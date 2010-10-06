@@ -16,7 +16,7 @@
 
 #include <cassert>
 
-/*N.B.: The tests' expected values (expectedDn and expectedA2) were computed on Pcphsft54.cern.ch i386 GNU/Linux computer (slc4_ia32_gcc34)
+/*N.B.: The tests' expected values (expectedDn and expectedA2) were computed on lxbuild114.cern.ch x86_64 GNU/Linux computer (slc4_x86_64_gcc34)
 */
 struct GoFTStress {
 
@@ -35,6 +35,8 @@ struct GoFTStress {
       result += UnitTest5();
       result += UnitTest6();
       result += UnitTest7();
+      result += UnitTest8();
+      result += UnitTest9();
       return result;
    }
       
@@ -95,9 +97,10 @@ struct GoFTStress {
    
       ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest( smpSize1, smp1, smpSize2, smp2 );
       
-      Double_t A2 = goft->AndersonDarling2SamplesTest("t"); // standartized A2_akN
-   //     Double_t pvalueAD = goft->AndersonDarling2SamplesTest();
-      Double_t pvalueAD = (*goft)(ROOT::Math::GoFTest::kAD2s);
+      Double_t A2;
+      Double_t pvalueAD;
+      goft->AndersonDarling2SamplesTest(pvalueAD, A2); // standartized A2_akN
+//       (*goft)(ROOT::Math::GoFTest::kAD2s, pvalueAD, A2);
    
       Double_t expectedA2_akN = 1.58334 ; // A2_akN in (1)
    
@@ -108,8 +111,11 @@ struct GoFTStress {
       Int_t result = PrintResultAD2Samples(nsmps, A2, expectedA2_akN, sigmaN, zScore, pvalueAD);
    
    //     Double_t Dn = goft->KolmogorovSmirnov2SamplesTest("t"); // standartized A2_akN
-      Double_t Dn = (*goft)(ROOT::Math::GoFTest::kKS2s, "t");
-      Double_t pvalueKS = goft->KolmogorovSmirnov2SamplesTest();
+      Double_t Dn;
+      Double_t pvalueKS;
+//       goft->KolmogorovSmirnov2SamplesTest(pvalueKS, Dn);
+      (*goft)(ROOT::Math::GoFTest::kKS2s, pvalueKS, Dn);
+      
    
       Double_t expectedDn = 0.139176;
    
@@ -133,9 +139,10 @@ struct GoFTStress {
    
       ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest( smpSize, smp1, smpSize, smp2 );
    
-   //     Double_t A2 = goft->AndersonDarling2SamplesTest("t"); // standartized A2_akN
-      Double_t A2 = (*goft)(ROOT::Math::GoFTest::kAD2s, "t");
-      Double_t pvalueAD = goft->AndersonDarling2SamplesTest();
+      Double_t pvalueAD;
+      Double_t A2;
+      goft->AndersonDarling2SamplesTest(pvalueAD, A2); // standartized A2_akN
+//       (*goft)(ROOT::Math::GoFTest::kAD2s, pvalueAD, A2);
    
       Double_t expectedA2_akN = 4.5735; // unstandardized A2_akN in (1)
    
@@ -145,9 +152,10 @@ struct GoFTStress {
    
       Int_t result = PrintResultAD2Samples(nsmps, A2, expectedA2_akN, sigmaN, zScore, pvalueAD);
    
-      Double_t Dn = goft->KolmogorovSmirnov2SamplesTest("t"); // standartized A2_akN
-   //     Double_t pvalueKS = goft->KolmogorovSmirnov2SamplesTest();
-      Double_t pvalueKS = (*goft)(ROOT::Math::GoFTest::kKS2s);
+      Double_t pvalueKS;
+      Double_t Dn;
+      goft->KolmogorovSmirnov2SamplesTest(pvalueKS, Dn);
+//       (*goft)(ROOT::Math::GoFTest::kKS2s, pvalueKS, Dn);
    
       Double_t expectedDn = 0.5;
    
@@ -178,17 +186,19 @@ struct GoFTStress {
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "LogNormal fitting" << std::endl;
       
-   //     Double_t A2 = goft->AndersonDarlingTest("t");
-      Double_t A2 = goft->operator()(ROOT::Math::GoFTest::kAD, "t");
-      Double_t pvalueAD = goft->AndersonDarlingTest();
+      Double_t A2;
+      Double_t pvalueAD; 
+//       goft->AndersonDarlingTest(pvalueAD, A2);
+      goft->operator()(ROOT::Math::GoFTest::kAD, pvalueAD, A2);
    
       Double_t expectedA2 = 0.422771;
    
       Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD);
    
-      Double_t Dn = goft->KolmogorovSmirnovTest("t");
-   //     Double_t pvalueKS = goft->KolmogorovSmirnovTest();
-      Double_t pvalueKS = goft->operator()(ROOT::Math::GoFTest::kKS);
+      Double_t pvalueKS;
+      Double_t Dn;
+//       goft->KolmogorovSmirnovTest(pvalueKS, Dn);
+      goft->operator()(ROOT::Math::GoFTest::kKS, pvalueKS, Dn);
    
       Double_t expectedDn = 0.0204916;
    
@@ -219,17 +229,19 @@ struct GoFTStress {
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "**Exponential fitting**" << std::endl;
       
-      Double_t A2 = goft->AndersonDarlingTest("t");
-   //     Double_t pvalueAD = goft->AndersonDarlingTest();
-      Double_t pvalueAD = goft->operator()();
+      Double_t pvalueAD;
+      Double_t A2;
+      goft->AndersonDarlingTest(pvalueAD, A2);
+//       goft->operator()(ROOT::Math::GoFTest::kAD, pvalueAD, A2);
    
       Double_t expectedA2 = 0.521153;
    
       Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD);
    
-   //     Double_t Dn = goft->KolmogorovSmirnovTest("t");
-      Double_t Dn = goft->operator()(ROOT::Math::GoFTest::kKS, "t");
-      Double_t pvalueKS = goft->KolmogorovSmirnovTest();
+      Double_t pvalueKS;
+      Double_t Dn;
+      goft->KolmogorovSmirnovTest(pvalueKS, Dn);
+//       goft->operator()(ROOT::Math::GoFTest::kKS, pvalueKS, Dn);
    
       Double_t expectedDn = 0.0218148;
    
@@ -261,15 +273,17 @@ struct GoFTStress {
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "**Gaussian fitting**" << std::endl;
       
-      Double_t A2 =  goft->AndersonDarlingTest("t");
-      Double_t pvalueAD = goft->AndersonDarlingTest();
+      Double_t pvalueAD;
+      Double_t A2;
+      goft->AndersonDarlingTest(pvalueAD, A2);
    
       Double_t expectedA2 = 0.441755;
    
       Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD);
    
-      Double_t Dn = goft->KolmogorovSmirnovTest("t");
-      Double_t pvalueKS = goft->KolmogorovSmirnovTest();
+      Double_t pvalueKS;
+      Double_t Dn;
+      goft->KolmogorovSmirnovTest(pvalueKS, Dn);
    
       Double_t expectedDn = 0.0282508;
    
@@ -294,21 +308,23 @@ struct GoFTStress {
          assert(sample[i] == data);
       }
       
-      ROOT::Math::Functor1D userCdf(&TMath::LandauI);
-      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample, userCdf, ROOT::Math::GoFTest::kCDF);
+      ROOT::Math::Functor1D userCDF(&TMath::LandauI);
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample, userCDF, ROOT::Math::GoFTest::kCDF);
          
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "**Landau fitting**" << std::endl;
       
-      Double_t A2 =  goft->AndersonDarlingTest("t");
-      Double_t pvalueAD = goft->AndersonDarlingTest();
+      Double_t pvalueAD;
+      Double_t A2;
+      (*goft)(ROOT::Math::GoFTest::kAD, pvalueAD, A2);
    
       Double_t expectedA2 = 0.544658;
    
       Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD);
       
-      Double_t Dn = goft->KolmogorovSmirnovTest("t");
-      Double_t pvalueKS = goft->KolmogorovSmirnovTest();
+      Double_t pvalueKS;
+      Double_t Dn;
+      (*goft)(ROOT::Math::GoFTest::kKS, pvalueKS, Dn);
    
       Double_t expectedDn = 0.0203432;
    
@@ -333,34 +349,123 @@ struct GoFTStress {
          sample[i] = data;
       }
       
-      // need to specify min and max otherwise pdf does not converge
+      // Need to specify min and max otherwise pdf does not converge
       ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample); 
 
-      ROOT::Math::Functor1D userPdf(&TMath::Landau);
-      // need to use a reasanble range for the Landau 
-      // but must be bigger than xmin and xmax 
-      double xmin = 3*TMath::MinElement(nEvents, sample);
-      double xmax = 3*TMath::MaxElement(nEvents, sample);
+      ROOT::Math::Functor1D userPDF(&TMath::Landau);
+      // Need to use a reasanble range for the Landau but must be bigger than xmin and xmax 
+      Double_t xmin = 3 * TMath::MinElement(nEvents, sample);
+      Double_t xmax = 3 * TMath::MaxElement(nEvents, sample);
          
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
-         std::cout << "**Landau fitting**" << " in [ " << xmin << " , " << xmax << " ]" << std::endl;
+         std::cout << "**Landau fitting**" << " in [ " << xmin << " , " << xmax << " ]" << " with user PDF." << std::endl;
 
-      goft->SetUserDistribution(userPdf,ROOT::Math::GoFTest::kPDF, xmin, xmax);
+      goft->SetUserDistribution(userPDF, ROOT::Math::GoFTest::kPDF, xmin, xmax);
       
-      Double_t A2 =  goft->AndersonDarlingTest("t");
-      Double_t pvalueAD = goft->AndersonDarlingTest();
-   
-      Double_t expectedA2 =  0.544658;
-   
-      // use larger tolerance due to truncation error of Landau
-      Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD,0.002);
+      Double_t pvalueAD;
+      Double_t A2;
+      goft->AndersonDarlingTest(pvalueAD, A2);
       
-      Double_t Dn = goft->KolmogorovSmirnovTest("t");
-      Double_t pvalueKS = goft->KolmogorovSmirnovTest();
+      Double_t expectedA2 = 0.544658;
    
+      // Use larger tolerance due to truncation error of Landau
+      Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD, 0.002);
+      
+      Double_t pvalueKS;
+      Double_t Dn;
+      goft->KolmogorovSmirnovTest(pvalueKS, Dn);
+      
       Double_t expectedDn = 0.0203432;
    
-      result += PrintResultKS(nsmps, Dn, expectedDn, pvalueKS,0.001);
+      result += PrintResultKS(nsmps, Dn, expectedDn, pvalueKS, 0.001);
+      
+      delete goft;
+      return result;
+   }
+   
+   Int_t UnitTest8() {
+      std::cout << "UNIT TEST 8" << std::endl;
+      
+      UInt_t nEvents = 1000;
+      UInt_t nsmps = 1;
+      
+      TRandom3 r;
+   
+      Double_t* sample = new Double_t[nEvents];
+   
+      for (UInt_t i = 0; i < nEvents; ++i) { 
+         Double_t data = r.Landau();
+         sample[i] = data;
+      }
+      // Need to use a reasanble range for the Landau but must be bigger than xmin and xmax       
+      Double_t xmin = 2 * TMath::MinElement(nEvents, sample);
+      Double_t xmax = 2 * TMath::MaxElement(nEvents, sample);
+         
+      ROOT::Math::Functor1D userCDF(&TMath::LandauI);
+          
+      // Need to specify min and max otherwise pdf does not converge
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample, userCDF, ROOT::Math::GoFTest::kCDF, xmin, xmax); 
+
+      if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
+         std::cout << "**Landau fitting**" << " in [ " << xmin << " , " << xmax << " ]" << " with user CDF." <<  std::endl;
+      
+      Double_t pvalueAD;
+      Double_t A2;
+      goft->AndersonDarlingTest(pvalueAD, A2);
+      
+      Double_t expectedA2 = 0.544658;
+   
+      // Use larger tolerance due to truncation error of Landau
+      Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD, 0.003);
+      
+      Double_t pvalueKS;
+      Double_t Dn;
+      goft->KolmogorovSmirnovTest(pvalueKS, Dn);
+      
+      Double_t expectedDn = 0.0203432;
+   
+      result += PrintResultKS(nsmps, Dn, expectedDn, pvalueKS, 0.001);
+      
+      delete goft;
+      return result;
+   }
+      
+   Int_t UnitTest9() {
+      std::cout << "UNIT TEST 9" << std::endl;
+      
+      UInt_t nEvents = 1000;
+      UInt_t nsmps = 1;
+      
+      TRandom3 r;
+   
+      Double_t* sample = new Double_t[nEvents];
+   
+      // Pseudo distribution sampling of pseudo density 1 / x
+      for (UInt_t i = 0; i < nEvents; ++i) { 
+         Double_t data = r.Uniform();
+         sample[i] = TMath::Exp(data) - 1;
+      }
+      
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample, ROOT::Math::GoFTest::kExponential); 
+         
+      if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
+         std::cout << "**Pseudo-exponential fitting" << std::endl;
+      
+      Double_t pvalueAD;
+      Double_t A2;
+      goft->AndersonDarlingTest(pvalueAD, A2);
+      
+      Double_t expectedA2 = 27.4549;
+   
+      Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD);
+      
+      Double_t pvalueKS;
+      Double_t Dn;
+      goft->KolmogorovSmirnovTest(pvalueKS, Dn);
+      
+      Double_t expectedDn = 0.116124;
+   
+      result += PrintResultKS(nsmps, Dn, expectedDn, pvalueKS);
       
       delete goft;
       return result;
