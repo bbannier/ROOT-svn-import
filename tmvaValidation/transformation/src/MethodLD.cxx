@@ -1,4 +1,4 @@
-// @(#)root/tmva $Id$ 
+// @(#)root/tmva $Id$
 // Author: Krzysztof Danielowski, Kamil Kraszewski, Maciej Kruk, Jan Therhaag
 
 /**********************************************************************************
@@ -48,22 +48,24 @@ ClassImp(TMVA::MethodLD)
 //_______________________________________________________________________
 TMVA::MethodLD::MethodLD( const TString& jobName,
                           const TString& methodTitle,
-                          DataSetInfo& dsi, 
+                          DataSetInfo& dsi,
                           const TString& theOption,
                           TDirectory* theTargetDir ) :
    MethodBase( jobName, Types::kLD, methodTitle, dsi, theOption, theTargetDir ),
-   fSumMatx   ( 0 ), 
+   fNRegOut   ( 0 ),
+   fSumMatx   ( 0 ),
    fSumValMatx( 0 ),
    fCoeffMatx ( 0 ),
    fLDCoeff   ( 0 )
 {
-   // standard constructor for the LD 
+   // standard constructor for the LD
 }
 
 //_______________________________________________________________________
 TMVA::MethodLD::MethodLD( DataSetInfo& theData, const TString& theWeightFile, TDirectory* theTargetDir )
    : MethodBase( Types::kLD, theData, theWeightFile, theTargetDir ),
-     fSumMatx   ( 0 ), 
+     fNRegOut   ( 0 ),
+     fSumMatx   ( 0 ),
      fSumValMatx( 0 ),
      fCoeffMatx ( 0 ),
      fLDCoeff   ( 0 )
@@ -93,10 +95,10 @@ TMVA::MethodLD::~MethodLD( void )
    if (fSumMatx)    { delete fSumMatx;    fSumMatx    = 0; }
    if (fSumValMatx) { delete fSumValMatx; fSumValMatx = 0; }
    if (fCoeffMatx)  { delete fCoeffMatx;  fCoeffMatx  = 0; }
-   if (fLDCoeff) { 
+   if (fLDCoeff) {
       for (vector< vector< Double_t >* >::iterator vi=fLDCoeff->begin(); vi!=fLDCoeff->end(); vi++)
          if (*vi) { delete *vi; *vi = 0; }
-      delete fLDCoeff; fLDCoeff = 0; 
+      delete fLDCoeff; fLDCoeff = 0;
    }
 }
 
@@ -124,13 +126,13 @@ void TMVA::MethodLD::Train( void )
 
    // compute fCoeffMatx and fLDCoeff
    GetLDCoeff();
-   
+
    // nice output
    PrintCoefficients();
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodLD::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodLD::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    //Returns the MVA classification output
    const Event* ev = GetEvent();
@@ -148,7 +150,7 @@ Double_t TMVA::MethodLD::GetMvaValue( Double_t* err )
    }
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return (*fRegressionReturnVal)[0];
 }
@@ -344,7 +346,7 @@ void TMVA::MethodLD::ReadWeightsFromXML( void* wghtnode )
    if (fLDCoeff) { 
       for (vector< vector< Double_t >* >::iterator vi=fLDCoeff->begin(); vi!=fLDCoeff->end(); vi++)
          if (*vi) { delete *vi; *vi = 0; }
-      delete fLDCoeff; fLDCoeff = 0; 
+      delete fLDCoeff; fLDCoeff = 0;
    }
    fLDCoeff = new vector< vector< Double_t >* >(fNRegOut);
    for (Int_t ivar = 0; ivar<fNRegOut; ivar++) (*fLDCoeff)[ivar] = new std::vector<Double_t>( ncoeff );
@@ -373,7 +375,10 @@ void TMVA::MethodLD::MakeClassSpecific( std::ostream& fout, const TString& class
    fout << "inline void " << className << "::Initialize() " << endl;
    fout << "{" << endl;
    for (UInt_t ivar=0; ivar<GetNvar()+1; ivar++) {
-      fout << "   fLDCoefficients.push_back( " << std::setprecision(12) << (*(*fLDCoeff)[0])[ivar] << " );" << endl;
+      Int_t dp = fout.precision();
+      fout << "   fLDCoefficients.push_back( "
+           << std::setprecision(12) << (*(*fLDCoeff)[0])[ivar]
+           << std::setprecision(dp) << " );" << endl;
    }
    fout << endl;
    fout << "   // sanity check" << endl;
@@ -402,7 +407,7 @@ void TMVA::MethodLD::MakeClassSpecific( std::ostream& fout, const TString& class
    fout << "}" << endl;
 }
 //_______________________________________________________________________
-const TMVA::Ranking* TMVA::MethodLD::CreateRanking() 
+const TMVA::Ranking* TMVA::MethodLD::CreateRanking()
 {
    // computes ranking of input variables
 
@@ -410,7 +415,7 @@ const TMVA::Ranking* TMVA::MethodLD::CreateRanking()
    fRanking = new Ranking( GetName(), "Discr. power" );
 
    for (UInt_t ivar=0; ivar<GetNvar(); ivar++) {
-      fRanking->AddRank( *new Rank( GetInputLabel(ivar), TMath::Abs((* (*fLDCoeff)[0])[ivar+1] )) );
+      fRanking->AddRank( Rank( GetInputLabel(ivar), TMath::Abs((* (*fLDCoeff)[0])[ivar+1] )) );
    }
 
    return fRanking;

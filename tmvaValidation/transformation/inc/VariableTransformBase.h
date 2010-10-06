@@ -106,14 +106,14 @@ namespace TMVA {
       virtual void WriteTransformationToStream ( std::ostream& o ) const = 0;
       virtual void ReadTransformationFromStream( std::istream& istr, const TString& classname="" ) = 0;
 
-      virtual void AttachXMLTo(void* parent);
-      virtual void ReadFromXML( void* trfnode );
+      virtual void AttachXMLTo(void* parent) = 0;
+      virtual void ReadFromXML( void* trfnode ) = 0;
 
       Types::EVariableTransform GetVariableTransform() const { return fVariableTransform; }
 
       // writer of function code
       virtual void MakeFunction( std::ostream& fout, const TString& fncName, Int_t part,
-                                 UInt_t trCounter, Int_t cls );
+                                 UInt_t trCounter, Int_t cls ) = 0;
 
       // provides string vector giving explicit transformation
       virtual std::vector<TString>* GetTransformationStrings( Int_t cls ) const;
@@ -135,8 +135,8 @@ namespace TMVA {
       void SetNVariables( UInt_t i )      { fNVars = i; }
       void SetName( const TString& c )    { fTransformName = c; }
 
-      UInt_t GetNVariables()  const { return fDsi.GetNVariables();  }
-      UInt_t GetNTargets()    const { return fDsi.GetNTargets();    }
+      UInt_t GetNVariables() const { return fDsi.GetNVariables(); }
+      UInt_t GetNTargets()   const { return fDsi.GetNTargets(); }
       UInt_t GetNSpectators() const { return fDsi.GetNSpectators(); }
 
       DataSetInfo& fDsi;
@@ -171,7 +171,6 @@ namespace TMVA {
       std::vector<TMVA::VariableInfo>  fVariables;          // event variables [saved to weight file]
       std::vector<TMVA::VariableInfo>  fTargets;            // event targets [saved to weight file --> TODO ]
       std::vector<TMVA::VariableInfo>  fSpectators;         // event spectators [saved to weight file --> TODO ]
-
 
       mutable Bool_t                   fVariableTypesAreCounted; // true if variable types have been counted already
       mutable UInt_t                   fNVariables;         // number of variables to be transformed

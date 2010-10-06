@@ -254,7 +254,7 @@ TMVA::Results* TMVA::DataSet::GetResults( const TString & resultsName,
          //Log() << kINFO << " GetResults("<<info<<") returns existing result." << Endl;
          return it->second;
       }
-   } 
+   }
    else {
       fResults.resize(t+1);
    }
@@ -273,7 +273,7 @@ TMVA::Results* TMVA::DataSet::GetResults( const TString & resultsName,
       newresults = new ResultsMulticlass(&fdsi);
       break;
    case Types::kNoAnalysisType:
-      newresults = new Results(&fdsi);
+      newresults = new ResultsClassification(&fdsi);
       break;
    case Types::kMaxAnalysisType:
       //Log() << kINFO << " GetResults("<<info<<") can't create new one." << Endl;
@@ -523,7 +523,7 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
 { 
    // create the test/trainings tree with all the variables, the weights, the classes, the targets, the spectators, the MVA outputs
    
-   Log() << kINFO << "GetTree(" << ( type==Types::kTraining ? "training" : "testing" ) << ")" << Endl;
+   Log() << kDEBUG << "GetTree(" << ( type==Types::kTraining ? "training" : "testing" ) << ")" << Endl;
 
    // the dataset does not hold the tree, this function returns a new tree everytime it is called
 
@@ -550,7 +550,6 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
    Float_t weight;
    //   TObjString *className = new TObjString();
    char *className = new char[40];
-   TBranch *classNameBranch;
 
 
    //Float_t metVals[fResults.at(t).size()][Int_t(fdsi.GetNTargets()+1)];
@@ -561,7 +560,7 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
 
    // create branches for event-variables
    tree->Branch( "classID", &cls, "classID/I" ); 
-   classNameBranch = tree->Branch( "className",(void*)className, "className/C" ); 
+   tree->Branch( "className",(void*)className, "className/C" ); 
 
 
    // create all branches for the variables
@@ -598,9 +597,8 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
         itMethod != fResults.at(t).end(); itMethod++) {
 
 
-      Log() << "analysis type " << (itMethod->second->GetAnalysisType()==Types::kRegression ? "Regression" :
-				     (itMethod->second->GetAnalysisType()==Types::kMulticlass ? "multiclass" : "classification" )) << Endl;
-
+      Log() << kDEBUG << "analysis type: " << (itMethod->second->GetAnalysisType()==Types::kRegression ? "Regression" :
+                                               (itMethod->second->GetAnalysisType()==Types::kMulticlass ? "Multiclass" : "Classification" )) << Endl;
 
       if (itMethod->second->GetAnalysisType() == Types::kClassification) {
          // classification
@@ -648,7 +646,7 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
          className[itmp] = tmp(itmp);
          className[itmp+1] = 0;
       }
-  
+
       // write the variables, targets and spectator variables
       for (UInt_t ivar = 0; ivar < ev->GetNVariables();   ivar++) varVals[ivar] = ev->GetValue( ivar );
       for (UInt_t itgt = 0; itgt < ev->GetNTargets();     itgt++) tgtVals[itgt] = ev->GetTarget( itgt );
@@ -656,18 +654,19 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
 
 
       // loop through all the results and write the branches
-      n = 0;
-      for (std::map<TString, Results*>::iterator itMethod = fResults.at(t).begin(); itMethod != fResults.at(t).end(); itMethod++) {
+      n=0;
+      for (std::map<TString, Results*>::iterator itMethod = fResults.at(t).begin();
+           itMethod != fResults.at(t).end(); itMethod++) {
+
+         Results* results = itMethod->second;
+         const std::vector< Float_t >& vals = results->operator[](iEvt);
+
          if (itMethod->second->GetAnalysisType() == Types::kClassification) {
             // classification
-            ResultsClassification *results = dynamic_cast<ResultsClassification*>( itMethod->second );
-            metVals[n][0] = results->operator[](iEvt);
+            metVals[n][0] = vals[0];
          }
          else if (itMethod->second->GetAnalysisType() == Types::kMulticlass) {
             // multiclass classification
-            ResultsMulticlass *results = dynamic_cast<ResultsMulticlass*>( itMethod->second );
-
-            std::vector< Float_t > vals = results->operator[](iEvt);
             for (UInt_t nCls = 0, nClsEnd=fdsi.GetNClasses(); nCls < nClsEnd; nCls++) {
                Float_t val = vals.at(nCls);
                metVals[n][nCls] = val;
@@ -675,9 +674,6 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
          }
          else if (itMethod->second->GetAnalysisType() == Types::kRegression) {
             // regression
-            ResultsRegression *results = dynamic_cast<ResultsRegression*>( itMethod->second );
-
-            std::vector< Float_t > vals = results->operator[](iEvt);
             for (UInt_t nTgts = 0; nTgts < fdsi.GetNTargets(); nTgts++) {
                Float_t val = vals.at(nTgts);
                metVals[n][nTgts] = val;

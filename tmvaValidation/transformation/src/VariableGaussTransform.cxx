@@ -438,6 +438,9 @@ void TMVA::VariableGaussTransform::AttachXMLTo(void* parent) {
    gTools().AddAttr(trfxml, "Name",        "Gauss");
    gTools().AddAttr(trfxml, "FlatOrGauss", (fFlatNotGaussD?"Flat":"Gauss") );
 
+   VariableTransformBase::AttachXMLTo( trfxml );
+
+
    for (UInt_t ivar=0; ivar<GetNVariables(); ivar++) {
       void* varxml = gTools().AddChild( trfxml, "Variable");
       gTools().AddAttr( varxml, "Name",     Variables()[ivar].GetLabel() );
@@ -461,6 +464,25 @@ void TMVA::VariableGaussTransform::ReadFromXML( void* trfnode ) {
    CleanUpCumulativeArrays();
 
    gTools().ReadAttr(trfnode, "FlatOrGauss", fFlatNotGaussD );
+
+
+
+   Bool_t newFormat = kFALSE;
+
+   void* inpnode = NULL;
+   
+   inpnode = gTools().GetChild(trfnode, "Selection"); // new xml format
+   if( inpnode!=NULL )
+      newFormat = kTRUE; // new xml format
+
+   if( newFormat ){
+      // ------------- new format --------------------
+      // read input
+      VariableTransformBase::ReadFromXML( inpnode );
+
+   }
+
+
 
    // Read the cumulative distribution
    void* varnode = gTools().GetChild( trfnode );

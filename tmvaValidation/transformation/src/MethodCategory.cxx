@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$   
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss,Or Cohen, Eckhard von Toerne 
+// @(#)root/tmva $Id$
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss,Or Cohen, Eckhard von Toerne
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -15,9 +15,9 @@
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
- *      U. of Victoria, Canada                                                    * 
- *      MPI-K Heidelberg, Germany                                                 * 
+ *      CERN, Switzerland                                                         *
+ *      U. of Victoria, Canada                                                    *
+ *      MPI-K Heidelberg, Germany                                                 *
  *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -101,15 +101,16 @@ TMVA::MethodCategory::~MethodCategory( void )
 Bool_t TMVA::MethodCategory::HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t numberTargets )
 {
    // check whether method category has analysis type
-   std::vector<IMethod*>::iterator itrMethod;
+   // the method type has to be the same for all sub-methods
+
+   std::vector<IMethod*>::iterator itrMethod = fMethods.begin();
 
    // iterate over methods and check whether they have the analysis type
-   for (itrMethod = fMethods.begin(); itrMethod != fMethods.end(); ++itrMethod ) {
-      MethodBase* method = dynamic_cast<MethodBase*>(*itrMethod);
-      if ( !method->HasAnalysisType(type, numberClasses, numberTargets) )
+   for(; itrMethod != fMethods.end(); ++itrMethod ) {
+      if ( !(*itrMethod)->HasAnalysisType(type, numberClasses, numberTargets) )
          return kFALSE;
    }
-   return kTRUE;    
+   return kTRUE;
 }
 
 //_______________________________________________________________________
@@ -121,13 +122,13 @@ void TMVA::MethodCategory::DeclareOptions()
 //_______________________________________________________________________
 TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
                                                 const TString& theVariables,
-                                                Types::EMVA theMethod , 
-                                                const TString& theTitle, 
+                                                Types::EMVA theMethod ,
+                                                const TString& theTitle,
                                                 const TString& theOptions )
 {
    // adds sub-classifier for a category
-   
-   std::string addedMethodName = std::string(Types::Instance().GetMethodName(theMethod)); 
+
+   std::string addedMethodName = std::string(Types::Instance().GetMethodName(theMethod));
 
    Log() << kINFO << "Adding sub-classifier: " << addedMethodName << "::" << theTitle << Endl;
 
@@ -191,7 +192,7 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
    UInt_t newSpectatorIndex = primaryDSI.GetSpectatorInfos().size();
    fCategorySpecIdx.push_back(newSpectatorIndex);
    
-   primaryDSI.AddSpectator( Form("%s_cat%i:=%s", GetName(),fMethods.size(),theCut.GetTitle()),
+   primaryDSI.AddSpectator( Form("%s_cat%i:=%s", GetName(),(int)fMethods.size(),theCut.GetTitle()),
                             Form("%s:%s",GetName(),method->GetName()),
                             "pass", 0, 0, 'C' );
 
@@ -462,7 +463,7 @@ void TMVA::MethodCategory::AddWeightsXMLTo( void* parent ) const
 }
 
 //_______________________________________________________________________
-void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode ) 
+void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
 {
    // read weights of sub-classifiers of MethodCategory from xml weight file
    UInt_t nSubMethods;
@@ -495,8 +496,10 @@ void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
       DataSetInfo& dsi = CreateCategoryDSI(TCut(theCutString), theVariables, methodTitle);
 
       // recreate sub-method from weights and add to fMethods
-      MethodBase* method = dynamic_cast<MethodBase*>( ClassifierFactory::Instance().Create( methodType.Data(), 
+      MethodBase* method = dynamic_cast<MethodBase*>( ClassifierFactory::Instance().Create( methodType.Data(),
                                                                                             dsi, "none" ) );
+      if(method==0)
+         Log() << kFATAL << "Could not create sub-method " << method << " from XML." << Endl;
 
       method->SetupMethod();
       method->ReadStateFromXML(subMethodNode);
@@ -513,7 +516,7 @@ void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
       // find the spectator index
       std::vector<VariableInfo>& spectators=primaryDSI.GetSpectatorInfos();
       std::vector<VariableInfo>::iterator itrVarInfo;
-      TString specName= Form("%s_cat%i", GetName(),fCategorySpecIdx.size()+1);
+      TString specName= Form("%s_cat%i", GetName(),(int)fCategorySpecIdx.size()+1);
 
       for (itrVarInfo = spectators.begin(); itrVarInfo != spectators.end(); ++itrVarInfo, ++counter) {
          if((specName==itrVarInfo->GetLabel()) || (specName==itrVarInfo->GetExpression())) {
@@ -586,7 +589,7 @@ Bool_t TMVA::MethodCategory::PassesCut( const Event* ev, UInt_t methodIdx )
 
 
 //_______________________________________________________________________
-Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // returns the mva value of the right sub-classifier
 
@@ -594,7 +597,7 @@ Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err )
 
    UInt_t methodToUse = 0;
 //    std::cout << "GMVAV " << std::flush;
-   const Event* ev = GetEvent(); 
+   const Event* ev = GetEvent();
 
 //    std::cout << "input event: " << std::endl;
 //    ev->Print(std::cout);
@@ -603,7 +606,7 @@ Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err )
    Int_t suitableCutsN = 0;
 
    for (UInt_t i=0; i<fMethods.size(); ++i) {
-      if (PassesCut(ev, i)) { 
+      if (PassesCut(ev, i)) {
          ++suitableCutsN;
          methodToUse=i;
       }
@@ -620,7 +623,7 @@ Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err )
    }
 
    // get mva value from the suitable sub-classifier
-   Double_t mvaValue = dynamic_cast<MethodBase*>(fMethods[methodToUse])->GetMvaValue(ev,err);
+   Double_t mvaValue = dynamic_cast<MethodBase*>(fMethods[methodToUse])->GetMvaValue(ev,err,errUpper);
 
    return mvaValue;
 }

@@ -433,7 +433,6 @@ void TMVA::VariableTransformBase::CountVariableTypes( UInt_t& nvars, UInt_t& ntg
 void TMVA::VariableTransformBase::CalcNorm( const std::vector<Event*>& events ) 
 {
    // TODO --> adapt to variable,target,spectator selection
-
    // method to calculate minimum, maximum, mean, and RMS for all
    // variables used in the MVA
 
@@ -524,9 +523,8 @@ void TMVA::VariableTransformBase::CalcNorm( const std::vector<Event*>& events )
 
 //_______________________________________________________________________
 std::vector<TString>* TMVA::VariableTransformBase::GetTransformationStrings( Int_t /*cls*/ ) const
-{ 
+{
    // TODO --> adapt to variable,target,spectator selection
-
    // default transformation output
    // --> only indicate that transformation occurred
    std::vector<TString>* strVec = new std::vector<TString>;
@@ -541,7 +539,6 @@ std::vector<TString>* TMVA::VariableTransformBase::GetTransformationStrings( Int
 void TMVA::VariableTransformBase::UpdateNorm ( Int_t ivar,  Double_t x ) 
 {
    // TODO --> adapt to variable,target,spectator selection
-
    // update min and max of a given variable (target) and a given transformation method
    Int_t nvars = fDsi.GetNVariables();
    if( ivar < nvars ){
@@ -598,7 +595,7 @@ void TMVA::VariableTransformBase::AttachXMLTo(void* parent)
    }
 
 
-   void* outxml = gTools().AddChild(parent, "Output");
+   void* outxml = gTools().AddChild(selxml, "Output");
    gTools().AddAttr(outxml, "NOutputs", fPut.size() );
 
    for( ItVarTypeIdx itPut = fPut.begin(), itPutEnd = fPut.end(); itPut != itPutEnd; ++itPut ) {
@@ -639,7 +636,7 @@ void TMVA::VariableTransformBase::ReadFromXML( void* selnode )
    // Read the input variables from the XML node
 
    void* inpnode = gTools().GetChild( selnode );
-   void* outnode = gTools().GetChild( selnode );
+   void* outnode = gTools().GetNextChild( inpnode );
 
    UInt_t nvars  = GetNVariables();
    UInt_t ntgts  = GetNTargets();

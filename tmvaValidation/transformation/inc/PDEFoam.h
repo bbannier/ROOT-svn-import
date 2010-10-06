@@ -27,6 +27,7 @@
 #define ROOT_TMVA_PDEFoam
 
 #include <iosfwd>
+#include <cassert>
 
 #ifndef ROOT_TH2D
 #include "TH2D.h"
@@ -82,11 +83,14 @@ namespace TMVA {
    // kTargetError   : error on target 0 (saved in cell element 1)
    // kMeanValue     : mean sampling value (saved in fIntegral)
    // kRms           : rms of sampling distribution (saved in fDriver)
-   // kRmsOvMean     : rms/mean of sampling distribution (saved in 
+   // kRmsOvMean     : rms/mean of sampling distribution (saved in
    //                  fDriver and fIntegral)
    // kDensity       : number of events/cell volume
-   enum ECellValue { kNev, kDiscriminator, kDiscriminatorError, kTarget0, 
+   enum ECellValue { kNev, kDiscriminator, kDiscriminatorError, kTarget0,
                      kTarget0Error, kMeanValue, kRms, kRmsOvMean, kDensity };
+   // separation quantity to use (kFoam: use PDEFoam algorithm)
+   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
+			kCrossEntropy };
 }
 
 namespace TMVA {
@@ -124,24 +128,24 @@ namespace TMVA {
       Double_t *fXmin;         // [fDim] minimum for variable transform
       Double_t *fXmax;         // [fDim] maximum for variable transform
       UInt_t fNElements;       // number of variables in every cell
-      Bool_t fCutNmin;         // true: activate cut on minimal number of events in cell
       UInt_t fNmin;            // minimal number of events in cell to split cell
-      Bool_t fCutRMSmin;       // true: peek cell with max. RMS for next split
-      Double_t fRMSmin;        // activate cut: minimal RMS in cell to split cell
+      UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
+      Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
+      EDTSeparation fDTSeparation; // split cells according to decision tree logic
+      Bool_t fPeekMax;         // peek up cell with max. driver integral for split
       PDEFoamDistr *fDistr;    //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
-      Int_t fSignalClass;      // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-      Int_t fBackgroundClass;  // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
       mutable MsgLogger* fLogger;                     //! message logger
-      MsgLogger& Log() const { return *fLogger; }
 
       /////////////////////////////////////////////////////////////////
       //                            METHODS                          //
       /////////////////////////////////////////////////////////////////
    private:
-      Double_t Sqr(Double_t x) const { return x*x;}      // Square function
+      // Square function (fastest implementation)
+      template<typename T> T Sqr(T x) const { return x*x; }
+      PDEFoamDistr* GetDistr() const { assert(fDistr); return fDistr; }
 
    protected:
       // ---------- TMVA console output
@@ -150,9 +154,9 @@ namespace TMVA {
 
       // ---------- Weighting functions for kernels
 
-      Float_t WeightGaus(PDEFoamCell*, std::vector<Float_t>, UInt_t dim=0);
+      Float_t WeightGaus(PDEFoamCell*, std::vector<Float_t>&, UInt_t dim=0);
 
-      Double_t WeightLinNeighbors( std::vector<Float_t> txvec, ECellValue cv, 
+      Double_t WeightLinNeighbors( std::vector<Float_t> &txvec, ECellValue cv, 
                                    Int_t dim1=-1, Int_t dim2=-1, 
                                    Bool_t TreatEmptyCells=kFALSE );
       
@@ -162,17 +166,19 @@ namespace TMVA {
       void InitCells(Bool_t CreateCellElements);      // Initialisation of all foam cells
       Int_t CellFill(Int_t, PDEFoamCell*);// Allocates new empty cell and return its index
       void Explore(PDEFoamCell *Cell);    // Exploration of the new cell, determine <wt>, wtMax etc.
+      void DTExplore(PDEFoamCell *Cell);  // Exploration of the new cell according to decision tree logic
       void Varedu(Double_t [], Int_t&, Double_t&,Double_t&); // Determines the best edge, variace reduction
       void MakeAlpha();             // Provides random point inside hyperrectangle
       void Grow();                  // build up foam
       Long_t PeekMax();             // peek cell with max. driver integral
+      Long_t PeekLast();            // peek last created cell
       Int_t  Divide(PDEFoamCell *); // Divide iCell into two daughters; iCell retained, taged as inactive
       Double_t Eval(Double_t *xRand, Double_t &event_density); // evaluate distribution on point 'xRand'
+      Float_t GetSeparation(Float_t s, Float_t b); // calculate separation
 
       // ---------- Cell value access functions
 
       // low level functions to access a certain cell value
-      TVectorD* GetCellElements(std::vector<Float_t>);       // return cell elements of cell with given coordinates
       Double_t GetCellElement(PDEFoamCell *cell, UInt_t i);  // get Element 'i' in cell 'cell'
       void SetCellElement(PDEFoamCell *cell, UInt_t i, Double_t value); // set Element 'i' in cell 'cell' to value 'value'
 
@@ -183,15 +189,15 @@ namespace TMVA {
       Bool_t   CellValueIsUndefined( PDEFoamCell* );
 
       // finds cell according to given event variables
-      PDEFoamCell* FindCell(std::vector<Float_t>); //!
-      std::vector<TMVA::PDEFoamCell*> FindCells(std::vector<Float_t>); //!
+      PDEFoamCell* FindCell(std::vector<Float_t>&); //!
+      std::vector<TMVA::PDEFoamCell*> FindCells(std::vector<Float_t>&); //!
 
       // find cells, which fit a given event vector
-      void FindCellsRecursive(std::vector<Float_t>, PDEFoamCell*, 
+      void FindCellsRecursive(std::vector<Float_t>&, PDEFoamCell*, 
                               std::vector<PDEFoamCell*> &);
       
       // calculates the mean/ mpv target values for a given event 'tvals'
-      std::vector<Float_t> GetCellTargets( std::vector<Float_t> tvals, ETargetSelection ts );
+      std::vector<Float_t> GetCellTargets( std::vector<Float_t> &tvals, ETargetSelection ts );
       // get number of events in cell during foam build-up
       Double_t GetBuildUpCellEvents(PDEFoamCell* cell);
       
@@ -221,7 +227,7 @@ namespace TMVA {
 
       // ---------- Getters and Setters
 
-      void SetkDim(Int_t kDim); // Sets dimension of cubical space
+      void SetDim(Int_t kDim); // Sets dimension of cubical space
       void SetnCells(Long_t nCells){fNCells =nCells;}  // Sets maximum number of cells
       void SetnSampl(Long_t nSampl){fNSampl =nSampl;}  // Sets no of MC events in cell exploration
       void SetnBin(Int_t nBin){fNBin = nBin;}          // Sets no of bins in histogs in cell exploration
@@ -231,9 +237,9 @@ namespace TMVA {
       void SetPDEFoamVolumeFraction(Double_t vfr){fVolFrac = vfr;} // set VolFrac to PDEFoam
       void SetVolumeFraction(Double_t); // set VolFrac to PDEFoamDistr
       void SetFoamType(EFoamType ft);   // set foam type
-
-      void SetSignalClass( Int_t cls )     { fSignalClass = cls; fDistr->SetSignalClass( cls ); } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-      void SetBackgroundClass( Int_t cls ) { fBackgroundClass = cls; fDistr->SetBackgroundClass( cls ); } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
+      void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
+      void SetDTSeparation(EDTSeparation new_val){fDTSeparation=new_val;}
+      void SetPeekMax(Bool_t new_val){ fPeekMax = new_val; }
 
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
@@ -246,14 +252,11 @@ namespace TMVA {
       PDEFoamCell* GetRootCell()   const {return fCells[0];}; // get pointer to root cell
 
       // Getters and Setters for user cut options
-      void     CutNmin(Bool_t cut )    { fCutNmin = cut;    }
-      Bool_t   CutNmin()               { return fCutNmin;   }
-      void     CutRMSmin(Bool_t cut )  { fCutRMSmin = cut;  }
-      Bool_t   CutRMSmin()             { return fCutRMSmin; }
       void     SetNmin(UInt_t val)     { fNmin=val;      }
       UInt_t   GetNmin()               { return fNmin;   }
-      void     SetRMSmin(Double_t val) { fRMSmin=val;    }
-      Double_t GetRMSmin()             { return fRMSmin; }
+      Bool_t   GetFillFoamWithOrigWeights(){ return fFillFoamWithOrigWeights; }
+      void     SetMaxDepth(UInt_t maxdepth) { fMaxDepth = maxdepth; }
+      UInt_t   GetMaxDepth() const { return fMaxDepth; }
 
       // Getters and Setters for foam boundaries
       void SetXmin(Int_t idim, Double_t wmin);
@@ -262,17 +265,21 @@ namespace TMVA {
       Double_t GetXmax(Int_t idim){return fXmax[idim];}
 
       // Getters and Setters for variable names
-      void AddVariableName(const char *s) { AddVariableName(new TObjString(s)); };
-      void AddVariableName(TObjString *s) { fVariableNames->Add(s); };
-      TObjString* GetVariableName(Int_t idx) {return dynamic_cast<TObjString*>(fVariableNames->At(idx));};
+      void AddVariableName(const char *s) { AddVariableName(new TObjString(s)); }
+      void AddVariableName(TObjString *s) { fVariableNames->Add(s); }
+      TObjString* GetVariableName(Int_t idx) {return dynamic_cast<TObjString*>(fVariableNames->At(idx));}
+
+      // Delete the fDistr object, which contains the binary search
+      // tree
+      void DeleteBinarySearchTree(){ if(fDistr) delete fDistr; fDistr=0; }
 
       // ---------- Transformation functions for event variables into foam boundaries
       // reason: foam allways has boundaries [0, 1]
 
       Float_t VarTransform(Int_t idim, Float_t x);       // transform [xmin, xmax] --> [0, 1]
-      std::vector<Float_t> VarTransform(std::vector<Float_t> invec);
+      std::vector<Float_t> VarTransform(std::vector<Float_t> &invec);
       Float_t VarTransformInvers(Int_t idim, Float_t x); // transform [0, 1] --> [xmin, xmax]
-      std::vector<Float_t> VarTransformInvers(std::vector<Float_t> invec);
+      std::vector<Float_t> VarTransformInvers(std::vector<Float_t> &invec);
 
       // ---------- Debug functions
 
@@ -281,6 +288,9 @@ namespace TMVA {
       void     CheckCells(Bool_t remove_empty_cells=false);   // check all cells with respect to critical values
       void     RemoveEmptyCell(Int_t iCell); // removes iCell if its volume is zero
       void     PrintCellElements();          // print all cells with its elements
+
+      // Message logger
+      MsgLogger& Log() const { return *fLogger; }
 
       // ---------- Foam output
 
@@ -295,8 +305,8 @@ namespace TMVA {
       // ---------- Foam projection methods
 
       // project foam to two-dimensional histogram
-      TH2D* Project2(Int_t idim1, Int_t idim2, const char *opt="nev", 
-                     const char *ker="kNone", UInt_t maxbins=0);
+      TH2D* Project2(Int_t idim1, Int_t idim2, const char *opt="cell_value", 
+                     const char *ker="kNone", UInt_t maxbins=50);
 
       // helper function for Project2()
       Double_t GetProjectionCellValue( PDEFoamCell* cell, 
@@ -313,23 +323,23 @@ namespace TMVA {
       // ---------- Foam evaluation functions
 
       // get cell value for a given event
-      Double_t GetCellValue(std::vector<Float_t>, ECellValue);
+      Double_t GetCellValue(std::vector<Float_t>&, ECellValue);
 
       // helper functions to access cell data with kernel
-      Double_t GetCellDiscr(std::vector<Float_t> xvec, EKernel kernel=kNone);
-      Double_t GetCellDensity(std::vector<Float_t> xvec, EKernel kernel=kNone);
+      Double_t GetCellDiscr(std::vector<Float_t> &xvec, EKernel kernel=kNone);
+      Double_t GetCellDensity(std::vector<Float_t> &xvec, EKernel kernel=kNone);
 
       // calc mean cell value of neighbor cells
-      Double_t GetAverageNeighborsValue(std::vector<Float_t> txvec, ECellValue cv);
+      Double_t GetAverageNeighborsValue(std::vector<Float_t> &txvec, ECellValue cv);
 
       // returns regression value (mono target regression)
-      Double_t GetCellRegValue0(std::vector<Float_t>, EKernel kernel=kNone);
+      Double_t GetCellRegValue0(std::vector<Float_t>&, EKernel kernel=kNone);
 
       // returns regression value i, given all variables (multi target regression)
-      std::vector<Float_t> GetProjectedRegValue(std::vector<Float_t> vals, EKernel kernel=kNone, ETargetSelection ts=kMean);
+      std::vector<Float_t> GetProjectedRegValue(std::vector<Float_t> &vals, EKernel kernel=kNone, ETargetSelection ts=kMean);
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoam,3)
+      ClassDef(PDEFoam,4)
    }; // end of PDEFoam 
 
 }  // namespace TMVA
@@ -344,7 +354,7 @@ inline Float_t TMVA::PDEFoam::VarTransform(Int_t idim, Float_t x)
 }
 
 //_____________________________________________________________________
-inline std::vector<Float_t> TMVA::PDEFoam::VarTransform(std::vector<Float_t> invec)
+inline std::vector<Float_t> TMVA::PDEFoam::VarTransform(std::vector<Float_t> &invec)
 {
    // transform vector invec from [xmin, xmax] --> [0, 1]
    std::vector<Float_t> outvec;
@@ -361,7 +371,7 @@ inline Float_t TMVA::PDEFoam::VarTransformInvers(Int_t idim, Float_t x)
 }
 
 //_____________________________________________________________________
-inline std::vector<Float_t> TMVA::PDEFoam::VarTransformInvers(std::vector<Float_t> invec)
+inline std::vector<Float_t> TMVA::PDEFoam::VarTransformInvers(std::vector<Float_t> &invec)
 {
    // transform vector invec from [0, 1] --> [xmin, xmax]
    std::vector<Float_t> outvec;

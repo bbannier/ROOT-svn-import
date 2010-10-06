@@ -43,7 +43,7 @@ TMVA::Event::Event()
    : fValues(),
      fTargets(),
      fSpectators(),
-     fClass(1),
+     fClass(0),
      fWeight(1.0),
      fBoostWeight(1.0),
      fDynamic(kFALSE)

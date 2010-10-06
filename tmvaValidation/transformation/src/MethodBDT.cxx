@@ -145,6 +145,32 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
                             const TString& theOption,
                             TDirectory* theTargetDir ) :
    TMVA::MethodBase( jobName, Types::kBDT, methodTitle, theData, theOption, theTargetDir )
+   , fNTrees(0)
+   , fAdaBoostBeta(0)
+   , fTransitionPoint(0)
+   , fShrinkage(0)
+   , fBaggedGradBoost(kFALSE)
+   , fSampleFraction(0)
+   , fSumOfWeights(0)
+   , fNodeMinEvents(0)
+   , fNCuts(0)
+   , fUseYesNoLeaf(kFALSE)
+   , fNodePurityLimit(0)
+   , fUseWeightedTrees(kFALSE)
+   , fNNodesMax(0)
+   , fMaxDepth(0)
+   , fITree(0)
+   , fBoostWeight(0)
+   , fErrorFraction(0)
+   , fPruneStrength(0)
+   , fPruneBeforeBoost(kFALSE)
+   , fFValidationEvents(0)
+   , fAutomatic(kFALSE)
+   , fRandomisedTrees(kFALSE)
+   , fUseNvars(0)
+   , fUseNTrainEvents(0)
+   , fSampleSizeFraction(0)
+   , fNoNegWeightsInTraining(kFALSE)
 {
    // the standard constructor for the "boosted decision trees"
 }
@@ -154,6 +180,32 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
                             const TString& theWeightFile,
                             TDirectory* theTargetDir )
    : TMVA::MethodBase( Types::kBDT, theData, theWeightFile, theTargetDir )
+   , fNTrees(0)
+   , fAdaBoostBeta(0)
+   , fTransitionPoint(0)
+   , fShrinkage(0)
+   , fBaggedGradBoost(kFALSE)
+   , fSampleFraction(0)
+   , fSumOfWeights(0)
+   , fNodeMinEvents(0)
+   , fNCuts(0)
+   , fUseYesNoLeaf(kFALSE)
+   , fNodePurityLimit(0)
+   , fUseWeightedTrees(kFALSE)
+   , fNNodesMax(0)
+   , fMaxDepth(0)
+   , fITree(0)
+   , fBoostWeight(0)
+   , fErrorFraction(0)
+   , fPruneStrength(0)
+   , fPruneBeforeBoost(kFALSE)
+   , fFValidationEvents(0)
+   , fAutomatic(kFALSE)
+   , fRandomisedTrees(kFALSE)
+   , fUseNvars(0)
+   , fUseNTrainEvents(0)
+   , fSampleSizeFraction(0)
+   , fNoNegWeightsInTraining(kFALSE)
 {
    // constructor for calculating BDT-MVA using previously generated decision trees
    // the result of the previous training (the decision trees) are read in via the
@@ -374,16 +426,18 @@ void TMVA::MethodBDT::Init( void )
       fMaxDepth        = 3;
       fBoostType      = "AdaBoost";
    }else {
-      fMaxDepth = 100;
+      fMaxDepth = 50;
       fBoostType      = "AdaBoostR2";
       fAdaBoostR2Loss = "Quadratic";
    }
 
    fNodeMinEvents  = TMath::Max( Int_t(40), Int_t( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    fNCuts          = 20;
-   fPruneMethodS   = "CostComplexity";
+   //   fPruneMethodS   = "CostComplexity";
+   fPruneMethodS   = "NoPruning";
    fPruneMethod    = DecisionTree::kCostComplexityPruning;
-   fPruneStrength  = -1.0;
+   fPruneStrength  = 0;
+   fAutomatic      = kFALSE;
    fFValidationEvents = 0.5;
    fRandomisedTrees = kFALSE;
    fUseNvars        =  (GetNvar()>12) ? UInt_t(GetNvar()/8) : TMath::Max(UInt_t(2),UInt_t(GetNvar()/3));
@@ -439,6 +493,8 @@ void TMVA::MethodBDT::InitEventSample( void )
          else {
             fEventSample.push_back(event);
          }
+      } else {
+         delete event;
       }
    }
    if (fAutomatic) {
@@ -1008,6 +1064,7 @@ Double_t TMVA::MethodBDT::Bagging( vector<TMVA::Event*> eventSample, Int_t iTree
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       (*e)->SetBoostWeight( (*e)->GetBoostWeight() * eventSample.size() / newSumw );
    }
+   delete trandom;
    return 1.;  //here as there are random weights for each event, just return a constant==1;
 }
 
@@ -1168,7 +1225,7 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
 void  TMVA::MethodBDT::ReadWeightsFromStream( istream& istr )
 {
    // read the weights (BDT coefficients)
-   TString var, dummy;
+   TString dummy;
    //   Types::EAnalysisType analysisType;
    Int_t analysisType(0);
 
@@ -1199,18 +1256,19 @@ void  TMVA::MethodBDT::ReadWeightsFromStream( istream& istr )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err ){
-   return this->GetMvaValue( err, 0 );
+Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, Double_t* errUpper ){
+   return this->GetMvaValue( err, errUpper, 0 );
 }
+
 //_______________________________________________________________________
-Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, UInt_t useNTrees )
+Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, Double_t* errUpper, UInt_t useNTrees )
 {
    // Return the MVA value (range [-1;1]) that classifies the
    // event according to the majority vote from the total number of
    // decision trees.
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
    
    // allow for the possibility to use less trees in the actual MVA calculation
    // than have been originally trained.
