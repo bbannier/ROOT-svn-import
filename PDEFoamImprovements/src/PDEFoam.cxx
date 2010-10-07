@@ -225,7 +225,6 @@ void TMVA::PDEFoam::SetXmin(Int_t idim, Double_t wmin)
       Log() << kFATAL << "<SetXmin>: Dimension out of bounds!" << Endl;
 
    fXmin[idim]=wmin;
-   GetDistr()->SetXmin(idim, wmin);
 }
 
 //_____________________________________________________________________
@@ -236,7 +235,6 @@ void TMVA::PDEFoam::SetXmax(Int_t idim, Double_t wmax)
       Log() << kFATAL << "<SetXmax>: Dimension out of bounds!" << Endl;
 
    fXmax[idim]=wmax;
-   GetDistr()->SetXmax(idim, wmax);
 }
 
 //_____________________________________________________________________
@@ -1899,9 +1897,9 @@ Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> &txve
       distance += Sqr(txvec.at(i)-cell_center.at(i));
    distance = TMath::Sqrt(distance);
 
-   Float_t width = 1./GetPDEFoamVolumeFraction();
+   Float_t width = 1./GetVolumeFraction();
    if (width < 1.0e-10)
-      Log() << kWARNING << "Warning: wrong volume fraction: " << GetPDEFoamVolumeFraction() << Endl;
+      Log() << kWARNING << "Warning: wrong volume fraction: " << GetVolumeFraction() << Endl;
 
    // weight with Gaus with sigma = 1/VolFrac
    return TMath::Gaus(distance, 0, width, kFALSE);
@@ -2581,14 +2579,6 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, std::string what,
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::SetVolumeFraction( Double_t vfr )
-{
-   // set VolFrac to internal foam density PDEFoamDistr
-   GetDistr()->SetVolumeFraction(vfr);
-   SetPDEFoamVolumeFraction(vfr);
-}
-
-//_____________________________________________________________________
 void TMVA::PDEFoam::FillBinarySearchTree( const Event* ev, Bool_t NoNegWeights )
 {
    // Insert event to internal foam density PDEFoamDistr.
@@ -2596,10 +2586,20 @@ void TMVA::PDEFoam::FillBinarySearchTree( const Event* ev, Bool_t NoNegWeights )
 }
 
 //_____________________________________________________________________
+void TMVA::PDEFoam::DeleteBinarySearchTree()
+{ 
+   // Delete the fDistr object, which contains the binary search tree
+   if(fDistr) delete fDistr; 
+   fDistr = NULL;
+}
+
+//_____________________________________________________________________
 void TMVA::PDEFoam::Init()
 {
-   // Initialize internal foam density PDEFoamDistr
-   GetDistr()->Initialize(GetTotDim());
+   // Initialize binary search tree, stored in object of type
+   // PDEFoamDistr
+   GetDistr()->SetPDEFoam(this);
+   GetDistr()->Initialize();
 }
 
 //_____________________________________________________________________
@@ -2646,7 +2646,7 @@ void TMVA::PDEFoam::ReadStream( istream & istr )
 
    Double_t vfr = -1.;
    istr >> vfr;
-   SetPDEFoamVolumeFraction(vfr);
+   SetVolumeFraction(vfr);
 
    Log() << kVERBOSE << "Foam dimension: " << GetTotDim() << Endl;
 
@@ -2670,7 +2670,7 @@ void TMVA::PDEFoam::PrintStream( ostream & ostr ) const
    ostr << fLastCe << std::endl;
    ostr << fNCells << std::endl;
    ostr << fDim    << std::endl;
-   ostr << GetPDEFoamVolumeFraction() << std::endl;
+   ostr << GetVolumeFraction() << std::endl;
 
    // write class variables: fXmin, fXmax
    for (Int_t i=0; i<GetTotDim(); i++)
@@ -2687,7 +2687,7 @@ void TMVA::PDEFoam::AddXMLTo( void* parent ){
    gTools().AddAttr( variables, "LastCe",           fLastCe );
    gTools().AddAttr( variables, "nCells",           fNCells );
    gTools().AddAttr( variables, "Dim",              fDim );
-   gTools().AddAttr( variables, "VolumeFraction",   GetPDEFoamVolumeFraction() );
+   gTools().AddAttr( variables, "VolumeFraction",   GetVolumeFraction() );
 
    void *xmin_wrap;
    for (Int_t i=0; i<GetTotDim(); i++){
@@ -2712,7 +2712,7 @@ void TMVA::PDEFoam::ReadXML( void* parent ) {
    gTools().ReadAttr( variables, "Dim",            fDim );
    Float_t volfr;
    gTools().ReadAttr( variables, "VolumeFraction", volfr );
-   SetPDEFoamVolumeFraction( volfr );
+   SetVolumeFraction( volfr );
 
    if (fXmin) delete [] fXmin;
    if (fXmax) delete [] fXmax;
