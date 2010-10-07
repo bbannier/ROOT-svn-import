@@ -76,6 +76,9 @@ void TMVA::PDEFoamDistr::Initialize()
    // Initialisation of binary search tree.  
    // Set dimension and create new BinarySearchTree.
 
+   if (!GetPDEFoam())
+      Log() << kFATAL << "<PDEFoamDistr::Initialize()> Pointer to owner not set!" << Endl;
+
    if (fBst) delete fBst;
    fBst = new TMVA::BinarySearchTree();
 
@@ -131,6 +134,9 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
    // In case of mono target regression:
    //  - returns average target value within volume divided by volume
    //    (specified by VolFrac)
+
+   if (!GetPDEFoam())
+      Log() << kFATAL << "<PDEFoamDistr::Density()> Pointer to owner not set!" << Endl;
 
    if (!fBst)
       Log() << kFATAL << "<PDEFoamDistr::Density()> Binary tree not found!"<< Endl;
@@ -201,6 +207,9 @@ void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, s
 {
    // fill the given histograms with signal and background events,
    // which are located in the given cell
+
+   if (!GetPDEFoam())
+      Log() << kFATAL << "<PDEFoamDistr::FillHist> Pointer to owner not set!" << Endl;
 
    // get PDEFoam properties
    Int_t Dim = GetPDEFoam()->GetTotDim(); // dimension of foam
