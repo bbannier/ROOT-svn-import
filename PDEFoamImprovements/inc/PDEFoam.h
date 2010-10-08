@@ -77,8 +77,8 @@ namespace TMVA {
 #endif
 
 namespace TMVA {
-   enum EKernel { kNone, kGaus, kLinN };
-   enum ETargetSelection { kMean, kMpv };
+   enum EKernel { kNone=0, kGaus=1, kLinN=2 };
+   enum ETargetSelection { kMean=0, kMpv=1 };
    enum ECellType { kAll, kActive, kInActive };
 
    // enum type for possible foam cell values
