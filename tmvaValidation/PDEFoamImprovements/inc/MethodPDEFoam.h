@@ -122,18 +122,7 @@ namespace TMVA {
 
       // possible kernels (option)
       EKernel GetKernel( void ) { return fKernel; }
-      UInt_t KernelToUInt(EKernel ker) const {
-         if (ker == kNone)
-            return 0;
-         else if (ker == kGaus)
-            return 1;
-         else if (ker == kLinN)
-            return 2;
-         else {
-            Log() << kFATAL << "Error: unknown kernel!" << Endl;
-            return 0;
-         }
-      }
+      UInt_t KernelToUInt(EKernel ker) const { return UInt_t(ker); }
       EKernel UIntToKernel(UInt_t iker){
          if (iker == 0)
             return kNone;
@@ -146,16 +135,7 @@ namespace TMVA {
             return kNone;
          }
       }
-      UInt_t TargetSelectionToUInt(ETargetSelection ts) const {
-         if (ts == kMean)
-            return 0;
-         else if (ts == kMpv)
-            return 1;
-         else {
-            std::cout << "Error: unknown method TargetSelection!" << std::endl;
-            return 0;
-         }
-      }
+      UInt_t TargetSelectionToUInt(ETargetSelection ts) const { return UInt_t(ts); }
       ETargetSelection UIntToTargetSelection(UInt_t its){
          if (its == 0)
             return kMean;
