@@ -120,52 +120,12 @@ namespace TMVA {
       // ranking of input variables
       const Ranking* CreateRanking() { return 0; }
 
-      // possible kernels (option)
+      // helper functions to convert enum types to UInt_t and back
       EKernel GetKernel( void ) { return fKernel; }
-      UInt_t KernelToUInt(EKernel ker) const {
-         if (ker == kNone)
-            return 0;
-         else if (ker == kGaus)
-            return 1;
-         else if (ker == kLinN)
-            return 2;
-         else {
-            Log() << kFATAL << "Error: unknown kernel!" << Endl;
-            return 0;
-         }
-      }
-      EKernel UIntToKernel(UInt_t iker){
-         if (iker == 0)
-            return kNone;
-         else if (iker == 1)
-            return kGaus;
-         else if (iker == 2)
-            return kLinN;
-         else {
-            Log() << kFATAL << "Error: unknown kernel number: " << iker << Endl;
-            return kNone;
-         }
-      }
-      UInt_t TargetSelectionToUInt(ETargetSelection ts) const {
-         if (ts == kMean)
-            return 0;
-         else if (ts == kMpv)
-            return 1;
-         else {
-            std::cout << "Error: unknown method TargetSelection!" << std::endl;
-            return 0;
-         }
-      }
-      ETargetSelection UIntToTargetSelection(UInt_t its){
-         if (its == 0)
-            return kMean;
-         else if (its == 1)
-            return kMpv;
-         else {
-            std::cout << "Error: unknown method TargetSelection: " << its << std::endl;
-            return kMean;
-         }
-      }
+      UInt_t KernelToUInt(EKernel ker) const { return UInt_t(ker); }
+      EKernel UIntToKernel(UInt_t iker);
+      UInt_t TargetSelectionToUInt(ETargetSelection ts) const { return UInt_t(ts); }
+      ETargetSelection UIntToTargetSelection(UInt_t its);
 
    protected:
 
@@ -241,6 +201,31 @@ namespace TMVA {
 
       ClassDef(MethodPDEFoam,0) // Analysis of PDEFoam discriminant (PDEFoam or Mahalanobis approach)
    };
+
+// ----- inline functions -----
+
+inline EKernel MethodPDEFoam::UIntToKernel(UInt_t iker)
+{
+   // convert UInt_t to EKernel (used for reading weight files)
+   if (iker == 0)       return kNone;
+   else if (iker == 1)  return kGaus;
+   else if (iker == 2)  return kLinN;
+   else {
+      Log() << kFATAL << "Error: unknown kernel number: " << iker << Endl;
+      return kNone;
+   }
+}
+
+inline ETargetSelection MethodPDEFoam::UIntToTargetSelection(UInt_t its)
+{
+   // convert UInt_t to ETargetSelection (used for reading weight files)
+   if (its == 0)       return kMean;
+   else if (its == 1)  return kMpv;
+   else {
+      Log() << kFATAL << "Error: unknown method TargetSelection: " << its << Endl;
+      return kMean;
+   }
+}
 
 } // namespace TMVA
 

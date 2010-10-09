@@ -46,6 +46,9 @@
 #ifndef ROOT_TMVA_Event
 #include "TMVA/Event.h"
 #endif
+#ifndef ROOT_TMVA_PDEFoam
+#include "TMVA/PDEFoam.h"
+#endif
 #ifndef ROOT_TMVA_PDEFoamCell
 #include "TMVA/PDEFoamCell.h"
 #endif
@@ -54,8 +57,6 @@
 #endif
 
 namespace TMVA {
-   enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget };
-
    // options for filling density (used in Density() to build up foam)
    // kEVENT_DENSITY : use event density for foam buildup
    // kDISCRIMINATOR : use N_sig/(N_sig + N_bg) for foam buildup
@@ -69,10 +70,7 @@ namespace TMVA {
    class PDEFoamDistr : public ::TObject  {
 
    private:
-      Int_t fDim;               // number of dimensions
-      Float_t *fXmin;           //[fDim] minimal value of phase space in all dimension
-      Float_t *fXmax;           //[fDim] maximal value of phase space in all dimension
-      Float_t fVolFrac;         // volume fraction (with respect to total phase space
+      PDEFoam *fPDEFoam;        // PDEFoam to refer to
       BinarySearchTree *fBst;   // Binary tree to find events within a volume
       TDensityCalc fDensityCalc;// method of density calculation
 
@@ -85,30 +83,8 @@ namespace TMVA {
       PDEFoamDistr(const PDEFoamDistr&);
       virtual ~PDEFoamDistr();
 
-      // Getter and setter for VolFrac option
-      void SetVolumeFraction(Float_t vfr){fVolFrac=vfr; return;}
-      Float_t GetVolumeFraction(){return fVolFrac;}
-
-      // set foam dimension (mandatory before foam build-up!)
-      void SetDim(Int_t idim);
-
-      // set foam boundaries
-      void SetXmin(Int_t idim,Float_t wmin){fXmin[idim]=wmin; return;}
-      void SetXmax(Int_t idim,Float_t wmax){fXmax[idim]=wmax; return;}
-
-      // transformation functions for event variable into foam boundaries
-      // reason: foam allways has boundaries [0, 1]
-      Float_t VarTransform(Int_t idim, Float_t x){        // transform [xmin, xmax] --> [0, 1]
-         Float_t b=fXmax[idim]-fXmin[idim];
-         return (x-fXmin[idim])/b;
-      }
-      Float_t VarTransformInvers(Int_t idim, Float_t x){  // transform [0, 1] --> [xmin, xmax]
-         Float_t b=fXmax[idim]-fXmin[idim];
-         return x*b + fXmin[idim];
-      }
-
       // density build-up functions
-      void Initialize(Int_t ndim = 2);
+      void Initialize(); // create and initialize binary search tree
       void FillBinarySearchTree( const Event* ev, EFoamType ft, Bool_t NoNegWeights=kFALSE );
 
       // main function used by PDEFoam
@@ -119,13 +95,17 @@ namespace TMVA {
       void FillHist(PDEFoamCell* cell, std::vector<TH1F*>&, std::vector<TH1F*>&, 
 		    std::vector<TH1F*>&, std::vector<TH1F*>&);
 
+      // Getter and setter for the fPDEFoam pointer
+      void SetPDEFoam(PDEFoam *foam){ fPDEFoam = foam; }
+      PDEFoam* GetPDEFoam(){ return fPDEFoam; };
+
       // Getters and setters for foam filling method
       void SetDensityCalc( TDensityCalc dc ){ fDensityCalc = dc; };
       Bool_t FillDiscriminator(){ return fDensityCalc == kDISCRIMINATOR; }
       Bool_t FillTarget0()      { return fDensityCalc == kTARGET;        }
       Bool_t FillEventDensity() { return fDensityCalc == kEVENT_DENSITY; }
 
-      ClassDef(PDEFoamDistr,2) //Class for Event density
+      ClassDef(PDEFoamDistr,3) //Class for Event density
    };  //end of PDEFoamDistr
 
 }  // namespace TMVA
