@@ -576,6 +576,20 @@ void TMVA::MethodBase::TrainMethod()
 }
 
 //_______________________________________________________________________
+void TMVA::MethodBase::GetRegressionDeviation(UInt_t tgtNum, Types::ETreeType type, Double_t& stddev, Double_t& stddev90Percent ) const 
+{
+   if (!DoRegression()) Log() << kFATAL << "Trying to use GetRegressionDeviation() with a classification job" << Endl;
+   Log() << kINFO << "Create results for " << (type==Types::kTraining?"training":"testing") << Endl;
+   ResultsRegression* regRes = (ResultsRegression*)Data()->GetResults(GetMethodName(), Types::kTesting, Types::kRegression);
+   bool truncate = false;
+   TH1F* h1 = regRes->QuadraticDeviation( tgtNum , truncate, 1.);
+   stddev = sqrt(h1->GetMean());
+   truncate = true;
+   TH1F* h2 = regRes->QuadraticDeviation( tgtNum , truncate, 0.95);
+   stddev90Percent = sqrt(h2->GetMean());
+}
+
+//_______________________________________________________________________
 void TMVA::MethodBase::AddRegressionOutput(Types::ETreeType type)
 {
    // prepare tree branch with the method's discriminating variable
