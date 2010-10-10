@@ -254,6 +254,7 @@ namespace TMVA {
       virtual Double_t GetSeparation( TH1*, TH1* ) const;
       virtual Double_t GetSeparation( PDF* pdfS = 0, PDF* pdfB = 0 ) const;
 
+      virtual void GetRegressionDeviation(UInt_t tgtNum, Types::ETreeType type, Double_t& stddev,Double_t& stddev90Percent ) const;
       // ---------- public accessors -----------------------------------------------
 
       // classifier naming (a lot of names ... aren't they ;-)
