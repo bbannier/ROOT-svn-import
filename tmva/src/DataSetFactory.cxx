@@ -655,6 +655,7 @@ void TMVA::DataSetFactory::InitOptions( TMVA::DataSetInfo& dsi,
    // put all to upper case
    splitMode.ToUpper(); mixMode.ToUpper(); normMode.ToUpper();
    // adjust mixmode if same as splitmode option has been set
+   Log() << kINFO << "The splitmode is:" << splitMode << " the mixmode is: " << mixMode << Endl;
    if (mixMode=="SAMEASSPLITMODE") mixMode = splitMode;
    else if (mixMode!=splitMode) 
       Log() << kINFO << "DataSet splitmode="<<splitMode
@@ -1106,7 +1107,7 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
             }
          }
       }else{
-         Log() << kDEBUG << "split 'RANDOM'" << Endl;
+         Log() << kDEBUG << "split '" << splitMode << "'" << Endl;
 
 	 // test if enough events are available
 	 Log() << kDEBUG << "availableundefined : " << availableUndefined << Endl;
