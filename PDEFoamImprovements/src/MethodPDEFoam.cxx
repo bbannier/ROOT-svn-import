@@ -427,7 +427,7 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       Log() << kINFO << "Build up " << foamcaption[i] << Endl;
       // build foam
       fFoam.back()->SetNElements(1);  // init space for 1 variable on every cell (number of events in cell)
-      fFoam.back()->Create(fNmin > 0);
+      fFoam.back()->Create(); // build foam
 
       // Reset Cell Integrals
       fFoam.back()->SetNElements(2);  // init space for 2 variables on every cell (N_ev, RMS)
@@ -465,7 +465,7 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
    Log() << kINFO << "Build up discriminator foam" << Endl;
    // build foam with 1 cell element
    fFoam.back()->SetNElements(1);     // init space for 1 variable on every cell (number of events in cell)
-   fFoam.back()->Create(fNmin > 0);    // build foam and create cell elements if Nmin-cut is activated
+   fFoam.back()->Create();            // build foam
 
    Log() << kVERBOSE << "Resetting cell elements" << Endl;
    // Reset cell elements, used after foam build-up
@@ -516,7 +516,7 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
    Log() << kINFO << "Build mono target regression foam" << Endl;
    // build foam
    fFoam.back()->SetNElements(1);        // to save N_ev during foam build-up
-   fFoam.back()->Create(fNmin > 0);
+   fFoam.back()->Create(); // build foam
 
    Log() << kVERBOSE << "Resetting cell elements" << Endl;
    // Reset Cell Integrals
@@ -564,7 +564,7 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
    Log() << kINFO << "Build multi target regression foam" << Endl;
    // build foam
    fFoam.back()->SetNElements(1);          // to save N_ev during build-up
-   fFoam.back()->Create(fNmin > 0);
+   fFoam.back()->Create(); // build foam
 
    Log() << kVERBOSE << "Resetting cell elements" << Endl;
    // Reset Cell values

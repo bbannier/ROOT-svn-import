@@ -169,7 +169,7 @@ namespace TMVA {
       // ---------- Foam build-up functions
 
       // Internal foam initialization functions
-      void InitCells(Bool_t CreateCellElements);      // Initialisation of all foam cells
+      void InitCells();                   // Initialisation of all foam cells
       Int_t CellFill(Int_t, PDEFoamCell*);// Allocates new empty cell and return its index
       void Explore(PDEFoamCell *Cell);    // Exploration of the new cell, determine <wt>, wtMax etc.
       void DTExplore(PDEFoamCell *Cell);  // Exploration of the new cell according to decision tree logic
@@ -218,7 +218,7 @@ namespace TMVA {
 
       void Init();                    // initialize PDEFoamDistr
       void FillBinarySearchTree( const Event* ev, Bool_t NoNegWeights=kFALSE );
-      void Create(Bool_t CreateCellElements=false);     // build-up foam
+      void Create();              // build-up foam
 
       // function to fill created cell with given value
       void FillFoamCells(const Event* ev, Bool_t NoNegWeights=kFALSE);
