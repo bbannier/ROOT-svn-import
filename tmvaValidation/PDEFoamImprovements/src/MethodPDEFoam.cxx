@@ -392,9 +392,13 @@ void TMVA::MethodPDEFoam::Train( void )
          TrainUnifiedClassification();
    }
 
-   // Delete the binary search tree in order to save memory
-   for(UInt_t i=0; i<fFoam.size(); i++)
+   // check cells and delete the binary search tree in order to save
+   // memory
+   for(UInt_t i=0; i<fFoam.size(); i++) {
+      Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
+      fFoam.at(i)->CheckCells(true);
       if(fFoam.at(i)) fFoam.at(i)->DeleteBinarySearchTree();
+   }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -434,9 +438,6 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
          if ((i==0 && DataInfo().IsSignal(ev)) || (i==1 && !DataInfo().IsSignal(ev)))
             fFoam.back()->FillFoamCells(ev, IgnoreEventsWithNegWeightsInTraining());
       }
-
-      Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
-      fFoam.back()->CheckCells(true);
    }
 }
 
@@ -467,9 +468,6 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
    Log() << kVERBOSE << "Calculate cell discriminator"<< Endl;
    // calc discriminator (and it's error) for each cell
    fFoam.back()->CalcCellDiscr();
-
-   Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
-   fFoam.back()->CheckCells(true);
 }
 
 //_______________________________________________________________________
@@ -511,9 +509,6 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
    Log() << kVERBOSE << "Calculate average cell targets"<< Endl;
    // calc weight (and it's error) for each cell
    fFoam.back()->CalcCellTarget();
-
-   Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
-   fFoam.back()->CheckCells(true);
 }
 
 //_______________________________________________________________________
@@ -548,9 +543,6 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
    // loop over all events -> fill foam cells with number of events
    for (UInt_t k=0; k<GetNEvents(); k++)
       fFoam.back()->FillFoamCells(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
-
-   Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
-   fFoam.back()->CheckCells(true);
 }
 
 //_______________________________________________________________________
