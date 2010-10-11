@@ -316,8 +316,10 @@ void TMVA::PDEFoam::InitCells()
    if(fCells==0) Log() << kFATAL << "Cannot initialize CELLS" << Endl;
 
    // create cell elemets
-   if (GetNmin() > 0)
+   if (GetNmin() > 0) {
+      SetNElements(1); // to save the number of events in the cell
       ResetCellElements(true);
+   }
 
    /////////////////////////////////////////////////////////////////////////////
    //              Single Root Hypercube                                      //
