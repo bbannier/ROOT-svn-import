@@ -427,10 +427,6 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       Log() << kINFO << "Build up " << foamcaption[i] << Endl;
       fFoam.back()->Create(); // build foam
 
-      // Reset Cell Integrals
-      fFoam.back()->SetNElements(2);  // init space for 2 variables on every cell (N_ev, RMS)
-      fFoam.back()->ResetCellElements();
-
       Log() << kVERBOSE << "Filling foam cells with events" << Endl;
       // loop over all events -> fill foam cells
       for (Long64_t k=0; k<GetNEvents(); k++) {
@@ -462,11 +458,6 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
 
    Log() << kINFO << "Build up discriminator foam" << Endl;
    fFoam.back()->Create(); // build foam
-
-   Log() << kVERBOSE << "Resetting cell elements" << Endl;
-   // Reset cell elements, used after foam build-up
-   fFoam.back()->SetNElements(2);     // init space for 2 variables on every cell
-   fFoam.back()->ResetCellElements();
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all training events -> fill foam cells with N_sig and N_Bg
@@ -512,11 +503,6 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
    Log() << kINFO << "Build mono target regression foam" << Endl;
    fFoam.back()->Create(); // build foam
 
-   Log() << kVERBOSE << "Resetting cell elements" << Endl;
-   // Reset Cell Integrals
-   fFoam.back()->SetNElements(2);        // to save N_ev and Target(0)
-   fFoam.back()->ResetCellElements();
-
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all events -> fill foam cells with target
    for (UInt_t k=0; k<GetNEvents(); k++)
@@ -557,11 +543,6 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
 
    Log() << kINFO << "Build multi target regression foam" << Endl;
    fFoam.back()->Create(); // build foam
-
-   Log() << kVERBOSE << "Resetting cell elements" << Endl;
-   // Reset Cell values
-   fFoam.back()->SetNElements(2);          // to save N_ev and RMS
-   fFoam.back()->ResetCellElements();
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all events -> fill foam cells with number of events

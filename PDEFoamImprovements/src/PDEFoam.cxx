@@ -294,6 +294,10 @@ void TMVA::PDEFoam::Create()
    Grow();
 
    TH1::AddDirectory(addStatus);
+
+   // prepare PDEFoam for the filling with events
+   SetNElements(2);     // init space for 2 variables on every cell
+   ResetCellElements(); // reset the cell elements of all active cells
 } // Create
 
 //_____________________________________________________________________
