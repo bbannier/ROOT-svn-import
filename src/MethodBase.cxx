@@ -542,7 +542,11 @@ void TMVA::MethodBase::TrainMethod()
    Log() << kINFO << "Create MVA output for ";
 
    // create PDFs for the signal and background MVA distributions (if required)
-   if (!DoRegression()) {
+   if (DoMulticlass()){
+      Log() << "Multiclass classification on training sample" << Endl;
+      AddMulticlassOutput(Types::kTraining);
+   }
+   else if (!DoRegression()) {
 
       Log() << "classification on training sample" << Endl;
       AddClassifierOutput(Types::kTraining);
@@ -550,9 +554,9 @@ void TMVA::MethodBase::TrainMethod()
          CreateMVAPdfs();
          AddClassifierOutputProb(Types::kTraining);
       }
-
+      
    } else {
-
+      
       Log() << "regression on training sample" << Endl;
       AddRegressionOutput( Types::kTraining );
 
@@ -644,7 +648,7 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
    // use timer
    Timer timer( nEvents, GetName(), kTRUE );
 
-   Log() << kINFO << "Evaluation of " << GetMethodName() << " on "
+   Log() << kINFO << "Multiclass evaluation of " << GetMethodName() << " on "
          << (type==Types::kTraining?"training":"testing") << " sample" << Endl;
 
    regMulti->Resize( nEvents );
