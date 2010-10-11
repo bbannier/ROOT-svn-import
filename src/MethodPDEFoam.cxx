@@ -392,9 +392,13 @@ void TMVA::MethodPDEFoam::Train( void )
          TrainUnifiedClassification();
    }
 
-   // Delete the binary search tree in order to save memory
-   for(UInt_t i=0; i<fFoam.size(); i++)
+   // check cells and delete the binary search tree in order to save
+   // memory
+   for(UInt_t i=0; i<fFoam.size(); i++) {
+      Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
+      fFoam.at(i)->CheckCells(true);
       if(fFoam.at(i)) fFoam.at(i)->DeleteBinarySearchTree();
+   }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -425,13 +429,7 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       }
 
       Log() << kINFO << "Build up " << foamcaption[i] << Endl;
-      // build foam
-      fFoam.back()->SetNElements(1);  // init space for 1 variable on every cell (number of events in cell)
-      fFoam.back()->Create(fNmin > 0);
-
-      // Reset Cell Integrals
-      fFoam.back()->SetNElements(2);  // init space for 2 variables on every cell (N_ev, RMS)
-      fFoam.back()->ResetCellElements();
+      fFoam.back()->Create(); // build foam
 
       Log() << kVERBOSE << "Filling foam cells with events" << Endl;
       // loop over all events -> fill foam cells
@@ -440,9 +438,6 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
          if ((i==0 && DataInfo().IsSignal(ev)) || (i==1 && !DataInfo().IsSignal(ev)))
             fFoam.back()->FillFoamCells(ev, IgnoreEventsWithNegWeightsInTraining());
       }
-
-      Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
-      fFoam.back()->CheckCells(true);
    }
 }
 
@@ -463,14 +458,7 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
       fFoam.back()->FillBinarySearchTree(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
 
    Log() << kINFO << "Build up discriminator foam" << Endl;
-   // build foam with 1 cell element
-   fFoam.back()->SetNElements(1);     // init space for 1 variable on every cell (number of events in cell)
-   fFoam.back()->Create(fNmin > 0);    // build foam and create cell elements if Nmin-cut is activated
-
-   Log() << kVERBOSE << "Resetting cell elements" << Endl;
-   // Reset cell elements, used after foam build-up
-   fFoam.back()->SetNElements(2);     // init space for 2 variables on every cell
-   fFoam.back()->ResetCellElements();
+   fFoam.back()->Create(); // build foam
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all training events -> fill foam cells with N_sig and N_Bg
@@ -480,9 +468,6 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
    Log() << kVERBOSE << "Calculate cell discriminator"<< Endl;
    // calc discriminator (and it's error) for each cell
    fFoam.back()->CalcCellDiscr();
-
-   Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
-   fFoam.back()->CheckCells(true);
 }
 
 //_______________________________________________________________________
@@ -514,14 +499,7 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
       fFoam.back()->FillBinarySearchTree(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
 
    Log() << kINFO << "Build mono target regression foam" << Endl;
-   // build foam
-   fFoam.back()->SetNElements(1);        // to save N_ev during foam build-up
-   fFoam.back()->Create(fNmin > 0);
-
-   Log() << kVERBOSE << "Resetting cell elements" << Endl;
-   // Reset Cell Integrals
-   fFoam.back()->SetNElements(2);        // to save N_ev and Target(0)
-   fFoam.back()->ResetCellElements();
+   fFoam.back()->Create(); // build foam
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all events -> fill foam cells with target
@@ -531,9 +509,6 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
    Log() << kVERBOSE << "Calculate average cell targets"<< Endl;
    // calc weight (and it's error) for each cell
    fFoam.back()->CalcCellTarget();
-
-   Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
-   fFoam.back()->CheckCells(true);
 }
 
 //_______________________________________________________________________
@@ -562,22 +537,12 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
       fFoam.back()->FillBinarySearchTree(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
 
    Log() << kINFO << "Build multi target regression foam" << Endl;
-   // build foam
-   fFoam.back()->SetNElements(1);          // to save N_ev during build-up
-   fFoam.back()->Create(fNmin > 0);
-
-   Log() << kVERBOSE << "Resetting cell elements" << Endl;
-   // Reset Cell values
-   fFoam.back()->SetNElements(2);          // to save N_ev and RMS
-   fFoam.back()->ResetCellElements();
+   fFoam.back()->Create(); // build foam
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all events -> fill foam cells with number of events
    for (UInt_t k=0; k<GetNEvents(); k++)
       fFoam.back()->FillFoamCells(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
-
-   Log() << kVERBOSE << "Check all cells and remove cells with volume 0" << Endl;
-   fFoam.back()->CheckCells(true);
 }
 
 //_______________________________________________________________________

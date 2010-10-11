@@ -238,7 +238,7 @@ void TMVA::PDEFoam::SetXmax(Int_t idim, Double_t wmax)
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::Create(Bool_t CreateCellElements)
+void TMVA::PDEFoam::Create()
 {
    // Basic initialization of FOAM invoked by the user.
    // IMPORTANT: Random number generator and the distribution object has to be
@@ -290,14 +290,18 @@ void TMVA::PDEFoam::Create(Bool_t CreateCellElements)
    // ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| //
 
    // Define and explore root cell(s)
-   InitCells(CreateCellElements);
+   InitCells();
    Grow();
 
    TH1::AddDirectory(addStatus);
+
+   // prepare PDEFoam for the filling with events
+   SetNElements(2);     // init space for 2 variables on every cell
+   ResetCellElements(); // reset the cell elements of all active cells
 } // Create
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::InitCells(Bool_t CreateCellElements)
+void TMVA::PDEFoam::InitCells()
 {
    // Internal subprogram used by Create.
    // It initializes "root part" of the FOAM of the tree of cells.
@@ -316,8 +320,10 @@ void TMVA::PDEFoam::InitCells(Bool_t CreateCellElements)
    if(fCells==0) Log() << kFATAL << "Cannot initialize CELLS" << Endl;
 
    // create cell elemets
-   if (CreateCellElements)
+   if (GetNmin() > 0) {
+      SetNElements(1); // to save the number of events in the cell
       ResetCellElements(true);
+   }
 
    /////////////////////////////////////////////////////////////////////////////
    //              Single Root Hypercube                                      //
