@@ -216,6 +216,25 @@ namespace Math {
             KolmogorovSmirnov2SamplesTest(pvalue, testStat);
       }
    }
+   
+   Double_t GoFTest::operator()(ETestType test, const Char_t* option) const {
+      Double_t result = 0.0;
+      switch (test) {
+         default:
+         case kAD:
+            result = AndersonDarlingTest(option);
+            break;
+         case kAD2s:
+            result = AndersonDarling2SamplesTest(option);
+            break;
+         case kKS:
+            result = KolmogorovSmirnovTest(option);
+            break;
+         case kKS2s:
+            result = KolmogorovSmirnov2SamplesTest(option);
+      }
+      return result;
+   }
 
    void GoFTest::SetCDF() { // Setting parameter-free distributions 
       IGenFunction* cdf = 0;
@@ -399,7 +418,7 @@ namespace Math {
       pvalue = -1;
       testStat = -1;
       if (fTestSampleFromH0) {
-         MATH_ERROR_MSG("AndersonDarling2SamplesTest", "Only 1-sample tests can be issued!");
+         MATH_ERROR_MSG("AndersonDarling2SamplesTest", "Only 1-sample tests can be issued with a 1-sample constructed GoFTest object!");
          return;
       }
       std::vector<Double_t> z(fCombinedSamples); 
@@ -434,13 +453,19 @@ namespace Math {
       testStat = A2;
    }
    
+   Double_t GoFTest::AndersonDarling2SamplesTest(const Char_t* option) const {
+      Double_t pvalue, testStat;
+      AndersonDarling2SamplesTest(pvalue, testStat);
+      return (strncmp(option, "p", 1) == 0 || strncmp(option, "t", 1) != 0) ? pvalue : testStat;   
+   }
+   
 /*
   Taken from (3)
 */ void GoFTest::AndersonDarlingTest(Double_t& pvalue, Double_t& testStat) const {
       pvalue = -1;
       testStat = -1;
       if (!fTestSampleFromH0) {
-         MATH_ERROR_MSG("AndersonDarlingTest", "Only 2-sample tests can be issued!");
+         MATH_ERROR_MSG("AndersonDarlingTest", "Only 2-sample tests can be issued with a 2-sample constructed GoFTest object!");
          return;
       } 
       if (fDist == kUndefined) {
@@ -463,12 +488,18 @@ namespace Math {
       pvalue = PValueAD1Sample(A2);
       testStat = A2;
    }
+   
+   Double_t GoFTest::AndersonDarlingTest(const Char_t* option) const {
+      Double_t pvalue, testStat;
+      AndersonDarlingTest(pvalue, testStat);
+      return (strncmp(option, "p", 1) == 0 || strncmp(option, "t", 1) != 0) ? pvalue : testStat;
+   }
 
    void GoFTest::KolmogorovSmirnov2SamplesTest(Double_t& pvalue, Double_t& testStat) const {
       pvalue = -1;
       testStat = -1;
       if (fTestSampleFromH0) {
-         MATH_ERROR_MSG("KolmogorovSmirnov2SamplesTest", "Only 1-sample tests can be issued!");
+         MATH_ERROR_MSG("KolmogorovSmirnov2SamplesTest", "Only 1-sample tests can be issued with a 1-sample constructed GoFTest object!");
          return;
       }
       const UInt_t na = fSamples[0].size();
@@ -480,6 +511,12 @@ namespace Math {
       pvalue = TMath::KolmogorovTest(na, a, nb, b, 0);
       testStat = TMath::KolmogorovTest(na, a, nb, b, "M");
    }
+   
+   Double_t GoFTest::KolmogorovSmirnov2SamplesTest(const Char_t* option) const {
+      Double_t pvalue, testStat;
+      KolmogorovSmirnov2SamplesTest(pvalue, testStat);
+      return (strncmp(option, "p", 1) == 0 || strncmp(option, "t", 1) != 0) ? pvalue : testStat;    
+   }
 
 /* 
    Algorithm taken from (3) in page 737
@@ -487,7 +524,7 @@ namespace Math {
       pvalue = -1;
       testStat = -1;
       if (!fTestSampleFromH0) {
-         MATH_ERROR_MSG("KolmogorovSmirnovTest", "Only 2-sample tests can be issued!");
+         MATH_ERROR_MSG("KolmogorovSmirnovTest", "Only 2-sample tests can be issued with a 2-sample constructed GoFTest object!");
          return;
       }
       if (fDist == kUndefined) {
@@ -505,6 +542,12 @@ namespace Math {
       }
       pvalue = TMath::KolmogorovProb(Dn * (TMath::Sqrt(n) + 0.12 + 0.11 / TMath::Sqrt(n)));
       testStat = Dn;
+   }
+   
+   Double_t GoFTest::KolmogorovSmirnovTest(const Char_t* option) const {
+      Double_t pvalue, testStat;
+      KolmogorovSmirnovTest(pvalue, testStat);
+      return (strncmp(option, "p", 1) == 0 || strncmp(option, "t", 1) != 0) ? pvalue : testStat;
    }
 
 } // ROOT namespace

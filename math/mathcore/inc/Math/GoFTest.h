@@ -43,7 +43,7 @@ public:
       kPDF                  // Default value
    };
    
-   enum ETestType { // Goodness of Fit test types for using with the class's unary funtion as a shorthand for the in-built methods
+   enum ETestType { // Goodness of Fit test types for using with the class's unary funtions as a shorthand for the in-built methods
       kAD,   // Anderson-Darling Test. Default value
       kAD2s, // Anderson-Darling 2-Samples Test
       kKS,   // Kolmogorov-Smirnov Test
@@ -122,7 +122,8 @@ public:
   and described and taken from (1)
   Scholz F.W., Stephens M.A. (1987), K-sample Anderson-Darling Tests, Journal of the American Statistical Association, 82, 918–924. (2-samples variant implemented)
 */ void AndersonDarling2SamplesTest(Double_t& pvalue, Double_t& testStat) const;
-  
+   Double_t AndersonDarling2SamplesTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "A2"
+
 /*
   The Anderson-Darling 1-Sample Test algorithm for a specific distribution is described at 
   http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/andedarl.htm
@@ -131,13 +132,15 @@ public:
   and described and taken from (3)
   Lewis P.A.W. (1961), The Annals of Mathematical Statistics, Distribution of the Anderson-Darling Statistic, Volume 32, Number 4, 1118-1124. 
 */ void AndersonDarlingTest(Double_t& pvalue, Double_t& testStat) const;
-  
+   Double_t AndersonDarlingTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "A2"
+
 /*
   The Kolmogorov-Smirnov 2-Samples Test algorithm is described at
   http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ks2samp.htm
   and described and taken from
   http://root.cern.ch/root/html/TMath.html#TMath:KolmogorovTest
 */ void KolmogorovSmirnov2SamplesTest(Double_t& pvalue, Double_t& testStat) const;
+   Double_t KolmogorovSmirnov2SamplesTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "Dn"
 
 /*
   The Kolmogorov-Smirnov 1-Sample Test algorithm for a specific distribution is described at
@@ -145,9 +148,11 @@ public:
   and described and taken from (4)
   Press W. H., Teukolsky S.A., Vetterling W.T., Flannery B.P. (2007), Numerical Recipes - The Art of Scientific Computing (Third Edition), Cambridge Univerdity Press
 */ void KolmogorovSmirnovTest(Double_t& pvalue, Double_t& testStat) const;
-  
-   // The class's unary function
+   Double_t KolmogorovSmirnovTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "Dn"
+
+   // The class's unary functions
    void operator()(ETestType test, Double_t& pvalue, Double_t& testStat) const;
+   Double_t operator()(ETestType test = kAD, const Char_t* option = "p") const; // Returns default Anderson Darling 1-Sample Test and default p-value; option "t" returns the test statistic value specific to the test type
 
 private:
   
