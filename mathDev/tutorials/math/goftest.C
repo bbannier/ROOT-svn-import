@@ -27,7 +27,7 @@
 void goftest() {
 
    // ---------------------------------------------------------------------------------------------------------------------------------------------------------
-   // C a s e  1 :  T e s t  G o o d n e s s  o f  F i t  f o r  a  l o g N o r m a l  r a n d o m  s a m p l e  ( i n b u i l t  d i s t r i b u t i o n )
+   // C a s e  1 :  T e s t  G o o d n e s s  o f  F i t  f o r  a  L o g N o r m a l  r a n d o m  s a m p l e  ( i n b u i l t  d i s t r i b u t i o n )
    // ---------------------------------------------------------------------------------------------------------------------------------------------------------
    
    UInt_t nEvents1 = 1000;
@@ -67,18 +67,15 @@ void goftest() {
    /* Possible calls for the 1-sample Anderson - DarlingTest test */
    /*-------------------------------------------------------------*/
    
-   /* a) Returning the Anderson-Darling standardized test statistic and the p-value by homonimous method call */
-   Double_t pvalueAD_1;
-   Double_t A2_1;
-   goftest_1->AndersonDarlingTest(pvalueAD_1, A2_1); 
+   /* a) Returning the Anderson-Darling standardized test statistic */
+   Double_t A2_1 = goftest_1-> AndersonDarlingTest("t");
+   Double_t A2_2 = (*goftest_1)(ROOT::Math::GoFTest::kAD, "t");
+   assert(A2_1 == A2_2);
    
   
-   /* b) Returning the p-value for the Anderson-Darling test statistic and the p-value by functor call */
-   Double_t pvalueAD_2;
-   Double_t A2_2;
-   (*goftest_1)(ROOT::Math::GoFTest::kAD, pvalueAD_2, A2_2);
-   
-   assert(A2_1 == A2_2);
+   /* b) Returning the p-value for the Anderson-Darling test statistic */
+   Double_t pvalueAD_1 = goftest_1-> AndersonDarlingTest(); // p-value is the default choice
+   Double_t pvalueAD_2 = (*goftest_1)(); // p-value and Anderson - Darling Test are the default choices
    assert(pvalueAD_1 == pvalueAD_2);
    
    /* Rebuild the test using the default 1-sample constructor */
@@ -90,25 +87,22 @@ void goftest() {
    /* Possible calls for the 1-sample Kolmogorov - Smirnov test */
    /*-----------------------------------------------------------*/              
        
-   /* a) Returning the Kolmogorov-Smirnov standardized test statistic and the p-value by homonimous method call */
-   Double_t pvalueKS_1;
-   Double_t Dn_1;
-   goftest_1->KolmogorovSmirnovTest(pvalueKS_1, Dn_1);
-   
-   /* b) Returning the Kolmogorov-Smirnov standardized test statistic and the p-value by functor call */
-   Double_t pvalueKS_2;
-   Double_t Dn_2;
-   (*goftest_1)(ROOT::Math::GoFTest::kKS, pvalueKS_2, Dn_2);
-   
+   /* a) Returning the Kolmogorov-Smirnov standardized test statistic */
+   Double_t Dn_1 = goftest_1-> KolmogorovSmirnovTest("t");
+   Double_t Dn_2 = (*goftest_1)(ROOT::Math::GoFTest::kKS, "t");
    assert(Dn_1 == Dn_2);
+   
+   /* b) Returning the p-value for the 1-sample Kolmogorov - Smirnov test statistc */
+   Double_t pvalueKS_1 = goftest_1-> KolmogorovSmirnovTest(); // p-value is the default choice
+   Double_t pvalueKS_2 = (*goftest_1)(ROOT::Math::GoFTest::kKS);
    assert(pvalueKS_1 == pvalueKS_2);
    
    /* Valid but incorrect calls for the 2-sample methods of the 1-samples constucted goftest_1 */
 #ifdef TEST_ERROR_MESSAGE
-   Double_t pvalueAD, pvalueKS; 
-   Double_t A2, Dn;
-   goftest_1->KolmogorovSmirnov2SamplesTest(pvalueKS, Dn); // Issues error message 
-   (*goftest_1)(ROOT::Math::GoFTest::kAD2s, pvalueAD, A2); // Issues error message
+   Double_t A2 = (*goftest_1)(ROOT::Math::GoFTest::kAD2s, "t");       // Issues error message
+   Double_t pvalueAD = (*goftest_1)(ROOT::Math::GoFTest::kAD2s, "p"); // Issues error message
+   Double_t Dn = (*goftest_1)(ROOT::Math::GoFTest::kKS2s, "t");        // Issues error message
+   Double_t pvalueKS = (*goftest_1)(ROOT::Math::GoFTest::kKS2s, "p"); // Issues error message
    assert(pvalueAD == pvalueKS);
    assert(A2 == Dn);
 #endif
@@ -204,8 +198,8 @@ void goftest() {
    pt2->SetTextFont(20);
    pt2->SetTextColor(4);
    sprintf(str2, "p-value for K-S 2-smps test: %f", pvalueKS_1);
-   pt2-> AddText(str2);
-   pt2-> Draw();
+   pt2->AddText(str2);
+   pt2->Draw();
    
       
    // -----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -264,8 +258,8 @@ void goftest() {
    ROOT::Math::GoFTest* goftest_3b = new ROOT::Math::GoFTest(nEvents3, sample3, cdf, ROOT::Math::GoFTest::kCDF, xmin, xmax);  // Need to specify an interval 
 
    /* Returning the Anderson-Darling standardized test statistic and the p-value */
-   goftest_3a->AndersonDarlingTest(pvalueAD_1, A2_1);
-   goftest_3b->AndersonDarlingTest(pvalueAD_2, A2_2);
+   pvalueAD_1 = goftest_3a->AndersonDarlingTest(); // p-value is the default choice
+   pvalueAD_2 = (*goftest_3b)(); // p-value and Anderson - Darling Test are the default choices
    
    /* Checking consistency between both tests */ 
    std::cout << " \n\nTEST with LANDAU distribution:\t";
