@@ -2439,6 +2439,19 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    // - colors - whether to fill cells with colors or shades of grey
    //
    // - log_colors - whether to fill cells with colors (logarithmic scale)
+   //
+   // Example:
+   //
+   //   The following commands load a mono-target regression foam from
+   //   file 'foam.root' and create a ROOT macro 'output.C', which
+   //   draws all PDEFoam cells with little boxes.  The latter are
+   //   filled with colors according to the target value stored in the
+   //   cell.  Also the cell number is drawn.
+   //
+   //   TFile file("foam.root");
+   //   TMVA::PDEFoam *foam = (TMVA::PDEFoam*) gDirectory->Get("MonoTargetRegressionFoam");
+   //   foam->RootPlot2dim("output.C","cell_value,cellnumber");
+   //   gROOT->Macro("output.C");
 
    if (GetTotDim() != 2)
       Log() << kFATAL << "RootPlot2dim() can only be used with "
@@ -2469,14 +2482,12 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    if (opt.Contains("cellnumber"))
       plotcellnumber = kTRUE;
 
+   // open file (root macro)
    std::ofstream outfile(filename, std::ios::out);
-   Double_t x1,y1,x2,y2,x,y;
-   Long_t   iCell;
-   Double_t offs =0.01;
-   Double_t lpag   =1-2*offs;
 
    outfile<<"{" << std::endl;
 
+   // declare boxes and set the fill styles
    if (!colors) { // define grayscale colors from light to dark,
       // starting from color index 1000
       outfile << "TColor *graycolors[100];" << std::endl;
@@ -2491,6 +2502,7 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    outfile<<"a->SetFillStyle(0);"<<std::endl;  // big frame
    outfile<<"a->SetLineWidth(4);"<<std::endl;
    outfile<<"TBox *b1=new TBox();"<<std::endl;  // single cell
+   outfile<<"TText*t=new TText();"<<endl;  // text for numbering
    if (fillcells) {
       outfile << (colors ? "gStyle->SetPalette(1, 0);" : "gStyle->SetPalette(0);") 
               << std::endl;
@@ -2502,19 +2514,18 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
       outfile <<"b1->SetFillStyle(0);"<<std::endl;
    }
 
-   Int_t lastcell = fLastCe;
-
    if (fillcells)
       (colors ? gStyle->SetPalette(1, 0) : gStyle->SetPalette(0) );
 
    Double_t zmin = 1E8;  // minimal value (for color calculation)
    Double_t zmax = -1E8; // maximal value (for color calculation)
 
-   Double_t value=0.;
+   // if cells shall be filled, calculate minimal and maximal plot
+   // value --> store in zmin and zmax
    if (fillcells) {	       
-      for (iCell=1; iCell<=lastcell; iCell++) {
+      for (Long_t iCell=1; iCell<=fLastCe; iCell++) {
 	 if ( fCells[iCell]->GetStat() == 1) {
-	    value = GetCellValue(fCells[iCell], cell_value);
+	    Double_t value = GetCellValue(fCells[iCell], cell_value);
 	    if (value<zmin)
 	       zmin=value;
 	    if (value>zmax)
@@ -2539,15 +2550,17 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    outfile << "Double_t zmin = "<< zmin << ";" << std::endl;
    outfile << "Double_t zmax = "<< zmax << ";" << std::endl;
 
-   // Next lines from THistPainter.cxx
-
+   Double_t x1,y1,x2,y2,x,y; // box and text coordintates
+   Double_t offs  = 0.01;
+   Double_t lpag  = 1-2*offs;
    Int_t ncolors  = colors ? gStyle->GetNumberOfColors() : 100;
-   Double_t dz    = zmax - zmin;
-   Double_t scale = (ncolors-1)/dz;
+   Double_t scale = (ncolors-1)/(zmax - zmin);
+   PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
 
-   PDEFoamVect  cellPosi(GetTotDim()); PDEFoamVect  cellSize(GetTotDim());
+   // loop over cells and draw a box for every cell (and maybe the
+   // cell number as well)
    outfile << "// =========== Rectangular cells  ==========="<< std::endl;
-   for (iCell=1; iCell<=lastcell; iCell++) {
+   for (Long_t iCell=1; iCell<=fLastCe; iCell++) {
       if ( fCells[iCell]->GetStat() == 1) {
          fCells[iCell]->GetHcub(cellPosi,cellSize);
          x1 = offs+lpag*(cellPosi[0]);             
@@ -2555,21 +2568,23 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
          x2 = offs+lpag*(cellPosi[0]+cellSize[0]); 
          y2 = offs+lpag*(cellPosi[1]+cellSize[1]);
          
-         value = 0;
          if (fillcells) {
-	    value = GetCellValue(fCells[iCell], cell_value);
+	    // get cell value
+	    Double_t value = GetCellValue(fCells[iCell], cell_value);
 
             if (log_colors) {
                if (value<1.) value=1;
                value = TMath::Log(value);
             }
 
+	    // calculate fill color
             Int_t color;
             if (colors)
                color = gStyle->GetColorPalette(Int_t((value-zmin)*scale));
             else
                color = 1000+(Int_t((value-zmin)*scale));
 
+	    // set fill color of box b1
             outfile << "b1->SetFillColor(" << color << ");" << std::endl;
          }
 
@@ -2580,7 +2595,6 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
 
          //     cell number
 	 if (plotcellnumber) {
-	    outfile<<"TText*t=new TText();"<<endl;  // text for numbering
 	    outfile<<"t->SetTextColor(4);"<<endl;
 	    if(fLastCe<51)
 	       outfile<<"t->SetTextSize(0.025);"<<endl;  // text for numbering
