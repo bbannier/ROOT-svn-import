@@ -2412,15 +2412,33 @@ void TMVA::PDEFoam::OutputGrow( Bool_t finished )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::RootPlot2dim( const TString& filename, std::string what,
+void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
                                   Bool_t CreateCanvas, Bool_t colors, Bool_t log_colors )
 {
-   // Debugging tool which plots 2-dimensional cells as rectangles
-   // in C++ format readable for root.
+   // Debugging tool which plots the cells of a 2-dimensional PDEFoam
+   // as rectangles in C++ format readable for ROOT.
    //
    // Parameters:
    // - filename - filename of ouput root macro
+   //
+   // - opt - cell_value, rms, rms_ov_mean
+   //   If cell_value is set, the following values will be filled into
+   //   the result histogram:
+   //    - number of events - in case of classification with 2 separate
+   //                         foams or multi-target regression
+   //    - discriminator    - in case of classification with one
+   //                         unified foam
+   //    - target           - in case of mono-target regression
+   //   If none of {cell_value, rms, rms_ov_mean} is given, the cells
+   //   will not be filled.  
+   //   If 'opt' contains the string 'cellnumber', the index of
+   //   each cell is draw in addition.
+   //
    // - CreateCanvas - whether to create a new canvas or not
+   //
+   // - colors - whether to fill cells with colors or shades of grey
+   //
+   // - log_colors - whether to fill cells with colors (logarithmic scale)
 
    if (GetTotDim() != 2)
       Log() << kFATAL << "RootPlot2dim() can only be used with "
@@ -2428,34 +2446,28 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, std::string what,
 
    // select value to plot
    ECellValue cell_value = kNev;
+   EFoamType  foam_type  = GetFoamType();
    Bool_t plotcellnumber = kFALSE;
    Bool_t fillcells      = kTRUE;
-
-   if (what == "mean")
-      cell_value = kMeanValue;
-   else if (what == "nevents")
-      cell_value = kNev;
-   else if (what == "density")
-      cell_value = kDensity;
-   else if (what == "rms")
-      cell_value = kRms;
-   else if (what == "rms_ov_mean")
+   if (opt.Contains("cell_value")){
+      if (foam_type == kSeparate || foam_type == kMultiTarget){
+         cell_value = kNev;
+      } else if (foam_type == kDiscr){
+         cell_value = kDiscriminator;
+      } else if (foam_type == kMonoTarget){
+         cell_value = kTarget0;
+      } else {
+         Log() << kFATAL << "unknown foam type" << Endl;
+      }
+   } else if (opt.Contains("rms_ov_mean")){
       cell_value = kRmsOvMean;
-   else if (what == "discr")
-      cell_value = kDiscriminator;
-   else if (what == "discrerr")
-      cell_value = kDiscriminatorError;
-   else if (what == "monotarget")
-      cell_value = kTarget0;
-   else if (what == "cellnumber")
-      plotcellnumber = kTRUE;
-   else if (what == "nofill") {
-      plotcellnumber = kTRUE;
-      fillcells = kFALSE;
+   } else if (opt.Contains("rms")){
+      cell_value = kRms;
    } else {
-      cell_value = kMeanValue;
-      Log() << kWARNING << "Unknown option, plotting mean!" << Endl;
+      fillcells = kFALSE;
    }
+   if (opt.Contains("cellnumber"))
+      plotcellnumber = kTRUE;
 
    std::ofstream outfile(filename, std::ios::out);
    Double_t x1,y1,x2,y2,x,y;
@@ -2499,21 +2511,20 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, std::string what,
    Double_t zmax = -1E8; // maximal value (for color calculation)
 
    Double_t value=0.;
-   for (iCell=1; iCell<=lastcell; iCell++) {
-      if ( fCells[iCell]->GetStat() == 1) {
-         if (plotcellnumber)
-            value = iCell;
-         else
-            value = GetCellValue(fCells[iCell], cell_value);
-         if (value<zmin)
-            zmin=value;
-         if (value>zmax)
-            zmax=value;
+   if (fillcells) {	       
+      for (iCell=1; iCell<=lastcell; iCell++) {
+	 if ( fCells[iCell]->GetStat() == 1) {
+	    value = GetCellValue(fCells[iCell], cell_value);
+	    if (value<zmin)
+	       zmin=value;
+	    if (value>zmax)
+	       zmax=value;
+	 }
       }
+      outfile << "// observed minimum and maximum of distribution: " << std::endl;
+      outfile << "// Double_t zmin = "<< zmin << ";" << std::endl;
+      outfile << "// Double_t zmax = "<< zmax << ";" << std::endl;
    }
-   outfile << "// observed minimum and maximum of distribution: " << std::endl;
-   outfile << "// Double_t zmin = "<< zmin << ";" << std::endl;
-   outfile << "// Double_t zmax = "<< zmax << ";" << std::endl;
 
    if (log_colors) {
       if (zmin<1)
@@ -2546,10 +2557,7 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, std::string what,
          
          value = 0;
          if (fillcells) {
-            if (plotcellnumber) 
-               value = iCell;
-            else 
-               value = GetCellValue(fCells[iCell], cell_value);
+	    value = GetCellValue(fCells[iCell], cell_value);
 
             if (log_colors) {
                if (value<1.) value=1;
@@ -2571,10 +2579,19 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, std::string what,
             outfile<<"b2->DrawBox("<<x1<<","<<y1<<","<<x2<<","<<y2<<");"<<std::endl;
 
          //     cell number
-         if (lastcell<=250) {
-            x = offs+lpag*(cellPosi[0]+0.5*cellSize[0]); 
-            y = offs+lpag*(cellPosi[1]+0.5*cellSize[1]);
-         }
+	 if (plotcellnumber) {
+	    outfile<<"TText*t=new TText();"<<endl;  // text for numbering
+	    outfile<<"t->SetTextColor(4);"<<endl;
+	    if(fLastCe<51)
+	       outfile<<"t->SetTextSize(0.025);"<<endl;  // text for numbering
+	    else if(fLastCe<251)
+	       outfile<<"t->SetTextSize(0.015);"<<endl;
+	    else
+	       outfile<<"t->SetTextSize(0.008);"<<endl;
+	    x = offs+lpag*(cellPosi[0]+0.5*cellSize[0]); 
+	    y = offs+lpag*(cellPosi[1]+0.5*cellSize[1]);
+	    outfile<<"t->DrawText("<<x<<","<<y<<","<<"\""<<iCell<<"\""<<");"<<endl;
+	 }
       }
    }
    outfile<<"// ============== End Rectangles ==========="<< std::endl;
