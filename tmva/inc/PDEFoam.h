@@ -321,7 +321,7 @@ namespace TMVA {
       TH1D* Draw1Dim(const char *opt, Int_t nbin);
 
       // Generates C++ code (root macro) for drawing foam with boxes (only 2-dim!)
-      void RootPlot2dim( const TString& filename, std::string what,
+      void RootPlot2dim( const TString& filename, TString opt,
                          Bool_t CreateCanvas = kTRUE, Bool_t colors = kTRUE, 
                          Bool_t log_colors = kFALSE  );
       
