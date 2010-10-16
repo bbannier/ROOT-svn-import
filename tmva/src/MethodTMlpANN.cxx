@@ -346,7 +346,7 @@ void TMVA::MethodTMlpANN::AddWeightsXMLTo( void* parent ) const
    void *ch=NULL;
    while (inf.getline(temp,256)) {
       TString dummy(temp);
-      std::cout << dummy << std::endl;
+      //std::cout << dummy << std::endl; // remove annoying debug printout with std::cout
       if (dummy.BeginsWith('#')) {
          if (ch!=0) gTools().AddRawLine( ch, data.Data() );
          dummy = dummy.Strip(TString::kLeading, '#');
