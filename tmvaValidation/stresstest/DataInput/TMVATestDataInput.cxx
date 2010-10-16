@@ -759,6 +759,34 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
                                            "SplitMode=Random:NormMode=NumEvents:!V" );  
       thetest->RegisterAssertion(2000,2000,2000,2000,"testtrainmixed");
    }
+   else if (index==132) {
+      std::cout << "signal and background divided into separate trees depending on phase space, signal and background med-sample require additional tree weight of 2"<<std::endl;
+      factory->AddSignalTree    ( TreeSlow, 1.0);
+      factory->AddSignalTree    ( TreeSmed, 2.0);
+      factory->AddSignalTree    ( TreeShig,  1.0);
+      factory->AddBackgroundTree( TreeBlow,  1.0);
+      factory->AddBackgroundTree( TreeBmed,  2.0);
+      factory->AddBackgroundTree( TreeBhig,  1.0);
+      factory->SetSignalWeightExpression("weight");
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTrain_Signal=200:nTrain_Background=200:nTest_Signal=200:nTest_Background=200:SplitMode=Alternate:NormMode=NumEvents:!V" );  
+      thetest->RegisterAssertion(200,200,200,200,"testtrainmixed");
+   }
+   else if (index==133) {
+      std::cout << "signal and background divided into separate trees depending on phase space, signal and background med-sample require additional tree weight of 2"<<std::endl;
+      factory->AddSignalTree    ( TreeSlow, 1.0);
+      factory->AddSignalTree    ( TreeSmed, 2.0);
+      factory->AddSignalTree    ( TreeShig,  1.0);
+      factory->AddBackgroundTree( TreeBlow,  1.0);
+      factory->AddBackgroundTree( TreeBmed,  2.0);
+      factory->AddBackgroundTree( TreeBhig,  1.0);
+      factory->SetSignalWeightExpression("weight");
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTrain_Signal=200:nTrain_Background=200:nTest_Signal=200:nTest_Background=200:SplitMode=Random:NormMode=NumEvents:!V" );  
+      thetest->RegisterAssertion(200,200,200,200,"testtrainmixed");
+   }
 
    else {
       std::cout <<" unknown index mode exiting"<<std::endl;
