@@ -385,6 +385,9 @@ void TMVA::Factory::AddTree( TTree* tree, const TString& className, Double_t wei
 void TMVA::Factory::AddTree( TTree* tree, const TString& className, Double_t weight, 
                              const TCut& cut, Types::ETreeType tt )
 {
+   if(!tree)
+      Log() << kFATAL << "Tree does not exist (empty pointer)." << Endl;
+
    DefaultDataSetInfo().AddClass( className );
 
    // set analysistype to "kMulticlass" if more than two classes and analysistype == kNoAnalysisType
