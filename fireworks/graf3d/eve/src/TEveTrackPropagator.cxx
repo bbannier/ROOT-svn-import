@@ -267,10 +267,10 @@ void TEveTrackPropagator::ElementChanged(Bool_t update_scenes, Bool_t redraw)
    // Virtual from TEveElement.
 
    TEveTrack* track;
-   std::list<TEveElement*>::iterator i = fBackRefs.begin();
+   RefMap_i i = fBackRefs.begin();
    while (i != fBackRefs.end())
    {
-      track = dynamic_cast<TEveTrack*>(*i);
+      track = dynamic_cast<TEveTrack*>(i->first);
       track->StampObjProps();
       ++i;
    }
@@ -752,10 +752,10 @@ void TEveTrackPropagator::RebuildTracks()
    // Rebuild all tracks using this render-style.
 
    TEveTrack* track;
-   std::list<TEveElement*>::iterator i = fBackRefs.begin();
+   RefMap_i i = fBackRefs.begin();
    while (i != fBackRefs.end())
    {
-      track = dynamic_cast<TEveTrack*>(*i);
+      track = dynamic_cast<TEveTrack*>(i->first);
       track->MakeTrack();
       track->StampObjProps();
       ++i;
