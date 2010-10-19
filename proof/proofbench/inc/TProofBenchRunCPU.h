@@ -52,6 +52,7 @@ private:
    Int_t fStart;                 //start number of workers to scan
    Int_t fStop;                  //stop number of workers to scan
    Int_t fStep;                  //test to be performed every fStep workers
+   Int_t fNx;
 
    Int_t fDraw;                  //draw switch
    Int_t fDebug;                 //debug switch
@@ -76,7 +77,8 @@ protected:
    TString BuildPatternName(const TString& objname,
                             const TString& delimiter="_");
    TString BuildNewPatternName(const TString& objname, Int_t nactive,
-                               Int_t tries, const TString& delimiter="_");
+                               Int_t tries, Int_t nx,
+                               const TString& delimiter="_");
    TString BuildProfileName(const TString& objname, const TString& type,
                             const TString& delimiter="_");
    TString BuildProfileTitle(const TString& objname, const TString& type,
@@ -88,12 +90,12 @@ public:
                      Int_t nhists=16, TDirectory* dirproofbench=0,
                      TProof* proof=0, TProofNodes* nodes=0,
                      Long64_t nevents=1000000, Int_t ntries=2, Int_t start=1,
-                     Int_t stop=-1, Int_t step=1, Int_t draw=0, Int_t debug=0);
+                     Int_t stop=-1, Int_t step=1, Int_t nx=0, Int_t draw=0, Int_t debug=0);
 
    virtual ~TProofBenchRunCPU();
 
    void Run(Long64_t nevents, Int_t start, Int_t stop, Int_t step, Int_t ntries,
-            Int_t debug, Int_t draw);
+            Int_t nx, Int_t debug, Int_t draw);
 
    void DrawPerfProfiles();
 
@@ -106,6 +108,7 @@ public:
    void SetStart(Int_t start);
    void SetStop(Int_t stop);
    void SetStep(Int_t step);
+   void SetNx(Int_t nx);
    void SetDraw(Int_t draw);
    void SetDebug(Int_t debug);
 
@@ -118,6 +121,7 @@ public:
    Int_t GetStart() const;
    Int_t GetStop() const;
    Int_t GetStep() const;
+   Int_t GetNx() const;
    Int_t GetDraw() const;
    Int_t GetDebug() const;
    TDirectory* GetDirProofBench() const;

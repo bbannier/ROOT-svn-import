@@ -48,10 +48,10 @@ ClassImp(TProofBenchRunCPU)
 TProofBenchRunCPU::TProofBenchRunCPU(TProofBenchRun::EHistType histtype,
                         Int_t nhists, TDirectory* dirproofbench, TProof* proof,
                         TProofNodes* nodes, Long64_t nevents, Int_t ntries,
-                        Int_t start, Int_t stop, Int_t step, Int_t draw,
-                        Int_t debug):
+                        Int_t start, Int_t stop, Int_t step, Int_t nx,
+                        Int_t draw, Int_t debug):
 fProof(proof), fHistType(histtype), fNHists(nhists), fNEvents(nevents),
-fNTries(ntries), fStart(start), fStop(stop), fStep(step), fDraw(draw),
+fNTries(ntries), fStart(start), fStop(stop), fStep(step), fNx(nx), fDraw(draw),
 fDebug(debug), fDirProofBench(dirproofbench), fNodes(nodes), fPerfStats(0),
 fListPerfProfiles(0), fCPerfProfiles(0), fName(0)
 {
@@ -92,7 +92,8 @@ TProofBenchRunCPU::~TProofBenchRunCPU()
 
 //______________________________________________________________________________
 void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
-                            Int_t step, Int_t ntries, Int_t debug, Int_t draw)
+                            Int_t step, Int_t ntries, Int_t nx, Int_t debug,
+                            Int_t draw)
 {
    // Run benchmark
    // Input parameters
@@ -115,8 +116,18 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
    stop=(stop==-1)?fStop:stop;
    step=(step==-1)?fStep:step;
    ntries=(ntries==-1)?fNTries:ntries;
+   nx=(nx==-1)?fNx:nx;
    debug=(debug==-1)?fDebug:debug;
    draw=(draw==-1)?fDraw:draw;
+
+   if (nx==0){
+   }
+   else if (nx==1){
+      const Int_t minnworkersanode=fNodes->GetMinNWorkersANode();
+      if (stop>minnworkersanode){
+         stop=minnworkersanode;
+      }
+   }
 
    if (!fListPerfProfiles){
       fListPerfProfiles=new TList();
@@ -144,7 +155,12 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
                             profile_perfstat_event_title, ndiv, ns_min, ns_max);
 
       profile_perfstat_event->SetDirectory(fDirProofBench);
-      profile_perfstat_event->GetXaxis()->SetTitle("Active Slaves");
+      if (nx==0){
+         profile_perfstat_event->GetXaxis()->SetTitle("Active Slaves");
+      }
+      else if (nx==1){
+         profile_perfstat_event->GetXaxis()->SetTitle("Active Slaves/Node");
+      }
       profile_perfstat_event->GetYaxis()->SetTitle("Events/sec");
       profile_perfstat_event->SetMarkerStyle(21);
 
@@ -167,7 +183,12 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
                          profile_queryresult_event_title, ndiv, ns_min, ns_max);
 
       profile_queryresult_event->SetDirectory(fDirProofBench);
-      profile_queryresult_event->GetXaxis()->SetTitle("Active Slaves");
+      if (nx==0){
+         profile_queryresult_event->GetXaxis()->SetTitle("Active Slaves");
+      }
+      else if (nx==1){
+         profile_queryresult_event->GetXaxis()->SetTitle("Active Slaves/Node");
+      }
       profile_queryresult_event->GetYaxis()->SetTitle("Events/sec");
       profile_queryresult_event->SetMarkerStyle(22);
 
@@ -202,24 +223,57 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
    //Delete the list of performance statistics trees
    fPerfStats->Delete();
 
-   Info("Run", "Running CPU-bound tests; %d ~ %d active worker(s),"
-               " every %d worker(s).", start, stop, step);
+   if (nx==0){
+      Info("Run", "Running CPU-bound tests; %d ~ %d active worker(s),"
+                  " every %d worker(s).", start, stop, step);
+   }
+   else if (nx==1){
+      Info("Run", "Running CPU-bound tests; %d ~ %d active worker(s)/node,"
+                  " every %d worker(s)/node.", start, stop, step);
+   }
 
    for (Int_t nactive=start; nactive<=stop; nactive+=step) {
-      fProof->SetParallel(nactive);
+      if (nx==0){
+         fProof->SetParallel(nactive);
+      }
+      else if (nx==1){
+         TString workers;
+         workers.Form("%dx", nactive);
+         fNodes->ActivateWorkers(workers);
+         if (fNodes->ActivateWorkers(workers)<0){
+            Error("Run", "Could not activate the requestednumber of" 
+                  " workers/node on the cluster; Skipping the test point"
+                  " (%d workers/node).", nactive);
+            continue;
+         }
+      }
+
       for (Int_t j=0; j<ntries; j++) {
 
-         Info("Run", "Running CPU-bound tests with %d active worker(s)."
-                     " %dth trial.", nactive, j);
+         if (nx==0){
+            Info("Run", "Running CPU-bound tests with %d active worker(s)."
+                        " %dth trial.", nactive, j);
+         }
+         else if (nx==1){
+            Info("Run", "Running CPU-bound tests with %d active worker(s)/node."
+                        " %dth trial.", nactive, j);
+         }
 
          Int_t npad=1; //pad number
 
          TTime starttime = gSystem->Now();
          TTime endtime = gSystem->Now();
 
-         Int_t nevents_all=nevents*nactive;
-         fProof->Process("TSelHist", nevents_all);
+         Int_t nevents_all=0;
+         if (nx==0){
+            nevents_all=nevents*nactive;
+         }
+         else if (nx==1){
+            Int_t nnodes=fNodes->GetNNodes();
+            nevents_all=nevents*nactive*nnodes;
+         }
 
+         fProof->Process("TSelHist", nevents_all);
          TList* l = fProof->GetOutputList();
 
          //save perfstats
@@ -235,7 +289,7 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
             t->SetDirectory(gDirectory);
 
             //build up new name
-            TString newname=BuildNewPatternName(perfstats_name, nactive, j);
+            TString newname=BuildNewPatternName(perfstats_name, nactive, j, nx);
             t->SetName(newname);
 
             fPerfStats->Add(t);
@@ -631,12 +685,18 @@ TString TProofBenchRunCPU::BuildPatternName(const TString& objname,
 
 //______________________________________________________________________________
 TString TProofBenchRunCPU::BuildNewPatternName(const TString& objname,
-                           Int_t nactive, Int_t tries, const TString& delimiter)
+                           Int_t nactive, Int_t tries, Int_t nx,
+                           const TString& delimiter)
 {
    TString newname(BuildPatternName(objname, delimiter));
    newname+=delimiter;
    newname+=nactive;
-   newname+="Slaves";
+   if (nx==0){
+      newname+="Slaves";
+   }
+   else if (nx==1){
+      newname+="XSlaves";
+   }
    newname+=delimiter;
    newname+="Run";
    newname+=tries;

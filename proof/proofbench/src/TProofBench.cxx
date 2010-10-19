@@ -45,8 +45,8 @@ fRunType(runtype), fBaseDir(basedir), fNTracks(100),
 fRegenerate(kFALSE), fHistType(TProofBenchRun::kHist1D), fNHists(16),
 fReadType(TProofBenchRun::kReadFull), fNFiles(-1), fNEventsCPU(1000000),
 fNEventsDataRead(100000), fNTries(2), fStart(1), fStop(-1), fStep(1),
-fDraw(0), fDebug(0), fFile(0), fDirProofBench(0), fNodes(0), fListMode(0),
-fRunCleanup(0), fRunCPU(0), fRunDataRead(0)
+fDraw(0), fDebug(0), fNx(0), fFile(0), fDirProofBench(0), fNodes(0),
+fListMode(0), fRunCleanup(0), fRunCPU(0), fRunDataRead(0)
 {
    //Default constructor.
 
@@ -94,7 +94,7 @@ fRunCleanup(0), fRunCPU(0), fRunDataRead(0)
                                                          fNodes));
 
    fFileGenerator=new TProofBenchFileGenerator(0, fNEventsDataRead, fStart,
-                           fStop, fStep, fBaseDir, fNTracks, fRegenerate,
+                           fStop, fStep, fBaseDir, fNTracks, fRegenerate, fNx,
                            fProof, fNodes);
 
    //create runs
@@ -103,11 +103,11 @@ fRunCleanup(0), fRunCPU(0), fRunDataRead(0)
 
    fRunCPU=new TProofBenchRunCPU(fHistType, fNHists, fDirProofBench, fProof,
                            fNodes, fNEventsCPU, fNTries, fStart, fStop, fStep,
-                           fDraw, fDebug);
+                           fNx, fDraw, fDebug);
 
    fRunDataRead=new TProofBenchRunDataRead(0, fRunCleanup, fReadType,
                            fDirProofBench, fProof, fNodes, fNEventsDataRead,
-                           fNTries, fStart, fStop, fStep, fDebug);
+                           fNTries, fStart, fStop, fStep, fNx, fDebug);
 }
 
 //______________________________________________________________________________
@@ -142,7 +142,8 @@ TProofBench::~TProofBench()
 //______________________________________________________________________________
 Int_t TProofBench::MakeDataSets(Int_t nfiles, Long64_t nevents,
                         TString basedir, Int_t regenerate, Int_t ntracks,
-                        Int_t start, Int_t stop, Int_t step, const char* option)
+                        Int_t start, Int_t stop, Int_t step, const char* option,
+                        Int_t nx)
 {
 
    // Generates files on worker nodes for I/O test or for cleanup run
@@ -173,6 +174,10 @@ Int_t TProofBench::MakeDataSets(Int_t nfiles, Long64_t nevents,
    //               When listfiles=0, the list filled up by
    //               TProofBenchFileGenerator::GenerateFiles is used.
    //    option: Option to TProof::RegisterDataSet
+   //    nx: When it is 1, the same number of workers on all nodes in the
+   //        cluster are activated at the same time. Scan starts with 'start'
+   //        active workers on all nodes, 'step' more workers are activated
+   //        until scan is done with 'stop' active worker on all nodes.
    // Return: 
    //    0 when ok
    //   <0 otherwise
@@ -199,6 +204,7 @@ Int_t TProofBench::MakeDataSets(Int_t nfiles, Long64_t nevents,
    start=(start==-1)?fStart:start;
    stop=(stop==-1)?fStop:stop;
    step=(step==-1)?fStep:step;
+   nx=(nx==-1)?fNx:nx;
 
    if (start>stop){
        Error("MakeDataSets", "Wrong inputs; start(%d)>stop(%d)", start, stop);
@@ -213,7 +219,8 @@ Int_t TProofBench::MakeDataSets(Int_t nfiles, Long64_t nevents,
       fFileGenerator->SetMode(mode);
       ret+=fFileGenerator->GenerateFiles(nfiles, nevents, basedir, regenerate,
                                     ntracks);
-      ret+=fFileGenerator->MakeDataSets(nfiles, start, stop, step, 0, option);
+      ret+=fFileGenerator->MakeDataSets(nfiles, start, stop, step, 0, option,
+                                        0);
       delete mode;
    }
 
@@ -227,7 +234,8 @@ Int_t TProofBench::MakeDataSets(Int_t nfiles, Long64_t nevents,
       fFileGenerator->SetMode(mode);
       ret+=fFileGenerator->GenerateFiles(nfiles, nevents, basedir, regenerate,
                                     ntracks);
-      ret+=fFileGenerator->MakeDataSets(nfiles, start, stop, step, 0, option);
+      ret+=fFileGenerator->MakeDataSets(nfiles, start, stop, step, 0, option,
+                                        nx);
    }
    delete modes;
 
@@ -316,7 +324,7 @@ Int_t TProofBench::MakeDataSets(const char* option)
 //______________________________________________________________________________
 void TProofBench::Run(const char* diroutput, ERunType runtype,
                       EModeType modetype, Int_t start, Int_t stop, Int_t step,
-                      Int_t ntries, Int_t debug, Int_t draw)
+                      Int_t ntries, Int_t nx, Int_t debug, Int_t draw)
 {
    //Run benchmark tests.
    //Input parameters:
@@ -348,6 +356,7 @@ void TProofBench::Run(const char* diroutput, ERunType runtype,
    stop=(stop==-1)?fStop:stop;
    step=(step==-1)?fStep:step;
    ntries=(ntries==-1)?fNTries:ntries;
+   nx=(nx==-1)?fNx:nx;
    debug=(debug==-1)?fDebug:debug;
    draw=(draw==-1)?fDraw:draw;
 
@@ -389,7 +398,7 @@ void TProofBench::Run(const char* diroutput, ERunType runtype,
 
    if (runtype & kRunCPU){
       fRunCPU->SetDirProofBench(gDirectory);
-      fRunCPU->Run(fNEventsCPU, start, stop, step, fNTries, debug, draw);
+      fRunCPU->Run(fNEventsCPU, start, stop, step, ntries, nx, debug, draw);
    }
    if (runtype & kRunDataRead){
       //set output directory for cleanup run
@@ -410,8 +419,8 @@ void TProofBench::Run(const char* diroutput, ERunType runtype,
 
          fRunDataRead->SetMode(mode);
          fRunDataRead->SetDirProofBench(gDirectory);
-         fRunDataRead->Run(fNEventsDataRead, start, stop, step, fNTries, debug,
-                           draw);
+         fRunDataRead->Run(fNEventsDataRead, start, stop, step, ntries, nx,
+                           debug, draw);
       }
       delete modes;
    }
@@ -447,6 +456,7 @@ void TProofBench::Print(Option_t* option)const
    Printf("fStep=%d", fStep);
    Printf("fDraw=%d", fDraw);
    Printf("fDebug=%d", fDebug);
+   Printf("fNx=%d", fNx);
  
    //if (fFile) fFile->Print(option);
    if (fDirProofBench){
@@ -683,6 +693,13 @@ void TProofBench::SetDebug(Int_t debug)
 }
 
 //______________________________________________________________________________
+void TProofBench::SetNx(Int_t nx)
+{
+   //Set nx flag to 'nx'.
+   fNx=nx;
+}
+
+//______________________________________________________________________________
 TProofBench::EModeType TProofBench::GetModeType() const
 {
    //Get mode type.
@@ -803,4 +820,11 @@ Int_t TProofBench::GetDebug() const
    //Get debug switch.
 {
    return fDebug;
+}
+
+//______________________________________________________________________________
+Int_t TProofBench::GetNx() const
+   //Get nx flag.
+{
+   return fNx;
 }

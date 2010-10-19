@@ -55,11 +55,12 @@ TProofBenchRunDataRead::TProofBenchRunDataRead(TProofBenchMode* mode,
                             TProofBenchRun::EReadType readtype,
                             TDirectory* dirproofbench, TProof* proof,
                             TProofNodes* nodes, Long64_t nevents, Int_t ntries,
-                            Int_t start, Int_t stop, Int_t step, Int_t debug):
+                            Int_t start, Int_t stop, Int_t step, Int_t nx,
+                            Int_t debug):
 fProof(proof), fReadType(readtype), fMode(mode), fRunCleanup(runcleanup),
 fNEvents(nevents), fNTries(ntries), fStart(start), fStop(stop), fStep(step),
-fDebug(debug), fDirProofBench(dirproofbench), fNodes(nodes), fPerfStats(0),
-fListPerfProfiles(0), fCPerfProfiles(0), fName(0)
+fNx(nx), fDebug(debug), fDirProofBench(dirproofbench), fNodes(nodes),
+fPerfStats(0), fListPerfProfiles(0), fCPerfProfiles(0), fName(0)
 {
 
    //Default constructor
@@ -107,7 +108,8 @@ TProofBenchRunDataRead::~TProofBenchRunDataRead()
 
 //______________________________________________________________________________
 void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
-                                 Int_t step, Int_t ntries, Int_t debug, Int_t)
+                                 Int_t step, Int_t ntries, Int_t nx,
+                                 Int_t debug, Int_t)
 {
    // Run benchmark
    // Input parameters
@@ -117,6 +119,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
    //    stop: Stop scan at 'stop workers.
    //    step: Scan every 'step' workers.
    //    ntries: Number of tries. When it is -1, data member fNTries is used.
+   //    nx:
    //    debug: debug switch.
    //    Int_t: Ignored
    // Returns
@@ -132,8 +135,18 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
    stop=(stop==-1)?fStop:stop;
    step=(step==-1)?fStep:step;
    ntries=(ntries==-1)?fNTries:ntries;
+   nx=(nx==-1)?fNx:nx;
    debug=(debug==-1)?fDebug:debug;
 
+   if (nx==0){
+   }
+   else if (nx==1){
+      const Int_t minnworkersanode=fNodes->GetMinNWorkersANode();
+      if (stop>minnworkersanode){
+         stop=minnworkersanode;
+      }
+   }
+   
    if (!fListPerfProfiles){
       fListPerfProfiles=new TList();
       fListPerfProfiles->SetOwner(kFALSE); //do not delete outputs
@@ -162,7 +175,12 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
                            profile_perfstat_event_title, ndiv, ns_min, ns_max);
 
       profile_perfstat_event->SetDirectory(fDirProofBench);
-      profile_perfstat_event->GetXaxis()->SetTitle("Active Slaves");
+      if (nx==0){
+         profile_perfstat_event->GetXaxis()->SetTitle("Active Slaves");
+      }
+      else if (nx==1){
+         profile_perfstat_event->GetXaxis()->SetTitle("Active Slaves/Node");
+      }
       profile_perfstat_event->GetYaxis()->SetTitle("Events/sec");
       profile_perfstat_event->SetMarkerStyle(21);
 
@@ -183,7 +201,13 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
       profile_perfstat_IO= new TProfile(profile_perfstat_IO_name,
                                profile_perfstat_IO_title, ndiv, ns_min, ns_max);
       profile_perfstat_IO->SetDirectory(fDirProofBench);
-      profile_perfstat_IO->GetXaxis()->SetTitle("Active Slaves");
+      if (nx==0){
+         profile_perfstat_IO->GetXaxis()->SetTitle("Active Slaves");
+      }
+      else if (nx==1){
+         profile_perfstat_IO->GetXaxis()->SetTitle("Active Slaves/Node");
+      }
+
       profile_perfstat_IO->GetYaxis()->SetTitle("MB/sec");
       profile_perfstat_IO->SetMarkerStyle(21);
 
@@ -206,7 +230,12 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
       profile_queryresult_event=new TProfile(profile_queryresult_event_name,
                          profile_queryresult_event_title, ndiv, ns_min, ns_max);
       profile_queryresult_event->SetDirectory(fDirProofBench);
-      profile_queryresult_event->GetXaxis()->SetTitle("Active Slaves");
+      if (nx==0){
+         profile_queryresult_event->GetXaxis()->SetTitle("Active Slaves");
+      }
+      else if (nx==1){
+         profile_queryresult_event->GetXaxis()->SetTitle("Active Slaves/Node");
+      }
       profile_queryresult_event->GetYaxis()->SetTitle("Events/sec");
       profile_queryresult_event->SetMarkerStyle(22);
 
@@ -228,7 +257,12 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
       profile_queryresult_IO=new TProfile(profile_queryresult_IO_name,
                             profile_queryresult_IO_title, ndiv, ns_min, ns_max);
       profile_queryresult_IO->SetDirectory(fDirProofBench);
-      profile_queryresult_IO->GetXaxis()->SetTitle("Active Slaves");
+      if (nx==0){
+         profile_queryresult_IO->GetXaxis()->SetTitle("Active Slaves");
+      }
+      else if (nx==1){
+         profile_queryresult_IO->GetXaxis()->SetTitle("Active Slaves/Node");
+      }
       profile_queryresult_IO->GetYaxis()->SetTitle("MB/sec");
       profile_queryresult_IO->SetMarkerStyle(22);
 
@@ -264,30 +298,56 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
 
    Int_t nf=fMode->GetNFiles();
    TString smode=fMode->GetName();
-   Info("Run", "Running IO-bound tests for mode %s; %d ~ %d active worker(s),"
-               " every %d worker(s).", smode.Data(), start, stop, step);
+   if (nx==0){
+      Info("Run", "Running IO-bound tests for mode %s; %d ~ %d active"
+           " worker(s), every %d worker(s).", smode.Data(), start, stop, step);
+   }
+   else if (nx==1){
+      Info("Run", "Running IO-bound tests for mode %s; %d ~ %d active"
+           " worker(s)/node, every %d worker(s)/node.", smode.Data(), start,
+           stop, step);
+   }
 
    for (Int_t nactive=start; nactive<=stop; nactive+=step) {
       for (Int_t j=0; j<ntries; j++) {
-
-         Info("Run", "Running IO-bound tests with %d active worker(s)."
-                     " %dth trial.", nactive, j);
 
          Int_t npad=1; //pad number
 
          TString dsname; 
 
          //cleanup run
-         dsname.Form("DataSetEvent%s_%d_%d", smode.Data(), nactive, nf);
+         if (nx==0){
+            dsname.Form("DataSetEvent%s_%d_%d", smode.Data(), nactive, nf);
+            Info("Run", "Running IO-bound tests with %d active worker(s)."
+                        " %dth trial.", nactive, j);
+         }
+         else if (nx==1){
+            dsname.Form("DataSetEvent%s_%dX_%d", smode.Data(), nactive, nf);
+            Info("Run", "Running IO-bound tests with %d active worker(s)/node."
+                        " %dth trial.", nactive, j);
+         }
+
          if (fRunCleanup->GetCleanupType()==TProofBenchRun::kCleanupFileAdvise){
             fRunCleanup->SetDataSetCleanup(dsname);
          }
-         fRunCleanup->Run(nevents, 0, 0, 0, 0, debug, 0);
+         fRunCleanup->Run(nevents, 0, 0, 0, 0, 0, debug, 0);
 
          //TString namestem=GetNameStem();
          DeleteParameters();
          SetParameters();
-         fProof->SetParallel(nactive);
+         if (nx==0){
+            fProof->SetParallel(nactive);
+         }
+         else if (nx==1){
+            TString workers;
+            workers.Form("%dx", nactive);
+            if (fNodes->ActivateWorkers(workers)<0){
+               Error("Run", "Could not activate the requestednumber of"
+                     " workers/node on the cluster; Skipping the test point"
+                     " (%d workers/node, %dth trial).", nactive, j);
+               continue;
+            }
+         }
 
          TFileCollection* fc=0;
          Long64_t nfiles=0;
@@ -304,8 +364,16 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
             continue;
          }
 
-         Info("Run", "Processing data set %s (%lld events to be processed) with"
-              " %d active worker(s).", dsname.Data(), nevents_total, nactive); 
+         if (nx==0){
+            Info("Run", "Processing data set %s (%lld files, %lld events to"
+                 " process) with %d active worker(s).", dsname.Data(),
+                 nfiles, nevents_total, nactive); 
+         }
+         else if (nx==1){
+            Info("Run", "Processing data set %s (%lld files, %lld events to"
+                 " process) with %d active worker(s)/node.", dsname.Data(),
+                 nfiles, nevents_total, nactive); 
+         }
 
          TTime starttime = gSystem->Now();
          fProof->Process(dsname.Data(), "TSelEvent", "", nevents_total);
@@ -334,7 +402,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
             tnew->SetDirectory(fDirProofBench);
 
             //change the name
-            TString newname=BuildNewPatternName(perfstats_name, nactive, j);
+            TString newname=BuildNewPatternName(perfstats_name, nactive, j, nx);
             tnew->SetName(newname);
             fPerfStats->Add(tnew);
 
@@ -388,7 +456,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
                TH1 *hnew = (TH1*)h->Clone("hnew");
                hnew->SetDirectory(fDirProofBench);
                TString origname = h->GetName();
-               TString newname=BuildNewPatternName(ptdist_name, nactive, j);
+               TString newname=BuildNewPatternName(ptdist_name, nactive, j, nx);
                hnew->SetName(newname);
 
                if (fDirProofBench->IsWritable()){
@@ -405,7 +473,8 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
             if (h2) {
                TH1 *hnew = (TH1*)h2->Clone("hnew");
                hnew->SetDirectory(fDirProofBench);
-               TString newname=BuildNewPatternName(tracksdist_name, nactive, j);
+               TString newname=BuildNewPatternName(tracksdist_name, nactive, j,
+                                                   nx);
                hnew->SetName(newname);
 
                if (fDirProofBench->IsWritable()){
@@ -634,6 +703,12 @@ void TProofBenchRunDataRead::SetStep(Int_t step)
 }
 
 //______________________________________________________________________________
+void TProofBenchRunDataRead::SetNx(Int_t nx)
+{
+   fNx=nx;
+}
+
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetDebug(Int_t debug)
 {
    fDebug=debug;
@@ -691,6 +766,12 @@ Int_t TProofBenchRunDataRead::GetStop()const
 Int_t TProofBenchRunDataRead::GetStep()const
 {
    return fStep;
+}
+
+//______________________________________________________________________________
+Int_t TProofBenchRunDataRead::GetNx()const
+{
+   return fNx;
 }
 
 //______________________________________________________________________________
@@ -795,10 +876,9 @@ TString TProofBenchRunDataRead::BuildPatternName(const TString& objname,
 
 //______________________________________________________________________________
 TString TProofBenchRunDataRead::BuildNewPatternName(const TString& objname,
-                                                    Int_t nactive, Int_t tries,
-                                                    const TString& delimiter)
+                                       Int_t nactive, Int_t tries, Int_t nx,
+                                       const TString& delimiter)
 {
-  
    if (!fMode){
       Error("BuildNewPatternName", "Mode is not set");
       //return 0;
@@ -807,7 +887,12 @@ TString TProofBenchRunDataRead::BuildNewPatternName(const TString& objname,
    TString newname(BuildPatternName(objname, delimiter));
    newname+=delimiter;
    newname+=nactive;
-   newname+="Slaves_Run";
+   if (nx==0){
+      newname+="Slaves_Run";
+   }
+   else if (nx==1){
+      newname+="XSlaves_Run";
+   }
    newname+=tries;
    //return newname.Data();
    return newname;

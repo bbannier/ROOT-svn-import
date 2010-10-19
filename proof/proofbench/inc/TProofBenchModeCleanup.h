@@ -48,10 +48,10 @@ public:
    TMap* FilesToProcess(Int_t);
  
    Int_t MakeDataSets(Int_t, Int_t, Int_t, Int_t, const TList* listfiles,
-                      const char* option, TProof* proof);
+                      const char* option, TProof* proof, Int_t);
  
-   Int_t MakeDataSets(Int_t, Int_t, const Int_t*, const TList*, const char*,
-                      TProof*);
+   Int_t MakeDataSets(Int_t, Int_t, const Int_t*, const TList* listfiles,
+                      const char* option, TProof* proof, Int_t);
 
    TProofBenchMode::EFileType GetFileType();
 

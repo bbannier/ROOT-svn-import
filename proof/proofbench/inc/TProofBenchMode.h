@@ -47,11 +47,12 @@ public:
 
    virtual Int_t MakeDataSets(Int_t nf=-1, Int_t start=1, Int_t stop=-1,
                               Int_t step=1, const TList* listfiles=0,
-                              const char* option="", TProof* proof=0)=0;
+                              const char* option="", TProof* proof=0,
+                              Int_t flag_nx=-1)=0;
 
    virtual Int_t MakeDataSets(Int_t nfiles, Int_t np, const Int_t *wp,
                               const TList* listfiles=0, const char *option="",
-                              TProof* proof=0)=0;
+                              TProof* proof=0, Int_t flag_nx=-1)=0;
 
    virtual EFileType GetFileType()=0;
 

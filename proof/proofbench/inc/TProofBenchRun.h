@@ -59,7 +59,7 @@ public:
    virtual ~TProofBenchRun();
 
    virtual void Run(Long64_t nevents=-1, Int_t start=-1, Int_t stop=-1,
-                    Int_t step=-1, Int_t ntries=-1, Int_t debug=-1,
+                    Int_t step=-1, Int_t ntries=-1, Int_t nx=-1, Int_t debug=-1,
                     Int_t draw=-1)=0;
 
    virtual void Print(Option_t* option="")const=0;

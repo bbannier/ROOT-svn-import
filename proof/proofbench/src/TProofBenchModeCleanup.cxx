@@ -83,7 +83,7 @@ TMap* TProofBenchModeCleanup::FilesToProcess(Int_t)
 //______________________________________________________________________________
 Int_t TProofBenchModeCleanup::MakeDataSets(Int_t, Int_t, Int_t, Int_t,
                                      const TList* listfiles, const char* option,
-                                     TProof* proof)
+                                     TProof* proof, Int_t)
 {
    // Make data set from list of file 'listfiles'and register it.
    // Input parameters
@@ -94,6 +94,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t, Int_t, Int_t, Int_t,
    //    listfiles List of files (TFileInfo*) from which data set is built and registered.
    //    option Option to TProof::RegisterDataSet(...).
    //    proof Proof
+   //    Int_t: Ignored.
    // Return
    //    0 when ok
    //   <0 otherwise
@@ -123,7 +124,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t, Int_t, Int_t, Int_t,
 //______________________________________________________________________________
 Int_t TProofBenchModeCleanup::MakeDataSets(Int_t, Int_t, const Int_t*,
                                     const TList* listfiles, const char* option,
-                                    TProof* proof)
+                                    TProof* proof, Int_t)
 {
    // Make data set from list of files 'listfiles' and register it.
    // Input parameters
@@ -134,13 +135,14 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t, Int_t, const Int_t*,
    //               registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
+   //    Int_t: Ignored.
    // Return
    //    0 when ok
    //   <0 otherwise
 
    Info("MakeDataSets", "Making data sets for mode %s.", GetName()); 
 
-   return MakeDataSets(0, 0, 0, 0, listfiles, option, proof);
+   return MakeDataSets(0, 0, 0, 0, listfiles, option, proof, 0);
 }
 
 //______________________________________________________________________________

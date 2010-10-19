@@ -78,6 +78,9 @@ private:
    Int_t fStep;                  //test to be performed every fStep workers
    Int_t fDraw;                  //draw switch
    Int_t fDebug;                 //debug switch
+   Int_t fNx;                    //When 1, the same number of workers on all
+                                 //nodes in the cluster are activated
+                                 //at the same time
 
    TFile* fFile;
    TDirectory* fDirProofBench;
@@ -108,12 +111,14 @@ public:
    //                   Int_t step=-1, const char* option="V");
    Int_t MakeDataSets(Int_t nfiles=-1, Long64_t nevents=-1, TString basedir="",
                       Int_t regenerate=-1, Int_t ntracks=-1, Int_t start=-1,
-                      Int_t stop=-1, Int_t step=-1, const char* option="V");
+                      Int_t stop=-1, Int_t step=-1, const char* option="V",
+                      Int_t nx=-1);
    Int_t MakeDataSets(const char* option);
 
    void Run(const char* diroutput="", ERunType runtype=kRunNotSpecified,
             EModeType modetype=kModeNotSpecified, Int_t start=-1, Int_t stop=-1,
-            Int_t step=-1, Int_t ntries=-1, Int_t debug=-1, Int_t draw=-1);
+            Int_t step=-1, Int_t ntries=-1, Int_t nx=-1, Int_t debug=-1,
+            Int_t draw=-1);
 
    TFile* OpenFile(const char* filename="", Option_t* option="",
                    const char* ftitle = "", Int_t compress = 1,
@@ -139,6 +144,7 @@ public:
    void SetStep(Int_t step);
    void SetDraw(Int_t draw);
    void SetDebug(Int_t debug);
+   void SetNx(Int_t nx);
    void SetBaseDir(TString basedir);
    void SetNTracks(Int_t ntracks);
    void SetRegenerate(Int_t regenerate);
@@ -159,6 +165,7 @@ public:
    Int_t GetStep() const;
    Int_t GetDraw() const;
    Int_t GetDebug() const;
+   Int_t GetNx() const;
    TString GetBaseDir() const;
    Int_t GetNTracks() const;
    Int_t GetRegenerate() const;

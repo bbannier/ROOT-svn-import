@@ -68,7 +68,7 @@ public:
 
    virtual ~TProofBenchRunCleanup();
 
-   void Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t debug, Int_t);
+   void Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t debug, Int_t);
 
    void DrawPerfProfiles();
 
