@@ -32,23 +32,25 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#ifndef ROOT_TString
 #include "TString.h"
-#include "TFormula.h"
-
-#ifndef ROOT_TMVA_MsgLogger
-#include "TMVA/MsgLogger.h"
 #endif
+#ifndef ROOT_TFormula
+#include "TFormula.h"
+#endif
+
 
 namespace TMVA {
 
    class TNeuron;
+   class MsgLogger;
 
    class TSynapse : public TObject {
 
    public:
     
       TSynapse();
-      virtual ~TSynapse() {}
+      virtual ~TSynapse();
      
       // set the weight of the synapse
       void SetWeight(Double_t weight);
@@ -86,17 +88,22 @@ namespace TMVA {
       // initialize the error field of the synpase to 0
       void InitDelta()           { fDelta = 0.0; fCount = 0; }
 
+      void SetDEDw(Double_t DEDw)              { fDEDw = DEDw;           }
+      Double_t GetDEDw()                       { return fDEDw;           }
+      Double_t GetDelta()                      { return fDelta;          }
+
    private:
   
       Double_t fWeight;            // weight of the synapse
       Double_t fLearnRate;         // learning rate parameter
       Double_t fDelta;             // local error field
+      Double_t fDEDw;              // sum of deltas
       Int_t    fCount;             // number of updates contributing to error field
       TNeuron* fPreNeuron;         // pointer to pre-neuron
       TNeuron* fPostNeuron;        // pointer to post-neuron
-      Int_t    fCounter;           // counter for normalization in batch mode
 
-      mutable MsgLogger fLogger;   // message logger
+      static MsgLogger* fgLogger;                     //! message logger, static to save resources
+      MsgLogger& Log() const { return *fgLogger; }                       
 
       ClassDef(TSynapse,0) // Synapse class used by MethodANNBase and derivatives
    };

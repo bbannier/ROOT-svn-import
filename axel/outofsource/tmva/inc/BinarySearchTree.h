@@ -12,7 +12,7 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
- *      Xavier Prudent  <prudent@lapp.in2p3.fr>  - LAPP, France                   *
+ *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
@@ -38,10 +38,11 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#include "Riostream.h"
 #include <vector>
 #include <queue>
+#ifndef ROOT_time
 #include "time.h"
+#endif
 
 #ifndef ROOT_TMVA_Volume
 #include "TMVA/Volume.h"
@@ -52,6 +53,9 @@
 #ifndef ROOT_TMVA_BinarySearchTreeNode
 #include "TMVA/BinarySearchTreeNode.h"
 #endif
+#ifndef ROOT_TMVA_VariableInfo
+#include "TMVA/VariableInfo.h"
+#endif
 
 class TString;
 class TTree;
@@ -59,14 +63,11 @@ class TTree;
 // -----------------------------------------------------------------------------
 // the binary search tree
 
-using std::vector;
-using std::queue;
-
 namespace TMVA {
 
    class DataSet;
    class Event;
-   class MethodBase;
+   //   class MethodBase;
    
    class BinarySearchTree : public BinaryTree {
       
@@ -81,42 +82,39 @@ namespace TMVA {
       // destructor
       virtual ~BinarySearchTree( void );
     
-      virtual Node * CreateNode() { return new BinarySearchTreeNode(); }
-
-      virtual Node * CreateNode(const std::vector<TMVA::VariableInfo> * vI) { 
-         TMVA::Event *ev = new TMVA::Event(*vI, kFALSE);
-         return new BinarySearchTreeNode(ev);
-      }
+      virtual Node * CreateNode( UInt_t ) const { return new BinarySearchTreeNode(); }
+      virtual BinaryTree* CreateTree() const { return new BinarySearchTree(); }
+      virtual const char* ClassName() const { return "BinarySearchTree"; }
 
       // Searches for a node with the specified data 
       // by calling  the private, recursive, function for searching
       BinarySearchTreeNode* Search( Event * event ) const;
     
       // Adds an item to the tree, 
-      void Insert( Event * );
+      void Insert( const Event * );
     
-      //get sum of weights of the nodes;
+      // get sum of weights of the nodes;
       Double_t GetSumOfWeights( void ) const;
+
+      //get sum of weights of the nodes of given type;
+      Double_t GetSumOfWeights( Int_t theType ) const;
     
       //set the periode (number of variables)
-      inline void SetPeriode( Int_t p )      { fPeriod = p; }
+      void SetPeriode( Int_t p )      { fPeriod = p; }
+
       // return periode (number of variables)
-      inline UInt_t  GetPeriode( void ) const { return fPeriod; }
+      UInt_t  GetPeriode( void ) const { return fPeriod; }
 
       // counts events (weights) within a given volume 
       Double_t SearchVolume( Volume*, std::vector<const TMVA::BinarySearchTreeNode*>* events = 0 );
     
-      // create the search tree from the events in a TTree
-      // using the variables specified in the calling Method
-      Double_t Fill( const TMVA::MethodBase& callingMethod, TTree* theTree, Int_t theType );
-    
       // Create the search tree from the event collection 
       // using ONLY the variables specified in "theVars"
-      Double_t Fill( vector<TMVA::Event*>, vector<Int_t> theVars, Int_t theType = -1 );
+      Double_t Fill( const std::vector<TMVA::Event*>& events, const std::vector<Int_t>& theVars, Int_t theType = -1 );
     
       // create the search tree from the events in a TTree
       // using ALL the variables specified included in the Event
-      Double_t Fill( vector<TMVA::Event*> theTree, Int_t theType = -1 );
+      Double_t Fill( const std::vector<TMVA::Event*>& events, Int_t theType = -1 );
 
       void NormalizeTree ();      
       
@@ -137,13 +135,15 @@ namespace TMVA {
 
       Int_t SearchVolumeWithMaxLimit( TMVA::Volume*, std::vector<const TMVA::BinarySearchTreeNode*>* events = 0, Int_t = -1);
 
+      // access to RMS for each variable
+      Float_t RMS(UInt_t var ) { return fRMS[0][var]; } // attention! class 0 is taken as signal!
 
       void SetNormalize( Bool_t norm ) { fCanNormalize = norm; }
 
    private:
 
       // add a new  node to the tree (as daughter) 
-      void       Insert( Event*, Node* );
+      void       Insert( const Event*, Node* );
       // recursively search the nodes for Event
       BinarySearchTreeNode*      Search( Event*, Node *) const ;
     
@@ -151,10 +151,10 @@ namespace TMVA {
       Bool_t   InVolume    (const std::vector<Float_t>&, Volume* ) const;
       //
       void     DestroyNode ( BinarySearchTreeNode* );
-      
 
-      void     NormalizeTree( vector< pair< Double_t, TMVA::Event* > >::iterator, 
-                              vector< pair< Double_t, TMVA::Event* > >::iterator, UInt_t );
+
+      void     NormalizeTree( std::vector< std::pair< Double_t, const TMVA::Event* > >::iterator, 
+                              std::vector< std::pair< Double_t, const TMVA::Event* > >::iterator, UInt_t );
 
       // recursive search through daughter nodes in weight counting
       Double_t SearchVolume( Node*, Volume*, Int_t, 
@@ -174,7 +174,7 @@ namespace TMVA {
                                                 // should be the same as fNEventsW[0]+fNEventsW[1].. used as a check
       
       Bool_t                      fCanNormalize; // the tree can be normalised
-      std::vector< std::pair<Double_t,TMVA::Event*> > fNormalizeTreeTable;
+      std::vector< std::pair<Double_t,const TMVA::Event*> > fNormalizeTreeTable;
       
       ClassDef(BinarySearchTree,0) // Binary search tree including volume search method  
    };

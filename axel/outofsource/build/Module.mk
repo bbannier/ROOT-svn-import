@@ -3,10 +3,12 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := $(SRCDIR)/build
+MODNAME      := build
+MODDIR       := $(SRCDIR)/$(MODNAME)
 
 RMKDEPDIR    := $(MODDIR)/rmkdepend
 BINDEXPDIR   := $(MODDIR)/win/bindexplib
+DROPDIR      := $(MODDIR)/unix/drop_from_path
 
 ##### rmkdepend #####
 RMKDEPH      := $(wildcard $(RMKDEPDIR)/*.h)
@@ -23,6 +25,14 @@ else
 RMKDEPCFLAGS := -DINCLUDEDIR=\"/usr/include\" -DOBJSUFFIX=\".o\"
 endif
 
+##### drop_from_path #####
+ifneq ($(PLATFORM),win32)
+DROPH      := $(wildcard $(DROPDIR)/*.h)
+DROPS      := $(wildcard $(DROPDIR)/*.c)
+DROPO      := $(DROPS:.c=.o)
+DROP       := bin/drop_from_path$(EXEEXT)
+endif
+
 ##### bindexplib #####
 ifeq ($(PLATFORM),win32)
 BINDEXPS     := $(wildcard $(BINDEXPDIR)/*.cxx)
@@ -33,9 +43,16 @@ W32PRAGMA    := build/win/w32pragma.h
 ALLHDRS      += include/w32pragma.h
 endif
 
+POSTBIN      += $(DROP)
+
 ##### local rules #####
+.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
+
 $(RMKDEP):      $(RMKDEPO)
 		$(LD) $(LDFLAGS) -o $@ $(RMKDEPO)
+
+$(DROP):        $(DROPO)
+		$(LD) $(LDFLAGS) -o $@ $(DROPO)
 
 ifeq ($(PLATFORM),win32)
 include/%.h:    build/win/%.h
@@ -44,20 +61,20 @@ include/%.h:    build/win/%.h
 $(BINDEXP):     $(BINDEXPO)
 		$(LD) $(LDFLAGS) -o $@ $(BINDEXPO)
 
-all-build:      $(RMKDEP) $(BINDEXP)
+all-$(MODNAME): $(RMKDEP) $(BINDEXP)
 else
-all-build:      $(RMKDEP)
+all-$(MODNAME): $(RMKDEP) $(DROP)
 endif
 
-clean-build:
-		@rm -f $(RMKDEPO) $(BINDEXPO)
+clean-$(MODNAME):
+		@rm -f $(RMKDEPO) $(BINDEXPO) $(DROPO)
 
-clean::         clean-build
+clean::         clean-$(MODNAME)
 
-distclean-build: clean-build
-		@rm -f $(RMKDEP) $(BINDEXP)
+distclean-$(MODNAME): clean-$(MODNAME)
+		@rm -f $(RMKDEP) $(BINDEXP) $(DROPO)
 
-distclean::     distclean-build
+distclean::     distclean-$(MODNAME)
 
 
 ##### dependencies #####

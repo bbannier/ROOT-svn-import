@@ -2,9 +2,17 @@
 
 enum HistType { MVAType = 0, ProbaType = 1, RarityType = 2 };
 
+#define CheckDerivedPlots 0
+//TString DerivedPlotName = "Proba";
+TString DerivedPlotName = "Rarity";
+
 void compareanapp( TString finAn = "TMVA.root", TString finApp = "TMVApp.root", 
                    HistType htype = MVAType, bool useTMVAStyle=kTRUE )
 {
+   cout << "=== Compare histograms of two files ===" << endl;
+   cout << "    File-1: " << finAn << endl;
+   cout << "    File-2: " << finApp << endl;
+
    // set style and remove existing canvas'
    TMVAGlob::Initialize( useTMVAStyle );
 
@@ -29,7 +37,12 @@ void compareanapp( TString finAn = "TMVA.root", TString finApp = "TMVApp.root",
    TKey *key, *hkey;   
    while ((key = (TKey*)next())) {
 
-      cout << "--- Found directory: " << ((TDirectory*)key->ReadObj())->GetName() 
+      TString dirname = ((TDirectory*)key->ReadObj())->GetName();
+      if (dirname.Contains( "Cuts" )) {
+         cout << "--- Found directory: " << dirname << " --> ignoring" << endl;
+         continue;
+      }
+      cout << "--- Found directory: " << dirname 
            << " --> going in" << endl;
 
       TString methodName;
@@ -49,6 +62,7 @@ void compareanapp( TString finAn = "TMVA.root", TString finApp = "TMVApp.root",
          TString methodTitle;
          TMVAGlob::GetMethodTitle(methodTitle,titDir);
          TString hname = "MVA_" + methodTitle;
+         if (CheckDerivedPlots) hname += TString("_") + DerivedPlotName;
 
          TH1* sig = dynamic_cast<TH1*>(titDir->Get( hname + "_S" ));
          TH1* bgd = dynamic_cast<TH1*>(titDir->Get( hname + "_B" ));
@@ -147,10 +161,12 @@ void compareanapp( TString finAn = "TMVA.root", TString finApp = "TMVApp.root",
          frame->Draw("sameaxis");
          
          // text for overflows
-         Int_t nbin = sig->GetNbinsX();
-         TString uoflow = Form( "U/O-flow (S,B): (%.1f, %.1f)% / (%.1f, %.1f)%", 
-                                sig->GetBinContent(0)*100, bgd->GetBinContent(0)*100,
-                                sig->GetBinContent(nbin+1)*100, bgd->GetBinContent(nbin+1)*100 );
+         Int_t    nbin = sig->GetNbinsX();
+         Double_t dxu  = sig->GetBinWidth(0);
+         Double_t dxo  = sig->GetBinWidth(nbin+1);
+         TString uoflow = Form( "U/O-flow (S,B): (%.1f, %.1f)%% / (%.1f, %.1f)%%", 
+                                sig->GetBinContent(0)*dxu*100, bgd->GetBinContent(0)*dxu*100,
+                                sig->GetBinContent(nbin+1)*dxo*100, bgd->GetBinContent(nbin+1)*dxo*100 );
          TText* t = new TText( 0.975, 0.115, uoflow );
          t->SetNDC();
          t->SetTextSize( 0.030 );

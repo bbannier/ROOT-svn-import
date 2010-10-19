@@ -4,6 +4,7 @@
 
 SRCDIR         := @srcdir@
 ARCH           := @architecture@
+HOST           := @host@
 @rootbuild@
 USECONFIG      := @useconfig@
 MKLIBOPTIONS   := @mkliboption@
@@ -12,7 +13,6 @@ EXTRA_CFLAGS   := -Iinclude @cflags@
 EXTRA_CXXFLAGS := -Iinclude @cflags@
 EXTRA_LDFLAGS  := @ldflags@
 WINRTDEBUG     := @winrtdebug@
-ENABLEPCH      := @enable_pch@
 
 GLBPATCHFLAGS  := @glbpatchcflags@
 EXTRA_AUTHFLAGS:= @srpextracflags@ @krb5extracflags@ @glbextracflags@ @sslextracflags@
@@ -34,9 +34,11 @@ TESTDIR        := @testdir@
 TUTDIR         := @tutdir@
 ACLOCALDIR     := @aclocaldir@
 
+BUILDX11       := @buildx11@
 X11LIBDIR      := @x11libdir@
 XPMLIBDIR      := @xpmlibdir@
 XPMLIB         := @xpmlib@
+XFTLIB         := @enable_xft@
 
 EXCEPTIONS     := @exceptions@
 EXPLICITLINK   := @explicitlink@
@@ -60,10 +62,6 @@ OPENGLLIBDIR   := @opengllibdir@
 OPENGLULIB     := @openglulib@
 OPENGLLIB      := @opengllib@
 OPENGLINCDIR   := $(filter-out /usr/include, @openglincdir@)
-
-BUILDHBOOK     := @buildhbook@
-CERNLIBDIR     := @cernlibdir@
-CERNLIBS       := @cernlibs@
 
 BUILDLDAP      := @buildldap@
 LDAPLIBDIR     := @ldaplibdir@
@@ -124,21 +122,47 @@ BUILDFTGL      := @buildftgl@
 FTGLLIBDIR     := @ftgllibdir@
 FTGLLIBS       := @ftgllibs@
 FTGLINCDIR     := $(filter-out /usr/include, @ftglincdir@)
+ifeq ($(BUILDFTGL), yes)
+FTGLCPPFLAGS   := -DBUILTIN_FTGL
+endif
+
+BUILDGLEW      := @buildglew@
+GLEWLIBDIR     := @glewlibdir@
+GLEWLIBS       := @glewlibs@
+GLEWINCDIR     := $(filter-out /usr/include, @glewincdir@)
+ifeq ($(BUILDGLEW), yes)
+GLEWCPPFLAGS   := -DBUILTIN_GLEW
+endif
 
 BUILDGFAL      := @buildgfal@
 GFALLIBDIR     := @gfallibdir@
 GFALCLILIB     := @gfallib@
 GFALINCDIR     := $(filter-out /usr/include, @gfalincdir@)
 
-BUILDG4ROOT    := @buildg4root@
-G4LIBDIR       := @g4libdir@
-G4INCDIR       := $(filter-out /usr/include, @g4incdir@)
-CLHEPINCDIR    := $(filter-out /usr/include, @clhepincdir@)
+BUILDGLITE     := @buildglite@
+GLITELIBDIR    := @glitelibdir@
+GAWLIB         := @glitelib@
+GAW_CPPFLAGS   := $(filter-out /usr/include, @gaw_cppflags@)
+
+BUILDMEMSTAT   := @buildmemstat@
+
+BUILDBONJOUR   := @buildbonjour@
+DNSSDLIBDIR    := @dnssdlibdir@
+DNSSDLIB       := @dnssdlib@
+DNSSDINCDIR    := $(filter-out /usr/include, @dnssdincdir@)
 
 BUILDCHIRP     := @buildchirp@
 CHIRPLIBDIR    := @chirplibdir@
 CHIRPCLILIB    := @chirplib@
 CHIRPINCDIR    := $(filter-out /usr/include, @chirpincdir@)
+
+BUILDHDFS      := @buildhdfs@
+HDFSLIBDIR     := @hdfslibdir@
+HDFSCLILIB     := @hdfslib@
+HDFSINCDIR     := $(filter-out /usr/include, @hdfsincdir@)
+JNIINCDIR      := $(filter-out /usr/include, @jniincdir@) $(filter-out /usr/include, @jniincdir@/linux)
+JVMCLILIB      := @jvmlib@
+JVMLIBDIR      := @jvmlibdir@
 
 BUILDALIEN     := @buildalien@
 ALIENLIBDIR    := @alienlibdir@
@@ -162,10 +186,26 @@ FPYTHIA6LIBDIR   := @pythia6libdir@
 FPYTHIA6LIB      := @pythia6lib@
 FPYTHIA6CPPFLAGS := @pythia6cppflags@
 
+BUILDFPYTHIA8    := @buildpythia8@
+FPYTHIA8INCDIR   := @pythia8incdir@
+FPYTHIA8LIBDIR   := @pythia8libdir@
+FPYTHIA8LIB      := @pythia8lib@
+
 BUILDFFTW3     := @buildfftw3@
 FFTW3LIBDIR    := @fftw3libdir@
 FFTW3LIB       := @fftw3lib@
 FFTW3INCDIR    := $(filter-out /usr/include, @fftw3incdir@)
+
+BUILDFITSIO    := @buildfitsio@
+CFITSIOLIBDIR  := @cfitsiolibdir@
+CFITSIOLIB     := @cfitsiolib@
+CFITSIOINCDIR  := $(filter-out /usr/include, @cfitsioincdir@)
+
+BUILDGVIZ      := @buildgviz@
+GRAPHVIZLIBDIR := @gvizlibdir@
+GRAPHVIZLIB    := @gvizlib@
+GRAPHVIZINCDIR := $(filter-out /usr/include, @gvizincdir@)
+GRAPHVIZCFLAGS := @gvizcflags@
 
 BUILDPYTHON    := @buildpython@
 PYTHONLIBDIR   := @pythonlibdir@
@@ -184,8 +224,11 @@ XMLCLILIB      := @xmllib@
 XMLINCDIR      := $(filter-out /usr/include, @xmlincdir@)
 
 BUILDXRD       := @buildxrd@
-XROOTDDIR      := @xrootddir@
+XRDINCDIR      := @xrdincdir@
+XRDLIBDIR      := @xrdlibdir@
+XRDADDOPTS     := @xrdaddopts@
 EXTRA_XRDFLAGS := @extraxrdflags@
+XRDVERSION     := @xrdversion@
 
 SRPLIBDIR      := @srplibdir@
 SRPLIB         := @srplib@
@@ -198,7 +241,12 @@ SRPUTILINCDIR  := $(filter-out /usr/include, @srputilincdir@)
 
 AFSLIB         := @afslib@
 AFSLIBDIR      := @afslibdir@
+AFSINCDIR      := @afsincdir@
 AFSEXTRACFLAGS := @afsextracflags@
+AFSSHARED      := @afsshared@
+
+ALLOCLIB       := @alloclib@
+ALLOCLIBDIR    := @alloclibdir@
 
 BUILDKRB5      := @buildkrb5@
 KRB5LIB        := @krb5lib@
@@ -224,19 +272,17 @@ BUILDMONALISA  := @buildmonalisa@
 MONALISALIBDIR := @monalisalibdir@
 MONALISACLILIB := @monalisalib@
 MONALISAINCDIR := $(filter-out /usr/include, @monalisaincdir@)
-MONALISAWSLIBDIR := @monalisawslibdir@
-MONALISAWSCLILIB := @monalisawslib@
-MONALISAWSINCDIR := $(filter-out /usr/include, @monalisawsincdir@)
 
 SSLLIB         := @ssllib@
 SSLLIBDIR      := @ssllibdir@
 SSLINCDIR      := $(filter-out /usr/include, @sslincdir@)
+SSLSHARED      := @sslshared@
 
 SHADOWFLAGS    := @shadowpw@
 SHADOWLIB      :=
 SHADOWLIBDIR   :=
 
-BUILDMATHCORE  := @buildmathcore@
+BUILDGENVECTOR := @buildgenvector@
 
 BUILDMATHMORE  := @buildmathmore@
 GSLFLAGS       := $(filter-out -I/usr/include, @gslflags@)
@@ -244,7 +290,7 @@ GSLLIBDIR      := @gsllibdir@
 GSLLIBS        := @gsllibs@
 GSLVERSION     := @gslversion@
 
-BUILDCINT7     := @buildcint7@
+BUILDCLING     := @buildcling@
 
 BUILDCINTEX    := @buildcintex@
 
@@ -260,11 +306,19 @@ BUILDGDML      := @buildgdml@
 
 BUILDTABLE     := @buildtable@
 
+BUILDTMVA      := @buildtmva@
+
 BUILDCLARENS   := @buildclarens@
 CLARENSINC     := $(filter-out -I/usr/include, @clarensincdir@)
 CLARENSLIBS    := @clarenslibs@
 
 BUILDPEAC      := @buildpeac@
+
+CURSESINCDIR   := $(filter-out -I/usr/include, -I@cursesincdir@)
+CURSESLIBDIR   := @curseslibdir@
+CURSESHDR      := @curseshdr@
+CURSESLIB      := @curseslib@
+BUILDEDITLINE  := @buildeditline@
 
 CPPUNIT        := @cppunit@
 GCCXML         := @gccxml@

@@ -41,24 +41,23 @@ in this Software without prior written authorization from the X Consortium.
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#define MAXDEFINES	512
 #define MAXFILES	4096
-#define MAXDIRS		256
+#define MAXDIRS   4096
 #define SYMTABINC	10	/* must be > 1 for define() to work right */
-#define	TRUE		1
-#define	FALSE		0
+#define TRUE      1
+#define FALSE     0
 
 /* the following must match the directives table in main.c */
-#define	IF		0
-#define	IFDEF		1
-#define	IFNDEF		2
-#define	ELSE		3
-#define	ENDIF		4
-#define	DEFINE		5
-#define	UNDEF		6
-#define	INCLUDE		7
-#define	LINE		8
-#define	PRAGMA		9
+#define IF              0
+#define IFDEF           1
+#define IFNDEF          2
+#define ELSE            3
+#define ENDIF           4
+#define DEFINE          5
+#define UNDEF           6
+#define INCLUDE         7
+#define LINE            8
+#define PRAGMA          9
 #define ERROR           10
 #define IDENT           11
 #define SCCS            12
@@ -133,15 +132,15 @@ char			*malloc();
 char			*realloc();
 #endif
 
-char			*copy();
-char			*base_name();
-char			*rgetline();
-struct symtab		**slookup();
-struct symtab		**isdefined();
+char			*copy(char*);
+char			*base_name(char*);
+char			*rgetline(struct filepointer*);
+struct symtab		**slookup(char*, struct inclist*);
+struct symtab		**isdefined(char*,struct inclist*, struct inclist**);
 struct symtab		**fdefined();
-struct filepointer	*getfile();
-struct inclist		*newinclude();
-struct inclist		*inc_path();
+struct filepointer	*getfile(char*);
+struct inclist		*newinclude(char*,char*);
+struct inclist		*inc_path(char*, char*, boolean);
 void			undefine_all(struct inclist *);
 
 extern void fatalerr(char *, ...);

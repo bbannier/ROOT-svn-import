@@ -33,14 +33,14 @@ SOFLAGS       = -Wl,-expect_unresolved,* -shared
 SOEXT         = so
 
 # System libraries:
-SYSLIBS       = -lm -ltermcap $(OSTHREADLIBDIR) $(OSTHREADLIB)
+SYSLIBS       = -lm -ltermcap $(OSTHREADLIBDIR) $(OSTHREADLIB) \
+                $(ALLOCLIBDIR) $(ALLOCLIB)
 XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm -ltermcap
 
 # Fortran:
 F77LIBS       = /usr/shlib/libfor.so -lg2c
 F77           = g77
-F77LD         = g77
 
 # Extras
 

@@ -17,6 +17,7 @@
 #endif
 
 class TDocParser;
+class TDocMethodWrapper;
 
 class TClassDocOutput: public TDocOutput {
 protected:
@@ -26,6 +27,7 @@ protected:
 
    Int_t          fHierarchyLines; // counter for no. lines in hierarchy
    TClass*        fCurrentClass;   // class to generate output for
+   TList*         fCurrentClassesTypedefs; // typedefs to the current class
    TDocParser*    fParser;         // parser we use
 
    void           ClassHtmlTree(std::ostream &out, TClass *classPtr, ETraverse dir=kBoth, int depth=1);
@@ -48,11 +50,11 @@ protected:
                               TString& name, TString& params,
                               const char* file, TString& anchor,
                               TString& comment, TString& codeOneLiner,
-                              TMethod* guessedMethod);
+                              TDocMethodWrapper* guessedMethod);
    virtual void   WriteClassDescription(std::ostream& out, const TString& description);
 
 public:
-   TClassDocOutput(THtml& html, TClass* cl);
+   TClassDocOutput(THtml& html, TClass* cl, TList* typedefs);
    virtual ~TClassDocOutput();
 
    void           Class2Html(Bool_t force=kFALSE);

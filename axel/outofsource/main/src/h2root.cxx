@@ -33,30 +33,40 @@
 #include "TProfile.h"
 #include "TGraph.h"
 #include "TMath.h"
-int Error;   //to be removed soon
 
 //  Define the names of the Fortran common blocks for the different OSs
-
+// Note that with gcc3.4 or above the size of PAWC_SIZE must be the same 
+// as in the Fortran definition in hbook.f and zebra
+// Also, the arrays must be declared extern like on Windows
 #ifndef WIN32
-#define PAWC_SIZE 5000000
+#define PAWC_SIZE 4000000
+#  define bigbuf bigbuf_
 #  define pawc pawc_
 #  define quest quest_
 #  define hcbits hcbits_
 #  define hcbook hcbook_
 #  define rzcl rzcl_
-int pawc[PAWC_SIZE];
-int quest[100];
-int hcbits[37];
-int hcbook[51];
-int rzcl[11];
+//int pawc[PAWC_SIZE];
+//int quest[100];
+//int hcbits[37];
+//int hcbook[51];
+//int rzcl[11];
+extern "C" char bigbuf[PAWC_SIZE];
+extern "C" int pawc[PAWC_SIZE];
+extern "C" int quest[100];
+extern "C" int hcbits[37];
+extern "C" int hcbook[51];
+extern "C" int rzcl[11];
 #else
 // on windows /pawc/ must have the same length as in libPacklib.a !!
-#define PAWC_SIZE 2000000
+#define PAWC_SIZE 4000000
+#  define bigbuf BIGBUF
 #  define pawc   PAWC
 #  define quest  QUEST
 #  define hcbits HCBITS
 #  define hcbook HCBOOK
 #  define rzcl   RZCL
+extern "C" int bigbuf[PAWC_SIZE];
 extern "C" int pawc[PAWC_SIZE];
 extern "C" int quest[100];
 extern "C" int hcbits[37];
@@ -64,7 +74,6 @@ extern "C" int hcbook[51];
 extern "C" int rzcl[11];
 #endif
 
-char bigbuf[4000000]; //this variable must be global for amd64
 int *iq, *lq;
 float *q;
 char idname[128];
@@ -205,7 +214,7 @@ extern "C" void  type_of_call hdelet(const int&);
 extern "C" void  type_of_call hix(const int&,const int&,const float&);
 extern "C" void  type_of_call hijxy(const int&,const int&,const int&,const float&,const float&);
 
-#ifndef R__B64
+#ifndef R__B64BUG
 extern "C" float type_of_call hi(const int&,const int&);
 extern "C" float type_of_call hie(const int&,const int&);
 extern "C" float type_of_call hif(const int&,const int&);
@@ -282,11 +291,12 @@ int main(int argc, char **argv)
    if (argc > 2) {
       file_out=argv[2];
    } else {
-      file_out= new char[2000];
-      strcpy(file_out,file_in);
+      Int_t nchf = strlen(file_in)+strlen(".root")+1;
+      file_out= new char[nchf];
+      strlcpy(file_out,file_in,nchf);
       char *dot = strrchr(file_out,'.');
       if (dot) strcpy(dot+1,"root");
-      else     strcat(file_out,".root");
+      else     strlcat(file_out,".root",nchf);
    }
 
 #if defined(_HIUX_SOURCE) && !defined(__GNUC__)
@@ -311,7 +321,7 @@ int main(int argc, char **argv)
    }
 
    char root_file_title[2000];
-   sprintf(root_file_title,"HBOOK file: %s converted to ROOT",file_in);
+   snprintf(root_file_title,2000,"HBOOK file: %s converted to ROOT",file_in);
    TFile* hfile= TFile::Open(file_out,"RECREATE",root_file_title,compress);
 
    if (!hfile) {
@@ -410,7 +420,12 @@ void convert_directory(const char *dir)
 #else
       uhtoc(ihdir[0],ncw,chdir,16,nch);
 #endif
-      strcpy(hbookdir,chdir);
+      //do not process directory names containing a slash
+      if (strchr(chdir,'/')) {
+         printf("Sorry cannot convert directory name %s because it contains a slash\n",chdir);
+         continue;
+      }   
+      strlcpy(hbookdir,chdir,17);
       for (i=16;i>0;i--) {
          if (chdir[i] == 0) continue;
          if (chdir[i] != ' ') break;
@@ -438,8 +453,8 @@ void convert_directory(const char *dir)
 void convert_1d(Int_t id)
 {
    //convert 1d histogram
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
 #ifndef WIN32
    hgive(id,chtitl,ncx,xmin,xmax,ncy,ymin,ymax,nwt,idb,80);
@@ -465,21 +480,22 @@ void convert_1d(Int_t id)
       h1->GetListOfFunctions()->Add(gr);
    }
 
-   Float_t x;
+   Float_t x,yx;
    for (i=0;i<=ncx+1;i++) {
       x = h1->GetBinCenter(i);
-      h1->Fill(x,hi(id,i));
+      yx = hi(id,i);
+      h1->Fill(x,yx);
       if (hcbits[8]) h1->SetBinError(i,hie(id,i));
       if (gr && i>0 && i<=ncx) gr->SetPoint(i,x,hif(id,i));
    }
-   Float_t ymin, ymax;
+   Float_t yymin, yymax;
    if (hcbits[19]) {
-      ymax = q[lcid+kMAX1];
-      h1->SetMaximum(ymax);
+      yymax = q[lcid+kMAX1];
+      h1->SetMaximum(yymax);
    }
    if (hcbits[20]) {
-      ymin = q[lcid+kMIN1];
-      h1->SetMinimum(ymin);
+      yymin = q[lcid+kMIN1];
+      h1->SetMinimum(yymin);
    }
    h1->SetEntries(nentries);
    h1->Write();
@@ -490,8 +506,8 @@ void convert_1d(Int_t id)
 void convert_2d(Int_t id)
 {
    //convert 2d histogram
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
 #ifndef WIN32
    hgive(id,chtitl,ncx,xmin,xmax,ncy,ymin,ymax,nwt,idb,80);
@@ -532,8 +548,8 @@ void convert_profile(Int_t id)
 //      if option S jbyt(iq(lw),1,2) = 1
 //      if option I jbyt(iq(lw),1,2) = 2
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
    Int_t lw = lq[lcont];
    Int_t ln = lq[lw];
@@ -575,8 +591,8 @@ void convert_rwn(Int_t id)
    float *x;
    float rmin[1000], rmax[1000];
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
    printf(" Converting RWN with ID= %d, nentries = %d\n",id,nentries);
    nvar=0;
@@ -642,8 +658,8 @@ void convert_cwn(Int_t id)
    float *x;
    float rmin[1000], rmax[1000];
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
    printf(" Converting CWN with ID= %d, nentries = %d\n",id,nentries);
    nvar=0;
@@ -661,7 +677,6 @@ void convert_cwn(Int_t id)
    Int_t *lenbool  = new Int_t[nvar];
    UChar_t *boolarr = new UChar_t[10000];
    x = new float[nvar];
-   //bigbuf = new char[2500000];
 
    chtag_out[nvar*kNchar]=0;
    for (i=0;i<80;i++)chtitl[i]=0;
@@ -670,10 +685,11 @@ void convert_cwn(Int_t id)
 #else
    hgiven(id,chtitl,80,nvar,chtag_out,kNchar,rmin[0],rmax[0]);
 #endif
+   Long_t add= (Long_t)&bigbuf[0];
 #ifndef WIN32
-   hbnam(id,PASSCHAR(" "),bigbuf[0],PASSCHAR("$CLEAR"),0,1,6);
+   hbnam(id,PASSCHAR(" "),add,PASSCHAR("$CLEAR"),0,1,6);
 #else
-   hbnam(id,PASSCHAR(" "),bigbuf[0],PASSCHAR("$CLEAR"),0);
+   hbnam(id,PASSCHAR(" "),add,PASSCHAR("$CLEAR"),0);
 #endif
 
    Int_t bufpos = 0;
@@ -684,7 +700,7 @@ void convert_cwn(Int_t id)
    char block[512];
    char oldblock[512];
    Int_t nbits = 0;
-   strcpy(oldblock,"OLDBLOCK");
+   strlcpy(oldblock,"OLDBLOCK",512);
    Int_t oldischar = -1;
    for (i=80;i>0;i--) {if (chtitl[i] == ' ') chtitl[i] = 0; }
    TTree *tree = new TTree(idname,chtitl);
@@ -720,8 +736,8 @@ void convert_cwn(Int_t id)
          else break;
       }
       if (itype == 1) {
-         if( isize == 4 )     strcat(fullname,"/F");
-         else if( isize == 8) strcat(fullname,"/D");
+         if( isize == 4 )     strlcat(fullname,"/F",1024);
+         else if( isize == 8) strlcat(fullname,"/D",1024);
       }
 
 
@@ -731,18 +747,18 @@ void convert_cwn(Int_t id)
       if( itype == 2 ) {
          if( optcwn == 1 ) {
             if( nbits > 16 ) {
-               strcat(fullname,"/I");
+               strlcat(fullname,"/I",1024);
             } else {
                if( nbits > 8 ) {
-                  strcat(fullname,"/S");
+                  strlcat(fullname,"/S",1024);
                   nBytesUsed = 2;
                } else {
-                  strcat(fullname,"/B");
+                  strlcat(fullname,"/B",1024);
                   nBytesUsed = 1;
                }
             }
          } else {
-            strcat(fullname,"/I");
+            strlcat(fullname,"/I",1024);
          }
       }
 
@@ -750,36 +766,36 @@ void convert_cwn(Int_t id)
       if ( itype == 3 ) {
          if(  optcwn == 1 ) {
             if( nbits > 16) {
-               strcat(fullname,"/i");
+               strlcat(fullname,"/i",1024);
             } else {
                if( nbits > 8 ) {
-                  strcat(fullname,"/s");
+                  strlcat(fullname,"/s",1024);
                   nBytesUsed = 2;
                } else {
-                  strcat(fullname,"/b");
+                  strlcat(fullname,"/b",1024);
                   nBytesUsed = 1;
                }
             }
          } else {
-            strcat(fullname,"/i");
+            strlcat(fullname,"/i",1024);
          }
       }
 
 
 
 
-//     if (itype == 4) strcat(fullname,"/i");
-      if (itype == 4) strcat(fullname,"/b");
-      if (itype == 5) strcat(fullname,"/C");
+//     if (itype == 4) strlcat(fullname,"/i",1024);
+      if (itype == 4) strlcat(fullname,"/b",1024);
+      if (itype == 5) strlcat(fullname,"/C",1024);
       printf("Creating branch:%s, block:%s, fullname:%s, nsub=%d, itype=%d, isize=%d, ielem=%d\n",name,block,fullname,nsub,itype,isize,ielem);
       Int_t ischar;
       if (itype == 5) ischar = 1;
       else            ischar = 0;
       if (ischar != oldischar || strcmp(oldblock,block) != 0) {
-         strcpy(oldblock,block);
+         strlcpy(oldblock,block,512);
          oldischar = ischar;
          Int_t lblock   = strlen(block);
-         Long_t add= (Long_t)&bigbuf[bufpos];
+         add= (Long_t)&bigbuf[bufpos];
 #ifndef WIN32
          hbnam(id,PASSCHAR(block),add,PASSCHAR("$SET"),ischar,lblock,4);
 #else
@@ -868,6 +884,7 @@ void convert_cwn(Int_t id)
                }
             }
             bufpos += isize*ielem;
+            
          }
       }
 
@@ -877,7 +894,6 @@ void convert_cwn(Int_t id)
    tree->Write();
    delete tree;
    delete [] x;
-   //delete [] bigbuf;
    delete [] charflag;
    delete [] lenchar;
    delete [] boolflag;

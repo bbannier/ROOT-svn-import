@@ -1,5 +1,4 @@
-// This macro gets in memory an histogram from a root file
-// and fits a user defined function.
+// Get in memory an histogram from a root file and fit a user defined function.
 // Note that a user defined function must always be defined
 // as in this example:
 //  - first parameter: array of variables (in this example only 1-dimension)
@@ -18,7 +17,7 @@ Double_t fitf(Double_t *x, Double_t *par)
 }
 void myfit()
 {
-   TString dir = gSystem->UnixPathName(TCint::GetCurrentMacroName());
+   TString dir = gSystem->UnixPathName(gInterpreter->GetCurrentMacroName());
    dir.ReplaceAll("myfit.C","../hsimple.C");
    dir.ReplaceAll("/./","/");
    if (!gInterpreter->IsLoaded(dir.Data())) gInterpreter->LoadMacro(dir.Data());

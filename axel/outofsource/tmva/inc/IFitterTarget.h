@@ -51,7 +51,12 @@ namespace TMVA {
 
       virtual ~IFitterTarget() {}
 
-      virtual Double_t EstimatorFunction( std::vector<Double_t> & parameters ) = 0;
+      virtual Double_t EstimatorFunction( std::vector<Double_t>& parameters ) = 0;
+
+      // function to notify the FitterTarget of the progress status of the fitter
+      // sender : "GA", "MC", ...
+      // progress : "init", "iteration", "last", "stop"
+      virtual void     ProgressNotifier ( TString /*sender*/, TString /* progress */ ) {}   
 
    private:
 

@@ -69,6 +69,7 @@
 //_____________________________batch only_____________________
 #ifndef __CINT__
 
+#include <stdlib.h>
 #include <TROOT.h>
 #include <TSystem.h>
 #include <TH1.h>
@@ -84,6 +85,7 @@
 #include <TRandom.h>
 #include <TPostScript.h>
 #include <TNtuple.h>
+#include <TTreeCache.h>
 #include <TChain.h>
 #include <TCut.h>
 #include <TCutG.h>
@@ -186,11 +188,18 @@ void stress(Int_t nevent, Int_t style = 1,
    Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
    printf("******************************************************************\n");
    if (UNIX) {
-      FILE *fp = gSystem->OpenPipe("uname -a", "r");
-      char line[60];
-      fgets(line,60,fp); line[59] = 0;
-      printf("*  SYS: %s\n",line);
-      gSystem->ClosePipe(fp);
+      TString sp = gSystem->GetFromPipe("uname -a");
+      sp.Resize(60);
+      printf("*  SYS: %s\n",sp.Data());
+      if (strstr(gSystem->GetBuildNode(),"Linux")) {
+         sp = gSystem->GetFromPipe("lsb_release -d -s");
+         printf("*  SYS: %s\n",sp.Data());
+      }
+      if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+         sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+         sp += " Mac OS X ";
+         printf("*  SYS: %s\n",sp.Data());
+      }
    } else {
       const char *os = gSystem->Getenv("OS");
       if (!os) printf("*  SYS: Windows 95\n");
@@ -266,7 +275,7 @@ void stress1()
    f1form->SetParameters(f1params);
 
    //Create an histogram and fill it randomly with f1form
-   gRandom->SetSeed();
+   gRandom->SetSeed(65539);
    TH1F *h1form = new TH1F("h1form","distribution from f1form",100,-10,10);
    TH1F *h1diff = (TH1F*)h1form->Clone();
    h1diff->SetName("h1diff");
@@ -280,7 +289,7 @@ void stress1()
    f1->SetParameters(f1params);
 
    //Create an histogram and fill it randomly with f1int
-   gRandom->SetSeed(); //make sure we start with the same random numbers
+   gRandom->SetSeed(65539); //make sure we start with the same random numbers
    TH1F *h1int = new TH1F("h1int","distribution from f1int",100,-10,10);
    h1int->FillRandom("f1int",10000);
 
@@ -384,7 +393,7 @@ void stress4()
    f2form->SetParameters(f2params);
 
    //Create an histogram and fill it randomly with f2form
-   gRandom->SetSeed();
+   gRandom->SetSeed(65539);
    TH2F *h2form = new TH2F("h2form","distribution from f2form",40,-10,10,40,-10,10);
    Int_t nentries = 100000;
    h2form->FillRandom("f2form",nentries);
@@ -464,7 +473,7 @@ void stress5()
    FILE *fp = fopen("stress.ps","r");
    char line[260];
    Int_t nlines = 0;
-   Int_t nlinesGood = 675;
+   Int_t nlinesGood = 632;
    while (fgets(line,255,fp)) {
       nlines++;
    }
@@ -491,7 +500,7 @@ void stress6()
 
    TFile f("stress.root","update");
    // create a new subdirectory for each plane
-   gRandom->SetSeed();
+   gRandom->SetSeed(65539);
    const Int_t nplanes = 10;
    const Int_t ncounters = 100;
    char dirname[50];
@@ -579,7 +588,7 @@ void stress7()
 
    TFile f("stress.root","update");
    // Create and fill a TNtuple
-   gRandom->SetSeed();
+   gRandom->SetSeed(65539);
    TNtuple *ntuple = new TNtuple("ntuple","Demo ntuple","px:py:pz:random:i");
    Float_t px, py, pz;
    Int_t nall = 50000;
@@ -722,6 +731,12 @@ Int_t stress8read(Int_t nevent)
    tree->SetBranchAddress("event",&event);
    Int_t nentries = (Int_t)tree->GetEntries();
    Int_t nev = TMath::Max(nevent,nentries);
+   //activate the treeCache
+   Int_t cachesize = 10000000; //this is the default value: 10 MBytes
+   tree->SetCacheSize(cachesize);
+   TTreeCache::SetLearnEntries(1); //one entry is sufficient to learn
+   TTreeCache *tc = (TTreeCache*)hfile->GetCacheRead();
+   tc->SetEntryRange(0,nevent);
    Int_t nb = 0;
    for (Int_t ev = 0; ev < nev; ev++) {
       nb += tree->GetEntry(ev);        //read complete event in memory
@@ -795,19 +810,19 @@ void stress8(Int_t nevent)
    }
 
    // Create the file not compressed, in no-split mode and read it back
-   gRandom->SetSeed();
+   gRandom->SetSeed(65539);
    Int_t nbw0 = stress8write(100,0,0);
    Int_t nbr0 = stress8read(0);
    Event::Reset();
 
    // Create the file compressed, in no-split mode and read it back
-   gRandom->SetSeed();
+   gRandom->SetSeed(65539);
    Int_t nbw1 = stress8write(100,1,0);
    Int_t nbr1 = stress8read(0);
    Event::Reset();
 
    // Create the file compressed, in split mode and read it back
-   gRandom->SetSeed();
+   gRandom->SetSeed(65539);
    Int_t nbw2 = stress8write(nevent,1,9);
    Int_t nbr2 = stress8read(0);
    Event::Reset();
@@ -1416,7 +1431,7 @@ void stress16()
    TCanvas *c = new TCanvas("laten","latency simulation",700,600);
    gROOT->LoadClass("TPostScript","Postscript");
    TPostScript ps("stress_lhcb.ps",112);
-   gRandom->SetSeed();
+   gRandom->SetSeed(65539);
    TFile f("stress_lhcb.root", "recreate");
    TH1F *pipe = new TH1F("pipe", "free in pipeline", nbuf+1, -0.5, nbuf+0.5);
    pipe->SetLineColor(2);
@@ -1495,9 +1510,11 @@ void stress16()
    FILE *fp = fopen("stress_lhcb.ps","r");
    char line[260];
    Int_t nlines = 0;
-   Int_t nlinesGood = 2303;
+   Int_t nlinesGood = 2121;
+   Bool_t counting = kFALSE;
    while (fgets(line,255,fp)) {
-      nlines++;
+      if (counting) nlines++;
+      if (strstr(line,"%%EndProlog")) counting = kTRUE;
    }
    fclose(fp);
    delete c;

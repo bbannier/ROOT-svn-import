@@ -1,21 +1,22 @@
-////////////////////////////////////////////////////////////////////////////////
-//                                                                            //
-// ROOT implementation of a XML DOM Parser                                    //
-//                                                                            //
-// This is an example of how Dom Parser walks the DOM tree recursively.       //
-// This example will parse any xml file.                                      //
-//                                                                            //
-// To run this program                                                        //
-// .x domrecursive.C                                                          //
-//                                                                            //
-// Requires: person.xml                                                       //
-//                                                                            //
-////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//
+// ROOT implementation of a XML DOM Parser
+//
+// This is an example of how Dom Parser walks the DOM tree recursively.
+// This example will parse any xml file.
+// 
+// To run this program
+// .x DOMRecursive.C+
+// 
+// Requires: person.xml 
+// 
+//////////////////////////////////////////////////////////////////////////////
 
 #include <Riostream.h>
 #include <TDOMParser.h>
 #include <TXMLNode.h>
 #include <TXMLAttr.h>
+#include <TList.h>
 
 
 void ParseContext(TXMLNode *node)

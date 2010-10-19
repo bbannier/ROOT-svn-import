@@ -1,4 +1,4 @@
-// @(#)root/tmva $Id$
+// @(#)root/tmva $Id$   
 // Author: Andreas Hoecker, Joerg Stelzer, Helge Voss
 
 /**********************************************************************************
@@ -49,8 +49,9 @@
 //         want to use the text output then
 //_______________________________________________________________________
 
+#include <iomanip>
+
 #include "TMVA/Timer.h"
-#include "Riostream.h"
 
 #ifndef ROOT_TMVA_Config
 #include "TMVA/Config.h"
@@ -58,43 +59,37 @@
 #ifndef ROOT_TMVA_Tools
 #include "TMVA/Tools.h"
 #endif
+#ifndef ROOT_TMVA_MsgLogger
+#include "TMVA/MsgLogger.h"
+#endif
 
 const TString TMVA::Timer::fgClassName = "Timer";
 const Int_t   TMVA::Timer::fgNbins     = 24;  
-
-using TMVA::Tools::Color;
 
 ClassImp(TMVA::Timer)
 
 //_______________________________________________________________________
 TMVA::Timer::Timer( const char* prefix, Bool_t colourfulOutput )
    : fNcounts        ( 0 ),
-     fPrefix         ( Timer::fgClassName ),
-     fColourfulOutput( colourfulOutput )
+     fPrefix         ( strcmp(prefix,"")==0?Timer::fgClassName:TString(prefix) ),
+     fColourfulOutput( colourfulOutput ),
+     fLogger         ( new MsgLogger( fPrefix.Data() ) )
 {
    // constructor
-   if (!strcmp(prefix, "")) fPrefix = Timer::fgClassName;
-   else              fPrefix = prefix;
-
-   fLogger = new MsgLogger( fPrefix.Data() );
-
    Reset();
 }
 
 //_______________________________________________________________________
 TMVA::Timer::Timer( Int_t ncounts, const char* prefix, Bool_t colourfulOutput  )
    : fNcounts        ( ncounts ),
-     fColourfulOutput( colourfulOutput )
+     fPrefix         ( strcmp(prefix,"")==0?Timer::fgClassName:TString(prefix) ),
+     fColourfulOutput( colourfulOutput ),
+     fLogger         ( new MsgLogger( fPrefix.Data() ) )
 {
    // standard constructor: ncounts gives the total number of counts that 
    // the loop will iterate through. At each call of the timer, the current
    // number of counts is provided by the user, so that the timer can obtain
    // the due time from linearly interpolating the spent time.
-   if (prefix == "") fPrefix = Timer::fgClassName;
-   else              fPrefix = prefix;
-
-   fLogger = new MsgLogger( fPrefix.Data() );
-
    Reset();
 }
 
@@ -149,77 +144,74 @@ TString TMVA::Timer::GetLeftTime( Int_t icounts )
 void TMVA::Timer::DrawProgressBar() 
 {
    // draws the progressbar
-
-   if(gConfig().Silent()) return;
-
    fNcounts++;
    if (fNcounts == 1) {
-      clog << fLogger->GetPrintedSource();
-      clog << "Please wait ";
+      std::clog << fLogger->GetPrintedSource();
+      std::clog << "Please wait ";
    }
 
-   clog << "." << flush;
+   std::clog << "." << std::flush;
 }
 
 //_______________________________________________________________________
 void TMVA::Timer::DrawProgressBar( TString theString ) 
 {
    // draws a string in the progress bar
+   std::clog << fLogger->GetPrintedSource();
 
-   if(gConfig().Silent()) return;
+   std::clog << gTools().Color("white_on_green") << gTools().Color("dyellow") << "[" << gTools().Color("reset");
 
-   clog << fLogger->GetPrintedSource();
+   std::clog << gTools().Color("white_on_green") << gTools().Color("dyellow") << theString << gTools().Color("reset");
 
-   clog << Color("white_on_green") << Color("dyellow") << "[" << Color("reset");
+   std::clog << gTools().Color("white_on_green") << gTools().Color("dyellow") << "]" << gTools().Color("reset");
 
-   clog << Color("white_on_green") << Color("dyellow") << theString << Color("reset");
-
-   clog << Color("white_on_green") << Color("dyellow") << "]" << Color("reset");
-
-   clog << "\r" << flush; 
+   std::clog << "\r" << std::flush; 
 }
 
 //_______________________________________________________________________
-void TMVA::Timer::DrawProgressBar( Int_t icounts ) 
+void TMVA::Timer::DrawProgressBar( Int_t icounts, const TString& comment  ) 
 {
    // draws progress bar in color or B&W
    // caution: 
 
-   if(gConfig().Silent()) return;
+   if (!gConfig().DrawProgressBar()) return;
 
    // sanity check:
    if (icounts > fNcounts-1) icounts = fNcounts-1;
    if (icounts < 0         ) icounts = 0;
    Int_t ic = Int_t(Float_t(icounts)/Float_t(fNcounts)*fgNbins);
 
-   clog << fLogger->GetPrintedSource();
-   if (fColourfulOutput) clog << Color("white_on_green") << Color("dyellow") << "[" << Color("reset");
-   else                  clog << "[";
+   std::clog << fLogger->GetPrintedSource();
+   if (fColourfulOutput) std::clog << gTools().Color("white_on_green") << gTools().Color("dyellow") << "[" << gTools().Color("reset");
+   else                  std::clog << "[";
    for (Int_t i=0; i<ic; i++) {
-      if (fColourfulOutput) clog << Color("white_on_green") << Color("dyellow") << ">" << Color("reset"); 
-      else                  clog << ">";
+      if (fColourfulOutput) std::clog << gTools().Color("white_on_green") << gTools().Color("dyellow") << ">" << gTools().Color("reset"); 
+      else                  std::clog << ">";
    }
    for (Int_t i=ic+1; i<fgNbins; i++) {
-      if (fColourfulOutput) clog << Color("white_on_green") << Color("dyellow") << "." << Color("reset"); 
-      else                  clog << ".";
+      if (fColourfulOutput) std::clog << gTools().Color("white_on_green") << gTools().Color("dyellow") << "." << gTools().Color("reset"); 
+      else                  std::clog << ".";
    }
-   if (fColourfulOutput) clog << Color("white_on_green") << Color("dyellow") << "]" << Color("reset");
-   else                  clog << "]" ;
+   if (fColourfulOutput) std::clog << gTools().Color("white_on_green") << gTools().Color("dyellow") << "]" << gTools().Color("reset");
+   else                  std::clog << "]" ;
 
    // timing information
    if (fColourfulOutput) {
-      clog << Color("reset") << " " ;
-      clog << "(" << Color("red") << Int_t((100*(icounts+1))/Float_t(fNcounts)) << "%" << Color("reset")
+      std::clog << gTools().Color("reset") << " " ;
+      std::clog << "(" << gTools().Color("red") << Int_t((100*(icounts+1))/Float_t(fNcounts)) << "%" << gTools().Color("reset")
                << ", " 
                << "time left: "
-               << this->GetLeftTime( icounts ) << Color("reset") << ") ";
+               << this->GetLeftTime( icounts ) << gTools().Color("reset") << ") ";
    }
    else {
-      clog << "] " ;
-      clog << "(" << Int_t((100*(icounts+1))/Float_t(fNcounts)) << "%" 
+      std::clog << "] " ;
+      std::clog << "(" << Int_t((100*(icounts+1))/Float_t(fNcounts)) << "%" 
                << ", " << "time left: " << this->GetLeftTime( icounts ) << ") ";
    }
-   clog << "\r" << flush; 
+   if (comment != "") {
+      std::clog << "[" << comment << "]  ";
+   }
+   std::clog << "\r" << std::flush; 
 }
 
 //_______________________________________________________________________
@@ -243,6 +235,6 @@ TString TMVA::Timer::SecToText( Double_t seconds, Bool_t Scientific ) const
       else        out += Form( "%i mins", m );
    }
 
-   return (fColourfulOutput) ? Color("red") + out + Color("reset") : out;
+   return (fColourfulOutput) ? gTools().Color("red") + out + gTools().Color("reset") : out;
 }
 

@@ -1,3 +1,4 @@
+// GUI to draw the geometry shapes
 // Author: M.Gheata  06/16/03
 Bool_t comments = kTRUE;
 Bool_t raytracing = kFALSE;
@@ -23,7 +24,7 @@ void geodemo ()
 // The same can procedure can be performed for visualizing other shapes.
 // When drawing one shape after another, the old geometry/canvas will be deleted.
    gSystem->Load("libGeom");
-   TString dir = gSystem->UnixPathName(TCint::GetCurrentMacroName());
+   TString dir = gSystem->UnixPathName(gInterpreter->GetCurrentMacroName());
    dir.ReplaceAll("geodemo.C","");
    dir.ReplaceAll("/./","/");
    gROOT->LoadMacro(dir+"rootgeom.C");

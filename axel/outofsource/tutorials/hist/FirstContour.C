@@ -1,3 +1,4 @@
+// make a contour plot and get the first contour in a TPolyMarker
 void FirstContour()
 {
    //this macro generates a color contour plot by selecting entries
@@ -6,7 +7,7 @@ void FirstContour()
    //accessed and displayed into a separate canvas.
    //Author: Rene Brun
    
-   TString dir = gSystem->UnixPathName(TCint::GetCurrentMacroName());
+   TString dir = gSystem->UnixPathName(gInterpreter->GetCurrentMacroName());
    dir.ReplaceAll("FirstContour.C","../hsimple.C");
    dir.ReplaceAll("/./","/");
    if (!gInterpreter->IsLoaded(dir.Data())) gInterpreter->LoadMacro(dir.Data());
@@ -28,8 +29,12 @@ void FirstContour()
    
    TObjArray *contours = 
       (TObjArray*)gROOT->GetListOfSpecials()->FindObject("contours");
+   if (!contours) return;
    TList *lcontour1 = (TList*)contours->At(0);
+   if (!lcontour1) return;
    TGraph *gc1 = (TGraph*)lcontour1->First();
+   if (!gc1) return;
+   if (gc1->GetN() < 10) return;
    gc1->SetMarkerStyle(21);
    gc1->Draw("alp");
    

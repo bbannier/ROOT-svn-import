@@ -14,8 +14,8 @@
  *      Rustem Ospanov <rustem@fnal.gov> - U. of Texas at Austin, USA             *
  *                                                                                *
  * Copyright (c) 2007:                                                            *
- *      CERN, Switzerland                                                         * 
- *      MPI-K Heidelberg, Germany                                                 * 
+ *      CERN, Switzerland                                                         *
+ *      MPI-K Heidelberg, Germany                                                 *
  *      U. of Texas at Austin, USA                                                *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -23,8 +23,8 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-#ifndef ROOT_TMVA_KNN_ModulekNN
-#define ROOT_TMVA_KNN_ModulekNN
+#ifndef ROOT_TMVA_ModulekNN
+#define ROOT_TMVA_ModulekNN
 
 //______________________________________________________________________
 /*
@@ -38,39 +38,45 @@
 #include <cassert>
 #include <iosfwd>
 #include <map>
+#include <string>
 #include <vector>
 
 // ROOT
+#ifndef ROOT_Rtypes
 #include "Rtypes.h"
+#endif
+#ifndef ROOT_TRandom
+#include "TRandom3.h"
+#endif
 
-// Local
-#ifndef ROOT_TMVA_KNN_Node
+#ifndef ROOT_TMVA_NodekNN
 #include "TMVA/NodekNN.h"
 #endif
-#ifndef ROOT_TMVA_MsgLogger
-#include "TMVA/MsgLogger.h"
-#endif
 
-namespace TMVA
-{
-   namespace kNN
-   {
+namespace TMVA {
+
+   class MsgLogger;
+
+   namespace kNN {
+      
       typedef Float_t VarType;
       typedef std::vector<VarType> VarVec;
       
-      class Event
-      {
+      class Event {
       public:
 
          Event();
          Event(const VarVec &vec, Double_t weight, Short_t type);
+         Event(const VarVec &vec, Double_t weight, Short_t type, const VarVec &tvec);
          ~Event();
-      
+
          Double_t GetWeight() const;
 
          VarType GetVar(UInt_t i) const;
+         VarType GetTgt(UInt_t i) const;
 
          UInt_t GetNVar() const;
+         UInt_t GetNTgt() const;
 
          Short_t GetType() const;
 
@@ -78,15 +84,20 @@ namespace TMVA
          VarType GetDist(VarType var, UInt_t ivar) const;
          VarType GetDist(const Event &other) const;
 
+         void SetTargets(const VarVec &tvec);
+         const VarVec& GetTargets() const;
+         const VarVec& GetVars() const;
+
          void Print() const;
          void Print(std::ostream& os) const;
 
       private:
 
-         VarVec fVar;
- 
-         Double_t fWeight;
-         Short_t fType;
+         VarVec fVar; // coordinates (variables) for knn search
+         VarVec fTgt; // targets for regression analysis
+
+         Double_t fWeight; // event weight
+         Short_t fType; // event type ==0 or == 1, expand it to arbitrary class types? 
       };
 
       typedef std::vector<TMVA::kNN::Event> EventVec;
@@ -112,7 +123,7 @@ namespace TMVA
 
          Bool_t Fill(const UShort_t odepth, UInt_t ifrac, const std::string &option = "");
 
-         Bool_t Find(Event event, UInt_t nfind = 100) const;
+         Bool_t Find(Event event, UInt_t nfind = 100, const std::string &option = "count") const;
          Bool_t Find(UInt_t nfind, const std::string &option) const;
       
          const EventVec& GetEventVec() const;
@@ -137,6 +148,8 @@ namespace TMVA
 
       private:
 
+         static TRandom3 fgRndm;
+
          UInt_t fDimn;
 
          Node<Event> *fTree;
@@ -145,13 +158,14 @@ namespace TMVA
 
          mutable List  fkNNList;     // latest result from kNN search
          mutable Event fkNNEvent;    // latest event used for kNN search
-
+         
          std::map<Short_t, UInt_t> fCount; // count number of events of each type
 
          EventVec fEvent; // vector of all events used to build tree and analysis
          VarMap   fVar;   // sorted map of variables in each dimension for all event types
 
-         mutable MsgLogger fLogger; // message logger
+         mutable MsgLogger* fLogger;   // message logger
+         MsgLogger& Log() const { return *fLogger; }
       };
 
       //
@@ -168,12 +182,20 @@ namespace TMVA
       }
       inline VarType Event::GetVar(const UInt_t i) const
       {
-         assert(i < GetNVar());
          return fVar[i];
       }
+      inline VarType Event::GetTgt(const UInt_t i) const
+      {
+         return fTgt[i];
+      }
+
       inline UInt_t Event::GetNVar() const
       {
          return fVar.size();
+      }
+      inline UInt_t Event::GetNTgt() const
+      {
+         return fTgt.size();
       }
       inline Short_t Event::GetType() const
       {

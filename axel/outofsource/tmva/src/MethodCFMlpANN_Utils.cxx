@@ -57,23 +57,80 @@
 //                 Universite de Blaise Pascal, IN2P3/CNRS    
 //_______________________________________________________________________
 
+#include <string>
 #include <iostream>
+#include <cstdlib>
+
+#include "TMath.h"
+#include "TString.h"
 
 #include "TMVA/MethodCFMlpANN_Utils.h"
 #include "TMVA/Timer.h"
-#include "TMath.h"
+
+using std::cout;
+using std::endl;
 
 ClassImp(TMVA::MethodCFMlpANN_Utils)
    
-Int_t TMVA::MethodCFMlpANN_Utils::fg_100         = 100;
-Int_t TMVA::MethodCFMlpANN_Utils::fg_0           = 0;
-Int_t TMVA::MethodCFMlpANN_Utils::fg_max_nVar_   = max_nVar_;
-Int_t TMVA::MethodCFMlpANN_Utils::fg_max_nNodes_ = max_nNodes_;
-Int_t TMVA::MethodCFMlpANN_Utils::fg_999         = 999;
+Int_t       TMVA::MethodCFMlpANN_Utils::fg_100         = 100;
+Int_t       TMVA::MethodCFMlpANN_Utils::fg_0           = 0;
+Int_t       TMVA::MethodCFMlpANN_Utils::fg_max_nVar_   = max_nVar_;
+Int_t       TMVA::MethodCFMlpANN_Utils::fg_max_nNodes_ = max_nNodes_;
+Int_t       TMVA::MethodCFMlpANN_Utils::fg_999         = 999;
+const char* TMVA::MethodCFMlpANN_Utils::fg_MethodName  = "--- CFMlpANN                 ";
 
 TMVA::MethodCFMlpANN_Utils::MethodCFMlpANN_Utils()  
 {
    // default constructor
+   Int_t i(0);
+   for(i=0; i<max_nVar_;++i) fVarn_1.xmin[i] = 0;
+   fCost_1.ancout = 0;
+   fCost_1.ieps = 0;
+   fCost_1.tolcou = 0;
+
+   for(i=0; i<max_nNodes_;++i) fDel_1.coef[i] = 0;
+   for(i=0; i<max_nLayers_*max_nNodes_;++i) fDel_1.del[i] = 0;
+   for(i=0; i<max_nLayers_*max_nNodes_*max_nNodes_;++i) fDel_1.delta[i] = 0;
+   for(i=0; i<max_nLayers_*max_nNodes_*max_nNodes_;++i) fDel_1.delw[i] = 0;
+   for(i=0; i<max_nLayers_*max_nNodes_;++i) fDel_1.delww[i] = 0;
+   fDel_1.demin = 0;
+   fDel_1.demax = 0;
+   fDel_1.idde = 0;
+   for(i=0; i<max_nLayers_;++i) fDel_1.temp[i] = 0;
+
+   for(i=0; i<max_nNodes_;++i) fNeur_1.cut[i] = 0;
+   for(i=0; i<max_nLayers_*max_nNodes_;++i) fNeur_1.deltaww[i] = 0;
+   for(i=0; i<max_nLayers_;++i) fNeur_1.neuron[i] = 0;
+   for(i=0; i<max_nNodes_;++i) fNeur_1.o[i] = 0;
+   for(i=0; i<max_nLayers_*max_nNodes_*max_nNodes_;++i) fNeur_1.w[i] = 0;
+   for(i=0; i<max_nLayers_*max_nNodes_;++i) fNeur_1.ww[i] = 0;
+   for(i=0; i<max_nLayers_*max_nNodes_;++i) fNeur_1.x[i] = 0;
+   for(i=0; i<max_nLayers_*max_nNodes_;++i) fNeur_1.y[i] = 0;
+      
+   fParam_1.eeps = 0;
+   fParam_1.epsmin = 0;
+   fParam_1.epsmax = 0;
+   fParam_1.eta = 0;
+   fParam_1.ichoi = 0;
+   fParam_1.itest = 0;
+   fParam_1.layerm = 0;
+   fParam_1.lclass = 0;
+   fParam_1.nblearn = 0;
+   fParam_1.ndiv = 0;
+   fParam_1.ndivis = 0;
+   fParam_1.nevl = 0;
+   fParam_1.nevt = 0;
+   fParam_1.nunap = 0;
+   fParam_1.nunilec = 0;
+   fParam_1.nunishort = 0;
+   fParam_1.nunisor = 0;
+   fParam_1.nvar = 0;
+
+   fVarn_1.iclass = 0;
+   for(i=0; i<max_Events_;++i) fVarn_1.mclass[i] = 0;
+   for(i=0; i<max_Events_;++i) fVarn_1.nclass[i] = 0;
+   for(i=0; i<max_nVar_;++i) fVarn_1.xmax[i] = 0;
+
 }
 
 TMVA::MethodCFMlpANN_Utils::~MethodCFMlpANN_Utils() 
@@ -97,7 +154,7 @@ void TMVA::MethodCFMlpANN_Utils::Train_nn( Double_t *tin2, Double_t *tout2, Int_
    if (*nvar2 > max_nVar_) {
       printf( "*** CFMlpANN_f2c: ERROR in Train_nn: number of variables" \
               " exceeds hardcoded maximum ==> abort");
-      exit(1);
+      std::exit(1);
    }
    if (*nlayer > max_nLayers_) {
       printf( "*** CFMlpANN_f2c: Warning in Train_nn: number of layers" \
@@ -180,9 +237,9 @@ void TMVA::MethodCFMlpANN_Utils::Entree_new( Int_t *, char *, Int_t *ntrain,
    fParam_1.nunisor = 30;
    fParam_1.nunishort = 48;
    fParam_1.nunap = 40;
-   printf("--- CFMlpANN     : Total number of events for training: %i\n", fParam_1.nevl);
-   printf("--- CFMlpANN     : Total number of events for testing : %i\n", fParam_1.nevt);
-   printf("--- CFMlpANN     : Total number of training cycles    : %i\n", fParam_1.nblearn);
+   
+   printf("%s: Total number of events for training: %i\n", fg_MethodName, fParam_1.nevl);
+   printf("%s: Total number of training cycles    : %i\n", fg_MethodName, fParam_1.nblearn);
    if (fParam_1.nevl > max_Events_) {
       printf("Error: number of learning events exceeds maximum: %i, %i ==> abort", 
              fParam_1.nevl, max_Events_ );
@@ -206,8 +263,7 @@ void TMVA::MethodCFMlpANN_Utils::Entree_new( Int_t *, char *, Int_t *ntrain,
    }
    i__1 = fParam_1.layerm;
    for (j = 1; j <= i__1; ++j) {
-      printf("--- CFMlpANN     : Number of layers for neuron(%2i): %i\n",j, 
-             fNeur_1.neuron[j - 1]);
+      printf("%s: Number of layers for neuron(%2i): %i\n",fg_MethodName, j, fNeur_1.neuron[j - 1]);
    }
    if (fNeur_1.neuron[fParam_1.layerm - 1] != 2) {
       printf("Error: wrong number of classes at ouput layer: %i != 2 ==> abort\n",
@@ -230,10 +286,10 @@ void TMVA::MethodCFMlpANN_Utils::Entree_new( Int_t *, char *, Int_t *ntrain,
       Arret("new training or continued one !");
    }
    if (fParam_1.ichoi == 0) {
-      printf("--- CFMlpANN     : New training will be performed\n");
+      printf("%s: New training will be performed\n", fg_MethodName);
    } 
    else {
-      printf("--- CFMlpANN     : New training will be continued from a weight file\n");
+      printf("%s: New training will be continued from a weight file\n", fg_MethodName);
    }
    ncoef = 0;
    ntemp = 0;
@@ -523,7 +579,7 @@ void TMVA::MethodCFMlpANN_Utils::Innit( char *det, Double_t *tout2, Double_t *ti
 
    Int_t i__, j;
    Int_t nevod, layer, ktest, i1, nrest;
-   Int_t ievent;
+   Int_t ievent(0);
    Int_t kkk;
    Double_t xxx, yyy;
 
@@ -531,7 +587,7 @@ void TMVA::MethodCFMlpANN_Utils::Innit( char *det, Double_t *tout2, Double_t *ti
    Lecev2(&ktest, tout2, tin2);
    if (ktest == 1) {
       printf( " .... strange to be here (1) ... \n");
-      exit(1);
+      std::exit(1);
    }
    i__1 = fParam_1.layerm - 1;
    for (layer = 1; layer <= i__1; ++layer) {
@@ -557,7 +613,7 @@ void TMVA::MethodCFMlpANN_Utils::Innit( char *det, Double_t *tout2, Double_t *ti
 
    for (i1 = 1; i1 <= i__3; ++i1) {
 
-      if ( num>0 && (i1-1)%num == 0 || i1 == i__3) timer.DrawProgressBar( i1-1 );
+      if ( ( num>0 && (i1-1)%num == 0) || (i1 == i__3) ) timer.DrawProgressBar( i1-1 );
 
       i__2 = fParam_1.nevl;
       for (i__ = 1; i__ <= i__2; ++i__) {
@@ -605,8 +661,6 @@ void TMVA::MethodCFMlpANN_Utils::Innit( char *det, Double_t *tout2, Double_t *ti
          break;
       }
    }
-   printf("--- CFMlpANN     : Elapsed time: %s\n", (const char*)timer.GetElapsedTime()  );
-
 }
 
 #undef deltaww_ref
@@ -660,7 +714,7 @@ void TMVA::MethodCFMlpANN_Utils::TestNN()
    }
    if (ktest == 1) {
       printf( " .... strange to be here (2) ... \n");
-      exit(1);
+      std::exit(1);
    }
 }
 
@@ -1002,8 +1056,8 @@ void TMVA::MethodCFMlpANN_Utils::En_avant2( Int_t *ievent )
 void TMVA::MethodCFMlpANN_Utils::Arret( const char* mot )
 {
    // fatal error occurred: stop execution
-   printf("CFMlpANN: %s",mot);
-   exit(1);
+   printf("%s: %s",fg_MethodName, mot);
+   std::exit(1);
 }
 
 void TMVA::MethodCFMlpANN_Utils::CollectVar( Int_t *nvar, Int_t *class__, Double_t *xpg )

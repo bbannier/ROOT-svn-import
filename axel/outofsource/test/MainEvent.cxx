@@ -107,6 +107,7 @@ int main(int argc, char **argv)
    Int_t arg4   = 1;
    Int_t arg5   = 600;     //default number of tracks per event
    Int_t netf   = 0;
+   Int_t punzip = 0;
 
    if (argc > 1)  nevent = atoi(argv[1]);
    if (argc > 2)  comp   = atoi(argv[2]);
@@ -119,6 +120,7 @@ int main(int argc, char **argv)
    if (arg4 == 10) { write = 0; hfill = 1;}
    if (arg4 == 11) { write = 1; hfill = 1;}
    if (arg4 == 20) { write = 0; read  = 1;}  //read sequential
+   if (arg4 == 21) { write = 0; read  = 1;  punzip = 1;}  //read sequential + parallel unzipping
    if (arg4 == 25) { write = 0; read  = 2;}  //read random
    if (arg4 >= 30) { netf  = 1; }            //use TNetFile
    if (arg4 == 30) { write = 0; read  = 1;}  //netfile + read sequential
@@ -144,9 +146,6 @@ int main(int argc, char **argv)
    if (arg5 < 100) printev = 1000;
    if (arg5 < 10)  printev = 10000;
 
-   //Authorize Trees up to 2 Terabytes (if the system can do it)
-   TTree::SetMaxTreeSize(1000*Long64_t(2000000000));
-
 //         Read case
    if (read) {
       if (netf) {
@@ -154,13 +153,19 @@ int main(int argc, char **argv)
       } else
          hfile = new TFile("Event.root");
       tree = (TTree*)hfile->Get("T");
-      tree->SetCacheSize(10000000); //this is the default value: 10 MBytes
       TBranch *branch = tree->GetBranch("event");
       branch->SetAddress(&event);
       Int_t nentries = (Int_t)tree->GetEntries();
-      nevent = TMath::Max(nevent,nentries);
+      nevent = TMath::Min(nevent,nentries);
       if (read == 1) {  //read sequential
+         //by setting the read cache to -1 we set it to the AutoFlush value when writing
+         Int_t cachesize = -1; 
+         if (punzip) tree->SetParallelUnzip();
+         tree->SetCacheSize(cachesize);
+         tree->SetCacheLearnEntries(1); //one entry is sufficient to learn
+         tree->SetCacheEntryRange(0,nevent);
          for (ev = 0; ev < nevent; ev++) {
+            tree->LoadTree(ev);  //this call is required when using the cache
             if (ev%printev == 0) {
                tnew = timer.RealTime();
                printf("event:%d, rtime=%f s\n",ev,tnew-told);
@@ -200,7 +205,7 @@ int main(int argc, char **argv)
      }
 
      // Create a ROOT Tree and one superbranch
-      TTree *tree = new TTree("T","An example of a ROOT tree");
+      tree = new TTree("T","An example of a ROOT tree");
       tree->SetAutoSave(1000000000); // autosave when 1 Gbyte written
       tree->SetCacheSize(10000000);  //set a 10 MBytes cache (useless when writing local files)
       bufsize = 64000;
@@ -245,6 +250,7 @@ int main(int argc, char **argv)
    printf("\n%d events and %lld bytes processed.\n",nevent,nb);
    printf("RealTime=%f seconds, CpuTime=%f seconds\n",rtime,ctime);
    if (read) {
+      tree->PrintCacheStats();
       printf("You read %f Mbytes/Realtime seconds\n",mbytes/rtime);
       printf("You read %f Mbytes/Cputime seconds\n",mbytes/ctime);
    } else {

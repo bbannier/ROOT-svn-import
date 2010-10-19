@@ -1,4 +1,5 @@
-//Author: Timur Pocheptsov
+// Render a TF2 looking like a rose.
+// Author: Timur Pocheptsov
 void glrose()
 {
   //Define and set user's palette,
@@ -23,6 +24,7 @@ void glrose()
 
    gStyle->SetPalette(paletteSize, palette);
 
+   gStyle->SetCanvasPreferGL(1);
    TCanvas *cnv = new TCanvas("glc", "Surface sample", 200, 10, 600, 550);
 
    TPaveLabel *title = new TPaveLabel(0.04, 0.86, 0.96, 0.98, "\"glsurf2pol\" option + user defined palette.");

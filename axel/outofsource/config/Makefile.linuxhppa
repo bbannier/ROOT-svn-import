@@ -38,24 +38,28 @@ SOFLAGS       = -shared -Wl,-soname,
 SOEXT         = so
 
 # System libraries:
-SYSLIBS       = -lm -ldl $(OSTHREADLIBDIR) $(OSTHREADLIB) -rdynamic
+SYSLIBS       = -lm -ldl $(OSTHREADLIBDIR) $(OSTHREADLIB) \
+                $(ALLOCLIBDIR) $(ALLOCLIB) -rdynamic
 XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm -ldl -rdynamic
 CRYPTLIBS     = -lcrypt
 
 # Fortran:
-F77           =
-ifeq ($(shell which gfortran 2>&1 | sed -ne "s/.*\/gfortran/gfortran/p"),gfortran)
-ifeq ($(shell gfortran -print-libgcc-file-name),$(shell $(CC) -print-libgcc-file-name))
+ifneq ($(findstring gfortran, $(F77)),)
+ifeq ($(F77),)
+# only needed to get default compiler in ./configure
 F77           = gfortran
+endif
 F77FLAGS      = -fPIC -std=legacy
 F77LIBS      := $(shell $(F77) -print-file-name=libgfortran.$(SOEXT))
 F77LIBS      += $(shell $(F77) -print-file-name=libgfortranbegin.a) -lnsl
-F77LD         = gfortran
 endif
-endif
-ifneq ($(F77),gfortran)
+
+ifneq ($(findstring g77, $(F77)),)
+ifeq ($(F77),)
+# only needed to get default compiler in ./configure
 F77           = g77
+endif
 F77FLAGS      = -fPIC
 ifneq ($(shell $(F77) -print-file-name=libg2c.so),libg2c.so)
 F77LIBS      := $(shell $(F77) -print-file-name=libg2c.so) -lnsl

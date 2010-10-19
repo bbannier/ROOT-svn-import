@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/usr/bin/env bash
 
 # Script to generate the file include/compiledata.h.
 # Called by main Makefile.
@@ -31,6 +31,8 @@ ARCH=$9
 shift
 ROOTBUILD=$9
 shift
+EXPLICITLINK=$9
+shift
 
 MACOSXTARGET=""
 
@@ -41,18 +43,30 @@ if [ "$LIBDIR" = "$ROOTSYS/lib" ]; then
    LIBDIR=\$ROOTSYS/lib
 fi
 
-EXPLLINKLIBS="\$LinkedLibs"
+if [ "$EXPLICITLINK" = "yes" ]; then
+   EXPLLINKLIBS="\$LinkedLibs"
+else
+   EXPLLINKLIBS="\$DepLibs"
+fi
+
 if [ "$ARCH" = "macosx" ] || [ "$ARCH" = "macosxxlc" ] || \
    [ "$ARCH" = "macosx64" ] || [ "$ARCH" = "macosxicc" ]; then
    macosx_minor=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
    SOEXT="so"
-   if [ $macosx_minor -ge 3 ]; then
+   if [ $macosx_minor -ge 5 ]; then
+      if [ "x`echo $SOFLAGS | grep -- '-install_name'`" != "x" ]; then
+         # If install_name is specified, remove it.
+         SOFLAGS="$OPT -dynamiclib -single_module -undefined dynamic_lookup"
+      fi
+      MACOSXTARGET="MACOSX_DEPLOYMENT_TARGET=10.$macosx_minor"
+   elif [ $macosx_minor -ge 3 ]; then
       SOFLAGS="-bundle $OPT -undefined dynamic_lookup"
+      EXPLLINKLIBS=""
       MACOSXTARGET="MACOSX_DEPLOYMENT_TARGET=10.$macosx_minor"
    else
       SOFLAGS="-bundle $OPT -undefined suppress"
+      EXPLLINKLIBS=""
    fi
-   EXPLLINKLIBS=""
 elif [ "x`echo $SOFLAGS | grep -- '-soname,$'`" != "x" ]; then
     # If soname is specified, add the library name.
     SOFLAGS=$SOFLAGS\$LibName.$SOEXT

@@ -1,5 +1,5 @@
 #include "TString.h"
-#include "TCint.h"
+#include "TInterpreter.h"
 #include <fstream>
 #include "TH1.h"
 #include "TGraphSmooth.h"
@@ -19,10 +19,6 @@ void DrawSmooth(Int_t pad, const char *title, const char *xt, const char *yt)
    vFrame->SetXTitle(xt);
    vFrame->SetYTitle(yt);
    grin->Draw("P");
-//   grout->SetMarkerColor(kRed);
-//   grout->SetMarkerStyle(21);
-//   grout->SetMarkerSize(0.5);
-//   grout->DrawClone("P");
    grout->DrawClone("LPX");
 }
 
@@ -45,7 +41,7 @@ void motorcycle()
 
 
 // data taken from R library MASS: mcycle.txt
-   TString dir = gSystem->UnixPathName(TCint::GetCurrentMacroName());
+   TString dir = gSystem->UnixPathName(gInterpreter->GetCurrentMacroName());
    dir.ReplaceAll("motorcycle.C","");
    dir.ReplaceAll("/./","/");
 

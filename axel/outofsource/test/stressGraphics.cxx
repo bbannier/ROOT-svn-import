@@ -24,6 +24,7 @@
 
 #ifndef __CINT__
 
+#include <stdlib.h>
 #include <Riostream.h>
 #include <time.h>
 #include <TString.h>
@@ -91,7 +92,10 @@ void     tlatex2        ();
 void     tlatex3        ();
 void     tlatex4        ();
 void     tlatex5        ();
+void     kerning        ();
+void     itbf           ();
 void     transpad       ();
+void     statfitparam   ();
 void     tgaxis1        ();
 void     tgaxis2        ();
 void     tgaxis3        ();
@@ -101,6 +105,7 @@ void     tellipse       ();
 void     feynman        ();
 void     tgraph1        ();
 void     tgraph2        ();
+void     tgraph3        ();
 void     tmultigraph1   ();
 void     tmultigraph2   ();
 void     options2d1     ();
@@ -132,22 +137,22 @@ void     cleanup        ();
 // Global variables.
 Int_t     gVerbose;
 Int_t     gTestNum;
-Int_t     gPS1RefNb[40];
-Int_t     gPS1ErrNb[40];
-Int_t     gPDFRefNb[40];
-Int_t     gPDFErrNb[40];
-Int_t     gGIFRefNb[40];
-Int_t     gGIFErrNb[40];
-Int_t     gJPGRefNb[40];
-Int_t     gJPGErrNb[40];
-Int_t     gPNGRefNb[40];
-Int_t     gPNGErrNb[40];
-Int_t     gPS2RefNb[40];
-Int_t     gPS2ErrNb[40];
+Int_t     gPS1RefNb[50];
+Int_t     gPS1ErrNb[50];
+Int_t     gPDFRefNb[50];
+Int_t     gPDFErrNb[50];
+Int_t     gGIFRefNb[50];
+Int_t     gGIFErrNb[50];
+Int_t     gJPGRefNb[50];
+Int_t     gJPGErrNb[50];
+Int_t     gPNGRefNb[50];
+Int_t     gPNGErrNb[50];
+Int_t     gPS2RefNb[50];
+Int_t     gPS2ErrNb[50];
 Bool_t    gOptionR;
 Bool_t    gOptionK;
 TH2F     *gH2;
-TFile    *gFile;
+TFile    *gLocalFile;
 char      gCfile[16];
 char      outfile[16];
 char      gLine[80];
@@ -208,17 +213,17 @@ void stressGraphics(Int_t verbose = 0)
    gROOT->SetBatch();
 
    // Check if $ROOTSYS/tutorials/hsimple.root exists
-   gFile = new TFile("$(ROOTSYS)/tutorials/hsimple.root");
-   if (gFile->IsZombie()) {
-      delete gFile;
-      gFile = new TFile("hsimple.root");
-      if (gFile->IsZombie()) {
-         delete gFile;
+   gLocalFile = new TFile("$(ROOTSYS)/tutorials/hsimple.root");
+   if (gLocalFile->IsZombie()) {
+      delete gLocalFile;
+      gLocalFile = new TFile("hsimple.root");
+      if (gLocalFile->IsZombie()) {
+         delete gLocalFile;
          printf("Create $(ROOTSYS)/tutorials/hsimple.root\n");
          gROOT->Macro("$(ROOTSYS)/tutorials/hsimple.C");
-         gFile = new TFile("$(ROOTSYS)/tutorials/hsimple.root");
-         if (gFile->IsZombie()) {
-            delete gFile;
+         gLocalFile = new TFile("$(ROOTSYS)/tutorials/hsimple.root");
+         if (gLocalFile->IsZombie()) {
+            delete gLocalFile;
             printf("Could not create $(ROOTSYS)/tutorials/hsimple.root\n");
             return;
          }
@@ -249,6 +254,8 @@ void stressGraphics(Int_t verbose = 0)
    }
    fclose(sg);
 
+   gRandom->SetSeed(65539);
+
    if (gOptionR) {
       cout << "Test#   PS1Ref#   PS1Err#   PDFRef#   PDFErr#   GIFRef#   GIFErr#   JPGRef#   JPGErr#   PNGRef#   PNGErr#   PS2Ref#   PS2Err#" <<endl;
    } else {
@@ -277,7 +284,10 @@ void stressGraphics(Int_t verbose = 0)
    tlatex3      ();
    tlatex4      ();
    tlatex5      ();
+   kerning      ();
+   itbf         ();
    transpad     ();
+   statfitparam ();
    if (!gOptionR) {
       cout << "**********************************************************************" <<endl;
       cout << "*  Starting High Level 2D Primitives - S T R E S S                   *" <<endl;
@@ -292,6 +302,7 @@ void stressGraphics(Int_t verbose = 0)
    feynman      ();
    tgraph1      ();
    tgraph2      ();
+   tgraph3      ();
    tmultigraph1 ();
    tmultigraph2 ();
    waves        ();
@@ -320,7 +331,7 @@ void stressGraphics(Int_t verbose = 0)
    zoomtf1      ();
    zoomfit      ();
    parallelcoord();
-//////clonepad     ();
+///clonepad     ();
    if (!gOptionR) {
       cout << "**********************************************************************" <<endl;
 
@@ -329,11 +340,18 @@ void stressGraphics(Int_t verbose = 0)
       //Print table with results
       Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
       if (UNIX) {
-         FILE *fp = gSystem->OpenPipe("uname -a", "r");
-         Char_t line[60];
-         fgets(line,60,fp); line[59] = 0;
-         printf("*  SYS: %s\n",line);
-         gSystem->ClosePipe(fp);
+         TString sp = gSystem->GetFromPipe("uname -a");
+         sp.Resize(60);
+         printf("*  SYS: %s\n",sp.Data());
+         if (strstr(gSystem->GetBuildNode(),"Linux")) {
+            sp = gSystem->GetFromPipe("lsb_release -d -s");
+            printf("*  SYS: %s\n",sp.Data());
+         }
+         if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+            sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+            sp += " Mac OS X ";
+            printf("*  SYS: %s\n",sp.Data());
+         }
       } else {
          const Char_t *os = gSystem->Getenv("OS");
          if (!os) printf("*  SYS: Windows 95\n");
@@ -377,12 +395,15 @@ Int_t StatusPrint(TString &filename, Int_t id, const TString &title,
          if (!gOptionK) gSystem->Unlink(filename.Data());
       } else {
          cout << gLine;
-         for (Int_t i = nch; i < 63; i++) cout << ".";
-         cout << " FAILED" << endl;
+         Int_t ndots = 60;
+         Int_t w = 3;
+         if (gTestNum < 10) { ndots++; w--;}
+         for (Int_t i = nch; i < ndots; i++) cout << ".";
+         cout << setw(w) << gTestNum << " FAILED" << endl;
          cout << "         Result    = "  << res << endl;
          cout << "         Reference = "  << ref << endl;
          cout << "         Error     = "  << TMath::Abs(res-ref)
-                                           << " (was " << err << ")"<< endl;
+                                          << " (was " << err << ")"<< endl;
          return 1;
       }
    } else {
@@ -442,6 +463,10 @@ TCanvas *StartTest(Int_t w, Int_t h)
 
    gTestNum++;
    gStyle->Reset();
+   TCanvas *old = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("C");
+   if (old) {
+      if (old->IsOnHeap()) delete old;
+   }
    TCanvas *C = new TCanvas("C","C",0,0,w,h);
    return C;
 }
@@ -499,7 +524,6 @@ void TestReport1(TCanvas *C, const TString &title)
                                            gPNGRefNb[gTestNum-1],
                                            gPNGErrNb[gTestNum-1]);
 
-   gErrorIgnoreLevel = 0;
    gErrorIgnoreLevel = 0;
 
    return;
@@ -595,12 +619,12 @@ void tmarker()
    int i;
    Double_t x = 0.5;
    Double_t y = 0.1;
-   Double_t dy = 0.05;
+   Double_t dy = 0.04;
    for (i = 1; i<=7; i++) {
       tmarker_draw(x, y, i, dy);
       y = y+dy;
    }
-   for (i = 20; i<=30; i++) {
+   for (i = 20; i<=34; i++) {
       tmarker_draw(x, y, i, dy);
       y = y+dy;
    }
@@ -624,7 +648,7 @@ void tmarker_draw(Double_t x, Double_t y, Int_t mt, Double_t d)
    TLine   *l3 = new TLine(0,y-dy,1,y-dy);
    l2->SetLineStyle(2);
    l3->SetLineStyle(2);
-   m->SetMarkerSize(3.8);
+   m->SetMarkerSize(3.6);
    m->SetMarkerColor(kRed);
    t->SetTextAlign(32);
    t->SetTextSize(0.3);
@@ -753,6 +777,8 @@ void ttext1()
       lh->Draw();
    }
    TText *tex1b = new TText(0.02,0.4,"jgabcdefhiklmnopqrstuvwxyz_{}");
+   // 161 is not a valid text font. This tests if the protection against
+   // invalid text font is working.
    tex1b->SetTextFont(161);
    tex1b->SetTextColor(2);
    tex1b->SetTextAngle(0);
@@ -849,7 +875,7 @@ void tlatex2()
    l.DrawLatex(0.5,0.95,"e^{+}e^{-}#rightarrowZ^{0}#rightarrowI#bar{I}, q#bar{q}");
    l.DrawLatex(0.5,0.75,"|#vec{a}#bullet#vec{b}|=#Sigmaa^{i}_{jk}+b^{bj}_{i}");
    l.DrawLatex(0.5,0.5,"i(#partial_{#mu}#bar{#psi}#gamma^{#mu}+m#bar{#psi})=0#Leftrightarrow(#Box+m^{2})#psi=0");
-   l.DrawLatex(0.5,0.3,"L_{em}=eJ^{#mu}_{em}A_{#mu} , J^{#mu}_{em}=#bar{I}#gamma_{#mu}I , M^{j}_{i}=#SigmaA_{#alpha}#tau^{#alphaj}_{i}");
+   l.DrawLatex(0.5,0.3,"L_{em}=eJ^{#mu}_{em}A_{#mu} , ^{}J^{#mu}_{em}=#bar{I}#gamma_{#mu}I , M^{j}_{i}=#SigmaA_{#alpha}#tau^{#alphaj}_{i}");
 
    TestReport1(C, "TLatex 2");
    DoCcode(C);
@@ -1066,6 +1092,52 @@ void tlatex5()
 
 
 //______________________________________________________________________________
+void kerning()
+{
+   // Text kerning.
+
+   TCanvas *C = StartTest(1000, 700);
+
+   for (Int_t i = 0;i < 25;i++) {
+      TLine *ln = new TLine(0, 0.04 * (i - 0.2), 1, 0.04 * (i - 0.2));
+      ln->Draw();
+      Float_t sz = 0.0016 * i;
+      TLatex *l = new TLatex(0.10, 0.04 * i, "AVAVAVAVAVAVAVAVAVAVAVAVAVAVAVAVAVAVA#color[2]{X}");
+      l->SetTextSize(sz);
+      l->Draw();
+      TLatex *l1 = new TLatex(0.05, 0.04 * i, Form("%g", sz));
+      l1->SetTextSize(0.02);
+      l1->Draw();
+   }
+
+   TestReport1(C, "Text kerning");
+   DoCcode(C);
+   TestReport2();
+}
+
+
+//______________________________________________________________________________
+void itbf()
+{
+   // TLatex commands #kern, #lower, #it and #bf
+
+   TCanvas *C = StartTest(700, 500);
+
+   gStyle->SetTextFont(132);
+
+   (new TLatex(0.01, 0.9, "Positive k#kern[0.3]{e}#kern[0.3]{r}#kern[0.3]{n}#kern[0.3]{i}#kern[0.3]{n}#kern[0.3]{g} with #^{}kern[0.3]"))->Draw();
+   (new TLatex(0.01, 0.7, "Negative k#kern[-0.3]{e}#kern[-0.3]{r}#kern[-0.3]{n}#kern[-0.3]{i}#kern[-0.3]{n}#kern[-0.3]{g} with #^{}kern[-0.3]"))->Draw();
+   (new TLatex(0.01, 0.5, "Vertical a#lower[0.2]{d}#lower[0.4]{j}#lower[0.1]{u}#lower[-0.1]{s}#lower[-0.3]{t}#lower[-0.4]{m}#lower[-0.2]{e}#lower[0.1]{n}t with #^{}lower[-0.4...+0.4]"))->Draw();
+   (new TLatex(0.01, 0.3, "Font styles: #^{}bf{#bf{bold}}, #^{}it{#it{italic}}, #^{}bf{#^{}it{#bf{#it{bold italic}}}}, #^{}bf{#^{}bf{#bf{#bf{unbold}}}}"))->Draw();
+   (new TLatex(0.01, 0.1, "Font styles: abc#alpha#beta#gamma, #^{}it{#it{abc#alpha#beta#gamma}}, #^{}it{#^{}it{#it{#it{abc#alpha#beta#gamma}}}}"))->Draw();
+
+   TestReport1(C, "TLatex commands #kern, #lower, #it and #bf");
+   DoCcode(C);
+   TestReport2();
+}
+
+
+//______________________________________________________________________________
 void transpad()
 {
    // Transparent pad.
@@ -1105,7 +1177,7 @@ void transpad()
    pad2->Draw();
    pad2->cd();
    ht2->SetLineColor(kRed);
-   ht2->Draw("sames");
+   ht2->Draw("][sames");
    pad2->Update();
    TPaveStats *ps2 = (TPaveStats*)ht2->GetListOfFunctions()->FindObject("stats");
    ps2->SetX1NDC(0.65); ps2->SetX2NDC(0.85);
@@ -1121,6 +1193,65 @@ void transpad()
    TestReport2();
 }
 
+
+//______________________________________________________________________________
+void statfitparam ()
+{
+   // Stat and fit parameters with errors.
+
+   TCanvas *C = StartTest(800,500);
+
+   C->Divide(3,2);
+   gStyle->SetOptFit(1111);
+   gStyle->SetOptStat(111111);
+   gStyle->SetStatW(0.43);
+   gStyle->SetStatH(0.35);
+
+   TH1 *hsf1 = new TH1F("hsf1","hsf1", 2,0.,1.);
+   TH1 *hsf2 = new TH1F("hsf2","hsf2", 2,0.,1.);
+   TH1 *hsf3 = new TH1F("hsf3","hsf3", 2,0.,1.);
+   TH1 *hsf4 = new TH1F("hsf4","hsf4", 2,0.,1.);
+   TH1 *hsf5 = new TH1F("hsf5","hsf5", 2,0.,1.);
+
+   C->cd(1);
+   hsf1->SetBinContent (1, 5.3E5); hsf1->SetBinError (1, 0.9);
+   hsf1->SetBinContent (2, 5.3E5); hsf1->SetBinError (2, 0.1);
+   hsf1->Fit("pol0","Q");
+
+   C->cd(2);
+   hsf2->SetBinContent (1, 5.0E15); hsf2->SetBinError (1, 4.9E15);
+   hsf2->SetBinContent (2, 5.0E15); hsf2->SetBinError (2, 4.9E11);
+   hsf2->Fit("pol0","Q");
+
+   C->cd(3);
+   hsf3->SetBinContent (1, 5.0E-15); hsf3->SetBinError (1, 4.9E-15);
+   hsf3->SetBinContent (2, 5.0E-15); hsf3->SetBinError (2, 4.9E-11);
+   hsf3->Fit("pol0","Q");
+
+   C->cd(4);
+   hsf4->SetBinContent (1, 5); hsf4->SetBinError (1, 3);
+   hsf4->SetBinContent (2, 5); hsf4->SetBinError (2, 1);
+   hsf4->Fit("pol0","Q");
+
+   C->cd(5);
+   hsf5->SetBinContent (1, 5.3); hsf5->SetBinError (1, 0.9);
+   hsf5->SetBinContent (2, 5.3); hsf5->SetBinError (2, 0.1);
+   hsf5->Fit("pol0","Q");
+
+   C->cd(6);
+   TPaveText *pt = new TPaveText(0.02,0.2,0.98,0.8,"brNDC");
+   pt->SetFillColor(18);
+   pt->SetTextAlign(12);
+   pt->AddText("This example test all the possible cases");
+   pt->AddText("handled by ThistPainter::GetBestFormat.");
+   pt->AddText("This method returns the best format to");
+   pt->AddText("paint the fit parameters errors.");
+   pt->Draw();
+
+   TestReport1(C, "Stat and fit parameters with errors");
+   DoCcode(C);
+   TestReport2();
+}
 
 //______________________________________________________________________________
 void tgaxis1()
@@ -1527,6 +1658,57 @@ void tgraph2()
    mg->Draw("AC");
 
    TestReport1(C, "TGraph 2 (Exclusion Zone)");
+   DoCcode(C);
+   TestReport2();
+}
+
+
+//______________________________________________________________________________
+void tgraph3()
+{
+   // 3rd TGraph test.
+
+   TCanvas *C = StartTest(800,400);
+
+   C->Divide(2,1);
+
+   TGraph *g1 = new TGraph();
+   g1->SetPoint(0, 1e-4, 1);
+   g1->SetPoint(1, 1e-2, 2);
+   g1->SetPoint(2, 1e-1, 3);
+   g1->SetPoint(3, 1, 4);
+   g1->SetPoint(4, 1e1, 5);
+   g1->SetPoint(5, 1e2, 5);
+   g1->SetPoint(6, 1e3, 4);
+   g1->SetPoint(7, 1e4, 3);
+   g1->SetPoint(8, 1e5, 2);
+   g1->SetPoint(9, 1e6, 1);
+   g1->SetTitle("10 blue circles should be visible");
+
+   g1->SetMarkerStyle(kFullCircle);
+   g1->SetMarkerSize(1.0);
+   g1->SetMarkerColor(kBlue);
+   g1->SetLineColor(kBlue);
+
+   C->cd(1);
+   g1->Fit("gaus","Q");
+   g1->Draw("AP");
+   gPad->SetLogx();
+
+   C->cd(2);
+   gPad->SetLogx();
+   gPad->SetLogy();
+   TGraph* g2 = new TGraph();
+   for (int i = 0; i < 10; i++) g2->SetPoint(i, i + 1, i + 1);
+   g2->SetTitle("2 log scales from 1e-2 to 1e2;x;y");
+   g2->GetXaxis()->SetLimits(1e-2, 1e2);
+   g2->GetHistogram()->SetMinimum(1e-2);
+   g2->GetHistogram()->SetMaximum(1e2);
+   g2->GetXaxis()->CenterTitle();
+   g2->GetYaxis()->CenterTitle();
+   g2->Draw("a*");
+
+   TestReport1(C, "TGraph 3 (Fitting and log scales)");
    DoCcode(C);
    TestReport2();
 }
@@ -2029,7 +2211,7 @@ void ntuple1()
    pad1->SetGrid();
    pad1->SetLogy();
    pad1->GetFrame()->SetFillColor(15);
-   TNtuple *ntuple = (TNtuple*)gFile->Get("ntuple");
+   TNtuple *ntuple = (TNtuple*)gLocalFile->Get("ntuple");
    ntuple->SetLineColor(1);
    ntuple->SetFillStyle(1001);
    ntuple->SetFillColor(45);
@@ -2242,7 +2424,7 @@ void zoomfit()
 
    TCanvas *C = StartTest(800,800);
 
-   TH1 *hpx = (TH1*)gFile->Get("hpx");
+   TH1 *hpx = (TH1*)gLocalFile->Get("hpx");
    hpx->Fit("gaus","q");
    hpx->GetXaxis()->SetRangeUser(.1,.3);
    gPad->Modified();
@@ -2264,7 +2446,7 @@ void parallelcoord()
 
    TCanvas *C = StartTest(800,700);
 
-   TNtuple *ntuple = (TNtuple*)gFile->Get("ntuple");
+   TNtuple *ntuple = (TNtuple*)gLocalFile->Get("ntuple");
 
    C->Divide(1,2);
 
@@ -2288,7 +2470,7 @@ void clonepad()
 
    TCanvas *C = StartTest(700,500);
 
-   TH1 *hpxpy = (TH1*)gFile->Get("hpxpy");
+   TH1 *hpxpy = (TH1*)gLocalFile->Get("hpxpy");
    hpxpy->Draw();
    TCanvas *C2 = (TCanvas*)C->DrawClone();
 
@@ -2353,12 +2535,11 @@ void waves()
    Int_t palette[colNum];
    Int_t color_offset = 1001;
    for (Int_t i=0;i<colNum;i++) {
-      TColor *color = new TColor(color_offset+i
+      new TColor(color_offset+i
       ,    pow(i/((colNum)*1.0),0.3)
       ,    pow(i/((colNum)*1.0),0.3)
       ,0.5*(i/((colNum)*1.0)),"");
       palette[i] = color_offset+i;
-      if(color);
    }
    gStyle->SetPalette(colNum,palette);
    C->cd();
@@ -2412,11 +2593,11 @@ void waves()
    finter->Draw("samecolorz");
 
    TArc *arc = new TArc();;
-   arc->SetFillStyle(0); 
-   arc->SetLineWidth(2);   
-   arc->SetLineColor(5);   
+   arc->SetFillStyle(0);
+   arc->SetLineWidth(2);
+   arc->SetLineColor(5);
    Float_t r = 0.5 * lambda, dr = lambda;
-      for (Int_t i = 0; i < 15; i++) {   
+      for (Int_t i = 0; i < 15; i++) {
       arc->DrawArc(0,  0.5*d, r, 0., 360., "only");
       arc->DrawArc(0, -0.5*d, r, 0., 360., "only");
       r += dr;
@@ -2436,6 +2617,7 @@ void waves()
    TestReport1(C, "TGraph, TArc, TPalette and TColor");
 ///DoCcode(C);
 ///TestReport2();
+   if (gOptionR) printf("\n");
 }
 
 

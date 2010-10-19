@@ -26,6 +26,7 @@
 //  Sigmoid activation function for TNeuron. This really simple implementation
 //  uses TFormulas and should probably be replaced with something more
 //  efficient later.
+//                                                                      
 //_______________________________________________________________________
 
 #include <iostream>
@@ -33,9 +34,10 @@
 #include "TFormula.h"
 #include "TString.h"
 #include "TMath.h"
-#include "Riostream.h"
 
+#ifndef ROOT_TMVA_TActivationSigmoid
 #include "TMVA/TActivationSigmoid.h"
+#endif
 
 static const Int_t  UNINITIALIZED = -1;
 
@@ -46,8 +48,9 @@ TMVA::TActivationSigmoid::TActivationSigmoid()
 {
    // constructor for sigmoid normalized in [0,1]
    
-   fEqn           = new TFormula( "sigmoid",    "1.0/(1.0+TMath::Exp(-x))" );
-   fEqnDerivative = new TFormula( "derivative", "TMath::Exp(-x)/(1.0+TMath::Exp(-x))^2" );
+   fEqn = new TFormula("sigmoid", "1.0/(1.0+TMath::Exp(-x))");
+   fEqnDerivative = 
+      new TFormula("derivative", "TMath::Exp(-x)/(1.0+TMath::Exp(-x))^2");
 }
 
 //______________________________________________________________________________
@@ -60,17 +63,18 @@ TMVA::TActivationSigmoid::~TActivationSigmoid()
 }
 
 //______________________________________________________________________________
-Double_t TMVA::TActivationSigmoid::Eval( Double_t arg )
+Double_t TMVA::TActivationSigmoid::Eval(Double_t arg)
 {
    // evaluate the sigmoid
 
    if (fEqn == NULL) return UNINITIALIZED;
-
    return fEqn->Eval(arg);
+
+   //return EvalFast(arg);
 }
 
 //______________________________________________________________________________
-Double_t TMVA::TActivationSigmoid::EvalDerivative( Double_t arg )
+Double_t TMVA::TActivationSigmoid::EvalDerivative(Double_t arg)
 {
    // evaluate the derivative of the sigmoid
 

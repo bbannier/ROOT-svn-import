@@ -1,4 +1,4 @@
-// Example macro describing how to use te mathmore integration
+//+ Example on the  usage of the adaptive 1D integration algorithm of MathMore  
 // it calculates the numerically cumulative integral of a distribution (like in this case the BreitWigner) 
 // to execute the macro type it (you need to compile with AClic)
 //
@@ -27,6 +27,8 @@
 
 #include "TStopwatch.h"
 #include "TF1.h"
+
+#include <limits>
 
 //!calculates exact integral of Breit Wigner distribution
 //!and compares with existing methods
@@ -111,9 +113,10 @@ void  DrawCumulative(double x1, double x2, int n = 100){
    }
 
    // alternative method using ROOT::Math::Functor class 
-   ROOT::Math::Functor1D f1(& TMath::BreitWigner);
-  
-   ROOT::Math::Integrator ig(f1, ROOT::Math::IntegrationOneDim::ADAPTIVE,1.E-12,1.E-12);
+   ROOT::Math::Functor1D f1(& func);
+ 
+ 
+   ROOT::Math::Integrator ig(f1, ROOT::Math::IntegrationOneDim::kADAPTIVE,1.E-12,1.E-12);
  
    TH1D *cum1 = new TH1D("cum1", "", n, x1, x2); 
    for (int i = 1; i <= n; ++i) { 
@@ -184,6 +187,11 @@ void  DrawCumulative(double x1, double x2, int n = 100){
 
 void mathmoreIntegration(double a = -2, double b = 2)
 {
+#if defined(__CINT__) && !defined(__MAKECINT__) 
+  cout << "WARNING: This tutorial can run only using ACliC, you must run it by doing: " << endl;
+  cout << "\t .x $ROOTSYS/tutorials/math/mathmoreIntegration.C+" << endl; 
+  return;
+#endif
 
    DrawCumulative(a, b);
    testIntegPerf(a, b);

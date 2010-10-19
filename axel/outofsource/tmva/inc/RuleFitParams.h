@@ -47,17 +47,13 @@
 #include "TMVA/Event.h"
 #endif
 
-#ifndef ROOT_TMVA_MsgLogger
-#include "TMVA/MsgLogger.h"
-#endif
-
 class TTree;
 
 namespace TMVA {
 
    class RuleEnsemble;
+   class MsgLogger;
    class RuleFit;
-
    class RuleFitParams {
 
    public:
@@ -68,7 +64,7 @@ namespace TMVA {
       void Init();
 
       // set message type
-      void SetMsgType( EMsgType t ) { fLogger.SetMinType(t); }
+      void SetMsgType( EMsgType t );
 
       // set RuleFit ptr
       void SetRuleFit( RuleFit *rf )    { fRuleFit = rf; }
@@ -98,7 +94,7 @@ namespace TMVA {
       void SetGDTauPrec( Double_t p )  { fGDTauPrec=p; CalcGDNTau(); fGDTauVec.resize(fGDNTau); }
 
       // return type such that +1 = signal and -1 = background
-      Int_t Type( const Event * e ) const { return (e->IsSignal() ? 1:-1); }
+      Int_t Type( const Event * e ) const; // return (fRuleFit->GetMethodRuleFit()->DataInfo().IsSignal(e) ? 1:-1); }
       //
       UInt_t                            GetPathIdx1() const { return fPathIdx1; }
       UInt_t                            GetPathIdx2() const { return fPathIdx2; }
@@ -225,7 +221,7 @@ namespace TMVA {
       std::vector< std::vector<Double_t> > fGradVecLinTst; // gradient vector, linear terms - one per tau
       //
       std::vector<Double_t> fGDErrTst;     // error rates per tau
-      std::vector<Bool_t>   fGDErrTstOK;   // error rate is sufficiently low
+      std::vector<Char_t>   fGDErrTstOK;   // error rate is sufficiently low <--- stores boolean
       std::vector< std::vector<Double_t> > fGDCoefTst;    // rule coeffs - one per tau
       std::vector< std::vector<Double_t> > fGDCoefLinTst; // linear coeffs - one per tau
       std::vector<Double_t> fGDOfsTst;       // offset per tau
@@ -262,7 +258,9 @@ namespace TMVA {
 
    private:
 
-      mutable MsgLogger     fLogger;         // message logger
+      mutable MsgLogger*    fLogger;         //! message logger
+      MsgLogger& Log() const { return *fLogger; }                       
+
    };
 
    // --------------------------------------------------------

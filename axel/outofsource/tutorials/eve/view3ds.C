@@ -1,6 +1,8 @@
 // @(#)root/eve:$Id$
 // Author: Bertrand Bellenot
 
+// Loading and display of basic 3DS models.
+
 #include "TCanvas.h"
 #include "TStyle.h"
 #include "TFile.h"
@@ -534,14 +536,14 @@ Int_t ConvertModel()
                                  model.flist[i].v3);
    }
    ts[nummodels]->SetName(model.name);
-   ts[nummodels]->SetTransparency(0);
-   ts[nummodels]->SetColor(0);
+   ts[nummodels]->SetMainTransparency(0);
+   ts[nummodels]->SetMainColor(0);
    for (i = 0; i < nummaterials; i++) {
       if (strcmp(model.matname, material[i]->name) == 0) {
-         ts[nummodels]->SetTransparency(material[i]->transparency);
-         ts[nummodels]->SetColor(Color_t(TColor::GetColor(material[i]->color[0], 
-                                                          material[i]->color[1], 
-                                                          material[i]->color[2])));
+         ts[nummodels]->SetMainTransparency(material[i]->transparency);
+         ts[nummodels]->SetMainColorRGB(material[i]->color[0], 
+                                        material[i]->color[1], 
+                                        material[i]->color[2]);
          break;
       }
    }
@@ -568,8 +570,8 @@ void view3ds(const char *fname = "nasashuttle.3ds")
       for (i=0;i<nummodels;i++) {
          if (ts[i]) {
             ts[i]->GenerateTriangleNormals();
-            ts[i]->RefHMTrans().RotateLF(1, 2, TMath::Pi());
-            gEve->AddElement(ts[i], parent);
+            ts[i]->RefMainTrans().RotateLF(1, 2, TMath::Pi());
+            parent->AddElement(ts[i]);
          }
       }
       gEve->Redraw3D(kTRUE);

@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$   
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -13,6 +13,7 @@
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch>  - CERN, Switzerland          *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
@@ -26,95 +27,102 @@
  * (http://mva.sourceforge.net/license.txt)                                       *
  **********************************************************************************/
 
-//////////////////////////////////////////////////////////////////////////
-//
-// Event
-//
-// Storage class for an event. It is used by all TMVA methods
-// during the training. Events are collected in Dataset
-//
-//////////////////////////////////////////////////////////////////////////
-
 #ifndef ROOT_TMVA_Event
 #define ROOT_TMVA_Event
 
+#include <iosfwd>
 #include <vector>
+
 #ifndef ROOT_Rtypes
 #include "Rtypes.h"
 #endif
-#ifndef ROOT_TMVA_VariableInfo
-#include "TMVA/VariableInfo.h"
+#ifndef ROOT_TMVA_Types
+#include "TMVA/Types.h"
 #endif
 
-class TTree;
-class TBranch;
+class TCut;
 
 namespace TMVA {
 
    class Event;
 
-   ostream& operator<<( ostream& os, const Event& event );
-   ostream& operator<<( ostream& os, const Event* event );
+   std::ostream& operator<<( std::ostream& os, const Event& event );
 
    class Event {
 
-      friend ostream& operator<<( ostream& os, const Event& event );
-      friend ostream& operator<<( ostream& os, const Event* event );
+      friend std::ostream& operator<<( std::ostream& os, const Event& event );
 
    public:
 
-      Event( const std::vector<TMVA:: VariableInfo>&, Bool_t AllowExternalLinks = kTRUE );
+      // constructors
+      Event();
       Event( const Event& );
+      explicit Event( const std::vector<Float_t>& values, 
+                      const std::vector<Float_t>& targetValues, 
+                      const std::vector<Float_t>& spectatorValues, 
+                      UInt_t theClass = 0, Float_t weight = 1.0, Float_t boostweight = 1.0 );
+      explicit Event( const std::vector<Float_t>& values, 
+                      const std::vector<Float_t>& targetValues, 
+                      UInt_t theClass = 0, Float_t weight = 1.0, Float_t boostweight = 1.0 );
+      explicit Event( const std::vector<Float_t>&, 
+                      UInt_t theClass, Float_t weight = 1.0, Float_t boostweight = 1.0 );
+      explicit Event( const std::vector<Float_t*>*&, UInt_t nvar );
+
       ~Event();
-      
-      void SetBranchAddresses(TTree* tr);
-      std::vector<TBranch*>& Branches() { return fBranches; }
 
-      Bool_t  IsSignal()       const { return (fType==1); }
-      Float_t GetWeight()      const { return fWeight*fBoostWeight; }
-      Float_t GetBoostWeight() const { return fBoostWeight; }
-      Int_t   Type()           const { return fType; }
-      void    SetWeight(Float_t w)      { fWeight=w; }
-      void    SetBoostWeight(Float_t w) { fBoostWeight=w; }
-      void    SetType(Int_t t)          { fType=t; }
-      void    SetType(Types::ESBType t) { fType=(t==Types::kSignal)?1:0; }
-      void    SetVal(UInt_t ivar, Float_t val);
-      void    SetValFloatNoCheck(UInt_t ivar, Float_t val) { *((Float_t*)fVarPtr[ivar]) = val; }
+      // accessors
+      Bool_t  IsDynamic()         const {return fDynamic; }
 
+      Float_t GetWeight()         const { return fWeight*fBoostWeight; }
+      Float_t GetOriginalWeight() const { return fWeight; }
+      Float_t GetBoostWeight()    const { return TMath::Max(Float_t(0.0001),fBoostWeight); }
+      UInt_t  GetClass()          const { return fClass; }  
+
+      UInt_t  GetNVariables()        const;
+      UInt_t  GetNTargets()          const;
+      UInt_t  GetNSpectators()       const;
+
+      const std::vector<UInt_t>* GetVariableArrangement() const { return fVariableArrangement; }
+
+      Float_t GetValue( UInt_t ivar) const;
+      const std::vector<Float_t>& GetValues() const;
+
+      Float_t GetTarget( UInt_t itgt ) const { return fTargets.at(itgt); }
+      std::vector<Float_t>& GetTargets() const { return fTargets; }
+
+      Float_t GetSpectator( UInt_t ivar) const;
+      std::vector<Float_t>& GetSpectators() const { return fSpectators; }
+
+      void    ScaleWeight           ( Float_t s ) { fWeight*=s; }
+      void    SetWeight             ( Float_t w ) { fWeight=w; }
+      void    SetBoostWeight        ( Float_t w ) { fBoostWeight=w; }
+      void    ScaleBoostWeight      ( Float_t s ) { fBoostWeight *= s; }
+      void    SetClass              ( UInt_t t )  { fClass=t; }
+      void    SetVal                ( UInt_t ivar, Float_t val );
+      void    SetTarget             ( UInt_t itgt, Float_t value );
+      void    SetSpectator          ( UInt_t ivar, Float_t value );
+      void    SetVariableArrangement( std::vector<UInt_t>* const m ) const;
+
+      static void ClearDynamicVariables();
 
       void    CopyVarValues( const Event& other );
-
-      Char_t  GetVarType (UInt_t ivar)        const { return fVariables[ivar].GetVarType(); }
-      Bool_t  IsInt      (UInt_t ivar)        const { return (fVariables[ivar].GetVarType()=='I'); }
-      Bool_t  IsFloat    (UInt_t ivar)        const { return (fVariables[ivar].GetVarType()=='F'); }
-      Float_t GetVal     (UInt_t ivar)        const;
-      Float_t GetValFloat(UInt_t ivar)        const { return *((Float_t*)fVarPtr[ivar]); }
-      UInt_t  GetNVars()                      const { return fVariables.size(); }
-      Float_t GetValueNormalized(UInt_t ivar) const;
-      void*   GetExternalLink(UInt_t ivar)    const { return fVariables[ivar].GetExternalLink(); }
-
-      void Print(std::ostream & o) const;
+      void    Print        ( std::ostream & o ) const;
 
    private:
 
-      void InitPointers(bool AllowExternalLink = kTRUE);
-   
-      const std::vector<TMVA::VariableInfo>& fVariables; // the variables
-      void **   fVarPtr;          // array containing values
-      //    Int_t *   fVarPtrI;         // integer value
-      Float_t*  fVarPtrF;         // float value
-      Int_t     fType;            // signal or background type
-      Float_t   fWeight;          // event weight (product of global and individual weights)
-      Float_t   fBoostWeight;     // internal weight to be set by boosting algorithm
-      UInt_t    fCountI;          // the number of Integer variables
-      UInt_t    fCountF;          // the number of Float variables
+      mutable std::vector<Float_t>   fValues;               // the event values
+      static  std::vector<Float_t*>* fgValuesDynamic;       // the event values
+      mutable std::vector<Float_t>   fTargets;              // target values for regression
+      mutable std::vector<Float_t>   fSpectators;           // "visisting" variables which are never used for any calculation
+      mutable std::vector<UInt_t>*   fVariableArrangement;  // needed for MethodCategories, where we can train on other than the main variables
 
-      std::vector<TBranch*> fBranches; // TTree branches
-
-      static Int_t fgCount;       // count instances of Event
-
+      UInt_t                         fClass;           // signal or background type: signal=1, background=0
+      Float_t                        fWeight;          // event weight (product of global and individual weights)
+      Float_t                        fBoostWeight;     // internal weight to be set by boosting algorithm
+      Bool_t                         fDynamic;         // is set when the dynamic values are taken
+      
+      static Int_t                   fgCount;          // count instances of Event
    };
-
 }
 
 #endif

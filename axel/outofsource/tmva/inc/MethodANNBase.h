@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Matt Jachowski
+// Author: Andreas Hoecker, Peter Speckmayer, Matt Jachowski
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -14,7 +14,13 @@
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker  <Andreas.Hocker@cern.ch> - CERN, Switzerland             *
  *      Matt Jachowski   <jachowski@stanford.edu> - Stanford University, USA      *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch>  - CERN, Switzerland          *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>   - CERN, Switzerland             *
+ *                                                                                *
+ * Small changes (regression):                                                    *
+ *      Krzysztof Danielowski <danielow@cern.ch>  - IFJ PAN & AGH, Poland         *
+ *      Kamil Kraszewski      <kalq@cern.ch>      - IFJ PAN & UJ , Poland         *
+ *      Maciej Kruk           <mkruk@cern.ch>     - IFJ PAN & AGH, Poland         *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
  *      CERN, Switzerland                                                         *
@@ -35,11 +41,19 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#ifndef ROOT_TString
 #include "TString.h"
+#endif
 #include <vector>
+#ifndef ROOT_TTree
 #include "TTree.h"
+#endif
+#ifndef ROOT_TObjArray
 #include "TObjArray.h"
+#endif
+#ifndef ROOT_TRandom3
 #include "TRandom3.h"
+#endif
 
 #ifndef ROOT_TMVA_MethodBase
 #include "TMVA/MethodBase.h"
@@ -54,6 +68,9 @@
 #include "TMVA/TNeuronInput.h"
 #endif
 
+class TH1;
+class TH1F;
+
 namespace TMVA {
 
    class MethodANNBase : public MethodBase {
@@ -61,10 +78,16 @@ namespace TMVA {
    public:
       
       // constructors dictated by subclassing off of MethodBase
-      MethodANNBase( const TString& jobName, const TString& methodTitle, DataSet& theData, 
-                     const TString& theOption, TDirectory* theTargetDir );
+      MethodANNBase( const TString& jobName,
+                     Types::EMVA methodType,
+                     const TString& methodTitle,
+                     DataSetInfo& theData, 
+                     const TString& theOption,
+                     TDirectory* theTargetDir );
       
-      MethodANNBase( DataSet& theData, const TString& theWeightFile, 
+      MethodANNBase( Types::EMVA methodType,
+                     DataSetInfo& theData,
+                     const TString& theWeightFile, 
                      TDirectory* theTargetDir );
       
       virtual ~MethodANNBase();
@@ -85,19 +108,23 @@ namespace TMVA {
       virtual void Train() = 0;
       
       // print network, for debugging
-      virtual void PrintNetwork();
+      virtual void PrintNetwork() const;
       
-      using MethodBase::WriteWeightsToStream;
       using MethodBase::ReadWeightsFromStream;
 
       // write weights to file
-      virtual void WriteWeightsToStream( ostream& o ) const;
+      void AddWeightsXMLTo( void* parent ) const;
+      void ReadWeightsFromXML( void* wghtnode );
 
       // read weights from file
       virtual void ReadWeightsFromStream( istream& istr );
       
       // calculate the MVA value
-      virtual Double_t GetMvaValue();
+      virtual Double_t GetMvaValue( Double_t* err = 0 );
+
+      virtual const std::vector<Float_t> &GetRegressionValues();
+
+      virtual const std::vector<Float_t> &GetMulticlassValues();
       
       // write method specific histos to target file
       virtual void WriteMonitoringHistosToFile() const;
@@ -109,45 +136,66 @@ namespace TMVA {
       virtual void DeclareOptions();
       virtual void ProcessOptions();
       
-      Bool_t Debug() const { return fgDEBUG; }
-      
+      Bool_t Debug() const;
+
+      enum EEstimator      { kMSE=0,kCE};        
+
    protected:
 
       virtual void MakeClassSpecific( std::ostream&, const TString& ) const;
       
-      vector<Int_t>* ParseLayoutString(TString layerSpec);
-      virtual void BuildNetwork(vector<Int_t>* layout, vector<Double_t>* weights=NULL);
-      void     ForceNetworkInputs(Int_t ignoreIndex=-1);
+      std::vector<Int_t>* ParseLayoutString( TString layerSpec );
+      virtual void        BuildNetwork( std::vector<Int_t>* layout, std::vector<Double_t>* weights=NULL, 
+                                        Bool_t fromFile = kFALSE );
+      void     ForceNetworkInputs( const Event* ev, Int_t ignoreIndex = -1 );
       Double_t GetNetworkOutput() { return GetOutputNeuron()->GetActivationValue(); }
       
       // debugging utilities
-      void PrintMessage(TString message, Bool_t force=kFALSE) const;
-      void ForceNetworkCalculations();
-      void WaitForKeyboard();
+      void     PrintMessage( TString message, Bool_t force = kFALSE ) const;
+      void     ForceNetworkCalculations();
+      void     WaitForKeyboard();
       
       // accessors
       Int_t    NumCycles()  { return fNcycles;   }
-      TNeuron* GetInputNeuron(Int_t index) { return (TNeuron*)fInputLayer->At(index); }
-      TNeuron* GetOutputNeuron()           { return fOutputNeuron; }
+      TNeuron* GetInputNeuron(Int_t index)       { return (TNeuron*)fInputLayer->At(index); }
+      TNeuron* GetOutputNeuron( Int_t index = 0) { return fOutputNeurons.at(index); }
       
       // protected variables
-      TObjArray*    fNetwork;     // TObjArray of TObjArrays representing network
-      TObjArray*    fSynapses;    // array of pointers to synapses, no structural data
-      TActivation*  fActivation;  // activation function to be used for hidden layers
-      TActivation*  fIdentity;    // activation for input and output layers
-      TRandom3*     frgen;        // random number generator for various uses
+      TObjArray*    fNetwork;         // TObjArray of TObjArrays representing network
+      TObjArray*    fSynapses;        // array of pointers to synapses, no structural data
+      TActivation*  fActivation;      // activation function to be used for hidden layers
+      TActivation*  fOutput;          // activation function to be used for output layers, depending on estimator
+      TActivation*  fIdentity;        // activation for input and output layers
+      TRandom3*     frgen;            // random number generator for various uses
       TNeuronInput* fInputCalculator; // input calculator for all neurons
+
+      std::vector<Int_t>        fRegulatorIdx;  //index to different priors from every synapses 
+      std::vector<Double_t>     fRegulators;    //the priors as regulator        
+      EEstimator                fEstimator; 
+      TString                   fEstimatorS;
 
       // monitoring histograms
       TH1F* fEstimatorHistTrain; // monitors convergence of training sample
       TH1F* fEstimatorHistTest;  // monitors convergence of independent test sample
       
+      // monitoring histograms (not available for regression)
+      void CreateWeightMonitoringHists( const TString& bulkname, std::vector<TH1*>* hv = 0 ) const;
+      std::vector<TH1*> fEpochMonHistS; // epoch monitoring hitograms for signal
+      std::vector<TH1*> fEpochMonHistB; // epoch monitoring hitograms for background
+      std::vector<TH1*> fEpochMonHistW; // epoch monitoring hitograms for weights
+
+      
+      // general
+      TMatrixD           fInvHessian;           // zjh
+      bool               fUseRegulator;         // zjh
+
+
    private:
       
       // helper functions for building network
-      void BuildLayers(std::vector<Int_t>* layout);
+      void BuildLayers(std::vector<Int_t>* layout, Bool_t from_file = false);
       void BuildLayer(Int_t numNeurons, TObjArray* curLayer, TObjArray* prevLayer, 
-                      Int_t layerIndex, Int_t numLayers);
+                      Int_t layerIndex, Int_t numLayers, Bool_t from_file = false);
       void AddPreLinks(TNeuron* neuron, TObjArray* prevLayer);
      
       // helper functions for weight initialization
@@ -159,21 +207,21 @@ namespace TMVA {
       void DeleteNetworkLayer(TObjArray*& layer);
       
       // debugging utilities
-      void PrintLayer(TObjArray* layer);
-      void PrintNeuron(TNeuron* neuron);
+      void PrintLayer(TObjArray* layer) const;
+      void PrintNeuron(TNeuron* neuron) const;
       
       // private variables
-      Int_t      fNcycles;         // number of epochs to train
-      TString    fNeuronType;      // name of neuron activation function class
-      TString    fNeuronInputType; // name of neuron input calculator class
-      TObjArray* fInputLayer;      // cache this for fast access
-      TNeuron*   fOutputNeuron;    // cache this for fast access
-      TString    fLayerSpec;       // layout specification option
-      
+      Int_t                   fNcycles;         // number of epochs to train
+      TString                 fNeuronType;      // name of neuron activation function class
+      TString                 fNeuronInputType; // name of neuron input calculator class
+      TObjArray*              fInputLayer;      // cache this for fast access
+      std::vector<TNeuron*>   fOutputNeurons;   // cache this for fast access
+      TString                 fLayerSpec;       // layout specification option
+      Int_t                   fRandomSeed;      // random seed for initial synapse weights
+
       // some static flags
       static const Bool_t fgDEBUG      = kTRUE;  // debug flag
-      static const Bool_t fgFIXED_SEED = kTRUE;  // fix rand generator seed
-          
+    
       ClassDef(MethodANNBase,0) // Base class for TMVA ANNs
    };
    

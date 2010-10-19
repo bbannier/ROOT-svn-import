@@ -12,8 +12,10 @@
 #include "TClassDocOutput.h"
 
 #include "TBaseClass.h"
+#include "TClassEdit.h"
 #include "TDataMember.h"
 #include "TMethodArg.h"
+#include "TDataType.h"
 #include "TDocInfo.h"
 #include "TDocParser.h"
 #include "TEnv.h"
@@ -44,8 +46,9 @@
 ClassImp(TClassDocOutput);
 
 //______________________________________________________________________________
-TClassDocOutput::TClassDocOutput(THtml& html, TClass* cl):
-   TDocOutput(html), fHierarchyLines(0), fCurrentClass(cl), fParser(0)
+TClassDocOutput::TClassDocOutput(THtml& html, TClass* cl, TList* typedefs):
+   TDocOutput(html), fHierarchyLines(0), fCurrentClass(cl),
+   fCurrentClassesTypedefs(typedefs), fParser(0)
 {
    // Create an object given the invoking THtml object, and the TClass
    // object that we will generate output for.
@@ -97,9 +100,8 @@ void TClassDocOutput::Class2Html(Bool_t force)
    WriteClassDocHeader(classFile);
 
    // copy .h file to the Html output directory
-   TString declf(fHtml->GetDeclFileName(fCurrentClass));
-   fHtml->GetSourceFileName(declf);
-   if (declf.Length())
+   TString declf;
+   if (fHtml->GetDeclFileName(fCurrentClass, kTRUE, declf))
       CopyHtmlFile(declf);
 
    // process a '.cxx' file
@@ -120,18 +122,25 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
    // loop to get a pointers to method names
 
    classFile << endl << "<div id=\"functions\">" << endl;
-   classFile << "<h2><a id=\"" << fCurrentClass->GetName()
+   TString mangled(fCurrentClass->GetName());
+   NameSpace2FileName(mangled);
+   classFile << "<h2><a id=\"" << mangled
       << ":Function_Members\"></a>Function Members (Methods)</h2>" << endl;
 
    const char* tab4nbsp="&nbsp;&nbsp;&nbsp;&nbsp;";
+   TString declFile;
+   fHtml->GetDeclFileName(fCurrentClass, kFALSE, declFile);
    if (fCurrentClass->Property() & kIsAbstract)
       classFile << "&nbsp;<br /><b>"
                 << tab4nbsp << "This is an abstract class, constructors will not be documented.<br />" << endl
                 << tab4nbsp << "Look at the <a href=\""
-                << fHtml->GetFileName(fHtml->GetDeclFileName(fCurrentClass))
+                << gSystem->BaseName(declFile)
                 << "\">header</a> to check for available constructors.</b><br />" << endl;
 
-   for (Int_t access = TDocParser::kPublic; access >= 0 && !fHtml->IsNamespace(fCurrentClass); --access) {
+   Int_t minAccess = 0;
+   if (fHtml->IsNamespace(fCurrentClass))
+      minAccess = TDocParser::kPublic;
+   for (Int_t access = TDocParser::kPublic; access >= minAccess; --access) {
 
       const TList* methods = fParser->GetMethods((TDocParser::EAccess)access);
       if (methods->GetEntries() == 0)
@@ -146,8 +155,8 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
          << "<table class=\"func\" id=\"tabfunc" << accessID[access] << "\" cellspacing=\"0\">" << endl;
 
       TIter iMethWrap(methods);
-      TDocParser::TMethodWrapper *methWrap = 0;
-      while ((methWrap = (TDocParser::TMethodWrapper*) iMethWrap())) {
+      TDocMethodWrapper *methWrap = 0;
+      while ((methWrap = (TDocMethodWrapper*) iMethWrap())) {
          const TMethod* method = methWrap->GetMethod();
 
          // it's a c'tor - Cint stores the class name as return type
@@ -159,11 +168,12 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
          if (method->GetClass() != fCurrentClass)
             classFile << "inh";
          classFile << "\"><td class=\"funcret\">";
-         if (kIsVirtual & method->Property())
+         if (kIsVirtual & method->Property()) {
             if (!isdtor)
                classFile << "virtual ";
             else
                classFile << " virtual";
+         }
 
          if (kIsStatic & method->Property())
             classFile << "static ";
@@ -171,19 +181,24 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
          if (!isctor && !isdtor)
             fParser->DecorateKeywords(classFile, method->GetReturnTypeName());
 
-         TString mangled(method->GetClass()->GetName());
-         NameSpace2FileName(mangled);
+         TString mangledM(method->GetClass()->GetName());
+         NameSpace2FileName(mangledM);
          classFile << "</td><td class=\"funcname\"><a class=\"funcname\" href=\"";
          if (method->GetClass() != fCurrentClass) {
             TString htmlFile;
             fHtml->GetHtmlFileName(method->GetClass(), htmlFile);
             classFile << htmlFile;
          }
-         classFile << "#" << mangled;
+         classFile << "#" << mangledM;
          classFile << ":";
-         mangled = method->GetName();
-         NameSpace2FileName(mangled);
-         classFile << mangled << "\">";
+         mangledM = method->GetName();
+         NameSpace2FileName(mangledM);
+         Int_t overloadIdx = methWrap->GetOverloadIdx();
+         if (overloadIdx) {
+            mangledM += "%";
+            mangledM += overloadIdx;
+         }
+         classFile << mangledM << "\">";
          if (method->GetClass() != fCurrentClass) {
             classFile << "<span class=\"baseclass\">";
             ReplaceSpecialChars(classFile, method->GetClass()->GetName());
@@ -193,6 +208,29 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
          classFile << "</a>";
 
          fParser->DecorateKeywords(classFile, const_cast<TMethod*>(method)->GetSignature());
+         bool propSignal = false;
+         bool propMenu   = false;
+         bool propToggle = false;
+         bool propGetter = false;
+         if (method->GetTitle()) {
+            propSignal = (strstr(method->GetTitle(), "*SIGNAL*"));
+            propMenu   = (strstr(method->GetTitle(), "*MENU*"));
+            propToggle = (strstr(method->GetTitle(), "*TOGGLE*"));
+            propGetter = (strstr(method->GetTitle(), "*GETTER"));
+            if (propSignal || propMenu || propToggle || propGetter) {
+               classFile << "<span class=\"funcprop\">";
+               if (propSignal) classFile << "<abbr title=\"emits a signal\">SIGNAL</abbr> ";
+               if (propMenu) classFile << "<abbr title=\"has a popup menu entry\">MENU</abbr> ";
+               if (propToggle) classFile << "<abbr title=\"toggles a state\">TOGGLE</abbr> ";
+               if (propGetter) {
+                  TString getter(method->GetTitle());
+                  Ssiz_t posGetter = getter.Index("*GETTER=");
+                  getter.Remove(0, posGetter + 8);
+                  classFile << "<abbr title=\"use " + getter + "() as getter\">GETTER</abbr> ";
+               }
+               classFile << "</span>";
+            }
+         }
          classFile << "</td></tr>" << endl;
       }
       classFile << endl << "</table></div>" << endl;
@@ -217,7 +255,9 @@ void  TClassDocOutput::ListDataMembers(std::ostream& classFile)
    if (!haveDataMembers) return;
 
    classFile << endl << "<div id=\"datamembers\">" << endl;
-   classFile << "<h2><a name=\"" << fCurrentClass->GetName()
+   TString mangled(fCurrentClass->GetName());
+   NameSpace2FileName(mangled);
+   classFile << "<h2><a name=\"" << mangled
       << ":Data_Members\"></a>Data Members</h2>" << endl;
 
    for (Int_t access = 5; access >= 0 && !fHtml->IsNamespace(fCurrentClass); --access) {
@@ -286,11 +326,12 @@ void  TClassDocOutput::ListDataMembers(std::ostream& classFile)
             if (access < 3) {
                if (member->Property() & G__BIT_ISSTATIC)
                   classFile << "static ";
-               fParser->DecorateKeywords(classFile, member->GetFullTypeName());
+               std::string shortTypeName(fHtml->ShortType(member->GetFullTypeName()));
+               fParser->DecorateKeywords(classFile, shortTypeName.c_str());
             }
 
-         TString mangled(member->GetClass()->GetName());
-         NameSpace2FileName(mangled);
+         TString mangledM(member->GetClass()->GetName());
+         NameSpace2FileName(mangledM);
          classFile << "</td><td class=\"dataname\"><a ";
          if (member->GetClass() != fCurrentClass) {
             classFile << "href=\"";
@@ -299,11 +340,11 @@ void  TClassDocOutput::ListDataMembers(std::ostream& classFile)
             classFile << htmlFile << "#";
          } else
             classFile << "name=\"";
-         classFile << mangled;
+         classFile << mangledM;
          classFile << ":";
-         mangled = member->GetName();
-         NameSpace2FileName(mangled);
-         classFile << mangled << "\">";
+         mangledM = member->GetName();
+         NameSpace2FileName(mangledM);
+         classFile << mangledM << "\">";
          if (member->GetClass() == fCurrentClass)
             classFile << "</a>";
          if (access < 3 && member->GetClass() != fCurrentClass) {
@@ -323,7 +364,7 @@ void  TClassDocOutput::ListDataMembers(std::ostream& classFile)
          if (member->GetClass() != fCurrentClass)
             classFile << "</a>";
          classFile << "</td>";
-         if (member->GetTitle() && strlen(member->GetTitle())) {
+         if (member->GetTitle() && member->GetTitle()[0]) {
             classFile << "<td class=\"datadesc\">";
             ReplaceSpecialChars(classFile, member->GetTitle());
          } else classFile << "<td>";
@@ -403,12 +444,12 @@ Bool_t TClassDocOutput::ClassDotCharts(std::ostream& out)
       RunDot(filenameLib, &out);
 
    out << "<div class=\"tabs\">" << endl
-       << "<a id=\"img" << title << "_Inh\" class=\"tabsel\" href=\"inh/" << title << "_Inh.gif\" onclick=\"javascript:return SetImg('Charts','inh/" << title << "_Inh.gif');\">Inheritance</a>" << endl
-       << "<a id=\"img" << title << "_InhMem\" class=\"tab\" href=\"inhmem/" << title << "_InhMem.gif\" onclick=\"javascript:return SetImg('Charts','inhmem/" << title << "_InhMem.gif');\">Inherited Members</a>" << endl
-       << "<a id=\"img" << title << "_Incl\" class=\"tab\" href=\"incl/" << title << "_Incl.gif\" onclick=\"javascript:return SetImg('Charts','incl/" << title << "_Incl.gif');\">Includes</a>" << endl
-       << "<a id=\"img" << title << "_Lib\" class=\"tab\" href=\"lib/" << title << "_Lib.gif\" onclick=\"javascript:return SetImg('Charts','lib/" << title << "_Lib.gif');\">Libraries</a><br/>" << endl
+       << "<a id=\"img" << title << "_Inh\" class=\"tabsel\" href=\"inh/" << title << "_Inh.png\" onclick=\"javascript:return SetImg('Charts','inh/" << title << "_Inh.png');\">Inheritance</a>" << endl
+       << "<a id=\"img" << title << "_InhMem\" class=\"tab\" href=\"inhmem/" << title << "_InhMem.png\" onclick=\"javascript:return SetImg('Charts','inhmem/" << title << "_InhMem.png');\">Inherited Members</a>" << endl
+       << "<a id=\"img" << title << "_Incl\" class=\"tab\" href=\"incl/" << title << "_Incl.png\" onclick=\"javascript:return SetImg('Charts','incl/" << title << "_Incl.png');\">Includes</a>" << endl
+       << "<a id=\"img" << title << "_Lib\" class=\"tab\" href=\"lib/" << title << "_Lib.png\" onclick=\"javascript:return SetImg('Charts','lib/" << title << "_Lib.png');\">Libraries</a><br/>" << endl
        << "</div><div class=\"classcharts\"><div class=\"classchartswidth\"></div>" << endl
-       << "<img id=\"Charts\" alt=\"Class Charts\" class=\"classcharts\" usemap=\"#Map" << title << "_Inh\" src=\"inh/" << title << "_Inh.gif\"/></div>" << endl;
+       << "<img id=\"Charts\" alt=\"Class Charts\" class=\"classcharts\" usemap=\"#Map" << title << "_Inh\" src=\"inh/" << title << "_Inh.png\"/></div>" << endl;
 
    return kTRUE;
 }
@@ -714,75 +755,85 @@ Bool_t TClassDocOutput::CreateDotClassChartInhMem(const char* filename) {
       //Bool_t haveMembers = (cl->GetListOfDataMembers() && cl->GetListOfDataMembers()->GetSize());
       Bool_t haveFuncs = cl->GetListOfMethods() && cl->GetListOfMethods()->GetSize();
 
-      // make sure each member name is listed only once
-      // that's useless for data members, but symmetric to what we have for methods
-      std::map<std::string, TDataMember*> dmMap;
-      TIter iDM(cl->GetListOfDataMembers());
-      TDataMember* dm = 0;
-      while ((dm = (TDataMember*) iDM()))
-         dmMap[dm->GetName()] = dm;
+      // DATA MEMBERS
+      {
+         // make sure each member name is listed only once
+         // that's useless for data members, but symmetric to what we have for methods
+         std::map<std::string, TDataMember*> dmMap;
 
-      outdot << "subgraph \"clusterData0" << cl->GetName() << "\" {" << endl
-             << "  color=white;" << endl
-             << "  label=\"\";" << endl
-             << "  \"clusterNode0" << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
-      TString prevColumnNode;
-      Int_t pos = dmMap.size();
-      Int_t column = 0;
-      Int_t newColumnEvery = (pos + numColumns - 1) / numColumns;
-      for (std::map<std::string, TDataMember*>::iterator iDM = dmMap.begin();
-         iDM != dmMap.end(); ++iDM, --pos) {
-         TDataMember* dm = iDM->second;
-         TString nodeName(cl->GetName());
-         nodeName += "::";
-         nodeName += dm->GetName();
-         if (iDM == dmMap.begin())
-            prevColumnNode = nodeName;
-
-         outdot << "\"" << nodeName << "\" [label=\""
-            << dm->GetName() << "\"";
-         if (dm->Property() & kIsPrivate)
-            outdot << ",color=\"#FFCCCC\"";
-         else if (dm->Property() & kIsProtected)
-            outdot << ",color=\"#FFFF77\"";
-         else
-            outdot << ",color=\"#CCFFCC\"";
-         outdot << "];" << endl;
-         if (pos % newColumnEvery == 1) {
-            ++column;
-            outdot << "};" << endl // end dataR
-                   << "subgraph \"clusterData" << column << cl->GetName() << "\" {" << endl
-                   << "  color=white;" << endl
-                   << "  label=\"\";" << endl
-                   << "  \"clusterNode" << column << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
-         } else if (iDM != dmMap.begin() && pos % newColumnEvery == 0) {
-            ssDep << "\"" << prevColumnNode
-                  << "\" -> \"" << nodeName << "\""<< " [style=invis,weight=100];" << endl;
-            prevColumnNode = nodeName;
+         {
+            TIter iDM(cl->GetListOfDataMembers());
+            TDataMember* dm = 0;
+            while ((dm = (TDataMember*) iDM()))
+               dmMap[dm->GetName()] = dm;
          }
-      }
 
-      while (column < numColumns - 1) {
-         ++column;
-         outdot << "  \"clusterNode" << column << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
-      }
+         outdot << "subgraph \"clusterData0" << cl->GetName() << "\" {" << endl
+                << "  color=white;" << endl
+                << "  label=\"\";" << endl
+                << "  \"clusterNode0" << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
+         TString prevColumnNode;
+         Int_t pos = dmMap.size();
+         Int_t column = 0;
+         Int_t newColumnEvery = (pos + numColumns - 1) / numColumns;
+         for (std::map<std::string, TDataMember*>::iterator iDM = dmMap.begin();
+              iDM != dmMap.end(); ++iDM, --pos) {
+            TDataMember* dm = iDM->second;
+            TString nodeName(cl->GetName());
+            nodeName += "::";
+            nodeName += dm->GetName();
+            if (iDM == dmMap.begin())
+               prevColumnNode = nodeName;
 
-      outdot << "};" << endl; // subgraph dataL/R
+            outdot << "\"" << nodeName << "\" [label=\""
+                   << dm->GetName() << "\"";
+            if (dm->Property() & kIsPrivate)
+               outdot << ",color=\"#FFCCCC\"";
+            else if (dm->Property() & kIsProtected)
+               outdot << ",color=\"#FFFF77\"";
+            else
+               outdot << ",color=\"#CCFFCC\"";
+            outdot << "];" << endl;
+            if (pos % newColumnEvery == 1) {
+               ++column;
+               outdot << "};" << endl // end dataR
+                      << "subgraph \"clusterData" << column << cl->GetName() << "\" {" << endl
+                      << "  color=white;" << endl
+                      << "  label=\"\";" << endl
+                      << "  \"clusterNode" << column << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
+            } else if (iDM != dmMap.begin() && pos % newColumnEvery == 0) {
+               ssDep << "\"" << prevColumnNode
+                     << "\" -> \"" << nodeName << "\""<< " [style=invis,weight=100];" << endl;
+               prevColumnNode = nodeName;
+            }
+         }
 
+         while (column < numColumns - 1) {
+            ++column;
+            outdot << "  \"clusterNode" << column << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
+         }
+
+         outdot << "};" << endl; // subgraph dataL/R
+      } // DATA MEMBERS
+
+      // FUNCTION MEMBERS
       if (haveFuncs) {
          // make sure each member name is listed only once
          std::map<std::string, TMethod*> methMap;
-         TIter iMeth(cl->GetListOfMethods());
-         TMethod* meth = 0;
-         while ((meth = (TMethod*) iMeth())) 
-            methMap[meth->GetName()] = meth;
+
+         {
+            TIter iMeth(cl->GetListOfMethods());
+            TMethod* meth = 0;
+            while ((meth = (TMethod*) iMeth())) 
+               methMap[meth->GetName()] = meth;
+         }
 
          outdot << "subgraph \"clusterFunc0" << cl->GetName() << "\" {" << endl
                 << "  color=white;" << endl
                 << "  label=\"\";" << endl
                 << "  \"clusterNode0" << cl->GetName() << "\" [height=0,width=0,style=invis];" << endl;
 
-         TString prevColumnNode;
+         TString prevColumnNodeFunc;
          Int_t pos = methMap.size();
          Int_t column = 0;
          Int_t newColumnEvery = (pos + numColumns - 1) / numColumns;
@@ -793,7 +844,7 @@ Bool_t TClassDocOutput::CreateDotClassChartInhMem(const char* filename) {
             nodeName += "::";
             nodeName += meth->GetName();
             if (iMeth == methMap.begin())
-               prevColumnNode = nodeName;
+               prevColumnNodeFunc = nodeName;
 
             outdot << "\"" << nodeName << "\" [label=\"" << meth->GetName() << "\"";
             if (cl != fCurrentClass && 
@@ -813,9 +864,9 @@ Bool_t TClassDocOutput::CreateDotClassChartInhMem(const char* filename) {
                       << "  color=white;" << endl
                       << "  label=\"\";" << endl;
             } else if (iMeth != methMap.begin() && pos % newColumnEvery == 0) {
-               ssDep << "\"" << prevColumnNode
+               ssDep << "\"" << prevColumnNodeFunc
                      << "\" -> \"" << nodeName << "\""<< " [style=invis,weight=100];" << endl;
-               prevColumnNode = nodeName;
+               prevColumnNodeFunc = nodeName;
             }
          }
          outdot << "};" << endl; // subgraph funcL/R
@@ -859,19 +910,19 @@ Bool_t TClassDocOutput::CreateDotClassChartIncl(const char* filename) {
 
    std::map<std::string, std::string> filesToParse;
    std::list<std::string> listFilesToParse;
-   const char* declFileName = fHtml->GetDeclFileName(fCurrentClass);
-   const char* implFileName = fHtml->GetImplFileName(fCurrentClass);
-   if (declFileName && strlen(declFileName)) {
-      char* real = gSystem->Which(fHtml->GetSourceDir(), declFileName, kReadPermission);
-      if (real) {
-         filesToParse[declFileName] = real;
-         listFilesToParse.push_back(declFileName);
-         delete [] real;
+   TString declFileName;
+   TString implFileName;
+   fHtml->GetImplFileName(fCurrentClass, kFALSE, implFileName);
+   if (fHtml->GetDeclFileName(fCurrentClass, kFALSE, declFileName)) {
+      TString real;
+      if (fHtml->GetDeclFileName(fCurrentClass, kTRUE, real)) {
+         filesToParse[declFileName.Data()] = real.Data();
+         listFilesToParse.push_back(declFileName.Data());
       }
    }
    /* do it only for the header
    if (implFileName && strlen(implFileName)) {
-      char* real = gSystem->Which(fHtml->GetSourceDir(), implFileName, kReadPermission);
+      char* real = gSystem->Which(fHtml->GetInputPath(), implFileName, kReadPermission);
       if (real) {
          filesToParse[implFileName] = real;
          listFilesToParse.push_back(implFileName);
@@ -915,12 +966,12 @@ Bool_t TClassDocOutput::CreateDotClassChartIncl(const char* filename) {
          if (pos == std::string::npos) continue;
          line.erase(pos);
          if (filesToParse.find(line) == filesToParse.end()) {
-            char* filename = gSystem->Which(fHtml->GetSourceDir(), line.c_str(), kReadPermission);
-            if (!filename) continue;
+            TString sysfilename;
+            if (!GetHtml()->GetPathDefinition().GetFileNameFromInclude(line.c_str(), sysfilename))
+               continue;
             listFilesToParse.push_back(line);
-            filesToParse[line] = filename;
-            delete [] filename;
-            if (*iFile == implFileName || *iFile == declFileName)
+            filesToParse[line] = sysfilename;
+            if (*iFile == implFileName.Data() || *iFile == declFileName.Data())
                outdot << "\"" << *iFile << "\" [style=filled,fillcolor=lightgray];" << endl;
          }
          outdot << "\"" << *iFile << "\" -> \"" << line << "\";" << endl;
@@ -960,9 +1011,13 @@ Bool_t TClassDocOutput::CreateDotClassChartLib(const char* filename) {
          firstLib.Remove(end, firstLib.Length());
          libs.Remove(0, end + 1);
       } else libs = "";
-      Ssiz_t posExt = firstLib.First(".");
-      if (posExt != kNPOS)
-         firstLib.Remove(posExt, firstLib.Length());
+
+      {
+         Ssiz_t posExt = firstLib.First(".");
+         if (posExt != kNPOS)
+            firstLib.Remove(posExt, firstLib.Length());
+      }
+
       outdot << "\"All Libraries\" -> \"" << firstLib << "\" [style=invis];" << endl;
       outdot << "\"" << firstLib << "\" -> {" << endl;
 
@@ -1061,9 +1116,11 @@ Bool_t TClassDocOutput::CreateHierarchyDot()
    TIter iClass(fHtml->GetListOfClasses());
    while ((cdi = (TClassDocInfo*)iClass())) {
 
-      TClass *cl = cdi->GetClass();
+      TDictionary *dict = cdi->GetClass();
+      TClass *cl = dynamic_cast<TClass*>(dict);
       if (cl == 0) {
-         Warning("THtml::CreateHierarchy", "skipping class %s\n", cdi->GetName());
+         if (!dict)
+            Warning("THtml::CreateHierarchy", "skipping class %s\n", cdi->GetName());
          continue;
       }
 
@@ -1105,7 +1162,7 @@ Bool_t TClassDocOutput::CreateHierarchyDot()
 
    RunDot(filename, &out);
 
-   out << "<img usemap=\"#Map" << title << "\" src=\"" << title << ".gif\"/>" << endl;
+   out << "<img usemap=\"#Map" << title << "\" src=\"" << title << ".png\"/>" << endl;
    // write out footer
    WriteHtmlFooter(out);
    return kTRUE;
@@ -1143,7 +1200,7 @@ void TClassDocOutput::CreateSourceOutputStream(std::ostream& out, const char* ex
    TString title(fCurrentClass->GetName());
    title += " - source file";
    WriteHtmlHeader(out, title, "../", fCurrentClass);
-   out << "<pre class=\"code\">" << std::endl;
+   out << "<div id=\"codeAndLineNumbers\"><pre class=\"listing\">" << std::endl;
 }
 
 //______________________________________________________________________________
@@ -1164,7 +1221,7 @@ void TClassDocOutput::DescendHierarchy(std::ostream& out, TClass* basePtr, Int_t
    TIter iClass(fHtml->GetListOfClasses());
    while ((cdi = (TClassDocInfo*)iClass()) && (!maxLines || fHierarchyLines<maxLines)) {
 
-      TClass *classPtr = cdi->GetClass();
+      TClass *classPtr = dynamic_cast<TClass*>(cdi->GetClass());
       if (!classPtr) continue;
 
       // find base classes with same name as basePtr
@@ -1244,7 +1301,9 @@ void TClassDocOutput::MakeTree(Bool_t force /*= kFALSE*/)
    }
 
    if (!htmlFile.Length()) {
-      Printf(fHtml->GetCounterFormat(), "-skipped-", "", fCurrentClass->GetName());
+      TString what(fCurrentClass->GetName());
+      what += " (source not found)";
+      Printf(fHtml->GetCounterFormat(), "-skipped-", "", what.Data());
       return;
    }
 
@@ -1327,12 +1386,26 @@ void TClassDocOutput::WriteClassDescription(std::ostream& out, const TString& de
       } else
          ReplaceSpecialChars(out, inheritFrom->GetName());
    }
+   out << "</h1>" << endl;
 
-   out << "</h1>" << endl
-      << "<div class=\"classdescr\">" << endl;
+   out << "<div class=\"classdescr\">" << endl;
 
    if (description.Length())
       out << "<pre>" << description << "</pre>";
+
+   // typedefs pointing to this class:
+   if (fCurrentClassesTypedefs && !fCurrentClassesTypedefs->IsEmpty()) {
+      out << "<h4>This class is also known as (typedefs to this class)</h4>";
+      TIter iTD(fCurrentClassesTypedefs);
+      bool firsttd = true;
+      TDataType* dt = 0;
+      while ((dt = (TDataType*) iTD())) {
+         if (!firsttd)
+            out << ", ";
+         else firsttd = false;
+         fParser->DecorateKeywords(out, dt->GetName());
+      }
+   }
 
    out << "</div>" << std::endl 
        << "</div></div>" << std::endl;
@@ -1341,7 +1414,7 @@ void TClassDocOutput::WriteClassDescription(std::ostream& out, const TString& de
    ListDataMembers(out);
 
    // create dot class charts or an html inheritance tree
-   out << "<h2><a id=\"" << fCurrentClass->GetName()
+   out << "<h2><a id=\"" << anchor
       << ":Class_Charts\"></a>Class Charts</h2>" << endl;
    if (!fHtml->IsNamespace(fCurrentClass))
       if (!ClassDotCharts(out))
@@ -1372,28 +1445,7 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
    TString sInclude;
    TString sLib;
    const char* lib=fCurrentClass->GetSharedLibs();
-   const char* incl=fHtml->GetDeclFileName(fCurrentClass);
-   if (incl) {
-      TString inclPath(GetHtml()->GetIncludePath());
-      Ssiz_t posDelim = 0;
-      TString inclDir;
-      TString sIncl(incl);
-#ifdef R__WIN32
-      const char* pdelim = ";";
-      static const char ddelim = '\\';
-#else
-      const char* pdelim = ":";
-      static const char ddelim = '/';
-#endif
-      while (inclPath.Tokenize(inclDir, posDelim, pdelim))
-         if (sIncl.BeginsWith(inclDir)) {
-            incl += inclDir.Length();
-            if (incl[0] == ddelim || incl[0] == '/')
-               ++incl;
-            break;
-         }
-      sInclude = incl;
-   }
+   GetHtml()->GetPathDefinition().GetIncludeAs(fCurrentClass, sInclude);
    if (lib) {
       char* libDup=StrDup(lib);
       char* libDupSpace=strchr(libDup,' ');
@@ -1410,62 +1462,35 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
    classFile << "<script type=\"text/javascript\">WriteFollowPageBox('" 
              << sTitle << "','" << sLib << "','" << sInclude << "');</script>" << endl;
 
-   // top links
-   classFile << "<div id=\"toplinks\">" << endl;
+   TString modulename;
+   fHtml->GetModuleNameForClass(modulename, fCurrentClass);
+   TModuleDocInfo* module = (TModuleDocInfo*) fHtml->GetListOfModules()->FindObject(modulename);
+   WriteTopLinks(classFile, module, fCurrentClass->GetName(), kFALSE);
 
-   // make a link to the description
-   TString currClassNameMangled(fCurrentClass->GetName());
-   NameSpace2FileName(currClassNameMangled);
-   classFile << "<div class=\"descrhead\">" << endl
-      << "<span class=\"descrtitle\">Location:</span>" << endl;
-   const char *productName = fHtml->GetProductName();
-   classFile << "<a class=\"descrheadentry\" href=\"ClassIndex.html\">" << productName << "</a> &#187; " << endl;
-
-   TString module;
-   fHtml->GetModuleNameForClass(module, fCurrentClass);
-   if (module.Length())
-      classFile << "<a class=\"descrheadentry\" href=\"./" << module << "_Index.html\">" << module << "</a> &#187; " << endl;
-
-   classFile << "<a class=\"descrheadentry\" href=\"#TopOfPage\">";
-   ReplaceSpecialChars(classFile, fCurrentClass->GetName());
-   classFile << "</a>" << endl
-      << "</div>" << endl;
-
-   classFile << "<div class=\"descrhead\">" << endl
-      << "<span class=\"descrtitle\">Quick Links:</span>" << endl;
-
-   // link to the user home page (if exist)
-   const char* userHomePage = GetHtml()->GetHomepage();
-   if (productName && !strcmp(productName, "ROOT"))
-      userHomePage = "";
-   if (userHomePage && *userHomePage)
-      classFile << "<a class=\"descrheadentry\" href=\"" << userHomePage << "\">" << productName << "</a>" << endl;
-   classFile << "<a class=\"descrheadentry\" href=\"http://root.cern.ch/root/Welcome.html\">ROOT</a>" << endl
-      << "<a class=\"descrheadentry\" href=\"./ClassIndex.html\">Class Index</a>" << endl
-      << "<a class=\"descrheadentry\" href=\"./ClassHierarchy.html\">Class Hierarchy</a>" << endl
-      << "</div>" << endl;
-
-   classFile << "<div class=\"descrhead\">" << endl
+   classFile << "<div class=\"descrhead\"><div class=\"descrheadcontent\">" << endl // descrhead line 3
       << "<span class=\"descrtitle\">Source:</span>" << endl;
 
    // make a link to the '.cxx' file
    TString classFileName(fCurrentClass->GetName());
    NameSpace2FileName(classFileName);
 
-   const char* headerFileName = fHtml->GetDeclFileName(fCurrentClass);
-   if (headerFileName && !headerFileName[0])
-      headerFileName = 0;
-   const char* sourceFileName = fHtml->GetImplFileName(fCurrentClass);
-   if (sourceFileName && !sourceFileName[0])
-      sourceFileName = 0;
-
-   if (headerFileName)
+   TString headerFileName;
+   fHtml->GetDeclFileName(fCurrentClass, kFALSE, headerFileName);
+   TString sourceFileName;
+   fHtml->GetImplFileName(fCurrentClass, kFALSE, sourceFileName);
+   if (headerFileName.Length())
       classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
                 << ".h.html\">header file</a>" << endl;
+   else
+      classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
+                << ".h.html\"></a>" << endl;
 
-   if (sourceFileName)
+   if (sourceFileName.Length())
       classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
                 << ".cxx.html\">source file</a>" << endl;
+   else
+      classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
+                << ".cxx.html\"></a>" << endl;
 
    if (!fHtml->IsNamespace(fCurrentClass) && !fHtml->HaveDot()) {
       // make a link to the inheritance tree (postscript)
@@ -1476,7 +1501,7 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
    const TString& viewCVSLink = GetHtml()->GetViewCVS();
    Bool_t mustReplace = viewCVSLink.Contains("%f");
    if (viewCVSLink.Length()) {
-      if (headerFileName) {
+      if (headerFileName.Length()) {
          TString link(viewCVSLink);
          TString sHeader(headerFileName);
          if (GetHtml()->GetProductName() && !strcmp(GetHtml()->GetProductName(), "ROOT")
@@ -1506,15 +1531,20 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
          }
          if (mustReplace) link.ReplaceAll("%f", sHeader);
          else link += sHeader;
-         classFile << "<a class=\"descrheadentry\" href=\"" << link << "\">viewCVS header</a> ";
-      }
-      if (sourceFileName) {
+         classFile << "<a class=\"descrheadentry\" href=\"" << link << "\">viewVC header</a> ";
+      } else
+         classFile << "<a class=\"descrheadentry\"> </a> ";
+      if (sourceFileName.Length()) {
          TString link(viewCVSLink);
          if (mustReplace) link.ReplaceAll("%f", sourceFileName);
          else link += sourceFileName;
-         classFile << "<a class=\"descrheadentry\" href=\"" << link << "\">viewCVS source</a> ";
-      }
+         classFile << "<a class=\"descrheadentry\" href=\"" << link << "\">viewVC source</a> ";
+      } else
+         classFile << "<a class=\"descrheadentry\"> </a> ";
    }
+
+   TString currClassNameMangled(fCurrentClass->GetName());
+   NameSpace2FileName(currClassNameMangled);
 
    TString wikiLink = GetHtml()->GetWikiURL();
    if (wikiLink.Length()) {
@@ -1523,9 +1553,9 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
       classFile << "<a class=\"descrheadentry\" href=\"" << wikiLink << "\">wiki</a> ";
    }
 
-   classFile << endl << "</div>" << endl;
+   classFile << endl << "</div></div>" << endl; // descrhead line 3
 
-   classFile << "<div class=\"descrhead\">" << endl
+   classFile << "<div class=\"descrhead\"><div class=\"descrheadcontent\">" << endl // descrhead line 4
       << "<span class=\"descrtitle\">Sections:</span>" << endl
       << "<a class=\"descrheadentry\" href=\"#" << currClassNameMangled;
    if (fHtml->IsNamespace(fCurrentClass))
@@ -1536,8 +1566,10 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
       << "<a class=\"descrheadentry\" href=\"#" << currClassNameMangled << ":Function_Members\">function members</a>" << endl
       << "<a class=\"descrheadentry\" href=\"#" << currClassNameMangled << ":Data_Members\">data members</a>" << endl
       << "<a class=\"descrheadentry\" href=\"#" << currClassNameMangled << ":Class_Charts\">class charts</a>" << endl
-      << "</div>" << endl
-      << "</div>" << endl;
+      << "</div></div>" << endl // descrhead line 4
+      << "</div>" << endl; // toplinks, from TDocOutput::WriteTopLinks
+
+   WriteLocation(classFile, module, fCurrentClass->GetName());
 }
 
 
@@ -1546,7 +1578,7 @@ void TClassDocOutput::WriteMethod(std::ostream& out, TString& ret,
                                   TString& name, TString& params,
                                   const char* filename, TString& anchor,
                                   TString& comment, TString& codeOneLiner,
-                                  TMethod* guessedMethod)
+                                  TDocMethodWrapper* guessedMethod)
 {
    // Write method name with return type ret and parameters param to out.
    // Build a link using file and anchor. Cooment it with comment, and
@@ -1562,6 +1594,10 @@ void TClassDocOutput::WriteMethod(std::ostream& out, TString& ret,
    out << mangled << ":";
    mangled = name;
    NameSpace2FileName(mangled);
+   if (guessedMethod && guessedMethod->GetOverloadIdx()) {
+      mangled += "%";
+      mangled += guessedMethod->GetOverloadIdx();
+   }
    out << mangled << "\" href=\"src/" << filename;
    if (anchor.Length())
       out << "#" << anchor;
@@ -1571,7 +1607,7 @@ void TClassDocOutput::WriteMethod(std::ostream& out, TString& ret,
    if (guessedMethod) {
       out << "(";
       TMethodArg* arg;
-      TIter iParam(guessedMethod->GetListOfMethodArgs());
+      TIter iParam(guessedMethod->GetMethod()->GetListOfMethodArgs());
       Bool_t first = kTRUE;
       while ((arg = (TMethodArg*) iParam())) {
          if (!first) out << ", ";
@@ -1587,7 +1623,7 @@ void TClassDocOutput::WriteMethod(std::ostream& out, TString& ret,
          out << paramGuessed;
       }
       out << ")";
-      if (guessedMethod->Property() & kIsMethConst)
+      if (guessedMethod->GetMethod()->Property() & kIsMethConst)
          out << " const";
    } else {
       fParser->DecorateKeywords(params);
