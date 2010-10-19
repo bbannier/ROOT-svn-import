@@ -12,6 +12,7 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch>  - CERN, Switzerland          *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
@@ -30,81 +31,137 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// Singleton class for TMVA typedefs and enums                          //
+// Types                                                                //
+//                                                                      //
+// Singleton class for Global types used by TMVA                        //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#include "Rtypes.h"
-#include "TString.h"
+#include <map>
 
-#ifndef ROOT_TMVA_MsgLogger
-#include "TMVA/MsgLogger.h"
+#ifndef ROOT_Rtypes
+#include "Rtypes.h"
+#endif
+
+#ifndef ROOT_TString
+#include "TString.h"
 #endif
 
 namespace TMVA {
 
+   typedef UInt_t TMVAVersion_t;
+
+   class MsgLogger;
+
+   // message types for MsgLogger
+   // define outside of Types class to facilite access
+   enum EMsgType {
+      kDEBUG   = 1,
+      kVERBOSE = 2,
+      kINFO    = 3,
+      kWARNING = 4,
+      kERROR   = 5,
+      kFATAL   = 6,
+      kSILENT  = 7
+   };
+
    class Types {
-      
+
    public:
-         
-      // available MVA methods in TMVA
+
+      // available MVA methods
       enum EMVA {
          kVariable    = 0,
-         kCuts           ,     
-         kSeedDistance   ,     
+         kCuts           ,
          kLikelihood     ,
          kPDERS          ,
          kHMatrix        ,
          kFisher         ,
          kKNN            ,
          kCFMlpANN       ,
-         kTMlpANN        , 
-         kBDT            ,     
+         kTMlpANN        ,
+         kBDT            ,
+         kDT             ,
          kRuleFit        ,
          kSVM            ,
          kMLP            ,
          kBayesClassifier,
          kFDA            ,
          kCommittee      ,
-         kMaxMethod      ,
-         kPlugins
-
+         kBoost          ,
+         kPDEFoam        ,
+         kLD             ,
+         kPlugins        ,
+         kCategory       ,
+         kMaxMethod
       };
 
+      // available variable transformations
       enum EVariableTransform {
-         kNone = 0,
+         kIdentity = 0,
          kDecorrelated,
+         kNormalized,
          kPCA,
+         kGaussDecorr,
          kMaxVariableTransform
       };
 
-      enum ESBType { 
+      // type of analysis
+      enum EAnalysisType {
+         kClassification = 0,
+         kRegression,
+         kMulticlass,
+         kNoAnalysisType,
+         kMaxAnalysisType
+      };
+
+      enum ESBType {
          kSignal = 0,  // Never change this number - it is elsewhere assumed to be zero !
-         kBackground, 
-         kSBBoth, 
+         kBackground,
+         kSBBoth,
          kMaxSBType,
          kTrueType
       };
 
-      enum ETreeType { kTraining = 0, kTesting, kMaxTreeType };
+      enum ETreeType {
+         kTraining = 0,
+         kTesting,
+         kMaxTreeType,
+         kValidation,
+         kTrainingOriginal
+      };
+
+      enum EBoostStage {
+         kBoostProcBegin=0,
+         kBeforeTraining,
+         kBeforeBoosting,
+         kAfterBoosting,
+         kBoostValidation,
+         kBoostProcEnd
+      };
 
    public:
 
-      static Types& Instance() { return fgTypesPtr ? *fgTypesPtr : *(fgTypesPtr = new Types()); }
-      ~Types() {}
+      static Types& Instance();
+      static void   DestroyInstance();
+      ~Types();
 
-      TMVA::Types::EMVA GetMethodType( const TString& method ) const;
+      Types::EMVA   GetMethodType( const TString& method ) const;
+      TString       GetMethodName( Types::EMVA    method ) const;
+
+      Bool_t        AddTypeMapping(Types::EMVA method, const TString& methodname);
 
    private:
 
-      Types();      
+      Types();
       static Types* fgTypesPtr;
-                  
+
    private:
-         
+
       std::map<TString, TMVA::Types::EMVA> fStr2type; // types-to-text map
-      mutable MsgLogger       fLogger;   // message logger
-         
+      mutable MsgLogger* fLogger;   // message logger
+      MsgLogger& Log() const { return *fLogger; }
+
    };
 }
 

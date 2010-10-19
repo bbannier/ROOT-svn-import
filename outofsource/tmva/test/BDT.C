@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <fstream>
 
 #include "tmvaglob.C"
 
@@ -13,11 +14,17 @@
 #include "TFile.h"
 #include "TColor.h"
 #include "TPaveText.h"
+#include "TObjString.h"
+#include "TControlBar.h"
 
 #include "TGWindow.h"
 #include "TGButton.h"
 #include "TGLabel.h"
 #include "TGNumberEntry.h"
+
+#include "TMVA/DecisionTree.h"
+#include "TMVA/Tools.h"
+#include "TXMLEngine.h"
 
 // Uncomment this only if the link problem is solved. The include statement tends
 // to use the ROOT classes rather than the local TMVA release
@@ -26,13 +33,13 @@
 
 // this macro displays a decision tree read in from the weight file
 
-const Int_t kSigColorF = TColor::GetColor( "#2244a5" );  // novel blue 
-const Int_t kBkgColorF = TColor::GetColor( "#dd0033" );  // novel red  
-const Int_t kIntColorF = TColor::GetColor( "#33aa77" );  // novel green
+static const Int_t kSigColorF = TColor::GetColor( "#2244a5" );  // novel blue 
+static const Int_t kBkgColorF = TColor::GetColor( "#dd0033" );  // novel red  
+static const Int_t kIntColorF = TColor::GetColor( "#33aa77" );  // novel green
 
-const Int_t kSigColorT = 10;
-const Int_t kBkgColorT = 10;
-const Int_t kIntColorT = 10;
+static const Int_t kSigColorT = 10;
+static const Int_t kBkgColorT = 10;
+static const Int_t kIntColorT = 10;
 
 enum PlotType { EffPurity = 0 };
 
@@ -40,13 +47,17 @@ class StatDialogBDT {
 
    RQ_OBJECT("StatDialogBDT")
 
-public:
+ public:
 
-   StatDialogBDT( const TGWindow* p, TString wfile = "weights/TMVAnalysis_BDT.weights.txt", Int_t itree = 0 );
+   StatDialogBDT( const TGWindow* p, TString wfile = "weights/TMVAClassification_BDT.weights.txt", 
+                  TString methName = "BDT", Int_t itree = 0 );
    virtual ~StatDialogBDT() {
+      TMVA::DecisionTreeNode::fgIsTraining=false;
+      fThis = 0;
       fMain->CloseWindow();
       fMain->Cleanup();
-      delete fCanvas; 
+      if(gROOT->GetListOfCanvases()->FindObject(fCanvas))
+        delete fCanvas; 
    }
    
    // draw method
@@ -54,7 +65,7 @@ public:
 
    void RaiseDialog() { if (fMain) { fMain->RaiseWindow(); fMain->Layout(); fMain->MapWindow(); } }
    
-private:
+ private:
    
    TGMainFrame *fMain;
    Int_t        fItree;
@@ -76,14 +87,25 @@ private:
    void GetNtrees();
 
    TString fWfile;
+   TString fMethName;
 
-public:
+ public:
+
+   // static function for external deletion
+   static void Delete() { if (fThis != 0) { delete fThis; fThis = 0; } }
 
    // slots
    void SetItree(); //*SIGNAL*
    void Redraw(); //*SIGNAL*
    void Close(); //*SIGNAL*
+
+ private:
+
+   static StatDialogBDT* fThis;
+
 };
+
+StatDialogBDT* StatDialogBDT::fThis = 0;
 
 void StatDialogBDT::SetItree() 
 {
@@ -100,7 +122,7 @@ void StatDialogBDT::Close()
    delete this;
 }
 
-StatDialogBDT::StatDialogBDT( const TGWindow* p, TString wfile, Int_t itree )
+StatDialogBDT::StatDialogBDT( const TGWindow* p, TString wfile, TString methName, Int_t itree )
    : fMain( 0 ),
      fItree(itree),
      fNtrees(0),
@@ -109,10 +131,15 @@ StatDialogBDT::StatDialogBDT( const TGWindow* p, TString wfile, Int_t itree )
      fButtons(0),
      fDrawButton(0),
      fCloseButton(0),
-     fWfile( wfile )
+     fWfile( wfile ),
+     fMethName( methName )
 {
    UInt_t totalWidth  = 500;
    UInt_t totalHeight = 200;
+
+   fThis = this;
+
+   TMVA::DecisionTreeNode::fgIsTraining=true;
 
    // read number of decision trees from weight file
    GetNtrees();
@@ -126,6 +153,7 @@ StatDialogBDT::StatDialogBDT( const TGWindow* p, TString wfile, Int_t itree )
    fInput = new TGNumberEntry(fMain, (Double_t) fItree,5,-1,(TGNumberFormat::EStyle) 5);
    fMain->AddFrame(fInput, new TGLayoutHints(kLHintsLeft | kLHintsTop,5,5,5,5));
    fInput->Resize(100,24);
+   fInput->SetLimits(TGNumberFormat::kNELLimitMinMax,0,fNtrees-1);
 
    fButtons = new TGHorizontalFrame(fMain, totalWidth,30);
 
@@ -158,33 +186,48 @@ void StatDialogBDT::UpdateCanvases()
 
 void StatDialogBDT::GetNtrees()
 {
-   ifstream fin( fWfile );
-   if (!fin.good( )) { // file not found --> Error
-      cout << "*** ERROR: Weight file: " << fWfile << " does not exist" << endl;
-      return;
-   }
+   if(!fWfile.EndsWith(".xml") ){
+      ifstream fin( fWfile );
+      if (!fin.good( )) { // file not found --> Error
+         cout << "*** ERROR: Weight file: " << fWfile << " does not exist" << endl;
+         return;
+      }
    
-   TString dummy = "";
-   
-   // read total number of trees, and check whether requested tree is in range
-   Int_t nc = 0;
-   while (!dummy.Contains("NTrees")) { 
+      TString dummy = "";
+      
+      // read total number of trees, and check whether requested tree is in range
+      Int_t nc = 0;
+      while (!dummy.Contains("NTrees")) { 
+         fin >> dummy; 
+         nc++; 
+         if (nc > 200) {
+            cout << endl;
+            cout << "*** Huge problem: could not locate term \"NTrees\" in BDT weight file: " 
+                 << fWfile << endl;
+            cout << "==> panic abort (please contact the TMVA authors)" << endl;
+            cout << endl;
+            exit(1);
+         }
+      }
       fin >> dummy; 
-      nc++; 
-      if (nc > 200) {
-         cout << endl;
-         cout << "*** Huge problem: could not locate term \"NTrees\" in BDT weight file: " 
-              << fWfile << endl;
-         cout << "==> panic abort (please contact the TMVA authors)" << endl;
-         cout << endl;
-         exit(1);
+      fNtrees = dummy.ReplaceAll("\"","").Atoi();
+      fin.close();
+   }
+   else{
+      void* doc = TMVA::gTools().xmlengine().ParseFile(fWfile);
+      void* rootnode = TMVA::gTools().xmlengine().DocGetRootElement(doc);
+      void* ch = TMVA::gTools().xmlengine().GetChild(rootnode);
+      while(ch){
+         TString nodeName = TString( TMVA::gTools().xmlengine().GetNodeName(ch) );
+         if(nodeName=="Weights") {
+            TMVA::gTools().ReadAttr( ch, "NTrees", fNtrees );
+            break;
+         }
+         ch = TMVA::gTools().xmlengine().GetNext(ch);
       }
    }
-   fin >> dummy; 
-   fNtrees = dummy.ReplaceAll("\"","").Atoi();
    cout << "--- Found " << fNtrees << " decision trees in weight file" << endl;
-   
-   fin.close();
+
 }
 
 //_______________________________________________________________________
@@ -242,46 +285,75 @@ void StatDialogBDT::DrawNode( TMVA::DecisionTreeNode *n,
 TMVA::DecisionTree* StatDialogBDT::ReadTree( TString* &vars, Int_t itree )
 {
    cout << "--- Reading Tree " << itree << " from weight file: " << fWfile << endl;
-   ifstream fin( fWfile );
-   if (!fin.good( )) { // file not found --> Error
-      cout << "*** ERROR: Weight file: " << fWfile << " does not exist" << endl;
-      return 0;
-   }
-   
-   TString dummy = "";
-   
-   if (itree >= fNtrees) {
-      cout << "*** ERROR: requested decision tree: " << itree 
-           << ", but number of trained trees only: " << fNtrees << endl;
-      return 0;
-   }
-
-   // file header with name
-   while (!dummy.Contains("#VAR")) fin >> dummy;
-   fin >> dummy >> dummy >> dummy; // the rest of header line
-   
-   // number of variables
-   Int_t nVars;
-   fin >> dummy >> nVars;
-
-   // variable mins and maxes
-   vars = new TString[nVars];
-   for (Int_t i = 0; i < nVars; i++) fin >> vars[i] >> dummy >> dummy >> dummy;
-
-   char buffer[20];
-   char line[256];
-   sprintf(buffer,"Tree %d",itree);
-
-   while (!dummy.Contains(buffer)) {
-      fin.getline(line,256);
-      dummy = TString(line);
-   }
-   
    TMVA::DecisionTree *d = new TMVA::DecisionTree();
-   d->Read(fin);
+   if(!fWfile.EndsWith(".xml") ){
+      ifstream fin( fWfile );
+      if (!fin.good( )) { // file not found --> Error
+         cout << "*** ERROR: Weight file: " << fWfile << " does not exist" << endl;
+         return 0;
+      }
+      
+      TString dummy = "";
+      
+      if (itree >= fNtrees) {
+         cout << "*** ERROR: requested decision tree: " << itree 
+              << ", but number of trained trees only: " << fNtrees << endl;
+         return 0;
+      }
+      
+      // file header with name
+      while (!dummy.Contains("#VAR")) fin >> dummy;
+      fin >> dummy >> dummy >> dummy; // the rest of header line
+      
+      // number of variables
+      Int_t nVars;
+      fin >> dummy >> nVars;
+      
+      // variable mins and maxes
+      vars = new TString[nVars];
+      for (Int_t i = 0; i < nVars; i++) fin >> vars[i] >> dummy >> dummy >> dummy >> dummy;
+      
+      char buffer[20];
+      char line[256];
+      sprintf(buffer,"Tree %d",itree);
 
-   fin.close();
-   
+      while (!dummy.Contains(buffer)) {
+         fin.getline(line,256);
+         dummy = TString(line);
+      }
+
+      d->Read(fin);
+      
+      fin.close();
+   }
+   else{
+     if (itree >= fNtrees) {
+         cout << "*** ERROR: requested decision tree: " << itree 
+              << ", but number of trained trees only: " << fNtrees << endl;
+         return 0;
+      }
+     Int_t nVars;
+      void* doc = TMVA::gTools().xmlengine().ParseFile(fWfile);
+      void* rootnode = TMVA::gTools().xmlengine().DocGetRootElement(doc);
+      void* ch = TMVA::gTools().xmlengine().GetChild(rootnode);
+      while(ch){
+         TString nodeName = TString( TMVA::gTools().xmlengine().GetNodeName(ch) );
+         if(nodeName=="Variables"){
+            TMVA::gTools().ReadAttr( ch, "NVar", nVars);
+            vars = new TString[nVars]; 
+            void* varnode =  TMVA::gTools().xmlengine().GetChild(ch);
+            for (Int_t i = 0; i < nVars; i++){
+               TMVA::gTools().ReadAttr( varnode, "Expression", vars[i]);
+               varnode =  TMVA::gTools().xmlengine().GetNext(varnode);
+            }
+         }
+         if(nodeName=="Weights") break;
+         ch = TMVA::gTools().xmlengine().GetNext(ch);
+      }
+      ch = TMVA::gTools().xmlengine().GetChild(ch);
+      for (int i=0; i<itree; i++) ch = TMVA::gTools().xmlengine().GetNext(ch);
+      d->ReadXML(ch);
+   }
    return d;
 }
 
@@ -300,8 +372,9 @@ void StatDialogBDT::DrawTree( Int_t itree )
    TStyle* TMVAStyle   = gROOT->GetStyle("Plain"); // our style is based on Plain
    Int_t   canvasColor = TMVAStyle->GetCanvasColor(); // backup
 
-   TString buffer = Form( " Decision Tree No.: %d ",itree );
-   if (!fCanvas) fCanvas = new TCanvas("c1",buffer,200,0,1000,600); 
+   TString cbuffer = Form( "Reading weight file: %s", fWfile.Data() );
+   TString tbuffer = Form( "Decision Tree no.: %d", itree );
+   if (!fCanvas) fCanvas = new TCanvas( "c1", cbuffer, 200, 0, 1000, 600 ); 
    else          fCanvas->Clear();
    fCanvas->Draw();   
 
@@ -316,7 +389,7 @@ void StatDialogBDT::DrawTree( Int_t itree )
    whichTree->SetBorderSize(1);
    whichTree->SetFillStyle(1);
    whichTree->SetFillColor( TColor::GetColor( "#ffff33" ) );
-   whichTree->AddText(buffer);
+   whichTree->AddText( tbuffer );
    whichTree->Draw();
 
    TPaveText *intermediate = new TPaveText(0.02,ydown,0.15,yup, "NDC");
@@ -349,7 +422,7 @@ void StatDialogBDT::DrawTree( Int_t itree )
    backgroundleaf->Draw();
 
    fCanvas->Update();
-   TString fname = Form("plots/BDT_%i", itree );
+   TString fname = Form("plots/%s_%i", fMethName.Data(), itree );
    cout << "--- Creating image: " << fname << endl;
    TMVAGlob::imgconv( fCanvas, fname );   
 
@@ -358,21 +431,109 @@ void StatDialogBDT::DrawTree( Int_t itree )
       
 // ========================================================================================
 
-// input: - No. of tree
-//        - the weight file from which the tree is read
-void BDT( Int_t itree=0, TString wfile = "weights/TMVAnalysis_BDT.weights.txt", Bool_t useTMVAStyle = kTRUE ) 
+static std::vector<TControlBar*> BDT_Global__cbar;
+
+// intermediate GUI
+void BDT( const TString& fin = "TMVA.root" )
 {
-   // quick check if weight file exist
-   ifstream fin( wfile );
-   if (!fin.good( )) { // file not found --> Error
-      cout << "*** ERROR: Weight file: " << wfile << " does not exist" << endl;
+   // --- read the available BDT weight files
+
+   // destroy all open cavases
+   TMVAGlob::DestroyCanvases(); 
+
+   // checks if file with name "fin" is already open, and if not opens one
+   TFile* file = TMVAGlob::OpenFile( fin );  
+
+   TDirectory* dir = file->GetDirectory( "Method_BDT" );
+   if (!dir) {
+      cout << "*** Error in macro \"BDT.C\": cannot find directory \"Method_BDT\" in file: " << fin << endl;
       return;
    }
 
+   // read all directories
+   TIter next( dir->GetListOfKeys() );
+   TKey *key(0);   
+   std::vector<TString> methname;   
+   std::vector<TString> path;   
+   std::vector<TString> wfile;   
+   while ((key = (TKey*)next())) {
+      TDirectory* mdir = dir->GetDirectory( key->GetName() );
+      if (!mdir) {
+         cout << "*** Error in macro \"BDT.C\": cannot find sub-directory: " << key->GetName() 
+              << " in directory: " << dir->GetName() << endl;
+         return;
+      }
+
+      // retrieve weight file name and path
+      TObjString* strPath = (TObjString*)mdir->Get( "TrainingPath" );
+      TObjString* strWFile = (TObjString*)mdir->Get( "WeightFileName" );
+      if (!strPath || !strWFile) {
+         cout << "*** Error in macro \"BDT.C\": could not find TObjStrings \"TrainingPath\" and/or \"WeightFileName\" *** " << endl;
+         cout << "*** Maybe you are using TMVA >= 3.8.15 with an older training target file ? *** " << endl;
+         return;
+      }
+
+      methname.push_back( key->GetName() );
+      path    .push_back( strPath->GetString() );
+      wfile   .push_back( strWFile->GetString() );
+   }
+
+   // create the control bar
+   TControlBar* cbar = new TControlBar( "vertical", "Choose weight file:", 50, 50 );
+   BDT_Global__cbar.push_back(cbar);
+
+   for (UInt_t im=0; im<path.size(); im++) {
+      TString fname = path[im];
+      if (fname[fname.Length()-1] != '/') fname += "/";
+      fname += wfile[im];
+      TString macro = Form( ".x BDT.C+\(0,\"%s\",\"%s\")", fname.Data(), methname[im].Data() );
+      cbar->AddButton( fname, macro, "Plot decision trees from this weight file", "button" );
+   }
+
+   // *** problems with this button in ROOT 5.19 ***
+   #if ROOT_VERSION_CODE < ROOT_VERSION(5,19,0)
+   cbar->AddButton( "Close", Form("BDT_DeleteTBar(%i)", BDT_Global__cbar.size()-1), "Close this control bar", "button" );
+   #endif
+   // **********************************************
+
+   // set the style 
+   cbar->SetTextColor("blue");
+
+   // draw
+   cbar->Show();   
+}
+
+void BDT_DeleteTBar(int i)
+{
+   // destroy all open canvases
+   StatDialogBDT::Delete();
+   TMVAGlob::DestroyCanvases();
+
+   delete BDT_Global__cbar[i];
+   BDT_Global__cbar[i] = 0;
+}
+
+// input: - No. of tree
+//        - the weight file from which the tree is read
+void BDT( Int_t itree, TString wfile = "weights/TMVAnalysis_test_BDT.weights.txt", TString methName = "BDT", Bool_t useTMVAStyle = kTRUE ) 
+{
+   // destroy possibly existing dialog windows and/or canvases
+   StatDialogBDT::Delete();
+   TMVAGlob::DestroyCanvases(); 
+
+   // quick check if weight file exist
+   if(!wfile.EndsWith(".xml") ){
+      ifstream fin( wfile );
+      if (!fin.good( )) { // file not found --> Error
+         cout << "*** ERROR: Weight file: " << wfile << " does not exist" << endl;
+         return;
+      }
+   }
+   std::cout << "test1";
    // set style and remove existing canvas'
    TMVAGlob::Initialize( useTMVAStyle );
 
-   StatDialogBDT* gGui = new StatDialogBDT( gClient->GetRoot(), wfile, itree );
+   StatDialogBDT* gGui = new StatDialogBDT( gClient->GetRoot(), wfile, methName, itree );
 
    gGui->DrawTree( itree );
 

@@ -25,10 +25,10 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
+#include <stdexcept>
+
 #include "TMVA/Volume.h"
 #include "TMVA/Tools.h"
-#include "Riostream.h"
-#include <stdexcept>
 
 #ifndef ROOT_TMVA_MsgLogger
 #include "TMVA/MsgLogger.h"
@@ -135,8 +135,8 @@ void TMVA::Volume::Delete( void )
 void TMVA::Volume::Scale( Double_t f )
 {
    // "scale" the volume by multiplying each upper and lower boundary by "f" 
-   Tools::Scale(*fLower,f);
-   Tools::Scale(*fUpper,f);
+   gTools().Scale(*fLower,f);
+   gTools().Scale(*fUpper,f);
 }
 
 void TMVA::Volume::ScaleInterval( Double_t f ) 

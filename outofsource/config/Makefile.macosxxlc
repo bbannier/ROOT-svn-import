@@ -39,7 +39,11 @@ LD            = xlC
 LDFLAGS       = $(OPT) -Wl,-bind_at_load
 FORCELINK     = yes
 NEEDFINK      = yes
+ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
+else
+MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET)
+endif
 ifeq ($(subst $(MACOSX_MINOR),,123),123)
 SOFLAGS       = $(OPT) -qmkshrobj -undefined dynamic_lookup \
                 -single_module -Wl,-install_name -Wl,$(LIBDIR)/
@@ -58,7 +62,7 @@ SOEXT         = dylib
 
 # System libraries:
 SYSLIBS       = -lm $(EXTRA_LDFLAGS) $(FINK_LDFLAGS) $(OSTHREADLIBDIR) \
-                $(OSTHREADLIB) -ldl
+                $(OSTHREADLIB) -ldl $(ALLOCLIBDIR) $(ALLOCLIB)
 XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm $(EXTRA_LDFLAGS) $(FINK_LDFLAGS) -ldl
 

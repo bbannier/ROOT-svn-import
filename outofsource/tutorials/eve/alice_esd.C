@@ -1,3 +1,8 @@
+// @(#)root/eve:$Id$
+// Author: Matevz Tadel
+
+// Complex example showing ALICE ESD track visualization.
+
 /*
   alice_esd.C - a simple event-display for ALICE ESD tracks and clusters
 
@@ -99,8 +104,16 @@ Double_t   trackGetP(AliExternalTrackParam* tp);
 // Configuration and global variables.
 
 const char* esd_file_name         = "http://root.cern.ch/files/alice_ESDs.root";
-const char* esd_friends_file_name = "http://root.cern.ch/files/alice_ESDfriends.root";
+// Temporarily disable reading of ESD friend.
+// There seems to be no way to get it working without AliRoot.
+// const char* esd_friends_file_name = "http://root.cern.ch/files/alice_ESDfriends.root";
+const char* esd_friends_file_name = 0;
+
 const char* esd_geom_file_name    = "http://root.cern.ch/files/alice_ESDgeometry.root";
+
+// For testing
+// const char* esd_file_name         = "AliESDs.root";
+// const char* esd_friends_file_name = "AliESDfriends.root";
 
 TFile *esd_file          = 0;
 TFile *esd_friends_file  = 0;
@@ -108,12 +121,18 @@ TFile *esd_friends_file  = 0;
 TTree *esd_tree          = 0;
 
 AliESDEvent  *esd        = 0;
+TList        *esd_objs   = 0;
 AliESDfriend *esd_friend = 0;
 
 Int_t esd_event_id       = 0; // Current event id.
 
-TEveTrackList *track_list = 0;
+TEveTrackList *gTrackList = 0;
 
+TEveGeoShape *gGeomGentle = 0;
+
+// Implemented in MultiView.C
+class MultiView;
+MultiView* gMultiView = 0;
 
 /******************************************************************************/
 // Initialization and steering functions
@@ -130,9 +149,17 @@ void alice_esd()
    // 4. Spawn simple GUI.
    // 5. Load first event.
 
+   const TString weh("alice_esd()");
+
+   if (gROOT->LoadMacro("MultiView.C+") != 0)
+   {
+      Error(weh, "Failed loading MultiView.C in compiled mode.");
+      return;
+   }
+
    TFile::SetCacheFileDir(".");
 
-   if (!alice_esd_loadlib(esd_file_name, "aliesd"))
+   if (!alice_esd_loadlib("aliesd"))
    {
       Error("alice_esd", "Can not load project libraries.");
       return;
@@ -143,33 +170,57 @@ void alice_esd()
    if (!esd_file)
       return;
 
-   printf("*** Opening ESD-friends ***\n");
-   esd_friends_file = TFile::Open(esd_friends_file_name, "CACHEREAD");
-   if (!esd_friends_file)
-      return;
+   esd_tree = (TTree*)       esd_file->Get("esdTree");
+   esd      = (AliESDEvent*) esd_tree->GetUserInfo()->FindObject("AliESDEvent");
+   esd_objs = esd->fESDObjects;
 
-   esd_tree = (TTree*) esd_file->Get("esdTree");
+   if (esd_friends_file_name != 0)
+   {
+      printf("*** Opening ESD-friends ***\n");
+      esd_friends_file = TFile::Open(esd_friends_file_name, "CACHEREAD");
+      if (!esd_friends_file)
+         return;
 
-   esd = (AliESDEvent*) esd_tree->GetUserInfo()->FindObject("AliESDEvent");
+      esd_tree->SetBranchStatus ("ESDfriend*", 1);
+   }
 
    // Set the branch addresses.
    {
-      TIter next(esd->fESDObjects);
+      TIter next(esd_objs);
       TObject *el;
-      while ((el=(TNamed*)next()))
+      while ((el = (TNamed*)next()))
       {
          TString bname(el->GetName());
-         if(bname.CompareTo("AliESDfriend")==0)
+         if (bname == "AliESDfriend")
          {
-            // AliESDfriend needs some '.' magick.
-            esd_tree->SetBranchAddress("ESDfriend.", esd->fESDObjects->GetObjectRef(el));
+            // AliESDfriend needs special treatment.
+            TBranch *br = esd_tree->GetBranch("ESDfriend.");
+            br->SetAddress(esd_objs->GetObjectRef(el));
          }
          else
          {
-            esd_tree->SetBranchAddress(bname, esd->fESDObjects->GetObjectRef(el));
+            TBranch *br = esd_tree->GetBranch(bname);
+            if (br)
+            {
+               br->SetAddress(esd_objs->GetObjectRef(el));
+            }
+            else
+            {
+               br = esd_tree->GetBranch(bname + ".");
+               if (br)
+               {
+                  br->SetAddress(esd_objs->GetObjectRef(el));
+               }
+               else
+               {
+                  Warning("AliESDEvent::ReadFromTree() No Branch found with Name '%s' or '%s.'.",
+                          bname.Data(),bname.Data());
+               }
+            }
          }
       }
    }
+
 
    TEveManager::Create();
 
@@ -178,10 +229,38 @@ void alice_esd()
       if (!geom)
          return;
       TEveGeoShapeExtract* gse = (TEveGeoShapeExtract*) geom->Get("Gentle");
-      TEveGeoShape* gsre = TEveGeoShape::ImportShapeExtract(gse, 0);
+      gGeomGentle = TEveGeoShape::ImportShapeExtract(gse, 0);
       geom->Close();
       delete geom;
+      gEve->AddGlobalElement(gGeomGentle);
    }
+
+
+   // Standard multi-view
+   //=====================
+
+   gMultiView = new MultiView;
+
+   gMultiView->ImportGeomRPhi(gGeomGentle);
+   gMultiView->ImportGeomRhoZ(gGeomGentle);
+
+
+   // HTML summary view
+   //===================
+
+   gROOT->LoadMacro("alice_esd_html_summary.C");
+   fgHtmlSummary = new HtmlSummary("Alice Event Display Summary Table");
+   slot = TEveWindow::CreateWindowInTab(gEve->GetBrowser()->GetTabRight());
+   fgHtml = new TGHtml(0, 100, 100);
+   TEveWindowFrame *wf = slot->MakeFrame(fgHtml);
+   fgHtml->MapSubwindows();
+   wf->SetElementName("Summary");
+
+
+   // Final stuff
+   //=============
+
+   gEve->GetBrowser()->GetTabRight()->SetTab(1);
 
    make_gui();
 
@@ -191,7 +270,7 @@ void alice_esd()
 }
 
 //______________________________________________________________________________
-Bool_t alice_esd_loadlib(const char* file, const char* project)
+Bool_t alice_esd_loadlib(const char* project)
 {
    // Make sure that shared library created from the auto-generated project
    // files exists and load it.
@@ -199,9 +278,12 @@ Bool_t alice_esd_loadlib(const char* file, const char* project)
    TString lib(Form("%s/%s.%s", project, project, gSystem->GetSoExt()));
 
    if (gSystem->AccessPathName(lib, kReadPermission)) {
-      TFile* f = TFile::Open(file, "CACHEREAD");
+      TFile* f = TFile::Open(esd_file_name, "CACHEREAD");
       if (f == 0)
          return kFALSE;
+      TFile *f2 = TFile::Open(esd_friends_file_name, "CACHEREAD");
+      TTree *tree = (TTree*) f->Get("esdTree");
+      tree->SetBranchStatus ("ESDfriend*", 1);
       f->MakeProject(project, "*", "++");
       f->Close();
       delete f;
@@ -217,12 +299,25 @@ void load_event()
 
    printf("Loading event %d.\n", esd_event_id);
 
-   if (track_list)
-      track_list->DestroyElements();
+   gEve->GetViewers()->DeleteAnnotations();
+
+   if (gTrackList)
+      gTrackList->DestroyElements();
 
    esd_tree->GetEntry(esd_event_id);
+   // esd_tree->Show();
 
    alice_esd_read();
+
+   TEveElement* top = gEve->GetCurrentEvent();
+
+   gMultiView->DestroyEventRPhi();
+   gMultiView->ImportEventRPhi(top);
+
+   gMultiView->DestroyEventRhoZ();
+   gMultiView->ImportEventRhoZ(top);
+
+   update_html_summary();
 
    gEve->Redraw3D(kFALSE, kTRUE);
 }
@@ -319,25 +414,26 @@ void alice_esd_read()
 {
    // Read tracks and associated clusters from current event.
 
-   AliESDRun    *esdrun = (AliESDRun*)    esd->fESDObjects->FindObject("AliESDRun");
-   TClonesArray *tracks = (TClonesArray*) esd->fESDObjects->FindObject("Tracks");
+   AliESDRun    *esdrun = (AliESDRun*)    esd_objs->FindObject("AliESDRun");
+   TClonesArray *tracks = (TClonesArray*) esd_objs->FindObject("Tracks");
 
    // This needs further investigation. Clusters not shown.
-   // AliESDfriend *frnd   = (AliESDfriend*) esd->fESDObjects->FindObject("AliESDfriend");
-   // printf("Friend %p, n_tracks:%d\n", frnd, frnd->fTracks.GetEntries());
+   // esd_friend = (AliESDfriend*) esd_objs->FindObject("AliESDfriend");
+   // printf("Friend %p, n_tracks:%d\n", esd_friend, esd_friend->fTracks.GetEntries());
 
-   if (track_list == 0) {
-      track_list = new TEveTrackList("ESD Tracks"); 
-      track_list->SetMainColor(Color_t(6));
-      track_list->SetMarkerColor(kYellow);
-      track_list->SetMarkerStyle(4);
-      track_list->SetMarkerSize(0.5);
+   if (gTrackList == 0)
+   {
+      gTrackList = new TEveTrackList("ESD Tracks"); 
+      gTrackList->SetMainColor(6);
+      gTrackList->SetMarkerColor(kYellow);
+      gTrackList->SetMarkerStyle(4);
+      gTrackList->SetMarkerSize(0.5);
 
-      gEve->AddElement(track_list);
+      gEve->AddElement(gTrackList);
    }
 
-   TEveTrackPropagator* trkProp = track_list->GetPropagator();
-   trkProp->SetMagField( esdrun->fMagneticField );
+   TEveTrackPropagator* trkProp = gTrackList->GetPropagator();
+   trkProp->SetMagField( 0.1 * esdrun->fMagneticField ); // kGaus to Tesla
 
    for (Int_t n=0; n<tracks->GetEntriesFast(); ++n)
    {
@@ -350,8 +446,8 @@ void alice_esd_read()
       }
 
       TEveTrack* track = esd_make_track(trkProp, n, at, tp);
-      track->SetAttLineAttMarker(track_list);
-      gEve->AddElement(track, track_list);
+      track->SetAttLineAttMarker(gTrackList);
+      gTrackList->AddElement(track);
 
       // This needs further investigation. Clusters not shown.
       // if (frnd)
@@ -361,7 +457,7 @@ void alice_esd_read()
       // }
    }
 
-   track_list->MakeTracks();
+   gTrackList->MakeTracks();
 }
 
 //______________________________________________________________________________
@@ -389,7 +485,7 @@ TEveTrack* esd_make_track(TEveTrackPropagator*   trkProp,
    trackGetMomentum(tp, pbuf); rt.fP.Set(pbuf);
 
    Double_t ep = trackGetP(at);
-   Double_t mc = 0.138; // at->GetMass(); - Complicated funciton, requiring PID.
+   Double_t mc = 0.138; // at->GetMass(); - Complicated function, requiring PID.
 
    rt.fBeta = ep/TMath::Sqrt(ep*ep + mc*mc);
  

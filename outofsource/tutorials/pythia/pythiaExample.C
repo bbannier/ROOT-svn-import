@@ -1,5 +1,6 @@
 //____________________________________________________________________
 //
+// Using Pythia6 with ROOT
 // To make an event sample (of size 100) do
 //
 //    shell> root
@@ -82,7 +83,7 @@ using namespace std;
 #define HISTNAME   "ptSpectra"
 #define PDGNUMBER  211
 
-// This funtion just load the needed libraries if we're executing from
+// This function just load the needed libraries if we're executing from
 // an interactive session.
 void loadLibraries()
 {

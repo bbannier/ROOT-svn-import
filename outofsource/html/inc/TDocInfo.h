@@ -12,22 +12,19 @@
 #ifndef ROOT_TDocInfo
 #define ROOT_TDocInfo
 
-#ifndef ROOT_TList
-#include "TList.h"
+#ifndef ROOT_TClass
+#include "TClass.h"
+#endif
+#ifndef ROOT_THashList
+#include "THashList.h"
 #endif
 #ifndef ROOT_TNamed
 #include "TNamed.h"
 #endif
-#ifndef ROOT_TString
-#include "TString.h"
-#endif
-#ifndef ROOT_TClassRef
-#include "TClassRef.h"
-#endif
 #include <string>
 #include <set>
 
-class TClass;
+class TDictionary;
 
 class TModuleDocInfo;
 //____________________________________________________________________
@@ -37,25 +34,53 @@ class TModuleDocInfo;
 class TClassDocInfo: public TObject {
 public:
    // initialize the object
-   TClassDocInfo(TClass* cl, const char* filename): 
-      fClass(cl), fModule(0), fHtmlFileName(filename),
-      fSelected(kTRUE), fHaveSource(kFALSE) { }
+   TClassDocInfo(TClass* cl,
+      const char* htmlfilename = "",
+      const char* fsdecl = "", const char* fsimpl = "",
+      const char* decl = 0, const char* impl = 0): 
+      fClass(cl), fModule(0), fHtmlFileName(htmlfilename),
+      fDeclFileName(decl ? decl : cl->GetDeclFileName()),
+      fImplFileName(impl ? impl : cl->GetImplFileName()),
+      fDeclFileSysName(fsdecl), fImplFileSysName(fsimpl),
+      fSelected(kTRUE) { }
+
+   TClassDocInfo(TDictionary* cl,
+      const char* htmlfilename = "",
+      const char* fsdecl = "", const char* fsimpl = "",
+      const char* decl = 0, const char* impl = 0): 
+      fClass(cl), fModule(0), fHtmlFileName(htmlfilename),
+      fDeclFileName(decl),
+      fImplFileName(impl),
+      fDeclFileSysName(fsdecl), fImplFileSysName(fsimpl),
+      fSelected(kTRUE) { }
+
    virtual ~TClassDocInfo() {}
 
-           TClass*         GetClass() const { return fClass; }
+           TDictionary*    GetClass() const { return fClass; }
    virtual const char*     GetName() const;
            const char*     GetHtmlFileName() const { return fHtmlFileName; }
+           const char*     GetDeclFileName() const { return fDeclFileName; }
+           const char*     GetImplFileName() const { return fImplFileName; }
+           const char*     GetDeclFileSysName() const { return fDeclFileSysName; }
+           const char*     GetImplFileSysName() const { return fImplFileSysName; }
 
            void            SetModule(TModuleDocInfo* module) { fModule = module; }
            TModuleDocInfo* GetModule() const { return fModule; }
 
            void            SetSelected(Bool_t sel = kTRUE) { fSelected = sel; }
            Bool_t          IsSelected() const { return fSelected; }
-           Bool_t          HaveSource() const { return fHaveSource; }
+           Bool_t          HaveSource() const { return fDeclFileSysName.Length()
+                                                   || (fClass && !dynamic_cast<TClass*>(fClass)); }
    
-           void            SetHaveSource(Bool_t have = kTRUE) { fHaveSource = have; }
+           void            SetHtmlFileName(const char* name) { fHtmlFileName = name; }
+           void            SetDeclFileName(const char* name) { fDeclFileName = name; }
+           void            SetImplFileName(const char* name) { fImplFileName = name; }
+           void            SetDeclFileSysName(const char* fsname) { fDeclFileSysName = fsname; }
+           void            SetImplFileSysName(const char* fsname) { fImplFileSysName = fsname; }
 
            ULong_t         Hash() const;
+
+           TList&          GetListOfTypedefs() { return fTypedefs; }
 
    virtual Bool_t          IsSortable() const { return kTRUE; }
    virtual Int_t           Compare(const TObject* obj) const;
@@ -63,11 +88,15 @@ public:
 private:
    TClassDocInfo();
 
-   TClassRef               fClass; // class represented by this info object
+   TDictionary*            fClass; // class (or typedef) represented by this info object
    TModuleDocInfo*         fModule; // module this class is in
    TString                 fHtmlFileName; // name of the HTML doc file
+   TString                 fDeclFileName; // header
+   TString                 fImplFileName; // source
+   TString                 fDeclFileSysName; // file system's location of the header
+   TString                 fImplFileSysName; // file system's location of the source
+   TList                   fTypedefs; // typedefs to this class
    Bool_t                  fSelected; // selected for doc output
-   Bool_t                  fHaveSource; // whether we can find the source locally
 
    ClassDef(TClassDocInfo,0); // info cache for class documentation
 };
@@ -78,8 +107,10 @@ private:
 //
 class TModuleDocInfo: public TNamed {
 public:
-   TModuleDocInfo(const char* name, const char* doc = ""): 
-      TNamed(name, doc), fSelected(kTRUE) {}
+   TModuleDocInfo(const char* name, TModuleDocInfo* super, const char* doc = ""): 
+      TNamed(name, doc), fSuper(super), fSub(0), fSelected(kTRUE) {
+         if (super) super->GetSub().Add(this);
+      }
    virtual ~TModuleDocInfo() {}
 
    void        SetDoc(const char* doc) { SetTitle(doc); }
@@ -91,12 +122,13 @@ public:
    void        AddClass(TClassDocInfo* cl) { fClasses.Add(cl); }
    TList*      GetClasses() { return &fClasses; }
 
-   const TString& GetSourceDir() const { return fSourceDir; }
-   void        SetSourceDir(const char* dir);
+   TModuleDocInfo* GetSuper() const { return fSuper; }
+   THashList&  GetSub() { return fSub; }
 
 private:
+   TModuleDocInfo* fSuper; // module containing this module
+   THashList   fSub; // modules contained in this module
    TList       fClasses;
-   TString     fSourceDir; // (a) directory containing the modules' sources
    Bool_t      fSelected; // selected for doc output
 
    ClassDef(TModuleDocInfo,0); // documentation for a group of classes

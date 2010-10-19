@@ -1,8 +1,7 @@
 void games()
 {
-   // This macro runs three "games" that each nicely illustrate
-   // some of the graphics capabilities of ROOT. Thanks to the
-   // clever usage of TTimer objects it looks like they are all
+   // This macro runs three "games" that each nicely illustrate the graphics capabilities of ROOT. 
+   // Thanks to the clever usage of TTimer objects it looks like they are all
    // executing in parallel (emulation of multi-threading).
    // It uses the small classes generated in $ROOTSYS/test/Hello,
    // Aclock, Tetris
@@ -15,7 +14,7 @@ void games()
       if (UNIX)
          gSystem->Exec("(cd $ROOTSYS/test; make Aclock)");
       else
-         gSystem->Exec("(cd %ROOTSYS%\\test && nmake Aclock.dll)");
+         gSystem->Exec("(cd %ROOTSYS%\\test && nmake -f Makefile.win32 Aclock.dll)");
 
       st1 = gSystem->Load("$(ROOTSYS)/test/Aclock");
    }
@@ -25,7 +24,7 @@ void games()
       if (UNIX)
          gSystem->Exec("(cd $ROOTSYS/test; make Hello)");
       else
-         gSystem->Exec("(cd %ROOTSYS%\\test && nmake Hello.dll)");
+         gSystem->Exec("(cd %ROOTSYS%\\test && nmake -f Makefile.win32 Hello.dll)");
 
       st2 = gSystem->Load("$(ROOTSYS)/test/Hello");
    }
@@ -35,7 +34,7 @@ void games()
          printf("===>The macro games will try to build the Tetris library\n");
          gSystem->Exec("(cd $ROOTSYS/test; make Tetris)");
       } else {
-         gSystem->Exec("(cd $ROOTSYS/test; nmake Tetris.dll)");
+         gSystem->Exec("(cd %ROOTSYS%\\test && nmake -f Makefile.win32 Tetris.dll)");
       }
       st3 = gSystem->Load("$(ROOTSYS)/test/Tetris");
    }
@@ -52,5 +51,5 @@ void games()
    Aclock *clock = new Aclock();
 
    // run the Tetris game
-   if (UNIX) Tetris *tetris = new Tetris();
+   Tetris *tetris = new Tetris();
 }

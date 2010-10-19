@@ -32,7 +32,12 @@ EXTRA=$8
 rm -f $LIB
 
 if [ $PLATFORM = "macosx" ]; then
-   soext="dylib"
+   macosx_minor=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
+   if [ $macosx_minor -ge 5 ] && [ $LD != "icpc" ]; then
+      soext="so"
+   else
+      soext="dylib"
+   fi
 elif [ $PLATFORM = "aix" ] || [ $PLATFORM = "aix5" ]; then
    soext="a"
 else
@@ -43,7 +48,9 @@ LIBVERS=
 VERSION=
 EXPLLNKCORE=
 if [ "x$EXPLICIT" = "xyes" ]; then
-   if [ $LIB != "lib/libCint.$soext" ] && [ $LIB != "lib/libReflex.$soext" ]; then
+   if [ $LIB != "lib/libCint.$soext" ] \
+       && [ $LIB != "lib/libReflex.$soext" ] \
+       && [ $LIB != "lib/libminicern.$soext" ]; then
       NEEDREFLEX=""
       if [ "`bin/root-config --dicttype`" != "cint" ]; then
           NEEDREFLEX="-lReflex"
@@ -55,6 +62,13 @@ if [ "x$EXPLICIT" = "xyes" ]; then
          EXPLLNKCORE="-Llib $NEEDREFLEX -lCore -lCint"
       else
          EXPLLNKCORE="-Llib -lCint"
+      fi
+   fi
+   if [ $PLATFORM = "linux" ]; then
+      if [ -z "$EXPLLNKCORE" ]; then
+         EXPLLNKCORE=" -ldl"
+      else
+         EXPLLNKCORE=${EXPLLNKCORE}" -ldl"
       fi
    fi
 fi
@@ -96,33 +110,29 @@ elif [ $PLATFORM = "fbsd" ] || [ $PLATFORM = "obsd" ]; then
    echo $cmd
    $cmd
 elif [ $PLATFORM = "macosx" ]; then
-   macosx_minor=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
    # Look for a fink installation
    FINKDIR=`which fink 2>&1 | sed -ne "s/\/bin\/fink//p"`
    export DYLD_LIBRARY_PATH=`pwd`/lib:$DYLD_LIBRARY_PATH
    if [ $macosx_minor -ge 3 ]; then
       unset LD_PREBIND
-      export MACOSX_DEPLOYMENT_TARGET=10.$macosx_minor
-   fi
-   # check if in 64 bit mode
-   m64=
-   if [ "x`echo $LDFLAGS | grep -- '-m64'`" != "x" ]; then
-      m64=-m64
+      if [ "$MACOSX_DEPLOYMENT_TARGET" = "" ]; then
+         export MACOSX_DEPLOYMENT_TARGET=10.$macosx_minor
+      fi
    fi
    # We need two library files: a .dylib to link to and a .so to load
    BUNDLE=`echo $LIB | sed s/.dylib/.so/`
    # Add versioning information to shared library if available
    if [ "x$MAJOR" != "x" ]; then
       VERSION="-compatibility_version ${MAJOR} -current_version ${MAJOR}.${MINOR}.${REVIS}"
-      SONAME=`echo $SONAME | sed "s/\(.*\)\.dylib/\1.${MAJOR}.dylib/"`
-      LIB=`echo $LIB | sed "s/\(\/*.*\/.*\)\.dylib/\1.${MAJOR}.${MINOR}.dylib/"`
+      SONAME=`echo $SONAME | sed "s/\(.*\)\.$soext/\1.${MAJOR}.$soext/"`
+      LIB=`echo $LIB | sed "s/\(\/*.*\/.*\)\.$soext/\1.${MAJOR}.${MINOR}.$soext/"`
       LIBVERS=$LIB
    fi
    if [ $macosx_minor -ge 4 ]; then
-      cmd="$LD $SOFLAGS$SONAME $m64 -o $LIB $OBJS \
+      cmd="$LD $SOFLAGS$SONAME $LDFLAGS -o $LIB $OBJS \
            -ldl $EXTRA $EXPLLNKCORE $VERSION"
    else
-      cmd="$LD $SOFLAGS$SONAME $m64 -o $LIB $OBJS \
+      cmd="$LD $SOFLAGS$SONAME $LDFLAGS -o $LIB $OBJS \
            `[ -d ${FINKDIR}/lib ] && echo -L${FINKDIR}/lib` \
            -ldl $EXTRA $EXPLLNKCORE $VERSION"
    fi
@@ -132,37 +142,30 @@ elif [ $PLATFORM = "macosx" ]; then
    if [ $linkstat -ne 0 ]; then
       exit $linkstat
    fi
-   if [ "x`echo $SOFLAGS | grep -- '-g'`" != "x" ]; then
-      opt=-g
-   else
-      opt=-O
-   fi
    if [ $LIB != $BUNDLE ]; then
        if [ $macosx_minor -ge 4 ]; then
 	   cmd="ln -fs `basename $LIB` $BUNDLE"
        elif [ $macosx_minor -ge 3 ]; then
-	   cmd="$LD $opt $m64 -bundle -undefined dynamic_lookup -o \
+	   cmd="$LD $LDFLAGS -bundle -undefined dynamic_lookup -o \
                 $BUNDLE $OBJS `[ -d ${FINKDIR}/lib ] && echo -L${FINKDIR}/lib` \
                 -ldl $EXTRA $EXPLLNKCORE"
        else
-	   cmd="$LD $opt -bundle -undefined suppress -o $BUNDLE \
+	   cmd="$LD $LDFLAGS -bundle -undefined suppress -o $BUNDLE \
 	        $OBJS `[ -d ${FINKDIR}/lib ] && echo -L${FINKDIR}/lib` \
                 -ldl $EXTRA $EXPLLNKCORE"
        fi
        echo $cmd
        $cmd
    fi
-elif [ $LD = "KCC" ]; then
-   cmd="$LD $LDFLAGS -o $LIB $OBJS $EXTRA $EXPLLNKCORE"
-   echo $cmd
-   $cmd
 elif [ $LD = "build/unix/wingcc_ld.sh" ]; then
    EXPLLNKCORE=
-   if [ $SONAME != "libCint.dll" ]; then
-      if [ $SONAME != "libCore.dll" ]; then
-         EXPLLNKCORE="-Llib -lCore -lCint"
-      else
+   if [ $SONAME != "libCint.dll" ] \
+       && [ $SONAME != "libReflex.dll" ] \
+       && [ $SONAME != "libminicern.dll" ] ; then
+      if [ $SONAME = "libCore.dll" ]; then
          EXPLLNKCORE="-Llib -lCint"
+      else
+         EXPLLNKCORE="-Llib -lCore -lCint"
       fi
    fi
    if [ "x$MAJOR" != "x" ] ; then

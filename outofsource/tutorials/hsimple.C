@@ -8,7 +8,7 @@
 #include <TSystem.h>
 #include <TRandom.h>
 #include <TBenchmark.h>
-#include <TCint.h>
+#include <TInterpreter.h>
 
 TFile *hsimple(Int_t get=0)
 {
@@ -25,15 +25,16 @@ TFile *hsimple(Int_t get=0)
 //  write access to this directory, otherwise the file is created in $PWD
 
    TString filename = "hsimple.root";
-   TString dir = gSystem->UnixPathName(TCint::GetCurrentMacroName());
+   TString dir = gSystem->UnixPathName(gInterpreter->GetCurrentMacroName());
    dir.ReplaceAll("hsimple.C","");
    dir.ReplaceAll("/./","/");
    TFile *hfile = 0;
    if (get) {
       // if the argument get =1 return the file "hsimple.root"
       // if the file does not exist, it is created
-      if (!gSystem->AccessPathName(dir+"hsimple.root",kFileExists)) {
-         hfile = TFile::Open(dir+"hsimple.root"); //in $ROOTSYS/tutorials
+      TString fullPath = dir+"hsimple.root";
+      if (!gSystem->AccessPathName(fullPath,kFileExists)) {
+	 hfile = TFile::Open(fullPath); //in $ROOTSYS/tutorials
          if (hfile) return hfile;
       }
       //otherwise try $PWD/hsimple.root
@@ -52,7 +53,6 @@ TFile *hsimple(Int_t get=0)
       printf("you must run the script in a directory with write access\n");
       return 0;
    }
-   (TFile*)gROOT->FindObject(filename); if (hfile) hfile->Close();
    hfile = (TFile*)gROOT->FindObject(filename); if (hfile) hfile->Close();
    hfile = new TFile(filename,"RECREATE","Demo ROOT file with histograms");
 

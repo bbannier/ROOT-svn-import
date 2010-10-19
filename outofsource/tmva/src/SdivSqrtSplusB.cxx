@@ -13,7 +13,6 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
- *      Xavier Prudent  <prudent@lapp.in2p3.fr>  - LAPP, France                   *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
@@ -21,21 +20,11 @@
  *      CERN, Switzerland                                                         * 
  *      U. of Victoria, Canada                                                    * 
  *      Heidelberg U., Germany                                                    * 
- *      LAPP, Annecy, France                                                      *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
-
-//______________________________________________________________________
-//
-// Implementation of the statistical significance as separation criterion
-// Begin_Latex
-// Index = #frac{S}{#sqrt{S+B}}
-// End_Latex
-//______________________________________________________________________
-
 
 #include "TMath.h"
 #include "TMVA/SdivSqrtSplusB.h"

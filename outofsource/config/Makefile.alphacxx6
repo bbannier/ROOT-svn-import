@@ -31,13 +31,14 @@ EXTRA_CXXFLAGS := -Iinclude -long_double_size 64
 
 # Linker:
 LD            = cxx
-F77LD         = f77
+F77           = f77
 LDFLAGS       = $(OPT) $(EXTRA_LDFLAGS)
 SOFLAGS       = -shared -nocxxstd -Wl,-expect_unresolved,*,-msym,-soname,
 SOEXT         = so
 
 # System libraries:
-SYSLIBS       = -lm $(OSTHREADLIBDIR) $(OSTHREADLIB)
+SYSLIBS       = -lm $(OSTHREADLIBDIR) $(OSTHREADLIB) \
+                $(ALLOCLIBDIR) $(ALLOCLIB)
 XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm -ltermcap
 

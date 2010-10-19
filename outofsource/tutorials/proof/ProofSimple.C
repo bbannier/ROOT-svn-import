@@ -1,27 +1,12 @@
 #define ProofSimple_cxx
-// The class definition in ProofSimple.h has been generated automatically
-// by the ROOT utility TTree::MakeSelector(). This class is derived
-// from the ROOT class TSelector. For more information on the TSelector
-// framework see $ROOTSYS/README/README.SELECTOR or the ROOT User Manual.
-
-// The following methods are defined in this file:
-//    Begin():        called everytime a loop on the tree starts,
-//                    a convenient place to create your histograms.
-//    SlaveBegin():   called after Begin(), when on PROOF called only on the
-//                    slave servers.
-//    Process():      called for each event, in this function you decide what
-//                    to read and fill your histograms.
-//    SlaveTerminate: called at the end of the loop on the tree, when on PROOF
-//                    called only on the slave servers.
-//    Terminate():    called at the end of the loop on the tree,
-//                    a convenient place to draw/fit your histograms.
+//////////////////////////////////////////////////////////
 //
-// To use this file, try the following session on your Tree T:
+// Example of TSelector implementation to do generic
+// processing (filling a set of histograms in this case).
+// See tutorials/proof/runProof.C, option "simple", for an
+// example of how to run this selector.
 //
-// Root > T->Process("ProofSimple.C")
-// Root > T->Process("ProofSimple.C","some options")
-// Root > T->Process("ProofSimple.C+")
-//
+//////////////////////////////////////////////////////////
 
 #include "ProofSimple.h"
 #include <TCanvas.h>
@@ -37,6 +22,7 @@
 #include <TSystem.h>
 #include <TParameter.h>
 
+//_____________________________________________________________________________
 ProofSimple::ProofSimple()
 {
    // Constructor
@@ -46,13 +32,15 @@ ProofSimple::ProofSimple()
    fRandom = 0;
 }
 
+//_____________________________________________________________________________
 ProofSimple::~ProofSimple()
 {
    // Destructor
 
-   SafeDelete(fRandom);
+   if (fRandom) delete fRandom;
 }
 
+//_____________________________________________________________________________
 void ProofSimple::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
@@ -71,6 +59,7 @@ void ProofSimple::Begin(TTree * /*tree*/)
    fHist = new TH1F*[fNhist];
 }
 
+//_____________________________________________________________________________
 void ProofSimple::SlaveBegin(TTree * /*tree*/)
 {
    // The SlaveBegin() function is called after the Begin() function.
@@ -99,6 +88,7 @@ void ProofSimple::SlaveBegin(TTree * /*tree*/)
    fRandom = new TRandom3(0);
 }
 
+//_____________________________________________________________________________
 Bool_t ProofSimple::Process(Long64_t)
 {
    // The Process() function is called for each entry in the tree (or possibly
@@ -129,6 +119,7 @@ Bool_t ProofSimple::Process(Long64_t)
    return kTRUE;
 }
 
+//_____________________________________________________________________________
 void ProofSimple::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
@@ -137,6 +128,7 @@ void ProofSimple::SlaveTerminate()
 
 }
 
+//_____________________________________________________________________________
 void ProofSimple::Terminate()
 {
    // The Terminate() function is the last function to be called during
@@ -154,7 +146,8 @@ void ProofSimple::Terminate()
    for (Int_t i=0; i < fNhist; i++) {
       fHist[i] = dynamic_cast<TH1F *>(fOutput->FindObject(Form("h%d",i)));
       c1->cd(i+1);
-      fHist[i]->Draw();
+      if (fHist[i])
+         fHist[i]->Draw();
    }
 
    // Final update

@@ -37,6 +37,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include <iomanip>
 #include <sstream>
 #include <vector>
 
@@ -63,10 +64,7 @@ namespace TMVA {
 
       friend class Configurable;
 
-      OptionBase( const TString& name, const TString& desc ) 
-         : TObject(), fName(name), fNameAllLower(name), fDescription(desc), fIsSet(kFALSE), fLogger("OptionBase") {
-         fNameAllLower.ToLower();
-      }
+      OptionBase( const TString& name, const TString& desc );
       virtual ~OptionBase() {}
          
       virtual const char* GetName() const { return fNameAllLower.Data(); }
@@ -95,7 +93,7 @@ namespace TMVA {
 
    protected:
 
-      mutable MsgLogger fLogger;  // message logger
+      static MsgLogger* fgLogger;  // message logger
 
    };
       
@@ -147,7 +145,7 @@ namespace TMVA {
 
       TString GetValue( Int_t i ) const {
          std::stringstream str;
-         str << Value(i);
+         str << std::scientific << Value(i);
          return str.str();
       }
       const T& Value( Int_t i ) const { return (*fVRefPtr)[i]; }
@@ -182,8 +180,8 @@ namespace TMVA {
 
    template<class T>
    inline TString TMVA::Option<T>::GetValue( Int_t ) const {
-      std::stringstream str;
-      str << this->Value();
+      std::stringstream str;      
+      str << std::scientific << this->Value();
       return str.str();
    }
 
@@ -251,32 +249,16 @@ namespace TMVA {
    inline void TMVA::Option<Bool_t>::AddPreDefVal( const Bool_t& ) 
    {
       // template specialization for Bool_t 
-      fLogger << kFATAL << "<AddPreDefVal> predefined values for Option<Bool_t> don't make sense" 
-              << Endl;
+      *fgLogger << kFATAL << "<AddPreDefVal> predefined values for Option<Bool_t> don't make sense" 
+                << Endl;
    }
 
    template<>
    inline void TMVA::Option<Float_t>::AddPreDefVal( const Float_t& ) 
    {
       // template specialization for Float_t 
-      fLogger << kFATAL << "<AddPreDefVal> predefined values for Option<Float_t> don't make sense" 
-              << Endl;
-   }
-
-   //______________________________________________________________________
-   template<class T>
-   inline void TMVA::Option<T>::PrintPreDefs( ostream& os, Int_t levelofdetail ) const 
-   {
-      // template specialization for TString printing
-      if (HasPreDefinedVal() && levelofdetail>0) {
-         os << "    possible values are";
-         typename std::vector<T>::const_iterator predefIt;
-         predefIt = fPreDefs.begin();
-         for (;predefIt!=fPreDefs.end(); predefIt++) {
-            if (predefIt != fPreDefs.begin()) os << "                       ";
-            os << "  - " << (*predefIt) << std::endl;
-         }
-      }
+      *fgLogger << kFATAL << "<AddPreDefVal> predefined values for Option<Float_t> don't make sense" 
+                << Endl;
    }
 
    template<class T>
@@ -303,18 +285,33 @@ namespace TMVA {
 
    //______________________________________________________________________
    template<class T>
-   inline Bool_t TMVA::Option<T*>::SetValue( const TString& val, Int_t i ) 
+   inline void TMVA::Option<T>::PrintPreDefs( ostream& os, Int_t levelofdetail ) const 
+   {
+      // template specialization for TString printing
+      if (HasPreDefinedVal() && levelofdetail>0) {
+         os << std::endl << "PreDefined - possible values are:" << std::endl;
+         typename std::vector<T>::const_iterator predefIt;
+         predefIt = fPreDefs.begin();
+         for (;predefIt!=fPreDefs.end(); predefIt++) {
+            os << "                       ";
+            os << "  - " << (*predefIt) << std::endl;
+         }
+      }
+   }
+   
+   //______________________________________________________________________
+   template<class T>
+   inline Bool_t TMVA::Option<T*>::SetValue( const TString& val, Int_t ind ) 
    {
       // template 
-      if (i>=fSize) return kFALSE;
+      if (ind >= fSize) return kFALSE;
       std::stringstream str(val.Data());
-      if (i<0) {
+      if (ind < 0) {
          str >> Value(0);
-         for (Int_t i=1; i<fSize; i++)
-            Value(i) = Value(0);      
+         for (Int_t i=1; i<fSize; i++) Value(i) = Value(0);      
       } 
       else {
-         str >> Value(i);
+         str >> Value(ind);
       }
       return kTRUE;
    }
@@ -361,8 +358,8 @@ namespace TMVA {
          this->Value() = false;
       }
       else {
-         fLogger << kFATAL << "<SetValueLocal> value \'" << val 
-                 << "\' can not be interpreted as boolean" << Endl;
+         *fgLogger << kFATAL << "<SetValueLocal> value \'" << val 
+                   << "\' can not be interpreted as boolean" << Endl;
       }
    }
 }

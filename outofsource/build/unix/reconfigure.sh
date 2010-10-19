@@ -31,3 +31,4 @@ ${SRCDIR}/./configure $confline --nohowto || exit 1
 echo "Reconfigure successful."
 echo "If the build fails, please run ./configure again."
 echo ""
+test -e Makefile && sleep 1 && touch Makefile

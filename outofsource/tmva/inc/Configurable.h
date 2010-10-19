@@ -35,21 +35,20 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#ifndef ROOT_TObject
 #include "TObject.h"
-#include "TList.h"
-
-#ifndef ROOT_TMVA_MsgLogger
-#include "TMVA/MsgLogger.h"
 #endif
+#ifndef ROOT_TList
+#include "TList.h"
+#endif
+
 #ifndef ROOT_TMVA_Option
 #include "TMVA/Option.h"
 #endif
 
 namespace TMVA {
 
-   class MsgLogger;
-
-   class Configurable : public virtual TObject {
+   class Configurable : public TObject {
 
    public:
 
@@ -60,13 +59,16 @@ namespace TMVA {
       virtual ~Configurable();
 
       // parse the internal option string
-      void ParseOptions( Bool_t verbose = kTRUE);
+      virtual void ParseOptions();
 
       // print list of defined options
       void PrintOptions() const;
 
-      virtual const char* GetName() const { return fName; }
-      void SetName( const char* n ) { fName = TString(n); }
+      virtual const char* GetName()      const { return GetConfigName(); }
+      const char* GetConfigName()        const { return fConfigName; }
+      const char* GetConfigDescription() const { return fConfigDescription; }
+      void SetConfigName       ( const char* n ) { fConfigName        = TString(n); }
+      void SetConfigDescription( const char* d ) { fConfigDescription = TString(d); }
 
       // Declare option and bind it to a variable
       template<class T> 
@@ -82,42 +84,61 @@ namespace TMVA {
       void CheckForUnusedOptions() const;
 
       const TString& GetOptions() const { return fOptions; }
-      void      SetOptions(const TString& s) { fOptions = s; }
+      void SetOptions(const TString& s) { fOptions = s; }
+
+      void WriteOptionsToStream ( std::ostream& o, const TString& prefix ) const;
+      void ReadOptionsFromStream( istream& istr );
+
+      void AddOptionsXMLTo( void* parent ) const;
+      void ReadOptionsFromXML( void* node );
 
    protected:
       
-      Bool_t    LooseOptionCheckingEnabled() const { return fLooseOptionCheckingEnabled; }
-      void      EnableLooseOptions( Bool_t b = kTRUE ) { fLooseOptionCheckingEnabled = b; }
+      Bool_t LooseOptionCheckingEnabled() const { return fLooseOptionCheckingEnabled; }
+      void   EnableLooseOptions( Bool_t b = kTRUE ) { fLooseOptionCheckingEnabled = b; }
 
-      void WriteOptionsToStream ( ostream& o, const TString& prefix ) const;
-      void ReadOptionsFromStream( istream& istr );
+      void   WriteOptionsReferenceToFile();
 
-      void ResetSetFlag();
+      void   ResetSetFlag();
+
+      const TString& GetReferenceFile() const { return fReferenceFile; }
 
    private:
 
       // splits the option string at ':' and fills the list 'loo' with the primitive strings
       void SplitOptions(const TString& theOpt, TList& loo) const;
 
-      TString     fOptions;                          // options string
-      Bool_t      fLooseOptionCheckingEnabled;       // checker for option string
+      TString     fOptions;                          //! options string
+      Bool_t      fLooseOptionCheckingEnabled;       //! checker for option string
 
       // classes and method related to easy and flexible option parsing
-      OptionBase* fLastDeclaredOption;  // last declared option
-      TList       fListOfOptions;       // option list
+      OptionBase* fLastDeclaredOption;  //! last declared option
+      TList       fListOfOptions;       //! option list
 
-      TString     fName;                // the name of this configurable
+      TString     fConfigName;          // the name of this configurable
+      TString     fConfigDescription;   // description of this configurable
+      TString     fReferenceFile;       // reference file for options writing
+
+   protected:
+
+      // the mutable declaration is needed to use the logger in const methods
+      MsgLogger& Log() const { return *fLogger; }                       
 
    public:
-      // the mutable declaration is needed to use the logger in const methods
-      mutable MsgLogger fLogger; // message logger
+
+      // set message type
+      void SetMsgType( EMsgType t ) { fLogger->SetMinType(t); }
+
 
    private:
+
+      mutable MsgLogger* fLogger;                     //! message logger
 
       template <class T>
       void AssignOpt( const TString& name, T& valAssign ) const;
       
    public:
+
       ClassDef(Configurable,0)  // Virtual base class for all TMVA method
 
    };
@@ -163,8 +184,8 @@ void TMVA::Configurable::AssignOpt(const TString& name, T& valAssign) const
    TObject* opt = fListOfOptions.FindObject(name);
    if (opt!=0) valAssign = ((Option<T>*)opt)->Value();
    else 
-      fLogger << kFATAL << "Option \"" << name 
-              << "\" not declared, please check the syntax of your option string" << Endl;
+      Log() << kFATAL << "Option \"" << name 
+            << "\" not declared, please check the syntax of your option string" << Endl;
 }
 
 #endif

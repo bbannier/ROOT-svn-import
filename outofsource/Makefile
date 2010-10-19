@@ -9,8 +9,11 @@
 ##### config/Makefile.config isn't made yet - the package  #####
 ##### scripts want's to make it them selves - so we don't  #####
 
-ifeq ($(findstring $(MAKECMDGOALS), maintainer-clean debian redhat),)
+ifeq ($(findstring $(MAKECMDGOALS), debian redhat),)
 include config/Makefile.config
+endif
+ifeq ($(MAKECMDGOALS),maintainer-clean)
+-include config/Makefile.config
 endif
 ifeq ($(MAKECMDGOALS),clean)
 include config/Makefile.config
@@ -24,6 +27,19 @@ MAKE_VERSION_MINOR ?= 0
 ORDER_ := $(shell test $(MAKE_VERSION_MAJOR) -gt 3 || \
                   test $(MAKE_VERSION_MAJOR) -eq 3 && \
                   test $(MAKE_VERSION_MINOR) -ge 80 && echo '|')
+
+##### Include compiler overrides specified via ./configure #####
+##### However, if we are building packages or cleaning, we #####
+##### don't include this file since it may screw up things #####
+##### Included before Makefile.$ARCH only because of f77   #####
+##### if case has to be processed                          #####
+
+ifeq ($(findstring $(MAKECMDGOALS), maintainer-clean debian redhat),)
+include config/Makefile.comp
+endif
+ifeq ($(MAKECMDGOALS),clean)
+include config/Makefile.comp
+endif
 
 ##### Include machine dependent macros                     #####
 ##### However, if we are building packages or cleaning, we #####
@@ -58,179 +74,226 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint metautils pcre utils base cont meta io net math \
-                zip clib matrix newdelete hist tree freetype graf gpad \
-                g3d gui minuit histpainter treeplayer ged treeviewer physics \
-                postscript rint thread html eg geom geompainter vmc fumili \
-                mlp quadp auth guibuilder xml foam splot smatrix sql tmva \
-                geombuilder spectrum spectrumpainter fitpanel proof \
-                proofplayer sessionviewer guihtml
+MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
+                core/base core/cont core/meta io/io math/mathcore net/net \
+                core/zip core/thread math/matrix core/newdelete hist/hist \
+                tree/tree graf2d/freetype graf2d/graf graf2d/gpad graf3d/g3d \
+                gui/gui math/minuit hist/histpainter tree/treeplayer \
+                gui/ged tree/treeviewer math/physics graf2d/postscript \
+                core/rint html montecarlo/eg \
+                geom/geom geom/geompainter montecarlo/vmc \
+                math/fumili math/mlp math/quadp net/auth gui/guibuilder io/xml \
+                math/foam math/splot math/smatrix io/sql \
+                geom/geombuilder hist/spectrum hist/spectrumpainter \
+                gui/fitpanel proof/proof proof/proofplayer \
+                gui/sessionviewer gui/guihtml gui/recorder
 
 ifeq ($(ARCH),win32)
-MODULES      += winnt win32gdk
+MODULES      += core/winnt graf2d/win32gdk
+MODULES      := $(filter-out core/newdelete,$(MODULES))
 SYSTEML       = $(WINNTL)
 SYSTEMO       = $(WINNTO)
 SYSTEMDO      = $(WINNTDO)
 else
 ifeq ($(ARCH),win32gcc)
-MODULES      += unix x11 x11ttf x3d rootx
+MODULES      += core/unix
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 else
-MODULES      += unix x11 x11ttf x3d rootx
+MODULES      += core/unix
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 endif
+endif
+ifeq ($(BUILDX11),yes)
+MODULES      += graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 endif
 ifeq ($(BUILDGL),yes)
 ifeq ($(BUILDFTGL),yes)
-MODULES      += ftgl
+MODULES      += graf3d/ftgl
 endif
-MODULES      += gl eve
+ifeq ($(BUILDGLEW),yes)
+MODULES      += graf3d/glew
+endif
+MODULES      += graf3d/gl graf3d/eve graf3d/gviz3d
 endif
 ifeq ($(BUILDMYSQL),yes)
-MODULES      += mysql
+MODULES      += sql/mysql
 endif
 ifeq ($(BUILDORACLE),yes)
-MODULES      += oracle
+MODULES      += sql/oracle
 endif
 ifeq ($(BUILDPGSQL),yes)
-MODULES      += pgsql
+MODULES      += sql/pgsql
 endif
 ifeq ($(BUILDSAPDB),yes)
-MODULES      += sapdb
+MODULES      += sql/sapdb
 endif
 ifeq ($(BUILDODBC),yes)
-MODULES      += odbc
+MODULES      += sql/odbc
 endif
 ifeq ($(BUILDRFIO),yes)
-MODULES      += rfio
+MODULES      += io/rfio
 endif
 ifeq ($(BUILDCASTOR),yes)
-MODULES      += castor
+MODULES      += io/castor
 endif
 ifeq ($(BUILDDCAP),yes)
-MODULES      += dcache
+MODULES      += io/dcache
 endif
 ifeq ($(BUILDGFAL),yes)
-MODULES      += gfal
+MODULES      += io/gfal
 endif
-ifeq ($(BUILDG4ROOT),yes)
-MODULES      += g4root
+ifeq ($(BUILDGLITE),yes)
+MODULES      += net/glite
+endif
+ifeq ($(BUILDBONJOUR),yes)
+MODULES      += net/bonjour
 endif
 ifeq ($(BUILDCHIRP),yes)
-MODULES      += chirp
+MODULES      += io/chirp
+endif
+ifeq ($(BUILDHDFS),yes)
+MODULES      += io/hdfs
+endif
+ifeq ($(BUILDMEMSTAT),yes)
+MODULES      += misc/memstat
 endif
 ifeq ($(BUILDASIMAGE),yes)
-MODULES      += asimage
+MODULES      += graf2d/asimage
+ifeq ($(BUILDFITSIO),yes)
+MODULES      += graf2d/fitsio
+endif
 endif
 ifeq ($(BUILDFPYTHIA6),yes)
-MODULES      += pythia6
+MODULES      += montecarlo/pythia6
+endif
+ifeq ($(BUILDFPYTHIA8),yes)
+MODULES      += montecarlo/pythia8
 endif
 ifeq ($(BUILDFFTW3),yes)
-MODULES      += fftw
+MODULES      += math/fftw
+endif
+ifeq ($(BUILDGVIZ),yes)
+MODULES      += graf2d/gviz
 endif
 ifeq ($(BUILDPYTHON),yes)
-MODULES      += pyroot
+MODULES      += bindings/pyroot
 endif
 ifeq ($(BUILDRUBY),yes)
-MODULES      += ruby
+MODULES      += bindings/ruby
 endif
 ifeq ($(BUILDXML),yes)
-MODULES      += xmlparser
+MODULES      += io/xmlparser
 endif
 ifeq ($(BUILDQT),yes)
-MODULES      += qt qtroot
+MODULES      += graf2d/qt gui/qtroot
 endif
 ifeq ($(BUILDQTGSI),yes)
-MODULES      += qtgsi
+MODULES      += gui/qtgsi
 endif
-ifeq ($(BUILDMATHCORE),yes)
-MODULES      += mathcore
+ifeq ($(BUILDGENVECTOR),yes)
+MODULES      += math/genvector
 endif
 ifeq ($(BUILDMATHMORE),yes)
-MODULES      += mathmore
+MODULES      += math/mathmore
 endif
 ifeq ($(BUILDREFLEX),yes)
-MODULES      += reflex
+# put reflex right in front of CINT; CINT needs it
+MODULES      := $(subst cint/cint,cint/reflex cint/cint,$(MODULES))
 endif
 ifeq ($(BUILDMINUIT2),yes)
-MODULES      += minuit2
+MODULES      += math/minuit2
 endif
 ifeq ($(BUILDUNURAN),yes)
-MODULES      += unuran
-endif
-ifeq ($(BUILDCINT7),yes)
-MODULES      += cint7
+MODULES      += math/unuran
 endif
 ifeq ($(BUILDCINTEX),yes)
-MODULES      += cintex
+MODULES      += cint/cintex
+endif
+ifeq ($(BUILDCLING),yes)
+# to be added to the unconditional MODULES list above once cling is in trunk
+MODULES      += cint/cling
 endif
 ifeq ($(BUILDROOFIT),yes)
-MODULES      += roofitcore roofit
+MODULES      += roofit/roofitcore roofit/roofit roofit/roostats
 endif
 ifeq ($(BUILDGDML),yes)
-MODULES      += gdml
+MODULES      += geom/gdml
 endif
 ifeq ($(BUILDTABLE),yes)
-MODULES      += table
+MODULES      += misc/table
 endif
 ifeq ($(BUILDSRPUTIL),yes)
-MODULES      += srputils
+MODULES      += net/srputils
 endif
 ifeq ($(BUILDKRB5),yes)
-MODULES      += krb5auth
+MODULES      += net/krb5auth
 endif
 ifeq ($(BUILDLDAP),yes)
-MODULES      += ldap
+MODULES      += net/ldap
 endif
 ifeq ($(BUILDMONALISA),yes)
-MODULES      += monalisa
+MODULES      += net/monalisa
 endif
 ifeq ($(BUILDGLOBUS),yes)
-MODULES      += globusauth
+MODULES      += net/globusauth
 endif
-ifeq ($(BUILDHBOOK),yes)
-MODULES      += hbook
+ifneq ($(F77),)
+MODULES      += misc/minicern hist/hbook
 endif
 ifeq ($(BUILDXRD),yes)
-ifneq ($(XROOTDDIR),)
-MODULES      += netx
+ifneq ($(XRDLIBDIR),)
+MODULES      += net/netx
 else
-MODULES      += xrootd netx
+MODULES      += net/xrootd net/netx
 endif
 endif
 ifeq ($(BUILDALIEN),yes)
-MODULES      += alien
+MODULES      += net/alien
 endif
 ifeq ($(BUILDCLARENS),yes)
-MODULES      += clarens
+MODULES      += proof/clarens
 endif
 ifeq ($(BUILDPEAC),yes)
-MODULES      += peac
+MODULES      += proof/peac
 endif
 ifneq ($(ARCH),win32)
-MODULES      += rpdutils rootd proofd
+MODULES      += net/rpdutils net/rootd proof/proofd proof/pq2
+endif
+ifeq ($(BUILDEDITLINE),yes)
+MODULES      += core/editline
+endif
+ifeq ($(BUILDTMVA),yes)
+MODULES      += tmva
 endif
 ifeq ($(BUILDXRD),yes)
 ifeq ($(ARCH),win32)
-MODULES      += proofd
+MODULES      += proof/proofd
 endif
-MODULES      += proofx
+MODULES      += proof/proofx
 endif
 
 -include MyModules.mk   # allow local modules
 
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
-MODULES      += unix winnt x11 x11ttf win32gdk gl ftgl rfio castor \
-                pythia6 table mysql pgsql sapdb srputils x3d \
-                rootx rootd proofd dcache chirp hbook asimage \
-                ldap mlp krb5auth rpdutils globusauth pyroot ruby gfal \
-                qt qtroot qtgsi xrootd netx proofx alien clarens peac oracle \
-                xmlparser mathcore mathmore reflex cintex roofitcore roofit \
-                minuit2 monalisa fftw odbc unuran gdml eve g4root cint7
+MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
+                graf3d/gl graf3d/ftgl graf3d/glew io/rfio io/castor \
+                montecarlo/pythia6 montecarlo/pythia8 misc/table \
+                sql/mysql sql/pgsql sql/sapdb net/srputils graf3d/x3d \
+                rootx net/rootd io/dcache io/chirp hist/hbook graf2d/asimage \
+                net/ldap net/krb5auth net/rpdutils net/globusauth \
+                bindings/pyroot bindings/ruby io/gfal misc/minicern \
+                graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
+                proof/proofd proof/proofx proof/clarens proof/peac proof/pq2 \
+                sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
+                tmva io/hdfs graf2d/fitsio \
+                roofit/roofitcore roofit/roofit roofit/roostats \
+                math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
+                geom/gdml graf3d/eve net/glite misc/memstat \
+                math/genvector net/bonjour graf3d/gviz3d graf2d/gviz
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -243,41 +306,37 @@ LPATH         = lib
 ifneq ($(PLATFORM),win32)
 RPATH        := -L$(LPATH)
 CINTLIBS     := -lCint
-CINT7LIBS    := -lCint7 -lReflex
 NEWLIBS      := -lNew
-ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
-                -lTree -lMatrix
-BOOTLIBS     := -lCore -lCint
+BOOTLIBS     := -lCore -lCint -lMathCore
 ifneq ($(ROOTDICTTYPE),cint)
-ROOTLIBS     += -lCintex -lReflex
 BOOTLIBS     += -lCintex -lReflex
 endif
+ROOTLIBS     := $(BOOTLIBS) -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
+                -lTree -lMatrix -lThread
 RINTLIBS     := -lRint
 else
 CINTLIBS     := $(LPATH)/libCint.lib
-CINT7LIBS    := $(LPATH)/libCint7.lib $(LPATH)/libReflex.lib
 NEWLIBS      := $(LPATH)/libNew.lib
-ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
-                $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
-                $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
-                $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
-                $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib
-BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib
+BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
+                $(LPATH)/libMathcore.lib
 ifneq ($(ROOTDICTTYPE),cint)
-ROOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
 endif
+ROOTLIBS     := $(BOOTLIBS) $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
+                $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
+                $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
+                $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib \
+                $(LPATH)/libThread.lib
 RINTLIBS     := $(LPATH)/libRint.lib
 endif
 
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
-ROOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(IOLIB) $(NETLIB) $(HISTLIB) \
-                $(GRAFLIB) $(G3DLIB) $(GPADLIB) $(TREELIB) $(MATRIXLIB)
-BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB)
+BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(MATHCORELIB)
 ifneq ($(ROOTDICTTYPE),cint)
-ROOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
 BOOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
 endif
+ROOTLIBSDEP   = $(BOOTLIBSDEP) $(IOLIB) $(NETLIB) $(HISTLIB) \
+                $(GRAFLIB) $(G3DLIB) $(GPADLIB) $(TREELIB) $(MATRIXLIB)
 
 # Force linking of not referenced libraries
 ifeq ($(FORCELINK),yes)
@@ -285,63 +344,62 @@ ifeq ($(PLATFORM),aix5)
 ROOTULIBS    := -Wl,-u,.G__cpp_setupG__Net      \
                 -Wl,-u,.G__cpp_setupG__IO       \
                 -Wl,-u,.G__cpp_setupG__Hist     \
-                -Wl,-u,.G__cpp_setupG__Graf1    \
+                -Wl,-u,.G__cpp_setupG__Graf     \
                 -Wl,-u,.G__cpp_setupG__G3D      \
                 -Wl,-u,.G__cpp_setupG__GPad     \
                 -Wl,-u,.G__cpp_setupG__Tree     \
+                -Wl,-u,.G__cpp_setupG__Thread   \
                 -Wl,-u,.G__cpp_setupG__Matrix
+BOOTULIBS    := -Wl,-u,.G__cpp_setupG__MathCore
 else
 ROOTULIBS    := -Wl,-u,_G__cpp_setupG__Net      \
                 -Wl,-u,_G__cpp_setupG__IO       \
                 -Wl,-u,_G__cpp_setupG__Hist     \
-                -Wl,-u,_G__cpp_setupG__Graf1    \
+                -Wl,-u,_G__cpp_setupG__Graf     \
                 -Wl,-u,_G__cpp_setupG__G3D      \
                 -Wl,-u,_G__cpp_setupG__GPad     \
                 -Wl,-u,_G__cpp_setupG__Tree     \
+                -Wl,-u,_G__cpp_setupG__Thread   \
                 -Wl,-u,_G__cpp_setupG__Matrix
+BOOTULIBS    := -Wl,-u,_G__cpp_setupG__MathCore
 endif
 endif
 ifeq ($(PLATFORM),win32)
 ROOTULIBS    := -include:_G__cpp_setupG__Net    \
                 -include:_G__cpp_setupG__IO     \
                 -include:_G__cpp_setupG__Hist   \
-                -include:_G__cpp_setupG__Graf1  \
+                -include:_G__cpp_setupG__Graf   \
                 -include:_G__cpp_setupG__G3D    \
                 -include:_G__cpp_setupG__GPad   \
                 -include:_G__cpp_setupG__Tree   \
+                -include:_G__cpp_setupG__Thread \
                 -include:_G__cpp_setupG__Matrix
+BOOTULIBS    := -include:_G__cpp_setupG__MathCore
 endif
 
 ##### Compiler output option #####
 
 CXXOUT ?= -o # keep whitespace after "-o"
 
-##### gcc version #####
+##### clang or gcc version #####
 
+ifneq ($(findstring clang,$(CXX)),)
+CLANG_MAJOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$3}' | cut -d'.' -f1)
+CLANG_MINOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$3}' | cut -d'.' -f2)
+else
 ifneq ($(findstring gnu,$(COMPILER)),)
 GCC_MAJOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f1)
 GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
 GCC_PATCH     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f3)
 GCC_VERS      := gcc-$(GCC_MAJOR).$(GCC_MINOR)
 GCC_VERS_FULL := gcc-$(GCC_MAJOR).$(GCC_MINOR).$(GCC_PATCH)
-
-# Precompiled headers for gcc
-ifeq ($(GCC_MAJOR),4)
-PCHSUPPORTED  := $(ENABLEPCH)
-endif
-ifeq ($(PCHSUPPORTED),yes)
-PCHFILE        = $(SRCDIR)/include/precompile.h.gch
-PCHCXXFLAGS    = -DUSEPCH -include precompile.h
-PCHEXTRAOBJBUILD = $(CXX) $(CXXFLAGS) -DUSEPCH $(OPT) -x c++-header \
-                   -c include/precompile.h $(CXXOUT)$(PCHFILE) \
-                   && touch $(PCHEXTRAOBJ)
 endif
 endif
 
 ##### f77 options #####
 
-ifeq ($(F77LD),)
-F77LD        := $(LD)
+ifneq ($(F77),)
+F77LD        := $(F77)
 endif
 ifeq ($(F77OPT),)
 F77OPT       := $(OPT)
@@ -352,7 +410,7 @@ endif
 
 ifeq ($(GCC_MAJOR),3)
 ifneq ($(GCC_MINOR),0)
-ifneq ($(F77),)
+ifeq ($(F77),g77)
 LIBFRTBEGIN  := $(shell $(F77) -print-file-name=libfrtbegin.a)
 F77LIBS      := $(LIBFRTBEGIN) $(F77LIBS)
 endif
@@ -367,13 +425,20 @@ endif
 
 ##### Store SVN revision number #####
 
+ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist),)
+ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(shell which svn 2>&1 | sed -ne "s@.*/svn@svn@p"),svn)
-SVNREV  := $(shell $(SRCDIR)/build/unix/svninfo.sh)
+SVNREV  := $(shell bash $(SRCDIR)/build/unix/svninfo.sh)
+endif
+endif
 endif
 
 ##### Utilities #####
 
+<<<<<<< .working
 ROOTCINTTMP   = mkdir -p $(dir $@); $(ROOTCINTTMPEXE) $(addprefix -,$(ROOTDICTTYPE))
+=======
+>>>>>>> .merge-right.r36366
 MAKEDEP       = $(RMKDEP)
 ifneq ($(SRCDIR),)
   MAKEDIR     = mkdir -p $(dir $@)
@@ -382,12 +447,12 @@ MAKELIB       = $(SRCDIR)/build/unix/makelib.sh $(MKLIBOPTIONS)
 MAKEDIST      = $(SRCDIR)/build/unix/makedist.sh
 MAKEDISTSRC   = $(SRCDIR)/build/unix/makedistsrc.sh
 MAKEVERSION   = $(SRCDIR)/build/unix/makeversion.sh
-IMPORTCINT    = $(SRCDIR)/build/unix/importcint.sh
 MAKECOMPDATA  = $(SRCDIR)/build/unix/compiledata.sh
+MAKECINTDLL   = $(SRCDIR)/build/unix/makecintdll.sh
 MAKECHANGELOG = $(SRCDIR)/build/unix/makechangelog.sh
 MAKEHTML      = $(SRCDIR)/build/unix/makehtml.sh
 MAKELOGHTML   = $(SRCDIR)/build/unix/makeloghtml.sh
-MAKECINTDLL   = $(SRCDIR)/build/unix/makecintdll.sh
+MAKERELNOTES  = $(SRCDIR)/build/unix/makereleasenotes.sh
 MAKESTATIC    = $(SRCDIR)/build/unix/makestatic.sh
 RECONFIGURE   = $(SRCDIR)/build/unix/reconfigure.sh
 ifeq ($(PLATFORM),win32)
@@ -401,19 +466,29 @@ COMPILEDATA   = include/compiledata.h
 ROOTRC        = etc/system.rootrc
 ROOTMAP       = etc/system.rootmap
 
+##### Extra libs needed for "static" target #####
+
+STATICEXTRALIBS = $(PCRELDFLAGS) $(PCRELIB) \
+                  $(FREETYPELDFLAGS) $(FREETYPELIB)
+
 ##### libCore #####
 
 COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) \
-                $(SYSTEML) $(CLIBL) $(METAUTILSL) $(MATHL)
+                $(SYSTEML) $(CLIBL) $(METAUTILSL) $(EDITLINEL)
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(CLIBO) \
-                $(METAUTILSO) $(MATHO)
-COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(SYSTEMDO) $(CLIBDO) \
-                $(METAUTILSDO) $(MATHDO)
+                $(METAUTILSO) $(EDITLINEO) $(CLINGO)
+COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(METACDO) $(SYSTEMDO) \
+                $(CLIBDO) $(METAUTILSDO) $(EDITLINEDO) $(CLINGDO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
 ifneq ($(BUILTINZLIB),yes)
-CORELIBEXTRA += $(ZLIBCLILIB)
+CORELIBEXTRA += $(ZLIBLIBDIR) $(ZLIBCLILIB)
+STATICEXTRALIBS += $(ZLIBLIBDIR) $(ZLIBCLILIB)
+endif
+ifeq ($(BUILDEDITLINE),yes)
+CORELIBEXTRA += $(CURSESLIBDIR) $(CURSESLIB)
+STATICEXTRALIBS += $(CURSESLIBDIR) $(CURSESLIB)
 endif
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
@@ -425,12 +500,6 @@ MAINLIBS     += $(CINTEXLIB) $(REFLEXLIB)
 endif
 else
 MAINLIBS      =
-endif
-
-##### pre-compiled header support #####
-
-ifeq ($(PCHSUPPORTED),yes)
-include $(SRCDIR)/config/Makefile.precomp
 endif
 
 ##### all #####
@@ -450,70 +519,16 @@ INCLUDEFILES :=
 G__%.o: G__%.cxx
 	$(MAKEDIR)
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
-	   -I$(CINTDIR)/stl -- $<
-	$(CXX) $(NOOPT) $(CXXFLAGS) -I. $(CXXOUT)$@ -c $<
-# ifeq (nope,)
-# ./%.o: $(SRCDIR)/%.cxx
-# 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-# 	$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
-# %_tmp.o: %_tmp.cxx
-# 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-# 	$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
-# ./%_tmp.cxx: $(SRCDIR)/%_tmp.cxx
-# 	$(CP) $< $@ 
-# ./%.o: $(SRCDIR)/%.c
-# 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
-# 	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
-# ./%.o: $(SRCDIR)/%.f
-# 	@mkdir $(notdir $@)
-# ifeq ($(F77),f2c)
-# 	f2c -a -A $<
-# 	$(CC) $(F77OPT) $(CFLAGS) $(CXXOUT)$@ -c $*.c
-# else
-# 	$(F77) $(F77OPT) $(F77FLAGS) $(CXXOUT)$@ -c $<
-# endif
-# endif
+	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
+	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	$(CXX) $(NOOPT) $(CXXFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
-# ifeq (nope,)
-# cint/src/%.o: $(SRCDIR)/cint/src/%.cxx
-# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
-# 	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
-
-# cint/src/%.o: $(SRCDIR)/cint/src/%.c
-# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
-# 	$(CC) $(OPT) $(CINTCFLAGS) $(CXXOUT)$@ -c $<
-
-# cint/main/%.o: $(SRCDIR)/cint/main/%.cxx
-# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
-# 	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
-
-# cint/main/%.o: $(SRCDIR)/cint/main/%.c
-# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
-# 	$(CC) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
-
-# cint7/src/%.o: $(SRCDIR)/cint7/src/%.cxx
-# 	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CXXFLAGS) -D__cplusplus -- $<
-# 	$(CXX) $(OPT) $(CINT7CXXFLAGS) $(CXXOUT)$@ -c $<
-
-# cint7/src/%.o: $(SRCDIR)/cint7/src/%.c
-# 	$(MAKEDEP) -R -fcint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -- $<
-# 	$(CC) $(OPT) $(CINT7CFLAGS) $(CXXOUT)$@ -c $<
-
-# cint7/main/%.o: $(SRCDIR)/cint7/main/%.cxx
-# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -D__cplusplus -- $<
-# 	$(CXX) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
-
-# cint7/main/%.o: $(SRCDIR)/cint7/main/%.c
-# 	$(MAKEDEP) -R -fcint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -- $<
-# 	$(CC) $(OPT) $(CINTCXXFLAGS) $(CXXOUT)$@ -c $<
-
-# build/%.o: $(SRCDIR)/build/%.cxx
-# 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
-
-# build/%.o: $(SRCDIR)/build/%.c
-# 	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
-# endif
+G__c_%.o: G__c_%.c
+	$(MAKEDIR)
+	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIR)/lib/prec_stl \
+	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 define SRCTOOBJ_template
 $(1)/%.o: $(SRCDIR)/$(1)/%.cxx
@@ -549,13 +564,9 @@ $(foreach module,$(MODULESGENERIC),$(eval $(call SRCTOOBJ_template,$(module))))
 
 ##### TARGETS #####
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
-                clean distclean maintainer-clean compiledata importcint \
+                clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
-                static map debian redhat skip postbin \
-                $(patsubst %,all-%,$(MODULES)) \
-                $(patsubst %,map-%,$(MODULES)) \
-                $(patsubst %,clean-%,$(MODULES)) \
-                $(patsubst %,distclean-%,$(MODULES))
+                releasenotes static map debian redhat skip postbin
 
 ifneq ($(findstring map, $(MAKECMDGOALS)),)
 .NOTPARALLEL:
@@ -568,21 +579,21 @@ fast:           rootexecs
 skip:
 		@true;
 
-include $(addprefix $(SRCDIR)/,$(patsubst %,%/Module.mk,$(MODULES)))
+<<<<<<< .working
 include $(SRCDIR)/cint/cintdlls.mk
+=======
+>>>>>>> .merge-right.r36366
+-include $(addprefix $(SRCDIR)/,$(patsubst %,%/ModuleVars.mk,$(MODULES)))
+include $(addprefix $(SRCDIR)/,$(patsubst %,%/Module.mk,$(MODULES)))
 
 -include MyRules.mk            # allow local rules
 
 ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist \
-      distsrc version importcint importcint7 install uninstall showbuild \
-      changelog html debian redhat),)
+      distsrc version showbuild \
+      changelog debian redhat),)
 ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(findstring skip,$(MAKECMDGOALS))$(findstring fast,$(MAKECMDGOALS)),)
 -include $(INCLUDEFILES)
-endif
-ifeq ($(PCHSUPPORTED),yes)
-INCLUDEPCHRULES = yes
-include $(SRCDIR)/config/Makefile.precomp
 endif
 -include build/dummy.d          # must be last include
 endif
@@ -625,7 +636,7 @@ ifeq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean debian redhat),)
 Makefile: $(addprefix $(SRCDIR)/,configure config/rootrc.in config/RConfigure.in config/Makefile.in \
   config/Makefile-comp.in config/root-config.in config/rootauthrc.in \
   config/rootdaemonrc.in config/mimes.unix.in config/mimes.win32.in) \
-  config.status
+  config.status config/proofserv.in config/roots.in
 	@( $(RECONFIGURE) "$?" || ( \
 	   echo ""; echo "Please, run ./configure again as config option files ($?) have changed."; \
 	   echo ""; exit 1; \
@@ -636,9 +647,9 @@ $(COMPILEDATA): $(SRCDIR)/config/Makefile.$(ARCH) config/Makefile.comp $(MAKECOM
 	@$(MAKECOMPDATA) $(COMPILEDATA) "$(CXX)" "$(OPTFLAGS)" "$(DEBUGFLAGS)" \
 	   "$(CXXFLAGS)" "$(SOFLAGS)" "$(LDFLAGS)" "$(SOEXT)" "$(SYSLIBS)" \
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \
-	   "$(MAKESHAREDLIB)" "$(MAKEEXE)" "$(ARCH)" "$(ROOTBUILD)"
+	   "$(MAKESHAREDLIB)" "$(MAKEEXE)" "$(ARCH)" "$(ROOTBUILD)" "$(EXPLICITLINK)"
 
-build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP) $(PCHDEP)
+build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP)
 	@(if [ ! -f $@ ] ; then \
 	   touch $@; \
 	fi)
@@ -714,6 +725,41 @@ redhat:
 #	rpm -bb --rcfile rpm/rpmrc --buildroot `pwd`/rpm/tmp rpm/root.spec
 #	@echo "Redhat Linux packages done. They are put in '../<arch>'"
 
+redhat-tar:
+	@if [ ! -x `which rpm` ]; then \
+	   echo "You must have rpm installed to make the Redhat package"; \
+	   exit 1; fi
+	@echo "OK, you have RPM on your system - good"
+	build/package/lib/makerpmspec.sh
+	-@$(MAKE) distclean
+	-@$(MAKE) maintainer-clean
+	@vers=`sed 's|\(.*\)/\(.*\)|\1.\2|' < build/version_number` && \
+	  rm -f root_v$$vers.source.tar.gz && \
+	  (cd ../ && tar 		\
+		--exclude=\\.svn 	\
+		--exclude=root/debian 	\
+		--exclude=root/bin	\
+		--exclude=root/lib	\
+		--exclude=root/include	\
+	     -czf root_v$$vers.source.tar.gz root) && \
+	  mv ../root_v$$vers.source.tar.gz .
+	@echo "To build the packages, run "
+	@echo ""
+	@vers=`sed 's|\(.*\)/\(.*\)|\1.\2|' < build/version_number` ; \
+	  echo "  rpmbuild -ta root_v$$vers.source.tar.gz"
+	@echo ""
+	@echo "as user root (or similar). If you want to build outside"
+	@echo "the regular tree (as a normal user), please refer to the"
+	@echo "RPM documentation."
+
+redhat-rpm: redhat-tar
+	@rm -rf rpm
+	@mkdir -p rpm/SOURCES rpm/SPECS rpm/BUILD rpm/RPMS rpm/SRPMS
+	@vers=`sed 's|\(.*\)/\(.*\)|\1.\2|' < build/version_number` && \
+	  rpmbuild --define "_topdir `pwd`/rpm" -ta root_v$$vers.source.tar.gz
+	@rm -rf rpm/SOURCES rpm/SPECS
+	@echo "Packages build in rpm/RPMS and rpm/SPRMS"
+
 rootdrpm:
 	@if [ ! -x `which rpm` ]; then \
 	   echo "You must have rpm installed to make the root-rootd package"; \
@@ -781,7 +827,7 @@ rootdrpm:
 	fi
 
 clean::
-	@rm -f __compiledata *~ core include/precompile.*
+	@rm -f __compiledata *~ core.*
 
 ifeq ($(CXX),KCC)
 clean::
@@ -802,6 +848,7 @@ distclean:: clean
                lib/*.def lib/*.exp lib/*.lib lib/*.dll.a \
                *.def .def
 ifeq ($(PLATFORM),macosx)
+	@rm -f lib/*.dylib
 	@rm -f lib/*.so
 endif
 	-@mv -f tutorials/gallery.root tutorials/gallery.root-
@@ -810,7 +857,7 @@ endif
 	@(find tutorials -name "files" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.root" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.ps" -exec rm -rf {} \; >/dev/null 2>&1;true)
-	@(find tutorials -name "*.gif" -exec rm -rf {} \; >/dev/null 2>&1;true)
+	@(find tutorials -path '*/doc' -prune -o -name "*.gif" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "so_locations" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "pca.C" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.so" -exec rm -rf {} \; >/dev/null 2>&1;true)
@@ -821,13 +868,13 @@ endif
 	-@mv -f tutorials/mlp/mlpHiggs.root- tutorials/mlp/mlpHiggs.root
 	-@mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root
 	@rm -f bin/roota bin/proofserva lib/libRoot.a
-	@rm -f $(CINTDIR)/include/*.dll $(CINTDIR)/include/sys/*.dll
-	@rm -f $(CINTDIR)/stl/*.dll README/ChangeLog build/dummy.d
-	@rm -f $(CINTDIR)/lib/posix/a.out $(CINTDIR)/include/*.so*
-	@rm -f etc/daemons/rootd.rc.d etc/daemons/rootd.xinetd
-	@rm -f etc/daemons/proofd.rc.d etc/daemons/proofd.xinetd
-	@rm -f etc/daemons/olbd.rc.d etc/daemons/xrootd.rc.d
-	@rm -f etc/svninfo.txt macros/html.C
+	@rm -f $(CINTDIR)/include/*.dll $(CINTDIR)/include/*.so*
+	@rm -f $(CINTDIR)/stl/*.dll $(CINTDIR)/stl/*.so*
+	@rm -f $(CINTDIR)/include/sys/*.dll $(CINTDIR)/include/sys/*.so.*
+	@rm -f $(CINTDIR)/lib/posix/a.out $(CINTDIR)/lib/posix/mktypes
+	@rm -f README/ChangeLog build/dummy.d
+	@rm -rf README/ReleaseNotes
+	@rm -f etc/svninfo.txt
 	@(find . -path '*/daemons' -prune -o -name *.d -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find . -name *.o -exec rm -rf {} \; >/dev/null 2>&1;true)
 	-@cd test && $(MAKE) distclean
@@ -835,8 +882,12 @@ endif
 maintainer-clean:: distclean
 	@rm -rf bin lib include htmldoc system.rootrc config/Makefile.config \
 	   config/Makefile.comp $(ROOTRC) etc/system.rootauthrc \
-	   etc/system.rootdaemonrc etc/root.mimes build/misc/root-help.el \
-	   rootd/misc/rootd.rc.d build-arch-stamp build-indep-stamp \
+	   etc/system.rootdaemonrc etc/root.mimes etc/daemons/rootd.rc.d \
+	   etc/daemons/rootd.xinetd etc/daemons/proofd.rc.d \
+	   etc/daemons/proofd.xinetd main/src/proofserv.sh main/src/roots.sh \
+	   etc/daemons/olbd.rc.d etc/daemons/xrootd.rc.d \
+	   etc/daemons/cmsd.rc.d macros/html.C \
+	   build/misc/root-help.el build-arch-stamp build-indep-stamp \
 	   configure-stamp build-arch-cint-stamp config.status config.log
 
 version: $(CINTTMP)
@@ -844,18 +895,15 @@ version: $(CINTTMP)
 
 static: rootlibs
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
-	   "$(XLIBS)" "$(SYSLIBS)"
-
-importcint: distclean-cint
-	@$(IMPORTCINT)
-
-importcint7: distclean-cint7
-	@$(IMPORTCINT) cint7
+	   "$(XLIBS)" "$(SYSLIBS)" "$(STATICEXTRALIBS)"
 
 changelog:
 	@$(MAKECHANGELOG)
 
-html: $(ROOTEXE) changelog
+releasenotes:
+	@$(MAKERELNOTES)
+
+html: $(ROOTEXE) changelog releasenotes
 	@$(MAKELOGHTML)
 	@$(MAKEHTML)
 
@@ -900,11 +948,11 @@ install: all
 	   $(INSTALLDATA) include/*             $(DESTDIR)$(INCDIR); \
 	   echo "Installing main/src/rmain.cxx in $(DESTDIR)$(INCDIR)"; \
 	   $(INSTALLDATA) main/src/rmain.cxx    $(DESTDIR)$(INCDIR); \
-	   echo "Installing cint/include cint/lib and cint/stl in $(DESTDIR)$(CINTINCDIR)"; \
-	   $(INSTALLDIR)                        $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/include          $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/lib              $(DESTDIR)$(CINTINCDIR); \
-	   $(INSTALLDATA) cint/stl              $(DESTDIR)$(CINTINCDIR); \
+	   echo "Installing cint/cint/include cint/cint/lib and cint/cint/stl in $(DESTDIR)$(CINTINCDIR)"; \
+	   $(INSTALLDIR)                        $(DESTDIR)$(CINTINCDIR)/cint; \
+	   $(INSTALLDATA) cint/cint/include     $(DESTDIR)$(CINTINCDIR)/cint; \
+	   $(INSTALLDATA) cint/cint/lib         $(DESTDIR)$(CINTINCDIR)/cint; \
+	   $(INSTALLDATA) cint/cint/stl         $(DESTDIR)$(CINTINCDIR)/cint; \
 	   find $(DESTDIR)$(CINTINCDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(CINTINCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing icons in $(DESTDIR)$(ICONPATH)"; \
@@ -956,7 +1004,7 @@ install: all
 	   $(INSTALLDIR)                          $(DESTDIR)$(ELISPDIR); \
 	   $(INSTALLDATA) build/misc/root-help.el $(DESTDIR)$(ELISPDIR); \
 	   echo "Installing GDML conversion scripts in $(DESTDIR)$(LIBDIR)"; \
-	   $(INSTALLDATA) gdml/*.py               $(DESTDIR)$(LIBDIR); \
+	   $(INSTALLDATA) geom/gdml/*.py          $(DESTDIR)$(LIBDIR); \
 	   find $(DESTDIR)$(DATADIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(DATADIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	fi
@@ -968,6 +1016,8 @@ uninstall:
 	inode2=`ls -id $$PWD/bin | awk '{ print $$1 }'`; \
 	if [ -d $(DESTDIR)$(BINDIR) ] && [ "x$$inode1" = "x$$inode2" ]; then \
 	   $(MAKE) distclean ; \
+	elif [ "$(USECONFIG)" = "FALSE" ]; then \
+	   echo "To uninstall ROOT just delete directory $$PWD"; \
 	else \
 	   rm -f $(DESTDIR)$(BINDIR)/`basename $(CINT)`; \
 	   rm -f $(DESTDIR)$(BINDIR)/`basename $(MAKECINT)`; \
@@ -986,10 +1036,10 @@ uninstall:
 	   if test -d $(DESTDIR)$(BINDIR) && \
 	      test "x`ls $(DESTDIR)$(BINDIR)`" = "x" ; then \
 	      rm -rf $(DESTDIR)$(BINDIR); \
-	   fi ; \
+	   fi; \
 	   for lib in $(ALLLIBS) $(CINTLIB) $(ALLMAPS); do \
 	      rm -f $(DESTDIR)$(LIBDIR)/`basename $$lib`* ; \
-	   done ; \
+	   done; \
 	   if test "x$(RFLX_GRFLXPY)" != "x"; then \
 	      rm -f $(DESTDIR)$(LIBDIR)/$(RFLX_GRFLXPY); \
 	   fi; \
@@ -1013,7 +1063,7 @@ uninstall:
               . \
               Math/GenVector Math \
               Reflex/internal Reflex/Builder Reflex \
-              Cintex TMVA Minuit2; do \
+              Cintex GL TMVA Minuit2; do \
               if test -d include/$${subdir}; then \
 	         for i in include/$${subdir}/*.h ; do \
 	            rm -f $(DESTDIR)$(INCDIR)/$${subdir}/`basename $$i`; \
@@ -1112,8 +1162,6 @@ showbuild:
 	@echo "SHIFTLIB           = $(SHIFTLIB)"
 	@echo "DCAPLIB            = $(DCAPLIB)"
 	@echo "GFALLIB            = $(GFALLIB)"
-	@echo "G4INCDIR           = $(G4INCDIR)"
-	@echo "G4LIBDIR           = $(G4LIBDIR)"
 	@echo "MYSQLINCDIR        = $(MYSQLINCDIR)"
 	@echo "ORACLEINCDIR       = $(ORACLEINCDIR)"
 	@echo "PGSQLINCDIR        = $(PGSQLINCDIR)"
@@ -1126,6 +1174,9 @@ showbuild:
 	@echo "FFTW3LIBDIR        = $(FFTW3LIBDIR)"
 	@echo "FFTW3LIB           = $(FFTW3LIB)"
 	@echo "FFTW3INCDIR        = $(FFTW3INCDIR)"
+	@echo "GVIZLIBDIR         = $(GVIZLIBDIR)"
+	@echo "GVIZLIB            = $(GVIZLIB)"
+	@echo "GVIZINCDIR         = $(GVIZINCDIR)"
 	@echo "SAPDBINCDIR        = $(SAPDBINCDIR)"
 	@echo "SRPLIBDIR          = $(SRPLIBDIR)"
 	@echo "SRPINCDIR          = $(SRPINCDIR)"
@@ -1149,7 +1200,6 @@ showbuild:
 	@echo "MAKEDIST           = $(MAKEDIST)"
 	@echo "MAKEDISTSRC        = $(MAKEDISTSRC)"
 	@echo "MAKEVERSION        = $(MAKEVERSION)"
-	@echo "IMPORTCINT         = $(IMPORTCINT)"
 	@echo ""
 	@echo "The list of modules to be built:"
 	@echo "--------------------------------"

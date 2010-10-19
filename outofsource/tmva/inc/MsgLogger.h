@@ -10,7 +10,7 @@
  * Description:                                                                   *
  *      TMVA output logger class producing nicely formatted log messages          *
  *                                                                                *
- * Authors (alphabetical):                                                        *
+ * Author:                                                                        *
  *      Attila Krasznahorkay <Attila.Krasznahorkay@cern.ch> - CERN, Switzerland   *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
@@ -36,6 +36,7 @@
 // STL include(s):
 #include <string>
 #include <sstream>
+#include <iostream>
 #include <map>
 
 // ROOT include(s)
@@ -43,20 +44,13 @@
 #include "TObject.h"
 #endif
 
+#ifndef ROOT_TMVA_Types
+#include "TMVA/Types.h"
+#endif
+
 // Local include(s):
 
 namespace TMVA {
-
-   // define outside of class to facilite access
-   enum EMsgType { 
-      kDEBUG   = 1,
-      kVERBOSE = 2, 
-      kINFO    = 3,
-      kWARNING = 4,
-      kERROR   = 5,
-      kFATAL   = 6,
-      kSILENT  = 7
-   };
 
    class MsgLogger : public std::ostringstream, public TObject {
 
@@ -72,11 +66,12 @@ namespace TMVA {
       void        SetSource ( const std::string& source ) { fStrSource = source; }
       EMsgType    GetMinType()                      const { return fMinType; }
       void        SetMinType( EMsgType minType )          { fMinType = minType; }
-      UInt_t      GetMaxSourceSize()   const              { return (UInt_t)fMaxSourceSize; }
       std::string GetSource()          const              { return fStrSource; }
       std::string GetPrintedSource()   const;
       std::string GetFormattedSource() const;
-      
+
+      static UInt_t GetMaxSourceSize()                    { return (UInt_t)fgMaxSourceSize; }
+
       // Needed for copying
       MsgLogger& operator= ( const MsgLogger& parent );
 
@@ -97,45 +92,52 @@ namespace TMVA {
          return *this;
       }
 
+      // Temporaly disables all the loggers (Caution! Use with care !)
+      static void  InhibitOutput();
+      static void  EnableOutput();
+
    private:
 
       // private utility routines
       void Send();
-      void InitMaps();
+      static void InitMaps();
       void WriteMsg( EMsgType type, const std::string& line ) const;
 
-      const TObject*                  fObjSource;     // the source TObject (used for name)
-      std::string                     fStrSource;     // alternative string source
-      const std::string               fPrefix;        // the prefix of the source name
-      const std::string               fSuffix;        // suffix following source name
-      EMsgType                        fActiveType;    // active type
-      const std::string::size_type    fMaxSourceSize; // maximum length of source name
+      const TObject*                  fObjSource;      // the source TObject (used for name)
+      std::string                     fStrSource;      // alternative string source
+      static const std::string               fgPrefix;         // the prefix of the source name
+      static const std::string               fgSuffix;         // suffix following source name
+      EMsgType                        fActiveType;     // active type
+      static UInt_t                   fgMaxSourceSize; // maximum length of source name
+      static Bool_t                   fgOutputSupressed; // disable the output globaly (used by generic booster)
 
-      std::map<EMsgType, std::string> fTypeMap;       // matches output types with strings
-      std::map<EMsgType, std::string> fColorMap;      // matches output types with terminal colors
-      EMsgType                        fMinType;       // minimum type for output
+      static std::map<EMsgType, std::string> fgTypeMap;        // matches output types with strings
+      static std::map<EMsgType, std::string> fgColorMap;       // matches output types with terminal colors
+      EMsgType                        fMinType;        // minimum type for output
 
-      ClassDef(MsgLogger,0) // Ostringstream derivative to redirect and format logging output  
+      static Bool_t                   fgInhibitOutput; // flag to suppress all output
+
+      ClassDef(MsgLogger,0) // Ostringstream derivative to redirect and format logging output
    }; // class MsgLogger
 
-   inline MsgLogger& MsgLogger::operator<< ( MsgLogger& (*_f)( MsgLogger& ) ) 
+   inline MsgLogger& MsgLogger::operator<< ( MsgLogger& (*_f)( MsgLogger& ) )
    {
       return (_f)(*this);
    }
 
-   inline MsgLogger& MsgLogger::operator<< ( std::ostream& (*_f)( std::ostream& ) ) 
+   inline MsgLogger& MsgLogger::operator<< ( std::ostream& (*_f)( std::ostream& ) )
    {
       (_f)(*this);
       return *this;
    }
 
-   inline MsgLogger& MsgLogger::operator<< ( std::ios& ( *_f )( std::ios& ) ) 
+   inline MsgLogger& MsgLogger::operator<< ( std::ios& ( *_f )( std::ios& ) )
    {
       (_f)(*this);
       return *this;
    }
 
-   inline MsgLogger& MsgLogger::operator<< ( EMsgType type ) 
+   inline MsgLogger& MsgLogger::operator<< ( EMsgType type )
    {
       fActiveType = type;
       return *this;

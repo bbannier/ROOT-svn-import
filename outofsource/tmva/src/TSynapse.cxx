@@ -26,37 +26,48 @@
 // Synapse class used by TMVA artificial neural network methods      
 //_______________________________________________________________________
 
-#include "Riostream.h"
-
-#ifndef ROOT_TMVA_TSynapse
 #include "TMVA/TSynapse.h"
-#endif
+
 #ifndef ROOT_TMVA_TNeuron
 #include "TMVA/TNeuron.h"
 #endif
 
+#ifndef ROOT_TMVA_MsgLogger
+#include "TMVA/MsgLogger.h"
+#endif
+
 static const Int_t fgUNINITIALIZED = -1;
 
-ClassImp(TMVA::TSynapse)
+ClassImp(TMVA::TSynapse);
+
+TMVA::MsgLogger* TMVA::TSynapse::fgLogger = 0;
 
 //______________________________________________________________________________
 TMVA::TSynapse::TSynapse()
-   : fLogger( "TSynapse" )
+  : fWeight( 0 ),
+    fLearnRate( 0 ),
+    fDelta( 0 ),
+    fDEDw( 0 ),
+    fCount( 0 ),
+    fPreNeuron( NULL ),
+    fPostNeuron( NULL )
 {
    // constructor
-
-   fPreNeuron  = NULL;
-   fPostNeuron = NULL;
    fWeight     = fgUNINITIALIZED;
-   fLearnRate  = 1.0;
-   fCounter    = 0;
+   if (!fgLogger) fgLogger = new MsgLogger("TSynapse");
+}
+
+
+//______________________________________________________________________________
+TMVA::TSynapse::~TSynapse()
+{
+   // destructor
 }
 
 //______________________________________________________________________________
 void TMVA::TSynapse::SetWeight(Double_t weight)
 {
    // set synapse weight
-
    fWeight = weight;
 }
 
@@ -64,9 +75,8 @@ void TMVA::TSynapse::SetWeight(Double_t weight)
 Double_t TMVA::TSynapse::GetWeightedValue()
 {
    // get output of pre-neuron weighted by synapse weight
-
    if (fPreNeuron == NULL) 
-      fLogger << kFATAL << "<GetWeightedValue> synapse not connected to neuron" << Endl;
+      Log() << kFATAL << "<GetWeightedValue> synapse not connected to neuron" << Endl;
 
    return (fWeight * fPreNeuron->GetActivationValue());
 }
@@ -77,7 +87,7 @@ Double_t TMVA::TSynapse::GetWeightedDelta()
    // get error field of post-neuron weighted by synapse weight
 
    if (fPostNeuron == NULL) 
-      fLogger << kFATAL << "<GetWeightedDelta> synapse not connected to neuron" << Endl;
+      Log() << kFATAL << "<GetWeightedDelta> synapse not connected to neuron" << Endl;
 
    return fWeight * fPostNeuron->GetDelta();
 }
@@ -86,16 +96,15 @@ Double_t TMVA::TSynapse::GetWeightedDelta()
 void TMVA::TSynapse::AdjustWeight()
 {
    // adjust the weight based on the error field all ready calculated by CalculateDelta
-
    Double_t wDelta = fDelta / fCount;
    fWeight += -fLearnRate * wDelta;
+   InitDelta();
 }
 
 //______________________________________________________________________________
 void TMVA::TSynapse::CalculateDelta()
 {
    // calculate/adjust the error field for this synapse
-
    fDelta += fPostNeuron->GetDelta() * fPreNeuron->GetActivationValue();
    fCount++;
 }

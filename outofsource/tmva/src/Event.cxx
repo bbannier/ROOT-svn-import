@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$   
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -12,6 +12,7 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch> - CERN, Switzerland           *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
@@ -26,197 +27,292 @@
  * (http://mva.sourceforge.net/license.txt)                                       *
  **********************************************************************************/
 
-//////////////////////////////////////////////////////////////////////////
-//
-// Event
-//
-// Storage class for an event. It is used by all TMVA methods
-// during the training. Events are collected in Dataset
-//
-//////////////////////////////////////////////////////////////////////////
-
 #include "TMVA/Event.h"
 #include "TMVA/Tools.h"
-#include "TTree.h"
-#include "TBranch.h"
 #include <iostream>
+#include "assert.h"
 #include <iomanip>
-
+#include <cassert>
+#include "TCut.h"
  
 Int_t TMVA::Event::fgCount = 0;
+std::vector<Float_t*>* TMVA::Event::fgValuesDynamic = 0;
 
 //____________________________________________________________
-TMVA::Event::Event(const std::vector<VariableInfo>& varinfo, Bool_t AllowExternalLinks) 
-   : fVariables(varinfo),
-     fVarPtr(new void*[varinfo.size()]), // array to hold pointers to the integer or float array
-     fVarPtrF(0),                        // array to hold all integer variables
-     fType(0),
-     fWeight(0),
+TMVA::Event::Event() 
+   : fValues(),
+     fTargets(),
+     fSpectators(),
+     fVariableArrangement(0),
+     fClass(1),
+     fWeight(1.0),
      fBoostWeight(1.0),
-     fCountI(0),
-     fCountF(0)
-{
-   // constructor
-
-   fgCount++; // static member: counts number of Event instances (check for memory leak)
-
-   fCountF = fVariables.size();
-
-   InitPointers(AllowExternalLinks);
-}
-
-TMVA::Event::Event( const Event& event ) 
-   : fVariables(event.fVariables),
-     fVarPtr(new void*[event.fVariables.size()]), // array to hold pointers to the integer or float array
-     fVarPtrF(0),                                 // array to hold all float variables
-     fType(event.fType),
-     fWeight(event.fWeight),
-     fBoostWeight(event.fBoostWeight),
-     fCountI(event.fCountI),
-     fCountF(event.fCountF)
+     fDynamic(kFALSE)
 {
    // copy constructor
-
    fgCount++; 
-   InitPointers(kFALSE); // this constructor is used in the BinarySearchTree
+}
 
-   // where we don't want to have externaly linked variables
-   for (UInt_t ivar=0; ivar<GetNVars(); ivar++) {
-      *(Float_t*)fVarPtr[ivar] = *(Float_t*)event.fVarPtr[ivar];
-   }
+//____________________________________________________________
+TMVA::Event::Event( const std::vector<Float_t>& ev,
+                    const std::vector<Float_t>& tg,
+                    UInt_t cls,
+                    Float_t weight,
+                    Float_t boostweight )
+   : fValues(ev),
+     fTargets(tg),
+     fSpectators(0),
+     fVariableArrangement(0),
+     fClass(cls),
+     fWeight(weight),
+     fBoostWeight(boostweight),
+     fDynamic(kFALSE)
+{
+   // constructor
+   fgCount++;
+}
+
+//____________________________________________________________
+TMVA::Event::Event( const std::vector<Float_t>& ev,
+                    const std::vector<Float_t>& tg,
+                    const std::vector<Float_t>& vi,
+                    UInt_t cls,
+                    Float_t weight,
+                    Float_t boostweight )
+   : fValues(ev),
+     fTargets(tg),
+     fSpectators(vi),
+     fVariableArrangement(0),
+     fClass(cls),
+     fWeight(weight),
+     fBoostWeight(boostweight),
+     fDynamic(kFALSE)
+{
+   // constructor
+   fgCount++;
+}
+
+//____________________________________________________________
+TMVA::Event::Event( const std::vector<Float_t>& ev,
+                    UInt_t cls,
+                    Float_t weight,
+                    Float_t boostweight )
+   : fValues(ev),
+     fTargets(0),
+     fSpectators(0),
+     fVariableArrangement(0),
+     fClass(cls),
+     fWeight(weight),
+     fBoostWeight(boostweight),
+     fDynamic(kFALSE)
+{
+   // constructor
+   fgCount++;
+}
+
+//____________________________________________________________
+TMVA::Event::Event( const std::vector<Float_t*>*& evdyn, UInt_t nvar )
+   : fValues(nvar),
+     fTargets(0),
+     fSpectators(evdyn->size()-nvar),
+     fVariableArrangement(0),
+     fClass(0),
+     fWeight(0),
+     fBoostWeight(0),
+     fDynamic(true)
+{
+   // constructor for single events
+   fgValuesDynamic = (std::vector<Float_t*>*) evdyn;
+   fgCount++;
+}
+
+//____________________________________________________________
+TMVA::Event::Event( const Event& event ) 
+   : fValues(event.fValues),
+     fTargets(event.fTargets),
+     fSpectators(event.fSpectators),
+     fVariableArrangement(event.fVariableArrangement),
+     fClass(event.fClass),
+     fWeight(event.fWeight),
+     fBoostWeight(event.fBoostWeight),
+     fDynamic(event.fDynamic)
+{
+   // copy constructor
+   fgCount++; 
 }
 
 //____________________________________________________________
 TMVA::Event::~Event() 
 {
    // Event destructor
-   delete[] fVarPtr;
-   delete[] fVarPtrF;
-   fgCount--;
+   fgCount--;;
+   if (fDynamic && fgCount==0) TMVA::Event::ClearDynamicVariables();
 }
  
-void TMVA::Event::InitPointers(bool AllowExternalLink)
-{
-   // sets the links of fVarPtr to the internal arrays that hold the
-   // integer and float variables
-
-   fVarPtrF = new Float_t[fCountF];
-   
-   UInt_t ivar(0), ivarF(0);
-   std::vector<VariableInfo>::const_iterator varIt = fVariables.begin();
-
-   // for each variable,
-   for (; varIt != fVariables.end(); varIt++, ivar++) {
-      const VariableInfo& var = *varIt;
-      // set the void pointer (which are used to access the data) to the proper field
-      // if external field is given
-      if (AllowExternalLink && var.GetExternalLink()!=0) {
-         fVarPtr[ivar] = var.GetExternalLink();
-         // or if its type is I(int) or F(float)
-      } 
-      else {
-         // set the void pointer to the float field
-         fVarPtr[ivar] = fVarPtrF+ivarF++;
-      } 
+//____________________________________________________________
+void TMVA::Event::ClearDynamicVariables() 
+{ 
+   // clear global variable
+   if (fgValuesDynamic != 0) { 
+      fgValuesDynamic->clear();
+      delete fgValuesDynamic;
+      fgValuesDynamic = 0;
    }
 }
 
 //____________________________________________________________
-void TMVA::Event::SetBranchAddresses(TTree *tr)
-{
-   // sets the branch addresses of the associated
-   // tree to the local memory as given by fVarPtr
+void TMVA::Event::SetVariableArrangement( std::vector<UInt_t>* const m ) const {
+   // set the variable arrangement
 
-   fBranches.clear();
-   Int_t ivar(0);
-   TBranch * br(0);
-   std::vector<VariableInfo>::const_iterator varIt;
-   for (varIt = fVariables.begin(); varIt != fVariables.end(); varIt++) {
-      const VariableInfo& var = *varIt;
-      br = tr->GetBranch(var.GetInternalVarName());
-      br->SetAddress(fVarPtr[ivar++]);
-      fBranches.push_back(br);
-   }
-   br = tr->GetBranch("type");        br->SetAddress(&fType);        fBranches.push_back(br);
-   br = tr->GetBranch("weight");      br->SetAddress(&fWeight);      fBranches.push_back(br);
-   br = tr->GetBranch("boostweight"); br->SetAddress(&fBoostWeight); fBranches.push_back(br);
+   // mapping from global variable index (the position in the vector)
+   // to the new index in the subset of variables used by the
+   // composite classifier
+   fVariableArrangement = m;
 }
+
+
 
 //____________________________________________________________
 void TMVA::Event::CopyVarValues( const Event& other )
 {
    // copies only the variable values
-   for (UInt_t ivar=0; ivar<GetNVars(); ivar++)
-      SetVal(ivar, other.GetVal(ivar));
-   SetType(other.Type());
-   SetWeight(other.GetWeight());
-   SetBoostWeight(other.GetBoostWeight());
+   fValues      = other.fValues;
+   fClass       = other.fClass;
+   fWeight      = other.fWeight;
+   fBoostWeight = other.fBoostWeight;
 }
 
 //____________________________________________________________
-void TMVA::Event::SetVal(UInt_t ivar, Float_t val) 
+Float_t TMVA::Event::GetValue( UInt_t ivar ) const 
+{ 
+   // return value of i'th variable
+   Float_t retval;
+   if (fVariableArrangement==0) {
+      retval = fDynamic ?( *(*fgValuesDynamic)[ivar] ) : fValues[ivar]; 
+   } 
+   else {
+      UInt_t mapIdx = (*fVariableArrangement)[ivar];
+      if (fDynamic) {
+         retval = *(*fgValuesDynamic)[mapIdx];
+      } 
+      else {
+         retval = ( mapIdx<fValues.size() ) ? fValues[mapIdx] : fSpectators[mapIdx-fValues.size()];
+      }
+   }
+   return retval;
+}
+
+//____________________________________________________________
+Float_t TMVA::Event::GetSpectator( UInt_t ivar) const 
+{
+   // return spectator content
+   if (fDynamic) return *(fgValuesDynamic->at(GetNVariables()+ivar));
+   else          return fSpectators.at(ivar);
+}
+
+//____________________________________________________________
+const std::vector<Float_t>& TMVA::Event::GetValues() const 
+{  
+   // return value vector
+   if (fVariableArrangement!=0) {
+      assert(0);
+   }
+   if (fDynamic) {
+//       if (fgValuesDynamic->size()-GetNSpectators() != fValues.size()) {
+//          std::cout << "ERROR Event::GetValues() is trying to change the size of the variable vector, exiting ..." << std::endl;
+//          assert(0);
+//       }
+      fValues.clear();
+      for (std::vector<Float_t*>::const_iterator it = fgValuesDynamic->begin(); 
+           it != fgValuesDynamic->end()-GetNSpectators(); it++) { 
+         Float_t val = *(*it); 
+         fValues.push_back( val ); 
+      }
+   }
+   return fValues;
+}
+
+//____________________________________________________________
+UInt_t TMVA::Event::GetNVariables() const 
+{
+   // accessor to the number of variables 
+
+   // if variables have to arranged (as it is the case for the
+   // composite classifier) the number of the variables changes
+
+   if (fVariableArrangement==0) return fValues.size();
+   else                         return fVariableArrangement->size();
+}
+
+//____________________________________________________________
+UInt_t TMVA::Event::GetNTargets() const 
+{
+   // accessor to the number of targets
+   return fTargets.size();
+}
+
+//____________________________________________________________
+UInt_t TMVA::Event::GetNSpectators() const 
+{
+   // accessor to the number of spectators 
+
+   // if variables have to arranged (as it is the case for the
+   // composite classifier) the number of the variables changes
+
+   if (fVariableArrangement==0) return fSpectators.size();
+   else                         return fValues.size()-fVariableArrangement->size();
+}
+
+
+//____________________________________________________________
+void TMVA::Event::SetVal( UInt_t ivar, Float_t val ) 
 {
    // set variable ivar to val
-   Bool_t isInternallyLinked = (fVarPtr[ivar] >= fVarPtrF && fVarPtr[ivar] < fVarPtrF+fCountF);
+   if ((fDynamic ?( (*fgValuesDynamic).size() ) : fValues.size())<=ivar)
+      (fDynamic ?( (*fgValuesDynamic).resize(ivar+1) ) : fValues.resize(ivar+1));
 
-   if(isInternallyLinked) {
-      fVarPtrF[ivar] = val;
-   } else { // external variable, have to go with type
-      if(fVariables[ivar].GetVarType()=='F') {
-         *(Float_t*)fVarPtr[ivar] = val;
-      } else {
-         *(Int_t*)fVarPtr[ivar] = (Int_t)val;
-      }
-   }
+   (fDynamic ?( *(*fgValuesDynamic)[ivar] ) : fValues[ivar])=val;
 }
 
 //____________________________________________________________
-Float_t TMVA::Event::GetVal(UInt_t ivar) const
-{
-   // return value of variable ivar
-   Bool_t isInternallyLinked = (fVarPtr[ivar] >= fVarPtrF && fVarPtr[ivar] < fVarPtrF+fCountF);
-   if(isInternallyLinked) {
-      return fVarPtrF[ivar];
-   } else { // external variable, have to go with type
-      if(fVariables[ivar].GetVarType()=='F') {
-         return *(Float_t*)fVarPtr[ivar];
-      } else {
-         return *(Int_t*)fVarPtr[ivar];
-      }
-   }
-}
-
-//____________________________________________________________
-Float_t TMVA::Event::GetValueNormalized(UInt_t ivar) const 
-{
-   // returns the value of variable ivar, normalized to [-1,1]
-   return Tools::NormVariable(GetVal(ivar),fVariables[ivar].GetMin(),fVariables[ivar].GetMax());
-}
-
-//____________________________________________________________
-void TMVA::Event::Print(std::ostream& o) const
+void TMVA::Event::Print( std::ostream& o ) const
 {
    // print method
-   o << fVariables.size() << " variables: ";
-   for (UInt_t ivar=0; ivar<fVariables.size(); ivar++)
-      o << " " << std::setw(10) << GetVal(ivar) << '(' << fVariables[ivar].GetVarType() << ')';
-   o << "  weight = " << GetWeight();
-   o << std::setw(10) << (IsSignal()?" signal":" background");
-   o << std::endl;
+   o << *this << std::endl;
+}
+
+//_____________________________________________________________
+void TMVA::Event::SetTarget( UInt_t itgt, Float_t value ) 
+{ 
+   // set the target value (dimension itgt) to value
+
+   if (fTargets.size() <= itgt) fTargets.resize( itgt+1 );
+   fTargets.at(itgt) = value;
+}
+
+//_____________________________________________________________
+void TMVA::Event::SetSpectator( UInt_t ivar, Float_t value ) 
+{ 
+   // set spectator value (dimension ivar) to value
+
+   if (fSpectators.size() <= ivar) fSpectators.resize( ivar+1 );
+   fSpectators.at(ivar) = value;
 }
 
 //_______________________________________________________________________
-ostream& TMVA::operator<<(ostream& os, const TMVA::Event& event)
+ostream& TMVA::operator << ( ostream& os, const TMVA::Event& event )
 { 
    // Outputs the data of an event
-   
-   event.Print(os);
+   os << "Variables [" << event.fValues.size() << "]:";
+   for (UInt_t ivar=0; ivar<event.fValues.size(); ++ivar)
+      os << " " << std::setw(10) << event.GetValue(ivar);
+   os << ", targets [" << event.fTargets.size() << "]:";
+   for (UInt_t ivar=0; ivar<event.fTargets.size(); ++ivar)
+      os << " " << std::setw(10) << event.GetTarget(ivar);
+   os << ", spectators ["<< event.fSpectators.size() << "]:";
+   for (UInt_t ivar=0; ivar<event.fSpectators.size(); ++ivar)
+      os << " " << std::setw(10) << event.GetSpectator(ivar);
+   os << ", weight: " << event.GetWeight();
+   os << ", class: " << event.GetClass();
    return os;
-}
-
-//_______________________________________________________________________
-ostream& TMVA::operator<<(ostream& os, const TMVA::Event* event)
-{
-   // Outputs the data of an event
-   return os << *event;
 }

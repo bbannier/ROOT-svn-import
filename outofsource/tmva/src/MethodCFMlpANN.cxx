@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$    
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// @(#)root/tmva $Id$
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate Data analysis       *
@@ -17,9 +17,9 @@
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
- *      U. of Victoria, Canada                                                    * 
- *      MPI-K Heidelberg, Germany                                                 * 
+ *      CERN, Switzerland                                                         *
+ *      U. of Victoria, Canada                                                    *
+ *      MPI-K Heidelberg, Germany                                                 *
  *      LAPP, Annecy, France                                                      *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -27,52 +27,57 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-//_______________________________________________________________________                                                                      
+//_______________________________________________________________________
 //
-// MethodCFMlpANN
-/* Begin_Html
-  Interface to Clermond-Ferrand artificial neural network 
+// Begin_Html
+/*
+  Interface to Clermond-Ferrand artificial neural network
 
   <p>
-  The CFMlpANN belong to the class of Multilayer Perceptrons (MLP), which are 
+  The CFMlpANN belong to the class of Multilayer Perceptrons (MLP), which are
   feed-forward networks according to the following propagation schema:<br>
   <center>
-  <img vspace=10 src="gif/tmva_mlp.gif" align="bottom" alt="Schema for artificial neural network"> 
+  <img vspace=10 src="gif/tmva_mlp.gif" align="bottom" alt="Schema for artificial neural network">
   </center>
   The input layer contains as many neurons as input variables used in the MVA.
   The output layer contains two neurons for the signal and background
   event classes. In between the input and output layers are a variable number
-  of <i>k</i> hidden layers with arbitrary numbers of neurons. (While the 
-  structure of the input and output layers is determined by the problem, the 
+  of <i>k</i> hidden layers with arbitrary numbers of neurons. (While the
+  structure of the input and output layers is determined by the problem, the
   hidden layers can be configured by the user through the option string
   of the method booking.) <br>
 
-  As indicated in the sketch, all neuron inputs to a layer are linear 
+  As indicated in the sketch, all neuron inputs to a layer are linear
   combinations of the neuron output of the previous layer. The transfer
   from input to output within a neuron is performed by means of an "activation
-  function". In general, the activation function of a neuron can be 
+  function". In general, the activation function of a neuron can be
   zero (deactivated), one (linear), or non-linear. The above example uses
   a sigmoid activation function. The transfer function of the output layer
-  is usually linear. As a consequence: an ANN without hidden layer should 
+  is usually linear. As a consequence: an ANN without hidden layer should
   give identical discrimination power as a linear discriminant analysis (Fisher).
-  In case of one hidden layer, the ANN computes a linear combination of 
+  In case of one hidden layer, the ANN computes a linear combination of
   sigmoid.  <br>
 
   The learning method used by the CFMlpANN is only stochastic.
-
-End_Html */
+*/
+// End_Html
 //_______________________________________________________________________
 
-#include <iostream>
 #include <string>
+#include <cstdlib>
+#include <iostream>
 
-#include "Riostream.h"
-#include "TMath.h"
 #include "TMatrix.h"
 #include "TObjString.h"
+#include "Riostream.h"
+#include "TMath.h"
 
+#include "TMVA/ClassifierFactory.h"
 #include "TMVA/MethodCFMlpANN.h"
 #include "TMVA/MethodCFMlpANN_def.h"
+#include "TMVA/Tools.h"
+
+REGISTER_METHOD(CFMlpANN)
 
 ClassImp(TMVA::MethodCFMlpANN)
 
@@ -84,109 +89,82 @@ namespace TMVA {
 TMVA::MethodCFMlpANN* TMVA::MethodCFMlpANN::fgThis = 0;
 
 //_______________________________________________________________________
-TMVA::MethodCFMlpANN::MethodCFMlpANN( const TString& jobName, const TString& methodTitle, DataSet& theData, 
-                                      const TString& theOption, TDirectory* theTargetDir  )
-   : TMVA::MethodBase( jobName, methodTitle, theData, theOption, theTargetDir  ),
-     fNodes(0),
-     fYNN(0)
+TMVA::MethodCFMlpANN::MethodCFMlpANN( const TString& jobName,
+                                      const TString& methodTitle,
+                                      DataSetInfo& theData,
+                                      const TString& theOption,
+                                      TDirectory* theTargetDir  ) :
+   TMVA::MethodBase( jobName, Types::kCFMlpANN, methodTitle, theData, theOption, theTargetDir  ),
+   fNlayers(0),
+   fNcycles(0),
+   fNodes(0),
+   fYNN(0)
 {
    // standard constructor
-   // option string: "n_training_cycles:n_hidden_layers"  
-   // default is:  n_training_cycles = 5000, n_layers = 4 
+   // option string: "n_training_cycles:n_hidden_layers"
+   // default is:  n_training_cycles = 5000, n_layers = 4
    //
-   // * note that the number of hidden layers in the NN is: 
+   // * note that the number of hidden layers in the NN is:
    //   n_hidden_layers = n_layers - 2
    //
-   // * since there is one input and one output layer. The number of         
+   // * since there is one input and one output layer. The number of
    //   nodes (neurons) is predefined to be:
-   //   n_nodes[i] = nvars + 1 - i (where i=1..n_layers)                  
+   //   n_nodes[i] = nvars + 1 - i (where i=1..n_layers)
    //
-   //   with nvars being the number of variables used in the NN.             
+   //   with nvars being the number of variables used in the NN.
    //
-   // Hence, the default case is: n_neurons(layer 1 (input)) : nvars       
-   //                             n_neurons(layer 2 (hidden)): nvars-1     
-   //                             n_neurons(layer 3 (hidden)): nvars-1     
-   //                             n_neurons(layer 4 (out))   : 2           
+   // Hence, the default case is: n_neurons(layer 1 (input)) : nvars
+   //                             n_neurons(layer 2 (hidden)): nvars-1
+   //                             n_neurons(layer 3 (hidden)): nvars-1
+   //                             n_neurons(layer 4 (out))   : 2
    //
-   // This artificial neural network usually needs a relatively large      
-   // number of cycles to converge (8000 and more). Overtraining can       
-   // be efficienctly tested by comparing the signal and background        
-   // output of the NN for the events that were used for training and      
+   // This artificial neural network usually needs a relatively large
+   // number of cycles to converge (8000 and more). Overtraining can
+   // be efficienctly tested by comparing the signal and background
+   // output of the NN for the events that were used for training and
    // an independent data sample (with equal properties). If the separation
-   // performance is significantly better for the training sample, the     
-   // NN interprets statistical effects, and is hence overtrained. In       
-   // this case, the number of cycles should be reduced, or the size       
-   // of the training sample increased.                                    
-   //
-   InitCFMlpANN();
-  
-   // interpretation of configuration option string
-   DeclareOptions();
-   ParseOptions();
-   ProcessOptions();
-
-   // some info
-   fLogger << "Use " << fNcycles << " training cycles" << Endl;
-
-   // note that one variable is type
-   if (HasTrainingTree()) {
-    
-      Int_t nEvtTrain = Data().GetNEvtTrain();
-
-      // Data LUT
-      fData  = new TMatrix( nEvtTrain, GetNvar() );
-      fClass = new vector<Int_t>( nEvtTrain );
-
-      // ---- fill LUTs
-
-      Int_t ivar;
-      for (Int_t ievt=0; ievt<nEvtTrain; ievt++) {
-         ReadTrainingEvent(ievt);
-
-         // identify signal and background events  
-         (*fClass)[ievt] = IsSignalEvent() ? 1 : 2;
-      
-         // use normalized input Data
-         for (ivar=0; ivar<GetNvar(); ivar++) {
-            (*fData)( ievt, ivar ) = GetEventVal(ivar);
-         }
-      }
-
-      fLogger << kVERBOSE << Data().GetNEvtSigTrain() << " Signal and " 
-              << Data().GetNEvtBkgdTrain() << " background" << " events in trainingTree" << Endl;
-   }
+   // performance is significantly better for the training sample, the
+   // NN interprets statistical effects, and is hence overtrained. In
+   // this case, the number of cycles should be reduced, or the size
+   // of the training sample increased.
 }
 
 //_______________________________________________________________________
-TMVA::MethodCFMlpANN::MethodCFMlpANN( DataSet & theData, 
-                                      const TString& theWeightFile,  
-                                      TDirectory* theTargetDir )
-   : TMVA::MethodBase( theData, theWeightFile, theTargetDir ) 
-   , fNodes(0)
+TMVA::MethodCFMlpANN::MethodCFMlpANN( DataSetInfo& theData,
+                                      const TString& theWeightFile,
+                                      TDirectory* theTargetDir ):
+   TMVA::MethodBase( Types::kCFMlpANN, theData, theWeightFile, theTargetDir ),
+   fNlayers(0),
+   fNcycles(0),
+   fNodes(0),
+   fYNN(0)
 {
-   // construction from weight file
-   InitCFMlpANN();
-  
-   DeclareOptions();
+   // constructor from weight file
 }
 
 //_______________________________________________________________________
-void TMVA::MethodCFMlpANN::DeclareOptions() 
+Bool_t TMVA::MethodCFMlpANN::HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t /*numberTargets*/ )
 {
-   // define the options (their key words) that can be set in the option string 
+   // CFMlpANN can handle classification with 2 classes
+   if (type == Types::kClassification && numberClasses == 2) return kTRUE;
+   return kFALSE;
+}
+
+//_______________________________________________________________________
+void TMVA::MethodCFMlpANN::DeclareOptions()
+{
+   // define the options (their key words) that can be set in the option string
    // know options: NCycles=xx              :the number of training cycles
    //               HiddenLayser="N-1,N-2"  :the specification of the hidden layers
- 
+
    DeclareOptionRef( fNcycles  =3000,      "NCycles",      "Number of training cycles" );
-   DeclareOptionRef( fLayerSpec="N-1,N-2", "HiddenLayers", "Specification of hidden layer architecture" );
+   DeclareOptionRef( fLayerSpec="N,N-1",   "HiddenLayers", "Specification of hidden layer architecture" );
 }
 
 //_______________________________________________________________________
-void TMVA::MethodCFMlpANN::ProcessOptions() 
+void TMVA::MethodCFMlpANN::ProcessOptions()
 {
    // decode the options in the option string
-   MethodBase::ProcessOptions();
-
    fNodes = new Int_t[20]; // number of nodes per layer (maximum 20 layers)
    fNlayers = 2;
    Int_t currentHiddenLayer = 1;
@@ -210,18 +188,54 @@ void TMVA::MethodCFMlpANN::ProcessOptions()
    fNodes[0]          = GetNvar(); // number of input nodes
    fNodes[fNlayers-1] = 2;         // number of output nodes
 
-   fLogger << kINFO << "Use configuration (nodes per layer): in=";
-   for (Int_t i=0; i<fNlayers-1; i++) fLogger << kINFO << fNodes[i] << ":";
-   fLogger << kINFO << fNodes[fNlayers-1] << "=out" << Endl;   
+   if (IgnoreEventsWithNegWeightsInTraining()) {
+      Log() << kFATAL << "Mechanism to ignore events with negative weights in training not yet available for method: "
+            << GetMethodTypeName() 
+            << " --> please remove \"IgnoreNegWeightsInTraining\" option from booking string."
+            << Endl;
+   }
+
+   Log() << kINFO << "Use configuration (nodes per layer): in=";
+   for (Int_t i=0; i<fNlayers-1; i++) Log() << kINFO << fNodes[i] << ":";
+   Log() << kINFO << fNodes[fNlayers-1] << "=out" << Endl;   
+
+   // some info
+   Log() << "Use " << fNcycles << " training cycles" << Endl;
+
+   Int_t nEvtTrain = Data()->GetNTrainingEvents();
+
+   // note that one variable is type
+   if (nEvtTrain>0) {
+    
+      // Data LUT
+      fData  = new TMatrix( nEvtTrain, GetNvar() );
+      fClass = new vector<Int_t>( nEvtTrain );
+
+      // ---- fill LUTs
+
+      UInt_t ivar;
+      for (Int_t ievt=0; ievt<nEvtTrain; ievt++) {
+         const Event * ev = GetEvent(ievt);
+
+         // identify signal and background events  
+         (*fClass)[ievt] = DataInfo().IsSignal(ev) ? 1 : 2;
+      
+         // use normalized input Data
+         for (ivar=0; ivar<GetNvar(); ivar++) {
+            (*fData)( ievt, ivar ) = ev->GetValue(ivar);
+         }
+      }
+
+      //Log() << kVERBOSE << Data()->GetNEvtSigTrain() << " Signal and " 
+      //        << Data()->GetNEvtBkgdTrain() << " background" << " events in trainingTree" << Endl;
+   }
+
 }
 
 //_______________________________________________________________________
-void TMVA::MethodCFMlpANN::InitCFMlpANN( void )
+void TMVA::MethodCFMlpANN::Init( void )
 {
    // default initialisation called by all constructors
-   SetMethodName( "CFMlpANN" );
-   SetMethodType( TMVA::Types::kCFMlpANN );
-   SetTestvarName();
 
    // CFMlpANN prefers normalised input variables
    SetNormalised( kTRUE );
@@ -253,11 +267,8 @@ void TMVA::MethodCFMlpANN::Train( void )
 {
    // training of the Clement-Ferrand NN classifier
 
-   // default sanity checks
-   if (!CheckSanity()) fLogger << kFATAL << "<Train> sanity check failed" << Endl;
-
    Double_t dumDat(0);
-   Int_t ntrain(Data().GetNEvtTrain());
+   Int_t ntrain(Data()->GetNTrainingEvents());
    Int_t ntest(0);
    Int_t nvar(GetNvar());
    Int_t nlayers(fNlayers);
@@ -265,29 +276,43 @@ void TMVA::MethodCFMlpANN::Train( void )
    Int_t ncycles(fNcycles);
 
    for (Int_t i=0; i<nlayers; i++) nodes[i] = fNodes[i]; // full copy of class member
+
+   if (fYNN != 0) {
+      for (Int_t i=0; i<fNlayers; i++) delete[] fYNN[i];
+      delete[] fYNN;
+      fYNN = 0;
+   }
+   fYNN = new Double_t*[nlayers];
+   for (Int_t layer=0; layer<nlayers; layer++)
+      fYNN[layer] = new Double_t[fNodes[layer]];
    
    // please check
 #ifndef R__WIN32
    Train_nn( &dumDat, &dumDat, &ntrain, &ntest, &nvar, &nlayers, nodes, &ncycles );
 #else
-   fLogger << kWARNING << "<Train> sorry CFMlpANN is not yet implemented on Windows" << Endl;
+   Log() << kWARNING << "<Train> sorry CFMlpANN does not run on Windows" << Endl;
 #endif  
 
    delete [] nodes;
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodCFMlpANN::GetMvaValue()
+Double_t TMVA::MethodCFMlpANN::GetMvaValue( Double_t* err )
 {
    // returns CFMlpANN output (normalised within [0,1])
    Bool_t isOK = kTRUE;
 
+   const Event* ev = GetEvent();
+
    // copy of input variables
    vector<Double_t> inputVec( GetNvar() );
-   for (Int_t ivar=0; ivar<GetNvar(); ivar++) inputVec[ivar] = GetEventVal(ivar);
+   for (UInt_t ivar=0; ivar<GetNvar(); ivar++) inputVec[ivar] = ev->GetValue(ivar);
 
    Double_t myMVA = EvalANN( inputVec, isOK );
-   if (!isOK) fLogger << kFATAL << "EvalANN returns (!isOK) for event " << Endl;
+   if (!isOK) Log() << kFATAL << "EvalANN returns (!isOK) for event " << Endl;
+
+   // cannot determine error
+   if (err != 0) *err = -1;
 
    return myMVA;
 }
@@ -299,11 +324,11 @@ Double_t TMVA::MethodCFMlpANN::EvalANN( vector<Double_t>& inVar, Bool_t& isOK )
 
    // hardcopy of input variables (necessary because they are update later)
    Double_t* xeev = new Double_t[GetNvar()];
-   for (Int_t ivar=0; ivar<GetNvar(); ivar++) xeev[ivar] = inVar[ivar];
+   for (UInt_t ivar=0; ivar<GetNvar(); ivar++) xeev[ivar] = inVar[ivar];
   
    // ---- now apply the weights: get NN output
    isOK = kTRUE;
-   for (Int_t jvar=0; jvar<GetNvar(); jvar++) {
+   for (UInt_t jvar=0; jvar<GetNvar(); jvar++) {
 
       if (fVarn_1.xmax[jvar] < xeev[jvar]) xeev[jvar] = fVarn_1.xmax[jvar];
       if (fVarn_1.xmin[jvar] > xeev[jvar]) xeev[jvar] = fVarn_1.xmin[jvar];
@@ -368,53 +393,54 @@ void TMVA::MethodCFMlpANN::ReadWeightsFromStream( istream & istr )
    TString var;
 
    // read number of variables and classes
-   Int_t nva(0), lclass(0);
+   UInt_t nva(0), lclass(0);
    istr >> nva >> lclass;
 
    if (GetNvar() != nva) // wrong file
-      fLogger << kFATAL << "<ReadWeightsFromFile> mismatch in number of variables" << Endl;
+      Log() << kFATAL << "<ReadWeightsFromFile> mismatch in number of variables" << Endl;
 
    // number of output classes must be 2
    if (lclass != 2) // wrong file
-      fLogger << kFATAL << "<ReadWeightsFromFile> mismatch in number of classes" << Endl;
-          
+      Log() << kFATAL << "<ReadWeightsFromFile> mismatch in number of classes" << Endl;
+
    // check that we are not at the end of the file
    if (istr.eof( ))
-      fLogger << kFATAL << "<ReadWeightsFromStream> reached EOF prematurely " << Endl;
+      Log() << kFATAL << "<ReadWeightsFromStream> reached EOF prematurely " << Endl;
 
    // read extrema of input variables
-   for (Int_t ivar=0; ivar<GetNvar(); ivar++) 
+   for (UInt_t ivar=0; ivar<GetNvar(); ivar++)
       istr >> fVarn_1.xmax[ivar] >> fVarn_1.xmin[ivar];
-            
+
    // read number of layers (sum of: input + output + hidden)
    istr >> fParam_1.layerm;
-            
+
    if (fYNN != 0) {
       for (Int_t i=0; i<fNlayers; i++) delete[] fYNN[i];
       delete[] fYNN;
       fYNN = 0;
    }
    fYNN = new Double_t*[fParam_1.layerm];
-   for (Int_t layer=0; layer<fParam_1.layerm; layer++) {              
+   for (Int_t layer=0; layer<fParam_1.layerm; layer++) {
       // read number of neurons for each layer
+      // coverity[tainted_data_argument]
       istr >> fNeur_1.neuron[layer];
       fYNN[layer] = new Double_t[fNeur_1.neuron[layer]];
    }
-            
+
    // to read dummy lines
    const Int_t nchar( 100 );
    char* dumchar = new char[nchar];
-            
+
    // read weights
    for (Int_t layer=1; layer<=fParam_1.layerm-1; layer++) {
-              
+
       Int_t nq = fNeur_1.neuron[layer]/10;
       Int_t nr = fNeur_1.neuron[layer] - nq*10;
-              
+
       Int_t kk(0);
       if (nr==0) kk = nq;
       else       kk = nq+1;
-              
+
       for (Int_t k=1; k<=kk; k++) {
          Int_t jmin = 10*k - 9;
          Int_t jmax = 10*k;
@@ -433,21 +459,22 @@ void TMVA::MethodCFMlpANN::ReadWeightsFromStream( istream & istr )
    }
 
    for (Int_t layer=0; layer<fParam_1.layerm; layer++) {
-              
+
       // skip 2 empty lines
       istr.getline( dumchar, nchar );
       istr.getline( dumchar, nchar );
-              
+
       istr >> fDel_1.temp[layer];
-   }            
+   }
 
    // sanity check
-   if (GetNvar() != fNeur_1.neuron[0]) {
-      fLogger << kFATAL << "<ReadWeightsFromFile> mismatch in zeroth layer:"
+   if ((Int_t)GetNvar() != fNeur_1.neuron[0]) {
+      Log() << kFATAL << "<ReadWeightsFromFile> mismatch in zeroth layer:"
               << GetNvar() << " " << fNeur_1.neuron[0] << Endl;
    }
 
    fNlayers = fParam_1.layerm;
+   delete[] dumchar;
 }
 
 //_______________________________________________________________________
@@ -466,16 +493,16 @@ Int_t TMVA::MethodCFMlpANN::DataInterface( Double_t* /*tout2*/, Double_t*  /*tin
 
    // sanity checks
    if (0 == xpg) {
-      fLogger << kFATAL << "ERROR in MethodCFMlpANN_DataInterface zero pointer xpg" << Endl;
+      Log() << kFATAL << "ERROR in MethodCFMlpANN_DataInterface zero pointer xpg" << Endl;
    }
-   if (*nvar != opt->GetNvar()) {
-      fLogger << kFATAL << "ERROR in MethodCFMlpANN_DataInterface mismatch in num of variables: "
+   if (*nvar != (Int_t)opt->GetNvar()) {
+      Log() << kFATAL << "ERROR in MethodCFMlpANN_DataInterface mismatch in num of variables: "
               << *nvar << " " << opt->GetNvar() << Endl;
    }
 
    // fill variables
    *iclass = (int)opt->GetClass( TMVA::MethodCFMlpANN_nsel );
-   for (Int_t ivar=0; ivar<opt->GetNvar(); ivar++) 
+   for (UInt_t ivar=0; ivar<opt->GetNvar(); ivar++) 
       xpg[ivar] = (double)opt->GetData( TMVA::MethodCFMlpANN_nsel, ivar );
 
    ++TMVA::MethodCFMlpANN_nsel;
@@ -484,65 +511,95 @@ Int_t TMVA::MethodCFMlpANN::DataInterface( Double_t* /*tout2*/, Double_t*  /*tin
 }
 
 //_______________________________________________________________________
-void TMVA::MethodCFMlpANN::WriteWeightsToStream( std::ostream& o ) const
+void TMVA::MethodCFMlpANN::AddWeightsXMLTo( void* parent ) const 
 {
-   // write number of variables and classes
-   o << fParam_1.nvar << "    " << fParam_1.lclass << endl;
-   
-   // number of output classes must be 2
-   if (fParam_1.lclass != 2) // wrong file
-      fLogger << kFATAL << "<WriteWeightsToStream> mismatch in number of classes" << Endl;
+   // write weights to xml file
 
-
-   // write extrema of input variables
+   void *wght = gTools().AddChild(parent, "Weights");
+   gTools().AddAttr(wght,"NVars",fParam_1.nvar);
+   gTools().AddAttr(wght,"NClasses",fParam_1.lclass);
+   gTools().AddAttr(wght,"NLayers",fParam_1.layerm);
+   void* minmaxnode = gTools().AddChild(wght, "VarMinMax");
+   stringstream s;
+   s.precision( 16 );
    for (Int_t ivar=0; ivar<fParam_1.nvar; ivar++) 
-      o << fVarn_1.xmax[ivar] << "   " << fVarn_1.xmin[ivar] << endl;
-        
-   // write number of layers (sum of: input + output + hidden)
-   o << fParam_1.layerm << endl;
-        
-   for (Int_t layer=0; layer<fParam_1.layerm; layer++) {              
-      // write number of neurons for each layer
-      o << fNeur_1.neuron[layer] << "     ";
-   }
-   o << endl;
-        
-   // write weights
-   for (Int_t layer=1; layer<=fParam_1.layerm-1; layer++) { 
-          
-      Int_t nq = fNeur_1.neuron[layer]/10;
-      Int_t nr = fNeur_1.neuron[layer] - nq*10;
-          
-      Int_t kk(0);
-      if (nr==0) kk = nq;
-      else       kk = nq+1;
-          
-      for (Int_t k=1; k<=kk; k++) {
-         Int_t jmin = 10*k - 9;
-         Int_t jmax = 10*k;
-         Int_t i, j;
-         if (fNeur_1.neuron[layer]<jmax) jmax = fNeur_1.neuron[layer];
-         for (j=jmin; j<=jmax; j++) {
-            o << setw(20) << Ww_ref(fNeur_1.ww, layer+1, j) << "  ";
+      s << std::scientific << fVarn_1.xmin[ivar] <<  " " << fVarn_1.xmax[ivar] <<  " ";
+   gTools().AddRawLine( minmaxnode, s.str().c_str() );
+   void* neurons = gTools().AddChild(wght, "NNeurons");
+   stringstream n;
+   n.precision( 16 );
+   for (Int_t layer=0; layer<fParam_1.layerm; layer++)
+      n << std::scientific << fNeur_1.neuron[layer] << " ";
+   gTools().AddRawLine( neurons, n.str().c_str() );
+   for (Int_t layer=1; layer<fParam_1.layerm; layer++) {
+      void* layernode = gTools().AddChild(wght, "Layer"+gTools().StringFromInt(layer));
+      gTools().AddAttr(layernode,"NNeurons",fNeur_1.neuron[layer]);
+      void* neuronnode=NULL;
+      for (Int_t neuron=0; neuron<fNeur_1.neuron[layer]; neuron++) {
+         neuronnode = gTools().AddChild(layernode,"Neuron"+gTools().StringFromInt(neuron));
+         stringstream weights;
+         weights.precision( 16 );         
+         weights << std::scientific << Ww_ref(fNeur_1.ww, layer+1, neuron+1);
+         for (Int_t i=0; i<fNeur_1.neuron[layer-1]; i++) {
+            weights << " " << std::scientific << W_ref(fNeur_1.w, layer+1, neuron+1, i+1);
          }
-         o << endl;
-         for (i=1; i<=fNeur_1.neuron[layer-1]; i++) {
-            for (j=jmin; j<=jmax; j++) {
-               o << setw(20) << W_ref(fNeur_1.w, layer+1, j, i) << "  ";
-            }
-            o << endl;
-         }
-            
-         // skip two empty lines
-         o << endl << endl;
+         gTools().AddRawLine( neuronnode, weights.str().c_str() );
       }
    }
+   void* tempnode = gTools().AddChild(wght, "LayerTemp");
+   stringstream temp;
+   temp.precision( 16 );
+   for (Int_t layer=0; layer<fParam_1.layerm; layer++) {         
+       temp << std::scientific << fDel_1.temp[layer] << " ";
+   }   
+   gTools().AddRawLine(tempnode, temp.str().c_str() );
+}
+//_______________________________________________________________________
+void TMVA::MethodCFMlpANN::ReadWeightsFromXML( void* wghtnode )
+{
+   // read weights from xml file
+   gTools().ReadAttr( wghtnode, "NLayers",fParam_1.layerm );
+   void* minmaxnode = gTools().GetChild(wghtnode);
+   const char* minmaxcontent = gTools().GetContent(minmaxnode);
+   std::stringstream content(minmaxcontent);
+   for (UInt_t ivar=0; ivar<GetNvar(); ivar++) 
+      content >> fVarn_1.xmin[ivar] >> fVarn_1.xmax[ivar];
+   if (fYNN != 0) {
+      for (Int_t i=0; i<fNlayers; i++) delete[] fYNN[i];
+      delete[] fYNN;
+      fYNN = 0;
+   }
+   fYNN = new Double_t*[fParam_1.layerm];
+   void *layernode=gTools().GetNextChild(minmaxnode);
+   const char* neuronscontent = gTools().GetContent(layernode);
+   stringstream ncontent(neuronscontent);
+   for (Int_t layer=0; layer<fParam_1.layerm; layer++) {              
+      // read number of neurons for each layer;
+      // coverity[tainted_data_argument]
+      ncontent >> fNeur_1.neuron[layer];
+      fYNN[layer] = new Double_t[fNeur_1.neuron[layer]];
+   }
+   for (Int_t layer=1; layer<fParam_1.layerm; layer++) {
+      layernode=gTools().GetNextChild(layernode);
+      void* neuronnode=NULL;
+      neuronnode = gTools().GetChild(layernode);
+      for (Int_t neuron=0; neuron<fNeur_1.neuron[layer]; neuron++) {
+         const char* neuronweights = gTools().GetContent(neuronnode);
+         stringstream weights(neuronweights);
+         weights >> Ww_ref(fNeur_1.ww, layer+1, neuron+1);
+         for (Int_t i=0; i<fNeur_1.neuron[layer-1]; i++) {
+            weights >> W_ref(fNeur_1.w, layer+1, neuron+1, i+1);
+         }
+         neuronnode=gTools().GetNextChild(neuronnode);
+      }
+   } 
+   void* tempnode=gTools().GetNextChild(layernode);
+   const char* temp = gTools().GetContent(tempnode);
+   stringstream t(temp);
    for (Int_t layer=0; layer<fParam_1.layerm; layer++) {
-          
-      // skip 2 empty lines
-      o << endl << endl;          
-      o << fDel_1.temp[layer] << endl;
-   }      
+      t >> fDel_1.temp[layer];
+   }
+   fNlayers = fParam_1.layerm;
 }
 
 //_______________________________________________________________________
@@ -606,8 +663,12 @@ void TMVA::MethodCFMlpANN::PrintWeights( std::ostream & o ) const
       o << "Del.temp in layer " << layer << " :  " << fDel_1.temp[layer] << endl;
    }      
 }
-
 //_______________________________________________________________________
+TMVA::MethodCFMlpANN* TMVA::MethodCFMlpANN::This( void ) 
+{ 
+// static pointer to this object (required for external functions
+   return fgThis; 
+}  
 void TMVA::MethodCFMlpANN::MakeClassSpecific( std::ostream& fout, const TString& className ) const
 {
    // write specific classifier response
@@ -628,16 +689,16 @@ void TMVA::MethodCFMlpANN::GetHelpMessage() const
    //
    // typical length of text line: 
    //         "|--------------------------------------------------------------|"
-   fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Short description:" << Tools::Color("reset") << Endl;
-   fLogger << Endl;
-   fLogger << "<None>" << Endl;
-   fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance optimisation:" << Tools::Color("reset") << Endl;
-   fLogger << Endl;
-   fLogger << "<None>" << Endl;
-   fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance tuning via configuration options:" << Tools::Color("reset") << Endl;
-   fLogger << Endl;
-   fLogger << "<None>" << Endl;
+   Log() << Endl;
+   Log() << gTools().Color("bold") << "--- Short description:" << gTools().Color("reset") << Endl;
+   Log() << Endl;
+   Log() << "<None>" << Endl;
+   Log() << Endl;
+   Log() << gTools().Color("bold") << "--- Performance optimisation:" << gTools().Color("reset") << Endl;
+   Log() << Endl;
+   Log() << "<None>" << Endl;
+   Log() << Endl;
+   Log() << gTools().Color("bold") << "--- Performance tuning via configuration options:" << gTools().Color("reset") << Endl;
+   Log() << Endl;
+   Log() << "<None>" << Endl;
 }

@@ -12,6 +12,7 @@ Float_t t = 0;
 Float_t phi = 30;
 void anim()
 {
+   gStyle->SetCanvasPreferGL(true);
    gStyle->SetFrameFillColor(42);
    TCanvas *c1 = new TCanvas("c1");
    c1->SetFillColor(17);
@@ -22,14 +23,15 @@ void anim()
    f2->SetNpy(15);
    f2->SetMaximum(1);
    f2->SetMinimum(-1);
-   f2->Draw("surf1");
+   f2->Draw("glsurf1");
    TTimer *timer = new TTimer(20);
    timer->SetCommand("Animate()");
    timer->TurnOn();
 }   
 void Animate()
 {
-   if (!gROOT->GetListOfCanvases()->FindObject("c1")) return; //just in case the canvas has been deleted
+   //just in case the canvas has been deleted
+   if (!gROOT->GetListOfCanvases()->FindObject("c1")) return;
    t += 0.05*pi;
    f2->SetParameter(0,TMath::Cos(t));
    phi += 2;

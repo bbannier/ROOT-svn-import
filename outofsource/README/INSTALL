@@ -9,7 +9,7 @@ Contents:
 	3.    Choosing the installation method
 	3.1.  Environment driven build
 	3.2.  Fixed locations build
-	3.2.  Redhat packages
+	3.3.  Redhat packages
 	3.4.  Debian GNU/Linux packages
 	4.    Installation Location
 	5.    Makefile targets
@@ -197,7 +197,7 @@ libraries.
         rehash
         root
 
-3.2. Redhat packages:
+3.3. Redhat packages:
 ---------------------
 Get the sources for a specific release from Subversion or from a tar-ball, as
 outlined above and cd into the source directory. Then just do
@@ -778,7 +778,7 @@ containing Globus lib, include and bin. For compilation purposes
 you can pass this directory to the configure script with the option
 --with-globus-dir=<globus_dir>. An experimental path is available
 for versions 2.2.3 and 2.2.4 of the Globus Tool Kit to fix a small
-bug preventing full fonctionallity of the root implementation; this
+bug preventing full functionallity of the root implementation; this
 is activated by setting --with-globus-patch-dir=<globus_src_dir>
 where <globus_src_dir> is the globus tool kit source,
 

@@ -1,5 +1,4 @@
-// Example macro describing how to use
-// different kinds of Bessel functions
+// Show the different kinds of Bessel functions available in ROOT 
 // To execute the macro type in:
 //
 // root[0]: .x Bessel.C 
@@ -29,7 +28,8 @@ void Bessel()
 {
   gSystem->Load("libMathMore");
 
-  TCanvas *DistCanvas = new TCanvas("DistCanvas", "Bessel functions example", 10, 10, 1000, 800);  
+  TCanvas *DistCanvas = new TCanvas("DistCanvas", 
+     "Bessel functions example", 10, 10, 1000, 800);  
   DistCanvas->SetFillColor(17);
   DistCanvas->Divide(2, 2);
   DistCanvas->cd(1);
@@ -38,7 +38,6 @@ void Bessel()
   TLegend *leg = new TLegend(0.75, 0.7, 0.89, 0.89); 
 
   int n = 5;//number of functions in each pad
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //drawing the set of Bessel J functions   
   TF1* JBessel[5];
   for(int nu = 0; nu < n; nu++)
@@ -55,7 +54,8 @@ void Bessel()
   JBessel[0]->GetXaxis()->SetTitleOffset(.7);
 
   //setting the title in a label style
-  TPaveLabel *p1 = new TPaveLabel(.0,.90 , (.0+.50),(.90+.10) ,"Bessel J functions", "NDC");
+  TPaveLabel *p1 = new TPaveLabel(.0,.90 , (.0+.50),(.90+.10) ,
+     "Bessel J functions", "NDC");
 p1->SetFillColor(0);
 p1->SetTextFont(22);
 p1->SetTextColor(kBlack);
@@ -70,13 +70,13 @@ p1->SetTextColor(kBlack);
   leg->Draw();
   p1->Draw();
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    DistCanvas->cd(2);
    gPad->SetGrid();
    gPad->SetFrameFillColor(19);
 
    TLegend *leg2 = new TLegend(0.75, 0.7, 0.89, 0.89); 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //Drawing Bessel k  
    TF1* KBessel[5];
    for(int nu = 0; nu < n; nu++)
@@ -93,7 +93,8 @@ p1->SetTextColor(kBlack);
     KBessel[0]->GetXaxis()->SetTitleOffset(.7);
 
     //setting title
-    TPaveLabel *p2 = new TPaveLabel(.0,.90 , (.0+.50),(.90+.10) ,"Bessel K functions", "NDC");
+    TPaveLabel *p2 = new TPaveLabel(.0,.90 , (.0+.50),(.90+.10) ,
+       "Bessel K functions", "NDC");
     p2->SetFillColor(0);
     p2->SetTextFont(22);
     p2->SetTextColor(kBlack);
@@ -110,12 +111,12 @@ p1->SetTextColor(kBlack);
 
     leg2->Draw();
     p2->Draw();
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    DistCanvas->cd(3);
    gPad->SetGrid();
    gPad->SetFrameFillColor(19);
    TLegend *leg3 = new TLegend(0.75, 0.7, 0.89, 0.89); 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  //Drawing Bessel i     
    TF1* iBessel[5];
    for(int nu = 0; nu <= 4; nu++)
@@ -133,7 +134,8 @@ p1->SetTextColor(kBlack);
     iBessel[0]->GetXaxis()->SetTitleOffset(.7);
 
     //setting title
-    TPaveLabel *p3 = new TPaveLabel(.0,.90 , (.0+.50),(.90+.10) ,"Bessel I functions", "NDC");
+    TPaveLabel *p3 = new TPaveLabel(.0,.90 , (.0+.50),(.90+.10) ,
+       "Bessel I functions", "NDC");
     p3->SetFillColor(0);
     p3->SetTextFont(22);
     p3->SetTextColor(kBlack);
@@ -150,14 +152,14 @@ p1->SetTextColor(kBlack);
     //iBessel[0]->Draw();
     leg3->Draw();
     p3->Draw();
- //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
    DistCanvas->cd(4);
    gPad->SetGrid();
    gPad->SetFrameFillColor(19);
    TLegend *leg4 = new TLegend(0.75, 0.7, 0.89, 0.89); 
 
-  //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++   
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    //drawing sph_bessel
    TF1* jBessel[5];
    for(int nu = 0; nu <= 4; nu++)
@@ -174,7 +176,8 @@ p1->SetTextColor(kBlack);
     jBessel[0]->GetXaxis()->SetTitleOffset(.7);
 
     //setting title
-    TPaveLabel *p4 = new TPaveLabel(.0,.90 , (.0+.50),(.90+.10) ,"Bessel j functions", "NDC");
+    TPaveLabel *p4 = new TPaveLabel(.0,.90 , (.0+.50),(.90+.10) ,
+       "Bessel j functions", "NDC");
     p4->SetFillColor(0);
     p4->SetTextFont(22);
     p4->SetTextColor(kBlack);

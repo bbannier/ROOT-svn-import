@@ -1,4 +1,4 @@
-// Example macro describing how to use the special mathematical functions
+// Example showing the usage of the major special math functions  (gamma, beta, erf)  in ROOT
 // To execute the macro type in:
 //
 // root[0]: .x GammaFun.C 
@@ -60,7 +60,7 @@ h->GetXaxis()->SetTitle("x");
 
 h->Draw(); 
 
-// draw the funcitions 3 times in the separate ranges to avoid singularities 
+// draw the functions 3 times in the separate ranges to avoid singularities 
 f1a->SetLineWidth(2);
 f1a->SetLineColor(kBlue);
 

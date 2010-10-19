@@ -1,3 +1,4 @@
+// Illustrates how to find peaks in histograms.
 // This script generates a random number of gaussian peaks
 // on top of a linear background.
 // The position of the peaks is found via TSpectrum and injected
@@ -9,13 +10,14 @@
 //  root > .x peaks.C++ (use the compiler)
 //  root > .x peaks.C++(30) (generates 30 peaks)
 //
-// To execute only the first part of teh script (without fitting)
+// To execute only the first part of the script (without fitting)
 // specify a negative value for the number of peaks, eg
 //  root > .x peaks.C(-20)
 //
 //Author: Rene Brun
 
 #include "TCanvas.h"
+#include "TMath.h"
 #include "TH1.h"
 #include "TF1.h"
 #include "TRandom.h"
@@ -61,7 +63,7 @@ void peaks(Int_t np=10) {
    printf("Found %d candidate peaks to fit\n",nfound);
    //Estimate background using TSpectrum::Background
    TH1 *hb = s->Background(h,20,"same");
-   c1->Update();
+   if (hb) c1->Update();
    if (np <0) return;
 
    //estimate linear background using a fitting method
@@ -86,7 +88,8 @@ void peaks(Int_t np=10) {
    printf("Found %d useful peaks to fit\n",npeaks);
    printf("Now fitting: Be patient\n");
    TF1 *fit = new TF1("fit",fpeaks,0,1000,2+3*npeaks);
-   TVirtualFitter::Fitter(h2,10+3*npeaks); //we may have more than the default 25 parameters
+   //we may have more than the default 25 parameters
+   TVirtualFitter::Fitter(h2,10+3*npeaks);
    fit->SetParameters(par);
    fit->SetNpx(1000);
    h2->Fit("fit");             

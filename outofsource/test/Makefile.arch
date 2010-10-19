@@ -15,7 +15,7 @@ ALTCXX       := $(shell $(ROOTCONFIG) --cxx)
 ALTF77       := $(shell $(ROOTCONFIG) --f77)
 ALTLD        := $(shell $(ROOTCONFIG) --ld)
 
-CXX           =
+#CXX           =
 ObjSuf        = o
 SrcSuf        = cxx
 ExeSuf        =
@@ -40,6 +40,8 @@ ROOTLDFLAGS  := $(shell $(ROOTCONFIG) --ldflags)
 ROOTLIBS     := $(shell $(ROOTCONFIG) --libs)
 ROOTGLIBS    := $(shell $(ROOTCONFIG) --glibs)
 HASTHREAD    := $(shell $(ROOTCONFIG) --has-thread)
+ROOTDICTTYPE := $(shell $(ROOTCONFIG) --dicttype)
+ROOTCINT     := rootcint
 
 ifeq ($(ARCH),hpuxacc)
 # HP-UX 10.x with aCC
@@ -126,6 +128,15 @@ LDFLAGS       = $(OPT)
 SOFLAGS       = -G
 endif
 
+ifeq ($(ARCH),solaris64CC5)
+# Solaris CC 5.0 64-bit
+CXX           = CC
+CXXFLAGS      = $(OPT) -KPIC
+LD            = CC
+LDFLAGS       = $(OPT)
+SOFLAGS       = -G
+endif
+
 ifeq ($(ARCH),solarisgcc)
 # Solaris gcc
 CXX           = g++
@@ -133,24 +144,6 @@ CXXFLAGS      = $(OPT) -fPIC
 LD            = g++
 LDFLAGS       = $(OPT)
 SOFLAGS       = -shared
-endif
-
-ifeq ($(ARCH),solariskcc)
-# Solaris kcc
-CXX           = KCC --one_instantiation_per_object
-CXXFLAGS      = -O4 -KPIC
-LD            = KCC
-LDFLAGS       = -O4
-SOFLAGS       =
-endif
-
-ifeq ($(ARCH),solarisx86)
-# Solaris CC on Intel
-CXX           = CC
-CXXFLAGS      = $(OPT) -KPIC
-LD            = CC
-LDFLAGS       = $(OPT)
-SOFLAGS       = -G
 endif
 
 ifeq ($(ARCH),sgicc)
@@ -189,30 +182,12 @@ LDFLAGS       = $(OPT) -L/usr/lib32 -Wl,-woff,134 -lgen
 SOFLAGS       = -shared
 endif
 
-ifeq ($(ARCH),sgikcc)
-# SGI with KCC
-CXX           = KCC -n32 --one_instantiation_per_object
-CXXFLAGS      = $(OPT)
-LD            = KCC -n32
-LDFLAGS       = $(OPT)
-SOFLAGS       =
-endif
-
 ifeq ($(ARCH),alphagcc)
 # Alpha/OSF with gcc
 CXX           = g++
 CXXFLAGS      = $(OPT2) -Wall -fPIC
 LD            = g++
 LDFLAGS       = $(OPT2)
-SOFLAGS       = -Wl,-expect_unresolved,* -shared
-endif
-
-ifeq ($(ARCH),alphakcc)
-# Alpha/OSF with kai compiler (not yet valid)
-CXX           = KCC --one_instantiation_per_object
-CXXFLAGS      = $(OPT) -fPIC
-LD            = KCC
-LDFLAGS       = $(OPT)
 SOFLAGS       = -Wl,-expect_unresolved,* -shared
 endif
 
@@ -225,15 +200,6 @@ LDFLAGS       = $(OPT)
 SOFLAGS       = -shared -nocxxstd -Wl,-expect_unresolved,*,-msym
 endif
 
-ifeq ($(ARCH),linuxdeb2ppc)
-# Debian/Linux on the PowerPC
-CXX           = g++
-CXXFLAGS      = $(OPT2) -Wall -fPIC
-LD            = g++
-LDFLAGS       = $(OPT2)
-SOFLAGS       = -shared
-endif
-
 ifeq ($(ARCH),linux)
 # Linux with egcs, gcc 2.9x, gcc 3.x
 CXX           = g++
@@ -241,15 +207,6 @@ CXXFLAGS      = $(OPT2) -Wall -fPIC
 LD            = g++
 LDFLAGS       = $(OPT2)
 SOFLAGS       = -shared
-endif
-
-ifeq ($(ARCH),linuxkcc)
-# Linux with the KAI compiler
-CXX           = KCC --one_instantiation_per_object
-CXXFLAGS      = $(OPT) -fPIC +K0
-LD            = KCC
-LDFLAGS       = $(OPT) $(shell $(ROOTCONFIG) --cflags)
-SOFLAGS       =
 endif
 
 ifeq ($(ARCH),linuxicc)
@@ -280,15 +237,6 @@ CXX           = g++
 CXXFLAGS      = $(OPT2) -Wall -fPIC
 LD            = g++
 LDFLAGS       = $(OPT2)
-SOFLAGS       = -shared
-endif
-
-ifeq ($(ARCH),linuxia64sgi)
-# Itanium Linux with sgiCC
-CXX           = sgiCC
-CXXFLAGS      = $(OPT) -Wall -fPIC
-LD            = gsgiCC
-LDFLAGS       = $(OPT)
 SOFLAGS       = -shared
 endif
 
@@ -386,6 +334,15 @@ LDFLAGS       = $(OPT)
 SOFLAGS       = -shared -Wl,-x
 endif
 
+ifeq ($(ARCH),freebsd7)
+# FreeBSD with libc
+CXX           = g++
+CXXFLAGS      = $(OPT) -W -Wall -fPIC
+LD            = $(CXX)
+LDFLAGS       = $(OPT)
+SOFLAGS       = -shared -Wl,-x
+endif
+
 ifeq ($(ARCH),openbsd)
 # OpenBSD with libc
 CXX           = g++
@@ -398,33 +355,40 @@ endif
 ifeq ($(ARCH),macosx)
 # MacOS X with cc (GNU cc 2.95.2 and gcc 3.3)
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
+ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
-ifeq ($(MACOSX_MINOR),5)
-MACOSX_MINOR  = 4
+else
+MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET)
 endif
-CXX           = c++
+CXX           = g++
 CXXFLAGS      = $(OPT2) -pipe -Wall -W -Woverloaded-virtual
-LD            = $(MACOSXTARGET) c++
-LDFLAGS       = $(OPT2) -bind_at_load
+LD            = $(MACOSXTARGET) g++
+LDFLAGS       = $(OPT2)
 # The SOFLAGS will be used to create the .dylib,
 # the .so will be created separately
+ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
+DllSuf        = so
+else
 DllSuf        = dylib
+endif
 UNDEFOPT      = dynamic_lookup
-ifneq ($(MACOSX_MINOR),4)
-ifneq ($(MACOSX_MINOR),3)
+ifneq ($(subst $(MACOSX_MINOR),,12),12)
 UNDEFOPT      = suppress
-LD            = c++
+LD            = g++
 endif
-endif
-SOFLAGS       = -dynamiclib -single_module -undefined $(UNDEFOPT)
+SOFLAGS       = -dynamiclib -single_module -undefined $(UNDEFOPT) -install_name $(CURDIR)/
 endif
 
 ifeq ($(ARCH),macosxicc)
 # MacOS X with Intel icc compiler
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
+ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
+else
+MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET)
+endif
 ifeq ($(MACOSX_MINOR),5)
-MACOSX_MINOR  = 4
+MACOSX_MINOR := 4
 endif
 CXX           = icc
 CXXFLAGS      = $(OPT) -fPIC -wd1476
@@ -432,34 +396,44 @@ LD            = $(MACOSXTARGET) icpc
 LDFLAGS       = $(OPT)
 # The SOFLAGS will be used to create the .dylib,
 # the .so will be created separately
+ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
+DllSuf        = so
+else
 DllSuf        = dylib
-SOFLAGS       = -dynamiclib -single_module -undefined dynamic_lookup
+endif
+SOFLAGS       = -dynamiclib -single_module -undefined dynamic_lookup -install_name $(CURDIR)/
 endif
 
 ifeq ($(ARCH),macosx64)
 # MacOS X >= 10.4 with gcc 64 bit mode (GNU gcc 4.*)
 # Only specific option (-m64) comes from root-config
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
+ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
-ifeq ($(MACOSX_MINOR),5)
-MACOSX_MINOR  = 4
+else
+MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET)
 endif
-CXX           = c++
+CXX           = g++
 CXXFLAGS      = $(OPT2) -pipe -Wall -W -Woverloaded-virtual
-LD            = $(MACOSXTARGET) c++ -m64
-LDFLAGS       = $(OPT2) -bind_at_load
+LD            = $(MACOSXTARGET) g++
+LDFLAGS       = $(OPT2)
 # The SOFLAGS will be used to create the .dylib,
 # the .so will be created separately
+ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
+DllSuf        = so
+else
 DllSuf        = dylib
-SOFLAGS       = -m64 -dynamiclib -single_module -undefined dynamic_lookup
+endif
+SOFLAGS       = -dynamiclib -single_module -undefined dynamic_lookup -install_name $(CURDIR)/
 endif
 
 ifeq ($(ARCH),macosxxlc)
 # MacOS X with IBM xlC compiler
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
+ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
-ifeq ($(MACOSX_MINOR),5)
-MACOSX_MINOR  = 4
+else
+MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET)
 endif
 CXX           = xlC
 CXXFLAGS      = $(OPT)
@@ -469,18 +443,16 @@ LDFLAGS       = $(OPT) -Wl,-bind_at_load
 # the .so will be created separately
 DllSuf        = dylib
 UNDEFOPT      = dynamic_lookup
-ifneq ($(MACOSX_MINOR),4)
-ifneq ($(MACOSX_MINOR),3)
+ifneq ($(subst $(MACOSX_MINOR),,12),12)
 UNDEFOPT      = suppress
 LD            = xlC
 endif
-endif
-SOFLAGS       = -qmkshrobj -single_module -undefined $(UNDEFOPT)
+SOFLAGS       = -qmkshrobj -single_module -undefined $(UNDEFOPT) -install_name $(CURDIR)/
 endif
 
 ifeq ($(ARCH),win32)
 # Windows with the VC++ compiler
-VC_MAJOR     := $(shell unset VS_UNICODE_OUTPUT; cl.exe 2>&1 | awk '{ if (NR==1) print $$8 }' | \
+VC_MAJOR     := $(shell unset VS_UNICODE_OUTPUT; cl.exe 2>&1 | awk '{ if (NR==1) print $$(NF-2) }' | \
                 cut -d'.' -f1)
 ObjSuf        = obj
 SrcSuf        = cxx
@@ -500,13 +472,14 @@ CXXOPT        = -O2
 LDOPT         = -opt:ref
 endif
 endif
-CXXFLAGS      = $(CXXOPT) -nologo -I$(shell $(ROOTCONFIG) --incdir) -FIw32pragma.h
+ROOTINCDIR   := -I$(shell cygpath -m `$(ROOTCONFIG) --incdir`)
+CXXFLAGS      = $(CXXOPT) -nologo $(ROOTINCDIR) -FIw32pragma.h
 LD            = link
 LDFLAGS       = $(LDOPT) -nologo
 SOFLAGS       = -DLL
 
 EXPLLINKLIBS  = $(ROOTLIBS) $(ROOTGLIBS)
-ifneq (,$(findstring $(VC_MAJOR),14 15))
+ifneq (,$(findstring $(VC_MAJOR),14 15 16))
 MT_EXE        = mt -nologo -manifest $@.manifest -outputresource:$@\;1; rm -f $@.manifest
 MT_DLL        = mt -nologo -manifest $@.manifest -outputresource:$@\;2; rm -f $@.manifest
 else
@@ -522,9 +495,11 @@ ExeSuf        = .exe
 CXX           = g++
 CXXFLAGS      = $(OPT) -pipe -Wall -Woverloaded-virtual -I/usr/X11R6/include
 LD            = g++
-LDFLAGS       = $(OPT) -Wl,--enable-auto-import -Wl,--enable-runtime-pseudo-reloc \
+LDFLAGS       = $(OPT) -Wl,--enable-auto-import \
+                -Wl,--enable-runtime-pseudo-reloc \
 		-L/usr/X11R6/lib
-SOFLAGS       = -shared -D_DLL -Wl,--export-all-symbols
+SOFLAGS       = -shared -Wl,--enable-auto-image-base \
+                -Wl,--export-all-symbols
 EXPLLINKLIBS  = $(ROOTLIBS) $(ROOTGLIBS)
 endif
 
@@ -548,4 +523,9 @@ ifneq ($(ALTF77),)
 endif
 ifneq ($(ALTLD),)
    LD  = $(ALTLD)
+endif
+
+ifneq ($(findstring g++, $(CXX)),)
+GCC_MAJOR := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f1)
+GCC_MINOR := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
 endif

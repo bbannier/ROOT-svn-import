@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$   
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// @(#)root/tmva $Id$
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -17,9 +17,9 @@
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
- *      U. of Victoria, Canada                                                    * 
- *      MPI-K Heidelberg, Germany                                                 * 
+ *      CERN, Switzerland                                                         *
+ *      U. of Victoria, Canada                                                    *
+ *      MPI-K Heidelberg, Germany                                                 *
  *      LAPP, Annecy, France                                                      *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -38,51 +38,70 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#ifndef ROOT_TObject
 #include "TObject.h"
-
+#endif
+#ifndef ROOT_TString
+#include "TString.h"
+#endif
+#include <iosfwd>
+#ifndef ROOT_Rtypes
+#include "Rtypes.h"
+#endif
 #ifndef ROOT_TMVA_Types
 #include "TMVA/Types.h"
 #endif
 
+class TString;
+
 namespace TMVA {
 
    class Ranking;
-   
-   class IMethod : public virtual TObject {
-      
+   class MethodBoost;
+
+   class IMethod {
+
    public:
-      
+
       // default constructur
-      IMethod() : TObject() {}
-      
+      IMethod() {}
+
       // default destructur
       virtual ~IMethod() {}
 
       // ------- virtual member functions to be implemented by each MVA method
+      // the name of the method
+      virtual const char *GetName() const = 0;
 
-      // calculate the MVA value
-      virtual Double_t GetMvaValue() = 0;
+      // calculate the MVA value - some methods may return a per-event error estimate (unless: *err = -1)
+      virtual Double_t GetMvaValue( Double_t* err = 0 ) = 0;
 
       // training method
       virtual void Train( void ) = 0;
 
-      // write weights to output stream
-      virtual void WriteWeightsToStream( std::ostream& ) const = 0;
-
       // read weights from output stream
       virtual void ReadWeightsFromStream( std::istream& ) = 0;
-      
+
       // write method specific monitoring histograms to target file
       virtual void WriteMonitoringHistosToFile( void ) const = 0;
 
       // make ROOT-independent C++ class for classifier response
-      virtual void MakeClass( const TString& classFileName = "" ) const = 0;
+      virtual void MakeClass( const TString& classFileName = TString("") ) const = 0;
 
       // create ranking
       virtual const Ranking* CreateRanking() = 0;
 
       // print help message
       virtual void PrintHelpMessage() const = 0;
+
+      // perfrom extra actions during the boosting at different stages
+      virtual Bool_t MonitorBoost( MethodBoost* boost) = 0;
+
+      virtual void Init() = 0;
+      virtual void DeclareOptions() = 0;
+      virtual void ProcessOptions() = 0;
+
+      virtual Bool_t HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t numberTargets ) = 0;
 
    protected:
 

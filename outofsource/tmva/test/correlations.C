@@ -7,21 +7,32 @@
 // input: - Input file (result from TMVA),
 //        - use of colors or grey scale
 //        - use of TMVA plotting TStyle
-void correlations( TString fin = "TMVA.root", Bool_t greyScale = kFALSE, Bool_t useTMVAStyle = kTRUE )
+void correlations( TString fin = "TMVA.root", Bool_t isRegression = kFALSE, 
+                   Bool_t greyScale = kFALSE, Bool_t useTMVAStyle = kTRUE )
 {
+
    // set style and remove existing canvas'
    TMVAGlob::Initialize( useTMVAStyle );
 
    // checks if file with name "fin" is already open, and if not opens one
    TFile* file = TMVAGlob::OpenFile( fin );  
 
-   // signal and background
-   const TString hName[2] = { "CorrelationMatrixS", "CorrelationMatrixB" };
+   // signal and background or regression problem
+   Int_t ncls = (isRegression ? 1 : 2 );
+   TString hName[2] = { "CorrelationMatrixS", "CorrelationMatrixB" };
+   if (isRegression) hName[0]= "CorrelationMatrix";
    const Int_t width = 600;
-   for (Int_t ic=0; ic<2; ic++) {
+   for (Int_t ic=0; ic<ncls; ic++) {
+
+      TH2* h2 = file->Get( hName[ic] );
+      if(!h2) {
+         cout << "Did not find histogram " << hName[ic] << " in " << fin << endl;
+         continue;
+      }
 
       TCanvas* c = new TCanvas( hName[ic], 
-                                Form("Correlations between MVA input variables (%s)", (ic==0?"signal":"background")), 
+                                Form("Correlations between MVA input variables (%s)", 
+                                     (isRegression ? "" : (ic==0 ? "signal" : "background"))), 
                                 ic*(width+5)+200, 0, width, width ); 
       Float_t newMargin1 = 0.13;
       Float_t newMargin2 = 0.15;
@@ -35,7 +46,6 @@ void correlations( TString fin = "TMVA.root", Bool_t greyScale = kFALSE, Bool_t 
       c->SetTopMargin   ( newMargin1 );
       gStyle->SetPalette( 1, 0 );
 
-      TH2* h2 = file->Get( hName[ic] );
 
       gStyle->SetPaintTextFormat( "3g" );
 

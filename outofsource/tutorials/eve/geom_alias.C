@@ -1,5 +1,7 @@
-// Demonstates usage of geometry aliases.
-// Merge ALICE ITS with ATLAS MUON.
+// @(#)root/eve:$Id$
+// Author: Matevz Tadel
+
+// Demonstates usage of geometry aliases - merge ALICE ITS with ATLAS MUON.
 
 void geom_alias()
 {
@@ -27,6 +29,10 @@ void geom_alias()
 
    // EClipType not exported to CINT (see TGLUtil.h):
    // 0 - no clip, 1 - clip plane, 2 - clip box
-   gEve->GetGLViewer()->GetClipSet()->SetClipType(2);
-   gEve->GetGLViewer()->RefreshPadEditor(gEve->GetGLViewer());
+   TGLViewer *v = gEve->GetDefaultGLViewer();
+   v->GetClipSet()->SetClipType(2);
+   v->RefreshPadEditor(v);
+
+   v->CurrentCamera().RotateRad(-0.5, -2.4);
+   v->DoDraw();
 }

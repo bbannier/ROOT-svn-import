@@ -56,7 +56,6 @@ TMVA::MinuitFitter::MinuitFitter( IFitterTarget& target,
 TMVA::MinuitFitter::~MinuitFitter( )
 {
    // destructor
-   fLogger << kINFO << "d" << Endl;
    delete fMinWrap;
 }
 
@@ -65,15 +64,15 @@ void TMVA::MinuitFitter::DeclareOptions()
 {
    // declare SA options
 
-   DeclareOptionRef(fErrorLevel    =  1,     "ErrorLevel",    "MINUIT: error level: 0.5=logL fit, 1=chi-squared fit" );
-   DeclareOptionRef(fPrintLevel    = -1,     "PrintLevel",    "MINUIT: output level: -1=least, 0, +1=all garbage" );
-   DeclareOptionRef(fFitStrategy   = 2,      "FitStrategy",   "MINUIT: fit strategy: 2=best" );
-   DeclareOptionRef(fPrintWarnings = kFALSE, "PrintWarnings", "MINUIT: suppress warnings" );
-   DeclareOptionRef(fUseImprove    = kTRUE,  "UseImprove",    "MINUIT: use IMPROVE routine" );
-   DeclareOptionRef(fUseMinos      = kTRUE,  "UseMinos",      "MINUIT: use MINOS routine" );  
-   DeclareOptionRef(fBatch         = kFALSE, "SetBatch",      "MINUIT: use batch mode" );  
-   DeclareOptionRef(fMaxCalls      = 1000,   "MaxCalls",      "MINUIT: approximate maximum number of function calls" );
-   DeclareOptionRef(fTolerance     = 0.1,    "Tolerance",     "MINUIT: tolerance to the function value at the minimum" );
+   DeclareOptionRef(fErrorLevel    =  1,     "ErrorLevel",    "TMinuit: error level: 0.5=logL fit, 1=chi-squared fit" );
+   DeclareOptionRef(fPrintLevel    = -1,     "PrintLevel",    "TMinuit: output level: -1=least, 0, +1=all garbage" );
+   DeclareOptionRef(fFitStrategy   = 2,      "FitStrategy",   "TMinuit: fit strategy: 2=best" );
+   DeclareOptionRef(fPrintWarnings = kFALSE, "PrintWarnings", "TMinuit: suppress warnings" );
+   DeclareOptionRef(fUseImprove    = kTRUE,  "UseImprove",    "TMinuit: use IMPROVE" );
+   DeclareOptionRef(fUseMinos      = kTRUE,  "UseMinos",      "TMinuit: use MINOS" );  
+   DeclareOptionRef(fBatch         = kFALSE, "SetBatch",      "TMinuit: use batch mode" );  
+   DeclareOptionRef(fMaxCalls      = 1000,   "MaxCalls",      "TMinuit: approximate maximum number of function calls" );
+   DeclareOptionRef(fTolerance     = 0.1,    "Tolerance",     "TMinuit: tolerance to the function value at the minimum" );
 }
 
 //_______________________________________________________________________
@@ -83,7 +82,7 @@ void TMVA::MinuitFitter::Init()
    Double_t args[10];
 
    // Execute fitting
-   if (!fBatch) fLogger << kINFO << "<MinuitFitter> Init " << Endl;
+   if (!fBatch) Log() << kINFO << "<MinuitFitter> Init " << Endl;
 
    // timing of MC   
    Timer timer;
@@ -125,23 +124,23 @@ Double_t TMVA::MinuitFitter::Run( std::vector<Double_t>& pars )
    Double_t args[10];
 
    // Execute fitting
-   if ( !fBatch ) fLogger << kINFO << "<MinuitFitter> Fitting, please be patient ... " << Endl;
+   if ( !fBatch ) Log() << kINFO << "<MinuitFitter> Fitting, please be patient ... " << Endl;
 
    // sanity check
    if ((Int_t)pars.size() != GetNpars())
-      fLogger << kFATAL << "<Run> Mismatch in number of parameters: (a)"
+      Log() << kFATAL << "<Run> Mismatch in number of parameters: (a)"
               << GetNpars() << " != " << pars.size() << Endl;
 
    // timing of MC   
    Timer* timer = 0;
-   if ( !fBatch ) timer = new Timer();
+   if (!fBatch) timer = new Timer();
 
    // define fit parameters
    for (Int_t ipar=0; ipar<fNpars; ipar++) {
       fMinWrap->SetParameter( ipar, Form( "Par%i",ipar ), 
-                                 pars[ipar], fRanges[ipar]->GetWidth()/100.0, 
-                                 fRanges[ipar]->GetMin(), fRanges[ipar]->GetMax() );      
-      if ( fRanges[ipar]->GetWidth() == 0. ) fMinWrap->FixParameter( ipar );
+                              pars[ipar], fRanges[ipar]->GetWidth()/100.0, 
+                              fRanges[ipar]->GetMin(), fRanges[ipar]->GetMax() );      
+      if (fRanges[ipar]->GetWidth() == 0.0) fMinWrap->FixParameter( ipar );
    }
 
    // --------- execute the fit
@@ -172,7 +171,7 @@ Double_t TMVA::MinuitFitter::Run( std::vector<Double_t>& pars )
 
    // sanity check
    if (GetNpars() != nparx) {
-      fLogger << kFATAL << "<Run> Mismatch in number of parameters: "
+      Log() << kFATAL << "<Run> Mismatch in number of parameters: "
               << GetNpars() << " != " << nparx << Endl;
    }
 
@@ -188,7 +187,7 @@ Double_t TMVA::MinuitFitter::Run( std::vector<Double_t>& pars )
 
    // get elapsed time   
    if (!fBatch) { 
-      fLogger << kINFO << "Elapsed time: " << timer->GetElapsedTime() 
+      Log() << kINFO << "Elapsed time: " << timer->GetElapsedTime() 
            << "                            " << Endl;  
       delete timer;
    }

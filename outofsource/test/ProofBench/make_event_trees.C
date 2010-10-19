@@ -46,7 +46,7 @@ Bool_t make_event_trees(const char *basedir, Int_t events_per_file,
    slavemacro << "#include \"TFile.h\""                                                   << endl;
    slavemacro << "#include \"TTree.h\""                                                   << endl;
    slavemacro << "#include \"Riostream.h\""                                               << endl;
-   slavemacro << "#include \"Event.h\""                                                   << endl;
+   slavemacro << "#include \"event/Event.h\""                                                   << endl;
    slavemacro << "void build_trees(const char *basedir, Int_t nevents, Int_t nfiles) {" << endl;
    slavemacro << "   Int_t slave_number = -1;"                                            << endl;
    slavemacro << "   Int_t nslaves = 0;"                                                  << endl;
@@ -66,6 +66,11 @@ Bool_t make_event_trees(const char *basedir, Int_t events_per_file,
       slavemacro << si->fOrdinal;
       slavemacro << "\") slave_number = nslaves; }" << endl;
    }
+
+   slavemacro << "  if (gSystem->AccessPathName(basedir)) {"                              << endl;
+   slavemacro << "     Printf(\"No such file or directory: %s\", basedir);"               << endl;
+   slavemacro << "     return;"                                                           << endl;
+   slavemacro << "  }"                                                                    << endl;
    slavemacro <<                                                                             endl;
    slavemacro << "   if (slave_number >= 0) {"                                            << endl;
    slavemacro << "      for(Int_t i=slave_number; i<=nfiles; i+=nslaves) {"               << endl;
@@ -83,7 +88,7 @@ Bool_t make_event_trees(const char *basedir, Int_t events_per_file,
    slavemacro << "         TFile *f = TFile::Open(filename, \"RECREATE\");"               << endl;
    slavemacro << "         savedir->cd();"                                                << endl;
    slavemacro <<                                                                             endl;
-   slavemacro << "         if (f->IsZombie()) break;"                                     << endl;
+   slavemacro << "         if (!f || f->IsZombie()) break;"                               << endl;
    slavemacro << "         Event event;"                                                  << endl;
    slavemacro << "         Event *ep = &event;"                                           << endl;
    slavemacro << "         TTree eventtree(\"EventTree\", \"Event Tree\");"               << endl;
@@ -117,15 +122,15 @@ Bool_t make_event_trees(const char *basedir, Int_t events_per_file,
 
    slavemacro.close();
 
-   TString cmd = ".x build_trees.C+(\"";
+   gProof->Load("build_trees.C+");
+
+   TString cmd = "build_trees(\"";
    cmd += basedir;
    cmd += "\",";
    cmd += events_per_file;
    cmd += ",";
    cmd += files_per_node;
    cmd += ")";
-
-   cout << "Running: '" << cmd << "' (please be patient!)" << endl;
 
    if (gProof->Exec(cmd)<0) return kFALSE;
 

@@ -15,13 +15,17 @@ N: Roel Aaij
 E: raaij@nikhef.nl
 D: contribution to GUI classes
 
-N: Mohammad AL-Turany
+N: Mohammad Al-Turany
 E: m.al-turany@gsi.de
 D: QTGSI classes
 
 N: Eric Anciant
 E: eric.anciant@sodern.fr
 D: TQuaternion class
+
+N: Aberto Annovi
+E: alberto.annovi@lnf.infn.it
+D: speed-up of TH1::FillRandom when source & destination have identical parameters
 
 N: Ilka Antcheva
 E: Ilka.Antcheva@cern.ch
@@ -53,6 +57,14 @@ N: Daniel Barna
 E: daniel.barna@cern.ch
 D: CINT install target
 
+N: Jean-Francois Bastien
+E: jfbastien@cae.com
+D: contribution to Reflex
+
+N: Peter D Barnes
+E: pdbarnes@llnl.gov
+D: contribution to the matrix classes
+
 N: Guy Barrand
 E: barrand@lal.in2p3.fr
 D: contribution to GUI classes
@@ -77,6 +89,10 @@ D: TMath::BubbleHigh, TMath::BubbleLow
 N: Marek Biskup
 E: Marek.Biskup@cern.ch
 D: PROOF contributions
+
+N: Brian Bockelman
+E: bbockelm@math.unl.edu
+D: THDFSFile for accessing the Hadoop file system
 
 N: Sebastian Boeser
 E: sboeser@ifh.de
@@ -154,6 +170,10 @@ N: Ben Cowan
 E: benc@SLAC.Stanford.EDU
 D: port to MacOS X
 
+N: Kyle Cranmer
+E: cranmer@cern.ch
+D: contribution in RooStats
+
 N: Bastien Dallapiazza
 E: bastien.dallapiazza@epfl.ch
 D: TSpider, TParallelCoord classes
@@ -170,6 +190,7 @@ N: Jason Detwiler
 E: jasondet@gmail.com
 D: Implementation of class KelvinFunctions
 D: Implementation of multiple columns in TLegend class
+D: Implementation of TClonesArray::MultiSort
 
 N: Mat Dobbs
 E: Matthew.Adam.Dobbs@cern.ch
@@ -199,7 +220,7 @@ N: Denis Favre-Miville
 E: Denis.Favre-Miville@ensimag.imag.fr
 D: contribution to the GUI and graphics editors
 
-N: Andr� Felipe
+N: André Felipe
 E: (felipe.andre@gmail.com)
 D: CINT contributions
 
@@ -222,6 +243,10 @@ D: contribution of TFractionFitter class
 N: Valery Fine
 E: fine@bnl.gov
 D: Win95/NT port, OpenGL interface
+
+N: Lucie Flekova
+E: l.flekova@centrum.cz
+D: several improvements of the GUI Builder
 
 N: Leandro Franco
 E: Leandro.Franco.Londono@cern.ch
@@ -265,13 +290,13 @@ E: Mihaela.Gheata@cern.ch
 D: many contributions to the geometry package
 D: extension of g2root, author of stressgeom
 
+N: Mary-Louise Gill
+E: m.l.gill+cern@gmail.com
+D: editline terminal interface
+
 N: Thorsten Glebe
 E: T.Glebe@mpi-hd.mpg.de
 D: Original author of the Smatrix package
-
-N: Piotr Golonka
-E: Piotr.Golonka@cern.ch
-D: class TMCParticle
 
 N: Piotr Golonka
 E: Piotr.Golonka@cern.ch
@@ -281,14 +306,23 @@ N: Masaharu Goto
 E: MXJ02154@niftyserve.or.jp
 D: CINT C/C++ interpreter
 
+N: Roberto Gracia Del Baño
+E: cuboscombro@gmail.com
+D: Event Recorder
+
 N: Oleksandr Grebenyuk
 E: Oleksandr.Grebenyuk@gsi.de
+D: Major developments in TLatex and TPostScript text.
 D: OpenLDAP interface
 
 N: Kristjan Gulbrandsen
 E: gulbrand@mit.edu
 D: monitoring facility for PROOF
 D: Clarens and PEAC interfaces for PROOF
+
+N: Christian Gumpert
+E: christian.gumpert@mailbox.tu-dresden.de
+D: class TEfficiency and new TGraphAsymmErrors::Divide
 
 N: Andrew Haas
 E: haas@yahoo.com
@@ -297,7 +331,7 @@ D: implement TGraphAsymmErrors::BayesDivide and corresponding functions
 
 N: Daniel Haertl
 E: Daniel.Haertl@cern.ch
-D: Reimplemnt in C++ the original chi2test of Nikolai Gagunashvili
+D: Reimplement in C++ the original chi2test of Nikolai Gagunashvili
 
 N: Andy Hanushevsky
 E: abh@slac.stanford.edu
@@ -312,13 +346,17 @@ N: Miroslav Helbich
 E: helbich@mail.desy.de
 D: apply method in the TGraph classes
 
+N: Bill Heintzelman
+E: billh@hep.upenn.edu
+D: TTree::AutoFlush,Autosave improvements
+
 N: Marc Hemberger
 E: hemberg@clri6a.gsi.de
 D: contributions to the thread classes, SapDB interface
 
 N: Andreas Hoecker
 E: Andreas.Hoecker@cern.ch
-D: contribution to the TMVA package
+D: author of the TMVA package
 
 N: Carsten Hof
 E: Carsten_Hof@web.de
@@ -351,9 +389,17 @@ N: Stanislaw Jadach
 E: Stanislaw.jadach@ifj.edu.pl
 D: the FOAM classes
 
+N: Lukasz Janyst
+E: ljanyst@cern.ch
+D: split vector<T*> and schema evolution
+
 N: Luke Jones
 E: jones@netoffice.com
 D: class TGraphDelaunay
+
+N: Pierre Juillot
+E: juillot@in2p3.fr
+D: various contributions to the postscript driver
 
 N: Michal Kapalka
 E: kapalka@icslab.agh.edu.pl
@@ -387,6 +433,10 @@ N: Christian Lacunza
 E: lacunza@cdfsg5.lbl.gov
 D: TTabCom [TAB] command line expansion class, #1 bug reporter
 
+N: Alfio Lazzaro
+E: Alfio.Lazzaro@cern.ch
+D: Integrating Minuit2 in Roofit and adding support for MPI
+
 N: Wim Lavrijsen
 E: WLavrijsen@lbl.gov
 D: PyRoot package
@@ -416,6 +466,10 @@ N: Constantin Loizides
 E: loizides@MIT.EDU
 D: PROOF testing and debugging
 
+N: Johan Lundberg
+E: johan.lundberg@cern.ch
+D: Additions to the TRolke class
+
 N: Elaine Lyons
 E: unknown
 D: First versions of the Users Guide
@@ -423,6 +477,11 @@ D: First versions of the Users Guide
 N: Henry Maddocks
 E: ftgl@opengl.geek.nz
 D: FTGL package (http://homepages.paradise.net.nz/henryj/code/index.html#FTGL)
+
+N: Anar Manafov
+E: anar.manafov@gmail.com
+D: STL compatible iterators for ROOT collections
+D: gLite plugin, PROOF development
 
 N: David Gonzalez Maline
 E: firemanworld@gmail.com
@@ -435,6 +494,14 @@ D: Fundamental CINT call wrapper improvements
 N: John Marraffino
 E: marafino@fnal.gov
 D: improvements in TUnixSystem::StackTrace()
+
+N: Claudi Martinez
+E: claudi@astres.cat
+D: provided the fitsio module
+
+N: Andy Mastbaum
+E: mastbaum@lanl.gov
+D: implementation of TH1::Interpolate and TH2::Interpolate
 
 N: Jiri Masik
 E: Jiri.Masik@fzu.cz
@@ -453,6 +520,10 @@ D: OpenGL developments
 N: Grzegorz Mazur
 E: mazur@mail.desy.de
 D: class TDCacheFile, interface to DESY's dCache system
+
+N: Marco Meoni
+E: marco.meoni@cern.ch
+D: PROOF CPU quota, CAF and AliEn contributions
 
 N: Akiya Miyamoto
 E: akiya.miyamoto@kek.jp
@@ -524,6 +595,14 @@ D: implementation of Qt like signals and slots mechanism (TQObject,
 D: TQConnection, etc.)
 D: author of Carrot (http://carrot.cern.ch)
 
+N: Katerina Opocenska
+E: opocenska@gmail.com
+D: author of the Event Recorder
+
+N: Juan Palacios
+E: Juan.Palacios@cern.ch
+D: Contribution to symmetric representation of SMatrix classes
+
 N: Suzanne Panacek
 E: spanacek@fnal.gov
 D: editor of the User's Guide
@@ -541,6 +620,10 @@ N: Andreas Peters
 E: Andreas.Joachim.Peters@cern.ch
 D: TGrid extension and TAlien plugin
 D: TMonaLisa monitoring plugin
+
+N: Danilo Piparo
+E: Danilo.Piparo@cern.ch
+D: contribution in RooStats
 
 N: Filip Pizlo
 E: pizlo@purdue.edu
@@ -566,13 +649,13 @@ N: Miha Puc
 E: miha.puc@marvin.fmf.uni-lj.si
 D: contributed to TMath::Voigt
 
-N: Xavier Prudent
-E: prudent@lapp.in2p3.fr
-D: contributed to TMVA classes
-
 N: Gilles Quemener
 E: quemener@lpsc.in2p3.fr
 D: contributed to TMultiDimFit::EvalError function
+
+N: Bartolomeu Rabacal
+E: brabacal@cern.ch
+D: Math libraries: GoFTest and TKDE classes 
 
 N: Sven Ravndal
 E: Sven.Ravndal@dresdner-bank.com
@@ -602,6 +685,14 @@ N: Heiko Scheit
 E: Heiko.Scheit@mpi-hd.mpg.de
 D: improvements in TTreePlayer::DrawSelect()
 
+N: Manuel Schiller
+E: schiller@physi.uni-heidelberg.de
+D: contribution on the Cholesly decomposition in SMatrix
+
+N: Gregory Schoot
+E: Gregory.Schott@cern.ch
+D: Contributions in RooStats
+
 N: Jason Seely
 E: seely@mit.edu
 D: contribution to TH1::GetAsymmetry()
@@ -614,13 +705,29 @@ N: Evgenia Smirnova
 E: Evgenia.Smirnova@gsi.de
 D: OpenLDAP interface
 
+N: Stefan Schmitt
+E: sschmitt@mail.desy.de
+D: contribution to TUnfold class
+
+N: Tomasz Sosnicki
+E: tom.sosnicki@gmail.com
+D: contribution to gviz3d/TStructViewer
+
+N: Peter Speckmayer
+E: Peter.Speckmayer@cern.ch
+D: author of the TMVA package
+
 N: Abdelhalim Ssadik
 E: abdelhalim.ssadik@cern.ch
 D: contribution to GUI classes (TGDockableFrame)
 
 N: Joerg Stelzer
 E: Joerz.Stelzer@cern.ch
-D: contribution to the TMVA package
+D: author of the TMVA package
+
+N: Matthew Strait
+E: strait@physics.umn.edu
+D: Documentation improvements
 
 N: Christian Stratowa
 E: cstrato@EUnet.at
@@ -629,6 +736,10 @@ D: development of class TGraphSmooth + many suggestions
 N: Matevz Tadel
 E: Matevz.Tadel@cern.ch
 D: Several contributions to the 3-d graphics and GL interface
+
+N: Jan Therhaag
+E: therhaag@users.sourceforge.net
+D: author of the TMVA package
 
 N: Tim Tran
 E: timtran@jlab.org
@@ -662,17 +773,21 @@ N: Guido Volpi
 E: guido.volpi@pi.infn.it
 D: class TPie
 
+N: Eckhard von Toerne
+E: evt@physik.uni-bonn.de
+D: author of the TMVA package
+
 N: Helge Voss
 E: Helge.Voss@cern.ch
-D: contribution to the TMVA package
-
-N: Kai Voss
-E: Kai.Voss@cern.ch
-D: contribution to the TMVA package
+D: author of the TMVA package
 
 N: Shaowen Wang
-E: shaowen-wang@uiowa.edu 
+E: shaowen-wang@uiowa.edu
 D: TOracleResult
+
+N: Hady Zalek
+E: hady.zalek@gmail.com
+D: contributed to Reflex
 
 N: Andreas Zoglauer
 E: zog@mpe.mpg.de

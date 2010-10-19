@@ -12,6 +12,7 @@ LD=$4
 LDFLAGS=$5
 XLIBS=$6
 SYSLIBS=$7
+EXTRALIBS=$8
 
 ROOTALIB=lib/libRoot.a
 ROOTAEXE=bin/roota
@@ -19,27 +20,47 @@ PROOFAEXE=bin/proofserva
 
 rm -f $ROOTALIB $ROOTAEXE $PROOFAEXE
 
-excl="main proofd rootd rootx pythia pythia6 venus mysql pgsql rfio sapdb \
-      hbook newdelete table utils srputils krb5auth chirp dcache x11ttf \
-      alien asimage ldap pyroot qt qtroot quadp ruby vmc xml xmlparser gl \
-      roofit roofitcore oracle netx auth rpdutils mathmore minuit2 gfal monalisa \
-      proofx fftw qtgsi odbc castor unuran gdml cint7 g4root eve"
+excl="main proof/proofd net/rootd net/xrootd rootx montecarlo/pythia6 \
+      montecarlo/pythia8 sql/mysql sql/pgsql io/rfio sql/sapdb \
+      hist/hbook core/newdelete misc/table core/utils net/srputils \
+      net/krb5auth net/globusauth io/chirp io/dcache net/alien \
+      graf2d/asimage net/ldap graf2d/qt gui/qtroot math/quadp \
+      bindings/pyroot bindings/ruby tmva \
+      io/xmlparser graf3d/gl graf3d/ftgl roofit/roofit roofit/roofitcore \
+      roofit/roostats sql/oracle net/netx net/auth net/rpdutils math/mathmore \
+      math/minuit2 io/gfal net/monalisa proof/proofx math/fftw gui/qtgsi \
+      sql/odbc io/castor math/unuran geom/gdml montecarlo/g4root \
+      graf2d/gviz graf3d/gviz3d graf3d/eve net/glite misc/minicern \
+      misc/memstat net/bonjour graf2d/fitsio"
 
 objs=""
 gobjs=""
 for i in * ; do
+   inc=$i
    for j in $excl ; do
       if [ $j = $i ]; then
          continue 2
       fi
    done
-   ls $i/src/*.o > /dev/null 2>&1 && objs="$objs $i/src/*.o"
-   ls $i/src/G__*.o > /dev/null 2>&1 && gobjs="$gobjs $i/src/G__*.o"
+   ls $inc/src/*.o > /dev/null 2>&1 && objs="$objs `ls $inc/src/*.o`"
+   ls $inc/src/G__*.o > /dev/null 2>&1 && gobjs="$gobjs `ls $inc/src/G__*.o`"
+   if [ -d $i ]; then
+      for k in $i/* ; do
+         inc=$k
+         for j in $excl ; do
+            if [ $j = $k ]; then
+               continue 2
+            fi
+         done
+         ls $inc/src/*.o > /dev/null 2>&1 && objs="$objs `ls $inc/src/*.o`"
+         ls $inc/src/G__*.o > /dev/null 2>&1 && gobjs="$gobjs `ls $inc/src/G__*.o`"
+      done
+   fi
 done
 
 echo "Making $ROOTALIB..."
-echo ar rv $ROOTALIB cint/main/G__setup.o $objs > /dev/null 2>&1
-ar rv $ROOTALIB cint/main/G__setup.o $objs > /dev/null 2>&1
+echo ar rv $ROOTALIB cint/cint/main/G__setup.o cint/cint/src/dict/*.o cint/cint/src/config/*.o $objs
+ar rv $ROOTALIB cint/cint/main/G__setup.o cint/cint/src/dict/*.o cint/cint/src/config/*.o $objs > /dev/null 2>&1
 
 arstat=$?
 if [ $arstat -ne 0 ]; then
@@ -56,9 +77,9 @@ fi
 
 echo "Making $ROOTAEXE..."
 echo $LD $LDFLAGS -o $ROOTAEXE main/src/rmain.o $dummyo $gobjs $ROOTALIB \
-   $XLIBS $SYSLIBS lib/libfreetype.a lib/libpcre.a
+   $XLIBS $SYSLIBS $EXTRALIBS
 $LD $LDFLAGS -o $ROOTAEXE main/src/rmain.o $dummyo $gobjs $ROOTALIB \
-   $XLIBS $SYSLIBS lib/libfreetype.a lib/libpcre.a
+   $XLIBS $SYSLIBS $EXTRALIBS
 
 linkstat=$?
 if [ $linkstat -ne 0 ]; then
@@ -66,10 +87,10 @@ if [ $linkstat -ne 0 ]; then
 fi
 
 echo "Making $PROOFAEXE..."
-echo $LD $LDFLAGS -o $PROOFAEXE main/src/pmain.o  $dummyo $gobjs $ROOTALIB \
-   $XLIBS $SYSLIBS lib/libfreetype.a lib/libpcre.a
-$LD $LDFLAGS -o $PROOFAEXE main/src/pmain.o  $dummyo $gobjs $ROOTALIB \
-   $XLIBS $SYSLIBS lib/libfreetype.a lib/libpcre.a
+echo $LD $LDFLAGS -o $PROOFAEXE main/src/pmain.o $dummyo $gobjs $ROOTALIB \
+   $XLIBS $SYSLIBS $EXTRALIBS
+$LD $LDFLAGS -o $PROOFAEXE main/src/pmain.o $dummyo $gobjs $ROOTALIB \
+   $XLIBS $SYSLIBS $EXTRALIBS
 
 linkstat=$?
 if [ $linkstat -ne 0 ]; then

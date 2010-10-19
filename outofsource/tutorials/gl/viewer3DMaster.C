@@ -1,3 +1,8 @@
+// Demonstrates 3D viewer architecture TVirtualViewer3D and TBuffer3D in the master frame.
+// Here each shape is described directly in a TBuffer3D
+// class, with identity translation matrix c.f. viewer3DLocal.C
+
+// Our abstract base shape class.
 // Author: Richard Maunder
 
 // As we overload TObject::Paint which is called directly from compiled
@@ -15,17 +20,10 @@
 #include "TBuffer3DTypes.h"
 
 #include "TObject.h"
-#include "TVirtualPad.h" // For gPad
+#include "TVirtualPad.h"
 #include "TAtt3D.h"
 
 #include <vector>
-
-// This demonstrates use of the 3D viewer architecture
-// TVirtualViewer3D and TBuffer3D in the MASTER frame
-// Here each shape is described directly in a TBuffer3D
-// class, with identity translation matrix c.f. viewer3DLocal.C
-
-// Our abstract base shape class.
 
 class Shape : public TObject
 {

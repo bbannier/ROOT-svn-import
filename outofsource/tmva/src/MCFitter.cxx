@@ -47,7 +47,10 @@ TMVA::MCFitter::MCFitter( IFitterTarget& target,
                           const TString& name, 
                           const std::vector<Interval*>& ranges, 
                           const TString& theOption ) 
-   : TMVA::FitterBase( target, name, ranges, theOption )
+   : TMVA::FitterBase( target, name, ranges, theOption ),
+     fSamples( 0 ),
+     fSigma  ( 1 ),
+     fSeed   ( 0 )
 {
    // constructor
    DeclareOptions();
@@ -58,7 +61,7 @@ TMVA::MCFitter::MCFitter( IFitterTarget& target,
 void TMVA::MCFitter::DeclareOptions() 
 {
    // Declare MCFitter options
-   DeclareOptionRef( fSamples = 100000, "SampleSize", "Number of Monte Carlo samples" );  
+   DeclareOptionRef( fSamples = 100000, "SampleSize", "Number of Monte Carlo events in toy sample" );  
    DeclareOptionRef( fSigma   = -1.0,   "Sigma", 
                     "If > 0: new points are generated according to Gauss around best value and with \"Sigma\" in units of interval length" );  
    DeclareOptionRef( fSeed    = 100,    "Seed",       "Seed for the random generator (0 takes random seeds)" );  
@@ -75,11 +78,11 @@ void TMVA::MCFitter::SetParameters( Int_t samples )
 Double_t TMVA::MCFitter::Run( std::vector<Double_t>& pars )
 {
    // Execute fitting
-   fLogger << kINFO << "<MCFitter> Sampling, please be patient ..." << Endl;
+   Log() << kINFO << "<MCFitter> Sampling, please be patient ..." << Endl;
    
    // sanity check
    if ((Int_t)pars.size() != GetNpars())
-      fLogger << kFATAL << "<Run> Mismatch in number of parameters: "
+      Log() << kFATAL << "<Run> Mismatch in number of parameters: "
               << GetNpars() << " != " << pars.size() << Endl;
 
    // timing of MC
@@ -88,7 +91,7 @@ Double_t TMVA::MCFitter::Run( std::vector<Double_t>& pars )
    std::vector<Double_t> parameters;
    std::vector<Double_t> bestParameters;
 
-   TRandom *rnd = new TRandom3( fSeed );
+   TRandom3*rnd = new TRandom3( fSeed );
    rnd->Uniform(0.,1.);
       
    std::vector<TMVA::GeneticRange*> rndRanges;
@@ -117,7 +120,7 @@ Double_t TMVA::MCFitter::Run( std::vector<Double_t>& pars )
       if (fSigma > 0.0) {
          parBestIt = bestParameters.begin();
          for (std::vector<TMVA::GeneticRange*>::iterator rndIt = rndRanges.begin(); rndIt<rndRanges.end(); rndIt++) {
-            (*parIt) = (*rndIt)->Random( kTRUE, fSigma,(*parBestIt) );
+            (*parIt) = (*rndIt)->Random( kTRUE, (*parBestIt), fSigma );
             parIt++;
             parBestIt++;
          }
@@ -144,7 +147,7 @@ Double_t TMVA::MCFitter::Run( std::vector<Double_t>& pars )
    pars.swap( bestParameters ); // return best parameters found
 
    // get elapsed time
-   fLogger << kINFO << "Elapsed time: " << timer.GetElapsedTime() 
+   Log() << kINFO << "Elapsed time: " << timer.GetElapsedTime() 
            << "                           " << Endl;  
    
    return bestFit;

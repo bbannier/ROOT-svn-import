@@ -16,6 +16,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "RConfigure.h"
+#include "Rtypes.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,8 +28,10 @@
 #include <errno.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <string>
 #ifdef __APPLE__
 #include <AvailabilityMacros.h>
+#include <mach-o/dyld.h>
 #endif
 
 #if defined(__sgi) || defined(__sun)
@@ -94,6 +97,7 @@ extern void CloseDisplay();
 
 static STRUCT_UTMP *gUtmpContents;
 static bool gNoLogo = false;
+const  int  kMAXPATHLEN = 8192;
 
 
 static int GetErrno()
@@ -134,16 +138,21 @@ static int ReadUtmp()
    }
 
    gUtmpContents = (STRUCT_UTMP *) malloc(size);
-   if (!gUtmpContents) return 0;
-
-   n_read = fread(gUtmpContents, 1, size, utmp);
-   if (ferror(utmp) || fclose(utmp) == EOF || n_read < size) {
-      free(gUtmpContents);
-      gUtmpContents = 0;
+   if (!gUtmpContents) {
+      fclose(utmp);
       return 0;
    }
 
-   return size / sizeof(STRUCT_UTMP);
+   n_read = fread(gUtmpContents, 1, size, utmp);
+   if (!ferror(utmp)) {
+      if (fclose(utmp) != EOF && n_read == size)
+         return size / sizeof(STRUCT_UTMP);
+   } else
+      fclose(utmp);
+
+   free(gUtmpContents);
+   gUtmpContents = 0;
+   return 0;
 }
 
 static STRUCT_UTMP *SearchEntry(int n, const char *tty)
@@ -156,6 +165,53 @@ static STRUCT_UTMP *SearchEntry(int n, const char *tty)
       ue++;
    }
    return 0;
+}
+
+static const char *GetExePath()
+{
+   static std::string exepath;
+   if (exepath == "") {
+#ifdef __APPLE__
+      exepath = _dyld_get_image_name(0);
+#endif
+#ifdef __linux
+      char linkname[64];      // /proc/<pid>/exe
+      char buf[kMAXPATHLEN];  // exe path name
+      pid_t pid;
+
+      // get our pid and build the name of the link in /proc
+      pid = getpid();
+      snprintf(linkname,64, "/proc/%i/exe", pid);
+      int ret = readlink(linkname, buf, kMAXPATHLEN);
+      if (ret > 0 && ret < kMAXPATHLEN) {
+         buf[ret] = 0;
+         exepath = buf;
+      }
+#endif
+   }
+   return exepath.c_str();
+}
+
+static void SetRootSys()
+{
+   const char *exepath = GetExePath();
+   if (exepath && *exepath) {
+      int l1 = strlen(exepath)+1;
+      char *ep = new char[l1];
+      strlcpy(ep, exepath, l1);
+      char *s;
+      if ((s = strrchr(ep, '/'))) {
+         *s = 0;
+         if ((s = strrchr(ep, '/'))) {
+            *s = 0;
+            int l2 = strlen(ep) + 10;
+            char *env = new char[l2];
+            snprintf(env, l2, "ROOTSYS=%s", ep);
+            putenv(env);
+         }
+      }
+      delete [] ep;
+   }
 }
 
 static void SetDisplay()
@@ -305,22 +361,26 @@ static void PrintUsage(char *pname)
    fprintf(stderr, "  -n : do not execute logon and logoff macros as specified in .rootrc\n");
    fprintf(stderr, "  -q : exit after processing command line macro files\n");
    fprintf(stderr, "  -l : do not show splash screen\n");
+   fprintf(stderr, "  -x : exit on exception\n");
    fprintf(stderr, " dir : if dir is a valid directory cd to it before executing\n");
    fprintf(stderr, "\n");
-   fprintf(stderr, "  -?      : print usage\n");
-   fprintf(stderr, "  -h      : print usage\n");
-   fprintf(stderr, "  --help  : print usage\n");
-   fprintf(stderr, "  -config : print ./configure options\n");
+   fprintf(stderr, "  -?       : print usage\n");
+   fprintf(stderr, "  -h       : print usage\n");
+   fprintf(stderr, "  --help   : print usage\n");
+   fprintf(stderr, "  -config  : print ./configure options\n");
+   fprintf(stderr, "  -memstat : run with memory usage monitoring\n");
    fprintf(stderr, "\n");
 }
 
 int main(int argc, char **argv)
 {
-   const int kMAXARGS = 256;
-   char *argvv[kMAXARGS];
-   char  arg0[2048];
+   char **argvv;
+   char  arg0[kMAXPATHLEN];
 
 #ifndef ROOTPREFIX
+   // Try to set ROOTSYS depending on pathname of the executable
+   SetRootSys();
+
    if (!getenv("ROOTSYS")) {
       fprintf(stderr, "%s: ROOTSYS not set. Set it before trying to run %s.\n",
               argv[0], argv[0]);
@@ -423,17 +483,16 @@ int main(int argc, char **argv)
    // Child is going to overlay itself with the actual ROOT module...
 
    // Build argv vector
+   argvv = new char* [argc+2];
 #ifdef ROOTBINDIR
-   sprintf(arg0, "%s/%s", ROOTBINDIR, ROOTBINARY);
+   snprintf(arg0, sizeof(arg0), "%s/%s", ROOTBINDIR, ROOTBINARY);
 #else
-   sprintf(arg0, "%s/bin/%s", getenv("ROOTSYS"), ROOTBINARY);
+   snprintf(arg0, sizeof(arg0), "%s/bin/%s", getenv("ROOTSYS"), ROOTBINARY);
 #endif
    argvv[0] = arg0;
    argvv[1] = (char *) "-splash";
 
-   int iargc = argc;
-   if (iargc > kMAXARGS-2) iargc = kMAXARGS-2;
-   for (i = 1; i < iargc; i++)
+   for (i = 1; i < argc; i++)
       argvv[1+i] = argv[i];
    argvv[1+i] = 0;
 

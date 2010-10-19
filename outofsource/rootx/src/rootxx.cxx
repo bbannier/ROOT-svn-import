@@ -19,9 +19,9 @@
 #include <pwd.h>
 #include <sys/types.h>
 #include <X11/Xlib.h>
+#include <X11/xpm.h>
 
-#include "RConfig.h"
-#include "Xpm.h"
+#include "Rtypes.h"
 
 #if defined(R__AIX) || defined(R__SOLARIS)
 #   include <sys/select.h>
@@ -61,14 +61,14 @@ static const char *gLeadDevelopers[] = {
 };
 
 static const char *gRootDevelopers[] = {
-   "Ilka Antcheva",
-   "Maarten Ballintijn",
    "Bertrand Bellenot",
    "Olivier Couet",
-   "Valery Fine",
    "Gerardo Ganis",
-   "Eddy Offermann",
-   "Valeriy Onuchin",
+   "Andrei Gheata",
+   "Lorenzo Moneta",
+   "Axel Naumann",
+   "Paul Russo",
+   "Matevz Tadel",
    0
 };
 
@@ -79,7 +79,6 @@ static const char *gCintDevelopers[] = {
 
 static const char *gRootDocumentation[] = {
    "Ilka Antcheva",
-   "Suzanne Panacek",
    0
 };
 
@@ -161,9 +160,9 @@ static Pixmap GetRootLogo()
 
    char file[2048];
 #ifdef ROOTICONPATH
-   sprintf(file, "%s/Splash.xpm", ROOTICONPATH);
+   snprintf(file, sizeof(file), "%s/Splash.xpm", ROOTICONPATH);
 #else
-   sprintf(file, "%s/icons/Splash.xpm", getenv("ROOTSYS"));
+   snprintf(file, sizeof(file), "%s/icons/Splash.xpm", getenv("ROOTSYS"));
 #endif
    int ret = XpmReadFileToPixmap(gDisplay, gLogoWindow,
                                  file, &logo, 0, &attr);
@@ -187,9 +186,9 @@ static void ReadContributors()
 
    char buf[2048];
 #ifdef ROOTDOCDIR
-   sprintf(buf, "%s/CREDITS", ROOTDOCDIR);
+   snprintf(buf, sizeof(buf), "%s/CREDITS", ROOTDOCDIR);
 #else
-   sprintf(buf, "%s/README/CREDITS", getenv("ROOTSYS"));
+   snprintf(buf, sizeof(buf), "%s/README/CREDITS", getenv("ROOTSYS"));
 #endif
 
    gContributors = 0;
@@ -242,7 +241,7 @@ static int DrawCreditItem(const char *creditItem, const char **members,
    int i;
    int lineSpacing = gFont->max_bounds.ascent + gFont->max_bounds.descent;
 
-   strcpy(credit, creditItem);
+   strlcpy(credit, creditItem, sizeof(credit));
    for (i = 0; members && members[i]; i++) {
       if (i) strcat(credit, ", ");
       if (XTextWidth(gFont, credit, strlen(credit)) +
@@ -307,9 +306,9 @@ static int DrawCredits(bool draw, bool extended)
          if (s) *s = 0;
          char line[1024];
          if (strlen(name))
-            sprintf(line, "Extra special thanks go to %s,", name);
+            snprintf(line, sizeof(line), "Extra special thanks go to %s,", name);
          else
-            sprintf(line, "Extra special thanks go to %s,", pwd->pw_name);
+            snprintf(line, sizeof(line), "Extra special thanks go to %s,", pwd->pw_name);
          delete [] name;
          y += 2*lineSpacing;
          y = DrawCreditItem(line, 0, y, draw);

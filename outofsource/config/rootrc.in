@@ -5,11 +5,12 @@
 # which values are active do: gEnv->Print().
 
 # Path used by dynamic loader to find shared libraries.
-# This path will be prepended to the (DY)LD_LIBRARY_PATH.
+# This path will be appended to the (DY)LD_LIBRARY_PATH on Unix
+# and to PATH on Windows.
 # Paths are different for Unix and Windows. The example shows the defaults
 # for all ROOT applications for either Unix or Windows.
 Unix.*.Root.DynamicPath:    .:@libdir@:
-WinNT.*.Root.DynamicPath:   .;@bindir@;$(PATH);
+WinNT.*.Root.DynamicPath:   .;@bindir@;
 
 # Path used to find macros.
 # Paths are different for Unix and Windows. The example shows the defaults
@@ -40,6 +41,13 @@ Root.ZipMode:            1
 # Show where item is found in the specified path.
 Root.ShowPath:           false
 
+# Activate malloc/new, free/delete calls via the TMemStat class
+# the parameter TMemStat.maxcalls is the maximum number of new/delete calls to be monitored
+# 5 million calls is a reasonable number
+Root.TMemStat:           0
+Root.TMemStat.maxcalls   5000000
+Root.TMemStat.system     gnubuiltin
+
 # Activate memory statistics (size and cnt is used to trap allocation of
 # blocks of a certain size after cnt times).
 Root.MemStat:            0
@@ -55,6 +63,12 @@ Root.MemCheckFile:       memcheck.out
 # Global debug mode. When >0 turns on progressively more details debugging.
 Root.Debug:              0
 Root.Stacktrace:         yes
+# Allow for a customized backtrace script.
+#Root.StacktraceScript:   $(ROOTSYS)/etc/gdb-backtrace.sh
+# Allow for a customized backtrace messages (e.g. referencing your own project
+# bug tracking system). Change this message rather then the entire script.
+# The % characters will be replaced by newlines.
+#Root.StacktraceMessage:  The lines below might hint at the cause of the crash.%If they do not help you then please submit a bug report at%http://myproject/bugs. Please post the ENTIRE stack trace%from above as an attachment in addition to anything else%that might help us fixing this issue.
 
 # Ignore errors lower than the ignore level. Possible values:
 # Print, Info, Warning, Error, Break, SysError and Fatal.
@@ -64,6 +78,7 @@ Root.ErrorIgnoreLevel:   Print
 X11.Sync:                no
 X11.FindBestVisual:      yes
 X11.UseXft:              no
+X11.XInitThread:         yes
 
 # Settings for Win32 behavior.
 Win32.UseSysPointers:    no
@@ -93,9 +108,10 @@ Root.Fitter:             Minuit
 # on mouse and key events.
 Canvas.MoveOpaque:          false
 Canvas.ResizeOpaque:        false
-Canvas.UseScreenFactor:     true
+Canvas.UseScreenFactor:     false
 Canvas.HighLightColor:      2
 Canvas.ShowEventStatus:     false
+Canvas.ShowToolTips:        false
 Canvas.ShowToolBar:         false
 Canvas.ShowEditor:          false
 Canvas.AutoExec:            true
@@ -142,17 +158,18 @@ Hist.Stats.KurtosisX  Kurtosis x
 Hist.Stats.KurtosisY  Kurtosis y
 
 # THtml specific settings (for more see doc of THtml class).
-Unix.*.Root.Html.SourceDir:  .:src:include
-WinNT.*.Root.Html.SourceDir: .;src;include
-Root.Html.Root:              http://root.cern.ch/root/html
-#Root.Html.OutputDir:        htmldoc/
+Root.Html.SourceDir:    .
+Root.Html.Root:         http://root.cern.ch/root/html
+Root.Html.ViewCVS:      http://root.cern.ch/viewcvs/trunk/%f?view=log
+Root.Html.Search:       http://www.google.com/search?q=%s+site%3A%u+-site%3A%u%2Fsrc%2F+-site%3A%u%2Fexamples%2F
+#Root.Html.OutputDir:   htmldoc/
 #Root.Html.Homepage:
 #Root.Html.Header:
 #Root.Html.Footer:
-#Root.Html.Description:      //____________________
-#Root.Html.Author:           // Author:
-#Root.Html.LastUpdate:       // @(#)
-#Root.Html.Copyright:        * Copyright
+#Root.Html.Description: //____________________
+#Root.Html.Author:      // Author:
+#Root.Html.LastUpdate:  // @(#)
+#Root.Html.Copyright:   * Copyright
 
 # GUI specific settings.
 Gui.Backend:                native
@@ -176,11 +193,12 @@ Gui.IconPath:                $(HOME)/icons:@iconpath@:.
 Gui.MimeTypeFile:            $(HOME)/.root.mimes
 # If above does not exists defaults to this:
 #Gui.MimeTypeFile:            @etcdir@/root.mimes
-Browser.Name:                TRootBrowserLite
+# Type of Browser: TRootBrowser or TRootBrowserLite
+Browser.Name:                TRootBrowser
 # Browser Options (plugins)
 # F: File browser E: Text Editor H: HTML browser 
 # C: Canvas I: I/O redirection P: Proof G: GL viewer
-Browser.Options:             FECI
+Browser.Options:             FCEI
 # Can be either small, big, list, details
 Browser.IconStyle:           small
 # Can be either name, type, size, date
@@ -188,11 +206,27 @@ Browser.SortBy:              name
 Browser.GroupView:           10000
 Browser.ShowHidden:          no
 Browser.AutoThumbnail:       yes
+# Start URL for the TRootBrowser embedded HTML renderer
+Browser.StartUrl:            http://root.cern.ch/root/html/ClassIndex.html
 
 # Rint (interactive ROOT executable) specific alias, logon and logoff macros.
 Rint.Load:               rootalias.C
 Rint.Logon:              rootlogon.C
 Rint.Logoff:             rootlogoff.C
+### Prompt colors
+# Whether to use default colors for light-on-dark (i.e. reverse) color scheme:
+#Rint.ReverseColor:        no
+# Prompt colors: #rgb or #rrggbb or color names:
+#  "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"
+#  "default" will keep the current terminal color.
+# can be combined with string containing "under" and "bold".
+#Rint.TypeColor:          bold blue
+#Rint.BracketColor:       bold green
+#Rint.BadBracketColor:    bold red underlined
+#Rint.PromptColor:        default
+#Rint.TabComColor:        magenta
+#
+### History
 # Record session commands, set to "-" to turn off command recording.
 Rint.History:            $(HOME)/.root_hist
 # History file size, once HistSize is reached remove all but HistSave entries,
@@ -226,6 +260,13 @@ ACLiC.Linkdef:          _linkdef
 #ACLiC.BuildDir:        /where/I/would/like/my/compiled/scripts
 # Add additional include directives for ACLiC compilations.
 #ACLiC.IncludePaths:     -I/where/the/includes/are
+# Select whether and how ACLiC tracks the dependency of the libraries.
+#  0 - No tracking
+#  1 - [Default] New libraries are explicitly linked to all currently loaded libraries
+#  2 - Generate and use rootmap file for each library
+#  3 - Generate rootmap file for each library _and_ explicitly link to the
+#      needed libraries.
+#ACLiC.LinkLibs:      1
 
 # PROOF related variables
 #
@@ -242,6 +283,9 @@ ACLiC.Linkdef:          _linkdef
 #
 # Proof.GdbHook: 0
 #
+# To control the number of processes in PROOF-Lite (0 disables PROOF-Lite).
+# This setting cannot be overwritten in the user rootrc files.
+# ProofLite.MaxWorkers: -1
 #
 # On the master enable parallel startup of workers using threads
 # Proof.ParallelStartup: no
@@ -410,8 +454,8 @@ Url.Special:         file: rfio: hpss: castor: gfal: dcache:
 +Url.Special:        /alien/- /castor/
 
 # PROOF XRD client variables
-# Debug level (<=0 : none, 1 : low, 2 : medium, 3 : high)
-XProof.Debug:  0
+# Debug level (<0 : errors, 0 : minimal, 1 : low, 2 : medium, 3 : high) [-1]
+# XProof.Debug:  0
 # Socket read timeout [in secs: default 10 secs]
 # XProof.ReadTimeout: 10
 
@@ -419,9 +463,9 @@ XProof.Debug:  0
 # (module netx, libNetx.so).
 #
 # XNet.ConnectTimeout   - maximum time to wait before server's
-#                         response on a connect [10 s]
+#                         response on a connect [120 s]
 # XNet.RequestTimeout   - maximum time to wait before considering
-#                         a read/write failure [60 s]
+#                         a read/write failure [300 s]
 # XNet.ConnectDomainAllowRE
 #                       - sequence of TRegexp regular expressions
 #                         separated by a |.
@@ -451,7 +495,7 @@ XProof.Debug:  0
 #                         regexps. Example:
 #                         slac.stanford.edu|pd.infn.it|fe.infn.it
 # XNet.MaxRedirectCount - maximum number of redirections from
-#                         server [255]
+#                         server [16]
 # XNet.Debug            - log verbosity level
 #                         (0=nothing,
 #                          1=messages of interest to the user,
@@ -460,10 +504,11 @@ XProof.Debug:  0
 #                          3=dump of all sent/received data buffers
 #                            (includes also user and developers
 #                             messages). [0]
-# XNet.ReconnectTimeout - sleep-time before going back to the
+#                          4=dump also the data received/sent at the lower level
+# XNet.ReconnectWait    - sleep-time before going back to the
 #                         load balancer (or rebouncing to the same
 #                         failing host) after a read/write error
-#                         [10 s]
+#                         [5 s]
 # XNet.ReadAheadSize    - read ahead value, in bytes, to use with the XrdClient
 #                         internal caching scheme
 #                         Generally not much useful together with the TFile cache,
@@ -476,7 +521,7 @@ XProof.Debug:  0
 #                         If > 0, TXNetFile will switch it on again if it sees that
 #                         synchronous ReadBuffer requests are issued again
 
-XNet.ReadAheadSize: 500000
+XNet.ReadAheadSize: 0
 
 # XNet.ReadCacheSize    - Default read cache size inside XrdClient, in bytes.
 #                         TXNetFile/TFileReadCache automatically sets this to a
@@ -490,10 +535,11 @@ XNet.ReadCacheSize: 10000000
 
 # XNet.FirstConnectMaxCnt
 #                       - Number of connect retries to the first host
+
 # XNet.PrintTAG         - Print a particular string the developers 
 #                         can choose to quickly recognize the
 #                         version at run time [0]
-#
+
 # XNet.ParStreamsPerPhyConn
 #                       - Number of additional TCP streams to use per
 #                         each physical connection
@@ -501,6 +547,13 @@ XNet.ReadCacheSize: 10000000
 #                         1-15=multistream mode
 
 XNet.ParStreamsPerPhyConn: 0
+
+# XNet.DfltTcpWindowSize
+#                       - Default size of the TCP window; set to 0 to use the
+#                         system default, which means automatic scaling under Linux
+#                         and MacOsX (at least). Value in bytes [0]
+# XNet.DfltTcpWindowSize  262144
+
 
 # Example of custom setting for the Rint application (root.exe).
 # This overrides the default specified above for a generic application.

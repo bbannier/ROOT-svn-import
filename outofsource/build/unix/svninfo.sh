@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 # Store info about which svn branch, what revision and at what date/time
 # we executed make.
@@ -23,7 +23,8 @@ for i in $INFO; do
          echo ${i#${HTTP}} > $OUT
       fi
    else
-      echo $i | tee -a $OUT
+      echo $i >> $OUT
+      echo $i
    fi
 done
 

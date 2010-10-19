@@ -1,3 +1,4 @@
+// echo object at mouse position and show a graphics line
 void exec2()
 {
    //example of macro called when a mouse event occurs in a pad.
@@ -16,7 +17,7 @@ void exec2()
 
    TObject *select = gPad->GetSelected();
    if(!select) return;
-   if (!select->InheritsFrom("TH2")) {gPad->SetUniqueID(0); return;}
+   if (!select->InheritsFrom(TH2::Class())) {gPad->SetUniqueID(0); return;}
    gPad->GetCanvas()->FeedbackMode(kTRUE);
 
    //erase old position and draw a line at current position

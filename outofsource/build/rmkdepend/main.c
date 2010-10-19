@@ -53,14 +53,16 @@ in this Software without prior written authorization from the X Consortium.
 #include <io.h>
 #endif
 #if !defined(__hpux)
-#if defined(__APPLE__)
-#include <AvailabilityMacros.h>
-#if !defined(MAC_OS_X_VERSION_10_4)
-extern int fchmod();
-#endif
+# if defined(__APPLE__)
+#  include <AvailabilityMacros.h>
+#  if !defined(MAC_OS_X_VERSION_10_4)
+extern int fchmod(int, int);
+#  endif
+# elif defined(__CYGWIN__)
+extern int fchmod(int, mode_t);
 #else
-extern int fchmod();
-#endif
+extern int fchmod(int, int);
+# endif
 #endif
 
 #ifdef MINIX
@@ -102,11 +104,13 @@ struct	inclist inclist[ MAXFILES ],
 		maininclist;
 
 char	*filelist[ MAXFILES ];
+char	*targetlist[ MAXFILES ];
 char	*includedirs[ MAXDIRS + 1 ];
 char	*notdotdot[ MAXDIRS ];
 char	*objprefix = "";
 char	*objsuffix = OBJSUFFIX;
 char	*startat = "# DO NOT DELETE";
+char  *isysroot = "";
 int	width = 78;
 boolean	append = FALSE;
 boolean	printed = FALSE;
@@ -114,8 +118,8 @@ boolean	verbose = FALSE;
 boolean	show_where_not = FALSE;
 boolean warn_multiple = FALSE;	/* Warn on multiple includes of same file */
 
-void freefile();
-void redirect();
+void freefile(struct filepointer*);
+void redirect(char*, char*);
 
 static
 #ifdef SIGNALRETURNSINT
@@ -149,7 +153,7 @@ extern void undefine(char *symbol, struct inclist *file);
 extern int find_includes(struct filepointer *filep, struct inclist *file,
                          struct inclist *file_red, int recursion,
                          boolean failOK);
-extern void recursive_pr_include(struct inclist *head, char *file, char *base);
+extern void recursive_pr_include(struct inclist *head, char *file, char *base, char *dep);
 extern void inc_clean();
 
 int main_orig(argc, argv)
@@ -157,6 +161,7 @@ int main_orig(argc, argv)
 	char	**argv;
 {
 	register char	**fp = filelist;
+   register char  **tp = targetlist;
 	register char	**incp = includedirs;
 	register char	*p;
 	register struct inclist	*ip;
@@ -167,6 +172,7 @@ int main_orig(argc, argv)
 	char *defincdir = NULL;
 	char **undeflist = NULL;
 	int numundefs = 0, i;
+   int numfiles = 0;
 
 	ProgramName = argv[0];
 
@@ -233,12 +239,22 @@ int main_orig(argc, argv)
 			if (endmarker && **argv == '+')
 				continue;
 			*fp++ = argv[0];
+			*tp++ = 0;
+         ++numfiles;
 			continue;
 		}
 		switch(argv[0][1]) {
 		case '-':
 			endmarker = &argv[0][2];
 			if (endmarker[0] == '\0') endmarker = "--";
+			break;
+		case 't':
+			if (endmarker) break;
+         if (numfiles==0) {
+            fatalerr("-t should follow a file name\n");
+         } else {
+            *(tp-1) = argv[0]+2;
+         }
 			break;
 		case 'D':
 			if (argv[0][2] == '\0') {
@@ -278,6 +294,13 @@ int main_orig(argc, argv)
 		case 'Y':
 			defincdir = argv[0]+2;
 			break;
+      case 'i':
+         if (!strcmp(argv[0]+2, "sysroot")) {
+            argv++;
+            argc--;
+            isysroot = argv[0];
+         }
+         break;
 		/* do not use if endmarker processing */
 		case 'a':
 			if (endmarker) break;
@@ -471,13 +494,13 @@ int main_orig(argc, argv)
 	/*
 	 * now peruse through the list of files.
 	 */
-	for(fp=filelist; *fp; fp++) {
+	for(fp=filelist, tp = targetlist; *fp; fp++, tp++) {
            filecontent = getfile(*fp);
            ip = newinclude(*fp, (char *)NULL);
 
            find_includes(filecontent, ip, ip, 0, FALSE);
            freefile(filecontent);
-           recursive_pr_include(ip, ip->i_file, base_name(*fp));
+           recursive_pr_include(ip, ip->i_file, base_name(*fp), *tp);
            inc_clean();
 	}
         if (!rootBuild) {
@@ -582,14 +605,14 @@ char *rgetline(filep)
 	lineno = filep->f_line;
 
 	for(bol = p--; ++p < eof; ) {
-		if (*p == '/' && *(p+1) == '/') { /* consume C++ comments */
+		if (*p == '/') {
+                   if (*(p+1) == '/') { /* consume C++ comments */
 			*p++ = ' ', *p++ = ' ';
 			while (*p && *p != '\n')
 				*p++ = ' ';
                         p--;
 			continue;
-		}
-		else if (*p == '/' && *(p+1) == '*') { /* consume comments */
+                   } else if (*(p+1) == '*') { /* consume C comments */
 			*p++ = ' ', *p++ = ' ';
 			while (*p) {
 				if (*p == '*' && *(p+1) == '/') {
@@ -601,16 +624,8 @@ char *rgetline(filep)
 				*p++ = ' ';
 			}
 			continue;
+                   }
 		}
-#if defined(WIN32) || defined(__EMX__)
-		else if (*p == '/' && *(p+1) == '/') { /* consume comments */
-			*p++ = ' ', *p++ = ' ';
-			while (*p && *p != '\n')
-				*p++ = ' ';
-			lineno++;
-			continue;
-		}
-#endif
 		else if (*p == '\\') {
 			if (*(p+1) == '\n') {
 				*p = ' ';
@@ -626,7 +641,7 @@ char *rgetline(filep)
 				*p++ = '\0';
 				/* punt lines with just # (yacc generated) */
 				for (cp = bol+1;
-				     *cp && (*cp == ' ' || *cp == '\t'); cp++);
+				     (*cp == ' ' || *cp == '\t'); cp++) {};
 				if (*cp) goto done;
 			}
 			bol = p+1;
@@ -743,6 +758,7 @@ redirect(line, makefile)
 	   chmod(makefile, st.st_mode);
 #else
 	   fchmod(fileno(fdout), st.st_mode);
+	   fclose(fdin);
 #endif /* USGISH */
 	} else {
 	   printf(" "); /* we need this to update the time stamp! */

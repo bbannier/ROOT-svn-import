@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$    
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// @(#)root/tmva $Id$
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -12,15 +12,15 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
- *      Xavier Prudent  <prudent@lapp.in2p3.fr>  - LAPP, France                   *
+ *      Joerg Stelzer   <stelzer@cern.ch>        - DESY, Germany                  *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
- *      U. of Victoria, Canada                                                    * 
- *      MPI-K Heidelberg, Germany                                                 * 
- *      LAPP, Annecy, France                                                      *
+ *      CERN, Switzerland                                                         *
+ *      DESY, Germany                                                             *
+ *      U. of Victoria, Canada                                                    *
+ *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -38,35 +38,38 @@
 #include <string>
 #include <stdexcept>
 
-#include "Riostream.h"
-
 #include "TMVA/BinaryTree.h"
+#include "TMVA/MsgLogger.h"
 #include "TMVA/Event.h"
+#include "TMVA/Tools.h"
+#include "TMVA/DecisionTree.h"
+#include "TMVA/BinarySearchTree.h"
 
 ClassImp(TMVA::BinaryTree)
 
+TMVA::MsgLogger* TMVA::BinaryTree::fgLogger = 0;
+
 //_______________________________________________________________________
 TMVA::BinaryTree::BinaryTree( void )
-   : fRoot  ( NULL ), 
+   : fRoot  ( NULL ),
      fNNodes( 0 ),
-     fDepth ( 0 ),
-     fLogger( "BinaryTree" )
+     fDepth ( 0 )
 {
    // constructor for a yet "empty" tree. Needs to be filled afterwards
+   if (!fgLogger) fgLogger =  new MsgLogger("BinaryTree");
 }
 
 //_______________________________________________________________________
-TMVA::BinaryTree::~BinaryTree( void ) 
+TMVA::BinaryTree::~BinaryTree( void )
 {
    //destructor (deletes the nodes and "events" if owned by the tree
-
    this->DeleteNode( fRoot );
    fRoot=0;
 }
 
 //_______________________________________________________________________
 void TMVA::BinaryTree::DeleteNode( TMVA::Node* node )
-{ 
+{
    // protected, recursive, function used by the class destructor and when Pruning
    if (node != NULL) { //If the node is not NULL...
       this->DeleteNode(node->GetLeft());  //Delete its left node.
@@ -98,7 +101,7 @@ UInt_t TMVA::BinaryTree::CountNodes(TMVA::Node *n)
    if (n == NULL){ //default, start at the tree top, then descend recursively
       n = (Node*)this->GetRoot();
       if (n == NULL) return 0 ;
-   } 
+   }
 
    UInt_t countNodes=1;
 
@@ -117,19 +120,56 @@ void TMVA::BinaryTree::Print(ostream & os) const
 {
    // recursively print the tree
    this->GetRoot()->PrintRec(os);
-   os << "-1" << endl;
+   os << "-1" << std::endl;
+}
+
+//_______________________________________________________________________
+void* TMVA::BinaryTree::AddXMLTo(void* parent) const {
+   // add attributes to XML
+
+   void* bdt = gTools().AddChild(parent, "BinaryTree");
+   gTools().AddAttr( bdt, "type" , ClassName() );
+   this->GetRoot()->AddXMLTo(bdt);
+   return bdt;
+}
+
+//_______________________________________________________________________
+void TMVA::BinaryTree::ReadXML(void* node, UInt_t tmva_Version_Code ) {
+   // read attributes from XML
+   this->DeleteNode( fRoot );
+   fRoot= CreateNode();
+   void* trnode = gTools().GetChild(node);
+   fRoot->ReadXML(trnode, tmva_Version_Code);
+   this->SetTotalTreeDepth();
+}
+
+//_______________________________________________________________________
+TMVA::BinaryTree* TMVA::BinaryTree::CreateFromXML(void* node, UInt_t tmva_Version_Code ) {
+   // re-create a new tree (decision tree or search tree) from XML
+   std::string type("");
+   gTools().ReadAttr(node,"type", type);
+   BinaryTree* bt = 0;
+   if(type == "DecisionTree") {
+      bt = new DecisionTree();
+   } else if(type == "BinarySearchTree") {
+      bt = new BinarySearchTree();
+   } else {
+      gTools().Log() << kFATAL << "Can't read binary tree of type '" << type << "'" << Endl;
+   }
+   bt->ReadXML( node, tmva_Version_Code );
+   return bt;
 }
 
 //_______________________________________________________________________
 ostream& TMVA::operator<< (ostream& os, const TMVA::BinaryTree& tree)
-{ 
+{
    // print the tree recursinvely using the << operator
    tree.Print(os);
    return os; // Return the output stream.
 }
 
 //_______________________________________________________________________
-void TMVA::BinaryTree::Read(istream & istr)
+void TMVA::BinaryTree::Read(istream & istr, UInt_t tmva_Version_Code )
 {
    // Read the binary tree from an input stream.
    // The input stream format depends on the tree type,
@@ -144,7 +184,7 @@ void TMVA::BinaryTree::Read(istream & istr)
    }
 
    while(1) {
-      if ( ! currentNode->ReadDataRecord(istr) ) {
+      if ( ! currentNode->ReadDataRecord(istr, tmva_Version_Code) ) {
          delete currentNode;
          this->SetTotalTreeDepth();
          return;
@@ -181,7 +221,7 @@ void TMVA::BinaryTree::SetTotalTreeDepth( Node *n)
    if (n == NULL){ //default, start at the tree top, then descend recursively
       n = (Node*) this->GetRoot();
       if (n == NULL) {
-         fLogger << kFATAL << "SetTotalTreeDepth: started with undefined ROOT node" <<Endl;
+         Log() << kFATAL << "SetTotalTreeDepth: started with undefined ROOT node" <<Endl;
          return ;
       }
    } 
@@ -192,5 +232,6 @@ void TMVA::BinaryTree::SetTotalTreeDepth( Node *n)
       this->SetTotalTreeDepth( this->GetRightDaughter(n) );
    }
    if (n->GetDepth() > this->GetTotalTreeDepth()) this->SetTotalTreeDepth(n->GetDepth());
+
    return;
 }

@@ -57,10 +57,12 @@ TMVA::FitterBase::FitterBase( IFitterTarget& target,
      fFitterTarget( target ),
      fRanges( ranges ),
      fNpars( ranges.size() ),
-     fLogger( this ),
+     fLogger( new MsgLogger("FitterBase", kINFO) ),
      fClassName( name )
 {
    // constructor   
+   SetConfigName( GetName() );
+   SetConfigDescription( "Configuration options for setup and tuning of specific fitter" );
 }
 
 //_______________________________________________________________________
@@ -72,6 +74,7 @@ Double_t TMVA::FitterBase::Run()
       pars.push_back( (*parIt)->GetMean() );
    }
                                                                    
+   //   delete fLogger;
    return this->Run( pars );
 }
 

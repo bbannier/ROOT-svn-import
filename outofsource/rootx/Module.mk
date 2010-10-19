@@ -3,7 +3,8 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODDIR       := $(SRCDIR)/rootx
+MODNAME      := rootx
+MODDIR       := $(SRCDIR)/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -26,23 +27,24 @@ ALLEXECS     += $(ROOTX)
 INCLUDEFILES += $(ROOTXDEP)
 
 ##### local rules #####
+.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
+
 include/%.h:    $(ROOTXDIRI)/%.h
 		cp $< $@
 
-$(ROOTX):       $(ROOTXO)
-		$(LD) $(LDFLAGS) -o $@ $(ROOTXO) $(XLIBS)
+$(ROOTX):       $(ROOTXO) $(STRLCPYO)
+		$(LD) $(LDFLAGS) -o $@ $(ROOTXO) $(STRLCPYO) $(XLIBS)
 
-all-rootx:      $(ROOTX)
+all-$(MODNAME): $(ROOTX)
 
-clean-rootx:
+clean-$(MODNAME):
 		@rm -f $(ROOTXO)
 
-clean::         clean-rootx
+clean::         clean-$(MODNAME)
 
-distclean-rootx: clean-rootx
+distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(ROOTXDEP) $(ROOTX)
 
-distclean::     distclean-rootx
+distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
-$(ROOTXO):      PCHCXXFLAGS =

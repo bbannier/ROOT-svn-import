@@ -21,7 +21,6 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
- *      Xavier Prudent  <prudent@lapp.in2p3.fr>  - LAPP, France                   *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
@@ -29,7 +28,6 @@
  *      CERN, Switzerland                                                         * 
  *      U. of Victoria, Canada                                                    * 
  *      Heidelberg U., Germany                                                    * 
- *      LAPP, Annecy, France                                                      *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -38,10 +36,7 @@
 
 //_______________________________________________________________________
 //                                                                      
-// GiniIndex
-//
-// Implementation of the GiniIndex as separation criterion for the
-// boosted decision tree
+// Implementation of the GiniIndex as separation criterion              
 //                                                                      
 //_______________________________________________________________________
 
@@ -58,6 +53,9 @@ Double_t TMVA::GiniIndex::GetSeparationIndex( const Double_t &s, const Double_t 
    //            c(k) is the number of elements that belong to class k     
    //     for just Signal and Background classes this boils down to:       
    //     Gini(Sample) = 2s*b/(s+b)^2    ( = 2 * purity * (1-purity) )                                     
+   //   
+   // !! what we use here is 2*Gini.. as for the later use the factor
+   //    2 is irrelevant and hence I'd like to save this calculation
 
    if (s+b <= 0)      return 0;
    if (s<=0 || b <=0) return 0;

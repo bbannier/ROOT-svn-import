@@ -12,11 +12,14 @@ ifeq ($(VC_MAJOR),)
    # Visual Studio 2005 set VS_UNICODE_OUTPUT to redirect the output
    # of cl directly to its log mechanism.
    VC_MAJOR     := $(shell unset VS_UNICODE_OUTPUT ; cl.exe 2>&1 | \
-                   awk '{ if (NR==1) print $$8 }' | \
+                   awk '{ if (NR==1) print $$(NF-2) }' | \
                    cut -d'.' -f1)
    VC_MINOR     := $(shell unset VS_UNICODE_OUTPUT ; cl.exe 2>&1 | \
-                   awk '{ if (NR==1) print $$8 }' | \
+                   awk '{ if (NR==1) print $$(NF-2) }' | \
                    cut -d'.' -f2)
+   VC_MICRO     := $(shell unset VS_UNICODE_OUTPUT ; cl.exe 2>&1 | \
+                   awk '{ if (NR==1) print $$(NF-2) }' | \
+                   cut -d'.' -f3)
 endif
 
 BUILDING_WITHIN_IDE = $(VS_UNICODE_OUTPUT)
@@ -32,7 +35,7 @@ else
   BLDF77FLAGS = -MD
 endif
 
-ifneq (,$(findstring $(VC_MAJOR),14 15))
+ifneq (,$(findstring $(VC_MAJOR),14 15 16))
   BLDCXXFLAGS+= -EHsc- -W3 -wd4244
   BLDCFLAGS  += -EHsc- -W3
   DEBUGFLAGS  = -Zi
@@ -65,25 +68,34 @@ LDOPT         =
 F77OPT        = -optimize:0 -nopdbfile -recursive 
 endif
 
+ifeq (yes,$(WINRTDEBUG))
+  LDOPT      += -nodefaultlib:msvcrt.lib
+endif
+
 NOOPT         =
 
 # Compiler:
-CXX           = cl
-CC            = cl
-CPPPREP       = cl -E -C -nologo
+CXX           = cl.exe
+CC            = cl.exe
+CPPPREP       = cl.exe -E -C -nologo
 CXXFLAGS      = -nologo -FIw32pragma.h \
-                $(BLDCXXFLAGS) $(EXTRA_CXXFLAGS)
+                $(BLDCXXFLAGS) $(EXTRA_CXXFLAGS) -D_WIN32
 CXXOUT        = -Fo
 CFLAGS        = -nologo -Ibuild/win -FIw32pragma.h -FIsehmap.h \
-                $(BLDCFLAGS) $(EXTRA_CFLAGS)
+                $(BLDCFLAGS) $(EXTRA_CFLAGS) -D_WIN32
 CINTCXXFLAGS := $(CXXFLAGS) $(CINTOPT)
 CINTCFLAGS   := $(CFLAGS) $(CINTOPT)
 
 # Linker:
 LD            = build/win/ld.sh
-LDFLAGS       = -nologo -ignore:4049,4075,4217,4221 -incremental:no \
+LDFLAGS       = -nologo -ignore:4049,4075,4089,4217,4221 -incremental:no \
                 $(LDOPT) $(EXTRA_LDFLAGS) 
 SOFLAGS       = -DLL
+HAVEDYNAMICBASE := $(shell unset VS_UNICODE_OUTPUT ; \
+                     $(LD) /? 2>&1 | grep DYNAMICBASE > /dev/null)
+ifneq ($(HAVEDYNAMICBASE),)
+  SOFLAGS += -DYNAMICBASE
+endif
 SOEXT         = dll
 EXEEXT        = .exe
 
@@ -94,19 +106,11 @@ CILIBS        =
 CRYPTLIBS     =
 
 # Fortran:
+ifeq ($(F77),build/win/f77.sh)
 F77           = build/win/f77.sh
 F77FLAGS      = -nologo -4Nportlib $(BLDF77FLAGS) -recursive
-F77LD         = $(F77)
 F77LDFLAGS    = $(F77FLAGS) $(F77OPT) -link $(LDFLAGS)
 F77LIBS       =
-
-# Precompiled headers:
-PCHSUPPORTED  := $(ENABLEPCH)
-ifeq ($(PCHSUPPORTED),yes)
-  PCHFILE      = include/precompile.pch
-  PCHCXXFLAGS  = -DUSEPCH -Yuw32pragma.h -Fp$(PCHFILE) 
-  PCHEXTRAOBJBUILD = $(CXX) -DUSEPCH $(CXXFLAGS) $(OPT) \
-        -Ycw32pragma.h -Fp$(PCHFILE) -c $(PCHEXTRASRC) -Fo$(PCHEXTRAOBJ)
 endif
 
 # Extras

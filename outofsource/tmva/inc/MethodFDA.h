@@ -1,4 +1,4 @@
-// @(#)root/tmva $Id$    
+// @(#)root/tmva $Id$
 // Author: Andreas Hoecker, Peter Speckmayer
 
 /**********************************************************************************
@@ -19,7 +19,7 @@
  *      Andreas Hoecker  <Andreas.Hocker@cern.ch> - CERN, Switzerland             *
  *      Peter Speckmayer <speckmay@mail.cern.ch>  - CERN, Switzerland             *
  *                                                                                *
- * Copyright (c) 2005-2006:                                                       *
+ * Copyright (c) 2005-2010:                                                       *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -42,10 +42,14 @@
 // class FitterBase, featuring Monte Carlo sampling, Genetic            //
 // Algorithm, Simulated Annealing, MINUIT and combinations of these.    //
 //                                                                      //
+// Can compute one-dimensional regression                               //
+//                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef ROOT_TMVA_MethodBase
 #include "TMVA/MethodBase.h"
+#endif
+#ifndef ROOT_TMVA_IFitterTarget
 #include "TMVA/IFitterTarget.h"
 #endif
 
@@ -61,39 +65,45 @@ namespace TMVA {
 
    public:
 
-      MethodFDA( const TString& jobName, 
-                 const TString& methodTitle, 
-                 DataSet& theData,
+      MethodFDA( const TString& jobName,
+                 const TString& methodTitle,
+                 DataSetInfo& theData,
                  const TString& theOption = "",
                  TDirectory* theTargetDir = 0 );
-      
-      MethodFDA( DataSet& theData, 
-                 const TString& theWeightFile,  
+
+      MethodFDA( DataSetInfo& theData,
+                 const TString& theWeightFile,
                  TDirectory* theTargetDir = NULL );
-      
+
       virtual ~MethodFDA( void );
-    
+
+      Bool_t HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t numberTargets );
+
       // training method
       void Train( void );
 
-      using MethodBase::WriteWeightsToStream;
       using MethodBase::ReadWeightsFromStream;
 
-      // write weights to file
-      void WriteWeightsToStream( ostream& o ) const;
+      void AddWeightsXMLTo      ( void* parent     ) const;
 
-      // read weights from file
-      void ReadWeightsFromStream( istream& istr );
+      void ReadWeightsFromStream( std::istream & i );
+      void ReadWeightsFromXML   ( void* wghtnode );
 
       // calculate the MVA value
-      Double_t GetMvaValue();
+      Double_t GetMvaValue( Double_t* err = 0 );
 
-      void InitFDA( void );
+      virtual const std::vector<Float_t>& GetRegressionValues();
+      virtual const std::vector<Float_t>& GetMulticlassValues();
+
+      void Init( void );
 
       // ranking of input variables
       const Ranking* CreateRanking() { return 0; }
 
       Double_t EstimatorFunction( std::vector<Double_t>& );
+
+      // no check of options at this place
+      void CheckSetup() {}
 
    protected:
 
@@ -105,10 +115,15 @@ namespace TMVA {
 
    private:
 
-      // interpret formula expression and compute estimator
-      Double_t InterpretFormula( const Event&, std::vector<Double_t>& pars );
+      // compute multiclass values
+      void CalculateMulticlassValues( const TMVA::Event*& evt, std::vector<Double_t>& parameters, std::vector<Float_t>& values);
 
-      // clean up 
+
+      // create and interpret formula expression and compute estimator
+      void     CreateFormula   ();
+      Double_t InterpretFormula( const Event*, std::vector<Double_t>::iterator begin, std::vector<Double_t>::iterator end );
+
+      // clean up
       void ClearAll();
 
       // print fit results
@@ -119,12 +134,12 @@ namespace TMVA {
       void ProcessOptions();
 
       TString                fFormulaStringP;     // string with function
-      TString                fParRangeStringP;    // string with ranges of parameters      
+      TString                fParRangeStringP;    // string with ranges of parameters
       TString                fFormulaStringT;     // string with function
-      TString                fParRangeStringT;    // string with ranges of parameters      
+      TString                fParRangeStringT;    // string with ranges of parameters
 
       TFormula*              fFormula;            // the discrimination function
-      Int_t                  fNPars;              // number of parameters
+      UInt_t                 fNPars;              // number of parameters
       std::vector<Interval*> fParRange;           // ranges of parameters
       std::vector<Double_t>  fBestPars;           // the pars that optimise (minimise) the estimator
       TString                fFitMethod;          // estimator optimisation method
@@ -133,13 +148,13 @@ namespace TMVA {
       IFitterTarget*         fConvergerFitter;    // intermediate fitter
 
 
-      // speed up access to training events by caching
-      std::vector<const Event*>    fEventsSig;          // event cache (signal)
-      std::vector<const Event*>    fEventsBkg;          // event cache (background)
-
       // sum of weights (this should become centrally available through the dataset)
       Double_t               fSumOfWeightsSig;    // sum of weights (signal)
       Double_t               fSumOfWeightsBkg;    // sum of weights (background)
+      Double_t               fSumOfWeights;       // sum of weights
+
+      //
+      Int_t                  fOutputDimensions;   // number of output values
 
       ClassDef(MethodFDA,0)  // Function Discriminant Analysis
    };

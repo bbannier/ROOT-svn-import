@@ -1,7 +1,7 @@
 void fitslicesy() {
 //
+// Illustrates how to use the TH1::FitSlicesY function
 // To see the output of this macro, click begin_html <a href="gif/fitslicesy.gif" >here</a> end_html
-//    This macro illustrates how to use the TH1::FitSlicesY function
 //    It uses the TH2F histogram generated in macro hsimple.C
 //    It invokes FitSlicesY and draw the fitted "mean" and "sigma"
 //    in 2 sepate pads.
@@ -17,7 +17,7 @@ void fitslicesy() {
    gStyle->SetTitleH(0.1);
 
 // Connect the input file and get the 2-d histogram in memory
-   TString dir = gSystem->UnixPathName(TCint::GetCurrentMacroName());
+   TString dir = gSystem->UnixPathName(gInterpreter->GetCurrentMacroName());
    dir.ReplaceAll("fitslicesy.C","../hsimple.C");
    dir.ReplaceAll("/./","/");
    if (!gInterpreter->IsLoaded(dir.Data())) gInterpreter->LoadMacro(dir.Data());
@@ -42,8 +42,8 @@ void fitslicesy() {
    hpxpy->GetYaxis()->SetLabelSize(0.06);
    hpxpy->SetMarkerColor(kYellow);
 
-// Fit slices projected along Y fron bins in X [7,32]
-   hpxpy->FitSlicesY(0,0,0,20);
+// Fit slices projected along Y fron bins in X [7,32] with more than 20 bins  in Y filled
+   hpxpy->FitSlicesY(0,7,32,20);
 
 // Show fitted "mean" for each slice
    left->cd(2);

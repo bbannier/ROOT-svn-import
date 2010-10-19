@@ -45,6 +45,8 @@
 #pragma warning (disable: 4554)
 /* qualifier applied to reference type; ignored */
 #pragma warning (disable: 4181)
+/* /GS can not buffer overrun protect parameters and locals: function not optimized */
+#pragma warning (disable: 4748)
 
 /* function is hidden */
 #pragma warning (3: 4266)
@@ -59,7 +61,6 @@
 #define _X86_ 1 
 // #define _DLL  - used to be explicitely defined, 
 // but it's implicitely defined via /MD(d)
-#define VISUAL_CPLUSPLUS 1
 #define G__REDIRECTIO 1
 #define G__SHAREDLIB 1
 #define G__UNIX 1
@@ -72,14 +73,9 @@
 
 #if (_MSC_VER >= 1400)
 #define _CRT_SECURE_NO_DEPRECATE 1
-#define _SECURE_SCL 0
-#define _HAS_ITERATOR_DEBUGGING 0
+#define _USE_ATTRIBUTES_FOR_SAL 0
 #endif
 
 #endif // _WIN32
-
-#if defined(__cplusplus) && defined(USEPCH)
-#  include "precompile.h"
-#endif
 
 #endif // defined ROOT_w32pragma
