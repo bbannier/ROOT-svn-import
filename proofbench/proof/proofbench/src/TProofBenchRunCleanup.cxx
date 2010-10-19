@@ -91,12 +91,13 @@ TString TProofBenchRunCleanup::GetNameStem() const
 }
 
 //______________________________________________________________________________
-void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t,
+void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t,
                                 Int_t debug, Int_t)
 {
    // Clean up cache between bench mark runs. 
    // Input parameters
    //    Long64_t Ignored.
+   //    Int_t    Ignored.
    //    Int_t    Ignored.
    //    Int_t    Ignored.
    //    Int_t    Ignored.

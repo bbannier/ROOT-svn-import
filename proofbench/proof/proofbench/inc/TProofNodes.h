@@ -39,8 +39,10 @@ public:
 
    virtual ~TProofNodes();
    Int_t ActivateWorkers(const TString& workers);
-   Int_t GetMaxNWorkers() const;
+   Int_t GetMaxNWorkersANode() const;
    Int_t GetNWorkersCluster() const;
+   Int_t GetNNodes() const;
+   Int_t GetMinNWorkersANode() const;
    TList* GetListOfNodes() const;
    void Print(Option_t* option="") const;
    //ClassDef(TProofNodes, 0) //Node and worker information

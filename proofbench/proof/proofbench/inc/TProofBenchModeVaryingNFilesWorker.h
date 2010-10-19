@@ -55,11 +55,11 @@ public:
 
    Int_t MakeDataSets(Int_t nfiles, Int_t start, Int_t stop, Int_t step,
                       const TList* listfiles, const char* option,
-                      TProof* proof);
+                      TProof* proof, Int_t flag_nx);
    
    Int_t MakeDataSets(Int_t nfiles, Int_t np, const Int_t *wp,
                       const TList* listfiles, const char *option,
-                      TProof* proof);
+                      TProof* proof, Int_t flag_nx);
 
    TProofBenchMode::EFileType GetFileType()
                    {return TProofBenchMode::kFileBenchmark;}

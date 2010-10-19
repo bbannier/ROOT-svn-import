@@ -106,7 +106,7 @@ TMap* TProofBenchModeVaryingNFilesWorker::FilesToProcess(Int_t nf)
 //______________________________________________________________________________
 Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf, Int_t start,
       Int_t stop, Int_t step, const TList* listfiles, const char* option,
-      TProof* proof)
+      TProof* proof, Int_t nx)
 {
    // Make data sets out of list of files'listfiles' and register them.
    // Input parameters
@@ -120,6 +120,11 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf, Int_t start,
    //               and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
+   //    nx: When it is 1, 'start', 'stop' and 'step' are the number of active
+   //        workers per node. The same number of workers are activated on all
+   //        nodes in the cluster for all test points. When it is 0, 'start,
+   //        'stop' and 'step' are the total number of active workers in the
+   //        cluster.
    // Return
    //   0 when ok
    //  <0 otherwise
@@ -140,13 +145,25 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf, Int_t start,
       //     GetName());
    }
 
-   Info("MakeDataSets", "Making data sets for mode %s, number of files a worker"
-        "=%d, %d ~ %d active worker(s), every %d worker(s).",
-         GetName(), nf, start, stop, step);
-
-   //default max worker number is the number of all workers in the cluster
-   if (stop==-1){
-      stop=fNodes->GetNWorkersCluster();
+   if (nx==0){
+      const Int_t maxnworkers=fNodes->GetNWorkersCluster();
+      if (stop==-1 || stop>maxnworkers){
+         stop=maxnworkers; //total number of workers
+                           //in the cluster
+       }
+       Info("MakeDataSets", "Making data sets for mode %s, number of files a"
+            " worker=%d, %d ~ %d active worker(s), every %d worker(s).",
+            GetName(), nf, start, stop, step);
+   }
+   else if (nx==1){
+      const Int_t maxnworkers=fNodes->GetMinNWorkersANode();
+      if (stop==-1 || stop>maxnworkers){
+         stop=maxnworkers; //min number of workers on nodes
+                                          //in the cluster
+      }
+      Info("MakeDataSets", "Making data sets for mode %s, number of files a"
+          " worker=%d, %d ~ %d active worker(s)/node, every %d worker(s)/node.",
+           GetName(), nf, start, stop, step);
    }
 
    const Int_t np=(stop-start)/step+1;
@@ -156,14 +173,15 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf, Int_t start,
       wp[i]=nactive;
       i++;
    }
-   return MakeDataSets(nf, np, wp, listfiles, option, proof);
+   return MakeDataSets(nf, np, wp, listfiles, option, proof, nx);
 
 }
 
 //______________________________________________________________________________
 Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf, Int_t np,
                                         const Int_t *wp, const TList* listfiles,
-                                        const char *option, TProof* proof)
+                                        const char *option, TProof* proof,
+                                        Int_t nx)
 {
 
    // Make data sets out of list of files 'listfiles' and register them.
@@ -178,6 +196,11 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf, Int_t np,
    //               and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
+   //    nx: When it is 1, 'start', 'stop' and 'step' are the number of active
+   //        workers per node. The same number of workers are activated on all
+   //        nodes in the cluster for all test points. When it is 0, 'start,
+   //        'stop' and 'step' are the total number of active workers in the
+   //        cluster.
    // Return
    //   0 when ok
    //  <0 otherwise
@@ -200,117 +223,227 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf, Int_t np,
    // Dataset naming:
    // DataSetEventConstNFilesNode_nworkersincluster_nfilesaworker
 
-   TString dsname;
-   Int_t kp;
-   Int_t nfiles=0;
-   for (kp = 0; kp < np; kp++) {
-      TFileCollection *fc = new TFileCollection;
-      dsname.Form("DataSetEvent%s_%d_%d", GetName(), wp[kp], nf);
-      Info("MakeDataSets", "Creating dataset '%s' for %d active worker(s).",
-            dsname.Data(), wp[kp]);
+   if (nx==0){
+      TString dsname;
+      Int_t kp;
+      Int_t nfiles=0;
+      for (kp = 0; kp < np; kp++) {
+         TFileCollection *fc = new TFileCollection;
+         dsname.Form("DataSetEvent%s_%d_%d", GetName(), wp[kp], nf);
+         Info("MakeDataSets", "Creating dataset '%s' for %d active worker(s).",
+              dsname.Data(), wp[kp]);
+         nfiles=nf*wp[kp]; //number of files on all nodes for wp[kp] workers
 
-      nfiles=nf*wp[kp]; //number of files on all nodes for wp[kp] workers
+         //Check if we have enough number of files
+         Int_t nfilesavailable=listfiles->GetSize();
+         if (nfilesavailable<nfiles){
+            Warning("MakeDataSets", "Number of available files (%d) is smaller"
+                    " than needed (%d)" ,nfilesavailable, nfiles);
+         }
 
-      //Check if we have enough number of files
-      Int_t nfilesavailable=listfiles->GetSize();
-      if (nfilesavailable<nfiles){
-         Warning("MakeDataSets", "Number of available files (%d) is smaller"
-                 " than needed (%d)" ,nfilesavailable, nfiles);
-      }
-      //Check if number of requested workers are not greater than number of
-      //available workers
-      TList *wl = proof->GetListOfSlaveInfos();
-      if (!wl) {
-         Error("MakeDataSets", "Could not get information about workers!");
-         return -2;
-      }
+         //Check if number of requested workers are not greater than number of
+         //available workers
+         TList *wl = proof->GetListOfSlaveInfos();
+         if (!wl) {
+            Error("MakeDataSets", "Could not get information about workers!");
+            return -2;
+         }
 
-      Int_t nworkersavailable=wl->GetSize();
-      if (nworkersavailable<wp[kp]){ 
-         Warning("MakeDataSets", "Number of available workers (%d) is smaller"
-                 " than needed (%d); Only upto %d"
-                 "(=%d files/worker * %d workers) out of %d(=%d files/worker*"
-                 " %d workers) files will be added to the data set",
-                 nworkersavailable, wp[kp], nf*nworkersavailable, nf,
-                 nworkersavailable, nfiles, nf, wp[kp]);
-      }
+         Int_t nworkersavailable=wl->GetSize();
+         if (nworkersavailable<wp[kp]){ 
+            Warning("MakeDataSets", "Number of available workers (%d) is"
+                    " smaller than needed (%d); Only upto %d (=%d files/worker"
+                    "* %d workers) out of %d(=%d files/worker* %d workers)"
+                    " files will be added to the data set", nworkersavailable,
+                    wp[kp], nf*nworkersavailable, nf, nworkersavailable, nfiles,
+                    nf, wp[kp]);
+         }
 
-      TList* listfiles_copy=(TList*)(listfiles->Clone("filelistcopy"));
+         TList* listfiles_copy=(TList*)(listfiles->Clone("filelistcopy"));
 
-      TIter nxwi(wl);
-      TSlaveInfo *si = 0;
-      TString nodename;
-      Int_t nfilesadded=0;
-      Int_t nfile; 
-      TFileInfo* fileinfo;
-      TUrl* url;
-      TString hostname, filename, tmpstring; 
-      while ((si = (TSlaveInfo *) nxwi())) {
-         nodename=si->GetName(); 
+         TIter nxwi(wl);
+         TSlaveInfo *si = 0;
+         TString nodename;
+         Int_t nfilesadded=0;
+         Int_t nfile; 
+         TFileInfo* fileinfo;
+         TUrl* url;
+         TString hostname, filename, tmpstring; 
+         while ((si = (TSlaveInfo *) nxwi())) {
+            nodename=si->GetName(); 
 
-         //start over for this worker
-         TIter nxtfileinfo(listfiles_copy);
-         Int_t nfilesadded_worker=0;
-         while ((fileinfo=(TFileInfo*)nxtfileinfo())){
+            //start over for this worker
+            TIter nxtfileinfo(listfiles_copy);
+            Int_t nfilesadded_worker=0;
+            while ((fileinfo=(TFileInfo*)nxtfileinfo())){
 
-            url=fileinfo->GetCurrentUrl();
-            hostname=url->GetHost(); 
-            filename=url->GetFile();
+               url=fileinfo->GetCurrentUrl();
+               hostname=url->GetHost(); 
+               filename=url->GetFile();
 
-            if (hostname!=nodename) continue; 
+               if (hostname!=nodename) continue; 
 
-            //Info("MakeDataSets", "filename=%s", fileinfo->GetName());
-            //filename=root://hostname/directory/EventTree_Benchmark_filenumber_
-            //serial.root
-            //remove upto "Benchmark_"
-            tmpstring=filename;
-            TString stem="_Benchmark_";
+               //Info("MakeDataSets", "filename=%s", fileinfo->GetName());
+               //filename=root://hostname/directory/EventTree_Benchmark_
+               //filenumber_serial.root
+               //remove upto "Benchmark_"
+               tmpstring=filename;
+               TString stem="_Benchmark_";
 
-            tmpstring.Remove(0, filename.Index(stem)+stem.Length());
+               tmpstring.Remove(0, filename.Index(stem)+stem.Length());
 
-            TObjArray* token=tmpstring.Tokenize("_");
+               TObjArray* token=tmpstring.Tokenize("_");
 
-            //Info ("CreateDataSetsN", "file %s", url->GetUrl());
-            if (token){
-               nfile=TString((*token)[0]->GetName()).Atoi();
-               token=TString((*token)[1]->GetName()).Tokenize(".");
-               Int_t serial=TString((*token)[0]->GetName()).Atoi();
+               //Info ("CreateDataSetsN", "file %s", url->GetUrl());
+               if (token){
+                  nfile=TString((*token)[0]->GetName()).Atoi();
+                  token=TString((*token)[1]->GetName()).Tokenize(".");
+                  Int_t serial=TString((*token)[0]->GetName()).Atoi();
 
-               //ok found, add it to the dataset
-               //count only once for set of split files
-               if (serial==0){
-                  if (nfilesadded_worker>=nf){
-                     break;
+                  //ok found, add it to the dataset
+                  //count only once for set of split files
+                  if (serial==0){
+                     if (nfilesadded_worker>=nf){
+                        break;
+                     }
+                     nfilesadded_worker++;
                   }
-                  nfilesadded_worker++;
-               }
 
-               fc->Add((TFileInfo*)(fileinfo->Clone()));
-               listfiles_copy->Remove(fileinfo);
+                  fc->Add((TFileInfo*)(fileinfo->Clone()));
+                  listfiles_copy->Remove(fileinfo);
+               }
+               else{
+                  Error("MakeDataSets", "File name not recognized: %s",
+                        fileinfo->GetName());
+                  return -1;
+               }
             }
-            else{
-               Error("MakeDataSets", "File name not recognized: %s",
-                     fileinfo->GetName());
-               return -1;
+            nfilesadded+=nfilesadded_worker;
+            if (nfilesadded>=nfiles){
+               break;
             }
          }
-         nfilesadded+=nfilesadded_worker;
-         if (nfilesadded>=nfiles){
-            break;
+         if (nfilesadded<nfiles){
+            Warning("MakeDataSets", "Only %d files out of %d files requested "
+                                    "are added to data set %s",
+                     nfilesadded, nfiles, dsname.Data());
          }
+         fc->Update();
+         // Register dataset with verification
+         proof->RegisterDataSet(dsname, fc, option);
+         listfiles_copy->SetOwner(kTRUE);
+         SafeDelete(listfiles_copy);
+         SafeDelete(fc);
       }
-      if (nfilesadded<nfiles){
-         Warning("MakeDataSets", "Only %d files out of %d files requested "
-                                 "are added to data set %s",
-                  nfilesadded, nfiles, dsname.Data());
-      }
-      fc->Update();
-      // Register dataset with verification
-      proof->RegisterDataSet(dsname, fc, option);
-      listfiles_copy->SetOwner(kTRUE);
-      SafeDelete(listfiles_copy);
-      SafeDelete(fc);
    }
+   else if (nx==1){
+      const Int_t nnodes=fNodes->GetNNodes();//number of nodes
+      const Int_t minnworkersanode=fNodes->GetMinNWorkersANode();
+
+      TString dsname;
+      Int_t kp;
+      Int_t nfiles=0;
+      for (kp = 0; kp < np; kp++) {
+         TFileCollection *fc = new TFileCollection;
+         dsname.Form("DataSetEvent%s_%dX_%d", GetName(), wp[kp], nf);
+         Info("MakeDataSets", "Creating dataset '%s' for %d active"
+              " worker(s)/node.", dsname.Data(), wp[kp]);
+         nfiles=nf*wp[kp]*nnodes; //number of files on all nodes for wp[kp]
+                                  //workers per node
+
+         //Check if number of requested workers are not greater than the minimum
+         //number of workers on the nodes in the cluster
+         if (minnworkersanode<wp[kp]){ 
+            Warning("MakeDataSets", "Number of available workers (%d) on some"
+                    "node in the cluster is smaller than needed (%d); Skipping"
+                    " making data set."
+                    ,minnworkersanode, wp[kp]);
+            continue;
+         }
+
+         //Check if we have enough number of files
+         Int_t nfilesavailable=listfiles->GetSize();
+         if (nfilesavailable<nfiles){
+            Warning("MakeDataSets", "Number of available files (%d) is smaller"
+                    " than needed (%d)" ,nfilesavailable, nfiles);
+         }
+
+         TList* listfiles_copy=(TList*)(listfiles->Clone("filelistcopy"));
+
+         const TList* listofnodes=fNodes->GetListOfNodes();
+
+         TIter nxnode(listofnodes);
+         TList *node= 0;
+         TString nodename;
+         Int_t nfilesadded=0;
+         Int_t nfile; 
+         TFileInfo* fileinfo;
+         TUrl* url;
+         TString hostname, filename, tmpstring; 
+         while ((node = (TList*) nxnode())) {
+            nodename=node->GetName(); 
+
+            //start over for this node
+            TIter nxtfileinfo(listfiles_copy);
+            Int_t nfilesadded_node=0;
+            while ((fileinfo=(TFileInfo*)nxtfileinfo())){
+
+               url=fileinfo->GetCurrentUrl();
+               hostname=url->GetHost(); 
+               filename=url->GetFile();
+
+               if (hostname!=nodename) continue; 
+
+               //Info("MakeDataSets", "filename=%s", fileinfo->GetName());
+               //filename=root://hostname/directory/
+               //         EventTree_Benchmark_filenumber_serial.root
+               //remove upto "Benchmark_"
+               tmpstring=filename;
+               TString stem="_Benchmark_";
+
+               tmpstring.Remove(0, filename.Index(stem)+stem.Length());
+
+               TObjArray* token=tmpstring.Tokenize("_");
+
+               //Info ("CreateDataSetsN", "file %s", url->GetUrl());
+               if (token){
+                  nfile=TString((*token)[0]->GetName()).Atoi();
+                  token=TString((*token)[1]->GetName()).Tokenize(".");
+                  Int_t serial=TString((*token)[0]->GetName()).Atoi();
+
+                  //ok found, add it to the dataset
+                  //count only once for set of split files
+                  if (serial==0){
+                     if (nfilesadded_node>=nf*wp[kp]){
+                        break;
+                     }
+                     nfilesadded_node++;
+                  }
+
+                  fc->Add((TFileInfo*)(fileinfo->Clone()));
+               }
+               else{
+                  Error("MakeDataSets", "File name not recognized: %s",
+                        fileinfo->GetName());
+                  return -1;
+               }
+            }
+            nfilesadded+=nfilesadded_node;
+         }
+         if (nfilesadded<nfiles){
+            Warning("MakeDataSets", "Only %d files out of %d files requested "
+                                    "are added to data set %s",
+                     nfilesadded, nfiles, dsname.Data());
+         }
+         fc->Update();
+         // Register dataset with verification
+         proof->RegisterDataSet(dsname, fc, option);
+         listfiles_copy->SetOwner(kTRUE);
+         SafeDelete(listfiles_copy);
+         SafeDelete(fc);
+      }
+   }
+
    return 0;
 }
 

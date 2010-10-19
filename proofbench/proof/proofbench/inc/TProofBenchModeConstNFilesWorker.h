@@ -50,21 +50,21 @@ public:
    TProofBenchModeConstNFilesWorker(Int_t nfiles=1, TProof* proof=0, TProofNodes* nodes=0);
     virtual ~TProofBenchModeConstNFilesWorker();
 
-    TMap* FilesToProcess(Int_t nfiles);
+   TMap* FilesToProcess(Int_t nfiles);
 
-    Int_t MakeDataSets(Int_t nfiles, Int_t start, Int_t stop, Int_t step,
-                       const TList* listfiles, const char* option,
-                       TProof* proof);
+   Int_t MakeDataSets(Int_t nfiles, Int_t start, Int_t stop, Int_t step,
+                      const TList* listfiles, const char* option,
+                      TProof* proof, Int_t flag_nx);
 
-     Int_t MakeDataSets(Int_t nfiles, Int_t np, const Int_t *wp,
-                        const TList* listfiles, const char *option,
-                        TProof* proof);
+   Int_t MakeDataSets(Int_t nfiles, Int_t np, const Int_t *wp,
+                      const TList* listfiles, const char *option,
+                      TProof* proof, Int_t flag_nx);
 
    TProofBenchMode::EFileType GetFileType()
                         {return TProofBenchMode::kFileBenchmark;}
 
    void Print(Option_t* option=0) const;
-
+   
    void SetProof(TProof* proof);
    void SetNFiles(Int_t nfiles);
 
