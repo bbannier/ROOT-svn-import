@@ -419,7 +419,7 @@ class ROOTMailNotifier(MailNotifier):
         t += 'Changed files: <br/>'
         for f in cd['files']:
             t += '<b>' + f['name'] + '</b><br/>'
-        t += 'Comments:<br/>' + cd['comments']
+        t += 'Comments:<br/><pre>' + cd['comments'] + '</pre>'
         return t
 
 class ROOTBuildBotConfig:
