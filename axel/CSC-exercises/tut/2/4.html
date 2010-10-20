@@ -1,0 +1,76 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise II</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?2.2" > </iframe>
+<div id="b">
+<h1>ROOT Exercise II</h1>
+<h3>Reading a TTree (2/5)</h3>
+      <p class="info"> Note that for these exercises, timing is a <em>key ingredient</em>, so please remember the printed times.
+      And to be sure to obtain good timing values, you <em>have to</em> run the macro consecutively several (at least two) times.</p>
+
+      <p>You can speed up the processing by enabling only the branches that you really need to read.
+      Well, give it a try!</p>
+
+<div class="help" id="help1">
+<p>See the lecture on selecting which branches to access.
+Then see which branches you access, and tell that to the tree!
+The trick is to first disable everything, and then to enable only what you need.
+Simple, he?</p>
+</div>
+
+<div class="help" id="help2">
+<p>Because there are sub-branches in the major branches, you cannot just set the BranchStatus for "muons" - you will have to set it for all the branches under "muons", too.
+You can use wildcarding for that.</p>
+</div>
+
+<div class="help" id="helps">
+<p>Your the change in the code that selects the branch to read:</p>
+<pre>
+...
+void read_tree()
+{
+   // function reading particles collection in a tree
+
+   // open the Root file
+   TFile *f = TFile::Open("http://server/ROOT/exercise2.root");
+   // get the tree from the file
+   TTree *myTree = (TTree*)f-&gt;Get("MyTree");
+   <b>// disable all branches 
+   myTree-&gt;SetBranchStatus("*", 0);
+   // enable only the branch we are interested to read
+   myTree-&gt;SetBranchStatus("muons*", 1);</b>
+...
+</pre>
+</div>
+
+<div id="nav" class="buttons">
+  <a href="3.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="5.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
+</body>
+</html>

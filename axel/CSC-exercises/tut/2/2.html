@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise II</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?2.1" > </iframe>
+<div id="b">
+<h1>ROOT Exercise II</h1>
+<h3>I/O (2/2)</h3>
+<p>The script creates a ROOT file.
+      Quit ROOT and restart it, then use the TBrowser to look at the ROOT file.
+      Draw the histogram that's stored in it.</p>
+<div class="help" id="help1">
+<p>You start the browser by <tt>new TBrowser()</tt>.
+Simply open the file in the current directory and then select it in the left panel.
+You can now see what's inside; double clicking on elements will call their <tt>Browse()</tt> method; for histograms it simply draws them.</p>
+</div>
+
+<div class="help" id="helps">
+<p>After starting the TBrowser, you select the current directory in the left panel and you double-click on the ROOT file to open in the right panel, as shown here:</p>
+<img width="550px" alt="browser in pwd" src="browser_pwd.png" />
+<p>That shows the list of files, with teh file you have just opened in the right panel, like this:</p>
+<img width="550px" alt="browser in files" src="browser_files.png" />
+<p>Now double click the file in the right panel (or click on it in the left panel) to have a look inside; you will see the histogram stored in the file like this:</p>
+<img width="550px" alt="browser showing histograms" src="browser_hist.png" />
+<p>Just double-click the histogram icon in the right panel to draw it.</p>
+</div>
+
+<div id="nav" class="buttons">
+  <a href="1.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="3.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise II</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?2.2" > </iframe>
+<div id="b">
+<h1>ROOT Exercise II</h1>
+<h3>Reading a TTree (4/5)</h3>
+      <p class="info"> Note that for these exercises, timing is a <em>key ingredient</em>, so please remember the printed times.
+      And to be sure to obtain good timing values, you <em>have to</em> run the macro consecutively several (at least two) times.</p>
+
+<p>Use <tt>TTree::Draw()</tt> to draw the same expression.
+      Is the performance comparable to the one of the other measurements?
+	  What does that suggest - which optimization does <tt>TTree::Draw()</tt> use?</p>
+
+<div class="help" id="help1">
+<p>You have to replace this part of the code: </p>
+<pre>
+   // create the 1D histogram of floats 
+   // (100 bins, between 0.0 and 10.0)
+   TH1F *h1 = new TH1F("h1", "Pt", 100, 0.0, 10.0);
+   // get number of entries in the tree
+   Long64_t nentries = myTree->GetEntries();
+   // loop over all entries
+   for (Long64_t ev=0;ev<nentries;ev++) {
+      // get tree entry[ev]
+      myTree->GetEntry(ev);
+      // get number of particle in the TClonesArray
+      Int_t npart = particles->GetEntriesFast();
+      // loop over all particles
+      for (Int_t i=0;i<npart;++i) {
+         // get the ith particle
+         MyParticle *particle = (MyParticle *)particles->At(i);
+         // fill the histogram with particle's Pt value
+         h1->Fill(particle->fPt);
+      }
+   }
+   // draw (display) the histogram
+   h1->Draw();
+</pre>
+
+<p> by one single line: <tt>myTree->Draw("some_expression", "");</tt> </p>
+
+<p> Basically, you replace the histogram creation, the loop over the tree entries, 
+the loop over the TClonesArray entries, and the histogram drawing by only one method call!</p>
+</div>
+
+<div class="help" id="helps">
+<p>Use the TTree::Draw() method, e.g: <tt>myTree->Draw("electrons.fPt", "");</tt> </p>
+<p>Then your code should look like: </p>
+
+<pre>
+#include "TROOT.h"
+#include "TFile.h"
+#include "TTree.h"
+#include "TRandom.h"
+#include "TClonesArray.h"
+#include "myparticle.h"
+#include "TH1F.h"
+
+void read_tree()
+{
+   // function reading particles collection in a tree
+
+   // open the Root file
+   TFile *f = TFile::Open("http://server/ROOT/exercise2.root");
+   // get the tree from the file
+   TTree *myTree = (TTree*)f-&gt;Get("MyTree");
+   
+   // initialize Root's timing mechanism
+   gROOT-&gt;Time();
+   
+   // Magic of TTree::Draw()!!!!
+   myTree-&gt;Draw("muons.fE", "");
+
+   // display the time elapsed since the first call to gROOT-&gt;Time()
+   gROOT-&gt;Time();
+}
+
+</pre>
+
+<p>And you can notice that the performance is comparable to reading branches with all 
+branches disabled but the one you want to read</p>
+
+</div>
+
+<div id="nav" class="buttons">
+  <a href="6.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="7.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
+</body>
+</html>

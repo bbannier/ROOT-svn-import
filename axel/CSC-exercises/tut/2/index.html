@@ -1,60 +1,36 @@
-<html>
-<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise II</title></head>
-<body><div id="b">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise II</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?2" > </iframe>
+<div id="b">
 <h1>ROOT Exercise II</h1>
 <p>When you are done with today's exercise please do <em>not</em> proceed to the next day.
 Help your colleagues instead!</p>
-<ul>
-  <li class="lvl1">Exercise I: The Basics.</li>
-  <li class="lvl1"><span class="today">Exercise II: I/O and Trees.</span></li>
-  <li class="lvl1">Exercise III: Tree-Based Analysis.</li>
-</ul>
 <h3>Overview</h3>
 <p>In this session you will learn how to read and write objects, including TTrees.<p/>
 <p>You need to download the code from <a href="../2.tar.bz2">2.tar.bz2</a> and then run</p>
 <pre>tar xjf 2.tar.bz2
 cd 2</pre>
-<p>These are your exercises for this session:</p>
-<ol>
-  <li class="lvl1">I/O
-    <ol>
-      <li><p>Run the macro <a href="ages_io.C" class="source">ages_io.C</a>
-      For some reason, the histogram does not stay on the canvas.
-      Please repair that!</p>
-      <a href="help11.html" class="help1">HELP!</a></li>
-
-      <li><p>The script creates a ROOT file.
-      Quit ROOT and restart it, then use the TBrowser to look at the ROOT file.
-      Draw the histogram that's stored in it.</p>
-      <a href="help21.html" class="help1">HELP!</a></li>
-    </ol>
-  </li>
-  <li class="lvl1">Reading a TTree
-      <a class="solution"> Note that for these exercises, timing is a <em>key ingredient</em>, so please remember the printed times.
-      <br> And to be sure to obtain good timing values, you <em>have to</em> run the macro consecutively several (at least two) times.</a>
-    <ol>
-      <li><p>Execute <a href="read_tree.C" class="source">read_tree.C<b>+</b></a> (note the plus!).
-      Modify the macro to read the muons; use the TBrowser to determine the name of the branch.</p>
-      <a href="help31.html" class="help1">HELP!</a></li>
-
-      <li><p>You can speed up the processing by enabling only the branches that you really need to read.
-      Well, give it a try!</p>
-      <a href="help41.html" class="help1">HELP!</a></li>
-
-      <li><p>Instead of plotting the Pt distribution, generate a histogram of another value.</p>
-      <a href="help51.html" class="help1">HELP!</a></li>
-
-      <li><p>Use <tt>TTree::Draw()</tt> to draw the same expression.
-      Is the performance comparable to the one of the other measurements?
-	  What does suggest - which optimization does <tt>TTree::Draw()</tt> use?</p>
-      <a href="help61.html" class="help1">HELP!</a></li>
-
-      <li><p>Now you use <tt>TTree::Draw()</tt> again, but on a non-split tree (split-level 0). The tree can be found in the file
-      <tt>TFile::Open("http://server/ROOT/exercise2_nonsplit.root")</tt>. Draw the same expression as before. Do you notice a timing
-      difference? Is that expected?</p>
-      <a href="help71.html" class="help1">HELP!</a></li>
-    </ol>
-  </li>
-</ol>
-</div></body>
+<div id="nav" class="buttons">
+  <a href="../index.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+  <a href="1.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+</div>
+</body>
 </html>
+
