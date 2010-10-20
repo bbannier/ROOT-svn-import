@@ -15,6 +15,8 @@
 #include "Math/WrappedFunction.h"
 #endif
 
+#include<map>
+
 #include "TF1.h"
 #include "Math/Math.h"
 
@@ -60,10 +62,10 @@ public:
       kForcedBinning
    };
 
-   explicit TKDE(UInt_t events = 0, const Double_t* data = 0, Double_t xMin = 0.0, Double_t xMax = 0.0, Option_t* option = "KernelType:Gaussian;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", Double_t rho = 1.0);
+   explicit TKDE(UInt_t events = 0, const Double_t* data = 0, Double_t xMin = 0.0, Double_t xMax = 0.0, const Option_t* option = "KernelType:Gaussian;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", Double_t rho = 1.0);
 
    template<class KernelFunction>
-   TKDE(const Char_t* /*name*/, const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 0.0, Double_t xMax = 0.0, Option_t* option = "KernelType:UserDefined;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", Double_t rho = 1.0)  {
+   TKDE(const Char_t* /*name*/, const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 0.0, Double_t xMax = 0.0, const Option_t* option = "KernelType:UserDefined;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", Double_t rho = 1.0)  {
       Instantiate(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc), events, data, xMin, xMax, option, rho);
    }
 
@@ -78,6 +80,8 @@ public:
    void SetUseBinsNEvents(UInt_t nEvents);
    void SetTuneFactor(Double_t rho);
    void SetRange(Double_t xMin, Double_t xMax); // By default computed from the data
+
+   virtual void Draw(const Option_t* option = "Plot:BothDoubleCanvas+ConfidenceInterval;CanvasName:KDE_Plot;CanvasTitle:KDE Plot;Draw:APL");
 
    Double_t operator()(Double_t x) const;
    Double_t operator()(const Double_t* x, const Double_t* p=0) const;  // needed for  creating TF1
@@ -161,7 +165,7 @@ private:
    friend struct KernelIntegrand;
 
    void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data,
-                    Double_t xMin, Double_t xMax, Option_t* option, Double_t rho);
+                    Double_t xMin, Double_t xMax, const Option_t* option, Double_t rho);
 
    inline Double_t GaussianKernel(Double_t x) const {
       // Returns the kernel evaluation at x
@@ -203,13 +207,16 @@ private:
    void SetSigma(Double_t R);
    void SetKernel();
    void SetKernelFunction(KernelFunction_Ptr kernfunc = 0);
-   void SetOptions(Option_t* option, Double_t rho);
+   void SetOptions(const Option_t* option, Double_t rho);
    void CheckOptions(Bool_t isUserDefinedKernel = kFALSE);
    void GetOptions(std::string optionType, std::string option);
    void AssureOptions();
    void SetData(const Double_t* data);
    void InitFromNewData();
    void SetMirroredEvents();
+   void SetDrawOptions(const Option_t* option, TString& plotOpt, std::map<TString, TString> & canvasNameOpt, std::map<TString, TString>& canvasTitleOpt, std::map<TString, TString>& drawOpt);
+   void DrawError(TString drawOpt);
+   void DrawEstimate(TString drawOpt);
 
    TF1* GetKDEFunction(UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
    TF1* GetKDEApproximateBias(UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
