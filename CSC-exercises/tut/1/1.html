@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise I</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?1.1" > </iframe>
+<div id="b">
+<h1>ROOT Exercise I</h1>
+<h3>Scopes (1/1)</h3>
+<p>Run the macro <a href="histogram.C" class="source">histogram.C</a>.
+It is supposed to display a histogram, but something is wrong.
+Fix the macro so the histogram gets displayed.</p>
+
+<div class="help" id="help1">
+<p>You run the code by starting ROOT (run <tt>root</tt> at the shell)
+and the executing <tt>.x histogram.C</tt></p>
+<p>To fix the macro you will need to look at the code,
+e.g. by running <tt>emacs histogram.C</tt>.
+The histogram gets created by this line:
+<pre>TH1F h1("h1", "Random numbers", 200, 0.0, 10.0);</pre>
+and drawn by this line:
+<pre>h1.Draw();</pre>
+<p>Then the function returns, and ROOT's prompt gains control again.
+That's when you want to see the histogram which for some reason doesn't get displayed - all you can see is an empty window (the canvas).
+So something must have happened between the drawing of the histogram and you looking at the canvas.</p>
+
+<p>Hint: check the lecture's part on scopes.</p>
+</div>
+
+<div class="help" id="helps">
+<pre>
+#include "TStyle.h"
+#include "TH1F.h"
+#include "TF1.h"
+#include "TFormula.h"
+
+void histogram()
+{
+   // Don't display fit informations
+   gStyle-&gt;SetOptFit(0);
+   // create 1D histogram of floats
+   // note the operator new!!!!
+   // the histogram is now created on the heap
+   TH1F *h1 = new TH1F("h1", "Random numbers", 200, 0.0, 10.0);
+   // create a formula
+   TFormula *form1 = new TFormula("form1", "abs(sin(x)/x)");
+   // create a 1D function using a gaussian and our formula
+   TF1 *sqroot = new TF1("sqroot", "x*gaus(0) + [3]*form1", 0.0, 10.0);
+   // set function parameters
+   sqroot-&gt;SetParameters(10.0, 4.0, 1.0, 20.0);
+   // randomly fill histogram with a distribution following
+   // the previously created function
+   h1-&gt;FillRandom("sqroot", 10000);
+   // finally draw (display) the histogram
+   h1-&gt;Draw();
+}
+
+</pre>
+</div>
+
+<div id="nav" class="buttons">
+  <a href="index.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="2.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
+</body>
+</html>

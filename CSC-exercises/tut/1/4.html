@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise I</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?1.3" > </iframe>
+<div id="b">
+<h1>ROOT Exercise I</h1>
+<h3>Drawing and Editing Histograms (1/3)</h3>
+<p>Execute <a href="ages.C" class="source">ages.C</a>.
+      It creates and displays a histogram showing the age distribution of the participants of a CSC.
+      Use the editor (in the TCanvas's menu under View &gt; Editor) to make the histogram look like this one:</p>
+      <p><img width="550px" src="ages.png" class="default" alt="goal histogram from ages.C" /></p>
+
+<div class="help" id="help1">
+<p>You run the code by starting ROOT (run <tt>root</tt> at the shell)
+and the executing <tt>.x ages.C</tt></p>
+<p>To modify the histogram you need to open the editor, via the editor menu entry from the view canvas menu.
+<p><img width="550px" src="Edit01.png" class="default" alt="editor menu for editing ages histo"></p>
+<p>Then you can edit any object in the pad by just clicking on it.</p>
+</div>
+
+<div class="help" id="helps">
+<ul>
+<li>Once the Editor is open (as shown in the previous help, click on one edge of the histogram
+to switch the editor.<br/>
+<img width="550px" src="Edit02.png" class="default" alt="first step editing histogram.C"></li>
+
+<li>Then you can change the fill color.<br/>
+<img width="550px" src="Edit03.png" class="default" alt="first step editing histogram.C"></li>
+
+<li>Then change the fill style.<br/>
+<img width="550px" src="Edit04.png" class="default" alt="second step editing histogram.C"></li>
+
+<li>Then the "bar" options.<br/>
+<img width="550px" src="Edit05.png" class="default" alt="third step editing histogram.C"></li>
+
+<li>Select a bar width of 0.90 (means 90%)<br/>
+<img width="550px" src="Edit06.png" class="default" alt="fourth step editing histogram.C"></li>
+
+<li>And a bar offset of 0.05 (to center the bars between the bin limits)<br/>
+<img width="550px" src="Edit07.png" class="default" alt="fourth step editing histogram.C"></li>
+
+<li>Same for the line properties of the fit (select fit object by clicking on the line).<br/>
+<img width="550px" src="Edit08.png" class="default" alt="fourth step editing histogram.C"><br/>
+<img width="550px" src="Edit09.png" class="default" alt="fourth step editing histogram.C"><br/>
+<img width="550px" src="Edit10.png" class="default" alt="fourth step editing histogram.C"></li>
+
+<li>Now you can zoom the X axis to obtain (more or less) the same limits than the ones on the example.<br/>
+<img width="550px" src="Edit11.png" class="default" alt="fourth step editing histogram.C"></li>
+
+<li>At last, to diplay fit information, click on the box containing histogram infos (Entries, Mean and RMS) 
+and check "values" in "Fit Options field".<br/>
+<img width="550px" src="Edit12.png" class="default" alt="fourth step editing histogram.C"></li>
+</ul>
+</div>
+
+
+
+<div id="nav" class="buttons">
+  <a href="3.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="5.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
+</body>
+</html>

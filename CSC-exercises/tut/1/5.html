@@ -1,18 +1,48 @@
-<html>
-<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise I - Solution</title></head>
-<body class="solution">
-<h1>ROOT Exercise I - Solution</h1>
-<p>Got stuck? This is the solution</p>
-<h2>3 Drawing and Editing Histograms </h2>
-
-<div class="exercise">
-      <li><p>Save the histogram to <tt>styledhist.C</tt>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise I</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?1.3" > </iframe>
+<div id="b">
+<h1>ROOT Exercise I</h1>
+<h3>Drawing and Editing Histograms (2/3)</h3>
+<p>Save the histogram to <tt>styledhist.C</tt>
       (e.g. see the Canvas's file menu, or right-click the histogram)
       and look at that saved file.
       Restart ROOT and run <tt>styleshist.C</tt> to check that ROOT really
       does store the histogram as C++ code.</p>
-</p>
 
+<div class="help" id="help1">
+<p>To save the source code from your modified histogram, you have three options:
+<ol>
+<li>From the Canvas's file menu, select the entry <tt>Save As...</tt><br/>
+<img width="550px" src="SaveAs01.png" class="default" alt="editor menu for editing ages histo" /><br/>
+a File Dialog will popup, where you can select the type of file you want to save, 
+and the file name. Select <tt>C files</tt> in the combo box and <tt>styleshist.C</tt>
+in the file name field.<br/>
+<img width="550px" src="SaveAs02.png" class="default" alt="editor menu for editing ages histo" />
+<img width="550px" src="SaveAs03.png" class="default" alt="editor menu for editing ages histo" /></<li>
+
+<li>From the Canvas's file menu, select <tt>Save-&gt;c1.C</tt> and then rename the file 
+<tt>c1.C</tt> to <tt>styleshist.C</tt><br/>
+<img width="550px" src="Save_c1.png" class="default" alt="editor menu for editing ages histo" /></li>
+
+<li>Right-click the histogram, from the context menu, select <tt>Save As</tt>.<br/>
+<img width="550px" src="ContextSaveAs01.png" class="default" alt="editor menu for editing ages histo" /><br/>
+<img width="550px" src="ContextSaveAs02.png" class="default" alt="editor menu for editing ages histo" /><nr/>
+then type the file name and click on the "OK" button.<br/>
+<img src="ContextSaveAs03.png" class="default" alt="editor menu for editing ages histo" /></li>
+
+</ol>
+</div>
+
+<div class="help" id="helps">
 <p>Use the first method previously described (File Menu, Save As) </p>
 
 <p>Your code will most probably look like this:</p>
@@ -59,7 +89,8 @@
    gaus-&gt;SetParLimits(2,0,36.10115);
    ages-&gt;GetListOfFunctions()-&gt;Add(gaus);
    
-   TPaveStats *ptstats = new TPaveStats(0.7571839,0.7627119,0.9798851,0.9957627,"brNDC");
+   TPaveStats *ptstats = new TPaveStats(0.7571839,0.7627119,
+      0.9798851,0.9957627,"brNDC");
    ptstats-&gt;SetName("stats");
    ptstats-&gt;SetBorderSize(2);
    ptstats-&gt;SetFillColor(19);
@@ -82,8 +113,10 @@
    ages-&gt;SetLineColor(4);
    ages-&gt;GetXaxis()-&gt;SetRange(4,21);
    ages-&gt;Draw("BAR");
-      tex = new TLatex(0.15,0.55,"#font[12]{f(x)}#scale[0.8]{=[a]}#upoint#font[12]{e}^{ - #frac{(#scale[1.2]{#font[12]{x}}-[b])^{2}}{2#upoint[c]^{2}}}");
-tex-&gt;SetNDC();
+   tex = new TLatex(0.15,0.55,"#font[12]{f(x)}#scale[0.8]{=[a]}"
+      "#upoint#font[12]{e}^{ - #frac{(#scale[1.2]{#font[12]{x}}-[b])^{2}}"
+      "{2#upoint[c]^{2}}}");
+   tex-&gt;SetNDC();
    tex-&gt;SetTextColor(36);
    tex-&gt;SetTextSize(0.07);
    tex-&gt;SetLineWidth(2);
@@ -100,5 +133,29 @@ tex-&gt;SetNDC();
    c1-&gt;SetSelected(c1);
 }
 </pre>
+</div>
+
+<div id="nav" class="buttons">
+  <a href="4.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="6.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
 </body>
 </html>

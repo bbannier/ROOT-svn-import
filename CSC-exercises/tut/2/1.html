@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise II</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?2.1" > </iframe>
+<div id="b">
+<h1>ROOT Exercise II</h1>
+<h3>I/O (1/2)</h3>
+<p>Run the macro <a href="ages_io.C" class="source">ages_io.C</a>
+      For some reason, the histogram does not stay on the canvas.
+      Please repair that!</p>
+
+<div class="help" id="help1">
+<p>In the lecture you have learned that histograms are associated with files:
+if a file gets deleted, all histograms in the file get deleted, too.
+This should get you onto the right track.</p>
+</div>
+
+<div class="help" id="help2">
+<p>The histogram is read from the file in <tt>read_histo()</tt>.
+It stays associated with the file, even at the time the file is closed by <tt>delete file</tt>.
+You will have to remove the association.
+</p>
+</div>
+
+<div class="help" id="helps">
+You could change <tt>read_histo()</tt> to look like this:
+<pre>
+void read_histo()
+{
+   // function reading the 1D histogram from the Root file
+
+   // create a file in read mode
+   TFile *file = TFile::Open("ages.root", "READ");
+   // get (read) the histogram from the file
+   TH1F *h1 = (TH1F *)file-&gt;Get("ages");
+   // remove the association of h1 with file
+   <b>h1-&gt;SetDirectory(0);</b>
+   // draw (display) the histogram
+   h1-&gt;Draw();
+   // call the function fitting the histogram
+   fit_histo(h1);
+   // delete the file. As seen before, this automatically 
+   // close the physical file on disk
+   delete file;
+}
+</pre>
+</div>
+
+<div id="nav" class="buttons">
+  <a href="index.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="2.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
+</body>
+</html>

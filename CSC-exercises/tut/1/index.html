@@ -1,71 +1,35 @@
-<html>
-<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise I</title></head>
-<body><div id="b">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise I</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?1" > </iframe>
+<div id="b">
 <h1>ROOT Exercise I</h1>
 <p>When you are done with today's exercise please do <em>not</em> proceed to the next day.
 Help your colleagues instead!</p>
-<ul>
-  <li class="lvl1"><span class="today">Exercise I: The Basics.</span></li>
-  <li class="lvl1">Exercise II: I/O and Trees.</li>
-  <li class="lvl1">Exercise III: Tree-Based Analysis.</li>
-</ul>
 <h3>Overview</h3>
 <p>In this session you will learn about scopes, what constructors and assignment operators do, and how to draw histograms and change their style.<p/>
 <p>You need to download the code from <a href="../1.tar.bz2">1.tar.bz2</a> and then run</p>
 <pre>tar xjf 1.tar.bz2
 cd 1</pre>
-<p>These are your exercises for this session:</p>
-<ol>
-  <li class="lvl1">Scopes
-    <ol>
-      <li><p>Run the macro <a href="histogram.C" class="source">histogram.C</a>.
-      It is supposed to display a histogram, but something is wrong.
-      Fix the macro so the histogram gets displayed.</p>
-      <a href="help11.html" class="help1">HELP!</a></li>
-    </ol>
-  </li>
-  <li class="lvl1">Constructors and alike
-    <ol>    
-      <li><p>Execute the macro <a href="test_motorcycle.C" class="source">test_motorcycle.C</a>.
-      This macro creates and loads a library containing the class <tt>TMotorcycle</tt>, which
-      is defined in <a href="Motorcycle.h" class="source">Motorcycle.h</a> and
-      <a href="Motorcycle.C" class="source">Motorcycle.C</a>.
-      <a href="test_motorcycle.C" class="source">test_motorcycle.C</a> is very inefficient - and
-      your assignment is to figure out why. To do that, count how many times the constructor,
-      copy constructor, assignment operator and destructor are called. You should modify
-      <a href="Motorcycle.C" class="source">Motorcycle.C</a>
-      for that.</p>
-      <p>The copy constructor and assignment operator can be extremely expensive,
-      e.g. for large vectors of large objects,
-      so it is important to learn how to write code that avoids their invocation.</p>
-      <a href="help21.html" class="help1">HELP!</a></li>
-
-      <li><p>We continue to use <a href="test_motorcycle.C" class="source">test_motorcycle.C</a>.
-      As you can see the macro has a bug - instead of five motorcycles it only displays one kind
-      of motorcycles. Fix that!</p>
-      <a href="help31.html" class="help1">HELP!</a></li>
-
-    </ol>
-  </li>
-  <li class="lvl1">Drawing and Editing Histograms
-    <ol>
-      <li><p>Execute <a href="ages.C" class="source">ages.C</a>.
-      It creates and displays a histogram showing the age distribution of the participants of a CSC.
-      Use the editor (in the TCanvas's menu under View &gt; Editor) to make the histogram look like this one:</p>
-      <p><img src="ages.png" class="default" alt="goal histogram from ages.C"></p>
-      <a href="help41.html" class="help1">HELP!</a></li>
-      <li><p>Save the histogram to <tt>styledhist.C</tt>
-      (e.g. see the Canvas's file menu, or right-click the histogram)
-      and look at that saved file.
-      Restart ROOT and run <tt>styleshist.C</tt> to check that ROOT really
-      does store the histogram as C++ code.</p>
-      <a href="help51.html" class="help1">HELP!</a></li>
-      <li><p>The style settings you set with the editor are preserved in the .C file.
-      Identify and use the function calls in <tt>styleshist.C</tt> to change ages.C
-      such that it displays the histogram styled like the example picture above.</p>
-      <a href="help61.html" class="help1">HELP!</a></li>
-    </ol>
-  </li>
-</ol>
-</div></body>
+<div id="nav" class="buttons">
+  <a href="../index.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+  <a href="1.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+</div>
+</body>
 </html>

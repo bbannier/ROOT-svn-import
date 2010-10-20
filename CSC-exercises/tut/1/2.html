@@ -1,11 +1,17 @@
-<html>
-<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise I - Solution</title></head>
-<body class="solution">
-<h1>ROOT Exercise I - Solution</h1>
-<p>Got stuck? This is the solution</p>
-<h2>2 Constructors and alike</h2>
-
-<div class="exercise">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise I</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?1.2" > </iframe>
+<div id="b">
+<h1>ROOT Exercise I</h1>
+<h3>Constructors and alike (1/2)</h3>
 <p>Execute the macro <a href="test_motorcycle.C" class="source">test_motorcycle.C</a>.
       This macro creates and loads a library containing the class <tt>TMotorcycle</tt>, which
       is defined in <a href="Motorcycle.h" class="source">Motorcycle.h</a> and
@@ -18,7 +24,14 @@
       <p>The copy constructor and assignment operator can be extremely expensive,
       e.g. for large vectors of large objects,
       so it is important to learn how to write code that avoids their invocation.</p>
+
+<div class="help" id="help1">
+<p>The file <a href="Motorcycle.C" class="source">Motorcycle.C</a> contains all the functions that the question mentions;
+see the comments.
+You could visualize the calls to these functions by adding a print statement.</p>
 </div>
+
+<div class="help" id="helps">
 <p>
 The functions are the first five functions in <a href="Motorcycle.C" class="source">Motorcycle.C</a>.
 Simply add
@@ -29,5 +42,30 @@ Simply add
 You will see that the constructor taking the name etc gets called once, the copy constructor gets called nine times,
 and the destructor gets called ten times.
 </p>
+</div>
+
+
+<div id="nav" class="buttons">
+  <a href="1.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="3.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
 </body>
 </html>

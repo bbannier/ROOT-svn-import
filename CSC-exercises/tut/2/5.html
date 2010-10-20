@@ -1,14 +1,27 @@
-<html>
-<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise II - Solution</title></head>
-<body class="solution">
-<h1>ROOT Exercise II - Solution</h1>
-<p>Got stuck? This is the solution</p>
-<h2>2 Reading a Tree </h2>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise II</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?2.2" > </iframe>
+<div id="b">
+<h1>ROOT Exercise II</h1>
+<h3>Reading a TTree (3/5)</h3>
+      <p class="info"> Note that for these exercises, timing is a <em>key ingredient</em>, so please remember the printed times.
+      And to be sure to obtain good timing values, you <em>have to</em> run the macro consecutively several (at least two) times.</p>
 
-<div class="exercise">
 <p>Instead of plotting the Pt distribution, generate a histogram of another value.</p>
+
+<div class="help" id="help1">
+<p>You have to change the value passed in argument of <tt>h1->Fill(particle->fPt);</tt> </p>
 </div>
 
+<div class="help" id="helps">
 <p>You may pass any other particle class member value to <tt>h1->Fill();</tt> </p>
 <p>Lets see how your code should look like with let's say, particle's energy (fE):</p>
 
@@ -65,6 +78,29 @@ void read_tree()
 }
 
 </pre>
+</div>
 
+<div id="nav" class="buttons">
+  <a href="5.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="6.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
 </body>
 </html>

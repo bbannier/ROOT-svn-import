@@ -1,16 +1,51 @@
-<html>
-<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise I - Solution</title></head>
-<body class="solution">
-<h1>ROOT Exercise I - Solution</h1>
-<p>Got stuck? This is the solution</p>
-<h2>3 Drawing and Editing Histograms </h2>
-
-<div class="exercise">
-      <li><p>The style settings you set with the editor are preserved in the .C file.
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise I</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?1.3" > </iframe>
+<div id="b">
+<h1>ROOT Exercise I</h1>
+<h3>Drawing and Editing Histograms (3/3)</h3>
+<p>The style settings you set with the editor are preserved in the .C file.
       Identify and use the function calls in <tt>styleshist.C</tt> to change ages.C
       such that it displays the histogram styled like the example picture above.</p>
+
+<div class="help" id="help1">
+<p>Looking at the saved macro, here are the lines you have to adapt to the original macro:</p>
+<pre>
+
+[...]
+
+   ages-&gt;SetBarOffset(0.05);
+   ages-&gt;SetBarWidth(0.899);
+
+[...]
+
+   gaus-&gt;SetLineColor(2);
+   gaus-&gt;SetLineWidth(2);
+
+[...]
+
+   ages-&gt;SetFillColor(4);
+   ages-&gt;SetFillStyle(3001);
+
+   ages-&gt;GetXaxis()-&gt;SetRange(4,21);
+   ages-&gt;Draw("BAR");
+
+[...]
+
+   ptstats-&gt;SetOptFit(10001);
+
+</pre>
 </div>
 
+<div class="help" id="helps">
 <p>Your code should more or less look like this:</p>
 <pre>
 #include "TFile.h"
@@ -73,7 +108,9 @@ void fit_histo(TH1F *h1)
    // set text size
    latex-&gt;SetTextSize(0.07);
    // draw the latex function at [0.5,0.55] NDC coordinates
-   latex-&gt;DrawLatex(0.15, 0.55, "#font[12]{f(x)}#scale[0.8]{=[a]}#upoint#font[12]{e}^{ - #frac{(#scale[1.2]{#font[12]{x}}-[b])^{2}}{2#upoint[c]^{2}}}");
+   latex-&gt;DrawLatex(0.15, 0.55, "#font[12]{f(x)}#scale[0.8]{=[a]}"
+      "#upoint#font[12]{e}^{ - #frac{(#scale[1.2]{#font[12]{x}}-[b])^{2}}"
+      "{2#upoint[c]^{2}}}");
    // update the current pad
    gPad-&gt;Update();
 }
@@ -94,5 +131,30 @@ void ages()
 }
 
 </pre>
+</div>
+
+
+<div id="nav" class="buttons">
+  <a href="5.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="../index.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
 </body>
 </html>

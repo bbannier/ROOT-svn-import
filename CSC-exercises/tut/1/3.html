@@ -1,0 +1,180 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise I</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?1.2" > </iframe>
+<div id="b">
+<h1>ROOT Exercise I</h1>
+<h3>Constructors and alike (2/2)</h3>
+<p>We continue to use <a href="test_motorcycle.C" class="source">test_motorcycle.C</a>.
+      As you can see the macro has a bug - instead of five motorcycles it only displays one kind
+      of motorcycles. Fix that!</p>
+      
+      <a href="help31.html" class="help1">HELP!</a></li>
+<div class="help" id="help1">
+<p>You run the code by starting ROOT (run <tt>root</tt> at the shell)
+and the executing <tt>.x test_motorcycle.C</tt></p>
+<p>To fix the macro you will need to look at the code,
+e.g. by running <tt>emacs test_motorcycle.C</tt>.
+The motorcycle gets created by this line:
+<pre>TMotorcycle mybike("Honda", "VTX1300S", 1312, 55);</pre>
+and the class informations are dump by this function:
+<pre>printinfos(mybike);</pre>
+<p>Then the class informations (e.g. brand, model and so on) are modified several times.
+The macro should display something like this on the command line:
+<pre>
+<tt>Brand: Honda - Model: VTX1300S - Cubic Capacity: 1312 - Power: 55</tt>
+<tt>Brand: Suzuki - Model: M800Z - Cubic Capacity: 805 - Power: 39</tt>
+<tt>Brand: Yamaha - Model: XVS1300A - Cubic Capacity: 1304 - Power: 53.5</tt>
+<tt>Brand: Kawasaki - Model: VN900C - Cubic Capacity: 903 - Power: 37</tt>
+<tt>Brand: Harley-Davidson - Model: FXCWC - Cubic Capacity: 1584 - Power: 49.236</tt>
+</pre>
+And the canvas should display pictures of all brands, as shown in this picture:
+<img width="400px" alt="Canvas displaying motorcycles" src="c1.png">
+</p>
+
+<p>Hint: check the lecture's part on constructors.</p>
+</div>
+
+<div class="help" id="help2">
+<p>The TMotorcycle class is stored by the variable <tt>mybike</tt>.
+<tt>mybike</tt> gets passed as argument to the <tt>setproperties(mybike, brand, model, cap, power)</tt> function.
+Inside this function, as the actual object is passed in argument, everything happening in the function
+is NOT applied to the original object, but on a local copy of it (see scope).</p>
+
+<p>As the lecture describes, you will have to pass a pointer to the TMotorcycle object <tt>mybike</tt>
+and use the pointer inside the function to really change the original object itself.
+<p>Remember that by using pointers (<tt>TMotorcycle*</tt> in this case) you should use e.g. 
+<tt>mybike-&gt;SetBrand(brand)</tt> to call a function on it (note the "arrow"!).</p>
+</div>
+
+<div class="help" id="helps">
+<p>As the lecture describes, you must have to pass a pointer to the TMotorcycle object <tt>mybike</tt>
+and use the pointer inside the function to really change the original object itself.
+<p>You will have to replace all method calls from "dot" (e.g. <tt>mybike.SetBrand(brand)</tt> to "arrow"
+(e.g. <tt>mybike-&gt;SetBrand(brand))</tt>.
+Before objects were passed around, which got copied again and again,
+which in turn invokes the assignment operator and the copy constructor etc.
+Passing a pointer to the original object make each function accessing 
+the same and unique object, without copying it each time</p>
+<pre>
+
+#include "Riostream.h"
+#include "Motorcycle.h"
+
+void setproperties(TMotorcycle *mybike, const char *brand,
+                   const char *model, Int_t cap, Float_t power)
+{
+   // function setting (changing) parameters of the TMotorcycle class
+   // passed in argument
+
+   // set the brand
+   mybike-&gt;SetBrand(brand);
+   // set the model
+   mybike-&gt;SetModel(model);
+   // set the cubic capacity
+   mybike-&gt;SetCubicCap(cap);
+   // set the power
+   mybike-&gt;SetPower(power);
+}
+
+void printinfos(TMotorcycle *mybike)
+{
+   // function printing parameters of the TMotorcycle class
+   // pointer passed in argument
+
+   // dump infos on the terminal
+   cout << "Brand: " << mybike-&gt;GetBrand();
+   cout << " - Model: " << mybike-&gt;GetModel();
+   cout << " - Cubic Capacity: " << mybike-&gt;GetCubicCap();
+   cout << " - Power: " << mybike-&gt;GetPower() << endl;
+}
+
+void test_motorcycle()
+{
+   // main function
+
+   // load the library containing the TMotorcycle class 
+   // implementation
+   gSystem-&gt;Load("Motorcycle_C");
+   // create a canvas to display pictures of the motorcycles
+   TCanvas *c1 = new TCanvas("c1", "Pictures", 1200, 600);
+   // divide the canvas
+   c1-&gt;Divide(3, 2);
+   // create a new TMotorcycle class with some values
+   TMotorcycle *mybike = new TMotorcycle("Honda", "VTX1300S", 1312, 55);
+   // verify the class member values
+   printinfos(mybike);
+   // go to the 1st pad
+   c1-&gt;cd(1);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   // change the values
+   setproperties(mybike, "Suzuki", "M800Z", 805, 39);
+   // and verify the values have been changed
+   printinfos(mybike);
+   // go to the 2d pad
+   c1-&gt;cd(2);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   // change values
+   setproperties(mybike, "Yamaha", "XVS1300A", 1304, 53.5);
+   // verify
+   printinfos(mybike);
+   // go to the 3rd pad
+   c1-&gt;cd(3);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   // change values
+   setproperties(mybike, "Kawasaki", "VN900C", 903, 37);
+   // verify
+   printinfos(mybike);
+   // go to the 4th pad
+   c1-&gt;cd(4);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   // change values
+   setproperties(mybike, "Harley-Davidson", "FXCWC", 1584, 49.236);
+   // verify
+   printinfos(mybike);
+   // go to the 5th pad
+   c1-&gt;cd(5);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   c1-&gt;cd();
+}
+
+</pre>
+</div>
+
+
+<div id="nav" class="buttons">
+  <a href="2.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="4.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
+</body>
+</html>
