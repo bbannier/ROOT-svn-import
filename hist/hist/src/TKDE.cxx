@@ -34,8 +34,6 @@
 #include "Math/RichardsonDerivator.h"
 #include "TGraphErrors.h"
 #include "TCanvas.h"
-#include <iostream>
-
 
 #include "TKDE.h"
 
