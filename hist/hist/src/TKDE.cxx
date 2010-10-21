@@ -34,6 +34,8 @@
 #include "Math/RichardsonDerivator.h"
 #include "TGraphErrors.h"
 #include "TCanvas.h"
+#include <iostream>
+
 
 #include "TKDE.h"
 
@@ -44,6 +46,7 @@ const Double_t TKDE::_2_PI_ROOT_INV = 0.398942280401432703;
 const Double_t TKDE::PI             = 3.14159265358979312;
 const Double_t TKDE::PI_OVER2       = 1.57079632679489656;
 const Double_t TKDE::PI_OVER4       = 0.785398163397448279;
+const Double_t APPRX_GEO_MEAN       = 0.241970724519143365; // 1 / TMath::Power(2 * TMath::Pi(), .5) * TMath::Exp(-.5)
 
 class TKDE::TKernel {
    TKDE* fKDE;
@@ -189,7 +192,7 @@ void TKDE::SetDrawOptions(const Option_t* option, TString& plotOpt, std::map<TSt
    TString plotInstance;
    while(plotpos != voption.end() && !foundPlotOPt) {
       size_t pos = (*plotpos).find(':');
-      if (pos != std::string::npos && !(*plotpos).empty()) {
+      if (pos != std::string::npos) {
          plotType = (*plotpos).substr(0, pos);
          plotInstance = (*plotpos).substr(pos + 1);
          plotType.ToLower();
@@ -526,7 +529,6 @@ void TKDE::SetMirroredEvents() {
       fEvents.resize((fMirrorLeft + 2) * fNEvents, 0.0);
       transform(fEvents.begin(), fEvents.begin() + fNEvents, fEvents.begin() + (fMirrorLeft + 1) * fNEvents, std::bind1st(std::minus<Double_t>(), 2 * fXMax));
    }
-   fNEvents *= (fMirrorLeft + fMirrorRight + 1);
    if(fUseBins) {
       fNBins *= (fMirrorLeft + fMirrorRight + 1);
       Double_t xmin = fMirrorLeft  ? 2 * fXMin - fXMax : fXMin;
@@ -693,7 +695,7 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
       *weight = std::max(*weight /= std::sqrt(f), minWeight);
       fKDE->fAdaptiveBandwidthFactor += std::log(f);
    }
-   fKDE->fAdaptiveBandwidthFactor = fKDE->fUseMirroring ? 0.288 /*TODO: Resolve "magic number"*/: std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size()));
+   fKDE->fAdaptiveBandwidthFactor = fKDE->fUseMirroring ? APPRX_GEO_MEAN / fKDE->fSigmaRob : std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size()));
    transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), fKDE->fAdaptiveBandwidthFactor));
  }
 

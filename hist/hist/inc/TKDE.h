@@ -110,6 +110,7 @@ private:
    static const Double_t PI;             // TMath::Pi()
    static const Double_t PI_OVER2;       // TMath::PiOver2()
    static const Double_t PI_OVER4;       // TMath::PiOver4()
+   static const Double_t APPROX_GEO_MEAN; // Approximated geometric mean over pointwise data (the KDE function is substituted by the "real Gaussian" pdf) and proportional to sigma. Used directly when the mirroring is enabled, otherwise computed from the data
 
    TKDE(TKDE& kde);           // Disallowed copy constructor
    TKDE operator=(TKDE& kde); // Disallowed assign operator
