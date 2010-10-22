@@ -33,6 +33,7 @@
 #include "TMap.h"
 #include "TTree.h"
 #include "TH1.h"
+#include "TH2.h"
 #include "TCanvas.h"
 #include "TProfile.h"
 #include "TKey.h"
@@ -208,13 +209,75 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
          profile_perfstat_IO->GetXaxis()->SetTitle("Active Slaves/Node");
       }
 
-      profile_perfstat_IO->GetYaxis()->SetTitle("MB/sec");
+      profile_perfstat_IO->GetYaxis()->SetTitle("MBs/sec");
       profile_perfstat_IO->SetMarkerStyle(21);
 
       fListPerfProfiles->Add(profile_perfstat_IO);
    }
    else{
       profile_perfstat_IO->Reset();
+   }
+
+   //find perfstat event histogram
+   TString hist_perfstat_event_name=BuildProfileName("hHist",
+                                                        "PerfStat_Event");
+   TH2* hist_perfstat_event=(TH2*)
+            (fListPerfProfiles->FindObject(hist_perfstat_event_name.Data()));
+
+   //book one if one does not exists yet or reset the existing one
+   if (!hist_perfstat_event){
+      TString hist_perfstat_event_title=BuildProfileTitle("Hist",
+                                                             "PerfStat Event");
+      hist_perfstat_event= new TH2C(hist_perfstat_event_name,
+             hist_perfstat_event_title, ndiv, ns_min, ns_max, 10000, 0, 10000);
+
+      hist_perfstat_event->SetDirectory(fDirProofBench);
+      if (nx==0){
+         hist_perfstat_event->GetXaxis()->SetTitle("Active Slaves");
+      }
+      else if (nx==1){
+         hist_perfstat_event->GetXaxis()->SetTitle("Active Slaves/Node");
+      }
+      hist_perfstat_event->GetYaxis()->SetTitle("Events/sec");
+      hist_perfstat_event->SetMarkerStyle(7);
+
+      hist_perfstat_event->SetBit(TH1::kCanRebin);
+
+      fListPerfProfiles->Add(hist_perfstat_event);
+   }
+   else{
+      hist_perfstat_event->Reset();
+   }
+
+   //find perfstat io histogram
+   TString hist_perfstat_io_name=BuildProfileName("hHist",
+                                                        "PerfStat_IO");
+   TH2* hist_perfstat_IO=(TH2*)
+            (fListPerfProfiles->FindObject(hist_perfstat_io_name.Data()));
+
+   //book one if one does not exists yet or reset the existing one
+   if (!hist_perfstat_IO){
+      TString hist_perfstat_io_title=BuildProfileTitle("Hist",
+                                                             "PerfStat IO");
+      hist_perfstat_IO= new TH2C(hist_perfstat_io_name,
+                           hist_perfstat_io_title, ndiv, ns_min, ns_max, 1000, 0, 100);
+
+      hist_perfstat_IO->SetDirectory(fDirProofBench);
+      if (nx==0){
+         hist_perfstat_IO->GetXaxis()->SetTitle("Active Slaves");
+      }
+      else if (nx==1){
+         hist_perfstat_IO->GetXaxis()->SetTitle("Active Slaves/Node");
+      }
+      hist_perfstat_IO->GetYaxis()->SetTitle("MBs/sec");
+      hist_perfstat_IO->SetMarkerStyle(7);
+
+      hist_perfstat_IO->SetBit(TH1::kCanRebin);
+
+      fListPerfProfiles->Add(hist_perfstat_IO);
+   }
+   else{
+      hist_perfstat_IO->Reset();
    }
 
    //find queryresult profile
@@ -263,7 +326,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
       else if (nx==1){
          profile_queryresult_IO->GetXaxis()->SetTitle("Active Slaves/Node");
       }
-      profile_queryresult_IO->GetYaxis()->SetTitle("MB/sec");
+      profile_queryresult_IO->GetYaxis()->SetTitle("MBs/sec");
       profile_queryresult_IO->SetMarkerStyle(22);
 
       fListPerfProfiles->Add(profile_queryresult_IO);
@@ -290,7 +353,12 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
    else{
       Int_t nside = (Int_t)TMath::Sqrt((Float_t)nprofiles);
       nside = (nside*nside<nprofiles)?nside+1:nside;
-      fCPerfProfiles->Divide(nside,nside);
+      if ((nside-1)*nside>=nprofiles){
+         fCPerfProfiles->Divide(nside, nside-1);
+      }
+      else{
+         fCPerfProfiles->Divide(nside, nside);
+      }
    }
 
    //do not delete performance statistics trees
@@ -390,13 +458,23 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
             TTree* tnew=(TTree*)t->Clone("tnew");
 
             FillPerfStatProfiles(tnew, profile_perfstat_event,
-                                 profile_perfstat_IO, nactive);
+                                 profile_perfstat_IO, 
+                                 hist_perfstat_event, hist_perfstat_IO,
+                                 nactive);
 
             fCPerfProfiles->cd(npad++);
             profile_perfstat_event->Draw();
             gPad->Update();
             fCPerfProfiles->cd(npad++);
             profile_perfstat_IO->Draw();
+            gPad->Update();
+
+            fCPerfProfiles->cd(npad++);
+            hist_perfstat_event->Draw();
+            gPad->Update();
+
+            fCPerfProfiles->cd(npad++);
+            hist_perfstat_IO->Draw();
             gPad->Update();
 
             tnew->SetDirectory(fDirProofBench);
@@ -497,6 +575,8 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
       fDirProofBench->cd();
       profile_perfstat_event->Write();
       profile_perfstat_IO->Write();
+      hist_perfstat_event->Write();
+      hist_perfstat_IO->Write();
       profile_queryresult_event->Write();
       profile_queryresult_IO->Write();
    }
@@ -505,7 +585,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
 //______________________________________________________________________________
 void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t,
                                  TProfile* profile_event, TProfile* profile_IO,
-                                 Int_t nactive)
+                                 TH2* hist_event, TH2* hist_IO, Int_t nactive)
 {
 
    // Fill performance profiles using tree 't'(PROOF_PerfStats).
@@ -520,9 +600,7 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t,
    // Return
    //    Nothing
 
-   Long64_t nevents_holder;
-   Long64_t bytes_holder;
-   Double_t time_holder;
+   const Double_t Dmegabytes=1024.*1024.;
 
    // extract timing information
    TPerfEvent pe;
@@ -533,22 +611,65 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t,
    //Bool_t started=kFALSE;
       
    Long64_t nevents_kPacket=0;
-   Long64_t nevents_kRate=0;
    Long64_t bytesread_kPacket=0;
+   Double_t proctime_kPacket=0;
+
+   Long64_t nevents_kRate=0;
    Long64_t bytesread_kRate=0;
+   Double_t proctime_kRate=0;
+
+   Double_t event_rate_packet=0, io_rate_packet=0;
+
+   Double_t proctime_kPacket_worker[nactive];
+   Long64_t nevents_kPacket_worker[nactive];
+   Long64_t bytesread_kPacket_worker[nactive];
+   for (Int_t i=0; i<nactive; i++){
+      proctime_kPacket_worker[i]=0;
+      nevents_kPacket_worker[i]=0;
+      bytesread_kPacket_worker[i]=0;
+   }
+
    for (Long64_t k=0; k<entries; k++) {
       t->GetEntry(k);
 
-      //Printf("k:%lld fTimeStamp=%lf fEvtNode=%s pe.fType=%d fSlaveName=%s fNodeName=%s fFileName=%s fFileClass=%s fSlave=%s fEventsProcessed=%lld fBytesRead=%lld fLen=%lld fLatency=%lf fProcTime=%lf fCpuTime=%lf fIsStart=%d fIsOk=%d",k, pe.fTimeStamp.GetSec() + 1e-9*pe.fTimeStamp.GetNanoSec(), pe.fEvtNode.Data(), pe.fType, pe.fSlaveName.Data(), pe.fNodeName.Data(), pe.fFileName.Data(), pe.fFileClass.Data(), pe.fSlave.Data(), pe.fEventsProcessed, pe.fBytesRead, pe.fLen, pe.fLatency, pe.fProcTime, pe.fCpuTime, pe.fIsStart, pe.fIsOk);
+      //Printf("k:%lld fTimeStamp=%lf fEvtNode=%s pe.fType=%d fSlaveName=%s"
+      //       " fNodeName=%s fFileName=%s fFileClass=%s fSlave=%s"
+      //       " fEventsProcessed=%lld fBytesRead=%lld fLen=%lld fLatency=%lf"
+      //       " fProcTime=%lf fCpuTime=%lf fIsStart=%d fIsOk=%d", k,
+      //       pe.fTimeStamp.GetSec()+ 1e-9*pe.fTimeStamp.GetNanoSec(),
+      //       pe.fEvtNode.Data(), pe.fType, pe.fSlaveName.Data(),
+      //       pe.fNodeName.Data(), pe.fFileName.Data(), pe.fFileClass.Data(),
+      //       pe.fSlave.Data(), pe.fEventsProcessed, pe.fBytesRead, pe.fLen,
+      //       pe.fLatency, pe.fProcTime, pe.fCpuTime, pe.fIsStart, pe.fIsOk);
+
+      //skip information from workers
+      if (pe.fEvtNode.Contains(".")) continue;
 
       if (pe.fType==TVirtualPerfStats::kPacket){
+         event_rate_packet=pe.fEventsProcessed/pe.fProcTime;
+         io_rate_packet=pe.fBytesRead/Dmegabytes/pe.fProcTime;
+
+         hist_event->Fill(Double_t(nactive), event_rate_packet);
+         hist_IO->Fill(Double_t(nactive), io_rate_packet);
+
+         TString sslave=pe.fSlave; 
+         sslave.Replace(0, sslave.Last('.')+1, "");
+         Int_t slave=sslave.Atoi();
+
+         proctime_kPacket_worker[slave]+=pe.fProcTime;
+         nevents_kPacket_worker[slave]+=pe.fEventsProcessed;
+         bytesread_kPacket_worker[slave]+=pe.fBytesRead;
+
          nevents_kPacket+=pe.fEventsProcessed;
          bytesread_kPacket+=pe.fBytesRead;
+         proctime_kPacket+=pe.fProcTime;
       }
+
       if (pe.fType==TVirtualPerfStats::kRate){
          //printf("adding pe.fEventsProcessed=%lld\n", pe.fEventsProcessed);
          nevents_kRate+=pe.fEventsProcessed;
          bytesread_kRate+=pe.fBytesRead;
+         proctime_kRate+=pe.fProcTime;
       }
      
       ///if (!started) {
@@ -564,8 +685,6 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t,
       //            + 1e-9*pe.fTimeStamp.GetNanoSec();
       //   }
       //}
-      //skip information from workers
-      if (pe.fEvtNode.Contains(".")) continue;
       if (pe.fType==TVirtualPerfStats::kStart) start= pe.fTimeStamp.GetSec()
                                               +1e-9*pe.fTimeStamp.GetNanoSec();
       if (pe.fType==TVirtualPerfStats::kStop) end= pe.fTimeStamp.GetSec()
@@ -577,18 +696,23 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t,
      // return 0;
    //}
 
-   nevents_holder=nevents_kPacket;
-   bytes_holder=bytesread_kPacket;
-   time_holder=end-start;
+   Double_t event_rate=0, io_rate=0;
+   Double_t event_rate_worker[nactive];
+   Double_t io_rate_worker[nactive];
 
-   Double_t event_rate, IO_rate;
+   for (Int_t i=0; i<nactive; i++){
+      //Info("FillPerfStatProfiles", "i=%d nevents_kPacket_worker=%lld,"
+      //     " proctime_kPacket_worker=%f", i, nevents_kPacket_worker[i],
+      //     proctime_kPacket_worker[i]);
+      event_rate_worker[i]=nevents_kPacket_worker[i]/proctime_kPacket_worker[i];
+      io_rate_worker[i]=bytesread_kPacket_worker[i]/Dmegabytes
+                        /proctime_kPacket_worker[i];
+      event_rate+=event_rate_worker[i];
+      io_rate+=io_rate_worker[i];
+   }
 
-   event_rate=nevents_holder/time_holder; 
    profile_event->Fill(Double_t(nactive), event_rate);
-
-   const Double_t Dmegabytes=1024.*1024.;
-   IO_rate=bytes_holder/Dmegabytes/time_holder; 
-   profile_IO->Fill(Double_t(nactive), IO_rate);
+   profile_IO->Fill(Double_t(nactive), io_rate);
 
    return;
 }

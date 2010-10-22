@@ -208,6 +208,32 @@ Int_t TProofNodes::GetMinNWorkersANode() const
 }
 
 //______________________________________________________________________________
+Int_t TProofNodes::GetNActives() const
+{
+   //Description: Get the number of active workers in the cluster
+
+   TProofNodes* const localthis=(TProofNodes* const) this;
+   localthis->Build();
+
+   Int_t nactives=0;
+   TIter nxtnode(fNodes);
+   TList* node=0;
+
+   while (node=(TList*)(nxtnode())){
+      TIter nxtworker(node);
+      TSlaveInfo* si=0;
+      while (si=(TSlaveInfo*)(nxtworker())){
+         if (si->fStatus==TSlaveInfo::kActive){
+            nactives++;
+         }
+         else if (si->fStatus==TSlaveInfo::kNotActive){
+         }
+      }
+   }
+   return nactives;
+}
+
+//______________________________________________________________________________
 TList* TProofNodes::GetListOfNodes() const
 {
 //Description: Get list of nodes.

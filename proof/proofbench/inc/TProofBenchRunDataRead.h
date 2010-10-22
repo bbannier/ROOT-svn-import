@@ -35,6 +35,7 @@
 class TProof;
 class TCanvas;
 class TProfile;
+class TH2;
 class TTree;
 
 class TProofBenchMode;
@@ -71,7 +72,9 @@ private:
 
 protected:
 
-   void FillPerfStatProfiles(TTree* t, TProfile* profile_event, TProfile* profile_IO, Int_t nactive);
+   void FillPerfStatProfiles(TTree* t, TProfile* profile_event,
+                           TProfile* profile_IO, TH2* hist_event,
+                           TH2* hist_IO, Int_t nactive);
 
    Int_t SetParameters();
    Int_t DeleteParameters();

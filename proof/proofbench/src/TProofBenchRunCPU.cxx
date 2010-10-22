@@ -32,6 +32,7 @@
 #include "TLeaf.h"
 #include "TCanvas.h"
 #include "TROOT.h"
+#include "TH2.h"
 #include "TProfile.h"
 #include "TLegend.h"
 #include "TKey.h"
@@ -170,6 +171,37 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
       profile_perfstat_event->Reset();
    }
 
+   //find perfstat event histogram
+   TString hist_perfstat_event_name=BuildProfileName("hHist",
+                                                        "PerfStat_Event");
+   TH2* hist_perfstat_event=(TH2*)
+            (fListPerfProfiles->FindObject(hist_perfstat_event_name.Data()));
+
+   //book one if one does not exists yet or reset the existing one
+   if (!hist_perfstat_event){
+      TString hist_perfstat_event_title=BuildProfileTitle("Hist",
+                                                             "PerfStat Event");
+      hist_perfstat_event= new TH2C(hist_perfstat_event_name,
+           hist_perfstat_event_title, ndiv, ns_min, ns_max, 5000, 0, 500000);
+
+      hist_perfstat_event->SetDirectory(fDirProofBench);
+      if (nx==0){
+         hist_perfstat_event->GetXaxis()->SetTitle("Active Slaves");
+      }
+      else if (nx==1){
+         hist_perfstat_event->GetXaxis()->SetTitle("Active Slaves/Node");
+      }
+      hist_perfstat_event->GetYaxis()->SetTitle("Events/sec");
+      hist_perfstat_event->SetMarkerStyle(7);
+
+      hist_perfstat_event->SetBit(TH1::kCanRebin);
+   
+      fListPerfProfiles->Add(hist_perfstat_event);
+   }
+   else{
+      hist_perfstat_event->Reset();
+   }
+
    //find queryresult profile
    TString profile_queryresult_event_name=BuildProfileName("hProf",
                                                            "QueryResult_Event");
@@ -213,7 +245,12 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
    else{
       Int_t nside = (Int_t)TMath::Sqrt((Float_t)nprofiles);
       nside = (nside*nside<nprofiles)?nside+1:nside;
-      fCPerfProfiles->Divide(nside,nside);
+      if ((nside-1)*nside>=nprofiles){
+         fCPerfProfiles->Divide(nside, nside-1);
+      }
+      else{
+         fCPerfProfiles->Divide(nside, nside);
+      }
    }
 
    TString perfstats_name = "PROOF_PerfStats";
@@ -280,9 +317,13 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
          TTree* t = dynamic_cast<TTree*>(l->FindObject(perfstats_name.Data()));
          if (t) {
 
-            FillPerfStatProfiles(t, profile_perfstat_event, nactive);
+            FillPerfStatProfiles(t, profile_perfstat_event, hist_perfstat_event,
+                                 nactive);
             fCPerfProfiles->cd(npad++);
             profile_perfstat_event->Draw();
+            gPad->Update();
+            fCPerfProfiles->cd(npad++);
+            hist_perfstat_event->Draw();
             gPad->Update();
 
             t->SetDirectory(fDirProofBench);
@@ -335,8 +376,8 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
 }
 
 //______________________________________________________________________________
-void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile,
-                                             Int_t nactive)
+void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile_event,
+                                        TH2* hist_event, Int_t nactive)
 {
 
    // Fill performance profiles using tree 't'(PROOF_PerfStats).
@@ -347,10 +388,6 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile,
    // Return
    //    Nothing
 
-   Long64_t nevents_holder;
-   Long64_t bytes_holder;
-   Double_t time_holder;
-
    // extract timing information
    TPerfEvent pe;
    TPerfEvent* pep = &pe;
@@ -360,17 +397,50 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile,
    //Bool_t started=kFALSE;
       
    Long64_t nevents_kPacket=0;
+   Double_t proctime_kPacket=0; 
+
    Long64_t nevents_kRate=0;
-   Long64_t bytesread_kPacket=0;
    Long64_t bytesread_kRate=0;
+
+   Double_t event_rate_packet=0;
+
+   Double_t proctime_kPacket_worker[nactive];
+   Long64_t nevents_kPacket_worker[nactive];
+   for (Int_t i=0; i<nactive; i++){
+      proctime_kPacket_worker[i]=0;
+      nevents_kPacket_worker[i]=0;
+   }
+
    for (Long64_t k=0; k<entries; k++) {
       t->GetEntry(k);
 
-      //Printf("k:%lld fTimeStamp=%lf fEvtNode=%s pe.fType=%d fSlaveName=%s fNodeName=%s fFileName=%s fFileClass=%s fSlave=%s fEventsProcessed=%lld fBytesRead=%lld fLen=%lld fLatency=%lf fProcTime=%lf fCpuTime=%lf fIsStart=%d fIsOk=%d",k, pe.fTimeStamp.GetSec() + 1e-9*pe.fTimeStamp.GetNanoSec(), pe.fEvtNode.Data(), pe.fType, pe.fSlaveName.Data(), pe.fNodeName.Data(), pe.fFileName.Data(), pe.fFileClass.Data(), pe.fSlave.Data(), pe.fEventsProcessed, pe.fBytesRead, pe.fLen, pe.fLatency, pe.fProcTime, pe.fCpuTime, pe.fIsStart, pe.fIsOk);
+      //Printf("k:%lld fTimeStamp=%lf fEvtNode=%s pe.fType=%d fSlaveName=%s"
+      //       "fNodeName=%s fFileName=%s fFileClass=%s fSlave=%s"
+      //       " fEventsProcessed=%lld fBytesRead=%lld fLen=%lld fLatency=%lf"
+      //       " fProcTime=%lf fCpuTime=%lf fIsStart=%d fIsOk=%d", k,
+      //       pe.fTimeStamp.GetSec() + 1e-9*pe.fTimeStamp.GetNanoSec(),
+      //       pe.fEvtNode.Data(), pe.fType, pe.fSlaveName.Data(),
+      //       pe.fNodeName.Data(), pe.fFileName.Data(), pe.fFileClass.Data(),
+      //       pe.fSlave.Data(), pe.fEventsProcessed, pe.fBytesRead, pe.fLen,
+      //       pe.fLatency, pe.fProcTime, pe.fCpuTime, pe.fIsStart, pe.fIsOk);
+
+      //skip information from workers
+      if (pe.fEvtNode.Contains(".")) continue;
 
       if (pe.fType==TVirtualPerfStats::kPacket){
+         event_rate_packet=pe.fEventsProcessed/pe.fProcTime;
+
+         hist_event->Fill(Double_t(nactive), event_rate_packet);
+
+         TString sslave=pe.fSlave;
+         sslave.Replace(0, sslave.Last('.')+1, "");
+         Int_t slave=sslave.Atoi();
+
+         proctime_kPacket_worker[slave]+=pe.fProcTime;
+         nevents_kPacket_worker[slave]+=pe.fEventsProcessed;
+
          nevents_kPacket+=pe.fEventsProcessed;
-         bytesread_kPacket+=pe.fBytesRead;
+         proctime_kPacket+=pe.fProcTime;
       }
       if (pe.fType==TVirtualPerfStats::kRate){
          //printf("adding pe.fEventsProcessed=%lld\n", pe.fEventsProcessed);
@@ -391,8 +461,6 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile,
          //            + 1e-9*pe.fTimeStamp.GetNanoSec();
          //   }
          //}
-         //skip information from workers
-      if (pe.fEvtNode.Contains(".")) continue;
       if (pe.fType==TVirtualPerfStats::kStart) start= pe.fTimeStamp.GetSec()
                                                +1e-9*pe.fTimeStamp.GetNanoSec();
       if (pe.fType==TVirtualPerfStats::kStop) end= pe.fTimeStamp.GetSec()
@@ -404,18 +472,19 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile,
    // return 0;
    //}
 
-   nevents_holder=nevents_kPacket;
-   bytes_holder=bytesread_kPacket;
-   time_holder = end-start;
+   Double_t event_rate=0;
+   Double_t event_rate_worker[nactive];
 
-   Double_t event_rate;
+   for (Int_t i=0; i<nactive; i++){
+      //Info("FillPerfStatProfiles", "i=%d nevents_kPacket_worker=%lld,"
+      //     " proctime_kPacket_worker=%f", i, nevents_kPacket_worker[i],
+      //     proctime_kPacket_worker[i]);
+      event_rate_worker[i]=nevents_kPacket_worker[i]/proctime_kPacket_worker[i];
+      event_rate+=event_rate_worker[i];
+   }
 
-   event_rate=nevents_holder/time_holder; 
-   profile->Fill(Double_t(nactive), event_rate);
+   profile_event->Fill(Double_t(nactive), event_rate);
 
-   //if (fWritable){
-   //   fProfEvent->Write();
-   //}
    return;
 }
 
