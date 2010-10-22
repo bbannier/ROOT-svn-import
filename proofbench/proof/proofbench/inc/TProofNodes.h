@@ -43,6 +43,7 @@ public:
    Int_t GetNWorkersCluster() const;
    Int_t GetNNodes() const;
    Int_t GetMinNWorkersANode() const;
+   Int_t TProofNodes::GetNActives() const;
    TList* GetListOfNodes() const;
    void Print(Option_t* option="") const;
    //ClassDef(TProofNodes, 0) //Node and worker information
