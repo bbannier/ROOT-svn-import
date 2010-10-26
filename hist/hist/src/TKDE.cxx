@@ -254,9 +254,7 @@ void TKDE::GetOptions(std::string optionType, std::string option) {
          fKernelType = kBiweight;
       } else if (option.compare("cosinearch") == 0) {
          fKernelType = kCosineArch;
-      } else if (option.compare("cosinearch") == 0) {
-         fKernelType = kCosineArch;
-      } else if (option.compare("cosinearch") == 0) {
+      } else if (option.compare("userdefined") == 0) {
          fKernelType = kUserDefined;
       } else {
          this->Warning("GetOptions", "Unknown kernel type option: setting to Gaussian");
@@ -479,7 +477,7 @@ void TKDE::SetData(const Double_t* data) {
    SetSigma(midspread);
    if (fUseBins) {
       if (fNBins >= fNEvents) {
-         this->Warning("CheckOptions", "Default number of bins is greater or equal to number of events. Use SetNBins(UInt_t) to set the appropriate number of bins");
+         this->Warning("SetData", "Default number of bins is greater or equal to number of events. Use SetNBins(UInt_t) to set the appropriate number of bins");
       }
       fWeightSize = fNBins / (fXMax - fXMin);
       SetBinCentreData(fXMin, fXMax);
@@ -1006,7 +1004,7 @@ TF1* TKDE::GetPDFUpperConfidenceInterval(Double_t confidenceLevel, UInt_t npx, D
    fUpperPDF->SetParameter(0, confidenceLevel);
    if (npx > 0) fUpperPDF->SetNpx(npx);
    return (TF1*)fUpperPDF->Clone();
-}
+   }
 
 TF1* TKDE::GetPDFLowerConfidenceInterval(Double_t confidenceLevel, UInt_t npx, Double_t xMin , Double_t xMax) {
    // Returns the upper estimated density
