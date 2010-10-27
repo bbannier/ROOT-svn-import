@@ -402,8 +402,10 @@ void TMVA::VariableDecorrTransform::AttachXMLTo(void* parent)
 //_______________________________________________________________________
 void TMVA::VariableDecorrTransform::ReadFromXML( void* trfnode ) 
 {
-
-
+   // first delete the old matrices
+   for( std::vector<TMatrixD*>::iterator it = fDecorrMatrices.begin(); it != fDecorrMatrices.end(); it++ )
+      if( (*it) != 0 ) delete (*it);
+   fDecorrMatrices.clear();
 
    Bool_t newFormat = kFALSE;
 
@@ -413,24 +415,17 @@ void TMVA::VariableDecorrTransform::ReadFromXML( void* trfnode )
    if( inpnode!=NULL )
       newFormat = kTRUE; // new xml format
 
+   void* ch = NULL;
    if( newFormat ){
       // ------------- new format --------------------
       // read input
       VariableTransformBase::ReadFromXML( inpnode );
 
-   }
-
-
-
+      ch = gTools().GetNextChild(inpnode);
+   }else
+      ch = gTools().GetChild(trfnode);
 
    // Read the transformation matrices from the xml node
-
-   // first delete the old matrices
-   for( std::vector<TMatrixD*>::iterator it = fDecorrMatrices.begin(); it != fDecorrMatrices.end(); it++ )
-      if( (*it) != 0 ) delete (*it);
-   fDecorrMatrices.clear();
-
-   void* ch = gTools().GetChild(trfnode);
    while(ch!=0) {
       Int_t nrows, ncols;
       gTools().ReadAttr(ch, "Rows", nrows);

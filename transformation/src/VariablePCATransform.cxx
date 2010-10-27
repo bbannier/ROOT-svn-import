@@ -87,7 +87,7 @@ Bool_t TMVA::VariablePCATransform::PrepareTransformation( const std::vector<Even
 
    // TPrincipal doesn't support PCA transformation for 1 or less variables
    if (inputSize <= 1) {
-      Log() << kINFO << "Cannot perform PCA transformation for " << inputSize << " variable only" << Endl;
+      Log() << kFATAL << "Cannot perform PCA transformation for " << inputSize << " variable only" << Endl;
       return kFALSE;
    }
 
@@ -114,7 +114,7 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
    // apply the principal component analysis
    if (!IsCreated()) return 0;
 
-   const Int_t inputSize = fGet.size();
+//   const Int_t inputSize = fGet.size();
    const UInt_t nCls = GetNClasses();
 
    // if we have more than one class, take the last PCA analysis where all classes are combined if 
@@ -595,11 +595,20 @@ void TMVA::VariablePCATransform::MakeFunction( std::ostream& fout, const TString
       fout << "       if ("<<GetNClasses()<<" > 1 ) cls = "<<GetNClasses()<<";"<< std::endl;
       fout << "       else cls = "<<(numC==1?0:2)<<";"<< std::endl;
       fout << "   }"<< std::endl;
-      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[ivar];" << std::endl;
+
+      VariableTransformBase::MakeFunction(fout, fcncName, 0, trCounter, 0 );
+
+      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[indicesGet(ivar)];" << std::endl;
+//      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[ivar];" << std::endl;
+
       fout << std::endl;
       fout << "   // Perform PCA and put it into PCAed events tree" << std::endl;
       fout << "   this->X2P_"<<trCounter<<"( dv, rv, cls );" << std::endl;
-      fout << "   for (int ivar=0; ivar<nvar; ivar++) iv[ivar] = rv[ivar];" << std::endl;
+
+
+      fout << "   for (int ivar=0; ivar<nvar; ivar++) iv[ivar] = rv[indicesPut(ivar)];" << std::endl;
+//      fout << "   for (int ivar=0; ivar<nvar; ivar++) iv[ivar] = rv[ivar];" << std::endl;
+
       fout << std::endl;
       fout << "   delete [] dv;" << std::endl;
       fout << "   delete [] rv;" << std::endl;
