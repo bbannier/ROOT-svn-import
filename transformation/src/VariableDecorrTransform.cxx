@@ -537,14 +537,17 @@ void TMVA::VariableDecorrTransform::MakeFunction( std::ostream& fout, const TStr
       fout << "       if ("<<GetNClasses()<<" > 1 ) cls = "<<GetNClasses()<<";"<< std::endl;
       fout << "       else cls = "<<(fDecorrMatrices.size()==1?0:2)<<";"<< std::endl;
       fout << "   }"<< std::endl;
+
+      VariableTransformBase::MakeFunction(fout, fcncName, 0, trCounter, 0 );
+
       fout << "   std::vector<double> tv;" << std::endl;
       fout << "   for (int i=0; i<"<<matx->GetNrows()<<";i++) {" << std::endl;
       fout << "      double v = 0;" << std::endl;
       fout << "      for (int j=0; j<"<<matx->GetNcols()<<"; j++)" << std::endl;
-      fout << "         v += iv[j] * fDecTF_"<<trCounter<<"[cls][i][j];" << std::endl;
+      fout << "         v += iv[indicesGet.at(j)] * fDecTF_"<<trCounter<<"[cls][i][j];" << std::endl;
       fout << "      tv.push_back(v);" << std::endl;
       fout << "   }" << std::endl;
-      fout << "   for (int i=0; i<"<<matx->GetNrows()<<";i++) iv[i] = tv[i];" << std::endl;
+      fout << "   for (int i=0; i<"<<matx->GetNrows()<<";i++) iv[indicesPut.at(i)] = tv[i];" << std::endl;
       fout << "}" << std::endl;
    }
 

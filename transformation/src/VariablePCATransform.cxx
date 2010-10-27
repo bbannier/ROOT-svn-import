@@ -598,7 +598,7 @@ void TMVA::VariablePCATransform::MakeFunction( std::ostream& fout, const TString
 
       VariableTransformBase::MakeFunction(fout, fcncName, 0, trCounter, 0 );
 
-      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[indicesGet(ivar)];" << std::endl;
+      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];" << std::endl;
 //      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[ivar];" << std::endl;
 
       fout << std::endl;
@@ -606,7 +606,7 @@ void TMVA::VariablePCATransform::MakeFunction( std::ostream& fout, const TString
       fout << "   this->X2P_"<<trCounter<<"( dv, rv, cls );" << std::endl;
 
 
-      fout << "   for (int ivar=0; ivar<nvar; ivar++) iv[ivar] = rv[indicesPut(ivar)];" << std::endl;
+      fout << "   for (int ivar=0; ivar<nvar; ivar++) iv[ivar] = rv[indicesPut.at(ivar)];" << std::endl;
 //      fout << "   for (int ivar=0; ivar<nvar; ivar++) iv[ivar] = rv[ivar];" << std::endl;
 
       fout << std::endl;
