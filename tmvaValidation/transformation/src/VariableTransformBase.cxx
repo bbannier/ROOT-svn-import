@@ -175,7 +175,7 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables, B
 	       Log() << kINFO << "Variable rearrangement set true: Variable order given in transformation option is used for input to transformation!" << Endl;
 
 	 }
-      }else{ // no keyword
+      }else{ // no keyword, ... user provided variable labels
 	 Int_t numIndices = varIndices.size()+tgtIndices.size()+spctIndices.size();
 	 for( UInt_t ivar = 0; ivar < nvars; ++ivar ) { // search all variables
 	    if( fDsi.GetVariableInfo( ivar ).GetLabel() == variables ) {
@@ -200,7 +200,7 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables, B
 	 }
 	 Int_t numIndicesEndOfLoop = varIndices.size()+tgtIndices.size()+spctIndices.size();
 	 if( numIndicesEndOfLoop == numIndices )
-	    Log() << kWARNING << "Variable/Target/Spectator '" << variables.Data() << "' not found." << Endl;
+	    Log() << kWARNING << "Error at parsing the options for the variable transformations: Variable/Target/Spectator '" << variables.Data() << "' not found." << Endl;
 	 numIndices = numIndicesEndOfLoop;
       }
    }
@@ -731,57 +731,55 @@ void TMVA::VariableTransformBase::ReadFromXML( void* selnode )
 
 
 //_______________________________________________________________________
-void TMVA::VariableTransformBase::MakeFunction( std::ostream& /*fout*/, const TString& /*fncName*/, Int_t part,
+void TMVA::VariableTransformBase::MakeFunction( std::ostream& fout, const TString& /*fncName*/, Int_t part,
 						UInt_t /*trCounter*/, Int_t /*cls*/ )
 {
    // getinput and setoutput equivalent
    if( part == 0 ){ // definitions
+      fout << std::endl;
+      fout << "   // define the indices of the variables which are transformed by this transformation" << std::endl;
+      fout << "   std::vector<double> indicesGet;" << std::endl;
+      fout << "   std::vector<double> indicesPut;" << std::endl << std::endl;
 
-//       fout << std::endl;
-//       fout << "   std::vector<double> input; " << std::endl;
-//    // select the values from the event
-//    input.clear();
-//    for( ItVarTypeIdxConst itEntry = fGet.begin(), itEntryEnd = fGet.end(); itEntry != itEntryEnd; ++itEntry ) {
-//       Char_t type = (*itEntry).first;
-//       Int_t  idx  = (*itEntry).second;
-
-//       switch( type ) {
-//       case 'v':
-// 	 input.push_back( event->GetValue(idx) );
-// 	 break;
-//       case 't':
-// 	 input.push_back( event->GetTarget(idx) );
-// 	 break;
-//       case 's':
-// 	 input.push_back( event->GetSpectator(idx) );
-// 	 break;
-//       default:
-// 	 Log() << kFATAL << "VariableTransformBase/GetInput : unknown type '" << type << "'." << Endl;
-//       }
-//    }
-
-/*
-  fout << "void GetInput(std::vector<float>& input
-
-   for( ItVarTypeIdxConst itEntry = fGet.begin(), itEntryEnd = fGet.end(); itEntry != itEntryEnd; ++itEntry ) {
-      Char_t type = (*itEntry).first;
-      Int_t  idx  = (*itEntry).second;
-
-      switch( type ) {
-      case 'v':
-      fout << "    input.push_back( event->GetValue(" << idx << ") );" << endl;
-	 break;
-      case 't':
-      fout << "    input.push_back( event->GetTarget(" << idx << ") );" << endl;
-	 break;
-      case 's':
-      fout << "    input.push_back( event->GetSpectator(" << idx << ") );" << endl;
-	 break;
+      for( ItVarTypeIdxConst itEntry = fGet.begin(), itEntryEnd = fGet.end(); itEntry != itEntryEnd; ++itEntry ) {
+	 Char_t type = (*itEntry).first;
+	 Int_t  idx  = (*itEntry).second;
+	 
+	 switch( type ) {
+	 case 'v':
+	    fout << "   indicesGet.push_back( " << idx << ");" << std::endl;
+	    break;
+	 case 't':
+	    Log() << kWARNING << "MakeClass doesn't work with transformation of targets. The results will be wrong!" << Endl;
+	    break;
+	 case 's':
+	    Log() << kWARNING << "MakeClass doesn't work with transformation of spectators. The results will be wrong!" << Endl;
+	    break;
+	 default:
+	    Log() << kFATAL << "VariableTransformBase/GetInput : unknown type '" << type << "'." << Endl;
+	 }
       }
-   }
 
+      for( ItVarTypeIdxConst itEntry = fPut.begin(), itEntryEnd = fPut.end(); itEntry != itEntryEnd; ++itEntry ) {
+	 Char_t type = (*itEntry).first;
+	 Int_t  idx  = (*itEntry).second;
 
- */
+	 switch( type ) {
+	 case 'v':
+	    fout << "   indicesPut.push_back( " << idx << ");" << std::endl;
+	    break;
+	 case 't':
+	    Log() << kWARNING << "MakeClass doesn't work with transformation of targets. The results will be wrong!" << Endl;
+	    break;
+	 case 's':
+	    Log() << kWARNING << "MakeClass doesn't work with transformation of spectators. The results will be wrong!" << Endl;
+	    break;
+	 default:
+	    Log() << kFATAL << "VariableTransformBase/PutInput : unknown type '" << type << "'." << Endl;
+	 }
+      }
+
+      fout << std::endl;
 
    }else if( part == 1){ 
    }
