@@ -593,6 +593,8 @@ void TMVA::MethodBase::GetRegressionDeviation(UInt_t tgtNum, Types::ETreeType ty
    h1->GetQuantiles(1,yq,xq);
    TH1F* h2 = regRes->QuadraticDeviation( tgtNum , truncate, yq[0]);
    stddev90Percent = sqrt(h2->GetMean());
+   delete h1;
+   delete h2;
 }
 
 //_______________________________________________________________________
