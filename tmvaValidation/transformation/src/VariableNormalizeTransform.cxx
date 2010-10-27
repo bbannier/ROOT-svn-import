@@ -563,12 +563,12 @@ void TMVA::VariableNormalizeTransform::MakeFunction( std::ostream& fout, const T
       fout << "   // get indices of used variables" << std::endl;
       VariableTransformBase::MakeFunction(fout, fcncName, 0, trCounter, 0 );
       fout << "   std::vector<double> dv(nvar);" << std::endl;
-      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[indicesGet(ivar)];" << std::endl;
+      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];" << std::endl;
 
       fout << "   for (int ivar=0;ivar<"<<nvar<<";ivar++) {" << std::endl;
       fout << "      double offset = fMin_"<<trCounter<<"[cls][ivar];" << std::endl;
       fout << "      double scale  = 1.0/(fMax_"<<trCounter<<"[cls][ivar]-fMin_"<<trCounter<<"[cls][ivar]);" << std::endl;
-      fout << "      iv[indicesPut(ivar)] = (dv[ivar]-offset)*scale * 2 - 1;" << std::endl;
+      fout << "      iv[indicesPut.at(ivar)] = (dv[ivar]-offset)*scale * 2 - 1;" << std::endl;
       fout << "   }" << std::endl;
       fout << "}" << std::endl;
    }
