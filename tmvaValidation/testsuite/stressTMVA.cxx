@@ -9,6 +9,7 @@
 #include "tmvaut/utDataSetInfo.h"
 #include "tmvaut/utDataSet.h"
 #include "tmvaut/MethodUnitTestWithROCLimits.h"
+#include "tmvaut/RegressionUnitTestWithDeviation.h"
 #include "TMVA/Types.h"
 
 using namespace UnitTesting;
@@ -93,7 +94,27 @@ int main()
                            "!H:!V:NTrees=400:nEventsMin=200:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=10:PruneMethod=NoPruning:VarTransform=Decorrelate" , 0.88, 0.98) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kRuleFit, "RuleFit",
                            "H:!V:RuleFitModule=RFTMVA:Model=ModRuleLinear:MinImp=0.001:RuleMinDist=0.001:NTrees=20:fEventsMin=0.01:fEventsMax=0.5:GDTau=-1.0:GDTauPrec=0.01:GDStep=0.01:GDNSteps=10000:GDErrScale=1.02" , 0.88, 0.98) );
-   
+
+  // regression tests
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LD", "!H:!V:VarTransform=None", 0., 1., 0., 1. ));          
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kPDERS, "PDERS", "!H:!V:NormTree=T:VolumeRangeMode=Adaptive:KernelEstimator=Gauss:GaussSigma=0.3:NEventsMin=40:NEventsMax=60:VarTransform=None", 0., 1., 0., 1. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kPDERS, "PDERSkNN", "!H:!V:VolumeRangeMode=kNN:KernelEstimator=Gauss:GaussSigma=0.3:NEventsMin=400:NEventsMax=600" , 0., 1., 0., 1. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kPDEFoam, "PDEFoam", "!H:!V:MultiTargetRegression=F:TargetSelection=Mpv:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:Compress=T:Kernel=None:Nmin=10:VarTransform=None", 0., 1., 0., 1. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kKNN, "KNN",  "nkNN=20:ScaleFrac=0.8:SigmaFact=1.0:Kernel=Gaus:UseKernel=F:UseWeight=T:!Trim" , 0., 1., 0., 1. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LD","!H:!V:VarTransform=None" , 0., 1., 0., 1. ));
+  /*
+     TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kFDA, "FDA_MC","!H:!V:Formula=(0)+(1)*x0+(2)*x1:ParRanges=(-100,100);(-100,100);(-100,100):FitMethod=MC:SampleSize=100000:Sigma=0.1:VarTransform=D", 0., 1., 0., 1. )); 
+     yields error:
+       <FATAL> Deco                     : Inverse transformation for decorrelation transformation not yet implemented. Hence, this transformation cannot be applied together with regression. Please contact the authors if necessary.
+     */
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kFDA, "FDA_GA","!H:!V:Formula=(0)+(1)*x0+(2)*x1:ParRanges=(-100,100);(-100,100);(-100,100):FitMethod=GA:PopSize=100:Cycles=3:Steps=30:Trim=True:SaveBestGen=1:VarTransform=Norm", 0., 1., 0., 1. ));;
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kFDA, "FDA_MT","!H:!V:Formula=(0)+(1)*x0+(2)*x1:ParRanges=(-100,100);(-100,100);(-100,100);(-10,10):FitMethod=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=2:UseImprove:UseMinos:SetBatch" , 0., 1., 0., 1. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kFDA, "FDA_GAMT","!H:!V:Formula=(0)+(1)*x0+(2)*x1:ParRanges=(-100,100);(-100,100);(-100,100):FitMethod=GA:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:!UseImprove:!UseMinos:SetBatch:Cycles=1:PopSize=5:Steps=5:Trim" , 0., 1., 0., 1. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kMLP, "MLP", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=20000:HiddenLayers=N+20:TestRate=6:TrainingMethod=BFGS:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-6:ConvergenceTests=15:!UseRegulator" , 0., 1., 0., 1. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kSVM, "SVM", "Gamma=0.25:Tol=0.001:VarTransform=Norm" , 0., 1., 0., 1. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDT","!H:!V:NTrees=100:nEventsMin=5:BoostType=AdaBoostR2:SeparationType=RegressionVariance:nCuts=20:PruneMethod=CostComplexity:PruneStrength=30", 0., 1., 0., 1. )); 
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDTG","!H:!V:NTrees=1000::BoostType=Grad:Shrinkage=0.3:!UseBaggedGrad:SeparationType=GiniIndex:nCuts=20:NNodesMax=10" , 0., 1., 0., 1. ));
+  //
   TMVA_test.run();
   
   long int nFail = TMVA_test.report();
