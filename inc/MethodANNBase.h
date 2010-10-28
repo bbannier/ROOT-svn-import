@@ -189,6 +189,8 @@ namespace TMVA {
       TMatrixD           fInvHessian;           // zjh
       bool               fUseRegulator;         // zjh
 
+   protected:
+      Int_t                   fRandomSeed;      // random seed for initial synapse weights
 
    private:
       
@@ -217,7 +219,6 @@ namespace TMVA {
       TObjArray*              fInputLayer;      // cache this for fast access
       std::vector<TNeuron*>   fOutputNeurons;   // cache this for fast access
       TString                 fLayerSpec;       // layout specification option
-      Int_t                   fRandomSeed;      // random seed for initial synapse weights
 
       // some static flags
       static const Bool_t fgDEBUG      = kTRUE;  // debug flag
