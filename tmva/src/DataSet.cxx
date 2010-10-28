@@ -393,7 +393,7 @@ void TMVA::DataSet::InitSampling( Float_t fraction, Float_t weight, UInt_t seed 
    if (fSamplingNEvents.size() < UInt_t(treeIdx+1) ) fSamplingNEvents.resize(treeIdx+1);
    if (fSamplingWeight.size() < UInt_t(treeIdx+1) )   fSamplingWeight.resize(treeIdx+1);
       
-   if (fraction > 0.99 || fraction < 0.01) {
+   if (fraction > 0.999999 || fraction < 0.0000001) {
       fSampling.at( treeIdx ) = false;
       fSamplingNEvents.at( treeIdx ) = 0;
       fSamplingWeight.at( treeIdx ) = 1.0;
