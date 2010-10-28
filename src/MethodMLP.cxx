@@ -412,6 +412,9 @@ void TMVA::MethodMLP::BFGSMinimize( Int_t nEpochs )
 
    fLastAlpha = 0.;
 
+   if(fSamplingTraining || fSamplingTesting)
+      Data()->InitSampling(1.0,1.0,fRandomSeed); // initialize sampling to initialize the random generator with the given seed
+
    if (fSteps > 0) Log() << kINFO << "Inaccurate progress timing for MLP... " << Endl;
    timer.DrawProgressBar( 0 );
 
@@ -903,6 +906,9 @@ void TMVA::MethodMLP::BackPropagationMinimize(Int_t nEpochs)
                                    nbinTest, Int_t(fTestRate/2), nbinTest*fTestRate+Int_t(fTestRate/2) );
    fEstimatorHistTest  = new TH1F( "estimatorHistTest", "test estimator",
                                    nbinTest, Int_t(fTestRate/2), nbinTest*fTestRate+Int_t(fTestRate/2) );
+
+   if(fSamplingTraining || fSamplingTesting)
+      Data()->InitSampling(1.0,1.0,fRandomSeed); // initialize sampling to initialize the random generator with the given seed
 
    if (fSteps > 0) Log() << kINFO << "Inaccurate progress timing for MLP... " << Endl;
    timer.DrawProgressBar(0);
