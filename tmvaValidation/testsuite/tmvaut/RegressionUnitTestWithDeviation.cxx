@@ -76,7 +76,13 @@ void RegressionUnitTestWithDeviation::run()
   _theMethod = dynamic_cast<TMVA::MethodBase*> (factory->GetMethod(_methodTitle));
 
   _theMethod->GetRegressionDeviation(0,TMVA::Types::kTesting, _theFullDeviation,_the90PercentDeviation);
-  // cout << "deviation, dev90= " << _theFullDeviation << ", " <<  _the90PercentDeviation << endl; 
+#ifdef COUTDEBUG
+  cout << "deviation, dev90= " << _theFullDeviation << ", " <<  _the90PercentDeviation << endl; 
+  cout << "Full limits " << _lowerFullDeviationLimit      << " "
+       << _upperFullDeviationLimit << endl;
+  cout << "90% limits "  << _lower90PercentDeviationLimit << " "
+       << _upper90PercentDeviationLimit << endl;
+#endif
   test_(DeviationWithinLimits());
 
     outputFile->Close();
