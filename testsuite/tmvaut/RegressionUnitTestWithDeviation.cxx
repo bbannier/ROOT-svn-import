@@ -9,7 +9,7 @@ using namespace TMVA;
 RegressionUnitTestWithDeviation::RegressionUnitTestWithDeviation(const Types::EMVA& theMethod, const TString& methodTitle, const TString& theOption,
                                                                  double lowFullLimit, double upFullLimit,double low90PercentLimit, double up90PercentLimit,
                                                                  const std::string & name,const std::string & filename, std::ostream* sptr) 
-                                                                                                                                  : UnitTest((string)methodTitle, __FILE__), _methodType(theMethod) , _methodTitle(methodTitle), _methodOption(theOption), 
+   : UnitTest(string("Regression_")+(string)methodTitle, __FILE__), _methodType(theMethod) , _methodTitle(methodTitle), _methodOption(theOption), 
                                                                                                                                   _lowerFullDeviationLimit(lowFullLimit),  _upperFullDeviationLimit(upFullLimit), _lower90PercentDeviationLimit(low90PercentLimit), _upper90PercentDeviationLimit(up90PercentLimit)
 {
 }
@@ -79,8 +79,8 @@ void RegressionUnitTestWithDeviation::run()
 #ifdef COUTDEBUG
   cout << "deviation, dev90= " << _theFullDeviation << ", " <<  _the90PercentDeviation << endl; 
   cout << "Full limits " << _lowerFullDeviationLimit      << " "
-       << _upperFullDeviationLimit << endl;
-  cout << "90% limits "  << _lower90PercentDeviationLimit << " "
+       << _upperFullDeviationLimit 
+       << ", 90% limits "  << _lower90PercentDeviationLimit << " "
        << _upper90PercentDeviationLimit << endl;
 #endif
   test_(DeviationWithinLimits());
