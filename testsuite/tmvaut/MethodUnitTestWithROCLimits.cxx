@@ -84,13 +84,16 @@ void MethodUnitTestWithROCLimits::run()
      // ToDo make class variable _theEffi
      Double_t err=0.;
      Double_t effi = _theMethod->GetEfficiency("Efficiency:0.1", Types::kTesting,err);
-     //std::cout << "Cuts Signal effi at for Background effi of 0.1 = " << effi<<" low limit="<<_lowROCLimit<<" high limit="<<_upROCLimit<<std::endl;
+#ifdef COUTDEBUG
+     std::cout << "Cuts Signal effi at for Background effi of 0.1 = " << effi<<" low limit="<<_lowROCLimit<<" high limit="<<_upROCLimit<<std::endl;
+#endif
      test_(effi <= _upROCLimit && effi>=_lowROCLimit);
   }
   else {
      _ROCValue = _theMethod->GetROCIntegral();
-     //std::cout << "ROC integral = "<<_ROCValue <<" low limit="<<_lowROCLimit<<" high limit="<<_upROCLimit<<std::endl;
-     
+#ifdef COUTDEBUG
+     std::cout << "ROC integral = "<<_ROCValue <<" low limit="<<_lowROCLimit<<" high limit="<<_upROCLimit<<std::endl;
+#endif     
      test_(ROCIntegralWithinInterval());
   }
   outputFile->Close();
