@@ -147,7 +147,7 @@ bool MethodUnitTestWithComplexData::create_data(const char* filename, int nmax)
    do {
       for (Int_t ivar=0; ivar<nvar-1; ivar++) { xvar[ivar]=2.*R.Rndm()-1.;}
       Float_t xout = xvar[0]+xvar[1]+xvar[2]*xvar[1]-xvar[0]*xvar[1]*xvar[1];
-      xvar[3] = xout + R.Rndm()-0.5;
+      xvar[3] = xout + 4. *R.Rndm()-2.;
       bool is = (TMath::Abs(xout)<0.3);
       if (is) is1=1; else is1=0;
       bool isSignal;
