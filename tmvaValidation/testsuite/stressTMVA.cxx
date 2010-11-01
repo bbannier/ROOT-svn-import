@@ -2,6 +2,7 @@
 // TMVA unit tests
 
 #include <iostream>
+#include <cstdlib>
 #include "tmvaut/UnitTestSuite.h"
 
 #include "tmvaut/utEvent.h"
@@ -9,11 +10,36 @@
 #include "tmvaut/utDataSetInfo.h"
 #include "tmvaut/utDataSet.h"
 #include "tmvaut/MethodUnitTestWithROCLimits.h"
+#include "tmvaut/MethodUnitTestWithComplexData.h"
 #include "tmvaut/RegressionUnitTestWithDeviation.h"
 #include "TMVA/Types.h"
 
 using namespace UnitTesting;
 using namespace std;
+
+void addDataInputTests( UnitTestSuite& TMVA_test)
+{
+   TString lhstring = "!H:!V:!TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmooth=5:NAvEvtPerBin=50:VarTransform=Decorrelate";
+
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_bgd1"), TString("nTrain_Signal=500:nTrain_Background=500:SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.48, 0.52) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_bgd1"), TString("nTrain_Signal=500:nTrain_Background=500:SplitMode=block:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.48, 0.52) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_bgd1"), TString("nTrain_Signal=500:nTrain_Background=500:SplitMode=alternate:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.48, 0.52) );
+
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sigfull_bgdfull"), TString("nTrain_Signal=500:nTrain_Background=500:SplitMode=Random:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sigfull_bgdfull"), TString("nTrain_Signal=500:nTrain_Background=500:SplitMode=alternate:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sigfull_bgdfull"), TString("nTrain_Signal=500:nTrain_Background=500:SplitMode=block:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
+
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("nTrain_Signal=500:nTrain_Background=500:nTest_Signal=500:nTest_Background=500:SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("nTrain_Signal=500:nTrain_Background=500:nTest_Signal=500:nTest_Background=500:SplitMode=block:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.2, 0.45) );
+   
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("nTrain_Signal=500:nTrain_Background=500:nTest_Signal=500:nTest_Background=500:SplitMode=alternate:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.45, 0.52) );
+
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=alternate:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=block:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.48, 0.52) );
+
+
+}
 
 int main()
 {
@@ -25,7 +51,7 @@ int main()
    TMVA_test.addTest(new utVariableInfo);
    TMVA_test.addTest(new utDataSetInfo);
    TMVA_test.addTest(new utDataSet);
-   
+     
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "Cuts",
    "!H:!V:FitMethod=MC:EffSel:SampleSize=20000:VarProp=FSmart", 0.4, 0.98) );
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsD", 
@@ -116,12 +142,13 @@ int main()
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDTN","!H:!V:VarTransform=N",  15., 20., 15., 25. ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDT2","!H:!V:NTrees=500:nEventsMin=20:BoostType=AdaBoostR2:SeparationType=GiniIndex:nCuts=20:PruneMethod=CostComplexity:PruneStrength=3", 15., 20., 10., 20. )); 
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDTG","!H:!V:NTrees=1000::BoostType=Grad:Shrinkage=0.3:!UseBaggedGrad:SeparationType=GiniIndex:nCuts=20:nEventsMin=20:NNodesMax=7" ,  5., 8., 3., 5. ));
-  
-  //
-  TMVA_test.run();
-  
-  long int nFail = TMVA_test.report();
-  cout << "Total number of failures: " << nFail << endl;
-  cout << "************************************************************************************************" << endl;
+ 
+   addDataInputTests(TMVA_test);  
+   //
+   TMVA_test.run();
+   
+   long int nFail = TMVA_test.report();
+   cout << "Total number of failures: " << nFail << endl;
+   cout << "************************************************************************************************" << endl;
    //  return eventTest.report();
 }
