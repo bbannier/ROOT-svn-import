@@ -147,6 +147,22 @@ void addDataInputTests( UnitTestSuite& TMVA_test, bool full=true)
    }
 }
 
+void addComplexClassificationTests( UnitTestSuite& TMVA_test, bool /* full=true */)
+{
+   TString trees="sigfull_bgdfull";
+   TString prep="nTrain_Signal=2000:nTrain_Background=2000:nTest_Signal=1000:nTest_Background=1000:!V";
+   // complex data tests Fisher for comparison
+   TMVA_test.addTest(new MethodUnitTestWithComplexData( trees, prep,TMVA::Types::kFisher, "Fisher", "H:!V:VarTransform=Gauss", 0.94, 0.96) );
+   // complex data tests with MLP
+TMVA_test.addTest(new MethodUnitTestWithComplexData(trees, prep, TMVA::Types::kMLP, "MLP", "H:!V:RandomSeed=9:NeuronType=tanh:VarTransform=N:NCycles=50:HiddenLayers=N+10:TestRate=5:TrainingMethod=BFGS:!UseRegulator" , 0.96, 0.975) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(trees, prep, TMVA::Types::kMLP, "MLP", "H:!V:RandomSeed=9:NeuronType=tanh:VarTransform=N:NCycles=50:HiddenLayers=N+10:TestRate=5:TrainingMethod=BP:!UseRegulator" , 0.96, 0.975) );
+   // BDT
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(trees, prep, TMVA::Types::kBDT, "BDTG8_50", "!H:!V:NTrees=50:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:nCuts=20:NNodesMax=8:SeparationType=GiniIndex" , 0.935, 0.955) );
+   // SVM
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(trees, prep, TMVA::Types::kSVM, "SVM", "Gamma=0.4:Tol=0.001" , 0.95, 0.97) );
+}
+
+
 int main()
 {
    bool full=true;
@@ -165,15 +181,10 @@ int main()
    TMVA_test.addTest(new utDataSet);
    
    addClassificationTests(TMVA_test, full);
-   addRegressionTests(TMVA_test, full);   // regression tests
+   addRegressionTests(TMVA_test, full);  
    addDataInputTests(TMVA_test, full);  
-   
-   // complex data tests with MLP
-   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("nTrain_Signal=2000:nTrain_Background=2000:nTest_Signal=1000:nTest_Background=1000:SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kMLP, "MLP", "H:!V:RandomSeed=9:NeuronType=tanh:VarTransform=N:NCycles=50:HiddenLayers=N+10:TestRate=5:TrainingMethod=BFGS:!UseRegulator" , 0.955, 0.975) );
-   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("nTrain_Signal=2000:nTrain_Background=2000:nTest_Signal=1000:nTest_Background=1000:SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kMLP, "MLP", "H:!V:RandomSeed=9:NeuronType=tanh:VarTransform=N:NCycles=50:HiddenLayers=N+10:TestRate=5:TrainingMethod=BP:!UseRegulator" , 0.955, 0.975) );
-   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("nTrain_Signal=2000:nTrain_Background=2000:nTest_Signal=1000:nTest_Background=1000:SplitMode=random:NormMode=NumEvents:!V"),TMVA::Types::kBDT, "BDTG8_50", "!H:!V:NTrees=50:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:nCuts=20:NNodesMax=8:SeparationType=GiniIndex" , 0.935, 0.955) );
-   TMVA_test.addTest(new MethodUnitTestWithComplexData( TString("sig1_sig2_bgd1_bgd2"), TString("nTrain_Signal=2000:nTrain_Background=2000:nTest_Signal=1000:nTest_Background=1000:SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kSVM, "SVM", "Gamma=0.4:Tol=0.001:VarTransform=Norm" , 0.95, 0.97) );
-   
+   addComplexClassificationTests(TMVA_test, full);
+
    // run all
    TMVA_test.run();
    
