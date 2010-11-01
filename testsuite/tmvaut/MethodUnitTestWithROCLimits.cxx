@@ -46,7 +46,7 @@ void MethodUnitTestWithROCLimits::run()
   
   TFile* input(0);
 // FIXME:: give the filename of the sample somewhere else?
-  TString fname = "../tmva/test/tmva_example.root"; 
+  TString fname = "../tmva/test/data/toy_sigbkg.root"; //tmva_example.root"; 
   TString fname2 = TString("../")+fname;
 
   input = TFile::Open( fname );  
