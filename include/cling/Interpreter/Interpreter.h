@@ -79,7 +79,7 @@ private:
    llvm::OwningPtr<cling::CIBuilder> m_CIBuilder; // our compiler intsance builder
    llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
    llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
-   unsigned long long m_numCallWrappers; // number of generated call wrappers
+   unsigned long long m_UniqueCounter; // number of generated call wrappers
    bool m_printAST; // whether to print the AST to be processed
 
 private:
@@ -87,7 +87,7 @@ private:
    void createWrappedSrc(const std::string& src, std::string& wrapped,
                          bool& haveStatements);
 
-   std::string createUniqueFuncName();
+   std::string createUniqueName();
 
    clang::CompilerInstance* createStatementList(const std::string& srcCode,
          std::vector<clang::Stmt*>& stmts);
