@@ -85,7 +85,7 @@ private:
 private:
 
    void createWrappedSrc(const std::string& src, std::string& wrapped,
-                         bool& haveStatements);
+                         std::string& stmtFunc);
 
    std::string createUniqueName();
 

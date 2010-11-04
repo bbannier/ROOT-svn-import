@@ -113,8 +113,7 @@ getRangeWithSemicolon(clang::SourceLocation SLoc,
     start = SM.getFileOffset(SLoc);
   }
   if (ELoc.isValid()) {
-    end = SM.getFileOffset(ELoc) +
-       clang::Lexer::MeasureTokenLength(ELoc, SM, LO);;
+    end = SM.getFileOffset(ELoc);
   }
   if (SLoc.isValid() && !ELoc.isValid()) {
     clang::SourceLocation Loc = SM.getInstantiationLoc(SLoc);

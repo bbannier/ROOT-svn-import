@@ -106,7 +106,7 @@ Interpreter::Interpreter(const char* llvmdir /*= 0*/):
    m_CIBuilder(0),
    m_CI(0),
    m_UniqueCounter(0),
-   m_printAST(true)
+  m_printAST(false)
 {
    m_CIBuilder.reset(new CIBuilder(fake_argc, fake_argv, llvmdir));
    m_CI.reset(createCI());
@@ -145,15 +145,10 @@ Interpreter::processLine(const std::string& input_line)
    //  Wrap input into a function along with
    //  the saved global declarations.
    //
-   std::string wrapperfunc = createUniqueName();
-   std::string src;
-   src += "extern \"C\" void " + wrapperfunc + "() {\n";
-   src += input_line;
-   src += "\n} // end wrapper func\n";
    //fprintf(stderr, "input_line:\n%s\n", src.c_str());
    std::string wrapped;
-   bool withStatements = true;
-   createWrappedSrc(src, wrapped, withStatements);
+   std::string stmtFunc;
+   createWrappedSrc(input_line, wrapped, stmtFunc);
    if (!wrapped.size()) {
       return 0;
    }
@@ -183,8 +178,8 @@ Interpreter::processLine(const std::string& input_line)
    //
    //  Run it using the JIT.
    //
-   if (withStatements)
-      m_ExecutionContext->executeFunction(wrapperfunc);
+   if (!stmtFunc.empty())
+      m_ExecutionContext->executeFunction(stmtFunc);
    return 1;
 }
 
@@ -200,11 +195,13 @@ std::string Interpreter::createUniqueName()
 
 
 void
-Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool& haveStatements)
+   Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
+                                 std::string& stmtFunc)
 {
-   haveStatements = false;
+   bool haveStatements = false;
+   std::string nonTUsrc = "void __cling__nonTUsrc() {" + src + ";}";
    std::vector<clang::Stmt*> stmts;
-   clang::CompilerInstance* CI = createStatementList(src, stmts);
+   clang::CompilerInstance* CI = createStatementList(nonTUsrc, stmts);
    if (!CI) {
       wrapped.clear();
       return;
@@ -229,7 +226,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool
          {
             std::pair<unsigned, unsigned> r =
                getStmtRangeWithSemicolon(cur_stmt, SM, LO);
-            stmt_string = src.substr(r.first, r.second - r.first);
+            stmt_string = nonTUsrc.substr(r.first, r.second - r.first);
             //fprintf(stderr, "stmt: %s\n", stmt_string.c_str());
          }
          //
@@ -276,7 +273,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool
                   SM.getInstantiationLoc((*D)->getLocEnd());
                std::pair<unsigned, unsigned> r =
                   getRangeWithSemicolon(SLoc, ELoc, SM, LO);
-               std::string decl = src.substr(r.first, r.second - r.first);
+               std::string decl = nonTUsrc.substr(r.first, r.second - r.first);
                wrapped_globals.append(decl + ";\n");
                held_globals.append(decl + ";\n");
                continue;
@@ -311,7 +308,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool
                //fprintf(stderr, "var decl, init is const.\n");
                std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
                wrapped_globals.append(decl + " = " +
-                                      src.substr(r.first, r.second - r.first) + ";\n");
+                                      nonTUsrc.substr(r.first, r.second - r.first) + ";\n");
                held_globals.append(decl + ";\n");
                continue;
             }
@@ -323,7 +320,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool
                //fprintf(stderr, "var decl, init is not list.\n");
                std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
                wrapped_stmts.append(std::string(VD->getName())  + " = " +
-                                    src.substr(r.first, r.second - r.first) + ";\n");
+                                    nonTUsrc.substr(r.first, r.second - r.first) + ";\n");
                wrapped_globals.append(decl + ";\n");
                held_globals.append(decl + ";\n");
                continue;
@@ -339,7 +336,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool
                stm << VD->getNameAsString() << "[" << j << "] = ";
                std::pair<unsigned, unsigned> r =
                   getStmtRange(ILE->getInit(j), SM, LO);
-               stm << src.substr(r.first, r.second - r.first) << ";\n";
+               stm << nonTUsrc.substr(r.first, r.second - r.first) << ";\n";
                wrapped_stmts.append(stm.str());
             }
             wrapped_globals.append(decl + ";\n");
@@ -348,8 +345,11 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool
       }
       haveStatements = !wrapped_stmts.empty();
       if (haveStatements) {
-         wrapped_stmts = "void __cling_internal() {\n" + wrapped_stmts;
-         wrapped_stmts += "\n} // end __cling_internal()\n";
+         stmtFunc = createUniqueName();
+         wrapped_stmts = "extern \"C\" void " + stmtFunc + "() {\n" + wrapped_stmts;
+         wrapped_stmts += "\n}";
+      } else {
+         stmtFunc = "";
       }
    }
    //
@@ -396,7 +396,7 @@ Interpreter::createStatementList(const std::string& srcCode,
    // will produce a list of statements seen.
    StmtSplitter splitter(stmts);
    FunctionBodyConsumer* consumer =
-      new FunctionBodyConsumer(splitter, "__cling_internal");
+      new FunctionBodyConsumer(splitter, "__cling__nonTUsrc");
    CI->setASTConsumer(consumer);
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                           PP.getLangOptions().NoBuiltin);
@@ -475,7 +475,7 @@ namespace {
       
    public:
       MutableMemoryBuffer(llvm::StringRef Code, llvm::StringRef Name)
-         : m_FileID(Name), m_Alloc(0) {
+         : MemoryBuffer(), m_FileID(Name), m_Alloc(0) {
          maybeRealloc(Code, 0);
       }
 
@@ -504,6 +504,7 @@ Interpreter::compileString(const std::string& argCode)
 
    static clang::Sema* S = 0;
    static clang::Parser* P = 0;
+   static clang::Lexer* L = 0;
    static MutableMemoryBuffer* MMB = 0;
    if (!S) {
       CI->createPreprocessor();
@@ -552,10 +553,11 @@ Interpreter::compileString(const std::string& argCode)
       bool CompleteTranslationUnit = false;
       clang::CodeCompleteConsumer *CompletionConsumer = 0;
       S = new clang::Sema(PP, *Ctx, *Consumer, CompleteTranslationUnit, CompletionConsumer);
-      P = new clang::Parser(PP, *S);
       PP.EnterMainSourceFile();
+      L = static_cast<clang::Lexer*>(PP.getTopmostLexer());
 
       // Initialize the parser.
+      P = new clang::Parser(PP, *S);
       P->Initialize();
 
       Consumer->Initialize(*Ctx);
@@ -566,6 +568,7 @@ Interpreter::compileString(const std::string& argCode)
       MMB->append(srcCode);
    }
 
+   L->updateBufferEnd(MMB->getBufferEnd());
    // BEGIN REPLACEMENT clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
 
    if (!Consumer) Consumer = &CI->getASTConsumer();
