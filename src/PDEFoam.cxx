@@ -1000,35 +1000,48 @@ void TMVA::PDEFoam::CheckAll(Int_t level)
 } // Check
 
 //_____________________________________________________________________
+void TMVA::PDEFoam::PrintCell(Long_t iCell)
+{
+   // Prints geometry of 'iCell'
+
+   if (iCell < 0 || iCell > fLastCe) {
+      Log() << kWARNING << "<PrintCell(iCell=" << iCell
+	    << ")>: cell number " << iCell << " out of bounds!" 
+	    << Endl;
+      return;
+   }
+
+   PDEFoamVect cellPosi(fDim), cellSize(fDim);
+   fCells[iCell]->GetHcub(cellPosi,cellSize);
+   Int_t    kBest = fCells[iCell]->GetBest();
+   Double_t xBest = fCells[iCell]->GetXdiv();
+
+   Log() << "Cell[" << iCell << "]={ ";
+   Log() << "  " << fCells[iCell] << "  " << Endl;  // extra DEBUG
+   Log() << " Xdiv[abs. coord.]="
+	 << VarTransformInvers(kBest,cellPosi[kBest] + xBest*cellSize[kBest])
+	 << Endl;
+   Log() << " Abs. coord. = (";
+   for (Int_t idim=0; idim<fDim; idim++) {
+      Log() << "dim[" << idim << "]={"
+	    << VarTransformInvers(idim,cellPosi[idim]) << ","
+	    << VarTransformInvers(idim,cellPosi[idim] + cellSize[idim])
+	    << "}";
+      if (idim < fDim-1)
+	 Log() << ", ";
+   }
+   Log() << ")" << Endl;
+   fCells[iCell]->Print("1");
+   Log()<<"}"<<Endl;
+}
+
+//_____________________________________________________________________
 void TMVA::PDEFoam::PrintCells(void)
 {
    // Prints geometry of ALL cells of the FOAM
 
-   Long_t iCell;
-
-   for(iCell=0; iCell<=fLastCe; iCell++) {
-      PDEFoamVect cellPosi(fDim); 
-      PDEFoamVect cellSize(fDim);
-      fCells[iCell]->GetHcub(cellPosi,cellSize);
-      Int_t kBest = fCells[iCell]->GetBest();
-      Double_t xBest = fCells[iCell]->GetXdiv();
-
-      Log()<<"Cell["<<iCell<<"]={ ";
-      Log()<<"  "<< fCells[iCell]<<"  " << Endl;  // extra DEBUG
-      Log() << " Xdiv[abs. coord.]="
-	    << VarTransformInvers(kBest,cellPosi[kBest] + xBest*cellSize[kBest])
-	    << Endl;
-      Log() << " Abs. coord. = (";
-      for (Int_t idim=0; idim<fDim; idim++) {
-	 Log() << "dim[" << idim << "]={"
-	       << VarTransformInvers(idim,cellPosi[idim]) << ","
-	       << VarTransformInvers(idim,cellPosi[idim] + cellSize[idim])
-	       << "}, ";
-      }
-      Log() << Endl;
-      fCells[iCell]->Print("1");
-      Log()<<"}"<<Endl;
-   }
+   for(Long_t iCell=0; iCell<=fLastCe; iCell++)
+      PrintCell(iCell);
 }
 
 //_____________________________________________________________________

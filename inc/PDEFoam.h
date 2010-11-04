@@ -289,6 +289,7 @@ namespace TMVA {
       // ---------- Debug functions
 
       void     CheckAll(Int_t);  // Checks correctness of the entire data structure in the FOAM object
+      void     PrintCell(Long_t iCell=0); // Print content of cell
       void     PrintCells();     // Prints content of all cells
       void     CheckCells(Bool_t remove_empty_cells=false);   // check all cells with respect to critical values
       void     RemoveEmptyCell(Int_t iCell); // removes iCell if its volume is zero
