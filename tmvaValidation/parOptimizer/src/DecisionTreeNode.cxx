@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$    
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Eckhard von Toerne 
+// @(#)root/tmva $Id$
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Eckhard von Toerne
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -17,19 +17,19 @@
  *      Eckhard von Toerne <evt@physik.uni-bonn.de>  - U. of Bonn, Germany        *
  *                                                                                *
  * CopyRight (c) 2009:                                                            *
- *      CERN, Switzerland                                                         * 
- *      U. of Victoria, Canada                                                    * 
- *      MPI-K Heidelberg, Germany                                                 * 
-*       U. of Bonn, Germany                                                       *
+ *      CERN, Switzerland                                                         *
+ *      U. of Victoria, Canada                                                    *
+ *      MPI-K Heidelberg, Germany                                                 *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
-   
+
 //_______________________________________________________________________
-//                                                                      
-// Node for the Decision Tree                                           
+//
+// Node for the Decision Tree
 //
 // The node specifies ONE variable out of the given set of selection variable
 // that is used to split the sample which "arrives" at the node, into a left
@@ -57,7 +57,7 @@ TMVA::DecisionTreeNode::DecisionTreeNode()
    : TMVA::Node(),
      fCutValue(0),
      fCutType ( kTRUE ),
-     fSelector ( -1 ),       
+     fSelector ( -1 ),
      fResponse(-99 ),
      fRMS(0),
      fNodeType (-99 ),
@@ -79,10 +79,10 @@ TMVA::DecisionTreeNode::DecisionTreeNode()
 
 //_______________________________________________________________________
 TMVA::DecisionTreeNode::DecisionTreeNode(TMVA::Node* p, char pos)
-   : TMVA::Node(p, pos), 
+   : TMVA::Node(p, pos),
      fCutValue( 0 ),
      fCutType ( kTRUE ),
-     fSelector( -1 ),  
+     fSelector( -1 ),
      fResponse(-99 ),
      fRMS(0),
      fNodeType( -99 ),
@@ -108,7 +108,7 @@ TMVA::DecisionTreeNode::DecisionTreeNode(const TMVA::DecisionTreeNode &n,
    : TMVA::Node(n),
      fCutValue( n.fCutValue ),
      fCutType ( n.fCutType ),
-     fSelector( n.fSelector ),  
+     fSelector( n.fSelector ),
      fResponse( n.fResponse ),
      fRMS     ( n.fRMS),
      fNodeType( n.fNodeType ),
@@ -122,10 +122,10 @@ TMVA::DecisionTreeNode::DecisionTreeNode(const TMVA::DecisionTreeNode &n,
    this->SetParent( parent );
    if (n.GetLeft() == 0 ) this->SetLeft(NULL);
    else this->SetLeft( new DecisionTreeNode( *((DecisionTreeNode*)(n.GetLeft())),this));
-   
+
    if (n.GetRight() == 0 ) this->SetRight(NULL);
    else this->SetRight( new DecisionTreeNode( *((DecisionTreeNode*)(n.GetRight())),this));
-   
+
    if (fgIsTraining){
       fTrainInfo = new DTNodeTrainingInfo(*(n.fTrainInfo));
       //std::cout << "Node constructor with TrainingINFO"<<std::endl;
@@ -142,6 +142,7 @@ TMVA::DecisionTreeNode::~DecisionTreeNode(){
    delete fTrainInfo;
 }
 
+
 //_______________________________________________________________________
 Bool_t TMVA::DecisionTreeNode::GoesRight(const TMVA::Event & e) const
 {
@@ -156,21 +157,21 @@ Bool_t TMVA::DecisionTreeNode::GoesRight(const TMVA::Event & e) const
 //_______________________________________________________________________
 Bool_t TMVA::DecisionTreeNode::GoesLeft(const TMVA::Event & e) const
 {
-   // test event if it decends the tree at this node to the left 
+   // test event if it decends the tree at this node to the left
    if (!this->GoesRight(e)) return kTRUE;
    else return kFALSE;
 }
 
 
 //_______________________________________________________________________
-void TMVA::DecisionTreeNode::SetPurity( void ) 
+void TMVA::DecisionTreeNode::SetPurity( void )
 {
    // return the S/(S+B) (purity) for the node
    // REM: even if nodes with purity 0.01 are very PURE background nodes, they still
    //      get a small value of the purity.
 
    if ( ( this->GetNSigEvents() + this->GetNBkgEvents() ) > 0 ) {
-      fPurity =  this->GetNSigEvents() / ( this->GetNSigEvents() + this->GetNBkgEvents()); 
+      fPurity = this->GetNSigEvents() / ( this->GetNSigEvents() + this->GetNBkgEvents());
    }
    else {
       *fgLogger << kINFO << "Zero events in purity calcuation , return purity=0.5" << Endl;
@@ -185,11 +186,11 @@ void TMVA::DecisionTreeNode::SetPurity( void )
 void TMVA::DecisionTreeNode::Print(ostream& os) const
 {
    //print the node
-   os << "< ***  "  << std::endl; 
+   os << "< ***  "  << std::endl;
    os << " d: "     << this->GetDepth()
       << " ivar: "  << this->GetSelector()
-      << " cut: "   << this->GetCutValue() 
-      << " cType: " << this->GetCutType() 
+      << " cut: "   << this->GetCutValue()
+      << " cType: " << this->GetCutType()
       << " s: "     << this->GetNSigEvents()
       << " b: "     << this->GetNBkgEvents()
       << " nEv: "   << this->GetNEvents()
@@ -200,12 +201,12 @@ void TMVA::DecisionTreeNode::Print(ostream& os) const
       << " sepG: "  << this->GetSeparationGain()
       << " nType: " << this->GetNodeType()
       << std::endl;
-   
+
    os << "My address is " << long(this) << ", ";
    if (this->GetParent() != NULL) os << " parent at addr: "         << long(this->GetParent()) ;
    if (this->GetLeft()   != NULL) os << " left daughter at addr: "  << long(this->GetLeft());
    if (this->GetRight()  != NULL) os << " right daughter at addr: " << long(this->GetRight()) ;
-   
+
    os << " **** > " << std::endl;
 }
 
@@ -214,12 +215,12 @@ void TMVA::DecisionTreeNode::PrintRec(ostream& os) const
 {
    //recursively print the node and its daughters (--> print the 'tree')
 
-   os << this->GetDepth() 
+   os << this->GetDepth()
       << std::setprecision(6)
-      << " "         << this->GetPos() 
+      << " "         << this->GetPos()
       << " ivar: "   << this->GetSelector()
-      << " cut: "    << this->GetCutValue() 
-      << " cType: "  << this->GetCutType() 
+      << " cut: "    << this->GetCutValue()
+      << " cType: "  << this->GetCutType()
       << " s: "      << this->GetNSigEvents()
       << " b: "      << this->GetNBkgEvents()
       << " nEv: "    << this->GetNEvents()
@@ -233,13 +234,13 @@ void TMVA::DecisionTreeNode::PrintRec(ostream& os) const
       << " nType: "  << this->GetNodeType();
    if (this->GetCC() > 10000000000000.) os << " CC: " << 100000. << std::endl;
    else os << " CC: "  << this->GetCC() << std::endl;
-  
+
    if (this->GetLeft()  != NULL) this->GetLeft() ->PrintRec(os);
    if (this->GetRight() != NULL) this->GetRight()->PrintRec(os);
 }
 
 //_______________________________________________________________________
-Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_Code ) 
+Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_Code )
 {
    // Read the data block
 
@@ -259,34 +260,34 @@ Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_
    this->SetPos(pos);
 
    if (tmva_Version_Code < TMVA_VERSION(4,0,0)) {
-      is >> tmp >> lseq 
-         >> tmp >> ivar 
-         >> tmp >> cutVal  
-         >> tmp >> cutType 
-         >> tmp >> nsig    
-         >> tmp >> nbkg    
-         >> tmp >> nEv     
-         >> tmp >> nsig_unweighted 
-         >> tmp >> nbkg_unweighted   
-         >> tmp >> nEv_unweighted    
-         >> tmp >> separationIndex   
-         >> tmp >> separationGain    
-         >> tmp >> nodeType;         
-   } else { 
-      is >> tmp >> lseq 
-         >> tmp >> ivar 
-         >> tmp >> cutVal  
-         >> tmp >> cutType 
-         >> tmp >> nsig    
-         >> tmp >> nbkg    
-         >> tmp >> nEv     
-         >> tmp >> nsig_unweighted 
-         >> tmp >> nbkg_unweighted   
-         >> tmp >> nEv_unweighted    
-         >> tmp >> separationIndex   
-         >> tmp >> separationGain    
+      is >> tmp >> lseq
+         >> tmp >> ivar
+         >> tmp >> cutVal
+         >> tmp >> cutType
+         >> tmp >> nsig
+         >> tmp >> nbkg
+         >> tmp >> nEv
+         >> tmp >> nsig_unweighted
+         >> tmp >> nbkg_unweighted
+         >> tmp >> nEv_unweighted
+         >> tmp >> separationIndex
+         >> tmp >> separationGain
+         >> tmp >> nodeType;
+   } else {
+      is >> tmp >> lseq
+         >> tmp >> ivar
+         >> tmp >> cutVal
+         >> tmp >> cutType
+         >> tmp >> nsig
+         >> tmp >> nbkg
+         >> tmp >> nEv
+         >> tmp >> nsig_unweighted
+         >> tmp >> nbkg_unweighted
+         >> tmp >> nEv_unweighted
+         >> tmp >> separationIndex
+         >> tmp >> separationGain
          >> tmp >> response
-         >> tmp >> nodeType           
+         >> tmp >> nodeType
          >> tmp >> cc;
    }
 
@@ -357,7 +358,7 @@ void TMVA::DecisionTreeNode::PrintPrune( ostream& os ) const {
 
 //_______________________________________________________________________
 void TMVA::DecisionTreeNode::PrintRecPrune( ostream& os ) const {
-   // recursive printout of the node and its daughters 
+   // recursive printout of the node and its daughters
 
    this->PrintPrune(os);
    if(this->GetLeft() != NULL && this->GetRight() != NULL) {
@@ -367,28 +368,28 @@ void TMVA::DecisionTreeNode::PrintRecPrune( ostream& os ) const {
 }
 
 //_______________________________________________________________________
-void TMVA::DecisionTreeNode::SetCC(Double_t cc) 
+void TMVA::DecisionTreeNode::SetCC(Double_t cc)
 {
-   if (fTrainInfo) fTrainInfo->fCC = cc; 
+   if (fTrainInfo) fTrainInfo->fCC = cc;
    else *fgLogger << kFATAL << "call to SetCC without trainingInfo" << Endl;
 }
 
 //_______________________________________________________________________
 Float_t TMVA::DecisionTreeNode::GetSampleMin(UInt_t ivar) const {
-   // return the minimum of variable ivar from the training sample 
-   // that pass/end up in this node 
+   // return the minimum of variable ivar from the training sample
+   // that pass/end up in this node
    if (fTrainInfo && ivar < fTrainInfo->fSampleMin.size()) return fTrainInfo->fSampleMin[ivar];
-   else *fgLogger << kFATAL << "You asked for Min of the event sample in node for variable " 
+   else *fgLogger << kFATAL << "You asked for Min of the event sample in node for variable "
                  << ivar << " that is out of range" << Endl;
    return -9999;
 }
 
 //_______________________________________________________________________
 Float_t TMVA::DecisionTreeNode::GetSampleMax(UInt_t ivar) const {
-   // return the maximum of variable ivar from the training sample 
-   // that pass/end up in this node 
+   // return the maximum of variable ivar from the training sample
+   // that pass/end up in this node
    if (fTrainInfo && ivar < fTrainInfo->fSampleMin.size()) return fTrainInfo->fSampleMax[ivar];
-   else *fgLogger << kFATAL << "You asked for Max of the event sample in node for variable " 
+   else *fgLogger << kFATAL << "You asked for Max of the event sample in node for variable "
                  << ivar << " that is out of range" << Endl;
    return 9999;
 }
@@ -405,15 +406,15 @@ void TMVA::DecisionTreeNode::SetSampleMin(UInt_t ivar, Float_t xmin){
 
 //_______________________________________________________________________
 void TMVA::DecisionTreeNode::SetSampleMax(UInt_t ivar, Float_t xmax){
-   // set the maximum of variable ivar from the training sample 
-   // that pass/end up in this node 
+   // set the maximum of variable ivar from the training sample
+   // that pass/end up in this node
    if ( fTrainInfo && ivar >= fTrainInfo->fSampleMax.size()) fTrainInfo->fSampleMax.resize(ivar+1);
    fTrainInfo->fSampleMax[ivar]=xmax;
 }
 
 //_______________________________________________________________________
-void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_Code */  ) 
-{   
+void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_Code */  )
+{
    Float_t tempNSigEvents,tempNBkgEvents,tempNEvents,tempNSigEvents_unweighted,  tempNBkgEvents_unweighted,tempNEvents_unweighted, tempSeparationIndex, tempSeparationGain;  
    Double_t tempCC;
 

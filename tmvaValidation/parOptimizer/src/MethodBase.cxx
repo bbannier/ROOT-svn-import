@@ -229,11 +229,11 @@ TMVA::MethodBase::MethodBase( Types::EMVA methodType,
    fSetupCompleted            (kFALSE)
 {
    // constructor used for Testing + Application of the MVA,
-   // only (no training), using given WeightFiles   
+   // only (no training), using given WeightFiles
 }
 
 //_______________________________________________________________________
-TMVA::MethodBase::~MethodBase( void ) 
+TMVA::MethodBase::~MethodBase( void )
 {
    // destructor
    if (!fSetupCompleted) Log() << kFATAL << "Calling destructor of method which got never setup" << Endl;
@@ -259,7 +259,7 @@ TMVA::MethodBase::~MethodBase( void )
 
    for (Int_t i = 0; i < 2; i++ ) {
       if (fEventCollections.at(i)) {
-         for (std::vector<Event*>::const_iterator it = fEventCollections.at(i)->begin(); 
+         for (std::vector<Event*>::const_iterator it = fEventCollections.at(i)->begin();
               it != fEventCollections.at(i)->end(); it++) {
             delete (*it);
          }
@@ -270,22 +270,22 @@ TMVA::MethodBase::~MethodBase( void )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::SetupMethod() 
+void TMVA::MethodBase::SetupMethod()
 {
    // setup of methods
-   
+
 
    if (fSetupCompleted) Log() << kFATAL << "Calling SetupMethod for the second time" << Endl;
    InitBase();
    DeclareBaseOptions();
-   
+
    Init();
    DeclareOptions();
    fSetupCompleted = kTRUE;
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::ProcessSetup() 
+void TMVA::MethodBase::ProcessSetup()
 {
    // process all options
    // the "CheckForUnusedOptions" is done in an independent call, since it may be overridden by derived class
@@ -295,7 +295,7 @@ void TMVA::MethodBase::ProcessSetup()
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::CheckSetup() 
+void TMVA::MethodBase::CheckSetup()
 {
    // check may be overridden by derived class
    // (sometimes, eg, fitters are used which can only be implemented during training phase)
@@ -374,7 +374,7 @@ void TMVA::MethodBase::DeclareBaseOptions()
    //               H                   for Help message
 
    DeclareOptionRef( fVerbose, "V", "Verbose output (short form of \"VerbosityLevel\" below - overrides the latter one)" );
-   
+
    DeclareOptionRef( fVerbosityLevelString="Default", "VerbosityLevel", "Verbosity level" );
    AddPreDefVal( TString("Default") ); // uses default defined in MsgLogger header
    AddPreDefVal( TString("Debug")   );
@@ -384,7 +384,7 @@ void TMVA::MethodBase::DeclareBaseOptions()
    AddPreDefVal( TString("Error")   );
    AddPreDefVal( TString("Fatal")   );
 
-   // If True (default): write all training results (weights) as text files only; 
+   // If True (default): write all training results (weights) as text files only;
    // if False: write also in ROOT format (not available for all methods - will abort if not
    fTxtWeightsOnly = kTRUE;  // OBSOLETE !!!
    fNormalise      = kFALSE; // OBSOLETE !!!
@@ -395,7 +395,7 @@ void TMVA::MethodBase::DeclareBaseOptions()
 
    DeclareOptionRef( fHasMVAPdfs, "CreateMVAPdfs", "Create PDFs for classifier outputs (signal and background)" );
 
-   DeclareOptionRef( fIgnoreNegWeightsInTraining, "IgnoreNegWeightsInTraining", 
+   DeclareOptionRef( fIgnoreNegWeightsInTraining, "IgnoreNegWeightsInTraining",
                      "Events with negative weights are ignored in the training (but are included for testing and performance evaluation)" );
 }
 
@@ -424,7 +424,7 @@ void TMVA::MethodBase::ProcessBaseOptions()
       // the final marked option string is written back to the original methodbase
       SetOptions( fMVAPdfS->GetOptions() );
    }
-   
+
    CreateVariableTransforms( fVarTransformString );
 
    if (!HasMVAPdfs()) {
@@ -486,13 +486,13 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
             GetTransformationHandler().AddTransformation( new VariableNormalizeTransform( DataInfo()), idxCls );
          else
             Log() << kFATAL << "<ProcessOptions> Variable transform '"
-                  << trName << "' unknown." << Endl;         
+                  << trName << "' unknown." << Endl;
          ClassInfo* clsInfo = DataInfo().GetClassInfo(idxCls);
          if( clsInfo )
             Log() << kINFO << " create Transformation " << trName << " with reference class " <<clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
          else
             Log() << kINFO << " create Transformation " << trName << " with events of all classes." << Endl;
-         
+
       }
    }
 }
@@ -545,7 +545,11 @@ void TMVA::MethodBase::TrainMethod()
    Log() << kINFO << "Create MVA output for ";
 
    // create PDFs for the signal and background MVA distributions (if required)
-   if (!DoRegression()) {
+   if (DoMulticlass()){
+      Log() << "Multiclass classification on training sample" << Endl;
+      AddMulticlassOutput(Types::kTraining);
+   }
+   else if (!DoRegression()) {
 
       Log() << "classification on training sample" << Endl;
       AddClassifierOutput(Types::kTraining);
@@ -553,9 +557,9 @@ void TMVA::MethodBase::TrainMethod()
          CreateMVAPdfs();
          AddClassifierOutputProb(Types::kTraining);
       }
-
+      
    } else {
-
+      
       Log() << "regression on training sample" << Endl;
       AddRegressionOutput( Types::kTraining );
 
@@ -576,6 +580,24 @@ void TMVA::MethodBase::TrainMethod()
    // again, make sure the histograms go into the method's subdirectory
    BaseDir()->cd();
    WriteMonitoringHistosToFile();
+}
+
+//_______________________________________________________________________
+void TMVA::MethodBase::GetRegressionDeviation(UInt_t tgtNum, Types::ETreeType type, Double_t& stddev, Double_t& stddev90Percent ) const 
+{
+   if (!DoRegression()) Log() << kFATAL << "Trying to use GetRegressionDeviation() with a classification job" << Endl;
+   Log() << kINFO << "Create results for " << (type==Types::kTraining?"training":"testing") << Endl;
+   ResultsRegression* regRes = (ResultsRegression*)Data()->GetResults(GetMethodName(), Types::kTesting, Types::kRegression);
+   bool truncate = false;
+   TH1F* h1 = regRes->QuadraticDeviation( tgtNum , truncate, 1.);
+   stddev = sqrt(h1->GetMean());
+   truncate = true;
+   Double_t yq[1], xq[]={0.9};
+   h1->GetQuantiles(1,yq,xq);
+   TH1F* h2 = regRes->QuadraticDeviation( tgtNum , truncate, yq[0]);
+   stddev90Percent = sqrt(h2->GetMean());
+   delete h1;
+   delete h2;
 }
 
 //_______________________________________________________________________
@@ -633,7 +655,7 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
    // use timer
    Timer timer( nEvents, GetName(), kTRUE );
 
-   Log() << kINFO << "Evaluation of " << GetMethodName() << " on "
+   Log() << kINFO << "Multiclass evaluation of " << GetMethodName() << " on "
          << (type==Types::kTraining?"training":"testing") << " sample" << Endl;
 
    regMulti->Resize( nEvents );
@@ -656,14 +678,21 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
 //   regMulti->CreateDeviationHistograms( histNamePrefix );
 }
 
+
+
 //_______________________________________________________________________
-Double_t TMVA::MethodBase::GetMvaValue( const Event* const ev, Double_t* err ) {
+void TMVA::MethodBase::NoErrorCalc(Double_t* const err, Double_t* const errUpper) {
+   if(err) *err=-1;
+   if(errUpper) *errUpper=-1;
+}
+
+//_______________________________________________________________________
+Double_t TMVA::MethodBase::GetMvaValue( const Event* const ev, Double_t* err, Double_t* errUpper ) {
    fTmpEvent = ev;
-   Double_t val = GetMvaValue(err);
+   Double_t val = GetMvaValue(err, errUpper);
    fTmpEvent = 0;
    return val;
 }
-
 
 //_______________________________________________________________________
 void TMVA::MethodBase::AddClassifierOutput( Types::ETreeType type )
@@ -672,7 +701,7 @@ void TMVA::MethodBase::AddClassifierOutput( Types::ETreeType type )
 
    Data()->SetCurrentType(type);
 
-   ResultsClassification* clRes = 
+   ResultsClassification* clRes =
       (ResultsClassification*)Data()->GetResults(GetMethodName(), type, Types::kClassification );
 
    Long64_t nEvents = Data()->GetNEvents();
@@ -1027,14 +1056,13 @@ void TMVA::MethodBase::TestClassification()
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
       
       const Event* ev = GetEvent(ievt);
-
-      Float_t v = (*mvaRes)[ievt];
+      Float_t v = (*mvaRes)[ievt][0];
       Float_t w = ev->GetWeight();
       
       if (DataInfo().IsSignal(ev)) {
          mva_s ->Fill( v, w );
          if (mvaProb) {
-            proba_s->Fill( (*mvaProb)[ievt], w );
+            proba_s->Fill( (*mvaProb)[ievt][0], w );
             rarity_s->Fill( GetRarity( v ), w );
          }
          
@@ -1043,7 +1071,7 @@ void TMVA::MethodBase::TestClassification()
       else {
          mva_b ->Fill( v, w );
          if (mvaProb) {
-            proba_b->Fill( (*mvaProb)[ievt], w );
+            proba_b->Fill( (*mvaProb)[ievt][0], w );
             rarity_b->Fill( GetRarity( v ), w );
          }
          mva_eff_b ->Fill( v, w );
@@ -1213,11 +1241,12 @@ void TMVA::MethodBase::WriteStateToFile() const
    Log() << kINFO << "Creating weight file in xml format: "
          << gTools().Color("lightblue") << xmlfname << gTools().Color("reset") << Endl;
    void* doc      = gTools().xmlengine().NewDoc();
-   void* rootnode = gTools().AddChild(0,"MethodSetup");
+   void* rootnode = gTools().AddChild(0,"MethodSetup", "", true);
    gTools().xmlengine().DocSetRootElement(doc,rootnode);
    gTools().AddAttr(rootnode,"Method", GetMethodTypeName() + "::" + GetMethodName());
    WriteStateToXML(rootnode);
    gTools().xmlengine().SaveDoc(doc,xmlfname);
+   gTools().xmlengine().FreeDoc(doc);
 }
 
 //_______________________________________________________________________
@@ -1236,6 +1265,7 @@ void TMVA::MethodBase::ReadStateFromFile()
       void* doc = gTools().xmlengine().ParseFile(tfname);
       void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
       ReadStateFromXML(rootnode);
+      gTools().xmlengine().FreeDoc(doc);
    }
    else {
       filebuf fb;
@@ -1261,18 +1291,17 @@ void TMVA::MethodBase::ReadStateFromFile()
 //_______________________________________________________________________
 void TMVA::MethodBase::ReadStateFromXMLString( const char* xmlstr ) {
    // for reading from memory
-   
+
 #if (ROOT_SVN_REVISION >= 32259) && (ROOT_VERSION_CODE >= 334336) // 5.26/00
    void* doc = gTools().xmlengine().ParseString(xmlstr);
-
    void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
-
-   return ReadStateFromXML(rootnode);
+   ReadStateFromXML(rootnode);
+   gTools().xmlengine().FreeDoc(doc);
 #else
    Log() << kFATAL << "Method MethodBase::ReadStateFromXMLString( const char* xmlstr ) is not available for ROOT versions prior to 5.26/00." << Endl;
-   return;
 #endif
 
+   return;
 }
 
 //_______________________________________________________________________
@@ -1350,8 +1379,8 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
       }
       else if (nodeName=="MVAPdfs") {
          TString pdfname;
-         if (fMVAPdfS) delete fMVAPdfS;
-         if (fMVAPdfB) delete fMVAPdfB;
+         if (fMVAPdfS) { delete fMVAPdfS; fMVAPdfS=0; }
+         if (fMVAPdfB) { delete fMVAPdfB; fMVAPdfB=0; }
          void* pdfnode = gTools().GetChild(ch);
          if (pdfnode) {
             gTools().ReadAttr(pdfnode, "Name", pdfname);
@@ -1367,7 +1396,7 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
          ReadWeightsFromXML(ch);
       }
       else {
-         std::cout << "Unparsed: " << nodeName << std::endl;
+         Log() << kWARNING << "Unparsed XML node: '" << nodeName << "'" << Endl;
       }
       ch = gTools().GetNextChild(ch);
 
@@ -1570,13 +1599,9 @@ void TMVA::MethodBase::AddSpectatorsXMLTo( void* parent ) const
 
       // we do not want to write spectators that are category-cuts,
       // except if the method is the category method and the spectators belong to it
-      if( vi.GetVarType()=='C' ) {
+      if( vi.GetVarType()=='C' )
          continue;
-         if(GetMethodTypeName()!="Category")
-            continue;
-         if(!vi.GetTitle().BeginsWith(GetMethodName()+":") )
-            continue;
-      }
+
       void* spec = gTools().AddChild( specs, "Spectator" );
       gTools().AddAttr( spec, "SpecIndex", writeIdx++ );
       vi.AddToXML( spec );
@@ -1691,7 +1716,7 @@ void TMVA::MethodBase::ReadTargetsFromXML( void* tarnode )
       gTools().ReadAttr( ch, "TargetIndex", tarIdx);
       gTools().ReadAttr( ch, "Expression", expression);
       DataInfo().AddTarget(expression,"","",0,0);
-     
+
       ch = gTools().GetNextChild(ch);
    }
 }
@@ -1784,7 +1809,9 @@ TString TMVA::MethodBase::GetWeightFileName() const
    // the default consists of
    // directory/jobname_methodname_suffix.extension.{root/txt}
    TString suffix = "";
-   return ( GetWeightFileDir() + "/" + GetJobName() + "_" + GetMethodName() +
+   TString wFileDir(GetWeightFileDir());
+   return ( wFileDir + (wFileDir[wFileDir.Length()-1]=='/' ? "" : "/") 
+	    + GetJobName() + "_" + GetMethodName() +
             suffix + "." + gConfig().GetIONames().fWeightFileExtension + ".xml" );
 }
 

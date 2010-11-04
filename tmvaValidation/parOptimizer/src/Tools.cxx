@@ -1022,6 +1022,10 @@ Bool_t TMVA::Tools::HasAttr( void* node, const char* attrname )
 void TMVA::Tools::ReadAttr( void* node, const char* attrname, TString& value )
 {
    // add attribute from xml
+   if(!HasAttr(node, attrname)) {
+      const char * nodename = xmlengine().GetNodeName(node);
+      Log() << kFATAL << "Trying to read non-existing attribute '" << attrname << "' from xml node '" << nodename << "'" << Endl;
+   }
    const char* val = xmlengine().GetAttr(node, attrname);
    value = TString(val);
 }
@@ -1030,16 +1034,19 @@ void TMVA::Tools::ReadAttr( void* node, const char* attrname, TString& value )
 void TMVA::Tools::AddAttr( void* node, const char* attrname, const char* value )
 {
    // add attribute to node
+   if( node == 0 ) return;
    gTools().xmlengine().NewAttr(node, 0, attrname, value );
 }
 
 //_______________________________________________________________________
-void* TMVA::Tools::AddChild( void* parent, const char* childname, const char* content ) {
+void* TMVA::Tools::AddChild( void* parent, const char* childname, const char* content, bool isRootNode ) {
+   if( !isRootNode && parent == 0 ) return 0;
    return gTools().xmlengine().NewChild(parent, 0, childname, content);
 }
 
 //_______________________________________________________________________
 Bool_t TMVA::Tools::AddComment( void* node, const char* comment ) {
+   if( node == 0 ) return kFALSE;
    return gTools().xmlengine().AddComment(node, comment);
 }
 
@@ -1315,6 +1322,34 @@ void TMVA::Tools::TMVAWelcomeMessage( MsgLogger& logger, EWelcomeMessage msgType
       
    default:
       logger << kFATAL << "unknown message type: " << msgType << Endl;
+   }
+}
+
+//_______________________________________________________________________
+void TMVA::Tools::TMVACitation( MsgLogger& logger, ECitation citType )
+{
+   // kinds of TMVA citation
+
+   switch (citType) {
+
+   case kPlainText:
+      logger << "Hoecker, A.; Speckmayer, P.; Stelzer, J.; Therhaag, J.; von Toerne, E. & Voss TMVA - Toolkit for Multivariate Data Analysis ArXiv Physics e-prints, 2007" << Endl;
+      break;
+
+   case kBibTeX:
+      logger << "@ARTICLE{TMVA2007," << Endl;
+      logger << "author = {{Hoecker}, A. and {Speckmayer}, P. and {Stelzer}, J. and {Therhaag}," << Endl;
+      logger << "J. and {von Toerne}, E. and {Voss}}," << Endl;
+      logger << "title = {{TMVA - Toolkit for Multivariate Data Analysis}}," << Endl;
+      logger << "journal = {ArXiv Physics e-prints}," << Endl;
+      logger << "year = {2007}," << Endl;
+      logger << "month = mar," << Endl;
+      logger << "adsnote = {Provided by the SAO/NASA Astrophysics Data System}," << Endl;
+      logger << "adsurl = {http://adsabs.harvard.edu/abs/2007physics...3039H}," << Endl;
+      logger << "eprint = {arXiv:physics/0703039}," << Endl;
+      logger << "keywords = {Physics - Data Analysis, Statistics and Probability}" << Endl;
+      break;
+
    }
 }
 
