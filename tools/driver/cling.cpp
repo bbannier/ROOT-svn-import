@@ -27,8 +27,8 @@ int main( int argc, char **argv )
 
    llvm::llvm_shutdown_obj shutdownTrigger;
 
-   llvm::sys::PrintStackTraceOnErrorSignal();
-   llvm::PrettyStackTraceProgram X(argc, argv);
+   //llvm::sys::PrintStackTraceOnErrorSignal();
+   //llvm::PrettyStackTraceProgram X(argc, argv);
 
    // TODO: factor out, use llvm's / clang option parsing tools
 
