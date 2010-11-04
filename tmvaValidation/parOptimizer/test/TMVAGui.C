@@ -81,9 +81,11 @@ void TMVAGui( const char* fName = "TMVA.root" )
    // find all references   
    cout << "--- Reading keys ..." << endl;
    TMVAGui_keyContent = (TList*)file->GetListOfKeys()->Clone();
+   cout << "Bla" << endl;
 
    // close file
    file->Close();
+   cout << "Bla" << endl;
 
    TString defaultRequiredClassifier = "";
 
@@ -94,6 +96,7 @@ void TMVAGui( const char* fName = "TMVA.root" )
    TControlBar* cbar = new TControlBar( "vertical", "TMVA Plotting Macros for Classification", 0, 0 );
 
    const TString buttonType( "button" );
+   cout << "Bla" << endl;
 
    // configure buttons   
    Int_t ic = 1;
@@ -104,6 +107,7 @@ void TMVAGui( const char* fName = "TMVA.root" )
    TObjString* str = 0;
    char ch = 'a';
    while ((str = (TObjString*)it())) {
+      cout << "Bla " << str << endl;
       TString tmp   = str->GetString();
       TString title = Form( "Input variables '%s'-transformed (training sample)", 
                             tmp.ReplaceAll("InputVariables_","").Data() );
