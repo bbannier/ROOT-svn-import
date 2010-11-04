@@ -339,7 +339,7 @@ namespace TMVA {
       // this method is used to decide whether an event is signal- or background-like
       // the reference cut "xC" is taken to be where 
       // Int_[-oo,xC] { PDF_S(x) dx } = Int_[xC,+oo] { PDF_B(x) dx }
-      virtual Bool_t        IsSignalLike() { return GetMvaValue() > GetSignalReferenceCut() ? kTRUE : kFALSE; }     
+      virtual Bool_t        IsSignalLike() { return GetMvaValue() > GetSignalReferenceCut(); }     
 
       DataSet* Data() const { return DataInfo().GetDataSet(); }
 

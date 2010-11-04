@@ -1636,8 +1636,5 @@ void TMVA::Factory::EvaluateAllMethods( void )
    RootBaseDir()->cd();
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTesting)->Write( "", TObject::kOverwrite );
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTraining)->Write( "", TObject::kOverwrite );
-
-
-
 }
 

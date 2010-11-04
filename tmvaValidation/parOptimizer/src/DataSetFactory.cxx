@@ -1087,7 +1087,6 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
       Log() << kDEBUG << "determined event sample size to select training sample from="<<useForTraining<<Endl;
       Log() << kDEBUG << "determined event sample size to select test sample from="<<useForTesting<<Endl;
       
-
       // associate undefined events 
       if( splitMode == "ALTERNATE" ){
          Log() << kDEBUG << "split 'ALTERNATE'" << Endl;
@@ -1106,7 +1105,7 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
             }
          }
       }else{
-         Log() << kDEBUG << "split 'RANDOM'" << Endl;
+         Log() << kDEBUG << "split '" << splitMode << "'" << Endl;
 
 	 // test if enough events are available
 	 Log() << kDEBUG << "availableundefined : " << availableUndefined << Endl;

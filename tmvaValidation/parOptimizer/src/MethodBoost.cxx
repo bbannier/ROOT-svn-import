@@ -61,6 +61,10 @@
 #include "TMVA/Results.h"
 #include "TMVA/Config.h"
 
+#include "TMVA/SeparationBase.h"
+#include "TMVA/GiniIndex.h"
+#include "TMVA/RegressionVariance.h"
+
 REGISTER_METHOD(Boost)
 
 ClassImp(TMVA::MethodBoost)
@@ -322,11 +326,12 @@ void TMVA::MethodBoost::Train()
 
 	 // test MethodBoost in order to calculate ROC integral
          TMVA::MsgLogger::InhibitOutput(); //supressing Logger outside the method
-	 FullTest(AllMethodsWeight);
+         FullTest(AllMethodsWeight);
          TMVA::MsgLogger::EnableOutput();
 
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
+         std::cout << "AdaBoost (methodErr) err = " << fMethodError <<std::endl;
          if (fMethodError > 0.49999) StopCounter++; 
          if (StopCounter > 0 && fBoostType == "AdaBoost")
             {
@@ -358,7 +363,7 @@ void TMVA::MethodBoost::Train()
          }
       }
 
-      fMethodWeight[fMethodIndex] = fMethodWeight[fMethodIndex] / AllMethodsWeight;
+      //      fMethodWeight[fMethodIndex] = fMethodWeight[fMethodIndex] / AllMethodsWeight;
       (*fMonitorHist)[0]->SetBinContent(fMethodIndex+1,fMethodWeight[fMethodIndex]);
    }
 
@@ -370,6 +375,8 @@ void TMVA::MethodBoost::Train()
    if (fMethods.size()==1)  fMethodWeight[0] = 1.0;
 
    fMethods.back()->MonitorBoost(SetStage(Types::kBoostProcEnd));
+
+   
 }
 
 //_______________________________________________________________________
@@ -521,25 +528,28 @@ void TMVA::MethodBoost::SingleTrain()
 //_______________________________________________________________________
 void TMVA::MethodBoost::FindMVACut()
 {
-   //Log() << kINFO << "FindMVACut "<<Endl;
-   MethodBase* method=dynamic_cast<MethodBase*>(fMethods.back());
-   if (method->GetMethodType() == Types::kDT ){ return;}
+   // find the CUT on the individual MVA that defines an event as 
+   // correct or misclassified (to be used in the boosting process)
+
+   MethodBase* lastMethod=dynamic_cast<MethodBase*>(fMethods.back());
+   if (lastMethod->GetMethodType() == Types::kDT ){ return;}
    if (!fRecalculateMVACut && fMethodIndex>0) {
-      method->SetSignalReferenceCut(dynamic_cast<MethodBase*>(fMethods[0])->GetSignalReferenceCut());
+      lastMethod->SetSignalReferenceCut(dynamic_cast<MethodBase*>(fMethods[0])->GetSignalReferenceCut());
    }
    else {
       // creating a fine histograms containing the error rate
       const Int_t nValBins=1000;
       Double_t* err=new Double_t[nValBins];
-      const Double_t valmin=-1.;
-      const Double_t valmax=1.;
+      const Double_t valmin=-1.5;
+      const Double_t valmax=1.5;
       for (Int_t i=0;i<nValBins;i++) err[i]=0.;
       Double_t sum = 0.;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          Double_t weight = GetEvent(ievt)->GetWeight();
          sum +=weight;
-         Double_t val=method->GetMvaValue();
+         Double_t val=lastMethod->GetMvaValue();
          Int_t ibin = (Int_t) (((val-valmin)/(valmax-valmin))*nValBins);
+         
          if (ibin>=nValBins) ibin = nValBins-1;
          if (ibin<0) ibin = 0;
          if (DataInfo().IsSignal(Data()->GetEvent(ievt))){
@@ -552,16 +562,21 @@ void TMVA::MethodBoost::FindMVACut()
       Double_t minerr=1.e6;
       Int_t minbin=-1;
       for (Int_t i=0;i<nValBins;i++){
-         if (err[i]<minerr){
+         if (err[i]<=minerr){
             minerr=err[i];
             minbin=i;
          }
       }
-      Double_t sigCutVal = valmin + (valmax-valmin)*minbin/nValBins;
-      method->SetSignalReferenceCut(sigCutVal);
-      //std::cout << "Setting method cut to " <<method->GetSignalReferenceCut()<< " minerr=" << minerr/sum<<endl;
       delete[] err;
+      
+      
+      Double_t sigCutVal = valmin + ((valmax-valmin)*minbin)/Float_t(nValBins+1);
+      lastMethod->SetSignalReferenceCut(sigCutVal);
+      
+      std::cout << "(old step) Setting method cut to " <<lastMethod->GetSignalReferenceCut()<< std::endl;
+      
    }
+   
 }
 
 //_______________________________________________________________________
@@ -598,6 +613,7 @@ void TMVA::MethodBoost::SingleBoost()
    }
    fMethodError=sumWrong/sumAll;
    fOrigMethodError = sumWrongOrig/sumAllOrig;
+   std::cout << "AdaBoost err (MethodErr1)= " << fMethodError<<" = wrong/all: " << sumWrong << "/" << sumAll<< " cut="<<method->GetSignalReferenceCut()<<std::endl;
 
    // calculating the fMethodError and the fBoostWeight out of it uses the formula 
    // w = ((1-err)/err)^beta
@@ -610,6 +626,8 @@ void TMVA::MethodBoost::SingleBoost()
    else fBoostWeight = 1000;
 
    Double_t alphaWeight = TMath::Log(fBoostWeight);
+
+   std::cout << "BoostWeight=" << fBoostWeight << "  " << alphaWeight << std::endl;
    if (alphaWeight>5.) alphaWeight = 5.;
    if (alphaWeight<0.){
       //Log()<<kWARNING<<"alphaWeight is too small in AdaBoost alpha=" << alphaWeight<< Endl;
@@ -620,17 +638,21 @@ void TMVA::MethodBoost::SingleBoost()
       // over the entire test sample rescaling all the weights to have the same sum, but without
       // touching the original weights (changing only the boosted weight of all the events)
       // first reweight
-      Double_t Factor=0., FactorOrig=0.;
+      Double_t newSum=0., oldSum=0.;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev =  Data()->GetEvent(ievt);
-         FactorOrig += ev->GetWeight();
-         ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 1.0)));
-         Factor += ev->GetWeight();
+         oldSum += ev->GetWeight();
+         //         ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 1.0)));
+         //ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 0)));
+         if (WrongDetection[ievt]) ev->ScaleBoostWeight(fBoostWeight);
+         newSum += ev->GetWeight();
       }
-      Factor = FactorOrig/Factor;
+
+      Double_t normWeight = oldSum/newSum;
+      std::cout << "Normalize weight by (Boost)" << normWeight <<  " = " << oldSum<<"/"<<newSum<< " eventBoostFactor="<<fBoostWeight<<std::endl;
       // next normalize the weights
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-         Data()->GetEvent(ievt)->ScaleBoostWeight(Factor);
+         Data()->GetEvent(ievt)->ScaleBoostWeight(normWeight);
       }
 
    }

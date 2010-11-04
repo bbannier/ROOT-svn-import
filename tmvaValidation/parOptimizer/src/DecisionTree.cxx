@@ -96,10 +96,11 @@ TMVA::DecisionTree::DecisionTree():
    fUseFisherCuts  (kFALSE),
    fSepType        (NULL),
    fMinSize        (0),
-   fPruneMethod    (kCostComplexityPruning),
+   fPruneMethod    (kNoPruning),
    fNodePurityLimit(0.5),
    fRandomisedTree (kFALSE),
    fUseNvars       (0),
+   fUsePoissonNvars(kFALSE),
    fMyTrandom      (NULL),
    fNNodesMax      (999999),
    fMaxDepth       (999999),
@@ -113,7 +114,7 @@ TMVA::DecisionTree::DecisionTree():
 
 //_______________________________________________________________________
 TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType,Int_t minSize, Int_t nCuts, Bool_t useFisherCuts, UInt_t cls, 
-                                  Bool_t randomisedTree, Int_t useNvars, UInt_t nNodesMax,
+                                  Bool_t randomisedTree, Int_t useNvars, Bool_t usePoissonNvars, UInt_t nNodesMax,
                                   UInt_t nMaxDepth, Int_t iSeed, Float_t purityLimit, Int_t treeID):
    BinaryTree(),
    fNvars          (0),
@@ -121,10 +122,11 @@ TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType,Int_t minSize, I
    fUseFisherCuts  (useFisherCuts),
    fSepType        (sepType),
    fMinSize        (minSize),
-   fPruneMethod    (kCostComplexityPruning),
+   fPruneMethod    (kNoPruning),
    fNodePurityLimit(purityLimit),
    fRandomisedTree (randomisedTree),
    fUseNvars       (useNvars),
+   fUsePoissonNvars(usePoissonNvars),
    fMyTrandom      (new TRandom3(iSeed)),
    fNNodesMax      (nNodesMax),
    fMaxDepth       (nMaxDepth),
@@ -165,6 +167,7 @@ TMVA::DecisionTree::DecisionTree( const DecisionTree &d ):
    fNodePurityLimit(d.fNodePurityLimit),
    fRandomisedTree (d.fRandomisedTree),
    fUseNvars       (d.fUseNvars),
+   fUsePoissonNvars(d.fUsePoissonNvars),
    fMyTrandom      (new TRandom3(fgRandomSeed)),  // well, that means it's not an identical copy. But I only ever intend to really copy trees that are "outgrown" already. 
    fNNodesMax  (d.fNNodesMax),
    fMaxDepth   (d.fMaxDepth),
@@ -329,17 +332,17 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
        && s!=0 && b !=0 ) {
       Float_t separationGain;
       if (fNCuts > 0)
-         //         if (fUseFisherCuts) separationGain = this->TrainNodeFisher(eventSample, dynamic_cast<FisherDecisionTreeNode*>( node ));
-      if (fUseFisherCuts)    separationGain = this->TrainNodeFisher(eventSample, dynamic_cast<FisherDecisionTreeNode*>( node ));
+         if (fUseFisherCuts) separationGain = this->TrainNodeFisher(eventSample, dynamic_cast<FisherDecisionTreeNode*>( node ));
          else                separationGain = this->TrainNodeFast(eventSample, node);
       else
          separationGain = this->TrainNodeFull(eventSample, node);
-
 
       if (separationGain < std::numeric_limits<double>::epsilon()) { // we could not gain anything, e.g. all events are in one bin,
          /// if (separationGain < 0.00000001) { // we could not gain anything, e.g. all events are in one bin,
          // no cut can actually do anything to improve the node
          // hence, naturally, the current node is a leaf node
+
+         std::cout << "SeparationGain almost zero --> stop" << std::endl;
          if (DoRegression()) {
             node->SetSeparationIndex(fRegType->GetSeparationIndex(s+b,target,target2));
             node->SetResponse(target/(s+b));
@@ -391,6 +394,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
          TMVA::DecisionTreeNode *leftNode;
          if (fUseFisherCuts) leftNode = new TMVA::FisherDecisionTreeNode(node,'l');
          else leftNode = new TMVA::DecisionTreeNode(node,'l');
+
          fNNodes++;
          leftNode->SetNEvents(nLeft);
          leftNode->SetNEvents_unweighted(leftSample.size());
@@ -568,8 +572,6 @@ Double_t TMVA::DecisionTree::PruneTree( vector<Event*>* validationSample )
 
    delete tool;
    delete info;
-
-   //   this->CleanTree();
 
    return pruneStrength;
 };
@@ -815,17 +817,17 @@ Float_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSam
 
   
    const UInt_t nBins = fNCuts+1;
-   const UInt_t cNvars = fNvars;
+   UInt_t cNvars = fNvars;
 
-   Float_t** nSelS = new Float_t* [cNvars];
-   Float_t** nSelB = new Float_t* [cNvars];
-   Float_t** nSelS_unWeighted = new Float_t* [cNvars];
-   Float_t** nSelB_unWeighted = new Float_t* [cNvars];
-   Float_t** target = new Float_t* [cNvars];
-   Float_t** target2 = new Float_t* [cNvars];
-   Float_t** cutValues = new Float_t* [cNvars];
+   Float_t** nSelS = new Float_t* [fNvars];
+   Float_t** nSelB = new Float_t* [fNvars];
+   Float_t** nSelS_unWeighted = new Float_t* [fNvars];
+   Float_t** nSelB_unWeighted = new Float_t* [fNvars];
+   Float_t** target = new Float_t* [fNvars];
+   Float_t** target2 = new Float_t* [fNvars];
+   Float_t** cutValues = new Float_t* [fNvars];
 
-   for (UInt_t i=0; i<cNvars; i++) {
+   for (UInt_t i=0; i<fNvars; i++) {
       nSelS[i] = new Float_t [nBins];
       nSelB[i] = new Float_t [nBins];
       nSelS_unWeighted[i] = new Float_t [nBins];
@@ -835,8 +837,8 @@ Float_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSam
       cutValues[i] = new Float_t [nBins];
    }
 
-   Float_t *xmin = new Float_t[cNvars]; 
-   Float_t *xmax = new Float_t[cNvars];
+   Float_t *xmin = new Float_t[fNvars]; 
+   Float_t *xmax = new Float_t[fNvars];
 
    Bool_t *useVariable = new Bool_t[fNvars];   // for performance reasons instead of vector<Bool_t> useVariable(fNvars);
    Int_t  *mapVariable = new Int_t[fNvars];    // map the subset of variables used in randomised trees to the original variable number (used in the Event() ) 
@@ -858,7 +860,7 @@ Float_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSam
    }
 
    if (fRandomisedTree) { // choose for each node splitting a random subset of variables to choose from
-      GetRandomisedVariables(useVariable,mapVariable);
+      GetRandomisedVariables(useVariable,mapVariable,cNvars);
    } 
    else {
       for (UInt_t ivar=0; ivar < fNvars; ivar++) {
@@ -1022,7 +1024,7 @@ Float_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSam
    }
   
 
-   for (UInt_t i=0; i<cNvars; i++) {
+   for (UInt_t i=0; i<fNvars; i++) {
       delete [] nSelS[i];
       delete [] nSelB[i];
       delete [] nSelS_unWeighted[i];
@@ -1047,16 +1049,18 @@ Float_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSam
    return separationGain;
 }
 
-void TMVA::DecisionTree::GetRandomisedVariables(Bool_t *useVariable, Int_t *mapVariable){
+void TMVA::DecisionTree::GetRandomisedVariables(Bool_t *useVariable, Int_t *mapVariable, UInt_t &useNvars){
 
    for (UInt_t ivar=0; ivar<fNvars; ivar++) useVariable[ivar]=kFALSE;
    if (fUseNvars==0) { // no number specified ... choose s.th. which hopefully works well 
-      if (fNvars < 12) fUseNvars = TMath::Max(2,Int_t( Float_t(fNvars) / 2.5 ));
-      else if (fNvars < 40) fUseNvars = Int_t( Float_t(fNvars) / 5 );
-      else fUseNvars = Int_t( Float_t(fNvars) / 10 );
+      // watch out, should never happen as it is initialised automatically in MethodBDT already!!!
+      fUseNvars        =  UInt_t(sqrt(fNvars)+0.6);
    }
-   Int_t nSelectedVars = 0;
-   while (nSelectedVars < fUseNvars) {
+   if (fUsePoissonNvars) useNvars=TMath::Min(fNvars,TMath::Max(UInt_t(1),(UInt_t) fMyTrandom->Poisson(fUseNvars)));
+   else useNvars = fUseNvars;
+
+   UInt_t nSelectedVars = 0;
+   while (nSelectedVars < useNvars) {
       Double_t bla = fMyTrandom->Rndm()*fNvars;
       useVariable[Int_t (bla)] = kTRUE;
       nSelectedVars = 0;
@@ -1067,7 +1071,7 @@ void TMVA::DecisionTree::GetRandomisedVariables(Bool_t *useVariable, Int_t *mapV
          }
       }
    }
-   if (nSelectedVars != fUseNvars) { std::cout << "Bug in TrainNode - GetRandisedVariables()... sorry" << std::endl; exit(1);}
+   if (nSelectedVars != useNvars) { std::cout << "Bug in TrainNode - GetRandisedVariables()... sorry" << std::endl; exit(1);}
 }
 
 //_______________________________________________________________________
@@ -1089,8 +1093,11 @@ Float_t TMVA::DecisionTree::TrainNodeFisher( const vector<TMVA::Event*> & eventS
 
    Bool_t *useVariable = new Bool_t[fNvars];   // for performance reasons instead of vector<Bool_t> useVariable(fNvars);
    Int_t  *mapVariable = new Int_t[fNvars];    // map the subset of variables used in randomised trees to the original variable number (used in the Event() ) 
+
+
+   UInt_t cNvars = fUseNvars; 
    if (fRandomisedTree) { // choose for each node splitting a random subset of variables to choose from
-      GetRandomisedVariables(useVariable,mapVariable);
+      GetRandomisedVariables(useVariable,mapVariable,cNvars);
    } 
    else {
       for (UInt_t ivar=0; ivar < fNvars; ivar++) {
@@ -1098,7 +1105,6 @@ Float_t TMVA::DecisionTree::TrainNodeFisher( const vector<TMVA::Event*> & eventS
          mapVariable[ivar] = ivar;
       }
    }
-   const UInt_t cNvars = fUseNvars; 
    
   
    // allocate Fisher coefficients (use fNvars, set all other fisher coeff. to zero
@@ -1499,9 +1505,8 @@ Float_t TMVA::DecisionTree::TrainNodeFull( const vector<TMVA::Event*> & eventSam
    for (UInt_t ivar=0; ivar < fNvars; ivar++) useVariable[ivar]=Char_t(kFALSE);
    if (fRandomisedTree) { // choose for each node splitting a random subset of variables to choose from
       if (fUseNvars ==0 ) { // no number specified ... choose s.th. which hopefully works well 
-         if (fNvars < 12) fUseNvars = TMath::Max(2,Int_t( Float_t(fNvars) / 2.5 ));
-         else if (fNvars < 40) fUseNvars = Int_t( Float_t(fNvars) / 5 );
-         else fUseNvars = Int_t( Float_t(fNvars) / 10 );
+         // watch out, should never happen as it is initialised automatically in MethodBDT already!!!
+         fUseNvars        =  UInt_t(sqrt(fNvars)+0.6);
       }
       Int_t nSelectedVars = 0;
       while (nSelectedVars < fUseNvars) {

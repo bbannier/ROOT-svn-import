@@ -166,6 +166,7 @@ void TMVA::MethodDT::DeclareOptions()
    //                         ExpectedError
    //                         CostComplexity 
    // PruneStrength    a parameter to adjust the amount of pruning. Should be large enouth such that overtraining is avoided");
+   // MaxDepth         maximum depth of the decision tree allowed before further splitting is stopped
 
    DeclareOptionRef(fRandomisedTrees,"UseRandomisedTrees","Choose at each node splitting a random set of variables and *bagging*");
    DeclareOptionRef(fUseNvars,"UseNvars","Number of variables used if randomised Tree option is chosen");
@@ -187,6 +188,13 @@ void TMVA::MethodDT::DeclareOptions()
    AddPreDefVal(TString("NoPruning"));
    AddPreDefVal(TString("ExpectedError"));
    AddPreDefVal(TString("CostComplexity"));
+
+   //   if (DoRegression()) {
+   if (0) {
+      DeclareOptionRef(fMaxDepth=50,"MaxDepth","Max depth of the decision tree allowed");
+   }else{
+      DeclareOptionRef(fMaxDepth=3,"MaxDepth","Max depth of the decision tree allowed");
+   }
 
 }
 
@@ -212,7 +220,7 @@ void TMVA::MethodDT::ProcessOptions()
    else if (fPruneMethodS == "nopruning" )       fPruneMethod = DecisionTree::kNoPruning;
    else {
       Log() << kINFO << GetOptions() << Endl;
-      Log() << kFATAL << "<ProcessOptions> unknown PruneMethod option called" << Endl;
+      Log() << kFATAL << "<ProcessOptions> unknown PruneMethod " << fPruneMethodS << " option called" << Endl;
    }
 
    if (fPruneStrength < 0) fAutomatic = kTRUE;
@@ -249,7 +257,8 @@ void TMVA::MethodDT::Init( void )
    // common initialisation with defaults for the DT-Method
    fNodeMinEvents  = TMath::Max( 20, int( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    fNCuts          = 20; 
-   fPruneMethod    = DecisionTree::kCostComplexityPruning;
+   fPruneMethodS   = "NoPruning";
+   fPruneMethod    = DecisionTree::kNoPruning;
    fPruneStrength  = 5;     // means automatic determination of the prune strength using a validation sample  
    fDeltaPruneStrength=0.1;
    fRandomisedTrees= kFALSE;
