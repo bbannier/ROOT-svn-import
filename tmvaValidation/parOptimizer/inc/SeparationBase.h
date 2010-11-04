@@ -90,12 +90,12 @@ namespace TMVA {
    public:
 
       // default constructor
-      SeparationBase():fPrecisionCut(TMath::Sqrt(std::numeric_limits<double>::epsilon())), fInit(kFALSE) {}
+      SeparationBase();
 
       //copy constructor
-      SeparationBase( const SeparationBase& s ): fName ( s.fName ), fPrecisionCut (s.fPrecisionCut) {}
+      SeparationBase( const SeparationBase& s );
       // destructor
-      virtual ~SeparationBase(){}
+      virtual ~SeparationBase();
 
       // Return the gain in separation of the original sample is splitted in two sub-samples
       // (N * Index_parent) - (N_left * Index_left) - (N_right * Index_right)

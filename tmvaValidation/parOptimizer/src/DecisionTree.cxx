@@ -1087,7 +1087,7 @@ void TMVA::DecisionTree::GetRandomisedVariables(Bool_t *useVariable, Int_t *mapV
 }
 
 //_______________________________________________________________________
-Float_t TMVA::DecisionTree::TrainNodeFisher( const vector<TMVA::Event*> & eventSample,
+Double_t TMVA::DecisionTree::TrainNodeFisher( const vector<TMVA::Event*> & eventSample,
                                            TMVA::FisherDecisionTreeNode *node )
 {
    // Decide how to split a node using a Fisher discriminant for the split, scan (Ncuts)
