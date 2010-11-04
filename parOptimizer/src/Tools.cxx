@@ -1049,7 +1049,13 @@ Bool_t TMVA::Tools::AddComment( void* node, const char* comment ) {
    if( node == 0 ) return kFALSE;
    return gTools().xmlengine().AddComment(node, comment);
 }
-
+ //_______________________________________________________________________
+void* TMVA::Tools::GetParent( void* child)
+{
+   void* par = xmlengine().GetParent(child);
+   
+   return par;
+}
 //_______________________________________________________________________
 void* TMVA::Tools::GetChild( void* parent, const char* childname )
 {
