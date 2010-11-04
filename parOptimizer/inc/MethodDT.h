@@ -118,7 +118,6 @@ namespace TMVA {
       SeparationBase                 *fSepType;         // the separation used in node splitting
       TString                         fSepTypeS;        // the separation (option string) used in node splitting
       Int_t                           fNodeMinEvents;   // min number of events in node 
-      UInt_t                          fMaxDepth;        // max depth  
       Int_t                           fNCuts;           // grid used in cut applied in node splitting
       Bool_t                          fUseYesNoLeaf;    // use sig or bkg classification in leave nodes or sig/bkg
       Double_t                        fNodePurityLimit; // purity limit for sig/bkg nodes
