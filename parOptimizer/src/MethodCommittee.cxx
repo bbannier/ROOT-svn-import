@@ -72,7 +72,14 @@ TMVA::MethodCommittee::MethodCommittee( const TString& jobName,
                                         TDirectory* theTargetDir ) :
    TMVA::MethodBase( jobName, Types::kCommittee, methodTitle, dsi, theOption, theTargetDir ),
    fNMembers(100),
-   fBoostType("AdaBoost")
+   fBoostType("AdaBoost"),
+   fMemberType(Types::kMaxMethod),
+   fUseMemberDecision(kFALSE),
+   fUseWeightedMembers(kFALSE),
+   fITree(0),
+   fBoostFactor(0),
+   fErrorFraction(0),
+   fNnodes(0)
 {
    // constructor
 }
@@ -83,7 +90,14 @@ TMVA::MethodCommittee::MethodCommittee( DataSetInfo& theData,
                                         TDirectory* theTargetDir ) :
    TMVA::MethodBase( Types::kCommittee, theData, theWeightFile, theTargetDir ),
    fNMembers(100),
-   fBoostType("AdaBoost")
+   fBoostType("AdaBoost"),
+   fMemberType(Types::kMaxMethod),
+   fUseMemberDecision(kFALSE),
+   fUseWeightedMembers(kFALSE),
+   fITree(0),
+   fBoostFactor(0),
+   fErrorFraction(0),
+   fNnodes(0)
 {
    // constructor for calculating Committee-MVA using previously generatad decision trees
    // the result of the previous training (the decision trees) are read in via the
@@ -343,6 +357,7 @@ Double_t TMVA::MethodCommittee::Bagging( UInt_t imember )
       ev->SetBoostWeight( ev->GetBoostWeight() * Data()->GetNTrainingEvents() / newSumw );      
    }
 
+   delete trandom;
    // return weight factor for this committee member
    return 1.0;  // here as there are random weights for each event, just return a constant==1;
 }
@@ -392,18 +407,18 @@ void  TMVA::MethodCommittee::ReadWeightsFromStream( istream& istr )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodCommittee::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodCommittee::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // return the MVA value (range [-1;1]) that classifies the
    // event.according to the majority vote from the total number of
    // decision trees
-   // In the literature I found that people actually use the 
+   // In the literature I found that people actually use the
    // weighted majority vote (using the boost weights) .. However I
-   // did not see any improvement in doing so :(  
+   // did not see any improvement in doing so :(
    // --> this is currently switched off
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    Double_t myMVA = 0;
    Double_t norm  = 0;
@@ -412,11 +427,11 @@ Double_t TMVA::MethodCommittee::GetMvaValue( Double_t* err )
       Double_t tmpMVA = ( fUseMemberDecision ? ( (dynamic_cast<MethodBase*>(GetCommittee()[itree]))->IsSignalLike() ? 1.0 : -1.0 ) 
                           : GetCommittee()[itree]->GetMvaValue() );
 
-      if (fUseWeightedMembers){ 
+      if (fUseWeightedMembers){
          myMVA += GetBoostWeights()[itree] * tmpMVA;
          norm  += GetBoostWeights()[itree];
       }
-      else { 
+      else {
          myMVA += tmpMVA;
          norm  += 1;
       }

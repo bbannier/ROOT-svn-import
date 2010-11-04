@@ -8,7 +8,7 @@ MAKEFLAGS = --no-print-directory -r -s
 INCLUDE = -I../ $(shell root-config --cflags)
 LIBS    = -L../lib -lTMVA.1 $(shell root-config --libs) -lMLP -lTreePlayer -lMinuit
 
-BINS = TMVAClassification TMVAClassificationCategory TMVAClassificationApplication TMVAClassificationCategoryApplication TMVARegression TMVARegressionApplication TMVABoost PlotDecisionBoundary
+BINS = TMVAClassification TMVAClassificationCategory TMVAClassificationApplication TMVAClassificationCategoryApplication TMVARegression TMVARegressionApplication TMVAMultipleBackgroundExample
 
 UNITTESTS = EVENT CREATE_DATASET 
 

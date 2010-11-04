@@ -266,8 +266,8 @@ void TMVA::DataSetFactory::ChangeToNewTree( TreeInfo& tinfo, const DataSetInfo &
 
    // 1) the input variable formulas
    Log() << kDEBUG << "transform input variables" << Endl;
-   std::vector<TTreeFormula*>::const_iterator formIt;
-   for (formIt = fInputFormulas.begin(); formIt!=fInputFormulas.end(); formIt++) if (*formIt) delete *formIt;
+   std::vector<TTreeFormula*>::const_iterator formIt, formItEnd;
+   for (formIt = fInputFormulas.begin(), formItEnd=fInputFormulas.end(); formIt!=formItEnd; formIt++) if (*formIt) delete *formIt;
    fInputFormulas.clear();
    TTreeFormula* ttf = 0;
 
@@ -282,7 +282,7 @@ void TMVA::DataSetFactory::ChangeToNewTree( TreeInfo& tinfo, const DataSetInfo &
    // targets
    //
    Log() << kDEBUG << "transform regression targets" << Endl;
-   for (formIt = fTargetFormulas.begin(); formIt!=fTargetFormulas.end(); formIt++) if (*formIt) delete *formIt;
+   for (formIt = fTargetFormulas.begin(), formItEnd = fTargetFormulas.end(); formIt!=formItEnd; formIt++) if (*formIt) delete *formIt;
    fTargetFormulas.clear();
    for (UInt_t i=0; i<dsi.GetNTargets(); i++) {
       ttf = new TTreeFormula( Form( "Formula%s", dsi.GetTargetInfo(i).GetInternalName().Data() ),
@@ -295,7 +295,7 @@ void TMVA::DataSetFactory::ChangeToNewTree( TreeInfo& tinfo, const DataSetInfo &
    // spectators
    //
    Log() << kDEBUG << "transform spectator variables" << Endl;
-   for (formIt = fSpectatorFormulas.begin(); formIt!=fSpectatorFormulas.end(); formIt++) if (*formIt) delete *formIt;
+   for (formIt = fSpectatorFormulas.begin(), formItEnd = fSpectatorFormulas.end(); formIt!=formItEnd; formIt++) if (*formIt) delete *formIt;
    fSpectatorFormulas.clear();
    for (UInt_t i=0; i<dsi.GetNSpectators(); i++) {
       ttf = new TTreeFormula( Form( "Formula%s", dsi.GetSpectatorInfo(i).GetInternalName().Data() ),
@@ -308,7 +308,7 @@ void TMVA::DataSetFactory::ChangeToNewTree( TreeInfo& tinfo, const DataSetInfo &
    // the cuts (one per class, if non-existent: formula pointer = 0)
    //
    Log() << kDEBUG << "transform cuts" << Endl;
-   for (formIt = fCutFormulas.begin(); formIt!=fCutFormulas.end(); formIt++) if (*formIt) delete *formIt;
+   for (formIt = fCutFormulas.begin(), formItEnd = fCutFormulas.end(); formIt!=formItEnd; formIt++) if (*formIt) delete *formIt;
    fCutFormulas.clear();
    for (UInt_t clIdx=0; clIdx<dsi.GetNClasses(); clIdx++) {
       const TCut& tmpCut = dsi.GetClassInfo(clIdx)->GetCut();
@@ -329,7 +329,7 @@ void TMVA::DataSetFactory::ChangeToNewTree( TreeInfo& tinfo, const DataSetInfo &
    // the weights (one per class, if non-existent: formula pointer = 0)
    //
    Log() << kDEBUG << "transform weights" << Endl;
-   for (formIt = fWeightFormula.begin(); formIt!=fWeightFormula.end(); formIt++) if (*formIt) delete *formIt;
+   for (formIt = fWeightFormula.begin(), formItEnd = fWeightFormula.end(); formIt!=formItEnd; formIt++) if (*formIt) delete *formIt;
    fWeightFormula.clear();
    for (UInt_t clIdx=0; clIdx<dsi.GetNClasses(); clIdx++) {
       const TString tmpWeight = dsi.GetClassInfo(clIdx)->GetWeight();
@@ -655,6 +655,7 @@ void TMVA::DataSetFactory::InitOptions( TMVA::DataSetInfo& dsi,
    // put all to upper case
    splitMode.ToUpper(); mixMode.ToUpper(); normMode.ToUpper();
    // adjust mixmode if same as splitmode option has been set
+   Log() << kINFO << "The splitmode is:" << splitMode << " the mixmode is: " << mixMode << Endl;
    if (mixMode=="SAMEASSPLITMODE") mixMode = splitMode;
    else if (mixMode!=splitMode) 
       Log() << kINFO << "DataSet splitmode="<<splitMode

@@ -55,7 +55,9 @@ TMVA::RuleFit::RuleFit( const MethodBase *rfbase )
 
 //_______________________________________________________________________
 TMVA::RuleFit::RuleFit()
-   : fVisHistsUseImp( kTRUE ),
+   : fMethodRuleFit(0),
+     fMethodBase(0),
+     fVisHistsUseImp( kTRUE ),
      fLogger( new MsgLogger("RuleFit") )
 {
    // default constructor
@@ -199,7 +201,7 @@ void TMVA::RuleFit::MakeForest()
    // Weights are modifed by the boosting.
    // Those weights we do not want for the later fitting.
    //
-   Bool_t useBoost = fMethodRuleFit->UseBoost();
+   Bool_t useBoost = fMethodRuleFit->UseBoost(); // (AdaBoost (True) or RandomForest/Tree (False)
 
    if (useBoost) SaveEventWeights();
 
@@ -213,8 +215,6 @@ void TMVA::RuleFit::MakeForest()
          else nbkg++;
       }
       fsig = Double_t(nsig)/Double_t(nsig+nbkg);
-      SeparationBase *qualitySepType = new GiniIndex();
-      // generate random number of events
       // do not implement the above in this release...just set it to default
       //      nminRnd = fNodeMinEvents;
       DecisionTree *dt;
@@ -239,8 +239,9 @@ void TMVA::RuleFit::MakeForest()
       if (dt) {
          fForest.push_back(dt);
          if (useBoost) Boost(dt);
-      } 
-      else {
+
+      } else {
+
          Log() << kWARNING << "------------------------------------------------------------------" << Endl;
          Log() << kWARNING << " Failed growing a tree even after " << ntriesMax << " trials" << Endl;
          Log() << kWARNING << " Possible solutions: " << Endl;
@@ -495,6 +496,7 @@ void TMVA::RuleFit::FillCut(TH2F* h2, const Rule *rule, Int_t vind)
    if (!ruleHasVar) return;
    //
    Int_t firstbin = h2->GetBin(1,1,1);
+   if(firstbin<0) firstbin=0;
    Int_t lastbin = h2->GetBin(h2->GetNbinsX(),1,1);
    Int_t binmin=(dormin ? h2->FindBin(rmin,0.5):firstbin);
    Int_t binmax=(dormax ? h2->FindBin(rmax,0.5):lastbin);
@@ -512,10 +514,10 @@ void TMVA::RuleFit::FillCut(TH2F* h2, const Rule *rule, Int_t vind)
       fbin = bin-firstbin+1;
       if (bin==binmin) {
          f = fbfrac;
-      } 
+      }
       else if (bin==binmax) {
          f = lbfrac;
-      } 
+      }
       else {
          f = 1.0;
       }
@@ -544,7 +546,7 @@ void TMVA::RuleFit::FillLin(TH2F* h2,Int_t vind)
    Double_t val;
    if (fVisHistsUseImp) {
       val = fRuleEnsemble.GetLinImportance(vind);
-   } 
+   }
    else {
       val = fRuleEnsemble.GetLinCoefficients(vind);
    }
@@ -563,7 +565,7 @@ void TMVA::RuleFit::FillCorr(TH2F* h2,const Rule *rule,Int_t vx, Int_t vy)
    Double_t val;
    if (fVisHistsUseImp) {
       val = rule->GetImportance();
-   } 
+   }
    else {
       val = rule->GetCoefficient()*rule->GetSupport();
    }

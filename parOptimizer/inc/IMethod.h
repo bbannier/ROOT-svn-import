@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$   
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// @(#)root/tmva $Id$
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -17,9 +17,9 @@
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
- *      U. of Victoria, Canada                                                    * 
- *      MPI-K Heidelberg, Germany                                                 * 
+ *      CERN, Switzerland                                                         *
+ *      U. of Victoria, Canada                                                    *
+ *      MPI-K Heidelberg, Germany                                                 *
  *      LAPP, Annecy, France                                                      *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -45,9 +45,11 @@
 #include "TString.h"
 #endif
 #include <iosfwd>
-
 #ifndef ROOT_Rtypes
 #include "Rtypes.h"
+#endif
+#ifndef ROOT_TMVA_Types
+#include "TMVA/Types.h"
 #endif
 
 class TString;
@@ -58,12 +60,12 @@ namespace TMVA {
    class MethodBoost;
 
    class IMethod {
-      
+
    public:
-      
+
       // default constructur
       IMethod() {}
-      
+
       // default destructur
       virtual ~IMethod() {}
 
@@ -72,14 +74,14 @@ namespace TMVA {
       virtual const char *GetName() const = 0;
 
       // calculate the MVA value - some methods may return a per-event error estimate (unless: *err = -1)
-      virtual Double_t GetMvaValue( Double_t* err = 0 ) = 0;
+      virtual Double_t GetMvaValue( Double_t* err = 0, Double_t* errUpper = 0 ) = 0;
 
       // training method
       virtual void Train( void ) = 0;
 
       // read weights from output stream
       virtual void ReadWeightsFromStream( std::istream& ) = 0;
-      
+
       // write method specific monitoring histograms to target file
       virtual void WriteMonitoringHistosToFile( void ) const = 0;
 
@@ -98,6 +100,8 @@ namespace TMVA {
       virtual void Init() = 0;
       virtual void DeclareOptions() = 0;
       virtual void ProcessOptions() = 0;
+
+      virtual Bool_t HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t numberTargets ) = 0;
 
    protected:
 

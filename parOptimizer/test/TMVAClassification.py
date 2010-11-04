@@ -44,7 +44,7 @@ DEFAULT_OUTFNAME = "TMVA.root"
 DEFAULT_INFNAME  = "tmva_example.root"
 DEFAULT_TREESIG  = "TreeS"
 DEFAULT_TREEBKG  = "TreeB"
-DEFAULT_METHODS  = "Cuts,CutsD,CutsPCA,CutsGA,CutsSA,Likelihood,LikelihoodD,LikelihoodPCA,LikelihoodKDE,LikelihoodMIX,PDERS,PDERSD,PDERSPCA,PDERSkNN,PDEFoam,KNN,HMatrix,Fisher,FisherG,BoostedFisher,LD,FDA_GA,FDA_SA,FDA_MC,FDA_MT,FDA_GAMT,FDA_MCMT,MLP,MLPBFGS,CFMlpANN,TMlpANN,SVM,BDT,BDTD,BDTG,BDTB,RuleFit"
+DEFAULT_METHODS  = "Cuts,CutsD,CutsPCA,CutsGA,CutsSA,Likelihood,LikelihoodD,LikelihoodPCA,LikelihoodKDE,LikelihoodMIX,PDERS,PDERSD,PDERSPCA,PDERSkNN,PDEFoam,PDEFoamBoost,KNN,HMatrix,Fisher,FisherG,BoostedFisher,LD,FDA_GA,FDA_SA,FDA_MC,FDA_MT,FDA_GAMT,FDA_MCMT,MLP,MLPBFGS,CFMlpANN,TMlpANN,SVM,BDT,BDTD,BDTG,BDTB,RuleFit"
 
 # Print usage help
 def usage():
@@ -298,7 +298,11 @@ def main():
     # Multi-dimensional likelihood estimator using self-adapting phase-space binning
     if "PDEFoam" in mlist:
         factory.BookMethod( TMVA.Types.kPDEFoam, "PDEFoam", 
-                            "H:!V:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:CutNmin=T:Nmin=100:Kernel=None:Compress=T" )
+                            "H:!V:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:Nmin=100:Kernel=None:Compress=T" )
+
+    if "PDEFoamBoost" in mlist:
+        factory.BookMethod( TMVA.Types.kPDEFoam, "PDEFoamBoost", 
+                           "!H:!V:Boost_Num=30:Boost_Transform=linear:SigBgSeparate=F:MaxDepth=4:UseYesNoCell=T:DTLogic=MisClassificationError:FillFoamWithOrigWeights=F:TailCut=0:nActiveCells=500:nBin=20:Nmin=400:Kernel=None:Compress=T" )
 
     # K-Nearest Neighbour classifier (KNN)
     if "KNN" in mlist:

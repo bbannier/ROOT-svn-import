@@ -86,6 +86,8 @@ TMVA::MethodTMlpANN::MethodTMlpANN( const TString& jobName,
                                     TDirectory* theTargetDir) :
    TMVA::MethodBase( jobName, Types::kTMlpANN, methodTitle, theData, theOption, theTargetDir ),
    fMLP(0),
+   fNcycles(100),
+   fValidationFraction(0.5),
    fLearningMethod( "" )
 {
    // standard constructor
@@ -97,6 +99,8 @@ TMVA::MethodTMlpANN::MethodTMlpANN( DataSetInfo& theData,
                                     TDirectory* theTargetDir ) :
    TMVA::MethodBase( Types::kTMlpANN, theData, theWeightFile, theTargetDir ),
    fMLP(0),
+   fNcycles(100),
+   fValidationFraction(0.5),
    fLearningMethod( "" )
 {
    // constructor from weight file
@@ -210,7 +214,7 @@ void TMVA::MethodTMlpANN::ProcessOptions()
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodTMlpANN::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodTMlpANN::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // calculate the value of the neural net for the current event
    const Event* ev = GetEvent();
@@ -221,7 +225,7 @@ Double_t TMVA::MethodTMlpANN::GetMvaValue( Double_t* err )
    Double_t mvaVal = fMLP->Evaluate(0,d);
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return mvaVal;
 }
@@ -342,7 +346,7 @@ void TMVA::MethodTMlpANN::AddWeightsXMLTo( void* parent ) const
    void *ch=NULL;
    while (inf.getline(temp,256)) {
       TString dummy(temp);
-      std::cout << dummy << std::endl;
+      //std::cout << dummy << std::endl; // remove annoying debug printout with std::cout
       if (dummy.BeginsWith('#')) {
          if (ch!=0) gTools().AddRawLine( ch, data.Data() );
          dummy = dummy.Strip(TString::kLeading, '#');

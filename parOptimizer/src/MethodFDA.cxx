@@ -68,27 +68,37 @@ ClassImp(TMVA::MethodFDA)
 //_______________________________________________________________________
 TMVA::MethodFDA::MethodFDA( const TString& jobName,
                             const TString& methodTitle,
-                            DataSetInfo& theData, 
+                            DataSetInfo& theData,
                             const TString& theOption,
                             TDirectory* theTargetDir )
-   : MethodBase( jobName, Types::kFDA, methodTitle, theData, theOption, theTargetDir ), 
+   : MethodBase( jobName, Types::kFDA, methodTitle, theData, theOption, theTargetDir ),
      IFitterTarget   (),
      fFormula        ( 0 ),
+     fNPars          ( 0 ),
      fFitter         ( 0 ),
-     fConvergerFitter( 0 )
+     fConvergerFitter( 0 ),
+     fSumOfWeightsSig( 0 ),
+     fSumOfWeightsBkg( 0 ),
+     fSumOfWeights   ( 0 ),
+     fOutputDimensions( 0 )
 {
    // standard constructor
 }
 
 //_______________________________________________________________________
-TMVA::MethodFDA::MethodFDA( DataSetInfo& theData, 
-                            const TString& theWeightFile,  
+TMVA::MethodFDA::MethodFDA( DataSetInfo& theData,
+                            const TString& theWeightFile,
                             TDirectory* theTargetDir )
-   : MethodBase( Types::kFDA, theData, theWeightFile, theTargetDir ), 
+   : MethodBase( Types::kFDA, theData, theWeightFile, theTargetDir ),
      IFitterTarget   (),
      fFormula        ( 0 ),
+     fNPars          ( 0 ),
      fFitter         ( 0 ),
-     fConvergerFitter( 0 )
+     fConvergerFitter( 0 ),
+     fSumOfWeightsSig( 0 ),
+     fSumOfWeightsBkg( 0 ),
+     fSumOfWeights   ( 0 ),
+     fOutputDimensions( 0 )
 {
    // constructor from weight file
 }
@@ -119,9 +129,9 @@ void TMVA::MethodFDA::Init( void )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodFDA::DeclareOptions() 
+void TMVA::MethodFDA::DeclareOptions()
 {
-   // define the options (their key words) that can be set in the option string 
+   // define the options (their key words) that can be set in the option string
    //
    // format of function string:
    //    "x0*(0)+((1)/x1)**(2)..."
@@ -483,13 +493,13 @@ Double_t TMVA::MethodFDA::InterpretFormula( const Event* event, std::vector<Doub
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodFDA::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodFDA::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // returns MVA value for given event
    const Event* ev = GetEvent();
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
    
    return InterpretFormula( ev, fBestPars.begin(), fBestPars.end() );
 }
@@ -597,16 +607,16 @@ void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
    // read coefficients from xml weight file
    gTools().ReadAttr( wghtnode, "NPars", fNPars );
 
-   try {
+   if(gTools().HasAttr( wghtnode, "NDim")) {
       gTools().ReadAttr( wghtnode, "NDim" , fOutputDimensions );
-   } catch ( std::logic_error& ){
-      // attribute could not be read, it probably does not exist because the weight file has been written with an older version
+   } else {
+      // older weight files don't have this attribute
       fOutputDimensions = 1;
    }
 
    fBestPars.clear();
    fBestPars.resize( fNPars*fOutputDimensions );
-   
+
    void* ch = gTools().GetChild(wghtnode);
    Double_t par;
    UInt_t    ipar;

@@ -65,7 +65,7 @@
 // by splitting the sample e.g. into a "left-node" and a "right-node"   //
 // (N * Index_parent) - (N_left * Index_left) - (N_right * Index_right) //
 // this is then the quality crition which is optimized for when trying  //
-// to increase the information in the system (making the best selection //            
+// to increase the information in the system (making the best selection //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -89,7 +89,7 @@ namespace TMVA {
 
    public:
 
-      //default constructor
+      // default constructor
       SeparationBase():fPrecisionCut(TMath::Sqrt(std::numeric_limits<double>::epsilon())), fInit(kFALSE) {}
 
       //copy constructor
@@ -98,8 +98,8 @@ namespace TMVA {
       virtual ~SeparationBase(){}
 
       // Return the gain in separation of the original sample is splitted in two sub-samples
-      // (N * Index_parent) - (N_left * Index_left) - (N_right * Index_right) 
-      Double_t GetSeparationGain( const Double_t& nSelS, const Double_t& nSelB, 
+      // (N * Index_parent) - (N_left * Index_left) - (N_right * Index_right)
+      Double_t GetSeparationGain( const Double_t& nSelS, const Double_t& nSelB,
                                   const Double_t& nTotS, const Double_t& nTotB );
 
       // Return the separation index (a measure for "purity" of the sample")
