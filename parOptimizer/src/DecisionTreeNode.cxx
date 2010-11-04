@@ -59,6 +59,7 @@ TMVA::DecisionTreeNode::DecisionTreeNode()
      fCutType ( kTRUE ),
      fSelector ( -1 ),       
      fResponse(-99 ),
+     fRMS(0),
      fNodeType (-99 ),
      fPurity (-99),
      fIsTerminalNode( kFALSE )
@@ -83,6 +84,7 @@ TMVA::DecisionTreeNode::DecisionTreeNode(TMVA::Node* p, char pos)
      fCutType ( kTRUE ),
      fSelector( -1 ),  
      fResponse(-99 ),
+     fRMS(0),
      fNodeType( -99 ),
      fPurity (-99),
      fIsTerminalNode( kFALSE )
@@ -108,7 +110,9 @@ TMVA::DecisionTreeNode::DecisionTreeNode(const TMVA::DecisionTreeNode &n,
      fCutType ( n.fCutType ),
      fSelector( n.fSelector ),  
      fResponse( n.fResponse ),
+     fRMS     ( n.fRMS),
      fNodeType( n.fNodeType ),
+     fPurity  ( n.fPurity),
      fIsTerminalNode( n.fIsTerminalNode )  
 {
    // copy constructor of a node. It will result in an explicit copy of
@@ -132,15 +136,18 @@ TMVA::DecisionTreeNode::DecisionTreeNode(const TMVA::DecisionTreeNode &n,
    }
 }
 
+//_______________________________________________________________________
+TMVA::DecisionTreeNode::~DecisionTreeNode(){
+   // destructor
+   delete fTrainInfo;
+}
 
 //_______________________________________________________________________
 Bool_t TMVA::DecisionTreeNode::GoesRight(const TMVA::Event & e) const
 {
-   // test event if it decends the tree at this node to the right  
-   Bool_t result;
-  
-   result =  (e.GetValue(this->GetSelector()) > this->GetCutValue() );
-  
+   // test event if it decends the tree at this node to the right
+   Bool_t result(e.GetValue(this->GetSelector()) > this->GetCutValue() );
+
    if (fCutType == kTRUE) return result; //the cuts are selecting Signal ;
    else return !result;
 
@@ -286,19 +293,20 @@ Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_
    this->SetSelector((UInt_t)ivar);
    this->SetCutValue(cutVal);
    this->SetCutType(cutType);
-   this->SetNSigEvents(nsig);
-   this->SetNBkgEvents(nbkg);
-   this->SetNEvents(nEv);
-   this->SetNSigEvents_unweighted(nsig_unweighted);
-   this->SetNBkgEvents_unweighted(nbkg_unweighted);
-   this->SetNEvents_unweighted(nEv_unweighted);
-   this->SetSeparationIndex(separationIndex);
-   this->SetSeparationGain(separationGain);
    this->SetNodeType(nodeType);
-   this->SetPurity();
-   this->SetResponse(response);
-   this->SetCC(cc);
-
+   if (fTrainInfo){
+      this->SetNSigEvents(nsig);
+      this->SetNBkgEvents(nbkg);
+      this->SetNEvents(nEv);
+      this->SetNSigEvents_unweighted(nsig_unweighted);
+      this->SetNBkgEvents_unweighted(nbkg_unweighted);
+      this->SetNEvents_unweighted(nEv_unweighted);
+      this->SetSeparationIndex(separationIndex);
+      this->SetSeparationGain(separationGain);
+      this->SetPurity();
+      //      this->SetResponse(response); old .txt weightfiles don't know regression yet
+      this->SetCC(cc);
+   }
    return kTRUE;
 }
 
@@ -387,10 +395,12 @@ Float_t TMVA::DecisionTreeNode::GetSampleMax(UInt_t ivar) const {
 
 //_______________________________________________________________________
 void TMVA::DecisionTreeNode::SetSampleMin(UInt_t ivar, Float_t xmin){
-   // set the minimum of variable ivar from the training sample 
-   // that pass/end up in this node 
-   if ( fTrainInfo && ivar >= fTrainInfo->fSampleMin.size()) fTrainInfo->fSampleMin.resize(ivar+1);
-   fTrainInfo->fSampleMin[ivar]=xmin;
+   // set the minimum of variable ivar from the training sample
+   // that pass/end up in this node
+   if ( fTrainInfo) {
+      if ( ivar >= fTrainInfo->fSampleMin.size()) fTrainInfo->fSampleMin.resize(ivar+1);
+      fTrainInfo->fSampleMin[ivar]=xmin;
+   }
 }
 
 //_______________________________________________________________________
@@ -422,7 +432,11 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    gTools().ReadAttr(node, "res",   fResponse               );
    gTools().ReadAttr(node, "rms",   fRMS                    );
    gTools().ReadAttr(node, "nType", fNodeType               );
-   gTools().ReadAttr(node, "purity",fPurity                 );
+   if(gTools().HasAttr(node, "purity")) {
+      gTools().ReadAttr(node, "purity",fPurity );
+   } else {
+      fPurity = tempNSigEvents / (tempNSigEvents + tempNBkgEvents);
+   }
    gTools().ReadAttr(node, "CC",    tempCC                  );
    if (fTrainInfo){
       SetNSigEvents(tempNSigEvents);
@@ -433,7 +447,7 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
       SetNEvents_unweighted(tempNEvents_unweighted);
       SetSeparationIndex(tempSeparationIndex);
       SetSeparationGain(tempSeparationGain);
-      SetCC(tempCC);  
+      SetCC(tempCC);
    }
 }
 

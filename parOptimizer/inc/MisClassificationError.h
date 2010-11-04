@@ -50,7 +50,7 @@ namespace TMVA {
    public:
 
       // consturctor for the Misclassification error
-      MisClassificationError() { fName = "MisCl"; }
+      MisClassificationError(): SeparationBase() { fName = "MisCl"; }
 
       // copy constructor
       MisClassificationError( const MisClassificationError& g): SeparationBase(g) {}

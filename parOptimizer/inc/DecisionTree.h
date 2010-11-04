@@ -87,7 +87,7 @@ namespace TMVA {
                     Int_t nCuts,
                     Bool_t useFisherCuts, 
                     UInt_t cls =0,
-                    Bool_t randomisedTree=kFALSE, Int_t useNvars=0, 
+                    Bool_t randomisedTree=kFALSE, Int_t useNvars=0, Bool_t usePoissonNvars=kFALSE, 
                     UInt_t nNodesMax=999999, UInt_t nMaxDepth=9999999, 
                     Int_t iSeed=fgRandomSeed, Float_t purityLimit=0.5,
                     Int_t treeID = 0);
@@ -113,7 +113,7 @@ namespace TMVA {
       Float_t TrainNodeFast( const EventList & eventSample,  DecisionTreeNode *node );
       Float_t TrainNodeFisher( const EventList & eventSample,  FisherDecisionTreeNode *node );
       Float_t TrainNodeFull( const EventList & eventSample,  DecisionTreeNode *node );
-      void    GetRandomisedVariables(Bool_t *useVariable, Int_t *variableMap);
+      void    GetRandomisedVariables(Bool_t *useVariable, Int_t *variableMap, UInt_t & nVars);
     
 
       // fill at tree with a given structure already (just see how many signa/bkgr
@@ -220,6 +220,7 @@ namespace TMVA {
     
       Bool_t    fRandomisedTree; // choose at each node splitting a random set of variables 
       Int_t     fUseNvars;       // the number of variables used in randomised trees;
+      Bool_t    fUsePoissonNvars; // use "fUseNvars" not as fixed number but as mean of a possion distr. in each split
     
       TRandom3  *fMyTrandom;     // random number generator for randomised trees
     

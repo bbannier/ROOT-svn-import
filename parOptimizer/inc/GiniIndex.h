@@ -67,7 +67,7 @@ namespace TMVA {
    public:
       
       // construtor for the GiniIndex
-      GiniIndex() { fName="Gini"; }
+      GiniIndex():SeparationBase() { fName="Gini"; }
 
       // copy constructor
       GiniIndex( const GiniIndex& g): SeparationBase(g) {}

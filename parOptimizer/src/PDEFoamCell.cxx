@@ -26,6 +26,7 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
+#include <iostream>
 #include <ostream>
 
 #ifndef ROOT_TMVA_PDEFoamCell
@@ -37,9 +38,10 @@ using namespace std;
 ClassImp(TMVA::PDEFoamCell)
 
 //_____________________________________________________________________
-TMVA::PDEFoamCell::PDEFoamCell() 
+TMVA::PDEFoamCell::PDEFoamCell()
    : TObject(),
      fDim(0),
+     fSerial(0),
      fStatus(1),
      fParent(0),
      fDaught0(0),
@@ -55,9 +57,10 @@ TMVA::PDEFoamCell::PDEFoamCell()
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamCell::PDEFoamCell(Int_t kDim) 
+TMVA::PDEFoamCell::PDEFoamCell(Int_t kDim)
    : TObject(),
      fDim(kDim),
+     fSerial(0),
      fStatus(1),
      fParent(0),
      fDaught0(0),
@@ -78,6 +81,7 @@ TMVA::PDEFoamCell::PDEFoamCell(Int_t kDim)
 TMVA::PDEFoamCell::PDEFoamCell(const PDEFoamCell &cell)
    : TObject(),
      fDim     (cell.fDim),
+     fSerial  (cell.fSerial),
      fStatus  (cell.fStatus),
      fParent  (cell.fParent),
      fDaught0 (cell.fDaught0),
@@ -106,7 +110,6 @@ void TMVA::PDEFoamCell::Fill(Int_t Status, PDEFoamCell *Parent, PDEFoamCell *Dau
 
    fStatus  = Status;
    fParent  = Parent;
-   //   Log() << "D1" << Daugh1 << Endl;
    fDaught0 = Daugh1;
    fDaught1 = Daugh2;
 }
@@ -182,6 +185,24 @@ void TMVA::PDEFoamCell::CalcVolume(void)
       for(k=0; k<fDim; k++) volu *= cellSize[k];
    }
    fVolume =volu;
+}
+
+//_____________________________________________________________________
+UInt_t TMVA::PDEFoamCell::GetDepth()
+{
+   // Get depth of cell in binary tree, where the root cell has depth
+   // 1
+
+   // check wheter we are in the root cell
+   if (fParent == 0)
+      return 1;
+
+   UInt_t depth = 1;
+   PDEFoamCell *cell = this;
+   while ((cell=cell->GetPare()) != 0){
+      ++depth;
+   }
+   return depth;
 }
 
 //_____________________________________________________________________

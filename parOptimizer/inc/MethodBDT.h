@@ -147,6 +147,7 @@ namespace TMVA {
 
       void GetHelpMessage() const;
 
+      virtual Bool_t        IsSignalLike() { return GetMvaValue() > 0;}
    protected:
       void DeclareCompatibilityOptions();
 
@@ -222,6 +223,7 @@ namespace TMVA {
       Bool_t                           fAutomatic;       // use user given prune strength or automatically determined one using a validation sample
       Bool_t                           fRandomisedTrees; // choose a random subset of possible cut variables at each node during training
       UInt_t                           fUseNvars;        // the number of variables used in the randomised tree splitting
+      Bool_t                           fUsePoissonNvars; // use "fUseNvars" not as fixed number but as mean of a possion distr. in each split
       UInt_t                           fUseNTrainEvents; // number of randomly picked training events used in randomised (and bagged) trees
 
       std::vector<Double_t>            fVariableImportance; // the relative importance of the different variables
