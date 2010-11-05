@@ -470,12 +470,6 @@ namespace TMVAGlob {
       return noVars;
    }
 
-   Int_t GetNumberOfInputVariablesMultiClass( TDirectory *dir ){
-      std::vector<TString> names(GetInputVariableNames(dir));
-      return names.end() - names.begin();
-   }
-   
-
    std::vector<TString> GetInputVariableNames(TDirectory *dir )
    {
       TIter next(dir->GetListOfKeys());
@@ -503,6 +497,11 @@ namespace TMVAGlob {
       return names;
    }
 
+   Int_t GetNumberOfInputVariablesMultiClass( TDirectory *dir ){
+      std::vector<TString> names(GetInputVariableNames(dir));
+      return names.end() - names.begin();
+   }
+   
    std::vector<TString> GetClassNames(TDirectory *dir )
    {      
       
