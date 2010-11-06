@@ -34,28 +34,28 @@
   Interface to Clermond-Ferrand artificial neural network
 
   <p>
-  The CFMlpANN belong to the class of Multilayer Perceptrons (MLP), which are 
+  The CFMlpANN belong to the class of Multilayer Perceptrons (MLP), which are
   feed-forward networks according to the following propagation schema:<br>
   <center>
-  <img vspace=10 src="gif/tmva_mlp.gif" align="bottom" alt="Schema for artificial neural network"> 
+  <img vspace=10 src="gif/tmva_mlp.gif" align="bottom" alt="Schema for artificial neural network">
   </center>
   The input layer contains as many neurons as input variables used in the MVA.
   The output layer contains two neurons for the signal and background
   event classes. In between the input and output layers are a variable number
-  of <i>k</i> hidden layers with arbitrary numbers of neurons. (While the 
-  structure of the input and output layers is determined by the problem, the 
+  of <i>k</i> hidden layers with arbitrary numbers of neurons. (While the
+  structure of the input and output layers is determined by the problem, the
   hidden layers can be configured by the user through the option string
   of the method booking.) <br>
 
-  As indicated in the sketch, all neuron inputs to a layer are linear 
+  As indicated in the sketch, all neuron inputs to a layer are linear
   combinations of the neuron output of the previous layer. The transfer
   from input to output within a neuron is performed by means of an "activation
-  function". In general, the activation function of a neuron can be 
+  function". In general, the activation function of a neuron can be
   zero (deactivated), one (linear), or non-linear. The above example uses
   a sigmoid activation function. The transfer function of the output layer
-  is usually linear. As a consequence: an ANN without hidden layer should 
+  is usually linear. As a consequence: an ANN without hidden layer should
   give identical discrimination power as a linear discriminant analysis (Fisher).
-  In case of one hidden layer, the ANN computes a linear combination of 
+  In case of one hidden layer, the ANN computes a linear combination of
   sigmoid.  <br>
 
   The learning method used by the CFMlpANN is only stochastic.
@@ -91,7 +91,7 @@ TMVA::MethodCFMlpANN* TMVA::MethodCFMlpANN::fgThis = 0;
 //_______________________________________________________________________
 TMVA::MethodCFMlpANN::MethodCFMlpANN( const TString& jobName,
                                       const TString& methodTitle,
-                                      DataSetInfo& theData, 
+                                      DataSetInfo& theData,
                                       const TString& theOption,
                                       TDirectory* theTargetDir  ) :
    TMVA::MethodBase( jobName, Types::kCFMlpANN, methodTitle, theData, theOption, theTargetDir  ),
@@ -101,37 +101,40 @@ TMVA::MethodCFMlpANN::MethodCFMlpANN( const TString& jobName,
    fYNN(0)
 {
    // standard constructor
-   // option string: "n_training_cycles:n_hidden_layers"  
-   // default is:  n_training_cycles = 5000, n_layers = 4 
+   // option string: "n_training_cycles:n_hidden_layers"
+   // default is:  n_training_cycles = 5000, n_layers = 4
    //
-   // * note that the number of hidden layers in the NN is: 
+   // * note that the number of hidden layers in the NN is:
    //   n_hidden_layers = n_layers - 2
    //
-   // * since there is one input and one output layer. The number of         
+   // * since there is one input and one output layer. The number of
    //   nodes (neurons) is predefined to be:
-   //   n_nodes[i] = nvars + 1 - i (where i=1..n_layers)                  
+   //   n_nodes[i] = nvars + 1 - i (where i=1..n_layers)
    //
-   //   with nvars being the number of variables used in the NN.             
+   //   with nvars being the number of variables used in the NN.
    //
-   // Hence, the default case is: n_neurons(layer 1 (input)) : nvars       
-   //                             n_neurons(layer 2 (hidden)): nvars-1     
-   //                             n_neurons(layer 3 (hidden)): nvars-1     
-   //                             n_neurons(layer 4 (out))   : 2           
+   // Hence, the default case is: n_neurons(layer 1 (input)) : nvars
+   //                             n_neurons(layer 2 (hidden)): nvars-1
+   //                             n_neurons(layer 3 (hidden)): nvars-1
+   //                             n_neurons(layer 4 (out))   : 2
    //
-   // This artificial neural network usually needs a relatively large      
-   // number of cycles to converge (8000 and more). Overtraining can       
-   // be efficienctly tested by comparing the signal and background        
-   // output of the NN for the events that were used for training and      
+   // This artificial neural network usually needs a relatively large
+   // number of cycles to converge (8000 and more). Overtraining can
+   // be efficienctly tested by comparing the signal and background
+   // output of the NN for the events that were used for training and
    // an independent data sample (with equal properties). If the separation
-   // performance is significantly better for the training sample, the     
-   // NN interprets statistical effects, and is hence overtrained. In       
-   // this case, the number of cycles should be reduced, or the size       
-   // of the training sample increased.                                    
+   // performance is significantly better for the training sample, the
+   // NN interprets statistical effects, and is hence overtrained. In
+   // this case, the number of cycles should be reduced, or the size
+   // of the training sample increased.
+
+   MethodCFMlpANN_Utils::SetLogger(&Log());
+
 }
 
 //_______________________________________________________________________
-TMVA::MethodCFMlpANN::MethodCFMlpANN( DataSetInfo& theData, 
-                                      const TString& theWeightFile,  
+TMVA::MethodCFMlpANN::MethodCFMlpANN( DataSetInfo& theData,
+                                      const TString& theWeightFile,
                                       TDirectory* theTargetDir ):
    TMVA::MethodBase( Types::kCFMlpANN, theData, theWeightFile, theTargetDir ),
    fNlayers(0),
@@ -145,13 +148,13 @@ TMVA::MethodCFMlpANN::MethodCFMlpANN( DataSetInfo& theData,
 //_______________________________________________________________________
 Bool_t TMVA::MethodCFMlpANN::HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t /*numberTargets*/ )
 {
-   // CFMlpANN can handle classification with 2 classes 
+   // CFMlpANN can handle classification with 2 classes
    if (type == Types::kClassification && numberClasses == 2) return kTRUE;
    return kFALSE;
 }
 
 //_______________________________________________________________________
-void TMVA::MethodCFMlpANN::DeclareOptions() 
+void TMVA::MethodCFMlpANN::DeclareOptions()
 {
    // define the options (their key words) that can be set in the option string 
    // know options: NCycles=xx              :the number of training cycles

@@ -67,7 +67,7 @@ TString  method_name = "PDEFoam";
 
 //=========================================================
 
-string DoubleToString(Double_t value) 
+string DoubleToString(Double_t value)
 {
    // convert Double_t to string
    ostringstream o;
@@ -78,7 +78,7 @@ string DoubleToString(Double_t value)
 
 // ===========================================================
 
-string IntToString(Int_t value) 
+string IntToString(Int_t value)
 {
    // convert Int_t to string
    ostringstream o;
@@ -126,19 +126,19 @@ TData GetDataFromOptStr(TString optstr)
    while( getline(stream, opt, ':') ) {
       TString v = TString(opt).Remove(TString::kBoth,' ').Remove(TString::kBoth,':');
       if (!v.IsNull() && v != "V" && v != "H" && v != "!V" && v != "!H") {
-	 // split string at =
-	 string str;
-	 stringstream stream2(v.Data());
-	 std::vector<TString> substr;
-	 while( getline(stream2, str, '=') )
-	    substr.push_back(TString(str));
-	 if (substr.size() != 2) {
-	    cout << "Error: something is wrong with option string" << endl;
-	    continue;
-	 }
-	 touple.push_back(std::make_pair<TString,TString>(substr.at(0),substr.at(1)));
-	 cout << ">>>    found parameter \'" << substr.at(0) << "\' " 
-	      << "with value \'" << substr.at(1) << "\'" << endl;
+         // split string at =
+         string str;
+         stringstream stream2(v.Data());
+         std::vector<TString> substr;
+         while( getline(stream2, str, '=') )
+            substr.push_back(TString(str));
+         if (substr.size() != 2) {
+            cout << "Error: something is wrong with option string" << endl;
+            continue;
+         }
+         touple.push_back(std::make_pair<TString,TString>(substr.at(0),substr.at(1)));
+         cout << ">>>    found parameter \'" << substr.at(0) << "\' "
+              << "with value \'" << substr.at(1) << "\'" << endl;
       }
    }
 
@@ -148,16 +148,16 @@ TData GetDataFromOptStr(TString optstr)
 // ===========================================================
 
 void analysis()
-{  
+{
    // This function books the classifier and writes the output files
    // to the specified locations
 
    TStopwatch timer_benchmark, timer_train, timer_test;
-   
+
    timer_train.Start();
    cout << "Start TMVAClassification" << endl
-	<< "========================" << endl
-	<< endl;
+        << "========================" << endl
+        << endl;
 
    // Create ROOT output file
    TFile *ROOTOutputFile = TFile::Open( rootoutfilename, "RECREATE" );
@@ -166,9 +166,9 @@ void analysis()
       exit(1);
    }
    // Create TMVA factory
-   TMVA::Factory *factory = new TMVA::Factory( TString("TMVAClassification"), 
-					       ROOTOutputFile,
-					       TString("!V:Color=F:DrawProgressBar=F:AnalysisType=Classification") );
+   TMVA::Factory *factory = new TMVA::Factory( TString("TMVAClassification"),
+                                               ROOTOutputFile,
+                                               TString("!V:Color=F:DrawProgressBar=F:AnalysisType=Classification") );
 
    // directory to store the weight files in
    TString weigthFileDir(rootoutfilename);
@@ -176,17 +176,17 @@ void analysis()
    while (weigthFileDir[weigthFileDir.Length()-1] != '/')
       weigthFileDir.Remove(weigthFileDir.Length()-1);
    (TMVA::gConfig().GetIONames()).fWeightFileDir = weigthFileDir;
-   
+
    // accessing ROOT sample
    TFile *input(0);
    if (!gSystem->AccessPathName( sample )) {
       cout << "--- TMVAClassification : accessing " << sample << endl;
       input = TFile::Open( sample );
       if (!input) {
-	 cout << "ERROR: could not open data file: " << sample << endl;
-	 exit(3);
+         cout << "ERROR: could not open data file: " << sample << endl;
+         exit(3);
       }
-   } else { 
+   } else {
       cout << "ERROR: can not find file: " << sample << endl;
       exit(2);
    }
@@ -209,15 +209,15 @@ void analysis()
    // add signal and background trees
    factory->AddSignalTree    ( signal,     1.0 );
    factory->AddBackgroundTree( background, 1.0 );
-   
+
    cout << ">>> Adding variables to factory:" << endl;
    string var;
    stringstream stream(variables_list.Data());
    while( getline(stream, var, ',') ) {
       TString v = TString(var).Remove(TString::kBoth,' ');
       if (v != "") {
-	 cout << ">>>   add variable: " << v << endl;
-	 factory->AddVariable(v, 'F');
+         cout << ">>>   add variable: " << v << endl;
+         factory->AddVariable(v, 'F');
       }
    }
 
@@ -226,8 +226,8 @@ void analysis()
 
    // book method
    cout << ">>> Booking method: " << method_name << endl;
-   factory->BookMethod( TMVA::Types::Instance().GetMethodType(method_name), 
-			method_name, method_optstr );
+   factory->BookMethod( TMVA::Types::Instance().GetMethodType(method_name),
+                        method_name, method_optstr );
 
    // Train MVAs using the set of training events
    cout << ">>> Training..." << endl;
@@ -255,7 +255,7 @@ void analysis()
    delete factory;  factory = 0;
 
    // --------------------------------------------------------------
-   
+
    // ------- get performance
    // test option string for boosting
    UInt_t Boost_Num = 0;
@@ -264,16 +264,16 @@ void analysis()
       TString Boost_Num_str(boost_str.Data());
       Boost_Num = TString(Boost_Num_str(TRegexp("[0-9]+")).Data()).Atoi();
    }
-   ROOTOutputFile->cd( (Boost_Num > 0 ? "/Method_Boost/" 
-			: "/Method_"+method_name+"/")
-		       + method_name);
+   ROOTOutputFile->cd( (Boost_Num > 0 ? "/Method_Boost/"
+                        : "/Method_"+method_name+"/")
+                       + method_name);
    TH1F *roc_hist = (TH1F*)gROOT->FindObject("MVA_"+method_name+"_rejBvsS");
    Float_t ROCintegral=0;
    if (roc_hist) {
       Float_t integral = roc_hist->Integral();
       Int_t nbins = roc_hist->GetNbinsX();
       if (nbins>0)
-	 ROCintegral=integral/nbins;
+         ROCintegral=integral/nbins;
    }
    cout << ">>> Integral under ROC curve: " << ROCintegral << endl;
 
@@ -283,10 +283,10 @@ void analysis()
    vector<TString> hname;
    vector<TH1F*> hboost;
    TIter next(gDirectory->GetListOfKeys());
-   TKey *key(0);   
+   TKey *key(0);
    while ((key = (TKey*)next())) {
-      if (!TString(key->GetName()).BeginsWith("Booster_")) 
-	 continue;
+      if (!TString(key->GetName()).BeginsWith("Booster_"))
+         continue;
       hname.push_back(TString(key->GetName()));
       hboost.push_back( (TH1F*) gROOT->FindObject(hname.back()) );
       cout << ">>> Boosting histogram found: " << hname.back() << endl;
@@ -298,8 +298,8 @@ void analysis()
    // too bad misclassification rate.
    for (UInt_t ihist=0; ihist<hboost.size(); ihist++) {
       if (hboost.at(ihist) != 0) {
-	 Boost_Num = hboost.at(ihist)->GetNbinsX();
-	 break;
+         Boost_Num = hboost.at(ihist)->GetNbinsX();
+         break;
       }
    }
    cout << ">>> Classifier boosted " << Boost_Num << " times" << endl;
@@ -318,83 +318,83 @@ void analysis()
       // if file does not exist, the first line shall contain the
       // description of the data
       TData data(GetDataFromOptStr("MethodName="+method_name
-				   +':'+factory_optstr
-				   +':'+method_optstr
-				   +':'+"ROC_integral="+DoubleToString(ROCintegral)
-				   +":ROOTOutput="+rootoutfilename));
+                                   +':'+factory_optstr
+                                   +':'+method_optstr
+                                   +':'+"ROC_integral="+DoubleToString(ROCintegral)
+                                   +":ROOTOutput="+rootoutfilename));
       if (!TextResultsFileExists) {
-	 txtfile << "# ";
-	 TData::iterator idata;
-	 Int_t EntryCounter = 1; // numerate data entries
-	 for (idata=data.begin(); idata!=data.end(); idata++) {
-	    txtfile << "[" << IntToString(EntryCounter) << "] " 
-		    << idata->first << " | ";
-	    EntryCounter++;
-	 }
+         txtfile << "# ";
+         TData::iterator idata;
+         Int_t EntryCounter = 1; // numerate data entries
+         for (idata=data.begin(); idata!=data.end(); idata++) {
+            txtfile << "[" << IntToString(EntryCounter) << "] "
+                    << idata->first << " | ";
+            EntryCounter++;
+         }
 
-	 if (Boost_Num > 0) {
-	    // boosting was activated --> extract additional data from
-	    // the boosting histograms and append it to the line
-	    txtfile << "[" << IntToString(EntryCounter) << "] "
-		    << "boost index" << " | ";
-	    EntryCounter++;
-	    for (UInt_t ihist=0; ihist<hname.size(); ihist++){
-	       txtfile << "[" << IntToString(EntryCounter) << "] " 
-		       << hname.at(ihist) << " | ";
-	       EntryCounter++;
-	    }
-	 } // Boost_Num > 0
-	 
-	 txtfile << endl;
+         if (Boost_Num > 0) {
+            // boosting was activated --> extract additional data from
+            // the boosting histograms and append it to the line
+            txtfile << "[" << IntToString(EntryCounter) << "] "
+                    << "boost index" << " | ";
+            EntryCounter++;
+            for (UInt_t ihist=0; ihist<hname.size(); ihist++){
+               txtfile << "[" << IntToString(EntryCounter) << "] "
+                       << hname.at(ihist) << " | ";
+               EntryCounter++;
+            }
+         } // Boost_Num > 0
+
+         txtfile << endl;
       } // if (!TextResultsFileExists)
 
       // loop over all boosts and write 'Boost_Num' lines, which
       // contain this data (boost index == 0 corresponds to no boosting)
       for (UInt_t iboost=0; iboost<(Boost_Num==0?1:Boost_Num); iboost++){
-	 // print all results to text file
-	 TData::iterator idata;
-	 for (idata=data.begin(); idata!=data.end(); idata++)
-	    txtfile << idata->second << " ";
-	 
-	 if (Boost_Num > 0) {
-	    // boosting was activated --> extract additional data from
-	    // the boosting histograms and append it to the line
-	    txtfile << iboost << " "; // number of boost
-	    for (UInt_t ihist=0; ihist<hboost.size(); ihist++){
-	       if (hboost.at(ihist) == 0) {
-		  txtfile << 0.0 << " ";
-		  continue;
-	       }
-	       // sanity check for correct number of bins
-	       if (iboost+1 > (UInt_t) hboost.at(ihist)->GetNbinsX()) {
-		  cout << "Warning: boost number > histogram bin number: " 
-		       << iboost+1 << " > " << hboost.at(ihist)->GetNbinsX() 
-		       << endl;
-		  txtfile << 0.0 << " ";
-		  continue;
-	       }
-	       // write histogram bin content
-	       txtfile << hboost.at(ihist)->GetBinContent(iboost+1) << " ";
-	    } // loop over boost histograms
-	 } // Boost_Num > 0
-	 txtfile << endl;
+         // print all results to text file
+         TData::iterator idata;
+         for (idata=data.begin(); idata!=data.end(); idata++)
+            txtfile << idata->second << " ";
+
+         if (Boost_Num > 0) {
+            // boosting was activated --> extract additional data from
+            // the boosting histograms and append it to the line
+            txtfile << iboost << " "; // number of boost
+            for (UInt_t ihist=0; ihist<hboost.size(); ihist++){
+               if (hboost.at(ihist) == 0) {
+                  txtfile << 0.0 << " ";
+                  continue;
+               }
+               // sanity check for correct number of bins
+               if (iboost+1 > (UInt_t) hboost.at(ihist)->GetNbinsX()) {
+                  cout << "Warning: boost number > histogram bin number: "
+                       << iboost+1 << " > " << hboost.at(ihist)->GetNbinsX()
+                       << endl;
+                  txtfile << 0.0 << " ";
+                  continue;
+               }
+               // write histogram bin content
+               txtfile << hboost.at(ihist)->GetBinContent(iboost+1) << " ";
+            } // loop over boost histograms
+         } // Boost_Num > 0
+         txtfile << endl;
       } // loop over number of boosts
 
       cout << ">>> Wrote text data to: " << txtoutfilename << endl;
    } // file is open
    else {
       cerr << ">>> Could not open txt file for writing results: "
-	   << txtoutfilename << endl;
+           << txtoutfilename << endl;
       ROOTOutputFile->Close();
       return;
    }
    txtfile.close();
    ROOTOutputFile->Close();
 
-//    // copy foams and data to specified location (allways accept
-//    // certificates)
-//    Exe("scp -o StrictHostKeyChecking=no " + outfileName  +" "+data_dir);
-//    Exe("scp -o StrictHostKeyChecking=no " + foam_filename+" "+data_dir);
+   //    // copy foams and data to specified location (allways accept
+   //    // certificates)
+   //    Exe("scp -o StrictHostKeyChecking=no " + outfileName  +" "+data_dir);
+   //    Exe("scp -o StrictHostKeyChecking=no " + foam_filename+" "+data_dir);
 }
 
 // ===========================================================
@@ -407,45 +407,45 @@ int main(int argc, char **argv)
    while((opt=getopt(argc,argv,"b:e:f:m:o:r:s:t:v:"))!=EOF) {
       switch(opt) {
       case 'b':
-	 TreeBkg = optarg;
-	 break;
+         TreeBkg = optarg;
+         break;
       case 'e':
-	 sample = optarg;
-	 break;
+         sample = optarg;
+         break;
       case 'f':
-	 factory_optstr = optarg;
-	 break;
+         factory_optstr = optarg;
+         break;
       case 'm':
-	 method_name = optarg;
-	 break;
+         method_name = optarg;
+         break;
       case 'o':
-	 method_optstr = optarg;
-	 break;
+         method_optstr = optarg;
+         break;
       case 'r':
-	 rootoutfilename = optarg;
-	 break;
+         rootoutfilename = optarg;
+         break;
       case 's':
-	 TreeSig = optarg;
-	 break;
+         TreeSig = optarg;
+         break;
       case 't':
-	 txtoutfilename = optarg;
-	 break;
+         txtoutfilename = optarg;
+         break;
       case 'v':
-	 variables_list = optarg;
-	 break;
+         variables_list = optarg;
+         break;
       default:
-	 cout << "usage: analysis " 
-	      << " [-b background tree name]" 
-	      << " [-e event sample]" 
-	      << " [-f factory option string]" 
-	      << " [-m method name]" 
-	      << " [-o method option string]" 
-	      << " [-r root output file name]" 
-	      << " [-s signal tree name]" 
-	      << " [-t text output file name]" 
-	      << " [-v comma separated list of variables]" 
-	      << endl;
-	 exit(0);
+         cout << "usage: analysis "
+              << " [-b background tree name]"
+              << " [-e event sample]"
+              << " [-f factory option string]"
+              << " [-m method name]"
+              << " [-o method option string]"
+              << " [-r root output file name]"
+              << " [-s signal tree name]"
+              << " [-t text output file name]"
+              << " [-v comma separated list of variables]"
+              << endl;
+         exit(0);
       }
    }
 
@@ -463,7 +463,7 @@ int main(int argc, char **argv)
    cout << "[-t text output file name]: " << txtoutfilename << endl;
    cout << "[-v comma separated list of variables]: " << variables_list << endl;
    cout << "------------------" << endl;
-  
+
    // start analysis
    analysis();
 }
