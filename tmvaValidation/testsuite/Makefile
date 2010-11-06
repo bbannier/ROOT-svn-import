@@ -8,6 +8,11 @@
 
 include $(ROOTSYS)/test/Makefile.arch
 
+ifeq ($(TMVASYS),)
+TMVASYS = ../../tmva
+TMVALIB = -lTMVA.1
+endif
+
 #------------------------------------------------------------------------------
 
 
@@ -32,10 +37,10 @@ TMVAUTOBJECTS    = $(TMVAUTSOURCES:.cxx=.o)
 TMVAUTH          = $(TMVAUTSOURCES:.cxx=.h)
 
 $(TMVAUTOBJECTS): %.o : %.cxx $(TMVAUTH)
-	$(CXX)  $(CXXFLAGS) -c $< -o $@
+	$(CXX) -I$(TMVASYS) $(CXXFLAGS) -c $< -o $@
 
 $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
-	$(LD) $(LDFLAGS) $^ $(LIBS) -lTMVA -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
+	$(LD) $(LDFLAGS) $^ -L$(TMVASYS)/lib $(LIBS) $(TMVALIB) -lTMVA -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
 	$(MT_EXE)
 	@echo "$@ done"
 

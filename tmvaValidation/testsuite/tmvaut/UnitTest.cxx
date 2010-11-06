@@ -37,7 +37,7 @@ long UnitTest::report() const
 {
    if (osptr)
       {
-         std::string counts(Form(" [%i/%i]", nPass, nPass+nFail));
+         std::string counts(Form(" [%li/%li]", nPass, nPass+nFail));
 
          *osptr << name() << counts;
 
