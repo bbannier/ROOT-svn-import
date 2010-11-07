@@ -70,7 +70,7 @@ namespace TMVA {
    class PDEFoamDistr : public ::TObject  {
 
    private:
-      PDEFoam *fPDEFoam;        // PDEFoam to refer to
+      const PDEFoam *fPDEFoam;  // PDEFoam to refer to
       BinarySearchTree *fBst;   // Binary tree to find events within a volume
       TDensityCalc fDensityCalc;// method of density calculation
 
@@ -96,8 +96,8 @@ namespace TMVA {
 		    std::vector<TH1F*>&, std::vector<TH1F*>&);
 
       // Getter and setter for the fPDEFoam pointer
-      void SetPDEFoam(PDEFoam *foam){ fPDEFoam = foam; }
-      PDEFoam* GetPDEFoam(){ return fPDEFoam; };
+      void SetPDEFoam(const PDEFoam *foam){ fPDEFoam = foam; }
+      const PDEFoam* GetPDEFoam() const { return fPDEFoam; };
 
       // Getters and setters for foam filling method
       void SetDensityCalc( TDensityCalc dc ){ fDensityCalc = dc; };
