@@ -1228,7 +1228,10 @@ void TMVA::Factory::EvaluateAllMethods( void )
          theMethod->WriteEvaluationHistosToFile(Types::kTraining);
       } else if (theMethod->DoMulticlass()) {
          doMulticlass = kTRUE;
-         Log() << kINFO << "Evaluate multiclass classification method: " << theMethod->GetMethodName() << Endl;         
+         Log() << kINFO << "Evaluate multiclass classification method: " << theMethod->GetMethodName() << Endl;
+         Log() << kINFO << "Write evaluation histograms to file" << Endl;
+         theMethod->WriteEvaluationHistosToFile(Types::kTesting);
+         theMethod->WriteEvaluationHistosToFile(Types::kTraining);
          theMethod->TestMulticlass();
       } else {
          
