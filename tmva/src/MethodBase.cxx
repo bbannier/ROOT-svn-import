@@ -645,7 +645,7 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
 
    Log() << kINFO << "Create results for " << (type==Types::kTraining?"training":"testing") << Endl;
 
-   ResultsMulticlass* regMulti = (ResultsMulticlass*)Data()->GetResults(GetMethodName(), type, Types::kMulticlass);
+   ResultsMulticlass* resMulticlass = (ResultsMulticlass*)Data()->GetResults(GetMethodName(), type, Types::kMulticlass);
 
    Long64_t nEvents = Data()->GetNEvents();
 
@@ -655,11 +655,11 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
    Log() << kINFO << "Multiclass evaluation of " << GetMethodName() << " on "
          << (type==Types::kTraining?"training":"testing") << " sample" << Endl;
 
-   regMulti->Resize( nEvents );
+   resMulticlass->Resize( nEvents );
    for (Int_t ievt=0; ievt<nEvents; ievt++) {
       Data()->SetCurrentEvent(ievt);
       std::vector< Float_t > vals = GetMulticlassValues();
-      regMulti->SetValue( vals, ievt );
+      resMulticlass->SetValue( vals, ievt );
       timer.DrawProgressBar( ievt );
    }
 
@@ -672,7 +672,7 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
 
    TString histNamePrefix(GetTestvarName());
    histNamePrefix += (type==Types::kTraining?"train":"test");
-//   regMulti->CreateDeviationHistograms( histNamePrefix );
+   resMulticlass->CreateMulticlassHistos( histNamePrefix );
 }
 
 
@@ -1824,7 +1824,6 @@ void TMVA::MethodBase::WriteEvaluationHistosToFile(Types::ETreeType treetype)
       Log() << kFATAL << "<WriteEvaluationHistosToFile> Unknown result: "
             << GetMethodName() << (treetype==Types::kTraining?"/kTraining":"/kTesting") << "/kMaxAnalysisType" << Endl;
    results->GetStorage()->Write();
-
    if(treetype==Types::kTesting)
       GetTransformationHandler().PlotVariables( GetEventCollection( Types::kTesting ), BaseDir() );
 }
@@ -2301,7 +2300,7 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency(const TString& theString)
 
       // normalise output distributions
       gTools().NormHist( mva_s_tr  );
-      gTools().NormHist( mva_s_tr  );
+      gTools().NormHist( mva_b_tr  );
 
       // renormalise to maximum
       mva_eff_tr_s->Scale( 1.0/TMath::Max(1.0, mva_eff_tr_s->GetMaximum()) );
@@ -2378,6 +2377,20 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency(const TString& theString)
 
    return 0.5*(effS + effS_); // the mean between bin above and bin below
 }
+
+//_______________________________________________________________________
+
+/*
+Double_t TMVA::MethodBase::GetMulticlassEfficiency( const TString& theString, Types::ETreeType type,Double_t& effSerr )
+{
+}
+
+//_______________________________________________________________________
+
+Double_t TMVA::MethodBase::GetMulticlassTrainingEfficiency( const TString& theString)
+{
+}
+*/
 
 //_______________________________________________________________________
 Double_t TMVA::MethodBase::GetSignificance( void ) const

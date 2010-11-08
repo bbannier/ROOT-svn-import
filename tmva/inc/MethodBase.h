@@ -247,6 +247,8 @@ namespace TMVA {
       // in the TString argument. (Watch the string format)
       virtual Double_t GetEfficiency( const TString&, Types::ETreeType, Double_t& err );
       virtual Double_t GetTrainingEfficiency(const TString& );
+      //virtual Double_t GetMulticlassEfficiency( const TString&, Types::ETreeType, Double_t& err );
+      //virtual Double_t GetMulticlassTrainingEfficiency(const TString& );
       virtual Double_t GetSignificance() const;
       virtual Double_t GetROCIntegral(PDF *pdfS=0, PDF *pdfB=0) const;
       virtual Double_t GetMaximumSignificance( Double_t SignalEvents, Double_t BackgroundEvents, 
