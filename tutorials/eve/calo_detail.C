@@ -40,8 +40,9 @@ void calo_detail()
    TEveCalo2D* calo2d;
    calo2d = MakeCalo2D(calo3d, slotLeftTop, TEveProjection::kPT_RPhi);
    calo2d->SetMaxTowerH(maxH);
-   calo2d->SetMaxTowerH(maxH);
    calo2d = MakeCalo2D(calo3d, slotLeftBottom, TEveProjection::kPT_RhoZ);
+   calo2d->SetMaxTowerH(maxH);
+
    TEveCaloLego* lego = MakeCaloLego(data, slotRightBottom);
    lego->SetAutoRebin(kFALSE);
    lego->Set2DMode(TEveCaloLego::kValSizeOutline);
