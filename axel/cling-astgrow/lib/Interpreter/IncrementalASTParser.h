@@ -19,6 +19,7 @@ namespace clang {
 
 namespace cling {
   class MutableMemoryBuffer;
+  class ChainedASTConsumer;
 
   class IncrementalASTParser {
   public:
@@ -36,7 +37,7 @@ namespace cling {
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
     llvm::OwningPtr<clang::Sema> m_Sema; // sema used for parsing
     llvm::OwningPtr<MutableMemoryBuffer> m_MemoryBuffer; // compiler instance.
-    clang::ASTConsumer* m_Consumer;
+    ChainedASTConsumer* m_Consumer; // CI owns it
     bool m_InterruptAtNextTopLevelDecl; // whether to stop parsing at the next top level decl 
   };
 }

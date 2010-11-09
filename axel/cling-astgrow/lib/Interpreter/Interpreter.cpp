@@ -233,7 +233,8 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
       std::vector<clang::Stmt*>::iterator stmt_end = stmts.end();
       for (; stmt_iter != stmt_end; ++stmt_iter) {
          clang::Stmt* cur_stmt = *stmt_iter;
-        const llvm::MemoryBuffer* MB = SM.getBuffer(SM.getFileID(cur_stmt->getLocStart()));
+        //const llvm::MemoryBuffer* MB = SM.getBuffer(SM.getFileID(cur_stmt->getLocStart()));
+        const llvm::MemoryBuffer* MB = SM.getBuffer(SM.getMainFileID());
         const char* buffer = MB->getBufferStart();
          std::string stmt_string;
          {
@@ -377,8 +378,8 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
    //
    //  Shutdown parse.
    //
-   CI->setASTConsumer(0);
-   CI->setASTContext(0);
+   //CI->setASTConsumer(0);
+   //CI->setASTContext(0);
    //if (CI->hasPreprocessor()) {
    //   CI->getPreprocessor().EndSourceFile();
    //}
