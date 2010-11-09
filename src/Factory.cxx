@@ -1625,5 +1625,18 @@ void TMVA::Factory::EvaluateAllMethods( void )
    RootBaseDir()->cd();
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTesting)->Write( "", TObject::kOverwrite );
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTraining)->Write( "", TObject::kOverwrite );
+
+
+   Log() << kINFO << "  " << Endl;
+   Log() << kINFO << ". . . . . . . . . . PLEASE CITE THIS . . . . . . . . . . " << Endl;
+   Log() << kINFO << "=== plain text ===" << Endl;
+   gTools().TMVACitation( Log(), Tools::kPlainText );
+   Log() << kINFO << "  " << Endl;
+   Log() << kINFO << "=== LaTex ===" << Endl;
+   gTools().TMVACitation( Log(), Tools::kLaTeX );
+   Log() << kINFO << "  " << Endl;
+   Log() << kINFO << "=== BibTex ===" << Endl;
+   gTools().TMVACitation( Log(), Tools::kBibTeX );
+   
 }
 
