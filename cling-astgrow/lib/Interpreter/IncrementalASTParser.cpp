@@ -15,7 +15,6 @@
 #include "clang/Parse/ParseAST.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Frontend/CompilerInstance.h"
-//#include "clang/Frontend/ASTConsumers.h"
 #include "clang/Sema/SemaConsumer.h"
 
 #include "DependentNodesTransform.h"
@@ -82,7 +81,7 @@ m_Consumer(Consumer), m_InterruptAtNextTopLevelDecl(false)
                                          PP.getLangOptions().NoBuiltin);
 
 
-  m_MemoryBuffer.reset(new MutableMemoryBuffer("//cling!", "CLING"));
+  m_MemoryBuffer.reset(new MutableMemoryBuffer("//cling!\n", "CLING"));
 
   CI->getSourceManager().clearIDTables();
   CI->getSourceManager().createMainFileIDForMemBuffer(m_MemoryBuffer.get());

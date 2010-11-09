@@ -23,6 +23,7 @@
 #include "clang/Lex/HeaderSearch.h"
 //#include "../../clang/lib/Sema/Sema.h"
 #include "llvm/Constants.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/System/DynamicLibrary.h"
 #include "llvm/System/Path.h"
 
@@ -199,19 +200,23 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
    bool haveStatements = false;
    stmtFunc = createUniqueName();
    std::string stmtVsDeclFunc = stmtFunc + "_stmt_vs_decl";
-   std::string nonTUsrc = "void " + stmtVsDeclFunc + "() {\n" + src + ";}";
-   std::vector<clang::Stmt*> stmts;
-  // Create an ASTConsumer for this frontend run which
-  // will produce a list of statements seen.
-  StmtSplitter splitter(stmts);
-  FunctionBodyConsumer* consumer =
-  new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
-  clang::CompilerInstance* CI = m_IncrASTParser->parse(nonTUsrc, -1, consumer);
+  std::vector<clang::Stmt*> stmts;
+  clang::CompilerInstance* CI = 0;
+  {
+    std::string nonTUsrc = "void " + stmtVsDeclFunc + "() {\n" + src + ";}";
+    // Create an ASTConsumer for this frontend run which
+    // will produce a list of statements seen.
+    StmtSplitter splitter(stmts);
+    FunctionBodyConsumer* consumer =
+      new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
+    CI = m_IncrASTParser->parse(nonTUsrc, -1, consumer);
 
-   if (!CI) {
+    if (!CI) {
       wrapped.clear();
       return;
-   }
+    }
+  }
+  
    //
    //  Rewrite the source code to support cint command
    //  line semantics.  We must move variable declarations
@@ -228,11 +233,13 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
       std::vector<clang::Stmt*>::iterator stmt_end = stmts.end();
       for (; stmt_iter != stmt_end; ++stmt_iter) {
          clang::Stmt* cur_stmt = *stmt_iter;
+        const llvm::MemoryBuffer* MB = SM.getBuffer(SM.getFileID(cur_stmt->getLocStart()));
+        const char* buffer = MB->getBufferStart();
          std::string stmt_string;
          {
             std::pair<unsigned, unsigned> r =
                getStmtRangeWithSemicolon(cur_stmt, SM, LO);
-            stmt_string = nonTUsrc.substr(r.first, r.second - r.first);
+           stmt_string = std::string(buffer + r.first, r.second - r.first);
             //fprintf(stderr, "stmt: %s\n", stmt_string.c_str());
          }
          //
@@ -279,7 +286,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
                   SM.getInstantiationLoc((*D)->getLocEnd());
                std::pair<unsigned, unsigned> r =
                   getRangeWithSemicolon(SLoc, ELoc, SM, LO);
-               std::string decl = nonTUsrc.substr(r.first, r.second - r.first);
+               std::string decl = std::string(buffer + r.first, r.second - r.first);
                wrapped_globals.append(decl + ";\n");
                held_globals.append(decl + ";\n");
                continue;
@@ -314,7 +321,8 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
                //fprintf(stderr, "var decl, init is const.\n");
                std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
                wrapped_globals.append(decl + " = " +
-                                      nonTUsrc.substr(r.first, r.second - r.first) + ";\n");
+                                      std::string(buffer + r.first, r.second - r.first)
+                                      + ";\n");
                held_globals.append(decl + ";\n");
                continue;
             }
@@ -326,7 +334,8 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
                //fprintf(stderr, "var decl, init is not list.\n");
                std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
                wrapped_stmts.append(std::string(VD->getName())  + " = " +
-                                    nonTUsrc.substr(r.first, r.second - r.first) + ";\n");
+                                    std::string(buffer + r.first, r.second - r.first)
+                                    + ";\n");
                wrapped_globals.append(decl + ";\n");
                held_globals.append(decl + ";\n");
                continue;
@@ -342,7 +351,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
                stm << VD->getNameAsString() << "[" << j << "] = ";
                std::pair<unsigned, unsigned> r =
                   getStmtRange(ILE->getInit(j), SM, LO);
-               stm << nonTUsrc.substr(r.first, r.second - r.first) << ";\n";
+               stm << std::string(buffer + r.first, r.second - r.first) << ";\n";
                wrapped_stmts.append(stm.str());
             }
             wrapped_globals.append(decl + ";\n");
