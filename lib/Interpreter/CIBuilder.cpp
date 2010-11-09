@@ -141,7 +141,8 @@ cling::CIBuilder::createCI() const {
    //else {
    //   CI->getSourceManager().clearIDTables();
    //}
-   CI->createSourceManager();
+   CI->createSourceManager(CI->getFileManager(), CI->getFileSystemOpts());
+   //CI->createSourceManager();
    //CI->createPreprocessor(); // Note: This single line takes almost all the time!
 
    return CI;
