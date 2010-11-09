@@ -671,7 +671,7 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
       SetTestTime(timer.ElapsedSeconds());
 
    TString histNamePrefix(GetTestvarName());
-   histNamePrefix += (type==Types::kTraining?"train":"test");
+   histNamePrefix += (type==Types::kTraining?"_Train":"_Test");
    resMulticlass->CreateMulticlassHistos( histNamePrefix );
 }
 
