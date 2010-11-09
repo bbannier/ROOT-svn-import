@@ -143,7 +143,7 @@ ExecutionContext::executeFunction(llvm::StringRef funcname)
    if (!f) {
       fprintf(
            stderr
-         , "Interpreter::executeFunction: Could not find function named: %s\n"
+         , "ExecutionContext::executeFunction: Could not find function named: %s\n"
          , funcname.data()
       );
       return;
