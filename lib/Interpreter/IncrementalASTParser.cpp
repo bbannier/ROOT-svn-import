@@ -61,12 +61,41 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
       return m_FileID.c_str();
     }
   };
-} // namespace cling
 
+  class ChainedASTConsumer: public clang::ASTConsumer {
+  public:
+    ChainedASTConsumer() {}
+    virtual ~ChainedASTConsumer() {}
+    
+#define CAC_DECL(WHAT, ARGS, PARAM) \
+void WHAT ARGS { \
+for (llvm::SmallVector<clang::ASTConsumer*,2>::iterator i = Consumers.begin(), \
+e = Consumers.end(); i != e; ++i) (*i)->WHAT PARAM; \
+}
+    CAC_DECL(Initialize,(clang::ASTContext &Context),(Context));
+    CAC_DECL(HandleTopLevelDecl,(clang::DeclGroupRef D),(D));
+    CAC_DECL(HandleInterestingDecl,(clang::DeclGroupRef D),(D));
+    CAC_DECL(HandleTranslationUnit,(clang::ASTContext &Ctx),(Ctx));
+    CAC_DECL(HandleTagDeclDefinition,(clang::TagDecl *D),(D));
+    CAC_DECL(CompleteTentativeDefinition,(clang::VarDecl *D),(D));
+    CAC_DECL(HandleVTable,(clang::CXXRecordDecl *RD, bool DefinitionRequired), \
+             (RD, DefinitionRequired));
+    CAC_DECL(PrintStats,(),());
+    
+    clang::ASTMutationListener *GetASTMutationListener() {
+      return Consumers.empty() ? 0 : Consumers[0]->GetASTMutationListener();
+    }
+    clang::ASTDeserializationListener *GetASTDeserializationListener() {
+      return Consumers.empty() ? 0 : Consumers[0]->GetASTDeserializationListener();
+    }
+
+    llvm::SmallVector<clang::ASTConsumer*,2> Consumers;
+  };
+} // namespace cling
 
 cling::IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
                                                   clang::ASTConsumer* Consumer):
-m_Consumer(Consumer), m_InterruptAtNextTopLevelDecl(false)
+m_Consumer(0), m_InterruptAtNextTopLevelDecl(false)
 {
   assert(CI && "CompilerInstance is (null)!");
   m_CI.reset(CI);
@@ -91,6 +120,11 @@ m_Consumer(Consumer), m_InterruptAtNextTopLevelDecl(false)
     return;
   }
 
+  m_Consumer = new ChainedASTConsumer();
+  m_Consumer->Consumers.push_back(Consumer);
+  m_Consumer->Initialize(*Ctx);
+  m_CI->setASTConsumer(m_Consumer);
+  
   bool CompleteTranslationUnit = false;
   clang::CodeCompleteConsumer *CompletionConsumer = 0;
   m_Sema.reset(new clang::Sema(PP, *Ctx, *m_Consumer, CompleteTranslationUnit,
@@ -100,8 +134,6 @@ m_Consumer(Consumer), m_InterruptAtNextTopLevelDecl(false)
   // Initialize the parser.
   m_Parser.reset(new clang::Parser(PP, *m_Sema.get()));
   m_Parser->Initialize();
-  
-  Consumer->Initialize(*Ctx);
   
   if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
     SC->InitializeSema(*m_Sema.get());
@@ -116,7 +148,7 @@ cling::IncrementalASTParser::~IncrementalASTParser()
 clang::CompilerInstance*
 cling::IncrementalASTParser::parse(llvm::StringRef src,
                                    int nTopLevelDecls /* = 1 */,
-                                   clang::ASTConsumer* Consumer /* = 0 */) {
+                                   clang::ASTConsumer* AddConsumer /* = 0 */) {
   // Add src to the memory buffer, parse it, and add it to
   // the AST. Returns the CompilerInstance (and thus the AST).
   // Diagnostics are reset for each call of parse: they are only covering
@@ -127,19 +159,19 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
   clang::Preprocessor& PP = m_CI->getPreprocessor();
   m_CI->getDiagnosticClient().BeginSourceFile(m_CI->getLangOpts(), &PP);
 
-  if (Consumer) {
-    m_CI->setASTConsumer(Consumer);
-  } else {
-    m_CI->setASTConsumer(m_Consumer);
+  if (AddConsumer) {
+    m_Consumer->Consumers.push_back(AddConsumer);
   }
 
   m_MemoryBuffer->append(src);
   
   clang::Lexer* L = static_cast<clang::Lexer*>(PP.getTopmostLexer());
-  L->updateBufferEnd(m_MemoryBuffer->getBufferEnd());
+  if (L) {
+    L->updateBufferEnd(m_MemoryBuffer->getBufferEnd());
+  }
   // BEGIN REPLACEMENT clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
   
-  Consumer = &m_CI->getASTConsumer();
+  clang::ASTConsumer* Consumer = &m_CI->getASTConsumer();
   clang::Parser::DeclGroupPtrTy ADecl;
   while (!m_Parser->ParseTopLevelDecl(ADecl) && --nTopLevelDecls != 0) {
     // Not end of file.
@@ -177,6 +209,9 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
   // END REPLACEMENT clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
   
   
+  if (AddConsumer) {
+    m_Consumer->Consumers.pop_back();
+  }
   //CI->setASTConsumer(0);
   //if (CI->hasPreprocessor()) {
   //   CI->getPreprocessor().EndSourceFile();
