@@ -12,7 +12,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclGroup.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
@@ -22,21 +21,15 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Parse/Parser.h"
-#include "clang/Parse/ParseAST.h"
-#include "clang/Sema/SemaConsumer.h"
 //#include "../../clang/lib/Sema/Sema.h"
 #include "llvm/Constants.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/System/DynamicLibrary.h"
 #include "llvm/System/Path.h"
 
 #include "Visitors.h"
 #include "ClangUtils.h"
 #include "ExecutionContext.h"
-
-#include "DependentNodesTransform.h"
+#include "IncrementalASTParser.h"
 
 #include <cstdio>
 #include <iostream>
@@ -104,12 +97,13 @@ namespace cling {
 //---------------------------------------------------------------------------
 Interpreter::Interpreter(const char* llvmdir /*= 0*/):
    m_CIBuilder(0),
-   m_CI(0),
    m_UniqueCounter(0),
   m_printAST(false)
 {
    m_CIBuilder.reset(new CIBuilder(fake_argc, fake_argv, llvmdir));
-   m_CI.reset(createCI());
+  m_IncrASTParser.reset(new IncrementalASTParser(createCI(),
+                                                 maybeGenerateASTPrinter()));
+  
 
    m_ExecutionContext.reset(new ExecutionContext(*this));
    compileString("#include <stdio.h>\n");
@@ -122,17 +116,21 @@ Interpreter::~Interpreter()
 {
    //delete m_prev_module;
    //m_prev_module = 0; // Don't do this, the engine does it.
-
-   m_CI->takeLLVMContext(); // Don't take down the context with the CI.
 }
 
 clang::CompilerInstance*
-Interpreter::createCI()
+Interpreter::createCI() const
 {
    return m_CIBuilder->createCI();
 }
 
-int
+clang::CompilerInstance*
+Interpreter::getCI() const
+{
+  return m_IncrASTParser->getCI();
+}
+  
+  int
 Interpreter::processLine(const std::string& input_line)
 {
    //
@@ -195,13 +193,21 @@ std::string Interpreter::createUniqueName()
 
 
 void
-   Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
-                                 std::string& stmtFunc)
+Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
+                              std::string& stmtFunc)
 {
    bool haveStatements = false;
-   std::string nonTUsrc = "void __cling__nonTUsrc() {" + src + ";}";
+   stmtFunc = createUniqueName();
+   std::string stmtVsDeclFunc = stmtFunc + "_stmt_vs_decl";
+   std::string nonTUsrc = "void " + stmtVsDeclFunc + "() {\n" + src + ";}";
    std::vector<clang::Stmt*> stmts;
-   clang::CompilerInstance* CI = createStatementList(nonTUsrc, stmts);
+  // Create an ASTConsumer for this frontend run which
+  // will produce a list of statements seen.
+  StmtSplitter splitter(stmts);
+  FunctionBodyConsumer* consumer =
+  new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
+  clang::CompilerInstance* CI = m_IncrASTParser->parse(nonTUsrc, -1, consumer);
+
    if (!CI) {
       wrapped.clear();
       return;
@@ -345,9 +351,8 @@ void
       }
       haveStatements = !wrapped_stmts.empty();
       if (haveStatements) {
-         stmtFunc = createUniqueName();
-         wrapped_stmts = "extern \"C\" void " + stmtFunc + "() {\n" + wrapped_stmts;
-         wrapped_stmts += "\n}";
+         wrapped_stmts = "extern \"C\" void " + stmtFunc + "() {\n"
+            + wrapped_stmts + ";}\n";
       } else {
          stmtFunc = "";
       }
@@ -377,70 +382,6 @@ void
    }
 }
 
-clang::CompilerInstance*
-Interpreter::createStatementList(const std::string& srcCode,
-                                 std::vector<clang::Stmt*>& stmts)
-{
-   clang::CompilerInstance* CI = getCI();
-   if (!CI) {
-      return 0;
-   }
-   CI->createPreprocessor();
-   clang::Preprocessor& PP = CI->getPreprocessor();
-   CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
-   //CI->createASTContext();
-   CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
-      PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-      PP.getSelectorTable(), PP.getBuiltinInfo(), 0));
-   // Create an ASTConsumer for this frontend run which
-   // will produce a list of statements seen.
-   StmtSplitter splitter(stmts);
-   FunctionBodyConsumer* consumer =
-      new FunctionBodyConsumer(splitter, "__cling__nonTUsrc");
-   CI->setASTConsumer(consumer);
-   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                          PP.getLangOptions().NoBuiltin);
-   llvm::MemoryBuffer* SB =
-      llvm::MemoryBuffer::getMemBufferCopy(srcCode, "CLING");
-   if (!SB) {
-      fprintf(stderr, "Interpreter::createStatementList: Failed to create "
-                      "memory buffer!\n");
-      ///*reuseCI*/CI->takeLLVMContext();
-      ///*reuseCI*/delete CI;
-      ///*reuseCI*/CI = 0;
-      return 0;
-   }
-   CI->getSourceManager().clearIDTables();
-   CI->getSourceManager().createMainFileIDForMemBuffer(SB);
-   if (CI->getSourceManager().getMainFileID().isInvalid()) {
-      fprintf(stderr, "Interpreter::createStatementList: Failed to create "
-                      "main file id!\n");
-      ///*reuseCI*/CI->takeLLVMContext();
-      ///*reuseCI*/delete CI;
-      ///*reuseCI*/CI = 0;
-      return 0;
-   }
-   clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
-   //CI->setASTConsumer(0); // We still need these later.
-   //CI->setASTContext(0); // We still need these later.
-   if (CI->hasPreprocessor()) {
-      CI->getPreprocessor().EndSourceFile();
-   }
-   CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
-   CI->getDiagnosticClient().EndSourceFile();
-   unsigned err_count = CI->getDiagnostics().getNumErrors();
-   if (err_count) {
-      fprintf(stderr, "Interpreter::createStatementList: Parse failed!\n");
-      CI->setASTConsumer(0);
-      CI->setASTContext(0);
-      ///*reuseCI*/CI->takeLLVMContext();
-      ///*reuseCI*/delete CI;
-      ///*reuseCI*/CI = 0;
-      return 0;
-   }
-   return CI;
-}
-
 clang::ASTConsumer*
 Interpreter::maybeGenerateASTPrinter() const
 {
@@ -450,181 +391,15 @@ Interpreter::maybeGenerateASTPrinter() const
    return new clang::ASTConsumer();
 }
 
-namespace {
-   class MutableMemoryBuffer: public llvm::MemoryBuffer {
-      std::string m_FileID;
-      size_t m_Alloc;
-   protected:
-      void maybeRealloc(llvm::StringRef code, size_t oldlen) {
-         size_t applen = code.size();
-         char* B = 0;
-         if (oldlen) {
-            B = const_cast<char*>(getBufferStart());
-            assert(!B[oldlen] && "old buffer is not 0 terminated!");
-            // B + oldlen points to trailing '\0'
-         }
-         size_t newlen = oldlen + applen + 1;
-         if (newlen > m_Alloc) {
-            m_Alloc += 64*1024;
-            B = (char*)realloc(B, m_Alloc);
-         }
-         memcpy(B + oldlen, code.data(), applen);
-         B[newlen - 1] = 0;
-         init(B, B + newlen - 1);
-      }
-      
-   public:
-      MutableMemoryBuffer(llvm::StringRef Code, llvm::StringRef Name)
-         : MemoryBuffer(), m_FileID(Name), m_Alloc(0) {
-         maybeRealloc(Code, 0);
-      }
-
-      virtual ~MutableMemoryBuffer() {
-         free((void*)getBufferStart());
-      }
-
-      void append(llvm::StringRef code) {
-         assert(getBufferSize() && "buffer is empty!");
-         maybeRealloc(code, getBufferSize());
-      }
-      virtual const char *getBufferIdentifier() const {
-         return m_FileID.c_str();
-      }
-   };
-}
-
-
 clang::CompilerInstance*
 Interpreter::compileString(const std::string& argCode)
 {
-   clang::CompilerInstance* CI = m_ExecutionContext->getCI();
-   if (!CI) {
-      return 0;
-   }
-
-   static clang::Sema* S = 0;
-   static clang::Parser* P = 0;
-   static clang::Lexer* L = 0;
-   static MutableMemoryBuffer* MMB = 0;
-   if (!S) {
-      CI->createPreprocessor();
-   }
-
-   clang::Preprocessor& PP = CI->getPreprocessor();
-   clang::ASTConsumer *Consumer = 0;
-
    std::string endOfInputName = "__cling_EndOfInput_" + createUniqueName();
    std::string srcCode(argCode);
    srcCode += "\nvoid " + endOfInputName + "(){};\n";
-
-   if (!S) {
-      CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
-      clang::ASTContext *Ctx = new clang::ASTContext(CI->getLangOpts(),
-         PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-         PP.getSelectorTable(), PP.getBuiltinInfo(), 0);
-      CI->setASTContext(Ctx);
-      CI->setASTConsumer(maybeGenerateASTPrinter());
-      Consumer = &CI->getASTConsumer();
-      PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                             PP.getLangOptions().NoBuiltin);
-      //llvm::MemoryBuffer* SB =
-      //   llvm::MemoryBuffer::getMemBufferCopy(srcCode, "CLING");
-      MMB = new MutableMemoryBuffer(srcCode, "CLING");
-      if (!MMB) {
-         fprintf(stderr, "Interpreter::compileString: Failed to create memory "
-                 "buffer!\n");
-         ///*reuseCI*/CI->takeLLVMContext();
-         ///*reuseCI*/delete CI;
-         ///*reuseCI*/CI = 0;
-         return 0;
-      }
-
-      CI->getSourceManager().clearIDTables();
-      CI->getSourceManager().createMainFileIDForMemBuffer(MMB);
-      if (CI->getSourceManager().getMainFileID().isInvalid()) {
-         fprintf(stderr, "Interpreter::compileString: Failed to create main "
-                 "file id!\n");
-         ///*reuseCI*/CI->takeLLVMContext();
-         ///*reuseCI*/delete CI;
-         ///*reuseCI*/CI = 0;
-         return 0;
-      }
-
-      bool CompleteTranslationUnit = false;
-      clang::CodeCompleteConsumer *CompletionConsumer = 0;
-      S = new clang::Sema(PP, *Ctx, *Consumer, CompleteTranslationUnit, CompletionConsumer);
-      PP.EnterMainSourceFile();
-      L = static_cast<clang::Lexer*>(PP.getTopmostLexer());
-
-      // Initialize the parser.
-      P = new clang::Parser(PP, *S);
-      P->Initialize();
-
-      Consumer->Initialize(*Ctx);
-
-      if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(Consumer))
-         SC->InitializeSema(*S);
-   } else {
-      MMB->append(srcCode);
-   }
-
-   L->updateBufferEnd(MMB->getBufferEnd());
-   // BEGIN REPLACEMENT clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
-
-   if (!Consumer) Consumer = &CI->getASTConsumer();
-   clang::Parser::DeclGroupPtrTy ADecl;
-   while (!P->ParseTopLevelDecl(ADecl)) {  // Not end of file.
-      // If we got a null return and something *was* parsed, ignore it.  This
-      // is due to a top-level semicolon, an action override, or a parse error
-      // skipping something.
-      if (ADecl) {
-         clang::DeclGroupRef DGR = ADecl.getAsVal<clang::DeclGroupRef>();
-         Consumer->HandleTopLevelDecl(DGR);
-         if (DGR.isSingleDecl()) {
-            clang::FunctionDecl* FD = dyn_cast<clang::FunctionDecl>(DGR.getSingleDecl());
-            if (FD && FD->getNameAsString() == endOfInputName)
-               break;
-         }
-      }
-   };
-
-   // Process any TopLevelDecls generated by #pragma weak.
-   for (llvm::SmallVector<clang::Decl*,2>::iterator
-           I = S->WeakTopLevelDecls().begin(),
-           E = S->WeakTopLevelDecls().end(); I != E; ++I)
-      Consumer->HandleTopLevelDecl(clang::DeclGroupRef(*I));
-
-   // Here we are substituting the dependent nodes with Cling invocations.
-   DependentNodesTransform* transformer = new DependentNodesTransform();
-   transformer->TransformNodes(S);
-   delete transformer;
-
-   clang::ASTContext *Ctx = &CI->getASTContext();
-   Consumer->HandleTranslationUnit(*Ctx);
-
-   //if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
-   //   SC->ForgetSema();
-
-   // END REPLACEMENT clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
-
-
-   //CI->setASTConsumer(0);
-   //if (CI->hasPreprocessor()) {
-   //   CI->getPreprocessor().EndSourceFile();
-   //}
-   //CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
-   CI->getDiagnosticClient().EndSourceFile();
-   unsigned err_count = CI->getDiagnostics().getNumErrors();
-   if (err_count) {
-      fprintf(stderr, "Interpreter::compileString: Parse failed!\n");
-      ///*reuseCI*/CI->takeLLVMContext();
-      ///*reuseCI*/delete CI;
-      ///*reuseCI*/CI = 0;
-      return 0;
-   }
-   return CI;
+  return m_IncrASTParser->parse(srcCode);
 }
-
+  
 clang::CompilerInstance*
 Interpreter::compileFile(const std::string& filename,
                          const std::string* trailcode /*=0*/)
