@@ -34,7 +34,6 @@
 #include "Math/RichardsonDerivator.h"
 #include "TGraphErrors.h"
 #include "TCanvas.h"
-
 #include "TKDE.h"
 
 
@@ -44,7 +43,7 @@ const Double_t TKDE::_2_PI_ROOT_INV = 0.398942280401432703;
 const Double_t TKDE::PI             = 3.14159265358979312;
 const Double_t TKDE::PI_OVER2       = 1.57079632679489656;
 const Double_t TKDE::PI_OVER4       = 0.785398163397448279;
-const Double_t APPRX_GEO_MEAN       = 0.241970724519143365; // 1 / TMath::Power(2 * TMath::Pi(), .5) * TMath::Exp(-.5)
+const Double_t /*TKDE::*/APPRX_GEO_MEAN = 0.241970724519143365; // 1 / TMath::Power(2 * TMath::Pi(), .5) * TMath::Exp(-.5)
 
 class TKDE::TKernel {
    TKDE* fKDE;
@@ -56,7 +55,6 @@ public:
    Double_t operator()(Double_t x) const;
    Double_t GetWeight(Double_t x) const;
    Double_t GetFixedWeight() const;
-   UInt_t GetNumberOfWeights() const;
    const std::vector<Double_t> & GetAdaptiveWeights() const;
 };
 
@@ -144,6 +142,7 @@ void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_
 }
 
 void TKDE::SetOptions(const Option_t* option, Double_t rho) {
+   //Sets User defined construction options
    TString opt = option;
    opt.ToLower();
    std::string options = opt.Data();
@@ -165,17 +164,9 @@ void TKDE::SetOptions(const Option_t* option, Double_t rho) {
    fRho = rho;
 }
 
-void TKDE::SetDrawOptions(const Option_t* option, TString& plotOpt, std::map<TString, TString>& canvasNameOpt, std::map<TString, TString>& canvasTitleOpt, std::map<TString, TString>& drawOpt) {
-   canvasNameOpt["estimate"] = "KDE_Estimate";
-   canvasTitleOpt["estimate"] = "KDE Estimate";
-   drawOpt["estimate"] = "";
-   canvasNameOpt["error"] = "KDE_Error";
-   canvasTitleOpt["error"] = "KDE Error";
-   drawOpt["error"] = "APL";
-   canvasNameOpt["bothsinglecanvas"] = "KDE_Estimate_Error";
-   canvasTitleOpt["bothsinglecanvas"] = "KDE Estimate and Error";
-   drawOpt["bothsinglecanvas"] = "APL";
-   size_t numOpt = 4;
+void TKDE::SetDrawOptions(const Option_t* option, TString& plotOpt, TString& drawOpt) {
+   // Sets User defined drawing options
+   size_t numOpt = 2;
    std::string options = TString(option).Data();
    std::vector<std::string> voption(numOpt, "");
    for (std::vector<std::string>::iterator it = voption.begin(); it != voption.end() && !options.empty(); ++it) {
@@ -185,65 +176,36 @@ void TKDE::SetDrawOptions(const Option_t* option, TString& plotOpt, std::map<TSt
       if (pos == std::string::npos) break;
    }
    Bool_t foundPlotOPt = kFALSE;
-   std::vector<std::string>::iterator plotpos = voption.begin();
-   TString plotType;
-   TString plotInstance;
-   while(plotpos != voption.end() && !foundPlotOPt) {
-      size_t pos = (*plotpos).find(':');
-      if (pos != std::string::npos) {
-         plotType = (*plotpos).substr(0, pos);
-         plotInstance = (*plotpos).substr(pos + 1);
-         plotType.ToLower();
-         if (std::string(plotType.Data()).compare("plot") == 0) {
-            foundPlotOPt = kTRUE;
-            break;
-         }
-      }
-      ++plotpos;
-   }
-   plotInstance.ToLower();
-   Bool_t hasPlotOPt = plotInstance.Contains("estimate") || plotInstance.Contains("error") ||
-   plotInstance.Contains("bothsinglecanvas") || plotInstance.Contains("bothdoublecanvas");
-   if (!foundPlotOPt || !hasPlotOPt) {
-      this->Warning("SetDrawOptions", "Unknown plotting option or no plotting option: setting to KDE estimate plot.");
-      plotOpt = "estimate";
-      return;
-   }
-   if (plotInstance.Contains("+confidenceinterval")) {
-      if (plotInstance.Contains("error")) {
-         this->Warning("SetDrawOptions", "Only Estimate plotting can have a Confidence Interval option: ignored option.");
-      } else {
-         plotInstance.Remove(plotInstance.Index("+confidenceinterval"), (Ssiz_t)(TString("+confidenceinterval").Length()));
-         drawOpt["estimate"] += "confidenceinterval";
-      }
-   }
-   plotOpt = plotInstance;
-   if (plotpos !=  voption.end())
-      voption.erase(plotpos);
-   for (std::vector<std::string>::iterator it = voption.begin(); it != voption.end(); ++it) {
+   Bool_t foundDrawOPt = kFALSE;
+   for (std::vector<std::string>::iterator it = voption.begin(); it != voption.end() && !options.empty(); ++it) {
       size_t pos = (*it).find(':');
-      if (pos == std::string::npos || (*it).empty()) {
-         continue;
-      } else {
-         TString optionType = (*it).substr(0, pos);
-         std::string optionInstance = (*it).substr(pos + 1);
-         optionType.ToLower();
-         if (std::string(optionType.Data()).compare("canvasname") == 0) {
-            if (optionInstance.empty()) {
-               canvasNameOpt[plotInstance] = "KDE_Canvas";
-            } else {
-               canvasNameOpt[plotInstance] = optionInstance;
-            }
-         } else if (std::string(optionType.Data()).compare("canvastitle") == 0) {
-            canvasTitleOpt[plotInstance] = optionInstance;
-         } else if (std::string(optionType.Data()).compare("draw") == 0) {
-            drawOpt[plotInstance] += optionInstance;
-         }
+      TString optionType = (*it).substr(0, pos);
+      TString optionInstance = (*it).substr(pos + 1);
+      optionType.ToLower();
+      optionInstance.ToLower();
+      if (optionType.Contains("plot")) {
+         foundPlotOPt = kTRUE;
+         if (optionInstance.Contains("estimate") || optionInstance.Contains("errors") || optionInstance.Contains("confidenceinterval"))
+            plotOpt = optionInstance;
+         else
+            this->Warning("SetDrawOptions", "Unknown plotting option: setting to KDE estimate plot.");
+      } else if (optionType.Contains("drawoptions")) {
+         foundDrawOPt = kTRUE;
+         drawOpt = optionInstance;
       }
+   }
+   if (!foundPlotOPt) {
+      this->Warning("SetDrawOptions", "No plotting option: setting to KDE estimate plot.");
+      plotOpt = "estimate";
+   }
+   if (!foundDrawOPt) {
+      this->Warning("SetDrawOptions", "No drawing options: setting to default ones.");
+      drawOpt = "apl4";
    }
 }
 
 void TKDE::GetOptions(std::string optionType, std::string option) {
+   // Gets User defined KDE construction options
    if (optionType.compare("kerneltype") == 0) {
       fSettedOptions[0] = kTRUE;
       if (option.compare("gaussian") == 0) {
@@ -310,6 +272,7 @@ void TKDE::GetOptions(std::string optionType, std::string option) {
 }
 
 void TKDE::AssureOptions() {
+   // Sets missing construction options to default ones
    if (!fSettedOptions[0]) {
       fKernelType = kGaussian;
    }
@@ -460,7 +423,6 @@ void TKDE::SetMirror() {
    fUseMirroring = fMirrorLeft                 || fMirrorRight ;
 }
 
-
 void TKDE::SetData(const Double_t* data) {
    // Sets the data events input sample or bin centres for binned option and computes basic estimators
    if (!data) {
@@ -512,7 +474,6 @@ void TKDE::InitFromNewData() {
    }
    SetKernel();
 }
-
 
 void TKDE::SetMirroredEvents() {
    // Mirrors the data
@@ -617,15 +578,15 @@ TF1* TKDE::GetFunction(UInt_t npx, Double_t xMin, Double_t xMax) {
    return GetKDEFunction(npx,xMin,xMax);
 }
 
-TF1* TKDE::GetUpperFunction(Double_t confidenceLevel, UInt_t npx, Double_t xMin, Double_t xMax) {
-   // Returns the PDF upper estimate (upper confidence interval limit)
-   return GetPDFUpperConfidenceInterval(confidenceLevel,npx,xMin,xMax);
-}
+// TF1* TKDE::GetUpperFunction(Double_t confidenceLevel, UInt_t npx, Double_t xMin, Double_t xMax) {
+//    // Returns the PDF upper estimate (upper confidence interval limit)
+//    return GetPDFUpperConfidenceInterval(confidenceLevel,npx,xMin,xMax);
+// }
 
-TF1* TKDE::GetLowerFunction(Double_t confidenceLevel, UInt_t npx, Double_t xMin, Double_t xMax) {
-   // Returns the PDF lower estimate (lower confidence interval limit)
-   return GetPDFLowerConfidenceInterval(confidenceLevel,npx,xMin,xMax);
-}
+// TF1* TKDE::GetLowerFunction(Double_t confidenceLevel, UInt_t npx, Double_t xMin, Double_t xMax) {
+//    // Returns the PDF lower estimate (lower confidence interval limit)
+//    return GetPDFLowerConfidenceInterval(confidenceLevel,npx,xMin,xMax);
+// }
 
 TF1* TKDE::GetApproximateBias(UInt_t npx, Double_t xMin, Double_t xMax) {
    // Returns the PDF estimate bias
@@ -700,10 +661,6 @@ Double_t TKDE::TKernel::GetWeight(Double_t x) const {
    return fWeights[fKDE->Index(x)];
 }
 
-UInt_t TKDE::TKernel::GetNumberOfWeights() const {
-   return fNWeights;
-}
-
 void TKDE::SetBinCentreData(Double_t xmin, Double_t xmax) {
    // Returns the bins' centres from the data for using with the binned option
    fData.assign(fNBins, 0.0);
@@ -722,38 +679,23 @@ void TKDE::SetBinCountData() {
    }
 }
 
-void TKDE::Draw(const Option_t* option) {
-   TString plotOpt;
-   std::map<TString, TString> canvasNameOpt;
-   std::map<TString, TString> canvasTitleOpt;
-   std::map<TString, TString> drawOpt;
-   SetDrawOptions(option, plotOpt, canvasNameOpt, canvasTitleOpt, drawOpt);
-   if (plotOpt.Contains("bothdoublecanvas")) {
-      TCanvas* c1 = new TCanvas(canvasNameOpt["bothdoublecanvas"] + "_Estimate", canvasTitleOpt["bothdoublecanvas"] + " Estimate");
-      c1->cd(1);
-      DrawEstimate(drawOpt["estimate"]);
-      TCanvas* c2 = new TCanvas(canvasNameOpt["bothdoublecanvas"] + "_Error", canvasTitleOpt["bothdoublecanvas"] + " Error");
-      c2->cd(1);
-      DrawError(drawOpt["error"]);
-   } else if (plotOpt.Contains("bothsinglecanvas")) {
-      TCanvas* c1 = new TCanvas(canvasNameOpt["bothsinglecanvas"], canvasTitleOpt["bothsinglecanvas"]);
-      c1->Divide(2, 1);
-      c1->cd(1);
-      DrawEstimate(drawOpt["estimate"]);
-      c1->cd(2);
-      DrawError(drawOpt["error"]);
-   } else if (plotOpt.Contains("estimate")) {
-      TCanvas* c1 = new TCanvas(canvasNameOpt["estimate"], canvasTitleOpt["estimate"]);
-      c1->cd(1);
-      DrawEstimate(drawOpt["estimate"]);
-   } else if (plotOpt.Contains("error")){
-      TCanvas* c1 = new TCanvas(canvasNameOpt["error"], canvasTitleOpt["error"]);
-      c1->cd(1);
-      DrawError(drawOpt["error"]);
-   }
+void TKDE::Draw(const Option_t* opt) {
+   // Draws either the KDE functions or its errors
+   TString plotOpt = "";
+   TString drawOpt = "";
+   SetDrawOptions(opt, plotOpt, drawOpt);
+   if(gPad && !drawOpt.Contains("same"))
+      gPad->Clear();
+   if (plotOpt.Contains("errors"))
+      DrawErrors(drawOpt);
+   else if (plotOpt.Contains("confidenceinterval"))
+      DrawConfidenceInterval(drawOpt);
+   else
+      GetKDEFunction()->Draw(drawOpt);
 }
 
-void TKDE::DrawError(TString drawOpt) { // Prototype to improve
+void TKDE::DrawErrors(TString& drawOpt) {
+   // Draws a TGraphErrors for the KDE errors
    UInt_t n = 100;
    Double_t* x = new Double_t[n + 1];
    Double_t* ex = new Double_t[n + 1];
@@ -764,30 +706,24 @@ void TKDE::DrawError(TString drawOpt) { // Prototype to improve
       y[i] = (*this)(x[i]);
       ey[i] = this->GetError(x[i]);
    }
-   TGraphErrors* ge = new TGraphErrors(n,&x[0],&y[0],&ex[0],&ey[0]);
-   ge->SetTitle("Error");
+   TGraphErrors* ge = new TGraphErrors(n, &x[0], &y[0], &ex[0], &ey[0]);
+   ge->SetTitle("Errors");
    ge->Draw(drawOpt.Data());
 }
 
-void TKDE::DrawEstimate(TString drawOpt) {
-   Bool_t drawConfidenceInterval = kFALSE;
-   if (drawOpt.Contains("confidenceinterval")) {
-      drawConfidenceInterval = kTRUE;
-      drawOpt.Remove(drawOpt.Index("confidenceinterval"), (Ssiz_t)(TString("confidenceinterval").Length()));
-      drawOpt.Insert(0, "same");
-   }
-   GetKDEFunction()->Draw();
-   if (drawConfidenceInterval) {
-      TF1* upper = GetUpperFunction();
-      upper->SetLineColor(kBlue);
-      upper->Draw(drawOpt.Data());
-      TF1* lower = GetLowerFunction();
-      lower->SetLineColor(kRed);
-      lower->Draw(drawOpt.Data());
-   }
+void TKDE::DrawConfidenceInterval(TString& drawOpt) {
+   // Draws the KDE ant its confidence interval
+   GetKDEFunction()->Draw(drawOpt.Data());
+   TF1* upper = GetPDFUpperConfidenceInterval();
+   upper->SetLineColor(kBlue);
+   upper->Draw(("same" + drawOpt).Data());
+   TF1* lower = GetPDFLowerConfidenceInterval();
+   lower->SetLineColor(kRed);
+   lower->Draw(("same" + drawOpt).Data());
 }
 
 Double_t TKDE::GetFixedWeight() const {
+   // Returns the bandwidth for the non adaptive KDE
    Double_t result = -1.;
    if (fIteration == TKDE::kAdaptive) {
       this->Warning("GetFixedWeight()", "Fixed iteration option not enabled. Returning %f.", result);
@@ -798,6 +734,7 @@ Double_t TKDE::GetFixedWeight() const {
 }
 
 const Double_t *  TKDE::GetAdaptiveWeights() const {
+   // Returns the bandwidths for the adaptive KDE
    if (fIteration != TKDE::kAdaptive) {
       this->Warning("GetFixedWeight()", "Adaptive iteration option not enabled. Returning a NULL pointer");
       return 0;
@@ -807,10 +744,12 @@ const Double_t *  TKDE::GetAdaptiveWeights() const {
 }
 
 Double_t TKDE::TKernel::GetFixedWeight() const {
+   // Returns the bandwidth for the non adaptive KDE
    return fWeights[0];
 }
 
 const std::vector<Double_t> & TKDE::TKernel::GetAdaptiveWeights() const {
+   // Returns the bandwidth for the non adaptive KDE
    return fWeights;
 }
 

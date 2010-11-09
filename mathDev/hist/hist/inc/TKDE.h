@@ -12,20 +12,22 @@
 #define ROOT_TKDE
 
 #ifndef ROOT_Math_WrappedFunction
-#include "Math/WrappedFunction.h"
+   #include "Math/WrappedFunction.h"
 #endif
 
-#include<map>
+#ifndef ROOT_TNamed
+   #include "TNamed.h"
+#endif
 
-#include "TF1.h"
 #include "Math/Math.h"
+#include "TF1.h"
 
 /*
    Kernel Density Estimation class. The three main references are (1) "Scott DW, Multivariate Density Estimation.
 Theory, Practice and Visualization. New York: Wiley", (2) "Jann Ben - ETH Zurich, Switzerland -, Univariate kernel density estimation document for KDENS: Stata module for univariate kernel density estimation." and (3) "Hardle W, Muller M, Sperlich S, Werwatz A, Nonparametric and Semiparametric Models. Springer."
    The algorithm is briefly described in (4) "Cranmer KS, Kernel Estimation in High-Energy
 Physics. Computer Physics Communications 136:198-207,2001" - e-Print Archive: hep ex/0011057.
-   A binned version is also implemented to address the performance issue due to its data size dependance.
+   A binned version is also implemented to address the performance issue due to its data size dependence.
 */
 class TKDE : public TNamed  {
 public:
@@ -81,10 +83,10 @@ public:
    void SetTuneFactor(Double_t rho);
    void SetRange(Double_t xMin, Double_t xMax); // By default computed from the data
 
-   virtual void Draw(const Option_t* option = "Plot:BothDoubleCanvas+ConfidenceInterval;CanvasName:KDE_Plot;CanvasTitle:KDE Plot;Draw:APL");
+   virtual void Draw(const Option_t* option = "Plot:ConfidenceInterval;DrawOptions:L");
 
    Double_t operator()(Double_t x) const;
-   Double_t operator()(const Double_t* x, const Double_t* p=0) const;  // needed for  creating TF1
+   Double_t operator()(const Double_t* x, const Double_t* p=0) const;  // Needed for creating TF1
 
    Double_t GetValue(Double_t x) const { return (*this)(x); }
    Double_t GetError(Double_t x) const;
@@ -97,8 +99,8 @@ public:
    Double_t GetFixedWeight() const;
 
    TF1* GetFunction(UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
-   TF1* GetUpperFunction(Double_t confidenceLevel = 0.95, UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
-   TF1* GetLowerFunction(Double_t confidenceLevel = 0.95, UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
+//    TF1* GetUpperFunction(Double_t confidenceLevel = 0.95, UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
+//    TF1* GetLowerFunction(Double_t confidenceLevel = 0.95, UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
    TF1* GetApproximateBias(UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
 
    const Double_t * GetAdaptiveWeights() const;
@@ -106,10 +108,10 @@ public:
 
 private:
 
-   static const Double_t _2_PI_ROOT_INV; // (2*TMath::Pi())**-0.5
-   static const Double_t PI;             // TMath::Pi()
-   static const Double_t PI_OVER2;       // TMath::PiOver2()
-   static const Double_t PI_OVER4;       // TMath::PiOver4()
+   static const Double_t _2_PI_ROOT_INV;  // (2*TMath::Pi())**-0.5
+   static const Double_t PI;              // TMath::Pi()
+   static const Double_t PI_OVER2;        // TMath::PiOver2()
+   static const Double_t PI_OVER4;        // TMath::PiOver4()
    static const Double_t APPROX_GEO_MEAN; // Approximated geometric mean over pointwise data (the KDE function is substituted by the "real Gaussian" pdf) and proportional to sigma. Used directly when the mirroring is enabled, otherwise computed from the data
 
    TKDE(TKDE& kde);           // Disallowed copy constructor
@@ -215,15 +217,15 @@ private:
    void SetData(const Double_t* data);
    void InitFromNewData();
    void SetMirroredEvents();
-   void SetDrawOptions(const Option_t* option, TString& plotOpt, std::map<TString, TString> & canvasNameOpt, std::map<TString, TString>& canvasTitleOpt, std::map<TString, TString>& drawOpt);
-   void DrawError(TString drawOpt);
-   void DrawEstimate(TString drawOpt);
+   void SetDrawOptions(const Option_t* option, TString& plotOpt, TString& drawOpt);
+   void DrawErrors(TString& drawOpt);
+   void DrawConfidenceInterval(TString& drawOpt);
 
    TF1* GetKDEFunction(UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
    TF1* GetKDEApproximateBias(UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
    // The density to estimate should be at least twice differentiable.
-   TF1* GetPDFUpperConfidenceInterval(Double_t confidenceLevel, UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
-   TF1* GetPDFLowerConfidenceInterval(Double_t confidenceLevel, UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
+   TF1* GetPDFUpperConfidenceInterval(Double_t confidenceLevel = 0.95, UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
+   TF1* GetPDFLowerConfidenceInterval(Double_t confidenceLevel = 0.95, UInt_t npx = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
 
    ClassDef(TKDE, 1) // One dimensional semi-parametric Kernel Density Estimation
 
