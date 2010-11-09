@@ -140,16 +140,16 @@ void TMVAMultiClassGui( const char* fName = "TMVAMulticlass.root" )
 
    ActionButton( cbar,  
                  Form( "(%ia) Classifier Output Distributions (test sample)", ++ic ),
-                 Form( ".x mvas.C(\"%s\",0)", fName ),
+                 Form( ".x mvasMulticlass.C(\"%s\",0)", fName ),
                  "Plots the output of each classifier for the test data (macro mvas.C(...,0))",
                  buttonType, defaultRequiredClassifier );
 
    ActionButton( cbar,  
                  Form( "   (%ib) Classifier Output Distributions (test and training samples superimposed)   ", ic ),
-                 Form( ".x mvas.C(\"%s\",3)", fName ),
+                 Form( ".x mvasMulticlass.C(\"%s\",1)", fName ),
                  "Plots the output of each classifier for the test (histograms) and training (dots) data (macro mvas.C(...,3))",
                  buttonType, defaultRequiredClassifier );
-
+   /*
    ActionButton( cbar,  
                  Form( "(%ic) Classifier Probability Distributions (test sample)", ic ),
                  Form( ".x mvas.C(\"%s\",1)", fName ),
@@ -161,7 +161,7 @@ void TMVAMultiClassGui( const char* fName = "TMVAMulticlass.root" )
                  Form( ".x mvas.C(\"%s\",2)", fName ),
                  "Plots the Rarity of each classifier for the test data (macro mvas.C(...,2)) - background distribution should be uniform",
                  buttonType, defaultRequiredClassifier );
-
+   */
    ActionButton( cbar,  
                  Form( "(%ia) Classifier Cut Efficiencies", ++ic ),
                  Form( ".x mvaeffs.C+(\"%s\")", fName ),
