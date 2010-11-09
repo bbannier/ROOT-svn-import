@@ -70,6 +70,10 @@ void variablesMultiClass( TString fin = "TMVA.root", TString dirName = "InputVar
    std::vector<TString> varnames(TMVAGlob::GetInputVariableNames(dir));
    std::vector<TString> classnames(TMVAGlob::GetClassNames(dir));
 
+
+   std::vector<TString>::iterator variter = varnames.begin();
+   std::vector<TString>::iterator classiter = classnames.begin();
+
    /*
    std::vector<TString>::const_iterator variter = varnames.begin();
    std::cout << "Available variables:" << std::endl;
