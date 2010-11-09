@@ -1333,7 +1333,7 @@ void TMVA::Tools::TMVACitation( MsgLogger& logger, ECitation citType )
    switch (citType) {
 
    case kPlainText:
-      logger << "A.~Hoecker, P.~Speckmayer, J.~Stelzer, J.~Therhaag, E.~von Toerne, H.~Voss" << Endl;
+      logger << "A. Hoecker, P. Speckmayer, J. Stelzer, J. Therhaag, E. von Toerne, H. Voss" << Endl;
       logger << "\"TMVA - Toolkit for Multivariate Data Analysis\" PoS ACAT:040,2007. e-Print: physics/0703039" << Endl;
       break;
 

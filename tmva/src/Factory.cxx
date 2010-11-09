@@ -1627,16 +1627,24 @@ void TMVA::Factory::EvaluateAllMethods( void )
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTraining)->Write( "", TObject::kOverwrite );
 
 
+   
    Log() << kINFO << "  " << Endl;
-   Log() << kINFO << ". . . . . . . . . . PLEASE CITE THIS . . . . . . . . . . " << Endl;
-   Log() << kINFO << "=== plain text ===" << Endl;
+   Log() << gTools().Color("lightblue");
+   Log() << kINFO << "Thank you for using TMVA!";
+   Log() << gTools().Color("reset") << Endl;
+   Log() << kINFO << "---------------- PLEASE CITE THIS ----------------" << Endl;
+   Log() << kINFO << "=== plain text ===";
+   Log() << gTools().Color("lightblue") << Endl;
    gTools().TMVACitation( Log(), Tools::kPlainText );
-   Log() << kINFO << "  " << Endl;
-   Log() << kINFO << "=== LaTex ===" << Endl;
+   Log() << gTools().Color("reset") << Endl;
+   Log() << kINFO << "=== LaTeX ===";
+   Log() << gTools().Color("lightblue") << Endl;
    gTools().TMVACitation( Log(), Tools::kLaTeX );
-   Log() << kINFO << "  " << Endl;
-   Log() << kINFO << "=== BibTex ===" << Endl;
+   Log() << gTools().Color("reset") << Endl;
+   Log() << kINFO << "=== BibTeX ===";
+   Log() << gTools().Color("lightblue") << Endl;
    gTools().TMVACitation( Log(), Tools::kBibTeX );
+   Log() << gTools().Color("reset") << Endl;
    
 }
 
