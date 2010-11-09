@@ -19,6 +19,7 @@
 
 #include "DependentNodesTransform.h"
 
+#include <stdio.h>
 
 namespace cling {
 class MutableMemoryBuffer: public llvm::MemoryBuffer {
