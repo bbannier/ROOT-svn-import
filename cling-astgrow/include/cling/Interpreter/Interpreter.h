@@ -16,74 +16,76 @@
 // Forward declarations from CLANG
 //------------------------------------------------------------------------------
 namespace clang {
-class ASTConsumer;
-class CompilerInstance;
+  class ASTConsumer;
+  class CompilerInstance;
+  class PragmaNamespace;
 }
 
 namespace cling {
-
-class CIBuilder;
-class ExecutionContext;
-class IncrementalASTParser;
-
-//---------------------------------------------------------------------------
-//! Class for managing many translation units supporting automatic
-//! forward declarations and linking
-//---------------------------------------------------------------------------
-class Interpreter {
-public:
-
-   //---------------------------------------------------------------------
-   //! Constructor
-   //---------------------------------------------------------------------
-   Interpreter(const char* llvmdir = 0);
-
-   //---------------------------------------------------------------------
-   //! Destructor
-   //---------------------------------------------------------------------
-   virtual ~Interpreter();
-
-   int processLine(const std::string& input_line);
-
-   int loadFile(const std::string& filename,
-                const std::string* trailcode = 0,
-                bool allowSharedLib = true);
-
-   int executeFile(const std::string& filename);
-
-
-   bool setPrintAST(bool print = true) {
+  
+  class CIBuilder;
+  class ExecutionContext;
+  class IncrementalASTParser;
+  
+  //---------------------------------------------------------------------------
+  //! Class for managing many translation units supporting automatic
+  //! forward declarations and linking
+  //---------------------------------------------------------------------------
+  class Interpreter {
+  public:
+    
+    //---------------------------------------------------------------------
+    //! Constructor
+    //---------------------------------------------------------------------
+    Interpreter(const char* llvmdir = 0);
+    
+    //---------------------------------------------------------------------
+    //! Destructor
+    //---------------------------------------------------------------------
+    virtual ~Interpreter();
+    
+    int processLine(const std::string& input_line);
+    
+    int loadFile(const std::string& filename,
+                 const std::string* trailcode = 0,
+                 bool allowSharedLib = true);
+    
+    int executeFile(const std::string& filename);
+    
+    
+    bool setPrintAST(bool print = true) {
       bool prev = m_printAST;
       m_printAST = print;
       return prev;
-   }
+    }
+    
+    clang::CompilerInstance* getCI() const;
+    clang::CompilerInstance* createCI() const;
+    CIBuilder& getCIBuilder() const { return *m_CIBuilder.get(); }
+    
+    clang::PragmaNamespace& getPragmaHandler() const { return *m_PragmaHandler; }
 
-   clang::CompilerInstance* getCI() const;
-   clang::CompilerInstance* createCI() const;
-   CIBuilder& getCIBuilder() const { return *m_CIBuilder.get(); }
-
-private:
-   llvm::OwningPtr<cling::CIBuilder> m_CIBuilder; // our compiler intsance builder
-   llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
-  llvm::OwningPtr<IncrementalASTParser> m_IncrASTParser; // incremental AST and its parser
-  unsigned long long m_UniqueCounter; // number of generated call wrappers
-   bool m_printAST; // whether to print the AST to be processed
-
-private:
-
-   void createWrappedSrc(const std::string& src, std::string& wrapped,
-                         std::string& stmtFunc);
-
-   std::string createUniqueName();
-
-   clang::ASTConsumer* maybeGenerateASTPrinter() const;
-   clang::CompilerInstance* compileString(const std::string& srcCode);
-   clang::CompilerInstance* compileFile(const std::string& filename,
-                                        const std::string* trailcode = 0);
+  private:
+    llvm::OwningPtr<cling::CIBuilder> m_CIBuilder; // our compiler intsance builder
+    llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
+    llvm::OwningPtr<IncrementalASTParser> m_IncrASTParser; // incremental AST and its parser
+    clang::PragmaNamespace* m_PragmaHandler; // pragma cling ..., owned by Preprocessor
+    unsigned long long m_UniqueCounter; // number of generated call wrappers
+    bool m_printAST; // whether to print the AST to be processed
+    
+  private:
+    
+    void createWrappedSrc(const std::string& src, std::string& wrapped,
+                          std::string& stmtFunc);
+    
+    std::string createUniqueName();
+    
+    clang::ASTConsumer* maybeGenerateASTPrinter() const;
+    clang::CompilerInstance* compileString(const std::string& srcCode);
+    clang::CompilerInstance* compileFile(const std::string& filename,
+                                         const std::string* trailcode = 0);
+  };
   
-
-};
-
 } // namespace cling
 
 #endif // CLING_INTERPRETER_H
