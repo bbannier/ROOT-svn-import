@@ -16,6 +16,10 @@ namespace llvm {
    class LLVMContext;
 }
 
+namespace clang {
+  class PragmaHandler;
+}
+
 namespace cling {
 class CIBuilder {
 public:
