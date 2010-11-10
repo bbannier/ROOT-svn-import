@@ -58,7 +58,7 @@ void TMVA::ResultsMulticlass::SetValue( std::vector<Float_t>& value, Int_t ievt 
 
 
 //_______________________________________________________________________
-void  TMVA::ResultsMulticlass::CreateMulticlassHistos( TString prefix)
+void  TMVA::ResultsMulticlass::CreateMulticlassHistos( TString prefix, Int_t nbins)
 {
    Log() << kINFO << "Creating multiclass response histograms..." << Endl;
       
@@ -75,7 +75,7 @@ void  TMVA::ResultsMulticlass::CreateMulticlassHistos( TString prefix)
          TString name(Form("%s_%s_prob_for_%s",prefix.Data(),
                            dsi->GetClassInfo( jCls )->GetName().Data(),
                            dsi->GetClassInfo( iCls )->GetName().Data()));
-         histos.at(iCls).push_back(new TH1F(name,name,50,xmin,xmax));
+         histos.at(iCls).push_back(new TH1F(name,name,nbins,xmin,xmax));
       }
    }
 
