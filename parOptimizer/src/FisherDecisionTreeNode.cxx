@@ -115,14 +115,23 @@ TMVA::FisherDecisionTreeNode::FisherDecisionTreeNode(const TMVA::FisherDecisionT
 Bool_t TMVA::FisherDecisionTreeNode::GoesRight(const TMVA::Event & e) const
 {
    // test event if it decends the tree at this node to the right  
-   
-   Double_t fisher = this->GetFisherCoeff(fFisherCoeff.size()-1); // the offset
-   for (UInt_t ivar=0; ivar<fFisherCoeff.size()-1; ivar++)
-      fisher += this->GetFisherCoeff(ivar)*(e.GetValue(ivar));
 
-   Bool_t result = fisher > this->GetCutValue();
+   Bool_t result;
+   // first check if the fisher criterium is used or ordinary cuts:
+   if (GetNFisherCoeff() == 0){
+      
+      result = (e.GetValue(this->GetSelector()) > this->GetCutValue() );
 
-   if (fCutType == kTRUE) return result;
+   }else{
+      
+      Double_t fisher = this->GetFisherCoeff(fFisherCoeff.size()-1); // the offset
+      for (UInt_t ivar=0; ivar<fFisherCoeff.size()-1; ivar++)
+         fisher += this->GetFisherCoeff(ivar)*(e.GetValue(ivar));
+
+      result = fisher > this->GetCutValue();
+   }
+
+   if (fCutType == kTRUE) return result; //the cuts are selecting Signal ;
    else return !result;
    
 }
@@ -146,7 +155,8 @@ void TMVA::FisherDecisionTreeNode::Print(ostream& os) const
       << std::setprecision(6)
       << "NCoef: "  << this->GetNFisherCoeff();
    for (Int_t i=0; i< (Int_t) this->GetNFisherCoeff(); i++) { os << "fC"<<i<<": " << this->GetFisherCoeff(i);}
-   os << " cut: "   << this->GetCutValue() 
+   os << " ivar: "  << this->GetSelector()
+      << " cut: "   << this->GetCutValue() 
       << " cType: " << this->GetCutType() 
       << " s: "     << this->GetNSigEvents()
       << " b: "     << this->GetNBkgEvents()
@@ -177,7 +187,8 @@ void TMVA::FisherDecisionTreeNode::PrintRec(ostream& os) const
       << " "         << this->GetPos() 
       << "NCoef: "   << this->GetNFisherCoeff();
    for (Int_t i=0; i< (Int_t) this->GetNFisherCoeff(); i++) {os << "fC"<<i<<": " << this->GetFisherCoeff(i);}
-   os << " cut: "    << this->GetCutValue() 
+   os << " ivar: "   << this->GetSelector()
+      << " cut: "    << this->GetCutValue() 
       << " cType: "  << this->GetCutType() 
       << " s: "      << this->GetNSigEvents()
       << " b: "      << this->GetNBkgEvents()
@@ -212,32 +223,33 @@ void TMVA::FisherDecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Ver
       gTools().ReadAttr(node, Form("fC%d",i),  tmp          );
       this->SetFisherCoeff(i,tmp);
    }
+   gTools().ReadAttr(node, "IVar",  fSelector               );
    gTools().ReadAttr(node, "Cut",   fCutValue               );
    gTools().ReadAttr(node, "cType", fCutType                );
-   gTools().ReadAttr(node, "nS",    tempNSigEvents             );
-   gTools().ReadAttr(node, "nB",    tempNBkgEvents             );
-   gTools().ReadAttr(node, "nEv",   tempNEvents                );
-   gTools().ReadAttr(node, "nSuw",  tempNSigEvents_unweighted  );
-   gTools().ReadAttr(node, "nBuw",  tempNBkgEvents_unweighted  );
-   gTools().ReadAttr(node, "nEvuw", tempNEvents_unweighted     );
-   gTools().ReadAttr(node, "sepI",  tempSeparationIndex        );
-   gTools().ReadAttr(node, "sepG",  tempSeparationGain         );
+   // gTools().ReadAttr(node, "nS",    tempNSigEvents             );
+   // gTools().ReadAttr(node, "nB",    tempNBkgEvents             );
+   // gTools().ReadAttr(node, "nEv",   tempNEvents                );
+   // gTools().ReadAttr(node, "nSuw",  tempNSigEvents_unweighted  );
+   // gTools().ReadAttr(node, "nBuw",  tempNBkgEvents_unweighted  );
+   // gTools().ReadAttr(node, "nEvuw", tempNEvents_unweighted     );
+   // gTools().ReadAttr(node, "sepI",  tempSeparationIndex        );
+   // gTools().ReadAttr(node, "sepG",  tempSeparationGain         );
    gTools().ReadAttr(node, "res",   fResponse               );
    gTools().ReadAttr(node, "rms",   fRMS                    );
    gTools().ReadAttr(node, "nType", fNodeType               );
    gTools().ReadAttr(node, "purity",fPurity                 );
-   gTools().ReadAttr(node, "CC",    tempCC                  );
-   if (fTrainInfo){
-      SetNSigEvents(tempNSigEvents);
-      SetNBkgEvents(tempNBkgEvents);
-      SetNEvents(tempNEvents);
-      SetNSigEvents_unweighted(tempNSigEvents_unweighted);
-      SetNBkgEvents_unweighted(tempNBkgEvents_unweighted);
-      SetNEvents_unweighted(tempNEvents_unweighted);
-      SetSeparationIndex(tempSeparationIndex);
-      SetSeparationGain(tempSeparationGain);
-      SetCC(tempCC);  
-   }
+   //   gTools().ReadAttr(node, "CC",    tempCC                  );
+   // if (fTrainInfo){
+   //    SetNSigEvents(tempNSigEvents);
+   //    SetNBkgEvents(tempNBkgEvents);
+   //    SetNEvents(tempNEvents);
+   //    SetNSigEvents_unweighted(tempNSigEvents_unweighted);
+   //    SetNBkgEvents_unweighted(tempNBkgEvents_unweighted);
+   //    SetNEvents_unweighted(tempNEvents_unweighted);
+   //    SetSeparationIndex(tempSeparationIndex);
+   //    SetSeparationGain(tempSeparationGain);
+   //    SetCC(tempCC);  
+   // }
 }
  
 
@@ -248,21 +260,22 @@ void TMVA::FisherDecisionTreeNode::AddAttributesToNode(void* node) const
    gTools().AddAttr(node, "NCoef", GetNFisherCoeff());
    for (Int_t i=0; i< (Int_t) this->GetNFisherCoeff(); i++) 
       gTools().AddAttr(node, Form("fC%d",i),  this->GetFisherCoeff(i));
+   gTools().AddAttr(node, "IVar",   GetSelector());
    gTools().AddAttr(node, "Cut",   GetCutValue());
    gTools().AddAttr(node, "cType", GetCutType());
-   gTools().AddAttr(node, "nS",    GetNSigEvents());
-   gTools().AddAttr(node, "nB",    GetNBkgEvents());
-   gTools().AddAttr(node, "nEv",   GetNEvents());
-   gTools().AddAttr(node, "nSuw",  GetNSigEvents_unweighted());
-   gTools().AddAttr(node, "nBuw",  GetNBkgEvents_unweighted());
-   gTools().AddAttr(node, "nEvuw", GetNEvents_unweighted());
-   gTools().AddAttr(node, "sepI",  GetSeparationIndex());
-   gTools().AddAttr(node, "sepG",  GetSeparationGain());
+   // gTools().AddAttr(node, "nS",    GetNSigEvents());
+   // gTools().AddAttr(node, "nB",    GetNBkgEvents());
+   // gTools().AddAttr(node, "nEv",   GetNEvents());
+   // gTools().AddAttr(node, "nSuw",  GetNSigEvents_unweighted());
+   // gTools().AddAttr(node, "nBuw",  GetNBkgEvents_unweighted());
+   // gTools().AddAttr(node, "nEvuw", GetNEvents_unweighted());
+   // gTools().AddAttr(node, "sepI",  GetSeparationIndex());
+   // gTools().AddAttr(node, "sepG",  GetSeparationGain());
    gTools().AddAttr(node, "res",   GetResponse());
    gTools().AddAttr(node, "rms",   GetRMS());
    gTools().AddAttr(node, "nType", GetNodeType());
    gTools().AddAttr(node, "purity",GetPurity());
-   gTools().AddAttr(node, "CC",    (GetCC() > 10000000000000.)?100000.:GetCC());
+   //   gTools().AddAttr(node, "CC",    (GetCC() > 10000000000000.)?100000.:GetCC());
    
 }
 //_______________________________________________________________________

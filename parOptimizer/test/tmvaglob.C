@@ -91,17 +91,17 @@ namespace TMVAGlob {
       //signal
       // const Int_t FillColor__S = 38 + 150; // change of Color Scheme in ROOT-5.16.
       // convince yourself with gROOT->GetListOfColors()->Print()
-      Int_t FillColor__S = c_SignalFill;
-      Int_t FillStyle__S = 1001;
-      Int_t LineColor__S = c_SignalLine;
-      Int_t LineWidth__S = 2;
+      //Int_t FillColor__S = c_SignalFill;
+      //Int_t FillStyle__S = 1001;
+      //Int_t LineColor__S = c_SignalLine;
+      //Int_t LineWidth__S = 2;
 
       // background
       //Int_t icolor = UsePaperStyle ? 2 + 100 : 2;
-      Int_t FillColor__B = c_BackgroundFill;
-      Int_t FillStyle__B = 3554;
-      Int_t LineColor__B = c_BackgroundLine;
-      Int_t LineWidth__B = 2;
+      //Int_t FillColor__B = c_BackgroundFill;
+      //Int_t FillStyle__B = 3554;
+      //Int_t LineColor__B = c_BackgroundLine;
+      //Int_t LineWidth__B = 2;
 
       Int_t FillColors[10] = {38,2,3,4,5,6,7,8,9,11};
       Int_t LineColors[10] = {4,2,3,38,5,6,7,8,9,11};
@@ -470,12 +470,6 @@ namespace TMVAGlob {
       return noVars;
    }
 
-   Int_t GetNumberOfInputVariablesMultiClass( TDirectory *dir ){
-      std::vector<TString> names(GetInputVariableNames(dir));
-      return names.end() - names.begin();
-   }
-   
-
    std::vector<TString> GetInputVariableNames(TDirectory *dir )
    {
       TIter next(dir->GetListOfKeys());
@@ -503,6 +497,11 @@ namespace TMVAGlob {
       return names;
    }
 
+   Int_t GetNumberOfInputVariablesMultiClass( TDirectory *dir ){
+      std::vector<TString> names(GetInputVariableNames(dir));
+      return names.end() - names.begin();
+   }
+   
    std::vector<TString> GetClassNames(TDirectory *dir )
    {      
       

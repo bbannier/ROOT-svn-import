@@ -101,6 +101,7 @@ int main( int argc, char** argv )
    Use["SVM"]             = 1;
    // ---
    Use["BDT"]             = 1;
+   Use["BDTF"]            = 1;
    Use["BDTD"]            = 0;
    Use["BDTG"]            = 1;
    Use["BDTB"]            = 0;
@@ -166,16 +167,19 @@ int main( int argc, char** argv )
    // Define the input variables that shall be used for the MVA training
    // note that you may also use variable expressions, such as: "3*var1/var2*abs(var3)"
    // [all types of expressions that can also be parsed by TTree::Draw( "expression" )]
-   factory->AddVariable( "myvar1 := var1+var2", 'F' );
-   factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
-   factory->AddVariable( "var3",                "Variable 3", "units", 'F' );
-   factory->AddVariable( "var4",                "Variable 4", "units", 'F' );
+    factory->AddVariable( "myvar1 := var1+var2", 'F' );
+    factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
+    factory->AddVariable( "var3",                "Variable 3", "units", 'F' );
+    factory->AddVariable( "var4",                "Variable 4", "units", 'F' );
+
+   // factory->AddVariable( "var0",                "Variable 3", "units", 'F' );
+   // factory->AddVariable( "var1",                "Variable 4", "units", 'F' );
 
    // You can add so-called "Spectator variables", which are not used in the MVA training,
    // but will appear in the final "TestTree" produced by TMVA. This TestTree will contain the
    // input variables, the response values of all trained MVAs, and the spectator variables
-   factory->AddSpectator( "spec1:=var1*2",  "Spectator 1", "units" );
-   factory->AddSpectator( "spec2:=var1*3",  "Spectator 2", "units" );
+   // factory->AddSpectator( "spec1:=var1*2",  "Spectator 1", "units" );
+   // factory->AddSpectator( "spec2:=var1*3",  "Spectator 2", "units" );
 
    // read training and test data
    if (ReadDataFromAsciiIFormat) {
@@ -401,9 +405,31 @@ int main( int argc, char** argv )
       factory->BookMethod( TMVA::Types::kBDT, "BDTG",
                            "!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:SeparationType=GiniIndex:nCuts=20:NNodesMax=5" );
 
+
    if (Use["BDT"])  // Adaptive Boost
-      factory->BookMethod( TMVA::Types::kBDT, "BDT",
-                           "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
+      factory->BookMethod( TMVA::Types::kBDT, "BDT20",
+                           "!H:!V:NTrees=20:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
+
+   if (Use["BDTF"])  // Adaptive Boost
+      factory->BookMethod( TMVA::Types::kBDT, "BDTF20",
+                           "!H:!V:NTrees=20:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:UseFisherCuts:MinLinCorrForFisher=.4" );
+
+
+   if (Use["BDT"])  // Adaptive Boost
+      factory->BookMethod( TMVA::Types::kBDT, "BDT200",
+                           "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
+
+   if (Use["BDTF"])  // Adaptive Boost
+      factory->BookMethod( TMVA::Types::kBDT, "BDTF200",
+                           "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:UseFisherCuts:MinLinCorrForFisher=.4" );
+
+   if (Use["BDT"])  // Adaptive Boost
+      factory->BookMethod( TMVA::Types::kBDT, "BDT400",
+                           "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
+
+   if (Use["BDTF"])  // Adaptive Boost
+      factory->BookMethod( TMVA::Types::kBDT, "BDTF400",
+                           "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:UseFisherCuts:MinLinCorrForFisher=.4" );
 
    if (Use["BDTB"]) // Bagging
       factory->BookMethod( TMVA::Types::kBDT, "BDTB",

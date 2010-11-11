@@ -85,7 +85,6 @@ namespace TMVA {
       // the constructur needed for constructing the decision tree via training with events
       DecisionTree( SeparationBase *sepType, Int_t minSize,
                     Int_t nCuts,
-                    Bool_t useFisherCuts, 
                     UInt_t cls =0,
                     Bool_t randomisedTree=kFALSE, Int_t useNvars=0, Bool_t usePoissonNvars=kFALSE, 
                     UInt_t nNodesMax=999999, UInt_t nMaxDepth=9999999, 
@@ -113,7 +112,8 @@ namespace TMVA {
       Double_t TrainNodeFast( const EventList & eventSample,  DecisionTreeNode *node );
       Double_t TrainNodeFisher( const EventList & eventSample,  FisherDecisionTreeNode *node );
       Double_t TrainNodeFull( const EventList & eventSample,  DecisionTreeNode *node );
-      void    GetRandomisedVariables(Bool_t *useVariable, Int_t *variableMap, UInt_t & nVars);
+      void    GetRandomisedVariables(Bool_t *useVariable, UInt_t *variableMap, UInt_t & nVars);
+      std::vector<Double_t>  GetFisherCoefficients(const EventList &eventSample, UInt_t nFisherVars, UInt_t *mapVarInFisher);
     
       // fill at tree with a given structure already (just see how many signa/bkgr
       // events end up in each node
@@ -190,7 +190,9 @@ namespace TMVA {
       Bool_t DoRegression() const { return fAnalysisType == Types::kRegression; }
       void SetAnalysisType (Types::EAnalysisType t) { fAnalysisType = t;}
       Types::EAnalysisType GetAnalysisType ( void ) { return fAnalysisType;}
-      void SetUseFisherCuts(Bool_t t) { fUseFisherCuts = t;}
+      inline void SetUseFisherCuts(Bool_t t=kTRUE)  { fUseFisherCuts = t;}
+      inline void SetMinLinCorrForFisher(Double_t min){fMinLinCorrForFisher = min;}
+
 
    private:
       // utility functions
@@ -204,6 +206,8 @@ namespace TMVA {
       UInt_t    fNvars;          // number of variables used to separate S and B
       Int_t     fNCuts;          // number of grid point in variable cut scans
       Bool_t    fUseFisherCuts;  // use multivariate splits using the Fisher criterium
+      Double_t  fMinLinCorrForFisher; // the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting
+
       SeparationBase *fSepType;  // the separation crition
       RegressionVariance *fRegType;  // the separation crition used in Regression
     
