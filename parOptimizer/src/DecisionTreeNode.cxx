@@ -147,11 +147,23 @@ TMVA::DecisionTreeNode::~DecisionTreeNode(){
 Bool_t TMVA::DecisionTreeNode::GoesRight(const TMVA::Event & e) const
 {
    // test event if it decends the tree at this node to the right
-   Bool_t result(e.GetValue(this->GetSelector()) > this->GetCutValue() );
+   Bool_t result;
+   // first check if the fisher criterium is used or ordinary cuts:
+   if (GetNFisherCoeff() == 0){
+      
+      result = (e.GetValue(this->GetSelector()) > this->GetCutValue() );
+
+   }else{
+      
+      Double_t fisher = this->GetFisherCoeff(fFisherCoeff.size()-1); // the offset
+      for (UInt_t ivar=0; ivar<fFisherCoeff.size()-1; ivar++)
+         fisher += this->GetFisherCoeff(ivar)*(e.GetValue(ivar));
+
+      result = fisher > this->GetCutValue();
+   }
 
    if (fCutType == kTRUE) return result; //the cuts are selecting Signal ;
    else return !result;
-
 }
 
 //_______________________________________________________________________
@@ -186,10 +198,13 @@ void TMVA::DecisionTreeNode::SetPurity( void )
 void TMVA::DecisionTreeNode::Print(ostream& os) const
 {
    //print the node
-   os << "< ***  "  << std::endl;
+   os << "< ***  "  << std::endl; 
    os << " d: "     << this->GetDepth()
-      << " ivar: "  << this->GetSelector()
-      << " cut: "   << this->GetCutValue()
+      << std::setprecision(6)
+      << "NCoef: "  << this->GetNFisherCoeff();
+   for (Int_t i=0; i< (Int_t) this->GetNFisherCoeff(); i++) { os << "fC"<<i<<": " << this->GetFisherCoeff(i);}
+   os << " ivar: "  << this->GetSelector()
+      << " cut: "   << this->GetCutValue() 
       << " cType: " << this->GetCutType()
       << " s: "     << this->GetNSigEvents()
       << " b: "     << this->GetNBkgEvents()
@@ -218,7 +233,9 @@ void TMVA::DecisionTreeNode::PrintRec(ostream& os) const
    os << this->GetDepth()
       << std::setprecision(6)
       << " "         << this->GetPos()
-      << " ivar: "   << this->GetSelector()
+      << "NCoef: "   << this->GetNFisherCoeff();
+   for (Int_t i=0; i< (Int_t) this->GetNFisherCoeff(); i++) {os << "fC"<<i<<": " << this->GetFisherCoeff(i);}
+   os << " ivar: "   << this->GetSelector()
       << " cut: "    << this->GetCutValue()
       << " cType: "  << this->GetCutType()
       << " s: "      << this->GetNSigEvents()
@@ -418,10 +435,17 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    Float_t tempNSigEvents,tempNBkgEvents,tempNEvents,tempNSigEvents_unweighted,  tempNBkgEvents_unweighted,tempNEvents_unweighted, tempSeparationIndex, tempSeparationGain;  
    Double_t tempCC;
 
-   // read attribute from xml
+   Int_t nCoef;
+   gTools().ReadAttr(node, "NCoef",  nCoef                  );
+   this->SetNFisherCoeff(nCoef);
+   Double_t tmp;
+   for (Int_t i=0; i< (Int_t) this->GetNFisherCoeff(); i++) {
+      gTools().ReadAttr(node, Form("fC%d",i),  tmp          );
+      this->SetFisherCoeff(i,tmp);
+   }
    gTools().ReadAttr(node, "IVar",  fSelector               );
    gTools().ReadAttr(node, "Cut",   fCutValue               );
-   gTools().ReadAttr(node, "cType", fCutType                );
+   gTools().ReadAttr(node, "cType", fCutType                );               
    // gTools().ReadAttr(node, "nS",    tempNSigEvents             );
    // gTools().ReadAttr(node, "nB",    tempNBkgEvents             );
    // gTools().ReadAttr(node, "nEv",   tempNEvents                );
@@ -436,6 +460,8 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    if(gTools().HasAttr(node, "purity")) {
       gTools().ReadAttr(node, "purity",fPurity );
    } else {
+      gTools().ReadAttr(node, "nS",    tempNSigEvents             );
+      gTools().ReadAttr(node, "nB",    tempNBkgEvents             );
       fPurity = tempNSigEvents / (tempNSigEvents + tempNBkgEvents);
    }
    // gTools().ReadAttr(node, "CC",    tempCC                  );
@@ -457,6 +483,10 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
 void TMVA::DecisionTreeNode::AddAttributesToNode(void* node) const
 {
    // add attribute to xml
+   gTools().AddAttr(node, "NCoef", GetNFisherCoeff());
+   for (Int_t i=0; i< (Int_t) this->GetNFisherCoeff(); i++) 
+      gTools().AddAttr(node, Form("fC%d",i),  this->GetFisherCoeff(i));
+
    gTools().AddAttr(node, "IVar",  GetSelector());
    gTools().AddAttr(node, "Cut",   GetCutValue());
    gTools().AddAttr(node, "cType", GetCutType());
@@ -473,6 +503,14 @@ void TMVA::DecisionTreeNode::AddAttributesToNode(void* node) const
    gTools().AddAttr(node, "nType", GetNodeType());
    gTools().AddAttr(node, "purity",GetPurity());
    //   gTools().AddAttr(node, "CC",    (GetCC() > 10000000000000.)?100000.:GetCC());
+}
+
+//_______________________________________________________________________
+void  TMVA::DecisionTreeNode::SetFisherCoeff(Int_t ivar, Double_t coeff)
+{
+   // set fisher coefficients
+   if ((Int_t) fFisherCoeff.size()<ivar+1) fFisherCoeff.resize(ivar+1) ; 
+   fFisherCoeff[ivar]=coeff;      
 }
 
 //_______________________________________________________________________

@@ -67,7 +67,6 @@
 #include "TMVA/MsgLogger.h"
 #include "TMVA/DecisionTree.h"
 #include "TMVA/DecisionTreeNode.h"
-#include "TMVA/FisherDecisionTreeNode.h"
 #include "TMVA/BinarySearchTree.h"
 
 #include "TMVA/Tools.h"
@@ -193,8 +192,7 @@ TMVA::DecisionTree::DecisionTree( const DecisionTree &d ):
 {
    // copy constructor that creates a true copy, i.e. a completely independent tree
    // the node copy will recursively copy all the nodes
-   if (fUseFisherCuts) this->SetRoot( new TMVA::FisherDecisionTreeNode ( *((FisherDecisionTreeNode*)(d.GetRoot())) ) );
-   else                this->SetRoot( new TMVA::DecisionTreeNode ( *((DecisionTreeNode*)(d.GetRoot())) ) );
+   this->SetRoot( new TMVA::DecisionTreeNode ( *((DecisionTreeNode*)(d.GetRoot())) ) );
    this->SetParentTreeInNodes();
    fNNodes = d.fNNodes;
 }
@@ -255,8 +253,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
    if (node==NULL) {
       IsRootNode = kTRUE;
       //start with the root node
-      if (fUseFisherCuts) node = new TMVA::FisherDecisionTreeNode(); 
-      else node = new TMVA::DecisionTreeNode();
+      node = new TMVA::DecisionTreeNode();
       fNNodes = 1;
       this->SetRoot(node);
       // have to use "s" for start as "r" for "root" would be the same as "r" for "right"
@@ -350,8 +347,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
        && s!=0 && b !=0 ) {
       Double_t separationGain;
       if (fNCuts > 0)
-         if (fUseFisherCuts) separationGain = this->TrainNodeFisher(eventSample, dynamic_cast<FisherDecisionTreeNode*>( node ));
-         else                separationGain = this->TrainNodeFast(eventSample, node);
+         separationGain = this->TrainNodeFast(eventSample, node);
       else
          separationGain = this->TrainNodeFull(eventSample, node);
 
@@ -359,8 +355,6 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
          /// if (separationGain < 0.00000001) { // we could not gain anything, e.g. all events are in one bin,
          // no cut can actually do anything to improve the node
          // hence, naturally, the current node is a leaf node
-
-         std::cout << "SeparationGain almost zero --> stop" << std::endl;
          if (DoRegression()) {
             node->SetSeparationIndex(fRegType->GetSeparationIndex(s+b,target,target2));
             node->SetResponse(target/(s+b));
@@ -402,16 +396,12 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
          }
 
          // continue building daughter nodes for the left and the right eventsample
-         TMVA::DecisionTreeNode *rightNode;
-         if (fUseFisherCuts) rightNode = new TMVA::FisherDecisionTreeNode(node,'r');
-         else rightNode = new TMVA::DecisionTreeNode(node,'r');
+         TMVA::DecisionTreeNode *rightNode = new TMVA::DecisionTreeNode(node,'r');
          fNNodes++;
          rightNode->SetNEvents(nRight);
          rightNode->SetNEvents_unweighted(rightSample.size());
 
-         TMVA::DecisionTreeNode *leftNode;
-         if (fUseFisherCuts) leftNode = new TMVA::FisherDecisionTreeNode(node,'l');
-         else leftNode = new TMVA::DecisionTreeNode(node,'l');
+         TMVA::DecisionTreeNode *leftNode = new TMVA::DecisionTreeNode(node,'l');
 
          fNNodes++;
          leftNode->SetNEvents(nLeft);
@@ -817,258 +807,8 @@ TMVA::Node* TMVA::DecisionTree::GetNode( ULong_t sequence, UInt_t depth )
 
 
 //_______________________________________________________________________
-Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSample,
-                                           TMVA::DecisionTreeNode *node )
-{
-   // Decide how to split a node using one of the variables that gives
-   // the best separation of signal/background. In order to do this, for each 
-   // variable a scan of the different cut values in a grid (grid = fNCuts) is 
-   // performed and the resulting separation gains are compared.
-
-   Double_t separationGain = -1, sepTmp;
-   Double_t cutValue=-999;
-   Int_t mxVar=-1, cutIndex=0;
-   Bool_t cutType=kTRUE;
-   Double_t  nTotS, nTotB;
-   Int_t     nTotS_unWeighted, nTotB_unWeighted; 
-   UInt_t nevents = eventSample.size();
-
-  
-   const UInt_t nBins = fNCuts+1;
-   UInt_t cNvars = fNvars;
-
-   Double_t** nSelS = new Double_t* [cNvars];
-   Double_t** nSelB = new Double_t* [cNvars];
-   Double_t** nSelS_unWeighted = new Double_t* [cNvars];
-   Double_t** nSelB_unWeighted = new Double_t* [cNvars];
-   Double_t** target = new Double_t* [cNvars];
-   Double_t** target2 = new Double_t* [cNvars];
-   Double_t** cutValues = new Double_t* [cNvars];
-
-   for (UInt_t i=0; i<fNvars; i++) {
-      nSelS[i] = new Double_t [nBins];
-      nSelB[i] = new Double_t [nBins];
-      nSelS_unWeighted[i] = new Double_t [nBins];
-      nSelB_unWeighted[i] = new Double_t [nBins];
-      target[i] = new Double_t [nBins];
-      target2[i] = new Double_t [nBins];
-      cutValues[i] = new Double_t [nBins];
-   }
-
-   Double_t *xmin = new Double_t[cNvars]; 
-   Double_t *xmax = new Double_t[cNvars];
-
-   Bool_t *useVariable = new Bool_t[fNvars];   // for performance reasons instead of vector<Bool_t> useVariable(fNvars);
-   UInt_t *mapVariable = new UInt_t[fNvars];   // map the subset of variables used in randomised trees to the original variable number (used in the Event() ) 
-
-   for (UInt_t ivar=0; ivar < fNvars; ivar++) {
-      useVariable[ivar]=kFALSE;
-      xmin[ivar]=node->GetSampleMin(ivar);
-      xmax[ivar]=node->GetSampleMax(ivar);
-      
-      for (UInt_t ibin=0; ibin<nBins; ibin++) {
-         nSelS[ivar][ibin]=0;
-         nSelB[ivar][ibin]=0;
-         nSelS_unWeighted[ivar][ibin]=0;
-         nSelB_unWeighted[ivar][ibin]=0;
-         target[ivar][ibin]=0;
-         target2[ivar][ibin]=0;
-         cutValues[ivar][ibin]=0;
-      }
-   }
-
-   if (fRandomisedTree) { // choose for each node splitting a random subset of variables to choose from
-      GetRandomisedVariables(useVariable,mapVariable,cNvars);
-   } 
-   else {
-      for (UInt_t ivar=0; ivar < fNvars; ivar++) {
-         useVariable[ivar] = kTRUE;
-         mapVariable[ivar] = ivar;
-      }
-   }
-
-   for (UInt_t ivar=0; ivar < fNvars; ivar++) {
-      if ( useVariable[ivar] ) {
-         
-         //set the grid for the cut scan on the variables like this:
-         // 
-         //  |       |        |         |         |   ...      |        |  
-         // xmin                                                       xmax
-         //
-         // cut      0        1         2         3   ...     fNCuts-1 (counting from zero)
-         // bin  0       1         2         3       .....      nBins-1=fNCuts (counting from zero)
-         // --> nBins = fNCuts+1
-         // (NOTE, the cuts at xmin or xmax would just give the whole sample and
-         //  hence can be safely omitted
-         
-         Double_t istepSize =( xmax[ivar] - xmin[ivar] ) / Double_t(nBins);
-         for (Int_t icut=0; icut<fNCuts; icut++) {
-            cutValues[ivar][icut]=xmin[ivar]+(Double_t(icut+1))*istepSize;
-         }
-      }
-   }
-  
-   nTotS=0; nTotB=0;
-   nTotS_unWeighted=0; nTotB_unWeighted=0;   
-   for (UInt_t iev=0; iev<nevents; iev++) {
-      Double_t eventWeight =  eventSample[iev]->GetWeight(); 
-      if (eventSample[iev]->GetClass() == fClass) {
-         nTotS+=eventWeight;
-         nTotS_unWeighted++;
-      }
-      else {
-         nTotB+=eventWeight;
-         nTotB_unWeighted++;
-      }
-      
-      Int_t iBin=-1;
-      for (UInt_t ivar=0; ivar < fNvars; ivar++) {
-         // now scan trough the cuts for each varable and find which one gives
-         // the best separationGain at the current stage.
-         if ( useVariable[ivar] ) {
-            Double_t eventData = eventSample[iev]->GetValue(ivar); 
-            // "maximum" is nbins-1 (the "-1" because we start counting from 0 !!
-            iBin = TMath::Min(Int_t(nBins-1),TMath::Max(0,int (nBins*(eventData-xmin[ivar])/(xmax[ivar]-xmin[ivar]) ) ));
-            if (eventSample[iev]->GetClass() == fClass) {
-               nSelS[ivar][iBin]+=eventWeight;
-               nSelS_unWeighted[ivar][iBin]++;
-            } 
-            else {
-               nSelB[ivar][iBin]+=eventWeight;
-               nSelB_unWeighted[ivar][iBin]++;
-            }
-            if (DoRegression()) {
-               target[ivar][iBin] +=eventWeight*eventSample[iev]->GetTarget(0);
-               target2[ivar][iBin]+=eventWeight*eventSample[iev]->GetTarget(0)*eventSample[iev]->GetTarget(0);
-            }
-         }
-      }
-   }
-   // now turn the "histogram" into a cummulative distribution
-   for (UInt_t ivar=0; ivar < fNvars; ivar++) {
-      if (useVariable[ivar]) {
-         for (UInt_t ibin=1; ibin < nBins; ibin++) {
-            nSelS[ivar][ibin]+=nSelS[ivar][ibin-1];
-            nSelS_unWeighted[ivar][ibin]+=nSelS_unWeighted[ivar][ibin-1];
-            nSelB[ivar][ibin]+=nSelB[ivar][ibin-1];
-            nSelB_unWeighted[ivar][ibin]+=nSelB_unWeighted[ivar][ibin-1];
-            if (DoRegression()) {
-               target[ivar][ibin] +=target[ivar][ibin-1] ;
-               target2[ivar][ibin]+=target2[ivar][ibin-1];
-            }
-         }
-         if (nSelS_unWeighted[ivar][nBins-1] +nSelB_unWeighted[ivar][nBins-1] != eventSample.size()) {
-            Log() << kFATAL << "Helge, you have a bug ....nSelS_unw..+nSelB_unw..= "
-                  << nSelS_unWeighted[ivar][nBins-1] +nSelB_unWeighted[ivar][nBins-1] 
-                  << " while eventsample size = " << eventSample.size()
-                  << Endl;
-         }
-         double lastBins=nSelS[ivar][nBins-1] +nSelB[ivar][nBins-1];
-         double totalSum=nTotS+nTotB;
-         if (TMath::Abs(lastBins-totalSum)/totalSum>0.01) {
-            Log() << kFATAL << "Helge, you have another bug ....nSelS+nSelB= "
-                  << lastBins
-                  << " while total number of events = " << totalSum
-                  << Endl;
-         }
-      }
-   }
-   
-   // now select the optimal cuts for each varable and find which one gives
-   // the best separationGain at the current stage
-   for (UInt_t ivar=0; ivar < fNvars; ivar++) {
-      if (useVariable[ivar]) {
-         for (UInt_t iBin=0; iBin<nBins-1; iBin++) { // the last bin contains "all events" -->skip
-            // the separationGain is defined as the various indices (Gini, CorssEntropy, e.t.c)
-            // calculated by the "SamplePurities" fom the branches that would go to the
-            // left or the right from this node if "these" cuts were used in the Node:
-            // hereby: nSelS and nSelB would go to the right branch
-            //        (nTotS - nSelS) + (nTotB - nSelB)  would go to the left branch;
-
-            // only allow splits where both daughter nodes match the specified miniumum number
-            // for this use the "unweighted" events, as you are interested in statistically 
-            // significant splits, which is determined by the actual number of entries
-            // for a node, rather than the sum of event weights.
-
-            Double_t sl = nSelS_unWeighted[ivar][iBin];
-            Double_t bl = nSelB_unWeighted[ivar][iBin];
-            Double_t s  = nTotS_unWeighted;
-            Double_t b  = nTotB_unWeighted;
-            Double_t sr = s-sl;
-            Double_t br = b-bl;
-            if ( (sl+bl)>=fMinSize && (sr+br)>=fMinSize ) {
-
-               if (DoRegression()) {
-                  sepTmp = fRegType->GetSeparationGain(nSelS[ivar][iBin]+nSelB[ivar][iBin], 
-                                                       target[ivar][iBin],target2[ivar][iBin],
-                                                       nTotS+nTotB,
-                                                       target[ivar][nBins-1],target2[ivar][nBins-1]);
-               } else {
-                  sepTmp = fSepType->GetSeparationGain(nSelS[ivar][iBin], nSelB[ivar][iBin], nTotS, nTotB);
-               }
-               if (separationGain < sepTmp) {
-                  separationGain = sepTmp;
-                  mxVar = ivar;
-                  cutIndex = iBin;
-                  if (cutIndex >= fNCuts) Log()<<kFATAL<<"ibin for cut " << iBin << Endl; 
-               }
-            }
-         }
-      }
-   }
-   
-   if (DoRegression()) {
-      node->SetSeparationIndex(fRegType->GetSeparationIndex(nTotS+nTotB,target[0][nBins-1],target2[0][nBins-1]));
-      node->SetResponse(target[0][nBins-1]/(nTotS+nTotB));
-      node->SetRMS(sqrt(target2[0][nBins-1]/(nTotS+nTotB) - target[0][nBins-1]/(nTotS+nTotB)*target[0][nBins-1]/(nTotS+nTotB)));
-   }
-   else {
-      node->SetSeparationIndex(fSepType->GetSeparationIndex(nTotS,nTotB));
-   }
-   if (mxVar >= 0) { 
-      if (nSelS[mxVar][cutIndex]/nTotS > nSelB[mxVar][cutIndex]/nTotB) cutType=kTRUE;
-      else cutType=kFALSE;
-      cutValue = cutValues[mxVar][cutIndex];
-    
-      node->SetSelector((UInt_t)mxVar);
-      node->SetCutValue(cutValue);
-      node->SetCutType(cutType);
-      node->SetSeparationGain(separationGain);
-
-      fVariableImportance[mxVar] += separationGain*separationGain * (nTotS+nTotB) * (nTotS+nTotB) ;
-   }
-   else {
-      separationGain = 0;
-   }
-  
-
-   for (UInt_t i=0; i<fNvars; i++) {
-      delete [] nSelS[i];
-      delete [] nSelB[i];
-      delete [] nSelS_unWeighted[i];
-      delete [] nSelB_unWeighted[i];
-      delete [] target[i];
-      delete [] target2[i];
-      delete [] cutValues[i];
-   }
-   delete nSelS;
-   delete nSelB;
-   delete nSelS_unWeighted;
-   delete nSelB_unWeighted;
-   delete target;
-   delete target2;
-   delete cutValues;
-
-   delete [] xmin;
-   delete [] xmax;
-
-   delete [] useVariable;
-
-   return separationGain;
-}
-
 void TMVA::DecisionTree::GetRandomisedVariables(Bool_t *useVariable, UInt_t *mapVariable, UInt_t &useNvars){
-
+  //
    for (UInt_t ivar=0; ivar<fNvars; ivar++) useVariable[ivar]=kFALSE;
    if (fUseNvars==0) { // no number specified ... choose s.th. which hopefully works well 
       // watch out, should never happen as it is initialised automatically in MethodBDT already!!!
@@ -1093,18 +833,23 @@ void TMVA::DecisionTree::GetRandomisedVariables(Bool_t *useVariable, UInt_t *map
 }
 
 //_______________________________________________________________________
-Double_t TMVA::DecisionTree::TrainNodeFisher( const vector<TMVA::Event*> & eventSample,
-                                           TMVA::FisherDecisionTreeNode *node )
+Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSample,
+                                           TMVA::DecisionTreeNode *node )
 {
-   // Decide how to split a node using a Fisher discriminant for the split, scan (Ncuts)
-   // through all "fisher cut" to find the "best" on in terms of the separation gain.
+   // Decide how to split a node using one of the variables that gives
+   // the best separation of signal/background. In order to do this, for each 
+   // variable a scan of the different cut values in a grid (grid = fNCuts) is 
+   // performed and the resulting separation gains are compared.
+   // in addition to the individual variables, one can also ask for a fisher
+   // discriminant being built out of (some) of the variables and used as a
+   // possible multivariate split.
 
    Float_t separationGain = -1, sepTmp;
    Float_t cutValue=-999;
    Int_t mxVar= -1;
    Int_t cutIndex=-1;
    Bool_t cutType=kTRUE;
-   Float_t  nTotS, nTotB;
+   Double_t  nTotS, nTotB;
    Int_t     nTotS_unWeighted, nTotB_unWeighted; 
    UInt_t nevents = eventSample.size();
 
