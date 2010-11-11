@@ -40,7 +40,7 @@ DICTH1       := Configurable.h Event.h Factory.h MethodBase.h MethodCompositeBas
 		MethodFDA.h MethodMLP.h MethodCommittee.h MethodBoost.h \
 		MethodPDEFoam.h MethodLD.h MethodCategory.h
 DICTH2       := TSpline2.h TSpline1.h PDF.h BinaryTree.h BinarySearchTreeNode.h BinarySearchTree.h \
-		Timer.h RootFinder.h CrossEntropy.h DecisionTree.h DecisionTreeNode.h FisherDecisionTreeNode.h \
+		Timer.h RootFinder.h CrossEntropy.h DecisionTree.h DecisionTreeNode.h \
 		MisClassificationError.h \
 		Node.h SdivSqrtSplusB.h SeparationBase.h RegressionVariance.h Tools.h Reader.h \
 		GeneticAlgorithm.h GeneticGenes.h GeneticPopulation.h GeneticRange.h GiniIndex.h \

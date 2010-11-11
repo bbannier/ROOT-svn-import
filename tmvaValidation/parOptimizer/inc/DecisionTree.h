@@ -47,9 +47,6 @@
 #ifndef ROOT_TMVA_DecisionTreeNode
 #include "TMVA/DecisionTreeNode.h"
 #endif
-#ifndef ROOT_TMVA_FisherDecisionTreeNode
-#include "TMVA/FisherDecisionTreeNode.h"
-#endif
 #ifndef ROOT_TMVA_BinaryTree
 #include "TMVA/BinaryTree.h"
 #endif
@@ -98,7 +95,7 @@ namespace TMVA {
 
       // Retrieves the address of the root node
       virtual DecisionTreeNode* GetRoot() const { return dynamic_cast<TMVA::DecisionTreeNode*>(fRoot); }
-      virtual DecisionTreeNode * CreateNode(UInt_t) const { if (fUseFisherCuts) return new FisherDecisionTreeNode(); else return new DecisionTreeNode(); }
+      virtual DecisionTreeNode * CreateNode(UInt_t) const { return new DecisionTreeNode(); }
       virtual BinaryTree* CreateTree() const { return new DecisionTree(); }
       virtual const char* ClassName() const { return "DecisionTree"; }
 
@@ -110,7 +107,6 @@ namespace TMVA {
 
       Double_t TrainNode( const EventList & eventSample,  DecisionTreeNode *node ) { return TrainNodeFast( eventSample, node ); }
       Double_t TrainNodeFast( const EventList & eventSample,  DecisionTreeNode *node );
-      Double_t TrainNodeFisher( const EventList & eventSample,  FisherDecisionTreeNode *node );
       Double_t TrainNodeFull( const EventList & eventSample,  DecisionTreeNode *node );
       void    GetRandomisedVariables(Bool_t *useVariable, UInt_t *variableMap, UInt_t & nVars);
       std::vector<Double_t>  GetFisherCoefficients(const EventList &eventSample, UInt_t nFisherVars, UInt_t *mapVarInFisher);

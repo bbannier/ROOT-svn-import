@@ -128,6 +128,13 @@ namespace TMVA {
 
       virtual Node* CreateNode() const { return new DecisionTreeNode(); }
 
+      inline void SetNFisherCoeff(Int_t nvars){fFisherCoeff.resize(nvars);}
+      inline UInt_t GetNFisherCoeff() const { return fFisherCoeff.size();}
+      // set fisher coefficients
+      void SetFisherCoeff(Int_t ivar, Double_t coeff);      
+      // get fisher coefficients
+      Double_t GetFisherCoeff(Int_t ivar) const {return fFisherCoeff.at(ivar);}
+
       // test event if it decends the tree at this node to the right
       virtual Bool_t GoesRight( const Event & ) const;
 
@@ -325,6 +332,7 @@ namespace TMVA {
 
       static MsgLogger* fgLogger;    // static because there is a huge number of nodes...
 
+      std::vector<Double_t>       fFisherCoeff;    // the other fisher coeff (offset at the last element
 
       Float_t  fCutValue;        // cut value appplied on this node to discriminate bkg against sig
       Bool_t   fCutType;         // true: if event variable > cutValue ==> signal , false otherwise

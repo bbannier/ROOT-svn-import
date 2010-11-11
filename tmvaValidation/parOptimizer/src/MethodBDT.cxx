@@ -1257,6 +1257,7 @@ void TMVA::MethodBDT::AddWeightsXMLTo( void* parent ) const
    void* wght = gTools().AddChild(parent, "Weights");
    gTools().AddAttr( wght, "NTrees", fForest.size() );
    gTools().AddAttr( wght, "TreeType", fForest.back()->GetAnalysisType() );
+   gTools().AddAttr( wght, "UseFisherCuts", fUseFisherCuts );
 
    for (UInt_t i=0; i< fForest.size(); i++) {
       void* trxml = fForest[i]->AddXMLTo(wght);
@@ -1277,9 +1278,11 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
    UInt_t ntrees;
    UInt_t analysisType;
    Float_t boostWeight;
+   Bool_t useFisherCuts;
 
    gTools().ReadAttr( parent, "NTrees", ntrees );
    gTools().ReadAttr( parent, "TreeType", analysisType );
+   gTools().ReadAttr( parent, "UseFisherCuts", useFisherCuts );
 
    void* ch = gTools().GetChild(parent);
    i=0;
