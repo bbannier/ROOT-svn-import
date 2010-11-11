@@ -151,9 +151,6 @@ m_Consumer(0) {
 cling::IncrementalASTParser::~IncrementalASTParser()
 {
   m_CI->takeLLVMContext(); // Don't take down the context with the CI.
-  for(unsigned int i = 0; i < m_MemoryBuffer.size(); ++i) {
-     delete m_MemoryBuffer[i];
-  }
 }
 
 clang::CompilerInstance*
