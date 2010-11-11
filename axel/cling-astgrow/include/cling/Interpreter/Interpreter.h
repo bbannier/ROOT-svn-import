@@ -19,6 +19,7 @@ namespace clang {
   class ASTConsumer;
   class CompilerInstance;
   class PragmaNamespace;
+  class SourceLocation;
 }
 
 namespace cling {
@@ -65,6 +66,10 @@ namespace cling {
     
     clang::PragmaNamespace& getPragmaHandler() const { return *m_PragmaHandler; }
 
+    void RequestContinuation(const clang::SourceLocation&) {
+      printf("...\n");
+    }
+    
   private:
     llvm::OwningPtr<cling::CIBuilder> m_CIBuilder; // our compiler intsance builder
     llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
