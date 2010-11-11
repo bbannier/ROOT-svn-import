@@ -22,7 +22,6 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Pragma.h"
-//#include "../../clang/lib/Sema/Sema.h"
 #include "llvm/Constants.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/System/DynamicLibrary.h"
@@ -84,12 +83,10 @@ namespace {
     
     return llvm::sys::Path();
   }
-  
-  
 }
 
 namespace cling {
-  
+
   //
   //  Interpreter
   //
@@ -105,10 +102,10 @@ namespace cling {
     m_PragmaHandler = new clang::PragmaNamespace("cling");
 
     m_CIBuilder.reset(new CIBuilder(fake_argc, fake_argv, llvmdir));
+
     m_IncrASTParser.reset(new IncrementalASTParser(createCI(),
                                                    maybeGenerateASTPrinter(),
                                                    &getPragmaHandler()));
-    
     m_ExecutionContext.reset(new ExecutionContext(*this));
     
     compileString("#include <stdio.h>\n");
@@ -165,7 +162,7 @@ namespace cling {
     }
     // Note: We have a valid compiler instance at this point.
     clang::TranslationUnitDecl* tu =
-    CI->getASTContext().getTranslationUnitDecl();
+      CI->getASTContext().getTranslationUnitDecl();
     if (!tu) { // Parse failed, return.
       fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
       return 0;
@@ -212,9 +209,10 @@ namespace cling {
       // will produce a list of statements seen.
       StmtSplitter splitter(stmts);
       FunctionBodyConsumer* consumer =
-      new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
-      CI = m_IncrASTParser->parse(nonTUsrc, -1, consumer);
+        new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
       
+      CI = m_IncrASTParser->parse(nonTUsrc, -1, consumer);
+
       if (!CI) {
         wrapped.clear();
         return;

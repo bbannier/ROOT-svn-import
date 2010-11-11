@@ -18,12 +18,12 @@ namespace clang {
   class ASTConsumer;
   class PragmaNamespace;
   class SourceLocation;
+  class FileID;
 }
 
 namespace cling {
   class MutableMemoryBuffer;
   class ChainedASTConsumer;
-  class ASTPragmaHandler;
 
   class IncrementalASTParser {
   public:
@@ -31,12 +31,13 @@ namespace cling {
                          clang::ASTConsumer* Consumer,
                          clang::PragmaNamespace* Pragma);
     ~IncrementalASTParser();
-    
+
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
+    clang::Parser* getParser() const { return m_Parser.get(); }
     clang::CompilerInstance* parse(llvm::StringRef src,
                                    int nTopLevelDecls = -1,
                                    clang::ASTConsumer* Consumer = 0);
-    void RequestParseInterrupt(clang::SourceLocation Loc) {
+    void RequestParseInterrupt(const clang::SourceLocation& Loc) {
       m_InterruptHere = Loc; }
 
   private:
@@ -44,7 +45,7 @@ namespace cling {
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
     llvm::OwningPtr<clang::Sema> m_Sema; // sema used for parsing
     llvm::OwningPtr<MutableMemoryBuffer> m_MemoryBuffer; // compiler instance
-    llvm::OwningPtr<ASTPragmaHandler> m_ASTPragmaHandler; // pragma cling ast(...)
+    clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedASTConsumer* m_Consumer; // CI owns it
     clang::SourceLocation m_InterruptHere; // where to stop parsing top level decls
   };
