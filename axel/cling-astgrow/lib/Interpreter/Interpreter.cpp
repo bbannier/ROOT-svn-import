@@ -39,7 +39,7 @@
 #include <utility>
 #include <vector>
 
-static const char* fake_argv[] = { "clang", "-x", "c++", "-D__CLING__", 0 };
+static const char* fake_argv[] = { "clang", "-x", "c++", "-D__CLING__", "-I.", 0 };
 static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
 
 namespace {
