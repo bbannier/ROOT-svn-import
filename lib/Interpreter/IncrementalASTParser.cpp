@@ -187,6 +187,7 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
 
      clang::Token &tok = const_cast<clang::Token&>(m_Parser->getCurToken());
      tok.setKind(clang::tok::semi);
+     // printf("src:%s\n",src.data());
   }
   
   clang::ASTConsumer* Consumer = &m_CI->getASTConsumer();
