@@ -115,6 +115,7 @@ void TMVAClassification( TString myMethodList = "" )
    Use["SVM"]             = 1;
    // ---
    Use["BDT"]             = 1;
+   Use["BDTF"]            = 1;
    Use["BDTD"]            = 0;
    Use["BDTG"]            = 1;
    Use["BDTB"]            = 0;
@@ -415,9 +416,18 @@ void TMVAClassification( TString myMethodList = "" )
                            "!H:V:NTrees=40:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:SeparationType=GiniIndex:nCuts=20:VerbosityLevel=Debug" );
 
    
-  if (Use["BDT"])  // Adaptive Boost
+   if (Use["BDT"])  // Adaptive Boost
          factory->BookMethod( TMVA::Types::kBDT, "BDT",
-                           "!H:NTrees=200:nEventsMin=40:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VerbosityLevel=Fatal" );
+                           "!H:NTrees=200:nEventsMin=40:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VerbosityLevel=Warning" );
+   if (Use["BDTF"])  // Adaptive Boost using also fisher criteria at the nodes as possible cut variable
+         // factory->BookMethod( TMVA::Types::kBDT, "BDTF1",
+         //                   "!H:NTrees=1:nEventsMin=40:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VerbosityLevel=Warning:UseFisherCuts" );
+         // factory->BookMethod( TMVA::Types::kBDT, "BDTF2",
+         //                   "!H:NTrees=2:nEventsMin=40:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VerbosityLevel=Fatal:UseFisherCuts" );
+         factory->BookMethod( TMVA::Types::kBDT, "BDTF",
+                           "!H:NTrees=200:nEventsMin=40:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VerbosityLevel=Warning:UseFisherCuts:MinLinCorrForFisher=.4" );
+         // factory->BookMethod( TMVA::Types::kBDT, "BDTF100",
+         //                   "!H:NTrees=100:nEventsMin=40:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VerbosityLevel=Fatal:UseFisherCuts" );
    if (Use["BDTB"]) // Bagging
       factory->BookMethod( TMVA::Types::kBDT, "BDTB",
                            "!H:V:NTrees=40:BoostType=Bagging:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VerbosityLevel=Debug" );
@@ -456,7 +466,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    
    // Optimize MVAs using the set of training events
-   factory->OptimizeAllMethods("ROCIntegral","GA");
+   //   factory->OptimizeAllMethods("ROCIntegral","GA");
 
    // Train MVAs using the set of training events
    factory->TrainAllMethods();

@@ -706,7 +706,7 @@ void TMVA::MethodBoost::SingleBoost()
       }
 
       Double_t normWeight = oldSum/newSum;
-      std::cout << "Normalize weight by (Boost)" << normWeight <<  " = " << oldSum<<"/"<<newSum<< " eventBoostFactor="<<fBoostWeight<<std::endl;
+      // bla      std::cout << "Normalize weight by (Boost)" << normWeight <<  " = " << oldSum<<"/"<<newSum<< " eventBoostFactor="<<fBoostWeight<<std::endl;
       // next normalize the weights
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          Data()->GetEvent(ievt)->ScaleBoostWeight(normWeight);

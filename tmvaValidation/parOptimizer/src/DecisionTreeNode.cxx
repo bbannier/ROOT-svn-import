@@ -422,14 +422,14 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    gTools().ReadAttr(node, "IVar",  fSelector               );
    gTools().ReadAttr(node, "Cut",   fCutValue               );
    gTools().ReadAttr(node, "cType", fCutType                );
-   gTools().ReadAttr(node, "nS",    tempNSigEvents             );
-   gTools().ReadAttr(node, "nB",    tempNBkgEvents             );
-   gTools().ReadAttr(node, "nEv",   tempNEvents                );
-   gTools().ReadAttr(node, "nSuw",  tempNSigEvents_unweighted  );
-   gTools().ReadAttr(node, "nBuw",  tempNBkgEvents_unweighted  );
-   gTools().ReadAttr(node, "nEvuw", tempNEvents_unweighted     );
-   gTools().ReadAttr(node, "sepI",  tempSeparationIndex        );
-   gTools().ReadAttr(node, "sepG",  tempSeparationGain         );
+   // gTools().ReadAttr(node, "nS",    tempNSigEvents             );
+   // gTools().ReadAttr(node, "nB",    tempNBkgEvents             );
+   // gTools().ReadAttr(node, "nEv",   tempNEvents                );
+   // gTools().ReadAttr(node, "nSuw",  tempNSigEvents_unweighted  );
+   // gTools().ReadAttr(node, "nBuw",  tempNBkgEvents_unweighted  );
+   // gTools().ReadAttr(node, "nEvuw", tempNEvents_unweighted     );
+   // gTools().ReadAttr(node, "sepI",  tempSeparationIndex        );
+   // gTools().ReadAttr(node, "sepG",  tempSeparationGain         );
    gTools().ReadAttr(node, "res",   fResponse               );
    gTools().ReadAttr(node, "rms",   fRMS                    );
    gTools().ReadAttr(node, "nType", fNodeType               );
@@ -438,18 +438,18 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    } else {
       fPurity = tempNSigEvents / (tempNSigEvents + tempNBkgEvents);
    }
-   gTools().ReadAttr(node, "CC",    tempCC                  );
-   if (fTrainInfo){
-      SetNSigEvents(tempNSigEvents);
-      SetNBkgEvents(tempNBkgEvents);
-      SetNEvents(tempNEvents);
-      SetNSigEvents_unweighted(tempNSigEvents_unweighted);
-      SetNBkgEvents_unweighted(tempNBkgEvents_unweighted);
-      SetNEvents_unweighted(tempNEvents_unweighted);
-      SetSeparationIndex(tempSeparationIndex);
-      SetSeparationGain(tempSeparationGain);
-      SetCC(tempCC);
-   }
+   // gTools().ReadAttr(node, "CC",    tempCC                  );
+   // if (fTrainInfo){
+   //    SetNSigEvents(tempNSigEvents);
+   //    SetNBkgEvents(tempNBkgEvents);
+   //    SetNEvents(tempNEvents);
+   //    SetNSigEvents_unweighted(tempNSigEvents_unweighted);
+   //    SetNBkgEvents_unweighted(tempNBkgEvents_unweighted);
+   //    SetNEvents_unweighted(tempNEvents_unweighted);
+   //    SetSeparationIndex(tempSeparationIndex);
+   //    SetSeparationGain(tempSeparationGain);
+   //    SetCC(tempCC);
+   // }
 }
 
 
@@ -460,19 +460,19 @@ void TMVA::DecisionTreeNode::AddAttributesToNode(void* node) const
    gTools().AddAttr(node, "IVar",  GetSelector());
    gTools().AddAttr(node, "Cut",   GetCutValue());
    gTools().AddAttr(node, "cType", GetCutType());
-   gTools().AddAttr(node, "nS",    GetNSigEvents());
-   gTools().AddAttr(node, "nB",    GetNBkgEvents());
-   gTools().AddAttr(node, "nEv",   GetNEvents());
-   gTools().AddAttr(node, "nSuw",  GetNSigEvents_unweighted());
-   gTools().AddAttr(node, "nBuw",  GetNBkgEvents_unweighted());
-   gTools().AddAttr(node, "nEvuw", GetNEvents_unweighted());
-   gTools().AddAttr(node, "sepI",  GetSeparationIndex());
-   gTools().AddAttr(node, "sepG",  GetSeparationGain());
+   // gTools().AddAttr(node, "nS",    GetNSigEvents());
+   // gTools().AddAttr(node, "nB",    GetNBkgEvents());
+   // gTools().AddAttr(node, "nEv",   GetNEvents());
+   // gTools().AddAttr(node, "nSuw",  GetNSigEvents_unweighted());
+   // gTools().AddAttr(node, "nBuw",  GetNBkgEvents_unweighted());
+   // gTools().AddAttr(node, "nEvuw", GetNEvents_unweighted());
+   // gTools().AddAttr(node, "sepI",  GetSeparationIndex());
+   // gTools().AddAttr(node, "sepG",  GetSeparationGain());
    gTools().AddAttr(node, "res",   GetResponse());
    gTools().AddAttr(node, "rms",   GetRMS());
    gTools().AddAttr(node, "nType", GetNodeType());
    gTools().AddAttr(node, "purity",GetPurity());
-   gTools().AddAttr(node, "CC",    (GetCC() > 10000000000000.)?100000.:GetCC());
+   //   gTools().AddAttr(node, "CC",    (GetCC() > 10000000000000.)?100000.:GetCC());
 }
 
 //_______________________________________________________________________
