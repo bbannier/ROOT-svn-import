@@ -95,6 +95,7 @@ TMVA::DecisionTree::DecisionTree():
    fNCuts          (-1),
    fUseFisherCuts  (kFALSE),
    fMinLinCorrForFisher (1),
+   fUseExclusiveVars (kTRUE),
    fSepType        (NULL),
    fMinSize        (0),
    fMinSepGain (0),
@@ -126,6 +127,7 @@ TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType,Int_t minSize, I
    fNCuts          (nCuts),
    fUseFisherCuts  (kFALSE),
    fMinLinCorrForFisher (1),
+   fUseExclusiveVars (kTRUE),
    fSepType        (sepType),
    fMinSize        (minSize),
    fMinSepGain     (0),
@@ -171,6 +173,7 @@ TMVA::DecisionTree::DecisionTree( const DecisionTree &d ):
    fNCuts      (d.fNCuts),
    fUseFisherCuts  (d.fUseFisherCuts),
    fMinLinCorrForFisher (d.fMinLinCorrForFisher),
+   fUseExclusiveVars (d.fUseExclusiveVars),
    fSepType    (d.fSepType),
    fMinSize    (d.fMinSize),
    fMinSepGain (d.fMinSepGain),
@@ -1174,7 +1177,7 @@ Double_t TMVA::DecisionTree::TrainNodeFisher( const vector<TMVA::Event*> & event
             mapVarInFisher[nFisherVars++]=ivar;
             // now exclud the the variables used in the Fisher cuts, and don't 
             // use them anymore in the individual variable scan
-            useVariable[ivar]    = kFALSE;
+            if (fUseExclusiveVars) useVariable[ivar] = kFALSE;
          }
       }
       

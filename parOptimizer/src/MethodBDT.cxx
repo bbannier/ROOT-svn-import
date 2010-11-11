@@ -158,9 +158,6 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fUseWeightedTrees(kFALSE)
    , fNNodesMax(0)
    , fMaxDepth(0)
-   , fITree(0)
-   , fBoostWeight(0)
-   , fErrorFraction(0)
    , fPruneStrength(0)
    , fPruneBeforeBoost(kFALSE)
    , fFValidationEvents(0)
@@ -170,6 +167,9 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fUseNTrainEvents(0)
    , fSampleSizeFraction(0)
    , fNoNegWeightsInTraining(kFALSE)
+   , fITree(0)
+   , fBoostWeight(0)
+   , fErrorFraction(0)
 {
    // the standard constructor for the "boosted decision trees"
    fMonitorNtuple = NULL;
@@ -194,9 +194,6 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fUseWeightedTrees(kFALSE)
    , fNNodesMax(0)
    , fMaxDepth(0)
-   , fITree(0)
-   , fBoostWeight(0)
-   , fErrorFraction(0)
    , fPruneStrength(0)
    , fPruneBeforeBoost(kFALSE)
    , fFValidationEvents(0)
@@ -206,6 +203,9 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fUseNTrainEvents(0)
    , fSampleSizeFraction(0)
    , fNoNegWeightsInTraining(kFALSE)
+   , fITree(0)
+   , fBoostWeight(0)
+   , fErrorFraction(0)
 {
    // constructor for calculating BDT-MVA using previously generated decision trees
    // the result of the previous training (the decision trees) are read in via the
@@ -266,6 +266,7 @@ void TMVA::MethodBDT::DeclareOptions()
    // MaxDepth         maximum depth of the decision tree allowed before further splitting is stopped
 
    DeclareOptionRef(fNTrees, "NTrees", "Number of trees in the forest");
+   DeclareOptionRef(fRenormByClass=kFALSE,"RenormByClass","individually re-normalize each event class to the original size after boosting");
    DeclareOptionRef(fBoostType, "BoostType", "Boosting type for the trees in the forest");
    AddPreDefVal(TString("AdaBoost"));
    AddPreDefVal(TString("Bagging"));
@@ -317,6 +318,7 @@ void TMVA::MethodBDT::DeclareOptions()
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
    DeclareOptionRef(fUseFisherCuts=kFALSE, "UseFisherCuts", "use multivariate splits using the Fisher criterium");
    DeclareOptionRef(fMinLinCorrForFisher=1,"MinLinCorrForFisher", "the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting");
+   DeclareOptionRef(fUseExclusiveVars=kTRUE,"UseExclusiveVars","individual variables already used in fisher criterium are not anymore analysed individually for node splitting");
 
    DeclareOptionRef(fPruneStrength, "PruneStrength", "Pruning strength");
    DeclareOptionRef(fPruneMethodS, "PruneMethod", "Method used for pruning (removal) of statistically insignificant branches");
@@ -647,6 +649,7 @@ void TMVA::MethodBDT::Train()
             if (fUseFisherCuts) {
                fForest.back()->SetUseFisherCuts();
                fForest.back()->SetMinLinCorrForFisher(fMinLinCorrForFisher); 
+               fForest.back()->SetUseExclusiveVars(fUseExclusiveVars); 
             }
 // the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting
 
@@ -663,6 +666,7 @@ void TMVA::MethodBDT::Train()
          if (fUseFisherCuts) {
             fForest.back()->SetUseFisherCuts();
             fForest.back()->SetMinLinCorrForFisher(fMinLinCorrForFisher); 
+            fForest.back()->SetUseExclusiveVars(fUseExclusiveVars); 
          }
          if (fBaggedGradBoost) nNodesBeforePruning = fForest.back()->BuildTree(fSubSample);
          else                  nNodesBeforePruning = fForest.back()->BuildTree(fEventSample);
@@ -985,49 +989,49 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
    //            w = ((1-err)/err)^beta
    // where err is the fraction of misclassified events in the tree ( <0.5 assuming
    // demanding the that previous selection was better than random guessing)
-   // and "beta" beeing a free parameter (standard: beta = 1) that modifies the
+   // and "beta" being a free parameter (standard: beta = 1) that modifies the
    // boosting.
 
-   Double_t err=0, sumAllw=0, sumAllwfalse=0, sumAllwfalse2=0;
+   Double_t err=0, sumGlobalw=0, sumGlobalwfalse=0, sumGlobalwfalse2=0;
 
    vector<Double_t> sumw; //for re-scaling individual each class
 
    Double_t maxDev=0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       Double_t w = (*e)->GetWeight();
-      sumAllw += w;
+      sumGlobalw += w;
       UInt_t iclass=(*e)->GetClass();
       if (iclass+1 > sumw.size()) sumw.resize(iclass+1,0);
       sumw[iclass] += w;
 
       if ( DoRegression() ) {
          Double_t tmpDev = TMath::Abs(dt->CheckEvent(*(*e),kFALSE) - (*e)->GetTarget(0) ); 
-         sumAllwfalse += w * tmpDev;
-         sumAllwfalse2 += w * tmpDev*tmpDev;
+         sumGlobalwfalse += w * tmpDev;
+         sumGlobalwfalse2 += w * tmpDev*tmpDev;
          if (tmpDev > maxDev) maxDev = tmpDev;
       }else{
          Bool_t isSignalType = (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit );
 
          if (!(isSignalType == DataInfo().IsSignal(*e))) {
-            sumAllwfalse+= w;
+            sumGlobalwfalse+= w;
          }
       }
    }
-   err = sumAllwfalse/sumAllw ;
+   err = sumGlobalwfalse/sumGlobalw ;
    if ( DoRegression() ) {
       //if quadratic loss:
       if (fAdaBoostR2Loss=="linear"){
-         err = sumAllwfalse/maxDev/sumAllw ;
+         err = sumGlobalwfalse/maxDev/sumGlobalw ;
       }
       else if (fAdaBoostR2Loss=="quadratic"){
-         err = sumAllwfalse2/maxDev/maxDev/sumAllw ;
+         err = sumGlobalwfalse2/maxDev/maxDev/sumGlobalw ;
       }
       else if (fAdaBoostR2Loss=="exponential"){
          err = 0;
          for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
             Double_t w = (*e)->GetWeight();
             Double_t  tmpDev = TMath::Abs(dt->CheckEvent(*(*e),kFALSE) - (*e)->GetTarget(0) ); 
-            err += w * (1 - exp (-tmpDev/maxDev)) / sumAllw;
+            err += w * (1 - exp (-tmpDev/maxDev)) / sumGlobalw;
          }
          
       }
@@ -1037,10 +1041,10 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
                << "and this is not implemented... a typo in the options ??" <<Endl;
       }
    }
-   Double_t newSumAllw=0;
+   Double_t newSumGlobalw=0;
    vector<Double_t> newSumw(sumw.size(),0);
 
-   // bla    std::cout << "AdaBoost err = " << err<< " = wrong/all: " << sumAllwfalse << "/" << sumAllw << std::endl;
+   // bla    std::cout << "AdaBoost err = " << err<< " = wrong/all: " << sumGlobalwfalse << "/" << sumGlobalw << std::endl;
    Double_t boostWeight=1.;
    if (err >= 0.5) { // sanity check ... should never happen as otherwise there is apparently
       // something odd with the assignement of the leaf nodes (rem: you use the training
@@ -1087,18 +1091,18 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
             (*e)->ScaleBoostWeight( 1. / boostfactor); // if the original event weight is negative, and you want to "increase" the events "positive" influence, you'd reather make the event weight "smaller" in terms of it's absolute value while still keeping it something "negative"
          }
       }
-      newSumAllw+=(*e)->GetWeight();
+      newSumGlobalw+=(*e)->GetWeight();
       newSumw[(*e)->GetClass()] += (*e)->GetWeight();
    }
 
    // re-normalise the weights (independent for Signal and Background)
-   Double_t OldNormWeight=sumAllw/newSumAllw;
-   vector<Double_t>  normWeight;
-   for (UInt_t i=0; i<sumw.size(); i++) normWeight.push_back(sumw[i]/newSumw[i]);
-   // bla   std::cout << "Normalize weight by (BDT )" << normWeight << " = " << sumAllw<<"/"<<newSumAllw<< " eventBoostWeight="<<boostWeight<< std::endl;
+   Double_t globalNormWeight=sumGlobalw/newSumGlobalw;
+   vector<Double_t>  normWeightByClass;
+   for (UInt_t i=0; i<sumw.size(); i++) normWeightByClass.push_back(sumw[i]/newSumw[i]);
+
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      //      (*e)->ScaleBoostWeight(  normWeight[(*e)->GetClass()] );
-      (*e)->ScaleBoostWeight(  OldNormWeight );
+     if (fRenormByClass) (*e)->ScaleBoostWeight( normWeightByClass[(*e)->GetClass()] );
+     else                (*e)->ScaleBoostWeight( globalNormWeight );
    }
 
    if (!(DoRegression()))results->GetHist("BoostWeights")->Fill(boostWeight);
@@ -1253,8 +1257,6 @@ void TMVA::MethodBDT::AddWeightsXMLTo( void* parent ) const
    void* wght = gTools().AddChild(parent, "Weights");
    gTools().AddAttr( wght, "NTrees", fForest.size() );
    gTools().AddAttr( wght, "TreeType", fForest.back()->GetAnalysisType() );
-   gTools().AddAttr( wght, "UseFisherCuts", fUseFisherCuts); 
-   
 
    for (UInt_t i=0; i< fForest.size(); i++) {
       void* trxml = fForest[i]->AddXMLTo(wght);
@@ -1278,8 +1280,6 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
 
    gTools().ReadAttr( parent, "NTrees", ntrees );
    gTools().ReadAttr( parent, "TreeType", analysisType );
-   gTools().ReadAttr( parent, "UseFisherCuts", fUseFisherCuts );
- 
 
    void* ch = gTools().GetChild(parent);
    i=0;

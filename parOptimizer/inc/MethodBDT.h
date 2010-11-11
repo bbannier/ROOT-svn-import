@@ -189,6 +189,7 @@ namespace TMVA {
       Int_t                           fNTrees;          // number of decision trees requested
       std::vector<DecisionTree*>      fForest;          // the collection of decision trees
       std::vector<double>             fBoostWeights;    // the weights applied in the individual boosts
+      Bool_t                          fRenormByClass;   // individually re-normalize each event class to the original size after boosting
       TString                         fBoostType;       // string specifying the boost type
       Double_t                        fAdaBoostBeta;    // beta parameter for AdaBoost algorithm
       TString                         fAdaBoostR2Loss;  // loss type used in AdaBoostR2 (Linear,Quadratic or Exponential)
@@ -208,21 +209,16 @@ namespace TMVA {
       Int_t                           fNCuts;           // grid used in cut applied in node splitting
       Bool_t                          fUseFisherCuts;   // use multivariate splits using the Fisher criterium
       Double_t                        fMinLinCorrForFisher; // the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting
+      Bool_t                          fUseExclusiveVars; // individual variables already used in fisher criterium are not anymore analysed individually for node splitting
       Bool_t                          fUseYesNoLeaf;    // use sig or bkg classification in leave nodes or sig/bkg
       Double_t                        fNodePurityLimit; // purity limit for sig/bkg nodes
       Bool_t                          fUseWeightedTrees;// use average classification from the trees, or have the individual trees trees in the forest weighted (e.g. log(boostweight) from AdaBoost
       UInt_t                          fNNodesMax;       // max # of nodes
       UInt_t                          fMaxDepth;        // max depth
 
-
-      //some histograms for monitoring
-      TTree*                           fMonitorNtuple;   // monitoring ntuple
-      Int_t                            fITree;           // ntuple var: ith tree
-      Double_t                         fBoostWeight;     // ntuple var: boost weight
-      Double_t                         fErrorFraction;   // ntuple var: misclassification error fraction
-      Double_t                         fPruneStrength;   // a parameter to set the "amount" of pruning..needs to be adjusted
       DecisionTree::EPruneMethod       fPruneMethod;     // method used for prunig
       TString                          fPruneMethodS;    // prune method option String
+      Double_t                         fPruneStrength;   // a parameter to set the "amount" of pruning..needs to be adjusted
       Bool_t                           fPruneBeforeBoost;// flag to prune before boosting
       Double_t                         fFValidationEvents;    // fraction of events to use for pruning
       Bool_t                           fAutomatic;       // use user given prune strength or automatically determined one using a validation sample
@@ -231,16 +227,23 @@ namespace TMVA {
       Bool_t                           fUsePoissonNvars; // use "fUseNvars" not as fixed number but as mean of a possion distr. in each split
       UInt_t                           fUseNTrainEvents; // number of randomly picked training events used in randomised (and bagged) trees
 
+      Double_t                         fSampleSizeFraction; // relative size of bagged event sample to original sample size
+      Bool_t                           fNoNegWeightsInTraining; // ignore negative event weights in the training
+
+
+
+      //some histograms for monitoring
+      TTree*                           fMonitorNtuple;   // monitoring ntuple
+      Int_t                            fITree;           // ntuple var: ith tree
+      Double_t                         fBoostWeight;     // ntuple var: boost weight
+      Double_t                         fErrorFraction;   // ntuple var: misclassification error fraction
+
       std::vector<Double_t>            fVariableImportance; // the relative importance of the different variables
 
       // debugging flags
       static const Int_t               fgDebugLevel;     // debug level determining some printout/control plots etc.
 
       // for backward compatibility
-
-      Double_t                         fSampleSizeFraction; // relative size of bagged event sample to original sample size
-      Bool_t                           fNoNegWeightsInTraining; // ignore negative event weights in the training
-
 
       ClassDef(MethodBDT,0)  // Analysis of Boosted Decision Trees
    };
