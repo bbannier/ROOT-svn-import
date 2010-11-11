@@ -41,6 +41,10 @@ namespace cling {
     void RequestParseInterrupt(const clang::SourceLocation& Loc) {
       m_InterruptHere = Loc; }
 
+    
+    MutableMemoryBuffer* getCurBuffer() {
+       return m_MemoryBuffer.back();
+    }
   private:
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
