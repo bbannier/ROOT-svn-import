@@ -22,6 +22,8 @@ namespace clang {
   class SourceLocation;
 }
 
+extern "C" int printf(const char*,...);
+
 namespace cling {
   
   class CIBuilder;
