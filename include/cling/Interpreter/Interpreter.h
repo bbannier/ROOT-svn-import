@@ -22,8 +22,6 @@ namespace clang {
   class SourceLocation;
 }
 
-extern "C" int printf(const char*,...);
-
 namespace cling {
   
   class CIBuilder;
@@ -68,9 +66,7 @@ namespace cling {
     
     clang::PragmaNamespace& getPragmaHandler() const { return *m_PragmaHandler; }
 
-    void RequestContinuation(const clang::SourceLocation&) {
-      printf("...\n");
-    }
+     void RequestContinuation(const clang::SourceLocation&);
     
   private:
     llvm::OwningPtr<cling::CIBuilder> m_CIBuilder; // our compiler intsance builder
