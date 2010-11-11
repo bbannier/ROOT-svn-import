@@ -192,7 +192,7 @@ namespace TMVA {
       Types::EAnalysisType GetAnalysisType ( void ) { return fAnalysisType;}
       inline void SetUseFisherCuts(Bool_t t=kTRUE)  { fUseFisherCuts = t;}
       inline void SetMinLinCorrForFisher(Double_t min){fMinLinCorrForFisher = min;}
-
+      inline void SetUseExclusiveVars(Bool_t t=kTRUE){fUseExclusiveVars = t;}
 
    private:
       // utility functions
@@ -207,6 +207,7 @@ namespace TMVA {
       Int_t     fNCuts;          // number of grid point in variable cut scans
       Bool_t    fUseFisherCuts;  // use multivariate splits using the Fisher criterium
       Double_t  fMinLinCorrForFisher; // the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting
+      Bool_t    fUseExclusiveVars; // individual variables already used in fisher criterium are not anymore analysed individually for node splitting
 
       SeparationBase *fSepType;  // the separation crition
       RegressionVariance *fRegType;  // the separation crition used in Regression
