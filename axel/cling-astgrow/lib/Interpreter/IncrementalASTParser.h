@@ -10,6 +10,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include <vector>
 
 namespace clang {
   class CompilerInstance;
@@ -44,7 +45,7 @@ namespace cling {
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
     llvm::OwningPtr<clang::Sema> m_Sema; // sema used for parsing
-    llvm::OwningPtr<MutableMemoryBuffer> m_MemoryBuffer; // compiler instance
+    std::vector<MutableMemoryBuffer*> m_MemoryBuffer; // compiler instance
     clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedASTConsumer* m_Consumer; // CI owns it
     clang::SourceLocation m_InterruptHere; // where to stop parsing top level decls

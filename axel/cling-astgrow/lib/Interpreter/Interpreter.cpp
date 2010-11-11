@@ -97,7 +97,7 @@ namespace cling {
   Interpreter::Interpreter(const char* llvmdir /*= 0*/):
   m_CIBuilder(0),
   m_UniqueCounter(0),
-  m_printAST(true)
+  m_printAST(false)
   {
     m_PragmaHandler = new clang::PragmaNamespace("cling");
 
@@ -108,6 +108,7 @@ namespace cling {
                                                    &getPragmaHandler()));
     m_ExecutionContext.reset(new ExecutionContext(*this));
     
+    compileString(""); // Consume initialization.
     compileString("#include <stdio.h>\n");
   }
   
@@ -501,7 +502,10 @@ namespace cling {
     m_ExecutionContext->executeFunction(func);
     return 0;
   }
-  
+
+  void Interpreter::RequestContinuation(const clang::SourceLocation&) {
+    printf("...\n");
+  }
   
 } // namespace cling
 
