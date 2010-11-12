@@ -7,14 +7,15 @@
 #include "clang/Sema/Sema.h"
 
 using namespace clang;
+namespace cling {
+   // This class is only interface between ASTTrasnformVisitor and the Interpreter. 
+   // Perhaps it should be removed.
+   class DependentNodesTransform {
 
-// This class is only interface between ASTTrasnformVisitor and the Interpreter. 
-// Perhaps it should be removed.
-class DependentNodesTransform {
-
-public:
-   DependentNodesTransform(){}
-   ~DependentNodesTransform(){}
-
-   void TransformNodes(Sema *Sema);
-};
+   public:
+      DependentNodesTransform(){}
+      ~DependentNodesTransform(){}
+      
+      void TransformNodes(Sema *Sema);
+   };
+}//end cling
