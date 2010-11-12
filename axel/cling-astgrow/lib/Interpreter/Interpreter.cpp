@@ -215,7 +215,7 @@ namespace cling {
     std::vector<clang::Stmt*> stmts;
     clang::CompilerInstance* CI = 0;
     {
-      std::string nonTUsrc = "void " + stmtVsDeclFunc + "() {\n" + src + "}";
+      std::string nonTUsrc = "void " + stmtVsDeclFunc + "() {\n" + src + ";}";
       // Create an ASTConsumer for this frontend run which
       // will produce a list of statements seen.
       StmtSplitter splitter(stmts);
@@ -376,7 +376,7 @@ namespace cling {
       haveStatements = !wrapped_stmts.empty();
       if (haveStatements) {
         wrapped_stmts = "extern \"C\" void " + stmtFunc + "() {\n"
-        + wrapped_stmts + "}\n";
+        + wrapped_stmts + ";}\n";
       } else {
         stmtFunc = "";
       }
