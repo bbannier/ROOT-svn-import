@@ -77,7 +77,7 @@ namespace TMVA {
       Types::EAnalysisType  GetAnalysisType() { return Types::kMulticlass; }
 
       // histogramming
-      void     MakeHistograms();
+      void     CreateMulticlassHistos( TString prefix, Int_t nbins );
 
 
    private:

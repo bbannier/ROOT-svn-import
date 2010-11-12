@@ -30,6 +30,7 @@
 #include "TMVA/ResultsMulticlass.h"
 #include "TMVA/MsgLogger.h"
 #include "TMVA/DataSet.h"
+#include "TMVA/Tools.h"
 
 //_______________________________________________________________________
 TMVA::ResultsMulticlass::ResultsMulticlass( const DataSetInfo* dsi ) 
@@ -57,13 +58,44 @@ void TMVA::ResultsMulticlass::SetValue( std::vector<Float_t>& value, Int_t ievt 
 
 
 //_______________________________________________________________________
-void  TMVA::ResultsMulticlass::MakeHistograms()
+void  TMVA::ResultsMulticlass::CreateMulticlassHistos( TString prefix, Int_t nbins)
 {
-//    DataSet* ds = GetDataSet();
-//    ds->SetCurrentType( GetTreeType() );
-//    const DataSetInfo* dsi = GetDataSetInfo();
+   Log() << kINFO << "Creating multiclass response histograms..." << Endl;
+      
+   DataSet* ds = GetDataSet();
+   ds->SetCurrentType( GetTreeType() );
+   const DataSetInfo* dsi = GetDataSetInfo();
+   
+   std::vector<std::vector<TH1F*> > histos;
+   Float_t xmin = 0.-0.0002;
+   Float_t xmax = 1.+0.0002;
+   for (UInt_t iCls = 0; iCls < dsi->GetNClasses(); iCls++) {
+      histos.push_back(std::vector<TH1F*>(0));
+      for (UInt_t jCls = 0; jCls < dsi->GetNClasses(); jCls++) {
+         TString name(Form("%s_%s_prob_for_%s",prefix.Data(),
+                           dsi->GetClassInfo( jCls )->GetName().Data(),
+                           dsi->GetClassInfo( iCls )->GetName().Data()));
+         histos.at(iCls).push_back(new TH1F(name,name,nbins,xmin,xmax));
+      }
+   }
 
-//    TString name( Form("tgt_%d",tgtNum) );
+   for (Int_t ievt=0; ievt<ds->GetNEvents(); ievt++) {
+      Event* ev = ds->GetEvent(ievt);
+      Int_t cls = ev->GetClass();
+      for (UInt_t jCls = 0; jCls < dsi->GetNClasses(); jCls++) {
+         histos.at(cls).at(jCls)->Fill(fMultiClassValues[ievt][jCls]);
+      }
+   }
+   for (UInt_t iCls = 0; iCls < dsi->GetNClasses(); iCls++) {
+      for (UInt_t jCls = 0; jCls < dsi->GetNClasses(); jCls++) {
+         gTools().NormHist( histos.at(iCls).at(jCls) );
+         Store(histos.at(iCls).at(jCls));
+      }
+   }
+   
+   
+   
+   //    TString name( Form("tgt_%d",tgtNum) );
 
 //    VariableInfo vinf = dsi->GetTargetInfo(tgtNum);
 //    Float_t xmin=0., xmax=0.;

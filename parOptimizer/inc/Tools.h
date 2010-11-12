@@ -205,7 +205,8 @@ namespace TMVA {
 
       // print TMVA citation (to be called from, eg, .TMVAlogon)
       enum ECitation { kPlainText = 1,
-		       kBibTeX };
+		       kBibTeX,
+		       kLaTeX };
 
       void TMVAWelcomeMessage();
       void TMVAWelcomeMessage( MsgLogger& logger, EWelcomeMessage m = kStandardWelcomeMsg );

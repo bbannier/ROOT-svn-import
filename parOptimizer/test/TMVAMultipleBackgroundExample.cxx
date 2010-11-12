@@ -221,7 +221,7 @@ void ApplicationCreateCombinedTree(){
 
    // ===== load the input file
    TFile *input(0);
-   TString fname = "./tmva_example.root";
+   TString fname = "./tmva_example_multiple_background.root";
    input = TFile::Open( fname );
 
    TTree* theTree = NULL;

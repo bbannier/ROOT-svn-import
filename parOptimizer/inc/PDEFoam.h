@@ -259,15 +259,15 @@ namespace TMVA {
       // Getters and Setters for user cut options
       void     SetNmin(UInt_t val)     { fNmin=val;      }
       UInt_t   GetNmin()               { return fNmin;   }
-      Bool_t   GetFillFoamWithOrigWeights(){ return fFillFoamWithOrigWeights; }
+      Bool_t   GetFillFoamWithOrigWeights() const { return fFillFoamWithOrigWeights; }
       void     SetMaxDepth(UInt_t maxdepth) { fMaxDepth = maxdepth; }
       UInt_t   GetMaxDepth() const { return fMaxDepth; }
 
       // Getters and Setters for foam boundaries
       void SetXmin(Int_t idim, Double_t wmin);
       void SetXmax(Int_t idim, Double_t wmax);
-      Double_t GetXmin(Int_t idim){return fXmin[idim];}
-      Double_t GetXmax(Int_t idim){return fXmax[idim];}
+      Double_t GetXmin(Int_t idim) const {return fXmin[idim];}
+      Double_t GetXmax(Int_t idim) const {return fXmax[idim];}
 
       // Getters and Setters for variable names
       void AddVariableName(const char *s) { AddVariableName(new TObjString(s)); }
@@ -281,14 +281,15 @@ namespace TMVA {
       // ---------- Transformation functions for event variables into foam boundaries
       // reason: foam allways has boundaries [0, 1]
 
-      Float_t VarTransform(Int_t idim, Float_t x);       // transform [xmin, xmax] --> [0, 1]
-      std::vector<Float_t> VarTransform(std::vector<Float_t> &invec);
-      Float_t VarTransformInvers(Int_t idim, Float_t x); // transform [0, 1] --> [xmin, xmax]
-      std::vector<Float_t> VarTransformInvers(std::vector<Float_t> &invec);
+      Float_t VarTransform(Int_t idim, Float_t x) const; // transform [xmin, xmax] --> [0, 1]
+      std::vector<Float_t> VarTransform(std::vector<Float_t> &invec) const;
+      Float_t VarTransformInvers(Int_t idim, Float_t x) const; // transform [0, 1] --> [xmin, xmax]
+      std::vector<Float_t> VarTransformInvers(std::vector<Float_t> &invec) const;
 
       // ---------- Debug functions
 
       void     CheckAll(Int_t);  // Checks correctness of the entire data structure in the FOAM object
+      void     PrintCell(Long_t iCell=0); // Print content of cell
       void     PrintCells();     // Prints content of all cells
       void     CheckCells(Bool_t remove_empty_cells=false);   // check all cells with respect to critical values
       void     RemoveEmptyCell(Int_t iCell); // removes iCell if its volume is zero
@@ -352,14 +353,14 @@ namespace TMVA {
 // ---------- Inline functions
 
 //_____________________________________________________________________
-inline Float_t TMVA::PDEFoam::VarTransform(Int_t idim, Float_t x) 
+inline Float_t TMVA::PDEFoam::VarTransform(Int_t idim, Float_t x) const
 {
    // transform variable x from [xmin, xmax] --> [0, 1]
    return (x-fXmin[idim])/(fXmax[idim]-fXmin[idim]);
 }
 
 //_____________________________________________________________________
-inline std::vector<Float_t> TMVA::PDEFoam::VarTransform(std::vector<Float_t> &invec)
+inline std::vector<Float_t> TMVA::PDEFoam::VarTransform(std::vector<Float_t> &invec) const
 {
    // transform vector invec from [xmin, xmax] --> [0, 1]
    std::vector<Float_t> outvec;
@@ -369,14 +370,14 @@ inline std::vector<Float_t> TMVA::PDEFoam::VarTransform(std::vector<Float_t> &in
 }
 
 //_____________________________________________________________________
-inline Float_t TMVA::PDEFoam::VarTransformInvers(Int_t idim, Float_t x)
+inline Float_t TMVA::PDEFoam::VarTransformInvers(Int_t idim, Float_t x) const
 { 
    // transform variable x from [0, 1] --> [xmin, xmax]
    return x*(fXmax[idim]-fXmin[idim]) + fXmin[idim];
 }
 
 //_____________________________________________________________________
-inline std::vector<Float_t> TMVA::PDEFoam::VarTransformInvers(std::vector<Float_t> &invec)
+inline std::vector<Float_t> TMVA::PDEFoam::VarTransformInvers(std::vector<Float_t> &invec) const
 {
    // transform vector invec from [0, 1] --> [xmin, xmax]
    std::vector<Float_t> outvec;

@@ -1261,7 +1261,10 @@ void TMVA::Factory::EvaluateAllMethods( void )
          theMethod->WriteEvaluationHistosToFile(Types::kTraining);
       } else if (theMethod->DoMulticlass()) {
          doMulticlass = kTRUE;
-         Log() << kINFO << "Evaluate multiclass classification method: " << theMethod->GetMethodName() << Endl;         
+         Log() << kINFO << "Evaluate multiclass classification method: " << theMethod->GetMethodName() << Endl;
+         Log() << kINFO << "Write evaluation histograms to file" << Endl;
+         theMethod->WriteEvaluationHistosToFile(Types::kTesting);
+         theMethod->WriteEvaluationHistosToFile(Types::kTraining);
          theMethod->TestMulticlass();
       } else {
          
@@ -1656,5 +1659,26 @@ void TMVA::Factory::EvaluateAllMethods( void )
    RootBaseDir()->cd();
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTesting)->Write( "", TObject::kOverwrite );
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTraining)->Write( "", TObject::kOverwrite );
+
+
+   
+   Log() << kINFO << "  " << Endl;
+   Log() << gTools().Color("lightblue");
+   Log() << kINFO << "Thank you for using TMVA!";
+   Log() << gTools().Color("reset") << Endl;
+   Log() << kINFO << "---------------- PLEASE CITE THIS ----------------" << Endl;
+   Log() << kINFO << "=== plain text ===";
+   Log() << gTools().Color("lightblue") << Endl;
+   gTools().TMVACitation( Log(), Tools::kPlainText );
+   Log() << gTools().Color("reset") << Endl;
+   Log() << kINFO << "=== LaTeX ===";
+   Log() << gTools().Color("lightblue") << Endl;
+   gTools().TMVACitation( Log(), Tools::kLaTeX );
+   Log() << gTools().Color("reset") << Endl;
+   Log() << kINFO << "=== BibTeX ===";
+   Log() << gTools().Color("lightblue") << Endl;
+   gTools().TMVACitation( Log(), Tools::kBibTeX );
+   Log() << gTools().Color("reset") << Endl;
+   
 }
 
