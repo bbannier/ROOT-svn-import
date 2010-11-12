@@ -97,6 +97,7 @@ namespace TMVA {
       virtual DecisionTreeNode* GetRoot() const { return dynamic_cast<TMVA::DecisionTreeNode*>(fRoot); }
       virtual DecisionTreeNode * CreateNode(UInt_t) const { return new DecisionTreeNode(); }
       virtual BinaryTree* CreateTree() const { return new DecisionTree(); }
+      static  DecisionTree* CreateFromXML(void* node, UInt_t tmva_Version_Code = TMVA_VERSION_CODE);
       virtual const char* ClassName() const { return "DecisionTree"; }
 
       // building of a tree by recursivly splitting the nodes

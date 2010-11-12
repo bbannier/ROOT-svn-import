@@ -432,8 +432,7 @@ void TMVA::DecisionTreeNode::SetSampleMax(UInt_t ivar, Float_t xmax){
 //_______________________________________________________________________
 void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_Code */  )
 {
-   Float_t tempNSigEvents,tempNBkgEvents,tempNEvents,tempNSigEvents_unweighted,  tempNBkgEvents_unweighted,tempNEvents_unweighted, tempSeparationIndex, tempSeparationGain;  
-   Double_t tempCC;
+   Float_t tempNSigEvents,tempNBkgEvents;
 
    Int_t nCoef;
    gTools().ReadAttr(node, "NCoef",  nCoef                  );
@@ -446,36 +445,18 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    gTools().ReadAttr(node, "IVar",  fSelector               );
    gTools().ReadAttr(node, "Cut",   fCutValue               );
    gTools().ReadAttr(node, "cType", fCutType                );               
-   // gTools().ReadAttr(node, "nS",    tempNSigEvents             );
-   // gTools().ReadAttr(node, "nB",    tempNBkgEvents             );
-   // gTools().ReadAttr(node, "nEv",   tempNEvents                );
-   // gTools().ReadAttr(node, "nSuw",  tempNSigEvents_unweighted  );
-   // gTools().ReadAttr(node, "nBuw",  tempNBkgEvents_unweighted  );
-   // gTools().ReadAttr(node, "nEvuw", tempNEvents_unweighted     );
-   // gTools().ReadAttr(node, "sepI",  tempSeparationIndex        );
-   // gTools().ReadAttr(node, "sepG",  tempSeparationGain         );
-   gTools().ReadAttr(node, "res",   fResponse               );
-   gTools().ReadAttr(node, "rms",   fRMS                    );
-   gTools().ReadAttr(node, "nType", fNodeType               );
-   if(gTools().HasAttr(node, "purity")) {
+   if (gTools().HasAttr(node,"rms")) gTools().ReadAttr(node, "rms",   fResponse);
+   if (gTools().HasAttr(node,"res")) gTools().ReadAttr(node, "res",   fResponse);
+   //   else { 
+   if( gTools().HasAttr(node, "purity") ) {
       gTools().ReadAttr(node, "purity",fPurity );
    } else {
       gTools().ReadAttr(node, "nS",    tempNSigEvents             );
       gTools().ReadAttr(node, "nB",    tempNBkgEvents             );
       fPurity = tempNSigEvents / (tempNSigEvents + tempNBkgEvents);
    }
-   // gTools().ReadAttr(node, "CC",    tempCC                  );
-   // if (fTrainInfo){
-   //    SetNSigEvents(tempNSigEvents);
-   //    SetNBkgEvents(tempNBkgEvents);
-   //    SetNEvents(tempNEvents);
-   //    SetNSigEvents_unweighted(tempNSigEvents_unweighted);
-   //    SetNBkgEvents_unweighted(tempNBkgEvents_unweighted);
-   //    SetNEvents_unweighted(tempNEvents_unweighted);
-   //    SetSeparationIndex(tempSeparationIndex);
-   //    SetSeparationGain(tempSeparationGain);
-   //    SetCC(tempCC);
-   // }
+   //   }
+   gTools().ReadAttr(node, "nType", fNodeType               );
 }
 
 
@@ -490,19 +471,15 @@ void TMVA::DecisionTreeNode::AddAttributesToNode(void* node) const
    gTools().AddAttr(node, "IVar",  GetSelector());
    gTools().AddAttr(node, "Cut",   GetCutValue());
    gTools().AddAttr(node, "cType", GetCutType());
-   // gTools().AddAttr(node, "nS",    GetNSigEvents());
-   // gTools().AddAttr(node, "nB",    GetNBkgEvents());
-   // gTools().AddAttr(node, "nEv",   GetNEvents());
-   // gTools().AddAttr(node, "nSuw",  GetNSigEvents_unweighted());
-   // gTools().AddAttr(node, "nBuw",  GetNBkgEvents_unweighted());
-   // gTools().AddAttr(node, "nEvuw", GetNEvents_unweighted());
-   // gTools().AddAttr(node, "sepI",  GetSeparationIndex());
-   // gTools().AddAttr(node, "sepG",  GetSeparationGain());
+
+   //UInt_t analysisType = (dynamic_cast<const TMVA::DecisionTree*>(GetParentTree()) )->GetAnalysisType();
+   //   if ( analysisType == TMVA::Types:: kRegression) {
    gTools().AddAttr(node, "res",   GetResponse());
    gTools().AddAttr(node, "rms",   GetRMS());
-   gTools().AddAttr(node, "nType", GetNodeType());
+   //} else if ( analysisType == TMVA::Types::kClassification) {
    gTools().AddAttr(node, "purity",GetPurity());
-   //   gTools().AddAttr(node, "CC",    (GetCC() > 10000000000000.)?100000.:GetCC());
+   //}
+   gTools().AddAttr(node, "nType", GetNodeType());
 }
 
 //_______________________________________________________________________
