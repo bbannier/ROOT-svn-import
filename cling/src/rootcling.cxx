@@ -147,7 +147,7 @@ void OpenPCH (clang::CompilerInstance* CI, std::string fileName)
    clang::PreprocessorOptions & PO = CI->getInvocation().getPreprocessorOpts();
 
    std::string originalFile =
-      clang::ASTReader::getOriginalSourceFile(fileName, CI->getDiagnostics());
+      clang::ASTReader::getOriginalSourceFile(fileName, CI->getFileManager(), CI->getFileSystemOpts(), CI->getDiagnostics());
 
    if (! originalFile.empty())
    {
@@ -263,7 +263,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
          error ("compileString: Failed to create main file id");
    }
    else {
-      const clang::FileEntry* File = CI->getFileManager().getFile(fileName);
+      const clang::FileEntry* File = CI->getFileManager().getFile(fileName,CI->getFileSystemOpts());
       if (File)
          CI->getSourceManager().createMainFileID(File);
       if (CI->getSourceManager().getMainFileID().isInvalid())

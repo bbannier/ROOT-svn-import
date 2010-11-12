@@ -966,7 +966,7 @@ TString TScanner::ConvTemplateArguments(const clang::TemplateArgumentList& list)
    clang::LangOptions lang_opts;
    clang::PrintingPolicy print_opts(lang_opts);  // !?
    return clang::TemplateSpecializationType::PrintTemplateArgumentList
-          (list.getFlatArgumentList(), list.flat_size(), print_opts);
+          (list.data(), list.size(), print_opts);
 }
 
 /********************************** FUNCTION **********************************/
