@@ -16,7 +16,6 @@
 //////////////////////////////////////////////////////////////////////////
 
 
-
 #include "XMLReader.h"
 
 std::map<std::string, XMLReader::ETagNames> XMLReader::fgMapTagNames;
