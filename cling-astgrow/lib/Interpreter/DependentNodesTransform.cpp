@@ -7,7 +7,9 @@
 #include "DependentNodesTransform.h"
 #include "ASTTransformVisitor.h"
 
-void DependentNodesTransform::TransformNodes(Sema *Sema){
-   ASTTransformVisitor transformer(Sema);
-   transformer.Visit(Sema->getASTContext().getTranslationUnitDecl());
-}
+namespace cling {
+   void DependentNodesTransform::TransformNodes(Sema *Sema){
+      ASTTransformVisitor transformer(Sema);
+      transformer.Visit(Sema->getASTContext().getTranslationUnitDecl());
+   }
+}//end cling
