@@ -468,8 +468,6 @@ void TMVA::MethodBDT::Reset( void )
    // I keep the BDT EventSample and its Validation sample (eventuall they should all
    // disappear and just use the DataSet samples ..
    
-   std::cout << std::endl << std::endl << "  BLA !!!  Yes  i call reset" << std::endl << std::endl;
-
    // remove all the trees 
    for (UInt_t i=0; i<fForest.size();           i++) delete fForest[i];
    fForest.clear();
@@ -1049,7 +1047,6 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
    Double_t newSumGlobalw=0;
    vector<Double_t> newSumw(sumw.size(),0);
 
-   // bla    std::cout << "AdaBoost err = " << err<< " = wrong/all: " << sumGlobalwfalse << "/" << sumGlobalw << std::endl;
    Double_t boostWeight=1.;
    if (err >= 0.5) { // sanity check ... should never happen as otherwise there is apparently
       // something odd with the assignement of the leaf nodes (rem: you use the training
@@ -1116,8 +1113,6 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
 
    fBoostWeight = boostWeight;
    fErrorFraction = err;
-
-   // bla   std::cout << "BoostWeight=" << boostWeight << "  " << TMath::Log(boostWeight) << std::endl;
 
    return TMath::Log(boostWeight);
 }
@@ -1261,8 +1256,7 @@ void TMVA::MethodBDT::AddWeightsXMLTo( void* parent ) const
    // write weights to XML
    void* wght = gTools().AddChild(parent, "Weights");
    gTools().AddAttr( wght, "NTrees", fForest.size() );
-   gTools().AddAttr( wght, "TreeType", fForest.back()->GetAnalysisType() );
-   gTools().AddAttr( wght, "UseFisherCuts", fUseFisherCuts );
+   gTools().AddAttr( wght, "AnalysisType", fForest.back()->GetAnalysisType() );
 
    for (UInt_t i=0; i< fForest.size(); i++) {
       void* trxml = fForest[i]->AddXMLTo(wght);
@@ -1283,16 +1277,20 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
    UInt_t ntrees;
    UInt_t analysisType;
    Float_t boostWeight;
-   Bool_t useFisherCuts;
+   //   Bool_t useFisherCuts;
 
    gTools().ReadAttr( parent, "NTrees", ntrees );
-   gTools().ReadAttr( parent, "TreeType", analysisType );
-   gTools().ReadAttr( parent, "UseFisherCuts", useFisherCuts );
+   
+   if(gTools().HasAttr(parent, "TreeType")) { // pre 4.1.0 version
+      gTools().ReadAttr( parent, "TreeType", analysisType );
+   } else {                                 // from 4.1.0 onwards
+      gTools().ReadAttr( parent, "AnalysisType", analysisType );      
+   }
 
    void* ch = gTools().GetChild(parent);
    i=0;
    while(ch) {
-      fForest.push_back( dynamic_cast<DecisionTree*>( BinaryTree::CreateFromXML(ch, GetTrainingTMVAVersionCode()) ) );
+      fForest.push_back( dynamic_cast<DecisionTree*>( DecisionTree::CreateFromXML(ch, GetTrainingTMVAVersionCode()) ) );
       fForest.back()->SetAnalysisType(Types::EAnalysisType(analysisType));
       fForest.back()->SetTreeID(i++);
 

@@ -124,10 +124,10 @@ namespace TMVA {
       char GetPos() const {return fPos;}
 
       // Return the pointer to the Parent tree to which the Node belongs 
-      TMVA::BinaryTree* GetParentTree() const {return fParentTree;}
+      virtual TMVA::BinaryTree* GetParentTree() const {return fParentTree;}
 
       // set the pointer to the Parent Tree to which the Node belongs 
-      void SetParentTree(TMVA::BinaryTree* t) {fParentTree = t;} 
+      virtual void SetParentTree(TMVA::BinaryTree* t) {fParentTree = t;} 
 
       int GetCount();
 

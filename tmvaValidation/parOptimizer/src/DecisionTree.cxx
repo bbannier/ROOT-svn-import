@@ -243,6 +243,18 @@ void TMVA::DecisionTree::SetParentTreeInNodes( Node *n )
 }
 
 //_______________________________________________________________________
+TMVA::DecisionTree* TMVA::DecisionTree::CreateFromXML(void* node, UInt_t tmva_Version_Code ) {
+   // re-create a new tree (decision tree or search tree) from XML
+   std::string type("");
+   gTools().ReadAttr(node,"type", type);
+   DecisionTree* dt = new DecisionTree();
+
+   dt->ReadXML( node, tmva_Version_Code );
+   return dt;
+}
+
+
+//_______________________________________________________________________
 UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
                                       TMVA::DecisionTreeNode *node)
 {
@@ -570,8 +582,6 @@ Double_t TMVA::DecisionTree::PruneTree( vector<Event*>* validationSample )
    
 
    for (UInt_t i = 0; i < info->PruneSequence.size(); ++i) {
-      //      std::cout << "bla : Pruning everything below node " << std::endl;
-      //      info->PruneSequence[i]->Print(std::cout);
       
       PruneNode(info->PruneSequence[i]);
    }
@@ -892,22 +902,12 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
       const TMatrixD *s = gTools().GetCorrelationMatrix(ss);
       const TMatrixD *b = gTools().GetCorrelationMatrix(bb);
       
-      //      std::cout << " Bla bla "  << std::endl;
-      //      s->Print();
-
       for (UInt_t ivar=0; ivar < fNvars; ivar++) {
          for (UInt_t jvar=ivar+1; jvar < fNvars; jvar++) {
-            // sorry, I don't manage to "read" element i,j from the TMatrixDSym,
-            // hence this stupid workaround...... maybe one day I mange directly,
-            // ... unbelievable, how can this be so complicated!!!!!!!! Or am
-            // I really THAT stupid ????????????
-            // std::cout << " bla xxx = " << fMinLinCorrForFisher << std::endl;
-            // std::cout << " bla correlation " << ivar << ", "<< jvar<<"   in sig:"<< (*s)(ivar, jvar)<< " and in bkg:"<< (*b)(ivar, jvar) << std::endl;
             if (  ( TMath::Abs( (*s)(ivar, jvar)) > fMinLinCorrForFisher) ||
                   ( TMath::Abs( (*b)(ivar, jvar)) > fMinLinCorrForFisher) ){
                useVarInFisher[ivar] = kTRUE;
                useVarInFisher[jvar] = kTRUE;
-               //               std::cout << "Bla Use in fisher criterium var " << ivar << ", "<< jvar<<" with corr in sig:"<< (*s)(ivar, jvar)<< " and in bkg:"<< (*b)(ivar, jvar) << std::endl;
             }
          }
       }
@@ -928,9 +928,6 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
       
       
       fisherCoeff = this->GetFisherCoefficients(eventSample, nFisherVars, mapVarInFisher);
-      //      std::cout << "Bla Fisher Coeff=";
-      //      for (UInt_t i=0; i<=fNvars; i++) std::cout << " " << fisherCoeff[i];
-      //      std::cout << std::endl;
    }
 
 
@@ -988,8 +985,6 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
       }
    }
 
-   //   std::cout << "Bla fill cut values now" << std::endl;
-
    // fill the cut values for the scan:
    for (UInt_t ivar=0; ivar < cNvars; ivar++) {
       if ( useVariable[ivar] ) {
@@ -1012,14 +1007,9 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
       }
    }
   
-   //   std::cout << "Bla event loop" << std::endl;
-
-
    nTotS=0; nTotB=0;
    nTotS_unWeighted=0; nTotB_unWeighted=0;   
    for (UInt_t iev=0; iev<nevents; iev++) {
-
-      //      if (!(iev%500) ) std::cout << "Bla event loop " << iev << std::endl;
 
       Double_t eventWeight =  eventSample[iev]->GetWeight(); 
       if (eventSample[iev]->GetClass() == fClass) {
@@ -1033,7 +1023,6 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
       
       Int_t iBin=-1;
       for (UInt_t ivar=0; ivar < cNvars; ivar++) {
-         //         if (!(iev%500) ) std::cout << "Bla event loop " << iev << " ivar=" << ivar << std::endl;
          // now scan trough the cuts for each varable and find which one gives
          // the best separationGain at the current stage.
          if ( useVariable[ivar] ) {
@@ -1063,8 +1052,6 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
       }
    }
    
-   //   std::cout << "Bla fill cumulative distribution " << std::endl;
-
    // now turn the "histogram" into a cummulative distribution
    for (UInt_t ivar=0; ivar < cNvars; ivar++) {
       if (useVariable[ivar]) {
@@ -1094,14 +1081,12 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
          }
       }
    }
-   //   std::cout << "Bla find best separation "  << std::endl;
-
    // now select the optimal cuts for each varable and find which one gives
    // the best separationGain at the current stage
    for (UInt_t ivar=0; ivar < cNvars; ivar++) {
-      //      std::cout << "Bla find best separation " << ivar << std::endl;
+
       if (useVariable[ivar]) {
-         //         std::cout << "Bla find best separation " << ivar << std::endl;
+
          for (UInt_t iBin=0; iBin<nBins-1; iBin++) { // the last bin contains "all events" -->skip
             // the separationGain is defined as the various indices (Gini, CorssEntropy, e.t.c)
             // calculated by the "SamplePurities" fom the branches that would go to the
@@ -1136,16 +1121,11 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
                   cutIndex = iBin;
                   if (cutIndex >= fNCuts) Log()<<kFATAL<<"ibin for cut " << iBin << Endl; 
                }
-               // if (ivar==fNvars){//the fisher thing..
-               //    std::cout << "Bla Fisher gives sepearation " << separationGain << std::endl;
-               // }
             }
          }
       }
    }
    
-   //   std::cout << "Bla now fill the node " << std::endl;
-
    if (DoRegression()) {
       node->SetSeparationIndex(fRegType->GetSeparationIndex(nTotS+nTotB,target[0][nBins-1],target2[0][nBins-1]));
       node->SetResponse(target[0][nBins-1]/(nTotS+nTotB));
@@ -1165,18 +1145,14 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
       node->SetCutType(cutType);
       node->SetSeparationGain(separationGain);
       if (mxVar < (Int_t) fNvars){ // the fisher cut is actually not used in this node, hence don't need to store fisher components
-         //         std::cout << "Bla  No fisher node :(" << std::endl;
-         
          node->SetNFisherCoeff(0);
          fVariableImportance[mxVar] += separationGain*separationGain * (nTotS+nTotB) * (nTotS+nTotB) ;
       }else{
-         //         std::cout << "Bla  Yes I found a fisher node" << std::endl;
-      // allocate Fisher coefficients (use fNvars, and set the non-used ones to zero. Might
-      // be even less storage space on average than storing also the mapping used otherwise
-      // can always be changed relatively easy
+         // allocate Fisher coefficients (use fNvars, and set the non-used ones to zero. Might
+         // be even less storage space on average than storing also the mapping used otherwise
+         // can always be changed relatively easy
          node->SetNFisherCoeff(fNvars+1);     
          for (UInt_t ivar=0; ivar<=fNvars; ivar++) {
-            //            std::cout << "Bla fill fisher coeff " << ivar << "  " << fisherCoeff[ivar] << std::endl;
             node->SetFisherCoeff(ivar,fisherCoeff[ivar]);
             // take 'fisher coeff. weighted estimate as variable importance, "Don't fill the offset coefficient though :) 
             if (ivar<fNvars){
@@ -1211,8 +1187,6 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
    delete [] xmax;
 
    delete [] useVariable;
-
-   //   std::cout << " Bla leaf TrainNode  " << std::endl;
 
    return separationGain;
 
