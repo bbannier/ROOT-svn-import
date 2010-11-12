@@ -31,6 +31,7 @@
 #include "ClangUtils.h"
 #include "ExecutionContext.h"
 #include "IncrementalASTParser.h"
+#include "InputValidator.h"
 
 #include <cstdio>
 #include <iostream>
@@ -83,6 +84,7 @@ namespace {
     
     return llvm::sys::Path();
   }
+  
 }
 
 namespace cling {
@@ -107,6 +109,8 @@ namespace cling {
                                                    maybeGenerateASTPrinter(),
                                                    &getPragmaHandler()));
     m_ExecutionContext.reset(new ExecutionContext(*this));
+    
+    m_InputValidator.reset(new InputValidator(createCI()));
     
     compileString(""); // Consume initialization.
     compileString("#include <stdio.h>\n");
@@ -147,6 +151,12 @@ namespace cling {
     //  the saved global declarations.
     //
     //fprintf(stderr, "input_line:\n%s\n", src.c_str());
+    InputValidator::Result ValidatorResult = m_InputValidator->validate(input_line);
+    if (ValidatorResult != InputValidator::kValid) {
+      fprintf(stderr, "Bad input, dude! That's a code %d\n", ValidatorResult);
+      return 0;
+    }
+    
     std::string wrapped;
     std::string stmtFunc;
     createWrappedSrc(input_line, wrapped, stmtFunc);
