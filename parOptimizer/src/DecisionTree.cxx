@@ -355,11 +355,12 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
    // of events in the parent node is not at least two times as big, I don't even need to try
    // splitting
 
-   if (eventSample.size() >= 2*fMinSize && fNNodes < fNNodesMax && node->GetDepth() < fMaxDepth
-       && s!=0 && b !=0 ) {
+   if (eventSample.size() >= 2*fMinSize && fNNodes < fNNodesMax && node->GetDepth() < fMaxDepth 
+       && ( ( s!=0 && b !=0 && !DoRegression()) || ( (s+b)!=0 && DoRegression()) ) ) {
       Double_t separationGain;
-      if (fNCuts > 0)
+      if (fNCuts > 0){
          separationGain = this->TrainNodeFast(eventSample, node);
+      }
       else
          separationGain = this->TrainNodeFull(eventSample, node);
 
@@ -987,6 +988,7 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
 
    // fill the cut values for the scan:
    for (UInt_t ivar=0; ivar < cNvars; ivar++) {
+
       if ( useVariable[ivar] ) {
          
          //set the grid for the cut scan on the variables like this:
