@@ -27,6 +27,7 @@ namespace cling {
   class CIBuilder;
   class ExecutionContext;
   class IncrementalASTParser;
+  class InputValidator;
   
   //---------------------------------------------------------------------------
   //! Class for managing many translation units supporting automatic
@@ -72,6 +73,7 @@ namespace cling {
     llvm::OwningPtr<cling::CIBuilder> m_CIBuilder; // our compiler intsance builder
     llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
     llvm::OwningPtr<IncrementalASTParser> m_IncrASTParser; // incremental AST and its parser
+    llvm::OwningPtr<InputValidator> m_InputValidator; // balanced paren etc
     clang::PragmaNamespace* m_PragmaHandler; // pragma cling ..., owned by Preprocessor
     unsigned long long m_UniqueCounter; // number of generated call wrappers
     bool m_printAST; // whether to print the AST to be processed
