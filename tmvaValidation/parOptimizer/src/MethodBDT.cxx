@@ -997,7 +997,7 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
 
    Double_t err=0, sumGlobalw=0, sumGlobalwfalse=0, sumGlobalwfalse2=0;
 
-   vector<Double_t> sumw; //for re-scaling individual each class
+   vector<Double_t> sumw; //for individually re-scaling  each class
 
    Double_t maxDev=0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
@@ -1086,7 +1086,8 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
          Double_t boostfactor = boostWeight;
          if (DoRegression()) boostfactor = TMath::Power(1/boostWeight,(1.-TMath::Abs(dt->CheckEvent(*(*e),kFALSE) - (*e)->GetTarget(0) )/maxDev ) );
          if ( (*e)->GetWeight() > 0 ){
-            (*e)->ScaleBoostWeight(boostfactor);
+            (*e)->SetBoostWeight( (*e)->GetBoostWeight() * boostfactor);
+            // Helge change back            (*e)->ScaleBoostWeight(boostfactor);
             if (DoRegression()) results->GetHist("BoostWeights")->Fill(boostfactor);
             //            cout << "  " << boostfactor << endl;
          } else {
@@ -1133,7 +1134,8 @@ Double_t TMVA::MethodBDT::Bagging( vector<TMVA::Event*> eventSample, Int_t iTree
    }
    Double_t normWeight =  eventSample.size() / newSumw ;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      (*e)->ScaleBoostWeight( normWeight );
+      (*e)->SetBoostWeight( (*e)->GetBoostWeight() * eventSample.size() / newSumw );
+      // change this backwards      (*e)->ScaleBoostWeight( normWeight );
    }
    delete trandom;
    return 1.;  //here as there are random weights for each event, just return a constant==1;
@@ -1237,7 +1239,9 @@ Double_t TMVA::MethodBDT::AdaBoostR2( vector<TMVA::Event*> eventSample, Decision
    // re-normalise the weights
    Double_t normWeight =  sumw / newSumw;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      (*e)->ScaleBoostWeight( normWeight);
+       //Helge    (*e)->ScaleBoostWeight( sumw/newSumw);
+     // (*e)->ScaleBoostWeight( normWeight);
+      (*e)->SetBoostWeight( (*e)->GetBoostWeight() * normWeight );
    }
 
 
@@ -1277,7 +1281,6 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
    UInt_t ntrees;
    UInt_t analysisType;
    Float_t boostWeight;
-   //   Bool_t useFisherCuts;
 
    gTools().ReadAttr( parent, "NTrees", ntrees );
    
@@ -1293,7 +1296,6 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
       fForest.push_back( dynamic_cast<DecisionTree*>( DecisionTree::CreateFromXML(ch, GetTrainingTMVAVersionCode()) ) );
       fForest.back()->SetAnalysisType(Types::EAnalysisType(analysisType));
       fForest.back()->SetTreeID(i++);
-
       gTools().ReadAttr(ch,"boostWeight",boostWeight);
       fBoostWeights.push_back(boostWeight);
       ch = gTools().GetNextChild(ch);

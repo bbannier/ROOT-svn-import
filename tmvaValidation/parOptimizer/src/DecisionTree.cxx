@@ -360,10 +360,9 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
       Double_t separationGain;
       if (fNCuts > 0){
          separationGain = this->TrainNodeFast(eventSample, node);
-      }
-      else
+      } else {
          separationGain = this->TrainNodeFull(eventSample, node);
-
+      }
       if (separationGain < std::numeric_limits<double>::epsilon()) { // we could not gain anything, e.g. all events are in one bin,
          /// if (separationGain < 0.00000001) { // we could not gain anything, e.g. all events are in one bin,
          // no cut can actually do anything to improve the node
@@ -855,8 +854,8 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
    // discriminant being built out of (some) of the variables and used as a
    // possible multivariate split.
 
-   Float_t separationGain = -1, sepTmp;
-   Float_t cutValue=-999;
+   Double_t separationGain = -1, sepTmp;
+   Double_t cutValue=-999;
    Int_t mxVar= -1;
    Int_t cutIndex=-1;
    Bool_t cutType=kTRUE;
@@ -1052,8 +1051,7 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
             }
          }
       }
-   }
-   
+   }   
    // now turn the "histogram" into a cummulative distribution
    for (UInt_t ivar=0; ivar < cNvars; ivar++) {
       if (useVariable[ivar]) {
@@ -1086,9 +1084,7 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
    // now select the optimal cuts for each varable and find which one gives
    // the best separationGain at the current stage
    for (UInt_t ivar=0; ivar < cNvars; ivar++) {
-
       if (useVariable[ivar]) {
-
          for (UInt_t iBin=0; iBin<nBins-1; iBin++) { // the last bin contains "all events" -->skip
             // the separationGain is defined as the various indices (Gini, CorssEntropy, e.t.c)
             // calculated by the "SamplePurities" fom the branches that would go to the
@@ -1138,8 +1134,7 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
    }
    if (mxVar >= 0) { 
       if (nSelS[mxVar][cutIndex]/nTotS > nSelB[mxVar][cutIndex]/nTotB) cutType=kTRUE;
-      else cutType=kFALSE;
-      
+      else cutType=kFALSE;      
       cutValue = cutValues[mxVar][cutIndex];
     
       node->SetSelector((UInt_t)mxVar);
