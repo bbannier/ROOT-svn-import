@@ -412,7 +412,7 @@ void TMVA::MethodBDT::ProcessOptions()
       }
    }
    if (fRandomisedTrees){
-      Log() << kINFO << " Randomised trees use *bagging* as *boost* method and no pruning" << Endl;
+      Log() << kINFO << " Randomised trees use no pruning" << Endl;
       fPruneMethod = DecisionTree::kNoPruning;
       //      fBoostType   = "Bagging";
    }
@@ -422,12 +422,6 @@ void TMVA::MethodBDT::ProcessOptions()
    //             << " that is larger than 1/2 the total number of events in the training sample."
    //             << " Hence I cannot make any split at all... this will not work!" << Endl;
    //    }
-
-   // fill the STL Vector with the event sample
-   // (needs to be done here and cannot be done in "init" as the options need to be 
-   // known). Train (where it was before) was also a bad place, as we don't want to repeat
-   // this for each "training" when optimising parameters.
-   InitEventSample();
 
 }
 //_______________________________________________________________________
@@ -474,6 +468,8 @@ void TMVA::MethodBDT::Reset( void )
    // I keep the BDT EventSample and its Validation sample (eventuall they should all
    // disappear and just use the DataSet samples ..
    
+   std::cout << std::endl << std::endl << "  BLA !!!  Yes  i call reset" << std::endl << std::endl;
+
    // remove all the trees 
    for (UInt_t i=0; i<fForest.size();           i++) delete fForest[i];
    fForest.clear();
@@ -482,8 +478,9 @@ void TMVA::MethodBDT::Reset( void )
    if (fMonitorNtuple) fMonitorNtuple->Delete(); fMonitorNtuple=NULL;
    fVariableImportance.clear();
    fResiduals.clear();
+   // now done in "InitEventSample" which is called in "Train"
    // reset all previously stored/accumulated BOOST weights in the event sample
-   for (UInt_t iev=0; iev<fEventSample.size(); iev++) fEventSample[iev]->SetBoostWeight(1.);
+   //for (UInt_t iev=0; iev<fEventSample.size(); iev++) fEventSample[iev]->SetBoostWeight(1.);
    if (Data()) Data()->DeleteResults(GetMethodName(), Types::kTraining, GetAnalysisType());
    Log() << kDEBUG << " successfully(?) resetted the method " << Endl;                                      
 }
@@ -506,40 +503,46 @@ void TMVA::MethodBDT::InitEventSample( void )
    // existing trainingTree, as it the vector of events from the ROOT training tree
    if (!HasTrainingTree()) Log() << kFATAL << "<Init> Data().TrainingTree() is zero pointer" << Endl;
 
-   UInt_t nevents = Data()->GetNTrainingEvents();
-   Bool_t first=kTRUE;
+   if (fEventSample.size() > 0) { // do not re-initialise the event sample, just set all boostweights to 1. as if it were untouched
+         // reset all previously stored/accumulated BOOST weights in the event sample
+      for (UInt_t iev=0; iev<fEventSample.size(); iev++) fEventSample[iev]->SetBoostWeight(1.);
+   } else {
 
-   for (UInt_t ievt=0; ievt<nevents; ievt++) {
-
-      Event* event = new Event( *GetTrainingEvent(ievt) );
-
-      if (!IgnoreEventsWithNegWeightsInTraining() || event->GetWeight() > 0) {
-         if (first && event->GetWeight() < 0) {
-            first = kFALSE;
-            Log() << kINFO << "Events with negative event weights are ignored during "
-                  << "the BDT training (option IgnoreNegWeightsInTraining is now enabled)" 
-                  << Endl;
-            continue;
+      UInt_t nevents = Data()->GetNTrainingEvents();
+      Bool_t first=kTRUE;
+      
+      for (UInt_t ievt=0; ievt<nevents; ievt++) {
+         
+         Event* event = new Event( *GetTrainingEvent(ievt) );
+         
+         if (!IgnoreEventsWithNegWeightsInTraining() || event->GetWeight() > 0) {
+            if (first && event->GetWeight() < 0) {
+               first = kFALSE;
+               Log() << kINFO << "Events with negative event weights are ignored during "
+                     << "the BDT training (option IgnoreNegWeightsInTraining is now enabled)" 
+                     << Endl;
+               continue;
+            }
+            // if fAutomatic == true you need a validation sample to optimize pruning
+            if (fAutomatic) {
+               Double_t modulo = 1.0/(fFValidationEvents);
+               Int_t   imodulo = static_cast<Int_t>( fmod(modulo,1.0) > 0.5 ? ceil(modulo) : floor(modulo) );
+               if (ievt % imodulo == 0) fValidationSample.push_back( event );
+               else                     fEventSample.push_back( event );
+            }
+            else {
+               fEventSample.push_back(event);
+            }
+         } else {
+            delete event;
          }
-         // if fAutomatic == true you need a validation sample to optimize pruning
-         if (fAutomatic) {
-            Double_t modulo = 1.0/(fFValidationEvents);
-            Int_t   imodulo = static_cast<Int_t>( fmod(modulo,1.0) > 0.5 ? ceil(modulo) : floor(modulo) );
-            if (ievt % imodulo == 0) fValidationSample.push_back( event );
-            else                     fEventSample.push_back( event );
-         }
-         else {
-            fEventSample.push_back(event);
-         }
-      } else {
-         delete event;
       }
-   }
-   if (fAutomatic) {
-      Log() << kINFO << "<InitEventSample> Internally I use " << fEventSample.size()
-            << " for Training  and " << fValidationSample.size()
-            << " for Pruning Validation (" << ((Float_t)fValidationSample.size())/((Float_t)fEventSample.size()+fValidationSample.size())*100.0
-            << "% of training used for validation)" << Endl;
+      if (fAutomatic) {
+         Log() << kINFO << "<InitEventSample> Internally I use " << fEventSample.size()
+               << " for Training  and " << fValidationSample.size()
+               << " for Pruning Validation (" << ((Float_t)fValidationSample.size())/((Float_t)fEventSample.size()+fValidationSample.size())*100.0
+               << "% of training used for validation)" << Endl;
+      }
    }
 }
 
@@ -549,8 +552,10 @@ void TMVA::MethodBDT::Train()
    // BDT training
    TMVA::DecisionTreeNode::fgIsTraining=true;
 
-   // // fill the STL Vector with the event sample
-   // InitEventSample();
+   // fill the STL Vector with the event sample
+   // (needs to be done here and cannot be done in "init" as the options need to be 
+   // known). 
+   InitEventSample();
 
    // HHV (it's been here since looong but I really don't know why we cannot handle
    // normalized variables in BDTs...  todo

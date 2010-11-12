@@ -198,6 +198,7 @@ void TMVA::MethodDT::DeclareOptions()
 
    DeclareOptionRef(fRandomisedTrees,"UseRandomisedTrees","Choose at each node splitting a random set of variables and *bagging*");
    DeclareOptionRef(fUseNvars,"UseNvars","Number of variables used if randomised Tree option is chosen");
+   DeclareOptionRef(fUsePoissonNvars,"UsePoissonNvars", "use *UseNvars* not as fixed number but as mean of a possion distr. in each split");
    DeclareOptionRef(fUseYesNoLeaf=kTRUE, "UseYesNoLeaf", 
                     "Use Sig or Bkg node type or the ratio S/B as classification in the leaf node");
    DeclareOptionRef(fNodePurityLimit=0.5, "NodePurityLimit", "In boosting/pruning, nodes with purity > NodePurityLimit are signal; background otherwise.");
@@ -311,9 +312,12 @@ TMVA::MethodDT::~MethodDT( void )
 void TMVA::MethodDT::Train( void )
 {
    TMVA::DecisionTreeNode::fgIsTraining=true;
-   SeparationBase *qualitySepType = new GiniIndex();
-   fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0, qualitySepType,
-                             fRandomisedTrees, fUseNvars, 0 );
+   UInt_t  treeID=0;
+   UInt_t  randomSeed=0;
+   fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0,
+                             fRandomisedTrees, fUseNvars, fUsePoissonNvars, fNNodesMax, fMaxDepth,
+                             randomSeed, fNodePurityLimit, treeID);
+
    if (fRandomisedTrees) Log()<<kWARNING<<" randomised Trees do not work yet in this framework," 
                                 << " as I do not know how to give each tree a new random seed, now they"
                                 << " will be all the same and that is not good " << Endl;
