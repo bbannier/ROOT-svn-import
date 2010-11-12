@@ -66,6 +66,7 @@ namespace cling {
     CIBuilder& getCIBuilder() const { return *m_CIBuilder.get(); }
     
     clang::PragmaNamespace& getPragmaHandler() const { return *m_PragmaHandler; }
+    void installLazyFunctionCreator(void* (*fp)(const std::string&));
 
      void RequestContinuation(const clang::SourceLocation&);
     
