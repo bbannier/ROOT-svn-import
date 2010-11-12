@@ -1,0 +1,23 @@
+Index: clang/lib/Sema/SemaExpr.cpp
+===================================================================
+--- clang/lib/Sema/SemaExpr.cpp	(revision 114073)
++++ clang/lib/Sema/SemaExpr.cpp	(working copy)
+@@ -1170,11 +1170,18 @@
+       if (D) R.addDecl(D);
+     }
+ 
++    /*
+     // If this name wasn't predeclared and if this is not a function
+     // call, diagnose the problem.
+     if (R.empty()) {
+       if (DiagnoseEmptyLookup(S, SS, R, CTC_Unknown))
+         return ExprError();
++    */
++    // Here if we encounter unknown symbol we are not reporting error anymore
++    // We are escaping it as dependent symbol, which is going to skip the
++    //the error diagnostics
++    if (R.empty()) {
++      return ActOnDependentIdExpression(SS, NameInfo, false, NULL);
+ 
+       assert(!R.empty() &&
+              "DiagnoseEmptyLookup returned false but added no results");

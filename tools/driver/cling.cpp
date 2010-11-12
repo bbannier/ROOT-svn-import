@@ -14,6 +14,7 @@
 
 #include "llvm/System/Signals.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/ManagedStatic.h"
 
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/UserInterface/UserInterface.h"
@@ -24,8 +25,10 @@
 int main( int argc, char **argv )
 {
 
-   llvm::sys::PrintStackTraceOnErrorSignal();
-   llvm::PrettyStackTraceProgram X(argc, argv);
+   llvm::llvm_shutdown_obj shutdownTrigger;
+
+   //llvm::sys::PrintStackTraceOnErrorSignal();
+   //llvm::PrettyStackTraceProgram X(argc, argv);
 
    // TODO: factor out, use llvm's / clang option parsing tools
 
@@ -83,15 +86,17 @@ int main( int argc, char **argv )
    //---------------------------------------------------------------------------
    // We're supposed to parse a file
    //---------------------------------------------------------------------------
+   int ret = 0;
    if( !interactive ) {
-      return interpreter.executeFile(argv[fileArgN]);
+      ret = interpreter.executeFile(argv[fileArgN]);
    }
    //----------------------------------------------------------------------------
    // We're interactive
    //----------------------------------------------------------------------------
-   //else {
+   else {
       cling::UserInterface ui(interpreter);
       ui.runInteractively(nologo);
-   //}
-   return 0;
+   }
+
+   return ret;
 }
