@@ -178,8 +178,8 @@ int main( int argc, char** argv )
    // You can add so-called "Spectator variables", which are not used in the MVA training,
    // but will appear in the final "TestTree" produced by TMVA. This TestTree will contain the
    // input variables, the response values of all trained MVAs, and the spectator variables
-   // factory->AddSpectator( "spec1:=var1*2",  "Spectator 1", "units" );
-   // factory->AddSpectator( "spec2:=var1*3",  "Spectator 2", "units" );
+   factory->AddSpectator( "spec1:=var1*2",  "Spectator 1", "units" );
+   factory->AddSpectator( "spec2:=var1*3",  "Spectator 2", "units" );
 
    // read training and test data
    if (ReadDataFromAsciiIFormat) {
