@@ -40,6 +40,10 @@ public:
                   const std::string& filename);
 
    void executeFunction(llvm::StringRef funcname);
+  
+  llvm::ExecutionEngine& getEngine() {
+    return *m_engine.get();
+  }
 
 private:
    int verifyModule(llvm::Module* m);

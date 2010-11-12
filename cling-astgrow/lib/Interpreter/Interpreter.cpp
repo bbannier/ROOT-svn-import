@@ -26,6 +26,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/System/DynamicLibrary.h"
 #include "llvm/System/Path.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 
 #include "Visitors.h"
 #include "ClangUtils.h"
@@ -517,6 +518,11 @@ namespace cling {
   void Interpreter::RequestContinuation(const clang::SourceLocation&) {
     printf("...\n");
   }
+  
+  void Interpreter::installLazyFunctionCreator(void* (*fp)(const std::string&)) {
+    m_ExecutionContext->getEngine().InstallLazyFunctionCreator(fp);
+  }
+  
   
 } // namespace cling
 
