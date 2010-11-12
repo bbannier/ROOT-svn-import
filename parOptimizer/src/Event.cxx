@@ -57,8 +57,8 @@ TMVA::Event::Event()
 TMVA::Event::Event( const std::vector<Float_t>& ev,
                     const std::vector<Float_t>& tg,
                     UInt_t cls,
-                    Float_t weight,
-                    Float_t boostweight )
+                    Double_t weight,
+                    Double_t boostweight )
    : fValues(ev),
      fTargets(tg),
      fSpectators(0),
@@ -77,8 +77,8 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
                     const std::vector<Float_t>& tg,
                     const std::vector<Float_t>& vi,
                     UInt_t cls,
-                    Float_t weight,
-                    Float_t boostweight )
+                    Double_t weight,
+                    Double_t boostweight )
    : fValues(ev),
      fTargets(tg),
      fSpectators(vi),
@@ -95,8 +95,8 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
 //____________________________________________________________
 TMVA::Event::Event( const std::vector<Float_t>& ev,
                     UInt_t cls,
-                    Float_t weight,
-                    Float_t boostweight )
+                    Double_t weight,
+                    Double_t boostweight )
    : fValues(ev),
      fTargets(0),
      fSpectators(0),
