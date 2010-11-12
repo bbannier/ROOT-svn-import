@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // CLING - the C++ LLVM-based InterpreterG :)
 // version: $Id: Interpreter.cpp 36507 2010-11-04 21:42:17Z axel $
-// author:  Lukasz Janyst <ljanyst@cern.ch>
+// author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
 #include "IncrementalASTParser.h"
