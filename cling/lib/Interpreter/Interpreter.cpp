@@ -147,23 +147,27 @@ namespace cling {
     //  and compile to produce a module.
     //
     
-    //
-    //  Wrap input into a function along with
-    //  the saved global declarations.
-    //
-    //fprintf(stderr, "input_line:\n%s\n", src.c_str());
-    InputValidator::Result ValidatorResult = m_InputValidator->validate(input_line);
-    if (ValidatorResult != InputValidator::kValid) {
-      fprintf(stderr, "Bad input, dude! That's a code %d\n", ValidatorResult);
-      return 0;
-    }
-    
     std::string wrapped;
     std::string stmtFunc;
-    createWrappedSrc(input_line, wrapped, stmtFunc);
-    if (!wrapped.size()) {
-      return 0;
+    if (strncmp(input_line.c_str(),"#include ",strlen("#include ")) != 0) {
+      //
+      //  Wrap input into a function along with
+      //  the saved global declarations.
+      //
+      InputValidator::Result ValidatorResult = m_InputValidator->validate(input_line);
+      if (ValidatorResult != InputValidator::kValid) {
+          fprintf(stderr, "Bad input, dude! That's a code %d\n", ValidatorResult);
+        return 0;
+      }
+
+      createWrappedSrc(input_line, wrapped, stmtFunc);
+      if (!wrapped.size()) {
+         return 0;
+      }
+    } else {
+      wrapped = input_line;
     }
+    
     //
     //  Send the wrapped code through the
     //  frontend to produce a translation unit.
@@ -223,6 +227,7 @@ namespace cling {
       FunctionBodyConsumer* consumer =
         new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
       
+      // fprintf(stderr,"nonTUsrc=%s\n",nonTUsrc.c_str());
       CI = m_IncrASTParser->parse(nonTUsrc, -1, consumer);
 
       if (!CI) {
