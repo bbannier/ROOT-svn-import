@@ -1348,21 +1348,33 @@ void TMVA::Tools::TMVACitation( MsgLogger& logger, ECitation citType )
    switch (citType) {
 
    case kPlainText:
-      logger << "Hoecker, A.; Speckmayer, P.; Stelzer, J.; Therhaag, J.; von Toerne, E. & Voss TMVA - Toolkit for Multivariate Data Analysis ArXiv Physics e-prints, 2007" << Endl;
+      logger << "A. Hoecker, P. Speckmayer, J. Stelzer, J. Therhaag, E. von Toerne, H. Voss" << Endl;
+      logger << "\"TMVA - Toolkit for Multivariate Data Analysis\" PoS ACAT:040,2007. e-Print: physics/0703039" << Endl;
       break;
 
    case kBibTeX:
-      logger << "@ARTICLE{TMVA2007," << Endl;
-      logger << "author = {{Hoecker}, A. and {Speckmayer}, P. and {Stelzer}, J. and {Therhaag}," << Endl;
-      logger << "J. and {von Toerne}, E. and {Voss}}," << Endl;
-      logger << "title = {{TMVA - Toolkit for Multivariate Data Analysis}}," << Endl;
-      logger << "journal = {ArXiv Physics e-prints}," << Endl;
-      logger << "year = {2007}," << Endl;
-      logger << "month = mar," << Endl;
-      logger << "adsnote = {Provided by the SAO/NASA Astrophysics Data System}," << Endl;
-      logger << "adsurl = {http://adsabs.harvard.edu/abs/2007physics...3039H}," << Endl;
-      logger << "eprint = {arXiv:physics/0703039}," << Endl;
-      logger << "keywords = {Physics - Data Analysis, Statistics and Probability}" << Endl;
+      logger << "@Article{TMVA2007," << Endl;
+      logger << "     author    = \"Hocker, Andreas and Speckmayer, Peter and Stelzer, Joerg " << Endl;
+      logger << "                   and Therhaag, Jan and von Toerne, Eckhard and Voss, Helge\"," << Endl;
+      logger << "     title     = \"{TMVA: Toolkit for multivariate data analysis}\"," << Endl;
+      logger << "     journal   = \"PoS\"," << Endl;
+      logger << "     volume    = \"ACAT\"," << Endl;
+      logger << "     year      = \"2007\"," << Endl;
+      logger << "     pages     = \"040\"," << Endl;
+      logger << "     eprint    = \"physics/0703039\"," << Endl;
+      logger << "     archivePrefix = \"arXiv\"," << Endl;
+      logger << "     SLACcitation  = \"%%CITATION = PHYSICS/0703039;%%\"" << Endl;
+      logger << "}" << Endl;
+      break;
+
+   case kLaTeX:
+      logger << "%\\cite{TMVA2007}" << Endl;
+      logger << "\bibitem{TMVA2007}" << Endl;
+      logger << "  A.~Hocker, P.~Speckmayer, J.~Stelzer, J.~Therhaag, E.~von Toerne, H.~Voss" << Endl;
+      logger << "  %``TMVA: Toolkit for multivariate data analysis,''" << Endl;
+      logger << "  PoS A {\\bf CAT} (2007) 040" << Endl;
+      logger << "  [arXiv:physics/0703039]." << Endl;
+      logger << "  %%CITATION = POSCI,ACAT,040;%%" << Endl;
       break;
 
    }
