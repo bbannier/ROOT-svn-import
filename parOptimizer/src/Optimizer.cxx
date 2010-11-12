@@ -229,6 +229,7 @@ Double_t TMVA::Optimizer::EstimatorFunction( std::vector<Double_t> & pars)
       fFOM->GetMethod()->Reset();
       ((MethodBDT*)(fFOM->GetMethod()))->SetMaxDepth(Int_t(pars[0]));     
       ((MethodBDT*)(fFOM->GetMethod()))->SetNodeMinEvents(Int_t(pars[1]));     
+      ((MethodBDT*)(fFOM->GetMethod()))->SetNTrees(Int_t(pars[2]));
       
       fFOM->GetMethod()->BaseDir()->cd();
       

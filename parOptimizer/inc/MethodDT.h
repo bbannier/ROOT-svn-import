@@ -132,6 +132,7 @@ namespace TMVA {
       Bool_t                           fAutomatic;       // use user given prune strength or automatically determined one using a validation sample 
       Bool_t                           fRandomisedTrees; // choose a random subset of possible cut variables at each node during training
       Int_t                            fUseNvars;        // the number of variables used in the randomised tree splitting
+      Bool_t                           fUsePoissonNvars; // use "fUseNvars" not as fixed number but as mean of a possion distr. in each split
       Bool_t                           fPruneBeforeBoost; //whether to prune right after the training (before the boosting)
 
       std::vector<Double_t>           fVariableImportance; // the relative importance of the different variables 
