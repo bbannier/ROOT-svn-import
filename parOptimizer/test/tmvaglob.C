@@ -35,6 +35,8 @@ namespace TMVAGlob {
                      kDecorrelated,
                      kPCA,
                      kGaussDecorr,
+                     kGauss,
+	             kUniform,
                      kNumOfMethods };
 
    static Int_t c_Canvas         = TColor::GetColor( "#e9e6da" );

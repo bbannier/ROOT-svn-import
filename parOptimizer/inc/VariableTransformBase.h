@@ -87,6 +87,7 @@ namespace TMVA {
       Bool_t UseSignalTransform() const { return fUseSignalTransform; }
 
       virtual const char* GetName() const { return fTransformName.Data(); }
+      
       TString GetShortName() const { TString a(fTransformName); a.ReplaceAll("Transform",""); return a; }
 
       virtual void WriteTransformationToStream ( std::ostream& o ) const = 0;

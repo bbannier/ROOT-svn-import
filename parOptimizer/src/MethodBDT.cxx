@@ -1134,7 +1134,7 @@ Double_t TMVA::MethodBDT::Bagging( vector<TMVA::Event*> eventSample, Int_t iTree
    }
    Double_t normWeight =  eventSample.size() / newSumw ;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      (*e)->SetBoostWeight( (*e)->GetBoostWeight() * eventSample.size() / newSumw );
+      (*e)->SetBoostWeight( (*e)->GetBoostWeight() * normWeight );
       // change this backwards      (*e)->ScaleBoostWeight( normWeight );
    }
    delete trandom;

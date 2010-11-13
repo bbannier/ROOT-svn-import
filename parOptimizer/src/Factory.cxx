@@ -126,7 +126,7 @@ TMVA::Factory::Factory( TString jobName, TFile* theTargetFile, TString theOption
    Bool_t drawProgressBar = kTRUE;
    DeclareOptionRef( fVerbose, "V", "Verbose flag" );
    DeclareOptionRef( color,    "Color", "Flag for coloured screen output (default: True, if in batch mode: False)" );
-   DeclareOptionRef( fTransformations, "Transformations", "List of transformations to test; formatting example: \"Transformations=I;D;P;G,D\", for identity, decorrelation, PCA, and Gaussianisation followed by decorrelation transformations" );
+   DeclareOptionRef( fTransformations, "Transformations", "List of transformations to test; formatting example: \"Transformations=I;D;P;U;G,D\", for identity, decorrelation, PCA, Uniform and Gaussianisation followed by decorrelation transformations" );
    DeclareOptionRef( silent,   "Silent", "Batch mode: boolean silent flag inhibiting any output from TMVA after the creation of the factory class object (default: False)" );
    DeclareOptionRef( drawProgressBar,
                      "DrawProgressBar", "Draw progress bar to display training, testing and evaluation schedule (default: True)" );
@@ -833,7 +833,7 @@ void TMVA::Factory::WriteDataInformation()
    
    // some default transformations to evaluate
    // NOTE: all transformations are destroyed after this test
-   TString processTrfs = ""; //"I;N;D;P;G,D;"
+   TString processTrfs = ""; //"I;N;D;P;U;G,D;"
 
    // plus some user defined transformations
    processTrfs = fTransformations;
@@ -896,6 +896,9 @@ void TMVA::Factory::WriteDataInformation()
          else if (trName=='P') {
             trfs.back()->AddTransformation( new VariablePCATransform      ( DefaultDataSetInfo() ), idxCls );
          } 
+         else if (trName=='U') {
+           trfs.back()->AddTransformation( new VariableGaussTransform    ( DefaultDataSetInfo(), "Uniform" ), idxCls );
+         }
          else if (trName=='G') {
             trfs.back()->AddTransformation( new VariableGaussTransform    ( DefaultDataSetInfo() ), idxCls );
          } 
