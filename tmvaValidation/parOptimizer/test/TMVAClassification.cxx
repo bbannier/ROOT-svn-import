@@ -154,7 +154,7 @@ int main( int argc, char** argv )
    // The second argument is the output file for the training results
    // All TMVA output can be suppressed by removing the "!" (not) in
    // front of the "Silent" argument in the option string
-   std::string factoryOptions( "!V:!Silent:Transformations=I;D;P;G,D:AnalysisType=Classification" );
+   std::string factoryOptions( "!V:!Silent:Transformations=I;D;P;U_Signal;G;G,D:AnalysisType=Classification" );
    if (batchMode) factoryOptions += ":!Color:!DrawProgressBar";
 
    TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile, factoryOptions );
@@ -417,7 +417,7 @@ int main( int argc, char** argv )
 
    if (Use["BDT"])  // Adaptive Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDT200",
-                           "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
+                           "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VarTransform=U" );
 
    if (Use["BDTF"])  // Adaptive Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDTF200",

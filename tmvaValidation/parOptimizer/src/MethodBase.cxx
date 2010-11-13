@@ -480,6 +480,8 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
             GetTransformationHandler().AddTransformation( new VariableDecorrTransform   ( DataInfo()) , idxCls );
          else if (trName == "P" || trName == "PCA")
             GetTransformationHandler().AddTransformation( new VariablePCATransform      ( DataInfo()), idxCls );
+         else if (trName == "U" || trName == "Uniform")
+            GetTransformationHandler().AddTransformation( new VariableGaussTransform    ( DataInfo(),"Uniform"), idxCls );
          else if (trName == "G" || trName == "Gauss")
             GetTransformationHandler().AddTransformation( new VariableGaussTransform    ( DataInfo()), idxCls );
          else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize")
@@ -1472,6 +1474,10 @@ void TMVA::MethodBase::ReadStateFromStream( std::istream& fin )
       varTrafo = GetTransformationHandler().AddTransformation( new VariableDecorrTransform(DataInfo()), -1 );
    } else if ( fVarTransformString == "PCA"  ) {
       varTrafo = GetTransformationHandler().AddTransformation( new VariablePCATransform(DataInfo()), -1 );
+   } else if ( fVarTransformString == "Uniform" ) {
+      varTrafo  = GetTransformationHandler().AddTransformation( new VariableGaussTransform(DataInfo(),"Uniform"), -1 );
+   } else if ( fVarTransformString == "Gauss" ) {
+      varTrafo  = GetTransformationHandler().AddTransformation( new VariableGaussTransform(DataInfo()), -1 );
    } else if ( fVarTransformString == "GaussDecorr" ) {
       varTrafo  = GetTransformationHandler().AddTransformation( new VariableGaussTransform(DataInfo()), -1 );
       varTrafo2 = GetTransformationHandler().AddTransformation( new VariableDecorrTransform(DataInfo()), -1 );
