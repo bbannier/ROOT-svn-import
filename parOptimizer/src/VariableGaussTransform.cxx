@@ -437,8 +437,10 @@ void TMVA::VariableGaussTransform::ReadFromXML( void* trfnode ) {
 
    // clean up first
    CleanUpCumulativeArrays();
-
-   gTools().ReadAttr(trfnode, "FlatOrGauss", fFlatNotGauss );
+   TString FlatOrGauss;
+   gTools().ReadAttr(trfnode, "FlatOrGauss", FlatOrGauss );
+   if (FlatOrGauss == "Flat") fFlatNotGauss = kTRUE;
+   else                       fFlatNotGauss = kFALSE;
 
    // Read the cumulative distribution
    void* varnode = gTools().GetChild( trfnode );
