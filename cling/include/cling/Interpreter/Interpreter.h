@@ -46,6 +46,8 @@ namespace cling {
     //---------------------------------------------------------------------
     virtual ~Interpreter();
     
+    void AddIncludePath(const char *path);
+     
     int processLine(const std::string& input_line);
     
     int loadFile(const std::string& filename,
