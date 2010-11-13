@@ -281,8 +281,8 @@ TCint::TCint(const char *name, const char *title) :
    langInfo.POSIXThreads = 1;
 
    #ifdef DBG
-   clang::HeaderSearchOptions & headerOpts = CI->getHeaderSearchOpts ();
-   headerOpts.Verbose = 1;
+//   clang::HeaderSearchOptions & headerOpts = CI->getHeaderSearchOpts ();
+//   headerOpts.Verbose = 1;
    #endif
 
    // addPath (CI, headerOpts.ResourceDir); // llvm/lib/clang/1.5
