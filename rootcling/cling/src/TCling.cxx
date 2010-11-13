@@ -281,8 +281,8 @@ TCint::TCint(const char *name, const char *title) :
    langInfo.POSIXThreads = 1;
 
    #ifdef DBG
-   //clang::HeaderSearchOptions & headerOpts = CI->getHeaderSearchOpts ();
-   //headerOpts.Verbose = 1;
+   clang::HeaderSearchOptions & headerOpts = CI->getHeaderSearchOpts ();
+   headerOpts.Verbose = 1;
    #endif
 
    // addPath (CI, headerOpts.ResourceDir); // llvm/lib/clang/1.5
@@ -2315,13 +2315,8 @@ void TCint::AddIncludePath(const char *path)
    char *incpath = gSystem->ExpandPathName(path);
 
    G__add_ipath(incpath);
-   clang::CompilerInstance* CI = fInterpreter->getCI();
-   clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
-   const bool IsUserSupplied = false;
-   const bool IsFramework = false;
-   const bool IsSysRootRelative = true;
-   headerOpts.AddPath (incpath, clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
-
+   fInterpreter->AddIncludePath(path);
+   
    delete [] incpath;
 }
 
