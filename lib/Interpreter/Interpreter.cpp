@@ -19,9 +19,12 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Pragma.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/Constants.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/System/DynamicLibrary.h"
@@ -125,7 +128,27 @@ namespace cling {
     //delete m_prev_module;
     //m_prev_module = 0; // Don't do this, the engine does it.
   }
-  
+   
+  void Interpreter::AddIncludePath(const char *incpath)
+  {
+    // Add the given path to the list of directories in which the interpreter
+    // looks for include files. Only one path item can be specified at a
+    // time, i.e. "path1:path2" is not supported.
+      
+    clang::CompilerInstance* CI = getCI();
+    clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
+    const bool IsUserSupplied = false;
+    const bool IsFramework = false;
+    const bool IsSysRootRelative = true;
+    headerOpts.AddPath (incpath, clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
+      
+    clang::Preprocessor& PP = CI->getPreprocessor();
+    clang::ApplyHeaderSearchOptions(PP.getHeaderSearchInfo(), headerOpts,
+                                    PP.getLangOptions(),
+                                    PP.getTargetInfo().getTriple());
+      
+  }
+   
   clang::CompilerInstance*
   Interpreter::createCI() const
   {
