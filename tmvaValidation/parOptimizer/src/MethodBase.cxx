@@ -107,8 +107,6 @@
 #include "TMVA/ResultsRegression.h"
 #include "TMVA/ResultsMulticlass.h"
 
-#include "TMVA/OptimizerFOM.h"
-
 ClassImp(TMVA::MethodBase)
 
 using std::endl;
