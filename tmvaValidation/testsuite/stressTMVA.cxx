@@ -143,7 +143,7 @@ void addDataInputTests( UnitTestSuite& TMVA_test, bool full=true)
    if (full){
       TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
       TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=alternate:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
-   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=block:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.48, 0.52) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=block:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.99) );
    }
 }
 

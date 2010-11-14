@@ -44,6 +44,7 @@ void MethodUnitTestWithComplexData::run()
   factory->AddVariable( "var2",  "Variable 2", 'F' );
   factory->AddVariable( "var3",  "Variable 3", 'F' );
   factory->AddSpectator( "is1", 'I' );
+  factory->AddSpectator( "evtno", 'I' );
   
   TFile* input(0);
 // FIXME:: give the filename of the sample somewhere else?
@@ -113,7 +114,7 @@ bool MethodUnitTestWithComplexData::create_data(const char* filename, int nmax)
    int nsig = 0, nbgd=0;
    Float_t weight=1;
    Float_t xvar[100];
-   int is1;
+   int is1,evtno=0;
    // create signal and background trees
    TTree* treeS1 = new TTree( "TreeS1", "TreeS1", 1 );
    TTree* treeB1 = new TTree( "TreeB1", "TreeB1", 1 );
@@ -143,6 +144,13 @@ bool MethodUnitTestWithComplexData::create_data(const char* filename, int nmax)
    treeSFull->Branch("is1", &is1, "is1/I");
    treeBFull->Branch("is1", &is1, "is1/I");
 
+   treeS1->Branch("evtno", &evtno, "evtno/I");
+   treeB1->Branch("evtno", &evtno, "evtno/I");
+   treeS2->Branch("evtno", &evtno, "evtno/I");
+   treeB2->Branch("evtno", &evtno, "evtno/I");
+   treeSFull->Branch("evtno", &evtno, "evtno/I");
+   treeBFull->Branch("evtno", &evtno, "evtno/I");
+
    TRandom R( 100 );
    do {
       for (Int_t ivar=0; ivar<nvar-1; ivar++) { xvar[ivar]=2.*R.Rndm()-1.;}
@@ -159,12 +167,14 @@ bool MethodUnitTestWithComplexData::create_data(const char* filename, int nmax)
          if (is) treeS1->Fill();
          else treeS2->Fill();
          nsig++;
+         evtno++;
       }
       else {
          treeBFull->Fill();
          if (is) treeB1->Fill();
          else treeB2->Fill();
          nbgd++;
+         evtno++;
       }
    } while ( nsig < nmax || nbgd < nmax);
 
