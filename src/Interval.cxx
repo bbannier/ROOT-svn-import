@@ -64,7 +64,7 @@ TMVA::Interval::Interval( Double_t min, Double_t max, Int_t nbins ) :
 
 TMVA::Interval::Interval( const Interval& other ) :
    fMin  ( other.fMin ),
-   fMax  ( other.fMin ),
+   fMax  ( other.fMax ),
    fNbins( other.fNbins )
 {
    if (!fgLogger) fgLogger = new MsgLogger("Interval");
