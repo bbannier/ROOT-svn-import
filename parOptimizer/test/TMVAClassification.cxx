@@ -443,7 +443,7 @@ int main( int argc, char** argv )
                             "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:UseFisherCuts:MinLinCorrForFisher=.4:VarTransform=U" );
 
     if (Use["BDT"])  // Adaptive Boost
-    factory->BookMethod( TMVA::Types::kBDT, "BDTOptimized",
+    factory->BookMethod( TMVA::Types::kBDT, "BDT",
                          "!H:!V:NTrees=850:nEventsMin=150:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
       // factory->BookMethod( TMVA::Types::kBDT, "BDT400U",
       //                      "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VarTransform=U_Signal" );
