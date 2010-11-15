@@ -8,8 +8,8 @@ include $(ROOTSYS)/test/Makefile.arch
 
 #------------------------------------------------------------------------------
 # define local settings
-TMVAINCLUDE = -I../../tmva
-TMVALOCALLIBS = -L../../tmva/lib
+TMVAINCLUDE = -I../tmva -I../../tmva
+TMVALOCALLIBS = -L../tmva/lib -L../../tmva/lib  
 # locals end
 
 STRESSTMVAO   = stressTMVA.$(ObjSuf)
@@ -36,7 +36,7 @@ $(TMVAUTOBJECTS): %.o : %.cxx $(TMVAUTH)
 	$(CXX)  $(TMVAINCLUDE) $(CXXFLAGS) -c $< -o $@
 
 $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
-	$(LD) $(LDFLAGS) $^ $(TMVALOCALLIBS) -lTMVA.1 $(LIBS) -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
+	$(LD) $(LDFLAGS) $^ $(TMVALOCALLIBS) $(LIBS) -lTMVA.1 -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
 	$(MT_EXE)
 	@echo "$@ done"
 
