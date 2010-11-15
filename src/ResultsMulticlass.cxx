@@ -78,7 +78,7 @@ Double_t TMVA::ResultsMulticlass::EstimatorFunction( std::vector<Double_t> & cut
          sumWeights += w;
       bool passed = true;
       for(UInt_t icls = 0; icls<cutvalues.size(); ++icls){
-         if(fMultiClassValues[ievt][icls]<=cutvalues.at(icls)){
+         if(cutvalues.at(icls)<0. ? -fMultiClassValues[ievt][icls]<cutvalues.at(icls) : fMultiClassValues[ievt][icls]<=cutvalues.at(icls)){
             passed = false;
             break;
          }
@@ -116,7 +116,7 @@ std::vector<Double_t> TMVA::ResultsMulticlass::GetBestMultiClassCuts(UInt_t targ
          << dsi->GetClassInfo( targetClass )->GetName() << Endl;
   
    fClassToOptimize = targetClass;
-   std::vector<Interval*> ranges(dsi->GetNClasses(), new Interval(0,1));
+   std::vector<Interval*> ranges(dsi->GetNClasses(), new Interval(-1,1));
    
    const TString name( "multiclassGA" );
    const TString opts( "PopSize=100:Steps=30" );
