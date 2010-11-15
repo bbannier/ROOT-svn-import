@@ -27,28 +27,36 @@ ClassImp(TMVA::Optimizer)
 #include <limits>
 #include "TMath.h"
 #include "TGraph.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TDirectory.h"
 
+#include "TMVA/IMethod.h"   
 #include "TMVA/MethodBase.h"   
-#include "TMVA/MethodBDT.h"   
 #include "TMVA/GeneticFitter.h"
 #include "TMVA/MinuitFitter.h"
 #include "TMVA/Interval.h"
 #include "TMVA/PDF.h"   
+#include "TMVA/MsgLogger.h"
 #include "TMVA/Tools.h"   
+   
 //_______________________________________________________________________
-TMVA::Optimizer::Optimizer(MethodBase * const method, TString fomType) 
-:   fMethod(method),
-    fFOMType(fomType),
-    fMvaSig(NULL),
-    fMvaBkg(NULL),
-    fMvaSigFineBin(NULL),
-    fMvaBkgFineBin(NULL)
+TMVA::Optimizer::Optimizer(MethodBase * const method, std::map<TString,TMVA::Interval> tuneParameters, TString fomType) 
+:  fMethod(method),
+   fTuneParameters(tuneParameters),
+   fFOMType(fomType),
+   fMvaSig(NULL),
+   fMvaBkg(NULL),
+   fMvaSigFineBin(NULL),
+   fMvaBkgFineBin(NULL)
 {
    // Constructor which sets either "Classification or Regression"
+  std::string name = "Optimizer_";
+  name += std::string(GetMethod()->GetName());
+  fLogger = new MsgLogger(name);
    if (fMethod->DoRegression()){
-      std::cout << " ERROR: Sorry, Regression is not yet implement for automatic parameter optimisation"
-                << " --> exit" << std::endl;
-      exit(1);
+      Log() << kFATAL << " ERROR: Sorry, Regression is not yet implement for automatic parameter optimisation"
+            << " --> exit" << Endl;
    }
 }
 
@@ -63,19 +71,17 @@ TMVA::Optimizer::~Optimizer()
    Float_t *y = new Float_t[n];
    Float_t  ymin=+999999999;
    Float_t  ymax=-999999999;
-   std::cout << "make graph with " << n << " points" << std::endl;
+
    for (Int_t i=0;i<n;i++){
       x[i] = Float_t(i);
       y[i] = fFOMvsIter[i];
       if (ymin>y[i]) ymin=y[i];
       if (ymax<y[i]) ymax=y[i];
-
-      std::cout << "for "<<i<<" fom = " << y[i] << std::endl;
    }
 
-   TH2D   *h=new TH2D(GetMethod()->GetMethodName()+"_FOMvsIterHist","",2,0,n,2,ymin*0.95,ymax*1.05);
+   TH2D   *h=new TH2D(TString(GetMethod()->GetName())+"_FOMvsIterHist","",2,0,n,2,ymin*0.95,ymax*1.05);
    TGraph *gFOMvsIter = new TGraph(n,x,y);
-   gFOMvsIter->SetName((GetMethod()->GetMethodName()+"_FOMvsIter").Data());
+   gFOMvsIter->SetName((TString(GetMethod()->GetName())+"_FOMvsIter").Data());
    gFOMvsIter->Write();
    h->Write();
 
@@ -83,16 +89,21 @@ TMVA::Optimizer::~Optimizer()
    // delete fFOMvsIter;
 } 
 //_______________________________________________________________________
-void TMVA::Optimizer::optimize(TString optimizationFitType)
+std::map<TString,Double_t> TMVA::Optimizer::optimize(TString optimizationFitType)
 {
    if      (optimizationFitType == "Scan"    ) this->optimizeScan();
    else if (optimizationFitType == "GA" || optimizationFitType == "Minuit" ) this->optimizeFit(optimizationFitType);
    else {
-      std::cout << "You have chosen as optimization type " << optimizationFitType
-                << " that is not (yet) coded --> exit()" << std::endl;
-      exit(1);
+      Log() << kFATAL << "You have chosen as optimization type " << optimizationFitType
+                << " that is not (yet) coded --> exit()" << Endl;
    }
-   return;
+   
+   Log() << kINFO << "For " << GetMethod()->GetName() << " the optimized Parameters are: " << Endl;
+   std::map<TString,Double_t>::iterator it;
+   for(it=fTunedParameters.begin(); it!= fTunedParameters.end(); it++){
+     Log() << kINFO << it->first << " = " << it->second << Endl;
+   }
+   return fTunedParameters;
 
 }//_______________________________________________________________________
 void TMVA::Optimizer::optimizeScan()
@@ -103,68 +114,58 @@ void TMVA::Optimizer::optimizeScan()
    // gave the best FOM
 
    Double_t      bestFOM=-1000000, currentFOM;
-   UInt_t        ibest=0;
 
-   //let's somehow translate for each method individually (maybe we just 
-   //define WHICH parameter(s) we want optimizer ourselfs (not the user) and
-   //then do it here..
-   //   too much freedom for the user just gives us bad publicity when being
-   //   compared with Neurobayes!!
-   
-   std::vector< std::vector<Int_t>* >  loopVariable;
-   
-   if (GetMethod()->GetMethodType() == TMVA::Types::kBDT){
-      loopVariable.clear();
-      for (Int_t idepth=2; idepth<=20; idepth++)
-        for (Int_t nEv=50; nEv<=500; nEv+=50)
-          for (Int_t nTrees=50; nTrees<=800; nTrees+=50){
-            std::vector<Int_t> *tmp = new std::vector<Int_t>; 
-            tmp->push_back(idepth); tmp->push_back(nEv); tmp->push_back(nTrees); loopVariable.push_back(tmp);
-          }
+   std::map<TString,Double_t> currentParameters;
+   std::map<TString,TMVA::Interval>::iterator it;
+
+   // for the scan, start at the lower end of the interval and then "move upwards" 
+   // initialize all parameters in currentParameter
+   currentParameters.clear();
+   fTunedParameters.clear();
+   for (it=fTuneParameters.begin(); it!=fTuneParameters.end(); it++){
+      currentParameters.insert(std::pair<TString,Double_t>(it->first,it->second.GetMin()));
+      fTunedParameters.insert(std::pair<TString,Double_t>(it->first,it->second.GetMin()));
    }
-      
-   for (UInt_t i=0;i<loopVariable.size();i++){    
-     if(i!=0)GetMethod()->Reset();
-     ((MethodBDT*)(GetMethod()))->SetMaxDepth((*(loopVariable[i]))[0]);     
-     ((MethodBDT*)(GetMethod()))->SetNodeMinEvents((*(loopVariable[i]))[1]);     
-     ((MethodBDT*)(GetMethod()))->SetNTrees((*(loopVariable[i]))[2]);     
+   // now loop over all the parameters and get for each combination the figure of merit
+   for (it=fTuneParameters.begin(); it!=fTuneParameters.end(); it++){
+      for (Int_t ibin=0; ibin<it->second.GetNbins(); ibin++){
+         currentParameters[it->first] = it->second.GetElement(ibin);
+         GetMethod()->Reset();
+         GetMethod()->SetTuneParameters(currentParameters);
+         // now do the training for the current parameters:
+         GetMethod()->BaseDir()->cd();
+         GetMethod()->GetTransformationHandler().CalcTransformations(
+                                                                    GetMethod()->Data()->GetEventCollection());
+         GetMethod()->Train();
+         currentFOM = GetFOM(); 
      
-     GetMethod()->BaseDir()->cd();
-     GetMethod()->GetTransformationHandler().CalcTransformations(
-                                                                 GetMethod()->Data()->GetEventCollection());
-     GetMethod()->Train();
-     currentFOM = GetFOM(); 
-     
-     // std::cout << "With variables:";
-     // for (UInt_t iv=0; iv<(*(loopVariable[i])).size(); iv++) std::cout << (*(loopVariable[i]))[iv]<< "  ";
-     // std::cout << " we get GetFOM = " << currentFOM << std::endl;
-      if (currentFOM > bestFOM) {
-         bestFOM = currentFOM;
-         ibest   = i;
+         if (currentFOM > bestFOM) {
+            bestFOM = currentFOM;
+            for (std::map<TString,Double_t>::iterator iter=currentParameters.begin();
+                 iter != currentParameters.end(); iter++){
+              fTunedParameters[iter->first]=iter->second;
+            }
+         }
       }
-
    }
-   
-   std::cout << "And the winner is : MaxDepth = " << (*(loopVariable[ibest]))[0] 
-             << " and NNodeMinEvents = " << (*(loopVariable[ibest]))[1]
-             << " and NTrees = " << (*(loopVariable[ibest]))[2]
-             << std::endl;
 
    GetMethod()->Reset();
-   ((MethodBDT*)(GetMethod()))->SetMaxDepth((*(loopVariable[ibest]))[0]);
-   ((MethodBDT*)(GetMethod()))->SetNodeMinEvents((*(loopVariable[ibest]))[1]);
-   ((MethodBDT*)(GetMethod()))->SetNTrees((*(loopVariable[ibest]))[2]);
-
+   GetMethod()->SetTuneParameters(fTunedParameters);
 }
 
 void TMVA::Optimizer::optimizeFit(TString optimizationFitType)
 {
-   // ranges in which the fit varies the parameters (currently hardcoded for BDTs only)
-   std::vector<Interval*> ranges;
+   // ranges (intervals) in which the fit varies the parameters
+   std::vector<TMVA::Interval*> ranges; // intervals of the fit ranges
+   std::map<TString, TMVA::Interval>::iterator it;
+   std::vector<Double_t> pars;    // current (starting) fit parameters
 
-   ranges.push_back(new Interval(2,20,20-2+1)); // MaxDepth
-   ranges.push_back(new Interval(50,500,50)); // NNodeMinEvents
-   ranges.push_back(new Interval(50,800,50)); // NTrees
+   for (it=fTuneParameters.begin(); it != fTuneParameters.end(); it++){
+      ranges.push_back(new TMVA::Interval(it->second)); 
+      pars.push_back( (it->second).GetMean() );  // like this the order is "right". Always keep the
+                                                 // order in the vector "pars" the same as the iterator
+                                                 // iterates through the tuneParameters !!!!
+   }
 
    // create the fitter
 
@@ -182,10 +183,6 @@ void TMVA::Optimizer::optimizeFit(TString optimizationFitType)
                                  ranges, opt );
    }
 
-   std::vector<Double_t> pars;
-   for (std::vector<Interval*>::const_iterator parIt = ranges.begin(); parIt != ranges.end(); parIt++) {
-      pars.push_back( (*parIt)->GetMean() );
-   }
 
    fitter->CheckForUnusedOptions();
 
@@ -196,17 +193,18 @@ void TMVA::Optimizer::optimizeFit(TString optimizationFitType)
    for (UInt_t ipar=0; ipar<ranges.size(); ipar++) delete ranges[ipar];
 
 
-   std::cout << "And the winner is : MaxDepth = " << pars[0] 
-             << " and NNodeMinEvents = " << pars[1] 
-             << " and NTrees = " << pars[2] 
-             << std::endl;
-
    GetMethod()->Reset();
-   ((MethodBDT*)(GetMethod()))->SetMaxDepth(Int_t(pars[0]));
-   ((MethodBDT*)(GetMethod()))->SetNodeMinEvents(Int_t(pars[1]));
-   ((MethodBDT*)(GetMethod()))->SetNTrees(Int_t(pars[2]));
+
+   fTunedParameters.clear();
+   Int_t jcount=0;
+   for (it=fTuneParameters.begin(); it!=fTuneParameters.end(); it++){
+      fTunedParameters.insert(std::pair<TString,Double_t>(it->first,pars[jcount++]));
+   }
+
+   GetMethod()->SetTuneParameters(fTunedParameters);
    
 }
+
 //_______________________________________________________________________
 Double_t TMVA::Optimizer::EstimatorFunction( std::vector<Double_t> & pars)
 {
@@ -221,12 +219,15 @@ Double_t TMVA::Optimizer::EstimatorFunction( std::vector<Double_t> & pars)
       //           <<" already --> FOM="<< iter->second <<std::endl; 
       return iter->second;
    }else{
-
+      std::map<TString,Double_t> currentParameters;
+      Int_t icount =0; // map "pars" to the  map of Tuneparameter, make sure
+                       // you never screw up this order!!
+      std::map<TString, TMVA::Interval>::iterator it;
+      for (it=fTuneParameters.begin(); it!=fTuneParameters.end(); it++){
+         currentParameters[it->first] = pars[icount++];
+      }
       GetMethod()->Reset();
-      ((MethodBDT*)(GetMethod()))->SetMaxDepth(Int_t(pars[0]));     
-      ((MethodBDT*)(GetMethod()))->SetNodeMinEvents(Int_t(pars[1]));     
-      ((MethodBDT*)(GetMethod()))->SetNTrees(Int_t(pars[2]));
-      
+      GetMethod()->SetTuneParameters(currentParameters);
       GetMethod()->BaseDir()->cd();
       
       GetMethod()->GetTransformationHandler().CalcTransformations(
@@ -236,10 +237,6 @@ Double_t TMVA::Optimizer::EstimatorFunction( std::vector<Double_t> & pars)
       
       Double_t currentFOM = GetFOM(); 
       
-      // std::cout << "currently: Depth=" <<Int_t(pars[0])
-      //           <<" MinEv=" <<Int_t(pars[1])
-      //           <<" --> FOM="<< currentFOM<<std::endl;
-
       fAlreadyTrainedParCombination.insert(std::make_pair(pars,-currentFOM));
       return  -currentFOM;
    }
@@ -262,10 +259,9 @@ Double_t TMVA::Optimizer::GetFOM()
       else if (fFOMType == "SigEffAt01")  fom = GetSigEffAt(0.1);
       else if (fFOMType == "SigEffAt001") fom = GetSigEffAt(0.01);
       else {
-         std::cout << " ERROR, you've specified as Figure of Merit in the \n"
-                   << " parameter optimisation " << fFOMType << " which has not\n"
-                   << " been implemented yet!! ---> exit " << std::endl;
-         exit(1);
+         Log()<<kFATAL << " ERROR, you've specified as Figure of Merit in the \n"
+              << " parameter optimisation " << fFOMType << " which has not\n"
+              << " been implemented yet!! ---> exit " << Endl;
       }
    }
    fFOMvsIter.push_back(fom);
@@ -385,10 +381,7 @@ Double_t TMVA::Optimizer::GetROCIntegral()
       }
    }
 
-
    return integral;
-         
-
 }
 
 

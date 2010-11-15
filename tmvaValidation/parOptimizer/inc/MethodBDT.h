@@ -83,6 +83,10 @@ namespace TMVA {
       // more easily manipulated
       void InitEventSample();
 
+      // optimize tuning parameters
+      virtual std::map<TString,Double_t> OptimizeTuningParameters(TString fomType="ROCIntegral", TString fitType="FitGA");
+      virtual void SetTuneParameters(std::map<TString,Double_t> tuneParameters);
+
       // training method
       void Train( void );
 
@@ -125,6 +129,9 @@ namespace TMVA {
       void SetMaxDepth(Int_t d){fMaxDepth = d;}
       void SetNodeMinEvents(Int_t d){fNodeMinEvents = d;}
       void SetNTrees(Int_t d){fNTrees = d;}
+      void SetAdaBoostBeta(Double_t b){fAdaBoostBeta = b;}
+      void SetNodePurityLimit(Double_t l){fNodePurityLimit = l;}
+
 
       // get the forest
       inline const std::vector<TMVA::DecisionTree*> & GetForest() const;

@@ -519,6 +519,34 @@ void TMVA::MethodBase::DeclareCompatibilityOptions()
    DeclareOptionRef( fNsmoothMVAPdf = 2,  "NsmoothMVAPdf", "Number of smoothing iterations for classifier PDFs" );
 }
 
+
+//_______________________________________________________________________
+std::map<TString,Double_t>  TMVA::MethodBase::OptimizeTuningParameters(TString fomType, TString fitType)
+{
+   // call the Optimzier with the set of paremeters and ranges that
+   // are meant to be tuned.
+
+  // this is just a dummy...  needs to be implemented for each method
+  // individually (as long as we don't have it automatized via the
+  // configuraion string
+
+  Log() << kWARNING << "Parameter optimization is not yet implemented for method " 
+        << GetName() << Endl; 
+  Log() << kWARNING << "Currently we need to set hardcoded which parameter is tuned in which ranges"<<Endl;
+
+   std::map<TString,Double_t> tunedParameters;
+   return tunedParameters;
+
+}
+
+//_______________________________________________________________________
+void TMVA::MethodBase::SetTuneParameters(std::map<TString,Double_t> tuneParameters)
+{
+  // set the tuning parameters accoding to the argument
+  // This is just a dummy .. have a look at the MethodBDT how you could 
+  // perhaps implment the same thing for the other Classifiers..
+}
+
 //_______________________________________________________________________
 void TMVA::MethodBase::TrainMethod()
 {

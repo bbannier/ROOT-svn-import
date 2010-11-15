@@ -65,7 +65,6 @@
 #include "TMVA/DataSetInfo.h"
 #include "TMVA/MethodBoost.h"
 #include "TMVA/MethodCategory.h"
-#include "TMVA/Optimizer.h"
 
 #include "TMVA/VariableIdentityTransform.h"
 #include "TMVA/VariableDecorrTransform.h"
@@ -955,9 +954,9 @@ void TMVA::Factory::OptimizeAllMethods(TString fomType, TString fitType)
       Log() << kINFO << "Optimize method: " << mva->GetMethodName() << " for " 
             << (fAnalysisType == Types::kRegression ? "Regression" : 
 		(fAnalysisType == Types::kMulticlass ? "Multiclass classification" : "Classification")) << Endl;
-      Optimizer optimize(mva, fomType);
-      optimize.optimize(fitType);
-      Log() << kINFO << "Optimize finished" << Endl;
+      
+      mva->OptimizeTuningParameters(fomType,fitType);
+      Log() << kINFO << "Optimization of tuning paremters finished for Method:"<<mva->GetName() << Endl;
    }
 }
 //_______________________________________________________________________

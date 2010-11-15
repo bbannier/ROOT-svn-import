@@ -406,8 +406,8 @@ int main( int argc, char** argv )
       factory->BookMethod( TMVA::Types::kBDT, "BDTG",
                            "!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:SeparationType=GiniIndex:nCuts=20:NNodesMax=5" );
 
-factory->BookMethod( TMVA::Types::kBDT, "BDT",
-     "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
+// factory->BookMethod( TMVA::Types::kBDT, "BDT",
+//      "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning");
 
 // factory->BookMethod( TMVA::Types::kBDT, "BDT200",
 //        "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
@@ -429,23 +429,22 @@ factory->BookMethod( TMVA::Types::kBDT, "BDT",
 
 
    // if (Use["BDT"])  // Adaptive Boost
-      factory->BookMethod( TMVA::Types::kBDT, "BDT200U",
-                           "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VarTransform=U" );
+      // factory->BookMethod( TMVA::Types::kBDT, "BDT200U",
+      //                      "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VarTransform=U" );
        // factory->BookMethod( TMVA::Types::kBDT, "BDT200U_Signal",
        //                      "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VarTransform=U_Signal" );
    //    factory->BookMethod( TMVA::Types::kBDT, "BDT200UR",
    //                         "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VarTransform=U_Signal:RenormByClass" );
 
     if (Use["BDTF"])  // Adaptive Boost
-      factory->BookMethod( TMVA::Types::kBDT, "BDTF200",
-                            "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:UseFisherCuts:MinLinCorrForFisher=.4" );
-
+      // factory->BookMethod( TMVA::Types::kBDT, "BDTF200",
+      //                       "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:UseFisherCuts:MinLinCorrForFisher=.4" );
       factory->BookMethod( TMVA::Types::kBDT, "BDTF200U",
                             "!H:!V:NTrees=200:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:UseFisherCuts:MinLinCorrForFisher=.4:VarTransform=U" );
 
-   // if (Use["BDT"])  // Adaptive Boost
-   //    factory->BookMethod( TMVA::Types::kBDT, "BDT400",
-   //                         "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
+    if (Use["BDT"])  // Adaptive Boost
+    factory->BookMethod( TMVA::Types::kBDT, "BDT100",
+                         "!H:!V:NTrees=100:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
       // factory->BookMethod( TMVA::Types::kBDT, "BDT400U",
       //                      "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=2:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VarTransform=U_Signal" );
       // factory->BookMethod( TMVA::Types::kBDT, "BDT400UR",
@@ -494,7 +493,8 @@ factory->BookMethod( TMVA::Types::kBDT, "BDT",
    // ---- Now you can tell the factory to train, test, and evaluate the MVAs
 
    // Optimize MVAs using the set of training events
-   factory->OptimizeAllMethods("ROCIntegral","GA");
+   //factory->OptimizeAllMethods("SigEffAt001","Scan");
+   //factory->OptimizeAllMethods("ROCIntegral","GA");
 
    // Train MVAs using the set of training events
    factory->TrainAllMethods();
