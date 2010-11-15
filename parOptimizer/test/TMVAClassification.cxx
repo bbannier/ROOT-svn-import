@@ -494,7 +494,7 @@ int main( int argc, char** argv )
 
    // Optimize MVAs using the set of training events
    //factory->OptimizeAllMethods("SigEffAt001","Scan");
-   //factory->OptimizeAllMethods("ROCIntegral","GA");
+   //   factory->OptimizeAllMethods("ROCIntegral","GA");
 
    // Train MVAs using the set of training events
    factory->TrainAllMethods();

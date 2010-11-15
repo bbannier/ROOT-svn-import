@@ -319,7 +319,7 @@ void TMVA::MethodBDT::DeclareOptions()
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
    DeclareOptionRef(fUseFisherCuts=kFALSE, "UseFisherCuts", "use multivariate splits using the Fisher criterium");
    DeclareOptionRef(fMinLinCorrForFisher=1,"MinLinCorrForFisher", "the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting");
-   DeclareOptionRef(fUseExclusiveVars=kTRUE,"UseExclusiveVars","individual variables already used in fisher criterium are not anymore analysed individually for node splitting");
+   DeclareOptionRef(fUseExclusiveVars=kFALSE,"UseExclusiveVars","individual variables already used in fisher criterium are not anymore analysed individually for node splitting");
 
    DeclareOptionRef(fPruneStrength, "PruneStrength", "Pruning strength");
    DeclareOptionRef(fPruneMethodS, "PruneMethod", "Method used for pruning (removal) of statistically insignificant branches");
@@ -559,15 +559,15 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
    //       the actual VALUES at (at least for the scan, guess also in GA) are always
    //       read from the middle of the bins. Hence.. the choice of Intervals e.g. for the
    //       MaxDepth, in order to make nice interger values!!!
-   // tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,5,5))); //==stepsize 
-    tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,15.,15))); // stepsize 1
-    tuneParameters.insert(std::pair<TString,Interval>("NodeMinEvents", Interval(50,500,10)));  // 50 to 500 stepsize 25  
-    tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,20))); //  stepsize 50
-    tuneParameters.insert(std::pair<TString,Interval>("NodePurityLimit",Interval(.4,.6,3)));   // stepsize .1
+   tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,5,5))); //==stepsize 
+   // tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,15.,15))); // stepsize 1
+   // tuneParameters.insert(std::pair<TString,Interval>("NodeMinEvents", Interval(50,500,10)));  // 50 to 500 stepsize 25  
+   // tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,20))); //  stepsize 50
+   // tuneParameters.insert(std::pair<TString,Interval>("NodePurityLimit",Interval(.4,.6,3)));   // stepsize .1
    tuneParameters.insert(std::pair<TString,Interval>("AdaBoostBeta",   Interval(.5,1.50,10)));   //== stepsize .1
 
-   Optimizer optimize(this, tuneParameters, fomType);
-   tunedParameters=optimize.optimize(fitType);
+   Optimizer optimize(this, tuneParameters, fomType, fitType);
+   tunedParameters=optimize.optimize();
 
    return tunedParameters;
 
@@ -637,7 +637,6 @@ void TMVA::MethodBDT::Train()
    TH1* h = new TH1F("BoostWeight",hname,nBins,xMin,xMax);
    TH1* nodesBeforePruningVsTree = new TH1I("NodesBeforePruning","nodes before pruning",fNTrees,0,fNTrees);
    TH1* nodesAfterPruningVsTree = new TH1I("NodesAfterPruning","nodes after pruning",fNTrees,0,fNTrees);
-   TH1D *alpha = new TH1D("alpha","PruneStrengths",fNTrees,0,fNTrees);
 
    if(!DoMulticlass()){
       Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
@@ -667,9 +666,6 @@ void TMVA::MethodBDT::Train()
       nodesAfterPruningVsTree->SetYTitle("#tree nodes");
       results->Store(nodesAfterPruningVsTree);
 
-      alpha->SetXTitle("#tree");
-      alpha->SetYTitle("PruneStrength");
-      results->Store(alpha);
    }
    
    fMonitorNtuple= new TTree("MonitorNtuple","BDT variables");
@@ -749,11 +745,9 @@ void TMVA::MethodBDT::Train()
                // determined by the pruning algorithm; otherwise, it is simply the strength parameter
                // set by the user
                Double_t pruneStrength = fForest.back()->PruneTree(validationSample);
-               alpha->SetBinContent(itree+1,pruneStrength);
             }
             else { // prune first, then apply a boosting cycle
                Double_t pruneStrength = fForest.back()->PruneTree(validationSample);
-               alpha->SetBinContent(itree+1,pruneStrength);
                fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
          }
             
@@ -769,7 +763,6 @@ void TMVA::MethodBDT::Train()
          fMonitorNtuple->Fill();
       }
    }
-   alpha->Write();
 
    // get elapsed time
    Log() << kINFO << "<Train> elapsed time: " << timer.GetElapsedTime()
