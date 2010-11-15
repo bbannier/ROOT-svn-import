@@ -65,17 +65,17 @@ namespace TMVA {
    public:
       
       //default constructor
-      Optimizer(MethodBase * const method, std::map<TString,TMVA::Interval> tuneParameters, TString fomType="Separation");
+      Optimizer(MethodBase * const method, std::map<TString,TMVA::Interval> tuneParameters, TString fomType="Separation", TString optimizationType = "GA"); 
       
       // destructor
       virtual ~Optimizer();
       // could later be changed to be set via option string... 
       // but for now it's impler like this
-      std::map<TString,Double_t> optimize(TString optimizationType = "GA"); 
+      std::map<TString,Double_t> optimize();
       
    private:
       void optimizeScan();
-      void optimizeFit(TString optimizationFitType);
+      void optimizeFit();
 
       Double_t EstimatorFunction( std::vector<Double_t> & );
 
@@ -95,7 +95,7 @@ namespace TMVA {
       std::map<TString,Double_t>       fTunedParameters; // parameters included in the tuning
       std::map< std::vector<Double_t> , Double_t>  fAlreadyTrainedParCombination; // save parameters for which the FOM is already known (GA seems to evaluate the same parameters several times)
       TString           fFOMType;    // the FOM type (Separation, ROC integra.. whaeter you implemented..
-      
+      TString           fOptimizationFitType; // which type of optimisation procedure to be used 
       TH1D             *fMvaSig; // MVA distrituion for signal events, used for spline fit
       TH1D             *fMvaBkg; // MVA distrituion for bakgr. events, used for spline fit
       

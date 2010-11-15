@@ -521,7 +521,7 @@ void TMVA::MethodBase::DeclareCompatibilityOptions()
 
 
 //_______________________________________________________________________
-std::map<TString,Double_t>  TMVA::MethodBase::OptimizeTuningParameters(TString fomType, TString fitType)
+std::map<TString,Double_t>  TMVA::MethodBase::OptimizeTuningParameters(TString /* fomType */ , TString /* fitType */)
 {
    // call the Optimzier with the set of paremeters and ranges that
    // are meant to be tuned.
@@ -535,12 +535,13 @@ std::map<TString,Double_t>  TMVA::MethodBase::OptimizeTuningParameters(TString f
   Log() << kWARNING << "Currently we need to set hardcoded which parameter is tuned in which ranges"<<Endl;
 
    std::map<TString,Double_t> tunedParameters;
+   tunedParameters.size(); // just to get rid of "unused" warning
    return tunedParameters;
 
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::SetTuneParameters(std::map<TString,Double_t> tuneParameters)
+void TMVA::MethodBase::SetTuneParameters(std::map<TString,Double_t> /* tuneParameters */)
 {
   // set the tuning parameters accoding to the argument
   // This is just a dummy .. have a look at the MethodBDT how you could 

@@ -41,10 +41,11 @@ ClassImp(TMVA::Optimizer)
 #include "TMVA/Tools.h"   
    
 //_______________________________________________________________________
-TMVA::Optimizer::Optimizer(MethodBase * const method, std::map<TString,TMVA::Interval> tuneParameters, TString fomType) 
+TMVA::Optimizer::Optimizer(MethodBase * const method, std::map<TString,TMVA::Interval> tuneParameters, TString fomType, TString optimizationFitType) 
 :  fMethod(method),
    fTuneParameters(tuneParameters),
    fFOMType(fomType),
+   fOptimizationFitType(optimizationFitType),
    fMvaSig(NULL),
    fMvaBkg(NULL),
    fMvaSigFineBin(NULL),
@@ -55,7 +56,7 @@ TMVA::Optimizer::Optimizer(MethodBase * const method, std::map<TString,TMVA::Int
   name += std::string(GetMethod()->GetName());
   fLogger = new MsgLogger(name);
    if (fMethod->DoRegression()){
-      Log() << kFATAL << " ERROR: Sorry, Regression is not yet implement for automatic parameter optimisation"
+      Log() << kFATAL << " ERROR: Sorry, Regression is not yet implement for automatic parameter optimization"
             << " --> exit" << Endl;
    }
 }
@@ -79,22 +80,23 @@ TMVA::Optimizer::~Optimizer()
       if (ymax<y[i]) ymax=y[i];
    }
 
-   TH2D   *h=new TH2D(TString(GetMethod()->GetName())+"_FOMvsIterHist","",2,0,n,2,ymin*0.95,ymax*1.05);
+   TH2D   *h=new TH2D(TString(GetMethod()->GetName())+"_FOMvsIterFrame","",2,0,n,2,ymin*0.95,ymax*1.05);
+   h->SetXTitle("#iteration "+fOptimizationFitType);
+   h->SetYTitle(fFOMType);
    TGraph *gFOMvsIter = new TGraph(n,x,y);
    gFOMvsIter->SetName((TString(GetMethod()->GetName())+"_FOMvsIter").Data());
    gFOMvsIter->Write();
    h->Write();
 
-
    // delete fFOMvsIter;
 } 
 //_______________________________________________________________________
-std::map<TString,Double_t> TMVA::Optimizer::optimize(TString optimizationFitType)
+std::map<TString,Double_t> TMVA::Optimizer::optimize()
 {
-   if      (optimizationFitType == "Scan"    ) this->optimizeScan();
-   else if (optimizationFitType == "GA" || optimizationFitType == "Minuit" ) this->optimizeFit(optimizationFitType);
+   if      (fOptimizationFitType == "Scan"    ) this->optimizeScan();
+   else if (fOptimizationFitType == "GA" || fOptimizationFitType == "Minuit" ) this->optimizeFit();
    else {
-      Log() << kFATAL << "You have chosen as optimization type " << optimizationFitType
+      Log() << kFATAL << "You have chosen as optimization type " << fOptimizationFitType
                 << " that is not (yet) coded --> exit()" << Endl;
    }
    
@@ -153,7 +155,7 @@ void TMVA::Optimizer::optimizeScan()
    GetMethod()->SetTuneParameters(fTunedParameters);
 }
 
-void TMVA::Optimizer::optimizeFit(TString optimizationFitType)
+void TMVA::Optimizer::optimizeFit()
 {
    // ranges (intervals) in which the fit varies the parameters
    std::vector<TMVA::Interval*> ranges; // intervals of the fit ranges
@@ -171,12 +173,12 @@ void TMVA::Optimizer::optimizeFit(TString optimizationFitType)
 
    FitterBase* fitter = NULL;
 
-   if ( optimizationFitType == "Minuit"  ) {
+   if ( fOptimizationFitType == "Minuit"  ) {
      TString opt="";
      fitter = new MinuitFitter(  *this, 
                                  "FitterMinuit_BDTOptimize", 
                                  ranges, opt );
-   }else if ( optimizationFitType == "GA"  ) {
+   }else if ( fOptimizationFitType == "GA"  ) {
      TString opt="PopSize=20:Steps=30:Cycles=3:ConvCrit=0.01:SaveBestCycle=5";
      fitter = new GeneticFitter( *this, 
                                  "FitterGA_BDTOptimize", 
