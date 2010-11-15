@@ -609,7 +609,7 @@ void TMVA::MethodBDT::Train()
 
    Log() << kINFO << "Training "<< fNTrees << " Decision Trees ... patience please" << Endl;
 
-   Log() << kINFO << "Training with maximal depth = " <<fMaxDepth 
+   Log() << kDEBUG << "Training with maximal depth = " <<fMaxDepth 
          << ", NodeMinEvents=" << fNodeMinEvents
          << ", NTrees="<<fNTrees
          << ", NodePurityLimit="<<fNodePurityLimit
@@ -637,9 +637,10 @@ void TMVA::MethodBDT::Train()
    TH1* h = new TH1F("BoostWeight",hname,nBins,xMin,xMax);
    TH1* nodesBeforePruningVsTree = new TH1I("NodesBeforePruning","nodes before pruning",fNTrees,0,fNTrees);
    TH1* nodesAfterPruningVsTree = new TH1I("NodesAfterPruning","nodes after pruning",fNTrees,0,fNTrees);
+   TH1D *alpha = new TH1D("alpha","PruneStrengths",fNTrees,0,fNTrees);
 
-   Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
    if(!DoMulticlass()){
+      Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
 
       h->SetXTitle("boost weight");
       results->Store(h, "BoostWeights");
@@ -665,6 +666,10 @@ void TMVA::MethodBDT::Train()
       nodesAfterPruningVsTree->SetXTitle("#tree");
       nodesAfterPruningVsTree->SetYTitle("#tree nodes");
       results->Store(nodesAfterPruningVsTree);
+
+      alpha->SetXTitle("#tree");
+      alpha->SetYTitle("PruneStrength");
+      results->Store(alpha);
    }
    
    fMonitorNtuple= new TTree("MonitorNtuple","BDT variables");
@@ -678,11 +683,6 @@ void TMVA::MethodBDT::Train()
 
    Int_t nNodesBeforePruning = 0;
    Int_t nNodesAfterPruning = 0;
-
-   TH1D *alpha = new TH1D("alpha","PruneStrengths",fNTrees,0,fNTrees);
-   alpha->SetXTitle("#tree");
-   alpha->SetYTitle("PruneStrength");
-   results->Store(alpha);
 
    if(fBoostType=="Grad"){
       InitGradBoost(fEventSample);
