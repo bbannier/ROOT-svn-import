@@ -1156,6 +1156,11 @@ void TMVA::Factory::EvaluateAllMethods( void )
    std::vector<std::vector<Double_t> > eff01err(2), eff10err(2), eff30err(2);
    std::vector<std::vector<Double_t> > trainEff01(2), trainEff10(2), trainEff30(2);
 
+   std::vector<std::vector<Float_t> > multiclass_testEff;
+   std::vector<std::vector<Float_t> > multiclass_trainEff;
+   std::vector<std::vector<Float_t> > multiclass_testPur;
+   std::vector<std::vector<Float_t> > multiclass_trainPur;
+
    std::vector<std::vector<Double_t> > biastrain(1);  // "bias" of the regression on the training data
    std::vector<std::vector<Double_t> > biastest(1);   // "bias" of the regression on test data
    std::vector<std::vector<Double_t> > devtrain(1);   // "dev" of the regression on the training data
@@ -1232,7 +1237,12 @@ void TMVA::Factory::EvaluateAllMethods( void )
          Log() << kINFO << "Write evaluation histograms to file" << Endl;
          theMethod->WriteEvaluationHistosToFile(Types::kTesting);
          theMethod->WriteEvaluationHistosToFile(Types::kTraining);
+         
          theMethod->TestMulticlass();
+         multiclass_testEff.push_back(theMethod->GetMulticlassEfficiency(multiclass_testPur));
+         //theMethod->GetMulticlassTrainingEfficiency();
+         nmeth_used[0]++;
+         mname[0].push_back( theMethod->GetMethodName() );
       } else {
          
          Log() << kINFO << "Evaluate classifier: " << theMethod->GetMethodName() << Endl;
@@ -1310,8 +1320,8 @@ void TMVA::Factory::EvaluateAllMethods( void )
       minftestT[0]  = vtmp[16];
       minftrainT[0] = vtmp[17];
    } else if( doMulticlass ) {
-      // do nothing for the moment
       // TODO: fill in something meaningfull
+      
    }  else {
       // now sort the variables according to the best 'eff at Beff=0.10'
       for (Int_t k=0; k<2; k++) {
@@ -1560,7 +1570,26 @@ void TMVA::Factory::EvaluateAllMethods( void )
       Log() << kINFO << Endl;
    }
    else if( doMulticlass ){
-      // do whatever necessary  TODO
+      Log() << Endl;
+      TString hLine = "--------------------------------------------------------------------------------";
+      Log() << kINFO << "Evaluation results ranked by best signal efficiency times signal purity " << Endl;
+      Log() << kINFO << hLine << Endl;
+      TString header= "MVA Method     "; 
+      for(UInt_t icls = 0; icls<DefaultDataSetInfo().GetNClasses(); ++icls){
+         header += Form("%-12s ",DefaultDataSetInfo().GetClassInfo(icls)->GetName().Data());
+      }
+      Log() << kINFO << header << Endl;
+      Log() << kINFO << hLine << Endl;
+      for (Int_t i=0; i<nmeth_used[0]; i++) {
+         TString res =  Form("%-15s",(const char*)mname[0][i]);
+         for(UInt_t icls = 0; icls<DefaultDataSetInfo().GetNClasses(); ++icls){
+            res += Form("%#1.3f        ",(multiclass_testEff[i][icls])*(multiclass_testPur[i][icls]));
+         }
+         Log() << kINFO << res << Endl;
+      }
+      Log() << kINFO << hLine << Endl;
+      Log() << kINFO << Endl;
+
    } else {
       Log() << Endl;
       TString hLine = "--------------------------------------------------------------------------------";

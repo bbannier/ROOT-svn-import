@@ -103,8 +103,8 @@ namespace TMVAGlob {
       //Int_t LineColor__B = c_BackgroundLine;
       //Int_t LineWidth__B = 2;
 
-      Int_t FillColors[10] = {38,2,3,4,5,6,7,8,9,11};
-      Int_t LineColors[10] = {4,2,3,38,5,6,7,8,9,11};
+      Int_t FillColors[10] = {38,2,3,6,7,8,9,11};
+      Int_t LineColors[10] = {4,2,3,6,7,8,9,11};
       Int_t FillStyles[5] = {1001,3554,3003,3545,0};
 
       for(Int_t i=0; i<hists->GetEntriesFast(); ++i){
