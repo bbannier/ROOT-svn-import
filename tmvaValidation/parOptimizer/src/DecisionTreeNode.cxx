@@ -435,12 +435,16 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    Float_t tempNSigEvents,tempNBkgEvents;
 
    Int_t nCoef;
-   gTools().ReadAttr(node, "NCoef",  nCoef                  );
-   this->SetNFisherCoeff(nCoef);
-   Double_t tmp;
-   for (Int_t i=0; i< (Int_t) this->GetNFisherCoeff(); i++) {
-      gTools().ReadAttr(node, Form("fC%d",i),  tmp          );
-      this->SetFisherCoeff(i,tmp);
+   if (gTools().HasAttr(node, "NCoef")){
+      gTools().ReadAttr(node, "NCoef",  nCoef                  );
+      this->SetNFisherCoeff(nCoef);
+      Double_t tmp;
+      for (Int_t i=0; i< (Int_t) this->GetNFisherCoeff(); i++) {
+         gTools().ReadAttr(node, Form("fC%d",i),  tmp          );
+         this->SetFisherCoeff(i,tmp);
+      }
+   }else{
+      this->SetNFisherCoeff(0);
    }
    gTools().ReadAttr(node, "IVar",  fSelector               );
    gTools().ReadAttr(node, "Cut",   fCutValue               );
