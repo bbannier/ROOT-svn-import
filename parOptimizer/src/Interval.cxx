@@ -64,7 +64,7 @@ TMVA::Interval::Interval( Double_t min, Double_t max, Int_t nbins ) :
 
 TMVA::Interval::Interval( const Interval& other ) :
    fMin  ( other.fMin ),
-   fMax  ( other.fMin ),
+   fMax  ( other.fMax ),
    fNbins( other.fNbins )
 {
    if (!fgLogger) fgLogger = new MsgLogger("Interval");
@@ -91,8 +91,10 @@ Double_t TMVA::Interval::GetElement( Int_t bin ) const
       Log() << kFATAL << "bin " << bin << " out of interval [0," << fNbins << ")" << Endl;
       return 0.0;
    }
-   
-   return fMin + ( (Double_t(bin)/(fNbins-1)) *(fMax - fMin) );
+   std::cout << "Min="<<fMin<<" Max="<<fMax<<" bin="<<bin<<" NBins="<<fNbins<<" elem=:"
+             << fMin + ( (Double_t(bin)/(fNbins-1)) *(fMax - fMin) ) << std::endl;
+   //   return fMin + ( (Double_t(bin)/(fNbins)) *(fMax - fMin) );
+      return fMin + ( (Double_t(bin)/(fNbins-1)) *(fMax - fMin) );
 }
 
 //_______________________________________________________________________

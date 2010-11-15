@@ -41,7 +41,12 @@
 
 #include <iosfwd>
 #include <vector>
+#include <map>
 #include "assert.h"
+
+#ifndef ROOT_TString
+#include "TString.h"
+#endif
 
 #ifndef ROOT_TMVA_IMethod
 #include "TMVA/IMethod.h"
@@ -60,6 +65,9 @@
 #endif
 #ifndef ROOT_TMVA_TransformationHandler
 #include "TMVA/TransformationHandler.h"
+#endif
+#ifndef ROOT_TMVA_Optimizer
+#include "TMVA/Optimizer.h"
 #endif
 
 class TGraph;
@@ -113,6 +121,11 @@ namespace TMVA {
       // performs classifier training
       // calls methods Train() implemented by derived classes
       void             TrainMethod();
+
+      // optimize tuning parameters
+      virtual std::map<TString,Double_t> OptimizeTuningParameters(TString fomType="ROCIntegral", TString fitType="FitGA");
+      virtual void SetTuneParameters(std::map<TString,Double_t> tuneParameters);
+
       virtual void     Train() = 0;
 
       // store and retrieve time used for training

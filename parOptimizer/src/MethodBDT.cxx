@@ -128,6 +128,7 @@
 #include "TMVA/MisClassificationError.h"
 #include "TMVA/Results.h"
 #include "TMVA/ResultsMulticlass.h"
+#include "TMVA/Interval.h"
 
 using std::vector;
 
@@ -545,6 +546,50 @@ void TMVA::MethodBDT::InitEventSample( void )
 }
 
 //_______________________________________________________________________
+std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fomType, TString fitType)
+{
+   // call the Optimzier with the set of paremeters and ranges that
+   // are meant to be tuned.
+
+   // fill all the tuning parameters that should be optimized into a map:
+   std::map<TString,TMVA::Interval> tuneParameters;
+   std::map<TString,Double_t> tunedParameters;
+
+   // note: the 3rd paraemter in the inteval is the "number of bins", NOT the stepsize !!
+   //       the actual VALUES at (at least for the scan, guess also in GA) are always
+   //       read from the middle of the bins. Hence.. the choice of Intervals e.g. for the
+   //       MaxDepth, in order to make nice interger values!!!
+   // tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,5,5))); //==stepsize 
+    tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,15.,15))); // stepsize 1
+    tuneParameters.insert(std::pair<TString,Interval>("NodeMinEvents", Interval(50,500,10)));  // 50 to 500 stepsize 25  
+    tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,20))); //  stepsize 50
+    tuneParameters.insert(std::pair<TString,Interval>("NodePurityLimit",Interval(.4,.6,3)));   // stepsize .1
+   tuneParameters.insert(std::pair<TString,Interval>("AdaBoostBeta",   Interval(.5,1.50,10)));   //== stepsize .1
+
+   Optimizer optimize(this, tuneParameters, fomType);
+   tunedParameters=optimize.optimize(fitType);
+
+   return tunedParameters;
+
+}
+
+//_______________________________________________________________________
+void TMVA::MethodBDT::SetTuneParameters(std::map<TString,Double_t> tuneParameters)
+{
+  // set the tuning parameters accoding to the argument
+
+  std::map<TString,Double_t>::iterator it;
+  for(it=tuneParameters.begin(); it!= tuneParameters.end(); it++){
+    if (it->first ==  "MaxDepth"       ) SetMaxDepth        (it->second);
+    if (it->first ==  "NodeMinEvents"  ) SetNodeMinEvents   (it->second);
+    if (it->first ==  "NTrees"         ) SetNTrees          (it->second);
+    if (it->first ==  "NodePurityLimit") SetNodePurityLimit (it->second);
+    if (it->first ==  "AdaBoostBeta"   ) SetAdaBoostBeta    (it->second);
+  }
+
+}
+
+//_______________________________________________________________________
 void TMVA::MethodBDT::Train()
 {
    // BDT training
@@ -564,7 +609,13 @@ void TMVA::MethodBDT::Train()
 
    Log() << kINFO << "Training "<< fNTrees << " Decision Trees ... patience please" << Endl;
 
-   Log() << kDEBUG << "Training  with maximal depth = "<<fMaxDepth<< " and NNodesMax=" << fNNodesMax;
+   Log() << kINFO << "Training with maximal depth = " <<fMaxDepth 
+         << ", NodeMinEvents=" << fNodeMinEvents
+         << ", NTrees="<<fNTrees
+         << ", NodePurityLimit="<<fNodePurityLimit
+         << ", AdaBoostBeta="<<fAdaBoostBeta
+         << Endl;
+
    // weights applied in boosting
    Int_t nBins;
    Double_t xMin,xMax;
@@ -587,8 +638,8 @@ void TMVA::MethodBDT::Train()
    TH1* nodesBeforePruningVsTree = new TH1I("NodesBeforePruning","nodes before pruning",fNTrees,0,fNTrees);
    TH1* nodesAfterPruningVsTree = new TH1I("NodesAfterPruning","nodes after pruning",fNTrees,0,fNTrees);
 
+   Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
    if(!DoMulticlass()){
-      Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
 
       h->SetXTitle("boost weight");
       results->Store(h, "BoostWeights");
@@ -631,6 +682,7 @@ void TMVA::MethodBDT::Train()
    TH1D *alpha = new TH1D("alpha","PruneStrengths",fNTrees,0,fNTrees);
    alpha->SetXTitle("#tree");
    alpha->SetYTitle("PruneStrength");
+   results->Store(alpha);
 
    if(fBoostType=="Grad"){
       InitGradBoost(fEventSample);
