@@ -685,13 +685,13 @@ void TMVA::MethodBDT::GetRandomSubSample()
 {
    // fills fEventSample with fSampleFraction*NEvents random training events
    UInt_t nevents = fEventSample.size();
-   UInt_t nfraction = static_cast<UInt_t>(fSampleFraction*Data()->GetNTrainingEvents());
-
+   
    if (fSubSample.size()!=0) fSubSample.clear();
    TRandom3 *trandom   = new TRandom3(fForest.size()+1);
 
-   for (UInt_t ievt=0; ievt<nfraction; ievt++) { // recreate new random subsample
-      fSubSample.push_back(fEventSample[(static_cast<UInt_t>(trandom->Uniform(nevents)-1))]);
+   for (UInt_t ievt=0; ievt<nevents; ievt++) { // recreate new random subsample
+      if(trandom->Rndm()<fSampleFraction)
+         fSubSample.push_back(fEventSample[ievt]);
    }
 }
 
