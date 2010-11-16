@@ -138,7 +138,7 @@ std::vector<Double_t> TMVA::ResultsMulticlass::GetBestMultiClassCuts(UInt_t targ
 
 //_______________________________________________________________________
 
-void  TMVA::ResultsMulticlass::CreateMulticlassHistos( TString prefix, Int_t nbins, Int_t nbins_high)
+void  TMVA::ResultsMulticlass::CreateMulticlassHistos( TString prefix, Int_t nbins, Int_t /* nbins_high */ )
 {
    //this function fills the mva response histos for multiclass classification
    Log() << kINFO << "Creating multiclass response histograms..." << Endl;
