@@ -29,7 +29,7 @@ namespace cling {
                                public StmtVisitor<ASTTransformVisitor, Stmt*> {
       
    private:
-      FunctionTemplateDecl *EvalTemplate;
+      FunctionDecl *EvalTemplate;
       
    public:
       
@@ -38,12 +38,12 @@ namespace cling {
       typedef DeclVisitor<ASTTransformVisitor> BaseDeclVisitor;
       typedef StmtVisitor<ASTTransformVisitor, Stmt*> BaseStmtVisitor;
       
-      FunctionTemplateDecl *getEvalTemplate(){ return EvalTemplate; }
-      void setEvalTemplate(FunctionTemplateDecl *FTD){ EvalTemplate = FTD; }
+      FunctionDecl *getEvalTemplate(){ return EvalTemplate; }
+      void setEvalTemplate(FunctionDecl *FDecl){ EvalTemplate = FDecl; }
       
       //region Constructors
-      
-      ASTTransformVisitor(Sema *SemaPtr) : SemaPtr(SemaPtr){};
+      ASTTransformVisitor(Sema *SemaPtr) : SemaPtr(SemaPtr), CurrentDecl(0){};
+      Decl *CurrentDecl;
       
       //endregion
       
@@ -51,7 +51,7 @@ namespace cling {
       
       //region DeclVisitor
       
-      void Visit(Decl *D);   
+      void Visit(Decl *D);
       void VisitDeclaratorDecl(DeclaratorDecl *D);
       void VisitFunctionDecl(FunctionDecl *D);
       void VisitFunctionTemplateDecl(FunctionTemplateDecl *D); 

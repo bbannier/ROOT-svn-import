@@ -11,7 +11,10 @@ namespace cling {
    //region DeclVisitor
 
    void ASTTransformVisitor::Visit(Decl *D) {
+      Decl *PrevDecl = ASTTransformVisitor::CurrentDecl;
+      ASTTransformVisitor::CurrentDecl = D;
       BaseDeclVisitor::Visit(D);
+      ASTTransformVisitor::CurrentDecl = PrevDecl;
    }
    
    void ASTTransformVisitor::VisitDeclaratorDecl(DeclaratorDecl *D) {
@@ -22,6 +25,7 @@ namespace cling {
    
    void ASTTransformVisitor::VisitFunctionDecl(FunctionDecl *D) {
       BaseDeclVisitor::VisitFunctionDecl(D);
+     
       if (D->isThisDeclarationADefinition()) {
          Stmt *Old = D->getBody();
          Stmt *New = Visit(Old);
@@ -31,12 +35,15 @@ namespace cling {
    }
    
    void ASTTransformVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
+      BaseDeclVisitor::VisitFunctionTemplateDecl(D);
+    
       if (D->getName().compare("Eval") == 0) {
          NamespaceDecl *ND = dyn_cast<NamespaceDecl>(D->getDeclContext());
          if (ND && ND->getName().compare("cling") == 0) {
-            setEvalTemplate(D);
+            setEvalTemplate(D->getTemplatedDecl());
          }
       }
+      
    }
    
    void ASTTransformVisitor::VisitObjCMethodDecl(ObjCMethodDecl *D) {
@@ -116,55 +123,54 @@ namespace cling {
    // Here is the test Eval function specialization. Here the CallExpr to the function
    // is created.
    Stmt *ASTTransformVisitor::VisitBinaryOperator(BinaryOperator *binOp) {
-      Stmt *rhs = Visit(binOp->getRHS());
+      /*Stmt *rhs =*/ Visit(binOp->getRHS());
       Stmt *lhs = Visit(binOp->getLHS());
       if (CallExpr *CE = dyn_cast<CallExpr>(lhs)){
          if (CE->isValueDependent() || CE->isTypeDependent()) {
-            if (FunctionTemplateDecl *FTD = getEvalTemplate()) {
-               DeclContext *PrevContext = SemaPtr->CurContext;
-               Decl *D;
-               
-               Sema::InstantiatingTemplate Inst(*SemaPtr, SourceLocation(), FTD);
-               SemaPtr->CurContext = FTD->getDeclContext();
-               
-               if (Expr *lhsEx = dyn_cast<Expr>(lhs)) {
-                  QualType lhsTy = lhsEx->getType();
-                  //TemplateArgument Arg(lhsTy);
-                  TemplateArgument Arg(SemaPtr->getASTContext().IntTy);
+            if (FunctionDecl *FDecl = getEvalTemplate()) {               
+               if (/*Expr *lhsEx =*/ dyn_cast<Expr>(lhs)) {                  
+                  // QualType lhsTy = lhsEx->getType();
+                  // TemplateArgument Arg(lhsTy);
+
+                  ASTContext *Ctx = &SemaPtr->getASTContext();
+
+                  DeclContext *PrevContext = SemaPtr->CurContext;
+                  SemaPtr->CurContext = FDecl->getDeclContext();
+
+                  Sema::InstantiatingTemplate Inst(*SemaPtr, SourceLocation(), FDecl);
+                  TemplateArgument Arg(Ctx->IntTy);
                   TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
                   
-                  D = SemaPtr->SubstDecl(FTD, FTD->getDeclContext(), MultiLevelTemplateArgumentList(TemplateArgs));
-                  SemaPtr->CurContext = PrevContext;
+                  Decl *D = SemaPtr->SubstDecl(FDecl, FDecl->getDeclContext(), MultiLevelTemplateArgumentList(TemplateArgs));
 
-                  FTD = dyn_cast<FunctionTemplateDecl>(D);
-                  FunctionDecl *Fn = FTD->getTemplatedDecl();
-                  
-                  DeclRefExpr *DRE = DeclRefExpr::Create(*&SemaPtr->getASTContext(), NULL, SourceRange(), Fn, Fn->getLocation(), Fn->getType(), NULL);
-                  ASTContext *Ctx = &SemaPtr->getASTContext();
-                  CallExpr *EvalCall = new (Ctx) CallExpr(*Ctx, DRE, 0, 0, Fn->getType(), SourceLocation());
-                  return SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext), DRE, SourceLocation(), MultiExprArg(), SourceLocation()).get();
-               }
+                  FunctionDecl *Fn = dyn_cast<FunctionDecl>(D);
+                  SemaPtr->InstantiateFunctionDefinition(Fn->getLocation(), Fn, true, true);
 
+                  SemaPtr->CurContext = PrevContext;                            
+
+                  const FunctionProtoType *Proto = Fn->getType()->getAs<FunctionProtoType>();
+                  QualType FuncT = SemaPtr->BuildFunctionType(Fn->getResultType()
+                                                              , /* ParamsTypes */ 0
+                                                              , /* NumParamTypes */ 0
+                                                              , Proto->isVariadic()
+                                                              , Proto->getTypeQuals()
+                                                              , Fn->getLocation()
+                                                              , Fn->getDeclName()
+                                                              , Proto->getExtInfo());                  
+                  DeclRefExpr *DRE = SemaPtr->BuildDeclRefExpr(Fn, FuncT, SourceLocation()).takeAs<DeclRefExpr>();
+                  CallExpr *EvalIntCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
+                                                                 , DRE
+                                                                 , SourceLocation()
+                                                                 , MultiExprArg()
+                                                                 , SourceLocation()
+                                                                 ).takeAs<CallExpr>();
+
+                  return EvalIntCall;                  
+               }               
             }
          }
       }
       
-      if (IntegerLiteral *IL = dyn_cast<IntegerLiteral>(rhs)) {
-         
-      }
-      
-      
-      // ASTContext *c = &SemaPtr->getASTContext();
-      // const char *str = "Transform World!";
-      
-      // QualType constCharArray = c->getConstantArrayType(c->getConstType(c->CharTy), llvm::APInt(32, 16U), ArrayType::Normal, 0);
-      // StringLiteral *SL = StringLiteral::Create(*c, &*str, sizeof(str), false, constCharArray, SourceLocation());
-      
-      // QualType charType = c->getPointerType(c->getConstType(c->CharTy));
-      // ImplicitCastExpr *cast = ImplicitCastExpr::Create(*c, charType, CK_ArrayToPointerDecay, SL, 0, VK_RValue);
-      
-      // CallExpr *theCall = new (c) CallExpr(*c, getPrf()->getCallee(), (Expr**)&cast, 1U, c->VoidPtrTy, SourceLocation());
-      // return theCall;
       return binOp;
    }
 
