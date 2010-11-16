@@ -151,7 +151,7 @@ void Training(){
 
    // Boosted Decision Trees
    factory->BookMethod( TMVA::Types::kBDT, "BDTG",
-			"!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:SeparationType=GiniIndex:nCuts=20:NNodesMax=5" );
+			"!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.5:SeparationType=GiniIndex:nCuts=20:NNodesMax=5" );
    factory->TrainAllMethods();
    factory->TestAllMethods();
    factory->EvaluateAllMethods();
@@ -331,7 +331,7 @@ public:
    Double_t EstimatorFunction( std::vector<Double_t> & factors ){
 
       TString cutsAndWeightTruePositive  = Form("weight*((classID==0) && cls0>%f && cls1>%f && cls2>%f )",factors.at(0), factors.at(1), factors.at(2));
-      TString cutsAndWeightFalsePositive = Form("weight*((classID >0) && cls0>%f && cls0>%f && cls0>%f )",factors.at(0), factors.at(1), factors.at(2));
+      TString cutsAndWeightFalsePositive = Form("weight*((classID >0) && cls0>%f && cls1>%f && cls2>%f )",factors.at(0), factors.at(1), factors.at(2));
 	  
       // Entry$/Entries$ just draws something reasonable. Could in principle anything
       Float_t nTP = chain->Draw("Entry$/Entries$>>htp",cutsAndWeightTruePositive,"goff");
