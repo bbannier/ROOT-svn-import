@@ -125,7 +125,7 @@ TMVA::Factory::Factory( TString jobName, TFile* theTargetFile, TString theOption
    Bool_t drawProgressBar = kTRUE;
    DeclareOptionRef( fVerbose, "V", "Verbose flag" );
    DeclareOptionRef( color,    "Color", "Flag for coloured screen output (default: True, if in batch mode: False)" );
-   DeclareOptionRef( fTransformations, "Transformations", "List of transformations to test; formatting example: \"Transformations=I;D;P;G,D\", for identity, decorrelation, PCA, and Gaussianisation followed by decorrelation transformations" );
+   DeclareOptionRef( fTransformations, "Transformations", "List of transformations to test; formatting example: \"Transformations=I;D;P;U;G,D\", for identity, decorrelation, PCA, Uniform and Gaussianisation followed by decorrelation transformations" );
    DeclareOptionRef( silent,   "Silent", "Batch mode: boolean silent flag inhibiting any output from TMVA after the creation of the factory class object (default: False)" );
    DeclareOptionRef( drawProgressBar,
                      "DrawProgressBar", "Draw progress bar to display training, testing and evaluation schedule (default: True)" );
@@ -832,7 +832,7 @@ void TMVA::Factory::WriteDataInformation()
    
    // some default transformations to evaluate
    // NOTE: all transformations are destroyed after this test
-   TString processTrfs = ""; //"I;N;D;P;G,D;"
+   TString processTrfs = ""; //"I;N;D;P;U;G,D;"
 
    // plus some user defined transformations
    processTrfs = fTransformations;
@@ -895,6 +895,9 @@ void TMVA::Factory::WriteDataInformation()
          else if (trName=='P') {
             trfs.back()->AddTransformation( new VariablePCATransform      ( DefaultDataSetInfo() ), idxCls );
          } 
+         else if (trName=='U') {
+           trfs.back()->AddTransformation( new VariableGaussTransform    ( DefaultDataSetInfo(), "Uniform" ), idxCls );
+         }
          else if (trName=='G') {
             trfs.back()->AddTransformation( new VariableGaussTransform    ( DefaultDataSetInfo() ), idxCls );
          } 
@@ -922,6 +925,39 @@ void TMVA::Factory::WriteDataInformation()
 
    // clean up
    for (trfIt = trfs.begin(); trfIt != trfs.end(); trfIt++) delete *trfIt;
+}
+
+//_______________________________________________________________________
+void TMVA::Factory::OptimizeAllMethods(TString fomType, TString fitType) 
+{
+  // iterates through all booked methods and sees if they use parameter tuning and if so..
+  // does just that  i.e. calls "Method::Train()" for different parameter setttings and
+  // keeps in mind the "optimal one"... and that's the one that will later on be used
+  // in the main training loop.
+
+ 
+   MVector::iterator itrMethod;
+
+   // iterate over methods and optimize
+   for( itrMethod = fMethods.begin(); itrMethod != fMethods.end(); ++itrMethod ) {
+
+      MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
+
+      if (mva->Data()->GetNTrainingEvents() < MinNoTrainingEvents) {
+         Log() << kWARNING << "Method " << mva->GetMethodName() 
+               << " not trained (training tree has less entries ["
+               << mva->Data()->GetNTrainingEvents() 
+               << "] than required [" << MinNoTrainingEvents << "]" << Endl; 
+         continue;
+      }
+
+      Log() << kINFO << "Optimize method: " << mva->GetMethodName() << " for " 
+            << (fAnalysisType == Types::kRegression ? "Regression" : 
+		(fAnalysisType == Types::kMulticlass ? "Multiclass classification" : "Classification")) << Endl;
+      
+      mva->OptimizeTuningParameters(fomType,fitType);
+      Log() << kINFO << "Optimization of tuning paremters finished for Method:"<<mva->GetName() << Endl;
+   }
 }
 
 //_______________________________________________________________________

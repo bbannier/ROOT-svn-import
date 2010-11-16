@@ -53,7 +53,6 @@ TMVA::SeparationBase::SeparationBase() :
    fPrecisionCut(TMath::Sqrt(std::numeric_limits<double>::epsilon()))
 {
    // default constructor
-
 }
 
 //copy constructor
@@ -75,16 +74,19 @@ Double_t TMVA::SeparationBase::GetSeparationGain(const Double_t &nSelS, const Do
    // (N * Index_parent) - (N_left * Index_left) - (N_right * Index_right)
    // this is then the quality crition which is optimized for when trying
    // to increase the information in the system (making the best selection
-
    if ( (nTotS-nSelS)==nSelS && (nTotB-nSelB)==nSelB) return 0.;
 
    Double_t parentIndex = (nTotS+nTotB) *this->GetSeparationIndex(nTotS,nTotB);
+
    Double_t leftIndex   = ( ((nTotS - nSelS) + (nTotB - nSelB))
                             * this->GetSeparationIndex(nTotS-nSelS,nTotB-nSelB) );
    Double_t rightIndex  = (nSelS+nSelB) * this->GetSeparationIndex(nSelS,nSelB);
-   
-   Double_t diff = parentIndex - leftIndex - rightIndex;
 
+   Double_t diff = parentIndex - leftIndex - rightIndex;
+   //   if (!fInit){
+      fPrecisionCut = (TMath::Sqrt(std::numeric_limits<double>::epsilon())); 
+      //      fInit = kTRUE;
+      //   }
    if(diff/parentIndex<fPrecisionCut ) return 0;
 
    return diff;

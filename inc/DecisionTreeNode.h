@@ -118,14 +118,22 @@ namespace TMVA {
       // constructor of an essentially "empty" node floating in space
       DecisionTreeNode ();
       // constructor of a daughter node as a daughter of 'p'
-      DecisionTreeNode (Node* p, char pos);
-
-      // copy constructor
-      DecisionTreeNode (const DecisionTreeNode &n, DecisionTreeNode* parent = NULL);
-
+      DecisionTreeNode (Node* p, char pos); 
+    
+      // copy constructor 
+      DecisionTreeNode (const DecisionTreeNode &n, DecisionTreeNode* parent = NULL); 
+      
+      // destructor
       virtual ~DecisionTreeNode();
 
       virtual Node* CreateNode() const { return new DecisionTreeNode(); }
+
+      inline void SetNFisherCoeff(Int_t nvars){fFisherCoeff.resize(nvars);}
+      inline UInt_t GetNFisherCoeff() const { return fFisherCoeff.size();}
+      // set fisher coefficients
+      void SetFisherCoeff(Int_t ivar, Double_t coeff);      
+      // get fisher coefficients
+      Double_t GetFisherCoeff(Int_t ivar) const {return fFisherCoeff.at(ivar);}
 
       // test event if it decends the tree at this node to the right
       virtual Bool_t GoesRight( const Event & ) const;
@@ -248,12 +256,19 @@ namespace TMVA {
       void ClearNodeAndAllDaughters();
 
       // get pointers to children, mother in the tree
-      inline DecisionTreeNode* GetLeftDaughter( ) { return dynamic_cast<DecisionTreeNode*>(GetLeft()); }
-      inline DecisionTreeNode* GetRightDaughter( ) { return dynamic_cast<DecisionTreeNode*>(GetRight()); }
-      inline DecisionTreeNode* GetMother( ) { return dynamic_cast<DecisionTreeNode*>(GetParent()); }
-      inline const DecisionTreeNode* GetLeftDaughter( ) const { return dynamic_cast<DecisionTreeNode*>(GetLeft()); }
-      inline const DecisionTreeNode* GetRightDaughter( ) const { return dynamic_cast<DecisionTreeNode*>(GetRight()); }
-      inline const DecisionTreeNode* GetMother( ) const { return dynamic_cast<DecisionTreeNode*>(GetParent()); }
+
+      // return pointer to the left/right daughter or parent node
+      inline virtual DecisionTreeNode* GetLeft( )   const { return dynamic_cast<DecisionTreeNode*>(fLeft); }
+      inline virtual DecisionTreeNode* GetRight( )  const { return dynamic_cast<DecisionTreeNode*>(fRight); }
+      inline virtual DecisionTreeNode* GetParent( ) const { return dynamic_cast<DecisionTreeNode*>(fParent); }
+
+      // set pointer to the left/right daughter and parent node
+      inline virtual void SetLeft  (Node* l) { fLeft   = dynamic_cast<DecisionTreeNode*>(l);} 
+      inline virtual void SetRight (Node* r) { fRight  = dynamic_cast<DecisionTreeNode*>(r);} 
+      inline virtual void SetParent(Node* p) { fParent = dynamic_cast<DecisionTreeNode*>(p);} 
+
+
+
 
       // the node resubstitution estimate, R(t), for Cost Complexity pruning
       inline void SetNodeR( Double_t r ) { fTrainInfo->fNodeR = r;    }
@@ -313,11 +328,11 @@ namespace TMVA {
 
       static bool fgIsTraining; // static variable to flag training phase in which we need fTrainInfo
 
-   private:
+   protected:
 
-      virtual void ReadAttributes(void* node, UInt_t tmva_Version_Code = TMVA_VERSION_CODE );
-      virtual Bool_t ReadDataRecord( istream& is, UInt_t tmva_Version_Code = TMVA_VERSION_CODE );
-      virtual void ReadContent(std::stringstream& s);
+      static MsgLogger* fgLogger;    // static because there is a huge number of nodes...
+
+      std::vector<Double_t>       fFisherCoeff;    // the other fisher coeff (offset at the last element
 
       Float_t  fCutValue;        // cut value appplied on this node to discriminate bkg against sig
       Bool_t   fCutType;         // true: if event variable > cutValue ==> signal , false otherwise
@@ -330,12 +345,16 @@ namespace TMVA {
 
       Bool_t   fIsTerminalNode;    //! flag to set node as terminal (i.e., without deleting its descendants)
 
-      static MsgLogger* fgLogger;    // static because there is a huge number of nodes...
       mutable DTNodeTrainingInfo* fTrainInfo;
 
-      ClassDef(DecisionTreeNode,0) // Node for the Decision Tree
+   private:
 
-         };
+      virtual void ReadAttributes(void* node, UInt_t tmva_Version_Code = TMVA_VERSION_CODE );
+      virtual Bool_t ReadDataRecord( istream& is, UInt_t tmva_Version_Code = TMVA_VERSION_CODE );
+      virtual void ReadContent(std::stringstream& s);
+
+      ClassDef(DecisionTreeNode,0) // Node for the Decision Tree 
+   };
 } // namespace TMVA
 
 #endif

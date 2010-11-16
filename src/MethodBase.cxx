@@ -272,6 +272,7 @@ void TMVA::MethodBase::SetupMethod()
 {
    // setup of methods
 
+
    if (fSetupCompleted) Log() << kFATAL << "Calling SetupMethod for the second time" << Endl;
    InitBase();
    DeclareBaseOptions();
@@ -477,6 +478,8 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
             GetTransformationHandler().AddTransformation( new VariableDecorrTransform   ( DataInfo()) , idxCls );
          else if (trName == "P" || trName == "PCA")
             GetTransformationHandler().AddTransformation( new VariablePCATransform      ( DataInfo()), idxCls );
+         else if (trName == "U" || trName == "Uniform")
+            GetTransformationHandler().AddTransformation( new VariableGaussTransform    ( DataInfo(),"Uniform"), idxCls );
          else if (trName == "G" || trName == "Gauss")
             GetTransformationHandler().AddTransformation( new VariableGaussTransform    ( DataInfo()), idxCls );
          else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize")
@@ -514,6 +517,35 @@ void TMVA::MethodBase::DeclareCompatibilityOptions()
    AddPreDefVal( TString("Fatal")   );
    DeclareOptionRef( fNbinsMVAPdf   = 60, "NbinsMVAPdf",   "Number of bins used for the PDFs of classifier outputs" );
    DeclareOptionRef( fNsmoothMVAPdf = 2,  "NsmoothMVAPdf", "Number of smoothing iterations for classifier PDFs" );
+}
+
+
+//_______________________________________________________________________
+std::map<TString,Double_t>  TMVA::MethodBase::OptimizeTuningParameters(TString /* fomType */ , TString /* fitType */)
+{
+   // call the Optimzier with the set of paremeters and ranges that
+   // are meant to be tuned.
+
+   // this is just a dummy...  needs to be implemented for each method
+   // individually (as long as we don't have it automatized via the
+   // configuraion string
+
+   Log() << kWARNING << "Parameter optimization is not yet implemented for method " 
+         << GetName() << Endl; 
+   Log() << kWARNING << "Currently we need to set hardcoded which parameter is tuned in which ranges"<<Endl;
+
+   std::map<TString,Double_t> tunedParameters;
+   tunedParameters.size(); // just to get rid of "unused" warning
+   return tunedParameters;
+
+}
+
+//_______________________________________________________________________
+void TMVA::MethodBase::SetTuneParameters(std::map<TString,Double_t> /* tuneParameters */)
+{
+   // set the tuning parameters accoding to the argument
+   // This is just a dummy .. have a look at the MethodBDT how you could 
+   // perhaps implment the same thing for the other Classifiers..
 }
 
 //_______________________________________________________________________
@@ -1200,8 +1232,7 @@ void TMVA::MethodBase::ReadStateFromFile()
    }
 }
 //_______________________________________________________________________
-void TMVA::MethodBase::ReadStateFromXMLString( const char* xmlstr ) 
-{
+void TMVA::MethodBase::ReadStateFromXMLString( const char* xmlstr ) {
    // for reading from memory
 
 #if (ROOT_SVN_REVISION >= 32259) && (ROOT_VERSION_CODE >= 334336) // 5.26/00
@@ -1385,6 +1416,10 @@ void TMVA::MethodBase::ReadStateFromStream( std::istream& fin )
       varTrafo = GetTransformationHandler().AddTransformation( new VariableDecorrTransform(DataInfo()), -1 );
    } else if ( fVarTransformString == "PCA"  ) {
       varTrafo = GetTransformationHandler().AddTransformation( new VariablePCATransform(DataInfo()), -1 );
+   } else if ( fVarTransformString == "Uniform" ) {
+      varTrafo  = GetTransformationHandler().AddTransformation( new VariableGaussTransform(DataInfo(),"Uniform"), -1 );
+   } else if ( fVarTransformString == "Gauss" ) {
+      varTrafo  = GetTransformationHandler().AddTransformation( new VariableGaussTransform(DataInfo()), -1 );
    } else if ( fVarTransformString == "GaussDecorr" ) {
       varTrafo  = GetTransformationHandler().AddTransformation( new VariableGaussTransform(DataInfo()), -1 );
       varTrafo2 = GetTransformationHandler().AddTransformation( new VariableDecorrTransform(DataInfo()), -1 );
@@ -1641,6 +1676,7 @@ TDirectory* TMVA::MethodBase::BaseDir() const
    // corresponding MVA method instance are stored
 
    if (fBaseDir != 0) return fBaseDir;
+   Log()<<kDEBUG<<" Base Directory for " << GetMethodTypeName() << " not set yet --> check if already there.." <<Endl;
 
    TDirectory* methodDir = MethodBaseDir();
    if (methodDir==0)
@@ -1653,8 +1689,12 @@ TDirectory* TMVA::MethodBase::BaseDir() const
    TObject* o = methodDir->FindObject(defaultDir);
    if (o!=0 && o->InheritsFrom(TDirectory::Class())) dir = (TDirectory*)o;
 
-   if (dir != 0) return dir;
+   if (dir != 0) {
+      Log()<<kDEBUG<<" Base Directory for " << GetMethodName() << " existed, return it.." <<Endl;
+      return dir;
+   }
 
+   Log()<<kDEBUG<<" Base Directory for " << GetMethodName() << " does not exist yet--> created it" <<Endl;
    TDirectory *sdir = methodDir->mkdir(defaultDir);
 
    // write weight file name into target file
@@ -1675,13 +1715,20 @@ TDirectory* TMVA::MethodBase::MethodBaseDir() const
 
    if (fMethodBaseDir != 0) return fMethodBaseDir;
 
+   Log()<<kDEBUG<<" Base Directory for " << GetMethodTypeName() << " not set yet --> check if already there.." <<Endl;
+
    const TString dirName(Form("Method_%s",GetMethodTypeName().Data()));
 
    TDirectory * dir = Factory::RootBaseDir()->GetDirectory(dirName);
-   if (dir != 0) return dir;
+   if (dir != 0){
+      Log()<<kDEBUG<<" Base Directory for " << GetMethodTypeName() << " existed, return it.." <<Endl;
+      return dir;
+   }
 
+   Log()<<kDEBUG<<" Base Directory for " << GetMethodTypeName() << " does not exist yet--> created it" <<Endl;
    fMethodBaseDir = Factory::RootBaseDir()->mkdir(dirName,Form("Directory for all %s methods", GetMethodTypeName().Data()));
 
+   Log()<<kDEBUG<<"Return from MethodBaseDir() after creating base directory "<<Endl;
    return fMethodBaseDir;
 }
 
@@ -2354,7 +2401,13 @@ Double_t TMVA::MethodBase::GetSeparation( PDF* pdfS, PDF* pdfB ) const
    if (!pdfS) pdfS = fSplS;
    if (!pdfB) pdfB = fSplB;
 
-   return gTools().GetSeparation( *pdfS, *pdfB );
+   if (!fSplS || !fSplB){
+      Log()<<kWARNING<< "could not calculate the separation, distributions"
+           << " fSplS or fSplB are not yet filled" << Endl;
+      return 0;
+   }else{
+      return gTools().GetSeparation( *pdfS, *pdfB );
+   }
 }
 
 //_______________________________________________________________________

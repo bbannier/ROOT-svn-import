@@ -55,9 +55,9 @@
 ClassImp(TMVA::VariableGaussTransform)
 
 //_______________________________________________________________________
-TMVA::VariableGaussTransform::VariableGaussTransform( DataSetInfo& dsi )
-   : VariableTransformBase( dsi, Types::kGaussDecorr, "Gauss" ),
-     fFlatNotGaussD(kFALSE),
+TMVA::VariableGaussTransform::VariableGaussTransform( DataSetInfo& dsi, TString strcor )
+   : VariableTransformBase( dsi, Types::kGauss, "Gauss" ),
+     fFlatNotGauss(kFALSE),
      fPdfMinSmooth(0),
      fPdfMaxSmooth(0),
      fElementsperbin(0)
@@ -65,6 +65,9 @@ TMVA::VariableGaussTransform::VariableGaussTransform( DataSetInfo& dsi )
    // constructor
    // can only be applied one after the other when they are created. But in order to
    // determine the Gauss transformation
+  if (strcor=="Uniform") {fFlatNotGauss = kTRUE;
+    SetName("Uniform");
+  }
 }
 
 //_______________________________________________________________________
@@ -137,7 +140,7 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
          cumulant = TMath::Min(cumulant,1.-10e-10);
          cumulant = TMath::Max(cumulant,0.+10e-10);
 
-         if (fFlatNotGaussD)
+         if (fFlatNotGauss)
             vec(ivar) = cumulant; 
          else {
             // sanity correction for out-of-range values
@@ -192,7 +195,7 @@ const TMVA::Event* TMVA::VariableGaussTransform::InverseTransform( const Event* 
          // now transfor to a gaussian
          // actually, the "sqrt(2) is not really necessary, who cares if it is totally normalised
          //            vec(ivar) =  TMath::Sqrt(2.)*TMath::ErfInverse(2*sum - 1);
-         if (fFlatNotGaussD) vec(ivar) = cumulant; 
+         if (fFlatNotGauss) vec(ivar) = cumulant; 
          else {
             // sanity correction for out-of-range values
             Double_t maxErfInvArgRange = 0.99999999;
@@ -411,7 +414,7 @@ void TMVA::VariableGaussTransform::AttachXMLTo(void* parent) {
    // create XML description of Gauss transformation
    void* trfxml = gTools().AddChild(parent, "Transform");
    gTools().AddAttr(trfxml, "Name",        "Gauss");
-   gTools().AddAttr(trfxml, "FlatOrGauss", (fFlatNotGaussD?"Flat":"Gauss") );
+   gTools().AddAttr(trfxml, "FlatOrGauss", (fFlatNotGauss?"Flat":"Gauss") );
 
    for (UInt_t ivar=0; ivar<GetNVariables(); ivar++) {
       void* varxml = gTools().AddChild( trfxml, "Variable");
@@ -434,8 +437,10 @@ void TMVA::VariableGaussTransform::ReadFromXML( void* trfnode ) {
 
    // clean up first
    CleanUpCumulativeArrays();
-
-   gTools().ReadAttr(trfnode, "FlatOrGauss", fFlatNotGaussD );
+   TString FlatOrGauss;
+   gTools().ReadAttr(trfnode, "FlatOrGauss", FlatOrGauss );
+   if (FlatOrGauss == "Flat") fFlatNotGauss = kTRUE;
+   else                       fFlatNotGauss = kFALSE;
 
    // Read the cumulative distribution
    void* varnode = gTools().GetChild( trfnode );
@@ -523,8 +528,9 @@ void TMVA::VariableGaussTransform::ReadTransformationFromStream( std::istream& i
          delete [] Binnings;
       }
 
-      if (strvar=="TransformToFlatInsetadOfGaussD=") { // don't correct this spelling mistake
-         sstr >> fFlatNotGaussD;
+      //      if (strvar=="TransformToFlatInsetadOfGauss=") { // don't correct this spelling mistake
+      if (strvar=="Uniform") { // don't correct this spelling mistake
+         sstr >> fFlatNotGauss;
          istr.getline(buf,512);
          break;
       }
@@ -650,7 +656,7 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << "       else cls = "<<(fCumulativePDF[0].size()==1?0:2)<<";"<< std::endl;
       fout << "   }"<< std::endl;
       
-      fout << "   bool FlatNotGaussD = "<< (fFlatNotGaussD? "true": "false") <<";"<< std::endl;
+      fout << "   bool FlatNotGauss = "<< (fFlatNotGauss? "true": "false") <<";"<< std::endl;
       fout << "   double cumulant;"<< std::endl;
       fout << "   const int nvar = "<<GetNVariables()<<";"<< std::endl;
       fout << "   for (int ivar=0; ivar<nvar; ivar++) {"<< std::endl;
@@ -667,7 +673,7 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << "           cumulant = eps*cumulativeDist[ivar][cls][ibin1] + (1-eps)*cumulativeDist[ivar][cls][ibin2];" << std::endl;
       fout << "           if (cumulant>1.-10e-10) cumulant = 1.-10e-10;"<< std::endl;
       fout << "           if (cumulant<10e-10)    cumulant = 10e-10;"<< std::endl;
-      fout << "           if (FlatNotGaussD) iv[ivar] = cumulant;"<< std::endl;
+      fout << "           if (FlatNotGauss) iv[ivar] = cumulant;"<< std::endl;
       fout << "           else {"<< std::endl;
       fout << "              double maxErfInvArgRange = 0.99999999;"<< std::endl;
       fout << "              double arg = 2.0*cumulant - 1.0;"<< std::endl;

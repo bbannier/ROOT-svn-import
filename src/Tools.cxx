@@ -127,6 +127,7 @@ Double_t TMVA::Tools::GetSeparation( TH1* S, TH1* B ) const
    Double_t intBin = (S->GetXaxis()->GetXmax() - S->GetXaxis()->GetXmin())/nstep;
    Double_t nS     = S->GetSumOfWeights()*intBin;
    Double_t nB     = B->GetSumOfWeights()*intBin;
+
    if (nS > 0 && nB > 0) {
       for (Int_t bin=0; bin<nstep; bin++) {
          Double_t s = S->GetBinContent( bin )/Double_t(nS);
@@ -304,11 +305,20 @@ const TMatrixD* TMVA::Tools::GetCorrelationMatrix( const TMatrixD* covMat )
       for (Int_t jvar=0; jvar<nvar; jvar++) {
          if (ivar != jvar) {
             Double_t d = (*covMat)(ivar, ivar)*(*covMat)(jvar, jvar);
-            if (d > 0) (*corrMat)(ivar, jvar) = (*covMat)(ivar, jvar)/TMath::Sqrt(d);
+            if (d > 1E-20) (*corrMat)(ivar, jvar) = (*covMat)(ivar, jvar)/TMath::Sqrt(d);
             else {
                Log() << kWARNING << "<GetCorrelationMatrix> zero variances for variables "
                      << "(" << ivar << ", " << jvar << ")" << Endl;
                (*corrMat)(ivar, jvar) = 0;
+            }
+            if (TMath::Abs( (*corrMat)(ivar,jvar))  > 1){
+               Log() << kWARNING
+                     <<  " Element  corr("<<ivar<<","<<ivar<<")=" << (*corrMat)(ivar,jvar)  
+                     << " sigma2="<<d
+                     << " cov("<<ivar<<","<<ivar<<")=" <<(*covMat)(ivar, ivar)
+                     << " cov("<<jvar<<","<<jvar<<")=" <<(*covMat)(jvar, jvar)
+                     << Endl; 
+               
             }
          }
          else (*corrMat)(ivar, ivar) = 1.0;
@@ -1048,8 +1058,13 @@ Bool_t TMVA::Tools::AddComment( void* node, const char* comment ) {
    if( node == 0 ) return kFALSE;
    return gTools().xmlengine().AddComment(node, comment);
 }
-
-
+ //_______________________________________________________________________
+void* TMVA::Tools::GetParent( void* child)
+{
+   void* par = xmlengine().GetParent(child);
+   
+   return par;
+}
 //_______________________________________________________________________
 void* TMVA::Tools::GetChild( void* parent, const char* childname )
 {
@@ -1369,5 +1384,109 @@ void TMVA::Tools::TMVACitation( MsgLogger& logger, ECitation citType )
 Bool_t TMVA::Tools::HistoHasEquidistantBins(const TH1& h)
 {
    return !(h.GetXaxis()->GetXbins()->fN);
+}
+
+//_______________________________________________________________________
+std::vector<TMatrixDSym*>*
+TMVA::Tools::CalcCovarianceMatrices( const std::vector<Event*>& events, Int_t maxCls )
+{
+   // compute covariance matrices
+
+   if (events.size() == 0) return 0;
+
+
+   UInt_t nvar = events.at(0)->GetNVariables(), ivar = 0, jvar = 0;
+
+   // init matrices
+   Int_t matNum = maxCls;
+   if (maxCls > 1 ) matNum++; // if more than one classes, then produce one matrix for all events as well (beside the matrices for each class)
+
+   std::vector<TVectorD*>* vec = new std::vector<TVectorD*>(matNum);
+   std::vector<TMatrixD*>* mat2 = new std::vector<TMatrixD*>(matNum);
+   std::vector<Double_t> count(matNum);
+   count.assign(matNum,0);
+
+   Int_t cls = 0;
+   TVectorD* v;
+   TMatrixD* m;
+   for (cls = 0; cls < matNum ; cls++) {
+      vec->at(cls) = new TVectorD(nvar);
+      mat2->at(cls) = new TMatrixD(nvar,nvar);
+      v = vec->at(cls);
+      m = mat2->at(cls);
+
+      for (ivar=0; ivar<nvar; ivar++) {
+         (*v)(ivar) = 0;
+         for (jvar=0; jvar<nvar; jvar++) {
+            (*m)(ivar, jvar) = 0;
+         }
+      }
+   }
+
+   // perform event loop
+   for (UInt_t i=0; i<events.size(); i++) {
+
+      // fill the event
+      Event * ev = events[i];
+      cls = ev->GetClass();
+      Double_t weight = ev->GetWeight();
+       
+      if (maxCls > 1) {
+         v = vec->at(matNum-1);
+         m = mat2->at(matNum-1);
+
+         count.at(matNum-1)+=weight; // count used events
+         for (ivar=0; ivar<nvar; ivar++) {
+
+            Double_t xi = ev->GetValue(ivar);
+            (*v)(ivar) += xi*weight;
+            (*m)(ivar, ivar) += (xi*xi*weight);
+
+            for (jvar=ivar+1; jvar<nvar; jvar++) {
+               Double_t xj = ev->GetValue(jvar);
+               (*m)(ivar, jvar) += (xi*xj*weight);
+               (*m)(jvar, ivar) = (*m)(ivar, jvar); // symmetric matrix
+            }
+         }
+      }
+
+      count.at(cls)+=weight; // count used events
+      v = vec->at(cls);
+      m = mat2->at(cls);
+      for (ivar=0; ivar<nvar; ivar++) {
+         Double_t xi = ev->GetValue(ivar);
+         (*v)(ivar) += xi*weight;
+         (*m)(ivar, ivar) += (xi*xi*weight);
+
+         for (jvar=ivar+1; jvar<nvar; jvar++) {
+            Double_t xj = ev->GetValue(jvar);
+            (*m)(ivar, jvar) += (xi*xj*weight);
+            (*m)(jvar, ivar) = (*m)(ivar, jvar); // symmetric matrix
+         }
+      }
+   }
+
+   // variance-covariance
+   std::vector<TMatrixDSym*>* mat = new std::vector<TMatrixDSym*>(matNum);
+   for (cls = 0; cls < matNum; cls++) {
+      v = vec->at(cls);
+      m = mat2->at(cls);
+
+      mat->at(cls) = new TMatrixDSym(nvar);
+
+      Double_t n = count.at(cls);
+      for (ivar=0; ivar<nvar; ivar++) {
+         for (jvar=0; jvar<nvar; jvar++) {
+            (*(mat->at(cls)))(ivar, jvar) = (*m)(ivar, jvar)/n - (*v)(ivar)*(*v)(jvar)/(n*n);
+         }
+      }
+      delete v;
+      delete m;
+   }
+
+   delete mat2;
+   delete vec;
+
+   return mat;
 }
 

@@ -1085,7 +1085,7 @@ void TMVA::MethodPDERS::ReadWeightsFromXML( void* wghtnode)
 {
    if (NULL != fBinaryTree) delete fBinaryTree;
    void* treenode = gTools().GetChild(wghtnode);
-   fBinaryTree = dynamic_cast<BinarySearchTree*>(TMVA::BinaryTree::CreateFromXML(treenode));
+   fBinaryTree = TMVA::BinarySearchTree::CreateFromXML(treenode);
    if(!fBinaryTree)
       Log() << kFATAL << "Could not create BinarySearchTree from XML" << Endl;
    fBinaryTree->SetPeriode( GetNvar() );

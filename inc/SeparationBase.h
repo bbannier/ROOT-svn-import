@@ -77,6 +77,12 @@
 #include "TString.h"
 #endif
 
+#ifndef ROOT_TMath
+#include "TMath.h"
+#endif
+
+#include <limits>
+
 namespace TMVA {
 
    class SeparationBase {
@@ -86,11 +92,10 @@ namespace TMVA {
       // default constructor
       SeparationBase();
 
-      // copy constructor
+      //copy constructor
       SeparationBase( const SeparationBase& s );
-
       // destructor
-      virtual ~SeparationBase(){}
+      virtual ~SeparationBase(){};
 
       // Return the gain in separation of the original sample is splitted in two sub-samples
       // (N * Index_parent) - (N_left * Index_left) - (N_right * Index_right)
@@ -108,6 +113,7 @@ namespace TMVA {
       TString fName;  // name of the concrete Separation Index impementation
 
       Double_t fPrecisionCut;
+      Bool_t   fInit;
 
       ClassDef(SeparationBase,0) // Interface to different separation critiera used in training algorithms
    };
