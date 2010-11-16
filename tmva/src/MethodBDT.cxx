@@ -429,6 +429,7 @@ void TMVA::MethodBDT::ProcessOptions()
 void TMVA::MethodBDT::Init( void )
 {
    // common initialisation with defaults for the BDT-Method
+      
    fNTrees         = 400;
    if (fAnalysisType == Types::kClassification || fAnalysisType == Types::kMulticlass ) {
       fMaxDepth        = 3;
@@ -439,7 +440,8 @@ void TMVA::MethodBDT::Init( void )
       fAdaBoostR2Loss = "Quadratic";
    }
 
-   fNodeMinEvents  = TMath::Max( Int_t(40), Int_t( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
+   if(DataInfo().GetNClasses()!=0) //workaround for multiclass application
+      fNodeMinEvents  = TMath::Max( Int_t(40), Int_t( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    fNCuts          = 20;
    fPruneMethodS   = "NoPruning";
    fPruneMethod    = DecisionTree::kNoPruning;
@@ -450,7 +452,8 @@ void TMVA::MethodBDT::Init( void )
    //   fUseNvars        =  (GetNvar()>12) ? UInt_t(GetNvar()/8) : TMath::Max(UInt_t(2),UInt_t(GetNvar()/3));
    fUseNvars        =  UInt_t(sqrt(GetNvar())+0.6);
    fUsePoissonNvars = kTRUE;
-   fUseNTrainEvents = Data()->GetNTrainingEvents();
+   if(DataInfo().GetNClasses()!=0) //workaround for multiclass application
+      fUseNTrainEvents = Data()->GetNTrainingEvents();
    fNNodesMax       = 1000000;
    fShrinkage       = 1.0;
    fSumOfWeights    = 0.0;

@@ -150,9 +150,11 @@ TMVA::DataSet* TMVA::DataSetFactory::BuildDynamicDataSet( TMVA::DataSetInfo& dsi
    DataSet* ds = new DataSet(dsi);
 
    // create a DataSet with one Event which uses dynamic variables (pointers to variables)
-   dsi.AddClass( "data" );
-   dsi.GetClassInfo( "data" )->SetNumber(0);
-
+   if(dsi.GetNClasses()==0){
+      dsi.AddClass( "data" );
+      dsi.GetClassInfo( "data" )->SetNumber(0);
+   }
+   
    std::vector<Float_t*>* evdyn = new std::vector<Float_t*>(0);
 
    std::vector<VariableInfo>& varinfos = dsi.GetVariableInfos();

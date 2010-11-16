@@ -239,9 +239,11 @@ namespace TMVA {
       void AddVarsXMLTo         ( void* parent  ) const;
       void AddSpectatorsXMLTo   ( void* parent  ) const;
       void AddTargetsXMLTo      ( void* parent  ) const;
+      void AddClassesXMLTo      ( void* parent  ) const;
       void ReadVariablesFromXML ( void* varnode );
       void ReadSpectatorsFromXML( void* specnode);
       void ReadTargetsFromXML   ( void* tarnode );
+      void ReadClassesFromXML   ( void* clsnode );
       void ReadVarsFromStream   ( std::istream& istr );       // backward compatibility
 
    public:
