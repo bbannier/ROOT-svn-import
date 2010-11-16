@@ -12,14 +12,11 @@
 #include <map>
 #include <string>
 
-#include "TChain.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TString.h"
-#include "TObjString.h"
 #include "TSystem.h"
 #include "TROOT.h"
-#include "TPluginManager.h"
 
 #include "TMVAMultiClassGui.C"
 
@@ -32,7 +29,9 @@ using namespace TMVA;
 
 void TMVAMulticlass( TString myMethodList = "" )
 {
-
+   
+   TMVA::Tools::Instance();
+   
    //---------------------------------------------------------------
    // default MVA methods to be trained + tested
    std::map<std::string,int> Use;
@@ -40,13 +39,13 @@ void TMVAMulticlass( TString myMethodList = "" )
    Use["BDTG"]            = 1;
    Use["FDA_GA"]          = 0;
    //---------------------------------------------------------------
-
+   
    std::cout << std::endl;
    std::cout << "==> Start TMVAMulticlass" << std::endl;
-
+   
    if (myMethodList != "") {
       for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) it->second = 0;
-
+      
       std::vector<TString> mlist = TMVA::gTools().SplitString( myMethodList, ',' );
       for (UInt_t i=0; i<mlist.size(); i++) {
          std::string regMethod(mlist[i]);
@@ -65,7 +64,7 @@ void TMVAMulticlass( TString myMethodList = "" )
    TString outfileName = "TMVAMulticlass.root";
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
    
-   TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile,
+   TMVA::Factory *factory = new TMVA::Factory( "TMVAMulticlass", outputFile,
                                                "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=multiclass" );
    factory->AddVariable( "var1", 'F' );
    factory->AddVariable( "var2", "Variable 2", "", 'F' );
@@ -108,11 +107,10 @@ void TMVAMulticlass( TString myMethodList = "" )
       factory->BookMethod( TMVA::Types::kBDT, "BDTG", "!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.50:SeparationType=GiniIndex:nCuts=20:NNodesMax=5");
    
    if (Use["MLP"]) // neural network
-      factory->BookMethod( TMVA::Types::kMLP, "MLP2", "!H:!V:NeuronType=tanh:NCycles=100:HiddenLayers=N+5,3:TestRate=5");
+      factory->BookMethod( TMVA::Types::kMLP, "MLP", "!H:!V:NeuronType=tanh:NCycles=100:HiddenLayers=N+5,3:TestRate=5");
    
    if (Use["FDA_GA"]) // functional discriminant with GA minimizer
-      factory->BookMethod( TMVA::Types::kFDA, "FDA_GA",
-                           "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10);(-10,10):FitMethod=GA:PopSize=300:Cycles=3:Steps=20:Trim=True:SaveBestGen=1" );
+      factory->BookMethod( TMVA::Types::kFDA, "FDA_GA", "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10);(-10,10):FitMethod=GA:PopSize=300:Cycles=3:Steps=20:Trim=True:SaveBestGen=1" );
    
   // Train MVAs using the set of training events
    factory->TrainAllMethods();
