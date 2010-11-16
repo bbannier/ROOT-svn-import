@@ -125,7 +125,7 @@ void TMVA::MethodTMlpANN::Init( void )
 //_______________________________________________________________________
 TMVA::MethodTMlpANN::~MethodTMlpANN( void )
 {
-   // destructor
+   // destructor // fix me!!! possible memory leak fMLP is not deleted!
 }
 
 //_______________________________________________________________________
@@ -249,7 +249,7 @@ void TMVA::MethodTMlpANN::Train( void )
    Int_t type;
    Float_t weight;
    const Long_t basketsize = 128000;
-   Float_t* vArr = new Float_t[GetNvar()];
+   Float_t* vArr = new Float_t[GetNvar()]; // fix me!!! possible memory leak
 
    TTree *localTrainingTree = new TTree( "TMLPtrain", "Local training tree for TMlpANN" );
    localTrainingTree->Branch( "type",       &type,        "type/I",        basketsize );
@@ -436,7 +436,7 @@ void  TMVA::MethodTMlpANN::ReadWeightsFromStream( istream& istr )
    // the MLP is already build
    Log() << kINFO << "Load TMLP weights into " << fMLP << Endl;
 
-   Double_t* d = new Double_t[Data()->GetNVariables()] ;
+   Double_t* d = new Double_t[Data()->GetNVariables()] ; // fix me !!!! possible memory leak
    static Int_t type;
    gROOT->cd();
    TTree * dummyTree = new TTree("dummy","Empty dummy tree", 1);
