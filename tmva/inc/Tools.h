@@ -123,6 +123,11 @@ namespace TMVA {
       // returns the square-root of a symmetric matrix: symMat = sqrtMat*sqrtMat
       TMatrixD* GetSQRootMatrix( TMatrixDSym* symMat );
 
+      // returns the covariance matrix of of the different classes (and the sum) 
+      // given the event sample
+      std::vector<TMatrixDSym*>* CalcCovarianceMatrices( const std::vector<Event*>& events, Int_t maxCls );
+
+
       // turns covariance into correlation matrix
       const TMatrixD* GetCorrelationMatrix( const TMatrixD* covMat );
 
@@ -241,6 +246,7 @@ namespace TMVA {
       Bool_t      AddRawLine  ( void* node, const char * raw );
       Bool_t      AddComment  ( void* node, const char* comment );
 
+      void*       GetParent( void* child);
       void*       GetChild    ( void* parent, const char* childname=0 );
       void*       GetNextChild( void* prevchild, const char* childname=0 );
       const char* GetContent  ( void* node );

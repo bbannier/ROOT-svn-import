@@ -41,7 +41,12 @@
 
 #include <iosfwd>
 #include <vector>
+#include <map>
 #include "assert.h"
+
+#ifndef ROOT_TString
+#include "TString.h"
+#endif
 
 #ifndef ROOT_TMVA_IMethod
 #include "TMVA/IMethod.h"
@@ -60,6 +65,9 @@
 #endif
 #ifndef ROOT_TMVA_TransformationHandler
 #include "TMVA/TransformationHandler.h"
+#endif
+#ifndef ROOT_TMVA_OptimizeConfigParameters
+#include "TMVA/OptimizeConfigParameters.h"
 #endif
 
 class TGraph;
@@ -113,6 +121,11 @@ namespace TMVA {
       // performs classifier training
       // calls methods Train() implemented by derived classes
       void             TrainMethod();
+
+      // optimize tuning parameters
+      virtual std::map<TString,Double_t> OptimizeTuningParameters(TString fomType="ROCIntegral", TString fitType="FitGA");
+      virtual void SetTuneParameters(std::map<TString,Double_t> tuneParameters);
+
       virtual void     Train() = 0;
 
       // store and retrieve time used for training
@@ -143,8 +156,13 @@ namespace TMVA {
       virtual void     ProcessOptions() = 0;
       virtual void     DeclareCompatibilityOptions(); // declaration of past options
 
-      // classifier response
+      // reset the Method --> As if it was not yet trained, just instantiated
+      //      virtual void     Reset()          = 0;
+      //for the moment, I provide a dummy (that would not work) default, just to make
+      // compilation/running w/o parameter optimisation still possible
+      virtual void     Reset(){return;}
 
+      // classifier response:
       // some methods may return a per-event error estimate
       // error calculation is skipped if err==0
       virtual Double_t GetMvaValue( Double_t* errLower = 0, Double_t* errUpper = 0) = 0;
