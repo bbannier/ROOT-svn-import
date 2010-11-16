@@ -439,6 +439,10 @@ int main( int argc, char** argv )
 
    // ---- Now you can tell the factory to train, test, and evaluate the MVAs
 
+   // Optimize MVAs using the set of training events
+   // factory->OptimizeAllMethods("SigEffAt001","Scan");
+   // factory->OptimizeAllMethods("ROCIntegral","GA");
+
    // Train MVAs using the set of training events
    factory->TrainAllMethods();
 

@@ -434,7 +434,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    if (Use["BDT"])  // Adaptive Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDT",
-                           "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
+                           "!H:!V:NTrees=850:nEventsMin=150:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
 
    if (Use["BDTB"]) // Bagging
       factory->BookMethod( TMVA::Types::kBDT, "BDTB",
@@ -471,6 +471,10 @@ void TMVAClassification( TString myMethodList = "" )
    // --------------------------------------------------------------------------------------------------
 
    // ---- Now you can tell the factory to train, test, and evaluate the MVAs
+
+   // Optimize MVAs using the set of training events
+   // factory->OptimizeAllMethods("SigEffAt001","Scan");
+   // factory->OptimizeAllMethods("ROCIntegral","GA");
 
    // Train MVAs using the set of training events
    factory->TrainAllMethods();
