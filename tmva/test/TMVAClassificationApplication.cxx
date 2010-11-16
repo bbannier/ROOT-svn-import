@@ -377,7 +377,7 @@ int main( int argc, char** argv )
          Double_t err = reader->GetMVAError();
          histPDEFoam   ->Fill( val );
          histPDEFoamErr->Fill( err );
-         histPDEFoamSig->Fill( val/err );
+         if (err>1.e-50) histPDEFoamSig->Fill( val/err );
       }
 
       // retrieve probability instead of MVA output
