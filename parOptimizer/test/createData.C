@@ -282,8 +282,8 @@ TTree* makeTree_lin_Nvar( TString treeName, TString treeTitle, Float_t* x, Float
          (*covMat)(jvar,ivar) = (*covMat)(ivar,jvar);
       }
    }
-   cout << "covariance matrix: " << endl;
-   covMat->Print();
+   //cout << "covariance matrix: " << endl;
+   //covMat->Print();
 
    // produce the square-root matrix
    TMatrixD* sqrtMat = produceSqrtMat( *covMat );
@@ -313,8 +313,8 @@ TTree* makeTree_lin_Nvar( TString treeName, TString treeTitle, Float_t* x, Float
 TTree* makeTree_circ(TString treeName, TString treeTitle, Int_t nvar = 2, Int_t N  = 6000, Float_t radius = 1.0, Bool_t distort = false)
 {
    Int_t Nn = 0;
-   Float_t xvar[nvar];
-
+   Float_t xvar[nvar]; //variable array size does not work in interactive mode
+ 
    // create signal and background trees
    TTree* tree = new TTree( treeName, treeTitle, 1 );   
    for (Int_t ivar=0; ivar<nvar; ivar++) {
@@ -363,8 +363,9 @@ TTree* makeTree_circ(TString treeName, TString treeTitle, Int_t nvar = 2, Int_t 
       tree->Fill();
    }
 
-
+   tree->Show(0);
    // write trees
+   cout << "created tree: " << tree->GetName() << endl;
    return tree;
 }
 
@@ -1990,9 +1991,9 @@ void create_MultipleBackground(Int_t N = 50000)
    treeB1->Write();
    treeB2->Write();
 
-   treeS->Show(0);
-   treeB0->Show(0);
-   treeB1->Show(0);
+   //treeS->Show(0);
+   //treeB0->Show(0);
+   //treeB1->Show(0);
    //treeB2->Show(0);
 
    dataFile->Close();

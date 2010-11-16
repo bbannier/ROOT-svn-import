@@ -648,9 +648,20 @@ const std::vector<Float_t> &TMVA::MethodANNBase::GetMulticlassValues()
 
    if (fMulticlassReturnVal == NULL) fMulticlassReturnVal = new std::vector<Float_t>();
    fMulticlassReturnVal->clear();
+   std::vector<Float_t> temp;
 
    for (UInt_t itgt = 0, itgtEnd = DataInfo().GetNClasses(); itgt < itgtEnd; itgt++) {
-      fMulticlassReturnVal->push_back( ((TNeuron*)outputLayer->At(itgt))->GetActivationValue() );
+      temp.push_back( ((TNeuron*)outputLayer->At(itgt))->GetActivationValue() );
+   }
+
+   UInt_t nClasses = DataInfo().GetNClasses();
+   for(UInt_t iClass=0; iClass<nClasses; iClass++){
+      Double_t norm = 0.0;
+      for(UInt_t j=0;j<nClasses;j++){
+         if(iClass!=j)
+            norm+=exp(temp[j]-temp[iClass]);
+      }
+      (*fMulticlassReturnVal).push_back(1.0/(1.0+norm));
    }
 
    return *fMulticlassReturnVal;

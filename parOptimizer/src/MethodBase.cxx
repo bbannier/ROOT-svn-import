@@ -704,7 +704,7 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
 
    TString histNamePrefix(GetTestvarName());
    histNamePrefix += (type==Types::kTraining?"_Train":"_Test");
-   resMulticlass->CreateMulticlassHistos( histNamePrefix, fNbins );
+   resMulticlass->CreateMulticlassHistos( histNamePrefix, fNbins, fNbinsH );
 }
 
 
@@ -909,97 +909,11 @@ void TMVA::MethodBase::TestMulticlass()
 {
    // test multiclass classification 
 
-   Types::ETreeType savedType = Data()->GetCurrentType();
-   Data()->SetCurrentType(Types::kTesting);
-
-//    ResultsMulticlass* mvaRes = dynamic_cast<ResultsMulticlass*>
-//       ( Data()->GetResults(GetMethodName(),Types::kTesting, Types::kMulticlass) );
-
-//    bias = 0; biasT = 0; dev = 0; devT = 0; rms = 0; rmsT = 0;
-//    Double_t sumw = 0;
-//    Double_t m1 = 0, m2 = 0, s1 = 0, s2 = 0, s12 = 0; // for correlation
-//    const Int_t nevt = GetNEvents();
-//    Float_t* rV = new Float_t[nevt];
-//    Float_t* tV = new Float_t[nevt];
-//    Float_t* wV = new Float_t[nevt];
-//    Float_t  xmin = 1e30, xmax = -1e30;
-//     for (Long64_t ievt=0; ievt<nevt; ievt++) {
-      
-//       const Event* ev = Data()->GetEvent(ievt); // NOTE: need untransformed event here !
-//       Float_t t = ev->GetTarget(0);
-//       Float_t w = ev->GetWeight();
-//       Float_t r = GetRegressionValues()[0];
-//       Float_t d = (r-t);
-
-//       // find min/max
-//       xmin = TMath::Min(xmin, TMath::Min(t, r));
-//       xmax = TMath::Max(xmax, TMath::Max(t, r));
-
-//       // store for truncated RMS computation
-//       rV[ievt] = r;
-//       tV[ievt] = t;
-//       wV[ievt] = w;
-      
-//       // compute deviation-squared
-//       sumw += w;
-//       bias += w * d;
-//       dev  += w * TMath::Abs(d);
-//       rms  += w * d * d;
-
-//       // compute correlation between target and regression estimate
-//       m1  += t*w; s1 += t*t*w;
-//       m2  += r*w; s2 += r*r*w;
-//       s12 += t*r;
-//    }
-
-//    // standard quantities
-//    bias /= sumw;
-//    dev  /= sumw;
-//    rms  /= sumw;
-//    rms  = TMath::Sqrt(rms - bias*bias);
-
-//    // correlation
-//    m1   /= sumw; 
-//    m2   /= sumw; 
-//    corr  = s12/sumw - m1*m2;
-//    corr /= TMath::Sqrt( (s1/sumw - m1*m1) * (s2/sumw - m2*m2) );
-
-//    // create histogram required for computeation of mutual information
-//    TH2F* hist  = new TH2F( "hist",  "hist",  150, xmin, xmax, 100, xmin, xmax );
-//    TH2F* histT = new TH2F( "histT", "histT", 150, xmin, xmax, 100, xmin, xmax );
-
-//    // compute truncated RMS and fill histogram
-//    Double_t devMax = bias + 2*rms;
-//    Double_t devMin = bias - 2*rms;
-//    sumw = 0;
-//    int ic=0;
-//    for (Long64_t ievt=0; ievt<nevt; ievt++) {
-//       Float_t d = (rV[ievt] - tV[ievt]);
-//       hist->Fill( rV[ievt], tV[ievt], wV[ievt] );
-//       if (d >= devMin && d <= devMax) {
-//          sumw  += wV[ievt];
-//          biasT += wV[ievt] * d;
-//          devT  += wV[ievt] * TMath::Abs(d);
-//          rmsT  += wV[ievt] * d * d;       
-//          histT->Fill( rV[ievt], tV[ievt], wV[ievt] );
-//          ic++;
-//       }
-//    }   
-//    biasT /= sumw;
-//    devT  /= sumw;
-//    rmsT  /= sumw;
-//    rmsT  = TMath::Sqrt(rmsT - biasT*biasT);
-//    mInf  = gTools().GetMutualInformation( *hist );
-//    mInfT = gTools().GetMutualInformation( *histT );
-
-//    delete hist;
-//    delete histT;
-
-//    delete [] rV;
-//    delete [] tV;
-//    delete [] wV;
-
-   Data()->SetCurrentType(savedType);   
+   ResultsMulticlass* resMulticlass = (ResultsMulticlass*)Data()->GetResults(GetMethodName(), Types::kTesting, Types::kMulticlass);
+   Log() << kINFO << "Determine optimal multiclass cuts for test data..." << Endl;
+   for(UInt_t icls = 0; icls<DataInfo().GetNClasses(); ++icls){
+      resMulticlass->GetBestMultiClassCuts(icls);
+   }
 }
 
 
@@ -2428,17 +2342,32 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency(const TString& theString)
 
 //_______________________________________________________________________
 
-/*
-Double_t TMVA::MethodBase::GetMulticlassEfficiency( const TString& theString, Types::ETreeType type,Double_t& effSerr )
+
+std::vector<Float_t> TMVA::MethodBase::GetMulticlassEfficiency(std::vector<std::vector<Float_t> >& purity)
 {
+   Data()->SetCurrentType(Types::kTesting);
+   ResultsMulticlass* resMulticlass = (ResultsMulticlass*)Data()->GetResults(GetMethodName(), Types::kTesting, Types::kMulticlass);
+
+   purity.push_back(resMulticlass->GetAchievablePur()); 
+   return resMulticlass->GetAchievableEff(); 
 }
 
 //_______________________________________________________________________
 
-Double_t TMVA::MethodBase::GetMulticlassTrainingEfficiency( const TString& theString)
+std::vector<Float_t> TMVA::MethodBase::GetMulticlassTrainingEfficiency(std::vector<std::vector<Float_t> >& purity)
 {
+   Data()->SetCurrentType(Types::kTraining);
+   ResultsMulticlass* resMulticlass = (ResultsMulticlass*)Data()->GetResults(GetMethodName(), Types::kTraining, Types::kMulticlass);
+   
+   Log() << kINFO << "Determine optimal multiclass cuts for training data..." << Endl;
+   for(UInt_t icls = 0; icls<DataInfo().GetNClasses(); ++icls){
+      resMulticlass->GetBestMultiClassCuts(icls);
+   }
+    
+   purity.push_back(resMulticlass->GetAchievablePur()); 
+   return resMulticlass->GetAchievableEff(); 
 }
-*/
+
 
 //_______________________________________________________________________
 Double_t TMVA::MethodBase::GetSignificance( void ) const
