@@ -82,8 +82,8 @@ void TMVAMultiClassGui( const char* fName = "TMVAMulticlass.root" )
    cout << "--- Reading keys ..." << endl;
    TMVAGui_keyContent = (TList*)file->GetListOfKeys()->Clone();
 
-   // close file
-   file->Close();
+   //close file
+   //file->Close();
 
    TString defaultRequiredClassifier = "";
 
@@ -131,50 +131,60 @@ void TMVAMultiClassGui( const char* fName = "TMVAMulticlass.root" )
                     buttonType, str->GetString() );
    }      
    
+   TString title;
    // coefficients
+   title =Form( "(%i) Input Variable Linear Correlation Coefficients", ++ic );
    ActionButton( cbar,  
-                 Form( "(%i) Input Variable Linear Correlation Coefficients", ++ic ),
+                 title,
                  Form( ".x correlationsMultiClass.C(\"%s\")", fName ),
                  "Plots signal and background correlation summaries for all input variables (macro correlationsMultiClass.C)", 
                  buttonType );
 
+   title =Form( "(%ia) Classifier Output Distributions (test sample)", ++ic );
    ActionButton( cbar,  
-                 Form( "(%ia) Classifier Output Distributions (test sample)", ++ic ),
+                 title,
                  Form( ".x mvasMulticlass.C(\"%s\",0)", fName ),
                  "Plots the output of each classifier for the test data (macro mvas.C(...,0))",
                  buttonType, defaultRequiredClassifier );
 
+   title =Form( "(%ib) Classifier Output Distributions (test and training samples superimposed)", ic );
    ActionButton( cbar,  
-                 Form( "   (%ib) Classifier Output Distributions (test and training samples superimposed)   ", ic ),
+                 title,
                  Form( ".x mvasMulticlass.C(\"%s\",1)", fName ),
                  "Plots the output of each classifier for the test (histograms) and training (dots) data (macro mvas.C(...,3))",
                  buttonType, defaultRequiredClassifier );
    /*
+     title = Form( "(%ic) Classifier Probability Distributions (test sample)", ic );
+     ActionButton( cbar,  
+     Form( "(%ic) Classifier Probability Distributions (test sample)", ic ),
+     Form( ".x mvas.C(\"%s\",1)", fName ),
+     "Plots the probability of each classifier for the test data (macro mvas.C(...,1))",
+     buttonType, defaultRequiredClassifier );
+     
+     title =Form( "(%id) Classifier Rarity Distributions (test sample)", ic );
+     ActionButton( cbar,  
+     Form( "(%id) Classifier Rarity Distributions (test sample)", ic ),
+     Form( ".x mvas.C(\"%s\",2)", fName ),
+     "Plots the Rarity of each classifier for the test data (macro mvas.C(...,2)) - background distribution should be uniform",
+     buttonType, defaultRequiredClassifier );
+   
+   
+   title =Form( "(%ia) Classifier Cut Efficiencies", ++ic );
    ActionButton( cbar,  
-                 Form( "(%ic) Classifier Probability Distributions (test sample)", ic ),
-                 Form( ".x mvas.C(\"%s\",1)", fName ),
-                 "Plots the probability of each classifier for the test data (macro mvas.C(...,1))",
-                 buttonType, defaultRequiredClassifier );
-
-   ActionButton( cbar,  
-                 Form( "(%id) Classifier Rarity Distributions (test sample)", ic ),
-                 Form( ".x mvas.C(\"%s\",2)", fName ),
-                 "Plots the Rarity of each classifier for the test data (macro mvas.C(...,2)) - background distribution should be uniform",
-                 buttonType, defaultRequiredClassifier );
-   */
-   ActionButton( cbar,  
-                 Form( "(%ia) Classifier Cut Efficiencies", ++ic ),
+                 title,
                  Form( ".x mvaeffs.C+(\"%s\")", fName ),
                  "Plots signal and background efficiencies versus cut on classifier output (macro mvaeffs.C)",
                  buttonType, defaultRequiredClassifier );
 
+   title = Form( "(%ib) Classifier Background Rejection vs Signal Efficiency (ROC curve)", ic );
    ActionButton( cbar,  
-                 Form( "(%ib) Classifier Background Rejection vs Signal Efficiency (ROC curve)", ic ),
+                 title,
                  Form( ".x efficiencies.C(\"%s\")", fName ),
                  "Plots background rejection vs signal efficiencies (macro efficiencies.C) [\"ROC\" stands for \"Receiver Operation Characteristics\"]",
                  buttonType, defaultRequiredClassifier );
-
-   TString title = Form( "(%i) Parallel Coordinates (requires ROOT-version >= 5.17)", ++ic );
+                 
+   
+   title = Form( "(%i) Parallel Coordinates (requires ROOT-version >= 5.17)", ++ic );
    ActionButton( cbar,  
                  title,
                  Form( ".x paracoor.C(\"%s\")", fName ),
@@ -185,66 +195,66 @@ void TMVAMultiClassGui( const char* fName = "TMVAMulticlass.root" )
    #if ROOT_VERSION_CODE < ROOT_VERSION(5,17,0)
    TMVAGui_inactiveButtons.push_back( title );
    #endif
-
+   
+   
+   title =Form( "(%i) PDFs of Classifiers (requires \"CreateMVAPdfs\" option set)", ++ic );
    ActionButton( cbar,  
-                 Form( "(%i) PDFs of Classifiers (requires \"CreateMVAPdfs\" option set)", ++ic ),
+                 title,
                  Form( ".x probas.C(\"%s\")", fName ),
                  "Plots the PDFs of the classifier output distributions for signal and background - if requested (macro probas.C)",
                  buttonType, defaultRequiredClassifier );
 
+   title = Form( "(%i) Likelihood Reference Distributiuons", ++ic);
    ActionButton( cbar,  
-                 Form( "(%i) Likelihood Reference Distributiuons", ++ic),
+                 title,
                  Form( ".x likelihoodrefs.C(\"%s\")", fName ), 
                  "Plots to verify the likelihood reference distributions (macro likelihoodrefs.C)",
                  buttonType, "Likelihood" );
-
+   */
+   
+   title = Form( "(%ia) Network Architecture (MLP)", ++ic );
    ActionButton( cbar,  
-                 Form( "(%ia) Network Architecture (MLP)", ++ic ),
+                 title,
                  Form( ".x network.C(\"%s\")", fName ), 
                  "Plots the MLP weights (macro network.C)",
                  buttonType, "MLP" );
 
+   title = Form( "(%ib) Network Convergence Test (MLP)", ic );
    ActionButton( cbar,  
-                 Form( "(%ib) Network Convergence Test (MLP)", ic ),
+                 title,
                  Form( ".x annconvergencetest.C(\"%s\")", fName ), 
                  "Plots error estimator versus training epoch for training and test samples (macro annconvergencetest.C)",
                  buttonType, "MLP" );
 
+   title = Form( "(%i) Decision Trees (BDT)", ++ic );
    ActionButton( cbar,  
-                 Form( "(%i) Decision Trees (BDT)", ++ic ),
+                 title,
                  Form( ".x BDT.C+(\"%s\")", fName ),
                  "Plots the Decision Trees trained by BDT algorithms (macro BDT.C(itree,...))",
                  buttonType, "BDT" );
 
+   title = Form( "(%i) Decision Tree Control Plots (BDT)", ++ic );
    ActionButton( cbar,  
-                 Form( "(%i) Decision Tree Control Plots (BDT)", ++ic ),
+                 title,
                  Form( ".x BDTControlPlots.C(\"%s\")", fName ),
                  "Plots to monitor boosting and pruning of decision trees (macro BDTControlPlots.C)",
                  buttonType, "BDT" );
-   //    ActionButton( cbar,  
-   //                  Form( "(%i) Monitor Decision Tree Boosting", ++ic ),
-   //                  Form( ".x BDTBoostWatch.C+(\"%s\")", fName ),
-   //                  "Plots separation obtained by BDT method as function of boosting steps (macro BDTBoostWatch.C(itree,...))",
-   //                  buttonType, "BDT" );
 
-   //    ActionButton( cbar,  
-   //                  Form( "(%i) Rule Ensemble Importance Plots (RuleFit)", ++ic ),
-   //                  Form( ".x rulevis.C(\"%s\",0)", fName ),
-   //                  "Plots all input variables with rule ensemble weights, including linear terms (macro rulevis.C)",
-   //                  buttonType, "RuleFit" );
-
+   /*
+   title = Form( "(%i) Plot Foams (PDEFoam)", ++ic );
    ActionButton( cbar,  
-                 Form( "(%i) Plot Foams (PDEFoam)", ++ic ),
+                 title,
                  Form( ".x PlotFoams.C", fName ),
                  "Plot Foams (macro PlotFoams.C)",
                  buttonType, "PDEFoam" );
 
+   title = Form( "(%i) General Boost Control Plots", ++ic );
    ActionButton( cbar,  
-                 Form( "(%i) General Boost Control Plots", ++ic ),
+                 title,
                  Form( ".x BoostControlPlots.C(\"%s\")", fName ),
                  "Plots to monitor boosting of general classifiers (macro BoostControlPlots.C)",
                  buttonType, "Boost" );
-
+   */
    cbar->AddSeparator();
 
    cbar->AddButton( Form( "(%i) Quit", ++ic ),   ".q", "Quit", buttonType );
