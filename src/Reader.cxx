@@ -308,8 +308,8 @@ void TMVA::Reader::AddSpectator( const TString& expression, Int_t* datalink )
 }
 
 //_______________________________________________________________________
-TString
-TMVA::Reader::GetMethodTypeFromFile( const TString& filename ) {
+TString TMVA::Reader::GetMethodTypeFromFile( const TString& filename ) 
+{
    // read the method type from the file
 
    ifstream fin( filename );
@@ -325,7 +325,8 @@ TMVA::Reader::GetMethodTypeFromFile( const TString& filename ) {
       void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
       gTools().ReadAttr(rootnode, "Method", fullMethodName);
       gTools().xmlengine().FreeDoc(doc);
-   } else {
+   } 
+   else {
       char buf[512];
       fin.getline(buf,512);
       while (!TString(buf).BeginsWith("Method")) fin.getline(buf,512);
@@ -336,8 +337,6 @@ TMVA::Reader::GetMethodTypeFromFile( const TString& filename ) {
    if (methodType.Contains(" ")) methodType = methodType(methodType.Last(' ')+1,methodType.Length());
    return methodType;
 }
-
-
 
 //_______________________________________________________________________
 TMVA::IMethod* TMVA::Reader::BookMVA( const TString& methodTag, const TString& weightfile )
@@ -412,9 +411,9 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const char* 
 
    MethodBase *method = (dynamic_cast<MethodBase*>(im));
 
-   if( method->GetMethodType() == Types::kCategory ){
+   if (method->GetMethodType() == Types::kCategory) {
       MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method));
-      if( !methCat )
+      if (!methCat)
          Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl;
       methCat->fDataSetManager = fDataSetManager;
    }
@@ -436,7 +435,9 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const char* 
 
    return method;
 #else
-   Log() << kFATAL << "Method Reader::BookMVA(TMVA::Types::EMVA methodType, const char* xmlstr) is not available for ROOT versions prior to 5.26/00." << Endl;
+   Log() << kFATAL << "Method Reader::BookMVA(TMVA::Types::EMVA methodType = " << methodType 
+         << ", const char* xmlstr = " << xmlstr 
+         << " ) is not available for ROOT versions prior to 5.26/00." << Endl;
    return 0;
 #endif
 }
