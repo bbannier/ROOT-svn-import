@@ -272,11 +272,9 @@ void TMVA::MethodBase::SetupMethod()
 {
    // setup of methods
 
-
    if (fSetupCompleted) Log() << kFATAL << "Calling SetupMethod for the second time" << Endl;
    InitBase();
    DeclareBaseOptions();
-
    Init();
    DeclareOptions();
    fSetupCompleted = kTRUE;
@@ -1135,6 +1133,10 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
    if(!fDisableWriting)
       AddSpectatorsXMLTo( parent );
 
+   // write class info if in multiclass mode
+   if(DoMulticlass())
+      AddClassesXMLTo(parent);
+   
    // write target info if in regression mode
    if(DoRegression())
       AddTargetsXMLTo(parent);
@@ -1313,6 +1315,10 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
       }
       else if (nodeName=="Spectators") {
          ReadSpectatorsFromXML(ch);
+      }
+      else if (nodeName=="Classes") {
+         if(DataInfo().GetNClasses()==0 && DoMulticlass())
+            ReadClassesFromXML(ch);
       }
       else if (nodeName=="Targets") {
          if(DataInfo().GetNTargets()==0 && DoRegression())
@@ -1558,6 +1564,14 @@ void TMVA::MethodBase::AddSpectatorsXMLTo( void* parent ) const
 }
 
 //_______________________________________________________________________
+void TMVA::MethodBase::AddClassesXMLTo( void* parent ) const 
+{
+   // write class info to XML 
+   void* targets = gTools().AddChild(parent, "Classes");
+   gTools().AddAttr( targets, "NClass", gTools().StringFromInt(DataInfo().GetNClasses()) );
+
+}
+//_______________________________________________________________________
 void TMVA::MethodBase::AddTargetsXMLTo( void* parent ) const 
 {
    // write target info to XML 
@@ -1647,6 +1661,20 @@ void TMVA::MethodBase::ReadSpectatorsFromXML( void* specnode )
          Log() << kFATAL << "The expression declared to the Reader needs to be checked (name or order are wrong)" << Endl;
       }
       ch = gTools().GetNextChild(ch);
+   }
+}
+
+//_______________________________________________________________________
+void TMVA::MethodBase::ReadClassesFromXML( void* clsnode ) 
+{
+   // read number of classes from XML
+   UInt_t readNCls;
+   gTools().ReadAttr( clsnode, "NClass", readNCls);
+
+   for(UInt_t icls = 0; icls<readNCls;++icls){
+      TString classname = Form("class%i",icls);
+      DataInfo().AddClass(classname);
+
    }
 }
 
