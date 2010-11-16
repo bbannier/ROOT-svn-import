@@ -85,13 +85,14 @@ int main(int argc, char** argv )
 
    // book output histograms
    UInt_t nbin = 100;
-   TH1F *histNn(0), *histBdtG(0), *histFDAGA(0);
+   TH1F *histMLP_signal(0), *histBDTG_signal(0), *histFDAGA_signal(0);
    if (Use["MLP"])    
-      histNn    = new TH1F( "MVA_MLP",    "MVA_MLP",    nbin, 0., 1.1);
+      histMLP_signal    = new TH1F( "MVA_MLP_signal",    "MVA_MLP_signal",    nbin, 0., 1.1 );
    if (Use["BDTG"])
-      histBdtG  = new TH1F( "MVA_BDTG",   "MVA_BDTG",   nbin, 0., 1.1);
+      histBDTG_signal  = new TH1F( "MVA_BDTG_signal",   "MVA_BDTG_signal",   nbin, 0., 1.1 );
    if (Use["FDA_GA"])
-      histFDAGA = new TH1F( "MVA_FDA_GA", "MVA_FDA_GA", nbin, 0., 1.1);
+      histFDAGA_signal = new TH1F( "MVA_FDA_GA_signal", "MVA_FDA_GA_signal", nbin, 0., 1.1 );
+
 
    TFile *input(0);
    TString fname = "./tmva_example_multiple_background.root";
@@ -127,11 +128,12 @@ int main(int argc, char** argv )
       
       theTree->GetEntry(ievt);
       if (Use["MLP"])
-         histNn->Fill((reader->EvaluateMulticlass(0, "MLP method" )));
+         histMLP_signal->Fill((reader->EvaluateMulticlass( "MLP method" ))[0]);
       if (Use["BDTG"])
-         histBdtG->Fill((reader->EvaluateMulticlass(0, "BDTG method" )));
+         histBDTG_signal->Fill((reader->EvaluateMulticlass( "BDTG method" ))[0]);
       if (Use["FDA_GA"])
-         histFDAGA->Fill((reader->EvaluateMulticlass(0, "FDA_GA method" )));
+         histFDAGA_signal->Fill((reader->EvaluateMulticlass( "FDA_GA method" ))[0]);
+    
       
    }
    
@@ -141,11 +143,12 @@ int main(int argc, char** argv )
    
    TFile *target  = new TFile( "TMVAMulticlassApp.root","RECREATE" );
    if (Use["MLP"])
-      histNn->Write();
+      histMLP_signal->Write();
    if (Use["BDTG"])
-      histBdtG->Write(); 
+      histBDTG_signal->Write(); 
    if (Use["FDA_GA"])
-      histFDAGA->Write();
+      histFDAGA_signal->Write();
+
 
    target->Close();
    std::cout << "--- Created root file: \"TMVMulticlassApp.root\" containing the MVA output histograms" << std::endl;
