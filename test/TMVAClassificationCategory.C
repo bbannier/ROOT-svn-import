@@ -50,7 +50,7 @@ void TMVAClassificationCategory()
 
    std::cout << std::endl << "==> Start TMVAClassificationCategory" << std::endl;
 
-   bool batchMode(false);
+   bool batchMode = false;
 
    // Create a new root output file.
    TString outfileName( "TMVA.root" );
