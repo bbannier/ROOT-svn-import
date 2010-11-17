@@ -1354,7 +1354,7 @@ void TMVA::Tools::TMVACitation( MsgLogger& logger, ECitation citType )
 
    case kBibTeX:
       logger << "@Article{TMVA2007," << Endl;
-      logger << "     author    = \"Hocker, Andreas and Speckmayer, Peter and Stelzer, Joerg " << Endl;
+      logger << "     author    = \"Hoecker, Andreas and Speckmayer, Peter and Stelzer, Joerg " << Endl;
       logger << "                   and Therhaag, Jan and von Toerne, Eckhard and Voss, Helge\"," << Endl;
       logger << "     title     = \"{TMVA: Toolkit for multivariate data analysis}\"," << Endl;
       logger << "     journal   = \"PoS\"," << Endl;
@@ -1370,7 +1370,7 @@ void TMVA::Tools::TMVACitation( MsgLogger& logger, ECitation citType )
    case kLaTeX:
       logger << "%\\cite{TMVA2007}" << Endl;
       logger << "\bibitem{TMVA2007}" << Endl;
-      logger << "  A.~Hocker, P.~Speckmayer, J.~Stelzer, J.~Therhaag, E.~von Toerne, H.~Voss" << Endl;
+      logger << "  A.~Hoecker, P.~Speckmayer, J.~Stelzer, J.~Therhaag, E.~von Toerne, H.~Voss" << Endl;
       logger << "  %``TMVA: Toolkit for multivariate data analysis,''" << Endl;
       logger << "  PoS A {\\bf CAT} (2007) 040" << Endl;
       logger << "  [arXiv:physics/0703039]." << Endl;
