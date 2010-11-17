@@ -1698,20 +1698,5 @@ void TMVA::Factory::EvaluateAllMethods( void )
    Log() << kINFO << gTools().Color("bold") 
          << "For citation information, please visit: http://tmva.sf.net/citeTMVA.html"
          << gTools().Color("reset") << Endl;
-
-   /*
-   Log() << kINFO << "---------------- PLEASE CITE THIS ----------------" << Endl;
-   Log() << kINFO << "=== plain text ===";
-   gTools().TMVACitation( Log(), Tools::kPlainText );
-   Log() << gTools().Color("reset") << Endl;
-   Log() << kINFO << "=== LaTeX ===";
-   Log() << gTools().Color("lightblue") << Endl;
-   gTools().TMVACitation( Log(), Tools::kLaTeX );
-   Log() << gTools().Color("reset") << Endl;
-   Log() << kINFO << "=== BibTeX ===";
-   Log() << gTools().Color("lightblue") << Endl;
-   gTools().TMVACitation( Log(), Tools::kBibTeX );
-   Log() << gTools().Color("reset") << Endl;
-   */
 }
 

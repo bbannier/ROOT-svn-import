@@ -1,0 +1,10 @@
+For December 2010 release (5.28):
+
+* network.C mit ROOT 5.27b
+* makeClass und SVM
+* regression mit MLP und backpropagation (BP)
+* unit test breaks mit BDT
+* unit test breaks von Event::SetWeight
+* ClassificationApplication.C breaks with BDT (while identical .cxx version works)
+* MulticlassApplication.C breaks (while identical .cxx version works)
+
