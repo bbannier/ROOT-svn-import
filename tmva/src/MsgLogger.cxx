@@ -217,6 +217,25 @@ void TMVA::MsgLogger::InitMaps()
    if (fgTypeMap.size()>0 && fgColorMap.size()>0 ) return;
 
    // fill maps that assign a string and a color to echo message level
+   std::map<TMVA::EMsgType, std::string>::iterator typeiter = fgTypeMap.begin();
+   std::map<TMVA::EMsgType, std::string>::iterator coloriter = fgTypeMap.begin();
+   fgTypeMap.insert(typeiter, std::pair<TMVA::EMsgType, std::string>(kVERBOSE,std::string("VERBOSE")));
+   fgTypeMap.insert(typeiter, std::pair<TMVA::EMsgType, std::string>(kDEBUG,std::string("DEBUG")));
+   fgTypeMap.insert(typeiter, std::pair<TMVA::EMsgType, std::string>(kINFO,std::string("INFO")));
+   fgTypeMap.insert(typeiter, std::pair<TMVA::EMsgType, std::string>(kWARNING,std::string("WARNING")));
+   fgTypeMap.insert(typeiter, std::pair<TMVA::EMsgType, std::string>(kERROR,std::string("ERROR")));
+   fgTypeMap.insert(typeiter, std::pair<TMVA::EMsgType, std::string>(kFATAL,std::string("FATAL")));
+   fgTypeMap.insert(typeiter, std::pair<TMVA::EMsgType, std::string>(kSILENT,std::string("SILENT")));
+
+   fgColorMap.insert(coloriter, std::pair<TMVA::EMsgType, std::string>(kVERBOSE,std::string("")));
+   fgColorMap.insert(coloriter, std::pair<TMVA::EMsgType, std::string>(kDEBUG,std::string("\033[34m")));
+   fgColorMap.insert(coloriter, std::pair<TMVA::EMsgType, std::string>(kINFO,std::string("")));
+   fgColorMap.insert(coloriter, std::pair<TMVA::EMsgType, std::string>(kWARNING,std::string("\033[1;31m")));
+   fgColorMap.insert(coloriter, std::pair<TMVA::EMsgType, std::string>(kERROR,std::string("\033[31m")));
+   fgColorMap.insert(coloriter, std::pair<TMVA::EMsgType, std::string>(kFATAL,std::string("\033[37;41;1m")));
+   fgColorMap.insert(coloriter, std::pair<TMVA::EMsgType, std::string>(kSILENT,std::string("\033[30m")));
+
+   /*
    fgTypeMap[kVERBOSE]  = std::string("VERBOSE");
    fgTypeMap[kDEBUG]    = std::string("DEBUG");
    fgTypeMap[kINFO]     = std::string("INFO");
@@ -232,4 +251,5 @@ void TMVA::MsgLogger::InitMaps()
    fgColorMap[kERROR]   = std::string("\033[31m");
    fgColorMap[kFATAL]   = std::string("\033[37;41;1m");
    fgColorMap[kSILENT]  = std::string("\033[30m");
+   */
 }
