@@ -137,11 +137,11 @@ m_Consumer(0) {
   clang::CodeCompleteConsumer* CCC = 0;
   m_Sema.reset(new clang::Sema(PP, *Ctx, *m_Consumer, CompleteTranslationUnit,
                                CCC));
-  PP.EnterMainSourceFile();  
-
   // Initialize the parser.
   m_Parser.reset(new clang::Parser(PP, *m_Sema.get()));
+  PP.EnterMainSourceFile();
   m_Parser->Initialize();
+  m_Sema->Initialize();
   
   if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
     SC->InitializeSema(*m_Sema.get());
