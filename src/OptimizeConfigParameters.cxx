@@ -25,6 +25,7 @@
 ClassImp(TMVA::OptimizeConfigParameters)
 
 #include <limits>
+#include <cstdlib>
 #include "TMath.h"
 #include "TGraph.h"
 #include "TH1.h"
