@@ -33,7 +33,7 @@ TMVAUTOBJECTS    = $(TMVAUTSOURCES:.cxx=.o)
 TMVAUTH          = $(TMVAUTSOURCES:.cxx=.h)
 
 $(TMVAUTOBJECTS): %.o : %.cxx $(TMVAUTH)
-	$(CXX)  $(TMVAINCLUDE) $(CXXFLAGS) -c $< -o $@
+	$(CXX)  $(TMVAINCLUDE) $(CXXFLAGS) -DCOUTDEBUG -c $< -o $@
 
 $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
 	$(LD) $(LDFLAGS) $^ $(TMVALOCALLIBS) $(LIBS) -lTMVA.1 -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
