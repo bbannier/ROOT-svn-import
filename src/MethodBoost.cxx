@@ -393,7 +393,7 @@ void TMVA::MethodBoost::Train()
 
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
-         std::cout << "AdaBoost (methodErr) err = " << fMethodError <<std::endl;
+         Log() << kDEBUG << "AdaBoost (methodErr) err = " << fMethodError << Endl;
          if (fMethodError > 0.49999) StopCounter++; 
          if (StopCounter > 0 && fBoostType != "Bagging")
             {
@@ -629,7 +629,7 @@ void TMVA::MethodBoost::FindMVACut()
       Double_t sigCutVal = valmin + ((valmax-valmin)*minbin)/Float_t(nValBins+1);
       lastMethod->SetSignalReferenceCut(sigCutVal);
       
-      std::cout << "(old step) Setting method cut to " <<lastMethod->GetSignalReferenceCut()<< std::endl;
+      Log() << kDEBUG << "(old step) Setting method cut to " <<lastMethod->GetSignalReferenceCut()<< Endl;
       
    }
    
@@ -670,7 +670,7 @@ void TMVA::MethodBoost::SingleBoost()
    }
    fMethodError=sumWrong/sumAll;
    fOrigMethodError = sumWrongOrig/sumAllOrig;
-   std::cout << "AdaBoost err (MethodErr1)= " << fMethodError<<" = wrong/all: " << sumWrong << "/" << sumAll<< " cut="<<method->GetSignalReferenceCut()<<std::endl;
+   Log() << kDEBUG << "AdaBoost err (MethodErr1)= " << fMethodError<<" = wrong/all: " << sumWrong << "/" << sumAll<< " cut="<<method->GetSignalReferenceCut()<< Endl;
 
    // calculating the fMethodError and the fBoostWeight out of it uses the formula 
    // w = ((1-err)/err)^beta
