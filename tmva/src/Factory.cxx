@@ -1692,11 +1692,6 @@ void TMVA::Factory::EvaluateAllMethods( void )
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTraining)->Write( "", TObject::kOverwrite );
 
    // references for citation
-   Log() << kINFO << "  " << Endl;
-   Log() << kINFO << gTools().Color("bold") 
-         << "Thank you for using TMVA!" << gTools().Color("reset") << Endl;
-   Log() << kINFO << gTools().Color("bold") 
-         << "For citation information, please visit: http://tmva.sf.net/citeTMVA.html"
-         << gTools().Color("reset") << Endl;
+   gTools().TMVACitation( Log(), Tools::kHtmlLink );
 }
 

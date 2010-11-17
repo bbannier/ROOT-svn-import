@@ -65,7 +65,6 @@ void TMVAGui( const char* fName = "TMVA.root" )
    //std::cout <<"inc path="<<curIncludePath<<std::endl;
    TString newIncludePath=TString("-I../ ")+curIncludePath;
    gSystem->SetIncludePath(newIncludePath);
-   std::cout <<"new include path="<<gSystem->GetIncludePath()<<std::endl;
   
    cout << "--- Launch TMVA GUI to view input file: " << fName << endl;
 
@@ -83,7 +82,7 @@ void TMVAGui( const char* fName = "TMVA.root" )
    TMVAGui_keyContent = (TList*)file->GetListOfKeys()->Clone();
 
    // close file
-   //file->Close();
+   file->Close();
 
    TString defaultRequiredClassifier = "";
 
@@ -235,6 +234,7 @@ void TMVAGui( const char* fName = "TMVA.root" )
                  Form( ".x BDTControlPlots.C(\"%s\")", fName ),
                  "Plots to monitor boosting and pruning of decision trees (macro BDTControlPlots.C)",
                  buttonType, "BDT" );
+
    //    ActionButton( cbar,  
    //                  Form( "(%i) Monitor Decision Tree Boosting", ++ic ),
    //                  Form( ".x BDTBoostWatch.C+(\"%s\")", fName ),
