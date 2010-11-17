@@ -37,9 +37,9 @@ namespace TMVAGlob {
                      kGaussDecorr,
                      kNumOfMethods };
 
-   static Int_t c_Canvas         = TColor::GetColor( "#e9e6da" );
+   static Int_t c_Canvas         = TColor::GetColor( "#f0f0f0" );
    static Int_t c_FrameFill      = TColor::GetColor( "#fffffd" );
-   static Int_t c_TitleBox       = TColor::GetColor( "#dae1e6" );
+   static Int_t c_TitleBox       = TColor::GetColor( "#FFFFFF" );
    static Int_t c_SignalLine     = TColor::GetColor( "#0000ee" );
    static Int_t c_SignalFill     = TColor::GetColor( "#7d99d1" );
    static Int_t c_BackgroundLine = TColor::GetColor( "#ff0000" );
