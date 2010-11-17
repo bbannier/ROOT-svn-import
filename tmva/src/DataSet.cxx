@@ -290,7 +290,7 @@ TMVA::Results* TMVA::DataSet::GetResults( const TString & resultsName,
 //_______________________________________________________________________
 void TMVA::DataSet::DeleteResults( const TString & resultsName,
                                    Types::ETreeType type,
-                                   Types::EAnalysisType analysistype ) 
+                                   Types::EAnalysisType /* analysistype */ ) 
 {
    // delete the results stored for this particulary 
    //      Method instance  (here appareantly called resultsName instead of MethodTitle
