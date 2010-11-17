@@ -2385,18 +2385,18 @@ Double_t TMVA::PDEFoam::GetProjectionCellValue( PDEFoamCell* cell,
    }
 }
 
+#include "Riostream.h"
 //_____________________________________________________________________
 Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 {
    // Returns cell element i of cell 'cell'.
 
-   if (i >= GetNElements())
-      Log() << kFATAL << "ERROR: Index out of range" << Endl;
+   if (i >= GetNElements()) Log() << kFATAL << "ERROR: Index out of range" << Endl;
 
-   TVectorD *vec = dynamic_cast<TVectorD*>(cell->GetElement());
+   // dynamic_cast doesn't seem to work here ?!
+   TVectorD *vec = (TVectorD*)cell->GetElement();
 
-   if (!vec)
-      Log() << kFATAL << "<GetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
+   if (!vec) Log() << kFATAL << "<GetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
 
    return (*vec)(i);
 }
@@ -2406,15 +2406,15 @@ void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Double_t value 
 {
    // Set cell element i of cell to value.
 
-   if (i >= GetNElements()){
+   if (i >= GetNElements()) {
       Log() << kFATAL << "ERROR: Index out of range" << Endl;
       return;
    }
 
-   TVectorD *vec = dynamic_cast<TVectorD*>(cell->GetElement());
+   // dynamic_cast doesn't seem to work here ?!
+   TVectorD *vec = (TVectorD*)cell->GetElement();
 
-   if (!vec)
-      Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
+   if (!vec) Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
 
    (*vec)(i) = value;
 }
