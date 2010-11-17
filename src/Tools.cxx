@@ -1377,6 +1377,13 @@ void TMVA::Tools::TMVACitation( MsgLogger& logger, ECitation citType )
       logger << "  %%CITATION = POSCI,ACAT,040;%%" << Endl;
       break;
 
+   case kHtmlLink:
+      logger << kINFO << "  " << Endl;
+      logger << kINFO << gTools().Color("bold") 
+         << "Thank you for using TMVA!" << gTools().Color("reset") << Endl;
+      logger << kINFO << gTools().Color("bold") 
+             << "For citation information, please visit: http://tmva.sf.net/citeTMVA.html"
+             << gTools().Color("reset") << Endl; 
    }
 }
 
