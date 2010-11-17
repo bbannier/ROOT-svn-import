@@ -111,6 +111,7 @@ namespace TMVA {
       static UInt_t            fgMaxSourceSize;   // maximum length of source name
       static Bool_t            fgOutputSupressed; // disable the output globaly (used by generic booster)
       static Bool_t            fgInhibitOutput;   // flag to suppress all output
+      static Int_t             fgInstanceCounter; // counts open MsgLogger instances
 
       static std::map<EMsgType, std::string>* fgTypeMap;   // matches output types with strings
       static std::map<EMsgType, std::string>* fgColorMap;  // matches output types with terminal colors
