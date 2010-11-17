@@ -37,14 +37,16 @@
 
 ClassImp(TMVA::MsgLogger)
 
+// declaration of global variables
 // this is the hard-coded maximum length of the source names
-UInt_t TMVA::MsgLogger::fgMaxSourceSize = 25;
-Bool_t TMVA::MsgLogger::fgInhibitOutput = kFALSE;
+UInt_t                                 TMVA::MsgLogger::fgMaxSourceSize = 25;
+Bool_t                                 TMVA::MsgLogger::fgInhibitOutput = kFALSE;
 
-const std::string TMVA::MsgLogger::fgPrefix = "--- ";
-const std::string TMVA::MsgLogger::fgSuffix = ": ";
+const std::string                      TMVA::MsgLogger::fgPrefix = "--- ";
+const std::string                      TMVA::MsgLogger::fgSuffix = ": ";
 std::map<TMVA::EMsgType, std::string>* TMVA::MsgLogger::fgTypeMap  = 0;
 std::map<TMVA::EMsgType, std::string>* TMVA::MsgLogger::fgColorMap = 0;
+Int_t                                  TMVA::MsgLogger::fgInstanceCounter = 0;
 
 void   TMVA::MsgLogger::InhibitOutput() { fgInhibitOutput = kTRUE;  }
 void   TMVA::MsgLogger::EnableOutput()  { fgInhibitOutput = kFALSE; }
@@ -56,7 +58,8 @@ TMVA::MsgLogger::MsgLogger( const TObject* source, EMsgType minType )
      fMinType   ( minType )
 {
    // constructor
-   InitMaps();
+   fgInstanceCounter++;
+   InitMaps();   
 }
 
 //_______________________________________________________________________
@@ -67,6 +70,7 @@ TMVA::MsgLogger::MsgLogger( const std::string& source, EMsgType minType )
      fMinType   ( minType )
 {
    // constructor
+   fgInstanceCounter++;
    InitMaps();
 }
 
@@ -78,6 +82,7 @@ TMVA::MsgLogger::MsgLogger( EMsgType minType )
      fMinType   ( minType )
 {
    // constructor
+   fgInstanceCounter++;
    InitMaps();
 }
 
@@ -88,6 +93,7 @@ TMVA::MsgLogger::MsgLogger( const MsgLogger& parent )
      TObject()
 {
    // copy constructor
+   fgInstanceCounter++;
    InitMaps();
    *this = parent;
 }
@@ -96,6 +102,12 @@ TMVA::MsgLogger::MsgLogger( const MsgLogger& parent )
 TMVA::MsgLogger::~MsgLogger()
 {
    // destructor
+   fgInstanceCounter--;
+   if (fgInstanceCounter == 0) {
+      // last MsgLogger instance has been deleted, can also delete the maps
+      delete fgTypeMap;  fgTypeMap  = 0;
+      delete fgColorMap; fgColorMap = 0;
+   }
 }
 
 //_______________________________________________________________________
