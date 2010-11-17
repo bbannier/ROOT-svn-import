@@ -1691,15 +1691,17 @@ void TMVA::Factory::EvaluateAllMethods( void )
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTesting)->Write( "", TObject::kOverwrite );
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTraining)->Write( "", TObject::kOverwrite );
 
-
-   
+   // references for citation
    Log() << kINFO << "  " << Endl;
-   Log() << gTools().Color("lightblue");
-   Log() << kINFO << "Thank you for using TMVA!";
-   Log() << gTools().Color("reset") << Endl;
+   Log() << kINFO << gTools().Color("bold") 
+         << "Thank you for using TMVA!" << gTools().Color("reset") << Endl;
+   Log() << kINFO << gTools().Color("bold") 
+         << "For citation information, please visit: http://tmva.sf.net/citeTMVA.html"
+         << gTools().Color("reset") << Endl;
+
+   /*
    Log() << kINFO << "---------------- PLEASE CITE THIS ----------------" << Endl;
    Log() << kINFO << "=== plain text ===";
-   Log() << gTools().Color("lightblue") << Endl;
    gTools().TMVACitation( Log(), Tools::kPlainText );
    Log() << gTools().Color("reset") << Endl;
    Log() << kINFO << "=== LaTeX ===";
@@ -1710,6 +1712,6 @@ void TMVA::Factory::EvaluateAllMethods( void )
    Log() << gTools().Color("lightblue") << Endl;
    gTools().TMVACitation( Log(), Tools::kBibTeX );
    Log() << gTools().Color("reset") << Endl;
-   
+   */
 }
 

@@ -225,7 +225,6 @@ TMVA::MsgLogger& TMVA::MsgLogger::Endmsg( MsgLogger& logger )
    return logger;
 }
 
-
 //_______________________________________________________________________
 void TMVA::MsgLogger::InitMaps()
 {
