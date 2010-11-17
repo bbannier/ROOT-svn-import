@@ -235,4 +235,3 @@ void TMVA::MsgLogger::InitMaps()
    fgColorMap.insert( std::make_pair(kFATAL,std::string("\033[37;41;1m")) );
    fgColorMap.insert( std::make_pair(kSILENT,std::string("\033[30m")) );
 }
-}
