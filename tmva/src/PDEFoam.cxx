@@ -2385,7 +2385,6 @@ Double_t TMVA::PDEFoam::GetProjectionCellValue( PDEFoamCell* cell,
    }
 }
 
-#include "Riostream.h"
 //_____________________________________________________________________
 Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 {
@@ -2575,8 +2574,8 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
       zmin=TMath::Log(zmin);
       zmax=TMath::Log(zmax);
       outfile << "// logarthmic color scale used " << std::endl;
-   } else
-      outfile << "// linear color scale used " << std::endl;
+   } 
+   else outfile << "// linear color scale used " << std::endl;
 
    outfile << "// used minimum and maximum of distribution (taking into account log scale if applicable): " << std::endl;
    outfile << "Double_t zmin = "<< zmin << ";" << std::endl;

@@ -366,7 +366,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    // Fisher discriminant
    if (Use["Fisher"])
-      factory->BookMethod( TMVA::Types::kFisher, "Fisher", "H:!V:Fisher:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=60:NsmoothMVAPdf=10" );
+      factory->BookMethod( TMVA::Types::kFisher, "Fisher", "H:!V:Fisher:CreateMVAPdfs:PDFInterpolMVAPdf=KDE:NbinsMVAPdf=50:NsmoothMVAPdf=1" );
 
    // Fisher with Gauss-transformed input variables
    if (Use["FisherG"])
