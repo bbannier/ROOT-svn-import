@@ -682,7 +682,8 @@ TMVA::MethodBase* TMVA::Factory::BookMethod( TString theMethodName, TString meth
               << Endl;
    }
 
-   Log() << kINFO << "Booking method: " << methodTitle << Endl;
+   Log() << kINFO << "Booking method: " << gTools().Color("bold") << methodTitle 
+         << gTools().Color("reset") << Endl;
 
    // interpret option string with respect to a request for boosting (i.e., BostNum > 0)
    Int_t    boostNum = 0;
@@ -983,6 +984,7 @@ void TMVA::Factory::TrainAllMethods()
    }
 
    // here the training starts
+   Log() << kINFO << " " << Endl;
    Log() << kINFO << "Train all methods for " 
          << (fAnalysisType == Types::kRegression ? "Regression" : 
 	     (fAnalysisType == Types::kMulticlass ? "Multiclass" : "Classification") ) << " ..." << Endl;
@@ -1013,7 +1015,7 @@ void TMVA::Factory::TrainAllMethods()
 
       // variable ranking 
       Log() << Endl;
-      Log() << kINFO << "Begin ranking of input variables..." << Endl;
+      Log() << kINFO << "Ranking input variables (method specific)..." << Endl;
       for (itrMethod = fMethods.begin(); itrMethod != fMethods.end(); itrMethod++) {
          MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
          if (mva->Data()->GetNTrainingEvents() >= MinNoTrainingEvents) {

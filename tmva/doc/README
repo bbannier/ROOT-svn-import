@@ -15,7 +15,7 @@ System requirements:
 
   TMVA has been tested to run on Linux, MAC/OSX and Windows platforms.
 
-  Running TMVA requires the availability of ROOT shared libraries with ROOT_VERSION >= 5.08
+  Running TMVA requires the availability of ROOT shared libraries with ROOT_VERSION >= 5.14
   (type "root-config --version" to see the version installed)
 
 ========================================================================================
@@ -158,11 +158,11 @@ Please report any problems and/or suggestions for improvements to the authors.
 
 ========================================================================================
 
-Copyright © (2005-2009):  
+Copyright © (2005-2010):  
 ------------------------
 
-   Andreas Hoecker, Peter Speckmayer, Jörg Stelzer (all: CERN, Switzerland),
-   Jan Therhaag, Eckhard von Toerne (both: U. Bonn, Germany), 
+   Andreas Hoecker, Peter Speckmayer, Jörg Stelzer (CERN, Switzerland),
+   Jan Therhaag, Eckhard von Toerne (U. Bonn, Germany), 
    Helge Voss (MPI-KP Heidelberg, Germany), 
 
 Contributed to TMVA have, please see: http://tmva.sourceforge.net/#authors
