@@ -1903,13 +1903,10 @@ void TMVA::MethodBase::CreateMVAPdfs()
       Double_t theVal    = mvaRes->GetValueVector()->at(ievt);
       Double_t theWeight = Data()->GetEvent(ievt)->GetWeight();
 
-      if (DataInfo().IsSignal(Data()->GetEvent(ievt)))
-         histMVAPdfS->Fill( theVal, theWeight );
-      else
-         histMVAPdfB->Fill( theVal, theWeight );
+      if (DataInfo().IsSignal(Data()->GetEvent(ievt))) histMVAPdfS->Fill( theVal, theWeight );
+      else                                             histMVAPdfB->Fill( theVal, theWeight );
    }
 
-   // normalisation
    gTools().NormHist( histMVAPdfS );
    gTools().NormHist( histMVAPdfB );
 
