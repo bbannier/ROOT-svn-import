@@ -207,7 +207,7 @@ void probas( TString fin = "TMVA.root", Bool_t useTMVAStyle = kTRUE )
             
          }
          if(!found){
-            cout << "No pdfs found for method " << methodTitle << ". Did you request them in the option string?" << endl;
+            cout << "No pdfs found for method " << methodTitle << ". Did you request \"CreateMVAPdfs\" in the option string?" << endl;
          }
       }    
    }
