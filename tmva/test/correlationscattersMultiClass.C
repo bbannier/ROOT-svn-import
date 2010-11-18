@@ -115,8 +115,8 @@ void correlationscattersMultiClass( TString fin = "TMVA.root", TString var= "var
             ++countCanvas;
             TString ext = extension; ext.Remove( 0, 1 );
             canv = new TCanvas( Form("canvas%d", countCanvas), 
-                                Form("Correlation profiles for '%s'-transformed %s variables", 
-                                     ext.Data(), classnames[itype]),
+                                Form("Correlation profiles for '%s'-transformed variables (%s)", 
+                                     ext.Data(), classnames[itype].Data()),
                                 countCanvas*50+200, countCanvas*20, width, height ); 
             canv->Divide(xPad,yPad);
          }
