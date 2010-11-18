@@ -39,6 +39,14 @@ void draw_network( TFile* f, TDirectory* d, const TString& hName = "weights_hist
    TStyle* TMVAStyle = gROOT->GetStyle("TMVA"); // the TMVA style
    Int_t canvasColor = TMVAStyle->GetCanvasColor(); // backup
    TMVAStyle->SetCanvasColor( c_DarkBackground );
+
+   Int_t titleFillColor = TMVAStyle->GetTitleFillColor();
+   Int_t titleTextColor = TMVAStyle->GetTitleTextColor();
+   Int_t borderSize     = TMVAStyle->GetTitleBorderSize();
+
+   TMVAStyle->SetTitleFillColor( c_DarkBackground );
+   TMVAStyle->SetTitleTextColor( TColor::GetColor( "#FFFFFF" ) );
+   TMVAStyle->SetTitleBorderSize( 0 );
    
    static Int_t icanvas = -1;
    Int_t ixc = 100 + (icanvas)*40;
@@ -146,12 +154,17 @@ void draw_network( TFile* f, TDirectory* d, const TString& hName = "weights_hist
       TMVAGlob::imgconv( c, fname );
    }
 
-   TMVAStyle->SetCanvasColor( canvasColor );
+   // reset global style changes so that it does not affect other plots
+   TMVAStyle->SetCanvasColor    ( canvasColor );
+   TMVAStyle->SetTitleFillColor ( titleFillColor );
+   TMVAStyle->SetTitleTextColor ( titleTextColor );
+   TMVAStyle->SetTitleBorderSize( borderSize );
+
 }
 
 void draw_layer_labels(Int_t nLayers)
 {
-   const Double_t LABEL_HEIGHT = 0.03;
+   const Double_t LABEL_HEIGHT = 0.032;
    const Double_t LABEL_WIDTH  = 0.20;
    Double_t effWidth = 0.8*(1.0-LABEL_WIDTH)/nLayers;
    Double_t height = 0.8*LABEL_HEIGHT;
@@ -159,6 +172,7 @@ void draw_layer_labels(Int_t nLayers)
 
    for (Int_t i = 0; i < nLayers; i++) {
       TString label = Form("Layer %i", i);
+      if (i == nLayers-1) label = "Output layer";
       Double_t cx = i*(1.0-LABEL_WIDTH)/nLayers+1.0/(2.0*nLayers)+LABEL_WIDTH;
       Double_t x1 = cx-0.8*effWidth/2.0;
       Double_t x2 = cx+0.8*effWidth/2.0;
@@ -167,7 +181,9 @@ void draw_layer_labels(Int_t nLayers)
 
       TPaveLabel *p = new TPaveLabel(x1, y1, x2, y2, label+"", "br");
       p->SetFillColor(gStyle->GetTitleFillColor());
+      p->SetTextColor(gStyle->GetTitleTextColor());
       p->SetFillStyle(1001);
+      p->SetBorderSize( 0 );
       p->Draw();
    }
 }
@@ -175,7 +191,7 @@ void draw_layer_labels(Int_t nLayers)
 void draw_input_labels(Int_t nInputs, Double_t* cy, 
                        Double_t rad, Double_t layerWidth)
 {
-   const Double_t LABEL_HEIGHT = 0.03;
+   const Double_t LABEL_HEIGHT = 0.04;
    const Double_t LABEL_WIDTH  = 0.20;
    Double_t width = LABEL_WIDTH + (layerWidth-4*rad);
    Double_t margX = 0.01;
@@ -194,11 +210,12 @@ void draw_input_labels(Int_t nInputs, Double_t* cy,
       Double_t y1 = cy[i] - effHeight;
       Double_t y2 = cy[i] + effHeight;
 
-      TPaveLabel *p = new TPaveLabel(x1, y1, x2, y2, input+"", "br");
-      p->SetFillColor(gStyle->GetTitleFillColor());
-      p->SetFillStyle(1001);
-      p->Draw();
-      if (i == nInputs-1) p->SetTextColor( TMVAGlob::c_NovelBlue );
+      TText* t = new TText();
+      t->SetTextColor(gStyle->GetTitleTextColor());
+      t->SetTextAlign(31);
+      t->SetTextSize(LABEL_HEIGHT);
+      if (i == nInputs-1) t->SetTextColor( TColor::GetColor( "#AFDCEC" ) );
+      t->DrawText( x2, y1+0.018, input + " :");
    }
 
    delete[] varNames;
