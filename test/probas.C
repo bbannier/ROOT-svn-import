@@ -91,6 +91,7 @@ void probas( TString fin = "TMVA.root", Bool_t useTMVAStyle = kTRUE )
 
                TH1* sigF(0);
                TH1* bkgF(0);
+               
                for (int i=0; i<= 5; i++) {
                   TString hspline = hnameS + Form("_smoothed_hist_from_spline%i",i);
                   sigF = (TH1*)instDir->Get( hspline );
@@ -100,9 +101,17 @@ void probas( TString fin = "TMVA.root", Bool_t useTMVAStyle = kTRUE )
                      break;
                   }
                }
+               if (!sigF){
+                  TString hspline = hnameS + TString("_smoothed_hist_from_KDE");
+                  sigF = (TH1*)instDir->Get( hspline );
+                  
+                  if (sigF) {
+                     bkgF = (TH1*)instDir->Get( hspline.ReplaceAll("_tr_S","_tr_B") );
+                  }
+               }
+              
                if ((sigF == NULL || bkgF == NULL) &&!hname.Contains("hist") ) {
-                  cout << "*** probas.C: big troubles - did not found histogram " << hspline.Data() << " " 
-                       << sigF << " " << bkgF << endl;
+                  cout << "*** probas.C: big troubles - did not probability histograms" << endl;
                   return;
                }
                else  {
