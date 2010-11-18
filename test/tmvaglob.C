@@ -39,7 +39,7 @@ namespace TMVAGlob {
 
    static Int_t c_Canvas         = TColor::GetColor( "#f0f0f0" );
    static Int_t c_FrameFill      = TColor::GetColor( "#fffffd" );
-   static Int_t c_TitleBox       = TColor::GetColor( "#6F808F" );
+   static Int_t c_TitleBox       = TColor::GetColor( "#6D7B8D" );
    static Int_t c_TitleText      = TColor::GetColor( "#FFFFFF" );
    static Int_t c_SignalLine     = TColor::GetColor( "#0000ee" );
    static Int_t c_SignalFill     = TColor::GetColor( "#7d99d1" );

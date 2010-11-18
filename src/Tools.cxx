@@ -1214,8 +1214,9 @@ void TMVA::Tools::TMVAWelcomeMessage()
    cout << Color("bold") << "TMVA -- Toolkit for Multivariate Data Analysis" << Color("reset") << endl;
    cout << "        " << "Version " << TMVA_RELEASE << ", " << TMVA_RELEASE_DATE << endl;
    cout << "        " << "Copyright (C) 2005-2010 CERN, MPI-K Heidelberg, Us of Bonn and Victoria" << endl;
-   cout << "        " << "Home page http://tmva.sourceforge.net" << endl;
-   cout << "        " << "All rights reserved, please read http://tmva.sf.net/license.txt" << endl << endl;
+   cout << "        " << "Home page:     http://tmva.sf.net" << endl;
+   cout << "        " << "Citation info: http://tmva.sf.net/citeTMVA.html" << endl;
+   cout << "        " << "License:       http://tmva.sf.net/LICENSE" << endl << endl;
 }
 
 //_______________________________________________________________________
