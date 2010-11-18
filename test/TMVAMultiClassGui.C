@@ -213,9 +213,10 @@ void TMVAMultiClassGui( const char* fName = "TMVAMulticlass.root" )
    */
    
    title = Form( "(%ia) Network Architecture (MLP)", ++ic );
+   TString call = Form( ".x network.C+g(\"%s\")", fName );
    ActionButton( cbar,  
                  title,
-                 Form( ".x network.C(\"%s\")", fName ), 
+                 call, 
                  "Plots the MLP weights (macro network.C)",
                  buttonType, "MLP" );
 
@@ -233,14 +234,15 @@ void TMVAMultiClassGui( const char* fName = "TMVAMulticlass.root" )
                  "Plots the Decision Trees trained by BDT algorithms (macro BDT.C(itree,...))",
                  buttonType, "BDT" );
 
-   title = Form( "(%i) Decision Tree Control Plots (BDT)", ++ic );
+   /*
+     title = Form( "(%i) Decision Tree Control Plots (BDT)", ++ic );
    ActionButton( cbar,  
                  title,
                  Form( ".x BDTControlPlots.C(\"%s\")", fName ),
                  "Plots to monitor boosting and pruning of decision trees (macro BDTControlPlots.C)",
                  buttonType, "BDT" );
 
-   /*
+   
    title = Form( "(%i) Plot Foams (PDEFoam)", ++ic );
    ActionButton( cbar,  
                  title,
