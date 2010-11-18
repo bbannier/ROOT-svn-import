@@ -83,7 +83,7 @@ void TMVAMultiClassGui( const char* fName = "TMVAMulticlass.root" )
    TMVAGui_keyContent = (TList*)file->GetListOfKeys()->Clone();
 
    //close file
-   //file->Close();
+   file->Close();
 
    TString defaultRequiredClassifier = "";
 
