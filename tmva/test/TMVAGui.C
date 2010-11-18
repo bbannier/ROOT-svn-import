@@ -29,7 +29,7 @@ TList* GetKeyList( const TString& pattern )
 // utility function
 void ActionButton( TControlBar* cbar, 
                    const TString& title, const TString& macro, const TString& comment, 
-                   const TString& buttonType, TString requiredKey = "" ) 
+                   const TString& buttonType, TString requiredKey = "") 
 {
    cbar->AddButton( title, macro, comment, buttonType );
 
@@ -208,9 +208,10 @@ void TMVAGui( const char* fName = "TMVA.root" )
                  buttonType, "Likelihood" );
 
    title = Form( "(%ia) Network Architecture (MLP)", ++ic );
+   TString call = Form( ".x network.C+g(\"%s\")", fName );
    ActionButton( cbar,  
                  title,
-                 Form( ".x network.C(\"%s\")", fName ), 
+                 call, 
                  "Plots the MLP weights (macro network.C)",
                  buttonType, "MLP" );
 

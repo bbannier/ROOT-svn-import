@@ -7,6 +7,7 @@
 #include "TString.h"
 #include "TDirectory.h"
 #include "TKey.h"
+#include "TText.h"
 
 #include "tmvaglob.C"
 
@@ -38,12 +39,14 @@ void draw_network( TFile* f, TDirectory* d, const TString& hName = "weights_hist
    TStyle* TMVAStyle = gROOT->GetStyle("TMVA"); // the TMVA style
    Int_t canvasColor = TMVAStyle->GetCanvasColor(); // backup
    TMVAStyle->SetCanvasColor( c_DarkBackground );
-
+   
    static Int_t icanvas = -1;
    Int_t ixc = 100 + (icanvas)*40;
    Int_t iyc =   0 + (icanvas+1)*20;   
    if (MovieMode) ixc = iyc = 0;
-   TCanvas* c = new TCanvas( Form( "c%i", icanvas ), Form("Neural Network Layout for: %s", d->GetName()), 
+   TString canvasnumber =  Form( "c%i", icanvas );
+   TString canvastitle = Form("Neural Network Layout for: %s", d->GetName());
+   TCanvas* c = new TCanvas( canvasnumber, canvastitle, 
                              ixc, 0 + (icanvas+1)*20, 1000, 650  );
    icanvas++;
    TIter next = d->GetListOfKeys();
@@ -53,7 +56,6 @@ void draw_network( TFile* f, TDirectory* d, const TString& hName = "weights_hist
    // loop over all histograms with hName in name again
    next.Reset();
    Double_t maxWeight = 0;
-
    // find max weight
    while ((key = (TKey*)next())) {
 
@@ -85,22 +87,30 @@ void draw_network( TFile* f, TDirectory* d, const TString& hName = "weights_hist
 
    // draw network
    next.Reset();
+   //cout << "check4a" << endl;
+
    Int_t count = 0;
    while ((key = (TKey*)next())) {
+      //cout << "check4b" << endl;
 
       TClass *cl = gROOT->GetClass(key->GetClassName());
       if (!cl->InheritsFrom("TH2F")) continue;    
+      //cout << "check4c" << endl;
 
       TH2F* h = (TH2F*)key->ReadObj();    
+      //cout << (h->GetName()) << endl;
       if (!h) {
          cout << "Big troubles in \"draw_network\" (2)" << endl;
          exit(1);
       }
+      //cout << (h->GetName()) << endl;
       if (TString(h->GetName()).Contains( hName )) {
+         //cout << (h->GetName()) << endl;
          draw_layer(c, h, count++, numHists+1, maxWeight);
       }
-   }
+      //cout << "check4d" << endl;
 
+   }
    draw_layer_labels(numHists+1);
 
    // add epoch
@@ -118,7 +128,6 @@ void draw_network( TFile* f, TDirectory* d, const TString& hName = "weights_hist
    // ============================================================  
 
    c->Update();
-
    if (MovieMode) {
       // save to file
       TString dirname  = "movieplots";
