@@ -6,17 +6,34 @@
 
 #include <set>
 
-#include "clang/AST/Stmt.h"
-
-using namespace clang;
+namespace clang {
+   class Stmt;
+   class DeclRefExpr;
+}
 
 namespace cling {
-   struct EvalInfo {
-      EvalInfo(Stmt *stmt, bool needed, std::set<DeclRefExpr*> *vars)
-         :NewStmt(stmt), IsEvalNeeded(needed), Variables(vars){};
-      Stmt *NewStmt; // the new/old node
+   class EvalInfo {      
+   private:
+      typedef clang::Stmt Stmt;
+      typedef clang::DeclRefExpr DeclRefExpr;
+      
+      Stmt *newStmt; // the new/old node
+      std::set<DeclRefExpr*> variables; // the DeclRefs
+
+   public:
       bool IsEvalNeeded; // whether to emit the Eval call or not
-      std::set<DeclRefExpr*> *Variables; // the DeclRefs
+ 
+      EvalInfo(Stmt *stmt, bool needed)
+         :newStmt(stmt), IsEvalNeeded(needed) {};
+
+      Stmt *getNewStmt() { return newStmt; }
+      const Stmt *getNewStmt() const { return newStmt; }
+      void setNewStmt(Stmt *stmt) { newStmt = stmt; } 
+      
+      const std::set<DeclRefExpr*> &getVariables() const { return variables; }
+      void addVariable(DeclRefExpr *var) { 
+         variables.insert(var);
+      }
    };
 
 } //end cling
