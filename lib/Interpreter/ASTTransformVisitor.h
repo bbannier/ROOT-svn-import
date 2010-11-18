@@ -16,6 +16,8 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 
+#include "EvalInfo.h"
+
 using namespace clang;
 
 namespace cling {
@@ -26,20 +28,20 @@ namespace cling {
    // h->Draw() is marked as dependent node. That requires the ASTTransformVisitor to find all
    // dependent nodes and escape them to the interpreter, using pre-defined Eval function.
    class ASTTransformVisitor : public DeclVisitor<ASTTransformVisitor>,
-                               public StmtVisitor<ASTTransformVisitor, Stmt*> {
+                               public StmtVisitor<ASTTransformVisitor, EvalInfo*> {
       
    private:
-      FunctionDecl *EvalTemplate;
+      FunctionDecl *EvalDecl;
       
    public:
       
       clang::Sema *SemaPtr; // Sema is needed
       
       typedef DeclVisitor<ASTTransformVisitor> BaseDeclVisitor;
-      typedef StmtVisitor<ASTTransformVisitor, Stmt*> BaseStmtVisitor;
+      typedef StmtVisitor<ASTTransformVisitor, EvalInfo*> BaseStmtVisitor;
       
-      FunctionDecl *getEvalTemplate(){ return EvalTemplate; }
-      void setEvalTemplate(FunctionDecl *FDecl){ EvalTemplate = FDecl; }
+      FunctionDecl *getEvalDecl(){ return EvalDecl; }
+      void setEvalDecl(FunctionDecl *FDecl){ EvalDecl = FDecl; }
       
       //region Constructors
       ASTTransformVisitor(Sema *SemaPtr) : SemaPtr(SemaPtr), CurrentDecl(0){};
@@ -65,12 +67,12 @@ namespace cling {
 
       //region StmtVisitor
 
-      Stmt *VisitStmt(Stmt *Node);
-      Stmt *VisitCompoundStmt(CompoundStmt *S);
-      Stmt *VisitImplicitCastExpr(ImplicitCastExpr *ICE);
-      Stmt *VisitDeclRefExpr(DeclRefExpr *DRE);
-      Stmt *VisitCallExpr(CallExpr *CE);
-      Stmt *VisitBinaryOperator(BinaryOperator *binOp);
+      EvalInfo *VisitStmt(Stmt *Node);
+      EvalInfo *VisitCompoundStmt(CompoundStmt *S);
+      EvalInfo *VisitImplicitCastExpr(ImplicitCastExpr *ICE);
+      EvalInfo *VisitDeclRefExpr(DeclRefExpr *DRE);
+      EvalInfo *VisitCallExpr(CallExpr *CE);
+      EvalInfo *VisitBinaryOperator(BinaryOperator *binOp);
       
       //endregion
       
