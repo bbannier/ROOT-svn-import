@@ -132,12 +132,8 @@ TMVA::Reader::Reader( const TString& theOption, Bool_t verbose )
 
    fLogger = new MsgLogger(this);
 
-   //    DataSetManager::CreateInstance(fDataInputHandler); // DSMTEST removed
-   //    DataSetManager::Instance().AddDataSetInfo(fDataSetInfo); // DSMTEST removed
-   fDataSetManager = new DataSetManager( fDataInputHandler ); // DSMTEST
-   fDataSetManager->AddDataSetInfo(fDataSetInfo); // DSMTEST
-
-
+   fDataSetManager = new DataSetManager( fDataInputHandler ); 
+   fDataSetManager->AddDataSetInfo(fDataSetInfo); 
 
    SetConfigName( GetName() );
    DeclareOptions();

@@ -133,8 +133,6 @@ namespace TMVA {
       void     AddSpectator( const TString& expression, Float_t* );
       void     AddSpectator( const TString& expression, Int_t* );
 
-
-
    private:
 
       DataSetManager* fDataSetManager; // DSMTEST
@@ -158,12 +156,12 @@ namespace TMVA {
 
       void DeclareOptions();
 
-      Bool_t    fVerbose;    // verbosity
-      Bool_t    fSilent;     // silent mode
-      Bool_t    fColor;      // color mode
-      Bool_t    fCalculateError; // error calculation mode
+      Bool_t    fVerbose;            // verbosity
+      Bool_t    fSilent;             // silent mode
+      Bool_t    fColor;              // color mode
+      Bool_t    fCalculateError;     // error calculation mode
 
-      Double_t  fMvaEventError; // per-event error returned by MVA
+      Double_t  fMvaEventError;      // per-event error returned by MVA
       Double_t  fMvaEventErrorUpper; // per-event error returned by MVA
 
       std::map<TString, IMethod*> fMethodMap; // map of methods

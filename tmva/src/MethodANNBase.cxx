@@ -420,7 +420,7 @@ void TMVA::MethodANNBase::AddPreLinks(TNeuron* neuron, TObjArray* prevLayer)
 void TMVA::MethodANNBase::InitWeights()
 {
    // initialize the synapse weights randomly
-   PrintMessage("initializing weights");
+   PrintMessage("Initializing weights");
    
    // init synapse weights
    Int_t numSynapses = fSynapses->GetEntriesFast();
@@ -435,7 +435,7 @@ void TMVA::MethodANNBase::InitWeights()
 void TMVA::MethodANNBase::ForceWeights(vector<Double_t>* weights)
 {
    // force the synapse weights
-   PrintMessage("forcing weights");
+   PrintMessage("Forcing weights");
 
    Int_t numSynapses = fSynapses->GetEntriesFast();
    TSynapse* synapse;
@@ -515,7 +515,7 @@ void TMVA::MethodANNBase::PrintNetwork() const
    if (!Debug()) return;
 
    Log() << kINFO << Endl;
-   PrintMessage( "printing network " );
+   PrintMessage( "Printing network " );
    Log() << kINFO << "-------------------------------------------------------------------" << Endl;
 
    TObjArray* curLayer;
@@ -952,7 +952,7 @@ void TMVA::MethodANNBase::CreateWeightMonitoringHists( const TString& bulkname,
 void TMVA::MethodANNBase::WriteMonitoringHistosToFile() const
 {
    // write histograms to file
-   PrintMessage(Form("write special histos to file: %s", BaseDir()->GetPath()), kTRUE);
+   PrintMessage(Form("Write special histos to file: %s", BaseDir()->GetPath()), kTRUE);
 
    if (fEstimatorHistTrain) fEstimatorHistTrain->Write();
    if (fEstimatorHistTest ) fEstimatorHistTest ->Write();

@@ -6,5 +6,5 @@ For December 2010 release (5.28):
 * unit test breaks von Event::SetWeight
 * MulticlassApplication.C breaks (while identical .cxx version works)
 * Parallel coordinates crashes
-* PDEFoam crashes
-* Probleme im CreateMvaPDF for Fisher
+* Problem im CreateMvaPDF for Fisher
+* crash of: root -l TMVAClassificationApplication.C\(\"LD\"\) (.cxx version works)

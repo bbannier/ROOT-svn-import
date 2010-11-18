@@ -1,6 +1,6 @@
 // @(#)root/tmva $Id$
 /**********************************************************************************
- * Project   : TMVA - a Root-integrated toolkit for multivariate data analysis    *
+ * Project   : TMVA - a ROOT-integrated toolkit for multivariate data analysis    *
  * Package   : TMVA                                                               *
  * Root Macro: TMVAClassification                                                 *
  *                                                                                *
@@ -13,14 +13,18 @@
  * The methods to be used can be switched on and off by means of booleans, or     *
  * via the prompt command, for example:                                           *
  *                                                                                *
- *    root -l TMVAClassification.C\(\"Fisher,Likelihood\"\)                       *
+ *    root -l ./TMVAClassification.C\(\"Fisher,Likelihood\"\)                     *
  *                                                                                *
  * (note that the backslashes are mandatory)                                      *
- * If no method given, a default set is used.                                     *
+ * If no method given, a default set of classifiers is used.                      *
  *                                                                                *
  * The output file "TMVA.root" can be analysed with the use of dedicated          *
  * macros (simply say: root -l <macro.C>), which can be conveniently              *
  * invoked through a GUI that will appear at the end of the run of this macro.    *
+ * Launch the GUI via the command:                                                *
+ *                                                                                *
+ *    root -l ./TMVAGui.C                                                         *
+ *                                                                                *
  **********************************************************************************/
 
 #include <cstdlib>
@@ -35,7 +39,6 @@
 #include "TObjString.h"
 #include "TSystem.h"
 #include "TROOT.h"
-#include "TPluginManager.h"
 
 #include "TMVAGui.C"
 
@@ -69,62 +72,67 @@ void TMVAClassification( TString myMethodList = "" )
    // default MVA methods to be trained + tested
    std::map<std::string,int> Use;
 
+   // --- Cut optimisation
    Use["Cuts"]            = 1;
    Use["CutsD"]           = 1;
-   Use["CutsPCA"]         = 1;
-   Use["CutsGA"]          = 1;
-   Use["CutsSA"]          = 1;
-   // ---
+   Use["CutsPCA"]         = 0;
+   Use["CutsGA"]          = 0;
+   Use["CutsSA"]          = 0;
+   // 
+   // --- 1-dimensional likelihood ("naive Bayes estimator")
    Use["Likelihood"]      = 1;
-   Use["LikelihoodD"]     = 1; // the "D" extension indicates decorrelated input variables (see option strings)
+   Use["LikelihoodD"]     = 0; // the "D" extension indicates decorrelated input variables (see option strings)
    Use["LikelihoodPCA"]   = 1; // the "PCA" extension indicates PCA-transformed input variables (see option strings)
-   Use["LikelihoodKDE"]   = 1;
-   Use["LikelihoodMIX"]   = 1;
-   // ---
+   Use["LikelihoodKDE"]   = 0;
+   Use["LikelihoodMIX"]   = 0;
+   //
+   // --- Mutidimensional likelihood and Nearest-Neighbour methods
    Use["PDERS"]           = 1;
-   Use["PDERSD"]          = 1;
-   Use["PDERSPCA"]        = 1;
-   Use["PDERSkNN"]        = 1; // depreciated until further notice
+   Use["PDERSD"]          = 0;
+   Use["PDERSPCA"]        = 0;
    Use["PDEFoam"]         = 1;
-   Use["PDEFoamBoost"]    = 1;
-   // --
-   Use["KNN"]             = 1;
-   // ---
-   Use["HMatrix"]         = 1;
-   Use["Fisher"]          = 1;
-   Use["FisherG"]         = 1;
-   Use["BoostedFisher"]   = 1;
-   Use["LD"]              = 1;
-   // ---
-   Use["FDA_GA"]          = 1;
-   Use["FDA_SA"]          = 1;
-   Use["FDA_MC"]          = 1;
-   Use["FDA_MT"]          = 1;
-   Use["FDA_GAMT"]        = 1;
-   Use["FDA_MCMT"]        = 1;
-   // ---
-   Use["MLP"]             = 1; // this is the recommended ANN
-   Use["MLPBFGS"]         = 1; // recommended ANN with optional training method
-   Use["MLPBNN"]          = 1;  // recommended ANN with BFGS training method and bayesian regulator
-   Use["CFMlpANN"]        = 1; // *** missing
-   Use["TMlpANN"]         = 1;
-   // ---
+   Use["PDEFoamBoost"]    = 0; // uses generalised MVA method boosting
+   Use["KNN"]             = 1; // k-nearest neighbour method
+   //
+   // --- Linear Discriminant Analysis
+   Use["LD"]              = 1; // Linear Discriminant identical to Fisher
+   Use["Fisher"]          = 0;
+   Use["FisherG"]         = 0;
+   Use["BoostedFisher"]   = 0; // uses generalised MVA method boosting
+   Use["HMatrix"]         = 0;
+   //
+   // --- Function Discriminant analysis
+   Use["FDA_GA"]          = 1; // minimisation of user-defined function using Genetics Algorithm
+   Use["FDA_SA"]          = 0;
+   Use["FDA_MC"]          = 0;
+   Use["FDA_MT"]          = 0;
+   Use["FDA_GAMT"]        = 0;
+   Use["FDA_MCMT"]        = 0;
+   //
+   // --- Neural Networks (all are feed-forward Multilayer Perceptrons)
+   Use["MLP"]             = 0; // Recommended ANN
+   Use["MLPBFGS"]         = 0; // Recommended ANN with optional training method
+   Use["MLPBNN"]          = 1; // Recommended ANN with BFGS training method and bayesian regulator
+   Use["CFMlpANN"]        = 0; // Depreciated ANN from ALEPH
+   Use["TMlpANN"]         = 0; // ROOT's own ANN
+   //
+   // --- Support Vector Machine 
    Use["SVM"]             = 1;
-   // ---
-   Use["BDT"]             = 1;
-   Use["BDTD"]            = 0;
-   Use["BDTG"]            = 1;
-   Use["BDTB"]            = 0;
-   // ---
+   // 
+   // --- Boosted Decision Trees
+   Use["BDT"]             = 1; // uses Adaptive Boost
+   Use["BDTG"]            = 0; // uses Gradient Boost
+   Use["BDTB"]            = 0; // uses Bagging
+   Use["BDTD"]            = 0; // decorrelation + Adaptive Boost
+   // 
+   // --- Friedman's RuleFit method, ie, an optimised series of cuts ("rules")
    Use["RuleFit"]         = 1;
-   // ---
-   Use["Plugin"]          = 0;
    // ---------------------------------------------------------------
 
    std::cout << std::endl;
    std::cout << "==> Start TMVAClassification" << std::endl;
 
-   // Choose methods (don't look at this code - not of interest)
+   // Select methods (don't look at this code - not of interest)
    if (myMethodList != "") {
       for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) it->second = 0;
 
@@ -202,8 +210,7 @@ void TMVAClassification( TString myMethodList = "" )
    Double_t signalWeight     = 1.0;
    Double_t backgroundWeight = 1.0;
    
-   // the following method is the prefered one:
-   // you can add an arbitrary number of signal or background trees
+   // You can add an arbitrary number of signal or background trees
    factory->AddSignalTree    ( signal,     signalWeight     );
    factory->AddBackgroundTree( background, backgroundWeight );
    
@@ -294,17 +301,17 @@ void TMVAClassification( TString myMethodList = "" )
       factory->BookMethod( TMVA::Types::kCuts, "CutsSA",
                            "!H:!V:FitMethod=SA:EffSel:MaxCalls=150000:KernelTemp=IncAdaptive:InitialTemp=1e+6:MinTemp=1e-6:Eps=1e-10:UseDefaultScale" );
 
-   // Likelihood
+   // Likelihood ("naive Bayes estimator")
    if (Use["Likelihood"])
       factory->BookMethod( TMVA::Types::kLikelihood, "Likelihood",
                            "H:!V:!TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmoothBkg[1]=10:NSmooth=1:NAvEvtPerBin=50" );
 
-   // Use a decorrelated likelihood
+   // Decorrelated likelihood
    if (Use["LikelihoodD"])
       factory->BookMethod( TMVA::Types::kLikelihood, "LikelihoodD",
                            "!H:!V:TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmooth=5:NAvEvtPerBin=50:VarTransform=Decorrelate" );
 
-   // Use a PCA-transformed likelihood
+   // PCA-transformed likelihood
    if (Use["LikelihoodPCA"])
       factory->BookMethod( TMVA::Types::kLikelihood, "LikelihoodPCA",
                            "!H:!V:!TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmooth=5:NAvEvtPerBin=50:VarTransform=PCA" ); 
@@ -327,10 +334,6 @@ void TMVAClassification( TString myMethodList = "" )
       factory->BookMethod( TMVA::Types::kPDERS, "PDERS",
                            "!H:!V:NormTree=T:VolumeRangeMode=Adaptive:KernelEstimator=Gauss:GaussSigma=0.3:NEventsMin=400:NEventsMax=600" );
 
-   if (Use["PDERSkNN"])
-      factory->BookMethod( TMVA::Types::kPDERS, "PDERSkNN",
-                           "!H:!V:VolumeRangeMode=kNN:KernelEstimator=Gauss:GaussSigma=0.3:NEventsMin=400:NEventsMax=600" );
-
    if (Use["PDERSD"])
       factory->BookMethod( TMVA::Types::kPDERS, "PDERSD",
                            "!H:!V:VolumeRangeMode=Adaptive:KernelEstimator=Gauss:GaussSigma=0.3:NEventsMin=400:NEventsMax=600:VarTransform=Decorrelate" );
@@ -352,11 +355,16 @@ void TMVAClassification( TString myMethodList = "" )
    if (Use["KNN"])
       factory->BookMethod( TMVA::Types::kKNN, "KNN",
                            "H:nkNN=20:ScaleFrac=0.8:SigmaFact=1.0:Kernel=Gaus:UseKernel=F:UseWeight=T:!Trim" );
+
    // H-Matrix (chi2-squared) method
    if (Use["HMatrix"])
       factory->BookMethod( TMVA::Types::kHMatrix, "HMatrix", "!H:!V" );
 
-   // Fisher discriminant
+   // Linear discriminant (same as Fisher discriminant)
+   if (Use["LD"])
+      factory->BookMethod( TMVA::Types::kLD, "LD", "H:!V:VarTransform=None" );
+
+   // Fisher discriminant (same as LD)
    if (Use["Fisher"])
       factory->BookMethod( TMVA::Types::kFisher, "Fisher", "H:!V:Fisher:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=50:NsmoothMVAPdf=10" );
 
@@ -367,10 +375,6 @@ void TMVAClassification( TString myMethodList = "" )
    // Composite classifier: ensemble (tree) of boosted Fisher classifiers
    if (Use["BoostedFisher"])
       factory->BookMethod( TMVA::Types::kFisher, "BoostedFisher", "H:!V:Boost_Num=20:Boost_Transform=log:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.2");
-
-   // Linear discriminant (same as Fisher)
-   if (Use["LD"])
-      factory->BookMethod( TMVA::Types::kLD, "LD", "H:!V:VarTransform=None" );
 
    // Function discrimination analysis (FDA) -- test of various fitters - the recommended one is Minuit (or GA or SA)
    if (Use["FDA_MC"])
@@ -441,7 +445,7 @@ void TMVAClassification( TString myMethodList = "" )
       factory->BookMethod( TMVA::Types::kRuleFit, "RuleFit",
                            "H:!V:RuleFitModule=RFTMVA:Model=ModRuleLinear:MinImp=0.001:RuleMinDist=0.001:NTrees=20:fEventsMin=0.01:fEventsMax=0.5:GDTau=-1.0:GDTauPrec=0.01:GDStep=0.01:GDNSteps=10000:GDErrScale=1.02" );
 
-   // For an example of the category classifier, see: TMVAClassificationCategory
+   // For an example of the category classifier usage, see: TMVAClassificationCategory
 
    // --------------------------------------------------------------------------------------------------
 
