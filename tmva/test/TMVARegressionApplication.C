@@ -88,9 +88,8 @@ void TMVARegressionApplication( TString myMethodList = "" )
 
    TMVA::Reader *reader = new TMVA::Reader( "!Color:!Silent" );    
 
-   // create a set of variables and declare them to the reader
-   // - the variable names must corresponds in name and type to 
-   // those given in the weight file(s) that you use
+   // Create a set of variables and declare them to the reader
+   // - the variable names MUST corresponds in name and type to those given in the weight file(s) used
    Float_t var1, var2;
    reader->AddVariable( "var1", &var1 );
    reader->AddVariable( "var2", &var2 );

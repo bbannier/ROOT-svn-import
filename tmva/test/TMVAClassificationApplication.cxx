@@ -18,7 +18,6 @@
 #include "TString.h"
 #include "TSystem.h"
 #include "TROOT.h"
-#include "TPluginManager.h"
 #include "TStopwatch.h"
 
 #include "TMVA/Reader.h"
