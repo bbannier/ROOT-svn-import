@@ -155,15 +155,12 @@ cling::IncrementalASTParser::~IncrementalASTParser()
 
 clang::CompilerInstance*
 cling::IncrementalASTParser::parse(llvm::StringRef src,
-                                   int nTopLevelDecls /* = 1 */,
-                                   clang::ASTConsumer* AddConsumer /* = 0 */) {
+  clang::ASTConsumer* AddConsumer /* = 0 */)
+{
   // Add src to the memory buffer, parse it, and add it to
   // the AST. Returns the CompilerInstance (and thus the AST).
   // Diagnostics are reset for each call of parse: they are only covering
   // src.
-  // If nTopLevelDecls > 0, return after parsing that many top level
-  // declarations.
-
 
   clang::Preprocessor& PP = m_CI->getPreprocessor();
   m_CI->getDiagnosticClient().BeginSourceFile(m_CI->getLangOpts(), &PP);
@@ -197,7 +194,7 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
   else {
     atEOF = m_Parser->ParseTopLevelDecl(ADecl);
   }
-  while (!atEOF && nTopLevelDecls-- != 0) {
+  while (!atEOF) {
     // Not end of file.
     // If we got a null return and something *was* parsed, ignore it.  This
     // is due to a top-level semicolon, an action override, or a parse error
