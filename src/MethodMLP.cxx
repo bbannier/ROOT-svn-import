@@ -277,20 +277,18 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
             Double_t dt = v - targetValue;
             d += (dt*dt);
          }
-         //         d = TMath::Sqrt(d);
-         //	 estimator += (d*d)*w;
          estimator += d*w;
       } else if (DoMulticlass() ) {
          UInt_t cls = ev->GetClass();
          for (UInt_t icls = 0; icls < nClasses; icls++) {
+            Double_t desired = (icls==cls) ? 1.0 : 0.0;
             v = GetOutputNeuron( icls )->GetActivationValue();
-            Double_t dt = v - ( icls==cls ? 1.0 : 0.0 );
-            d += (dt*dt);
-         }
-         //         d = TMath::Sqrt(d);
+            if (fEstimator==kMSE) d = (desired-v)*(desired-v);
+            else if (fEstimator==kCE) d = -2*(desired*TMath::Log(v)+(1-desired)*TMath::Log(1-v)); 
+          }
          estimator += d*w; //zjh
       } else {
-         Double_t desired = GetDesiredOutput( ev );
+         Double_t desired =  DataInfo().IsSignal(ev)?1.:0.;
          v = GetOutputNeuron()->GetActivationValue();
          if (fEstimator==kMSE) d = (desired-v)*(desired-v);                         //zjh
          else if (fEstimator==kCE) d = -2*(desired*TMath::Log(v)+(1-desired)*TMath::Log(1-v));     //zjh
