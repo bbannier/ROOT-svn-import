@@ -139,7 +139,7 @@ void TMVA::MethodANNBase::DeclareOptions()
 void TMVA::MethodANNBase::ProcessOptions()
 {
    // do nothing specific at this moment
-  if      ( DoRegression() || DoMulticlass())  fEstimatorS = "MSE";    //zjh
+  if      ( DoRegression())  fEstimatorS = "MSE";    //zjh
   if      (fEstimatorS == "MSE" )  fEstimator = kMSE;    //zjh  (to test all others)
   else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
   vector<Int_t>* layout = ParseLayoutString(fLayerSpec);
@@ -650,20 +650,20 @@ const std::vector<Float_t> &TMVA::MethodANNBase::GetMulticlassValues()
    fMulticlassReturnVal->clear();
    std::vector<Float_t> temp;
 
-   for (UInt_t itgt = 0, itgtEnd = DataInfo().GetNClasses(); itgt < itgtEnd; itgt++) {
+   UInt_t nClasses = DataInfo().GetNClasses();
+   for (UInt_t itgt = 0, itgtEnd = nClasses; itgt < itgtEnd; itgt++) {
       temp.push_back( ((TNeuron*)outputLayer->At(itgt))->GetActivationValue() );
    }
 
-   UInt_t nClasses = DataInfo().GetNClasses();
    for(UInt_t iClass=0; iClass<nClasses; iClass++){
       Double_t norm = 0.0;
       for(UInt_t j=0;j<nClasses;j++){
          if(iClass!=j)
-            // norm+=exp(temp[j]-temp[iClass]);
-            norm+=temp[j]; //because NN output is already between 0 and 1
+            norm+=exp(temp[j]-temp[iClass]);
+         //norm+=temp[j]; //because NN output is already between 0 and 1
       }
-      //(*fMulticlassReturnVal).push_back(1.0/(1.0+norm));
-      (*fMulticlassReturnVal).push_back(temp[iClass]/(temp[iClass]+norm));//because NN output is already between 0 and 1
+      (*fMulticlassReturnVal).push_back(1.0/(1.0+norm));
+      //(*fMulticlassReturnVal).push_back(temp[iClass]/(temp[iClass]+norm));//because NN output is already between 0 and 1
    }
 
    return *fMulticlassReturnVal;
