@@ -12,6 +12,7 @@
 #include <string>
 #include <iostream>
 #include <cassert>
+#include <vector>
 
 #include "TTree.h"
 #include "TString.h"
@@ -38,21 +39,24 @@ namespace UnitTesting
     TTree*          theTree;
 
   private:
-    TMVA::Factory* _factory; 
-    TMVA::MethodBase* _theMethod;
-	TMVA::Types::EMVA _methodType;
-	TString _methodTitle;
-	TString _methodOption;
+     TMVA::Factory* _factory; 
+     TMVA::MethodBase* _theMethod;
+     TMVA::Types::EMVA _methodType;
+     TString _methodTitle;
+     TString _methodOption;
 	
-    double _upROCLimit;
-    double _lowROCLimit;
-    double _ROCValue;
+     double _upROCLimit;
+     double _lowROCLimit;
+     double _ROCValue;
 
-    bool ROCIntegralWithinInterval();
+     //TString _OutputROOTFile;
+     std::vector<TString>* _VariableNames;
+     std::vector<TString>* _TreeVariableNames;
+     bool ROCIntegralWithinInterval();
 
-    // disallow copy constructor and assignment
-    MethodUnitTestWithROCLimits(const MethodUnitTestWithROCLimits&);
-    MethodUnitTestWithROCLimits& operator=(const MethodUnitTestWithROCLimits&);
+     // disallow copy constructor and assignment
+     MethodUnitTestWithROCLimits(const MethodUnitTestWithROCLimits&);
+     MethodUnitTestWithROCLimits& operator=(const MethodUnitTestWithROCLimits&);
   };
 } // namespace UnitTesting
 #endif // METHODUNITTESTWITHROCLIMITS_H
