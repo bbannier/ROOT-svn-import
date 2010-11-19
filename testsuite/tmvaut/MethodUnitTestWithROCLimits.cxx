@@ -1,6 +1,13 @@
 #include "MethodUnitTestWithROCLimits.h"
 #include "TFile.h"
+#include "TROOT.h"
+#include "TSystem.h"
+#include "TMath.h"
 #include "TMVA/MethodBase.h"
+#include "TMVA/Reader.h"
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 using namespace UnitTesting;
@@ -9,8 +16,19 @@ using namespace TMVA;
 MethodUnitTestWithROCLimits::MethodUnitTestWithROCLimits(const Types::EMVA& theMethod, const TString& methodTitle, const TString& theOption,
 														double lowLimit, double upLimit,
 														const std::string & name,const std::string & filename, std::ostream* sptr) :
- UnitTest((string)methodTitle, __FILE__), _methodType(theMethod) , _methodTitle(methodTitle), _methodOption(theOption), _upROCLimit(upLimit), _lowROCLimit(lowLimit)
+   UnitTest((string)methodTitle, __FILE__), _methodType(theMethod) , _methodTitle(methodTitle), _methodOption(theOption), _upROCLimit(upLimit), _lowROCLimit(lowLimit), _VariableNames(0), _TreeVariableNames(0)
 {
+   //_OutputROOTFile="TMVA.root";
+   _VariableNames  = new std::vector<TString>(0);
+   _TreeVariableNames = new std::vector<TString>(0);
+   _VariableNames->push_back("var1+var2");
+   _VariableNames->push_back("var1-var2");
+   _VariableNames->push_back("var3");
+   _VariableNames->push_back("var4");
+   _TreeVariableNames->push_back("myvar1");
+   _TreeVariableNames->push_back("myvar2");
+   _TreeVariableNames->push_back("var3");
+   _TreeVariableNames->push_back("var4");
 }
 
 
@@ -25,9 +43,11 @@ bool MethodUnitTestWithROCLimits::ROCIntegralWithinInterval()
 
 void MethodUnitTestWithROCLimits::run()
 {
-	// FIXME:: create _this_ file or rather somewhere else?
-  TString outfileName( "TMVA.root" );
-  TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
+   TString outfileName( "TMVA.root" );                                                                                                                       
+   TFile* outputFile = TFile::Open( outfileName, "RECREATE" );         
+   //TString outfileName("TMVA.root");//_OutputROOTFile;
+   //cout << "outfile="<<outfileName<<endl;
+   //TFile* outputFile = TFile::Open(outfileName, "RECREATE" );
 
 // FIXME:: if file can't be created do something more?
   if(!outputFile)
@@ -38,11 +58,12 @@ void MethodUnitTestWithROCLimits::run()
   string factoryOptions( "!V:Silent:Transformations=I;D;P;G,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
 
   Factory* factory = new Factory( "TMVAUnitTesting", outputFile, factoryOptions );
-  
-  factory->AddVariable( "myvar1 := var1+var2", 'F' );
-  factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
-  factory->AddVariable( "var3",                "Variable 3", "units", 'F' );
-  factory->AddVariable( "var4",                "Variable 4", "units", 'F' );
+  // factory->AddVariable( "myvar1 := var1+var2", 'F' );
+  // factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
+  factory->AddVariable( Form("%s  := %s",_TreeVariableNames->at(0).Data(), _VariableNames->at(0).Data()), 'F' );
+  factory->AddVariable( Form("%s  := %s",_TreeVariableNames->at(1).Data(), _VariableNames->at(1).Data()), "Expression 2", "",'F' );
+  factory->AddVariable( _VariableNames->at(2),                "Variable 3", "units", 'F' );
+  factory->AddVariable( _VariableNames->at(3),                "Variable 4", "units", 'F' );
   
   TFile* input(0);
 // FIXME:: give the filename of the sample somewhere else?
@@ -98,4 +119,101 @@ void MethodUnitTestWithROCLimits::run()
   }
   outputFile->Close();
   delete factory;
+  if (outputFile) delete outputFile;
+  // setup test tree access
+  TFile* testFile = new TFile("TMVA.root");
+  TTree* testTree = (TTree*)(testFile->Get("TestTree"));
+  float testTreeVal,readerVal1,readerVal2,readerVal3;
+  vector<float> testvar(_VariableNames->size());
+  vector<double> testvarDouble(_VariableNames->size());
+  for (UInt_t i=0;i<_VariableNames->size();i++)
+     testTree->SetBranchAddress(_TreeVariableNames->at(i),&testvar[i]);
+  testTree->SetBranchAddress(_methodTitle.Data(),&testTreeVal);
+  //testTree->SetBranchAddress("FisherTest/F",&testTreeVal);
+
+  TMVA::Reader *reader = new TMVA::Reader( "!Color:Silent" );
+  for (UInt_t i=0;i<_VariableNames->size();i++){
+     cout << "var="<<_VariableNames->at(i)<<endl;
+     reader->AddVariable( _VariableNames->at(i),&testvar[i]);
+  }
+  TString readerName = _methodTitle + TString(" method");
+  TString dir    = "weights/TMVAUnitTesting_";
+  TString weightfile=dir+_methodTitle+".weights.xml";
+  reader->BookMVA( readerName, weightfile) ;
+
+  // run the reader application and compare to test tree  
+  double diff, maxdiff = 0., sumdiff=0., previousVal=0.;
+  int stuckCount=0, nevt= TMath::Min((int) testTree->GetEntries(),100);
+  
+  for (Long64_t ievt=0;ievt<nevt;ievt++) {
+     //if (ievt%1000 == 0) std::cout << "--- ... Processing event: " << ievt << " of " <<testTree->GetEntries() <<std::endl;
+     testTree->GetEntry(ievt);
+     for (UInt_t i=0;i<_VariableNames->size();i++)
+        testvarDouble[i]= testvar[i];
+     readerVal1=reader->EvaluateMVA( readerName);     
+     diff = TMath::Abs(readerVal1-testTreeVal);
+     maxdiff = diff > maxdiff ? diff : maxdiff;
+     sumdiff += diff;
+
+     // compare also different reader usages
+     readerVal2=reader->EvaluateMVA(testvar,readerName);
+     diff = TMath::Abs(readerVal1-readerVal2);
+     maxdiff = diff > maxdiff ? diff : maxdiff;
+     sumdiff += diff;
+     readerVal3=reader->EvaluateMVA(testvarDouble,readerName);
+     diff = TMath::Abs(readerVal1-readerVal3);
+     maxdiff = diff > maxdiff ? diff : maxdiff;
+     sumdiff += diff;
+     if (ievt>0 && readerVal1==previousVal) stuckCount++; 
+     previousVal=readerVal1;
+  }
+  sumdiff=sumdiff/testTree->GetEntries();
+  test_(maxdiff <1.e-4);
+  test_(sumdiff <1.e-5);
+  test_(stuckCount<testTree->GetEntries()/10);
+  testFile->Close();
+  delete reader;
+  cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<endl;
+  cout << "starting standalone c-code test"<<endl;
+  // create generic macro
+  TString macroFileName="testmakeclass.C";
+  TString methodTypeName = Types::Instance().GetMethodName(_methodType);
+  ofstream fout( macroFileName );
+  fout << "// generic macro file to test TMVA reader and standalone C code " << std::endl;
+  fout << Form("#include \"weights/TMVAUnitTesting_%s.class.C\"",_methodTitle.Data()) << std::endl;
+  fout << "bool testmakeclass(){" << std::endl;
+  fout << "std::vector<std::string> vars(4);" << std::endl; // fix me 4
+  fout << "std::vector<double> val(4);" << std::endl;  // fix me 4
+  for (UInt_t i=0;i<_VariableNames->size();i++)
+     fout << Form("vars[%d]=\"%s\";",i,_VariableNames->at(i).Data()) << std::endl;  
+  fout << Form("Read%s  aa(vars);", _methodTitle.Data()) << std::endl;
+  fout << "TFile* testFile = new TFile(\"TMVA.root\");" << std::endl; // fix me hardcode TMVA.root
+  fout << " TTree* testTree = (TTree*)(testFile->Get(\"TestTree\"));" << std::endl;
+  fout << Form("vector<float> testvar(%d);",_VariableNames->size()) << std::endl;
+  fout << Form("vector<double> testvarDouble(%d);",_VariableNames->size()) << std::endl;
+  for (UInt_t j=0;j<_VariableNames->size();j++)
+     fout << Form("testTree->SetBranchAddress(\"%s\",&testvar[%d]);",_TreeVariableNames->at(j).Data(),j) << std::endl;
+  fout << "float testTreeVal,diff,maxdiff,sumdiff;" << std::endl;
+  fout << Form("testTree->SetBranchAddress(\"%s\",&testTreeVal);",_methodTitle.Data()) << std::endl;
+ fout << "Long64_t nevt= TMath::Min((int) testTree->GetEntries(),100);" << std::endl;
+  fout << "  for (Long64_t ievt=0; ievt<nevt;ievt++) {" << std::endl;
+  fout << "    testTree->GetEntry(ievt);" << std::endl;
+  fout << Form("for (UInt_t i=0;i<%d;i++) testvarDouble[i]= testvar[i];",_VariableNames->size()) << std::endl;
+  fout << "double ccode_val = aa.GetMvaValue(testvarDouble);" << std::endl;
+
+  fout << "diff = TMath::Abs(ccode_val-testTreeVal);" << std::endl;
+  fout << "maxdiff = diff > maxdiff ? diff : maxdiff;" << std::endl;
+  fout << "sumdiff += diff;" << std::endl;
+  fout << "}" << std::endl;
+  fout << "sumdiff=sumdiff/testTree->GetEntries();" << std::endl;
+  fout << "if (maxdiff >1.e-4) return false;" << std::endl;
+  fout << "if (sumdiff >1.e-5) return false;" << std::endl;
+  fout << "testFile->Close();" << std::endl;
+  fout << "return true;" << std::endl;
+  fout << "}" << std::endl;
+  
+  gROOT->ProcessLine(Form(".L %s",macroFileName.Data()));
+  test_(gROOT->ProcessLine("testmakeclass()"));
+
+
 }

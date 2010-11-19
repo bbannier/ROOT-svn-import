@@ -174,16 +174,18 @@ int main()
    UnitTestSuite TMVA_test("TMVA unit testing");
    
    TMVA_test.intro();
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFisher, "Fisher", 
+		"H:!V:Fisher:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=60:NsmoothMVAPdf=10" , 0.88, 0.98) );
+TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=200:HiddenLayers=N+5:TestRate=5:!UseRegulator" , 0.88, 0.98) ); 
+  //  TMVA_test.addTest(new utEvent);
+//    TMVA_test.addTest(new utVariableInfo);
+//    TMVA_test.addTest(new utDataSetInfo);
+//    TMVA_test.addTest(new utDataSet);
    
-   TMVA_test.addTest(new utEvent);
-   TMVA_test.addTest(new utVariableInfo);
-   TMVA_test.addTest(new utDataSetInfo);
-   TMVA_test.addTest(new utDataSet);
-   
-   addClassificationTests(TMVA_test, full);
-   addRegressionTests(TMVA_test, full);  
-   addDataInputTests(TMVA_test, full);  
-   addComplexClassificationTests(TMVA_test, full);
+//    addClassificationTests(TMVA_test, full);
+//    addRegressionTests(TMVA_test, full);  
+//    addDataInputTests(TMVA_test, full);  
+//    addComplexClassificationTests(TMVA_test, full);
 
    // run all
    TMVA_test.run();
