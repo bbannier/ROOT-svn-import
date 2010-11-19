@@ -428,7 +428,7 @@ namespace cling {
     //}
     //CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
     //CI->getDiagnosticClient().EndSourceFile();
-    unsigned err_count = CI->getDiagnostics().getNumErrors();
+    unsigned err_count = CI->getDiagnosticClient().getNumErrors();
     if (err_count) {
       wrapped.clear();
       return;

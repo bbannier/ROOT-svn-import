@@ -56,7 +56,7 @@ cling::InputValidator::validate(llvm::StringRef code) {
     }
   } while (Tok.isNot(clang::tok::eof));
   
-  if (m_CI->getDiagnostics().getNumErrors()) {
+  if (m_CI->getDiagnostics().hasErrorOccurred()) {
     return kParseError;
   }
   
