@@ -182,7 +182,22 @@ void MethodUnitTestWithROCLimits::run()
   testFile->Close();
   delete reader;
   //cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
-  bool _DoTestCCode=false;
+  bool _DoTestCCode=true; 
+  
+  // use: grep -A5  'MakeClassSpecific' ../tmva/src/Method*.cxx
+
+  if (_methodType==Types::kCuts  // non-implemented makeclass methods BayesClassifier CFMlpANN Committee Cuts KNN PDERS RuleFit SVM
+      || _methodType==Types::kBayesClassifier
+      || _methodType==Types::kCFMlpANN
+      || _methodType==Types::kCommittee
+      || _methodType==Types::kCuts
+      || _methodType==Types::kKNN
+      || _methodType==Types::kPDERS
+      || _methodType==Types::kRuleFit
+      || _methodType==Types::kPDEFoam
+      || _methodType==Types::kSVM
+      ) _DoTestCCode=false;
+
   if (_DoTestCCode){
      cout << "starting standalone c-code test"<<endl;
      // create generic macro
