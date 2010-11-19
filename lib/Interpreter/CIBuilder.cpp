@@ -96,13 +96,16 @@ cling::CIBuilder::createCI() const {
       //  the compiler options.
       //
       clang::TextDiagnosticBuffer *DiagsBuffer = new clang::TextDiagnosticBuffer();
-      // Diags takes ownership of DiagsBuffer
-      clang::Diagnostic Diags(DiagsBuffer);
+      clang::DiagnosticOptions DiagOpts;
+      clang::DiagnosticClient *Client = new clang::DiagnosticClient();
+      llvm::IntrusiveRefCntPtr<clang::Diagnostic> Diags = clang::CompilerInstance::createDiagnostics(DiagOpts, 0, 0, Client);
+
+
       clang::CompilerInvocation::CreateFromArgs
          (CI->getInvocation(),
           (m_argv + 1),
           (m_argv + m_argc),
-          Diags
+          *Diags
           );
       if (CI->getHeaderSearchOpts().UseBuiltinIncludes &&
          CI->getHeaderSearchOpts().ResourceDir.empty()) {
@@ -113,7 +116,7 @@ cling::CIBuilder::createCI() const {
       }
       // Output the buffered error messages now.
       DiagsBuffer->FlushDiagnostics(CI->getDiagnostics());
-      if (CI->getDiagnostics().getNumErrors()) {
+      if (CI->getDiagnostics().hasErrorOccurred()) {
          CI->takeLLVMContext();
          delete CI;
          CI = 0;

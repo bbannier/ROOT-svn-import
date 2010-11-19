@@ -259,7 +259,7 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
   //}
   //CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
   m_CI->getDiagnosticClient().EndSourceFile();
-  unsigned err_count = m_CI->getDiagnostics().getNumErrors();
+  unsigned err_count = m_CI->getDiagnosticClient().getNumErrors();
   if (err_count) {
     fprintf(stderr, "Interpreter::compileString: Parse failed!\n");
     return 0;
