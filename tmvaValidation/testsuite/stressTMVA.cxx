@@ -59,7 +59,7 @@ void addClassificationTests( UnitTestSuite& TMVA_test, bool full=true)
 		"H:!V:Fisher:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=60:NsmoothMVAPdf=10" , 0.88, 0.98) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFisher, "FisherG", "H:!V:VarTransform=Gauss" , 0.88, 0.98) ); 
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFisher, "BoostedFisher", 
-		"H:!V:Boost_Num=5:Boost_Transform=log:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.2", 0.88, 0.98) );
+		"H:!V:Boost_Num=10:Boost_Transform=log:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.2", 0.88, 0.98) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits(TMVA::Types::kLD, "LD","!H:!V", 0.88, 0.98) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LD2", "H:!V:VarTransform=None" , 0.88, 0.98) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN", "H:!V:VarTransform=N" , 0.88, 0.98) );
@@ -174,19 +174,17 @@ int main()
    UnitTestSuite TMVA_test("TMVA unit testing");
    
    TMVA_test.intro();
-   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFisher, "Fisher", 
-		"H:!V:Fisher:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=60:NsmoothMVAPdf=10" , 0.88, 0.98) );
-TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=200:HiddenLayers=N+5:TestRate=5:!UseRegulator" , 0.88, 0.98) ); 
-  //  TMVA_test.addTest(new utEvent);
-//    TMVA_test.addTest(new utVariableInfo);
-//    TMVA_test.addTest(new utDataSetInfo);
-//    TMVA_test.addTest(new utDataSet);
-   
-//    addClassificationTests(TMVA_test, full);
-//    addRegressionTests(TMVA_test, full);  
-//    addDataInputTests(TMVA_test, full);  
-//    addComplexClassificationTests(TMVA_test, full);
 
+   TMVA_test.addTest(new utEvent);
+   TMVA_test.addTest(new utVariableInfo);
+   TMVA_test.addTest(new utDataSetInfo);
+   TMVA_test.addTest(new utDataSet);
+   
+   addClassificationTests(TMVA_test, full);
+   addRegressionTests(TMVA_test, full);  
+   addDataInputTests(TMVA_test, full);  
+   addComplexClassificationTests(TMVA_test, full);
+   
    // run all
    TMVA_test.run();
    
