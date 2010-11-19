@@ -266,7 +266,7 @@ void TMVAClassificationApplication( TString myMethodList = "" )
       var1 = userVar1 + userVar2;
       var2 = userVar1 - userVar2;
 
-      // --- Return the MVA outputs and fill intto histograms
+      // --- Return the MVA outputs and fill into histograms
 
       if (Use["CutsGA"]) {
          // Cuts is a special case: give the desired signal efficienciy
