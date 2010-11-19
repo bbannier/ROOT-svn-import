@@ -8,6 +8,36 @@
 
 namespace cling {
 
+   //region Constructors
+
+   ASTTransformVisitor::ASTTransformVisitor()
+     : EvalDecl(0), SemaPtr(0), CurrentDecl(0)
+   {
+   }
+
+   ASTTransformVisitor::ASTTransformVisitor(Sema *SemaPtr)
+     : EvalDecl(0), SemaPtr(SemaPtr), CurrentDecl(0)
+   {
+   }
+
+   //endregion
+
+
+   //region Destructor
+
+   //ASTTransformVisitor::~ASTTransformVisitor()
+   //{
+   //   delete EvalDecl;
+   //   EvalDecl = 0;
+   //   delete SemaPtr;
+   //   SemaPtr = 0;
+   //   delete CurrentDecl;
+   //   CurrentDecl = 0;
+   //}
+   
+   //endregion
+
+
    //region DeclVisitor
 
    void ASTTransformVisitor::Visit(Decl *D) {
@@ -128,6 +158,7 @@ namespace cling {
       if (CallExpr *CE = dyn_cast<CallExpr>(lhs)){
          if (CE->isValueDependent() || CE->isTypeDependent()) {
             if (FunctionDecl *FDecl = getEvalDecl()) {               
+               setEvalDecl(0);
                if (/*Expr *lhsEx =*/ dyn_cast<Expr>(lhs)) {                  
                   // QualType lhsTy = lhsEx->getType();
                   // TemplateArgument Arg(lhsTy);

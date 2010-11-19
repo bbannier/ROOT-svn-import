@@ -30,26 +30,38 @@ namespace cling {
    class ASTTransformVisitor : public DeclVisitor<ASTTransformVisitor>,
                                public StmtVisitor<ASTTransformVisitor, EvalInfo> {
       
-   private:
-      FunctionDecl *EvalDecl;
+   private: // members
+      FunctionDecl *EvalDecl; // FIXME: ownership is what?
       
-   public:
+   public: // members
       
-      clang::Sema *SemaPtr; // Sema is needed
+      clang::Sema *SemaPtr; // Sema is needed, FIXME: ownership is what?
+      Decl *CurrentDecl; // FIXME: ownership is what?
+
+   public: // types
       
       typedef DeclVisitor<ASTTransformVisitor> BaseDeclVisitor;
       typedef StmtVisitor<ASTTransformVisitor, EvalInfo> BaseStmtVisitor;
-      
-      FunctionDecl *getEvalDecl(){ return EvalDecl; }
-      void setEvalDecl(FunctionDecl *FDecl){ EvalDecl = FDecl; }
+
+      using BaseStmtVisitor::Visit;
+
+   public:
       
       //region Constructors
-      ASTTransformVisitor(Sema *SemaPtr) : SemaPtr(SemaPtr), CurrentDecl(0){};
-      Decl *CurrentDecl;
-      
+      explicit ASTTransformVisitor();
+      ASTTransformVisitor(Sema *SemaPtr);
+
       //endregion
       
-      using BaseStmtVisitor::Visit;
+      //region Destructor
+
+      //~ASTTransformVisitor();
+      
+      //endregion
+
+      FunctionDecl *getEvalDecl() { return EvalDecl; }
+      void setEvalDecl(FunctionDecl *FDecl) { EvalDecl = FDecl; }
+      
       
       //region DeclVisitor
       
