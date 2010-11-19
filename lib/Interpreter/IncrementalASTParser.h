@@ -36,8 +36,7 @@ namespace cling {
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
     clang::CompilerInstance* parse(llvm::StringRef src,
-                                   int nTopLevelDecls = -1,
-                                   clang::ASTConsumer* Consumer = 0);
+      clang::ASTConsumer* Consumer = 0);
     void RequestParseInterrupt(const clang::SourceLocation& Loc) {
       m_InterruptHere = Loc; }
 

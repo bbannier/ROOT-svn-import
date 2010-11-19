@@ -251,7 +251,7 @@ namespace cling {
         new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
       
       // fprintf(stderr,"nonTUsrc=%s\n",nonTUsrc.c_str());
-      CI = m_IncrASTParser->parse(nonTUsrc, -1, consumer);
+      CI = m_IncrASTParser->parse(nonTUsrc, consumer);
 
       if (!CI) {
         wrapped.clear();
