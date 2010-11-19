@@ -190,7 +190,14 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
   clang::ASTConsumer* Consumer = &m_CI->getASTConsumer();
   clang::Parser::DeclGroupPtrTy ADecl;
   
-  while (!m_Parser->ParseTopLevelDecl(ADecl) && nTopLevelDecls-- != 0) {
+  bool atEOF = false;
+  if (m_Parser->getCurToken().is(tok::eof)) {
+    atEOF = true;
+  }
+  else {
+    atEOF = m_Parser->ParseTopLevelDecl(ADecl);
+  }
+  while (!atEOF && nTopLevelDecls-- != 0) {
     // Not end of file.
     // If we got a null return and something *was* parsed, ignore it.  This
     // is due to a top-level semicolon, an action override, or a parse error
@@ -205,7 +212,7 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
       Consumer->HandleTopLevelDecl(DGR);
 
       if (m_InterruptHere.isValid()) {
-        clang::Decl* D;
+        clang::Decl* D = 0;
         if (DGR.isSingleDecl()) {
           D = DGR.getSingleDecl();
         } else {
@@ -223,6 +230,12 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
         }
       } // valid m_InterruptHere
     } // ADecl
+    if (m_Parser->getCurToken().is(tok::eof)) {
+      atEOF = true;
+    }
+    else {
+      atEOF = m_Parser->ParseTopLevelDecl(ADecl);
+    }
   };
   // printf("end decl loop.\n");
 
