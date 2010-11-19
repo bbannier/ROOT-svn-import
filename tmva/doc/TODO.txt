@@ -1,9 +1,12 @@
 For December 2010 release (5.28):
 
-* makeClass und SVM 
-* makeClass und Cuts:
-    Error: Initialize() declared but not defined weights/TMVAUnitTesting_Cuts.class.C:134:                                                                       
-    Error: Clear() declared but not defined       
+* make it easier for the user to understand that makeclass is not implemented.
+  even an non-implemented makeclass creates a huge c-code output (which is garbage) 
+  We have not implemented makeclass for the following classes: 
+  BayesClassifier CFMlpANN Committee Cuts KNN PDERS RuleFit SVM
+  try  grep  'not implemented for class' tmva/src/Method*.cxx 
+  for a complete list
+
 * regression mit MLP und backpropagation (BP)
 * unit test breaks mit BDT
 * unit test breaks von Event::SetWeight
