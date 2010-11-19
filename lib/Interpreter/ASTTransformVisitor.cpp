@@ -28,7 +28,7 @@ namespace cling {
      
       if (D->isThisDeclarationADefinition()) {
          Stmt *Old = D->getBody();
-         Stmt *New = Visit(Old)->getNewStmt();
+         Stmt *New = Visit(Old).getNewStmt();
          if (Old != New)
             D->setBody(New);
       }
@@ -81,32 +81,32 @@ namespace cling {
    
    //region StmtVisitor
    
-   EvalInfo *ASTTransformVisitor::VisitStmt(Stmt *Node) {
+   EvalInfo ASTTransformVisitor::VisitStmt(Stmt *Node) {
       for (Stmt::child_iterator
               I = Node->child_begin(), E = Node->child_end(); I != E; ++I)
          if (*I)
-            *I = Visit(*I)->getNewStmt();
+            *I = Visit(*I).getNewStmt();
       
-      return new EvalInfo(Node, 0);
+      return EvalInfo(Node, 0);
    }
    
-   EvalInfo *ASTTransformVisitor::VisitCompoundStmt(CompoundStmt *S) {
+   EvalInfo ASTTransformVisitor::VisitCompoundStmt(CompoundStmt *S) {
       for (CompoundStmt::body_iterator
               I = S->body_begin(), E = S->body_end(); I != E; ++I) {
-         *I = Visit(*I)->getNewStmt();
+         *I = Visit(*I).getNewStmt();
       }
-      return new EvalInfo(S, 0);
+      return EvalInfo(S, 0);
    }
    
-   EvalInfo *ASTTransformVisitor::VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
-      return new EvalInfo(ICE, 0);
+   EvalInfo ASTTransformVisitor::VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
+      return EvalInfo(ICE, 0);
    }
    
-   EvalInfo *ASTTransformVisitor::VisitDeclRefExpr(DeclRefExpr *DRE) {
-      return new EvalInfo(DRE, 0);
+   EvalInfo ASTTransformVisitor::VisitDeclRefExpr(DeclRefExpr *DRE) {
+      return EvalInfo(DRE, 0);
    }
    
-   EvalInfo *ASTTransformVisitor::VisitCallExpr(CallExpr *CE) {
+   EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *CE) {
       
       //      if (!CE->isTypeDependent()) {
       // setPrf(CE);
@@ -117,14 +117,14 @@ namespace cling {
       //         *I = Visit(*I);
       //      } 
       
-      return new EvalInfo(CE, 0);
+      return EvalInfo(CE, 0);
    }
    
    // Here is the test Eval function specialization. Here the CallExpr to the function
    // is created.
-   EvalInfo *ASTTransformVisitor::VisitBinaryOperator(BinaryOperator *binOp) {
+   EvalInfo ASTTransformVisitor::VisitBinaryOperator(BinaryOperator *binOp) {
       /*Stmt *rhs =*/ Visit(binOp->getRHS());
-      Stmt *lhs = Visit(binOp->getLHS())->getNewStmt();
+      Stmt *lhs = Visit(binOp->getLHS()).getNewStmt();
       if (CallExpr *CE = dyn_cast<CallExpr>(lhs)){
          if (CE->isValueDependent() || CE->isTypeDependent()) {
             if (FunctionDecl *FDecl = getEvalDecl()) {               
@@ -165,13 +165,13 @@ namespace cling {
                                                                  , SourceLocation()
                                                                  ).takeAs<CallExpr>();
 
-                  return new EvalInfo(EvalIntCall, 1);                  
+                  return EvalInfo(EvalIntCall, 1);                  
                }               
             }
          }
       }
       
-      return new EvalInfo(binOp, 0);
+      return EvalInfo(binOp, 0);
    }
 
 //endregion

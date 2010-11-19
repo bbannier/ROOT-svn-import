@@ -17,22 +17,21 @@ namespace cling {
       typedef clang::Stmt Stmt;
       typedef clang::DeclRefExpr DeclRefExpr;
       
-      Stmt *newStmt; // the new/old node
-      std::set<DeclRefExpr*> variables; // the DeclRefs
+      Stmt *m_newStmt; // the new/old node
+      std::set<DeclRefExpr*> m_variables; // the DeclRefs
 
    public:
       bool IsEvalNeeded; // whether to emit the Eval call or not
  
       EvalInfo(Stmt *stmt, bool needed)
-         :newStmt(stmt), IsEvalNeeded(needed) {};
+         :m_newStmt(stmt), IsEvalNeeded(needed) {};
 
-      Stmt *getNewStmt() { return newStmt; }
-      const Stmt *getNewStmt() const { return newStmt; }
-      void setNewStmt(Stmt *stmt) { newStmt = stmt; } 
+      Stmt *getNewStmt() const { return m_newStmt; }
+      void setNewStmt(Stmt *stmt) { m_newStmt = stmt; } 
       
-      const std::set<DeclRefExpr*> &getVariables() const { return variables; }
+      const std::set<DeclRefExpr*> &getVariables() const { return m_variables; }
       void addVariable(DeclRefExpr *var) { 
-         variables.insert(var);
+         m_variables.insert(var);
       }
    };
 

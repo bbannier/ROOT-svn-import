@@ -28,7 +28,7 @@ namespace cling {
    // h->Draw() is marked as dependent node. That requires the ASTTransformVisitor to find all
    // dependent nodes and escape them to the interpreter, using pre-defined Eval function.
    class ASTTransformVisitor : public DeclVisitor<ASTTransformVisitor>,
-                               public StmtVisitor<ASTTransformVisitor, EvalInfo*> {
+                               public StmtVisitor<ASTTransformVisitor, EvalInfo> {
       
    private:
       FunctionDecl *EvalDecl;
@@ -38,7 +38,7 @@ namespace cling {
       clang::Sema *SemaPtr; // Sema is needed
       
       typedef DeclVisitor<ASTTransformVisitor> BaseDeclVisitor;
-      typedef StmtVisitor<ASTTransformVisitor, EvalInfo*> BaseStmtVisitor;
+      typedef StmtVisitor<ASTTransformVisitor, EvalInfo> BaseStmtVisitor;
       
       FunctionDecl *getEvalDecl(){ return EvalDecl; }
       void setEvalDecl(FunctionDecl *FDecl){ EvalDecl = FDecl; }
@@ -67,12 +67,12 @@ namespace cling {
 
       //region StmtVisitor
 
-      EvalInfo *VisitStmt(Stmt *Node);
-      EvalInfo *VisitCompoundStmt(CompoundStmt *S);
-      EvalInfo *VisitImplicitCastExpr(ImplicitCastExpr *ICE);
-      EvalInfo *VisitDeclRefExpr(DeclRefExpr *DRE);
-      EvalInfo *VisitCallExpr(CallExpr *CE);
-      EvalInfo *VisitBinaryOperator(BinaryOperator *binOp);
+      EvalInfo VisitStmt(Stmt *Node);
+      EvalInfo VisitCompoundStmt(CompoundStmt *S);
+      EvalInfo VisitImplicitCastExpr(ImplicitCastExpr *ICE);
+      EvalInfo VisitDeclRefExpr(DeclRefExpr *DRE);
+      EvalInfo VisitCallExpr(CallExpr *CE);
+      EvalInfo VisitBinaryOperator(BinaryOperator *binOp);
       
       //endregion
       
