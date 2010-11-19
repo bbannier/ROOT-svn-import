@@ -55,7 +55,7 @@ Bool_t ReadDataFromAsciiIFormat = kFALSE;
 int main( int argc, char** argv )
 {
    //---------------------------------------------------------------
-   // default MVA methods to be trained + tested
+   // Default MVA methods to be trained + tested
    std::map<std::string,int> Use;
 
    // --- Cut optimisation

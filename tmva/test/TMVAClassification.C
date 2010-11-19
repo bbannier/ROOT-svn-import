@@ -65,11 +65,11 @@ void TMVAClassification( TString myMethodList = "" )
    // but of course the real application is when you write your own
    // method based)
 
-   // this loads the library
+   //---------------------------------------------------------------
+   // This loads the library
    TMVA::Tools::Instance();
 
-   //---------------------------------------------------------------
-   // default MVA methods to be trained + tested
+   // Default MVA methods to be trained + tested
    std::map<std::string,int> Use;
 
    // --- Cut optimisation

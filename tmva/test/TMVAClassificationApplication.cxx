@@ -29,7 +29,7 @@
 int main( int argc, char** argv )
 {
    //---------------------------------------------------------------
-   // default MVA methods to be trained + tested
+   // Default MVA methods to be trained + tested
    std::map<std::string,int> Use;
 
    // --- Cut optimisation
@@ -256,7 +256,7 @@ int main( int argc, char** argv )
       var1 = userVar1 + userVar2;
       var2 = userVar1 - userVar2;
 
-      // --- return the MVA outputs and fill intto histograms
+      // --- Return the MVA outputs and fill intto histograms
 
       if (Use["CutsGA"]) {
          // Cuts is a special case: give the desired signal efficienciy

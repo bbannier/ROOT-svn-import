@@ -33,13 +33,11 @@ using namespace TMVA;
 void TMVAClassificationApplication( TString myMethodList = "" ) 
 {   
    //---------------------------------------------------------------
-   // default MVA methods to be trained + tested
 
-   // this loads the library
+   // This loads the library
    TMVA::Tools::Instance();
 
-   //---------------------------------------------------------------
-   // default MVA methods to be trained + tested
+   // Default MVA methods to be trained + tested
    std::map<std::string,int> Use;
 
    // --- Cut optimisation
@@ -268,7 +266,7 @@ void TMVAClassificationApplication( TString myMethodList = "" )
       var1 = userVar1 + userVar2;
       var2 = userVar1 - userVar2;
 
-      // --- return the MVA outputs and fill intto histograms
+      // --- Return the MVA outputs and fill intto histograms
 
       if (Use["CutsGA"]) {
          // Cuts is a special case: give the desired signal efficienciy
