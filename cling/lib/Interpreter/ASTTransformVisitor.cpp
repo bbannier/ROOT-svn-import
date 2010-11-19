@@ -37,9 +37,9 @@ namespace cling {
    void ASTTransformVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
       BaseDeclVisitor::VisitFunctionTemplateDecl(D);
     
-      if (D->getName().compare("Eval") == 0) {
+      if (D->getNameAsString().compare("Eval") == 0) {
          NamespaceDecl *ND = dyn_cast<NamespaceDecl>(D->getDeclContext());
-         if (ND && ND->getName().compare("cling") == 0) {
+         if (ND && ND->getNameAsString().compare("cling") == 0) {
             setEvalDecl(D->getTemplatedDecl());
          }
       }
