@@ -171,7 +171,6 @@ namespace TMVA {
       Int_t         fnSampl;          // Number of MC events per cell in build-up (1000)
       Int_t         fnBin;            // Number of bins in build-up (100)
       Int_t         fEvPerBin;        // Maximum events (equiv.) per bin in buid-up (1000)
-      Float_t       fNSigBgRatio;     // ratio of number of signal events / bg events (training)
 
       Bool_t        fCompress;        // compress foam output file
       Bool_t        fMultiTargetRegression; // do regression on multible targets
