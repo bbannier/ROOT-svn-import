@@ -243,6 +243,9 @@ void TMVA::PDEFoam::Create()
    // Basic initialization of FOAM invoked by the user.
    // IMPORTANT: Random number generator and the distribution object has to be
    // provided using SetPseRan and SetRho prior to invoking this initializator!
+   //
+   // After the foam is grown, space for 2 variables is reserved in
+   // every cell.  They are used for filling the foam cells.
 
    Bool_t addStatus = TH1::AddDirectoryStatus();
    TH1::AddDirectory(kFALSE);
@@ -385,10 +388,10 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
    // Note that links to parents and initial volume = 1/2 parent has to be
    // already defined prior to calling this routine.
    //
-   // This function is overridden from the original PDEFoam::Explore()
-   // to provide an extra option:   Filling edge histograms directly from the
-   // input distributions, w/o MC sampling if fNSampl == 0
-   // Warning:  This option is not tested jet!
+   // If fNmin > 0 then the total number of (training) events found in
+   // the cell during the exploration is stored in the cell.  This
+   // information is used withing PeekMax() to avoid splitting cells
+   // which contain less than fNmin events.
 
    Double_t wt, dx, xBest, yBest;
    Double_t intOld, driOld;
@@ -519,12 +522,18 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
 void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 {
    // Internal subprogram used by Create.  It explores newly defined
-   // cell with according to the decision tree logic.
+   // cell with according to the decision tree logic.  The separation
+   // set by the 'fDTSeparation' option is used (see also
+   // GetSeparation()).
    //
    // The optimal division point for eventual future cell division is
    // determined/recorded.  Note that links to parents and initial
    // volume = 1/2 parent has to be already defined prior to calling
    // this routine.
+   //
+   // Note, that according to the decision tree logic, a cell is only
+   // split, if the number of (unweighted) events in each dautghter
+   // cell is greater than fNmin.
 
    if (!cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
@@ -616,6 +625,10 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 //_____________________________________________________________________
 Float_t TMVA::PDEFoam::GetSeparation(Float_t s, Float_t b)
 {
+   // Calculate the separation depending on 'fDTSeparation' for the
+   // given number of signal and background events 's', 'b'.  Note,
+   // that if (s+b) < 0 or s < 0 or b < 0 than the return value is 0.
+
    if (s+b <= 0 || s < 0 || b < 0 )
       return 0;
 
@@ -718,10 +731,11 @@ void TMVA::PDEFoam::MakeAlpha()
 //_____________________________________________________________________
 Long_t TMVA::PDEFoam::PeekMax()
 {
-   // Internal subprogram used by Create.
-   // It finds cell with maximal driver integral for the purpose of the division.
-   // This function is overridden by the PDEFoam Class to apply cuts
-   // on Nmin during cell buildup.
+   // Internal subprogram used by Create.  It finds cell with maximal
+   // driver integral for the purpose of the division.  This function
+   // is overridden by the PDEFoam Class to apply cuts on the number
+   // of events in the cell (fNmin) and the cell tree depth
+   // (GetMaxDepth() > 0) during cell buildup.
 
    Long_t iCell = -1;
 
@@ -772,8 +786,10 @@ Long_t TMVA::PDEFoam::PeekMax()
 //_____________________________________________________________________
 Long_t TMVA::PDEFoam::PeekLast()
 {
-   // Internal subprogram used by Create.
-   // It finds the last created active for the purpose of the division.
+   // Internal subprogram used by Create.  It finds the last created
+   // active cell for the purpose of the division.  Analogous to
+   // PeekMax() it is cut on the number of events in the cell (fNmin)
+   // and the cell tree depth (GetMaxDepth() > 0).
 
    Long_t iCell = -1;
 
@@ -862,7 +878,7 @@ Int_t TMVA::PDEFoam::Divide(PDEFoamCell *cell)
 Double_t TMVA::PDEFoam::Eval(Double_t *xRand, Double_t &event_density)
 {
    // Internal subprogram.
-   // Evaluates distribution to be generated.
+   // Evaluates (training) distribution.
    return fDistr->Density(xRand, event_density);
 }
 
@@ -1051,6 +1067,7 @@ void TMVA::PDEFoam::RemoveEmptyCell( Int_t iCell )
    // It works the following way:
    // 1) find grandparent to iCell
    // 2) set daughter of the grandparent cell to the sister of iCell
+   //
    // Result:
    // iCell and its parent are alone standing ==> will be removed
 
@@ -1368,7 +1385,7 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
 //_____________________________________________________________________
 Double_t TMVA::PDEFoam::GetCellRegValue0( std::vector<Float_t> &xvec, EKernel kernel )
 {
-   // Get regression value 0 from cell that contains xvec.
+   // Get regression value 0 from cell that contains the event vector xvec.
    // This function is used when the MultiTargetRegression==False option is set.
 
    std::vector<Float_t> txvec(VarTransform(xvec));
@@ -1439,7 +1456,7 @@ Double_t TMVA::PDEFoam::GetAverageNeighborsValue( std::vector<Float_t> &txvec,
    // not be evaluated.
    //
    // Parameters:
-   // - txvec - event vector, transformed into foam [0, 1]
+   // - txvec - event vector, transformed into foam coordinates [0, 1]
    // - cv - cell value, see definition of ECellValue
 
    const Double_t xoffset = 1.e-6;
@@ -1654,10 +1671,10 @@ std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> &
 //_____________________________________________________________________
 Double_t TMVA::PDEFoam::GetCellDensity( std::vector<Float_t> &xvec, EKernel kernel )
 {
-   // Returns density (=number of entries / volume) of cell that encloses 'xvec'.
-   // This function is called by GetMvaValue() in case of two separated foams
-   // (signal and background).
-   // 'kernel' can be either kNone or kGaus.
+   // Returns density (=number of entries / volume) of cell that
+   // encloses the untransformed event vector 'xvec'.  This function
+   // is called by GetMvaValue() in case of two separated foams
+   // (signal and background).  'kernel' can be either kNone or kGaus.
 
    std::vector<Float_t> txvec(VarTransform(xvec));
    PDEFoamCell *cell          = FindCell(txvec);
@@ -1776,8 +1793,8 @@ Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv )
 Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv)
 {
    // This function finds the cell, which corresponds to the given
-   // event vector 'xvec' and return its value, which is given by the
-   // parameter 'cv'.
+   // untransformed event vector 'xvec' and return its value, which is
+   // given by the parameter 'cv'.
    
    std::vector<Float_t> txvec(VarTransform(xvec));
    return GetCellValue(FindCell(txvec), cv);
@@ -1794,18 +1811,22 @@ Double_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
 //_____________________________________________________________________
 Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> &txvec, ECellValue cv, Int_t dim1, Int_t dim2, Bool_t TreatEmptyCells )
 {
-   // results the cell value, corresponding to txvec, weighted by the
-   // neighor cells via a linear function
+   // Returns the cell value, corresponding to 'txvec' (foam
+   // coordinates [0,1]), weighted by the neighbor cells via a linear
+   // function.
    //
-   // Parameters
-   //  - txvec - event vector, transformed to interval [0,1]
+   // Parameters:
+   //  - txvec - event vector, transformed into foam coordinates [0,1]
+   //
    //  - cv - cell value to be weighted
+   //
    //  - dim1, dim2 - dimensions for two-dimensional projection.
    //    Default values: dim1 = dim2 = -1
    //    If dim1 and dim2 are set to values >=0 and <fDim, than
    //    the function GetProjectionCellValue() is used to get cell
    //    value.  This is used for projection to two dimensions within
    //    Project2().
+   //
    //  - TreatEmptyCells - if this option is set false (default),
    //    it is not checked, wether the cell or its neighbors are empty
    //    or not.  If this option is set true, than only non-empty
@@ -1879,8 +1900,10 @@ Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> &txve
    //
    // Parameters:
    // - cell - the cell
+   //
    // - txvec - the transformed event variables (in [0,1]) (coordinates <0 are
    //   set to 0, >1 are set to 1)
+   //
    // - dim - number of dimensions for the calculation of the euclidean distance.
    //   If dim=0, all dimensions of the foam are taken.  Else only the first 'dim'
    //   coordinates of 'txvec' are used for the calculation of the euclidean distance.
@@ -1938,10 +1961,13 @@ Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> &txve
 //_____________________________________________________________________
 TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> &xvec )
 {
-   // Find cell that contains xvec
+   // Find cell that contains 'xvec' (in foam coordinates [0,1]).
    //
-   // loop to find cell that contains xvec start from root Cell, uses
-   // binary tree to find cell quickly
+   // Loop to find cell that contains 'xvec' starting at root cell,
+   // and traversing binary tree to find the cell quickly.  Note, that
+   // if 'xvec' lies outside the foam, the cell which is nearest to
+   // 'xvec' is returned.  (The returned pointer should never be
+   // NULL.)
 
    PDEFoamVect  cellPosi0(GetTotDim()), cellSize0(GetTotDim());
    PDEFoamCell *cell, *cell0;
@@ -2753,7 +2779,8 @@ void TMVA::PDEFoam::PrintStream( ostream & ostr ) const
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::AddXMLTo( void* parent ){
+void TMVA::PDEFoam::AddXMLTo( void* parent )
+{
    // write foam variables to xml
 
    void *variables = gTools().AddChild( parent, "Variables" );
@@ -2778,7 +2805,8 @@ void TMVA::PDEFoam::AddXMLTo( void* parent ){
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::ReadXML( void* parent ) {
+void TMVA::PDEFoam::ReadXML( void* parent )
+{
    void *variables = gTools().GetChild( parent );
    gTools().ReadAttr( variables, "LastCe",         fLastCe );
    gTools().ReadAttr( variables, "nCells",         fNCells );
