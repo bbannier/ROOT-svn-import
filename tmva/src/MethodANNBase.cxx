@@ -655,17 +655,20 @@ const std::vector<Float_t> &TMVA::MethodANNBase::GetMulticlassValues()
       temp.push_back( ((TNeuron*)outputLayer->At(itgt))->GetActivationValue() );
    }
 
-   for(UInt_t iClass=0; iClass<nClasses; iClass++){
-      Double_t norm = 0.0;
-      for(UInt_t j=0;j<nClasses;j++){
-         if(iClass!=j)
-            norm+=exp(temp[j]-temp[iClass]);
-         //norm+=temp[j]; //because NN output is already between 0 and 1
+   if(fEstimator==kCE)
+      *fMulticlassReturnVal = temp;
+   else{
+      for(UInt_t iClass=0; iClass<nClasses; iClass++){
+         Double_t norm = 0.0;
+         for(UInt_t j=0;j<nClasses;j++){
+            if(iClass!=j)
+               norm+=exp(temp[j]-temp[iClass]);
+            //norm+=temp[j]; //because NN output is already between 0 and 1
+         }
+         (*fMulticlassReturnVal).push_back(1.0/(1.0+norm));
+         //(*fMulticlassReturnVal).push_back(temp[iClass]/(temp[iClass]+norm));//because NN output is already between 0 and 1
       }
-      (*fMulticlassReturnVal).push_back(1.0/(1.0+norm));
-      //(*fMulticlassReturnVal).push_back(temp[iClass]/(temp[iClass]+norm));//because NN output is already between 0 and 1
    }
-
    return *fMulticlassReturnVal;
 }
 
