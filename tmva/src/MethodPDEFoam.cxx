@@ -988,6 +988,35 @@ void TMVA::MethodPDEFoam::ReadFoamsFromFile()
 }
 
 //_______________________________________________________________________
+TMVA::EKernel TMVA::MethodPDEFoam::UIntToKernel(UInt_t iker)
+{
+   // convert UInt_t to EKernel (used for reading weight files)
+   switch(iker) {
+   case 0:  return kNone;
+   case 1:  return kGaus;
+   case 2:  return kLinN;
+   default:
+      Log() << kWARNING << "<UIntToKernel>: unknown kernel number: " << iker << Endl;
+      return kNone;
+   }
+   return kNone;
+}
+
+//_______________________________________________________________________
+TMVA::ETargetSelection TMVA::MethodPDEFoam::UIntToTargetSelection(UInt_t its)
+{
+   // convert UInt_t to ETargetSelection (used for reading weight files)
+   switch(its) {
+   case 0:  return kMean;
+   case 1:  return kMpv;
+   default:
+      Log() << kWARNING << "<UIntToTargetSelection>: unknown method TargetSelection: " << its << Endl;
+      return kMean;
+   }
+   return kMean;
+}
+
+//_______________________________________________________________________
 void TMVA::MethodPDEFoam::FillVariableNamesToFoam() const 
 {
    // fill variable names into foam(s)

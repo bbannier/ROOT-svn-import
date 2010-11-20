@@ -201,31 +201,6 @@ namespace TMVA {
       ClassDef(MethodPDEFoam,0) // Analysis of PDEFoam discriminant (PDEFoam or Mahalanobis approach)
    };
 
-// ----- inline functions -----
-
-inline EKernel MethodPDEFoam::UIntToKernel(UInt_t iker)
-{
-   // convert UInt_t to EKernel (used for reading weight files)
-   if (iker == 0)       return kNone;
-   else if (iker == 1)  return kGaus;
-   else if (iker == 2)  return kLinN;
-   else {
-      Log() << kFATAL << "Error: unknown kernel number: " << iker << Endl;
-      return kNone;
-   }
-}
-
-inline ETargetSelection MethodPDEFoam::UIntToTargetSelection(UInt_t its)
-{
-   // convert UInt_t to ETargetSelection (used for reading weight files)
-   if (its == 0)       return kMean;
-   else if (its == 1)  return kMpv;
-   else {
-      Log() << kFATAL << "Error: unknown method TargetSelection: " << its << Endl;
-      return kMean;
-   }
-}
-
 } // namespace TMVA
 
 #endif // MethodPDEFoam_H
