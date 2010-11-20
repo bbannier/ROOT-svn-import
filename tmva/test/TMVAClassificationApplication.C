@@ -158,7 +158,7 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) {
       if (it->second) {
          TString methodName = TString(it->first) + TString(" method");
-         TString weightfile = dir + prefix + "_" + TString(it->first) + TString(".weights.xml");
+         TString weightfile = dir + prefix + TString("_") + TString(it->first) + TString(".weights.xml");
          reader->BookMVA( methodName, weightfile ); 
       }
    }
