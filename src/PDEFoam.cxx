@@ -50,6 +50,7 @@
 #include <fstream>
 #include <sstream>
 #include <cassert>
+#include <climits>
 
 #include "TMVA/Event.h"
 #include "TMVA/Tools.h"
@@ -336,9 +337,9 @@ void TMVA::PDEFoam::InitCells()
    // Exploration of the root cell(s)
    for(Long_t iCell=0; iCell<=fLastCe; iCell++){
       if (fDTSeparation != kFoam)
-	 DTExplore( fCells[iCell] );  // Exploration of root cell(s)
+         DTExplore( fCells[iCell] );  // Exploration of root cell(s)
       else
-	 Explore( fCells[iCell] );    // Exploration of root cell(s)
+         Explore( fCells[iCell] );    // Exploration of root cell(s)
    }
 }//InitCells
 
@@ -440,21 +441,18 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
    for (iev=0;iev<fNSampl;iev++){
       MakeAlpha();               // generate uniformly vector inside hypercube
 
-      if (fDim>0){
-	 for (j=0; j<fDim; j++)
-	    xRand[j]= cellPosi[j] +fAlpha[j]*(cellSize[j]);
-      }
+      if (fDim>0) for (j=0; j<fDim; j++) xRand[j]= cellPosi[j] +fAlpha[j]*(cellSize[j]);
 
       wt         = dx*Eval(xRand, event_density);
       totevents += dx*event_density;
-
+      
       nProj = 0;
       if (fDim>0) {
-	 for (k=0; k<fDim; k++) {
-	    xproj =fAlpha[k];
-	    ((TH1D *)(*fHistEdg)[nProj])->Fill(xproj,wt);
-	    nProj++;
-	 }
+         for (k=0; k<fDim; k++) {
+            xproj =fAlpha[k];
+            ((TH1D *)(*fHistEdg)[nProj])->Fill(xproj,wt);
+            nProj++;
+         }
       }
 
       ceSum[0] += wt;    // sum of weights
@@ -472,12 +470,12 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
    // events were found.
    if (cell==fCells[0] && ceSum[0]<=0.0){
       if (ceSum[0]==0.0)
-	 Log() << kFATAL << "No events were found during exploration of "
-	       << "root cell.  Please check PDEFoam parameters nSampl "
-	       << "and VolFrac." << Endl;
+         Log() << kFATAL << "No events were found during exploration of "
+               << "root cell.  Please check PDEFoam parameters nSampl "
+               << "and VolFrac." << Endl;
       else
-	 Log() << kWARNING << "Negative number of events found during "
-	       << "exploration of root cell" << Endl;
+         Log() << kWARNING << "Negative number of events found during "
+               << "exploration of root cell" << Endl;
    }
 
    //------------------------------------------------------------------
@@ -512,7 +510,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
       parent->SetIntg( parIntg   +intTrue -intOld );
       parent->SetDriv( parDriv   +intDriv -driOld );
       if (GetNmin() > 0)
-	 SetCellElement( parent, 0, GetBuildUpCellEvents(parent) + totevents - toteventsOld);
+         SetCellElement( parent, 0, GetBuildUpCellEvents(parent) + totevents - toteventsOld);
    }
    delete [] volPart;
    delete [] xRand;
@@ -542,13 +540,13 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    std::vector<TH1F*> hsig, hbkg, hsig_unw, hbkg_unw;
    for (Int_t idim=0; idim<fDim; idim++) {
       hsig.push_back( new TH1F(Form("hsig_%i",idim), 
-			       Form("signal[%i]",idim), fNBin, 0, 1 ));
+                               Form("signal[%i]",idim), fNBin, 0, 1 ));
       hbkg.push_back( new TH1F(Form("hbkg_%i",idim), 
-			       Form("background[%i]",idim), fNBin, 0, 1 ));
+                               Form("background[%i]",idim), fNBin, 0, 1 ));
       hsig_unw.push_back( new TH1F(Form("hsig_unw_%i",idim), 
-				   Form("signal_unw[%i]",idim), fNBin, 0, 1 ));
+                                   Form("signal_unw[%i]",idim), fNBin, 0, 1 ));
       hbkg_unw.push_back( new TH1F(Form("hbkg_unw_%i",idim), 
-				   Form("background_unw[%i]",idim), fNBin, 0, 1 ));
+                                   Form("background_unw[%i]",idim), fNBin, 0, 1 ));
    }
 
    // Fill histograms
@@ -570,30 +568,30 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
       Float_t nSelS_unw=hsig_unw.at(idim)->GetBinContent(0);
       Float_t nSelB_unw=hbkg_unw.at(idim)->GetBinContent(0);
       for(Int_t jLo=1; jLo<fNBin; jLo++) {
-	 nSelS += hsig.at(idim)->GetBinContent(jLo);
-	 nSelB += hbkg.at(idim)->GetBinContent(jLo);
-	 nSelS_unw += hsig_unw.at(idim)->GetBinContent(jLo);
-	 nSelB_unw += hbkg_unw.at(idim)->GetBinContent(jLo);
+         nSelS += hsig.at(idim)->GetBinContent(jLo);
+         nSelB += hbkg.at(idim)->GetBinContent(jLo);
+         nSelS_unw += hsig_unw.at(idim)->GetBinContent(jLo);
+         nSelB_unw += hbkg_unw.at(idim)->GetBinContent(jLo);
 
-	 // proceed if total number of events in left and right cell
-	 // is greater than fNmin
-	 if ( !( (nSelS_unw + nSelB_unw) >= GetNmin() && 
-		 (nTotS_unw-nSelS_unw + nTotB_unw-nSelB_unw) >= GetNmin() ) )
-	    continue;
+         // proceed if total number of events in left and right cell
+         // is greater than fNmin
+         if ( !( (nSelS_unw + nSelB_unw) >= GetNmin() && 
+                 (nTotS_unw-nSelS_unw + nTotB_unw-nSelB_unw) >= GetNmin() ) )
+            continue;
 
-	 Float_t xLo = 1.0*jLo/fNBin;
+         Float_t xLo = 1.0*jLo/fNBin;
 
-	 // calculate gain
-	 Float_t leftGain   = ((nTotS - nSelS) + (nTotB - nSelB))
-	    * GetSeparation(nTotS-nSelS,nTotB-nSelB);
-	 Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
-	 Float_t gain = parentGain - leftGain - rightGain;
+         // calculate gain
+         Float_t leftGain   = ((nTotS - nSelS) + (nTotB - nSelB))
+            * GetSeparation(nTotS-nSelS,nTotB-nSelB);
+         Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
+         Float_t gain = parentGain - leftGain - rightGain;
 
-	 if (gain >= maxGain) {
-	    maxGain = gain;
-	    xBest   = xLo;
-	    kBest   = idim;
-	 }
+         if (gain >= maxGain) {
+            maxGain = gain;
+            xBest   = xLo;
+            kBest   = idim;
+         }
       } // jLo
    } // idim
 
@@ -747,15 +745,15 @@ Long_t TMVA::PDEFoam::PeekMax()
    drivMax = 0;  // only split cells if gain>0 (this also avoids splitting at cell boundary)
    for(i=0; i<=fLastCe; i++) {//without root
       if( fCells[i]->GetStat() == 1 ) {
-	 // if driver integral < numeric limit, skip cell
-	 if (fCells[i]->GetDriv() < std::numeric_limits<float>::epsilon())
-	    continue;
+         // if driver integral < numeric limit, skip cell
+         if (fCells[i]->GetDriv() < std::numeric_limits<float>::epsilon())
+            continue;
 
          driv =  TMath::Abs( fCells[i]->GetDriv());
 
-	 // apply cut on depth
-	 if (GetMaxDepth() > 0)
-	    bCutMaxDepth = fCells[i]->GetDepth() < GetMaxDepth();
+         // apply cut on depth
+         if (GetMaxDepth() > 0)
+            bCutMaxDepth = fCells[i]->GetDepth() < GetMaxDepth();
 
          // apply Nmin-cut
          if (GetNmin() > 0)
@@ -772,10 +770,10 @@ Long_t TMVA::PDEFoam::PeekMax()
    if (iCell == -1){
       if (!bCutNmin)
          Log() << kVERBOSE << "Warning: No cell with more than " 
-	       << GetNmin() << " events found!" << Endl;
+               << GetNmin() << " events found!" << Endl;
       else if (!bCutMaxDepth)
          Log() << kVERBOSE << "Warning: Maximum depth reached: " 
-	       << GetMaxDepth() << Endl;
+               << GetMaxDepth() << Endl;
       else
          Log() << kWARNING << "Warning: PDEFoam::PeekMax: no more candidate cells (drivMax>0) found for further splitting." << Endl;
    }
@@ -798,13 +796,13 @@ Long_t TMVA::PDEFoam::PeekLast()
 
    for(Long_t i=fLastCe; i>=0; i--) {
       if( fCells[i]->GetStat() == 1 ) {
-	 // if driver integral < numeric limit, skip cell
-	 if (fCells[i]->GetDriv() < std::numeric_limits<float>::epsilon())
-	    continue;
+         // if driver integral < numeric limit, skip cell
+         if (fCells[i]->GetDriv() < std::numeric_limits<float>::epsilon())
+            continue;
 
-	 // apply cut on depth
-	 if (GetMaxDepth() > 0)
-	    bCutMaxDepth = fCells[i]->GetDepth() < GetMaxDepth();
+         // apply cut on depth
+         if (GetMaxDepth() > 0)
+            bCutMaxDepth = fCells[i]->GetDepth() < GetMaxDepth();
 
          // apply Nmin-cut
          if (GetNmin() > 0)
@@ -813,18 +811,18 @@ Long_t TMVA::PDEFoam::PeekLast()
          // choose cell
          if(bCutNmin && bCutMaxDepth) {
             iCell = i;
-	    break;
-	 }
+            break;
+         }
       }
    }
 
    if (iCell == -1){
       if (!bCutNmin)
          Log() << kVERBOSE << "Warning: No cell with more than " 
-	       << GetNmin() << " events found!" << Endl;
+               << GetNmin() << " events found!" << Endl;
       else if (!bCutMaxDepth)
          Log() << kVERBOSE << "Warning: Maximum depth reached: " 
-	       << GetMaxDepth() << Endl;
+               << GetMaxDepth() << Endl;
       else
          Log() << kWARNING << "Warning: PDEFoam::PeekLast: no more candidate cells found for further splitting." << Endl;
    }
@@ -897,9 +895,9 @@ void TMVA::PDEFoam::Grow()
 
    while ( (fLastCe+2) < fNCells ) {  // this condition also checked inside Divide
       if (fPeekMax)
-	 iCell = PeekMax(); // peek up cell with maximum driver integral
+         iCell = PeekMax(); // peek up cell with maximum driver integral
       else
-	 iCell = PeekLast(); // peek up last cell created
+         iCell = PeekLast(); // peek up last cell created
 
       if ( (iCell<0) || (iCell>fLastCe) ) {
          Log() << kVERBOSE << "Break: "<< fLastCe+1 << " cells created" << Endl;
@@ -992,11 +990,11 @@ void TMVA::PDEFoam::CheckAll(Int_t level)
             if (level==1) Log() << kFATAL << "ERROR: Cell's no %d daughter 1 not pointing to this cell " << iCell << Endl;
          }
       }
-     if(cell->GetVolume()<1E-50) {
+      if(cell->GetVolume()<1E-50) {
          errors++;
          if(level==1) Log() << kFATAL << "ERROR: Cell no. " << iCell << " has Volume of <1E-50" << Endl;
-     }
-    }// loop after cells;
+      }
+   }// loop after cells;
 
    // Check for cells with Volume=0
    for(iCell=0; iCell<=fLastCe; iCell++) {
@@ -1008,7 +1006,7 @@ void TMVA::PDEFoam::CheckAll(Int_t level)
    }
    // summary
    if(level==1){
-     Log() << kVERBOSE << "Check has found " << errors << " errors and " << warnings << " warnings." << Endl;
+      Log() << kVERBOSE << "Check has found " << errors << " errors and " << warnings << " warnings." << Endl;
    }
    if(errors>0){
       Info("CheckAll","Check - found total %d  errors \n",errors);
@@ -1022,8 +1020,8 @@ void TMVA::PDEFoam::PrintCell(Long_t iCell)
 
    if (iCell < 0 || iCell > fLastCe) {
       Log() << kWARNING << "<PrintCell(iCell=" << iCell
-	    << ")>: cell number " << iCell << " out of bounds!" 
-	    << Endl;
+            << ")>: cell number " << iCell << " out of bounds!" 
+            << Endl;
       return;
    }
 
@@ -1035,16 +1033,16 @@ void TMVA::PDEFoam::PrintCell(Long_t iCell)
    Log() << "Cell[" << iCell << "]={ ";
    Log() << "  " << fCells[iCell] << "  " << Endl;  // extra DEBUG
    Log() << " Xdiv[abs. coord.]="
-	 << VarTransformInvers(kBest,cellPosi[kBest] + xBest*cellSize[kBest])
-	 << Endl;
+         << VarTransformInvers(kBest,cellPosi[kBest] + xBest*cellSize[kBest])
+         << Endl;
    Log() << " Abs. coord. = (";
    for (Int_t idim=0; idim<fDim; idim++) {
       Log() << "dim[" << idim << "]={"
-	    << VarTransformInvers(idim,cellPosi[idim]) << ","
-	    << VarTransformInvers(idim,cellPosi[idim] + cellSize[idim])
-	    << "}";
+            << VarTransformInvers(idim,cellPosi[idim]) << ","
+            << VarTransformInvers(idim,cellPosi[idim] + cellSize[idim])
+            << "}";
       if (idim < fDim-1)
-	 Log() << ", ";
+         Log() << ", ";
    }
    Log() << ")" << Endl;
    fCells[iCell]->Print("1");
@@ -1076,7 +1074,7 @@ void TMVA::PDEFoam::RemoveEmptyCell( Int_t iCell )
 
    if (!fCells[iCell]->GetStat() || volume>0){
       Log() << kDEBUG << "<RemoveEmptyCell>: cell " << iCell
-	    << "is not active or has volume>0 ==> doesn't need to be removed" << Endl;
+            << "is not active or has volume>0 ==> doesn't need to be removed" << Endl;
       return;
    }
 
@@ -1094,9 +1092,9 @@ void TMVA::PDEFoam::RemoveEmptyCell( Int_t iCell )
    // cross check
    if (pCell->GetIntg() != sCell->GetIntg())
       Log() << kWARNING << "<RemoveEmptyCell> Error: cell integrals are not equal!"
-              << " Intg(parent cell)=" << pCell->GetIntg()
-              << " Intg(sister cell)=" << sCell->GetIntg()
-              << Endl;
+            << " Intg(parent cell)=" << pCell->GetIntg()
+            << " Intg(sister cell)=" << sCell->GetIntg()
+            << Endl;
 
    // set daughter of grandparent to sister of iCell
    if (ppCell->GetDau0() == pCell)
@@ -1126,7 +1124,7 @@ void TMVA::PDEFoam::CheckCells( Bool_t remove_empty_cells )
       if (volume<1e-10){
          if (volume<=0){
             Log() << kWARNING << "Critical: cell volume negative or zero! volume="
-                    << volume << " cell number: " << iCell << Endl;
+                  << volume << " cell number: " << iCell << Endl;
             // fCells[iCell]->Print("1"); // debug output
             if (remove_empty_cells){
                Log() << kWARNING << "Remove cell " << iCell << Endl;
@@ -1135,7 +1133,7 @@ void TMVA::PDEFoam::CheckCells( Bool_t remove_empty_cells )
          }
          else {
             Log() << kWARNING << "Cell volume close to zero! volume="
-                    << volume << " cell number: " << iCell << Endl;
+                  << volume << " cell number: " << iCell << Endl;
          }
       }
    }
@@ -1195,11 +1193,11 @@ void TMVA::PDEFoam::ResetCellElements(Bool_t allcells)
    for(Long_t iCell=0; iCell<(allcells ? fNCells : fLastCe+1); iCell++) {
       // skip inactive cells if allcells == false
       if (!allcells && !(fCells[iCell]->GetStat()))
-	 continue;
+         continue;
 
       TVectorD *elem = new TVectorD(GetNElements());
       for (UInt_t i=0; i<GetNElements(); i++)
-	 (*elem)(i) = 0.;
+         (*elem)(i) = 0.;
 
       fCells[iCell]->SetElement(elem);
    }
@@ -1630,33 +1628,33 @@ std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> &
 
       // loop over all active cells to calc gaus weighted target values
       for (Long_t ice=0; ice<=fLastCe; ice++) {
-	 if (!(fCells[ice]->GetStat())) continue;
+         if (!(fCells[ice]->GetStat())) continue;
 
-	 // weight with gaus only in non-target dimensions!
-	 Double_t gau = WeightGaus(fCells[ice], txvec, vals.size());
+         // weight with gaus only in non-target dimensions!
+         Double_t gau = WeightGaus(fCells[ice], txvec, vals.size());
 
-	 PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
-	 fCells[ice]->GetHcub(cellPosi, cellSize);
+         PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
+         fCells[ice]->GetHcub(cellPosi, cellSize);
 
-	 // fill new vector with coordinates of new cell
-	 std::vector<Float_t> new_vec;
-	 for (UInt_t k=0; k<txvec.size(); k++)
-	    new_vec.push_back(cellPosi[k] + 0.5*cellSize[k]);
+         // fill new vector with coordinates of new cell
+         std::vector<Float_t> new_vec;
+         for (UInt_t k=0; k<txvec.size(); k++)
+            new_vec.push_back(cellPosi[k] + 0.5*cellSize[k]);
 
-	 std::vector<Float_t> val = GetCellTargets(new_vec, ts);
-	 for (UInt_t itar=0; itar<target.size(); itar++){
-	    target.at(itar) += gau * val.at(itar);
-	    norm.at(itar)   += gau;
-	 }
+         std::vector<Float_t> val = GetCellTargets(new_vec, ts);
+         for (UInt_t itar=0; itar<target.size(); itar++){
+            target.at(itar) += gau * val.at(itar);
+            norm.at(itar)   += gau;
+         }
       }
 
       // normalisation
       for (UInt_t itar=0; itar<target.size(); itar++){
-	 if (norm.at(itar)<1.0e-20){
-	    Log() << kWARNING << "Warning: norm too small!" << Endl;
-	    target.at(itar) = 0.;
-	 } else
-	    target.at(itar) /= norm.at(itar);
+         if (norm.at(itar)<1.0e-20){
+            Log() << kWARNING << "Warning: norm too small!" << Endl;
+            target.at(itar) = 0.;
+         } else
+            target.at(itar) /= norm.at(itar);
       }
       return target;
    }
@@ -2085,13 +2083,13 @@ TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
       case kSeparate:
       case kMultiTarget:
          cell_value = kNev;
-	 break;
+         break;
       case kDiscr:
          cell_value = kDiscriminator;
-	 break;
+         break;
       case kMonoTarget:
          cell_value = kTarget0;
-	 break;
+         break;
       default:
          Log() << kFATAL << "<Draw1Dim>: unknown foam type" << Endl;
          return 0;
@@ -2190,13 +2188,13 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
       case kSeparate:
       case kMultiTarget:
          cell_value = kNev;
-	 break;
+         break;
       case kDiscr:
          cell_value = kDiscriminator;
-	 break;
+         break;
       case kMonoTarget:
          cell_value = kTarget0;
-	 break;
+         break;
       default:
          Log() << kFATAL << "<Draw1Dim>: unknown foam type" << Endl;
          return 0;
@@ -2230,7 +2228,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
       nbin = 1000;
    } else if (nbin<1) {
       Log() << kWARNING << "Wrong bin number: " << nbin 
-	    << "; set nbin=50" << Endl;
+            << "; set nbin=50" << Endl;
       nbin = 50;
    }
 
@@ -2375,13 +2373,13 @@ Double_t TMVA::PDEFoam::GetProjectionCellValue( PDEFoamCell* cell,
       // calc cell entries per projected cell area
       return GetCellValue(cell, kNev)/(area*foam_area);
    }
-   // =========================================================
+      // =========================================================
    case kRms:
       return GetCellValue(cell, kRms);
-   // =========================================================
+      // =========================================================
    case kRmsOvMean:
       return GetCellValue(cell, kRmsOvMean);
-   // =========================================================
+      // =========================================================
    case kDiscriminator: {
       // calculate cell volume in other dimensions (not including idim1 and idim2)
       Double_t area_cell = 1.;
@@ -2398,10 +2396,10 @@ Double_t TMVA::PDEFoam::GetProjectionCellValue( PDEFoamCell* cell,
       // foam is normalized -> length of foam = 1.0
       return GetCellValue(cell, kDiscriminator)*area_cell;
    }
-   // =========================================================
+      // =========================================================
    case kDiscriminatorError:
       return GetCellValue(cell, kDiscriminator);
-   // =========================================================
+      // =========================================================
    case kTarget0:
       // plot mean over all underlying cells?
       return GetCellValue(cell, kTarget0);
@@ -2518,13 +2516,13 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
       case kSeparate:
       case kMultiTarget:
          cell_value = kNev;
-	 break;
+         break;
       case kDiscr:
          cell_value = kDiscriminator;
-	 break;
+         break;
       case kMonoTarget:
          cell_value = kTarget0;
-	 break;
+         break;
       default:
          Log() << kFATAL << "<Draw1Dim>: unknown foam type" << Endl;
          return;
@@ -2581,13 +2579,13 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    // value --> store in zmin and zmax
    if (fillcells) {	       
       for (Long_t iCell=1; iCell<=fLastCe; iCell++) {
-	 if ( fCells[iCell]->GetStat() == 1) {
-	    Double_t value = GetCellValue(fCells[iCell], cell_value);
-	    if (value<zmin)
-	       zmin=value;
-	    if (value>zmax)
-	       zmax=value;
-	 }
+         if ( fCells[iCell]->GetStat() == 1) {
+            Double_t value = GetCellValue(fCells[iCell], cell_value);
+            if (value<zmin)
+               zmin=value;
+            if (value>zmax)
+               zmax=value;
+         }
       }
       outfile << "// observed minimum and maximum of distribution: " << std::endl;
       outfile << "// Double_t zmin = "<< zmin << ";" << std::endl;
@@ -2626,22 +2624,22 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
          y2 = offs+lpag*(cellPosi[1]+cellSize[1]);
          
          if (fillcells) {
-	    // get cell value
-	    Double_t value = GetCellValue(fCells[iCell], cell_value);
+            // get cell value
+            Double_t value = GetCellValue(fCells[iCell], cell_value);
 
             if (log_colors) {
                if (value<1.) value=1;
                value = TMath::Log(value);
             }
 
-	    // calculate fill color
+            // calculate fill color
             Int_t color;
             if (colors)
                color = gStyle->GetColorPalette(Int_t((value-zmin)*scale));
             else
                color = 1000+(Int_t((value-zmin)*scale));
 
-	    // set fill color of box b1
+            // set fill color of box b1
             outfile << "b1->SetFillColor(" << color << ");" << std::endl;
          }
 
@@ -2651,18 +2649,18 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
             outfile<<"b2->DrawBox("<<x1<<","<<y1<<","<<x2<<","<<y2<<");"<<std::endl;
 
          //     cell number
-	 if (plotcellnumber) {
-	    outfile<<"t->SetTextColor(4);"<<endl;
-	    if(fLastCe<51)
-	       outfile<<"t->SetTextSize(0.025);"<<endl;  // text for numbering
-	    else if(fLastCe<251)
-	       outfile<<"t->SetTextSize(0.015);"<<endl;
-	    else
-	       outfile<<"t->SetTextSize(0.008);"<<endl;
-	    x = offs+lpag*(cellPosi[0]+0.5*cellSize[0]); 
-	    y = offs+lpag*(cellPosi[1]+0.5*cellSize[1]);
-	    outfile<<"t->DrawText("<<x<<","<<y<<","<<"\""<<iCell<<"\""<<");"<<endl;
-	 }
+         if (plotcellnumber) {
+            outfile<<"t->SetTextColor(4);"<<endl;
+            if(fLastCe<51)
+               outfile<<"t->SetTextSize(0.025);"<<endl;  // text for numbering
+            else if(fLastCe<251)
+               outfile<<"t->SetTextSize(0.015);"<<endl;
+            else
+               outfile<<"t->SetTextSize(0.008);"<<endl;
+            x = offs+lpag*(cellPosi[0]+0.5*cellSize[0]); 
+            y = offs+lpag*(cellPosi[1]+0.5*cellSize[1]);
+            outfile<<"t->DrawText("<<x<<","<<y<<","<<"\""<<iCell<<"\""<<");"<<endl;
+         }
       }
    }
    outfile<<"// ============== End Rectangles ==========="<< std::endl;
@@ -2741,7 +2739,10 @@ void TMVA::PDEFoam::ReadStream( istream & istr )
    istr >> fLastCe;
    istr >> fNCells;
    istr >> fDim;
-
+   if (fDim < 1 || fDim >= INT_MAX) {
+      Log() << kERROR << "Foam dimension " << GetTotDim() << "our of range!" << Endl;
+      return;
+   }
 
    Double_t vfr = -1.;
    istr >> vfr;
@@ -2811,6 +2812,10 @@ void TMVA::PDEFoam::ReadXML( void* parent )
    gTools().ReadAttr( variables, "LastCe",         fLastCe );
    gTools().ReadAttr( variables, "nCells",         fNCells );
    gTools().ReadAttr( variables, "Dim",            fDim );
+   if (fDim < 1 || fDim >= INT_MAX) {
+      Log() << kERROR << "Foam dimension " << GetTotDim() << "our of range!" << Endl;
+      return;
+   }
    Float_t volfr;
    gTools().ReadAttr( variables, "VolumeFraction", volfr );
    SetVolumeFraction( volfr );
