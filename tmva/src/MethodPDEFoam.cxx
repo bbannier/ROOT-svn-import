@@ -104,7 +104,8 @@ TMVA::MethodPDEFoam::MethodPDEFoam( DataSetInfo& dsi,
 //_______________________________________________________________________
 Bool_t TMVA::MethodPDEFoam::HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t /*numberTargets*/ )
 {
-   // PDEFoam can handle classification with 2 classes and regression with one or more regression-targets
+   // PDEFoam can handle classification with 2 classes and regression
+   // with one or more regression-targets
    if (type == Types::kClassification && numberClasses == 2) return kTRUE;
    if (type == Types::kRegression) return kTRUE;
    return kFALSE;
@@ -116,38 +117,38 @@ void TMVA::MethodPDEFoam::Init( void )
    // default initialization called by all constructors
 
    // init PDEFoam options
-   fSigBgSeparated = kFALSE;   // default values for options
-   fFrac           = 0.001;
-   fDiscrErrCut    = -1.;
-   fVolFrac        = 30;
-   fVolFracInv     = 1./30.;
-   fnActiveCells   = 500;
-   fnCells         = fnActiveCells*2-1;
-   fnSampl         = 2000;
-   fnBin           = 5;
-   fEvPerBin       = 10000;
-   fNmin           = 100;
-   fMaxDepth       = 0;  // cell tree depth is unlimited
-   fFillFoamWithOrigWeights = kFALSE;
-   fUseYesNoCell   = kFALSE; // return -1 or 1 for bg or signal like events
-   fDTLogic        = "None";
-   fDTSeparation   = kFoam;
-   fPeekMax        = kTRUE;
+   fSigBgSeparated = kFALSE;   // default: unified foam
+   fFrac           = 0.001;    // fraction of outlier events
+   fDiscrErrCut    = -1.;      // cut on discriminator error
+   fVolFrac        = 30;       // inverse range searching box size
+   fVolFracInv     = 1./30.;   // range searching box size
+   fnActiveCells   = 500;      // number of active cells to create
+   fnCells         = fnActiveCells*2-1; // total number of cells
+   fnSampl         = 2000;     // number of sampling points in cell
+   fnBin           = 5;        // number of bins in edge histogram
+   fEvPerBin       = 10000;    // number of events per bin
+   fNmin           = 100;      // minimum number of events in cell
+   fMaxDepth       = 0;        // cell tree depth (default: unlimited)
+   fFillFoamWithOrigWeights = kFALSE; // fill orig. weights into foam
+   fUseYesNoCell   = kFALSE;   // return -1 or 1 for bg or signal events
+   fDTLogic        = "None";   // decision tree algorithmus
+   fDTSeparation   = kFoam;    // separation type
+   fPeekMax        = kTRUE;    // peek cell with max separation
 
    fKernel         = kNone; // default: use no kernel
    fTargetSelection= kMean; // default: use mean for target selection (only multi target regression!)
 
-   fCompress              = kTRUE;
-   fMultiTargetRegression = kFALSE;
+   fCompress              = kTRUE;  // compress ROOT output file
+   fMultiTargetRegression = kFALSE; // multi-target regression
 
    for (UInt_t i=0; i<fFoam.size(); i++) 
       if (fFoam.at(i)) delete fFoam.at(i);
    fFoam.clear();
 
    if (fUseYesNoCell)
-      SetSignalReferenceCut( 0.0 );
+      SetSignalReferenceCut( 0.0 ); // MVA output in [-1, 1]
    else
-      SetSignalReferenceCut( 0.5 );
+      SetSignalReferenceCut( 0.5 ); // MVA output in [0, 1]
 }
 
 //_______________________________________________________________________
@@ -252,8 +253,8 @@ TMVA::MethodPDEFoam::~MethodPDEFoam( void )
 //_______________________________________________________________________
 void TMVA::MethodPDEFoam::CalcXminXmax() 
 {
-   // determine foam range for all dimensions
-   // loop over all testing events -> Get Xmin and Xmax
+   // Determine foam range [fXmin, fXmax] for all dimensions, such
+   // that fFrac events lie outside the foam.
 
    fXmin.clear();
    fXmax.clear();
@@ -276,7 +277,8 @@ void TMVA::MethodPDEFoam::CalcXminXmax()
    Int_t nevoutside = (Int_t)((Data()->GetNTrainingEvents())*(fFrac)); // number of events that are outside the range
    Int_t rangehistbins = 10000;                               // number of bins in histos
   
-   // loop over all testing singnal and BG events and clac minimal and maximal value of every variable
+   // loop over all testing singnal and BG events and clac minimal and
+   // maximal value of every variable
    for (Long64_t i=0; i<(GetNEvents()); i++) { // events loop
       const Event* ev = GetEvent(i);    
       for (UInt_t dim=0; dim<kDim; dim++) { // variables loop
@@ -297,8 +299,9 @@ void TMVA::MethodPDEFoam::CalcXminXmax()
       }
    }
 
-   // Create and fill histograms for each dimension (with same events as before), to determine range 
-   // based on number of events outside the range
+   // Create and fill histograms for each dimension (with same events
+   // as before), to determine range based on number of events outside
+   // the range
    TH1F **range_h = new TH1F*[kDim]; 
    for (UInt_t dim=0; dim<kDim; dim++) {
       range_h[dim]  = new TH1F(Form("range%i", dim), "range", rangehistbins, xmin[dim], xmax[dim]);
@@ -359,6 +362,8 @@ void TMVA::MethodPDEFoam::CalcXminXmax()
 //_______________________________________________________________________
 void TMVA::MethodPDEFoam::Train( void )
 {
+   // Train PDE-Foam depending on the set options
+
    Log() << kVERBOSE << "Calculate Xmin and Xmax for every dimension" << Endl;
    CalcXminXmax();
 
@@ -401,9 +406,6 @@ void TMVA::MethodPDEFoam::Train( void )
    }
 }
 
-/////////////////////////////////////////////////////////////////////////////
-//  First method (signal and bg are in seperate foams).                    //
-/////////////////////////////////////////////////////////////////////////////
 //_______________________________________________________________________
 void TMVA::MethodPDEFoam::TrainSeparatedClassification() 
 {
@@ -441,9 +443,7 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
    }
 }
 
-//////////////////////////////////////////////////////////////////////////
-// second method (only one foam, which contains discriminator).         //
-//////////////////////////////////////////////////////////////////////////
+//_______________________________________________________________________
 void TMVA::MethodPDEFoam::TrainUnifiedClassification() 
 {
    // Create only one unified foam which contains discriminator
@@ -473,7 +473,7 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
 //_______________________________________________________________________
 void TMVA::MethodPDEFoam::TrainMonoTargetRegression() 
 {
-   // Training for mono target regression
+   // Training mono target regression foam
    // - foam density = average Target(0)
    // - dimension of foam = number of non-targets
    // - cell content = average target 0
@@ -514,7 +514,7 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
 //_______________________________________________________________________
 void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
 {
-   // Training multi target regression
+   // Training multi target regression foam
    // - foam density = Event density
    // - dimension of foam = number of non-targets + number of targets
    // - cell content = event density
@@ -548,7 +548,11 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
 //_______________________________________________________________________
 Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
-   // Return Mva-Value for both separated and unified foams
+   // Return Mva-Value.  In case of 'fSigBgSeparated==false' return
+   // the cell content (D = N_sig/(N_bg+N_sig)).  In case of
+   // 'fSigBgSeparated==false' return D =
+   // Density_sig/(Density_sig+Density_bg).  In both cases the error
+   // of the discriminant is stored in 'err'.
 
    const Event* ev = GetEvent();
    Double_t discr = 0.;
@@ -592,12 +596,6 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
 
       if (discr_error < 1e-10) discr_error = 1.;
    }
-
-   /////////////////////////////////////////////////////////////////////////////
-   //  End of first method (signal and bg are in seperate foams).             //
-   //  Begin second method (only one foam, which contains discriminator).     //
-   /////////////////////////////////////////////////////////////////////////////
-
    else { // Signal and Bg not separated
       std::vector<Float_t> xvec = ev->GetValues();
       
@@ -619,7 +617,7 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
 //_______________________________________________________________________
 void TMVA::MethodPDEFoam::SetXminXmax( TMVA::PDEFoam *pdefoam )
 {
-   // Set Xmin, Xmax in every dimension to pdefoam
+   // Set Xmin, Xmax for every dimension in the given pdefoam object
 
    if (!pdefoam){
       Log() << kFATAL << "Null pointer given!" << Endl;
@@ -639,8 +637,10 @@ void TMVA::MethodPDEFoam::SetXminXmax( TMVA::PDEFoam *pdefoam )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
-   // Set foam options and initialize foam
+void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft)
+{
+   // Set foam options (incl. Xmin, Xmax) and initialize foam via 
+   // pdefoam->Init()
 
    if (!pdefoam){
       Log() << kFATAL << "Null pointer given!" << Endl;
