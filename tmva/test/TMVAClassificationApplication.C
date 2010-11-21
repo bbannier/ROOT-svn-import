@@ -96,6 +96,11 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    // --- Friedman's RuleFit method, ie, an optimised series of cuts ("rules")
    Use["RuleFit"]         = 1;
    // ---------------------------------------------------------------
+   Use["Plugin"]          = 0;
+   Use["Category"]        = 0;
+   Use["SVM_Gauss"]       = 0;
+   Use["SVM_Poly"]        = 0;
+   Use["SVM_Lin"]         = 0;
 
    std::cout << std::endl;
    std::cout << "==> Start TMVAClassificationApplication" << std::endl;
