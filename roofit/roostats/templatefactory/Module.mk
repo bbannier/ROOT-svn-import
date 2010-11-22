@@ -4,7 +4,7 @@
 # Author: Kyle Cranmer
 
 MODNAME      := templatefactory
-MODDIR       := roofit/roostats/$(MODNAME)
+MODDIR       := roofit/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
