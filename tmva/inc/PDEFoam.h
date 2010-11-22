@@ -207,12 +207,13 @@ namespace TMVA {
       // get number of events in cell during foam build-up
       Double_t GetBuildUpCellEvents(PDEFoamCell* cell);
       
+      PDEFoam(const PDEFoam&);    // Copy Constructor  NOT USED
+
       // ---------- Public functions ----------------------------------
    public:
       PDEFoam();                  // Default constructor (used only by ROOT streamer)
       PDEFoam(const TString&);    // Principal user-defined constructor
       virtual ~PDEFoam();         // Default destructor
-      PDEFoam(const PDEFoam&);    // Copy Constructor  NOT USED
 
       // ---------- Foam creation functions
 
@@ -246,6 +247,7 @@ namespace TMVA {
       void SetDTSeparation(EDTSeparation new_val){fDTSeparation=new_val;}
       void SetPeekMax(Bool_t new_val){ fPeekMax = new_val; }
 
+      // coverity[ -tainted_data_return ]
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
       UInt_t   GetNElements() const {return fNElements; } // returns number of elements, saved on every cell
@@ -315,7 +317,7 @@ namespace TMVA {
                      const char *ker="kNone", UInt_t maxbins=50);
 
       // helper function for Project2()
-      Double_t GetProjectionCellValue( PDEFoamCell* cell, 
+      Double_t GetProjectionCellValue( PDEFoamCell* cell,
                                        Int_t idim1, Int_t idim2, ECellValue cv );
 
       // Project one-dimensional foam to a 1-dim histogram
@@ -323,9 +325,9 @@ namespace TMVA {
 
       // Generates C++ code (root macro) for drawing foam with boxes (only 2-dim!)
       void RootPlot2dim( const TString& filename, TString opt,
-                         Bool_t CreateCanvas = kTRUE, Bool_t colors = kTRUE, 
+                         Bool_t CreateCanvas = kTRUE, Bool_t colors = kTRUE,
                          Bool_t log_colors = kFALSE  );
-      
+
       // ---------- Foam evaluation functions
 
       // get cell value for a given event
@@ -346,7 +348,7 @@ namespace TMVA {
 
       // ---------- ROOT class definition
       ClassDef(PDEFoam,5) // Tree of PDEFoamCells
-   }; // end of PDEFoam 
+   }; // end of PDEFoam
 
 }  // namespace TMVA
 
@@ -371,7 +373,7 @@ inline std::vector<Float_t> TMVA::PDEFoam::VarTransform(std::vector<Float_t> &in
 
 //_____________________________________________________________________
 inline Float_t TMVA::PDEFoam::VarTransformInvers(Int_t idim, Float_t x) const
-{ 
+{
    // transform variable x from [0, 1] --> [xmin, xmax]
    return x*(fXmax[idim]-fXmin[idim]) + fXmin[idim];
 }

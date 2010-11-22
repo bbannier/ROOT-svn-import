@@ -337,7 +337,8 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
 void TMVA::MethodMLP::Train(Int_t nEpochs)
 {
    if (fNetwork == 0) {
-      Log() <<kERROR <<"ANN Network is not initialized, doing it now!"<< Endl;
+      //Log() << kERROR <<"ANN Network is not initialized, doing it now!"<< Endl;
+      Log() << kFATAL <<"ANN Network is not initialized, doing it now!"<< Endl;
       SetAnalysisType(GetAnalysisType());
    }
    Log() << kDEBUG << "reinitalize learning rates" << Endl;
@@ -346,17 +347,8 @@ void TMVA::MethodMLP::Train(Int_t nEpochs)
 
    Int_t nEvents=GetNEvents();
    Int_t nSynapses=fSynapses->GetEntriesFast();
-   if (nSynapses>nEvents) Log()<<kFATAL<<"ANN too complicated: #events="<<nEvents<<"\t#synapses="<<nSynapses<<Endl;
-   //Int_t  nEvents  = GetNEvents();
-   //UInt_t nTgts = DataInfo().GetNTargets();
-   //for (Int_t i = 0; i < nEvents; i++) {
-   //  const Event* ev = GetEvent(i);
-   //  if (i*100%nEvents==0 && DoRegression()) {
-   //    for (UInt_t itgt = 0; itgt < nTgts; itgt++) {
-   //	 Log()<<kINFO<< GetOutputNeuron( itgt )->GetActivationValue()<<"\t"<< ev->GetTarget( itgt ) <<Endl;
-   //    }
-   //  }
-   //}
+   if (nSynapses>nEvents) 
+      Log()<<kFATAL<<"ANN too complicated: #events="<<nEvents<<"\t#synapses="<<nSynapses<<Endl;
 
 #ifdef MethodMLP_UseMinuit__
    if (useMinuit) MinuitMinimize();
@@ -1387,7 +1379,6 @@ Double_t TMVA::MethodMLP::GetMvaValueAsymError( Double_t* errLower, Double_t* er
    // no hessian (old training file) or no error reqested
    if (fInvHessian.GetNcols()==0 || errLower==0 || errUpper==0)
       return MvaValue;
-
 
    Double_t MvaUpper,MvaLower,median,variance;
    Int_t numSynapses=fSynapses->GetEntriesFast();

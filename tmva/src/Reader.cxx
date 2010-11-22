@@ -349,7 +349,7 @@ TMVA::IMethod* TMVA::Reader::BookMVA( const TString& methodTag, const TString& w
 
    MethodBase* method = dynamic_cast<MethodBase*>(this->BookMVA( Types::Instance().GetMethodType(methodType),
                                                                  weightfile ) );
-   if( method->GetMethodType() == Types::kCategory ){
+   if( method && method->GetMethodType() == Types::kCategory ){
       MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method));
       if( !methCat )
          Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl;
@@ -407,11 +407,13 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const char* 
 
    MethodBase *method = (dynamic_cast<MethodBase*>(im));
 
-   if (method->GetMethodType() == Types::kCategory) {
-      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method));
-      if (!methCat)
-         Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl;
-      methCat->fDataSetManager = fDataSetManager;
+   if(!method) return 0;
+
+   if( method->GetMethodType() == Types::kCategory ){ 
+      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method)); 
+      if( !methCat ) 
+         Log() << kFATAL << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; 
+      methCat->fDataSetManager = fDataSetManager; 
    }
 
    method->SetupMethod();
@@ -445,11 +447,15 @@ Double_t TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const 
    // The parameter aux is obligatory for the cuts method where it represents the efficiency cutoff
 
    // create a temporary event from the vector.
-   Event* tmpEvent=new Event(inputVec, 2); // ToDo resolve magic 2 issue
    IMethod* imeth = FindMVA( methodTag );
    MethodBase* meth = dynamic_cast<TMVA::MethodBase*>(imeth);
-   if (meth->GetMethodType() == TMVA::Types::kCuts)
-      dynamic_cast<TMVA::MethodCuts*>(meth)->SetTestSignalEfficiency( aux );
+   if(meth==0) return 0;
+   Event* tmpEvent=new Event(inputVec, 2); // ToDo resolve magic 2 issue
+   if (meth->GetMethodType() == TMVA::Types::kCuts) {
+      TMVA::MethodCuts* mc = dynamic_cast<TMVA::MethodCuts*>(meth);
+      if(mc)
+         mc->SetTestSignalEfficiency( aux );
+   }
    Double_t val = meth->GetMvaValue( tmpEvent, (fCalculateError?&fMvaEventError:0));
    delete tmpEvent;
    return val;
@@ -502,8 +508,11 @@ Double_t TMVA::Reader::EvaluateMVA( MethodBase* method, Double_t aux )
 
    // the aux value is only needed for MethodCuts: it sets the
    // required signal efficiency
-   if (method->GetMethodType() == TMVA::Types::kCuts)
-      dynamic_cast<TMVA::MethodCuts*>(method)->SetTestSignalEfficiency( aux );
+   if (method->GetMethodType() == TMVA::Types::kCuts) {
+      TMVA::MethodCuts* mc = dynamic_cast<TMVA::MethodCuts*>(method);
+      if(mc)
+         mc->SetTestSignalEfficiency( aux );
+   }
 
    return method->GetMvaValue( (fCalculateError?&fMvaEventError:0),
                                (fCalculateError?&fMvaEventErrorUpper:0) );

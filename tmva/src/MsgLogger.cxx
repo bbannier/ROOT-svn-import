@@ -33,6 +33,8 @@
 
 #include <cstdlib>
 
+#include <assert.h>
+
 // ROOT include(s):
 
 ClassImp(TMVA::MsgLogger)
@@ -193,6 +195,7 @@ void TMVA::MsgLogger::WriteMsg( EMsgType type, const std::string& line ) const
    if ( (type < fMinType || fgInhibitOutput) && type!=kFATAL ) return; // no output
 
    std::map<EMsgType, std::string>::const_iterator stype;
+
    if ((stype = fgTypeMap->find( type )) != fgTypeMap->end()) {
       if (!gConfig().IsSilent() || type==kFATAL) {
          if (gConfig().UseColor()) {
@@ -214,6 +217,7 @@ void TMVA::MsgLogger::WriteMsg( EMsgType type, const std::string& line ) const
    if (type == kFATAL) {
       std::cout << "***> abort program execution" << std::endl;
       std::exit(1);
+      assert(false);
    }
 }
 

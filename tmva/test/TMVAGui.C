@@ -78,7 +78,6 @@ void TMVAGui( const char* fName = "TMVA.root" )
       return;
    }
    // find all references   
-   cout << "--- Reading keys ..." << endl;
    TMVAGui_keyContent = (TList*)file->GetListOfKeys()->Clone();
 
    // close file

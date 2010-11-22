@@ -94,6 +94,7 @@ namespace TMVA {
 
       //copy constructor
       SeparationBase( const SeparationBase& s );
+
       // destructor
       virtual ~SeparationBase(){};
 

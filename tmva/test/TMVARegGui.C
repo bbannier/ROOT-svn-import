@@ -66,7 +66,6 @@ void TMVARegGui( const char* fName = "TMVAReg.root" )
       return;
    }
    // find all references   
-   cout << "--- Reading keys ..." << endl;
    TMVAGui_keyContent = (TList*)file->GetListOfKeys()->Clone();
 
    // close file

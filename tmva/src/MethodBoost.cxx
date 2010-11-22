@@ -304,109 +304,106 @@ void TMVA::MethodBoost::Train()
    CleanBoostOptions(); 
    //
    // training and boosting the classifiers
-   for (fMethodIndex=0;fMethodIndex<fBoostNum;fMethodIndex++)
-      {
-         // the first classifier shows the option string output, the rest not
-         if (fMethodIndex>0) TMVA::MsgLogger::InhibitOutput();
-         IMethod* method = ClassifierFactory::Instance().Create(std::string(fBoostedMethodName),
-                                                                GetJobName(),
-                                                                Form("%s_B%04i", fBoostedMethodName.Data(),fMethodIndex),
-                                                                DataInfo(),
-                                                                fBoostedMethodOptions);
-         TMVA::MsgLogger::EnableOutput();
+   for (fMethodIndex=0;fMethodIndex<fBoostNum;fMethodIndex++) {
+      // the first classifier shows the option string output, the rest not
+      if (fMethodIndex>0) TMVA::MsgLogger::InhibitOutput();
+      IMethod* method = ClassifierFactory::Instance().Create(std::string(fBoostedMethodName),
+                                                             GetJobName(),
+                                                             Form("%s_B%04i", fBoostedMethodName.Data(),fMethodIndex),
+                                                             DataInfo(),
+                                                             fBoostedMethodOptions);
+      TMVA::MsgLogger::EnableOutput();
 
-         // supressing the rest of the classifier output the right way
-         MethodBase *meth = (dynamic_cast<MethodBase*>(method));
+      // supressing the rest of the classifier output the right way
+      MethodBase *meth = (dynamic_cast<MethodBase*>(method));
+         
+      if(meth==0) continue;
 
-
-
-
-
-	 // set fDataSetManager if MethodCategory (to enable Category to create datasetinfo objects) // DSMTEST
-	 if( meth->GetMethodType() == Types::kCategory ){ // DSMTEST
-	    MethodCategory *methCat = (dynamic_cast<MethodCategory*>(meth)); // DSMTEST
-	    if( !methCat ) // DSMTEST
-	       Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /MethodBoost" << Endl; // DSMTEST
-	    methCat->fDataSetManager = fDataSetManager; // DSMTEST
-	 } // DSMTEST
+      // set fDataSetManager if MethodCategory (to enable Category to create datasetinfo objects) // DSMTEST
+      if( meth->GetMethodType() == Types::kCategory ){ // DSMTEST
+         MethodCategory *methCat = (dynamic_cast<MethodCategory*>(meth)); // DSMTEST
+         if( !methCat ) // DSMTEST
+            Log() << kFATAL << "Method with type kCategory cannot be casted to MethodCategory. /MethodBoost" << Endl; // DSMTEST
+         methCat->fDataSetManager = fDataSetManager; // DSMTEST
+      } // DSMTEST
 
 
+      meth->SetMsgType(kWARNING);
+      meth->SetupMethod();
+      meth->ParseOptions();
+      // put SetAnalysisType here for the needs of MLP
+      meth->SetAnalysisType( GetAnalysisType() );
+      meth->ProcessSetup();
+      meth->CheckSetup();
 
-
-
-         meth->SetMsgType(kWARNING);
-         meth->SetupMethod();
-         meth->ParseOptions();
-         // put SetAnalysisType here for the needs of MLP
-         meth->SetAnalysisType( GetAnalysisType() );
-         meth->ProcessSetup();
-         meth->CheckSetup();
-
-         // creating the directory of the classifier
-         if (fMonitorBoostedMethod)
-            {
-               methodDir=MethodBaseDir()->GetDirectory(dirName=Form("%s_B%04i",fBoostedMethodName.Data(),fMethodIndex));
-               if (methodDir==0)
-                  methodDir=BaseDir()->mkdir(dirName,dirTitle=Form("Directory Boosted %s #%04i", fBoostedMethodName.Data(),fMethodIndex));
-               dynamic_cast<MethodBase*>(method)->SetMethodDir(methodDir);
-               dynamic_cast<MethodBase*>(method)->BaseDir()->cd();
+      // creating the directory of the classifier
+      if (fMonitorBoostedMethod)
+         {
+            methodDir=MethodBaseDir()->GetDirectory(dirName=Form("%s_B%04i",fBoostedMethodName.Data(),fMethodIndex));
+            if (methodDir==0)
+               methodDir=BaseDir()->mkdir(dirName,dirTitle=Form("Directory Boosted %s #%04i", fBoostedMethodName.Data(),fMethodIndex));
+            MethodBase* m = dynamic_cast<MethodBase*>(method);
+            if(m) {
+               m->SetMethodDir(methodDir);
+               m->BaseDir()->cd();
             }
+         }
 
-         // training
-         TMVA::MethodCompositeBase::fMethods.push_back(method);
-         timer.DrawProgressBar( fMethodIndex );
-         if (fMethodIndex==0) method->MonitorBoost(SetStage(Types::kBoostProcBegin));
-         method->MonitorBoost(SetStage(Types::kBeforeTraining));
-         TMVA::MsgLogger::InhibitOutput(); //supressing Logger outside the method
-         SingleTrain();
-         TMVA::MsgLogger::EnableOutput();
-         method->WriteMonitoringHistosToFile();
-
-	 // calculate MVA values of method on training sample
-	 CalcMVAValues();
-
-         if (fMethodIndex==0 && fMonitorBoostedMethod) CreateMVAHistorgrams();
-
-	 // get ROC integral and overlap integral for single method on
-	 // training sample
-	 fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining, kTRUE);
+      // training
+      TMVA::MethodCompositeBase::fMethods.push_back(method);
+      timer.DrawProgressBar( fMethodIndex );
+      if (fMethodIndex==0) method->MonitorBoost(SetStage(Types::kBoostProcBegin));
+      method->MonitorBoost(SetStage(Types::kBeforeTraining));
+      TMVA::MsgLogger::InhibitOutput(); //supressing Logger outside the method
+      SingleTrain();
+      TMVA::MsgLogger::EnableOutput();
+      method->WriteMonitoringHistosToFile();
+      
+      // calculate MVA values of method on training sample
+      CalcMVAValues();
+      
+      if (fMethodIndex==0 && fMonitorBoostedMethod) CreateMVAHistorgrams();
+      
+      // get ROC integral and overlap integral for single method on
+      // training sample
+      fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining, kTRUE);
 	 
-	 // calculate method weight
-	 CalcMethodWeight();
-         AllMethodsWeight += fMethodWeight.back();
+      // calculate method weight
+      CalcMethodWeight();
+      AllMethodsWeight += fMethodWeight.back();
 
-	 (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kTRUE, Types::kTesting));
-	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTesting));
-	 (*fMonitorHist)[6]->SetBinContent(fMethodIndex+1, fROC_training);
-	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTraining));
-	 (*fMonitorHist)[8]->SetBinContent(fMethodIndex+1, fOverlap_integral);
+      (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kTRUE, Types::kTesting));
+      (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTesting));
+      (*fMonitorHist)[6]->SetBinContent(fMethodIndex+1, fROC_training);
+      (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTraining));
+      (*fMonitorHist)[8]->SetBinContent(fMethodIndex+1, fOverlap_integral);
 
-         // boosting (reweight training sample)
-         method->MonitorBoost(SetStage(Types::kBeforeBoosting));
-         SingleBoost();
-         method->MonitorBoost(SetStage(Types::kAfterBoosting));
-         (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
-         (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
-         (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
+      // boosting (reweight training sample)
+      method->MonitorBoost(SetStage(Types::kBeforeBoosting));
+      SingleBoost();
+      method->MonitorBoost(SetStage(Types::kAfterBoosting));
+      (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
+      (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
+      (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
 
-         fMonitorTree->Fill();
+      fMonitorTree->Fill();
 
-         // stop boosting if needed when error has reached 0.5
-         // thought of counting a few steps, but it doesn't seem to be necessary
-         Log() << kDEBUG << "AdaBoost (methodErr) err = " << fMethodError << Endl;
-         if (fMethodError > 0.49999) StopCounter++; 
-         if (StopCounter > 0 && fBoostType != "Bagging")
-            {
-               timer.DrawProgressBar( fBoostNum );
-               fBoostNum = fMethodIndex+1; 
-               Log() << kINFO << "Error rate has reached 0.5, boosting process stopped at #" << fBoostNum << " classifier" << Endl;
-               if (fBoostNum < 5)
-                  Log() << kINFO << "The classifier might be too strong to boost with Beta = " << fADABoostBeta << ", try reducing it." <<Endl;
-               for (Int_t i=0;i<fDefaultHistNum;i++)
-                  (*fMonitorHist)[i]->SetBins(fBoostNum,0,fBoostNum);
-               break;
-            }
-      }
+      // stop boosting if needed when error has reached 0.5
+      // thought of counting a few steps, but it doesn't seem to be necessary
+      Log() << kDEBUG << "AdaBoost (methodErr) err = " << fMethodError << Endl;
+      if (fMethodError > 0.49999) StopCounter++; 
+      if (StopCounter > 0 && fBoostType != "Bagging")
+         {
+            timer.DrawProgressBar( fBoostNum );
+            fBoostNum = fMethodIndex+1; 
+            Log() << kINFO << "Error rate has reached 0.5, boosting process stopped at #" << fBoostNum << " classifier" << Endl;
+            if (fBoostNum < 5)
+               Log() << kINFO << "The classifier might be too strong to boost with Beta = " << fADABoostBeta << ", try reducing it." <<Endl;
+            for (Int_t i=0;i<fDefaultHistNum;i++)
+               (*fMonitorHist)[i]->SetBins(fBoostNum,0,fBoostNum);
+            break;
+         }
+   }
    if (fMethodWeightType == "LastMethod") { fMethodWeight.back() = AllMethodsWeight = 1.0; }
 
    ResetBoostWeights();
@@ -426,7 +423,7 @@ void TMVA::MethodBoost::Train()
       }
 
       if (AllMethodsWeight != 0.0)
-	 fMethodWeight[fMethodIndex] = fMethodWeight[fMethodIndex] / AllMethodsWeight;
+         fMethodWeight[fMethodIndex] = fMethodWeight[fMethodIndex] / AllMethodsWeight;
       (*fMonitorHist)[0]->SetBinContent(fMethodIndex+1,fMethodWeight[fMethodIndex]);
    }
 
@@ -495,7 +492,9 @@ void TMVA::MethodBoost::WriteMonitoringHistosToFile( void ) const
       for (Int_t imtd=0;imtd<fBoostNum;imtd++) {
 
          //writing the histograms in the specific classifier's directory
-         dir = dynamic_cast<MethodBase*>(fMethods[imtd])->BaseDir();
+         MethodBase* m = dynamic_cast<MethodBase*>(fMethods[imtd]);
+         if(!m) continue;
+         dir = m->BaseDir();
          dir->cd();
          fTrainSigMVAHist[imtd]->SetDirectory(dir);
          fTrainSigMVAHist[imtd]->Write();
@@ -551,12 +550,15 @@ void TMVA::MethodBoost::WriteEvaluationHistosToFile(Types::ETreeType treetype)
    MethodBase::WriteEvaluationHistosToFile(treetype);
    if(treetype==Types::kTraining) return;
    UInt_t nloop = fTestSigMVAHist.size();
-   if (fMethods.size()<nloop) nloop = fMethods.size(); 
+   if (fMethods.size()<nloop) nloop = fMethods.size();
    if (fMonitorBoostedMethod) {
       TDirectory* dir=0;
       for (UInt_t imtd=0;imtd<nloop;imtd++) {
          //writing the histograms in the specific classifier's directory
-         dir = dynamic_cast<MethodBase*>(fMethods[imtd])->BaseDir();
+         MethodBase* mva = dynamic_cast<MethodBase*>(fMethods[imtd]);
+         if(!mva) continue;
+         dir = mva->BaseDir();
+         if(dir==0) continue;
          dir->cd();
          fTestSigMVAHist[imtd]->SetDirectory(dir);
          fTestSigMVAHist[imtd]->Write();
@@ -578,7 +580,8 @@ void TMVA::MethodBoost::SingleTrain()
    // initialization
    Data()->SetCurrentType(Types::kTraining);
    MethodBase* meth = dynamic_cast<MethodBase*>(GetLastMethod());
-   meth->TrainMethod();
+   if(meth)
+      meth->TrainMethod();
 }
 
 //_______________________________________________________________________
@@ -588,11 +591,14 @@ void TMVA::MethodBoost::FindMVACut()
    // correct or misclassified (to be used in the boosting process)
 
    MethodBase* lastMethod=dynamic_cast<MethodBase*>(fMethods.back());
-   if (lastMethod->GetMethodType() == Types::kDT ){ return;}
+   if (!lastMethod || lastMethod->GetMethodType() == Types::kDT ){ return;}
+
    if (!fRecalculateMVACut && fMethodIndex>0) {
-      lastMethod->SetSignalReferenceCut(dynamic_cast<MethodBase*>(fMethods[0])->GetSignalReferenceCut());
-   }
-   else {
+      MethodBase* m = dynamic_cast<MethodBase*>(fMethods[0]);
+      if(m)
+         lastMethod->SetSignalReferenceCut(m->GetSignalReferenceCut());
+   } else {
+
       // creating a fine histograms containing the error rate
       const Int_t nValBins=1000;
       Double_t* err=new Double_t[nValBins];
@@ -639,6 +645,7 @@ void TMVA::MethodBoost::FindMVACut()
 void TMVA::MethodBoost::SingleBoost()
 {
    MethodBase* method =  dynamic_cast<MethodBase*>(fMethods.back());
+   if(!method) return;
    Event * ev; Float_t w,v,wo; Bool_t sig=kTRUE;
    Double_t sumAll=0, sumWrong=0, sumAllOrig=0, sumWrongOrig=0, sumAll1=0;
    Bool_t* WrongDetection=new Bool_t[Data()->GetNEvents()];
@@ -856,7 +863,9 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err, Double_t* errUpper )
    //Double_t fact    = TMath::Exp(-1.)+TMath::Exp(1.);
    for (UInt_t i=0;i< fMethods.size(); i++){
       Double_t val = fMethods[i]->GetMvaValue();
-      Double_t sigcut = dynamic_cast<MethodBase*>(fMethods[i])->GetSignalReferenceCut();
+      MethodBase* m = dynamic_cast<MethodBase*>(fMethods[i]);
+      if(m==0) continue;
+      Double_t sigcut = m->GetSignalReferenceCut();
       // default is no transform
       if (fTransformString == "linear"){
 
