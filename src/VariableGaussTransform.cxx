@@ -622,10 +622,12 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << std::endl;
       // declare variables
       fout << "   double  cumulativeDist["<<nvar<<"]["<<numDist<<"]["<<nBins+1<<"];"<<std::endl;
-      fout << "   double xmin["<<nvar<<"]["<<numDist<<"];"<<std::endl;
-      fout << "   double xmax["<<nvar<<"]["<<numDist<<"];"<<std::endl;
+      fout << "   double xMin["<<nvar<<"]["<<numDist<<"];"<<std::endl;
+      fout << "   double xMax["<<nvar<<"]["<<numDist<<"];"<<std::endl;
    }
    if (part==2) {
+      fout << std::endl;
+      fout << "#include \"math.h\"" << std::endl;
       fout << std::endl;
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::InitTransform_"<<trCounter<<"()" << std::endl;
@@ -635,12 +637,12 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       // fill cumulativeDist with fCumulativePDF[ivar][cls])->GetValue(vec(ivar)
       for (UInt_t icls=0; icls<numDist; icls++) {
          for (UInt_t ivar=0; ivar<nvar; ivar++) {
-            Double_t xmn=Variables()[ivar].GetMin();
-            Double_t xmx=Variables()[ivar].GetMax();
-            fout << "    xmin["<<ivar<<"]["<<icls<<"]="<<xmn<<";"<<std::endl;
-            fout << "    xmax["<<ivar<<"]["<<icls<<"]="<<xmx<<";"<<std::endl;
+            Double_t xmn=(fCumulativePDF[ivar][icls])->GetXmin();
+            Double_t xmx=(fCumulativePDF[ivar][icls])->GetXmax();
+            fout << "    xMin["<<ivar<<"]["<<icls<<"]="<<xmn<<";"<<std::endl;
+            fout << "    xMax["<<ivar<<"]["<<icls<<"]="<<xmx<<";"<<std::endl;
             for (Int_t ibin=0; ibin<=nBins; ibin++) {
-               Double_t xval = xmn + (xmx-xmn) / nBins * ibin;
+               Double_t xval = xmn + (xmx-xmn) / nBins * (ibin+0.5);
                // ibin = (xval -xmin) / (xmax-xmin) *1000 
                fout << "  cumulativeDist[" << ivar << "]["<< icls<< "]["<<ibin<<"]="<< (fCumulativePDF[ivar][icls])->GetVal(xval)<< ";"<<std::endl;
             }
@@ -661,15 +663,15 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << "   const int nvar = "<<GetNVariables()<<";"<< std::endl;
       fout << "   for (int ivar=0; ivar<nvar; ivar++) {"<< std::endl;
       // ibin = (xval -xmin) / (xmax-xmin) *1000 
-      fout << "   int ibin1 = (int) ((iv[ivar]-xmin[ivar][cls])/(xmax[ivar][cls]-xmin[ivar][cls])*"<<nBins<<");"<<std::endl;
+      fout << "   int ibin1 = (int) ((iv[ivar]-xMin[ivar][cls])/(xMax[ivar][cls]-xMin[ivar][cls])*"<<nBins<<");"<<std::endl;
       fout << "   if (ibin1<=0) { cumulant = cumulativeDist[ivar][cls][0];}"<<std::endl;
       fout << "   else if (ibin1>="<<nBins<<") { cumulant = cumulativeDist[ivar][cls]["<<nBins<<"];}"<<std::endl;
       fout << "   else {"<<std::endl;
       fout << "           int ibin2 = ibin1+1;" << std::endl;
-      fout << "           double dx = iv[ivar]-(xmin[ivar][cls]+"<< (1./nBins)
-           << "           * ibin1* (xmax[ivar][cls]-xmin[ivar][cls]));"  
+      fout << "           double dx = iv[ivar]-(xMin[ivar][cls]+"<< (1./nBins)
+           << "           * ibin1* (xMax[ivar][cls]-xMin[ivar][cls]));"  
            << std::endl;
-      fout << "           double eps=dx/(xmax[ivar][cls]-xmin[ivar][cls])*"<<nBins<<";"<<std::endl;
+      fout << "           double eps=dx/(xMax[ivar][cls]-xMin[ivar][cls])*"<<nBins<<";"<<std::endl;
       fout << "           cumulant = eps*cumulativeDist[ivar][cls][ibin1] + (1-eps)*cumulativeDist[ivar][cls][ibin2];" << std::endl;
       fout << "           if (cumulant>1.-10e-10) cumulant = 1.-10e-10;"<< std::endl;
       fout << "           if (cumulant<10e-10)    cumulant = 10e-10;"<< std::endl;
