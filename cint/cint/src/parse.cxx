@@ -156,7 +156,7 @@ static void G__toUniquePath(char* s)
       }
    }
    d[j] = 0;
-   strcpy(s, d);
+   strcpy(s, d); // Okay we allocated enough space
    free(d);
 }
 #endif // G__WIN32
@@ -217,7 +217,7 @@ static int G__setline(G__FastAllocString& statement, int c, int* piout)
                   }
                }
                statement[strlen(statement)-1] = '\0';
-               strcpy(G__ifile.name, statement + 1);
+               G__strlcpy(G__ifile.name, statement + 1, G__MAXFILENAME);
                int hash = 0;
                int temp = 0;
                G__hash(G__ifile.name, hash, temp);
@@ -242,7 +242,7 @@ static int G__setline(G__FastAllocString& statement, int c, int* piout)
                   // --
                   G__srcfile[null_entry].hash = hash;
                   G__srcfile[null_entry].filename = (char*) malloc(strlen(statement + 1) + 1);
-                  strcpy(G__srcfile[null_entry].filename, statement + 1);
+                  strcpy(G__srcfile[null_entry].filename, statement + 1); // Okay we allocated enough space
                   G__srcfile[null_entry].prepname = 0;
                   G__srcfile[null_entry].fp = 0;
                   G__srcfile[null_entry].maxline = 0;
@@ -259,7 +259,7 @@ static int G__setline(G__FastAllocString& statement, int c, int* piout)
                   //
                   if (G__cpp && G__srcfile[G__ifile.filenum].prepname[0]) {
                      G__srcfile[null_entry].prepname = (char*) malloc(strlen(G__srcfile[G__ifile.filenum].prepname) + 1);
-                     strcpy(G__srcfile[null_entry].prepname, G__srcfile[G__ifile.filenum].prepname);
+                     strcpy(G__srcfile[null_entry].prepname, G__srcfile[G__ifile.filenum].prepname); // Okay we allocated enough space
                      G__srcfile[null_entry].fp = G__ifile.fp;
                   }
                   G__srcfile[null_entry].included_from = G__ifile.filenum;
@@ -277,7 +277,7 @@ static int G__setline(G__FastAllocString& statement, int c, int* piout)
                      // --
                      G__srcfile[G__nfile].hash = hash;
                      G__srcfile[G__nfile].filename = (char*) malloc(strlen(statement + 1) + 1);
-                     strcpy(G__srcfile[G__nfile].filename, statement + 1);
+                     strcpy(G__srcfile[G__nfile].filename, statement + 1); // Okay we allocated enough space
                      G__srcfile[G__nfile].prepname = 0;
                      G__srcfile[G__nfile].fp = 0;
                      G__srcfile[G__nfile].maxline = 0;
@@ -299,7 +299,7 @@ static int G__setline(G__FastAllocString& statement, int c, int* piout)
                      ) {
                         // --
                         G__srcfile[G__nfile].prepname = (char*) malloc(strlen(G__srcfile[G__ifile.filenum].prepname) + 1);
-                        strcpy(G__srcfile[G__nfile].prepname, G__srcfile[G__ifile.filenum].prepname);
+                        strcpy(G__srcfile[G__nfile].prepname, G__srcfile[G__ifile.filenum].prepname); // Okay we allocated enough space
                         G__srcfile[G__nfile].fp = G__ifile.fp;
                      }
                      G__srcfile[G__nfile].included_from = G__ifile.filenum;
@@ -3438,7 +3438,7 @@ static int G__search_gotolabel(char* label, fpos_t* pfpos, int line, int* pmpare
    // Note: The label parameter is 0 if G__gotolabel is already set.
    //
    if (label) {
-      strcpy(G__gotolabel, label);
+      G__strlcpy(G__gotolabel, label, G__MAXNAME);
    }
    int c = 0;
    int mparen = 0;
@@ -3979,7 +3979,7 @@ static void G__parse_friend()
             friendtagnum = G__search_tagname(classname, tagtype);
          }
          // friend class ...;
-         if (envtagnum != -1) {
+         if (envtagnum != -1 && friendtagnum != -1) {
             struct G__friendtag* friendtag = G__struct.friendtag[friendtagnum];
             if (friendtag) {
                while (friendtag->next) {
@@ -4058,14 +4058,27 @@ static int G__keyword_anytime_5(G__FastAllocString& statement)
       G__IsFundamentalDecl() // the following type is a fundamental type
    ) {
       // -- We have a function-local const of non-class type.
+      //
+      // Handle this as a static because the value may be needed
+      // as a constant expression in the array index of a subsequent
+      // static array declaration.  For example:
+      //
+      //      void f() {
+      //        const int array_size = 3;
+      //        static int my_array[array_size] = { 1, 2, 3 };
+      //      }
+      //
+      // If we do not handle it as a static, then we will not have the
+      // value available during prerun when we parse the static array
+      // variable declaration and allocate memory for it.
+      //
       G__constvar = G__CONSTVAR;
       G__const_setnoerror();
-      // FIXME: Pretend a function-local const is a static, why?
-      //int rslt = G__keyword_anytime_6("static");
       struct G__var_array* store_local = G__p_local;
       if (G__prerun && (G__func_now != -1)) {
          G__p_local = 0;
       }
+      G__static_alloc = 1;
       int store_no_exec = G__no_exec;
       G__no_exec = 0;
       int brace_level = 0;
@@ -4076,7 +4089,6 @@ static int G__keyword_anytime_5(G__FastAllocString& statement)
       G__const_resetnoerror();
       G__security_error = G__NOERROR;
       G__return = G__RETURN_NON;
-      //return rslt;
       return 1;
    }
    if (statement[0] != '#') {
@@ -4482,7 +4494,9 @@ static int G__defined_type(G__FastAllocString& type_name, int len)
             // Output the info to the given file.
             fprintf(G__fpundeftype, "class %s; /* %s %d */\n", type_name(), G__ifile.name, G__ifile.line_number);
             fprintf(G__fpundeftype, "#pragma link off class %s;\n\n", type_name());
-            G__struct.globalcomp[G__tagnum] = G__NOLINK;
+            if (G__tagnum > -1) { // it could be -1 if we get too many classes.
+               G__struct.globalcomp[G__tagnum] = G__NOLINK;
+            }
          }
          else {
             // -- Was not a known type, return.
@@ -4812,7 +4826,7 @@ void G__pp_skip(int elifskip)
                      else {
                         temp = posCommentEnd + 2;
                         condition.Resize(posComment - condition.data() + strlen(temp) + 1);
-                        strcpy(posComment, temp);
+                        strcpy(posComment, temp); // Okay we allocated enough space
                      }
                      posComment = strstr(posComment, "/*");
                      if (!posComment) posComment = strstr(condition, "//");
@@ -7201,10 +7215,9 @@ G__value G__exec_statement(int* mparen)
                int paren_start_line = G__ifile.line_number;
                c = G__fignorestream(")");
                if (c != ')') {
-                  char* msg = new char[70];
-                  sprintf(msg, "Error: Cannot find matching ')' for '(' on line %d.", paren_start_line);
+                  G__FastAllocString msg(70);
+                  msg.Format("Error: Cannot find matching ')' for '(' on line %d.", paren_start_line);
                   G__genericerror(msg);
-                  delete[] msg;
                }
                // Reset the statement buffer.
                iout = 0;
@@ -7671,7 +7684,6 @@ void G__free_tempobject()
    /* The only 2 potential risks of making this static are
     * - a destructor indirectly calls G__free_tempobject
     * - multi-thread application (but CINT is not multi-threadable anyway). */
-   static char statement[G__ONELINE];
    struct G__tempobject_list *store_p_tempbuf;
 
    if (
@@ -7728,7 +7740,8 @@ void G__free_tempobject()
          if (G__dispsource) {
             G__fprinterr(G__serr, "!!!Destroy temp object (%s)0x%lx createlevel=%d destroylevel=%d\n", G__struct.name[G__tagnum], G__p_tempbuf->obj.obj.i, G__p_tempbuf->level, G__templevel);
          }
-         sprintf(statement, "~%s()", G__struct.name[G__tagnum]);
+         G__FastAllocString statement;
+         statement.Format("~%s()", G__struct.name[G__tagnum]);
          G__getfunction(statement, &iout, G__TRYDESTRUCTOR);
       }
       G__store_struct_offset = store_struct_offset;

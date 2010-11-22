@@ -69,6 +69,8 @@ protected:
 
    virtual void SetDepthLocal(Float_t d);
 
+   static Bool_t fgDebugCornerPoints;
+
 public:
    TEveBoxProjected(const char* n="TEveBoxProjected", const char* t="");
    virtual ~TEveBoxProjected();
@@ -80,7 +82,12 @@ public:
    virtual void SetProjection(TEveProjectionManager* mng, TEveProjectable* model);
    virtual void UpdateProjection();
 
-   ClassDef(TEveBoxProjected, 0); // 3D box with arbitrary vertices.
+   virtual TEveElement* GetProjectedAsElement() { return this; }
+
+   static Bool_t GetDebugCornerPoints();
+   static void   SetDebugCornerPoints(Bool_t d);
+
+   ClassDef(TEveBoxProjected, 0); // Projection of TEveBox.
 };
 
 #endif

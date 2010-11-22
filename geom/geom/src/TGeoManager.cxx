@@ -345,6 +345,7 @@ TGeoManager::TGeoManager()
       fCurrentNavigator = 0;
       fMaterials = 0;
       fHashPNE = 0;
+      fArrayPNE = 0;
       fMatrices = 0;
       fNodes = 0;
       fOverlaps = 0;
@@ -438,6 +439,7 @@ void TGeoManager::Init()
    fBits = new UChar_t[50000]; // max 25000 nodes per volume
    fCurrentNavigator = 0;
    fHashPNE = new THashList(256,3);
+   fArrayPNE = 0;
    fMaterials = new THashList(200,3);
    fMatrices = new TObjArray(256);
    fNodes = new TObjArray(30);
@@ -552,6 +554,7 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
   fHashVolumes(gm.fHashVolumes),
   fHashGVolumes(gm.fHashGVolumes),
   fHashPNE(gm.fHashPNE),
+  fArrayPNE(gm.fArrayPNE),
   fSizePNEId(0),
   fNPNEId(0),
   fKeyPNEId(0),
@@ -630,6 +633,7 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
       fHashVolumes=gm.fHashVolumes;
       fHashGVolumes=gm.fHashGVolumes;
       fHashPNE=gm.fHashPNE;
+      fArrayPNE=gm.fArrayPNE;
       fSizePNEId = 0;
       fNPNEId = 0;
       fKeyPNEId = 0;
@@ -663,6 +667,7 @@ TGeoManager::~TGeoManager()
    SafeDelete(fHashVolumes);
    SafeDelete(fHashGVolumes);
    if (fHashPNE) {fHashPNE->Delete(); SafeDelete(fHashPNE);}
+   if (fArrayPNE) {delete fArrayPNE;}
    if (fVolumes) {fVolumes->Delete(); SafeDelete(fVolumes);}
    if (fShapes) {fShapes->Delete(); SafeDelete( fShapes );}
    if (fPhysicalNodes) {fPhysicalNodes->Delete(); SafeDelete( fPhysicalNodes );}
@@ -717,7 +722,9 @@ Int_t TGeoManager::AddShape(const TGeoShape *shape)
 //_____________________________________________________________________________
 Int_t TGeoManager::AddTrack(Int_t id, Int_t pdgcode, TObject *particle)
 {
-// Add a track to the list of tracks
+// Add a track to the list of tracks. Use this for primaries only. For secondaries,
+// add them to the parent track. The method create objects that are registered
+// to the analysis manager but have to be cleaned-up by the user via ClearTracks().
    Int_t index = fNtracks;
    fTracks->AddAtAndExpand(GetGeomPainter()->AddTrack(id,pdgcode,particle),fNtracks++);
    return index;
@@ -1488,7 +1495,7 @@ void TGeoManager::AnimateTracks(Double_t tmin, Double_t tmax, Int_t nframes, Opt
    Int_t i, j;
    TString opt(option);
    Bool_t save = kFALSE, geomanim=kFALSE;
-   char fname[15];
+   TString fname;
    if (opt.Contains("/S")) save = kTRUE;
 
    if (opt.Contains("/G")) geomanim = kTRUE;
@@ -1524,12 +1531,7 @@ void TGeoManager::AnimateTracks(Double_t tmin, Double_t tmax, Int_t nframes, Opt
          ModifiedPad();
       }
       if (save) {
-         Int_t ndigits=1;
-         Int_t result=i;
-         while ((result /= 10)) ndigits++;
-         sprintf(fname, "anim0000.gif");
-         char *fpos = fname+8-ndigits;
-         sprintf(fpos, "%d.gif", i);
+         fname = TString::Format("anim%04d.gif", i);
          gPad->Print(fname);
       }
       t += dt;
@@ -1935,16 +1937,11 @@ void TGeoManager::OptimizeVoxels(const char *filename)
       return;
    }
    ofstream out;
-   char *fname = new char[20];
-   char quote = '"';
-   if (!strlen(filename))
-      sprintf(fname, "tgeovox.C");
-   else
-      sprintf(fname, "%s", filename);
+   TString fname = filename;
+   if (fname.IsNull()) fname = "tgeovox.C";
    out.open(fname, ios::out);
    if (!out.good()) {
       Error("OptimizeVoxels", "cannot open file");
-      delete [] fname;
       return;
    }
    // write header
@@ -1963,7 +1960,7 @@ void TGeoManager::OptimizeVoxels(const char *filename)
    TIter next(fVolumes);
    while ((vol=(TGeoVolume*)next())) {
       if (!vol->GetVoxels()) continue;
-      out<<"   vol = gGeoManager->GetVolume("<<quote<<vol->GetName()<<quote<<");"<<endl;
+      out<<"   vol = gGeoManager->GetVolume(\""<<vol->GetName()<<"\");"<<endl;
       cyltype = vol->OptimizeVoxels();
       if (cyltype) {
          out<<"   vol->SetCylVoxels();"<<endl;
@@ -1973,7 +1970,6 @@ void TGeoManager::OptimizeVoxels(const char *filename)
    }
    out << "}" << endl;
    out.close();
-   delete [] fname;
 }
 //_____________________________________________________________________________
 Int_t TGeoManager::Parse(const char *expr, TString &expr1, TString &expr2, TString &expr3)
@@ -2106,16 +2102,11 @@ void TGeoManager::SaveAttributes(const char *filename)
       return;
    }
    ofstream out;
-   char *fname = new char[20];
-   char quote = '"';
-   if (!strlen(filename))
-      sprintf(fname, "tgeoatt.C");
-   else
-      sprintf(fname, "%s", filename);
+   TString fname(filename);
+   if (fname.IsNull()) fname = "tgeoatt.C";
    out.open(fname, ios::out);
    if (!out.good()) {
       Error("SaveAttributes", "cannot open file");
-      delete [] fname;
       return;
    }
    // write header
@@ -2128,7 +2119,7 @@ void TGeoManager::SaveAttributes(const char *filename)
    out << "//=== Attributes for " << GetTitle() << " geometry"<<endl;
    out << "//===== <run this macro AFTER loading the geometry in memory>"<<endl;
    // save current top volume
-   out << "   TGeoVolume *top = gGeoManager->GetVolume("<<quote<<fTopVolume->GetName()<<quote<<");"<<endl;
+   out << "   TGeoVolume *top = gGeoManager->GetVolume(\""<<fTopVolume->GetName()<<"\");"<<endl;
    out << "   TGeoVolume *vol = 0;"<<endl;
    out << "   TGeoNode *node = 0;"<<endl;
    out << "   // clear all volume attributes and get painter"<<endl;
@@ -2155,7 +2146,6 @@ void TGeoManager::SaveAttributes(const char *filename)
    out << "   gPad->x3d();"<<endl;
    out << "}" << endl;
    out.close();
-   delete [] fname;
 }
 //_____________________________________________________________________________
 TGeoNode *TGeoManager::SearchNode(Bool_t downwards, const TGeoNode *skipnode)
@@ -2703,6 +2693,7 @@ TGeoPNEntry *TGeoManager::SetAlignableEntry(const char *unique_name, const char 
 // provided, in which case PN entries can be searched fast by uid.
    if (!CheckPath(path)) return NULL;
    if (!fHashPNE) fHashPNE = new THashList(256,3);
+   if (!fArrayPNE) fArrayPNE = new TObjArray(256);
    TGeoPNEntry *entry = GetAlignableEntry(unique_name);
    if (entry) {
       Error("SetAlignableEntry", "An alignable object with name %s already existing. NOT ADDED !", unique_name);
@@ -2711,6 +2702,7 @@ TGeoPNEntry *TGeoManager::SetAlignableEntry(const char *unique_name, const char 
    entry = new TGeoPNEntry(unique_name, path);
    Int_t ientry = fHashPNE->GetSize();
    fHashPNE->Add(entry);
+   fArrayPNE->AddAtAndExpand(entry, ientry);
    if (uid>=0) {
       Bool_t added = InsertPNEId(uid, ientry);
       if (!added) Error("SetAlignableEntry", "A PN entry: has already uid=%i", uid);
@@ -2730,18 +2722,18 @@ TGeoPNEntry *TGeoManager::GetAlignableEntry(const char *name) const
 TGeoPNEntry *TGeoManager::GetAlignableEntry(Int_t index) const
 {
 // Retreives an existing alignable object at a given index.
-   if (!fHashPNE) return 0;
-   return (TGeoPNEntry*)fHashPNE->At(index);
+   if (!fArrayPNE && !InitArrayPNE()) return 0;
+   return (TGeoPNEntry*)fArrayPNE->At(index);
 }
 
 //_____________________________________________________________________________
 TGeoPNEntry *TGeoManager::GetAlignableEntryByUID(Int_t uid) const
 {
 // Retreives an existing alignable object having a preset UID.
-   if (!fNPNEId || !fHashPNE) return NULL;
+   if (!fNPNEId || (!fArrayPNE && !InitArrayPNE())) return NULL;
    Int_t index = TMath::BinarySearch(fNPNEId, fKeyPNEId, uid);
    if (index<0 || fKeyPNEId[index]!=uid) return NULL;
-   return (TGeoPNEntry*)fHashPNE->At(fValuePNEId[index]);
+   return (TGeoPNEntry*)fArrayPNE->At(fValuePNEId[index]);
 }
 
 //_____________________________________________________________________________
@@ -2864,7 +2856,6 @@ void TGeoManager::RefreshPhysicalNodes(Bool_t lock)
 {
 // Refresh physical nodes to reflect the actual geometry paths after alignment
 // was applied. Optionally locks physical nodes (default).
-
    TIter next(gGeoManager->GetListOfPhysicalNodes());
    TGeoPhysicalNode *pn;
    while ((pn=(TGeoPhysicalNode*)next())) pn->Refresh();
@@ -2993,7 +2984,7 @@ void TGeoManager::SetTopVolume(TGeoVolume *vol)
 //   fMasterVolume->FindMatrixOfDaughterVolume(vol);
 //   fCurrentMatrix->Print();
    fTopNode = new TGeoNodeMatrix(vol, gGeoIdentity);
-   fTopNode->SetName(Form("%s_1",vol->GetName()));
+   fTopNode->SetName(TString::Format("%s_1",vol->GetName()));
    fTopNode->SetNumber(1);
    fTopNode->SetTitle("Top logical node");
    fNodes->AddAt(fTopNode, 0);
@@ -3115,7 +3106,9 @@ void TGeoManager::CheckGeometry(Option_t * /*option*/)
    // check shapes first
    if (fgVerboseLevel>0) Info("CheckGeometry","Fixing runtime shapes...");
    TIter next(fShapes);
+   TIter nextv(fVolumes);
    TGeoShape *shape;
+   TGeoVolume *vol;
    Bool_t has_runtime = kFALSE;
    while ((shape = (TGeoShape*)next())) {
       if (shape->IsRunTimeShape()) {
@@ -3126,6 +3119,10 @@ void TGeoManager::CheckGeometry(Option_t * /*option*/)
    }
    if (has_runtime) fTopNode->CheckShapes();
    else if (fgVerboseLevel>0) Info("CheckGeometry","...Nothing to fix");
+   // Compute bounding  box for assemblies
+   while ((vol = (TGeoVolume*)nextv())) {
+      if (vol->IsAssembly()) vol->GetShape()->ComputeBBox();
+   }   
 }
 
 //_____________________________________________________________________________
@@ -3248,7 +3245,7 @@ Int_t TGeoManager::Export(const char *filename, const char *name, Option_t *opti
       gROOT->ProcessLine("TPython::Exec(\"topV = geomgr.GetTopVolume()\")");
 
       // instanciate writer
-      const char *cmd=Form("TPython::Exec(\"gdmlwriter = writer.writer('%s')\")",filename);
+      const char *cmd=TString::Format("TPython::Exec(\"gdmlwriter = writer.writer('%s')\")",filename);
       gROOT->ProcessLine(cmd);
       gROOT->ProcessLine("TPython::Exec(\"binding = ROOTwriter.ROOTwriter(gdmlwriter)\")");
 
@@ -3277,9 +3274,8 @@ Int_t TGeoManager::Export(const char *filename, const char *name, Option_t *opti
          Error("Export","Cannot open file");
          return 0;
       }
-      char keyname[256];
-      if (name && strlen(name)) strcpy(keyname,name);
-      else                      strcpy(keyname,GetName());
+      TString keyname = name;
+      if (keyname.IsNull()) keyname = GetName();
       TString opt = option;
       opt.ToLower();
       if (opt.Contains("v")) {
@@ -3365,7 +3361,7 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
    if (strstr(filename,".gdml")) {
       // import from a gdml file
       new TGeoManager("GDMLImport", "Geometry imported from GDML");
-      const char* cmd = Form("TGDMLParse::StartGDML(\"%s\")", filename);
+      const char* cmd = TString::Format("TGDMLParse::StartGDML(\"%s\")", filename);
       TGeoVolume* world = (TGeoVolume*)gROOT->ProcessLineFast(cmd);
 
       if(world == 0) {
@@ -3445,6 +3441,22 @@ void TGeoManager::UpdateElements()
          }
       }
    }
+}
+
+//___________________________________________________________________________
+Bool_t TGeoManager::InitArrayPNE() const
+{
+// Initialize PNE array for fast access via index and unique-id.
+   if (fHashPNE) {
+     fArrayPNE = new TObjArray(fHashPNE->GetSize());
+     TIter next(fHashPNE);
+     TObject *obj;
+     while ((obj = next())) {
+       fArrayPNE->Add(obj);
+     }
+     return kTRUE;
+   }
+   return kFALSE;
 }
 
 //___________________________________________________________________________

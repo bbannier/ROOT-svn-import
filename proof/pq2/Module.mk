@@ -4,7 +4,7 @@
 # Author: G. Ganis, 2010
 
 MODNAME      := pq2
-MODDIR       := proof/$(MODNAME)
+MODDIR       := $(ROOT_SRCDIR)/proof/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -15,16 +15,15 @@ PQ2DIRI      := $(PQ2DIR)/inc
 ##### pq2 #####
 PQ2H         := $(wildcard $(MODDIRI)/*.h)
 PQ2S         := $(wildcard $(MODDIRS)/*.cxx)
-PQ2O         := $(PQ2S:.cxx=.o)
+PQ2O         := $(call stripsrc,$(PQ2S:.cxx=.o))
 PQ2DEP       := $(PQ2O:.o=.d)
 PQ2          := bin/pq2
 
 ##### Libraries needed #######
-PQ2LIBS      := -lCore -lCint -lRIO -lNet -lHist -lTree \
-                -lMatrix -lMathCore -lProof -lThread
+PQ2LIBS      := -lRIO -lNet -lHist -lTree \
+                -lMatrix -lProof -lThread $(BOOTLIBS) 
 PQ2LIBSDEP    = $(ORDER_) $(CORELIB) $(CINTLIB) $(IOLIB) $(NETLIB) $(HISTLIB) \
                 $(TREELIB) $(MATRIXLIB) $(MATHCORELIB) $(PROOFLIB) $(THREADLIB)
-
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(PQ2H))

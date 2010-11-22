@@ -437,6 +437,7 @@ Int_t TViewerX3D::AddObject(const TBuffer3D & buffer, Bool_t * addChildren)
          x3dBuff->polys     = buffer.fPols;
          FillX3DBuffer(x3dBuff);
          delete [] x3dBuff->points;
+	 delete x3dBuff;
          break;
       }
       default: {
@@ -508,6 +509,7 @@ void TViewerX3D::PaintPolyMarker(const TBuffer3D & buffer) const
          FillX3DBuffer(x3dBuff);
          delete [] x3dBuff->points;
          delete [] x3dBuff->segs;
+	 delete x3dBuff;
          break;
       }
    }
@@ -622,7 +624,7 @@ Bool_t TViewerX3D::ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t)
                   case kHelpAbout:
                      {
                         char str[32];
-                        sprintf(str, "About ROOT %s...", gROOT->GetVersion());
+                        snprintf(str,32, "About ROOT %s...", gROOT->GetVersion());
                         hd = new TRootHelpDialog(fMainFrame, str, 600, 400);
                         hd->SetText(gHelpAbout);
                         hd->Popup();

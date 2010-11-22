@@ -26,6 +26,7 @@
 #   include <io.h>
 #   include "snprintf.h"
 #endif
+#include "RConfigure.h"
 #include "TDSet.h"
 #include "TEnv.h"
 #include "TError.h"
@@ -380,7 +381,7 @@ Int_t TProofLite::GetNumberOfWorkers(const char *url)
       // Find the max number of workers, if any
       TString sysname = "system.rootrc";
 #ifdef ROOTETCDIR
-      char *s = gSystem->ConcatFileName(ROOTETCDIR, sname);
+      char *s = gSystem->ConcatFileName(ROOTETCDIR, sysname);
 #else
       TString etc = gRootDir;
 #ifdef WIN32
@@ -395,6 +396,7 @@ Int_t TProofLite::GetNumberOfWorkers(const char *url)
       fgWrksMax = sysenv.GetValue("ProofLite.MaxWorkers", -1);
       // Notify once the user if its will is changed
       notify = kTRUE;
+      if (s) delete[] s;
    }
    if (fgWrksMax == 0) {
       ::Error("TProofLite::GetNumberOfWorkers",
@@ -702,9 +704,17 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
       return -1;
    }
    // ROOTSYS
+#ifdef R__HAVE_CONFIG
+   fprintf(fenv, "export ROOTSYS=%s\n", ROOTPREFIX);
+#else
    fprintf(fenv, "export ROOTSYS=%s\n", gSystem->Getenv("ROOTSYS"));
+#endif
    // Conf dir
+#ifdef R__HAVE_CONFIG
+   fprintf(fenv, "export ROOTCONFDIR=%s\n", ROOTETCDIR);
+#else
    fprintf(fenv, "export ROOTCONFDIR=%s\n", gSystem->Getenv("ROOTSYS"));
+#endif
    // TMPDIR
    fprintf(fenv, "export TMPDIR=%s\n", gSystem->TempDirectory());
    // Log file in the log dir
@@ -920,7 +930,7 @@ void TProofLite::SetQueryRunning(TProofQueryResult *pq)
    }
 
    // Set in running state
-   pq->SetRunning(startlog, parlist);
+   pq->SetRunning(startlog, parlist, GetParallel());
 
    // Bytes and CPU at start (we will calculate the differential at end)
    pq->SetProcessInfo(pq->GetEntries(), GetCpuTime(), GetBytesRead());
@@ -997,7 +1007,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    if (!fPlayer->GetInputList()->FindObject("PROOF_MaxSlavesPerNode"))
       SetParameter("PROOF_MaxSlavesPerNode", (Long_t)fNWorkers);
 
-   Bool_t hasNoData = (!dset || dset->TestBit(TDSet::kEmpty)) ? kTRUE : kFALSE;
+   Bool_t hasNoData = (!dset || (dset && dset->TestBit(TDSet::kEmpty))) ? kTRUE : kFALSE;
 
    // If just a name was given to identify the dataset, retrieve it from the
    // local files
@@ -1059,7 +1069,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
    // Start or reset the progress dialog
    if (!gROOT->IsBatch()) {
-      Int_t dsz = dset->GetListOfElements()->GetSize();
+      Int_t dsz = (dset && dset->GetListOfElements()) ? dset->GetListOfElements()->GetSize() : -1;
       if (fProgressDialog &&
           !TestBit(kUsingSessionGui) && TestBit(kUseProgressDialog)) {
          if (!fProgressDialogStarted) {
@@ -1164,20 +1174,22 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       }
 
       // Remove aborted queries from the list
-      if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
-         if (fPlayer && fPlayer->GetListOfResults())
-            fPlayer->GetListOfResults()->Remove(pq);
+      if (fPlayer && fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
+         if (fPlayer->GetListOfResults()) fPlayer->GetListOfResults()->Remove(pq);
          if (fQMgr) fQMgr->RemoveQuery(pq);
       } else {
          // If the last object, notify the GUI that the result arrived
          QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
-         // Keep in memory only light infor about a query
+         // Keep in memory only light info about a query
          if (!(pq->IsDraw())) {
-            if (fQMgr->Queries()) {
+            if (fQMgr && fQMgr->Queries())
                // Remove from the fQueries list
                fQMgr->Queries()->Remove(pq);
-            }
          }
+         // To get the prompt back
+         TString msg;
+         msg.Form("Lite-0: all output objects have been merged                                                         ");
+         fprintf(stderr, "%s\n", msg.Data());
       }
 
    }
@@ -1439,8 +1451,12 @@ Int_t TProofLite::CopyMacroToCache(const char *macro, Int_t headerRequired,
             TMD5 *md5hcache = TMD5::FileChecksum(cachedhname);
             if (md5h && md5hcache && (*md5h != *md5hcache))
                useCacheBinaries = kFALSE;
+            SafeDelete(md5h);
+            SafeDelete(md5hcache);
          }
       }
+      SafeDelete(md5);
+      SafeDelete(md5cache);
    }
 
    // Create version file name template

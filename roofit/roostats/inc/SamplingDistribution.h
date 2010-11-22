@@ -34,14 +34,14 @@ namespace RooStats {
    public:
 
     // Constructor for SamplingDistribution
-    SamplingDistribution(const char *name,const char *title, std::vector<Double_t>& samplingDist, const TString varName = 0);
+    SamplingDistribution(const char *name,const char *title, std::vector<Double_t>& samplingDist, const char * varName = 0);
     SamplingDistribution(const char *name,const char *title,
-			 std::vector<Double_t>& samplingDist, std::vector<Double_t>& sampleWeights, const TString varName = 0);
+			 std::vector<Double_t>& samplingDist, std::vector<Double_t>& sampleWeights, const char * varName = 0);
 
 
-    SamplingDistribution(const char *name,const char *title, const TString varName = 0);
+    SamplingDistribution(const char *name,const char *title, const char * varName = 0);
 
-    SamplingDistribution(const char *name,const char *title, RooDataSet& dataSet, const TString varName = 0);
+    SamplingDistribution(const char *name,const char *title, RooDataSet& dataSet, const char * varName = 0);
 
     // Default constructor for SamplingDistribution
     SamplingDistribution();
@@ -66,9 +66,9 @@ namespace RooStats {
     Int_t GetSize() const{return fSamplingDist.size();}
 
     // Get test statistics values
-    const std::vector<Double_t> & GetSamplingDistribution() const {return fSamplingDist;}
+    std::vector<Double_t> GetSamplingDistribution() const {return fSamplingDist;}
     // Get the sampling weights 
-    const std::vector<Double_t> & GetSampleWeights() const {return fSampleWeights;}
+    std::vector<Double_t> GetSampleWeights() const {return fSampleWeights;}
 
     const TString GetVarName() const {return fVarName;}
     
@@ -87,7 +87,7 @@ namespace RooStats {
     
   protected:
     
-    ClassDef(SamplingDistribution,1)  // Class holding the sampling distribution value of some test statistics
+    ClassDef(SamplingDistribution,1)  // Class containing the results of the HybridCalculator
   };
 }
 

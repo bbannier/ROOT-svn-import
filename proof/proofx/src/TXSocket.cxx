@@ -395,7 +395,8 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    UnsolRespProcResult rc = kUNSOL_KEEP;
 
    // If we are closing we will not do anything
-   if (fAsynProc.TryWait()) {
+   TXSemaphoreGuard semg(&fAsynProc);
+   if (!semg.IsValid()) {
       Error("ProcessUnsolicitedMsg", "%p: async semaphore taken by Close()! Should not be here!", this);
       return kUNSOL_CONTINUE;
    }
@@ -404,7 +405,6 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
       if (gDebug > 2)
          Info("ProcessUnsolicitedMsg", "%p: got empty message: skipping", this);
       // Some one is perhaps interested in empty messages
-      fAsynProc.Post();
       return kUNSOL_CONTINUE;
    } else {
       if (gDebug > 2)
@@ -433,7 +433,6 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
             Info("ProcessUnsolicitedMsg", "%p: underlying connection timed out", this);
       }
       // Propagate the message to other possible handlers
-      fAsynProc.Post();
       return kUNSOL_CONTINUE;
    }
 
@@ -441,7 +440,6 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    if (!fConn || !m->MatchStreamid(fConn->fStreamid)) {
       if (gDebug > 1)
          Info("ProcessUnsolicitedMsg", "%p: IDs do not match: {%d, %d}", this, fConn->fStreamid, m->HeaderSID());
-      fAsynProc.Post();
       return kUNSOL_CONTINUE;
    }
 
@@ -449,7 +447,6 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    if (!m) {
       Error("ProcessUnsolicitedMsg", "undefined message - disabling");
       PostMsg(kPROOF_STOP);
-      fAsynProc.Post();
       return rc;
    }
 
@@ -457,7 +454,6 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    if ((len = m->DataLen()) < (int)sizeof(kXR_int32)) {
       Error("ProcessUnsolicitedMsg", "empty or bad-formed message - disabling");
       PostMsg(kPROOF_STOP);
-      fAsynProc.Post();
       return rc;
    }
 
@@ -867,7 +863,6 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    }
 
    // We are done
-   fAsynProc.Post();
    return rc;
 }
 
@@ -951,7 +946,7 @@ Int_t TXSocket::GetInterrupt(Bool_t &forward)
    // propagated to lower stages forward will be kTRUE after the call
 
    if (gDebug > 2)
-      Info("GetInterrupt","%p: waiting to lock mutex %p", fIMtx);
+      Info("GetInterrupt","%p: waiting to lock mutex %p", this, fIMtx);
 
    R__LOCKGUARD(fIMtx);
 
@@ -961,7 +956,7 @@ Int_t TXSocket::GetInterrupt(Bool_t &forward)
 
    // Check if filled
    if (fILev == -1)
-      Error("GetInterrupt","value is unset (%d) - protocol error",fILev);
+      Error("GetInterrupt", "value is unset (%d) - protocol error",fILev);
 
    // Fill output
    ilev = fILev;
@@ -1330,7 +1325,7 @@ void TXSocket::RemoteTouch()
       return;
    }
    if (fConn->LowWrite(&Request, 0, 0) != kOK)
-      Error("Touch", "%p: %s: problems sending touch request to server", this);
+      Error("Touch", "%p: problems sending touch request to server", this);
 
    // Done
    return;
@@ -1367,7 +1362,7 @@ void TXSocket::CtrlC()
       return;
    }
    if (fConn->LowWrite(&Request, 0, 0) != kOK)
-      Error("CtrlC", "%p: %s: problems sending ctrl-c request to server", this);
+      Error("CtrlC", "%p: problems sending ctrl-c request to server", this);
 
    // Done
    return;
@@ -1473,7 +1468,7 @@ TXSockBuf *TXSocket::PopUpSpare(Int_t size)
             buf = *i;
             if (gDebug > 2)
                Info("PopUpSpare","asked: %d, spare: %d/%d, REUSE buf %p, sz: %d",
-                                 size, fgSQue.size(), nBuf, buf, buf->fSiz);
+                                 size, (int) fgSQue.size(), nBuf, buf, buf->fSiz);
             // Drop from this list
             fgSQue.erase(i);
             return buf;
@@ -1484,7 +1479,7 @@ TXSockBuf *TXSocket::PopUpSpare(Int_t size)
       buf->Resize(size);
       if (gDebug > 2)
          Info("PopUpSpare","asked: %d, spare: %d/%d, maxsz: %d, RESIZE buf %p, sz: %d",
-                           size, fgSQue.size(), nBuf, maxsz, buf, buf->fSiz);
+                           size, (int) fgSQue.size(), nBuf, maxsz, buf, buf->fSiz);
       // Drop from this list
       fgSQue.pop_front();
       return buf;
@@ -1497,7 +1492,7 @@ TXSockBuf *TXSocket::PopUpSpare(Int_t size)
    nBuf++;
    if (gDebug > 2)
       Info("PopUpSpare","asked: %d, spare: %d/%d, maxsz: %d, NEW buf %p, sz: %d",
-                        size, fgSQue.size(), nBuf, maxsz, buf, buf->fSiz);
+                        size, (int) fgSQue.size(), nBuf, maxsz, buf, buf->fSiz);
 
    // We are done
    return buf;

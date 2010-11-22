@@ -24,6 +24,7 @@ namespace Cint {
    class G__DataMemberHandle;
 }
 class G__FastAllocString;
+struct G__AppPragma;
 
 extern "C" {
 #endif
@@ -96,7 +97,9 @@ int G__display_template(FILE *fout,const char *name);
 int G__display_macro(FILE *fout,const char *name);
 int G__display_string(FILE *fout);
 int G__display_files(FILE *fout);
-int G__pr(FILE *fout,struct G__input_file view);
+#ifdef __cplusplus
+int G__pr(FILE *fout,const struct G__input_file &view);
+#endif
 int G__dump_tracecoverage(FILE *fout);
 int G__objectmonitor(FILE *fout,long pobject,int tagnum,const char *addspace);
 int G__varmonitor(FILE *fout,struct G__var_array *var,const char *index,const char *addspace,long offset);
@@ -153,6 +156,7 @@ int G__fgetspace(void);
 int G__fgetspace_peek(void);
 #ifdef __cplusplus
 } // extern "C"
+char* G__setiparseobject(G__value* result,G__FastAllocString &str);
 int G__fgetvarname(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__fgetname(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__getname(const char* source,int* isrc,G__FastAllocString& string,const char *endmark);
@@ -174,12 +178,11 @@ long G__op2_operator_detail(int opr,G__value *lval,G__value *rval);
 int G__explicit_fundamental_typeconv(char* funcname,int hash,struct G__param *libp,G__value *presult3);
 int G__special_func(G__value *result7,char *funcname,struct G__param *libp,int hash);
 int G__library_func(G__value *result7,char *funcname,struct G__param *libp,int hash);
-char *G__charformatter(int ifmt,struct G__param *libp,char *result);
+char *G__charformatter(int ifmt,struct G__param *libp,char *result,size_t result_length);
 int G__istypename(char *temp);
 char* G__savestring(char** pbuf,char* name);
 struct G__ifunc_table* G__get_ifunc_ref(struct G__ifunc_table_internal*);
 void G__reset_ifunc_refs_for_tagnum(int tagnum);
-void G__make_ifunctable(char *funcheader);
 int G__interpret_func(G__value *result7,const char *funcname,struct G__param *libp,int hash,struct G__ifunc_table_internal *p_ifunc,int funcmatch,int memfunc_flag);
 struct G__ifunc_table_internal *G__ifunc_exist(struct G__ifunc_table_internal *ifunc_now,int allifunc,struct G__ifunc_table_internal *ifunc,int *piexist,int mask);
 struct G__ifunc_table_internal *G__ifunc_ambiguous(struct G__ifunc_table_internal *ifunc_now,int allifunc,struct G__ifunc_table_internal *ifunc,int *piexist,int derivedtagnum);
@@ -401,18 +404,12 @@ int G__dasm(FILE *fout,int isthrow);
 G__value G__getrsvd(int i);
 int G__read_setmode(int *pmode);
 int G__pragma(void);
-int G__execpragma(const char *comname,char *args);
-#ifndef G__VMS
-void G__freepragma(struct G__AppPragma *paddpragma);
-#endif
 void G__free_bytecode(struct G__bytecodefunc *bytecode);
 void G__asm_gen_strip_quotation(G__value *pval);
 int G__security_handle(G__UINT32 category);
 void G__asm_get_strip_quotation(G__value *pval);
 G__value G__strip_quotation(const char *string);
-char *G__charaddquote(char *string,char c);
 G__value G__strip_singlequotation(char *string);
-char *G__tocharexpr(char *result7);
 char *G__quotedstring(char *buf,char *result);
 char *G__logicstring(G__value buf,int dig,char *result);
 int G__revprint(FILE *fp);
@@ -442,6 +439,8 @@ G__value G__classassign(long pdest,int tagnum,G__value result);
 char *G__catparam(struct G__param *libp,int catn,const char *connect);
 #ifdef __cplusplus
 } // extern "C"
+void G__make_ifunctable(G__FastAllocString &funcheader);
+G__FastAllocString &G__charaddquote(G__FastAllocString &string,char c);
 int G__readline_FastAlloc(FILE* fp, G__FastAllocString& line, G__FastAllocString& argbuf,
                           int* argn, char* arg[]);
 int G__separate_parameter(const char *original,int *pos,G__FastAllocString& param);
@@ -457,6 +456,8 @@ int G__getstream_template(const char *source,int *isrc,G__FastAllocString& strin
 char* G__rename_templatefunc(G__FastAllocString& funcname);
 int G__templatesubstitute(G__FastAllocString& symbol,struct G__Charlist *callpara,struct G__Templatearg *defpara,const char *templatename,const char *tagname,int c,int npara,int isnew);
 char *G__valuemonitor(G__value buf,G__FastAllocString& temp);
+int G__execpragma(const char *comname,char *args);
+void G__freepragma(G__AppPragma *paddpragma);
 extern "C" {
 #endif
 void G__IntList_init(struct G__IntList *body,long iin,struct G__IntList *prev);
@@ -489,7 +490,7 @@ int G__createtemplatefunc(char *funcname,struct G__Templatearg *targ,int line_nu
 void G__define_type(void);
 const char *G__access2string(int caccess);
 const char *G__tagtype2string(int tagtype);
-char *G__fulltypename(int typenum);
+const char *G__fulltypename(int typenum);
 int G__val2pointer(G__value *result7);
 char *G__getbase(unsigned int expression,int base,int digit,char *result1);
 int G__getdigit(unsigned int number);
@@ -506,7 +507,6 @@ G__value G__letVvalue(G__value *p,G__value result);
 G__value G__letPvalue(G__value *p,G__value result);
 G__value G__letvalue(G__value *p,G__value result);
 G__value G__getvariable(char *item,int *known2,struct G__var_array *varglobal,struct G__var_array *varlocal);
-G__value G__getstructmem(int store_var_type,char *varname,char *membername,char *tagname,int *known2,struct G__var_array *varglobal,int objptr);
 void G__letstruct(G__value *result,int p_inc,struct G__var_array *var,int ig15,const char *item,int paran,long G__struct_offset);
 void G__letstructp(G__value result,long G__struct_offset,int ig15,int p_inc,struct G__var_array *var,int paran,const char *item,G__value *para,int pp_inc);
 void G__returnvartype(G__value* presult,struct G__var_array *var,int ig15,int paran);
@@ -609,8 +609,6 @@ struct G__ConstStringList* G__AddConstStringList(struct G__ConstStringList* curr
 void G__DeleteConstStringList(struct G__ConstStringList* current);
 
 int G__ReadInputMode(void);
-
-char* G__setiparseobject(G__value* result,char *str);
 
 #ifdef G__SHMGLOBAL
 void* G__shmmalloc(int size);
@@ -743,9 +741,13 @@ void *G__UnregisterLibrary (void (*func) ());
 #ifdef __cplusplus
 } // extern "C"
 
-G__value G__letvariable(char *item,G__value expression,struct G__var_array *varglobal,struct G__var_array *varlocal);
-G__value G__letvariable(char *item,G__value expression,struct G__var_array *varglobal,struct G__var_array *varlocal,Cint::G__DataMemberHandle &member);
-G__value G__letstructmem(int store_var_type,char *varname,char *membername,char *tagname,struct G__var_array *varglobal,G__value expression,int objptr,Cint::G__DataMemberHandle &member);
+G__value G__getstructmem(int store_var_type,G__FastAllocString& varname,char *membername,int memnamesize,char *tagname,int *known2,struct G__var_array *varglobal,int objptr);
+G__value G__letvariable(G__FastAllocString &item,G__value expression,struct G__var_array *varglobal,struct G__var_array *varlocal);
+G__value G__letvariable(G__FastAllocString &item,G__value expression,struct G__var_array *varglobal,struct G__var_array *varlocal,Cint::G__DataMemberHandle &member);
+G__value G__letstructmem(int store_var_type,G__FastAllocString& varname,int membernameoffset,
+                         G__FastAllocString& result7,char* tagname,
+                         struct G__var_array *varglobal,G__value expression,int objptr,
+                         Cint::G__DataMemberHandle &member);
 
 #endif
 

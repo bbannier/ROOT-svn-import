@@ -237,8 +237,10 @@ void TPaveText::EditText()
    if (!obj->InheritsFrom(TText::Class())) return;
    TText *text = (TText*)obj;
    gROOT->SetSelectedPrimitive(text);
-   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->SetSelected((TObject*)0x%lx)",gPad->GetCanvas(),text));
-   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",gPad->GetCanvas(),gPad,text));
+   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->SetSelected((TObject*)0x%lx)",
+                           (ULong_t)gPad->GetCanvas(), (ULong_t)text));
+   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",
+                           (ULong_t)gPad->GetCanvas(), (ULong_t)gPad, (ULong_t)text));
    text->SetTextAttributes();
 }
 
@@ -848,7 +850,7 @@ void TPaveText::SavePrimitive(ostream &out, Option_t * /*= ""*/)
    if (fBorderSize != 4) {
       out<<"   pt->SetBorderSize("<<fBorderSize<<");"<<endl;
    }
-   SaveFillAttributes(out,"pt",0,1001);
+   SaveFillAttributes(out,"pt",19,1001);
    SaveLineAttributes(out,"pt",1,1,1);
    SaveTextAttributes(out,"pt",22,0,1,62,0);
    SaveLines(out,"pt");

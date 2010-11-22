@@ -100,7 +100,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" -d should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             dataset = argv[i+1];
             i += 2;
          }
@@ -108,7 +108,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" -o should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             options = argv[i+1];
             i += 2;
          }
@@ -116,7 +116,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" -e or --exclude should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             excsrvs = argv[i+1];
             i += 2;
          }
@@ -124,7 +124,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" -i or --ignore should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             ignsrvs = argv[i+1];
             i += 2;
          }
@@ -132,7 +132,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" -s or --servers should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             servers = argv[i+1];
             i += 2;
          }
@@ -140,15 +140,15 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" -m should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             metrics = argv[i+1];
             i += 2;
          }
       } else if (!strcmp(argv[i],"-f")) {
          if (i+1 == argc || argv[i+1][0] == '-') {
-            Printf(" -f should be followed by a string: ignoring", argv[i]);
+            Printf(" -f should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             fout = argv[i+1];
             i += 2;
          }
@@ -156,7 +156,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" -r should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             redir = argv[i+1];
             i += 2;
          }
@@ -164,7 +164,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" -u should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             url = argv[i+1];
             i += 2;
          }
@@ -172,7 +172,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             plot = "plot.png";
             i++;
-         } else { 
+         } else {
             plot = argv[i+1];
             i += 2;
          }
@@ -180,7 +180,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" --infile should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             infile = argv[i+1];
             i += 2;
          }
@@ -188,7 +188,7 @@ int main(int argc,const char *argv[])
          if (i+1 == argc || argv[i+1][0] == '-') {
             Printf(" --outfile should be followed by a string: ignoring");
             i++;
-         } else { 
+         } else {
             outfile = argv[i+1];
             i += 2;
          }
@@ -279,46 +279,59 @@ int main(int argc,const char *argv[])
    }
 
    Int_t rc = 0;
-   if (iact == 0) {
-      // ls
-      do_ls(dataset, options);
+   try {
+      if (iact == 0) {
+         // ls
+         do_ls(dataset, options);
 
-   } else if (iact == 1) {
-      // ls-files
-      do_ls_files_server(dataset, 0);
+      } else if (iact == 1) {
+         // ls-files
+         do_ls_files_server(dataset, 0);
 
-   } else if (iact == 2) {
-      // ls-files-server
-      do_ls_files_server(dataset, servers);
+      } else if (iact == 2) {
+         // ls-files-server
+         do_ls_files_server(dataset, servers);
 
-   } else if (iact == 3) {
-      // info-server
-      do_info_server(servers);
+      } else if (iact == 3) {
+         // info-server
+         do_info_server(servers);
 
-   } else if (iact == 4) {
-      // put
-      do_put(dataset, options);
+      } else if (iact == 4) {
+         // put
+         do_put(dataset, options);
 
-   } else if (iact == 5) {
-      // rm
-      do_rm(dataset);
+      } else if (iact == 5) {
+         // rm
+         do_rm(dataset);
 
-   } else if (iact == 6) {
-      // verify
-      rc = do_verify(dataset, options, redir);
+      } else if (iact == 6) {
+         // verify
+         rc = do_verify(dataset, options, redir);
 
-   } else if (iact == 7) {
-      // ana-dist
-      do_anadist(dataset, servers, ignsrvs, excsrvs, metrics, fout, plot, outfile, infile);
+      } else if (iact == 7) {
+         // ana-dist
+         do_anadist(dataset, servers, ignsrvs, excsrvs, metrics, fout, plot, outfile, infile);
 
-   } else if (iact == 8) {
-      // cache
-      bool clear = (!strcmp(options, "clear")) ? 1 : 0;
-      do_cache(clear, dataset);
+      } else if (iact == 8) {
+         // cache
+         bool clear = (!strcmp(options, "clear")) ? 1 : 0;
+         do_cache(clear, dataset);
 
-   } else {
-      // Unknown
-      Printf("Unknown action code: %d - Protocol error?", iact);
+      } else {
+         // Unknown
+         Printf("Unknown action code: %d - Protocol error?", iact);
+      }
+   }
+   catch (std::exception& exc) {
+      Printf("Standard exception caught: we abort whatever it is ...");
+      throw;
+   }
+   catch (const char *str) {
+      Printf("Exception thrown: %s", str);
+   }
+   // handle every exception
+   catch (...) {
+      Printf("Handle uncaugth exception, terminating");
    }
 
    if (!gSystem->AccessPathName(ferr)) {

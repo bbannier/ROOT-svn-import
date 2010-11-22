@@ -2,7 +2,7 @@ from __future__ import generators
 # @(#)root/pyroot:$Id$
 # Author: Wim Lavrijsen (WLavrijsen@lbl.gov)
 # Created: 02/20/03
-# Last: 04/30/10
+# Last: 11/10/10
 
 """PyROOT user module.
 
@@ -21,11 +21,10 @@ __author__  = 'Wim Lavrijsen (WLavrijsen@lbl.gov)'
 
 ### system and interpreter setup ------------------------------------------------
 import os, sys, types
-import string as pystring
 
 ## there's no version_info in 1.5.2
 if sys.version[0:3] < '2.2':
-   raise ImportError, 'Python Version 2.2 or above is required.'
+   raise ImportError( 'Python Version 2.2 or above is required.' )
 
 ## 2.2 has 10 instructions as default, > 2.3 has 100 ... make same
 if sys.version[0:3] == '2.2':
@@ -61,7 +60,7 @@ try:
 
    readline.set_completer( FileNameCompleter().complete )
    readline.set_completer_delims(
-      pystring.replace( readline.get_completer_delims(), os.sep , '' ) )
+      readline.get_completer_delims().replace( os.sep , '' ) )
 
    readline.parse_and_bind( 'tab: complete' )
    readline.parse_and_bind( 'set show-all-if-ambiguous On' )
@@ -76,8 +75,8 @@ if sys.platform == 'darwin':
       message='class \S* already in TClassTable$' )
 
 ### load PyROOT C++ extension module, special case for linux and Sun ------------
-needsGlobal =  ( 0 <= pystring.find( sys.platform, 'linux' ) ) or\
-               ( 0 <= pystring.find( sys.platform, 'sunos' ) )
+needsGlobal =  ( 0 <= sys.platform.find( 'linux' ) ) or\
+               ( 0 <= sys.platform.find( 'sunos' ) )
 if needsGlobal:
  # change dl flags to load dictionaries from pre-linked .so's
    dlflags = sys.getdlopenflags()
@@ -159,7 +158,7 @@ _sigPolicyAPI = [ 'SetSignalPolicy', 'kSignalFast', 'kSignalSafe' ]
 
 ### helpers ---------------------------------------------------------------------
 def split( str ):
-   npos = pystring.find( str, ' ' )
+   npos = str.find( ' ' )
    if 0 <= npos:
       return str[:npos], str[npos+1:]
    else:
@@ -175,15 +174,14 @@ class Template:
       newargs = [ self.__name__[ 0 <= self.__name__.find( 'std::' ) and 5 or 0:] ]
       for arg in args:
          if type(arg) == str:
-            arg = pystring.join(
-               map( lambda x: pystring.strip(x), pystring.split(arg,',') ), ',' )
+            arg = ','.join( map( lambda x: x.strip(), arg.split(',') ) )
          newargs.append( arg )
       result = _root.MakeRootTemplateClass( *newargs )
 
     # special case pythonization (builtin_map is not available from the C-API)
       if hasattr( result, 'push_back' ):
          def iadd( self, ll ):
-            map( self.push_back, ll )
+            [ self.push_back(x) for x in ll ]
             return self
 
          result.__iadd__ = iadd
@@ -199,7 +197,8 @@ class std:
       'deque', 'list', 'queue', 'stack', 'vector', 'map', 'multimap', 'set', 'multiset' )
 
    for name in stlclasses:
-      exec '%(name)s = Template( "std::%(name)s" )' % { 'name' : name }
+      locals()[ name ] = Template( "std::%s" % name )
+#      exec '%(name)s = Template( "std::%(name)s" )' % { 'name' : name }
 
    string = _root.MakeRootClass( 'string' )
 
@@ -247,7 +246,7 @@ def _excepthook( exctype, value, traceb ):
       if cmd == '.q':
          sys.exit( 0 )
       elif cmd == '.?' or cmd == '.help':
-         print """PyROOT emulation of CINT commands.
+         sys.stdout.write( """PyROOT emulation of CINT commands.
 All emulated commands must be preceded by a . (dot).
 ===========================================================================
 Help:        ?         : this help
@@ -259,7 +258,8 @@ Quit:        q         : quit python session
 
 The standard python help system is available through a call to 'help()' or
 'help(<id>)' where <id> is an identifier, e.g. a class or function such as
-TPad or TPad.cd, etc."""
+TPad or TPad.cd, etc.
+""" )
          return
       elif cmd == '.!' and arg:
          return os.system( arg )
@@ -279,15 +279,15 @@ TPad or TPad.cd, etc."""
          return sys.modules[ __name__ ].gDirectory.pwd()
    elif isinstance( value, SyntaxError ) and \
       value.msg == "can't assign to function call":
-         print """Are you trying to assign a value to a reference return, for example to the
+         sys.stdout.write( """Are you trying to assign a value to a reference return, for example to the
 result of a call to "double& SMatrix<>::operator()(int,int)"? If so, then
 please use operator[] instead, as in e.g. "mymatrix[i,j] = somevalue".
-"""
+""" )
 
  # normal exception processing
    _orig_ehook( exctype, value, traceb )
 
-if not __builtins__.has_key( '__IPYTHON__' ):
+if not '__IPYTHON__' in __builtins__:
  # IPython has its own ways of executing shell commands etc.
    sys.excepthook = _excepthook
 
@@ -343,7 +343,6 @@ class ModuleFacade( types.ModuleType ):
            if name != 'SetBatch' and self._master.__dict__[ 'gROOT' ] != self._gROOT:
               self._master._ModuleFacade__finalSetup()
               del self._master.__class__._ModuleFacade__finalSetup
-              self._master.__dict__[ 'gROOT' ] = self._gROOT
            return getattr( self._gROOT, name )
 
          def __setattr__( self, name, value ):
@@ -374,9 +373,13 @@ class ModuleFacade( types.ModuleType ):
             setattr( self.__class__, name, _root.GetRootGlobal( name ) )
          except LookupError:
           # allow a few limited cases where new globals can be set
+            if sys.hexversion >= 0x3000000:
+               pylong = int
+            else:
+               pylong = long
             tcnv = { bool        : 'bool %s = %d;',
                      int         : 'int %s = %d;',
-                     long        : 'long %s = %d;',
+                     pylong      : 'long %s = %d;',
                      float       : 'double %s = %f;',
                      str         : 'string %s = "%s";' }
             try:
@@ -444,6 +447,9 @@ class ModuleFacade( types.ModuleType ):
       return super( self.__class__, self ).__delattr__( name )
 
    def __finalSetup( self ):
+    # prevent this method from being re-entered through the gROOT wrapper
+      self.__dict__[ 'gROOT' ] = _root.gROOT
+
     # switch to running gettattr/setattr
       self.__class__.__getattr__ = self.__class__.__getattr2
       del self.__class__.__getattr2
@@ -452,7 +458,8 @@ class ModuleFacade( types.ModuleType ):
 
     # normally, you'll want a ROOT application; don't init any further if
     # one pre-exists from some C++ code somewhere
-      if PyConfig.IgnoreCommandLineOptions:
+      hasargv = hasattr( sys, 'argv' )
+      if hasargv and PyConfig.IgnoreCommandLineOptions:
          argv = sys.argv
          sys.argv = []
 
@@ -462,17 +469,17 @@ class ModuleFacade( types.ModuleType ):
          appc.InitCINTMessageCallback();
          appc.InitROOTMessageCallback();
 
-      if PyConfig.IgnoreCommandLineOptions:
+      if hasargv and PyConfig.IgnoreCommandLineOptions:
          sys.argv = argv
 
     # must be called after gApplication creation:
-      if __builtins__.has_key( '__IPYTHON__' ):
+      if '__IPYTHON__' in __builtins__:
        # IPython's FakeModule hack otherwise prevents usage of python from CINT
          _root.gROOT.ProcessLine( 'TPython::Exec( "" )' )
          sys.modules[ '__main__' ].__builtins__ = __builtins__
 
     # custom logon file (must be after creation of ROOT globals)
-      if not '-n' in sys.argv:
+      if hasargv and not '-n' in sys.argv:
          rootlogon = os.path.expanduser( '~/.rootlogon.py' )
          if os.path.exists( rootlogon ):
           # could also have used execfile, but import is likely to give fewer surprises
@@ -484,7 +491,7 @@ class ModuleFacade( types.ModuleType ):
 
           # system logon, user logon, and local logon (skip Rint.Logon)
             name = '.rootlogon.C'
-            logons = [ os.path.join( self.gRootDir, 'etc', 'system' + name ),
+            logons = [ os.path.join( str(self.gRootDir), 'etc', 'system' + name ),
                        os.path.expanduser( os.path.join( '~', name ) ) ]
             if logons[-1] != os.path.join( os.getcwd(), name ):
                logons.append( name )
@@ -532,7 +539,7 @@ def cleanup():
  # restore hooks
    import sys
    sys.displayhook = sys.__displayhook__
-   if not __builtins__.has_key( '__IPYTHON__' ):
+   if not '__IPYTHON__' in __builtins__:
       sys.excepthook = sys.__excepthook__
 
    facade = sys.modules[ __name__ ]
@@ -553,10 +560,11 @@ def cleanup():
 
  # remove otherwise (potentially) circular references
    import types
-   for k, v in facade.module.__dict__.items():
+   items = facade.module.__dict__.items()
+   for k, v in items:
       if type(v) == types.ModuleType:
-         del facade.module.__dict__[ k ]
-   del v, k, types
+         facade.module.__dict__[ k ] = None
+   del v, k, items, types
 
  # destroy facade
    facade.__dict__.clear()
@@ -567,8 +575,12 @@ def cleanup():
  # order of static object destruction; so far it only seemed needed for
  # sockets with PROOF, whereas files should not be touched this early ...
    gROOT = sys.modules[ 'libPyROOT' ].gROOT
+   if gROOT.GetListOfFiles():
+      gROOT.GetListOfFiles().Delete( 'slow' )
    if gROOT.GetListOfSockets():
       gROOT.GetListOfSockets().Delete()
+   if gROOT.GetListOfMappedFiles():
+      gROOT.GetListOfMappedFiles().Delete( 'slow' )
    del gROOT
 
  # cleanup cached python strings

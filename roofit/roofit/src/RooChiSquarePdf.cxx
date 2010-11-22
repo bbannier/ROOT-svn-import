@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitModels                                                     *
- * @(#)root/roofit:$Id: RooChiSquarePdf.cxx 28259 2009-04-16 16:21:16Z wouter $
+ * @(#)root/roofit:$Id$
  * Authors:                                                                  *
  *   Kyle Cranmer
  *                                                                           *

@@ -271,20 +271,20 @@ This concerns the way Minuit reports the symmetric (or parabolic)  errors
 on parameters.  It does not apply to the errors reported from Minos, which
 are in general asymmetric.
 <P>
-The symmetric errors reported by Minuit are always calculated from 
-the covariance matrix, assuming that this matrix has been calculated, 
-usually as the result of a Migrad minimization or a direct 
+The symmetric errors reported by Minuit are always calculated from
+the covariance matrix, assuming that this matrix has been calculated,
+usually as the result of a Migrad minimization or a direct
 calculation by Hesse which inverts the second derivative matrix.
 <P>
-When there are no limits on the parameter in question, the error reported 
-by Minuit should therefore be exactly equal to the square root of the 
+When there are no limits on the parameter in question, the error reported
+by Minuit should therefore be exactly equal to the square root of the
 corresponding diagonal element of the error matrix reported by Minuit.
 <P>
 However, when there are limits on the parameter, there is a transformation
-between the internal parameter values seen by Minuit (which are unbounded)  
+between the internal parameter values seen by Minuit (which are unbounded)
 and the external parameter values seen by the user in FCN (which remain
 inside the desired limits).  Therefore the internal error matrix kept by
-Minuit must be transformed to an external error matrix for the user.  
+Minuit must be transformed to an external error matrix for the user.
 This is done by multiplying the (I,J)th element by DEXDIN(I)*DEXDIN(J),
 where DEXDIN is the derivative of the external value with respect to the
 internal value at the minimum.  This is a linearization of the
@@ -297,13 +297,13 @@ this transformed interval.  Strictly speaking, it is now asymmetric, but
 since the origin of the asymmetry is only an artificial transformation it
 does not make much sense, so the transformed errors are symmetrized.
 <P>
-The result of all the above is that for parameters with limits, the error 
-reported by Minuit is not exactly equal to the square root of the diagonal 
-element of the error matrix.  The difference is a measure of how much the 
-limits deform the problem.  If possible, it is suggested not to use limits 
-on parameters, and the problem goes away.  If for some reason limits are 
-necessary, and you are sensitive to the difference between the two ways of 
-calculating the errors, it is suggested to use Minos errors which take 
+The result of all the above is that for parameters with limits, the error
+reported by Minuit is not exactly equal to the square root of the diagonal
+element of the error matrix.  The difference is a measure of how much the
+limits deform the problem.  If possible, it is suggested not to use limits
+on parameters, and the problem goes away.  If for some reason limits are
+necessary, and you are sensitive to the difference between the two ways of
+calculating the errors, it is suggested to use Minos errors which take
 into account the non-linearities much more precisely.
 
 <!--*/
@@ -332,7 +332,7 @@ TMinuit::TMinuit(): TNamed("MINUIT","The Minimization package")
 //*-*-*-*-*-*-*-*-*-*-*Minuit normal constructor*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                  ========================
 
-   if (TMinuit::Class()->IsCallingNew()) {
+   if (TMinuit::Class()->IsCallingNew() != TClass::kRealNew) {
       //preset all pointers to null
       fCpnam     = 0;
       fU         = 0;
@@ -404,7 +404,7 @@ TMinuit::TMinuit(): TNamed("MINUIT","The Minimization package")
       fXmidcr    = 0;
       fYmidcr    = 0;
       fXdircr    = 0;
-      fYdircr    = 0;   
+      fYdircr    = 0;
 
       fStatus       = 0;
       fEmpty        = 0;
@@ -422,7 +422,7 @@ TMinuit::TMinuit(): TNamed("MINUIT","The Minimization package")
       fXmidcr    = 0;
       fYmidcr    = 0;
       fXdircr    = 0;
-      fYdircr    = 0;   
+      fYdircr    = 0;
 
       fStatus       = 0;
       fEmpty        = 0;
@@ -447,6 +447,8 @@ TMinuit::TMinuit(Int_t maxpar): TNamed("MINUIT","The Minimization package")
 //*-*                  ========================
 //
 //  maxpar is the maximum number of parameters used with this TMinuit object.
+
+   fFCN = 0;
 
    BuildArrays(maxpar);
 
@@ -587,6 +589,8 @@ Int_t TMinuit::Command(const char *command)
 //     Equivalent to MNEXCM except that the command is given as a
 //     character string.
 // See TMinuit::mnhelp for the full list of available commands
+// See also http://wwwasdoc.web.cern.ch/wwwasdoc/minuit/node18.html for
+//  a complete documentation of all the available commands
 //
 // Returns the status of the execution:
 //   = 0: command executed normally
@@ -806,9 +810,10 @@ Int_t TMinuit::FixParameter( Int_t parNo)
 // fix a parameter
 
    Int_t err;
-   Double_t tmp = parNo+1; //set internal Minuit numbering
+   Double_t tmp[1];
+   tmp[0] = parNo+1; //set internal Minuit numbering
 
-   mnexcm( "FIX", &tmp,  1,  err );
+   mnexcm( "FIX", tmp,  1,  err );
 
    return err;
 }
@@ -856,9 +861,10 @@ Int_t TMinuit::Migrad()
 {
 // invokes the MIGRAD minimizer
    Int_t err;
-   Double_t tmp = 0;
+   Double_t tmp[1];
+   tmp[0] = 0;
 
-   mnexcm( "MIGRAD", &tmp, 0, err );
+   mnexcm( "MIGRAD", tmp, 0, err );
 
    return err;
 }
@@ -869,9 +875,10 @@ Int_t TMinuit::Release( Int_t parNo)
 // release a parameter
 
    Int_t err;
-   Double_t tmp = parNo+1; //set internal Minuit numbering
+   Double_t tmp[1];
+   tmp[0] = parNo+1; //set internal Minuit numbering
 
-   mnexcm( "RELEASE", &tmp, 1, err );
+   mnexcm( "RELEASE", tmp, 1, err );
 
    return err;
 }
@@ -880,7 +887,7 @@ Int_t TMinuit::Release( Int_t parNo)
 Int_t TMinuit::SetErrorDef( Double_t up )
 {
 // To get the n-sigma contour the error def parameter "up" has to set to n^2.
-   
+
    Int_t err;
 
    mnexcm( "SET ERRDEF", &up, 1, err );
@@ -944,11 +951,12 @@ Int_t TMinuit::SetPrintLevel( Int_t printLevel )
    //            =  0  normal
    //            =  1  verbose
    Int_t    err;
-   Double_t tmp = printLevel;
+   Double_t tmp[1];
+   tmp[0] = printLevel;
 
-   mnexcm( "SET PRINT", &tmp, 1, err );
-   
-   if (printLevel <=-1) mnexcm("SET NOWarnings",&tmp,0,err);
+   mnexcm( "SET PRINT", tmp, 1, err );
+
+   if (printLevel <=-1) mnexcm("SET NOWarnings",tmp,0,err);
 
    return err;
 }
@@ -1670,7 +1678,7 @@ void TMinuit::mncrck(TString cardbuf, Int_t maxcwd, TString &comand, Int_t &lnc,
 //*-*
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
    /* Initialized data */
-    
+
    char *cnull  = 0;
    const char *cnumer = "123456789-.0+";
 
@@ -2251,7 +2259,7 @@ void TMinuit::mnderi()
          fX[i-1]   = xtf;
          if (ldebug) {
             d1d2 = (fs1 + fs2 - fAmin*2) / step;
-            Printf("%4d%11.3g%11.3g%10.2g%10.2g%10.2g%10.2g%10.2g",i,fGrd[i-1],step,stpmin,optstp,d1d2,fG2[i-1]);
+            Printf("%4d%11.3g%11.3g%10.2g%10.2g%10.2g%10.2g",i,fGrd[i-1],step,stpmin,optstp,d1d2,fG2[i-1]);
          }
 //*-*-        see if another iteration is necessary
          if (TMath::Abs(grbfor - fGrd[i-1]) / (TMath::Abs(fGrd[i-1]) + dfmin/step) < tlrgrd)
@@ -2654,6 +2662,10 @@ void TMinuit::mnexcm(const char *command, Double_t *plist, Int_t llist, Int_t &i
 //*-*             10: END command
 //*-*             11: EXIT or STOP command
 //*-*             12: RETURN command
+//*-*
+//*-*     see also http://wwwasdoc.web.cern.ch/wwwasdoc/minuit/node18.html for the possible list
+//*-*     of all Minuit commands
+//*-*
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    /* Initialized data */
@@ -4120,7 +4132,7 @@ L30:
          fG2[i-1]  = sag*2 / (d*d);
          fGrd[i-1] = (fs1 - fs2) / (d*2);
          if (ldebug) {
-            Printf("%4d%2d%12.5g%12.5g%12.5g%12.5g%12.5g%12.5g",i,idrv,fGstep[i-1],fG2[i-1],fGrd[i-1],sag);
+            Printf("%4d%2d%12.5g%12.5g%12.5g%12.5g",i,idrv,fGstep[i-1],fG2[i-1],fGrd[i-1],sag);
          }
          if (fGstep[i-1] > 0) fGstep[i-1] =  TMath::Abs(d);
          else                 fGstep[i-1] = -TMath::Abs(d);
@@ -4280,7 +4292,7 @@ void TMinuit::mnhes1()
          grdnew = (fs1 - fs2) / (d*2);
          dgmin  = fEpsmac*(TMath::Abs(fs1) + TMath::Abs(fs2)) / d;
          if (ldebug) {
-            Printf("%4d%2d%12.5g%12.5g%12.5g%12.5g%12.5g%12.5g",i,idrv,fGstep[i-1],d,fG2[i-1],grdnew,sag);
+            Printf("%4d%2d%12.5g%12.5g%12.5g%12.5g%12.5g",i,idrv,fGstep[i-1],d,fG2[i-1],grdnew,sag);
          }
          if (grdnew == 0) goto L60;
          change = TMath::Abs((grdold - grdnew) / grdnew);
@@ -4326,7 +4338,7 @@ void TMinuit::mnimpr()
    /* Local variables */
    Double_t amax, ycalf, ystar, ystst;
    Double_t pb, ep, wg, xi, sigsav, reg, sig2;
-   Int_t npfn, ndex, loop=0, i, j, ifail, iseed;
+   Int_t npfn, ndex, loop=0, i, j, ifail, iseed=0;
    Int_t jhold, nloop, nparx, nparp1, jh, jl, iswtr;
 
    if (fNpar <= 0) return;
@@ -5479,8 +5491,7 @@ L650:
    Printf("                                               VVVVVVV");
    Printf("                                                VVVVV");
    Printf("                                                 VVV");
-   Printf("                                                  V");
-   Printf("");
+   Printf("                                                  V\n");
    return;
 L700:
    Printf(" THERE ARE NO MINOS ERRORS TO CALCULATE.");
@@ -5563,7 +5574,7 @@ void TMinuit::mnmnot(Int_t ilax, Int_t ilax2, Double_t &val2pl, Double_t &val2mi
       }
 //*-*-                                       . sig=sign of error being calcd
       if (fISW[4] > 1) {
-         Printf(" DETERMINATION OF %sTIVE MINOS ERROR FOR PARAMETER %d"
+         Printf(" DETERMINATION OF %sTIVE MINOS ERROR FOR PARAMETER %d %s"
                             ,(const char*)csig,ilax
                             ,(const char*)fCpnam[ilax-1]);
       }
@@ -6300,7 +6311,6 @@ void TMinuit::mnpout(Int_t iuext1, TString &chnam, Double_t &val, Double_t &err,
    } else {
 //*-*-                   external parameter number specified
       iext = iuext;
-      if (iext == 0) goto L100;
       if (iext > fNu) goto L100;
       iint  = fNiofex[iext-1];
       iuint = iint;
@@ -6583,7 +6593,7 @@ void TMinuit::mnpsdf()
       for (ip = 1; ip <= fNpar; ++ip) {
          ctemp += Form(" %11.4e",fPstar[ip-1]);
       }
-      Printf((const char*)ctemp);
+      Printf("%s", ctemp.Data());
    }
    if (pmin > epspdf*pmax) return;
    if (fISW[1] == 3) fISW[1] = 2;
@@ -6847,7 +6857,7 @@ void TMinuit::mnseek()
    /* Local variables */
    Double_t dxdi, rnum, ftry, rnum1, rnum2, alpha;
    Double_t flast, bar;
-   Int_t ipar, iext, j, ifail, iseed, nparx, istep, ib, mxfail, mxstep;
+   Int_t ipar, iext, j, ifail, iseed=0, nparx, istep, ib, mxfail, mxstep;
 
    mxfail = Int_t(fWord7[0]);
    if (mxfail <= 0) mxfail = fNpar*20 + 100;
@@ -7003,7 +7013,7 @@ void TMinuit::mnset()
    /* Local variables */
    Double_t val;
    Int_t iset, iprm, i, jseed, kname, iseed, iunit, id, ii, kk;
-   Int_t ikseed, idbopt, igrain, iswsav, isw2;
+   Int_t ikseed, idbopt, igrain=0, iswsav, isw2;
    TString  cfname, cmode, ckind,  cwarn, copt, ctemp, ctemp2;
    Bool_t lname=kFALSE;
 
@@ -7348,7 +7358,7 @@ L1150:
    val = 0;
    mnrn15(val, igrain);
    ikseed = igrain;
-   Printf(" MINUIT RNDM SEED IS CURRENTLY=",ikseed);
+   Printf(" MINUIT RNDM SEED IS CURRENTLY=%d",ikseed);
    val   = 3;
    iseed = ikseed;
    mnrn15(val, iseed);

@@ -181,7 +181,7 @@ void TFTP::PrintError(const char *where, Int_t err) const
 {
    // Print error string depending on error code.
 
-   Error(where, gRootdErrStr[err]);
+   Error(where, "%s", gRootdErrStr[err]);
 }
 
 //______________________________________________________________________________
@@ -507,7 +507,7 @@ Long64_t TFTP::GetFile(const char *file, const char *localName)
 #else
       if (lseek(fd, restartat, SEEK_SET) < 0) {
 #endif
-         Error("GetFile", "cannot seek to position %ld in file %s",
+         Error("GetFile", "cannot seek to position %lld in file %s",
                restartat, localName);
          // if cannot seek send urgent message to rootd to stop tranfer
          close(fd);
@@ -574,8 +574,8 @@ Long64_t TFTP::GetFile(const char *file, const char *localName)
       }
 
       if (siz != n) {
-         Error("GetFile", "error writing all requested bytes to file %s, wrote %d of %d",
-               localName, siz, n);
+         Error("GetFile", "error writing all requested bytes to file %s, wrote %ld of %d",
+               localName, (Long_t)siz, n);
          // send urgent message to rootd to stop tranfer
          close(fd);
          delete [] buf; delete [] buf2;
@@ -1013,7 +1013,7 @@ const char *TFTP::GetDirEntry(Bool_t print)
       Info("GetDirEntry", "%s", mess);
 
    if (!strncmp(mess,"OK:",3)) {
-      strcpy(dirent,mess+3);
+      strlcpy(dirent,mess+3, sizeof(dirent));
       return (const char *)dirent;
    }
 
@@ -1087,7 +1087,7 @@ Int_t TFTP::GetPathInfo(const char *path, FileStat_t &buf, Bool_t print)
       if (id == -1)
          return 1;
       buf.fDev    = (id >> 24);
-      buf.fIno    = (id && 0x00FFFFFF);
+      buf.fIno    = (id & 0x00FFFFFF);
       if (flags == 0)
          buf.fMode = kS_IFREG;
       if (flags & 1)

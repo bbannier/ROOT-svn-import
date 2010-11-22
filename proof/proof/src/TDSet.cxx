@@ -41,6 +41,7 @@
 #include "TDSet.h"
 
 #include "Riostream.h"
+#include "TChain.h"
 #include "TClass.h"
 #include "TClassTable.h"
 #include "TCut.h"
@@ -167,6 +168,60 @@ TDSetElement::~TDSetElement()
 }
 
 //______________________________________________________________________________
+Int_t TDSetElement::MergeElement(TDSetElement *elem)
+{
+   // Check if 'elem' is overlapping or subsequent and, if the case, return
+   // a merged element.
+   // Returns:
+   //     1    if the elements are overlapping
+   //     0    if the elements are subsequent
+   //    -1    if the elements are neither overlapping nor subsequent
+
+   // The element must be defined
+   if (!elem) return -1;
+
+   // The file names and object names must be the same
+   if (strcmp(GetName(), elem->GetName()) || strcmp(GetTitle(), elem->GetTitle()))
+      return -1;
+
+   Int_t rc = -1;
+   // Check the overlap or subsequency
+   if (fFirst == 0 && fNum == -1) {
+      // Overlap, since we cover already the full range
+      rc = 1;
+   } else if (elem->GetFirst() == 0 && elem->GetNum() == -1) {
+      // Overlap, since 'elem' cover already the full range
+      fFirst = 0;
+      fNum = -1;
+      fEntries = elem->GetEntries();
+      rc = 1;
+   } else if (fFirst >= 0 && fNum > 0 && elem->GetFirst() >= 0 && elem->GetNum() > 0) {
+      Long64_t last = fFirst + fNum - 1, lastref = 0;
+      Long64_t lastelem = elem->GetFirst() + elem->GetNum() - 1;
+      if (elem->GetFirst() == last + 1) {
+         lastref = lastelem;
+         rc = 0;
+      } else if (fFirst == lastelem + 1) {
+         fFirst += elem->GetFirst();
+         lastref = last;
+         rc = 0;
+      } else if (elem->GetFirst() < last + 1 && elem->GetFirst() >= fFirst) {
+         lastref = (lastelem > last) ? lastelem : last;
+         rc = 1;
+      } else if (fFirst < lastelem + 1 && fFirst >= elem->GetFirst()) {
+         fFirst += elem->GetFirst();
+         lastref = (lastelem > last) ? lastelem : last;
+         rc = 1;
+      }
+      fNum = lastref - fFirst + 1;
+   }
+   if (rc >= 0 && fEntries < 0 && elem->GetEntries() > 0) fEntries = elem->GetEntries();
+
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
 TFileInfo *TDSetElement::GetFileInfo(const char *type)
 {
    // Return the content of this element in the form of a TFileInfo
@@ -220,14 +275,14 @@ void TDSetElement::Validate(Bool_t isTree)
          if (fNum <= entries - fFirst) {
             fValid = kTRUE;
          } else {
-            Error("Validate", "TDSetElement has only %d entries starting"
-                  " with entry %d, while %d were requested",
-                  entries - fFirst, fFirst, fNum);
+            Error("Validate", "TDSetElement has only %lld entries starting"
+                              " with entry %lld, while %lld were requested",
+                              entries - fFirst, fFirst, fNum);
          }
       }
    } else {
-      Error("Validate", "TDSetElement has only %d entries with"
-            " first entry requested as %d", entries, fFirst);
+      Error("Validate", "TDSetElement has only %lld entries with"
+            " first entry requested as %lld", entries, fFirst);
    }
 }
 
@@ -266,14 +321,14 @@ void TDSetElement::Validate(TDSetElement *elem)
             if (fNum <= entries - fFirst) {
                fValid = kTRUE;
             } else {
-               Error("Validate", "TDSetElement requests %d entries starting"
-                     " with entry %d, while TDSetElement to validate against"
-                     " has only %d entries", fNum, fFirst, entries);
+               Error("Validate", "TDSetElement requests %lld entries starting"
+                                 " with entry %lld, while TDSetElement to validate against"
+                                 " has only %lld entries", fNum, fFirst, entries);
             }
          }
       } else {
-         Error("Validate", "TDSetElement to validate against has only %d"
-               " entries, but this TDSetElement requested %d as its first"
+         Error("Validate", "TDSetElement to validate against has only %lld"
+               " entries, but this TDSetElement requested %lld as its first"
                " entry", entries, fFirst);
       }
    } else {
@@ -668,7 +723,7 @@ TDSet::TDSet(const char *name,
    if (name && strlen(name) > 0) {
       // In the old constructor signature it was the 'type'
       if (!type) {
-         if ((c = TClass::GetClass(name)))
+         if (TClass::GetClass(name))
             fType = name;
          else
             // Default type is 'TTree'
@@ -678,12 +733,12 @@ TDSet::TDSet(const char *name,
          fName = name;
          // Check type
          if (strlen(type) > 0)
-            if ((c = TClass::GetClass(type)))
+            if (TClass::GetClass(type))
                fType = type;
       }
    } else if (type && strlen(type) > 0) {
       // Check the type
-      if ((c = TClass::GetClass(type)))
+      if (TClass::GetClass(type))
          fType = type;
    }
    // The correct class type
@@ -759,7 +814,9 @@ TDSet::TDSet(const TChain &chain, Bool_t withfriends)
          // Not an MSD option
          msd = "";
       }
-      if (Add(file, tree, dir, 0, -1, ((msd.IsNull()) ? 0 : msd.Data()))) {
+      Long64_t nent = (elem->GetEntries() > 0 &&
+                       elem->GetEntries() != TChain::kBigNumber) ? elem->GetEntries() : -1;
+      if (Add(file, tree, dir, 0, nent, ((msd.IsNull()) ? 0 : msd.Data()))) {
          if (elem->HasBeenLookedUp()) {
             // Save lookup information, if any
             TDSetElement *dse = (TDSetElement *) fElements->Last();
@@ -949,7 +1006,7 @@ Bool_t TDSet::Add(const char *file, const char *objname, const char *dir,
    } else {
       TString msg;
       msg.Form("duplication detected: %40s is already in dataset - ignored", fn.Data());
-      Warning("Add", msg.Data());
+      Warning("Add", "%s", msg.Data());
       if (gProofServ) {
          msg.Insert(0, "WARNING: ");
          gProofServ->SendAsynMessage(msg);
@@ -1060,9 +1117,6 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
    }
    TString msg;
 
-   // Element to be added
-   TDSetElement *el = 0;
-
    // Check if a remap of the server coordinates is requested
    const char *file = fi->GetFirstUrl()->GetUrl();
    Bool_t setLookedUp = kTRUE;
@@ -1073,9 +1127,9 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
       setLookedUp = kFALSE;
    }
    // Check if it already exists in the TDSet
-   if ((el = (TDSetElement *) fElements->FindObject(file))) {
+   if (fElements->FindObject(file)) {
       msg.Form("duplication detected: %40s is already in dataset - ignored", file);
-      Warning("Add", msg.Data());
+      Warning("Add", "%s", msg.Data());
       if (gProofServ) {
          msg.Insert(0, "WARNING: ");
          gProofServ->SendAsynMessage(msg);
@@ -1102,7 +1156,7 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
          if (gProofServ)
             gProofServ->SendAsynMessage(msg);
          else
-            Warning("Add", msg.Data());
+            Warning("Add", "%s", msg.Data());
          return kFALSE;
       }
    }
@@ -1126,7 +1180,7 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
    }
    const char *dataset = 0;
    if (strcmp(fi->GetTitle(), "TFileInfo")) dataset = fi->GetTitle();
-   el = new TDSetElement(file, objname, dir, first, -1, 0, dataset);
+   TDSetElement *el = new TDSetElement(file, objname, dir, first, -1, 0, dataset);
    el->SetEntries(num);
 
    // Set looked-up bit

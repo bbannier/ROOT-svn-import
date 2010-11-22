@@ -51,6 +51,7 @@ ClassImp(RooKeysPdf)
 //_____________________________________________________________________________
 RooKeysPdf::RooKeysPdf() : _dataPts(0), _weights(0)
 {
+  // coverity[UNINIT_CTOR]
 }
 
 
@@ -70,7 +71,7 @@ RooKeysPdf::RooKeysPdf(const char *name, const char *title,
   _rho(rho)
 {
   // cache stuff about x
-  sprintf(_varName, "%s", x.GetName());
+  snprintf(_varName, 128,"%s", x.GetName());
   RooRealVar real= (RooRealVar&)(_x.arg());
   _lo = real.getMin();
   _hi = real.getMax();
@@ -91,7 +92,7 @@ RooKeysPdf::RooKeysPdf(const RooKeysPdf& other, const char* name):
   _rho( other._rho ) {
 
   // cache stuff about x
-  sprintf(_varName, "%s", other._varName );
+  snprintf(_varName, 128, "%s", other._varName );
   _lo = other._lo;
   _hi = other._hi;
   _binWidth = other._binWidth;

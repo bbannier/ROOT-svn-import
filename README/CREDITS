@@ -15,7 +15,7 @@ N: Roel Aaij
 E: raaij@nikhef.nl
 D: contribution to GUI classes
 
-N: Mohammad AL-Turany
+N: Mohammad Al-Turany
 E: m.al-turany@gsi.de
 D: QTGSI classes
 
@@ -320,6 +320,10 @@ E: gulbrand@mit.edu
 D: monitoring facility for PROOF
 D: Clarens and PEAC interfaces for PROOF
 
+N: Christian Gumpert
+E: christian.gumpert@mailbox.tu-dresden.de
+D: class TEfficiency and new TGraphAsymmErrors::Divide
+
 N: Andrew Haas
 E: haas@yahoo.com
 D: add support for asymmetric errors in the GraphFitChisquare functions
@@ -491,6 +495,10 @@ N: John Marraffino
 E: marafino@fnal.gov
 D: improvements in TUnixSystem::StackTrace()
 
+N: Claudi Martinez
+E: claudi@astres.cat
+D: provided the fitsio module
+
 N: Andy Mastbaum
 E: mastbaum@lanl.gov
 D: implementation of TH1::Interpolate and TH2::Interpolate
@@ -644,6 +652,10 @@ D: contributed to TMath::Voigt
 N: Gilles Quemener
 E: quemener@lpsc.in2p3.fr
 D: contributed to TMultiDimFit::EvalError function
+
+N: Bartolomeu Rabacal
+E: brabacal@cern.ch
+D: Math libraries: GoFTest and TKDE classes 
 
 N: Sven Ravndal
 E: Sven.Ravndal@dresdner-bank.com

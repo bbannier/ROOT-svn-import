@@ -38,29 +38,41 @@
 namespace std {} using namespace std;
 
 const Int_t kMaxLen = 1024;
-static char gIncludeName[kMaxLen];
+static TString gIncludeName(kMaxLen);
 
 extern void *gMmallocDesc;
 
 //______________________________________________________________________________
-static TStreamerBasicType *InitCounter(const char *countClass, const char *countName)
+static TStreamerBasicType *InitCounter(const char *countClass, const char *countName, TObject *directive)
 {
    // Helper function to initialize the 'index/counter' value of
-   // the Pointer streamerElements.
-
-   TClass *cl = TClass::GetClass(countClass);
-
-   if (cl==0) return 0;
-
-   TStreamerBasicType *counter = TVirtualStreamerInfo::GetElementCounter(countName,cl);
-
-   //at this point the counter is may be declared to skip
+   // the Pointer streamerElements.  If directive is a StreamerInfo and it correspond to the 
+   // same class a 'countClass' the streamerInfo is used instead of the current StreamerInfo of the TClass
+   // for 'countClass'.
+   
+   TStreamerBasicType *counter = 0;
+   
+   if (directive && directive->InheritsFrom(TVirtualStreamerInfo::Class()) && strcmp(directive->GetName(),countClass)==0) {
+      
+      TVirtualStreamerInfo *info = (TVirtualStreamerInfo*)directive;
+      TStreamerElement *element = (TStreamerElement *)info->GetElements()->FindObject(countName);
+      if (!element) return 0;
+      if (element->IsA() != TStreamerBasicType::Class()) return 0;
+      counter = (TStreamerBasicType*)element;
+      
+   } else {
+   
+      TClass *cl = TClass::GetClass(countClass);
+      if (cl==0) return 0;
+      counter = TVirtualStreamerInfo::GetElementCounter(countName,cl);
+   }
+       
+   //at this point the counter may be declared to skip
    if (counter) {
       if (counter->GetType() < TVirtualStreamerInfo::kCounter) counter->SetType(TVirtualStreamerInfo::kCounter);
    }
    return counter;
 }
-
 
 //______________________________________________________________________________
 static void GetRange(const char *comments, Double_t &xmin, Double_t &xmax, Double_t &factor)
@@ -158,7 +170,6 @@ TStreamerElement::TStreamerElement()
    fArrayDim    = 0;
    fArrayLength = 0;
    fStreamer    = 0;
-   fMethod      = 0;
    fOffset      = 0;
    fClassObject = (TClass*)(-1);
    fNewClass    = 0;
@@ -183,7 +194,6 @@ TStreamerElement::TStreamerElement(const char *name, const char *title, Int_t of
    fArrayLength = 0;
    fTypeName    = TClassEdit::ResolveTypedef(typeName);
    fStreamer    = 0;
-   fMethod      = 0;
    fClassObject = (TClass*)(-1);
    fNewClass    = 0;
    fTObjectOffset = 0;
@@ -205,7 +215,6 @@ TStreamerElement::TStreamerElement(const char *name, const char *title, Int_t of
 TStreamerElement::~TStreamerElement()
 {
    // TStreamerElement dtor.
-   delete fMethod;
 }
 
 
@@ -263,15 +272,17 @@ Int_t TStreamerElement::GetExecID() const
    //check if an Exec is specified in the comment field
    char *action = (char*)strstr(GetTitle(),"EXEC:");
    if (!action) return 0;
-   char caction[512];
-   strcpy(caction,action+5);
+   Int_t nch = strlen(action)+1;
+   char *caction = new char[nch];
+   strlcpy(caction,action+5,nch);
    char *blank = (char*)strchr(caction,' ');
    if (blank) *blank = 0;
    //we have found the Exec name in the comment
    //we register this Exec to the list of Execs.
    Int_t index = TRef::AddExec(caction);
+   delete [] caction;
    //we save the Exec index as the uniqueid of this STreamerElement
-   ((TStreamerElement*)this)->SetUniqueID(index+1);
+   const_cast<TStreamerElement*>(this)->SetUniqueID(index+1);
    return index+1;
 }
 
@@ -282,12 +293,12 @@ const char *TStreamerElement::GetFullName() const
    // Note that this function stores the name into a static array.
    // You should copy the result.
 
-   static char name[kMaxLen];
+   static TString name(kMaxLen);
    char cdim[20];
-   sprintf(name,"%s",GetName());
+   name = GetName();
    for (Int_t i=0;i<fArrayDim;i++) {
-      sprintf(cdim,"[%d]",fMaxIndex[i]);
-      strcat(name,cdim);
+      snprintf(cdim,19,"[%d]",fMaxIndex[i]);
+      name += cdim;
    }
    return name;
 }
@@ -360,10 +371,10 @@ void TStreamerElement::ls(Option_t *) const
 {
    // Print the content of the element.
 
-   sprintf(gIncludeName,"%s",GetTypeName());
-   if (IsaPointer() && !fTypeName.Contains("*")) strcat(gIncludeName,"*");
+   TString temp(GetTypeName());
+   if (IsaPointer() && !fTypeName.Contains("*")) temp += "*";
    printf("  %-14s %-15s offset=%3d type=%2d %s%-20s\n",
-      gIncludeName,GetFullName(),fOffset,fType,TestBit(kCache)?"(cached) ":"",
+      temp.Data(),GetFullName(),fOffset,fType,TestBit(kCache)?"(cached) ":"",
       GetTitle());
 }
 
@@ -491,7 +502,7 @@ void TStreamerElement::Update(const TClass *oldClass, TClass *newClass)
 ClassImp(TStreamerBase)
 
 //______________________________________________________________________________
-TStreamerBase::TStreamerBase()
+TStreamerBase::TStreamerBase() : fStreamerFunc(0)
 {
    // Default ctor.
 
@@ -502,7 +513,7 @@ TStreamerBase::TStreamerBase()
 
 //______________________________________________________________________________
 TStreamerBase::TStreamerBase(const char *name, const char *title, Int_t offset)
-        : TStreamerElement(name,title,offset,TVirtualStreamerInfo::kBase,"BASE")
+        : TStreamerElement(name,title,offset,TVirtualStreamerInfo::kBase,"BASE"),fStreamerFunc(0)
 {
    // Create a TStreamerBase object.
 
@@ -549,16 +560,7 @@ void TStreamerBase::Init(TObject *)
    fBaseClass = TClass::GetClass(GetName());
    if (!fBaseClass) return;
    if (!fBaseClass->GetMethodAny("StreamerNVirtual")) return;
-
-   // When called via TMapFile (e.g. Update()) make sure that the dictionary
-   // gets allocated on the heap and not in the mapped file.
-   void *save = gMmallocDesc;
-   gMmallocDesc = 0;
-   delete fMethod;
-   fMethod = new TMethodCall();
-   fMethod->InitWithPrototype(fBaseClass,"StreamerNVirtual","TBuffer &");
-   gMmallocDesc = save;
-   //fBaseClass = TClass::GetClass(GetName());
+   fStreamerFunc = fBaseClass->GetStreamerFunc();
 }
 
 //______________________________________________________________________________
@@ -575,10 +577,10 @@ const char *TStreamerBase::GetInclude() const
    // Return the proper include for this element.
 
    if (GetClassPointer() && fBaseClass->GetClassInfo()) {
-      sprintf(gIncludeName,"\"%s\"",fBaseClass->GetDeclFileName());
+      gIncludeName.Form("\"%s\"",fBaseClass->GetDeclFileName());
    } else {
       std::string shortname( TClassEdit::ShortType( GetName(), 1 ) );
-      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+      gIncludeName.Form("\"%s.h\"",shortname.c_str());
    }
    return gIncludeName;
 }
@@ -596,14 +598,11 @@ Int_t TStreamerBase::ReadBuffer (TBuffer &b, char *pointer)
 {
    // Read the content of the buffer.
 
-   if (fMethod) {
-      ULong_t args[1];
-      args[0] = (ULong_t)&b;
-      R__LOCKGUARD2(gCINTMutex);
-      fMethod->SetParamPtrs(args);
-      fMethod->Execute((void*)(pointer+fOffset));
+   if (fStreamerFunc) {
+      // We have a custom Streamer member function, we must use it.
+      fStreamerFunc(b,pointer+fOffset);
    } else {
-      // We don't have a StreamerNVirtual(). That still doesn't mean
+      // We don't have a custom Streamer member function. That still doesn't mean
       // that there is no streamer - it could be an external one:
       // If the old base class has an adopted streamer we take that
       // one instead of the new base class:
@@ -666,8 +665,8 @@ void TStreamerBase::Streamer(TBuffer &R__b)
 //______________________________________________________________________________
 void TStreamerBase::Update(const TClass *oldClass, TClass *newClass)
 {
-   //function called by the TClass constructor when replacing an emulated class
-   //by the real class
+   //Function called by the TClass constructor when replacing an emulated class
+   //by the real class.
 
    if (fClassObject == oldClass) fClassObject = newClass;
    else if (fClassObject == 0) {
@@ -683,6 +682,11 @@ void TStreamerBase::Update(const TClass *oldClass, TClass *newClass)
        fClassObject && fClassObject->InheritsFrom(TObject::Class())) {
       fTObjectOffset = fClassObject->GetBaseClassOffset(TObject::Class());
    }
+   if (fBaseClass && fBaseClass != (TClass*)-1) {
+      fStreamerFunc = fBaseClass->GetStreamerFunc();
+   } else {
+      fStreamerFunc = 0;
+   }
 }
 
 //______________________________________________________________________________
@@ -690,8 +694,11 @@ Int_t TStreamerBase::WriteBuffer (TBuffer &b, char *pointer)
 {
    // Write the base class into the buffer.
 
-   if (!fMethod) {
-      // We don't have a StreamerNVirtual(). That still doesn't mean
+   if (fStreamerFunc) {
+      // We have a custom Streamer member function, we must use it.
+      fStreamerFunc(b,pointer+fOffset);      
+   } else {
+      // We don't have a custom Streamer member function. That still doesn't mean
       // that there is no streamer - it could be an external one:
       // If the old base class has an adopted streamer we take that
       // one instead of the new base class:
@@ -717,12 +724,6 @@ Int_t TStreamerBase::WriteBuffer (TBuffer &b, char *pointer)
          }
       }
    }
-   ULong_t args[1];
-   args[0] = (ULong_t)&b;
-   R__LOCKGUARD2(gCINTMutex);
-   fMethod->SetParamPtrs(args);
-   fMethod->Execute((void*)(pointer+fOffset));
-   b.ForceWriteInfo(fBaseClass->GetStreamerInfo(),kFALSE);
    return 0;
 }
 
@@ -738,7 +739,7 @@ Int_t TStreamerBase::WriteBuffer (TBuffer &b, char *pointer)
 ClassImp(TStreamerBasicPointer)
 
 //______________________________________________________________________________
-TStreamerBasicPointer::TStreamerBasicPointer() : fCounter(0)
+TStreamerBasicPointer::TStreamerBasicPointer() : fCountVersion(0),fCountName(),fCountClass(),fCounter(0)
 {
    // Default ctor.
    fCounter = 0;
@@ -785,11 +786,14 @@ Int_t TStreamerBasicPointer::GetSize() const
 }
 
 //______________________________________________________________________________
-void TStreamerBasicPointer::Init(TObject *)
+void TStreamerBasicPointer::Init(TObject *directive)
 {
    // Setup the element.
-
-   fCounter = InitCounter( fCountClass, fCountName );
+   // If directive is a StreamerInfo and it correspond to the 
+   // same class a 'countClass' the streamerInfo is used instead of the current StreamerInfo of the TClass
+   // for 'countClass'.
+   
+   fCounter = InitCounter( fCountClass, fCountName, directive );
 }
 
 //______________________________________________________________________________
@@ -841,11 +845,10 @@ void TStreamerBasicPointer::Streamer(TBuffer &R__b)
 ClassImp(TStreamerLoop)
 
 //______________________________________________________________________________
-TStreamerLoop::TStreamerLoop() : fCounter(0)
+TStreamerLoop::TStreamerLoop() : fCountVersion(0),fCountName(),fCountClass(),fCounter(0)
 {
    // Default ctor.
 
-   fCounter = 0;
 }
 
 //______________________________________________________________________________
@@ -889,11 +892,14 @@ Int_t TStreamerLoop::GetSize() const
 }
 
 //______________________________________________________________________________
-void TStreamerLoop::Init(TObject *)
+void TStreamerLoop::Init(TObject *directive)
 {
    // Setup the element.
+   // If directive is a StreamerInfo and it correspond to the 
+   // same class a 'countClass' the streamerInfo is used instead of the current StreamerInfo of the TClass
+   // for 'countClass'.
 
-   fCounter = InitCounter( fCountClass, fCountName );
+   fCounter = InitCounter( fCountClass, fCountName, directive );
 }
 
 //______________________________________________________________________________
@@ -901,7 +907,7 @@ const char *TStreamerLoop::GetInclude() const
 {
    // Return the proper include for this element.
 
-   sprintf(gIncludeName,"<%s>","TString.h"); //to be generalized
+   gIncludeName.Form("<%s>","TString.h"); //to be generalized
    return gIncludeName;
 }
 
@@ -942,7 +948,7 @@ void TStreamerLoop::Streamer(TBuffer &R__b)
 ClassImp(TStreamerBasicType)
 
 //______________________________________________________________________________
-TStreamerBasicType::TStreamerBasicType()
+TStreamerBasicType::TStreamerBasicType() : fCounter(0)
 {
    // Default ctor.
 
@@ -950,7 +956,7 @@ TStreamerBasicType::TStreamerBasicType()
 
 //______________________________________________________________________________
 TStreamerBasicType::TStreamerBasicType(const char *name, const char *title, Int_t offset, Int_t dtype, const char *typeName)
-        : TStreamerElement(name,title,offset,dtype,typeName)
+        : TStreamerElement(name,title,offset,dtype,typeName),fCounter(0)
 {
    // Create a TStreamerBasicType object.
 
@@ -1080,10 +1086,10 @@ const char *TStreamerObject::GetInclude() const
 
    TClass *cl = GetClassPointer();
    if (cl && cl->GetClassInfo()) {
-      sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
+      gIncludeName.Form("\"%s\"",cl->GetDeclFileName());
    } else {
       std::string shortname( TClassEdit::ShortType( GetTypeName(), 1 ) );
-      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+      gIncludeName.Form("\"%s.h\"",shortname.c_str());
    }
    return gIncludeName;
 }
@@ -1171,10 +1177,10 @@ const char *TStreamerObjectAny::GetInclude() const
 
    TClass *cl = GetClassPointer();
    if (cl && cl->GetClassInfo()) {
-      sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
+      gIncludeName.Form("\"%s\"",cl->GetDeclFileName());
    } else {
       std::string shortname( TClassEdit::ShortType( GetTypeName(), 1 ) );
-      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+      gIncludeName.Form("\"%s.h\"",shortname.c_str());
    }
    return gIncludeName;
 }
@@ -1267,10 +1273,10 @@ const char *TStreamerObjectPointer::GetInclude() const
 
    TClass *cl = GetClassPointer();
    if (cl && cl->GetClassInfo()) {
-      sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
+      gIncludeName.Form("\"%s\"",cl->GetDeclFileName());
    } else {
       std::string shortname( TClassEdit::ShortType( GetTypeName(), 1 ) );
-      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+      gIncludeName.Form("\"%s.h\"",shortname.c_str());
    }
 
    return gIncludeName;
@@ -1370,10 +1376,10 @@ const char *TStreamerObjectAnyPointer::GetInclude() const
 
    TClass *cl = GetClassPointer();
    if (cl && cl->GetClassInfo()) {
-      sprintf(gIncludeName,"\"%s\"",cl->GetDeclFileName());
+      gIncludeName.Form("\"%s\"",cl->GetDeclFileName());
    } else {
       std::string shortname( TClassEdit::ShortType( GetTypeName(), 1 ) );
-      sprintf(gIncludeName,"\"%s.h\"",shortname.c_str());
+      gIncludeName.Form("\"%s.h\"",shortname.c_str());
    }
 
    return gIncludeName;
@@ -1447,7 +1453,7 @@ const char *TStreamerString::GetInclude() const
 {
    // Return the proper include for this element.
    
-   sprintf(gIncludeName,"<%s>","TString.h");
+   gIncludeName.Form("<%s>","TString.h");
    return gIncludeName;
 }
 
@@ -1491,7 +1497,7 @@ void TStreamerString::Streamer(TBuffer &R__b)
 ClassImp(TStreamerSTL)
 
 //______________________________________________________________________________
-TStreamerSTL::TStreamerSTL()
+TStreamerSTL::TStreamerSTL() : fSTLtype(0),fCtype(0)
 {
    // Default ctor.
 
@@ -1517,8 +1523,13 @@ TStreamerSTL::TStreamerSTL(const char *name, const char *title, Int_t offset,
 
    Int_t nch = strlen(t);
    char *s = new char[nch+1];
-   strcpy(s,t);
-   char *sopen  = strchr(s,'<'); *sopen  = 0; sopen++;
+   strlcpy(s,t,nch+1);
+   char *sopen  = strchr(s,'<'); 
+   if (sopen == 0) {
+      Fatal("TStreamerSTL","For %s, the type name (%s) is not seemingly not a template (template argument not found)", name, s);
+      return;
+   }
+   *sopen  = 0; sopen++;
    // We are looking for the first arguments of the STL container, because
    // this arguments can be a templates we need to count the < and >
    char* current=sopen;
@@ -1678,15 +1689,15 @@ void TStreamerSTL::ls(Option_t *) const
 {
    // Print the content of the element.
 
-   char name[kMaxLen];
-   char cdim[20];
-   sprintf(name,"%s",GetName());
+   TString name(kMaxLen);
+   TString cdim;
+   name = GetName();
    for (Int_t i=0;i<fArrayDim;i++) {
-      sprintf(cdim,"[%d]",fMaxIndex[i]);
-      strcat(name,cdim);
+      cdim.Form("[%d]",fMaxIndex[i]);
+      name += cdim;
    }
    printf("  %-14s %-15s offset=%3d type=%2d %s,stl=%d, ctype=%d, %-20s\n",
-      GetTypeName(),name,fOffset,fType,TestBit(kCache)?"(cached)":"",
+      GetTypeName(),name.Data(),fOffset,fType,TestBit(kCache)?"(cached)":"",
       fSTLtype,fCtype,GetTitle());
 }
 
@@ -1695,14 +1706,14 @@ const char *TStreamerSTL::GetInclude() const
 {
    // Return the proper include for this element.
 
-   if      (fSTLtype == kSTLvector)   sprintf(gIncludeName,"<%s>","vector");
-   else if (fSTLtype == kSTLlist)     sprintf(gIncludeName,"<%s>","list");
-   else if (fSTLtype == kSTLdeque)    sprintf(gIncludeName,"<%s>","deque");
-   else if (fSTLtype == kSTLmap)      sprintf(gIncludeName,"<%s>","map");
-   else if (fSTLtype == kSTLset)      sprintf(gIncludeName,"<%s>","set");
-   else if (fSTLtype == kSTLmultimap) sprintf(gIncludeName,"<%s>","multimap");
-   else if (fSTLtype == kSTLmultiset) sprintf(gIncludeName,"<%s>","multiset");
-   else if (fSTLtype == kSTLbitset)   sprintf(gIncludeName,"<%s>","bitset");
+   if      (fSTLtype == kSTLvector)   gIncludeName.Form("<%s>","vector");
+   else if (fSTLtype == kSTLlist)     gIncludeName.Form("<%s>","list");
+   else if (fSTLtype == kSTLdeque)    gIncludeName.Form("<%s>","deque");
+   else if (fSTLtype == kSTLmap)      gIncludeName.Form("<%s>","map");
+   else if (fSTLtype == kSTLset)      gIncludeName.Form("<%s>","set");
+   else if (fSTLtype == kSTLmultimap) gIncludeName.Form("<%s>","multimap");
+   else if (fSTLtype == kSTLmultiset) gIncludeName.Form("<%s>","multiset");
+   else if (fSTLtype == kSTLbitset)   gIncludeName.Form("<%s>","bitset");
    return gIncludeName;
 }
 
@@ -1805,7 +1816,7 @@ const char *TStreamerSTLstring::GetInclude() const
 {
    // Return the proper include for this element.
 
-   sprintf(gIncludeName,"<string>");
+   gIncludeName = "<string>";
    return gIncludeName;
 }
 

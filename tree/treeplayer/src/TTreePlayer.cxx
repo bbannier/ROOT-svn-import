@@ -210,8 +210,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "snprintf.h"
-
 #include "Riostream.h"
 #include "TTreePlayer.h"
 #include "TROOT.h"
@@ -397,8 +395,8 @@ TTree *TTreePlayer::CopyTree(const char *selection, Option_t *, Long64_t nentrie
                              // UpdateFormulaLeaves ourselves.
    if (strlen(selection)) {
       select = new TTreeFormula("Selection",selection,fTree);
-      if (!select || !select->GetNdim()) { 
-         delete select; 
+      if (!select || !select->GetNdim()) {
+         delete select;
          delete tree;
          return 0;
       }
@@ -502,7 +500,7 @@ Long64_t TTreePlayer::DrawScript(const char* wrapperPrefix,
    }
    selname.Append(aclicMode);
 
-   Info("DrawScript",Form("Will process tree/chain using %s",selname.Data()));
+   Info("DrawScript","%s",Form("Will process tree/chain using %s",selname.Data()));
    Long64_t result = fTree->Process(selname,option,nentries,firstentry);
    fTree->SetNotify(0);
 
@@ -793,10 +791,10 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //  MaxIf$(formula,condition): return the minimum (maximum) (within one TTree entry)
 //                    of the value of the elements of the formula given as a parameter
 //                    if they match the condition. If not element match the condition, the result is zero.  To avoid the
-//                    the result is zero.  To avoid the consequent peak a zero, use the 
-//                    pattern: 
+//                    the result is zero.  To avoid the consequent peak a zero, use the
+//                    pattern:
 //    tree->Draw("MinIf$(formula,condition)","condition");
-//                    which will avoid calculation MinIf$ for the entries that have no match 
+//                    which will avoid calculation MinIf$ for the entries that have no match
 //                    for the condition.
 //
 //  Alt$(primary,alternate) : return the value of "primary" if it is available
@@ -887,6 +885,10 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //  a candle sticks chart. With that option, the number of dimensions is
 //  arbitrary. Giving more than 4 variables without the option=para or
 //  option=candle or option=goff will produce an error.
+//
+//     Normalizing the ouput histogram to 1
+//     ====================================
+//  When option contains "norm" the output histogram is normalized to 1.
 //
 //     Saving the result of Draw to a TEventList or a TEntryList
 //     =========================================================
@@ -1057,6 +1059,8 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
    Bool_t optpara   = kFALSE;
    Bool_t optcandle = kFALSE;
    Bool_t optgl5d   = kFALSE;
+   Bool_t optnorm   = kFALSE;
+   if (opt.Contains("norm")) {optnorm = kTRUE; opt.ReplaceAll("norm",""); opt.ReplaceAll(" ","");}
    if (opt.Contains("para")) optpara = kTRUE;
    if (opt.Contains("candle")) optcandle = kTRUE;
    if (opt.Contains("gl5d")) optgl5d = kTRUE;
@@ -1068,7 +1072,7 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
          gROOT->ProcessLineFast("new TCanvas();");
       }
    }
-         
+
 
    // Do not process more than fMaxEntryLoop entries
    if (nentries > fTree->GetMaxEntryLoop()) nentries = fTree->GetMaxEntryLoop();
@@ -1095,23 +1099,27 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
    Bool_t draw = kFALSE;
    if (!drawflag && !opt.Contains("goff")) draw = kTRUE;
    if (!optcandle && !optpara) fHistogram = (TH1*)fSelector->GetObject();
-
-   if (!nrows && draw && drawflag && !opt.Contains("same")) {
-      if (gPad) gPad->Clear();
-      return 0;
+   if (optnorm) {
+      Double_t sumh= fHistogram->GetSumOfWeights();
+      if (sumh != 0) fHistogram->Scale(1./sumh);
    }
+   
+   //if (!nrows && draw && drawflag && !opt.Contains("same")) {
+   //   if (gPad) gPad->Clear();
+   //   return 0;
+   //}
 
    //*-*- 1-D distribution
    if (fDimension == 1) {
       if (fSelector->GetVar1()->IsInteger()) fHistogram->LabelsDeflate("X");
-      if (draw) fHistogram->Draw(option);
+      if (draw) fHistogram->Draw(opt.Data());
 
    //*-*- 2-D distribution
    } else if (fDimension == 2 && !(optpara||optcandle)) {
       if (fSelector->GetVar1()->IsInteger()) fHistogram->LabelsDeflate("Y");
       if (fSelector->GetVar2()->IsInteger()) fHistogram->LabelsDeflate("X");
       if (action == 4) {
-         if (draw) fHistogram->Draw(option);
+         if (draw) fHistogram->Draw(opt.Data());
       } else {
          Bool_t graph = kFALSE;
          Int_t l = opt.Length();
@@ -1120,9 +1128,9 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
          if (opt.Contains("surf")  || opt.Contains("lego") || opt.Contains("cont")) graph = kFALSE;
          if (opt.Contains("col")   || opt.Contains("hist") || opt.Contains("scat")) graph = kFALSE;
          if (!graph) {
-            if (draw) fHistogram->Draw(option);
+            if (draw) fHistogram->Draw(opt.Data());
          } else {
-            if (fSelector->GetOldHistogram() && draw) fHistogram->Draw(option);
+            if (fSelector->GetOldHistogram() && draw) fHistogram->Draw(opt.Data());
          }
       }
    //*-*- 3-D distribution
@@ -1131,14 +1139,14 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
       if (fSelector->GetVar2()->IsInteger()) fHistogram->LabelsDeflate("Y");
       if (fSelector->GetVar3()->IsInteger()) fHistogram->LabelsDeflate("X");
       if (action == 23) {
-         if (draw) fHistogram->Draw(option);
+         if (draw) fHistogram->Draw(opt.Data());
       } else {
          Int_t noscat = opt.Length();
          if (opt.Contains("same")) noscat -= 4;
          if (noscat) {
-            if (draw) fHistogram->Draw(option);
+            if (draw) fHistogram->Draw(opt.Data());
          } else {
-            if (fSelector->GetOldHistogram() && draw) fHistogram->Draw(option);
+            if (fSelector->GetOldHistogram() && draw) fHistogram->Draw(opt.Data());
          }
       }
    //*-*- 4-D distribution
@@ -1146,7 +1154,7 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
       if (fSelector->GetVar1()->IsInteger()) fHistogram->LabelsDeflate("Z");
       if (fSelector->GetVar2()->IsInteger()) fHistogram->LabelsDeflate("Y");
       if (fSelector->GetVar3()->IsInteger()) fHistogram->LabelsDeflate("X");
-      if (draw) fHistogram->Draw(option);
+      if (draw) fHistogram->Draw(opt.Data());
       Int_t ncolors  = gStyle->GetNumberOfColors();
       TObjArray *pms = (TObjArray*)fHistogram->GetListOfFunctions()->FindObject("polymarkers");
       for (Int_t col=0;col<ncolors;col++) {
@@ -1160,11 +1168,12 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
          TObject* para = fSelector->GetObject();
          TObject *enlist = gDirectory->FindObject("enlist");
          fTree->Draw(">>enlist",selection,"entrylist",nentries,firstentry);
-         gROOT->ProcessLineFast(Form("TParallelCoord::SetEntryList((TParallelCoord*)0x%lx,(TEntryList*)0x%lx)",para,enlist));
+         gROOT->ProcessLineFast(Form("TParallelCoord::SetEntryList((TParallelCoord*)0x%lx,(TEntryList*)0x%lx)",
+                                     (ULong_t)para, (ULong_t)enlist));
       }
    //*-*- 5d with gl
    } else if (optgl5d) {
-      gROOT->ProcessLineFast(Form("(new TGL5DDataSet((TTree *)0x%lx))->Draw(\"%s\");", fTree, opt.Data()));
+      gROOT->ProcessLineFast(Form("(new TGL5DDataSet((TTree *)0x%lx))->Draw(\"%s\");", (ULong_t)fTree, opt.Data()));
       gStyle->SetCanvasPreferGL(pgl);
    }
 
@@ -1196,11 +1205,11 @@ Int_t TTreePlayer::Fit(const char *formula ,const char *varexp, const char *sele
 // If no entries were selected, the function returns -1;
 //   (i.e. fitResult is null if the fit is OK)
 
-   Int_t nch = strlen(option) + 10;
+   Int_t nch = option ? strlen(option) + 10 : 10;
    char *opt = new char[nch];
-   if (option) sprintf(opt,"%s",option);
-   else        strcpy(opt,"goff");
-
+   if (option) strlcpy(opt,option,nch-1);
+   else        strlcpy(opt,"goff",5);
+   
    Long64_t nsel = DrawSelect(varexp,selection,opt,nentries,firstentry);
 
    delete [] opt;
@@ -1447,7 +1456,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
    leaves = fTree->GetListOfLeaves();
    for (l=0;l<nleaves;l++) {
       TLeaf *leaf = (TLeaf*)leaves->UncheckedAt(l);
-      strcpy(blen,leaf->GetName());
+      strlcpy(blen,leaf->GetName(),sizeof(blen)); 
       bname = &blen[0];
       while (*bname) {
          if (*bname == '.') *bname='_';
@@ -1504,20 +1513,20 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       leafcount =leaf->GetLeafCount();
       TBranch *branch = leaf->GetBranch();
       branchname[0] = 0;
-      strcpy(branchname,branch->GetName());
-      strcpy(aprefix,branch->GetName());
+      strlcpy(branchname,branch->GetName(),sizeof(branchname)); 
+      strlcpy(aprefix,branch->GetName(),sizeof(aprefix)); 
       if (!branches.FindObject(branch)) branches.Add(branch);
       else leafStatus[l] = 1;
       if ( branch->GetNleaves() > 1) {
          // More than one leaf for the branch we need to distinguish them
-         strcat(branchname,".");
-         strcat(branchname,leaf->GetTitle());
+         strlcat(branchname,".",sizeof(branchname));
+         strlcat(branchname,leaf->GetTitle(),sizeof(branchname));
          if (leafcount) {
             // remove any dimension in title
             char *dim =  (char*)strstr(branchname,"["); if (dim) dim[0] = 0;
          }
       } else {
-         strcpy(branchname,branch->GetName());
+         strlcpy(branchname,branch->GetName(),sizeof(branchname)); 
       }
       char *twodim = (char*)strstr(leaf->GetTitle(),"][");
       bname = branchname;
@@ -1540,7 +1549,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       if (leafcount) {
          len = leafcount->GetMaximum();
          if (len<=0) len = 1;
-         strcpy(blen,leafcount->GetName());
+         strlcpy(blen,leafcount->GetName(),sizeof(blen)); 
          bname = &blen[0];
          while (*bname) {
             if (*bname == '.') *bname='_';
@@ -1552,7 +1561,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
          }
          lenb = strlen(blen);
          if (blen[lenb-1] == '_') {blen[lenb-1] = 0; kmax = 1;}
-         else                     sprintf(blen,"%d",len);
+         else                     snprintf(blen,sizeof(blen),"%d",len);
       }
       if (branch->IsA() == TBranchElement::Class()) {
          bre = (TBranchElement*)branch;
@@ -1591,7 +1600,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
             if (!cle) {leafStatus[l] = 1; continue;}
             if (bre->GetStreamerType() == 66) leafStatus[l] = 0;
             char brename[256];
-            strcpy(brename,bre->GetName());
+            strlcpy(brename,bre->GetName(),255); 
             char *bren = brename;
             char *adot = strrchr(bren,'.');
             if (adot) bren = adot+1;
@@ -1614,7 +1623,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       if (strlen(leaf->GetTypeName()) == 0) {leafStatus[l] = 1; continue;}
       if (leafcount) {
          //len = leafcount->GetMaximum();
-         //strcpy(blen,leafcount->GetName());
+         //strlcpy(blen,leafcount->GetName(),sizeof(blen));
          //bname = &blen[0];
          //while (*bname) {if (*bname == '.') *bname='_'; bname++;}
          //lenb = strlen(blen);
@@ -1628,24 +1637,20 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
          }
          // Dimensions can be in the branchname for a split Object with a fix length C array.
          // Theses dimensions HAVE TO be placed after the dimension explicited by leafcount
-         char *dimensions = 0;
+         TString dimensions;
          char *dimInName = (char*) strstr(branchname,"[");
          if ( twodim || dimInName ) {
-            int dimlen = 0;
-            if (dimInName) dimlen += strlen(dimInName) + 1;
-            if (twodim)    dimlen += strlen(twodim) + 1;
-            dimensions = new char[dimlen];
             if (dimInName) {
-               strcpy(dimensions,dimInName);
+               dimensions = dimInName; 
                dimInName[0] = 0; // terminate branchname before the array dimensions.
-            } else dimensions[0] = 0;
-            if (twodim) strcat(dimensions,(char*)(twodim+1));
+            }
+            if (twodim) dimensions += (char*)(twodim+1);
          }
          const char* leafcountName = leafcount->GetName();
          char b2len[1024];
          if (bre && bre->GetBranchCount2()) {
             TLeaf * l2 = (TLeaf*)bre->GetBranchCount2()->GetListOfLeaves()->At(0);
-            strcpy(b2len,l2->GetName());
+            strlcpy(b2len,l2->GetName(),sizeof(b2len)); 
             bname = &b2len[0];
             while (*bname) {
                if (*bname == '.') *bname='_';
@@ -1657,12 +1662,11 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
             }
             leafcountName = b2len;
          }
-         if (dimensions) {
+         if (dimensions.Length()) {
             if (kmax) fprintf(fp,"   %-14s %s%s[kMax%s]%s;   //[%s]\n",leaf->GetTypeName(), stars,
-                              branchname,blen,dimensions,leafcountName);
+                              branchname,blen,dimensions.Data(),leafcountName);
             else      fprintf(fp,"   %-14s %s%s[%d]%s;   //[%s]\n",leaf->GetTypeName(), stars,
-                              branchname,len,dimensions,leafcountName);
-            delete [] dimensions;
+                              branchname,len,dimensions.Data(),leafcountName);
          } else {
             if (kmax) fprintf(fp,"   %-14s %s%s[kMax%s];   //[%s]\n",leaf->GetTypeName(), stars, branchname,blen,leafcountName);
             else      fprintf(fp,"   %-14s %s%s[%d];   //[%s]\n",leaf->GetTypeName(), stars, branchname,len,leafcountName);
@@ -1841,10 +1845,11 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       fprintf(fp,"   // Set object pointer\n");
       while( (obj = next()) ) {
          if (obj->InheritsFrom(TBranch::Class())) {
-            strcpy(branchname,((TBranch*)obj)->GetName() );
+            strlcpy(branchname,((TBranch*)obj)->GetName(),sizeof(branchname));
          } else if (obj->InheritsFrom(TLeaf::Class())) {
-            strcpy(branchname,((TLeaf*)obj)->GetName() );
+            strlcpy(branchname,((TLeaf*)obj)->GetName(),sizeof(branchname)); 
          }
+         branchname[1023]=0;
          bname = branchname;
          while (*bname) {
             if (*bname == '.') *bname='_';
@@ -1878,22 +1883,22 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       len = leaf->GetLen();
       leafcount =leaf->GetLeafCount();
       TBranch *branch = leaf->GetBranch();
-      strcpy(aprefix,branch->GetName());
+      strlcpy(aprefix,branch->GetName(),sizeof(aprefix)); 
 
       if ( branch->GetNleaves() > 1) {
          // More than one leaf for the branch we need to distinguish them
-         strcpy(branchname,branch->GetName());
-         strcat(branchname,".");
-         strcat(branchname,leaf->GetTitle());
+         strlcpy(branchname,branch->GetName(),sizeof(branchname)); 
+         strlcat(branchname,".",sizeof(branchname));
+         strlcat(branchname,leaf->GetTitle(),sizeof(branchname));
          if (leafcount) {
             // remove any dimension in title
             char *dim =  (char*)strstr(branchname,"["); if (dim) dim[0] = 0;
          }
       } else {
-         strcpy(branchname,branch->GetName());
+         strlcpy(branchname,branch->GetName(),sizeof(branchname)); 
          if (branch->IsA() == TBranchElement::Class()) {
             bre = (TBranchElement*)branch;
-            if (bre->GetType() == 3 || bre->GetType()==4) strcat(branchname,"_");
+            if (bre->GetType() == 3 || bre->GetType()==4) strlcat(branchname,"_",sizeof(branchname));
          }
       }
       bname = branchname;
@@ -1912,7 +1917,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
             fprintf(fp,"   fChain->SetBranchAddress(\"%s\",(void*)-1,&b_%s);\n",branch->GetName(),R__GetBranchPointerName(leaf).Data());
             continue;
          }
-         strcpy(branchname,branch->GetName());
+         strlcpy(branchname,branch->GetName(),sizeof(branchname)); 
       }
       if (branch->IsA() == TBranchElement::Class()) {
          if (((TBranchElement*)branch)->GetType() == 3) len =1;
@@ -2149,7 +2154,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
       tfile.Form("%s.C", fTree->GetName());
    FILE *fp = fopen(tfile, "w");
    if (!fp) {
-      Printf("MakeCode","cannot open output file %s", tfile.Data());
+      Error("MakeCode","cannot open output file %s", tfile.Data());
       return 3;
    }
    TString treefile;
@@ -2231,17 +2236,17 @@ Int_t TTreePlayer::MakeCode(const char *filename)
 
       if ( branch->GetNleaves() > 1) {
          // More than one leaf for the branch we need to distinguish them
-         strcpy(branchname,branch->GetName());
-         strcat(branchname,".");
-         strcat(branchname,leaf->GetTitle());
+         strlcpy(branchname,branch->GetName(),sizeof(branchname)); 
+         strlcat(branchname,".",sizeof(branchname));
+         strlcat(branchname,leaf->GetTitle(),sizeof(branchname));
          if (leafcount) {
             // remove any dimension in title
             char *dim =  (char*)strstr(branchname,"[");
             dim[0] = 0;
          }
       } else {
-         if (leafcount) strcpy(branchname,branch->GetName());
-         else           strcpy(branchname,leaf->GetTitle());
+         if (leafcount) strlcpy(branchname,branch->GetName(),sizeof(branchname));
+         else           strlcpy(branchname,leaf->GetTitle(),sizeof(branchname));
       }
       char *twodim = (char*)strstr(leaf->GetTitle(),"][");
       bname = branchname;
@@ -2265,21 +2270,16 @@ Int_t TTreePlayer::MakeCode(const char *filename)
          // Dimensions can be in the branchname for a split Object with a fix length C array.
          // Theses dimensions HAVE TO be placed after the dimension explicited by leafcount
          char *dimInName = (char*) strstr(branchname,"[");
-         char *dimensions = 0;
+         TString dimensions;
          if ( twodim || dimInName ) {
-            int dimlen = 0;
-            if (dimInName) dimlen += strlen(dimInName) + 1;
-            if (twodim)    dimlen += strlen(twodim) + 1;
-            dimensions = new char[dimlen];
             if (dimInName) {
-               strcpy(dimensions,dimInName);
+               dimensions = dimInName; 
                dimInName[0] = 0; // terminate branchname before the array dimensions.
-            } else dimensions[0] = 0;
-            if (twodim) strcat(dimensions,(char*)(twodim+1));
+            }
+            if (twodim) dimensions += (char*)(twodim+1);
          }
-         if (dimensions) {
-            fprintf(fp,"   %-15s %s[%d]%s;\n",leaf->GetTypeName(), branchname,len,dimensions);
-            delete [] dimensions;
+         if (dimensions.Length()) {
+            fprintf(fp,"   %-15s %s[%d]%s;\n",leaf->GetTypeName(), branchname,len,dimensions.Data());
          } else {
             fprintf(fp,"   %-15s %s[%d];\n",leaf->GetTypeName(), branchname,len);
          }
@@ -2300,17 +2300,17 @@ Int_t TTreePlayer::MakeCode(const char *filename)
 
       if ( branch->GetNleaves() > 1) {
          // More than one leaf for the branch we need to distinguish them
-         strcpy(branchname,branch->GetName());
-         strcat(branchname,".");
-         strcat(branchname,leaf->GetTitle());
+         strlcpy(branchname,branch->GetName(),sizeof(branchname)); 
+         strlcat(branchname,".",sizeof(branchname));
+         strlcat(branchname,leaf->GetTitle(),sizeof(branchname));
          if (leafcount) {
             // remove any dimension in title
             char *dim =  (char*)strstr(branchname,"[");
             dim[0] = 0;
          }
       } else {
-         if (leafcount) strcpy(branchname,branch->GetName());
-         else           strcpy(branchname,leaf->GetTitle());
+         if (leafcount) strlcpy(branchname,branch->GetName(),sizeof(branchname));
+         else           strlcpy(branchname,leaf->GetTitle(),sizeof(branchname));
       }
       bname = branchname;
       while (*bname) {
@@ -2325,7 +2325,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
       if (brak) *brak = 0;
       head = headOK;
       if (branch->IsA() == TBranchObject::Class()) {
-         strcpy(branchname,branch->GetName());
+         strlcpy(branchname,branch->GetName(),sizeof(branchname));
          leafobj = (TLeafObject*)leaf;
          if (!leafobj->GetClass()) head = headcom;
       }
@@ -2537,7 +2537,7 @@ TPrincipal *TTreePlayer::Principal(const char *varexp, const char *selection, Op
    }
 //*-*- if varexp is empty, take first 8 columns by default
    int allvar = 0;
-   if (!strcmp(varexp, "*")) { ncols = nleaves; allvar = 1; }
+   if (varexp && !strcmp(varexp, "*")) { ncols = nleaves; allvar = 1; }
    if (nch == 0 || allvar) {
       for (i=0;i<ncols;i++) {
          cnames.push_back( ((TLeaf*)leaves->At(i))->GetName() );
@@ -2848,7 +2848,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
    // By default 50 rows are shown and you are asked for <CR>
    // to see the next 50 rows.
    // You can change the default number of rows to be shown before <CR>
-   // via  mytree->SetScanfield(maxrows) where maxrows is 50 by default.
+   // via  mytree->SetScanField(maxrows) where maxrows is 50 by default.
    // if maxrows is set to 0 all rows of the Tree are shown.
    // This option is interesting when dumping the contents of a Tree to
    // an ascii file, eg from the command line
@@ -3014,8 +3014,8 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
       if (!lenfile) {
          Int_t nch2 = strlen(fTree->GetName());
          fname = new char[nch2+10];
-         strcpy(fname, fTree->GetName());
-         strcat(fname, "-scan.dat");
+         strlcpy(fname, fTree->GetName(),nch2+10);
+         strlcat(fname, "-scan.dat",nch2+10);
       }
       out.open(fname, ios::out);
       if (!out.good ()) {
@@ -3042,7 +3042,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
    }
 //*-*- if varexp is empty, take first 8 columns by default
    int allvar = 0;
-   if (!strcmp(varexp, "*")) { ncols = nleaves; allvar = 1; }
+   if (varexp && !strcmp(varexp, "*")) { ncols = nleaves; allvar = 1; }
    if (nch == 0 || allvar) {
       UInt_t ncs = ncols;
       ncols = 0;
@@ -3064,8 +3064,10 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
                   continue;
                }
             }
-            cnames[ncols].Append('.');
-            cnames[ncols].Append( lf->GetBranch()->GetName() );
+            if (!strchr(lf->GetBranch()->GetName() ,'[') ) {
+               cnames[ncols].Append('.');
+               cnames[ncols].Append( lf->GetBranch()->GetName() );
+            }
          }
          if (strcmp( lf->GetBranch()->GetName(), lf->GetName() ) != 0 ) {
             cnames[ncols].Append('.');
@@ -3075,7 +3077,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
       }
 //*-*- otherwise select only the specified columns
    } else {
-      
+
       ncols = fSelector->SplitNames(varexp, cnames);
 
    }
@@ -3301,7 +3303,7 @@ TSQLResult *TTreePlayer::Query(const char *varexp, const char *selection,
 
    // if varexp is empty, take first 8 columns by default
    int allvar = 0;
-   if (!strcmp(varexp, "*")) { ncols = nleaves; allvar = 1; }
+   if (varexp && !strcmp(varexp, "*")) { ncols = nleaves; allvar = 1; }
    if (nch == 0 || allvar) {
       for (i=0;i<ncols;i++) {
          cnames.push_back( ((TLeaf*)leaves->At(i))->GetName() );
@@ -3333,7 +3335,7 @@ TSQLResult *TTreePlayer::Query(const char *varexp, const char *selection,
       }
       manager->Sync();
    }
-   
+
    // loop on all selected entries
    const char *aresult;
    Int_t len;
@@ -3350,12 +3352,12 @@ TSQLResult *TTreePlayer::Query(const char *varexp, const char *selection,
          tnumber = fTree->GetTreeNumber();
          for (i=0;i<ncols;i++) var[i]->UpdateFormulaLeaves();
       }
-      
+
       Int_t ndata = 1;
       if (manager && manager->GetMultiplicity()) {
          ndata = manager->GetNdata();
       }
-      
+
       if (select) {
          select->GetNdata();
          if (select->EvalInstance(0) == 0) continue;
@@ -3368,7 +3370,7 @@ TSQLResult *TTreePlayer::Query(const char *varexp, const char *selection,
                continue;
             }
          }
-         
+
          if (inst==0) loaded = kTRUE;
          else if (!loaded) {
             // EvalInstance(0) always needs to be called so that
@@ -3388,8 +3390,8 @@ TSQLResult *TTreePlayer::Query(const char *varexp, const char *selection,
                memcpy(arow+fields[i-1],aresult,len);
                fields[i] = fields[i-1] + len;
             }
-            res->AddRow(new TTreeRow(ncols,fields,arow));
          }
+         res->AddRow(new TTreeRow(ncols,fields,arow));
          fSelectedRows++;
       }
    }
@@ -3533,7 +3535,7 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
 //   If the number of selected entries is null the function returns -1
 
 
-// new implementation using new Fitter classes 
+// new implementation using new Fitter classes
 
    gTree = fTree; // not sure if this is still needed
 
@@ -3566,11 +3568,11 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
    if (!fitOption.Nograph) drawOpt = "";
    Long64_t nsel = DrawSelect(varexp, selection,drawOpt, nentries, firstentry);
 
-   if (!fitOption.Nograph  && GetSelectedRows() <= 0 && GetDimension() > 4) { 
+   if (!fitOption.Nograph  && GetSelectedRows() <= 0 && GetDimension() > 4) {
       Info("UnbinnedFit","Ignore option D with more than 4 variables");
       nsel = DrawSelect(varexp, selection,"goff para", nentries, firstentry);
    }
-   
+
    //if no selected entries return
    Long64_t nrows = GetSelectedRows();
 
@@ -3581,22 +3583,22 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
 
    // Check that function has same dimension as number of variables
    Int_t ndim = GetDimension();
-   // do not check with TF1::GetNdim() since it returns 1 for TF1 classes created with 
+   // do not check with TF1::GetNdim() since it returns 1 for TF1 classes created with
    // a C function with larger dimension
-   
+
 
    // use pointer stored in the tree (not copy the data in)
-   std::vector<double *> vlist(ndim); 
-   for (int i = 0; i < ndim; ++i) 
-      vlist[i] = fSelector->GetVal(i); 
+   std::vector<double *> vlist(ndim);
+   for (int i = 0; i < ndim; ++i)
+      vlist[i] = fSelector->GetVal(i);
 
-   // fill the data 
+   // fill the data
    ROOT::Fit::UnBinData * fitdata = new ROOT::Fit::UnBinData(nrows, ndim, vlist.begin());
 
-   
+
 
    ROOT::Math::MinimizerOptions minOption;
-   TFitResultPtr ret = ROOT::Fit::UnBinFit(fitdata,fitfunc, fitOption, minOption); 
+   TFitResultPtr ret = ROOT::Fit::UnBinFit(fitdata,fitfunc, fitOption, minOption);
 
    //reset estimate
    fTree->SetEstimate(oldEstimate);
@@ -3664,4 +3666,3 @@ void TTreePlayer::UpdateFormulaLeaves()
       }
    }
 }
-

@@ -79,7 +79,10 @@ Int_t TPerfEvent::Compare(const TObject *obj) const
 
    const TPerfEvent *pe = dynamic_cast<const TPerfEvent*>(obj);
 
-   R__ASSERT(pe != 0);
+   if (!pe) {
+      Error("Compare", "input is not a TPerfEvent object");
+      return 0;
+   }
 
    if (fTimeStamp < pe->fTimeStamp) {
       return -1;
@@ -94,23 +97,18 @@ Int_t TPerfEvent::Compare(const TObject *obj) const
 void TPerfEvent::Print(Option_t *) const
 {
    // Dump content of this instance
-
-   cout << "TPerfEvent: ";
-
-   if ( fEvtNode == -2 ) {
-      cout << "StandAlone ";
+        
+   TString where;
+   if (fEvtNode == -2) {
+      where = "TPerfEvent: StandAlone ";
    } else if ( fEvtNode == -1 ) {
-      cout << "Master ";
+      where = "TPerfEvent: Master ";
    } else {
-      cout << "Slave " << fEvtNode << " ";
+      where.Form("TPerfEvent: Worker %s ", fEvtNode.Data());
    }
-   cout << TVirtualPerfStats::EventType(fType) << " "
-        << double(fTimeStamp)
-        << endl;
+   Printf("%s %s %f", where.Data(),
+                      TVirtualPerfStats::EventType(fType), double(fTimeStamp));
 }
-
-
-//------------------------------------------------------------------------------
 
 //______________________________________________________________________________
 TPerfStats::TPerfStats(TList *input, TList *output)
@@ -335,7 +333,7 @@ void TPerfStats::PacketEvent(const char *slave, const char* slavename, const cha
    if (fMonitoringWriter) {
       if (!gProofServ || !gProofServ->GetSessionTag() || !gProofServ->GetProof() ||
           !gProofServ->GetProof()->GetQueryResult()) {
-         Error("PacketEvent", "some required object are undefined (0x%lx 0x%lx 0x%lx 0x%lx)",
+         Error("PacketEvent", "some required object are undefined (%p %p %p %p)",
                gProofServ, (gProofServ ? gProofServ->GetSessionTag() : 0),
               (gProofServ ? gProofServ->GetProof() : 0),
               ((gProofServ && gProofServ->GetProof()) ?
@@ -501,7 +499,7 @@ void TPerfStats::WriteQueryLog()
    if (sqlserv != "" && sqluser != "" && sqlpass != "" && gProofServ) {
       TString sql;
       sql.Form("INSERT INTO proofquerylog VALUES (0, '%s', '%s', "
-               "'%s', '%s', %d, %.2f, %lld, %lld, %d)",
+               "'%s', '%s', %ld, %.2f, %lld, %lld, %d)",
                gProofServ->GetUser(), gProofServ->GetGroup(),
                fTzero.AsString("s"), stop.AsString("s"),
                stop.GetSec()-fTzero.GetSec(), fTotCpuTime,
@@ -530,7 +528,7 @@ void TPerfStats::WriteQueryLog()
    if (fMonitoringWriter) {
       if (!gProofServ || !gProofServ->GetSessionTag() || !gProofServ->GetProof() ||
           !gProofServ->GetProof()->GetQueryResult()) {
-         Error("WriteQueryLog", "some required object are undefined (0x%lx 0x%lx 0x%lx 0x%lx)",
+         Error("WriteQueryLog", "some required object are undefined (%p %p %p %p)",
                gProofServ, (gProofServ ? gProofServ->GetSessionTag() : 0),
               (gProofServ ? gProofServ->GetProof() : 0),
               ((gProofServ && gProofServ->GetProof()) ?

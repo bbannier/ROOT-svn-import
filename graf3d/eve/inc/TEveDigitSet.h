@@ -84,6 +84,9 @@ public:
    TEveDigitSet(const char* n="TEveDigitSet", const char* t="");
    virtual ~TEveDigitSet();
 
+   virtual TObject* GetObject(const TEveException&) const
+   { const TObject* obj = this; return const_cast<TObject*>(obj); }
+
    void   UseSingleColor();
 
    Bool_t GetAntiFlick() const   { return fAntiFlick; }
@@ -124,6 +127,7 @@ public:
    DigitBase_t* GetDigit(Int_t n) const { return (DigitBase_t*) fPlex.Atom(n); }
    TObject*     GetId(Int_t n) const;
    void*        GetUserData(Int_t n) const;
+   using TEveElement::GetUserData;
 
    // --------------------------------
 

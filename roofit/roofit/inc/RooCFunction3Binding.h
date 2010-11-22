@@ -121,7 +121,13 @@ class RooCFunction3Ref : public TObject {
     if (result && strlen(result)) {
       return result ;
     } 
-    return Form("(0x%08x)",_ptr) ;
+    // This union is to avoid a warning message:
+    union { 
+       void *_ptr;
+       func_t _funcptr;
+    } temp;
+    temp._funcptr = _ptr;
+    return Form("(%p)",temp._ptr) ;
   }
 
   const char* argName(Int_t iarg) {
@@ -146,7 +152,8 @@ class RooCFunction3Ref : public TObject {
   }
 
 
-  VO (*_ptr)(VI1,VI2,VI3) ; //! Pointer to embedded function
+  typedef VO (*func_t)(VI1,VI2,VI3) ; //! Pointer to embedded function
+  func_t _ptr; //! Pointer to embedded function
 
   static RooCFunction3Map<VO,VI1,VI2,VI3>* _fmap ; // Pointer to mapping service object
 
@@ -173,13 +180,13 @@ void RooCFunction3Ref<VO,VI1,VI2,VI3>::Streamer(TBuffer &R__b)
    if (R__b.IsReading()) {
 
      UInt_t R__s, R__c;
-     R__b.ReadVersion(&R__s, &R__c);      
+     Version_t R__v = R__b.ReadVersion(&R__s, &R__c);      
 
      // Read name from file
      TString tmpName ;
      tmpName.Streamer(R__b) ;       
 
-     if (tmpName=="UNKNOWN") {
+     if (tmpName=="UNKNOWN" && R__v>0) {
 
        coutW(ObjectHandling) << "WARNING: Objected embeds function pointer to unknown function, object will not be functional" << endl ;
        _ptr = dummyFunction ;
@@ -206,7 +213,13 @@ void RooCFunction3Ref<VO,VI1,VI2,VI3>::Streamer(TBuffer &R__b)
      // Lookup name of reference C function
      TString tmpName = fmap().lookupName(_ptr) ;
      if (tmpName.Length()==0) {
-       coutW(ObjectHandling) << "WARNING: Cannot persist unknown function pointer " << Form("0x%08x",_ptr) 
+       // This union is to avoid a warning message:
+       union { 
+          void *_ptr;
+          func_t _funcptr;
+       } temp;
+       temp._funcptr = _ptr;
+       coutW(ObjectHandling) << "WARNING: Cannot persist unknown function pointer " << Form("%p",temp._ptr) 
 			     << " written object will not be functional when read back" <<  endl ;
        tmpName="UNKNOWN" ;
      } 
@@ -362,36 +375,4 @@ RooCFunction3PdfBinding<VO,VI1,VI2,VI3>::RooCFunction3PdfBinding(const RooCFunct
   // Copy constructor
 } 
 
-
-
-
-template <>        void RooCFunction3Ref<Double_t,Double_t,Double_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <>    void RooCFunction3Binding<Double_t,Double_t,Double_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <> void RooCFunction3PdfBinding<Double_t,Double_t,Double_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-
-template <>        void RooCFunction3Ref<Double_t,Double_t,Double_t,Bool_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <>    void RooCFunction3Binding<Double_t,Double_t,Double_t,Bool_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <> void RooCFunction3PdfBinding<Double_t,Double_t,Double_t,Bool_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-
-template <>        void RooCFunction3Ref<Double_t,Double_t,Int_t,Int_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <>    void RooCFunction3Binding<Double_t,Double_t,Int_t,Int_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <> void RooCFunction3PdfBinding<Double_t,Double_t,Int_t,Int_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-
-template <>        void RooCFunction3Ref<Double_t,UInt_t,Double_t,UInt_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <>    void RooCFunction3Binding<Double_t,UInt_t,Double_t,UInt_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <> void RooCFunction3PdfBinding<Double_t,UInt_t,Double_t,UInt_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-
-template <>        void RooCFunction3Ref<Double_t,UInt_t,Double_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <>    void RooCFunction3Binding<Double_t,UInt_t,Double_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <> void RooCFunction3PdfBinding<Double_t,UInt_t,Double_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-
-template <>        void RooCFunction3Ref<Double_t,UInt_t,UInt_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <>    void RooCFunction3Binding<Double_t,UInt_t,UInt_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <> void RooCFunction3PdfBinding<Double_t,UInt_t,UInt_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-
-
-
-
-
- 
 #endif

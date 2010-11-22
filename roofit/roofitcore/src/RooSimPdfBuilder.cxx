@@ -16,12 +16,10 @@
 
 //////////////////////////////////////////////////////////////////////////////
 //
-// BEGIN_HTML
+// Begin_Html
 //
 // <b>This tool has now been superceded by RooSimWSTool</b>
 // 
-//Begin_Html
-//  </pre>
 //  <p>
 //    <tt>RooSimPdfBuilder</tt> is a powerful tool to build <tt>RooSimultaneous</tt>
 //    PDFs that are defined in terms component PDFs that are identical in
@@ -411,10 +409,8 @@
 //    <tt>RooSimultaneous</tt> returned by <tt>buildPdf()</tt>. Therefore the builder instance should 
 //    exist as long as the constructed PDFs needs to exist.
 //  </p>
-//  <pre>
-//End_Html
 //
-// END_HTML
+// End_Html
 //
 
 
@@ -537,7 +533,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
   Int_t buflen = strlen(((RooStringVar*)buildConfig.find("physModels"))->getVal())+1 ;
   char *buf = new char[buflen] ;
 
-  strcpy(buf,((RooStringVar*)buildConfig.find("physModels"))->getVal()) ;
+  strlcpy(buf,((RooStringVar*)buildConfig.find("physModels"))->getVal(),buflen) ;
   RooAbsCategoryLValue* physCat(0) ;
   if (strstr(buf," : ")) {
     const char* physCatName = strtok(buf,spaceChars) ;
@@ -583,15 +579,17 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       }
       stateName = physName ;
       physName = strchr(stateName,'=') ;
-      *(physName++) = 0 ;      
+      if (physName) {
+	*(physName++) = 0 ;      
+      }
     } else {
       stateName = physName ;
     }
 
-    RooAbsPdf* physModel = (RooAbsPdf*) _protoPdfSet.find(physName) ;
+    RooAbsPdf* physModel = (RooAbsPdf*) (physName ? _protoPdfSet.find(physName) : 0 );
     if (!physModel) {
       coutE(InputArguments) << "RooSimPdfBuilder::buildPdf: ERROR requested physics model " 
-			    << physName << " is not defined" << endl ;
+			    << (physName?physName:"(null)") << " is not defined" << endl ;
       delete[] buf ;
       return 0 ;
     }    
@@ -629,7 +627,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
   delete[] buf ; 
   buflen = strlen(((RooStringVar*)buildConfig.find("splitCats"))->getVal())+1 ;
   buf = new char[buflen] ;
-  strcpy(buf,((RooStringVar*)buildConfig.find("splitCats"))->getVal()) ;
+  strlcpy(buf,((RooStringVar*)buildConfig.find("splitCats"))->getVal(),buflen) ;
 
   char *catName = strtok(buf,spaceChars) ;
   char *stateList(0) ;
@@ -646,9 +644,9 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       stateList = 0 ;
     }
 
-    RooCategory* splitCat = dynamic_cast<RooCategory*>(dependents.find(catName)) ;
+    RooCategory* splitCat = catName ? dynamic_cast<RooCategory*>(dependents.find(catName)) : 0 ;
     if (!splitCat) {
-      coutE(InputArguments) << "RooSimPdfBuilder::buildPdf: ERROR requested split category " << catName 
+      coutE(InputArguments) << "RooSimPdfBuilder::buildPdf: ERROR requested split category " << (catName?catName:"(null)") 
 			    << " is not a RooCategory in the dataset" << endl ;
       delete[] buf ;
       return 0 ;
@@ -756,7 +754,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       buflen = strlen(ruleStr->getVal())+1 ;
       buf = new char[buflen] ;
 
-      strcpy(buf,ruleStr->getVal()) ;
+      strlcpy(buf,ruleStr->getVal(),buflen) ;
       char *tokenPtr(0) ;
 
       char* token = strtok_r(buf,spaceChars,&tokenPtr) ;
@@ -1029,7 +1027,7 @@ RooSimultaneous* RooSimPdfBuilder::buildPdf(const RooArgSet& buildConfig, const 
       }
       if (mode!=SplitCat) {
 	coutE(InputArguments) << "RooSimPdfBuilder::buildPdf: ERROR in parsing, expected " 
-			      << (mode==Colon?":":"parameter list") << " after " << token << endl ;
+			      << (mode==Colon?":":"parameter list") << " after " << (token?token:"(null)") << endl ;
       }
 
       //RooArgSet* paramSet = physModel->getParameters(dependents) ;

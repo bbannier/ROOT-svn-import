@@ -10,58 +10,78 @@
 
 
 #include "RooRealVar.h"
-#include "RooProdPdf.h"
 #include "RooWorkspace.h"
 #include "RooDataSet.h"
-
+#include "RooPlot.h"
+#include "RooMsgService.h"
 
 #include "RooStats/BayesianCalculator.h"
 #include "RooStats/SimpleInterval.h"
+#include "TCanvas.h"
 
 using namespace RooFit;
 using namespace RooStats;
 
-void rs701_BayesianCalculator()
+void rs701_BayesianCalculator(bool useBkg = true, double confLevel = 0.90)
 {
 
+
   RooWorkspace* w = new RooWorkspace("w",true);
-  w->factory("SUM::pdf(s[0.001,10]*Uniform(x[0,1]),b[0.001,0,2]*Uniform(x))");
-  w->factory("Gaussian::prior_b(b,0.001,1)");
+  w->factory("SUM::pdf(s[0.001,15]*Uniform(x[0,1]),b[1,0,2]*Uniform(x))");
+  w->factory("Gaussian::prior_b(b,1,1)");
   w->factory("PROD::model(pdf,prior_b)");
   RooAbsPdf* model = w->pdf("model");  // pdf*priorNuisance
-  const RooArgSet nuisanceParameters(*(w->var("b")));
+  RooArgSet nuisanceParameters(*(w->var("b")));
+  
 
-  w->factory("Uniform::priorPOI(s)");
-  RooRealVar* POI = w->var("s");
-  RooAbsPdf* priorPOI = w->pdf("priorPOI");
 
-  w->factory("n[2]"); // observed number of events
+  RooAbsRealLValue* POI = w->var("s");
+  RooAbsPdf* priorPOI  = (RooAbsPdf *) w->factory("Uniform::priorPOI(s)");  
+  RooAbsPdf* priorPOI2 = (RooAbsPdf *) w->factory("GenericPdf::priorPOI2('1/sqrt(@0)',s)");
+
+  w->factory("n[3]"); // observed number of events
+  // create a data set with n observed events
   RooDataSet data("data","",RooArgSet(*(w->var("x")),*(w->var("n"))),"n");
   data.add(RooArgSet(*(w->var("x"))),w->var("n")->getVal());
 
-  BayesianCalculator bcalc(data,*model,RooArgSet(*POI),*priorPOI,&nuisanceParameters);
-  bcalc.SetTestSize(0.05);
+  // to suppress messgaes when pdf goes to zero
+  RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL) ;
 
+  RooArgSet * nuisPar = 0;
+  if (useBkg) nuisPar = &nuisanceParameters;
+  //if (!useBkg) ((RooRealVar *)w->var("b"))->setVal(0);
+
+  double size = 1.-confLevel;
+  std::cout << "\nBayesian Result using a Flat prior " << std::endl;
+  BayesianCalculator bcalc(data,*model,RooArgSet(*POI),*priorPOI, nuisPar);
+  bcalc.SetTestSize(size);
   SimpleInterval* interval = bcalc.GetInterval();
-  std::cout << "90% CL interval: [ " << interval->LowerLimit() << " - " << interval->UpperLimit() << " ] or 95% CL limits\n";
+  double cl = bcalc.ConfidenceLevel();
+  std::cout << cl <<"% CL central interval: [ " << interval->LowerLimit() << " - " << interval->UpperLimit() 
+            << " ] or " 
+            << cl+(1.-cl)/2 << "% CL limits\n";
+  RooPlot * plot = bcalc.GetPosteriorPlot();
+  TCanvas * c1 = new TCanvas("c1","Bayesian Calculator Result");
+  c1->Divide(1,2); 
+  c1->cd(1);
+  plot->Draw();
+  c1->Update();
 
+  std::cout << "\nBayesian Result using a 1/sqrt(s) prior  " << std::endl;
+  BayesianCalculator bcalc2(data,*model,RooArgSet(*POI),*priorPOI2,nuisPar);
+  bcalc2.SetTestSize(size);
+  SimpleInterval* interval2 = bcalc2.GetInterval();
+  cl = bcalc2.ConfidenceLevel();
+  std::cout << cl <<"% CL central interval: [ " << interval2->LowerLimit() << " - " << interval2->UpperLimit() 
+            << " ] or " 
+            << cl+(1.-cl)/2 << "% CL limits\n";
+
+  RooPlot * plot2 = bcalc2.GetPosteriorPlot();
+  c1->cd(2);
+  plot2->Draw();
+  gPad->SetLogy();
+  c1->Update();
+  
   // observe one event while expecting one background event -> the 95% CL upper limit on s is 4.10
   // observe one event while expecting zero background event -> the 95% CL upper limit on s is 4.74
-
-  // The plotting code below can be replace by the single following line in the ROOT > 5.25.00 future releases
-  //bcalc.GetPosteriorPlot()->Draw();
-
-  // bcalc.PlotPosterior(); // for the moment this is the current plot
-
-  // the commented code below produce a much nicer plot
-
-  RooAbsPdf* fPosteriorPdf = bcalc.GetPosteriorPdf();
-
-  RooPlot* plot = POI->frame();
-  plot->SetTitle(TString("Posterior probability of parameter \"")+TString(POI->GetName())+TString("\""));  
-  fPosteriorPdf->plotOn(plot,RooFit::Range(interval->LowerLimit(),interval->UpperLimit(),kFALSE),RooFit::VLines(),RooFit::DrawOption("F"),RooFit::MoveToBack(),RooFit::FillColor(kGray));
-  fPosteriorPdf->plotOn(plot);
-  plot->GetYaxis()->SetTitle("posterior probability");
-  plot->Draw();
-  
 }

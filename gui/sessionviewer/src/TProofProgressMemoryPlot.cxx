@@ -244,18 +244,18 @@ void TProofProgressMemoryPlot::DoPlot()
    Int_t min = -1;
    while ((selworker=(TGTextLBEntry*)nextworker())){
 
-      sprintf(name, "%s", selworker->GetText()->GetString());
+      snprintf(name, sizeof(name)-1, "%s", selworker->GetText()->GetString());
       char *token;
       token = strtok(name, " ");
       if (!strcmp(token, "average")) { //change that to id comparison later
          gr = DoAveragePlot(max, min);
          if (gr && gr->GetN()>0){
-            if (!fWPlot){
+            if (!fWPlot) {
                fWPlot = new TMultiGraph();
-               if (!legw){
-                  legw = new TLegend(0.1, 0.7, 0.4, 0.9);
-                  legw->SetHeader("Workers");
-               }
+            }
+            if (!legw) {
+               legw = new TLegend(0.1, 0.7, 0.4, 0.9);
+               legw->SetHeader("Workers");
             }
             gr->SetMarkerColor(1);
             gr->SetMarkerStyle(2);
@@ -268,6 +268,13 @@ void TProofProgressMemoryPlot::DoPlot()
          TProofLogElem *pltemp = (TProofLogElem*)elem->At(min+1);
          gr = DoWorkerPlot(pltemp);
          if (gr && gr->GetN()>0){
+            if (!fWPlot) {
+               fWPlot = new TMultiGraph();
+            }
+            if (!legw) {
+               legw = new TLegend(0.1, 0.7, 0.4, 0.9);
+               legw->SetHeader("Workers");
+            }
             gr->SetLineWidth(2);
             gr->SetLineColor(2);
             gr->SetLineStyle(3);
@@ -277,13 +284,19 @@ void TProofProgressMemoryPlot::DoPlot()
          pltemp = (TProofLogElem*)elem->At(max+1);
          gr = DoWorkerPlot(pltemp);
          if (gr && gr->GetN()>0){
+            if (!fWPlot) {
+               fWPlot = new TMultiGraph();
+            }
+            if (!legw) {
+               legw = new TLegend(0.1, 0.7, 0.4, 0.9);
+               legw->SetHeader("Workers");
+            }
             gr->SetLineWidth(2);
             gr->SetLineColor(2);
             gr->SetLineStyle(2);
             fWPlot->Add(gr, "l");
             legw->AddEntry(gr, TString::Format("%s - max", pltemp->GetName()), "l");
          }
-
 
          continue;
       }
@@ -295,13 +308,13 @@ void TProofProgressMemoryPlot::DoPlot()
          //role should be equal to "worker", only check the 1st char
 
          gr = DoWorkerPlot(ple);
-         if (gr && gr->GetN()>0){
-            if (!fWPlot){
+         if (gr && gr->GetN()>0) {
+            if (!fWPlot) {
                fWPlot = new TMultiGraph();
-               if (!legw){
-                  legw = new TLegend(0.1, 0.7, 0.4, 0.9);
-                  legw->SetHeader("Workers");
-               }
+            }
+            if (!legw) {
+               legw = new TLegend(0.1, 0.7, 0.4, 0.9);
+               legw->SetHeader("Workers");
             }
             gr->SetLineWidth(2);
             gr->SetLineColor(iwelem+3);
@@ -316,6 +329,8 @@ void TProofProgressMemoryPlot::DoPlot()
          if (gr && gr->GetN()>0){
             if (!fMPlot){
                fMPlot = new TMultiGraph();
+            }
+            if (!legm) {
                legm = new TLegend(0.1, 0.7, 0.4, 0.9);
                legm->SetHeader("Master");
             }
@@ -376,6 +391,9 @@ TGraph *TProofProgressMemoryPlot::DoAveragePlot(Int_t &max_el, Int_t &min_el)
    Long64_t vmem = -1, rmem = -1, nevt = -1;
    TString token;
    Int_t ielem=0;
+   for (Int_t i=0; i<elem->GetEntries(); i++) {
+      last[i] = 0;
+   }
    while ((ple = (TProofLogElem *)next())){
       //find the maximal entry processed in the last query
       const char *role = ple->GetRole();
@@ -548,7 +566,7 @@ TGraph *TProofProgressMemoryPlot::DoWorkerPlot(TProofLogElem *ple)
    //find the step
    TObjString *prevline = (TObjString*)lines->Before(curline);
    Long64_t prevevent_value = 0;
-   if (ParseLine(prevline->String(), vmem, rmem, prevevent_value) != 0) {
+   if (prevline && ParseLine(prevline->String(), vmem, rmem, prevevent_value) != 0) {
       Error("DoWorkerPlot", "error parsing line: '%s'", prevline->String().Data());
       return 0;
    }

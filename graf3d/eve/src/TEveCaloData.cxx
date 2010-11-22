@@ -63,7 +63,7 @@ Float_t TEveCaloData::CellData_t::Value(Bool_t isEt) const
    if (isEt)
       return fValue;
    else
-      return TMath::Abs(fValue/TMath::Cos(Theta()));
+      return TMath::Abs(fValue/TMath::Sin(Theta()));
 }
 
 //______________________________________________________________________________
@@ -531,13 +531,16 @@ void TEveCaloDataVec::GetCellList(Float_t eta, Float_t etaD,
          minQ = cg.fPhiMin;
          maxQ = cg.fPhiMax;
 
-         if (maxQ < phiMin)
+         if (fWrapTwoPi)
          {
-            minQ += TwoPi(); maxQ += TwoPi();
-         }
-         else if (minQ > phiMax)
-         {
-            minQ -= TwoPi(); maxQ -= TwoPi();
+            if (maxQ < phiMin)
+            {
+               minQ += TwoPi(); maxQ += TwoPi();
+            }
+            else if (minQ > phiMax)
+            {
+               minQ -= TwoPi(); maxQ -= TwoPi();
+            }
          }
 
          if (maxQ >= phiMin && minQ <= phiMax)
@@ -601,7 +604,7 @@ void TEveCaloDataVec::GetCellData(const TEveCaloData::CellId_t &id,
    // Get cell geometry and value from cell ID.
 
    cellData.CellGeom_t::operator=( fGeomVec[id.fTower] );
-   cellData.fValue = fSliceVec[id.fSlice][id.fTower]*id.fFraction;
+   cellData.fValue = fSliceVec[id.fSlice][id.fTower];
 }
 
 //______________________________________________________________________________
@@ -615,7 +618,7 @@ void TEveCaloDataVec::DataChanged()
 
    fMaxValE = 0;
    fMaxValEt = 0;
-   Float_t sum=0, cos=0;
+   Float_t sum=0;
    //   printf("geom vec %d slices %d\n",fGeomVec.size(), fSliceVec.size() );
 
    for (UInt_t tw=0; tw<fGeomVec.size(); tw++)
@@ -626,8 +629,8 @@ void TEveCaloDataVec::DataChanged()
 
       if (sum > fMaxValEt ) fMaxValEt=sum;
 
-      cos = Cos(2*ATan(Exp( -Abs(fGeomVec[tw].Eta()))));
-      sum /= Abs(cos);
+      sum /= Abs(Sin(EtaToTheta(fGeomVec[tw].Eta())));
+
       if (sum > fMaxValE) fMaxValE=sum;
    }
 
@@ -781,8 +784,8 @@ void TEveCaloDataHist::DataChanged()
 
          if (value > fMaxValEt ) fMaxValEt = value;
 
-         Double_t cos = Cos(2*ATan(Exp(-Abs(eta))));
-         value /= Abs(cos);
+         value /= Abs(Sin(EtaToTheta(eta)));
+
          if (value > fMaxValE) fMaxValE = value;
       }
    }
@@ -808,7 +811,6 @@ void TEveCaloDataHist::GetCellList(Float_t eta, Float_t etaD,
    Int_t nPhi = fPhiAxis->GetNbins();
    Int_t nSlices = GetNSlices();
 
-   TH2F* hist = GetHist(0);
    Int_t bin  = 0;
 
    Bool_t accept;
@@ -833,7 +835,7 @@ void TEveCaloDataHist::GetCellList(Float_t eta, Float_t etaD,
             {
                for (Int_t s = 0; s < nSlices; ++s)
                {
-                  hist = GetHist(s);
+                  TH2F *hist = GetHist(s);
                   bin = hist->GetBin(ieta, iphi);
                   if (hist->GetBinContent(bin) > fSliceInfos[s].fThreshold)
                      out.push_back(TEveCaloData::CellId_t(bin, s));

@@ -50,7 +50,6 @@
 #include "TGProgressBar.h"
 #include "TGScrollBar.h"
 #include "TGTextEntry.h"
-#include "snprintf.h"
 
 #undef DEBUG_LOCAL
 
@@ -228,28 +227,28 @@ const char *TGuiBldMenuDialog::GetParameters()
 
       // if necessary, replace the selected object by it's address
       if (selfobjpos == nparam-1) {
-         if (params[0]) strncat(params, ",", 1023-strlen(params));
-         sprintf(param, "(TObject*)0x%lx", (Long_t)fObject);
-         strncat(params, param, 1023-strlen(params));
+         if (params[0]) strlcat(params, ",", 1024-strlen(params));
+         snprintf(param, 255, "(TObject*)0x%lx", (Long_t)fObject);
+         strlcat(params, param, 1024-strlen(params));
       }
 
-      if (params[0]) strncat(params, ",", 1023-strlen(params));
+      if (params[0]) strlcat(params, ",", 1024-strlen(params));
       if (data) {
          if (!strncmp(type, "char*", 5))
             snprintf(param, 255, "\"%s\"", data);
          else
-            strncpy(param, data, 255);
+            strlcpy(param, data, sizeof(param));
       } else
-         strcpy(param, "0");
+         strlcpy(param, "0", sizeof(param));
 
-      strncat(params, param, 1023-strlen(params));
+      strlcat(params, param, 1024-strlen(params));
    }
 
    // if selected object is the last argument, have to insert it here
    if (selfobjpos == nparam) {
-      if (params[0]) strncat(params, ",", 1023-strlen(params));
-      sprintf(param, "(TObject*)0x%lx", (Long_t)fObject);
-      strncat(params, param, 1023-strlen(params));
+      if (params[0]) strlcat(params, ",", 1024-strlen(params));
+      snprintf(param, 255, "(TObject*)0x%lx", (Long_t)fObject);
+      strlcat(params, param, 1024-strlen(params));
    }
 
    return params;
@@ -323,16 +322,16 @@ void TGuiBldMenuDialog::Build()
          char        basictype[32];
 
          if (datatype) {
-            strncpy(basictype, datatype->GetTypeName(), 30);
+            strlcpy(basictype, datatype->GetTypeName(), sizeof(basictype));
          } else {
             TClass *cl = TClass::GetClass(type);
             if (strncmp(type, "enum", 4) && (cl && !(cl->Property() & kIsEnum)))
                Warning("Dialog", "data type is not basic type, assuming (int)");
-            strcpy(basictype, "int");
+            strlcpy(basictype, "int", sizeof(basictype));
          }
 
          if (strchr(argname, '*')) {
-            strcat(basictype, "*");
+            strlcat(basictype, "*", 32-strlen(basictype));
             type = charstar;
          }
 
@@ -345,12 +344,12 @@ void TGuiBldMenuDialog::Build()
             if (!strncmp(basictype, "char*", 5)) {
                char *tdefval;
                m->GetterMethod()->Execute(fObject, "", &tdefval);
-               strncpy(val, tdefval, 255);
+               strlcpy(val, tdefval, sizeof(val));
             } else if (!strncmp(basictype, "float", 5) ||
                        !strncmp(basictype, "double", 6)) {
                Double_t ddefval;
                m->GetterMethod()->Execute(fObject, "", ddefval);
-               sprintf(val, "%g", ddefval);
+               snprintf(val, 255, "%g", ddefval);
             } else if (!strncmp(basictype, "char", 4) ||
                        !strncmp(basictype, "bool", 4) ||
                        !strncmp(basictype, "int", 3)  ||
@@ -358,14 +357,14 @@ void TGuiBldMenuDialog::Build()
                        !strncmp(basictype, "short", 5)) {
                Long_t ldefval;
                m->GetterMethod()->Execute(fObject, "", ldefval);
-               sprintf(val, "%li", ldefval);
+               snprintf(val, 255, "%li", ldefval);
             }
 
             // Find out whether we have options ...
 
             TList *opt;
             if ((opt = m->GetOptions())) {
-               Warning("Dialog", "option menu not yet implemented", opt);
+               Warning("Dialog", "option menu not yet implemented");
 
             } else {
                // we haven't got options - textfield ...
@@ -375,7 +374,7 @@ void TGuiBldMenuDialog::Build()
 
             char val[256] = "";
             const char *tval = argument->GetDefault();
-            if (tval) strncpy(val, tval, 255);
+            if (tval) strlcpy(val, tval, sizeof(val));
             Add(argname, val, type);
          }
       }
@@ -1477,10 +1476,10 @@ Bool_t TGuiBldDragManager::IsSelectedVisible()
       return kTRUE;
    }
 
-   static Long_t was = gSystem->Now();
+   static Long64_t was = gSystem->Now();
    static Bool_t visible = kFALSE;
 
-   Long_t now = (long)gSystem->Now();
+   Long64_t now = gSystem->Now();
 
    if (now-was < 100) {
       return visible;
@@ -1954,9 +1953,9 @@ Bool_t TGuiBldDragManager::HandleExpose(Event_t *event)
       return kFALSE;
    }
 
-   static Long_t was = gSystem->Now();
+   static Long64_t was = gSystem->Now();
    static Window_t win = 0;
-   Long_t now = (long)gSystem->Now();
+   Long64_t now = gSystem->Now();
 
    if (event->fCount || (win == event->fWindow) || (now-was < 50) || fDragging) {
       if (fDragging) {
@@ -3105,7 +3104,7 @@ void TGuiBldDragManager::HandleCopy(Bool_t brk_layout)
       if (gVirtualX->InheritsFrom("TGX11")) tmp->SetIconPixmap("bld_rgb.xpm");
    }
    Bool_t quite =  brk_layout || (fPasteFileName == fTmpBuildFile);
-   tmp->SaveSource(fPasteFileName.Data(), quite ? "quiet" : "");
+   tmp->SaveSource(fPasteFileName.Data(), quite ? "keep_names quiet" : "keep_names");
    tmp->GetList()->Remove(fe);
 
    fPimpl->fGrab->SetX(x0);
@@ -3323,7 +3322,7 @@ Bool_t TGuiBldDragManager::Save(const char *file)
       main->SetClassHints(fname.Data(), fname.Data());
       // some problems here under win32
       if (gVirtualX->InheritsFrom("TGX11")) main->SetIconPixmap("bld_rgb.xpm");
-      main->SaveSource(fname.Data(), file ? "quiet" : "");
+      main->SaveSource(fname.Data(), file ? "keep_names quiet" : "keep_names");
 
       fBuilder->AddMacro(fname.Data(), img);
 
@@ -3536,7 +3535,7 @@ void TGuiBldDragManager::DoResize()
             if (IsFixedW(fr)) {
                w =  fr->GetDefaultWidth();
             } else {
-               w = fr->GetX() + x > (Int_t)wp ? wp - fr->GetX() : x;
+               w = fr->GetX() + x > Int_t(wp) ? wp - fr->GetX() : UInt_t(x);
             }
             x = fr->GetX();
             y = fr->GetY() + y;
@@ -3571,7 +3570,7 @@ void TGuiBldDragManager::DoResize()
             if (fr->GetX() + x < 2) {
                x = 2 - fr->GetX();
             }
-            h = fr->GetY() + y > (Int_t)hp ? hp - fr->GetY() : y;
+            h = fr->GetY() + y > Int_t(hp) ? hp - fr->GetY() : UInt_t(y);
             w = fr->GetWidth() - x;
             x = fr->GetX() + x;
 
@@ -3592,8 +3591,8 @@ void TGuiBldDragManager::DoResize()
          break;
       case kBottomRight:
          if ((x > 0) && (y > 0)) {
-            w = !IsFixedW(fr) ? x : fr->GetDefaultWidth();
-            h = !IsFixedH(fr) ? y : fr->GetDefaultHeight();
+            w = !IsFixedW(fr) ? UInt_t(x) : fr->GetDefaultWidth();
+            h = !IsFixedH(fr) ? UInt_t(y) : fr->GetDefaultHeight();
 
             h = fr->GetY() + h > hp ? hp - fr->GetY() : h;
             w = fr->GetX() + w > wp ? wp - fr->GetX() : w;
@@ -3609,7 +3608,7 @@ void TGuiBldDragManager::DoResize()
             }
 
             w = fr->GetWidth();
-            h = fr->GetY() + y > (Int_t)hp ? hp - fr->GetY() : y;
+            h = fr->GetY() + y > (Int_t)hp ? hp - fr->GetY() : UInt_t(y);
 
             //canResize(comp, 0, 0, w, h);
             fr->Resize(w, h);
@@ -3640,7 +3639,7 @@ void TGuiBldDragManager::DoResize()
             }
 
             h = fr->GetHeight();
-            w = fr->GetX() + x > (Int_t)wp ? wp - fr->GetX() : x;
+            w = fr->GetX() + x > (Int_t)wp ? wp - fr->GetX() : UInt_t(x);
             //canResize(comp, 0, 0, w, h);
             fr->Resize(w, h);
          }
@@ -3886,11 +3885,11 @@ Bool_t TGuiBldDragManager::HandleMotion(Event_t *event)
       return kFALSE;
    }
 
-   static Long_t was = gSystem->Now();
+   static Long64_t was = gSystem->Now();
    static Int_t gy = event->fYRoot;
    static Int_t gx = event->fXRoot;
 
-   Long_t now = (long)gSystem->Now();
+   Long64_t now = gSystem->Now();
 
    if ((now-was < 100) || !(event->fState & kButton1Mask) ||
        ((event->fYRoot == gy) && (event->fXRoot == gx))) {
@@ -3966,8 +3965,8 @@ void TGuiBldDragManager::PlaceFrame(TGFrame *frame, TGLayoutHints *hints)
    h = h < frame->GetDefaultHeight() + 2 ? frame->GetDefaultHeight() + 2 : h;
 
    // do not create frame out of editable space
-   x = x + w > root->GetWidth() ? root->GetWidth() - w : x;
-   y = y + h > root->GetHeight() ? root->GetHeight() - h : y;
+   x = x + w > root->GetWidth() ? Int_t(root->GetWidth() - w) : x;
+   y = y + h > root->GetHeight() ? Int_t(root->GetHeight() - h) : y;
 
    frame->Move(x, y);
 
@@ -5020,7 +5019,7 @@ void TGuiBldDragManager::HandleUpdateSelected(TGFrame *f)
    }
 
    TGCompositeFrame *parent = 0;
-   if (f->GetParent() && 
+   if (f->GetParent() &&
        f->GetParent()->InheritsFrom(TGCompositeFrame::Class())) {
       parent = (TGCompositeFrame*)f->GetParent();
    }
@@ -5487,8 +5486,8 @@ void TGuiBldDragManager::DoClassMenu(Int_t id)
 
       if (str.Contains("*DIALOG")) {
          TString str2;
-         str2.Form("((TGuiBldDragManager*)0x%lx)->%s((%s*)0x%lx)", this, method->GetName(),
-                  fPimpl->fMenuObject->ClassName(), fPimpl->fMenuObject);
+         str2.Form("((TGuiBldDragManager*)0x%lx)->%s((%s*)0x%lx)", (ULong_t)this, method->GetName(),
+                  fPimpl->fMenuObject->ClassName(), (ULong_t)fPimpl->fMenuObject);
          gCint->Calc((char *)str2.Data());
          //delete fFrameMenu;  // suicide (BB)?
          //fFrameMenu = 0;

@@ -88,7 +88,11 @@ using namespace std;
 
 //_____________________________________________________________________
 TMVA::PDEFoam::PDEFoam() :
-   fLogger(new MsgLogger("PDEFoam"))
+   fNBin(0)
+   , fNSampl(0)
+   , fEvPerBin(0)
+   , fLastCe(0)
+   , fLogger(new MsgLogger("PDEFoam"))
 {
    // Default constructor for streamer, user should not use it.
    fDim      = 0;
@@ -125,8 +129,12 @@ TMVA::PDEFoam::PDEFoam() :
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoam::PDEFoam(const TString& Name) :
-   fLogger(new MsgLogger("PDEFoam"))
+TMVA::PDEFoam::PDEFoam(const TString& Name)
+   : fRvec ( 0 )
+   , fNElements( 0 )
+   , fNmin     ( 100 )
+   , fRMSmin   ( 1.0 )
+   , fLogger(new MsgLogger("PDEFoam"))
 {
    // User constructor, to be employed by the user
 
@@ -195,17 +203,45 @@ TMVA::PDEFoam::~PDEFoam()
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoam::PDEFoam(const PDEFoam &From):
-   TObject(From),
-   fLogger( new MsgLogger("PDEFoam"))
+TMVA::PDEFoam::PDEFoam(const PDEFoam &From) :
+   TObject(From)
+   , fDim(0)
+   , fNCells(0)
+   , fNBin(0)
+   , fNSampl(0)
+   , fEvPerBin(0)
+   , fMaskDiv(0)
+   , fInhiDiv(0)
+   , fNoAct(0)
+   , fLastCe(0)
+   , fCells(0)
+   , fHistEdg(0)
+   , fRvec(0)
+   , fPseRan(0)
+   , fAlpha(0)
+   , fFoamType(kSeparate)
+   , fXmin(0)
+   , fXmax(0)
+   , fNElements(0)
+   , fCutNmin(false)
+   , fNmin(0)
+   , fCutRMSmin(false)
+   , fRMSmin(0)
+   , fVolFrac(0)
+   , fDistr(0)
+   , fTimer(0)
+   , fVariableNames(0)
+   , fSignalClass(0)
+   , fBackgroundClass(0)
+   , fLogger(new MsgLogger("PDEFoam"))
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::SetkDim(Int_t kDim) 
-{ 
+void TMVA::PDEFoam::SetkDim(Int_t kDim)
+{
    // Sets dimension of cubical space
    if (kDim < 1)
       Log() << kFATAL << "<SetkDim>: Dimension is zero or negative!" << Endl;
@@ -1855,13 +1891,12 @@ TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
       return 0;
    }
 
-   char hname[100]; char htit[100];
-   sprintf(htit,"1-dimensional Foam: %s", opt);
-   sprintf(hname,"h%s",opt);
+
+   TString hname(Form("h%s",opt));
 
    TH1D* h1=(TH1D*)gDirectory->Get(hname);
    if (h1) delete h1;
-   h1= new TH1D(hname, htit, nbin, fXmin[0], fXmax[0]);
+   h1= new TH1D(hname, Form("1-dimensional Foam: %s", opt), nbin, fXmin[0], fXmax[0]);
 
    if (!h1) Log() << kFATAL << "ERROR: Can not create histo" << hname << Endl;
 
@@ -1996,14 +2031,12 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
    }
 
    // create result histogram
-   char hname[100], htit[100];
-   sprintf(htit,"%s var%d vs var%d",opt,idim1,idim2);
-   sprintf(hname,"h%s_%d_vs_%d",opt,idim1,idim2);
+   TString hname(Form("h%s_%d_vs_%d",opt,idim1,idim2));
 
    // if histogram with this name already exists, delete it
-   TH2D* h1=(TH2D*)gDirectory->Get(hname);
+   TH2D* h1=(TH2D*)gDirectory->Get(hname.Data());
    if (h1) delete h1;
-   h1= new TH2D(hname, htit, nbin, fXmin[idim1], fXmax[idim1], nbin, fXmin[idim2], fXmax[idim2]);
+   h1= new TH2D(hname.Data(), Form("%s var%d vs var%d",opt,idim1,idim2), nbin, fXmin[idim1], fXmax[idim1], nbin, fXmin[idim2], fXmax[idim2]);
 
    if (!h1) Log() << kFATAL << "ERROR: Can not create histo" << hname << Endl;
 
@@ -2201,9 +2234,15 @@ Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 {
    // Returns cell element i of cell 'cell'.
 
-   assert(i < GetNElements());
+   if (i >= GetNElements())
+      Log() << kFATAL << "ERROR: Index out of range" << Endl;
 
-   return (*dynamic_cast<TVectorD*>(cell->GetElement()))(i);
+   TVectorD *vec = dynamic_cast<TVectorD*>(cell->GetElement());
+
+   if (!vec)
+      Log() << kFATAL << "<GetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
+
+   return (*vec)(i);
 }
 
 //_____________________________________________________________________
@@ -2235,7 +2274,7 @@ void TMVA::PDEFoam::OutputGrow( Bool_t finished )
             << "                                 " << Endl;
       return;
    }
-   
+
    Int_t modulo = 1;
 
    if (fNCells        >= 100) modulo = Int_t(fNCells/100);
@@ -2476,6 +2515,7 @@ void TMVA::PDEFoam::ReadStream( istream & istr )
    // inherited class variables: fLastCe, fNCells, fDim[GetTotDim()]
    istr >> fLastCe;
    istr >> fNCells;
+   // coverity[tainted_data_argument]
    istr >> fDim;
 
 

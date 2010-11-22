@@ -192,7 +192,7 @@ TClassTree::TClassTree()
    SetLabelDx();
    SetYoffset(0);
 #ifdef ROOTSRCDIR
-   SetSourceDir(".:src:" ROOTSRCDIR "/src");
+   SetSourceDir(".:src:" ROOTSRCDIR);
 #else
    SetSourceDir(".:src:$ROOTSYS/src");
 #endif
@@ -223,7 +223,7 @@ TClassTree::TClassTree(const char *name, const char *classes)
    SetLabelDx();
    SetYoffset(0);
 #ifdef ROOTSRCDIR
-   SetSourceDir(".:src:" ROOTSRCDIR "/src");
+   SetSourceDir(".:src:" ROOTSRCDIR);
 #else
    SetSourceDir(".:src:$ROOTSYS/src");
 #endif
@@ -438,8 +438,8 @@ void TClassTree::ls(Option_t *) const
 
    char line[500];
    for (Int_t i=0;i<fNclasses;i++) {
-      sprintf(line,"%s%s",fCnames[i]->Data(),"...........................");
-      sprintf(&line[30],"%s",fCtitles[i]->Data());
+      snprintf(line,500,"%s%s",fCnames[i]->Data(),"...........................");
+      snprintf(&line[30],460,"%s",fCtitles[i]->Data());
       line[79] = 0;
       printf("%5d %s\n",i,line);
    }
@@ -481,7 +481,7 @@ void TClassTree::Paint(Option_t *)
    char *classes  = new char[nch+1];
    gNsons   = new Int_t[fNclasses];
    gNtsons  = new Int_t[fNclasses];
-   strcpy(classes,GetClasses());
+   strlcpy(classes,GetClasses(),nch+1);
    Int_t i,j;
    char *derived;
    char *ptr = strtok(classes,":");
@@ -766,13 +766,13 @@ void TClassTree::ScanClasses(Int_t iclass)
    TList *lf = cl->GetListOfMethods();
    if (lf) {
       TIter nextm(lf);
-      char name[1000];
+      TString name;
       while ((method = (TMethod*) nextm())) {
          // check return type
-         strcpy(name,method->GetReturnTypeName());
-         star = strstr(name,"*");
+         name = method->GetReturnTypeName();
+         star = strstr((char*)name.Data(),"*");
          if (star) *star = 0;
-         cref = strstr(name,"&");
+         cref = strstr((char*)name.Data(),"&");
          if (cref) *cref = 0;
          ic = FindClass(name);
          if (ic < 0 || ic == iclass) continue;
@@ -784,10 +784,10 @@ void TClassTree::ScanClasses(Int_t iclass)
          // ================================
          TIter nexta(method->GetListOfMethodArgs());
          while ((methodarg = (TMethodArg*) nexta())) {
-            strcpy(name,methodarg->GetTypeName());
-            star = strstr(name,"*");
+            name = methodarg->GetTypeName();
+            star = strstr((char*)name.Data(),"*");
             if (star) *star = 0;
-            cref = strstr(name,"&");
+            cref = strstr((char*)name.Data(),"&");
             if (cref) *cref = 0;
             ic = FindClass(name);
             if (ic < 0 || ic == iclass) continue;
@@ -809,9 +809,9 @@ void TClassTree::ScanClasses(Int_t iclass)
    const char *source = gSystem->BaseName( gSystem->UnixPathName(cl->GetImplFileName()));
    char *sourceName = gSystem->Which( fSourceDir.Data(), source , kReadPermission );
    if (!sourceName) return;
-   char cname[1000];
-   sprintf(cname,"%s::",fCnames[iclass]->Data());
-   Int_t ncn = strlen(cname);
+   Int_t ncn = strlen(fCnames[iclass]->Data())+2;
+   char *cname = new char[ncn+1];
+   snprintf(cname,ncn,"%s::",fCnames[iclass]->Data());
        // open source file
    ifstream sourceFile;
    sourceFile.open( sourceName, ios::in );
@@ -862,6 +862,7 @@ void TClassTree::ScanClasses(Int_t iclass)
          }
       }
    }
+   delete [] cname;
    sourceFile.close();
 }
 
@@ -912,7 +913,7 @@ void TClassTree::ShowClassesUsedBy(const char *classes)
    Int_t i,j;
    Int_t nch = strlen(classes);
    char *ptr = new char[nch+1];
-   strcpy(ptr,classes);
+   strlcpy(ptr,classes,nch+1);
    if (ptr[0] == '*') {
       i = FindClass(&ptr[1]);
       if (i >= 0) {
@@ -944,7 +945,7 @@ void TClassTree::ShowClassesUsing(const char *classes)
    Int_t i,j;
    Int_t nch = strlen(classes);
    char *ptr = new char[nch+1];
-   strcpy(ptr,classes);
+   strlcpy(ptr,classes,nch+1);
    if (ptr[0] == '*') {
       i = FindClass(&ptr[1]);
       if (i >= 0) {

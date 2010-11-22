@@ -100,7 +100,7 @@ namespace TMVA {
 
       // private utility routines
       void Send();
-      void InitMaps();
+      static void InitMaps();
       void WriteMsg( EMsgType type, const std::string& line ) const;
 
       const TObject*                  fObjSource;      // the source TObject (used for name)
@@ -117,27 +117,27 @@ namespace TMVA {
 
       static Bool_t                   fgInhibitOutput; // flag to suppress all output
 
-      ClassDef(MsgLogger,0) // Ostringstream derivative to redirect and format logging output  
+      ClassDef(MsgLogger,0) // Ostringstream derivative to redirect and format logging output
    }; // class MsgLogger
 
-   inline MsgLogger& MsgLogger::operator<< ( MsgLogger& (*_f)( MsgLogger& ) ) 
+   inline MsgLogger& MsgLogger::operator<< ( MsgLogger& (*_f)( MsgLogger& ) )
    {
       return (_f)(*this);
    }
 
-   inline MsgLogger& MsgLogger::operator<< ( std::ostream& (*_f)( std::ostream& ) ) 
+   inline MsgLogger& MsgLogger::operator<< ( std::ostream& (*_f)( std::ostream& ) )
    {
       (_f)(*this);
       return *this;
    }
 
-   inline MsgLogger& MsgLogger::operator<< ( std::ios& ( *_f )( std::ios& ) ) 
+   inline MsgLogger& MsgLogger::operator<< ( std::ios& ( *_f )( std::ios& ) )
    {
       (_f)(*this);
       return *this;
    }
 
-   inline MsgLogger& MsgLogger::operator<< ( EMsgType type ) 
+   inline MsgLogger& MsgLogger::operator<< ( EMsgType type )
    {
       fActiveType = type;
       return *this;

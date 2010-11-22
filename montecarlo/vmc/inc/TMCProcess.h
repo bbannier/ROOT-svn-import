@@ -17,68 +17,71 @@
 //
 #include "Rtypes.h"
 
-const Int_t kMaxMCProcess = 45;
+const Int_t kMaxMCProcess = 48;
 
 enum TMCProcess
 {
-  kPPrimary,            // Primary interaction
+  kPPrimary = 0,             // Primary interaction
 
-  kPMultipleScattering, // multiple scattering
-  kPEnergyLoss,         // continuous energy loss
-  kPMagneticFieldL,     // bending in mag. field
-  kPDecay,              // particle decay
-  kPPair,               // photon pair production or
-                        // muon direct pair production
-  kPCompton,            // Compton scattering
-  kPPhotoelectric,      // photoelectric effect
-  kPBrem,               // bremsstrahlung
-  kPDeltaRay,           // delta-ray production
-  kPAnnihilation,       // positron annihilation
-  kPAnnihilationRest,   // positron annihilation at rest
-  kPAnnihilationFlight, // positron annihilation in flight
+  kPMultipleScattering = 1,  // multiple scattering
+  kPCoulombScattering = 45,  // single Coulomb scattering
+  kPEnergyLoss = 2,          // continuous energy loss
+  kPMagneticFieldL = 3,      // bending in mag. field
+  kPDecay = 4,               // particle decay
+  kPPair = 5,                // photon pair production or
+                             // muon direct pair production
+  kPCompton = 6,             // Compton scattering
+  kPPhotoelectric = 7,       // photoelectric effect
+  kPBrem = 8,                // bremsstrahlung
+  kPDeltaRay = 9,            // delta-ray production
+  kPAnnihilation = 10,       // positron annihilation
+  kPAnnihilationRest = 11,   // positron annihilation at rest
+  kPAnnihilationFlight = 12, // positron annihilation in flight
 
-  kPHadronic,           // hadronic interaction
-  kPEvaporation,        // nuclear evaporation
-  kPNuclearFission,     // nuclear fission
-  kPNuclearAbsorption,  // nuclear absorption
-  kPPbarAnnihilation,   // antiproton annihilation
-  kPNbarAnnihilation,   // antineutron annihilation
-  kPNCapture,           // neutron capture
-  kPHElastic,           // hadronic elastic scattering
-  kPHIElastic,          // hadronic elastic incoherent scattering
-  kPHCElastic,          // hadronic elastic coherent scattering
-  kPHInhelastic,        // hadronic inelastic scattering
-  kPPhotonInhelastic,   // photon inelastic scattering
+  kPHadronic = 13,           // hadronic interaction
+  kPEvaporation = 14,        // nuclear evaporation
+  kPNuclearFission = 15,     // nuclear fission
+  kPNuclearAbsorption = 16,  // nuclear absorption
+  kPPbarAnnihilation = 17,   // antiproton annihilation
+  kPNbarAnnihilation = 18,   // antineutron annihilation
+  kPNCapture = 19,           // neutron capture
+  kPHElastic = 20,           // hadronic elastic scattering
+  kPHIElastic = 21,          // hadronic elastic incoherent scattering
+  kPHCElastic = 22,          // hadronic elastic coherent scattering
+  kPHInhelastic = 23,        // hadronic inelastic scattering
+  kPPhotonInhelastic = 24,   // photon inelastic scattering
 
-  kPMuonNuclear,        // muon nuclear interaction
-  kPElectronNuclear,    // electron nuclear interaction
-  kPPositronNuclear,    // positron nuclear interaction
+  kPMuonNuclear = 25,        // muon nuclear interaction
+  kPElectronNuclear = 26,    // electron nuclear interaction
+  kPPositronNuclear = 27,    // positron nuclear interaction
+  kPPhotoNuclear = 46,       // photo nuclear interaction
 
-  kPTOFlimit,           // exceeded time of flight cut
-  kPPhotoFission,       // nuclear photofission
+  kPTOFlimit = 28,           // exceeded time of flight cut
+  kPPhotoFission = 29,       // nuclear photofission
 
-  kPRayleigh,           // Rayleigh scattering
+  kPRayleigh = 30,           // Rayleigh scattering
 
-  kPNull,               // no mechanism is active, usually at the entrance
-                        // of a new volume
-  kPStop,               // particle has fallen below energy threshold
-                        // and tracking stops
+  kPNull = 31,               // no mechanism is active, usually at the entrance
+                             // of a new volume
+  kPStop = 32,               // particle has fallen below energy threshold
+                             // and tracking stops
 
-  kPLightAbsorption,    // Cerenkov photon absorption
-  kPLightDetection,     // Optical photon detection (absorption + photoelectron production)
-  kPLightScattering,    // Cerenkov photon reflection/refraction
-  kStepMax,             // step limited by STEMAX
+  kPLightAbsorption = 33,    // Cerenkov photon absorption
+  kPLightDetection = 34,     // Optical photon detection (absorption + photoelectron production)
+  kPLightScattering = 35,    // Cerenkov photon reflection/refraction
+  kStepMax = 36,             // step limited by STEMAX
 
-  kPCerenkov,           // Cerenkov photon generation
-  kPFeedBackPhoton,     // Feed back photon in RICH -- ALICE specific
-  kPLightReflection,    // Cerenkov photon reflection
-  kPLightRefraction,    // Cerenkov photon refraction
-  kPSynchrotron,        // synchrotron radiation generation
-  kPScintillation,      // scintillation
+  kPCerenkov = 37,           // Cerenkov photon generation
+  kPFeedBackPhoton = 38,     // Feed back photon in RICH -- ALICE specific
+  kPLightReflection = 39,    // Cerenkov photon reflection
+  kPLightRefraction = 40,    // Cerenkov photon refraction
+  kPSynchrotron = 41,        // synchrotron radiation generation
+  kPScintillation = 42,      // scintillation
 
-  kPTransportation,     // Transportation
+  kPTransportation = 43,     // Transportation
+  kPUserDefined = 47,        // User defined process
 
-  kPNoProcess           // unknown process
+  kPNoProcess = 44           // unknown process
 };
 
 static const char * const TMCProcessName[kMaxMCProcess] = {
@@ -126,7 +129,10 @@ static const char * const TMCProcessName[kMaxMCProcess] = {
   "Synchrotron radiation",
   "Scintillation",
   "Transportation",
-  "Unknown process"
+  "Unknown process",
+  "Coulomb scattering",
+  "Photo nuclear interaction",
+  "User defined process",
 };
 
 #endif //ROOT_TMCProcess

@@ -184,19 +184,20 @@ void TFileCacheRead::Print(Option_t *option) const
 {
    // Print cache statistics, like
    //   ******TreeCache statistics for file: cms2.root ******
-   //   Reading 73921562 bytes in 716 transactions
-   //   Average transaction = 103.242405 Kbytes
-   //   Number of blocks in current cache: 202, total size : 6001193
+   //   Reading............................: 72761843 bytes in 7 transactions
+   //   Readahead..........................: 256000 bytes with overhead = 0 bytes
+   //   Average transaction................: 10394.549000 Kbytes
+   //   Number of blocks in current cache..: 210, total size: 6280352
    //
    // if option = "a" the list of blocks in the cache is printed
-   
+   // NB: this function is automatically called by TTreeCache::Print
+      
    TString opt = option;
    opt.ToLower();
-   printf("******TreeCache statistics for file: %s ******\n",fFile->GetName());
-   printf("Reading %lld bytes in %d transactions\n",fFile->GetBytesRead(),  fFile->GetReadCalls());
-   printf("Readahead = %d bytes with overhead = %lld bytes\n",TFile::GetReadaheadSize(),fFile->GetBytesReadExtra());
-   printf("Average transaction = %f Kbytes\n",0.001*Double_t(fFile->GetBytesRead())/Double_t(fFile->GetReadCalls()));
-   printf("Number of blocks in current cache: %d, total size: %d\n",fNseek,fNtot);
+   printf("Reading............................: %lld bytes in %d transactions\n",fFile->GetBytesRead(),  fFile->GetReadCalls());
+   printf("Readahead..........................: %d bytes with overhead = %lld bytes\n",TFile::GetReadaheadSize(),fFile->GetBytesReadExtra());
+   printf("Average transaction................: %f Kbytes\n",0.001*Double_t(fFile->GetBytesRead())/Double_t(fFile->GetReadCalls()));
+   printf("Number of blocks in current cache..: %d, total size: %d\n",fNseek,fNtot);
    if (!opt.Contains("a")) return;
    for (Int_t i=0;i<fNseek;i++) {
       if (fIsSorted && !opt.Contains("s")) {
@@ -259,7 +260,7 @@ Int_t TFileCacheRead::ReadBufferExt(char *buf, Long64_t pos, Int_t len, Int_t &l
    // if this buffer is in the write cache (not yet written to the file)
    if (TFileCacheWrite *cachew = fFile->GetCacheWrite()) {
       if (cachew->ReadBuffer(buf,pos,len) == 0) {
-         fFile->Seek(pos+len);
+         fFile->SetOffset(pos+len);
          return 1;
       }
    }
@@ -280,13 +281,12 @@ Int_t TFileCacheRead::ReadBufferExt(char *buf, Long64_t pos, Int_t len, Int_t &l
          // Block found, the caller will get it
          
          if (buf) {
-            fFile->Seek(pos);
             // disable cache to avoid infinite recursion
             fFile->SetCacheRead(0);
-            if (fFile->ReadBuffer(buf, len)) {
+            if (fFile->ReadBuffer(buf, pos, len)) {
                return -1;
             }
-            fFile->Seek(pos+len);
+            fFile->SetOffset(pos+len);
             fFile->SetCacheRead(this);
          }
          
@@ -297,7 +297,7 @@ Int_t TFileCacheRead::ReadBufferExt(char *buf, Long64_t pos, Int_t len, Int_t &l
       }
 
       if (gDebug > 0)
-         Info("ReadBuffer","pos=%lld, len=%d, retval=%d, loc=%d, fseekSort[loc]=%d, fSeekLen[loc]=%d", pos, len, retval, loc, fSeekSort[loc], fSeekLen[loc]);
+         Info("ReadBuffer","pos=%lld, len=%d, retval=%d, loc=%d, fseekSort[loc]=%lld, fSeekLen[loc]=%d", pos, len, retval, loc, fSeekSort[loc], fSeekLen[loc]);
       
       return retval;
    } else {
@@ -308,7 +308,7 @@ Int_t TFileCacheRead::ReadBufferExt(char *buf, Long64_t pos, Int_t len, Int_t &l
       if (loc >= 0 && loc <fNseek && pos == fSeekSort[loc]) {
          if (buf) {
             memcpy(buf,&fBuffer[fSeekPos[loc]],len);
-            fFile->Seek(pos+len);
+            fFile->SetOffset(pos+len);
          }
          return 1;
       }

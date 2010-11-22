@@ -281,15 +281,16 @@ void TProofSuperMaster::ValidateDSet(TDSet *dset)
       } else {
          smlist = dynamic_cast<TList*>(p->Key());
       }
-      smlist->Add(sl);
+      if (smlist) smlist->Add(sl);
    }
 
    TIter nextElem(dset->GetListOfElements());
    while (TDSetElement *elem = dynamic_cast<TDSetElement*>(nextElem())) {
       if (elem->GetValid()) continue;
       TPair *p = dynamic_cast<TPair*>(msds.FindObject(elem->GetMsd()));
-      if (p) {
-         dynamic_cast<TList*>(p->Value())->Add(elem);
+      if (p && p->Value()) {
+         TList *xl = dynamic_cast<TList*>(p->Value());
+         if (xl) xl->Add(elem);
       } else {
          Error("ValidateDSet", "no mass storage domain '%s' associated"
                                " with available submasters",
@@ -307,8 +308,8 @@ void TProofSuperMaster::ValidateDSet(TDSet *dset)
       TList *setelements = dynamic_cast<TList*>(msd->Value());
 
       // distribute elements over the slaves
-      Int_t nsms = sms->GetSize();
-      Int_t nelements = setelements->GetSize();
+      Int_t nsms = sms ? sms->GetSize() : -1;
+      Int_t nelements = setelements ? setelements->GetSize() : -1;
       for (Int_t i=0; i<nsms; i++) {
 
          TDSet set(dset->GetType(), dset->GetObjName(),
@@ -316,11 +317,13 @@ void TProofSuperMaster::ValidateDSet(TDSet *dset)
          for (Int_t j = (i*nelements)/nsms;
                     j < ((i+1)*nelements)/nsms;
                     j++) {
-            TDSetElement *elem =
-               dynamic_cast<TDSetElement*>(setelements->At(j));
-            set.Add(elem->GetFileName(), elem->GetObjName(),
-                    elem->GetDirectory(), elem->GetFirst(),
-                    elem->GetNum(), elem->GetMsd());
+            TDSetElement *elem = setelements ?
+               dynamic_cast<TDSetElement*>(setelements->At(j)) : (TDSetElement *)0;
+            if (elem) {
+               set.Add(elem->GetFileName(), elem->GetObjName(),
+                     elem->GetDirectory(), elem->GetFirst(),
+                     elem->GetNum(), elem->GetMsd());
+            }
          }
 
          if (set.GetListOfElements()->GetSize()>0) {
@@ -328,13 +331,17 @@ void TProofSuperMaster::ValidateDSet(TDSet *dset)
             mesg << &set;
 
             TSlave *sl = dynamic_cast<TSlave*>(sms->At(i));
-            PDB(kGlobal,1)
-               Info("ValidateDSet",
-                    "Sending TDSet with %d elements to worker %s"
-                    " to be validated", set.GetListOfElements()->GetSize(),
-                                        sl->GetOrdinal());
-            sl->GetSocket()->Send(mesg);
-            usedsms.Add(sl);
+            if (sl) {
+               PDB(kGlobal,1)
+                  Info("ValidateDSet",
+                     "Sending TDSet with %d elements to worker %s"
+                     " to be validated", set.GetListOfElements()->GetSize(),
+                                          sl->GetOrdinal());
+               sl->GetSocket()->Send(mesg);
+               usedsms.Add(sl);
+            } else {
+               Warning("ValidateDSet", "not a TSlave object");
+            }
          }
       }
    }

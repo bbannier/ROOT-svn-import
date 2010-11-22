@@ -665,6 +665,15 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
    return result;
 }
 
+//_____________________________________________________________________________
+Bool_t TXNetFile::ReadBuffer(char *buffer, Long64_t pos, Int_t bufferLength)
+{
+   // Pass through to TNetFile implementation which will call back eventually
+   // to our ReadBuffer with 2 arguments to deal with xrootd errors.
+
+   return TNetFile::ReadBuffer(buffer, pos, bufferLength);
+}
+
 //______________________________________________________________________________
 Bool_t TXNetFile::ReadBufferAsync(Long64_t offs, Int_t bufferLength)
 {
@@ -777,7 +786,7 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
    Long64_t nr = fClient->ReadV(buf, pos, len, nbuf);
 
    if (gDebug > 1)
-      Info("ReadBuffers", "response from ReadV(%d) nr: %d", nbuf, nr);
+      Info("ReadBuffers", "response from ReadV(%d) nr: %lld", nbuf, nr);
 
    if (nr > 0) {
 
@@ -786,7 +795,7 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
               nr, nbuf);
 
       if (GetCacheRead()->GetBufferSize() < nr)
-         Info("ReadBuffers", "%lld bytes of data read with a smaller (%ld) TFileCacheRead buffer size?",
+         Info("ReadBuffers", "%lld bytes of data read with a smaller (%d) TFileCacheRead buffer size?",
               nr, GetCacheRead()->GetBufferSize());
 
       // Where should we leave the offset ?
@@ -803,7 +812,7 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
 
       if (gPerfStats) {
          fOffset = pos[0];
-         gPerfStats->FileReadEvent(this, pos[nbuf-1]+len[nbuf-1]-pos[0], start);         
+         gPerfStats->FileReadEvent(this, pos[nbuf-1]+len[nbuf-1]-pos[0], start);
       }
 
       if (gMonitoringWriter)
@@ -865,14 +874,14 @@ Bool_t TXNetFile::WriteBuffer(const char *buffer, Int_t bufferLength)
    if (!fClient->Write(buffer, fOffset, bufferLength)) {
       if (gDebug > 0)
          Info("WriteBuffer",
-              "error writing %d bytes of data wrote to offset %Ld",
+              "error writing %d bytes of data wrote to offset %lld",
               bufferLength , fOffset);
       return kTRUE;
    }
 
    if (gDebug > 1)
       Info("WriteBuffer", " %d bytes of data wrote to offset"
-                         " %Ld", bufferLength , fOffset);
+                         " %lld", bufferLength , fOffset);
 
    fOffset += bufferLength;
    fBytesWrite += bufferLength;
@@ -1244,6 +1253,11 @@ void TXNetFile::SetEnv()
                                         DFLT_DFLTTCPWINDOWSIZE);
    EnvPutInt(NAME_DFLTTCPWINDOWSIZE, tcpWindowSize);
 
+   // Change the transaction timeout
+   Int_t transactionTimeout = gEnv->GetValue("XNet.TransactionTimeout",
+                                             DFLT_TRANSACTIONTIMEOUT);
+   EnvPutInt(NAME_TRANSACTIONTIMEOUT, transactionTimeout);
+
    // Whether to activate automatic rootd backward-compatibility
    // (We override XrdClient default)
    fgRootdBC = gEnv->GetValue("XNet.RootdFallback", 1);
@@ -1362,8 +1376,13 @@ void TXNetFile::SynchronizeCacheSize()
                              bytesusefulness) ) {
 
       // To allow for some space for outstanding data
-      newbsz = GetCacheRead()->GetBufferSize() / 2 * 3;
-      newbsz = TMath::Max(newbsz, size);
+      TFileCacheRead *cacheRead = GetCacheRead();
+      if (cacheRead) {
+         newbsz = GetBufferSize() / 2 * 3;
+         newbsz = TMath::Max(newbsz, size);
+      } else {
+         newbsz = size;
+      }
 
    }
 
@@ -1412,11 +1431,11 @@ void TXNetFile::Print(Option_t *option) const
                                         byteshit, misscount,
                                         missrate, readreqcnt,
                                         bytesusefulness)) {
-      Printf(" Max size:                  %ld", size);
+      Printf(" Max size:                  %d",   size);
       Printf(" Bytes submitted:           %lld", bytessubmitted);
       Printf(" Bytes hit (estimation):    %lld", byteshit);
       Printf(" Miss count:                %lld", misscount);
-      Printf(" Miss rate:                 %f", missrate);
+      Printf(" Miss rate:                 %f",   missrate);
       Printf(" Read requests count:       %lld", readreqcnt);
       Printf(" Bytes usefulness:          %f\n", bytesusefulness);
    } else

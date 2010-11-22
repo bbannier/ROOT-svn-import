@@ -37,7 +37,7 @@ G__value G__new_operator(const char* expression)
    // new type(53)
    // new (arena)type
    //char expression[G__LONGLINE];
-   //strcpy (expression,express);
+   //copy (expression,express);
    G__FastAllocString arena(G__ONELINE);
    long memarena = 0;
    int arenaflag = 0;
@@ -56,7 +56,7 @@ G__value G__new_operator(const char* expression)
    int store_tagnum;
    int store_typenum;
    int var_type = 0;
-   G__value result;
+   G__value result = G__null;
    int reftype = G__PARANORMAL;
    int typelen;
    int ispointer = 0;
@@ -258,16 +258,16 @@ G__value G__new_operator(const char* expression)
          else if (!strcmp(type, "double")) var_type = 'd';
          else if (!strcmp(type, "void")) var_type = 'y';
          else if (!strcmp(type, "FILE")) var_type = 'e';
-         else if (!strcmp(type, "unsignedint")) var_type = 'h';
+         else if (!strcmp(type, "unsigned int")) var_type = 'h';
          else if (!strcmp(type, "unsignedchar")) var_type = 'b';
-         else if (!strcmp(type, "unsignedshort")) var_type = 'r';
-         else if (!strcmp(type, "unsignedlong")) var_type = 'l';
+         else if (!strcmp(type, "unsigned short")) var_type = 'r';
+         else if (!strcmp(type, "unsigned long")) var_type = 'l';
          else if (!strcmp(type, "size_t")) var_type = 'l';
          else if (!strcmp(type, "time_t")) var_type = 'l';
          else if (!strcmp(type, "bool")) var_type = 'g';
-         else if (!strcmp(type, "longlong")) var_type = 'n';
-         else if (!strcmp(type, "unsignedlonglong")) var_type = 'm';
-         else if (!strcmp(type, "longdouble")) var_type = 'q';
+         else if (!strcmp(type, "long long")) var_type = 'n';
+         else if (!strcmp(type, "unsigned long long")) var_type = 'm';
+         else if (!strcmp(type, "long double")) var_type = 'q';
       }
    }
    if (ispointer) {

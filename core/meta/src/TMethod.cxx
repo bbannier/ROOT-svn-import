@@ -164,15 +164,20 @@ TDataMember *TMethod::FindDataMember()
 
       if (!fMethodArgs) return 0;
 
-      char argstr[2048];    // workspace...
+      Int_t nchs = strlen(argstring);    // workspace...
+      char *argstr = new char[nchs+1];   // workspace...
       char *ptr1 = 0;
       char *tok  = 0;
       char *ptr2 = 0;
       Int_t i;
 
-      strcpy(argstr,argstring);       //let's move it to "worksapce"  copy
-
+      strlcpy(argstr,argstring,nchs+1);       //let's move it to "worksapce"  copy
       ptr2 = strtok(argstr,"{}");     //extract the data!
+      if (ptr2 == 0) {
+         Fatal("FindDataMember","Internal error found '*ARGS=\"' but not \"{}\" in %s",GetCommentString());
+         delete [] argstr;
+         return 0;
+      }
       ptr2 = strtok((char*)0,"{}");
 
       //extract argument tokens//
@@ -183,8 +188,9 @@ TDataMember *TMethod::FindDataMember()
          ptr1 = strtok((char*) (cnt++ ? 0:ptr2),",;"); //extract tokens
                                                         // separated by , or ;
          if (ptr1) {
-            tok = new char[strlen(ptr1)+1];
-            strcpy(tok,ptr1);
+            Int_t nch = strlen(ptr1);
+            tok = new char[nch+1];
+            strlcpy(tok,ptr1,nch+1);
             tokens[token_cnt] = tok;            //store this token.
             token_cnt++;
          }
@@ -222,6 +228,7 @@ TDataMember *TMethod::FindDataMember()
          }
          delete [] tokens[i];
       }
+      delete [] argstr;
       return member; // nothing else to do! We return a pointer to the last
                      // found data member
 
@@ -237,15 +244,15 @@ TDataMember *TMethod::FindDataMember()
       char basename[64]    = "";
       const char *funcname = GetName();
       if ( strncmp(funcname,"Get",3) == 0 || strncmp(funcname,"Set",3) == 0 )
-         sprintf(basename,"%s",funcname+3);
+         snprintf(basename,64,"%s",funcname+3);
       else if ( strncmp(funcname,"Is",2) == 0 )
-         sprintf(basename,"%s",funcname+2);
+         snprintf(basename,64,"%s",funcname+2);
       else if (strncmp(funcname, "Has", 3) == 0)
-         sprintf(basename, "%s", funcname+3);
+         snprintf(basename,64,"%s", funcname+3);
       else
          return 0;
 
-      sprintf(dataname,"f%s",basename);
+      snprintf(dataname,64,"f%s",basename);
 
       TClass *cl = GetClass()->GetBaseDataMember(dataname);
       if (cl) {
@@ -253,7 +260,7 @@ TDataMember *TMethod::FindDataMember()
          if (a) a->fDataMember = member;
          return member;
       } else {
-         sprintf(dataname,"fIs%s",basename);  //in case of IsEditable()
+         snprintf(dataname,64,"fIs%s",basename);  //in case of IsEditable()
                                                         //and fIsEditable
          cl = GetClass()->GetBaseDataMember(dataname);
          if (cl) {

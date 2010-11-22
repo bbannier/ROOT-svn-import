@@ -136,7 +136,7 @@ void TGLBoxPainter::Pan(Int_t px, Int_t py)
    if (fSelectedPart >= fSelectionBase) {//Pan camera.
       SaveModelviewMatrix();
       SaveProjectionMatrix();
-      
+
       fCamera->SetCamera();
       fCamera->Apply(fPadPhi, fPadTheta);
       fCamera->Pan(px, py);
@@ -149,11 +149,11 @@ void TGLBoxPainter::Pan(Int_t px, Int_t py)
       py = fCamera->GetHeight() - py;
       SaveModelviewMatrix();
       SaveProjectionMatrix();
-      
+
       fCamera->SetCamera();
       fCamera->Apply(fPadPhi, fPadTheta);
-      
-      
+
+
       if (!fHighColor) {
          if (fBoxCut.IsActive() && (fSelectedPart >= kXAxis && fSelectedPart <= kZAxis))
             fBoxCut.MoveBox(px, py, fSelectedPart);
@@ -162,7 +162,7 @@ void TGLBoxPainter::Pan(Int_t px, Int_t py)
       } else {
          MoveSection(px, py);
       }
-      
+
       RestoreProjectionMatrix();
       RestoreModelviewMatrix();
    }
@@ -197,7 +197,7 @@ void TGLBoxPainter::ProcessEvent(Int_t event, Int_t /*px*/, Int_t py)
       if (fBoxCut.IsActive())
          fBoxCut.TurnOnOff();
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", this));
+         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", (ULong_t)this));
       else
          Paint();
    } else if (event == kKeyPress && (py == kKey_c || py == kKey_C)) {
@@ -517,6 +517,13 @@ Bool_t TGLBoxPainter::HasSections()const
 void TGLBoxPainter::DrawPalette()const
 {
    //Draw. Palette.
+   //Originally, fCamera was never null.
+   //It can be a null now because of gl-viewer.
+   if (!fCamera) {
+      //Thank you, gl-viewer!
+      return;
+   }
+
    const TGLLevelPalette * palette = 0;
    const TGLVertex3 *frame = fBackBox.Get3DBox();
 

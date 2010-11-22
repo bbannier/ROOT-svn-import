@@ -61,6 +61,7 @@
 #include "RooWorkspace.h"
 #include "RooRangeBoolean.h"
 #include "RooCustomizer.h"
+#include "RooRealIntegral.h"
 
 #include <string.h>
 #include <sstream>
@@ -513,10 +514,12 @@ Double_t RooProdPdf::evaluate() const
   // Calculate current value of object
 
   Int_t code ;
-  RooArgList *plist ;
-  RooLinkedList *nlist ;
+  RooArgList *plist(0) ;
+  RooLinkedList *nlist(0) ;
   getPartIntList(_curNormSet,0,plist,nlist,code) ;
 
+  // preceding call to getPartIntList guarantees non-null return
+  // coverity[NULL_RETURNS]
   CacheElem* cache = (CacheElem*) _cacheMgr.getObj(_curNormSet,0,&code,0) ;
   Double_t ret =  calculate(*cache) ;
 
@@ -717,7 +720,13 @@ void RooProdPdf::factorizeProduct(const RooArgSet& normSet, const RooArgSet& int
 	term->add(*pdf) ;
 	termNormDeps->add(pdfNormDeps,kFALSE) ;
 	termAllDeps->add(pdfAllDeps,kFALSE) ;
+	if (!termIntDeps) {
+	  termIntDeps = new RooArgSet("termIntDeps") ;
+	}
 	termIntDeps->add(*pdfIntSet,kFALSE) ;
+	if (!termIntNoNormDeps) {
+	  termIntNoNormDeps = new RooArgSet("termIntNoNormDeps") ;
+	}
 	termIntNoNormDeps->add(pdfIntNoNormDeps,kFALSE) ;
 	done = kTRUE ;
       }
@@ -750,6 +759,9 @@ void RooProdPdf::factorizeProduct(const RooArgSet& normSet, const RooArgSet& int
     // We own the reduced version of pdfNSet
     delete pdfNSet ;
     delete pdfIntSet ;
+    if (pdfCSet != pdfNSetOrig) {
+      delete pdfCSet ;
+    }
   }
 
   // Loop over list of terms again to determine 'imported' observables
@@ -759,6 +771,7 @@ void RooProdPdf::factorizeProduct(const RooArgSet& normSet, const RooArgSet& int
   TIterator* innIter = depIntNoNormList.MakeIterator() ;
 
 //   cout << "now making second loop over terms" << endl ;
+  // coverity[UNUSED_VALUE]
   while((term=(RooArgSet*)lIter->Next())) {
     RooArgSet* normDeps = (RooArgSet*) ldIter->Next() ;
     RooArgSet* allDeps = (RooArgSet*) laIter->Next() ;
@@ -888,6 +901,7 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
 	}
 	delete niter ;
 // 	cout<<"FK: rangeIdentical Single = "<<(rangeIdentical ? 'T':'F')<<endl;
+	// coverity[CONSTANT_EXPRESSION_RESULT]
 	if (!rangeIdentical || 1) {
 // 	  cout << "PREPARING RATIO HERE (SINGLE TERM)" << endl ;	  
 	  RooAbsReal* ratio = makeCondPdfRatioCorr(*(RooAbsReal*)term->first(),termNSet,termImpSet,normRange(),RooNameReg::str(_refRangeName)) ;	  
@@ -1210,7 +1224,7 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 
   list<string> rangeComps ;
   char buf[1024] ;  
-  strcpy(buf,_normRange.Data()) ;
+  strlcpy(buf,_normRange.Data(),1024) ;
   char* save(0) ;
   char* token = strtok_r(buf,",",&save) ;
   while(token) {
@@ -1227,6 +1241,7 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 
   while((part=(RooAbsReal*)iterp->Next())) {
 
+    // coverity[UNUSED_VALUE]
     nset = (RooArgSet*) itern->Next() ;
     num = (RooAbsReal*) iter1->Next() ;
     den = (RooAbsReal*) iter2->Next() ;
@@ -1420,6 +1435,9 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 
   // Do not rearrage terms if numerator and denominator are effectively empty
   if (nomList.getSize()==0) {
+    delete iter1 ;
+    delete iter2 ;
+    delete itern ;
     return ;
   }
 
@@ -1468,6 +1486,8 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
   cache._rearrangedDen = norm ;
   cache._isRearranged = kTRUE ;
 
+  delete iter1 ;
+  delete iter2 ;
   delete iterp ;
   delete itern ;
   
@@ -1878,8 +1898,8 @@ Int_t RooProdPdf::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVar
 
   // Retrieve (or create) the required partial integral list
   Int_t code ;
-  RooArgList *plist ;
-  RooLinkedList *nlist ;
+  RooArgList *plist(0) ;
+  RooLinkedList *nlist(0) ;
   getPartIntList(normSet,&allVars,plist,nlist,code,rangeName) ;
 //   cout << "RooProdPdf::getAIWN(" << GetName() << ") allVars = " << allVars << " rangeName = " << (rangeName?rangeName:"<none>") << " code = " << code << endl ;
   
@@ -1904,8 +1924,8 @@ Double_t RooProdPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, 
   // Partial integration scenarios
   CacheElem* cache = (CacheElem*) _cacheMgr.getObjByIndex(code-1) ;
   
-  RooArgList* partIntList ;
-  RooLinkedList* normList ;
+  RooArgList* partIntList(0) ;
+  RooLinkedList* normList(0) ;
 
   // If cache has been sterilized, revive this slot
   if (cache==0) {
@@ -1920,6 +1940,8 @@ Double_t RooProdPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, 
     delete nset ;
     delete iset ;
 
+    // preceding call to getPartIntList guarantees non-null return
+    // coverity[NULL_RETURNS]
     cache = (CacheElem*) _cacheMgr.getObj(nset,iset,&code2,RooNameReg::ptr(rangeName)) ;
 
 
@@ -2235,8 +2257,8 @@ void RooProdPdf::getParametersHook(const RooArgSet* nset, RooArgSet* params, Boo
   if (!nset || nset->getSize()==0) return ;
 
   // Get/create appropriate term list for this normalization set
-  RooArgList *plist ;
-  RooLinkedList *nlist ;
+  RooArgList *plist(0) ;
+  RooLinkedList *nlist(0) ;
   Int_t code ;
   getPartIntList(nset,0,plist,nlist,code) ;
 

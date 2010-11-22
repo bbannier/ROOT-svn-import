@@ -64,7 +64,7 @@ TVolumePosition *TVolumeViewIter::operator[](Int_t level)
    const TVolumePosition *pos = GetPosition(level);
    if (pos) return new TVolumePosition(*pos);
    else {
-      Error("operator[]"," GetPosition: %d %d %x", level,fDepth, fPositions);
+      Error("operator[]"," GetPosition: %d %d 0x%lx", level,fDepth, (Long_t)fPositions);
       return 0;
    }
 }
@@ -90,6 +90,9 @@ TVolumePosition *TVolumeViewIter::UpdateTempMatrix(TVolumePosition *curPosition)
    if (curPosition) {
       curNode       = curPosition->GetNode();
       curPositionId = curPosition->GetId();
+   } else {
+      Error("UpdateTempMatrix","No position has been defined");
+      return 0;
    }
    if (fDepth-1) {
       TVolumePosition *oldPosition = 0;
@@ -117,7 +120,7 @@ TVolumePosition *TVolumeViewIter::UpdateTempMatrix(TVolumePosition *curPosition)
                        ,newTranslation,newMatrix);
          Int_t num = gGeometry->GetListOfMatrices()->GetSize();
          Char_t anum[100];
-         sprintf(anum,"%d",num+1);
+         snprintf(anum,100,"%d",num+1);
          newPosition = SetPositionAt(curNode
                                 ,newTranslation[0],newTranslation[1],newTranslation[2]
                                 ,new TRotMatrix(anum,"NodeView",newMatrix));
@@ -127,12 +130,11 @@ TVolumePosition *TVolumeViewIter::UpdateTempMatrix(TVolumePosition *curPosition)
          newTranslation[1] = oldTranslation[1] + curPosition->GetY();
          newTranslation[2] = oldTranslation[2] + curPosition->GetZ();
          newPosition = SetPositionAt(curNode,newTranslation[0],newTranslation[1],newTranslation[2]);
+         if (newPosition) {;} //intentionally not used         
       }
-   } else if (curPosition)  {
-      newPosition =  SetPositionAt(*curPosition);
+   } 
+   newPosition =  SetPositionAt(*curPosition);
 //         printf(" new level %d %s\n",fDepth, curNode->GetName());
-   } else
-      Error("UpdateTempMatrix","No position has been defined");
    if (newPosition) newPosition->SetId(curPositionId);
    return newPosition;
 }

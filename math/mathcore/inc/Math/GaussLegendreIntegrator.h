@@ -16,8 +16,11 @@
 #ifndef ROOT_Math_GaussLegendreIntegrator
 #define ROOT_Math_GaussLegendreIntegrator
 
-#include <Math/IFunction.h>
-#include <Math/VirtualIntegrator.h>
+
+#ifndef ROOT_Math_GaussIntegrator
+#include "Math/GaussIntegrator.h"
+#endif
+
 
 namespace ROOT {
 namespace Math {
@@ -33,7 +36,7 @@ namespace Math {
   
  */
 
-class GaussLegendreIntegrator: public VirtualIntegratorOneDim {
+class GaussLegendreIntegrator: public GaussIntegrator {
 public:
 
    /** Basic contructor of GaussLegendreIntegrator. 
@@ -49,59 +52,43 @@ public:
        integral */
    void SetNumberPoints(int num);
 
+   /** Set the desired relative Error. */
+   virtual void SetRelTolerance (double);
+
+   /** This method is not implemented. */
+   virtual void SetAbsTolerance (double);
+
+
    /** Returns the arrays x and w containing the abscissa and weight of
        the Gauss-Legendre n-point quadrature formula.
        
        Gauss-Legendre: W(x)=1 -1<x<1 
                        (j+1)P_{j+1} = (2j+1)xP_j-jP_{j-1}
    */
-   void GetWeightVectors(double *x, double *w);
+   void GetWeightVectors(double *x, double *w) const;
 
-   // Implementing VirtualIntegrator Interface
+   int GetNumberPoints() const { return fNum; }
 
-   /** Set the desired relative Error. */
-   void SetRelTolerance (double);
-
-   /** Absolute Tolerance is not used in this class. */
-   void SetAbsTolerance (double);
-
-   /** Returns the result of the last integral calculation. */
-   double Result () const;
-
-   /** Return the estimate of the absolute Error of the last Integral calculation. */
-   double Error () const;
-
-   /** This method is not implemented. */
-   int Status () const;
-
-   // Implementing VirtualIntegratorOneDim Interface
-
-   /** Gauss-Legendre integral, see CalcGaussLegendreSamplingPoints. */
-   double Integral (double a, double b);
-
-   /** Set integration function (flag control if function must be copied inside).
-       \@param f Function to be used in the calculations.
-       \@param copy Indicates whether the function has to be copied.
+   /** 
+       return number of function evaluations in calculating the integral 
+       This is equivalent to the number of points
    */
-   void SetFunction (const IGenFunction &);
+   int NEval() const { return fNum; }
 
-   /** This method is not implemented. */
-   double Integral ();
 
-   /** This method is not implemented. */
-   double IntegralUp (double a);
-
-   /**This method is not implemented. */
-   double IntegralLow (double b);
-
-   /** This method is not implemented. */
-   double Integral (const std::vector< double > &pts);
-
-   /** This method is not implemented. */
-   double IntegralCauchy (double a, double b, double c);   
+   ///  get the option used for the integration 
+   virtual ROOT::Math::IntegratorOneDimOptions Options() const; 
+   
+   // set the options 
+   virtual void SetOptions(const ROOT::Math::IntegratorOneDimOptions & opt); 
 
 private:
-   // Middle functions
+   
+   /**
+      Integration surrugate method. Return integral of passed function in  interval [a,b]
+      Reimplement method of GaussIntegrator using CalcGaussLegendreSamplingPoints
+   */
+   virtual double DoIntegral (double a, double b, const IGenFunction* func);
 
    /** 
       Type: unsafe but fast interface filling the arrays x and w (static method)
@@ -123,15 +110,11 @@ private:
    */
    void CalcGaussLegendreSamplingPoints();
 
+
 protected:
    int fNum;                         // Number of points used in the stimation of the integral.
    double* fX;                       // Abscisa of the points used.
    double* fW;                       // Weights of the points used.
-   double fEpsilon;                  // Desired relative error.
-   bool fUsedOnce;                   // Bool value to check if the function was at least called once.
-   double fLastResult;               // Result from the last stimation.
-   double fLastError;                // Error from the last stimation.
-   const IGenFunction* fFunction;    // Pointer to function used.
 
 };
 

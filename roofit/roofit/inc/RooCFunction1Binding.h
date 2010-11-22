@@ -109,7 +109,13 @@ class RooCFunction1Ref : public TObject {
     if (result && strlen(result)) {
       return result ;
     } 
-    return Form("(0x%08x)",_ptr) ;
+    // This union is to avoid a warning message:
+    union { 
+       void *_ptr;
+       func_t _funcptr;
+    } temp;
+    temp._funcptr = _ptr;
+    return Form("(%p)",temp._ptr) ;
   }
 
   const char* argName(Int_t iarg) {
@@ -133,8 +139,8 @@ class RooCFunction1Ref : public TObject {
     return 0 ;
   }
 
-
-  VO (*_ptr)(VI) ; //! Pointer to embedded function
+  typedef VO (*func_t)(VI); 
+  func_t _ptr; //! Pointer to embedded function
 
   static RooCFunction1Map<VO,VI>* _fmap ; // Pointer to mapping service object
 
@@ -161,13 +167,13 @@ void RooCFunction1Ref<VO,VI>::Streamer(TBuffer &R__b)
    if (R__b.IsReading()) {
 
      UInt_t R__s, R__c;
-     R__b.ReadVersion(&R__s, &R__c);      
+     Version_t R__v = R__b.ReadVersion(&R__s, &R__c);      
 
      // Read name from file
      TString tmpName ;
      tmpName.Streamer(R__b) ;       
 
-     if (tmpName=="UNKNOWN") {
+     if (tmpName=="UNKNOWN" && R__v>0) {
 
        coutW(ObjectHandling) << "WARNING: Objected embeds function pointer to unknown function, object will not be functional" << endl ;
        _ptr = dummyFunction ;
@@ -194,8 +200,14 @@ void RooCFunction1Ref<VO,VI>::Streamer(TBuffer &R__b)
      // Lookup name of reference C function
      TString tmpName = fmap().lookupName(_ptr) ;
      if (tmpName.Length()==0) {
-       coutW(ObjectHandling) << "WARNING: Cannot persist unknown function pointer " << Form("0x%08x",_ptr) 
-			     << " written object will not be functional when read back" <<  endl ;
+        // This union is to avoid a warning message:
+        union { 
+           void *_ptr;
+           func_t _funcptr;
+        } temp;
+        temp._funcptr = _ptr;
+        coutW(ObjectHandling) << "WARNING: Cannot persist unknown function pointer " << Form("%p",temp._ptr) 
+                              << " written object will not be functional when read back" <<  endl ;
        tmpName="UNKNOWN" ;
      } 
      
@@ -335,15 +347,4 @@ RooCFunction1PdfBinding<VO,VI>::RooCFunction1PdfBinding(const RooCFunction1PdfBi
   // Copy constructor
 } 
 
-
-
-template <>        void RooCFunction1Ref<Double_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <>    void RooCFunction1Binding<Double_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <> void RooCFunction1PdfBinding<Double_t,Double_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <>        void RooCFunction1Ref<Double_t,Int_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <>    void RooCFunction1Binding<Double_t,Int_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-template <> void RooCFunction1PdfBinding<Double_t,Int_t>::ShowMembers(TMemberInspector &R__insp, char *R__parent) ;
-
-
- 
 #endif

@@ -1,5 +1,5 @@
 // @(#)root/hist:$Id$
-// Author: D. Piparo, G. Schott
+
 //___________________________________
 /**
 Class HybridPlot
@@ -127,8 +127,8 @@ HybridPlot::~HybridPlot()
   
   if (fSb_histo) delete fSb_histo;
   if (fB_histo) delete fB_histo;
-  if (fSb_histo_shaded) delete fSb_histo;
-  if (fB_histo_shaded) delete fB_histo;
+  if (fSb_histo_shaded) delete fSb_histo_shaded;
+  if (fB_histo_shaded) delete fB_histo_shaded;
   if (fData_testStat_line) delete fData_testStat_line;
   if (fLegend) delete fLegend;
 }
@@ -165,14 +165,14 @@ void HybridPlot::Draw(const char* )
 
    // Empty the bins according to the data -2lnQ
    double data_m2lnq= fData_testStat_line->GetX1();
-   for (int i=0;i<fSb_histo->GetNbinsX();++i){
+   for (int i=1;i<=fSb_histo->GetNbinsX();++i){
       if (fSb_histo->GetBinCenter(i)<data_m2lnq){
          fSb_histo_shaded->SetBinContent(i,0);
-         fB_histo_shaded->SetBinContent(i,fB_histo->GetBinContent(i)/fB_histo->GetEntries());
+         fB_histo_shaded->SetBinContent(i,fB_histo->GetBinContent(i)/fB_histo->GetSumOfWeights());
       }
       else{
          fB_histo_shaded->SetBinContent(i,0);
-         fSb_histo_shaded->SetBinContent(i,fSb_histo->GetBinContent(i)/fSb_histo->GetEntries());
+         fSb_histo_shaded->SetBinContent(i,fSb_histo->GetBinContent(i)/fSb_histo->GetSumOfWeights());
       }
    }
 
@@ -338,7 +338,7 @@ double* HybridPlot::GetHistoPvals (TH1* histo, double percentage){
    for (it = extremes_map.begin();it != extremes_map.end();++it){
       a=it->first;
       b=it->second;
-      current_diff=fabs(histo->GetBinContent(a)-histo->GetBinContent(b));
+      current_diff=std::fabs(histo->GetBinContent(a)-histo->GetBinContent(b));
       if (current_diff<diff){
          //std::cout << "a=" << a << " b=" << b << std::endl;
          diff=current_diff;

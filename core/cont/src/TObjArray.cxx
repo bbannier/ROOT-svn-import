@@ -224,7 +224,7 @@ void TObjArray::AddAtAndExpand(TObject *obj, Int_t idx)
    // of the array, expand the array (double its size).
 
    if (idx < fLowerBound) {
-      Error("AddAt", "out of bounds at %d in %lx", idx, this);
+      Error("AddAt", "out of bounds at %d in %lx", idx, (Long_t)this);
       return;
    }
    if (idx-fLowerBound >= fSize)
@@ -573,7 +573,7 @@ Bool_t TObjArray::OutOfBoundsError(const char *where, Int_t i) const
 {
    // Generate an out-of-bounds error. Always returns false.
 
-   Error(where, "index %d out of bounds (size: %d, this: 0x%08x)", i, fSize, this);
+   Error(where, "index %d out of bounds (size: %d, this: 0x%lx)", i, fSize, (Long_t)this);
    return kFALSE;
 }
 
@@ -699,9 +699,9 @@ void TObjArray::Randomize(Int_t ntimes)
    for (Int_t i = 0; i < ntimes; i++) {
       for (Int_t j = 0; j < fLast; j++) {
 #ifdef R__WIN32
-         Int_t k = (Int_t)(fLast*rand()/(RAND_MAX+1.0));
+         Int_t k = (Int_t)(0.5+fLast*Double_t(rand())/Double_t((RAND_MAX+1.0)));
 #else
-         Int_t k = (Int_t)(fLast*random()/(RAND_MAX+1.0));
+         Int_t k = (Int_t)(0.5+fLast*Double_t(random())/Double_t((RAND_MAX+1.0)));
 #endif
          if (k == j) continue;
          TObject *obj = fCont[j];

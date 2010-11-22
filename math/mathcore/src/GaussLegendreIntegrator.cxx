@@ -11,21 +11,18 @@
 #include "Math/GaussLegendreIntegrator.h"
 #include <cmath>
 #include <string.h>
+#include <algorithm>
 
 namespace ROOT {
 namespace Math {
 
-GaussLegendreIntegrator::GaussLegendreIntegrator(int num, double eps)
+GaussLegendreIntegrator::GaussLegendreIntegrator(int num, double eps) : 
+   GaussIntegrator(eps)
 {
    // Basic contructor
-
-   fEpsilon = eps;
    fNum = num;
    fX = 0;
    fW = 0;
-   fLastResult = fLastError = 0;
-   fUsedOnce = false;
-   fFunction = 0;
 
    CalcGaussLegendreSamplingPoints();
 }
@@ -47,16 +44,16 @@ void GaussLegendreIntegrator::SetNumberPoints(int num)
    CalcGaussLegendreSamplingPoints();
 }
 
-void GaussLegendreIntegrator::GetWeightVectors(double *x, double *w)
+void GaussLegendreIntegrator::GetWeightVectors(double *x, double *w) const
 {
    // Returns the arrays x and w.
 
-   memcpy(x, fX, fNum);
-   memcpy(w, fW, fNum);
+   std::copy(fX,fX+fNum, x);
+   std::copy(fW,fW+fNum, w);
 }
 
 
-double GaussLegendreIntegrator::Integral(double a, double b)
+double GaussLegendreIntegrator::DoIntegral(double a, double b, const IGenFunction* function)
 {
    // Gauss-Legendre integral, see CalcGaussLegendreSamplingPoints.
 
@@ -74,7 +71,7 @@ double GaussLegendreIntegrator::Integral(double a, double b)
    for (int i=0; i<fNum; i++)
    {
       xx[0] = a0 + b0*fX[i];
-      result += fW[i] * (*fFunction)(xx);
+      result += fW[i] * (*function)(xx);
    }
 
    fLastResult = result*b0;
@@ -85,55 +82,14 @@ double GaussLegendreIntegrator::Integral(double a, double b)
 void GaussLegendreIntegrator::SetRelTolerance (double eps)
 {
    // Set the desired relative Error.
-
    fEpsilon = eps;
    CalcGaussLegendreSamplingPoints();
 }
 
 void GaussLegendreIntegrator::SetAbsTolerance (double)
-{ MATH_ERROR_MSG("ROOT::Math::GausIntegratorOneDim", "There is no Absolute Tolerance!"); }
-
-double GaussLegendreIntegrator::Result () const
-{
-   // Returns the result of the last integral calculation.
-
-   if (!fUsedOnce)
-      MATH_ERROR_MSG("ROOT::Math::GausIntegratorOneDim", "You must calculate the result at least once!");
-
-   return fLastResult;
-}
-
-double GaussLegendreIntegrator::Error() const
-{ return fLastError; }
-
-int GaussLegendreIntegrator::Status() const
-{
-   return (fUsedOnce) ? 0 :  -1;
-}
-
-void GaussLegendreIntegrator::SetFunction (const IGenFunction & function)
-{
-   //  Set integration function.
-
-   fFunction = &function;
-   fUsedOnce = false; 
-}
+{   MATH_WARN_MSG("ROOT::Math::GaussLegendreIntegrator", "There is no Absolute Tolerance!");  }
 
 
-double GaussLegendreIntegrator::Integral ()
-{ return 0.0; }
-
-double GaussLegendreIntegrator::IntegralUp (double /*a*/)
-{ return 0.0; }
-
-double GaussLegendreIntegrator::IntegralLow (double /*b*/)
-{ return 0.0; }
-
-double GaussLegendreIntegrator::Integral (const std::vector< double > &/*pts*/)
-{ return 0.0; }
-
-double GaussLegendreIntegrator::IntegralCauchy (double /*a*/, double /*b*/, double /*c*/)
-{ return 0.0; }
 
 void GaussLegendreIntegrator::CalcGaussLegendreSamplingPoints()
 {
@@ -157,7 +113,7 @@ void GaussLegendreIntegrator::CalcGaussLegendreSamplingPoints()
 
    double z, pp, p1,p2, p3;
 
-   // Loop over the disired roots
+   // Loop over the desired roots
    for (unsigned int i=0; i<m; i++) {
       z = std::cos(3.14159265358979323846*(i+0.75)/(fNum+0.5));
 
@@ -194,6 +150,28 @@ void GaussLegendreIntegrator::CalcGaussLegendreSamplingPoints()
    }
 }
 
-} // end namespace Math
-   
+ROOT::Math::IntegratorOneDimOptions  GaussLegendreIntegrator::Options() const { 
+   ROOT::Math::IntegratorOneDimOptions opt; 
+   opt.SetAbsTolerance(fEpsilon); 
+   opt.SetRelTolerance(fEpsilon); 
+   opt.SetWKSize(0); 
+   opt.SetNPoints(fNum); 
+   opt.SetIntegrator("GaussLegendre");
+   return opt; 
+}
+
+void GaussLegendreIntegrator::SetOptions(const ROOT::Math::IntegratorOneDimOptions & opt)
+{
+   //   set integration options
+//    std::cout << "fEpsilon = " << fEpsilon << std::endl;
+//    std::cout << opt.RelTolerance() << " abs " << opt.AbsTolerance() << std::endl;
+   //double tol = opt.RelTolerance(); fEpsilon = tol; 
+   fEpsilon = opt.RelTolerance(); 
+//    std::cout << "fEpsilon = " << fEpsilon << std::endl;
+   fNum = opt.NPoints(); 
+   if (fNum <= 7)  MATH_WARN_MSGVAL("GaussLegendreIntegrator::SetOptions","setting a low number of points ",fNum);
+   CalcGaussLegendreSamplingPoints();
+}
+
+} // end namespace Math  
 } // end namespace ROOT

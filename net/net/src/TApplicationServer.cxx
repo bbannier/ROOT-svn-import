@@ -26,6 +26,7 @@
    #include <io.h>
    typedef long off_t;
 #endif
+#include <stdlib.h>
 #include <errno.h>
 #include <time.h>
 #include <fcntl.h>
@@ -362,7 +363,7 @@ Int_t TApplicationServer::Setup()
    // Return 0 on success, -1 on failure
 
    char str[512];
-   sprintf(str, "**** Remote session @ %s started ****", gSystem->HostName());
+   snprintf(str, 512, "**** Remote session @ %s started ****", gSystem->HostName());
    if (fSocket->Send(str) != 1+static_cast<Int_t>(strlen(str))) {
       Error("Setup", "failed to send startup message");
       return -1;
@@ -541,10 +542,10 @@ void TApplicationServer::HandleSocketInput()
                case kRRT_File:
                   // A file follows
                   mess->ReadString(str, sizeof(str));
-                  {  Long_t size;
-                     Int_t  bin;
-                     char   name[1024];
-                     sscanf(str, "%s %d %ld", name, &bin, &size);
+                  {  char   name[2048], i1[20], i2[40];
+                     sscanf(str, "%2047s %19s %39s", name, i1, i2);
+                     Int_t  bin = atoi(i1);
+                     Long_t size = atol(i2);
                      ReceiveFile(name, bin ? kTRUE : kFALSE, size);
                   }
                   break;
@@ -807,8 +808,12 @@ void TApplicationServer::SendLogFile(Int_t status, Int_t start, Int_t end)
    Bool_t adhoc = kFALSE;
 
    if (fLogFileDes > -1) {
-      ltot = lseek(fileno(stdout),   (off_t) 0, SEEK_END);
+      ltot = lseek(fileno(stdout), (off_t) 0, SEEK_END);
       lnow = lseek(fLogFileDes, (off_t) 0, SEEK_CUR);
+      if (lnow == -1) {
+         SysError("SendLogFile", "lseek failed");
+         lnow = 0;
+      }
 
       if (start > -1) {
          lseek(fLogFileDes, (off_t) start, SEEK_SET);
@@ -966,15 +971,15 @@ Int_t TApplicationServer::BrowseFile(const char *fname)
       if (fh) {
          fh->cd();
          TRemoteObject dir(fh->GetName(), fh->GetTitle(), "TFile");
-         TList *keylist = (TList *)gROOT->ProcessLine(Form("((TFile *)0x%lx)->GetListOfKeys();", fh));
+         TList *keylist = (TList *)gROOT->ProcessLine(Form("((TFile *)0x%lx)->GetListOfKeys();", (ULong_t)fh));
          TIter nextk(keylist);
          TNamed *key = 0;
          TRemoteObject *robj;
          while ((key = (TNamed *)nextk())) {
             robj = new TRemoteObject(key->GetName(), key->GetTitle(), "TKey");
-            const char *classname = (const char *)gROOT->ProcessLine(Form("((TKey *)0x%lx)->GetClassName();", key));
+            const char *classname = (const char *)gROOT->ProcessLine(Form("((TKey *)0x%lx)->GetClassName();", (ULong_t)key));
             robj->SetKeyClassName(classname);
-            Bool_t isFolder = (Bool_t)gROOT->ProcessLine(Form("((TKey *)0x%lx)->IsFolder();", key));
+            Bool_t isFolder = (Bool_t)gROOT->ProcessLine(Form("((TKey *)0x%lx)->IsFolder();", (ULong_t)key));
             robj->SetFolder(isFolder);
             robj->SetRemoteAddress((Long_t) key);
             list->Add(robj);
@@ -1236,15 +1241,15 @@ Long_t TApplicationServer::ProcessLine(const char *line, Bool_t, Int_t *)
                // A file follows
                char str[2048];
                rm->ReadString(str, sizeof(str));
-               Long_t size;
-               Int_t  bin;
-               char name[1024];
-               sscanf(str, "%s %d %ld", name, &bin, &size);
+               char   name[2048], i1[20], i2[40];
+               sscanf(str, "%2047s %19s %39s", name, i1, i2);
+               Int_t  bin = atoi(i1);
+               Long_t size = atol(i2);
                ReceiveFile(name, bin ? kTRUE : kFALSE, size);
             }
          }
-
       }
+      delete [] imp;
    }
 
    // Process the line now

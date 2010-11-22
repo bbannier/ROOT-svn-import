@@ -327,7 +327,7 @@ void TAxis3D::PaintAxis(TGaxis *axis, Float_t ang)
    Double_t r[24]       /* was [3][8] */;
    Int_t ndiv, i;
    Double_t x1[3], x2[3], y1[3], y2[3], z1[3], z2[3], av[24]  /*  was [3][8] */;
-   char chopax[8];
+   char chopax[10];
    Int_t ix1, ix2, iy1, iy2, iz1, iz2;
    Double_t rad;
 
@@ -383,7 +383,7 @@ void TAxis3D::PaintAxis(TGaxis *axis, Float_t ang)
          case 2 :
             ax[0] = z1[0]; ax[1] = z2[0];
             ay[0] = z1[1]; ay[1] = z2[1];
-            strcpy(chopax, "SDH+=");
+            strlcpy(chopax, "SDH+=",10);
             logAx = gPad->GetLogz();
             break;
          default:
@@ -395,16 +395,16 @@ void TAxis3D::PaintAxis(TGaxis *axis, Float_t ang)
       if ( ( TMath::Abs(ax[0] - ax[1]) + TMath::Abs(ay[0] - ay[1]))  < epsil  ) continue;
 
       if (i != 2 ) {
-         if (ax[0] > ax[1]) strcpy(chopax, "SDHV=+");
-         else               strcpy(chopax, "SDHV=-");
+         if (ax[0] > ax[1]) strlcpy(chopax, "SDHV=+",10);
+         else               strlcpy(chopax, "SDHV=-",10);
       }
 
       if (i==1 && (TMath::Abs(z1[0] - z2[0]) + TMath::Abs(z1[1] - z2[1])) < epsil)
-         strcpy(chopax, "SDH+=");
+         strlcpy(chopax, "SDH+=",10);
 
       // Initialize the axis options
       if (logAx) {
-         strcat(chopax,"G");
+         strlcat(chopax,"G",10);
          bmin = TMath::Power(10, rmin[i]);
          bmax = TMath::Power(10, rmax[i]);
       } else {
@@ -436,7 +436,7 @@ void TAxis3D::PaintAxis(TGaxis *axis, Float_t ang)
 
       // Option time display is required ?
       if (fAxis[i].GetTimeDisplay()) {
-         strcat(chopax,"t");
+         strlcat(chopax,"t",10);
          if (strlen(fAxis[i].GetTimeFormatOnly()) == 0) {
             axis->SetTimeFormat(fAxis[i].ChooseTimeFormat(bmax-bmin));
          } else {
@@ -558,6 +558,7 @@ Int_t TAxis3D::GetNdivisions( Option_t *axis) const
    // Get number of divisions.
 
    Int_t ax = AxisChoice(axis);
+   if (ax < 0) return 0;
    return fAxis[ax].GetNdivisions();
 }
 
@@ -568,6 +569,7 @@ Color_t TAxis3D::GetAxisColor( Option_t *axis) const
    // Get axis color.
 
    Int_t ax = AxisChoice(axis);
+   if (ax < 0) return 0;
    return fAxis[ax].GetAxisColor();
 }
 
@@ -578,6 +580,7 @@ Color_t TAxis3D::GetLabelColor( Option_t *axis) const
    // Get label color.
 
    Int_t ax = AxisChoice(axis);
+   if (ax < 0) return 0;
    return fAxis[ax].GetLabelColor();
 }
 
@@ -588,6 +591,7 @@ Style_t TAxis3D::GetLabelFont( Option_t *axis) const
    // Get label font.
 
    Int_t ax = AxisChoice(axis);
+   if (ax < 0) return 0;
    return fAxis[ax].GetLabelFont();
 }
 
@@ -598,6 +602,7 @@ Float_t TAxis3D::GetLabelOffset( Option_t *axis) const
    // Get label offset.
 
    Int_t ax = AxisChoice(axis);
+   if (ax < 0) return 0;
    return fAxis[ax].GetLabelOffset();
 }
 
@@ -608,6 +613,7 @@ Float_t TAxis3D::GetLabelSize( Option_t *axis) const
    // Get label size.
 
    Int_t ax = AxisChoice(axis);
+   if (ax < 0) return 0;
    return fAxis[ax].GetLabelSize();
 }
 
@@ -618,6 +624,7 @@ Float_t TAxis3D::GetTickLength( Option_t *axis) const
    // Get tick mark length.
 
    Int_t ax = AxisChoice(axis);
+   if (ax < 0) return 0;
    return fAxis[ax].GetTickLength();
 }
 
@@ -628,8 +635,8 @@ Float_t TAxis3D::GetTitleOffset( Option_t *axis) const
    // Get title offset.
 
    Int_t ax = AxisChoice(axis);
-   fAxis[ax].GetTitleOffset();
-   return 0;
+   if (ax < 0) return 0;
+   return fAxis[ax].GetTitleOffset();
 }
 
 
@@ -665,6 +672,7 @@ void TAxis3D::SetAxisRange(Double_t xmin, Double_t xmax, Option_t *axis)
    // Set axis range.
 
    Int_t ax = AxisChoice(axis);
+   if (ax < 0) return;
    TAxis *theAxis = &fAxis[ax];
    Int_t bin1 = theAxis->FindBin(xmin);
    Int_t bin2 = theAxis->FindBin(xmax);

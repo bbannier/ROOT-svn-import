@@ -162,6 +162,8 @@ static int G__make_uniqueP2Ftypedef(char* type_name)
             switch (*from) {
                case ',':
                   isstart = 1;
+                  *(to - 1) = *from;
+                  break;
                case ')':
                case '*':
                case '&':
@@ -280,7 +282,7 @@ void G__define_type()
 
    c = G__fgetname_template(type1, 0, "*{");
    if (c == '*') {
-      strcat(type1, "*");
+      type1 += "*";
       c = ' ';
    }
    // Consume any const, volatile, mutable, or typename qualifier. // FIXME: mutable is illegal in a typedef.
@@ -309,16 +311,16 @@ void G__define_type()
       // above since it does not allow for distinction between global
       // namespace and local namespace) ... but at least it is an improvement
       // over the current behavior.
-      strcpy(type1, type1 + 2);
+      strcpy((char*)type1, type1 + 2);  // Okay since we reduce the size ...
    }
    while (isspace(c)) {
       len = strlen(type1);
       c = G__fgetspace();
       if (c == ':') {
          c = G__fgetspace(); // skip the next ':'
-         strcat(type1, "::");
+         type1 += "::";
          c = G__fgetname_template(temp, 0, "{");
-         strcat(type1, temp);
+         type1 += temp;
       }
       else if ((c == '<') || (c == ',') || (type1[len-1] == '<') || (type1[len-1] == ',')) {
          type1[len++] = c;
@@ -361,27 +363,27 @@ void G__define_type()
    }
    else if (!strcmp(type1, "unsigned*")) {
       unsigned_flag = 1;
-      strcpy(type1, "int*");
+      type1 = "int*";
    }
    else if (!strcmp(type1, "signed*")) {
       unsigned_flag = 0;
-      strcpy(type1, "int*");
+      type1 = "int*";
    }
    else if (!strcmp(type1, "unsigned&")) {
       unsigned_flag = 1;
-      strcpy(type1, "int&");
+      type1 = "int&";
    }
    else if (!strcmp(type1, "signed&")) {
       unsigned_flag = 0;
-      strcpy(type1, "int&");
+      type1 = "int&";
    }
    else if (!strcmp(type1, "unsigned*&")) {
       unsigned_flag = 1;
-      strcpy(type1, "int*&");
+      type1 = "int*&";
    }
    else if (!strcmp(type1, "signed*&")) {
       unsigned_flag = 0;
-      strcpy(type1, "int*&");
+      type1 = "int*&";
    }
 
    /*
@@ -947,7 +949,7 @@ void G__define_type()
       typenum = G__newtype.alltype;
       len = strlen(type_name);
       G__newtype.name[typenum] = (char*) malloc(len + 2);
-      strcpy(G__newtype.name[typenum], type_name);
+      strcpy(G__newtype.name[typenum], type_name); // Okay, we allocated the right size
       G__newtype.namerange->Insert(G__newtype.name[typenum], typenum);
       G__newtype.iscpplink[typenum] = G__NOLINK;
       G__newtype.comment[typenum].p.com = 0;
@@ -1337,10 +1339,43 @@ int G__search_typename(const char* typenamein, int typein, int tagnum, int refty
       type_name[--len] = '\0';
       ispointer = 'A' - 'a';
    }
-   NameMap::Range nameRange = G__newtype.namerange->Find(type_name);
+   const char *atom_tagname = type_name;
+   if ( strstr(type_name,"(*)") == 0 ) {
+      // Deal with potential scope in the name but only when not a function type
+      char *p = (char*) G__find_last_scope_operator(type_name);
+      if (p) {
+         if (G__static_parent_tagnum != -1) {
+            // humm something is wrong, we specify the parent in 2 different
+            // ways.
+         }
+         atom_tagname = p+2;
+         *p = '\0';
+         int scope_tagnum = -1;
+         if (p == type_name) {
+            scope_tagnum = -1;  // global scope
+         }
+#ifndef G__STD_NAMESPACE
+         else if (!strcmp(type_name, "std") && G__ignore_stdnamespace) {
+            scope_tagnum = -1;
+         }
+#endif // G__STD_NAMESPACE
+         else {
+            // first try a typedef, so we don't trigger autoloading here:
+            int scope_typenum = G__defined_typename_noerror(type_name, 1);
+            if (scope_typenum != -1 && G__newtype.type[scope_typenum] == 'u')
+               scope_tagnum = G__newtype.tagnum[scope_typenum];
+            else
+               scope_tagnum = G__defined_tagname(type_name, 0);
+         }
+         G__static_parent_tagnum = scope_tagnum;
+         len = strlen(atom_tagname);
+      }
+   }
+   
+   NameMap::Range nameRange = G__newtype.namerange->Find(atom_tagname);
    if (nameRange) {
       for (i = nameRange.First();i <= nameRange.Last();i++) {
-         if (len == G__newtype.hash[i] && strcmp(G__newtype.name[i], type_name) == 0 &&
+         if (len == G__newtype.hash[i] && strcmp(G__newtype.name[i], atom_tagname) == 0 &&
              (G__static_parent_tagnum == -1 ||
               G__newtype.parent_tagnum[i] == G__static_parent_tagnum)) {
             flag = 1;
@@ -1365,7 +1400,7 @@ int G__search_typename(const char* typenamein, int typein, int tagnum, int refty
       }
       G__newtype.hash[G__newtype.alltype] = len;
       G__newtype.name[G__newtype.alltype] = (char*)malloc((size_t)(len + 1));
-      strcpy(G__newtype.name[G__newtype.alltype], type_name);
+      strcpy(G__newtype.name[G__newtype.alltype], atom_tagname); // Okay, we allocated the right size
       G__newtype.namerange->Insert(G__newtype.name[G__newtype.alltype], G__newtype.alltype);
       G__newtype.nindex[G__newtype.alltype] = 0;
       G__newtype.parent_tagnum[G__newtype.alltype] = G__static_parent_tagnum;

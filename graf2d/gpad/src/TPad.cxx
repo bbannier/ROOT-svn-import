@@ -1097,8 +1097,10 @@ void TPad::Divide(Int_t nx, Int_t ny, Float_t xmargin, Float_t ymargin, Int_t co
    Double_t x1,y1,x2,y2;
    Double_t dx,dy;
    TPad *pad;
-   char *name  = new char [strlen(GetName())+6];
-   char *title = new char [strlen(GetTitle())+6];
+   Int_t nchname  = strlen(GetName())+6;
+   Int_t nchtitle = strlen(GetTitle())+6;
+   char *name  = new char [nchname];
+   char *title = new char [nchtitle];
    Int_t n = 0;
    if (color == 0) color = GetFillColor();
    if (xmargin > 0 && ymargin > 0) {
@@ -1115,7 +1117,7 @@ void TPad::Divide(Int_t nx, Int_t ny, Float_t xmargin, Float_t ymargin, Int_t co
             x2 = x1 +dx -2*xmargin;
             if (x1 > x2) continue;
             n++;
-            sprintf(name,"%s_%d",GetName(),n);
+            snprintf(name,nchname,"%s_%d",GetName(),n);
             pad = new TPad(name,name,x1,y1,x2,y2,color);
             pad->SetNumber(n);
             pad->Draw();
@@ -1149,8 +1151,8 @@ void TPad::Divide(Int_t nx, Int_t ny, Float_t xmargin, Float_t ymargin, Int_t co
             y1 = y2 - dy;
             if (j == 0)    y2 = 1-yt;
             if (j == ny-1) y1 = 0;
-            sprintf(name,"%s_%d",GetName(),number);
-            sprintf(title,"%s_%d",GetTitle(),number);
+            snprintf(name,nchname,"%s_%d",GetName(),number);
+            snprintf(title,nchtitle,"%s_%d",GetTitle(),number);
             pad = new TPad(name,title,x1,y1,x2,y2);
             pad->SetNumber(number);
             pad->SetBorderMode(0);
@@ -1331,14 +1333,14 @@ void TPad::DrawClassObject(const TObject *classobj, Option_t *option)
 
             Int_t dim = d->GetArrayDim();
             Int_t indx = 0;
-            sprintf(dname,"%s",obj->EscapeChars(d->GetName()));
+            snprintf(dname,256,"%s",obj->EscapeChars(d->GetName()));
             Int_t ldname = 0;
             while (indx < dim ){
                ldname = strlen(dname);
-               sprintf(&dname[ldname],"[%d]",d->GetMaxIndex(indx));
+               snprintf(&dname[ldname],256,"[%d]",d->GetMaxIndex(indx));
                indx++;
             }
-            ptext = pt->AddText(x,(y-v1)/dv,dname);
+            pt->AddText(x,(y-v1)/dv,dname);
          }
 
          // Draw a separator line
@@ -2982,7 +2984,7 @@ void TPad::PaintDate()
          dates = dt.AsString();
       } else if (gStyle->GetOptDate() < 20) {
          //use ISO format like 2002-09-25
-         strncpy(iso,dt.AsSQLString(),10); iso[10] = 0;
+         strlcpy(iso,dt.AsSQLString(),16);
          dates = iso;
       } else {
          //use ISO format like 2002-09-25 17:10:35
@@ -3321,6 +3323,8 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
    Int_t nc = 2*nn+1;
    Double_t *x = new Double_t[nc];
    Double_t *y = new Double_t[nc];
+   memset(x,0,8*nc);
+   memset(y,0,8*nc);
 
    n = ClipPolygon(nn, xx, yy, nc, x, y,xmin,ymin,xmax,ymax);
    if (!n) {
@@ -4155,11 +4159,12 @@ void TPad::Print(const char *filenam, Option_t *option)
    //  To generate a Postscript file containing more than one picture, see
    //  class TPostScript.
    //
-   //   Writing several canvases to the same Postscript file:
-   //   ----------------------------------------------------
-   // if the Postscript file name finishes with "(", the file is not closed
-   // if the Postscript file name finishes with ")" and the file has been opened
-   //    with "(", the file is closed. Example:
+   //   Writing several canvases to the same Postscript or PDF file:
+   //   ------------------------------------------------------------
+   // if the Postscript or PDF file name finishes with "(", the file is not closed
+   // if the Postscript or PDF file name finishes with ")" and the file has been opened
+   // with "(", the file is closed. Example:
+   //
    // {
    //    TCanvas c1("c1");
    //    h1.Draw();
@@ -4170,6 +4175,8 @@ void TPad::Print(const char *filenam, Option_t *option)
    //    c1.Print("c1.ps)"); canvas is added to "c1.ps" and ps file is closed
    // }
    //
+   //  In the previous example replacing "ps" by "pdf" will create a multi-pages PDF file.
+   //
    //  Note that the following sequence writes the canvas to "c1.ps" and closes the ps file.:
    //    TCanvas c1("c1");
    //    h1.Draw();
@@ -4177,7 +4184,7 @@ void TPad::Print(const char *filenam, Option_t *option)
    //
    //  The TCanvas::Print("file.ps(") mechanism is very useful, but it can be
    //  a little inconvenient to have the action of opening/closing a file
-   //  being atomic with printing a page.  Particularly if pages are being
+   //  being atomic with printing a page. Particularly if pages are being
    //  generated in some loop one needs to detect the special cases of first
    //  and last page and then munge the argument to Print() accordingly.
    //
@@ -4191,6 +4198,8 @@ void TPad::Print(const char *filenam, Option_t *option)
    //      c1.Print("file.ps");  // actually print canvas to file
    //    }// end loop
    //    c1.Print("file.ps]");   // No actual print, just close.
+   //
+   // As before, the same macro is valid for PDF files.
    //
    // It is possible to print a pad into an animated GIF file by specifying the
    // file name as "myfile.gif+" or "myfile.gif+NN", where NN*10ms is delay
@@ -4279,6 +4288,7 @@ void TPad::Print(const char *filenam, Option_t *option)
    }
 
    Int_t wid = 0;
+   if (!GetCanvas()) return;
    if (!gROOT->IsBatch() && image) {
       if ((gtype == TImage::kGif) && !ContainsTImage(fPrimitives)) {
          wid = (this == GetCanvas()) ? GetCanvas()->GetCanvasID() : GetPixmapID();
@@ -4446,6 +4456,7 @@ void TPad::Print(const char *filenam, Option_t *option)
       l = (char*)strstr(opt,"Title:");
       if (l) {
          gVirtualPS->SetTitle(&opt[6]);
+         //Please fix this bug, we may overwrite an input argument
          strcpy(l,"pdf");
       }
       gVirtualPS->Open(psname,pstype);
@@ -4474,6 +4485,7 @@ void TPad::Print(const char *filenam, Option_t *option)
       l = (char*)strstr(opt,"Title:");
       if (l) {
          gVirtualPS->SetTitle(&opt[6]);
+         //Please fix this bug, we may overwrite an input argument
          strcpy(l,"pdf");
       }
       Info("Print", "Current canvas added to %s file %s", opt, psname.Data());
@@ -4918,11 +4930,11 @@ void TPad::SavePrimitive(ostream &out, Option_t * /*= ""*/)
    const char *cname = GetName();
    Int_t nch = strlen(cname);
    if (nch < 10) {
-      strcpy(lcname,cname);
+      strlcpy(lcname,cname,10);
       for (Int_t k=1;k<=nch;k++) {if (lcname[nch-k] == ' ') lcname[nch-k] = 0;}
       if (lcname[0] == 0) {
-         if (this == gPad->GetCanvas()) {strcpy(lcname,"c1");  nch = 2;}
-         else                           {strcpy(lcname,"pad"); nch = 3;}
+         if (this == gPad->GetCanvas()) {strlcpy(lcname,"c1",10);  nch = 2;}
+         else                           {strlcpy(lcname,"pad",10); nch = 3;}
       }
       cname = lcname;
    }
@@ -5408,6 +5420,13 @@ void TPad::Streamer(TBuffer &b)
 
          b.ReadClassBuffer(TPad::Class(), this, v, R__s, R__c);
 
+         //Set the kCanDelete bit in all objects in the pad such that when the pad 
+         //is deleted all objects in the pad are deleted too.
+         TIter next(fPrimitives);
+         while ((obj = next())) {
+            obj->SetBit(kCanDelete);
+         }
+
          fModified = kTRUE;
          fPadPointer = 0;
          gReadLevel--;
@@ -5816,8 +5835,7 @@ TVirtualViewer3D *TPad::GetViewer3D(Option_t *type)
 
    if (type && type[0]) {
 
-      TPluginHandler *h;
-      if ((h = gPluginMgr->FindHandler("TVirtualViewer3D", type)))
+      if (gPluginMgr->FindHandler("TVirtualViewer3D", type))
          validType = kTRUE;
 
    }

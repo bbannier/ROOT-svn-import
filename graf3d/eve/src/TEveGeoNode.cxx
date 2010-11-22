@@ -78,7 +78,7 @@ TEveGeoNode::TEveGeoNode(TGeoNode* node) :
    SetMainColorPtr((Color_t*)(l + sizeof(void*)));
    SetMainTransparency(fNode->GetVolume()->GetTransparency());
 
-   fRnrSelf = fNode->TGeoAtt::IsVisible();
+   SetRnrSelfChildren(fNode->IsVisible(), fNode->IsVisDaughters());
 }
 
 //______________________________________________________________________________
@@ -122,10 +122,12 @@ void TEveGeoNode::ExpandIntoListTree(TGListTree* ltree,
    // Checks if child-nodes have been imported ... imports them if not.
    // Then calls TEveElement::ExpandIntoListTree.
 
-   if (fChildren.empty() && fNode->GetVolume()->GetNdaughters() > 0) {
+   if ( ! HasChildren() && fNode->GetVolume()->GetNdaughters() > 0)
+   {
       TIter next(fNode->GetVolume()->GetNodes());
       TGeoNode* dnode;
-      while ((dnode = (TGeoNode*) next()) != 0) {
+      while ((dnode = (TGeoNode*) next()) != 0)
+      {
          TEveGeoNode* node_re = new TEveGeoNode(dnode);
          AddElement(node_re);
       }
@@ -351,26 +353,24 @@ TEveGeoShapeExtract* TEveGeoNode::DumpShapeTree(TEveGeoNode*         geon,
          TGLScenePad scene_pad(&pad);
          pad.SetViewer3D(&scene_pad);
 
-         TEveGeoManagerHolder gmgr(tvolume->GetGeoManager());
-         gGeoManager->SetPaintVolume(tvolume);
-         Int_t nseg = gGeoManager->GetNsegments();
-         gGeoManager->SetNsegments(fgCSGExportNSeg);
+         {
+            TEveGeoManagerHolder gmgr(tvolume->GetGeoManager(), fgCSGExportNSeg);
+            gGeoManager->SetPaintVolume(tvolume);
 
-         Bool_t had_null_transform = kFALSE;
-         if (tshape->GetTransform() == 0) {
-            had_null_transform = kTRUE;
-            tshape->SetTransform(gGeoIdentity);
+            Bool_t had_null_transform = kFALSE;
+            if (tshape->GetTransform() == 0) {
+               had_null_transform = kTRUE;
+               tshape->SetTransform(gGeoIdentity);
+            }
+
+            scene_pad.BeginScene();
+            dynamic_cast<TGeoCompositeShape*>(tshape)->PaintComposite();
+            scene_pad.EndScene();
+
+            if (had_null_transform) {
+               tshape->SetTransform(0);
+            }
          }
-
-         scene_pad.BeginScene();
-         dynamic_cast<TGeoCompositeShape*>(tshape)->PaintComposite();
-         scene_pad.EndScene();
-
-         if (had_null_transform) {
-            tshape->SetTransform(0);
-         }
-
-         gGeoManager->SetNsegments(nseg);
 
          pad.SetViewer3D(0);
 
@@ -524,20 +524,35 @@ void TEveGeoTopNode::Paint(Option_t* option)
    // option given in data-members.
    // Uses TGeoPainter internally.
 
-   if (fRnrSelf) {
-      gGeoManager = fManager;
-      TVirtualPad* pad = gPad;
+   if (fRnrSelf)
+   {
+      TEveGeoManagerHolder geo_holder(fManager);
+      TVirtualPad *pad = gPad;
       gPad = 0;
       TGeoVolume* top_volume = fManager->GetTopVolume();
-      fManager->SetVisOption(fVisOption);
       if (fVisLevel > 0)
          fManager->SetVisLevel(fVisLevel);
       else
          fManager->SetMaxVisNodes(fMaxVisNodes);
-      fManager->SetTopVolume(fNode->GetVolume());
-      gPad = pad;
       TVirtualGeoPainter* vgp = fManager->GetGeomPainter();
+      fManager->SetTopVolume(fNode->GetVolume());
+      switch (fVisOption)
+      {
+         case 0:
+            fNode->GetVolume()->SetVisContainers(kTRUE);
+            fManager->SetTopVisible(kTRUE);
+            break;
+         case 1:
+            fNode->GetVolume()->SetVisLeaves(kTRUE);
+            fManager->SetTopVisible(kFALSE);
+            break;
+         case 2:
+            fNode->GetVolume()->SetVisOnly(kTRUE);
+            break;
+      }
+      gPad = pad;
       if(vgp != 0) {
+         vgp->SetVisOption(fVisOption);
          TGeoHMatrix geomat;
          if (HasMainTrans()) RefMainTrans().SetGeoHMatrix(geomat);
          vgp->PaintNode(fNode, option, &geomat);

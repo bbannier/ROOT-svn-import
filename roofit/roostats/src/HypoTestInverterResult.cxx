@@ -1,5 +1,5 @@
 // @(#)root/roostats:$Id$
-// Author: Gregory Schott, Danilo Piparo
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -61,7 +61,7 @@ HypoTestInverterResult::~HypoTestInverterResult()
 }
 
 
-bool HypoTestInverterResult::Add( HypoTestInverterResult /* otherResult */  )
+bool HypoTestInverterResult::Add( const HypoTestInverterResult& /* otherResult */  )
 {
   /// Merge this HypoTestInverterResult with another
   /// HypoTestInverterResult passed as argument

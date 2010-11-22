@@ -46,7 +46,7 @@ ClassImp(TMVA::RuleFit)
 //_______________________________________________________________________
 TMVA::RuleFit::RuleFit( const MethodBase *rfbase )
    : fVisHistsUseImp( kTRUE ),
-   fLogger( new MsgLogger("RuleFit") )
+     fLogger( new MsgLogger("RuleFit") )
 {
    // constructor
    Initialize( rfbase );
@@ -55,8 +55,12 @@ TMVA::RuleFit::RuleFit( const MethodBase *rfbase )
 
 //_______________________________________________________________________
 TMVA::RuleFit::RuleFit()
-   : fVisHistsUseImp( kTRUE ),
-     fLogger( new MsgLogger("RuleFit") )
+   : fNTreeSample(0)
+   , fNEveEffTrain(0)
+   , fMethodRuleFit(0)
+   , fMethodBase(0)
+   , fVisHistsUseImp( kTRUE )
+   , fLogger( new MsgLogger("RuleFit") )
 {
    // default constructor
    std::srand( randSEED ); // initialize random number generator used by std::random_shuffle
@@ -213,7 +217,7 @@ void TMVA::RuleFit::MakeForest()
          else nbkg++;
       }
       fsig = Double_t(nsig)/Double_t(nsig+nbkg);
-      SeparationBase *qualitySepType = new GiniIndex();
+      //SeparationBase *qualitySepType = new GiniIndex();
       // generate random number of events
       // do not implement the above in this release...just set it to default
       //      nminRnd = fNodeMinEvents;
@@ -224,7 +228,8 @@ void TMVA::RuleFit::MakeForest()
       while (tryAgain) {
          Double_t frnd = rndGen.Uniform( fMethodRuleFit->GetMinFracNEve(), fMethodRuleFit->GetMaxFracNEve() );
          nminRnd = Int_t(frnd*static_cast<Double_t>(fNTreeSample));
-         dt = new DecisionTree( fMethodRuleFit->GetSeparationBase(), nminRnd, fMethodRuleFit->GetNCuts(), 0, qualitySepType );
+         // TODO: make sure the DT constructor call is updated. This still assumes a 2-year old version
+         dt = new DecisionTree( fMethodRuleFit->GetSeparationBase(), nminRnd, fMethodRuleFit->GetNCuts(), 0, true /*qualitySepType*/ );
          BuildTree(dt); // reads fNTreeSample events from fTrainingEventsRndm
          if (dt->GetNNodes()<3) {
             delete dt;
@@ -236,8 +241,9 @@ void TMVA::RuleFit::MakeForest()
       if (dt) {
          fForest.push_back(dt);
          if (useBoost) Boost(dt);
-      } 
-      else {
+
+      } else {
+
          Log() << kWARNING << "------------------------------------------------------------------" << Endl;
          Log() << kWARNING << " Failed growing a tree even after " << ntriesMax << " trials" << Endl;
          Log() << kWARNING << " Possible solutions: " << Endl;
@@ -492,6 +498,7 @@ void TMVA::RuleFit::FillCut(TH2F* h2, const Rule *rule, Int_t vind)
    if (!ruleHasVar) return;
    //
    Int_t firstbin = h2->GetBin(1,1,1);
+   if(firstbin<0) firstbin=0;
    Int_t lastbin = h2->GetBin(h2->GetNbinsX(),1,1);
    Int_t binmin=(dormin ? h2->FindBin(rmin,0.5):firstbin);
    Int_t binmax=(dormax ? h2->FindBin(rmax,0.5):lastbin);
@@ -509,10 +516,10 @@ void TMVA::RuleFit::FillCut(TH2F* h2, const Rule *rule, Int_t vind)
       fbin = bin-firstbin+1;
       if (bin==binmin) {
          f = fbfrac;
-      } 
+      }
       else if (bin==binmax) {
          f = lbfrac;
-      } 
+      }
       else {
          f = 1.0;
       }
@@ -541,7 +548,7 @@ void TMVA::RuleFit::FillLin(TH2F* h2,Int_t vind)
    Double_t val;
    if (fVisHistsUseImp) {
       val = fRuleEnsemble.GetLinImportance(vind);
-   } 
+   }
    else {
       val = fRuleEnsemble.GetLinCoefficients(vind);
    }
@@ -560,7 +567,7 @@ void TMVA::RuleFit::FillCorr(TH2F* h2,const Rule *rule,Int_t vx, Int_t vy)
    Double_t val;
    if (fVisHistsUseImp) {
       val = rule->GetImportance();
-   } 
+   }
    else {
       val = rule->GetCoefficient()*rule->GetSupport();
    }
@@ -750,7 +757,7 @@ void TMVA::RuleFit::MakeVisHists()
    if (varDir==0) {
       Log() << kWARNING << "No input variable directory found - BUG?" << Endl;
       return;
-   }   
+   }
    corrDir = (TDirectory*)varDir->Get( corrDirName );
    if (corrDir==0) {
       Log() << kWARNING << "No correlation directory found" << Endl;
@@ -767,7 +774,11 @@ void TMVA::RuleFit::MakeVisHists()
    //
    // get correlation plot directory
    corrDir = (TDirectory *)varDir->Get(corrDirName);
-   if (corrDir==0) Log() << kWARNING << "No correlation directory found : " << corrDirName << Endl;
+   if (corrDir==0) {
+      Log() << kWARNING << "No correlation directory found : " << corrDirName << Endl;
+      return;
+   }
+
    // how many plots are in the var directory?
    Int_t noPlots = ((varDir->GetListOfKeys())->GetEntries()) / 2;
    Log() << kDEBUG << "Got number of plots = " << noPlots << Endl;

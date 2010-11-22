@@ -32,6 +32,7 @@
 #include "RooRealVar.h"
 #include "RooRandom.h"
 #include "RooBCPGenDecay.h"
+#include "RooRealIntegral.h"
 
 ClassImp(RooBCPGenDecay) 
 ;
@@ -166,12 +167,13 @@ Double_t RooBCPGenDecay::coefAnalyticalIntegral(Int_t basisIndex, Int_t code, co
     }
     
     if (basisIndex==_basisSin) {
-    return 2*_mu*_avgS ;
-  }
+      return 2*_mu*_avgS ;
+    }
     if (basisIndex==_basisCos) {
-    return -2*_mu*_avgC ;
-  }
-
+      return -2*_mu*_avgC ;
+    }
+    break ;
+    
   default:
     assert(0) ;
   }

@@ -12,6 +12,7 @@
 
 #include "Math/Math.h"
 #include "Math/SpecFuncMathCore.h"
+#include <limits>
 
 
 namespace ROOT {
@@ -19,8 +20,21 @@ namespace Math {
 
    
    double beta_pdf(double x, double a, double b) {
-      if (x <= 0 || x >= 1.0) return 0; 
-      return std::exp( ROOT::Math::lgamma(a + b) - ROOT::Math::lgamma(a) - ROOT::Math::lgamma(b) + std::log(x) * (a -1.) + ROOT::Math::log1p(-x ) * (b - 1.) ); 
+      if (x < 0 || x > 1.0) return 0;
+      if (x == 0 ) {
+         // need this wor Windows 
+         if (a < 1) return  std::numeric_limits<double>::infinity();
+         else if (a > 1) return  0;
+         else if ( a == 1) return b; // to avoid a nan from log(0)*0 
+      }
+      if (x == 1 ) {
+         // need this wor Windows 
+         if (b < 1) return  std::numeric_limits<double>::infinity();
+         else if (b > 1) return  0;
+         else if ( b == 1) return a; // to avoid a nan from log(0)*0 
+      }
+      return std::exp( ROOT::Math::lgamma(a + b) - ROOT::Math::lgamma(a) - ROOT::Math::lgamma(b) + 
+                       std::log(x) * (a -1.) + ROOT::Math::log1p(-x ) * (b - 1.) ); 
    }
    
    double binomial_pdf(unsigned int k, double p, unsigned int n) {
@@ -81,16 +95,16 @@ namespace Math {
    
    
    double fdistribution_pdf(double x, double n, double m, double x0) {
-      
-      if ((x-x0) < 0) {
+
+      // function is defined only for both n and m > 0
+      if (n < 0 || m < 0)  
+         return std::numeric_limits<double>::quiet_NaN(); 
+      if ((x-x0) < 0) 
          return 0.0;
-      } else {
          
-         return std::exp((n/2) * std::log(n) + (m/2) * std::log(m) + ROOT::Math::lgamma((n+m)/2) - ROOT::Math::lgamma(n/2) - ROOT::Math::lgamma(m/2))
-         * std::pow((x-x0), n/2-1) * std::pow (m + n*(x-x0), -(n+m)/2);
+      return std::exp((n/2) * std::log(n) + (m/2) * std::log(m) + ROOT::Math::lgamma((n+m)/2) - ROOT::Math::lgamma(n/2) - ROOT::Math::lgamma(m/2) 
+                         + (n/2 -1) * std::log(x-x0) - ((n+m)/2) * std::log(m +  n*(x-x0)) );
          
-      }
-      
    }
    
    
@@ -219,7 +233,14 @@ namespace Math {
    
    double poisson_pdf(unsigned int n, double mu) {
       
-      return std::exp (n*std::log(mu) - ROOT::Math::lgamma(n+1) - mu);
+      if (n >  0) 
+         return std::exp (n*std::log(mu) - ROOT::Math::lgamma(n+1) - mu);
+      else  {
+         //  when  n = 0 and mu = 0,  1 is returned 
+         if (mu >= 0) return std::exp(-mu);
+         // return a nan for mu < 0 since it does not make sense
+         return std::log(mu);
+      }
       
    }
    

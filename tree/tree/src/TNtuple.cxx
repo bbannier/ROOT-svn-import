@@ -71,8 +71,8 @@ TNtuple::TNtuple(const char *name, const char *title, const char *varlist, Int_t
    Int_t nch = strlen(varlist);
    if (nch == 0) return;
    char *vars = new char[nch+1];
-   strcpy(vars,varlist);
-   Int_t *pvars = new Int_t[1000];
+   strlcpy(vars,varlist,nch+1);
+   Int_t *pvars = new Int_t[nch+1];
    fNvar = 1;
    pvars[0] = 0;
    for (i=1;i<nch;i++) {

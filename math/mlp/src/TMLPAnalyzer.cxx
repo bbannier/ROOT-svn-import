@@ -151,8 +151,8 @@ void TMLPAnalyzer::CheckNetwork()
    // Checks if some input variable is not needed
    char var[64], sel[64];
    for (Int_t i = 0; i < GetNeurons(1); i++) {
-      sprintf(var,"diff>>tmp%d",i);
-      sprintf(sel,"inNeuron==%d",i);
+      snprintf(var,64,"diff>>tmp%d",i);
+      snprintf(sel,64,"inNeuron==%d",i);
       fAnalysisTree->Draw(var, sel, "goff");
       TH1F* tmp = (TH1F*)gDirectory->Get(Form("tmp%d",i));
       if (!tmp) continue;
@@ -187,13 +187,13 @@ void TMLPAnalyzer::GatherInformations()
       formula = GetNeuronFormula(i);
       pos = re.Index(formula,&len);
       if(pos==-1 || len<3) {
-         formulas[i] = new TTreeFormula(Form("NF%d",this),formula,data);
+         formulas[i] = new TTreeFormula(Form("NF%lu",(ULong_t)this),formula,data);
          index[i] = 0;
       }
       else {
          TString newformula(formula,pos);
          TString val = formula(pos+1,len-2);
-         formulas[i] = new TTreeFormula(Form("NF%d",this),newformula,data);
+         formulas[i] = new TTreeFormula(Form("NF%lu",(ULong_t)this),newformula,data);
          formula = newformula;
          index[i] = val.Atoi();
       }
@@ -283,7 +283,7 @@ void TMLPAnalyzer::DrawDInput(Int_t i)
    // the ith input.
 
    char sel[64];
-   sprintf(sel, "inNeuron==%d", i);
+   snprintf(sel,64, "inNeuron==%d", i);
    fAnalysisTree->Draw("diff", sel);
 }
 
@@ -293,20 +293,20 @@ void TMLPAnalyzer::DrawDInputs()
    // Draws the distribution (on the test sample) of the
    // impact on the network output of a small variation of
    // each input.
-   // DrawDInputs() draws something that approximates the distribution of the 
-   // derivative of the NN w.r.t. each input. That quantity is recognized as 
+   // DrawDInputs() draws something that approximates the distribution of the
+   // derivative of the NN w.r.t. each input. That quantity is recognized as
    // one of the measures to determine key quantities in the network.
-   // 
-   // What is done is to vary one input around its nominal value and to see 
+   //
+   // What is done is to vary one input around its nominal value and to see
    // how the NN changes. This is done for each entry in the sample and produces
    // a distribution.
-   // 
+   //
    // What you can learn from that is:
    // - is variable a really useful, or is my network insensitive to it ?
    // - is there any risk of big systematic ? Is the network extremely sensitive
    //   to small variations of any of my inputs ?
-   // 
-   // As you might understand, this is to be considered with care and can serve 
+   //
+   // As you might understand, this is to be considered with care and can serve
    // as input for an "educated guess" when optimizing the network.
 
    THStack* stack  = new THStack("differences","differences (impact of variables on ANN)");
@@ -314,8 +314,8 @@ void TMLPAnalyzer::DrawDInputs()
    TH1F* tmp = 0;
    char var[64], sel[64];
    for(Int_t i = 0; i < GetNeurons(1); i++) {
-      sprintf(var, "diff>>tmp%d", i);
-      sprintf(sel, "inNeuron==%d", i);
+      snprintf(var,64, "diff>>tmp%d", i);
+      snprintf(sel,64, "inNeuron==%d", i);
       fAnalysisTree->Draw(var, sel, "goff");
       tmp = (TH1F*)gDirectory->Get(Form("tmp%d",i));
       tmp->SetDirectory(0);

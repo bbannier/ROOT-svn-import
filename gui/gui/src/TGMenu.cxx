@@ -2143,7 +2143,7 @@ void TGPopupMenu::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
             }
             outext[i]=0;
             if (mentry->fShortcut) {
-               sprintf(shortcut, "\\t%s", mentry->GetShortcutText());
+               snprintf(shortcut, 80, "\\t%s", mentry->GetShortcutText());
             }
             else {
                memset(shortcut, 0, 80);
@@ -2281,6 +2281,8 @@ void TGMenuBar::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    out << "   TGMenuBar *";
    out << GetName() << " = new TGMenuBar(" << fParent->GetName()
        << "," << GetWidth() << "," << GetHeight() << "," << GetOptionString() << ");" << endl;
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    if (!fList) return;
 

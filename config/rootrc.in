@@ -41,6 +41,18 @@ Root.ZipMode:            1
 # Show where item is found in the specified path.
 Root.ShowPath:           false
 
+# Activate malloc/new, free/delete calls via the TMemStat class
+# the parameter buffersize is the number of calls to malloc or free that can be stored in one memory buffer.
+# when the buffer is full, the calls to malloc/free pointing to the same location
+# are eliminated and not written to the final Tree. The default value 100000
+# is such that between 50 and 90% of the calls are eliminated depending on the application.
+# the parameter TMemStat.maxcalls is the maximum number of new/delete calls to be monitored
+# 5 million calls is a reasonable number
+Root.TMemStat:           0
+Root.TMemStat.buffersize 100000
+Root.TMemStat.maxcalls   5000000
+Root.TMemStat.system     gnubuiltin
+
 # Activate memory statistics (size and cnt is used to trap allocation of
 # blocks of a certain size after cnt times).
 Root.MemStat:            0
@@ -547,6 +559,10 @@ XNet.ParStreamsPerPhyConn: 0
 #                         and MacOsX (at least). Value in bytes [0]
 # XNet.DfltTcpWindowSize  262144
 
+# XNet.TransactionTimeout
+#                       - The maximum amount of time either a request or a server
+#                         wait request can be before the client declares an error.
+# XNet.TransactionTimeout: 28800
 
 # Example of custom setting for the Rint application (root.exe).
 # This overrides the default specified above for a generic application.

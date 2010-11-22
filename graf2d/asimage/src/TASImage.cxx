@@ -399,7 +399,10 @@ const char *TASImage::TypeFromMagicNumber(const char *file)
 
    if (!fp) return 0;
 
-   if (!fread(&magic, 1, 1, fp)) return 0;
+   if (!fread(&magic, 1, 1, fp)) {
+      fclose(fp);
+      return 0;
+   }
 
    switch (magic) {
       case 0x00:
@@ -497,12 +500,15 @@ void TASImage::ReadImage(const char *filename, EImageFileTypes /*type*/)
    iparams.return_animation_delay = -1;
 
    TString ext;
-   const char *dot = strrchr(filename, '.');
+   const char *dot;
+   if (filename) dot = strrchr(filename, '.');
+   else          dot = 0;
    ASImage *image = 0;
    TString fname = filename;
 
    if (!dot) {
-      ext = TypeFromMagicNumber(filename);
+      if (filename) ext = TypeFromMagicNumber(filename);
+      else ext = dot + 1;
    } else {
       ext = dot + 1;
    }
@@ -1040,7 +1046,7 @@ void TASImage::FromPad(TVirtualPad *pad, Int_t x, Int_t y, UInt_t w, UInt_t h)
    }
 
    if (w == 0) {
-      w = pad->UtoPixel(1.);
+      w = TMath::Abs(pad->UtoPixel(1.));
    }
 
    if (h == 0) {
@@ -1499,6 +1505,9 @@ void TASImage::Paint(Option_t *option)
       } else if (gVirtualPS->InheritsFrom("TPDF")) {
          Warning("Paint", "PDF not implemeted yet");
          return;
+      } else if (gVirtualPS->InheritsFrom("TSVG")) {
+         Warning("Paint", "SVG not implemeted yet");
+         return;
       }
 
       // get special color cell to be reused during image printing
@@ -1719,10 +1728,10 @@ char *TASImage::GetObjectInfo(Int_t px, Int_t py) const
    }
 
    if (fImage->alt.vector) {
-      sprintf(info, "x: %d  y: %d   %.5g",
+      snprintf(info,64,"x: %d  y: %d   %.5g",
               px, py, fImage->alt.vector[px + py * fImage->width]);
    } else {
-      sprintf(info, "x: %d  y: %d", px, py);
+      snprintf(info,64,"x: %d  y: %d", px, py);
    }
 
    return info;
@@ -2087,7 +2096,7 @@ Bool_t TASImage::InitVisual()
 {
    // Static function to initialize the ASVisual.
 
-   Display *dpy;
+   Display *disp;
 
    Bool_t inbatch = fgVisual && (fgVisual->dpy == (void*)1); // was in batch
    Bool_t noX = gROOT->IsBatch() || gVirtualX->InheritsFrom("TGWin32");
@@ -2104,13 +2113,13 @@ Bool_t TASImage::InitVisual()
 
    // batch or win32 mode
    if (!fgVisual && noX) {
-      dpy = 0;
+      disp = 0;
       fgVisual = create_asvisual(0, 0, 0, 0);
       fgVisual->dpy = (Display*)1; //fake (not used)
       return kTRUE;
    }
 
-   dpy = (Display*) gVirtualX->GetDisplay();
+   disp = (Display*) gVirtualX->GetDisplay();
    Int_t screen  = gVirtualX->GetScreen();
    Int_t depth   = gVirtualX->GetDepth();
    Visual *vis   = (Visual*) gVirtualX->GetVisual();
@@ -2119,7 +2128,7 @@ Bool_t TASImage::InitVisual()
    if (vis == 0 || cmap == 0) {
       fgVisual = create_asvisual(0, 0, 0, 0);
    } else {
-      fgVisual = create_asvisual_for_id(dpy, screen, depth,
+      fgVisual = create_asvisual_for_id(disp, screen, depth,
                                         XVisualIDFromVisual(vis), cmap, 0);
    }
 #else
@@ -2781,6 +2790,7 @@ Double_t *TASImage::Vectorize(UInt_t max_colors, UInt_t dither, Int_t opaque_thr
    fPalette = *pal;
    fImage->alt.vector = vec;
    UnZoom();
+   if (res) delete res;
    return (Double_t*)fImage->alt.vector;
 }
 
@@ -3338,6 +3348,7 @@ void TASImage::Crop(Int_t x, Int_t y, UInt_t width, UInt_t height)
    if (!imout) {
       Warning("Crop", "Failed to start image output");
       destroy_asimage(&img);
+      if (imdec) delete [] imdec;
       return;
    }
 
@@ -4523,7 +4534,7 @@ void TASImage::DrawDashLine(UInt_t x1,  UInt_t y1, UInt_t x2, UInt_t y2, UInt_t 
    }
 
    if ((nDash < 2) || !pDash || (nDash%2)) {
-      Warning("DrawDashLine", "Wrong input parameters n=%d %d", nDash, sizeof(pDash)-1);
+      Warning("DrawDashLine", "Wrong input parameters n=%d %ld", nDash, (Long_t)sizeof(pDash)-1);
       return;
    }
 
@@ -4670,7 +4681,7 @@ void TASImage::DrawSegments(UInt_t nseg, Segment_t *seg, const char *col, UInt_t
    // Draw segments.
 
    if (!nseg || !seg) {
-      Warning("DrawSegments", "Ivalid data nseg=%d seg=%d", nseg, seg);
+      Warning("DrawSegments", "Ivalid data nseg=%d seg=0x%lx", nseg, (Long_t)seg);
       return;
    }
 
@@ -4714,8 +4725,8 @@ void TASImage::FillSpans(UInt_t npt, TPoint *ppt, UInt_t *widths, const char *co
    }
 
    if (!npt || !ppt || !widths || (stipple && (!w || !h))) {
-      Warning("FillSpans", "Invalid input data npt=%d ppt=%x col=%s widths=%x stipple=%x w=%d h=%d",
-              npt, ppt, col, widths, stipple, w, h);
+      Warning("FillSpans", "Invalid input data npt=%d ppt=0x%lx col=%s widths=0x%lx stipple=0x%lx w=%d h=%d",
+              npt, (Long_t)ppt, col, (Long_t)widths, (Long_t)stipple, w, h);
       return;
    }
 
@@ -4773,8 +4784,8 @@ void TASImage::FillSpans(UInt_t npt, TPoint *ppt, UInt_t *widths, TImage *tile)
    }
 
    if (!npt || !ppt || !widths || !tile) {
-      Warning("FillSpans", "Invalid input data npt=%d ppt=%x widths=%x tile=%x",
-              npt, ppt, widths, tile);
+      Warning("FillSpans", "Invalid input data npt=%d ppt=0x%lx widths=0x%lx tile=0x%lx",
+              npt, (Long_t)ppt, (Long_t)widths, (Long_t)tile);
       return;
    }
 
@@ -4829,7 +4840,7 @@ void TASImage::CropSpans(UInt_t npt, TPoint *ppt, UInt_t *widths)
    }
 
    if (!npt || !ppt || !widths) {
-      Warning("CropSpans", "No points specified npt=%d ppt=%x widths=%x", npt, ppt, widths);
+      Warning("CropSpans", "No points specified npt=%d ppt=0x%lx widths=0x%lx", npt, (Long_t)ppt, (Long_t)widths);
       return;
    }
 
@@ -5138,7 +5149,7 @@ Bool_t TASImage::GetPolygonSpans(UInt_t npt, TPoint *ppt, UInt_t *nspans,
    }
 
    if ((npt < 3) || !ppt) {
-      Warning("GetPolygonSpans", "No points specified npt=%d ppt=%x", npt, ppt);
+      Warning("GetPolygonSpans", "No points specified npt=%d ppt=0x%lx", npt, (Long_t)ppt);
       return kFALSE;
    }
 
@@ -5201,6 +5212,7 @@ Bool_t TASImage::GetPolygonSpans(UInt_t npt, TPoint *ppt, UInt_t *nspans,
       // in case of non-convex polygon
       if (i < 0) {
          delete [] firstWidth;
+	 delete [] firstPoint;
          return kTRUE;
       }
 
@@ -5257,6 +5269,9 @@ void TASImage::FillPolygon(UInt_t npt, TPoint *ppt, const char *col,
          delete [] firstWidth;
          delete [] firstPoint;
       }
+   } else {
+      if (firstWidth) delete [] firstWidth;
+      if (firstPoint) delete [] firstPoint;
    }
 }
 
@@ -5280,6 +5295,9 @@ void TASImage::FillPolygon(UInt_t npt, TPoint *ppt, TImage *tile)
          delete [] firstWidth;
          delete [] firstPoint;
       }
+   } else {
+      if (firstWidth) delete [] firstWidth;
+      if (firstPoint) delete [] firstPoint;
    }
 }
 
@@ -5302,6 +5320,9 @@ void TASImage::CropPolygon(UInt_t npt, TPoint *ppt)
          delete [] firstWidth;
          delete [] firstPoint;
       }
+   } else {
+         if (firstWidth) delete [] firstWidth;
+         if (firstPoint) delete [] firstPoint;
    }
 }
 
@@ -5334,7 +5355,7 @@ void TASImage::DrawFillArea(UInt_t count, TPoint *ptsIn, const char *col,
    }
 
    if ((count < 3) || !ptsIn) {
-      Warning("DrawFillArea", "No points specified npt=%d ppt=%x", count, ptsIn);
+      Warning("DrawFillArea", "No points specified npt=%d ppt=0x%lx", count, (Long_t)ptsIn);
       return;
    }
 
@@ -5448,7 +5469,7 @@ void TASImage::DrawFillArea(UInt_t count, TPoint *ptsIn, TImage *tile)
    }
 
    if ((count < 3) || !ptsIn) {
-      Warning("DrawFillArea", "No points specified npt=%d ppt=%x", count, ptsIn);
+      Warning("DrawFillArea", "No points specified npt=%d ppt=0x%lx", count, (Long_t)ptsIn);
       return;
    }
 
@@ -6465,7 +6486,8 @@ void TASImage::Gray(Bool_t on)
       CARD32 *bb = imdec->buffer.blue;
 
       ASScanline result;
-      prepare_scanline(fImage->width, 0, &result, fgVisual->BGR_mode);
+      ASScanline *sl = prepare_scanline(fImage->width, 0, &result, fgVisual->BGR_mode);
+      if (sl) delete sl;
 
       for (i = 0; i < fImage->height; i++) {
          imdec->decode_image_scanline(imdec);
@@ -6647,7 +6669,7 @@ Bool_t TASImage::SetJpegDpi(const char *name, UInt_t set)
    // set - dpi resolution.
    // Returns kFALSE in case of error.
 
-   static char buf[20];
+   static char buf[32];
    FILE *fp = fopen(name, "rb+");
 
    if (!fp) {
@@ -6655,7 +6677,10 @@ Bool_t TASImage::SetJpegDpi(const char *name, UInt_t set)
       return kFALSE;
    }
 
-   if (!fread(buf, 1, 20, fp)) return kFALSE;
+   if (!fread(buf, 1, 20, fp)) {
+      fclose(fp);
+      return kFALSE;
+   }
 
    char dpi1 = (set & 0xffff) >> 8;
    char dpi2 = set & 0xff;

@@ -59,7 +59,7 @@ ClassImp(TGFontTypeComboBox)
 //______________________________________________________________________________
 TGComboBoxPopup::TGComboBoxPopup(const TGWindow *p, UInt_t w, UInt_t h,
                                  UInt_t options, ULong_t back) :
-   TGCompositeFrame (p, w, h, options, back)
+   TGCompositeFrame (p, w, h, options, back), fListBox(0), fSelected(0)
 {
    // Create a combo box popup frame.
 
@@ -83,8 +83,15 @@ Bool_t TGComboBoxPopup::HandleButton(Event_t *event)
 {
    // Handle mouse button event in combo box popup.
 
-   if (event->fType == kButtonPress && event->fCode == kButton1)
+   if (event->fType == kButtonPress && event->fCode == kButton1) {
+      if ((fListBox != 0) && (fSelected != 0) && 
+          fListBox->GetSelectedEntry() != fSelected) {
+         // in the case the combo box popup is closed by clicking outside the 
+         // list box, then select the previously selected entry
+         fListBox->Select(fSelected->EntryId());
+      }
       EndPopup();
+   }
    return kTRUE;
 }
 
@@ -115,11 +122,18 @@ void TGComboBoxPopup::PlacePopup(Int_t x, Int_t y, UInt_t w, UInt_t h)
    if (y < 0) y = 0;
    if (y + fHeight > rh) y = rh - fHeight;
 
+   // remember the current selected entry
+   if (fListBox == 0) {
+      // the listbox should be the first in the list
+      TGFrameElement *el = (TGFrameElement *)fList->First();
+      fListBox = dynamic_cast<TGListBox *>(el->fFrame);
+   }
+   fSelected = fListBox ? fListBox->GetSelectedEntry() : 0;
+
    MoveResize(x, y, w, h);
    MapSubwindows();
    Layout();
    MapRaised();
-
 
    gVirtualX->GrabPointer(fId, kButtonPressMask | kButtonReleaseMask |
                               kPointerMotionMask, kNone,
@@ -222,6 +236,7 @@ void TGComboBox::Init()
 
    fComboFrame->AddFrame(fListBox, fLhdd = new TGLayoutHints(kLHintsExpandX |
                                                              kLHintsExpandY));
+   fComboFrame->SetListBox(fListBox);
    fComboFrame->MapSubwindows();
    fComboFrame->Resize(fComboFrame->GetDefaultSize());
 
@@ -612,6 +627,8 @@ void TGComboBox::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    } else {
       out << "," << GetOptionString() << ",ucolor);" << endl;
    }
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    TGTextLBEntry *b;
    TGFrameElement *el;
@@ -653,7 +670,7 @@ TGLineStyleComboBox::TGLineStyleComboBox(const TGWindow *p, Int_t id,
 }
 
 //______________________________________________________________________________
-void TGLineStyleComboBox::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+void TGLineStyleComboBox::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 {
    // Save a line style combo box widget as a C++ statement(s).
 
@@ -662,6 +679,8 @@ void TGLineStyleComboBox::SavePrimitive(ostream &out, Option_t * /*= ""*/)
 
    out << GetName() << " = new TGLineStyleComboBox(" << fParent->GetName()
        << "," << fWidgetId << ");" << endl;
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
    out << "   " << GetName() << "->Resize(" << GetWidth()  << ","
        << GetHeight() << ");" << endl;
    out << "   " << GetName() << "->Select(" << GetSelected() << ");" << endl;
@@ -693,7 +712,7 @@ TGLineWidthComboBox::TGLineWidthComboBox(const TGWindow *p, Int_t id,
 }
 
 //______________________________________________________________________________
-void TGLineWidthComboBox::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+void TGLineWidthComboBox::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 {
    // Save a line width combo box widget as a C++ statement(s).
 
@@ -702,6 +721,8 @@ void TGLineWidthComboBox::SavePrimitive(ostream &out, Option_t * /*= ""*/)
 
    out << GetName() << " = new TGLineWidthComboBox(" << fParent->GetName()
        << "," << fWidgetId << ");" << endl;
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
    out << "   " << GetName() << "->Resize(" << GetWidth()  << ","
        << GetHeight() << ");" << endl;
    out << "   " << GetName() << "->Select(" << GetSelected() << ");" << endl;
@@ -764,6 +785,7 @@ TGFontTypeComboBox::~TGFontTypeComboBox()
 {
    // Text font combo box dtor.
 
-   for (int i = 0; i < kMaxFonts && fFonts[i] != 0; i++)
-      gVirtualX->DeleteFont(fFonts[i]);
+   for (int i = 0; i < kMaxFonts && fFonts[i] != 0; i++) {
+      if (fFonts[i] != TGTextLBEntry::GetDefaultFontStruct()) gVirtualX->DeleteFont(fFonts[i]);
+   }
 }

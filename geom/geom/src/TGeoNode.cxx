@@ -234,7 +234,7 @@ void TGeoNode::CheckOverlaps(Double_t ovlp, Option_t *option)
    TNamed *obj;
    for (i=0; i<novlps; i++) {
       obj = (TNamed*)overlaps->At(i);
-      obj->SetName(Form("ov%05d",i));
+      obj->SetName(TString::Format("ov%05d",i));
    }
    geom->GetGeomPainter()->OpProgress("Check overlaps:",icheck,ncheck,timer,kTRUE);
    Info("CheckOverlaps", "Number of illegal overlaps/extrusions : %d\n", novlps);
@@ -271,7 +271,7 @@ char *TGeoNode::GetObjectInfo(Int_t px, Int_t py) const
    if (!fVolume) return 0;
    TVirtualGeoPainter *painter = fVolume->GetGeoManager()->GetPainter();
    if (!painter) return 0;
-   return painter->GetVolumeInfo(fVolume, px, py);
+   return (char*)painter->GetVolumeInfo(fVolume, px, py);
 }
 
 //_____________________________________________________________________________

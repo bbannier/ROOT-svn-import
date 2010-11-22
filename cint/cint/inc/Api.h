@@ -34,16 +34,36 @@
 /* #define G__INFO_TITLELEN 256 */
 #define G__INFO_TITLELEN G__ONELINE
 
+#ifndef G__PROPERTY_H
 #include "Property.h"
+#endif
+#ifndef G__CLASSINFO_H
 #include "Class.h"
+#endif
+#ifndef G__BaseClassInfo_H
 #include "BaseCls.h"
+#endif
+#ifndef G__TYPEINFOX_H
 #include "Type.h"
+#endif
+#ifndef G__METHODINFO_H
 #include "Method.h"
+#endif
+#ifndef G__METHODARGINFO_H
 #include "MethodAr.h"
+#endif
+#ifndef G__DATAMEMBER_H
 #include "DataMbr.h"
+#endif
+#ifndef G__CALLFUNC_H
 #include "CallFunc.h"
+#endif
+#ifndef G__TYPEDEFINFO_H
 #include "Typedf.h"
+#endif
+#ifndef G__TOKENINFO_H
 #include "Token.h"
+#endif
 
 #include <vector>
 #include <string>
@@ -171,7 +191,7 @@ void G__delete_interpreted_object(void* p);
 /*********************************************************************
 * Generate dictionary.
 *********************************************************************/
-typedef int (*G__pGenerateDictionary)(const std::string &className,const std::vector<std::string> &headers);
+   typedef int (*G__pGenerateDictionary)(const std::string &className,const std::vector<std::string> &headers, const std::vector<std::string> &fwdDecls, const std::vector<std::string> &unknown);
 
 #ifndef __CINT__
 G__EXPORT

@@ -24,7 +24,7 @@
 
 using namespace Cint;
 
-static G__value G__allocvariable(G__value result, G__value para[], G__var_array* varglobal, G__var_array* varlocal, int paran, int varhash, char* item, char* varname, int parameter00, G__DataMemberHandle &member);
+static G__value G__allocvariable(G__value result, G__value para[], G__var_array* varglobal, G__var_array* varlocal, int paran, int varhash, const char* item, char* varname, int parameter00, G__DataMemberHandle &member);
 
 extern "C" {
 
@@ -509,14 +509,14 @@ static void G__getpointer2pointer(G__value* presult, G__var_array* var, int ig15
 } // extern "C"
 
 //______________________________________________________________________________
-G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal, G__var_array* varlocal)
+G__value G__letvariable(G__FastAllocString &item, G__value expression, G__var_array* varglobal, G__var_array* varlocal)
 {
    static G__DataMemberHandle member;
    return G__letvariable(item,expression,varglobal,varlocal,member);
 }
 
 //______________________________________________________________________________
-G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal, G__var_array* varlocal, G__DataMemberHandle &member)
+G__value G__letvariable(G__FastAllocString &item, G__value expression, G__var_array* varglobal, G__var_array* varlocal, G__DataMemberHandle &member)
 {
    // -- FIXME: Describe me!
    struct G__var_array* var = 0;
@@ -535,7 +535,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
    int store_var_type = 0;
    long G__struct_offset = 0L;
    char* tagname = 0;
-   char* membername = 0;
+   int membername = -1;
    int varhash = 0;
    long address = 0L;
    long store_struct_offset = 0L;
@@ -612,7 +612,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
                   break;
             }
             ttt = item + i - 1;
-            strcpy(item, ttt);
+            item = ttt;
             if (G__var_type == 'p') {
                G__var_type = 'v';
             }
@@ -638,7 +638,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
          // -- Should not happen!
          G__var_type = 'P';
          ttt = item + 1;
-         strcpy(item, ttt);
+         item = ttt;
          break;
       case '0':
       case '1':
@@ -653,7 +653,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
       case '.':
       case '-':
       case '+':
-         G__fprinterr(G__serr, "Error: assignment to %s", item);
+         G__fprinterr(G__serr, "Error: assignment to %s", item());
          G__genericerror(0);
          break;
    }
@@ -670,7 +670,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
                result7 = item;
                result7.Set(ig2++, 0);
                tagname = result7;
-               membername = result7 + ig2;
+               membername = ig2;
                flag = 1;
             }
             break;
@@ -680,7 +680,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
                result7.Set(ig2++, 0);
                result7.Set(ig2++, 0);
                tagname = result7;
-               membername = result7 + ig2;
+               membername = ig2;
                flag = 2;
             }
             break;
@@ -718,7 +718,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
    double_quote = 0;
    paren = 0;
    if (flag) {
-      result = G__letstructmem(store_var_type, varname, membername, tagname, varglobal, expression, flag, member);
+      result = G__letstructmem(store_var_type, varname, membername, result7, tagname, varglobal, expression, flag, member);
       return result;
    }
    /************************************************************
@@ -915,6 +915,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
    // Search local and global variables.
    //
    var = 0;
+   ig15 = 0;
    // Avoid searching variables when processing
    // a function-local const static during prerun.
    if (
@@ -924,8 +925,71 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
       !G__constvar ||       // Not a const.
       !G__prerun            // Not in prerun (we are actually executing).
    ) {
-      int ig15 = 0;
-      var = G__searchvariable(varname, varhash, varlocal, varglobal, &G__struct_offset, &store_struct_offset, &ig15, G__decl || G__def_struct_member);
+      char* v = (char*) varname();
+      int vlen = strlen(v);
+      char* p = NULL;
+      if (vlen) {
+         int nest_angle = 0;
+         int nest_square_bracket = 0;
+         int nest_paren = 0;
+         bool done = false;
+         p = v + vlen - 1;
+         for (; !done && (p != v); --p) {
+            switch (*p) {
+               case '<':
+                  --nest_angle;
+                  break;
+               case '>':
+                  ++nest_angle;
+                  break;
+               case '[':
+                  --nest_square_bracket;
+                  break;
+               case ']':
+                  ++nest_square_bracket;
+                  break;
+               case '(':
+                  --nest_paren;
+                  break;
+               case ')':
+                  ++nest_paren;
+                  break;
+               case ':':
+                  if (nest_angle || nest_square_bracket || nest_paren) {
+                     continue;
+                  }
+                  if (*(p - 1) == ':') {
+                     done = true;
+                  } 
+                  break;
+               default:
+                  break;
+            }
+         }
+         if (done) {
+            ++p;
+         }
+         else {
+            p = NULL;
+         }
+      }
+      if ((p != NULL) && varglobal) {
+         int qual_id_len = p - v - 1;
+         if (qual_id_len > 0) {
+            G__FastAllocString qual_id(G__BUFLEN);
+            qual_id.Format("%*.*s", qual_id_len, qual_id_len, v);
+            int qual_id_tagnum = G__defined_tagname(qual_id(), 0);
+            if (qual_id_tagnum != -1) {
+               int store_tagnum = G__tagnum;
+               G__tagnum = qual_id_tagnum;
+               var = G__searchvariable(varname, varhash, G__struct.memvar[qual_id_tagnum], varglobal, &G__struct_offset, &store_struct_offset, &ig15, 1);
+               G__tagnum = store_tagnum;
+            }
+         }
+      }
+      else {
+         var = G__searchvariable(varname, varhash, varlocal, varglobal, &G__struct_offset, &store_struct_offset, &ig15, G__decl || G__def_struct_member);
+      }
    }
    //
    // Assign value.
@@ -946,7 +1010,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
             (var->p_tagtable[ig15] != G__tagnum)
          )
       ) {
-         G__fprinterr(G__serr, "Error: %s already declared as different type", item);
+         G__fprinterr(G__serr, "Error: %s already declared as different type", item());
          if (
             isupper(var->type[ig15]) &&
             isupper(G__var_type) &&
@@ -978,73 +1042,6 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
             G__genericerror(0);
             return G__null;
          }
-      } else if (var->statictype[ig15] == G__LOCALSTATIC && var->p_tagtable[ig15]!=-1 && var->type[ig15]=='u') {
-         //fprintf(stderr,"humm .. declaration of static variable %s\n",var->varnamebuf[ig15]);
-         // Let's assume this is the first definition of the class static variable (CINT currently allows the
-         // declaration to be there several times  ...
-         // First delete the memory allocated at the time of the declaration (inside the class declaration)
-         free((void*)var->p[ig15]);
-         var->p[ig15] = 0;
-         // And let's allocate the object (currently CINT does not allow a constructor in this case).
-         // (this is inpired from code in G__define_var
-         if ( G__struct.iscpplink[var->p_tagtable[ig15]] == G__CPPLINK) {
-            // -- The struct is compiled code.
-            G__FastAllocString temp1(G__ONELINE);
-            G__value reg = G__null;
-            int known;
-            temp1.Format("%s()", G__struct.name[var->p_tagtable[ig15]]);
-            if (G__struct.parent_tagnum[var->p_tagtable[ig15]] != -1) {
-               int store_exec_memberfunc = G__exec_memberfunc;
-               int store_memberfunc_tagnum = G__memberfunc_tagnum;
-               G__exec_memberfunc = 1;
-               G__memberfunc_tagnum = G__struct.parent_tagnum[var->p_tagtable[ig15]];
-               reg = G__getfunction(temp1, &known, G__CALLCONSTRUCTOR);
-               G__exec_memberfunc = store_exec_memberfunc;
-               G__memberfunc_tagnum = store_memberfunc_tagnum;
-            }
-            else {
-               int store_exec_memberfunc = G__exec_memberfunc;
-               int store_memberfunc_tagnum = G__memberfunc_tagnum;
-               int store_G__tagnum = G__tagnum;
-               G__exec_memberfunc = 0;
-               G__memberfunc_tagnum = -1;
-               G__tagnum = var->p_tagtable[ig15];
-               reg = G__getfunction(temp1, &known, G__CALLCONSTRUCTOR);
-               G__exec_memberfunc = store_exec_memberfunc;
-               G__memberfunc_tagnum = store_memberfunc_tagnum;
-               G__tagnum = store_G__tagnum;
-            }
-            var->p[ig15] = G__int(reg);
-         }
-         else {
-            // -- The struct is interpreted.
-            // Initialize it.
-            G__FastAllocString temp1(G__ONELINE);
-            // G__value reg = G__null;
-            // int known;
-            temp1.Format("new %s", G__struct.name[var->p_tagtable[ig15]]);
-
-            int store_exec_memberfunc = G__exec_memberfunc;
-            int store_memberfunc_tagnum = G__memberfunc_tagnum;
-            int store_tagnum = G__tagnum;
-            int store_prerun = G__prerun;
-            int store_vartype = G__var_type;
-            G__exec_memberfunc = 0;
-            G__memberfunc_tagnum = -1;
-            G__prerun = 0;
-            G__tagnum = var->p_tagtable[ig15];
-            G__value reg = G__getexpr(temp1);
-            G__exec_memberfunc = store_exec_memberfunc;
-            G__memberfunc_tagnum = store_memberfunc_tagnum;
-            G__tagnum = store_tagnum;
-            G__prerun = store_prerun;
-            G__var_type = store_vartype;
-            
-            var->p[ig15] = G__int(reg);
-            
-            // G__letvariable(var->varnamebuf[ig15], reg, &G__global, var);
-         }
-         
       }
       //
       //
@@ -1192,6 +1189,9 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
          }
          G__var_type = 'p';
          if (G__reftype && (G__globalvarpointer != G__PVOID)) {
+            var->p[ig15] = G__globalvarpointer;
+         }
+         if (G__cppconstruct) {
             var->p[ig15] = G__globalvarpointer;
          }
          return result;
@@ -1496,7 +1496,7 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
                   int len = strlen((const char*) result.obj.i);
                   var->p[ig15] = (long) malloc(len + 1);
                   // And copy the initializer into the allocated space.
-                  strcpy((char*) var->p[ig15], (const char*) result.obj.i);
+                  strcpy((char*) var->p[ig15], (const char*) result.obj.i); // Okay, we just allocated enough space
                   // Change the variable into a fixed-size array of characters.
                   var->varlabel[ig15][1] = len;
                   // And return, we are done.
@@ -1674,6 +1674,8 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
                   G__changeconsterror(varname, "enforced macro");
                }
             }
+            G__letautomatic(var, ig15, G__struct_offset, linear_index, result);
+            break;
          default:
             // case 'X' automatic variable
             G__letautomatic(var, ig15, G__struct_offset, linear_index, result);
@@ -1742,7 +1744,11 @@ void G__letautomatic(G__var_array* var, int ig15, long G__struct_offset, int lin
 } // extern "C"
 
 //______________________________________________________________________________
-G__value G__letstructmem(int store_var_type, char* varname, char* membername, char* tagname, G__var_array* varglobal, G__value expression, int objptr  /* 1: object, 2: pointer */, Cint::G__DataMemberHandle &member)
+G__value G__letstructmem(int store_var_type, G__FastAllocString& varname,
+                         int membernameoffset, G__FastAllocString& result7,
+                         char* tagname, G__var_array* varglobal,
+                         G__value expression, int objptr  /* 1: object, 2: pointer */,
+                         Cint::G__DataMemberHandle &member)
 {
    // -- FIXME: Describe me!
    G__value result;
@@ -1753,13 +1759,13 @@ G__value G__letstructmem(int store_var_type, char* varname, char* membername, ch
    /* add pointer operater if necessary */
 
    if (store_var_type == 'P') {
-      std::sprintf(varname, "&%s", membername);
-      std::strcpy(membername, varname);
+      varname = "&"; varname += (result7 + membernameoffset); // Legacy, only add one character
+      result7.Replace(membernameoffset, varname); // Legacy, only increase use by on charater
 
    }
    if (store_var_type == 'v') {
-      std::sprintf(varname, "*%s", membername);
-      std::strcpy(membername, varname);
+      varname = "*"; varname += (result7 + membernameoffset); // Legacy, only add one character
+      result7.Replace(membernameoffset, varname); // Legacy, only add one character
 
    }
    int store_tagnum = G__tagnum;
@@ -1942,7 +1948,10 @@ G__value G__letstructmem(int store_var_type, char* varname, char* membername, ch
    store_do_setmemfuncenv = G__do_setmemfuncenv;
    G__do_setmemfuncenv = 1;
    G__incsetup_memvar(G__tagnum);
-   result = G__letvariable(membername, expression, 0, G__struct.memvar[G__tagnum], member);
+   {   
+      G__FastAllocString temp_membername(result7 + membernameoffset);
+      result = G__letvariable(temp_membername, expression, 0, G__struct.memvar[G__tagnum], member);
+   }
    G__do_setmemfuncenv = store_do_setmemfuncenv;
    G__tagnum = store_tagnum;
    G__store_struct_offset = store_struct_offset;
@@ -2515,7 +2524,7 @@ G__value G__classassign(long pdest, int tagnum, G__value result)
       memcpy((void*) pdest, (void*) G__int(result), (size_t) G__struct.size[tagnum]);
       return result;
    }
-   if (result.type == 'u') {
+   if (result.type == 'u' && result.tagnum != -1) {
       // --
       if (result.obj.i < 0) {
          ttt.Format("(%s)(%ld)", G__struct.name[result.tagnum], result.obj.i);
@@ -2922,7 +2931,7 @@ int G__fundamental_conversion_operator(int type, int tagnum, int typenum, int re
 
 extern "C++" {
 template<class CASTTYPE, class CONVFUNC>
-inline void G__alloc_var_ref(int SIZE, CONVFUNC f, char* item, G__var_array* var, int ig15, G__value& result)
+inline void G__alloc_var_ref(int SIZE, CONVFUNC f, const char* item, G__var_array* var, int ig15, G__value& result)
 {
    if (islower(G__var_type)) {
       /* -- Not a pointer, may be an array. */
@@ -3154,7 +3163,7 @@ inline void G__alloc_var_ref(int SIZE, CONVFUNC f, char* item, G__var_array* var
 } // extern "C"
 
 //______________________________________________________________________________
-static G__value G__allocvariable(G__value result, G__value para[], G__var_array* varglobal, G__var_array* varlocal, int paran, int varhash, char* item, char* varname, int parameter00, G__DataMemberHandle &member)
+static G__value G__allocvariable(G__value result, G__value para[], G__var_array* varglobal, G__var_array* varlocal, int paran, int varhash, const char* item, char* varname, int parameter00, G__DataMemberHandle &member)
 {
    // -- Allocate memory for a variable and initialize it.
    if (!varname) {
@@ -3172,7 +3181,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
       }
       if (pp) {
          G__fprinterr(G__serr,
-            "Error: Variable name has bad character '%s'", varname);
+                      "Error: Variable name has bad character '%s'", varname);
          G__genericerror(0);
          return result;
       }
@@ -3471,6 +3480,9 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
                ttt.Format("%s\\%x\\%x", varname, G__func_page, G__func_now);
             }
 #endif // G__NEWINHERIT
+            // We have no idea how big varname is. G__searchvariable() takes a char* which becomes
+            // varname here; we would have to change that signature to know the size of varname here.
+            // coverity[secure_coding]
             std::strcpy(varname, ttt);
             int junk;
             G__hash(ttt, varhash, junk);
@@ -3516,7 +3528,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
    //  Determine class member access control.
    //
    var->access[var->allvar] = G__PUBLIC;
-   if (G__def_struct_member) {
+   if (G__def_struct_member || G__enumdef) {
       var->access[var->allvar] = G__access;
    }
 #ifndef G__NEWINHERIT
@@ -3668,6 +3680,8 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
          return result;
       }
       var->varlabel[ig15][base+i] = 1;
+      // Since base == paran + 4 and i >= 0, the previous if statement insures that we have
+      //    (paran+4+i) < G__MAXVARDIM so (paran+4) < G__MAXVARDIM
       var->varlabel[ig15][paran+3] = element_count;
    }
    G__p2arylabel[0] = 0;
@@ -4372,7 +4386,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
                      // -- We are an unspecified length array of char being initialized with a string constant.
                      // FIXME: Can this happen?
                      var->p[ig15] = (long) malloc(len + 1);
-                     strcpy((char*) var->p[ig15], (char*) result.obj.i);
+                     strcpy((char*) var->p[ig15], (char*) result.obj.i); // Okay we allocated enough space
                   }
                   else if (len > var->varlabel[ig15][1] /* number of elements */) {
                      // -- We are an array of char being initialized with a string constant that is too big.
@@ -4385,7 +4399,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
                      // -- We are an array of char being initialized with a string constant.
                      // FIXME: Can this happen?
                      G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, var, ig15, result);
-                     strcpy((char*) var->p[ig15], (char*) result.obj.i);
+                     strcpy((char*) var->p[ig15], (char*) result.obj.i); // Okay we allocated enough memory
                      int num_omitted = var->varlabel[ig15][1] /* number of elements */ - len;
                      memset(((char*) var->p[ig15]) + len, 0, num_omitted);
                   }
@@ -4439,11 +4453,11 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
                G__inc_cp_asm(1, 0);
 #ifdef G__ASM_DBG
                if (G__asm_dbg) {
-                  G__fprinterr(G__serr, "%3x,%3x: LD_FUNC 'strcpy' %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
+                  G__fprinterr(G__serr, "%3x,%3x: LD_FUNC 'strcpy' %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__); // Okay
                }
 #endif // G__ASM_DBG
                G__asm_inst[G__asm_cp] = G__LD_FUNC;
-               G__asm_inst[G__asm_cp+1] = (long) "strcpy"; // name
+               G__asm_inst[G__asm_cp+1] = (long) "strcpy"; // name. Okay
                G__asm_inst[G__asm_cp+2] = 677; // hash
                G__asm_inst[G__asm_cp+3] = 2; // paran
                G__asm_inst[G__asm_cp+4] = (long) G__compiled_func; // pfunc
@@ -5278,7 +5292,9 @@ G__value G__getvariable(char* item, int* known, G__var_array* varglobal, G__var_
                   char* tagname = tmp;
                   char* membername = tmp + i;
                   G__FastAllocString varname(2*G__MAXNAME);
-                  G__value val = G__getstructmem(store_var_type, varname, membername, tagname, known, varglobal, 1);
+                  G__value val = G__getstructmem(store_var_type, varname, membername,
+                                                 tmp.Capacity() - i - 1, tagname,
+                                                 known, varglobal, 1);
                   return val;
                }
                break;
@@ -5293,7 +5309,9 @@ G__value G__getvariable(char* item, int* known, G__var_array* varglobal, G__var_
                   char* tagname = tmp;
                   char* membername = item + i;
                   G__FastAllocString varname(2*G__MAXNAME);
-                  G__value val = G__getstructmem(store_var_type, varname, membername, tagname, known, varglobal, 2);
+                  G__value val = G__getstructmem(store_var_type, varname, membername,
+                                                 INT_MAX /* we don't know */, tagname,
+                                                 known, varglobal, 2);
                   return val;
                }
                break;
@@ -6186,7 +6204,7 @@ G__value G__getvariable(char* item, int* known, G__var_array* varglobal, G__var_
                fgetpos(G__ifile.fp, &pos); /* ifile might already be mfp */
                store_ifile = G__ifile;
                G__ifile.fp = G__mfp;
-               strcpy(G__ifile.name, G__macro);
+               G__strlcpy(G__ifile.name, G__macro, G__MAXFILENAME);
                fsetpos(G__ifile.fp, (fpos_t *) var->p[ig15]);
                G__nobreak = 1;
                int brace_level = 0;
@@ -6333,11 +6351,16 @@ G__value G__getvariable(char* item, int* known, G__var_array* varglobal, G__var_
    return result;
 }
 
+} // extern "C"
+
 #undef G__GET_VAR
 #undef G__GET_PVAR
 
 //______________________________________________________________________________
-G__value G__getstructmem(int store_var_type, char* varname, char* membername, char* tagname, int* known2, G__var_array* varglobal, int objptr /* 1 : object , 2 : pointer */)
+G__value G__getstructmem(int store_var_type, G__FastAllocString& varname,
+                         char* membername, int memnamesize, char* tagname,
+                         int* known2, G__var_array* varglobal,
+                         int objptr /* 1 : object , 2 : pointer */)
 {
    // -- FIXME: Describe me!
    int store_tagnum = 0;
@@ -6355,12 +6378,12 @@ G__value G__getstructmem(int store_var_type, char* varname, char* membername, ch
    // because child G__getvariable() needs that information.
    //
    if (store_var_type == 'P') {
-      sprintf(varname, "&%s", membername);
-      strcpy(membername, varname);
+      varname = "&"; varname += membername; // Legacy, only add one character
+      G__strlcpy(membername, varname, memnamesize - 1); // Legacy, only add one character
    }
    else if (store_var_type == 'v') {
-      sprintf(varname, "*%s", membername);
-      strcpy(membername, varname);
+      varname = "*"; varname += membername; // Legacy, only add one character
+      G__strlcpy(membername, varname, memnamesize - 1); // Legacy, only add one character
    }
    store_tagnum = G__tagnum;
    store_struct_offset = G__store_struct_offset;
@@ -6729,6 +6752,8 @@ G__value G__getstructmem(int store_var_type, char* varname, char* membername, ch
    return result;
 }
 
+extern "C" {
+
 //______________________________________________________________________________
 int G__getthis(G__value* result7, const char* varname, const char* item)
 {
@@ -6939,7 +6964,9 @@ struct G__var_array* G__getvarentry(const char* varname, int varhash, int* pi, G
             baseclass = G__struct.baseclass[G__tagnum];
          }
 #else // G__OLDIMPLEMENTATION589_YET
-         baseclass = G__struct.baseclass[G__tagnum];
+         if (G__tagnum > -1) {
+            baseclass = G__struct.baseclass[G__tagnum];
+         }
 #endif // G__OLDIMPLEMENTATION589_YET
          if (G__exec_memberfunc || G__isfriend(G__tagnum)) {
             accesslimit = G__PUBLIC_PROTECTED_PRIVATE;
@@ -7391,6 +7418,8 @@ struct G__var_array* G__searchvariable(char* varname, int varhash, G__var_array*
 #ifdef G__ROOT
    if ((varname[0] == '$') && G__GetSpecialObject && (G__GetSpecialObject != G__getreserved)) {
       G__FastAllocString temp(varname + 1);
+      // We copy less into varname than it contained before:
+      // coverity[secure_coding]
       strcpy(varname, temp);
       specialflag = 1;
    }
@@ -7495,8 +7524,10 @@ struct G__var_array* G__searchvariable(char* varname, int varhash, G__var_array*
          *pstore_struct_offset = *pG__struct_offset;
          isbase = 1;
          basen = 0;
-         baseclass = G__struct.baseclass[scope_tagnum];
-         if (G__exec_memberfunc || isdecl || G__isfriend(G__tagnum)) {
+         if (scope_tagnum > -1) {
+            baseclass = G__struct.baseclass[scope_tagnum];
+         }
+         if (G__exec_memberfunc || isdecl || G__enumdef || G__isfriend(G__tagnum)) {
             accesslimit = G__PUBLIC_PROTECTED_PRIVATE;
             memfunc_or_friend = 1;
          }
@@ -7556,7 +7587,12 @@ struct G__var_array* G__searchvariable(char* varname, int varhash, G__var_array*
                      var = G__struct.memvar[baseclass->herit[basen]->basetagnum];
 #ifdef G__VIRTUALBASE
                      if (baseclass->herit[basen]->property&G__ISVIRTUALBASE) {
-                        *pG__struct_offset = *pstore_struct_offset + G__getvirtualbaseoffset(*pstore_struct_offset, scope_tagnum, baseclass, basen);
+                        if (G__store_struct_offset!=0) {
+                           *pG__struct_offset = *pstore_struct_offset + G__getvirtualbaseoffset(*pstore_struct_offset, scope_tagnum, baseclass, basen);
+                        } else {
+                           // We don't have a real object, we can't calculate the real offset.
+                           // So do nothing ...
+                        }
                      }
                      else {
                         *pG__struct_offset = *pstore_struct_offset + baseclass->herit[basen]->baseoffset;

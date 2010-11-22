@@ -351,7 +351,7 @@ RooSimWSTool::ObjBuildConfig* RooSimWSTool::validateConfig(BuildConfig& bc)
 
     char buf[4096] ;
     list<const RooCatType*> rlist ;
-    strcpy(buf,riter->second.c_str()) ;
+    strlcpy(buf,riter->second.c_str(),4096) ;
     
     char* tok = strtok(buf,"{,}") ;
     while(tok) {
@@ -407,11 +407,26 @@ RooSimultaneous* RooSimWSTool::executeBuild(const char* simPdfName, ObjBuildConf
   RooArgSet splitCatSet(obc._usedSplitCats) ;
   if (physCat) splitCatSet.add(*physCat) ;
 
+  RooArgSet splitCatSetFund ;
+  TIterator* scsiter = splitCatSet.createIterator() ;
+  RooAbsCategory* scat ;
+  while((scat=(RooAbsCategory*)scsiter->Next())) {
+    if (scat->isFundamental()) {
+      splitCatSetFund.add(*scat) ;
+    } else {
+      RooArgSet* scatvars = scat->getVariables() ;
+      splitCatSetFund.add(*scatvars) ;
+      delete scatvars ;
+    }
+  }
+  delete scsiter ;
+
+
   RooAbsCategoryLValue* masterSplitCat ;
-  if (splitCatSet.getSize()>1) {
-    masterSplitCat = new RooSuperCategory("masterSplitCat","Master splitting category",splitCatSet) ;
+  if (splitCatSetFund.getSize()>1) {
+    masterSplitCat = new RooSuperCategory("masterSplitCat","Master splitting category",splitCatSetFund) ;
   } else {
-    masterSplitCat = (RooAbsCategoryLValue*) splitCatSet.first() ;
+    masterSplitCat = (RooAbsCategoryLValue*) splitCatSetFund.first() ;
   }
   if (verbose) coutI(ObjectHandling) << "RooSimWSTool::executeBuild: list of splitting categories " << splitCatSet << endl ;
 
@@ -503,7 +518,22 @@ RooSimultaneous* RooSimWSTool::executeBuild(const char* simPdfName, ObjBuildConf
   // Create fit category from physCat and splitCatList ;
   RooArgSet fitCatList ;
   if (physCat) fitCatList.add(*physCat) ;
-  fitCatList.add(splitCatSet) ;
+
+  // Add observables of splitCatSet members, rather than splitCatSet members directly
+  // as there may be cat->cat functions in here
+  scsiter = splitCatSet.createIterator() ;
+  while((scat=(RooAbsCategory*)scsiter->Next())) {
+    if (scat->isFundamental()) {
+      fitCatList.add(*scat) ;
+    } else {
+      RooArgSet* scatvars = scat->getVariables() ;
+      fitCatList.add(*scatvars) ;
+      delete scatvars ;
+    }
+  }
+  delete scsiter ;
+
+
   TIterator* fclIter = fitCatList.createIterator() ;
   string mcatname = string(simPdfName) + "_index" ;
   RooAbsCategoryLValue* fitCat = 0 ;
@@ -577,7 +607,7 @@ RooSimultaneous* RooSimWSTool::executeBuild(const char* simPdfName, ObjBuildConf
   // Delete customizers
   customizerList->Delete() ;
   delete customizerList ;
-
+  delete fclIter ;
   return (RooSimultaneous*) _ws->pdf(simPdf->GetName()) ;
 }
 
@@ -616,8 +646,8 @@ void RooSimWSTool::SplitRule::splitParameter(const char* paramNameList, const ch
 
   char paramBuf[4096] ;
   char catBuf[4096] ;
-  strcpy(paramBuf,paramNameList) ;
-  strcpy(catBuf,categoryNameList) ;
+  strlcpy(paramBuf,paramNameList,4096) ;
+  strlcpy(catBuf,categoryNameList,4096) ;
 
   // First parse category list
   list<string> catList ;
@@ -644,8 +674,8 @@ void RooSimWSTool::SplitRule::splitParameterConstrained(const char* paramNameLis
 
   char paramBuf[4096] ;
   char catBuf[4096] ;
-  strcpy(paramBuf,paramNameList) ;
-  strcpy(catBuf,categoryNameList) ;
+  strlcpy(paramBuf,paramNameList,4096) ;
+  strlcpy(catBuf,categoryNameList,4096) ;
 
   // First parse category list
   list<string> catList ;
@@ -750,7 +780,7 @@ void RooSimWSTool::BuildConfig::internalAddPdf(const char* pdfName, const char* 
   // and split rules 'sr' to configuration
 
   char buf[4096] ;
-  strcpy(buf,miStateNameList) ;
+  strlcpy(buf,miStateNameList,4096) ;
   
   char* tok = strtok(buf,",") ;
   while(tok) {
@@ -881,13 +911,13 @@ std::string RooSimWSTool::SimWSIFace::create(RooFactoryWSTool& ft, const char* t
       if (args[i].find("$SplitParam(")==0) {
 	vector<string> subargs = ft.splitFunctionArgs(args[i].c_str()) ;
 	if (subargs.size()!=2) {
-	  throw string(Form("Incorrect number of arguments in $SplitParam, have %d, expect 2",subargs.size())) ;
+	  throw string(Form("Incorrect number of arguments in $SplitParam, have %d, expect 2",(Int_t)subargs.size())) ;
 	}
 	sr.splitParameter(subargs[0].c_str(),subargs[1].c_str()) ;
       } else if (args[i].find("$SplitParamConstrained(")==0) {
 	vector<string> subargs = ft.splitFunctionArgs(args[i].c_str()) ;
 	if (subargs.size()!=3) {
-	  throw string(Form("Incorrect number of arguments in $SplitParamConstrained, have %d, expect 3",subargs.size())) ;
+	  throw string(Form("Incorrect number of arguments in $SplitParamConstrained, have %d, expect 3",(Int_t)subargs.size())) ;
 	}
 	sr.splitParameterConstrained(subargs[0].c_str(), subargs[1].c_str(), subargs[2].c_str()) ;	
       } 
@@ -899,7 +929,7 @@ std::string RooSimWSTool::SimWSIFace::create(RooFactoryWSTool& ft, const char* t
       if (args[i].find("$Restrict(")==0) {
 	vector<string> subargs = ft.splitFunctionArgs(args[i].c_str()) ;
 	if (subargs.size()!=2) {
-	  throw string(Form("Incorrect number of arguments in $Restrict, have %d, expect 2",subargs.size())) ;
+	  throw string(Form("Incorrect number of arguments in $Restrict, have %d, expect 2",(Int_t)subargs.size())) ;
 	}
 	bc.restrictBuild(subargs[0].c_str(),subargs[1].c_str()) ;
       }
@@ -942,13 +972,13 @@ std::string RooSimWSTool::SimWSIFace::create(RooFactoryWSTool& ft, const char* t
 	  if (subargs[j].find("$SplitParam(")==0) {
 	    vector<string> subsubargs = ft.splitFunctionArgs(subargs[j].c_str()) ;
 	    if (subsubargs.size()!=2) {
-	      throw string(Form("Incorrect number of arguments in $SplitParam, have %d, expect 2",subsubargs.size())) ;
+	      throw string(Form("Incorrect number of arguments in $SplitParam, have %d, expect 2",(Int_t)subsubargs.size())) ;
 	    }
 	    sr.splitParameter(subsubargs[0].c_str(),subsubargs[1].c_str()) ;
 	  } else if (subargs[j].find("$SplitParamConstrained(")==0) {
 	    vector<string> subsubargs = ft.splitFunctionArgs(subargs[j].c_str()) ;
 	    if (subsubargs.size()!=3) {
-	      throw string(Form("Incorrect number of arguments in $SplitParamConstrained, have %d, expect 3",subsubargs.size())) ;
+	      throw string(Form("Incorrect number of arguments in $SplitParamConstrained, have %d, expect 3",(Int_t)subsubargs.size())) ;
 	    }
 	    sr.splitParameterConstrained(subsubargs[0].c_str(), subsubargs[1].c_str(), subsubargs[2].c_str()) ;	
 	  } 
@@ -960,7 +990,7 @@ std::string RooSimWSTool::SimWSIFace::create(RooFactoryWSTool& ft, const char* t
 	// Process a restrict operation 	
 	vector<string> subargs = ft.splitFunctionArgs(args[i].c_str()) ;
 	if (subargs.size()!=2) {
-	  throw string(Form("Incorrect number of arguments in $Restrict, have %d, expect 2",subargs.size())) ;
+	  throw string(Form("Incorrect number of arguments in $Restrict, have %d, expect 2",(Int_t)subargs.size())) ;
 	}
 	mbc.restrictBuild(subargs[0].c_str(),subargs[1].c_str()) ;
 	

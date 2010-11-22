@@ -20,6 +20,7 @@ class Roo2DKeysPdf;
 #include "RooDataSet.h"
 #include "RooGaussian.h"
 #include "TCanvas.h"
+#include "TAxis.h"
 #include "RooPlot.h"
 #include "TMath.h"
 #include "TF1.h"
@@ -35,6 +36,7 @@ using namespace RooFit;
 
 void rf105_funcbinding()
 {
+
   // B i n d   T M a t h : : E r f   C   f u n c t i o n
   // ---------------------------------------------------
 
@@ -54,7 +56,7 @@ void rf105_funcbinding()
   // -----------------------------------------------------------------------
 
   // Bind pdf ROOT::Math::Beta with three variables as RooAbsPdf function
-  RooRealVar x2("x2","x2",0,1) ;
+  RooRealVar x2("x2","x2",0,0.999) ;
   RooRealVar a("a","a",5,0,10) ;
   RooRealVar b("b","b",2,0,10) ;
   RooAbsPdf* beta = bindPdf("beta",ROOT::Math::beta_pdf,x2,a,b) ;
@@ -96,8 +98,8 @@ void rf105_funcbinding()
 
   TCanvas* c = new TCanvas("rf105_funcbinding","rf105_funcbinding",1200,400) ;
   c->Divide(3) ;
-  c->cd(1) ; frame1->Draw() ;
-  c->cd(2) ; frame2->Draw() ;
-  c->cd(3) ; frame3->Draw() ;
+  c->cd(1) ; gPad->SetLeftMargin(0.15) ; frame1->GetYaxis()->SetTitleOffset(1.6) ; frame1->Draw() ;
+  c->cd(2) ; gPad->SetLeftMargin(0.15) ; frame2->GetYaxis()->SetTitleOffset(1.6) ; frame2->Draw() ;
+  c->cd(3) ; gPad->SetLeftMargin(0.15) ; frame3->GetYaxis()->SetTitleOffset(1.6) ; frame3->Draw() ;
 
 }

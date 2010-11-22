@@ -42,6 +42,11 @@ TBox::TBox(): TObject(), TAttLine(), TAttFill()
    // Box default constructor.
 
    fTip = 0;
+   fX1       = 0.;
+   fY1       = 0.;
+   fX2       = 0.;
+   fY2       = 0.;
+   fResizing = kTRUE;
 }
 
 
@@ -553,6 +558,17 @@ void TBox::HideToolTip(Int_t event)
 
    if (event != kMouseEnter && event != kMouseMotion && fTip && gPad)
       gPad->CloseToolTip(fTip);
+}
+
+
+//______________________________________________________________________________
+Int_t TBox::IsInside(Double_t x, Double_t y) const
+{
+   // Function which returns 1 if point x,y lies inside the box, 0 otherwise.
+   
+   if (x < fX1 || x > fX2) return 0;
+   if (y < fY1 || y > fY2) return 0;
+   return 1;
 }
 
 

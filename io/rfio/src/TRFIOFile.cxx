@@ -46,6 +46,8 @@
 
 #include "TRFIOFile.h"
 #include "TROOT.h"
+#include "TTimeStamp.h"
+#include "TVirtualPerfStats.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -221,6 +223,9 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
       return kTRUE;
    }
 
+   Double_t start = 0;
+   if (gPerfStats) start = TTimeStamp();
+
    // we maintain a static iove64 buffer to avoid malloc/free with every call
    if (!iov) {
       if (nbuf > iovsize)
@@ -230,8 +235,8 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
       if (gDebug > 1)
          Info("TRFIOFile", "allocating iovec64 with size %d", iovsize);
       if (!iov) {
-         Error("TRFIOFile", "error allocating preseek vector of size %d",
-               sizeof(struct iovec64) * iovsize);
+         Error("TRFIOFile", "error allocating preseek vector of size %ld",
+               (Long_t)sizeof(struct iovec64) * iovsize);
          return kTRUE;
       }
    } else {
@@ -241,17 +246,16 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
          if (gDebug > 1)
             Info("TRFIOFile", "re-allocating iovec64 with size %d", iovsize);
          if (!iov) {
-            Error("TRFIOFile", "error reallocating preseek vector of size %d",
-                  sizeof(struct iovec64) * iovsize);
+            Error("TRFIOFile", "error reallocating preseek vector of size %ld",
+                  (Long_t)sizeof(struct iovec64) * iovsize);
             return kTRUE;
          }
       }
    }
 
-
    for (n = 0; n < nbuf; n++) {
       if (gDebug>1)
-         Info("TFIOFile", "adding chunk %lld, %d %d", n, pos[n], len[n]);
+         Info("TFIOFile", "adding chunk %d, %lld %d", n, pos[n], len[n]);
       iov[n].iov_base = pos[n] + fArchiveOffset;
       iov[n].iov_len  = len[n];
    }
@@ -277,7 +281,6 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
       k += iov[n].iov_len;
    }
 
-   fOffset    += k;
    fBytesRead += k;
 #ifdef WIN32
    SetFileBytesRead(GetFileBytesRead() + k);
@@ -286,6 +289,9 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
    fgBytesRead += k;
    fgReadCalls++;
 #endif
+
+   if (gPerfStats)
+      gPerfStats->FileReadEvent(this, k, start);
 
    return kFALSE;
 }
@@ -316,7 +322,6 @@ Int_t TRFIOFile::SysRead(Int_t fd, void *buf, Int_t len)
 {
    // Interface to system read. All arguments like in POSIX read.
 
-   fOffset += len;
    Int_t ret = ::rfio_read(fd, (char *)buf, len);
    if (ret < 0)
       gSystem->SetErrorStr(::rfio_serror());
@@ -328,7 +333,6 @@ Int_t TRFIOFile::SysWrite(Int_t fd, const void *buf, Int_t len)
 {
    // Interface to system write. All arguments like in POSIX write.
 
-   fOffset += len;
    Int_t ret = ::rfio_write(fd, (char *)buf, len);
    if (ret < 0)
       gSystem->SetErrorStr(::rfio_serror());
@@ -342,14 +346,10 @@ Long64_t TRFIOFile::SysSeek(Int_t fd, Long64_t offset, Int_t whence)
    // except that the offset and return value are Long_t to be able to
    // handle 64 bit file systems.
 
-   if (whence == SEEK_SET && offset == fOffset) return offset;
-
    Long64_t ret = ::rfio_lseek64(fd, offset, whence);
 
    if (ret < 0)
       gSystem->SetErrorStr(::rfio_serror());
-   else
-      fOffset = ret;
 
    return ret;
 }

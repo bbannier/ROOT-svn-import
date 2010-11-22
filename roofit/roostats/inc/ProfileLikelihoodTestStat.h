@@ -80,6 +80,7 @@ namespace RooStats {
      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& paramsOfInterest) {
        if (!&data) {
 	 cout << "problem with data" << endl;
+	 return 0 ;
        }
        
        RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
@@ -100,11 +101,13 @@ namespace RooStats {
        delete profile;
        RooMsgService::instance().setGlobalKillBelow(msglevel);
        //       cout << "ret = " << ret << endl;
+
+
+       // return here and forget about the following code
        return ret;
 
-
-
        // OLD version with some handling for local minima
+       // (not used right now)
 
          bool needToRebuild = true; // try to avoid rebuilding if possible
 

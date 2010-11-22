@@ -347,7 +347,7 @@ inline bool TQtPainter::begin ( TGQt *dev, unsigned int useFeedBack)
         }
      }
      if (!(res= QPainter::begin(src)) ) {
-        Error("TGQt::Begin()","Can not create Qt painter for win=%lp dev=%lp\n",src);
+        Error("TGQt::Begin()","Can not create Qt painter for win=0x%lx dev=0x%lx\n",(Long_t)src,(Long_t)dev);
         assert(0);
      } else {
         dev->fQPainter = (TQtPainter*)-1;
@@ -479,7 +479,8 @@ protected:
         fFreeWindowsIdStack.push(Id);
         if (fIDMax == Id) SetMaxId(--fIDMax);
      }
-     return device;
+     //return device; this was a huge bug
+     return 0;
    }
    //______________________________________________________________________________
    inline const QPaintDevice *ReplaceById(Int_t Id, QPaintDevice *newDev)
@@ -789,9 +790,10 @@ void TGQt::PostQtEvent(QObject *receiver, QEvent *event)
 }
 
 //______________________________________________________________________________
-TGQt::TGQt() : TVirtualX(),fDisplayOpened(kFALSE),fQPainter(0),fQClientFilterBuffer(0)
-,fCodec(0),fSymbolFontFamily("Symbol"),fQtEventHasBeenProcessed(0)
-,fFeedBackMode(kFALSE),fFeedBackWidget(0),fBlockRGB(kFALSE),fUseTTF(kTRUE)
+TGQt::TGQt() : TVirtualX(),fDisplayOpened(kFALSE),fQPainter(0),fhEvent ()
+,fQBrush(),fQPen(),fQtMarker(),fQFont(),fQClientFilter(),fQClientFilterBuffer(0)
+,fPointerGrabber(),fCodec(0),fSymbolFontFamily("Symbol"),fQtEventHasBeenProcessed(0)
+,fFeedBackMode(kFALSE),fFeedBackWidget(0),fBlockRGB(kFALSE),fUseTTF(kTRUE)      
 {
    //*-*-*-*-*-*-*-*-*-*-*-*Default Constructor *-*-*-*-*-*-*-*-*-*-*-*-*-*-*
    //*-*                    ===================
@@ -803,7 +805,7 @@ TGQt::TGQt() : TVirtualX(),fDisplayOpened(kFALSE),fQPainter(0),fQClientFilterBuf
 
 //______________________________________________________________________________
 TGQt::TGQt(const char *name, const char *title) : TVirtualX(name,title),fDisplayOpened(kFALSE)
-,fQPainter(0),fCursors(kNumCursors),fQClientFilter(0),fQClientFilterBuffer(0),fPointerGrabber(0)
+,fQPainter(0),fhEvent(),fCursors(kNumCursors),fQClientFilter(0),fQClientFilterBuffer(0),fPointerGrabber(0)
 ,fCodec(0),fSymbolFontFamily("Symbol"),fQtEventHasBeenProcessed(0)
 ,fFeedBackMode(kFALSE),fFeedBackWidget(0),fBlockRGB(kFALSE),fUseTTF(kTRUE)
 {
@@ -875,7 +877,7 @@ Bool_t TGQt::Init(void* /*display*/)
    fMarkerStyle = -1;
 
    //
-   // Retrieve the applicaiton instance
+   // Retrieve the application instance
    //
 
    // --   fHInstance = GetModuleHandle(NULL);
@@ -926,7 +928,9 @@ Bool_t TGQt::Init(void* /*display*/)
    fFontTextCode = "ISO8859-1";
    const char *default_font =
       gEnv->GetValue("Gui.DefaultFont",  "-adobe-helvetica-medium-r-*-*-12-*-*-*-*-*-iso8859-1");
-   QApplication::setFont(*(QFont *)LoadQueryFont(default_font));
+   QFont *dfFont = (QFont *)LoadQueryFont(default_font);
+   QApplication::setFont(*dfFont);
+   delete dfFont;
    //  define the font code page
    QString fontName(default_font);
    fFontTextCode = fontName.section('-',13). toUpper();
@@ -1363,6 +1367,7 @@ void  TGQt::DrawBox(int x1, int y1, int x2, int y2, EBoxMode mode)
 
    static const int Q3=0;
 #endif
+   if (!fSelectedWindow ) return;
    TQtLock lock;
    // Some workaround to fix issue from TBox::ExecuteEvent case pC. 
    // The reason of the problem has not been found yet.
@@ -1383,18 +1388,15 @@ void  TGQt::DrawBox(int x1, int y1, int x2, int y2, EBoxMode mode)
       return;
    }
 
-   if (fSelectedWindow )
-   {
-      if ((mode == kHollow) || (fQBrush->style() == Qt::NoBrush) )
-      { 
-         TQtPainter p(this,TQtPainter::kUpdatePen);
-         p.setBrush(Qt::NoBrush);
-         p.drawRect(x1,y2,x2-x1+Q3,y1-y2+Q3);
-      } else if (fQBrush->GetColor().alpha() ) {
-         TQtPainter p(this);
-         if (fQBrush->style() != Qt::SolidPattern) p.setPen(fQBrush->GetColor());
-         p.fillRect(x1,y2,x2-x1,y1-y2,*fQBrush);
-      }
+   if ((mode == kHollow) || (fQBrush->style() == Qt::NoBrush) )
+   { 
+      TQtPainter p(this,TQtPainter::kUpdatePen);
+      p.setBrush(Qt::NoBrush);
+      p.drawRect(x1,y2,x2-x1+Q3,y1-y2+Q3);
+   } else if (fQBrush->GetColor().alpha() ) {
+      TQtPainter p(this);
+      if (fQBrush->style() != Qt::SolidPattern) p.setPen(fQBrush->GetColor());
+      p.fillRect(x1,y2,x2-x1,y1-y2,*fQBrush);
    }
 }
 
@@ -1768,7 +1770,7 @@ void  TGQt::GetTextExtent(unsigned int &w, unsigned int &h, char *mess)
       }
       if (!textProxy) {
          QSize textSize = QFontMetrics(*fQFont).size(Qt::TextSingleLine,GetTextDecoder()->toUnicode(mess)) ;
-         w = textSize.width() ;
+         w = textSize.width();
          h = (unsigned int)(textSize.height());
       }
       // qDebug() << "  TGQt::GetTextExtent  w=" <<w <<" h=" << h << "font = " 

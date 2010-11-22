@@ -85,7 +85,7 @@ using namespace RooStats;
 
 //____________________________________________________________________
 LikelihoodInterval::LikelihoodInterval(const char* name) :
-   ConfInterval(name), fBestFitParams(0), fLikelihoodRatio(0)
+   ConfInterval(name), fBestFitParams(0), fLikelihoodRatio(0), fConfidenceLevel(0.95)
 {
    // Default constructor with name and title
 }
@@ -95,7 +95,8 @@ LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, const R
    ConfInterval(name), 
    fParameters(*params), 
    fBestFitParams(bestParams), 
-   fLikelihoodRatio(lr) 
+   fLikelihoodRatio(lr),
+   fConfidenceLevel(0.95)
 {
    // Alternate constructor taking a pointer to the profile likelihood ratio, parameter of interest and 
    // optionally a snaphot of best parameter of interest for interval
@@ -195,10 +196,7 @@ Double_t LikelihoodInterval::LowerLimit(const RooRealVar& param, bool & status)
 
    double lower = 0; 
    double upper = 0; 
-   RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
    status = FindLimits(param, lower, upper); 
-   RooMsgService::instance().setGlobalKillBelow(msglevel);
    return lower; 
 }
 
@@ -212,27 +210,23 @@ Double_t LikelihoodInterval::UpperLimit(const RooRealVar& param, bool & status)
 
    double lower = 0; 
    double upper = 0; 
-   RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
    status = FindLimits(param, lower, upper); 
-   RooMsgService::instance().setGlobalKillBelow(msglevel);
    return upper; 
 }
 
 
 void LikelihoodInterval::ResetLimits() { 
-   // reset map with cached limits
+   // reset map with cached limits - called every time the test size or CL has been changed
    fLowerLimits.clear(); 
    fUpperLimits.clear(); 
 }
 
 
 bool LikelihoodInterval::CreateMinimizer() { 
+   // internal function to create minimizer object needed to find contours or interval limits
+   // (running MINOS). 
+   // Minimizer must be Minuit or Minuit2
 
-   //std::cout << "creating minimizer..........." << std::endl;
-
-   // create minimizer object needed to find contours or interval limits
-   // minimizer must be Minuit or Minuit2
    RooProfileLL * profilell = dynamic_cast<RooProfileLL*>(fLikelihoodRatio);
    if (!profilell) return false; 
 
@@ -288,19 +282,19 @@ bool LikelihoodInterval::CreateMinimizer() {
    }
 
    //std::cout << "print minimizer result..........." << std::endl;
+   //fMinimizer->PrintResults();
 
-   fMinimizer->PrintResults();
    return true; 
 }
 
 bool LikelihoodInterval::FindLimits(const RooRealVar & param, double &lower, double & upper) 
 {
-   // find both lower and upper limits using MINOS
+   // Method to find both lower and upper limits using MINOS
+   // If cached values exist (limits have been already found) return them in that case
    // check first if limit has been computed 
    // otherwise compute limit using MINOS
    // in case of failure lower and upper will mantain previous value (will not be modified)
 
-   // check first if cached values exist (limits have been already found) and return them in that case
    std::map<std::string, double>::const_iterator itrl = fLowerLimits.find(param.GetName());
    std::map<std::string, double>::const_iterator itru = fUpperLimits.find(param.GetName());
    if ( itrl != fLowerLimits.end() && itru != fUpperLimits.end() ) { 
@@ -335,7 +329,6 @@ bool LikelihoodInterval::FindLimits(const RooRealVar & param, double &lower, dou
    
    unsigned int ivarX = ix; 
 
-   fMinimizer->SetPrintLevel(1);
    double elow = 0; 
    double eup = 0;
    ret = fMinimizer->GetMinosError(ivarX, elow, eup );
@@ -369,9 +362,7 @@ bool LikelihoodInterval::FindLimits(const RooRealVar & param, double &lower, dou
 
 
 Int_t LikelihoodInterval::GetContourPoints(const RooRealVar & paramX, const RooRealVar & paramY, Double_t * x, Double_t *y, Int_t npoints ) { 
-   // use Minuit to find the contour of the likelihood 
-   // take first the nll function 
-   // find contours 
+   // use Minuit to find the contour of the likelihood function at the desired CL 
 
    // check the parameters 
    // variable index in minimizer

@@ -122,6 +122,7 @@ void TFitter::GetConfidenceIntervals(Int_t n, Int_t ndim, const Double_t *x, Dou
    Double_t al, bl;
    if (npar_real != npar){
       fixed = new Bool_t[npar_real];
+      memset(fixed,0,npar_real*sizeof(Bool_t));
 
       for (Int_t ipar=0; ipar<npar_real; ipar++){
          fixed[ipar]=0;
@@ -608,6 +609,7 @@ void TFitter::FitChisquare(Int_t &npar, Double_t *gin, Double_t &f, Double_t *u,
    }
    Double_t cu,eu,fu,fsum;
    Double_t dersum[100], grad[100];
+   memset(grad,0,800);
    Double_t x[3];
 
    TH1 *hfit = (TH1*)GetObjectFit();
@@ -655,6 +657,7 @@ void TFitter::FitChisquareI(Int_t &npar, Double_t *gin, Double_t &f, Double_t *u
    
    Double_t cu,eu,fu,fsum;
    Double_t dersum[100], grad[100];
+   memset(grad,0,800);
    Double_t x[3];
 
    TH1 *hfit = (TH1*)GetObjectFit();
@@ -1117,6 +1120,7 @@ void F2Fit(Int_t &/*npar*/, Double_t * /*gin*/, Double_t &f,Double_t *u, Int_t /
 {
    TVirtualFitter *fitter = TVirtualFitter::GetFitter();
    TF2 *f2 = (TF2*)fitter->GetObjectFit();
+   f2->InitArgs(u, f2->GetParameters() );
    f = f2->EvalPar(u);
 }
 
@@ -1125,5 +1129,6 @@ void F3Fit(Int_t &/*npar*/, Double_t * /*gin*/, Double_t &f,Double_t *u, Int_t /
 {
    TVirtualFitter *fitter = TVirtualFitter::GetFitter();
    TF3 *f3 = (TF3*)fitter->GetObjectFit();
+   f3->InitArgs(u, f3->GetParameters() );
    f = f3->EvalPar(u);
 }

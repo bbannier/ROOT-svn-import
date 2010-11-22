@@ -51,14 +51,34 @@ TEveProjectable::~TEveProjectable()
    {
       TEveProjected* p = fProjectedList.front();
       p->UnRefProjectable(this);
-      TEveElement* el = dynamic_cast<TEveElement*>(p);
+      TEveElement* el = p->GetProjectedAsElement();
       assert(el);
-      // if (el)
       {
          gEve->PreDeleteElement(el);
          delete el;
       }
    }
+}
+
+//______________________________________________________________________________
+void TEveProjectable::AnnihilateProjecteds()
+{
+   // Optimized destroy of projected elements with condition 
+   // there is only one parent for projected element. Method is 
+   // called from TEveElement::Annihilate(). 
+
+   for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
+   {
+      (*i)->UnRefProjectable(this, kFALSE);
+      (*i)->GetProjectedAsElement()->Annihilate();
+   }
+   fProjectedList.clear();
+}
+
+//______________________________________________________________________________
+void TEveProjectable::ClearProjectedList()
+{
+   fProjectedList.clear();
 }
 
 //______________________________________________________________________________
@@ -69,7 +89,7 @@ void TEveProjectable::AddProjectedsToSet(std::set<TEveElement*>& set)
 
    for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
    {
-      set.insert(dynamic_cast<TEveElement*>(*i));
+      set.insert((*i)->GetProjectedAsElement());
    }
 }
 
@@ -87,7 +107,7 @@ void TEveProjectable::PropagateVizParams(TEveElement* el)
 
    for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
    {
-      dynamic_cast<TEveElement*>(*i)->CopyVizParams(el);
+      (*i)->GetProjectedAsElement()->CopyVizParams(el);
    }
 }
 
@@ -98,9 +118,8 @@ void TEveProjectable::PropagateRenderState(Bool_t rnr_self, Bool_t rnr_children)
 
    for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
    {
-      TEveElement* el = dynamic_cast<TEveElement*>(*i);
-      if (el->SetRnrSelfChildren(rnr_self, rnr_children))
-         el->ElementChanged();
+      if ((*i)->GetProjectedAsElement()->SetRnrSelfChildren(rnr_self, rnr_children))
+         (*i)->GetProjectedAsElement()->ElementChanged();
    }
 }
 
@@ -111,9 +130,8 @@ void TEveProjectable::PropagateMainColor(Color_t color, Color_t old_color)
 
    for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
    {
-      TEveElement* el = dynamic_cast<TEveElement*>(*i);
-      if (el->GetMainColor() == old_color)
-         el->SetMainColor(color);
+      if ((*i)->GetProjectedAsElement()->GetMainColor() == old_color)
+         (*i)->GetProjectedAsElement()->SetMainColor(color);
    }
 }
 
@@ -125,9 +143,8 @@ void TEveProjectable::PropagateMainTransparency(Char_t t, Char_t old_t)
 
    for (ProjList_i i=fProjectedList.begin(); i!=fProjectedList.end(); ++i)
    {
-      TEveElement* el = dynamic_cast<TEveElement*>(*i);
-      if (el->GetMainTransparency() == old_t)
-         el->SetMainTransparency(t);
+      if ((*i)->GetProjectedAsElement()->GetMainTransparency() == old_t)
+         (*i)->GetProjectedAsElement()->SetMainTransparency(t);
    }
 }
 
@@ -167,11 +184,11 @@ TEveProjected::~TEveProjected()
 }
 
 //______________________________________________________________________________
-TEveElement* TEveProjected::GetProjectableAsElement() const
+TEveElement* TEveProjected::GetProjectedAsElement()
 {
    // Returns fProjectable dynamic-casted to TEveElement.
 
-   return dynamic_cast<TEveElement*>(fProjectable);
+   return dynamic_cast<TEveElement*>(this);
 }
 
 //______________________________________________________________________________
@@ -188,7 +205,7 @@ void TEveProjected::SetProjection(TEveProjectionManager* mng, TEveProjectable* m
 }
 
 //______________________________________________________________________________
-void TEveProjected::UnRefProjectable(TEveProjectable* assumed_parent)
+void TEveProjected::UnRefProjectable(TEveProjectable* assumed_parent, bool notifyParent)
 {
    // Remove reference to projectable.
 
@@ -196,7 +213,7 @@ void TEveProjected::UnRefProjectable(TEveProjectable* assumed_parent)
 
    assert(fProjectable == assumed_parent);
 
-   fProjectable->RemoveProjected(this);
+   if (notifyParent) fProjectable->RemoveProjected(this);
    fProjectable = 0;
 }
 

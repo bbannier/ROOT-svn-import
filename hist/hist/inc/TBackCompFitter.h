@@ -27,6 +27,7 @@
 #endif
 
 
+
 #include <vector>
 
 /**
@@ -34,6 +35,7 @@
 */
 
 class TGraph; 
+class TFitResult; 
 
 namespace ROOT { 
    namespace Fit { 
@@ -59,6 +61,10 @@ public:
    virtual ~TBackCompFitter();
 
 public:
+
+   enum { 
+      kCanDeleteLast = BIT(9)  // object can be deleted before creating a new one
+   };
 
    // inherited interface
    virtual Double_t  Chisquare(Int_t npar, Double_t *params) const;
@@ -106,14 +112,17 @@ public:
    // get reference to Fit Result object (NOTE: it will be invalid when class is deleted) 
    const ROOT::Fit::FitResult & GetFitResult() const { return fFitter->Result(); }
 
+   // get a copy of the Fit result returning directly a new  TFitResult 
+   TFitResult * GetTFitResult() const; 
+
    // get reference to Fit Data object (NOTE: it will be invalid when class is deleted) 
    const ROOT::Fit::FitData & GetFitData() const { return *fFitData; }
 
    // return pointer to last used minimizer
-   ROOT::Math::Minimizer * GetMinimizer(); 
+   ROOT::Math::Minimizer * GetMinimizer() const; 
 
    // return pointer to last used objective function
-   ROOT::Math::IMultiGenFunction * GetObjFunction(); 
+   ROOT::Math::IMultiGenFunction * GetObjFunction() const; 
    
    // scan likelihood value of  parameter and fill the given graph. 
    bool  Scan(unsigned int ipar, TGraph * gr, double xmin = 0, double xmax = 0);
@@ -145,13 +154,14 @@ protected:
 private:
 
 
-   //ROOT::Fit::FitData * fFitData;
+   //ROOT::Fit::FitData * fFitData;          
    std::auto_ptr<ROOT::Fit::FitData>  fFitData;  //! data of the fit (managed by TBackCompFitter)
    std::auto_ptr<ROOT::Fit::Fitter>   fFitter;   //! pointer to fitter object (managed by TBackCompFitter)
    ROOT::Math::Minimizer * fMinimizer;
    ROOT::Math::IMultiGenFunction * fObjFunc; 
    ROOT::Math::IParamMultiFunction * fModelFunc; 
    mutable std::vector<double> fCovar; // cached covariance matrix (NxN)
+
 
 
    ClassDef(TBackCompFitter,1)  // Class providing backward compatibility for fitting by implementing the TVirtualFitter interface

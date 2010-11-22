@@ -51,6 +51,9 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
    fZAxis(0),
    fM(0),
    fDLCacheOK(kFALSE),
+   fMaxVal(0),
+   fValToPixel(0),
+   fCurrentPixelsPerBin(0),
    fCells3D(kTRUE),
    fBinStep(-1)
 {
@@ -82,12 +85,8 @@ Bool_t TEveCaloLegoGL::SetModel(TObject* obj, const Option_t* /*opt*/)
 {
    // Set model object.
 
-   if (SetModelCheckClass(obj, TEveCaloLego::Class())) {
-      fM = dynamic_cast<TEveCaloLego*>(obj);
-      return kTRUE;
-   }
-
-   return kFALSE;
+   fM = SetModelDynCast<TEveCaloLego>(obj);
+   return kTRUE;
 }
 
 //______________________________________________________________________________

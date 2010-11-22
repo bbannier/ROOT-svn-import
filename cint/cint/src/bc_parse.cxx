@@ -1140,6 +1140,7 @@ int G__blockscope::compile_throw(string& token,int c) {
     break;
   case '(':
     m_preader->putback();
+    // Now that we put it back, let's process it
   case ' ':
   default:
     c = m_preader->fgetstream(token,";");
@@ -1895,7 +1896,7 @@ int G__blockscope::initstruct(G__TypeReader& type, struct G__var_array* var, int
         type_tmp.Init(memvar, memindex);
         type_tmp.incplevel();
         m_bc_inst.CAST(type_tmp);
-        G__value reg = G__getexpr(expr);
+        /* G__value reg = */ G__getexpr(expr);
         m_bc_inst.LETNEWVAL();
         // Move to next data member.
 	memvar = G__incmemvar(memvar, &memindex, &buf);
@@ -1928,7 +1929,7 @@ int G__blockscope::initstruct(G__TypeReader& type, struct G__var_array* var, int
   }
   if (isauto) {
     // -- An unspecified length array.
-    G__malloc(num_of_elements, size, var->varnamebuf[varid]);
+    var->p[varid] = G__malloc(num_of_elements, size, var->varnamebuf[varid]);
   }
   // Read and discard up to next comma or semicolon.
   c = G__fignorestream(",;");
@@ -2028,67 +2029,67 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, struct G__var_array* v
   int linear_index = 0;
   int prev = 0;
   int stringflag = 0;
-  while (mparen) {
-    // -- Get next initializer expression.
-     c = G__fgetstream(expr, 0, ",{}");
-    if (expr[0]) {
-      // -- We got an initializer expression.
-      if ((var->type[ig15] == 'c') && (expr[0] == '"')) {
-        // -- Character array initialized by a string literal.
-	if (!typedefary) {
-          size = var->varlabel[ig15][var->paran[ig15]];
-        }
-	stringflag = 1;
-	if ((size < 0) && !num_of_elements) {
-	  isauto = 0;
-	  size = 1;
-	  stringflag = 2;
-	}
+   while (mparen) {
+      // -- Get next initializer expression.
+      c = G__fgetstream(expr, 0, ",{}");
+      if (expr[0]) {
+         // -- We got an initializer expression.
+         if ((var->type[ig15] == 'c') && (expr[0] == '"')) {
+            // -- Character array initialized by a string literal.
+            if (!typedefary) {
+               size = var->varlabel[ig15][var->paran[ig15]];
+            }
+            stringflag = 1;
+            if ((size < 0) && !num_of_elements) {
+               isauto = 0;
+               size = 1;
+               stringflag = 2;
+            }
+         }
+         prev = linear_index;
+         if (inc) {
+            linear_index = (linear_index - (linear_index % inc)) + inc;
+         }
+         if ((num_of_elements || isauto) && (linear_index >= num_of_elements)) {
+            if (isauto) {
+               num_of_elements += stride;
+            }
+            else if (stringflag == 2) {
+            }
+            else {
+               // Error, array index out of range.
+               G__fprinterr(G__serr, "Error: %s: %d: Array initialization over-run '%s'", __FILE__, __LINE__, var->varnamebuf[ig15]);
+               G__genericerror(0);
+               return c;
+            }
+         }
+         // Default initialize omitted elements.
+         for (int i = prev + 1; i < linear_index; ++i) {
+            m_bc_inst.LD(&G__null);
+            m_bc_inst.LETNEWVAL();
+            m_bc_inst.OP1(G__OPR_PREFIXINC);
+         }
+         // Initialize this element.
+         G__value reg;
+         {
+            int store_prerun = G__prerun;
+            G__prerun = 0;
+            // todo, only if !stringflag 
+            reg = G__getexpr(expr);
+            G__prerun = store_prerun;
+            conversion(reg, var, ig15, 'p', 0);
+         }
+         if (stringflag == 1) {
+         }
+         else if ((stringflag == 2) && isauto) {
+            num_of_elements = std::strlen((char*) reg.obj.i) + 1;
+         }
+         else {
+            m_bc_inst.LETNEWVAL();
+            m_bc_inst.OP1(G__OPR_PREFIXINC);
+         }
       }
-      prev = linear_index;
-      if (inc) {
-        linear_index = (linear_index - (linear_index % inc)) + inc;
-      }
-      if ((num_of_elements || isauto) && (linear_index >= num_of_elements)) {
-	if (isauto) {
-          num_of_elements += stride;
-	}
-	else if (stringflag == 2) {
-	}
-	else {
-	  // Error, array index out of range.
-	  G__fprinterr(G__serr, "Error: %s: %d: Array initialization over-run '%s'", __FILE__, __LINE__, var->varnamebuf[ig15]);
-	  G__genericerror(0);
-	  return c;
-	}
-      }
-      // Default initialize omitted elements.
-      for (int i = prev + 1; i < linear_index; ++i) {
-        m_bc_inst.LD(&G__null);
-        m_bc_inst.LETNEWVAL();
-        m_bc_inst.OP1(G__OPR_PREFIXINC);
-      }
-      // Initialize this element.
-      G__value reg;
-      {
-        int store_prerun = G__prerun;
-        G__prerun = 0;
-        // todo, only if !stringflag 
-        reg = G__getexpr(expr);
-        G__prerun = store_prerun;
-	conversion(reg, var, ig15, 'p', 0);
-      }
-      if (stringflag == 1) {
-      }
-      else if ((stringflag == 2) && isauto) {
-	num_of_elements = std::strlen((char*) reg.obj.i) + 1;
-      }
-      else {
-        m_bc_inst.LETNEWVAL();
-        m_bc_inst.OP1(G__OPR_PREFIXINC);
-      }
-    }
-    // Change parser state for the next initializer expression.
+      // Change parser state for the next initializer expression.
     switch (c) {
       case '{':
         // -- Increment nesting level.
@@ -2130,7 +2131,7 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, struct G__var_array* v
     // -- Unspecified length array.
     // Allocate in order to increment memory pointer
     // now that we know the final size.
-    G__malloc(num_of_elements, size, var->varnamebuf[ig15]);
+    var->p[ig15]=G__malloc(num_of_elements, size, var->varnamebuf[ig15]);
   }
   // Read and discard up to the next comma or semicolon.
   c = G__fignorestream(",;");
@@ -2274,7 +2275,7 @@ struct G__var_array* G__blockscope::allocatevariable(G__TypeReader& type
     }
 
     char *buf = (char*)malloc(name.size()+1);
-    strcpy(buf,name.c_str());
+    strcpy(buf,name.c_str()); // Okay we allocated enough memory
 
     int size = type.Size();
     // todo, Reference argument works with and without following line.

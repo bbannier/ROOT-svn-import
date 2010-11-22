@@ -230,7 +230,7 @@ namespace TMVA {
       template<typename T>
       void        AddAttr     ( void* node, const char* , const T& value, Int_t precision = 16 );
       void        AddAttr     ( void* node, const char* attrname, const char* value );
-      void*       AddChild    ( void* parent, const char* childname, const char* content = 0 );
+      void*       AddChild    ( void* parent, const char* childname, const char* content = 0, bool isRootNode = false );
       Bool_t      AddRawLine  ( void* node, const char * raw );
       Bool_t      AddComment  ( void* node, const char* comment );
 
@@ -254,13 +254,13 @@ namespace TMVA {
 } // namespace TMVA
 
 //_______________________________________________________________________
-template<typename T>
-void TMVA::Tools::ReadAttr( void* node, const char* attrname, T& value )
+template<typename T> void TMVA::Tools::ReadAttr( void* node, const char* attrname, T& value )
 {
    // read attribute from xml
    TString val;
    ReadAttr( node, attrname, val );
    std::stringstream s(val.Data());
+   // coverity[tainted_data_argument]
    s >> value;
 }
 

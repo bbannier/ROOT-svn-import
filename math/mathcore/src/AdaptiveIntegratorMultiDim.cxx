@@ -12,12 +12,15 @@ namespace Math {
 
 
 
-AdaptiveIntegratorMultiDim::AdaptiveIntegratorMultiDim(double absTol, double relTol, unsigned int size):
+AdaptiveIntegratorMultiDim::AdaptiveIntegratorMultiDim(double absTol, double relTol, unsigned int maxpts, unsigned int size):
    fDim(0), 
+   fMinPts(0), 
+   fMaxPts(maxpts),
+   fSize(size), 
    fAbsTol(absTol),
    fRelTol(relTol),
-   fSize(size), 
-   fResult(0), fError(0), 
+   fResult(0), 
+   fError(0), fRelError(0),
    fNEval(0),
    fStatus(-1),
    fFun(0)
@@ -25,12 +28,15 @@ AdaptiveIntegratorMultiDim::AdaptiveIntegratorMultiDim(double absTol, double rel
    // constructor - without passing a function
 }
 
-AdaptiveIntegratorMultiDim::AdaptiveIntegratorMultiDim( const IMultiGenFunction &f, double absTol, double relTol, unsigned int size):
+AdaptiveIntegratorMultiDim::AdaptiveIntegratorMultiDim( const IMultiGenFunction &f, double absTol, double relTol, unsigned int maxpts, unsigned int size):
    fDim(f.NDim()), 
+   fMinPts(0), 
+   fMaxPts(maxpts),
+   fSize(size),
    fAbsTol(absTol),
    fRelTol(relTol),
-   fSize(size),
-   fResult(0), fError(0), 
+   fResult(0), 
+   fError(0), fRelError(0),
    fNEval(0),
    fStatus(-1),
    fFun(&f)
@@ -56,7 +62,7 @@ void AdaptiveIntegratorMultiDim::SetRelTolerance(double relTol){ this->fRelTol =
 void AdaptiveIntegratorMultiDim::SetAbsTolerance(double absTol){ this->fAbsTol = absTol; }
 
 
-double AdaptiveIntegratorMultiDim::Integral(const double* xmin, const double * xmax)
+double AdaptiveIntegratorMultiDim::DoIntegral(const double* xmin, const double * xmax, bool absValue)
 {
    // References:
    //
@@ -71,15 +77,12 @@ double AdaptiveIntegratorMultiDim::Integral(const double* xmin, const double * x
    bool kFALSE = false;
    bool kTRUE = true;
 
-   unsigned int minpts = 0;
-   unsigned int maxpts = fSize;//specified maximal number of function evaluations
    double eps = fRelTol; //specified relative accuracy
    //output parameters
    fStatus = 0; //report status
    unsigned int nfnevl; //nr of function evaluations
    double relerr; //an estimation of the relative accuracy of the result
 
-   bool fgAbsValue=0;//for now; maybe later new class member as in TF1..
 
    double ctr[15], wth[15], wthl[15], z[15];
 
@@ -134,12 +137,17 @@ double AdaptiveIntegratorMultiDim::Integral(const double* xmin, const double * x
 
    double twondm = std::pow(2.0,static_cast<int>(n));
    //unsigned int minpts = Int_t(twondm)+ 2*n*(n+1)+1;
+
    unsigned int ifncls = 0;
    bool  ldv   = kFALSE;
    unsigned int irgnst = 2*n+3;
    unsigned int  irlcls = (unsigned int)(twondm) +2*n*(n+1)+1;//minimal number of nodes in n dim
    unsigned int isbrgn = irgnst;
    unsigned int isbrgs = irgnst;
+
+
+   unsigned int minpts = fMinPts; 
+   unsigned int maxpts = std::max(fMaxPts, irlcls) ;//specified maximal number of function evaluations
 
    if (minpts < 1)      minpts = irlcls;
    if (maxpts < minpts) maxpts = 10*minpts;
@@ -148,7 +156,7 @@ double AdaptiveIntegratorMultiDim::Integral(const double* xmin, const double * x
    // with IWK Length ( >= (2N + 3) * (1 + MAXPTS/(2**N + 2N(N + 1) + 1))/2).
    // Here, this array is allocated dynamically
 
-   unsigned int iwk = irgnst*(1 +maxpts/irlcls)/2;
+   unsigned int iwk = std::max( fSize, irgnst*(1 +maxpts/irlcls)/2 );
    double *wk = new double[iwk+10];
 
    unsigned int j; 
@@ -179,18 +187,18 @@ L20:
    //loop over coordinates
    for (j=0; j<n; j++) {
       z[j]    = ctr[j] - xl2*wth[j];
-      if (fgAbsValue) f2 = std::abs((*fFun)(z));
-      else            f2 = (*fFun)(z);
+      if (absValue) f2 = std::abs((*fFun)(z));
+      else          f2 = (*fFun)(z);
       z[j]    = ctr[j] + xl2*wth[j];
-      if (fgAbsValue) f2 += std::abs((*fFun)(z));
-      else            f2 += (*fFun)(z);
+      if (absValue) f2 += std::abs((*fFun)(z));
+      else          f2 += (*fFun)(z);
       wthl[j] = xl4*wth[j];
       z[j]    = ctr[j] - wthl[j]; 
-      if (fgAbsValue) f3 = std::abs((*fFun)(z));
-      else            f3 = (*fFun)(z);
+      if (absValue) f3 = std::abs((*fFun)(z));
+      else          f3 = (*fFun)(z);
       z[j]    = ctr[j] + wthl[j];
-      if (fgAbsValue) f3 += std::abs((*fFun)(z));
-      else            f3 += (*fFun)(z);
+      if (absValue) f3 += std::abs((*fFun)(z));
+      else          f3 += (*fFun)(z);
       sum2   += f2;//sum func eval with different weights separately
       sum3   += f3;//for a given region
       dif     = std::abs(7*f2-f3-12*sum1);
@@ -212,7 +220,7 @@ L20:
             for (m=0;m<2;m++) {
                wthl[k] = -wthl[k];
                z[k]    = ctr[k] + wthl[k];
-               if (fgAbsValue) sum4 += std::abs((*fFun)(z));
+               if (absValue) sum4 += std::abs((*fFun)(z));
                else            sum4 += (*fFun)(z);
             }
          }
@@ -228,8 +236,8 @@ L20:
       z[j] = ctr[j] + wthl[j];
    }
 L90: //sum over end nodes ~gray codes
-   if (fgAbsValue) sum5 += std::abs((*fFun)(z));
-   else            sum5 += (*fFun)(z);
+   if (absValue) sum5 += std::abs((*fFun)(z));
+   else          sum5 += (*fFun)(z);
    for (j=0;j<n;j++) {
       wthl[j] = -wthl[j];
       z[j] = ctr[j] + wthl[j];
@@ -351,7 +359,29 @@ double AdaptiveIntegratorMultiDim::Integral(const IMultiGenFunction &f, const do
 
 }
 
+ROOT::Math::IntegratorMultiDimOptions  AdaptiveIntegratorMultiDim::Options() const { 
+   // return the used options
+   ROOT::Math::IntegratorMultiDimOptions opt; 
+   opt.SetAbsTolerance(fAbsTol); 
+   opt.SetRelTolerance(fRelTol); 
+   opt.SetNCalls(fMaxPts); 
+   opt.SetWKSize(fSize); 
+   opt.SetIntegrator("ADAPTIVE");
+   return opt; 
+}
 
+void AdaptiveIntegratorMultiDim::SetOptions(const ROOT::Math::IntegratorMultiDimOptions & opt)
+{
+   //   set integration options
+   if (opt.IntegratorType() != IntegrationMultiDim::kADAPTIVE) {
+      MATH_ERROR_MSG("AdaptiveIntegratorMultiDim::SetOptions","Invalid options");
+      return;
+   }      
+   SetAbsTolerance( opt.AbsTolerance() );
+   SetRelTolerance( opt.RelTolerance() );
+   SetMaxPts( opt.NCalls() );
+   SetSize( opt.WKSize() );
+}
 
 } // namespace Math
 } // namespace ROOT

@@ -28,9 +28,105 @@
 
 namespace ROOT {
 namespace Math {
+   
+   struct CDFWrapper : public IGenFunction { 
+      // wrapper around a cdf funciton to re-scale for the range
+      Double_t fXmin; // lower range for x 
+      Double_t fXmax; // lower range for x 
+      Double_t fNorm; // normalization
+      const IGenFunction* fCDF; // cdf pointer (owned by the class) 
+
+      
+      virtual ~CDFWrapper() { if (fCDF) delete fCDF; }
+
+      CDFWrapper(const IGenFunction& cdf, Double_t xmin=0, Double_t xmax=-1) : 
+         fCDF(cdf.Clone())
+      {
+         if (xmin >= xmax) { 
+            fNorm = 1; 
+            fXmin = -std::numeric_limits<double>::infinity();
+            fXmax = std::numeric_limits<double>::infinity();
+         }
+         else {
+            fNorm = cdf(xmax) - cdf(xmin); 
+            fXmin = xmin; 
+            fXmax = xmax; 
+         }
+      }
+
+      Double_t DoEval(Double_t x) const {
+         if (x <= fXmin) return 0; 
+         if (x >= fXmax) return 1.0; 
+         return (*fCDF)(x)/fNorm;
+      }
+      
+      IGenFunction* Clone() const {
+         return new CDFWrapper(*fCDF,fXmin,fXmax);
+      }
+   };
+
+
+   class PDFIntegral : public IGenFunction { 
+      Double_t fXmin; // lower range for x 
+      Double_t fXmax; // lower range for x 
+      Double_t fNorm; // normalization
+      mutable IntegratorOneDim fIntegral;
+      const IGenFunction* fPDF; // pdf pointer (owned by the class) 
+   public:
+
+      virtual ~PDFIntegral() { if (fPDF) delete fPDF; }
+
+      PDFIntegral(const IGenFunction& pdf, Double_t xmin=0, Double_t xmax=-1) : 
+         fXmin(xmin), 
+         fXmax(xmax),
+         fNorm(1),
+         fPDF(pdf.Clone())
+      {
+         // compute normalization
+         fIntegral.SetFunction(*fPDF);  // N.B. must be fPDF (the cloned copy) and not pdf which can disappear
+         if (fXmin >= fXmax) {  
+            fXmin = -std::numeric_limits<double>::infinity();
+            fXmax = std::numeric_limits<double>::infinity();
+         }
+         if (fXmin ==  std::numeric_limits<double>::infinity() && fXmax == std::numeric_limits<double>::infinity() ) { 
+            fNorm = fIntegral.Integral();
+         }
+         else if (fXmin == std::numeric_limits<double>::infinity() )
+            fNorm = fIntegral.IntegralLow(fXmax);
+         else if (fXmax == std::numeric_limits<double>::infinity() )
+            fNorm = fIntegral.IntegralUp(fXmin);
+         else
+            fNorm = fIntegral.Integral(fXmin, fXmax);
+      }
+            
+      Double_t DoEval(Double_t x) const {
+         if (x <= fXmin) return 0; 
+         if (x >= fXmax) return 1.0; 
+         if (fXmin == std::numeric_limits<double>::infinity() )
+            return fIntegral.IntegralLow(x)/fNorm;
+         else 
+            return fIntegral.Integral(fXmin,x)/fNorm;
+      }
+      
+      IGenFunction* Clone() const {
+         return new PDFIntegral(*fPDF,fXmin,fXmax);
+      }
+   };
+
+   void GoFTest::SetDistribution(EDistribution dist) {
+      if (!(kGaussian <= dist && dist <= kExponential)) {
+         std::cerr << "Cannot set distribution type! Distribution type option must be ennabled." << std::endl;
+         return;
+      }
+      fDist = dist;
+      SetCDF();
+   }
   
-   GoFTest::GoFTest(const Double_t* sample1, UInt_t sample1Size, const Double_t* sample2, UInt_t sample2Size)
-      : fCDF(0), fSamples(std::vector<std::vector<Double_t> >(2)), fTestSampleFromH0(kFALSE) {
+   GoFTest::GoFTest( UInt_t sample1Size, const Double_t* sample1, UInt_t sample2Size, const Double_t* sample2 )
+   : fCDF(std::auto_ptr<IGenFunction>((IGenFunction*)0)), 
+     fDist(kUndefined), 
+     fSamples(std::vector<std::vector<Double_t> >(2)), 
+     fTestSampleFromH0(kFALSE) {
       Bool_t badSampleArg = sample1 == 0 || sample1Size == 0;
       if (badSampleArg) { 
          std::string msg = "'sample1";
@@ -55,8 +151,11 @@ namespace Math {
       SetParameters();
    }
 
-   GoFTest::GoFTest(const Double_t* sample, UInt_t sampleSize, EDistribution dist)   
-      : fCDF(0), fDist(dist), fSamples(std::vector<std::vector<Double_t> >(1)), fTestSampleFromH0(kTRUE) {
+   GoFTest::GoFTest(UInt_t sampleSize, const Double_t* sample, EDistribution dist)   
+   : fCDF(std::auto_ptr<IGenFunction>((IGenFunction*)0)), 
+     fDist(dist), 
+     fSamples(std::vector<std::vector<Double_t> >(1)), 
+     fTestSampleFromH0(kTRUE) {
       Bool_t badSampleArg = sample == 0 || sampleSize == 0;
       if (badSampleArg) { 
          std::string msg = "'sample";
@@ -71,9 +170,7 @@ namespace Math {
       SetCDF();
    }
 
-   GoFTest::~GoFTest() {
-      delete fCDF;
-   }
+   GoFTest::~GoFTest() {}
 
    void GoFTest::SetSamples(std::vector<const Double_t*> samples, const std::vector<UInt_t> samplesSizes) {
       fCombinedSamples.assign(std::accumulate(samplesSizes.begin(), samplesSizes.end(), 0), 0.0);
@@ -122,23 +219,39 @@ namespace Math {
       return result;
    }
 
-   void GoFTest::SetCDF(CDF_Ptr cdf) { //  Setting parameter-free distributions 
+   void GoFTest::SetCDF() { //  Setting parameter-free distributions 
+      IGenFunction* cdf = 0;
       switch (fDist) {
       case kLogNormal:
          LogSample();
       case kGaussian :
-         fCDF = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::GaussianCDF);
+         cdf = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::GaussianCDF);
          break;
       case kExponential:
-         fCDF = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::ExponentialCDF);
+         cdf = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::ExponentialCDF);
          break;
       case kUserDefined:
+      case kUndefined:
       default:
-         fCDF = cdf;
+         break;   
       }
+      fCDF = std::auto_ptr<IGenFunction>(cdf);
+   }
+   
+   void GoFTest::SetDistributionFunction(const IGenFunction& f, Bool_t isPDF, Double_t xmin, Double_t xmax) {
+      if (fDist > kUserDefined) {
+         MATH_WARN_MSG("SetDistributionFunction","Distribution type is changed to user defined");
+      }
+      fDist = kUserDefined; 
+      // function will be cloned inside the wrapper PDFIntegral of CDFWrapper classes
+      if (isPDF) 
+         fCDF = std::auto_ptr<IGenFunction>(new PDFIntegral(f,xmin,xmax) ); 
+      else 
+         fCDF = std::auto_ptr<IGenFunction>(new CDFWrapper(f,xmin,xmax) ); 
    }
 
    void GoFTest::Instantiate(const Double_t* sample, UInt_t sampleSize) {
+      // initialization function for the template constructors
       Bool_t badSampleArg = sample == 0 || sampleSize == 0;
       if (badSampleArg) { 
          std::string msg = "'sample";
@@ -146,46 +259,26 @@ namespace Math {
          MATH_ERROR_MSG("GoFTest::GoFTest", msg.c_str());
          assert(!badSampleArg);
       }
-      fCDF = 0;
+      fCDF = std::auto_ptr<IGenFunction>((IGenFunction*)0);
       fDist = kUserDefined;
+      fMean = 0;
+      fSigma = 0; 
       fSamples = std::vector<std::vector<Double_t> >(1);
       fTestSampleFromH0 = kTRUE;
       SetSamples(std::vector<const Double_t*>(1, sample), std::vector<UInt_t>(1, sampleSize));
    }
-
-   Double_t GoFTest::ComputeIntegral(Double_t* parms) const { 
-      ROOT::Math::IntegratorOneDim ig;
-      Integrand func(parms);
-      ig.SetFunction(func);
-      Double_t result = ig.IntegralUp( 0);
-      return result;
-   }
-
+   
    Double_t GoFTest::GaussianCDF(Double_t x) const {
-      x -= fMean;
-      x /= fSigma;
-      return ROOT::Math::normal_cdf(x);
+      return ROOT::Math::normal_cdf(x, fSigma, fMean);
    }
 
    Double_t GoFTest::ExponentialCDF(Double_t x) const {
-      x /= fMean;
-      return ROOT::Math::exponential_cdf(x, 1.0);
+      return ROOT::Math::exponential_cdf(x, 1.0 / fMean);
    }
 
    void GoFTest::LogSample() {
       transform(fSamples[0].begin(), fSamples[0].end(), fSamples[0].begin(), std::ptr_fun<Double_t, Double_t>(TMath::Log));
       SetParameters();
-   }
-
-   GoFTest::Integrand::Integrand(Double_t* p) : parms(p) {}
-
-/*
-  Taken from (2)
-*/
-   Double_t GoFTest::Integrand::operator()(Double_t y) const {
-      Double_t z = parms[0];
-      Double_t t_j = parms[1];
-      return TMath::Exp(z / (8 * (1 + TMath::Power(y, 2))) - TMath::Power(y, 2) * t_j);
    }
 
 /*
@@ -292,16 +385,19 @@ namespace Math {
 /*
   Taken from (2)
 */Double_t GoFTest::PValueAD1Sample(Double_t A2) const {
-   if (A2 == 0)
-      return 0.0;
-   Double_t t0 = TMath::Power(TMath::Pi(), 2) / (8 * A2);
-   Double_t t1 = 25 * t0;
-   Double_t parms[2] = {A2, t0};
-   Double_t f0Integral = ComputeIntegral(parms);
-   parms[1] = t1;
-   Double_t f1Integral = ComputeIntegral(parms);
-   Double_t pvalue = 1 - (TMath::Sqrt(2 * TMath::Pi()) / A2 * (TMath::Exp(-t0) * f0Integral - 5.0 / 2.0 * TMath::Exp(-t1) * f1Integral));
-   return pvalue;
+   Double_t pvalue = 0.0;
+   if (A2 <= 0.0) {
+      return pvalue;
+   } else if (A2 < 2.) {
+      pvalue = std::pow(A2, -0.5) * std::exp(-1.2337141 / A2) * (2.00012 + (0.247105 - (0.0649821 - (0.0347962 - (0.011672 - 0.00168691 * A2) * A2) * A2) * A2) * A2);
+   } else {
+      pvalue = std::exp(-1. * std::exp(1.0776 - (2.30695 - (0.43424 - (.082433 - (0.008056 - 0.0003146 * A2) * A2) * A2) * A2) * A2));
+   }   
+   if (pvalue != pvalue) {
+      std::cerr << "Cannot compute p-value: degenerate distribution. Check input distribution parameter soundness." << std::endl;
+      return -1;
+   }
+   return 1. - pvalue;
 }
 
 /*
@@ -347,7 +443,11 @@ namespace Math {
   Taken from (3)
 */Double_t GoFTest::AndersonDarlingTest(const Char_t* option) const {
    if (!fTestSampleFromH0) {
-      std::cerr << "Only 2-samples tests can be issued!" << std::endl;
+      std::cerr << "Only 2-sample tests can be issued!" << std::endl;
+      return -1;
+   } 
+   if (fDist == kUndefined) {
+      std::cerr << "Distribution type is undefined! Please use SetDistribution(GoFTest::EDistribution)." << std::endl;
       return -1;
    }
    Double_t A2 = 0.0;
@@ -382,7 +482,11 @@ namespace Math {
    Algorithm taken from (3) in page 737
 */Double_t GoFTest::KolmogorovSmirnovTest(const Char_t* option) const {
    if (!fTestSampleFromH0) {
-      std::cerr << "Only 2-samples tests can be issued!" << std::endl;
+      std::cerr << "Only 2-sample tests can be issued!" << std::endl;
+      return -1;
+   }
+   if (fDist == kUndefined) {
+      std::cerr << "Distribution type is undefined! Please use SetDistribution(GoFTest::EDistribution)." << std::endl;
       return -1;
    }
    Double_t Fo = 0.0, Dn = 0.0;

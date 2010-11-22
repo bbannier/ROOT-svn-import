@@ -114,7 +114,7 @@ namespace {
       using namespace std;
       pyprop->fName.~string();
       delete pyprop->fConverter;
-      pyprop->ob_type->tp_free( (PyObject*)pyprop );
+      Py_TYPE(pyprop)->tp_free( (PyObject*)pyprop );
    }
 
 
@@ -123,8 +123,7 @@ namespace {
 
 //= PyROOT property proxy type ===============================================
 PyTypeObject PropertyProxy_Type = {
-   PyObject_HEAD_INIT( &PyType_Type )
-   0,                         // ob_size
+   PyVarObject_HEAD_INIT( &PyType_Type, 0 )
    (char*)"ROOT.PropertyProxy",                  // tp_name
    sizeof(PropertyProxy),     // tp_basicsize
    0,                         // tp_itemsize
@@ -169,10 +168,10 @@ PyTypeObject PropertyProxy_Type = {
    0,                         // tp_cache
    0,                         // tp_subclasses
    0                          // tp_weaklist
-#if PY_MAJOR_VERSION >= 2 && PY_MINOR_VERSION >= 3
+#if PY_VERSION_HEX >= 0x02030000
    , 0                        // tp_del
 #endif
-#if PY_MAJOR_VERSION >= 2 && PY_MINOR_VERSION >= 6
+#if PY_VERSION_HEX >= 0x02060000
    , 0                        // tp_version_tag
 #endif
 };
@@ -190,6 +189,12 @@ void PyROOT::PropertyProxy::Set( TDataMember* dm )
       fullType.append( "*" );
    }
    fProperty  = (Long_t)dm->Property();
+
+// workaround for bug affecting "using" declared data members:
+   if ( (fProperty & kIsStatic) && /* with offset smaller than class size, can't be static! */
+        fOffset < ((G__ClassInfo*)dm->GetClass()->GetClassInfo())->Size() )
+      fProperty &= ~kIsStatic;
+
    fConverter = CreateConverter( fullType, dm->GetMaxIndex( 0 ) );
    fName      = dm->GetName();
 
@@ -208,6 +213,9 @@ void PyROOT::PropertyProxy::Set( TGlobal* gbl )
    std::string fullType = gbl->GetFullTypeName();
    if ( fullType == "void*" ) // actually treated as address to void*
       fullType = "void**";
+   if ( (int)gbl->GetArrayDim() != 0 ) {
+      fullType.append( "*" );
+   }
    fConverter = CreateConverter( fullType, gbl->GetMaxIndex( 0 ) );
    fName      = gbl->GetName();
 
@@ -237,11 +245,8 @@ void PyROOT::PropertyProxy::Set( const ROOT::Reflex::Member& mb )
 //____________________________________________________________________________
 Long_t PyROOT::PropertyProxy::GetAddress( ObjectProxy* pyobj ) {
 // class attributes, global properties
-   if ( fProperty & kIsStatic )
+   if ( (fProperty & kIsStatic) || ( (fOwnerTagnum > -1) && fOwnerIsNamespace ) )
       return fOffset;
-   if ( (fOwnerTagnum > -1) && fOwnerIsNamespace ) {
-      return fOffset;
-   }
 
 // special case: non-static lookup through class
    if ( ! pyobj )

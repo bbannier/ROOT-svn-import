@@ -238,9 +238,9 @@ TGeoMaterial::~TGeoMaterial()
 char *TGeoMaterial::GetPointerName() const
 {
 // Provide a pointer name containing uid.
-   static char name[20];
-   sprintf(name,"pMat%d", GetUniqueID());
-   return name;
+   static TString name;
+   name = TString::Format("pMat%d", GetUniqueID());
+   return (char*)name.Data();
 }    
 
 //_____________________________________________________________________________
@@ -253,7 +253,7 @@ void TGeoMaterial::SetRadLen(Double_t radlen, Double_t intlen)
    // Check for vacuum
    if (fA<0.9 || fZ<0.9) {
       if (radlen<-1e5 || intlen<-1e-5) {
-         Error("SetRadLen","Material %s: user values taken for vacuum: radlen=%g or intlen=%g - too small", fRadLen, fIntLen);
+         Error("SetRadLen","Material %s: user values taken for vacuum: radlen=%g or intlen=%g - too small", GetName(),fRadLen, fIntLen);
          return;
       }
       // Ignore positive values and take big numbers
@@ -398,12 +398,18 @@ TGeoMaterial *TGeoMaterial::DecayMaterial(Double_t time, Double_t precision)
          ncomp1--;
       }
    }
-   if (ncomp1>1) mix = new TGeoMixture(Form("%s-evol",GetName()), ncomp, rho); 
+   if (ncomp1<2) {
+      el = (TGeoElementRN *)pop->At(0);
+      delete [] weight;
+      delete pop;
+      if (ncomp1==1) return new TGeoMaterial(TString::Format("%s-evol",GetName()), el, rho);
+      return NULL;
+   }   
+   mix = new TGeoMixture(TString::Format("%s-evol",GetName()), ncomp, rho);
    for (i=0; i<ncomp; i++) {
       weight[i] /= amed;
       if (weight[i]<precision) continue;
       el = (TGeoElementRN *)pop->At(i);
-      if (ncomp1==1) return new TGeoMaterial(Form("%s-evol",GetName()), el, rho);
       mix->AddElement(el, weight[i]);
    }
    delete [] weight;
@@ -748,7 +754,10 @@ void TGeoMixture::DefineElement(Int_t /*iel*/, Int_t z, Int_t natoms)
 // Define the mixture element at index iel by number of atoms in the chemical formula.
    TGeoElementTable *table = gGeoManager->GetElementTable();
    TGeoElement *elem = table->GetElement(z);
-   if (!elem) Fatal("DefineElement", "In mixture %s, element with Z=%i not found",GetName(),z);
+   if (!elem) {
+      Fatal("DefineElement", "In mixture %s, element with Z=%i not found",GetName(),z);
+      return;
+   }   
    AddElement(elem, natoms);
 }
    
@@ -858,12 +867,18 @@ TGeoMaterial *TGeoMixture::DecayMaterial(Double_t time, Double_t precision)
          ncomp1--;
       }
    }
-   if (ncomp1>1) mix = new TGeoMixture(Form("%s-evol",GetName()), ncomp, rho); 
+   if (ncomp1<2) {
+      el = (TGeoElementRN *)pop->At(0);
+      delete [] weight;
+      delete pop;
+      if (ncomp1==1) return new TGeoMaterial(TString::Format("%s-evol",GetName()), el, rho);
+      return NULL;
+   }
+   mix = new TGeoMixture(TString::Format("%s-evol",GetName()), ncomp, rho); 
    for (i=0; i<ncomp; i++) {
       weight[i] /= amed;
       if (weight[i]<precision) continue;
       el = (TGeoElementRN *)pop->At(i);
-      if (ncomp1==1) return new TGeoMaterial(Form("%s-evol",GetName()), el, rho);
       mix->AddElement(el, weight[i]);
    }
    delete [] weight;

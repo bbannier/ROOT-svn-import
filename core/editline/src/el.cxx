@@ -153,6 +153,7 @@ el_set(EditLine_t* el, int op, ...) {
    va_start(va, op);
 
    if (el == NULL) {
+      va_end(va);
       return -1;
    }
 
@@ -413,11 +414,11 @@ el_source(EditLine_t* el, const char* fname) {
          return -1;
       }
 
-      if (el_strlcpy(path, ptr, sizeof(path)) >= sizeof(path)) {
+      if (strlcpy(path, ptr, sizeof(path)) >= sizeof(path)) {
          return -1;
       }
 
-      if (el_strlcat(path, elpath, sizeof(path)) >= sizeof(path)) {
+      if (strlcat(path, elpath, sizeof(path)) >= sizeof(path)) {
          return -1;
       }
       fname = path;

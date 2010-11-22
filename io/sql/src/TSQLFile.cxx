@@ -295,7 +295,8 @@ TSQLFile::TSQLFile() :
    fOtherTypes(0),
    fUserName(),
    fLogFile(0),
-   fIdsTableExists(kFALSE)
+   fIdsTableExists(kFALSE),
+   fStmtCounter(0)
 {
    // default TSQLFile constructor
    SetBit(kBinaryFile, kFALSE);
@@ -319,7 +320,8 @@ TSQLFile::TSQLFile(const char* dbname, Option_t* option, const char* user, const
    fOtherTypes(mysql_OtherTypes),
    fUserName(user),
    fLogFile(0),
-   fIdsTableExists(kFALSE)
+   fIdsTableExists(kFALSE),
+   fStmtCounter(0)
 {
    // Connects to SQL server with provided arguments.
    // If the constructor fails in any way IsZombie() will
@@ -351,7 +353,7 @@ TSQLFile::TSQLFile(const char* dbname, Option_t* option, const char* user, const
    TDirectoryFile::Build();
    fFile = this;
 
-   if (strstr(dbname,"oracle://")!=0) {
+   if (dbname && strstr(dbname,"oracle://")!=0) {
       fBasicTypes = oracle_BasicTypes;
       fOtherTypes = oracle_OtherTypes;
    }
@@ -991,7 +993,7 @@ Int_t TSQLFile::StreamKeysForDirectory(TDirectory* dir, Bool_t doupdate, Long64_
             TKeySQL* key = FindSQLKey(dir, keyid);
 
             if (key==0) {
-               Error("StreamKeysForDirectory","Key with id %d not exist in list", keyid);
+               Error("StreamKeysForDirectory","Key with id %lld not exist in list", keyid);
                nkeys = -1; // this will finish execution
             } else
             if (key->IsKeyModified(keyname, keytitle, keydatime, cycle, classname))
@@ -1435,7 +1437,7 @@ TSQLResult* TSQLFile::SQLQuery(const char* cmd, Int_t flag, Bool_t* ok)
 
    if (fSQL==0) return 0;
 
-   if (gDebug>2) Info("SQLQuery",cmd);
+   if (gDebug>2) Info("SQLQuery", "%s", cmd);
 
    fQuerisCounter++;
 
@@ -1448,10 +1450,6 @@ TSQLResult* TSQLFile::SQLQuery(const char* cmd, Int_t flag, Bool_t* ok)
    TSQLResult* res = fSQL->Query(cmd);
    if (ok!=0) *ok = res!=0;
    if (res==0) return 0;
-   if (flag==0) {
-      delete res;
-      return 0;
-   }
 //   if ((flag==2) && IsOracle())
 //      res = new TSQLResultCopy(res);
    return res;
@@ -1479,7 +1477,7 @@ TSQLStatement* TSQLFile::SQLStatement(const char* cmd, Int_t bufsize)
    if (!fSQL->HasStatement()) return 0;
 
    if (gDebug>1)
-      Info("SQLStatement",cmd);
+      Info("SQLStatement", "%s", cmd);
 
    fStmtCounter++;
    fQuerisCounter++; // one statement counts as one query
@@ -1526,7 +1524,7 @@ Bool_t TSQLFile::SQLTestTable(const char* tablename)
    if (fSQL==0) return kFALSE;
 
    if (fSQL->HasTable(tablename)) return kTRUE;
-   
+
    TString buf(tablename);
    buf.ToLower();
    if (fSQL->HasTable(buf.Data())) return kTRUE;
@@ -2176,7 +2174,7 @@ Bool_t TSQLFile::CreateRawTable(TSQLClassInfo* sqlinfo)
    const char* quote = SQLIdentifierQuote();
 
    if (gDebug>2)
-      Info("CreateRawTable", sqlinfo->GetName());
+      Info("CreateRawTable", "%s", sqlinfo->GetName());
 
    TString sqlcmd;
 
@@ -2412,7 +2410,7 @@ TObjArray* TSQLFile::SQLObjectsInfo(Long64_t keyid)
 
    if (fLogFile!=0)
       *fLogFile << sqlcmd << endl;
-   if (gDebug>2) Info("SQLObjectsInfo",sqlcmd);
+   if (gDebug>2) Info("SQLObjectsInfo", "%s", sqlcmd.Data());
    fQuerisCounter++;
 
    TSQLStatement* stmt = SQLStatement(sqlcmd.Data(), 1000);
@@ -2517,7 +2515,7 @@ TSQLStatement* TSQLFile::GetBlobClassDataStmt(Long64_t objid, TSQLClassInfo* sql
 
    if (fLogFile!=0)
       *fLogFile << sqlcmd << endl;
-   if (gDebug>2) Info("BuildStatement",sqlcmd);
+   if (gDebug>2) Info("BuildStatement", "%s", sqlcmd.Data());
    fQuerisCounter++;
 
    TSQLStatement* stmt = SQLStatement(sqlcmd.Data(), 1000);
@@ -2544,14 +2542,14 @@ Long64_t TSQLFile::StoreObjectInTables(Long64_t keyid, const void* obj, const TC
 
    TSQLStructure* s = buffer.SqlWriteAny(obj, cl, objid);
 
-   if ((buffer.GetErrorFlag()>0) && (s!=0)) {
+   if ((buffer.GetErrorFlag()>0) && s) {
       Error("StoreObjectInTables","Cannot convert object data to TSQLStructure");
       objid = -1;
    } else {
       TObjArray cmds;
       // here tables may be already created, therefore
       // it should be protected by transactions operations
-      if (!s->ConvertToTables(this, keyid, &cmds)) {
+      if (s && !s->ConvertToTables(this, keyid, &cmds)) {
          Error("StoreObjectInTables","Cannot convert to SQL statements");
          objid = -1;
       } else {
@@ -2616,7 +2614,7 @@ Int_t TSQLFile::DirReadKeys(TDirectory* dir)
    dir->GetListOfKeys()->Delete();
 
    if (gDebug>2)
-      Info("DirReadKeys","dir = %s id = %d", dir->GetName(), dir->GetSeekDir());
+      Info("DirReadKeys","dir = %s id = %lld", dir->GetName(), dir->GetSeekDir());
 
    return StreamKeysForDirectory(dir, kFALSE);
 }
@@ -2664,7 +2662,7 @@ void TSQLFile::DirWriteHeader(TDirectory* dir)
       col3name+=sqlio::StrSuffix;
    }
 
-   sqlcmd.Form("UPDATE %s%s%s SET %s%s%s=%s, %s%s%s=%s, %s%s%s=%s WHERE %s%s%s=%d",
+   sqlcmd.Form("UPDATE %s%s%s SET %s%s%s=%s, %s%s%s=%s, %s%s%s=%s WHERE %s%s%s=%lld",
                 quote, sqlinfo->GetClassTableName(), quote,
                 quote, col1name.Data(), quote, timeC.Data(),
                 quote, col2name.Data(), quote, timeM.Data(),

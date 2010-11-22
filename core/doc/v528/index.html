@@ -2,6 +2,33 @@
 <hr/>
 <a name="core"></a> 
 <h3>Core</h3>
+<h4>Base</h4>
+<ul>
+<li>Change TTime data member from Long_t to Long64_t. On 32-bit systems the
+Long_t is 32-bits and too small to keep the time in milliseconds since the ROOT EPOCH (1-1-1995). Added new operators:
+<pre>
+operator long long()
+operator unsigned long long()
+</pre>
+The existing operators long and unsigned long on 32-bit machines return
+an error in case the stored time is larger then 32-bit and truncation
+occurs (like was always the case till now, but silently).
+</li>
+<li>New method ExitOnException() which allows to set the behaviour of
+TApplication in case of an exception (sigsegv, sigbus, sigill, sigfpe).
+The default is to trap the signal and continue with the event loop,
+using this method one can specify to exit with the signal number to the
+shell, or to abort() which in addition generates a core dump.
+</li>
+<li>New command line argument -x which forces ROOT to exit on an exception.
+</li>
+</ul>
+<h4>Build</h4>
+<ul>
+<li>New option '-t' for rmkdepend to allow the caller to fully specify the name to be used as a target
+This supersedes the name calculated from the input file name and the -p and -o option.
+</li>
+</ul>
 <h4>ACLiC</h4>
 <ul>
 <li>Allow ACLiC to use a flat directory structure when a build directory is specified.
@@ -30,6 +57,13 @@ of its emulated base class.<br/>
 <tt>TStreamerInfo::Destruct</tt> and the new method <tt>TStreamerInfo::GetActualClass</tt>
 use this information to detect the TStreamerInfo actually used to create
 the object and hence run the proper emulated destructor.</li>
+<br>
+<li>Add a new function GenerateDictionary to TInterpreter which allows for the quick and easy creation of a dictionary
+given one (or more) class name(s) and the name(s) of its header files.
+<pre style="border:gray 1px solid;padding:0.5em 2em;background:#ffe">
+   gInterpreter->GenerateDictionary("vector<vector<float> >;list<vector<float> >","list;vector");
+   gInterpreter->GenerateDictionary("myclass","myclass.h;myhelper.h");
+</pre>This replaces the recommandation of creating a small 'loader.C' script to create the dictionaries.
 </ul>
 
 <h4>Cont</h4>
@@ -56,3 +90,9 @@ arrays in b). Uses ObjCompare() to compare objects. This function is used by
 the new function TClonesArray::MultiSort().
 </li>
 </ul>
+<h4>Thread</h4>
+<ul>
+<li>New static function TThread::IsInitialized
+</li>
+</ul>
+

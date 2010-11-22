@@ -132,6 +132,8 @@ void TImageDump::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t  y2)
    Int_t ix2 = x1 < x2 ? XtoPixel(x2) : XtoPixel(x1);
    Int_t iy1 = y1 < y2 ? YtoPixel(y1) : YtoPixel(y2);
    Int_t iy2 = y1 < y2 ? YtoPixel(y2) : YtoPixel(y1);
+   if (TMath::Abs(ix2-ix1) < 1) ix2 = ix1+1;
+   if (TMath::Abs(iy1-iy2) < 1) iy1 = iy2+1;
 
    Int_t fillis = fFillStyle/1000;
    Int_t fillsi = fFillStyle%1000;
@@ -173,7 +175,7 @@ void TImageDump::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t  y2)
    }
 
    if (fillis == 0) {
-      fImage->DrawBox(ix1, iy1, ix2, iy2, linecol->AsHexString(), 1, TVirtualX::kHollow);
+      fImage->DrawBox(ix1, iy1, ix2, iy2, linecol->AsHexString(), fLineWidth, TVirtualX::kHollow);
    }
 }
 
@@ -231,6 +233,7 @@ void TImageDump::DrawFrame(Double_t x1, Double_t y1, Double_t x2, Double_t  y2,
       col = gROOT->GetColor(light);
       if (!col) {
          col = gROOT->GetColor(10);
+         if (!col) return;
       }
       fImage->DrawBox(pxl, pyl, pxt, pyt, // force image creation and resizing
                       "#ffffffff", 1,  TVirtualX::kFilled);
@@ -498,6 +501,7 @@ void TImageDump::DrawPS(Int_t nn, Double_t *x, Double_t *y)
       if (!col) { // no color, make it black
          fLineColor = 1;
          col = gROOT->GetColor(fLineColor);
+         if (!col) return;
       }
    }
 

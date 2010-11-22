@@ -477,15 +477,15 @@ void TGeoVolume::Browse(TBrowser *b)
    for (Int_t i=0; i<GetNdaughters(); i++) { 
       daughter = GetNode(i)->GetVolume();
       if(!strlen(daughter->GetTitle())) {
-         if (daughter->IsAssembly()) title.Form("Assembly with %d daughter(s)", 
+         if (daughter->IsAssembly()) title.TString::Format("Assembly with %d daughter(s)", 
                                                 daughter->GetNdaughters());
          else if (daughter->GetFinder()) {
             TString s1 = daughter->GetFinder()->ClassName();
             s1.ReplaceAll("TGeoPattern","");
-            title.Form("Volume having %s shape divided in %d %s slices",
+            title.TString::Format("Volume having %s shape divided in %d %s slices",
                        daughter->GetShape()->ClassName(),daughter->GetNdaughters(), s1.Data()); 
                        
-         } else title.Form("Volume with %s shape having %d daughter(s)", 
+         } else title.TString::Format("Volume with %s shape having %d daughter(s)", 
                          daughter->GetShape()->ClassName(),daughter->GetNdaughters());
          daughter->SetTitle(title.Data());
       }   
@@ -551,20 +551,11 @@ void TGeoVolume::CheckOverlaps(Double_t ovlp, Option_t *option) const
       TObjArray *overlaps = fGeoManager->GetListOfOverlaps();
       Int_t novlps = overlaps->GetEntriesFast();
       TNamed *obj;
-      char name[15];
-      char num[15];
-      Int_t ndigits=1;
-      Int_t i,j, result=novlps;
-      while ((result /= 10)) ndigits++;
-      for (i=0; i<novlps; i++) {
+      TString name;
+      for (Int_t i=0; i<novlps; i++) {
          obj = (TNamed*)overlaps->At(i);
-         result = i;
-         name[0] = 'o';
-         name[1] = 'v';
-         for (j=0; j<ndigits; j++) name[j+2]='0';
-         name[ndigits+2] = 0;
-         sprintf(num,"%i", i);
-         memcpy(name+2+ndigits-strlen(num), num, strlen(num));
+         if (novlps<1000) name = TString::Format("ov%03d", i);
+         else             name = TString::Format("ov%06d", i);
          obj->SetName(name);
       }   
       if (novlps) Info("CheckOverlaps", "Number of illegal overlaps/extrusions for volume %s: %d\n", GetName(), novlps);
@@ -840,10 +831,9 @@ Int_t TGeoVolume::Export(const char *filename, const char *name, Option_t *optio
       if (!f || f->IsZombie()) {
          Error("Export","Cannot open file");
          return 0;
-      }   
-      char keyname[256];
-      if (name) strcpy(keyname,name);
-      if (strlen(keyname) == 0) strcpy(keyname,GetName());
+      } 
+      TString keyname(name);
+      if (keyname.IsNull()) keyname = GetName();
       Int_t nbytes = Write(keyname);
       delete f;
       return nbytes;
@@ -884,16 +874,13 @@ void TGeoVolume::AddNode(const TGeoVolume *vol, Int_t copy_no, TGeoMatrix *mat, 
    }
 
    TGeoNodeMatrix *node = 0;
-   char *name = 0;         
    node = new TGeoNodeMatrix(vol, matrix);
    node->SetMotherVolume(this);
    fNodes->Add(node);
-   name = new char[strlen(vol->GetName())+15];
-   sprintf(name, "%s_%i", vol->GetName(), copy_no);
+   TString name = TString::Format("%s_%d", vol->GetName(), copy_no);
    if (fNodes->FindObject(name))
-      Warning("AddNode", "Volume %s : added node %s with same name", GetName(), name);
+      Warning("AddNode", "Volume %s : added node %s with same name", GetName(), name.Data());
    node->SetName(name);
-   delete [] name;
    node->SetNumber(copy_no);
 }
 
@@ -915,10 +902,8 @@ void TGeoVolume::AddNodeOffset(const TGeoVolume *vol, Int_t copy_no, Double_t of
    TGeoNode *node = new TGeoNodeOffset(vol, copy_no, offset);
    node->SetMotherVolume(this);
    fNodes->Add(node);
-   char *name = new char[strlen(vol->GetName())+15];
-   sprintf(name, "%s_%i", vol->GetName(), copy_no+1);
+   TString name = TString::Format("%s_%d", vol->GetName(), copy_no+1);
    node->SetName(name);
-   delete [] name;
    node->SetNumber(copy_no+1);
 }
 
@@ -927,14 +912,6 @@ void TGeoVolume::AddNodeOverlap(const TGeoVolume *vol, Int_t copy_no, TGeoMatrix
 {
 // Add a TGeoNode to the list of nodes. This is the usual method for adding
 // daughters inside the container volume.
-   if (vol->IsAssembly()) {
-      Warning("AddNodeOverlap", "Declaring assembly %s as possibly overlapping inside %s not allowed. Using AddNode instead !",vol->GetName(),GetName());
-      AddNode(vol, copy_no, mat, option);
-      return;
-   }   
-   TGeoMatrix *matrix = mat;
-   if (matrix==0) matrix = gGeoIdentity;
-   else           matrix->RegisterYourself();
    if (!vol) {
       Error("AddNodeOverlap", "Volume is NULL");
       return;
@@ -944,6 +921,14 @@ void TGeoVolume::AddNodeOverlap(const TGeoVolume *vol, Int_t copy_no, TGeoMatrix
       printf("### invalid volume was : %s\n", vol->GetName());
       return;
    }
+   if (vol->IsAssembly()) {
+      Warning("AddNodeOverlap", "Declaring assembly %s as possibly overlapping inside %s not allowed. Using AddNode instead !",vol->GetName(),GetName());
+      AddNode(vol, copy_no, mat, option);
+      return;
+   }   
+   TGeoMatrix *matrix = mat;
+   if (matrix==0) matrix = gGeoIdentity;
+   else           matrix->RegisterYourself();
    if (!fNodes) fNodes = new TObjArray();   
 
    if (fFinder) {
@@ -952,18 +937,13 @@ void TGeoVolume::AddNodeOverlap(const TGeoVolume *vol, Int_t copy_no, TGeoMatrix
       return;
    }
 
-   TGeoNodeMatrix *node = 0;
-   char *name = 0;
-
-   node = new TGeoNodeMatrix(vol, matrix);
+   TGeoNodeMatrix *node = new TGeoNodeMatrix(vol, matrix);
    node->SetMotherVolume(this);
    fNodes->Add(node);
-   name = new char[strlen(vol->GetName())+15];
-   sprintf(name, "%s_%i", vol->GetName(), copy_no);
+   TString name = TString::Format("%s_%d", vol->GetName(), copy_no);
    if (fNodes->FindObject(name))
-      Warning("AddNode", "Volume %s : added node %s with same name", GetName(), name);
+      Warning("AddNode", "Volume %s : added node %s with same name", GetName(), name.Data());
    node->SetName(name);
-   delete [] name;
    node->SetNumber(copy_no);
    node->SetOverlapping();
    if (vol->GetMedium() == fMedium)
@@ -1285,10 +1265,9 @@ void TGeoVolume::SaveAs(const char *filename, Option_t *option) const
    }
    if (fGeoManager->GetTopVolume() != this) fGeoManager->SetTopVolume((TGeoVolume*)this);
    
-   char fname[1000];
-   strcpy(fname,filename);
-   char *dot = strstr(fname,".");
-   if (dot) *dot = 0;  
+   TString fname(filename);
+   Int_t ind = fname.Index(".");
+   if (ind>0) fname.Remove(ind);
    out << "void "<<fname<<"() {" << endl;
    out << "   gSystem->Load(\"libGeom\");" << endl;
    ((TGeoVolume*)this)->SavePrimitive(out,option);
@@ -1501,7 +1480,7 @@ char *TGeoVolume::GetObjectInfo(Int_t px, Int_t py) const
    TGeoVolume *vol = (TGeoVolume*)this;
    TVirtualGeoPainter *painter = fGeoManager->GetPainter();
    if (!painter) return 0;
-   return painter->GetVolumeInfo(vol, px, py);
+   return (char*)painter->GetVolumeInfo(vol, px, py);
 }
 
 //_____________________________________________________________________________
@@ -1525,12 +1504,9 @@ Bool_t TGeoVolume::GetOptimalVoxels() const
 char *TGeoVolume::GetPointerName() const
 {
 // Provide a pointer name containing uid.
-   static char name[40];
-//   Int_t uid = GetUniqueID();
-//   if (uid) sprintf(name,"p%s_%i", GetName(),uid);
-//   else     sprintf(name,"p%s", GetName());
-   sprintf(name, "p%s_%lx", GetName(), (ULong_t)this);
-   return name;
+   static TString name;
+   name = TString::Format("p%s_%lx", GetName(), (ULong_t)this);
+   return (char*)name.Data();
 }
 
 //_____________________________________________________________________________
@@ -1620,7 +1596,10 @@ void TGeoVolume::MakeCopyNodes(const TGeoVolume *other)
 // make a new list of nodes and copy all nodes of other volume inside
    Int_t nd = other->GetNdaughters();
    if (!nd) return;
-   if (fNodes) delete fNodes;   
+   if (fNodes) {
+      if (!TObject::TestBit(kVolumeImportNodes)) fNodes->Delete();
+      delete fNodes;   
+   }   
    fNodes = new TObjArray();
    for (Int_t i=0; i<nd; i++) fNodes->Add(other->GetNode(i));
    TObject::SetBit(kVolumeImportNodes);
@@ -1931,8 +1910,6 @@ TGeoNode *TGeoVolume::ReplaceNode(TGeoNode *nodeorig, TGeoShape *newshape, TGeoM
    }   
    TGeoShape  *shape = oldvol->GetShape();
    if (newshape && !nodeorig->IsOffset()) shape = newshape;
-   TGeoMatrix *pos = nodeorig->GetMatrix();
-   if (newpos && !nodeorig->IsOffset())   pos = newpos;
    TGeoMedium *med = oldvol->GetMedium();
    if (newmed) med = newmed;
    // Make a new volume
@@ -1950,6 +1927,11 @@ TGeoNode *TGeoVolume::ReplaceNode(TGeoNode *nodeorig, TGeoShape *newshape, TGeoM
    TGeoNode *newnode = nodeorig->MakeCopyNode();
    // Change the volume for the new node
    newnode->SetVolume(vol);
+   // Replace the matrix
+   if (newpos && !nodeorig->IsOffset()) {
+      TGeoNodeMatrix *nodemat = (TGeoNodeMatrix*)newnode;
+      nodemat->SetMatrix(newpos);
+   }   
    // Replace nodeorig with new one
    fNodes->RemoveAt(ind);
    fNodes->AddAt(newnode, ind);   
@@ -2348,13 +2330,9 @@ TGeoVolume *TGeoVolumeMulti::Divide(const char *divname, Int_t iaxis, Int_t ndiv
 //_____________________________________________________________________________
 TGeoVolume *TGeoVolumeMulti::MakeCopyVolume(TGeoShape *newshape)
 {
-    // make a copy of this volume
-//    printf("   Making a copy of %s\n", GetName());
-   char *name = new char[strlen(GetName())+1];
-   sprintf(name, "%s", GetName());
+   // Make a copy of this volume
    // build a volume with same name, shape and medium
-   TGeoVolume *vol = new TGeoVolume(name, newshape, fMedium);
-   delete [] name;
+   TGeoVolume *vol = new TGeoVolume(GetName(), newshape, fMedium);
    Int_t i=0;
    // copy volume attributes
    vol->SetVisibility(IsVisible());
@@ -2500,7 +2478,7 @@ void TGeoVolumeAssembly::AddNode(const TGeoVolume *vol, Int_t copy_no, TGeoMatri
 {
 // Add a component to the assembly. 
    TGeoVolume::AddNode(vol,copy_no,mat,option);
-   fShape->ComputeBBox();
+   ((TGeoShapeAssembly*)fShape)->RecomputeBoxLast();
 }   
 
 //_____________________________________________________________________________
@@ -2534,7 +2512,7 @@ TGeoVolume *TGeoVolumeAssembly::CloneVolume() const
    // make copy nodes
    vol->MakeCopyNodes(this);
 //   CloneNodesAndConnect(vol);
-   vol->GetShape()->ComputeBBox();
+   ((TGeoShapeAssembly*)vol->GetShape())->NeedsBBoxRecompute();
    // copy voxels
    TGeoVoxelFinder *voxels = 0;
    if (fVoxels) {

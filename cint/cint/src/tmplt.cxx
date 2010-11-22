@@ -228,69 +228,72 @@ void G__instantiate_templatememfunclater(G__Definedtemplateclass *deftmpclass
 * G__settemplatealias()
 *
 ***********************************************************************/
-int G__settemplatealias(const char *tagnamein,char *tagname,int tagnum
+int G__settemplatealias(const char *tagnamein,G__FastAllocString &tagname,int tagnum
                         ,G__Charlist *charlist,G__Templatearg *defpara,int encscope)
 {
-  char *p;
-  p=strchr(tagname,'<');
-  if(p) ++p;
-  else {
-    p = tagname + strlen(tagname);
-    *p++ = '<';
-  }
-  /* B<int,5*2>
-   *   ^ => p */
-  while(charlist->next) {
-    if(defpara->default_parameter) {
-	  char oldp = *(p-1);
-	  char oldp2 = *(p-2);
-	  if (oldp == '<') // all template args have defaults
-	    *(p-1) = 0;
-	  else {
-             if (oldp2 == '>') {
-                *(p-1) = ' ';
-                ++p;
-             }
-             *(p-1) = '>';
-             *p = 0;
-	  }
-      if(0!=strcmp(tagnamein,tagname) && -1==G__defined_typename(tagname)) {
-        int typenum=G__newtype.alltype++;
-        G__newtype.type[typenum]='u';
-        G__newtype.tagnum[typenum] = tagnum;
-        G__newtype.name[typenum]=(char*)malloc(strlen(tagname)+1);
-        strcpy(G__newtype.name[typenum],tagname);
-        G__newtype.namerange->Insert(G__newtype.name[typenum], typenum);
-        G__newtype.hash[typenum] = strlen(tagname);
-        G__newtype.globalcomp[typenum] = G__globalcomp;
-        G__newtype.reftype[typenum] = G__PARANORMAL;
-        G__newtype.nindex[typenum] = 0;
-        G__newtype.index[typenum] = (int*)NULL;
-        G__newtype.iscpplink[typenum] = G__NOLINK;
-        G__newtype.comment[typenum].filenum = -1;
-        if(encscope) {
-          G__newtype.parent_tagnum[typenum] = G__get_envtagnum();
-        }
-        else {
-          G__newtype.parent_tagnum[typenum] = G__struct.parent_tagnum[tagnum];
-        }
+   size_t cursor = 0;
+   char *lessthan = strchr(tagname,'<');
+   if  (lessthan) {
+      cursor = (lessthan - tagname) + 1;
+   } else {
+      cursor = strlen(tagname);
+      tagname[cursor] = '<';
+      ++cursor;
+   }
+   /* B<int,5*2>
+    *   ^ => p */
+   while(charlist->next) {
+      if(defpara->default_parameter) {
+         char oldp = tagname[cursor-1];
+         char oldp2 = tagname[cursor-2];
+         if (oldp == '<') // all template args have defaults
+            tagname.Set(cursor-1, 0);
+         else {
+            if (oldp2 == '>') {
+               tagname.Set(cursor-1, ' ');
+               ++cursor;
+            }
+            tagname.Set(cursor-1, '>');
+            tagname.Set(cursor, 0);
+         }
+         if(0!=strcmp(tagnamein,tagname) && -1==G__defined_typename(tagname)) {
+            int typenum=G__newtype.alltype++;
+            G__newtype.type[typenum]='u';
+            G__newtype.tagnum[typenum] = tagnum;
+            size_t nlen = strlen(tagname)+1;
+            G__newtype.name[typenum]=(char*)malloc(nlen);
+            G__strlcpy(G__newtype.name[typenum],tagname,nlen);
+            G__newtype.namerange->Insert(G__newtype.name[typenum], typenum);
+            G__newtype.hash[typenum] = strlen(tagname);
+            G__newtype.globalcomp[typenum] = G__globalcomp;
+            G__newtype.reftype[typenum] = G__PARANORMAL;
+            G__newtype.nindex[typenum] = 0;
+            G__newtype.index[typenum] = (int*)NULL;
+            G__newtype.iscpplink[typenum] = G__NOLINK;
+            G__newtype.comment[typenum].filenum = -1;
+            if(encscope) {
+               G__newtype.parent_tagnum[typenum] = G__get_envtagnum();
+            }
+            else {
+               G__newtype.parent_tagnum[typenum] = G__struct.parent_tagnum[tagnum];
+            }
+         }
+         if (oldp2 == '>') {
+            --cursor;
+         }
+         tagname.Set(cursor-1, oldp);
       }
-      if (oldp2 == '>') {
-         --p;
+      tagname.Replace(cursor,charlist->string);
+      cursor += strlen(charlist->string);
+      charlist = charlist->next;
+      defpara = defpara->next;
+      if(charlist->next) {
+         tagname.Set(cursor, ','); ++cursor;
       }
-      *(p-1) = oldp;
-    }
-    strcpy(p,charlist->string);
-    p+=strlen(charlist->string);
-    charlist=charlist->next;
-    defpara=defpara->next;
-    if(charlist->next) {
-      *p=','; ++p;
-    }
-  }
-  *p='>'; ++p;
-  *p='\0'; ++p;
-  return 0;
+   }
+   tagname.Set(cursor, '>'); ++cursor;
+   tagname.Set(cursor, '\0'); ++cursor;
+   return 0;
 }
 #endif
 
@@ -340,26 +343,29 @@ extern "C" {
 /***********************************************************************
 * G__catparam()
 *
-* Cancatinate parameter string to libp->parameter[0] and return.
+* Concatenate parameter string to libp->parameter[0] and return.
 *
 *  "B<int"   "double"   "5>"     =>    "B<int,double,5>"
 ***********************************************************************/
 char *G__catparam(G__param *libp,int catn,const char *connect)
 {
-  int i;
-  char *p;
-  int lenconnect;
-  /* B<int\0
-   *      ^ => p */
-  p = libp->parameter[0]+strlen(libp->parameter[0]);
-  lenconnect = strlen(connect);
-  for(i=1;i<catn;i++) {
-    strcpy(p,connect);
-    p+=lenconnect;
-    strcpy(p,libp->parameter[i]);
-    p+=strlen(libp->parameter[i]);
-  }
-  return(libp->parameter[0]);
+   int i;
+   char *p;
+   int lenconnect;
+   /* B<int\0
+    *      ^ => p */
+   size_t lenused = strlen(libp->parameter[0]);
+   p = libp->parameter[0] + lenused;
+   lenconnect = strlen(connect);
+   for(i=1; i<catn; i++) {
+      G__strlcpy(p, connect, sizeof(libp->parameter[0]) - lenused);
+      p += lenconnect;
+      lenused += lenconnect;
+      G__strlcpy(p, libp->parameter[i], sizeof(libp->parameter[0]) - lenused);
+      p += strlen(libp->parameter[i]);
+      lenused += strlen(libp->parameter[i]);
+   }
+   return(libp->parameter[0]);
 }
 
 /**************************************************************************
@@ -409,7 +415,7 @@ struct G__Templatearg *G__read_formal_templatearg()
     else {
       if(strcmp(type,"int")==0) p->type = G__TMPLT_INTARG;
       else if(strcmp(type,"size_t")==0) p->type = G__TMPLT_SIZEARG;
-      else if(strcmp(type,"unsignedint")==0) p->type = G__TMPLT_UINTARG;
+      else if(strcmp(type,"unsigned int")==0) p->type = G__TMPLT_UINTARG;
       else if(strcmp(type,"unsigned")==0) {
         fpos_t pos;
         int linenum;
@@ -440,11 +446,11 @@ struct G__Templatearg *G__read_formal_templatearg()
         }
       }
       else if(strcmp(type,"char")==0) p->type = G__TMPLT_CHARARG;
-      else if(strcmp(type,"unsignedchar")==0) p->type = G__TMPLT_UCHARARG;
+      else if(strcmp(type,"unsigned char")==0) p->type = G__TMPLT_UCHARARG;
       else if(strcmp(type,"short")==0) p->type = G__TMPLT_SHORTARG;
-      else if(strcmp(type,"unsignedshort")==0) p->type = G__TMPLT_USHORTARG;
+      else if(strcmp(type,"unsigned short")==0) p->type = G__TMPLT_USHORTARG;
       else if(strcmp(type,"long")==0) p->type = G__TMPLT_LONGARG;
-      else if(strcmp(type,"unsignedlong")==0) p->type = G__TMPLT_ULONGARG;
+      else if(strcmp(type,"unsigned long")==0) p->type = G__TMPLT_ULONGARG;
       else if(strcmp(type,"float")==0) p->type = G__TMPLT_FLOATARG;
       else if(strcmp(type,"double")==0) p->type = G__TMPLT_DOUBLEARG;
       else if(strcmp(type,">")==0) {
@@ -470,12 +476,12 @@ struct G__Templatearg *G__read_formal_templatearg()
       name[strlen(name)-1] = '\0';
     }
     p->string=(char*)malloc(strlen(name)+1);
-    strcpy(p->string,name);
+    strcpy(p->string,name); // Okay we allocated enough memory
 
     if('='==c) {
       c = G__fgetstream_template(name, 0, ",>"); /* G__fgetstream_tmplt() ? */
       p->default_parameter=(char*)malloc(strlen(name)+1);
-      strcpy(p->default_parameter,name);
+      strcpy(p->default_parameter,name); // Okay we allocated enough memory
     }
     else {
       p->default_parameter=(char*)NULL;
@@ -574,7 +580,7 @@ struct G__Templatearg *G__read_specializationarg(char *source)
     }
 
     p->string=(char*)malloc(strlen(type)+1);
-    strcpy(p->string,type);
+    strcpy(p->string,type); // Okay we allocated enough memory
 
     /*  template<T*,E,int> ...
      *              ^                  */
@@ -824,6 +830,7 @@ int G__createtemplateclass(const char *new_name,G__Templatearg *targ
         if(isforwarddecl) {
           /* Ignore an incomplete declaration after a complete one */
           G__fignorestream(";");
+          if (spec_arg) G__freetemplatearg(spec_arg);
           return(0);
         }
         if(spec_arg) {
@@ -848,6 +855,8 @@ int G__createtemplateclass(const char *new_name,G__Templatearg *targ
             while(deftmpclass->next) deftmpclass=deftmpclass->next;
           }
           deftmpclass->spec_arg = spec_arg;
+          // indicate that we took ownership
+          spec_arg = 0;
           override=0;
           break;
         }
@@ -868,19 +877,19 @@ int G__createtemplateclass(const char *new_name,G__Templatearg *targ
   if(!override) {
     /* store name and hash key */
     deftmpclass->name = (char*)malloc(strlen(new_name)+1);
-    strcpy(deftmpclass->name,new_name);
+    strcpy(deftmpclass->name,new_name); // Okay we allocated enough memory
     deftmpclass->hash=hash;
   }
 
   /* store parent_tagnum */
   {
-      int env_tagnum;
+      int env_tagnum2;
       if(-1!=G__def_tagnum) {
-        if(G__tagdefining!=G__def_tagnum) env_tagnum=G__tagdefining;
-        else                              env_tagnum=G__def_tagnum;
+        if(G__tagdefining!=G__def_tagnum) env_tagnum2=G__tagdefining;
+        else                              env_tagnum2=G__def_tagnum;
       }
-      else env_tagnum = -1;
-      deftmpclass->parent_tagnum = env_tagnum;
+      else env_tagnum2 = -1;
+      deftmpclass->parent_tagnum = env_tagnum2;
   }
 
   /* store template argument list */
@@ -941,6 +950,7 @@ int G__createtemplateclass(const char *new_name,G__Templatearg *targ
   }
   deftmpclass->isforwarddecl = isforwarddecl;
 
+  if (spec_arg) G__freetemplatearg(spec_arg);
   return(0);
 }
 
@@ -1441,6 +1451,7 @@ void G__declare_template()
         if (isforwarddecl && isfrienddecl) {
            // We do not need to autoload friend declaration.
            if (isfrienddecl) G__set_class_autoloading(autoload_old);
+           G__freetemplatearg(targ);
            return;
         }
         fsetpos(G__ifile.fp,&pos);
@@ -1543,7 +1554,9 @@ void G__declare_template()
         c='<';
         if(p!=temp2) {
           p=strchr(temp2,'<');
-          *p='\0';  /* non constructor/destructor member function */
+          if (p) {
+             *p='\0';  /* non constructor/destructor member function */
+          }
           temp = temp2;
         }
       }
@@ -1589,7 +1602,7 @@ void G__declare_template()
       p=strchr(temp2,'<');
       if(p) {
         *p = '\0';
-        strcpy(temp,temp2);
+        str cpy(temp,temp2);
         c='<';
       }
       else if(isspace(c)&&'\0'==temp[0]) {
@@ -1683,6 +1696,7 @@ void G__declare_template()
         else {
           G__genericerror("Error: operator() overloading syntax error");
           if (isfrienddecl) G__set_class_autoloading(autoload_old);
+          G__freetemplatearg(targ);
           return;
         }
       }
@@ -1698,121 +1712,83 @@ void G__declare_template()
 *
 * separate and evaluate template argument list
 **************************************************************************/
-static void G__templatemaptypename(char *string)
+static void G__templatemaptypename(G__FastAllocString &string)
 {
-  int tagnum;
+   int tagnum;
 #ifdef G__OLDIMPLEMENTATION609_YET
-  int typenum;
+   int typenum;
 #endif
-  if(strncmp(string,"const",5)==0 && string[5]!=' ') {
-    if(
-       strcmp(string+5,"int")==0||
-       strcmp(string+5,"unsignedint")==0||
-       strcmp(string+5,"char")==0||
-       strcmp(string+5,"unsignedchar")==0||
-       strcmp(string+5,"short")==0||
-       strcmp(string+5,"unsignedshort")==0||
-       strcmp(string+5,"long")==0||
-       strcmp(string+5,"unsignedlong")==0||
-       strcmp(string+5,"double")==0||
-       strcmp(string+5,"float")==0||
-       strcmp(string+5,"int*")==0||
-       strcmp(string+5,"unsignedint*")==0||
-       strcmp(string+5,"char*")==0||
-       strcmp(string+5,"unsignedchar*")==0||
-       strcmp(string+5,"short*")==0||
-       strcmp(string+5,"unsignedshort*")==0||
-       strcmp(string+5,"long*")==0||
-       strcmp(string+5,"unsignedlong*")==0||
-       strcmp(string+5,"double*")==0||
-       strcmp(string+5,"float*")==0
-       || G__istypename(string+5)
-      ) {
-      int len=strlen(string);
-      while(len>=5) {
-        string[len+1] = string[len];
-        --len;
-      }
-      string[5] = ' ';
-      string += 6;
-    }
-  }
-  while(strncmp(string,"const ",6)==0) string+=6;
-  if(strcmp(string,"shortint")==0) strcpy(string,"short");
-  else if(strcmp(string,"shortint*")==0) strcpy(string,"short*");
-  else if(strcmp(string,"longint")==0) strcpy(string,"long");
-  else if(strcmp(string,"longint*")==0) strcpy(string,"long*");
-  else if(strcmp(string,"longlong")==0) strcpy(string,"long long");
-  else if(strcmp(string,"longlong*")==0) strcpy(string,"long long*");
-  else if(strcmp(string,"unsignedchar")==0) strcpy(string,"unsigned char");
-  else if(strcmp(string,"unsignedchar*")==0) strcpy(string,"unsigned char*");
-  else if(strcmp(string,"unsigned")==0) strcpy(string,"unsigned int");
-  else if(strcmp(string,"unsignedint")==0) strcpy(string,"unsigned int");
-  else if(strcmp(string,"unsignedint*")==0) strcpy(string,"unsigned int*");
-  else if(strcmp(string,"unsignedlong")==0||
-          strcmp(string,"unsignedlongint")==0)
-    strcpy(string,"unsigned long");
-  else if(strcmp(string,"unsignedlong*")==0||
-          strcmp(string,"unsignedlongint*")==0)
-    strcpy(string,"unsigned long*");
-  else if(strcmp(string,"unsignedlonglong")==0)
-    strcpy(string,"unsigned long long ");
-  else if(strcmp(string,"unsignedlonglong*")==0)
-    strcpy(string,"unsigned long long*");
-  else if(strcmp(string,"unsignedshort")==0||
-          strcmp(string,"unsignedshortint")==0)
-    strcpy(string,"unsigned short");
-  else if(strcmp(string,"unsignedshort*")==0||
-          strcmp(string,"unsignedshortint*")==0)
-    strcpy(string,"unsigned short*");
-  else if (strcmp(string,"Float16_t")==0||
-           strcmp(string,"Float16_t*")==0) 
-    { 
-       /* nothing to do, we want to keep those as is */
+   
+   size_t offset = 0;
+   while(strncmp(string+offset,"const ",6)==0) offset += 6;
 
-    }
-  else if (strcmp(string,"Double32_t")==0||
-           strcmp(string,"Double32_t*")==0) 
-    { 
-       /* nothing to do, we want to keep those as is */
+   if (strcmp(string,"short int")==0) string.Replace(offset,"short");
+   else if(strcmp(string,"short int*")==0) string.Replace(offset,"short*");
+   else if(strcmp(string,"long int")==0) string.Replace(offset,"long");
+   else if(strcmp(string,"long int*")==0) string.Replace(offset,"long*");
+   else if(strcmp(string,"unsigned")==0) string.Replace(offset,"unsigned int");
+   else if(strcmp(string,"unsigned int")==0) string.Replace(offset,"unsigned int");
+   else if(strcmp(string,"unsigned int*")==0) string.Replace(offset,"unsigned int*");
+   else if(strcmp(string,"unsigned long int")==0)
+      string.Replace(offset,"unsigned long");
+   else if(strcmp(string,"unsigned long int*")==0)
+      string.Replace(offset,"unsigned long*");
+   else if(strcmp(string,"unsigned short int")==0)
+      string.Replace(offset,"unsigned short");
+   else if(strcmp(string,"unsigned short int*")==0)
+      string.Replace(offset,"unsigned short*");
+   else if (strcmp(string,"Float16_t")==0||
+            strcmp(string,"Float16_t*")==0) 
+   { 
+      /* nothing to do, we want to keep those as is */
+      
+   }
+   else {
+      if (strcmp(string,"Double32_t")==0||
+          strcmp(string,"Double32_t*")==0) 
+      { 
+         /* nothing to do, we want to keep those as is */
+         
+      }
+   /* #define G__OLDIMPLEMENTATION787 */
+      else 
+      {
+         G__FastAllocString saveref(G__LONGLINE);
+         char* p = string + strlen (string);
+         while (p > string && (p[-1] == '*' || p[-1] == '&'))
+            --p;
 
-    }
-/* #define G__OLDIMPLEMENTATION787 */
-  else {
-    char saveref[G__LONGLINE];
-    char* p = string + strlen (string);
-    while (p > string && (p[-1] == '*' || p[-1] == '&'))
-      --p;
-    G__ASSERT (strlen (p) < sizeof (saveref));
-    strcpy (saveref, p);
-    *p = '\0';
-    if(-1!=(tagnum=G__defined_typename(string))) {
-      char type = G__newtype.type[tagnum];
-      int ref = G__newtype.reftype[tagnum];
+         saveref = p;
+         *p = '\0';
+         if(-1!=(tagnum=G__defined_typename(string+offset))) {
+            char type = G__newtype.type[tagnum];
+            int ref = G__newtype.reftype[tagnum];
 #ifndef G__OLDIMPLEMENTATION1712
-      if(0==strstr(string,"::") && -1!=G__newtype.parent_tagnum[tagnum]) {
-        ++G__templatearg_enclosedscope;
-      }
+            if(0==strstr(string+offset,"::") && -1!=G__newtype.parent_tagnum[tagnum]) {
+               ++G__templatearg_enclosedscope;
+            }
 #endif
-      if (G__newtype.tagnum[tagnum] >= 0 &&
-          G__struct.name[G__newtype.tagnum[tagnum]][0] == '$') {
-        ref = 0;
-        type = tolower (type);
-      }
-      strcpy (string,G__type2string (type,
-                                     G__newtype.tagnum[tagnum],
-                                     -1, ref, 0));
-    } else
-    if(-1!=(tagnum=G__defined_tagname(string,1))) {
+            if (G__newtype.tagnum[tagnum] >= 0 &&
+                G__struct.name[G__newtype.tagnum[tagnum]][0] == '$') {
+               ref = 0;
+               type = tolower (type);
+            }
+            string.Replace(offset,G__type2string (type,
+                                                  G__newtype.tagnum[tagnum],
+                                                  -1, ref, 0));
+         } else {
+            if(-1!=(tagnum=G__defined_tagname(string+offset,1))) {
 #ifndef G__OLDIMPLEMENTATION1712
-      if(0==strstr(string,"::") && -1!=G__struct.parent_tagnum[tagnum]) {
-        ++G__templatearg_enclosedscope;
-      }
+               if(0==strstr(string,"::") && -1!=G__struct.parent_tagnum[tagnum]) {
+                  ++G__templatearg_enclosedscope;
+               }
 #endif
-      strcpy(string,G__fulltagname(tagnum,1));
-    }
-    strcat (string, saveref);
-  }
+               string.Replace(offset,G__fulltagname(tagnum,1));
+            }
+         }
+         string += saveref;
+      }
+   }
 }
 
 /**************************************************************************
@@ -1870,7 +1846,7 @@ static char* G__expand_def_template_arg (G__FastAllocString& str_in, G__Template
     if(isconst && strncmp(reslt,"const ",6)==0 &&
        lreslt>0 && '*'==reslt[lreslt-1]) {
       str_out.Resize(lreslt + 6 + iout + 1 + 6);
-      strcpy(str_out+iout,reslt+6);
+      str_out.Replace(iout,reslt+6);
       str_out += " const";
       iout += lreslt;
       isconst=0;
@@ -1879,14 +1855,14 @@ static char* G__expand_def_template_arg (G__FastAllocString& str_in, G__Template
                lreslt>0 && '*'==reslt[lreslt-1]) {
 
        str_out.Resize(lreslt + iout - 6 + 1 + 6);
-       strcpy(str_out+iout-6,reslt);
+       str_out.Replace(iout-6,reslt);
        str_out += " const";
        iout += lreslt;
        isconst=0;      
     }
     else {
       str_out.Resize(lreslt + iout + 1);
-      strcpy(str_out + iout, reslt);
+      str_out.Replace(iout, reslt);
       iout += lreslt;
       if (strcmp(reslt,"const")==0 && ' '==c) isconst=1;
       else isconst=0;
@@ -1953,10 +1929,12 @@ int G__gettemplatearglist(const char *paralist,G__Charlist *charlist_in
         if(string[0] && '*'==string[strlen(string)-1])
           string[strlen(string)-1]='\0';
         else G__genericerror("Error: this template requests pointer arg 3");
+        // Fallthrough to handle the 2nd and then 1st argument.
       case G__TMPLT_POINTERARG2:
         if(string[0] && '*'==string[strlen(string)-1])
           string[strlen(string)-1]='\0';
         else G__genericerror("Error: this template requests pointer arg 2");
+        // Fallthrough to handle the 1st argument.
       case G__TMPLT_POINTERARG1:
         if(string[0] && '*'==string[strlen(string)-1])
           string[strlen(string)-1]='\0';
@@ -1983,7 +1961,7 @@ int G__gettemplatearglist(const char *paralist,G__Charlist *charlist_in
         G__string(buf,temp);
         if(strcmp(temp,string)!=0) {
           searchflag=1;
-          strcpy(string,temp);
+          string = temp;
         }
         break;
       }
@@ -1993,7 +1971,7 @@ int G__gettemplatearglist(const char *paralist,G__Charlist *charlist_in
       G__genericerror("Error: Too many template arguments");
     }
     charlist->string = (char*)malloc(strlen(string)+1);
-    strcpy(charlist->string,string);
+    strcpy(charlist->string,string); // Okay we allocated enough space
     charlist->next = (struct G__Charlist*)malloc(sizeof(struct G__Charlist));
     charlist->next->next = (struct G__Charlist *)NULL;
     charlist->next->string = (char *)NULL;
@@ -2013,16 +1991,16 @@ int G__gettemplatearglist(const char *paralist,G__Charlist *charlist_in
   if(def_para) {
     while(def_para) {
       if(def_para->default_parameter) {
-        strcpy(string,def_para->default_parameter);
+        string = def_para->default_parameter;
         charlist->string = G__expand_def_template_arg (string,def_para_in,
                                                        charlist_in);
         {
-          int len=strlen(charlist->string)*2;
-          /* workaround, G__templatemaptemplatename() overrides malloced mem*/
-          if(len<G__LONGLINE) len=G__LONGLINE;
-          charlist->string=(char*)realloc(charlist->string,len+1);
-          G__templatemaptypename(charlist->string);
-          G__ASSERT((int)strlen(charlist->string)<=(int)len);
+           /* workaround, G__templatemaptemplatename() modifies its input */
+           temp = charlist->string;
+           G__templatemaptypename(temp);
+           int len = strlen(temp);
+           charlist->string = (char*)realloc(charlist->string,len+1);
+           G__strlcpy(charlist->string, temp, len+1);
         }
         charlist->next=(struct G__Charlist*)malloc(sizeof(struct G__Charlist));
         charlist->next->next = (struct G__Charlist *)NULL;
@@ -2067,7 +2045,8 @@ static bool G__isLibrary( int index )
    return (G__srcfile[index].slindex != -1) || (G__srcfile[index].ispermanentsl == 2);
 }
    
-static int G__getIndex( int index, int tagnum ,std::vector<std::string> &headers )
+static int G__findSrcFile( int index, int tagnum, std::vector<std::string> &headers, std::vector<std::string> &fwdDecls,
+                        std::vector<std::string> &unknown)
 {
    //Function iterates through G__srcfile to find the name of *.h file where we have
    //class definition, then adds it to data container 'headers'.
@@ -2084,6 +2063,7 @@ static int G__getIndex( int index, int tagnum ,std::vector<std::string> &headers
       if( tagnum >= 0 && G__struct.comment[tagnum].p.com && strstr(G__struct.comment[tagnum].p.com, "//[INCLUDE:") )
       {
          // check whether G__struct.comment.p.com is set and starts with "//[INCLUDE:"
+         std::vector<std::string>* collectionToAddTo = &headers;
          char *pDel = G__struct.comment[tagnum].p.com;
          while( *pDel != 0 && *pDel != ':' ) pDel++;
          if( *pDel != 0 )pDel++;
@@ -2092,12 +2072,20 @@ static int G__getIndex( int index, int tagnum ,std::vector<std::string> &headers
          // and go on.
          while( *pDel != 0 )
          {
-            if( *pDel != ';' ) tmpHeader += *pDel;
-            else
-            {
-               it = std::find( headers.begin(), headers.end(), tmpHeader );
-               if( it == headers.end() ) headers.push_back( tmpHeader );
+            if (*pDel == ';') {
+               it = std::find(collectionToAddTo->begin(), collectionToAddTo->end(), tmpHeader );
+               if( it == collectionToAddTo->end() ) collectionToAddTo->push_back( tmpHeader );
                tmpHeader = "";
+            } else if (*pDel == '[') {
+               if (!strncmp(pDel, "[FWDDECL:", 9)) {
+                  collectionToAddTo = &fwdDecls;
+                  pDel += 8;
+               } else if (!strncmp(pDel, "[UNKNOWN:", 9)) {
+                  collectionToAddTo = &unknown;
+                  pDel += 8;
+               }
+            } else {
+               tmpHeader += *pDel;
             }
             pDel++;
          }
@@ -2172,13 +2160,15 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
 
   std::string className(tagname);
   std::vector<std::string> headers;
+  std::vector<std::string> fwdDecls;
+  std::vector<std::string> unknown;
   std::vector<std::string>::iterator it;
 
   if (fileNum >= 0) {
      if (G__srcfile[fileNum].filename[0] == '{')
         // ignore "{CINTEX dictionary translator}"
         return -4;
-     fileNum = G__getIndex(fileNum,-1, headers);
+     fileNum = G__findSrcFile(fileNum,-1, headers, fwdDecls, unknown);
      if( fileNum < 0 ) return fileNum;
   } else if (iSTLType != sSTLTypes.end()) {
      headers.push_back(iSTLType->second);
@@ -2192,14 +2182,20 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
     if( (char)gValue.type == 'u' || (char)gValue.type == 'U' ) {
       int index = gValue.tagnum;
       index = G__struct.filenum[index];
-      if( index < 0 ) return -3;
-      if (G__srcfile[index].filename[0] == '{')
-         // ignore "{CINTEX dictionary translator}"
-         return -4;
-      index = G__getIndex(index, gValue.tagnum, headers);
-      if( index < 0 ) return index;
-      //it = find( headers.begin(), headers.end(),G__srcfile[ index ].filename  );
-      //if( (it == headers.end()) && (G__srcfile[index].slindex == -1 ) ) headers.push_back( G__srcfile[index].filename );
+      if( index >= 0 ) {
+         if (G__srcfile[index].filename && G__srcfile[index].filename[0] == '{')
+            // ignore "{CINTEX dictionary translator}"
+            return -4;
+         index = G__findSrcFile(index, gValue.tagnum, headers, fwdDecls, unknown);
+      }
+      // not else: index is changed by G__findSrcFile()
+      if (index < 0) {
+         if (gValue.type == 'U') {
+            fwdDecls.push_back(G__fulltagname(gValue.tagnum, 1));
+         } else {
+            unknown.push_back(call_para->string);
+         }
+      }
     }
     call_para = call_para->next;
   }
@@ -2207,7 +2203,7 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
   Cint::G__pGenerateDictionary pGD = Cint::G__GetGenerateDictionary();
   int storeDefTagum = G__def_tagnum;
   G__def_tagnum = -1;
-  int rtn = pGD( className, headers );
+  int rtn = pGD(className, headers, fwdDecls, unknown);
   G__def_tagnum = storeDefTagum;
   if( rtn != 0 ) return (-rtn)-2;
   int tagnum = G__defined_tagname( className.c_str(), 3 );
@@ -2218,8 +2214,21 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
         for( it = headers.begin(); it!= headers.end(); it++ ) {
            headersToInclude += *it + ";";
         }
+        if (!fwdDecls.empty()) {
+           headersToInclude += "[FWDDECL:";
+           for( it = fwdDecls.begin(); it!= fwdDecls.end(); it++ ) {
+              headersToInclude += *it + ";";
+           }
+        }
+        if (!unknown.empty()) {
+           headersToInclude += "[UNKNOWN:";
+           for( it = unknown.begin(); it!= unknown.end(); it++ ) {
+              headersToInclude += *it + ";";
+           }
+        }
+        
         G__struct.comment[tagnum].p.com = new char[headersToInclude.length() + 1];
-        strcpy(G__struct.comment[tagnum].p.com, headersToInclude.c_str());
+        strcpy(G__struct.comment[tagnum].p.com, headersToInclude.c_str()); // Okay we allocated enough space
      }
   }
 
@@ -2408,24 +2417,24 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
     /* If evaluated template argument is not identical as string to
      * the original argument, recursively call G__defined_tagname()
      * to find actual tagname. */
-    int typenum = -1;
+    int typenum2 = -1;
 #ifndef G__OLDIMPLEMENTATION1712
     int templatearg_enclosedscope=G__templatearg_enclosedscope;
     G__templatearg_enclosedscope=store_templatearg_enclosedscope;
 #endif
     if(-1==G__defined_typename(tagname)) {
-      typenum=G__newtype.alltype++;
-      G__newtype.type[typenum]='u';
-      G__newtype.name[typenum]=(char*)malloc(strlen(tagname)+1);
-      strcpy(G__newtype.name[typenum],tagname);
-      G__newtype.namerange->Insert(G__newtype.name[typenum], typenum);
-      G__newtype.hash[typenum] = strlen(tagname);
-      G__newtype.globalcomp[typenum] = G__globalcomp;
-      G__newtype.reftype[typenum] = G__PARANORMAL;
-      G__newtype.nindex[typenum] = 0;
-      G__newtype.index[typenum] = (int*)NULL;
-      G__newtype.iscpplink[typenum] = G__NOLINK;
-      G__newtype.comment[typenum].filenum = -1;
+      typenum2=G__newtype.alltype++;
+      G__newtype.type[typenum2]='u';
+      G__newtype.name[typenum2]=(char*)malloc(strlen(tagname)+1);
+      strcpy(G__newtype.name[typenum2],tagname); // Okay we allocated enough space
+      G__newtype.namerange->Insert(G__newtype.name[typenum2], typenum2);
+      G__newtype.hash[typenum2] = strlen(tagname);
+      G__newtype.globalcomp[typenum2] = G__globalcomp;
+      G__newtype.reftype[typenum2] = G__PARANORMAL;
+      G__newtype.nindex[typenum2] = 0;
+      G__newtype.index[typenum2] = (int*)NULL;
+      G__newtype.iscpplink[typenum2] = G__NOLINK;
+      G__newtype.comment[typenum2].filenum = -1;
     }
     G__cattemplatearg(tagname,&call_para);
     tagnum = G__defined_tagname(tagname,1);
@@ -2433,20 +2442,20 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
     G__settemplatealias(tagnamein,tagname,tagnum,&call_para
                         ,deftmpclass->def_para,templatearg_enclosedscope);
 #endif
-    if(-1!=typenum) {
-      G__newtype.tagnum[typenum] = tagnum;
+    if(-1!=typenum2) {
+      G__newtype.tagnum[typenum2] = tagnum;
 #ifndef G__OLDIMPLEMENTATION1712
       if(templatearg_enclosedscope) {
-        G__newtype.parent_tagnum[typenum] = G__get_envtagnum();
+        G__newtype.parent_tagnum[typenum2] = G__get_envtagnum();
       }
       else {
-        G__newtype.parent_tagnum[typenum] = G__struct.parent_tagnum[tagnum];
+        G__newtype.parent_tagnum[typenum2] = G__struct.parent_tagnum[tagnum];
       }
 #else
-      G__newtype.parent_tagnum[typenum] = G__struct.parent_tagnum[tagnum];
+      G__newtype.parent_tagnum[typenum2] = G__struct.parent_tagnum[tagnum];
 #endif
 #ifndef G__OLDIMPLEMENTATION1503
-      if(3==defarg) G__struct.defaulttypenum[tagnum] = typenum;
+      if(3==defarg) G__struct.defaulttypenum[tagnum] = typenum2;
 #endif
     }
     G__freecharlist(&call_para);
@@ -2466,7 +2475,7 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
     int i=0;
     char *p = strrchr(templatename,':');
     while(*p) templatename.Set(i++, *(++p));
-    sprintf(tagname,"%s<%s",templatename(),arg);
+    tagname.Format("%s<%s",templatename(),arg);
   }
 
   /* resolve template specialization */
@@ -2521,7 +2530,7 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
       G__struct.namerange->Remove(G__struct.name[tagnum], tagnum);
       free((void*)G__struct.name[tagnum]);
       G__struct.name[tagnum] = (char*)malloc(strlen(tagname)+1);
-      strcpy(G__struct.name[tagnum],tagname);
+      strcpy(G__struct.name[tagnum],tagname); // Okay we allocated enough space
       G__struct.namerange->Insert(G__struct.name[tagnum], tagnum);
       G__struct.hash[tagnum] = strlen(tagname);
     }
@@ -2687,7 +2696,7 @@ void G__replacetemplate(const char* templatename,const char *tagname,G__Charlist
             SET_READINGFILE; /* ON777 */
             while(isspace(c=G__fgetc())){
                if (c=='\n') {
-                  /* strcat(symbol,"\n");   BAD  */
+                  /* strcat(symbol,"\n");   BAD Legacy  */
                   /* if (c=='\n') c2='\n'; Fix by Philippe */
                   break;  /* Fix by Masa Goto */
                }
@@ -3018,7 +3027,7 @@ int G__templatesubstitute(G__FastAllocString& symbol,G__Charlist *callpara
 
   while(defpara) {
     if(strcmp(defpara->string,symbol)==0) {
-      if(callpara->string) {
+      if(callpara && callpara->string) {
         symbol = callpara->string;
       }
       else if(defpara->default_parameter) {
@@ -3199,7 +3208,7 @@ int G__checkset_charlist(char *type_name,G__Charlist *pcall_para,
     else                                       return(0);
   }
   pcall_para->string = (char*)malloc(strlen(type_name)+1);
-  strcpy(pcall_para->string,type_name);
+  strcpy(pcall_para->string,type_name); // Okay we allocated enough space
 
   if('U'==ftype) {
     int len=strlen(type_name);
@@ -3228,7 +3237,6 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
   int freftype,reftype,ref;
   /* int fparadefault; */
   int fargtmplt;
-  int i;
   G__FastAllocString paratype(G__LONGLINE);
   int *fntarg;
   int fnt;
@@ -3243,7 +3251,7 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
     if(!deftmpfunc->func_para.paradefault[paran]) return(0);
   }
 
-  for(i=0;i<paran;i++) {
+  for(int i=0;i<paran;i++) {
     /* get template information for simplicity */
     ftype = deftmpfunc->func_para.type[i];
     ftagnum = deftmpfunc->func_para.tagnum[i];
@@ -3374,16 +3382,16 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
       else
         paratype = G__type2string(type,tagnum,-1,reftype,0);
       if(strncmp(paratype,"class ",6)==0) {
-        int j=0,i=6;
+        int j=0,i2=6;
         do {
-          paratype[j++] = paratype[i];
-        } while(paratype[i++]);
+          paratype[j++] = paratype[i2];
+        } while(paratype[i2++]);
       }
       else if(strncmp(paratype,"struct ",7)==0) {
-        int j=0,i=7;
+        int j=0,i2=7;
         do {
-          paratype[j++] = paratype[i];
-        } while(paratype[i++]);
+          paratype[j++] = paratype[i2];
+        } while(paratype[i2++]);
       }
       if(G__checkset_charlist(paratype,pcall_para,fargtmplt,ftype)) {
         /* match or newly set template argument */
@@ -3538,7 +3546,7 @@ int G__templatefunc(G__value *result,const char *funcname,G__param *libp
         int tmp=0;
         char *p = pexplicitarg-1;
         pexplicitarg = (char*)malloc(strlen(funcname)+1);
-        strcpy(pexplicitarg,funcname);
+        if (pexplicitarg) strcpy(pexplicitarg,funcname); // Okay we allocated enough space
         *p = '<';
         G__hash(funcname,hash,tmp);
       }
@@ -3564,7 +3572,7 @@ int G__templatefunc(G__value *result,const char *funcname,G__param *libp
 
       G__friendtagnum = store_friendtagnum;
 
-      if(pexplicitarg && pexplicitarg[0]) {
+      if(pexplicitarg[0]) {
         free((void*)pexplicitarg);
       }
 
@@ -3620,7 +3628,6 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
   int unsigned_flag,reftype,pointlevel;
   int tagnum,typenum;
   int narg;
-  int i;
 
   /**************************************************************
   * get to the end of list
@@ -3647,17 +3654,17 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
   {
     char *p;
     deftmpfunc->name=(char*)malloc(strlen(funcname)+1);
-    strcpy(deftmpfunc->name,funcname);
+    strcpy(deftmpfunc->name,funcname); // Okay we allocated enough space
     p = (char*)G__strrstr(deftmpfunc->name,"::");
     if(p) {
       *p = 0;
       deftmpfunc->parent_tagnum = G__defined_tagname(deftmpfunc->name,0);
       p = (char*)G__strrstr(funcname,"::");
-      strcpy(deftmpfunc->name,p+2);
+      strcpy(deftmpfunc->name,p+2);  // Okay we allocated enough space
       G__hash(deftmpfunc->name,deftmpfunc->hash,tmp);
     }
     else {
-      strcpy(deftmpfunc->name,funcname);
+       strcpy(deftmpfunc->name,funcname); // Okay we allocated enough space
       G__hash(funcname,deftmpfunc->hash,tmp);
       deftmpfunc->parent_tagnum = G__get_envtagnum();
     }
@@ -3672,7 +3679,7 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
   deftmpfunc->next->next = (struct G__Definetemplatefunc*)NULL;
   deftmpfunc->next->def_para = (struct G__Templatearg*)NULL;
   deftmpfunc->next->name = (char*)NULL;
-  for(i=0;i<G__MAXFUNCPARA;i++) {
+  for(int i=0;i<G__MAXFUNCPARA;i++) {
     deftmpfunc->next->func_para.ntarg[i]=(int*)NULL;
     deftmpfunc->next->func_para.nt[i]=0;
   }
@@ -3773,7 +3780,6 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
       char *ntargc[20];
       int ntarg[20];
       int nt=0;
-      int i;
       /* f(T<E,K> a) or f(c<E,K> a) or f(c<E,b> a)
        * f(T<E> a) or f(c<T> a) or f(T<c> a) */
       deftmpfunc->func_para.type[tmp]='u';
@@ -3789,12 +3795,12 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
           if (deftmpclass && deftmpclass->parent_tagnum!=-1) {
              const char *parent_name = G__fulltagname(deftmpclass->parent_tagnum,1);
              ntargc[nt] = (char*)malloc(strlen(parent_name)+strlen(deftmpclass->name)+3);
-             strcpy(ntargc[nt],parent_name);
-             strcat(ntargc[nt],"::");
-             strcat(ntargc[nt],deftmpclass->name);
+             strcpy(ntargc[nt],parent_name);       // Okay we allocated enough space
+             strcat(ntargc[nt],"::");              // Okay we allocated enough space
+             strcat(ntargc[nt],deftmpclass->name); // Okay we allocated enough space
           } else {
              ntargc[nt] = (char*)malloc(strlen(paraname)+1);
-             strcpy(ntargc[nt],paraname);
+             strcpy(ntargc[nt],paraname); // Okay we allocated enough space
           }
         }
         ++nt;
@@ -3807,12 +3813,12 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
           if (deftmpclass && deftmpclass->parent_tagnum!=-1) {
              const char *parent_name = G__fulltagname(deftmpclass->parent_tagnum,1);
              ntargc[nt] = (char*)malloc(strlen(parent_name)+strlen(deftmpclass->name)+3);
-             strcpy(ntargc[nt],parent_name);
-             strcat(ntargc[nt],"::");
-             strcat(ntargc[nt],deftmpclass->name);
+             strcpy(ntargc[nt],parent_name);       // Okay we allocated enough space
+             strcat(ntargc[nt],"::");              // Okay we allocated enough space
+             strcat(ntargc[nt],deftmpclass->name); // Okay we allocated enough space
           } else {
              ntargc[nt] = (char*)malloc(strlen(paraname)+1);
-             strcpy(ntargc[nt],paraname);
+             strcpy(ntargc[nt],paraname); // Okay we allocated enough space
           }
         }
         ++nt;
@@ -3820,7 +3826,7 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
       deftmpfunc->func_para.nt[tmp] = nt;
       deftmpfunc->func_para.ntarg[tmp] = (int*)malloc(sizeof(int)*nt);
       deftmpfunc->func_para.ntargc[tmp] = (char**)malloc(sizeof(char*)*nt);
-      for(i=0;i<nt;i++) {
+      for(int i=0;i<nt;i++) {
         deftmpfunc->func_para.ntarg[tmp][i] = ntarg[i];
         if(0==ntarg[i]) deftmpfunc->func_para.ntargc[tmp][i] = ntargc[i];
         else deftmpfunc->func_para.ntargc[tmp][i] = (char*)NULL;
@@ -3929,8 +3935,8 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
 
   /*Hack by Scott Snyder: try not to gag on forward decl of template memfunc*/
   {
-    int c = G__fignorestream(";{");
-    if (';'!=c) G__fignorestream("}");
+    int c2 = G__fignorestream(";{");
+    if (';'!=c2) G__fignorestream("}");
   }
 
 #else /* G__TEMPLATEFUNC */

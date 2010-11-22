@@ -200,9 +200,9 @@ TDataMember::TDataMember(DataMemberInfo_t *info, TClass *cl) : TDictionary()
    if (!fInfo && !fClass) return; // default ctor is called
 
    if (fInfo) {
-      fFullTypeName = gCint->DataMemberInfo_TypeName(fInfo);
-      fTrueTypeName = gCint->DataMemberInfo_TypeTrueName(fInfo);
-      fTypeName     = gCint->TypeName(fFullTypeName);
+      fFullTypeName = TClassEdit::GetLong64_Name(gCint->DataMemberInfo_TypeName(fInfo));
+      fTrueTypeName = TClassEdit::GetLong64_Name(gCint->DataMemberInfo_TypeTrueName(fInfo));
+      fTypeName     = TClassEdit::GetLong64_Name(gCint->TypeName(fFullTypeName));
       SetName(gCint->DataMemberInfo_Name(fInfo));
       const char *t = gCint->DataMemberInfo_Title(fInfo);
       SetTitle(t);
@@ -255,7 +255,7 @@ TDataMember::TDataMember(DataMemberInfo_t *info, TClass *cl) : TDictionary()
    Int_t token_cnt;
    Int_t i;
 
-   strcpy(cmt,gCint->DataMemberInfo_Title(fInfo));
+   strlcpy(cmt,gCint->DataMemberInfo_Title(fInfo),2048);
 
    if ((opt_ptr=strstr(cmt,"*OPTION={"))) {
 
@@ -263,10 +263,18 @@ TDataMember::TDataMember(DataMemberInfo_t *info, TClass *cl) : TDictionary()
 
       //let's cut the part lying between {}
       ptr1 = strtok(opt_ptr  ,"{}");  //starts tokenizing:extracts "*OPTION={"
+      if (ptr1 == 0) {
+         Fatal("TDataMember","Internal error, found \"*OPTION={\" but not \"{}\" in %s.",gCint->DataMemberInfo_Title(fInfo));
+         return;
+      }
       ptr1 = strtok((char*)0,"{}");   //And now we have what we need in ptr1!!!
-
+      if (ptr1 == 0) {
+         Fatal("TDataMember","Internal error, found \"*OPTION={\" but not \"{}\" in %s.",gCint->DataMemberInfo_Title(fInfo));
+         return;
+      }
+      
       //and save it:
-      strcpy(opt,ptr1);
+      strlcpy(opt,ptr1,2048);
 
       // Let's extract sub-tokens extracted by ';' sign.
       // We'll put'em in an array for convenience;
@@ -279,8 +287,9 @@ TDataMember::TDataMember(DataMemberInfo_t *info, TClass *cl) : TDictionary()
       do {                          //tokenizing loop
          ptr1=strtok((char*) (cnt++ ? 0:opt),";");
          if (ptr1){
-            tok=new char[strlen(ptr1)+1];
-            strcpy(tok,ptr1);
+            Int_t nch = strlen(ptr1)+1;
+            tok=new char[nch];
+            strlcpy(tok,ptr1,nch);
             tokens[token_cnt]=tok;
             token_cnt++;
          }
@@ -291,8 +300,16 @@ TDataMember::TDataMember(DataMemberInfo_t *info, TClass *cl) : TDictionary()
 
          if (strstr(tokens[i],"GetMethod")) {
             ptr1 = strtok(tokens[i],"\"");    //tokenizing-strip text "GetMethod"
+            if (ptr1 == 0) {
+               Fatal("TDataMember","Internal error, found \"GetMethod\" but not \"\\\"\" in %s.",gCint->DataMemberInfo_Title(fInfo));
+               return;
+            }
             ptr1 = strtok(0,"\"");         //tokenizing - name is in ptr1!
-
+            if (ptr1 == 0) {
+               Fatal("TDataMember","Internal error, found \"GetMethod\" but not \"\\\"\" in %s.",gCint->DataMemberInfo_Title(fInfo));
+               return;
+            }
+            
             if (GetClass()->GetMethod(ptr1,"")) // check whether such method exists
                // FIXME: wrong in case called derives via multiple inheritance from this class
                fValueGetter = new TMethodCall(GetClass(),ptr1,"");
@@ -302,7 +319,15 @@ TDataMember::TDataMember(DataMemberInfo_t *info, TClass *cl) : TDictionary()
 
          if (strstr(tokens[i],"SetMethod")) {
             ptr1 = strtok(tokens[i],"\"");
+            if (ptr1 == 0) {
+               Fatal("TDataMember","Internal error, found \"SetMethod\" but not \"\\\"\" in %s.",gCint->DataMemberInfo_Title(fInfo));
+               return;
+            }
             ptr1 = strtok((char*)0,"\"");    //name of Setter in ptr1
+            if (ptr1 == 0) {
+               Fatal("TDataMember","Internal error, found \"SetMethod\" but not \"\\\"\" in %s.",gCint->DataMemberInfo_Title(fInfo));
+               return;
+            }
             if (GetClass()->GetMethod(ptr1,"1"))
                // FIXME: wrong in case called derives via multiple inheritance from this class
                fValueSetter = new TMethodCall(GetClass(),ptr1,"1");
@@ -317,10 +342,18 @@ TDataMember::TDataMember(DataMemberInfo_t *info, TClass *cl) : TDictionary()
       for (i=0;i<token_cnt;i++) {
          if (strstr(tokens[i],"Items")) {
             ptr1 = strtok(tokens[i],"()");
+            if (ptr1 == 0) {
+               Fatal("TDataMember","Internal error, found \"Items\" but not \"()\" in %s.",gCint->DataMemberInfo_Title(fInfo));
+               return;
+            }
             ptr1 = strtok((char*)0,"()");
-
+            if (ptr1 == 0) {
+               Fatal("TDataMember","Internal error, found \"Items\" but not \"()\" in %s.",gCint->DataMemberInfo_Title(fInfo));
+               return;
+            }
+            
             char opts[2048];  //and save it!
-            strcpy(opts,ptr1);
+            strlcpy(opts,ptr1,2048);
 
             //now parse it...
             //fistly we just store strings like: xxx="Label Name"
@@ -399,8 +432,7 @@ TDataMember::TDataMember(DataMemberInfo_t *info, TClass *cl) : TDictionary()
       TGlobal *global = 0;
       TDataMember::fOptions = new TList();
       char etypename[65];
-      strncpy(etypename,this->GetTypeName(),64); //save the typename!!! must do it!
-
+      strlcpy(etypename,this->GetTypeName(),65); //save the typename!!! must do it!
       const char *gtypename = 0;
       TList *globals = (TList*)(gROOT->GetListOfGlobals(kTRUE)); //get all globals
       if (!globals) return;
@@ -411,9 +443,7 @@ TDataMember::TDataMember(DataMemberInfo_t *info, TClass *cl) : TDictionary()
          if (strcmp(gtypename,etypename)==0) {
             Int_t *value = (Int_t*)(global->GetAddress());
             Long_t l     = (Long_t)(*value);
-            char enumItem[128];
-            strcpy(enumItem,global->GetName());
-            TOptionListItem *it = new TOptionListItem(this,l,0,0,enumItem,enumItem);
+            TOptionListItem *it = new TOptionListItem(this,l,0,0,global->GetName(),global->GetName());
             fOptions->Add(it);
          }
       }
@@ -443,6 +473,8 @@ TDataMember::TDataMember(const TDataMember& dm) :
   fTypeName(dm.fTypeName),
   fFullTypeName(dm.fFullTypeName),
   fTrueTypeName(dm.fTrueTypeName),
+  fValueGetter(0),
+  fValueSetter(0),
   fOptions(dm.fOptions ? (TList*)dm.fOptions->Clone() : 0)
 { 
    //copy constructor
@@ -560,8 +592,8 @@ Long_t TDataMember::GetOffset() const
    //Note that the offset cannot be computed in case of an abstract class
    //for which the list of real data has not yet been computed via
    //a real daughter class.
-   char dmbracket[256];
-   sprintf(dmbracket,"%s[",GetName());
+   TString dmbracket;
+   dmbracket.Form("%s[",GetName());
    fClass->BuildRealData();
    TIter next(fClass->GetListOfRealData());
    TRealData *rdm;
@@ -583,7 +615,7 @@ Long_t TDataMember::GetOffset() const
             break;
          }
       }
-      if (strstr(rdm->GetName(),dmbracket)) {
+      if (strstr(rdm->GetName(),dmbracket.Data())) {
          offset = rdm->GetThisOffset();
          break;
       }
@@ -710,14 +742,14 @@ TMethodCall *TDataMember::GetterMethod(TClass *cl)
 
          const char *dataname = GetName();
 
-         char gettername[128];
-         sprintf(gettername, "Get%s", dataname+1);
+         TString gettername;
+         gettername.Form( "Get%s", dataname+1);
          if (GetClass()->GetMethod(gettername, ""))
             return fValueGetter = new TMethodCall(cl, gettername, "");
-         sprintf(gettername, "Is%s", dataname+1);
+         gettername.Form( "Is%s", dataname+1);
          if (GetClass()->GetMethod(gettername, ""))
             return fValueGetter = new TMethodCall(cl, gettername, "");
-         sprintf(gettername, "Has%s", dataname+1);
+         gettername.Form( "Has%s", dataname+1);
          if (GetClass()->GetMethod(gettername, ""))
             return fValueGetter = new TMethodCall(cl, gettername, "");
       }
@@ -754,9 +786,9 @@ TMethodCall *TDataMember::SetterMethod(TClass *cl)
 
          const char *dataname = GetName();
 
-         char settername[64];
-         sprintf(settername, "Set%s", dataname+1);
-         if (strstr(settername, "Is")) sprintf(settername, "Set%s", dataname+3);
+         TString settername;
+         settername.Form( "Set%s", dataname+1);
+         if (strstr(settername, "Is")) settername.Form( "Set%s", dataname+3);
          if (GetClass()->GetMethod(settername, "1"))
             fValueSetter = new TMethodCall(cl, settername, "1");
          if (!fValueSetter)
@@ -780,15 +812,17 @@ TOptionListItem::TOptionListItem(TDataMember *d, Long_t val, Long_t valmask,
    fToggleMaskBit = tglmask;
    if (name){
 
-      fOptName = new char[strlen(name)+1];
-      strcpy(fOptName,name);
+      Int_t nch1 = strlen(name)+1;
+      fOptName = new char[nch1];
+      strlcpy(fOptName,name,nch1);
 
    } else fOptName = 0;
 
    if(label){
 
-      fOptLabel = new char[strlen(label)+1];
-      strcpy(fOptLabel,label);
+      Int_t nch2 = strlen(label)+1;
+      fOptLabel = new char[nch2];
+      strlcpy(fOptLabel,label,nch2);
 
    } else fOptLabel = 0;
 }

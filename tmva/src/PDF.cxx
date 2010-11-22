@@ -580,6 +580,7 @@ void TMVA::PDF::ValidatePDF( TH1* originalHist ) const
       Double_t ey = originalHist->GetBinError( bin );
 
       Int_t binPdfHist = fPDFHist->FindBin( x );
+      if(binPdfHist<0) continue; // happens only if hist-dim>3
 
       Double_t yref = GetVal( x );
       Double_t rref = ( originalHist->GetSumOfWeights()/fPDFHist->GetSumOfWeights() *
@@ -936,6 +937,7 @@ void TMVA::PDF::ReadXML( void* pdfnode )
 ostream& TMVA::operator<< ( ostream& os, const PDF& pdf )
 {
    // write the pdf
+   Int_t dp = os.precision();
    os << "MinNSmooth      " << pdf.fMinNsmooth << std::endl;
    os << "MaxNSmooth      " << pdf.fMaxNsmooth << std::endl;
    os << "InterpolMethod  " << pdf.fInterpolMethod << std::endl;
@@ -960,9 +962,11 @@ ostream& TMVA::operator<< ( ostream& os, const PDF& pdf )
    os << "Weights " << std::endl;
    os << std::setprecision(8);
    for (Int_t i=0; i<nBins; i++) {
-      os << std::setw(15) << std::left << histToWrite->GetBinContent(i+1) << " ";
+      os << std::setw(15) << std::left << histToWrite->GetBinContent(i+1) << std::right << " ";
       if ((i+1)%5==0) os << std::endl;
    }
+
+   os << std::setprecision(dp);
    return os; // Return the output stream.
 }
 
@@ -990,6 +994,7 @@ istream& TMVA::operator>> ( istream& istr, PDF& pdf )
       else if (devnullS == "KDE_finefactor") {
          istr  >> pdf.fFineFactor;
          if (pdf.GetReadingVersion() != 0 && pdf.GetReadingVersion() < TMVA_VERSION(3,7,3)) { // here we expect the histogram limits if the version is below 3.7.3. When version == 0, the newest TMVA version is assumed.
+            // coverity[tainted_data_argument]
             istr  >> nbins >> xmin >> xmax;
             doneReading = kTRUE;
          }

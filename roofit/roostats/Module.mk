@@ -4,7 +4,7 @@
 # Author: Kyle Cranmer
 
 MODNAME      := roostats
-MODDIR       := roofit/$(MODNAME)
+MODDIR       := $(ROOT_SRCDIR)/roofit/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,13 +14,13 @@ ROOSTATSDIRI := $(ROOSTATSDIR)/inc
 
 ##### libRooStats #####
 ROOSTATSL    := $(MODDIRI)/LinkDef.h
-ROOSTATSDS   := $(MODDIRS)/G__RooStats.cxx
+ROOSTATSDS   := $(call stripsrc,$(MODDIRS)/G__RooStats.cxx)
 ROOSTATSDO   := $(ROOSTATSDS:.cxx=.o)
 ROOSTATSDH   := $(ROOSTATSDS:.cxx=.h)
 
 ROOSTATSH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 ROOSTATSS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-ROOSTATSO    := $(ROOSTATSS:.cxx=.o)
+ROOSTATSO    := $(call stripsrc,$(ROOSTATSS:.cxx=.o))
 
 ROOSTATSDEP  := $(ROOSTATSO:.o=.d) $(ROOSTATSDO:.o=.d)
 
@@ -37,10 +37,11 @@ INCLUDEFILES += $(ROOSTATSDEP)
 
 #needed since include are in inc and not inc/RooStats
 ROOSTATSH_DIC   := $(subst $(MODDIRI),include/RooStats,$(ROOSTATSH))
+
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
-include/RooStats/%.h:    $(ROOSTATSDIRI)/%.h
+include/RooStats/%.h: $(ROOSTATSDIRI)/%.h
 		@(if [ ! -d "include/RooStats" ]; then    \
 		   mkdir -p include/RooStats;             \
 		fi)
@@ -54,11 +55,12 @@ $(ROOSTATSLIB): $(ROOSTATSO) $(ROOSTATSDO) $(ORDER_) $(MAINLIBS) \
 		   "$(ROOSTATSLIBEXTRA)"
 
 $(ROOSTATSDS):  $(ROOSTATSH_DIC) $(ROOSTATSL) $(ROOTCINTTMPDEP)
+		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(ROOSTATSH_DIC) $(ROOSTATSL)
 
 $(ROOSTATSMAP): $(RLIBMAP) $(MAKEFILEDEP) $(ROOSTATSL)
-		$(RLIBMAP) -o $(ROOSTATSMAP) -l $(ROOSTATSLIB) \
+		$(RLIBMAP) -o $@ -l $(ROOSTATSLIB) \
 		   -d $(ROOSTATSLIBDEPM) -c $(ROOSTATSL)
 
 all-$(MODNAME): $(ROOSTATSLIB) $(ROOSTATSMAP)
@@ -69,7 +71,11 @@ clean-$(MODNAME):
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
-		@rm -rf $(ROOSTATSDEP) $(ROOSTATSLIB) $(ROOSTATSMAP) \
+		@rm -f $(ROOSTATSDEP) $(ROOSTATSLIB) $(ROOSTATSMAP) \
 		   $(ROOSTATSDS) $(ROOSTATSDH)
+		@rm -rf include/RooStats
 
 distclean::     distclean-$(MODNAME)
+
+# Optimize dictionary with stl containers.
+$(ROOSTATSDO): NOOPT = $(OPT)

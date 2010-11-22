@@ -66,6 +66,7 @@ TQpLinSolverBase::TQpLinSolverBase()
    fNxlo = 0;
    fMcup = 0;
    fMclo = 0;
+   fFactory = 0;
 }
 
 
@@ -101,7 +102,8 @@ TQpLinSolverBase::TQpLinSolverBase(TQpProbBase *factory,TQpDataBase *data)
 
 
 //______________________________________________________________________________
-TQpLinSolverBase::TQpLinSolverBase(const TQpLinSolverBase &another) : TObject(another)
+TQpLinSolverBase::TQpLinSolverBase(const TQpLinSolverBase &another) : TObject(another), 
+                                                                      fFactory(another.fFactory)
 {
 // Copy constructor
 
@@ -332,6 +334,9 @@ TQpLinSolverBase &TQpLinSolverBase::operator=(const TQpLinSolverBase &source)
       fCupIndex .ResizeTo(source.fCupIndex);  fCupIndex  = source.fCupIndex;
       fXloIndex .ResizeTo(source.fXloIndex);  fXloIndex  = source.fXloIndex;
       fCloIndex .ResizeTo(source.fCloIndex);  fCloIndex  = source.fCloIndex;
+
+      // LM : copy also pointer data member
+      fFactory = source.fFactory;
    }
    return *this;
 }

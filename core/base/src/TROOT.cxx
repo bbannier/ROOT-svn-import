@@ -212,14 +212,35 @@ Int_t gDebug;
 ClassImp(TROOT)
 
 //______________________________________________________________________________
-TROOT::TROOT() : TDirectory()
+TROOT::TROOT() : TDirectory(),
+     fLineIsProcessing(0), fVersion(0), fVersionInt(0), fVersionCode(0),
+     fVersionDate(0), fVersionTime(0), fBuiltDate(0), fBuiltTime(0), fSvnRevision(0),
+     fTimer(0), fApplication(0), fInterpreter(0), fBatch(kTRUE), fEditHistograms(kTRUE),
+     fFromPopUp(kTRUE),fMustClean(kTRUE),fReadingObject(kFALSE),fForceStyle(kFALSE),
+     fInterrupt(kFALSE),fEscape(kFALSE),fExecutingMacro(kFALSE),fEditorMode(0),
+     fPrimitive(0),fSelectPad(0),fClasses(0),fTypes(0),fGlobals(0),fGlobalFunctions(0),
+     fFiles(0),fMappedFiles(0),fSockets(0),fCanvases(0),fStyles(0),fFunctions(0),
+     fTasks(0),fColors(0),fGeometries(0),fBrowsers(0),fSpecials(0),fCleanups(0),
+     fMessageHandlers(0),fStreamerInfo(0),fClassGenerators(0),fSecContexts(0),
+     fProofs(0),fClipboard(0),fDataSets(0),fUUIDs(0),fRootFolder(0),fBrowsables(0),
+     fPluginManager(0)
 {
    // Default ctor.
 }
 
 //______________________________________________________________________________
 TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
-           : TDirectory()
+   : TDirectory(), fLineIsProcessing(0), fVersion(0), fVersionInt(0), fVersionCode(0),
+     fVersionDate(0), fVersionTime(0), fBuiltDate(0), fBuiltTime(0), fSvnRevision(0),
+     fTimer(0), fApplication(0), fInterpreter(0), fBatch(kTRUE), fEditHistograms(kTRUE),
+     fFromPopUp(kTRUE),fMustClean(kTRUE),fReadingObject(kFALSE),fForceStyle(kFALSE),
+     fInterrupt(kFALSE),fEscape(kFALSE),fExecutingMacro(kFALSE),fEditorMode(0),
+     fPrimitive(0),fSelectPad(0),fClasses(0),fTypes(0),fGlobals(0),fGlobalFunctions(0),
+     fFiles(0),fMappedFiles(0),fSockets(0),fCanvases(0),fStyles(0),fFunctions(0),
+     fTasks(0),fColors(0),fGeometries(0),fBrowsers(0),fSpecials(0),fCleanups(0),
+     fMessageHandlers(0),fStreamerInfo(0),fClassGenerators(0),fSecContexts(0),
+     fProofs(0),fClipboard(0),fDataSets(0),fUUIDs(0),fRootFolder(0),fBrowsables(0),
+     fPluginManager(0)
 {
    // Initialize the ROOT system. The creation of the TROOT object initializes
    // the ROOT system. It must be the first ROOT related action that is
@@ -419,7 +440,7 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    atexit(CleanUpROOTAtExit);
 
    fgRootInit = kTRUE;
-   
+
    TClass::ReadRules(); // Read the default customization rules ...
 }
 
@@ -757,11 +778,13 @@ static TClass *R__FindSTLClass(const char *name, Bool_t load, Bool_t silent, con
       TDataType *objType = gROOT->GetType(name, load);
       if (objType) {
          const char *typedfName = objType->GetTypeName();
-         string defaultTypedefName(  TClassEdit::ShortType( typedfName, TClassEdit::kDropStlDefault ) );
+         if (typedfName) {
+            string defaultTypedefName(TClassEdit::ShortType(typedfName, TClassEdit::kDropStlDefault));
 
-         if (typedfName && strcmp(typedfName, name) && defaultTypedefName==name) {
-            cl = (TClass*)gROOT->GetListOfClasses()->FindObject(typedfName);
-            if (load && !cl) cl = gROOT->LoadClass(typedfName, silent);
+            if (strcmp(typedfName, name) && defaultTypedefName == name) {
+               cl = (TClass*)gROOT->GetListOfClasses()->FindObject(typedfName);
+               if (load && !cl) cl = gROOT->LoadClass(typedfName, silent);
+            }
          }
       }
    }
@@ -1205,7 +1228,7 @@ void TROOT::InitSystem()
       fgMemCheck = gEnv->GetValue("Root.MemCheck", 0);
 
       TObject::SetObjectStat(gEnv->GetValue("Root.ObjectStat", 0));
-      
+
    }
 }
 
@@ -1235,16 +1258,16 @@ TClass *TROOT::LoadClass(const char *requestedname, Bool_t silent) const
    // This function does not (and should not) attempt to check in the
    // list of loaded classes or in the typedef.
 
-   
+
    // We need to cache the requested name as in some case this function is
    // called with gROOT->LoadClass(cl->GetName()) and the loading of a library,
    // for example via the autoloader, can result in our argument becoming invalid.
    // In addition the call to the dictionary function (dict()) might also have
    // the same effect (change/delete requestedname).
    TString classname(requestedname);
-   
+
    VoidFuncPtr_t dict = TClassTable::GetDict(classname);
-   
+
    TString resolved;
 
    if (!dict) {
@@ -1390,7 +1413,7 @@ Int_t TROOT::LoadMacro(const char *filename, int *error, Bool_t check)
       TString fname = gSystem->SplitAclicMode(filename, aclicMode, arguments, io);
 
       if (arguments.Length()) {
-         Warning("LoadMacro", "argument(s) \"%s\" ignored", arguments.Data(), GetMacroPath());
+         Warning("LoadMacro", "argument(%s) ignored in %s", arguments.Data(), GetMacroPath());
       }
       char *mac = gSystem->Which(GetMacroPath(), fname, kReadPermission);
       if (!mac) {
@@ -1823,7 +1846,7 @@ Bool_t TROOT::Initialized()
 //______________________________________________________________________________
 Bool_t TROOT::MemCheck()
 {
-   // Return kTRUE if the memory leak checke is on.
+   // Return kTRUE if the memory leak checker is on.
    return fgMemCheck;
 }
 

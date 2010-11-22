@@ -206,15 +206,16 @@ void TSlaveInfo::Print(Option_t *opt) const
    if (oo == "bad" && fStatus != kBad) return;
 
    if (newfmt) {
-      TString msd, si;
+      TString msd, si, datadir;
       if (!(fMsd.IsNull())) msd.Form("| msd: %s ", fMsd.Data());
+      if (!(fDataDir.IsNull())) datadir.Form("| datadir: %s ", fDataDir.Data());
       if (fSysInfo.fCpus > 0) {
          si.Form("| %s, %d cores, %d MB ram", fHostName.Data(),
                fSysInfo.fCpus, fSysInfo.fPhysRam);
       } else {
          si.Form("| %s", fHostName.Data());
       }
-      Printf("Worker: %9s %s %s| %s", fOrdinal.Data(), si.Data(), msd.Data(), stat.Data());
+      Printf("Worker: %9s %s %s%s| %s", fOrdinal.Data(), si.Data(), msd.Data(), datadir.Data(), stat.Data());
 
    } else {
       TString msd  = fMsd.IsNull() ? "<null>" : fMsd.Data();
@@ -545,6 +546,30 @@ void TProof::InitMembers()
    fLastAssignedMerger = 0;
    fWorkersToMerge = 0;
    fFinalizationRunning = kFALSE;
+
+   // Check if the user defined a list of environment variables to send over:
+   // include them into the dedicated list
+   if (gSystem->Getenv("PROOF_ENVVARS")) {
+      TString envs(gSystem->Getenv("PROOF_ENVVARS")), env, envsfound;
+      Int_t from = 0;
+      while (envs.Tokenize(env, from, ",")) {
+         if (!env.IsNull()) {
+            if (!gSystem->Getenv(env)) {
+               Warning("Init", "request for sending over undefined environemnt variable '%s' - ignoring", env.Data());
+            } else {
+               if (!envsfound.IsNull()) envsfound += ",";
+               envsfound += env;
+               TProof::DelEnvVar(env);
+               TProof::AddEnvVar(env, gSystem->Getenv(env));
+            }
+         }
+      }
+      if (envsfound.IsNull()) {
+         Warning("Init", "none of the requested env variables were found: '%s'", envs.Data());
+      } else {
+         Info("Init", "the following environment variables have been added to the list to be sent to the nodes: '%s'", envsfound.Data());
+      }
+   }
 
    // Done
    return;
@@ -1085,8 +1110,7 @@ Int_t TProof::AddWorkers(TList *workerList)
    }
 
    if (!workerList || !(workerList->GetSize())) {
-      Error("AddWorkers", "The list of workers should not be empty; NULL: %d",
-            workerList == 0);
+      Error("AddWorkers", "empty list of workers!");
       return -2;
    }
 
@@ -1094,8 +1118,7 @@ Int_t TProof::AddWorkers(TList *workerList)
 
    fImage = gProofServ->GetImage();
    if (fImage.IsNull())
-      fImage = Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(),
-                    gProofServ->GetWorkDir());
+      fImage.Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(), gProofServ->GetWorkDir());
 
    // Get all workers
    UInt_t nSlaves = workerList->GetSize();
@@ -1106,6 +1129,11 @@ Int_t TProof::AddWorkers(TList *workerList)
 
    // a list of TSlave objects for workers that are being added
    TList *addedWorkers = new TList();
+   if (!addedWorkers) {
+      // This is needed to silence Coverity ...
+      Error("AddWorkers", "cannot create new list for the workers to be added");
+      return -2;
+   }
    addedWorkers->SetOwner(kFALSE);
    TListIter next(workerList);
    TObject *to;
@@ -1232,11 +1260,11 @@ Int_t TProof::AddWorkers(TList *workerList)
    TString dyn = gSystem->GetDynamicPath();
    dyn.ReplaceAll(":", " ");
    dyn.ReplaceAll("\"", " ");
-   AddDynamicPath(dyn, addedWorkers);
+   AddDynamicPath(dyn, kFALSE, addedWorkers);
    TString inc = gSystem->GetIncludePath();
    inc.ReplaceAll("-I", " ");
    inc.ReplaceAll("\"", " ");
-   AddIncludePath(inc, addedWorkers);
+   AddIncludePath(inc, kFALSE, addedWorkers);
 
    // Cleanup
    delete addedWorkers;
@@ -1327,7 +1355,7 @@ Bool_t TProof::StartSlaves(Bool_t attach)
       // Get list of workers
       if (gProofServ->GetWorkers(workerList, pc) == TProofServ::kQueryStop) {
          TString emsg("no resource currently available for this session: please retry later");
-         if (gDebug > 0) Info("StartSlaves", emsg.Data());
+         if (gDebug > 0) Info("StartSlaves", "%s", emsg.Data());
          gProofServ->SendAsynMessage(emsg.Data());
          return kFALSE;
       }
@@ -1987,8 +2015,9 @@ TList *TProof::GetListOfSlaveInfos()
 
    while ((slave = (TSlave *) next()) != 0) {
       if (slave->GetSlaveType() == TSlave::kSlave) {
+         const char *name = IsLite() ? gSystem->HostName() : slave->GetName();
          TSlaveInfo *slaveinfo = new TSlaveInfo(slave->GetOrdinal(),
-                                                slave->GetName(),
+                                                name,
                                                 slave->GetPerfIdx());
          fSlaveInfo->Add(slaveinfo);
 
@@ -2311,7 +2340,7 @@ void TProof::ReleaseMonitor(TMonitor *mon)
 }
 
 //______________________________________________________________________________
-Int_t TProof::Collect(const TSlave *sl, Long_t timeout, Int_t endtype)
+Int_t TProof::Collect(const TSlave *sl, Long_t timeout, Int_t endtype, Bool_t deactonfail)
 {
    // Collect responses from slave sl. Returns the number of slaves that
    // responded (=1).
@@ -2332,13 +2361,13 @@ Int_t TProof::Collect(const TSlave *sl, Long_t timeout, Int_t endtype)
    }
    mon->Activate(sl->GetSocket());
 
-   rc = Collect(mon, timeout, endtype);
+   rc = Collect(mon, timeout, endtype, deactonfail);
    ReleaseMonitor(mon);
    return rc;
 }
 
 //______________________________________________________________________________
-Int_t TProof::Collect(TList *slaves, Long_t timeout, Int_t endtype)
+Int_t TProof::Collect(TList *slaves, Long_t timeout, Int_t endtype, Bool_t deactonfail)
 {
    // Collect responses from the slave servers. Returns the number of slaves
    // that responded.
@@ -2363,13 +2392,13 @@ Int_t TProof::Collect(TList *slaves, Long_t timeout, Int_t endtype)
          mon->Activate(sl->GetSocket());
    }
 
-   rc = Collect(mon, timeout, endtype);
+   rc = Collect(mon, timeout, endtype, deactonfail);
    ReleaseMonitor(mon);
    return rc;
 }
 
 //______________________________________________________________________________
-Int_t TProof::Collect(ESlaves list, Long_t timeout, Int_t endtype)
+Int_t TProof::Collect(ESlaves list, Long_t timeout, Int_t endtype, Bool_t deactonfail)
 {
    // Collect responses from the slave servers. Returns the number of slaves
    // that responded.
@@ -2390,13 +2419,13 @@ Int_t TProof::Collect(ESlaves list, Long_t timeout, Int_t endtype)
    }
    mon->ActivateAll();
 
-   rc = Collect(mon, timeout, endtype);
+   rc = Collect(mon, timeout, endtype, deactonfail);
    ReleaseMonitor(mon);
    return rc;
 }
 
 //______________________________________________________________________________
-Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
+Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype, Bool_t deactonfail)
 {
    // Collect responses from the slave servers. Returns the number of messages
    // received. Can be 0 if there are no active slaves.
@@ -2461,10 +2490,10 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
                while ((xs = (TSocket *)nxs())) {
                   TSlave *wrk = FindSlave(xs);
                   if (wrk)
-                     Info("Collect","   %s", wrk->GetName());
+                     Info("Collect","   %s (%s)", wrk->GetName(), wrk->GetOrdinal());
                   else
                      Info("Collect","   %p: %s:%d", xs, xs->GetInetAddress().GetHostName(),
-                                                      xs->GetInetAddress().GetPort());
+                                                        xs->GetInetAddress().GetPort());
                }
             }
          }
@@ -2475,7 +2504,7 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
 
       if (s && s != (TSocket *)(-1)) {
          // Get and analyse the info it did receive
-         rc = CollectInputFrom(s, endtype);
+         rc = CollectInputFrom(s, endtype, deactonfail);
          if (rc  == 1 || (rc == 2 && !savedMonitor)) {
             // Deactivate it if we are done with it
             mon->DeActivate(s);
@@ -2569,7 +2598,7 @@ void TProof::CleanGDirectory(TList *ol)
 }
 
 //______________________________________________________________________________
-Int_t TProof::CollectInputFrom(TSocket *s, Int_t endtype)
+Int_t TProof::CollectInputFrom(TSocket *s, Int_t endtype, Bool_t deactonfail)
 {
    // Collect and analyze available input from socket s.
    // Returns 0 on success, -1 if any failure occurs.
@@ -2603,7 +2632,7 @@ Int_t TProof::CollectInputFrom(TSocket *s, Int_t endtype)
 
    Int_t what = mess->What();
    TSlave *sl = FindSlave(s);
-   rc = HandleInputMessage(sl, mess);
+   rc = HandleInputMessage(sl, mess, deactonfail);
    if (rc == 1 && (endtype >= 0) && (what != endtype))
       // This message was for the base monitor in recursive case
       rc = 2;
@@ -2613,7 +2642,7 @@ Int_t TProof::CollectInputFrom(TSocket *s, Int_t endtype)
 }
 
 //______________________________________________________________________________
-Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
+Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
 {
    // Analyze the received message.
    // Returns 0 on success (1 if this the last message from this socket), -1 if
@@ -2671,7 +2700,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
       case kPROOF_STOP:
          // Stop collection from this worker
          Info("HandleInputMessage", "received kPROOF_STOP from %s: disabling any further collection this worker",
-                                    (sl ? sl->GetOrdinal() : "undef"));
+              sl->GetOrdinal());
          rc = 1;
          break;
 
@@ -2742,7 +2771,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
             Int_t size;
             (*mess) >> size;
             PDB(kGlobal,2)
-               Info("HandleInputMessage","kPROOF_LOGFILE: size: %d", size);
+               Info("HandleInputMessage","%s: kPROOF_LOGFILE: size: %d", sl->GetOrdinal(), size);
             RecvLogFile(s, size);
          }
          break;
@@ -2750,9 +2779,14 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
       case kPROOF_LOGDONE:
          (*mess) >> sl->fStatus >> sl->fParallel;
          PDB(kCollect,2)
-            Info("HandleInputMessage","kPROOF_LOGDONE:%s: status %d  parallel %d",
+            Info("HandleInputMessage","%s: kPROOF_LOGDONE: status %d  parallel %d",
                  sl->GetOrdinal(), sl->fStatus, sl->fParallel);
-         if (sl->fStatus != 0) fStatus = sl->fStatus; //return last nonzero status
+         if (sl->fStatus != 0) {
+            // Return last nonzero status
+            fStatus = sl->fStatus;
+            // Deactivate the worker, if required
+            if (deactonfail) DeactivateWorker(sl->fOrdinal);
+         }
          rc = 1;
          break;
 
@@ -2848,7 +2882,6 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
             PDB(kGlobal,2)
                Info("HandleInputMessage","kPROOF_OUTPUTOBJECT: enter");
             Int_t type = 0;
-
             const char *prefix = gProofServ ? gProofServ->GetPrefix() : "Lite-0";
             if (!TestBit(TProof::kIsClient) && !fMergersSet && !fFinalizationRunning) {
                Info("HandleInputMessage", "finalization on %s started ...", prefix);
@@ -2918,7 +2951,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
       case kPROOF_OUTPUTLIST:
          {
             PDB(kGlobal,2)
-               Info("HandleInputMessage","kPROOF_OUTPUTLIST: enter");
+               Info("HandleInputMessage","%s: kPROOF_OUTPUTLIST: enter", sl->GetOrdinal());
             TList *out = 0;
             if (fPlayer) {
                if (TestBit(TProof::kIsMaster) || fProtocol < 7) {
@@ -2939,7 +2972,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                      QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
                   } else {
                      PDB(kGlobal,2)
-                        Info("HandleInputMessage","kPROOF_OUTPUTLIST: query result missing");
+                        Info("HandleInputMessage",
+                             "%s: kPROOF_OUTPUTLIST: query result missing", sl->GetOrdinal());
                   }
                }
                if (out) {
@@ -2947,10 +2981,13 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                   fPlayer->AddOutput(out); // Incorporate the list
                   SafeDelete(out);
                } else {
-                  PDB(kGlobal,2) Info("HandleInputMessage","kPROOF_OUTPUTLIST: ouputlist is empty");
+                  PDB(kGlobal,2)
+                     Info("HandleInputMessage",
+                          "%s: kPROOF_OUTPUTLIST: ouputlist is empty", sl->GetOrdinal());
                }
             } else {
-               Warning("HandleInputMessage", "kPROOF_OUTPUTLIST: player undefined!");
+               Warning("HandleInputMessage",
+                       "%s: kPROOF_OUTPUTLIST: player undefined!", sl->GetOrdinal());
             }
             // On clients at this point processing is over
             if (TestBit(TProof::kIsClient) && !IsLite())
@@ -3053,10 +3090,10 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                   Int_t frac = (Int_t) (done*100.)/tot;
                   char msg[512] = {0};
                   if (frac >= 100) {
-                     sprintf(msg,"%s: OK (%d %s)                 \n",
+                     snprintf(msg, 512, "%s: OK (%d %s)                 \n",
                              action.Data(),tot, type.Data());
                   } else {
-                     sprintf(msg,"%s: %d out of %d (%d %%)\r",
+                     snprintf(msg, 512, "%s: %d out of %d (%d %%)\r",
                              action.Data(), done, tot, frac);
                   }
                   if (fSync)
@@ -3319,6 +3356,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                   TSlaveInfo* slinfo =
                      dynamic_cast<TSlaveInfo*>(tmpinfo->At(i));
                   if (slinfo) {
+                     // If PROOF-Lite
+                     if (IsLite()) slinfo->fHostName = gSystem->HostName();
                      // Check if we have already a instance for this worker
                      TIter nxw(fSlaveInfo);
                      TSlaveInfo *ourwi = 0;
@@ -3326,6 +3365,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                         if (!strcmp(ourwi->GetOrdinal(), slinfo->GetOrdinal())) {
                            ourwi->SetSysInfo(slinfo->GetSysInfo());
                            ourwi->fHostName = slinfo->GetName();
+                           if (slinfo->GetDataDir() && (strlen(slinfo->GetDataDir()) > 0))
+                           ourwi->fDataDir = slinfo->GetDataDir();
                            break;
                         }
                      }
@@ -3431,7 +3472,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
       default:
          {
             Error("HandleInputMessage", "unknown command received from '%s' (what = %d)",
-                                      (sl ? sl->GetOrdinal() : "undef"), what);
+                                        sl->GetOrdinal(), what);
          }
          break;
    }
@@ -3522,7 +3563,7 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
             while ((o = nxo())) {
                AskForOutput((TSlave *)o);
             }
-            PDB(kSubmerger, 2) Info("HandleSubmerger", "kMergerDown: exit", merger_id);
+            PDB(kSubmerger, 2) Info("HandleSubmerger", "kMergerDown:%d: exit", merger_id);
          }
          break;
 
@@ -3548,15 +3589,17 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                TString msg;
                if (!fMergersSet) {
 
+                  Int_t activeWorkers = fCurrentMonitor ? fCurrentMonitor->GetActive() : GetNumberOfActiveSlaves();
+                  
                   // First pass - setting number of mergers according to user or dynamically
                   fMergersCount = -1; // No mergers used if not set by user
                   TParameter<Int_t> *mc = dynamic_cast<TParameter<Int_t> *>(GetParameter("PROOF_UseMergers"));
                   if (mc) fMergersCount = mc->GetVal(); // Value set by user
 
                   // Mergers count specified by user but not valid
-                  if (fMergersCount < 0 || (fMergersCount > (GetNumberOfSlaves()/2) )) {
+                  if (fMergersCount < 0 || (fMergersCount > (activeWorkers/2) )) {
                      msg.Form("%s: Invalid request: cannot start %d mergers for %d workers",
-                              prefix, fMergersCount, GetNumberOfSlaves());
+                              prefix, fMergersCount, activeWorkers);
                      if (gProofServ)
                         gProofServ->SendAsynMessage(msg);
                      else
@@ -3565,14 +3608,17 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                   }
                   // Mergers count will be set dynamically
                   if (fMergersCount == 0) {
-                     if (GetNumberOfSlaves() > 1)
-                        fMergersCount = TMath::Nint(TMath::Sqrt(GetNumberOfSlaves()));
+                     if (activeWorkers > 1) {
+                        fMergersCount = TMath::Nint(TMath::Sqrt(activeWorkers));
+                        if (activeWorkers / fMergersCount < 2)
+                           fMergersCount = (Int_t) TMath::Sqrt(activeWorkers);
+                     }
                      if (fMergersCount > 1)
                         msg.Form("%s: Number of mergers set dynamically to %d (for %d workers)",
-                                 prefix, fMergersCount, GetNumberOfSlaves());
+                                 prefix, fMergersCount, activeWorkers);
                      else {
                         msg.Form("%s: No mergers will be used for %d workers",
-                                 prefix, GetNumberOfSlaves());
+                                 prefix, activeWorkers);
                         fMergersCount = -1;
                      }
                      if (gProofServ)
@@ -3581,7 +3627,7 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                         Printf("%s",msg.Data());
                   } else {
                      msg.Form("%s: Number of mergers set by user to %d (for %d workers)",
-                              prefix, fMergersCount, GetNumberOfSlaves());
+                              prefix, fMergersCount, activeWorkers);
                      if (gProofServ)
                         gProofServ->SendAsynMessage(msg);
                      else
@@ -3592,7 +3638,7 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                      fMergers = new TList();
                      fLastAssignedMerger = 0;
                      // Total number of workers, which will not act as mergers ('pure workers')
-                     fWorkersToMerge = (GetNumberOfSlaves() - fMergersCount);
+                     fWorkersToMerge = (activeWorkers - fMergersCount);
                      // Establish the first merger
                      if (!CreateMerger(sl, merging_port)) {
                         // Cannot establish first merger
@@ -3961,6 +4007,9 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
             gProofServ->ReleaseWorker(ord.Data());
          }
       }
+   } else if (TestBit(TProof::kIsClient) && reason && !strcmp(reason, kPROOF_WorkerIdleTO)) {
+      // We are invalid after this
+      fValid = kFALSE;
    }
 
    fActiveSlaves->Remove(wrk);
@@ -3985,7 +4034,27 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
          delete wrk;
       } else {
          fBadSlaves->Add(wrk);
+         fActiveSlaves->Remove(wrk);
+         fUniqueSlaves->Remove(wrk);
+         fAllUniqueSlaves->Remove(wrk);
+         fNonUniqueMasters->Remove(wrk);
+         if (fCurrentMonitor) fCurrentMonitor->DeActivate(wrk->GetSocket());
          wrk->Close();
+         // Update the mergers count, if needed
+         if (fMergersSet) {
+            Int_t mergersCount = -1;
+            TParameter<Int_t> *mc = dynamic_cast<TParameter<Int_t> *>(GetParameter("PROOF_UseMergers"));
+            if (mc) mergersCount = mc->GetVal(); // Value set by user
+            // Mergers count is set dynamically: recalculate it
+            if (mergersCount == 0) {
+               Int_t activeWorkers = fCurrentMonitor ? fCurrentMonitor->GetActive() : GetNumberOfActiveSlaves();
+               if (activeWorkers > 1) {
+                  fMergersCount = TMath::Nint(TMath::Sqrt(activeWorkers));
+                  if (activeWorkers / fMergersCount < 2)
+                     fMergersCount = (Int_t) TMath::Sqrt(activeWorkers);
+               }
+            }
+         }
       }
 
       // Update session workers files
@@ -5049,8 +5118,8 @@ void TProof::RecvLogFile(TSocket *s, Int_t size)
 
    while (filesize < size) {
       left = Int_t(size - filesize);
-      if (left > kMAXBUF)
-         left = kMAXBUF;
+      if (left >= kMAXBUF)
+         left = kMAXBUF-1;
       rec = s->RecvRaw(&buf, left);
       filesize = (rec > 0) ? (filesize + rec) : filesize;
       if (!fLogToWindowOnly) {
@@ -5861,7 +5930,8 @@ void TProof::ClearData(UInt_t what, const char *dsname)
    if ((what & TProof::kPurge)) {
       // Prompt, if requested
       if (doask && !Prompt("Do you really want to remove all data files")) return;
-      fManager->Rm("~/data/*", "-rf", "all");
+      if (fManager->Rm("~/data/*", "-rf", "all") < 0)
+         Warning("ClearData", "problems purging data directory");
       return;
    } else if ((what & TProof::kDataset)) {
       // We must have got a name
@@ -5980,7 +6050,7 @@ void TProof::ClearData(UInt_t what, const char *dsname)
       // Get registered data files
       TString sel = TString::Format("/%s/%s/", GetGroup(), GetUser());
       TMap *fcmap = GetDataSets(sel);
-      if (!fcmap || fcmap->GetSize() <= 0) {
+      if (!fcmap || (fcmap && fcmap->GetSize() <= 0)) {
          PDB(kDataset,1)
          Warning("ClearData", "no dataset beloning to '%s'", sel.Data());
          SafeDelete(fcmap);
@@ -5988,51 +6058,53 @@ void TProof::ClearData(UInt_t what, const char *dsname)
 
       // Go thorugh and prepare the lists per node
       TString opt;
-      TIter nxfc(fcmap);
       TObjString *os = 0;
-      while ((os = (TObjString *) nxfc())) {
-         TFileCollection *fc = 0;
-         if ((fc = (TFileCollection *) fcmap->GetValue(os))) {
-            TFileInfo *fi = 0;
-            TIter nxfi(fc->GetList());
-            while ((fi = (TFileInfo *) nxfi())) {
-               // Get special "file:" url
-               fi->ResetUrl();
-               Int_t nurl = fi->GetNUrls();
-               TUrl *up = 0;
-               while (nurl-- && fi->NextUrl()) {
-                  up = fi->GetCurrentUrl();
-                  if (!strcmp(up->GetProtocol(), "file")) {
-                     opt = up->GetOptions();
-                     if (opt.BeginsWith("node=")) {
-                        host=opt;
-                        host.ReplaceAll("node=","");
-                        file = up->GetFile();
-                        PDB(kDataset,2)
-                           Info("ClearData", "found: host: %s, file: %s", host.Data(), file.Data());
-                        // Remove this from the full list, if there
-                        TList *fl = (TList *) afmap->GetValue(host.Data());
-                        if (fl) {
-                           TObjString *fn = (TObjString *) fl->FindObject(file.Data());
-                           if (fn) {
-                              fl->Remove(fn);
-                              SafeDelete(fn);
-                              nfiles--;
-                           } else {
-                              Warning("ClearData",
-                                      "registered file '%s' not found in the full list!", file.Data());
+      if (fcmap) {
+         TIter nxfc(fcmap);
+         while ((os = (TObjString *) nxfc())) {
+            TFileCollection *fc = 0;
+            if ((fc = (TFileCollection *) fcmap->GetValue(os))) {
+               TFileInfo *fi = 0;
+               TIter nxfi(fc->GetList());
+               while ((fi = (TFileInfo *) nxfi())) {
+                  // Get special "file:" url
+                  fi->ResetUrl();
+                  Int_t nurl = fi->GetNUrls();
+                  TUrl *up = 0;
+                  while (nurl-- && fi->NextUrl()) {
+                     up = fi->GetCurrentUrl();
+                     if (!strcmp(up->GetProtocol(), "file")) {
+                        opt = up->GetOptions();
+                        if (opt.BeginsWith("node=")) {
+                           host=opt;
+                           host.ReplaceAll("node=","");
+                           file = up->GetFile();
+                           PDB(kDataset,2)
+                              Info("ClearData", "found: host: %s, file: %s", host.Data(), file.Data());
+                           // Remove this from the full list, if there
+                           TList *fl = (TList *) afmap->GetValue(host.Data());
+                           if (fl) {
+                              TObjString *fn = (TObjString *) fl->FindObject(file.Data());
+                              if (fn) {
+                                 fl->Remove(fn);
+                                 SafeDelete(fn);
+                                 nfiles--;
+                              } else {
+                                 Warning("ClearData",
+                                       "registered file '%s' not found in the full list!", file.Data());
+                              }
                            }
+                           break;
                         }
-                        break;
                      }
                   }
                }
             }
          }
+         // Clean up the the received map
+         if (fcmap) fcmap->SetOwner(kTRUE);
+         SafeDelete(fcmap);
       }
-      // Clean up the the received map
-      if (fcmap) fcmap->SetOwner(kTRUE);
-      SafeDelete(fcmap);
       // List of the files to be removed
       Info("ClearData", "%d unregistered files to be removed:", nfiles);
       afmap->Print();
@@ -6728,7 +6800,9 @@ Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient, TList *loadop
    mess << Int_t(kLoadPackage) << pac;
    if (loadopts) mess << loadopts;
    Broadcast(mess);
-   Collect();
+   // On the master, workers that fail are deactivated
+   Bool_t deactivateOnFailure = (IsMaster()) ? kTRUE : kFALSE;
+   Collect(kActive, -1, -1, deactivateOnFailure);
 
    return fStatus;
 }
@@ -6784,15 +6858,32 @@ Int_t TProof::LoadPackageOnClient(const char *pack, TList *loadopts)
 
       // check for SETUP.C and execute
       if (!gSystem->AccessPathName("PROOF-INF/SETUP.C")) {
+
+         // We need to change the name of the function to avoid problems when we load more packages
+         TString setup, setupfn;
+         setup.Form("SETUP_%x", TString(pack).Hash());
+         setupfn.Form("%s/%s.C", gSystem->TempDirectory(), setup.Data());
+         TMacro setupmc("PROOF-INF/SETUP.C");
+         TObjString *setupline = setupmc.GetLineWith("SETUP(");
+         if (setupline) {
+            TString setupstring(setupline->GetString());
+            setupstring.ReplaceAll("SETUP(", TString::Format("%s(", setup.Data()));
+            setupline->SetString(setupstring);
+         } else {
+            // Macro does not contain SETUP()
+            Warning("LoadPackageOnClient", "macro '%s/PROOF-INF/SETUP.C' does not contain a SETUP()"
+                                           " function", pack);
+         }
+         setupmc.SaveSource(setupfn.Data());
          // Load the macro
-         if (gROOT->LoadMacro("PROOF-INF/SETUP.C") != 0) {
+         if (gROOT->LoadMacro(setupfn.Data()) != 0) {
             // Macro could not be loaded
             Error("LoadPackageOnClient", "macro '%s/PROOF-INF/SETUP.C' could not be loaded:"
                                          " cannot continue", pack);
             status = -1;
          } else {
             // Check the signature
-            TFunction *fun = (TFunction *) gROOT->GetListOfGlobalFunctions()->FindObject("SETUP");
+            TFunction *fun = (TFunction *) gROOT->GetListOfGlobalFunctions()->FindObject(setup);
             if (!fun) {
                // Notify the upper level
                Error("LoadPackageOnClient", "function SETUP() not found in macro '%s/PROOF-INF/SETUP.C':"
@@ -6803,7 +6894,7 @@ Int_t TProof::LoadPackageOnClient(const char *pack, TList *loadopts)
                // Check the number of arguments
                if (fun->GetNargs() == 0) {
                   // No arguments (basic signature)
-                  callEnv.InitWithPrototype("SETUP","");
+                  callEnv.InitWithPrototype(setup,"");
                   // Warn that the argument (if any) if ignored
                   if (loadopts)
                      Warning("LoadPackageOnClient", "loaded SETUP() does not take any argument:"
@@ -6814,11 +6905,11 @@ Int_t TProof::LoadPackageOnClient(const char *pack, TList *loadopts)
                      // Check argument type
                      TString argsig(arg->GetTitle());
                      if (argsig.BeginsWith("TList")) {
-                        callEnv.InitWithPrototype("SETUP","TList *");
+                        callEnv.InitWithPrototype(setup,"TList *");
                         callEnv.ResetParam();
                         callEnv.SetParam((Long_t) loadopts);
                      } else if (argsig.BeginsWith("const char")) {
-                        callEnv.InitWithPrototype("SETUP","const char *");
+                        callEnv.InitWithPrototype(setup,"const char *");
                         callEnv.ResetParam();
                         TObjString *os = loadopts ? dynamic_cast<TObjString *>(loadopts->First()) : 0;
                         if (os) {
@@ -6857,6 +6948,8 @@ Int_t TProof::LoadPackageOnClient(const char *pack, TList *loadopts)
                }
             }
          }
+         // Remove the temporary macro file
+         if (!gSystem->AccessPathName(setupfn.Data())) gSystem->Unlink(setupfn.Data());
       } else {
          PDB(kPackage, 1)
             Info("LoadPackageOnClient",
@@ -7261,8 +7354,8 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
 
    TMD5 *md5 = TMD5::FileChecksum(par);
 
-   if (UploadPackageOnClient(par, opt, md5) == -1) {
-      delete md5;
+   if (!md5 || (md5 && UploadPackageOnClient(par, opt, md5) == -1)) {
+      if (md5) delete md5;
       return -1;
    }
 
@@ -7382,6 +7475,7 @@ Int_t TProof::UploadPackageOnClient(const char *parpack, EUploadPackageOpt opt, 
 #ifndef WIN32
       char ctmp[4096];
       ssize_t sz = readlink(par.Data(), ctmp, 4096);
+      if (sz >= 4096) sz = 4095;
       if (sz > 0) {
          ctmp[sz] = '\0';
          par = ctmp;
@@ -7913,7 +8007,8 @@ TList *TProof::GetListOfEnabledPackages()
 }
 
 //______________________________________________________________________________
-void TProof::PrintProgress(Long64_t total, Long64_t processed, Float_t procTime)
+void TProof::PrintProgress(Long64_t total, Long64_t processed,
+                           Float_t procTime, Long64_t bytesread)
 {
    // Print a progress bar on stderr. Used in batch mode.
 
@@ -7921,7 +8016,7 @@ void TProof::PrintProgress(Long64_t total, Long64_t processed, Float_t procTime)
       Bool_t redirlog = fRedirLog;
       fRedirLog = kFALSE;
       // Call the external function
-      (*fPrintProgress)(total, processed, procTime);
+      (*fPrintProgress)(total, processed, procTime, bytesread);
       fRedirLog = redirlog;
       return;
    }
@@ -7940,12 +8035,31 @@ void TProof::PrintProgress(Long64_t total, Long64_t processed, Float_t procTime)
          fprintf(stderr, "=");
    }
    Float_t evtrti = (procTime > 0. && processed > 0) ? processed / procTime : -1.;
-   if (evtrti > 0.)
-      fprintf(stderr, "| %.02f %% [%.1f evts/s]\r",
-              (total ? ((100.0*processed)/total) : 100.0), evtrti);
-   else
+   Float_t mbsrti = (procTime > 0. && bytesread > 0) ? bytesread / procTime : -1.;
+   if (evtrti > 0.) {
+      if (mbsrti > 0.) {
+         TString sunit("B/s");
+         const Float_t toK = 1024., toM = 1048576., toG = 1073741824.;
+         if (mbsrti >= toG) {
+            mbsrti /= toG;
+            sunit = "GB/s";
+         } else if (mbsrti >= toM) {
+            mbsrti /= toM;
+            sunit = "MB/s";
+         } else if (mbsrti >= toK) {
+            mbsrti /= toK;
+            sunit = "kB/s";
+         }
+         fprintf(stderr, "| %.02f %% [%.1f evts/s, %.1f %s]\r",
+                (total ? ((100.0*processed)/total) : 100.0), evtrti, mbsrti, sunit.Data());
+      } else {
+         fprintf(stderr, "| %.02f %% [%.1f evts/s]\r",
+                (total ? ((100.0*processed)/total) : 100.0), evtrti);
+      }
+   } else {
       fprintf(stderr, "| %.02f %%\r",
               (total ? ((100.0*processed)/total) : 100.0));
+   }
    if (processed >= total)
       fprintf(stderr, "\n");
 }
@@ -7958,7 +8072,7 @@ void TProof::Progress(Long64_t total, Long64_t processed)
 
    if (fPrintProgress) {
       // Call the external function
-      return (*fPrintProgress)(total, processed, -1.);
+      return (*fPrintProgress)(total, processed, -1., -1);
    }
 
    PDB(kGlobal,1)
@@ -7988,7 +8102,7 @@ void TProof::Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
    if (gROOT->IsBatch()) {
       // Simple progress bar
       if (total > 0)
-         PrintProgress(total, processed, procTime);
+         PrintProgress(total, processed, procTime, bytesread);
    } else {
       EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
              7, total, processed, bytesread, initTime, procTime, evtrti, mbrti);
@@ -8010,7 +8124,7 @@ void TProof::Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
    if (gROOT->IsBatch()) {
       // Simple progress bar
       if (total > 0)
-         PrintProgress(total, processed, procTime);
+         PrintProgress(total, processed, procTime, bytesread);
    } else {
       EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t,Int_t,Int_t,Float_t)",
              10, total, processed, bytesread, initTime, procTime, evtrti, mbrti, actw, tses, eses);
@@ -9347,6 +9461,11 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    // (*)|-------> call RegisterDataSet ------->|
    // (*) - optional
 
+   if (!IsValid()) {
+      Error("UploadDataSet", "not connected");
+      return -1;
+   }
+
    if (fProtocol < 15) {
       Info("UploadDataSet", "functionality not available: the server has an"
                             " incompatible version of TFileInfo");
@@ -9369,9 +9488,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    if ((opt & kOverwriteAllFiles && opt & kOverwriteNoFiles) ||
        (opt & kNoOverwriteDataSet && opt & kAppend) ||
        (opt & kOverwriteDataSet && opt & kAppend) ||
-       (opt & kNoOverwriteDataSet && opt & kOverwriteDataSet) ||
-       (opt & kAskUser && opt & (kOverwriteDataSet | kNoOverwriteDataSet | kAppend |
-                                 kOverwriteAllFiles | kOverwriteNoFiles))) {
+       (opt & kNoOverwriteDataSet && opt & kOverwriteDataSet)) {
       Error("UploadDataSet", "you specified contradicting options.");
       return kError;
    }
@@ -9397,13 +9514,6 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
                "Provided skippedFiles argument does not point to a TList object.");
          return kError;
       }
-   }
-   TSocket *master;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("UploadDataSet", "No connection to the master!");
-      return kError;
    }
 
    Int_t fileCount = 0; // return value
@@ -9647,14 +9757,6 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
       return kFALSE;
    }
 
-   TSocket *master;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("RegisterDataSet", "No connection to the master!");
-      return kFALSE;
-   }
-
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kRegisterDataSet);
    mess << TString(dataSetName);
@@ -9723,14 +9825,6 @@ TMap *TProof::GetDataSets(const char *uri, const char* optStr)
       return 0;
    }
 
-   TSocket *master = 0;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("GetDataSets", "no connection to the master!");
-      return 0;
-   }
-
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kGetDataSets);
    mess << TString(uri?uri:"");
@@ -9763,15 +9857,6 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
    if (fProtocol < 15) {
       Info("ShowDataSets",
            "functionality not available: the server does not have dataset support");
-      return;
-   }
-
-   TSocket *master = 0;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("ShowDataSets",
-            "no connection to the master!");
       return;
    }
 
@@ -9871,14 +9956,6 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char *optStr)
       return 0;
    }
 
-   TSocket *master = 0;
-
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("GetDataSet", "no connection to the master!");
-      return 0;
-   }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kGetDataSet);
    nameMess << TString(uri);
@@ -9922,13 +9999,6 @@ Int_t TProof::RemoveDataSet(const char *uri, const char* optStr)
    // Remove the specified dataset from the PROOF cluster.
    // Files are not deleted.
 
-   TSocket *master;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("RemoveDataSet", "no connection to the master!");
-      return kError;
-   }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kRemoveDataSet);
    nameMess << TString(uri?uri:"");
@@ -9965,13 +10035,6 @@ Int_t TProof::VerifyDataSet(const char *uri, const char* optStr)
    }
 
    Int_t nMissingFiles = 0;
-   TSocket *master;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("VerifyDataSet", "no connection to the master!");
-      return kError;
-   }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kVerifyDataSet);
    nameMess << TString(uri ? uri : "");
@@ -9996,14 +10059,6 @@ TMap *TProof::GetDataSetQuota(const char* optStr)
    if (IsLite()) {
       Info("UploadDataSet", "Lite-session: functionality not implemented");
       return (TMap *)0;
-   }
-
-   TSocket *master = 0;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("GetDataSetQuota", "no connection to the master!");
-      return 0;
    }
 
    TMessage mess(kPROOF_DATASETS);
@@ -10042,14 +10097,6 @@ void TProof::ShowDataSetQuota(Option_t* opt)
 
    if (IsLite()) {
       Info("UploadDataSet", "Lite-session: functionality not implemented");
-      return;
-   }
-
-   TSocket *master = 0;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("ShowDataSetQuota", "no connection to the master!");
       return;
    }
 
@@ -10466,7 +10513,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, TString &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TNamed *p = dynamic_cast<TNamed*>(obj);
       if (p) {
@@ -10485,7 +10532,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Int_t &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TParameter<Int_t> *p = dynamic_cast<TParameter<Int_t>*>(obj);
       if (p) {
@@ -10503,7 +10550,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Long_t &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TParameter<Long_t> *p = dynamic_cast<TParameter<Long_t>*>(obj);
       if (p) {
@@ -10521,7 +10568,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Long64_t &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TParameter<Long64_t> *p = dynamic_cast<TParameter<Long64_t>*>(obj);
       if (p) {
@@ -10539,7 +10586,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Double_t &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TParameter<Double_t> *p = dynamic_cast<TParameter<Double_t>*>(obj);
       if (p) {
@@ -10753,13 +10800,7 @@ Int_t TProof::AssertDataSet(TDSet *dset, TList *input,
             emsg.Form("error integrating dataset %s", dataset->GetName());
             continue;
          }
-         if (enl) {
-            if (!entrylist) {
-               entrylist = enl;
-            } else {
-               entrylist->Add(enl);
-            }
-         }
+         if (enl) entrylist = enl;
       }
       if (missingFiles) {
          // The missing files objects have to be removed from the dataset

@@ -328,7 +328,9 @@ void MCMCIntervalPlot::DrawKeysPdfInterval(const Option_t* options)
          fPosteriorKeysPdf->plotOn(frame,
                RooFit::Normalization(1, RooAbsReal::Raw));
       }
-      frame->Draw(options);
+      if (frame) {
+	frame->Draw(options);
+      }
 
       TLine* llLine = new TLine(ll, 0, ll, height);
       TLine* ulLine = new TLine(ul, 0, ul, height);
@@ -646,10 +648,10 @@ void MCMCIntervalPlot::DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar)
    first->Draw("L,P,same");
 
    //walkCanvas->Update();
-   //delete x;
-   //delete y;
-   //delete burnInX;
-   //delete burnInY;
+   delete [] x;
+   delete [] y;
+   if (burnInX != NULL) delete [] burnInX;
+   if (burnInY != NULL) delete [] burnInY;
    //delete walk;
    //delete burnIn;
    //delete first;
@@ -687,6 +689,8 @@ void MCMCIntervalPlot::DrawParameterVsTime(RooRealVar& param)
    paramGraph->GetYaxis()->SetTitle(param.GetName());
    //paramGraph->SetLineColor(fLineColor);
    paramGraph->Draw("A,L,same");
+   delete [] value; 
+   delete [] time; 
    //gPad->Update();
 }
 
@@ -723,6 +727,8 @@ void MCMCIntervalPlot::DrawNLLVsTime()
    //nllGraph->SetLineColor(fLineColor);
    nllGraph->Draw("A,L,same");
    //gPad->Update();
+   delete [] nllValue; 
+   delete [] time; 
 }
 
 void MCMCIntervalPlot::DrawNLLHist(const Option_t* options)

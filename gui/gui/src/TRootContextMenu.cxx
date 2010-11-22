@@ -432,17 +432,16 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
          char        basictype[32];
 
          if (datatype) {
-            strncpy(basictype, datatype->GetTypeName(), 31);
-            basictype[31] = 0;
+            strlcpy(basictype, datatype->GetTypeName(), 32);
          } else {
             TClass *cl = TClass::GetClass(type);
             if (strncmp(type, "enum", 4) && (cl && !(cl->Property() & kIsEnum)))
                Warning("Dialog", "data type is not basic type, assuming (int)");
-            strcpy(basictype, "int");
+            strlcpy(basictype, "int", 32);
          }
 
          if (strchr(argname, '*')) {
-            strcat(basictype, "*");
+            strlcat(basictype, "*",32);
             if (!strncmp(type, "char", 4))
                type = charstar;
             else if (strstr(argname, "[default:")) {
@@ -463,12 +462,12 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
             if (!strncmp(basictype, "char*", 5)) {
                char *tdefval;
                m->GetterMethod()->Execute(object, "", &tdefval);
-               strncpy(val, tdefval, 255);
+               strlcpy(val, tdefval, sizeof(val));
             } else if (!strncmp(basictype, "float", 5) ||
                        !strncmp(basictype, "double", 6)) {
                Double_t ddefval;
                m->GetterMethod()->Execute(object, "", ddefval);
-               sprintf(val, "%g", ddefval);
+               snprintf(val,256, "%g", ddefval);
             } else if (!strncmp(basictype, "char", 4) ||
                        !strncmp(basictype, "bool", 4) ||
                        !strncmp(basictype, "int", 3)  ||
@@ -476,14 +475,14 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
                        !strncmp(basictype, "short", 5)) {
                Long_t ldefval;
                m->GetterMethod()->Execute(object, "", ldefval);
-               sprintf(val, "%li", ldefval);
+               snprintf(val,256, "%li", ldefval);
             }
 
             // Find out whether we have options ...
 
             TList *opt;
             if ((opt = m->GetOptions())) {
-               Warning("Dialog", "option menu not yet implemented", opt);
+               Warning("Dialog", "option menu not yet implemented");
 #if 0
                TMotifOptionMenu *o= new TMotifOptionMenu(argname);
                TIter nextopt(opt);
@@ -494,7 +493,7 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
                   Long_t value  = it->fValue;
                   if (value != -9999) {
                      char val[256];
-                     sprintf(val, "%li", value);
+                     snprintf(val,256, "%li", value);
                      o->AddItem(name, val);
                   }else
                      o->AddItem(name, label);
@@ -512,7 +511,7 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
             const char *tval = argument->GetDefault();
             if (tval && strlen(tval)) {
                // Remove leading and trailing quotes
-               strncpy(val, tval + (tval[0] == '"' ? 1 : 0), 255);
+               strlcpy(val, tval + (tval[0] == '"' ? 1 : 0), sizeof(val));
                if (val[strlen(val)-1] == '"')
                   val[strlen(val)-1]= 0;
             }

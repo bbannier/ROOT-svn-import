@@ -1,6 +1,6 @@
  /***************************************************************************** 
   * Project: RooFit                                                           * 
-  * @(#)root/roofit:$Id: RooLognormal.cxx 25185 2008-08-20 14:00:42Z wouter $ *
+  * @(#)root/roofit:$Id$ *
   *                                                                           * 
   * RooFit Lognormal PDF                                                      *
   *                                                                           * 

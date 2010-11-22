@@ -759,15 +759,6 @@ struct G__filetable {
 #endif
 
 /**************************************************************************
-* user specified pragma statement
-**************************************************************************/
-struct G__AppPragma {
-  char *name;
-  void *p2f;
-  struct G__AppPragma *next;
-};
-
-/**************************************************************************
 * Flag to check global operator new/delete()
 **************************************************************************/
 #define G__IS_OPERATOR_NEW        0x01
@@ -920,43 +911,31 @@ struct G__bytecodefunc {
  **************************************************************************/
 
 struct G__funcentry {
-  /* file position and pointer for restoring start point */
-  fpos_t pos; /* Set if interpreted func body defined, unknown otherwise */
-  void *p;  /* FILE* for source file or  int (*)() for compiled function
-             * (void*)NULL if no function body */
-  int  line_number; /* -1 if no function body or compiled function */
-  short filenum;    /* -1 if compiled function, otherwise interpreted func */
-
+   /* file position and pointer for restoring start point */
+   fpos_t pos; /* Set if interpreted func body defined, unknown otherwise */
+   void *p;  /* FILE* for source file or  int (*)() for compiled function
+              * (void*)NULL if no function body */
+   int  line_number; /* -1 if no function body or compiled function */
+   short filenum;    /* -1 if compiled function, otherwise interpreted func */
+   
    // Object Pointer Adjustement to call the stub function (entry) 
    long ptradjust;
-
+   
 #ifdef G__ASM_FUNC
-  int size; /* size (number of lines) of function */
+   int size; /* size (number of lines) of function */
 #endif
 #ifdef G__TRUEP2F
-  void *tp2f;
+   void *tp2f;
 #endif
 #ifdef G__ASM_WHOLEFUNC
-  struct G__bytecodefunc *bytecode;
-  int bytecodestatus;
+   struct G__bytecodefunc *bytecode;
+   int bytecodestatus;
+#endif
+#ifdef __cplusplus
+   G__funcentry() : p(0),line_number(-1),filenum(-1),ptradjust(0),size(0),tp2f(0),bytecode(0),bytecodestatus(0) { 
+      memset(&pos,0,sizeof(pos)); }
 #endif
 };
-
-#ifdef G__VMS
-/***************************************************************************
-*  Need for struct G__ifunc_table_VMS.  Neccessary for
-*  Cint_Method::FilePosition().
-***************************************************************************/
-struct G__funcentry_VMS {
-  /* file position and pointer for restoring start point */
-  fpos_tt pos; /* Set if interpreted func body defined, unknown otherwise */
-  void *p;     /* FILE* for source file or  int (*)() for compiled function
-                * (void*)NULL if no function body */
-  int  line_number; /* -1 if no function body or compiled function */
-  short filenum;    /* -1 if compiled function, otherwise interpreted func */
-};
-#endif
-
 
 /**************************************************************************
 * structure for ifunc (Interpreted FUNCtion) table
@@ -1050,7 +1029,34 @@ struct G__ifunc_table {
 };
 struct G__ifunc_table_internal {
 #ifdef __cplusplus
-   G__ifunc_table_internal() : inited(true) {};
+   G__ifunc_table_internal() : inited(true),allifunc(0),next(0),page(0),page_base(0),tagnum(-1) {
+      for(unsigned i = 0; i < G__MAXIFUNC; ++i) {
+         funcname[i]       = 0;
+         hash[i]           = 0;
+         funcptr[i]        = 0;
+         mangled_name[i]   = 0;
+         pentry[i]         = 0;
+         type[i]           = 0;
+         p_tagtable[i]     = 0;
+         p_typetable[i]    = 0;
+         reftype[i]        = 0;
+         para_nu[i]        = 0;
+         isconst[i]        = 0;
+         isexplicit[i]     = 0;
+         iscpp[i]          = 0;
+         ansi[i]           = 0;
+         busy[i]           = 0;
+         access[i]         = 0;
+         staticalloc[i]    = 0;
+         isvirtual[i]      = 0;
+         ispurevirtual[i]  = 0;
+         friendtag[i]      = 0;
+         globalcomp[i]     = 0;
+         userparam[i]      = 0;
+         vtblindex[i]      = 0;
+         vtblbasetagnum[i] = 0;
+      }
+   };
 #endif
    
   /* true if the constructor was run */
@@ -1123,79 +1129,6 @@ struct G__ifunc_table_internal {
   short vtblindex[G__MAXIFUNC];
   short vtblbasetagnum[G__MAXIFUNC];
 };
-
-
-#ifdef G__VMS
-/**************************************************************************
-* For VMS:
-*  This is the same struct as G__ifunc_table excep pentry becomes
-*  G__funcentry_VMS.  This is needed in Cint_method::FilePosition().
-**************************************************************************/
-struct G__ifunc_table_VMS {
-  /* number of interpreted function */
-  int allifunc;
-
-  /* function name and hash for identification */
-  char *funcname[G__MAXIFUNC];
-  int  hash[G__MAXIFUNC];
-
-  struct G__funcentry entry[G__MAXIFUNC];
-  struct G__funcentry_VMS *pentry[G__MAXIFUNC];
-
-  /* type of return value */
-  G__SIGNEDCHAR_T type[G__MAXIFUNC];
-  short p_tagtable[G__MAXIFUNC];
-  short p_typetable[G__MAXIFUNC];
-  G__SIGNEDCHAR_T reftype[G__MAXIFUNC];
-  short para_nu[G__MAXIFUNC];
-  G__SIGNEDCHAR_T isconst[G__MAXIFUNC];
-  G__SIGNEDCHAR_T isexplicit[G__MAXIFUNC];
-
-  /* number and type of function parameter */
-  /* G__inheritclass() depends on type of following members */
-  char para_reftype[G__MAXIFUNC][G__MAXFUNCPARA];
-  char para_type[G__MAXIFUNC][G__MAXFUNCPARA];
-  char para_isconst[G__MAXIFUNC][G__MAXFUNCPARA];
-  short para_p_tagtable[G__MAXIFUNC][G__MAXFUNCPARA];
-  short para_p_typetable[G__MAXIFUNC][G__MAXFUNCPARA];
-  G__value *para_default[G__MAXIFUNC][G__MAXFUNCPARA];
-  char *para_name[G__MAXIFUNC][G__MAXFUNCPARA];
-  char *para_def[G__MAXIFUNC][G__MAXFUNCPARA];
-
-  /* C or C++ */
-  char iscpp[G__MAXIFUNC];
-
-  /* ANSI or standard header format */
-  char ansi[G__MAXIFUNC];
-
-  /**************************************************
-   * if function is called, busy[] is incremented
-   **************************************************/
-  short busy[G__MAXIFUNC];
-
-  struct G__ifunc_table *next;
-  short page;
-
-  G__SIGNEDCHAR_T access[G__MAXIFUNC];  /* private, protected, public */
-  char staticalloc[G__MAXIFUNC];
-
-  int tagnum;
-  char isvirtual[G__MAXIFUNC]; /* virtual function flag */
-  char ispurevirtual[G__MAXIFUNC]; /* virtual function flag */
-
-#ifdef G__FRIEND
-  struct G__friendtag *friendtag[G__MAXIFUNC];
-#endif
-
-  G__SIGNEDCHAR_T globalcomp[G__MAXIFUNC];
-
-  struct G__comment_info comment[G__MAXIFUNC];
-
-  void* userparam[G__MAXIFUNC];  /* user parameter array */
-  short vtblindex[G__MAXIFUNC];
-  short vtblbasetagnum[G__MAXIFUNC];
-};
-#endif
 
 /**************************************************************************
 * structure for class inheritance
@@ -1351,7 +1284,9 @@ public:
    };
 
    NameMap() {}
-   void Insert(const char* name, int idx) { fMap[name].insert(idx); }
+   void Insert(const char* name, int idx) {
+      fMap[name].insert(idx); 
+   }
    void Remove(const char* name, int idx) {
       NameMap_t::iterator iMap = fMap.find(name);
       if (iMap != fMap.end()) {
@@ -1365,6 +1300,13 @@ public:
       if (iMap != fMap.end() && !iMap->second.empty())
          return Range(iMap->second);
       return Range();
+   }
+   void Print() {
+      NameMap_t::iterator iMap = fMap.begin();
+      while( iMap != fMap.end() ) {
+         fprintf(stderr,"key=%s size=%ld\n",iMap->first,(long)iMap->second.size());
+         ++iMap;
+      }  
    }
    
 private:
@@ -1490,10 +1432,30 @@ struct G__tempobject_list {
 #include "security.h"
 #include "fproto.h"
 #include "global.h"
+#include "config/snprintf.h"
+#include "config/strlcpy.h"
 
 #ifdef __cplusplus
 #include "FastAllocString.h"
 using namespace Cint::Internal;
+
+/**************************************************************************
+ * user specified pragma statement
+ **************************************************************************/
+extern "C" {
+   typedef void (*G__AppPragma_func_t)(char*);
+}
+
+struct G__AppPragma {
+
+   G__FastAllocString name;
+   G__AppPragma_func_t p2f;
+   struct G__AppPragma *next;
+
+   G__AppPragma(char *comname, G__AppPragma_func_t p2f);
+   ~G__AppPragma();
+};
+
 #endif
 
 #endif /* G__COMMON_H */

@@ -1433,7 +1433,7 @@ char *TGHtml::GetTokenName(TGHtmlElement *p)
          } else {
             zName = "Unknown";
          }
-         strncpy(zBuf, zName, 199);
+         strlcpy(zBuf, zName, sizeof(zBuf));
          break;
    }
 
@@ -1471,8 +1471,8 @@ TGString *TGHtml::ListTokens(TGHtmlElement *p, TGHtmlElement *pEnd)
             break;
 
          case Html_Space:
-            sprintf(zLine, "Space %d %d ",
-                    p->fCount, (p->fFlags & HTML_NewLine) != 0);
+            snprintf(zLine, 100, "Space %d %d ",
+                     p->fCount, (p->fFlags & HTML_NewLine) != 0);
             str->Append(zLine);
             break;
 

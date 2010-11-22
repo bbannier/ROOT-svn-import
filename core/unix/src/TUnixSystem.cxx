@@ -261,7 +261,7 @@ extern "C" {
 #endif
 
 #if defined(R__MACOSX) && !defined(__xlC__) && !defined(__i386__) && \
-   !defined(__x86_64__)
+   !defined(__x86_64__) && !defined(__arm__)
 #include <fenv.h>
 #include <signal.h>
 #include <ucontext.h>
@@ -282,7 +282,7 @@ enum {
 };
 #endif
 
-#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__))
+#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
 #include <fenv.h>
 #endif
 // End FPE handling includes
@@ -367,7 +367,7 @@ static const char *GetExePath()
 
       // get our pid and build the name of the link in /proc
       pid = getpid();
-      sprintf(linkname, "/proc/%i/exe", pid);
+      snprintf(linkname,64, "/proc/%i/exe", pid);
       int ret = readlink(linkname, buf, kMAXPATHLEN);
       if (ret > 0 && ret < kMAXPATHLEN) {
          buf[ret] = 0;
@@ -563,7 +563,7 @@ void TUnixSystem::SetDisplay()
                           utmp_entry->ut_host);
                } else {
                   char disp[64];
-                  sprintf(disp, "%s:0.0", utmp_entry->ut_host);
+                  snprintf(disp, sizeof(disp), "%s:0.0", utmp_entry->ut_host);
                   Setenv("DISPLAY", disp);
                   Warning("SetDisplay", "DISPLAY not set, setting it to %s",
                           disp);
@@ -574,7 +574,7 @@ void TUnixSystem::SetDisplay()
                if ((he = gethostbyaddr((const char*)&utmp_entry->ut_addr,
                                        sizeof(utmp_entry->ut_addr), AF_INET))) {
                   char disp[64];
-                  sprintf(disp, "%s:0.0", he->h_name);
+                  snprintf(disp, sizeof(disp), "%s:0.0", he->h_name);
                   Setenv("DISPLAY", disp);
                   Warning("SetDisplay", "DISPLAY not set, setting it to %s",
                           disp);
@@ -790,11 +790,15 @@ Int_t TUnixSystem::GetFPEMask()
 #endif
 #endif
 
-#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__))
+#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
    fenv_t oldenv;
    fegetenv(&oldenv);
    fesetenv(&oldenv);
+#if defined(__arm__)
+   Int_t oldmask = ~oldenv.__fpscr;
+#else
    Int_t oldmask = ~oldenv.__control;
+#endif
 
    if (oldmask & FE_INVALID  )   mask |= kInvalid;
    if (oldmask & FE_DIVBYZERO)   mask |= kDivByZero;
@@ -806,7 +810,7 @@ Int_t TUnixSystem::GetFPEMask()
 #endif
 
 #if defined(R__MACOSX) && !defined(__xlC__) && !defined(__i386__) && \
-   !defined(__x86_64__)
+   !defined(__x86_64__) && !defined(__arm__)
    Long64_t oldmask;
    fegetenvd(oldmask);
 
@@ -863,7 +867,7 @@ Int_t TUnixSystem::SetFPEMask(Int_t mask)
 #endif
 #endif
 
-#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__))
+#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
    Int_t newm = 0;
    if (mask & kInvalid  )   newm |= FE_INVALID;
    if (mask & kDivByZero)   newm |= FE_DIVBYZERO;
@@ -873,12 +877,16 @@ Int_t TUnixSystem::SetFPEMask(Int_t mask)
 
    fenv_t cur;
    fegetenv(&cur);
+#if defined(__arm__)
+   cur.__fpscr &= ~newm;
+#else
    cur.__control &= ~newm;
+#endif
    fesetenv(&cur);
 #endif
 
 #if defined(R__MACOSX) && !defined(__xlC__) && !defined(__i386__) && \
-   !defined(__x86_64__)
+   !defined(__x86_64__) && !defined(__arm__)
    Int_t newm = 0;
    if (mask & kInvalid  )   newm |= FE_ENABLE_INVALID;
    if (mask & kDivByZero)   newm |= FE_ENABLE_DIVBYZERO;
@@ -1104,7 +1112,7 @@ void TUnixSystem::DispatchSignals(ESignals sig)
    case kSigSegmentationViolation:
    case kSigIllegalInstruction:
    case kSigFloatingException:
-      Break("TUnixSystem::DispatchSignals", UnixSigname(sig));
+      Break("TUnixSystem::DispatchSignals", "%s", UnixSigname(sig));
       StackTrace();
       if (gApplication)
          gApplication->HandleException(sig);
@@ -1113,7 +1121,7 @@ void TUnixSystem::DispatchSignals(ESignals sig)
       break;
    case kSigSystem:
    case kSigPipe:
-      Break("TUnixSystem::DispatchSignals", UnixSigname(sig));
+      Break("TUnixSystem::DispatchSignals", "%s", UnixSigname(sig));
       break;
    case kSigWindowChanged:
       Gl_windowchanged();
@@ -1424,8 +1432,10 @@ int TUnixSystem::CopyFile(const char *f, const char *t, Bool_t overwrite)
       return -1;
 
    FILE *to   = fopen(t, "w");
-   if (!to)
+   if (!to) {
+      fclose(from);
       return -1;
+   }
 
    const int bufsize = 1024;
    char buf[bufsize];
@@ -2238,31 +2248,31 @@ void TUnixSystem::StackTrace()
                if (name.Contains(".so") || name.Contains(".sl")) noShare = kFALSE;
                if (noShare) offset = addr;
                if (noPath)  name = "`which " + name + "`";
-               sprintf(buffer, "%s -e %s 0x%016lx", addr2line, name.Data(), offset);
+               snprintf(buffer, sizeof(buffer), "%s -e %s 0x%016lx", addr2line, name.Data(), offset);
                Bool_t nodebug = kTRUE;
                if (FILE *pf = ::popen(buffer, "r")) {
                   char buf[2048];
                   if (fgets(buf, 2048, pf)) {
                      buf[strlen(buf)-1] = 0;  // remove trailing \n
                      if (strncmp(buf, "??", 2)) {
-                        sprintf(buffer, format2, addr, symname, buf, libname);
+                        snprintf(buffer, sizeof(buffer), format2, addr, symname, buf, libname);
                         nodebug = kFALSE;
                      }
                   }
                   ::pclose(pf);
                }
                if (nodebug)
-                  sprintf(buffer, format1, addr, symname,
-                          gte ? "+" : "-", diff, libname);
+                  snprintf(buffer, sizeof(buffer), format1, addr, symname,
+                           gte ? "+" : "-", diff, libname);
             } else {
                if (symaddr)
-                  sprintf(buffer, format1, addr, symname,
-                          gte ? "+" : "-", diff, libname);
+                  snprintf(buffer, sizeof(buffer), format1, addr, symname,
+                           gte ? "+" : "-", diff, libname);
                else
-                  sprintf(buffer, format3, addr, symname, libname);
+                  snprintf(buffer, sizeof(buffer), format3, addr, symname, libname);
             }
          } else {
-            sprintf(buffer, format4, addr);
+            snprintf(buffer, sizeof(buffer), format4, addr);
          }
 
          if (demangle)
@@ -2277,7 +2287,7 @@ void TUnixSystem::StackTrace()
          FILE *f = TempFileName(tmpf2);
          if (f) fclose(f);
          file1.close();
-         sprintf(buffer, "%s %s < %s > %s", filter, cppfiltarg, tmpf1.Data(), tmpf2.Data());
+         snprintf(buffer, sizeof(buffer), "%s %s < %s > %s", filter, cppfiltarg, tmpf1.Data(), tmpf2.Data());
          Exec(buffer);
          ifstream file2(tmpf2);
          TString line;
@@ -2732,8 +2742,8 @@ const char *TUnixSystem::GetLinkedLibraries()
       // it's not a dll and exe doesn't end on ".exe";
       // need to add it for cygcheck to find it:
       char* longerexe = new char[lenexe + 5];
-      strcpy(longerexe, exe);
-      strcat(longerexe, ".exe");
+      strlcpy(longerexe, exe,lenexe+5);
+      strlcat(longerexe, ".exe",lenexe+5);
       delete [] exe;
       exe = longerexe;
    }
@@ -2765,9 +2775,7 @@ const char *TUnixSystem::GetLinkedLibraries()
       }
       delete tok;
    }
-   if (p) {
-      ClosePipe(p);
-   }
+   ClosePipe(p);
 #endif
 
    delete [] exe;
@@ -2785,7 +2793,7 @@ const char *TUnixSystem::GetLinkedLibraries()
 //______________________________________________________________________________
 TTime TUnixSystem::Now()
 {
-   // Return current time.
+   // Get current time in milliseconds since 0:00 Jan 1 1995.
 
    return UnixNow();
 }
@@ -2806,7 +2814,7 @@ Bool_t TUnixSystem::DispatchTimers(Bool_t mode)
 
    while ((t = (TTimer *) it.Next())) {
       // NB: the timer resolution is added in TTimer::CheckTimer()
-      Long_t now = UnixNow();
+      Long64_t now = UnixNow();
       if (mode && t->IsSync()) {
          if (t->CheckTimer(now))
             timedout = kTRUE;
@@ -3605,7 +3613,7 @@ void TUnixSystem::UnixResetSignals()
 //---- time --------------------------------------------------------------------
 
 //______________________________________________________________________________
-Long_t TUnixSystem::UnixNow()
+Long64_t TUnixSystem::UnixNow()
 {
    // Get current time in milliseconds since 0:00 Jan 1 1995.
 
@@ -3629,7 +3637,7 @@ Long_t TUnixSystem::UnixNow()
 
    struct timeval t;
    gettimeofday(&t, 0);
-   return (t.tv_sec-(Long_t)jan95)*1000 + t.tv_usec/1000;
+   return Long64_t(t.tv_sec-(Long_t)jan95)*1000 + t.tv_usec/1000;
 }
 
 //______________________________________________________________________________
@@ -3719,13 +3727,14 @@ const char *TUnixSystem::UnixHomedirectory(const char *name)
 {
    // Returns the user's home directory.
 
-   static char path[kMAXPATHLEN], mydir[kMAXPATHLEN];
+   static char path[kMAXPATHLEN], mydir[kMAXPATHLEN] = { '\0' };
    struct passwd *pw;
 
    if (name) {
       pw = getpwnam(name);
       if (pw) {
-         strncpy(path, pw->pw_dir, kMAXPATHLEN);
+         strncpy(path, pw->pw_dir, kMAXPATHLEN-1);
+         path[sizeof(path)-1] = '\0';
          return path;
       }
    } else {
@@ -3733,7 +3742,8 @@ const char *TUnixSystem::UnixHomedirectory(const char *name)
          return mydir;
       pw = getpwuid(getuid());
       if (pw) {
-         strncpy(mydir, pw->pw_dir, kMAXPATHLEN);
+         strncpy(mydir, pw->pw_dir, kMAXPATHLEN-1);
+         mydir[sizeof(mydir)-1] = '\0';
          return mydir;
       }
    }
@@ -3986,8 +3996,8 @@ int TUnixSystem::UnixUnixConnect(const char *sockpath)
    unserver.sun_family = AF_UNIX;
 
    if (strlen(sockpath) > sizeof(unserver.sun_path)-1) {
-      ::Error("TUnixSystem::UnixUnixConnect", "socket path %s, longer than max allowed length (%d)",
-              sockpath, sizeof(unserver.sun_path)-1);
+      ::Error("TUnixSystem::UnixUnixConnect", "socket path %s, longer than max allowed length (%u)",
+              sockpath, (UInt_t)sizeof(unserver.sun_path)-1);
       return -1;
    }
    strcpy(unserver.sun_path, sockpath);
@@ -4127,7 +4137,13 @@ int TUnixSystem::UnixUnixService(const char *sockpath, int backlog)
    // Prepare structure
    memset(&unserver, 0, sizeof(unserver));
    unserver.sun_family = AF_UNIX;
-   sprintf(unserver.sun_path, "%s", sockpath);
+
+   if (strlen(sockpath) > sizeof(unserver.sun_path)-1) {
+      ::Error("TUnixSystem::UnixUnixService", "socket path %s, longer than max allowed length (%u)",
+              sockpath, (UInt_t)sizeof(unserver.sun_path)-1);
+      return -1;
+   }
+   strcpy(unserver.sun_path, sockpath);
 
    // Create socket
    if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
@@ -4567,16 +4583,21 @@ int TUnixSystem::ReadUtmpFile()
    }
 
    gUtmpContents = (STRUCT_UTMP *) malloc(size);
-   if (!gUtmpContents) return 0;
-
-   n_read = fread(gUtmpContents, 1, size, utmp);
-   if (ferror(utmp) || fclose(utmp) == EOF || n_read < size) {
-      free(gUtmpContents);
-      gUtmpContents = 0;
+   if (!gUtmpContents) {
+      fclose(utmp);
       return 0;
    }
 
-   return size / sizeof(STRUCT_UTMP);
+   n_read = fread(gUtmpContents, 1, size, utmp);
+   if (!ferror(utmp)) {
+      if (fclose(utmp) != EOF && n_read == size)
+         return size / sizeof(STRUCT_UTMP);
+   } else
+      fclose(utmp);
+
+   free(gUtmpContents);
+   gUtmpContents = 0;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -4738,8 +4759,8 @@ static void GetDarwinMemInfo(MemInfo_t *meminfo)
       char fname [MAXNAMLEN];
       if (strncmp(dp->d_name, "swapfile", 8))
          continue;
-      strcpy(fname, "/private/var/vm/");
-      strcat (fname, dp->d_name);
+      strlcpy(fname, "/private/var/vm/",MAXNAMLEN);
+      strlcat (fname, dp->d_name,MAXNAMLEN);
       if (stat(fname, &sb) < 0)
          continue;
       swap_total += sb.st_size;

@@ -1063,7 +1063,7 @@ Int_t TGX11::OpenDisplay(Display *disp)
 
    // Inquire the the XServer Vendor
    char vendor[132];
-   strcpy(vendor, XServerVendor(fDisplay));
+   strlcpy(vendor, XServerVendor(fDisplay),132);
 
    // Create primitives graphic contexts
    for (i = 0; i < kMAXGC; i++)
@@ -2721,7 +2721,7 @@ void TGX11::SetRGB(int cindex, float r, float g, float b)
       xcol.red   = (UShort_t)(r * kBIGGEST_RGB_VALUE);
       xcol.green = (UShort_t)(g * kBIGGEST_RGB_VALUE);
       xcol.blue  = (UShort_t)(b * kBIGGEST_RGB_VALUE);
-      xcol.flags = DoRed || DoGreen || DoBlue;
+      xcol.flags = DoRed | DoGreen | DoBlue;
       XColor_t &col = GetColor(cindex);
       if (col.fDefined) {
          // if color is already defined with same rgb just return
@@ -2734,7 +2734,7 @@ void TGX11::SetRGB(int cindex, float r, float g, float b)
       }
       if (AllocColor(fColormap, &xcol)) {
          col.fDefined = kTRUE;
-         col.fPixel  = xcol.pixel;
+         col.fPixel   = xcol.pixel;
          col.fRed     = xcol.red;
          col.fGreen   = xcol.green;
          col.fBlue    = xcol.blue;
@@ -2859,7 +2859,7 @@ Int_t TGX11::SetTextFont(char *fontname, ETextSetMode mode)
          XSetFont(fDisplay, *gGCtext, gTextFont->fid);
          XSetFont(fDisplay, *gGCinvt, gTextFont->fid);
          gFont[gCurrentFontNumber].id = gTextFont;
-         strcpy(gFont[gCurrentFontNumber].name,fontname);
+         strlcpy(gFont[gCurrentFontNumber].name,fontname,80);
          gCurrentFontNumber++;
          if (gCurrentFontNumber == kMAXFONT) gCurrentFontNumber = 0;
       }
@@ -3192,7 +3192,7 @@ Pixmap_t TGX11::ReadGIF(int x0, int y0, const char *file, Window_t id)
    // current window. Otherwise creates pixmap from gif file
 
    FILE  *fd;
-   Seek_t filesize;
+   Seek_t filesize = 0;
    unsigned char *gifArr, *pixArr, red[256], green[256], blue[256], *j1, *j2, icol;
    int   i, j, k, width, height, ncolor, irep, offset;
    float rr, gg, bb;
@@ -3205,7 +3205,14 @@ Pixmap_t TGX11::ReadGIF(int x0, int y0, const char *file, Window_t id)
    }
 
    fseek(fd, 0L, 2);
-   filesize = Seek_t(ftell(fd));
+   long ft = ftell(fd);
+   if (ft <=0) {
+      Error("ReadGIF", "unable to open GIF file");
+      fclose(fd);
+      return pic;
+   } else {
+      filesize = Seek_t(ft);
+   }
    fseek(fd, 0L, 0);
 
    if (!(gifArr = (unsigned char *) calloc(filesize+256,1))) {

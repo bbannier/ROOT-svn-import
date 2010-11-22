@@ -276,7 +276,7 @@ static int G__get_newname(G__FastAllocString& new_name)
          else if (strcmp(new_name, "const&") == 0) {
             cin = G__fgetvarname(new_name, 0, ",;=():");
             G__reftype = G__PARAREFERENCE;
-            G__constvar |= G__PCONSTVAR;
+            G__constvar |= G__CONSTVAR;
          }
          else if (strcmp(new_name, "*const&") == 0) {
             cin = G__fgetvarname(new_name, 1, ",;=():");
@@ -465,7 +465,8 @@ static int G__get_newname(G__FastAllocString& new_name)
          cin = G__fignorestream(")");
          cin = G__fignorestream("(");
          new_name.Resize(12);
-         strcpy(new_name + 9, "()");
+         new_name[9] = '\0';
+         new_name += "()";
       }
       return cin;
    }
@@ -482,7 +483,8 @@ static int G__get_newname(G__FastAllocString& new_name)
          cin = G__fignorestream(")");
          cin = G__fignorestream("(");
          new_name.Resize(13);
-         strcpy(new_name + 10, "()");
+         new_name[10] = '\0';
+         new_name += "()";
       }
       return(cin);
    }
@@ -758,7 +760,7 @@ static int G__initstruct(G__FastAllocString& new_name)
                // -- Data member is a fixed-size character array.
                // FIXME: We do not handle a data member which is an unspecified length array.
                if (memvar->varlabel[memindex][1] /* number of elements */ > (int) std::strlen((char*)reg.obj.i)) {
-                  std::strcpy((char*) buf.obj.i, (char*) reg.obj.i);
+                  std::strcpy((char*) buf.obj.i, (char*) reg.obj.i); // Legacy, we don't know the buffer size.
                }
                else {
                   std::strncpy((char*) buf.obj.i, (char*) reg.obj.i, memvar->varlabel[memindex][1] /* num of elements */);
@@ -1335,11 +1337,6 @@ static int G__initary(G__FastAllocString& new_name)
       }
    }
    G__ASSERT(linear_index == num_of_elements);
-   // FIXME: This is bizzare!
-   if (!G__asm_noverflow && G__no_exec_compile) {
-      // FIXME: Why?
-      G__no_exec = 1;
-   }
    // Read and discard up to the next ',' or ';'.
    // FIXME: We should only allow spaces here!
    int c = G__fignorestream(",;");
@@ -2425,8 +2422,8 @@ void G__define_var(int tagnum, int typenum)
          if (G__globalcomp != G__NOLINK) {
             if (!bitfieldwarn) {
                if (G__dispmsg >= G__DISPNOTE) {
-                  G__fprinterr(G__serr, "Note: Bit-field not accessible from interpreter");
                   G__printlinenum();
+                  G__fprinterr(G__serr, "Note: Bit-field not accessible from interpreter\n");
                }
                bitfieldwarn = 1;
             }
@@ -2442,7 +2439,7 @@ void G__define_var(int tagnum, int typenum)
                G__bitfield = -1;
             }
             if (!new_name[0]) {
-               sprintf(new_name, "G__pad%x", padn++);
+               new_name.Format("G__pad%x", padn++);
             }
          }
       }

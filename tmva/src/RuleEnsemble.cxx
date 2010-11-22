@@ -40,11 +40,23 @@
 
 //_______________________________________________________________________
 TMVA::RuleEnsemble::RuleEnsemble( RuleFit *rf )
-   : fLearningModel    ( kFull )
-   , fLinQuantile      ( 0.025 ) // default quantile for killing outliers in linear terms
-   , fAverageSupport   ( 0.8 )
-   , fAverageRuleSigma ( 0.4 )  // default value - used if only linear model is chosen
-   , fRuleMinDist      ( 1e-3 ) // closest allowed 'distance' between two rules
+   : fLearningModel   ( kFull )
+   , fImportanceCut   ( 0 )
+   , fLinQuantile     ( 0.025 ) // default quantile for killing outliers in linear terms
+   , fOffset          ( 0 )
+   , fAverageSupport  ( 0.8 )
+   , fAverageRuleSigma( 0.4 )  // default value - used if only linear model is chosen
+   , fRuleFSig        ( 0 )
+   , fRuleNCave       ( 0 )
+   , fRuleNCsig       ( 0 )
+   , fRuleMinDist     ( 1e-3 ) // closest allowed 'distance' between two rules
+   , fNRulesGenerated ( 0 )
+   , fEvent           ( 0 )
+   , fEventCacheOK    ( true )
+   , fRuleMapOK       ( true )
+   , fRuleMapInd0     ( 0 )
+   , fRuleMapInd1     ( 0 )
+   , fRuleMapEvents   ( 0 )
    , fLogger( new MsgLogger("RuleFit") )
 {
    // constructor
@@ -54,6 +66,9 @@ TMVA::RuleEnsemble::RuleEnsemble( RuleFit *rf )
 //_______________________________________________________________________
 TMVA::RuleEnsemble::RuleEnsemble( const RuleEnsemble& other )
    : fAverageSupport   ( 1 )
+   , fEvent(0)
+   , fRuleMapEvents(0)
+   , fRuleFit(0)
    , fLogger( new MsgLogger("RuleFit") )
 {
    // copy constructor
@@ -61,9 +76,27 @@ TMVA::RuleEnsemble::RuleEnsemble( const RuleEnsemble& other )
 }
 
 //_______________________________________________________________________
-TMVA::RuleEnsemble::RuleEnsemble() :
-   fAverageSupport( 1 ),
-   fLogger( new MsgLogger("RuleFit") )
+TMVA::RuleEnsemble::RuleEnsemble()
+   : fLearningModel     ( kFull )
+   , fImportanceCut   ( 0 )
+   , fLinQuantile     ( 0.025 ) // default quantile for killing outliers in linear terms
+   , fOffset          ( 0 )
+   , fImportanceRef   ( 1.0 )
+   , fAverageSupport  ( 0.8 )
+   , fAverageRuleSigma( 0.4 )  // default value - used if only linear model is chosen
+   , fRuleFSig        ( 0 )
+   , fRuleNCave       ( 0 )
+   , fRuleNCsig       ( 0 )
+   , fRuleMinDist     ( 1e-3 ) // closest allowed 'distance' between two rules
+   , fNRulesGenerated ( 0 )
+   , fEvent           ( 0 )
+   , fEventCacheOK    ( true )
+   , fRuleMapOK       ( true )
+   , fRuleMapInd0     ( 0 )
+   , fRuleMapInd1     ( 0 )
+   , fRuleMapEvents   ( 0 )
+   , fRuleFit         ( 0 )
+   , fLogger( new MsgLogger("RuleFit") )
 {
    // constructor
 }
@@ -1002,6 +1035,7 @@ void TMVA::RuleEnsemble::Print() const
 void TMVA::RuleEnsemble::PrintRaw( ostream & os ) const
 {
    // write rules to stream
+   Int_t dp = os.precision();
    UInt_t nrules = fRules.size();
    //   std::sort(fRules.begin(),fRules.end());
    //
@@ -1027,6 +1061,7 @@ void TMVA::RuleEnsemble::PrintRaw( ostream & os ) const
          << fLinDP[i] << " "
          << fLinImportance[i] << " " << std::endl;
    }
+   os << std::setprecision(dp);
 }
 
 //_______________________________________________________________________
@@ -1146,6 +1181,7 @@ void TMVA::RuleEnsemble::ReadRaw( istream & istr )
    //
    UInt_t nlinear;
    //
+   // coverity[tainted_data_argument]
    istr >> dummy >> nlinear;
    //
    fLinNorm        .resize( nlinear );
@@ -1182,6 +1218,16 @@ void TMVA::RuleEnsemble::Copy( const RuleEnsemble & other )
       fVarImportance     = other.GetVarImportance();
       fLearningModel     = other.GetLearningModel();
       fLinQuantile       = other.GetLinQuantile();
+      fRuleNCsig         = other.fRuleNCsig;
+      fAverageRuleSigma  = other.fAverageRuleSigma;
+      fEventCacheOK      = other.fEventCacheOK;
+      fImportanceRef     = other.fImportanceRef;
+      fNRulesGenerated   = other.fNRulesGenerated;
+      fRuleFSig          = other.fRuleFSig;
+      fRuleMapInd0       = other.fRuleMapInd0;
+      fRuleMapInd1       = other.fRuleMapInd1;
+      fRuleMapOK         = other.fRuleMapOK;
+      fRuleNCave         = other.fRuleNCave;
    }
 }
 
@@ -1271,10 +1317,11 @@ TMVA::Rule *TMVA::RuleEnsemble::MakeTheRule( const Node *node )
    nodeVec.push_back( node );
    while (parent!=0) {
       parent = parent->GetParent();
-      if (parent) {
-         if (dynamic_cast<const DecisionTreeNode*>(parent)->GetSelector()>=0)
-            nodeVec.insert( nodeVec.begin(), parent );
-      }
+      if (!parent) continue;
+      const DecisionTreeNode* dtn = dynamic_cast<const DecisionTreeNode*>(parent);
+      if (dtn && dtn->GetSelector()>=0)
+         nodeVec.insert( nodeVec.begin(), parent );
+
    }
    if (nodeVec.size()<2) {
       Log() << kFATAL << "<MakeTheRule> BUG! Inconsistent Rule!" << Endl;

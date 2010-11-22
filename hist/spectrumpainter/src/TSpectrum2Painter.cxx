@@ -156,6 +156,7 @@ TSpectrum2Painter::TSpectrum2Painter(TH2* h2, Int_t bs)
    fChanlineEnDis   = kChannelGridNotDrawn; // Decides whether the channel lines
                                             // (grid) are shown.
    fChanlineColor   = kRed;                 // Color of channel marks.
+   fNewColor        = 0;
    fEnvelope        = new Short_t [fMaximumXScreenResolution];
    fEnvelopeContour = new Short_t [fMaximumXScreenResolution];
    for (i=0;i<fMaximumXScreenResolution;i++) {
@@ -6798,9 +6799,9 @@ lc2:
       bmin  = fH2->GetXaxis()->GetXmin();
       bmax  = fH2->GetXaxis()->GetXmax();
       xaxis->SetLabelOffset(xaxis->GetLabelOffset()-xaxis->GetTickSize());
-      chopt[0] = 0; strcat(chopt, "SDH-");
+      chopt[0] = 0; strlcat(chopt, "SDH-",10);
       if (ndivx < 0) {
-         strcat(chopt, "N");
+         strlcat(chopt, "N",10);
          ndivx = -ndivx;
       }
       xaxis->PaintAxis(p010x, p010y, p110x, p110y, bmin, bmax, ndivx, chopt);
@@ -6808,9 +6809,9 @@ lc2:
       bmin  = fH2->GetYaxis()->GetXmin();
       bmax  = fH2->GetYaxis()->GetXmax();
       yaxis->SetLabelOffset(yaxis->GetLabelOffset()+yaxis->GetTickSize());
-      chopt[0] = 0; strcat(chopt, "SDH+");
+      chopt[0] = 0; strlcat(chopt, "SDH+",10);
       if (ndivy < 0) {
-         strcat(chopt, "N");
+         strlcat(chopt, "N",10);
          ndivy = -ndivy;
       }
       yaxis->PaintAxis(p100x, p100y, p110x, p110y, bmin, bmax, ndivy, chopt);
@@ -6831,9 +6832,9 @@ lc2:
             delete f1;
             delete a1;
          } else {
-            chopt[0] = 0; strcat(chopt, "SDH+");
+            chopt[0] = 0; strlcat(chopt, "SDH+",10);
             if (ndivz < 0) {
-               strcat(chopt, "N");
+               strlcat(chopt, "N",10);
                ndivz = -ndivz;
             }
             zaxis->PaintAxis(p010x, p010y, p011x, p011y, bmin, bmax, ndivz, chopt);
@@ -6848,9 +6849,9 @@ lc2:
       bmin  = fH2->GetXaxis()->GetXmin();
       bmax  = fH2->GetXaxis()->GetXmax();
       xaxis->SetLabelOffset(xaxis->GetLabelOffset()+xaxis->GetTickSize());
-      chopt[0] = 0; strcat(chopt, "SDH+");
+      chopt[0] = 0; strlcat(chopt, "SDH+",10);
       if (ndivx < 0) {
-         strcat(chopt, "N");
+         strlcat(chopt, "N",10);
          ndivx = -ndivx;
       }
       xaxis->PaintAxis(p000x, p000y, p100x, p100y, bmin, bmax, ndivx, chopt);
@@ -6858,9 +6859,9 @@ lc2:
       bmin  = fH2->GetYaxis()->GetXmin();
       bmax  = fH2->GetYaxis()->GetXmax();
       yaxis->SetLabelOffset(yaxis->GetLabelOffset()+yaxis->GetTickSize());
-      chopt[0] = 0; strcat(chopt, "SDH+");
+      chopt[0] = 0; strlcat(chopt, "SDH+",10);
       if (ndivy < 0) {
-         strcat(chopt, "N");
+         strlcat(chopt, "N",10);
          ndivy = -ndivy;
       }
       yaxis->PaintAxis(p100x, p100y, p110x, p110y, bmin, bmax, ndivy, chopt);
@@ -6881,9 +6882,9 @@ lc2:
             delete f1;
             delete a1;
          } else {
-            chopt[0] = 0; strcat(chopt, "SDH+");
+            chopt[0] = 0; strlcat(chopt, "SDH+",10);
             if (ndivz < 0) {
-               strcat(chopt, "N");
+               strlcat(chopt, "N",10);
                ndivz = -ndivz;
             }
             zaxis->PaintAxis(p110x, p110y, p111x, p111y, bmin, bmax, ndivz, chopt);
@@ -6898,9 +6899,9 @@ lc2:
       bmin  = fH2->GetXaxis()->GetXmin();
       bmax  = fH2->GetXaxis()->GetXmax();
       xaxis->SetLabelOffset(xaxis->GetLabelOffset()+xaxis->GetTickSize());
-      chopt[0] = 0; strcat(chopt, "SDH+");
+      chopt[0] = 0; strlcat(chopt, "SDH+",10);
       if (ndivx < 0) {
-         strcat(chopt, "N");
+         strlcat(chopt, "N",10);
          ndivx = -ndivx;
       }
       xaxis->PaintAxis(p000x, p000y, p100x, p100y, bmin, bmax, ndivx, chopt);
@@ -6908,9 +6909,9 @@ lc2:
       bmin  = fH2->GetYaxis()->GetXmin();
       bmax  = fH2->GetYaxis()->GetXmax();
       yaxis->SetLabelOffset(yaxis->GetLabelOffset()-yaxis->GetTickSize());
-      chopt[0] = 0; strcat(chopt, "SDH-");
+      chopt[0] = 0; strlcat(chopt, "SDH-",10);
       if (ndivy < 0) {
-         strcat(chopt, "N");
+         strlcat(chopt, "N",10);
          ndivy = -ndivy;
       }
       yaxis->PaintAxis(p000x, p000y, p010x, p010y, bmin, bmax, ndivy, chopt);
@@ -6931,9 +6932,9 @@ lc2:
             delete f1;
             delete a1;
          } else {
-            chopt[0] = 0; strcat(chopt, "SDH+");
+            chopt[0] = 0; strlcat(chopt, "SDH+",10);
             if (ndivz < 0) {
-               strcat(chopt, "N");
+               strlcat(chopt, "N",10);
                ndivz = -ndivz;
             }
             zaxis->PaintAxis(p100x, p100y, p101x, p101y, bmin, bmax, ndivz, chopt);
@@ -6948,9 +6949,9 @@ lc2:
       bmin  = fH2->GetXaxis()->GetXmin();
       bmax  = fH2->GetXaxis()->GetXmax();
       xaxis->SetLabelOffset(xaxis->GetLabelOffset()-xaxis->GetTickSize());
-      chopt[0] = 0; strcat(chopt, "SDH-");
+      chopt[0] = 0; strlcat(chopt, "SDH-",10);
       if (ndivx < 0) {
-         strcat(chopt, "N");
+         strlcat(chopt, "N",10);
          ndivx = -ndivx;
       }
       xaxis->PaintAxis(p010x, p010y, p110x, p110y, bmin, bmax, ndivx, chopt);
@@ -6958,9 +6959,9 @@ lc2:
       bmin  = fH2->GetYaxis()->GetXmin();
       bmax  = fH2->GetYaxis()->GetXmax();
       yaxis->SetLabelOffset(yaxis->GetLabelOffset()-yaxis->GetTickSize());
-      chopt[0] = 0; strcat(chopt, "SDH-");
+      chopt[0] = 0; strlcat(chopt, "SDH-",10);
       if (ndivy < 0) {
-         strcat(chopt, "N");
+         strlcat(chopt, "N",10);
          ndivy = -ndivy;
       }
       yaxis->PaintAxis(p000x, p000y, p010x, p010y, bmin, bmax, ndivy, chopt);
@@ -6981,9 +6982,9 @@ lc2:
             delete f1;
             delete a1;
          } else {
-            chopt[0] = 0; strcat(chopt, "SDH+");
+            chopt[0] = 0; strlcat(chopt, "SDH+",10);
             if (ndivz < 0) {
-               strcat(chopt, "N");
+               strlcat(chopt, "N",10);
                ndivz = -ndivz;
             }
             zaxis->PaintAxis(p000x, p000y, p001x, p001y, bmin, bmax, ndivz, "SDH+");

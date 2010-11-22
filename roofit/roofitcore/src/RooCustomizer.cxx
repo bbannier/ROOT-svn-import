@@ -646,7 +646,7 @@ std::string RooCustomizer::CustIFace::create(RooFactoryWSTool& ft, const char* t
   
   for (unsigned int i=1 ; i<args.size() ; i++) {
     char buf[1024] ;
-    strcpy(buf,args[i].c_str()) ;
+    strlcpy(buf,args[i].c_str(),1024) ;
     char* sep = strchr(buf,'=') ;
     if (!sep) {
       throw string(Form("RooCustomizer::CustIFace::create() ERROR: unknown argument: %s, expect form orig=subst",args[i].c_str())) ;
@@ -655,7 +655,7 @@ std::string RooCustomizer::CustIFace::create(RooFactoryWSTool& ft, const char* t
     RooAbsArg* orig = ft.ws().arg(buf) ;
     RooAbsArg* subst = ft.ws().arg(sep+1) ;
     if (!orig) {
-      throw string(Form("RooCustomizer::CustIFace::create() ERROR: $Replace() input RooAbsArg %s does not exist",orig)) ;
+      throw string(Form("RooCustomizer::CustIFace::create() ERROR: $Replace() input RooAbsArg %s does not exist",buf)) ;
     }
     if (!subst) {
       throw string(Form("RooCustomizer::CustIFace::create() ERROR: $Replace() input RooAbsArg %s does not exist",sep+1)) ;

@@ -145,6 +145,33 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
                             const TString& theOption,
                             TDirectory* theTargetDir ) :
    TMVA::MethodBase( jobName, Types::kBDT, methodTitle, theData, theOption, theTargetDir )
+   , fNTrees(0)
+   , fAdaBoostBeta(0)
+   , fTransitionPoint(0)
+   , fShrinkage(0)
+   , fBaggedGradBoost(kFALSE)
+   , fSampleFraction(0)
+   , fSumOfWeights(0)
+   , fNodeMinEvents(0)
+   , fNCuts(0)
+   , fUseYesNoLeaf(kFALSE)
+   , fNodePurityLimit(0)
+   , fUseWeightedTrees(kFALSE)
+   , fNNodesMax(0)
+   , fMaxDepth(0)
+   , fITree(0)
+   , fBoostWeight(0)
+   , fErrorFraction(0)
+   , fPruneStrength(0)
+   , fPruneMethod(DecisionTree::kNoPruning)
+   , fPruneBeforeBoost(kFALSE)
+   , fFValidationEvents(0)
+   , fAutomatic(kFALSE)
+   , fRandomisedTrees(kFALSE)
+   , fUseNvars(0)
+   , fUseNTrainEvents(0)
+   , fSampleSizeFraction(0)
+   , fNoNegWeightsInTraining(kFALSE)
 {
    // the standard constructor for the "boosted decision trees"
 }
@@ -154,6 +181,33 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
                             const TString& theWeightFile,
                             TDirectory* theTargetDir )
    : TMVA::MethodBase( Types::kBDT, theData, theWeightFile, theTargetDir )
+   , fNTrees(0)
+   , fAdaBoostBeta(0)
+   , fTransitionPoint(0)
+   , fShrinkage(0)
+   , fBaggedGradBoost(kFALSE)
+   , fSampleFraction(0)
+   , fSumOfWeights(0)
+   , fNodeMinEvents(0)
+   , fNCuts(0)
+   , fUseYesNoLeaf(kFALSE)
+   , fNodePurityLimit(0)
+   , fUseWeightedTrees(kFALSE)
+   , fNNodesMax(0)
+   , fMaxDepth(0)
+   , fITree(0)
+   , fBoostWeight(0)
+   , fErrorFraction(0)
+   , fPruneStrength(0)
+   , fPruneMethod(DecisionTree::kNoPruning)
+   , fPruneBeforeBoost(kFALSE)
+   , fFValidationEvents(0)
+   , fAutomatic(kFALSE)
+   , fRandomisedTrees(kFALSE)
+   , fUseNvars(0)
+   , fUseNTrainEvents(0)
+   , fSampleSizeFraction(0)
+   , fNoNegWeightsInTraining(kFALSE)
 {
    // constructor for calculating BDT-MVA using previously generated decision trees
    // the result of the previous training (the decision trees) are read in via the
@@ -425,8 +479,9 @@ void TMVA::MethodBDT::InitEventSample( void )
          if (first && event->GetWeight() < 0) {
             first = kFALSE;
             Log() << kINFO << "Events with negative event weights are ignored during "
-                  << "the BDT training (option IgnoreNegWeightsInTraining is now enabled)" 
+                  << "the BDT training (option IgnoreNegWeightsInTraining is now enabled)"
                   << Endl;
+            delete event;
             continue;
          }
          // if fAutomatic == true you need a validation sample to optimize pruning
@@ -439,6 +494,8 @@ void TMVA::MethodBDT::InitEventSample( void )
          else {
             fEventSample.push_back(event);
          }
+      } else {
+         delete event;
       }
    }
    if (fAutomatic) {
@@ -1172,6 +1229,7 @@ void  TMVA::MethodBDT::ReadWeightsFromStream( istream& istr )
    //   Types::EAnalysisType analysisType;
    Int_t analysisType(0);
 
+   // coverity[tainted_data_argument]
    istr >> dummy >> fNTrees;
    Log() << kINFO << "Read " << fNTrees << " Decision trees" << Endl;
 

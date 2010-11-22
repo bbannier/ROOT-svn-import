@@ -379,7 +379,7 @@ void RooHist::addBin(Axis_t binCenter, Double_t n, Double_t binWidth, Double_t x
 
   if (fabs((double)((n-Int_t(n))>1e-5))) {
     // need interpolation
-    Double_t ym1,yp1,ym2,yp2 ;
+    Double_t ym1(0),yp1(0),ym2(0),yp2(0) ;
     Int_t n1 = Int_t(n) ;
     Int_t n2 = n1+1 ;
     if(!RooHistError::instance().getPoissonInterval(n1,ym1,yp1,_nSigma) ||
@@ -698,8 +698,13 @@ RooHist* RooHist::makeResidHist(const RooCurve& curve,bool normalize) const
 
   // Copy all non-content properties from hist1
   RooHist* hist = new RooHist(_nominalBinWidth) ;
-  hist->SetName(Form(normalize?"pull_%s_s":"resid_%s_s",GetName(),curve.GetName())) ;
-  hist->SetTitle(Form(normalize?"Pull of %s and %s":"Residual of %s and %s",GetTitle(),curve.GetTitle())) ;  
+  if (normalize) {
+    hist->SetName(Form("pull_%s_%s",GetName(),curve.GetName())) ;
+    hist->SetTitle(Form("Pull of %s and %s",GetTitle(),curve.GetTitle())) ;  
+  } else {
+    hist->SetName(Form("resid_%s_%s",GetName(),curve.GetName())) ;
+    hist->SetTitle(Form("Residual of %s and %s",GetTitle(),curve.GetTitle())) ;  
+  }
 
   // Determine range of curve 
   Double_t xstart,xstop,y ;

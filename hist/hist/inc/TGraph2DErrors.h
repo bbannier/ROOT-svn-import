@@ -31,7 +31,7 @@ private:
 
    TGraph2DErrors(const TGraph2DErrors&); // Not implemented
    TGraph2DErrors& operator=(const TGraph2DErrors&); // Not implemented
- 
+
 protected:
    Double_t *fEX; //[fNpoints] array of X errors
    Double_t *fEY; //[fNpoints] array of Y errors
@@ -46,9 +46,15 @@ public:
    Double_t        GetErrorX(Int_t bin) const;
    Double_t        GetErrorY(Int_t bin) const;
    Double_t        GetErrorZ(Int_t bin) const;
-   Double_t        *GetEX() const {return fEX;}
-   Double_t        *GetEY() const {return fEY;}
-   Double_t        *GetEZ() const {return fEZ;}
+   Double_t       *GetEX() const {return fEX;}
+   Double_t       *GetEY() const {return fEY;}
+   Double_t       *GetEZ() const {return fEZ;}
+   Double_t        GetXmaxE() const;
+   Double_t        GetXminE() const;
+   Double_t        GetYmaxE() const;
+   Double_t        GetYminE() const;
+   Double_t        GetZmaxE() const;
+   Double_t        GetZminE() const;
    virtual void    Set(Int_t n);
    virtual void    SetPoint(Int_t i, Double_t x, Double_t y, Double_t z);
    virtual void    SetPointError(Int_t i, Double_t ex, Double_t ey, Double_t ez);

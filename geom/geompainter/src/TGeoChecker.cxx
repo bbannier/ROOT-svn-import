@@ -61,7 +61,7 @@
 // Overlap checker
 //-----------------
 //
-//  -> add it from the doc.
+//Begin_Html
 /*
 <img src="gif/t_checker.jpg">
 */
@@ -200,7 +200,7 @@ void TGeoChecker::OpProgress(const char *opname, Long64_t current, Long64_t size
       nname = oname;
       if (fNchecks <= 0) fNchecks = nrefresh+1;
       Int_t pctdone = (Int_t)(100.*nrefresh/fNchecks);
-      oname = Form("     == %d%% ==", pctdone);
+      oname = TString::Format("     == %d%% ==", pctdone);
    }         
    Double_t percent = 100.0*ocurrent/osize;
    Int_t nchar = Int_t(percent/10);
@@ -317,12 +317,13 @@ void TGeoChecker::CheckBoundaryErrors(Int_t ntracks, Double_t radius)
             hnew->Fill(i-20.);
             if(i>15) {
                const Double_t* norm = fGeoManager->FindNormal();
-               strcpy(path,fGeoManager->GetPath());
+               strncpy(path,fGeoManager->GetPath(),1024);
+               path[1023] = '\0';
                Double_t dotp = norm[0]*dir[0]+norm[1]*dir[1]+norm[2]*dir[2];
                printf("Forward error i=%d p=%5.4f %5.4f %5.4f s=%5.4f dot=%5.4f path=%s\n",
                        i,xyz[0],xyz[1],xyz[2],step,dotp,path);
                hplotS->Fill(xyz[0],xyz[1],(Double_t)i);
-               strcpy(cdir,"Forward");
+               strncpy(cdir,"Forward",10);
                bug->Fill();
             }
 	         break;
@@ -337,11 +338,12 @@ void TGeoChecker::CheckBoundaryErrors(Int_t ntracks, Double_t radius)
             hold->Fill(i-20.);
             if(i>15) {
                const Double_t* norm = fGeoManager->FindNormal();
-               strcpy(path,fGeoManager->GetPath());
+               strncpy(path,fGeoManager->GetPath(),1024);
+               path[1023] = '\0';
                Double_t dotp = norm[0]*dir[0]+norm[1]*dir[1]+norm[2]*dir[2];
                printf("Backward error i=%d p=%5.4f %5.4f %5.4f s=%5.4f dot=%5.4f path=%s\n",
                        i,xyz[0],xyz[1],xyz[2],step,dotp,path);
-               strcpy(cdir,"Backward");
+               strncpy(cdir,"Backward",10);
                bug->Fill();
             }
             break;
@@ -549,7 +551,7 @@ void TGeoChecker::CheckGeometryFull(Bool_t checkoverlaps, Bool_t checkcrossings,
    timer.Start();
    i = 0;
    char volname[30];
-   sprintf(volname, "Tracking %s", vol->GetName());
+   strncpy(volname, vol->GetName(),15); 
    volname[15] = '\0';
    OpProgress(volname,i++, nuid, &timer); 
    Score(vol, 1, TimingPerVolume(vol)); 
@@ -560,7 +562,7 @@ void TGeoChecker::CheckGeometryFull(Bool_t checkoverlaps, Bool_t checkcrossings,
       fFlags[uid] = kTRUE;
       next.GetPath(path);
       fGeoManager->cd(path.Data());
-      sprintf(volname, "Tracking %s", vol->GetName());
+      strncpy(volname, vol->GetName(),15); 
       volname[15] = '\0';
       OpProgress(volname,i++, nuid, &timer); 
       Score(vol,1,TimingPerVolume(vol));
@@ -636,6 +638,11 @@ Int_t TGeoChecker::PropagateInGeom(Double_t *start, Double_t *dir)
    Int_t nzero = 0;
    Int_t nhits = 0;
    while (!fGeoManager->IsOutside()) {
+      if (nzero>3) {
+      // Problems in trying to cross a boundary
+         printf("Error in trying to cross boundary of %s\n", current->GetName());
+         return nhits;
+      }
       current = fGeoManager->FindNextBoundaryAndStep(TGeoShape::Big(), kFALSE);
       if (!current || fGeoManager->IsOutside()) return nhits;
       Double_t step = fGeoManager->GetStep();
@@ -644,11 +651,6 @@ Int_t TGeoChecker::PropagateInGeom(Double_t *start, Double_t *dir)
          continue;
       } 
       else nzero = 0;
-      if (nzero>3) {
-      // Problems in trying to cross a boundary
-         printf("Error in trying to cross boundary of %s\n", current->GetName());
-         return nhits;
-      }
       // Generate the hit
       nhits++;
       TGeoVolume *vol = current->GetVolume();
@@ -805,13 +807,13 @@ void TGeoChecker::CheckGeometry(Int_t nrays, Double_t startx, Double_t starty, D
       // shoot direct ray
       nelem1=nelem2=0;
 //      printf("DIRECT %i\n", i);
-      ShootRay(&start[0], dir[0], dir[1], dir[2], array1, nelem1, dim1);
+      array1 = ShootRay(&start[0], dir[0], dir[1], dir[2], array1, nelem1, dim1);
       if (!nelem1) continue;
 //      for (j=0; j<nelem1; j++) printf("%i : %f %f %f\n", j, array1[3*j], array1[3*j+1], array1[3*j+2]);
       memcpy(&end[0], &array1[3*(nelem1-1)], 3*sizeof(Double_t));
       // shoot ray backwards
 //      printf("BACK %i\n", i);
-      ShootRay(&end[0], -dir[0], -dir[1], -dir[2], array2, nelem2, dim2, &start[0]);
+      array2 = ShootRay(&end[0], -dir[0], -dir[1], -dir[2], array2, nelem2, dim2, &start[0]);
       if (!nelem2) {
          printf("#### NOTHING BACK ###########################\n");
          for (j=0; j<nelem1; j++) {
@@ -1202,7 +1204,7 @@ void TGeoChecker::CheckOverlapsBySampling(TGeoVolume *vol, Double_t /* ovlp */, 
             Int_t cindex = node1->GetVolume()->GetCurrentNodeIndex();
             while (cindex >= 0) {
                node1 = node1->GetVolume()->GetNode(cindex);
-               name1 += Form("/%s", node1->GetName());
+               name1 += TString::Format("/%s", node1->GetName());
                mat1.Multiply(node1->GetMatrix());
                cindex = node1->GetVolume()->GetCurrentNodeIndex();
             }   
@@ -1212,11 +1214,11 @@ void TGeoChecker::CheckOverlapsBySampling(TGeoVolume *vol, Double_t /* ovlp */, 
             cindex = node2->GetVolume()->GetCurrentNodeIndex();
             while (cindex >= 0) {
                node2 = node2->GetVolume()->GetNode(cindex);
-               name2 += Form("/%s", node2->GetName());
+               name2 += TString::Format("/%s", node2->GetName());
                mat2.Multiply(node2->GetMatrix());
                cindex = node2->GetVolume()->GetCurrentNodeIndex();
             }   
-            nodeovlp = new TGeoOverlap(Form("Volume %s: node %s overlapping %s", 
+            nodeovlp = new TGeoOverlap(TString::Format("Volume %s: node %s overlapping %s", 
                vol->GetName(), name1.Data(), name2.Data()), node1->GetVolume(),node2->GetVolume(),
                &mat1,&mat2, kTRUE, safe);
             flags[nd*id1+id0] = nodeovlp;
@@ -1355,7 +1357,7 @@ void TGeoChecker::CheckOverlaps(const TGeoVolume *vol, Double_t ovlp, Option_t *
    TGeoNode * node, *nodecheck;
    TGeoChecker *checker = (TGeoChecker*)this;
 
-   TGeoOverlap *nodeovlp = 0;
+//   TGeoOverlap *nodeovlp = 0;
    UInt_t id;
    Int_t level;
 // Check extrusion only for daughters of a non-assembly volume
@@ -1384,7 +1386,7 @@ void TGeoChecker::CheckOverlaps(const TGeoVolume *vol, Double_t ovlp, Option_t *
                }   
             }
             next1.GetPath(path);
-            nodeovlp = checker->MakeCheckOverlap(Form("%s extruded by: %s", vol->GetName(),path.Data()),
+            checker->MakeCheckOverlap(TString::Format("%s extruded by: %s", vol->GetName(),path.Data()),
                                  (TGeoVolume*)vol,node->GetVolume(),gGeoIdentity,(TGeoMatrix*)next1.GetCurrentMatrix(),kFALSE,ovlp);
             next1.Skip();
          }
@@ -1468,7 +1470,7 @@ void TGeoChecker::CheckOverlaps(const TGeoVolume *vol, Double_t ovlp, Option_t *
                            next2.GetPath(path1);
                            hmat2 = node02->GetMatrix();
                            hmat2 *= *next2.GetCurrentMatrix();
-                           nodeovlp = checker->MakeCheckOverlap(Form("%s/%s overlapping %s/%s", vol->GetName(),path.Data(),vol->GetName(),path1.Data()),
+                           checker->MakeCheckOverlap(TString::Format("%s/%s overlapping %s/%s", vol->GetName(),path.Data(),vol->GetName(),path1.Data()),
                                               node->GetVolume(),node1->GetVolume(),&hmat1,&hmat2,kTRUE,ovlp);  
                            next2.Skip();
                         }
@@ -1492,7 +1494,7 @@ void TGeoChecker::CheckOverlaps(const TGeoVolume *vol, Double_t ovlp, Option_t *
                            }   
                         }   
                      }
-                     nodeovlp = checker->MakeCheckOverlap(Form("%s/%s overlapping %s/%s", vol->GetName(),path.Data(),vol->GetName(),path1.Data()),
+                     checker->MakeCheckOverlap(TString::Format("%s/%s overlapping %s/%s", vol->GetName(),path.Data(),vol->GetName(),path1.Data()),
                                         node->GetVolume(),node02->GetVolume(),&hmat1,node02->GetMatrix(),kTRUE,ovlp);  
                   }
                   next1.Skip();
@@ -1525,7 +1527,7 @@ void TGeoChecker::CheckOverlaps(const TGeoVolume *vol, Double_t ovlp, Option_t *
                      next2.GetPath(path1);
                      hmat2 = node02->GetMatrix();
                      hmat2 *= *next2.GetCurrentMatrix();
-                     nodeovlp = checker->MakeCheckOverlap(Form("%s/%s overlapping %s/%s", vol->GetName(),path.Data(),vol->GetName(),path1.Data()),
+                     checker->MakeCheckOverlap(TString::Format("%s/%s overlapping %s/%s", vol->GetName(),path.Data(),vol->GetName(),path1.Data()),
                                         node01->GetVolume(),node1->GetVolume(),node01->GetMatrix(),&hmat2,kTRUE,ovlp);  
                      next2.Skip();
                   }
@@ -1533,7 +1535,7 @@ void TGeoChecker::CheckOverlaps(const TGeoVolume *vol, Double_t ovlp, Option_t *
             } else {
                // node1 also not assembly
                if (fSelectedNode && (fSelectedNode != node01) && (fSelectedNode != node02)) continue;
-               nodeovlp = checker->MakeCheckOverlap(Form("%s/%s overlapping %s/%s", vol->GetName(),path.Data(),vol->GetName(),path1.Data()),
+               checker->MakeCheckOverlap(TString::Format("%s/%s overlapping %s/%s", vol->GetName(),path.Data(),vol->GetName(),path1.Data()),
                                   node01->GetVolume(),node02->GetVolume(),node01->GetMatrix(),node02->GetMatrix(),kTRUE,ovlp);  
             }
          }                         
@@ -1815,7 +1817,7 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
       vis2 = (endnode)?(endnode->IsOnScreen()):kFALSE;
       while (endnode) {
          istep = 0;
-         vis2 = (endnode)?(endnode->IsOnScreen()):kFALSE;
+         vis2 = endnode->IsOnScreen();
          if (ipoint>0) {
          // old visible node had an entry point -> finish segment
             line->SetPoint(ipoint, point[0], point[1], point[2]);
@@ -1848,8 +1850,6 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
             pm->Add(line);
             pm->Add(normline);
          } 
-         // now see if we can make an other step
-         if (endnode==0 && step>1E10) break;
          // generate an extra step to cross boundary
          startnode = endnode;    
          fGeoManager->FindNextBoundary();
@@ -1885,8 +1885,7 @@ TGeoNode *TGeoChecker::SamplePoints(Int_t npoints, Double_t &dist, Double_t epsi
    gRandom = new TRandom3();
    Bool_t hasg3 = kFALSE;
    if (strlen(g3path)) hasg3 = kTRUE;
-   char geopath[200];
-   sprintf(geopath, "%s\n", fGeoManager->GetPath());
+   TString geopath = fGeoManager->GetPath();
    dist = 1E10;
    TString common = "";
    // cd to common path
@@ -1984,7 +1983,7 @@ TGeoNode *TGeoChecker::SamplePoints(Int_t npoints, Double_t &dist, Double_t epsi
 }
 
 //______________________________________________________________________________
-void TGeoChecker::ShootRay(Double_t *start, Double_t dirx, Double_t diry, Double_t dirz, Double_t *array, Int_t &nelem, Int_t &dim, Double_t *endpoint) const
+Double_t *TGeoChecker::ShootRay(Double_t *start, Double_t dirx, Double_t diry, Double_t dirz, Double_t *array, Int_t &nelem, Int_t &dim, Double_t *endpoint) const
 {
 // Shoot one ray from start point with direction (dirx,diry,dirz). Fills input array
 // with points just after boundary crossings.
@@ -1993,7 +1992,7 @@ void TGeoChecker::ShootRay(Double_t *start, Double_t dirx, Double_t diry, Double
    Int_t istep = 0;
    if (!dim) {
       printf("empty input array\n");
-      return;
+      return array;
    }   
 //   fGeoManager->CdTop();
    const Double_t *point = fGeoManager->GetCurrentPoint();
@@ -2010,7 +2009,7 @@ void TGeoChecker::ShootRay(Double_t *start, Double_t dirx, Double_t diry, Double
    fGeoManager->FindNextBoundary();
    step = fGeoManager->GetStep();
 //   printf("---next : at step=%f\n", step);
-   if (step>1E10) return;
+   if (step>1E10) return array;
    endnode = fGeoManager->Step();
    is_entering = fGeoManager->IsEntering();
    while (step<1E10) {
@@ -2018,7 +2017,7 @@ void TGeoChecker::ShootRay(Double_t *start, Double_t dirx, Double_t diry, Double
          forward = dirx*(endpoint[0]-point[0])+diry*(endpoint[1]-point[1])+dirz*(endpoint[2]-point[2]);
          if (forward<1E-3) {
 //            printf("exit : Passed start point. nelem=%i\n", nelem); 
-            return;
+            return array;
          }
       }
       if (is_entering) {
@@ -2035,7 +2034,7 @@ void TGeoChecker::ShootRay(Double_t *start, Double_t dirx, Double_t diry, Double
       } else {
          if (endnode==0 && step>1E10) {
 //            printf("exit : NULL endnode. nelem=%i\n", nelem); 
-            return;
+            return array;
          }    
          if (!fGeoManager->IsEntering()) {
 //            if (startnode) printf("stepping %f from (%f, %f, %f) inside %s...\n", step,point[0], point[1], point[2], startnode->GetName());
@@ -2047,7 +2046,7 @@ void TGeoChecker::ShootRay(Double_t *start, Double_t dirx, Double_t diry, Double
             if (istep>1E3) {
 //               Error("ShootRay", "more than 1000 steps. Step was %f", step);
                nelem = 0;
-               return;
+               return array;
             }   
             fGeoManager->SetStep(1E-5);
             endnode = fGeoManager->Step();
@@ -2071,6 +2070,7 @@ void TGeoChecker::ShootRay(Double_t *start, Double_t dirx, Double_t diry, Double
       endnode = fGeoManager->Step();
       is_entering = fGeoManager->IsEntering();
    }
+   return array;
 //   printf("exit : INFINITE step. nelem=%i\n", nelem);
 }
 
@@ -2220,10 +2220,10 @@ void TGeoChecker::TestOverlaps(const char* path)
       }
    }
    // draw all overlapping points
-   for (Int_t m=0; m<128; m++) {
-      marker = (TPolyMarker3D*)pm->At(m);
+//   for (Int_t m=0; m<128; m++) {
+//      marker = (TPolyMarker3D*)pm->At(m);
 //      if (marker) marker->Draw("SAME");
-   }
+//   }
    markthis->Draw("SAME");
    if (gPad) gPad->Update();
    // display overlaps

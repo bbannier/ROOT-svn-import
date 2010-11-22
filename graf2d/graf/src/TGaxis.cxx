@@ -209,7 +209,7 @@ TGaxis::TGaxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax,
 
    fFunction = (TF1*)gROOT->GetFunction(funcname);
    if (!fFunction) {
-      Error("TGaxis, calling constructor with an unknown function:%s",funcname);
+      Error("TGaxis", "calling constructor with an unknown function: %s", funcname);
       fWmin = 0;
       fWmax = 1;
    } else {
@@ -1066,7 +1066,7 @@ void TGaxis::PaintAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t yma
 //*-*-              (with alphanumeric labels for horizontal axis).
 
    charheight = GetLabelSize();
-   if (optionText) charheight *= 0.66666;
+   if (optionText && GetLabelFont()%10 != 3) charheight *= 0.66666;
    textaxis->SetTextFont(GetLabelFont());
    if ((GetLabelFont()%10 < 2) && optionLog) // force TLatex mode in PaintLatex
       textaxis->SetTextFont((Int_t)(GetLabelFont()/10)*10+2);
@@ -1447,13 +1447,13 @@ L110:
                coded = &chcoded[0];
                if (if1 > 14) if1=14;
                if (if2 > 14) if2=14;
-               if (if2) sprintf(coded,"%%%d.%df",if1,if2);
-               else     sprintf(coded,"%%%d.%df",if1+1,1);
+               if (if2) snprintf(coded,8,"%%%d.%df",if1,if2);
+               else     snprintf(coded,8,"%%%d.%df",if1+1,1);
             }
 
 //*-*-              We draw labels
 
-            sprintf(chtemp,"%g",dwlabel);
+            snprintf(chtemp,256,"%g",dwlabel);
             Int_t ndecimals = 0;
             if (optionDecimals) {
                char *dot = strchr(chtemp,'.');
@@ -1483,22 +1483,22 @@ L110:
                if (optionM)    xlabel += 0.5*dxlabel;
 
                if (!optionText && !optionTime) {
-                  sprintf(label,&chcoded[0],wlabel);
+                  snprintf(label,256,&chcoded[0],wlabel);
                   label[28] = 0;
                   wlabel += dwlabel;
 
                   LabelsLimits(label,first,last);  //Eliminate blanks
 
                   if (label[first] == '.') { //check if '.' is preceeded by a digit
-                     strcpy(chtemp, "0");
-                     strcat(chtemp, &label[first]);
-                     strcpy(label, chtemp);
+                     strncpy(chtemp, "0",256);
+                     strlcat(chtemp, &label[first],256);
+                     strncpy(label, chtemp,256);
                      first = 1; last = strlen(label);
                   }
                   if (label[first] == '-' && label[first+1] == '.') {
-                     strcpy(chtemp, "-0");
-                     strcat(chtemp, &label[first+1]);
-                     strcpy(label, chtemp);
+                     strncpy(chtemp, "-0",256);
+                     strlcat(chtemp, &label[first+1],256);
+                     strncpy(label, chtemp, 256);
                      first = 1; last = strlen(label);
                   }
 
@@ -1518,7 +1518,7 @@ L110:
 //*-*-            Make sure the label is not "-0"
                   if (last-first == 1 && label[first] == '-'
                                       && label[last]  == '0') {
-                     strcpy(label, "0");
+                     strncpy(label, "0", 256);
                      label[last] = 0;
                   }
                }
@@ -1541,7 +1541,7 @@ L110:
                   if (dwlabel<0.9) {
                      double tmpdb;
                      int tmplast;
-                     sprintf(label,"%%S%7.5f",modf(timed,&tmpdb));
+                     snprintf(label, 256, "%%S%7.5f", modf(timed,&tmpdb));
                      tmplast = strlen(label)-1;
 
 //*-*-              We eliminate the non significiant 0 after '.'
@@ -1555,8 +1555,8 @@ L110:
 
                   }
 
-                  strftime(label,256,timeformattmp.Data(),utctis);
-                  strcpy(chtemp,&label[0]);
+                  strftime(label, 256, timeformattmp.Data(), utctis);
+                  strncpy(chtemp, &label[0], 256);
                   first = 0; last=strlen(label)-1;
                   wlabel = wTimeIni + (k+1)*dwlabel;
                }
@@ -1580,8 +1580,8 @@ L110:
                }
                if (!optionY || (x0 == x1)) {
                   if (!optionText) {
-                     if (first > last)  strcpy(chtemp, " ");
-                     else               strcpy(chtemp, &label[first]);
+                     if (first > last)  strncpy(chtemp, " ", 256);
+                     else               strncpy(chtemp, &label[first], 256);
                      textaxis->PaintLatex(gPad->GetX1() + xx*(gPad->GetX2() - gPad->GetX1()),
                            gPad->GetY1() + yy*(gPad->GetY2() - gPad->GetY1()),
                            0,
@@ -1606,8 +1606,8 @@ L110:
                   for ( l=1; l<=lnlen; l++) {
                      if (!optionText) *chtemp = label[first+l-2];
                      else {
-                        if (lnlen == 0) strcpy(chtemp, " ");
-                        else            strcpy(chtemp, "1");
+                        if (lnlen == 0) strncpy(chtemp, " ", 256);
+                        else            strncpy(chtemp, "1", 256);
                      }
                      textaxis->PaintLatex(gPad->GetX1() + xx*(gPad->GetX2() - gPad->GetX1()),
                            gPad->GetY1() + yy*(gPad->GetY2() - gPad->GetY1()),
@@ -1622,7 +1622,7 @@ L110:
 //*-*-                We use the format x 10 ** n
 
             if (flexe && !optionText && nexe)  {
-               sprintf(label,"#times10^{%d}", nexe);
+               snprintf(label,256,"#times10^{%d}", nexe);
                if (x0 != x1) { xfactor = x1-x0+0.1*charheight; yfactor = 0; }
                else          { xfactor = y1-y0+0.1*charheight; yfactor = 0; }
                Rotate (xfactor,yfactor,cosphi,sinphi,x0,y0,xx,yy);
@@ -1685,7 +1685,7 @@ L110:
          //the following statement is a trick to circumvent a gcc bug
          if (j < 0) printf("j=%d\n",j);
          if (x00 > xone) goto L160;
-         if (xone > x11) break;
+         if ((xone-x11)>epsilon) break;
          xtwo = xone;
          y    = 0;
          if (!mside) y -= atick[0];
@@ -1719,7 +1719,7 @@ L110:
 //*-*-              We generate labels (numeric only).
             if (noExponent) {
                rlab = TMath::Power(10,labelnumber);
-               sprintf(label, "%f", rlab);
+               snprintf(label,256, "%f", rlab);
                LabelsLimits(label,first,last);
                while (last > first) {
                   if (label[last] != '0') break;
@@ -1728,7 +1728,7 @@ L110:
                }
                if (label[last] == '.') {label[last] = 0; last--;}
             } else {
-               sprintf(label, "%d", labelnumber);
+               snprintf(label,256, "%d", labelnumber);
                LabelsLimits(label,first,last);
             }
             Rotate (xone,ylabel,cosphi,sinphi,x0,y0,xx,yy);
@@ -1760,7 +1760,7 @@ L110:
                   if (noExponent) {
                      textaxis->PaintTextNDC(xx,yy,&label[first]);
                   } else {
-                        sprintf(chtemp, "10^{%d}", labelnumber);
+                        snprintf(chtemp,256, "10^{%d}", labelnumber);
                         textaxis->PaintLatex(gPad->GetX1() + xx*(gPad->GetX2() - gPad->GetX1()),
                                              gPad->GetY1() + yy*(gPad->GetY2() - gPad->GetY1()),
                                              0, textaxis->GetTextSize(), chtemp);
@@ -1806,14 +1806,14 @@ L160:
                if (moreLogLabels && !optionUnlab && !drawGridOnly && !overlap) {
                   if (noExponent) {
                      rlab = Double_t(k)*TMath::Power(10,labelnumber-1);
-                     sprintf(chtemp, "%g", rlab);
+                     snprintf(chtemp,256, "%g", rlab);
                   } else {
                      if (labelnumber-1 == 0) {
-                        sprintf(chtemp, "%d", k);
+                        snprintf(chtemp,256, "%d", k);
                      } else if (labelnumber-1 == 1) {
-                        sprintf(chtemp, "%d", 10*k);
+                        snprintf(chtemp,256, "%d", 10*k);
                      } else {
-                        sprintf(chtemp, "%d#times10^{%d}", k, labelnumber-1);
+                        snprintf(chtemp,256, "%d#times10^{%d}", k, labelnumber-1);
                      }
                   }
                   Rotate (xone,ylabel,cosphi,sinphi,x0,y0,xx,yy);
@@ -2043,7 +2043,7 @@ void TGaxis::SetFunction(const char *funcname)
    }
    fFunction = (TF1*)gROOT->GetFunction(funcname);
    if (!fFunction) {
-      Error("SetFunction, Unknown function:%s",funcname);
+      Error("SetFunction", "unknown function: %s", funcname);
    } else {
       fWmin = fFunction->GetXmin();
       fWmax = fFunction->GetXmax();
@@ -2183,13 +2183,13 @@ void TGaxis::SetTimeOffset(Double_t toffset, Option_t *option)
    timeoff = (time_t)((Long_t)(toffset));
    utctis = gmtime(&timeoff);
 
-   strftime(tmp,256,"%Y-%m-%d %H:%M:%S",utctis);
+   strftime(tmp,20,"%Y-%m-%d %H:%M:%S",utctis);
    fTimeFormat.Append(tmp);
 
    // append the decimal part of the time offset
    Double_t ds = toffset-(Int_t)toffset;
    if(ds!= 0) {
-      sprintf(tmp,"s%g",ds);
+      snprintf(tmp,20,"s%g",ds);
       fTimeFormat.Append(tmp);
    }
 

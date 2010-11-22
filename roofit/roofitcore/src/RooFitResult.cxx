@@ -67,7 +67,7 @@ RooFitResult::RooFitResult(const char* name, const char* title) :
   _CM(0), _VM(0), _GC(0)
 {  
   // Constructor with name and title
-
+  // coverity[UNINIT_CTOR]
   if (name) appendToDir(this,kTRUE) ;
 }
 
@@ -748,7 +748,7 @@ Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Double
       cout << "RooFitResult::isIdentical: cannot find constant parameter " << _constPars->at(i)->GetName() << " in reference" << endl ;
       ret = kFALSE ;
     }
-    if (fabs(static_cast<RooAbsReal*>(_constPars->at(i))->getVal()-ov->getVal())>=tol) {
+    if (ov && fabs(static_cast<RooAbsReal*>(_constPars->at(i))->getVal()-ov->getVal())>=tol) {
       cout << "RooFitResult::isIdentical: constant parameter " << _constPars->at(i)->GetName() 
 	   << " differs in value: " << static_cast<RooAbsReal*>(_constPars->at(i))->getVal() << " vs. " << ov->getVal() << endl ;
       ret = kFALSE ;
@@ -761,7 +761,7 @@ Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Double
       cout << "RooFitResult::isIdentical: cannot find initial parameter " << _initPars->at(i)->GetName() << " in reference" << endl ;
       ret = kFALSE ;
     }
-    if (fabs(static_cast<RooAbsReal*>(_initPars->at(i))->getVal()-ov->getVal())>=tol) {
+    if (ov && fabs(static_cast<RooAbsReal*>(_initPars->at(i))->getVal()-ov->getVal())>=tol) {
       cout << "RooFitResult::isIdentical: initial parameter " << _initPars->at(i)->GetName() 
 	   << " differs in value: " << static_cast<RooAbsReal*>(_initPars->at(i))->getVal() << " vs. " << ov->getVal() << endl ;
       ret = kFALSE ;
@@ -774,7 +774,7 @@ Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Double
       cout << "RooFitResult::isIdentical: cannot find final parameter " << _finalPars->at(i)->GetName() << " in reference" << endl ;
       ret = kFALSE ;
     }
-    if (fabs(static_cast<RooAbsReal*>(_finalPars->at(i))->getVal()-ov->getVal())>=tol) {
+    if (ov && fabs(static_cast<RooAbsReal*>(_finalPars->at(i))->getVal()-ov->getVal())>=tol) {
       cout << "RooFitResult::isIdentical: final parameter " << _finalPars->at(i)->GetName() 
 	   << " differs in value: " << static_cast<RooAbsReal*>(_finalPars->at(i))->getVal() << " vs. " << ov->getVal() << endl ;
       ret = kFALSE ;
@@ -793,7 +793,7 @@ Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Double
 	cout << "RooFitResult::isIdentical: cannot find global correlation coefficient " << _globalCorr->at(i)->GetName() << " in reference" << endl ;
 	ret = kFALSE ;
       }
-      if (fabs(static_cast<RooAbsReal*>(_globalCorr->at(i))->getVal()-ov->getVal())>=tolCorr) {
+      if (ov && fabs(static_cast<RooAbsReal*>(_globalCorr->at(i))->getVal()-ov->getVal())>=tolCorr) {
 	cout << "RooFitResult::isIdentical: global correlation coefficient " << _globalCorr->at(i)->GetName() 
 	     << " differs in value: " << static_cast<RooAbsReal*>(_globalCorr->at(i))->getVal() << " vs. " << ov->getVal() << endl ;
 	ret = kFALSE ;
@@ -809,7 +809,7 @@ Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Double
 	  cout << "RooFitResult::isIdentical: cannot find correlation coefficient " << row->at(i)->GetName() << " in reference" << endl ;
 	  ret = kFALSE ;
 	}
-	if (fabs(static_cast<RooAbsReal*>(row->at(i))->getVal()-ov->getVal())>=tolCorr) {
+	if (ov && fabs(static_cast<RooAbsReal*>(row->at(i))->getVal()-ov->getVal())>=tolCorr) {
 	  cout << "RooFitResult::isIdentical: correlation coefficient " << row->at(i)->GetName() 
 	       << " differs in value: " << static_cast<RooAbsReal*>(row->at(i))->getVal() << " vs. " << ov->getVal() << endl ;
 	  ret = kFALSE ;

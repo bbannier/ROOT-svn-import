@@ -40,6 +40,9 @@ ClassImp(TRemoteObject);
 TRemoteObject::TRemoteObject()
 {
    // Create a remote object.
+
+   fIsFolder = kFALSE;
+   fRemoteAddress = 0;
 }
 
 //______________________________________________________________________________
@@ -87,9 +90,9 @@ void TRemoteObject::Browse(TBrowser *b)
          b->SetRefreshFlag(kFALSE);
       gApplication->SetBit(TApplication::kProcessRemotely);
       TObject *obj = (TObject *)gROOT->ProcessLine(Form("((TApplicationServer *)gApplication)->BrowseKey(\"%s\");", GetName()));
-      if (b && obj) {
+      if (obj) {
          if (obj->IsA()->GetMethodWithPrototype("SetDirectory", "TDirectory*"))
-            gROOT->ProcessLine(Form("((%s *)0x%lx)->SetDirectory(0);", obj->ClassName(), obj));
+            gROOT->ProcessLine(Form("((%s *)0x%lx)->SetDirectory(0);", obj->ClassName(), (ULong_t)obj));
          obj->Browse(b);
          b->SetRefreshFlag(kTRUE);
       }
@@ -118,7 +121,7 @@ void TRemoteObject::Browse(TBrowser *b)
       if (ret) {
          TIter next(ret);
          while ((robj = (TRemoteObject *)next())) {
-            file = robj->GetName();
+            //file = robj->GetName();
             b->Add(robj, robj->GetName());
          }
       }
@@ -150,7 +153,7 @@ TList *TRemoteObject::Browse()
       TIter next(files);
       TSystemFile *file;
       TString fname;
-      // directories first 
+      // directories first
       while ((file=(TSystemFile*)next())) {
          fname = file->GetName();
          if (file->IsDirectory()) {
@@ -171,7 +174,7 @@ TList *TRemoteObject::Browse()
             level--;
          }
       }
-      // then files... 
+      // then files...
       TIter nextf(files);
       while ((file=(TSystemFile*)nextf())) {
          fname = file->GetName();
@@ -238,4 +241,3 @@ void TRemoteObject::Streamer(TBuffer &b)
    }
    TNamed::Streamer(b);
 }
-

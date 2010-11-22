@@ -60,10 +60,11 @@ void TIndexTable::Dictionary()
                            DeclFileName(), ImplFileName(),
                            DeclFileLine(), ImplFileLine());
 
-   char *structBuf = new char[strlen(_QUOTE2_(structName,.h))+2];
-   strcpy(structBuf,_QUOTE2_(structName,.h));
+   int nch = strlen(_QUOTE2_(structName,.h))+2;
+   char *structBuf = new char[nch];
+   strlcpy(structBuf,_QUOTE2_(structName,.h),nch);
    char *s = strstr(structBuf,"_st.h");
-   if (s) { *s = 0;  strcat(structBuf,".h"); }
+   if (s) { *s = 0;  strlcat(structBuf,".h",nch); }
    TClass *r = CreateClass(_QUOTE_(structName), Class_Version(),
                            structBuf, structBuf, 1,  1 );
    fgIsA = c;
@@ -95,7 +96,7 @@ TTableDescriptor *TIndexTable::CreateDescriptor()
          tableDescriptor_st row;
 
          memset(&row,0,sizeof(row));
-         strncpy(row.fColumnName,"index",sizeof(row.fColumnName));
+         strlcpy(row.fColumnName,"index",sizeof(row.fColumnName));
 
          row.fType = kInt;
          row.fTypeSize = sizeof(Int_t);

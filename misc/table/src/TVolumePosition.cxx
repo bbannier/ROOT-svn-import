@@ -97,6 +97,7 @@ TVolumePosition::TVolumePosition(TVolume *node,Double_t x, Double_t y, Double_t 
 //______________________________________________________________________________
 TVolumePosition::TVolumePosition(const TVolumePosition* oldPosition, const TVolumePosition* curPosition){
    // Pick the "old" position by pieces
+   fMatrix = 0;
    SetMatrixOwner(kFALSE);
    TVolume *curNode = 0;
    UInt_t curPositionId    = 0;
@@ -107,6 +108,7 @@ TVolumePosition::TVolumePosition(const TVolumePosition* oldPosition, const TVolu
       curMatrix     = (TRotMatrix *) curPosition->GetMatrix();
    }
    TRotMatrix *oldMatrix = 0;
+   fX[0] = 0; fX[1] = 0; fX[2] = 0;
    Double_t oldTranslation[] = { 0, 0, 0 };
    if (oldPosition) {
       oldMatrix         = (TRotMatrix *) oldPosition->GetMatrix();
@@ -120,21 +122,23 @@ TVolumePosition::TVolumePosition(const TVolumePosition* oldPosition, const TVolu
    // Create a new position
    Double_t newMatrix[9];
 
-   if(oldMatrix)  {
+   if(oldMatrix && curMatrix && curPosition)  {
       TGeometry::UpdateTempMatrix(oldTranslation,oldMatrix->GetMatrix(),
                                  curPosition->GetX(),curPosition->GetY(),curPosition->GetZ(),
                                  curMatrix->GetMatrix(),
                                  fX,newMatrix);
       Int_t num = gGeometry->GetListOfMatrices()->GetSize();
       Char_t anum[100];
-      sprintf(anum,"%d",num+1);
+      snprintf(anum,100,"%d",num+1);
       fMatrix = new TRotMatrix(anum,"NodeView",newMatrix);
       SetMatrixOwner(kTRUE);
    } else {
-      fX[0] = oldTranslation[0] + curPosition->GetX();
-      fX[1] = oldTranslation[1] + curPosition->GetY();
-      fX[2] = oldTranslation[2] + curPosition->GetZ();
-      fMatrix = curMatrix;
+      if (curPosition) {
+         fX[0] = oldTranslation[0] + curPosition->GetX();
+         fX[1] = oldTranslation[1] + curPosition->GetY();
+         fX[2] = oldTranslation[2] + curPosition->GetZ();
+         fMatrix = curMatrix;
+      }
    }
    fId = curPositionId;
    fNode = curNode;
@@ -227,7 +231,7 @@ char *TVolumePosition::GetObjectInfo(Int_t, Int_t) const
    if (!gPad) return 0;
    if (!GetNode()) return 0;
    static char info[64];
-   sprintf(info,"%s/%s, shape=%s/%s",GetNode()->GetName(),GetNode()->GetTitle(),GetNode()->GetShape()->GetName(),GetNode()->GetShape()->ClassName());
+   snprintf(info,64,"%s/%s, shape=%s/%s",GetNode()->GetName(),GetNode()->GetTitle(),GetNode()->GetShape()->GetName(),GetNode()->GetShape()->ClassName());
    return info;
 }
 
@@ -566,7 +570,7 @@ TVolumePosition &TVolumePosition::Mult(const TVolumePosition &curPosition) {
                        ,newTranslation,newMatrix);
       Int_t num = gGeometry->GetListOfMatrices()->GetSize();
       Char_t anum[100];
-      sprintf(anum,"%d",num+1);
+      snprintf(anum,100,"%d",num+1);
       SetMatrixOwner();
       Reset(curNode
                            ,newTranslation[0],newTranslation[1],newTranslation[2]

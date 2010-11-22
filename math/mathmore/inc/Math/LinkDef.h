@@ -34,10 +34,21 @@
 
 #pragma link C++ class ROOT::Math::Vavilov+;
 #pragma link C++ class ROOT::Math::VavilovAccurate+;
+#pragma link C++ class ROOT::Math::VavilovFast+;
+
+#ifndef _WIN32  
+// virtual inheritance gives problem when making dictionary on Windows 
+#pragma link C++ class ROOT::Math::Polynomial+;
 #pragma link C++ class ROOT::Math::VavilovAccuratePdf+;
 #pragma link C++ class ROOT::Math::VavilovAccurateCdf+;
 #pragma link C++ class ROOT::Math::VavilovAccurateQuantile+;
-#pragma link C++ class ROOT::Math::VavilovFast+;
+#else 
+#pragma link C++ class ROOT::Math::Polynomial-;
+#pragma link C++ class ROOT::Math::VavilovAccuratePdf-;
+#pragma link C++ class ROOT::Math::VavilovAccurateCdf-;
+#pragma link C++ class ROOT::Math::VavilovAccurateQuantile-;
+#endif
+
 
 //#pragma extra_include "TF1.h";
 
@@ -56,10 +67,18 @@
 #pragma link C++ class ROOT::Math::GSLRngMT+;
 #pragma link C++ class ROOT::Math::GSLRngTaus+;
 #pragma link C++ class ROOT::Math::GSLRngRanLux+;
+#pragma link C++ class ROOT::Math::GSLRngRanLuxS1+;
+#pragma link C++ class ROOT::Math::GSLRngRanLuxS2+;
+#pragma link C++ class ROOT::Math::GSLRngRanLuxD1+;
+#pragma link C++ class ROOT::Math::GSLRngRanLuxD2+;
 #pragma link C++ class ROOT::Math::GSLRngGFSR4+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngMT>+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngTaus>+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngRanLux>+;
+#pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngRanLuxS1>+;
+#pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngRanLuxS2>+;
+#pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngRanLuxD1>+;
+#pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngRanLuxD2>+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::GSLRngGFSR4>+;
 
 #pragma link C++ class ROOT::Math::KelvinFunctions+;
@@ -81,6 +100,8 @@
 // #endif
 
 #pragma link C++ class ROOT::Math::GSLMCIntegrator+;
+#pragma link C++ class ROOT::Math::VegasParameters+;
+#pragma link C++ class ROOT::Math::MiserParameters+;
 
 
 

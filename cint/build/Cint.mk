@@ -24,7 +24,7 @@ ifeq ($(subst msvc,,$(G__CFG_ARCH)),$(G__CFG_ARCH))
 # not windows
 # xlib doesn't work, types.h conflicts
 # socket, pthread use MAKEINFO
-  ALLDLLS += longlong.cintdll ipc.cintdll posix.cintdll
+  ALLDLLS += ipc.cintdll posix.cintdll
 endif
 
 BUILDDLL = chmod a+x setup; PATH=../../../bin:../../../lib:$$PATH LD_LIBRARY_PATH=../../../lib:$$LD_LIBRARY_PATH DYLD_LIBRARY_PATH=../../../lib:$$DYLD_LIBRARY_PATH ./setup
@@ -42,7 +42,7 @@ dlls: $(ALLDLLS)
 ipc.cintdll posix.cintdll: $(G__CFG_COREVERSION)/include/sys/types.h
 
 $(ALLDLLS): %.cintdll: $(MAKECINT) $(CINTLIBSTATIC) $(CINT)
-	(cd $(G__CFG_COREVERSION)/lib/$*; $(BUILDDLL))
+	+(cd $(G__CFG_COREVERSION)/lib/$*; $(BUILDDLL))
 
 $(G__CFG_COREVERSION)/include/systypes.h: $(MKTYPES)
 	cd $(dir $(MKTYPES)) \

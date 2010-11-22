@@ -483,7 +483,7 @@ TFile::~TFile()
    gROOT->GetUUIDs()->RemoveUUID(GetUniqueID());
 
    if (gDebug)
-      Info("~TFile", "dtor called for %s [%d]", GetName(),this);
+      Info("~TFile", "dtor called for %s [%lx]", GetName(),(Long_t)this);
 }
 
 //______________________________________________________________________________
@@ -1251,6 +1251,7 @@ void TFile::Map()
       frombuf(buffer, &nbytes);
       if (!nbytes) {
          Printf("Address = %lld\tNbytes = %d\t=====E R R O R=======", idcur, nbytes);
+         date = 0; time = 0;
          break;
       }
       if (nbytes < 0) {
@@ -1274,24 +1275,20 @@ void TFile::Map()
          frombuf(buffer, &sdir);  seekpdir = (Long64_t)sdir;
       }
       frombuf(buffer, &nwhc);
-      int i;
-      for (i = 0;i < nwhc; i++) frombuf(buffer, &classname[i]);
+      for (int i = 0;i < nwhc; i++) frombuf(buffer, &classname[i]);
       classname[(int)nwhc] = '\0'; //cast to avoid warning with gcc3.4
-      if (idcur == fSeekFree) strcpy(classname,"FreeSegments");
-      if (idcur == fSeekInfo) strcpy(classname,"StreamerInfo");
-      if (idcur == fSeekKeys) strcpy(classname,"KeysList");
+      if (idcur == fSeekFree) strlcpy(classname,"FreeSegments",512);
+      if (idcur == fSeekInfo) strlcpy(classname,"StreamerInfo",512);
+      if (idcur == fSeekKeys) strlcpy(classname,"KeysList",512);
       TDatime::GetDateTime(datime, date, time);
       if (objlen != nbytes-keylen) {
          Float_t cx = Float_t(objlen+keylen)/Float_t(nbytes);
-         //Printf("%d/%06d  At:%-8d  N=%-8d  %-14s CX = %5.2f",date,time,idcur,nbytes,classname,cx);
          Printf("%d/%06d  At:%lld  N=%-8d  %-14s CX = %5.2f",date,time,idcur,nbytes,classname,cx);
       } else {
-         //Printf("%d/%06d  At:%-8d  N=%-8d  %-14s",date,time,idcur,nbytes,classname);
          Printf("%d/%06d  At:%lld  N=%-8d  %-14s",date,time,idcur,nbytes,classname);
       }
       idcur += nbytes;
    }
-   //Printf("%d/%06d  At:%-8d  N=%-8d  %-14s",date,time,idcur,1,"END");
    Printf("%d/%06d  At:%lld  N=%-8d  %-14s",date,time,idcur,1,"END");
 }
 
@@ -1310,6 +1307,59 @@ void TFile::Print(Option_t *option) const
 
    Printf("TFile: name=%s, title=%s, option=%s", GetName(), GetTitle(), GetOption());
    GetList()->R__FOR_EACH(TObject,Print)(option);
+}
+
+//______________________________________________________________________________
+Bool_t TFile::ReadBuffer(char *buf, Long64_t pos, Int_t len)
+{
+   // Read a buffer from the file at the offset 'pos' in the file.
+   // Returns kTRUE in case of failure.
+   // Compared to ReadBuffer(char*, Int_t), this routine does _not_
+   // change the cursor on the physical file representation (fD)
+   // if the data is in this TFile's cache.
+
+   if (IsOpen()) {
+
+      SetOffset(pos);
+
+      Int_t st;
+      if ((st = ReadBufferViaCache(buf, len))) {
+         if (st == 2)
+            return kTRUE;
+         return kFALSE;
+      }
+
+      Seek(pos);
+
+      ssize_t siz;
+      Double_t start = 0;
+      if (gPerfStats != 0) start = TTimeStamp();
+
+      while ((siz = SysRead(fD, buf, len)) < 0 && GetErrno() == EINTR)
+         ResetErrno();
+
+      if (siz < 0) {
+         SysError("ReadBuffer", "error reading from file %s", GetName());
+         return kTRUE;
+      }
+      if (siz != len) {
+         Error("ReadBuffer", "error reading all requested bytes from file %s, got %ld of %d",
+               GetName(), (Long_t)siz, len);
+         return kTRUE;
+      }
+      fBytesRead  += siz;
+      fgBytesRead += siz;
+      fReadCalls++;
+      fgReadCalls++;
+
+      if (gMonitoringWriter)
+         gMonitoringWriter->SendFileReadProgress(this);
+      if (gPerfStats != 0) {
+         gPerfStats->FileReadEvent(this, len, start);
+      }
+      return kFALSE;
+   }
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -1340,8 +1390,8 @@ Bool_t TFile::ReadBuffer(char *buf, Int_t len)
          return kTRUE;
       }
       if (siz != len) {
-         Error("ReadBuffer", "error reading all requested bytes from file %s, got %d of %d",
-               GetName(), siz, len);
+         Error("ReadBuffer", "error reading all requested bytes from file %s, got %ld of %d",
+               GetName(), (Long_t)siz, len);
          return kTRUE;
       }
       fBytesRead  += siz;
@@ -1442,7 +1492,7 @@ Int_t TFile::ReadBufferViaCache(char *buf, Int_t len)
          return 2;  // failure reading
       else if (st == 1) {
          // fOffset might have been changed via TFileCacheRead::ReadBuffer(), reset it
-         Seek(off + len);
+         SetOffset(off + len);
          return 1;
       }
       // fOffset might have been changed via TFileCacheRead::ReadBuffer(), reset it
@@ -1451,11 +1501,11 @@ Int_t TFile::ReadBufferViaCache(char *buf, Int_t len)
       // if write cache is active check if data still in write cache
       if (fWritable && fCacheWrite) {
          if (fCacheWrite->ReadBuffer(buf, off, len) == 0) {
-            Seek(off + len);
+            SetOffset(off + len);
             return 1;
          }
          // fOffset might have been changed via TFileCacheWrite::ReadBuffer(), reset it
-         Seek(off);
+         SetOffset(off);
       }
    }
 
@@ -1501,7 +1551,7 @@ TProcessID  *TFile::ReadProcessID(UShort_t pidf)
    //check if fProcessIDs[uid] is set in file
    //if not set, read the process uid from file
    char pidname[32];
-   sprintf(pidname,"ProcessID%d",pidf);
+   snprintf(pidname,32,"ProcessID%d",pidf);
    pid = (TProcessID *)Get(pidname);
    if (gDebug > 0) {
       printf("ReadProcessID, name=%s, file=%s, pid=%lx\n",pidname,GetName(),(Long_t)pid);
@@ -1760,6 +1810,27 @@ Int_t TFile::ReOpen(Option_t *mode)
 }
 
 //______________________________________________________________________________
+void TFile::SetOffset(Long64_t offset, ERelativeTo pos)
+{
+   // Set position from where to start reading.
+
+   switch (pos) {
+      case kBeg:
+         fOffset = offset + fArchiveOffset;
+         break;
+      case kCur:
+         fOffset += offset;
+         break;
+      case kEnd:
+         // this option is not used currently in the ROOT code
+         if (fArchiveOffset)
+            Error("SetOffset", "seeking from end in archive is not (yet) supported");
+         fOffset = fEND + offset;  // is fEND really EOF or logical EOF?
+         break;
+   }
+}
+
+//______________________________________________________________________________
 void TFile::Seek(Long64_t offset, ERelativeTo pos)
 {
    // Seek to a specific position in the file. Pos it either kBeg, kCur or kEnd.
@@ -1900,7 +1971,7 @@ Int_t TFile::Write(const char *, Int_t opt, Int_t bufsiz)
       if (!GetTitle() || strlen(GetTitle()) == 0)
          Info("Write", "writing name = %s", GetName());
       else
-         Info("Write", "writing name = s title = %s", GetName(), GetTitle());
+         Info("Write", "writing name = %s title = %s", GetName(), GetTitle());
    }
 
    fMustFlush = kFALSE;
@@ -1950,13 +2021,13 @@ Bool_t TFile::WriteBuffer(const char *buf, Int_t len)
       if (siz < 0) {
          // Write the system error only once for this file
          SetBit(kWriteError); SetWritable(kFALSE);
-         SysError("WriteBuffer", "error writing to file %s (%d)", GetName(), siz);
+         SysError("WriteBuffer", "error writing to file %s (%ld)", GetName(), (Long_t)siz);
          return kTRUE;
       }
       if (siz != len) {
          SetBit(kWriteError);
-         Error("WriteBuffer", "error writing all requested bytes to file %s, wrote %d of %d",
-               GetName(), siz, len);
+         Error("WriteBuffer", "error writing all requested bytes to file %s, wrote %ld of %d",
+               GetName(), (Long_t)siz, len);
          return kTRUE;
       }
       fBytesWrite  += siz;
@@ -2153,39 +2224,44 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
 
    TString opt = option;
    opt.ToLower();
-   void *dir = gSystem->OpenDirectory(dirname);
-   char *path = new char[4000];
+   {
+      void *dir = gSystem->OpenDirectory(dirname);
+      TString dirpath;
 
-   if (opt.Contains("update")) {
-      // check that directory exist, if not create it
-      if (dir == 0) {
+      if (opt.Contains("update")) {
+         // check that directory exist, if not create it
+         if (dir == 0) {
+            gSystem->mkdir(dirname);
+         }
+         
+      } else if (opt.Contains("recreate")) {
+         // check that directory exist, if not create it
+         if (dir == 0) {
+            gSystem->mkdir(dirname);
+         }
+         // clear directory
+         while (dir) {
+            const char *afile = gSystem->GetDirEntry(dir);
+            if (afile == 0) break;
+            if (strcmp(afile,".") == 0) continue;
+            if (strcmp(afile,"..") == 0) continue;
+            dirpath.Form("%s/%s",dirname,afile);
+            gSystem->Unlink(dirpath);
+         }
+         
+      } else {
+         // new is assumed
+         // if directory already exist, print error message and return
+         if (dir) {
+            Error("MakeProject","cannot create directory %s, already existing",dirname);
+            gSystem->FreeDirectory(dir);
+            return;
+         }
          gSystem->mkdir(dirname);
       }
-
-   } else if (opt.Contains("recreate")) {
-      // check that directory exist, if not create it
-      if (dir == 0) {
-         gSystem->mkdir(dirname);
-      }
-      // clear directory
-      while (dir) {
-         const char *afile = gSystem->GetDirEntry(dir);
-         if (afile == 0) break;
-         if (strcmp(afile,".") == 0) continue;
-         if (strcmp(afile,"..") == 0) continue;
-         sprintf(path,"%s/%s",dirname,afile);
-         gSystem->Unlink(path);
-      }
-
-   } else {
-      // new is assumed
-      // if directory already exist, print error message and return
       if (dir) {
-         Error("MakeProject","cannot create directory %s, already existing",dirname);
-         delete [] path;
-         return;
+         gSystem->FreeDirectory(dir);
       }
-      gSystem->mkdir(dirname);
    }
    Bool_t genreflex = opt.Contains("genreflex");
 
@@ -2194,7 +2270,6 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    TList *filelist = (TList*)GetStreamerInfoCache()->Clone();
    if (filelist == 0) {
       Error("MakeProject","file %s has no StreamerInfo", GetName());
-      delete [] path;
       return;
    }
 
@@ -2324,10 +2399,11 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       ngener += info->GenerateHeaderFile(dirname,&subClasses,&extrainfos);
       subClasses.Clear("nodelete");
    }
-   sprintf(path,"%s/%sProjectHeaders.h",dirname,dirname);
+   TString path;
+   path.Form("%s/%sProjectHeaders.h",dirname,dirname);
    FILE *allfp = fopen(path,"a");
    if (!allfp) {
-      Error("MakeProject","Cannot open output file:%s\n",path);
+      Error("MakeProject","Cannot open output file:%s\n",path.Data());
    } else {
       fprintf(allfp,"#include \"%sProjectInstances.h\"\n", dirname);
       fclose(allfp);
@@ -2337,18 +2413,18 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
 
    // generate the shared lib
    if (!opt.Contains("+")) {
-      list->Delete();
       delete list;
-      delete [] path;
+      filelist->Delete();
+      delete filelist;
       return;
    }
 
    // create the MAKEP file by looping on all *.h files
    // delete MAKEP if it already exists
 #ifdef WIN32
-   sprintf(path,"%s/makep.cmd",dirname);
+   path.Form("%s/makep.cmd",dirname);
 #else
-   sprintf(path,"%s/MAKEP",dirname);
+   path.Form("%s/MAKEP",dirname);
 #endif
 #ifdef R__WINGCC
    FILE *fpMAKE = fopen(path,"wb");
@@ -2356,36 +2432,36 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    FILE *fpMAKE = fopen(path,"w");
 #endif
    if (!fpMAKE) {
-      Error("MakeProject", "cannot open file %s", path);
-      list->Delete();
+      Error("MakeProject", "cannot open file %s", path.Data());
       delete list;
-      delete [] path;
+      filelist->Delete();
+      delete filelist;
       return;
    }
 
    // Add rootcint/genreflex statement generating ProjectDict.cxx
    FILE *ifp = 0;
-   sprintf(path,"%s/%sProjectInstances.h",dirname,dirname);
+   path.Form("%s/%sProjectInstances.h",dirname,dirname);
 #ifdef R__WINGCC
    ifp = fopen(path,"wb");
 #else
    ifp = fopen(path,"w");
 #endif
    if (!ifp) {
-      Error("MakeProject", "cannot open path file %s", path);
-      list->Delete();
+      Error("MakeProject", "cannot open path file %s", path.Data());
       delete list;
-      delete [] path;
+      filelist->Delete();
+      delete filelist;
       fclose(fpMAKE);
       return;
    }
 
    if (genreflex) {
       fprintf(fpMAKE,"genreflex %sProjectHeaders.h -o %sProjectDict.cxx --comments --iocomments %s ",dirname,dirname,gSystem->GetIncludePath());
-      sprintf(path,"%s/%sSelection.xml",dirname,dirname);
+      path.Form("%s/%sSelection.xml",dirname,dirname);
    } else {
       fprintf(fpMAKE,"rootcint -f %sProjectDict.cxx -c %s ",dirname,gSystem->GetIncludePath());
-      sprintf(path,"%s/%sLinkDef.h",dirname,dirname);
+      path.Form("%s/%sLinkDef.h",dirname,dirname);
    }
    // Create the LinkDef.h or xml selection file by looping on all *.h files
    // replace any existing file.
@@ -2395,10 +2471,10 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    FILE *fp = fopen(path,"w");
 #endif
    if (!fp) {
-      Error("MakeProject", "cannot open path file %s", path);
-      list->Delete();
+      Error("MakeProject", "cannot open path file %s", path.Data());
       delete list;
-      delete [] path;
+      filelist->Delete();
+      delete filelist;
       fclose(fpMAKE);
       fclose(ifp);
       return;
@@ -2426,23 +2502,24 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
          if (cl->GetSchemaRules()) {
             rules = cl->GetSchemaRules()->FindRules(cl->GetName(), info->GetClassVersion());
             TString strrule;
-            for(Int_t art = 0; art < rules->GetEntries(); ++art) {
-               ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)rules->At(art);
-               strrule.Clear();
-               if (genreflex) {
-                  rule->AsString(strrule,"x");
-                  strrule.Append("\n");
-                  if ( selections.Index(strrule) == kNPOS ) {
-                     selections.Append(strrule);
+            if (rules) {
+               for(Int_t art = 0; art < rules->GetEntries(); ++art) {
+                  ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)rules->At(art);
+                  strrule.Clear();
+                  if (genreflex) {
+                     rule->AsString(strrule,"x");
+                     strrule.Append("\n");
+                     if ( selections.Index(strrule) == kNPOS ) {
+                        selections.Append(strrule);
+                     }
+                  } else {
+                     rule->AsString(strrule);
+                     if (strncmp(strrule.Data(),"type=",5)==0) {
+                        strrule.Remove(0,5);
+                     }
+                     fprintf(fp,"#pragma %s;\n",strrule.Data());
                   }
-               } else {
-                  rule->AsString(strrule);
-                  if (strncmp(strrule.Data(),"type=",5)==0) {
-                     strrule.Remove(0,5);
-                  }
-                  fprintf(fp,"#pragma %s;\n",strrule.Data());
                }
-
             }
             delete rules;
          }
@@ -2484,6 +2561,23 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
                   }
                   break;
                }
+            default:
+               if (strncmp(key->GetName(),"pair<",strlen("pair<"))==0) {
+                  if (genreflex) {
+                     tmp.Form("<class name=\"%s\" />\n",key->GetName());
+                     if ( selections.Index(tmp) == kNPOS ) {
+                        selections.Append(tmp);
+                     }
+                     tmp.Form("template class %s;\n",key->GetName());
+                     if ( instances.Index(tmp) == kNPOS ) {
+                        instances.Append(tmp);
+                     }
+                  } else {
+                     what.ReplaceAll("std::","");
+                     fprintf(fp,"#pragma link C++ class %s+;\n",key->GetName());
+                  }
+               }
+               break;
             }
          }
          continue;
@@ -2574,7 +2668,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
 
    if (!opt.Contains("nocompilation")) {
       // now execute the generated script compiling and generating the shared lib
-      strcpy(path,gSystem->WorkingDirectory());
+      path = gSystem->WorkingDirectory();
       gSystem->ChangeDirectory(dirname);
 #ifndef WIN32
       gSystem->Exec("chmod +x MAKEP");
@@ -2585,20 +2679,21 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       int res = !gSystem->Exec("MAKEP");
 #endif
       gSystem->ChangeDirectory(path);
-      sprintf(path,"%s/%s.%s",dirname,dirname,gSystem->GetSoExt());
-      if (res) printf("Shared lib %s has been generated\n",path);
+      path.Form("%s/%s.%s",dirname,dirname,gSystem->GetSoExt());
+      if (res) printf("Shared lib %s has been generated\n",path.Data());
 
       //dynamically link the generated shared lib
       if (opt.Contains("++")) {
          res = !gSystem->Load(path);
-         if (res) printf("Shared lib %s has been dynamically linked\n",path);
+         if (res) printf("Shared lib %s has been dynamically linked\n",path.Data());
       }
    }
 
    extrainfos.Clear("nodelete");
-   delete filelist;
+   // filelist->Clear("nodetele");
    delete list;
-   delete [] path;
+   filelist->Delete();
+   delete filelist;
 }
 
 //______________________________________________________________________________
@@ -2719,7 +2814,7 @@ UShort_t TFile::WriteProcessID(TProcessID *pidd)
    pids->AddAtAndExpand(pid,npids);
    pid->IncrementCount();
    char name[32];
-   sprintf(name,"ProcessID%d",npids);
+   snprintf(name,32,"ProcessID%d",npids);
    this->WriteTObject(pid,name);
    this->IncrementProcessIDs();
    if (gDebug > 0) {
@@ -2809,7 +2904,7 @@ void TFile::WriteStreamerInfo()
 }
 
 //______________________________________________________________________________
-TFile *TFile::OpenFromCache(const char *name, Option_t *option, const char *ftitle,
+TFile *TFile::OpenFromCache(const char *name, Option_t *, const char *ftitle,
                    Int_t compress, Int_t netopt)
 {
    // Static member function allowing to open a file for reading through the file
@@ -2819,13 +2914,11 @@ TFile *TFile::OpenFromCache(const char *name, Option_t *option, const char *ftit
 
    TFile *f = 0;
 
-   const char *defaultreadoption = "READ";
    if (fgCacheFileDir == "") {
       ::Warning("TFile::OpenFromCache",
                 "you want to read through a cache, but you have no valid cache "
                 "directory set - reading remotely");
       ::Info("TFile::OpenFromCache", "set cache directory using TFile::SetCacheFileDir()");
-      option = defaultreadoption;
    } else {
       TUrl fileurl(name);
       TUrl tagurl;
@@ -2836,7 +2929,6 @@ TFile *TFile::OpenFromCache(const char *name, Option_t *option, const char *ftit
             ::Warning("TFile::OpenFromCache",
                       "you want to read through a cache, but you are reading "
                       "local files - CACHEREAD disabled");
-         option = defaultreadoption;
       } else {
          // this is a remote file and worthwhile to be put into the local cache
          // now create cachepath to put it
@@ -2850,7 +2942,6 @@ TFile *TFile::OpenFromCache(const char *name, Option_t *option, const char *ftit
             ::Warning("TFile::OpenFromCache","you want to read through a cache, but I "
                       "cannot create the directory %s - CACHEREAD disabled",
                       cachefilepathbasedir.Data());
-            option = defaultreadoption;
          } else {
             // check if this should be a zip file
             if (strlen(fileurl.GetAnchor())) {
@@ -2937,7 +3028,7 @@ TFile *TFile::OpenFromCache(const char *name, Option_t *option, const char *ftit
 
                   cachefile->Seek(0);
                   remotfile->Seek(0);
-                  
+
                   if ((!cachefile->ReadBuffer(cacheblock,256)) &&
                       (!remotfile->ReadBuffer(remotblock,256))) {
                      if (memcmp(cacheblock, remotblock, 256)) {
@@ -2965,7 +3056,6 @@ TFile *TFile::OpenFromCache(const char *name, Option_t *option, const char *ftit
                ::Warning("TFile::OpenFromCache", "you want to read through a cache, but I "
                          "cannot make a cache copy of %s - CACHEREAD disabled",
                          cachefilepathbasedir.Data());
-               option = defaultreadoption;
                fgCacheFileForce = forcedcache;
                if (fgOpenTimeout != 0)
                   return 0;
@@ -4010,7 +4100,7 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
       writeop = dfile->WriteBuffer(copybuffer, (Int_t)read);
       written = dfile->GetBytesWritten() - w0;
       if ((written != read) || writeop) {
-         ::Error("TFile::Cp", "cannot write %d bytes to destination file %s", read, dst);
+         ::Error("TFile::Cp", "cannot write %lld bytes to destination file %s", read, dst);
          goto copyout;
       }
       totalread += read;

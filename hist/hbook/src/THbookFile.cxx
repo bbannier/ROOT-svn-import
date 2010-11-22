@@ -241,14 +241,14 @@ R__EXTERN TTree *gTree;
 ClassImp(THbookFile)
 
 //______________________________________________________________________________
-THbookFile::THbookFile() : TNamed()
+THbookFile::THbookFile() : TNamed(),fLun(0),fLrecl(0)
 {
    //the constructor
    fList = new TList();
    fKeys = new TList();
 }
 
-//1_____________________________________________________________________________
+//_____________________________________________________________________________
 THbookFile::THbookFile(const char *fname, Int_t lrecl)
            :TNamed(fname,"")
 {
@@ -282,7 +282,7 @@ THbookFile::THbookFile(const char *fname, Int_t lrecl)
       return;
    }
    char topdir[20];
-   sprintf(topdir,"lun%d",fLun);
+   snprintf(topdir,19,"lun%d",fLun);
 
    Int_t ier;
 #ifndef WIN32
@@ -292,7 +292,7 @@ THbookFile::THbookFile(const char *fname, Int_t lrecl)
 #endif
    fLrecl = lrecl;
    SetTitle(topdir);
-   sprintf(topdir,"//lun%d",fLun);
+   snprintf(topdir,19,"//lun%d",fLun);
    fCurDir = topdir;
 
    if (ier) printf (" Error on hropen was %d \n", ier);
@@ -595,26 +595,32 @@ TFile *THbookFile::Convert2root(const char *rootname, Int_t /*lrecl*/,
    TString opt = option;
    opt.ToLower();
 
-   char cmd[512];
-   char rfile[512];
    Int_t nch = strlen(rootname);
+   char *rfile=0;
    if (nch) {
-      strcpy(rfile,rootname);
+      rfile = new char[nch+1];
+      strlcpy(rfile,rootname,nch+1);
    } else {
-      strcpy(rfile,GetName());
+      nch = strlen(GetName());
+      rfile = new char[nch+1];
+      strlcpy(rfile,GetName(),nch+1);
       char *dot = strrchr(rfile,'.');
       if (dot) strcpy(dot+1,"root");
-      else     strcat(rfile,".root");
+      else     strlcat(rfile,".root",nch+1);
    }
 
-   sprintf(cmd,"h2root %s %s",GetName(),rfile);
-   if (opt.Contains("c")) strcat (cmd," 0");
-   if (opt.Contains("l")) strcat (cmd," 0");
+   nch = 2*nch+50;
+   char *cmd = new char[nch+1];
+   snprintf(cmd,nch,"h2root %s %s",GetName(),rfile);
+   if (opt.Contains("c")) strlcat (cmd," 0",nch+1);
+   if (opt.Contains("l")) strlcat (cmd," 0",nch+1);
 
    gSystem->Exec(cmd);
-
-   if (opt.Contains("no")) return 0;
+   
+   delete [] cmd;
+   if (opt.Contains("no")) {delete [] rfile; return 0;}
    TFile *f = new TFile(rfile);
+   delete [] rfile;
    if (f->IsZombie()) {delete f; f = 0;}
    return f;
 }
@@ -632,8 +638,8 @@ TObject *THbookFile::ConvertCWN(Int_t id)
    char *chtag_out;
    float rmin[1000], rmax[1000];
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,127,"h%d",id);
+   else        snprintf(idname,127,"h_%d",-id);
    hnoent(id,nentries);
    //printf(" Converting CWN with ID= %d, nentries = %d\n",id,nentries);
    nvar=0;
@@ -664,7 +670,7 @@ TObject *THbookFile::ConvertCWN(Int_t id)
    char name[32];
    char block[32];
    char oldblock[32];
-   strcpy(oldblock,"OLDBLOCK");
+   strlcpy(oldblock,"OLDBLOCK",32); 
    Int_t oldischar = -1;
    for (i=80;i>0;i--) {if (chtitl[i] == ' ') chtitl[i] = 0; }
    THbookTree *tree = new THbookTree(idname,id);
@@ -715,13 +721,13 @@ TObject *THbookFile::ConvertCWN(Int_t id)
          if (block[j] == ' ') block[j] = 0;
          else break;
       }
-      if (itype == 1 && isize == 4) strcat(fullname,"/F");
-      if (itype == 1 && isize == 8) strcat(fullname,"/D");
-      if (itype == 2) strcat(fullname,"/I");
-      if (itype == 3) strcat(fullname,"/i");
-//     if (itype == 4) strcat(fullname,"/i");
-      if (itype == 4) strcat(fullname,"/b");
-      if (itype == 5) strcat(fullname,"/C");
+      if (itype == 1 && isize == 4) strlcat(fullname,"/F",64);
+      if (itype == 1 && isize == 8) strlcat(fullname,"/D",64);
+      if (itype == 2) strlcat(fullname,"/I",64);
+      if (itype == 3) strlcat(fullname,"/i",64);
+//     if (itype == 4) strlcat(fullname,"/i",64);
+      if (itype == 4) strlcat(fullname,"/b",64);
+      if (itype == 5) strlcat(fullname,"/C",64);
 //printf("Creating branch:%s, block:%s, fullname:%s, nsub=%d, itype=%d, isize=%d, ielem=%d, bufpos=%d\n",name,block,fullname,nsub,itype,isize,ielem,bufpos);
       Int_t ischar;
       if (itype == 5) ischar = 1;
@@ -729,7 +735,7 @@ TObject *THbookFile::ConvertCWN(Int_t id)
 
       if (ischar != oldischar || strcmp(oldblock,block) != 0) {
          varNumber = 0;
-         strcpy(oldblock,block);
+         strlcpy(oldblock,block,32); 
          oldischar = ischar;
          Long_t add= (Long_t)&bigbuf[bufpos];
          Int_t lblock   = strlen(block);
@@ -785,8 +791,8 @@ TObject *THbookFile::ConvertRWN(Int_t id)
    char *chtag_out;
    float rmin[1000], rmax[1000];
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,127,"h%d",id);
+   else        snprintf(idname,127,"h_%d",-id);
    hnoent(id,nentries);
    //printf(" Converting RWN with ID= %d, nentries = %d\n",id,nentries);
    nvar=0;
@@ -858,8 +864,8 @@ TObject *THbookFile::ConvertProfile(Int_t id)
 //      if option S jbyt(iq(lw),1,2) = 1
 //      if option I jbyt(iq(lw),1,2) = 2
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,127,"h%d",id);
+   else        snprintf(idname,127,"h_%d",-id);
    hnoent(id,nentries);
    Int_t lw = lq[lcont];
    Int_t ln = lq[lw];
@@ -899,8 +905,8 @@ TObject *THbookFile::Convert1D(Int_t id)
 {
 // Convert an Hbook 1-d histogram into a Root TH1F
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,127,"h%d",id);
+   else        snprintf(idname,127,"h_%d",-id);
    hnoent(id,nentries);
 #ifndef WIN32
    hgive(id,chtitl,ncx,xmin,xmax,ncy,ymin,ymax,nwt,idb,80);
@@ -951,8 +957,8 @@ TObject *THbookFile::Convert2D(Int_t id)
 {
 // Convert an Hbook 2-d histogram into a Root TH2F
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,127,"h%d",id);
+   else        snprintf(idname,127,"h_%d",-id);
    hnoent(id,nentries);
 #ifndef WIN32
    hgive(id,chtitl,ncx,xmin,xmax,ncy,ymin,ymax,nwt,idb,80);

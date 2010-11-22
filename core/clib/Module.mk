@@ -4,7 +4,7 @@
 # Author: Fons Rademakers, 29/2/2000
 
 MODNAME      := clib
-MODDIR       := core/$(MODNAME)
+MODDIR       := $(ROOT_SRCDIR)/core/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,19 +14,22 @@ CLIBDIRI     := $(CLIBDIR)/inc
 
 ##### libClib (part of libCore) #####
 CLIBL        := $(MODDIRI)/LinkDef.h
-CLIBDS       := $(MODDIRS)/G__Clib.cxx
+CLIBDS       := $(call stripsrc,$(MODDIRS)/G__Clib.cxx)
 CLIBDO       := $(CLIBDS:.cxx=.o)
 CLIBDH       := $(CLIBDS:.cxx=.h)
 
 CLIBH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
+CLIBHH       := $(CLIBDIRI)/strlcpy.h $(CLIBDIRI)/snprintf.h \
+                $(CLIBDIRI)/Getline.h
 CLIBS1       := $(wildcard $(MODDIRS)/*.c)
 ifeq ($(BUILDEDITLINE),yes)
 CLIBS1       := $(filter-out $(MODDIRS)/Getline.c,$(CLIBS1))
 endif
 CLIBS2       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 
-CLIBO        := $(CLIBS1:.c=.o) $(CLIBS2:.cxx=.o)
-SNPRINTFO    := $(CLIBDIRS)/snprintf.o
+CLIBO        := $(call stripsrc,$(CLIBS1:.c=.o) $(CLIBS2:.cxx=.o))
+SNPRINTFO    := $(call stripsrc,$(CLIBDIRS)/snprintf.o)
+STRLCPYO     := $(call stripsrc,$(CLIBDIRS)/strlcpy.o $(CLIBDIRS)/strlcat.o)
 
 CLIBDEP      := $(CLIBO:.o=.d) $(CLIBDO:.o=.d)
 
@@ -42,9 +45,10 @@ INCLUDEFILES += $(CLIBDEP)
 include/%.h:    $(CLIBDIRI)/%.h
 		cp $< $@
 
-$(CLIBDS):      $(CLIBDIRI)/Getline.h $(CLIBL) $(ROOTCINTTMPDEP)
+$(CLIBDS):      $(CLIBHH) $(CLIBL) $(ROOTCINTTMPDEP)
+		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(CLIBDIRI)/Getline.h $(CLIBL)
+		$(ROOTCINTTMP) -f $@ -c $(CLIBHH) $(CLIBL)
 
 all-$(MODNAME): $(CLIBO) $(CLIBDO)
 

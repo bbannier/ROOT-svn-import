@@ -1366,10 +1366,7 @@ void TRootCanvas::EventInfo(Int_t event, Int_t px, Int_t py, TObject *selected)
                                  selected->GetName());
       if (title && strlen(title))
          tipInfo += TString::Format("\n%s", selected->GetTitle());
-      if (event == kKeyPress)
-         tipInfo += TString::Format("\n%c", (char) px);
-      else
-         tipInfo += TString::Format("\n%d, %d", px, py);
+      tipInfo += TString::Format("\n%d, %d", px, py);
       if (!objInfo.IsNull())
          tipInfo += TString::Format("\n%s", objInfo.Data());
    }
@@ -1808,7 +1805,7 @@ Bool_t TRootCanvas::HandleDNDDrop(TDNDData *data)
       if (!obj) return kTRUE;
       gPad->Clear();
       if (obj->InheritsFrom("TKey")) {
-         TObject *object = (TObject *)gROOT->ProcessLine(Form("((TKey *)0x%lx)->ReadObj();", obj));
+         TObject *object = (TObject *)gROOT->ProcessLine(Form("((TKey *)0x%lx)->ReadObj();", (ULong_t)obj));
          if (!object) return kTRUE;
          if (object->InheritsFrom("TGraph"))
             object->Draw("ACP");

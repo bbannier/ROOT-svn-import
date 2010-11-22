@@ -28,6 +28,7 @@
 #include "Fit/LogLikelihoodFCN.h"
 #include "Fit/Chi2FCN.h"
 #include "Fit/FcnAdapter.h"
+#include "TFitResult.h"
 
 //#define DEBUG 1
 
@@ -305,7 +306,7 @@ bool TBackCompFitter::ValidParameterIndex(int ipar) const  {
    int nps  = fFitter->Config().ParamsSettings().size(); 
    if (ipar  < 0 || ipar >= nps ) { 
       std::string msg = ROOT::Math::Util::ToString(ipar) + " is an invalid Parameter index";
-      Error("ValidParameterIndex",msg.c_str());
+      Error("ValidParameterIndex","%s",msg.c_str());
       return false;
    } 
    return true; 
@@ -783,7 +784,7 @@ void TBackCompFitter::DoSetDimension() {
    if (ndim != 0) fobj->SetDimension(ndim); 
 }
 
-ROOT::Math::IMultiGenFunction * TBackCompFitter::GetObjFunction( ) { 
+ROOT::Math::IMultiGenFunction * TBackCompFitter::GetObjFunction( ) const { 
    // return a pointer to the objective function (FCN) 
    // If fitting directly using TBackCompFitter the pointer is managed by the class,
    // which has been set previously when calling SetObjFunction or SetFCN
@@ -793,7 +794,7 @@ ROOT::Math::IMultiGenFunction * TBackCompFitter::GetObjFunction( ) {
    return fFitter->GetFCN(); 
 }
 
-ROOT::Math::Minimizer * TBackCompFitter::GetMinimizer( ) { 
+ROOT::Math::Minimizer * TBackCompFitter::GetMinimizer( ) const { 
    // return a pointer to the minimizer.  
    // the return pointer will be valid after fitting and as long a new fit will not be done. 
    // For keeping a minimizer pointer the method ReCreateMinimizer() could eventually be used  
@@ -801,7 +802,11 @@ ROOT::Math::Minimizer * TBackCompFitter::GetMinimizer( ) {
    return fFitter->GetMinimizer();
 }
 
-
+TFitResult * TBackCompFitter::GetTFitResult( ) const {
+   // return a new copy of the TFitResult object which needs to be deleted later by the user
+   if (!fFitter.get() ) return 0; 
+   return new TFitResult( fFitter->Result() );
+}
 
 //________________________________________________________________________________
 bool TBackCompFitter::Scan(unsigned int ipar, TGraph * gr, double xmin, double xmax )

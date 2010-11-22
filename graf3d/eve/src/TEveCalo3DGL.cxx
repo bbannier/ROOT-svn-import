@@ -43,11 +43,8 @@ Bool_t TEveCalo3DGL::SetModel(TObject* obj, const Option_t* /*opt*/)
 {
    // Set model object.
 
-   if (SetModelCheckClass(obj, TEveCalo3D::Class())) {
-      fM = dynamic_cast<TEveCalo3D*>(obj);
-      return kTRUE;
-   }
-   return kFALSE;
+   fM = SetModelDynCast<TEveCalo3D>(obj);
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -109,10 +106,10 @@ void TEveCalo3DGL::RenderGridEndCap() const
    Float_t r, z, theta, phiU, phiL, eta;
 
    // eta slices
-   for (Int_t i=1; i<nx; ++i)
+   for (Int_t i=0; i<=nx; ++i)
    {
-      eta = ax->GetBinLowEdge(i);
-      if (Abs(eta) > trans && (eta > etaMin && eta < etaMax))
+      eta = ax->GetBinUpEdge(i);
+      if (Abs(eta) >= trans && (eta > etaMin && eta < etaMax))
       {
          theta = TEveCaloData::EtaToTheta(eta);
          r = Abs(zE*Tan(theta));
@@ -140,7 +137,7 @@ void TEveCalo3DGL::RenderGridEndCap() const
       else
          r2 = zE*Tan(TEveCaloData::EtaToTheta(etaMin));
 
-      for (Int_t j=0; j<ny; ++j)
+      for (Int_t j=1; j<=ny; ++j)
       {
          phiL = ay->GetBinLowEdge(j);
          phiU = ay->GetBinUpEdge(j);
@@ -165,7 +162,7 @@ void TEveCalo3DGL::RenderGridEndCap() const
 
       r1 = Abs(r1);
       r2 = Abs(r2);
-      for (Int_t j=0; j<ny; ++j)
+      for (Int_t j=1; j<=ny; ++j)
       {
          phiL = ay->GetBinLowEdge(j);
          phiU = ay->GetBinUpEdge(j);
@@ -202,10 +199,10 @@ void TEveCalo3DGL::RenderGridBarrel() const
    Float_t z, theta, phiL, phiU, eta, x, y;
 
    // eta slices
-   for(Int_t i=1; i<nx; i++)
+   for(Int_t i=0; i<=nx; i++)
    {
-      eta = ax->GetBinLowEdge(i);
-      if ((Abs(eta)<trans) && (etaMin < eta && eta < etaMax))
+      eta = ax->GetBinUpEdge(i);
+      if ((Abs(eta)<=trans) && (etaMin < eta && eta < etaMax))
       {
          theta = TEveCaloData::EtaToTheta(eta);
          z  = rB/Tan(theta);
@@ -236,7 +233,7 @@ void TEveCalo3DGL::RenderGridBarrel() const
    else
       zF = fM->GetEndCapPos();
 
-   for (Int_t j=0; j<ny; j++)
+   for (Int_t j=1; j<=ny; j++)
    {
       phiU = ay->GetBinUpEdge(j);
       phiL = ay->GetBinLowEdge(j);
@@ -276,18 +273,19 @@ void TEveCalo3DGL::RenderGrid(TGLRnrCtx & rnrCtx) const
 
    TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
 
+   TGLUtil::LineWidth(fM->GetFrameWidth());
    glBegin(GL_LINES);
 
    Float_t etaMin = fM->GetEtaMin();
    Float_t etaMax = fM->GetEtaMax();
 
    Float_t trans = fM->GetTransitionEta();
-   if (etaMin < trans && etaMax > -trans)
+   if (fM->GetRnrBarrelFrame() && (etaMin < trans && etaMax > -trans))
    {
       RenderGridBarrel();
    }
 
-   if (etaMax > trans || etaMin < -trans)
+   if (fM->GetRnrEndCapFrame() && (etaMax > trans || etaMin < -trans))
    {
       RenderGridEndCap();
    }
@@ -377,7 +375,7 @@ void TEveCalo3DGL::RenderBox(const Float_t pnts[8]) const
 }
 
 //______________________________________________________________________________
-Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellGeom_t &cellData, Float_t towerH, Float_t offset ) const
+void TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellGeom_t &cellData, Float_t towerH, Float_t& offset ) const
 {
    // Render barrel cell.
 
@@ -442,20 +440,20 @@ Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellGeom_t &cellData,
 
    RenderBox(box);
 
-   return offset + towerH*Sin(cellData.ThetaMin());
+   offset += towerH*Sin(cellData.ThetaMin());
 
 }// end RenderBarrelCell
 
 //______________________________________________________________________________
-Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellGeom_t &cellData, Float_t towerH, Float_t offset ) const
+void TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellGeom_t &cellData, Float_t towerH, Float_t& offset ) const
 {
    // Render an endcap cell.
 
    using namespace TMath;
    Float_t z1, r1In, r1Out, z2, r2In, r2Out;
 
-   z1    = TMath::Sign(fM->fEndCapPos + offset, cellData.Eta());
-   z2    = z1 + TMath::Sign(towerH, cellData.Eta());
+   z1    = TMath::Sign(fM->fEndCapPos + offset, cellData.EtaMin());
+   z2    = z1 + TMath::Sign(towerH, cellData.EtaMin());
 
    r1In  = z1*Tan(cellData.ThetaMin());
    r2In  = z2*Tan(cellData.ThetaMin());
@@ -511,7 +509,12 @@ Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellGeom_t &cellData,
    pnts[2] = z2;
 
    RenderBox(box);
-   return offset+towerH*Cos(cellData.ThetaMin());
+
+   if (z1 > 0)
+      offset += towerH * Cos(cellData.ThetaMin());
+   else
+      offset -= towerH * Cos(cellData.ThetaMin());
+
 } // end RenderEndCapCell
 
 
@@ -556,11 +559,15 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
 
       if (rnrCtx.SecSelection()) glLoadName(cellID);
 
-      if (TMath::Abs(cellData.EtaMax()) < fM->GetTransitionEta())
-         offset = RenderBarrelCell(cellData, towerH, offset);
+      if ((cellData.Eta() > 0 && cellData.Eta() < fM->GetTransitionEta()) ||
+          (cellData.Eta() < 0 && cellData.Eta() > -fM->GetTransitionEta())) 
+      {
+         RenderBarrelCell(cellData, towerH, offset);
+      }
       else
-         offset = RenderEndCapCell(cellData, towerH, offset);
-
+      {
+         RenderEndCapCell(cellData, towerH, offset);
+      }
       ++cellID;
    }
 

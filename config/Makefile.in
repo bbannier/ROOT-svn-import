@@ -2,7 +2,25 @@
 #
 # Makefile definitions included by the top Makefile
 
+# The macro below is expanded when 'realpath' is not built-in.
+# Built-in 'realpath' is available on GNU Make 3.81.
+realpath = $(shell cd $(1); pwd)
+
+ROOT_SRCDIR    := $(call realpath, @top_srcdir@)
+ROOT_OBJDIR    := $(call realpath, @top_builddir@)
+
+ifndef ROOT_SRCDIR
+$(error Error determining ROOT_SRCDIR)
+endif
+ifndef ROOT_OBJDIR
+$(error Error determining ROOT_OBJDIR)
+endif
+
+# The macro below strips off the source dir path to make a relative path name
+stripsrc = $(subst $(ROOT_SRCDIR)/,,$(1))
+
 ARCH           := @architecture@
+HOST           := @host@
 @rootbuild@
 USECONFIG      := @useconfig@
 MKLIBOPTIONS   := @mkliboption@
@@ -32,6 +50,7 @@ TESTDIR        := @testdir@
 TUTDIR         := @tutdir@
 ACLOCALDIR     := @aclocaldir@
 
+BUILDX11       := @buildx11@
 X11LIBDIR      := @x11libdir@
 XPMLIBDIR      := @xpmlibdir@
 XPMLIB         := @xpmlib@
@@ -153,13 +172,13 @@ CHIRPLIBDIR    := @chirplibdir@
 CHIRPCLILIB    := @chirplib@
 CHIRPINCDIR    := $(filter-out /usr/include, @chirpincdir@)
 
-BUILDHDFS     := @buildhdfs@
-HDFSLIBDIR    := @hdfslibdir@
-HDFSCLILIB    := @hdfslib@
-HDFSINCDIR    := $(filter-out /usr/include, @hdfsincdir@)
-JNIINCDIR     := $(filter-out /usr/include, @jniincdir@) $(filter-out /usr/include, @jniincdir@/linux)
-JVMCLILIB     := @jvmlib@
-JVMLIBDIR     := @jvmlibdir@
+BUILDHDFS      := @buildhdfs@
+HDFSLIBDIR     := @hdfslibdir@
+HDFSCLILIB     := @hdfslib@
+HDFSINCDIR     := $(filter-out /usr/include, @hdfsincdir@)
+JNIINCDIR      := $(filter-out /usr/include, @jniincdir@) $(filter-out /usr/include, @jniincdir@/linux)
+JVMCLILIB      := @jvmlib@
+JVMLIBDIR      := @jvmlibdir@
 
 BUILDALIEN     := @buildalien@
 ALIENLIBDIR    := @alienlibdir@
@@ -193,6 +212,11 @@ FFTW3LIBDIR    := @fftw3libdir@
 FFTW3LIB       := @fftw3lib@
 FFTW3INCDIR    := $(filter-out /usr/include, @fftw3incdir@)
 
+BUILDFITSIO    := @buildfitsio@
+CFITSIOLIBDIR  := @cfitsiolibdir@
+CFITSIOLIB     := @cfitsiolib@
+CFITSIOINCDIR  := $(filter-out /usr/include, @cfitsioincdir@)
+
 BUILDGVIZ      := @buildgviz@
 GRAPHVIZLIBDIR := @gvizlibdir@
 GRAPHVIZLIB    := @gvizlib@
@@ -220,6 +244,7 @@ XRDINCDIR      := @xrdincdir@
 XRDLIBDIR      := @xrdlibdir@
 XRDADDOPTS     := @xrdaddopts@
 EXTRA_XRDFLAGS := @extraxrdflags@
+XRDVERSION     := @xrdversion@
 
 SRPLIBDIR      := @srplibdir@
 SRPLIB         := @srplib@
@@ -235,6 +260,9 @@ AFSLIBDIR      := @afslibdir@
 AFSINCDIR      := @afsincdir@
 AFSEXTRACFLAGS := @afsextracflags@
 AFSSHARED      := @afsshared@
+
+ALLOCLIB       := @alloclib@
+ALLOCLIBDIR    := @alloclibdir@
 
 BUILDKRB5      := @buildkrb5@
 KRB5LIB        := @krb5lib@
@@ -316,5 +344,6 @@ ROOTDICTTYPE   := @dicttype@
 INSTALL        := cp -dpR
 INSTALLDATA    := cp -dpR
 INSTALLDIR     := mkdir -p
+RSYNC          := rsync -au
 
 ROOTDRPMREL    := 1

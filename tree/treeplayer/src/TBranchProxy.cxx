@@ -135,6 +135,8 @@ Bool_t ROOT::TBranchProxy::Setup()
    }
    if (fParent) {
 
+      fParent->Setup();
+      
       TClass *pcl = fParent->GetClass();
       R__ASSERT(pcl);
 
@@ -156,13 +158,21 @@ Bool_t ROOT::TBranchProxy::Setup()
          if (fCollection) delete fCollection;
          fCollection = pcl->GetCollectionProxy()->Generate();
          pcl = fCollection->GetValueClass();
+         if (pcl == 0) {
+            Error("Setup","Not finding TClass for collecion for the data member %s seems no longer be in class %s",fDataMember.Data(),fParent->GetClass()->GetName());
+            return false;
+         }         
       }
 
       fElement = (TStreamerElement*)pcl->GetStreamerInfo()->GetElements()->FindObject(fDataMember);
+      if (fElement == 0) {
+         Error("Setup","Data member %s seems no longer be in class %s",fDataMember.Data(),pcl->GetName());
+         return false;
+      }
+      
       fIsaPointer = fElement->IsaPointer();
       fClass = fElement->GetClassPointer();
 
-      R__ASSERT(fElement);
 
       fIsClone = (fClass==TClonesArray::Class());
 
@@ -361,7 +371,7 @@ Bool_t ROOT::TBranchProxy::Setup()
             fMemberOffset = fClass->GetDataMemberOffset(member);
 
             if (fMemberOffset<0) {
-               Error("Setup",Form("Negative offset %d for %s in %s",
+               Error("Setup","%s",Form("Negative offset %d for %s in %s",
                                   fMemberOffset,fBranch->GetName(),
                                   bcount?bcount->GetName():"unknown"));
             }
@@ -386,7 +396,7 @@ Bool_t ROOT::TBranchProxy::Setup()
             }
 
          } else if (fBranch->IsA() != TBranch::Class()) {
-            Error("Setup",Form("Missing TClass object for %s\n",fClassName.Data()));
+            Error("Setup","%s",Form("Missing TClass object for %s\n",fClassName.Data()));
          }
 
          if ( fBranch->IsA()==TBranchElement::Class()

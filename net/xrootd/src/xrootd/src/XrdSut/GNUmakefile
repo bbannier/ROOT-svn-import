@@ -1,12 +1,12 @@
-# $Id: GNUmakefile,v 1.5 2007/11/20 09:43:01 ganis Exp $
+# $Id: GNUmakefile,v 1.6 2010/07/30 03:19:16 abh Exp $
 #-----------------------------------------------------------------------------#
 #                            E n v i r o n m e n t                            #
 #-----------------------------------------------------------------------------#
 include ../GNUmake.env
 
-BINLIBS = -L$(LIBDIR) -lXrdOuc -lXrdSut
+BINLIBS = -L$(LIBDIR) -lXrdOuc -lXrdSut -lXrdSys
 
-LIBDEPS =  $(LIBDIR)/libXrdSut.a $(LIBDIR)/libXrdOuc.a
+LIBDEPS =  $(LIBDIR)/libXrdSut.a $(LIBDIR)/libXrdOuc.a $(LIBDIR)/libXrdSys.a
 
 #------------------------------------------------------------------------------#
 #                             C o m p o n e n t s                              #
@@ -62,16 +62,8 @@ anything: $(TARGETS)
 $(LIBARCH): $(OBJECTS)
 	@echo Creating archive $(LIBARCH) 
 	$(ECHO)rm -f $(LIBARCH)
-	$(ECHO)if [ "$(TYPE)" = "SunOS" -a "$(CC)" = "CC" ]; then \
-	          if [ "x$(SUNCACHE)" != "x" ]; then \
-	             $(CC) -xar -o $(LIBARCH) $(OBJDIR)$(SUNCACHE)/*/*.o; \
-		  else \
-	             $(CC) -xar -o $(LIBARCH) $(OBJECTS); \
-		  fi; \
-	       else \
-	          ar -rc $(LIBARCH) $(OBJECTS); \
-	          ranlib $(LIBARCH); \
-               fi
+	$(ECHO)ar -rc $(LIBARCH) $(OBJECTS)
+	$(ECHO)ranlib $(LIBARCH)
 
 $(LIBRARY): $(OBJECTS) $(LIBDIR)/libXrdOuc.a
 	@echo Creating shared library $(LIBRARY) 

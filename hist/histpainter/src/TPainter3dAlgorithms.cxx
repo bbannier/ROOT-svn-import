@@ -81,13 +81,17 @@ TPainter3dAlgorithms::TPainter3dAlgorithms(): TObject(), TAttLine(1,1,1), TAttFi
    // Lego default constructor
 
    Int_t i;
-   fIfrast       = 0;
-   fMesh         = 1;
-   fRaster       = 0;
-   fColorTop     = 1;
-   fColorBottom  = 1;
-   fNlevel       = 0;
-   fSystem       = kCARTESIAN;
+   fIfrast          = 0;
+   fMesh            = 1;
+   fRaster          = 0;
+   fColorTop        = 1;
+   fColorBottom     = 1;
+   fNlevel          = 0;
+   fSystem          = kCARTESIAN;
+   fDrawFace        = 0;
+   fLegoFunction    = 0;
+   fSurfaceFunction = 0;
+
 
    TList *stack = 0;
    if (gCurrentHist) stack = gCurrentHist->GetPainter()->GetStack();
@@ -102,8 +106,43 @@ TPainter3dAlgorithms::TPainter3dAlgorithms(): TObject(), TAttLine(1,1,1), TAttFi
    }
 
    for (i=0;i<fNStack;i++) { fColorMain[i] = 1; fColorDark[i] = 1; }
-   for (i=0;i<3;i++)  { fRmin[i] = 0, fRmax[i] = 1; }
-   for (i=0;i<4;i++)  { fYls[i] = 0; }
+   for (i=0;i<3;i++)       { fRmin[i] = 0, fRmax[i] = 1; }
+   for (i=0;i<4;i++)       { fYls[i] = 0; }
+
+   for (i=0;i<30;i++)      { fJmask[i] = 0; }
+   for (i=0;i<200;i++)     { fLevelLine[i] = 0; }
+   for (i=0;i<465;i++)     { fMask[i] = 0; }
+   for (i=0;i<258;i++)     { fColorLevel[i] = 0; }
+   for (i=0;i<1200;i++)    { fPlines[i] = 0.; }
+   for (i=0;i<200;i++)     { fT[i] = 0.; }
+   for (i=0;i<2000;i++)    { fU[i] = 0.; fD[i] = 0.; }
+   for (i=0;i<12;i++)      { fVls[i] = 0.; }
+   for (i=0;i<257;i++)     { fFunLevel[i] = 0.; }
+   for (i=0;i<183;i++)     { fAphi[i] = 0.; }
+   for (i=0;i<8;i++)       { fF8[i] = 0.; }
+
+   fLoff   = 0;
+   fNT     = 0;
+   fNcolor = 0;
+   fNlines = 0;
+   fNqs    = 0;
+   fNxrast = 0;
+   fNyrast = 0;
+   fIc1    = 0;
+   fIc2    = 0;
+   fIc3    = 0;
+   fQA     = 0.;
+   fQD     = 0.;
+   fQS     = 0.;
+   fX0     = 0.;
+   fYdl    = 0.;
+   fXrast  = 0.;
+   fYrast  = 0.;
+   fFmin   = 0.;
+   fFmax   = 0.;
+   fDXrast = 0.;
+   fDYrast = 0.;
+   fDX     = 0.;
 }
 
 
@@ -128,6 +167,9 @@ TPainter3dAlgorithms::TPainter3dAlgorithms(Double_t *rmin, Double_t *rmax, Int_t
    fSystem       = system;
    if (system == kCARTESIAN || system == kPOLAR) psi =  0;
    else                                          psi = 90;
+   fDrawFace        = 0;
+   fLegoFunction    = 0;
+   fSurfaceFunction = 0;
 
    TList *stack = gCurrentHist->GetPainter()->GetStack();
    fNStack = 0;
@@ -141,10 +183,46 @@ TPainter3dAlgorithms::TPainter3dAlgorithms(Double_t *rmin, Double_t *rmax, Int_t
    }
 
    for (i=0;i<fNStack;i++) { fColorMain[i] = 1; fColorDark[i] = 1; }
-   for (i=0;i<3;i++)  { fRmin[i] = rmin[i], fRmax[i] = rmax[i]; }
-   for (i=0;i<4;i++)  { fYls[i] = 0; }
+   for (i=0;i<3;i++)       { fRmin[i] = rmin[i], fRmax[i] = rmax[i]; }
+   for (i=0;i<4;i++)       { fYls[i] = 0; }
 
-   TView *view = gPad->GetView();
+   for (i=0;i<30;i++)      { fJmask[i] = 0; }
+   for (i=0;i<200;i++)     { fLevelLine[i] = 0; }
+   for (i=0;i<465;i++)     { fMask[i] = 0; }
+   for (i=0;i<258;i++)     { fColorLevel[i] = 0; }
+   for (i=0;i<1200;i++)    { fPlines[i] = 0.; }
+   for (i=0;i<200;i++)     { fT[i] = 0.; }
+   for (i=0;i<2000;i++)    { fU[i] = 0.; fD[i] = 0.; }
+   for (i=0;i<12;i++)      { fVls[i] = 0.; }
+   for (i=0;i<257;i++)     { fFunLevel[i] = 0.; }
+   for (i=0;i<183;i++)     { fAphi[i] = 0.; }
+   for (i=0;i<8;i++)       { fF8[i] = 0.; }
+
+   fLoff   = 0;
+   fNT     = 0;
+   fNcolor = 0;
+   fNlines = 0;
+   fNqs    = 0;
+   fNxrast = 0;
+   fNyrast = 0;
+   fIc1    = 0;
+   fIc2    = 0;
+   fIc3    = 0;
+   fQA     = 0.;
+   fQD     = 0.;
+   fQS     = 0.;
+   fX0     = 0.;
+   fYdl    = 0.;
+   fXrast  = 0.;
+   fYrast  = 0.;
+   fFmin   = 0.;
+   fFmax   = 0.;
+   fDXrast = 0.;
+   fDYrast = 0.;
+   fDX     = 0.;
+
+   TView *view = 0;
+   if (gPad) view = gPad->GetView();
    if (!view) view = TView::CreateView(fSystem, rmin, rmax);
    view->SetView(gPad->GetPhi(), gPad->GetTheta(), psi, i);
    view->SetRange(rmin,rmax);
@@ -182,12 +260,10 @@ void TPainter3dAlgorithms::BackBox(Double_t ang)
    static Int_t iface2[4] = { 4,3,7,8 };
    TView *view = 0;
 
-   if(gPad) {
-      view = gPad->GetView();
-      if(!view) {
-         Error("BackBox", "no TView in current pad");
-         return;
-      }
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("BackBox", "no TView in current pad");
+      return;
    }
 
    /* Local variables */
@@ -292,10 +368,11 @@ void TPainter3dAlgorithms::DefineGridLevels(Int_t ndivz)
    // Define the grid levels drawn in the background of surface and lego plots.
    // The grid levels are aligned on the  Z axis' main tick marks.
 
-   Int_t i, nbins;
+   Int_t i, nbins=0;
    Double_t binLow, binHigh, binWidth;
+   TView *view = 0;
 
-   TView *view = gPad->GetView();
+   if (gPad) view = gPad->GetView();
    if (!view) {
       Error("GridLevels", "no TView in current pad");
       return;
@@ -344,9 +421,10 @@ void TPainter3dAlgorithms::DrawFaceMode1(Int_t *icodes, Double_t *xyz, Int_t np,
    Double_t x[13], y[13];
    Double_t z;
    Double_t p3[24]        /* was [2][12] */;
+   TView *view = 0;
 
-   TView *view = gPad->GetView();   //Get current view
-   if(!view) return;                //Check if `view` is valid!
+   if (gPad) view = gPad->GetView();
+   if (!view) return;
 
    //          T R A N S F E R   T O   N O R M A L I S E D   COORDINATES
    /* Parameter adjustments */
@@ -422,9 +500,10 @@ void TPainter3dAlgorithms::DrawFaceMode2(Int_t *icodes, Double_t *xyz, Int_t np,
    Int_t i, k;
    Double_t x[12], y[12];
    Double_t p3[36]        /* was [3][12] */;
+   TView *view = 0;
 
-   TView *view = gPad->GetView();   //Get current view
-   if(!view) return;                //Check if `view` is valid!
+   if (gPad) view = gPad->GetView();
+   if (!view) return;
 
    //          T R A N S F E R   T O   N O R M A L I S E D   COORDINATES
    /* Parameter adjustments */
@@ -475,9 +554,10 @@ void TPainter3dAlgorithms::DrawFaceMode3(Int_t *icodes, Double_t *xyz, Int_t np,
    Int_t i, k;
    Int_t icol = 0;
    Double_t x[4], y[4], p3[12]        /* was [3][4] */;
+   TView *view = 0;
 
-   TView *view = gPad->GetView();   //Get current view
-   if(!view) return;                //Check if `view` is valid!
+   if (gPad) view = gPad->GetView();
+   if (!view) return;
 
    /* Parameter adjustments */
    --t;
@@ -537,9 +617,10 @@ void TPainter3dAlgorithms::DrawFaceMove1(Int_t *icodes, Double_t *xyz, Int_t np,
    Int_t i, k, i1, i2, il, it;
    Double_t x[2], y[2];
    Double_t p1[3], p2[3], p3[36]        /* was [3][12] */;
+   TView *view = 0;
 
-   TView *view = gPad->GetView();   //Get current view
-   if(!view) return;                //Check if `view` is valid!
+   if (gPad) view = gPad->GetView();
+   if (!view) return;
 
    //          C O P Y   P O I N T S   T O   A R R A Y
    /* Parameter adjustments */
@@ -632,9 +713,10 @@ void TPainter3dAlgorithms::DrawFaceMove3(Int_t *icodes, Double_t *xyz, Int_t np,
    Int_t i, k, i1, i2, il, it;
    Double_t x[2], y[2];
    Double_t p1[3], p2[3], p3[36]        /* was [3][12] */;
+   TView *view = 0;
 
-   TView *view = gPad->GetView();
-   if(!view) return;
+   if (gPad) view = gPad->GetView();
+   if (!view) return;
 
    // Parameter adjustments (ftoc)
    --tt;
@@ -705,9 +787,10 @@ void TPainter3dAlgorithms::DrawFaceMove2(Int_t *icodes, Double_t *xyz, Int_t np,
    Int_t i, k, icol, i1, i2, it;
    Double_t x[2], y[2];
    Double_t p1[3], p2[3], p3[36]        /* was [3][12] */;
+   TView *view = 0;
 
-   TView *view = gPad->GetView();   //Get current view
-   if(!view) return;                //Check if `view` is valid!
+   if (gPad) view = gPad->GetView();
+   if (!view) return;
 
    //          C O P Y   P O I N T S   T O   A R R A Y
    /* Parameter adjustments */
@@ -781,9 +864,10 @@ void TPainter3dAlgorithms::DrawFaceRaster1(Int_t *icodes, Double_t *xyz, Int_t n
    Double_t x[2], y[2];
    Double_t p1[3], p2[3], p3[36]        /* was [3][12] */;
    Double_t pp[24]        /* was [2][12] */;
+   TView *view = 0;
 
-   TView *view = gPad->GetView();   //Get current view
-   if(!view) return;                //Check if `view` is valid!
+   if (gPad) view = gPad->GetView();
+   if (!view) return;
 
    //          C O P Y   P O I N T S   T O   A R R A Y
    /* Parameter adjustments */
@@ -871,9 +955,10 @@ void TPainter3dAlgorithms::DrawFaceRaster2(Int_t *icodes, Double_t *xyz, Int_t n
    Int_t i, k, icol, i1, i2, it;
    Double_t p[3], x[2], y[2];
    Double_t pp[24]        /* was [2][12] */;
+   TView *view = 0;
 
-   TView *view = gPad->GetView();   //Get current view
-   if(!view) return;                //Check if `view` is valid!
+   if (gPad) view = gPad->GetView();
+   if (!view) return;
 
    //          C O P Y   P O I N T S   T O   A R R A Y
    /* Parameter adjustments */
@@ -1482,9 +1567,11 @@ void TPainter3dAlgorithms::FindVisibleDraw(Double_t *r1, Double_t *r2)
    /* Parameter adjustments */
    --r2;
    --r1;
+   TView *view = 0;
 
-   if (gPad->GetView()) {
-      tn = gPad->GetView()->GetTN();
+   if (gPad) view = gPad->GetView();
+   if (view) {
+      tn = view->GetTN();
       x1 = tn[0]*r1[1] + tn[1]*r1[2] + tn[2]*r1[3]  + tn[3];
       x2 = tn[0]*r2[1] + tn[1]*r2[2] + tn[2]*r2[3]  + tn[3];
       y1 = tn[4]*r1[1] + tn[5]*r1[2] + tn[6]*r1[3]  + tn[7];
@@ -1803,12 +1890,10 @@ void TPainter3dAlgorithms::FrontBox(Double_t ang)
    Int_t i, ix1, ix2, iy1, iy2, iz1, iz2;
    TView *view = 0;
 
-   if (gPad) {
-      view = gPad->GetView();
-      if (!view) {
-         Error("FrontBox", "no TView in current pad");
-         return;
-      }
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("FrontBox", "no TView in current pad");
+      return;
    }
 
    cosa = TMath::Cos(kRad*ang);
@@ -2252,14 +2337,12 @@ void TPainter3dAlgorithms::LegoCartesian(Double_t ang, Int_t nx, Int_t ny, const
    cosa = TMath::Cos(ang*kRad);
 
    //          F I N D   T H E   M O S T   L E F T   P O I N T
-   if (gPad) {
-      view = gPad->GetView();
-      if (!view) {
-         Error("LegoCartesian", "no TView in current pad");
-         return;
-      }
-      tn = gPad->GetView()->GetTN();
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("LegoCartesian", "no TView in current pad");
+      return;
    }
+   tn = view->GetTN();
 
    i1 = 1;
    if (tn[0] < 0) i1 = 2;
@@ -2420,7 +2503,7 @@ void TPainter3dAlgorithms::LegoPolar(Int_t iordr, Int_t na, Int_t nb, const char
    //             T(NP)     - additional function
    //
    //            CHOPT       - options: 'BF' - from BACK to FRONT
-   //                                  'FB' - from FRONT to BACK
+   //                                   'FB' - from FRONT to BACK
    //
    //Begin_Html
    /*
@@ -2434,14 +2517,13 @@ void TPainter3dAlgorithms::LegoPolar(Int_t iordr, Int_t na, Int_t nb, const char
    Double_t ab[8];       // was [2][4]
    Int_t ir, jr, iv, nr, nv, icodes[4];
    Double_t xyz[24];     // was [3][8]
-   TView *view = 0;
    ia = ib = 0;
-   if(gPad) {
-      view = gPad->GetView();
-      if(!view) {
-         Error("LegoPolar", "no TView in current pad");
-         return;
-      }
+   TView *view = 0;
+
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("LegoPolar", "no TView in current pad");
+      return;
    }
 
    if (iordr == 0) {
@@ -2657,16 +2739,15 @@ void TPainter3dAlgorithms::LegoCylindrical(Int_t iordr, Int_t na, Int_t nb, cons
    Double_t cosphi[4];
    Double_t sinphi[4];
    Double_t xyz[24];     // was [3][8]
-   TView *view = 0;
    ia = ib = 0;
+   TView *view = 0;
 
-   if(gPad) {
-      view = gPad->GetView();
-      if(!view) {
-         Error("LegoCylindrical", "no TView in current pad");
-         return;
-      }
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("LegoCylindrical", "no TView in current pad");
+      return;
    }
+
    if (iordr == 0) {
       jz   = 1;
       jphi = 2;
@@ -2880,15 +2961,13 @@ void TPainter3dAlgorithms::LegoSpherical(Int_t ipsdr, Int_t iordr, Int_t na, Int
    Double_t sinphi[4], th1, th2, phi;
    Double_t xyz[24];     // was [3][8]
    Double_t phi1, phi2;
-   TView *view = 0;
    ia = ib = 0;
+   TView *view = 0;
 
-   if(gPad) {
-      view = gPad->GetView();
-      if(!view) {
-         Error("LegoSpherical", "no TView in current pad");
-         return;
-      }
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("LegoSpherical", "no TView in current pad");
+      return;
    }
 
    if (iordr == 0) {
@@ -3228,11 +3307,10 @@ void TPainter3dAlgorithms::Luminosity(Double_t *anorm, Double_t &flum)
    Double_t cosn, cosr;
    Int_t i;
    Double_t s, vl[3], vn[3];
+   TView *view = 0;
 
-
-   TView *view = gPad->GetView();   //Get current view
-   if(!view) return;                //Check if `view` is valid!
-
+   if (gPad) view = gPad->GetView();
+   if (!view) return;
 
    /* Parameter adjustments */
    --anorm;
@@ -3281,8 +3359,11 @@ void TPainter3dAlgorithms::ModifyScreen(Double_t *r1, Double_t *r2)
    --r2;
    --r1;
 
-   if (gPad->GetView()) {
-      tn = gPad->GetView()->GetTN();
+   TView *view = 0;
+   if (gPad) view = gPad->GetView();
+
+   if (view) {
+      tn = view->GetTN();
       x1 = tn[0]*r1[1] + tn[1]*r1[2] + tn[2]*r1[3] + tn[3];
       x2 = tn[0]*r2[1] + tn[1]*r2[2] + tn[2]*r2[3] + tn[3];
       y1 = tn[4]*r1[1] + tn[5]*r1[2] + tn[6]*r1[3] + tn[7];
@@ -3451,12 +3532,10 @@ void TPainter3dAlgorithms::SideVisibilityEncode(Int_t iopt, Double_t phi1, Doubl
    Int_t k = 0;
    TView *view = 0;
 
-   if (gPad) {
-      view = gPad->GetView();
-      if (!view) {
-         Error("SideVisibilityEncode", "no TView in current pad");
-         return;
-      }
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("SideVisibilityEncode", "no TView in current pad");
+      return;
    }
 
    view->FindNormal(0, 0, 1, zn);
@@ -3579,12 +3658,14 @@ void TPainter3dAlgorithms::SurfaceCartesian(Double_t ang, Int_t nx, Int_t ny, co
    cosa = TMath::Cos(ang*kRad);
 
    //          F I N D   T H E   M O S T   L E F T   P O I N T
-   if (gPad->GetView())
-      tn = gPad->GetView()->GetTN();
-   else {
+   TView *view = 0;
+
+   if (gPad) view = gPad->GetView();
+   if (!view) {
       Error("SurfaceCartesian", "no TView in current pad");
       return;
    }
+   tn = view->GetTN();
 
    i1 = 1;
    if (tn[0] < 0) i1 = 2;
@@ -3788,12 +3869,10 @@ void TPainter3dAlgorithms::SurfacePolar(Int_t iordr, Int_t na, Int_t nb, const c
    static Int_t iface[4] = { 1,2,3,4 };
    TView *view = 0;
 
-   if (gPad) {
-      view = gPad->GetView();
-      if (!view) {
-         Error("SurfacePolar", "no TView in current pad");
-         return;
-      }
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("SurfacePolar", "no TView in current pad");
+      return;
    }
 
    Int_t iphi, jphi, kphi, incr, nphi, iopt, iphi1, iphi2;
@@ -3940,15 +4019,13 @@ void TPainter3dAlgorithms::SurfaceCylindrical(Int_t iordr, Int_t na, Int_t nb, c
    Double_t z;
    Double_t tt[4];
    Double_t ttt[4], xyz[12]        /* was [3][4] */;
-   TView *view = 0;
    ia = ib = 0;
+   TView *view = 0;
 
-   if (gPad) {
-      view = gPad->GetView();
-      if (!view) {
-         Error("SurfaceCylindrical", "no TView in current pad");
-         return;
-      }
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("SurfaceCylindrical", "no TView in current pad");
+      return;
    }
 
    if (iordr == 0) {
@@ -4074,15 +4151,13 @@ void TPainter3dAlgorithms::SurfaceSpherical(Int_t ipsdr, Int_t iordr, Int_t na, 
    Double_t tt[4];
    Double_t phi;
    Double_t ttt[4], xyz[12]        /* was [3][4] */;
-   TView *view = 0;
    ia = ib = 0;
+   TView *view = 0;
 
-   if (gPad) {
-      view = gPad->GetView();
-      if (!view) {
-         Error("SurfaceSpherical", "no TView in current pad");
-         return;
-      }
+   if (gPad) view = gPad->GetView();
+   if (!view) {
+      Error("SurfaceSpherical", "no TView in current pad");
+      return;
    }
 
    if (iordr == 0) {
@@ -4283,8 +4358,9 @@ void TPainter3dAlgorithms::ImplicitFunction(Double_t *rmin, Double_t *rmax,
    Double_t xyz[kNmaxp][3], xyzn[kNmaxp][3], grad[kNmaxp][3];
    Double_t dtria[kNmaxt][6], abcd[kNmaxt][4];
    Int_t    itria[kNmaxt][3], iorder[kNmaxt];
+   TView *view = 0;
 
-   TView *view = gPad->GetView();
+   if (gPad) view = gPad->GetView();
    if (!view) {
       Error("ImplicitFunction", "no TView in current pad");
       return;
@@ -5764,8 +5840,15 @@ void TPainter3dAlgorithms::IsoSurface (Int_t ns, Double_t *s, Int_t nx,
 
    static Int_t ind[8][3] = { { 0,0,0 }, { 1,0,0 }, { 1,0,1 }, { 0,0,1 },
                               { 0,1,0 }, { 1,1,0 }, { 1,1,1 }, { 0,1,1 } };
+   for (i=0;i<kNmaxp;i++) {
+      xyzn[i][0] = 0.;
+      xyzn[i][1] = 0.;
+      xyzn[i][2] = 0.;
+   }
 
-   TView *view = gPad->GetView();
+   TView *view = 0;
+
+   if (gPad) view = gPad->GetView();
    if (!view) {
       Error("ImplicitFunction", "no TView in current pad");
       return;
@@ -6052,8 +6135,9 @@ void TPainter3dAlgorithms::DrawFaceGouraudShaded(Int_t *icodes,
 
    Int_t i, k, irep;
    Double_t p3[12][3];
+   TView *view = 0;
 
-   TView *view = gPad->GetView();
+   if (gPad) view = gPad->GetView();
    if (!view) {
       Error("ImplicitFunction", "no TView in current pad");
       return;

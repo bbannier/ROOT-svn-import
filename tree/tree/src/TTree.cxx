@@ -80,7 +80,7 @@
 //           be of a type related to the one pointed to by the pointer.  It should be either
 //           a parent or derived class.
 //       * if splitlevel=0, the object is serialized in the branch buffer.
-//       * if splitlevel=1 (default), this branch will automatically be split
+//       * if splitlevel=1, this branch will automatically be split
 //           into subbranches, with one subbranch for each data member or object
 //           of the object itself. In case the object member is a TClonesArray,
 //           the mechanism described in case C is applied to this array.
@@ -134,9 +134,9 @@
 //     TBranch *branch = tree->Branch( branchname, STLcollection, buffsize, splitlevel);
 //         STLcollection is the address of a pointer to std::vector, std::list,
 //         std::deque, std::set or std::multiset containing pointers to objects.
-//         If the splitlevel is a value bigger than 100 then the collection
-//         will be written in split mode. Ie. if it contains objects of any
-//         types deriving from TTrack this function will sort the objects
+//         If the splitlevel is a value bigger than 100 (TTree::kSplitCollectionOfPointers)
+//         then the collection will be written in split mode. Ie. if it contains objects of 
+//         any types deriving from TTrack this function will sort the objects
 //         basing on their type and store them in separate branches in split
 //         mode.
 //
@@ -854,7 +854,7 @@ TFriendElement* TTree::AddFriend(const char* treename, const char* filename)
    TTree* t = fe->GetTree();
    if (t) {
       if (!t->GetTreeIndex() && (t->GetEntries() < fEntries)) {
-         Warning("AddFriend", "FriendElement %s in file %s has less entries %g than its parent Tree: %g", treename, filename, t->GetEntries(), fEntries);
+         Warning("AddFriend", "FriendElement %s in file %s has less entries %lld than its parent Tree: %lld", treename, filename, t->GetEntries(), fEntries);
       }
    } else {
       Warning("AddFriend", "Cannot add FriendElement %s in file %s", treename, filename);
@@ -882,7 +882,7 @@ TFriendElement* TTree::AddFriend(const char* treename, TFile* file)
    TTree *t = fe->GetTree();
    if (t) {
       if (!t->GetTreeIndex() && (t->GetEntries() < fEntries)) {
-         Warning("AddFriend", "FriendElement %s in file %s has less entries %g than its parent tree: %g", treename, file->GetName(), t->GetEntries(), fEntries);
+         Warning("AddFriend", "FriendElement %s in file %s has less entries %lld than its parent tree: %lld", treename, file->GetName(), t->GetEntries(), fEntries);
       }
    } else {
       Warning("AddFriend", "unknown tree '%s' in file '%s'", treename, file->GetName());
@@ -909,7 +909,7 @@ TFriendElement* TTree::AddFriend(TTree* tree, const char* alias, Bool_t warn)
    fFriends->Add(fe);
    TTree* t = fe->GetTree();
    if (warn && (t->GetEntries() < fEntries)) {
-      Warning("AddFriend", "FriendElement '%s' in file '%s' has less entries %g than its parent tree: %g", tree->GetName(), fe->GetFile() ? fe->GetFile()->GetName() : "(memory resident)", t->GetEntries(), fEntries);
+      Warning("AddFriend", "FriendElement '%s' in file '%s' has less entries %lld than its parent tree: %lld", tree->GetName(), fe->GetFile() ? fe->GetFile()->GetName() : "(memory resident)", t->GetEntries(), fEntries);
    }
    return fe;
 }
@@ -1020,7 +1020,12 @@ Long64_t TTree::AutoSave(Option_t* option)
    TFile *file = fDirectory->GetFile();
    if (file) file->WriteStreamerInfo();
 
-   if (opt.Contains("saveself")) fDirectory->SaveSelf();
+   if (opt.Contains("saveself")) {
+      fDirectory->SaveSelf();
+      //the following line is required in case GetUserInfo contains a user class
+      //for which the StreamerInfo must be written. One could probably be a bit faster (Rene)
+      if (file) file->WriteHeader();
+   }
 
    return nbytes;
 }
@@ -1033,8 +1038,8 @@ TBranch* TTree::BranchImp(const char* branchname, const char* classname, TClass*
    // See TTree::Branch() for other details.
    //
 
+   TClass* claim = TClass::GetClass(classname);
    if (!ptrClass) {
-      TClass* claim = TClass::GetClass(classname);
       if (claim && claim->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(claim->GetCollectionProxy())) {
          Error("Branch", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
                "Please generate the dictionary for this class (%s)",
@@ -1043,7 +1048,6 @@ TBranch* TTree::BranchImp(const char* branchname, const char* classname, TClass*
       }
       return Branch(branchname, classname, (void*) addobj, bufsize, splitlevel);
    }
-   TClass* claim = TClass::GetClass(classname);
    TClass* actualClass = 0;
    void** addr = (void**) addobj;
    if (addr) {
@@ -1112,11 +1116,72 @@ TBranch* TTree::BranchImp(const char* branchname, TClass* ptrClass, void* addobj
 }
 
 //______________________________________________________________________________
+TBranch* TTree::BranchImpRef(const char* branchname, const char *classname, TClass* ptrClass, void *addobj, Int_t bufsize, Int_t splitlevel)
+{
+   // Same as TTree::Branch but automatic detection of the class name.
+   // See TTree::Branch for other details.
+   
+   TClass* claim = TClass::GetClass(classname);
+   if (!ptrClass) {
+      if (claim && claim->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(claim->GetCollectionProxy())) {
+         Error("Branch", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
+               "Please generate the dictionary for this class (%s)",
+               claim->GetName(), branchname, claim->GetName());
+         return 0;
+      } else if (claim == 0) {
+         Error("Branch", "The pointer specified for %s is not of a class known to ROOT and %s is not a known class", branchname, classname);         
+         return 0;
+      }
+      ptrClass = claim;
+   }
+   TClass* actualClass = 0;
+   if (!addobj) {
+      Error("Branch", "Reference interface requires a valid object (for branch: %s)!", branchname);
+      return 0;
+   }
+   actualClass = ptrClass->GetActualClass(addobj);
+   if (ptrClass && claim) {
+      if (!(claim->InheritsFrom(ptrClass) || ptrClass->InheritsFrom(claim))) {
+         // Note we currently do not warn in case of splicing or over-expectation).
+         if (claim->IsLoaded() && ptrClass->IsLoaded() && strcmp( claim->GetTypeInfo()->name(), ptrClass->GetTypeInfo()->name() ) == 0) {
+            // The type is the same according to the C++ type_info, we must be in the case of
+            // a template of Double32_t.  This is actually a correct case.
+         } else {
+            Error("Branch", "The class requested (%s) for \"%s\" is different from the type of the object passed (%s)",
+                  claim->GetName(), branchname, ptrClass->GetName());
+         }
+      } else if (actualClass && (claim != actualClass) && !actualClass->InheritsFrom(claim)) {
+         if (claim->IsLoaded() && actualClass->IsLoaded() && strcmp( claim->GetTypeInfo()->name(), actualClass->GetTypeInfo()->name() ) == 0) {
+            // The type is the same according to the C++ type_info, we must be in the case of
+            // a template of Double32_t.  This is actually a correct case.
+         } else {
+            Error("Branch", "The actual class (%s) of the object provided for the definition of the branch \"%s\" does not inherit from %s",
+                  actualClass->GetName(), branchname, claim->GetName());
+         }
+      }
+   }
+   if (!actualClass) {
+      Warning("Branch", "The actual TClass corresponding to the object provided for the definition of the branch \"%s\" is missing.\n\tThe object will be truncated down to its %s part", branchname, ptrClass->GetName());
+      actualClass = ptrClass;
+   } else if ((ptrClass != actualClass) && !actualClass->InheritsFrom(ptrClass)) {
+      Error("Branch", "The actual class (%s) of the object provided for the definition of the branch \"%s\" does not inherit from %s", actualClass->GetName(), branchname, ptrClass->GetName());
+      return 0;
+   }
+   if (actualClass && actualClass->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(actualClass->GetCollectionProxy())) {
+      Error("Branch", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
+            "Please generate the dictionary for this class (%s)",
+            actualClass->GetName(), branchname, actualClass->GetName());
+      return 0;
+   }
+   return BronchExec(branchname, actualClass->GetName(), (void*) addobj, kFALSE, bufsize, splitlevel);
+}
+
+//______________________________________________________________________________
 TBranch* TTree::BranchImpRef(const char* branchname, TClass* ptrClass, EDataType datatype, void* addobj, Int_t bufsize, Int_t splitlevel)
 {
    // Same as TTree::Branch but automatic detection of the class name.
    // See TTree::Branch for other details.
-
+   
    if (!ptrClass) {
       if (datatype == kOther_t || datatype == kNoType_t) {
          Error("Branch", "The pointer specified for %s is not of a class or type known to ROOT", branchname);
@@ -1282,7 +1347,7 @@ Int_t TTree::Branch(const char* foldername, Int_t bufsize /* = 32000 */, Int_t s
    char* curname = new char[1000];
    char occur[20];
    while ((obj = next())) {
-      sprintf(curname, "%s/%s", foldername, obj->GetName());
+      snprintf(curname,1000, "%s/%s", foldername, obj->GetName());
       if (obj->IsA() == TFolder::Class()) {
          Branch(curname, bufsize, splitlevel - 1);
       } else {
@@ -1297,8 +1362,8 @@ Int_t TTree::Branch(const char* foldername, Int_t bufsize /* = 32000 */, Int_t s
          }
          Int_t noccur = folder->Occurence(obj);
          if (noccur > 0) {
-            sprintf(occur, "_%d", noccur);
-            strcat(curname, occur);
+            snprintf(occur,20, "_%d", noccur);
+            strlcat(curname, occur,1000); 
          }
          TBranchElement* br = (TBranchElement*) Bronch(curname, obj->ClassName(), add, bufsize, splitlevel - 1);
          br->SetBranchFolder();
@@ -1842,7 +1907,7 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
       // the collection contains pointers we can split it
       //-------------------------------------------------------------------------
       TBranch *branch;
-      if( splitlevel > 100 && collProxy->HasPointers() )
+      if( splitlevel > kSplitCollectionOfPointers && collProxy->HasPointers() )
          branch = new TBranchSTL( this, name, collProxy, bufsize, splitlevel );
       else
          branch = new TBranchElement(this, name, collProxy, bufsize, splitlevel);
@@ -1878,7 +1943,7 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
       // The streamer info is not rebuilt unoptimized.
       // No dummy top-level branch is created.
       // No splitting is attempted.
-      TBranchElement* branch = new TBranchElement(this, name, (TClonesArray*) objptr, bufsize, splitlevel%100);
+      TBranchElement* branch = new TBranchElement(this, name, (TClonesArray*) objptr, bufsize, splitlevel%kSplitCollectionOfPointers);
       fBranches.Add(branch);
       if (isptrptr) {
          branch->SetAddress(addr);
@@ -1950,7 +2015,7 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
    // Do splitting, if requested.
    //
 
-   if (splitlevel%100 > 0) {
+   if (splitlevel%kSplitCollectionOfPointers > 0) {
       // Loop on all public data members of the class and its base classes and create branches for each one.
       TObjArray* blist = branch->GetListOfBranches();
       TIter next(sinfo->GetElements());
@@ -2014,7 +2079,7 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
             bname.Form("%s", element->GetFullName());
          }
 
-         if( splitlevel > 100 && element->GetClass() &&
+         if( splitlevel > kSplitCollectionOfPointers && element->GetClass() &&
              element->GetClass()->GetCollectionProxy() &&
              element->GetClass()->GetCollectionProxy()->HasPointers() )
          {
@@ -2184,29 +2249,30 @@ TFile* TTree::ChangeFile(TFile* file)
    while (nus < 10) {
       uscore[nus] = '_';
       fname[0] = 0;
-      strcpy(fname, file->GetName());
+      strlcpy(fname, file->GetName(),2000);
+      
       if (fFileNumber > 1) {
          char* cunder = strrchr(fname, '_');
          if (cunder) {
-            sprintf(cunder, "%s%d", uscore, fFileNumber);
+            snprintf(cunder,2000-Int_t(cunder-fname), "%s%d", uscore, fFileNumber);
             const char* cdot = strrchr(file->GetName(), '.');
             if (cdot) {
-               strcat(fname, cdot);
+               strlcat(fname, cdot,2000); 
             }
          } else {
             char fcount[10];
-            sprintf(fcount, "%s%d", uscore, fFileNumber);
-            strcat(fname, fcount);
+            snprintf(fcount,10, "%s%d", uscore, fFileNumber);
+            strlcat(fname, fcount,2000); 
          }
       } else {
          char* cdot = strrchr(fname, '.');
          if (cdot) {
-            sprintf(cdot, "%s%d", uscore, fFileNumber);
-            strcat(fname, strrchr(file->GetName(), '.'));
+            snprintf(cdot,2000-Int_t(fname-cdot), "%s%d", uscore, fFileNumber);
+            strlcat(fname, strrchr(file->GetName(), '.'),2000); 
          } else {
             char fcount[10];
-            sprintf(fcount, "%s%d", uscore, fFileNumber);
-            strcat(fname, fcount);
+            snprintf(fcount,10, "%s%d", uscore, fFileNumber);
+            strlcat(fname, fcount,2000); 
          }
       }
       if (gSystem->AccessPathName(fname)) {
@@ -2285,7 +2351,6 @@ Int_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType
    // Let's determine what we need!
    TClass* expectedClass = 0;
    EDataType expectedType = kOther_t;
-   TStreamerInfo* sinfo = 0;
    if (branch->InheritsFrom(TBranchObject::Class())) {
       TLeafObject* lobj = (TLeafObject*) branch->GetListOfLeaves()->At(0);
       expectedClass = lobj->GetClass();
@@ -2293,10 +2358,8 @@ Int_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType
       TBranchElement* branchEl = (TBranchElement*) branch;
 
       Int_t type = branchEl->GetStreamerType();
-      sinfo = branchEl->GetInfo();
       if ((type == -1) || (branchEl->GetID() == -1)) {
            expectedClass = TClass::GetClass( branchEl->GetClassName() );
-//         expectedClass =  branchEl->GetInfo()->GetClass();
       } else {
          // Case of an object data member.  Here we allow for the
          // variable name to be ommitted.  Eg, for Event.root with split
@@ -2896,7 +2959,7 @@ Long64_t TTree::CopyEntries(TTree* tree, Long64_t nentries /* = -1 */, Option_t*
                      this->GetTreeIndex()->Append(tree->GetTree()->GetTreeIndex(), kTRUE);
                   }
                } else {
-                  Warning("CopyEntries",cloner.GetWarning());
+                  Warning("CopyEntries","%s",cloner.GetWarning());
                   if (tree->GetDirectory() && tree->GetDirectory()->GetFile()) {
                      Warning("CopyEntries", "Skipped file %s\n", tree->GetDirectory()->GetFile()->GetName());
                   } else {
@@ -3751,11 +3814,11 @@ Int_t TTree::Fill()
              (fAutoFlush>0 && fEntries%TMath::Max((Long64_t)1,fAutoFlush) == 0) ||
              (fAutoSave >0 && fEntries%TMath::Max((Long64_t)1,fAutoSave)  == 0) ) {
 
-      	    //we take the opportunity to Optimizebaskets at this point (it calls FlushBaskets)
-      	    OptimizeBaskets(fTotBytes,1,"");
-            if (gDebug > 0) printf("OptimizeBaskets called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
+            //we take the opportunity to Optimizebaskets at this point (it calls FlushBaskets)
+            OptimizeBaskets(fTotBytes,1,"");
+            if (gDebug > 0) Info("TTree::Fill","OptimizeBaskets called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
             fFlushedBytes = fZipBytes;
-      	    fAutoFlush    = fEntries;  // Use test on entries rather than bytes
+            fAutoFlush    = fEntries;  // Use test on entries rather than bytes
                                        // subsequently in run
             if (fAutoSave < 0) {
       	       // Set fAutoSave to the largest integer multiple of
@@ -3766,17 +3829,17 @@ Int_t TTree::Fill()
       	       fAutoSave = fEntries*(fAutoSave/fEntries);
       	    }
       	    if (fAutoSave!=0 && fEntries >= fAutoSave) AutoSave();    // FlushBaskets not called in AutoSave
-      	    if (gDebug > 0) printf("TTree::Fill:  First AutoFlush.  fAutoFlush = %lld, fAutoSave = %lld\n", fAutoFlush, fAutoSave);
+      	    if (gDebug > 0) Info("TTree::Fill","First AutoFlush.  fAutoFlush = %lld, fAutoSave = %lld\n", fAutoFlush, fAutoSave);
          }
       } else if (fEntries > 1 && fEntries%fAutoFlush == 0) {
-         if (fEntries%fAutoSave == 0) {
+         if (fAutoSave != 0 && fEntries%fAutoSave == 0) {
        	    //We are at an AutoSave point. AutoSave flushes baskets and saves the Tree header
       	    AutoSave("flushbaskets");
-      	    if (gDebug > 0) printf("AutoSave called at entry %lld, fZipBytes=%lld, fSavedBytes=%lld\n",fEntries,fZipBytes,fSavedBytes);
+      	    if (gDebug > 0) Info("TTree::Fill","AutoSave called at entry %lld, fZipBytes=%lld, fSavedBytes=%lld\n",fEntries,fZipBytes,fSavedBytes);
          } else {
       	    //We only FlushBaskets
             FlushBaskets();
-      	    if (gDebug > 0) printf("FlushBasket called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
+      	    if (gDebug > 0) Info("TTree::Fill","FlushBasket called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
          }
          fFlushedBytes = fZipBytes;
       }
@@ -5434,7 +5497,7 @@ void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option)
          if (pass == 0) continue;
          //Reset the compression level in case the compression factor is small
          Double_t comp = 1;
-         if (branch->GetZipBytes() > 0) comp = Double_t(oldBsize)/Double_t(branch->GetZipBytes());
+         if (branch->GetZipBytes() > 0) comp = totBytes/Double_t(branch->GetZipBytes());
          if (comp > 1 && comp < minComp) {
             if (pDebug) printf("Disabling compression for branch : %s\n",branch->GetName());
             branch->SetCompressionLevel(0);
@@ -5444,6 +5507,7 @@ void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option)
       if (memFactor > 100) memFactor = 100;
       bmin = Int_t(bmin*memFactor);
       bmax = Int_t(bmax*memFactor);
+      if (bmax < bmin) bmax = bmin;  //this may happen when bmax is above 2 billions      
    }
    if (pDebug) {
       printf("oldMemsize = %d,  newMemsize = %d\n",oldMemsize, newMemsize);
@@ -5762,14 +5826,24 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    //    T.ReadFile("file1.dat","branch descriptor");
    //    T.ReadFile("file2.dat");
 
-   gTree = this;
    std::ifstream in;
    in.open(filename);
    if (!in.good()) {
       Error("ReadFile","Cannot open file: %s",filename);
       return 0;
    }
+   return ReadStream(in, branchDescriptor);
+}
 
+//______________________________________________________________________________
+Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor)
+{
+   // Create or simply read branches from an input stream.
+   //
+   // See reference information for TTree::ReadFile
+
+   gTree = this;
+   std::istream& in = inputStream;
    TBranch *branch;
    Int_t nbranches = fBranches.GetEntries();
    if (nbranches == 0) {
@@ -5781,13 +5855,15 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
       if (!nch) {
          in >> bd;
          if (!in.good()) {
-            Error("ReadFile","Error reading file: %s",filename);
+            delete [] bdname;
+            delete [] bd;
+            Error("ReadStream","Error reading stream");
             return 0;
          }
          in.ignore(8192,'\n');
          nch = strlen(bd);
       } else {
-         strcpy(bd,branchDescriptor);
+         strlcpy(bd,branchDescriptor,100000);
       }
 
       //parse the branch descriptor and create a branch for each element
@@ -5798,7 +5874,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
       while (bdcur) {
          char *colon = strchr(bdcur,':');
          if (colon) *colon = 0;
-         strcpy(bdname,bdcur);
+         strlcpy(bdname,bdcur,4000);
          char *slash = strchr(bdname,'/');
          if (slash) {
             *slash = 0;
@@ -5814,7 +5890,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
          branch = new TBranch(this,bdname,address,desc.Data(),32000);
          if (branch->IsZombie()) {
             delete branch;
-            Warning("ReadFile","Illegal branch definition: %s",bdcur);
+            Warning("ReadStream","Illegal branch definition: %s",bdcur);
          } else {
             fBranches.Add(branch);
             branch->SetAddress(0);
@@ -5845,7 +5921,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
             if (in.eof()) return nlines;
             status = in.good();
             if (!status) {
-               Warning("ReadFile","Illegal value after line %d\n",nlines);
+               Warning("ReadStream","Illegal value after line %lld\n",nlines);
                in.clear();
                break;
             }
@@ -6671,7 +6747,7 @@ void TTree::SetEventList(TEventList *evlist)
 
    fEventList = evlist;
    char enlistname[100];
-   sprintf(enlistname, "%s_%s", evlist->GetName(), "entrylist");
+   snprintf(enlistname,100, "%s_%s", evlist->GetName(), "entrylist");
    fEntryList = new TEntryList(enlistname, evlist->GetTitle());
    fEntryList->SetDirectory(0); // We own this.
    Int_t nsel = evlist->GetN();
@@ -6716,6 +6792,21 @@ void TTree::SetFileNumber(Int_t number)
       return;
    }
    fFileNumber = number;
+}
+
+//______________________________________________________________________________
+void TTree::SetMakeClass(Int_t make) 
+{
+   // Set all the branches in this TTree to be in decomposed object mode
+   // (also known as MakeClass mode).
+   
+   fMakeClass = make;
+
+   Int_t nb = fBranches.GetEntriesFast();
+   for (Int_t i = 0; i < nb; ++i)  {
+      TBranch* branch = (TBranch*) fBranches.UncheckedAt(i);
+      branch->SetMakeClass(make);
+   }   
 }
 
 //______________________________________________________________________________

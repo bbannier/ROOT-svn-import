@@ -430,7 +430,7 @@ Int_t TGeoPainter::DistanceToPrimitiveVol(TGeoVolume *volume, Int_t px, Int_t py
 
    // Iterate the volume content
    TGeoIterator next(vol);
-   next.SetTopName(Form("%s_1",vol->GetName()));
+   next.SetTopName(TString::Format("%s_1",vol->GetName()));
    TGeoNode *daughter;
 
    Int_t level, nd;
@@ -542,7 +542,7 @@ Int_t TGeoPainter::CountNodes(TGeoVolume *volume, Int_t rlevel) const
    Bool_t last;
       
    while ((daughter=next())) {
-      vol = daughter->GetVolume();
+//      vol = daughter->GetVolume();
       level = next.GetLevel();
       nd = daughter->GetNdaughters();
       vis = daughter->IsVisible();
@@ -661,16 +661,16 @@ void TGeoPainter::DrawBatemanSol(TGeoBatemanSol *sol, Option_t *option)
    TString formula = "";
    for (i=0; i<ncoeff; i++) {
       sol->GetCoeff(i, cn, lambda);
-      formula += Form("%g*exp(-%g*x)",cn, lambda);
+      formula += TString::Format("%g*exp(-%g*x)",cn, lambda);
       if (i < ncoeff-1) formula += "+";
       if (lambda < lambdamin &&
           lambda > 0.) lambdamin = lambda;
    }
    if (autorange) thi = 10./lambdamin;
    formula += ";time[s]";
-   formula += Form(";Concentration_of_%s",sol->GetElement()->GetName());
+   formula += TString::Format(";Concentration_of_%s",sol->GetElement()->GetName());
    // Create a function
-   TF1 *func = new TF1(Form("conc%s",sol->GetElement()->GetName()), formula.Data(), tlo,thi);
+   TF1 *func = new TF1(TString::Format("conc%s",sol->GetElement()->GetName()), formula.Data(), tlo,thi);
    func->SetMinimum(1.e-3);
    func->SetMaximum(1.25*TMath::Max(sol->Concentration(tlo), sol->Concentration(thi)));
    func->SetLineColor(sol->GetLineColor());
@@ -896,7 +896,6 @@ void TGeoPainter::EstimateCameraMove(Double_t tmin, Double_t tmax, Double_t *sta
    while ((obj=next())) {
       if (strcmp(obj->ClassName(), "TGeoTrack")) continue;
       track = (TVirtualGeoTrack*)obj;
-      if (!track) continue;
       ntracks++;
       track->PaintCollect(tmin, start);
    }
@@ -981,15 +980,15 @@ void TGeoPainter::ExecuteVolumeEvent(TGeoVolume * /*volume*/, Int_t event, Int_t
 }
 
 //______________________________________________________________________________
-char *TGeoPainter::GetVolumeInfo(const TGeoVolume *volume, Int_t /*px*/, Int_t /*py*/) const
+const char *TGeoPainter::GetVolumeInfo(const TGeoVolume *volume, Int_t /*px*/, Int_t /*py*/) const
 {
 // Get some info about the current selected volume.
-   const char *snull = "";
-   if (!gPad) return (char*)snull;
-   static char info[128];
+   static TString info;
+   info = "";
+   if (!gPad) return info;
    if (fPaintingOverlaps) {
       if (!fOverlap) {
-         sprintf(info, "wrong overlapping flag");
+         info =  "wrong overlapping flag";
          return info;
       }   
       TString ovtype, name;
@@ -997,10 +996,10 @@ char *TGeoPainter::GetVolumeInfo(const TGeoVolume *volume, Int_t /*px*/, Int_t /
       else ovtype = "OVERLAP";
       if (volume==fOverlap->GetFirstVolume()) name=volume->GetName();
       else name=fOverlap->GetSecondVolume()->GetName();
-      sprintf(info, "%s: %s of %g", name.Data(), ovtype.Data(), fOverlap->GetOverlap());
+      info = TString::Format("%s: %s of %g", name.Data(), ovtype.Data(), fOverlap->GetOverlap());
       return info;
    }   
-   else sprintf(info,"%s, shape=%s", fVolInfo.Data(), volume->GetShape()->ClassName());
+   else info = TString::Format("%s, shape=%s", fVolInfo.Data(), volume->GetShape()->ClassName());
    return info;
 }
 

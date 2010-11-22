@@ -75,10 +75,11 @@ tryagain:
    // Determine unique pipe path: try with /tmp/rootdSSH_<random_string>
    char fsun[25] = {0};
    if (access("/tmp",W_OK) == 0) {
-      strcpy(fsun, "/tmp/rootdSSH_XXXXXX");
+      strncpy(fsun, "/tmp/rootdSSH_XXXXXX", 24);
    } else {
-      strcpy(fsun, "rootdSSH_XXXXXX");
+      strncpy(fsun, "rootdSSH_XXXXXX", 24);
    }
+   mode_t oldumask = umask(0700);
    int itmp = mkstemp(fsun);
    Int_t nAtt = 0;
    while (itmp == -1 && nAtt < kMAXRSATRIES) {
@@ -88,6 +89,7 @@ tryagain:
                    nAtt,errno);
       itmp = mkstemp(fsun);
    }
+   umask(oldumask);
    if (itmp == -1) {
       ErrorInfo("SshToolAllocateSocket: mkstemp failed %d times - return",
                 kMAXRSATRIES);
@@ -102,7 +104,7 @@ tryagain:
                  fsun, nAtt0);
 
    // Save path ...
-   strcpy(servAddr.sun_path, fsun);
+   strncpy(servAddr.sun_path, fsun, 104);
 
    // bind to socket
    if (bind(sd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
@@ -145,19 +147,16 @@ tryagain:
       }
    }
    // The path ...
-   stat(fsun, &sst);
-   if ((unsigned int)sst.st_uid != Uid || (unsigned int)sst.st_gid != Gid) {
-      if (chown(fsun, Uid, Gid)) {
-         if (gDebug > 0) {
-            ErrorInfo("SshToolAllocateSocket: chown: could not change path"
-                      " '%s' ownership (errno= %d)",fsun, errno);
-            ErrorInfo("SshToolAllocateSocket: path (uid,gid) are: %d %d",
-                      sst.st_uid, sst.st_gid);
-            ErrorInfo("SshToolAllocateSocket: may follow authentication problems");
-         }
+   if (chown(fsun, Uid, Gid) != 0) {
+      if (gDebug > 0) {
+         ErrorInfo("SshToolAllocateSocket: chown: could not change path"
+                     " '%s' ownership (errno= %d)",fsun, errno);
+         ErrorInfo("SshToolAllocateSocket: path (uid,gid) are: %d %d",
+                     sst.st_uid, sst.st_gid);
+         ErrorInfo("SshToolAllocateSocket: may follow authentication problems");
       }
+      return -1;
    }
-
 
    // Change permissions to access pipe to avoid hacking from a different
    // user account.
@@ -174,7 +173,7 @@ tryagain:
    }
 
    // Fill output
-   strcpy(*pipe, fsun);
+   *pipe = strdup(fsun);
 
    // return socket fd
    return sd;
@@ -215,7 +214,8 @@ int SshToolNotifyFailure(const char *Pipe)
    int sd;
    struct sockaddr_un servAddr;
    servAddr.sun_family = AF_UNIX;
-   strcpy(servAddr.sun_path, Pipe);
+   memcpy((void *) servAddr.sun_path, (void *) Pipe, 108);
+   servAddr.sun_path[107] = '\0';
    if ((sd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
       ErrorInfo("SshToolNotifyFailure: cannot open socket: exiting ");
       return 1;
@@ -260,12 +260,18 @@ int SshToolGetAuth(int UnixFd, const char *User)
 #endif
    int newUnixFd =
        accept(UnixFd, (struct sockaddr *) &sunAddr, &sunAddrLen);
+   if (newUnixFd < 0) {
+      ErrorInfo
+         ("SshToolGetAuth: problems while accepting new connection (errno: %d)", (int) errno);
+      return auth;
+   }
 
    int lenr[1], nr, len = 0;
    if ((nr = NetRecvRaw(newUnixFd, lenr, sizeof(lenr))) < 0) {
       ErrorInfo
          ("SshToolGetAuth: incorrect recv from ssh2rpd: bytes:%d, buffer:%d",
            nr, lenr[0]);
+      return auth;
    }
 
    // Transform in human readable form

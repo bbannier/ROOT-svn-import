@@ -541,6 +541,7 @@ static void G__getiparseobject(G__value* result, char* item)
    /* '_$trc_[tagnum]_[addr]' */
    char *xtmp = item + 6;
    char *xx = strchr(xtmp, '_');
+   // assert(xx != 0);
    result->type = item[2];
    result->obj.reftype.reftype = (int)(item[3] - '0');
    result->isconst = (int)(item[4] - '0');
@@ -656,17 +657,11 @@ static int G__iscastexpr_body(const char* ebuf, int lenbuf)
 {
    // --
    int result;
-   char* temp = (char*) malloc(strlen(ebuf) + 1);
-   if (!temp) {
-      G__genericerror("Internal error: malloc, G__iscastexpr_body(), temp");
-      return 0;
-   }
-   strcpy(temp, ebuf + 1);
+   G__FastAllocString temp(ebuf+1);
    temp[lenbuf-2] = 0;
    // Using G__istypename() is questionable.
    // May need to use G__string2type() for better language compliance.
    result = G__istypename(temp);
-   free((void*) temp);
    return result;
 }
 
@@ -935,11 +930,10 @@ static int G__getoperator(int newoperator, int oldoperator)
 //
 
 //______________________________________________________________________________
-extern "C"
-char* G__setiparseobject(G__value* result, char* str)
+char* G__setiparseobject(G__value* result, G__FastAllocString &str)
 {
    // --
-   sprintf(str, "_$%c%d%c_%d_%c%lu"
+   str.Format("_$%c%d%c_%d_%c%lu"
            , result->type
            , 0
            , (0 == result->isconst) ? '0' : '1'
@@ -948,6 +942,13 @@ char* G__setiparseobject(G__value* result, char* str)
            , labs(result->obj.i)
           );
    return(str);
+}
+
+//______________________________________________________________________________
+static bool G__IsIdentifier(int c) {
+   // Check for character that is valid for an identifier.
+   // If start is true, digits are not allowed
+   return isalnum(c) || c == '_';
 }
 
 //______________________________________________________________________________
@@ -972,10 +973,9 @@ G__value G__calc_internal(const char* exprwithspace)
 #endif // SIGBUS
 #endif // G__EH_SIGNAL
    char *exprnospace = (char*)malloc(strlen(exprwithspace) + 2);
-   int iin = 0, iout = 0, ipunct = 0;
+   int iin = 0, iout = 0;
    int single_quote = 0, double_quote = 0;
    G__value result;
-   int len = 0;
    int store_asm_exec = G__asm_exec;
    int store_asm_noverflow = G__asm_noverflow;
    G__asm_noverflow = 0;
@@ -986,55 +986,68 @@ G__value G__calc_internal(const char* exprwithspace)
    bool isdeletearr = false;
 
    while (exprwithspace[iin] != '\0') {
+      bool next_double_quote = double_quote;
+      bool next_single_quote = single_quote;
+      bool skipchar = false;
       switch (exprwithspace[iin]) {
          case '"' : /* double quote */
             if (single_quote == 0) {
-               double_quote ^= 1;
+               next_double_quote ^= 1;
             }
-            exprnospace[iout++] = exprwithspace[iin++] ;
             break;
          case '\'' : /* single quote */
             if (double_quote == 0) {
-               single_quote ^= 1;
+               next_single_quote ^= 1;
             }
-            exprnospace[iout++] = exprwithspace[iin++] ;
             break;
+         case ';' : /* semi-column */
+            if (single_quote==0 && double_quote==0) skipchar = true;
+            // intentional fall-through:
          case '\n': /* end of line */
          case '\r': /* end of line */
-         case ';' : /* semi-column */
          case ' ' : /* space */
          case '\t' : /* tab */
             exprnospace[iout] = '\0'; /* temporarily terminate string */
-            len = strlen(exprnospace);
-            if ((single_quote != 0) || (double_quote != 0)
-                  || (len >= 5 + ipunct && strncmp(exprnospace + ipunct, "const", 5) == 0)
-               ) {
-               
-               exprnospace[iout++] = exprwithspace[iin] ;
-            } else if (len >= 3 + ipunct && strncmp(exprnospace + ipunct, "new", 3) == 0) {
-               exprnospace[iout++] = exprwithspace[iin] ;
-            } else if (len >= 8 && strncmp(exprnospace, "delete[]", 8) == 0) {
+            if (iout == 8 && strncmp(exprnospace, "delete[]", 8) == 0) {
                iout = 0;
-               ipunct = 0;
                isdeletearr = true;
             }
-            else if (len >= 6 && strncmp(exprnospace, "delete", 6) == 0) {
+            else if (iout == 6 && strncmp(exprnospace, "delete", 6) == 0) {
                iout = 0;
-               ipunct = 0;
                isdelete = true;
             }
-            iin++;
             break;
-         case '=':
-         case '(':
-         case ')':
-         case ',':
-         case '<':
-            ipunct = iout + 1;
          default :
-            exprnospace[iout++] = exprwithspace[iin++] ;
             break;
       }
+      // adapted from fread's G__fgetstream_newtemplate_internal()
+      if (iout > 0 && !single_quote && !double_quote
+          && isspace(exprnospace[iout - 1])) {
+         char c = exprwithspace[iin];
+
+         // We want to append to a space. Do we keep it?
+         if (isspace(c)) --iout; // replace ' ' by ' '
+         else if (iout == 1) {
+            // string is " " - remove leading space.
+            --iout;
+         } else {
+            char pp = exprnospace[iout - 2];
+            // We only keep spaces between "identifiers" like "new const long long"
+            // and between '> >'
+            if ((G__IsIdentifier(pp) && G__IsIdentifier(c)) || (pp == '>' && c == '>')) {
+            } else {
+               // replace previous ' '
+               --iout;
+            }
+         }
+      }
+      if (!skipchar) {
+         exprnospace[iout++] = exprwithspace[iin++];
+      } else {
+         ++iin;
+      }
+      double_quote = next_double_quote;
+      single_quote = next_single_quote;
    }
    exprnospace[iout++] = '\0';
    if (isdelete) {
@@ -1132,6 +1145,18 @@ G__value G__getexpr(const char* expression)
    //
    for (ig1 = 0; ig1 < length; ++ig1) {
       c = expression[ig1];
+      if (!single_quote && !double_quote) {
+         if (lenbuf > 1 && ebuf[lenbuf - 1] == ' ') {
+            // we had a space - do we keep it?
+            char beforeSpaceChar = ebuf[lenbuf - 2];
+            if (((isalnum(c) || c == '_') && (isalnum(beforeSpaceChar) || beforeSpaceChar == '_'))
+                || (c == '>' && beforeSpaceChar == '>')) {}
+            else {
+               // not two identifiers / template "> >" - replace the space
+               ebuf[--lenbuf] = 0;
+            }
+         }
+      }
       switch (c) {
 
             /***************************************************
@@ -1188,8 +1213,14 @@ G__value G__getexpr(const char* expression)
                if (lenbuf - inew == 3 && strncmp(expression + inew, "new", 3) == 0) { /* ON994 */
                   return(G__new_operator(expression + ig1 + 1));
                }
-               /* else ignore c, shoud not happen, but not sure */
-               inew = ig1 + 1;
+               if (lenbuf && ebuf[lenbuf - 1] != ' ') {
+                  // keep space for now; if statement checking for beforeSpaceChar will
+                  // later determine whether it's worth keeping this space.
+                  ebuf[lenbuf++] = c;
+               } else {
+                  // collapse multiple spaces into one
+                  inew = ig1 + 1;
+               }
             }
             else ebuf[lenbuf++] = c;
             break;
@@ -1935,7 +1966,7 @@ G__value G__getitem(const char* item)
                         G__genericerror("Internal error: malloc in G__getitem(),sbuf");
                         return G__null;
                      }
-                     sprintf(sbuf, "$%s", item);
+                     sprintf(sbuf, "$%s", item); // Okay, right size.
                      G__gettingspecial = 1;
                      G__var_type = store_var_typeB;
                      result3 = G__getitem(sbuf);

@@ -66,6 +66,9 @@ TDirectoryFile::TDirectoryFile() : TDirectory()
 //______________________________________________________________________________
 TDirectoryFile::TDirectoryFile(const char *name, const char *title, Option_t *classname, TDirectory* initMotherDir)
            : TDirectory()
+   , fModified(kFALSE), fWritable(kFALSE), fNbytesKeys(0), fNbytesName(0)
+   , fBufferSize(0), fSeekDir(0), fSeekParent(0), fSeekKeys(0)
+   , fFile(0), fKeys(0)
 {
 //*-*-*-*-*-*-*-*-*-*-*-* Create a new DirectoryFile *-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                     ==========================
@@ -141,6 +144,9 @@ TDirectoryFile::TDirectoryFile(const char *name, const char *title, Option_t *cl
 
 //______________________________________________________________________________
 TDirectoryFile::TDirectoryFile(const TDirectoryFile & directory) : TDirectory(directory)
+   , fModified(kFALSE), fWritable(kFALSE), fNbytesKeys(0), fNbytesName(0)
+   , fBufferSize(0), fSeekDir(0), fSeekParent(0), fSeekKeys(0)
+   , fFile(0), fKeys(0)
 {
    // Copy constructor.
    ((TDirectoryFile&)directory).Copy(*this);
@@ -395,11 +401,11 @@ TObject *TDirectoryFile::FindObjectAnyFile(const char *name) const
 
 //______________________________________________________________________________
 TDirectory *TDirectoryFile::GetDirectory(const char *apath,
-                                     Bool_t printError, const char *funcname)
+                                         Bool_t printError, const char *funcname)
 {
-   // Find a directory using apath.
+   // Find a directory named "apath".
    // It apath is null or empty, returns "this" directory.
-   // Otherwie use apath to find a directory.
+   // Otherwise use the name "apath" to find a directory.
    // The absolute path syntax is:
    //    file.root:/dir1/dir2
    // where file.root is the file and /dir1/dir2 the desired subdirectory
@@ -419,7 +425,7 @@ TDirectory *TDirectoryFile::GetDirectory(const char *apath,
    TDirectory *result = this;
 
    char *path = new char[nch+1]; path[0] = 0;
-   if (nch) strcpy(path,apath);
+   if (nch) strlcpy(path,apath,nch+1);
    char *s = (char*)strchr(path, ':');
    if (s) {
       *s = '\0';
@@ -496,7 +502,7 @@ void TDirectoryFile::Close(Option_t *)
 {
    // -- Delete all objects from memory and directory structure itself.
 
-   if (!fList) {
+   if (!fList || !fSeekDir) {
       return;
    }
 
@@ -551,7 +557,7 @@ void TDirectoryFile::Delete(const char *namecycle)
 //          WARNING
 //    If the key to be deleted contains special characters ("+","^","?", etc
 //    that have a special meaning for the regular expression parser (see TRegexp)
-//    then you must specify 2 backslash characters to escape teh regular expression.
+//    then you must specify 2 backslash characters to escape the regular expression.
 //    For example, if the key to be deleted is namecycle = "C++", you must call
 //       mydir.Delete("C\\+\\+")).
 
@@ -1080,22 +1086,32 @@ TDirectory *TDirectoryFile::mkdir(const char *name, const char *title)
    // Create a sub-directory and return a pointer to the created directory.
    // Returns 0 in case of error.
    // Returns 0 if a directory with the same name already exists.
-   // Note that the directory name cannot contain slashes.
+   // Note that the directory name may be of the form "a/b/c" to create a hierarchy of directories.
+   // In this case, the function returns the pointer to the "a" directory if the operation is successful.
 
    if (!name || !title || !strlen(name)) return 0;
    if (!strlen(title)) title = name;
-   if (strchr(name,'/')) {
-      ::Error("TDirectoryFile::mkdir","directory name (%s) cannot contain a slash", name);
-      return 0;
-   }
    if (GetKey(name)) {
       Error("mkdir","An object with name %s exists already",name);
       return 0;
    }
+   TDirectoryFile *newdir = 0;
+   if (const char *slash = strchr(name,'/')) {
+      Long_t size = Long_t(slash-name);
+      char *workname = new char[size+1];
+      strncpy(workname, name, size);
+      workname[size] = 0;
+      TDirectoryFile *tmpdir = (TDirectoryFile*)mkdir(workname,title);
+      if (!tmpdir) return 0;
+      if (!newdir) newdir = tmpdir;
+      tmpdir->mkdir(slash+1);
+      delete[] workname;
+      return newdir;
+   }
 
    TDirectory::TContext ctxt(this);
 
-   TDirectoryFile *newdir = new TDirectoryFile(name, title, "", this);
+   newdir = new TDirectoryFile(name, title, "", this);
 
    return newdir;
 }
@@ -1160,7 +1176,7 @@ void TDirectoryFile::ReadAll(Option_t* opt)
       while ((key = (TKey *) next())) {
          TObject *thing = GetList()->FindObject(key->GetName());
          if (thing) { delete thing; }
-         thing = key->ReadObj();
+         key->ReadObj();
       }
 }
 
@@ -1687,7 +1703,7 @@ Int_t TDirectoryFile::WriteTObject(const TObject *obj, const char *name, Option_
    char *newName = 0;
    if (oname[nch-1] == ' ') {
       newName = new char[nch+1];
-      strcpy(newName,oname);
+      strlcpy(newName,oname,nch+1);
       for (Int_t i=0;i<nch;i++) {
          if (newName[nch-i-1] != ' ') break;
          newName[nch-i-1] = 0;
@@ -1811,7 +1827,7 @@ Int_t TDirectoryFile::WriteObjectAny(const void *obj, const TClass *cl, const ch
    char *newName = 0;
    if (oname[nch-1] == ' ') {
       newName = new char[nch+1];
-      strcpy(newName,oname);
+      strlcpy(newName,oname,nch+1);
       for (Int_t i=0;i<nch;i++) {
          if (newName[nch-i-1] != ' ') break;
          newName[nch-i-1] = 0;

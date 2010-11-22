@@ -7,17 +7,59 @@
 #
 # Author: Fons Rademakers, 18/8/2006
 
+if [ -n "${ROOTSYS}" ] ; then
+   OLD_ROOTSYS=${ROOTSYS}
+fi
+
 if [ "x${BASH_ARGV[0]}" = "x" ]; then
     if [ ! -f bin/thisroot.sh ]; then
         echo ERROR: must "cd where/root/is" before calling ". bin/thisroot.sh" for this version of bash!
         ROOTSYS=; export ROOTSYS
-        return
+        return 1
     fi
     ROOTSYS="$PWD"; export ROOTSYS
 else
     # get param to "."
     THIS=$(dirname ${BASH_ARGV[0]})
     ROOTSYS=$(cd ${THIS}/..;pwd); export ROOTSYS
+fi
+
+if [ -n "${OLD_ROOTSYS}" ] ; then
+   if [ ! -e @bindir@/drop_from_path ]; then
+      echo "ERROR: the utility drop_from_path has not been build yet. Do:"
+      echo "make bin/drop_from_path"
+      return 1
+   fi
+   if [ -n "${PATH}" ]; then
+      PATH=`@bindir@/drop_from_path -e "${OLD_ROOTSYS}/bin"`
+   fi
+   if [ -n "${LD_LIBRARY_PATH}" ]; then
+      LD_LIBRARY_PATH=`@bindir@/drop_from_path -D -e -p "${LD_LIBRARY_PATH}" "${OLD_ROOTSYS}/lib"`
+   fi
+   if [ -n "${DYLD_LIBRARY_PATH}" ]; then
+      DYLD_LIBRARY_PATH=`@bindir@/drop_from_path -D -e -p "${DYLD_LIBRARY_PATH}" "${OLD_ROOTSYS}/lib"`
+   fi
+   if [ -n "${SHLIB_PATH}" ]; then
+      SHLIB_PATH=`@bindir@/drop_from_path -D -e -p "${SHLIB_PATH}" "${OLD_ROOTSYS}/lib"`
+   fi
+   if [ -n "${LIBPATH}" ]; then
+      LIBPATH=`@bindir@/drop_from_path -D -e -p "${LIBPATH}" "${OLD_ROOTSYS}/lib"`
+   fi
+   if [ -n "${PYTHONPATH}" ]; then
+      PYTHONPATH=`@bindir@/drop_from_path -D -e -p "${PYTHONPATH}" "${OLD_ROOTSYS}/lib"`
+   fi
+   if [ -n "${MANPATH}" ]; then
+      MANPATH=`@bindir@/drop_from_path -D -e -p "${MANPATH}" "${OLD_ROOTSYS}/man"`
+   fi
+fi
+
+if [ -z "${MANPATH}" ]; then
+   # Grab the default man path before setting the path to avoid duplicates 
+   if `which manpath > /dev/null 2>&1` ; then
+      default_manpath=`manpath`
+   else
+      default_manpath=`man -w`
+   fi
 fi
 
 if [ -z "${PATH}" ]; then
@@ -57,7 +99,7 @@ else
 fi
 
 if [ -z "${MANPATH}" ]; then
-   MANPATH=`dirname @mandir@`; export MANPATH
+   MANPATH=`dirname @mandir@`:${default_manpath}; export MANPATH
 else
    MANPATH=`dirname @mandir@`:$MANPATH; export MANPATH
 fi

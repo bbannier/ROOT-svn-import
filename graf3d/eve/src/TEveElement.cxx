@@ -72,6 +72,7 @@ TEveElement::TEveElement() :
    fCompound            (0),
    fVizModel            (0),
    fVizTag              (),
+   fNumChildren         (0),
    fParentIgnoreCnt     (0),
    fTopItemCnt          (0),
    fDenyDestroy         (0),
@@ -94,7 +95,7 @@ TEveElement::TEveElement() :
    fImpliedHighlighted  (0),
    fCSCBits             (0),
    fChangeBits          (0),
-   fDestructing         (kFALSE)
+   fDestructing         (kNone)
 {
    // Default contructor.
 }
@@ -106,6 +107,7 @@ TEveElement::TEveElement(Color_t& main_color) :
    fCompound            (0),
    fVizModel            (0),
    fVizTag              (),
+   fNumChildren         (0),
    fParentIgnoreCnt     (0),
    fTopItemCnt          (0),
    fDenyDestroy         (0),
@@ -128,7 +130,7 @@ TEveElement::TEveElement(Color_t& main_color) :
    fImpliedHighlighted  (0),
    fCSCBits             (0),
    fChangeBits          (0),
-   fDestructing         (kFALSE)
+   fDestructing         (kNone)
 {
    // Constructor.
 }
@@ -140,6 +142,7 @@ TEveElement::TEveElement(const TEveElement& e) :
    fCompound            (0),
    fVizModel            (0),
    fVizTag              (e.fVizTag),
+   fNumChildren         (0),
    fParentIgnoreCnt     (0),
    fTopItemCnt          (0),
    fDenyDestroy         (0),
@@ -162,7 +165,7 @@ TEveElement::TEveElement(const TEveElement& e) :
    fImpliedHighlighted  (0),
    fCSCBits             (e.fCSCBits),
    fChangeBits          (0),
-   fDestructing         (kFALSE)
+   fDestructing         (kNone)
 {
    // Copy constructor. Does shallow copy.
    // For deep-cloning and children-cloning, see:
@@ -186,16 +189,20 @@ TEveElement::TEveElement(const TEveElement& e) :
 TEveElement::~TEveElement()
 {
    // Destructor.
+  
+   if (fDestructing != kAnnihilate)
+   { 
+      fDestructing = kStandard;
+      RemoveElementsInternal();
 
-   fDestructing = kTRUE;
-
-   RemoveElementsInternal();
-
-   for (List_i p=fParents.begin(); p!=fParents.end(); ++p)
-   {
-      (*p)->RemoveElementLocal(this);
-      (*p)->fChildren.remove(this);
+      for (List_i p=fParents.begin(); p!=fParents.end(); ++p)
+      {
+         (*p)->RemoveElementLocal(this);
+         (*p)->fChildren.remove(this);
+         --((*p)->fNumChildren);
+      }  
    }
+
    fParents.clear();
 
    for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i)
@@ -491,8 +498,10 @@ void TEveElement::SaveVizParams(ostream& out, const TString& tag, const TString&
    // WriteVizParams() and, at the end, writes out the code for
    // registration of the model into the VizDB.
 
+   static const TEveException eh("TEveElement::GetObject ");
+
    TString t = "   ";
-   TString cls(GetObject()->ClassName());
+   TString cls(GetObject(eh)->ClassName());
 
    out << "\n";
 
@@ -581,7 +590,9 @@ void TEveElement::VizDB_Insert(const char* tag, Bool_t replace, Bool_t update)
    // If replace is true an existing element with the same tag will be replaced.
    // If update is true, existing client of tag will be updated.
 
-   TClass* cls = GetObject()->IsA();
+   static const TEveException eh("TEveElement::GetObject ");
+
+   TClass* cls = GetObject(eh)->IsA();
    TEveElement* el = reinterpret_cast<TEveElement*>(cls->New());
    if (el == 0) {
       Error("VizDB_Insert", "Creation of replica failed.");
@@ -655,7 +666,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
    // Check external references to this and eventually auto-destruct
    // the render-element.
 
-   if (fDestructing)
+   if (fDestructing != kNone)
       return;
 
    if (NumParents() <= fParentIgnoreCnt && fTopItemCnt  <= 0 &&
@@ -664,7 +675,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
       if (gEve->GetUseOrphanage())
       {
          if (gDebug > 0)
-            Info(eh, Form("moving to orphanage '%s' on zero reference count.", GetElementName()));
+            Info(eh, "moving to orphanage '%s' on zero reference count.", GetElementName());
 
          PreDeleteElement();
          gEve->GetOrphanage()->AddElement(this);
@@ -672,7 +683,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
       else
       {
          if (gDebug > 0)
-            Info(eh, Form("auto-destructing '%s' on zero reference count.", GetElementName()));
+            Info(eh, "auto-destructing '%s' on zero reference count.", GetElementName());
 
          PreDeleteElement();
          delete this;
@@ -960,7 +971,7 @@ void TEveElement::ExportToCINT(char* var_name)
    // Export render-element to CINT with variable name var_name.
 
    const char* cname = IsA()->GetName();
-   gROOT->ProcessLine(TString::Format("%s* %s = (%s*)0x%lx;", cname, var_name, cname, this));
+   gROOT->ProcessLine(TString::Format("%s* %s = (%s*)0x%lx;", cname, var_name, cname, (ULong_t)this));
 }
 
 /******************************************************************************/
@@ -1008,7 +1019,7 @@ void TEveElement::ExportSourceObjectToCINT(char* var_name) const
       throw eh + "source-object not set.";
 
    const char* cname = so->IsA()->GetName();
-   gROOT->ProcessLine(TString::Format("%s* %s = (%s*)0x%lx;", cname, var_name, cname, so));
+   gROOT->ProcessLine(TString::Format("%s* %s = (%s*)0x%lx;", cname, var_name, cname, (ULong_t)so));
 }
 
 /******************************************************************************/
@@ -1347,7 +1358,7 @@ void TEveElement::AddElement(TEveElement* el)
                       GetElementName(), el->GetElementName()));
 
    el->AddParent(this);
-   fChildren.push_back(el);
+   fChildren.push_back(el); ++fNumChildren;
    el->AddIntoListTrees(this);
    ElementChanged();
 }
@@ -1360,7 +1371,7 @@ void TEveElement::RemoveElement(TEveElement* el)
    el->RemoveFromListTrees(this);
    RemoveElementLocal(el);
    el->RemoveParent(this);
-   fChildren.remove(el);
+   fChildren.remove(el); --fNumChildren;
    ElementChanged();
 }
 
@@ -1394,7 +1405,7 @@ void TEveElement::RemoveElementsInternal()
    {
       (*i)->RemoveParent(this);
    }
-   fChildren.clear();
+   fChildren.clear(); fNumChildren = 0;
 }
 
 //______________________________________________________________________________
@@ -1404,7 +1415,7 @@ void TEveElement::RemoveElements()
    // be done more efficiently then looping over them and removing
    // them one by one.
 
-   if ( ! fChildren.empty())
+   if (HasChildren())
    {
       RemoveElementsInternal();
       ElementChanged();
@@ -1443,7 +1454,7 @@ void TEveElement::ProjectChild(TEveElement* el, Bool_t same_depth)
          Float_t cd = pmgr->GetCurrentDepth();
          if (same_depth) pmgr->SetCurrentDepth((*i)->GetDepth());
 
-         pmgr->SubImportElements(el, dynamic_cast<TEveElement*>(*i));
+         pmgr->SubImportElements(el, (*i)->GetProjectedAsElement());
 
          if (same_depth) pmgr->SetCurrentDepth(cd);
       }
@@ -1473,7 +1484,7 @@ void TEveElement::ProjectAllChildren(Bool_t same_depth)
          Float_t cd = pmgr->GetCurrentDepth();
          if (same_depth) pmgr->SetCurrentDepth((*i)->GetDepth());
 
-         pmgr->SubImportChildren(this, dynamic_cast<TEveElement*>(*i));
+         pmgr->SubImportChildren(this, (*i)->GetProjectedAsElement());
 
          if (same_depth) pmgr->SetCurrentDepth(cd);
       }
@@ -1581,7 +1592,7 @@ TEveElement* TEveElement::FirstChild() const
 {
    // Returns the first child element or 0 if the list is empty.
 
-   return fChildren.empty() ? 0 : fChildren.front();
+   return HasChildren() ? fChildren.front() : 0;
 }
 
 //______________________________________________________________________________
@@ -1589,7 +1600,7 @@ TEveElement* TEveElement::LastChild () const
 {
    // Returns the last child element or 0 if the list is empty.
 
-   return fChildren.empty() ? 0 : fChildren.back();
+   return HasChildren() ? fChildren.back() : 0;
 }
 
 
@@ -1631,6 +1642,91 @@ void TEveElement::DisableListElements(Bool_t rnr_self,  Bool_t rnr_children)
 /******************************************************************************/
 
 //______________________________________________________________________________
+void TEveElement::AnnihilateRecursively()
+{
+   // Protected member function called from TEveElement::Annihilate().
+
+   static const TEveException eh("TEveElement::AnnihilateRecursively ");
+
+   // projected  were already destroyed in TEveElement::Anihilate(), now only clear its list
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable && pable->HasProjecteds())
+   {
+      pable->ClearProjectedList();
+   }
+
+   // same as TEveElements::RemoveElementsInternal(), except parents are ignored
+   for (sLTI_i i=fItems.begin(); i!=fItems.end(); ++i)
+   {
+      DestroyListSubTree(i->fTree, i->fItem);
+   }
+   RemoveElementsLocal();
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      (*i)->AnnihilateRecursively();
+   }
+
+   fChildren.clear();
+   fNumChildren = 0;
+   
+   fDestructing = kAnnihilate;
+   PreDeleteElement();
+ 
+   delete this;
+}
+
+//______________________________________________________________________________
+void TEveElement::Annihilate()
+{
+   // Optimized destruction without check of reference-count.
+   // Parents are not notified about child destruction. 
+   // The method should only be used when an element does not have
+   // more than one parent -- otherwise an exception is thrown.
+
+   static const TEveException eh("TEveElement::Annihilate ");
+
+   if (fParents.size() > 1)
+   {
+      Warning(eh, "More than one parent for '%s': %d. Refusing to delete.",
+              GetElementName(), (Int_t) fParents.size());
+      return;
+   }
+
+   fDestructing = kAnnihilate;
+
+   // recursive annihilation of projecteds
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable && pable->HasProjecteds())
+   {
+      pable->AnnihilateProjecteds();
+   }
+
+   // detach from the parent
+   while (!fParents.empty())
+   {
+      fParents.front()->RemoveElement(this);
+   }
+
+   AnnihilateRecursively();
+
+   gEve->Redraw3D();
+}
+
+//______________________________________________________________________________
+void TEveElement::AnnihilateElements()
+{  
+   // Annihilate elements.
+   
+   while (!fChildren.empty())
+   {
+      TEveElement* c = fChildren.front();
+      c->Annihilate();
+   }
+
+   fNumChildren = 0;
+}
+
+//______________________________________________________________________________
 void TEveElement::Destroy()
 {
    // Destroy this element. Throws an exception if deny-destroy is in force.
@@ -1639,7 +1735,7 @@ void TEveElement::Destroy()
 
    if (fDenyDestroy > 0)
       throw eh + TString::Format("element '%s' (%s*) 0x%lx is protected against destruction.",
-                                 GetElementName(), IsA()->GetName(), this);
+                                 GetElementName(), IsA()->GetName(), (ULong_t)this);
 
    PreDeleteElement();
    delete this;
@@ -1659,7 +1755,7 @@ void TEveElement::DestroyOrWarn()
    }
    catch (TEveException& exc)
    {
-      Warning(eh, exc);
+      Warning(eh, "%s", exc.Data());
    }
 }
 
@@ -1670,7 +1766,8 @@ void TEveElement::DestroyElements()
 
    static const TEveException eh("TEveElement::DestroyElements ");
 
-   while ( ! fChildren.empty()) {
+   while (HasChildren())
+   {
       TEveElement* c = fChildren.front();
       if (c->fDenyDestroy <= 0)
       {
@@ -1678,15 +1775,14 @@ void TEveElement::DestroyElements()
             c->Destroy();
          }
          catch (TEveException exc) {
-            Warning(eh, Form("element destruction failed: '%s'.", exc.Data()));
+            Warning(eh, "element destruction failed: '%s'.", exc.Data());
             RemoveElement(c);
          }
       }
       else
       {
          if (gDebug > 0)
-            Info(eh, Form("element '%s' is protected agains destruction, removing locally.",
-			  c->GetElementName()));
+            Info(eh, "element '%s' is protected agains destruction, removing locally.", c->GetElementName());
          RemoveElement(c);
       }
    }
@@ -1969,7 +2065,7 @@ void TEveElement::AddStamp(UChar_t bits)
    // actions. The base-class method should still be called (or replicated).
 
    fChangeBits |= bits;
-   if (!fDestructing) gEve->ElementStamped(this);
+   if (fDestructing == kNone) gEve->ElementStamped(this);
 }
 
 /******************************************************************************/
@@ -2078,7 +2174,7 @@ TObject* TEveElementObjectPtr::GetObject(const TEveException& eh) const
    // Virtual from TEveElement.
 
    if (fObject == 0)
-      throw(eh + "fObject not set.");
+      throw eh + "fObject not set.";
    return fObject;
 }
 
@@ -2092,7 +2188,7 @@ void TEveElementObjectPtr::ExportToCINT(char* var_name)
 
    TObject* obj = GetObject(eh);
    const char* cname = obj->IsA()->GetName();
-   gROOT->ProcessLine(Form("%s* %s = (%s*)0x%lx;", cname, var_name, cname, obj));
+   gROOT->ProcessLine(Form("%s* %s = (%s*)0x%lx;", cname, var_name, cname, (ULong_t)obj));
 }
 
 //______________________________________________________________________________

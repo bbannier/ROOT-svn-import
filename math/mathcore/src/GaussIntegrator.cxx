@@ -13,14 +13,15 @@
 
 namespace ROOT {
 namespace Math {
+      
 
 bool GaussIntegrator::fgAbsValue = false;
 
-GaussIntegrator::GaussIntegrator()
+GaussIntegrator::GaussIntegrator(double eps)
 {
 // Default Constructor.
 
-   fEpsilon = 1e-12;
+   fEpsilon = eps;
    fLastResult = fLastError = 0;
    fUsedOnce = false;
    fFunction = 0;
@@ -34,7 +35,26 @@ GaussIntegrator::~GaussIntegrator()
 void GaussIntegrator::AbsValue(bool flag)
 {   fgAbsValue = flag;  }
 
-double GaussIntegrator::Integral(double a, double b)
+double GaussIntegrator::Integral(double a, double b) {
+   return DoIntegral(a, b, fFunction);
+}
+
+double GaussIntegrator::Integral () {
+   IntegrandTransform it(this->fFunction);
+   return DoIntegral(0., 1., it.Clone());
+}
+
+double GaussIntegrator::IntegralUp (double a) {
+   IntegrandTransform it(a, IntegrandTransform::kPlus, this->fFunction);
+   return DoIntegral(0., 1., it.Clone());
+}
+
+double GaussIntegrator::IntegralLow (double b) {
+   IntegrandTransform it(b, IntegrandTransform::kMinus, this->fFunction);
+   return DoIntegral(0., 1., it.Clone());
+}
+
+double GaussIntegrator::DoIntegral(double a, double b, const IGenFunction* function)
 {
    //  Return Integral of function between a and b.
 
@@ -80,10 +100,10 @@ CASE2:
    for (i=0;i<4;i++) {
       u     = c2*x[i];
       xx[0] = c1+u;
-      f1    = (*fFunction)(xx);
+      f1    = (*function)(xx);
       if (fgAbsValue) f1 = std::abs(f1);
       xx[0] = c1-u;
-      f2    = (*fFunction) (xx);
+      f2    = (*function) (xx);
       if (fgAbsValue) f2 = std::abs(f2);
       s8   += w[i]*(f1 + f2);
    }
@@ -91,10 +111,10 @@ CASE2:
    for (i=4;i<12;i++) {
       u     = c2*x[i];
       xx[0] = c1+u;
-      f1    = (*fFunction) (xx);
+      f1    = (*function) (xx);
       if (fgAbsValue) f1 = std::abs(f1);
       xx[0] = c1-u;
-      f2    = (*fFunction) (xx);
+      f2    = (*function) (xx);
       if (fgAbsValue) f2 = std::abs(f2);
       s16  += w[i]*(f1 + f2);
    }
@@ -119,14 +139,14 @@ void GaussIntegrator::SetRelTolerance (double eps)
 {   fEpsilon = eps;  }
 
 void GaussIntegrator::SetAbsTolerance (double)
-{   MATH_ERROR_MSG("ROOT::Math::GausIntegratorOneDim", "There is no Absolute Tolerance!");  }
+{   MATH_WARN_MSG("ROOT::Math::GaussIntegrator", "There is no Absolute Tolerance!");  }
 
 double GaussIntegrator::Result () const
 {
    // Returns the result of the last Integral calculation.
 
    if (!fUsedOnce)
-      MATH_ERROR_MSG("ROOT::Math::GausIntegratorOneDim", "You must calculate the result at least once!");
+      MATH_ERROR_MSG("ROOT::Math::GaussIntegrator", "You must calculate the result at least once!");
 
    return fLastResult;
 }
@@ -145,22 +165,66 @@ void GaussIntegrator::SetFunction (const IGenFunction & function)
    fUsedOnce = false; 
 }
 
-
-double GaussIntegrator::Integral ()
-{   return 0.0;  }
-
-double GaussIntegrator::IntegralUp (double /*a*/)
-{   return 0.0;  }
-
-double GaussIntegrator::IntegralLow (double /*b*/)
-{   return 0.0;  }
-
 double GaussIntegrator::Integral (const std::vector< double > &/*pts*/)
-{   return 0.0;  }
+{ 
+   // not impl. 
+   MATH_WARN_MSG("ROOT::Math::GaussIntegrator", "This method is not implemented in this class !");
+   return -1.0;  
+}
 
 double GaussIntegrator::IntegralCauchy (double /*a*/, double /*b*/, double /*c*/)
-{   return 0.0;  }
+{ 
+   // not impl.
+   MATH_WARN_MSG("ROOT::Math::GaussIntegrator", "This method is not implemented in this class !");
+   return -1.0;  
+}
 
-} // end namespace Math
-   
+void GaussIntegrator::SetOptions(const ROOT::Math::IntegratorOneDimOptions & opt) {
+   // set options
+   SetRelTolerance(opt.RelTolerance() );
+}
+
+ROOT::Math::IntegratorOneDimOptions  GaussIntegrator::Options() const { 
+   // retrieve options 
+   ROOT::Math::IntegratorOneDimOptions opt; 
+   opt.SetIntegrator("Gauss");
+   //opt.SetAbsTolerance(fEpsilon); 
+   opt.SetRelTolerance(fEpsilon); 
+   opt.SetWKSize(0); 
+   opt.SetNPoints(0); 
+   return opt; 
+}
+
+
+
+//implementation of IntegrandTransform class 
+
+IntegrandTransform::IntegrandTransform(const IGenFunction* integrand)
+   : fSign(kPlus), fIntegrand(integrand), fBoundary(0.), fInfiniteInterval(true) {
+}
+
+IntegrandTransform::IntegrandTransform(const double boundary, ESemiInfinitySign sign, const IGenFunction* integrand) 
+   : fSign(sign), fIntegrand(integrand), fBoundary(boundary), fInfiniteInterval(false)  {
+}
+
+double IntegrandTransform::DoEval(double x) const {
+   double result = DoEval(x, fBoundary, fSign);
+   return (result += (fInfiniteInterval ? DoEval(x, 0., -1) : 0.));
+}
+
+double IntegrandTransform::DoEval(double x, double boundary, int sign) const {
+   double mappedX = 1. / x - 1.;
+   return (*fIntegrand)(boundary + sign * mappedX) * std::pow(mappedX + 1., 2);;
+}
+
+double IntegrandTransform::operator()(double x) const {
+   return DoEval(x);
+}
+
+IGenFunction* IntegrandTransform::Clone() const {
+   return (fInfiniteInterval ? new IntegrandTransform(fIntegrand) : new IntegrandTransform(fBoundary, fSign, fIntegrand));
+}
+
+
+} // end namespace Math   
 } // end namespace ROOT

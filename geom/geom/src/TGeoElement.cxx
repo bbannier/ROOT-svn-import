@@ -247,8 +247,8 @@ TGeoIsotope::TGeoIsotope(const char *name, Int_t z, Int_t n, Double_t a)
              fA(a)
 {
 // Constructor
-   if (z<1) Fatal("ctor", "Not allowed Z=%d (<1) for isotope: %s", name, z);
-   if (n<z) Fatal("ctor", "Not allowed Z=%d < N=%d for isotope: %s", name, z,n);
+   if (z<1) Fatal("ctor", "Not allowed Z=%d (<1) for isotope: %s", z,name);
+   if (n<z) Fatal("ctor", "Not allowed Z=%d < N=%d for isotope: %s", z,n,name);
    TGeoElement::GetElementTable()->AddIsotope(this);
 }
 
@@ -447,11 +447,11 @@ void TGeoElementRN::MakeName(Int_t a, Int_t z, Int_t iso)
       fName = "neutron";
       return;
    }
-   if (z>=1 && z<= gMaxElem) fName += Form("%3d-%s-",z,gElName[z-1]);
+   if (z>=1 && z<= gMaxElem) fName += TString::Format("%3d-%s-",z,gElName[z-1]);
    else fName = "?? -?? -";
-   if (a>=1 && a<=999) fName += Form("%3.3d",a);
+   if (a>=1 && a<=999) fName += TString::Format("%3.3d",a);
    else fName += "??";
-   if (iso>0 && iso<gMaxLevel) fName += Form("%c", gLevName[iso]);
+   if (iso>0 && iso<gMaxLevel) fName += TString::Format("%c", gLevName[iso]);
    fName.ReplaceAll(" ","");
 }
 
@@ -795,6 +795,7 @@ TGeoElementTable::TGeoElementTable()
 // default constructor
    fNelements = 0;
    fNelementsRN = 0;
+   fNisotopes = 0;
    fList      = 0;
    fListRN    = 0;
    fIsotopes = 0;
@@ -806,6 +807,7 @@ TGeoElementTable::TGeoElementTable(Int_t /*nelements*/)
 // constructor
    fNelements = 0;
    fNelementsRN = 0;
+   fNisotopes = 0;
    fList = new TObjArray(128);
    fListRN    = 0;
    fIsotopes = 0;
@@ -818,6 +820,7 @@ TGeoElementTable::TGeoElementTable(const TGeoElementTable& get) :
   TObject(get),
   fNelements(get.fNelements),
   fNelementsRN(get.fNelementsRN),
+  fNisotopes(get.fNisotopes),
   fList(get.fList),
   fListRN(get.fListRN),
   fIsotopes(0)
@@ -833,6 +836,7 @@ TGeoElementTable& TGeoElementTable::operator=(const TGeoElementTable& get)
       TObject::operator=(get);
       fNelements=get.fNelements;
       fNelementsRN=get.fNelementsRN;
+      fNisotopes=get.fNisotopes;
       fList=get.fList;
       fListRN=get.fListRN;
       fIsotopes = 0;
@@ -1028,9 +1032,9 @@ void TGeoElementTable::ImportElementsRN()
    TGeoElementRN *elem;
    TString rnf;
 #ifdef ROOTETCDIR
-   rnf.Form("%s/RadioNuclides.txt", ROOTETCDIR);
+   rnf.TString::Format("%s/RadioNuclides.txt", ROOTETCDIR);
 #else
-   rnf.Form("%s/etc/RadioNuclides.txt", gSystem->Getenv("ROOTSYS"));
+   rnf.TString::Format("%s/etc/RadioNuclides.txt", gSystem->Getenv("ROOTSYS"));
 #endif
    FILE *fp = fopen(rnf, "r");
    if (!fp) {
@@ -1046,6 +1050,7 @@ void TGeoElementTable::ImportElementsRN()
       for (i=0; i<ndecays; i++) {
          if (!fgets(&line[0],140,fp)) {
             Error("ImportElementsRN", "Error parsing RadioNuclides.txt file");
+            fclose(fp);
             return;
          }   
          TGeoDecayChannel *dc = TGeoDecayChannel::ReadDecay(line);
@@ -1056,6 +1061,7 @@ void TGeoElementTable::ImportElementsRN()
    }
    TObject::SetBit(kETRNElements,kTRUE);
    CheckTable();
+   fclose(fp);
 }
 
 //______________________________________________________________________________
@@ -1398,10 +1404,10 @@ void TGeoBatemanSol::Normalize(Double_t factor)
 void TGeoBatemanSol::Print(Option_t * /*option*/) const
 {
 // Print concentration evolution.
-   TString formula = Form("N[%s]/N[%s] = ", fElem->GetName(), fElemTop->GetName());
+   TString formula = TString::Format("N[%s]/N[%s] = ", fElem->GetName(), fElemTop->GetName());
    for (Int_t i=0; i<fNcoeff; i++) {
-      if (i == fNcoeff-1) formula += Form("%g*exp(-%g*t)", fCoeff[i].cn, fCoeff[i].lambda);
-      else                formula += Form("%g*exp(-%g*t) + ", fCoeff[i].cn, fCoeff[i].lambda);
+      if (i == fNcoeff-1) formula += TString::Format("%g*exp(-%g*t)", fCoeff[i].cn, fCoeff[i].lambda);
+      else                formula += TString::Format("%g*exp(-%g*t) + ", fCoeff[i].cn, fCoeff[i].lambda);
    }
    printf("%s\n", formula.Data());
 }

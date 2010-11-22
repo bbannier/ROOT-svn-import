@@ -247,6 +247,7 @@ rl_initialize(void) {
    /* so this can be overriden */
    // NO vi at the ROOT prompt, please!
    char* editor = 0; // getenv("EDITOR");
+   // coverity[dead_error_line] - yes, this is always "emacs".
    el_set(gEditLine, EL_EDITOR, editor ? editor : "emacs");
 
    /*
@@ -679,6 +680,7 @@ _history_expand_command(const char* command, size_t cmdlen, char** result) {
                   from = strdup(search);
                } else {
                   from = NULL;
+                  free(line);
                   return -1;
                }
             }
@@ -755,6 +757,7 @@ _history_expand_command(const char* command, size_t cmdlen, char** result) {
 
    /* check boundaries ... */
    if (start > max || end > max || start > end) {
+      free(arr);
       return -1;
    }
 

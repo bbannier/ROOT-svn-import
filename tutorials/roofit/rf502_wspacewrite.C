@@ -15,11 +15,13 @@
 #include "RooRealVar.h"
 #include "RooDataSet.h"
 #include "RooGaussian.h"
+#include "RooConstVar.h"
 #include "RooChebychev.h"
 #include "RooAddPdf.h"
 #include "RooWorkspace.h"
 #include "RooPlot.h"
 #include "TCanvas.h"
+#include "TAxis.h"
 #include "TFile.h"
 #include "TH1.h"
 using namespace RooFit ;
@@ -81,10 +83,7 @@ void rf502_wspacewrite()
   // -------------------------------------------
 
   // Save the workspace into a ROOT file
-  TFile f("rf502_workspace.root","RECREATE") ;
-  w->Write() ;
-  f.Close() ;
-
+  w->writeToFile("rf502_workspace.root") ;
 
 
   // Workspace will remain in memory after macro finishes

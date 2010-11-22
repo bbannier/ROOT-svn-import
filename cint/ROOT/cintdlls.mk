@@ -3,7 +3,9 @@
 #
 # Author: Axel Naumann, 2006-09-14
 
-.PHONY: cintdlls distclean-cintdll clean-cintdll
+MODNAME      := cintdlls
+
+.PHONY: all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
 # no: iterator pair
 # already in libCore (core/base/inc/Linkdef2.h): string 
@@ -22,16 +24,17 @@ CINTDLLS = $(addsuffix .dll,$(addprefix $(CINTDLLDIRSTL)/,$(CINTSTLDLLNAMES)) \
 
 CINTDLLNAMES = $(CINTSTLDLLNAMES) $(CINTINCDLLNAMES)
 
-.PRECIOUS: \
-	$(addsuffix .cc ,$(addprefix core/metautils/src/stlLoader_,$(CINTSTLDLLNAMES))) \
-	$(addsuffix .o  ,$(addprefix core/metautils/src/stlLoader_,$(CINTSTLDLLNAMES))) \
+CINTDLLS_SOURCE_FILES = $(addsuffix .cc ,$(addprefix core/metautils/src/stlLoader_,$(CINTSTLDLLNAMES))) \
 	$(addsuffix .cxx,$(addprefix $(CINTDLLDIRDLLSTL)/G__cpp_,$(CINTSTLDLLNAMES))) \
-	$(addsuffix .o  ,$(addprefix $(CINTDLLDIRDLLSTL)/G__cpp_,$(CINTSTLDLLNAMES))) \
 	$(addsuffix .cxx,$(addprefix $(CINTDLLDIRDLLSTL)/rootcint_,$(CINTSTLDLLNAMES))) \
-	$(addsuffix .o  ,$(addprefix $(CINTDLLDIRDLLSTL)/rootcint_,$(CINTSTLDLLNAMES))) \
 	$(addsuffix .cxx,$(addprefix $(CINTDLLDIRL)/G__cpp_,$(CINTINCDLLNAMES))) \
+	$(addsuffix .c  ,$(addprefix $(CINTDLLDIRL)/G__c_,$(CINTINCDLLNAMES))) 
+
+.PRECIOUS: $(CINTDLLS_SOURCE_FILES) \
+	$(addsuffix .o  ,$(addprefix core/metautils/src/stlLoader_,$(CINTSTLDLLNAMES))) \
+	$(addsuffix .o  ,$(addprefix $(CINTDLLDIRDLLSTL)/G__cpp_,$(CINTSTLDLLNAMES))) \
+	$(addsuffix .o  ,$(addprefix $(CINTDLLDIRDLLSTL)/rootcint_,$(CINTSTLDLLNAMES))) \
 	$(addsuffix .o  ,$(addprefix $(CINTDLLDIRL)/G__cpp_,$(CINTINCDLLNAMES))) \
-	$(addsuffix .c  ,$(addprefix $(CINTDLLDIRL)/G__c_,$(CINTINCDLLNAMES))) \
 	$(addsuffix .o  ,$(addprefix $(CINTDLLDIRL)/G__c_,$(CINTINCDLLNAMES)))
 
 # these need dictionaries
@@ -85,10 +88,17 @@ ALLCINTDLLS = $(CINTDLLS) $(CINTDICTDLLS)
 ALLLIBS    += $(ALLCINTDLLS)
 ALLMAPS    += $(CINTDICTMAPS)
 
-INCLUDEFILES += $(addsuffix .d,$(addprefix core/metautils/src/stlLoader_,$(CINTSTLDLLNAMES)))\
-   $(CINTDLLDIRL)/posix/mktypes.d $(CINTDLLDIRL)/posix/exten.d
+CINTDLLS_DEPENDENCY_FILES = $(addsuffix .d,$(addprefix core/metautils/src/stlLoader_,$(CINTSTLDLLNAMES))) \
+	$(addsuffix .d,$(addprefix $(CINTDLLDIRL)/G__cpp_,$(CINTINCDLLNAMES))) \
+	$(addsuffix .d,$(addprefix $(CINTDLLDIRDLLSTL)/G__cpp_,$(CINTSTLDLLNAMES))) \
+	$(addsuffix .d,$(addprefix $(CINTDLLDIRDLLSTL)/rootcint_,$(CINTSTLDLLNAMES))) \
+	$(CINTDLLDIRL)/posix/mktypes.d $(CINTDLLDIRL)/posix/exten.d
 
-cintdlls: $(ALLCINTDLLS)
+cintdlls_cleanup_dependency_files_trigger := $(shell grep ORDER_ $(wildcard $(CINTDLLS_DEPENDENCY_FILES)) /dev/null > /dev/null && ( rm -f `find . -name \*.d -exec grep -c ORDER_ {} /dev/null \; 2>&1 | grep -v ':0' | cut -d: -f1 | sed -e 's/\.d/\.o/' `  1>&2 ) )
+
+INCLUDEFILES += $(CINTDLLS_DEPENDENCY_FILES)
+
+all-$(MODNAME): $(ALLCINTDLLS) $(CINTDICTMAPS)
 
 CINTCPPDEP := $(CINTDLLDICTVER) $(ORDER_) $(CINTDLLCINTTMP) $(CINTDLLIOSENUM)
 
@@ -126,6 +136,9 @@ ifeq ($(subst $(MACOSX_MINOR),,456789),456789)
 # MACOSX_MINOR < 4
   CINTDLLSOEXTCMD += ;mv $(@:.dll=.so) $@
 else
+  # On macosx one should change the install_name as well.
+  # FIXME: not tested on 10.4, should be the same also there?
+  CINTDLLSOEXTCMD += ;install_name_tool -id `otool -D $@ | tail -1 | sed -e's|:$$||;s|[.]so$$|.dll|'` $@
   CINTDLLSOEXTCMD += ;rm -f $(@:.dll=.so)
 endif
 endif # macosx
@@ -133,7 +146,7 @@ endif # need to mv to .dll
 ##### all cintdlls end on .dll - END
 
 # Filter out the explicit link flag
-ifneq ($(subst build/unix/makelib.sh,,$(MAKELIB)),$(MAKELIB))
+ifneq ($(subst $(ROOT_SRCDIR)/build/unix/makelib.sh,,$(MAKELIB)),$(MAKELIB))
   $(CINTDLLS): MAKELIB := $(subst -x,,$(MAKELIB))
 endif
 
@@ -157,7 +170,7 @@ $(CINTDLLDIRDLLS)/%.dll: $(CINTDLLDIRL)/G__c_%.o
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" "$(SOFLAGS)" $(notdir $(@:.dll=.$(SOEXT))) $(@:.dll=.$(SOEXT)) $(filter-out $(MAINLIBS),$^)
 	$(CINTDLLSOEXTCMD)
 
-core/metautils/src/stlLoader_%.cc: core/metautils/src/stlLoader.cc
+core/metautils/src/stlLoader_%.cc: $(ROOT_SRCDIR)/core/metautils/src/stlLoader.cc
 	cp -f $< $@
 
 core/metautils/src/stlLoader_%.o: core/metautils/src/stlLoader_%.cc
@@ -165,29 +178,29 @@ core/metautils/src/stlLoader_%.o: core/metautils/src/stlLoader_%.cc
 	$(CXX) $(OPT) $(CINTDLLCXXFLAGS) $(INCDIRS) -DWHAT=\"$*\" $(CXXOUT)$@ -c $<
 
 $(CINTDLLDIRDLLSTL)/G__cpp_%.cxx:
-	$(patsubst %lib/dll_stl/,%,$(dir $@))/main/cint_tmp \
+	$(CINTDLLCINTTMP) \
            -w1 -z$(notdir $*) -n$@ $(subst $*,,$(patsubst %map2,-DG__MAP2,$*)) \
 	   -D__MAKECINT__ -DG__MAKECINT \
            $(addprefix $(patsubst %lib/dll_stl/,-I%,$(dir $@)),lib/dll_stl lib) \
-	   -c-1 -A -Z0 $(filter-out $(IOSENUM),$(filter %.h,$^))
+	   -c-1 -A -Z0 $(filter-out $(CINTDLLDIRDLLSTL)/G__cpp_%, $(filter-out $(IOSENUM),$(filter $(CINTDLLDIRDLLSTL)/%,$(filter %.h,$^))))
 
 $(CINTDLLDIRL)/G__cpp_%.cxx:
-	$(patsubst %lib/,%,$(dir $@))/main/cint_tmp \
+	$(CINTDLLCINTTMP) \
 	   -w1 -z$(notdir $*) -n$@ $(subst $*,,$(patsubst %map2,-DG__MAP2,$*)) \
 	   -D__MAKECINT__ -DG__MAKECINT -I$(dir $@) \
-	   -c-1 -A -Z0 $(filter-out $(IOSENUM),$(filter %.h,$^))
+	   -c-1 -A -Z0 $(filter-out $(CINTDLLDIRL)/G__cpp%, $(filter-out $(IOSENUM),$(filter $(CINTDLLDIRL)/%,$(filter %.h,$^))))
 
 $(CINTDLLDIRL)/G__c_%.c:
-	$(patsubst %lib/,%,$(dir $@))/main/cint_tmp \
+	$(CINTDLLCINTTMP) \
 	   -K -w1 -z$(notdir $*) -n$@ -D__MAKECINT__ -DG__MAKECINT \
-	   $(MACOSX_UNIX03) -c-2 -Z0 $(filter-out $(IOSENUM),$(filter %.h,$^))
+	   $(MACOSX_UNIX03) -c-2 -Z0 $(filter-out $(CINTDLLDIRL)/G__c_%, $(filter-out $(IOSENUM),$(filter $(CINTDLLDIRL)/%,$(filter %.h,$^))))
 
 $(CINTDLLDIRDLLSTL)/G__cpp_complex.cxx: $(CINTDLLDIRL)/dll_stl/cmplx.h $(CINTCPPDEP)
-	$(patsubst %lib/dll_stl/,%,$(dir $@))/main/cint_tmp \
+	$(CINTDLLCINTTMP) \
            -w1 -z$(notdir $*) -n$@ $(subst $*,,$(patsubst %map2,-DG__MAP2,$*)) \
 	   -D__MAKECINT__ -DG__MAKECINT \
            $(addprefix $(patsubst %lib/dll_stl/,-I%,$(dir $@)),lib/dll_stl lib) \
-	   -V -c-1 -A -Z0 $(filter-out $(IOSENUM),$(filter %.h,$^))
+	   -V -c-1 -A -Z0 $(CINTDLLDIRL)/dll_stl/cmplx.h
 
 ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
 # MACOSX_MINOR > 4
@@ -221,59 +234,63 @@ $(CINTDLLDIRDLLS)/sys/ipc.dll: $(CINTDLLDIRL)/G__c_ipc.o
 ##### ipc special treatment - END
 
 ##### dictionaries
-$(CINTDLLDIRDLLSTL)/rootcint_%.cxx: core/metautils/src/%Linkdef.h $(CINTDLLROOTCINTTMPDEP)
-	core/utils/src/rootcint_tmp -f $@ -c \
-	   $(subst multi,,${*:2=}) \
-	   core/metautils/src/$*Linkdef.h
+$(CINTDLLDIRDLLSTL)/rootcint_%.cxx: $(ROOT_SRCDIR)/core/metautils/src/%Linkdef.h $(CINTDLLROOTCINTTMPDEP)
+	$(CINTDLLROOTCINTTMP) -f $@ -c $(subst multi,,${*:2=}) \
+	   $(ROOT_SRCDIR)/core/metautils/src/$*Linkdef.h
 
 $(patsubst lib/lib%Dict.$(SOEXT),$(CINTDLLDIRDLLSTL)/rootcint_%.o,$(CINTDICTDLLS)): CINTCXXFLAGS += -I.
 $(patsubst lib/lib%Dict.$(SOEXT),$(CINTDLLDIRDLLSTL)/rootcint_%.cxx,$(CINTDICTDLLS)): $(CINTDLLROOTCINTTMPDEP)
 
-ifeq (5,5)
-$(CINTDICTMAPS): lib/lib%Dict.rootmap: bin/rlibmap$(EXEEXT) $(MAKEFILEDEP)
-	$(RLIBMAP) -o $@ -l \
-		    $*.dll -c core/metautils/src/$*Linkdef.h
+lib/libvectorDict.rootmap: $(RLIBMAP) $(MAKEFILEDEP) $(ROOT_SRCDIR)/core/metautils/src/vectorLinkdef.h
+	$(RLIBMAP) -o $@ -l vector.dll -d vectorbool.dll -c $(ROOT_SRCDIR)/core/metautils/src/vectorLinkdef.h
+
+$(filter-out lib/libvectorDict.rootmap,$(CINTDICTMAPS)): lib/lib%Dict.rootmap: $(RLIBMAP) $(MAKEFILEDEP) $(ROOT_SRCDIR)/core/metautils/src/%Linkdef.h
+	$(RLIBMAP) -o $@ -l $*.dll -c $(ROOT_SRCDIR)/core/metautils/src/$*Linkdef.h
 
 $(CINTDICTDLLS): lib/lib%Dict.$(SOEXT): $(CINTDLLDIRDLLSTL)/rootcint_%.o
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" "$(SOFLAGS)" $(notdir $@) $@ $(filter-out $(MAINLIBS),$^)
-endif
 
 ##### dictionaries - END
 
 ##### clean
 
 # remove only .o, .dll, .$(SOEXT)
-CLEANCINTDLLSTARGET := cintdll
 
-clean-$(CLEANCINTDLLSTARGET):
+clean-$(MODNAME):
 	@(for cintdll in $(CINTDLLNAMES); do \
-	  rm -f $(patsubst clean-%dll,cint/%,$@)/lib/dll_stl/rootcint_$${cintdll}.o \
-	  $(patsubst clean-%dll,cint/%,$@)/lib/dll_stl/G__cpp_$${cintdll}.o \
-	  $(patsubst clean-%dll,cint/%,$@)/lib/G__c_$${cintdll}.o \
-	  $(patsubst clean-%dll,cint/%,$@)/lib/G__cpp_$${cintdll}.o \
+	  rm -f $(CINTDLLDIRDLLSTL)/rootcint_$${cintdll}.o \
+	  $(CINTDLLDIRDLLSTL)/G__cpp_$${cintdll}.o \
+	  $(CINTDLLDIRL)/G__c_$${cintdll}.o \
+	  $(CINTDLLDIRL)/G__cpp_$${cintdll}.o \
 	  core/metautils/src/stlLoader_$${cintdll}.o; done)
+	@(for cintdll in $(CINTDLLNAMES); do \
+	  rm -f $(CINTDLLDIRDLLSTL)/rootcint_$${cintdll}.d \
+	  $(CINTDLLDIRDLLSTL)/G__cpp_$${cintdll}.d \
+	  $(CINTDLLDIRL)/G__c_$${cintdll}.d \
+	  $(CINTDLLDIRL)/G__cpp_$${cintdll}.d \
+	  core/metautils/src/stlLoader_$${cintdll}.d; done)
 	@rm -f $(ALLCINTDLLS) \
-	  $(patsubst clean-%dll,cint/%,$@)/lib//posix/exten.o \
-	  $(patsubst clean-%dll,cint/%,$@)/include/posix.* \
-	  $(patsubst clean-%dll,cint/%,$@)/include/ipc.*
+	  $(CINTDLLDIRL)/posix/exten.o \
+	  $(CINTDLLDIRDLLS)/posix.* \
+	  $(CINTDLLDIRDLLS)/ipc.*
 
-clean:: clean-$(CLEANCINTDLLSTARGET)
+clean:: clean-$(MODNAME)
 
 # remove generated code, too.
-distclean-$(CLEANCINTDLLSTARGET): clean-$(CLEANCINTDLLSTARGET)
+distclean-$(MODNAME): clean-$(MODNAME)
 	@(for cintdll in $(CINTDLLNAMES); do \
-	  rm -f $(patsubst distclean-%dll,cint/%,$@)/lib/dll_stl/rootcint_$${cintdll}.* \
-	  $(patsubst distclean-%dll,cint/%,$@)/lib/dll_stl/G__cpp_$${cintdll}.* \
-	  $(patsubst distclean-%dll,cint/%,$@)/lib/G__c_$${cintdll}.* \
-	  $(patsubst distclean-%dll,cint/%,$@)/lib/G__cpp_$${cintdll}.* \
+	  rm -f $(CINTDLLDIRDLLSTL)/rootcint_$${cintdll}.* \
+	  $(CINTDLLDIRDLLSTL)/G__cpp_$${cintdll}.* \
+	  $(CINTDLLDIRL)/G__c_$${cintdll}.* \
+	  $(CINTDLLDIRL)/G__cpp_$${cintdll}.* \
 	  core/metautils/src/stlLoader_$${cintdll}.*; done)
 	@rm -f $(ALLCINTDLLS) $(CINTDICTMAPS) \
-	  $(patsubst distclean-%dll,cint/%,$@)/lib/posix/mktypes$(EXEEXT)
+	  $(CINTDLLDIRL)/posix/mktypes$(EXEEXT)
 ifeq ($(PLATFORM),macosx)
-	@rm -f  $(patsubst distclean-%dll,cint/%,$@)/stl/*.so
-	@rm -rf $(patsubst distclean-%dll,cint/%,$@)/lib/posix/mktypes.dSYM
+	@rm -f  $(CINTDLLDIRSTL)/*.so
+	@rm -rf $(CINTDLLDIRL)/posix/mktypes.dSYM
 endif
 
-distclean:: distclean-$(CLEANCINTDLLSTARGET)
+distclean:: distclean-$(MODNAME)
 
 ##### clean - END

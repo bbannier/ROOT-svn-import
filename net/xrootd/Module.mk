@@ -4,14 +4,14 @@
 # Author: G Ganis, 27/7/2004
 
 MODNAME    := xrootd
-MODDIR     := net/$(MODNAME)
+MODDIR     := $(ROOT_SRCDIR)/net/$(MODNAME)
 MODDIRS    := $(MODDIR)/src
 
 XROOTDDIR  := $(MODDIR)
 XROOTDDIRS := $(MODDIRS)
-XROOTDDIRD := $(MODDIRS)/xrootd
-XROOTDDIRI := $(MODDIRS)/xrootd/src
-XROOTDDIRL := $(MODDIRS)/xrootd/lib
+XROOTDDIRD := $(call stripsrc,$(MODDIRS)/xrootd)
+XROOTDDIRI := $(XROOTDDIRD)/src
+XROOTDDIRL := $(XROOTDDIRD)/lib
 XROOTDMAKE := $(XROOTDDIRD)/GNUmakefile
 XROOTDBUILD:= $(XROOTDDIRD)/LastBuild.d
 
@@ -56,7 +56,7 @@ XRDPLUGINSA := $(XROOTDDIRL)/libXrdClient.$(XRDSOEXT)
 XRDPLUGINS  := $(XRDPLUGINSA)
 XRDLIBS     := $(XRDPLUGINS)
 else
-XRDLIBS     := $(XROOTDDIRL)/libXrdOuc.a $(XROOTDDIRL)/libXrdNet.a \
+XRDLIBS     := $(XROOTDDIRL)/libXrdOuc.a $(XROOTDDIRL)/libXrdNet.a $(XROOTDDIRL)/libXrdNetUtil.a \
                $(XROOTDDIRL)/libXrdSys.a \
                $(LPATH)/libXrdClient.$(XRDSOEXT) $(LPATH)/libXrdSut.$(XRDSOEXT)
 XRDNETXD    := $(XROOTDDIRL)/libXrdOuc.a $(XROOTDDIRL)/libXrdSys.a \
@@ -77,8 +77,9 @@ XRDHDRS    := $(wildcard $(XROOTDDIRI)/Xrd/*.hh) $(wildcard $(XROOTDDIRI)/XrdCli
 XROOTDDEPS := $(wildcard $(XROOTDDIRI)/*/*.hh) $(wildcard $(XROOTDDIRI)/*/*.cc) \
               $(wildcard $(XROOTDDIRI)/*/*.h) $(wildcard $(XROOTDDIRI)/*/*.c) \
               $(wildcard $(XROOTDDIRI)/*/*/*.h) $(wildcard $(XROOTDDIRI)/*/*/*.c)
-XROOTDCFGD := $(wildcard $(XROOTDDIRD)/config/*) $(wildcard $(XROOTDDIRD)/config/test/*) \
-              $(XROOTDDIRD)/configure.classic
+XROOTDCFGD := $(wildcard $(XROOTDDIRS)/xrootd/config/*) \
+              $(wildcard $(XROOTDDIRS)/xrootd/config/test/*) \
+              $(XROOTDDIRS)/xrootd/configure.classic
 
 # used in the main Makefile
 ALLLIBS    += $(XRDLIBS)
@@ -102,11 +103,17 @@ endif
 
 ifneq ($(PLATFORM),win32)
 $(XROOTDMAKE): $(XROOTDCFGD)
-		@(cd $(XROOTDDIRS); \
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+		$(MAKEDIR)
+		@$(RSYNC) --exclude '.svn' --exclude '*.o' --exclude '*.a' $(XROOTDDIRS)/xrootd  $(call stripsrc,$(XROOTDDIRS))
+		@rm -rf $(XROOTDDIRL) $(XROOTDDIRD)/bin
+		@rm -f $(XROOTDMAKE)
+endif
+		@(cd $(XROOTDDIRD); \
 		RELE=`uname -r`; \
 		CHIP=`uname -m | tr '[A-Z]' '[a-z]'`; \
 		PROC=`uname -p`; \
-                xarch="" ; \
+		xarch="" ; \
 		case "$(ARCH):$$RELE:$$CHIP:$$PROC" in \
 		freebsd*:*)      xopt="--ccflavour=gcc";; \
 		linuxicc:*)      xopt="--ccflavour=icc --use-xrd-strlcpy";; \
@@ -115,6 +122,7 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		linuxx8664gcc:*) xopt="--ccflavour=gccx8664 --use-xrd-strlcpy";; \
 		linuxx8664icc:*) xopt="--ccflavour=iccx8664 --use-xrd-strlcpy";; \
 		linuxppc64gcc:*) xopt="--ccflavour=gccppc64 --use-xrd-strlcpy";; \
+                linuxalphagcc:*) xopt="--ccflavour=gcc --use-xrd-strlcpy";; \
 		linux*:*)        xarch="i386_linux"; xopt="--ccflavour=gcc --use-xrd-strlcpy";; \
 		macosx64:*)      xopt="--ccflavour=macos64";; \
 		macosxicc:*)     xopt="--ccflavour=icc";; \
@@ -154,6 +162,9 @@ $(XROOTDMAKE): $(XROOTDCFGD)
                 fi; \
 		if [ "x$(BUILDXRDGSI)" = "x" ] ; then \
 		   xopt="$$xopt --disable-gsi"; \
+		fi; \
+		if [ ! "x$(BUILDBONJOUR)" = "x" ] ; then \
+		   xopt="$$xopt --enable-bonjour"; \
 		fi; \
 		if [ ! "x$(SSLLIBDIR)" = "x" ] ; then \
 		   xlib=`echo $(SSLLIBDIR) | cut -c3-`; \
@@ -205,7 +216,6 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		   xopt="$$xopt $$xaddopts"; \
 		fi; \
 		xopt="$$xopt --disable-krb4 --enable-echo --no-arch-subdirs --disable-mon --with-cxx=$(CXX) --with-ld=$(LD)"; \
-		cd xrootd; \
 		echo "Options to Xrootd-configure: $$xarch $$xopt $(XRDDBG)"; \
 		GNUMAKE=$(MAKE) ./configure.classic $$xarch $$xopt $(XRDDBG); \
 		rc=$$? ; \
@@ -216,6 +226,14 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		fi)
 else
 $(XROOTDMAKE):
+		$(MAKEDIR)
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+		@$(INSTALL) $(XROOTDDIRS)/xrootd  $(call stripsrc,$(XROOTDDIRS))
+		@(find $(XROOTDDIRD) -name "*.o" -exec rm -f {} \; >/dev/null 2>&1;true)
+		@(find $(XROOTDDIRD) -name .svn -exec rm -rf {} \; >/dev/null 2>&1;true)
+		@rm -rf $(XROOTDDIRL) $(XROOTDDIRD)/bin
+		@rm -f $(XROOTDMAKE)
+endif
 		@(if [ -d $(XROOTDDIRD)/pthreads-win32 ]; then \
     		   cp $(XROOTDDIRD)/pthreads-win32/lib/*.dll "bin" ; \
 		   cp $(XROOTDDIRD)/pthreads-win32/lib/*.lib "lib" ; \
@@ -286,7 +304,7 @@ $(XRDEXECSA): $(XROOTDBUILD)
 endif
 
 ### Rules for xrootd plugins
-$(LPATH)/libXrd%.$(XRDSOEXT):    $(XROOTDDIRL)/libXrd%.$(XRDSOEXT)
+$(LPATH)/libXrd%.$(XRDSOEXT): $(XROOTDDIRL)/libXrd%.$(XRDSOEXT)
 		cp -rp $< $@
 
 ### Rules for single components
@@ -295,6 +313,7 @@ $(XROOTDDIRL)/libXrdSut.$(XRDSOEXT): $(XROOTDBUILD)
 #
 $(XROOTDDIRL)/libXrdOuc.a: $(XROOTDBUILD)
 $(XROOTDDIRL)/libXrdNet.a: $(XROOTDBUILD)
+$(XROOTDDIRL)/libXrdNetUtil.a: $(XROOTDBUILD)
 $(XROOTDDIRL)/libXrdSys.a: $(XROOTDBUILD)
 $(XROOTDDIRL)/libXrd.a: $(XROOTDBUILD)
 $(XROOTDDIRL)/libXrdClient.a: $(XROOTDBUILD)
@@ -326,12 +345,19 @@ clean::         clean-$(MODNAME)
 distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -rf $(XRDEXECS) $(LPATH)/libXrd* bin/libXrd* $(XROOTDBUILD)
 ifneq ($(PLATFORM),win32)
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+		@rm -rf $(XROOTDDIRD)
+else
 		@(if [ -f $(XROOTDMAKE) ]; then \
-		   $(MAKE) distclean-netx;  \
-		   $(MAKE) distclean-proofx;  \
+		   $(MAKE) distclean-netx; \
+		   $(MAKE) distclean-proofx; \
 		   cd $(XROOTDDIRD); \
 		   $(MAKE) distclean; \
 		fi)
+endif
+else
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+		@rm -rf $(XROOTDDIRD)
 else
 		@(if [ -f $(XROOTDMAKE) ]; then \
 		   cd $(XROOTDDIRD); \
@@ -339,6 +365,7 @@ else
 		   nmake -f Makefile.msc distclean; \
 		   rm -f GNUmakefile; \
 		fi)
+endif
 endif
 		@rm -f $(XROOTDMAKE)
 

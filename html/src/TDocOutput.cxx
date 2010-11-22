@@ -325,7 +325,7 @@ void TDocOutput::Convert(std::istream& in, const char* infilename,
    // write a HTML header
    WriteHtmlHeader(out, title, relpath);
 
-   if (context || context[0])
+   if (context && context[0])
       out << context << endl;
    else if (title && title[0])
       out << "<h1 class=\"convert\">" << title << "</h1>" << endl;
@@ -449,15 +449,15 @@ void TDocOutput::Convert(std::istream& in, const char* infilename,
             std::set<TObject*> previousWindows;
             if (gclient) {
                gROOT->ProcessLine(TString::Format("*((TList**)0x%lx) = ((TGClient*)0x%lx)->GetListOfWindows();",
-                                                  &gClientGetListOfWindows, gclient));
+                                                  (ULong_t)&gClientGetListOfWindows, (ULong_t)gclient));
                gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGClient*)0x%lx)->GetDefaultRoot();",
-                                                  &gClientGetDefaultRoot, gclient));
+                                                  (ULong_t)&gClientGetDefaultRoot, (ULong_t)gclient));
                TObject* win = 0;
                TIter iWin(gClientGetListOfWindows);
                while((win = iWin())) {
                   TObject* winGetParent = 0;
                   gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGWindow*)0x%lx)->GetParent();",
-                                                     &winGetParent, win));
+                                                     (ULong_t)&winGetParent, (ULong_t)win));
                   if (winGetParent == gClientGetDefaultRoot)
                      previousWindows.insert(win);
                }
@@ -490,30 +490,30 @@ void TDocOutput::Convert(std::istream& in, const char* infilename,
                   while((win = iWin())) {
                      TObject* winGetParent = 0;
                      gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGWindow*)0x%lx)->GetParent();",
-                                                        &winGetParent, win));
+                                                        (ULong_t)&winGetParent, (ULong_t)win));
                      Bool_t winIsMapped = kFALSE;
                      if (winGetParent == gClientGetDefaultRoot)
                         gROOT->ProcessLine(TString::Format("*((Bool_t*)0x%lx) = ((TGWindow*)0x%lx)->IsMapped();",
-                                                           &winIsMapped, win));
+                                                           (ULong_t)&winIsMapped, (ULong_t)win));
                      if (winIsMapped && previousWindows.find(win) == previousWindows.end()
                          && win->InheritsFrom(clGMainFrame)) {
-                        gROOT->ProcessLine(TString::Format("((TGWindow*)0x%lx)->MapRaised();", win));
+                        gROOT->ProcessLine(TString::Format("((TGWindow*)0x%lx)->MapRaised();", (ULong_t)win));
                         Bool_t isRootCanvas = win->InheritsFrom(clRootCanvas);
                         Bool_t hasEditor = false;
                         if (isRootCanvas) {
                            gROOT->ProcessLine(TString::Format("*((Bool_t*)0x%lx) = ((TRootCanvas*)0x%lx)->HasEditor();",
-                                                              &hasEditor, win));
+                                                              (ULong_t)&hasEditor, (ULong_t)win));
                         }
                         if (isRootCanvas && !hasEditor) {
                            TVirtualPad* pad = 0;
                            gROOT->ProcessLine(TString::Format("*((TVirtualPad**)0x%lx) = ((TRootCanvas*)0x%lx)->Canvas();",
-                                                              &pad, win));
+                                                              (ULong_t)&pad, (ULong_t)win));
                            if (!pad->HasViewer3D() || pad->GetViewer3D()->InheritsFrom("TViewer3DPad")) {
                               pad->SaveAs(TString::Format("%s_%d.png", outfilename, nCanvases++));
                            }
                         } else
                            gROOT->ProcessLine(TString::Format("((TGWindow*)0x%lx)->SaveAs(\"%s_%d.png\");",
-                                                              win, outfilename, nCanvases++));
+                                                              (ULong_t)win, outfilename, nCanvases++));
                      }
                   }
                } else {
@@ -1211,7 +1211,7 @@ void TDocOutput::CreateClassTypeDefs()
                sLib = libDup;
                delete[] libDup;
             }
-            outfile << "<script type=\"text/javascript\">WriteFollowPageBox('" 
+            outfile << "<script type=\"text/javascript\">WriteFollowPageBox('"
                     << sTitle << "','" << sLib << "','" << sInclude << "');</script>" << endl;
          }
 
@@ -1225,10 +1225,10 @@ void TDocOutput::CreateClassTypeDefs()
             << "<div class=\"classdescr\">" << endl;
 
          outfile << dtName << " is a typedef to ";
-         std::string shortClsName(fHtml->ShortType(cls->GetName()));
+         std::string shortClsName(fHtml->ShortType(cdi->GetName()));
          parser.DecorateKeywords(outfile, shortClsName.c_str());
          outfile << endl
-            << "</div>" << std::endl 
+            << "</div>" << std::endl
             << "</div></div><div style=\"clear:both;\"></div>" << std::endl;
 
          // the typedef isn't a data member, but the CSS is applicable nevertheless
@@ -1772,10 +1772,13 @@ void TDocOutput::ReferenceEntity(TSubString& str, TDataMember* entity, const cha
    fHtml->GetHtmlFileName(scope, link);
    link += "#";
 
-   TString mangledName(scope->GetName());
-   NameSpace2FileName(mangledName);
-   link += mangledName;
-   link += ":";
+   TString mangledName;
+   if (scope) {
+      mangledName = scope->GetName();
+      NameSpace2FileName(mangledName);
+      link += mangledName;
+      link += ":";
+   }
 
    mangledName = entity->GetName();
    NameSpace2FileName(mangledName);
@@ -2425,8 +2428,11 @@ void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const 
    // link to the user home page (if exist)
    const char* userHomePage = GetHtml()->GetHomepage();
    const char* productName = fHtml->GetProductName();
-   if (productName && !strcmp(productName, "ROOT"))
+   if (!productName) {
+      productName = "";
+   } else if (!strcmp(productName, "ROOT")) {
       userHomePage = "";
+   }
    if (userHomePage && *userHomePage)
       out << "<a class=\"descrheadentry\" href=\"" << userHomePage << "\">" << productName << "</a>" << endl;
    out << "<a class=\"descrheadentry\" href=\"http://root.cern.ch\">ROOT Homepage</a>" << endl

@@ -1325,6 +1325,9 @@ XrdSecCredentials *XrdSecProtocolgsi::getCredentials(XrdSecParameters *parm,
    //
    // Now action depens on the step
    nextstep = kXGC_none;
+
+   XrdCryptoX509 *c = 0;
+
    switch (step) {
 
    case kXGS_init:
@@ -1341,7 +1344,17 @@ XrdSecCredentials *XrdSecProtocolgsi::getCredentials(XrdSecParameters *parm,
                 XrdSutBuckStr(kXRS_version),"global",stepstr);
       //
       // Add our issuer hash
-      issuerHash = hs->PxyChain->Begin()->IssuerHash();
+      c = hs->PxyChain->Begin();
+      if (c->type == XrdCryptoX509::kCA)
+        issuerHash = c->SubjectHash();
+      else
+        issuerHash = c->IssuerHash();
+      while ((c = hs->PxyChain->Next()) != 0) {
+        if (c->type != XrdCryptoX509::kCA)
+          break;
+        issuerHash = c->SubjectHash();
+      }
+      DEBUG("Client issuer hash: " << issuerHash);
       if (bpar->AddBucket(issuerHash,kXRS_issuer_hash) != 0)
             return ErrC(ei,bpar,bmai,0, kGSErrCreateBucket,
                         XrdSutBuckStr(kXRS_issuer_hash),stepstr);
@@ -1588,7 +1601,7 @@ int XrdSecProtocolgsi::Authenticate(XrdSecCredentials *cred,
 
       if (GMAPOpt > 0) {
          // Get name from gridmap
-         String name; 
+         String name;
          QueryGMAP(hs->Chain->EECname(), hs->TimeStamp, name);
          DEBUG("username(s) associated with this DN: "<<name);
          if (name.length() <= 0) {
@@ -1623,13 +1636,15 @@ int XrdSecProtocolgsi::Authenticate(XrdSecCredentials *cred,
                   name = u;
                   DEBUG("grid map: requested user is authorized: name is '"<<name<<"'");
                } else {
-                  // It was required, so we fail
-                  kS_rc = kgST_error;
-                  PRINT("ERROR: grid map lookup ok, but the requested user is not"
-                        " authorized ("<<name<<")");
-                  break;
+                  // The requested username is not in the list; we warn and default to the first
+                  // found (to be Globus compliant)
+                  if (name.find(',') != STR_NPOS) name.erase(name.find(','));
+                  PRINT("WARNING: grid map lookup ok, but the requested user is not"
+                        " authorized ("<<user<<"). Instead, mapped as " << name << ".");
                }
             } else {
+               // No username requested: we default to the first found (to be Globus compliant)
+               if (name.find(',') != STR_NPOS) name.erase(name.find(','));
                DEBUG("grid map lookup successful: name is '"<<name<<"'");
             }
             Entity.name = strdup(name.c_str());
@@ -3416,8 +3431,8 @@ XrdCryptoX509Crl *XrdSecProtocolgsi::LoadCRL(XrdCryptoX509 *xca,
       int from = 0;
       while ((from = CRLdir.tokenize(crldir, from, ',')) != -1) {
          if (crldir.length() <= 0) continue;
-         String casigfile = crldir + xcasig->Issuer();
-         // Try to init a crl
+         String casigfile = crldir + xcasig->IssuerHash();
+         // Try to get the certificate
          if ((xcasig = CF->X509(casigfile.c_str()))) break;
       }
    }

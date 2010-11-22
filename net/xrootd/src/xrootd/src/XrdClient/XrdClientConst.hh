@@ -41,7 +41,7 @@
 #define DFLT_FIRSTCONNECTMAXCNT 8
 #define NAME_FIRSTCONNECTMAXCNT (char *)"FirstConnectMaxCnt"
 
-#define DFLT_TRANSACTIONTIMEOUT 300
+#define DFLT_TRANSACTIONTIMEOUT 28800
 #define NAME_TRANSACTIONTIMEOUT (char *)"TransactionTimeout"
 
 
@@ -56,7 +56,7 @@
 
 // The minimum size to use to split big single requests
 //  through multiple streams
-#define DFLT_MULTISTREAMSPLITSIZE (128*1024)
+#define DFLT_MULTISTREAMSPLITSIZE (4*1024*1024)
 
 // keep/dont-keep the socket open (required by optimized rootd fallback)
 #define DFLT_KEEPSOCKOPENIFNOTXRD 0

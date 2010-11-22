@@ -124,9 +124,9 @@ public:
    }
 
    static TGeoVolume* StartGDML(const char* filename){
-      TGDMLParse* fParser = new TGDMLParse;
-      TGeoVolume* fWorld = fParser->GDMLReadFile(filename);
-      return fWorld;
+      TGDMLParse* parser = new TGDMLParse;
+      TGeoVolume* world = parser->GDMLReadFile(filename);
+      return world;
    }
    
    TGeoVolume*       GDMLReadFile(const char* filename = "test.gdml");
@@ -137,7 +137,6 @@ private:
    const char*       GetScale(const char* unit);
    double            Evaluate(const char* evalline);
    const char*       NameShort(const char* name);
-   const char*       NameShortB(const char* name);
     
    //'define' section
    XMLNodePointer_t  ConProcess(TXMLEngine* gdml, XMLNodePointer_t node, XMLAttrPointer_t attr);

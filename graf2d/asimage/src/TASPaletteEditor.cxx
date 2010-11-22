@@ -359,7 +359,7 @@ Bool_t TASPaletteEditor::ProcessMessage(Long_t msg, Long_t param1, Long_t param2
                         fImagePad->Modified();
                         fImagePad->Update();
                      }
-                     UpdateScreen(kTRUE);
+                     if (fPalette) UpdateScreen(kTRUE);
                      break;
 
                   case 21: // redo
@@ -443,11 +443,11 @@ void TASPaletteEditor::Save()
       // write into a ROOT file
       char fn[512];
       if (strcmp(".pal.root", fi.fFilename + strlen(fi.fFilename) - 9) != 0)
-         sprintf(fn, "%s%s", fi.fFilename, ".pal.root");
+         snprintf(fn,512, "%s%s", fi.fFilename, ".pal.root");
       else
-         strcpy(fn, fi.fFilename);
+         strlcpy(fn, fi.fFilename,512);
 
-      gROOT->ProcessLine(Form("gROOT->SaveObjectAs((TASPaletteEditor*)0x%lx,\"%s\",\"%s\");",this,fn,"q"));
+      gROOT->ProcessLine(Form("gROOT->SaveObjectAs((TASPaletteEditor*)0x%lx,\"%s\",\"%s\");",(ULong_t)this,fn,"q"));
    }
 }
 
@@ -470,9 +470,11 @@ void TASPaletteEditor::Open()
       FILE *fl = fopen(fi.fFilename, "r");
       if (!fl) return;
       UInt_t numPoints;
+      // coverity [Calling risky function : FALSE]
       if (fscanf(fl, "%u\n", &numPoints)) {;}
       newPalette = new TImagePalette(numPoints);
       for (Int_t pt = 0; pt < Int_t(numPoints); pt++)
+         // coverity [Calling risky function : FALSE]
          if (fscanf(fl, "%lf %hx %hx %hx %hx\n",
                 newPalette->fPoints + pt,
                 newPalette->fColorRed + pt,
@@ -484,9 +486,9 @@ void TASPaletteEditor::Open()
       // read from a ROOT file
       char fn[512];
       if (strcmp(".pal.root", fi.fFilename + strlen(fi.fFilename) - 9) != 0)
-         sprintf(fn, "%s%s", fi.fFilename, ".pal.root");
+         snprintf(fn,512, "%s%s", fi.fFilename, ".pal.root");
       else
-         strcpy(fn, fi.fFilename);
+         strlcpy(fn, fi.fFilename,512);
       TDirectory *dirsav = gDirectory;
 
       TFile *fsave = new TFile(fn, "READ");

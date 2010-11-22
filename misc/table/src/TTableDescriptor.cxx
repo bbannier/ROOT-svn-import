@@ -117,7 +117,11 @@ void  TTableDescriptor::AddAt(const void *c, Int_t i)
    //Add one row pointed by "c" to the "i"-th row of the descriptor
    if (c) {
       tableDescriptor_st *element = (tableDescriptor_st *)c;
-      const char *comment = element->fColumnName ? element->fColumnName : "N/A";
+#ifdef NORESTRICTIONS
+      const char *comment = element->fColumnName && element->fColumnName[0] ? element->fColumnName : "N/A";
+#else
+      const char *comment = element->fColumnName[0] ? element->fColumnName : "N/A";
+#endif
       AddAt(*(tableDescriptor_st *)c,comment,i);
    }
 }
@@ -172,7 +176,7 @@ TString TTableDescriptor::CreateLeafList() const
       if (totalSize > 1) {
          for ( k = 0; k < totalSize; k++) {
             Char_t buf[10];
-            sprintf(buf,"_%d",k);
+            snprintf(buf,10,"_%d",k);
             string += colName;
             string += buf;
             if (k==0) {

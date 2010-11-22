@@ -32,7 +32,7 @@ Bool_t TArray::OutOfBoundsError(const char *where, Int_t i) const
 {
    // Generate an out-of-bounds error. Always returns false.
 
-   ::Error(where, "index %d out of bounds (size: %d, this: 0x%08x)", i, fN, this);
+   ::Error(where, "index %d out of bounds (size: %d, this: 0x%lx)", i, fN, (Long_t)this);
    return kFALSE;
 }
 
@@ -66,6 +66,7 @@ TArray *TArray::ReadArray(TBuffer &b, const TClass *clReq)
          ::Error("TArray::ReadArray", "could not create object of class %s",
                  clRef->GetName());
          // Exception
+         return 0;
       }
 
       a->Streamer(b);

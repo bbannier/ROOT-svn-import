@@ -265,11 +265,12 @@ void TSpider::AddVariable(const char* varexp)
                ++entry;
             }
          }
-         if(inst == 0) loaded = kTRUE;
-         else if(!loaded){
+         if (!loaded) {
             // EvalInstance(0) always needs to be called so that
             // the proper branches are loaded.
             ((TTreeFormula*)fFormulas->At(fNcols-1))->EvalInstance(0);
+            loaded = kTRUE;
+         } else if (inst == 0) {
             loaded = kTRUE;
          }
       }
@@ -311,7 +312,7 @@ void TSpider::AddVariable(const char* varexp)
 
    if(fSegmentDisplay){
       for(ui=0;ui<fNx*fNy;++ui) ((TList*)fPolyList->At(ui))->Delete();
-      for(ui=0;ui<fNcols-1;++ui) delete fAverageSlices[ui];
+      if (fAverageSlices) for(ui=0;ui<fNcols-1;++ui) delete fAverageSlices[ui];
    }
    fPolyList->Delete();
    delete fPolyList;
@@ -395,7 +396,7 @@ void TSpider::DeleteVariable(const char* varexp)
 
    if(fSegmentDisplay){
       for(ui=0;ui<fNx*fNy;++ui) ((TList*)fPolyList->At(ui))->Delete();
-      for(ui=0;ui<=fNcols;++ui) delete fAverageSlices[ui];
+      if (fAverageSlices) for(ui=0;ui<=fNcols;++ui) delete fAverageSlices[ui];
    }
    fPolyList->Delete();
    delete fPolyList;
@@ -900,13 +901,14 @@ void TSpider::InitVariables(Long64_t firstentry, Long64_t nentries)
                ++entry;
             }
          }
-         if(inst == 0) loaded = kTRUE;
-         else if(!loaded){
+         if (!loaded) {
             // EvalInstance(0) always needs to be called so that
             // the proper branches are loaded.
             for (ui=0;ui<fNcols;ui++) {
                ((TTreeFormula*)fFormulas->At(ui))->EvalInstance(0);
             }
+            loaded = kTRUE;
+         } else if (inst == 0) {
             loaded = kTRUE;
          }
       }
@@ -1131,13 +1133,14 @@ void TSpider::SetCurrentEntries()
                ++entry;
             }
          }
-         if(inst == 0) loaded = kTRUE;
-         else if(!loaded){
+         if (!loaded) {
             // EvalInstance(0) always needs to be called so that
             // the proper branches are loaded.
             for (ui=0;ui<fNcols;ui++) {
                ((TTreeFormula*)fFormulas->At(ui))->EvalInstance(0);
             }
+            loaded = kTRUE;
+         } else if (inst == 0) {
             loaded = kTRUE;
          }
       }
@@ -1508,10 +1511,11 @@ void TSpider::SetVariablesExpression(const char* varexp)
    Int_t nch;
    fNcols=8;
 
+   if (!varexp) return;
    TObjArray *leaves = fTree->GetListOfLeaves();
    UInt_t nleaves = leaves->GetEntriesFast();
    if (nleaves < fNcols) fNcols = nleaves;
-   nch = varexp ? strlen(varexp) : 0;
+   nch = strlen(varexp);
 
    // if varexp is empty, take first 8 columns by default
    Int_t allvar = 0;

@@ -16,6 +16,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "RConfigure.h"
+#include "Rtypes.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -137,16 +138,21 @@ static int ReadUtmp()
    }
 
    gUtmpContents = (STRUCT_UTMP *) malloc(size);
-   if (!gUtmpContents) return 0;
-
-   n_read = fread(gUtmpContents, 1, size, utmp);
-   if (ferror(utmp) || fclose(utmp) == EOF || n_read < size) {
-      free(gUtmpContents);
-      gUtmpContents = 0;
+   if (!gUtmpContents) {
+      fclose(utmp);
       return 0;
    }
 
-   return size / sizeof(STRUCT_UTMP);
+   n_read = fread(gUtmpContents, 1, size, utmp);
+   if (!ferror(utmp)) {
+      if (fclose(utmp) != EOF && n_read == size)
+         return size / sizeof(STRUCT_UTMP);
+   } else
+      fclose(utmp);
+
+   free(gUtmpContents);
+   gUtmpContents = 0;
+   return 0;
 }
 
 static STRUCT_UTMP *SearchEntry(int n, const char *tty)
@@ -175,7 +181,7 @@ static const char *GetExePath()
 
       // get our pid and build the name of the link in /proc
       pid = getpid();
-      sprintf(linkname, "/proc/%i/exe", pid);
+      snprintf(linkname,64, "/proc/%i/exe", pid);
       int ret = readlink(linkname, buf, kMAXPATHLEN);
       if (ret > 0 && ret < kMAXPATHLEN) {
          buf[ret] = 0;
@@ -190,15 +196,17 @@ static void SetRootSys()
 {
    const char *exepath = GetExePath();
    if (exepath && *exepath) {
-      char *ep = new char[strlen(exepath)+1];
-      strcpy(ep, exepath);
+      int l1 = strlen(exepath)+1;
+      char *ep = new char[l1];
+      strlcpy(ep, exepath, l1);
       char *s;
       if ((s = strrchr(ep, '/'))) {
          *s = 0;
          if ((s = strrchr(ep, '/'))) {
             *s = 0;
-            char *env = new char[strlen(ep) + 10];
-            sprintf(env, "ROOTSYS=%s", ep);
+            int l2 = strlen(ep) + 10;
+            char *env = new char[l2];
+            snprintf(env, l2, "ROOTSYS=%s", ep);
             putenv(env);
          }
       }
@@ -353,12 +361,14 @@ static void PrintUsage(char *pname)
    fprintf(stderr, "  -n : do not execute logon and logoff macros as specified in .rootrc\n");
    fprintf(stderr, "  -q : exit after processing command line macro files\n");
    fprintf(stderr, "  -l : do not show splash screen\n");
+   fprintf(stderr, "  -x : exit on exception\n");
    fprintf(stderr, " dir : if dir is a valid directory cd to it before executing\n");
    fprintf(stderr, "\n");
-   fprintf(stderr, "  -?      : print usage\n");
-   fprintf(stderr, "  -h      : print usage\n");
-   fprintf(stderr, "  --help  : print usage\n");
-   fprintf(stderr, "  -config : print ./configure options\n");
+   fprintf(stderr, "  -?       : print usage\n");
+   fprintf(stderr, "  -h       : print usage\n");
+   fprintf(stderr, "  --help   : print usage\n");
+   fprintf(stderr, "  -config  : print ./configure options\n");
+   fprintf(stderr, "  -memstat : run with memory usage monitoring\n");
    fprintf(stderr, "\n");
 }
 
@@ -475,9 +485,9 @@ int main(int argc, char **argv)
    // Build argv vector
    argvv = new char* [argc+2];
 #ifdef ROOTBINDIR
-   sprintf(arg0, "%s/%s", ROOTBINDIR, ROOTBINARY);
+   snprintf(arg0, sizeof(arg0), "%s/%s", ROOTBINDIR, ROOTBINARY);
 #else
-   sprintf(arg0, "%s/bin/%s", getenv("ROOTSYS"), ROOTBINARY);
+   snprintf(arg0, sizeof(arg0), "%s/bin/%s", getenv("ROOTSYS"), ROOTBINARY);
 #endif
    argvv[0] = arg0;
    argvv[1] = (char *) "-splash";

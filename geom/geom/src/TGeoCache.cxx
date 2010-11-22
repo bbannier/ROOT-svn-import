@@ -56,6 +56,7 @@ TGeoNodeCache::TGeoNodeCache()
    fMPB         = 0;
    fNodeBranch  = 0;
    fNodeIdArray = 0;
+   for (Int_t i=0; i<100; i++) fIdBranch[i] = 0;
 }
 
 //_____________________________________________________________________________
@@ -77,13 +78,14 @@ TGeoNodeCache::TGeoNodeCache(TGeoNode *top, Bool_t nodeid, Int_t capacity)
    fMatrixBranch = new TGeoHMatrix *[fGeoCacheMaxLevels];
    fMPB = new TGeoHMatrix *[fGeoCacheMaxLevels];
    for (Int_t i=0; i<fGeoCacheMaxLevels; i++) {
-      fMPB[i] = new TGeoHMatrix(Form("global_%d",i));
+      fMPB[i] = new TGeoHMatrix(TString::Format("global_%d",i));
       fMatrixBranch[i] = 0;
    }
    fMatrix = fMatrixBranch[0] = fMPB[0];
    fNodeBranch  = new TGeoNode *[fGeoCacheMaxLevels];
    fNodeBranch[0] = top;
    fNodeIdArray = 0;
+   for (Int_t i=0; i<100; i++) fIdBranch[i] = 0;
    if (nodeid) BuildIdArray();
    CdTop();
 }
@@ -112,7 +114,7 @@ TGeoNodeCache::TGeoNodeCache(const TGeoNodeCache& gnc)
 }
 
 //_____________________________________________________________________________
-TGeoNodeCache& TGeoNodeCache::operator=(const TGeoNodeCache&) 
+TGeoNodeCache& TGeoNodeCache::operator=(const TGeoNodeCache&)
 {
    // Assignment operator
    Error("operator=","Assignment not allowed");
@@ -143,7 +145,7 @@ void TGeoNodeCache::BuildIdArray()
    Int_t nnodes = gGeoManager->GetNNodes();
    //if (nnodes>3E7) return;
    if (fNodeIdArray) delete [] fNodeIdArray;
-   Info("BuildIDArray","--- node ID tracking enabled, size=%d Bytes\n", (2*nnodes+1)*sizeof(Int_t));
+   Info("BuildIDArray","--- node ID tracking enabled, size=%lu Bytes\n", ULong_t((2*nnodes+1)*sizeof(Int_t)));
    fNodeIdArray = new Int_t[2*nnodes+1];
    fNodeIdArray[0] = 0;
    Int_t ifree  = 1;
@@ -329,42 +331,42 @@ Bool_t TGeoNodeCache::RestoreState(Int_t &nmany, TGeoCacheState *state, Double_t
 }
 
 //_____________________________________________________________________________
-void TGeoNodeCache::LocalToMaster(const Double_t *local, Double_t *master) const 
+void TGeoNodeCache::LocalToMaster(const Double_t *local, Double_t *master) const
 {
 // Local point converted to master frame defined by current matrix.
    fMatrix->LocalToMaster(local, master);
 }
 
 //_____________________________________________________________________________
-void TGeoNodeCache::MasterToLocal(const Double_t *master, Double_t *local) const 
+void TGeoNodeCache::MasterToLocal(const Double_t *master, Double_t *local) const
 {
 // Point in master frame defined by current matrix converted to local one.
    fMatrix->MasterToLocal(master, local);
 }
 
 //_____________________________________________________________________________
-void TGeoNodeCache::LocalToMasterVect(const Double_t *local, Double_t *master) const 
+void TGeoNodeCache::LocalToMasterVect(const Double_t *local, Double_t *master) const
 {
 // Local vector converted to master frame defined by current matrix.
    fMatrix->LocalToMasterVect(local, master);
 }
 
 //_____________________________________________________________________________
-void TGeoNodeCache::MasterToLocalVect(const Double_t *master, Double_t *local) const 
+void TGeoNodeCache::MasterToLocalVect(const Double_t *master, Double_t *local) const
 {
 // Vector in master frame defined by current matrix converted to local one.
    fMatrix->MasterToLocalVect(master,local);
 }
 
 //_____________________________________________________________________________
-void TGeoNodeCache::LocalToMasterBomb(const Double_t *local, Double_t *master) const 
+void TGeoNodeCache::LocalToMasterBomb(const Double_t *local, Double_t *master) const
 {
 // Local point converted to master frame defined by current matrix and rescaled with bomb factor.
    fMatrix->LocalToMasterBomb(local, master);
 }
 
 //_____________________________________________________________________________
-void TGeoNodeCache::MasterToLocalBomb(const Double_t *master, Double_t *local) const 
+void TGeoNodeCache::MasterToLocalBomb(const Double_t *master, Double_t *local) const
 {
 // Point in master frame defined by current matrix converted to local one and rescaled with bomb factor.
    fMatrix->MasterToLocalBomb(master, local);
@@ -413,7 +415,7 @@ TGeoCacheState::TGeoCacheState(Int_t capacity)
 }
 
 //_____________________________________________________________________________
-TGeoCacheState::TGeoCacheState(const TGeoCacheState& gcs) : 
+TGeoCacheState::TGeoCacheState(const TGeoCacheState& gcs) :
   TObject(gcs),
   fCapacity(gcs.fCapacity),
   fLevel(gcs.fLevel),
@@ -429,14 +431,14 @@ TGeoCacheState::TGeoCacheState(const TGeoCacheState& gcs) :
    fMatrixBranch = new TGeoHMatrix *[fCapacity];
    fMatPtr = new TGeoHMatrix *[fCapacity];
    for (i=0; i<fCapacity; i++) {
-      fNodeBranch[i] = gcs.fNodeBranch[i];      
+      fNodeBranch[i] = gcs.fNodeBranch[i];
       fMatrixBranch[i] = new TGeoHMatrix(*gcs.fMatrixBranch[i]);
       fMatPtr[i] = gcs.fMatPtr[i];
-   }   
+   }
 }
 
 //_____________________________________________________________________________
-TGeoCacheState& TGeoCacheState::operator=(const TGeoCacheState& gcs) 
+TGeoCacheState& TGeoCacheState::operator=(const TGeoCacheState& gcs)
 {
    //assignment operator
    Int_t i;
@@ -453,11 +455,11 @@ TGeoCacheState& TGeoCacheState::operator=(const TGeoCacheState& gcs)
       fMatrixBranch = new TGeoHMatrix *[fCapacity];
       fMatPtr = new TGeoHMatrix *[fCapacity];
       for (i=0; i<fCapacity; i++) {
-         fNodeBranch[i] = gcs.fNodeBranch[i];      
+         fNodeBranch[i] = gcs.fNodeBranch[i];
          fMatrixBranch[i] = new TGeoHMatrix(*gcs.fMatrixBranch[i]);
          fMatPtr[i] = gcs.fMatPtr[i];
-      }   
-   } 
+      }
+   }
    return *this;
 }
 
@@ -524,4 +526,3 @@ Bool_t TGeoCacheState::GetState(Int_t &level, Int_t &nmany, Double_t *point) con
    if (point) memcpy(point, fPoint, 3*sizeof(Double_t));
    return fOverlapping;
 }
-

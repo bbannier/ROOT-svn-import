@@ -22,7 +22,7 @@
 namespace {
 
    //_________________________________________________________________________
-   int PyCtorCallback( G__value* res, G__CONST char*, struct G__param* libp, int hash )
+   int PyCtorCallback( G__value* res, G__CONST char*, struct G__param* /* libp */, int /* hash */ )
    {
       PyObject* pyclass = PyROOT::Utility::GetInstalledMethod( G__value_get_tagnum(res) );
       if ( ! pyclass )
@@ -42,7 +42,7 @@ namespace {
       pti.tagtype = 'c';
 
       PyObject* str = PyObject_Str( pyclass );
-      std::string clName = PyString_AS_STRING( str );
+      std::string clName = PyROOT_PyUnicode_AsString( str );
       Py_DECREF( str );
 
       clName = clName.substr( clName.rfind( '.' )+1, std::string::npos );
@@ -50,11 +50,11 @@ namespace {
 
       G__set_tagnum( res, G__get_linked_tagnum( &pti ) );
 
-      return ( 1 || hash || res || libp );
+      return ( 1 );
    }
 
    //_________________________________________________________________________
-   int PyMemFuncCallback( G__value* res, G__CONST char*, struct G__param* libp, int hash )
+   int PyMemFuncCallback( G__value* res, G__CONST char*, struct G__param* libp, int /* hash */)
    {
       PyObject* pyfunc = PyROOT::Utility::GetInstalledMethod( G__value_get_tagnum(res) );
       if ( ! pyfunc )
@@ -98,13 +98,13 @@ namespace {
             break;
          case 'c':
             char cc[2]; cc[0] = G__Mchar(libp->para[i]); cc[1] = '\0';
-            arg = PyString_FromString( cc );
+            arg = PyBytes_FromString( cc );
             break;
          case 'b':
          // unsigned char
             break;
          case 'C':
-            arg = PyString_FromString( (char*)G__Mlong(libp->para[i]) );
+            arg = PyBytes_FromString( (char*)G__Mlong(libp->para[i]) );
             break;
          }
 
@@ -131,7 +131,7 @@ namespace {
       res->ref = (Long_t)retval;
       G__set_tagnum( res, ((G__ClassInfo*)TPyReturn::Class()->GetClassInfo())->Tagnum() );
 
-      return ( 1 || hash || res || libp );
+      return ( 1 );
    }
 
 } // unnamed namespace
@@ -220,7 +220,7 @@ TClass* TPyClassGenerator::GetClass( const char* name, Bool_t load, Bool_t silen
 
    // collect only member functions (i.e. callable elements in __dict__)
       if ( PyCallable_Check( attr ) ) {
-         std::string mtName = PyString_AS_STRING( label );
+         std::string mtName = PyROOT_PyUnicode_AsString( label );
 
       // add method and store callback
          if ( mtName != "__init__" ) {

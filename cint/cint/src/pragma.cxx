@@ -15,33 +15,29 @@
 
 #include "common.h"
 
-extern "C" {
-
 /**************************************************************************
 * G__addpragma()
 **************************************************************************/
-void G__addpragma(char *comname, void (*p2f) G__P((char*)))
+G__AppPragma::G__AppPragma(char *comname, G__AppPragma_func_t in_p2f) : 
+   name(comname), p2f(in_p2f), next(0)
 {
-  struct G__AppPragma *paddpragma;
+   // Normal constructor.
+}
 
-  if(G__paddpragma) {
-    paddpragma=G__paddpragma;
-    while(paddpragma->next) paddpragma=paddpragma->next;
-    paddpragma->next
-      =(struct G__AppPragma*)malloc(sizeof(struct G__AppPragma)
-                                    +strlen(comname)+1);
-    paddpragma = paddpragma->next;
-  }
-  else {
-    G__paddpragma
-      =(struct G__AppPragma*)malloc(sizeof(struct G__AppPragma)+strlen(comname)+1);
-    paddpragma=G__paddpragma;
-  }
-
-  paddpragma->name=(char*)((long)paddpragma+sizeof(struct G__AppPragma));
-  strcpy(paddpragma->name,comname);
-  paddpragma->p2f=(void*)p2f;
-  paddpragma->next=(struct G__AppPragma*)NULL;
+extern "C" void G__addpragma(char *comname, G__AppPragma_func_t p2f)
+{
+   struct G__AppPragma *paddpragma;
+   
+   if(G__paddpragma) {
+      paddpragma = G__paddpragma;
+      while(paddpragma->next) paddpragma = paddpragma->next;
+      paddpragma->next = new G__AppPragma( comname, p2f); 
+      paddpragma = paddpragma->next;
+   }
+   else {
+      G__paddpragma = new G__AppPragma( comname, p2f); 
+      paddpragma=G__paddpragma;
+   }
 }
 
 /**************************************************************************
@@ -68,13 +64,16 @@ int G__execpragma(const char *comname,char *args)
 /**************************************************************************
 * G__freepragma()
 **************************************************************************/
+G__AppPragma::~G__AppPragma()
+{
+   delete next;
+}
 void G__freepragma(G__AppPragma *paddpragma)
 {
-  if(paddpragma) {
-    if(paddpragma->next) G__freepragma(paddpragma->next);
-    free(paddpragma);
-  }
+   delete paddpragma;
 }
+
+extern "C" {
 
 /**************************************************************************
 * G__read_setmode()
@@ -116,7 +115,7 @@ static int G__addpreprocessfile()
 
   /* Add the list */
   pkey->keystring = (char*)malloc(strlen(keystring)+1);
-  strcpy(pkey->keystring,keystring);
+  strcpy(pkey->keystring,keystring); // Okay we allocated enough space
   pkey->next
     =(struct G__Preprocessfilekey*)malloc(sizeof(struct G__Preprocessfilekey));
   pkey->next->next=(struct G__Preprocessfilekey*)NULL;
@@ -175,7 +174,7 @@ static void G__do_not_include()
 
   G__srcfile[G__nfile].hash = hash;
   G__srcfile[G__nfile].filename = (char*)malloc(strlen(fname)+1);
-  strcpy(G__srcfile[G__nfile].filename,fname);
+  strcpy(G__srcfile[G__nfile].filename,fname); // Okay we allocated enough space
   G__srcfile[G__nfile].included_from = -1;
 
   ++G__nfile;
@@ -538,11 +537,13 @@ int G__security_handle(G__UINT32 category)
       G__genericerror("Can not reference through pointer");
       G__security_error |= G__RECOVERABLE;
     }
+#if 0
+    // G__SECURE_ARRAY is not used
     if(category&G__SECURE_ARRAY) {
       G__genericerror("Can not instantiate array");
       G__security_error |= G__DANGEROUS;
     }
-
+#endif
     if(category&G__SECURE_FILE_POINTER) {
       G__genericerror("Can not use FILE pointer");
       G__security_error |= G__DANGEROUS;
@@ -576,16 +577,16 @@ int G__setautoccnames()
 
   /* assign autocc filenames */
   if(G__iscpp) 
-     sprintf(G__autocc_c,"G__AC%s%s",fname(),G__getmakeinfo1("CPPSRCPOST"));
+     G__snprintf(G__autocc_c,G__MAXNAME,"G__AC%s%s",fname(),G__getmakeinfo1("CPPSRCPOST"));
   else
-     sprintf(G__autocc_c,"G__AC%s%s",fname(),G__getmakeinfo1("CSRCPOST"));
-  sprintf(G__autocc_h,"G__AC%s",fname());
+     G__snprintf(G__autocc_c,G__MAXNAME,"G__AC%s%s",fname(),G__getmakeinfo1("CSRCPOST"));
+  G__snprintf(G__autocc_h,G__MAXNAME,"G__AC%s",fname());
 #ifdef G__WIN32
-  sprintf(G__autocc_sl,"G__AC%s%s",fname(),G__getmakeinfo1("DLLPOST"));
+  G__snprintf(G__autocc_sl,G__MAXNAME,"G__AC%s%s",fname(),G__getmakeinfo1("DLLPOST"));
 #else
-  sprintf(G__autocc_sl,"./G__AC%s%s",fname(),G__getmakeinfo1("DLLPOST"));
+  G__snprintf(G__autocc_sl,G__MAXNAME,"./G__AC%s%s",fname(),G__getmakeinfo1("DLLPOST"));
 #endif
-  sprintf(G__autocc_mak,"G__AC%s.mak",fname());
+  G__snprintf(G__autocc_mak,G__MAXNAME,"G__AC%s.mak",fname());
 
   /* copy autocc file backup */
   backup.Format("G__%s",G__autocc_c);
@@ -635,7 +636,7 @@ int G__autocc()
   if(G__isautoccupdate()) {
     G__fprinterr(G__serr,"Compiling #pragma compile ...\n");
     ansi[0]='\0';
-    if(G__cpp)  sprintf(cpp,"-p");
+    if(G__cpp)  G__strlcpy(cpp,"-p",sizeof(cpp));
     else        cpp[0]='\0';
 
     if(G__iscpp) {

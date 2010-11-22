@@ -61,11 +61,13 @@ static const Int_t gSVNMemPlot = 25090;
 ClassImp(TProofProgressDialog)
 
 //______________________________________________________________________________
-TProofProgressDialog::TProofProgressDialog(TProof *proof,
-                                           const char *selector,
-                                           Int_t files,
-                                           Long64_t first,
-                                           Long64_t entries)
+TProofProgressDialog::TProofProgressDialog(TProof *proof, const char *selector,
+                                           Int_t files, Long64_t first,
+                                           Long64_t entries) : fDialog(0),
+   fBar(0), fClose(0), fStop(0), fAbort(0), fAsyn(0), fLog(0), fRatePlot(0),
+   fMemPlot(0), fKeepToggle(0), fLogQueryToggle(0), fTextQuery(0), fEntry(0),
+   fTitleLab(0), fFilesEvents(0), fTimeLab(0), fProcessed(0), fEstim(0), 
+   fTotal(0), fRate(0), fInit(0), fSelector(0), fSpeedo(0), fSmoothSpeedo(0)
 {
    // Create PROOF processing progress dialog.
 
@@ -92,6 +94,10 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
    fAvgMBRate     = 0.;
    fSVNRev        = -1;
    fRightInfo     = 0;
+   fSpeedoEnabled = kFALSE;
+   fSpeedo        = 0;
+   fUpdtSpeedo    = 0;
+   fSmoothSpeedo  = 0;
 
    // Make sure we are attached to a good instance
    if (!proof || !(proof->IsValid())) {
@@ -226,9 +232,14 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
 
    TGVerticalFrame *vf51 = new TGVerticalFrame(hf4, 20, 20);
 
+   Int_t enablespeedo = gEnv->GetValue("Proof.EnableSpeedo", 0);
+   if (enablespeedo) fSpeedoEnabled = kTRUE;
+
    fSpeedo = new TGSpeedo(vf51, 0.0, 1.0, "", "  Ev/s");
-   fSpeedo->Connect("OdoClicked()", "TProofProgressDialog", this, "ToggleOdometerInfos()");
-   fSpeedo->Connect("LedClicked()", "TProofProgressDialog", this, "ToggleThreshold()");
+   if (fSpeedoEnabled) {
+      fSpeedo->Connect("OdoClicked()", "TProofProgressDialog", this, "ToggleOdometerInfos()");
+      fSpeedo->Connect("LedClicked()", "TProofProgressDialog", this, "ToggleThreshold()");
+   }
    vf51->AddFrame(fSpeedo);
    fSpeedo->SetDisplayText("Init Time", "[ms]");
    fSpeedo->EnablePeakMark();
@@ -238,7 +249,13 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
    fSpeedo->EnableMeanMark();
 
    fSmoothSpeedo = new TGCheckButton(vf51, new TGHotString("Smooth speedometer update"));
-   fSmoothSpeedo->SetState(kButtonDown);
+   if (fSpeedoEnabled) {
+      fSmoothSpeedo->SetState(kButtonDown);
+      fSmoothSpeedo->SetToolTipText("Control smoothness in refreshing the speedo");
+   } else {
+      fSmoothSpeedo->SetToolTipText("Speedo refreshing is disabled");
+      fSmoothSpeedo->SetState(kButtonDisabled);
+   }
    vf51->AddFrame(fSmoothSpeedo, new TGLayoutHints(kLHintsBottom | kLHintsCenterX, 0, 0, 5, 0));
 
    hf4->AddFrame(vf51, new TGLayoutHints(kLHintsBottom, 5, 5, 5, 5));
@@ -303,10 +320,21 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
       hf5->AddFrame(fRatePlot, new TGLayoutHints(kLHintsCenterY | kLHintsExpandX, 7, 7, 0, 0));
    }
 
-   fMemPlot = new TGTextButton(hf5, "Memory Plot");
+   fMemPlot = new TGTextButton(hf5, "&Memory Plot");
    fMemPlot->Connect("Clicked()", "TProofProgressDialog", this, "DoMemoryPlot()");
    fMemPlot->SetToolTipText("Show memory consumption vs entry / merging phase");
    hf5->AddFrame(fMemPlot, new TGLayoutHints(kLHintsCenterY | kLHintsExpandX, 7, 7, 0, 0));
+
+   fUpdtSpeedo = new TGTextButton(hf5, "&Enable speedometer");
+   fUpdtSpeedo->Connect("Clicked()", "TProofProgressDialog", this, "DoEnableSpeedo()");
+   if (fSpeedoEnabled) {
+      fUpdtSpeedo->ChangeText("&Disable speedometer");
+      fUpdtSpeedo->SetToolTipText("Disable speedometer");
+   } else {
+      fUpdtSpeedo->ChangeText("&Enable speedometer");
+      fUpdtSpeedo->SetToolTipText("Enable speedometer (may have an impact on performance)");
+   }
+   hf5->AddFrame(fUpdtSpeedo, new TGLayoutHints(kLHintsCenterY | kLHintsExpandX, 7, 7, 0, 0));
 
    fDialog->AddFrame(hf5, new TGLayoutHints(kLHintsBottom | kLHintsCenterX | kLHintsExpandX, 5, 5, 5, 5));
 
@@ -341,7 +369,7 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
 
    // Set dialog title
    if (fProof) {
-      if (strlen(fProof->GetUser()) > 0) 
+      if (strlen(fProof->GetUser()) > 0)
          fDialog->SetWindowName(Form("PROOF Query Progress: %s@%s",
                                      fProof->GetUser(), fProof->GetMaster()));
       else
@@ -545,10 +573,10 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed)
    TTime tdiff = fEndTime - fStartTime;
    Float_t eta = 0;
    if (evproc > 0)
-      eta = ((Float_t)((Long_t)tdiff)*total/Float_t(evproc) - Long_t(tdiff))/1000.;
+      eta = ((Float_t)((Long64_t)tdiff)*total/Float_t(evproc) - Long64_t(tdiff))/1000.;
 
    if (processed >= 0 && processed >= total) {
-      tt = (Long_t(tdiff)/1000);
+      tt = (Long_t)Long64_t(tdiff)/1000;
       if (tt > 0) {
          hh = (UInt_t)(tt / 3600);
          mm = (UInt_t)((tt % 3600) / 60);
@@ -614,8 +642,8 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed)
          buf += TString::Format(" - %s", cproc[fStatus]);
       }
       fTotal->SetText(buf);
-      
-      buf.Form("%.1f events/sec\n", Float_t(evproc)/Long_t(tdiff)*1000.);
+
+      buf.Form("%.1f events/sec\n", Float_t(evproc)/Long64_t(tdiff)*1000.);
       fRate->SetText(buf);
 
       if (processed < 0) {
@@ -662,7 +690,7 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
       fInitTime = initTime;
       buf.Form("%.1f secs", initTime);
       fInit->SetText(buf);
-      if (fRightInfo == 0)
+      if (fSpeedoEnabled && fRightInfo == 0)
          fSpeedo->SetOdoValue((Int_t)(fInitTime * 1000.0));
    }
 
@@ -709,11 +737,13 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
       fAvgMBRate = mbsproc / procTime;
    }
 
-   if (fRightInfo == 0)
-      fSpeedo->SetOdoValue((Int_t)(fInitTime * 1000.0));
-   else if (fRightInfo == 1)
-      fSpeedo->SetOdoValue((Int_t)(fProcTime * 1000.0));
-      
+   if (fSpeedoEnabled) {
+      if (fRightInfo == 0)
+         fSpeedo->SetOdoValue((Int_t)(fInitTime * 1000.0));
+      else if (fRightInfo == 1)
+         fSpeedo->SetOdoValue((Int_t)(fProcTime * 1000.0));
+   }
+
    if (over || (processed >= 0 && processed >= total)) {
 
       // A negative value for process indicates that we are finished,
@@ -785,7 +815,7 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
       fStop->SetState(kButtonDisabled);
       fAbort->SetState(kButtonDisabled);
       fClose->SetState(kButtonUp);
-      
+
       if (fSmoothSpeedo->GetState() == kButtonDown)
          fSpeedo->SetScaleValue(0.0, 0);
       else
@@ -836,18 +866,20 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
                   evtrti, fAvgRate, fAvgMBRate);
          fRatePoints->Fill(procTime, evtrti, mbrti, (Float_t)actw, (Float_t)tses, eses);
          fRatePlot->SetState(kButtonUp);
-         if (evtrti > fSpeedo->GetScaleMax()) {
-            nbins = 4;
-            BinLow = fSpeedo->GetScaleMin();
-            BinHigh = 1.5 * evtrti;
-            THLimitsFinder::OptimizeLimits(4, nbins, BinLow, BinHigh, kFALSE);
-            fSpeedo->SetMinMaxScale(fSpeedo->GetScaleMin(), BinHigh);
+         if (fSpeedoEnabled) {
+            if (evtrti > fSpeedo->GetScaleMax()) {
+               nbins = 4;
+               BinLow = fSpeedo->GetScaleMin();
+               BinHigh = 1.5 * evtrti;
+               THLimitsFinder::OptimizeLimits(4, nbins, BinLow, BinHigh, kFALSE);
+               fSpeedo->SetMinMaxScale(fSpeedo->GetScaleMin(), BinHigh);
+            }
+            if (fSmoothSpeedo->GetState() == kButtonDown)
+               fSpeedo->SetScaleValue(evtrti, 0);
+            else
+               fSpeedo->SetScaleValue(evtrti);
+            fSpeedo->SetMeanValue(fAvgRate);
          }
-         if (fSmoothSpeedo->GetState() == kButtonDown)
-            fSpeedo->SetScaleValue(evtrti, 0);
-         else
-            fSpeedo->SetScaleValue(evtrti);
-         fSpeedo->SetMeanValue(fAvgRate);
       } else {
          buf.Form("avg: %.1f evts/sec (%.1f MB/sec)", fAvgRate, fAvgMBRate);
       }
@@ -860,11 +892,13 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
          fAbort->SetState(kButtonDisabled);
          fClose->SetState(kButtonUp);
 
-         if (fSmoothSpeedo->GetState() == kButtonDown)
-            fSpeedo->SetScaleValue(0.0, 0);
-         else
-            fSpeedo->SetScaleValue(0.0);
-         fSpeedo->Glow(TGSpeedo::kNoglow);
+         if (fSpeedoEnabled) {
+            if (fSmoothSpeedo->GetState() == kButtonDown)
+               fSpeedo->SetScaleValue(0.0, 0);
+            else
+               fSpeedo->SetScaleValue(0.0);
+            fSpeedo->Glow(TGSpeedo::kNoglow);
+         }
 
          // Set the status to done
          fStatus = kDone;
@@ -1306,5 +1340,31 @@ void TProofProgressDialog::DoMemoryPlot()
       // Clear window
       fMemWindow->Clear();
       fMemWindow->DoPlot();
+   }
+}
+
+//______________________________________________________________________________
+void TProofProgressDialog::DoEnableSpeedo()
+{
+   // Enable/Disable speedometer
+
+   if (!fSpeedoEnabled) {
+      // Enable and connect
+      fSpeedoEnabled = kTRUE;
+      fSpeedo->Connect("OdoClicked()", "TProofProgressDialog", this, "ToggleOdometerInfos()");
+      fSpeedo->Connect("LedClicked()", "TProofProgressDialog", this, "ToggleThreshold()");
+      fUpdtSpeedo->ChangeText("&Disable speedometer");
+      fUpdtSpeedo->SetToolTipText("Disable speedometer");
+      fSmoothSpeedo->SetState(kButtonDown);
+      fSmoothSpeedo->SetToolTipText("Control smoothness in refreshing the speedo");
+   } else {
+      // Disable and disconnect
+      fSpeedoEnabled = kFALSE;
+      // Reset speedo
+      fSpeedo->SetScaleValue(0);
+      fUpdtSpeedo->ChangeText("&Enable speedometer");
+      fUpdtSpeedo->SetToolTipText("Enable speedometer (may have an impact on performance)");
+      fSmoothSpeedo->SetToolTipText("Speedo refreshing is disabled");
+      fSmoothSpeedo->SetState(kButtonDisabled);
    }
 }

@@ -77,8 +77,11 @@ using namespace RooStats;
 
 //_______________________________________________________
 NeymanConstruction::NeymanConstruction(RooAbsData& data, ModelConfig& model):
+   fSize(0.05),
    fData(data),
    fModel(model),
+   fTestStatSampler(0), 
+   fPointsToTest(0),
    fLeftSideFraction(0), 
    fConfBelt(0),  // constructed with tree data 
    fAdaptiveSampling(false),
@@ -114,7 +117,7 @@ ConfInterval* NeymanConstruction::GetInterval() const {
   }
   
   if(!&fData) {
-    oocoutF(&fData,Contents) << "Neyman Construction: data is not set, can't get interval" << endl;
+    oocoutF((TObject*)0,Contents) << "Neyman Construction: data is not set, can't get interval" << endl;
     return 0;
   }
   Int_t npass = 0;

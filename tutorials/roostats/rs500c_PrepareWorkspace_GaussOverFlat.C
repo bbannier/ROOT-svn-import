@@ -49,11 +49,10 @@ void rs500c_PrepareWorkspace_GaussOverFlat( TString fileName = "WS_GaussOverFlat
   // Pdf in observable, 
   myWS.factory("Gaussian::sigPdf(mass,200,50)") ;
   myWS.factory("Uniform::bkgPdf(mass)") ;
-  myWS.factory("SUM::model(S[20,0,60]*sigPdf,B[10]*bkgPdf") ;
+  myWS.factory("SUM::model(S[20,0,60]*sigPdf,B[10]*bkgPdf)") ;
   // Background only pdf
   myWS.factory("ExtendPdf::modelBkg(bkgPdf,B)") ;
-
-  // Prior
+  // Priors
   myWS.factory("Uniform::priorPOI(S)") ;
 
   // Definition of observables and parameters of interest

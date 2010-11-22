@@ -8,10 +8,10 @@
  **********************************************************************/
 // Header file for GoFTest
 
+#include <memory>
+
 #ifndef ROOT_Math_GoFTest
 #define ROOT_Math_GoFTest
-
-
 
 #ifndef ROOT_Math_WrappedFunction
 #include "Math/WrappedFunction.h"
@@ -19,7 +19,6 @@
 #ifndef ROOT_TMath
 #include "TMath.h"
 #endif
-
 
 /*
   Goodness of Fit Statistical Tests Toolkit -- Anderson-Darling and Kolmogorov-Smirnov 1- and 2-Samples Tests
@@ -31,32 +30,89 @@ namespace Math {
 class GoFTest {
 public:
 
-   enum EDistribution {  // H0 distributions for using only with 2-samples tests
-      kUserDefined = -1, // Internal use only for the class's template constructor
-      kGaussian,         // Default value
+   enum EDistribution { // H0 distributions for using only with 1-sample tests
+      kUndefined,       // Default value for non templated 1-sample test. Set with SetDistribution
+      kUserDefined,     // For internal use only within the class's template constructor
+      kGaussian,  
       kLogNormal,
       kExponential
    };
-  
+   
+   enum EUserDistribution { // User input distribution option
+      kCDF,
+      kPDF                  // Default value
+   };
+   
    enum ETestType { // Goodness of Fit test types for using with the class's unary funtion as a shorthand for the in-built methods
-      kAD,    // Anderson-Darling Test. Default value
+      kAD,   // Anderson-Darling Test. Default value
       kAD2s, // Anderson-Darling 2-Samples Test
       kKS,   // Kolmogorov-Smirnov Test
       kKS2s  // Kolmogorov-Smirnov 2-Samples Test
    };
-    
+   
    /* Constructor for using only with 2-samples tests */
-   GoFTest(const Double_t* sample1, UInt_t sample1Size, const Double_t* sample2, UInt_t sample2Size);
+   GoFTest( UInt_t sample1Size, const Double_t* sample1, UInt_t sample2Size, const Double_t* sample2 );
   
    /* Constructor for using only with 1-sample tests with a specified distribution */
-   GoFTest(const Double_t* sample, UInt_t sampleSize, EDistribution dist = kGaussian);
+   GoFTest(UInt_t sampleSize, const Double_t* sample, EDistribution dist = kUndefined);
   
-   /* Templated constructor for using only with 1-sample tests with a user specified distribution */
+   /* Templated constructor for using only with 1-sample tests with a user specified distribution */  
    template<class Dist>
-   GoFTest(const Double_t* sample, UInt_t sampleSize, const Dist& cdf) {
+   GoFTest(UInt_t sampleSize, const Double_t* sample, Dist& dist, EUserDistribution userDist = kPDF,
+           Double_t xmin = 1, Double_t xmax = 0) 
+   {
       Instantiate(sample, sampleSize);
-      SetCDF(new ROOT::Math::WrappedFunction<const Dist&>(cdf));
+      SetUserDistribution<Dist>(dist, userDist, xmin, xmax);
    }
+
+   /* specializetion using IGenFunction interface */
+   GoFTest(UInt_t sampleSize, const Double_t* sample, const IGenFunction& dist, EUserDistribution userDist = kPDF, 
+           Double_t xmin = 1, Double_t xmax = 0) 
+   {
+      Instantiate(sample, sampleSize);
+      SetUserDistribution(dist, userDist,xmin,xmax);
+   }
+
+   /* Sets the user input distribution function for 1-sample tests. */
+   template<class Dist>
+   void SetUserDistribution(Dist& dist, EUserDistribution userDist = kPDF, Double_t xmin = 1, Double_t xmax = 0) {
+      WrappedFunction<Dist&> wcdf(dist); 
+      SetDistributionFunction(wcdf, userDist,xmin,xmax);
+   }
+
+   /* Template specialization to set the user input distribution for 1-sample tests */
+   void SetUserDistribution(const IGenFunction& f, GoFTest::EUserDistribution userDist, Double_t xmin = 1, Double_t xmax = 0) {
+      SetDistributionFunction(f, userDist,xmin,xmax); 
+   }
+   
+   /* Sets the user input distribution as a probability density function for 1-sample tests */
+   template<class Dist>
+   void SetUserPDF(Dist& dist, Double_t xmin = 1, Double_t xmax = 0) {
+      SetUserDistribution<Dist>(dist, kPDF,xmin,xmax);
+   }
+
+   /* Template specialization to set the user input distribution as a probability density function for 1-sample tests */
+   void SetUserPDF(const IGenFunction& f, Double_t xmin = 1, Double_t xmax = 0) {
+      SetUserDistribution(f, kPDF,xmin,xmax);
+   }
+
+   /* Sets the user input distribution as a cumulative distribution function for 1-sample tests 
+      The CDF must return zero 
+    */
+   template<class Dist>
+   void SetUserCDF(Dist& dist, Double_t xmin = 1, Double_t xmax = 0) {
+      SetUserDistribution<Dist>(dist, kCDF, xmin, xmax);
+   }
+
+   /* Template specialization to set the user input distribution as a cumulative distribution function for 1-sample tests */
+   void SetUserCDF(const IGenFunction& f, Double_t xmin = 1, Double_t xmax = 0)  {
+      SetUserDistribution(f, kCDF, xmin, xmax);
+   }
+
+   
+   /* Sets the distribution for the predefined distribution types  */
+   void SetDistribution(EDistribution dist);
+
    
    virtual ~GoFTest();
 
@@ -102,34 +158,28 @@ private:
    GoFTest();                       // Disallowed default constructor
    GoFTest(GoFTest& gof);           // Disallowed copy constructor
    GoFTest operator=(GoFTest& gof); // Disallowed assign operator
-  
-   typedef ROOT::Math::IBaseFunctionOneDim* CDF_Ptr;
-   CDF_Ptr fCDF;
-  
-   class Integrand { // Integrand of the integral term of the Anderson-Darling test statistic's asymtotic distribution as described in (2)
-      Double_t* parms;
-   public:
-      Integrand(Double_t* parms);
-      Double_t operator()(Double_t y) const;
-   };
+
+   std::auto_ptr<IGenFunction> fCDF;
+
   
    EDistribution fDist;
   
    Double_t fMean;
    Double_t fSigma;
-  
+
    std::vector<Double_t> fCombinedSamples;
   
    std::vector<std::vector<Double_t> > fSamples;
   
    Bool_t fTestSampleFromH0;
+   
+   void SetCDF();
+   void SetDistributionFunction(const IGenFunction& cdf, Bool_t isPDF, Double_t xmin, Double_t xmax);
   
-   void SetCDF(CDF_Ptr cdf = 0);
+   void Instantiate(const Double_t* sample, UInt_t sampleSize);
+    
   
-   void Instantiate(const Double_t* sample, UInt_t sampleSize)
-      ; 
-   Double_t ComputeIntegral(Double_t* parms) const; // Computation of the integral term of the 1-Sample Anderson-Darling test statistic's asymtotic distribution as described in (2)
-  
+   Double_t LogNormalCDF(Double_t x) const;
    Double_t GaussianCDF(Double_t x) const;
    Double_t ExponentialCDF(Double_t x) const;
   
@@ -147,6 +197,7 @@ private:
   
    void SetParameters(); // Sets the estimated mean and standard-deviation from the samples 
 }; // end GoFTest class
+
 
 } // ROOT namespace
 } // Math namespace

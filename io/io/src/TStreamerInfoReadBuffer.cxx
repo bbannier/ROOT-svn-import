@@ -665,7 +665,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
 
    TStreamerInfo *thisVar = this;
 #endif
-   b.IncrementLevel(thisVar);
+   Bool_t needIncrement = !( arrayMode & 2 );
+   arrayMode = arrayMode & (~2);
+   
+   if (needIncrement) b.IncrementLevel(thisVar);
 
    Int_t last;
 
@@ -691,7 +694,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
    TMemberStreamer *pstreamer=0;
    Int_t isPreAlloc = 0;
    for (Int_t i=first;i<last;i++) {
-      b.SetStreamerElementNumber(i);
+      if (needIncrement) b.SetStreamerElementNumber(i);
       TStreamerElement * aElement  = (TStreamerElement*)fElem[i];
       fgElement = aElement;
 
@@ -1063,7 +1066,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                   TClass *newClass = aElement->GetNewClass();
                   TClass *oldClass = aElement->GetClassPointer();
                   if( vers < 9 && newClass && newClass!=oldClass ) {
-                     Error( "ReadBuffer", "Unfortunately, version %d of TStreamerInfo (used in %s) did not record enough information to convert a %d into a %s.",
+                     Error( "ReadBuffer", "Unfortunately, version %d of TStreamerInfo (used in %s) did not record enough information to convert a %s into a %s.",
                            vers, b.GetParent() ? b.GetParent()->GetName() : "memory/socket", oldClass->GetName(), newClass->GetName() );
                      continue;
                   }
@@ -1079,6 +1082,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                   TStreamerInfo *subinfo = 0;
                   
                   if( newProxy ) {
+                     // coverity[dererence] oldProxy->GetValueClass() can not be null since this was streamed memberwise.
                      subinfo = (TStreamerInfo*)newProxy->GetValueClass()->GetConversionStreamerInfo( oldProxy->GetValueClass(), vClVersion );
                   } else {
                      subinfo = (TStreamerInfo*)oldProxy->GetValueClass()->GetStreamerInfo( vClVersion );
@@ -1151,24 +1155,36 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                   TClass *oldClass = aElement->GetClassPointer();
 
                   if( vers < 8 && newClass && newClass!=oldClass ) {
-                     Error( "ReadBuffer", "Unfortunately, version %d of TStreamerInfo (used in %s) did not record enough information to convert a %d into a %s.",
+                     Error( "ReadBuffer", "Unfortunately, version %d of TStreamerInfo (used in %s) did not record enough information to convert a %s into a %s.",
                            vers, b.GetParent() ? b.GetParent()->GetName() : "memory/socket", oldClass->GetName(), newClass->GetName() );
                      continue;
                   }
+                  TVirtualCollectionProxy *oldProxy = oldClass->GetCollectionProxy();
+                  TClass *valueClass = oldClass->GetCollectionProxy()->GetValueClass();
                   UInt_t startDummy, countDummy;
                   Version_t vClVersion = 0; // For vers less than 8, we have to use the current version.
                   if( vers >= 8 ) {
-                     vClVersion = b.ReadVersion( &startDummy, &countDummy, cle->GetCollectionProxy()->GetValueClass() );
+                     vClVersion = b.ReadVersion( &startDummy, &countDummy, valueClass );
+                  }
+
+                  if (valueClass == 0) {
+                     // MemberWise streaming applies to only collection of classes, and hence
+                     // valueClass can only be null if we are reading without the original library
+                     // and the collection is always empty,
+                     // So let's skip the rest (which requires the StreamerInfo of the valueClass ... which we do not have)
+
+                     b.SetBufferOffset(start+count+sizeof(UInt_t));
+                     continue;
                   }
 
                   TVirtualCollectionProxy *newProxy = (newClass ? newClass->GetCollectionProxy() : 0);
-                  TVirtualCollectionProxy *oldProxy = oldClass->GetCollectionProxy();
                   TStreamerInfo *subinfo = 0;
 
                   if( newProxy ) {
+                     // coverity[dererence] oldProxy->GetValueClass() can not be null since this was streamed memberwise.
                      subinfo = (TStreamerInfo*)newProxy->GetValueClass()->GetConversionStreamerInfo( oldProxy->GetValueClass(), vClVersion );
                   } else {
-                     subinfo = (TStreamerInfo*)oldProxy->GetValueClass()->GetStreamerInfo( vClVersion );
+                     subinfo = (TStreamerInfo*)valueClass->GetStreamerInfo( vClVersion );
                      newProxy = oldProxy;
                   }
                   if (subinfo->IsOptimized()) {
@@ -1307,8 +1323,8 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                }
             }
             if (pstreamer == 0) {
-               if (1 || gDebug > 0) {
-                  printf("ERROR, Streamer is null\n");
+               Error("ReadBuffer","Streamer for %s is null\n",aElement->GetName());
+               if (gDebug > 0) {
                   aElement->ls(); continue;
                }
             } else {
@@ -1435,7 +1451,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                            continue;
                         }
                         // And set each pointer to null.
-                        memset(pp[ndx], 0, vlen * sizeof(char*));
+                        memset(pp[ndx], 0, vlen * sizeof(char*)); // This is the right size we really have a char**: pp[ndx] = (char*) new char*[vlen];
                      }
                      if (!isPtrPtr) {
                         // -- We are a varying-length array of objects.
@@ -1521,7 +1537,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                            continue;
                         }
                         // And set each pointer to null.
-                        memset(pp[ndx], 0, vlen * sizeof(char*));
+                        memset(pp[ndx], 0, vlen * sizeof(char*)); // This is the right size we really have a char**: pp[ndx] = (char*) new char*[vlen];
                      }
                      if (!isPtrPtr) {
                         // -- We are a varying-length array of objects.
@@ -1598,7 +1614,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
          continue;
       }
    }
-   b.DecrementLevel(thisVar);
+   if (needIncrement) b.DecrementLevel(thisVar);
    return 0;
 }
 
@@ -1613,14 +1629,6 @@ Int_t TStreamerInfo::ReadBufferSkip(TBuffer &b, char** const &arr, Int_t i, Int_
 }
 
 Int_t TStreamerInfo::ReadBufferSkip(TBuffer &b, const TVirtualCollectionProxy &arr, Int_t i, Int_t kase,
-                                    TStreamerElement *aElement, Int_t narr,
-                                    Int_t eoffset)
-{
-  return TStreamerInfo__ReadBufferSkipImp(this, b,arr,i,kase,aElement,narr,eoffset,
-                                          fMethod,fLength,fComp,fOldVersion);
-}
-
-Int_t TStreamerInfo::ReadBufferSkip(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t i, Int_t kase,
                                     TStreamerElement *aElement, Int_t narr,
                                     Int_t eoffset)
 {
@@ -1646,15 +1654,6 @@ Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, char** const &arr,  Int_t i, Int
 }
 
 Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, const TVirtualCollectionProxy &arr,  Int_t i, Int_t kase,
-                                    TStreamerElement *aElement, Int_t narr,
-                                    Int_t eoffset)
-{
-  return TStreamerInfo__ReadBufferConvImp(b,arr,i,kase,aElement,narr,eoffset,fMethod,
-                                          fElem,fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,
-                                          fOldVersion);
-}
-
-Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, const TPointerCollectionAdapter &arr,  Int_t i, Int_t kase,
                                     TStreamerElement *aElement, Int_t narr,
                                     Int_t eoffset)
 {
@@ -1690,15 +1689,6 @@ Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const TVirtualCollectionPr
                                           fOldVersion);
 }
 
-Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const TPointerCollectionAdapter &arr,  Int_t i, Int_t kase,
-                                    TStreamerElement *aElement, Int_t narr,
-                                    Int_t eoffset)
-{
-  return TStreamerInfo__ReadBufferArtificialImp(b,arr,i,kase,aElement,narr,eoffset,fMethod,
-                                          fElem,fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,
-                                          fOldVersion);
-}
-
 Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const TVirtualArray &arr,  Int_t i, Int_t kase,
                                     TStreamerElement *aElement, Int_t narr,
                                     Int_t eoffset)
@@ -1716,13 +1706,6 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, char** const &arr, Int_t first,
 }
 
 Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const TVirtualCollectionProxy &arr, Int_t first,
-                                Int_t narr, Int_t eoffset, Int_t arrayMode)
-{
-  return TStreamerInfo__ReadBufferImp(this,b,arr,first,narr,eoffset,arrayMode,fMethod,fElem,
-                                      fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,fOldVersion);
-}
-
-Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t first,
                                 Int_t narr, Int_t eoffset, Int_t arrayMode)
 {
   return TStreamerInfo__ReadBufferImp(this,b,arr,first,narr,eoffset,arrayMode,fMethod,fElem,
@@ -1747,9 +1730,6 @@ template Int_t TStreamerInfo::ReadBufferSkip<char**>(TBuffer &b, char** const &a
 template Int_t TStreamerInfo::ReadBufferSkip<TVirtualCollectionProxy>(TBuffer &b, const TVirtualCollectionProxy &arr, Int_t i, Int_t kase,
                                        TStreamerElement *aElement, Int_t narr,
                                        Int_t eoffset);
-template Int_t TStreamerInfo::ReadBufferSkip<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t i, Int_t kase,
-                                       TStreamerElement *aElement, Int_t narr,
-                                       Int_t eoffset);
 template Int_t TStreamerInfo::ReadBufferSkip<TVirtualArray>(TBuffer &b, const TVirtualArray &arr, Int_t i, Int_t kase,
                                        TStreamerElement *aElement, Int_t narr,
                                        Int_t eoffset);
@@ -1758,9 +1738,6 @@ template Int_t TStreamerInfo::ReadBufferConv<char**>(TBuffer &b, char** const &a
                                        TStreamerElement *aElement, Int_t narr,
                                        Int_t eoffset);
 template Int_t TStreamerInfo::ReadBufferConv<TVirtualCollectionProxy>(TBuffer &b, const TVirtualCollectionProxy &arr,  Int_t i, Int_t kase,
-                                       TStreamerElement *aElement, Int_t narr,
-                                       Int_t eoffset);
-template Int_t TStreamerInfo::ReadBufferConv<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr,  Int_t i, Int_t kase,
                                        TStreamerElement *aElement, Int_t narr,
                                        Int_t eoffset);
 template Int_t TStreamerInfo::ReadBufferConv<TVirtualArray>(TBuffer &b, const TVirtualArray &arr,  Int_t i, Int_t kase,
@@ -1773,9 +1750,6 @@ template Int_t TStreamerInfo::ReadBufferArtificial<char**>(TBuffer &b, char** co
 template Int_t TStreamerInfo::ReadBufferArtificial<TVirtualCollectionProxy>(TBuffer &b, const TVirtualCollectionProxy &arr,  Int_t i, Int_t kase,
                                              TStreamerElement *aElement, Int_t narr,
                                              Int_t eoffset);
-template Int_t TStreamerInfo::ReadBufferArtificial<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr,  Int_t i, Int_t kase,
-                                             TStreamerElement *aElement, Int_t narr,
-                                             Int_t eoffset);
 template Int_t TStreamerInfo::ReadBufferArtificial<TVirtualArray>(TBuffer &b, const TVirtualArray &arr,  Int_t i, Int_t kase,
                                              TStreamerElement *aElement, Int_t narr,
                                              Int_t eoffset);
@@ -1784,8 +1758,6 @@ template Int_t TStreamerInfo::ReadBuffer<char**>(TBuffer &b, char** const &arr, 
                                                  Int_t narr, Int_t eoffset, Int_t arrayMode);
 template Int_t TStreamerInfo::ReadBuffer<TVirtualCollectionProxy>(TBuffer &b, const TVirtualCollectionProxy &arr, Int_t first,
                                                                   Int_t narr, Int_t eoffset, Int_t arrayMode);
-template Int_t TStreamerInfo::ReadBuffer<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t first,
-                                                                    Int_t narr, Int_t eoffset, Int_t arrayMode);
 template Int_t TStreamerInfo::ReadBuffer<TVirtualArray>(TBuffer &b, const TVirtualArray &arr, Int_t first,
                                                         Int_t narr, Int_t eoffset, Int_t arrayMode);
 
@@ -1800,18 +1772,6 @@ Int_t TStreamerInfo::ReadBufferSTL(TBuffer &b, TVirtualCollectionProxy *cont,
 
    if (!nc) return 0;
    int ret = ReadBuffer(b, *cont, first,nc,eoffset,1);
-   return ret;
-}
-
-//______________________________________________________________________________
-Int_t TStreamerInfo::ReadBufferSTLPtrs(TBuffer &b,
-                                       TVirtualCollectionProxy *cont,
-                                       Int_t nc, Int_t first, Int_t eoffset )
-{
-   //  The STL vector/list is deserialized from the buffer b
-
-   if (!nc) return 0;
-   int ret = ReadBuffer(b, TPointerCollectionAdapter(cont), first,nc,eoffset,1);
    return ret;
 }
 

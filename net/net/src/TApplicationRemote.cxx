@@ -116,10 +116,8 @@ TApplicationRemote::TApplicationRemote(const char *url, Int_t debug,
    // Create server socket; generate randomly a port to find a free one
    Int_t port = -1;
    Int_t na = fgPortAttempts;
-   Long_t now = gSystem->Now();
-   UInt_t seed;
-   memcpy(&seed,&now,sizeof(UInt_t));
-   gRandom->SetSeed(seed);
+   Long64_t now = gSystem->Now();
+   gRandom->SetSeed((UInt_t)now);
    TServerSocket *ss = 0;
    while (na--) {
       port = (Int_t) (gRandom->Rndm() * (fgPortUpper - fgPortLower)) + fgPortLower;
@@ -799,7 +797,7 @@ Int_t TApplicationRemote::SendFile(const char *file, Int_t opt, const char *rfil
    if (gDebug > 1 && size > 0)
       Info("SendFile", "sending file %s", file);
 
-   sprintf(buf, "%s %d %lld", fnam, bin, size);
+   snprintf(buf, kMAXBUF, "%s %d %lld", fnam, bin, size);
    if (Broadcast(buf, kMESS_ANY, kRRT_File) == -1) {
       SafeDelete(fSocket);
       return -1;
@@ -1052,4 +1050,3 @@ void TApplicationRemote::Browse(TBrowser *b)
    b->Add(fWorkingDir, fWorkingDir->GetTitle());
    gROOT->RefreshBrowsers();
 }
-

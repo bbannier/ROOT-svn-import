@@ -1,4 +1,4 @@
-#              $Id: GNUmakefile,v 1.4 2010/03/29 06:37:39 ganis Exp $
+#              $Id$
 
 #------------------------------------------------------------------------------#
 #                       C o m m o n   V a r i a b l e s                        #
@@ -6,10 +6,14 @@
   
 include ../GNUmake.env
 
-MORELIBS = -L$(LIBDIR) -lXrdSec $(LIBDIR)/libsslGridSite.a \
-           $(LIBDIR)/libXrdOuc.a $(LIBDIR)/libXrdSys.a $(LIBDIR)/libXrdNet.a  $(LIBSSL) $(LIBXML)
+MORELIBS = -L$(LIBDIR) -lXrdSec        $(LIBDIR)/libsslGridSite.a \
+             $(LIBDIR)/libXrdNet.a     $(LIBDIR)/libXrdOuc.a \
+             $(LIBDIR)/libXrdNetUtil.a $(LIBDIR)/libXrdSys.a \
+             $(LIBSSL) $(LIBXML)
 
-LIBDEPS = $(LIBDIR)/libsslGridSite.a $(LIBDIR)/libXrdOuc.a $(LIBDIR)/libXrdSys.a $(LIBDIR)/libXrdNet.a
+LIBDEPS = $(LIBDIR)/libsslGridSite.a  $(LIBDIR)/libXrdNet.a \
+          $(LIBDIR)/libXrdNetUtil.a   $(LIBDIR)/libXrdOuc.a \
+          $(LIBDIR)/libXrdSys.a
 
 NCXXFLAGS = $(INCSSL) $(SSLEXTRACFLAGS) -DOPENSSL_NO_KRB5 $(subst deprecated,deprecated-declarations,$(CFLAGS)) 
 NCFLAGS = $(INCXML) $(INCSSL) $(SSLEXTRACFLAGS) -DOPENSSL_NO_KRB5 -U_FORTIFY_SOURCE $(subst deprecated,deprecated-declarations,$(CFLAGS)) 
@@ -18,10 +22,12 @@ NCFLAGS = $(INCXML) $(INCSSL) $(SSLEXTRACFLAGS) -DOPENSSL_NO_KRB5 -U_FORTIFY_SOU
 #                             C o m p o n e n t s                              #
 #------------------------------------------------------------------------------#
 
-CCOMPILE = gcc
+CCOMPILE = cc
 
 SOURCES = \
         XrdSecProtocolssl.cc \
+	XrdSecProtocolsslProc.cc \
+        XrdSecProtocolsslProc.hh \
         XrdSecProtocolsslTest.cc \
         libsslGridSite/grst_asn1.c \
         libsslGridSite/grst_err.c \
@@ -30,9 +36,6 @@ SOURCES = \
         libsslGridSite/grst_verifycallback.c \
         libsslGridSite/grst_x509.c \
         libsslGridSite/grst_xacml.c \
-
-OBJECTS = \
-        $(OBJDIR)/XrdSecProtocolssl.o
 
 OBJECTA = \
         $(OBJDIR)/XrdSecProtocolsslTest.o
@@ -46,12 +49,17 @@ OBJGRST = \
         $(OBJDIR)/grst_x509.o \
         $(OBJDIR)/grst_xacml.o\
 
+OBJECTS = $(OBJGRST) $(OBJECTA) \
+        $(OBJDIR)/XrdSecProtocolssl.o \
+        $(OBJDIR)/XrdSecProtocolsslProc.o
+
+
 LIBGRST = $(LIBDIR)/libsslGridSite.a
 LIBRARY = $(LIBDIR)/libXrdSecssl.$(TYPESHLIB)
 
 SECSSLTEST = $(BINDIR)/xrdsecssltest
 
-TARGETS = $(LIBGRST) $(LIBRARY)
+TARGETS = $(LIBGRST) $(LIBRARY) $(SECSSLTEST)
 
 #------------------------------------------------------------------------------#
 #                           S e a r c h   P a t h s                            #
@@ -82,22 +90,21 @@ $(LIBRARY): $(OBJECTS) $(LIBDEPS)
 $(LIBGRST): $(OBJGRST)
 	@echo Creating archive $(LIBGRST)
 	$(ECHO)rm -f $(LIBGRST)
-	$(ECHO)if [ "$(TYPE)" = "SunOS" -a "$(CC)" = "CC" ]; then \
-	          if [ "x$(SUNCACHE)" != "x" ]; then \
-		     $(CC) -xar -o $(LIBGRST) $(OBJDIR)$(SUNCACHE)/*/*.o; \
-		  else \
-		     $(CC) -xar -o $(LIBGRST) $(OBJGRST); \
-		  fi; \
-	       else \
-		  ar -rc $(LIBGRST) $(OBJGRST); \
-		  ranlib $(LIBGRST); \
-	       fi
+	$(ECHO)ar -rc $(LIBGRST) $(OBJGRST)
+	$(ECHO)ranlib $(LIBGRST)
 
 $(SECSSLTEST): $(OBJECTA) $(LIBDEPS)
 	@echo Creating executable $(SECSSLTEST)
 	$(ECHO)$(LD) $(LDOP) $(OBJECTA) -L$(LIBDIR) -lXrdSecssl $(MORELIBS) $(LIBS) -o $(SECSSLTEST)
 
+$(OBJDIR)/XrdSecProtocolsslProc.o:  XrdSecProtocolsslProc.cc 	XrdSecProtocolsslProc.hh \
+			        XrdOucString.hh 	XrdOucHash.hh
+
+	@echo Compiling XrdSecProtocolsslProc.cc
+	$(ECHO)$(CC) -c $(NCXXFLAGS)  $(INCLUDE) -o $(OBJDIR)/XrdSecProtocolsslProc.o XrdSecProtocolsslProc.cc
+
 $(OBJDIR)/XrdSecProtocolssl.o:  XrdSecProtocolssl.cc 	XrdSecProtocolssl.hh 	XrdSecInterface.hh \
+                                XrdSecProtocolsslProc.cc XrdSecProtocolsslProc.hh \
                                 XrdSysHeaders.hh 	XrdNetDNS.hh 		XrdOucErrInfo.hh XrdOucHash.hh \
 				XrdOucString.hh 	XrdOucTrace.hh 		XrdOucTokenizer.hh XrdSysPthread.hh \
 				XrdSysLogger.hh 	XrdSecInterface.hh 	XrdSecTLayer.hh \

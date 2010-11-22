@@ -115,7 +115,7 @@ TFolder::TFolder(const char *name, const char *title) : TNamed(name,title)
 }
 
 //______________________________________________________________________________
-TFolder::TFolder(const TFolder &folder) : TNamed(folder)
+TFolder::TFolder(const TFolder &folder) : TNamed(folder),fFolders(0),fIsOwner(kFALSE)
 {
    // Copy constructor.
 
@@ -163,7 +163,7 @@ TFolder *TFolder::AddFolder(const char *name, const char *title, TCollection *co
    // Note that the folder name cannot contain slashes.
 
    if (strchr(name,'/')) {
-      ::Error("TFolder::TFolder","folder name cannot contain a slash", name);
+      ::Error("TFolder::TFolder","folder name cannot contain a slash: %s", name);
       return 0;
    }
    if (strlen(GetName()) == 0) {
@@ -210,11 +210,11 @@ const char *TFolder::FindFullPathName(const char *name) const
       gFolderPath[0] = '/';
       gFolderPath[1] = 0;
       for (Int_t l=0;l<=gFolderLevel;l++) {
-         strcat(gFolderPath,"/");
-         strcat(gFolderPath,gFolderD[l]);
+         strlcat(gFolderPath, "/", sizeof(gFolderPath));
+         strlcat(gFolderPath, gFolderD[l], sizeof(gFolderPath));
       }
-      strcat(gFolderPath,"/");
-      strcat(gFolderPath,name);
+      strlcat(gFolderPath, "/", sizeof(gFolderPath));
+      strlcat(gFolderPath,name, sizeof(gFolderPath));
       gFolderLevel = -1;
       return gFolderPath;
    }
@@ -281,20 +281,32 @@ TObject *TFolder::FindObject(const char *name) const
          return gROOT->GetRootFolder()->FindObject(name+1);
       }
    }
-   char cname[1024];
-   strcpy(cname,name);
+   Int_t nch = strlen(name);
+   char *cname;
+   char csname[128];
+   if (nch < (int)sizeof(csname))
+      cname = csname;
+   else
+      cname = new char[nch+1];
+   strcpy(cname, name);
    TObject *obj;
    char *slash = strchr(cname,'/');
    if (slash) {
       *slash = 0;
       obj = fFolders->FindObject(cname);
-      if (!obj) return 0;
-      return obj->FindObject(slash+1);
+      if (!obj) {
+         if (nch >= (int)sizeof(csname)) delete [] cname;
+         return 0;
+      }
+      TObject *ret = obj->FindObject(slash+1);
+      if (nch >= (int)sizeof(csname)) delete [] cname;
+      return ret;
    } else {
-      return fFolders->FindObject(name);
+      TObject *ret = fFolders->FindObject(cname);
+      if (nch >= (int)sizeof(csname)) delete [] cname;
+      return ret;
    }
 }
-
 
 //______________________________________________________________________________
 TObject *TFolder::FindObjectAny(const char *name) const

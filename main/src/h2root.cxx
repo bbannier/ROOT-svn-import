@@ -291,11 +291,12 @@ int main(int argc, char **argv)
    if (argc > 2) {
       file_out=argv[2];
    } else {
-      file_out= new char[2000];
-      strcpy(file_out,file_in);
+      Int_t nchf = strlen(file_in)+strlen(".root")+1;
+      file_out= new char[nchf];
+      strlcpy(file_out,file_in,nchf);
       char *dot = strrchr(file_out,'.');
       if (dot) strcpy(dot+1,"root");
-      else     strcat(file_out,".root");
+      else     strlcat(file_out,".root",nchf);
    }
 
 #if defined(_HIUX_SOURCE) && !defined(__GNUC__)
@@ -320,7 +321,7 @@ int main(int argc, char **argv)
    }
 
    char root_file_title[2000];
-   sprintf(root_file_title,"HBOOK file: %s converted to ROOT",file_in);
+   snprintf(root_file_title,2000,"HBOOK file: %s converted to ROOT",file_in);
    TFile* hfile= TFile::Open(file_out,"RECREATE",root_file_title,compress);
 
    if (!hfile) {
@@ -419,7 +420,12 @@ void convert_directory(const char *dir)
 #else
       uhtoc(ihdir[0],ncw,chdir,16,nch);
 #endif
-      strcpy(hbookdir,chdir);
+      //do not process directory names containing a slash
+      if (strchr(chdir,'/')) {
+         printf("Sorry cannot convert directory name %s because it contains a slash\n",chdir);
+         continue;
+      }   
+      strlcpy(hbookdir,chdir,17);
       for (i=16;i>0;i--) {
          if (chdir[i] == 0) continue;
          if (chdir[i] != ' ') break;
@@ -447,8 +453,8 @@ void convert_directory(const char *dir)
 void convert_1d(Int_t id)
 {
    //convert 1d histogram
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
 #ifndef WIN32
    hgive(id,chtitl,ncx,xmin,xmax,ncy,ymin,ymax,nwt,idb,80);
@@ -500,8 +506,8 @@ void convert_1d(Int_t id)
 void convert_2d(Int_t id)
 {
    //convert 2d histogram
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
 #ifndef WIN32
    hgive(id,chtitl,ncx,xmin,xmax,ncy,ymin,ymax,nwt,idb,80);
@@ -542,8 +548,8 @@ void convert_profile(Int_t id)
 //      if option S jbyt(iq(lw),1,2) = 1
 //      if option I jbyt(iq(lw),1,2) = 2
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
    Int_t lw = lq[lcont];
    Int_t ln = lq[lw];
@@ -585,8 +591,8 @@ void convert_rwn(Int_t id)
    float *x;
    float rmin[1000], rmax[1000];
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
    printf(" Converting RWN with ID= %d, nentries = %d\n",id,nentries);
    nvar=0;
@@ -652,8 +658,8 @@ void convert_cwn(Int_t id)
    float *x;
    float rmin[1000], rmax[1000];
 
-   if (id > 0) sprintf(idname,"h%d",id);
-   else        sprintf(idname,"h_%d",-id);
+   if (id > 0) snprintf(idname,128,"h%d",id);
+   else        snprintf(idname,128,"h_%d",-id);
    hnoent(id,nentries);
    printf(" Converting CWN with ID= %d, nentries = %d\n",id,nentries);
    nvar=0;
@@ -694,7 +700,7 @@ void convert_cwn(Int_t id)
    char block[512];
    char oldblock[512];
    Int_t nbits = 0;
-   strcpy(oldblock,"OLDBLOCK");
+   strlcpy(oldblock,"OLDBLOCK",512);
    Int_t oldischar = -1;
    for (i=80;i>0;i--) {if (chtitl[i] == ' ') chtitl[i] = 0; }
    TTree *tree = new TTree(idname,chtitl);
@@ -730,8 +736,8 @@ void convert_cwn(Int_t id)
          else break;
       }
       if (itype == 1) {
-         if( isize == 4 )     strcat(fullname,"/F");
-         else if( isize == 8) strcat(fullname,"/D");
+         if( isize == 4 )     strlcat(fullname,"/F",1024);
+         else if( isize == 8) strlcat(fullname,"/D",1024);
       }
 
 
@@ -741,18 +747,18 @@ void convert_cwn(Int_t id)
       if( itype == 2 ) {
          if( optcwn == 1 ) {
             if( nbits > 16 ) {
-               strcat(fullname,"/I");
+               strlcat(fullname,"/I",1024);
             } else {
                if( nbits > 8 ) {
-                  strcat(fullname,"/S");
+                  strlcat(fullname,"/S",1024);
                   nBytesUsed = 2;
                } else {
-                  strcat(fullname,"/B");
+                  strlcat(fullname,"/B",1024);
                   nBytesUsed = 1;
                }
             }
          } else {
-            strcat(fullname,"/I");
+            strlcat(fullname,"/I",1024);
          }
       }
 
@@ -760,33 +766,33 @@ void convert_cwn(Int_t id)
       if ( itype == 3 ) {
          if(  optcwn == 1 ) {
             if( nbits > 16) {
-               strcat(fullname,"/i");
+               strlcat(fullname,"/i",1024);
             } else {
                if( nbits > 8 ) {
-                  strcat(fullname,"/s");
+                  strlcat(fullname,"/s",1024);
                   nBytesUsed = 2;
                } else {
-                  strcat(fullname,"/b");
+                  strlcat(fullname,"/b",1024);
                   nBytesUsed = 1;
                }
             }
          } else {
-            strcat(fullname,"/i");
+            strlcat(fullname,"/i",1024);
          }
       }
 
 
 
 
-//     if (itype == 4) strcat(fullname,"/i");
-      if (itype == 4) strcat(fullname,"/b");
-      if (itype == 5) strcat(fullname,"/C");
+//     if (itype == 4) strlcat(fullname,"/i",1024);
+      if (itype == 4) strlcat(fullname,"/b",1024);
+      if (itype == 5) strlcat(fullname,"/C",1024);
       printf("Creating branch:%s, block:%s, fullname:%s, nsub=%d, itype=%d, isize=%d, ielem=%d\n",name,block,fullname,nsub,itype,isize,ielem);
       Int_t ischar;
       if (itype == 5) ischar = 1;
       else            ischar = 0;
       if (ischar != oldischar || strcmp(oldblock,block) != 0) {
-         strcpy(oldblock,block);
+         strlcpy(oldblock,block,512);
          oldischar = ischar;
          Int_t lblock   = strlen(block);
          add= (Long_t)&bigbuf[bufpos];

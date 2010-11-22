@@ -59,6 +59,8 @@
      </pre>
 </li>
 <li> Small fix regarding line width in TPDF.</li>
+<li> In some cases there was some extra blanck page at the beginning of the
+     PDF files. In particular when generated using the "[]" mechanism.</li>
 </ul>
 
 <h4>SVG</h4>
@@ -88,6 +90,14 @@
 <li> Initialize the <tt>Visual</tt> in <tt>TASImage::ReadImage</tt>. This fix
      a long standing problem with THtml: Without this fix all the embeded
      macros generating GUI output did not work in THtml.</li>
+</ul>
+
+<h4>TImageDump</h4>
+</ul>
+<li> Small boxes (less than one pixel width) were not drawn properly.
+</li>
+<li> Line width for hollow boxes was always 1 (in batch mode).
+</li>
 </ul>
 
 <h3>Graphics Primitives</h3>
@@ -168,13 +178,14 @@
      <img alt="New commands" src="itbf.gif"/>
      </center>
      Done by: Oleksandr Grebenyuk <tt>&lt;ogrebenyuk@lbl.gov&gt;</tt>.
+<li> Two new characters: #forall and #exists.
 </li>
 </ul>
 
 <h4>TText</h4>
 <ul>
 <li> New method <tt>GetTextAdvance</tt> to return the text advance for string
-     text taking the kerning into account or not.
+     text taking the kerning into account or not.</li>
 </li>
 </ul>
 
@@ -182,6 +193,15 @@
 <ul>
 <li> In case of horizontal axis with the font size in pixel (font precision = 3)
      the labels were not visible.</li>
+<li> Alpha numeric labels are not scaled anymore in case of text precision 3 
+     (size in pixels). They are in the other precisions.</li>
+<li> Fix a precision issue on Mac. With the following lines the last label
+     (10^3) did not show:
+     <pre>
+     t1 = new TH1F("test","test", 100,1,1000);
+     t1.Draw();
+     gPad->SetLogx(1);
+     </pre></li>
 </ul>
 
 <h4>TPaveStats</h4>
@@ -191,6 +211,13 @@
      might not true if the stats position is given by user. This is now 
      protected. The stats are correctly drawn whatever the orders of X and Y
      coordinates are. </li>
+<li> Saving canvas as a .C macro discarded white title and stat box 
+     background. Same thing with TPaveText.</li>
+</ul>
+
+<h4>TCutG</h4>
+<ul>
+<li> <tt>IsInside(x,y)</tt> is now inherited from TGraph.</li>
 </ul>
 
 <h4>TCanvas and TPad</h4>
@@ -203,4 +230,6 @@ the rubberband was not visible during the zooming along axis.</li>
     problem it was enough to specify the option "pdf" in SaveAs.</li>
 <li> <tt>c->BuildLegend()</tt> created the legend in the current pad,
      not in <tt>c</tt> (as it should). </li>
+<li> A square TCanvas saved in batch mode in a ROOT file was not square anymore
+     when displayed in interactive mode. </li>
 </ul>

@@ -52,6 +52,9 @@ TDataSetIter::TDataSetIter(TDataSet *link, Bool_t dir)
    fMaxDepth      = fDepth         =1;
    fDataSet= fgNullDataSet ;
    fNext = link ? new TIter(link->GetCollection() ,dir):0;
+   for(UInt_t i = 0; i < sizeof(fNextSet) / sizeof(TIter*); ++i) {
+      fNextSet[i] = (TIter*)0;
+   }
 }
 
 //______________________________________________________________________________
@@ -67,7 +70,10 @@ TDataSetIter::TDataSetIter(TDataSet *link, Int_t depth, Bool_t dir)
    // Create a DataSet iterator to pass all nodes of the
    //     "depth"  levels
    //  of  TDataSet *link
-
+   
+   for(UInt_t i = 0; i < sizeof(fNextSet) / sizeof(TIter*); ++i) {
+      fNextSet[i] = (TIter*)0;
+   }
    if (fMaxDepth != 1) {
       fNextSet[0] = fNext;
       if (fMaxDepth > 100) fMaxDepth = 100;

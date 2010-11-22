@@ -50,12 +50,12 @@ TLegendEntry::TLegendEntry(const TObject* obj, const char* label, Option_t* opti
    //    P draw polymarker assoc. w/ TAttMarker if obj inherits from TAttMarker
    //    F draw a box with fill associated w/ TAttFill if obj inherits TAttFill
    //   default is object = "LPF"
- 
+
    fObject = 0;
    if ( !label && obj ) fLabel = obj->GetTitle();
    else                 fLabel = label;
    fOption = option;
-   SetObject((TObject*)obj);
+   if (obj) SetObject((TObject*)obj);
 }
 
 
@@ -141,7 +141,7 @@ void TLegendEntry::SetObject(TObject* obj )
    // (re)set the obj pointed to by this entry
 
    if ( ( fObject && fLabel == fObject->GetTitle() ) || !fLabel ) {
-      fLabel = obj->GetTitle();
+      if (obj) fLabel = obj->GetTitle();
    }
    fObject = obj;
 }
@@ -154,6 +154,6 @@ void TLegendEntry::SetObject( const char* objectName)
 
    TObject* obj = 0;
    TList* padprimitives = gPad->GetListOfPrimitives();
-   if ( padprimitives ) obj = padprimitives->FindObject( objectName );
-   SetObject( obj );
+   if (padprimitives) obj = padprimitives->FindObject( objectName );
+   if (obj) SetObject( obj );
 }

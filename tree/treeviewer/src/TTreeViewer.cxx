@@ -162,8 +162,6 @@
 
 #include "RConfigure.h"
 
-#include "snprintf.h"
-
 #include "Riostream.h"
 #include "TTreeViewer.h"
 #include "HelpText.h"
@@ -310,7 +308,7 @@ TTreeViewer::TTreeViewer(const char* treeName) :
    fTree = 0;
    if (!gClient) return;
    char command[128];
-   sprintf(command, "TTreeViewer *gTV = (TTreeViewer*)0x%lx", (ULong_t)this);
+   snprintf(command,128, "TTreeViewer *gTV = (TTreeViewer*)0x%lx", (ULong_t)this);
    gROOT->ProcessLine(command);
    gROOT->ProcessLine("TTree *tv__tree = 0;");
    fTreeList = new TList;
@@ -334,7 +332,7 @@ TTreeViewer::TTreeViewer(const TTree *tree) :
 
    fTree = 0;
    char command[128];
-   sprintf(command, "TTreeViewer *gTV = (TTreeViewer*)0x%lx", (ULong_t)this);
+   snprintf(command,128, "TTreeViewer *gTV = (TTreeViewer*)0x%lx", (ULong_t)this);
    gROOT->ProcessLine(command);
    if (!tree) return;
    gROOT->ProcessLine("TTree *tv__tree = 0;");
@@ -396,11 +394,11 @@ void TTreeViewer::AppendTree(TTree *tree)
       char command[100];
       command[0] = 0;
       // define a global "tree" variable for the same tree
-      sprintf(command, "tv__tree = (TTree *)0x%lx;", (ULong_t)tree);
+      snprintf(command,100, "tv__tree = (TTree *)0x%lx;", (ULong_t)tree);
       ExecuteCommand(command);
    }
    //--- add the tree to the list if it is not already in
-   fTreeList->Add(fTree);
+   if (fTreeList) fTreeList->Add(fTree);
    ExecuteCommand("tv__tree_list->Add(tv__tree);");
    //--- map this tree
    TGListTreeItem *base = 0;
@@ -487,14 +485,12 @@ void TTreeViewer::SetTreeName(const char* treeName)
    if (fTree != tree) {
       fTree = tree;
       // load the tree via the interpreter
-      char command[100];
-      command[0] = 0;
       // define a global "tree" variable for the same tree
-      sprintf(command, "tv__tree = (TTree *) gROOT->FindObject(\"%s\");", treeName);
-      ExecuteCommand(command);
+      TString command = TString::Format("tv__tree = (TTree *) gROOT->FindObject(\"%s\");", treeName);
+      ExecuteCommand(command.Data());
    }
    //--- add the tree to the list if it is not already in
-   fTreeList->Add(fTree);
+   if (fTreeList) fTreeList->Add(fTree);
    ExecuteCommand("tv__tree_list->Add(tv__tree);");
    //--- map this tree
    TGListTreeItem *base = 0;
@@ -1315,10 +1311,8 @@ void TTreeViewer::ExecuteDraw()
 {
    // Called when the DRAW button is executed.
 
-   char varexp[2000];
-   varexp[0] = 0;
-   char command[2000];
-   command[0] = 0;
+   TString varexp;
+   TString command;
    Int_t dimension = 0;
    TString alias[3];
    TTVLVEntry *item;
@@ -1330,33 +1324,33 @@ void TTreeViewer::ExecuteDraw()
       if (!(item = (TTVLVEntry *) fLVContainer->GetNextSelected(&p))) return;
       alias[0] = item->GetAlias();
       if (alias[0].BeginsWith("~")) alias[0].Remove(0, 1);
-      sprintf(varexp, "%s", item->ConvertAliases());
+      varexp = item->ConvertAliases();
    } else {
       if (strlen(Ez())) {
          dimension++;
-         sprintf(varexp, "%s", Ez());
+         varexp = Ez();
          item = ExpressionItem(2);
          alias[2] = item->GetAlias();
          if (alias[2].BeginsWith("~")) alias[2].Remove(0, 1);
       }
-      if (strlen(Ez()) && (strlen(Ex()) || strlen(Ey()))) strcat(varexp, ":");
+      if (strlen(Ez()) && (strlen(Ex()) || strlen(Ey()))) varexp += ":";
       if (strlen(Ey())) {
          dimension++;
-         strcat(varexp, Ey());
+         varexp += Ey();
          item = ExpressionItem(1);
          alias[1] = item->GetAlias();
          if (alias[1].BeginsWith("~")) alias[1].Remove(0, 1);
       }
-      if (strlen(Ey()) && strlen(Ex())) strcat(varexp, ":");
+      if (strlen(Ey()) && strlen(Ex())) varexp += ":";
       if (strlen(Ex())) {
          dimension++;
-         strcat(varexp, Ex());
+         varexp += Ex();
          item = ExpressionItem(0);
          alias[0] = item->GetAlias();
          if (alias[0].BeginsWith("~")) alias[0].Remove(0, 1);
       }
    }
-   if (!dimension) {
+   if (!dimension && !fScanMode) {
       Warning("ExecuteDraw", "Nothing to draw on X,Y,Z.");
       return;
    }
@@ -1368,11 +1362,11 @@ void TTreeViewer::ExecuteDraw()
       if (elist) fTree->SetEventList(elist);
    }
    // find ListOut
-   if (strlen(fBarListOut->GetText())) sprintf(varexp, ">>%s", fBarListOut->GetText());
+   if (strlen(fBarListOut->GetText())) varexp = TString::Format(">>%s", fBarListOut->GetText());
    // find histogram name
    if (strcmp("htemp", fBarHist->GetText())) {
-      strcat(varexp, ">>");
-      strcat(varexp, fBarHist->GetText());
+      varexp += ">>";
+      varexp += fBarHist->GetText();
    }
    // find canvas/pad where to draw
    TPad *pad = (TPad*)gROOT->GetSelectedPad();
@@ -1394,15 +1388,15 @@ void TTreeViewer::ExecuteDraw()
    if (fScanMode) {
 //      fBarScan->SetState(kButtonUp);
       fScanMode = kFALSE;
-      if (strlen(ScanList())) sprintf(varexp, "%s", ScanList());
-      sprintf(command, "tv__tree->Scan(\"%s\",\"%s\",\"%s\", %lld, %lld);",
-              varexp, cut, gopt, nentries, firstentry);
+      if (strlen(ScanList())) varexp = ScanList();
+      command = TString::Format("tv__tree->Scan(\"%s\",\"%s\",\"%s\", %lld, %lld);",
+              varexp.Data(), cut, gopt, nentries, firstentry);
       if (fBarScan->GetState() == kButtonDown) {
          ((TTreePlayer *)fTree->GetPlayer())->SetScanRedirect(kTRUE);
       } else {
          ((TTreePlayer *)fTree->GetPlayer())->SetScanRedirect(kFALSE);
       }
-      ExecuteCommand(command, kTRUE);
+      ExecuteCommand(command.Data(), kTRUE);
       return;
    }
    // check if only histogram has to be updated
@@ -1446,13 +1440,13 @@ void TTreeViewer::ExecuteDraw()
       gopt = "";
       fLastOption = "";
    }
-   sprintf(command, "tv__tree->Draw(\"%s\",\"%s\",\"%s\", %lld, %lld);",
-           varexp, cut, gopt, nentries, firstentry);
+   command = TString::Format("tv__tree->Draw(\"%s\",\"%s\",\"%s\", %lld, %lld);",
+           varexp.Data(), cut, gopt, nentries, firstentry);
    if (fCounting) return;
    fCounting = kTRUE;
    fTree->SetTimerInterval(200);
    fTimer->TurnOn();
-   ExecuteCommand(command);
+   ExecuteCommand(command.Data());
    HandleTimer(fTimer);
    fTimer->TurnOff();
    fTree->SetTimerInterval(0);
@@ -1488,10 +1482,7 @@ void TTreeViewer::ExecuteSpider()
 {
    // Draw a spider plot for the selected entries.
 
-   char varexp[2000];
-   varexp[0] = 0;
-   char command[2000];
-   command[0] = 0;
+   TString varexp;
    Int_t dimension = 0;
    TString alias[3];
    TTVLVEntry *item;
@@ -1500,25 +1491,25 @@ void TTreeViewer::ExecuteSpider()
    if (strlen(Ez())) {
       previousexp = kTRUE;
       dimension++;
-      sprintf(varexp, "%s", Ez());
+      varexp = Ez();
       item = ExpressionItem(2);
       alias[2] = item->GetAlias();
       if (alias[2].BeginsWith("~")) alias[2].Remove(0, 1);
    }
-   if (strlen(Ez()) && (strlen(Ex()) || strlen(Ey()))) strcat(varexp, ":");
+   if (strlen(Ez()) && (strlen(Ex()) || strlen(Ey()))) varexp += ":";
    if (strlen(Ey())) {
       previousexp = kTRUE;
       dimension++;
-      strcat(varexp, Ey());
+      varexp += Ey();
       item = ExpressionItem(1);
       alias[1] = item->GetAlias();
       if (alias[1].BeginsWith("~")) alias[1].Remove(0, 1);
    }
-   if (strlen(Ey()) && strlen(Ex())) strcat(varexp, ":");
+   if (strlen(Ey()) && strlen(Ex())) varexp += ":";
    if (strlen(Ex())) {
       previousexp = kTRUE;
       dimension++;
-      strcat(varexp, Ex());
+      varexp += Ex();
       item = ExpressionItem(0);
       alias[0] = item->GetAlias();
       if (alias[0].BeginsWith("~")) alias[0].Remove(0, 1);
@@ -1527,9 +1518,9 @@ void TTreeViewer::ExecuteSpider()
       if(strlen(En(i+5))){
          ++dimension;
          if(previousexp){
-            strcat(varexp,":");
-            strcat(varexp,En(i+5));
-         } else sprintf(varexp, "%s", En(i+5));
+            varexp += ":";
+            varexp += En(i+5);
+         } else varexp = En(i+5);
          previousexp = kTRUE;
       }
    }
@@ -1545,7 +1536,7 @@ void TTreeViewer::ExecuteSpider()
       if (elist) fTree->SetEventList(elist);
    }
    // find ListOut
-   if (strlen(fBarListOut->GetText())) sprintf(varexp, ">>%s", fBarListOut->GetText());
+   if (strlen(fBarListOut->GetText())) varexp = TString::Format(">>%s", fBarListOut->GetText());
    // find canvas/pad where to draw
    TPad *pad = (TPad*)gROOT->GetSelectedPad();
    if (pad) pad->cd();
@@ -1564,7 +1555,7 @@ void TTreeViewer::ExecuteSpider()
 
    // create the spider plot
 
-   TSpider* spider = new TSpider(fTree,varexp,cut,Form("%s spider average",gopt),nentries,firstentry);
+   TSpider* spider = new TSpider(fTree,varexp.Data(),cut,Form("%s spider average",gopt),nentries,firstentry);
    spider->Draw();
 
    if (gPad) gPad->Update();
@@ -1924,11 +1915,9 @@ Bool_t TTreeViewer::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                         new TGFileDialog(fClient->GetRoot(), this, kFDOpen, &info);
                         if (!info.fFilename) return kTRUE;
                         dir = info.fIniDir;
-                        char command[1024];
-                        command[0] = 0;
-                        sprintf(command, "tv__tree_file = new TFile(\"%s\");",
+                        TString command = TString::Format("tv__tree_file = new TFile(\"%s\");",
                            gSystem->UnixPathName(info.fFilename));
-                        ExecuteCommand(command);
+                        ExecuteCommand(command.Data());
                         ExecuteCommand("tv__tree_file->ls();");
                         cout << "Use SetTreeName() from context menu and supply a tree name" << endl;
                         cout << "The context menu is activated by right-clicking the panel from right" << endl;
@@ -1958,7 +1947,7 @@ Bool_t TTreeViewer::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                         if (!gInterpreter->IsLoaded(info.fFilename)) gInterpreter->LoadMacro(info.fFilename);
                         char command[1024];
                         command[0] = 0;
-                        sprintf(command,"open_session((void*)0x%lx);", (Long_t)this);
+                        snprintf(command,1024,"open_session((void*)0x%lx);", (Long_t)this);
                         ExecuteCommand(command);
                      }
                      break;
@@ -2002,7 +1991,7 @@ Bool_t TTreeViewer::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                         new TWin32SplashThread(kTRUE);
 #else
                         char str[32];
-                        sprintf(str, "About ROOT %s...", gROOT->GetVersion());
+                        snprintf(str,32, "About ROOT %s...", gROOT->GetVersion());
                         hd = new TRootHelpDialog(this, str, 600, 400);
                         hd->SetText(gHelpAbout);
                         hd->Popup();
@@ -2104,23 +2093,23 @@ Bool_t TTreeViewer::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                            if (*itemType & kLTTreeType) {
                            // X, Y or Z clicked
                               char symbol = (char)((*itemType) >> 8);
-                              sprintf(msg2, "%c expression : %s", symbol, vname);
+                              snprintf(msg2,2000, "%c expression : %s", symbol, vname);
                            } else {
                               if (*itemType & kLTCutType) {
                               // scissors clicked
-                                 sprintf(msg2, "Cut : %s", vname);
+                                 snprintf(msg2,2000, "Cut : %s", vname);
                               } else {
                                  if (*itemType & kLTPackType) {
-                                    sprintf(msg2, "Box : %s", vname);
+                                    snprintf(msg2,2000, "Box : %s", vname);
                                  } else {
                                     if (*itemType & kLTExpressionType) {
                                        // expression clicked
-                                       sprintf(msg2, "Expression : %s", vname);
+                                       snprintf(msg2,2000, "Expression : %s", vname);
                                     } else {
                                        if (*itemType & kLTBranchType) {
-                                          sprintf(msg2, "Branch : %s", vname);
+                                          snprintf(msg2,2000, "Branch : %s", vname);
                                        } else {
-                                          sprintf(msg2, "Leaf : %s", vname);
+                                          snprintf(msg2,2000, "Leaf : %s", vname);
                                        }
                                     }
                                  }
@@ -2251,7 +2240,7 @@ void TTreeViewer::ExecuteCommand(const char* command, Bool_t fast)
          Warning("ExecuteCommand", "Command too long: aborting.");
          return;
       }
-      sprintf(comm, "%s", command);
+      snprintf(comm,2000, "%s", command);
       // print the command to history file
       Gl_histadd(comm);
    }
@@ -2451,7 +2440,7 @@ void TTreeViewer::MapBranch(TBranch *branch, const char *prefix, TGListTreeItem 
    }
    // list branch in list view if necessary
    if (listIt) {
-      TGString *textEntry;
+      TGString *textEntry = 0;
       const TGPicture *pic, *spic;
       TTVLVEntry *entry;
       // make list view items in the right frame
@@ -2460,9 +2449,9 @@ void TTreeViewer::MapBranch(TBranch *branch, const char *prefix, TGListTreeItem 
          fMappedTree = 0;
          fStopMapping = kTRUE;
       }
-      textEntry = new TGString(EmptyBrackets(name.Data()));
       if ((branch->GetListOfBranches()->GetEntries()) ||
           (branch->GetNleaves())) {
+         textEntry = new TGString(EmptyBrackets(name.Data()));
          if (branch->GetListOfBranches()->GetEntries()) {
             if (branch->InheritsFrom("TBranchObject")) {
                pic = gClient->GetPicture("branch-ob_t.xpm");
@@ -2484,7 +2473,7 @@ void TTreeViewer::MapBranch(TBranch *branch, const char *prefix, TGListTreeItem 
             entry->SetAlias(textEntry->GetString());
          } else {
             if (branch->GetNleaves() > 1) {
-               itemType = new ULong_t(kLTBranchType);
+               if (textEntry) delete textEntry;
                textEntry = new TGString(EmptyBrackets(name.Data()));
                pic = gClient->GetPicture("branch_t.xpm");
                spic = gClient->GetPicture("branch_t.xpm");
@@ -2629,7 +2618,7 @@ void TTreeViewer::PrintEntries()
 
    if (!fTree) return;
    char * msg = new char[100];
-   sprintf(msg, "First entry : %lld Last entry : %lld",
+   snprintf(msg,100, "First entry : %lld Last entry : %lld",
            (Long64_t)fSlider->GetMinPosition(), (Long64_t)fSlider->GetMaxPosition());
    Message(msg);
    delete[] msg;
@@ -2658,7 +2647,7 @@ void TTreeViewer::SaveSource(const char* filename, Option_t *)
       out.open(fname, ios::out);
    } else {
       fname = new char[13];
-      strcpy(fname, "treeviewer.C");
+      strlcpy(fname, "treeviewer.C",13);
       out.open(fname, ios::out);
    }
    if (!out.good ()) {

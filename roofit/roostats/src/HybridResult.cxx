@@ -4,7 +4,7 @@
  * Project: RooStats                                                     *
  * Package: RooFit/RooStats                                              *
  * Authors:                                                              *
- *   Gregory Schott, Danilo Piparo                                       *
+ *   Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke       *
  *************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -49,7 +49,8 @@ HybridResult::HybridResult( const char *name) :
    HypoTestResult(name),
    fTestStat_data(-999.),
    fComputationsNulDoneFlag(false),
-   fComputationsAltDoneFlag(false)
+   fComputationsAltDoneFlag(false),
+   fSumLargerValues(false)
 {
    // HybridResult default constructor (with name )
 }
@@ -175,8 +176,7 @@ Double_t HybridResult::CLbError() const
   // Returns an estimate of the error on CLb assuming a binomial error on
   // CLb:
   // BEGIN_LATEX
-  // #sigma_{CL_{b}} &=& #sqrt{CL_{b} #left( 1 - CL_{b} #right) /
-  //   n_{toys}} 
+  // #sigma_{CL_{b}} &=& #sqrt{CL_{b} #left( 1 - CL_{b} #right) / n_{toys}}
   // END_LATEX
   unsigned const int n = fTestStat_b.size();
   return TMath::Sqrt(CLb() * (1. - CLb()) / n);
@@ -189,8 +189,7 @@ Double_t HybridResult::CLsplusbError() const
   // Returns an estimate of the error on CLsplusb assuming a binomial
   // error on CLsplusb:
   // BEGIN_LATEX
-  // #sigma_{CL_{s+b}} &=& #sqrt{CL_{s+b} #left( 1 - CL_{s+b} #right) /
-  //   n_{toys}} 
+  // #sigma_{CL_{s+b}} &=& #sqrt{CL_{s+b} #left( 1 - CL_{s+b} #right) / n_{toys}}
   // END_LATEX
   unsigned const int n = fTestStat_sb.size();
   return TMath::Sqrt(CLsplusb() * (1. - CLsplusb()) / n);
@@ -203,9 +202,7 @@ Double_t HybridResult::CLsError() const
   // Returns an estimate of the error on CLs through combination of the
   // errors on CLb and CLsplusb:
   // BEGIN_LATEX
-  // #sigma_{CL_s} &=& CL_s
-  //   #sqrt{#left( #frac{#sigma_{CL_{s+b}}}{CL_{s+b}} #right)^2 +
-  //     #left( #frac{#sigma_{CL_{b}}}{CL_{b}} #right)^2}
+  // #sigma_{CL_s} &=& CL_s #sqrt{#left( #frac{#sigma_{CL_{s+b}}}{CL_{s+b}} #right)^2 + #left( #frac{#sigma_{CL_{b}}}{CL_{b}} #right)^2}
   // END_LATEX
   unsigned const int n_b = fTestStat_b.size();
   unsigned const int n_sb = fTestStat_sb.size();

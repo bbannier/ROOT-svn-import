@@ -136,19 +136,21 @@ namespace ROOT {
          if (fDirector->GetReadEntry()!=fRead) {
             if (!IsInitialized()) {
                if (!Setup()) {
-                  Error("Read",Form("Unable to initialize %s\n",fBranchName.Data()));
-                  return false;
+                  Error("Read","%s",Form("Unable to initialize %s\n",fBranchName.Data()));
+                  return kFALSE;
                }
             }
-            if (fParent) fParent->Read();
-            else {
+            Bool_t result = kTRUE;
+            if (fParent) {
+               result = fParent->Read();
+            } else {
                if (fBranchCount) {
-                  fBranchCount->GetEntry(fDirector->GetReadEntry());
+                  result &= (-1 != fBranchCount->GetEntry(fDirector->GetReadEntry()));
                }
-               fBranch->GetEntry(fDirector->GetReadEntry());
+               result &= (-1 != fBranch->GetEntry(fDirector->GetReadEntry()));
             }
             fRead = fDirector->GetReadEntry();
-            return kTRUE;
+            return result;
          } else {
             return IsInitialized();
          }
@@ -160,7 +162,7 @@ namespace ROOT {
          if (fDirector->GetReadEntry()!=fRead) {
             if (!IsInitialized()) {
                if (!Setup()) {
-                  Error("Read",Form("Unable to initialize %s\n",fBranchName.Data()));
+                  Error("Read","%s",Form("Unable to initialize %s\n",fBranchName.Data()));
                   return false;
                }
             }
@@ -258,7 +260,7 @@ namespace ROOT {
       virtual void *GetStlStart(UInt_t i=0) {
          // return the address of the start of the object being proxied. Assumes
          // that Setup() has been called.  Assumes the object containing this data
-         // member is held in TClonesArray.
+         // member is held in STL Collection.
 
          char *location=0;
 
@@ -298,6 +300,8 @@ namespace ROOT {
          }
 
       }
+      
+      Int_t GetOffset() { return fOffset; }
    };
 
    //____________________________________________________________________________________________
@@ -418,7 +422,7 @@ namespace ROOT {
 
       const TVirtualCollectionProxy* GetPtr() {
          if (!Read()) return 0;
-         return GetCollection();;
+         return GetCollection();
       }
 
       Int_t GetEntries() {

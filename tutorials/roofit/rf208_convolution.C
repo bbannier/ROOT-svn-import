@@ -22,6 +22,7 @@
 #include "RooFFTConvPdf.h"
 #include "RooPlot.h"
 #include "TCanvas.h"
+#include "TAxis.h"
 #include "TH1.h"
 using namespace RooFit ;
 
@@ -39,7 +40,7 @@ void rf208_convolution()
   RooRealVar ml("ml","mean landau",5.,-20,20) ;
   RooRealVar sl("sl","sigma landau",1,0.1,10) ;
   RooLandau landau("lx","lx",t,ml,sl) ;
-
+  
   // Construct gauss(t,mg,sg)
   RooRealVar mg("mg","mg",0) ;
   RooRealVar sg("sg","sg",2,0.1,10) ;
@@ -75,7 +76,7 @@ void rf208_convolution()
 
   // Draw frame on canvas
   new TCanvas("rf208_convolution","rf208_convolution",600,600) ;
-  frame->Draw() ;
+  gPad->SetLeftMargin(0.15) ; frame->GetYaxis()->SetTitleOffset(1.4) ; frame->Draw() ;
 
 }
 

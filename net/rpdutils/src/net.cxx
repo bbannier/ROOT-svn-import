@@ -308,12 +308,14 @@ int NetRecv(char *msg, int len, EMessageTypes &kind)
    if (mlen == 0) {
       msg[0] = 0;
       return 0;
-   } else if (mlen > len) {
+   } else if (mlen > len-1) {
       strncpy(msg, buf, len-1);
       msg[len-1] = 0;
       mlen = len;
-   } else
-      strcpy(msg, buf);
+   } else {
+      strncpy(msg, buf, mlen);
+      msg[mlen] = 0;
+   }
 
    delete [] buf;
 
@@ -393,6 +395,7 @@ again:
       }
       Error(gErrSys,kErrFatal, "NetOpen: accept error (errno: %d) ... socket %d",
                     GetErrno(),gTcpSrvSock);
+      return 0;
    }
 
    struct hostent *hp;
@@ -496,6 +499,7 @@ int NetInit(EService servtype, int port1, int port2, int tcpwindowsize)
    if ((gTcpSrvSock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
       fprintf(stderr,     "NetInit: can't create socket\n");
       Error(gErrSys,kErrFatal, "NetInit: can't create socket");
+      return gTcpSrvSock;
    }
 
    int val = 1;

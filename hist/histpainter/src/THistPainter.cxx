@@ -20,6 +20,7 @@
 #include "TSystem.h"
 #include "THistPainter.h"
 #include "TH2.h"
+#include "TH2Poly.h"
 #include "TH3.h"
 #include "TProfile.h"
 #include "THStack.h"
@@ -39,6 +40,7 @@
 #include "TPoints.h"
 #include "TStyle.h"
 #include "TGraph.h"
+#include "TMultiGraph.h"
 #include "TPie.h"
 #include "TGaxis.h"
 #include "TColor.h"
@@ -101,6 +103,7 @@
 <li><a href="#HP18">The "SURFace" options</li></a>
 <li><a href="#HP19">Cylindrical, Polar, Spherical and PseudoRapidity/Phi options</li></a>
 <li><a href="#HP20">Base line for bar-charts and lego plots</li></a>
+<li><a href="#HP20a">TH2Poly Drawing</li></a>
 <li><a href="#HP21">The SPEC option</li></a>
 <li><a href="#HP22">Option "Z" : Adding the color palette on the right side of the pad</li></a>
 <li><a href="#HP23">Setting the color palette</li></a>
@@ -1172,14 +1175,14 @@ It can be changed with <tt>TH1::SetContour()</tt> or
 <tt>TStyle::SetNumberContours()</tt>. The higher this number is, the smoother
 is the color change between cells.
 
-<p>The color palette in TStyle can be modified via <tt>gStyle->SePalette()</tt>.
+<p>The color palette in TStyle can be modified via <tt>gStyle->SetPalette()</tt>.
 
 <p>All the none empty bins are painted. Empty bins are not painted unless
 some bins have a negative content because in that case the null bins
 might be not empty.
 
 <p>Combined with the option <tt>"COL"</tt>, the option <tt>"Z"</tt> allows to
-display the color palette defined by <tt>gStyle->SePalette()</tt>.
+display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 <p>In the following example, the histogram has only positive bins; the empty
 bins (containing 0) <u>are not drawn</u>.
@@ -1241,6 +1244,7 @@ by calling <tt>gStyle->SetPaintTextFormat()</tt>.
 the angle <tt>nn</tt> (<tt>0 < nn < 90</tt>).
 
 <p>For 2D histograms the text is plotted in the center of each non empty cells.
+It is possible to plot empty cells by calling gStyle->SetHistMinimumZero().
 For 1D histogram the text is plotted at a y position equal to the bin content.
 
 <p>For 2D histograms when the option "E" (errors) is combined with the option
@@ -1343,7 +1347,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"CONTZ"</tt>. The option <tt>"CONT"</tt> draws a contour plot using surface
 colors to distinguish contours.  Combined with the option <tt>"CONT"</tt> (or
 <tt>"CONT0"</tt>), the option <tt>"Z"</tt> allows to display the color palette
-defined by <tt>gStyle->SePalette()</tt>.
+defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1367,7 +1371,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"CONT1Z"</tt>. The option <tt>"CONT1"</tt> draws a contour plot using the
 line colors to distinguish contours. Combined with the option <tt>"CONT1"</tt>,
 the option <tt>"Z"</tt> allows to display the color palette defined by
-<tt>gStyle->SePalette()</tt>.
+<tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1433,7 +1437,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"CONT4"</tt>. The option <tt>"CONT4"</tt> draws a contour plot using surface
 colors to distinguish contours (<tt>"SURF"</tt> option at theta = 0). Combined
 with the option <tt>"CONT"</tt> (or <tt>"CONT0"</tt>), the option <tt>"Z"</tt>
-allows to display the color palette defined by <tt>gStyle->SePalette()</tt>.
+allows to display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1601,7 +1605,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"LEGO2"</tt>. The option <tt>"LEGO2"</tt> draws a lego plot using colors to
 show the cell contents.  Combined with the option <tt>"LEGO2"</tt>, the option
 <tt>"Z"</tt> allows to display the color palette defined by
-<tt>gStyle->SePalette()</tt>.
+<tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1694,7 +1698,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"SURF1"</tt>. The option <tt>"SURF1"</tt> draws a surface plot using the
 hidden surface removal technique.  Combined with the option <tt>"SURF1"</tt>,
 the option <tt>"Z"</tt> allows to display the color palette defined by
-<tt>gStyle->SePalette()</tt>.
+<tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1717,7 +1721,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"SURF2"</tt>. The option <tt>"SURF2"</tt> draws a surface plot using colors
 to show the cell contents. Combined with the option <tt>"SURF2"</tt>, the option
 <tt>"Z"</tt> allows to display the color palette defined by
-<tt>gStyle->SePalette()</tt>.
+<tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1740,7 +1744,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"SURF3"</tt>. The option <tt>"SURF3"</tt> draws a surface plot using the
 hidden line removal technique with, in addition, a filled contour view drawn on the
 top.  Combined with the option <tt>"SURF3"</tt>, the option <tt>"Z"</tt> allows
-to display the color palette defined by <tt>gStyle->SePalette()</tt>.
+to display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1783,7 +1787,7 @@ Begin_Html
 
 The following example shows a 2D histogram plotted with the option
 <tt>"SURF5 CYL"</tt>.  Combined with the option <tt>"SURF5"</tt>, the option
-<tt>"Z"</tt> allows to display the color palette defined by <tt>gStyle->SePalette()</tt>.
+<tt>"Z"</tt> allows to display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1807,7 +1811,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"SURF7"</tt>. The option <tt>"SURF7"</tt> draws a surface plot using the
 hidden surfaces removal technique with, in addition, a line contour view drawn on the
 top.  Combined with the option <tt>"SURF7"</tt>, the option <tt>"Z"</tt> allows
-to display the color palette defined by <tt>gStyle->SePalette()</tt>.
+to display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1995,7 +1999,7 @@ Begin_Macro(source)
    float d_35_0[nx] = {0.75, -3.30, -0.92, 0.10, 0.08, -1.69, -1.29, -2.37};
    float d_35_1[nx] = {1.01, -3.02, -0.65, 0.37, 0.34, -1.42, -1.02, -2.10};
 
-   TCanvas *cb = new TCanvas("cbh","cbh",400,600);
+   TCanvas *cbh = new TCanvas("cbh","cbh",400,600);
    cbh->SetGrid();
 
    gStyle->SetHistMinimumZero();
@@ -2026,6 +2030,53 @@ Begin_Macro(source)
 
    return cbh;
 }
+End_Macro
+Begin_Html
+
+
+<a name="HP20a"></a><h3>TH2Poly Drawing</h3>
+
+<tt>TH2Poly</tt> can be drawn as a color plot (option COL).
+<tt>TH2Poly</tt> bins can have any shapes. The bins are defined as graphs. The
+following macro is a very simple example showing how to book a TH2Poly and draw
+it.
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *ch2p1 = new TCanvas("ch2p1","ch2p1",600,400);
+   TH2Poly *h2p = new TH2Poly();
+   h2p->SetName("h2poly_name");
+   h2p->SetTitle("h2poly_title");
+   Double_t x1[] = {0, 5, 6};
+   Double_t y1[] = {0, 0, 5};
+   Double_t x2[] = {0, -1, -1, 0};
+   Double_t y2[] = {0, 0, -1, 3};
+   Double_t x3[] = {4, 3, 0, 1, 2.4};
+   Double_t y3[] = {4, 3.7, 1, 4.7, 3.5};
+   h2p->AddBin(3, x1, y1);
+   h2p->AddBin(4, x2, y2);
+   h2p->AddBin(4, x3, y3);
+   h2p->Fill(0.1, 0.01, 3);
+   h2p->Fill(-0.5, -0.5, 7);
+   h2p->Fill(-0.7, -0.5, 1);
+   h2p->Fill(1, 3, 1.5);
+   Double_t fx[] = {0.1, -0.5, -0.7, 1};
+   Double_t fy[] = {0.01, -0.5, -0.5, 3};
+   Double_t fw[] = {3, 1, 1, 1.5};
+   h2p->FillN(4, fx, fy, fw);
+   gStyle->SetPalette(1);
+   h2p->Draw("col");
+   return ch2p1;
+}
+End_Macro
+Begin_Html
+
+<p>Rectangular bins are a frequent case. The method <tt>AddBinBox</tt> allows
+to define them more easily like shown in the following example.
+
+End_Html
+Begin_Macro(source)
+../../../tutorials/hist/th2polyBoxes.C
 End_Macro
 Begin_Html
 
@@ -2074,7 +2125,7 @@ red spectrum is created. It is recommended you use this palette when drawing
 legos, surfaces or contours.
 
 <p>If ncolors > 50 and colors=0, the DeepSea palette is used.
-(see <tt>TStyle::CreateGradientColorTable</tt> for more details)
+(see <tt>TColor::CreateGradientColorTable</tt> for more details)
 
 <p> If <tt>ncolors > 0 && colors == 0</tt>, the default palette is used
 with a maximum of ncolors.
@@ -2588,6 +2639,10 @@ THistPainter::THistPainter()
    fGraph2DPainter = 0;
    fShowProjection = 0;
    fShowOption = "";
+   for (int i=0; i<kMaxCuts; i++) {
+      fCuts[i] = 0;
+      fCutsOpt[i] = 0;
+   }
 
    gStringEntries   = gEnv->GetValue("Hist.Stats.Entries",   "Entries");
    gStringMean      = gEnv->GetValue("Hist.Stats.Mean",      "Mean");
@@ -2721,6 +2776,12 @@ Int_t THistPainter::DistancetoPrimitive(Int_t px, Int_t py)
 
    //     if object is 2D or 3D return this object
    if (fH->GetDimension() == 2) {
+      if (fH->InheritsFrom(TH2Poly::Class())) {
+         TH2Poly *th2 = (TH2Poly*)fH;
+         Int_t bin = th2->FindBin(gPad->AbsPixeltoX(px), gPad->AbsPixeltoY(py));
+         if (bin>0) {curdist =1; goto FUNCTIONS;}
+         else return big;
+      }
       Int_t delta2 = 5; //Give a margin of delta2 pixels to be in the 2-d area
       if ( px > puxmin + delta2
         && px < puxmax - delta2
@@ -2802,7 +2863,8 @@ void THistPainter::DrawPanel()
    }
    TVirtualPadEditor *editor = TVirtualPadEditor::GetPadEditor();
    editor->Show();
-   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",gPad->GetCanvas(),gPad,fH));
+   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",
+                           (ULong_t)gPad->GetCanvas(), (ULong_t)gPad, (ULong_t)fH));
 }
 
 
@@ -3012,10 +3074,16 @@ char *THistPainter::GetObjectInfo(Int_t px, Int_t py) const
    if (fH->GetDimension() == 1) {
       Double_t integ = 0;
       for (Int_t bin=binmin;bin<=binx;bin++) {integ += fH->GetBinContent(bin);}
-      sprintf(info,"(x=%g, y=%g, binx=%d, binc=%g, Sum=%g)",x,y,binx,fH->GetBinContent(binx),integ);
+      snprintf(info,100,"(x=%g, y=%g, binx=%d, binc=%g, Sum=%g)",x,y,binx,fH->GetBinContent(binx),integ);
    } else {
-      biny = fYaxis->FindFixBin(y);
-      sprintf(info,"(x=%g, y=%g, binx=%d, biny=%d, binc=%g)",x,y,binx,biny,fH->GetCellContent(binx,biny));
+      if (fH->InheritsFrom(TH2Poly::Class())) {
+         TH2Poly *th2 = (TH2Poly*)fH;
+         biny = th2->FindBin(x,y);
+         snprintf(info,100,"%s (x=%g, y=%g, bin=%d, binc=%g)",th2->GetBinTitle(biny),x,y,biny,th2->GetBinContent(biny));
+      } else {
+         biny = fYaxis->FindFixBin(y);
+         snprintf(info,100,"(x=%g, y=%g, binx=%d, biny=%d, binc=%g)",x,y,binx,biny,fH->GetCellContent(binx,biny));
+      }
    }
    return info;
 }
@@ -3069,11 +3137,11 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
    char *l;
    char chopt[128];
    Int_t nch = strlen(choptin);
-   strcpy(chopt,choptin);
+   strlcpy(chopt,choptin,128);
 
    Hoption.Axis = Hoption.Bar    = Hoption.Curve   = Hoption.Error = 0;
    Hoption.Hist = Hoption.Line   = Hoption.Mark    = Hoption.Fill  = 0;
-   Hoption.Same = Hoption.Func   = Hoption.Plus    = Hoption.Scat  = 0;
+   Hoption.Same = Hoption.Func   = Hoption.Scat    = 0;
    Hoption.Star = Hoption.Arrow  = Hoption.Box     = Hoption.Text  = 0;
    Hoption.Char = Hoption.Color  = Hoption.Contour = Hoption.Logx  = 0;
    Hoption.Logy = Hoption.Logz   = Hoption.Lego    = Hoption.Surf  = 0;
@@ -3224,8 +3292,6 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
       if (l[3] == '3') { Hoption.Bar = 13; l[3] = ' '; }
       if (l[3] == '4') { Hoption.Bar = 14; l[3] = ' '; }
    }
-   l = strstr(chopt,"+-");   if (l) { Hoption.Plus = 2; strncpy(l,"  ",2); }
-   l = strstr(chopt,"-+");   if (l) { Hoption.Plus = 2; strncpy(l,"  ",2); }
 
    l = strstr(chopt,"ARR" ); if (l) { Hoption.Arrow  = 1; strncpy(l,"   ", 3); Hoption.Scat = 0; }
    l = strstr(chopt,"BOX" );
@@ -3267,6 +3333,7 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
       Hoption.Tri = 1; strncpy(l,"   ",3);
       l = strstr(chopt,"FB");   if (l) { Hoption.FrontBox = 0; strncpy(l,"  ",2); }
       l = strstr(chopt,"BB");   if (l) { Hoption.BackBox = 0;  strncpy(l,"  ",2); }
+      l = strstr(chopt,"ERR");  if (l) strncpy(l,"   ",3);
    }
 
    l = strstr(chopt,"AITOFF");
@@ -3300,8 +3367,6 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
    if (strstr(chopt,"P")) { Hoption.Mark =1; Hoption.Hist = -1;}
    if (strstr(chopt,"Z"))   Hoption.Zscale =1;
    if (strstr(chopt,"*"))   Hoption.Star =1;
-   if (strstr(chopt,"+"))   Hoption.Plus =1;
-   if (strstr(chopt,"-"))   Hoption.Plus =-1;
    if (strstr(chopt,"H"))   Hoption.Hist =2;
    if (strstr(chopt,"P0"))  Hoption.Mark =10;
 
@@ -3351,22 +3416,6 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
 
    //       Check options incompatibilities
    if (Hoption.Bar  == 1) Hoption.Hist = -1;
-   if (Hoption.Same && Hoption.Plus) {
-      Error("MakeChopt", "select only one of the options S,+");
-      return 0;
-   }
-   if (Hoption.Plus) {
-      if (Hoption.Line || Hoption.Curve || Hoption.Text || Hoption.Mark) {
-         Error("MakeChopt", "options L,C,T,P are incompatible with options U and K");
-         if (Hoption.Hist && Hoption.Bar) return 0;
-      }
-   }
-   if (Hoption.Error || Hoption.Func || Hoption.Star) {
-      if (Hoption.Plus) {
-         Error("MakeChopt", "U, + options incompatible with errors/function");
-         return 0;
-      }
-   }
    return 1;
 }
 
@@ -3442,7 +3491,8 @@ void THistPainter::Paint(Option_t *option)
    if (Hoption.Spec) {
       if (!TableInit()) return;
       if (!TClass::GetClass("TSpectrum2Painter")) gSystem->Load("libSpectrumPainter");
-      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%lx,\"%s\",%d)",fH,option,Hoption.Spec));
+      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%lx,\"%s\",%d)",
+                                  (ULong_t)fH, option, Hoption.Spec));
       return;
    }
 
@@ -3772,16 +3822,20 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    axis.ImportAxisAttributes(fXaxis);
 
    chopt[0] = 0;
-   strcat(chopt, "SDH");
-   if (ndivx < 0) strcat(chopt, "N");
+   // coverity [Calling risky function]
+   strlcat(chopt, "SDH",10);
+   // coverity [Calling risky function]
+   if (ndivx < 0) strlcat(chopt, "N",10);
    if (gPad->GetGridx()) {
       gridl = (aymax-aymin)/(gPad->GetY2() - gPad->GetY1());
-      strcat(chopt, "W");
+      // coverity [Calling risky function]
+      strlcat(chopt, "W",10);
    }
 
    // Define X-Axis limits
    if (Hoption.Logx) {
-      strcat(chopt, "G");
+      // coverity [Calling risky function]
+      strlcat(chopt, "G",10);
       ndiv = TMath::Abs(ndivx);
       if (useHparam) {
          umin = TMath::Power(10,Hparam.xmin);
@@ -3803,7 +3857,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
 
    // Display axis as time
    if (fXaxis->GetTimeDisplay()) {
-      strcat(chopt,"t");
+      // coverity [Calling risky function]
+      strlcat(chopt,"t",10);
       if (strlen(fXaxis->GetTimeFormatOnly()) == 0) {
          axis.SetTimeFormat(fXaxis->ChooseTimeFormat(Hparam.xmax-Hparam.xmin));
       }
@@ -3827,7 +3882,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    ndivsave = ndiv;
    axis.SetOption(chopt);
    if (xAxisPos) {
-      strcat(chopt, "-");
+      // coverity [Calling risky function]
+      strlcat(chopt, "-",10);
       gridl = -gridl;
    }
    if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
@@ -3844,9 +3900,11 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
          cw=strstr(chopt,"-");
          *cw='z';
       } else {
-         strcat(chopt, "-");
+         // coverity [Calling risky function]
+         strlcat(chopt, "-",10);
       }
-      if (gPad->GetTickx() < 2) strcat(chopt, "U");
+      // coverity [Calling risky function]
+      if (gPad->GetTickx() < 2) strlcat(chopt, "U",10);
       if ((cw=strstr(chopt,"W"))) *cw='z';
       axis.SetTitle("");
       axis.PaintAxis(axmin, xAxisYPos2,
@@ -3859,16 +3917,20 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    axis.ImportAxisAttributes(fYaxis);
 
    chopt[0] = 0;
-   strcat(chopt, "SDH");
-   if (ndivy < 0) strcat(chopt, "N");
+   // coverity [Calling risky function]
+   strlcat(chopt, "SDH",10);
+   // coverity [Calling risky function]
+   if (ndivy < 0) strlcat(chopt, "N",10);
    if (gPad->GetGridy()) {
       gridl = (axmax-axmin)/(gPad->GetX2() - gPad->GetX1());
-      strcat(chopt, "W");
+      // coverity [Calling risky function]
+      strlcat(chopt, "W",10);
    }
 
    // Define Y-Axis limits
    if (Hoption.Logy) {
-      strcat(chopt, "G");
+      // coverity [Calling risky function]
+      strlcat(chopt, "G",10);
       ndiv = TMath::Abs(ndivy);
       if (useHparam) {
          umin = TMath::Power(10,Hparam.ymin);
@@ -3890,7 +3952,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
 
    // Display axis as time
    if (fYaxis->GetTimeDisplay()) {
-      strcat(chopt,"t");
+      // coverity [Calling risky function]
+      strlcat(chopt,"t",10);
       if (strlen(fYaxis->GetTimeFormatOnly()) == 0) {
          axis.SetTimeFormat(fYaxis->ChooseTimeFormat(Hparam.ymax-Hparam.ymin));
       }
@@ -3914,7 +3977,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    ndivsave = ndiv;
    axis.SetOption(chopt);
    if (yAxisPos) {
-      strcat(chopt, "+L");
+      // coverity [Calling risky function]
+      strlcat(chopt, "+L",10);
       gridl = -gridl;
    }
    if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
@@ -3928,10 +3992,12 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    // Paint the additional Y axis (if needed)
    if (gPad->GetTicky()) {
       if (gPad->GetTicky() < 2) {
-         strcat(chopt, "U");
+         // coverity [Calling risky function]
+         strlcat(chopt, "U",10);
          axis.SetTickSize(-fYaxis->GetTickLength());
       } else {
-         strcat(chopt, "+L");
+         // coverity [Calling risky function]
+         strlcat(chopt, "+L",10);
       }
       if ((cw=strstr(chopt,"W"))) *cw='z';
       axis.SetTitle("");
@@ -5262,11 +5328,10 @@ void THistPainter::PaintHist(Option_t *)
 
    Int_t htype, oldhtype;
    Int_t i, j, first, last, nbins, fixbin;
-   Double_t c1, yb, y1, y2, ym1, ym2, yadd, ycur, ypre;
-   Double_t ync, ynext, ypc;
-   yb = ynext = 0;
+   Double_t c1, yb;
+   yb = 0;
 
-   strcpy(chopth, "                ");
+   strlcpy(chopth, "                ",17);
 
    Double_t ymin = Hparam.ymin;
    Double_t ymax = Hparam.ymax;
@@ -5287,11 +5352,9 @@ void THistPainter::PaintHist(Option_t *)
    Double_t *keepy = 0;
    if (fXaxis->GetXbins()->fN) fixbin = 0;
    else                        fixbin = 1;
-   if (!Hoption.Plus) {
-      if (fixbin) keepx = new Double_t[2];
-      else        keepx = new Double_t[nbins+1];
-      keepy = new Double_t[nbins];
-   }
+   if (fixbin) keepx = new Double_t[2];
+   else        keepx = new Double_t[nbins+1];
+   keepy = new Double_t[nbins];
    Double_t logymin = 0;
    if (Hoption.Logy) logymin = TMath::Power(10,ymin);
 
@@ -5305,64 +5368,8 @@ void THistPainter::PaintHist(Option_t *)
       }
       yb = TMath::Max(yb, ymin);
       yb = TMath::Min(yb, ymax);
-      if (Hoption.Plus) {
-   //            compute y1, y2
-         y1 = keepy[j-first];
-         y2 = yb;
-         if (Hoption.Plus == 1 || Hoption.Plus == -1) {
-            if (Hoption.Logy)
-               y2 = TMath::Log10(TMath::Power(10,y1) + Hoption.Plus*TMath::Power(10,y2));
-            else
-               y2 = y1 +y2*Hoption.Plus;
-         }
-   //            compute ym1, ym2
-         if (!Hoption.Bar) {
-            yadd = Hparam.factor*fH->GetBinContent(j);
-            if (Hoption.Logy) ycur = TMath::Power(10,keepy[j-first]);
-            else              ycur = keepy[j-first];
-            if (j != last) {
-               ync = Hparam.factor*fH->GetBinContent(j+1);
-               if (Hoption.Logy) ycur = TMath::Power(10,keepy[j-first+1]);
-               else              ycur = keepy[j-first+1];
-            }
-            else { ync = ynext = 0;}
-            if (j != first) {
-               ypc = Hparam.factor*fH->GetBinContent(j-1);
-               if (Hoption.Logy) ypre = TMath::Power(10,keepy[j-first]);
-               else              ypre = keepy[j-first];
-            }
-            else { ypc = ypre = 0;}
-            if (Hoption.Plus == 1) {
-               ym1 = TMath::Max(TMath::Min(ycur+yadd,ypre),ycur);
-               ym2 = TMath::Max(TMath::Min(ycur+yadd,ynext+ync),ycur);
-            }
-            else if(Hoption.Plus == -1) {
-               ym1 = TMath::Max(TMath::Min(ycur-yadd,ypre),ycur);
-               ym2 = TMath::Max(TMath::Min(ycur-yadd,ynext-ync),ycur);
-            }
-            else {
-               if (ycur > yadd) { ym1 = TMath::Max(yadd,ypc); ym2 = TMath::Max(yadd,ync); }
-               else {             ym1 = TMath::Min(yadd,ypc); ym2 = TMath::Min(yadd,ync); }
-            }
-            if (Hoption.Logy) {
-               if (ym1 > 0) ym1 = TMath::Log10(ym1);
-               if (ym2 > 0) ym2 = TMath::Log10(ym2);
-            }
-         }
-
-   //               Compute X1 X2
-         if (Hoption.Logy && c1 <= 0) continue;
-
-   //     Update the current plot
-
-         if (Hoption.Plus == 1 || Hoption.Plus == -1) keepy[j-first-1] = y2;
-      }
-      else {
-         keepy[j-first] = yb;
-      }
-   } // end of for loop
-
-   if (Hoption.Plus) return;
+      keepy[j-first] = yb;
+   }
 
    //              Draw histogram according to value of FillStyle and FillColor
 
@@ -5405,8 +5412,10 @@ void THistPainter::PaintHist(Option_t *)
       chopth[8] = 'N';
    }
 
-   if (Hoption.Fill == 2)    strcat(chopth,"2");
-   if (Hoption.HighRes != 0) strcat(chopth,"9");
+   // coverity [Calling risky function]
+   if (Hoption.Fill == 2)    strlcat(chopth,"2",17);
+   // coverity [Calling risky function]
+   if (Hoption.HighRes != 0) strlcat(chopth,"9",17);
 
    //         Option LOGX
 
@@ -5631,13 +5640,17 @@ Int_t THistPainter::PaintInit()
    Double_t xm = ymin;
    if (maximum) ymax = fH->GetMaximumStored();
    if (minimum) xm   = fH->GetMinimumStored();
-   if (Hoption.Logy && xm <= 0) {
-      Error(where, "log scale requested with zero or negative argument (%f)", xm);
+   if (Hoption.Logy && xm < 0) {
+      Error(where, "log scale requested with a negative argument (%f)", xm);
       return 0;
+   } else if (Hoption.Logy && xm>=0 && ymax==0) { // empty histogram in log scale
+      ymin = 0.01;
+      ymax = 10.;
+   } else {
+      ymin = xm;
    }
-   else ymin = xm;
 
-   if (ymin >= ymax && !Hoption.Plus) {
+   if (ymin >= ymax) {
       if (Hoption.Logy) {
          if (ymax > 0) ymin = 0.001*ymax;
          else {
@@ -5694,7 +5707,7 @@ Int_t THistPainter::PaintInit()
       ymin = TMath::Log10(ymin);
       if (!minimum) ymin += TMath::Log10(0.5);
       ymax = TMath::Log10(ymax);
-      if (!maximum && !Hoption.Plus) ymax += TMath::Log10(2*(0.9/0.95));
+      if (!maximum) ymax += TMath::Log10(2*(0.9/0.95));
       if (!Hoption.Same) {
          Hparam.ymin = ymin;
          Hparam.ymax = ymax;
@@ -5719,7 +5732,7 @@ Int_t THistPainter::PaintInit()
    //         final adjustment of YMAXI for linear scale (if not option "Same"):
    //         decrease histogram height to MAX% of allowed height if HMAXIM
    //         has not been called.
-   if (!maximum && !Hoption.Plus) {
+   if (!maximum) {
       ymax += yMARGIN*(ymax-ymin);
    }
 
@@ -5824,7 +5837,7 @@ Int_t THistPainter::PaintInitH()
       return 0;
    }
    else xmin = xm;
-   if (xmin >= xmax && !Hoption.Plus) {
+   if (xmin >= xmax) {
       if (Hoption.Logx) {
          if (xmax > 0) xmin = 0.001*xmax;
          else {
@@ -5868,7 +5881,7 @@ Int_t THistPainter::PaintInitH()
       xmin = TMath::Log10(xmin);
       if (!minimum) xmin += TMath::Log10(0.5);
       xmax = TMath::Log10(xmax);
-      if (!maximum && !Hoption.Plus) xmax += TMath::Log10(2*(0.9/0.95));
+      if (!maximum) xmax += TMath::Log10(2*(0.9/0.95));
       if (!Hoption.Same) {
          Hparam.xmin = xmin;
          Hparam.xmax = xmax;
@@ -5887,7 +5900,7 @@ Int_t THistPainter::PaintInitH()
    //         final adjustment of YMAXI for linear scale (if not option "Same"):
    //         decrease histogram height to MAX% of allowed height if HMAXIM
    //         has not been called.
-   if (!maximum && !Hoption.Plus) {
+   if (!maximum) {
       xmax += yMARGIN*(xmax-xmin);
    }
    Hparam.xmin = xmin;
@@ -6265,16 +6278,19 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
    Double_t *rmax = view->GetRmax();
 
    // Initialize the axis options
-   if (x1[0] > x2[0]) strcpy(chopax, "SDH=+");
-   else               strcpy(chopax, "SDH=-");
-   if (y1[0] > y2[0]) strcpy(chopay, "SDH=+");
-   else               strcpy(chopay, "SDH=-");
-   strcpy(chopaz, "SDH+=");
+   if (x1[0] > x2[0]) strlcpy(chopax, "SDH=+",8);
+   else               strlcpy(chopax, "SDH=-",8);
+   if (y1[0] > y2[0]) strlcpy(chopay, "SDH=+",8);
+   else               strlcpy(chopay, "SDH=-",8);
+   strlcpy(chopaz, "SDH+=",8);
 
    // Option LOG is required ?
-   if (Hoption.Logx) strcat(chopax,"G");
-   if (Hoption.Logy) strcat(chopay,"G");
-   if (Hoption.Logz) strcat(chopaz,"G");
+   // coverity [Calling risky function]
+   if (Hoption.Logx) strlcat(chopax,"G",8);
+   // coverity [Calling risky function]
+   if (Hoption.Logy) strlcat(chopay,"G",8);
+   // coverity [Calling risky function]
+   if (Hoption.Logz) strlcat(chopaz,"G",8);
 
    // Initialize the number of divisions. If the
    // number of divisions is negative, option 'N' is required.
@@ -6283,15 +6299,18 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
    ndivz = fZaxis->GetNdivisions();
    if (ndivx < 0) {
       ndivx = TMath::Abs(ndivx);
-      strcat(chopax, "N");
+      // coverity [Calling risky function]
+      strlcat(chopax, "N",8);
    }
    if (ndivy < 0) {
       ndivy = TMath::Abs(ndivy);
-      strcat(chopay, "N");
+      // coverity [Calling risky function]
+      strlcat(chopay, "N",8);
    }
    if (ndivz < 0) {
       ndivz = TMath::Abs(ndivz);
-      strcat(chopaz, "N");
+      // coverity [Calling risky function]
+      strlcat(chopaz, "N",8);
    }
 
    // Set Axis attributes.
@@ -6304,7 +6323,7 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
    if (TMath::Abs(x1[0] - x2[0]) >= epsil || TMath::Abs(x1[1] - x2[1]) > epsil) {
       axis->ImportAxisAttributes(fXaxis);
       axis->SetLabelOffset(fXaxis->GetLabelOffset()+fXaxis->GetTickLength());
-      if (Hoption.Logx) {
+      if (Hoption.Logx && !fH->InheritsFrom(TH3::Class())) {
          bmin = TMath::Power(10, rmin[0]);
          bmax = TMath::Power(10, rmax[0]);
       } else {
@@ -6313,7 +6332,8 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
       }
       // Option time display is required ?
       if (fXaxis->GetTimeDisplay()) {
-         strcat(chopax,"t");
+         // coverity [Calling risky function]
+         strlcat(chopax,"t",8);
          if (strlen(fXaxis->GetTimeFormatOnly()) == 0) {
             axis->SetTimeFormat(fXaxis->ChooseTimeFormat(bmax-bmin));
          } else {
@@ -6330,13 +6350,13 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
       axis->SetLabelOffset(fYaxis->GetLabelOffset()+fYaxis->GetTickLength());
 
       if (fH->GetDimension() < 2) {
-         strcpy(chopay, "V=+UN");
+         strlcpy(chopay, "V=+UN",8);
          ndivy = 0;
       }
       if (TMath::Abs(y1[0] - y2[0]) < epsil) {
          y2[0] = y1[0];
       }
-      if (Hoption.Logy) {
+      if (Hoption.Logy && !fH->InheritsFrom(TH3::Class())) {
          bmin = TMath::Power(10, rmin[1]);
          bmax = TMath::Power(10, rmax[1]);
       } else {
@@ -6345,7 +6365,8 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
       }
       // Option time display is required ?
       if (fYaxis->GetTimeDisplay()) {
-         strcat(chopay,"t");
+         // coverity [Calling risky function]
+         strlcat(chopay,"t",8);
          if (strlen(fYaxis->GetTimeFormatOnly()) == 0) {
             axis->SetTimeFormat(fYaxis->ChooseTimeFormat(bmax-bmin));
          } else {
@@ -6359,7 +6380,7 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
    // Z axis drawing
    if (TMath::Abs(z1[0] - z2[0]) >= 100*epsil || TMath::Abs(z1[1] - z2[1]) > 100*epsil) {
       axis->ImportAxisAttributes(fZaxis);
-      if (Hoption.Logz) {
+      if (Hoption.Logz && !fH->InheritsFrom(TH3::Class())) {
          bmin = TMath::Power(10, rmin[2]);
          bmax = TMath::Power(10, rmax[2]);
       } else {
@@ -6368,7 +6389,8 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
       }
       // Option time display is required ?
       if (fZaxis->GetTimeDisplay()) {
-         strcat(chopaz,"t");
+         // coverity [Calling risky function]
+         strlcat(chopaz,"t",8);
          if (strlen(fZaxis->GetTimeFormatOnly()) == 0) {
             axis->SetTimeFormat(fZaxis->ChooseTimeFormat(bmax-bmin));
          } else {
@@ -6475,7 +6497,7 @@ void THistPainter::PaintScatterPlot(Option_t *option)
    opt.ToLower();
    if (opt.Contains("scat=")) {
       char optscat[100];
-      strcpy(optscat,opt.Data());
+      strlcpy(optscat,opt.Data(),100);
       char *oscat = strstr(optscat,"scat=");
       char *blank = strstr(oscat," "); if (blank) *blank = 0;
       sscanf(oscat+5,"%lg",&scale);
@@ -6631,7 +6653,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    // Pavetext with statistics
    Bool_t done = kFALSE;
    if (!dostat && !fit) {
-      if (stats) { delete stats; fFunctions->Remove(stats); }
+      if (stats) { fFunctions->Remove(stats); delete stats;}
       return;
    }
    Double_t  statw  = gStyle->GetStatW();
@@ -6670,89 +6692,89 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    }
    if (print_name)  stats->AddText(fH->GetName());
    if (print_entries) {
-      if (fH->GetEntries() < 1e7) sprintf(t,"%s = %-7d",gStringEntries.Data(),Int_t(fH->GetEntries()+0.5));
-      else                        sprintf(t,"%s = %14.7g",gStringEntries.Data(),Float_t(fH->GetEntries()));
+      if (fH->GetEntries() < 1e7) snprintf(t,100,"%s = %-7d",gStringEntries.Data(),Int_t(fH->GetEntries()+0.5));
+      else                        snprintf(t,100,"%s = %14.7g",gStringEntries.Data(),Float_t(fH->GetEntries()));
       stats->AddText(t);
    }
    char textstats[50];
    if (print_mean) {
       if (print_mean == 1) {
-         sprintf(textstats,"%s  = %s%s",gStringMean.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,fH->GetMean(1));
+         snprintf(textstats,50,"%s  = %s%s",gStringMean.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,fH->GetMean(1));
       } else {
-         sprintf(textstats,"%s  = %s%s #pm %s%s",gStringMean.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s  = %s%s #pm %s%s",gStringMean.Data(),"%",stats->GetStatFormat()
                                                   ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,fH->GetMean(1),fH->GetMeanError(1));
+         snprintf(t,100,textstats,fH->GetMean(1),fH->GetMeanError(1));
       }
       stats->AddText(t);
       if (fH->InheritsFrom(TProfile::Class())) {
          if (print_mean == 1) {
-            sprintf(textstats,"%s = %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat());
-            sprintf(t,textstats,fH->GetMean(2));
+            snprintf(textstats,50,"%s = %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat());
+            snprintf(t,100,textstats,fH->GetMean(2));
          } else {
-            sprintf(textstats,"%s = %s%s #pm %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat()
+            snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat()
                                                       ,"%",stats->GetStatFormat());
-            sprintf(t,textstats,fH->GetMean(2),fH->GetMeanError(2));
+            snprintf(t,100,textstats,fH->GetMean(2),fH->GetMeanError(2));
          }
          stats->AddText(t);
       }
    }
    if (print_rms) {
       if (print_rms == 1) {
-         sprintf(textstats,"%s   = %s%s",gStringRMS.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,fH->GetRMS(1));
+         snprintf(textstats,50,"%s   = %s%s",gStringRMS.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,fH->GetRMS(1));
       } else {
-         sprintf(textstats,"%s   = %s%s #pm %s%s",gStringRMS.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s   = %s%s #pm %s%s",gStringRMS.Data(),"%",stats->GetStatFormat()
                                                   ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,fH->GetRMS(1),fH->GetRMSError(1));
+         snprintf(t,100,textstats,fH->GetRMS(1),fH->GetRMSError(1));
       }
       stats->AddText(t);
       if(fH->InheritsFrom(TProfile::Class())) {
          if (print_rms == 1) {
-            sprintf(textstats,"%s = %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat());
-            sprintf(t,textstats,fH->GetRMS(2));
+            snprintf(textstats,50,"%s = %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat());
+            snprintf(t,100,textstats,fH->GetRMS(2));
          } else {
-            sprintf(textstats,"%s = %s%s #pm %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat()
+            snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat()
                                                      ,"%",stats->GetStatFormat());
-            sprintf(t,textstats,fH->GetRMS(2),fH->GetRMSError(2));
+            snprintf(t,100,textstats,fH->GetRMS(2),fH->GetRMSError(2));
          }
          stats->AddText(t);
       }
    }
    if (print_under) {
-      sprintf(textstats,"%s = %s%s",gStringUnderflow.Data(),"%",stats->GetStatFormat());
-      sprintf(t,textstats,fH->GetBinContent(0));
+      snprintf(textstats,50,"%s = %s%s",gStringUnderflow.Data(),"%",stats->GetStatFormat());
+      snprintf(t,100,textstats,fH->GetBinContent(0));
       stats->AddText(t);
    }
    if (print_over) {
-      sprintf(textstats,"%s  = %s%s",gStringOverflow.Data(),"%",stats->GetStatFormat());
-      sprintf(t,textstats,fH->GetBinContent(fXaxis->GetNbins()+1));
+      snprintf(textstats,50,"%s  = %s%s",gStringOverflow.Data(),"%",stats->GetStatFormat());
+      snprintf(t,100,textstats,fH->GetBinContent(fXaxis->GetNbins()+1));
       stats->AddText(t);
    }
    if (print_integral) {
-      sprintf(textstats,"%s = %s%s",gStringIntegral.Data(),"%",stats->GetStatFormat());
-      sprintf(t,textstats,fH->Integral());
+      snprintf(textstats,50,"%s = %s%s",gStringIntegral.Data(),"%",stats->GetStatFormat());
+      snprintf(t,100,textstats,fH->Integral());
       stats->AddText(t);
    }
    if (print_skew) {
       if (print_skew == 1) {
-         sprintf(textstats,"%s = %s%s",gStringSkewness.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,fH->GetSkewness(1));
+         snprintf(textstats,50,"%s = %s%s",gStringSkewness.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,fH->GetSkewness(1));
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringSkewness.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringSkewness.Data(),"%",stats->GetStatFormat()
                                                      ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,fH->GetSkewness(1),fH->GetSkewness(11));
+         snprintf(t,100,textstats,fH->GetSkewness(1),fH->GetSkewness(11));
       }
       stats->AddText(t);
    }
    if (print_kurt) {
       if (print_kurt == 1) {
-         sprintf(textstats,"%s = %s%s",gStringKurtosis.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,fH->GetKurtosis(1));
+         snprintf(textstats,50,"%s = %s%s",gStringKurtosis.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,fH->GetKurtosis(1));
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringKurtosis.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringKurtosis.Data(),"%",stats->GetStatFormat()
                                                      ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,fH->GetKurtosis(1),fH->GetKurtosis(11));
+         snprintf(t,100,textstats,fH->GetKurtosis(1),fH->GetKurtosis(11));
       }
       stats->AddText(t);
    }
@@ -6760,12 +6782,12 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    // Draw Fit parameters
    if (fit) {
       Int_t ndf = fit->GetNDF();
-      sprintf(textstats,"#chi^{2} / ndf = %s%s / %d","%",stats->GetFitFormat(),ndf);
-      sprintf(t,textstats,(Float_t)fit->GetChisquare());
+      snprintf(textstats,50,"#chi^{2} / ndf = %s%s / %d","%",stats->GetFitFormat(),ndf);
+      snprintf(t,100,textstats,(Float_t)fit->GetChisquare());
       if (print_fchi2) stats->AddText(t);
       if (print_fprob) {
-         sprintf(textstats,"Prob  = %s%s","%",stats->GetFitFormat());
-         sprintf(t,textstats,(Float_t)TMath::Prob(fit->GetChisquare(),ndf));
+         snprintf(textstats,50,"Prob  = %s%s","%",stats->GetFitFormat());
+         snprintf(t,100,textstats,(Float_t)TMath::Prob(fit->GetChisquare(),ndf));
          stats->AddText(t);
       }
       if (print_fval || print_ferrors) {
@@ -6774,13 +6796,13 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
             fit->GetParLimits(ipar,parmin,parmax);
             if (print_fval < 2 && parmin*parmax != 0 && parmin >= parmax) continue;
             if (print_ferrors) {
-               sprintf(textstats,"%-8s = %s%s #pm %s ",fit->GetParName(ipar), "%",stats->GetFitFormat(),
+               snprintf(textstats,50,"%-8s = %s%s #pm %s ",fit->GetParName(ipar), "%",stats->GetFitFormat(),
                        GetBestFormat(fit->GetParameter(ipar), fit->GetParError(ipar), stats->GetFitFormat()));
-               sprintf(t,textstats,(Float_t)fit->GetParameter(ipar)
+               snprintf(t,100,textstats,(Float_t)fit->GetParameter(ipar)
                                ,(Float_t)fit->GetParError(ipar));
             } else {
-               sprintf(textstats,"%-8s = %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat());
-               sprintf(t,textstats,(Float_t)fit->GetParameter(ipar));
+               snprintf(textstats,50,"%-8s = %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat());
+               snprintf(t,100,textstats,(Float_t)fit->GetParameter(ipar));
             }
             t[63] = 0;
             stats->AddText(t);
@@ -6877,88 +6899,88 @@ void THistPainter::PaintStat2(Int_t dostat, TF1 *fit)
    }
    if (print_name)  stats->AddText(h2->GetName());
    if (print_entries) {
-      if (h2->GetEntries() < 1e7) sprintf(t,"%s = %-7d",gStringEntries.Data(),Int_t(h2->GetEntries()+0.5));
-      else                        sprintf(t,"%s = %14.7g",gStringEntries.Data(),Float_t(h2->GetEntries()));
+      if (h2->GetEntries() < 1e7) snprintf(t,100,"%s = %-7d",gStringEntries.Data(),Int_t(h2->GetEntries()+0.5));
+      else                        snprintf(t,100,"%s = %14.7g",gStringEntries.Data(),Float_t(h2->GetEntries()));
       stats->AddText(t);
    }
    char textstats[50];
    if (print_mean) {
       if (print_mean == 1) {
-         sprintf(textstats,"%s = %s%s",gStringMeanX.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetMean(1));
+         snprintf(textstats,50,"%s = %s%s",gStringMeanX.Data(),"%",stats->GetStatFormat());
+         snprintf(t,50,textstats,h2->GetMean(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetMean(2));
+         snprintf(textstats,50,"%s = %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h2->GetMean(2));
          stats->AddText(t);
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringMeanX.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringMeanX.Data(),"%",stats->GetStatFormat()
                                                    ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetMean(1),h2->GetMeanError(1));
+         snprintf(t,100,textstats,h2->GetMean(1),h2->GetMeanError(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat()
                                                    ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetMean(2),h2->GetMeanError(2));
+         snprintf(t,100,textstats,h2->GetMean(2),h2->GetMeanError(2));
          stats->AddText(t);
       }
    }
    if (print_rms) {
       if (print_rms == 1) {
-         sprintf(textstats,"%s = %s%s",gStringRMSX.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetRMS(1));
+         snprintf(textstats,50,"%s = %s%s",gStringRMSX.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h2->GetRMS(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetRMS(2));
+         snprintf(textstats,50,"%s = %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h2->GetRMS(2));
          stats->AddText(t);
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringRMSX.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringRMSX.Data(),"%",stats->GetStatFormat()
                                                   ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetRMS(1),h2->GetRMSError(1));
+         snprintf(t,100,textstats,h2->GetRMS(1),h2->GetRMSError(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat()
                                                   ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetRMS(2),h2->GetRMSError(2));
+         snprintf(t,100,textstats,h2->GetRMS(2),h2->GetRMSError(2));
          stats->AddText(t);
       }
    }
    if (print_integral) {
-      sprintf(t,"%s  = %6.4g",gStringIntegral.Data(),h2->Integral());
+      snprintf(t,100,"%s  = %6.4g",gStringIntegral.Data(),h2->Integral());
       stats->AddText(t);
    }
    if (print_skew) {
       if (print_skew == 1) {
-         sprintf(textstats,"%s = %s%s",gStringSkewnessX.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetSkewness(1));
+         snprintf(textstats,50,"%s = %s%s",gStringSkewnessX.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h2->GetSkewness(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringSkewnessY.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetSkewness(2));
+         snprintf(textstats,50,"%s = %s%s",gStringSkewnessY.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h2->GetSkewness(2));
          stats->AddText(t);
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringSkewnessX.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringSkewnessX.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetSkewness(1),h2->GetSkewness(11));
+         snprintf(t,100,textstats,h2->GetSkewness(1),h2->GetSkewness(11));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringSkewnessY.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringSkewnessY.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetSkewness(2),h2->GetSkewness(12));
+         snprintf(t,100,textstats,h2->GetSkewness(2),h2->GetSkewness(12));
          stats->AddText(t);
       }
    }
    if (print_kurt) {
       if (print_kurt == 1) {
-         sprintf(textstats,"%s = %s%s",gStringKurtosisX.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetKurtosis(1));
+         snprintf(textstats,50,"%s = %s%s",gStringKurtosisX.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h2->GetKurtosis(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringKurtosisY.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetKurtosis(2));
+         snprintf(textstats,50,"%s = %s%s",gStringKurtosisY.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h2->GetKurtosis(2));
          stats->AddText(t);
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringKurtosisX.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringKurtosisX.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetKurtosis(1),h2->GetKurtosis(11));
+         snprintf(t,100,textstats,h2->GetKurtosis(1),h2->GetKurtosis(11));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringKurtosisY.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringKurtosisY.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h2->GetKurtosis(2),h2->GetKurtosis(12));
+         snprintf(t,100,textstats,h2->GetKurtosis(2),h2->GetKurtosis(12));
          stats->AddText(t);
       }
    }
@@ -6976,24 +6998,24 @@ void THistPainter::PaintStat2(Int_t dostat, TF1 *fit)
       unov[7] = h2->Integral(h2->GetXaxis()->GetFirst(),h2->GetXaxis()->GetLast(),0,h2->GetYaxis()->GetFirst()-1);
       unov[8] = h2->Integral(h2->GetXaxis()->GetLast()+1,h2->GetXaxis()->GetNbins()+1,0,h2->GetYaxis()->GetFirst()-1);
 
-      sprintf(t, " %7d|%7d|%7d\n", (Int_t)unov[0], (Int_t)unov[1], (Int_t)unov[2]);
+      snprintf(t, 100," %7d|%7d|%7d\n", (Int_t)unov[0], (Int_t)unov[1], (Int_t)unov[2]);
       stats->AddText(t);
       if (h2->GetEntries() < 1e7)
-         sprintf(t, " %7d|%7d|%7d\n", (Int_t)unov[3], (Int_t)unov[4], (Int_t)unov[5]);
+         snprintf(t, 100," %7d|%7d|%7d\n", (Int_t)unov[3], (Int_t)unov[4], (Int_t)unov[5]);
       else
-         sprintf(t, " %7d|%14.7g|%7d\n", (Int_t)unov[3], (Float_t)unov[4], (Int_t)unov[5]);
+         snprintf(t, 100," %7d|%14.7g|%7d\n", (Int_t)unov[3], (Float_t)unov[4], (Int_t)unov[5]);
       stats->AddText(t);
-      sprintf(t, " %7d|%7d|%7d\n", (Int_t)unov[6], (Int_t)unov[7], (Int_t)unov[8]);
+      snprintf(t, 100," %7d|%7d|%7d\n", (Int_t)unov[6], (Int_t)unov[7], (Int_t)unov[8]);
       stats->AddText(t);
    }
 
    // Draw Fit parameters
    if (fit) {
       Int_t ndf = fit->GetNDF();
-      sprintf(t,"#chi^{2} / ndf = %6.4g / %d",(Float_t)fit->GetChisquare(),ndf);
+      snprintf(t,100,"#chi^{2} / ndf = %6.4g / %d",(Float_t)fit->GetChisquare(),ndf);
       stats->AddText(t);
       for (Int_t ipar=0;ipar<fit->GetNpar();ipar++) {
-         sprintf(t,"%-8s = %5.4g #pm %5.4g ",fit->GetParName(ipar)
+         snprintf(t,100,"%-8s = %5.4g #pm %5.4g ",fit->GetParName(ipar)
                                    ,(Float_t)fit->GetParameter(ipar)
                                    ,(Float_t)fit->GetParError(ipar));
          t[32] = 0;
@@ -7088,116 +7110,116 @@ void THistPainter::PaintStat3(Int_t dostat, TF1 *fit)
    }
    if (print_name)  stats->AddText(h3->GetName());
    if (print_entries) {
-      if (h3->GetEntries() < 1e7) sprintf(t,"%s = %-7d",gStringEntries.Data(),Int_t(h3->GetEntries()+0.5));
-      else                        sprintf(t,"%s = %14.7g",gStringEntries.Data(),Float_t(h3->GetEntries()+0.5));
+      if (h3->GetEntries() < 1e7) snprintf(t,100,"%s = %-7d",gStringEntries.Data(),Int_t(h3->GetEntries()+0.5));
+      else                        snprintf(t,100,"%s = %14.7g",gStringEntries.Data(),Float_t(h3->GetEntries()+0.5));
       stats->AddText(t);
    }
    char textstats[50];
    if (print_mean) {
       if (print_mean == 1) {
-         sprintf(textstats,"%s = %s%s",gStringMeanX.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetMean(1));
+         snprintf(textstats,50,"%s = %s%s",gStringMeanX.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetMean(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetMean(2));
+         snprintf(textstats,50,"%s = %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetMean(2));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringMeanZ.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetMean(3));
+         snprintf(textstats,50,"%s = %s%s",gStringMeanZ.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetMean(3));
          stats->AddText(t);
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringMeanX.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringMeanX.Data(),"%",stats->GetStatFormat()
                                                    ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetMean(1),h3->GetMeanError(1));
+         snprintf(t,100,textstats,h3->GetMean(1),h3->GetMeanError(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat()
                                                    ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetMean(2),h3->GetMeanError(2));
+         snprintf(t,100,textstats,h3->GetMean(2),h3->GetMeanError(2));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringMeanZ.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringMeanZ.Data(),"%",stats->GetStatFormat()
                                                    ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetMean(3),h3->GetMeanError(3));
+         snprintf(t,100,textstats,h3->GetMean(3),h3->GetMeanError(3));
          stats->AddText(t);
       }
    }
    if (print_rms) {
       if (print_rms == 1) {
-         sprintf(textstats,"%s = %s%s",gStringRMSX.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetRMS(1));
+         snprintf(textstats,50,"%s = %s%s",gStringRMSX.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetRMS(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetRMS(2));
+         snprintf(textstats,50,"%s = %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetRMS(2));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringRMSZ.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetRMS(3));
+         snprintf(textstats,50,"%s = %s%s",gStringRMSZ.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetRMS(3));
          stats->AddText(t);
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringRMSX.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringRMSX.Data(),"%",stats->GetStatFormat()
                                                   ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetRMS(1),h3->GetRMSError(1));
+         snprintf(t,100,textstats,h3->GetRMS(1),h3->GetRMSError(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat()
                                                   ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetRMS(2),h3->GetRMSError(2));
+         snprintf(t,100,textstats,h3->GetRMS(2),h3->GetRMSError(2));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringRMSZ.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringRMSZ.Data(),"%",stats->GetStatFormat()
                                                   ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetRMS(3),h3->GetRMSError(3));
+         snprintf(t,100,textstats,h3->GetRMS(3),h3->GetRMSError(3));
          stats->AddText(t);
       }
    }
    if (print_integral) {
-      sprintf(t,"%s  = %6.4g",gStringIntegral.Data(),h3->Integral());
+      snprintf(t,100,"%s  = %6.4g",gStringIntegral.Data(),h3->Integral());
       stats->AddText(t);
    }
    if (print_skew) {
       if (print_skew == 1) {
-         sprintf(textstats,"%s = %s%s",gStringSkewnessX.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetSkewness(1));
+         snprintf(textstats,50,"%s = %s%s",gStringSkewnessX.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetSkewness(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringSkewnessY.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetSkewness(2));
+         snprintf(textstats,50,"%s = %s%s",gStringSkewnessY.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetSkewness(2));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringSkewnessZ.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetSkewness(3));
+         snprintf(textstats,50,"%s = %s%s",gStringSkewnessZ.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetSkewness(3));
          stats->AddText(t);
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringSkewnessX.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringSkewnessX.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetSkewness(1),h3->GetSkewness(11));
+         snprintf(t,100,textstats,h3->GetSkewness(1),h3->GetSkewness(11));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringSkewnessY.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringSkewnessY.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetSkewness(2),h3->GetSkewness(12));
+         snprintf(t,100,textstats,h3->GetSkewness(2),h3->GetSkewness(12));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringSkewnessZ.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringSkewnessZ.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetSkewness(3),h3->GetSkewness(13));
+         snprintf(t,100,textstats,h3->GetSkewness(3),h3->GetSkewness(13));
          stats->AddText(t);
       }
    }
    if (print_kurt) {
       if (print_kurt == 1) {
-         sprintf(textstats,"%s = %s%s",gStringKurtosisX.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetKurtosis(1));
+         snprintf(textstats,50,"%s = %s%s",gStringKurtosisX.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetKurtosis(1));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringKurtosisY.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetKurtosis(2));
+         snprintf(textstats,50,"%s = %s%s",gStringKurtosisY.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetKurtosis(2));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s",gStringKurtosisZ.Data(),"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetKurtosis(3));
+         snprintf(textstats,50,"%s = %s%s",gStringKurtosisZ.Data(),"%",stats->GetStatFormat());
+         snprintf(t,100,textstats,h3->GetKurtosis(3));
          stats->AddText(t);
       } else {
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringKurtosisX.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringKurtosisX.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetKurtosis(1),h3->GetKurtosis(11));
+         snprintf(t,100,textstats,h3->GetKurtosis(1),h3->GetKurtosis(11));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringKurtosisY.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringKurtosisY.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetKurtosis(2),h3->GetKurtosis(12));
+         snprintf(t,100,textstats,h3->GetKurtosis(2),h3->GetKurtosis(12));
          stats->AddText(t);
-         sprintf(textstats,"%s = %s%s #pm %s%s",gStringKurtosisZ.Data(),"%",stats->GetStatFormat()
+         snprintf(textstats,50,"%s = %s%s #pm %s%s",gStringKurtosisZ.Data(),"%",stats->GetStatFormat()
                                                        ,"%",stats->GetStatFormat());
-         sprintf(t,textstats,h3->GetKurtosis(3),h3->GetKurtosis(13));
+         snprintf(t,100,textstats,h3->GetKurtosis(3),h3->GetKurtosis(13));
          stats->AddText(t);
       }
    }
@@ -7231,10 +7253,10 @@ void THistPainter::PaintStat3(Int_t dostat, TF1 *fit)
    // Draw Fit parameters
    if (fit) {
       Int_t ndf = fit->GetNDF();
-      sprintf(t,"#chi^{2} / ndf = %6.4g / %d",(Float_t)fit->GetChisquare(),ndf);
+      snprintf(t,100,"#chi^{2} / ndf = %6.4g / %d",(Float_t)fit->GetChisquare(),ndf);
       stats->AddText(t);
       for (Int_t ipar=0;ipar<fit->GetNpar();ipar++) {
-         sprintf(t,"%-8s = %5.4g #pm %5.4g ",fit->GetParName(ipar)
+         snprintf(t,100,"%-8s = %5.4g #pm %5.4g ",fit->GetParName(ipar)
                                    ,(Float_t)fit->GetParameter(ipar)
                                    ,(Float_t)fit->GetParError(ipar));
          t[32] = 0;
@@ -7637,10 +7659,13 @@ void THistPainter::PaintTable(Option_t *option)
 
    //if palette option not specified, delete a possible existing palette
    if (!Hoption.Zscale) {
-      delete fFunctions->FindObject("palette");
+      TObject *palette = fFunctions->FindObject("palette");
+      if (palette) delete palette;
    }
 
-   if (fH->GetEntries() != 0 && Hoption.Axis<=0) {
+   if (fH->InheritsFrom(TH2Poly::Class())) {
+      if (Hoption.Color)   PaintTH2PolyColorLevels(option);
+   } else if (fH->GetEntries() != 0 && Hoption.Axis<=0) {
       if (Hoption.Scat)    PaintScatterPlot(option);
       if (Hoption.Arrow)   PaintArrows(option);
       if (Hoption.Box)     PaintBoxes(option);
@@ -7677,6 +7702,100 @@ void THistPainter::PaintTable(Option_t *option)
 
 
 //______________________________________________________________________________
+void THistPainter::PaintTH2PolyColorLevels(Option_t *)
+{
+   /* Begin_html
+    <a href="#HP20a">Control function to draw a TH2Poly.</a>
+    End_html */
+
+   Int_t ncolors, color, theColor;
+   Double_t z, zc;
+   Double_t zmin = fH->GetMinimum();
+   Double_t zmax = fH->GetMaximum();
+   if (Hoption.Logz) {
+      if (zmax > 0) {
+         if (zmin <= 0) zmin = TMath::Min((Double_t)1, (Double_t)0.001*zmax);
+         zmin = TMath::Log10(zmin);
+         zmax = TMath::Log10(zmax);
+      } else {
+         return;
+      }
+   }
+   Double_t dz = zmax - zmin;
+
+   // Initialize the levels on the Z axis
+   ncolors     = gStyle->GetNumberOfColors();
+   Int_t ndiv  = fH->GetContour();
+   if (ndiv == 0 ) {
+      ndiv = gStyle->GetNumberContours();
+      fH->SetContour(ndiv);
+   }
+   Int_t ndivz  = TMath::Abs(ndiv);
+   if (fH->TestBit(TH1::kUserContour) == 0) fH->SetContour(ndiv);
+   Double_t scale = ndivz/dz;
+
+   TH2PolyBin  *b;
+
+   TIter next(((TH2Poly*)fH)->GetBins());
+   TObject *obj, *poly;
+
+   while ((obj=next())) {
+      b     = (TH2PolyBin*)obj;
+      poly  = b->GetPolygon();
+
+      z = b->GetContent();
+      if (Hoption.Logz) {
+         if (z > 0) z = TMath::Log10(z);
+         else       z = zmin;
+      }
+      if (z < zmin) continue;
+
+      // Define the bin color.
+      if (fH->TestBit(TH1::kUserContour)) {
+         zc = fH->GetContourLevelPad(0);
+         if (z < zc) continue;
+         color = -1;
+         for (Int_t k=0; k<ndiv; k++) {
+            zc = fH->GetContourLevelPad(k);
+            if (z < zc) {
+               continue;
+            } else {
+               color++;
+            }
+         }
+      } else {
+         color = Int_t(0.01+(z-zmin)*scale);
+      }
+      theColor = Int_t((color+0.99)*Float_t(ncolors)/Float_t(ndivz));
+      if (theColor > ncolors-1) theColor = ncolors-1;
+
+      // Paint the TGraph bins.
+      if (poly->IsA() == TGraph::Class()) {
+         TGraph *g  = (TGraph*)poly;
+         g->SetFillColor(gStyle->GetColorPalette(theColor));
+         g->TAttFill::Modify();
+         g->Paint("F");
+      }
+
+      // Paint the TMultiGraph bins.
+      if (poly->IsA() == TMultiGraph::Class()) {
+         TMultiGraph *mg = (TMultiGraph*)poly;
+         TList *gl = mg->GetListOfGraphs();
+         if (!gl) return;
+         TGraph *g;
+         TIter nextg(gl);
+         while ((g = (TGraph*) nextg())) {
+            g->SetFillColor(gStyle->GetColorPalette(theColor));
+            g->TAttFill::Modify();
+            g->Paint("F");
+         }
+      }
+   }
+   if (Hoption.Zscale) PaintPalette();
+}
+
+
+//______________________________________________________________________________
 void THistPainter::PaintText(Option_t *)
 {
    /* Begin_html
@@ -7691,7 +7810,7 @@ void THistPainter::PaintText(Option_t *)
    Double_t x, y, z, e, angle = 0;
    char value[50];
    char format[32];
-   sprintf(format,"%s%s","%",gStyle->GetPaintTextFormat());
+   snprintf(format,32,"%s%s","%",gStyle->GetPaintTextFormat());
    if (Hoption.Text >= 1000) angle = Hoption.Text%1000;
 
    // 1D histograms
@@ -7714,7 +7833,7 @@ void THistPainter::PaintText(Option_t *)
          y  = fH->GetBinContent(i);
          yt = y;
          if (getentries) yt = hp->GetBinEntries(i);
-         sprintf(value,format,yt);
+         snprintf(value,50,format,yt);
          if (Hoption.Logx) {
             if (x > 0)  x  = TMath::Log10(x);
             else continue;
@@ -7749,15 +7868,15 @@ void THistPainter::PaintText(Option_t *)
             }
             if (!IsInside(x,y)) continue;
             z = fH->GetBinContent(bin);
-            if (z < Hparam.zmin || z == 0) continue;
+            if (z < Hparam.zmin || (z == 0 && !gStyle->GetHistMinimumZero()) ) continue;
             if (Hoption.Text>2000) {
                e = fH->GetBinError(bin);
-               sprintf(format,"#splitline{%s%s}{#pm %s%s}",
+               snprintf(format,32,"#splitline{%s%s}{#pm %s%s}",
                                           "%",gStyle->GetPaintTextFormat(),
                                           "%",gStyle->GetPaintTextFormat());
-               sprintf(value,format,z,e);
+               snprintf(value,50,format,z,e);
             } else {
-               sprintf(value,format,z);
+               snprintf(value,50,format,z);
             }
             text.PaintLatex(x,y,angle,0.02*fH->GetMarkerSize(),value);
          }
@@ -8248,11 +8367,14 @@ Int_t THistPainter::TableInit()
 
    if (maximum) zmax = fH->GetMaximumStored();
    if (minimum) zmin = fH->GetMinimumStored();
-   if (Hoption.Logz && zmax <= 0) {
+   if (Hoption.Logz && zmax < 0) {
       if (!Hoption.Same) Error(where, "log scale is requested but maximum is less or equal 0 (%f)", zmax);
       return 0;
+   } else if (Hoption.Logz && zmin>=0 && zmax==0) { // empty histogram in log scale
+      zmin = 0.01;
+      zmax = 10.;
    }
-   if (zmin >= zmax && !Hoption.Plus) {
+   if (zmin >= zmax) {
       if (Hoption.Logz) {
          if (zmax > 0) zmin = 0.001*zmax;
          else {
@@ -8286,7 +8408,7 @@ Int_t THistPainter::TableInit()
       zmin = TMath::Log10(zmin);
       if (!minimum) zmin += TMath::Log10(0.5);
       zmax = TMath::Log10(zmax);
-      if (!maximum && !Hoption.Plus) zmax += TMath::Log10(2*(0.9/0.95));
+      if (!maximum) zmax += TMath::Log10(2*(0.9/0.95));
       goto LZMIN;
    }
 
@@ -8295,7 +8417,7 @@ Int_t THistPainter::TableInit()
    //         has not been called.
    //         MAX% is the value in percent which has been set in HPLSET
    //         (default is 90%).
-   if (!maximum && !Hoption.Plus) {
+   if (!maximum) {
       zmax += yMARGIN*(zmax-zmin);
    }
 
@@ -8337,8 +8459,8 @@ const char * THistPainter::GetBestFormat(Double_t v, Double_t e, const char *f)
    char tf[20], tv[64];
 
    // print v with the format f in tv.
-   sprintf(tf,"%s%s","%",f);
-   sprintf(tv,tf,v);
+   snprintf(tf,20,"%s%s","%",f);
+   snprintf(tv,64,tf,v);
 
    // Analyse tv.
    TString sv = tv;
@@ -8351,30 +8473,30 @@ const char * THistPainter::GetBestFormat(Double_t v, Double_t e, const char *f)
    if (ie >= 0 || iE >= 0) {
       if (sv.Index("+") >= 0) {
          if (e < 1) {
-            sprintf(ef,"%s.1f","%");
+            snprintf(ef,20,"%s.1f","%");
          } else {
             if (ie >= 0) {
-               sprintf(ef,"%s.%de","%",ie-id-1);
+               snprintf(ef,20,"%s.%de","%",ie-id-1);
             } else {
-               sprintf(ef,"%s.%dE","%",iE-id-1);
+               snprintf(ef,20,"%s.%dE","%",iE-id-1);
             }
          }
       } else {
          if (ie >= 0) {
-            sprintf(ef,"%s.%de","%",ie-id-1);
+            snprintf(ef,20,"%s.%de","%",ie-id-1);
          } else {
-            sprintf(ef,"%s.%dE","%",iE-id-1);
+            snprintf(ef,20,"%s.%dE","%",iE-id-1);
          }
       }
 
    // There is not '.' in tv. e will be printed with one decimal digit.
    } else if (id < 0) {
-      sprintf(ef,"%s.1f","%");
+      snprintf(ef,20,"%s.1f","%");
 
    // There is a '.' in tv and no exponent notation. e's decimal part will
    // have the same number of digits as v's one.
    } else {
-      sprintf(ef,"%s.%df","%",sv.Length()-id-1);
+      snprintf(ef,20,"%s.%df","%",sv.Length()-id-1);
    }
 
    return ef;
@@ -8405,7 +8527,7 @@ void THistPainter::SetShowProjection(const char *option,Int_t nbins)
    else                fShowOption = option+2;
    fShowProjection = projection+100*nbins;
    gROOT->MakeDefCanvas();
-   gPad->SetName(Form("%x_c_projection_%d",fH,fShowProjection));
+   gPad->SetName(Form("%lx_c_projection_%d", (ULong_t)fH, fShowProjection));
    gPad->SetGrid();
 }
 
@@ -8442,7 +8564,8 @@ void THistPainter::ShowProjectionX(Int_t /*px*/, Int_t py)
 
    // Create or set the new canvas proj x
    TVirtualPad *padsav = gPad;
-   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%x_c_projection_%d",fH,fShowProjection));
+   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%lx_c_projection_%d",
+                                                                              (ULong_t)fH, fShowProjection));
    if (c) {
       c->Clear();
    } else {
@@ -8500,7 +8623,8 @@ void THistPainter::ShowProjectionY(Int_t px, Int_t /*py*/)
 
    // Create or set the new canvas proj y
    TVirtualPad *padsav = gPad;
-   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%x_c_projection_%d",fH,fShowProjection));
+   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%lx_c_projection_%d",
+                                                                              (ULong_t)fH, fShowProjection));
    if(c) {
       c->Clear();
    } else {
@@ -8576,7 +8700,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
    Double_t cx    = (pxmax-pxmin)/(uxmax-uxmin);
    Double_t cy    = (pymax-pymin)/(uymax-uymin);
    TVirtualPad *padsav = gPad;
-   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%x_c_projection_%d",fH,fShowProjection));
+   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%lx_c_projection_%d",
+                                                                              (ULong_t)fH, fShowProjection));
    if(!c) {
       fShowProjection = 0;
       return;
@@ -8677,13 +8802,13 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             }
             c->Clear();
             c->cd();
-            TH2 *hp = (TH2*)h3->Project3D("x");
+            TH1 *hp = h3->Project3D("x");
             yaxis->SetRange(firstY,lastY);
             zaxis->SetRange(firstZ,lastZ);
             hp->SetFillColor(38);
             hp->SetTitle(Form("ProjectionX of biny=%d binz=%d", biny, binz));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
+            hp->SetXTitle(fH->GetXaxis()->GetTitle());
+            hp->SetYTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
          break;
@@ -8782,13 +8907,13 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             }
             c->Clear();
             c->cd();
-            TH2 *hp = (TH2*)h3->Project3D("y");
+            TH1 *hp = h3->Project3D("y");
             xaxis->SetRange(firstX,lastX);
             zaxis->SetRange(firstZ,lastZ);
             hp->SetFillColor(38);
             hp->SetTitle(Form("ProjectionY of binx=%d binz=%d", binx, binz));
             hp->SetXTitle(fH->GetYaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
+            hp->SetYTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
          break;
@@ -8887,13 +9012,13 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             }
             c->Clear();
             c->cd();
-            TH2 *hp = (TH2*)h3->Project3D("z");
+            TH1 *hp = h3->Project3D("z");
             xaxis->SetRange(firstX,lastX);
             yaxis->SetRange(firstY,lastY);
             hp->SetFillColor(38);
             hp->SetTitle(Form("ProjectionZ of binx=%d biny=%d", binx, biny));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
+            hp->SetXTitle(fH->GetZaxis()->GetTitle());
+            hp->SetYTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
          break;
@@ -8962,6 +9087,7 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             if(nbins==1)hp->SetTitle(Form("ProjectionXY of binz=%d (%.1f)", binz,value1));
             else        hp->SetTitle(Form("ProjectionXY, binz range=%d-%d (%.1f-%.1f)", binz,binz+nbins-1,value1,value2));
             hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetYTitle(fH->GetXaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9029,7 +9155,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             hp->SetFillColor(38);
             if(nbins==1)hp->SetTitle(Form("ProjectionYX of binz=%d (%.1f)", binz,value1));
             else        hp->SetTitle(Form("ProjectionXY, binz range=%d-%d (%.1f-%.1f)", binz,binz+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetXTitle(fH->GetXaxis()->GetTitle());
+            hp->SetYTitle(fH->GetYaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9097,7 +9224,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             hp->SetFillColor(38);
             if(nbins==1)hp->SetTitle(Form("ProjectionXZ of biny=%d (%.1f)", biny,value1));
             else        hp->SetTitle(Form("ProjectionXZ, biny range=%d-%d (%.1f-%.1f)", biny,biny+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetXTitle(fH->GetZaxis()->GetTitle());
+            hp->SetYTitle(fH->GetXaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9165,7 +9293,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             hp->SetFillColor(38);
             if(nbins==1)hp->SetTitle(Form("ProjectionZX of biny=%d (%.1f)", biny,value1));
             else        hp->SetTitle(Form("ProjectionZX, binY range=%d-%d (%.1f-%.1f)", biny,biny+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetXTitle(fH->GetXaxis()->GetTitle());
+            hp->SetYTitle(fH->GetZaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9233,7 +9362,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             hp->SetFillColor(38);
             if(nbins==1)hp->SetTitle(Form("ProjectionYZ of binx=%d (%.1f)", binx,value1));
             else        hp->SetTitle(Form("ProjectionYZ, binx range=%d-%d (%.1f-%.1f)", binx,binx+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetXTitle(fH->GetZaxis()->GetTitle());
+            hp->SetYTitle(fH->GetYaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9303,6 +9433,7 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             if(nbins==1)hp->SetTitle(Form("ProjectionZY of binx=%d (%.1f)", binx,value1));
             else        hp->SetTitle(Form("ProjectionZY, binx range=%d-%d (%.1f-%.1f)", binx,binx+nbins-1,value1,value2));
             hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetYTitle(fH->GetZaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }

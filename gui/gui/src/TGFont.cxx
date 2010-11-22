@@ -298,7 +298,7 @@ void TGFont::Print(Option_t *option) const
    TString opt = option;
 
    if ((opt == "full") && fNamedHash) {
-      Printf("TGFont: %s, %s, %s, ref cnt = %u",
+      Printf("TGFont: %s, %s, ref cnt = %u",
               fNamedHash->GetName(),
               fFM.fFixed ? "fixed" : "prop", References());
    } else {
@@ -1822,10 +1822,10 @@ char **TGFontPool::GetAttributeInfo(const FontAttributes_t *fa)
 
       if (str) {
          result[i] = new char[strlen(str)+1];
-         strcpy(result[i], str);
+         strlcpy(result[i], str, strlen(str)+1);
       } else {
          result[i] = new char[20];
-         sprintf(result[i], "%d", num);
+         snprintf(result[i], 20, "%d", num);
       }
    }
 
@@ -1945,8 +1945,7 @@ Bool_t TGFontPool::ParseFontName(const char *string, FontAttributes_t *fa)
    XLFDAttributes_t xa;
 
    char *str = new char[strlen(string)+1];
-   strncpy(str, string, strlen(string));
-   str[strlen(string)] = 0;
+   strlcpy(str, string, strlen(string)+1);
 
    if (*str == '-' || *str == '*') {
 
@@ -2611,7 +2610,7 @@ TGFont *TGFontPool::MakeFont(TGFont *font, FontStruct_t fontStruct,
    lastChar = 0xff; //fontStruct->max_char_or_byte2;
 
    for (i = 0; i < 256; i++) {
-      if ((i == 160) || (i == 173) || (i == 177) || 
+      if ((i == 160) || (i == 173) || (i == 177) ||
           (i < firstChar) || (i > lastChar)) {
          newFont->fTypes[i] = kCharReplace;
       } else {

@@ -117,16 +117,16 @@ void TGLSurfacePainter::Pan(Int_t px, Int_t py)
       fCamera->SetCamera();
       fCamera->Apply(fPadPhi, fPadTheta);
       fCamera->Pan(px, py);
-      
+
       RestoreProjectionMatrix();
       RestoreModelviewMatrix();
    } else if (fSelectedPart > 0) {
       //Convert py into bottom-top orientation.
       py = fCamera->GetHeight() - py;
-      
+
       SaveModelviewMatrix();
       SaveProjectionMatrix();
-      
+
       fCamera->SetCamera();
       fCamera->Apply(fPadPhi, fPadTheta);
 
@@ -139,7 +139,7 @@ void TGLSurfacePainter::Pan(Int_t px, Int_t py)
       }
       else
          MoveSection(px, py);
-         
+
       RestoreProjectionMatrix();
       RestoreModelviewMatrix();
    }
@@ -211,7 +211,7 @@ void TGLSurfacePainter::ProcessEvent(Int_t event, Int_t /*px*/, Int_t py)
       if (fBoxCut.IsActive())
          fBoxCut.TurnOnOff();
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", this));
+         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", (ULong_t)this));
       else
          Paint();
    } else if (event == kKeyPress && (py == kKey_c || py == kKey_C)) {
@@ -1221,6 +1221,13 @@ Bool_t TGLSurfacePainter::HasProjections()const
 void TGLSurfacePainter::DrawPalette()const
 {
    //Draw. Palette.
+   //Originally, fCamera was never null.
+   //It can be a null now because of gl-viewer.
+   if (!fCamera) {
+      //Thank you, gl-viewer!
+      return;
+   }
+
    Rgl::DrawPalette(fCamera, fPalette);
 
    glFinish();

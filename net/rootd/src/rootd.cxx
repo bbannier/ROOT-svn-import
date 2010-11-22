@@ -372,24 +372,24 @@ using namespace ROOT;
 //--- Error handlers -----------------------------------------------------------
 
 //______________________________________________________________________________
-void Err(int level,const char *msg)
+void Err(int level,const char *msg, int size)
 {
-   Perror((char *)msg);
+   Perror((char *)msg,size);
    if (level > -1) NetSendError((ERootdErrors)level);
 }
 //______________________________________________________________________________
-void ErrFatal(int level,const char *msg)
+void ErrFatal(int level,const char *msg, int size)
 {
-   Perror((char *)msg);
+   Perror((char *)msg,size);
    if (level > -1) NetSendError((ERootdErrors)level);
    RootdClose();
    exit(1);
 }
 //______________________________________________________________________________
-void ErrSys(int level,const char *msg)
+void ErrSys(int level,const char *msg, int size)
 {
-   Perror((char *)msg);
-   ErrFatal(level,msg);
+   Perror((char *)msg,size);
+   ErrFatal(level,msg,size);
 }
 
 //--- Rootd routines -----------------------------------------------------------
@@ -445,7 +445,8 @@ static const char *HomeDirectory(const char *name)
    if (name) {
       pw = getpwnam(name);
       if (pw) {
-         strncpy(path, pw->pw_dir, kMAXPATHLEN);
+         strncpy(path, pw->pw_dir, kMAXPATHLEN-1);
+         path[sizeof(path)-1] = '\0';
          return path;
       }
    } else {
@@ -453,7 +454,8 @@ static const char *HomeDirectory(const char *name)
          return mydir;
       pw = getpwuid(getuid());
       if (pw) {
-         strncpy(mydir, pw->pw_dir, kMAXPATHLEN);
+         strncpy(mydir, pw->pw_dir, kMAXPATHLEN-1);
+         mydir[sizeof(mydir)-1] = '\0';
          return mydir;
       }
    }
@@ -486,9 +488,9 @@ needshell:
 
    char cmd[kMAXPATHLEN];
 #ifdef __hpux
-   strcpy(cmd, "/bin/echo ");
+   strlcpy(cmd, "/bin/echo ", sizeof(cmd));
 #else
-   strcpy(cmd, "echo ");
+   strlcpy(cmd, "echo ", sizeof(cmd));
 #endif
 
    // emulate csh -> popen executes sh
@@ -693,7 +695,7 @@ again:
                    gFile, dev, ino, smode, gUser.c_str(), (int) getpid());
       if (write(fid, tmsg, strlen(tmsg)) == -1)
          Error(ErrSys, kErrFatal, "RootdCheckTab: error writing %s", sfile);
-      if (tmsg && tmsg != msg)
+      if (tmsg != msg)
          delete[] tmsg;
    }
 
@@ -1037,30 +1039,30 @@ void RootdOpen(const char *msg)
    } else {
 
       if (gClientProtocol > 14) {
-         strcpy(gFile, file);
+         strlcpy(gFile, file, sizeof(gFile));
       } else {
          // Old clients send an additional slash at the beginning
          if (file[0] == '/')
-            strcpy(gFile, &file[1]);
+            strlcpy(gFile, &file[1], sizeof(gFile));
          else
-            strcpy(gFile, file);
+            strlcpy(gFile, file, sizeof(gFile));
       }
 
       gFile[strlen(file)] = '\0';
    }
 
-   strcpy(gOption, option);
+   strlcpy(gOption, option, sizeof(gOption));
 
    int forceOpen = 0;
    if (option[0] == 'f') {
       forceOpen = 1;
-      strcpy(gOption, &option[1]);
+      strlcpy(gOption, &option[1], sizeof(gOption));
    }
 
    int forceRead = 0;
    if (!strcmp(option, "+read")) {
       forceRead = 1;
-      strcpy(gOption, &option[1]);
+      strlcpy(gOption, &option[1], sizeof(gOption));
    }
 
    int create = 0;
@@ -1071,7 +1073,7 @@ void RootdOpen(const char *msg)
    int read     = strcmp(gOption, "read")     ? 0 : 1;
    if (!create && !recreate && !update && !read) {
       read = 1;
-      strcpy(gOption, "read");
+      strlcpy(gOption, "read", sizeof(gOption));
    }
 
    if (!read && gReadOnly)
@@ -1081,7 +1083,7 @@ void RootdOpen(const char *msg)
    if (!gAnon) {
       char *fname;
       if ((fname = RootdExpandPathName(gFile))) {
-         strcpy(gFile, fname);
+         strlcpy(gFile, fname, sizeof(gFile));
          free(fname);
       } else
          Error(ErrFatal, kErrBadFile, "RootdOpen: bad file name %s", gFile);
@@ -1100,7 +1102,7 @@ void RootdOpen(const char *msg)
       else {
          recreate = 0;
          create   = 1;
-         strcpy(gOption, "create");
+         strlcpy(gOption, "create", sizeof(gOption));
       }
    }
 
@@ -1113,7 +1115,7 @@ void RootdOpen(const char *msg)
          update = 0;
          create = 1;
          wasupdt = 1;
-         strcpy(gOption, "create");
+         strlcpy(gOption, "create", sizeof(gOption));
       }
       if (update && access(gFile, W_OK))
          Error(ErrFatal, kErrNoAccess,
@@ -1137,7 +1139,8 @@ void RootdOpen(const char *msg)
 #else
          gFd = SysOpen(gFile, O_RDWR | O_CREAT | O_BINARY | trunc, S_IREAD | S_IWRITE);
 #endif
-         close(gFd);
+         if (gFd != -1)
+            close(gFd);
          gFd = -1;
       }
 #ifndef WIN32
@@ -1424,9 +1427,9 @@ void RootdPutFile(const char *msg)
 
    if (file[0] == '-') {
       forceopen = 1;
-      strcpy(gFile, file+1);
+      strlcpy(gFile, file+1, sizeof(gFile));
    } else
-      strcpy(gFile, file);
+      strlcpy(gFile, file, sizeof(gFile));
 
    // anon user may not overwrite existing files...
    struct stat st;
@@ -1634,9 +1637,9 @@ void RootdGetFile(const char *msg)
 
    if (file[0] == '-') {
       forceopen = 1;
-      strcpy(gFile, file+1);
+      strlcpy(gFile, file+1, sizeof(gFile));
    } else
-      strcpy(gFile, file);
+      strlcpy(gFile, file, sizeof(gFile));
 
    // remove lock from file
    if (forceopen)
@@ -1816,7 +1819,7 @@ void RootdChdir(const char *dir)
       }
 
       if (!getcwd(buffer, kMAXPATHLEN)) {
-         if (*dir == '/')
+         if (dir && *dir == '/')
             SPrintf(buffer, kMAXBUFLEN, "%s", dir);
       }
       NetSend(buffer, kROOTD_CHDIR);

@@ -685,10 +685,21 @@ ClassImp(TPrincipal);
 
 //____________________________________________________________________
 TPrincipal::TPrincipal()
+  : fMeanValues(0),
+    fSigmas(0),
+    fCovarianceMatrix(1,1),
+    fEigenVectors(1,1),
+    fEigenValues(0),
+    fOffDiagonal(0),
+    fStoreData(kFALSE)
 {
   // Empty CTOR, Do not use.
 
-      fHistograms = 0;
+   fTrace              = 0;
+   fHistograms         = 0;
+   fIsNormalised       = kFALSE;
+   fNumberOfDataPoints = 0;
+   fNumberOfVariables  = 0;
 }
 
 //____________________________________________________________________
@@ -1289,6 +1300,12 @@ void TPrincipal::MakeHistograms(const char *name, Option_t *opt)
       }
    }
    // Clean up
+   if (hX)
+      delete [] hX;
+   if (hD)
+      delete [] hD;
+   if (hP)
+      delete [] hP;
    if (d)
       delete [] d;
    if (p)

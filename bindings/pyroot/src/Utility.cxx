@@ -60,7 +60,7 @@ namespace {
 
          gC2POperatorMapping[ "[]" ]  = "__getitem__";
          gC2POperatorMapping[ "()" ]  = "__call__";
-         gC2POperatorMapping[ "/" ]   = "__div__";
+         gC2POperatorMapping[ "/" ]   = PYROOT__div__;
          gC2POperatorMapping[ "%" ]   = "__mod__";
          gC2POperatorMapping[ "**" ]  = "__pow__";
          gC2POperatorMapping[ "<<" ]  = "__lshift__";
@@ -72,7 +72,7 @@ namespace {
          gC2POperatorMapping[ "+=" ]  = "__iadd__";
          gC2POperatorMapping[ "-=" ]  = "__isub__";
          gC2POperatorMapping[ "*=" ]  = "__imul__";
-         gC2POperatorMapping[ "/=" ]  = "__idiv__";
+         gC2POperatorMapping[ "/=" ]  = PYROOT__idiv__;
          gC2POperatorMapping[ "%=" ]  = "__imod__";
          gC2POperatorMapping[ "**=" ] = "__ipow__";
          gC2POperatorMapping[ "<<=" ] = "__ilshift__";
@@ -91,7 +91,7 @@ namespace {
          gC2POperatorMapping[ "const char*" ] = "__str__";
          gC2POperatorMapping[ "char*" ]       = "__str__";
          gC2POperatorMapping[ "int" ]         = "__int__";
-         gC2POperatorMapping[ "long" ]        = "__long__";
+         gC2POperatorMapping[ "long" ]        = PYROOT__long__;
          gC2POperatorMapping[ "double" ]      = "__float__";
 
       // the following type mappings are "okay"; the assumption is that they
@@ -99,16 +99,20 @@ namespace {
       // they are, that it is done consistently)
          gC2POperatorMapping[ "short" ]              = "__int__";
          gC2POperatorMapping[ "unsigned short" ]     = "__int__";
-         gC2POperatorMapping[ "unsigned int" ]       = "__long__";
-         gC2POperatorMapping[ "unsigned long" ]      = "__long__";
-         gC2POperatorMapping[ "long long" ]          = "__long__";
-         gC2POperatorMapping[ "unsigned long long" ] = "__long__";
+         gC2POperatorMapping[ "unsigned int" ]       = PYROOT__long__;
+         gC2POperatorMapping[ "unsigned long" ]      = PYROOT__long__;
+         gC2POperatorMapping[ "long long" ]          = PYROOT__long__;
+         gC2POperatorMapping[ "unsigned long long" ] = PYROOT__long__;
          gC2POperatorMapping[ "float" ]              = "__float__";
 
          gC2POperatorMapping[ "->" ]  = "__follow__";       // not an actual python operator
          gC2POperatorMapping[ "=" ]   = "__assign__";       // id.
 
+#if PY_VERSION_HEX < 0x03000000
          gC2POperatorMapping[ "bool" ] = "__nonzero__";
+#else
+         gC2POperatorMapping[ "bool" ] = "__bool__";
+#endif
       }
    } initOperatorMapping_;
 
@@ -231,8 +235,11 @@ Bool_t PyROOT::Utility::AddToClass( PyObject* pyclass, const char* label, PyCall
    // not adding to existing MethodProxy; add callable directly to the class
       if ( PyErr_Occurred() )
          PyErr_Clear();
-      return PyObject_SetAttrString( pyclass,
-         const_cast< char* >( label ), (PyObject*)MethodProxy_New( label, pyfunc ) ) == 0;
+      Py_XDECREF( (PyObject*)method );
+      method = MethodProxy_New( label, pyfunc );
+      Bool_t isOk = PyObject_SetAttrString( pyclass, const_cast< char* >( label ), (PyObject*)method ) == 0;
+      Py_DECREF( method );
+      return isOk;
    }
 
    method->AddMethod( pyfunc );
@@ -307,27 +314,33 @@ Bool_t PyROOT::Utility::AddBinaryOperator(
       return kFALSE;
 
 // retrieve the class names to match the signature of any found global functions
-   PyObject* pyclass = PyObject_GetAttr( right, PyStrings::gClass );
-   if ( ! pyclass ) {
-      PyErr_Clear();
-      return kFALSE;
-   }
+   std::string rcname = ClassName( right );
+   std::string lcname = ClassName( left );
+   PyObject* pyclass = PyObject_GetAttr( left, PyStrings::gClass );
 
+   Bool_t result = AddBinaryOperator( pyclass, lcname, rcname, op, label );
+
+   Py_DECREF( pyclass );
+   return result;
+}
+
+//____________________________________________________________________________
+Bool_t PyROOT::Utility::AddBinaryOperator( PyObject* pyclass, const char* op, const char* label )
+{
+// install binary operator op in pyclass, working on two instances of pyclass
    PyObject* pyname = PyObject_GetAttr( pyclass, PyStrings::gName );
-   Py_DECREF( pyclass ); pyclass = 0;
-   std::string rcname = PyString_AS_STRING( pyname );
+   std::string cname = TClassEdit::ResolveTypedef( PyROOT_PyUnicode_AsString( pyname ) );
    Py_DECREF( pyname ); pyname = 0;
 
-   pyclass = PyObject_GetAttr( right, PyStrings::gClass );
-   pyname = PyObject_GetAttr( pyclass, PyStrings::gName );
-   std::string lcname = PyString_AS_STRING( pyname );
-   Py_DECREF( pyname ); pyname = 0;
+   return AddBinaryOperator( pyclass, cname, cname, op, label );
+}
 
-// note that pyclass has not been decref-ed: it will be used again to install
-// the operator, if found
-
-// find a global function with a matching signature
-   TCollection* funcs = gROOT->GetListOfGlobalFunctions( kFALSE );
+//____________________________________________________________________________
+Bool_t PyROOT::Utility::AddBinaryOperator( PyObject* pyclass, const std::string& lcname,
+   const std::string& rcname, const char* op, const char* label )
+{
+// find a global function with a matching signature and install the result on pyclass
+   TCollection* funcs = gROOT->GetListOfGlobalFunctions( kTRUE );
    TIter ifunc( funcs );
 
    std::string opname = "operator";
@@ -340,22 +353,19 @@ Bool_t PyROOT::Utility::AddBinaryOperator(
 
       if ( func->GetName() == opname ) {
          if ( ( lcname == TClassEdit::ResolveTypedef(
-                            ((TMethodArg*)func->GetListOfMethodArgs()->At(0))->GetTypeName(), true ) ) &&
+                           ((TMethodArg*)func->GetListOfMethodArgs()->At(0))->GetTypeName(), true ) ) &&
               ( rcname == TClassEdit::ResolveTypedef(
-                            ((TMethodArg*)func->GetListOfMethodArgs()->At(1))->GetTypeName(), true ) ) ) {
+                           ((TMethodArg*)func->GetListOfMethodArgs()->At(1))->GetTypeName(), true ) ) ) {
          // found a matching overload; add to class
             PyCallable* pyfunc = new TFunctionHolder< TScopeAdapter, TMemberAdapter >( func );
             Utility::AddToClass( pyclass, label ? label : gC2POperatorMapping[ op ].c_str(), pyfunc );
 
          // done; break out loop
-            Py_DECREF( pyclass );
             return kTRUE;
          }
 
       }
    }
-
-   Py_DECREF( pyclass );
 
    return kFALSE;
 }
@@ -367,25 +377,25 @@ Bool_t PyROOT::Utility::BuildTemplateName( PyObject*& pyname, PyObject* args, in
 // for a class as in MakeRootTemplateClass in RootModule.cxx) or for method lookup
 // (as in TemplatedMemberHook, below)
 
-   PyString_ConcatAndDel( &pyname, PyString_FromString( "<" ) );
+   PyROOT_PyUnicode_AppendAndDel( &pyname, PyROOT_PyUnicode_FromString( "<" ) );
 
    Py_ssize_t nArgs = PyTuple_GET_SIZE( args );
    for ( int i = argoff; i < nArgs; ++i ) {
    // add type as string to name
       PyObject* tn = PyTuple_GET_ITEM( args, i );
-      if ( PyString_Check( tn ) )
-         PyString_Concat( &pyname, tn );
+      if ( PyROOT_PyUnicode_Check( tn ) )
+         PyROOT_PyUnicode_Append( &pyname, tn );
       else if ( PyObject_HasAttr( tn, PyStrings::gName ) ) {
       // this works for type objects
          PyObject* tpName = PyObject_GetAttr( tn, PyStrings::gName );
 
       // special case for strings
-         if ( strcmp( PyString_AS_STRING( tpName ), "str" ) == 0 ) {
+         if ( strcmp( PyROOT_PyUnicode_AsString( tpName ), "str" ) == 0 ) {
             Py_DECREF( tpName );
-            tpName = PyString_FromString( "std::string" );
+            tpName = PyROOT_PyUnicode_FromString( "std::string" );
          }
 
-         PyString_ConcatAndDel( &pyname, tpName );
+         PyROOT_PyUnicode_AppendAndDel( &pyname, tpName );
       } else {
       // last ditch attempt, works for things like int values
          PyObject* pystr = PyObject_Str( tn );
@@ -393,19 +403,19 @@ Bool_t PyROOT::Utility::BuildTemplateName( PyObject*& pyname, PyObject* args, in
             return kFALSE;
          }
 
-         PyString_ConcatAndDel( &pyname, pystr );
+         PyROOT_PyUnicode_AppendAndDel( &pyname, pystr );
       }
 
    // add a comma, as needed
       if ( i != nArgs - 1 )
-         PyString_ConcatAndDel( &pyname, PyString_FromString( "," ) );
+         PyROOT_PyUnicode_AppendAndDel( &pyname, PyROOT_PyUnicode_FromString( "," ) );
    }
 
 // close template name; prevent '>>', which should be '> >'
-   if ( PyString_AsString( pyname )[ PyString_Size( pyname ) - 1 ] == '>' )
-      PyString_ConcatAndDel( &pyname, PyString_FromString( " >" ) );
+   if ( PyROOT_PyUnicode_AsString( pyname )[ PyROOT_PyUnicode_GetSize( pyname ) - 1 ] == '>' )
+      PyROOT_PyUnicode_AppendAndDel( &pyname, PyROOT_PyUnicode_FromString( " >" ) );
    else
-      PyString_ConcatAndDel( &pyname, PyString_FromString( ">" ) );
+      PyROOT_PyUnicode_AppendAndDel( &pyname, PyROOT_PyUnicode_FromString( ">" ) );
 
    return kTRUE;
 }
@@ -431,24 +441,38 @@ Bool_t PyROOT::Utility::InitProxy( PyObject* module, PyTypeObject* pytype, const
 //____________________________________________________________________________
 int PyROOT::Utility::GetBuffer( PyObject* pyobject, char tc, int size, void*& buf, Bool_t check )
 {
-// special case: don't handle strings here (yes, they're buffers, but not quite)
-   if ( PyString_Check( pyobject ) )
+// special case: don't handle character strings here (yes, they're buffers, but not quite)
+   if ( PyBytes_Check( pyobject ) )
       return 0;
 
 // attempt to retrieve pointer to buffer interface
-   PyBufferProcs* bufprocs = pyobject->ob_type->tp_as_buffer;
-   PySequenceMethods* seqmeths = pyobject->ob_type->tp_as_sequence;
-   if ( seqmeths != 0 && bufprocs != 0 && bufprocs->bf_getwritebuffer != 0 &&
-        (*(bufprocs->bf_getsegcount))( pyobject, 0 ) == 1 ) {
+   PyBufferProcs* bufprocs = Py_TYPE(pyobject)->tp_as_buffer;
+
+   PySequenceMethods* seqmeths = Py_TYPE(pyobject)->tp_as_sequence;
+   if ( seqmeths != 0 && bufprocs != 0
+#if  PY_VERSION_HEX < 0x03000000
+        && bufprocs->bf_getwritebuffer != 0
+        && (*(bufprocs->bf_getsegcount))( pyobject, 0 ) == 1
+#else
+        && bufprocs->bf_getbuffer != 0
+#endif
+      ) {
 
    // get the buffer
+#if PY_VERSION_HEX < 0x03000000
       Py_ssize_t buflen = (*(bufprocs->bf_getwritebuffer))( pyobject, 0, &buf );
+#else
+      Py_buffer bufinfo;
+      (*(bufprocs->bf_getbuffer))( pyobject, &bufinfo, PyBUF_WRITABLE );
+      buf = (char*)bufinfo.buf;
+      Py_ssize_t buflen = bufinfo.len;
+#endif
 
       if ( check == kTRUE ) {
       // determine buffer compatibility (use "buf" as a status flag)
          PyObject* pytc = PyObject_GetAttr( pyobject, PyStrings::gTypeCode );
          if ( pytc != 0 ) {     // for array objects
-            if ( PyString_AS_STRING( pytc )[0] != tc )
+            if ( PyROOT_PyUnicode_AsString( pytc )[0] != tc )
                buf = 0;         // no match
             Py_DECREF( pytc );
          } else if ( seqmeths->sq_length &&
@@ -464,9 +488,9 @@ int PyROOT::Utility::GetBuffer( PyObject* pyobject, char tc, int size, void*& bu
          // clarify error message
             PyObject* pytype = 0, *pyvalue = 0, *pytrace = 0;
             PyErr_Fetch( &pytype, &pyvalue, &pytrace );
-            PyObject* pyvalue2 = PyString_FromFormat(
+            PyObject* pyvalue2 = PyROOT_PyUnicode_FromFormat(
                (char*)"%s and given element size (%ld) do not match needed (%d)",
-               PyString_AS_STRING( pyvalue ),
+               PyROOT_PyUnicode_AsString( pyvalue ),
                seqmeths->sq_length ? (long)(buflen / (*(seqmeths->sq_length))( pyobject )) : (long)buflen,
                size );
             Py_DECREF( pyvalue );
@@ -594,6 +618,27 @@ const std::string PyROOT::Utility::Compound( const std::string& name )
 }
 
 //____________________________________________________________________________
+const std::string PyROOT::Utility::ClassName( PyObject* pyobj )
+{
+   std::string clname = "<unknown>";
+   PyObject* pyclass = PyObject_GetAttr( pyobj, PyStrings::gClass );
+   if ( pyclass != 0 ) {
+      PyObject* pyname = PyObject_GetAttr( pyclass, PyStrings::gName );
+
+      if ( pyname != 0 ) {
+         clname = PyROOT_PyUnicode_AsString( pyname );
+         Py_DECREF( pyname );
+      } else
+         PyErr_Clear();
+
+      Py_DECREF( pyclass );
+   } else
+      PyErr_Clear();
+
+   return clname;
+}
+
+//____________________________________________________________________________
 void PyROOT::Utility::ErrMsgCallback( char* msg )
 {
 // Translate CINT error/warning into python equivalent
@@ -627,10 +672,10 @@ void PyROOT::Utility::ErrMsgCallback( char* msg )
       PyErr_Fetch( &etype, &value, &trace );           // clears current exception
 
    // need to be sure that error can be added; otherwise leave earlier error in place
-      if ( PyString_Check( value ) ) {
+      if ( PyROOT_PyUnicode_Check( value ) ) {
          if ( ! PyErr_GivenExceptionMatches( etype, PyExc_IndexError ) )
-            PyString_ConcatAndDel( &value, PyString_FromString( (char*)"\n  " ) );
-         PyString_ConcatAndDel( &value, PyString_FromString( msg ) );
+            PyROOT_PyUnicode_AppendAndDel( &value, PyROOT_PyUnicode_FromString( (char*)"\n  " ) );
+         PyROOT_PyUnicode_AppendAndDel( &value, PyROOT_PyUnicode_FromString( msg ) );
       }
 
       PyErr_Restore( etype, value, trace );
@@ -753,4 +798,23 @@ PyObject* PyROOT::Utility::GetInstalledMethod( int tagnum, Long_t* extra )
    if ( extra )
       *extra = cinfo.second;
    return cinfo.first;
+}
+
+//____________________________________________________________________________
+PyObject* PyROOT::Utility::PyErr_Occurred_WithGIL()
+{
+// re-acquire the GIL before calling PyErr_Occurred() in case it has been
+// released; note that the p2.2 code assumes that there are no callbacks in
+// C++ to python (or at least none returning errors)
+#if PY_VERSION_HEX >= 0x02030000
+   PyGILState_STATE gstate = PyGILState_Ensure();
+   PyObject* e = PyErr_Occurred();
+   PyGILState_Release( gstate );
+#else
+   if ( PyThreadState_GET() )
+      return PyErr_Occurred();
+   PyObject* e = 0;
+#endif
+
+   return e;
 }

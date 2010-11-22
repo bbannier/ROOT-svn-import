@@ -521,7 +521,7 @@ void TGSplitFrame::SplitHor()
    // via the context menu.
 
    char side[200];
-   sprintf(side, "top");
+   snprintf(side, 200, "top");
    if (fFrame) {
       new TGInputDialog(gClient->GetRoot(), GetTopFrame(),
                "In which side the actual frame has to be kept (top / bottom)", 
@@ -569,7 +569,7 @@ void TGSplitFrame::SplitVer()
    // via the context menu.
 
    char side[200];
-   sprintf(side, "left");
+   snprintf(side, 200, "left");
    if (fFrame) {
       new TGInputDialog(gClient->GetRoot(), GetTopFrame(),
                "In which side the actual frame has to be kept (left / right)", 
@@ -704,7 +704,7 @@ void TGSplitFrame::UnSplit(const char *which)
    // Close (unmap and remove from the list of frames) the frame contained in
    // this split frame.
 
-   TGCompositeFrame *keepframe = 0, *delframe = 0;
+   TGCompositeFrame *keepframe = 0;
    TGSplitFrame *kframe = 0, *dframe = 0;
    if (!strcmp(which, "first")) {
       dframe = GetFirst();
@@ -717,7 +717,6 @@ void TGSplitFrame::UnSplit(const char *which)
    if (!kframe || !dframe)
       return;
    keepframe = (TGCompositeFrame *)kframe->GetFrame();
-   delframe = (TGCompositeFrame *)dframe->GetFrame();
    if (keepframe) {
       keepframe->UnmapWindow();
       keepframe->ReparentWindow(gClient->GetDefaultRoot());
@@ -753,6 +752,8 @@ void TGSplitFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    } else {
       out << "," << GetOptionString() << ",ucolor);" << endl;
    }
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    // setting layout manager if it differs from the main frame type
    TGLayoutManager * lm = GetLayoutManager();

@@ -98,11 +98,18 @@ TClass* TEveBox::ProjectedClass(const TEveProjection*) const
 // TEveBoxProjected
 //==============================================================================
 
+//______________________________________________________________________________
+//
+// Projection of TEveBox.
+
 ClassImp(TEveBoxProjected);
+
+Bool_t TEveBoxProjected::fgDebugCornerPoints = kFALSE;
 
 //______________________________________________________________________________
 TEveBoxProjected::TEveBoxProjected(const char* n, const char* t) :
-   TEveShape(n, t)
+   TEveShape(n, t),
+   fBreakIdx(0)
 {
    // Constructor.
 }
@@ -147,10 +154,6 @@ void TEveBoxProjected::UpdateProjection()
 {
    // Re-project the box. Projects all points and finds 2D convex-hull.
    //
-   // The convex-hull calculation code could be extracted and put into
-   // TEveShape or TEveUtil. Maybe projection / hull-search could be put into
-   // two functions.
-   //
    // The only issue is with making sure that initial conditions for
    // hull-search are reasonable -- that is, there are no overlaps with the
    // first point.
@@ -184,7 +187,8 @@ void TEveBoxProjected::UpdateProjection()
          if (! overlap)
          {
             ppv.push_back(p);
-            fDebugPoints.push_back(p);
+            if (fgDebugCornerPoints)
+               fDebugPoints.push_back(p);
          }
       }
    }
@@ -201,4 +205,22 @@ void TEveBoxProjected::UpdateProjection()
       fBreakIdx = fPoints.size();
       FindConvexHull(pp[1], fPoints, this);
    }
+}
+
+//______________________________________________________________________________
+Bool_t TEveBoxProjected::GetDebugCornerPoints()
+{
+   // Get state of fgDebugCornerPoints static.
+
+   return fgDebugCornerPoints;
+}
+
+//______________________________________________________________________________
+void TEveBoxProjected::SetDebugCornerPoints(Bool_t d)
+{
+   // Set state of fgDebugCornerPoints static.
+   // When this is true, points will be drawn at the corners of
+   // computed convex hull.
+
+   fgDebugCornerPoints = d;
 }

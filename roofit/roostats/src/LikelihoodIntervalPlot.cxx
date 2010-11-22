@@ -49,6 +49,7 @@ using namespace RooStats;
 LikelihoodIntervalPlot::LikelihoodIntervalPlot()
 {
   // LikelihoodIntervalPlot default constructor
+  // with default parameters
   fInterval = 0;
   fNdimPlot = 0;
   fParamsPlot = 0;
@@ -56,16 +57,19 @@ LikelihoodIntervalPlot::LikelihoodIntervalPlot()
   fFillStyle = 4050; // half transparent
   fLineColor = 0;
   fMaximum = 2.;
-  fNPoints = 40;
+  fNPoints = 0;  // default depends if 1D or 2D 
+  // default is variable range
   fXmin = 0;
   fXmax = -1;
+  fYmin = 0;
+  fYmax = -1;
   fPrecision = -1; // use default 
 }
 
 //_______________________________________________________
 LikelihoodIntervalPlot::LikelihoodIntervalPlot(LikelihoodInterval* theInterval)
 {
-  // LikelihoodIntervalPlot constructor
+  // LikelihoodIntervalPlot copy constructor
   fInterval = theInterval;
   fParamsPlot = fInterval->GetParameters();
   fNdimPlot = fParamsPlot->getSize();
@@ -73,9 +77,12 @@ LikelihoodIntervalPlot::LikelihoodIntervalPlot(LikelihoodInterval* theInterval)
   fLineColor = kGreen;
   fFillStyle = 4050; // half transparent
   fMaximum = 2.;
-  fNPoints = 40;
+  fNPoints = 0;  // default depends if 1D or 2D 
+  // default is variable range
   fXmin = 0;
   fXmax = -1;
+  fYmin = 0;
+  fYmax = -1;
   fPrecision = -1; // use default 
 }
 
@@ -108,6 +115,18 @@ void LikelihoodIntervalPlot::SetPlotParameters(const RooArgSet *params)
 //_____________________________________________________________________________
 void LikelihoodIntervalPlot::Draw(const Option_t *options) 
 {
+   // draw the Likelihood interval or contour plot
+   // For 1D problem draw the log profile likelihood function ratio and its interval 
+   // The curve is draws in a RooPLot by default (i.e as a RooCurve) 
+   // The plotting range (default is the full parameter range) and the precision of the RooCurve
+   // can be specified by using SetRange(x1,x2) and SetPrecision(eps). 
+   // SetNPoints(npoints) can also be used  (default is npoints=100) 
+   // Optionally the function can be drawn as a TF1 (option="tf1") obtained by sampling the npoints
+   // For 2D case, a contour is drawn. The number of contour points is controlled by 
+   // SetNPoints(npoints) (default is npoints=40)
+   // In case of problems finding the contour with Minuit, the option "nominuit" can be used. 
+   // In this case the profile likelihood function is sampled in the npoints x npoints values and then 
+   // an approximate contour is obtained. 
 
    if(fNdimPlot > 2){
       std::cout << "LikelihoodIntervalPlot::Draw(" << GetName() 
@@ -135,12 +154,14 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
    RooPlot * frame = 0; 
 
    TString title = GetTitle(); 
+   int nPoints = fNPoints; 
    
    if(fNdimPlot == 1){
 
      //      if (title.Length() == 0) 
      //         title = "- log profile likelihood ratio";
-      
+
+      if (nPoints <=0) nPoints = 100; // default in 1D
 
       const Double_t xcont_min = fInterval->LowerLimit(*myparam);
       const Double_t xcont_max = fInterval->UpperLimit(*myparam);
@@ -160,7 +181,7 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
          
          TF1 * tmp = newProfile->asTF(*myarg); 
          tmp->SetRange(xmin, xmax);      
-         tmp->SetNpx(fNPoints);
+         tmp->SetNpx(nPoints);
 
          // clone the function to avoid later to sample it
          TF1 * f1 = (TF1*) tmp->Clone(); 
@@ -205,7 +226,7 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
          myarg->setBins(fNPoints);
 
          // want to set range on frame not function
-         frame = myarg->frame(xmin,xmax);
+         frame = myarg->frame(xmin,xmax,nPoints);
 	 // for ycutoff line
 	 x1= xmin;
 	 x2=xmax;
@@ -278,11 +299,12 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
       if (title.Length() == 0)
          title = TString("Contour of ") + TString(myparamY->GetName() ) + TString(" vs ") + TString(myparam->GetName() ); 
 
+      if (nPoints <=0) nPoints = 40; // default in 2D
 
       if (!useMinuit) { 
       
          // draw directly the TH2 from the profile LL
-         TH2F* hist2D = (TH2F*)newProfile->createHistogram("_hist2D",*myparam,RooFit::YVar(*myparamY),RooFit::Binning(fNPoints),RooFit::Scaling(kFALSE));
+         TH2F* hist2D = (TH2F*)newProfile->createHistogram("_hist2D",*myparam,RooFit::YVar(*myparamY),RooFit::Binning(nPoints),RooFit::Scaling(kFALSE));
 
 
          hist2D->SetTitle(title);
@@ -320,13 +342,13 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
       else { 
 
          // find contours  using Minuit       
-         TGraph * gr = new TGraph(fNPoints+1); 
+         TGraph * gr = new TGraph(nPoints+1); 
          
-         int ncp = fInterval->GetContourPoints(*myparam, *myparamY, gr->GetX(), gr->GetY(),fNPoints); 
+         int ncp = fInterval->GetContourPoints(*myparam, *myparamY, gr->GetX(), gr->GetY(),nPoints); 
 
-         if (int(ncp) < fNPoints) {
-            std::cout << "Warning - Less points calculated in contours np = " << ncp << " / " << fNPoints << std::endl;
-            for (int i = ncp; i < fNPoints; ++i) gr->RemovePoint(i);
+         if (int(ncp) < nPoints) {
+            std::cout << "Warning - Less points calculated in contours np = " << ncp << " / " << nPoints << std::endl;
+            for (int i = ncp; i < nPoints; ++i) gr->RemovePoint(i);
          }
          // add last point to same as first one to close the contour
          gr->SetPoint(ncp, gr->GetX()[0], gr->GetY()[0] );
@@ -339,7 +361,7 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
             if (fXmin < fXmax) { xmin = fXmin; xmax = fXmax; }  
             if (fYmin < fYmax) { ymin = fYmin; ymax = fYmax; }  
 
-            TH2F* hist2D = new TH2F("_hist2D",title, fNPoints, xmin, xmax, fNPoints, ymin, ymax );
+            TH2F* hist2D = new TH2F("_hist2D",title, nPoints, xmin, xmax, nPoints, ymin, ymax );
             hist2D->GetXaxis()->SetTitle(myparam->GetName());
             hist2D->GetYaxis()->SetTitle(myparamY->GetName());
             hist2D->SetBit(TH1::kNoStats); // do not draw statistics

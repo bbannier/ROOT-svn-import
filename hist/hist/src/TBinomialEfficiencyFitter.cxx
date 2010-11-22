@@ -101,6 +101,7 @@ TBinomialEfficiencyFitter::TBinomialEfficiencyFitter() {
    fFitDone     = kFALSE;
    fAverage     = kFALSE;
    fRange       = kFALSE;
+   fEpsilon     = kDefaultEpsilon;
 }
 
 //______________________________________________________________________________
@@ -113,7 +114,8 @@ TBinomialEfficiencyFitter::TBinomialEfficiencyFitter(const TH1 *numerator, const
    // Both histograms need to be "consistent". This is not checked here, but in
    // TBinomialEfficiencyFitter::Fit().
 
-   fEpsilon = kDefaultEpsilon;
+   fEpsilon  = kDefaultEpsilon;
+   fFunction = 0;
    Set(numerator,denominator);
 }
 
@@ -184,6 +186,7 @@ Int_t TBinomialEfficiencyFitter::Fit(TF1 *f1, Option_t* option)
    fAverage  = opt.Contains("I");
    fRange    = opt.Contains("R");
    Bool_t verbose    = opt.Contains("V");
+   if (!f1) return -1;
    fFunction = (TF1*)f1;
    Int_t i, npar;
    npar = f1->GetNpar();
@@ -194,7 +197,6 @@ Int_t TBinomialEfficiencyFitter::Fit(TF1 *f1, Option_t* option)
    }
 
    // Check that function has same dimension as histogram
-   if (!f1) return -1;
    if (!fNumerator || !fDenominator) {
       Error("Fit","No numerator or denominator histograms set");
       return -5;
@@ -381,21 +383,19 @@ void TBinomialEfficiencyFitter::ComputeFCN(Int_t& /*npar*/, Double_t* /* gin */,
                   break;
                case 2:
                   {
-                     TF2* f2 = dynamic_cast<TF2*>(fFunction);
                      mu = (fAverage) ?
-                     f2->Integral(xlow, xup, ylow, yup, fEpsilon) 
+                     fFunction->Integral(xlow, xup, ylow, yup, fEpsilon) 
                         / ((xup-xlow)*(yup-ylow)) :
-                     f2->Eval(fDenominator->GetXaxis()->GetBinCenter(xbin),
+                     fFunction->Eval(fDenominator->GetXaxis()->GetBinCenter(xbin),
                      fDenominator->GetYaxis()->GetBinCenter(ybin));
                   }
                   break;
                case 3:
                   {
-                     TF3* f3 = dynamic_cast<TF3*>(fFunction);
                      mu = (fAverage) ?
-                        f3->Integral(xlow, xup, ylow, yup, zlow, zup, fEpsilon)
+                        fFunction->Integral(xlow, xup, ylow, yup, zlow, zup, fEpsilon)
                            / ((xup-xlow)*(yup-ylow)*(zup-zlow)) :
-                        f3->Eval(fDenominator->GetXaxis()->GetBinCenter(xbin),
+                        fFunction->Eval(fDenominator->GetXaxis()->GetBinCenter(xbin),
                                  fDenominator->GetYaxis()->GetBinCenter(ybin),
                                  fDenominator->GetZaxis()->GetBinCenter(zbin));
                   }
@@ -431,7 +431,7 @@ void BinomialEfficiencyFitterFCN(Int_t& npar, Double_t* gin, Double_t& f,
 
    TBinomialEfficiencyFitter* fitter = dynamic_cast<TBinomialEfficiencyFitter*>(TBinomialEfficiencyFitter::GetFitter()->GetObjectFit());
    if (!fitter) {
-      fitter->Error("binomialFCN","Invalid fit object encountered!");
+      Error("binomialFCN","Invalid fit object encountered!");
       return;
    }
    fitter->ComputeFCN(npar, gin, f, par, flag);

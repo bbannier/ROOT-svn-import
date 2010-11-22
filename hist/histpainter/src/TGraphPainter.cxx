@@ -139,7 +139,7 @@ The Y-axis is drawn on the right side of the plot.
 <p>
 
 Several drawing options can be combined. In the following example the graph
-is drawn as a smooth curve (optiob "C") and with markers (option "P"). The
+is drawn as a smooth curve (option "C") and with markers (option "P"). The
 option "A" request the definition of the axis.
 
 End_Html
@@ -651,7 +651,8 @@ void TGraphPainter::DrawPanelHelper(TGraph *theGraph)
    }
    TVirtualPadEditor *editor = TVirtualPadEditor::GetPadEditor();
    editor->Show();
-   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",gPad->GetCanvas(),gPad,theGraph));
+   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",
+                           (ULong_t)gPad->GetCanvas(), (ULong_t)gPad, (ULong_t)theGraph));
 }
 
 
@@ -1030,8 +1031,8 @@ void TGraphPainter::PaintGraph(TGraph *theGraph, Int_t npoints, const Double_t *
       // Create a temporary histogram and fill each channel with the
       // function value.
       char chopth[8] = " ";
-      if (strstr(chopt,"x+")) strcat(chopth, "x+");
-      if (strstr(chopt,"y+")) strcat(chopth, "y+");
+      if (strstr(chopt,"x+")) strncat(chopth, "x+",2);
+      if (strstr(chopt,"y+")) strncat(chopth, "y+",2);
       if (!theGraph->GetHistogram()) {
          // the graph is created with at least as many channels as there are
          // points to permit zooming on the full range.
@@ -1504,14 +1505,17 @@ void TGraphPainter::PaintGrapHist(TGraph *theGraph, Int_t npoints, const Double_
          ndivx = 100*nx2 + Int_t(Double_t(nx1)*gPad->GetAbsWNDC());
       }
       ndiv  =TMath::Abs(ndivx);
-      if (ndivx < 0) strcat(choptaxis, "N");
+      // coverity [Calling risky function]
+      if (ndivx < 0) strlcat(choptaxis, "N",10);
       if (gPad->GetGridx()) {
-         strcat(choptaxis, "W");
+         // coverity [Calling risky function]
+         strlcat(choptaxis, "W",10);
       }
       if (gPad->GetLogx()) {
          rwmin = TMath::Power(10,rwxmin);
          rwmax = TMath::Power(10,rwxmax);
-         strcat(choptaxis, "G");
+         // coverity [Calling risky function]
+         strlcat(choptaxis, "G",10);
       }
       TGaxis *axis = new TGaxis();
       axis->SetLineColor(gStyle->GetAxisColor("X"));
@@ -1530,16 +1534,19 @@ void TGraphPainter::PaintGrapHist(TGraph *theGraph, Int_t npoints, const Double_
          nx2   = ndivy/100;
          nx1   = TMath::Max(1, ndivy%100);
          ndivy = 100*nx2 + Int_t(Double_t(nx1)*gPad->GetAbsHNDC());
-         strcat(choptaxis, "N");
+         // coverity [Calling risky function]
+         strlcat(choptaxis, "N",10);
       }
       ndiv  =TMath::Abs(ndivy);
       if (gPad->GetGridy()) {
-         strcat(choptaxis, "W");
+         // coverity [Calling risky function]
+         strlcat(choptaxis, "W",10);
       }
       if (gPad->GetLogy()) {
          rwmin = TMath::Power(10,rwymin);
          rwmax = TMath::Power(10,rwymax);
-         strcat(choptaxis,"G");
+         // coverity [Calling risky function]
+         strlcat(choptaxis,"G",10);
       }
       axis->SetLineColor(gStyle->GetAxisColor("Y"));
       axis->SetTextColor(gStyle->GetLabelColor("Y"));
@@ -2235,8 +2242,8 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
    const Int_t kBASEMARKER=8;
    Double_t s2x, s2y, symbolsize, sbase;
    Double_t x, y, xl1, xl2, xr1, xr2, yup1, yup2, ylow1, ylow2, tx, ty;
-   static Float_t cxx[11] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6};
-   static Float_t cyy[11] = {1,1,1,1,1,1,1,1,1,0.5,0.6};
+   static Float_t cxx[15] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6,1,0.6,1,1};
+   static Float_t cyy[15] = {1,1,1,1,1,1,1,1,1,0.5,0.6,1,1,1,1};
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
@@ -2301,7 +2308,7 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
    Int_t mark  = theGraph->GetMarkerStyle();
    Double_t cx  = 0;
    Double_t cy  = 0;
-   if (mark >= 20 && mark < 31) {
+   if (mark >= 20 && mark <= 34) {
       cx = cxx[mark-20];
       cy = cyy[mark-20];
    }
@@ -2460,8 +2467,8 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
    Double_t s2x, s2y, symbolsize, sbase;
    Double_t x, y, xl1, xl2, xr1, xr2, yup1, yup2, ylow1, ylow2, tx, ty;
    Double_t bxl, bxh, byl, byh;
-   static Float_t cxx[11] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6};
-   static Float_t cyy[11] = {1,1,1,1,1,1,1,1,1,0.5,0.6};
+   static Float_t cxx[15] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6,1,0.6,1,1};
+   static Float_t cyy[15] = {1,1,1,1,1,1,1,1,1,0.5,0.6,1,1,1,1};
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
@@ -2530,7 +2537,7 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
    Int_t mark  = theGraph->GetMarkerStyle();
    Double_t cx  = 0;
    Double_t cy  = 0;
-   if (mark >= 20 && mark < 31) {
+   if (mark >= 20 && mark <= 34) {
       cx = cxx[mark-20];
       cy = cyy[mark-20];
    }
@@ -2692,8 +2699,8 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
    const Int_t kBASEMARKER=8;
    Double_t s2x, s2y, symbolsize, sbase;
    Double_t x, y, ex, ey, xl1, xl2, xr1, xr2, yup1, yup2, ylow1, ylow2, tx, ty;
-   static Float_t cxx[11] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6};
-   static Float_t cyy[11] = {1,1,1,1,1,1,1,1,1,0.5,0.6};
+   static Float_t cxx[15] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6,1,0.6,1,1};
+   static Float_t cyy[15] = {1,1,1,1,1,1,1,1,1,0.5,0.6,1,1,1,1};
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
@@ -2756,7 +2763,7 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
    Int_t mark  = theGraph->GetMarkerStyle();
    Double_t cx  = 0;
    Double_t cy  = 0;
-   if (mark >= 20 && mark < 31) {
+   if (mark >= 20 && mark <= 34) {
       cx = cxx[mark-20];
       cy = cyy[mark-20];
    }
@@ -3567,23 +3574,23 @@ void TGraphPainter::PaintStats(TGraph *theGraph, TF1 *fit)
    char t[64];
    char textstats[50];
    Int_t ndf = fit->GetNDF();
-   sprintf(textstats,"#chi^{2} / ndf = %s%s / %d","%",stats->GetFitFormat(),ndf);
-   sprintf(t,textstats,(Float_t)fit->GetChisquare());
+   snprintf(textstats,50,"#chi^{2} / ndf = %s%s / %d","%",stats->GetFitFormat(),ndf);
+   snprintf(t,64,textstats,(Float_t)fit->GetChisquare());
    if (print_fchi2) stats->AddText(t);
    if (print_fprob) {
-      sprintf(textstats,"Prob  = %s%s","%",stats->GetFitFormat());
-      sprintf(t,textstats,(Float_t)TMath::Prob(fit->GetChisquare(),ndf));
+      snprintf(textstats,50,"Prob  = %s%s","%",stats->GetFitFormat());
+      snprintf(t,64,textstats,(Float_t)TMath::Prob(fit->GetChisquare(),ndf));
       stats->AddText(t);
    }
    if (print_fval || print_ferrors) {
       for (Int_t ipar=0;ipar<fit->GetNpar();ipar++) {
          if (print_ferrors) {
-            sprintf(textstats,"%-8s = %s%s #pm %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat(),"%",stats->GetFitFormat());
-            sprintf(t,textstats,(Float_t)fit->GetParameter(ipar)
+            snprintf(textstats,50,"%-8s = %s%s #pm %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat(),"%",stats->GetFitFormat());
+            snprintf(t,64,textstats,(Float_t)fit->GetParameter(ipar)
                             ,(Float_t)fit->GetParError(ipar));
          } else {
-            sprintf(textstats,"%-8s = %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat());
-            sprintf(t,textstats,(Float_t)fit->GetParameter(ipar));
+            snprintf(textstats,50,"%-8s = %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat());
+            snprintf(t,64,textstats,(Float_t)fit->GetParameter(ipar));
          }
          t[63] = 0;
          stats->AddText(t);
@@ -4086,4 +4093,3 @@ L390:
    delete [] qlx;
    delete [] qly;
 }
-

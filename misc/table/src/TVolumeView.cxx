@@ -339,8 +339,8 @@ TVolumeView::TVolumeView(Double_t *translate, Double_t *rotate, UInt_t positionI
    if (topNode) {
       thisNode =  (TVolume *)topNode->Find(thisNodePath);
       if (!thisNode->InheritsFrom(TVolume::Class())) {
-         thisNode = 0;
          Error("TVolumeView","wrong node <%s> on path: \"%s\"",thisNode->GetName(),thisNodePath);
+         thisNode = 0;
       }
    }
 
@@ -357,7 +357,7 @@ TVolumeView::TVolumeView(Double_t *translate, Double_t *rotate, UInt_t positionI
       thisPosition  = new TVolumePosition(thisNode,thisX, thisY, thisZ, thisRotMatrix);
    } else
       Error("TVolumeView"," No rotation matrix is defined");
-   thisPosition->SetId(positionId);
+   if (thisPosition) thisPosition->SetId(positionId);
    SetObject(thisPosition);
    if (thisNode) {
       SetName(thisNode->GetName());
@@ -520,7 +520,7 @@ void TVolumeView::Draw(Option_t *option)
    TDataSet *parent = 0;
    char buffer[10];
    if (iopt < 0) {
-      sprintf(buffer,"%d",-iopt);
+      snprintf(buffer,10,"%d",-iopt);
       option = buffer;
       // select parent to draw
       parent = this;
@@ -637,9 +637,9 @@ char *TVolumeView::GetObjectInfo(Int_t px, Int_t py) const
    }
    TShape *shape = GetShape();
    if (shape)
-      sprintf(info,"%6.2f/%6.2f/%6.2f: %s/%s, shape=%s/%s",x[0],x[1],x[2],GetName(),GetTitle(),shape->GetName(),shape->ClassName());
+      snprintf(info,512,"%6.2f/%6.2f/%6.2f: %s/%s, shape=%s/%s",x[0],x[1],x[2],GetName(),GetTitle(),shape->GetName(),shape->ClassName());
    else
-      sprintf(info,"%6.2f/%6.2f/%6.2f: %s/%s",x[0],x[1],x[2],GetName(),GetTitle());
+      snprintf(info,512,"%6.2f/%6.2f/%6.2f: %s/%s",x[0],x[1],x[2],GetName(),GetTitle());
    return info;
 }
 
@@ -742,7 +742,8 @@ void TVolumeView::Paint(Option_t *option)
 //
 // restrict the levels for "range" option
    Int_t level = gGeometry->GeomLevel();
-   if (option && option[0]=='r' && level > 3 ) return;
+   if (!option) return;
+   if (option[0]=='r' && level > 3 ) return;
 
    Int_t iFirst =  atoi(option);
    Int_t iLast = 0;
@@ -853,7 +854,7 @@ TString TVolumeView::PathP() const
    if (p) {
       char buffer[10];
       positionId = p->GetId();
-      sprintf(buffer,";%d",p->GetId());
+      snprintf(buffer,10,";%d",p->GetId());
       str +=  buffer;
    }
    return str;
@@ -880,7 +881,7 @@ void TVolumeView::SavePrimitive(ostream &out, Option_t * /*= ""*/)
      ,"}"
    };
 //------------------- end of sceleton ---------------------
-   Int_t sceletonSize = sizeof(sceleton)/4;
+   Int_t sceletonSize = sizeof(sceleton)/sizeof(const Char_t*);
    TVolumePosition *thisPosition = GetPosition();
    TVolume *thisFullNode = GetNode();
    TString thisNodePath = thisFullNode ? thisFullNode->Path() : TString("");

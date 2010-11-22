@@ -271,6 +271,7 @@ TLinearFitter::TLinearFitter(Int_t ndim, const char *formula, Option_t *opt)
    fFixedParams=0;
    fSpecial=0;
    fInputFunction=0;
+   fFormula = 0;
    TString option=opt;
    option.ToUpper();
    if (option.Contains("D"))
@@ -318,6 +319,8 @@ TLinearFitter::TLinearFitter(TFormula *function, Option_t *opt)
       fStoreData=kFALSE;
    fIsSet=kTRUE;
    fRobust=kFALSE;
+   fInputFunction=0;
+
    SetFormula(function);
 }
 
@@ -370,7 +373,7 @@ TLinearFitter::TLinearFitter(const TLinearFitter& tlf) :
    }
    if (tlf.fFormula) { 
       fFormula = new char[fFormulaSize+1]; 
-      strcpy(fFormula,tlf.fFormula);
+      strlcpy(fFormula,tlf.fFormula,fFormulaSize+1);
    }
 
 }
@@ -418,7 +421,7 @@ TLinearFitter& TLinearFitter::operator=(const TLinearFitter& tlf)
       fFormula = 0; 
       if (tlf.fFormula) { 
          fFormula = new char[fFormulaSize+1]; 
-         strcpy(fFormula,tlf.fFormula);
+         strlcpy(fFormula,tlf.fFormula,fFormulaSize+1);
       }
 
       if (fFixedParams)   delete [] fFixedParams;
@@ -443,7 +446,6 @@ TLinearFitter& TLinearFitter::operator=(const TLinearFitter& tlf)
       fNdim=tlf.fNdim;
       fNfixed=tlf.fNfixed;
       fSpecial=tlf.fSpecial;
-      strcpy(fFormula,tlf.fFormula);
       fIsSet=tlf.fIsSet;
       fStoreData=tlf.fStoreData;
       fChisquare=tlf.fChisquare;
@@ -527,10 +529,14 @@ void TLinearFitter::AddPoint(Double_t *x, Double_t y, Double_t e)
          fX(j,i)=x[i];
    }
    //add the point to the design matrix, if the formula has been set
-   if (!fFunctions.IsEmpty() || fInputFunction || fSpecial>199 || !fRobust)
-      AddToDesign(x, y, e);
-   else if (!fStoreData)
-      Error("AddPoint", "Point can't be added, because the formula hasn't been set and data is not stored");
+   // (LM: why condition !fRobust ?? - remove it to fix Coverity 11602)
+   // when 100< fSpecial < 200 (Polynomial) fFunctions is not empty
+   // (see implementation of SetFormula method)
+   if (fFunctions.IsEmpty()&&(!fInputFunction)&&(fSpecial<=200)){
+      Error("AddPoint", "Point can't be added, because the formula hasn't been set");
+      return; 
+   }
+   if (!fRobust) AddToDesign(x, y, e);
 }
 
 //______________________________________________________________________________
@@ -565,7 +571,7 @@ void TLinearFitter::AssignData(Int_t npoints, Int_t xncols, Double_t *x, Double_
       fE=1;
    }
    Int_t xfirst;
-   if (!fFunctions.IsEmpty() || fInputFunction || fSpecial>199) {
+   if (!fFunctions.IsEmpty() || fInputFunction ||  fSpecial>200) {
       if (same)
          xfirst=fNpoints;
 
@@ -582,6 +588,8 @@ void TLinearFitter::AddToDesign(Double_t *x, Double_t y, Double_t e)
 {
    //Add a point to the AtA matrix and to the Atb vector.
 
+
+
    Int_t i, j, ii;
    y/=e;
 
@@ -595,23 +603,21 @@ void TLinearFitter::AddToDesign(Double_t *x, Double_t y, Double_t e)
          fVal[i]=fVal[i-1]*x[0];
       for (i=0; i<npar; i++)
          fVal[i]/=e;
+   } else if (fSpecial>200){
+      //Hyperplane fitting. Constant term is added
+      Int_t npar=fSpecial-201;
+      fVal[0]=1./e;
+      for (i=0; i<npar; i++)
+         fVal[i+1]=x[i]/e;
    } else {
-      if (fSpecial>200){
-         //Hyperplane fitting. Constant term is added
-         Int_t npar=fSpecial-201;
-         fVal[0]=1./e;
-         for (i=0; i<npar; i++)
-            fVal[i+1]=x[i]/e;
-      } else {
-         //general case
-         for (ii=0; ii<fNfunctions; ii++){
-            if (!fFunctions.IsEmpty()){
-               TFormula *f1 = (TFormula*)(fFunctions.UncheckedAt(ii));
-               fVal[ii]=f1->EvalPar(x)/e;
-            } else {
-               TFormula *f=(TFormula*)fInputFunction->GetLinearPart(ii);
-               fVal[ii]=f->EvalPar(x)/e;
-            }
+      //general case
+      for (ii=0; ii<fNfunctions; ii++){
+         if (!fFunctions.IsEmpty()){
+            TFormula *f1 = (TFormula*)(fFunctions.UncheckedAt(ii));
+            fVal[ii]=f1->EvalPar(x)/e;
+         } else {
+            TFormula *f=(TFormula*)fInputFunction->GetLinearPart(ii);
+            fVal[ii]=f->EvalPar(x)/e;
          }
       }
    }
@@ -819,7 +825,7 @@ Int_t TLinearFitter::Eval()
    // Returns 0 if the fit is ok, 1 if there are errors
 
    Double_t e;
-   if (fFunctions.IsEmpty()&&(!fInputFunction)&&(fSpecial<200)){
+   if (fFunctions.IsEmpty()&&(!fInputFunction)&&(fSpecial<=200)){
       Error("TLinearFitter::Eval", "The formula hasn't been set");
       return 1;
    }
@@ -1294,6 +1300,7 @@ void TLinearFitter::GetParameters(TVectorD &vpar)
 Int_t TLinearFitter::GetParameter(Int_t ipar,char* name,Double_t& value,Double_t& /*verr*/,Double_t& /*vlow*/, Double_t& /*vhigh*/) const
 {
 //Returns the value and the name of the parameter #ipar
+//NB: In the calling function he argument name must be set large enough
 
    if (ipar<0 || ipar>fNfunctions) {
       Error("GetParError", "illegal value of parameter");
@@ -1469,7 +1476,7 @@ void TLinearFitter::SetFormula(const char *formula)
       fInputFunction = 0;
    fFormulaSize = strlen(formula);
    fFormula = new char[fFormulaSize+1];
-   strcpy(fFormula, formula);
+   strlcpy(fFormula, formula,fFormulaSize+1);
    fSpecial = 0;
    //in case of a hyperplane:
    char *fstring;
@@ -1504,8 +1511,8 @@ void TLinearFitter::SetFormula(const char *formula)
       char pattern[5];
       char replacement[6];
       for (i=0; i<fNdim; i++){
-         sprintf(pattern, "x%d", i);
-         sprintf(replacement, "x[%d]", i);
+         snprintf(pattern,5, "x%d", i);
+         snprintf(replacement,6, "x[%d]", i);
          sstring = sstring.ReplaceAll(pattern, Int_t(i/10)+2, replacement, Int_t(i/10)+4);
       }
 
@@ -2021,7 +2028,14 @@ Int_t TLinearFitter::EvalRobust(Double_t h)
    Int_t nmini = 300;
    Int_t i, j, maxind=0, k, k1 = 500;
    Int_t nbest = 10;
-   Double_t chi2;
+   Double_t chi2 = -1;
+
+   if (fFunctions.IsEmpty()&&(!fInputFunction)&&(fSpecial<=200)){
+      Error("TLinearFitter::EvalRobust", "The formula hasn't been set");
+      return 1;
+   }
+
+
    Double_t *bestchi2 = new Double_t[nbest];
    for (i=0; i<nbest; i++)
       bestchi2[i]=1e30;
@@ -2268,6 +2282,8 @@ Double_t TLinearFitter::CStep(Int_t step, Int_t h, Double_t *residuals, Int_t *i
 {
    //The CStep procedure, as described in the article
 
+   R__ASSERT( !fFunctions.IsEmpty() || fInputFunction ||  fSpecial>200);
+
    Int_t i, j, itemp, n;
    Double_t func;
    Double_t val[100];
@@ -2289,19 +2305,18 @@ Double_t TLinearFitter::CStep(Int_t step, Int_t h, Double_t *residuals, Int_t *i
                      val[j] = val[j-1]*fX(itemp, 0);
                   for (j=0; j<npar; j++)
                      func += fParams(j)*val[j];
+            } else if (fSpecial>200) {
+               //hyperplane case
+               npar = fSpecial-201;
+               func+=fParams(0);
+               for (j=0; j<npar; j++)
+                  func += fParams(j+1)*fX(itemp, j);
             } else {
-               if (fSpecial>200) {
-                  //hyperplane case
-                  npar = fSpecial-201;
-                  func+=fParams(0);
-                  for (j=0; j<npar; j++)
-                     func += fParams(j+1)*fX(itemp, j);
-               } else {
-                  for (j=0; j<fNfunctions; j++) {
-                     TF1 *f1 = (TF1*)(fFunctions.UncheckedAt(j));
-                     val[j] = f1->EvalPar(TMatrixDRow(fX, itemp).GetPtr());
-                     func += fParams(j)*val[j];
-                  }
+               // general case
+               for (j=0; j<fNfunctions; j++) {
+                  TF1 *f1 = (TF1*)(fFunctions.UncheckedAt(j));
+                  val[j] = f1->EvalPar(TMatrixDRow(fX, itemp).GetPtr());
+                  func += fParams(j)*val[j];
                }
             }
          }
@@ -2323,19 +2338,17 @@ Double_t TLinearFitter::CStep(Int_t step, Int_t h, Double_t *residuals, Int_t *i
                   val[j] = val[j-1]*fX(i, 0);
                for (j=0; j<npar; j++)
                   func += fParams(j)*val[j];
+            } else if (fSpecial>200) {
+               //hyperplane case
+               npar = fSpecial-201;
+               func+=fParams(0);
+               for (j=0; j<npar; j++)
+                  func += fParams(j+1)*fX(i, j);
             } else {
-               if (fSpecial>200) {
-                  //hyperplane case
-                  npar = fSpecial-201;
-                  func+=fParams(0);
-                  for (j=0; j<npar; j++)
-                     func += fParams(j+1)*fX(i, j);
-               } else {
-                  for (j=0; j<fNfunctions; j++) {
-                     TF1 *f1 = (TF1*)(fFunctions.UncheckedAt(j));
-                     val[j] = f1->EvalPar(TMatrixDRow(fX, i).GetPtr());
-                     func += fParams(j)*val[j];
-                  }
+               for (j=0; j<fNfunctions; j++) {
+                  TF1 *f1 = (TF1*)(fFunctions.UncheckedAt(j));
+                  val[j] = f1->EvalPar(TMatrixDRow(fX, i).GetPtr());
+                  func += fParams(j)*val[j];
                }
             }
          }
@@ -2372,19 +2385,17 @@ Double_t TLinearFitter::CStep(Int_t step, Int_t h, Double_t *residuals, Int_t *i
                      val[j] = val[j-1]*fX(itemp, 0);
                   for (j=0; j<npar; j++)
                      func += fParams(j)*val[j];
+            } else if (fSpecial>200) {
+               //hyperplane case
+               npar = fSpecial-201;
+               func+=fParams(0);
+               for (j=0; j<npar; j++)
+                  func += fParams(j+1)*fX(itemp, j);
             } else {
-               if (fSpecial>200) {
-                  //hyperplane case
-                  npar = fSpecial-201;
-                  func+=fParams(0);
-                  for (j=0; j<npar; j++)
-                     func += fParams(j+1)*fX(itemp, j);
-               } else {
-                  for (j=0; j<fNfunctions; j++) {
-                     TF1 *f1 = (TF1*)(fFunctions.UncheckedAt(j));
-                     val[j] = f1->EvalPar(TMatrixDRow(fX, itemp).GetPtr());
-                     func += fParams(j)*val[j];
-                  }
+               for (j=0; j<fNfunctions; j++) {
+                  TF1 *f1 = (TF1*)(fFunctions.UncheckedAt(j));
+                  val[j] = f1->EvalPar(TMatrixDRow(fX, itemp).GetPtr());
+                  func += fParams(j)*val[j];
                }
             }
          }

@@ -178,7 +178,7 @@ static G__value G__exec_tempfile_core(const char* file, FILE* fp)
    if (file) {
       len = strlen(file);
       filename = new char[len+1];
-      strcpy(filename, file);
+      strcpy(filename, file); // Okay, we allocated the right size
       while (len > 1 && isspace(filename[len-1])) {
          filename[--len] = '\0';
       }
@@ -198,11 +198,13 @@ static G__value G__exec_tempfile_core(const char* file, FILE* fp)
       ftemp->vindex = -1;
       ftemp->line_number = 1;
       if (file) {
-         strncpy(ftemp->name, filename, sizeof(ftemp->name) - 1);
+         G__strlcpy(ftemp->name, filename, sizeof(ftemp->name));
          ftemp->name[sizeof(ftemp->name) - 1] = 0; // ensure termination
          delete [] filename;
       }
-      else     strcpy(ftemp->name, "(tmpfile)");
+      else {
+         G__strlcpy(ftemp->name, "(tmpfile)", sizeof(ftemp->name));
+      }
       ftemp->filenum = G__tempfilenum;
       G__srcfile[G__tempfilenum].fp = ftemp->fp;
       G__srcfile[G__tempfilenum].filename = ftemp->name;
@@ -824,7 +826,6 @@ G__value G__exec_text(const char* unnamedmacro)
    G__FastAllocString sname_sb(G__MAXFILENAME);
 #endif
    char* tname = tname_sb;
-   char* sname = sname_sb;
    int nest = 0, single_quote = 0, double_quote = 0;
    int ccomment = 0, cppcomment = 0;
    G__value buf;
@@ -902,6 +903,7 @@ G__value G__exec_text(const char* unnamedmacro)
       return(G__null);
    }
 
+   // coverity[secure_temp]: we don't care about predictable names.
    fp = tmpfile();
    if (!fp) {
       G__tmpnam(tname);  /* not used anymore 0 */
@@ -925,7 +927,7 @@ G__value G__exec_text(const char* unnamedmacro)
    }
    else {
       sname_sb = tname;
-      sname = sname_sb;
+      const char *sname = sname_sb;
       G__storerewindposition();
       buf = G__exec_tempfile(sname);
       G__security_recover(G__serr);
@@ -943,7 +945,7 @@ char* G__exec_text_str(const char* unnamedmacro, char* result)
    G__FastAllocString resbuf;
    G__value buf = G__exec_text(unnamedmacro);
    G__valuemonitor(buf, resbuf);
-   strcpy(result, resbuf);
+   strcpy(result, resbuf); // Legacy interface, we don't know the buffer size
    return result;
 }
 #endif
@@ -963,6 +965,7 @@ const char* G__load_text(const char* namedmacro)
    static char tname[G__MAXFILENAME];
 #endif
 
+   // coverity[secure_temp]: we don't care about predictable names.
    fp = tmpfile();
    if (!fp) {
       G__tmpnam(tname);  /* not used anymore */

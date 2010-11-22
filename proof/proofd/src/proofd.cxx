@@ -254,23 +254,23 @@ using namespace ROOT;
 //--- Error handlers -----------------------------------------------------------
 
 //______________________________________________________________________________
-void Err(int level, const char *msg)
+void Err(int level, const char *msg, int size)
 {
-   Perror((char *)msg);
+   Perror((char *)msg, size);
    if (level > -1) NetSend(level, kROOTD_ERR);
 }
 //______________________________________________________________________________
-void ErrFatal(int level, const char *msg)
+void ErrFatal(int level, const char *msg, int size)
 {
-   Perror((char *)msg);
+   Perror((char *)msg, size);
    if (level > -1) NetSend(msg, kMESS_STRING);
    exit(1);
 }
 //______________________________________________________________________________
-void ErrSys(int level, const char *msg)
+void ErrSys(int level, const char *msg, int size)
 {
-   Perror((char *)msg);
-   ErrFatal(level, msg);
+   Perror((char *)msg, size);
+   ErrFatal(level, msg, size);
 }
 
 //--- Proofd routines ----------------------------------------------------------
@@ -319,17 +319,15 @@ const char *RerouteUser()
       // string::insert is buggy on some compilers (eg gcc 2.96):
       // new length correct but data not always null terminated
       conffile[conffile.length()] = 0;
-      if (access(conffile.c_str(), R_OK))
-         conffile = "";
    }
-   if (!conffile.length()) {
-      conffile.insert(0,"/etc/");
+   if (!(proofconf = fopen(conffile.c_str(), "r"))) {
+      conffile = "/etc/";
       conffile.insert(0,gConfDir);
       // string::insert is buggy on some compilers (eg gcc 2.96):
       // new length correct but data not always null terminated
       conffile[conffile.length()] = 0;
    }
-   if ((proofconf = fopen(conffile.c_str(), "r")) != 0) {
+   if (proofconf || (proofconf = fopen(conffile.c_str(), "r")) != 0) {
 
       // read configuration file
       static char user_on_node[32];
@@ -339,12 +337,14 @@ const char *RerouteUser()
       int  nnodes = 0;
       int  i;
 
-      strcpy(user_on_node, "any");
+      strncpy(user_on_node, "any", 32);
+      user_on_node[31] = 0;
 
       while (fgets(line, sizeof(line), proofconf) != 0) {
          char word[4][64];
          if (line[0] == '#') continue;  // skip comment lines
-         int nword = sscanf(line, "%s %s %s %s",
+         // coverity[secure_coding]
+         int nword = sscanf(line, "%63s %63s %63s %63s",
                             word[0], word[1], word[2], word[3]);
 
          //
@@ -354,7 +354,10 @@ const char *RerouteUser()
          if (nword >= 2 && strcmp(word[0], "node") == 0) {
             if (gethostbyname(word[1]) != 0) {
                if (nnodes < kMaxSlaves) {
-                  strcpy(node_name[nnodes], word[1]);
+                  if (strlen(word[1]) < 32) {
+                     strncpy(node_name[nnodes], word[1], 32);
+                     node_name[nnodes][31] = 0;
+                  }
                   nnodes++;
                }
             }
@@ -369,7 +372,10 @@ const char *RerouteUser()
              strcmp(word[1], gUser.c_str()) == 0 &&
              strcmp(word[2], "on") == 0) {
             // user <name> on <node>
-            strcpy(user_on_node, word[3]);
+            if (strlen(word[3]) < 32) {
+               strncpy(user_on_node, word[3], 32);
+               user_on_node[31] = 0;
+            }
             continue;
          }
       }
@@ -387,16 +393,18 @@ const char *RerouteUser()
       // the system load; make sure the file is not completely out of date
       //
       conffile = gConfDir + "/etc/next.node";
-      if (stat(conffile.c_str(), &statbuf) == -1) {
-         return 0;
-      } else if (difftime(time(0), statbuf.st_mtime) < 600 &&
-                 (proofconf = fopen(conffile.c_str(), "r")) != 0) {
-         if (fgets(line, sizeof(line), proofconf) != 0) {
-            sscanf(line, " %s ", user_on_node);
-            for (i = 0; i < nnodes; i++) {
-               if (strcmp(node_name[i], user_on_node) == 0) {
-                  fclose(proofconf);
-                  return user_on_node;
+      proofconf = fopen(conffile.c_str(), "r");
+      if (proofconf) {
+         if (fstat(fileno(proofconf), &statbuf) == 0 &&
+             difftime(time(0), statbuf.st_mtime) < 600) {
+            if (fgets(line, sizeof(line), proofconf) != 0) {
+               strncpy(user_on_node, line, 32);
+               user_on_node[31] = 0;
+               for (i = 0; i < nnodes; i++) {
+                  if (strcmp(node_name[i], user_on_node) == 0) {
+                     fclose(proofconf);
+                     return user_on_node;
+                  }
                }
             }
          }
@@ -489,13 +497,16 @@ void ProofdExec()
          if (host != 0) {
             struct in_addr *host_addr = (struct in_addr*)(host->h_addr);
             char host_numb[32];
-            strcpy(host_numb, inet_ntoa(*host_addr));
+            if (strlen(inet_ntoa(*host_addr)) < 32) {
+               strncpy(host_numb, inet_ntoa(*host_addr), 32);
+               host_numb[31] = 0;
+            }
 
             if ((node = gethostbyname(node_name)) != 0) {
                struct in_addr *node_addr = (struct in_addr*)(node->h_addr);
                char node_numb[32];
-               strcpy(node_numb, inet_ntoa(*node_addr));
-
+               strncpy(node_numb, inet_ntoa(*node_addr), 32);
+               node_numb[31] = 0;
                //
                // compare the string representation of the IP addresses
                // to avoid possible problems with host name aliases
@@ -518,12 +529,12 @@ void ProofdExec()
       if ((lab = RpdProofGetAuthSetup(&authbuff)) > 0) {
          // Save it in an environment variable
          char *rootproofauthsetup = new char[20+strlen(authbuff)];
-         sprintf(rootproofauthsetup, "ROOTPROOFAUTHSETUP=%s", authbuff);
+         snprintf(rootproofauthsetup, 20 + strlen(authbuff), "ROOTPROOFAUTHSETUP=%s", authbuff);
          putenv(rootproofauthsetup);
-         delete[] authbuff;
       } else if (lab < 0) {
          ErrorInfo("ProofdExec: problems receiving auth buffer");
       }
+      if (authbuff) delete[] authbuff;
    }
 
    if(RpdGetClientProtocol() >= 16) {
@@ -547,14 +558,15 @@ void ProofdExec()
       char *buf = (char *) vb;
       char *end = buf + len;
       const char name[] = "PROOF_ALLVARS=";
-      char *all = new char[strlen(name)+len]; // strlen("PROOF_ALLVARS=") = 14
-      strcpy(all, name);
+      int alen = strlen(name)+len;
+      char *all = new char[alen]; // strlen("PROOF_ALLVARS=") = 14
+      strlcpy(all, name, alen);
       while (buf < end) {
          if (gDebug > 0) ErrorInfo("ProofdExec: setting: %s", buf);
          char *p = index(buf, '=');
          if (p) {
-            if (buf != (char *) vb) strcat(all, ","); // skip the first one
-            strncat(all, buf, p-buf);
+            if (buf != (char *) vb) strlcat(all, ",", alen); // skip the first one
+            strlcat(all, buf, alen);
             putenv(buf);
          }
          buf += strlen(buf) + 1;
@@ -574,7 +586,8 @@ void ProofdExec()
       for (fd = 3; fd < NOFILE; fd++) {
          ResetErrno();
          if (fstat(fd, &stbuf) == -1 && GetErrno() == EBADF) {
-            dup2(sockFd, fd);
+            if (dup2(sockFd, fd) < 0)
+               ErrorInfo("ProofdExec: problems executing 'dup2' (errno: %d)", errno);
             close(sockFd);
             sockFd = fd;
             close(2);
@@ -595,32 +608,32 @@ void ProofdExec()
    // Set environments vars for proofserv
    // Config dir
    char *rootconf = new char[13+gConfDir.length()];
-   sprintf(rootconf, "ROOTCONFDIR=%s", gConfDir.c_str());
+   snprintf(rootconf, 13+gConfDir.length(), "ROOTCONFDIR=%s", gConfDir.c_str());
    putenv(rootconf);
    if (gDebug > 0)
       ErrorInfo("ProofdExec: setting: %s", rootconf);
    // Temp dir
    char *roottmp = new char[12+gTmpDir.length()];
-   sprintf(roottmp, "ROOTTMPDIR=%s", gTmpDir.c_str());
+   snprintf(roottmp, 12+gTmpDir.length(), "ROOTTMPDIR=%s", gTmpDir.c_str());
    putenv(roottmp);
    if (gDebug > 0)
       ErrorInfo("ProofdExec: setting: %s", roottmp);
    // User, host, rpid
    char *rootentity = new char[gUser.length()+gOpenHost.length()+33];
-   sprintf(rootentity,
+   snprintf(rootentity, gUser.length()+gOpenHost.length()+33,
            "ROOTENTITY=%s:%d@%s", gUser.c_str(), gRemPid, gOpenHost.c_str());
    putenv(rootentity);
    if (gDebug > 2)
       ErrorInfo("ProofdExec: setting: %s", rootentity);
    // Open socket
    char *rootopensock = new char[33];
-   sprintf(rootopensock, "ROOTOPENSOCK=%d", sockFd);
+   snprintf(rootopensock, 33, "ROOTOPENSOCK=%d", sockFd);
    putenv(rootopensock);
    if (gDebug > 0)
       ErrorInfo("ProofdExec: setting: %s", rootopensock);
    // ReadHomeAuthrc option
    char *roothomeauthrc = new char[20];
-   sprintf(roothomeauthrc, "ROOTHOMEAUTHRC=%s", gReadHomeAuthrc.c_str());
+   snprintf(roothomeauthrc, 20, "ROOTHOMEAUTHRC=%s", gReadHomeAuthrc.c_str());
    putenv(roothomeauthrc);
    if (gDebug > 0)
       ErrorInfo("ProofdExec: setting: %s", roothomeauthrc);
@@ -628,7 +641,7 @@ void ProofdExec()
 #ifdef R__GLBS
    // ID of shm with exported credentials
    char *shmidcred = new char[25];
-   sprintf(shmidcred, "ROOTSHMIDCRED=%d", RpdGetShmIdCred());
+   snprintf(shmidcred, 25, "ROOTSHMIDCRED=%d", RpdGetShmIdCred());
    putenv(shmidcred);
    if (gDebug > 0)
       ErrorInfo("ProofdExec: setting: %s", shmidcred);
@@ -642,46 +655,48 @@ void ProofdExec()
 
 #ifndef ROOTPREFIX
    char *rootsys = new char[9+gConfDir.length()];
-   sprintf(rootsys, "ROOTSYS=%s", gConfDir.c_str());
+   snprintf(rootsys, 9+gConfDir.length(), "ROOTSYS=%s", gConfDir.c_str());
    putenv(rootsys);
    if (gDebug > 0)
       ErrorInfo("ProofdExec: setting: %s", rootsys);
 #endif
 #ifndef ROOTLIBDIR
-   char *ldpath;
+   char *oldpath, *ldpath;
 #   if defined(__hpux) || defined(_HIUX_SOURCE)
-   if (getenv("SHLIB_PATH")) {
-      ldpath = new char[32+gConfDir.length()+strlen(getenv("SHLIB_PATH"))];
-      sprintf(ldpath, "SHLIB_PATH=%s/lib:%s", gConfDir.c_str(), getenv("SHLIB_PATH"));
+   if ((oldpath = getenv("SHLIB_PATH")) && strlen(oldpath) > 0) {
+      ldpath = new char[32+gConfDir.length()+strlen(oldpath)];
+      snprintf(ldpath, 32+gConfDir.length()+strlen(oldpath),
+                      "SHLIB_PATH=%s/lib:%s", gConfDir.c_str(), oldpath);
    } else {
       ldpath = new char[32+gConfDir.length()];
-      sprintf(ldpath, "SHLIB_PATH=%s/lib", gConfDir.c_str());
+      snprintf(ldpath, 32+gConfDir.length(), "SHLIB_PATH=%s/lib", gConfDir.c_str());
    }
 #   elif defined(_AIX)
-   if (getenv("LIBPATH")) {
-      ldpath = new char[32+gConfDir.length()+strlen(getenv("LIBPATH"))];
-      sprintf(ldpath, "LIBPATH=%s/lib:%s", gConfDir.c_str(), getenv("LIBPATH"));
+   if ((oldpath = getenv("LIBPATH")) && strlen(oldpath) > 0) {
+      ldpath = new char[32+gConfDir.length()+strlen(oldpath)];
+      snprintf(ldpath, 32+gConfDir.length()+strlen(oldpath),
+                       "LIBPATH=%s/lib:%s", gConfDir.c_str(), oldpath);
    } else {
       ldpath = new char[32+gConfDir.length()];
-      sprintf(ldpath, "LIBPATH=%s/lib", gConfDir.c_str());
+      snprintf(ldpath, 32+gConfDir.length(), "LIBPATH=%s/lib", gConfDir.c_str());
    }
 #   elif defined(__APPLE__)
-   if (getenv("DYLD_LIBRARY_PATH")) {
-      ldpath = new char[32+gConfDir.length()+strlen(getenv("DYLD_LIBRARY_PATH"))];
-      sprintf(ldpath, "DYLD_LIBRARY_PATH=%s/lib:%s",
-                      gConfDir.c_str(), getenv("DYLD_LIBRARY_PATH"));
+   if ((oldpath = getenv("DYLD_LIBRARY_PATH")) && strlen(oldpath) > 0) {
+      ldpath = new char[32+gConfDir.length()+strlen(oldpath)];
+      snprintf(ldpath, 32+gConfDir.length()+strlen(oldpath),
+                      "DYLD_LIBRARY_PATH=%s/lib:%s", gConfDir.c_str(), oldpath);
    } else {
       ldpath = new char[32+gConfDir.length()];
-      sprintf(ldpath, "DYLD_LIBRARY_PATH=%s/lib", gConfDir.c_str());
+      snprintf(ldpath, 32+gConfDir.length(), "DYLD_LIBRARY_PATH=%s/lib", gConfDir.c_str());
    }
 #   else
-   if (getenv("LD_LIBRARY_PATH")) {
-      ldpath = new char[32+gConfDir.length()+strlen(getenv("LD_LIBRARY_PATH"))];
-      sprintf(ldpath, "LD_LIBRARY_PATH=%s/lib:%s",
-                      gConfDir.c_str(), getenv("LD_LIBRARY_PATH"));
+   if ((oldpath = getenv("LD_LIBRARY_PATH")) && strlen(oldpath) > 0) {
+      ldpath = new char[32+gConfDir.length()+strlen(oldpath)];
+      snprintf(ldpath, 32+gConfDir.length()+strlen(oldpath),
+                      "LD_LIBRARY_PATH=%s/lib:%s", gConfDir.c_str(), oldpath);
    } else {
       ldpath = new char[32+gConfDir.length()];
-      sprintf(ldpath, "LD_LIBRARY_PATH=%s/lib", gConfDir.c_str());
+      snprintf(ldpath, 32+gConfDir.length(), "LD_LIBRARY_PATH=%s/lib", gConfDir.c_str());
    }
 #   endif
    putenv(ldpath);
@@ -697,7 +712,7 @@ void ProofdExec()
       if (gDebug > 0)
          ErrorInfo("ProofdExec: setting ROOTAUTHRC to %s",gAuthrc.c_str());
       authrc = new char[15+gAuthrc.length()];
-      sprintf(authrc, "ROOTAUTHRC=%s", gAuthrc.c_str());
+      snprintf(authrc, 15+gAuthrc.length(), "ROOTAUTHRC=%s", gAuthrc.c_str());
       putenv(authrc);
       if (gDebug > 0)
          ErrorInfo("ProofdExec: setting: %s", authrc);
@@ -705,7 +720,7 @@ void ProofdExec()
 
    // For backward compatibility
    char *keyfile = new char[15+strlen(RpdGetKeyRoot())];
-   sprintf(keyfile, "ROOTKEYFILE=%s",RpdGetKeyRoot());
+   snprintf(keyfile, 15+strlen(RpdGetKeyRoot()), "ROOTKEYFILE=%s",RpdGetKeyRoot());
    putenv(keyfile);
    if (gDebug > 2)
       ErrorInfo("ProofdExec: setting: %s", keyfile);
@@ -1008,7 +1023,7 @@ int main(int argc, char **argv)
    // Make it available to all the session via env
    if (gRootBinDir.length()) {
       char *tmp = new char[15 + gRootBinDir.length()];
-      sprintf(tmp, "ROOTBINDIR=%s", gRootBinDir.c_str());
+      snprintf(tmp, 15 + gRootBinDir.length(), "ROOTBINDIR=%s", gRootBinDir.c_str());
       putenv(tmp);
    }
 
@@ -1018,27 +1033,27 @@ int main(int argc, char **argv)
    // Make it available to all the session via env
    if (rootetcdir.length()) {
       char *tmp = new char[15 + rootetcdir.length()];
-      sprintf(tmp, "ROOTETCDIR=%s", rootetcdir.c_str());
+      snprintf(tmp, 15 + rootetcdir.length(), "ROOTETCDIR=%s", rootetcdir.c_str());
       putenv(tmp);
    }
 
    // If specified, set the special daemonrc file to be used
    if (daemonrc.length()) {
       char *tmp = new char[15+daemonrc.length()];
-      sprintf(tmp, "ROOTDAEMONRC=%s", daemonrc.c_str());
+      snprintf(tmp, 15+daemonrc.length(), "ROOTDAEMONRC=%s", daemonrc.c_str());
       putenv(tmp);
    }
 #ifdef R__GLBS
    // If specified, set the special gridmap file to be used
    if (gridmap.length()) {
       char *tmp = new char[15+gridmap.length()];
-      sprintf(tmp, "GRIDMAP=%s", gridmap.c_str());
+      snprintf(tmp, 15+gridmap.length(), "GRIDMAP=%s", gridmap.c_str());
       putenv(tmp);
    }
    // If specified, set the special hostcert.conf file to be used
    if (hostcertconf.length()) {
       char *tmp = new char[15+hostcertconf.length()];
-      sprintf(tmp, "ROOTHOSTCERT=%s", hostcertconf.c_str());
+      snprintf(tmp, 15+hostcertconf.length(), "ROOTHOSTCERT=%s", hostcertconf.c_str());
       putenv(tmp);
    }
 #endif

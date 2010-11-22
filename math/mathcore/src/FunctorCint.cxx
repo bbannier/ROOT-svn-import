@@ -11,19 +11,19 @@
 #include "TError.h"
 #include "TInterpreter.h"
 
-namespace ROOT { 
-namespace Math { 
+namespace ROOT {
+namespace Math {
 
-//#if defined(__MAKECINT__) || defined(G__DICTIONARY) 
+//#if defined(__MAKECINT__) || defined(G__DICTIONARY)
 
 //Functor handler for Cint functions
 
 template<class ParentFunctor>
 class FunctorCintHandler : public ParentFunctor::Impl
-{ 
+{
 public:
-   typedef typename ParentFunctor::Impl ImplFunc; 
-   typedef typename ImplFunc::BaseFunc BaseFunc; 
+   typedef typename ParentFunctor::Impl ImplFunc;
+   typedef typename ImplFunc::BaseFunc BaseFunc;
 
    // for 1D functor1d
    FunctorCintHandler(void * p, const char * className , const char * methodName, const char * derivName = 0 );
@@ -41,8 +41,7 @@ public:
    FunctorCintHandler(const FunctorCintHandler<Functor> & rhs) :
       BaseFunc(),
       fDim(rhs.fDim),
-      fPtr(rhs.fPtr), 
-      //fPtr2(0),
+      fPtr(rhs.fPtr),
       fMethodCall(rhs.fMethodCall),
       fMethodCall2(0)
    {}
@@ -50,16 +49,14 @@ public:
       BaseFunc(),
       ImplFunc(),
       fDim(rhs.fDim),
-      fPtr(rhs.fPtr), 
-      //fPtr2(rhs.fPtr2),
+      fPtr(rhs.fPtr),
       fMethodCall(rhs.fMethodCall),
       fMethodCall2(rhs.fMethodCall2)
    {}
    FunctorCintHandler(const FunctorCintHandler<Functor1D> & rhs) :
       BaseFunc(),
       fDim(1),
-      fPtr(rhs.fPtr), 
-      //fPtr2(0),
+      fPtr(rhs.fPtr),
       fMethodCall(rhs.fMethodCall),
       fMethodCall2(0)
    {}
@@ -67,19 +64,18 @@ public:
       BaseFunc(),
       ImplFunc(),
       fDim(1),
-      fPtr(rhs.fPtr), 
-      //fPtr2(rhs.fPtr2),
+      fPtr(rhs.fPtr),
       fMethodCall(rhs.fMethodCall),
       fMethodCall2(rhs.fMethodCall2)
    {}
 
    ~FunctorCintHandler() { //no op (keep pointer to TMethodCall)
    }
-   BaseFunc  * Clone() const {  return new FunctorCintHandler(*this);  } 
+   BaseFunc  * Clone() const {  return new FunctorCintHandler(*this);  }
 
-   unsigned int NDim() const { 
+   unsigned int NDim() const {
       return fDim;
-   } 
+   }
 
 
 private:
@@ -87,19 +83,17 @@ private:
    unsigned int fDim;
 
    void * fPtr; // pointer to callable object
-   //void * fPtr2; // pointer to callable object
 
    // function required by interface
-   inline double DoEval (double x) const; 
-   inline double DoDerivative (double x) const; 
-   inline double DoDerivative (const double * x,unsigned int ipar ) const; 
-   inline double DoEval (const double * x) const; 
+   inline double DoEval (double x) const;
+   inline double DoDerivative (double x) const;
+   inline double DoDerivative (const double * x,unsigned int ipar ) const;
+   inline double DoEval (const double * x) const;
 
 
    mutable TMethodCall *fMethodCall; // pointer to method call
    mutable TMethodCall *fMethodCall2; // pointer to second method call (for deriv)
 
-   mutable Long_t fArgs[2]; // for the address
 };
 
 //implementation of Functor methods
@@ -133,17 +127,17 @@ template<class PF>
 FunctorCintHandler<PF>::FunctorCintHandler(void * p, const char * className , const char * methodName, const char * derivMethodName ):    fDim(1)  {
 
    //constructor for non-grad 1D functions
-   fPtr = p; 
+   fPtr = p;
    fMethodCall2 = 0;
 
 
    //std::cout << "creating Cint functor" << std::endl;
    fMethodCall = new TMethodCall();
-   
-   if (className == 0) { 
+
+   if (className == 0) {
       const char *funcname = gCint->Getp2f2funcname((void *) fPtr);
 
-      if (funcname) 
+      if (funcname)
          fMethodCall->InitWithPrototype(funcname,"double");
    }
    else {
@@ -161,7 +155,7 @@ FunctorCintHandler<PF>::FunctorCintHandler(void * p, const char * className , co
             fMethodCall2 = new TMethodCall();
             fMethodCall2->InitWithPrototype(cl,derivMethodName,"double");
          }
-         
+
          if (! fMethodCall->IsValid() ) {
             if (methodName)
                Error("ROOT::Math::FunctorCintHandler","No function found in class %s with the signature %s(double ) ",className,methodName);
@@ -173,7 +167,7 @@ FunctorCintHandler<PF>::FunctorCintHandler(void * p, const char * className , co
                Error("ROOT::Math::FunctorCintHandler","No function found in class %s with the signature %s(double ) ",className,derivMethodName);
          }
       } else {
-         Error("ROOT::Math::FunctorCintHandler","can not find any class with name %s at the address 0x%lx",className,fPtr);
+         Error("ROOT::Math::FunctorCintHandler","can not find any class with name %s at the address 0x%lx",className,(Long_t)fPtr);
       }
    }
 }
@@ -182,24 +176,24 @@ FunctorCintHandler<PF>::FunctorCintHandler(void * p, const char * className , co
 template<class PF>
 FunctorCintHandler<PF>::FunctorCintHandler(void * p1, void * p2 ) :    fDim(1) {
    //constructor for grad 1D functions
-   fPtr = 0; 
+   fPtr = 0;
 
    //std::cout << "creating Grad Cint functor" << std::endl;
    fMethodCall = new TMethodCall();
    fMethodCall2 = new TMethodCall();
-   
+
    const char *funcname = gCint->Getp2f2funcname((void *) p1);
-   
-   if (funcname) 
+
+   if (funcname)
       fMethodCall->InitWithPrototype(funcname,"double");
-   
+
    const char *funcname2 = gCint->Getp2f2funcname((void *) p2);
-   
-   if (funcname2) 
+
+   if (funcname2)
       fMethodCall2->InitWithPrototype(funcname2,"double");
 
    if (! fMethodCall->IsValid() ) {
-      Error("ROOT::Math::FunctorCintHandler","No function %s found with the signature double () ( double ) at the address 0x%lx",funcname,fPtr);
+      Error("ROOT::Math::FunctorCintHandler","No function %s found with the signature double () ( double ) at the address 0x%lx",funcname,(Long_t)fPtr);
    }
    if (! fMethodCall2->IsValid() ) {
       Error("ROOT::Math::FunctorCintHandler","No free function %s found with the signature double () ( double )",funcname2);
@@ -209,16 +203,16 @@ FunctorCintHandler<PF>::FunctorCintHandler(void * p1, void * p2 ) :    fDim(1) {
 template<class PF>
 FunctorCintHandler<PF>::FunctorCintHandler(void * p, unsigned int ndim, const char * className , const char * methodName, const char * derivMethodName ) :    fDim(ndim) {
    // for multi-dim functions
-   fPtr = p; 
+   fPtr = p;
    fMethodCall2 = 0;
 
    //std::cout << "creating Cint functor" << std::endl;
    fMethodCall = new TMethodCall();
-   
-   if (className == 0) { 
+
+   if (className == 0) {
       const char *funcname = gCint->Getp2f2funcname((void *) fPtr);
 
-      if (funcname) 
+      if (funcname)
          fMethodCall->InitWithPrototype(funcname,"const double*");
    }
    else {
@@ -236,7 +230,7 @@ FunctorCintHandler<PF>::FunctorCintHandler(void * p, unsigned int ndim, const ch
             fMethodCall2 = new TMethodCall();
             fMethodCall2->InitWithPrototype(cl,derivMethodName,"const double*,unsigned int");
          }
-         
+
          if (! fMethodCall->IsValid() ) {
             if (methodName)
                Error("ROOT::Math::FunctorCintHandler","No function found in class %s with the signature %s(const double *) ",className,methodName);
@@ -248,7 +242,7 @@ FunctorCintHandler<PF>::FunctorCintHandler(void * p, unsigned int ndim, const ch
                Error("ROOT::Math::FunctorCintHandler","No function found in class %s with the signature %s(const double *, unsigned int ) ",className,derivMethodName);
          }
       } else {
-         Error("ROOT::Math::FunctorCintHandler","can not find any class with name %s at the address 0x%lx",className,fPtr);
+         Error("ROOT::Math::FunctorCintHandler","can not find any class with name %s at the address 0x%lx",className,(Long_t)fPtr);
       }
    }
 }
@@ -259,20 +253,20 @@ template<class PF>
 FunctorCintHandler<PF>::FunctorCintHandler(void * p1, void * p2, unsigned int dim ) :    fDim(dim) {
    //constructor for grad 1D functions
 
-   fPtr = 0; 
+   fPtr = 0;
 
    //std::cout << "creating Grad Cint functor" << std::endl;
    fMethodCall = new TMethodCall();
    fMethodCall2 = new TMethodCall();
-   
+
    const char *funcname = gCint->Getp2f2funcname((void *) p1);
-   
-   if (funcname) 
+
+   if (funcname)
       fMethodCall->InitWithPrototype(funcname,"const double *");
-   
+
    const char *funcname2 = gCint->Getp2f2funcname((void *) p2);
-   
-   if (funcname2) 
+
+   if (funcname2)
       fMethodCall2->InitWithPrototype(funcname2,"const double *,UInt_t");
 
    if (! fMethodCall->IsValid() ) {
@@ -284,74 +278,71 @@ FunctorCintHandler<PF>::FunctorCintHandler(void * p1, void * p2, unsigned int di
 }
 
 template<class PF>
-inline double FunctorCintHandler<PF>::DoEval (double x) const { 
-   //fArgs[0] = (Long_t)&x; 
+inline double FunctorCintHandler<PF>::DoEval (double x) const {
+   //fArgs[0] = (Long_t)&x;
    fMethodCall->ResetParam();
    fMethodCall->SetParam(x);
-   double result = 0; 
+   double result = 0;
    // distinguish the case of free functions
-   if (fPtr) 
+   if (fPtr)
       fMethodCall->Execute(fPtr,result);
-   else 
+   else
       fMethodCall->Execute(result);
    //std::cout << "execute doeval for x = " << x << " on " << fPtr << "  result " << result << std::endl;
-   return result;    
+   return result;
 }
 template<class PF>
-inline double FunctorCintHandler<PF>::DoDerivative (double x) const { 
+inline double FunctorCintHandler<PF>::DoDerivative (double x) const {
    if (!fMethodCall2) return 0;
 
    fMethodCall2->ResetParam();
    fMethodCall2->SetParam(x);
    double result = 0;
-   
+
    // distinguish the case of free functions
-   if (fPtr) { 
+   if (fPtr) {
       fMethodCall2->Execute(fPtr,result);
       //std::cout << "execute doDerivative for x = " << x << " on " << fPtr2 << "  result " << result << std::endl;
    }
    else {
       fMethodCall2->Execute(result);
    }
-   return result;    
+   return result;
 }
 
 template<class PF>
-inline double FunctorCintHandler<PF>::DoEval (const double *x) const { 
+inline double FunctorCintHandler<PF>::DoEval (const double *x) const {
    // for multi-dim functions
-   //fArgs[0] = (Long_t)&x; 
    fMethodCall->ResetParam();
-   fArgs[0] = (Long_t)x;
-   fMethodCall->SetParamPtrs(fArgs);
-   double result = 0; 
+   Long_t args[1]; // for the address of x
+   args[0] = (Long_t)x;
+   fMethodCall->SetParamPtrs(args);
+   double result = 0;
    // distinguish the case of free functions (fPtr ==0)
-   if (fPtr) 
+   if (fPtr)
       fMethodCall->Execute(fPtr,result);
-   else 
-      fMethodCall->Execute(result); 
+   else
+      fMethodCall->Execute(result);
    //std::cout << "execute doeval for x = " << x << " on " << fPtr << "  result " << result << std::endl;
-   return result;    
+   return result;
 }
 
 template<class PF>
-inline double FunctorCintHandler<PF>::DoDerivative (const double *x, unsigned int ipar) const { 
+inline double FunctorCintHandler<PF>::DoDerivative (const double *x, unsigned int ipar) const {
    // derivative for multi-dim functions
    //fMethodCall2->ResetParam();
-//    fArgs[0] = (Long_t)x;
-//    fArgs[1] = (Long_t)&ipar;
-   char * params = Form(" 0x%lx ,  %d",x,ipar);
-   //fMethodCall2->SetParamPtrs(fArgs);
+   char * params = Form(" 0x%lx ,  %d", (ULong_t)x, ipar);
 
-   double result = 0; 
+   double result = 0;
    // distinguish the case of free functions
-   if (fPtr) { 
+   if (fPtr) {
       fMethodCall2->Execute(fPtr,params,result);
    }
    else {
       //std::cout << "execute doDerivative for x = " << *x <<  "  result " << result << std::endl;
       fMethodCall2->Execute(params,result);
    }
-   return result;    
+   return result;
 }
 
 } //end namespace Math

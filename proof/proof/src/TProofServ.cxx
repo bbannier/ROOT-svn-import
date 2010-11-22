@@ -40,6 +40,10 @@
 #endif
 #include <cstdlib>
 
+// To handle exceptions
+#include <exception>
+#include <new>
+
 #if (defined(__FreeBSD__) && (__FreeBSD__ < 4)) || \
     (defined(__APPLE__) && (!defined(MAC_OS_X_VERSION_10_3) || \
      (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3)))
@@ -120,6 +124,15 @@ FILE *TProofServ::fgErrorHandlerFile = 0;
 
 // To control allowed actions while processing
 Int_t TProofServ::fgRecursive = 0;
+
+// Last message before exceptions
+TString TProofServ::fgLastMsg("<undef>");
+
+// Memory controllers
+Long_t TProofServ::fgVirtMemMax = -1;
+Long_t TProofServ::fgResMemMax = -1;
+Float_t TProofServ::fgMemHWM = 0.80;
+Float_t TProofServ::fgMemStop = 0.95;
 
 //----- Termination signal handler ---------------------------------------------
 //______________________________________________________________________________
@@ -474,7 +487,7 @@ Bool_t TIdleTOTimer::Notify()
 {
    // Handle expiration of the idle timer. The session will just be terminated.
 
-   Info ("Notify", "session idle for more then %d secs: terminating", Long_t(fTime)/1000);
+   Info ("Notify", "session idle for more then %lld secs: terminating", Long64_t(fTime)/1000);
 
    if (fProofServ) {
       // Set the status to timed-out
@@ -484,12 +497,12 @@ Bool_t TIdleTOTimer::Notify()
       // Send a terminate request
       TString msg;
       if (fProofServ->GetProtocol() < 29) {
-         msg.Form("\n//\n// PROOF session at %s (%s) terminated because idle for more than %d secs\n"
+         msg.Form("\n//\n// PROOF session at %s (%s) terminated because idle for more than %lld secs\n"
                   "// Please IGNORE any error message possibly displayed below\n//",
-                  gSystem->HostName(), fProofServ->GetSessionTag(), Long_t(fTime)/1000);
+                  gSystem->HostName(), fProofServ->GetSessionTag(), Long64_t(fTime)/1000);
       } else {
-         msg.Form("\n//\n// PROOF session at %s (%s) terminated because idle for more than %d secs\n//",
-                  gSystem->HostName(), fProofServ->GetSessionTag(), Long_t(fTime)/1000);
+         msg.Form("\n//\n// PROOF session at %s (%s) terminated because idle for more than %lld secs\n//",
+                  gSystem->HostName(), fProofServ->GetSessionTag(), Long64_t(fTime)/1000);
       }
       fProofServ->SendAsynMessage(msg.Data());
       fProofServ->Terminate(0);
@@ -526,19 +539,41 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    if (!gSystem->AccessPathName(rcfile, kReadPermission))
       gEnv->ReadFile(rcfile, kEnvChange);
 
-   // Set Memory limits, if any (in kB)
-   fVirtMemHWM = -1;
-   fVirtMemMax = -1;
-   if (gSystem->Getenv("ROOTPROOFASSOFT")) {
-      Long_t hwm = strtol(gSystem->Getenv("ROOTPROOFASSOFT"), 0, 10);
-      if (hwm < kMaxLong && hwm > 0)
-         fVirtMemHWM = hwm * 1024;
+   // Upper limit on Virtual Memory (in kB)
+   fgVirtMemMax = gEnv->GetValue("Proof.VirtMemMax",-1);
+   if (fgVirtMemMax < 0 && gSystem->Getenv("PROOF_VIRTMEMMAX")) {
+      Long_t mmx = strtol(gSystem->Getenv("PROOF_VIRTMEMMAX"), 0, 10);
+      if (mmx < kMaxLong && mmx > 0)
+         fgVirtMemMax = mmx * 1024;
    }
-   if (gSystem->Getenv("ROOTPROOFASHARD")) {
+   // Old variable for backward compatibility
+   if (fgVirtMemMax < 0 && gSystem->Getenv("ROOTPROOFASHARD")) {
       Long_t mmx = strtol(gSystem->Getenv("ROOTPROOFASHARD"), 0, 10);
       if (mmx < kMaxLong && mmx > 0)
-         fVirtMemMax = mmx * 1024;
+         fgVirtMemMax = mmx * 1024;
    }
+   // Upper limit on Resident Memory (in kB)
+   fgResMemMax = gEnv->GetValue("Proof.ResMemMax",-1);
+   if (fgResMemMax < 0 && gSystem->Getenv("PROOF_RESMEMMAX")) {
+      Long_t mmx = strtol(gSystem->Getenv("PROOF_RESMEMMAX"), 0, 10);
+      if (mmx < kMaxLong && mmx > 0)
+         fgResMemMax = mmx * 1024;
+   }
+   // Thresholds for warnings and stop processing
+   fgMemStop = gEnv->GetValue("Proof.MemStop", 0.95);
+   fgMemHWM = gEnv->GetValue("Proof.MemHWM", 0.80);
+   if (fgVirtMemMax > 0 || fgResMemMax > 0) {
+      if ((fgMemStop < 0.) || (fgMemStop > 1.)) {
+         Warning("TProofServ", "requested memory fraction threshold to stop processing"
+                               " (MemStop) out of range [0,1] - ignoring");
+         fgMemStop = 0.95;
+      }
+      if ((fgMemHWM < 0.) || (fgMemHWM > fgMemStop)) {
+         Warning("TProofServ", "requested memory fraction threshold for warning and finer monitoring"
+                               " (MemHWM) out of range [0,MemStop] - ignoring");
+         fgMemHWM = 0.80;
+      }
+   }   
 
    // Wait (loop) to allow debugger to connect
    Bool_t test = (*argc >= 4 && !strcmp(argv[3], "test")) ? kTRUE : kFALSE;
@@ -630,6 +665,9 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fMergingMonitor  = 0;
    fMergedWorkers   = 0;
 
+   // Bit to flg high-memory footprint
+   ResetBit(TProofServ::kHighMemory);
+   
    // Max message size
    fMsgSizeHWM = gEnv->GetValue("ProofServ.MsgSizeHWM", 1000000);
 
@@ -882,6 +920,20 @@ Int_t TProofServ::CreateServer()
       SendAsynMessage(msg.Data());
    }
 
+   // Setup the idle timer
+   if (IsMaster() && !fIdleTOTimer) {
+      // Check activity on socket every 5 mins
+      Int_t idle_to = gEnv->GetValue("ProofServ.IdleTimeout", -1);
+      if (idle_to > 0) {
+         fIdleTOTimer = new TIdleTOTimer(this, idle_to * 1000);
+         fIdleTOTimer->Start(-1, kTRUE);
+         if (gProofDebugLevel > 0)
+            Info("CreateServer", " idle timer started (%d secs)", idle_to);
+      } else if (gProofDebugLevel > 0) {
+         Info("CreateServer", " idle timer not started (no idle timeout requested)");
+      }
+   }
+
    // Done
    return 0;
 }
@@ -1021,7 +1073,7 @@ void TProofServ::RestartComputeTime()
    if (fPlayer) {
       TProofProgressStatus *status = fPlayer->GetProgressStatus();
       if (status) status->SetLearnTime(fCompute.RealTime());
-      Info("RestartComputeTime", "compute time restarted after %f secs (%lld entries)",
+      Info("RestartComputeTime", "compute time restarted after %f secs (%d entries)",
                                  fCompute.RealTime(), fPlayer->GetLearnEntries());
    }
    fCompute.Start(kFALSE);
@@ -1203,64 +1255,105 @@ void TProofServ::HandleSocketInput()
    Bool_t all = (fgRecursive > 0) ? kFALSE : kTRUE;
    fgRecursive++;
 
-   // Get message
    TMessage *mess;
-   if (fSocket->Recv(mess) <= 0 || !mess) {
-      // Pending: do something more intelligent here
-      // but at least get a message in the log file
-      Error("HandleSocketInput", "retrieving message from input socket");
-      Terminate(0);
-      return;
-   }
-   Int_t what = mess->What();
-   PDB(kCollect, 1)
-      Info("HandleSocketInput", "got type %d from '%s'", what, fSocket->GetTitle());
-
-   // We use to check in the end if something wrong went on during processing
-   Bool_t parallel = IsParallel();
-   fNcmd++;
-
-   if (fProof) fProof->SetActive();
-
-   Bool_t doit = kTRUE;
-
    Int_t rc = 0;
-   while (doit) {
+   TString exmsg;
 
-      // Process the message
-      rc = HandleSocketInput(mess, all);
-      if (rc < 0) {
-         TString emsg;
-         if (rc == -1) {
-            emsg.Form("HandleSocketInput: command %d cannot be executed while processing", what);
-         } else if (rc == -3) {
-            emsg.Form("HandleSocketInput: message undefined ! Protocol error?", what);
-         } else {
-            emsg.Form("HandleSocketInput: unknown command %d ! Protocol error?", what);
+   try {
+   
+      // Get message
+      if (fSocket->Recv(mess) <= 0 || !mess) {
+         // Pending: do something more intelligent here
+         // but at least get a message in the log file
+         Error("HandleSocketInput", "retrieving message from input socket");
+         Terminate(0);
+         return;
+      }
+      Int_t what = mess->What();
+      PDB(kCollect, 1)
+         Info("HandleSocketInput", "got type %d from '%s'", what, fSocket->GetTitle());
+
+      fNcmd++;
+
+      if (fProof) fProof->SetActive();
+
+      Bool_t doit = kTRUE;
+
+      while (doit) {
+
+         // Process the message
+         rc = HandleSocketInput(mess, all);
+         if (rc < 0) {
+            TString emsg;
+            if (rc == -1) {
+               emsg.Form("HandleSocketInput: command %d cannot be executed while processing", what);
+            } else if (rc == -3) {
+               emsg.Form("HandleSocketInput: message %d undefined! Protocol error?", what);
+            } else {
+               emsg.Form("HandleSocketInput: unknown command %d! Protocol error?", what);
+            }
+            SendAsynMessage(emsg.Data());
+         } else if (rc == 2) {
+            // Add to the queue
+            fQueuedMsg->Add(mess);
+            PDB(kGlobal, 1)
+               Info("HandleSocketInput", "message of type %d enqueued; sz: %d",
+                                          what, fQueuedMsg->GetSize());
+            mess = 0;
          }
-         SendAsynMessage(emsg.Data());
-      } else if (rc == 2) {
-         // Add to the queue
-         fQueuedMsg->Add(mess);
-         PDB(kGlobal, 1)
-            Info("HandleSocketInput", "message of type %d enqueued; sz: %d",
-                                       what, fQueuedMsg->GetSize());
-         mess = 0;
-      }
 
-      // Still something to do?
-      doit = 0;
-      if (fgRecursive == 1 && fQueuedMsg->GetSize() > 0) {
-         // Add to the queue
-         PDB(kCollect, 1)
-            Info("HandleSocketInput", "processing enqueued message of type %d; left: %d",
-                                       what, fQueuedMsg->GetSize());
-         all = 1;
-         SafeDelete(mess);
-         mess = (TMessage *) fQueuedMsg->First();
-         if (mess) fQueuedMsg->Remove(mess);
-         doit = 1;
+         // Still something to do?
+         doit = 0;
+         if (fgRecursive == 1 && fQueuedMsg->GetSize() > 0) {
+            // Add to the queue
+            PDB(kCollect, 1)
+               Info("HandleSocketInput", "processing enqueued message of type %d; left: %d",
+                                          what, fQueuedMsg->GetSize());
+            all = 1;
+            SafeDelete(mess);
+            mess = (TMessage *) fQueuedMsg->First();
+            if (mess) fQueuedMsg->Remove(mess);
+            doit = 1;
+         }
       }
+   
+   } catch (std::bad_alloc &) {
+      // Memory allocation problem:
+      exmsg.Form("caught exception 'bad_alloc' (memory leak?) %s", fgLastMsg.Data());
+   } catch (std::exception &exc) {
+      // Standard exception caught
+      exmsg.Form("caught standard exception '%s' %s", exc.what(), fgLastMsg.Data());
+   } catch (int i) {
+      // Other exception caught
+      exmsg.Form("caught exception throwing %d %s", i, fgLastMsg.Data());
+   } catch (const char *str) {
+      // Other exception caught
+      exmsg.Form("caught exception throwing '%s' %s", str, fgLastMsg.Data());
+   } catch (...) {
+      // Caught other exception
+      exmsg.Form("caught exception <unknown> %s", fgLastMsg.Data());
+   }
+
+   // Terminate on exception
+   if (!exmsg.IsNull()) {
+      // Save info in the log file too
+      Error("HandleSocketInput", "%s", exmsg.Data());
+      // Try to warn the user
+      SendAsynMessage(TString::Format("%s: %s", GetOrdinal(), exmsg.Data()));
+      // Terminate
+      Terminate(0);
+   }
+   
+   // Terminate also if a high memory footprint was detected before the related
+   // exception was thrwon
+   if (TestBit(TProofServ::kHighMemory)) {
+      // Save info in the log file too
+      exmsg.Form("high-memory footprint detected during Process(...) - terminating");
+      Error("HandleSocketInput", "%s", exmsg.Data());
+      // Try to warn the user
+      SendAsynMessage(TString::Format("%s: %s", GetOrdinal(), exmsg.Data()));
+      // Terminate
+      Terminate(0);
    }
 
    fgRecursive--;
@@ -1268,7 +1361,9 @@ void TProofServ::HandleSocketInput()
    if (fProof) {
       // If something wrong went on during processing and we do not have
       // any worker anymore, we shutdown this session
-      if (rc == 0 && parallel != IsParallel()) {
+      Bool_t masterOnly = gEnv->GetValue("Proof.MasterOnly", kFALSE);
+      Int_t ngwrks = fProof->GetListOfActiveSlaves()->GetSize() + fProof->GetListOfInactiveSlaves()->GetSize();
+      if (rc == 0 && ngwrks == 0 && !masterOnly) {
          SendAsynMessage(" *** No workers left: cannot continue! Terminating ... *** ");
          Terminate(0);
       }
@@ -1352,6 +1447,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
       case kPROOF_GROUPVIEW:
          if (all) {
             mess->ReadString(str, sizeof(str));
+            // coverity[secure_coding]
             sscanf(str, "%d %d", &fGroupId, &fGroupSize);
          } else {
             rc = -1;
@@ -1437,7 +1533,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                (*mess) >> timeout;
             PDB(kGlobal, 1)
                Info("HandleSocketInput:kPROOF_STOPPROCESS",
-                    "recursive mode: enter %d, %d", aborted, timeout);
+                    "recursive mode: enter %d, %ld", aborted, timeout);
             if (fProof)
                // On the master: propagate further
                fProof->StopProcess(aborted, timeout);
@@ -1567,10 +1663,11 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             Long_t size;
             Int_t  bin, fw = 1;
             char   name[1024];
-            if (fProtocol > 5)
-               sscanf(str, "%s %d %ld %d", name, &bin, &size, &fw);
-            else
-               sscanf(str, "%s %d %ld", name, &bin, &size);
+            if (fProtocol > 5) {
+               sscanf(str, "%1023s %d %ld %d", name, &bin, &size, &fw);
+            } else {
+               sscanf(str, "%1023s %d %ld", name, &bin, &size);
+            }
             TString fnam(name);
             Bool_t copytocache = kTRUE;
             if (fnam.BeginsWith("cache:")) {
@@ -1672,7 +1769,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             } else {
                TMessage answ(kPROOF_GETSLAVEINFO);
                TList *info = new TList;
-               TSlaveInfo *wi = new TSlaveInfo(GetOrdinal(), TUrl(gSystem->HostName()).GetHostFQDN(), 0);
+               TSlaveInfo *wi = new TSlaveInfo(GetOrdinal(), TUrl(gSystem->HostName()).GetHostFQDN(), 0, "", GetDataDir());
                SysInfo_t si;
                gSystem->GetSysInfo(&si);
                wi->SetSysInfo(si);
@@ -2638,8 +2735,8 @@ Int_t TProofServ::Setup()
       host.Remove(host.Index("."));
 
    // Session tag
-   fSessionTag.Form("%s-%s-%d-%d", fOrdinal.Data(), host.Data(),
-                    TTimeStamp().GetSec(),gSystem->GetPid());
+   fSessionTag.Form("%s-%s-%ld-%d", fOrdinal.Data(), host.Data(),
+                    (Long_t)TTimeStamp().GetSec(),gSystem->GetPid());
    fTopSessionTag = fSessionTag;
 
    // create session directory and make it the working directory
@@ -2940,9 +3037,10 @@ Int_t TProofServ::SetupCommon()
                      fHWMBoxSize = (fact > 0) ? tok.Atoi() * fact : tok.Atoi();
                   else
                      fMaxBoxSize = (fact > 0) ? tok.Atoi() * fact : tok.Atoi();
-               } else
-                  Info("SetupCommon", "parsing '%.*s' : ignoring token %s",
-                                      strlen(ksz[j])-1, ksz[j], tok.Data());
+               } else {
+                  TString ssz(ksz[j], strlen(ksz[j])-1);
+                  Info("SetupCommon", "parsing '%s' : ignoring token %s", ssz.Data(), tok.Data());
+               }
             }
          }
       }
@@ -2993,20 +3091,6 @@ Int_t TProofServ::SetupCommon()
       gSystem->Syslog(kLogNotice, s.Data());
    }
 
-   // Setup the idle timer
-   if (IsMaster() && !fIdleTOTimer) {
-      // Check activity on socket every 5 mins
-      Int_t idle_to = gEnv->GetValue("ProofServ.IdleTimeout", -1);
-      if (idle_to > 0) {
-         fIdleTOTimer = new TIdleTOTimer(this, idle_to * 1000);
-         fIdleTOTimer->Start(-1, kTRUE);
-         if (gProofDebugLevel > 0)
-            Info("SetupCommon", " idle timer started (%d secs)", idle_to);
-      } else if (gProofDebugLevel > 0) {
-         Info("SetupCommon", " idle timer not started (no idle timeout requested)");
-      }
-   }
-
    if (gProofDebugLevel > 0)
       Info("SetupCommon", "successfully completed");
 
@@ -3028,12 +3112,8 @@ void TProofServ::Terminate(Int_t status)
    // Notify the memory footprint
    ProcInfo_t pi;
    if (!gSystem->GetProcInfo(&pi)){
-      Info("Terminate", "process memory footprint: %ld kB virtual, %ld kB resident ",
-                        pi.fMemVirtual, pi.fMemResident);
-      if (fVirtMemHWM > 0 || fVirtMemMax > 0) {
-         Info("Terminate", "process virtual memory limits: %ld kB HWM, %ld kB max ",
-                           fVirtMemHWM, fVirtMemMax);
-      }
+      Info("Terminate", "process memory footprint: %ld/%ld kB virtual, %ld/%ld kB resident ",
+                        pi.fMemVirtual, fgVirtMemMax, pi.fMemResident, fgResMemMax);
    }
 
    // Cleanup session directory
@@ -3115,7 +3195,7 @@ Bool_t TProofServ::UnlinkDataDir(const char *path)
 
     // Do remove, if required
    if (dorm && gSystem->Unlink(path) != 0)
-      Warning("UnlinkDataDir", "data directory '%s' is empty but could not be removed");
+      Warning("UnlinkDataDir", "data directory '%s' is empty but could not be removed", path);
    // done
    return dorm;
 }
@@ -3235,12 +3315,20 @@ void TProofServ::SetQueryRunning(TProofQueryResult *pq)
          parlist += TString::Format(";%s",os->GetName());
    }
 
-   // Set in running state
-   pq->SetRunning(startlog, parlist);
+   if (fProof) {
+      // Set in running state
+      pq->SetRunning(startlog, parlist, fProof->GetParallel());
 
-   // Bytes and CPU at start (we will calculate the differential at end)
-   pq->SetProcessInfo(pq->GetEntries(),
-                      fProof->GetCpuTime(), fProof->GetBytesRead());
+      // Bytes and CPU at start (we will calculate the differential at end)
+      pq->SetProcessInfo(pq->GetEntries(),
+                        fProof->GetCpuTime(), fProof->GetBytesRead());
+   } else {
+      // Set in running state
+      pq->SetRunning(startlog, parlist, -1);
+
+      // Bytes and CPU at start (we will calculate the differential at end)
+      pq->SetProcessInfo(pq->GetEntries(), float(0.), 0);
+   }
 }
 
 //______________________________________________________________________________
@@ -3413,10 +3501,9 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
       if (elist) input->Add(elist);
       pq->SetInputList(input, kTRUE);
 
-      // Re-attach to the new list
+      // Clear the list
       input->Clear("nodelete");
       SafeDelete(input);
-      input = pq->GetInputList();
 
       // Save input data, if any
       TString emsg;
@@ -3550,7 +3637,7 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
       MakePlayer();
 
       // Setup data set
-      if (dset->IsA() == TDSetProxy::Class())
+      if (dset && (dset->IsA() == TDSetProxy::Class()))
          ((TDSetProxy*)dset)->SetProofServ(this);
 
       // Get input data, if any
@@ -3615,9 +3702,11 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
 
       // Check if we are in merging mode (i.e. parameter PROOF_UseMergers exists)
       Bool_t isInMergingMode = kFALSE;
-      Int_t nm = 0;
-      if (TProof::GetParameter(input, "PROOF_UseMergers", nm) == 0) {
-         isInMergingMode = kTRUE;
+      if (!(TestBit(TProofServ::kHighMemory))) {
+         Int_t nm = 0;
+         if (TProof::GetParameter(input, "PROOF_UseMergers", nm) == 0) {
+            isInMergingMode = (nm >= 0) ? kTRUE : kFALSE;
+         }
       }
       PDB(kGlobal, 2) Info("HandleProcess", "merging mode check: %d", isInMergingMode);
 
@@ -3731,7 +3820,7 @@ Int_t TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
          if (mbuf.Length() > fMsgSizeHWM) {
             PDB(kOutput, 1)
                Info("SendResults",
-                    "message has %lld bytes: limit of %lld bytes reached - sending ...",
+                    "message has %d bytes: limit of %lld bytes reached - sending ...",
                     mbuf.Length(), fMsgSizeHWM);
             // Compress the message, if required; for these messages we do it already
             // here so we get the size; TXSocket does not do it twice.
@@ -3968,6 +4057,16 @@ void TProofServ::ProcessNext(TString *slb)
    //  ... and the sequential number
    fQuerySeqNum = pq->GetSeqNum();
    input->Add(new TParameter<Int_t>("PROOF_QuerySeqNum", fQuerySeqNum));
+
+   // Check whether we have to enforce the use of submergers, but only if the user did
+   // not express itself on the subject
+   if (gEnv->Lookup("Proof.UseMergers") && !input->FindObject("PROOF_UseMergers")) {
+      Int_t smg = gEnv->GetValue("Proof.UseMergers",-1);
+      if (smg >= 0) {
+         input->Add(new TParameter<Int_t>("PROOF_UseMergers", smg));
+         PDB(kSubmerger, 2) Info("ProcessNext", "PROOF_UseMergers set to %d", smg);
+      }
+   }
 
    // Set input
    TIter next(input);
@@ -4315,9 +4414,9 @@ void TProofServ::HandleRetrieve(TMessage *mess, TString *slb)
                   qsz /= 1000.;
                   ilb++;
                }
-               SendAsynMessage(TString::Format("%s: sending result of %s:%s (%'.1f %s)",
-                                    fPrefix.Data(), pqr->GetTitle(), pqr->GetName(),
-                                    qsz, clb[ilb]));
+               SendAsynMessage(TString::Format("%s: sending result of %s:%s (%.1f %s)",
+                                               fPrefix.Data(), pqr->GetTitle(), pqr->GetName(),
+                                               qsz, clb[ilb]));
                fSocket->SendObject(pqr, kPROOF_RETRIEVE);
             } else {
                Info("HandleRetrieve",
@@ -4853,12 +4952,16 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                         } else {
                            // Store md5 in package/PROOF-INF/md5.txt
                            TMD5 *md5local = TMD5::FileChecksum(par);
-                           TString md5f = packagedir + "/" + package + "/PROOF-INF/md5.txt";
-                           TMD5::WriteChecksum(md5f, md5local);
-                           // Go down to the package directory
-                           gSystem->ChangeDirectory(pdir);
-                           // Cleanup
-                           SafeDelete(md5local);
+                           if (md5local) {
+                              TString md5f = packagedir + "/" + package + "/PROOF-INF/md5.txt";
+                              TMD5::WriteChecksum(md5f, md5local);
+                              // Go down to the package directory
+                              gSystem->ChangeDirectory(pdir);
+                              // Cleanup
+                              SafeDelete(md5local);
+                           } else {
+                              Error("HandleCache", "kBuildPackage: failure calculating MD5sum for '%s'", par.Data());
+                           }
                         }
                         delete [] gunzip;
                      } else
@@ -4911,7 +5014,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
          } else {
             // collect built results from slaves
             if (IsMaster())
-               fProof->BuildPackage(package, TProof::kCollectBuildResults);
+               status = fProof->BuildPackage(package, TProof::kCollectBuildResults);
             PDB(kPackage, 1)
                Info("HandleCache", "package %s successfully built", package.Data());
          }
@@ -4956,10 +5059,30 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
          ocwd = gSystem->WorkingDirectory();
          gSystem->ChangeDirectory(pdir);
 
+         // We have to be atomic here
+         fPackageLock->Lock();
+
          // Check for SETUP.C and execute
          if (!gSystem->AccessPathName("PROOF-INF/SETUP.C")) {
+            // We need to change the name of the function to avoid problems when we load more packages
+            TString setup, setupfn;
+            setup.Form("SETUP_%x", package.Hash());
+            // Remove special characters
+            setupfn.Form("%s/%s.C", gSystem->TempDirectory(), setup.Data());
+            TMacro setupmc("PROOF-INF/SETUP.C");
+            TObjString *setupline = setupmc.GetLineWith("SETUP(");
+            if (setupline) {
+               TString setupstring(setupline->GetString());
+               setupstring.ReplaceAll("SETUP(", TString::Format("%s(", setup.Data()));
+               setupline->SetString(setupstring);
+            } else {
+               // Macro does not contain SETUP()
+               SendAsynMessage(TString::Format("%s: warning: macro '%s/PROOF-INF/SETUP.C' does not contain a SETUP()"
+                                               " function", noth.Data(), package.Data()));
+            }
+            setupmc.SaveSource(setupfn.Data());
             // Load the macro
-            if (gROOT->LoadMacro("PROOF-INF/SETUP.C") != 0) {
+            if (gROOT->LoadMacro(setupfn.Data()) != 0) {
                // Macro could not be loaded
                SendAsynMessage(TString::Format("%s: error: macro '%s/PROOF-INF/SETUP.C' could not be loaded:"
                                                 " cannot continue",
@@ -4967,7 +5090,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                status = -1;
             } else {
                // Check the signature
-               TFunction *fun = (TFunction *) gROOT->GetListOfGlobalFunctions()->FindObject("SETUP");
+               TFunction *fun = (TFunction *) gROOT->GetListOfGlobalFunctions()->FindObject(setup);
                if (!fun) {
                   // Notify the upper level
                   SendAsynMessage(TString::Format("%s: error: function SETUP() not found in macro '%s/PROOF-INF/SETUP.C':"
@@ -4979,7 +5102,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                   // Check the number of arguments
                   if (fun->GetNargs() == 0) {
                      // No arguments (basic signature)
-                     callEnv.InitWithPrototype("SETUP","");
+                     callEnv.InitWithPrototype(setup.Data(),"");
                      if ((mess->BufferSize() > mess->Length())) {
                         (*mess) >> optls;
                         SendAsynMessage(TString::Format("%s: warning: loaded SETUP() does not take any argument:"
@@ -4993,11 +5116,11 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                         // Check argument type
                         TString argsig(arg->GetTitle());
                         if (argsig.BeginsWith("TList")) {
-                           callEnv.InitWithPrototype("SETUP","TList *");
+                           callEnv.InitWithPrototype(setup.Data(),"TList *");
                            callEnv.ResetParam();
                            callEnv.SetParam((Long_t) optls);
                         } else if (argsig.BeginsWith("const char")) {
-                           callEnv.InitWithPrototype("SETUP","const char *");
+                           callEnv.InitWithPrototype(setup.Data(),"const char *");
                            callEnv.ResetParam();
                            TObjString *os = optls ? dynamic_cast<TObjString *>(optls->First()) : 0;
                            if (os) {
@@ -5036,7 +5159,11 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                   }
                }
             }
+            if (!gSystem->AccessPathName(setupfn.Data())) gSystem->Unlink(setupfn.Data());
          }
+
+         // End of atomicity
+         fPackageLock->Unlock();
 
          gSystem->ChangeDirectory(ocwd);
 
@@ -5059,8 +5186,15 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
 
             // if successful add to list and propagate to slaves
             fEnabledPackages->Add(new TObjString(package));
-            if (IsMaster())
-               fProof->LoadPackage(package);
+            if (IsMaster()) {
+               if (optls && optls->GetSize() > 0) {
+                  // List argument
+                  status = fProof->LoadPackage(package, kFALSE, optls);
+               } else {
+                  // No argument
+                  status = fProof->LoadPackage(package);
+               }
+            }
 
             PDB(kPackage, 1)
                Info("HandleCache", "package %s successfully loaded", package.Data());
@@ -5903,7 +6037,14 @@ void TProofServ::HandleException(Int_t sig)
 {
    // Exception handler: we do not try to recover here, just exit.
 
-   Error("HandleException","exception triggered by signal: %d", sig);
+   Error("HandleException", "caugth exception triggered by signal '%d' %s",
+                            sig, fgLastMsg.Data());
+   // Description
+   TString emsg;
+   emsg.Form("%s: caught exception triggered by signal '%d' %s",
+             GetOrdinal(), sig, fgLastMsg.Data());
+   // Try to warn the user
+   SendAsynMessage(emsg.Data());
 
    gSystem->Exit(sig);
 }
@@ -6167,13 +6308,13 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                Int_t merger_id = -1;
                (*mess) >> merger_id >> name >> port;
                PDB(kSubmerger, 1)
-                  Info("HandleSubmerger","worker %s redirected to merger #%d %s:%d", fOrdinal.Data(), merger_id, name.Data(), port); 
+                  Info("HandleSubmerger","worker %s redirected to merger #%d %s:%d", fOrdinal.Data(), merger_id, name.Data(), port);
 
                TSocket *t = 0;
                if (name.Length() > 0 && port > 0 && (t = new TSocket(name, port)) && t->IsValid()) {
 
                   PDB(kSubmerger, 2) Info("HandleSubmerger",
-                                          "%f kSendOutput: worker asked for sending output to merger #%d %s:%d",
+                                          "kSendOutput: worker asked for sending output to merger #%d %s:%d",
                                           merger_id, name.Data(), port);
 
                   if (SendResults(t, fPlayer->GetOutputList()) != 0) {
@@ -6193,8 +6334,7 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                      answ << merger_id;
                      fSocket->Send(answ);
 
-                     PDB(kSubmerger, 2) Info("HandleSubmerger",
-                                             "kSendOutput: worker sent its output", name.Data(), port);
+                     PDB(kSubmerger, 2) Info("HandleSubmerger", "kSendOutput: worker sent its output");
                      fSocket->Send(kPROOF_SETIDLE);
                      SetIdle(kTRUE);
                      SendLogFile();
@@ -6204,7 +6344,8 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   if (name == "master") {
                      PDB(kSubmerger, 2) Info("HandleSubmerger",
                                              "kSendOutput: worker was asked for sending output to master");
-                     SendResults(fSocket, fPlayer->GetOutputList());
+                     if (SendResults(fSocket, fPlayer->GetOutputList()) != 0)
+                        Warning("HandleSubmerger", "problems sending output list");
                      // Signal the master that we are idle
                      fSocket->Send(kPROOF_SETIDLE);
                      SetIdle(kTRUE);
@@ -6549,6 +6690,39 @@ Int_t TProofServ::CleanupWaitingQueries(Bool_t del, TList *qls)
    }
    // Done
    return ncq;
+}
+
+//______________________________________________________________________________
+void TProofServ::SetLastMsg(const char *lastmsg)
+{
+   // Set the message to be sent back in case of exceptions
+
+   fgLastMsg = lastmsg;
+}
+
+//______________________________________________________________________________
+Long_t TProofServ::GetVirtMemMax()
+{
+   // VirtMemMax getter
+   return fgVirtMemMax;
+}
+//______________________________________________________________________________
+Long_t TProofServ::GetResMemMax()
+{
+   // ResMemMax getter
+   return fgResMemMax;
+}
+//______________________________________________________________________________
+Float_t TProofServ::GetMemHWM()
+{
+   // MemHWM getter
+   return fgMemHWM;
+}
+//______________________________________________________________________________
+Float_t TProofServ::GetMemStop()
+{
+   // MemStop getter
+   return fgMemStop;
 }
 
 //______________________________________________________________________________

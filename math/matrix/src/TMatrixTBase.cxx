@@ -801,7 +801,8 @@ void TMatrixTBase<Element>::Draw(Option_t *option)
 // Draw this matrix
 // The histogram is named "TMatrixT" by default and no title
 
-   gROOT->ProcessLine(Form("THistPainter::PaintSpecialObjects((TObject*)0x%lx,\"%s\");",this,option));
+   gROOT->ProcessLine(Form("THistPainter::PaintSpecialObjects((TObject*)0x%lx,\"%s\");",
+                           (ULong_t)this, option));
 }
 
 //______________________________________________________________________________
@@ -825,13 +826,13 @@ void TMatrixTBase<Element>::Print(Option_t *option) const
       if (f) format = f+2;
    }
    char topbar[100];
-   sprintf(topbar,format,123.456789);
+   snprintf(topbar,100,format,123.456789);
    Int_t nch = strlen(topbar)+1;
-   if (nch > 19) nch = 19;
+   if (nch > 18) nch = 18;
    char ftopbar[20];
    for (Int_t i = 0; i < nch; i++) ftopbar[i] = ' ';
    Int_t nk = 1 + Int_t(TMath::Log10(fNcols));
-   sprintf(ftopbar+nch/2,"%s%dd","%",nk);
+   snprintf(ftopbar+nch/2,20-nch/2,"%s%dd","%",nk);
    Int_t nch2 = strlen(ftopbar);
    for (Int_t i = nch2; i < nch; i++) ftopbar[i] = ' ';
    ftopbar[nch] = '|';
@@ -853,6 +854,7 @@ void TMatrixTBase<Element>::Print(Option_t *option) const
       for (Int_t j = sheet_counter; j < sheet_counter+cols_per_sheet && j <= ncols; j++)
          printf(ftopbar,j+collwb-1);
       printf("\n%s\n",topbar);
+      if (fNelems <= 0) continue;
       for (Int_t i = 1; i <= nrows; i++) {
          printf("%4d |",i+rowlwb-1);
          for (Int_t j = sheet_counter; j < sheet_counter+cols_per_sheet && j <= ncols; j++)

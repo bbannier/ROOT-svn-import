@@ -32,7 +32,6 @@
 #include "TTimeStamp.h"
 #include "TInterpreter.h"
 #include "TError.h"
-#include "snprintf.h"
 #include "Varargs.h"
 
 TThreadImp     *TThread::fgThreadImp = 0;
@@ -227,6 +226,16 @@ TThread::TThread(Long_t id)
 
    if (gDebug)
       Info("TThread::TThread", "TThread attached to running thread");
+}
+
+//______________________________________________________________________________
+Bool_t TThread::IsInitialized()
+{
+   // Return true, if the TThread objects have been initialize.   If false,
+   // the process is (from ROOT's point of view) single threaded.
+
+   if (fgThreadImp) return kTRUE;
+   else return kFALSE;
 }
 
 //______________________________________________________________________________

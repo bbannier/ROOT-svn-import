@@ -34,6 +34,20 @@ TPrimary::TPrimary()
 //
 
    //do nothing
+   fPart         = 0;
+   fFirstMother  = 0;
+   fSecondMother = 0;
+   fGeneration   = 0;
+   fPx           = 0;
+   fPy           = 0;
+   fPz           = 0;
+   fEtot         = 0;
+   fVx           = 0;
+   fVy           = 0;
+   fVz           = 0;
+   fTime         = 0;
+   fTimeEnd      = 0;
+   fType         = "";
 
 }
 
@@ -147,7 +161,7 @@ const char *TPrimary::GetTitle() const
    //return title of primary particle
    static char title[128];
    Float_t pmom = TMath::Sqrt(fPx*fPx+fPy*fPy+fPz*fPz);
-   sprintf(title,"pmom=%f GeV",pmom);
+   snprintf(title,128,"pmom=%f GeV",pmom);
    return title;
 }
 

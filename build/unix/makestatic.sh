@@ -31,7 +31,7 @@ excl="main proof/proofd net/rootd net/xrootd rootx montecarlo/pythia6 \
       math/minuit2 io/gfal net/monalisa proof/proofx math/fftw gui/qtgsi \
       sql/odbc io/castor math/unuran geom/gdml montecarlo/g4root \
       graf2d/gviz graf3d/gviz3d graf3d/eve net/glite misc/minicern \
-      misc/memstat net/bonjour"
+      misc/memstat net/bonjour graf2d/fitsio"
 
 objs=""
 gobjs=""
@@ -59,8 +59,8 @@ for i in * ; do
 done
 
 echo "Making $ROOTALIB..."
-echo ar rv $ROOTALIB cint/cint/main/G__setup.o cint/cint/src/dict/*.o $objs
-ar rv $ROOTALIB cint/cint/main/G__setup.o cint/cint/src/dict/*.o $objs > /dev/null 2>&1
+echo ar rv $ROOTALIB cint/cint/main/G__setup.o cint/cint/src/dict/*.o cint/cint/src/config/*.o $objs
+ar rv $ROOTALIB cint/cint/main/G__setup.o cint/cint/src/dict/*.o cint/cint/src/config/*.o $objs > /dev/null 2>&1
 
 arstat=$?
 if [ $arstat -ne 0 ]; then
@@ -87,9 +87,9 @@ if [ $linkstat -ne 0 ]; then
 fi
 
 echo "Making $PROOFAEXE..."
-echo $LD $LDFLAGS -o $PROOFAEXE main/src/pmain.o  $dummyo $gobjs $ROOTALIB \
+echo $LD $LDFLAGS -o $PROOFAEXE main/src/pmain.o $dummyo $gobjs $ROOTALIB \
    $XLIBS $SYSLIBS $EXTRALIBS
-$LD $LDFLAGS -o $PROOFAEXE main/src/pmain.o  $dummyo $gobjs $ROOTALIB \
+$LD $LDFLAGS -o $PROOFAEXE main/src/pmain.o $dummyo $gobjs $ROOTALIB \
    $XLIBS $SYSLIBS $EXTRALIBS
 
 linkstat=$?

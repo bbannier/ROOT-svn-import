@@ -345,8 +345,6 @@ void TGLSAViewer::CreateGLWidget()
    if (fFormat == 0)
       fFormat = new TGLFormat;
 
-   ResetInitGL();
-
    fGLWidget = TGLWidget::Create(*fFormat, fRightVerticalFrame, kTRUE, kTRUE, 0, 10, 10);
    fGLWidget->SetEventHandler(fEventHandler);
 
@@ -366,8 +364,6 @@ void TGLSAViewer::DestroyGLWidget()
       Error("DestroyGLWidget", "Widget does not exist.");
       return;
    }
-
-   ResetInitGL();
 
    fGLWidget->UnmapWindow();
    fGLWidget->SetEventHandler(0);
@@ -678,7 +674,7 @@ Bool_t TGLSAViewer::ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t)
             new TWin32SplashThread(kTRUE);
 #else
             char str[32];
-            sprintf(str, "About ROOT %s...", gROOT->GetVersion());
+            snprintf(str,32, "About ROOT %s...", gROOT->GetVersion());
             hd = new TRootHelpDialog(this, str, 600, 400);
             hd->SetText(gHelpAbout);
             hd->Popup();

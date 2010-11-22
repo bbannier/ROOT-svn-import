@@ -71,10 +71,11 @@ THDFSFile::THDFSFile(const char *path, Option_t *option,
 {
    // Usual Constructor.  See the TFile constructor for details.
 
-   fHdfsFH = 0;
-   fFS = 0;
-   fSize = -1;
-   fPath = 0;
+   fHdfsFH    = 0;
+   fFS        = 0;
+   fSize      = -1;
+   fPath      = 0;
+   fSysOffset = 0;
 
    fOption = option;
    fOption.ToUpper();
@@ -149,8 +150,8 @@ THDFSFile::~THDFSFile()
 
    TRACE("destroy")
 
-   if (0 != fPath)
-      free(fPath);
+   if (fPath)
+      delete [] fPath;
 
    // We assume that the file is closed in SysClose
    // Explicitly release reference to HDFS filesystem object.
@@ -166,8 +167,8 @@ Int_t THDFSFile::SysRead(Int_t, void *buf, Int_t len)
    // See documentation for TFile::SysRead().
 
    TRACE("READ")
-   tSize num_read = hdfsPread(fFS, (hdfsFile)fHdfsFH, fOffset, buf, len);
-   fOffset += len;
+   tSize num_read = hdfsPread(fFS, (hdfsFile)fHdfsFH, fSysOffset, buf, len);
+   fSysOffset += len;
    if (num_read < 0) {
       gSystem->SetErrorStr(strerror(errno));
    }
@@ -182,9 +183,9 @@ Long64_t THDFSFile::SysSeek(Int_t, Long64_t offset, Int_t whence)
 
    TRACE("SEEK")
    if (whence == SEEK_SET)
-      fOffset = offset;
+      fSysOffset = offset;
    else if (whence == SEEK_CUR)
-      fOffset += offset;
+      fSysOffset += offset;
    else if (whence == SEEK_END) {
       if (offset > 0) {
          SysError("THDFSFile", "Unable to seek past end of file");
@@ -200,12 +201,12 @@ Long64_t THDFSFile::SysSeek(Int_t, Long64_t offset, Int_t whence)
             return -1;
          }
       }
-      fOffset = fSize;
+      fSysOffset = fSize;
    } else {
       SysError("THDFSFile", "Unknown whence!");
       return -1;
    }
-   return fOffset;
+   return fSysOffset;
 }
 
 //______________________________________________________________________________
@@ -218,11 +219,11 @@ Int_t THDFSFile::SysOpen(const char * pathname, Int_t flags, UInt_t)
    TUrl url(pathname);
    const char * file = url.GetFile();
    size_t path_size = strlen(file);
-   fPath = (char *)malloc(path_size*sizeof(char));
+   fPath = new char[path_size+1];
    if (fPath == 0) {
       SysError("THDFSFile", "Unable to allocate memory for path.");
    }
-   strcpy(fPath, file);
+   strlcpy(fPath, file,path_size+1);
    if ((fHdfsFH = hdfsOpenFile(fFS, fPath, flags, 0, 0, 0)) == 0) {
       SysError("THDFSFile", "Unable to open file %s in HDFS", pathname);
       return -1;

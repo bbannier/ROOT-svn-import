@@ -366,8 +366,9 @@ void TPaveStats::Paint(Option_t *option)
       while ((line = (TObject*) next())) {
          if (line->IsA() == TLatex::Class()) {
             latex = (TLatex*)line;
-            sl = new char[strlen(latex->GetTitle())+1];
-            strcpy(sl, latex->GetTitle());
+            Int_t nchs = strlen(latex->GetTitle());
+            sl = new char[nchs+1];
+            strlcpy(sl, latex->GetTitle(),nchs+1);
             if (strpbrk(sl, "=") !=0 && print_name == 0) {
                st = strtok(sl, "=");
                Int_t itok = 0;
@@ -423,8 +424,9 @@ void TPaveStats::Paint(Option_t *option)
          if (tfont  == 0) latex->SetTextFont(GetTextFont());
          if (tsize  == 0) latex->SetTextSize(GetTextSize());
 
-         sl = new char[strlen(latex->GetTitle())+1];
-         strcpy(sl, latex->GetTitle());
+         Int_t nchs = strlen(latex->GetTitle());
+         sl = new char[nchs+1];
+         strlcpy(sl, latex->GetTitle(),nchs+1);
          // Draw all the histogram stats except the 2D under/overflow
          if (strpbrk(sl, "=") !=0 && print_name == 0) {
             st = strtok(sl, "=");
@@ -537,7 +539,7 @@ void TPaveStats::SavePrimitive(ostream &out, Option_t * /*= ""*/)
    if (fBorderSize != 4) {
       out<<"   ptstats->SetBorderSize("<<fBorderSize<<");"<<endl;
    }
-   SaveFillAttributes(out,"ptstats",0,1001);
+   SaveFillAttributes(out,"ptstats",19,1001);
    SaveLineAttributes(out,"ptstats",1,1,1);
    SaveTextAttributes(out,"ptstats",22,0,1,62,0);
    SaveLines(out,"ptstats");

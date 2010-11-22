@@ -198,7 +198,7 @@ TQtWidget::TQtWidget(QWidget* mother, Qt::WFlags f,bool embedded) :
      ,fBits(0),fNeedStretch(false),fCanvas(0),fPixmapID(0)
      ,fPixmapScreen(0),fPaint(TRUE),fSizeChanged(FALSE)
      ,fDoubleBufferOn(FALSE),fEmbedded(embedded),fWrapper(0),fSaveFormat("PNG")
-     ,fInsidePaintEvent(false),fOldMousePos(-1,-1),fRefreshTimer(0)
+     ,fInsidePaintEvent(false),fOldMousePos(-1,-1),fIgnoreLeaveEnter(0),fRefreshTimer(0) 
 { setObjectName("tqtwidget"); Init() ;}
 
 //_____________________________________________________________________________
@@ -356,8 +356,10 @@ TApplication *TQtWidget::InitRint( Bool_t /*prompt*/, const char *appClassName, 
           localArgv  = new char*[args.size()]; // leaking :-(
           for (int i = 0; i < args.size(); ++i) {
              QString nextarg = args.at(i);
-             localArgv[i]= new char[nextarg.length()+1]; 
-             strcpy(localArgv[i], nextarg.toAscii().constData());
+             Int_t nchi = nextarg.length()+1;
+             localArgv[i]= new char[nchi]; 
+             memcpy(localArgv[i], nextarg.toAscii().constData(),nchi-1);
+             localArgv[nchi-1]=0;
           } 
        } else {
          localArgv  = argv;
@@ -535,6 +537,7 @@ void TQtWidget::mousePressEvent (QMouseEvent *e)
    //    kButton1Down   =  1, kButton2Down   =  2, kButton3Down   =  3,
 
    EEventType rootButton = kNoEvent;
+   Qt::ContextMenuPolicy currentPolicy = contextMenuPolicy();
    fOldMousePos = e->pos();
    TCanvas *c = Canvas();
    if (c && !fWrapper ){
@@ -542,22 +545,30 @@ void TQtWidget::mousePressEvent (QMouseEvent *e)
       {
       case Qt::LeftButton:  rootButton = kButton1Down; break;
       case Qt::RightButton: {
-//          rootButton = kButton3Down; 
          // respect the QWidget::contextMenuPolicy
          // treat this event as QContextMenuEvent
-          if (contextMenuPolicy()) {
-             e->accept(); 
-             QContextMenuEvent evt(QContextMenuEvent::Other, e->pos() );
-             QApplication::sendEvent(this, &evt);
-          }
-          break;
-       }
+         if ( currentPolicy == Qt::DefaultContextMenu) {
+            e->accept();
+            QContextMenuEvent evt(QContextMenuEvent::Other, e->pos() );
+            QApplication::sendEvent(this, &evt);
+         } else {
+            rootButton = kButton3Down;
+         }
+         break;
+      }
       case Qt::MidButton:   rootButton = kButton2Down; break;
       default: break;
       };
       if (rootButton != kNoEvent) {
-         e->accept(); 
-         c->HandleInput(rootButton, e->x(), e->y());
+         e->accept();
+	 if (rootButton == kButton3Down) {
+           bool lastvalue = c->TestBit(kNoContextMenu);
+           c->SetBit(kNoContextMenu);
+	   c->HandleInput(rootButton, e->x(), e->y());
+           c->SetBit(kNoContextMenu, lastvalue);
+         } else {
+	   c->HandleInput(rootButton, e->x(), e->y());
+         }
          EmitSignal(kMousePressEvent);
          return;
       }

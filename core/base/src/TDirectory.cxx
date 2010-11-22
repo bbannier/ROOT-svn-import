@@ -308,7 +308,7 @@ TDirectory *TDirectory::GetDirectory(const char *apath,
    TDirectory *result = this;
 
    char *path = new char[nch+1]; path[0] = 0;
-   if (nch) strcpy(path,apath);
+   if (nch) strlcpy(path,apath,nch+1);
    char *s = (char*)strrchr(path, ':');
    if (s) {
       *s = '\0';
@@ -615,7 +615,7 @@ TObject *TDirectory::FindObjectAny(const char *aname) const
    TIter next(fList);
    while( (obj = next()) ) {
       if (obj->IsA()->InheritsFrom(TDirectory::Class())) {
-         TDirectory* subdir = dynamic_cast<TDirectory*>(obj);
+         TDirectory* subdir = static_cast<TDirectory*>(obj);
          TObject *subobj = subdir->TDirectory::FindObjectAny(aname); // Explicitly recurse into _this_ exact function.
          if (subobj) {
             return subobj;
@@ -825,12 +825,12 @@ const char *TDirectory::GetPathStatic() const
 
    for (int i = depth-1; i >= 0; i--) {
       if (i == depth-1) {    // file or TROOT name
-         strcpy(path, d[i]->GetName());
-         strcat(path, ":");
-         if (i == 0) strcat(path, "/");
+         strlcpy(path, d[i]->GetName(),len+2);
+         strlcat(path, ":",len+2);
+         if (i == 0) strlcat(path, "/",len+2);
       } else {
-         strcat(path, "/");
-         strcat(path, d[i]->GetName());
+         strlcat(path, "/",len+2);
+         strlcat(path, d[i]->GetName(),len+2);
       }
    }
 
@@ -875,18 +875,28 @@ TDirectory *TDirectory::mkdir(const char *name, const char *title)
    // Create a sub-directory and return a pointer to the created directory.
    // Returns 0 in case of error.
    // Returns 0 if a directory with the same name already exists.
-   // Note that the directory name cannot contain slashes.
-
+   // Note that the directory name may be of the form "a/b/c" to create a hierarchy of directories.
+   // In this case, the function returns the pointer to the "a" directory if the operation is successful.
+   
    if (!name || !title || !strlen(name)) return 0;
    if (!strlen(title)) title = name;
-   if (strchr(name,'/')) {
-      ::Error("TDirectory::mkdir","directory name (%s) cannot contain a slash", name);
-      return 0;
+   TDirectory *newdir = 0;
+   if (const char *slash = strchr(name,'/')) {
+      Long_t size = Long_t(slash-name);
+      char *workname = new char[size+1];
+      strncpy(workname, name, size);
+      workname[size] = 0;
+      TDirectory *tmpdir = mkdir(workname,title);
+      if (!tmpdir) return 0;
+      if (!newdir) newdir = tmpdir;
+      tmpdir->mkdir(slash+1);
+      delete[] workname;
+      return newdir;
    }
 
    TDirectory::TContext ctxt(this);
 
-   TDirectory *newdir = new TDirectory(name, title, "", this);
+   newdir = new TDirectory(name, title, "", this);
 
    return newdir;
 }

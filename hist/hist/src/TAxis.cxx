@@ -214,9 +214,6 @@ const char *TAxis::ChooseTimeFormat(Double_t axislength)
       case 7:
         formatstr = "%m/%y";
         break;
-      default:
-        formatstr = "%H:%M:%S";
-        break;
    }
    return formatstr;
 }
@@ -238,6 +235,7 @@ void TAxis::Copy(TObject &obj) const
    ((TAxis&)obj).fTimeFormat   = fTimeFormat;
    ((TAxis&)obj).fTimeDisplay  = fTimeDisplay;
    ((TAxis&)obj).fParent       = fParent;
+   ((TAxis&)obj).fLabels       = 0;
    if (fLabels) {
       for (Int_t i=1;i<=fNbins;i++) ((TAxis&)obj).SetBinLabel(i,this->GetBinLabel(i));
    }
@@ -326,7 +324,7 @@ Int_t TAxis::FindBin(const char *label)
    // count number of labels in the list
    Int_t n = 0;
    TIter next(fLabels);
-   while ((obj = (TObjString*)next())) {
+   while (next()) {
       n++;
    }
    TH1 *h = (TH1*)fParent;
@@ -469,9 +467,10 @@ Double_t TAxis::GetBinWidth(Int_t bin) const
 {
    // Return bin width
 
-   if (bin <1 ) bin = 1;
+   if (fNbins <= 0) return 0;
+   if (fXbins.fN <= 0)  return (fXmax - fXmin) / Double_t(fNbins);
    if (bin >fNbins) bin = fNbins;
-   if (!fXbins.fN)  return (fXmax - fXmin) / Double_t(fNbins);
+   if (bin <1 ) bin = 1;
    return fXbins.fArray[bin] - fXbins.fArray[bin-1];
 }
 
@@ -708,7 +707,7 @@ void TAxis::SetDefaults()
    fLast    = 0;
    fBits2   = 0;
    char name[2];
-   strncpy(name,GetName(),1);
+   strlcpy(name,GetName(),2);
    name[1] = 0;
    TAttAxis::ResetAttAxis(name);
    fTimeDisplay = 0;
@@ -960,13 +959,13 @@ void TAxis::SetTimeOffset(Double_t toffset, Option_t *option)
    timeoff = (time_t)((Long_t)(toffset));
    utctis = gmtime(&timeoff);
 
-   strftime(tmp,256,"%Y-%m-%d %H:%M:%S",utctis);
+   strftime(tmp,20,"%Y-%m-%d %H:%M:%S",utctis);
    fTimeFormat.Append(tmp);
 
    // append the decimal part of the time offset
    Double_t ds = toffset-(Int_t)toffset;
    if(ds!= 0) {
-      sprintf(tmp,"s%g",ds);
+      snprintf(tmp,20,"s%g",ds);
       fTimeFormat.Append(tmp);
    }
 
@@ -1086,4 +1085,20 @@ void TAxis::UnZoom()
          hobj->GetXaxis()->SetRange(0,0);
       }
    }
+}
+
+//______________________________________________________________________________
+void TAxis::ZoomOut(Double_t factor, Double_t offset)
+{
+   // Zoom out by a factor of 'factor' (default =2)
+   //   uses previous zoom factor by default
+   // Keep center defined by 'offset' fixed
+   //   ie. -1 at left of current range, 0 in center, +1 at right
+   
+   if (factor <= 0) factor = 2;
+   Double_t center = (GetFirst()*(1-offset) + GetLast()*(1+offset))/2.;
+   Int_t first = int(TMath::Floor(center+(GetFirst()-center)*factor + 0.4999999));
+   Int_t last  = int(TMath::Floor(center+(GetLast() -center)*factor + 0.5000001));
+   if (first==GetFirst() && last==GetLast()) { first--; last++; }
+   SetRange(first,last);
 }

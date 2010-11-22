@@ -48,6 +48,8 @@
 #pragma link C++ class TH2C-;
 #pragma link C++ class TH2D-;
 #pragma link C++ class TH2F-;
+#pragma link C++ class TH2Poly+;
+#pragma link C++ class TH2PolyBin+;
 #pragma link C++ class TH2S-;
 #pragma link C++ class TH2I+;
 #pragma link C++ class TH3-;
@@ -87,6 +89,8 @@
 #pragma link C++ class TBackCompFitter+;
 #pragma link C++ class TUnfold+;
 #pragma link C++ class TUnfoldSys+;
+#pragma link C++ class TEfficiency+;
+#pragma link C++ class TKDE+;
 
 
 #pragma link C++ typedef THnSparseD;

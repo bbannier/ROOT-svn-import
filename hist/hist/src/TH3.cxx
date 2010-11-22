@@ -266,6 +266,7 @@ Int_t TH3::Fill(Double_t x, Double_t y, Double_t z)
    binx = fXaxis.FindBin(x);
    biny = fYaxis.FindBin(y);
    binz = fZaxis.FindBin(z);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  =  binx + (fXaxis.GetNbins()+2)*(biny + (fYaxis.GetNbins()+2)*binz);
    AddBinContent(bin);
    if (fSumw2.fN) ++fSumw2.fArray[bin];
@@ -312,6 +313,7 @@ Int_t TH3::Fill(Double_t x, Double_t y, Double_t z, Double_t w)
    binx = fXaxis.FindBin(x);
    biny = fYaxis.FindBin(y);
    binz = fZaxis.FindBin(z);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  =  binx + (fXaxis.GetNbins()+2)*(biny + (fYaxis.GetNbins()+2)*binz);
    AddBinContent(bin,w);
    if (fSumw2.fN) fSumw2.fArray[bin] += w*w;
@@ -352,6 +354,7 @@ Int_t TH3::Fill(const char *namex, const char *namey, const char *namez, Double_
    binx = fXaxis.FindBin(namex);
    biny = fYaxis.FindBin(namey);
    binz = fZaxis.FindBin(namez);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  =  binx + (fXaxis.GetNbins()+2)*(biny + (fYaxis.GetNbins()+2)*binz);
    AddBinContent(bin,w);
    if (fSumw2.fN) fSumw2.fArray[bin] += w*w;
@@ -390,6 +393,7 @@ Int_t TH3::Fill(const char *namex, Double_t y, const char *namez, Double_t w)
    binx = fXaxis.FindBin(namex);
    biny = fYaxis.FindBin(y);
    binz = fZaxis.FindBin(namez);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  =  binx + (fXaxis.GetNbins()+2)*(biny + (fYaxis.GetNbins()+2)*binz);
    AddBinContent(bin,w);
    if (fSumw2.fN) fSumw2.fArray[bin] += w*w;
@@ -429,6 +433,7 @@ Int_t TH3::Fill(const char *namex, const char *namey, Double_t z, Double_t w)
    binx = fXaxis.FindBin(namex);
    biny = fYaxis.FindBin(namey);
    binz = fZaxis.FindBin(z);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  =  binx + (fXaxis.GetNbins()+2)*(biny + (fYaxis.GetNbins()+2)*binz);
    AddBinContent(bin,w);
    if (fSumw2.fN) fSumw2.fArray[bin] += w*w;
@@ -468,6 +473,7 @@ Int_t TH3::Fill(Double_t x, const char *namey, const char *namez, Double_t w)
    binx = fXaxis.FindBin(x);
    biny = fYaxis.FindBin(namey);
    binz = fZaxis.FindBin(namez);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  =  binx + (fXaxis.GetNbins()+2)*(biny + (fYaxis.GetNbins()+2)*binz);
    AddBinContent(bin,w);
    if (fSumw2.fN) fSumw2.fArray[bin] += w*w;
@@ -507,6 +513,7 @@ Int_t TH3::Fill(Double_t x, const char *namey, Double_t z, Double_t w)
    binx = fXaxis.FindBin(x);
    biny = fYaxis.FindBin(namey);
    binz = fZaxis.FindBin(z);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  =  binx + (fXaxis.GetNbins()+2)*(biny + (fYaxis.GetNbins()+2)*binz);
    AddBinContent(bin,w);
    if (fSumw2.fN) fSumw2.fArray[bin] += w*w;
@@ -547,6 +554,7 @@ Int_t TH3::Fill(Double_t x, Double_t y, const char *namez, Double_t w)
    binx = fXaxis.FindBin(x);
    biny = fYaxis.FindBin(y);
    binz = fZaxis.FindBin(namez);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  =  binx + (fXaxis.GetNbins()+2)*(biny + (fYaxis.GetNbins()+2)*binz);
    AddBinContent(bin,w);
    if (fSumw2.fN) fSumw2.fArray[bin] += w*w;
@@ -622,6 +630,7 @@ void TH3::FillRandom(const char *fname, Int_t ntimes)
 
    //*-*- Normalize integral to 1
    if (integral[nbins] == 0 ) {
+      delete [] integral;
       Error("FillRandom", "Integral = zero"); return;
    }
    for (bin=1;bin<=nbins;bin++)  integral[bin] /= integral[nbins];
@@ -827,8 +836,8 @@ void TH3::FitSlicesZ(TF1 *f1, Int_t binminx, Int_t binmaxx, Int_t binminy, Int_t
    const TArrayD *xbins = fXaxis.GetXbins();
    const TArrayD *ybins = fYaxis.GetXbins();
    for (ipar=0;ipar<npar;ipar++) {
-      sprintf(name,"%s_%d",GetName(),ipar);
-      sprintf(title,"Fitted value of par[%d]=%s",ipar,f1->GetParName(ipar));
+      snprintf(name,80,"%s_%d",GetName(),ipar);
+      snprintf(title,80,"Fitted value of par[%d]=%s",ipar,f1->GetParName(ipar));
       if (xbins->fN == 0) {
          hlist[ipar] = new TH2D(name, title,
                                 nbinsx, fXaxis.GetXmin(), fXaxis.GetXmax(),
@@ -841,7 +850,7 @@ void TH3::FitSlicesZ(TF1 *f1, Int_t binminx, Int_t binmaxx, Int_t binminy, Int_t
       hlist[ipar]->GetXaxis()->SetTitle(fXaxis.GetTitle());
       hlist[ipar]->GetYaxis()->SetTitle(fYaxis.GetTitle());
    }
-   sprintf(name,"%s_chi2",GetName());
+   snprintf(name,80,"%s_chi2",GetName());
    TH2D *hchi2 = new TH2D(name,"chisquare", nbinsx, fXaxis.GetXmin(), fXaxis.GetXmax()
       , nbinsy, fYaxis.GetXmin(), fYaxis.GetXmax());
 
@@ -958,7 +967,7 @@ Double_t TH3::GetCovariance(Int_t axis1, Int_t axis2) const
       Error("GetCovariance","Wrong parameters");
       return 0;
    }
-   Double_t stats[11];
+   Double_t stats[kNstat];
    GetStats(stats);
    Double_t sumw   = stats[0];
    Double_t sumw2  = stats[1];
@@ -1595,6 +1604,7 @@ Long64_t TH3::Merge(TCollection *list)
                            return -1;
                         }
                   }
+                  if (ibin <0) continue;
                   AddBinContent(ibin,cu);
                   if (fSumw2.fN) {
                      Double_t error1 = h->GetBinError(bin);
@@ -1629,7 +1639,7 @@ TH1D *TH3::ProjectionX(const char *name, Int_t iymin, Int_t iymax, Int_t izmin, 
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
-   //   if option "o" original axis range of the taget axes will be
+   //   if option "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    //   NOTE that if a TH1D named "name" exists in the current directory or pad and having   
@@ -1707,7 +1717,7 @@ TH1D *TH3::ProjectionY(const char *name, Int_t ixmin, Int_t ixmax, Int_t izmin, 
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
-   //   if option "o" original axis range of the taget axes will be
+   //   if option "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    //   NOTE that if a TH1D named "name" exists in the current directory or pad and having   
@@ -1786,7 +1796,7 @@ TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, 
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
-   //   if option "o" original axis range of the taget axes will be
+   //   if option "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    //   NOTE that if a TH1D named "name" exists in the current directory or pad and having   
@@ -1891,7 +1901,7 @@ TH1D *TH3::DoProject1D(const char* name, const char* title, TAxis* projX,
          h1->Reset();   
       }      
       else {  
-         Error("DoProject1D","Histogram with name %s alread exists and it is not compatible",name);
+         Error("DoProject1D","Histogram with name %s already exists and it is not compatible",name);
          return 0; 
       }
    }
@@ -1953,6 +1963,7 @@ TH1D *TH3::DoProject1D(const char* name, const char* title, TAxis* projX,
    if ( projX == GetXaxis() ) { refX = &ixbin;   refY = &out1bin; refZ = &out2bin; }
    if ( projX == GetYaxis() ) { refX = &out2bin; refY = &ixbin;   refZ = &out1bin; }
    if ( projX == GetZaxis() ) { refX = &out2bin; refY = &out1bin; refZ = &ixbin;   }
+   R__ASSERT (refX != 0 && refY != 0 && refZ != 0); 
 
    // Fill the projected histogram excluding underflow/overflows if considered in the option
    // if specified in the option (by default they considered)
@@ -2097,7 +2108,7 @@ TH2D *TH3::DoProject2D(const char* name, const char * title, TAxis* projX, TAxis
          h2->Reset();   
       }      
       else {  
-         Error("DoProject2D","Histogram with name %s alread exists and it is not compatible",name);
+         Error("DoProject2D","Histogram with name %s already exists and it is not compatible",name);
          return 0; 
       }
    }
@@ -2188,6 +2199,7 @@ TH2D *TH3::DoProject2D(const char* name, const char * title, TAxis* projX, TAxis
    if ( projX == GetZaxis() && projY == GetXaxis() ) { refX = &iybin;  refY = &outbin; refZ = &ixbin;  }
    if ( projX == GetYaxis() && projY == GetZaxis() ) { refX = &outbin; refY = &ixbin;  refZ = &iybin;  }
    if ( projX == GetZaxis() && projY == GetYaxis() ) { refX = &outbin; refY = &iybin;  refZ = &ixbin;  }
+   R__ASSERT (refX != 0 && refY != 0 && refZ != 0); 
 
    // Fill the projected histogram excluding underflow/overflows if considered in the option
    // if specified in the option (by default they considered)
@@ -2249,6 +2261,7 @@ TH2D *TH3::DoProject2D(const char* name, const char * title, TAxis* projX, TAxis
    if (!resetStats) {
       Double_t stats[kNstat];
       Double_t oldst[kNstat]; // old statistics
+      for (Int_t i = 0; i < kNstat; ++i) { oldst[i] = 0; }
       GetStats(oldst); 
       std::copy(oldst,oldst+kNstat,stats);
       // not that projX refer to Y axis and projX refer to the X axis of projected histogram
@@ -2326,7 +2339,7 @@ TH1 *TH3::Project3D(Option_t *option) const
    // option = "zy" return the z versus y projection into a TH2D histogram
    // NB: the notation "a vs b" means "a" vertical and "b" horizontal
    //
-   // option = "o" original axis range of the taget axes will be
+   // option = "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    // If option contains the string "e", errors are computed
@@ -2499,6 +2512,7 @@ void TH3::DoFillProfileProjection(TProfile2D * p2, const TAxis & a1, const TAxis
    Double_t v = a2.GetBinCenter(bin2);
    Double_t w = a3.GetBinCenter(bin3);
    Int_t outBin = p2->FindBin(u, v);
+   if (outBin <0) return;
    Double_t tmp = 0;
    if ( useWeights ) tmp = binSumw2.fArray[outBin];            
    p2->Fill( u , v, w, cont);
@@ -2565,7 +2579,7 @@ TProfile2D *TH3::DoProjectProfile2D(const char* name, const char * title, TAxis*
          p2->Dump();
          projY->Dump(); projX->Dump(); 
          std::cout << ny << "  " << iymin << " , " << iymax << " nx " << nx << "  " << ixmin << " , " << ixmax << std::endl;
-         Error("DoProjectProfile2D","Profile2D with name %s alread exists and it is not compatible",name);
+         Error("DoProjectProfile2D","Profile2D with name %s already exists and it is not compatible",name);
          return 0; 
       }
    }
@@ -2625,6 +2639,7 @@ TProfile2D *TH3::DoProjectProfile2D(const char* name, const char * title, TAxis*
    if ( projX == GetZaxis() && projY == GetXaxis() ) { refX = &iybin;  refY = &outbin; refZ = &ixbin;  }
    if ( projX == GetYaxis() && projY == GetZaxis() ) { refX = &outbin; refY = &ixbin;  refZ = &iybin;  }
    if ( projX == GetZaxis() && projY == GetYaxis() ) { refX = &outbin; refY = &iybin;  refZ = &ixbin;  }
+   R__ASSERT (refX != 0 && refY != 0 && refZ != 0); 
 
    Int_t outmin = outAxis->GetFirst(); 
    Int_t outmax = outAxis->GetLast(); 
@@ -2645,7 +2660,7 @@ TProfile2D *TH3::DoProjectProfile2D(const char* name, const char * title, TAxis*
 
          // profile output bin
          Int_t poutBin = p2->FindBin(projY->GetBinCenter(iybin), projX->GetBinCenter(ixbin));
-
+         if (poutBin <0) continue;
          // loop on the bins to be integrated (outbin should be called inbin)
          for (outbin = outmin; outbin <= outmax; outbin++){
 
@@ -2702,7 +2717,7 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    // option = "zy" return the z versus y projection into a TProfile2D histogram
    // NB: the notation "a vs b" means "a" vertical and "b" horizontal
    //
-   // option = "o" original axis range of the taget axes will be
+   // option = "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    // The projection is made for the selected bins only.

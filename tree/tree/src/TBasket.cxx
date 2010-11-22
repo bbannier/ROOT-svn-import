@@ -34,7 +34,7 @@ ClassImp(TBasket)
 //
 
 //_______________________________________________________________________
-TBasket::TBasket() 
+TBasket::TBasket() : fCompressedSize(0),fCompressedBuffer(0)
 {
    // Default contructor.
 
@@ -51,7 +51,7 @@ TBasket::TBasket()
 }
 
 //_______________________________________________________________________
-TBasket::TBasket(TDirectory *motherDir) : TKey(motherDir)
+TBasket::TBasket(TDirectory *motherDir) : TKey(motherDir),fCompressedSize(0),fCompressedBuffer(0)
 {
    // Constructor used during reading.
 
@@ -69,7 +69,7 @@ TBasket::TBasket(TDirectory *motherDir) : TKey(motherDir)
 
 //_______________________________________________________________________
 TBasket::TBasket(const char *name, const char *title, TBranch *branch) : 
-   TKey(branch->GetDirectory())
+   TKey(branch->GetDirectory()),fCompressedSize(0),fCompressedBuffer(0)
 {
    // Basket normal constructor, used during writing.
 
@@ -79,9 +79,9 @@ TBasket::TBasket(const char *name, const char *title, TBranch *branch) :
    fBufferSize  = branch->GetBasketSize();
    fNevBufSize  = branch->GetEntryOffsetLen();
    fNevBuf      = 0;
-   fEntryOffset = 0;  //Must be set to 0 before calling Sizeof
-   fDisplacement= 0;  //Must be set to 0 before calling Sizeof
-   fBuffer      = 0;  //Must be set to 0 before calling Sizeof
+   fEntryOffset = 0;
+   fDisplacement= 0;
+   fBuffer      = 0;
    fBufferRef   = new TBufferFile(TBuffer::kWrite, fBufferSize);
    fVersion    += 1000;
    if (branch->GetDirectory()) {
@@ -89,7 +89,7 @@ TBasket::TBasket(const char *name, const char *title, TBranch *branch) :
       fBufferRef->SetParent(file);
    }
    fHeaderOnly  = kTRUE;
-   fLast        = 0; // RDK: Must initialize before calling Streamer()
+   fLast        = 0; // Must initialize before calling Streamer()
    
    Streamer(*fBufferRef);
    fKeylen      = fBufferRef->Length();
@@ -112,18 +112,24 @@ TBasket::~TBasket()
 
    if (fDisplacement) delete [] fDisplacement;
    if (fEntryOffset)  delete [] fEntryOffset;
+   if (fBuffer == fCompressedBuffer) fBuffer = 0;
+   if (fCompressedBuffer) delete [] fCompressedBuffer;
    fDisplacement= 0;
    fEntryOffset = 0;
+   fCompressedSize = 0;
+   fCompressedBuffer = 0;
 }
 
 //_______________________________________________________________________
 void TBasket::AdjustSize(Int_t newsize)
 {
    // Increase the size of the current fBuffer up to newsize.
-
-   char *newbuf = TStorage::ReAllocChar(fBuffer,newsize,fBufferSize);
-   fBufferSize  = newsize;
+   
+   Long_t len = fBufferRef->Length();
+   char *newbuf = len ? TStorage::ReAllocChar(fBuffer,newsize,len) : new char[newsize];
    fBuffer      = newbuf;
+   fBranch->GetTree()->IncrementTotalBuffers(newsize-fBufferSize);
+   fBufferSize  = newsize;
 }
 
 //_______________________________________________________________________
@@ -142,7 +148,7 @@ Long64_t TBasket::CopyTo(TFile *to)
    fHeaderOnly = kTRUE;
    Streamer(*fBufferRef);
    fHeaderOnly = kFALSE;
-   Int_t nBytes = WriteFile(0, to);
+   Int_t nBytes = WriteFileKeepBuffer(to);
 
    return nBytes>0 ? nBytes : -1;
 }
@@ -164,14 +170,17 @@ Int_t TBasket::DropBuffers()
    // Drop buffers of this basket if it is not the current basket.
 
    if (!fBuffer && !fBufferRef) return 0;
-   //   delete [] fBuffer;
+
    if (fDisplacement) delete [] fDisplacement;
    if (fEntryOffset)  delete [] fEntryOffset;
    if (fBufferRef)    delete fBufferRef;
+   if (fCompressedBuffer) delete [] fCompressedBuffer;
    fBufferRef   = 0;
    fBuffer      = 0;
    fDisplacement= 0;
    fEntryOffset = 0;
+   fCompressedSize = 0;
+   fCompressedBuffer = 0;
    fBranch->GetTree()->IncrementTotalBuffers(-fBufferSize);
    return fBufferSize;
 }
@@ -273,15 +282,11 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
    // There is a lot of code duplication but it was necesary to assure
    // the expected behavior when there is no cache.
 
-   Int_t badread= 0;
-   TDirectory *cursav = gDirectory;
-   TDirectory *brdir = fBranch->GetDirectory();
-   if(!brdir) {
+
+   if(!fBranch->GetDirectory()) {
       return -1;
    }
-   brdir->cd();
-
-   if (fBranch->GetTree()->MemoryFull(fBufferSize)) fBranch->DropBaskets();
+   Int_t badread= 0;
 
    TFileCacheRead *pf = file->GetCacheRead();
    char *buffer = 0;
@@ -294,7 +299,13 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
 
       // We always create the TBuffer for the basket but it will be a shell only,
       // since we pass the pointer to the low level buffer
-      fBufferRef = new TBufferFile(TBuffer::kRead, res, buffer, free);
+      if (fBufferRef) {
+         fBufferRef->SetBuffer(buffer, res, free);
+         fBufferRef->SetReadMode();
+         fBufferRef->Reset();
+      } else {
+         fBufferRef = new TBufferFile(TBuffer::kRead, res, buffer, free);
+      }
       fBufferRef->SetParent(file);
 
       Streamer(*fBufferRef);
@@ -333,12 +344,19 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
       len = fObjlen+fKeylen;
    }
    else{
-      fBufferRef = new TBufferFile(TBuffer::kRead, len);
+      if (fBufferRef) {
+         fBufferRef->SetReadMode();
+         if (fBufferRef->BufferSize() < len) {
+            fBufferRef->Expand(len);
+         }
+         fBufferRef->Reset();
+      } else {
+         fBufferRef = new TBufferFile(TBuffer::kRead, len);
+      }
       fBufferRef->SetParent(file);
 
       buffer = fBufferRef->Buffer();
-      file->Seek(pos);
-      if (file->ReadBuffer(buffer,len)) {
+      if (file->ReadBuffer(buffer,pos,len)) {
          badread = 1;
          return badread;
       }
@@ -358,22 +376,27 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
             // By-passing buffer unzipping has been requested and is
             // possible (only 1 entry in this basket).
             fBuffer = fBufferRef->Buffer();
-
+            
             // Make sure that the buffer is set at the END of the data
             fBufferRef->SetBufferOffset(fNbytes);
-
+            
             // Indicate that this buffer is weird.
             fBufferRef->SetBit(TBufferFile::kNotDecompressed);
-
+            
             // Usage of this mode assume the existance of only ONE
             // entry in this basket.
             delete [] fEntryOffset; fEntryOffset = 0;
             delete [] fDisplacement; fDisplacement = 0;
-
+            
             fBranch->GetTree()->IncrementTotalBuffers(fBufferSize);
             return badread;
          }
-         fBuffer = new char[fObjlen+fKeylen];
+         if ((fObjlen+fKeylen) > fCompressedSize) {
+            if (fCompressedSize) delete [] fCompressedBuffer;
+            fCompressedSize = fObjlen+fKeylen;
+            fCompressedBuffer = new char[fCompressedSize];
+         }
+         fBuffer = fCompressedBuffer;
          memcpy(fBuffer,buffer,fKeylen);
          char *objbuf = fBuffer + fKeylen;
          UChar_t *bufcur = (UChar_t *)&buffer[fKeylen];
@@ -385,8 +408,8 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
             if (oldCase && (nin > fObjlen || nbuf > fObjlen)) {
                //buffer was very likely not compressed in an old version
                delete [] fBuffer;
-                fBuffer = fBufferRef->Buffer();
-                goto AfterBuffer;
+               fBuffer = fBufferRef->Buffer();
+               goto AfterBuffer;
             }
             R__unzip(&nin, bufcur, &nbuf, objbuf, &nout);
             if (!nout) break;
@@ -394,19 +417,24 @@ Int_t TBasket::ReadBasketBuffers(Long64_t pos, Int_t len, TFile *file)
             if (noutot >= fObjlen) break;
             bufcur += nin;
             objbuf += nout;
-          }
+         }
          if (noutot != fObjlen) {
             Error("ReadBasketBuffers", "fNbytes = %d, fKeylen = %d, fObjlen = %d, noutot = %d, nout=%d, nin=%d, nbuf=%d", fNbytes,fKeylen,fObjlen, noutot,nout,nin,nbuf);
             badread = 1;
          }
-         fBufferRef->SetBuffer(fBuffer, fObjlen+fKeylen );
+         // Switch the 2 buffers
+         char *temp = fBufferRef->Buffer();
+         Int_t templen = fBufferRef->BufferSize();
+         fBufferRef->ResetBit(TBuffer::kIsOwner);
+         fBufferRef->SetBuffer(fBuffer, fCompressedSize, kTRUE); // Do adopt the buffer.
+         fCompressedBuffer = temp;
+         fCompressedSize = templen;
          len = fObjlen+fKeylen;
       } else {
          fBuffer = fBufferRef->Buffer();
       }
    }
  AfterBuffer:
-   cursav->cd();
 
    fBranch->GetTree()->IncrementTotalBuffers(fBufferSize);
 
@@ -451,6 +479,58 @@ Int_t TBasket::ReadBasketBytes(Long64_t pos, TFile *file)
    file->GetRecordHeader(buffer, pos,len, fNbytes, fObjlen, keylen);
    fKeylen = keylen;
    return fNbytes;
+}
+
+//_______________________________________________________________________
+void TBasket::Reset()
+{
+   // Reset the basket to the starting state. i.e. as it was after calling
+   // the constructor (and potentially attaching a TBuffer.)
+   
+   // Name, Title, fClassName, fBranch 
+   // stay the same.
+   
+   TKey::Reset();
+
+   Int_t newNevBufSize = fBranch->GetEntryOffsetLen();
+   if (newNevBufSize==0) {
+      delete [] fEntryOffset;
+      fEntryOffset = 0;
+   } else if (newNevBufSize > fNevBufSize) {
+      delete [] fEntryOffset;
+      fEntryOffset = new Int_t[newNevBufSize];
+   } else {
+      if (!fEntryOffset) {
+         fEntryOffset = new Int_t[newNevBufSize];
+      }         
+   }
+   fNevBufSize = newNevBufSize;
+
+   fNevBuf      = 0;
+   Int_t *storeEntryOffset = fEntryOffset;
+   fEntryOffset = 0; 
+   Int_t *storeDisplacement = fDisplacement;
+   fDisplacement= 0; 
+   fBuffer      = 0;
+
+   fBufferRef->Reset();
+   fBufferRef->SetWriteMode();
+
+   fHeaderOnly  = kTRUE;
+   fLast        = 0;  //Must initialize before calling Streamer()
+   
+   Streamer(*fBufferRef);
+
+   fKeylen      = fBufferRef->Length();
+   fObjlen      = fBufferSize - fKeylen;
+   fLast        = fKeylen;
+   fBuffer      = 0;
+   fHeaderOnly  = kFALSE;
+   fDisplacement= storeDisplacement;
+   fEntryOffset = storeEntryOffset;
+   if (fNevBufSize) {
+      for (Int_t i=0;i<fNevBufSize;i++) fEntryOffset[i] = 0;
+   }   
 }
 
 //_______________________________________________________________________
@@ -653,7 +733,7 @@ Int_t TBasket::WriteBuffer()
       fHeaderOnly = kTRUE;
 
       Streamer(*fBufferRef);         //write key itself again
-      int nBytes = WriteFile(0);
+      int nBytes = WriteFileKeepBuffer();
       fHeaderOnly = kFALSE;
       return nBytes>0 ? fKeylen+nout : -1;
    }
@@ -681,7 +761,12 @@ Int_t TBasket::WriteBuffer()
       //if (cxlevel == 2) cxlevel--; RB: I cannot remember why we had this!
       Int_t nbuffers = fObjlen/kMAXBUF;
       Int_t buflen = fKeylen + fObjlen + 28; //add 28 bytes in case object is placed in a deleted gap
-      fBuffer = new char[buflen];
+      if (buflen > fCompressedSize) {
+         if (fCompressedSize) delete [] fCompressedBuffer;
+         fCompressedSize = buflen;
+         fCompressedBuffer = new char[fCompressedSize];
+      }
+      fBuffer = fCompressedBuffer;
       char *objbuf = fBufferRef->Buffer() + fKeylen;
       char *bufcur = &fBuffer[fKeylen];
       noutot = 0;
@@ -697,7 +782,9 @@ Int_t TBasket::WriteBuffer()
          // buffer is larger than the input. In this case, we write the original uncompressed buffer
          if (nout == 0 || nout >= fObjlen) {
             nout = fObjlen;
-            delete [] fBuffer;
+            // We use do delete fBuffer here, we no longer want to since
+            // the buffer (help by fCompressedBuffer) might be re-use later.
+            // delete [] fBuffer;
             fBuffer = fBufferRef->Buffer();
             Create(fObjlen,file);
             fBufferRef->SetBufferOffset(0);
@@ -720,7 +807,6 @@ Int_t TBasket::WriteBuffer()
 
       Streamer(*fBufferRef);         //write key itself again
       memcpy(fBuffer,fBufferRef->Buffer(),fKeylen);
-      delete fBufferRef; fBufferRef = 0;
    } else {
       fBuffer = fBufferRef->Buffer();
       Create(fObjlen,file);
@@ -731,7 +817,7 @@ Int_t TBasket::WriteBuffer()
    }
 
 WriteFile:
-   Int_t nBytes = WriteFile(0);
+   Int_t nBytes = WriteFileKeepBuffer();
    fHeaderOnly = kFALSE;
    return nBytes>0 ? fKeylen+nout : -1;
 }

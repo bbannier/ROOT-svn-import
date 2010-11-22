@@ -24,7 +24,6 @@
 #include "TInterpreter.h"
 #include "TMath.h"
 #include "TRandom.h"
-#include <cassert>
 
 #include "TError.h"
 
@@ -154,7 +153,7 @@ ULong64_t THnSparseCoordCompression::SetBufferFromCoord(const Int_t* coord_in,
    if (fCoordBufferSize <= 8) {
       ULong64_t l64buf = 0;
       for (Int_t i = 0; i < fNdimensions; ++i) {
-         l64buf += coord_in[i] << fBitOffsets[i];
+         l64buf += ((ULong64_t)((UInt_t)coord_in[i])) << fBitOffsets[i];
       }
       memcpy(buf_out, &l64buf, sizeof(Long64_t));
       return l64buf;
@@ -558,9 +557,6 @@ void THnSparse::AddBinContent(Long64_t bin, Double_t v)
 THnSparseArrayChunk* THnSparse::AddChunk()
 {
    //Create a new chunk of bin content
-   THnSparseArrayChunk* first = 0;
-   if (fBinContent.GetEntriesFast() > 0)
-      first = GetChunk(0);
    THnSparseArrayChunk* chunk =
       new THnSparseArrayChunk(GetCompactCoord()->GetBufferSize(),
                               GetCalculateErrors(), GenerateArray());
@@ -760,6 +756,8 @@ void THnSparse::FillExMap()
    THnSparseArrayChunk* chunk = 0;
    THnSparseCoordCompression compactCoord(*GetCompactCoord());
    Long64_t idx = 0;
+   if (2 * GetNbins() > fBins.Capacity())
+      fBins.Expand(3 * GetNbins());
    while ((chunk = (THnSparseArrayChunk*) iChunk())) {
       const Int_t chunkSize = chunk->GetEntries();
       Char_t* buf = chunk->fCoordinates;
@@ -979,13 +977,16 @@ Long64_t THnSparse::GetBinIndexForCurrentBin(Bool_t allocate)
 
    // store translation between hash and bin
    newidx += (fBinContent.GetEntriesFast() - 1) * fChunkSize;
-   if (!linidx)
+   if (!linidx) {
       // fBins didn't find it
+      if (2 * GetNbins() > fBins.Capacity())
+         fBins.Expand(3 * GetNbins());
       fBins.Add(hash, newidx + 1);
-   else
+   } else {
       // fBins contains one, but it's the wrong one;
       // add entry to fBinsContinued.
       fBinsContinued.Add(linidx, newidx + 1);
+   }
    return newidx;
 }
 
@@ -1059,7 +1060,6 @@ Double_t THnSparse::GetSparseFractionMem() const {
    // non-sparse n-dimensional histogram. The value is approximate.
 
    Int_t arrayElementSize = 0;
-   Double_t size = 0.;
    if (fFilledBins) {
       TClass* clArray = GetChunk(0)->fContent->IsA();
       TDataMember* dm = clArray ? clArray->GetDataMember("fArray") : 0;
@@ -1070,9 +1070,13 @@ Double_t THnSparse::GetSparseFractionMem() const {
       return -1.;
    }
 
-   size += fFilledBins * (GetCompactCoord()->GetBufferSize() + arrayElementSize + 2 * sizeof(Long_t) /* TExMap */);
+   Double_t sizePerChunkElement = arrayElementSize + GetCompactCoord()->GetBufferSize();
    if (fFilledBins && GetChunk(0)->fSumw2)
-      size += fFilledBins * sizeof(Float_t); /* fSumw2 */
+      sizePerChunkElement += sizeof(Double_t); /* fSumw2 */
+
+   Double_t size = 0.;
+   size += fBinContent.GetEntries() * (GetChunkSize() * sizePerChunkElement + sizeof(THnSparseArrayChunk));
+   size += + 3 * sizeof(Long64_t) * fBins.GetSize() /* TExMap */;
 
    Double_t nbinsTotal = 1.;
    for (Int_t d = 0; d < fNdimensions; ++d)
@@ -1343,29 +1347,12 @@ void THnSparse::Scale(Double_t c)
 }
 
 //______________________________________________________________________________
-void THnSparse::Add(const THnSparse* h, Double_t c)
+void THnSparse::AddInternal(const THnSparse* h, Double_t c, Bool_t rebinned)
 {
-   // Add contents of h scaled by c to this histogram:
-   // this = this + c * h
-   // Note that if h has Sumw2 set, Sumw2 is automatically called for this
-   // if not already set.
+   // Add() implementation for both rebinned histograms and those with identical
+   // binning. See THnSparse::Add().
 
-   // Check consistency of the input
-   if (!CheckConsistency(h, "Add")) return;
-   RebinnedAdd(h, c);
-}
-
-//______________________________________________________________________________
-void THnSparse::RebinnedAdd(const THnSparse* h, Double_t c)
-{
-   // Add contents of h scaled by c to this histogram:
-   // this = this + c * h
-   // Note that if h has Sumw2 set, Sumw2 is automatically called for this
-   // if not already set.
-   // In contrast to Add(), RebinnedAdd() does not require consist binning of
-   // this and h; instead, each bin's center is used to determine the target bin.
-
-   if (fNdimensions!=h->GetNdimensions()) {
+   if (fNdimensions != h->GetNdimensions()) {
       Warning("RebinnedAdd", "Different number of dimensions, cannot carry out operation on the histograms");
       return;
    }
@@ -1378,24 +1365,79 @@ void THnSparse::RebinnedAdd(const THnSparse* h, Double_t c)
    // Now add the contents: in this case we have the union of the sets of bins
    Int_t* coord = new Int_t[fNdimensions];
    memset(coord, 0, sizeof(Int_t) * fNdimensions);
+   Double_t* x = 0;
+   if (rebinned) {
+      x = new Double_t[fNdimensions];
+   }
+
+   if (!fBins.GetSize() && fBinContent.GetSize()) {
+      FillExMap();
+   }
+
+   // Expand the exmap if needed, to reduce collisions
+   Long64_t numTargetBins = GetNbins() + h->GetNbins();
+   if (2 * numTargetBins > fBins.Capacity()) {
+      fBins.Expand(3 * numTargetBins);
+   }
 
    // Add to this whatever is found inside the other histogram
    for (Long64_t i = 0; i < h->GetNbins(); ++i) {
       // Get the content of the bin from the second histogram
       Double_t v = h->GetBinContent(i, coord);
-      AddBinContent(coord, c * v);
-      if (haveErrors) {
-         Double_t err1 = GetBinError(coord);
-         Double_t err2 = h->GetBinError(coord) * c;
-         SetBinError(coord, TMath::Sqrt(err1 * err1 + err2 * err2));
+
+      Long64_t binidx = -1;
+      if (rebinned) {
+         // Get the bin center given a coord
+         for (Int_t j = 0; j < fNdimensions; ++j)
+            x[j] = h->GetAxis(j)->GetBinCenter(coord[j]);
+
+         binidx = GetBin(x);
+      } else {
+         binidx = GetBin(coord);
       }
+
+      if (haveErrors) {
+         Double_t err1 = GetBinError(binidx);
+         Double_t err2 = h->GetBinError(i) * c;
+         SetBinError(binidx, TMath::Sqrt(err1 * err1 + err2 * err2));
+      }
+      // only _after_ error calculation, or sqrt(v) is taken into account!
+      AddBinContent(binidx, c * v);
    }
 
 
    delete [] coord;
+   delete [] x;
 
    Double_t nEntries = GetEntries() + c * h->GetEntries();
    SetEntries(nEntries);
+}
+
+//______________________________________________________________________________
+void THnSparse::Add(const THnSparse* h, Double_t c)
+{
+   // Add contents of h scaled by c to this histogram:
+   // this = this + c * h
+   // Note that if h has Sumw2 set, Sumw2 is automatically called for this
+   // if not already set.
+
+   // Check consistency of the input
+   if (!CheckConsistency(h, "Add")) return;
+
+   AddInternal(h, c, kFALSE);
+}
+
+//______________________________________________________________________________
+void THnSparse::RebinnedAdd(const THnSparse* h, Double_t c)
+{
+   // Add contents of h scaled by c to this histogram:
+   // this = this + c * h
+   // Note that if h has Sumw2 set, Sumw2 is automatically called for this
+   // if not already set.
+   // In contrast to Add(), RebinnedAdd() does not require consist binning of
+   // this and h; instead, each bin's center is used to determine the target bin.
+
+   AddInternal(h, c, kTRUE);
 }
 
 
@@ -1408,8 +1450,23 @@ Long64_t THnSparse::Merge(TCollection* list)
    if (!list) return 0;
    if (list->IsEmpty()) return (Long64_t)GetEntries();
 
+   Long64_t sumNbins = GetNbins();
    TIter iter(list);
    const TObject* addMeObj = 0;
+   while ((addMeObj = iter())) {
+      const THnSparse* addMe = dynamic_cast<const THnSparse*>(addMeObj);
+      if (addMe) {
+         sumNbins += addMe->GetNbins();
+      }
+   }
+   if (!fBins.GetSize() && fBinContent.GetSize()) {
+      FillExMap();
+   }
+   if (2 * sumNbins > fBins.Capacity()) {
+      fBins.Expand(3 * sumNbins);
+   }
+
+   iter.Reset();
    while ((addMeObj = iter())) {
       const THnSparse* addMe = dynamic_cast<const THnSparse*>(addMeObj);
       if (!addMe)
@@ -1471,36 +1528,38 @@ void THnSparse::Multiply(TF1* f, Double_t c)
     // you should call Sumw2 before making this operation.
     // This is particularly important if you fit the histogram after THnSparse::Multiply
 
-   std::vector<Int_t>    coord(fNdimensions);
-   std::vector<Double_t> points(fNdimensions);
-   
-   Double_t value(0);
-   
-   Bool_t wantErrors( GetCalculateErrors() );
+   Int_t* coord = new Int_t[fNdimensions];
+   memset(coord, 0, sizeof(Int_t) * fNdimensions);
+   Double_t* points = new Double_t[fNdimensions];
+
+
+   Bool_t wantErrors = GetCalculateErrors();
    if (wantErrors) Sumw2();
 
    ULong64_t nEntries = GetNbins();
-   for ( ULong64_t i = 0; i < nEntries; i++ )
-   {
-      value = GetBinContent( i, &coord[0] );
-      
+   for (ULong64_t i = 0; i < nEntries; ++i) {
+      Double_t value = GetBinContent(i, coord);
+
       // Get the bin co-ordinates given an coord
-      for ( Int_t j = 0; j < fNdimensions; j++ )
-         points[j] = GetAxis( j )->GetBinCenter( coord[j] );
-      
-      if ( !f->IsInside( &points[0] ) )
+      for (Int_t j = 0; j < fNdimensions; ++j)
+         points[j] = GetAxis(j)->GetBinCenter(coord[j]);
+
+      if (!f->IsInside(points))
          continue;
       TF1::RejectPoint(kFALSE);
-      
+
       // Evaulate function at points
-      Double_t fvalue = f->EvalPar( &points[0], NULL );
-      
-      SetBinContent( &coord[0], c * fvalue * value );
+      Double_t fvalue = f->EvalPar(points, NULL);
+
+      SetBinContent(coord, c * fvalue * value);
       if (wantErrors) {
-         Double_t error( GetBinError( i ) );
-         SetBinError(&coord[0], c * fvalue * error);
+         Double_t error(GetBinError(i));
+         SetBinError(coord, c * fvalue * error);
       }
    }
+   
+   delete [] points;
+   delete [] coord;
 }
 
 //______________________________________________________________________________
@@ -1708,12 +1767,14 @@ void THnSparse::SetBinError(Long64_t bin, Double_t e)
 
    THnSparseArrayChunk* chunk = GetChunk(bin / fChunkSize);
    if (!chunk->fSumw2 ) {
-      // if fSumw2 is zero GetCalcualteErrors should return false
-      assert(!GetCalculateErrors() );
+      // if fSumw2 is zero GetCalculateErrors should return false
+      if (GetCalculateErrors()) {
+         Error("SetBinError", "GetCalculateErrors() logic error!");
+      }
       Sumw2(); // enable error calculation
    }
 
-   chunk->fSumw2->SetAt(e*e, bin % fChunkSize);
+   chunk->fSumw2->SetAt(e * e, bin % fChunkSize);
 }
 
 //______________________________________________________________________________
@@ -1826,6 +1887,7 @@ THnSparse* THnSparse::Rebin(const Int_t* group) const
                   edges[i] = newaxis->GetXbins()->At(group[d] * i);
                else edges[i] = newaxis->GetXmax();
             newaxis->Set(newbins, edges);
+            delete [] edges;
          } else {
             newaxis->Set(newbins, newaxis->GetXmin(), newaxis->GetXmax());
          }
@@ -1943,3 +2005,159 @@ Double_t THnSparse::ComputeIntegral()
    fIntegralStatus = kValidInt;
    return fIntegral[GetNbins()];
 }
+
+//______________________________________________________________________________
+void THnSparse::PrintBin(Long64_t idx, Option_t* options) const
+{
+   // Print bin with linex index "idx".
+   // For valid options see PrintBin(Long64_t idx, Int_t* bin, Option_t* options).
+   Int_t* coord = new Int_t[fNdimensions];
+   PrintBin(idx, coord, options);
+   delete [] coord;
+}
+
+//______________________________________________________________________________
+Bool_t THnSparse::PrintBin(Long64_t idx, Int_t* bin, Option_t* options) const
+{
+   // Print one bin. If "idx" is != -1 use that to determine the bin,
+   // otherwise (if "idx" == -1) use the coordinate in "bin".
+   // If "options" contains:
+   //   '0': only print bins with an error or content != 0
+   // Return whether the bin was printed (depends on options)
+   
+   Double_t v = -42;
+   if (idx == -1) {
+      idx = const_cast<THnSparse*>(this)->GetBin(bin, kFALSE);
+      v = GetBinContent(idx);
+   } else {
+      v = GetBinContent(idx, bin);
+   }
+
+   if (options && strchr(options, '0') && v == 0.) {
+      if (GetCalculateErrors()) {
+         if (GetBinError(idx) == 0.) {
+            // suppress zeros, and we have one.
+            return kFALSE;
+         }
+      } else {
+         // suppress zeros, and we have one.
+         return kFALSE;
+      }
+   }
+
+   TString coord;
+   for (Int_t dim = 0; dim < fNdimensions; ++dim) {
+      coord += bin[dim];
+      coord += ',';
+   }
+   coord.Remove(coord.Length() - 1);
+
+   if (GetCalculateErrors()) {
+      Double_t err = 0.;
+      if (idx != -1) {
+         err = GetBinError(idx);
+      }
+      Printf("Bin at (%s) = %g (+/- %g)", coord.Data(), v, err);
+   } else {
+      Printf("Bin at (%s) = %g", coord.Data(), v);
+   }
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+void THnSparse::PrintEntries(Long64_t from /*=0*/, Long64_t howmany /*=-1*/,
+                            Option_t* options /*=0*/) const
+{
+   // Print "howmany" entries starting at "from". If "howmany" is -1, print all.
+   // If "options" contains:
+   //   'x': print in the order of axis bins, i.e. (0,0,...,0), (0,0,...,1),...
+   //   '0': only print bins with content != 0
+
+   if (from < 0) from = 0;
+   if (howmany == -1) howmany = GetNbins();
+
+   Int_t* bin = new Int_t[fNdimensions];
+
+   if (options && (strchr(options, 'x') || strchr(options, 'X'))) {
+      Int_t* nbins = new Int_t[fNdimensions];
+      for (Int_t dim = fNdimensions - 1; dim >= 0; --dim) {
+         nbins[dim] = GetAxis(dim)->GetNbins();
+         bin[dim] = from % nbins[dim];
+         from /= nbins[dim];
+      }
+
+      for (Long64_t i = 0; i < howmany; ++i) {
+         if (!PrintBin(-1, bin, options))
+            ++howmany;
+         // Advance to next bin:
+         ++bin[fNdimensions - 1];
+         for (Int_t dim = fNdimensions - 1; dim >= 0; --dim) {
+            if (bin[dim] >= nbins[dim]) {
+               bin[dim] = 0;
+               if (dim > 0) {
+                  ++bin[dim - 1];
+               } else {
+                  howmany = -1; // aka "global break"
+               }
+            }
+         }
+      }
+      delete [] nbins;
+   } else {
+      for (Long64_t i = from; i < from + howmany; ++i) {
+         if (!PrintBin(i, bin, options))
+            ++howmany;
+      }
+   }
+   delete [] bin;
+}
+
+//______________________________________________________________________________
+void THnSparse::Print(Option_t* options) const
+{
+   // Print a THnSparse. If "option" contains:
+   //   'a': print axis details
+   //   'm': print memory usage
+   //   's': print statistics
+   //   'c': print its content, too (this can generate a LOT of output!)
+   // Other options are forwarded to PrintEntries().
+
+   Bool_t optAxis    = options && (strchr(options, 'A') || (strchr(options, 'a')));
+   Bool_t optMem     = options && (strchr(options, 'M') || (strchr(options, 'm')));
+   Bool_t optStat    = options && (strchr(options, 'S') || (strchr(options, 's')));
+   Bool_t optContent = options && (strchr(options, 'C') || (strchr(options, 'c')));
+
+   Printf("%s (*0x%lx): \"%s\" \"%s\"", IsA()->GetName(), (unsigned long)this, GetName(), GetTitle());
+   Printf("  %d dimensions, %g entries in %lld filled bins", GetNdimensions(), GetEntries(), GetNbins());
+
+   if (optAxis) {
+      for (Int_t dim = 0; dim < fNdimensions; ++dim) {
+         TAxis* axis = GetAxis(dim);
+         Printf("    axis %d \"%s\": %d bins (%g..%g), %s bin sizes", dim,
+                axis->GetTitle(), axis->GetNbins(), axis->GetXmin(), axis->GetXmax(),
+                (axis->GetXbins() ? "variable" : "fixed"));
+      }
+   }
+
+   if (optStat) {
+      Printf("  %s error calculation", (GetCalculateErrors() ? "with" : "without"));
+      if (GetCalculateErrors()) {
+         Printf("    Sum(w)=%g, Sum(w^2)=%g", GetSumw(), GetSumw2());
+         for (Int_t dim = 0; dim < fNdimensions; ++dim) {
+            Printf("    axis %d: Sum(w*x)=%g, Sum(w*x^2)=%g", dim, GetSumwx(dim), GetSumwx2(dim));
+         }
+      }
+   }
+
+   if (optMem) {
+      Printf("  coordinates stored in %d chunks of %d entries\n    %g of bins filled using %g of memory compared to an array",
+             GetNChunks(), GetChunkSize(), GetSparseFractionBins(), GetSparseFractionMem());
+   }
+
+   if (optContent) {
+      Printf("  BIN CONTENT:");
+      PrintEntries(0, -1, options);
+   }
+}
+

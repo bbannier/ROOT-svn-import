@@ -650,7 +650,7 @@ void THStack::Paint(Option_t *option)
    }
 
    char loption[32];
-   sprintf(loption,"%s",opt.Data());
+   snprintf(loption,31,"%s",opt.Data());
    char *nostack = strstr(loption,"nostack");
    // do not delete the stack. Another pad may contain the same object
    // drawn in stack mode!
@@ -678,7 +678,7 @@ void THStack::Paint(Option_t *option)
       TAxis *xaxis = h->GetXaxis();
       TAxis *yaxis = h->GetYaxis();
       if (h->GetDimension() > 1) {
-         if (strlen(option) == 0) strcpy(loption,"lego1");
+         if (strlen(option) == 0) strlcpy(loption,"lego1",32);
          const TArrayD *xbins = xaxis->GetXbins();
          const TArrayD *ybins = yaxis->GetXbins();
          if (xbins->fN != 0 && ybins->fN != 0) {
@@ -707,8 +707,8 @@ void THStack::Paint(Option_t *option)
       fHistogram->SetTitle(GetTitle());
    }
 
-   if (nostack) {*nostack = 0; strcat(nostack,nostack+7);}
-   //if (nostack) {strncpy(nostack,"       ",7);}
+   if (nostack) {*nostack = 0; strncat(nostack,nostack+7,7);}
+   //if (nostack) {strlcpy(nostack,"       ",7);}
    else fHistogram->GetPainter()->SetStack(fHists);
 
    if (!fHistogram->TestBit(TH1::kIsZoomed)) {
@@ -745,15 +745,15 @@ void THStack::Paint(Option_t *option)
    if (strstr(loption,"lego")) return;
 
    char noption[32];
-   strcpy(noption,loption);
+   strlcpy(noption,loption,32);
    Int_t nhists = fHists->GetSize();
    if (nostack) {
       lnk = (TObjOptLink*)fHists->FirstLink();
       for (Int_t i=0;i<nhists;i++) {
          if (strstr(lnk->GetOption(),"same")) {
-            sprintf(loption,"%s%s",noption,lnk->GetOption());
+            snprintf(loption,31,"%s%s",noption,lnk->GetOption());
          } else {
-            sprintf(loption,"%ssame%s",noption,lnk->GetOption());
+            snprintf(loption,31,"%ssame%s",noption,lnk->GetOption());
          }
          fHists->At(i)->Paint(loption);
          lnk = (TObjOptLink*)lnk->Next();
@@ -764,9 +764,9 @@ void THStack::Paint(Option_t *option)
       Int_t h1col, h1fill;
       for (Int_t i=0;i<nhists;i++) {
          if (strstr(lnk->GetOption(),"same")) {
-            sprintf(loption,"%s%s",noption,lnk->GetOption());
+            snprintf(loption,31,"%s%s",noption,lnk->GetOption());
          } else {
-            sprintf(loption,"%ssame%s",noption,lnk->GetOption());
+            snprintf(loption,31,"%ssame%s",noption,lnk->GetOption());
          }
          h1 = (TH1*)fStack->At(nhists-i-1);
          if (i>0) {

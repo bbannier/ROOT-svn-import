@@ -563,14 +563,19 @@ void TDatabasePDG::ReadPDGTable(const char *FileName)
 
    Int_t     idecay, decay_type, flavor, ndau, stable;
 
-   while ( (c[0]=getc(file)) != EOF) {
-
+   Int_t input;
+   while ( (input=getc(file)) != EOF) {
+      c[0] = input;
       if (c[0] != '#') {
          ungetc(c[0],file);
          // read channel number
+         // coverity [secure_coding : FALSE]
          if (fscanf(file,"%i",&ich)) {;}
+         // coverity [secure_coding : FALSE]
          if (fscanf(file,"%s",name  )) {;}
+         // coverity [secure_coding : FALSE]
          if (fscanf(file,"%i",&kf   )) {;}
+         // coverity [secure_coding : FALSE]
          if (fscanf(file,"%i",&anti )) {;}
 
          if (kf < 0) {
@@ -578,16 +583,27 @@ void TDatabasePDG::ReadPDGTable(const char *FileName)
             // nothing more on this line
             if (fgets(c,200,file)) {;}
          } else {
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%i",&class_number)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%s",class_name)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%i",&charge)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%le",&mass)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%le",&width)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%i",&isospin)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%i",&i3)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%i",&spin)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%i",&flavor)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%i",&tracking_code)) {;}
+            // coverity [secure_coding : FALSE]
             if (fscanf(file,"%i",&nch)) {;}
             // nothing more on this line
             if (fgets(c,200,file)) {;}
@@ -610,15 +626,22 @@ void TDatabasePDG::ReadPDGTable(const char *FileName)
             if (nch) {
                // read in decay channels
                ich = 0;
-               while ( ((c[0]=getc(file)) != EOF) && (ich <nch)) {
+               Int_t c_input = 0;
+               while ( ((c_input=getc(file)) != EOF) && (ich <nch)) {
+                  c[0] = c_input;
                   if (c[0] != '#') {
                      ungetc(c[0],file);
 
+                     // coverity [secure_coding : FALSE]
                      if (fscanf(file,"%i",&idecay)) {;}
+                     // coverity [secure_coding : FALSE]
                      if (fscanf(file,"%i",&decay_type)) {;}
+                     // coverity [secure_coding : FALSE]
                      if (fscanf(file,"%le",&branching_ratio)) {;}
+                     // coverity [secure_coding : FALSE]
                      if (fscanf(file,"%i",&ndau)) {;}
                      for (int idau=0; idau<ndau; idau++) {
+                        // coverity [secure_coding : FALSE]
                         if (fscanf(file,"%i",&dau[idau])) {;}
                      }
                      // add decay channel
@@ -770,6 +793,6 @@ Int_t TDatabasePDG::WritePDGTable(const char *filename)
          fprintf(file,"\n");
       }
    }
-
+   fclose(file);
    return nparts;
 }

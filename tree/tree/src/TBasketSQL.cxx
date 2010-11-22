@@ -66,7 +66,7 @@ TBasketSQL::TBasketSQL(const char *name, const char *title, TBranch *branch,
       fBufferRef = new TBufferSQL(TBuffer::kWrite, fBufferSize, vc, fInsertQuery, fRowPtr);
    }
    fHeaderOnly  = kTRUE;
-   fLast        = 0; // RDK: Must initialize before calling Streamer()
+   fLast        = 0; // Must initialize before calling Streamer()
    //Streamer(*fBufferRef);
    fBuffer      = 0;
    fBranch      = branch;
@@ -148,6 +148,15 @@ Int_t TBasketSQL::ReadBasketBuffers(Long64_t , Int_t, TFile *)
    Error("ReadBasketBuffers","This member function should not be called!");
    return 0;
 }
+
+//_________________________________________________________________________
+void TBasketSQL::Reset()
+{	 
+   // See TBasket::Reset
+
+   TBasket::Reset();
+}
+
 
 //_________________________________________________________________________
 void TBasketSQL::Update(Int_t, Int_t) 

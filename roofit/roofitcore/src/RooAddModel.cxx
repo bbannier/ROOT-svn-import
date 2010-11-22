@@ -55,6 +55,7 @@
 #include "RooRealConstant.h"
 #include "RooNameReg.h"
 #include "RooMsgService.h"
+#include "RooRealIntegral.h"
 
 #include "Riostream.h"
 
@@ -310,6 +311,7 @@ Int_t RooAddModel::basisCode(const char* name) const
       Int_t subCode = model->basisCode(name) ;
       if (first) {
 	code = subCode ;
+	first = kFALSE ;
       } else if (subCode==0) {
 	code = 0 ;
       }

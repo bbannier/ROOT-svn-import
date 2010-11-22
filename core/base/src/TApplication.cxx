@@ -74,18 +74,20 @@ TApplication::TApplication()
 {
    // Default ctor. Can be used by classes deriving from TApplication.
 
-   fArgc          = 0;
-   fArgv          = 0;
-   fAppImp        = 0;
-   fAppRemote     = 0;
-   fIsRunning     = kFALSE;
-   fReturnFromRun = kFALSE;
-   fNoLog         = kFALSE;
-   fNoLogo        = kFALSE;
-   fQuit          = kFALSE;
-   fFiles         = 0;
-   fIdleTimer     = 0;
-   fSigHandler    = 0;
+   fArgc            = 0;
+   fArgv            = 0;
+   fAppImp          = 0;
+   fAppRemote       = 0;
+   fIsRunning       = kFALSE;
+   fReturnFromRun   = kFALSE;
+   fNoLog           = kFALSE;
+   fNoLogo          = kFALSE;
+   fQuit            = kFALSE;
+   fUseMemstat      = kFALSE;
+   fFiles           = 0;
+   fIdleTimer       = 0;
+   fSigHandler      = 0;
+   fExitOnException = kDontExit;
    ResetBit(kProcessRemotely);
 }
 
@@ -149,10 +151,12 @@ TApplication::TApplication(const char *appClassName,
    for (int i = 0; i < fArgc; i++)
       fArgv[i] = StrDup(argv[i]);
 
-   fNoLog         = kFALSE;
-   fNoLogo        = kFALSE;
-   fQuit          = kFALSE;
-   fAppImp        = 0;
+   fNoLog           = kFALSE;
+   fNoLogo          = kFALSE;
+   fQuit            = kFALSE;
+   fUseMemstat      = kFALSE;
+   fExitOnException = kDontExit;
+   fAppImp          = 0;
 
    if (numOptions >= 0)
       GetOptions(argc, argv);
@@ -191,6 +195,17 @@ TApplication::TApplication(const char *appClassName,
 
    // to allow user to interact with TCanvas's under WIN32
    gROOT->SetLineHasBeenProcessed();
+
+   // activate TMemStat
+   if (fUseMemstat || gEnv->GetValue("Root.TMemStat", 0)) {
+      fUseMemstat = kTRUE;
+      Int_t buffersize = gEnv->GetValue("Root.TMemStat.buffersize", 100000);
+      Int_t maxcalls   = gEnv->GetValue("Root.TMemStat.maxcalls", 5000000);
+      const char *ssystem = gEnv->GetValue("Root.TMemStat.system","gnubuiltin");
+      if (maxcalls > 0) {
+         gROOT->ProcessLine(Form("new TMemStat(\"%s\",%d,%d);",ssystem,buffersize,maxcalls));
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -204,6 +219,12 @@ TApplication::~TApplication()
    SafeDelete(fAppImp);
    if (fgApplications)
       fgApplications->Remove(this);
+
+   //close TMemStat
+   if (fUseMemstat) {
+      ProcessLine("TMemStat::Close()");
+      fUseMemstat = kFALSE;
+   }
 }
 
 //______________________________________________________________________________
@@ -253,7 +274,8 @@ void TApplication::InitializeGraphics()
       } else {
          TPluginHandler *h;
          if ((h = gROOT->GetPluginManager()->FindHandler("TVirtualX", "x11ttf")))
-            h->LoadPlugin();
+            if (h->LoadPlugin() == -1)
+               Info("InitializeGraphics", "no TTF support");
       }
    }
 #endif
@@ -321,25 +343,32 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
    // Get and handle command line options. Arguments handled are removed
    // from the argument array. The following arguments are handled:
    //    -b : run in batch mode without graphics
+   //    -x : exit on exception
    //    -n : do not execute logon and logoff macros as specified in .rootrc
    //    -q : exit after processing command line macro files
    //    -l : do not show splash screen
    // The last three options are only relevant in conjunction with TRint.
    // The following help and info arguments are supported:
-   //    -?      : print usage
-   //    -h      : print usage
-   //    --help  : print usage
-   //    -config : print ./configure options
+   //    -?       : print usage
+   //    -h       : print usage
+   //    --help   : print usage
+   //    -config  : print ./configure options
+   //    -memstat : run with memory usage monitoring
    // In addition to the above options the arguments that are not options,
-   // i.e. they don't start with - or + are treated as follows:
-   //   <file>.root are considered ROOT files and added to the InputFiles() list
-   //   <macro>.C   are considered ROOT macros and also added to the InputFiles() list
+   // i.e. they don't start with - or + are treated as follows (and also removed
+   // from the argument array):
    //   <dir>       is considered the desired working directory and available
    //               via WorkingDirectory(), if more than one dir is specified the
-   //               last one will prevail
+   //               first one will prevail
+   //   <file>      if the file exists its added to the InputFiles() list
+   //   <file>.root are considered ROOT files and added to the InputFiles() list,
+   //               the file may be a remote file url
+   //   <macro>.C   are considered ROOT macros and also added to the InputFiles() list
    // In TRint we set the working directory to the <dir>, the ROOT files are
    // connected, and the macros are executed. If your main TApplication is not
    // TRint you have to decide yourself what to do whith these options.
+   // All specified arguments (also the ones removed) can always be retrieved
+   // via the TApplication::Argv() method.
 
    static char null[1] = { "" };
 
@@ -359,6 +388,7 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
          fprintf(stderr, "Usage: %s [-l] [-b] [-n] [-q] [dir] [[file:]data.root] [file1.C ... fileN.C]\n", argv[0]);
          fprintf(stderr, "Options:\n");
          fprintf(stderr, "  -b : run in batch mode without graphics\n");
+         fprintf(stderr, "  -x : exit on exception\n");
          fprintf(stderr, "  -n : do not execute logon and logoff macros as specified in .rootrc\n");
          fprintf(stderr, "  -q : exit after processing command line macro files\n");
          fprintf(stderr, "  -l : do not show splash screen\n");
@@ -368,11 +398,15 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
          fprintf(stderr, "  -h      : print usage\n");
          fprintf(stderr, "  --help  : print usage\n");
          fprintf(stderr, "  -config : print ./configure options\n");
+         fprintf(stderr, "  -memstat : run with memory usage monitoring\n");
          fprintf(stderr, "\n");
          Terminate(0);
       } else if (!strcmp(argv[i], "-config")) {
          fprintf(stderr, "ROOT ./configure options:\n%s\n", gROOT->GetConfigOptions());
          Terminate(0);
+      } else if (!strcmp(argv[i], "-memstat")) {
+         fUseMemstat = kTRUE;
+         argv[i] = null;
       } else if (!strcmp(argv[i], "-b")) {
          MakeBatch();
          argv[i] = null;
@@ -385,6 +419,9 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
       } else if (!strcmp(argv[i], "-l")) {
          // used by front-end program to not display splash screen
          fNoLogo = kTRUE;
+         argv[i] = null;
+      } else if (!strcmp(argv[i], "-x")) {
+         fExitOnException = kExit;
          argv[i] = null;
       } else if (!strcmp(argv[i], "-splash")) {
          // used when started by front-end program to signal that
@@ -418,11 +455,13 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
                Warning("GetOptions", "file %s has size 0, skipping", dir);
             }
          } else {
-            if (TString(udir.GetFile()).EndsWith(".root") && !strcmp(gROOT->GetName(), "Rint")) {
-               // file ending on .root but does not exist, likely a typo, warn user...
-               if (!strcmp(udir.GetProtocol(), "file"))
-                  Warning("GetOptions", "file %s not found", dir);
-               else {
+            if (TString(udir.GetFile()).EndsWith(".root")) {
+               if (!strcmp(udir.GetProtocol(), "file")) {
+                  // file ending on .root but does not exist, likely a typo
+                  // warn user if plain root...
+                  if (!strcmp(gROOT->GetName(), "Rint"))
+                     Warning("GetOptions", "file %s not found", dir);
+               } else {
                   // remote file, give it the benefit of the doubt and add it to list of files
                   if (!fFiles) fFiles = new TObjArray;
                   fFiles->Add(new TObjString(argv[i]));
@@ -492,9 +531,28 @@ void TApplication::HandleException(Int_t sig)
          gInterpreter->RewindDictionary();
          gInterpreter->ClearFileBusy();
       }
-      Throw(sig);
+      if (fExitOnException == kExit)
+         gSystem->Exit(sig);
+      else if (fExitOnException == kAbort)
+         gSystem->Abort();
+      else
+         Throw(sig);
    }
    gSystem->Exit(sig);
+}
+
+//______________________________________________________________________________
+TApplication::EExitOnException TApplication::ExitOnException(TApplication::EExitOnException opt)
+{
+   // Set the exit on exception option. Setting this option determines what
+   // happens in HandleException() in case an exception (kSigBus,
+   // kSigSegmentationViolation, kSigIllegalInstruction or kSigFloatingException)
+   // is trapped. Choices are: kDontExit (default), kExit or kAbort.
+   // Returns the previous value.
+
+   EExitOnException old = fExitOnException;
+   fExitOnException = opt;
+   return old;
 }
 
 //______________________________________________________________________________
@@ -552,13 +610,17 @@ void TApplication::LoadGraphicsLibs()
       guiFactory = nativeg;
 
    if ((h = gROOT->GetPluginManager()->FindHandler("TVirtualX", guiBackend))) {
-      if (h->LoadPlugin() == -1)
+      if (h->LoadPlugin() == -1) {
+         gROOT->SetBatch(kTRUE);
          return;
+      }
       gVirtualX = (TVirtualX *) h->ExecPlugin(2, name.Data(), title.Data());
    }
    if ((h = gROOT->GetPluginManager()->FindHandler("TGuiFactory", guiFactory))) {
-      if (h->LoadPlugin() == -1)
+      if (h->LoadPlugin() == -1) {
+         gROOT->SetBatch(kTRUE);
          return;
+      }
       gGuiFactory = (TGuiFactory *) h->ExecPlugin(0);
    }
 }
@@ -633,9 +695,6 @@ Int_t TApplication::ParseRemoteLine(const char *ln,
             script += "\"";
             isScript = kFALSE;
             break;
-         } else {
-            ::Warning("TApplication::ParseRemoteLine",
-                      "inconsistent input line %s", line.Data());
          }
       }
    }
@@ -991,7 +1050,6 @@ void TApplication::Run(Bool_t retrn)
    fIsRunning = kTRUE;
 
    gSystem->Run();
-
    fIsRunning = kFALSE;
 }
 
@@ -1043,6 +1101,12 @@ void TApplication::Terminate(Int_t status)
 {
    // Terminate the application by call TSystem::Exit() unless application has
    // been told to return from Run(), by a call to SetReturnFromRun().
+
+   //close TMemStat
+   if (fUseMemstat) {
+      ProcessLine("TMemStat::Close()");
+      fUseMemstat = kFALSE;
+   }
 
    Emit("Terminate(Int_t)", status);
 

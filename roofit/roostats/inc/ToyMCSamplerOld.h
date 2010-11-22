@@ -39,6 +39,7 @@ END_HTML
 #endif
 
 #include <vector>
+#include <string>
 #include <sstream>
 
 #include "RooStats/TestStatSampler.h"
@@ -73,6 +74,9 @@ namespace RooStats {
       fCounter=0;
       fVarName = fTestStat->GetVarName();
       fLastDataSet = 0;
+      fNevents = 0; 
+      fNtoys = 0; 
+      fSize = 0.05; 
     }
 
     virtual ~ToyMCSamplerOld() {
@@ -203,14 +207,10 @@ namespace RooStats {
 
      // helper method to create meaningful names for sampling dist
      string MakeName(RooArgSet& /*params*/){
-       std::stringstream str;
+       std::ostringstream str;
        str<<"SamplingDist_"<< fCounter;
        fCounter++;
-
-       // WVE -- Return pointer to static buffer
-       static char buf[1024] ;
-       strcpy(buf,str.str().c_str()) ;
-
+       std::string buf = str.str(); 
        return buf ;       
      }
 

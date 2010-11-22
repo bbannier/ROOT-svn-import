@@ -101,7 +101,7 @@ namespace RooStats {
   ///////////////////////////
   class AcceptanceRegion : public TObject{
   public:
-    AcceptanceRegion() {}
+     AcceptanceRegion() : fLookupIndex(0), fLowerLimit(0), fUpperLimit(0) {}
     virtual ~AcceptanceRegion() {}
 
     AcceptanceRegion(Int_t lu, Double_t ll, Double_t ul){
@@ -127,9 +127,9 @@ namespace RooStats {
   ///////////////////////////
   class SamplingSummary : public TObject {
   public:
-    SamplingSummary() {}
+     SamplingSummary() : fParameterPointIndex(0) {}
     virtual ~SamplingSummary() {}
-    SamplingSummary(AcceptanceRegion& ar){
+     SamplingSummary(AcceptanceRegion& ar) : fParameterPointIndex(0) {
       AddAcceptanceRegion(ar);
     }
     Int_t GetParameterPointIndex(){return fParameterPointIndex;}

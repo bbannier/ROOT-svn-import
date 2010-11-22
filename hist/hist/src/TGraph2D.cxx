@@ -309,11 +309,14 @@ TGraph2D::TGraph2D(TH2 *h2)
    // Graph2D constructor with a TH2 (h2) as input.
    // Only the h2's bins within the X and Y axis ranges are used.
    // Empty bins, recognized when both content and errors are zero, are excluded.
+   Build(h2->GetNbinsX()*h2->GetNbinsY());
 
-   Build(10);
-
-   SetName(h2->GetName());
+   TString gname = "Graph2D_from_" + TString(h2->GetName() );
+   SetName(gname);
+   // need to call later because sets title in ref histogram
    SetTitle(h2->GetTitle());
+
+
 
    TAxis *xaxis = h2->GetXaxis();
    TAxis *yaxis = h2->GetYaxis();
@@ -526,7 +529,7 @@ void TGraph2D::DirectoryAutoAdd(TDirectory *dir)
       SetDirectory(dir);
       if (dir) {
          ResetBit(kCanDelete);
-      }      
+      }
    }
 }
 
@@ -702,12 +705,16 @@ TFitResultPtr TGraph2D::Fit(TF2 *f2, Option_t *option, Option_t *)
    //
    //  Changing the fitting function
    //  =============================
-   //  By default the fitting function Graph2DFitChisquare is used.
-   //  To specify a User defined fitting function, specify option "U" and
-   //  call the following functions:
-   //    TVirtualFitter::Fitter(mygraph)->SetFCN(MyFittingFunction)
-   //  where MyFittingFunction is of type:
-   //  extern void MyFittingFunction(Int_t &npar, Double_t *gin, Double_t &f, Double_t *u, Int_t flag);
+   //   By default a chi2 fitting function is used for fitting a TGraph.
+   //   The function is implemented in FitUtil::EvaluateChi2.
+   //   In case of TGraph2DErrors an effective chi2 is used
+   //   (see TGraphErrors fit in TGraph::Fit) and is implemented in
+   //   FitUtil::EvaluateChi2Effective
+   //   To specify a User defined fitting function, specify option "U" and
+   //   call the following functions:
+   //   TVirtualFitter::Fitter(mygraph)->SetFCN(MyFittingFunction)
+   //   where MyFittingFunction is of type:
+   //   extern void MyFittingFunction(Int_t &npar, Double_t *gin, Double_t &f, Double_t *u, Int_t flag);
    //
    //  Associated functions
    //  ====================
@@ -723,7 +730,7 @@ TFitResultPtr TGraph2D::Fit(TF2 *f2, Option_t *option, Option_t *)
    //  By default the TFitResultPtr contains only the status of the fit and it converts automatically to an
    //  integer. If the option "S" is instead used, TFitResultPtr contains the TFitResult and behaves as a smart
    //  pointer to it. For example one can do:
-   //     TFitResult r    = graph->Fit("myFunc","S");
+   //     TFitResultPtr r = graph->Fit("myFunc","S");
    //     TMatrixDSym cov = r->GetCovarianceMatrix();  //  to access the covariance matrix
    //     Double_t par0   = r->Value(0); // retrieve the value for the parameter 0
    //     Double_t err0   = r->Error(0); // retrieve the error for the parameter 0
@@ -921,10 +928,10 @@ TH2D *TGraph2D::GetHistogram(Option_t *option)
    if (!fUserHisto) {
       Bool_t add = TH1::AddDirectoryStatus();
       TH1::AddDirectory(kFALSE);
-      Double_t xmax  = GetXmax();
-      Double_t ymax  = GetYmax();
-      Double_t xmin  = GetXmin();
-      Double_t ymin  = GetYmin();
+      Double_t xmax  = GetXmaxE();
+      Double_t ymax  = GetYmaxE();
+      Double_t xmin  = GetXminE();
+      Double_t ymin  = GetYminE();
       hxmin = xmin-fMargin*(xmax-xmin);
       hymin = ymin-fMargin*(ymax-ymin);
       hxmax = xmax+fMargin*(xmax-xmin);
@@ -955,11 +962,13 @@ TH2D *TGraph2D::GetHistogram(Option_t *option)
          hzmin = fMinimum;
       } else {
          hzmin = GetZmin();
+///         hzmin = GetZminE();
       }
       if (fMaximum != -1111) {
          hzmax = fMaximum;
       } else {
          hzmax = GetZmax();
+///         hzmax = GetZmaxE();
       }
       if (hzmin==hzmax) {
          hzmin = hzmin-0.01*hzmin;
@@ -1098,6 +1107,8 @@ void TGraph2D::Paint(Option_t *option)
 
    if (opt.Contains("line") && !opt.Contains("tri")) opt.Append("tri0");
 
+   if (opt.Contains("err")  && !opt.Contains("tri")) opt.Append("tri0");
+
    if (opt.Contains("tri0")) {
       GetHistogram("empty");
    } else {
@@ -1145,10 +1156,10 @@ TH1 *TGraph2D::Project(Option_t *option) const
    TH2D *h2 = 0;
    Int_t nch = strlen(GetName()) +opt.Length() +2;
    char *name = new char[nch];
-   sprintf(name,"%s_%s",GetName(),option);
+   snprintf(name,nch,"%s_%s",GetName(),option);
    nch = strlen(GetTitle()) +opt.Length() +2;
    char *title = new char[nch];
-   sprintf(title,"%s_%s",GetTitle(),option);
+   snprintf(title,nch,"%s_%s",GetTitle(),option);
 
    Double_t hxmin = GetXmin();
    Double_t hxmax = GetXmax();

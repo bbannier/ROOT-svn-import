@@ -4,7 +4,7 @@
  * Project: RooStats                                                     *
  * Package: RooFit/RooStats                                              *
  * Authors:                                                              *
- *   Danilo Piparo, Gregory Schott                                       *
+ *   Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke       *
  *************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *

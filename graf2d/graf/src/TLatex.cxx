@@ -33,7 +33,7 @@ ClassImp(TLatex)
 <center><h2>TLatex : to draw Mathematical Formula</h2></center>
 
 TLatex's purpose is to write mathematical equations.
-The syntax is very similar to the Latex one.
+The syntax is very similar to Latex's.
 It provides several functionalities:
 <ul>
 <li><a href="#L1">  Subscripts and Superscripts</a></li>
@@ -46,12 +46,12 @@ It provides several functionalities:
 <li><a href="#L8">  Accents</a></li>
 <li><a href="#L9">  Changing Style</a></li>
 <li><a href="#L10"> Alignment Rules</a></li>
-<li><a href="#L11"> Characters adjustement</a></li>
-<li><a href="#L12"> Italic and boldface</a></li>
+<li><a href="#L11"> Character Adjustement</a></li>
+<li><a href="#L12"> Italic and Boldface</a></li>
 <li><a href="#L13"> Examples</a></li>
 </ul>
 
-When the font precision (see <tt>TAttText</tt>) is low (ie 0), TLatex is
+When the font precision (see <tt>TAttText</tt>) is low (0 or 1), TLatex is
 painted as a normal TText, the control characters are not interpreted.
 
 <a name="L1"></a><h3>Subscripts and Superscripts</h3>
@@ -60,7 +60,7 @@ commands. These commands can be combined to make complicated subscript and
 superscript expressions. You may adjust the display of subscripts and
 superscripts by using the two functions <tt>SetIndiceSize(Double_t)</tt>,
 which set relative size of subscripts and superscripts, and
-<tt>SetLimitIndiceSize(Int_t)</tt>, which set limit for text resizing of
+<tt>SetLimitIndiceSize(Int_t)</tt>, which set limits for text resizing of
 subscipts and superscripts.
 <p>Examples:
 End_Html
@@ -95,7 +95,7 @@ End_Html
 
 Begin_Html
 <a name="L3"></a><h3>Splitting Lines</h3>
-A text can be split in two lines via the command <tt>#splitline</tt>.
+Text can be split in two lines via the command <tt>#splitline</tt>.
 <p>Examples:
 End_Html
    #splitline{21 April 2003}{14:02:30} : Begin_Latex #splitline{21 April 2003}{14:02:30} End_Latex
@@ -125,14 +125,14 @@ TLatex provides 4 kinds of proportional delimiters:
 <pre>
    #[]{....} or "a la" Latex #left[.....#right] : big square brackets
    #{}{....} or              #left{.....#right} : big curly brackets
-   #||{....} or              #left|.....#right| : big absolute value symbol
-   #(){....} or              #left(.....#right) : big parenthesis
+   #||{....} or              #left|.....#right| : big absolute value symbols
+   #(){....} or              #left(.....#right) : big parentheses
 </pre>
 
 <a name="L7"></a><h3>Greek Letters</h3>
 The command to produce a lowercase Greek letter is obtained by adding a
 <tt>#</tt> to the name of the letter. For an uppercase Greek letter, just
-capitalize the first letter of the command name. Some letter have two
+capitalize the first letter of the command name. Some letters have two
 representations. The name of the second one (the "variation") starts with "var".
 The following table gives the complete list:
 End_Html
@@ -227,9 +227,9 @@ Begin_Macro(source)
 End_Macro
 
 Begin_Html
-<a name="L11"></a><h3>Characters adjustement</h3>
+<a name="L11"></a><h3>Character Adjustement</h3>
 The two commands <tt>#kern</tt> and <tt>#lower</tt> enable a better control
-over characters placement. The command <tt>#kern[(Float_t)dx]{text}</tt> moves
+over character placement. The command <tt>#kern[(Float_t)dx]{text}</tt> moves
 the output string horizontally by the fraction <tt>dx</tt> of its length.
 Similarly, <tt>#lower[(Float_t)dy]{text}</tt> shifts the text up or down by
 the fraction <tt>dy</tt> of its height.
@@ -245,7 +245,7 @@ Vertical a#lower[0.2]{d}#lower[0.4]{j}#lower[0.1]{u}#lower[-0.1]{s}#lower[-0.3]{
 Begin_Latex Vertical a#lower[0.2]{d}#lower[0.4]{j}#lower[0.1]{u}#lower[-0.1]{s}#lower[-0.3]{t}#lower[-0.4]{m}#lower[-0.2]{e}#lower[0.1]{n}t End_Latex
 
 Begin_Html
-<a name="L12"></a><h3>Italic and boldface</h3>
+<a name="L12"></a><h3>Italic and Boldface</h3>
 Text can be turned italic or boldface using the commands
 <tt>#it</tt> and <tt>#bf</tt>.
 <p>Examples:
@@ -327,13 +327,14 @@ TLatex::TLatex(Double_t x, Double_t y, const char *text)
 
    fFactorSize  = 1.5;
    fFactorPos   = 0.6;
-   fLimitFactorSize = 3;
    fError       = 0;
    fShow        = kFALSE;
-   fPos=fTabMax = 0;
+   fPos         = 0;
+   fTabMax      = 0;
    fOriginSize  = 0.04;
    fTabSize     = 0;
    fItalic      = kFALSE;
+   fLimitFactorSize = 3;
    SetLineWidth(2);
 }
 
@@ -350,6 +351,14 @@ TLatex::TLatex(const TLatex &text) : TText(text), TAttLine(text)
 {
    // Copy constructor.
 
+   fFactorSize  = 1.5;
+   fFactorPos   = 0.6;
+   fShow        = kFALSE;
+   fPos         = 0;
+   fTabMax      = 0;
+   fOriginSize  = 0.04;
+   fItalic      = kFALSE;
+   fLimitFactorSize = 3;
    ((TLatex&)text).Copy(*this);
 }
 
@@ -445,7 +454,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
                  "vee","Leftrightarrow","Leftarrow","Uparrow","Rightarrow",
                  "Downarrow","diamond","LT","void1","copyright","void3","sum",
                  "arctop","lbar","arcbottom","topbar","void8", "bottombar","arcbar",
-                 "ltbar","AA","aa","void06","GT","int" };
+                 "ltbar","AA","aa","void06","GT","int","forall","exists" };
 
    const char *tab3[] = { "bar","vec","dot","hat","ddot","acute","grave","check","tilde","slash"};
 
@@ -581,18 +590,19 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
                if (nCroch<0) {
                   // more "]" than "["
                   fError = "Missing \"[\"";
+                  delete [] text;
                   return TLatexFormSize(0,0,0);
                }
             }
             break;
       }
       if (length>i+1) {
-         Char_t buf[2];
+         Char_t buf[3];
          strncpy(buf,&text[i],2);
          if (strncmp(buf,"^{",2)==0) {
             if (opPower==-1 && nBrackets==0 && nCroch==0) opPower=i;
             if (i>3) {
-               Char_t buf1[4];
+               Char_t buf1[5];
                strncpy(buf1,&text[i-4],4);
                if (strncmp(buf1,"#int",4)==0) {
                   abovePlace = 1;
@@ -607,7 +617,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
          if (strncmp(buf,"_{",2)==0) {
             if (opUnder==-1 && nBrackets==0 && nCroch==0) opUnder=i;
             if (i>3) {
-               Char_t buf2[4];
+               Char_t buf2[5];
                strncpy(buf2,&text[i-4],4);
                if (strncmp(buf2,"#int",4)==0) {
                   abovePlace = 1;
@@ -626,7 +636,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
       if (text[i]=='\\' || (text[i]=='#' && !opFound && nBrackets==0 && nCroch==0)) {
 
          if (length>i+10 ) {
-            Char_t buf[10];
+            Char_t buf[11];
             strncpy(buf,&text[i+1],10);
             if (strncmp(buf,"splitline{",10)==0) {
                opSplitLine=i; opFound = kTRUE;
@@ -635,7 +645,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
             }
          }
          if (length>i+8 ) {
-            Char_t buf[8];
+            Char_t buf[9];
             strncpy(buf,&text[i+1],8);
             if (!opParallel && strncmp(buf,"parallel",8)==0) {
                opParallel=1; opFound = kTRUE;
@@ -644,7 +654,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
             }
          }
          if (length>i+6) {
-            Char_t buf[6];
+            Char_t buf[7];
             strncpy(buf,&text[i+1],6);
             if (strncmp(buf,"lower[",6)==0 || strncmp(buf,"lower{",6)==0) {
                opLower=i; opFound = kTRUE;
@@ -663,7 +673,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
             }
          }
          if (length>i+5 ) {
-            Char_t buf[5];
+            Char_t buf[6];
             strncpy(buf,&text[i+1],5);
             if (strncmp(buf,"frac{",5)==0) {
                opFrac=i; opFound = kTRUE;
@@ -687,7 +697,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
             }
          }
          if (length>i+4 ) {
-            Char_t buf[4];
+            Char_t buf[5];
             strncpy(buf,&text[i+1],4);
             if (!opOdot && strncmp(buf,"odot",4)==0) {
                opOdot=1; opFound = kTRUE;
@@ -765,7 +775,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
          }
          UInt_t lastsize = 0;
          if (!opFound)
-         for(k=0;k<80;k++) {
+         for(k=0;k<82;k++) {
             if ((opSpec==-1 || strlen(tab2[k])>lastsize) && UInt_t(length)>i+strlen(tab2[k])) {
                if (strncmp(&text[i+1],tab2[k],strlen(tab2[k]))==0) {
                   lastsize = strlen(tab2[k]);
@@ -819,7 +829,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
          if (min >= 2 && strncmp(&text[min-2],"{}",2)==0) {
             // upper and lower indice before the character
             // like with chemical element
-            sprintf(&text[ltext-2],"I ") ;
+            snprintf(&text[ltext-2],length-(ltext-2),"I ") ;
             ltext-- ;
          }
          fs1 = Anal1(spec,text,ltext);
@@ -865,7 +875,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
          }
 
          if (min >= 2 && strncmp(&text[min-2],"{}",2)==0) {
-            sprintf(&text[min-2],"  ") ;
+            snprintf(&text[min-2],length-(min-2),"  ") ;
             Analyse(x+pos,y,spec,text,min-1);
          } else {
             Analyse(x+pos,y,spec,text,min);
@@ -907,7 +917,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
          if (ltext >= 2 && strncmp(&text[ltext-2],"{}",2)==0) {
             // upper and lower indice before the character
             // like with chemical element
-            sprintf(&text[ltext-2],"I ") ;
+            snprintf(&text[ltext-2],length-(ltext-2),"I ") ;
             ltext-- ;
          }
          fs1 = Anal1(spec,text,ltext);
@@ -932,7 +942,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
             Analyse(x+pos2,y-fs1.Over()*prop-fs2.Under(),specNewSize,text+opPower+1,length-opPower-1);
          }
          if (opPower >= 2 && strncmp(&text[opPower-2],"{}",2)==0) {
-            sprintf(&text[opPower-2],"  ") ;
+            snprintf(&text[opPower-2],length-(opPower-2),"  ") ;
             Analyse(x+pos,y,spec,text,opPower-1);
          } else {
             Analyse(x+pos,y,spec,text,opPower);
@@ -956,7 +966,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
          if (ltext >= 2 && strncmp(&text[ltext-2],"{}",2)==0) {
             // upper and lower indice before the character
             // like with chemical element
-            sprintf(&text[ltext-2],"I ") ;
+            snprintf(&text[ltext-2],length-(ltext-2),"I ") ;
             ltext-- ;
          }
          fs1 = Anal1(spec,text,ltext);
@@ -979,7 +989,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
             Analyse(x+pos2,y+fs1.Under()*prop+fs2.Over(),specNewSize,text+opUnder+1,length-opUnder-1);
          }
          if (opUnder >= 2 && strncmp(&text[opUnder-2],"{}",2)==0) {
-            sprintf(&text[opUnder-2],"  ") ;
+            snprintf(&text[opUnder-2],length-(opUnder-2),"  ") ;
             Analyse(x+pos,y,spec,text,opUnder-1);
          } else {
             Analyse(x+pos,y,spec,text,opUnder);
@@ -1104,6 +1114,10 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
          newSpec.fFont = GetTextFont();
          if (opSpec == 75) letter = '\305'; // AA Angstroem
          if (opSpec == 76) letter = '\345'; // aa Angstroem
+      }
+      if(opSpec == 80 || opSpec == 81) {
+         if (opSpec == 80) letter = '\042'; // #forall
+         if (opSpec == 81) letter = '\044'; // #exists
       }
       Double_t props, propi;
       props = 1.8 ; // scale factor for #sum(66)
@@ -1798,6 +1812,9 @@ void TLatex::PaintLatex(Double_t x, Double_t y, Double_t angle, Double_t size, c
       return;
    }
 
+   TString newText = text1;
+   if( newText.Length() == 0) return;
+
    Double_t saveSize = size;
    Int_t saveFont = fTextFont;
    if (fTextFont%10 > 2) {
@@ -1812,10 +1829,6 @@ void TLatex::PaintLatex(Double_t x, Double_t y, Double_t angle, Double_t size, c
       SetTextFont(10*(saveFont/10) + 2);
    }
    if (gVirtualPS) gVirtualPS->SetBit(kLatex);
-
-   TString newText = text1;
-
-   if( newText.Length() == 0) return;
 
    fError = 0 ;
    if (CheckLatexSyntax(newText)) {
@@ -1923,6 +1936,8 @@ Int_t TLatex::CheckLatexSyntax(TString &text)
    // and all occurences of "kRight" keyword by "}".
    i = 0 ;
    while (i < length) {
+      // The string in 'buf' does not need to be null terminated,
+      // we will only check with strncmp.
       strncpy(buf,&text[i],TMath::Min(7,length-i));
       opFound = kFALSE ;
       for (k = 0 ; k < nLeft1 ; k++) {
@@ -1966,6 +1981,8 @@ Int_t TLatex::CheckLatexSyntax(TString &text)
             case '"' : quote1 = !quote1 ; break ;
             case '\'': quote2 = !quote2 ; break ;
          }
+         // The string in 'buf' does not need to be null terminated,
+         // we will only check with strncmp
          strncpy(buf,&text[i],TMath::Min(11,length-i));
          opFound = kFALSE ;
 

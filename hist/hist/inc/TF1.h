@@ -45,6 +45,12 @@ class TH1;
 class TAxis;
 class TMethodCall;
 
+namespace ROOT { 
+   namespace Fit { 
+      class FitResult; 
+   }
+}
+
 class TF1 : public TFormula, public TAttLine, public TAttFill, public TAttMarker {
 
 protected:
@@ -242,8 +248,8 @@ public:
    virtual Double_t Integral(Double_t a, Double_t b, const Double_t *params=0, Double_t epsilon=1e-12);
    virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t epsilon=1e-12);
    virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsilon=1e-12);
-   virtual Double_t IntegralError(Double_t a, Double_t b, Double_t epsilon=1e-12);
-   virtual Double_t IntegralError(Int_t n, const Double_t * a, const Double_t * b, Double_t epsilon=1e-12);
+   virtual Double_t IntegralError(Double_t a, Double_t b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
+   virtual Double_t IntegralError(Int_t n, const Double_t * a, const Double_t * b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
    //virtual Double_t IntegralFast(const TGraph *g, Double_t a, Double_t b, Double_t *params=0);
    virtual Double_t IntegralFast(Int_t num, Double_t *x, Double_t *w, Double_t a, Double_t b, Double_t *params=0, Double_t epsilon=1e-12);
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t minpts, Int_t maxpts, Double_t epsilon, Double_t &relerr,Int_t &nfnevl, Int_t &ifail);
@@ -255,6 +261,7 @@ public:
    virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
    virtual void     SavePrimitive(ostream &out, Option_t *option = "");
    virtual void     SetChisquare(Double_t chi2) {fChisquare = chi2;}
+   virtual void     SetFitResult(const ROOT::Fit::FitResult & result, const Int_t * indpar = 0);
    template <class PtrObj, typename MemFn> 
    void SetFunction( PtrObj& p, MemFn memFn );
    template <typename Func> 

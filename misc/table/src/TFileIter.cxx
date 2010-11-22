@@ -132,7 +132,7 @@ TFileIter::TFileIter(TFile *file) : fFileBackUp(0),fDirectoryBackUp(0), fNestedI
 }
 
 //__________________________________________________________________________
-TFileIter::TFileIter(TDirectory *directory) :  fFileBackUp(0),fDirectoryBackUp(0), fNestedIterator(0)
+TFileIter::TFileIter(TDirectory *directory) :  fFileBackUp(0),fDirectoryBackUp(0),fNestedIterator(0)
          , fRootFile(directory)
          , fEventName("event"), fRunNumber(UInt_t(-1)),fEventNumber(UInt_t(-1))
          , fCursorPosition(-1),  fOwnTFile(kFALSE)
@@ -142,7 +142,10 @@ TFileIter::TFileIter(TDirectory *directory) :  fFileBackUp(0),fDirectoryBackUp(0
 }
 //__________________________________________________________________________
 TFileIter::TFileIter(const char *name, Option_t *option, const char *ftitle
-                     , Int_t compress, Int_t /*netopt*/) :fNestedIterator(0),fRootFile (0)
+                     , Int_t compress, Int_t /*netopt*/) : fFileBackUp(0),fDirectoryBackUp(0),fNestedIterator(0)
+                                                         ,fRootFile(0)
+                                                         ,fEventName("event"), fRunNumber(UInt_t(-1)) ,fEventNumber(UInt_t(-1))
+                                                         ,fCursorPosition(-1), fOwnTFile(kFALSE)
 {
    // Open ROOT TFile by the name provided;
    // This TFile is to be deleted by the TFileIter alone
@@ -165,8 +168,9 @@ TFileIter::TFileIter(const TFileIter &dst) : TListIter()
            fCursorPosition(-1),  fOwnTFile(dst.fOwnTFile)
 {
    // Copy ctor can be used with the "read only" files only.
-   assert(!fRootFile->IsWritable());
-   if (fRootFile && fOwnTFile && !fRootFile->IsWritable()) {
+   //the next statement is illegal, spotted by coverity "Dereferencing pointer "this->fRootFile". (Deref happens because this is a virtual function call.)
+   //assert(!fRootFile->IsWritable());
+   if (fRootFile && fOwnTFile) {
       // Reopen the file
       if (fRootFile->InheritsFrom(TFile::Class())) 
       {
@@ -439,7 +443,7 @@ TKey *TFileIter::NextEventKey(UInt_t eventNumber, UInt_t runNumber, const char *
    while ( (key = SkipObjects()) ) {
       if (fDirection==kIterForward) fCursorPosition++;
       else                          fCursorPosition--;
-      if ( name[0] != '*') {
+      if ( name && name[0] != '*') {
          thisKey.SetKey(key->GetName());
          if (thisKey.GetName() < name)  continue;
          if (thisKey.GetName() > name) { key = 0; break; }

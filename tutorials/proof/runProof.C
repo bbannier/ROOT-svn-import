@@ -73,10 +73,15 @@
 //      - 'readall'  to read the whole event, by default only the branches
 //                   needed by the analysis are read (read 25% more bytes)
 //      - 'datasrc=<dir-with-files>' to read the files from another server,
-//                   the files must be named
-//                   'event_<num>.root' where <num>=1,2,...
+//                   the files must be named 'event_<num>.root' where <num>=1,2,...
+//        or
+//      - 'datasrc=<file-with-files>' to take the file content from a text file,
+//                   specified one file per line; usefull when testing differences
+//                   between several sources and distributions
 //      - 'files=N'  to change the number of files to be analysed (default
 //                   is 10, max is 50 for the HTTP server).
+//      - 'uneven'   to process uneven entries from files following the scheme
+//                   {50000,5000,5000,5000,5000} and so on
 //
 //      root[] runProof("eventproc")
 //
@@ -152,38 +157,53 @@
 //      mode '++'). To do this just add one or more '+' to the name of the
 //      tutorial, e.g. runProof("simple++")
 //
-//   1. nevt=N
+//   1. debug=[what:]level
+//
+//      Controls verbosity; 'level' is an integer number and the optional string
+//      'what' one or more of the enum names in TProofDebug.h .
+//      e.g. runProof("eventproc(debug=kPacketizer|kCollect:2)") runs 'eventproc' enabling
+//           all printouts matching TProofDebug::kPacketizer and having level
+//           equal or larger than 2 .
+//
+//   2. nevt=N
 //
 //      Set the number of entries to N
 //      e.g. runProof("simple(nevt=1000000000)") runs simple with 1000000000
 //
-//   2. asyn
+//   3. asyn
 //
 //      Run in non blocking mode
 //      e.g. root[] runProof("h1(asyn)")
 //
-//   3. nwrk=N
+//   4. nwrk=N
 //
 //      Set the number of active workers to N, usefull to test performance
 //      on a remote cluster where control about the number of workers is
 //      not possible, e.g. runProof("event(nwrk=2)") runs 'event' with
 //      2 workers.
 //
-//   4. punzip
+//   5. punzip
 //
 //      Use parallel unzipping in reading files where relevant
 //      e.g. root[] runProof("eventproc(punzip)")
 //
-//   5. cache=<bytes> (or <kbytes>K or <mbytes>M) 
+//   6. cache=<bytes> (or <kbytes>K or <mbytes>M) 
 //
 //      Change the size of the tree cache; 0 or <0 disables the cache,
 //      value cane be in bytes (no suffix), kilobytes (suffix 'K') or
 //      megabytes (suffix 'M'), e.g. root[] runProof("eventproc(cache=0)") 
 //
-//   6. submergers[=S]
+//   7. submergers[=S]
 //
 //      Enabling merging via S submergers or the optimal number if S is
 //      not specified, e.g. root[] runProof("simple(hist=1000,submergers)") 
+//
+//   8. rateest=average
+//
+//      Enable processed entries estimation for constant progress reporting based on
+//      the measured average. This may screw up the progress bar in some cases, which
+//      is the reason why it is not on by default .
+//      e.g. root[] runProof("eventproc(rateest=average)")
 //
 //   In all cases, to run on a remote PROOF cluster, the master URL must
 //   be passed as second argument; e.g.
@@ -226,10 +246,12 @@
 #include "TPad.h"
 #include "TPaveText.h"
 #include "TProof.h"
+#include "TProofDebug.h"
 #include "TString.h"
 
 #include "getProof.C"
 void plotNtuple(TProof *p, const char *ds, const char *ntptitle);
+int getDebugEnum(const char *what);
 
 TDrawFeedback *fb = 0;
 
@@ -315,7 +337,7 @@ void runProof(const char *what = "simple",
    // Determine locality of this session
    Bool_t isProofLocal = kFALSE;
    TUrl uu(url);
-   if (!strcmp(uu.GetHost(), "localhost") ||
+   if (!strcmp(uu.GetHost(), "localhost") || proof->IsLite() ||
        !strcmp(uu.GetHostFQDN(), TUrl(gSystem->HostName()).GetHostFQDN())) {
       isProofLocal = kTRUE;
    }
@@ -368,9 +390,6 @@ void runProof(const char *what = "simple",
       proof->AddFeedback("PROOF_EventsHist");
    }
 
-   // Have constant progress reporting based on estimated info
-   proof->SetParameter("PROOF_RateEstimation", "average");
-
    // Parse 'what'; it is in the form 'analysis(arg1,arg2,...)'
    TString args(what);
    args.ReplaceAll("("," "); 
@@ -392,11 +411,27 @@ void runProof(const char *what = "simple",
    Printf("runProof: %s: ACLiC mode: '%s'", act.Data(), aMode.Data());
 
    // Parse out number of events and  'asyn' option, used almost by every test
-   TString aNevt, aNwrk, opt, sel, punzip("off"), aCache, aH1Src("http://root.cern.ch/files/h1");
+   TString aNevt, aNwrk, opt, sel, punzip("off"), aCache, aH1Src("http://root.cern.ch/files/h1"),
+           aDebug, aDebugEnum, aRateEst;
    Long64_t suf = 1;
    Int_t aSubMg = -1;
    Bool_t fillList = kFALSE, useList = kFALSE;
    while (args.Tokenize(tok, from, " ")) {
+      // Debug controllers
+      if (tok.BeginsWith("debug=")) {
+         aDebug = tok;
+         aDebug.ReplaceAll("debug=","");
+         Int_t icol = kNPOS;
+         if ((icol = aDebug.Index(":")) != kNPOS) {
+            aDebugEnum = aDebug(0, icol);
+            aDebug.Remove(0, icol+1);
+         }
+         if (!aDebug.IsDigit()) {
+            Printf("runProof: %s: error parsing the 'debug=' option (%s) - ignoring", act.Data(), tok.Data());
+            aDebug = "";
+            aDebugEnum = "";
+         }
+      }
       // Number of events
       if (tok.BeginsWith("nevt=")) {
          aNevt = tok;
@@ -456,6 +491,12 @@ void runProof(const char *what = "simple",
          if (!(tok.IsNull())) aH1Src = tok;
          Printf("runProof: %s: reading data files from '%s'", act.Data(), aH1Src.Data());
       }
+      // Rate estimation technique
+      if (tok.BeginsWith("rateest=")) {
+         tok.ReplaceAll("rateest=","");
+         if (!(tok.IsNull())) aRateEst = tok;
+         Printf("runProof: %s: progress-bar rate estimation option: '%s'", act.Data(), aRateEst.Data());
+      }
    }
    Long64_t nevt = (aNevt.IsNull()) ? -1 : aNevt.Atoi();
    Long64_t nwrk = (aNwrk.IsNull()) ? -1 : aNwrk.Atoi();
@@ -469,6 +510,20 @@ void runProof(const char *what = "simple",
          proof->SetParallel(nwrk);
       }
    }
+
+   // Debug controllers
+   if (!aDebug.IsNull()) {
+      Int_t dbg = aDebug.Atoi();
+      Int_t scope = TProofDebug::kAll;
+      if (!aDebugEnum.IsNull()) scope = getDebugEnum(aDebugEnum.Data());
+      proof->SetLogLevel(dbg, scope);
+      Printf("runProof: %s: verbose mode for '%s'; level: %d", act.Data(), aDebugEnum.Data(), dbg);
+   }
+
+   // Have constant progress reporting based on estimated info
+   // (NB: may screw up the progress bar in some cases)
+   if (aRateEst == "average")
+      proof->SetParameter("PROOF_RateEstimation", aRateEst);
 
    // Parallel unzip
    if (punzip == "on") {
@@ -528,7 +583,7 @@ void runProof(const char *what = "simple",
          }
       }
       Int_t nhist = (aNhist.IsNull()) ? 100 : aNhist.Atoi();
-      Printf("\nrunProof: running \"simple\" with nhist= %d and nevt= %d\n", nhist, nevt);
+      Printf("\nrunProof: running \"simple\" with nhist= %d and nevt= %lld\n", nhist, nevt);
 
       // The number of histograms is added as parameter in the input list
       proof->SetParameter("ProofSimple_NHist", (Long_t)nhist);
@@ -622,7 +677,7 @@ void runProof(const char *what = "simple",
       }
       // Setting the default number of events, if needed
       nevt = (nevt < 0) ? 100 : nevt;
-      Printf("\nrunProof: running \"Pythia01\" nevt= %d\n", nevt);
+      Printf("\nrunProof: running \"Pythia01\" nevt= %lld\n", nevt);
       // The selector string
       sel.Form("%s/proof/ProofPythia.C%s", tutorials.Data(), aMode.Data());
       // Run it for nevt times
@@ -643,7 +698,7 @@ void runProof(const char *what = "simple",
 
       // Setting the default number of events, if needed
       nevt = (nevt < 0) ? 100 : nevt;
-      Printf("\nrunProof: running \"event\" nevt= %d\n", nevt);
+      Printf("\nrunProof: running \"event\" nevt= %lld\n", nevt);
       // The selector string
       sel.Form("%s/proof/ProofEvent.C%s", tutorials.Data(), aMode.Data());
       // Run it for nevt times
@@ -664,8 +719,9 @@ void runProof(const char *what = "simple",
       proof->ShowEnabledPackages(); 
 
       // Extract the number of files to process, data source and
-      // other parameters controlling the run ... 
-      TString aFiles, aDataSrc("http://root.cern.ch/files/data");
+      // other parameters controlling the run ...
+      Bool_t uneven = kFALSE;
+      TString aFiles, aDataSrc("http://root.cern.ch/files/data"), aPartitions;
       proof->SetParameter("ProofEventProc_Read", "optimized");
       while (args.Tokenize(tok, from, " ")) {
          // Number of events
@@ -687,6 +743,16 @@ void runProof(const char *what = "simple",
          } else if (tok == "readall") {
             proof->SetParameter("ProofEventProc_Read", "readall");
             Printf("runProof: eventproc: reading the full event");
+         } else if (tok == "uneven") {
+            uneven = kTRUE;
+         } else if (tok.BeginsWith("partitions=")) {
+            tok.ReplaceAll("partitions=","");
+            if (tok.IsDigit()) {
+               Printf("runProof: error parsing the 'partitions=' option (%s) - ignoring", tok.Data());
+            } else {
+               aPartitions = tok;
+               Printf("runProof: partitions: %s included in packetizer operations", aPartitions.Data());
+            }
          }
       }
       Int_t nFiles = (aFiles.IsNull()) ? 10 : aFiles.Atoi();
@@ -696,18 +762,57 @@ void runProof(const char *what = "simple",
          nFiles = 50;
       }
 
-      // Create the chain
+      // We create the chain now
       TChain *c = new TChain("EventTree");
-      Int_t i = 1;
-      TString fn;
-      for (i = 1; i <= nFiles; i++) {
-         fn.Form("%s/event_%d.root", aDataSrc.Data(), i);
-         c->AddFile(fn.Data());
+
+      FileStat_t fst;
+      if (gSystem->GetPathInfo(aDataSrc, fst) == 0 && R_ISREG(fst.fMode) &&
+         !gSystem->AccessPathName(aDataSrc, kReadPermission)) {
+         // It is a local file, we get the TFileCollection and we inject it into the chain
+         TFileCollection *fc = new TFileCollection("", "", aDataSrc, nFiles);
+         c->AddFileInfoList(fc->GetList());
+         delete fc;
+
+      } else {
+
+         // Tokenize the source: if more than 1 we rotate the assignment. More sources can be specified
+         // separating them by a '|'
+         TObjArray *dsrcs = aDataSrc.Tokenize("|");
+         Int_t nds = dsrcs->GetEntries();
+
+         // Fill the chain
+         Int_t i = 1, k = 0;
+         TString fn;
+         for (i = 1; i <= nFiles; i++) {
+            k = (i - 1) % nds;
+            TObjString *os = (TObjString *) (*dsrcs)[k];
+            if (os) {
+               fn.Form("%s/event_%d.root", os->GetName(), i);
+               if (uneven) {
+                  if ((i - 1)%5 == 0)
+                     c->AddFile(fn.Data(), 50000);
+                  else
+                     c->AddFile(fn.Data(), 5000);
+               } else {
+                  c->AddFile(fn.Data());
+               }
+            }
+         }
+         dsrcs->SetOwner();
+         delete dsrcs;
       }
+      // Show the chain
+      c->ls();
       c->SetProof();
 
       // Only validate the files really needed for the analysis
       proof->SetParameter("PROOF_ValidateByFile", 1);
+
+      // Send over the  partition information, if any
+      if (!aPartitions.IsNull()) {
+         aPartitions.ReplaceAll("|", ",");
+         proof->SetParameter("PROOF_PacketizerPartitions", aPartitions);
+      }
 
       // The selector
       sel.Form("%s/proof/ProofEventProc.C%s", tutorials.Data(), aMode.Data());
@@ -722,7 +827,7 @@ void runProof(const char *what = "simple",
 
       // Set the default number of events, if needed
       nevt = (nevt < 0) ? 1000 : nevt;
-      Printf("\nrunProof: running \"ntuple\" with nevt= %d\n", nevt);
+      Printf("\nrunProof: running \"ntuple\" with nevt= %lld\n", nevt);
 
       // Output file
       TString fout = TString::Format("%s/ProofNtuple.root", gSystem->WorkingDirectory());
@@ -767,7 +872,7 @@ void runProof(const char *what = "simple",
 
       // Set the default number of events, if needed
       nevt = (nevt < 0) ? 1000000 : nevt;
-      Printf("\nrunProof: running \"dataset\" with nevt= %d\n", nevt);
+      Printf("\nrunProof: running \"dataset\" with nevt= %lld\n", nevt);
 
       // Ask for registration of the dataset (the default is the the TFileCollection is return
       // without registration; the name of the TFileCollection is the name of the dataset
@@ -929,4 +1034,58 @@ void plotNtuple(TProof *p, const char *ds, const char *ntptitle)
    // Clear parameters used for the plots
    p->DeleteParameters("PROOF_*Color");
    p->DeleteParameters("PROOF_*Style");
+}
+
+int getDebugEnum(const char *what)
+{
+   // Check if 'what' matches one of the TProofDebug enum and return the corresponding
+   // integer. Relies on a perfect synchronization with the content of TProofDebug.h .
+
+   TString sws(what), sw;
+   int rcmask = 0;
+   int from = 0;
+   while (sws.Tokenize(sw, from , "|")) {
+      if (sw.BeginsWith("k")) sw.Remove(0,1);
+
+      if (sw == "None") {
+         rcmask |= TProofDebug::kNone;
+      } else if (sw == "Packetizer") {
+         rcmask |= TProofDebug::kPacketizer;
+      } else if (sw == "Loop") {
+         rcmask |= TProofDebug::kLoop;
+      } else if (sw == "Selector") {
+         rcmask |= TProofDebug::kSelector;
+      } else if (sw == "Output") {
+         rcmask |= TProofDebug::kOutput;
+      } else if (sw == "Input") {
+         rcmask |= TProofDebug::kInput;
+      } else if (sw == "Global") {
+         rcmask |= TProofDebug::kGlobal;
+      } else if (sw == "Package") {
+         rcmask |= TProofDebug::kPackage;
+      } else if (sw == "Feedback") {
+         rcmask |= TProofDebug::kFeedback;
+      } else if (sw == "Condor") {
+         rcmask |= TProofDebug::kCondor;
+      } else if (sw == "Draw") {
+         rcmask |= TProofDebug::kDraw;
+      } else if (sw == "Asyn") {
+         rcmask |= TProofDebug::kAsyn;
+      } else if (sw == "Cache") {
+         rcmask |= TProofDebug::kCache;
+      } else if (sw == "Collect") {
+         rcmask |= TProofDebug::kCollect;
+      } else if (sw == "Dataset") {
+         rcmask |= TProofDebug::kDataset;
+      } else if (sw == "Submerger") {
+         rcmask |= TProofDebug::kSubmerger;
+      } else if (sw == "All") {
+         rcmask |= TProofDebug::kAll;
+      } else if (!sw.IsNull()) {
+         Printf("WARNING: requested debug enum name '%s' does not exist: assuming 'All'", sw.Data());
+         rcmask |= TProofDebug::kAll;
+      }
+   }
+   // Done
+   return rcmask;
 }

@@ -75,7 +75,6 @@ TDCacheFile::TDCacheFile(const char *path, Option_t *option,
    TString pathString = GetDcapPath(path);
    path = pathString.Data();
 
-   fOffset = 0;
    fOption = option;
    fOption.ToUpper();
    fStatCached = kFALSE;
@@ -219,6 +218,23 @@ Bool_t TDCacheFile::ReadBuffer(char *buf, Int_t len)
    }
 
    return TFile::ReadBuffer(buf, len);
+}
+
+//______________________________________________________________________________
+Bool_t TDCacheFile::ReadBuffer(char *buf, Long64_t pos, Int_t len)
+{
+   // Read specified byte range from remote file via dCache daemon.
+   // Returns kTRUE in case of error.
+
+   SetOffset(pos);
+   Int_t st;
+   if ((st = ReadBufferViaCache(buf, len))) {
+      if (st == 2)
+         return kTRUE;
+      return kFALSE;
+   }
+
+   return TFile::ReadBuffer(buf, pos, len);
 }
 
 //______________________________________________________________________________
@@ -436,8 +452,6 @@ Int_t TDCacheFile::SysRead(Int_t fd, void *buf, Int_t len)
 {
    // Interface to system read. All arguments like in POSIX read.
 
-   fOffset += len;
-
    dc_errno = 0;
 
    Int_t rc = dc_read(fd, buf, len);
@@ -454,8 +468,6 @@ Int_t TDCacheFile::SysRead(Int_t fd, void *buf, Int_t len)
 Int_t TDCacheFile::SysWrite(Int_t fd, const void *buf, Int_t len)
 {
    // Interface to system write. All arguments like in POSIX write.
-
-   fOffset += len;
 
    dc_errno = 0;
 
@@ -474,8 +486,6 @@ Long64_t TDCacheFile::SysSeek(Int_t fd, Long64_t offset, Int_t whence)
 {
    // Interface to system seek. All arguments like in POSIX lseek.
 
-   if (whence == SEEK_SET && offset == fOffset) return offset;
-
    dc_errno = 0;
 
    Long64_t rc = dc_lseek64(fd, offset, whence);
@@ -483,8 +493,7 @@ Long64_t TDCacheFile::SysSeek(Int_t fd, Long64_t offset, Int_t whence)
    if (rc < 0) {
       if (dc_errno != 0)
          gSystem->SetErrorStr(dc_strerror(dc_errno));
-   } else
-      fOffset = rc;
+   }
 
    return rc;
 }
@@ -582,11 +591,11 @@ TString TDCacheFile::GetDcapPath(const char *path)
    while (!strncmp(path, DCACHE_PREFIX, DCACHE_PREFIX_LEN)) {
       path += DCACHE_PREFIX_LEN;
    }
- 
+
    TUrl url(path);
    TString pathString(url.GetUrl());
 
-   // convert file://path url and dcap:///path to /path 
+   // convert file://path url and dcap:///path to /path
    if(!strncmp(url.GetProtocol(), "file", 4) || !strcmp(url.GetHost(),"")){
        pathString = url.GetFile();
    }

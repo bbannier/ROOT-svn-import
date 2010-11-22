@@ -28,6 +28,14 @@ PyROOT::ExecFactories_t PyROOT::gExecFactories;
 
 
 //- executors for built-ins ---------------------------------------------------
+PyObject* PyROOT::TBoolExecutor::Execute( G__CallFunc* func, void* self )
+{
+// execute <func> with argument <self>, construct python bool return value
+   PyObject* result = (bool)func->ExecInt( self ) ? Py_True : Py_False;
+   Py_INCREF( result );
+   return result;
+}
+
 PyObject* PyROOT::TLongExecutor::Execute( G__CallFunc* func, void* self )
 {
 // execute <func> with argument <self>, construct python long return value
@@ -38,7 +46,7 @@ PyObject* PyROOT::TLongExecutor::Execute( G__CallFunc* func, void* self )
 PyObject* PyROOT::TCharExecutor::Execute( G__CallFunc* func, void* self )
 {
 // execute <func> with argument <self>, construct python string return value
-   return PyString_FromFormat( "%c", (int)func->ExecInt( self ) );
+   return PyROOT_PyUnicode_FromFormat( "%c", (int)func->ExecInt( self ) );
 }
 
 //____________________________________________________________________________
@@ -120,10 +128,10 @@ PyObject* PyROOT::TSTLStringRefExecutor::Execute( G__CallFunc* func, void* self 
 {
 // execute <func> with argument <self>, return python string return value
    if ( ! fAssignable ) {
-      return PyString_FromString( ((std::string*)func->ExecInt( self ))->c_str() );
+      return PyROOT_PyUnicode_FromString( ((std::string*)func->ExecInt( self ))->c_str() );
    } else {
       std::string* result = (std::string*)func->ExecInt( self );
-      *result = std::string( PyString_AsString( fAssignable ) );
+      *result = std::string( PyROOT_PyUnicode_AsString( fAssignable ) );
 
       Py_DECREF( fAssignable );
       fAssignable = 0;
@@ -152,7 +160,7 @@ PyObject* PyROOT::TCStringExecutor::Execute( G__CallFunc* func, void* self )
       return PyStrings::gEmptyString;
    }
 
-   return PyString_FromString( result );
+   return PyROOT_PyUnicode_FromString( result );
 }
 
 
@@ -190,7 +198,7 @@ PyObject* PyROOT::TSTLStringExecutor::Execute( G__CallFunc* func, void* self )
       return PyStrings::gEmptyString;
    }
 
-   PyObject* pyresult = PyString_FromString( result->c_str() );
+   PyObject* pyresult = PyROOT_PyUnicode_FromString( result->c_str() );
 
 // stop CINT from tracking the object, then force delete
    G__pop_tempobject_nodel();
@@ -346,6 +354,7 @@ namespace {
    using namespace PyROOT;
 
 // use macro rather than template for portability ...
+   PYROOT_EXECUTOR_FACTORY( Bool )
    PYROOT_EXECUTOR_FACTORY( Char )
    PYROOT_EXECUTOR_FACTORY( ShortRef )
    PYROOT_EXECUTOR_FACTORY( UShortRef )
@@ -405,7 +414,7 @@ namespace {
       NFp_t( "double",             &CreateDoubleExecutor              ),
       NFp_t( "double&",            &CreateDoubleRefExecutor           ),
       NFp_t( "void",               &CreateVoidExecutor                ),
-      NFp_t( "bool",               &CreateIntExecutor                 ),
+      NFp_t( "bool",               &CreateBoolExecutor                ),
       NFp_t( "const char*",        &CreateCStringExecutor             ),
       NFp_t( "char*",              &CreateCStringExecutor             ),
 

@@ -4,7 +4,7 @@
 # Author: Fons Rademakers, 29/2/2000
 
 MODNAME      := treeviewer
-MODDIR       := tree/$(MODNAME)
+MODDIR       := $(ROOT_SRCDIR)/tree/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -14,7 +14,7 @@ TREEVIEWERDIRI := $(TREEVIEWERDIR)/inc
 
 ##### libTreeViewer #####
 TREEVIEWERL  := $(MODDIRI)/LinkDef.h
-TREEVIEWERDS := $(MODDIRS)/G__TreeViewer.cxx
+TREEVIEWERDS := $(call stripsrc,$(MODDIRS)/G__TreeViewer.cxx)
 TREEVIEWERDO := $(TREEVIEWERDS:.cxx=.o)
 TREEVIEWERDH := $(TREEVIEWERDS:.cxx=.h)
 
@@ -26,15 +26,15 @@ TREEVIEWERH  := TTreeViewerOld.h TPaveVar.h
 TREEVIEWERS  := TTreeViewerOld.cxx TPaveVar.cxx
 else
 TREEVIEWERH  := TTreeViewer.h TTVSession.h TTVLVContainer.h HelpTextTV.h TSpider.h TSpiderEditor.h TParallelCoord.h \
-                TParallelCoordVar.h TParallelCoordRange.h TParallelCoordEditor.h TGTreeTable.h
+                TParallelCoordVar.h TParallelCoordRange.h TParallelCoordEditor.h TGTreeTable.h TMemStatShow.h
 TREEVIEWERS  := TTreeViewer.cxx TTVSession.cxx TTVLVContainer.cxx HelpTextTV.cxx TSpider.cxx TSpiderEditor.cxx \
                 TParallelCoord.cxx TParallelCoordVar.cxx TParallelCoordRange.cxx TParallelCoordEditor.cxx \
-		TGTreeTable.cxx
+		TGTreeTable.cxx TMemStatShow.cxx
 endif
 TREEVIEWERH  := $(patsubst %,$(MODDIRI)/%,$(TREEVIEWERH))
 TREEVIEWERS  := $(patsubst %,$(MODDIRS)/%,$(TREEVIEWERS))
 
-TREEVIEWERO  := $(TREEVIEWERS:.cxx=.o)
+TREEVIEWERO  := $(call stripsrc,$(TREEVIEWERS:.cxx=.o))
 
 TREEVIEWERDEP := $(TREEVIEWERO:.o=.d) $(TREEVIEWERDO:.o=.d)
 
@@ -63,11 +63,12 @@ $(TREEVIEWERLIB): $(TREEVIEWERO) $(TREEVIEWERDO) $(ORDER_) $(MAINLIBS) \
 		   "$(TREEVIEWERLIBEXTRA)"
 
 $(TREEVIEWERDS): $(TREEVIEWERH) $(TREEVIEWERL) $(ROOTCINTTMPDEP)
+		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(TREEVIEWERH) $(TREEVIEWERL)
 
 $(TREEVIEWERMAP): $(RLIBMAP) $(MAKEFILEDEP) $(TREEVIEWERL)
-		$(RLIBMAP) -o $(TREEVIEWERMAP) -l $(TREEVIEWERLIB) \
+		$(RLIBMAP) -o $@ -l $(TREEVIEWERLIB) \
 		   -d $(TREEVIEWERLIBDEPM) -c $(TREEVIEWERL)
 
 all-$(MODNAME): $(TREEVIEWERLIB) $(TREEVIEWERMAP)

@@ -69,8 +69,8 @@ TNtupleD::TNtupleD(const char *name, const char *title, const char *varlist, Int
    Int_t nch = strlen(varlist);
    if (nch == 0) return;
    char *vars = new char[nch+1];
-   strcpy(vars,varlist);
-   Int_t *pvars = new Int_t[1000];
+   strlcpy(vars,varlist,nch+1);
+   Int_t *pvars = new Int_t[nch+1];
    fNvar = 1;
    pvars[0] = 0;
    for (i=1;i<nch;i++) {
@@ -86,7 +86,7 @@ TNtupleD::TNtupleD(const char *name, const char *title, const char *varlist, Int
    char descriptor[100];
    for (i=0;i<fNvar;i++) {
       Int_t pv = pvars[i];
-      sprintf(descriptor,"%s/D",&vars[pv]);      
+      snprintf(descriptor,100,"%s/D",&vars[pv]);      
       TTree::Branch(&vars[pv],&fArgs[i],descriptor,bufsize);
    }
 

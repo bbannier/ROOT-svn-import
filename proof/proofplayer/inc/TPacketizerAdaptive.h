@@ -40,13 +40,12 @@
 
 
 class TMessage;
-class TTimer;
 class TTree;
 class TMap;
 class TNtupleD;
 class TProofStats;
 class TRandom;
-
+class TSortedList;
 
 class TPacketizerAdaptive : public TVirtualPacketizer {
 
@@ -60,14 +59,29 @@ private:
    TList         *fUnAllocated;  // nodes with unallocated files
    TList         *fActive;       // nodes with unfinished files
    Int_t          fMaxPerfIdx;   // maximum of our slaves' performance index
+   TList         *fPartitions;   // list of partitions on nodes
 
-   Float_t        fFractionOfRemoteFiles; // fraction of TDSetElements
-                                          // that are on non slaves
+   TSortedList   *fFilesToProcess; // Global list of files (TFileStat) to be processed
+
+   Bool_t         fCachePacketSync; // control synchronization of cache and packet sizes
+   Double_t       fMaxEntriesRatio; // max file entries to avg allowed ratio for cache-to-packet sync
+
+   Float_t        fFractionOfRemoteFiles; // fraction of TDSetElements that are on non-workers
    Long64_t       fNEventsOnRemLoc;       // number of events in currently
                                           // unalloc files on non-worker loc.
-   Float_t        fBaseLocalPreference;   // indicates how much more likely
-   // the nodes will be to open their local files (1 means indifferent)
-   Bool_t         fForceLocal;    // if 1 - eliminate the remote processing
+   Float_t        fBaseLocalPreference;   // indicates how much more likely the nodes will be
+                                          // to open their local files (1 means indifferent)
+   Bool_t         fForceLocal;            // if 1 - eliminate the remote processing
+
+   Long_t         fMaxSlaveCnt;        // maximum number of workers per filenode (Long_t to avoid
+                                       // warnings from backward compatibility support)
+   Int_t          fPacketAsAFraction;  // used to calculate the packet size
+                                       // fPacketSize = fTotalEntries / (fPacketAsAFraction * nslaves)
+                                       // fPacketAsAFraction can be interpreted as follows:
+                                       // assuming all slaves have equal processing rate, packet size
+                                       // is (#events processed by 1 slave) / fPacketSizeAsAFraction.
+                                       // It can be set with PROOF_PacketAsAFraction in input list.
+   Int_t          fStrategy;           // 0 means the classic and 1 (default) - the adaptive strategy
 
    TPacketizerAdaptive();
    TPacketizerAdaptive(const TPacketizerAdaptive&);    // no implementation, will generate
@@ -80,7 +94,7 @@ private:
    TFileNode     *NextActiveNode();
    void           RemoveActiveNode(TFileNode *);
 
-   TFileStat     *GetNextUnAlloc(TFileNode *node = 0);
+   TFileStat     *GetNextUnAlloc(TFileNode *node = 0, const char *nodeHostName = 0);
    TFileStat     *GetNextActive();
    void           RemoveActive(TFileStat *file);
 
@@ -90,18 +104,6 @@ private:
    void           SplitPerHost(TList *elements, TList **listOfMissingFiles);
 
 public:
-   static Long_t   fgMaxSlaveCnt;  // maximum number of workers per filenode (Long_t to avoid
-                                   // warnings from backward compatibility support)
-   static Int_t    fgPacketAsAFraction; // used to calculate the packet size
-                                  // fPacketSize = fTotalEntries / (fPacketAsAFraction * nslaves)
-                                  // fPacketAsAFraction can be interpreted as follows:
-                                  // assuming all slaves have equal processing rate, packet size
-                                  // is (#events processed by 1 slave) / fPacketSizeAsAFraction.
-                                  // It can be set with PROOF_PacketAsAFraction in input list.
-   static Double_t fgMinPacketTime; // minimum packet time
-   static Double_t fgMaxPacketTime; // maximum packet time
-   static Int_t    fgStrategy;    // 0 means the classic and 1 (default) - the adaptive strategy
-
    TPacketizerAdaptive(TDSet *dset, TList *slaves, Long64_t first, Long64_t num,
                        TList *input, TProofProgressStatus *st);
    virtual ~TPacketizerAdaptive();

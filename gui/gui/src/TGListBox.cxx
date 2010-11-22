@@ -917,14 +917,29 @@ Bool_t TGLBContainer::HandleButton(Event_t *event)
 }
 
 //______________________________________________________________________________
+Bool_t TGLBContainer::HandleDoubleClick(Event_t *)
+{
+   // Handle double click mouse event in the listbox container.
+
+   if (!fMultiSelect) {
+      if (fLastActive) {
+         TGLBEntry *f = fLastActive;
+         SendMessage(fMsgWindow, MK_MSG(kC_CONTAINER, kCT_ITEMDBLCLICK),
+                     f->EntryId(), 0);
+      }
+   }
+   return kTRUE;
+}
+
+//______________________________________________________________________________
 Bool_t TGLBContainer::HandleMotion(Event_t *event)
 {
    // Handle mouse motion event in listbox container.
 
    int xf0, yf0, xff, yff;
 
-   static Long_t was = gSystem->Now();
-   Long_t now = (long)gSystem->Now();
+   static Long64_t was = gSystem->Now();
+   Long64_t now = gSystem->Now();
 
    if ((now-was) < 50) return kFALSE;
    was = now;
@@ -1561,7 +1576,21 @@ Bool_t TGListBox::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                      Selected((Int_t) parm1);
                   }
                }
-            break;
+               break;
+            case kCT_ITEMDBLCLICK:
+               {
+                  TGLBEntry *entry = GetSelectedEntry();
+                  if (entry) {
+                     if (entry->InheritsFrom(TGTextLBEntry::Class())) {
+                        const char *text;
+                        text = ((TGTextLBEntry*)entry)->GetText()->GetString();
+                        DoubleClicked(text);
+                     }
+                     DoubleClicked(fWidgetId, (Int_t) parm1);
+                     DoubleClicked((Int_t) parm1);
+                  }
+               }
+               break;
          }
          break;
 
@@ -1575,7 +1604,7 @@ Bool_t TGListBox::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
 //______________________________________________________________________________
 void TGListBox::Selected(Int_t widgetId, Int_t id)
 {
-   // Emit signal with list box id and entry id.
+   // Emit Selected signal with list box id and entry id.
 
    Long_t args[2];
 
@@ -1583,6 +1612,19 @@ void TGListBox::Selected(Int_t widgetId, Int_t id)
    args[1] = id;
 
    Emit("Selected(Int_t,Int_t)", args);
+}
+
+//______________________________________________________________________________
+void TGListBox::DoubleClicked(Int_t widgetId, Int_t id)
+{
+   // Emit DoubleClicked signal with list box id and entry id.
+
+   Long_t args[2];
+
+   args[0] = widgetId;
+   args[1] = id;
+
+   Emit("DoubleClicked(Int_t,Int_t)", args);
 }
 
 //______________________________________________________________________________
@@ -1625,6 +1667,8 @@ void TGListBox::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    } else {
       out << "," << fWidgetId << "," << GetOptionString() << ",ucolor);" << endl;
    }
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    if (!fLbc->GetList()) return;
 

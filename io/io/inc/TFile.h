@@ -72,7 +72,7 @@ protected:
    TList           *fFree;           //Free segments linked list table
    TArrayC         *fClassIndex;     //!Index of TStreamerInfo classes written to this file
    TObjArray       *fProcessIDs;     //!Array of pointers to TProcessIDs
-   Long64_t         fOffset;         //!Seek offset used by remote file classes
+   Long64_t         fOffset;         //!Seek offset cache
    TArchiveFile    *fArchive;        //!Archive file from which we read this file
    TFileCacheRead  *fCacheRead;      //!Pointer to the read cache (if any)
    TFileCacheWrite *fCacheWrite;     //!Pointer to the write cache (if any)
@@ -129,7 +129,7 @@ private:
    void operator=(const TFile &);
 
    static void   CpProgress(Long64_t bytesread, Long64_t size, TStopwatch &watch);
-   static TFile *OpenFromCache(const char *name, Option_t *option = "",
+   static TFile *OpenFromCache(const char *name, Option_t * = "",
                                const char *ftitle = "", Int_t compress = 1,
                                Int_t netopt = 0);
 
@@ -210,6 +210,7 @@ public:
    virtual void        Print(Option_t *option="") const;
    virtual Bool_t      ReadBufferAsync(Long64_t offs, Int_t len);
    virtual Bool_t      ReadBuffer(char *buf, Int_t len);
+   virtual Bool_t      ReadBuffer(char *buf, Long64_t pos, Int_t len);
    virtual Bool_t      ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf);
    virtual void        ReadFree();
    virtual TProcessID *ReadProcessID(UShort_t pidf);
@@ -221,6 +222,7 @@ public:
    virtual void        SetCacheWrite(TFileCacheWrite *cache);
    virtual void        SetCompressionLevel(Int_t level=1);
    virtual void        SetEND(Long64_t last) { fEND = last; }
+   virtual void        SetOffset(Long64_t offset, ERelativeTo pos = kBeg);
    virtual void        SetOption(Option_t *option=">") { fOption = option; }
    virtual void        SetReadCalls(Int_t readcalls = 0) { fReadCalls = readcalls; }
    virtual void        ShowStreamerInfo();

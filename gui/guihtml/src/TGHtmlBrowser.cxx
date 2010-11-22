@@ -29,7 +29,6 @@
 #include "Riostream.h"
 #include "TGHtmlBrowser.h"
 #include "TGText.h"
-#include "snprintf.h"
 
 #ifdef WIN32
 #include "TWin32SplashThread.h"
@@ -583,8 +582,8 @@ Bool_t TGHtmlBrowser::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                                          kFDOpen, &fi);
                         dir = fi.fIniDir;
                         if (fi.fFilename) {
-                           Selected(StrDup(Form("file://%s",
-                              gSystem->UnixPathName(fi.fFilename))));
+                           Selected(Form("file://%s",
+                              gSystem->UnixPathName(fi.fFilename)));
                         }
                      }
                      break;

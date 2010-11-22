@@ -242,7 +242,7 @@ static Long_t IntStr(const char *text)
    for (UInt_t i = 0; i < strlen(text); i++) {
       if (text[i] == '-') {
          sign = -1;
-      } else if ((isdigit(text[i])) && (l < 100000000)) {
+      } else if ((isdigit(text[i])) && (l < kMaxLong)) {
          l = 10 * l + (text[i] - '0');
       }
    }
@@ -252,7 +252,7 @@ static Long_t IntStr(const char *text)
 //______________________________________________________________________________
 static char *StrInt(char *text, Long_t i, Int_t digits)
 {
-   sprintf(text, "%li", TMath::Abs(i));
+   snprintf(text, 250, "%li", TMath::Abs(i));
    TString s = text;
    while (digits > s.Length()) {
       s = "0" + s;
@@ -260,7 +260,7 @@ static char *StrInt(char *text, Long_t i, Int_t digits)
    if (i < 0) {
       s = "-" + s;
    }
-   strcpy(text, (const char *) s);
+   strlcpy(text, (const char *) s, 250);
    return text;
 }
 
@@ -279,21 +279,21 @@ static char *RealToStr(char *text, const RealInfo_t & ri)
    if (text == 0) {
       return 0;
    }
-   strcpy(p, "");
+   strlcpy(p, "", 256);
    if (ri.fSign < 0) {
-      strcpy(p, "-");
+      strlcpy(p, "-", 256);
       p++;
    }
    StrInt(p, TMath::Abs(ri.fIntNum), 0);
    p += strlen(p);
    if ((ri.fStyle == kRSFrac) || (ri.fStyle == kRSFracExpo)) {
-      strcpy(p, ".");
+      strlcpy(p, ".", 256-strlen(p));
       p++;
       StrInt(p, TMath::Abs(ri.fFracNum), ri.fFracDigits);
       p += strlen(p);
    }
    if ((ri.fStyle == kRSExpo) || (ri.fStyle == kRSFracExpo)) {
-      strcpy(p, "e");
+      strlcpy(p, "e", 256-strlen(p));
       p++;
       StrInt(p, ri.fExpoNum, 0);
       p += strlen(p);
@@ -316,7 +316,7 @@ static Double_t StrToReal(const char *text, RealInfo_t & ri)
       ri.fSign = 1;
       return 0.0;
    }
-   strncpy(buf, text, sizeof(buf) - 1);
+   strlcpy(buf, text, sizeof(buf));
    s = buf;
    frac = strchr(s, '.');
    if (frac == 0) {
@@ -370,7 +370,7 @@ static Double_t StrToReal(const char *text, RealInfo_t & ri)
    if (frac != 0) {
       for (UInt_t i = 0; i < strlen(frac); i++) {
          if (isdigit(frac[i])) {
-            if (ri.fFracNum < 100000000) {
+            if (ri.fFracNum < kMaxInt) {
                ri.fFracNum = 10 * ri.fFracNum + (frac[i] - '0');
                ri.fFracDigits++;
                ri.fFracBase *= 10;
@@ -461,7 +461,7 @@ static char *MIntToStr(char *text, Long_t l, Int_t digits)
    if (l < 0) {
       s = "-" + s;
    }
-   strcpy(text, (const char *) s);
+   strlcpy(text, (const char *) s, 256);
    return text;
 }
 
@@ -480,7 +480,7 @@ static char *DIntToStr(char *text, Long_t l, Bool_t Sec, char Del)
    if (l < 0) {
       s = "-" + s;
    }
-   strcpy(text, (const char *) s);
+   strlcpy(text, (const char *) s, 256);
    return text;
 }
 
@@ -505,7 +505,7 @@ static void GetNumbers(const char *s, Int_t & Sign,
    }
    while ((*s != 0) && ((strchr(Delimiters, *s) == 0) || (maxd2 == 0))) {
       if (isdigit(*s) && (d < maxd1)) {
-         if (n1 < 100000000) {
+         if (n1 < kMaxLong) {
             n1 = 10 * n1 + (*s - '0');
          }
          d++;
@@ -599,7 +599,7 @@ static Long_t TranslateToNum(const char *text,
    case TGNumberFormat::kNESRealTwo:
       {
          char buf[256];
-         strncpy(buf, text, sizeof(buf) - 1);
+         strlcpy(buf, text, sizeof(buf));
          AppendFracZero(buf, 2);
          GetNumbers(buf, sign, n1, 12, n2, 2, n3, 0, ".,");
          return sign * (100 * n1 + GetSignificant(n2, 100));
@@ -607,7 +607,7 @@ static Long_t TranslateToNum(const char *text,
    case TGNumberFormat::kNESRealThree:
       {
          char buf[256];
-         strncpy(buf, text, sizeof(buf) - 1);
+         strlcpy(buf, text, sizeof(buf));
          AppendFracZero(buf, 3);
          GetNumbers(buf, sign, n1, 12, n2, 3, n3, 0, ".,");
          return sign * (1000 * n1 + GetSignificant(n2, 1000));
@@ -615,7 +615,7 @@ static Long_t TranslateToNum(const char *text,
    case TGNumberFormat::kNESRealFour:
       {
          char buf[256];
-         strncpy(buf, text, sizeof(buf) - 1);
+         strlcpy(buf, text, sizeof(buf));
          AppendFracZero(buf, 4);
          GetNumbers(buf, sign, n1, 12, n2, 4, n3, 0, ".,");
          return sign * (10000 * n1 + GetSignificant(n2, 10000));
@@ -681,7 +681,8 @@ static char *TranslateToStr(char *text, Long_t l,
              StringInt(TMath::Abs(l) % 100, 0) + "/" +
              StringInt((TMath::Abs(l) / 100) % 100, 0) + "/" +
              StringInt(TMath::Abs(l) / 10000, 0);
-         return strcpy(text, (const char *) date);
+         strlcpy(text, (const char *) date, 256);
+         return text;
       }
    case TGNumberFormat::kNESMDayYear:
       {
@@ -689,7 +690,8 @@ static char *TranslateToStr(char *text, Long_t l,
              StringInt((TMath::Abs(l) / 100) % 100, 0) + "/" +
              StringInt(TMath::Abs(l) % 100, 0) + "/" +
              StringInt(TMath::Abs(l) / 10000, 0);
-         return strcpy(text, (const char *) date);
+         strlcpy(text, (const char *) date, 256);
+         return text;
       }
    case TGNumberFormat::kNESHex:
       return IntToHexStr(text, (ULong_t) l);
@@ -958,7 +960,7 @@ static void IncreaseReal(RealInfo_t & ri, Double_t mag, Bool_t logstep,
           (limits == TGNumberFormat::kNELLimitMinMax)) {
          if (x < min) {
             char text[256];
-            sprintf(text, "%g", min);
+            snprintf(text, 255, "%g", min);
             StrToReal(text, ri);
          }
       }
@@ -967,7 +969,7 @@ static void IncreaseReal(RealInfo_t & ri, Double_t mag, Bool_t logstep,
           (limits == TGNumberFormat::kNELLimitMinMax)) {
          if (x > max) {
             char text[256];
-            sprintf(text, "%g", max);
+            snprintf(text, 255, "%g", max);
             StrToReal(text, ri);
          }
       }
@@ -1108,7 +1110,7 @@ void TGNumberEntryField::SetNumber(Double_t val)
    case kNESReal:
       {
          char text[256];
-         sprintf(text, "%g", val);
+         snprintf(text, 255, "%g", val);
          SetText(text);
          break;
       }
@@ -1207,7 +1209,7 @@ void TGNumberEntryField::SetText(const char *text, Bool_t emit)
    // Set the value (text format).
 
    char buf[256];
-   strncpy(buf, text, sizeof(buf) - 1);
+   strlcpy(buf, text, sizeof(buf));
    EliminateGarbage(buf, fNumStyle, fNumAttr);
    TGTextEntry::SetText(buf, emit);
    fNeedsVerification = kFALSE;
@@ -1233,8 +1235,7 @@ Double_t TGNumberEntryField::GetNumber() const
       {
          char text[256];
          RealInfo_t ri;
-         strncpy(text, GetText(), 255);
-         text[255] = 0;
+         strlcpy(text, GetText(), sizeof(text));
          return StrToReal(text, ri);
       }
    case kNESDegree:
@@ -1814,7 +1815,7 @@ public:
    TGRepeatFireButton(const TGWindow *p, const TGPicture *pic,
                       Int_t id, Bool_t logstep)
     : TGPictureButton(p, pic, id), fTimer(0), fIgnoreNextFire(0),
-       fStep(TGNumberFormat::kNSSSmall), fStepLog(logstep), fDoLogStep(logstep) 
+       fStep(TGNumberFormat::kNSSSmall), fStepLog(logstep), fDoLogStep(logstep)
        { fEditDisabled = kEditDisable | kEditDisableGrab; }
    virtual ~TGRepeatFireButton() { delete fTimer; }
 
@@ -1912,7 +1913,7 @@ Bool_t TRepeatTimer::Notify()
 
    fButton->FireButton();
    Reset();
-   if ((long)fTime>20) fTime -= 10;
+   if ((Long64_t)fTime > 20) fTime -= 10;
    return kFALSE;
 }
 
@@ -2091,7 +2092,7 @@ void TGNumberEntry::ValueSet(Long_t val)
 }
 
 //______________________________________________________________________________
-void TGNumberEntry::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+void TGNumberEntry::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 {
    // Save a number entry widget as a C++ statement(s) on output stream out.
 
@@ -2163,7 +2164,7 @@ void TGNumberEntry::SavePrimitive(ostream &out, Option_t * /*= ""*/)
              << ",(TGNumberFormat::EStyle) " << GetNumStyle();
          break;
       case kNESHex:
-      {  char hex[150];
+      {  char hex[256];
          ULong_t l = GetHexNumber();
          IntToHexStr(hex, l);
          out << "0x" << hex << "U," << digits << "," << WidgetId()
@@ -2193,6 +2194,8 @@ void TGNumberEntry::SavePrimitive(ostream &out, Option_t * /*= ""*/)
              << ",(TGNumberFormat::ELimit) " << GetNumLimits()
              << "," << GetNumMin() << "," << GetNumMax() << ");" << endl;
    }
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
    if (fButtonDown->GetState() == kButtonDisabled)
       out << "   " << GetName() << "->SetState(kFALSE);" << endl;
 
@@ -2207,7 +2210,7 @@ void TGNumberEntry::SavePrimitive(ostream &out, Option_t * /*= ""*/)
 }
 
 //______________________________________________________________________________
-void TGNumberEntryField::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+void TGNumberEntryField::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 {
    // Save a number entry widget as a C++ statement(s) on output stream out.
 
@@ -2274,7 +2277,7 @@ void TGNumberEntryField::SavePrimitive(ostream &out, Option_t * /*= ""*/)
              << ",(TGNumberFormat::EStyle) " << GetNumStyle();
          break;
       case kNESHex:
-      {  char hex[150];
+      {  char hex[256];
          ULong_t l = GetHexNumber();
          IntToHexStr(hex, l);
          out << "0x" << hex << "U"
@@ -2304,6 +2307,8 @@ void TGNumberEntryField::SavePrimitive(ostream &out, Option_t * /*= ""*/)
              << ",(TGNumberFormat::ELimit) " << GetNumLimits()
              << "," << GetNumMin() << "," << GetNumMax() << ");" << endl;
    }
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
    if (!IsEnabled())
       out << "   " << GetName() << "->SetState(kFALSE);" << endl;
 

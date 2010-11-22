@@ -123,7 +123,7 @@ static int G__splitmessage(char* item)
    char* point;
    char* p;
    char* buf = (char*) malloc(strlen(item) + 1);
-   strcpy(buf, item);
+   strcpy(buf, item); // Okay we allocated enough space.
 #ifndef G__OLDIMPELMENTATION1186
    dot = (char*)G__findrpos(buf, ".");
    point = (char*)G__findrpos(buf, "->");
@@ -283,16 +283,8 @@ int G__warnundefined(const char* item)
          }
          else {
             G__FastAllocString tmp(item);
-            if (p) {
-               *p = 0;
-               p += 2;
-               G__fprinterr(G__serr,
-                            "Error: Symbol %s is not defined in %s ", p, tmp());
-            }
-            else {
-               G__fprinterr(G__serr,
-                            "Error: Symbol %s is not defined in current scope ", item[0] == '$' ? item + 1 : item);
-            }
+            G__fprinterr(G__serr,
+                         "Error: Symbol %s is not defined in current scope ", item[0] == '$' ? item + 1 : item);
          }
          G__genericerror(0);
       }
@@ -410,14 +402,15 @@ int G__pounderror()
 {
    // -- #error xxx
    G__FastAllocString buf(G__ONELINE);
-   char *p;
-   // dummy assign
-   p = fgets(buf, G__ONELINE, G__ifile.fp);
-   p = strchr(buf, '\n');
-   if (p) *p = '\0';
-   p = strchr(buf, '\r');
-   if (p) *p = '\0';
-   G__fprinterr(G__serr, "#error %s\n", buf());
+   if (fgets(buf, G__ONELINE, G__ifile.fp)) {
+      char *p = strchr(buf, '\n');
+      if (p) *p = '\0';
+      p = strchr(buf, '\r');
+      if (p) *p = '\0';
+      G__fprinterr(G__serr, "#error %s\n", buf());
+   } else {
+      G__fprinterr(G__serr, "#error <can not read original file %s>\n", G__ifile.name[0] ? G__ifile.name : "temporary file");
+   }
    G__CHECK(G__SECURE_EXIT_AT_ERROR, 1, G__return = G__RETURN_EXIT1);
 #ifdef G__SECURITY
    G__security_error = G__RECOVERABLE;

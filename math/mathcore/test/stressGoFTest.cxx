@@ -1,5 +1,6 @@
 #include "TBenchmark.h"
 #include "Math/GoFTest.h"
+#include "Math/Functor.h"
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TStopwatch.h"
@@ -33,6 +34,7 @@ struct GoFTStress {
       result += UnitTest4();
       result += UnitTest5();
       result += UnitTest6();
+      result += UnitTest7();
       return result;
    }
       
@@ -78,6 +80,8 @@ struct GoFTStress {
    private:  
    
    Int_t UnitTest1() {
+      std::cout << "UNIT TEST 1" << std::endl;
+      
       UInt_t nsmps = 2;
       const UInt_t smpSize1 = 71;
       const UInt_t smpSize2 = 135;
@@ -85,11 +89,11 @@ struct GoFTStress {
       Data set adapted from the paper (1)
       "K-Sample Anderson-Darling Tests of Fit for continuous and discrete cases" by Scholz and Stephens
    */
-      Double_t smp1[smpSize1] = {194, 15, 41, 29, 33, 181, 413, 14, 58, 37, 100, 65, 9, 169, 447, 18, 4, 36, 201, 118, 34, 31, 18, 18, 67, 57, 62, 7, 22, 34, 90, 10, 60, 186, 61, 49, 14, 24, 56, 20, 79, 84, 44, 59, 29, 118, 25, 156, 310, 76, 26, 44, 23, 62, 130, 208, 70, 101, 208, 74, 57, 48, 29, 502, 12, 70, 21, 29, 386, 59, 27};
+      const Double_t smp1[smpSize1] = {194, 15, 41, 29, 33, 181, 413, 14, 58, 37, 100, 65, 9, 169, 447, 18, 4, 36, 201, 118, 34, 31, 18, 18, 67, 57, 62, 7, 22, 34, 90, 10, 60, 186, 61, 49, 14, 24, 56, 20, 79, 84, 44, 59, 29, 118, 25, 156, 310, 76, 26, 44, 23, 62, 130, 208, 70, 101, 208, 74, 57, 48, 29, 502, 12, 70, 21, 29, 386, 59, 27};
    
-      Double_t smp2[smpSize2] = {55, 320, 56, 104, 220, 239, 47, 246, 176, 182, 33, 23, 261, 87, 7, 120, 14, 62, 47, 225, 71, 246, 21, 42, 20, 5, 12, 120, 11, 3, 14, 71, 11, 14, 11, 16, 90, 1, 16, 52, 95, 97, 51, 11, 4, 141, 18, 142, 68, 77, 80, 1, 16, 106, 206, 82, 54, 31, 216, 46, 111, 39, 63, 18, 191, 18, 163, 24, 50, 44, 102, 72, 22, 39, 3, 15, 197, 188, 79, 88, 46, 5, 5, 36, 22, 139, 210, 97, 30, 23, 13, 14, 359, 9, 12, 270, 603, 3, 104, 2, 438, 50, 254, 5, 283, 35, 12, 487, 18, 100, 7, 98, 5, 85, 91, 43, 230, 3, 130, 102, 209, 14, 57, 54, 32, 67, 59, 134, 152, 27, 14, 230, 66, 61, 34};
+      const Double_t smp2[smpSize2] = {55, 320, 56, 104, 220, 239, 47, 246, 176, 182, 33, 23, 261, 87, 7, 120, 14, 62, 47, 225, 71, 246, 21, 42, 20, 5, 12, 120, 11, 3, 14, 71, 11, 14, 11, 16, 90, 1, 16, 52, 95, 97, 51, 11, 4, 141, 18, 142, 68, 77, 80, 1, 16, 106, 206, 82, 54, 31, 216, 46, 111, 39, 63, 18, 191, 18, 163, 24, 50, 44, 102, 72, 22, 39, 3, 15, 197, 188, 79, 88, 46, 5, 5, 36, 22, 139, 210, 97, 30, 23, 13, 14, 359, 9, 12, 270, 603, 3, 104, 2, 438, 50, 254, 5, 283, 35, 12, 487, 18, 100, 7, 98, 5, 85, 91, 43, 230, 3, 130, 102, 209, 14, 57, 54, 32, 67, 59, 134, 152, 27, 14, 230, 66, 61, 34};
    
-      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(smp1, smpSize1, smp2, smpSize2);
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest( smpSize1, smp1, smpSize2, smp2 );
       
       Double_t A2 = goft->AndersonDarling2SamplesTest("t"); // standartized A2_akN
    //     Double_t pvalueAD = goft->AndersonDarling2SamplesTest();
@@ -116,6 +120,7 @@ struct GoFTStress {
    }
    
    Int_t UnitTest2() {
+      std::cout << "UNIT TEST 2" << std::endl;
       
       const UInt_t nsmps = 2;
       const UInt_t smpSize = 16;
@@ -123,10 +128,10 @@ struct GoFTStress {
       Data sets adapted from the paper (1)
       "K-Sample Anderson-Darling Tests of Fit for continuous and discrete cases" by Scholz and Stephens
    */
-      Double_t smp1[smpSize] = {38.7, 41.5, 43.8, 44.5, 45.5, 46.0, 47.7, 58.0, 39.2, 39.3, 39.7, 41.4, 41.8, 42.9, 43.3, 45.8};
-      Double_t smp2[smpSize] = {34.0, 35.0, 39.0, 40.0, 43.0, 43.0, 44.0, 45.0, 34.0, 34.8, 34.8, 35.4, 37.2, 37.8, 41.2, 42.8};
+      const Double_t smp1[smpSize] = {38.7, 41.5, 43.8, 44.5, 45.5, 46.0, 47.7, 58.0, 39.2, 39.3, 39.7, 41.4, 41.8, 42.9, 43.3, 45.8};
+      const Double_t smp2[smpSize] = {34.0, 35.0, 39.0, 40.0, 43.0, 43.0, 44.0, 45.0, 34.0, 34.8, 34.8, 35.4, 37.2, 37.8, 41.2, 42.8};
    
-      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(smp1, smpSize, smp2, smpSize);
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest( smpSize, smp1, smpSize, smp2 );
    
    //     Double_t A2 = goft->AndersonDarling2SamplesTest("t"); // standartized A2_akN
       Double_t A2 = (*goft)(ROOT::Math::GoFTest::kAD2s, "t");
@@ -153,6 +158,8 @@ struct GoFTStress {
    }
    
    Int_t UnitTest3() {
+      std::cout << "UNIT TEST 3" << std::endl;
+      
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
          
@@ -166,7 +173,7 @@ struct GoFTStress {
          assert(sample[i] == data);
       }
       
-      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(sample, nEvents, ROOT::Math::GoFTest::kLogNormal);
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample, ROOT::Math::GoFTest::kLogNormal);
       
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "LogNormal fitting" << std::endl;
@@ -191,7 +198,9 @@ struct GoFTStress {
       return result;
    }
    
-   Int_t UnitTest4(){
+   Int_t UnitTest4() {
+      std::cout << "UNIT TEST 4" << std::endl;
+      
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
@@ -205,7 +214,7 @@ struct GoFTStress {
          assert(sample[i] == data);
       }
       
-      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(sample, nEvents, ROOT::Math::GoFTest::kExponential);
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample, ROOT::Math::GoFTest::kExponential);
    
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "**Exponential fitting**" << std::endl;
@@ -231,6 +240,8 @@ struct GoFTStress {
    }
    
    Int_t UnitTest5() {
+      std::cout << "UNIT TEST 5" << std::endl;
+      
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
@@ -244,7 +255,8 @@ struct GoFTStress {
          assert(sample[i] == data);
       }
       
-      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(sample, nEvents);
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample);
+      goft->SetDistribution(ROOT::Math::GoFTest::kGaussian);
    
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "**Gaussian fitting**" << std::endl;
@@ -268,6 +280,7 @@ struct GoFTStress {
    }
    
    Int_t UnitTest6() {
+      std::cout << "UNIT TEST 6" << std::endl;
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
@@ -281,7 +294,8 @@ struct GoFTStress {
          assert(sample[i] == data);
       }
       
-      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(sample, nEvents, TMath::LandauI);
+      ROOT::Math::Functor1D userCdf(&TMath::LandauI);
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample, userCdf, ROOT::Math::GoFTest::kCDF);
          
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "**Landau fitting**" << std::endl;
@@ -299,6 +313,54 @@ struct GoFTStress {
       Double_t expectedDn = 0.0203432;
    
       result += PrintResultKS(nsmps, Dn, expectedDn, pvalueKS);
+      
+      delete goft;
+      return result;
+   }
+   
+   Int_t UnitTest7() {
+      std::cout << "UNIT TEST 7" << std::endl;
+      
+      UInt_t nEvents = 1000;
+      UInt_t nsmps = 1;
+      
+      TRandom3 r;
+   
+      Double_t* sample = new Double_t[nEvents];
+   
+      for (UInt_t i = 0; i < nEvents; ++i) { 
+         Double_t data = r.Landau();
+         sample[i] = data;
+      }
+      
+      // need to specify min and max otherwise pdf does not converge
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(nEvents, sample); 
+
+      ROOT::Math::Functor1D userPdf(&TMath::Landau);
+      // need to use a reasanble range for the Landau 
+      // but must be bigger than xmin and xmax 
+      double xmin = 3*TMath::MinElement(nEvents, sample);
+      double xmax = 3*TMath::MaxElement(nEvents, sample);
+         
+      if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
+         std::cout << "**Landau fitting**" << " in [ " << xmin << " , " << xmax << " ]" << std::endl;
+
+      goft->SetUserDistribution(userPdf,ROOT::Math::GoFTest::kPDF, xmin, xmax);
+      
+      Double_t A2 =  goft->AndersonDarlingTest("t");
+      Double_t pvalueAD = goft->AndersonDarlingTest();
+   
+      Double_t expectedA2 =  0.544658;
+   
+      // use larger tolerance due to truncation error of Landau
+      Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD,0.002);
+      
+      Double_t Dn = goft->KolmogorovSmirnovTest("t");
+      Double_t pvalueKS = goft->KolmogorovSmirnovTest();
+   
+      Double_t expectedDn = 0.0203432;
+   
+      result += PrintResultKS(nsmps, Dn, expectedDn, pvalueKS,0.001);
       
       delete goft;
       return result;

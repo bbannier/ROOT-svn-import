@@ -151,6 +151,8 @@ TPolyLine::TPolyLine(const TPolyLine &polyline) : TObject(polyline), TAttLine(po
 {
    // PolyLine copy constructor.
 
+   fN = 0;
+   fLastPoint = -1;
    ((TPolyLine&)polyline).Copy(*this);
 }
 
@@ -472,7 +474,7 @@ Int_t TPolyLine::Merge(TCollection *li)
    }
 
    //extend this polyline to hold npoints
-   pl->SetPoint(npoints-1,0,0);
+   if (npoints > 1) SetPoint(npoints-1,0,0);
 
    //merge all polylines
    next.Reset();

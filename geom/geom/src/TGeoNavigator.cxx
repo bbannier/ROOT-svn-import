@@ -69,6 +69,7 @@ TGeoNavigator::TGeoNavigator()
                fCache(0),
                fCurrentVolume(0),
                fCurrentNode(0),
+               fTopNode(0),
                fLastNode(0),
                fNextNode(0),
                fForcedNode(0),
@@ -79,6 +80,14 @@ TGeoNavigator::TGeoNavigator()
                 
 {
 // dummy constructor
+   for (Int_t i=0; i<3; i++) {
+      fNormal[i] = 0.;
+      fCldir[i] = 0.;
+      fCldirChecked[i] = 0.;
+      fPoint[i] = 0.;
+      fDirection[i] = 0.;
+      fLastPoint[i] = 0.;
+   }
 }
 
 //_____________________________________________________________________________
@@ -107,6 +116,7 @@ TGeoNavigator::TGeoNavigator(TGeoManager* geom)
                fCache(0),
                fCurrentVolume(0),
                fCurrentNode(0),
+               fTopNode(0),
                fLastNode(0),
                fNextNode(0),
                fForcedNode(0),
@@ -157,6 +167,7 @@ TGeoNavigator::TGeoNavigator(const TGeoNavigator& gm)
                fCache(gm.fCache),
                fCurrentVolume(gm.fCurrentVolume),
                fCurrentNode(gm.fCurrentNode),
+               fTopNode(gm.fTopNode),
                fLastNode(gm.fLastNode),
                fNextNode(gm.fNextNode),
                fForcedNode(gm.fForcedNode),
@@ -206,6 +217,7 @@ TGeoNavigator& TGeoNavigator::operator=(const TGeoNavigator& gm)
       fCache = gm.fCache;
       fCurrentVolume = gm.fCurrentVolume;
       fCurrentNode = gm.fCurrentNode;
+      fTopNode = gm.fTopNode;
       fLastNode = gm.fLastNode;
       fNextNode = gm.fNextNode;
       fForcedNode = gm.fForcedNode;
@@ -1687,7 +1699,7 @@ TGeoNode *TGeoNavigator::SearchNode(Bool_t downwards, const TGeoNode *skipnode)
    Bool_t inside_current = (fCurrentNode==skipnode)?kTRUE:kFALSE;
    if (!downwards) {
    // we are looking upwards until inside current node or exit
-      if (fGeometry->IsActivityEnabled() && !vol->IsActive()) {
+      if (fGeometry->IsActivityEnabled() && !fCurrentNode->GetVolume()->IsActive()) {
          // We are inside an inactive volume-> go upwards
          CdUp();
          fIsSameLocation = kFALSE;
@@ -1769,7 +1781,7 @@ TGeoNode *TGeoNavigator::SearchNode(Bool_t downwards, const TGeoNode *skipnode)
          // Point *HAS* to be inside a cell
          Double_t dir[3];
          fGlobalMatrix->MasterToLocalVect(fDirection, dir);
-         node = finder->FindNode(point,dir);
+         finder->FindNode(point,dir);
          node = finder->CdNext();
          if (!node) return fCurrentNode;  // inside divided volume but not in a cell
       }   
@@ -2208,7 +2220,7 @@ Bool_t TGeoNavigator::IsSameLocation(Double_t x, Double_t y, Double_t z, Bool_t 
       if (!check_list) return kTRUE;
       if (!change) PushPath();
       for (Int_t id=0; id<ncheck; id++) {
-         node = vol->GetNode(check_list[id]);
+//         node = vol->GetNode(check_list[id]);
          CdDown(check_list[id]);
          fGlobalMatrix->MasterToLocal(point,local1);
          if (fCurrentNode->GetVolume()->GetShape()->Contains(local1)) {
@@ -2226,7 +2238,7 @@ Bool_t TGeoNavigator::IsSameLocation(Double_t x, Double_t y, Double_t z, Bool_t 
    }
    Int_t id = 0;
    if (!change) PushPath();
-   while ((node=fCurrentNode->GetDaughter(id++))) {
+   while (fCurrentNode && fCurrentNode->GetDaughter(id++)) {
       CdDown(id-1);
       fGlobalMatrix->MasterToLocal(point,local1);
       if (fCurrentNode->GetVolume()->GetShape()->Contains(local1)) {

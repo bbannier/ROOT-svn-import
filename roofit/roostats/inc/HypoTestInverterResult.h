@@ -1,5 +1,5 @@
 // @(#)root/roostats:$Id$
-// Author: Gregory Schott, Danilo Piparo
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -78,7 +78,7 @@ namespace RooStats {
   private:
 
     // merge with the content of another HypoTestInverterResult object
-    bool Add( HypoTestInverterResult otherResult );
+    bool Add( const HypoTestInverterResult& otherResult );
 
     double CalculateEstimatedError(double target);
     int FindClosestPointIndex(double target);

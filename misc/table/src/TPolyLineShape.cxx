@@ -401,7 +401,7 @@ void TPolyLineShape::Paint(Option_t *opt)
       view3D->SetLineAttr(GetColorAttribute(), (Int_t)GetSizeAttribute());
       view3D->PaintPoints3D(GetPoints(), mode.Data());
    }
-   if (!strstr(opt, "x3d")) {
+   if (opt && !strstr(opt, "x3d")) {
       if (fPointFlag) {
          SetMarkerColor(GetColorAttribute());
          SetMarkerSize(GetSizeAttribute());
@@ -448,15 +448,14 @@ void TPolyLineShape::PaintPolyMarker(Int_t n, Float_t *, Marker_t, Option_t *)
 
    if (n <= 0) return;
 
+   TView *view = gPad->GetView();      //Get current 3-D view
+   if(!view) return;                   //Check if `view` is valid
+
    //Create temorary storage
    TPoint *pxy = new TPoint[n];
    Float_t *x  = new Float_t[n];
    Float_t *y  = new Float_t[n];
    Float_t xndc[3], ptr[3];
-
-
-   TView *view = gPad->GetView();      //Get current 3-D view
-   if(!view) return;                   //Check if `view` is valid
 
 //*-*- convert points from world to pixel coordinates
    Int_t nin = 0;
@@ -509,12 +508,12 @@ void TPolyLineShape::PaintX3DLine(Option_t *)
 {
    //to be documented
 #ifndef WIN32
-   X3DBuffer *buff = new X3DBuffer;
-   if (!buff) return;
-
    Int_t size = 0;
    if (fPoints) size = fPoints->Size();
    if (!size) return;
+
+   X3DBuffer *buff = new X3DBuffer;
+   if (!buff) return;
 
    fSizeX3D->numPoints = buff->numPoints = size;
    fSizeX3D->numSegs   = buff->numSegs   = size-1;

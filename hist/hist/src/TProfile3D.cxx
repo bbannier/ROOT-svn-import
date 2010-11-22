@@ -633,6 +633,7 @@ Int_t TProfile3D::Fill(Double_t x, Double_t y, Double_t z, Double_t t)
    binx =fXaxis.FindBin(x);
    biny =fYaxis.FindBin(y);
    binz =fZaxis.FindBin(z);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  = GetBin(binx,biny,binz);
    AddBinContent(bin, t);
    fSumw2.fArray[bin] += (Double_t)t*t;
@@ -683,6 +684,7 @@ Int_t TProfile3D::Fill(Double_t x, Double_t y, Double_t z, Double_t t, Double_t 
    binx =fXaxis.FindBin(x);
    biny =fYaxis.FindBin(y);
    binz =fZaxis.FindBin(z);
+   if (binx <0 || biny <0 || binz<0) return -1;
    bin  = GetBin(binx,biny,binz);
    AddBinContent(bin, u*t);
    fSumw2.fArray[bin] += u*t*t;
@@ -1103,11 +1105,9 @@ TH3D *TProfile3D::ProjectionXYZ(const char *name, Option_t *option) const
    Int_t nz = fZaxis.GetNbins();
 
    // Create the projection histogram
-   char *pname = (char*)name;
-   if (strcmp(name,"_px") == 0) {
-      Int_t nch = strlen(GetName()) + 4;
-      pname = new char[nch];
-      sprintf(pname,"%s%s",GetName(),name);
+   TString pname = name; 
+   if (pname == "_px") { 
+      pname = GetName();  pname.Append("_px");
    }
    TH3D *h1 = new TH3D(pname,GetTitle(),nx,fXaxis.GetXmin(),fXaxis.GetXmax(),ny,fYaxis.GetXmin(),fYaxis.GetXmax(),nz,fZaxis.GetXmin(),fZaxis.GetXmax());
    Bool_t computeErrors = kFALSE;
@@ -1117,7 +1117,6 @@ TH3D *TProfile3D::ProjectionXYZ(const char *name, Option_t *option) const
    if (opt.Contains("e")) computeErrors = kTRUE;
    if (opt.Contains("c=e")) {cequalErrors = kTRUE; computeErrors=kFALSE;}
    if (computeErrors) h1->Sumw2();
-   if (pname != name)  delete [] pname;
 
    // Fill the projected histogram
    Int_t bin,binx,biny,binz;

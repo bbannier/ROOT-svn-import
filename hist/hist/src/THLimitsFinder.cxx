@@ -185,6 +185,8 @@ void THLimitsFinder::Optimize(Double_t A1,  Double_t A2,  Int_t nold ,Double_t &
    Int_t optionTime;
    if(strchr(option,'t')) optionTime = 1;  else optionTime = 0;
 
+   nbins = nold;
+
    Double_t al = TMath::Min(A1,A2);
    Double_t ah = TMath::Max(A1,A2);
    if (al == ah) ah = al+1;
@@ -351,7 +353,7 @@ void THLimitsFinder::OptimizeLimits(Int_t nbins, Int_t &newbins, Double_t &xmin,
 // When isInter=kTRUE, the function makes an integer binwidth
 // and recompute the number of bins accordingly.
    
-   Double_t binlow,binhigh,binwidth;
+   Double_t binlow,binhigh,binwidth=0;
    Int_t n=0;
    Double_t dx = 0.1*(xmax-xmin);
    if (isInteger) dx = 5*(xmax-xmin)/nbins;

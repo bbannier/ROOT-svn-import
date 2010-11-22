@@ -48,8 +48,8 @@ class TUnuranEmpDist;
    The sampling is provided via these methods: 
     - TUnuran::Sample()   returns a double for all one-dimensional distribution
     - TUnuran::SampleDiscr()  returns an integer for one-dimensional discrete distribution
-    - TUnuran::Sample(double *) sample a multi-dimensional distribution. A pointer to a vector of 
-      size as the distribution dimension must be passed
+    - TUnuran::Sample(double *) sample a multi-dimensional distribution. A pointer to a vector with  
+      size at least equal to the distribution dimension must be passed
 
    In addition is possible to set the random number generator in the constructor of the class, its seed 
    via the TUnuran::SetSeed() method.
@@ -66,6 +66,10 @@ typedef struct unur_gen UNUR_GEN;
 
 struct unur_distr; 
 typedef struct unur_distr UNUR_DISTR; 
+
+struct unur_urng;
+typedef struct unur_urng  UNUR_URNG;
+
 
 class TRandom; 
 class TH1; 
@@ -254,8 +258,9 @@ protected:
 
    UNUR_GEN * fGen;                      //pointer to the UnuRan C generator struct
    UNUR_DISTR * fUdistr;                 //pointer to the UnuRan C distribution struct
+   UNUR_URNG  * fUrng;                   // pointer to Unuran C random generator struct 
    std::auto_ptr<TUnuranBaseDist>         fDist;       // pointer for distribution wrapper
-   TRandom * fRng;                       //pointer to random number generator
+   TRandom * fRng;                       //pointer to ROOT random number generator
    std::string fMethod;                  //string representing the method
 
 }; 

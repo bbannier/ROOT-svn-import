@@ -1743,7 +1743,7 @@ void TH2Editor::DoBinLabel()
    Int_t ny = 0;
    if (fBinHist) ny = fBinHist->GetYaxis()->GetNbins();
    else ny = fHist->GetYaxis()->GetNbins();
-   if (nx < 1 || ny < 1) return;
+   if (nx < 2 || ny < 2) return;
    // Get the divider of nx/ny which is closest to numx/numy
    Int_t *divx = Dividers(nx);
    Int_t *divy = Dividers(ny);
@@ -1832,6 +1832,10 @@ void TH2Editor::DoCancel()
                      fBinHist->GetYaxis()->GetXmin(),
                      fBinHist->GetYaxis()->GetXmax());
       fHist->Add(fBinHist);
+      fHist->GetXaxis()->SetRange(fBinHist->GetXaxis()->GetFirst(),
+                                  fBinHist->GetXaxis()->GetLast());
+      fHist->GetYaxis()->SetRange(fBinHist->GetYaxis()->GetFirst(),
+                                  fBinHist->GetYaxis()->GetLast());
 
       delete fBinHist;
       fBinHist = 0;

@@ -164,7 +164,10 @@ public:
       // Must return -1 if this is smaller than obj, 0 if objects are equal
       // and 1 if this is larger than obj.
       const TFileNode *obj = dynamic_cast<const TFileNode*>(other);
-      R__ASSERT(obj != 0);
+      if (!obj) {
+         Error("Compare", "input is not a TPacketizer::TFileNode object");
+         return 0;
+      }
 
       Int_t myVal = GetSlaveCnt();
       Int_t otherVal = obj->GetSlaveCnt();
@@ -375,9 +378,10 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
    // Setup file & filenode structure
    Reset();
    // Optimize the number of files to be open when running on subsample
+   Bool_t byfile = kFALSE;
    Int_t validateMode = 0;
-   TProof::GetParameter(input, "PROOF_ValidateByFile", validateMode);
-   Bool_t byfile = (validateMode > 0 && num > -1) ? kTRUE : kFALSE;
+   if (TProof::GetParameter(input, "PROOF_ValidateByFile", validateMode) == 0)
+      byfile = (validateMode > 0 && num > -1) ? kTRUE : kFALSE;
    ValidateFiles(dset, slaves, num, byfile);
 
    if (!fValid) return;
@@ -593,7 +597,7 @@ TPacketizer::TFileNode *TPacketizer::NextUnAllocNode()
 
    TFileNode *fn = (TFileNode*) fUnAllocated->First();
    if (fn != 0 && fMaxSlaveCnt > 0 && fn->GetSlaveCnt() >= fMaxSlaveCnt) {
-      PDB(kPacketizer,1) Info("NextUnAllocNode","Reached Slaves per Node Limit (%d)",
+      PDB(kPacketizer,1) Info("NextUnAllocNode", "reached workers per node limit (%ld)",
                               fMaxSlaveCnt);
       fn = 0;
    }
@@ -638,7 +642,7 @@ TPacketizer::TFileNode *TPacketizer::NextActiveNode()
 
    TFileNode *fn = (TFileNode*) fActive->First();
    if (fn != 0 && fMaxSlaveCnt > 0 && fn->GetSlaveCnt() >= fMaxSlaveCnt) {
-      PDB(kPacketizer,1) Info("NextActiveNode","Reached Slaves per Node Limit (%d)", fMaxSlaveCnt);
+      PDB(kPacketizer,1) Info("NextActiveNode", "reached workers per node limit (%ld)", fMaxSlaveCnt);
       fn = 0;
    }
 
@@ -793,8 +797,8 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves, Long64_t maxent, Boo
                   if (!elem->GetEntryList()) {
                      if (elem->GetFirst() > entries) {
                         Error("ValidateFiles",
-                              "first (%d) higher then number of entries (%d) in %d",
-                              elem->GetFirst(), entries, elem->GetFileName() );
+                              "first (%lld) higher then number of entries (%lld) in %s",
+                              elem->GetFirst(), entries, elem->GetFileName());
                         // disable element
                         slstat->fCurFile->SetDone();
                         elem->Invalidate();
@@ -803,7 +807,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves, Long64_t maxent, Boo
                      if (elem->GetNum() == -1) {
                         elem->SetNum(entries - elem->GetFirst());
                      } else if (elem->GetFirst() + elem->GetNum() > entries) {
-                        Warning("ValidateFiles", "Num (%lld) + First (%lld) larger then number of"
+                        Warning("ValidateFiles", "num (%lld) + first (%lld) larger then number of"
                                  " keys/entries (%lld) in %s", elem->GetNum(), elem->GetFirst(),
                                  entries, elem->GetFileName());
                         elem->SetNum(entries - elem->GetFirst());
@@ -934,8 +938,8 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves, Long64_t maxent, Boo
          //if (!e->GetEventList()) {
          if (!e->GetEntryList()){
             if ( e->GetFirst() > entries ) {
-               Error("ValidateFiles", "first (%d) higher then number of entries (%lld) in %s",
-                     e->GetFirst(), entries, e->GetFileName() );
+               Error("ValidateFiles", "first (%lld) higher then number of entries (%lld) in %s",
+                                      e->GetFirst(), entries, e->GetFileName());
 
                // Invalidate the element
                slavestat->fCurFile->SetDone();
@@ -947,9 +951,9 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves, Long64_t maxent, Boo
                e->SetNum( entries - e->GetFirst() );
             } else if ( e->GetFirst() + e->GetNum() > entries ) {
                Error("ValidateFiles",
-                     "Num (%d) + First (%d) larger then number of keys/entries (%lld) in %s",
-                     e->GetNum(), e->GetFirst(), entries, e->GetFileName() );
-               e->SetNum( entries - e->GetFirst() );
+                     "num (%lld) + first (%lld) larger then number of keys/entries (%lld) in %s",
+                     e->GetNum(), e->GetFirst(), entries, e->GetFileName());
+               e->SetNum(entries - e->GetFirst());
             }
          }
 

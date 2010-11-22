@@ -15,10 +15,13 @@
 #include "TEveTrans.h"
 #include "TEvePad.h"
 
-#include "TList.h"
 #include "TGLScenePad.h"
 #include "TGLLogicalShape.h"
 #include "TGLPhysicalShape.h"
+
+#include "TList.h"
+#include "TExMap.h"
+
 
 //==============================================================================
 //==============================================================================
@@ -61,7 +64,7 @@ TEveScene::~TEveScene()
 {
    // Destructor.
 
-   fDestructing = kTRUE;
+   fDestructing = kStandard;
 
    gEve->GetViewers()->SceneDestructing(this);
    gEve->GetScenes()->RemoveElement(this);
@@ -137,13 +140,15 @@ void TEveScene::RetransHierarchicallyRecurse(TEveElement* el, const TEveTrans& t
    // Set transformation matrix for physical shape of element el in
    // the GL-scene and recursively descend into children (if enabled).
 
+   static const TEveException eh("TEveScene::RetransHierarchicallyRecurse ");
+
    TEveTrans t(tp);
    if (el->HasMainTrans())
       t *= el->RefMainTrans();
 
    if (el->GetRnrSelf() && el != this)
    {
-      fGLScene->UpdatePhysioLogical(el->GetRenderObject(), t.Array(), 0);
+      fGLScene->UpdatePhysioLogical(el->GetRenderObject(eh), t.Array(), 0);
    }
 
    if (el->GetRnrChildren())
@@ -187,8 +192,10 @@ void TEveScene::DestroyElementRenderers(TEveElement* element)
    // Remove element from the scene.
    // It is not an error if the element is not found in the scene.
 
+   static const TEveException eh("TEveScene::DestroyElementRenderers ");
+
    fGLScene->BeginUpdate();
-   Bool_t changed = fGLScene->DestroyLogical(element->GetRenderObject(), kFALSE);
+   Bool_t changed = fGLScene->DestroyLogical(element->GetRenderObject(eh), kFALSE);
    fGLScene->EndUpdate(changed, changed);
 }
 
@@ -283,7 +290,9 @@ void TEveSceneList::DestroyElementRenderers(TEveElement* element)
    // Loop over all scenes and remove all instances of element from
    // them.
 
-   TObject* obj = element->GetRenderObject();
+   static const TEveException eh("TEveSceneList::DestroyElementRenderers ");
+
+   TObject* obj = element->GetRenderObject(eh);
    for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
    {
       ((TEveScene*)*i)->DestroyElementRenderers(obj);
@@ -291,7 +300,7 @@ void TEveSceneList::DestroyElementRenderers(TEveElement* element)
 }
 
 //______________________________________________________________________________
-void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
+void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, TExMap* stampMap)
 {
    // Loop over all scenes and update them accordingly:
    //   a) if scene is marked as changed, it is repainted;
@@ -300,6 +309,26 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
    //
    // This allows much finer update granularity without resetting of
    // complex GL-viewer and GL-scene state.
+
+   // We need changed elements sorted by their "render object" as we do
+   // parallel iteration over this list and the list of logical shapes
+   // in every scene.
+
+   static const TEveException eh("TEveSceneList::ProcessSceneChanges ");
+
+   typedef std::map<TObject*, TEveElement*> mObjectElement_t;
+   typedef mObjectElement_t::iterator       mObjectElement_i;
+
+   mObjectElement_t changed_objects;
+   {
+      Long64_t   key, value;
+      TExMapIter stamped_elements(stampMap);
+      while (stamped_elements.Next(key, value))
+      {
+         TEveElement *el = reinterpret_cast<TEveElement*>(key);
+         changed_objects.insert(std::make_pair(el->GetRenderObject(eh), el));
+      }
+   }
 
    for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
    {
@@ -318,18 +347,14 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
          s->GetGLScene()->BeginUpdate();
 
          // Process stamps.
-         TGLScene::LogicalShapeMap_t& logs = s->GetGLScene()->RefLogicalShapes();
-         TGLScene::LogicalShapeMapIt_t li = logs.begin();
+         TGLScene::LogicalShapeMap_t   &logs = s->GetGLScene()->RefLogicalShapes();
+         TGLScene::LogicalShapeMapIt_t  li   = logs.begin();
 
-         Set_i ei = stampSet.begin();
+         mObjectElement_i ei = changed_objects.begin();
 
-         TObject* eobj = 0;
-
-         while (li != logs.end() && ei != stampSet.end())
+         while (li != logs.end() && ei != changed_objects.end())
          {
-            if (!eobj) eobj = (*ei)->GetRenderObject();
-
-            if (li->first == eobj)
+            if (li->first == ei->first)
             {
                if (li->second->Ref() != 1)
                   Warning("TEveSceneList::ProcessSceneChanges",
@@ -337,7 +362,7 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
 
                TGLLogicalShape  *lshp = li->second;
                TGLPhysicalShape *pshp = const_cast<TGLPhysicalShape*>(lshp->GetFirstPhysical());
-               TEveElement      *el   = *ei;
+               TEveElement      *el   = ei->second;
                UChar_t           bits = el->GetChangeBits();
 
                if (bits & kCBColorSelection)
@@ -361,16 +386,16 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
                   lshp->DLCacheClear();
                }
 
-               ++li; ++ei; eobj = 0;
+               ++li; ++ei;
                updateViewers = kTRUE;
             }
-            else if (li->first < eobj)
+            else if (li->first < ei->first)
             {
                ++li;
             }
             else
             {
-               ++ei; eobj = 0;
+               ++ei;
             }
          }
 

@@ -20,10 +20,10 @@
 #define G__CINT_VER6  1
 #endif
 
-#define G__CINTVERSION_V6      60020000
-#define G__CINTVERSIONSTR_V6  "6.2.00, Dec 21, 2008"
-#define G__CINTVERSION_V5      50170000
-#define G__CINTVERSIONSTR_V5  "5.17.00, Dec 21, 2008"
+#define G__CINTVERSION_V6      60030000
+#define G__CINTVERSIONSTR_V6  "6.03.00, July 2, 2010"
+#define G__CINTVERSION_V5      50180000
+#define G__CINTVERSIONSTR_V5  "5.18.00, July 2, 2010"
 
 #define G__ALWAYS
 /* #define G__NEVER */
@@ -341,10 +341,6 @@
 #endif
 #endif
 
-#ifdef __VMS
-#define G__VMS
-#endif
-
 #if defined(__BORLANDC__) || defined(__BCPLUSPLUS) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
 #ifndef G__BORLAND
 #define G__BORLAND
@@ -435,15 +431,6 @@ typedef unsigned long long G__uint64;
 
 #ifndef G__IF_DUMMY
 #define G__IF_DUMMY /* avoid compiler warning */
-#endif
-
-#ifdef G__VMS
-#ifndef G__NONSCALARFPOS
-#define G__NONSCALARFPOS
-#endif
-typedef long fpos_tt; /* pos_t is defined to be a struct{32,32} in VMS.
-                         Therefore,pos_tt is defined to be a long. This
-                         is used in G__ifunc_table_VMS, G__functentry_VMS*/
 #endif
 
 #if defined(G__BORLAND) || defined(G__VISUAL)
@@ -1103,10 +1090,6 @@ struct G__friendtag;
 struct G__bytecodefunc;
 #endif
 struct G__funcentry;
-#ifdef G__VMS
-struct G__funcentry_VMS;
-struct G__ifunc_table_VMS;
-#endif
 struct G__ifunc_table;
 struct G__inheritance;
 struct G__var_array;
@@ -1132,18 +1115,21 @@ struct G__va_list_para;
 **************************************************************************/
 struct G__ifunc_table;
 struct G__var_array;
-struct G__dictposition; // decl in Api.h because of Cint7's having C++ content
+struct G__dictposition; /* decl in Api.h because of Cint7's having C++ content */
 
 /**************************************************************************
 * comment information
 *
 **************************************************************************/
 struct G__comment_info {
-  union {
-    char  *com;
-    fpos_t pos;
-  } p;
-  int   filenum;
+   union {
+      char  *com;
+      fpos_t pos;
+   } p;
+   int   filenum;
+#ifdef __cplusplus
+   G__comment_info() : filenum(0) { p.com = 0; };
+#endif
 };
 
 /**************************************************************************
@@ -1192,13 +1178,8 @@ struct G__friendtag {
 **************************************************************************/
 struct G__param {
   int paran;
-#ifdef G__OLDIMPLEMENTATION1530
-  char parameter[G__MAXFUNCPARA][G__ONELINE];
-#endif
   G__value para[G__MAXFUNCPARA];
-#ifndef G__OLDIMPLEMENTATION1530
   char parameter[G__MAXFUNCPARA][G__ONELINE];
-#endif
 };
 
 
@@ -1248,14 +1229,17 @@ extern "C" { /* extern C 3 */
 *
 **************************************************************************/
 struct G__input_file {
-  FILE *fp;
-  int line_number;
-  short filenum;
-  char name[G__MAXFILENAME];
+   FILE *fp;
+   int line_number;
+   short filenum;
+   char name[G__MAXFILENAME];
 #ifndef G__OLDIMPLEMENTATION1649
-  char *str;
-  unsigned long pos;
-  int vindex;
+   char *str;
+   unsigned long pos;
+   int vindex;
+#endif
+#ifdef __cplusplus
+   G__input_file() : fp(0),line_number(-1),filenum(-1),str(0),pos(0),vindex(0) { name[0] = 0; }
 #endif
 };
 
@@ -1407,8 +1391,6 @@ extern void (*G__aterror)();
 #define G__P(funcparam) ()
 #endif
 
-extern G__EXPORT unsigned long G__uint G__P((G__value buf));
-
 #if defined(G__DEBUG) && !defined(G__MEMTEST_C)
 #include "src/memtest.h"
 #endif
@@ -1428,6 +1410,25 @@ typedef struct {
     long i[G__VAARG_SIZE/sizeof(long)];
   } x;
 } G__va_arg_buf;
+
+
+// cross-compiling for iOS and iOS simulator (assumes host is Intel Mac OS X)
+#if defined(R__IOSSIM) || defined(R__IOS)
+#ifdef __x86_64__
+#define R__x86_64 1
+#undef __x86_64__
+#endif
+#ifdef __i386__
+#define R__i386 1
+#undef __i386__
+#endif
+#ifdef R__IOSSIM
+#define __i386__ 1
+#endif
+#ifdef R__IOS
+#define __arm__ 1
+#endif
+#endif
 
 
 #if (defined(__i386__) && (defined(__linux) || defined(__APPLE__))) || \
@@ -1549,6 +1550,17 @@ typedef struct {
 
 #endif
 
+// cross-compiling for iOS and iOS simulator (assumes host is Intel Mac OS X)
+#if defined(R__IOSSIM) || defined(R__IOS)
+#undef __i386__
+#undef __arm__
+#ifdef R__x86_64
+#define __x86_64__ 1
+#endif
+#ifdef R__i386
+#define __i386__ 1
+#endif
+#endif
 
 struct G__va_list_para {
   struct G__param *libp;
@@ -1572,7 +1584,7 @@ typedef void G__parse_hook_t ();
 #    define G__DUMMYTOCHECKFORDUPLICATES_CONCAT(A,B) A##B
 #    define G__DUMMYTOCHECKFORDUPLICATES(IDX) namespace{class G__DUMMYTOCHECKFORDUPLICATES_CONCAT(this_API_function_index_occurs_more_than_once_,IDX) {};}
 #  else
-#    define G__DUMMYTOCHECKFORDUPLICATES(IDX) 
+#    define G__DUMMYTOCHECKFORDUPLICATES(IDX)
 #  endif
 #  define G__DECL_API(IDX, RET, NAME, ARGS) \
    G__EXPORT RET NAME ARGS ; G__DUMMYTOCHECKFORDUPLICATES(IDX)
@@ -1610,6 +1622,11 @@ G__EXPORT void G__SET_CINT_API_POINTERS_FUNCNAME (void *a[G__NUMBER_OF_API_FUNCT
 
 #endif /* __CINT__ */
 
+#if defined(G__WIN32)
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
+#endif
 
 #if defined(G__WIN32) && (!defined(G__SYMANTEC)) && defined(G__CINTBODY)
 /* ON562 , this used to be test for G__SPECIALSTDIO */
@@ -1698,16 +1715,17 @@ G__signaltype G__signal G__P((int sgnl,void (*f)(int)));
 
 /***********************************************************************/
 #if defined(__cplusplus) && !defined(__CINT__)
-// Helper class to avoid compiler warning about casting function pointer
-// to void pointer.
+/* Helper class to avoid compiler warning about casting function pointer
+** to void pointer.
+*/
 class G__func2void {
    typedef void (*funcptr_t)();
 
    union funcptr_and_voidptr {
       typedef void (*funcptr_t)();
-      
+
       funcptr_and_voidptr(void *val) : _read(val) {}
-      
+
       void *_read;
       funcptr_t _write;
    };
@@ -1723,6 +1741,11 @@ public:
       return _tmp._read;
    }
 };
+#elif !__CINT__
+typedef union {
+   void *_read;
+   void (*_write)();
+} funcptr_and_voidptr;
 #endif /* __cplusplus  && ! __CINT__*/
 
 #endif /* __MAKECINT__ */

@@ -138,7 +138,7 @@ void TEveTrackPropagator::Helix_t::Step(const TEveVector4& v, const TEveVector& 
    {
       TEveVector d = fE2*(fR*fSin) + fE3*(fR*(1-fCos)) + fE1*fLStep;
       vOut    += d;
-      vOut.fT += fLStep;
+      vOut.fT += TMath::Abs(fLStep);
 
       pOut = fPl + fE2*(fPtMag*fCos) + fE3*(fPtMag*fSin);
 
@@ -148,7 +148,8 @@ void TEveTrackPropagator::Helix_t::Step(const TEveVector4& v, const TEveVector& 
    {
       // case: pT < kPtMinSqr or B < kBMin
       // might happen if field directon changes pT ~ 0 or B becomes zero
-      vOut += p * (fMaxStep / p.Mag());
+      vOut    += p * (fMaxStep / p.Mag());
+      vOut.fT += fMaxStep;
       pOut  = p;
    }
 }
@@ -267,10 +268,10 @@ void TEveTrackPropagator::ElementChanged(Bool_t update_scenes, Bool_t redraw)
    // Virtual from TEveElement.
 
    TEveTrack* track;
-   std::list<TEveElement*>::iterator i = fBackRefs.begin();
+   RefMap_i i = fBackRefs.begin();
    while (i != fBackRefs.end())
    {
-      track = dynamic_cast<TEveTrack*>(*i);
+      track = dynamic_cast<TEveTrack*>(i->first);
       track->StampObjProps();
       ++i;
    }
@@ -352,24 +353,31 @@ void TEveTrackPropagator::Update(const TEveVector4& v, const TEveVector& p,
          using namespace TMath;
 
          Float_t a = fgkB2C * fMagFieldObj->GetMaxFieldMag() * Abs(fH.fCharge);
-         fH.fR = p.Mag() / a;
+	 if (a > kAMin)
+	 {
+            fH.fR = p.Mag() / a;
 
-         // get phi step, compare fDelta with MaxAng
-         fH.fPhiStep = fH.fMaxAng * DegToRad();
-         if (fH.fR > fH.fDelta )
-         {
-            Float_t ang  = 2.0 * ACos(1.0f - fH.fDelta/fH.fR);
-            if (ang < fH.fPhiStep)
-               fH.fPhiStep = ang;
-         }
+            // get phi step, compare fDelta with MaxAng
+            fH.fPhiStep = fH.fMaxAng * DegToRad();
+            if (fH.fR > fH.fDelta )
+            {
+               Float_t ang  = 2.0 * ACos(1.0f - fH.fDelta/fH.fR);
+               if (ang < fH.fPhiStep)
+                  fH.fPhiStep = ang;
+            }
 
-         // check against maximum step-size
-         fH.fRKStep = fH.fR * fH.fPhiStep * Sqrt(1 + fH.fLam*fH.fLam);
-         if (fH.fRKStep > fH.fMaxStep || enforce_max_step)
-         {
-            fH.fPhiStep *= fH.fMaxStep / fH.fRKStep;
-            fH.fRKStep   = fH.fMaxStep;
-         }
+            // check against maximum step-size
+            fH.fRKStep = fH.fR * fH.fPhiStep * Sqrt(1 + fH.fLam*fH.fLam);
+            if (fH.fRKStep > fH.fMaxStep || enforce_max_step)
+            {
+               fH.fPhiStep *= fH.fMaxStep / fH.fRKStep;
+               fH.fRKStep   = fH.fMaxStep;
+            }
+	 }
+	 else
+	 {
+            fH.fRKStep = fH.fMaxStep; 
+	 }
       }
    }
 }
@@ -516,10 +524,7 @@ Bool_t TEveTrackPropagator::LoopToVertex(TEveVector& v, TEveVector& p)
    // make the remaining fractional step
    if (np > first_point)
    {
-      TEveVector d1 = v;
-      d1 -= currV;
-
-      if (d1.Mag() > kStepEps)
+      if ((v - currV).Mag() > kStepEps)
       {
          Float_t step_frac = prod0 / (prod0 - prod1);
          if (step_frac > 0)
@@ -527,7 +532,7 @@ Bool_t TEveTrackPropagator::LoopToVertex(TEveVector& v, TEveVector& p)
             // Step for fraction of previous step size.
             // We pass 'enforce_max_step' flag to Update().
             Float_t orig_max_step = fH.fMaxStep;
-            fH.fMaxStep *= step_frac;
+            fH.fMaxStep = step_frac * (forwV - currV).Mag();
             Update(currV, p, kTRUE, kTRUE);
             Step(currV, p, forwV, forwP);
             p     = forwP;
@@ -539,7 +544,7 @@ Bool_t TEveTrackPropagator::LoopToVertex(TEveVector& v, TEveVector& p)
 
          // Distribute offset to desired crossing point over all segment.
 
-         TEveVector off(v); off -= currV;
+         TEveVector off(v - currV);
          off *= 1.0f / currV.fT;
 
          // Calculate the required momentum rotation.
@@ -744,10 +749,10 @@ void TEveTrackPropagator::RebuildTracks()
    // Rebuild all tracks using this render-style.
 
    TEveTrack* track;
-   std::list<TEveElement*>::iterator i = fBackRefs.begin();
+   RefMap_i i = fBackRefs.begin();
    while (i != fBackRefs.end())
    {
-      track = dynamic_cast<TEveTrack*>(*i);
+      track = dynamic_cast<TEveTrack*>(i->first);
       track->MakeTrack();
       track->StampObjProps();
       ++i;
@@ -996,9 +1001,9 @@ void TEveTrackPropagator::StepRungeKutta(Double_t step,
   Double_t yt;
   Double_t zt;
 
-  // Double_t maxit = 1992;
-  Double_t maxit = 10;
-  Double_t maxcut = 11;
+  // const Int_t maxit = 1992;
+  const Int_t maxit  = 500;
+  const Int_t maxcut = 11;
 
   const Double_t hmin   = 1e-4; // !!! MT ADD,  should be member
   const Double_t kdlt   = 1e-3; // !!! MT CHANGE from 1e-4, should be member

@@ -167,34 +167,42 @@ Bool_t TProofCondor::StartSlaves(Bool_t)
          c = dynamic_cast<TCondorSlave*>(claims.At(idx));
       } else {
          TPair *p = dynamic_cast<TPair*>(claims.At(idx));
-         TTimer *t = dynamic_cast<TTimer*>(p->Value());
-         // wait remaining time
-         Long_t wait = (Long_t) (t->GetAbsTime()-gSystem->Now());
-         if (wait>0) gSystem->Sleep(wait);
-         c = dynamic_cast<TCondorSlave*>(p->Key());
+         if (p) {
+            TTimer *t = dynamic_cast<TTimer*>(p->Value());
+            if (t) {
+               // wait remaining time
+               Long64_t wait = t->GetAbsTime()-gSystem->Now();
+               if (wait > 0) gSystem->Sleep((UInt_t)wait);
+               c = dynamic_cast<TCondorSlave*>(p->Key());
+            }
+         }
       }
 
       // create slave
-      TSlave *slave = CreateSlave(Form("%s:d",c->fHostname.Data(), c->fPort), c->fOrdinal,
-                                    c->fPerfIdx, c->fImage, c->fWorkDir);
+      TSlave *slave = 0;
+      if (c) slave = CreateSlave(Form("%s:%d", c->fHostname.Data(), c->fPort), c->fOrdinal,
+                                               c->fPerfIdx, c->fImage, c->fWorkDir);
 
       // add slave to appropriate list
       if (trial < ntries) {
-         if (slave->IsValid()) {
+         if (slave && slave->IsValid()) {
             fSlaves->Add(slave);
             if (trial == 1) {
                claims.Remove(c);
             } else {
                TPair *p = dynamic_cast<TPair*>(claims.Remove(c));
-               delete dynamic_cast<TTimer*>(p->Value());
-               delete p;
+               if (p) {
+                  TTimer *xt = dynamic_cast<TTimer*>(p->Value());
+                  if (xt) delete xt;
+                  delete p;
+               }
             }
             nClaimsDone++;
             TMessage m(kPROOF_SERVERSTARTED);
             m << TString("Opening connections to workers") << nClaims
                << nClaimsDone << kTRUE;
             gProofServ->GetSocket()->Send(m);
-         } else {
+         } else if (slave) {
             if (trial == 1) {
                TTimer* timer = new TTimer(delay);
                TPair *p = new TPair(c, timer);
@@ -202,22 +210,34 @@ Bool_t TProofCondor::StartSlaves(Bool_t)
                claims.AddAt(p, idx);
             } else {
                TPair *p = dynamic_cast<TPair*>(claims.At(idx));
-               dynamic_cast<TTimer*>(p->Value())->Reset();
+               if (p && p->Value()) {
+                  TTimer *xt = dynamic_cast<TTimer*>(p->Value());
+                  if (xt) xt->Reset();
+               }
             }
             delete slave;
             idx++;
+         } else {
+            Warning("StartSlaves", "could not create TSlave object!");
          }
       } else {
-         fSlaves->Add(slave);
-         TPair *p = dynamic_cast<TPair*>(claims.Remove(c));
-         delete dynamic_cast<TTimer*>(p->Value());
-         delete p;
+         if (slave) {
+            fSlaves->Add(slave);
+            TPair *p = dynamic_cast<TPair*>(claims.Remove(c));
+            if (p && p->Value()) {
+               TTimer *xt = dynamic_cast<TTimer*>(p->Value());
+               delete xt;
+            }
+            if (p) delete p;
 
-         nClaimsDone++;
-         TMessage m(kPROOF_SERVERSTARTED);
-         m << TString("Opening connections to workers") << nClaims
-            << nClaimsDone << slave->IsValid();
-         gProofServ->GetSocket()->Send(m);
+            nClaimsDone++;
+            TMessage m(kPROOF_SERVERSTARTED);
+            m << TString("Opening connections to workers") << nClaims
+               << nClaimsDone << slave->IsValid();
+            gProofServ->GetSocket()->Send(m);
+         } else {
+            Warning("StartSlaves", "could not create TSlave object!");
+         }
       }
 
       if (idx>=claims.GetSize()) {
@@ -269,12 +289,15 @@ void TProofCondor::SetActive(Bool_t active)
       if (fCondor->GetState() == TCondor::kSuspended)
          fCondor->Resume();
    } else {
-return; // don't suspend for the moment
+#if 1
+      return; // don't suspend for the moment
+#else
       Int_t delay = 60000; // milli seconds
-      PDB(kCondor,1) Info("SetActive","-- Delayed Condor Suspend (%d msec / to %ld) --",
-                          delay, delay + long(gSystem->Now()));
+      PDB(kCondor,1) Info("SetActive","-- Delayed Condor Suspend (%d msec / to %lld) --",
+                          delay, delay + Long64_t(gSystem->Now()));
       fTimer->Connect("Timeout()", "TCondor", fCondor, "Suspend()");
       fTimer->Start(10000, kTRUE); // single shot
+#endif
    }
 }
 

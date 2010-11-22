@@ -365,6 +365,7 @@ void TMVA::VariableDecorrTransform::WriteTransformationToStream( std::ostream& o
 {
    // write the decorrelation matrix to the stream
    Int_t cls = 0;
+   Int_t dp = o.precision();
    for (std::vector<TMatrixD*>::const_iterator itm = fDecorrMatrices.begin(); itm != fDecorrMatrices.end(); itm++) {
       o << "# correlation matrix " << std::endl;
       TMatrixD* mat = (*itm);
@@ -378,6 +379,7 @@ void TMVA::VariableDecorrTransform::WriteTransformationToStream( std::ostream& o
       cls++;
    }
    o << "##" << std::endl;
+   o << std::setprecision(dp);
 }
 
 //_______________________________________________________________________
@@ -458,6 +460,7 @@ void TMVA::VariableDecorrTransform::ReadTransformationFromStream( std::istream& 
          UInt_t cls=0;
          if(strvar=="background") cls=1;
          if(strvar==classname) classIdx = cls;
+         // coverity[tainted_data_argument]
          sstr >> nrows >> dummy >> ncols;
          if (fDecorrMatrices.size() <= cls ) fDecorrMatrices.resize(cls+1);
          if (fDecorrMatrices.at(cls) != 0) delete fDecorrMatrices.at(cls);
@@ -492,6 +495,8 @@ void TMVA::VariableDecorrTransform::PrintTransformation( ostream& )
 void TMVA::VariableDecorrTransform::MakeFunction( std::ostream& fout, const TString& fcncName, Int_t part, UInt_t trCounter, Int_t )
 {
    // creates C++ code fragment of the decorrelation transform for inclusion in standalone C++ class
+
+   Int_t dp = fout.precision();
 
    UInt_t numC = fDecorrMatrices.size();
    // creates a decorrelation function
@@ -534,4 +539,6 @@ void TMVA::VariableDecorrTransform::MakeFunction( std::ostream& fout, const TStr
       fout << "   for (int i=0; i<"<<matx->GetNrows()<<";i++) iv[i] = tv[i];" << std::endl;
       fout << "}" << std::endl;
    }
+
+   fout << std::setprecision(dp);
 }

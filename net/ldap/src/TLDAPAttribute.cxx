@@ -132,12 +132,13 @@ LDAPMod *TLDAPAttribute::GetMod(Int_t op)
    char **values = new char* [iCount + 1];
    char *type = new char [strlen(GetName())+1];
    for (int i = 0; i < iCount; i++) {
-      values[i] = new char [strlen(((TObjString*)fValues->At(i))->GetName()) + 1];
-      strcpy(values[i], ((TObjString*)fValues->At(i))->GetName());
+      int nch = strlen(((TObjString*)fValues->At(i))->GetName()) + 1;
+      values[i] = new char [nch];
+      strlcpy(values[i], ((TObjString*)fValues->At(i))->GetName(),nch);
    }
 
    values[iCount] = 0;
-   strcpy(type, GetName());
+   strlcpy(type, GetName(),strlen(GetName())+1);
    tmpMod->mod_values = values;
    tmpMod->mod_type = type;
    tmpMod->mod_op = op;

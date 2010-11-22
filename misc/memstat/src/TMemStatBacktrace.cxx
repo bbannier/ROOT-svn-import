@@ -24,7 +24,7 @@
 // ROOT
 #include "TString.h"
 
-#if defined(R__GNU) && (defined(R__LINUX) || defined(R__HURD) || (defined(__APPLE__) && defined(MAC_OS_X_VERSION_10_5))) && !defined(__alpha__)
+#if defined(R__GNU) && (defined(R__LINUX) || defined(R__HURD) || (defined(__APPLE__) && defined(MAC_OS_X_VERSION_10_5)))
 #define SUPPORTS_MEMSTAT
 #endif
 
@@ -105,7 +105,7 @@ namespace memstat {
             return 0;
       }
 #else
-      if (_frame) { }
+      if(_frame) { }
       return 0;
 #endif
    }
@@ -137,27 +137,27 @@ namespace memstat {
       }
       return backtrace(_trace, _size);
 #else
-      if (_trace || _size || _bUseGNUBuiltinBacktrace) { }
+      if(_trace || _size || _bUseGNUBuiltinBacktrace) { }
       return 0;
 #endif
    }
 
 //______________________________________________________________________________
-   void getSymbols(void *_pAddr,
-                   TString &/*_strInfo*/, TString &_strLib, TString &_strSymbol, TString &/*_strLine*/)
+   int getSymbols(void *_pAddr,
+                  TString &/*_strInfo*/, TString &_strLib, TString &_strSymbol)
    {
       // get the name of the function and library
 
 #if defined(SUPPORTS_MEMSTAT)
       Dl_info info;
       if(0 ==  dladdr(_pAddr, &info)) {
-         return;
+         return -1;
       }
       if(NULL != info.dli_sname) {
          int status(0);
          char *ch = abi::__cxa_demangle(info.dli_sname, 0, 0, &status);
          if(status < 0 || !ch)
-            return;
+            return -1;
 
          _strSymbol = (!status) ? ch : info.dli_sname;
 
@@ -172,6 +172,7 @@ namespace memstat {
          _strSymbol = "";
       }
 #endif
+      return 0;
    }
 
 //______________________________________________________________________________
@@ -185,14 +186,17 @@ namespace memstat {
       TString strInfo;
       TString strLib;
       TString strFun;
-      TString strLine;
-      getSymbols(_pAddr, strInfo, strLib, strFun, strLine);
-      *_retInfo +=
-         strInfo + _separator +
-         strLib + _separator +
-         strFun;
+      int res = getSymbols(_pAddr, strInfo, strLib, strFun);
+      if(0 != res)
+         return;
+
+      *_retInfo += strInfo;
+      *_retInfo += _separator;
+      *_retInfo += strLib;
+      *_retInfo += _separator;
+      *_retInfo += strFun;
 #else
-      if (_pAddr || _separator) { }
+      if(_pAddr || _separator) { }
 #endif
    }
 

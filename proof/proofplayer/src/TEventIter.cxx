@@ -207,6 +207,7 @@ TEventIterUnit::TEventIterUnit()
    fNum = 0;
    fCurrent = 0;
    fStop = kFALSE;
+   fOldBytesRead = 0; // Measures the bytes written
 }
 
 //______________________________________________________________________________
@@ -220,6 +221,7 @@ TEventIterUnit::TEventIterUnit(TDSet* dset, TSelector *sel, Long64_t num)
    fNum = num;
    fCurrent = 0;
    fStop = kFALSE;
+   fOldBytesRead = 0; // Measures the bytes written
 }
 
 //______________________________________________________________________________
@@ -233,6 +235,14 @@ Long64_t TEventIterUnit::GetNextEvent()
    if (fElem) fElem->ResetBit(TDSetElement::kNewPacket);
 
    while (fElem == 0 || fCurrent == 0) {
+
+      if (gPerfStats) {
+         Long64_t totBytesWritten = TFile::GetFileBytesWritten();
+         Long64_t bytesWritten = totBytesWritten - fOldBytesRead;
+         PDB(kLoop, 2) Info("GetNextEvent", "bytes written: %lld", bytesWritten);
+         gPerfStats->SetBytesRead(bytesWritten);
+         fOldBytesRead = totBytesWritten;
+      }
 
       SafeDelete(fElem);
       if (!(fElem = fDSet->Next()))
@@ -352,8 +362,8 @@ Long64_t TEventIterObj::GetNextEvent()
       Long64_t num = fKeys->GetSize();
 
       if ( fElemFirst > num ) {
-         Error("GetNextEvent","First (%d) higher then number of keys (%d) in %d",
-            fElemFirst, num, fElem->GetName() );
+         Error("GetNextEvent","First (%lld) higher then number of keys (%lld) in %s",
+               fElemFirst, num, fElem->GetName());
          fNum = 0;
          return -1;
       }
@@ -361,8 +371,8 @@ Long64_t TEventIterObj::GetNextEvent()
       if ( fElemNum == -1 ) {
          fElemNum = num - fElemFirst;
       } else if ( fElemFirst+fElemNum  > num ) {
-         Error("GetNextEvent","Num (%d) + First (%d) larger then number of keys (%d) in %s",
-            fElemNum, fElemFirst, num, fElem->GetDirectory() );
+         Error("GetNextEvent","Num (%lld) + First (%lld) larger then number of keys (%lld) in %s",
+            fElemNum, fElemFirst, num, fElem->GetDirectory());
          fElemNum = num - fElemFirst;
       }
 
@@ -424,6 +434,8 @@ TEventIterTree::TEventIterTree()
    fTreeCache = 0;
    fUseTreeCache = 1;
    fCacheSize = -1;
+   fTreeCacheIsLearning = kTRUE;
+   fUseParallelUnzip = 0;
 }
 
 //______________________________________________________________________________
@@ -533,7 +545,7 @@ TTree* TEventIterTree::GetTrees(TDSetElement *elem)
             dse->SetName(uf.GetUrl());
          }
          TTree *friendTree = Load(dse, loc);
-         if (friendTree) {
+         if (friendTree && main) {
             // Make sure it has not yet been added
             Bool_t addfriend = kTRUE;
             TList *frnds = main->GetListOfFriends();
@@ -775,16 +787,16 @@ Long64_t TEventIterTree::GetNextEvent()
 
       if (!fEntryList && !fEventList) {
          if ( fElemFirst > num ) {
-            Error("GetNextEvent","First (%d) higher then number of entries (%d) in %s",
-               fElemFirst, num, fElem->GetObjName() );
+            Error("GetNextEvent", "first (%lld) higher then number of entries (%lld) in %s",
+                                  fElemFirst, num, fElem->GetObjName());
             fNum = 0;
             return -1;
          }
          if ( fElemNum == -1 ) {
             fElemNum = num - fElemFirst;
          } else if ( fElemFirst+fElemNum  > num ) {
-            Error("GetNextEvent","Num (%d) + First (%d) larger then number of entries (%d) in %s",
-               fElemNum, fElemFirst, num, fElem->GetName() );
+            Error("GetNextEvent", "num (%lld) + first (%lld) larger then number of entries (%lld) in %s",
+                                  fElemNum, fElemFirst, num, fElem->GetName());
             fElemNum = num - fElemFirst;
          }
 

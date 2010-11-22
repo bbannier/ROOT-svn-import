@@ -49,7 +49,8 @@ namespace PyROOT {
 
       TClass* ObjectIsA() const
       {
-         return ((PyRootClass*)ob_type)->fClass.GetClass(); // may return null
+      // the following may return null
+         return ((PyRootClass*)Py_TYPE(this))->fClass.GetClass();
       }
 
       void HoldOn() { fFlags |= kIsOwner; }
@@ -77,7 +78,7 @@ namespace PyROOT {
    template< typename T >
    inline Bool_t ObjectProxy_CheckExact( T* object )
    {
-      return object && object->ob_type == &ObjectProxy_Type;
+      return object && Py_TYPE(object) == &ObjectProxy_Type;
    }
 
 
