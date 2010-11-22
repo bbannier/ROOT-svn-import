@@ -207,10 +207,14 @@ void MethodUnitTestWithROCLimits::run()
      gSystem->Exec(Form("rm %s",macroFileName.Data()));
      ofstream fout( macroFileName );
      fout << "// generic macro file to test TMVA reader and standalone C code " << std::endl;
+     fout << "#include \"TFile.h\""<<std::endl;
+     fout << "#include \"TTree.h\""<<std::endl;
+     fout << "#include <vector>"<<std::endl;
      fout << Form("#include \"weights/TMVAUnitTesting_%s.class.C\"",_methodTitle.Data()) << std::endl;
      fout << Form("bool %s(){",macroName.Data()) << std::endl;
      fout << "std::vector<std::string> vars(4);" << std::endl; // fix me 4
      fout << "std::vector<double> val(4);" << std::endl;  // fix me 4
+     fout << "bool ok=true;" << std::endl;  // fix me 4
      for (UInt_t i=0;i<_VariableNames->size();i++)
         fout << Form("vars[%d]=\"%s\";",i,_VariableNames->at(i).Data()) << std::endl;  
      fout << Form("Read%s  aa(vars);", _methodTitle.Data()) << std::endl;
@@ -220,7 +224,7 @@ void MethodUnitTestWithROCLimits::run()
      fout << Form("vector<double> testvarDouble(%d);",_VariableNames->size()) << std::endl;
      for (UInt_t j=0;j<_VariableNames->size();j++)
         fout << Form("testTree->SetBranchAddress(\"%s\",&testvar[%d]);",_TreeVariableNames->at(j).Data(),j) << std::endl;
-     fout << "float testTreeVal,diff,maxdiff,sumdiff;" << std::endl;
+     fout << "float testTreeVal,diff,nrm,maxdiff=0.,sumdiff=0.;" << std::endl;
      fout << Form("testTree->SetBranchAddress(\"%s\",&testTreeVal);",_methodTitle.Data()) << std::endl;
      fout << "Long64_t nevt= TMath::Min((int) testTree->GetEntries(),100);" << std::endl;
      fout << "  for (Long64_t ievt=0; ievt<nevt;ievt++) {" << std::endl;
@@ -229,17 +233,22 @@ void MethodUnitTestWithROCLimits::run()
      fout << "double ccode_val = aa.GetMvaValue(testvarDouble);" << std::endl;
 
      fout << "diff = TMath::Abs(ccode_val-testTreeVal);" << std::endl;
+     fout << "nrm = TMath::Max(TMath::Abs(ccode_val),1.);" << std::endl;
+     fout << "diff = diff/nrm;" << std::endl;
+     fout << "if (diff>1.2) std::cout << \"ccode_val=\" << ccode_val <<\"testval=\" << testTreeVal <<std::endl;"<<std::endl;
      fout << "maxdiff = diff > maxdiff ? diff : maxdiff;" << std::endl;
      fout << "sumdiff += diff;" << std::endl;
      fout << "}" << std::endl;
      fout << "sumdiff=sumdiff/testTree->GetEntries();" << std::endl;
-     fout << "if (maxdiff >1.e-4) return false;" << std::endl;
-     fout << "if (sumdiff >1.e-5) return false;" << std::endl;
+     fout << "if (maxdiff >1.e-2) std::cout << \"maxdiff=\"<<maxdiff<< \", sumdiff=\"<<sumdiff<<std::endl;" << std::endl;
+     fout << "if (sumdiff >1.e-4) ok=false;" << std::endl;
      fout << "testFile->Close();" << std::endl;
-     fout << "return true;" << std::endl;
+     fout << "if (!ok) {" << std::endl;
+     fout << "std::cout << \"maxdiff=\"<<maxdiff<< \", sumdiff=\"<<sumdiff<<std::endl;}" << std::endl;
+     fout << "return ok;" << std::endl;
      fout << "}" << std::endl;
      
-     gROOT->ProcessLine(Form(".L %s",macroFileName.Data()));
+     gROOT->ProcessLine(Form(".L %s+",macroFileName.Data()));
      test_(gROOT->ProcessLine(Form("%s()",macroName.Data())));
   }
 
