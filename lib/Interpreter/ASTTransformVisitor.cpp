@@ -120,12 +120,27 @@ namespace cling {
       return EvalInfo(Node, 0);
    }
    
+   EvalInfo ASTTransformVisitor::VisitExpr(Expr *E) {
+      return EvalInfo(E, E->isTypeDependent() || E->isValueDependent());
+   }
+
    EvalInfo ASTTransformVisitor::VisitCompoundStmt(CompoundStmt *S) {
       for (CompoundStmt::body_iterator
               I = S->body_begin(), E = S->body_end(); I != E; ++I) {
-         *I = Visit(*I).getNewStmt();
+         EvalInfo EInfo = Visit(*I);
+         if (EInfo.IsEvalNeeded) {
+            //FIXME: Find appropriate type
+            *I = BuildEvalCallExpr(SemaPtr->getASTContext().IntTy);
+         } 
+         else {
+            *I = EInfo.getNewStmt();
+         }
       }
       return EvalInfo(S, 0);
+   }
+
+   EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *E) {
+      return EvalInfo(E, E->isTypeDependent() || E->isValueDependent());
    }
    
    EvalInfo ASTTransformVisitor::VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
@@ -135,76 +150,80 @@ namespace cling {
    EvalInfo ASTTransformVisitor::VisitDeclRefExpr(DeclRefExpr *DRE) {
       return EvalInfo(DRE, 0);
    }
-   
-   EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *CE) {
       
-      //      if (!CE->isTypeDependent()) {
-      // setPrf(CE);
-      //      }
-      
-      //      for (CallExpr::child_iterator
-      //              I = CE->child_begin(), E = CE->child_end(); I != E; ++I) {
-      //         *I = Visit(*I);
-      //      } 
-      
-      return EvalInfo(CE, 0);
+   EvalInfo ASTTransformVisitor::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node) {
+      return EvalInfo(Node, 1);
    }
-   
-   // Here is the test Eval function specialization. Here the CallExpr to the function
-   // is created.
+
    EvalInfo ASTTransformVisitor::VisitBinaryOperator(BinaryOperator *binOp) {
-      /*Stmt *rhs =*/ Visit(binOp->getRHS());
-      Stmt *lhs = Visit(binOp->getLHS()).getNewStmt();
-      if (CallExpr *CE = dyn_cast<CallExpr>(lhs)){
-         if (CE->isValueDependent() || CE->isTypeDependent()) {
-            if (FunctionDecl *FDecl = getEvalDecl()) {               
-               setEvalDecl(0);
-               if (/*Expr *lhsEx =*/ dyn_cast<Expr>(lhs)) {                  
-                  // QualType lhsTy = lhsEx->getType();
-                  // TemplateArgument Arg(lhsTy);
+      EvalInfo rhs = Visit(binOp->getRHS());
+      EvalInfo lhs = Visit(binOp->getLHS());
 
-                  ASTContext *Ctx = &SemaPtr->getASTContext();
-
-                  DeclContext *PrevContext = SemaPtr->CurContext;
-                  SemaPtr->CurContext = FDecl->getDeclContext();
-
-                  Sema::InstantiatingTemplate Inst(*SemaPtr, SourceLocation(), FDecl);
-                  TemplateArgument Arg(Ctx->IntTy);
-                  TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
-                  
-                  Decl *D = SemaPtr->SubstDecl(FDecl, FDecl->getDeclContext(), MultiLevelTemplateArgumentList(TemplateArgs));
-
-                  FunctionDecl *Fn = dyn_cast<FunctionDecl>(D);
-                  SemaPtr->InstantiateFunctionDefinition(Fn->getLocation(), Fn, true, true);
-
-                  SemaPtr->CurContext = PrevContext;                            
-
-                  const FunctionProtoType *Proto = Fn->getType()->getAs<FunctionProtoType>();
-                  QualType FuncT = SemaPtr->BuildFunctionType(Fn->getResultType()
-                                                              , /* ParamsTypes */ 0
-                                                              , /* NumParamTypes */ 0
-                                                              , Proto->isVariadic()
-                                                              , Proto->getTypeQuals()
-                                                              , Fn->getLocation()
-                                                              , Fn->getDeclName()
-                                                              , Proto->getExtInfo());                  
-                  DeclRefExpr *DRE = SemaPtr->BuildDeclRefExpr(Fn, FuncT, VK_RValue, SourceLocation()).takeAs<DeclRefExpr>();
-                  CallExpr *EvalIntCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
-                                                                 , DRE
-                                                                 , SourceLocation()
-                                                                 , MultiExprArg()
-                                                                 , SourceLocation()
-                                                                 ).takeAs<CallExpr>();
-
-                  return EvalInfo(EvalIntCall, 1);                  
-               }               
+      if (rhs.IsEvalNeeded && !lhs.IsEvalNeeded) {
+         if (Expr *E = dyn_cast<Expr>(lhs.getNewStmt()))
+            if (!E->isTypeDependent() || !E->isValueDependent()) {
+               const QualType returnTy = E->getType();
+               return EvalInfo(BuildEvalCallExpr(returnTy), 0);
             }
-         }
       }
+      
+      if (lhs.IsEvalNeeded && !rhs.IsEvalNeeded) {
+         if (Expr *E = dyn_cast<Expr>(rhs.getNewStmt()))
+            if (!E->isTypeDependent() || !E->isValueDependent()) {
+               const QualType returnTy = E->getType();
+               return EvalInfo(BuildEvalCallExpr(returnTy), 0);
+            }        
+      }      
       
       return EvalInfo(binOp, 0);
    }
+   
+   //endregion
 
+   //region EvalBuilder
+
+
+   // Here is the test Eval function specialization. Here the CallExpr to the function
+   // is created.
+   CallExpr *ASTTransformVisitor::BuildEvalCallExpr(const QualType InstTy) {
+      ASTContext *Ctx = &SemaPtr->getASTContext();
+      
+      DeclContext *PrevContext = SemaPtr->CurContext;
+      FunctionDecl *FDecl = getEvalDecl();
+      SemaPtr->CurContext = FDecl->getDeclContext();
+      
+      Sema::InstantiatingTemplate Inst(*SemaPtr, SourceLocation(), FDecl);
+      TemplateArgument Arg(Ctx->IntTy);
+      TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
+      
+      Decl *D = SemaPtr->SubstDecl(FDecl, FDecl->getDeclContext(), MultiLevelTemplateArgumentList(TemplateArgs));
+      
+      FunctionDecl *Fn = dyn_cast<FunctionDecl>(D);
+      SemaPtr->InstantiateFunctionDefinition(Fn->getLocation(), Fn, true, true);
+      
+      SemaPtr->CurContext = PrevContext;                            
+      
+      const FunctionProtoType *Proto = Fn->getType()->getAs<FunctionProtoType>();
+      QualType FuncT = SemaPtr->BuildFunctionType(Fn->getResultType()
+                                                  , /* ParamsTypes */ 0
+                                                  , /* NumParamTypes */ 0
+                                                  , Proto->isVariadic()
+                                                  , Proto->getTypeQuals()
+                                                  , Fn->getLocation()
+                                                  , Fn->getDeclName()
+                                                  , Proto->getExtInfo());                  
+      DeclRefExpr *DRE = SemaPtr->BuildDeclRefExpr(Fn, FuncT, VK_RValue, SourceLocation()).takeAs<DeclRefExpr>();
+      CallExpr *EvalIntCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
+                                                     , DRE
+                                                     , SourceLocation()
+                                                     , MultiExprArg()
+                                                     , SourceLocation()
+                                                     ).takeAs<CallExpr>();
+      
+      return EvalIntCall;                  
+      
+   }
+   
 //endregion
 
 }//end cling
