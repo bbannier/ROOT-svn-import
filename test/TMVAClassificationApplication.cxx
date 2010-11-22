@@ -116,10 +116,11 @@ int main( int argc, char** argv )
 
    // --- Create the Reader object
 
-   TMVA::Reader *reader = new TMVA::Reader( "!Color:!Silent" );    
+   TMVA::Reader *reader = new TMVA::Reader( "!Color:!Silent" );
 
    // Create a set of variables and declare them to the reader
-   // - the variable names MUST corresponds in name and type to those given in the weight file(s) used
+   // - the variable names must corresponds in name and type to
+   // those given in the weight file(s) that you use
    Float_t var1, var2;
    Float_t var3, var4;
    reader->AddVariable( "myvar1 := var1+var2", &var1 );
@@ -143,7 +144,7 @@ int main( int argc, char** argv )
    // --- Book the MVA methods
 
    TString dir    = "weights/";
-   TString prefix = "TMVAClassification";
+   TString prefix = "TMVAnalysis";
 
    // Book method(s)
    for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) {
@@ -153,7 +154,7 @@ int main( int argc, char** argv )
          reader->BookMVA( methodName, weightfile ); 
       }
    }
-   
+
    // Book output histograms
    UInt_t nbin = 100;
    TH1F   *histLk(0), *histLkD(0), *histLkPCA(0), *histLkKDE(0), *histLkMIX(0), *histPD(0), *histPDD(0);
@@ -208,14 +209,14 @@ int main( int argc, char** argv )
    // Prepare input tree (this must be replaced by your data source)
    // in this example, there is a toy tree with signal and one with background events
    // we'll later on use only the "signal" events for the test in this example.
-   //   
+   //
    TFile *input(0);
-   TString fname = "./tmva_example.root";   
+   TString fname = "./tmva_example.root";
    if (!gSystem->AccessPathName( fname )) 
       input = TFile::Open( fname ); // check if file in local directory exists
    else    
       input = TFile::Open( "http://root.cern.ch/files/tmva_class_example.root" ); // if not: download from ROOT server
-   
+
    if (!input) {
       std::cout << "ERROR: could not open data file" << std::endl;
       exit(1);
@@ -246,7 +247,8 @@ int main( int argc, char** argv )
    std::cout << "--- Processing: " << theTree->GetEntries() << " events" << std::endl;
    TStopwatch sw;
    sw.Start();
-   for (Long64_t ievt=0; ievt<theTree->GetEntries();ievt++) {
+   Int_t nEvent = theTree->GetEntries();
+   for (Long64_t ievt=0; ievt<nEvent; ievt++) {
 
       if (ievt%1000 == 0) std::cout << "--- ... Processing event: " << ievt << std::endl;
 
@@ -297,9 +299,9 @@ int main( int argc, char** argv )
          Double_t val = reader->EvaluateMVA( "PDEFoam method" );
          Double_t err = reader->GetMVAError();
          histPDEFoam   ->Fill( val );
-         histPDEFoamErr->Fill( err );         
+         histPDEFoamErr->Fill( err );
          if (err>1.e-50) histPDEFoamSig->Fill( val/err );
-      }         
+      }
 
       // Retrieve probability instead of MVA output
       if (Use["Fisher"])   {
@@ -322,18 +324,18 @@ int main( int argc, char** argv )
       // CINT ignores dynamic_casts so we have to use a cuts-secific Reader function to acces the pointer  
       TMVA::MethodCuts* mcuts = reader->FindCutsMVA( "CutsGA method" ) ;
 
-      if (mcuts) {      
+      if (mcuts) {
          std::vector<Double_t> cutsMin;
          std::vector<Double_t> cutsMax;
          mcuts->GetCuts( 0.7, cutsMin, cutsMax );
          std::cout << "--- -------------------------------------------------------------" << std::endl;
          std::cout << "--- Retrieve cut values for signal efficiency of 0.7 from Reader" << std::endl;
          for (UInt_t ivar=0; ivar<cutsMin.size(); ivar++) {
-            std::cout << "... Cut: " 
-                      << cutsMin[ivar] 
-                      << " < \"" 
+            std::cout << "... Cut: "
+                      << cutsMin[ivar]
+                      << " < \""
                       << mcuts->GetInputVar(ivar)
-                      << "\" <= " 
+                      << "\" <= "
                       << cutsMax[ivar] << std::endl;
          }
          std::cout << "--- -------------------------------------------------------------" << std::endl;

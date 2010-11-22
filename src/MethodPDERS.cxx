@@ -883,6 +883,8 @@ void TMVA::MethodPDERS::RKernelEstimate( const Event & event,
       }
    }
 
+   delete[] dim_normalization;
+
    if (pdfDiv == 0)
       return;
 
@@ -895,7 +897,7 @@ void TMVA::MethodPDERS::RKernelEstimate( const Event & event,
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodPDERS::ApplyKernelFunction (Double_t normalized_distance) 
+Double_t TMVA::MethodPDERS::ApplyKernelFunction (Double_t normalized_distance)
 {
    // from the normalized euclidean distance calculate the distance
    // for a certain kernel
@@ -1088,6 +1090,8 @@ void TMVA::MethodPDERS::ReadWeightsFromXML( void* wghtnode)
    fBinaryTree = TMVA::BinarySearchTree::CreateFromXML(treenode);
    if(!fBinaryTree)
       Log() << kFATAL << "Could not create BinarySearchTree from XML" << Endl;
+   if(!fBinaryTree)
+      Log() << kFATAL << "Could not create BinarySearchTree from XML" << Endl;
    fBinaryTree->SetPeriode( GetNvar() );
    fBinaryTree->CalcStatistics();
    fBinaryTree->CountNodes();
@@ -1108,8 +1112,6 @@ void TMVA::MethodPDERS::ReadWeightsFromStream( istream& istr)
    fBinaryTree = new BinarySearchTree();
 
    istr >> *fBinaryTree;
-
-   std::cout << *fBinaryTree;
 
    fBinaryTree->SetPeriode( GetNvar() );
 

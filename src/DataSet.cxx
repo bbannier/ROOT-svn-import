@@ -627,7 +627,7 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
 
       Log() << kDEBUG << "analysis type: " << (itMethod->second->GetAnalysisType()==Types::kRegression ? "Regression" :
                                                (itMethod->second->GetAnalysisType()==Types::kMulticlass ? "Multiclass" : "Classification" )) << Endl;
-
+      
       if (itMethod->second->GetAnalysisType() == Types::kClassification) {
          // classification
          tree->Branch( itMethod->first, &(metVals[n][0]), itMethod->first + "/F" );

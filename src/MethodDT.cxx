@@ -309,7 +309,6 @@ TMVA::MethodDT::~MethodDT( void )
 void TMVA::MethodDT::Train( void )
 {
    TMVA::DecisionTreeNode::fgIsTraining=true;
-   //SeparationBase *qualitySepType = new GiniIndex();
    fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0, 
                              fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,0 );
    if (fRandomisedTrees) Log()<<kWARNING<<" randomised Trees do not work yet in this framework," 
@@ -350,19 +349,22 @@ Bool_t TMVA::MethodDT::MonitorBoost( MethodBoost* booster )
       booster->GetMonitoringHist(0)->SetBinContent(booster->GetBoostNum()+1,fTree->GetNNodes());
 
    if (booster->GetBoostStage() == ((fPruneBeforeBoost)?Types::kBeforeBoosting:Types::kBoostValidation)
-       && !(fPruneMethod == DecisionTree::kNoPruning))
-      {
-         if (methodIndex==0 && fPruneBeforeBoost == kFALSE)
-            {
-               Log() << kINFO << "Pruning "<< booster->GetBoostNum() << " Decision Trees ... patience please" << Endl;
-            }
-         //reading the previous value
-         if (fAutomatic && methodIndex > 0)
-            fPruneStrength = dynamic_cast<MethodDT*>(booster->GetPreviousMethod())->GetPruneStrength();
-         booster->GetMonitoringHist(0)->SetBinContent(methodIndex+1,fTree->GetNNodes());
-         booster->GetMonitoringHist(2)->SetBinContent(methodIndex+1,PruneTree(methodIndex));
-         booster->GetMonitoringHist(1)->SetBinContent(methodIndex+1,fTree->GetNNodes());
-      } // no pruning is performed
+       && !(fPruneMethod == DecisionTree::kNoPruning)) {
+      
+      if (methodIndex==0 && fPruneBeforeBoost == kFALSE)
+         Log() << kINFO << "Pruning "<< booster->GetBoostNum() << " Decision Trees ... patience please" << Endl;
+         
+      //reading the previous value
+      if (fAutomatic && methodIndex > 0) {
+         MethodDT* mdt = dynamic_cast<MethodDT*>(booster->GetPreviousMethod());
+         if(mdt)
+            fPruneStrength = mdt->GetPruneStrength();
+      }
+
+      booster->GetMonitoringHist(0)->SetBinContent(methodIndex+1,fTree->GetNNodes());
+      booster->GetMonitoringHist(2)->SetBinContent(methodIndex+1,PruneTree(methodIndex));
+      booster->GetMonitoringHist(1)->SetBinContent(methodIndex+1,fTree->GetNNodes());
+   } // no pruning is performed
    else if (booster->GetBoostStage() != Types::kBoostProcEnd)
       return kFALSE;
 

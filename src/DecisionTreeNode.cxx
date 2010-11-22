@@ -113,7 +113,7 @@ TMVA::DecisionTreeNode::DecisionTreeNode(const TMVA::DecisionTreeNode &n,
      fRMS     ( n.fRMS),
      fNodeType( n.fNodeType ),
      fPurity  ( n.fPurity),
-     fIsTerminalNode( n.fIsTerminalNode )  
+     fIsTerminalNode( n.fIsTerminalNode )
 {
    // copy constructor of a node. It will result in an explicit copy of
    // the node and recursively all it's daughters
@@ -262,7 +262,7 @@ Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_
    // Read the data block
 
    string tmp;
-   
+
    Float_t cutVal, cutType, nsig, nbkg, nEv, nsig_unweighted, nbkg_unweighted, nEv_unweighted;
    Float_t separationIndex, separationGain, response(-99), cc(0);
    Int_t   depth, ivar, nodeType;
@@ -325,6 +325,7 @@ Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_
       //      this->SetResponse(response); old .txt weightfiles don't know regression yet
       this->SetCC(cc);
    }
+
    return kTRUE;
 }
 
@@ -365,9 +366,9 @@ void TMVA::DecisionTreeNode::ResetValidationData( ) {
 void TMVA::DecisionTreeNode::PrintPrune( ostream& os ) const {
    // printout of the node (can be read in with ReadDataRecord)
 
-   os << "----------------------" << std::endl 
-      << "|~T_t| " << GetNTerminal() << std::endl 
-      << "R(t): " << GetNodeR() << std::endl 
+   os << "----------------------" << std::endl
+      << "|~T_t| " << GetNTerminal() << std::endl
+      << "R(t): " << GetNodeR() << std::endl
       << "R(T_t): " << GetSubTreeR() << std::endl
       << "g(t): " << GetAlpha() << std::endl
       << "G(t): "  << GetAlphaMinSubtree() << std::endl;
@@ -425,7 +426,9 @@ void TMVA::DecisionTreeNode::SetSampleMin(UInt_t ivar, Float_t xmin){
 void TMVA::DecisionTreeNode::SetSampleMax(UInt_t ivar, Float_t xmax){
    // set the maximum of variable ivar from the training sample
    // that pass/end up in this node
-   if ( fTrainInfo && ivar >= fTrainInfo->fSampleMax.size()) fTrainInfo->fSampleMax.resize(ivar+1);
+   if( ! fTrainInfo ) return;
+   if ( ivar >= fTrainInfo->fSampleMax.size() ) 
+      fTrainInfo->fSampleMax.resize(ivar+1);
    fTrainInfo->fSampleMax[ivar]=xmax;
 }
 
@@ -496,13 +499,13 @@ void  TMVA::DecisionTreeNode::SetFisherCoeff(Int_t ivar, Double_t coeff)
 
 //_______________________________________________________________________
 void TMVA::DecisionTreeNode::AddContentToNode( std::stringstream& /*s*/ ) const
-{   
+{
    // adding attributes to tree node  (well, was used in BinarySearchTree,
    // and somehow I guess someone programmed it such that we need this in
    // this tree too, although we don't..)
 }
 
-//_______________________________________________________________________ 
+//_______________________________________________________________________
 void TMVA::DecisionTreeNode::ReadContent( std::stringstream& /*s*/ )
 {
    // reading attributes from tree node  (well, was used in BinarySearchTree,

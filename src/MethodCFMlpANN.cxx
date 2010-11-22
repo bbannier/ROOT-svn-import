@@ -156,16 +156,16 @@ Bool_t TMVA::MethodCFMlpANN::HasAnalysisType( Types::EAnalysisType type, UInt_t 
 //_______________________________________________________________________
 void TMVA::MethodCFMlpANN::DeclareOptions()
 {
-   // define the options (their key words) that can be set in the option string 
+   // define the options (their key words) that can be set in the option string
    // know options: NCycles=xx              :the number of training cycles
    //               HiddenLayser="N-1,N-2"  :the specification of the hidden layers
- 
+
    DeclareOptionRef( fNcycles  =3000,      "NCycles",      "Number of training cycles" );
    DeclareOptionRef( fLayerSpec="N,N-1",   "HiddenLayers", "Specification of hidden layer architecture" );
 }
 
 //_______________________________________________________________________
-void TMVA::MethodCFMlpANN::ProcessOptions() 
+void TMVA::MethodCFMlpANN::ProcessOptions()
 {
    // decode the options in the option string
    fNodes = new Int_t[20]; // number of nodes per layer (maximum 20 layers)
@@ -425,6 +425,7 @@ void TMVA::MethodCFMlpANN::ReadWeightsFromStream( istream & istr )
    fYNN = new Double_t*[fParam_1.layerm];
    for (Int_t layer=0; layer<fParam_1.layerm; layer++) {
       // read number of neurons for each layer
+      // coverity[tainted_data_argument]
       istr >> fNeur_1.neuron[layer];
       fYNN[layer] = new Double_t[fNeur_1.neuron[layer]];
    }
@@ -577,6 +578,7 @@ void TMVA::MethodCFMlpANN::ReadWeightsFromXML( void* wghtnode )
    stringstream ncontent(neuronscontent);
    for (Int_t layer=0; layer<fParam_1.layerm; layer++) {              
       // read number of neurons for each layer;
+      // coverity[tainted_data_argument]
       ncontent >> fNeur_1.neuron[layer];
       fYNN[layer] = new Double_t[fNeur_1.neuron[layer]];
    }

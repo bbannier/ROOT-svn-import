@@ -187,7 +187,7 @@ int main( int argc, char** argv )
    // Read training and test data
    // (it is also possible to use ASCII format as input -> see TMVA Users Guide)
    TString fname = "./tmva_class_example.root";
-   
+
    if (gSystem->AccessPathName( fname ))  // file does not exist in local directory
       gSystem->Exec("wget http://root.cern.ch/files/tmva_class_example.root");
    
@@ -438,6 +438,8 @@ int main( int argc, char** argv )
    if (Use["RuleFit"])
       factory->BookMethod( TMVA::Types::kRuleFit, "RuleFit",
                            "H:!V:RuleFitModule=RFTMVA:Model=ModRuleLinear:MinImp=0.001:RuleMinDist=0.001:NTrees=20:fEventsMin=0.01:fEventsMax=0.5:GDTau=-1.0:GDTauPrec=0.01:GDStep=0.01:GDNSteps=10000:GDErrScale=1.02" );
+
+   // For an example of the category classifier, see: TMVAClassificationCategory
 
    // For an example of the category classifier usage, see: TMVAClassificationCategory
 

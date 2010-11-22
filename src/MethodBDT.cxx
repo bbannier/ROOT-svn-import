@@ -159,6 +159,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fUseWeightedTrees(kFALSE)
    , fNNodesMax(0)
    , fMaxDepth(0)
+   , fPruneMethod(DecisionTree::kNoPruning)
    , fPruneStrength(0)
    , fPruneBeforeBoost(kFALSE)
    , fFValidationEvents(0)
@@ -195,6 +196,7 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fUseWeightedTrees(kFALSE)
    , fNNodesMax(0)
    , fMaxDepth(0)
+   , fPruneMethod(DecisionTree::kNoPruning)
    , fPruneStrength(0)
    , fPruneBeforeBoost(kFALSE)
    , fFValidationEvents(0)
@@ -1358,6 +1360,7 @@ void  TMVA::MethodBDT::ReadWeightsFromStream( istream& istr )
    //   Types::EAnalysisType analysisType;
    Int_t analysisType(0);
 
+   // coverity[tainted_data_argument]
    istr >> dummy >> fNTrees;
    Log() << kINFO << "Read " << fNTrees << " Decision trees" << Endl;
 

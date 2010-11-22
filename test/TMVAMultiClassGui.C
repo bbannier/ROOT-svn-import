@@ -79,7 +79,6 @@ void TMVAMultiClassGui( const char* fName = "TMVAMulticlass.root" )
       return;
    }
    // find all references   
-   cout << "--- Reading keys ..." << endl;
    TMVAGui_keyContent = (TList*)file->GetListOfKeys()->Clone();
 
    //close file
