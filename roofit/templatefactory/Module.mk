@@ -27,33 +27,25 @@ TF_MAKEWORKSPACEEXE    :=
 TF_MAKEWORKSPACESH     :=
 endif
 
-#TF_LIBS                := $(ROOFITCORELIB) $(ROOFITLIB) $(ROOSTATSLIB) $(TEMPLATEFACTORYLIB) $(FOAMLIB) $(XMLPARSERLIB) 
-TF_LIBS                := -lRooFitCore -lRooFit -lRooStats -lTemplateFactory -lFoam -lHtml -lMinuit -lThread -lXMLParser
+#TF_LIBS := $(TEMPLATEFACTORYLIBEXTRA)
 
-TF_LIBSDEP                := $(ROOFITCOREDEP) $(ROOFITDEP) $(ROOSTATSDEP) $(TEMPLATEFACTORYDEP) $(FOAMDEP) $(XMLPARSERDEP)
-#-lRooFitCore -lRooFit -lRooStats -lTemplateFactory #-lFoam -lHtml -lMinuit -lThread -lXMLParser
+ifeq ($(PLATFORM),win32)
+TF_LIBS= "$(ROOTSYS)/lib/libMinuit.lib" "$(ROOTSYS)/lib/libThread.lib" "$(ROOTSYS)/lib/libRooFit.lib" "$(ROOTSYS)/lib/libRooFitCore.lib" "$(ROOTSYS)/lib/libRoostats.lib"  "$(ROOTSYS)/lib/libXMLParser.lib"  "$(ROOTSYS)/lib/libTemplateFactory.lib"
+else
+TF_LIBS= -lMinuit   -lRooFit -lRooFitCore -lFoam -lRooStats  -lTemplateFactory -lXMLParser 
+# #TF_LIBS= -lMinuit  -lThread -lRooFit -lRooFitCore -lHtml -lFoam -lRooStats -lTemplateFactory
+endif
 
-$(TF_MAKEWORKSPACEEXE): $(TF_MAKEWORKSPACEEXEO) $(ROOTLIBSDEP) $(RINTLIB) $(TF_LIBSDEP)
-	echo $(TF_LIBS)
-	#echo $(TF_LIBSDEP)
+
+TF_LIBSDEP := $(TEMPLATEFACTORYLIBDEP)
+
+
+$(TF_MAKEWORKSPACEEXE): $(TF_MAKEWORKSPACEEXEO) $(ROOTLIBSDEP) $(RINTLIB) $(TEMPLATEFACTORYLIBDEP)
 		$(LD) $(LDFLAGS) -o $@ $(TF_MAKEWORKSPACEEXEO)  $(ROOTICON) $(BOOTULIBS)  \
 		   $(ROOTULIBS) $(RPATH) $(ROOTLIBS)  $(RINTLIBS) $(TF_LIBS) $(SYSLIBS)  
 
-#make XXXDEP for the .so files#
-#make XXX for the -lXXX files
-# two versions for this see ROOTSYS/Makefile
-
-#remove .exe for non windows case
-#man/man1/  see example (bin/thisroot.sh sets man path)
-
-
-#this works
-#g++ -O2 -m64 -O2 /home/cranmer/roostats/root/roofit/roostats/templatefactory/src/MakeModelAndMeasurements.o -L/home/cranmer/roostats/root/lib/ -l TemplateFactory \
-#          -L/home/cranmer/roostats/root/lib -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lz -pthread -lm -ldl -rdynamic -lRooFitCore -lRooFit -lRooStats -lFoam -lHtml -lMinuit -lThread -lXMLParser -o /home/cranmer/roostats/root/bin/testKyle.exe
-
-
-# used in the main Makefile
 ALLEXECS     += $(TF_MAKEWORKSPACEEXE) 
+
 
 ##### libRooStats #####
 TEMPLATEFACTORYL    := $(MODDIRI)/LinkDef.h
