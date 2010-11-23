@@ -1,4 +1,4 @@
-# Module.mk for RooStats/Histfactory module
+# Module.mk for RooStats/HistFactory module
 # Copyright (c) 2008 Rene Brun and Fons Rademakers
 #
 # Author: Kyle Cranmer
@@ -30,9 +30,9 @@ endif
 #TF_LIBS := $(HISTFACTORYLIBEXTRA)
 
 ifeq ($(PLATFORM),win32)
-TF_LIBS= "$(ROOTSYS)/lib/libMinuit.lib"  "$(ROOTSYS)/lib/libRooFit.lib" "$(ROOTSYS)/lib/libRooFitCore.lib" "$(ROOTSYS)/lib/libRoostats.lib"  "$(ROOTSYS)/lib/libXMLParser.lib"  "$(ROOTSYS)/lib/libHistfactory.lib" "$(ROOTSYS)/lib/libFoam.lib"
+TF_LIBS= "$(ROOTSYS)/lib/libMinuit.lib"  "$(ROOTSYS)/lib/libRooFit.lib" "$(ROOTSYS)/lib/libRooFitCore.lib" "$(ROOTSYS)/lib/libRoostats.lib"  "$(ROOTSYS)/lib/libXMLParser.lib"  "$(ROOTSYS)/lib/libHistFactory.lib" "$(ROOTSYS)/lib/libFoam.lib"
 else
-TF_LIBS= -lMinuit   -lRooFit -lRooFitCore -lFoam -lRooStats  -lHistfactory -lXMLParser 
+TF_LIBS= -lMinuit   -lRooFit -lRooFitCore -lFoam -lRooStats  -lHistFactory -lXMLParser 
 endif
 
 
@@ -48,7 +48,7 @@ ALLEXECS     += $(TF_MAKEWORKSPACEEXE)
 
 ##### libRooStats #####
 HISTFACTORYL    := $(MODDIRI)/LinkDef.h
-HISTFACTORYDS   := $(MODDIRS)/G__Histfactory.cxx
+HISTFACTORYDS   := $(MODDIRS)/G__HistFactory.cxx
 HISTFACTORYDO   := $(HISTFACTORYDS:.cxx=.o)
 HISTFACTORYDH   := $(HISTFACTORYDS:.cxx=.h)
 
@@ -58,11 +58,11 @@ HISTFACTORYO    := $(HISTFACTORYS:.cxx=.o)
 
 HISTFACTORYDEP  := $(HISTFACTORYO:.o=.d) $(HISTFACTORYDO:.o=.d)
 
-HISTFACTORYLIB  := $(LPATH)/libHistfactory.$(SOEXT)
+HISTFACTORYLIB  := $(LPATH)/libHistFactory.$(SOEXT)
 HISTFACTORYMAP  := $(HISTFACTORYLIB:.$(SOEXT)=.rootmap)
 
 # used in the main Makefile
-ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/RooStats/Histfactory/%.h,$(HISTFACTORYH))
+ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/RooStats/HistFactory/%.h,$(HISTFACTORYH))
 ALLLIBS      += $(HISTFACTORYLIB)
 ALLMAPS      += $(HISTFACTORYMAP)
 
@@ -70,20 +70,20 @@ ALLMAPS      += $(HISTFACTORYMAP)
 INCLUDEFILES += $(HISTFACTORYDEP)
 
 #needed since include are in inc and not inc/RooStats
-HISTFACTORYH_DIC   := $(subst $(MODDIRI),include/RooStats/Histfactory,$(HISTFACTORYH))
+HISTFACTORYH_DIC   := $(subst $(MODDIRI),include/RooStats/HistFactory,$(HISTFACTORYH))
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
-include/RooStats/Histfactory/%.h:    $(HISTFACTORYDIRI)/%.h
-		@(if [ ! -d "include/RooStats/Histfactory" ]; then    \
-		   mkdir -p include/RooStats/Histfactory;             \
+include/RooStats/HistFactory/%.h:    $(HISTFACTORYDIRI)/%.h
+		@(if [ ! -d "include/RooStats/HistFactory" ]; then    \
+		   mkdir -p include/RooStats/HistFactory;             \
 		fi)
 		cp $< $@
 
 $(HISTFACTORYLIB): $(HISTFACTORYO) $(HISTFACTORYDO) $(ORDER_) $(MAINLIBS) \
                 $(HISTFACTORYLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libHistfactory.$(SOEXT) $@ \
+		   "$(SOFLAGS)" libHistFactory.$(SOEXT) $@ \
 		   "$(HISTFACTORYO) $(HISTFACTORYDO)" \
 		   "$(HISTFACTORYLIBEXTRA)"
 
