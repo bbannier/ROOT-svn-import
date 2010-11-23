@@ -166,6 +166,7 @@ RooCatType RooSuperCategory::evaluate() const
   if (!ret) {
     coutE(Eval) << "RooSuperCat::evaluate(" << this << ") error: current state not defined: '" << currentLabel() << "'" << endl ;
     printStream(ccoutE(Eval),0,kVerbose) ;
+    return RooCatType() ;
   }
   return *ret ;
 }
@@ -205,7 +206,7 @@ Bool_t RooSuperCategory::setType(const RooCatType* type, Bool_t /*printError*/)
   // by setting the state names of the corresponding input category lvalues
 
   char buf[1024] ;
-  strcpy(buf,type->GetName()) ;
+  strlcpy(buf,type->GetName(),1024) ;
 
   RooAbsCategoryLValue* arg ;
   Bool_t error(kFALSE) ;

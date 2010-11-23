@@ -210,8 +210,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "snprintf.h"
-
 #include "Riostream.h"
 #include "TTreePlayer.h"
 #include "TROOT.h"
@@ -2850,7 +2848,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
    // By default 50 rows are shown and you are asked for <CR>
    // to see the next 50 rows.
    // You can change the default number of rows to be shown before <CR>
-   // via  mytree->SetScanfield(maxrows) where maxrows is 50 by default.
+   // via  mytree->SetScanField(maxrows) where maxrows is 50 by default.
    // if maxrows is set to 0 all rows of the Tree are shown.
    // This option is interesting when dumping the contents of a Tree to
    // an ascii file, eg from the command line
@@ -3392,8 +3390,8 @@ TSQLResult *TTreePlayer::Query(const char *varexp, const char *selection,
                memcpy(arow+fields[i-1],aresult,len);
                fields[i] = fields[i-1] + len;
             }
-            res->AddRow(new TTreeRow(ncols,fields,arow));
          }
+         res->AddRow(new TTreeRow(ncols,fields,arow));
          fSelectedRows++;
       }
    }

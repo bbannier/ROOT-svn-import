@@ -64,6 +64,7 @@
 #include "RooMsgService.h"
 #include "RooRecursiveFraction.h"
 #include "RooGlobalFunc.h"
+#include "RooRealIntegral.h"
 
 #include "Riostream.h"
 #include <algorithm>
@@ -888,7 +889,11 @@ Int_t RooAddPdf::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVars
     delete allAnalVars2 ; 
     n++ ;
   }  
-  if (!allOK) return 0 ;
+  if (!allOK) {
+    delete[] subCode ;
+    delete avIter ;
+    return 0 ;
+  }
 
   // Mare all analytically integrated observables as such
   analVars.add(allAnalVars) ;

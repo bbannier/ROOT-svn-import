@@ -848,14 +848,15 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    gAbort = kFALSE;
    Long64_t entry;
    fProgressStatus->Reset();
-
-   // Get the frequency for logging memory consumption information
-   TParameter<Long64_t> *par = (TParameter<Long64_t>*)fInput->FindObject("PROOF_MemLogFreq");
-   volatile Long64_t memlogfreq = (par) ? par->GetVal() : 100;
-   volatile Long_t memlim = (gProofServ) ? gProofServ->GetVirtMemHWM() : -1;
-   volatile Bool_t warn80 = kTRUE;
+   if (gProofServ) gProofServ->ResetBit(TProofServ::kHighMemory);
 
    TRY {
+
+      // Get the frequency for checking memory consumption and logging information
+      TParameter<Long64_t> *par = (TParameter<Long64_t>*)fInput->FindObject("PROOF_MemLogFreq");
+      Long64_t memlogfreq = (par) ? par->GetVal() : 100;
+      Bool_t warnHWMres = kTRUE, warnHWMvir = kTRUE;
+      TString lastMsg;
 
       TPair *currentElem = 0;
       // The event loop on the worker
@@ -867,6 +868,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
          // Give the possibility to the selector to access additional info in the
          // incoming packet
+         lastMsg = "(unfortunately no detailed info is available about current packet)";
          if (dset->Current()) {
             if (!currentElem) {
                currentElem = new TPair(new TObjString("PROOF_CurrentElement"), dset->Current());
@@ -878,7 +880,17 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
                   dset->Current()->ResetBit(TDSetElement::kNewRun);
                }
             }
+            if (dset->TestBit(TDSet::kEmpty)) {
+               lastMsg.Form("while processing cycle:%lld - check logs for possible stacktrace", entry);
+            } else {
+               TDSetElement *elem = dynamic_cast<TDSetElement *>(currentElem->Value());
+               TString fn = (elem) ? elem->GetFileName() : "<undef>";
+               lastMsg.Form("while processing dset:'%s', file:'%s', event:%lld"
+                            " - check logs for possible stacktrace", dset->GetName(), fn.Data(), entry);
+            }
          }
+         // This will be sent to clients in case of exceptions ...
+         TProofServ::SetLastMsg(lastMsg);
 
          if (version == 0) {
             PDB(kLoop,3)
@@ -905,37 +917,25 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
             if (gMonitoringWriter)
                gMonitoringWriter->SendProcessingProgress(fProgressStatus->GetEntries(),
                        TFile::GetFileBytesRead()-readbytesatstart, kFALSE);
-            if (memlogfreq > 0 && GetEventsProcessed()%memlogfreq == 0) {
-               // Record the memory information
-               ProcInfo_t pi;
-               if (!gSystem->GetProcInfo(&pi)){
-                  Info("Process|Svc", "Memory %ld virtual %ld resident event %lld",
-                                      pi.fMemVirtual, pi.fMemResident, GetEventsProcessed());
-                  // Apply limit, if any: warn if above 80%, stop if above 95% of the HWM
-                  TString wmsg;
-                  if (memlim > 0) {
-                     if (pi.fMemVirtual > 0.95 * memlim) {
-                        wmsg.Form("using more than 95%% of allowed memory (%ld kB) - STOP processing", pi.fMemVirtual);
-                        Error("Process", "%s", wmsg.Data());
-                        if (gProofServ) {
-                           wmsg.Insert(0, TString::Format("ERROR:%s ", gProofServ->GetOrdinal()));
-                           gProofServ->SendAsynMessage(wmsg.Data());
-                        }
-                        fExitStatus = kStopped;
-                        SetProcessing(kFALSE);
-                        break;
-                     } else if (pi.fMemVirtual > 0.80 * memlim && warn80) {
-                        // Refine monitoring
-                        memlogfreq = 1;
-                        wmsg.Form("using more than 80%% of allowed memory (%ld kB)", pi.fMemVirtual);
-                        Warning("Process", "%s", wmsg.Data());
-                        if (gProofServ) {
-                           wmsg.Insert(0, TString::Format("WARNING:%s ", gProofServ->GetOrdinal()));
-                           gProofServ->SendAsynMessage(wmsg.Data());
-                        }
-                        warn80 = kFALSE;
-                     }
-                  }
+         }
+         // Check the memory footprint, if required
+         TString wmsg;
+         if (!CheckMemUsage(memlogfreq, warnHWMres, warnHWMvir, wmsg)) {
+            Error("Process", "%s", wmsg.Data());
+            if (gProofServ) {
+               wmsg.Insert(0, TString::Format("ERROR:%s, entry:%lld, ", gProofServ->GetOrdinal(), entry));
+               gProofServ->SendAsynMessage(wmsg.Data());
+            }
+            fExitStatus = kStopped;
+            SetProcessing(kFALSE);
+            if (gProofServ) gProofServ->SetBit(TProofServ::kHighMemory);
+            break;
+         } else {
+            if (!wmsg.IsNull()) {
+               Warning("Process", "%s", wmsg.Data());
+               if (gProofServ) {
+                  wmsg.Insert(0, TString::Format("WARNING:%s, entry:%lld, ", gProofServ->GetOrdinal(), entry));
+                  gProofServ->SendAsynMessage(wmsg.Data());
                }
             }
          }
@@ -1033,6 +1033,60 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       TPerfStats::Stop();
 
    return 0;
+}
+
+//______________________________________________________________________________
+Bool_t TProofPlayer::CheckMemUsage(Long64_t &mfreq, Bool_t &w80r,
+                                   Bool_t &w80v, TString &wmsg)
+{
+   // Check the memory usage, if requested.
+   // Return kTRUE if OK, kFALSE if above 95% of at least one between virtual or
+   // resident limits are depassed.
+
+   if (mfreq > 0 && GetEventsProcessed()%mfreq == 0) {
+      // Record the memory information
+      ProcInfo_t pi;
+      if (!gSystem->GetProcInfo(&pi)){
+         Info("CheckMemUsage|Svc", "Memory %ld virtual %ld resident event %lld",
+                                   pi.fMemVirtual, pi.fMemResident, GetEventsProcessed());
+         wmsg = "";
+         // Apply limit on virtual memory, if any: warn if above 80%, stop if above 95% of max
+         if (TProofServ::GetVirtMemMax() > 0) {
+            if (pi.fMemVirtual > TProofServ::GetMemStop() * TProofServ::GetVirtMemMax()) {
+               wmsg.Form("using more than %d%% of allowed virtual memory (%ld kB)"
+                         " - STOP processing", (Int_t) (TProofServ::GetMemStop() * 100), pi.fMemVirtual);
+               return kFALSE;
+            } else if (pi.fMemVirtual > TProofServ::GetMemHWM() * TProofServ::GetVirtMemMax() && w80v) {
+               // Refine monitoring
+               mfreq = 1;
+               wmsg.Form("using more than %d%% of allowed virtual memory (%ld kB)",
+                         (Int_t) (TProofServ::GetMemHWM() * 100), pi.fMemVirtual);
+               w80v = kFALSE;
+            }
+         }
+         // Apply limit on resident memory, if any: warn if above 80%, stop if above 95% of max
+         if (TProofServ::GetResMemMax() > 0) {
+            if (pi.fMemResident > TProofServ::GetMemStop() * TProofServ::GetResMemMax()) {
+               wmsg.Form("using more than %d%% of allowed resident memory (%ld kB)"
+                         " - STOP processing", (Int_t) (TProofServ::GetMemStop() * 100), pi.fMemResident);
+               return kFALSE;
+            } else if (pi.fMemResident > TProofServ::GetMemHWM() * TProofServ::GetResMemMax() && w80r) {
+               // Refine monitoring
+               mfreq = 1;
+               if (wmsg.Length() > 0) {
+                  wmsg.Form("using more than %d%% of allowed both virtual and resident memory ({%ld,%ld} kB)",
+                            (Int_t) (TProofServ::GetMemHWM() * 100), pi.fMemVirtual, pi.fMemResident);
+               } else {
+                  wmsg.Form("using more than %d%% of allowed resident memory (%ld kB)",
+                            (Int_t) (TProofServ::GetMemHWM() * 100), pi.fMemResident);
+               }
+               w80r = kFALSE;
+            }
+         }
+      }
+   }
+   // Done
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -1630,8 +1684,8 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       // Check whether we have to enforce the use of submergers
       if (gEnv->Lookup("Proof.UseMergers") && !fInput->FindObject("PROOF_UseMergers")) {
          Int_t smg = gEnv->GetValue("Proof.UseMergers",-1);
-         fInput->Add(new TParameter<Int_t>("PROOF_UseMergers", smg));
-   }
+         if (smg >= 0) fInput->Add(new TParameter<Int_t>("PROOF_UseMergers", smg));
+      }
 
       // For a new query clients should make sure that the temporary
       // output list is empty
@@ -2357,6 +2411,7 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
       }
 
       // Incorporate the resulting global list in fOutput
+      SetLastMergingMsg(evlist);
       Incorporate(evlist, fOutput, merged);
       NotifyMemory(evlist);
 
@@ -2402,6 +2457,7 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
    }
 
    // For other objects we just run the incorporation procedure
+   SetLastMergingMsg(obj);
    Incorporate(obj, fOutput, merged);
    NotifyMemory(obj);
 
@@ -2491,6 +2547,7 @@ void TProofPlayerRemote::AddOutput(TList *out)
       delete elists;
 
       // Incorporate the resulting global list in fOutput
+      SetLastMergingMsg(evlist);
       Incorporate(evlist, fOutput, merged);
       NotifyMemory(evlist);
    }
@@ -2499,6 +2556,7 @@ void TProofPlayerRemote::AddOutput(TList *out)
    TIter nxo(out);
    TObject *obj = 0;
    while ((obj = nxo())) {
+      SetLastMergingMsg(obj);
       Incorporate(obj, fOutput, merged);
       // If not merged, drop from the temporary list, as the ownership
       // passes to fOutput
@@ -2528,6 +2586,15 @@ void TProofPlayerRemote::NotifyMemory(TObject *obj)
          RedirectOutput(0);
       }
    }
+}
+
+//______________________________________________________________________________
+void TProofPlayerRemote::SetLastMergingMsg(TObject *obj)
+{
+   // Set the message to be notified in case of exception
+
+   TString lastMsg = TString::Format("while merging object '%s'", obj->GetName());
+   TProofServ::SetLastMsg(lastMsg);
 }
 
 //______________________________________________________________________________
@@ -2622,7 +2689,7 @@ TObject *TProofPlayerRemote::HandleHistogram(TObject *obj)
    // Attach to the list in the outputlists, if any
    TList *list = 0;
    if (!fOutputLists) {
-      PDB(kOutput,2) Info("HandleHistogram", "Create fOutputLists");
+      PDB(kOutput,2) Info("HandleHistogram", "create fOutputLists");
       fOutputLists = new TList;
       fOutputLists->SetOwner();
    }
@@ -2681,7 +2748,7 @@ TObject *TProofPlayerRemote::HandleHistogram(TObject *obj)
             return obj;
          } else {
             // Create the list to merge in one-go at the end (more efficient
-            // then merging one by one)
+            // than merging one by one)
             list = new TList;
             list->SetName(h->GetName());
             list->SetOwner();
@@ -2692,7 +2759,7 @@ TObject *TProofPlayerRemote::HandleHistogram(TObject *obj)
          }
       }
    }
-   PDB(kOutput,1) Info("HandleHistogram", "Leaving");
+   PDB(kOutput,1) Info("HandleHistogram", "leaving");
 }
 
 //______________________________________________________________________________
@@ -3060,7 +3127,7 @@ Bool_t TProofPlayerRemote::IsClient() const
 {
    // Is the player running on the client?
 
-   return fProof->TestBit(TProof::kIsClient);
+   return fProof ? fProof->TestBit(TProof::kIsClient) : kFALSE;
 }
 
 //______________________________________________________________________________
@@ -3435,8 +3502,8 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
             for (Int_t j = (i*nelements)/nmasters;
                        j < ((i+1)*nelements)/nmasters;
                        j++) {
-               TDSetElement *elem =
-                  dynamic_cast<TDSetElement*>(setelements->At(j));
+               TDSetElement *elem = setelements ?
+                  dynamic_cast<TDSetElement*>(setelements->At(j)) : (TDSetElement *)0;
                if (elem) {
                   set.Add(elem->GetFileName(), elem->GetObjName(),
                         elem->GetDirectory(), elem->GetFirst(),

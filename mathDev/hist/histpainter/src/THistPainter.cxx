@@ -20,6 +20,7 @@
 #include "TSystem.h"
 #include "THistPainter.h"
 #include "TH2.h"
+#include "TH2Poly.h"
 #include "TH3.h"
 #include "TProfile.h"
 #include "THStack.h"
@@ -39,6 +40,7 @@
 #include "TPoints.h"
 #include "TStyle.h"
 #include "TGraph.h"
+#include "TMultiGraph.h"
 #include "TPie.h"
 #include "TGaxis.h"
 #include "TColor.h"
@@ -101,6 +103,7 @@
 <li><a href="#HP18">The "SURFace" options</li></a>
 <li><a href="#HP19">Cylindrical, Polar, Spherical and PseudoRapidity/Phi options</li></a>
 <li><a href="#HP20">Base line for bar-charts and lego plots</li></a>
+<li><a href="#HP20a">TH2Poly Drawing</li></a>
 <li><a href="#HP21">The SPEC option</li></a>
 <li><a href="#HP22">Option "Z" : Adding the color palette on the right side of the pad</li></a>
 <li><a href="#HP23">Setting the color palette</li></a>
@@ -1996,7 +1999,7 @@ Begin_Macro(source)
    float d_35_0[nx] = {0.75, -3.30, -0.92, 0.10, 0.08, -1.69, -1.29, -2.37};
    float d_35_1[nx] = {1.01, -3.02, -0.65, 0.37, 0.34, -1.42, -1.02, -2.10};
 
-   TCanvas *cb = new TCanvas("cbh","cbh",400,600);
+   TCanvas *cbh = new TCanvas("cbh","cbh",400,600);
    cbh->SetGrid();
 
    gStyle->SetHistMinimumZero();
@@ -2027,6 +2030,53 @@ Begin_Macro(source)
 
    return cbh;
 }
+End_Macro
+Begin_Html
+
+
+<a name="HP20a"></a><h3>TH2Poly Drawing</h3>
+
+<tt>TH2Poly</tt> can be drawn as a color plot (option COL).
+<tt>TH2Poly</tt> bins can have any shapes. The bins are defined as graphs. The
+following macro is a very simple example showing how to book a TH2Poly and draw
+it.
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *ch2p1 = new TCanvas("ch2p1","ch2p1",600,400);
+   TH2Poly *h2p = new TH2Poly();
+   h2p->SetName("h2poly_name");
+   h2p->SetTitle("h2poly_title");
+   Double_t x1[] = {0, 5, 6};
+   Double_t y1[] = {0, 0, 5};
+   Double_t x2[] = {0, -1, -1, 0};
+   Double_t y2[] = {0, 0, -1, 3};
+   Double_t x3[] = {4, 3, 0, 1, 2.4};
+   Double_t y3[] = {4, 3.7, 1, 4.7, 3.5};
+   h2p->AddBin(3, x1, y1);
+   h2p->AddBin(4, x2, y2);
+   h2p->AddBin(4, x3, y3);
+   h2p->Fill(0.1, 0.01, 3);
+   h2p->Fill(-0.5, -0.5, 7);
+   h2p->Fill(-0.7, -0.5, 1);
+   h2p->Fill(1, 3, 1.5);
+   Double_t fx[] = {0.1, -0.5, -0.7, 1};
+   Double_t fy[] = {0.01, -0.5, -0.5, 3};
+   Double_t fw[] = {3, 1, 1, 1.5};
+   h2p->FillN(4, fx, fy, fw);
+   gStyle->SetPalette(1);
+   h2p->Draw("col");
+   return ch2p1;
+}
+End_Macro
+Begin_Html
+
+<p>Rectangular bins are a frequent case. The method <tt>AddBinBox</tt> allows
+to define them more easily like shown in the following example.
+
+End_Html
+Begin_Macro(source)
+../../../tutorials/hist/th2polyBoxes.C
 End_Macro
 Begin_Html
 
@@ -2075,7 +2125,7 @@ red spectrum is created. It is recommended you use this palette when drawing
 legos, surfaces or contours.
 
 <p>If ncolors > 50 and colors=0, the DeepSea palette is used.
-(see <tt>TStyle::CreateGradientColorTable</tt> for more details)
+(see <tt>TColor::CreateGradientColorTable</tt> for more details)
 
 <p> If <tt>ncolors > 0 && colors == 0</tt>, the default palette is used
 with a maximum of ncolors.
@@ -2726,6 +2776,12 @@ Int_t THistPainter::DistancetoPrimitive(Int_t px, Int_t py)
 
    //     if object is 2D or 3D return this object
    if (fH->GetDimension() == 2) {
+      if (fH->InheritsFrom(TH2Poly::Class())) {
+         TH2Poly *th2 = (TH2Poly*)fH;
+         Int_t bin = th2->FindBin(gPad->AbsPixeltoX(px), gPad->AbsPixeltoY(py));
+         if (bin>0) {curdist =1; goto FUNCTIONS;}
+         else return big;
+      }
       Int_t delta2 = 5; //Give a margin of delta2 pixels to be in the 2-d area
       if ( px > puxmin + delta2
         && px < puxmax - delta2
@@ -3020,8 +3076,14 @@ char *THistPainter::GetObjectInfo(Int_t px, Int_t py) const
       for (Int_t bin=binmin;bin<=binx;bin++) {integ += fH->GetBinContent(bin);}
       snprintf(info,100,"(x=%g, y=%g, binx=%d, binc=%g, Sum=%g)",x,y,binx,fH->GetBinContent(binx),integ);
    } else {
-      biny = fYaxis->FindFixBin(y);
-      snprintf(info,100,"(x=%g, y=%g, binx=%d, biny=%d, binc=%g)",x,y,binx,biny,fH->GetCellContent(binx,biny));
+      if (fH->InheritsFrom(TH2Poly::Class())) {
+         TH2Poly *th2 = (TH2Poly*)fH;
+         biny = th2->FindBin(x,y);
+         snprintf(info,100,"%s (x=%g, y=%g, bin=%d, binc=%g)",th2->GetBinTitle(biny),x,y,biny,th2->GetBinContent(biny));
+      } else {
+         biny = fYaxis->FindFixBin(y);
+         snprintf(info,100,"(x=%g, y=%g, binx=%d, biny=%d, binc=%g)",x,y,binx,biny,fH->GetCellContent(binx,biny));
+      }
    }
    return info;
 }
@@ -3079,7 +3141,7 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
 
    Hoption.Axis = Hoption.Bar    = Hoption.Curve   = Hoption.Error = 0;
    Hoption.Hist = Hoption.Line   = Hoption.Mark    = Hoption.Fill  = 0;
-   Hoption.Same = Hoption.Func   = Hoption.Plus    = Hoption.Scat  = 0;
+   Hoption.Same = Hoption.Func   = Hoption.Scat    = 0;
    Hoption.Star = Hoption.Arrow  = Hoption.Box     = Hoption.Text  = 0;
    Hoption.Char = Hoption.Color  = Hoption.Contour = Hoption.Logx  = 0;
    Hoption.Logy = Hoption.Logz   = Hoption.Lego    = Hoption.Surf  = 0;
@@ -3230,8 +3292,6 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
       if (l[3] == '3') { Hoption.Bar = 13; l[3] = ' '; }
       if (l[3] == '4') { Hoption.Bar = 14; l[3] = ' '; }
    }
-   l = strstr(chopt,"+-");   if (l) { Hoption.Plus = 2; strncpy(l,"  ",2); }
-   l = strstr(chopt,"-+");   if (l) { Hoption.Plus = 2; strncpy(l,"  ",2); }
 
    l = strstr(chopt,"ARR" ); if (l) { Hoption.Arrow  = 1; strncpy(l,"   ", 3); Hoption.Scat = 0; }
    l = strstr(chopt,"BOX" );
@@ -3273,6 +3333,7 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
       Hoption.Tri = 1; strncpy(l,"   ",3);
       l = strstr(chopt,"FB");   if (l) { Hoption.FrontBox = 0; strncpy(l,"  ",2); }
       l = strstr(chopt,"BB");   if (l) { Hoption.BackBox = 0;  strncpy(l,"  ",2); }
+      l = strstr(chopt,"ERR");  if (l) strncpy(l,"   ",3);
    }
 
    l = strstr(chopt,"AITOFF");
@@ -3306,8 +3367,6 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
    if (strstr(chopt,"P")) { Hoption.Mark =1; Hoption.Hist = -1;}
    if (strstr(chopt,"Z"))   Hoption.Zscale =1;
    if (strstr(chopt,"*"))   Hoption.Star =1;
-   if (strstr(chopt,"+"))   Hoption.Plus =1;
-   if (strstr(chopt,"-"))   Hoption.Plus =-1;
    if (strstr(chopt,"H"))   Hoption.Hist =2;
    if (strstr(chopt,"P0"))  Hoption.Mark =10;
 
@@ -3357,22 +3416,6 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
 
    //       Check options incompatibilities
    if (Hoption.Bar  == 1) Hoption.Hist = -1;
-   if (Hoption.Same && Hoption.Plus) {
-      Error("MakeChopt", "select only one of the options S,+");
-      return 0;
-   }
-   if (Hoption.Plus) {
-      if (Hoption.Line || Hoption.Curve || Hoption.Text || Hoption.Mark) {
-         Error("MakeChopt", "options L,C,T,P are incompatible with options U and K");
-         if (Hoption.Hist && Hoption.Bar) return 0;
-      }
-   }
-   if (Hoption.Error || Hoption.Func || Hoption.Star) {
-      if (Hoption.Plus) {
-         Error("MakeChopt", "U, + options incompatible with errors/function");
-         return 0;
-      }
-   }
    return 1;
 }
 
@@ -3779,16 +3822,20 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    axis.ImportAxisAttributes(fXaxis);
 
    chopt[0] = 0;
-   strcat(chopt, "SDH");
-   if (ndivx < 0) strcat(chopt, "N");
+   // coverity [Calling risky function]
+   strlcat(chopt, "SDH",10);
+   // coverity [Calling risky function]
+   if (ndivx < 0) strlcat(chopt, "N",10);
    if (gPad->GetGridx()) {
       gridl = (aymax-aymin)/(gPad->GetY2() - gPad->GetY1());
-      strcat(chopt, "W");
+      // coverity [Calling risky function]
+      strlcat(chopt, "W",10);
    }
 
    // Define X-Axis limits
    if (Hoption.Logx) {
-      strcat(chopt, "G");
+      // coverity [Calling risky function]
+      strlcat(chopt, "G",10);
       ndiv = TMath::Abs(ndivx);
       if (useHparam) {
          umin = TMath::Power(10,Hparam.xmin);
@@ -3810,7 +3857,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
 
    // Display axis as time
    if (fXaxis->GetTimeDisplay()) {
-      strcat(chopt,"t");
+      // coverity [Calling risky function]
+      strlcat(chopt,"t",10);
       if (strlen(fXaxis->GetTimeFormatOnly()) == 0) {
          axis.SetTimeFormat(fXaxis->ChooseTimeFormat(Hparam.xmax-Hparam.xmin));
       }
@@ -3834,7 +3882,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    ndivsave = ndiv;
    axis.SetOption(chopt);
    if (xAxisPos) {
-      strcat(chopt, "-");
+      // coverity [Calling risky function]
+      strlcat(chopt, "-",10);
       gridl = -gridl;
    }
    if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
@@ -3851,9 +3900,11 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
          cw=strstr(chopt,"-");
          *cw='z';
       } else {
-         strcat(chopt, "-");
+         // coverity [Calling risky function]
+         strlcat(chopt, "-",10);
       }
-      if (gPad->GetTickx() < 2) strcat(chopt, "U");
+      // coverity [Calling risky function]
+      if (gPad->GetTickx() < 2) strlcat(chopt, "U",10);
       if ((cw=strstr(chopt,"W"))) *cw='z';
       axis.SetTitle("");
       axis.PaintAxis(axmin, xAxisYPos2,
@@ -3866,16 +3917,20 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    axis.ImportAxisAttributes(fYaxis);
 
    chopt[0] = 0;
-   strcat(chopt, "SDH");
-   if (ndivy < 0) strcat(chopt, "N");
+   // coverity [Calling risky function]
+   strlcat(chopt, "SDH",10);
+   // coverity [Calling risky function]
+   if (ndivy < 0) strlcat(chopt, "N",10);
    if (gPad->GetGridy()) {
       gridl = (axmax-axmin)/(gPad->GetX2() - gPad->GetX1());
-      strcat(chopt, "W");
+      // coverity [Calling risky function]
+      strlcat(chopt, "W",10);
    }
 
    // Define Y-Axis limits
    if (Hoption.Logy) {
-      strcat(chopt, "G");
+      // coverity [Calling risky function]
+      strlcat(chopt, "G",10);
       ndiv = TMath::Abs(ndivy);
       if (useHparam) {
          umin = TMath::Power(10,Hparam.ymin);
@@ -3897,7 +3952,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
 
    // Display axis as time
    if (fYaxis->GetTimeDisplay()) {
-      strcat(chopt,"t");
+      // coverity [Calling risky function]
+      strlcat(chopt,"t",10);
       if (strlen(fYaxis->GetTimeFormatOnly()) == 0) {
          axis.SetTimeFormat(fYaxis->ChooseTimeFormat(Hparam.ymax-Hparam.ymin));
       }
@@ -3921,7 +3977,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    ndivsave = ndiv;
    axis.SetOption(chopt);
    if (yAxisPos) {
-      strcat(chopt, "+L");
+      // coverity [Calling risky function]
+      strlcat(chopt, "+L",10);
       gridl = -gridl;
    }
    if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
@@ -3935,10 +3992,12 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    // Paint the additional Y axis (if needed)
    if (gPad->GetTicky()) {
       if (gPad->GetTicky() < 2) {
-         strcat(chopt, "U");
+         // coverity [Calling risky function]
+         strlcat(chopt, "U",10);
          axis.SetTickSize(-fYaxis->GetTickLength());
       } else {
-         strcat(chopt, "+L");
+         // coverity [Calling risky function]
+         strlcat(chopt, "+L",10);
       }
       if ((cw=strstr(chopt,"W"))) *cw='z';
       axis.SetTitle("");
@@ -5269,11 +5328,10 @@ void THistPainter::PaintHist(Option_t *)
 
    Int_t htype, oldhtype;
    Int_t i, j, first, last, nbins, fixbin;
-   Double_t c1, yb, y1, y2, ym1, ym2, yadd, ycur, ypre;
-   Double_t ync, ynext, ypc;
-   yb = ynext = 0;
+   Double_t c1, yb;
+   yb = 0;
 
-   strcpy(chopth, "                ");
+   strlcpy(chopth, "                ",17);
 
    Double_t ymin = Hparam.ymin;
    Double_t ymax = Hparam.ymax;
@@ -5294,11 +5352,9 @@ void THistPainter::PaintHist(Option_t *)
    Double_t *keepy = 0;
    if (fXaxis->GetXbins()->fN) fixbin = 0;
    else                        fixbin = 1;
-   if (!Hoption.Plus) {
-      if (fixbin) keepx = new Double_t[2];
-      else        keepx = new Double_t[nbins+1];
-      keepy = new Double_t[nbins];
-   }
+   if (fixbin) keepx = new Double_t[2];
+   else        keepx = new Double_t[nbins+1];
+   keepy = new Double_t[nbins];
    Double_t logymin = 0;
    if (Hoption.Logy) logymin = TMath::Power(10,ymin);
 
@@ -5312,65 +5368,8 @@ void THistPainter::PaintHist(Option_t *)
       }
       yb = TMath::Max(yb, ymin);
       yb = TMath::Min(yb, ymax);
-      if (Hoption.Plus) {
-   //            compute y1, y2
-         if (keepy) y1 = keepy[j-first];
-	 else       y1 = yb;
-         y2 = yb;
-         if (Hoption.Plus == 1 || Hoption.Plus == -1) {
-            if (Hoption.Logy)
-               y2 = TMath::Log10(TMath::Power(10,y1) + Hoption.Plus*TMath::Power(10,y2));
-            else
-               y2 = y1 +y2*Hoption.Plus;
-         }
-   //            compute ym1, ym2
-         if (!Hoption.Bar) {
-            yadd = Hparam.factor*fH->GetBinContent(j);
-            if (Hoption.Logy) ycur = TMath::Power(10,keepy[j-first]);
-            else              ycur = keepy[j-first];
-            if (j != last) {
-               ync = Hparam.factor*fH->GetBinContent(j+1);
-               if (Hoption.Logy) ycur = TMath::Power(10,keepy[j-first+1]);
-               else              ycur = keepy[j-first+1];
-            }
-            else { ync = ynext = 0;}
-            if (j != first) {
-               ypc = Hparam.factor*fH->GetBinContent(j-1);
-               if (Hoption.Logy) ypre = TMath::Power(10,keepy[j-first]);
-               else              ypre = keepy[j-first];
-            }
-            else { ypc = ypre = 0;}
-            if (Hoption.Plus == 1) {
-               ym1 = TMath::Max(TMath::Min(ycur+yadd,ypre),ycur);
-               ym2 = TMath::Max(TMath::Min(ycur+yadd,ynext+ync),ycur);
-            }
-            else if(Hoption.Plus == -1) {
-               ym1 = TMath::Max(TMath::Min(ycur-yadd,ypre),ycur);
-               ym2 = TMath::Max(TMath::Min(ycur-yadd,ynext-ync),ycur);
-            }
-            else {
-               if (ycur > yadd) { ym1 = TMath::Max(yadd,ypc); ym2 = TMath::Max(yadd,ync); }
-               else {             ym1 = TMath::Min(yadd,ypc); ym2 = TMath::Min(yadd,ync); }
-            }
-            if (Hoption.Logy) {
-               if (ym1 > 0) ym1 = TMath::Log10(ym1);
-               if (ym2 > 0) ym2 = TMath::Log10(ym2);
-            }
-         }
-
-   //               Compute X1 X2
-         if (Hoption.Logy && c1 <= 0) continue;
-
-   //     Update the current plot
-
-         if (Hoption.Plus == 1 || Hoption.Plus == -1) keepy[j-first-1] = y2;
-      }
-      else {
-         keepy[j-first] = yb;
-      }
-   } // end of for loop
-
-   if (Hoption.Plus) return;
+      keepy[j-first] = yb;
+   }
 
    //              Draw histogram according to value of FillStyle and FillColor
 
@@ -5413,8 +5412,10 @@ void THistPainter::PaintHist(Option_t *)
       chopth[8] = 'N';
    }
 
-   if (Hoption.Fill == 2)    strcat(chopth,"2");
-   if (Hoption.HighRes != 0) strcat(chopth,"9");
+   // coverity [Calling risky function]
+   if (Hoption.Fill == 2)    strlcat(chopth,"2",17);
+   // coverity [Calling risky function]
+   if (Hoption.HighRes != 0) strlcat(chopth,"9",17);
 
    //         Option LOGX
 
@@ -5649,7 +5650,7 @@ Int_t THistPainter::PaintInit()
       ymin = xm;
    }
 
-   if (ymin >= ymax && !Hoption.Plus) {
+   if (ymin >= ymax) {
       if (Hoption.Logy) {
          if (ymax > 0) ymin = 0.001*ymax;
          else {
@@ -5706,7 +5707,7 @@ Int_t THistPainter::PaintInit()
       ymin = TMath::Log10(ymin);
       if (!minimum) ymin += TMath::Log10(0.5);
       ymax = TMath::Log10(ymax);
-      if (!maximum && !Hoption.Plus) ymax += TMath::Log10(2*(0.9/0.95));
+      if (!maximum) ymax += TMath::Log10(2*(0.9/0.95));
       if (!Hoption.Same) {
          Hparam.ymin = ymin;
          Hparam.ymax = ymax;
@@ -5731,7 +5732,7 @@ Int_t THistPainter::PaintInit()
    //         final adjustment of YMAXI for linear scale (if not option "Same"):
    //         decrease histogram height to MAX% of allowed height if HMAXIM
    //         has not been called.
-   if (!maximum && !Hoption.Plus) {
+   if (!maximum) {
       ymax += yMARGIN*(ymax-ymin);
    }
 
@@ -5836,7 +5837,7 @@ Int_t THistPainter::PaintInitH()
       return 0;
    }
    else xmin = xm;
-   if (xmin >= xmax && !Hoption.Plus) {
+   if (xmin >= xmax) {
       if (Hoption.Logx) {
          if (xmax > 0) xmin = 0.001*xmax;
          else {
@@ -5880,7 +5881,7 @@ Int_t THistPainter::PaintInitH()
       xmin = TMath::Log10(xmin);
       if (!minimum) xmin += TMath::Log10(0.5);
       xmax = TMath::Log10(xmax);
-      if (!maximum && !Hoption.Plus) xmax += TMath::Log10(2*(0.9/0.95));
+      if (!maximum) xmax += TMath::Log10(2*(0.9/0.95));
       if (!Hoption.Same) {
          Hparam.xmin = xmin;
          Hparam.xmax = xmax;
@@ -5899,7 +5900,7 @@ Int_t THistPainter::PaintInitH()
    //         final adjustment of YMAXI for linear scale (if not option "Same"):
    //         decrease histogram height to MAX% of allowed height if HMAXIM
    //         has not been called.
-   if (!maximum && !Hoption.Plus) {
+   if (!maximum) {
       xmax += yMARGIN*(xmax-xmin);
    }
    Hparam.xmin = xmin;
@@ -6277,16 +6278,19 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
    Double_t *rmax = view->GetRmax();
 
    // Initialize the axis options
-   if (x1[0] > x2[0]) strcpy(chopax, "SDH=+");
-   else               strcpy(chopax, "SDH=-");
-   if (y1[0] > y2[0]) strcpy(chopay, "SDH=+");
-   else               strcpy(chopay, "SDH=-");
-   strcpy(chopaz, "SDH+=");
+   if (x1[0] > x2[0]) strlcpy(chopax, "SDH=+",8);
+   else               strlcpy(chopax, "SDH=-",8);
+   if (y1[0] > y2[0]) strlcpy(chopay, "SDH=+",8);
+   else               strlcpy(chopay, "SDH=-",8);
+   strlcpy(chopaz, "SDH+=",8);
 
    // Option LOG is required ?
-   if (Hoption.Logx) strcat(chopax,"G");
-   if (Hoption.Logy) strcat(chopay,"G");
-   if (Hoption.Logz) strcat(chopaz,"G");
+   // coverity [Calling risky function]
+   if (Hoption.Logx) strlcat(chopax,"G",8);
+   // coverity [Calling risky function]
+   if (Hoption.Logy) strlcat(chopay,"G",8);
+   // coverity [Calling risky function]
+   if (Hoption.Logz) strlcat(chopaz,"G",8);
 
    // Initialize the number of divisions. If the
    // number of divisions is negative, option 'N' is required.
@@ -6295,15 +6299,18 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
    ndivz = fZaxis->GetNdivisions();
    if (ndivx < 0) {
       ndivx = TMath::Abs(ndivx);
-      strcat(chopax, "N");
+      // coverity [Calling risky function]
+      strlcat(chopax, "N",8);
    }
    if (ndivy < 0) {
       ndivy = TMath::Abs(ndivy);
-      strcat(chopay, "N");
+      // coverity [Calling risky function]
+      strlcat(chopay, "N",8);
    }
    if (ndivz < 0) {
       ndivz = TMath::Abs(ndivz);
-      strcat(chopaz, "N");
+      // coverity [Calling risky function]
+      strlcat(chopaz, "N",8);
    }
 
    // Set Axis attributes.
@@ -6325,7 +6332,8 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
       }
       // Option time display is required ?
       if (fXaxis->GetTimeDisplay()) {
-         strcat(chopax,"t");
+         // coverity [Calling risky function]
+         strlcat(chopax,"t",8);
          if (strlen(fXaxis->GetTimeFormatOnly()) == 0) {
             axis->SetTimeFormat(fXaxis->ChooseTimeFormat(bmax-bmin));
          } else {
@@ -6342,7 +6350,7 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
       axis->SetLabelOffset(fYaxis->GetLabelOffset()+fYaxis->GetTickLength());
 
       if (fH->GetDimension() < 2) {
-         strcpy(chopay, "V=+UN");
+         strlcpy(chopay, "V=+UN",8);
          ndivy = 0;
       }
       if (TMath::Abs(y1[0] - y2[0]) < epsil) {
@@ -6357,7 +6365,8 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
       }
       // Option time display is required ?
       if (fYaxis->GetTimeDisplay()) {
-         strcat(chopay,"t");
+         // coverity [Calling risky function]
+         strlcat(chopay,"t",8);
          if (strlen(fYaxis->GetTimeFormatOnly()) == 0) {
             axis->SetTimeFormat(fYaxis->ChooseTimeFormat(bmax-bmin));
          } else {
@@ -6380,7 +6389,8 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
       }
       // Option time display is required ?
       if (fZaxis->GetTimeDisplay()) {
-         strcat(chopaz,"t");
+         // coverity [Calling risky function]
+         strlcat(chopaz,"t",8);
          if (strlen(fZaxis->GetTimeFormatOnly()) == 0) {
             axis->SetTimeFormat(fZaxis->ChooseTimeFormat(bmax-bmin));
          } else {
@@ -7653,7 +7663,9 @@ void THistPainter::PaintTable(Option_t *option)
       if (palette) delete palette;
    }
 
-   if (fH->GetEntries() != 0 && Hoption.Axis<=0) {
+   if (fH->InheritsFrom(TH2Poly::Class())) {
+      if (Hoption.Color)   PaintTH2PolyColorLevels(option);
+   } else if (fH->GetEntries() != 0 && Hoption.Axis<=0) {
       if (Hoption.Scat)    PaintScatterPlot(option);
       if (Hoption.Arrow)   PaintArrows(option);
       if (Hoption.Box)     PaintBoxes(option);
@@ -7686,6 +7698,100 @@ void THistPainter::PaintTable(Option_t *option)
          PaintStat2(gStyle->GetOptStat(),fit);
       }
    }
+}
+
+
+//______________________________________________________________________________
+void THistPainter::PaintTH2PolyColorLevels(Option_t *)
+{
+   /* Begin_html
+    <a href="#HP20a">Control function to draw a TH2Poly.</a>
+    End_html */
+
+   Int_t ncolors, color, theColor;
+   Double_t z, zc;
+   Double_t zmin = fH->GetMinimum();
+   Double_t zmax = fH->GetMaximum();
+   if (Hoption.Logz) {
+      if (zmax > 0) {
+         if (zmin <= 0) zmin = TMath::Min((Double_t)1, (Double_t)0.001*zmax);
+         zmin = TMath::Log10(zmin);
+         zmax = TMath::Log10(zmax);
+      } else {
+         return;
+      }
+   }
+   Double_t dz = zmax - zmin;
+
+   // Initialize the levels on the Z axis
+   ncolors     = gStyle->GetNumberOfColors();
+   Int_t ndiv  = fH->GetContour();
+   if (ndiv == 0 ) {
+      ndiv = gStyle->GetNumberContours();
+      fH->SetContour(ndiv);
+   }
+   Int_t ndivz  = TMath::Abs(ndiv);
+   if (fH->TestBit(TH1::kUserContour) == 0) fH->SetContour(ndiv);
+   Double_t scale = ndivz/dz;
+
+   TH2PolyBin  *b;
+
+   TIter next(((TH2Poly*)fH)->GetBins());
+   TObject *obj, *poly;
+
+   while ((obj=next())) {
+      b     = (TH2PolyBin*)obj;
+      poly  = b->GetPolygon();
+
+      z = b->GetContent();
+      if (Hoption.Logz) {
+         if (z > 0) z = TMath::Log10(z);
+         else       z = zmin;
+      }
+      if (z < zmin) continue;
+
+      // Define the bin color.
+      if (fH->TestBit(TH1::kUserContour)) {
+         zc = fH->GetContourLevelPad(0);
+         if (z < zc) continue;
+         color = -1;
+         for (Int_t k=0; k<ndiv; k++) {
+            zc = fH->GetContourLevelPad(k);
+            if (z < zc) {
+               continue;
+            } else {
+               color++;
+            }
+         }
+      } else {
+         color = Int_t(0.01+(z-zmin)*scale);
+      }
+      theColor = Int_t((color+0.99)*Float_t(ncolors)/Float_t(ndivz));
+      if (theColor > ncolors-1) theColor = ncolors-1;
+
+      // Paint the TGraph bins.
+      if (poly->IsA() == TGraph::Class()) {
+         TGraph *g  = (TGraph*)poly;
+         g->SetFillColor(gStyle->GetColorPalette(theColor));
+         g->TAttFill::Modify();
+         g->Paint("F");
+      }
+
+      // Paint the TMultiGraph bins.
+      if (poly->IsA() == TMultiGraph::Class()) {
+         TMultiGraph *mg = (TMultiGraph*)poly;
+         TList *gl = mg->GetListOfGraphs();
+         if (!gl) return;
+         TGraph *g;
+         TIter nextg(gl);
+         while ((g = (TGraph*) nextg())) {
+            g->SetFillColor(gStyle->GetColorPalette(theColor));
+            g->TAttFill::Modify();
+            g->Paint("F");
+         }
+      }
+   }
+   if (Hoption.Zscale) PaintPalette();
 }
 
 
@@ -8268,7 +8374,7 @@ Int_t THistPainter::TableInit()
       zmin = 0.01;
       zmax = 10.;
    }
-   if (zmin >= zmax && !Hoption.Plus) {
+   if (zmin >= zmax) {
       if (Hoption.Logz) {
          if (zmax > 0) zmin = 0.001*zmax;
          else {
@@ -8302,7 +8408,7 @@ Int_t THistPainter::TableInit()
       zmin = TMath::Log10(zmin);
       if (!minimum) zmin += TMath::Log10(0.5);
       zmax = TMath::Log10(zmax);
-      if (!maximum && !Hoption.Plus) zmax += TMath::Log10(2*(0.9/0.95));
+      if (!maximum) zmax += TMath::Log10(2*(0.9/0.95));
       goto LZMIN;
    }
 
@@ -8311,7 +8417,7 @@ Int_t THistPainter::TableInit()
    //         has not been called.
    //         MAX% is the value in percent which has been set in HPLSET
    //         (default is 90%).
-   if (!maximum && !Hoption.Plus) {
+   if (!maximum) {
       zmax += yMARGIN*(zmax-zmin);
    }
 
@@ -8696,13 +8802,13 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             }
             c->Clear();
             c->cd();
-            TH2 *hp = (TH2*)h3->Project3D("x");
+            TH1 *hp = h3->Project3D("x");
             yaxis->SetRange(firstY,lastY);
             zaxis->SetRange(firstZ,lastZ);
             hp->SetFillColor(38);
             hp->SetTitle(Form("ProjectionX of biny=%d binz=%d", biny, binz));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
+            hp->SetXTitle(fH->GetXaxis()->GetTitle());
+            hp->SetYTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
          break;
@@ -8801,13 +8907,13 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             }
             c->Clear();
             c->cd();
-            TH2 *hp = (TH2*)h3->Project3D("y");
+            TH1 *hp = h3->Project3D("y");
             xaxis->SetRange(firstX,lastX);
             zaxis->SetRange(firstZ,lastZ);
             hp->SetFillColor(38);
             hp->SetTitle(Form("ProjectionY of binx=%d binz=%d", binx, binz));
             hp->SetXTitle(fH->GetYaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
+            hp->SetYTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
          break;
@@ -8906,13 +9012,13 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             }
             c->Clear();
             c->cd();
-            TH2 *hp = (TH2*)h3->Project3D("z");
+            TH1 *hp = h3->Project3D("z");
             xaxis->SetRange(firstX,lastX);
             yaxis->SetRange(firstY,lastY);
             hp->SetFillColor(38);
             hp->SetTitle(Form("ProjectionZ of binx=%d biny=%d", binx, biny));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
+            hp->SetXTitle(fH->GetZaxis()->GetTitle());
+            hp->SetYTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
          break;
@@ -8981,6 +9087,7 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             if(nbins==1)hp->SetTitle(Form("ProjectionXY of binz=%d (%.1f)", binz,value1));
             else        hp->SetTitle(Form("ProjectionXY, binz range=%d-%d (%.1f-%.1f)", binz,binz+nbins-1,value1,value2));
             hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetYTitle(fH->GetXaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9048,7 +9155,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             hp->SetFillColor(38);
             if(nbins==1)hp->SetTitle(Form("ProjectionYX of binz=%d (%.1f)", binz,value1));
             else        hp->SetTitle(Form("ProjectionXY, binz range=%d-%d (%.1f-%.1f)", binz,binz+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetXTitle(fH->GetXaxis()->GetTitle());
+            hp->SetYTitle(fH->GetYaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9116,7 +9224,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             hp->SetFillColor(38);
             if(nbins==1)hp->SetTitle(Form("ProjectionXZ of biny=%d (%.1f)", biny,value1));
             else        hp->SetTitle(Form("ProjectionXZ, biny range=%d-%d (%.1f-%.1f)", biny,biny+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetXTitle(fH->GetZaxis()->GetTitle());
+            hp->SetYTitle(fH->GetXaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9184,7 +9293,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             hp->SetFillColor(38);
             if(nbins==1)hp->SetTitle(Form("ProjectionZX of biny=%d (%.1f)", biny,value1));
             else        hp->SetTitle(Form("ProjectionZX, binY range=%d-%d (%.1f-%.1f)", biny,biny+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetXTitle(fH->GetXaxis()->GetTitle());
+            hp->SetYTitle(fH->GetZaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9252,7 +9362,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             hp->SetFillColor(38);
             if(nbins==1)hp->SetTitle(Form("ProjectionYZ of binx=%d (%.1f)", binx,value1));
             else        hp->SetTitle(Form("ProjectionYZ, binx range=%d-%d (%.1f-%.1f)", binx,binx+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetXTitle(fH->GetZaxis()->GetTitle());
+            hp->SetYTitle(fH->GetYaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }
@@ -9322,6 +9433,7 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             if(nbins==1)hp->SetTitle(Form("ProjectionZY of binx=%d (%.1f)", binx,value1));
             else        hp->SetTitle(Form("ProjectionZY, binx range=%d-%d (%.1f-%.1f)", binx,binx+nbins-1,value1,value2));
             hp->SetXTitle(fH->GetYaxis()->GetTitle());
+            hp->SetYTitle(fH->GetZaxis()->GetTitle());
             hp->SetZTitle("Number of Entries");
             hp->Draw(fShowOption.Data());
          }

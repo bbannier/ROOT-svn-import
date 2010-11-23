@@ -2,7 +2,7 @@ from __future__ import generators
 # @(#)root/pyroot:$Id$
 # Author: Wim Lavrijsen (WLavrijsen@lbl.gov)
 # Created: 02/20/03
-# Last: 09/29/10
+# Last: 11/10/10
 
 """PyROOT user module.
 
@@ -181,7 +181,7 @@ class Template:
     # special case pythonization (builtin_map is not available from the C-API)
       if hasattr( result, 'push_back' ):
          def iadd( self, ll ):
-            map( self.push_back, ll )
+            [ self.push_back(x) for x in ll ]
             return self
 
          result.__iadd__ = iadd
@@ -343,7 +343,6 @@ class ModuleFacade( types.ModuleType ):
            if name != 'SetBatch' and self._master.__dict__[ 'gROOT' ] != self._gROOT:
               self._master._ModuleFacade__finalSetup()
               del self._master.__class__._ModuleFacade__finalSetup
-              self._master.__dict__[ 'gROOT' ] = self._gROOT
            return getattr( self._gROOT, name )
 
          def __setattr__( self, name, value ):
@@ -448,6 +447,9 @@ class ModuleFacade( types.ModuleType ):
       return super( self.__class__, self ).__delattr__( name )
 
    def __finalSetup( self ):
+    # prevent this method from being re-entered through the gROOT wrapper
+      self.__dict__[ 'gROOT' ] = _root.gROOT
+
     # switch to running gettattr/setattr
       self.__class__.__getattr__ = self.__class__.__getattr2
       del self.__class__.__getattr2

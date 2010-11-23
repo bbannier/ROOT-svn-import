@@ -5308,10 +5308,13 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       hnew = (TH1*)Clone(newname);
    }
 
+   //reset kCanRebin bit to avoid a rebinning in SetBinContent
+   Int_t bitRebin = hnew->TestBit(kCanRebin);
+   hnew->SetBit(kCanRebin,0);
+
    // save original statistics
    Double_t stat[kNstat];
    GetStats(stat);
-
    bool resetStat = false;
    // change axis specs and rebuild bin contents array::RebinAx
    if(!xbins && (newbins*ngroup != nbins)) {
@@ -5400,6 +5403,7 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    }
    hnew->SetBinContent(newbins+1,binContent);
    if (oldErrors) hnew->SetBinError(newbins+1,TMath::Sqrt(binError));
+   hnew->SetBit(kCanRebin,bitRebin);
 
    //restore statistics and entries  modified by SetBinContent
    hnew->SetEntries(entries);
@@ -5876,6 +5880,7 @@ void TH1::Streamer(TBuffer &b)
    if (b.IsReading()) {
       UInt_t R__s, R__c;
       Version_t R__v = b.ReadVersion(&R__s, &R__c);
+      if (fDirectory) fDirectory->Remove(this);
       fDirectory = 0;
       if (R__v > 2) {
          b.ReadClassBuffer(TH1::Class(), this, R__v, R__s, R__c);
@@ -6653,7 +6658,7 @@ void TH1::ResetStats()
    // and replace with values calculates from bin content
    // The number of entries is set to the total bin content or (in case of weighted histogram)
    // to number of effective entries
-   Double_t stats[kNstat];
+   Double_t stats[kNstat] = {0};
    fTsumw = 0;
    fEntries = 1; // to force re-calculation of the statistics in TH1::GetStats
    GetStats(stats);
@@ -6763,7 +6768,7 @@ Double_t TH1::DoIntegral(Int_t binx1, Int_t binx2, Int_t biny1, Int_t biny2, Int
             if (width) integral += GetBinContent(bin)*dx*dy*dz;
             else       integral += GetBinContent(bin);
             if (doError) {
-               if (width)  igerr2 += GetBinError(bin)*GetBinError(bin)*dx*dy*dz;
+               if (width)  igerr2 += GetBinError(bin)*GetBinError(bin)*dx*dx*dy*dy*dz*dz;
                else        igerr2 += GetBinError(bin)*GetBinError(bin);
             }
          }
@@ -7591,7 +7596,7 @@ void TH1::Sumw2()
 
    if ( fEntries > 0 )
       for (Int_t bin=0; bin<fNcells; bin++) {
-         fSumw2.fArray[bin] = GetBinContent(bin);
+         fSumw2.fArray[bin] = TMath::Abs(GetBinContent(bin));
       }
 }
 
@@ -7800,12 +7805,12 @@ TH1 *TH1::ShowBackground(Int_t niter, Option_t *option)
 //______________________________________________________________________________
 Int_t TH1::ShowPeaks(Double_t sigma, Option_t *option, Double_t threshold)
 {
-   //Interface to TSpectrum::Search
-   //the function finds peaks in this histogram where the width is > sigma
+   //Interface to TSpectrum::Search.
+   //The function finds peaks in this histogram where the width is > sigma
    //and the peak maximum greater than threshold*maximum bin content of this.
-   //for more detauils see TSpectrum::Search.
-   //note the difference in the default value for option compared to TSpectrum::Search
-   //option="" by default (instead of "goff")
+   //For more details see TSpectrum::Search.
+   //Note the difference in the default value for option compared to TSpectrum::Search
+   //option="" by default (instead of "goff").
 
    return (Int_t)gROOT->ProcessLineFast(Form("TSpectrum::StaticSearch((TH1*)0x%lx,%g,\"%s\",%g)",
                                              (ULong_t)this, sigma, option, threshold));

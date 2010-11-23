@@ -30,11 +30,13 @@
 #include "Math/BrentRootFinder.h"
 #include "Math/BrentMinimizer1D.h"
 #include "Math/BrentMethods.h"
+#include "Math/Integrator.h"
 #include "Math/GaussIntegrator.h"
 #include "Math/GaussLegendreIntegrator.h"
 #include "Math/AdaptiveIntegratorMultiDim.h"
 #include "Math/RichardsonDerivator.h"
 #include "Math/Functor.h"
+#include "Fit/FitResult.h"
 
 //#include <iostream>
 
@@ -2534,8 +2536,10 @@ Double_t TF1::Integral(Double_t a, Double_t b, const Double_t *params, Double_t 
    TF1_EvalWrapper wf1( this, params, fgAbsValue ); 
 
    ROOT::Math::GaussIntegrator giod;
+   //ROOT::Math::Integrator giod;
    giod.SetFunction(wf1);
    giod.SetRelTolerance(epsilon);
+   //giod.SetAbsTolerance(epsilon);
 
    return giod.Integral(a, b);
 }
@@ -2565,11 +2569,21 @@ Double_t TF1::IntegralError(Double_t a, Double_t b, const Double_t * params, con
 {
    // Return Error on Integral of a parameteric function between a and b 
    // due to the parameter uncertainties.
-   // A pointer to a vector of parameter values and to the elements of the covariance matrix (covmat) can be optionally passed.
-   // By default (i.e. when a zero pointer is passed) the current stored parameter values are used to estimate the integral error 
-   // together with the covariance matrix from the last fit (retrieved from the global fitter instance) 
-   // IMPORTANT NOTE: When no covariance matrix is passed and in the meantime a fit is done 
-   // using another function, the routine will signal an error and return zero.
+   // A pointer to a vector of parameter values and to the elements of the covariance matrix (covmat)
+   // can be optionally passed.  By default (i.e. when a zero pointer is passed) the current stored 
+   // parameter values are used to estimate the integral error together with the covariance matrix
+   // from the last fit (retrieved from the global fitter instance) 
+   //
+   // IMPORTANT NOTE1: When no covariance matrix is passed and in the meantime a fit is done 
+   // using another function, the routine will signal an error and it will return zero only 
+   // when the number of fit parameter is different than the values stored in TF1 (TF1::GetNpar() ). 
+   // In the case that npar is the same, an incorrect result is returned. 
+   //
+   // IMPORTANT NOTE2: The user must pass a pointer to the elements of the full covariance matrix 
+   // dimensioned with the right size (npar*npar), where npar is the total number of parameters (TF1::GetNpar()), 
+   // including also the fixed parameters. When there are fixed parameters, the pointer returned from 
+   // TVirtualFitter::GetCovarianceMatrix() cannot be used. 
+   // One should use the TFitResult class, as shown in the example below.   
    // 
    // To get the matrix and values from an old fit do for example:  
    // TFitResultPtr r = histo->Fit(func, "S");
@@ -2592,10 +2606,23 @@ Double_t TF1::IntegralError(Int_t n, const Double_t * a, const Double_t * b, con
    //
    // A pointer to a vector of parameter values and to the elements of the covariance matrix (covmat) can be optionally passed.
    // By default (i.e. when a zero pointer is passed) the current stored parameter values are used to estimate the integral error 
-   // together with the covariance matrix from the last fit (retrieved from the global fitter instance) 
-   // IMPORTANT NOTE: When no covariance matrix is passed and in the meantime a fit is done 
-   // using another function, the routine will signal an error and return zero.
+   // together with the covariance matrix from the last fit (retrieved from the global fitter instance).
    //
+   // IMPORTANT NOTE1: When no covariance matrix is passed and in the meantime a fit is done 
+   // using another function, the routine will signal an error and it will return zero only 
+   // when the number of fit parameter is different than the values stored in TF1 (TF1::GetNpar() ). 
+   // In the case that npar is the same, an incorrect result is returned. 
+   //
+   // IMPORTANT NOTE2: The user must pass a pointer to the elements of the full covariance matrix 
+   // dimensioned with the right size (npar*npar), where npar is the total number of parameters (TF1::GetNpar()), 
+   // including also the fixed parameters. When there are fixed parameters, the pointer returned from 
+   // TVirtualFitter::GetCovarianceMatrix() cannot be used. 
+   // One should use the TFitResult class, as shown in the example below.   
+   // 
+   // To get the matrix and values from an old fit do for example:  
+   // TFitResultPtr r = histo->Fit(func, "S");
+   // ..... after performing other fits on the same function do 
+   // func->IntegralError(x1,x2,r->GetParams(), r->GetCovarianceMatrix()->GetMatrixArray() );
 
    return ROOT::TF1Helper::IntegralError(this,n,a,b,params,covmat,epsilon);
 }
@@ -2647,7 +2674,7 @@ Double_t TF1::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Do
 
 
 //______________________________________________________________________________
-Double_t TF1::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t /*minpts*/, Int_t maxpts, Double_t eps, Double_t &relerr,Int_t &nfnevl, Int_t &ifail)
+Double_t TF1::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t minpts, Int_t maxpts, Double_t eps, Double_t &relerr,Int_t &nfnevl, Int_t &ifail)
 {
    //  Adaptive Quadrature for Multiple Integrals over N-Dimensional
    //  Rectangular Regions
@@ -2715,6 +2742,7 @@ Double_t TF1::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, In
    ROOT::Math::WrappedMultiFunction<TF1&> wf1(*this, n);
 
    ROOT::Math::AdaptiveIntegratorMultiDim aimd(wf1, eps, eps, maxpts);
+   aimd.SetMinPts(minpts);
    double result = aimd.Integral(a,b);
    relerr = aimd.RelError();
    nfnevl = aimd.NEval();
@@ -2769,7 +2797,7 @@ void TF1::Paint(Option_t *option)
    if (semicol) {
       Int_t nxt = strlen(semicol);
       char *ctemp = new char[nxt];
-      strcpy(ctemp,semicol+1);
+      strlcpy(ctemp,semicol+1,nxt);
       semicol = (char*)strstr(ctemp,";");
       if (semicol) {
          *semicol = 0;
@@ -3049,6 +3077,45 @@ void TF1::SetCurrent(TF1 *f1)
    // when fitting or painting a function.
 
    fgCurrent = f1;
+}
+
+//______________________________________________________________________________
+void TF1::SetFitResult(const ROOT::Fit::FitResult & result, const Int_t* indpar )
+{
+   // Set the result from the fit  
+   // parameter values, errors, chi2, etc...
+   // Optionally a pointer to a vector (with size fNpar) of the parameter indices in the FitResult can be passed
+   // This is useful in the case of a combined fit with different functions, and the FitResult contains the global result 
+   // By default it is assume that indpar = {0,1,2,....,fNpar-1}. 
+
+   if (result.IsEmpty()) { 
+      Warning("SetFitResult","Empty Fit result - nathing is set in TF1");
+      return;      
+   }
+   if (indpar == 0 && fNpar != (int) result.NPar() ) { 
+      Error("SetFitResult","Invalid Fit result passed - number of parameter is %d , different than TF1::GetNpar() = %d",fNpar,result.NPar());
+      return;
+   }
+   if (result.Chi2() > 0) 
+      SetChisquare(result.Chi2() );
+   else 
+      SetChisquare(result.MinFcnValue() );
+
+   SetNDF(result.Ndf() );
+   SetNumberFitPoints(result.Ndf() + result.NFreeParameters() );
+
+
+   for (Int_t i = 0; i < fNpar; ++i) { 
+      Int_t ipar = (indpar != 0) ? indpar[i] : i;  
+      if (ipar < 0) continue;
+      fParams[i] = result.Parameter(ipar);
+      // in case errors are not present do not set them
+      if (ipar < (int) result.Errors().size() )
+         fParErrors[i] = result.Error(ipar);
+   }
+   //invalidate cached integral since parameters have changed
+   Update();   
+         
 }
 
 

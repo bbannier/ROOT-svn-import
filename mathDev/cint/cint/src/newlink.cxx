@@ -97,6 +97,22 @@ FILE *FOpenAndSleep(const char *filename, const char *mode) {
 # define fopen(A,B) FOpenAndSleep((A),(B))
 #endif
 
+// cross-compiling for iOS and iOS simulator (assumes host is Intel Mac OS X)
+#if defined(R__IOSSIM) || defined(R__IOS)
+#ifdef __x86_64__
+#undef __x86_64__
+#endif
+#ifdef __i386__
+#undef __i386
+#endif
+#ifdef R__IOSSIM
+#define __i386 1
+#endif
+#ifdef R__IOS
+#define __arm__ 1
+#endif
+#endif
+
 static void AllocateRootSpecial( int tagnum )
 {
   if(G__struct.rootspecial[tagnum]) return;
@@ -2818,17 +2834,6 @@ void G__gen_cpplink()
      else if(algoflag&2) fprintf(hfp,"#include <algorithm.h>\n");
   }
 
-#if !defined(G__ROOT) || defined(G__OLDIMPLEMENTATION1817)
-  if(G__CPPLINK==G__globalcomp&&-1!=G__defined_tagname("G__longlong",2)) {
-#if defined(__hpux) && !defined(G__ROOT)
-    G__getcintsysdir();
-    fprintf(hfp,"\n#include \"%s/%s/lib/longlong/longlong.h\"\n",G__cintsysdir,G__CFG_COREVERSION);
-#else
-    fprintf(hfp,"\n#include \"%s/lib/longlong/longlong.h\"\n",G__CFG_COREVERSION);
-#endif
-  }
-#endif /* G__ROOT */
-
   fprintf(fp,"#include <new>\n");
 
 #ifdef G__BUILTIN
@@ -4278,16 +4283,18 @@ void G__add_ipath(const char *path)
     G__allincludepath = (char*)malloc(1);
     G__allincludepath[0] = '\0';
   }
-  store_allincludepath = (char*)realloc((void*)G__allincludepath
-                                        ,strlen(G__allincludepath)+strlen(temp)+6);
+  size_t allincludepath_oldlen = strlen(G__allincludepath);
+  size_t allincludepath_newlen = allincludepath_oldlen+strlen(temp)+6;
+  store_allincludepath = (char*)realloc((void*)G__allincludepath,allincludepath_newlen);
   if(store_allincludepath) {
     int i=0,flag=0;
     while(temp[i]) if(isspace(temp[i++])) flag=1;
     G__allincludepath = store_allincludepath;
+    size_t increase = allincludepath_newlen - allincludepath_oldlen;
     if(flag)
-       sprintf(G__allincludepath+strlen(G__allincludepath) ,"-I\"%s\" ",temp());
+       G__snprintf(G__allincludepath+allincludepath_oldlen,increase,"-I\"%s\" ",temp());
     else
-       sprintf(G__allincludepath+strlen(G__allincludepath) ,"-I%s ",temp());
+       G__snprintf(G__allincludepath+allincludepath_oldlen,increase,"-I%s ",temp());
   }
   else {
     G__genericerror("Internal error: memory allocation failed for includepath buffer");
@@ -4295,8 +4302,9 @@ void G__add_ipath(const char *path)
 
 
   /* copy the path name */
-  ipath->pathname = (char *)malloc((size_t)(strlen(temp)+1));
-  strcpy(ipath->pathname,temp); // Okay, we allocated the right size
+  size_t templen = (size_t)(strlen(temp)+1);
+  ipath->pathname = (char *)malloc(templen);
+  G__strlcpy(ipath->pathname,temp,templen); // Okay, we allocated the right size
 
   /* allocate next entry */
   ipath->next=(struct G__includepath *)malloc(sizeof(struct G__includepath));
@@ -9999,16 +10007,10 @@ void G__cpplink_memfunc(FILE *fp)
               fprintf(fp, "\"%s\", %d, ", funcname(), hash);
               //04-07-07 print the mangled name after the funcname and hash
               if(G__dicttype!=kCompleteDictionary){
-                if( isdestructor && ifunc_destructor->mangled_name[j])
-                  fprintf(fp,"\"%s\",", ifunc_destructor->mangled_name[j]);
-                else
-                  fprintf(fp,"0,");
+                fprintf(fp,"0,");
               }
 
-              if (0 == isdestructor)
-                fprintf(fp, "%s, ", G__map_cpp_funcname(i, funcname, j, page));
-              else
-                fprintf(fp, "(G__InterfaceMethod) NULL, ");
+              fprintf(fp, "%s, ", G__map_cpp_funcname(i, funcname, j, page));
 
               fprintf(fp, "(int) ('y'), ");
               fprintf(fp, "-1, "); /* tagnum */
@@ -12371,6 +12373,9 @@ void G__specify_link(int link_stub)
       param_sb = p+1;
       char* param = param_sb;
       p = strrchr(param,')');
+      if (p==0) {
+         return;
+      }
       *p='\0';
       G__SetGlobalcomp(funcname,param,globalcomp);
       if(rfUseStubs) G__SetForceStub(funcname,param);

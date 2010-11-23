@@ -77,6 +77,7 @@ ClassImp(RooPlot)
 RooPlot::RooPlot() : _hist(0), _plotVarClone(0), _plotVarSet(0), _normVars(0), _normObj(0), _dir(0)
 {
   // Default constructor
+  // coverity[UNINIT_CTOR]
 
   _iterator= _items.MakeIterator() ;
 
@@ -580,6 +581,7 @@ void RooPlot::printValue(ostream& os) const
     }
     if(obj->IsA()->InheritsFrom(RooPrintable::Class())) {
       RooPrintable* po = dynamic_cast<RooPrintable*>(obj) ;
+      // coverity[FORWARD_NULL]
       po->printStream(os,kClassName|kName,kInline) ;
     }
     // is it a TNamed subclass?
@@ -616,7 +618,9 @@ void RooPlot::printMultiline(ostream& os, Int_t /*content*/, Bool_t verbose, TSt
       // Is this a printable object?
       if(obj->IsA()->InheritsFrom(RooPrintable::Class())) {
 	RooPrintable* po = dynamic_cast<RooPrintable*>(obj) ;
-	po->printStream(os,kName|kClassName|kArgs|kExtras,kSingleLine) ;
+	if (po) {
+	  po->printStream(os,kName|kClassName|kArgs|kExtras,kSingleLine) ;
+	}
       }
       // is it a TNamed subclass?
       else {
@@ -823,7 +827,7 @@ Bool_t RooPlot::setDrawOptions(const char *name, TString options)
   if(0 == link) return kFALSE;
 
   DrawOpt opt(link->GetOption()) ;
-  strcpy(opt.drawOptions,options) ;
+  strlcpy(opt.drawOptions,options,128) ;
   link->SetOption(opt.rawOpt());
   return kTRUE;
 }
@@ -852,10 +856,10 @@ void RooPlot::setInvisible(const char* name, Bool_t flag)
 
   if(link) {
     opt.initialize(link->GetOption()) ;
+    opt.invisible = flag ;
+    link->SetOption(opt.rawOpt()) ;
   }
 
-  opt.invisible = flag ;
-  link->SetOption(opt.rawOpt()) ;
 }
 
 
@@ -955,7 +959,7 @@ void RooPlot::DrawOpt::initialize(const char* inRawOpt)
     invisible=kFALSE ;
     return ;
   }
-  strcpy(drawOptions,inRawOpt) ;
+  strlcpy(drawOptions,inRawOpt,128) ;
   strtok(drawOptions,":") ;
   const char* extraOpt = strtok(0,":") ;
   if (extraOpt) {
@@ -969,9 +973,9 @@ const char* RooPlot::DrawOpt::rawOpt() const
 {
   // Return the raw draw options
   static char buf[128] ;
-  strcpy(buf,drawOptions) ;
+  strlcpy(buf,drawOptions,128) ;
   if (invisible) {
-    strcat(buf,":I") ;
+    strlcat(buf,":I",128) ;
   }
   return buf ;
 }

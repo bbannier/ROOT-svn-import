@@ -29,6 +29,7 @@
 #include "TMath.h"
 #include "RooRealVar.h"
 #include "RooBMixDecay.h"
+#include "RooRealIntegral.h"
 #include "RooRandom.h"
 
 ClassImp(RooBMixDecay) 
@@ -152,6 +153,7 @@ Double_t RooBMixDecay::coefAnalyticalIntegral(Int_t basisIndex, Int_t code, cons
     if (basisIndex==_basisCos) {
       return 0.0 ;
     }
+    break ;
 
     // Integration over 'mixState'
   case 2:
@@ -161,6 +163,7 @@ Double_t RooBMixDecay::coefAnalyticalIntegral(Int_t basisIndex, Int_t code, cons
     if (basisIndex==_basisCos) {
       return 0.0 ;
     }
+    break ;
 
     // Integration over 'tagFlav'
   case 1:
@@ -170,6 +173,8 @@ Double_t RooBMixDecay::coefAnalyticalIntegral(Int_t basisIndex, Int_t code, cons
     if (basisIndex==_basisCos) {
       return 2.0*coefficient(basisIndex) ;
     }
+    break ;
+
   default:
     assert(0) ;
   }

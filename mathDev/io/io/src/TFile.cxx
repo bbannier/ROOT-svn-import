@@ -1277,9 +1277,9 @@ void TFile::Map()
       frombuf(buffer, &nwhc);
       for (int i = 0;i < nwhc; i++) frombuf(buffer, &classname[i]);
       classname[(int)nwhc] = '\0'; //cast to avoid warning with gcc3.4
-      if (idcur == fSeekFree) strcpy(classname,"FreeSegments");
-      if (idcur == fSeekInfo) strcpy(classname,"StreamerInfo");
-      if (idcur == fSeekKeys) strcpy(classname,"KeysList");
+      if (idcur == fSeekFree) strlcpy(classname,"FreeSegments",512);
+      if (idcur == fSeekInfo) strlcpy(classname,"StreamerInfo",512);
+      if (idcur == fSeekKeys) strlcpy(classname,"KeysList",512);
       TDatime::GetDateTime(datime, date, time);
       if (objlen != nbytes-keylen) {
          Float_t cx = Float_t(objlen+keylen)/Float_t(nbytes);
@@ -2502,23 +2502,24 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
          if (cl->GetSchemaRules()) {
             rules = cl->GetSchemaRules()->FindRules(cl->GetName(), info->GetClassVersion());
             TString strrule;
-            for(Int_t art = 0; art < rules->GetEntries(); ++art) {
-               ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)rules->At(art);
-               strrule.Clear();
-               if (genreflex) {
-                  rule->AsString(strrule,"x");
-                  strrule.Append("\n");
-                  if ( selections.Index(strrule) == kNPOS ) {
-                     selections.Append(strrule);
+            if (rules) {
+               for(Int_t art = 0; art < rules->GetEntries(); ++art) {
+                  ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)rules->At(art);
+                  strrule.Clear();
+                  if (genreflex) {
+                     rule->AsString(strrule,"x");
+                     strrule.Append("\n");
+                     if ( selections.Index(strrule) == kNPOS ) {
+                        selections.Append(strrule);
+                     }
+                  } else {
+                     rule->AsString(strrule);
+                     if (strncmp(strrule.Data(),"type=",5)==0) {
+                        strrule.Remove(0,5);
+                     }
+                     fprintf(fp,"#pragma %s;\n",strrule.Data());
                   }
-               } else {
-                  rule->AsString(strrule);
-                  if (strncmp(strrule.Data(),"type=",5)==0) {
-                     strrule.Remove(0,5);
-                  }
-                  fprintf(fp,"#pragma %s;\n",strrule.Data());
                }
-
             }
             delete rules;
          }
@@ -2560,6 +2561,23 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
                   }
                   break;
                }
+            default:
+               if (strncmp(key->GetName(),"pair<",strlen("pair<"))==0) {
+                  if (genreflex) {
+                     tmp.Form("<class name=\"%s\" />\n",key->GetName());
+                     if ( selections.Index(tmp) == kNPOS ) {
+                        selections.Append(tmp);
+                     }
+                     tmp.Form("template class %s;\n",key->GetName());
+                     if ( instances.Index(tmp) == kNPOS ) {
+                        instances.Append(tmp);
+                     }
+                  } else {
+                     what.ReplaceAll("std::","");
+                     fprintf(fp,"#pragma link C++ class %s+;\n",key->GetName());
+                  }
+               }
+               break;
             }
          }
          continue;
@@ -3114,6 +3132,9 @@ TFile *TFile::Open(const char *url, Option_t *options, const char *ftitle,
       return f;
    }
 
+   TString expandedUrl(url);
+   gSystem->ExpandPathName(expandedUrl);
+
    // If a timeout has been specified extract the value and try to apply it (it requires
    // support for asynchronous open, though; the following is completely transparent if
    // such support if not available for the required protocol)
@@ -3130,7 +3151,7 @@ TFile *TFile::Open(const char *url, Option_t *options, const char *ftitle,
          sto.Insert(0, "TIMEOUT=");
          opts.ReplaceAll(sto, "");
          // Asynchrounous open
-         TFileOpenHandle *fh = TFile::AsyncOpen(url, opts, ftitle, compress, netopt);
+         TFileOpenHandle *fh = TFile::AsyncOpen(expandedUrl, opts, ftitle, compress, netopt);
          // Check the result in steps of 1 millisec
          TFile::EAsyncOpenStatus aos = TFile::kAOSNotAsync;
          aos = TFile::GetAsyncOpenStatus(fh);
@@ -3152,7 +3173,7 @@ TFile *TFile::Open(const char *url, Option_t *options, const char *ftitle,
             }
          } else {
             if (xtms <= 0)
-               ::Error("TFile::Open", "timeout expired while opening '%s'", url);
+               ::Error("TFile::Open", "timeout expired while opening '%s'", expandedUrl.Data());
             // Cleanup the request
             SafeDelete(fh);
          }
@@ -3168,7 +3189,7 @@ TFile *TFile::Open(const char *url, Option_t *options, const char *ftitle,
    const char *option = opts;
 
    // Many URLs? Redirect output and print errors in case of global failure
-   TString namelist(url);
+   TString namelist(expandedUrl);
    Ssiz_t ip = namelist.Index("|");
    Bool_t rediroutput = (ip != kNPOS &&
                          ip != namelist.Length()-1 && gDebug <= 0) ? kTRUE : kFALSE;
@@ -3337,6 +3358,7 @@ TFileOpenHandle *TFile::AsyncOpen(const char *url, Option_t *option,
 
    // Many URLs? Redirect output and print errors in case of global failure
    TString namelist(url);
+   gSystem->ExpandPathName(namelist);
    Ssiz_t ip = namelist.Index("|");
    Bool_t rediroutput = (ip != kNPOS &&
                          ip != namelist.Length()-1 && gDebug <= 0) ? kTRUE : kFALSE;

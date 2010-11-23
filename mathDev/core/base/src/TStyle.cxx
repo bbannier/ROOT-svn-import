@@ -1052,8 +1052,8 @@ void TStyle::SetLineStyleString(Int_t i, const char *text)
    char *l;
    Int_t nch = strlen(text);
    char *st = new char[nch+10];
-   sprintf(st," ");
-   strcat(st,text);
+   snprintf(st,nch+10," ");
+   strlcat(st,text,nch+10);
    l = strstr(st,"["); if (l) l[0] = ' ';
    l = strstr(st,"]"); if (l) l[0] = ' ';
    if (i >= 1 && i <= 29) fLineStyle[i] = st;
@@ -1403,6 +1403,10 @@ void TStyle::SetTimeOffset(Double_t toffset)
    // one has to set an offset time that will be added to the axis begining,
    // in order to plot times correctly and conveniently. A convenient way to
    // set the time offset is to use TDatime::Convert().
+   //
+   // By default the time offset is set to 788918400 which corresponds to
+   // 01/01/1995. This allows to have valid dates until 2072. The standard
+   // UNIX time offset in 1970 allows only valid dates until 2030.
 
    fTimeOffset = toffset;
 }

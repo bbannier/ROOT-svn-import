@@ -4,7 +4,7 @@
 # Author: Gerardo Ganis, 7/4/2003
 
 MODNAME      := rpdutils
-MODDIR       := net/$(MODNAME)
+MODDIR       := $(ROOT_SRCDIR)/net/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -15,13 +15,13 @@ RPDUTILDIRI  := $(RPDUTILDIR)/inc
 ##### $(RPDUTILO) #####
 RPDUTILH     := $(wildcard $(MODDIRI)/*.h)
 RPDUTILS     := $(wildcard $(MODDIRS)/*.cxx)
-RPDUTILO     := $(RPDUTILS:.cxx=.o)
+RPDUTILO     := $(call stripsrc,$(RPDUTILS:.cxx=.o))
 
 RPDUTILDEP   := $(RPDUTILO:.o=.d)
 
 ##### for libSrvAuth #####
 SRVAUTHS     := $(MODDIRS)/rpdutils.cxx $(MODDIRS)/ssh.cxx
-SRVAUTHO     := $(SRVAUTHS:.cxx=.o)
+SRVAUTHO     := $(call stripsrc,$(SRVAUTHS:.cxx=.o))
 
 SRVAUTHLIB   := $(LPATH)/libSrvAuth.$(SOEXT)
 
@@ -53,11 +53,11 @@ ifneq ($(GLOBUSLIB),)
 GLBSFLAGS     := $(GLOBUSINCDIR:%=-I%)
 GLBSLIBS      := $(GLOBUSLIBDIR) $(GLOBUSLIB)
 SRVAUTHS      += $(MODDIRS)/globus.cxx
-SRVAUTHO      += $(MODDIRS)/globus.o
+SRVAUTHO      += $(call stripsrc,$(MODDIRS)/globus.o)
 else
 GLBSFLAGS     := $(SSLINCDIR:%=-I%)
 RPDUTILS      := $(filter-out $(MODDIRS)/globus.cxx,$(RPDUTILS))
-RPDUTILO      := $(filter-out $(MODDIRS)/globus.o,$(RPDUTILO))
+RPDUTILO      := $(filter-out $(call stripsrc,$(MODDIRS)/globus.o),$(RPDUTILO))
 GLBSLIBS      += $(SSLLIBDIR) $(SSLLIB)
 endif
 
@@ -82,10 +82,10 @@ INCLUDEFILES  += $(RPDUTILDEP)
 include/%.h:    $(RPDUTILDIRI)/%.h
 		cp $< $@
 
-$(SRVAUTHLIB):  $(SRVAUTHO) $(RSAO) $(DAEMONUTILSO) $(ORDER_) $(MAINLIBS) $(SRVAUTHLIBDEP)
+$(SRVAUTHLIB):  $(SRVAUTHO) $(RSAO) $(DAEMONUTILSO) $(STRLCPYO) $(ORDER_) $(MAINLIBS) $(SRVAUTHLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libSrvAuth.$(SOEXT) $@ "$(SRVAUTHO) $(RSAO)" \
-		   "$(SRVAUTHLIBEXTRA) $(DAEMONUTILSO) $(CRYPTLIBS) $(AUTHLIBS)"
+		   "$(SRVAUTHLIBEXTRA) $(DAEMONUTILSO) $(STRLCPYO) $(CRYPTLIBS) $(AUTHLIBS)"
 
 all-$(MODNAME): $(RPDUTILO) $(SRVAUTHLIB)
 

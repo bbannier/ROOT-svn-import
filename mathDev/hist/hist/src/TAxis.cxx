@@ -235,6 +235,7 @@ void TAxis::Copy(TObject &obj) const
    ((TAxis&)obj).fTimeFormat   = fTimeFormat;
    ((TAxis&)obj).fTimeDisplay  = fTimeDisplay;
    ((TAxis&)obj).fParent       = fParent;
+   ((TAxis&)obj).fLabels       = 0;
    if (fLabels) {
       for (Int_t i=1;i<=fNbins;i++) ((TAxis&)obj).SetBinLabel(i,this->GetBinLabel(i));
    }
@@ -1084,4 +1085,20 @@ void TAxis::UnZoom()
          hobj->GetXaxis()->SetRange(0,0);
       }
    }
+}
+
+//______________________________________________________________________________
+void TAxis::ZoomOut(Double_t factor, Double_t offset)
+{
+   // Zoom out by a factor of 'factor' (default =2)
+   //   uses previous zoom factor by default
+   // Keep center defined by 'offset' fixed
+   //   ie. -1 at left of current range, 0 in center, +1 at right
+   
+   if (factor <= 0) factor = 2;
+   Double_t center = (GetFirst()*(1-offset) + GetLast()*(1+offset))/2.;
+   Int_t first = int(TMath::Floor(center+(GetFirst()-center)*factor + 0.4999999));
+   Int_t last  = int(TMath::Floor(center+(GetLast() -center)*factor + 0.5000001));
+   if (first==GetFirst() && last==GetLast()) { first--; last++; }
+   SetRange(first,last);
 }

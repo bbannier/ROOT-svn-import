@@ -250,8 +250,8 @@ void RooAbsData::setDirtyProp(Bool_t flag)
 
 
 //_____________________________________________________________________________
-RooAbsData* RooAbsData::reduce(RooCmdArg arg1,RooCmdArg arg2,RooCmdArg arg3,RooCmdArg arg4,
-			       RooCmdArg arg5,RooCmdArg arg6,RooCmdArg arg7,RooCmdArg arg8) 
+RooAbsData* RooAbsData::reduce(const RooCmdArg& arg1,const RooCmdArg& arg2,const RooCmdArg& arg3,const RooCmdArg& arg4,
+			       const RooCmdArg& arg5,const RooCmdArg& arg6,const RooCmdArg& arg7,const RooCmdArg& arg8) 
 {
   // Create a reduced copy of this dataset. The caller takes ownership of the returned dataset
   //
@@ -515,7 +515,7 @@ TH1 *RooAbsData::createHistogram(const char* varNameList, Int_t xbins, Int_t ybi
 
   // Parse list of variable names
   char buf[1024] ;
-  strcpy(buf,varNameList) ;
+  strlcpy(buf,varNameList,1024) ;
   char* varName = strtok(buf,",:") ;
   
   RooRealVar* xvar = (RooRealVar*) get()->find(varName) ;
@@ -1204,8 +1204,8 @@ RooPlot* RooAbsData::statOn(RooPlot* frame, const char* what, const char *label,
 
   // create the box and set its options
   TPaveText *box= new TPaveText(xmin,ymax,xmax,ymin,"BRNDC");
-  box->SetName(Form("%s_statBox",GetName())) ;
   if(!box) return 0;
+  box->SetName(Form("%s_statBox",GetName())) ;
   box->SetFillColor(0);
   box->SetBorderSize(1);
   box->SetTextAlign(12);
@@ -1213,7 +1213,6 @@ RooPlot* RooAbsData::statOn(RooPlot* frame, const char* what, const char *label,
   box->SetFillStyle(1001);
 
   // add formatted text for each statistic
-  TText *text = 0;
   RooRealVar N("N","Number of Events",sumEntries(cutSpec,cutRange));
   N.setPlotLabel("Entries") ;
   RooRealVar *meanv= meanVar(*(RooRealVar*)frame->getPlotVar(),cutSpec,cutRange);
@@ -1230,9 +1229,9 @@ RooPlot* RooAbsData::statOn(RooPlot* frame, const char* what, const char *label,
     meanText= meanv->format(*formatCmd);
     NText= N.format(*formatCmd);
   }
-  if (showR) text= box->AddText(rmsText->Data());
-  if (showM) text= box->AddText(meanText->Data());
-  if (showN) text= box->AddText(NText->Data());
+  if (showR) box->AddText(rmsText->Data());
+  if (showM) box->AddText(meanText->Data());
+  if (showN) box->AddText(NText->Data());
 
   // cleanup heap memory
   delete NText;
@@ -1242,7 +1241,7 @@ RooPlot* RooAbsData::statOn(RooPlot* frame, const char* what, const char *label,
   delete rms;
 
   // add the optional label if specified
-  if(showLabel) text= box->AddText(label);
+  if(showLabel) box->AddText(label);
 
   frame->addObject(box) ;
   return frame ;
@@ -1343,7 +1342,7 @@ TH1 *RooAbsData::fillHistogram(TH1 *hist, const RooArgList &plotVars, const char
       cutVec.push_back(cutRange) ;
     } else {
       char* buf = new char[strlen(cutRange)+1] ;
-      strcpy(buf,cutRange) ;
+      strlcpy(buf,cutRange,strlen(cutRange)+1) ;
       const char* oneRange = strtok(buf,",") ;
       while(oneRange) {
 	cutVec.push_back(oneRange) ;

@@ -261,7 +261,7 @@ extern "C" {
 #endif
 
 #if defined(R__MACOSX) && !defined(__xlC__) && !defined(__i386__) && \
-   !defined(__x86_64__)
+   !defined(__x86_64__) && !defined(__arm__)
 #include <fenv.h>
 #include <signal.h>
 #include <ucontext.h>
@@ -282,7 +282,7 @@ enum {
 };
 #endif
 
-#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__))
+#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
 #include <fenv.h>
 #endif
 // End FPE handling includes
@@ -367,7 +367,7 @@ static const char *GetExePath()
 
       // get our pid and build the name of the link in /proc
       pid = getpid();
-      sprintf(linkname, "/proc/%i/exe", pid);
+      snprintf(linkname,64, "/proc/%i/exe", pid);
       int ret = readlink(linkname, buf, kMAXPATHLEN);
       if (ret > 0 && ret < kMAXPATHLEN) {
          buf[ret] = 0;
@@ -790,11 +790,15 @@ Int_t TUnixSystem::GetFPEMask()
 #endif
 #endif
 
-#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__))
+#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
    fenv_t oldenv;
    fegetenv(&oldenv);
    fesetenv(&oldenv);
+#if defined(__arm__)
+   Int_t oldmask = ~oldenv.__fpscr;
+#else
    Int_t oldmask = ~oldenv.__control;
+#endif
 
    if (oldmask & FE_INVALID  )   mask |= kInvalid;
    if (oldmask & FE_DIVBYZERO)   mask |= kDivByZero;
@@ -806,7 +810,7 @@ Int_t TUnixSystem::GetFPEMask()
 #endif
 
 #if defined(R__MACOSX) && !defined(__xlC__) && !defined(__i386__) && \
-   !defined(__x86_64__)
+   !defined(__x86_64__) && !defined(__arm__)
    Long64_t oldmask;
    fegetenvd(oldmask);
 
@@ -863,7 +867,7 @@ Int_t TUnixSystem::SetFPEMask(Int_t mask)
 #endif
 #endif
 
-#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__))
+#if defined(R__MACOSX) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
    Int_t newm = 0;
    if (mask & kInvalid  )   newm |= FE_INVALID;
    if (mask & kDivByZero)   newm |= FE_DIVBYZERO;
@@ -873,12 +877,16 @@ Int_t TUnixSystem::SetFPEMask(Int_t mask)
 
    fenv_t cur;
    fegetenv(&cur);
+#if defined(__arm__)
+   cur.__fpscr &= ~newm;
+#else
    cur.__control &= ~newm;
+#endif
    fesetenv(&cur);
 #endif
 
 #if defined(R__MACOSX) && !defined(__xlC__) && !defined(__i386__) && \
-   !defined(__x86_64__)
+   !defined(__x86_64__) && !defined(__arm__)
    Int_t newm = 0;
    if (mask & kInvalid  )   newm |= FE_ENABLE_INVALID;
    if (mask & kDivByZero)   newm |= FE_ENABLE_DIVBYZERO;
@@ -2734,8 +2742,8 @@ const char *TUnixSystem::GetLinkedLibraries()
       // it's not a dll and exe doesn't end on ".exe";
       // need to add it for cygcheck to find it:
       char* longerexe = new char[lenexe + 5];
-      strcpy(longerexe, exe);
-      strcat(longerexe, ".exe");
+      strlcpy(longerexe, exe,lenexe+5);
+      strlcat(longerexe, ".exe",lenexe+5);
       delete [] exe;
       exe = longerexe;
    }
@@ -4751,8 +4759,8 @@ static void GetDarwinMemInfo(MemInfo_t *meminfo)
       char fname [MAXNAMLEN];
       if (strncmp(dp->d_name, "swapfile", 8))
          continue;
-      strcpy(fname, "/private/var/vm/");
-      strcat (fname, dp->d_name);
+      strlcpy(fname, "/private/var/vm/",MAXNAMLEN);
+      strlcat (fname, dp->d_name,MAXNAMLEN);
       if (stat(fname, &sb) < 0)
          continue;
       swap_total += sb.st_size;

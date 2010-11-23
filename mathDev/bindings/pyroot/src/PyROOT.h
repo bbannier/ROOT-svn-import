@@ -62,6 +62,9 @@
 #define PyROOT_PyUnicode_InternFromString   PyString_InternFromString
 #define PyROOT_PyUnicode_Append             PyString_Concat
 #define PyROOT_PyUnicode_AppendAndDel       PyString_ConcatAndDel
+#define PyROOT_PyUnicode_FromStringAndSize  PyString_FromStringAndSize
+
+#define PyROOT_PyUnicode_Type PyString_Type
 
 #define PYROOT__long__ "__long__"
 #define PYROOT__idiv__ "__idiv__"
@@ -82,6 +85,9 @@
 #define PyROOT_PyUnicode_InternFromString   PyUnicode_InternFromString
 #define PyROOT_PyUnicode_Append             PyUnicode_Append
 #define PyROOT_PyUnicode_AppendAndDel       PyUnicode_AppendAndDel
+#define PyROOT_PyUnicode_FromStringAndSize  PyUnicode_FromStringAndSize
+
+#define PyROOT_PyUnicode_Type PyUnicode_Type
 
 #define PyIntObject          PyLongObject
 #define PyInt_Check          PyLong_Check
@@ -102,6 +108,8 @@
 #define Py_TPFLAGS_CHECKTYPES 0
 
 #define PyClass_Check   PyType_Check
+
+#define PyBuffer_Type   PyMemoryView_Type
 #endif  // ! 3.0
 
 // feature of 3.0 not in 2.5 and earlier

@@ -759,15 +759,6 @@ struct G__filetable {
 #endif
 
 /**************************************************************************
-* user specified pragma statement
-**************************************************************************/
-struct G__AppPragma {
-  char *name;
-  void *p2f;
-  struct G__AppPragma *next;
-};
-
-/**************************************************************************
 * Flag to check global operator new/delete()
 **************************************************************************/
 #define G__IS_OPERATOR_NEW        0x01
@@ -1293,7 +1284,9 @@ public:
    };
 
    NameMap() {}
-   void Insert(const char* name, int idx) { fMap[name].insert(idx); }
+   void Insert(const char* name, int idx) {
+      fMap[name].insert(idx); 
+   }
    void Remove(const char* name, int idx) {
       NameMap_t::iterator iMap = fMap.find(name);
       if (iMap != fMap.end()) {
@@ -1307,6 +1300,13 @@ public:
       if (iMap != fMap.end() && !iMap->second.empty())
          return Range(iMap->second);
       return Range();
+   }
+   void Print() {
+      NameMap_t::iterator iMap = fMap.begin();
+      while( iMap != fMap.end() ) {
+         fprintf(stderr,"key=%s size=%ld\n",iMap->first,(long)iMap->second.size());
+         ++iMap;
+      }  
    }
    
 private:
@@ -1438,6 +1438,24 @@ struct G__tempobject_list {
 #ifdef __cplusplus
 #include "FastAllocString.h"
 using namespace Cint::Internal;
+
+/**************************************************************************
+ * user specified pragma statement
+ **************************************************************************/
+extern "C" {
+   typedef void (*G__AppPragma_func_t)(char*);
+}
+
+struct G__AppPragma {
+
+   G__FastAllocString name;
+   G__AppPragma_func_t p2f;
+   struct G__AppPragma *next;
+
+   G__AppPragma(char *comname, G__AppPragma_func_t p2f);
+   ~G__AppPragma();
+};
+
 #endif
 
 #endif /* G__COMMON_H */

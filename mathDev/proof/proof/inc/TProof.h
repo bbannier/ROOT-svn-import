@@ -124,9 +124,10 @@ class TMacro;
 // 27 -> 28: Support for multi-datasets, fix global pack dirs, fix AskStatistics,
 //           package download, dataset caching
 // 28 -> 29: Support for config parameters in EnablePackage, idle-timeout
+// 29 -> 30: Add information about data dir in TSlaveInfo
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 29;            // protocol version number
+const Int_t       kPROOF_Protocol        = 30;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -164,7 +165,7 @@ const char* const kGUNZIP = "gunzip";
 
 R__EXTERN TVirtualMutex *gProofMutex;
 
-typedef void (*PrintProgress_t)(Long64_t tot, Long64_t proc, Float_t proctime);
+typedef void (*PrintProgress_t)(Long64_t tot, Long64_t proc, Float_t proctime, Long64_t bytes);
 
 // Structure for the progress information
 class TProofProgressInfo : public TObject {
@@ -225,15 +226,17 @@ public:
    TString      fOrdinal;      //slave ordinal
    TString      fHostName;     //hostname this slave is running on
    TString      fMsd;          //mass storage domain slave is in
+   TString      fDataDir;      //directory for user data
    Int_t        fPerfIndex;    //relative performance of this slave
    SysInfo_t    fSysInfo;      //Infomation about its hardware
    ESlaveStatus fStatus;       //slave status
 
    TSlaveInfo(const char *ordinal = "", const char *host = "", Int_t perfidx = 0,
-              const char *msd = "") :
-              fOrdinal(ordinal), fHostName(host), fMsd(msd),
+              const char *msd = "", const char *datadir = "") :
+              fOrdinal(ordinal), fHostName(host), fMsd(msd), fDataDir(datadir),
               fPerfIndex(perfidx), fSysInfo(), fStatus(kNotActive) { }
 
+   const char *GetDataDir() const { return fDataDir; }
    const char *GetMsd() const { return fMsd; }
    const char *GetName() const { return fHostName; }
    const char *GetOrdinal() const { return fOrdinal; }
@@ -245,7 +248,7 @@ public:
    Bool_t IsSortable() const { return kTRUE; }
    void   Print(Option_t *option="") const;
 
-   ClassDef(TSlaveInfo,3) //basic info on slave
+   ClassDef(TSlaveInfo,4) //basic info on workers
 };
 
 // Merger info class
@@ -627,10 +630,10 @@ private:
    Int_t    BroadcastObject(const TObject *obj, Int_t kind = kMESS_OBJECT, ESlaves list = kActive);
    Int_t    BroadcastRaw(const void *buffer, Int_t length, TList *slaves);
    Int_t    BroadcastRaw(const void *buffer, Int_t length, ESlaves list = kActive);
-   Int_t    Collect(const TSlave *sl, Long_t timeout = -1, Int_t endtype = -1);
-   Int_t    Collect(TMonitor *mon, Long_t timeout = -1, Int_t endtype = -1);
-   Int_t    CollectInputFrom(TSocket *s, Int_t endtype = -1);
-   Int_t    HandleInputMessage(TSlave *wrk, TMessage *m);
+   Int_t    Collect(const TSlave *sl, Long_t timeout = -1, Int_t endtype = -1, Bool_t deactonfail = kFALSE);
+   Int_t    Collect(TMonitor *mon, Long_t timeout = -1, Int_t endtype = -1, Bool_t deactonfail = kFALSE);
+   Int_t    CollectInputFrom(TSocket *s, Int_t endtype = -1, Bool_t deactonfail = kFALSE);
+   Int_t    HandleInputMessage(TSlave *wrk, TMessage *m, Bool_t deactonfail = kFALSE);
    void     HandleSubmerger(TMessage *mess, TSlave *sl);
    void     SetMonitor(TMonitor *mon = 0, Bool_t on = kTRUE);
 
@@ -665,7 +668,8 @@ private:
    void     DeActivateAsyncInput();
 
    Int_t    GetQueryReference(Int_t qry, TString &ref);
-   void     PrintProgress(Long64_t total, Long64_t processed, Float_t procTime = -1.);
+   void     PrintProgress(Long64_t total, Long64_t processed,
+                          Float_t procTime = -1.,  Long64_t bytesread = -1);
 
    // Managing mergers
    Bool_t   CreateMerger(TSlave *sl, Int_t port);
@@ -711,8 +715,8 @@ protected:
 
    virtual void SaveWorkerInfo();
 
-   Int_t    Collect(ESlaves list = kActive, Long_t timeout = -1, Int_t endtype = -1);
-   Int_t    Collect(TList *slaves, Long_t timeout = -1, Int_t endtype = -1);
+   Int_t    Collect(ESlaves list = kActive, Long_t timeout = -1, Int_t endtype = -1, Bool_t deactonfail = kFALSE);
+   Int_t    Collect(TList *slaves, Long_t timeout = -1, Int_t endtype = -1, Bool_t deactonfail = kFALSE);
 
    void         SetDSet(TDSet *dset) { fDSet = dset; }
    virtual void ValidateDSet(TDSet *dset);

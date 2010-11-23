@@ -80,7 +80,7 @@
 //           be of a type related to the one pointed to by the pointer.  It should be either
 //           a parent or derived class.
 //       * if splitlevel=0, the object is serialized in the branch buffer.
-//       * if splitlevel=1 (default), this branch will automatically be split
+//       * if splitlevel=1, this branch will automatically be split
 //           into subbranches, with one subbranch for each data member or object
 //           of the object itself. In case the object member is a TClonesArray,
 //           the mechanism described in case C is applied to this array.
@@ -1020,7 +1020,12 @@ Long64_t TTree::AutoSave(Option_t* option)
    TFile *file = fDirectory->GetFile();
    if (file) file->WriteStreamerInfo();
 
-   if (opt.Contains("saveself")) fDirectory->SaveSelf();
+   if (opt.Contains("saveself")) {
+      fDirectory->SaveSelf();
+      //the following line is required in case GetUserInfo contains a user class
+      //for which the StreamerInfo must be written. One could probably be a bit faster (Rene)
+      if (file) file->WriteHeader();
+   }
 
    return nbytes;
 }
@@ -1358,7 +1363,7 @@ Int_t TTree::Branch(const char* foldername, Int_t bufsize /* = 32000 */, Int_t s
          Int_t noccur = folder->Occurence(obj);
          if (noccur > 0) {
             snprintf(occur,20, "_%d", noccur);
-            strcat(curname, occur);  //intentional
+            strlcat(curname, occur,1000); 
          }
          TBranchElement* br = (TBranchElement*) Bronch(curname, obj->ClassName(), add, bufsize, splitlevel - 1);
          br->SetBranchFolder();
@@ -2252,22 +2257,22 @@ TFile* TTree::ChangeFile(TFile* file)
             snprintf(cunder,2000-Int_t(cunder-fname), "%s%d", uscore, fFileNumber);
             const char* cdot = strrchr(file->GetName(), '.');
             if (cdot) {
-               strcat(fname, cdot);  //intentional
+               strlcat(fname, cdot,2000); 
             }
          } else {
             char fcount[10];
             snprintf(fcount,10, "%s%d", uscore, fFileNumber);
-            strcat(fname, fcount);  //intentional
+            strlcat(fname, fcount,2000); 
          }
       } else {
          char* cdot = strrchr(fname, '.');
          if (cdot) {
             snprintf(cdot,2000-Int_t(fname-cdot), "%s%d", uscore, fFileNumber);
-            strcat(fname, strrchr(file->GetName(), '.'));  //intentional
+            strlcat(fname, strrchr(file->GetName(), '.'),2000); 
          } else {
             char fcount[10];
             snprintf(fcount,10, "%s%d", uscore, fFileNumber);
-            strcat(fname, fcount);  //intentional
+            strlcat(fname, fcount,2000); 
          }
       }
       if (gSystem->AccessPathName(fname)) {
@@ -5821,14 +5826,24 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    //    T.ReadFile("file1.dat","branch descriptor");
    //    T.ReadFile("file2.dat");
 
-   gTree = this;
    std::ifstream in;
    in.open(filename);
    if (!in.good()) {
       Error("ReadFile","Cannot open file: %s",filename);
       return 0;
    }
+   return ReadStream(in, branchDescriptor);
+}
 
+//______________________________________________________________________________
+Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor)
+{
+   // Create or simply read branches from an input stream.
+   //
+   // See reference information for TTree::ReadFile
+
+   gTree = this;
+   std::istream& in = inputStream;
    TBranch *branch;
    Int_t nbranches = fBranches.GetEntries();
    if (nbranches == 0) {
@@ -5840,7 +5855,9 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
       if (!nch) {
          in >> bd;
          if (!in.good()) {
-            Error("ReadFile","Error reading file: %s",filename);
+            delete [] bdname;
+            delete [] bd;
+            Error("ReadStream","Error reading stream");
             return 0;
          }
          in.ignore(8192,'\n');
@@ -5873,7 +5890,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
          branch = new TBranch(this,bdname,address,desc.Data(),32000);
          if (branch->IsZombie()) {
             delete branch;
-            Warning("ReadFile","Illegal branch definition: %s",bdcur);
+            Warning("ReadStream","Illegal branch definition: %s",bdcur);
          } else {
             fBranches.Add(branch);
             branch->SetAddress(0);
@@ -5904,7 +5921,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
             if (in.eof()) return nlines;
             status = in.good();
             if (!status) {
-               Warning("ReadFile","Illegal value after line %lld\n",nlines);
+               Warning("ReadStream","Illegal value after line %lld\n",nlines);
                in.clear();
                break;
             }

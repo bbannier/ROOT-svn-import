@@ -1019,7 +1019,7 @@ void TString::ReadBuffer(char *&buffer)
       nchars = nwh;
 
    if (nchars < 0) {
-      Printf("Error in TString::ReadBuffer, found case with nwh=%d and nchars=%d", nwh, nchars);
+      Error("ReadBuffer", "found case with nwh=%d and nchars=%d", nwh, nchars);
       return;
    }
    fData = TStringRef::GetRep(nchars, nchars)->Data();
@@ -1090,14 +1090,37 @@ void TString::Streamer(TBuffer &b)
    UChar_t nwh;
    if (b.IsReading()) {
       b >> nwh;
-      if (nwh == 255)
-         b >> nbig;
-      else
-         nbig = nwh;
-      Pref()->UnLink();
-      fData = TStringRef::GetRep(nbig,nbig)->Data();
-      b.ReadFastArray(fData,nbig);
-      //for (int i = 0; i < nbig; i++) b >> fData[i];
+      if (nwh == 0) {
+         if (Pref()->References() > 1) {
+            Pref()->UnLink();
+            gNullStringRef->AddReference();
+            fData = gNullStringRef->Data();
+         } else {
+            // Clear string without changing its capacity.
+            fData[Pref()->fNchars = 0] = 0;
+         }
+      } else {
+         if (nwh == 255)
+            b >> nbig;
+         else
+            nbig = nwh;
+
+         if (Pref()->References() > 1 ||
+             Capacity() < nbig ||
+             Capacity() - nbig > GetMaxWaste()) {
+
+            Pref()->UnLink();
+            // We trying to optimize the I/O of TNamed in particular, so we duplicate
+            // some of the code in TStringRef::GetRep to save on the 'if statement'
+            // at the start of the function.
+            TStringRef *ret = (TStringRef*)new char[nbig + sizeof(TStringRef) + 1];
+            ret->fCapacity = nbig;
+            ret->SetRefCount(1);
+            fData = ret->Data();
+         }
+         fData[Pref()->fNchars = nbig] = 0; // Terminating null
+         b.ReadFastArray(fData,nbig);
+      }
    } else {
       nbig = Length();
       if (nbig > 254) {
@@ -1261,7 +1284,7 @@ TString operator+(const TString &s, Long_t i)
    // Add integer to string.
 
    char si[32];
-   sprintf(si, "%ld", i);
+   snprintf(si, sizeof(si), "%ld", i);
    return TString(s.Data(), s.Length(), si, strlen(si));
 }
 
@@ -1271,7 +1294,7 @@ TString operator+(const TString &s, ULong_t i)
    // Add integer to string.
 
    char si[32];
-   sprintf(si, "%lu", i);
+   snprintf(si, sizeof(si), "%lu", i);
    return TString(s.Data(), s.Length(), si, strlen(si));
 }
 
@@ -1281,7 +1304,7 @@ TString operator+(const TString &s, Long64_t i)
    // Add integer to string.
 
    char si[32];
-   sprintf(si, "%lld", i);
+   snprintf(si, sizeof(si), "%lld", i);
    return TString(s.Data(), s.Length(), si, strlen(si));
 }
 
@@ -1291,7 +1314,7 @@ TString operator+(const TString &s, ULong64_t i)
    // Add integer to string.
 
    char si[32];
-   sprintf(si, "%llu", i);
+   snprintf(si, sizeof(si), "%llu", i);
    return TString(s.Data(), s.Length(), si, strlen(si));
 }
 
@@ -1309,7 +1332,7 @@ TString operator+(Long_t i, const TString &s)
    // Add string to integer.
 
    char si[32];
-   sprintf(si, "%ld", i);
+   snprintf(si, sizeof(si), "%ld", i);
    return TString(si, strlen(si), s.Data(), s.Length());
 }
 
@@ -1319,7 +1342,7 @@ TString operator+(ULong_t i, const TString &s)
    // Add string to integer.
 
    char si[32];
-   sprintf(si, "%lu", i);
+   snprintf(si, sizeof(si), "%lu", i);
    return TString(si, strlen(si), s.Data(), s.Length());
 }
 
@@ -1329,7 +1352,7 @@ TString operator+(Long64_t i, const TString &s)
    // Add string to integer.
 
    char si[32];
-   sprintf(si, "%lld", i);
+   snprintf(si, sizeof(si), "%lld", i);
    return TString(si, strlen(si), s.Data(), s.Length());
 }
 
@@ -1339,7 +1362,7 @@ TString operator+(ULong64_t i, const TString &s)
    // Add string to integer.
 
    char si[32];
-   sprintf(si, "%llu", i);
+   snprintf(si, sizeof(si), "%llu", i);
    return TString(si, strlen(si), s.Data(), s.Length());
 }
 

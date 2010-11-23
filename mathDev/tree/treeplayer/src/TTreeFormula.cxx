@@ -1621,8 +1621,8 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                   Warning("DefinedVariable","No data member in content of %s in %s\n",
                            cl->GetName(),name.Data());
                }
-               if (1 || inside_cl) cl = inside_cl;
-               // if inside_cl is nul ... we have a problem of inconsistency :(
+               cl = inside_cl;
+               // if inside_cl is nul ... we have a problem of inconsistency.
             }
 
             if (!cl) {
@@ -4772,7 +4772,14 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
                }
             }
          } else {
-            snprintf(value,kMAXLENGTH,Form(" %%%sc",decform),' ');
+            if (isalpha(decform[strlen(decform)-1])) {
+               TString short_decform(decform);
+               short_decform.Remove(short_decform.Length()-1);
+               snprintf(value,kMAXLENGTH,Form(" %%%sc",short_decform.Data()),' ');               
+            } else {
+               snprintf(value,kMAXLENGTH,Form(" %%%sc",decform),' ');
+            }
+            
          }
       }
    }
@@ -4905,7 +4912,15 @@ void TTreeFormula::UpdateFormulaLeaves()
       names.Form("%s/%s",fLeafNames[i]->GetTitle(),fLeafNames[i]->GetName());
       TLeaf *leaf = fTree->GetLeaf(names);
       fLeaves[i] = leaf;
-      if (fBranches[i] && leaf) fBranches[i]=leaf->GetBranch();
+      if (fBranches[i] && leaf) {
+         fBranches[i]=leaf->GetBranch();
+         // Since sometimes we might no read all the branches for all the entries, we 
+         // might sometimes only read the branch count and thus reset the colleciton
+         // but might not read the data branches, to insure that a subsequent read 
+         // from TTreeFormula will properly load the data branches even if fQuickLoad is true,
+         // we reset the entry of all branches in the TTree.
+         ((TBranch*)fBranches[i])->ResetReadEntry();
+      }
       if (leaf==0) SetBit( kMissingLeaf );
    }
    for (Int_t j=0; j<kMAXCODES; j++) {
@@ -5231,7 +5246,7 @@ Bool_t TTreeFormula::LoadCurrentDim() {
             } else {
                // Since we do not read the full branch let's reset the read entry number
                // so that a subsequent read from TTreeFormula will properly load the full
-               // object event if fQuickLoad is true.
+               // object even if fQuickLoad is true.
                branchcount->TBranch::GetEntry(readentry);
                branchcount->ResetReadEntry();
             }

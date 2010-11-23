@@ -182,6 +182,7 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
 
       _ownData = kTRUE ;
     } else {
+      // coverity[DEADCODE]
       _dataClone = &indata ;
       _ownData = kFALSE ;
     }
@@ -196,8 +197,10 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
     if (realDepRLV && !realDepRLV->getBinning().isShareable()) {
 
       RooRealVar* datReal = dynamic_cast<RooRealVar*>(_dataClone->get()->find(realDepRLV->GetName())) ;
-      datReal->setBinning(realDepRLV->getBinning()) ;
-      datReal->attachDataSet(*_dataClone) ;
+      if (datReal) {
+	datReal->setBinning(realDepRLV->getBinning()) ;
+	datReal->attachDataSet(*_dataClone) ;
+      }
     }
   }
   delete iter9 ;

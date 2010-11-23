@@ -108,9 +108,10 @@ static Int_t SrvSetVars(string confdir)
       execdir = string(confdir).append("/bin");
    // Make it available to all the session via env
    if (execdir.length()) {
-      char *tmp = new char[15 + execdir.length()];
+      int len = 15 + execdir.length();
+      char *tmp = new char[len+1];
       if (tmp) {
-         sprintf(tmp, "ROOTBINDIR=%s", execdir.c_str());
+         snprintf(tmp,len+1, "ROOTBINDIR=%.*s", len, execdir.c_str());
          putenv(tmp);
       } else
          return -1;
@@ -121,9 +122,10 @@ static Int_t SrvSetVars(string confdir)
       etcdir = string(confdir).append("/etc");
    // Make it available to all the session via env
    if (etcdir.length()) {
-      char *tmp = new char[15 + etcdir.length()];
+      int len = 15 + etcdir.length();
+      char *tmp = new char[len+1];
       if (tmp) {
-         sprintf(tmp, "ROOTETCDIR=%s", etcdir.c_str());
+         snprintf(tmp, len+1, "ROOTETCDIR=%.*s", len, etcdir.c_str());
          putenv(tmp);
       } else
          return -1;
@@ -132,9 +134,10 @@ static Int_t SrvSetVars(string confdir)
    // If specified, set the special daemonrc file to be used
    string daemonrc = string(gEnv->GetValue("SrvAuth.DaemonRc",""));
    if (daemonrc.length()) {
-      char *tmp = new char[15 + daemonrc.length()];
+      int len = 15 + daemonrc.length();
+      char *tmp = new char[len+1];
       if (tmp) {
-         sprintf(tmp, "ROOTDAEMONRC=%s", daemonrc.c_str());
+         snprintf(tmp, len+1, "ROOTDAEMONRC=%.*s", len, daemonrc.c_str());
          putenv(tmp);
       } else
          return -1;
@@ -143,9 +146,10 @@ static Int_t SrvSetVars(string confdir)
    // If specified, set the special gridmap file to be used
    string gridmap = string(gEnv->GetValue("SrvAuth.GridMap",""));
    if (gridmap.length()) {
-      char *tmp = new char[15 + gridmap.length()];
+      int len = 15 + gridmap.length();
+      char *tmp = new char[len+1];
       if (tmp) {
-         sprintf(tmp, "GRIDMAP=%s", gridmap.c_str());
+         snprintf(tmp, len+1, "GRIDMAP=%.*s", len, gridmap.c_str());
          putenv(tmp);
       } else
          return -1;
@@ -154,9 +158,10 @@ static Int_t SrvSetVars(string confdir)
    // If specified, set the special hostcert.conf file to be used
    string hcconf = string(gEnv->GetValue("SrvAuth.HostCert",""));
    if (hcconf.length()) {
-      char *tmp = new char[15 + hcconf.length()];
+      int len = 15 + hcconf.length();
+      char *tmp = new char[len+1];
       if (tmp) {
-         sprintf(tmp, "ROOTHOSTCERT=%s", hcconf.c_str());
+         snprintf(tmp, len+1, "ROOTHOSTCERT=%.*s", len, hcconf.c_str());
          putenv(tmp);
       } else
          return -1;
@@ -165,25 +170,26 @@ static Int_t SrvSetVars(string confdir)
    return 0;
 }
 
+
 //______________________________________________________________________________
-void Err(int level, const char *msg)
+void Err(int level, const char *msg, int size)
 {
-   Perror((char *)msg);
+   Perror((char *)msg, size);
    if (level > -1) NetSend(level, kROOTD_ERR);
 }
 
 //______________________________________________________________________________
-void ErrFatal(int level, const char *msg)
+void ErrFatal(int level, const char *msg, int size)
 {
-   Perror((char *)msg);
+   Perror((char *)msg, size);
    if (level > -1) NetSend(msg, kMESS_STRING);
 }
 
 //______________________________________________________________________________
-void ErrSys(int level, const char *msg)
+void ErrSys(int level, const char *msg, int size)
 {
-   Perror((char *)msg);
-   ErrFatal(level, msg);
+   Perror((char *)msg, size);
+   ErrFatal(level, msg, size);
 }
 
 //______________________________________________________________________________
@@ -525,17 +531,17 @@ namespace ROOT {
    }
 
 //______________________________________________________________________________
-   void Perror(char *buf)
+   void Perror(char *buf, int size)
    {
       // Return in buf the message belonging to errno.
 
       int len = strlen(buf);
 #if (defined(__sun) && defined (__SVR4)) || defined (__linux) || \
    defined(_AIX) || defined(__MACH__)
-      sprintf(buf+len, " (%s)", strerror(GetErrno()));
+      snprintf(buf+len, size, " (%s)", strerror(GetErrno()));
 #else
       if (GetErrno() >= 0 && GetErrno() < sys_nerr)
-         sprintf(buf+len, " (%s)", sys_errlist[GetErrno()]);
+         snprintf(buf+len, size, " (%s)", sys_errlist[GetErrno()]);
 #endif
    }
 
@@ -570,7 +576,7 @@ namespace ROOT {
 
       // Actions are defined by the specific error handler (
       // see rootd.cxx and proofd.cxx)
-      if (func) (*func)(code,(const char *)buf);
+      if (func) (*func)(code,(const char *)buf, sizeof(buf));
    }
 
 } // namespace ROOT

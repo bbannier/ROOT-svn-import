@@ -163,6 +163,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fBoostWeight(0)
    , fErrorFraction(0)
    , fPruneStrength(0)
+   , fPruneMethod(DecisionTree::kNoPruning)
    , fPruneBeforeBoost(kFALSE)
    , fFValidationEvents(0)
    , fAutomatic(kFALSE)
@@ -198,6 +199,7 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fBoostWeight(0)
    , fErrorFraction(0)
    , fPruneStrength(0)
+   , fPruneMethod(DecisionTree::kNoPruning)
    , fPruneBeforeBoost(kFALSE)
    , fFValidationEvents(0)
    , fAutomatic(kFALSE)
@@ -477,8 +479,9 @@ void TMVA::MethodBDT::InitEventSample( void )
          if (first && event->GetWeight() < 0) {
             first = kFALSE;
             Log() << kINFO << "Events with negative event weights are ignored during "
-                  << "the BDT training (option IgnoreNegWeightsInTraining is now enabled)" 
+                  << "the BDT training (option IgnoreNegWeightsInTraining is now enabled)"
                   << Endl;
+            delete event;
             continue;
          }
          // if fAutomatic == true you need a validation sample to optimize pruning
@@ -1226,6 +1229,7 @@ void  TMVA::MethodBDT::ReadWeightsFromStream( istream& istr )
    //   Types::EAnalysisType analysisType;
    Int_t analysisType(0);
 
+   // coverity[tainted_data_argument]
    istr >> dummy >> fNTrees;
    Log() << kINFO << "Read " << fNTrees << " Decision trees" << Endl;
 

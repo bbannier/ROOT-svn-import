@@ -426,6 +426,20 @@ Int_t TXProofServ::CreateServer()
       SendAsynMessage(msg.Data());
    }
 
+   // Setup the idle timer
+   if (IsMaster() && !fIdleTOTimer) {
+      // Check activity on socket every 5 mins
+      Int_t idle_to = gEnv->GetValue("ProofServ.IdleTimeout", -1);
+      if (idle_to > 0) {
+         fIdleTOTimer = new TIdleTOTimer(this, idle_to * 1000);
+         fIdleTOTimer->Start(-1, kTRUE);
+         if (gProofDebugLevel > 0)
+            Info("CreateServer", " idle timer started (%d secs)", idle_to);
+      } else if (gProofDebugLevel > 0) {
+         Info("CreateServer", " idle timer not started (no idle timeout requested)");
+      }
+   }
+
    // Done
    return 0;
 }
@@ -993,12 +1007,8 @@ void TXProofServ::Terminate(Int_t status)
    // Notify the memory footprint
    ProcInfo_t pi;
    if (!gSystem->GetProcInfo(&pi)){
-      Info("Terminate", "process memory footprint: %ld kB virtual, %ld kB resident ",
-                        pi.fMemVirtual, pi.fMemResident);
-      if (fVirtMemHWM > 0 || fVirtMemMax > 0) {
-         Info("Terminate", "process virtual memory limits: %ld kB HWM, %ld kB max ",
-                           fVirtMemHWM, fVirtMemMax);
-      }
+      Info("Terminate", "process memory footprint: %ld/%ld kB virtual, %ld/%ld kB resident ",
+                        pi.fMemVirtual, fgVirtMemMax, pi.fMemResident, fgResMemMax);
    }
 
    // Deactivate current monitor, if any

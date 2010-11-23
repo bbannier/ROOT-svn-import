@@ -21,7 +21,7 @@
 #include "Math/IParamFunction.h"
 #include "Math/OneDimFunctionAdapter.h"
 
-#include "Math/DistFunc.h"
+#include "Math/ProbFuncMathCore.h"
 
 #include "TMath.h"  
 #include "Math/RichardsonDerivator.h"
@@ -365,7 +365,7 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
    const std::ios_base::fmtflags prFmt = os.setf(std::ios::left,std::ios::adjustfield); // set left alignment
 
    if (fVal != fChi2 || fChi2 < 0) 
-      os << std::left << std::setw(nw) << "LogLikelihood" << " = " << std::right << std::setw(nn) << fVal << std::endl;
+      os << std::left << std::setw(nw) << "MinFCN" << " = " << std::right << std::setw(nn) << fVal << std::endl;
    if (fChi2 >= 0) 
       os << std::left << std::setw(nw) <<  "Chi2"         << " = " << std::right << std::setw(nn) << fChi2 << std::endl;
    os << std::left << std::setw(nw) << "NDf"              << " = " << std::right << std::setw(nn) << fNdf << std::endl; 

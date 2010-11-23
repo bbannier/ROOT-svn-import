@@ -889,16 +889,6 @@ static int PyObject_Compare( PyObject* one, PyObject* other ) {
       return repr;                                                            \
    }                                                                          \
                                                                               \
-   PyObject* name##StringCompare( PyObject* self, PyObject* obj )             \
-   {                                                                          \
-      PyObject* data = CallPyObjMethod( self, #func );                        \
-      int result = PyObject_Compare( data, obj );                             \
-      Py_DECREF( data );                                                      \
-      if ( PyErr_Occurred() )                                                 \
-         return 0;                                                            \
-      return PyInt_FromLong( result );                                        \
-   }                                                                          \
-                                                                              \
    PyObject* name##StringIsEqual( PyObject* self, PyObject* obj )             \
    {                                                                          \
       PyObject* data = CallPyObjMethod( self, #func );                        \
@@ -919,12 +909,26 @@ static int PyObject_Compare( PyObject* one, PyObject* other ) {
       return result;                                                          \
    }
 
-   PYROOT_IMPLEMENT_STRING_PYTHONIZATION( Stl, c_str )
+   // Only define StlStringCompare:
+   // TStringCompare is unused and generates a warning;
+#define PYROOT_IMPLEMENT_STRING_PYTHONIZATION_CMP( name, func )               \
+   PyObject* name##StringCompare( PyObject* self, PyObject* obj )             \
+   {                                                                          \
+      PyObject* data = CallPyObjMethod( self, #func );                        \
+      int result = PyObject_Compare( data, obj );                             \
+      Py_DECREF( data );                                                      \
+      if ( PyErr_Occurred() )                                                 \
+         return 0;                                                            \
+      return PyInt_FromLong( result );                                        \
+   }                                                                          \
+                                                                              \
+   PYROOT_IMPLEMENT_STRING_PYTHONIZATION( name, func )
+   PYROOT_IMPLEMENT_STRING_PYTHONIZATION_CMP( Stl, c_str )
    PYROOT_IMPLEMENT_STRING_PYTHONIZATION(   T, Data )
 
 
 //- TObjString behavior --------------------------------------------------------
-   PYROOT_IMPLEMENT_STRING_PYTHONIZATION( TObj, GetName )
+   PYROOT_IMPLEMENT_STRING_PYTHONIZATION_CMP( TObj, GetName )
 
 //____________________________________________________________________________
    PyObject* TObjStringLength( PyObject* self )
@@ -1018,8 +1022,8 @@ static int PyObject_Compare( PyObject* one, PyObject* other ) {
    PyObject* TDirectoryGetObject( ObjectProxy* self, PyObject* args )
    {
       PyObject* name = 0; ObjectProxy* ptr = 0;
-      if ( ! PyArg_ParseTuple( args, const_cast< char* >( "SO!:TDirectory::GetObject" ),
-               &name, &ObjectProxy_Type, &ptr ) )
+      if ( ! PyArg_ParseTuple( args, const_cast< char* >( "O!O!:TDirectory::GetObject" ),
+               &PyROOT_PyUnicode_Type, &name, &ObjectProxy_Type, &ptr ) )
          return 0;
 
       TDirectory* dir =
@@ -1047,8 +1051,9 @@ static int PyObject_Compare( PyObject* one, PyObject* other ) {
    PyObject* TDirectoryWriteObject( ObjectProxy* self, PyObject* args )
    {
       ObjectProxy *wrt = 0; PyObject *name = 0, *option = 0;
-      if ( ! PyArg_ParseTuple( args, const_cast< char* >( "O!OS|S:TDirectory::WriteObject" ),
-               &ObjectProxy_Type, &wrt, &name, &option ) )
+      if ( ! PyArg_ParseTuple( args, const_cast< char* >( "O!OO!|O!:TDirectory::WriteObject" ),
+               &ObjectProxy_Type, &wrt, &PyROOT_PyUnicode_Type, &name,
+               &PyROOT_PyUnicode_Type, &option ) )
          return 0;
 
       TDirectory* dir =
@@ -1210,8 +1215,9 @@ namespace PyROOT {      // workaround for Intel icc on Linux
             PyObject *bufsize = 0, *splitlevel = 0;
 
          // try: ( const char*, void*, const char*, Int_t = 32000 )
-            if ( PyArg_ParseTuple( args, const_cast< char* >( "SOS|O!:Branch" ),
-                    &name, &address, &leaflist, &PyInt_Type, &bufsize ) ) {
+            if ( PyArg_ParseTuple( args, const_cast< char* >( "O!OO!|O!:Branch" ),
+                   &PyROOT_PyUnicode_Type, &name, &address, &PyROOT_PyUnicode_Type,
+                   &leaflist, &PyInt_Type, &bufsize ) ) {
 
                void* buf = 0;
                if ( ObjectProxy_Check( address ) )
@@ -1238,15 +1244,17 @@ namespace PyROOT {      // workaround for Intel icc on Linux
          // try: ( const char*, const char*, T**, Int_t = 32000, Int_t = 99 )
          //  or: ( const char*,              T**, Int_t = 32000, Int_t = 99 ) 
             Bool_t bIsMatch = kFALSE;
-            if ( PyArg_ParseTuple( args, const_cast< char* >( "SSO|O!O!:Branch" ),
-                    &name, &clName, &address, &PyInt_Type, &bufsize, &PyInt_Type, &splitlevel ) ) {
+            if ( PyArg_ParseTuple( args, const_cast< char* >( "O!O!O|O!O!:Branch" ),
+                   &PyROOT_PyUnicode_Type, &name, &PyROOT_PyUnicode_Type, &clName, &address,
+                   &PyInt_Type, &bufsize, &PyInt_Type, &splitlevel ) ) {
                bIsMatch = kTRUE;
             } else {
                PyErr_Clear(); clName = 0;    // clName no longer used
-               if ( PyArg_ParseTuple( args, const_cast< char* >( "SO|O!O!" ),
-                       &name, &address, &PyInt_Type, &bufsize, &PyInt_Type, &splitlevel ) )
+               if ( PyArg_ParseTuple( args, const_cast< char* >( "O!O|O!O!" ),
+                      &PyROOT_PyUnicode_Type, &name, &address,
+                      &PyInt_Type, &bufsize, &PyInt_Type, &splitlevel ) ) {
                   bIsMatch = kTRUE;
-               else
+               } else
                   PyErr_Clear();
             }
 
@@ -1817,6 +1825,7 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
 
       Utility::AddToClass( pyclass, "__len__",  "GetSize" );
       ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)TCollectionIter;
+      Utility::AddToClass( pyclass, "__iter__",  (PyCFunction)TCollectionIter, METH_NOARGS );
 
       return kTRUE;
    }
@@ -1930,6 +1939,8 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
 
    if ( name == "TIter" ) {
       ((PyTypeObject*)pyclass)->tp_iter     = (getiterfunc)TIterIter;
+      Utility::AddToClass( pyclass, "__iter__", (PyCFunction) TIterIter, METH_NOARGS );
+
       ((PyTypeObject*)pyclass)->tp_iternext = (iternextfunc)TIterNext;
       Utility::AddToClass( pyclass, "next", (PyCFunction) TIterNext, METH_NOARGS );
 

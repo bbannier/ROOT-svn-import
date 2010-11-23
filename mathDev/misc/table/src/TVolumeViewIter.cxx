@@ -90,6 +90,9 @@ TVolumePosition *TVolumeViewIter::UpdateTempMatrix(TVolumePosition *curPosition)
    if (curPosition) {
       curNode       = curPosition->GetNode();
       curPositionId = curPosition->GetId();
+   } else {
+      Error("UpdateTempMatrix","No position has been defined");
+      return 0;
    }
    if (fDepth-1) {
       TVolumePosition *oldPosition = 0;
@@ -127,12 +130,11 @@ TVolumePosition *TVolumeViewIter::UpdateTempMatrix(TVolumePosition *curPosition)
          newTranslation[1] = oldTranslation[1] + curPosition->GetY();
          newTranslation[2] = oldTranslation[2] + curPosition->GetZ();
          newPosition = SetPositionAt(curNode,newTranslation[0],newTranslation[1],newTranslation[2]);
+         if (newPosition) {;} //intentionally not used         
       }
-   } else if (curPosition)  {
-      newPosition =  SetPositionAt(*curPosition);
+   } 
+   newPosition =  SetPositionAt(*curPosition);
 //         printf(" new level %d %s\n",fDepth, curNode->GetName());
-   } else
-      Error("UpdateTempMatrix","No position has been defined");
    if (newPosition) newPosition->SetId(curPositionId);
    return newPosition;
 }

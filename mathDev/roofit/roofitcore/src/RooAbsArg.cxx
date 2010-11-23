@@ -1832,8 +1832,8 @@ TString RooAbsArg::cleanBranchName() const
 
   // Name is too long, truncate and include CRC32 checksum of full name in clean name
   static char buf[1024] ;
-  strcpy(buf,cleanName.Data()) ;
-  sprintf(buf+46,"_CRC%08x",crc32(cleanName.Data())) ;
+  strlcpy(buf,cleanName.Data(),1024) ;
+  snprintf(buf+46,1024-46,"_CRC%08x",crc32(cleanName.Data())) ;
 
   return TString(buf) ;
 }
@@ -1961,7 +1961,7 @@ RooLinkedList RooAbsArg::getCloningAncestors() const
   while(iter != _boolAttrib.end()) {
     if (TString(*iter).BeginsWith("CloneOf(")) {
       char buf[128] ;
-      strcpy(buf,iter->c_str()) ;
+      strlcpy(buf,iter->c_str(),128) ;
       strtok(buf,"(") ;
       char* ptrToken = strtok(0,")") ;
       RooAbsArg* ptr = (RooAbsArg*) strtol(ptrToken,0,16) ;
@@ -2018,8 +2018,9 @@ void RooAbsArg::graphVizTree(ostream& os, const char* delimiter, bool useTitle, 
     string nodeLabel = (useTitle && !nodeTitle.empty()) ? nodeTitle : nodeName;
 
     // if using latex, replace ROOT's # with normal latex backslash
-    while(useLatex && nodeLabel.find("#")!=nodeLabel.npos){
-      nodeLabel.replace(nodeLabel.find("#"), 1, "\\");
+    string::size_type position = nodeLabel.find("#") ;
+    while(useLatex && position!=nodeLabel.npos){
+      nodeLabel.replace(position, 1, "\\");
     }
 
     string typeFormat = "\\texttt{";

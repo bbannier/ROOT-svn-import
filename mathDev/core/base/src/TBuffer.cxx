@@ -185,8 +185,13 @@ void TBuffer::Expand(Int_t newsize)
    // Expand the I/O buffer to newsize bytes.
 
    Int_t l  = Length();
-   fBuffer  = fReAllocFunc(fBuffer, newsize+kExtraSpace,
-                           fBufSize+kExtraSpace);
+   if ( (fMode&kWrite)!=0 ) {
+      fBuffer  = fReAllocFunc(fBuffer, newsize+kExtraSpace,
+                              fBufSize+kExtraSpace);
+   } else {
+      fBuffer  = fReAllocFunc(fBuffer, newsize,
+                              fBufSize);
+   }
    if (fBuffer == 0) {
       if (fReAllocFunc == TStorage::ReAllocChar) {
          Fatal("Expand","Failed to expand the data buffer using TStorage::ReAllocChar.");
@@ -288,3 +293,34 @@ UShort_t TBuffer::WriteProcessID(TProcessID *)
 
    return 0;
 }
+
+//______________________________________________________________________________
+void TBuffer::PushDataCache(TVirtualArray *obj)
+{
+   // Push a new data cache area onto the list of area to be used for
+   // temporarily store 'missing' data members.
+   
+   fCacheStack.push_back(obj);
+}
+
+//______________________________________________________________________________
+TVirtualArray *TBuffer::PeekDataCache() const
+{
+   // Return the 'current' data cache area from the list of area to be used for
+   // temporarily store 'missing' data members.
+   
+   if (fCacheStack.empty()) return 0;
+   return fCacheStack.back();
+}
+
+//______________________________________________________________________________
+TVirtualArray *TBuffer::PopDataCache()
+{
+   // Pop and Return the 'current' data cache area from the list of area to be used for
+   // temporarily store 'missing' data members.
+   
+   TVirtualArray *val = PeekDataCache();
+   fCacheStack.pop_back();
+   return val;
+}
+

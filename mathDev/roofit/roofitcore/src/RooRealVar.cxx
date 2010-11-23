@@ -85,9 +85,25 @@ RooRealVar::RooRealVar(const char *name, const char *title,
 
   _binning = new RooUniformBinning(minValue,maxValue,100) ;
 
-  _value= 0.5*(minValue + maxValue);
+  if (RooNumber::isInfinite(minValue)) {
+    if (RooNumber::isInfinite(maxValue)) {
+      // [-inf,inf]
+      _value = 0 ;
+    } else {
+      // [-inf,X]
+      _value= maxValue ;
+    }
+  } else {
+    if (RooNumber::isInfinite(maxValue)) {
+      // [X,inf]
+      _value = minValue ;
+    } else {
+      // [X,X]
+      _value= 0.5*(minValue + maxValue);
+    }
+  }
 
-//   setPlotRange(minValue,maxValue) ;
+  //   setPlotRange(minValue,maxValue) ;
   setRange(minValue,maxValue) ;
 }  
 
@@ -576,8 +592,8 @@ void RooRealVar::writeToStream(ostream& os, Bool_t compact) const
     // Write value with error (if not zero)    
     if (_printScientific) {
       char fmtVal[16], fmtErr[16] ;
-      sprintf(fmtVal,"%%.%de",_printSigDigits) ;
-      sprintf(fmtErr,"%%.%de",(_printSigDigits+1)/2) ;
+      snprintf(fmtVal,16,"%%.%de",_printSigDigits) ;
+      snprintf(fmtErr,16,"%%.%de",(_printSigDigits+1)/2) ;
       if (_value>=0) os << " " ;
       os << Form(fmtVal,_value) ;
 
@@ -590,7 +606,9 @@ void RooRealVar::writeToStream(ostream& os, Bool_t compact) const
 
       os << " " ;
     } else {
-      os << format(_printSigDigits,"EFA")->Data() << " " ;
+      TString* tmp = format(_printSigDigits,"EFA") ;
+      os << tmp->Data() << " " ;
+      delete tmp ;
     }
 
     // Append limits if not constants
@@ -815,8 +833,8 @@ TString *RooRealVar::format(Int_t sigDigits, const char *options) const
   char fmtVal[16], fmtErr[16];
 
   if (_value<0) whereVal -= 1 ;
-  sprintf(fmtVal,"%%.%df", whereVal < 0 ? -whereVal : 0);
-  sprintf(fmtErr,"%%.%df", whereErr < 0 ? -whereErr : 0);
+  snprintf(fmtVal,16,"%%.%df", whereVal < 0 ? -whereVal : 0);
+  snprintf(fmtErr,16,"%%.%df", whereErr < 0 ? -whereErr : 0);
   TString *text= new TString();
   if(latexMode) text->Append("$");
   // begin the string with "<name> = " if requested
@@ -841,7 +859,7 @@ TString *RooRealVar::format(Int_t sigDigits, const char *options) const
   char buffer[256];
   if(!hideValue) {
     chopAt(_value, whereVal);
-    sprintf(buffer, fmtVal, _value);
+    snprintf(buffer, 256,fmtVal, _value);
     text->Append(buffer);
   }
 
@@ -856,7 +874,7 @@ TString *RooRealVar::format(Int_t sigDigits, const char *options) const
     else {
       text->Append(" +/- ");
     }
-    sprintf(buffer, fmtErr, getError());
+    snprintf(buffer, 256,fmtErr, getError());
     text->Append(buffer);
   }
   
@@ -864,30 +882,30 @@ TString *RooRealVar::format(Int_t sigDigits, const char *options) const
     if(tlatexMode) {
       text->Append(" #pm ");
       text->Append("_{") ;      
-      sprintf(buffer, fmtErr, getAsymErrorLo());
+      snprintf(buffer, 256,fmtErr, getAsymErrorLo());
       text->Append(buffer);
       text->Append("}^{+") ;
-      sprintf(buffer, fmtErr, getAsymErrorHi());
+      snprintf(buffer, 256,fmtErr, getAsymErrorHi());
       text->Append(buffer);
       text->Append("}") ;
     }
     else if(latexMode) {
       text->Append("\\pm ");
       text->Append("_{") ;      
-      sprintf(buffer, fmtErr, getAsymErrorLo());
+      snprintf(buffer, 256,fmtErr, getAsymErrorLo());
       text->Append(buffer);
       text->Append("}^{+") ;
-      sprintf(buffer, fmtErr, getAsymErrorHi());
+      snprintf(buffer, 256,fmtErr, getAsymErrorHi());
       text->Append(buffer);
       text->Append("}") ;
     }
     else {
       text->Append(" +/- ");
       text->Append(" (") ;      
-      sprintf(buffer, fmtErr, getAsymErrorLo());
+      snprintf(buffer, 256, fmtErr, getAsymErrorLo());
       text->Append(buffer);
       text->Append(", ") ;
-      sprintf(buffer, fmtErr, getAsymErrorHi());
+      snprintf(buffer, 256, fmtErr, getAsymErrorHi());
       text->Append(buffer);
       text->Append(")") ;
     }

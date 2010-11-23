@@ -106,6 +106,9 @@ RooProdGenContext::RooProdGenContext(const RooProdPdf &model, const RooArgSet &v
 
       impDeps = (RooArgSet*)impIter->Next() ;
       termDeps = (RooArgSet*)normIter->Next() ;
+      if (impDeps==0 || termDeps==0) {
+	break ;
+      }
 
       cxcoutD(Generation) << "RooProdGenContext::ctor() analyzing product term " << *term << " with observable(s) " << *termDeps ;
       if (impDeps->getSize()>0) {
@@ -149,7 +152,7 @@ RooProdGenContext::RooProdGenContext(const RooProdPdf &model, const RooArgSet &v
 	RooArgSet* pdfDep = pdf->getObservables(termDeps) ;
 	if (pdfDep->getSize()>0) {
  	  coutI(Generation) << "RooProdGenContext::ctor() creating subcontext for generation of observables " << *pdfDep << " from model " << pdf->GetName() << endl ;
-	  RooArgSet* auxProto2 = impDeps ? pdf->getObservables(impDeps) : 0 ;
+	  RooArgSet* auxProto2 = pdf->getObservables(impDeps) ;
 	  RooAbsGenContext* cx = pdf->genContext(*pdfDep,prototype,auxProto2,verbose) ;
 	  delete auxProto2 ;
 	  _gcList.Add(cx) ;
@@ -368,7 +371,9 @@ void RooProdGenContext::generateEvent(RooArgSet &theEvent, Int_t remaining)
     RooAbsArg* uniVar ;
     while((uniVar=(RooAbsArg*)_uniIter->Next())) {
       RooAbsLValue* arglv = dynamic_cast<RooAbsLValue*>(uniVar) ;
-      arglv->randomize() ;
+      if (arglv) {
+	arglv->randomize() ;
+      }
     }
     theEvent = _uniObs ;
   }  

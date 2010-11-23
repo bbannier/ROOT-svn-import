@@ -176,7 +176,8 @@ namespace {
    // helper to get the address (address-of-address) of various object proxy types
       ObjectProxy* pyobj = 0;
       PyObject* pyname = 0;
-      if ( PyArg_ParseTuple( args, const_cast< char* >( "O|S" ), &pyobj, &pyname ) &&
+      if ( PyArg_ParseTuple( args, const_cast< char* >( "O|O!" ), &pyobj,
+             &PyROOT_PyUnicode_Type, &pyname ) &&
            ObjectProxy_Check( pyobj ) && pyobj->fObject ) {
 
          if ( pyname != 0 ) {
@@ -316,11 +317,12 @@ namespace {
    PyObject* ObjectProxyExpand( PyObject*, PyObject* args )
    {
    // This method is a helper for (un)pickling of ObjectProxy instances.
-      PyObject* pybuf = 0;
-      const char* clname = 0;
-      if ( ! PyArg_ParseTuple( args, const_cast< char* >( "O!s:__expand__" ),
-                &PyBytes_Type, &pybuf, &clname ) )
+      PyObject* pybuf = 0, *pyname = 0;
+      if ( ! PyArg_ParseTuple( args, const_cast< char* >( "O!O!:__expand__" ),
+               &PyBytes_Type, &pybuf, &PyBytes_Type, &pyname ) )
          return 0;
+
+      const char* clname = PyBytes_AS_STRING(pyname);
 
    // TBuffer and its derived classes can't write themselves, but can be created
    // directly from the buffer, so handle them in a special case

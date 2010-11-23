@@ -683,6 +683,23 @@ void TMultiGraph::LeastSquareLinearFit(Int_t ndata, Double_t &a0, Double_t &a1, 
 
 
 //______________________________________________________________________________
+Int_t TMultiGraph::IsInside(Double_t x, Double_t y) const
+{
+   // Return 1 if the point (x,y) is inside one of the graphs 0 otherwise.
+
+   Int_t in = 0;
+   if (!fGraphs) return in;
+   TGraph *g;
+   TIter next(fGraphs);
+   while ((g = (TGraph*) next())) {
+      in = g->IsInside(x, y);
+      if (in) return in;
+   }
+   return in;
+}
+
+
+//______________________________________________________________________________
 TH1F *TMultiGraph::GetHistogram() const
 {
    // Returns a pointer to the histogram used to draw the axis
@@ -968,8 +985,12 @@ void TMultiGraph::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
          lnk = (TObjOptLink*)lnk->Next();
       }
    }
-   out<<"   multigraph->Draw(" <<quote<<option<<quote<<");"<<endl;
-
+   const char *l = strstr(option,"th2poly");
+   if (l) {
+      out<<"   "<<l+7<<"->AddBin(multigraph);"<<endl;
+   } else {
+      out<<"   multigraph->Draw(" <<quote<<option<<quote<<");"<<endl;
+   }
    TAxis *xaxis = GetXaxis();
    TAxis *yaxis = GetYaxis();
 

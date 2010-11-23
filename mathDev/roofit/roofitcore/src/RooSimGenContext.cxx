@@ -35,7 +35,7 @@
 #include "RooMsgService.h"
 #include "RooRandom.h"
 
-
+#include <string>
 
 ClassImp(RooSimGenContext)
 ;
@@ -65,6 +65,8 @@ RooSimGenContext::RooSimGenContext(const RooSimultaneous &model, const RooArgSet
       oocoutE(_pdf,Generation) << "RooSimGenContext::ctor(" << GetName() << ") ERROR: This context must"
 			       << " generate the index category" << endl ;
       _isValid = kFALSE ;
+      _numPdf = 0 ;
+      _haveIdxProto = kFALSE ;
       return ;
     }
   } else {
@@ -85,6 +87,8 @@ RooSimGenContext::RooSimGenContext(const RooSimultaneous &model, const RooArgSet
       oocoutE(_pdf,Generation) << "RooSimGenContext::ctor(" << GetName() << ") ERROR: This context must"
 			       << " generate all components of a derived index category" << endl ;
       _isValid = kFALSE ;
+      _numPdf = 0 ;
+      _haveIdxProto = kFALSE ;
       return ;
     }
   }
@@ -97,6 +101,7 @@ RooSimGenContext::RooSimGenContext(const RooSimultaneous &model, const RooArgSet
     oocoutE(_pdf,Generation) << "RooSimGenContext::ctor(" << GetName() << ") ERROR: Need either extended mode"
 			     << " or prototype data to calculate number of events per category" << endl ;
     _isValid = kFALSE ;
+    _numPdf = 0 ;
     return ;
   }
 
@@ -137,7 +142,7 @@ RooSimGenContext::RooSimGenContext(const RooSimultaneous &model, const RooArgSet
   _idxCatSet = (RooArgSet*) RooArgSet(model._indexCat.arg()).snapshot(kTRUE) ;
   if (!_idxCatSet) {
     oocoutE(_pdf,Generation) << "RooSimGenContext::RooSimGenContext(" << GetName() << ") Couldn't deep-clone index category, abort," << endl ;
-    RooErrorHandler::softAbort() ;
+    throw std::string("RooSimGenContext::RooSimGenContext() Couldn't deep-clone index category, abort") ;
   }
   
   _idxCat = (RooAbsCategoryLValue*) _idxCatSet->find(model._indexCat.arg().GetName()) ;

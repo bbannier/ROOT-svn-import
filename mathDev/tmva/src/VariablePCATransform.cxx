@@ -418,6 +418,7 @@ void TMVA::VariablePCATransform::ReadTransformationFromStream( std::istream& ist
       sstr >> strvar;
       if (strvar=="signal" || strvar=="background") {
 
+         // coverity[tainted_data_argument]
          sstr >> nrows >> dummy >> ncols;
          Int_t sbType = (strvar=="signal" ? 0 : 1);
 
@@ -494,7 +495,7 @@ void TMVA::VariablePCATransform::MakeFunction( std::ostream& fout, const TString
 
       // fill vector of mean values
       fout << "   // initialise vector of mean values" << std::endl;
-      Int_t dp = fout.precision();
+      std::streamsize dp = fout.precision();
       for (UInt_t index=0; index<numC; index++) {
          for (int i=0; i<fMeanValues[index]->GetNrows(); i++) {
             fout << "   fMeanValues_"<<trCounter<<"["<<index<<"]["<<i<<"] = " << std::setprecision(12)

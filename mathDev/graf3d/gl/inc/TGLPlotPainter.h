@@ -303,6 +303,8 @@ protected:
    information about plot's current coordinate system
 */
 
+class TH2Poly;
+
 class TGLPlotCoordinates {
 private:
    EGLCoordType    fCoordType;
@@ -348,8 +350,10 @@ public:
 
    void   ResetModified();
    Bool_t Modified()const;
-
+   //
    Bool_t SetRanges(const TH1 *hist, Bool_t errors = kFALSE, Bool_t zBins = kFALSE);
+   //
+   Bool_t SetRanges(TH2Poly *hist);
    //
    Bool_t SetRanges(const TAxis *xAxis, const TAxis *yAxis, const TAxis *zAxis);
 
@@ -404,6 +408,9 @@ namespace Rgl {
 
 void DrawPalette(const TGLPlotCamera * camera, const TGLLevelPalette & palette);
 void DrawPaletteAxis(const TGLPlotCamera * camera, const Range_t & minMax, Bool_t logZ);
+
+//Polygonal histogram (TH2Poly) is slightly stretched along x and y.
+extern const Double_t gH2PolyScaleXY;
 
 }
 

@@ -560,7 +560,7 @@ Int_t Krb5Authenticate(TAuthenticate *auth, TString &user, TString &det,
 
          // Send length first
          char buflen[20];
-         sprintf(buflen, "%d", outdata.length);
+         snprintf(buflen, 20, "%d", outdata.length);
          nsen = sock->Send(buflen, kROOTD_KRB5);
          if (nsen <= 0) {
             Error("Krb5Authenticate","Sending <buflen>");
@@ -612,10 +612,12 @@ Int_t Krb5Authenticate(TAuthenticate *auth, TString &user, TString &det,
       Int_t rsaKey = 0;
       if (reuse == 1) {
 
-         if (type != kROOTD_RSAKEY  || retval < 1 || retval > 2 )
-            Warning("Krb5Auth",
-                    "problems recvn RSA key flag: got message %d, flag: %d",
-                     type, rsaKey);
+         if (type != kROOTD_RSAKEY  || retval < 1 || retval > 2 ) {
+            Error("Krb5Auth",
+                  "problems recvn RSA key flag: got message %d, flag: %d",
+                  type, rsaKey);
+            return 0;
+         }
          rsaKey = retval - 1;
 
          // Send the key securely
@@ -644,9 +646,9 @@ Int_t Krb5Authenticate(TAuthenticate *auth, TString &user, TString &det,
       }
 
       // Parse answer
-      char *lUser= new char[retval];
+      char lUser[128];
       int offset = -1;
-      sscanf(rfrm,"%s %d", lUser, &offset);
+      sscanf(rfrm,"%127s %d", lUser, &offset);
       // Save username
       user = lUser;
 
@@ -673,7 +675,6 @@ Int_t Krb5Authenticate(TAuthenticate *auth, TString &user, TString &det,
 
       det = details;
       if (token) delete[] token;
-      if (lUser) delete[] lUser;
    } else {
       nrec = sock->Recv(answer, 100, type);  // returns user
       if (nrec <= 0) {

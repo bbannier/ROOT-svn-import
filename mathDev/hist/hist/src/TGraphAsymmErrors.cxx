@@ -330,10 +330,10 @@ void TGraphAsymmErrors::BayesDivide(const TH1* pass, const TH1* total, Option_t 
 {
    //This function is only kept for backward compatibility.
    //You should rather use the Divide method.
-   //It calls Divide(pass,total,"cl=0.683 b(1,1)") which is equivalent to the
+   //It calls Divide(pass,total,"cl=0.683 b(1,1) mode") which is equivalent to the
    //former BayesDivide method.
 
-   Divide(pass,total,"cl=0.683 b(1,1)");
+   Divide(pass,total,"cl=0.683 b(1,1) mode");
 }
 
 //______________________________________________________________________________
@@ -370,8 +370,14 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    // - w     : Wilson interval (see TEfficiency::Wilson)
    // - n     : normal approximation propagation (see TEfficiency::Normal)
    // - ac    : Agresti-Coull interval (see TEfficiency::AgrestiCoull)
+   // - fc    : Feldman-Cousins interval (see TEfficiency::FeldmanCousinsInterval)
    // - b(a,b): bayesian interval using a prior probability ~Beta(a,b); a,b > 0
    //           (see TEfficiency::Bayesian)
+   // - mode  : use mode of posterior for Bayesian interval (default is mean)
+   // - shortest: use shortest interval (done by default if mode is set) 
+   // - central: use central interval (done by default if mode is NOT set)
+   // - e0    : plot (in Bayesian case) efficiency and interval for bins where total=0 
+   //           (default is to skip them)
    //
    // Note:
    // Unfortunately there is no straightforward approach for determining a confidence
@@ -469,6 +475,11 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
       option.ReplaceAll("ac","");
       pBound = &TEfficiency::AgrestiCoull;
    }
+   // Feldman-Cousins interval
+   if(option.Contains("fc")) {
+      option.ReplaceAll("fc","");
+      pBound = &TEfficiency::FeldmanCousins;
+   }
 
    //bayesian with prior
    if(option.Contains("b(")) {
@@ -486,6 +497,25 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
       option.ReplaceAll("b(","");
       bIsBayesian = true;
    }
+
+   // use posterior mode
+   Bool_t usePosteriorMode = false; 
+   if(bIsBayesian && option.Contains("mode") ) { 
+      usePosteriorMode = true; 
+      option.ReplaceAll("mode","");
+   }
+
+   Bool_t plot0Bins = false; 
+   if(option.Contains("e0") ) { 
+      plot0Bins = true; 
+      option.ReplaceAll("e0","");
+   }
+
+   Bool_t useShortestInterval = false; 
+   if (bIsBayesian && ( option.Contains("sh") || (usePosteriorMode && !option.Contains("cen") ) ) ) {
+      useShortestInterval = true; 
+   }
+
    
    //Set the graph to have a number of points equal to the number of histogram
    //bins
@@ -521,21 +551,30 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
 	 p = int(pass->GetBinContent(b) + 0.5);
       }
 
+      if (!t && !plot0Bins) continue; // skip bins with total = 0
+      eff = 0; // default value when total =0;
+
       //using bayesian statistics
       if(bIsBayesian) {
-	 if(t + alpha + beta)
-	    eff = (p + alpha)/(t + alpha + beta);
-	 else
-	    continue;
-      
-	 low = TEfficiency::Bayesian(t,p,conf,alpha,beta,false);
-	 upper = TEfficiency::Bayesian(t,p,conf,alpha,beta,true);
+         double aa = double(p) + alpha; 
+         double bb = double(t-p) + beta; 
+         if (usePosteriorMode) 
+            eff = TEfficiency::BetaMode(aa,bb);
+         else 
+            eff = TEfficiency::BetaMean(aa,bb);
+         
+         if (useShortestInterval) { 
+            TEfficiency::BetaShortestInterval(conf,aa,bb,low,upper);
+         }
+         else { 
+            low = TEfficiency::BetaCentralInterval(conf,aa,bb,false);
+            upper = TEfficiency::BetaCentralInterval(conf,aa,bb,true);
+         }
       }
+      // case of non-bayesian statistics
       else {
 	 if(t)
 	    eff = ((Double_t)p)/t;
-	 else
-	    continue;
 	 
 	 low = pBound(t,p,conf,false);
 	 upper = pBound(t,p,conf,true);

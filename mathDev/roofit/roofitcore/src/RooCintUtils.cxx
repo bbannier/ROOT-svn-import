@@ -125,7 +125,7 @@ namespace RooCintUtils
 
     // Chop type name into class name and enum name
     char buf[256] ;
-    strcpy(buf,typeName) ;
+    strlcpy(buf,typeName,256) ;
     char* className = strtok(buf,":") ;
 
     // Chop any class name prefix from value
@@ -159,7 +159,7 @@ namespace RooCintUtils
     
     // Seperate namespace part from method name
     char buf[1024] ;
-    strcpy(buf,fname) ;
+    strlcpy(buf,fname,256) ;
     const char* methodName(0), *scopeName = buf ;
     for(int i=strlen(buf)-1 ; i>0 ; i--) {
       if (buf[i]==':' && buf[i-1]==':') {
@@ -176,7 +176,7 @@ namespace RooCintUtils
     G__MethodInfo method(scope);
     while(method.Next()) {
       // If method name matches, check argument list
-      if (string(methodName)==method.Name()) {
+      if (string(methodName?methodName:"")==method.Name()) {
 	
 	// Construct list of arguments
 	string s ;

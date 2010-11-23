@@ -282,6 +282,8 @@ RooIntegralMorph::MorphCacheElem::MorphCacheElem(RooIntegralMorph& self, const R
   // Must do this here too: fillCache() may not be called if cache contents is retrieved from EOcache
   pdf()->setUnitNorm(kTRUE) ;
 
+  _yatXmax = 0 ;
+  _yatXmin = 0 ;
 }
 
 
@@ -290,6 +292,8 @@ RooIntegralMorph::MorphCacheElem::~MorphCacheElem()
 {
   // Destructor
 
+  delete _rf1 ;
+  delete _rf2 ;
   delete[] _yatX ;
   delete[] _calcX ;
 }

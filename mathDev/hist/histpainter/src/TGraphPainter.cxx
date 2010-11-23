@@ -1505,14 +1505,17 @@ void TGraphPainter::PaintGrapHist(TGraph *theGraph, Int_t npoints, const Double_
          ndivx = 100*nx2 + Int_t(Double_t(nx1)*gPad->GetAbsWNDC());
       }
       ndiv  =TMath::Abs(ndivx);
-      if (ndivx < 0) strcat(choptaxis, "N");
+      // coverity [Calling risky function]
+      if (ndivx < 0) strlcat(choptaxis, "N",10);
       if (gPad->GetGridx()) {
-         strcat(choptaxis, "W");
+         // coverity [Calling risky function]
+         strlcat(choptaxis, "W",10);
       }
       if (gPad->GetLogx()) {
          rwmin = TMath::Power(10,rwxmin);
          rwmax = TMath::Power(10,rwxmax);
-         strcat(choptaxis, "G");
+         // coverity [Calling risky function]
+         strlcat(choptaxis, "G",10);
       }
       TGaxis *axis = new TGaxis();
       axis->SetLineColor(gStyle->GetAxisColor("X"));
@@ -1531,16 +1534,19 @@ void TGraphPainter::PaintGrapHist(TGraph *theGraph, Int_t npoints, const Double_
          nx2   = ndivy/100;
          nx1   = TMath::Max(1, ndivy%100);
          ndivy = 100*nx2 + Int_t(Double_t(nx1)*gPad->GetAbsHNDC());
-         strcat(choptaxis, "N");
+         // coverity [Calling risky function]
+         strlcat(choptaxis, "N",10);
       }
       ndiv  =TMath::Abs(ndivy);
       if (gPad->GetGridy()) {
-         strcat(choptaxis, "W");
+         // coverity [Calling risky function]
+         strlcat(choptaxis, "W",10);
       }
       if (gPad->GetLogy()) {
          rwmin = TMath::Power(10,rwymin);
          rwmax = TMath::Power(10,rwymax);
-         strcat(choptaxis,"G");
+         // coverity [Calling risky function]
+         strlcat(choptaxis,"G",10);
       }
       axis->SetLineColor(gStyle->GetAxisColor("Y"));
       axis->SetTextColor(gStyle->GetLabelColor("Y"));
@@ -2236,8 +2242,8 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
    const Int_t kBASEMARKER=8;
    Double_t s2x, s2y, symbolsize, sbase;
    Double_t x, y, xl1, xl2, xr1, xr2, yup1, yup2, ylow1, ylow2, tx, ty;
-   static Float_t cxx[11] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6};
-   static Float_t cyy[11] = {1,1,1,1,1,1,1,1,1,0.5,0.6};
+   static Float_t cxx[15] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6,1,0.6,1,1};
+   static Float_t cyy[15] = {1,1,1,1,1,1,1,1,1,0.5,0.6,1,1,1,1};
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
@@ -2302,7 +2308,7 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
    Int_t mark  = theGraph->GetMarkerStyle();
    Double_t cx  = 0;
    Double_t cy  = 0;
-   if (mark >= 20 && mark < 31) {
+   if (mark >= 20 && mark <= 34) {
       cx = cxx[mark-20];
       cy = cyy[mark-20];
    }
@@ -2461,8 +2467,8 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
    Double_t s2x, s2y, symbolsize, sbase;
    Double_t x, y, xl1, xl2, xr1, xr2, yup1, yup2, ylow1, ylow2, tx, ty;
    Double_t bxl, bxh, byl, byh;
-   static Float_t cxx[11] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6};
-   static Float_t cyy[11] = {1,1,1,1,1,1,1,1,1,0.5,0.6};
+   static Float_t cxx[15] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6,1,0.6,1,1};
+   static Float_t cyy[15] = {1,1,1,1,1,1,1,1,1,0.5,0.6,1,1,1,1};
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
@@ -2531,7 +2537,7 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
    Int_t mark  = theGraph->GetMarkerStyle();
    Double_t cx  = 0;
    Double_t cy  = 0;
-   if (mark >= 20 && mark < 31) {
+   if (mark >= 20 && mark <= 34) {
       cx = cxx[mark-20];
       cy = cyy[mark-20];
    }
@@ -2693,8 +2699,8 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
    const Int_t kBASEMARKER=8;
    Double_t s2x, s2y, symbolsize, sbase;
    Double_t x, y, ex, ey, xl1, xl2, xr1, xr2, yup1, yup2, ylow1, ylow2, tx, ty;
-   static Float_t cxx[11] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6};
-   static Float_t cyy[11] = {1,1,1,1,1,1,1,1,1,0.5,0.6};
+   static Float_t cxx[15] = {1,1,0.6,0.6,1,1,0.6,0.5,1,0.6,0.6,1,0.6,1,1};
+   static Float_t cyy[15] = {1,1,1,1,1,1,1,1,1,0.5,0.6,1,1,1,1};
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
@@ -2757,7 +2763,7 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
    Int_t mark  = theGraph->GetMarkerStyle();
    Double_t cx  = 0;
    Double_t cy  = 0;
-   if (mark >= 20 && mark < 31) {
+   if (mark >= 20 && mark <= 34) {
       cx = cxx[mark-20];
       cy = cyy[mark-20];
    }

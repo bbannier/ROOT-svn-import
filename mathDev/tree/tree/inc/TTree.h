@@ -183,7 +183,7 @@ protected:
       kGetLeaf           = BIT(8),
       kLoadTree          = BIT(9),
       kPrint             = BIT(10),
-      kRemoveFriend      = BIT(12),
+      kRemoveFriend      = BIT(11),
       kSetBranchStatus   = BIT(12)
    };
    
@@ -400,6 +400,7 @@ public:
    virtual Long64_t        Project(const char* hname, const char* varexp, const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual TSQLResult     *Query(const char* varexp = "", const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual Long64_t        ReadFile(const char* filename, const char* branchDescriptor = "");
+   virtual Long64_t        ReadStream(istream& inputStream, const char* branchDescriptor = "");
    virtual void            Refresh();
    virtual void            RecursiveRemove(TObject *obj);
    virtual void            RemoveFriend(TTree*);

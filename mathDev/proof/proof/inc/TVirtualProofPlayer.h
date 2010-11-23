@@ -47,6 +47,7 @@ class TProofProgressInfo;
 class TVirtualProofPlayer : public TObject, public TQObject {
 
 public:
+   // TDSet status bits
    enum EExitStatus { kFinished, kStopped, kAborted };
 
    TVirtualProofPlayer() { }

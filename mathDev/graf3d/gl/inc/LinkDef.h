@@ -65,6 +65,7 @@
 #pragma link C++ class TGLCameraOverlay;
 #pragma link C++ class TGLCameraGuide;
 #pragma link C++ class TGLPlotCamera+;
+#pragma link C++ class TGLAutoRotator+;
 
 #pragma link C++ class TGLSceneBase+;
 #pragma link C++ class TGLScene+;
@@ -126,6 +127,7 @@
 #pragma link C++ class TF2GL+;
 #pragma link C++ class TH2GL+;
 #pragma link C++ class TH3GL+;
+#pragma link C++ class TGLH2PolyPainter;
 #pragma link C++ class TGLParametricEquationGL;
 #pragma link C++ class TGLPadPainter;
 #pragma link C++ class TGL5DDataSet;

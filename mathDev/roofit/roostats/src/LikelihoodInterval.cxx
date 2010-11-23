@@ -196,10 +196,7 @@ Double_t LikelihoodInterval::LowerLimit(const RooRealVar& param, bool & status)
 
    double lower = 0; 
    double upper = 0; 
-   RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
    status = FindLimits(param, lower, upper); 
-   RooMsgService::instance().setGlobalKillBelow(msglevel);
    return lower; 
 }
 
@@ -213,10 +210,7 @@ Double_t LikelihoodInterval::UpperLimit(const RooRealVar& param, bool & status)
 
    double lower = 0; 
    double upper = 0; 
-   RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
    status = FindLimits(param, lower, upper); 
-   RooMsgService::instance().setGlobalKillBelow(msglevel);
    return upper; 
 }
 
@@ -288,8 +282,8 @@ bool LikelihoodInterval::CreateMinimizer() {
    }
 
    //std::cout << "print minimizer result..........." << std::endl;
+   //fMinimizer->PrintResults();
 
-   fMinimizer->PrintResults();
    return true; 
 }
 
@@ -335,7 +329,6 @@ bool LikelihoodInterval::FindLimits(const RooRealVar & param, double &lower, dou
    
    unsigned int ivarX = ix; 
 
-   fMinimizer->SetPrintLevel(1);
    double elow = 0; 
    double eup = 0;
    ret = fMinimizer->GetMinosError(ivarX, elow, eup );

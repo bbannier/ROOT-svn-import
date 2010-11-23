@@ -280,7 +280,7 @@ void RooAddition::printMetaArgs(ostream& os) const
 
   Bool_t first(kTRUE) ;
     
-  RooAbsArg* arg1, *arg2 ;
+  RooAbsArg* arg1, *arg2(0) ;
   if (_set2.getSize()!=0) { 
 
     while((arg1=(RooAbsArg*)_setIter1->Next())) {
@@ -289,8 +289,13 @@ void RooAddition::printMetaArgs(ostream& os) const
       } else {
 	first = kFALSE ;
       }
-      arg2=(RooAbsArg*)_setIter2->Next() ;
-      os << arg1->GetName() << " * " << arg2->GetName() ;
+      if (_setIter2) {
+	arg2=(RooAbsArg*)_setIter2->Next() ;
+      }
+      os << arg1->GetName() ;
+      if (_setIter2) {
+	os << " * " << arg2->GetName() ;
+      }
     }
 
   } else {
