@@ -144,7 +144,7 @@ int main( int argc, char** argv )
    // --- Book the MVA methods
 
    TString dir    = "weights/";
-   TString prefix = "TMVAnalysis";
+   TString prefix = "TMVAClassification";
 
    // Book method(s)
    for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) {
