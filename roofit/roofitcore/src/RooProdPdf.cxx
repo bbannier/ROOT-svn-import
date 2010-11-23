@@ -2104,6 +2104,7 @@ RooProdPdf::CacheElem::~CacheElem()
 {
   // Destructor
   //_normList.Delete() ; //WVE THIS IS AN INTENTIAL LEAK -- MUST FIX LATER
+  _normList.Delete() ; //KC Testing
   if (_rearrangedNum) delete _rearrangedNum ;
   if (_rearrangedDen) delete _rearrangedDen ;
 //   cout << "RooProdPdf::CacheElem dtor, this = " << this << endl ;
