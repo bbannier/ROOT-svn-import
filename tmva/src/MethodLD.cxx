@@ -78,7 +78,7 @@ void TMVA::MethodLD::Init( void )
 {
    // default initialization called by all constructors
 
-   if (DoRegression()) fNRegOut = DataInfo().GetNTargets();
+   if(DataInfo().GetNTargets()!=0) fNRegOut = DataInfo().GetNTargets();
    else                fNRegOut = 1;
 
    fLDCoeff = new vector< vector< Double_t >* >(fNRegOut);
