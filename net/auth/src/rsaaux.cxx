@@ -43,6 +43,7 @@ MA  02110-1301  USA
 typedef long off_t;
 #else
 #  include <unistd.h>
+#  include <sys/time.h>
 #endif
 
 #include "rsaaux.h"
@@ -159,6 +160,38 @@ typedef long off_t;
  *
  */
 
+
+//______________________________________________________________________________
+static int aux_rand()
+{
+   // rand() implementation using /udev/random or /dev/random, if available
+
+#ifndef WIN32
+   int frnd = open("/dev/urandom", O_RDONLY);
+   if (frnd < 0) frnd = open("/dev/random", O_RDONLY);
+   int r;
+   if (frnd >= 0) {
+      ssize_t rs = read(frnd, (void *) &r, sizeof(int));
+      close(frnd);
+      if (r < 0) r = -r;
+      if (rs == sizeof(int)) return r;
+   }
+   printf("+++ERROR+++ : aux_rand: neither /dev/urandom nor /dev/random are available or readable!\n");
+   struct timeval tv;
+   if (gettimeofday(&tv,0) == 0) {
+      int t1, t2;
+      memcpy((void *)&t1, (void *)&tv.tv_sec, sizeof(int));
+      memcpy((void *)&t2, (void *)&tv.tv_usec, sizeof(int));
+      r = t1 + t2;
+      if (r < 0) r = -r;
+      return r;
+   }
+   return -1;
+#else
+   // No special random device available: use rand()
+   return rand();
+#endif
+}
 
 /*
  * Konstante 1, 2
@@ -868,9 +901,9 @@ int p_prim(rsa_NUMBER *n, int m)
       /* ziehe zufaellig a aus 2..n-1		*/
       do {
          for (i=n->n_len-1, p=a.n_part; i; i--)
-            *p++ = (rsa_INT)rand();
+            *p++ = (rsa_INT)aux_rand();
          if ((i=n->n_len) )
-            *p = (rsa_INT)( rand() % ((unsigned long)n->n_part[i-1] +1) );
+            *p = (rsa_INT)( aux_rand() % ((unsigned long)n->n_part[i-1] +1) );
          while ( i && ! *p )
             p--,i--;
          a.n_len = i;
@@ -969,7 +1002,7 @@ void gen_number(int len, rsa_NUMBER *n)
    *p-- = '\0';
 
    for (l=len; l--; p--) {
-      i = rand() % 16;
+      i = aux_rand() % 16;
       *p = hex[ i ];
    }
    p++;

@@ -96,6 +96,8 @@
 </ul>
 <li> Small boxes (less than one pixel width) were not drawn properly.
 </li>
+<li> Line width for hollow boxes was always 1 (in batch mode).
+</li>
 </ul>
 
 <h3>Graphics Primitives</h3>
@@ -209,6 +211,13 @@
      might not true if the stats position is given by user. This is now 
      protected. The stats are correctly drawn whatever the orders of X and Y
      coordinates are. </li>
+<li> Saving canvas as a .C macro discarded white title and stat box 
+     background. Same thing with TPaveText.</li>
+</ul>
+
+<h4>TCutG</h4>
+<ul>
+<li> <tt>IsInside(x,y)</tt> is now inherited from TGraph.</li>
 </ul>
 
 <h4>TCanvas and TPad</h4>
@@ -221,4 +230,6 @@ the rubberband was not visible during the zooming along axis.</li>
     problem it was enough to specify the option "pdf" in SaveAs.</li>
 <li> <tt>c->BuildLegend()</tt> created the legend in the current pad,
      not in <tt>c</tt> (as it should). </li>
+<li> A square TCanvas saved in batch mode in a ROOT file was not square anymore
+     when displayed in interactive mode. </li>
 </ul>

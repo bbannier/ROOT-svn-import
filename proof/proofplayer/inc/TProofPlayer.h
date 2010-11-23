@@ -123,6 +123,8 @@ protected:
       ~TCleanup() { fPlayer->StopFeedback(); }
    };
 
+   Bool_t CheckMemUsage(Long64_t &mfreq, Bool_t &w80r, Bool_t &w80v, TString &wmsg);
+
    void MapOutputListToDataMembers() const;
 
 public:
@@ -270,6 +272,7 @@ protected:
    TList          *MergeFeedback();
    Bool_t          MergeOutputFiles();
    void            NotifyMemory(TObject *obj);
+   void            SetLastMergingMsg(TObject *obj);
    virtual Bool_t  SendSelector(const char *selector_file); //send selector to slaves
    TProof         *GetProof() const { return fProof; }
    void            SetupFeedback();  // specialized setup

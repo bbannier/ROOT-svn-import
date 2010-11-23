@@ -1242,7 +1242,7 @@ struct G__input_file {
    G__input_file() : fp(0),line_number(-1),filenum(-1),str(0),pos(0),vindex(0) { name[0] = 0; }
 #endif
 };
-   
+
 /**************************************************************************
 * make hash value
 *
@@ -1391,8 +1391,6 @@ extern void (*G__aterror)();
 #define G__P(funcparam) ()
 #endif
 
-extern G__EXPORT unsigned long G__uint G__P((G__value buf));
-
 #if defined(G__DEBUG) && !defined(G__MEMTEST_C)
 #include "src/memtest.h"
 #endif
@@ -1412,6 +1410,25 @@ typedef struct {
     long i[G__VAARG_SIZE/sizeof(long)];
   } x;
 } G__va_arg_buf;
+
+
+// cross-compiling for iOS and iOS simulator (assumes host is Intel Mac OS X)
+#if defined(R__IOSSIM) || defined(R__IOS)
+#ifdef __x86_64__
+#define R__x86_64 1
+#undef __x86_64__
+#endif
+#ifdef __i386__
+#define R__i386 1
+#undef __i386__
+#endif
+#ifdef R__IOSSIM
+#define __i386__ 1
+#endif
+#ifdef R__IOS
+#define __arm__ 1
+#endif
+#endif
 
 
 #if (defined(__i386__) && (defined(__linux) || defined(__APPLE__))) || \
@@ -1533,6 +1550,17 @@ typedef struct {
 
 #endif
 
+// cross-compiling for iOS and iOS simulator (assumes host is Intel Mac OS X)
+#if defined(R__IOSSIM) || defined(R__IOS)
+#undef __i386__
+#undef __arm__
+#ifdef R__x86_64
+#define __x86_64__ 1
+#endif
+#ifdef R__i386
+#define __i386__ 1
+#endif
+#endif
 
 struct G__va_list_para {
   struct G__param *libp;
@@ -1556,7 +1584,7 @@ typedef void G__parse_hook_t ();
 #    define G__DUMMYTOCHECKFORDUPLICATES_CONCAT(A,B) A##B
 #    define G__DUMMYTOCHECKFORDUPLICATES(IDX) namespace{class G__DUMMYTOCHECKFORDUPLICATES_CONCAT(this_API_function_index_occurs_more_than_once_,IDX) {};}
 #  else
-#    define G__DUMMYTOCHECKFORDUPLICATES(IDX) 
+#    define G__DUMMYTOCHECKFORDUPLICATES(IDX)
 #  endif
 #  define G__DECL_API(IDX, RET, NAME, ARGS) \
    G__EXPORT RET NAME ARGS ; G__DUMMYTOCHECKFORDUPLICATES(IDX)
@@ -1594,7 +1622,7 @@ G__EXPORT void G__SET_CINT_API_POINTERS_FUNCNAME (void *a[G__NUMBER_OF_API_FUNCT
 
 #endif /* __CINT__ */
 
-#if defined(G__WIN32) 
+#if defined(G__WIN32)
 #ifndef snprintf
 #define snprintf _snprintf
 #endif
@@ -1695,9 +1723,9 @@ class G__func2void {
 
    union funcptr_and_voidptr {
       typedef void (*funcptr_t)();
-      
+
       funcptr_and_voidptr(void *val) : _read(val) {}
-      
+
       void *_read;
       funcptr_t _write;
    };
@@ -1716,7 +1744,7 @@ public:
 #elif !__CINT__
 typedef union {
    void *_read;
-   void (*_write)();   
+   void (*_write)();
 } funcptr_and_voidptr;
 #endif /* __cplusplus  && ! __CINT__*/
 

@@ -129,8 +129,12 @@ TMVA::PDEFoam::PDEFoam() :
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoam::PDEFoam(const TString& Name) :
-   fLogger(new MsgLogger("PDEFoam"))
+TMVA::PDEFoam::PDEFoam(const TString& Name)
+   : fRvec ( 0 )
+   , fNElements( 0 )
+   , fNmin     ( 100 )
+   , fRMSmin   ( 1.0 )
+   , fLogger(new MsgLogger("PDEFoam"))
 {
    // User constructor, to be employed by the user
 
@@ -201,19 +205,35 @@ TMVA::PDEFoam::~PDEFoam()
 //_____________________________________________________________________
 TMVA::PDEFoam::PDEFoam(const PDEFoam &From) :
    TObject(From)
+   , fDim(0)
+   , fNCells(0)
+   , fNBin(0)
+   , fNSampl(0)
+   , fEvPerBin(0)
    , fMaskDiv(0)
    , fInhiDiv(0)
+   , fNoAct(0)
+   , fLastCe(0)
    , fCells(0)
    , fHistEdg(0)
    , fRvec(0)
    , fPseRan(0)
    , fAlpha(0)
+   , fFoamType(kSeparate)
    , fXmin(0)
    , fXmax(0)
+   , fNElements(0)
+   , fCutNmin(false)
+   , fNmin(0)
+   , fCutRMSmin(false)
+   , fRMSmin(0)
+   , fVolFrac(0)
    , fDistr(0)
    , fTimer(0)
    , fVariableNames(0)
-   , fLogger(0)
+   , fSignalClass(0)
+   , fBackgroundClass(0)
+   , fLogger(new MsgLogger("PDEFoam"))
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
@@ -2495,6 +2515,7 @@ void TMVA::PDEFoam::ReadStream( istream & istr )
    // inherited class variables: fLastCe, fNCells, fDim[GetTotDim()]
    istr >> fLastCe;
    istr >> fNCells;
+   // coverity[tainted_data_argument]
    istr >> fDim;
 
 

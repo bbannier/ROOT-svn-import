@@ -12,11 +12,12 @@
 #include <stdexcept>
 #include <cstring>
 
-#include "TROOT.h"
-#include "TClass.h"
 #include "TVirtualGL.h"
 #include "KeySymbols.h"
 #include "Buttons.h"
+#include "TH2Poly.h"
+#include "TClass.h"
+#include "TROOT.h"
 #include "TGL5D.h"
 #include "TMath.h"
 #include "TPad.h"
@@ -25,6 +26,7 @@
 
 #include "TGLSurfacePainter.h"
 #include "TGLTH3Composition.h"
+#include "TGLH2PolyPainter.h"
 #include "TGLHistPainter.h"
 #include "TGLLegoPainter.h"
 #include "TGLBoxPainter.h"
@@ -621,8 +623,12 @@ void TGLHistPainter::CreatePainter(const PlotOption_t &option, const TString &ad
    }
 
    if (option.fPlotType == kGLLegoPlot) {
-      if (!fGLPainter.get())
-         fGLPainter.reset(new TGLLegoPainter(fHist, &fCamera, &fCoord));
+      if (!fGLPainter.get()) {
+         if (dynamic_cast<TH2Poly*>(fHist))
+            fGLPainter.reset(new TGLH2PolyPainter(fHist, &fCamera, &fCoord));
+         else
+            fGLPainter.reset(new TGLLegoPainter(fHist, &fCamera, &fCoord));
+      }
    } else if (option.fPlotType == kGLSurfacePlot) {
       if (!fGLPainter.get())
          fGLPainter.reset(new TGLSurfacePainter(fHist, &fCamera, &fCoord));

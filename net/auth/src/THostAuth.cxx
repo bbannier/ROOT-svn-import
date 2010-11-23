@@ -197,7 +197,8 @@ THostAuth::THostAuth(const char *asstring) : TObject()
 
    TString strtmp(asstring);
    char *tmp = new char[strlen(asstring)+1];
-   strcpy(tmp,asstring);
+   strncpy(tmp,asstring,strlen(asstring));
+   tmp[strlen(asstring)] = 0;
 
    fHost = TString((const char *)strtok(tmp," "));
    strtmp.ReplaceAll(fHost,"");
@@ -212,7 +213,7 @@ THostAuth::THostAuth(const char *asstring) : TObject()
    strtmp.ReplaceAll(fNmet,"");
    fNmet.Remove(0,fNmet.Index(":")+1);
 
-   if (tmp) delete[] tmp;
+   delete[] tmp;
 
    fNumMethods = atoi(fNmet.Data());
    Int_t i = 0;
@@ -221,8 +222,8 @@ THostAuth::THostAuth(const char *asstring) : TObject()
       det.Remove(0,det.Index("'")+1);
       det.Resize(det.Index("'"));
       // Remove leading spaces, if
-      char cmet[2];
-      sscanf(det.Data(),"%s",cmet);
+      char cmet[20];
+      sscanf(det.Data(),"%10s",cmet);
       Int_t met = atoi(cmet);
       if (met > -1 && met < kMAXSEC) {
          det.ReplaceAll(cmet,"");
@@ -474,9 +475,9 @@ void  THostAuth::ReOrder(Int_t nmet, Int_t *fmet)
    // Reorder nmet methods according fmet[nmet]
 
    // Temporary arrays
-   Int_t   tMethods[kMAXSEC];
-   Int_t   tSuccess[kMAXSEC];
-   Int_t   tFailure[kMAXSEC];
+   Int_t   tMethods[kMAXSEC] = {0};
+   Int_t   tSuccess[kMAXSEC] = {0};
+   Int_t   tFailure[kMAXSEC] = {0};
    TString tDetails[kMAXSEC];
    Int_t   flag[kMAXSEC] = {0};
 

@@ -9,11 +9,9 @@
 #include <map>
 
 #if PY_VERSION_HEX >= 0x03000000
-// TODO: this is all very, very wrong
-#define PyBuffer_Type PyBytes_Type
-static PyObject* PyBuffer_FromReadWriteMemory( void*, int ) {
-   PyErr_SetString( PyExc_TypeError, "PyBuffer not supported in old-style p3" );
-   return 0;
+static PyObject* PyBuffer_FromReadWriteMemory( void* ptr, int size ) {
+   Py_buffer bufinfo = { ptr, NULL, size, 1, 0, 1, NULL, NULL, NULL, NULL, { 0, 0 }, NULL };
+   return PyMemoryView_FromBuffer( &bufinfo );
 }
 #endif
 
@@ -54,7 +52,13 @@ namespace {
 // implement get, str, and length functions
    Py_ssize_t buffer_length( PyObject* self )
    {
+#if PY_VERSION_HEX < 0x03000000
       Py_ssize_t nlen = (*(PyBuffer_Type.tp_as_sequence->sq_length))(self);
+#else
+      Py_buffer bufinfo;
+      (*(Py_TYPE(self)->tp_as_buffer->bf_getbuffer))( self, &bufinfo, PyBUF_SIMPLE );
+      Py_ssize_t nlen = bufinfo.len;
+#endif
       if ( nlen != INT_MAX )  // INT_MAX is the default, i.e. unknown actual length
          return nlen;
 
@@ -87,8 +91,11 @@ namespace {
       char* buf = 0;     // interface change in 2.5, no other way to handle it
 #endif
 #if PY_VERSION_HEX < 0x03000000
-// TODO: currently will always fail for p3
       (*(PyBuffer_Type.tp_as_buffer->bf_getcharbuffer))( self, 0, &buf );
+#else
+      Py_buffer bufinfo;
+      (*(PyBuffer_Type.tp_as_buffer->bf_getbuffer))( self, &bufinfo, PyBUF_SIMPLE );
+      buf = (char*)bufinfo.buf;
 #endif
 
       if ( ! buf )
@@ -144,14 +151,31 @@ namespace {
    PYROOT_IMPLEMENT_PYBUFFER_METHODS( Float,  Float_t,  Double_t, PyFloat_FromDouble, PyFloat_AsDouble )
    PYROOT_IMPLEMENT_PYBUFFER_METHODS( Double, Double_t, Double_t, PyFloat_FromDouble, PyFloat_AsDouble )
 
+   int pyroot_buffer_ass_subscript( PyObject* self, PyObject* idx, PyObject* val ) {
+      if ( PyIndex_Check( idx ) ) {
+         Py_ssize_t i = PyNumber_AsSsize_t( idx, PyExc_IndexError );
+         if ( i == -1 && PyErr_Occurred() )
+            return -1;
+         return Py_TYPE(self)->tp_as_sequence->sq_ass_item( self, i, val );
+      } else {
+         PyErr_SetString( PyExc_TypeError, "buffer indices must be integers" );
+         return -1;
+      }
+   }
+
+
 //____________________________________________________________________________
-   PyObject* buffer_setsize( PyBufferTop_t* self, PyObject* pynlen )
+   PyObject* buffer_setsize( PyObject* self, PyObject* pynlen )
    {
       Py_ssize_t nlen = PyInt_AsSsize_t( pynlen );
       if ( nlen == -1 && PyErr_Occurred() )
          return 0;
 
-      self->fSize = nlen;
+#if PY_VERSION_HEX < 0x03000000
+      ((PyBufferTop_t*)self)->fSize = nlen;
+#else
+      PyMemoryView_GET_BUFFER(self)->len = nlen;
+#endif
 
       Py_INCREF( Py_None );
       return Py_None;
@@ -218,7 +242,7 @@ PyROOT::TPyBufferFactory* PyROOT::TPyBufferFactory::Instance()
    if ( PyBuffer_Type.tp_as_mapping ) { /* p2.6 and later */                    \
       Py##name##Buffer_MapMethods.mp_length    = (lenfunc)buffer_length;        \
       Py##name##Buffer_MapMethods.mp_subscript = (binaryfunc)name##_buffer_subscript;\
-      Py##name##Buffer_MapMethods.mp_ass_subscript = 0;                         \
+      Py##name##Buffer_MapMethods.mp_ass_subscript = (objobjargproc)pyroot_buffer_ass_subscript;\
       Py##name##Buffer_Type.tp_as_mapping      = &Py##name##Buffer_MapMethods;  \
    }                                                                            \
    Py##name##Buffer_Type.tp_str             = (reprfunc)name##_buffer_str;      \

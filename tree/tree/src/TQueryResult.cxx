@@ -216,7 +216,7 @@ void TQueryResult::SaveSelector(const char *selector)
       // Locate the included header file
       char *p = (char *) strrchr(selc,'.');
       if (p) {
-         strcpy(p+1,"h");
+         strlcpy(p+1,"h",strlen(p));
       } else {
          Warning("SaveSelector",
                  "bad formatted name (%s): could not build header file name", selc);

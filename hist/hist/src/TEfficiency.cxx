@@ -5,9 +5,11 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <stdlib.h>
 
 //ROOT headers
-#include "Math/QuantFuncMathCore.h"
+#include "Math/ProbFunc.h"
+#include "Math/QuantFunc.h"
 #include "TBinomialEfficiencyFitter.h"
 #include "TDirectory.h"
 #include "TF1.h"
@@ -20,15 +22,21 @@
 #include "TROOT.h"
 #include "TStyle.h"
 #include "TVirtualPad.h"
+#include "TError.h"
+#include "Math/BrentMinimizer1D.h"
+#include "Math/WrappedFunction.h"
 
 //custom headers
 #include "TEfficiency.h"
+
+// file with extra class for FC method
+#include "TEfficiencyHelper.h"
 
 //default values
 const Double_t kDefBetaAlpha = 1;
 const Double_t kDefBetaBeta = 1;
 const Double_t kDefConfLevel = 0.682689492137; // 1 sigma
-const Int_t kDefStatOpt = TEfficiency::kFCP;
+const TEfficiency::EStatOption kDefStatOpt = TEfficiency::kFCP;
 const Double_t kDefWeight = 1;
 
 ClassImp(TEfficiency)
@@ -205,12 +213,21 @@ ClassImp(TEfficiency)
 // #Rightarrow P(#epsilon | k ; N) = #frac{1}{norm'} #times #epsilon^{k + #alpha - 1} #times (1 - #epsilon)^{N - k + #beta - 1} #equiv Beta(#epsilon; k + #alpha, N - k + #beta)
 //    End_Latex
 //    Begin_Html
-//    The expectation value of this posterior distribution is used as estimator for the efficiency:
+//    By default the expectation value of this posterior distribution is used as estimator for the efficiency:
 //    End_Html
 //    Begin_Latex
 // #hat{#varepsilon} = #frac{k + #alpha}{N + #alpha + #beta}
 //    End_Latex
-//    Begin_Html   
+//    Begin_Html  
+//    Optionally the mode can also be used as value for the estimated efficiency. This can be done by calling SetBit(kPosteriorMode) or 
+//    <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:SetPosteriorMode">SetPosteriorMode</a>. In this case the estimated efficiency is:
+//    End_Html
+//    Begin_Latex
+// #hat{#varepsilon} = #frac{k + #alpha -1}{N + #alpha + #beta - 2}
+//    End_Latex
+//    Begin_Html  
+//    In the case of a uniform prior distribution, B(x,1,1), the posterior mode is k/n, equivalent to the frequentist estimate (the maximum likelihood value). 
+//   
 // The statistic options also specifiy which confidence interval is used for calculating
 // the uncertainties of the efficiency. The following properties define the error
 // calculation:
@@ -219,6 +236,7 @@ ClassImp(TEfficiency)
 // <li><b>fStatisticOption:</b> defines which method is used to calculate the boundaries of the confidence interval (<a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:SetStatisticOption">SetStatisticOption</a>)</li>
 // <li><b>fBeta_alpha, fBeta_beta:</b> parameters for the prior distribution which is only used in the bayesian case (<a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:GetBetaAlpha">GetBetaAlpha</a> / <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:GetBetaBeta">GetBetaBeta</a> / <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:SetBetaAlpha">SetBetaAlpha</a> / <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:SetBetaBeta">SetBetaBeta</a>)</li>
 // <li><b>kIsBayesian:</b> flag whether bayesian statistics are used or not (<a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:UsesBayesianStat">UsesBayesianStat</a>)</li>
+// <li><b>kShortestInterval:</b> flag whether shortest interval (instead of central one) are used in case of Bayesian statistics  (<a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:UsesShortestInterval">UsesShortestInterval</a>). Normally shortest interval should be used in combination with the mode (see <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:UsesPosteriorMode">UsesPosteriorMode</a>)</li>
 // <li><b>fWeight:</b> global weight for this TEfficiency object which is used during combining or merging with other TEfficiency objects(<a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:GetWeight">GetWeight</a> / <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:SetWeight">SetWeight</a>)</li>
 // </ul>
 //    In the following table the implemented confidence intervals are listed
@@ -263,6 +281,16 @@ ClassImp(TEfficiency)
 //    <td>Agresti-Coull</td><td>kFAC</td>
 //    <td>
 //     <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:AgrestiCoull">AgrestiCoull</a>
+//    </td>
+//    <td>false</td>
+//    <td>
+//      <ul><li>total events</li><li>passed events</li><li>confidence level</li></ul>
+//    </td>
+//    </tr>
+//    <tr>
+//    <td>Feldman-Cousins</td><td>kFAC</td>
+//    <td>
+//     <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:FeldmanCousins">FeldmanCousins</a>
 //    </td>
 //    <td>false</td>
 //    <td>
@@ -509,12 +537,17 @@ ClassImp(TEfficiency)
 // histograms, the result is not stored in a TEfficiency object but a TGraphAsymmErrors
 // is returned which shows the estimated combined efficiency and its uncertainty
 // for each bin. At the moment the combination method <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:Combine">Combine </a>only supports combination of 1-dimensional efficiencies in a bayesian approach.<br />
-// For calculating the combined efficiency and its uncertainty for each bin, a weighted average posterior distribution is constructed. An equal-tailed confidence interval is constructed which might be not the shortest one.
+// For calculating the combined efficiency and its uncertainty for each bin only Bayesian statistics is used. No frequentists methods are presently 
+// supported for computing the combined efficiency and its confidence interval.
+// In the case of the Bayesian statistics a combined posterior is constructed taking into account the weight of each TEfficiency object. The same prior is used 
+// for all the TEfficiency objects.
 // End_Html
-// Begin_Latex(separator='=',align='rl')
-// P_{comb}(#epsilon | {k_{i}} , {N_{i}}) = norm #times #sum_{j} p_{j} #times P_{j}(#epsilon | k_{j} , N_{j})
-// p_{j} = probability of an event coming from sub sample j
-// p_{j} = w_{j} #times N_{j} is used if no probabilites are given
+// Begin_Latex
+// P_{comb}(#epsilon | {w_{i}}, {k_{i}} , {N_{i}}) = #frac{1}{norm} #prod_{i}{L(k_{i} | N_{i}, #epsilon)}^{w_{i}} #Pi( #epsilon )  
+// L(k_{i} | N_{i}, #epsilon) is the likelihood function for the sample i ( a Binomial distribution) 
+// #Pi( #epsilon) is the prior, a beta distribution B(#epsilon, #alpha, #beta).
+// The resulting combined posterior is 
+// P_{comb}(#epsilon |{w_{i}}; {k_{i}}; {N_{i}}) = B(#epsilon, #sum_{i}{ w_{i} k_{i}} + #alpha, #sum_{i}{ w_{i}(n_{i}-k_{i})}+#beta)  
 // #hat{#varepsilon} = #int_{0}^{1} #epsilon #times P_{comb}(#epsilon | {k_{i}} , {N_{i}}) d#epsilon
 // confidence level = 1 - #alpha
 // #frac{#alpha}{2} = #int_{0}^{#epsilon_{low}} P_{comb}(#epsilon | {k_{i}} , {N_{i}}) d#epsilon ... defines lower boundary
@@ -524,14 +557,13 @@ ClassImp(TEfficiency)
 // <b>Example:</b><br />
 // If you use cuts to select electrons which can originate from two different
 // processes, you can determine the selection efficiency for each process. The
-// overall selection efficiency is then the combined efficiency. The weights for
-// the individual posterior distributions should be the probability that an
+// overall selection efficiency is then the combined efficiency. The weights to be used in the 
+// combination should be the probability that an
 // electron comes from the corresponding process.
 // End_Html
 // Begin_Latex
 // p_{1} = #frac{#sigma_{1}}{#sigma_{1} + #sigma_{2}} = #frac{N_{1}w_{1}}{N_{1}w_{1} + N_{2}w_{2}}
-// p_{2} = #frac{#sigma_{2}}{#sigma_{1} + #sigma{2}} = #frac{N_{2}w_{2}}{N_{1}w_{1} + N_{2}w_{2}}
-// P_{ges}(#epsilon | k_{1}, k_{2}; N_{1}, N_{2}) = p_{1} #times P_{1}(#epsilon | k_{1}; N_{1}) + p_{2} #times P_{2}(#epsilon | k_{2}; N_{2})
+// p_{2} = #frac{#sigma_{2}}{#sigma_{1} + #sigma_{2}} = #frac{N_{2}w_{2}}{N_{1}w_{1} + N_{2}w_{2}}
 // End_Latex
 // Begin_Html
 // <h3><a name="other">VI. Further operations</a></h3>
@@ -1077,9 +1109,62 @@ Double_t TEfficiency::AgrestiCoull(Int_t total,Int_t passed,Double_t level,Bool_
 }
 
 //______________________________________________________________________________
-Double_t TEfficiency::Bayesian(Int_t total,Int_t passed,Double_t level,Double_t alpha,Double_t beta,Bool_t bUpper)
+Double_t TEfficiency::FeldmanCousins(Int_t total,Int_t passed,Double_t level,Bool_t bUpper) 
+{ 
+   //calculates the boundaries for the frequentist Feldman-Cousins interval
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //       - bUpper: true  - upper boundary is returned
+   //                 false - lower boundary is returned
+   //
+   //
+   Double_t lower = 0; 
+   Double_t upper = 1;
+   if (!FeldmanCousinsInterval(total,passed,level, upper,lower)) { 
+      ::Error("FeldmanCousins","Error running FC method - return 0 or 1");
+   }
+   return (bUpper) ? upper : lower; 
+}
+Bool_t TEfficiency::FeldmanCousinsInterval(Int_t total,Int_t passed,Double_t level,Double_t & upper, Double_t & lower)
 {
-   //calculates the boundaries for a baysian confidence interval
+   //calculates the interval boundaries using the frequentist methods of Feldman-Cousins
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //Output: 
+   //       - lower :  lower boundary returned on exit
+   //       - upper :  lower boundary returned on exit
+   //
+   //Return a flag with the status of the calculation 
+   // 
+   // Calculation: 
+   // The Feldman-Cousins is a frequentist method where the interval is estimated using a Neyman construction where the ordering 
+   // is based on the likelihood ratio: 
+   //Begin_Latex(separator='=',align='rl')
+   // LR =  #frac{Binomial(k | N, #epsilon)}{Binomial(k | N, #hat{#epsilon} ) }
+   //End_Latex
+   //See G. J. Feldman and R. D. Cousins, Phys. Rev. D57 (1998) 3873 
+   // and   R. D. Cousins, K. E. Hymes, J. Tucker, Nuclear Instruments and Methods in Physics Research A 612 (2010) 388
+   //
+   // Implemented using classes developed by Jordan Tucker and Luca Lista
+   // See File hist/hist/src/TEfficiencyHelper.h
+   //
+   FeldmanCousinsBinomialInterval fc;
+   double alpha = 1.-level;
+   fc.Init(alpha);
+   fc.Calculate(passed, total);
+   lower = fc.Lower();
+   upper = fc.Upper();
+   return true;
+}
+
+//______________________________________________________________________________
+Double_t TEfficiency::Bayesian(Int_t total,Int_t passed,Double_t level,Double_t alpha,Double_t beta,Bool_t bUpper, Bool_t bShortest)
+{
+   //calculates the boundaries for a Bayesian confidence interval (shortest or central interval depending on the option)
    //
    //Input: - total : number of total events
    //       - passed: 0 <= number of passed events <= total
@@ -1089,8 +1174,9 @@ Double_t TEfficiency::Bayesian(Int_t total,Int_t passed,Double_t level,Double_t 
    //       - bUpper: true  - upper boundary is returned
    //                 false - lower boundary is returned
    //
-   //Note: The equal-tailed confidence interval is calculated which might be not
-   //      the shortest interval containing the desired coverage probability.
+   //Note: In the case central confidence interval is calculated. 
+   //      when passed = 0 (or passed = total) the lower (or upper) 
+   //      interval values will be larger than 0 (or smaller than 1).   
    //
    //Calculation:
    //
@@ -1105,27 +1191,188 @@ Double_t TEfficiency::Bayesian(Int_t total,Int_t passed,Double_t level,Double_t 
    //Begin_Latex Prior(#varepsilon) = #frac{1}{B(#alpha,#beta)} #varepsilon ^{#alpha - 1} (1 - #varepsilon)^{#beta - 1}End_Latex
    //The posterior probability is therefore again given by a beta distribution:
    //Begin_Latex P(#varepsilon |k,N) #propto #varepsilon ^{k + #alpha - 1} (1 - #varepsilon)^{N - k + #beta - 1} End_Latex
-   //The lower boundary for the equal-tailed confidence interval is given by the
+   //In case of central intervals 
+   //the lower boundary for the equal-tailed confidence interval is given by the
    //inverse cumulative (= quantile) function for the quantile Begin_Latex #frac{1 - level}{2} End_Latex.
    //The upper boundary for the equal-tailed confidence interval is given by the
    //inverse cumulative (= quantile) function for the quantile Begin_Latex #frac{1 + level}{2} End_Latex.
    //Hence it is the solution Begin_Latex #varepsilon End_Latex of the following equation:
    //Begin_Latex I_{#varepsilon}(k + #alpha,N - k + #beta) = #frac{1}{norm} #int_{0}^{#varepsilon} dt t^{k + #alpha - 1} (1 - t)^{N - k + #beta - 1} =  #frac{1 #pm level}{2} End_Latex
+   // In the case of shortest interval the minimum interval aorund the mode is found by minimizing the length of all intervals whith the 
+   // given probability content. See TEfficiency::BetaShortestInterval
+
+   Double_t a = double(passed)+alpha;
+   Double_t b = double(total-passed)+beta;
+
+   if (bShortest) { 
+      double lower = 0; 
+      double upper = 1;
+      BetaShortestInterval(level,a,b,lower,upper);
+      return (bUpper) ? upper : lower; 
+   }
+   else 
+      return BetaCentralInterval(level, a, b, bUpper);
+}
+//______________________________________________________________________________
+Double_t TEfficiency::BetaCentralInterval(Double_t level,Double_t a,Double_t b,Bool_t bUpper)
+{
+   //calculates the boundaries for a central confidence interval for a Beta distribution
+   //
+   //Input: - level : confidence level
+   //       -    a  : parameter > 0 for the beta distribution (for a posterior is passed + prior_alpha
+   //       -    b  : parameter > 0 for the beta distribution (for a posterior is (total-passed) + prior_beta 
+   //       - bUpper: true  - upper boundary is returned
+   //                 false - lower boundary is returned
+   //
 
    if(bUpper) {
-      if((alpha > 0) && (beta > 0))
-	 return (passed == total)? 1.0 : ROOT::Math::beta_quantile((1+level)/2,passed+alpha,total-passed+beta);
-      else
+      if((a > 0) && (b > 0))
+	 return ROOT::Math::beta_quantile((1+level)/2,a,b);
+      else { 
+         gROOT->Error("TEfficiency::BayesianCentral","Invalid input parameters - return 1");
 	 return 1;
+      }
    }
    else {
-      if((alpha > 0) && (beta > 0))
-	 return (passed == 0)? 0.0 : ROOT::Math::beta_quantile((1-level)/2,passed+alpha,total-passed+beta);
-      else
+      if((a > 0) && (b > 0))
+	 return ROOT::Math::beta_quantile((1-level)/2,a,b);
+      else {
+         gROOT->Error("TEfficiency::BayesianCentral","Invalid input parameters - return 0");
 	 return 0;
+      }
    }
 }
 
+struct Beta_interval_length { 
+   Beta_interval_length(Double_t level,Double_t alpha,Double_t beta ) : 
+      fCL(level), fAlpha(alpha), fBeta(beta)                                     
+   {}
+
+   Double_t LowerMax() { 
+      // max allowed value of lower given the interval size 
+      return ROOT::Math::beta_quantile_c(fCL, fAlpha,fBeta);
+   }
+
+   Double_t operator() (double lower) const {
+      // return length of interval
+      Double_t plow = ROOT::Math::beta_cdf(lower, fAlpha, fBeta); 
+      Double_t pup = plow + fCL; 
+      double upper = ROOT::Math::beta_quantile(pup, fAlpha,fBeta);
+      return upper-lower;
+   }
+   Double_t fCL; // interval size (confidence level)
+   Double_t fAlpha; // beta distribution alpha parameter
+   Double_t fBeta; // beta distribution beta parameter
+
+};
+
+//______________________________________________________________________________
+Bool_t TEfficiency::BetaShortestInterval(Double_t level,Double_t a,Double_t b, Double_t & lower, Double_t & upper)
+{
+   //calculates the boundaries for a shortest confidence interval for a Beta  distribution
+   //
+   //Input: - level : confidence level
+   //       -    a  : parameter > 0 for the beta distribution (for a posterior is passed + prior_alpha
+   //       -    b  : parameter > 0 for the beta distribution (for a posterior is (total-passed) + prior_beta 
+   //       - bUpper: true  - upper boundary is returned
+   //                 false - lower boundary is returned
+   //
+   //
+   //The lower/upper boundary are then obtained by finding the shortest interval of the beta distribbution 
+   // contained the desired probability level. 
+   // The length of all possible intervals is minimized in order to find the shortest one
+
+   if (a <= 0 || b <= 0) {
+      lower = 0; upper = 1; 
+      gROOT->Error("TEfficiency::BayesianShortest","Invalid input parameters - return [0,1]");
+      return kFALSE; 
+   }
+
+   // treat here special cases when mode == 0 or 1
+   double mode = BetaMode(a,b);
+   if (mode == 0.0) { 
+      lower = 0; 
+      upper = ROOT::Math::beta_quantile(level, a, b);
+      return kTRUE;
+   } 
+   if (mode == 1.0) { 
+      lower = ROOT::Math::beta_quantile_c(level, a, b);
+      upper = 1.0;
+      return kTRUE;
+   }
+   // special case when the shortest interval is undefined  return the central interval
+   // can happen for a posterior when passed=total=0
+   //
+   if ( a==b && a<1.0) { 
+      lower = BetaCentralInterval(level,a,b,kFALSE);
+      upper = BetaCentralInterval(level,a,b,kTRUE);
+      return kTRUE;
+   }
+
+   // for the other case perform a minimization
+   // make a function of the length of the posterior interval as a function of lower bound
+   Beta_interval_length intervalLength(level,a,b);
+   // minimize the interval length
+   ROOT::Math::WrappedFunction<const Beta_interval_length &> func(intervalLength);
+   ROOT::Math::BrentMinimizer1D minim;
+   minim.SetFunction(func, 0, intervalLength.LowerMax() );
+   minim.SetNpx(2); // no need to bracket with many iterations. Just do few times to estimate some better points
+   bool ret = minim.Minimize(100, 1.E-10,1.E-10);
+   if (!ret) { 
+      gROOT->Error("TEfficiency::BayesianShortes","Error finding the shortest interval"); 
+      return kFALSE;
+   }
+   lower = minim.XMinimum();
+   upper = lower + minim.FValMinimum();
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+Double_t TEfficiency::BetaMean(Double_t a,Double_t b)
+{
+   // compute the mean (average) of the beta distribution
+   //
+   //Input:    a  : parameter > 0 for the beta distribution (for a posterior is passed + prior_alpha
+   //          b  : parameter > 0 for the beta distribution (for a posterior is (total-passed) + prior_beta 
+   //
+
+   if (a <= 0 || b <= 0 ) { 
+      gROOT->Error("TEfficiency::BayesianMean","Invalid input parameters - return 0");
+      return 0;
+   }
+
+   Double_t mean =  a / (a + b);
+   return mean; 
+}
+
+//______________________________________________________________________________
+Double_t TEfficiency::BetaMode(Double_t a,Double_t b)
+{
+   // compute the mode of the beta distribution
+   //
+   //Input:    a  : parameter > 0 for the beta distribution (for a posterior is passed + prior_alpha
+   //          b  : parameter > 0 for the beta distribution (for a posterior is (total-passed) + prior_beta 
+   //
+   // note the mode is defined for a Beta(a,b) only if (a,b)>1 (a = passed+alpha; b = total-passed+beta)
+   // return then the following in case (a,b) < 1: 
+   //  if (a==b) return 0.5 (it is really undefined)
+   //  if (a < b) return 0;
+   //  if (a > b) return 1;
+
+   if (a <= 0 || b <= 0 ) { 
+      gROOT->Error("TEfficiency::BayesianMode","Invalid input parameters - return 0");
+      return 0;
+   }
+   if ( a <= 1 || b <= 1) {
+      if ( a < b) return 0;
+      if ( a > b) return 1; 
+      if (a == b) return 0.5; // cannot do otherwise
+   }
+      
+   // since a and b are > 1 here denominator cannot be 0 or < 0
+   Double_t mode =  (a - 1.0) / (a + b -2.0);
+   return mode; 
+}
 //______________________________________________________________________________
 void TEfficiency::Build(const char* name,const char* title)
 {
@@ -1326,11 +1573,10 @@ Double_t TEfficiency::ClopperPearson(Int_t total,Int_t passed,Double_t level,Boo
    else
       return ((passed == 0) ? 0.0 : ROOT::Math::beta_quantile(alpha,passed,total-passed+1.0));
 }
-
 //______________________________________________________________________________
 Double_t TEfficiency::Combine(Double_t& up,Double_t& low,Int_t n,
 			      const Int_t* pass,const Int_t* total,
-			      const Double_t* alpha,const Double_t* beta,
+			      Double_t alpha, Double_t beta,
 			      Double_t level,const Double_t* w,Option_t* opt)
 {
    //calculates the combined efficiency and its uncertainties
@@ -1348,36 +1594,28 @@ Double_t TEfficiency::Combine(Double_t& up,Double_t& low,Int_t n,
    //- beta   : shape parameters for the beta distribution as prior
    //- level  : desired confidence level
    //- w      : weights for each sample; if not given, all samples get the weight 1
+   //           The weights do not need to be normalized, since they are internally renormalized 
+   //           to the number of effective entries. 
    //- options:
-   // + N : The weight for each sample is multiplied by the number of total events.
-   //       -> weight = w[i] * N[i]
-   //       This can be usefull when the weights and probability for each sample are given by
-   //Begin_Latex(separator='=',align='rl')
-   // w_{i} = #frac{#sigma_{i} #times L}{N_{i}}
-   // p_{i} = #frac{#sigma_{i}}{sum_{j} #sigma_{j}} #equiv #frac{N_{i} #times w_{i}}{sum_{j} N_{j} #times w_{j}}
-   //End_Latex
+   //
+   // + mode : The mode is returned instead of the mean of the posterior as best value
+   //          When using the mode the shortest interval is also computed instead of the central one
+   // + shortest: compute shortest interval (done by default if mode option is set)
+   // + central: compute central interval (done by default if mode option is NOT set)
+   //
    //Begin_Html
-   //Notation:
-   //<ul>
-   //<li>k = passed events</li>
-   //<li>N = total evens</li>
-   //<li>n = number of combined samples</li>
-   //<li>i = index for numbering samples</li>
-   //<li>p = probability of sample i (either w[i] or w[i] * N[i], see options)</li>
-   //</ul>
-   //calculation:
+   //Calculation:
    //<ol>
-   //<li>The combined posterior distributions is calculated</li>
-   //End_Html
+   //<li>The combined posterior distributions is calculated from the Bayes theorem assuming a common prior Beta distribution. 
+   //     It is easy to proof that the combined posterior is then:</li> 
    //Begin_Latex(separator='=',align='rl')
-   //P_{comb}(#epsilon |{k_{i}}; {N_{i}}) = #frac{1}{sum p_{i}} #times #sum_{i} p_{i} #times P_{i}(#epsilon | k_{i}; N_{i})
-   //p_{i} = w[i] or w_{i} #times N_{i} if option "N" is specified
+   //P_{comb}(#epsilon |{w_{i}}; {k_{i}}; {N_{i}}) = B(#epsilon, #sum_{i}{ w_{i} k_{i}} + #alpha, #sum_{i}{ w_{i}(n_{i}-k_{i})}+#beta) 
+   //w_{i} = weight for each sample renormalized to the effective entries 
+   //w^{'}_{i} =  w_{i} #frac{ #sum_{i} {w_{i} } } { #sum_{i} {w_{i}^{2} } }  
    //End_Latex
    //Begin_Html
-   //<li>The estimated efficiency is the weighted average of the individual efficiencies.</li>
+   //<li>The estimated efficiency is the mode (or the mean) of the obtained posterior distribution </li>
    //End_Html
-   //Begin_Latex #hat{#varepsilon}_{comb} = #frac{1}{sum p_{i}} #times #sum_{i} p_{i} #times #frac{pass_{i} + #alpha_{i}}{total_{i} + #alpha_{i} + #beta_{i}}
-   //End_Latex
    //Begin_Html
    //<li>The boundaries of the confidence interval for a confidence level (1 - a)
    //are given by the a/2 and 1-a/2 quantiles of the resulting cumulative
@@ -1385,16 +1623,20 @@ Double_t TEfficiency::Combine(Double_t& up,Double_t& low,Int_t n,
    //</ol>
    //End_Html
    //Example (uniform prior distribution):
-   //Begin_Macro
+   //Begin_Macro(source)
    //{
    //  TCanvas* c1 = new TCanvas("c1","",600,800);
    //  c1->Divide(1,2);
    //  c1->SetFillStyle(1001);
    //  c1->SetFillColor(kWhite);
    //
-   //  TF1* p1 = new TF1("p1","TMath::BetaDist(x,18,8)",0,1);
-   //  TF1* p2 = new TF1("p2","TMath::BetaDist(x,3,7)",0,1);
-   //  TF1* comb = new TF1("comb","0.6*p1 + 0.4*p2",0,1);
+   //  TF1* p1 = new TF1("p1","TMath::BetaDist(x,19,9)",0,1);
+   //  TF1* p2 = new TF1("p2","TMath::BetaDist(x,4,8)",0,1);
+   //  TF1* comb = new TF1("comb2","TMath::BetaDist(x,[0],[1])",0,1);
+   //  double norm = 1./(0.6*0.6+0.4*0.4); // weight normalization
+   //  double a = 0.6*18.0 + 0.4*3.0 + 1.0;  // new alpha parameter of combined beta dist.
+   //  double b = 0.6*10+0.4*7+1.0;  // new beta parameter of combined beta dist.
+   //  comb->SetParameters(norm*a ,norm *b );
    //  TF1* const1 = new TF1("const1","0.05",0,1);
    //  TF1* const2 = new TF1("const2","0.95",0,1);
    //
@@ -1403,15 +1645,15 @@ Double_t TEfficiency::Combine(Double_t& up,Double_t& low,Int_t n,
    //  p2->SetLineColor(kBlue);
    //  comb->SetLineColor(kGreen+2);
    //
-   //  TLegend* leg1 = new TLegend(0.2,0.65,0.6,0.85);
+   //  TLegend* leg1 = new TLegend(0.12,0.65,0.5,0.85);
    //  leg1->AddEntry(p1,"k1 = 18, N1 = 26","l");
    //  leg1->AddEntry(p2,"k2 = 3, N2 = 10","l");
    //  leg1->AddEntry(comb,"combined: p1 = 0.6, p2=0.4","l");
    //
    //  c1->cd(1);
-   //  p1->Draw();
+   //  comb->Draw();
+   //  p1->Draw("same");
    //  p2->Draw("same");
-   //  comb->Draw("same");
    //  leg1->Draw("same");
    //  c1->cd(2);
    //  const1->SetLineWidth(1);
@@ -1426,71 +1668,60 @@ Double_t TEfficiency::Combine(Double_t& up,Double_t& low,Int_t n,
    //}
    //End_Macro
 
-   Double_t sumweights = 0;
-   Double_t weight;
-   Double_t mean = 0;
-   TString formula = "( 0 ";
-
-   Bool_t bModWeights = false;
-
-   TString option = opt;
+   TString option(opt);
    option.ToLower();
-   if(option.Contains("n"))
-     bModWeights = true;
-   
-   //create formula for cumulative of total posterior
-   // cdf = 1/sum of weights * sum_i (weight_i * cdf_i(pass_i,total_i,alpha_i,beta_i))
-   // and cdf_i(pass_i,total_i,alpha_i,beta_i) = beta_incomplete(pass_i + alpha_i,total_i - pass_i + beta_i)
-   //combined efficiency is weighted average of individual efficiencies
-   for(Int_t i = 0; i < n; ++i) {
-      //get weight
-      if(w) {
-	//check weights > 0
-	 if(w[i] > 0)
-	    weight = w[i];
-	 else {
-	    gROOT->Error("TEfficiency::Combine","invalid custom weight found w = %.2lf",w[i]);
-	    gROOT->Info("TEfficiency::Combine","stop combining");
-	    return -1;
-	 }
-      }
-      //no weights given -> all objects get the same weight
-      else
-         weight = 1;
 
-      if(bModWeights)
-	weight *= total[i];
-      
-      sumweights += weight;
-      //check: total >= pass
+   //LM:  new formula for combination 
+   // works only if alpha beta are the same always
+   // the weights are normalized to w(i) -> N_eff w(i)/ Sum w(i) 
+   // i.e. w(i) -> Sum (w(i) / Sum (w(i)^2) * w(i) 
+   // norm = Sum (w(i) / Sum (w(i)^2) 
+   double ntot = 0; 
+   double ktot = 0; 
+   double sumw = 0;
+   double sumw2 = 0;
+   for (int i = 0; i < n ; ++i) { 
       if(pass[i] > total[i]) {
-	 gROOT->Error("TEfficiency::Combine","total events = %i < passed events %i",total[i],pass[i]);
-	 gROOT->Info("TEfficiency::Combine","stop combining");
+	 ::Error("TEfficiency::Combine","total events = %i < passed events %i",total[i],pass[i]);
+	 ::Info("TEfficiency::Combine","stop combining");
 	 return -1;
       }
-      formula += TString::Format("+ %lf * TMath::BetaIncomplete(x,%lf,%lf) ",weight,
-				 pass[i]+alpha[i],total[i]-pass[i]+beta[i]);
 
-      //add combined efficiency
-      if(total[i] + alpha[i] + beta[i])
-	mean += weight * (pass[i] + alpha[i])/(total[i] + alpha[i] + beta[i]);
+      ntot += w[i] * total[i]; 
+      ktot += w[i] * pass[i]; 
+      sumw += w[i]; 
+      sumw2 += w[i]*w[i]; 
+      //mean += w[i] * (pass[i] + alpha[i])/(total[i] + alpha[i] + beta[i]);
+   } 
+   double norm = sumw/sumw2;
+   ntot *= norm;
+   ktot *= norm; 
+   if(ktot > ntot) {
+      ::Error("TEfficiency::Combine","total  = %f < passed  %f",ntot,ktot);
+      ::Info("TEfficiency::Combine","stop combining");
+      return -1;
    }
-   formula += TString::Format(") / %lf",sumweights);
 
-   //create pdf function
-   TF1* pdf = new TF1("pdf",formula.Data(),0,1);
-   
-   //get quantiles for (1-level)/2 and (1+level)/2   
-   low = pdf->GetX((1-level)/2,0,1);
-   up = pdf->GetX((1+level)/2,0,1);
+   double a = ktot + alpha; 
+   double b = ntot - ktot + beta; 
 
-   delete pdf;
+   double mean = a/(a+b); 
+   double mode = BetaMode(a,b);
 
-   mean = mean/sumweights;
 
-   return mean;
+   Bool_t shortestInterval = option.Contains("sh") || ( option.Contains("mode") && !option.Contains("cent") ); 
+
+   if (shortestInterval) 
+      BetaShortestInterval(level, a, b, low, up); 
+   else {
+      low = BetaCentralInterval(level, a, b, false);  
+      up = BetaCentralInterval(level, a, b, true);  
+   }
+
+   if (option.Contains("mode")) return mode; 
+   return mean; 
+
 }
-
 //______________________________________________________________________________
 TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
 					 Int_t n,const Double_t* w)
@@ -1509,21 +1740,14 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
    //- options  
    // + s     : strict combining; only TEfficiency objects with the same beta
    //           prior and the flag kIsBayesian == true are combined
+   //           If not specified the prior parameter of the first TEfficiency object is used 
    // + v     : verbose mode; print information about combining
    // + cl=x  : set confidence level (0 < cl < 1). If not specified, the
    //           confidence level of the first TEfficiency object is used.
-   // + N     : for each bin i the weight of each TEfficiency object j in pList
-   //           is multiplied by the number of total events as
-   //           Begin_Latex w{i,j} = weight{j} #times total{j}->GetBinContent(i) End_Latex
-   //           Begin_Html
-   //           <ul>
-   //            <li>w{i,j}: weight of bin i and TEfficiency object j</li>
-   //            <li>weight{j}: global weight of TEfficiency object j (either GetWeight() or w[j])</li>
-   //            <li>total{j}: histogram containing the total events of TEfficiency object j</li>
-   //           </ul>
-   //           End_Html
-   //           Otherwise the weights for the TEfficiency objects are global and
-   //           the same for each bin.
+   // + mode    Use mode of combined posterior as estimated value for the efficiency
+   // + shortest: compute shortest interval (done by default if mode option is set)
+   // + central: compute central interval (done by default if mode option is NOT set)
+   // 
    //- n      : number of weights (has to be the number of one-dimensional
    //           TEfficiency objects in pList)
    //           If no weights are passed, the internal weights GetWeight() of
@@ -1538,8 +1762,8 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
    opt.ToLower();
 
    //parameter of prior distribution, confidence level and normalisation factor
-   Double_t alpha = 0;
-   Double_t beta = 0;
+   Double_t alpha = -1;
+   Double_t beta = -1;
    Double_t level = 0;
    
    //flags for combining
@@ -1547,11 +1771,11 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
    Bool_t bOutput = false;
    Bool_t bWeights = false;
    //list of all information needed to weight and combine efficiencies
-   std::vector<TH1*> vTotal;
-   std::vector<TH1*> vPassed;
-   std::vector<Double_t> vWeights;
-   std::vector<Double_t> vAlpha;
-   std::vector<Double_t> vBeta;
+   std::vector<TH1*> vTotal;    vTotal.reserve(n); 
+   std::vector<TH1*> vPassed;   vPassed.reserve(n); 
+   std::vector<Double_t> vWeights;  vWeights.reserve(n);
+//    std::vector<Double_t> vAlpha;
+//    std::vector<Double_t> vBeta;
 
    if(opt.Contains("s")) {
       opt.ReplaceAll("s","");
@@ -1564,7 +1788,8 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
    }
 
    if(opt.Contains("cl=")) {
-      sscanf(strstr(opt.Data(),"cl="),"cl=%lf",&level);
+      Ssiz_t pos = opt.Index("cl=") + 3; 
+      level = atof( opt(pos,opt.Length() ).Data() );
       if((level <= 0) || (level >= 1))
 	 level = 0;
       opt.ReplaceAll("cl=","");
@@ -1594,13 +1819,13 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
 	 if(pEff->GetDimension() > 1)
 	    continue;
 	 if(!level) level = pEff->GetConfidenceLevel();
+
+         if(alpha<1) alpha = pEff->GetBetaAlpha();
+         if(beta<1) beta = pEff->GetBetaBeta();
 	 
 	 //if strict combining, check priors, confidence level and statistic
 	 if(bStrict) {
-	    if(!alpha) alpha = pEff->GetBetaAlpha();
-	    if(!beta) beta = pEff->GetBetaBeta();
-	 
-	    if(alpha != pEff->GetBetaAlpha())
+            if(alpha != pEff->GetBetaAlpha())
 	       continue;	    
 	    if(beta != pEff->GetBetaBeta())
 	       continue;
@@ -1616,14 +1841,14 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
 	    vWeights.push_back(pEff->fWeight);
 
 	 //strict combining -> using global prior
-	 if(bStrict) {
-	    vAlpha.push_back(alpha);
-	    vBeta.push_back(beta);
-	 }
-	 else {
-	    vAlpha.push_back(pEff->GetBetaAlpha());
-	    vBeta.push_back(pEff->GetBetaBeta());
-	 }
+// 	 if(bStrict) {
+// 	    vAlpha.push_back(alpha);
+// 	    vBeta.push_back(beta);
+// 	 }
+// 	 else {
+// 	    vAlpha.push_back(pEff->GetBetaAlpha());
+// 	    vBeta.push_back(pEff->GetBetaBeta());
+// 	 }
       }
    }
 
@@ -1667,22 +1892,18 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
    }
 
    //create TGraphAsymmErrors with efficiency
-   Double_t* x = new Double_t[nbins_max];
-   Double_t* xlow = new Double_t[nbins_max];
-   Double_t* xhigh = new Double_t[nbins_max];
-   Double_t* eff = new Double_t[nbins_max];
-   Double_t* efflow = new Double_t[nbins_max];
-   Double_t* effhigh = new Double_t[nbins_max];
+   std::vector<Double_t> x(nbins_max);
+   std::vector<Double_t> xlow(nbins_max);
+   std::vector<Double_t> xhigh(nbins_max);
+   std::vector<Double_t> eff(nbins_max); 
+   std::vector<Double_t> efflow(nbins_max);
+   std::vector<Double_t> effhigh(nbins_max);
 
    //parameters for combining:
    //number of objects
    Int_t num = vTotal.size();
-   //shape parameters
-   Double_t* a = new Double_t[n];
-   Double_t* b = new Double_t[n];
-   Int_t* pass = new Int_t[n];
-   Int_t* total = new Int_t[n];
-   Double_t* weights = new Double_t[n];
+   std::vector<Int_t> pass(num); 
+   std::vector<Int_t> total(num); 
    
    //loop over all bins
    Double_t low, up;
@@ -1693,50 +1914,23 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
       xhigh[i-1] = vTotal.at(0)->GetBinWidth(i) - xlow[i-1];
 
       for(Int_t j = 0; j < num; ++j) {
-	 a[j] = vAlpha.at(j);
-	 b[j] = vBeta.at(j);
 	 pass[j] = (Int_t)(vPassed.at(j)->GetBinContent(i) + 0.5);
 	 total[j] = (Int_t)(vTotal.at(j)->GetBinContent(i) + 0.5);
-         weights[j] = vWeights.at(j);
       }
       
       //fill efficiency and errors
-      eff[i-1] = Combine(up,low,num,pass,total,a,b,level,weights,opt.Data());
+      eff[i-1] = Combine(up,low,num,&pass[0],&total[0],alpha,beta,level,&vWeights[0],opt.Data());
       //did an error occured ?
       if(eff[i-1] == -1) {
 	 gROOT->Error("TEfficiency::Combine","error occured during combining");
 	 gROOT->Info("TEfficiency::Combine","stop combining");
-	 //free memory
- 	 delete [] x;
-	 delete [] xlow;
-	 delete [] xhigh;
-	 delete [] eff;
-	 delete [] efflow;
-	 delete [] effhigh;
-	 delete [] pass;
-	 delete [] total;
-	 delete [] weights;
-	 delete [] a;
-	 delete [] b;
 	 return 0;
       }
       efflow[i-1]= eff[i-1] - low;
       effhigh[i-1]= up - eff[i-1];
    }//loop over all bins
 
-   TGraphAsymmErrors* gr = new TGraphAsymmErrors(nbins_max,x,eff,xlow,xhigh,efflow,effhigh);
-
-   delete [] x;
-   delete [] xlow;
-   delete [] xhigh;
-   delete [] eff;
-   delete [] efflow;
-   delete [] effhigh;
-   delete [] pass;
-   delete [] total;
-   delete [] weights;
-   delete [] a;
-   delete [] b;
+   TGraphAsymmErrors* gr = new TGraphAsymmErrors(nbins_max,&x[0],&eff[0],&xlow[0],&xhigh[0],&efflow[0],&effhigh[0]);
 
    return gr;
 }
@@ -1747,9 +1941,14 @@ void TEfficiency::Draw(const Option_t* opt)
    //draws the current TEfficiency object
    //
    //options:
-   //- 1-dimensional case: same options as TGraphAsymmErrors::Draw()
+   //- 1-dimensional case: same options as TGraphAsymmErrors::Draw() 
+   //    but as default "AP" is used
    //- 2-dimensional case: same options as TH2::Draw()
    //- 3-dimensional case: not yet supported
+   //
+   // specific TEfficiency drawing options: 
+   // - E0 - plot bins where the total number of passed events is zero
+   //      (the error interval will be [0,1] )
    
    //check options
    TString option = opt;
@@ -1943,14 +2142,29 @@ Double_t TEfficiency::GetEfficiency(Int_t bin) const
    //        for bayesian ones the expectation value of the resulting posterior
    //        distribution is returned:
    //        Begin_Latex #hat{#varepsilon} = #frac{passed + #alpha}{total + #alpha + #beta} End_Latex
+   //        If the bit kPosteriorMode is set (or the method TEfficiency::UsePosteriorMode() has been called ) the 
+   //        mode (most probable value) of the posterior is returned: 
+   //        Begin_Latex #hat{#varepsilon} = #frac{passed + #alpha -1}{total + #alpha + #beta -2} End_Latex
+   //       
    //      - If the denominator is equal to 0, an efficiency of 0 is returned.
-   
+   //      - When  Begin_Latex passed + #alpha < 1 End_Latex or Begin_Latex total - passed + #beta < 1 End_latex the above 
+   //        formula for the mode is not valid. In these cases values the estimated efficiency is 0 or 1.  
+
    Int_t total = (Int_t)fTotalHistogram->GetBinContent(bin);
    Int_t passed = (Int_t)fPassedHistogram->GetBinContent(bin);
       
-   if(TestBit(kIsBayesian))
-      return (total + fBeta_alpha + fBeta_beta)?
-	 (passed + fBeta_alpha)/(total + fBeta_alpha + fBeta_beta): 0;
+   if(TestBit(kIsBayesian)) { 
+
+      // parameters for the beta prior distribution
+      Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
+      Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
+
+      if (!TestBit(kPosteriorMode) ) 
+         return BetaMean(double(passed) + alpha , double(total-passed) + beta);
+      else  
+         return BetaMode(double(passed) + alpha , double(total-passed) + beta);
+
+   } 
    else
       return (total)? ((Double_t)passed)/total : 0;
 }
@@ -1968,9 +2182,12 @@ Double_t TEfficiency::GetEfficiencyErrorLow(Int_t bin) const
    Int_t passed = (Int_t)fPassedHistogram->GetBinContent(bin);
 
    Double_t eff = GetEfficiency(bin);
+   // parameters for the beta prior distribution
+   Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
+   Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
 
    if(TestBit(kIsBayesian))
-      return (eff - Bayesian(total,passed,fConfLevel,fBeta_alpha,fBeta_beta,false));
+      return (eff - Bayesian(total,passed,fConfLevel,alpha,beta,false,TestBit(kShortestInterval)));
    else
       return (eff - fBoundary(total,passed,fConfLevel,false));
 }
@@ -1988,9 +2205,12 @@ Double_t TEfficiency::GetEfficiencyErrorUp(Int_t bin) const
    Int_t passed = (Int_t)fPassedHistogram->GetBinContent(bin);
 
    Double_t eff = GetEfficiency(bin);
+   // parameters for the beta prior distribution
+   Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
+   Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
 
    if(TestBit(kIsBayesian))
-      return (Bayesian(total,passed,fConfLevel,fBeta_alpha,fBeta_beta,true) - eff);
+      return (Bayesian(total,passed,fConfLevel,alpha,beta,true,TestBit(kShortestInterval)) - eff);
    else
       return fBoundary(total,passed,fConfLevel,true) - eff;
 }
@@ -2058,6 +2278,7 @@ Double_t TEfficiency::Normal(Int_t total,Int_t passed,Double_t level,Bool_t bUpp
    //End_Latex
 
    Double_t alpha = (1.0 - level)/2;
+   if (total == 0) return (bUpper) ? 1 : 0;
    Double_t average = ((Double_t)passed) / total;
    Double_t sigma = std::sqrt(average * (1 - average) / total);
    Double_t delta = ROOT::Math::normal_quantile(1 - alpha,sigma);
@@ -2083,6 +2304,26 @@ TEfficiency& TEfficiency::operator+=(const TEfficiency& rhs)
    //weight of rhs = Begin_Latex w_{2} End_Latex
    //Begin_Latex w_{new} = \frac{w_{1} \times w_{2}}{w_{1} + w_{2}}End_Latex
    
+
+   if (fTotalHistogram == 0 && fPassedHistogram == 0) { 
+      // efficiency is empty just copy it over
+      *this = rhs; 
+      return *this;
+   }
+   else if (fTotalHistogram == 0 || fPassedHistogram == 0) {
+      Fatal("operator+=","Adding to a non consistent TEfficiency object which has not a total or a passed histogram "); 
+      return *this;
+   }
+
+   if (rhs.fTotalHistogram == 0 && rhs.fTotalHistogram == 0 ) {
+      Warning("operator+=","no operation: adding an empty object");
+      return *this;
+   }
+   else  if (rhs.fTotalHistogram == 0  || rhs.fTotalHistogram == 0 ) {
+      Fatal("operator+=","Adding a non consistent TEfficiency object which has not a total or a passed histogram "); 
+      return *this;
+   }
+
    fTotalHistogram->ResetBit(TH1::kIsAverage);
    fPassedHistogram->ResetBit(TH1::kIsAverage);
 
@@ -2156,6 +2397,9 @@ void TEfficiency::Paint(const Option_t* opt)
    TString option = opt;
    option.ToLower();
 
+   Bool_t plot0Bins = false; 
+   if (option.Contains("e0") ) plot0Bins = true; 
+
    //use TGraphAsymmErrors for painting
    if(GetDimension() == 1) {
       Int_t npoints = fTotalHistogram->GetNbinsX();
@@ -2168,15 +2412,22 @@ void TEfficiency::Paint(const Option_t* opt)
 
       //errors for points
       Double_t xlow,xup,ylow,yup;
-      //point i corresponds to bin i+1 in histogram
-      for(Int_t i = 0; i < npoints; ++i) {
-	 fPaintGraph->SetPoint(i,fTotalHistogram->GetBinCenter(i+1),GetEfficiency(i+1));
+      //point i corresponds to bin i+1 in histogram   
+      // point j is point graph index
+      Int_t j = 0;
+      for (Int_t i = 0; i < npoints; ++i) {
+         if (!plot0Bins && fTotalHistogram->GetBinContent(i+1) == 0 ) continue;
+	 fPaintGraph->SetPoint(j,fTotalHistogram->GetBinCenter(i+1),GetEfficiency(i+1));
 	 xlow = fTotalHistogram->GetBinCenter(i+1) - fTotalHistogram->GetBinLowEdge(i+1);
 	 xup = fTotalHistogram->GetBinWidth(i+1) - xlow;
 	 ylow = GetEfficiencyErrorLow(i+1);
 	 yup = GetEfficiencyErrorUp(i+1);
-	 fPaintGraph->SetPointError(i,xlow,xup,ylow,yup);
+	 fPaintGraph->SetPointError(j,xlow,xup,ylow,yup);
+         j++;
       }
+      // tell the graph the effective number of points 
+      fPaintGraph->Set(j);
+      fPaintGraph->SetMaximum(1);
 
       //copying style information
       TAttLine::Copy(*fPaintGraph);
@@ -2427,6 +2678,34 @@ void TEfficiency::SetBetaBeta(Double_t beta)
 }
 
 //______________________________________________________________________________
+void TEfficiency::SetBetaBinParameters(Int_t bin, Double_t alpha, Double_t beta)
+{
+   //sets different  shape parameter Begin_Latex \alpha and \beta End_Latex
+   // for the prior distribution for each bin. By default the global parameter are used if they are not set 
+   // for the specific bin 
+   //The prior probability of the efficiency is given by the beta distribution:
+   //Begin_Latex
+   // f(\varepsilon;\alpha;\beta) = \frac{1}{B(\alpha,\beta)} \varepsilon^{\alpha-1} (1 - \varepsilon)^{\beta-1}
+   //End_Latex
+   //
+   //Note: - both shape parameters have to be positive (i.e. > 0)
+
+   if (!fPassedHistogram || !fTotalHistogram) return;
+   TH1 * h1 = fTotalHistogram;
+   // doing this I get h1->fN which is available only for a TH1D 
+   UInt_t n = h1->GetBin(h1->GetNbinsX()+1, h1->GetNbinsY()+1, h1->GetNbinsZ()+1 ) + 1;
+
+   // in case vector is not created do with defult alpha, beta params
+   if (fBeta_bin_params.size() != n )       
+      fBeta_bin_params = std::vector<std::pair<Double_t, Double_t> >(n, std::make_pair(fBeta_alpha, fBeta_beta) ); 
+
+   // vector contains also values for under/overflows
+   fBeta_bin_params[bin] = std::make_pair(alpha,beta);
+   SetBit(kUseBinPrior,true);
+
+}
+
+//______________________________________________________________________________
 void TEfficiency::SetConfidenceLevel(Double_t level)
 {
    //sets the confidence level (0 < level < 1)
@@ -2543,7 +2822,7 @@ Bool_t TEfficiency::SetPassedHistogram(const TH1& rPassed,Option_t* opt)
 }
 
 //______________________________________________________________________________
-void TEfficiency::SetStatisticOption(Int_t option)
+void TEfficiency::SetStatisticOption(EStatOption option)
 {
    //sets the statistic option which affects the calculation of the confidence interval
    //
@@ -2560,13 +2839,16 @@ void TEfficiency::SetStatisticOption(Int_t option)
    //- kFAC       (=3)   : using the Agresti-Coull interval
    //                      sets kIsBayesian = false
    //                      see also AgrestiCoull
-   //- kBJeffrey  (=4)   : using the Jeffrey interval
+   //- kFFC       (=4)   : using the Feldman-Cousins frequentist method
+   //                      sets kIsBayesian = false
+   //                      see also FeldmanCousins    
+   //- kBJeffrey  (=5)   : using the Jeffrey interval
    //                      sets kIsBayesian = true, fBeta_alpha = 0.5 and fBeta_beta = 0.5
    //                      see also Bayesian
-   //- kBUniform  (=5)   : using a uniform prior
+   //- kBUniform  (=6)   : using a uniform prior
    //                      sets kIsBayesian = true, fBeta_alpha = 1 and fBeta_beta = 1
    //                      see also Bayesian
-   //- kBBayesian (=6)   : using a custom prior defined by fBeta_alpha and fBeta_beta
+   //- kBBayesian (=7)   : using a custom prior defined by fBeta_alpha and fBeta_beta
    //                      sets kIsBayesian = true
    //                      see also Bayesian
    
@@ -2590,15 +2872,21 @@ void TEfficiency::SetStatisticOption(Int_t option)
       fBoundary = &AgrestiCoull;
       SetBit(kIsBayesian,false);
       break;
+   case kFFC:
+      fBoundary = &FeldmanCousins;
+      SetBit(kIsBayesian,false);
+      break;
    case kBJeffrey:
       fBeta_alpha = 0.5;
       fBeta_beta = 0.5;
       SetBit(kIsBayesian,true);
+      SetBit(kUseBinPrior,false);
       break;
    case kBUniform:
       fBeta_alpha = 1;
       fBeta_beta = 1;
       SetBit(kIsBayesian,true);
+      SetBit(kUseBinPrior,false);
       break;
    case kBBayesian:
       SetBit(kIsBayesian,true);
@@ -2745,6 +3033,7 @@ Double_t TEfficiency::Wilson(Int_t total,Int_t passed,Double_t level,Bool_t bUpp
    //End_Latex
    
    Double_t alpha = (1.0 - level)/2;
+   if (total == 0) return (bUpper) ? 1 : 0; 
    Double_t average = ((Double_t)passed) / total;
    Double_t kappa = ROOT::Math::normal_quantile(1 - alpha,1);
 

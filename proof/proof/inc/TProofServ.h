@@ -76,6 +76,7 @@ friend class TProofServLite;
 friend class TXProofServ;
 
 public:
+   enum EStatusBits { kHighMemory = BIT(16) };
    enum EQueryAction { kQueryOK, kQueryModify, kQueryStop, kQueryEnqueued };
 
 private:
@@ -161,9 +162,12 @@ private:
    Long64_t      fMaxBoxSize;       //Max size of the sandbox
    Long64_t      fHWMBoxSize;       //High-Water-Mark on the sandbox size
 
-   // Memory limits (-1 to disable) set by envs ROOTPROOFASSOFT and RPPTPROFOASHARD
-   Long_t        fVirtMemHWM;       //Above this we terminate gently (in kB)
-   Long_t        fVirtMemMax;       //Hard limit enforced by the system (in kB)
+   // Memory limits (-1 to disable) set by envs ROOTPROFOASHARD, PROOF_VIRTMEMMAX, PROOF_RESMEMMAX
+   static Long_t fgVirtMemMax;       //Hard limit enforced by the system (in kB)
+   static Long_t fgResMemMax;        //Hard limit on the resident memory checked
+                                     //in TProofPlayer::Process (in kB)
+   static Float_t fgMemHWM;          // Threshold fraction of max for warning and finer monitoring
+   static Float_t fgMemStop;         // Fraction of max for stop processing
 
    // In bytes; default is 1MB
    Long64_t      fMsgSizeHWM;       //High-Water-Mark on the size of messages with results
@@ -228,6 +232,8 @@ protected:
    Bool_t        IsIdle();
    Bool_t        UnlinkDataDir(const char *path);
 
+   static TString fgLastMsg;    // Message about status before exception
+
 public:
    TProofServ(Int_t *argc, char **argv, FILE *flog = 0);
    virtual ~TProofServ();
@@ -265,7 +271,10 @@ public:
 
    Int_t          GetInflateFactor() const { return fInflateFactor; }
 
-   Long_t         GetVirtMemHWM() const { return fVirtMemHWM; }
+   static Long_t  GetVirtMemMax();
+   static Long_t  GetResMemMax();
+   static Float_t GetMemHWM();
+   static Float_t GetMemStop();
 
    Long64_t       GetMsgSizeHWM() const { return fMsgSizeHWM; }
 
@@ -323,6 +332,8 @@ public:
                                const char *msg);
 
    static void    ResolveKeywords(TString &fname, const char *path = 0);
+
+   static void    SetLastMsg(const char *lastmsg);
 
    static Bool_t      IsActive();
    static TProofServ *This();

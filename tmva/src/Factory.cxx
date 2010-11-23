@@ -940,41 +940,42 @@ void TMVA::Factory::TrainAllMethods()
    for( itrMethod = fMethods.begin(); itrMethod != fMethods.end(); ++itrMethod ) {
 
       MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
+      if(mva==0) continue;
 
       if (mva->Data()->GetNTrainingEvents() < MinNoTrainingEvents) {
-         Log() << kWARNING << "Method " << mva->GetMethodName() 
+         Log() << kWARNING << "Method " << mva->GetMethodName()
                << " not trained (training tree has less entries ["
-               << mva->Data()->GetNTrainingEvents() 
-               << "] than required [" << MinNoTrainingEvents << "]" << Endl; 
+               << mva->Data()->GetNTrainingEvents()
+               << "] than required [" << MinNoTrainingEvents << "]" << Endl;
          continue;
       }
 
-      Log() << kINFO << "Train method: " << mva->GetMethodName() << " for " 
-            << (fAnalysisType == Types::kRegression ? "Regression" : 
-		(fAnalysisType == Types::kMulticlass ? "Multiclass classification" : "Classification")) << Endl;
+      Log() << kINFO << "Train method: " << mva->GetMethodName() << " for "
+            << (fAnalysisType == Types::kRegression ? "Regression" :
+                (fAnalysisType == Types::kMulticlass ? "Multiclass classification" : "Classification")) << Endl;
       mva->TrainMethod();
       Log() << kINFO << "Training finished" << Endl;
    }
 
    if (fAnalysisType != Types::kRegression) {
 
-      // variable ranking 
+      // variable ranking
       Log() << Endl;
       Log() << kINFO << "Begin ranking of input variables..." << Endl;
       for (itrMethod = fMethods.begin(); itrMethod != fMethods.end(); itrMethod++) {
          MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
-         if (mva->Data()->GetNTrainingEvents() >= MinNoTrainingEvents) {
-            
+         if (mva && mva->Data()->GetNTrainingEvents() >= MinNoTrainingEvents) {
+
             // create and print ranking
             const Ranking* ranking = (*itrMethod)->CreateRanking();
             if (ranking != 0) ranking->Print();
-            else Log() << kINFO << "No variable ranking supplied by classifier: " 
-                         << dynamic_cast<MethodBase*>(*itrMethod)->GetMethodName() << Endl;
+            else Log() << kINFO << "No variable ranking supplied by classifier: "
+                       << dynamic_cast<MethodBase*>(*itrMethod)->GetMethodName() << Endl;
          }
       }
    }
 
-   // delete all methods and recreate them from weight file - this ensures that the application 
+   // delete all methods and recreate them from weight file - this ensures that the application
    // of the methods (in TMVAClassificationApplication) is consistent with the results obtained
    // in the testing
    Log() << Endl;
@@ -988,6 +989,7 @@ void TMVA::Factory::TrainAllMethods()
       for (UInt_t i=0; i<fMethods.size(); i++) {
 
          MethodBase* m = dynamic_cast<MethodBase*>(fMethods[i]);
+         if(m==0) continue;
 
          TMVA::Types::EMVA methodType = m->GetMethodType();
          TString           weightfile = m->GetWeightFileName();
@@ -1066,6 +1068,7 @@ void TMVA::Factory::MakeClass( const TString& methodTitle ) const
       MVector::const_iterator itrMethodEnd = fMethods.end();
       for (; itrMethod != itrMethodEnd; itrMethod++) {
          MethodBase* method = dynamic_cast<MethodBase*>(*itrMethod);
+         if(method==0) continue;
          Log() << kINFO << "Make response class for classifier: " << method->GetMethodName() << Endl;
          method->MakeClass();
       }
@@ -1092,6 +1095,7 @@ void TMVA::Factory::PrintHelpMessage( const TString& methodTitle ) const
       MVector::const_iterator itrMethodEnd = fMethods.end();
       for (; itrMethod != itrMethodEnd; itrMethod++) {
          MethodBase* method = dynamic_cast<MethodBase*>(*itrMethod);
+         if(method==0) continue;
          Log() << kINFO << "Print help message for classifier: " << method->GetMethodName() << Endl;
          method->PrintHelpMessage();
       }
@@ -1171,6 +1175,7 @@ void TMVA::Factory::EvaluateAllMethods( void )
    MVector::iterator itrMethodEnd = fMethods.end();
    for (; itrMethod != itrMethodEnd; itrMethod++) {
       MethodBase* theMethod = dynamic_cast<MethodBase*>(*itrMethod);
+      if(theMethod==0) continue;
       if (theMethod->GetMethodType() != Types::kCuts) methodsNoCuts.push_back( *itrMethod );
 
       if (theMethod->DoRegression()) {
@@ -1355,6 +1360,7 @@ void TMVA::Factory::EvaluateAllMethods( void )
          std::vector<ResultsClassification*> mvaRes;
          for (itrMethod = methodsNoCuts.begin(); itrMethod != methodsNoCuts.end(); itrMethod++, ivar++) {
             MethodBase* m = dynamic_cast<MethodBase*>(*itrMethod);
+            if(m==0) continue;
             theVars->push_back( m->GetTestvarName() );
             rvec.push_back( m->GetSignalReferenceCut() );
             theVars->back().ReplaceAll( "MVA_", "" );

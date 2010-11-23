@@ -40,6 +40,10 @@
 #endif
 #include <cstdlib>
 
+// To handle exceptions
+#include <exception>
+#include <new>
+
 #if (defined(__FreeBSD__) && (__FreeBSD__ < 4)) || \
     (defined(__APPLE__) && (!defined(MAC_OS_X_VERSION_10_3) || \
      (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3)))
@@ -120,6 +124,15 @@ FILE *TProofServ::fgErrorHandlerFile = 0;
 
 // To control allowed actions while processing
 Int_t TProofServ::fgRecursive = 0;
+
+// Last message before exceptions
+TString TProofServ::fgLastMsg("<undef>");
+
+// Memory controllers
+Long_t TProofServ::fgVirtMemMax = -1;
+Long_t TProofServ::fgResMemMax = -1;
+Float_t TProofServ::fgMemHWM = 0.80;
+Float_t TProofServ::fgMemStop = 0.95;
 
 //----- Termination signal handler ---------------------------------------------
 //______________________________________________________________________________
@@ -526,19 +539,41 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    if (!gSystem->AccessPathName(rcfile, kReadPermission))
       gEnv->ReadFile(rcfile, kEnvChange);
 
-   // Set Memory limits, if any (in kB)
-   fVirtMemHWM = -1;
-   fVirtMemMax = -1;
-   if (gSystem->Getenv("ROOTPROOFASSOFT")) {
-      Long_t hwm = strtol(gSystem->Getenv("ROOTPROOFASSOFT"), 0, 10);
-      if (hwm < kMaxLong && hwm > 0)
-         fVirtMemHWM = hwm * 1024;
+   // Upper limit on Virtual Memory (in kB)
+   fgVirtMemMax = gEnv->GetValue("Proof.VirtMemMax",-1);
+   if (fgVirtMemMax < 0 && gSystem->Getenv("PROOF_VIRTMEMMAX")) {
+      Long_t mmx = strtol(gSystem->Getenv("PROOF_VIRTMEMMAX"), 0, 10);
+      if (mmx < kMaxLong && mmx > 0)
+         fgVirtMemMax = mmx * 1024;
    }
-   if (gSystem->Getenv("ROOTPROOFASHARD")) {
+   // Old variable for backward compatibility
+   if (fgVirtMemMax < 0 && gSystem->Getenv("ROOTPROOFASHARD")) {
       Long_t mmx = strtol(gSystem->Getenv("ROOTPROOFASHARD"), 0, 10);
       if (mmx < kMaxLong && mmx > 0)
-         fVirtMemMax = mmx * 1024;
+         fgVirtMemMax = mmx * 1024;
    }
+   // Upper limit on Resident Memory (in kB)
+   fgResMemMax = gEnv->GetValue("Proof.ResMemMax",-1);
+   if (fgResMemMax < 0 && gSystem->Getenv("PROOF_RESMEMMAX")) {
+      Long_t mmx = strtol(gSystem->Getenv("PROOF_RESMEMMAX"), 0, 10);
+      if (mmx < kMaxLong && mmx > 0)
+         fgResMemMax = mmx * 1024;
+   }
+   // Thresholds for warnings and stop processing
+   fgMemStop = gEnv->GetValue("Proof.MemStop", 0.95);
+   fgMemHWM = gEnv->GetValue("Proof.MemHWM", 0.80);
+   if (fgVirtMemMax > 0 || fgResMemMax > 0) {
+      if ((fgMemStop < 0.) || (fgMemStop > 1.)) {
+         Warning("TProofServ", "requested memory fraction threshold to stop processing"
+                               " (MemStop) out of range [0,1] - ignoring");
+         fgMemStop = 0.95;
+      }
+      if ((fgMemHWM < 0.) || (fgMemHWM > fgMemStop)) {
+         Warning("TProofServ", "requested memory fraction threshold for warning and finer monitoring"
+                               " (MemHWM) out of range [0,MemStop] - ignoring");
+         fgMemHWM = 0.80;
+      }
+   }   
 
    // Wait (loop) to allow debugger to connect
    Bool_t test = (*argc >= 4 && !strcmp(argv[3], "test")) ? kTRUE : kFALSE;
@@ -630,6 +665,9 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fMergingMonitor  = 0;
    fMergedWorkers   = 0;
 
+   // Bit to flg high-memory footprint
+   ResetBit(TProofServ::kHighMemory);
+   
    // Max message size
    fMsgSizeHWM = gEnv->GetValue("ProofServ.MsgSizeHWM", 1000000);
 
@@ -880,6 +918,20 @@ Int_t TProofServ::CreateServer()
                "         This may generate compatibility problems between streamed objects.\n"
                "         The advise is to move to ROOT >= 5.21/02 .");
       SendAsynMessage(msg.Data());
+   }
+
+   // Setup the idle timer
+   if (IsMaster() && !fIdleTOTimer) {
+      // Check activity on socket every 5 mins
+      Int_t idle_to = gEnv->GetValue("ProofServ.IdleTimeout", -1);
+      if (idle_to > 0) {
+         fIdleTOTimer = new TIdleTOTimer(this, idle_to * 1000);
+         fIdleTOTimer->Start(-1, kTRUE);
+         if (gProofDebugLevel > 0)
+            Info("CreateServer", " idle timer started (%d secs)", idle_to);
+      } else if (gProofDebugLevel > 0) {
+         Info("CreateServer", " idle timer not started (no idle timeout requested)");
+      }
    }
 
    // Done
@@ -1203,64 +1255,105 @@ void TProofServ::HandleSocketInput()
    Bool_t all = (fgRecursive > 0) ? kFALSE : kTRUE;
    fgRecursive++;
 
-   // Get message
    TMessage *mess;
-   if (fSocket->Recv(mess) <= 0 || !mess) {
-      // Pending: do something more intelligent here
-      // but at least get a message in the log file
-      Error("HandleSocketInput", "retrieving message from input socket");
-      Terminate(0);
-      return;
-   }
-   Int_t what = mess->What();
-   PDB(kCollect, 1)
-      Info("HandleSocketInput", "got type %d from '%s'", what, fSocket->GetTitle());
-
-   // We use to check in the end if something wrong went on during processing
-   Bool_t parallel = IsParallel();
-   fNcmd++;
-
-   if (fProof) fProof->SetActive();
-
-   Bool_t doit = kTRUE;
-
    Int_t rc = 0;
-   while (doit) {
+   TString exmsg;
 
-      // Process the message
-      rc = HandleSocketInput(mess, all);
-      if (rc < 0) {
-         TString emsg;
-         if (rc == -1) {
-            emsg.Form("HandleSocketInput: command %d cannot be executed while processing", what);
-         } else if (rc == -3) {
-            emsg.Form("HandleSocketInput: message %d undefined! Protocol error?", what);
-         } else {
-            emsg.Form("HandleSocketInput: unknown command %d! Protocol error?", what);
+   try {
+   
+      // Get message
+      if (fSocket->Recv(mess) <= 0 || !mess) {
+         // Pending: do something more intelligent here
+         // but at least get a message in the log file
+         Error("HandleSocketInput", "retrieving message from input socket");
+         Terminate(0);
+         return;
+      }
+      Int_t what = mess->What();
+      PDB(kCollect, 1)
+         Info("HandleSocketInput", "got type %d from '%s'", what, fSocket->GetTitle());
+
+      fNcmd++;
+
+      if (fProof) fProof->SetActive();
+
+      Bool_t doit = kTRUE;
+
+      while (doit) {
+
+         // Process the message
+         rc = HandleSocketInput(mess, all);
+         if (rc < 0) {
+            TString emsg;
+            if (rc == -1) {
+               emsg.Form("HandleSocketInput: command %d cannot be executed while processing", what);
+            } else if (rc == -3) {
+               emsg.Form("HandleSocketInput: message %d undefined! Protocol error?", what);
+            } else {
+               emsg.Form("HandleSocketInput: unknown command %d! Protocol error?", what);
+            }
+            SendAsynMessage(emsg.Data());
+         } else if (rc == 2) {
+            // Add to the queue
+            fQueuedMsg->Add(mess);
+            PDB(kGlobal, 1)
+               Info("HandleSocketInput", "message of type %d enqueued; sz: %d",
+                                          what, fQueuedMsg->GetSize());
+            mess = 0;
          }
-         SendAsynMessage(emsg.Data());
-      } else if (rc == 2) {
-         // Add to the queue
-         fQueuedMsg->Add(mess);
-         PDB(kGlobal, 1)
-            Info("HandleSocketInput", "message of type %d enqueued; sz: %d",
-                                       what, fQueuedMsg->GetSize());
-         mess = 0;
-      }
 
-      // Still something to do?
-      doit = 0;
-      if (fgRecursive == 1 && fQueuedMsg->GetSize() > 0) {
-         // Add to the queue
-         PDB(kCollect, 1)
-            Info("HandleSocketInput", "processing enqueued message of type %d; left: %d",
-                                       what, fQueuedMsg->GetSize());
-         all = 1;
-         SafeDelete(mess);
-         mess = (TMessage *) fQueuedMsg->First();
-         if (mess) fQueuedMsg->Remove(mess);
-         doit = 1;
+         // Still something to do?
+         doit = 0;
+         if (fgRecursive == 1 && fQueuedMsg->GetSize() > 0) {
+            // Add to the queue
+            PDB(kCollect, 1)
+               Info("HandleSocketInput", "processing enqueued message of type %d; left: %d",
+                                          what, fQueuedMsg->GetSize());
+            all = 1;
+            SafeDelete(mess);
+            mess = (TMessage *) fQueuedMsg->First();
+            if (mess) fQueuedMsg->Remove(mess);
+            doit = 1;
+         }
       }
+   
+   } catch (std::bad_alloc &) {
+      // Memory allocation problem:
+      exmsg.Form("caught exception 'bad_alloc' (memory leak?) %s", fgLastMsg.Data());
+   } catch (std::exception &exc) {
+      // Standard exception caught
+      exmsg.Form("caught standard exception '%s' %s", exc.what(), fgLastMsg.Data());
+   } catch (int i) {
+      // Other exception caught
+      exmsg.Form("caught exception throwing %d %s", i, fgLastMsg.Data());
+   } catch (const char *str) {
+      // Other exception caught
+      exmsg.Form("caught exception throwing '%s' %s", str, fgLastMsg.Data());
+   } catch (...) {
+      // Caught other exception
+      exmsg.Form("caught exception <unknown> %s", fgLastMsg.Data());
+   }
+
+   // Terminate on exception
+   if (!exmsg.IsNull()) {
+      // Save info in the log file too
+      Error("HandleSocketInput", "%s", exmsg.Data());
+      // Try to warn the user
+      SendAsynMessage(TString::Format("%s: %s", GetOrdinal(), exmsg.Data()));
+      // Terminate
+      Terminate(0);
+   }
+   
+   // Terminate also if a high memory footprint was detected before the related
+   // exception was thrwon
+   if (TestBit(TProofServ::kHighMemory)) {
+      // Save info in the log file too
+      exmsg.Form("high-memory footprint detected during Process(...) - terminating");
+      Error("HandleSocketInput", "%s", exmsg.Data());
+      // Try to warn the user
+      SendAsynMessage(TString::Format("%s: %s", GetOrdinal(), exmsg.Data()));
+      // Terminate
+      Terminate(0);
    }
 
    fgRecursive--;
@@ -1268,7 +1361,9 @@ void TProofServ::HandleSocketInput()
    if (fProof) {
       // If something wrong went on during processing and we do not have
       // any worker anymore, we shutdown this session
-      if (rc == 0 && parallel != IsParallel()) {
+      Bool_t masterOnly = gEnv->GetValue("Proof.MasterOnly", kFALSE);
+      Int_t ngwrks = fProof->GetListOfActiveSlaves()->GetSize() + fProof->GetListOfInactiveSlaves()->GetSize();
+      if (rc == 0 && ngwrks == 0 && !masterOnly) {
          SendAsynMessage(" *** No workers left: cannot continue! Terminating ... *** ");
          Terminate(0);
       }
@@ -1352,6 +1447,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
       case kPROOF_GROUPVIEW:
          if (all) {
             mess->ReadString(str, sizeof(str));
+            // coverity[secure_coding]
             sscanf(str, "%d %d", &fGroupId, &fGroupSize);
          } else {
             rc = -1;
@@ -1567,10 +1663,11 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             Long_t size;
             Int_t  bin, fw = 1;
             char   name[1024];
-            if (fProtocol > 5)
-               sscanf(str, "%s %d %ld %d", name, &bin, &size, &fw);
-            else
-               sscanf(str, "%s %d %ld", name, &bin, &size);
+            if (fProtocol > 5) {
+               sscanf(str, "%1023s %d %ld %d", name, &bin, &size, &fw);
+            } else {
+               sscanf(str, "%1023s %d %ld", name, &bin, &size);
+            }
             TString fnam(name);
             Bool_t copytocache = kTRUE;
             if (fnam.BeginsWith("cache:")) {
@@ -1672,7 +1769,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             } else {
                TMessage answ(kPROOF_GETSLAVEINFO);
                TList *info = new TList;
-               TSlaveInfo *wi = new TSlaveInfo(GetOrdinal(), TUrl(gSystem->HostName()).GetHostFQDN(), 0);
+               TSlaveInfo *wi = new TSlaveInfo(GetOrdinal(), TUrl(gSystem->HostName()).GetHostFQDN(), 0, "", GetDataDir());
                SysInfo_t si;
                gSystem->GetSysInfo(&si);
                wi->SetSysInfo(si);
@@ -2994,20 +3091,6 @@ Int_t TProofServ::SetupCommon()
       gSystem->Syslog(kLogNotice, s.Data());
    }
 
-   // Setup the idle timer
-   if (IsMaster() && !fIdleTOTimer) {
-      // Check activity on socket every 5 mins
-      Int_t idle_to = gEnv->GetValue("ProofServ.IdleTimeout", -1);
-      if (idle_to > 0) {
-         fIdleTOTimer = new TIdleTOTimer(this, idle_to * 1000);
-         fIdleTOTimer->Start(-1, kTRUE);
-         if (gProofDebugLevel > 0)
-            Info("SetupCommon", " idle timer started (%d secs)", idle_to);
-      } else if (gProofDebugLevel > 0) {
-         Info("SetupCommon", " idle timer not started (no idle timeout requested)");
-      }
-   }
-
    if (gProofDebugLevel > 0)
       Info("SetupCommon", "successfully completed");
 
@@ -3029,12 +3112,8 @@ void TProofServ::Terminate(Int_t status)
    // Notify the memory footprint
    ProcInfo_t pi;
    if (!gSystem->GetProcInfo(&pi)){
-      Info("Terminate", "process memory footprint: %ld kB virtual, %ld kB resident ",
-                        pi.fMemVirtual, pi.fMemResident);
-      if (fVirtMemHWM > 0 || fVirtMemMax > 0) {
-         Info("Terminate", "process virtual memory limits: %ld kB HWM, %ld kB max ",
-                           fVirtMemHWM, fVirtMemMax);
-      }
+      Info("Terminate", "process memory footprint: %ld/%ld kB virtual, %ld/%ld kB resident ",
+                        pi.fMemVirtual, fgVirtMemMax, pi.fMemResident, fgResMemMax);
    }
 
    // Cleanup session directory
@@ -3623,9 +3702,11 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
 
       // Check if we are in merging mode (i.e. parameter PROOF_UseMergers exists)
       Bool_t isInMergingMode = kFALSE;
-      Int_t nm = 0;
-      if (TProof::GetParameter(input, "PROOF_UseMergers", nm) == 0) {
-         isInMergingMode = kTRUE;
+      if (!(TestBit(TProofServ::kHighMemory))) {
+         Int_t nm = 0;
+         if (TProof::GetParameter(input, "PROOF_UseMergers", nm) == 0) {
+            isInMergingMode = (nm >= 0) ? kTRUE : kFALSE;
+         }
       }
       PDB(kGlobal, 2) Info("HandleProcess", "merging mode check: %d", isInMergingMode);
 
@@ -3981,8 +4062,10 @@ void TProofServ::ProcessNext(TString *slb)
    // not express itself on the subject
    if (gEnv->Lookup("Proof.UseMergers") && !input->FindObject("PROOF_UseMergers")) {
       Int_t smg = gEnv->GetValue("Proof.UseMergers",-1);
-      input->Add(new TParameter<Int_t>("PROOF_UseMergers", smg));
-      PDB(kSubmerger, 2) Info("ProcessNext", "PROOF_UseMergers set to %d", smg);
+      if (smg >= 0) {
+         input->Add(new TParameter<Int_t>("PROOF_UseMergers", smg));
+         PDB(kSubmerger, 2) Info("ProcessNext", "PROOF_UseMergers set to %d", smg);
+      }
    }
 
    // Set input
@@ -4869,12 +4952,16 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                         } else {
                            // Store md5 in package/PROOF-INF/md5.txt
                            TMD5 *md5local = TMD5::FileChecksum(par);
-                           TString md5f = packagedir + "/" + package + "/PROOF-INF/md5.txt";
-                           TMD5::WriteChecksum(md5f, md5local);
-                           // Go down to the package directory
-                           gSystem->ChangeDirectory(pdir);
-                           // Cleanup
-                           SafeDelete(md5local);
+                           if (md5local) {
+                              TString md5f = packagedir + "/" + package + "/PROOF-INF/md5.txt";
+                              TMD5::WriteChecksum(md5f, md5local);
+                              // Go down to the package directory
+                              gSystem->ChangeDirectory(pdir);
+                              // Cleanup
+                              SafeDelete(md5local);
+                           } else {
+                              Error("HandleCache", "kBuildPackage: failure calculating MD5sum for '%s'", par.Data());
+                           }
                         }
                         delete [] gunzip;
                      } else
@@ -5950,7 +6037,14 @@ void TProofServ::HandleException(Int_t sig)
 {
    // Exception handler: we do not try to recover here, just exit.
 
-   Error("HandleException","exception triggered by signal: %d", sig);
+   Error("HandleException", "caugth exception triggered by signal '%d' %s",
+                            sig, fgLastMsg.Data());
+   // Description
+   TString emsg;
+   emsg.Form("%s: caught exception triggered by signal '%d' %s",
+             GetOrdinal(), sig, fgLastMsg.Data());
+   // Try to warn the user
+   SendAsynMessage(emsg.Data());
 
    gSystem->Exit(sig);
 }
@@ -6596,6 +6690,39 @@ Int_t TProofServ::CleanupWaitingQueries(Bool_t del, TList *qls)
    }
    // Done
    return ncq;
+}
+
+//______________________________________________________________________________
+void TProofServ::SetLastMsg(const char *lastmsg)
+{
+   // Set the message to be sent back in case of exceptions
+
+   fgLastMsg = lastmsg;
+}
+
+//______________________________________________________________________________
+Long_t TProofServ::GetVirtMemMax()
+{
+   // VirtMemMax getter
+   return fgVirtMemMax;
+}
+//______________________________________________________________________________
+Long_t TProofServ::GetResMemMax()
+{
+   // ResMemMax getter
+   return fgResMemMax;
+}
+//______________________________________________________________________________
+Float_t TProofServ::GetMemHWM()
+{
+   // MemHWM getter
+   return fgMemHWM;
+}
+//______________________________________________________________________________
+Float_t TProofServ::GetMemStop()
+{
+   // MemStop getter
+   return fgMemStop;
 }
 
 //______________________________________________________________________________

@@ -4,7 +4,7 @@
 # Author: Fons Rademakers, 29/2/2000
 
 MODNAME      := proofd
-MODDIR       := proof/$(MODNAME)
+MODDIR       := $(ROOT_SRCDIR)/proof/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -29,10 +29,8 @@ ifeq ($(PLATFORM),win32)
 
 ##### XrdProofd plugin ####
 XPDH         := $(wildcard $(MODDIRI)/X*.h)
-XPDS         := $(wildcard $(MODDIRS)/X*.cxx)
-XPDO         := $(XPDS:.cxx=.o)
-XPDO         := $(MODDIRS)/XProofProtUtils.o
-
+XPDS         := $(MODDIRS)/XProofProtUtils.cxx
+XPDO         := $(call stripsrc,$(XPDS:.cxx=.o))
 
 ##### Object files used by libProofx #####
 XPCONNH      := $(MODDIRI)/XrdProofConn.h $(MODDIRI)/XrdProofPhyConn.h \
@@ -41,8 +39,7 @@ XPCONNH      := $(MODDIRI)/XrdProofConn.h $(MODDIRI)/XrdProofPhyConn.h \
 XPCONNS      := $(MODDIRS)/XrdProofConn.cxx $(MODDIRS)/XrdProofPhyConn.cxx \
                 $(MODDIRS)/XProofProtUtils.cxx
 
-XPCONNO      := $(MODDIRS)/XrdProofConn.o $(MODDIRS)/XrdProofPhyConn.o \
-                $(MODDIRS)/XProofProtUtils.o
+XPCONNO      := $(call stripsrc,$(XPCONNS:.cxx=.o))
 
 XPDDEP       := $(XPCONNO:.o=.d)
 
@@ -93,22 +90,23 @@ else
 ##### proofd #####
 PROOFDEXEH   := $(MODDIRI)/proofdp.h
 PROOFDEXES   := $(MODDIRS)/proofd.cxx
-PROOFDEXEO   := $(PROOFDEXES:.cxx=.o)
+PROOFDEXEO   := $(call stripsrc,$(PROOFDEXES:.cxx=.o))
 PROOFDDEP    := $(PROOFDEXEO:.o=.d)
 PROOFDEXE    := bin/proofd
 
 ##### XrdProofd plugin ####
 XPDH         := $(wildcard $(MODDIRI)/X*.h)
 XPDS         := $(wildcard $(MODDIRS)/X*.cxx)
-XPDO         := $(XPDS:.cxx=.o)
+XPDO         := $(call stripsrc,$(XPDS:.cxx=.o))
 
 XPDDEP       := $(XPDO:.o=.d)
 
 XPDLIB       := $(LPATH)/libXrdProofd.$(SOEXT)
 
 ##### Object files used by libProofx #####
-XPCONNO      := $(MODDIRS)/XrdProofConn.o $(MODDIRS)/XrdProofPhyConn.o \
-                $(MODDIRS)/XProofProtUtils.o
+XPCONNO      := $(call stripsrc,$(MODDIRS)/XrdProofConn.o \
+                $(MODDIRS)/XrdProofPhyConn.o \
+                $(MODDIRS)/XProofProtUtils.o)
 
 # Extra definitions
 # CXXFLAGS += $(BONJOURCPPFLAGS)
@@ -165,9 +163,9 @@ endif
 include/%.h:    $(PROOFDDIRI)/%.h
 		cp $< $@
 
-$(PROOFDEXE):   $(PROOFDEXEO) $(RSAO) $(SNPRINTFO) $(GLBPATCHO) $(RPDUTILO)
+$(PROOFDEXE):   $(PROOFDEXEO) $(RSAO) $(SNPRINTFO) $(GLBPATCHO) $(RPDUTILO) $(STRLCPYO)
 		$(LD) $(LDFLAGS) -o $@ $(PROOFDEXEO) $(RPDUTILO) $(GLBPATCHO) \
-		   $(RSAO) $(SNPRINTFO) $(CRYPTLIBS) $(AUTHLIBS) $(SYSLIBS)
+		   $(RSAO) $(SNPRINTFO) $(CRYPTLIBS) $(AUTHLIBS) $(STRLCPYO) $(SYSLIBS)
 
 $(XPROOFDEXE):  $(XPDO) $(XPROOFDEXELIBS) $(XRDPROOFXD)
 		$(LD) $(LDFLAGS) -o $@ $(XPDO) $(XPROOFDEXELIBS) $(SYSLIBS) $(XPROOFDEXESYSLIBS)

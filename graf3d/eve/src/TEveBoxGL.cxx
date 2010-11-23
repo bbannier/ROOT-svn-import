@@ -41,11 +41,8 @@ Bool_t TEveBoxGL::SetModel(TObject* obj, const Option_t* /*opt*/)
 {
    // Set model object.
 
-   if (SetModelCheckClass(obj, TEveBox::Class())) {
-      fM = dynamic_cast<TEveBox*>(obj);
-      return kTRUE;
-   }
-   return kFALSE;
+   fM = SetModelDynCast<TEveBox>(obj);
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -103,7 +100,7 @@ void TEveBoxGL::RenderOutline(const Float_t p[8][3]) const
 //______________________________________________________________________________
 void TEveBoxGL::RenderBoxStdNorm(const Float_t p[8][3]) const
 {
-   // Render box with "standard" normals.
+   // Render box with standard axis-aligned normals.
 
    glBegin(GL_QUADS);
 
@@ -145,7 +142,7 @@ void TEveBoxGL::RenderBoxAutoNorm(const Float_t p[8][3]) const
    subtract_and_normalize(p[3], p[0], e[1]);
    subtract_and_normalize(p[4], p[0], e[2]);
    subtract_and_normalize(p[5], p[6], e[3]);
-   subtract_and_normalize(p[4], p[6], e[4]);
+   subtract_and_normalize(p[7], p[6], e[4]);
    subtract_and_normalize(p[2], p[6], e[5]);
 
    glBegin(GL_QUADS);
@@ -159,7 +156,7 @@ void TEveBoxGL::RenderBoxAutoNorm(const Float_t p[8][3]) const
    glVertex3fv(p[7]); glVertex3fv(p[6]);
    glVertex3fv(p[5]); glVertex3fv(p[4]);
    // back:  0451
-   glNormal3fv(TMath::Cross(e[2], e[1], n));
+   glNormal3fv(TMath::Cross(e[2], e[0], n));
    glVertex3fv(p[0]); glVertex3fv(p[4]);
    glVertex3fv(p[5]); glVertex3fv(p[1]);
    // front:   3267
@@ -193,6 +190,7 @@ void TEveBoxGL::Draw(TGLRnrCtx& rnrCtx) const
    {
       if (fM->fDrawFrame)
       {
+         glEnable(GL_BLEND);
          TGLUtil::LineWidth(fM->fLineWidth);
          TGLUtil::Color(fM->fLineColor);
       }
@@ -221,9 +219,9 @@ void TEveBoxGL::DirectDraw(TGLRnrCtx&) const
    // Frame
    if (fM->fDrawFrame)
    {
+      glEnable(GL_BLEND);
       TGLUtil::Color(fM->fLineColor);
       TGLUtil::LineWidth(fM->fLineWidth);
-      glEnable(GL_LINE_SMOOTH);
       RenderOutline(fM->fVertices);
    }
 
@@ -257,11 +255,8 @@ Bool_t TEveBoxProjectedGL::SetModel(TObject* obj, const Option_t* /*opt*/)
 {
    // Set model object.
 
-   if (SetModelCheckClass(obj, TEveBoxProjected::Class())) {
-      fM = dynamic_cast<TEveBoxProjected*>(obj);
-      return kTRUE;
-   }
-   return kFALSE;
+   fM = SetModelDynCast<TEveBoxProjected>(obj);
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -315,6 +310,7 @@ void TEveBoxProjectedGL::Draw(TGLRnrCtx& rnrCtx) const
    {
       if (fM->fDrawFrame)
       {
+         glEnable(GL_BLEND);
          TGLUtil::LineWidth(fM->fLineWidth);
          TGLUtil::Color(fM->fLineColor);
       }
@@ -365,9 +361,9 @@ void TEveBoxProjectedGL::DirectDraw(TGLRnrCtx&) const
    // Frame
    if (fM->fDrawFrame)
    {
+      glEnable(GL_BLEND);
       TGLUtil::Color(fM->fLineColor);
       TGLUtil::LineWidth(fM->fLineWidth);
-      glEnable(GL_LINE_SMOOTH);
       RenderPoints(GL_LINE_LOOP);
    }
 

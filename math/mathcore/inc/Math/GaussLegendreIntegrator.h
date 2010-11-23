@@ -65,8 +65,22 @@ public:
        Gauss-Legendre: W(x)=1 -1<x<1 
                        (j+1)P_{j+1} = (2j+1)xP_j-jP_{j-1}
    */
-   void GetWeightVectors(double *x, double *w);
+   void GetWeightVectors(double *x, double *w) const;
 
+   int GetNumberPoints() const { return fNum; }
+
+   /** 
+       return number of function evaluations in calculating the integral 
+       This is equivalent to the number of points
+   */
+   int NEval() const { return fNum; }
+
+
+   ///  get the option used for the integration 
+   virtual ROOT::Math::IntegratorOneDimOptions Options() const; 
+   
+   // set the options 
+   virtual void SetOptions(const ROOT::Math::IntegratorOneDimOptions & opt); 
 
 private:
    

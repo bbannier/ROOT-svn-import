@@ -764,7 +764,7 @@ int G__reloadfile(char *filename, bool keep)
       return(G__loadfile(filename));
    }
 
-   if (storefname[0] || G__UNLOADFILE_SUCCESS != G__unloadfile(storefname[0])) {
+   if (!storefname[0] || G__UNLOADFILE_SUCCESS != G__unloadfile(storefname[0])) {
       return(1);
    }
 
@@ -804,6 +804,7 @@ void G__display_classkeyword(FILE *fout, const char *classnamein, const char *ke
 #endif
       FILE *G__temp;
       do {
+         // coverity[secure_temp]: we don't care about predictable names.
          G__temp = tmpfile();
          if (!G__temp) {
             G__tmpnam(tname); /* not used anymore */
@@ -1558,6 +1559,7 @@ static void G__create_input_tmpfile(G__input_file& ftemp)
    G__strlcpy(ftemp.name, G__tmpfilenam(),G__MAXFILENAME);
    ftemp.fp = fopen(ftemp.name, "w+bTD"); // write and read (but write first), binary, temp, and delete when closed
 #else
+   // coverity[secure_temp]: we don't care about predictable names.
    ftemp.fp = tmpfile();
    G__strlcpy(ftemp.name, "(tmpfile)",G__MAXFILENAME);
 #endif
@@ -2606,6 +2608,7 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
             istmpnam = 1;
          }
 #elif !defined(G__OLDIMPLEMENTATION1917)
+         // coverity[secure_temp]: we don't care about predictable names.
          G__temp = tmpfile();
 #else
         G__tmpnam(tname); /* not used anymore */

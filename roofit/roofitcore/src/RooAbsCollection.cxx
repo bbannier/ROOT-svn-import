@@ -354,7 +354,11 @@ RooAbsCollection &RooAbsCollection::assignFast(const RooAbsCollection& other)
   RooLinkedListIter iter = _list.iterator() ;
   RooLinkedListIter iter2 = other._list.iterator() ;
   while((elem=(RooAbsArg*)iter.Next())) {
+
+    // Identical size of iterators is documented assumption of method
+    // coverity[NULL_RETURNS]
     theirs= (RooAbsArg*)iter2.Next() ;
+
     theirs->syncCache() ;
     elem->copyCache(theirs,kTRUE) ;
   }
@@ -537,7 +541,7 @@ Bool_t RooAbsCollection::replace(const RooAbsArg& var1, const RooAbsArg& var2)
     return kFALSE;
   }
 
-  RooAbsArg *other= find(name);
+  RooAbsArg *other ;
 
   // is var2's name already in this list?
   if (dynamic_cast<RooArgSet*>(this)) {
@@ -710,7 +714,7 @@ RooAbsCollection* RooAbsCollection::selectByName(const char* nameList, Bool_t ve
   TIterator* iter = createIterator() ;
 
   char* buf = new char[strlen(nameList)+1] ;
-  strcpy(buf,nameList) ;
+  strlcpy(buf,nameList,strlen(nameList)+1) ;
   char* wcExpr = strtok(buf,",") ;
   while(wcExpr) {
     TRegexp rexp(wcExpr,kTRUE) ;
@@ -1051,7 +1055,7 @@ void RooAbsCollection::printLatex(ostream& ofs, Int_t ncol, const char* option, 
     tmp.ReplaceAll("N","") ;    
     tmp.ReplaceAll("n","") ;    
     static char buf[100] ;
-    strcpy(buf,tmp.Data()) ;
+    strlcpy(buf,tmp.Data(),100) ;
     sibFormatCmd._s[0] = buf ;
   }
 
@@ -1120,9 +1124,13 @@ void RooAbsCollection::printLatex(ostream& ofs, Int_t ncol, const char* option, 
 	RooRealVar* par = (RooRealVar*) ((RooArgList*)listListRRV.At(k))->at(i+j*nrow) ;
 	if (par) {
 	  if (option) {
-	    ofs << *par->format(sigDigit,(k==0)?option:sibOption.Data()) ;
+	    TString* tmp = par->format(sigDigit,(k==0)?option:sibOption.Data()) ;
+	    ofs << *tmp ;
+	    delete tmp ;
 	  } else {
-	    ofs << *par->format((k==0)?*formatCmd:sibFormatCmd) ;
+	    TString* tmp = par->format((k==0)?*formatCmd:sibFormatCmd) ;
+	    ofs << *tmp ;
+	    delete tmp ;
 	  }
 	}
 	if (!(j==ncol-1 && k==nlist-1)) {
@@ -1155,7 +1163,7 @@ Bool_t RooAbsCollection::allInRange(const char* rangeSpec) const
       cutVec.push_back(rangeSpec) ;
     } else {
       char* buf = new char[strlen(rangeSpec)+1] ;
-      strcpy(buf,rangeSpec) ;
+      strlcpy(buf,rangeSpec,strlen(rangeSpec)+1) ;
       const char* oneRange = strtok(buf,",") ;
       while(oneRange) {
 	cutVec.push_back(oneRange) ;

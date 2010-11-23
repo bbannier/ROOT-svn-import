@@ -206,15 +206,16 @@ void TSlaveInfo::Print(Option_t *opt) const
    if (oo == "bad" && fStatus != kBad) return;
 
    if (newfmt) {
-      TString msd, si;
+      TString msd, si, datadir;
       if (!(fMsd.IsNull())) msd.Form("| msd: %s ", fMsd.Data());
+      if (!(fDataDir.IsNull())) datadir.Form("| datadir: %s ", fDataDir.Data());
       if (fSysInfo.fCpus > 0) {
          si.Form("| %s, %d cores, %d MB ram", fHostName.Data(),
                fSysInfo.fCpus, fSysInfo.fPhysRam);
       } else {
          si.Form("| %s", fHostName.Data());
       }
-      Printf("Worker: %9s %s %s| %s", fOrdinal.Data(), si.Data(), msd.Data(), stat.Data());
+      Printf("Worker: %9s %s %s%s| %s", fOrdinal.Data(), si.Data(), msd.Data(), datadir.Data(), stat.Data());
 
    } else {
       TString msd  = fMsd.IsNull() ? "<null>" : fMsd.Data();
@@ -1109,8 +1110,7 @@ Int_t TProof::AddWorkers(TList *workerList)
    }
 
    if (!workerList || !(workerList->GetSize())) {
-      Error("AddWorkers", "The list of workers should not be empty; NULL: %d",
-            workerList == 0);
+      Error("AddWorkers", "empty list of workers!");
       return -2;
    }
 
@@ -1118,8 +1118,7 @@ Int_t TProof::AddWorkers(TList *workerList)
 
    fImage = gProofServ->GetImage();
    if (fImage.IsNull())
-      fImage = Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(),
-                    gProofServ->GetWorkDir());
+      fImage.Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(), gProofServ->GetWorkDir());
 
    // Get all workers
    UInt_t nSlaves = workerList->GetSize();
@@ -1130,6 +1129,11 @@ Int_t TProof::AddWorkers(TList *workerList)
 
    // a list of TSlave objects for workers that are being added
    TList *addedWorkers = new TList();
+   if (!addedWorkers) {
+      // This is needed to silence Coverity ...
+      Error("AddWorkers", "cannot create new list for the workers to be added");
+      return -2;
+   }
    addedWorkers->SetOwner(kFALSE);
    TListIter next(workerList);
    TObject *to;
@@ -1256,11 +1260,11 @@ Int_t TProof::AddWorkers(TList *workerList)
    TString dyn = gSystem->GetDynamicPath();
    dyn.ReplaceAll(":", " ");
    dyn.ReplaceAll("\"", " ");
-   AddDynamicPath(dyn, addedWorkers);
+   AddDynamicPath(dyn, kFALSE, addedWorkers);
    TString inc = gSystem->GetIncludePath();
    inc.ReplaceAll("-I", " ");
    inc.ReplaceAll("\"", " ");
-   AddIncludePath(inc, addedWorkers);
+   AddIncludePath(inc, kFALSE, addedWorkers);
 
    // Cleanup
    delete addedWorkers;
@@ -2336,7 +2340,7 @@ void TProof::ReleaseMonitor(TMonitor *mon)
 }
 
 //______________________________________________________________________________
-Int_t TProof::Collect(const TSlave *sl, Long_t timeout, Int_t endtype)
+Int_t TProof::Collect(const TSlave *sl, Long_t timeout, Int_t endtype, Bool_t deactonfail)
 {
    // Collect responses from slave sl. Returns the number of slaves that
    // responded (=1).
@@ -2357,13 +2361,13 @@ Int_t TProof::Collect(const TSlave *sl, Long_t timeout, Int_t endtype)
    }
    mon->Activate(sl->GetSocket());
 
-   rc = Collect(mon, timeout, endtype);
+   rc = Collect(mon, timeout, endtype, deactonfail);
    ReleaseMonitor(mon);
    return rc;
 }
 
 //______________________________________________________________________________
-Int_t TProof::Collect(TList *slaves, Long_t timeout, Int_t endtype)
+Int_t TProof::Collect(TList *slaves, Long_t timeout, Int_t endtype, Bool_t deactonfail)
 {
    // Collect responses from the slave servers. Returns the number of slaves
    // that responded.
@@ -2388,13 +2392,13 @@ Int_t TProof::Collect(TList *slaves, Long_t timeout, Int_t endtype)
          mon->Activate(sl->GetSocket());
    }
 
-   rc = Collect(mon, timeout, endtype);
+   rc = Collect(mon, timeout, endtype, deactonfail);
    ReleaseMonitor(mon);
    return rc;
 }
 
 //______________________________________________________________________________
-Int_t TProof::Collect(ESlaves list, Long_t timeout, Int_t endtype)
+Int_t TProof::Collect(ESlaves list, Long_t timeout, Int_t endtype, Bool_t deactonfail)
 {
    // Collect responses from the slave servers. Returns the number of slaves
    // that responded.
@@ -2415,13 +2419,13 @@ Int_t TProof::Collect(ESlaves list, Long_t timeout, Int_t endtype)
    }
    mon->ActivateAll();
 
-   rc = Collect(mon, timeout, endtype);
+   rc = Collect(mon, timeout, endtype, deactonfail);
    ReleaseMonitor(mon);
    return rc;
 }
 
 //______________________________________________________________________________
-Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
+Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype, Bool_t deactonfail)
 {
    // Collect responses from the slave servers. Returns the number of messages
    // received. Can be 0 if there are no active slaves.
@@ -2486,10 +2490,10 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
                while ((xs = (TSocket *)nxs())) {
                   TSlave *wrk = FindSlave(xs);
                   if (wrk)
-                     Info("Collect","   %s", wrk->GetName());
+                     Info("Collect","   %s (%s)", wrk->GetName(), wrk->GetOrdinal());
                   else
                      Info("Collect","   %p: %s:%d", xs, xs->GetInetAddress().GetHostName(),
-                                                      xs->GetInetAddress().GetPort());
+                                                        xs->GetInetAddress().GetPort());
                }
             }
          }
@@ -2500,7 +2504,7 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
 
       if (s && s != (TSocket *)(-1)) {
          // Get and analyse the info it did receive
-         rc = CollectInputFrom(s, endtype);
+         rc = CollectInputFrom(s, endtype, deactonfail);
          if (rc  == 1 || (rc == 2 && !savedMonitor)) {
             // Deactivate it if we are done with it
             mon->DeActivate(s);
@@ -2594,7 +2598,7 @@ void TProof::CleanGDirectory(TList *ol)
 }
 
 //______________________________________________________________________________
-Int_t TProof::CollectInputFrom(TSocket *s, Int_t endtype)
+Int_t TProof::CollectInputFrom(TSocket *s, Int_t endtype, Bool_t deactonfail)
 {
    // Collect and analyze available input from socket s.
    // Returns 0 on success, -1 if any failure occurs.
@@ -2628,7 +2632,7 @@ Int_t TProof::CollectInputFrom(TSocket *s, Int_t endtype)
 
    Int_t what = mess->What();
    TSlave *sl = FindSlave(s);
-   rc = HandleInputMessage(sl, mess);
+   rc = HandleInputMessage(sl, mess, deactonfail);
    if (rc == 1 && (endtype >= 0) && (what != endtype))
       // This message was for the base monitor in recursive case
       rc = 2;
@@ -2638,7 +2642,7 @@ Int_t TProof::CollectInputFrom(TSocket *s, Int_t endtype)
 }
 
 //______________________________________________________________________________
-Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
+Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
 {
    // Analyze the received message.
    // Returns 0 on success (1 if this the last message from this socket), -1 if
@@ -2767,7 +2771,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
             Int_t size;
             (*mess) >> size;
             PDB(kGlobal,2)
-               Info("HandleInputMessage","kPROOF_LOGFILE: size: %d", size);
+               Info("HandleInputMessage","%s: kPROOF_LOGFILE: size: %d", sl->GetOrdinal(), size);
             RecvLogFile(s, size);
          }
          break;
@@ -2775,9 +2779,14 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
       case kPROOF_LOGDONE:
          (*mess) >> sl->fStatus >> sl->fParallel;
          PDB(kCollect,2)
-            Info("HandleInputMessage","kPROOF_LOGDONE:%s: status %d  parallel %d",
+            Info("HandleInputMessage","%s: kPROOF_LOGDONE: status %d  parallel %d",
                  sl->GetOrdinal(), sl->fStatus, sl->fParallel);
-         if (sl->fStatus != 0) fStatus = sl->fStatus; //return last nonzero status
+         if (sl->fStatus != 0) {
+            // Return last nonzero status
+            fStatus = sl->fStatus;
+            // Deactivate the worker, if required
+            if (deactonfail) DeactivateWorker(sl->fOrdinal);
+         }
          rc = 1;
          break;
 
@@ -2942,7 +2951,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
       case kPROOF_OUTPUTLIST:
          {
             PDB(kGlobal,2)
-               Info("HandleInputMessage","kPROOF_OUTPUTLIST: enter");
+               Info("HandleInputMessage","%s: kPROOF_OUTPUTLIST: enter", sl->GetOrdinal());
             TList *out = 0;
             if (fPlayer) {
                if (TestBit(TProof::kIsMaster) || fProtocol < 7) {
@@ -2963,7 +2972,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                      QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
                   } else {
                      PDB(kGlobal,2)
-                        Info("HandleInputMessage","kPROOF_OUTPUTLIST: query result missing");
+                        Info("HandleInputMessage",
+                             "%s: kPROOF_OUTPUTLIST: query result missing", sl->GetOrdinal());
                   }
                }
                if (out) {
@@ -2971,10 +2981,13 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                   fPlayer->AddOutput(out); // Incorporate the list
                   SafeDelete(out);
                } else {
-                  PDB(kGlobal,2) Info("HandleInputMessage","kPROOF_OUTPUTLIST: ouputlist is empty");
+                  PDB(kGlobal,2)
+                     Info("HandleInputMessage",
+                          "%s: kPROOF_OUTPUTLIST: ouputlist is empty", sl->GetOrdinal());
                }
             } else {
-               Warning("HandleInputMessage", "kPROOF_OUTPUTLIST: player undefined!");
+               Warning("HandleInputMessage",
+                       "%s: kPROOF_OUTPUTLIST: player undefined!", sl->GetOrdinal());
             }
             // On clients at this point processing is over
             if (TestBit(TProof::kIsClient) && !IsLite())
@@ -3077,10 +3090,10 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                   Int_t frac = (Int_t) (done*100.)/tot;
                   char msg[512] = {0};
                   if (frac >= 100) {
-                     sprintf(msg,"%s: OK (%d %s)                 \n",
+                     snprintf(msg, 512, "%s: OK (%d %s)                 \n",
                              action.Data(),tot, type.Data());
                   } else {
-                     sprintf(msg,"%s: %d out of %d (%d %%)\r",
+                     snprintf(msg, 512, "%s: %d out of %d (%d %%)\r",
                              action.Data(), done, tot, frac);
                   }
                   if (fSync)
@@ -3352,6 +3365,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                         if (!strcmp(ourwi->GetOrdinal(), slinfo->GetOrdinal())) {
                            ourwi->SetSysInfo(slinfo->GetSysInfo());
                            ourwi->fHostName = slinfo->GetName();
+                           if (slinfo->GetDataDir() && (strlen(slinfo->GetDataDir()) > 0))
+                           ourwi->fDataDir = slinfo->GetDataDir();
                            break;
                         }
                      }
@@ -3457,7 +3472,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
       default:
          {
             Error("HandleInputMessage", "unknown command received from '%s' (what = %d)",
-                                      (sl ? sl->GetOrdinal() : "undef"), what);
+                                        sl->GetOrdinal(), what);
          }
          break;
    }
@@ -3574,15 +3589,17 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                TString msg;
                if (!fMergersSet) {
 
+                  Int_t activeWorkers = fCurrentMonitor ? fCurrentMonitor->GetActive() : GetNumberOfActiveSlaves();
+                  
                   // First pass - setting number of mergers according to user or dynamically
                   fMergersCount = -1; // No mergers used if not set by user
                   TParameter<Int_t> *mc = dynamic_cast<TParameter<Int_t> *>(GetParameter("PROOF_UseMergers"));
                   if (mc) fMergersCount = mc->GetVal(); // Value set by user
 
                   // Mergers count specified by user but not valid
-                  if (fMergersCount < 0 || (fMergersCount > (GetNumberOfSlaves()/2) )) {
+                  if (fMergersCount < 0 || (fMergersCount > (activeWorkers/2) )) {
                      msg.Form("%s: Invalid request: cannot start %d mergers for %d workers",
-                              prefix, fMergersCount, GetNumberOfSlaves());
+                              prefix, fMergersCount, activeWorkers);
                      if (gProofServ)
                         gProofServ->SendAsynMessage(msg);
                      else
@@ -3591,17 +3608,17 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                   }
                   // Mergers count will be set dynamically
                   if (fMergersCount == 0) {
-                     if (GetNumberOfActiveSlaves() > 1) {
-                        fMergersCount = TMath::Nint(TMath::Sqrt(GetNumberOfActiveSlaves()));
-                        if (GetNumberOfActiveSlaves() / fMergersCount < 2)
-                           fMergersCount = (Int_t) TMath::Sqrt(GetNumberOfActiveSlaves());
+                     if (activeWorkers > 1) {
+                        fMergersCount = TMath::Nint(TMath::Sqrt(activeWorkers));
+                        if (activeWorkers / fMergersCount < 2)
+                           fMergersCount = (Int_t) TMath::Sqrt(activeWorkers);
                      }
                      if (fMergersCount > 1)
                         msg.Form("%s: Number of mergers set dynamically to %d (for %d workers)",
-                                 prefix, fMergersCount, GetNumberOfActiveSlaves());
+                                 prefix, fMergersCount, activeWorkers);
                      else {
                         msg.Form("%s: No mergers will be used for %d workers",
-                                 prefix, GetNumberOfActiveSlaves());
+                                 prefix, activeWorkers);
                         fMergersCount = -1;
                      }
                      if (gProofServ)
@@ -3610,7 +3627,7 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                         Printf("%s",msg.Data());
                   } else {
                      msg.Form("%s: Number of mergers set by user to %d (for %d workers)",
-                              prefix, fMergersCount, GetNumberOfActiveSlaves());
+                              prefix, fMergersCount, activeWorkers);
                      if (gProofServ)
                         gProofServ->SendAsynMessage(msg);
                      else
@@ -3621,7 +3638,7 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                      fMergers = new TList();
                      fLastAssignedMerger = 0;
                      // Total number of workers, which will not act as mergers ('pure workers')
-                     fWorkersToMerge = (GetNumberOfSlaves() - fMergersCount);
+                     fWorkersToMerge = (activeWorkers - fMergersCount);
                      // Establish the first merger
                      if (!CreateMerger(sl, merging_port)) {
                         // Cannot establish first merger
@@ -3990,6 +4007,9 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
             gProofServ->ReleaseWorker(ord.Data());
          }
       }
+   } else if (TestBit(TProof::kIsClient) && reason && !strcmp(reason, kPROOF_WorkerIdleTO)) {
+      // We are invalid after this
+      fValid = kFALSE;
    }
 
    fActiveSlaves->Remove(wrk);
@@ -4014,6 +4034,11 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
          delete wrk;
       } else {
          fBadSlaves->Add(wrk);
+         fActiveSlaves->Remove(wrk);
+         fUniqueSlaves->Remove(wrk);
+         fAllUniqueSlaves->Remove(wrk);
+         fNonUniqueMasters->Remove(wrk);
+         if (fCurrentMonitor) fCurrentMonitor->DeActivate(wrk->GetSocket());
          wrk->Close();
          // Update the mergers count, if needed
          if (fMergersSet) {
@@ -4022,10 +4047,11 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
             if (mc) mergersCount = mc->GetVal(); // Value set by user
             // Mergers count is set dynamically: recalculate it
             if (mergersCount == 0) {
-               if (GetNumberOfActiveSlaves() > 1) {
-                  fMergersCount = TMath::Nint(TMath::Sqrt(GetNumberOfActiveSlaves()));
-                  if (GetNumberOfActiveSlaves() / fMergersCount < 2)
-                     fMergersCount = (Int_t) TMath::Sqrt(GetNumberOfActiveSlaves());
+               Int_t activeWorkers = fCurrentMonitor ? fCurrentMonitor->GetActive() : GetNumberOfActiveSlaves();
+               if (activeWorkers > 1) {
+                  fMergersCount = TMath::Nint(TMath::Sqrt(activeWorkers));
+                  if (activeWorkers / fMergersCount < 2)
+                     fMergersCount = (Int_t) TMath::Sqrt(activeWorkers);
                }
             }
          }
@@ -5904,7 +5930,8 @@ void TProof::ClearData(UInt_t what, const char *dsname)
    if ((what & TProof::kPurge)) {
       // Prompt, if requested
       if (doask && !Prompt("Do you really want to remove all data files")) return;
-      fManager->Rm("~/data/*", "-rf", "all");
+      if (fManager->Rm("~/data/*", "-rf", "all") < 0)
+         Warning("ClearData", "problems purging data directory");
       return;
    } else if ((what & TProof::kDataset)) {
       // We must have got a name
@@ -6773,7 +6800,9 @@ Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient, TList *loadop
    mess << Int_t(kLoadPackage) << pac;
    if (loadopts) mess << loadopts;
    Broadcast(mess);
-   Collect();
+   // On the master, workers that fail are deactivated
+   Bool_t deactivateOnFailure = (IsMaster()) ? kTRUE : kFALSE;
+   Collect(kActive, -1, -1, deactivateOnFailure);
 
    return fStatus;
 }
@@ -7325,8 +7354,8 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
 
    TMD5 *md5 = TMD5::FileChecksum(par);
 
-   if (UploadPackageOnClient(par, opt, md5) == -1) {
-      delete md5;
+   if (!md5 || (md5 && UploadPackageOnClient(par, opt, md5) == -1)) {
+      if (md5) delete md5;
       return -1;
    }
 
@@ -7978,7 +8007,8 @@ TList *TProof::GetListOfEnabledPackages()
 }
 
 //______________________________________________________________________________
-void TProof::PrintProgress(Long64_t total, Long64_t processed, Float_t procTime)
+void TProof::PrintProgress(Long64_t total, Long64_t processed,
+                           Float_t procTime, Long64_t bytesread)
 {
    // Print a progress bar on stderr. Used in batch mode.
 
@@ -7986,7 +8016,7 @@ void TProof::PrintProgress(Long64_t total, Long64_t processed, Float_t procTime)
       Bool_t redirlog = fRedirLog;
       fRedirLog = kFALSE;
       // Call the external function
-      (*fPrintProgress)(total, processed, procTime);
+      (*fPrintProgress)(total, processed, procTime, bytesread);
       fRedirLog = redirlog;
       return;
    }
@@ -8005,12 +8035,31 @@ void TProof::PrintProgress(Long64_t total, Long64_t processed, Float_t procTime)
          fprintf(stderr, "=");
    }
    Float_t evtrti = (procTime > 0. && processed > 0) ? processed / procTime : -1.;
-   if (evtrti > 0.)
-      fprintf(stderr, "| %.02f %% [%.1f evts/s]\r",
-              (total ? ((100.0*processed)/total) : 100.0), evtrti);
-   else
+   Float_t mbsrti = (procTime > 0. && bytesread > 0) ? bytesread / procTime : -1.;
+   if (evtrti > 0.) {
+      if (mbsrti > 0.) {
+         TString sunit("B/s");
+         const Float_t toK = 1024., toM = 1048576., toG = 1073741824.;
+         if (mbsrti >= toG) {
+            mbsrti /= toG;
+            sunit = "GB/s";
+         } else if (mbsrti >= toM) {
+            mbsrti /= toM;
+            sunit = "MB/s";
+         } else if (mbsrti >= toK) {
+            mbsrti /= toK;
+            sunit = "kB/s";
+         }
+         fprintf(stderr, "| %.02f %% [%.1f evts/s, %.1f %s]\r",
+                (total ? ((100.0*processed)/total) : 100.0), evtrti, mbsrti, sunit.Data());
+      } else {
+         fprintf(stderr, "| %.02f %% [%.1f evts/s]\r",
+                (total ? ((100.0*processed)/total) : 100.0), evtrti);
+      }
+   } else {
       fprintf(stderr, "| %.02f %%\r",
               (total ? ((100.0*processed)/total) : 100.0));
+   }
    if (processed >= total)
       fprintf(stderr, "\n");
 }
@@ -8023,7 +8072,7 @@ void TProof::Progress(Long64_t total, Long64_t processed)
 
    if (fPrintProgress) {
       // Call the external function
-      return (*fPrintProgress)(total, processed, -1.);
+      return (*fPrintProgress)(total, processed, -1., -1);
    }
 
    PDB(kGlobal,1)
@@ -8053,7 +8102,7 @@ void TProof::Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
    if (gROOT->IsBatch()) {
       // Simple progress bar
       if (total > 0)
-         PrintProgress(total, processed, procTime);
+         PrintProgress(total, processed, procTime, bytesread);
    } else {
       EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
              7, total, processed, bytesread, initTime, procTime, evtrti, mbrti);
@@ -8075,7 +8124,7 @@ void TProof::Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
    if (gROOT->IsBatch()) {
       // Simple progress bar
       if (total > 0)
-         PrintProgress(total, processed, procTime);
+         PrintProgress(total, processed, procTime, bytesread);
    } else {
       EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t,Int_t,Int_t,Float_t)",
              10, total, processed, bytesread, initTime, procTime, evtrti, mbrti, actw, tses, eses);
@@ -9412,6 +9461,11 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    // (*)|-------> call RegisterDataSet ------->|
    // (*) - optional
 
+   if (!IsValid()) {
+      Error("UploadDataSet", "not connected");
+      return -1;
+   }
+
    if (fProtocol < 15) {
       Info("UploadDataSet", "functionality not available: the server has an"
                             " incompatible version of TFileInfo");
@@ -9434,9 +9488,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    if ((opt & kOverwriteAllFiles && opt & kOverwriteNoFiles) ||
        (opt & kNoOverwriteDataSet && opt & kAppend) ||
        (opt & kOverwriteDataSet && opt & kAppend) ||
-       (opt & kNoOverwriteDataSet && opt & kOverwriteDataSet) ||
-       (opt & kAskUser && opt & (kOverwriteDataSet | kNoOverwriteDataSet | kAppend |
-                                 kOverwriteAllFiles | kOverwriteNoFiles))) {
+       (opt & kNoOverwriteDataSet && opt & kOverwriteDataSet)) {
       Error("UploadDataSet", "you specified contradicting options.");
       return kError;
    }
@@ -9462,13 +9514,6 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
                "Provided skippedFiles argument does not point to a TList object.");
          return kError;
       }
-   }
-   TSocket *master;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("UploadDataSet", "No connection to the master!");
-      return kError;
    }
 
    Int_t fileCount = 0; // return value
@@ -10755,13 +10800,7 @@ Int_t TProof::AssertDataSet(TDSet *dset, TList *input,
             emsg.Form("error integrating dataset %s", dataset->GetName());
             continue;
          }
-         if (enl) {
-            if (!entrylist) {
-               entrylist = enl;
-            } else {
-               entrylist->Add(enl);
-            }
-         }
+         if (enl) entrylist = enl;
       }
       if (missingFiles) {
          // The missing files objects have to be removed from the dataset

@@ -45,11 +45,15 @@ endif
 ##### However, if we are building packages or cleaning, we #####
 ##### don't include this file since it may screw up things #####
 
+ifndef ROOT_SRCDIR
+$(error Please run ./configure again, the build system has been updated)
+endif
+
 ifeq ($(findstring $(MAKECMDGOALS), maintainer-clean debian redhat),)
-include config/Makefile.$(ARCH)
+include $(ROOT_SRCDIR)/config/Makefile.$(ARCH)
 endif
 ifeq ($(MAKECMDGOALS),clean)
-include config/Makefile.$(ARCH)
+include $(ROOT_SRCDIR)/config/Makefile.$(ARCH)
 endif
 
 ##### Include compiler overrides specified via ./configure #####
@@ -65,7 +69,7 @@ endif
 
 ##### Include library dependencies for explicit linking #####
 
-MAKEFILEDEP = config/Makefile.depend
+MAKEFILEDEP = $(ROOT_SRCDIR)/config/Makefile.depend
 include $(MAKEFILEDEP)
 
 ##### Allow local macros #####
@@ -74,9 +78,9 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
-                core/cont core/meta io/io math/mathcore net/net core/zip \
-                core/clib core/thread math/matrix core/newdelete hist/hist \
+MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
+                core/base core/cont core/meta io/io math/mathcore net/net \
+                core/zip core/thread math/matrix core/newdelete hist/hist \
                 tree/tree graf2d/freetype graf2d/graf graf2d/gpad graf3d/g3d \
                 gui/gui math/minuit hist/histpainter tree/treeplayer \
                 gui/ged tree/treeviewer math/physics graf2d/postscript \
@@ -299,6 +303,11 @@ endif
 
 MODULES      += main   # must be last, $(ALLLIBS) must be fully formed
 
+ifeq ($(BUILDTOOLS),yes)
+MODULES       = build cint/cint core/metautils core/clib core/base core/meta \
+                core/utils
+endif
+
 ##### ROOT libraries #####
 
 LPATH         = lib
@@ -329,6 +338,8 @@ ROOTLIBS     := $(BOOTLIBS) $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
                 $(LPATH)/libThread.lib
 RINTLIBS     := $(LPATH)/libRint.lib
 endif
+
+ROOTALIB     := $(LPATH)/libRoot.a
 
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
 BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(MATHCORELIB)
@@ -428,29 +439,40 @@ endif
 ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist),)
 ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(shell which svn 2>&1 | sed -ne "s@.*/svn@svn@p"),svn)
-SVNREV  := $(shell bash build/unix/svninfo.sh)
+SVNREV  := $(shell bash $(ROOT_SRCDIR)/build/unix/svninfo.sh $(ROOT_SRCDIR))
 endif
 endif
 endif
 
 ##### Utilities #####
 
-MAKEDEP       = $(RMKDEP)
-MAKELIB       = build/unix/makelib.sh $(MKLIBOPTIONS)
-MAKEDIST      = build/unix/makedist.sh
-MAKEDISTSRC   = build/unix/makedistsrc.sh
-MAKEVERSION   = build/unix/makeversion.sh
-MAKECOMPDATA  = build/unix/compiledata.sh
-MAKECINTDLL   = build/unix/makecintdll.sh
-MAKECHANGELOG = build/unix/makechangelog.sh
-MAKEHTML      = build/unix/makehtml.sh
-MAKELOGHTML   = build/unix/makeloghtml.sh
-MAKERELNOTES  = build/unix/makereleasenotes.sh
-MAKESTATIC    = build/unix/makestatic.sh
-RECONFIGURE   = build/unix/reconfigure.sh
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+   MAKEDIR      = +@[ -d $(dir $@) ] || mkdir -p $(dir $@)
+   RUNTIMEDIRS := etc macros icons fonts README tutorials test man
+   POSTBIN     += $(RUNTIMEDIRS)
+endif
+
+ifneq ($(HOST),)
+   BUILDTOOLSDIR := buildtools
+   POSTBIN       += static
+endif
+
+MAKEDEP        = $(RMKDEP)
+MAKELIB        = $(ROOT_SRCDIR)/build/unix/makelib.sh $(MKLIBOPTIONS)
+MAKEDIST      := $(ROOT_SRCDIR)/build/unix/makedist.sh
+MAKEDISTSRC   := $(ROOT_SRCDIR)/build/unix/makedistsrc.sh
+MAKEVERSION   := $(ROOT_SRCDIR)/build/unix/makeversion.sh
+MAKECOMPDATA  := $(ROOT_SRCDIR)/build/unix/compiledata.sh
+MAKECINTDLL   := $(ROOT_SRCDIR)/build/unix/makecintdll.sh
+MAKECHANGELOG := $(ROOT_SRCDIR)/build/unix/makechangelog.sh
+MAKEHTML      := $(ROOT_SRCDIR)/build/unix/makehtml.sh
+MAKELOGHTML   := $(ROOT_SRCDIR)/build/unix/makeloghtml.sh
+MAKERELNOTES  := $(ROOT_SRCDIR)/build/unix/makereleasenotes.sh
+MAKESTATIC    := $(ROOT_SRCDIR)/build/unix/makestatic.sh
+RECONFIGURE   := $(ROOT_SRCDIR)/build/unix/reconfigure.sh
 ifeq ($(PLATFORM),win32)
-MAKELIB       = build/win/makelib.sh
-MAKECOMPDATA  = build/win/compiledata.sh
+MAKELIB       := $(ROOT_SRCDIR)/build/win/makelib.sh
+MAKECOMPDATA  := $(ROOT_SRCDIR)/build/win/compiledata.sh
 endif
 
 ##### Compiler directives and run-control file #####
@@ -511,53 +533,91 @@ INCLUDEFILES :=
 # special rules (need to be defined before generic ones)
 cint/cint/lib/dll_stl/G__%.o: cint/cint/lib/dll_stl/G__%.cxx
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
-	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
+	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
 	$(CXX) $(NOOPT) $(CXXFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/lib/dll_stl/G__c_%.o: cint/cint/lib/dll_stl/G__c_%.c
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIR)/lib/prec_stl \
-	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIRL)/prec_stl \
+	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
 	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/lib/G__%.o: cint/cint/lib/G__%.cxx
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
-	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
+	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
 	$(CXX) $(NOOPT) $(CXXFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/lib/G__c_%.o: cint/cint/lib/G__c_%.c
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIR)/lib/prec_stl \
-	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIRL)/prec_stl \
+	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
 	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 G__%.o: G__%.cxx
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
-	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
+	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
 	$(CXX) $(NOOPT) $(CXXFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 G__c_%.o: G__c_%.c
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIR)/lib/prec_stl \
-	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIRL)/prec_stl \
+	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
 	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+
+cint/cint/%.o: $(ROOT_SRCDIR)/cint/cint/%.cxx
+	$(MAKEDIR)
+	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
+	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
+
+cint/cint/%.o: $(ROOT_SRCDIR)/cint/cint/%.c
+	$(MAKEDIR)
+	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
+	$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
 
 cint/cint/%.o: cint/cint/%.cxx
 	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
 	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
 
-cint/cint/%.o: cint/cint/%.c
-	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
-	$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
-
-build/%.o: build/%.cxx
+build/rmkdepend/%.o: $(ROOT_SRCDIR)/build/rmkdepend/%.cxx
+	$(MAKEDIR)
 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
-build/%.o: build/%.c
+build/rmkdepend/%.o: $(ROOT_SRCDIR)/build/rmkdepend/%.c
+	$(MAKEDIR)
 	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+
+define SRCTOOBJ_template
+$(1)/%_tmp.o: $(1)/%_tmp.cxx
+	$$(MAKEDIR)
+	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
+	$$(CXX) $$(OPT) $$(CXXFLAGS) $$(CXXOUT)$$@ -c $$<
+
+$(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.cxx
+	$$(MAKEDIR)
+	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
+	$$(CXX) $$(OPT) $$(CXXFLAGS) $$(CXXOUT)$$@ -c $$<
+
+$(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.c
+	$$(MAKEDIR)
+	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CFLAGS) -- $$<
+	$$(CC) $$(OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$<
+
+$(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.f
+	$$(MAKEDIR)
+ifeq ($$(F77),f2c)
+	f2c -a -A $$<
+	$$(CC) $$(F77OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$(@:.o=.c)
+else
+	$$(F77) $$(F77OPT) $$(F77FLAGS) $$(CXXOUT)$$@ -c $$<
+endif
+endef
+
+MODULESGENERIC := build $(filter-out build,$(MODULES))
+MODULESGENERIC := $(filter-out cint/cint,$(MODULES))
+$(foreach module,$(MODULESGENERIC),$(eval $(call SRCTOOBJ_template,$(module))))
 
 %.o: %.cxx
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
@@ -579,7 +639,8 @@ endif
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
                 clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
-                releasenotes static map debian redhat skip postbin
+                releasenotes static map debian redhat skip postbin \
+                showit help
 
 ifneq ($(findstring map, $(MAKECMDGOALS)),)
 .NOTPARALLEL:
@@ -592,8 +653,8 @@ fast:           rootexecs
 skip:
 		@true;
 
--include $(patsubst %,%/ModuleVars.mk,$(MODULES))
-include $(patsubst %,%/Module.mk,$(MODULES))
+-include $(patsubst %,$(ROOT_SRCDIR)/%/ModuleVars.mk,$(MODULES))
+include $(patsubst %,$(ROOT_SRCDIR)/%/Module.mk,$(MODULES))
 
 -include MyRules.mk            # allow local rules
 
@@ -613,6 +674,29 @@ rootcint:       all-cint all-utils
 rootlibs:       rootcint compiledata $(ALLLIBS) $(ALLMAPS)
 
 rootexecs:      rootlibs $(ALLEXECS)
+
+ifneq ($(HOST),)
+.PHONY:         buildtools
+
+buildtools:     $(BUILDTOOLSDIR)/bin/rootcint
+
+$(BUILDTOOLSDIR)/bin/rootcint:
+		@echo ""; \
+		echo "*** Building build tools in $(BUILDTOOLSDIR)..."; \
+		echo ""; \
+		if [ ! -f $(BUILDTOOLSDIR)/Makefile ]; then \
+		   mkdir -p $(BUILDTOOLSDIR); \
+		   cd $(BUILDTOOLSDIR); \
+		   $(ROOT_SRCDIR)/configure $(HOST) --minimal; \
+		fi; \
+		($(MAKE) BUILDTOOLS=yes \
+		   TARGETFLAGS=-DR__$(shell echo $(ARCH) | tr 'a-z' 'A-Z') \
+		   rootcint \
+		) || exit 1;
+
+distclean::
+		@rm -rf $(BUILDTOOLSDIR)
+endif
 
 postbin:        $(POSTBIN)
 
@@ -642,23 +726,29 @@ config/Makefile.config config/Makefile.comp include/RConfigure.h \
   bin/root-config: Makefile
 
 ifeq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean debian redhat),)
-Makefile: configure config/rootrc.in config/RConfigure.in config/Makefile.in \
+Makefile: $(addprefix $(ROOT_SRCDIR)/,configure config/rootrc.in \
+  config/RConfigure.in config/Makefile.in config/Makefile.$(ARCH) \
   config/Makefile-comp.in config/root-config.in config/rootauthrc.in \
   config/rootdaemonrc.in config/mimes.unix.in config/mimes.win32.in \
-  config.status config/proofserv.in config/roots.in
-	@( $(RECONFIGURE) "$?" || ( \
-	   echo ""; echo "Please, run ./configure again as config option files ($?) have changed."; \
+  config/proofserv.in config/roots.in) config.status
+	@( $(RECONFIGURE) "$?" "$(ROOT_SRCDIR)" || ( \
+	   echo ""; echo "Please, run $(ROOT_SRCDIR)/configure again as config option files ($?) have changed."; \
 	   echo ""; exit 1; \
 	 ) )
 endif
 
-$(COMPILEDATA): config/Makefile.$(ARCH) config/Makefile.comp $(MAKECOMPDATA)
+$(COMPILEDATA): $(ROOT_SRCDIR)/config/Makefile.$(ARCH) config/Makefile.comp \
+                $(MAKECOMPDATA)
 	@$(MAKECOMPDATA) $(COMPILEDATA) "$(CXX)" "$(OPTFLAGS)" "$(DEBUGFLAGS)" \
 	   "$(CXXFLAGS)" "$(SOFLAGS)" "$(LDFLAGS)" "$(SOEXT)" "$(SYSLIBS)" \
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \
 	   "$(MAKESHAREDLIB)" "$(MAKEEXE)" "$(ARCH)" "$(ROOTBUILD)" "$(EXPLICITLINK)"
 
+ifeq ($(HOST),)
 build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP)
+else
+build/dummy.d: config Makefile buildtools $(ALLHDRS) $(RMKDEP) $(BINDEXP)
+endif
 	@(if [ ! -f $@ ] ; then \
 	   touch $@; \
 	fi)
@@ -675,7 +765,7 @@ else
 endif
 
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
-	$(RLIBMAP) -o $(COREMAP) -l $(CORELIB) -d $(CORELIBDEPM) -c $(COREL)
+	$(RLIBMAP) -o $@ -l $(CORELIB) -d $(CORELIBDEPM) -c $(COREL)
 
 map::   $(ALLMAPS)
 
@@ -709,7 +799,7 @@ debian:
 	    echo "Please rename this directory to `basename $$PWD` to"; \
 	    echo "root-$$vers and try again"; exit 1 ; fi
 	rm -rf debian
-	build/package/lib/makedebdir.sh
+	$(ROOT_SRCDIR)/build/package/lib/makedebdir.sh
 	fakeroot debian/rules debian/control
 	dpkg-buildpackage -rfakeroot -us -uc -i"G__|^debian|root-bin.png|\.d$$"
 	@echo "Debian GNU/Linux packages done. They are put in '../'"
@@ -719,7 +809,7 @@ redhat:
 	   echo "You must have rpm installed to make the Redhat package"; \
 	   exit 1; fi
 	@echo "OK, you have RPM on your system - good"
-	build/package/lib/makerpmspec.sh
+	$(ROOT_SRCDIR)/build/package/lib/makerpmspec.sh
 	@echo "To build the packages, make a gzipped tar ball of the sources"
 	@vers=`sed 's|\(.*\)/\(.*\)|\1.\2|' < build/version_number` ; \
 	  echo "called root_v$$vers.source.tar.gz and put it in you RPM "
@@ -739,7 +829,7 @@ redhat-tar:
 	   echo "You must have rpm installed to make the Redhat package"; \
 	   exit 1; fi
 	@echo "OK, you have RPM on your system - good"
-	build/package/lib/makerpmspec.sh
+	$(ROOT_SRCDIR)/build/package/lib/makerpmspec.sh
 	-@$(MAKE) distclean
 	-@$(MAKE) maintainer-clean
 	@vers=`sed 's|\(.*\)/\(.*\)|\1.\2|' < build/version_number` && \
@@ -779,8 +869,10 @@ rootdrpm:
 	else  \
 	    rm -f rootd-*-$(ROOTDRPMREL).spec ; \
 	fi
-	build/package/lib/makerpmspecs.sh rpm build/package/common \
-	        build/package/rpm root-rootd >> root-rootd.spec.tmp
+	$(ROOT_SRCDIR)/build/package/lib/makerpmspecs.sh rpm \
+		$(ROOT_SRCDIR)/build/package/common \
+	        $(ROOT_SRCDIR)/build/package/rpm root-rootd >> \
+		root-rootd.spec.tmp
 	@if [ "x$(ARCOMP)" != "x" ]; then \
 	    echo "Architecture+compiler flag: $(ARCOMP)" ; \
 	fi
@@ -860,9 +952,9 @@ ifeq ($(PLATFORM),macosx)
 	@rm -f lib/*.dylib
 	@rm -f lib/*.so
 endif
-	-@mv -f tutorials/gallery.root tutorials/gallery.root-
-	-@mv -f tutorials/mlp/mlpHiggs.root tutorials/mlp/mlpHiggs.root-
-	-@mv -f tutorials/quadp/stock.root tutorials/quadp/stock.root-
+	-@(mv -f tutorials/gallery.root tutorials/gallery.root- >/dev/null 2>&1;true)
+	-@(mv -f tutorials/mlp/mlpHiggs.root tutorials/mlp/mlpHiggs.root- >/dev/null 2>&1;true)
+	-@(mv -f tutorials/quadp/stock.root tutorials/quadp/stock.root- >/dev/null 2>&1;true)
 	@(find tutorials -name "files" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.root" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.ps" -exec rm -rf {} \; >/dev/null 2>&1;true)
@@ -873,9 +965,9 @@ endif
 	@(find tutorials -name "work.pc" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "work.pcl" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@rm -rf tutorials/eve/aliesd
-	-@mv -f tutorials/gallery.root- tutorials/gallery.root
-	-@mv -f tutorials/mlp/mlpHiggs.root- tutorials/mlp/mlpHiggs.root
-	-@mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root
+	-@(mv -f tutorials/gallery.root- tutorials/gallery.root >/dev/null 2>&1;true)
+	-@(mv -f tutorials/mlp/mlpHiggs.root- tutorials/mlp/mlpHiggs.root >/dev/null 2>&1;true)
+	-@(mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root >/dev/null 2>&1;true)
 	@rm -f bin/roota bin/proofserva lib/libRoot.a
 	@rm -f $(CINTDIR)/include/*.dll $(CINTDIR)/include/*.so*
 	@rm -f $(CINTDIR)/stl/*.dll $(CINTDIR)/stl/*.so*
@@ -886,7 +978,7 @@ endif
 	@rm -f etc/svninfo.txt
 	@(find . -path '*/daemons' -prune -o -name *.d -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find . -name *.o -exec rm -rf {} \; >/dev/null 2>&1;true)
-	-@cd test && $(MAKE) distclean
+	-@([ -d test ] && (cd test && $(MAKE) distclean); true)
 
 maintainer-clean:: distclean
 	@rm -rf bin lib include htmldoc system.rootrc config/Makefile.config \
@@ -902,7 +994,9 @@ maintainer-clean:: distclean
 version: $(CINTTMP)
 	@$(MAKEVERSION)
 
-static: rootlibs
+static: $(ROOTALIB)
+
+$(ROOTALIB): $(ALLLIBS)
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
 	   "$(XLIBS)" "$(SYSLIBS)" "$(STATICEXTRALIBS)"
 
@@ -955,8 +1049,8 @@ install: all
 	   echo "Installing headers in $(DESTDIR)$(INCDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(INCDIR); \
 	   $(INSTALLDATA) include/*             $(DESTDIR)$(INCDIR); \
-	   echo "Installing main/src/rmain.cxx in $(DESTDIR)$(INCDIR)"; \
-	   $(INSTALLDATA) main/src/rmain.cxx    $(DESTDIR)$(INCDIR); \
+	   echo "Installing $(ROOT_SRCDIR)/main/src/rmain.cxx in $(DESTDIR)$(INCDIR)"; \
+	   $(INSTALLDATA) $(ROOT_SRCDIR)/main/src/rmain.cxx $(DESTDIR)$(INCDIR); \
 	   echo "Installing cint/cint/include cint/cint/lib and cint/cint/stl in $(DESTDIR)$(CINTINCDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(CINTINCDIR)/cint; \
 	   $(INSTALLDATA) cint/cint/include     $(DESTDIR)$(CINTINCDIR)/cint; \
@@ -1123,11 +1217,50 @@ uninstall:
 	   fi ; \
 	fi
 
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+# install directrories needed at run-time
+$(RUNTIMEDIRS):
+	@echo "Rsync'ing $(ROOT_SRCDIR)/etc..."; \
+	$(RSYNC) \
+		--exclude '.svn' \
+		--exclude root.mimes \
+		--exclude system.rootauthrc \
+		--exclude system.rootdaemonrc \
+		--exclude system.rootrc \
+		--exclude cmsd.rc.d \
+		--exclude olbd.rc.d \
+		--exclude proofd.rc.d \
+		--exclude proofd.xinetd \
+		--exclude rootd.rc.d \
+		--exclude rootd.xinetd \
+		--exclude xrootd.rc.d \
+		--exclude svninfo.txt \
+		$(ROOT_SRCDIR)/etc . ; \
+	echo "Rsync'ing $(ROOT_SRCDIR)/macros..."; \
+	$(RSYNC) \
+		--exclude '.svn' \
+		--exclude html.C \
+		$(ROOT_SRCDIR)/macros . ; \
+	for d in icons fonts README tutorials test man; do \
+		echo "Rsync'ing $(ROOT_SRCDIR)/$$d..."; \
+		$(RSYNC) \
+			--exclude '.svn' \
+			--exclude '*.o' \
+			--exclude '*.so' \
+			--exclude '*.lib' \
+			--exclude '*.dll' \
+			$(ROOT_SRCDIR)/$$d . ; \
+	done;
+endif
+
 showbuild:
 	@echo "ROOTSYS            = $(ROOTSYS)"
 	@echo "SVNREV             = $(SVNREV)"
 	@echo "PLATFORM           = $(PLATFORM)"
 	@echo "OPT                = $(OPT)"
+	@echo ""
+	@echo "ROOT_SRCDIR        = $(ROOT_SRCDIR)"
+	@echo "ROOT_OBJDIR        = $(ROOT_OBJDIR)"
 	@echo ""
 	@echo "CXX                = $(CXX)"
 	@echo "CC                 = $(CC)"
@@ -1221,3 +1354,10 @@ showit:
 	@echo "Libraries:$(word 1, $(ALLLIBS))"
 	@$(foreach l, $(filter-out $(word 1, $(ALLLIBS)), $(ALLLIBS)), \
 	  echo -e "\t$(l)" ;)
+
+help:
+	@$(MAKE) --print-data-base --question |               \
+	awk '/^[^.%][-A-Za-z0-9_]*:/                          \
+		{ print substr($$1, 1, length($$1)-1) }' |    \
+	sort | uniq |                                         \
+	pr -t -w 80 -4

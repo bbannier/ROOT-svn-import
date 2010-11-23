@@ -20,6 +20,9 @@
  *      use 0.0 or 1.0 for initializing when using Vc as contained type
  */
 
+#include <cmath>
+#include <algorithm>
+
 namespace ROOT { 
 
    namespace Math { 

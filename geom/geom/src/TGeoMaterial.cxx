@@ -239,7 +239,7 @@ char *TGeoMaterial::GetPointerName() const
 {
 // Provide a pointer name containing uid.
    static TString name;
-   name = Form("pMat%d", GetUniqueID());
+   name = TString::Format("pMat%d", GetUniqueID());
    return (char*)name.Data();
 }    
 
@@ -398,16 +398,18 @@ TGeoMaterial *TGeoMaterial::DecayMaterial(Double_t time, Double_t precision)
          ncomp1--;
       }
    }
-   if (ncomp1>1) mix = new TGeoMixture(Form("%s-evol",GetName()), ncomp, rho); 
+   if (ncomp1<2) {
+      el = (TGeoElementRN *)pop->At(0);
+      delete [] weight;
+      delete pop;
+      if (ncomp1==1) return new TGeoMaterial(TString::Format("%s-evol",GetName()), el, rho);
+      return NULL;
+   }   
+   mix = new TGeoMixture(TString::Format("%s-evol",GetName()), ncomp, rho);
    for (i=0; i<ncomp; i++) {
       weight[i] /= amed;
       if (weight[i]<precision) continue;
       el = (TGeoElementRN *)pop->At(i);
-      if (ncomp1==1) {
-         delete [] weight;
-         delete pop;
-         return new TGeoMaterial(Form("%s-evol",GetName()), el, rho);
-      }   
       mix->AddElement(el, weight[i]);
    }
    delete [] weight;
@@ -865,22 +867,18 @@ TGeoMaterial *TGeoMixture::DecayMaterial(Double_t time, Double_t precision)
          ncomp1--;
       }
    }
-   if (ncomp1>1) mix = new TGeoMixture(Form("%s-evol",GetName()), ncomp, rho); 
-   else {
-      Error("DecayMaterial","No components left after decay of %s?", GetName());
+   if (ncomp1<2) {
+      el = (TGeoElementRN *)pop->At(0);
       delete [] weight;
       delete pop;
-      return 0;
+      if (ncomp1==1) return new TGeoMaterial(TString::Format("%s-evol",GetName()), el, rho);
+      return NULL;
    }
+   mix = new TGeoMixture(TString::Format("%s-evol",GetName()), ncomp, rho); 
    for (i=0; i<ncomp; i++) {
       weight[i] /= amed;
       if (weight[i]<precision) continue;
       el = (TGeoElementRN *)pop->At(i);
-      if (ncomp1==1) {
-         delete [] weight;
-         delete pop;
-         return new TGeoMaterial(Form("%s-evol",GetName()), el, rho);
-      }   
       mix->AddElement(el, weight[i]);
    }
    delete [] weight;

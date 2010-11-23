@@ -704,13 +704,13 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
       return -1;
    }
    // ROOTSYS
-#if R__HAVE_CONFIG
+#ifdef R__HAVE_CONFIG
    fprintf(fenv, "export ROOTSYS=%s\n", ROOTPREFIX);
 #else
    fprintf(fenv, "export ROOTSYS=%s\n", gSystem->Getenv("ROOTSYS"));
 #endif
    // Conf dir
-#if R__HAVE_CONFIG
+#ifdef R__HAVE_CONFIG
    fprintf(fenv, "export ROOTCONFDIR=%s\n", ROOTETCDIR);
 #else
    fprintf(fenv, "export ROOTCONFDIR=%s\n", gSystem->Getenv("ROOTSYS"));
@@ -1174,19 +1174,17 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       }
 
       // Remove aborted queries from the list
-      if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
-         if (fPlayer && fPlayer->GetListOfResults())
-            fPlayer->GetListOfResults()->Remove(pq);
+      if (fPlayer && fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
+         if (fPlayer->GetListOfResults()) fPlayer->GetListOfResults()->Remove(pq);
          if (fQMgr) fQMgr->RemoveQuery(pq);
       } else {
          // If the last object, notify the GUI that the result arrived
          QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
          // Keep in memory only light info about a query
          if (!(pq->IsDraw())) {
-            if (fQMgr->Queries()) {
+            if (fQMgr && fQMgr->Queries())
                // Remove from the fQueries list
                fQMgr->Queries()->Remove(pq);
-            }
          }
          // To get the prompt back
          TString msg;

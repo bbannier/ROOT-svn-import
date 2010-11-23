@@ -20,27 +20,27 @@ distclean::     distclean-$(MODNAME)
 
 else
 
-MODDIR       := graf2d/$(MODNAME)
+MODDIR       := $(ROOT_SRCDIR)/graf2d/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 
 FREETYPEVERS := freetype-2.3.12
-FREETYPEDIR  := $(MODDIR)
-FREETYPEDIRS := $(MODDIRS)
-FREETYPEDIRI := $(MODDIRS)/$(FREETYPEVERS)/include
+FREETYPEDIR  := $(call stripsrc,$(MODDIR))
+FREETYPEDIRS := $(call stripsrc,$(MODDIRS))
+FREETYPEDIRI := $(FREETYPEDIRS)/$(FREETYPEVERS)/include
 
 ##### libfreetype #####
 FREETYPELIBS := $(MODDIRS)/$(FREETYPEVERS).tar.gz
 ifeq ($(PLATFORM),win32)
 FREETYPELIB  := $(LPATH)/libfreetype.lib
 ifeq (yes,$(WINRTDEBUG))
-FREETYPELIBA := $(MODDIRS)/$(FREETYPEVERS)/objs/freetype2312MT_D.lib
+FREETYPELIBA := $(call stripsrc,$(MODDIRS)/$(FREETYPEVERS)/objs/freetype2312MT_D.lib)
 FTNMCFG      := "freetype - Win32 Debug Multithreaded"
 else
-FREETYPELIBA := $(MODDIRS)/$(FREETYPEVERS)/objs/freetype2312MT.lib
+FREETYPELIBA := $(call stripsrc,$(MODDIRS)/$(FREETYPEVERS)/objs/freetype2312MT.lib)
 FTNMCFG      := "freetype - Win32 Release Multithreaded"
 endif
 else
-FREETYPELIBA := $(MODDIRS)/$(FREETYPEVERS)/objs/.libs/libfreetype.a
+FREETYPELIBA := $(call stripsrc,$(MODDIRS)/$(FREETYPEVERS)/objs/.libs/libfreetype.a)
 FREETYPELIB  := $(LPATH)/libfreetype.a
 endif
 FREETYPEINC  := $(FREETYPEDIRI:%=-I%)
@@ -61,14 +61,18 @@ else
 endif
 
 $(FREETYPELIBA): $(FREETYPELIBS)
+		$(MAKEDIR)
 ifeq ($(PLATFORM),win32)
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+		@$(RSYNC) --exclude '.svn' --exclude '*.lib' $(ROOT_SRCDIR)/$(FREETYPEDIRS)/win $(FREETYPEDIRS)
+endif
 		@(if [ -d $(FREETYPEDIRS)/$(FREETYPEVERS) ]; then \
 			rm -rf $(FREETYPEDIRS)/$(FREETYPEVERS); \
 		fi; \
 		echo "*** Building $@..."; \
 		cd $(FREETYPEDIRS); \
 		if [ ! -d $(FREETYPEVERS) ]; then \
-			gunzip -c $(FREETYPEVERS).tar.gz | tar xf -; \
+			gunzip -c $(FREETYPELIBS) | tar xf -; \
 		fi; \
 		cd $(FREETYPEVERS)/builds/win32/visualc; \
 		cp ../../../../win/freetype.mak .; \
@@ -84,7 +88,7 @@ else
 		echo "*** Building $@..."; \
 		cd $(FREETYPEDIRS); \
 		if [ ! -d $(FREETYPEVERS) ]; then \
-			gunzip -c $(FREETYPEVERS).tar.gz | tar xf -; \
+			gunzip -c $(FREETYPELIBS) | tar xf -; \
 		fi; \
 		cd $(FREETYPEVERS); \
 		FREECC=$(CC); \
@@ -118,6 +122,16 @@ else
 			FREECC="$$FREECC -m64"; \
 			FREE_CFLAGS="-m64"; \
 		fi; \
+		if [ $(ARCH) = "iossim" ]; then \
+			FREECC="$$FREECC -arch i386"; \
+			FREE_CFLAGS="-arch i386 -isysroot $(IOSSDK) -miphoneos-version-min=$(IOSVERS)"; \
+			FREE_HOST="--host=i686-apple-darwin10"; \
+		fi; \
+		if [ $(ARCH) = "ios" ]; then \
+			FREECC="$$FREECC -arch armv7"; \
+			FREE_CFLAGS="-arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=$(IOSVERS)"; \
+			FREE_HOST="--host=arm-apple-darwin10"; \
+		fi; \
 		if [ $(ARCH) = "solaris64CC5" ]; then \
 			FREECC="$$FREECC -m64"; \
 			FREE_CFLAGS="-m64"; \
@@ -140,8 +154,8 @@ else
 		if [ $(ARCH) = "aixgcc" ]; then \
 			FREEZLIB="--without-zlib"; \
 		fi; \
-		GNUMAKE=$(MAKE) ./configure --with-pic --disable-shared \
-		 $$FREEZLIB \
+		GNUMAKE=$(MAKE) ./configure $$FREE_HOST --with-pic \
+		--disable-shared $$FREEZLIB \
 		CC=\'$$FREECC\' CFLAGS=\'$$FREE_CFLAGS -O\'; \
 		$(MAKE))
 endif
@@ -166,9 +180,18 @@ endif
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
+ifeq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
 		@mv $(FREETYPELIBS) $(FREETYPEDIRS)/-$(FREETYPEVERS).tar.gz
+endif
 		@rm -rf $(FREETYPELIB) $(FREETYPEDIRS)/freetype-*
+ifeq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
 		@mv $(FREETYPEDIRS)/-$(FREETYPEVERS).tar.gz $(FREETYPELIBS)
+endif
+ifeq ($(PLATFORM),win32)
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+		@rm -rf $(FREETYPEDIRS)/win
+endif
+endif
 
 distclean::     distclean-$(MODNAME)
 
