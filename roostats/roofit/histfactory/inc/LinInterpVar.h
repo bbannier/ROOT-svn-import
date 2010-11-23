@@ -19,7 +19,7 @@ class RooRealVar;
 class RooArgList ;
 
 namespace RooStats{
-namespace TemplateFactory{
+namespace HistFactory{
 
   class LinInterpVar : public RooAbsReal {
   public:
@@ -46,7 +46,7 @@ namespace TemplateFactory{
 
     Double_t evaluate() const;
 
-    ClassDef(RooStats::TemplateFactory::LinInterpVar,1) // Piecewise linear interpolation
+    ClassDef(RooStats::HistFactory::LinInterpVar,1) // Piecewise linear interpolation
   };
 }
 }

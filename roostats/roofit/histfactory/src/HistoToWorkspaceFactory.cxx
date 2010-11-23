@@ -66,9 +66,9 @@ END_HTML
 #include "TMatrixDSym.h"
 
 // specific to this package
-#include "RooStats/TemplateFactory/Helper.h"
-#include "RooStats/TemplateFactory/LinInterpVar.h"
-#include "RooStats/TemplateFactory/HistoToWorkspaceFactory.h"
+#include "RooStats/HistFactory/Helper.h"
+#include "RooStats/HistFactory/LinInterpVar.h"
+#include "RooStats/HistFactory/HistoToWorkspaceFactory.h"
 
 #define VERBOSE
 
@@ -83,10 +83,10 @@ using namespace RooStats ;
 using namespace std ;
 //using namespace RooMsgService ;
 
-ClassImp(RooStats::TemplateFactory::HistoToWorkspaceFactory)
+ClassImp(RooStats::HistFactory::HistoToWorkspaceFactory)
 
 namespace RooStats{
-namespace TemplateFactory{
+namespace HistFactory{
 
   HistoToWorkspaceFactory::HistoToWorkspaceFactory(){}
   HistoToWorkspaceFactory::~HistoToWorkspaceFactory(){

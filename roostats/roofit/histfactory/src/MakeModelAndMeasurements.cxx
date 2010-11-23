@@ -82,15 +82,15 @@ END_HTML
 #include "RooStats/ModelConfig.h"
 
 // from this package
-#include "RooStats/TemplateFactory/EstimateSummary.h"
-#include "RooStats/TemplateFactory/Helper.h"
-#include "RooStats/TemplateFactory/HistoToWorkspaceFactory.h"
-#include "RooStats/TemplateFactory/ConfigParser.h"
+#include "RooStats/HistFactory/EstimateSummary.h"
+#include "RooStats/HistFactory/Helper.h"
+#include "RooStats/HistFactory/HistoToWorkspaceFactory.h"
+#include "RooStats/HistFactory/ConfigParser.h"
 
 
 using namespace RooFit;
 using namespace RooStats;
-using namespace TemplateFactory;
+using namespace HistFactory;
 
 void topDriver(string input);
 
