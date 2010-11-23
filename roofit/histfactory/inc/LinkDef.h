@@ -6,9 +6,9 @@
 #pragma link off all functions;
 
 #pragma link C++ class PiecewiseInterpolation+ ;
-#pragma link C++ class RooStats::TemplateFactory::LinInterpVar+ ;
-#pragma link C++ class RooStats::TemplateFactory::EstimateSummary+ ;
-#pragma link C++ class RooStats::TemplateFactory::HistoToWorkspaceFactory+ ;
+#pragma link C++ class RooStats::HistFactory::LinInterpVar+ ;
+#pragma link C++ class RooStats::HistFactory::EstimateSummary+ ;
+#pragma link C++ class RooStats::HistFactory::HistoToWorkspaceFactory+ ;
 
 
 #endif

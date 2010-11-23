@@ -22,7 +22,7 @@
 using namespace std;
 
 namespace RooStats{
-namespace TemplateFactory{
+namespace HistFactory{
 
   class EstimateSummary : public TObject {
 
@@ -60,7 +60,7 @@ namespace TemplateFactory{
     pair<double, double> dummyForRoot;
     vector<NormFactor> normFactor;
 
-    ClassDef(RooStats::TemplateFactory::EstimateSummary,1)
+    ClassDef(RooStats::HistFactory::EstimateSummary,1)
   };
 
 }

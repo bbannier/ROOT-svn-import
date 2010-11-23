@@ -20,10 +20,10 @@ END_HTML
 
 
 //#define DEBUG
-#include "RooStats/TemplateFactory/Helper.h"
+#include "RooStats/HistFactory/Helper.h"
 
 namespace RooStats{
-namespace TemplateFactory{
+namespace HistFactory{
   vector<pair<string, string> > get_comb(vector<string> names){
     vector<pair<string, string> > list;
     for(vector<string>::iterator itr=names.begin(); itr!=names.end(); ++itr){

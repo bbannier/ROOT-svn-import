@@ -16,7 +16,7 @@
 #include "Riostream.h"
 #include <math.h>
 
-#include "RooStats/TemplateFactory/PiecewiseInterpolation.h"
+#include "RooStats/HistFactory/PiecewiseInterpolation.h"
 #include "RooAbsReal.h"
 #include "RooAbsPdf.h"
 #include "RooErrorHandler.h"

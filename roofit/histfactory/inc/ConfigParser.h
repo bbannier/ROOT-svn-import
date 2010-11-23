@@ -16,15 +16,15 @@
 #include "TFile.h"
 #include "TXMLAttr.h"
 
-#include "RooStats/TemplateFactory/EstimateSummary.h"
+#include "RooStats/HistFactory/EstimateSummary.h"
 
 // KC: Should make this a class and have it do some of what is done in MakeModelAndMeasurements
 
 namespace RooStats{
-   namespace TemplateFactory {
+   namespace HistFactory {
 
      typedef pair<double,double> UncertPair;
-     void ReadXmlConfig( string, vector<RooStats::TemplateFactory::EstimateSummary>& , Double_t );
-     void AddSystematic( RooStats::TemplateFactory::EstimateSummary &, TXMLNode*, string, string,string);
+     void ReadXmlConfig( string, vector<RooStats::HistFactory::EstimateSummary>& , Double_t );
+     void AddSystematic( RooStats::HistFactory::EstimateSummary &, TXMLNode*, string, string,string);
    }
 }

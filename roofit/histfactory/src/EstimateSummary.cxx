@@ -18,12 +18,12 @@ END_HTML
 //
 
 #include <algorithm>
-#include "RooStats/TemplateFactory/EstimateSummary.h"
+#include "RooStats/HistFactory/EstimateSummary.h"
 
-ClassImp(RooStats::TemplateFactory::EstimateSummary)
+ClassImp(RooStats::HistFactory::EstimateSummary)
 
 namespace RooStats {
-  namespace TemplateFactory {
+  namespace HistFactory {
 
     EstimateSummary::EstimateSummary(){
       nominal=0; 

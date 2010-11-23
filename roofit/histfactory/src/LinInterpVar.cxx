@@ -30,12 +30,12 @@ END_HTML
 #include "RooMsgService.h"
 #include "TMath.h"
 
-#include "RooStats/TemplateFactory/LinInterpVar.h"
+#include "RooStats/HistFactory/LinInterpVar.h"
 
-ClassImp(RooStats::TemplateFactory::LinInterpVar)
+ClassImp(RooStats::HistFactory::LinInterpVar)
 
 using namespace RooStats;
-using namespace TemplateFactory;
+using namespace HistFactory;
 
 //_____________________________________________________________________________
 LinInterpVar::LinInterpVar()

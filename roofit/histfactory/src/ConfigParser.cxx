@@ -19,13 +19,13 @@ END_HTML
 
 #include "TDOMParser.h"
 
-#include "RooStats/TemplateFactory/ConfigParser.h"
-#include "RooStats/TemplateFactory/Helper.h"
+#include "RooStats/HistFactory/ConfigParser.h"
+#include "RooStats/HistFactory/Helper.h"
 
 using namespace RooStats;
-using namespace TemplateFactory;
+using namespace HistFactory;
 
-void TemplateFactory::ReadXmlConfig( string filen, vector<EstimateSummary> & summary, Double_t lumi ){
+void HistFactory::ReadXmlConfig( string filen, vector<EstimateSummary> & summary, Double_t lumi ){
 
   TString lumiStr;
   lumiStr+=lumi;
@@ -125,7 +125,7 @@ void TemplateFactory::ReadXmlConfig( string filen, vector<EstimateSummary> & sum
 }
 
 
-void TemplateFactory::AddSystematic( EstimateSummary & sample_channel, TXMLNode* node, string inputFileName, string histoPathName, string histoName){
+void HistFactory::AddSystematic( EstimateSummary & sample_channel, TXMLNode* node, string inputFileName, string histoPathName, string histoName){
 
   while( node != 0 ) {
     if( node->GetNodeName() == TString( "NormFactor" ) ){

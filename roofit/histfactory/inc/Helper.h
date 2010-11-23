@@ -17,10 +17,10 @@
 
 #include "TFile.h"
 
-#include "RooStats/TemplateFactory/EstimateSummary.h"
+#include "RooStats/HistFactory/EstimateSummary.h"
 
 namespace RooStats{
-namespace TemplateFactory{
+namespace HistFactory{
   vector<EstimateSummary>*  loadSavedInputs(TFile* outFile, string channel );
   void saveInputs(TFile* outFile, string channel, vector<EstimateSummary> summaries);
   TH1F * GetHisto( TFile * inFile, const string name );

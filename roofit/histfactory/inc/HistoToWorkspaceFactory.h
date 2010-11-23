@@ -27,11 +27,11 @@
 #include <TH1F.h>
 #include <TDirectory.h>
 
-#include "RooStats/TemplateFactory/EstimateSummary.h"
+#include "RooStats/HistFactory/EstimateSummary.h"
 
 
 namespace RooStats{
-namespace TemplateFactory{
+namespace HistFactory{
   class HistoToWorkspaceFactory: public TObject {
 
     public:
@@ -68,7 +68,7 @@ namespace TemplateFactory{
 
       TDirectory* makedirs( TDirectory* file, vector<string> names );
 
-      RooWorkspace* makeSingleChannelModel(vector<RooStats::TemplateFactory::EstimateSummary> summary, vector<string> systToFix, bool doRatio=false);
+      RooWorkspace* makeSingleChannelModel(vector<RooStats::HistFactory::EstimateSummary> summary, vector<string> systToFix, bool doRatio=false);
 
       void  makeTotalExpected(RooWorkspace* proto, string totName, string /**/, string /**/,
             int lowBin, int highBin, vector<string>& syst_x_expectedPrefixNames,
@@ -89,7 +89,7 @@ namespace TemplateFactory{
       TFile * out_f;
       FILE * pFile;
 
-      ClassDef(RooStats::TemplateFactory::HistoToWorkspaceFactory,1)
+      ClassDef(RooStats::HistFactory::HistoToWorkspaceFactory,1)
   };
 
 }

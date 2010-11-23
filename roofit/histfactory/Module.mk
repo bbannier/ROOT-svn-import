@@ -1,16 +1,16 @@
-# Module.mk for RooStats/TemplateFactory module
+# Module.mk for RooStats/Histfactory module
 # Copyright (c) 2008 Rene Brun and Fons Rademakers
 #
 # Author: Kyle Cranmer
 
-MODNAME      := templatefactory
+MODNAME      := histfactory
 MODDIR       := roofit/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
-TEMPLATEFACTORYDIR  := $(MODDIR)
-TEMPLATEFACTORYDIRS := $(TEMPLATEFACTORYDIR)/src
-TEMPLATEFACTORYDIRI := $(TEMPLATEFACTORYDIR)/inc
+HISTFACTORYDIR  := $(MODDIR)
+HISTFACTORYDIRS := $(HISTFACTORYDIR)/src
+HISTFACTORYDIRI := $(HISTFACTORYDIR)/inc
 
 ##### tf_makeworkspace.exe #####
 TF_MAKEWORKSPACEEXES   := $(MODDIRS)/MakeModelAndMeasurements.cxx
@@ -27,20 +27,19 @@ TF_MAKEWORKSPACEEXE    :=
 TF_MAKEWORKSPACESH     :=
 endif
 
-#TF_LIBS := $(TEMPLATEFACTORYLIBEXTRA)
+#TF_LIBS := $(HISTFACTORYLIBEXTRA)
 
 ifeq ($(PLATFORM),win32)
-TF_LIBS= "$(ROOTSYS)/lib/libMinuit.lib" "$(ROOTSYS)/lib/libThread.lib" "$(ROOTSYS)/lib/libRooFit.lib" "$(ROOTSYS)/lib/libRooFitCore.lib" "$(ROOTSYS)/lib/libRoostats.lib"  "$(ROOTSYS)/lib/libXMLParser.lib"  "$(ROOTSYS)/lib/libTemplateFactory.lib"
+TF_LIBS= "$(ROOTSYS)/lib/libMinuit.lib"  "$(ROOTSYS)/lib/libRooFit.lib" "$(ROOTSYS)/lib/libRooFitCore.lib" "$(ROOTSYS)/lib/libRoostats.lib"  "$(ROOTSYS)/lib/libXMLParser.lib"  "$(ROOTSYS)/lib/libHistfactory.lib" "$(ROOTSYS)/lib/libFoam.lib"
 else
-TF_LIBS= -lMinuit   -lRooFit -lRooFitCore -lFoam -lRooStats  -lTemplateFactory -lXMLParser 
-# #TF_LIBS= -lMinuit  -lThread -lRooFit -lRooFitCore -lHtml -lFoam -lRooStats -lTemplateFactory
+TF_LIBS= -lMinuit   -lRooFit -lRooFitCore -lFoam -lRooStats  -lHistfactory -lXMLParser 
 endif
 
 
-TF_LIBSDEP := $(TEMPLATEFACTORYLIBDEP)
+TF_LIBSDEP := $(HISTFACTORYLIBDEP)
 
 
-$(TF_MAKEWORKSPACEEXE): $(TF_MAKEWORKSPACEEXEO) $(ROOTLIBSDEP) $(RINTLIB) $(TEMPLATEFACTORYLIBDEP)
+$(TF_MAKEWORKSPACEEXE): $(TF_MAKEWORKSPACEEXEO) $(ROOTLIBSDEP) $(RINTLIB) $(HISTFACTORYLIBDEPM)
 		$(LD) $(LDFLAGS) -o $@ $(TF_MAKEWORKSPACEEXEO)  $(ROOTICON) $(BOOTULIBS)  \
 		   $(ROOTULIBS) $(RPATH) $(ROOTLIBS)  $(RINTLIBS) $(TF_LIBS) $(SYSLIBS)  
 
@@ -48,63 +47,63 @@ ALLEXECS     += $(TF_MAKEWORKSPACEEXE)
 
 
 ##### libRooStats #####
-TEMPLATEFACTORYL    := $(MODDIRI)/LinkDef.h
-TEMPLATEFACTORYDS   := $(MODDIRS)/G__TemplateFactory.cxx
-TEMPLATEFACTORYDO   := $(TEMPLATEFACTORYDS:.cxx=.o)
-TEMPLATEFACTORYDH   := $(TEMPLATEFACTORYDS:.cxx=.h)
+HISTFACTORYL    := $(MODDIRI)/LinkDef.h
+HISTFACTORYDS   := $(MODDIRS)/G__Histfactory.cxx
+HISTFACTORYDO   := $(HISTFACTORYDS:.cxx=.o)
+HISTFACTORYDH   := $(HISTFACTORYDS:.cxx=.h)
 
-TEMPLATEFACTORYH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
-TEMPLATEFACTORYS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-TEMPLATEFACTORYO    := $(TEMPLATEFACTORYS:.cxx=.o)
+HISTFACTORYH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
+HISTFACTORYS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
+HISTFACTORYO    := $(HISTFACTORYS:.cxx=.o)
 
-TEMPLATEFACTORYDEP  := $(TEMPLATEFACTORYO:.o=.d) $(TEMPLATEFACTORYDO:.o=.d)
+HISTFACTORYDEP  := $(HISTFACTORYO:.o=.d) $(HISTFACTORYDO:.o=.d)
 
-TEMPLATEFACTORYLIB  := $(LPATH)/libTemplateFactory.$(SOEXT)
-TEMPLATEFACTORYMAP  := $(TEMPLATEFACTORYLIB:.$(SOEXT)=.rootmap)
+HISTFACTORYLIB  := $(LPATH)/libHistfactory.$(SOEXT)
+HISTFACTORYMAP  := $(HISTFACTORYLIB:.$(SOEXT)=.rootmap)
 
 # used in the main Makefile
-ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/RooStats/TemplateFactory/%.h,$(TEMPLATEFACTORYH))
-ALLLIBS      += $(TEMPLATEFACTORYLIB)
-ALLMAPS      += $(TEMPLATEFACTORYMAP)
+ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/RooStats/Histfactory/%.h,$(HISTFACTORYH))
+ALLLIBS      += $(HISTFACTORYLIB)
+ALLMAPS      += $(HISTFACTORYMAP)
 
 # include all dependency files
-INCLUDEFILES += $(TEMPLATEFACTORYDEP)
+INCLUDEFILES += $(HISTFACTORYDEP)
 
 #needed since include are in inc and not inc/RooStats
-TEMPLATEFACTORYH_DIC   := $(subst $(MODDIRI),include/RooStats/TemplateFactory,$(TEMPLATEFACTORYH))
+HISTFACTORYH_DIC   := $(subst $(MODDIRI),include/RooStats/Histfactory,$(HISTFACTORYH))
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
-include/RooStats/TemplateFactory/%.h:    $(TEMPLATEFACTORYDIRI)/%.h
-		@(if [ ! -d "include/RooStats/TemplateFactory" ]; then    \
-		   mkdir -p include/RooStats/TemplateFactory;             \
+include/RooStats/Histfactory/%.h:    $(HISTFACTORYDIRI)/%.h
+		@(if [ ! -d "include/RooStats/Histfactory" ]; then    \
+		   mkdir -p include/RooStats/Histfactory;             \
 		fi)
 		cp $< $@
 
-$(TEMPLATEFACTORYLIB): $(TEMPLATEFACTORYO) $(TEMPLATEFACTORYDO) $(ORDER_) $(MAINLIBS) \
-                $(TEMPLATEFACTORYLIBDEP)
+$(HISTFACTORYLIB): $(HISTFACTORYO) $(HISTFACTORYDO) $(ORDER_) $(MAINLIBS) \
+                $(HISTFACTORYLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libTemplateFactory.$(SOEXT) $@ \
-		   "$(TEMPLATEFACTORYO) $(TEMPLATEFACTORYDO)" \
-		   "$(TEMPLATEFACTORYLIBEXTRA)"
+		   "$(SOFLAGS)" libHistfactory.$(SOEXT) $@ \
+		   "$(HISTFACTORYO) $(HISTFACTORYDO)" \
+		   "$(HISTFACTORYLIBEXTRA)"
 
-$(TEMPLATEFACTORYDS):  $(TEMPLATEFACTORYH_DIC) $(TEMPLATEFACTORYL) $(ROOTCINTTMPDEP)
+$(HISTFACTORYDS):  $(HISTFACTORYH_DIC) $(HISTFACTORYL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(TEMPLATEFACTORYH_DIC) $(TEMPLATEFACTORYL)
+		$(ROOTCINTTMP) -f $@ -c $(HISTFACTORYH_DIC) $(HISTFACTORYL)
 
-$(TEMPLATEFACTORYMAP): $(RLIBMAP) $(MAKEFILEDEP) $(TEMPLATEFACTORYL)
-		$(RLIBMAP) -o $(TEMPLATEFACTORYMAP) -l $(TEMPLATEFACTORYLIB) \
-		   -d $(TEMPLATEFACTORYLIBDEPM) -c $(TEMPLATEFACTORYL)
+$(HISTFACTORYMAP): $(RLIBMAP) $(MAKEFILEDEP) $(HISTFACTORYL)
+		$(RLIBMAP) -o $(HISTFACTORYMAP) -l $(HISTFACTORYLIB) \
+		   -d $(HISTFACTORYLIBDEPM) -c $(HISTFACTORYL)
 
-all-$(MODNAME): $(TEMPLATEFACTORYLIB) $(TEMPLATEFACTORYMAP)
+all-$(MODNAME): $(HISTFACTORYLIB) $(HISTFACTORYMAP)
 
 clean-$(MODNAME):
-		@rm -f $(TEMPLATEFACTORYO) $(TEMPLATEFACTORYDO)
+		@rm -f $(HISTFACTORYO) $(HISTFACTORYDO)
 
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
-		@rm -rf $(TEMPLATEFACTORYDEP) $(TEMPLATEFACTORYLIB) $(TEMPLATEFACTORYMAP) \
-		   $(TEMPLATEFACTORYDS) $(TEMPLATEFACTORYDH)
+		@rm -rf $(HISTFACTORYDEP) $(HISTFACTORYLIB) $(HISTFACTORYMAP) \
+		   $(HISTFACTORYDS) $(HISTFACTORYDH)
 
 distclean::     distclean-$(MODNAME)
