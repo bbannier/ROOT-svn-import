@@ -1172,13 +1172,13 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSa
       delete [] target2[i];
       delete [] cutValues[i];
    }
-   delete nSelS;
-   delete nSelB;
-   delete nSelS_unWeighted;
-   delete nSelB_unWeighted;
-   delete target;
-   delete target2;
-   delete cutValues;
+   delete [] nSelS;
+   delete [] nSelB;
+   delete [] nSelS_unWeighted;
+   delete [] nSelB_unWeighted;
+   delete [] target;
+   delete [] target2;
+   delete [] cutValues;
 
    delete [] xmin;
    delete [] xmax;
