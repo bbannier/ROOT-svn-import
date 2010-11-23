@@ -124,13 +124,12 @@ TMVA::Reader::Reader( const TString& theOption, Bool_t verbose )
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
+     fCalculateError(kFALSE),
      fMvaEventError( 0 ),
      fMvaEventErrorUpper( 0 ),
-     fLogger ( 0 )
+     fLogger (  new MsgLogger(this) )
 {
    // constructor
-
-   fLogger = new MsgLogger(this);
 
    fDataSetManager = new DataSetManager( fDataInputHandler ); 
    fDataSetManager->AddDataSetInfo(fDataSetInfo); 
@@ -149,12 +148,12 @@ TMVA::Reader::Reader( std::vector<TString>& inputVars, const TString& theOption,
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
+     fCalculateError(kFALSE),
      fMvaEventError( 0 ),
      fMvaEventErrorUpper( 0 ),   //zjh
-     fLogger ( 0 )
+     fLogger ( new MsgLogger(this) )
 {
    // constructor
-   fLogger = new MsgLogger(this);
    SetConfigName( GetName() );
    DeclareOptions();
    ParseOptions();
@@ -175,12 +174,12 @@ TMVA::Reader::Reader( std::vector<std::string>& inputVars, const TString& theOpt
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
+     fCalculateError(kFALSE),
      fMvaEventError( 0 ),
      fMvaEventErrorUpper( 0 ),
-     fLogger ( 0 )
+     fLogger ( new MsgLogger(this) )
 {
    // constructor
-   fLogger = new MsgLogger(this);
    SetConfigName( GetName() );
    DeclareOptions();
    ParseOptions();
@@ -201,12 +200,12 @@ TMVA::Reader::Reader( const std::string& varNames, const TString& theOption, Boo
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
+     fCalculateError(kFALSE),
      fMvaEventError( 0 ),
      fMvaEventErrorUpper( 0 ),
-     fLogger ( 0 )
+     fLogger (  new MsgLogger(this) )
 {
    // constructor
-   fLogger = new MsgLogger(this);
    SetConfigName( GetName() );
    DeclareOptions();
    ParseOptions();
@@ -224,12 +223,12 @@ TMVA::Reader::Reader( const TString& varNames, const TString& theOption, Bool_t 
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
+     fCalculateError(kFALSE),
      fMvaEventError( 0 ),
      fMvaEventErrorUpper( 0 ),
-     fLogger ( 0 )
+     fLogger ( new MsgLogger(this))
 {
    // constructor
-   fLogger = new MsgLogger(this);
    SetConfigName( GetName() );
    DeclareOptions();
    ParseOptions();
