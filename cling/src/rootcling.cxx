@@ -147,7 +147,7 @@ void OpenPCH (clang::CompilerInstance* CI, std::string fileName)
    clang::PreprocessorOptions & PO = CI->getInvocation().getPreprocessorOpts();
 
    std::string originalFile =
-      clang::ASTReader::getOriginalSourceFile(fileName, CI->getFileManager(), CI->getFileSystemOpts(), CI->getDiagnostics());
+      clang::ASTReader::getOriginalSourceFile(fileName, CI->getFileManager(), CI->getDiagnostics());
 
    if (! originalFile.empty())
    {
@@ -169,10 +169,11 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
 
    bool pch = IsPCH (fileName);
 
+   clang::DiagnosticOptions DiagOpts;
    clang::TextDiagnosticPrinter *diagClient = new 
      clang::TextDiagnosticPrinter(llvm::errs(), clang::DiagnosticOptions (), false);
 
-   clang::Diagnostic diags (diagClient);
+   llvm::IntrusiveRefCntPtr<clang::Diagnostic> diags = clang::CompilerInstance::createDiagnostics(DiagOpts, 0, 0, diagClient);
 
    static const char* argv [] = { "program", "-x", "c++" };
 
@@ -183,7 +184,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
       (*invocation,
        argv + 1,
        argv + argc,
-       diags);
+       *diags);
 
    // Create a compiler instance to handle the actual work.
    cling::Interpreter* fInterpreter = new cling::Interpreter(gSystem->ExpandPathName("$(LLVMDIR)"));
@@ -263,7 +264,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
          error ("compileString: Failed to create main file id");
    }
    else {
-      const clang::FileEntry* File = CI->getFileManager().getFile(fileName,CI->getFileSystemOpts());
+      const clang::FileEntry* File = CI->getFileManager().getFile(fileName);
       if (File)
          CI->getSourceManager().createMainFileID(File);
       if (CI->getSourceManager().getMainFileID().isInvalid())
@@ -272,7 +273,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
 
    clang::ParseAST (PP, & CI->getASTConsumer (), CI->getASTContext ());
 
-   unsigned err_count = CI->getDiagnostics().getNumErrors();
+   unsigned err_count = CI->getDiagnosticClient().getNumErrors();
    if (err_count != 0)
       error ("Parse failed");
 
