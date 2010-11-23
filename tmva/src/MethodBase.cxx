@@ -189,6 +189,8 @@ TMVA::MethodBase::MethodBase( Types::EMVA methodType,
    IMethod(),
    Configurable(""),
    fTmpEvent                  ( 0 ),
+   fRegressionReturnVal       ( 0 ),
+   fMulticlassReturnVal       ( 0 ),
    fDataSetInfo               ( dsi ),
    fSignalReferenceCut        ( 0.5 ),
    fVariableTransformType     ( Types::kSignal ),
@@ -265,6 +267,9 @@ TMVA::MethodBase::~MethodBase( void )
          fEventCollections.at(i) = 0;
       }
    }
+
+   if (fRegressionReturnVal) delete fRegressionReturnVal;
+   if (fMulticlassReturnVal) delete fMulticlassReturnVal;
 }
 
 //_______________________________________________________________________
