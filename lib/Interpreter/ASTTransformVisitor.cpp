@@ -6,7 +6,7 @@
 
 #include "ASTTransformVisitor.h"
 
-#include "AddressDumper.cpp"
+#include "StmtAddressPrinter.cpp"
 
 namespace cling {
 
@@ -149,8 +149,8 @@ namespace cling {
    }
 
    EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *E) {
-      // FIXME: Handle the arguments
       if (E->isTypeDependent() || E->isValueDependent()) {
+         // FIXME: Handle the arguments
 
          return EvalInfo(E, 1);
       
