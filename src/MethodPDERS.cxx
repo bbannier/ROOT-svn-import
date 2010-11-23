@@ -883,8 +883,6 @@ void TMVA::MethodPDERS::RKernelEstimate( const Event & event,
       }
    }
 
-   delete[] dim_normalization;
-
    if (pdfDiv == 0)
       return;
 
