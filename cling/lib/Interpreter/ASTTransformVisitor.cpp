@@ -6,6 +6,8 @@
 
 #include "ASTTransformVisitor.h"
 
+#include "AddressDumper.cpp"
+
 namespace cling {
 
    //region Constructors
@@ -113,9 +115,16 @@ namespace cling {
    
    EvalInfo ASTTransformVisitor::VisitStmt(Stmt *Node) {
       for (Stmt::child_iterator
-              I = Node->child_begin(), E = Node->child_end(); I != E; ++I)
-         if (*I)
-            *I = Visit(*I).getNewStmt();
+              I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
+         EvalInfo EInfo = Visit(*I);
+         if (EInfo.IsEvalNeeded) {
+            if (Expr *Exp = dyn_cast<Expr>(EInfo.getNewStmt()))
+               *I = BuildEvalCallExpr(Exp->getType());
+         } 
+         else {
+            *I = EInfo.getNewStmt();
+         }
+      }
       
       return EvalInfo(Node, 0);
    }
@@ -129,8 +138,8 @@ namespace cling {
               I = S->body_begin(), E = S->body_end(); I != E; ++I) {
          EvalInfo EInfo = Visit(*I);
          if (EInfo.IsEvalNeeded) {
-            //FIXME: Find appropriate type
-            *I = BuildEvalCallExpr(SemaPtr->getASTContext().IntTy);
+            if (Expr *Exp = dyn_cast<Expr>(EInfo.getNewStmt()))
+               *I = BuildEvalCallExpr(Exp->getType());
          } 
          else {
             *I = EInfo.getNewStmt();
@@ -140,7 +149,13 @@ namespace cling {
    }
 
    EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *E) {
-      return EvalInfo(E, E->isTypeDependent() || E->isValueDependent());
+      // FIXME: Handle the arguments
+      if (E->isTypeDependent() || E->isValueDependent()) {
+
+         return EvalInfo(E, 1);
+      
+      }
+      return EvalInfo(E, 0);
    }
    
    EvalInfo ASTTransformVisitor::VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
@@ -163,7 +178,7 @@ namespace cling {
          if (Expr *E = dyn_cast<Expr>(lhs.getNewStmt()))
             if (!E->isTypeDependent() || !E->isValueDependent()) {
                const QualType returnTy = E->getType();
-               return EvalInfo(BuildEvalCallExpr(returnTy), 0);
+               binOp->setRHS(BuildEvalCallExpr(returnTy));
             }
       }
       
@@ -171,7 +186,7 @@ namespace cling {
          if (Expr *E = dyn_cast<Expr>(rhs.getNewStmt()))
             if (!E->isTypeDependent() || !E->isValueDependent()) {
                const QualType returnTy = E->getType();
-               return EvalInfo(BuildEvalCallExpr(returnTy), 0);
+               binOp->setLHS(BuildEvalCallExpr(returnTy));
             }        
       }      
       
@@ -186,14 +201,12 @@ namespace cling {
    // Here is the test Eval function specialization. Here the CallExpr to the function
    // is created.
    CallExpr *ASTTransformVisitor::BuildEvalCallExpr(const QualType InstTy) {
-      ASTContext *Ctx = &SemaPtr->getASTContext();
-      
       DeclContext *PrevContext = SemaPtr->CurContext;
       FunctionDecl *FDecl = getEvalDecl();
       SemaPtr->CurContext = FDecl->getDeclContext();
       
       Sema::InstantiatingTemplate Inst(*SemaPtr, SourceLocation(), FDecl);
-      TemplateArgument Arg(Ctx->IntTy);
+      TemplateArgument Arg(InstTy);
       TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
       
       Decl *D = SemaPtr->SubstDecl(FDecl, FDecl->getDeclContext(), MultiLevelTemplateArgumentList(TemplateArgs));
