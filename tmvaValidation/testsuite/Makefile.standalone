@@ -36,7 +36,7 @@ $(TMVAUTOBJECTS): %.o : %.cxx $(TMVAUTH)
 	$(CXX) -g  $(TMVAINCLUDE) $(CXXFLAGS) -DCOUTDEBUG -c $< -o $@
 
 $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
-	rm *.d *.so                                
+	@rm -f *.d *.so                                
 	$(LD) $(LDFLAGS) $^ $(TMVALOCALLIBS) $(LIBS) -lTMVA.1 -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
 	$(MT_EXE)
 	@echo "$@ done"
