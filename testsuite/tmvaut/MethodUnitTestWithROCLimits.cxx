@@ -220,8 +220,8 @@ void MethodUnitTestWithROCLimits::run()
      fout << Form("Read%s  aa(vars);", _methodTitle.Data()) << std::endl;
      fout << "TFile* testFile = new TFile(\"TMVA.root\");" << std::endl; // fix me hardcode TMVA.root
      fout << " TTree* testTree = (TTree*)(testFile->Get(\"TestTree\"));" << std::endl;
-     fout << Form("vector<float> testvar(%d);",_VariableNames->size()) << std::endl;
-     fout << Form("vector<double> testvarDouble(%d);",_VariableNames->size()) << std::endl;
+     fout << Form("vector<float> testvar(%d);",(Int_t) _VariableNames->size()) << std::endl;
+     fout << Form("vector<double> testvarDouble(%d);", (Int_t) _VariableNames->size()) << std::endl;
      for (UInt_t j=0;j<_VariableNames->size();j++)
         fout << Form("testTree->SetBranchAddress(\"%s\",&testvar[%d]);",_TreeVariableNames->at(j).Data(),j) << std::endl;
      fout << "float testTreeVal,diff,nrm,maxdiff=0.,sumdiff=0.;" << std::endl;
@@ -229,7 +229,7 @@ void MethodUnitTestWithROCLimits::run()
      fout << "Long64_t nevt= TMath::Min((int) testTree->GetEntries(),100);" << std::endl;
      fout << "  for (Long64_t ievt=0; ievt<nevt;ievt++) {" << std::endl;
      fout << "    testTree->GetEntry(ievt);" << std::endl;
-     fout << Form("for (UInt_t i=0;i<%d;i++) testvarDouble[i]= testvar[i];",_VariableNames->size()) << std::endl;
+     fout << Form("for (UInt_t i=0;i<%d;i++) testvarDouble[i]= testvar[i];",(Int_t) _VariableNames->size()) << std::endl;
      fout << "double ccode_val = aa.GetMvaValue(testvarDouble);" << std::endl;
 
      fout << "diff = TMath::Abs(ccode_val-testTreeVal);" << std::endl;
