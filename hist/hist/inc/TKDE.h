@@ -108,8 +108,6 @@ public:
 
 private:
 
-   static const Double_t k2_PI_ROOT_INV;   // (2 * M_PI)**-0.5
-
    TKDE(TKDE& kde);           // Disallowed copy constructor
    TKDE operator=(TKDE& kde); // Disallowed assign operator
 
@@ -168,6 +166,7 @@ private:
 
    inline Double_t GaussianKernel(Double_t x) const {
       // Returns the kernel evaluation at x
+      Double_t k2_PI_ROOT_INV = 0.398942280401432703; // (2 * M_PI)**-0.5
       return (x > -9. && x < 9.) ? k2_PI_ROOT_INV * std::exp(-.5 * x * x) : 0.0;
    }
    inline Double_t EpanechnikovKernel(Double_t x) const {
