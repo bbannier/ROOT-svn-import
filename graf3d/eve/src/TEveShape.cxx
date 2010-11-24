@@ -31,7 +31,8 @@ TEveShape::TEveShape(const char* n, const char* t) :
    fLineColor(3),
    fLineWidth(1),
    fDrawFrame(kTRUE),
-   fHighlightFrame(kTRUE)
+   fHighlightFrame(kTRUE),
+   fMiniFrame(kTRUE)
 {
    // Constructor.
 
@@ -73,6 +74,7 @@ void TEveShape::CopyVizParams(const TEveElement* el)
       fLineWidth = m->fLineWidth;
       fDrawFrame      = m->fDrawFrame;
       fHighlightFrame = m->fHighlightFrame;
+      fMiniFrame      = m->fMiniFrame;
    }
 
    TEveElementList::CopyVizParams(el);
