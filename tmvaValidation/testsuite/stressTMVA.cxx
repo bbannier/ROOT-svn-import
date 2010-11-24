@@ -12,6 +12,7 @@
 #include "tmvaut/MethodUnitTestWithROCLimits.h"
 #include "tmvaut/MethodUnitTestWithComplexData.h"
 #include "tmvaut/RegressionUnitTestWithDeviation.h"
+#include "tmvaut/utReader.h"
 #include "TMVA/Types.h"
 
 using namespace UnitTesting;
@@ -179,6 +180,7 @@ int main()
    TMVA_test.addTest(new utVariableInfo);
    TMVA_test.addTest(new utDataSetInfo);
    TMVA_test.addTest(new utDataSet);
+   TMVA_test.addTest(new utReader);
    
    addClassificationTests(TMVA_test, full);
    addRegressionTests(TMVA_test, full);  

@@ -203,7 +203,7 @@ void MethodUnitTestWithROCLimits::run()
   }
   testFile->Close();
 
-  for (int i=0;i<nTest;i++) delete reader[i];
+  //for (int i=0;i<nTest;i++) delete reader[i]; // why is this crashing??
 
   cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
   bool _DoTestCCode=true; 
