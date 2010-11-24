@@ -229,7 +229,7 @@ void TMVA::MethodPDEFoam::ProcessOptions()
    }
    fnCells = fnActiveCells*2-1;
 
-   fVolFrac = Int_t(1./fVolFracInv + 0.5); // round
+   fVolFrac = 1./fVolFracInv;
 
    // DT logic is only applicable if a single foam is trained
    if (fSigBgSeparated && fDTLogic != "None") {
