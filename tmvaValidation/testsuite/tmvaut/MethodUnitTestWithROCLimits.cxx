@@ -45,9 +45,6 @@ void MethodUnitTestWithROCLimits::run()
 {
    TString outfileName( "TMVA.root" );                                                                                                                       
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );         
-   //TString outfileName("TMVA.root");//_OutputROOTFile;
-   //cout << "outfile="<<outfileName<<endl;
-   //TFile* outputFile = TFile::Open(outfileName, "RECREATE" );
 
 // FIXME:: if file can't be created do something more?
   if(!outputFile)
@@ -123,65 +120,92 @@ void MethodUnitTestWithROCLimits::run()
   // setup test tree access
   TFile* testFile = new TFile("TMVA.root");
   TTree* testTree = (TTree*)(testFile->Get("TestTree"));
-  float testTreeVal,readerVal1=0.,readerVal2=0.,readerVal3=0.;
-  vector<float> testvar(_VariableNames->size());
+  const int nTest=3; // 3 reader usages
+  float testTreeVal,readerVal=0.;
+
+  vector<float>  testvar(_VariableNames->size());
+  vector<float>  dummy(_VariableNames->size());
+  vector<float>  dummy2(_VariableNames->size());
+  vector<float>  testvarFloat(_VariableNames->size());
   vector<double> testvarDouble(_VariableNames->size());
   for (UInt_t i=0;i<_VariableNames->size();i++)
      testTree->SetBranchAddress(_TreeVariableNames->at(i),&testvar[i]);
   testTree->SetBranchAddress(_methodTitle.Data(),&testTreeVal);
-  //testTree->SetBranchAddress("FisherTest/F",&testTreeVal);
 
-  TMVA::Reader *reader = new TMVA::Reader( "!Color:Silent" );
-  for (UInt_t i=0;i<_VariableNames->size();i++)
-     reader->AddVariable( _VariableNames->at(i),&testvar[i]);
   TString readerName = _methodTitle + TString(" method");
   TString dir    = "weights/TMVAUnitTesting_";
   TString weightfile=dir+_methodTitle+".weights.xml";
-  reader->BookMVA( readerName, weightfile) ;
-
-  // run the reader application and compare to test tree  
   double diff, maxdiff = 0., sumdiff=0., previousVal=0.;
   int stuckCount=0, nevt= TMath::Min((int) testTree->GetEntries(),100);
   const float effS=0.301;
-  for (Long64_t ievt=0;ievt<nevt;ievt++) {
-     //if (ievt%1000 == 0) std::cout << "--- ... Processing event: " << ievt << " of " <<testTree->GetEntries() <<std::endl;
-     testTree->GetEntry(ievt);
-     for (UInt_t i=0;i<_VariableNames->size();i++)
-        testvarDouble[i]= testvar[i];
-     if (_methodType==Types::kCuts) readerVal1 = reader->EvaluateMVA( readerName, effS );
-     else readerVal1=reader->EvaluateMVA( readerName);     
-     diff = TMath::Abs(readerVal1-testTreeVal);
-     maxdiff = diff > maxdiff ? diff : maxdiff;
-     sumdiff += diff;
-     //if (ievt<5) cout <<"testval="<<testTreeVal<<" reader="<<readerVal1<<endl;
 
-     // compare also different reader usages
-     if (_methodType==Types::kCuts) readerVal2=reader->EvaluateMVA(testvar,readerName, effS);
-     else readerVal2=reader->EvaluateMVA(testvar,readerName);
-     diff = TMath::Abs(readerVal1-readerVal2);
-     maxdiff = diff > maxdiff ? diff : maxdiff;
-     sumdiff += diff;
-     if (_methodType==Types::kCuts) readerVal3=reader->EvaluateMVA(testvarDouble,readerName, effS);
-     else readerVal3=reader->EvaluateMVA(testvarDouble,readerName);
-     diff = TMath::Abs(readerVal1-readerVal3);
-     maxdiff = diff > maxdiff ? diff : maxdiff;
-     sumdiff += diff;
-     if (ievt>0 && TMath::Abs(readerVal1-previousVal)<1.e-6) stuckCount++; 
-     previousVal=readerVal1;
+  std::vector< TMVA::Reader* > reader(3);
+  for (int iTest=0;iTest<nTest;iTest++){
+     
+     if (iTest==0){
+        reader[iTest] = new TMVA::Reader( "!Color:Silent" );
+        for (UInt_t i=0;i<_VariableNames->size();i++)
+           reader[iTest]->AddVariable( _VariableNames->at(i),&testvar[i]);
+     }
+     else{
+        reader[iTest] = new TMVA::Reader( *_VariableNames, "!Color:Silent" );
+     }
+
+
+     reader[iTest] ->BookMVA( readerName, weightfile) ;
+     
+     // run the reader application and compare to test tree  
+     for (Long64_t ievt=0;ievt<nevt;ievt++) {
+        testTree->GetEntry(ievt);
+        for (UInt_t i=0;i<_VariableNames->size();i++){
+           testvarDouble[i]= testvar[i];
+           testvarFloat[i]= testvar[i];
+        }
+
+        if (iTest==0){
+           if (_methodType==Types::kCuts) 
+              readerVal = reader[iTest]->EvaluateMVA( readerName, effS );
+           else readerVal=reader[iTest]->EvaluateMVA( readerName);  
+        } 
+        else if (iTest==1){
+           if (_methodType==Types::kCuts) 
+              readerVal = reader[iTest]->EvaluateMVA( testvarFloat, readerName, effS );
+           else readerVal=reader[iTest]->EvaluateMVA( testvarFloat, readerName);  
+        }
+        else if (iTest==2){
+           if (_methodType==Types::kCuts) 
+              readerVal = reader[iTest]->EvaluateMVA( testvarDouble, readerName, effS );
+           else readerVal=reader[iTest]->EvaluateMVA( testvarDouble, readerName);  
+        }
+        else {
+           std::cout << "ERROR, undefined iTest value "<<iTest<<endl;
+           exit(1);
+        }
+        
+        diff = TMath::Abs(readerVal-testTreeVal);
+        maxdiff = diff > maxdiff ? diff : maxdiff;
+        sumdiff += diff;
+        if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++; 
+        if (iTest ==0 ) previousVal=readerVal;
+     }
+
   }
-  sumdiff=sumdiff/testTree->GetEntries();
+
+  sumdiff=sumdiff/nevt;
   if (_methodType!=Types::kCuts){
      test_(maxdiff <1.e-4);
      test_(sumdiff <1.e-5);
      test_(stuckCount<nevt/10);
   }
   if (_methodType==Types::kCuts){
-     test_(stuckCount<nevt-5);
+     test_(stuckCount<nevt-20);
      test_(sumdiff <0.005);
   }
   testFile->Close();
-  delete reader;
-  //cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
+
+  for (int i=0;i<nTest;i++) delete reader[i];
+
+  cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
   bool _DoTestCCode=true; 
   
   // use: grep -A5  'MakeClassSpecific' ../tmva/src/Method*.cxx
@@ -196,6 +220,7 @@ void MethodUnitTestWithROCLimits::run()
       || _methodType==Types::kRuleFit
       || _methodType==Types::kPDEFoam
       || _methodType==Types::kSVM
+      || _methodTitle == "BoostedFisher"
       ) _DoTestCCode=false;
 
   if (_DoTestCCode){
