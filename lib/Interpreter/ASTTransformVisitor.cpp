@@ -140,8 +140,13 @@ namespace cling {
               I = S->body_begin(), E = S->body_end(); I != E; ++I) {
          EvalInfo EInfo = Visit(*I);
          if (EInfo.IsEvalNeeded) {
-            if (Expr *Exp = dyn_cast<Expr>(EInfo.getNewStmt()))
-               *I = BuildEvalCallExpr(Exp->getType());
+            if (Expr *Exp = dyn_cast<Expr>(EInfo.getNewStmt())) {
+               QualType T = Exp->getType();
+               // Assume if still dependent void
+               if (Exp->isTypeDependent() || Exp->isValueDependent())
+                  T = SemaPtr->getASTContext().VoidTy;
+               *I = BuildEvalCallExpr(T);
+            }
          } 
          else {
             *I = EInfo.getNewStmt();
