@@ -39,9 +39,6 @@
 
 ClassImp(TKDE)
 
-const Double_t k2_PI_ROOT_INV = 0.398942280401432703;
-const Double_t kAPPRX_GEO_MEAN = 0.241970724519143365; // 1 / TMath::Power(2 * TMath::Pi(), .5) * TMath::Exp(-.5). Approximated geometric mean over pointwise data (the KDE function is substituted by the "real Gaussian" pdf) and proportional to sigma. Used directly when the mirroring is enabled, otherwise computed from the data
-
 class TKDE::TKernel {
    TKDE* fKDE;
    UInt_t fNWeights; // Number of kernel weights (bandwidth as vectorized for binning)
@@ -649,7 +646,8 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
       *weight = std::max(*weight /= std::sqrt(f), minWeight);
       fKDE->fAdaptiveBandwidthFactor += std::log(f);
    }
-   fKDE->fAdaptiveBandwidthFactor = fKDE->fUseMirroring ? kAPPRX_GEO_MEAN / fKDE->fSigmaRob : std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size()));
+   Double_t kAPPROX_GEO_MEAN = 0.241970724519143365; // 1 / TMath::Power(2 * TMath::Pi(), .5) * TMath::Exp(-.5). Approximated geometric mean over pointwise data (the KDE function is substituted by the "real Gaussian" pdf) and proportional to sigma. Used directly when the mirroring is enabled, otherwise computed from the data
+   fKDE->fAdaptiveBandwidthFactor = fKDE->fUseMirroring ? kAPPROX_GEO_MEAN / fKDE->fSigmaRob : std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size()));
    transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), fKDE->fAdaptiveBandwidthFactor));
  }
 
