@@ -4,6 +4,7 @@
 #include "TMVA/IFitterTarget.h"
 
 #include "Math/IFunction.h"
+#include "Math/GenAlgoOptions.h"
 
 #include "TError.h"
 
@@ -12,35 +13,55 @@
 namespace ROOT {
 namespace Math {
    
+
+// wrapper class for TMVA interface to evaluate objective function
 class MultiGenFunctionFitness : public TMVA::IFitterTarget {
 private:
-   unsigned int NCalls;
-   const ROOT::Math::IMultiGenFunction& f;
+   unsigned int fNCalls;
+   const ROOT::Math::IMultiGenFunction& fFunc;
 
 public:
-   MultiGenFunctionFitness(const ROOT::Math::IMultiGenFunction& function) : f(function) { NCalls = 0; }
+   MultiGenFunctionFitness(const ROOT::Math::IMultiGenFunction& function) : fFunc(function) { fNCalls = 0; }
 
-   unsigned int getNCalls() { return NCalls; }
-   unsigned int getNDims() { return f.NDim(); }
+   unsigned int NCalls() const { return fNCalls; }
+   unsigned int NDims() const { return fFunc.NDim(); }
 
-   Double_t Evaluate(const std::vector<double> & factors ){
-      return f(&factors[0]);
+   Double_t Evaluate(const std::vector<double> & factors ) const {
+      return fFunc(&factors[0]);
    }
 
    Double_t EstimatorFunction(std::vector<double> & factors ){
-      NCalls += 1;
-      return f(&factors[0]);
+      fNCalls += 1;
+      return fFunc(&factors[0]);
    }
 };
 
-GeneticMinimizer::GeneticMinimizer(int ): fFitness(0)
-{
-   fNsteps=40;
-   fPopSize=300;
-   fSC_steps=10;
-   fSC_rate=5;
+GeneticMinimizerParameters::GeneticMinimizerParameters() 
+{ 
+   // constructor of parameters with default values
+   fNsteps   = 40;
+   fPopSize  =300;
+   fCycles   = 3;
+   fSC_steps =10;
+   fSC_rate  =5;
    fSC_factor=0.95;
-   fConvCrit=0.001;
+   fConvCrit =10.0 * ROOT::Math::MinimizerOptions::DefaultTolerance(); // default is 0.001
+   if (fConvCrit <=0 ) fConvCrit = 0.001; 
+
+}
+
+   GeneticMinimizer::GeneticMinimizer(int ): 
+      fFitness(0), 
+      fParameters(GeneticMinimizerParameters() )
+{
+
+   // check with default minimizer options
+   ROOT::Math::IOptions * geneticOpt = ROOT::Math::MinimizerOptions::FindDefault("Genetic");
+   if (geneticOpt) { 
+      ROOT::Math::MinimizerOptions opt; // create using default options
+      opt.SetExtraOptions(*geneticOpt);
+      this->SetOptions(opt);
+   } 
  }
 
 GeneticMinimizer::~GeneticMinimizer()
@@ -80,27 +101,100 @@ bool GeneticMinimizer::SetLimitedVariable(unsigned int , const std::string & , d
 bool GeneticMinimizer::SetVariable(unsigned int, const std::string&, double value, double step) 
 {
    //It does nothing! As there is no variable if it has no limits!
-   Warning("GeneticMinimizer::SetVariable", "Variables should be limited on a Genetic Minimizer");
+   Info("GeneticMinimizer::SetVariable", "Variables should be limited on a Genetic Minimizer - set automatic range to 50 times step size");
    fRanges.push_back( new TMVA::Interval(value - (50 * step), value + (50 * step)) );
    
-   return false;
+   return true;
 }
 
-void GeneticMinimizer::SetParameters(Int_t nsteps, Int_t popSize, Int_t SC_steps, 
-                                     Int_t SC_rate, Double_t SC_factor, Double_t convCrit )
+void GeneticMinimizer::SetParameters(const GeneticMinimizerParameters & params )
 {
-   fNsteps = nsteps;
-   fPopSize = popSize;
-   fSC_steps = SC_steps;
-   fSC_rate = SC_rate;
-   fSC_factor = SC_factor;
-   fConvCrit = convCrit;   
+   fParameters  = params; 
+}
+
+ROOT::Math::MinimizerOptions GeneticMinimizer::Options() const { 
+   ROOT::Math::MinimizerOptions opt; 
+   GetGeneticOptions(opt);
+   return opt; 
+}
+
+void  GeneticMinimizer::GetGeneticOptions(ROOT::Math::MinimizerOptions & opt) const { 
+   // get  the genetic options of the class and return them in the MinimizerOptions class
+   opt.SetTolerance(fParameters.fConvCrit/10); // use a factor of 10 to have default as Minuit
+   opt.SetPrintLevel(PrintLevel() );   
+   opt.SetMaxFunctionCalls(MaxIterations());  // this is different than nsteps
+   // use fixed or dammy value for the other options
+   opt.SetMinimizerType("Genetic");
+   opt.SetMaxFunctionCalls(0);
+   opt.SetStrategy(-1);
+   opt.SetErrorDef(0);
+   opt.SetPrecision(0);
+   opt.SetMinimizerAlgorithm("");
+
+   ROOT::Math::GenAlgoOptions geneticOpt; 
+   geneticOpt.SetValue("PopSize",fParameters.fPopSize);
+   geneticOpt.SetValue("Steps",fParameters.fNsteps);
+   geneticOpt.SetValue("Cycles",fParameters.fCycles);
+   geneticOpt.SetValue("SC_steps",fParameters.fSC_steps);
+   geneticOpt.SetValue("SC_rate",fParameters.fSC_rate);
+   geneticOpt.SetValue("SC_factor",fParameters.fSC_factor);
+   geneticOpt.SetValue("ConvCrit",fParameters.fConvCrit);
+
+   opt.SetExtraOptions(geneticOpt);   
+}
+
+void GeneticMinimizer::SetOptions(const ROOT::Math::MinimizerOptions & opt) 
+{
+   SetTolerance(opt.Tolerance() );
+   SetPrintLevel(opt.PrintLevel() );
+   //SetMaxFunctionCalls(opt.MaxFunctionCalls() );
+   SetMaxIterations(opt.MaxIterations() );
+
+   fParameters.fConvCrit = 10.*opt.Tolerance(); // use a factor of 10 to have default as Minuit
+
+   // set genetic parameter from minimizer options 
+   ROOT::Math::IOptions * geneticOpt = opt.ExtraOptions(); 
+   if (!geneticOpt) { 
+      Warning("GeneticMinimizer::SetOptions", "No specific genetic minimizer options have been set"); 
+      return; 
+   }
+
+   // if options are not existing values will not be set
+   geneticOpt->GetValue("PopSize",fParameters.fPopSize);
+   geneticOpt->GetValue("Steps",fParameters.fNsteps);
+   geneticOpt->GetValue("Cycles",fParameters.fCycles);
+   geneticOpt->GetValue("SC_steps",fParameters.fSC_steps);
+   geneticOpt->GetValue("SC_rate",fParameters.fSC_rate);
+   geneticOpt->GetValue("SC_factor",fParameters.fSC_factor);
+   geneticOpt->GetValue("ConvCrit",fParameters.fConvCrit);
+
+   // use same of options in base class
+   int maxiter = MaxIterations();
+   if ( maxiter > 0 &&  maxiter < fParameters.fNsteps )    {
+      Warning("GeneticMinimizer::SetOptions", "max iterations smaller than Steps - set equal to steps %d",fParameters.fNsteps); 
+      SetMaxIterations(fParameters.fNsteps);
+   }
+
+
 }
 
 bool GeneticMinimizer::Minimize() 
 {
-   TMVA::GeneticAlgorithm mg( *fFitness, fPopSize, fRanges );
+
+   if (!fFitness) {
+      Error("GeneticMinimizer::Minimize","Fitness function has not been set"); 
+      return false; 
+   }
+
+   TMVA::GeneticAlgorithm mg( *fFitness, fParameters.fPopSize, fRanges );
+
+   if (PrintLevel() > 0) { 
+      Info("GeneticMinimizer::Minimize","Start iterating - max iterations = %d max calls = %d conv criteria %10e6 ",
+           fParameters.fNsteps, MaxFunctionCalls(),  fParameters.fConvCrit );
+   }
    
+   fStatus = 0;
+   unsigned int niter = 0; 
    do {
       mg.Init();
       
@@ -111,15 +205,46 @@ bool GeneticMinimizer::Minimize()
       
       mg.GetGeneticPopulation().TrimPopulation();
       
-      mg.SpreadControl( fSC_steps, fSC_rate, fSC_factor );
+      mg.SpreadControl( fParameters.fSC_steps, fParameters.fSC_rate, fParameters.fSC_factor );
+
+      if (PrintLevel() > 2) { 
+         std::cout << "New Iteration " << niter << " with  parameter values :" << std::endl;
+         TMVA::GeneticGenes* genes = mg.GetGeneticPopulation().GetGenes( 0 );
+         if (genes) { 
+            std::vector<Double_t> gvec;
+            gvec = genes->GetFactors(); 
+            for (unsigned int i = 0; i < gvec.size(); ++i) {
+               std::cout << gvec[i] << "    ";
+            }
+            std::cout << std::endl;
+            std::cout << "\tFitness function value = " <<  static_cast<MultiGenFunctionFitness*>(fFitness)->Evaluate(gvec) << std::endl;
+         }                     
+      } 
+      niter++;
+      if ( niter > MaxIterations() && MaxIterations() > 0) { 
+         if (PrintLevel() > 0) { 
+            Info("GeneticMinimizer::Minimize","Max number of iterations %d reached - stop iterating",MaxIterations());
+         }
+         fStatus = 1; 
+         break;
+      }
       
-   } while (!mg.HasConverged( fNsteps, fConvCrit ));  // converged if: fitness-improvement < CONVCRIT within the last CONVSTEPS loops
+   } while (!mg.HasConverged( fParameters.fNsteps, fParameters.fConvCrit ));  // converged if: fitness-improvement < CONVCRIT within the last CONVSTEPS loops
    
    TMVA::GeneticGenes* genes = mg.GetGeneticPopulation().GetGenes( 0 );
    std::vector<Double_t> gvec;
    gvec = genes->GetFactors();
 
    fResult = gvec;   
+
+
+   if (PrintLevel() > 0) { 
+      if (PrintLevel() > 2) std::cout << std::endl;
+          std::cout << "Finished Iteration (niter = " << niter << "  with fitness function value = " << MinValue() << std::endl;
+      for (unsigned int i = 0; i < fResult.size(); ++i) {
+         std::cout << " Parameter-" << i << "\t=\t" << fResult[i] << std::endl;
+      }
+   }
 
    return true;
 }  
@@ -137,7 +262,7 @@ const double *  GeneticMinimizer::X() const { return &fResult[0]; }
 unsigned int GeneticMinimizer::NCalls() const 
 {
    if ( fFitness )
-      return static_cast<MultiGenFunctionFitness*>(fFitness)->getNCalls();
+      return static_cast<MultiGenFunctionFitness*>(fFitness)->NCalls();
    else
       return 0;
 }
@@ -145,7 +270,7 @@ unsigned int GeneticMinimizer::NCalls() const
 unsigned int GeneticMinimizer::NDim() const 
 {
    if ( fFitness )
-      return static_cast<MultiGenFunctionFitness*>(fFitness)->getNDims();
+      return static_cast<MultiGenFunctionFitness*>(fFitness)->NDims();
    else
       return 0;
 }   

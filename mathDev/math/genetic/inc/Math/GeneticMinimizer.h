@@ -22,13 +22,33 @@
 namespace ROOT { 
    namespace Math { 
 
+
+//_______________________________________________________________________________
+/*
+  structure containing the parameters of the genetic minimizer 
+ */ 
+struct GeneticMinimizerParameters { 
+
+   Int_t fPopSize;
+   Int_t fNsteps;
+   Int_t fCycles; 
+   Int_t fSC_steps;
+   Int_t fSC_rate;
+   Double_t fSC_factor;
+   Double_t fConvCrit;
+
+   // constructor with default value
+   GeneticMinimizerParameters(); 
+};
+
+
+
 //_______________________________________________________________________________
 /** 
    GeneticMinimizer
 
    @ingroup MultiMin
 */
-
 class GeneticMinimizer: public ROOT::Math::Minimizer {
 
 public: 
@@ -58,23 +78,25 @@ public:
 
    virtual double CovMatrix(unsigned int i, unsigned int j) const;  
 
-   void SetParameters(Int_t nsteps=40, Int_t popSize=300, Int_t SC_steps=10, 
-                      Int_t SC_rate=5, Double_t SC_factor=0.95, Double_t convCrit=0.001 );
+   void SetParameters(const GeneticMinimizerParameters & params );
+
+   virtual ROOT::Math::MinimizerOptions Options() const; 
+
+   virtual void SetOptions(const ROOT::Math::MinimizerOptions & opt);
 
 protected:
+
+   void GetGeneticOptions(ROOT::Math::MinimizerOptions & opt) const; 
+
    std::vector<TMVA::Interval*> fRanges;
    TMVA::IFitterTarget* fFitness;
 
    std::vector<double> fResult;
 
+   GeneticMinimizerParameters fParameters; 
 
-   Int_t fNsteps;
-   Int_t fPopSize;
-   Int_t fSC_steps;
-   Int_t fSC_rate;
-   Double_t fSC_factor;
-   Double_t fConvCrit;
 }; 
+
 
    } // end namespace Math
 } // end namespace ROOT
