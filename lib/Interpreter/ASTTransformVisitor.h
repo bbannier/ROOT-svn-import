@@ -93,7 +93,7 @@ namespace cling {
       //region EvalBuilder
 
       CallExpr *BuildEvalCallExpr(QualType type);
-      Expr *BuildEvalCharArg();
+      Expr *BuildEvalCharArg(QualType ToType);
       
       //endregion
       

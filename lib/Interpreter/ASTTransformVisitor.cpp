@@ -247,7 +247,7 @@ namespace cling {
       
       // Prepare the actual arguments for the call
       ASTOwningVector<Expr*> CallArgs(*SemaPtr);
-      CallArgs.push_back(BuildEvalCharArg());
+      CallArgs.push_back(BuildEvalCharArg(FDecl->getParamDecl(0U)->getType()));
 
       
       CallExpr *EvalCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
@@ -262,17 +262,15 @@ namespace cling {
    }
    
    // Creates the string, which is going to be escaped.
-   Expr *ASTTransformVisitor::BuildEvalCharArg() {
+   Expr *ASTTransformVisitor::BuildEvalCharArg(QualType ToType) {
       ASTContext *c = &SemaPtr->getASTContext();
       const char *str = "Transform World!";
       QualType constCharArray = c->getConstantArrayType(c->getConstType(c->CharTy), llvm::APInt(32, 16U), ArrayType::Normal, 0);
       Expr *SL = StringLiteral::Create(*c, &*str, strlen(str), false, constCharArray, SourceLocation());
-      CXXCastPath BasePath;
-      //FIXME: Figure out how to use ImpCastExprToType instead of creating 1000s stupid casts and using 1000s of types...
-      // SemaPtr->ImpCastExprToType(SL, constCharArray, CK_ArrayToPointerDecay);
-       QualType charType = c->getPointerType(c->getConstType(c->CharTy));
-       ImplicitCastExpr *cast = ImplicitCastExpr::Create(*c, charType, CK_ArrayToPointerDecay, SL, 0, VK_RValue);
-      return cast;
+      //FIXME: Figure out how handle the cast kinds in the different cases
+      SemaPtr->ImpCastExprToType(SL, ToType, CK_ArrayToPointerDecay);
+
+      return SL;
    }
    
 //endregion
