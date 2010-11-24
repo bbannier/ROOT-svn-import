@@ -241,7 +241,7 @@ namespace TMVA {
       void SetEvPerBin(Int_t EvPerBin){fEvPerBin =EvPerBin;} // Sets max. no. of effective events per bin
       void SetInhiDiv(Int_t, Int_t ); // Set inhibition of cell division along certain edge
       void SetNElements(UInt_t numb){fNElements = numb;} // init every cell element (TVectorD*)
-      void SetVolumeFraction(Double_t vfr){fVolFrac = vfr;} // set VolFrac
+      void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;} // set VolFrac
       void SetFoamType(EFoamType ft);   // set foam type
       void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
       void SetDTSeparation(EDTSeparation new_val){fDTSeparation=new_val;}
@@ -251,7 +251,7 @@ namespace TMVA {
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
       UInt_t   GetNElements() const {return fNElements; } // returns number of elements, saved on every cell
-      Double_t GetVolumeFraction() const {return fVolFrac;} // get VolFrac from PDEFoam
+      Float_t  GetVolumeFraction() const {return fVolFrac;} // get VolFrac from PDEFoam
       EFoamType GetFoamType()      const {return fFoamType;}; // get foam type
       UInt_t   GetNActiveCells()   const {return fNoAct;}; // returns number of active cells
       UInt_t   GetNInActiveCells() const {return GetNCells()-GetNActiveCells();}; // returns number of not active cells
