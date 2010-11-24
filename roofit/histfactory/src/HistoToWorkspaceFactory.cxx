@@ -578,7 +578,7 @@ namespace HistFactory{
     proto->import(*model,RecycleConflictNodes());
 
     proto_config->SetPdf(*model);
-    proto->import(*proto_config);
+    proto->import(*proto_config,proto_config->GetName());
 
     return proto;
   }
@@ -668,7 +668,8 @@ namespace HistFactory{
     //combined_config->SetPdf(*customized);
     combined_config->SetPdf(*simPdf);
     customized->graphVizTree(("results/"+resultsPrefixStr.str()+"_simul.dot").c_str());
-    combined->import(*combined_config);
+    combined->import(*combined_config,combined_config->GetName());
+    combined->writeToFile("results/combinedModel.root");
 
     return combined;
   }
