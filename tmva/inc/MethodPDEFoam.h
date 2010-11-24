@@ -164,7 +164,7 @@ namespace TMVA {
       Bool_t        fSigBgSeparated;  // Separate Sig and Bg, or not
       Double_t      fFrac;            // Fraction used for calc of Xmin, Xmax
       Double_t      fDiscrErrCut;     // cut on discrimant error
-      Int_t         fVolFrac;         // inverse volume fraction (used for density calculation during buildup)
+      Float_t       fVolFrac;         // inverse volume fraction (used for density calculation during buildup)
       Float_t       fVolFracInv;      // volume fraction (used for density calculation during buildup)
       Int_t         fnCells;          // Number of Cells  (1000)
       Int_t         fnActiveCells;    // Number of active cells

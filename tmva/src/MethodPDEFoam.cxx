@@ -142,7 +142,7 @@ void TMVA::MethodPDEFoam::Init( void )
    fSigBgSeparated = kFALSE;   // default: unified foam
    fFrac           = 0.001;    // fraction of outlier events
    fDiscrErrCut    = -1.;      // cut on discriminator error
-   fVolFrac        = 30;       // inverse range searching box size
+   fVolFrac        = 30.0;     // inverse range searching box size
    fVolFracInv     = 1./30.;   // range searching box size
    fnActiveCells   = 500;      // number of active cells to create
    fnCells         = fnActiveCells*2-1; // total number of cells
