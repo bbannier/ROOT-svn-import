@@ -48,7 +48,7 @@ include/Math/%.h: $(GENETICDIRI)/%.h
 		fi)
 		cp $< $@
 
-$(GENETICLIB): $(GENETICO) $(GENETICDO) $(ORDER_) $(MAINLIBS)
+$(GENETICLIB): $(GENETICO) $(GENETICDO) $(ORDER_) $(MAINLIBS) $(GENETICLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"  \
 		   "$(SOFLAGS)" libGenetic.$(SOEXT) $@     \
 		   "$(GENETICO) $(GENETICDO)" \
