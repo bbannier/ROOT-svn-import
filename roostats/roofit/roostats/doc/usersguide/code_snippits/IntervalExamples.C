@@ -3,24 +3,34 @@
 // with four techniques.
 /////////////////////////////////////////////////////////////////////////
 
-#include "RooGlobalFunc.h"
+//#include "RooGlobalFunc.h"
 #include "RooStats/ConfInterval.h"
 #include "RooStats/PointSetInterval.h"
 #include "RooStats/ConfidenceBelt.h"
 #include "RooStats/FeldmanCousins.h"
+#include "RooStats/ProfileLikelihoodCalculator.h"
+#include "RooStats/MCMCCalculator.h"
+#include "RooStats/BayesianCalculator.h"
+#include "RooStats/MCMCIntervalPlot.h"
+#include "RooStats/LikelihoodIntervalPlot.h"
 
+#include "RooStats/ProofConfig.h"
+#include "RooStats/ToyMCSampler.h"
+
+#include "RooRandom.h"
 #include "RooDataSet.h"
 #include "RooRealVar.h"
 #include "RooConstVar.h"
 #include "RooAddition.h"
-
 #include "RooDataHist.h"
-
 #include "RooPoisson.h"
 #include "RooPlot.h"
 
 #include "TCanvas.h"
 #include "TTree.h"
+#include "TStyle.h"
+#include "TMath.h"
+#include"Math/DistFunc.h"
 #include "TH1F.h"
 #include "TMarker.h"
 #include "TStopwatch.h"
@@ -34,10 +44,18 @@ using namespace RooStats ;
 
 void IntervalExamples()
 {
+  
+  // Time this macro
+  TStopwatch t;
+  t.Start();
+
+
+  // set RooFit random seed for reproducible results
+  RooRandom::randomGenerator()->SetSeed(3001);
 
   // make a simple model via the workspace factory
   RooWorkspace* wspace = new RooWorkspace();
-  wspace->factory("Gaussian::normal(x[-10,10],mu[-1,1],sigma[1]))");
+  wspace->factory("Gaussian::normal(x[-10,10],mu[-1,1],sigma[1])");
   wspace->defineSet("poi","mu");
   wspace->defineSet("obs","x");
 
@@ -69,7 +87,15 @@ void IntervalExamples()
   fc.SetConfidenceLevel( confidenceLevel);
   fc.SetNBins(100); // number of points to test per parameter
   fc.UseAdaptiveSampling(true); // make it go faster
-  PointSetInterval* interval = fc.GetInterval();
+  fc.FluctuateNumDataEntries(false); // rows in dataset are not for individual events, the summarize counts in experiment
+  // Proof
+
+  ProofConfig pc(*wspace, 4, "workers=4");    // proof-lite
+  //ProofConfig pc(w, 8, "localhost");    // proof cluster at "localhost"
+  ToyMCSampler* toymcsampler = (ToyMCSampler*) fc.GetTestStatSampler();
+  toymcsampler->SetProofConfig(&pc);     // enable proof
+
+  PointSetInterval* interval = (PointSetInterval*) fc.GetInterval();
 
 
   // example use of BayesianCalculator
@@ -89,8 +115,8 @@ void IntervalExamples()
   mc.SetNumBins(200);	  // bins used internally for representing posterior
   mc.SetNumBurnInSteps(500); // first N steps to be ignored as burn-in
   mc.SetNumIters(100000);    // how long to run chain
+  mc.SetLeftSideTailFraction(0.5); // for central interval
   MCMCInterval* mcInt = mc.GetInterval();
-
   
   // for this example we know the expected intervals
   double expectedLL = data->mean(*x) 
@@ -138,24 +164,32 @@ void IntervalExamples()
   gStyle->SetStatColor(0);
  
 
-  TCanvas* dataCanvas = new TCanvas("dataCanvas");
+  // some plots
+  TCanvas* canvas = new TCanvas("canvas");
+  canvas->Divide(2,2);
+
+  // plot the data
+  canvas->cd(1);
   RooPlot* frame = x->frame();
   data->plotOn(frame);
   data->statOn(frame);
   frame->Draw();
-  dataCanvas->Update();
 
-  t.Stop();
-  t.Print();
-    
-  cout << "making plots" << endl;
-  // Make a plot of the profile-likelihood and confidence interval
+  // plot the profile likeihood
+  canvas->cd(2);
   LikelihoodIntervalPlot plot(plInt);
   plot.Draw();
 
-  MCMCIntervalPlot* mcPlot = new MCMCIntervalPlot(*mcInt));
+  // plot the MCMC interval
+  canvas->cd(3);
+  MCMCIntervalPlot* mcPlot = new MCMCIntervalPlot(*mcInt);
   mcPlot->SetLineColor(kGreen);
   mcPlot->SetLineWidth(2);
-  mcPlot->Draw("same");
+  mcPlot->Draw();
+
+  canvas->Update();
+
+  t.Stop();
+  t.Print();
 
 }
