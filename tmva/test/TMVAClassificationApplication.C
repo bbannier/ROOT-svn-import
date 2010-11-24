@@ -32,6 +32,10 @@ using namespace TMVA;
 
 void TMVAClassificationApplication( TString myMethodList = "" ) 
 {   
+#ifdef __CINT__
+   gROOT->ProcessLine( ".O0" ); // turn off optimization in CINT
+#endif
+
    //---------------------------------------------------------------
 
    // This loads the library
