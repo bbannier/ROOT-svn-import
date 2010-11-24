@@ -39,11 +39,8 @@
 
 ClassImp(TKDE)
 
-const Double_t TKDE::_2_PI_ROOT_INV = 0.398942280401432703;
-const Double_t TKDE::PI             = 3.14159265358979312;
-const Double_t TKDE::PI_OVER2       = 1.57079632679489656;
-const Double_t TKDE::PI_OVER4       = 0.785398163397448279;
-const Double_t /*TKDE::*/APPRX_GEO_MEAN = 0.241970724519143365; // 1 / TMath::Power(2 * TMath::Pi(), .5) * TMath::Exp(-.5)
+const Double_t k2_PI_ROOT_INV = 0.398942280401432703;
+const Double_t kAPPRX_GEO_MEAN = 0.241970724519143365; // 1 / TMath::Power(2 * TMath::Pi(), .5) * TMath::Exp(-.5). Approximated geometric mean over pointwise data (the KDE function is substituted by the "real Gaussian" pdf) and proportional to sigma. Used directly when the mirroring is enabled, otherwise computed from the data
 
 class TKDE::TKernel {
    TKDE* fKDE;
@@ -514,7 +511,7 @@ void TKDE::SetKernel() {
    UInt_t n = fData.size();
    if (n == 0) return;
    // Optimal bandwidth (Silverman's rule of thumb with assumed Gaussian density)
-   Double_t weight(fCanonicalBandwidths[kGaussian] * fSigmaRob * std::pow(3. / (8. * std::sqrt(PI)) * n, -0.2));
+   Double_t weight(fCanonicalBandwidths[kGaussian] * fSigmaRob * std::pow(3. / (8. * std::sqrt(M_PI)) * n, -0.2));
    weight *= fRho * fCanonicalBandwidths[fKernelType] / fCanonicalBandwidths[kGaussian];
    fKernel = new TKernel(weight, this);
    if (fIteration == kAdaptive) {
@@ -566,7 +563,7 @@ void TKDE::SetKernelSigmas2() {
    fKernelSigmas2[kGaussian] = 1.0;
    fKernelSigmas2[kEpanechnikov] = 1.0 / 5.0;
    fKernelSigmas2[kBiweight] = 1.0 / 7.0;
-   fKernelSigmas2[kCosineArch] = 1.0 - 8.0 / std::pow(PI, 2);
+   fKernelSigmas2[kCosineArch] = 1.0 - 8.0 / std::pow(M_PI, 2);
 }
 
 TF1* TKDE::GetFunction(UInt_t npx, Double_t xMin, Double_t xMax) {
@@ -629,7 +626,7 @@ Double_t TKDE::GetSigma() const {
 
 Double_t TKDE::GetRAMISE() const {
    // Returns the Root Asymptotic Mean Integrated Squared Error according to Silverman's rule of thumb with assumed Gaussian density
-   Double_t result = 5. / 4. * fKernelSigmas2[fKernelType] * std::pow(fCanonicalBandwidths[fKernelType], 4) * std::pow(3. / (8. * std::sqrt(PI)) , -0.2) * fSigmaRob * std::pow(fNEvents, -0.8);
+   Double_t result = 5. / 4. * fKernelSigmas2[fKernelType] * std::pow(fCanonicalBandwidths[fKernelType], 4) * std::pow(3. / (8. * std::sqrt(M_PI)) , -0.2) * fSigmaRob * std::pow(fNEvents, -0.8);
    return std::sqrt(result);
 }
 
@@ -652,7 +649,7 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
       *weight = std::max(*weight /= std::sqrt(f), minWeight);
       fKDE->fAdaptiveBandwidthFactor += std::log(f);
    }
-   fKDE->fAdaptiveBandwidthFactor = fKDE->fUseMirroring ? APPRX_GEO_MEAN / fKDE->fSigmaRob : std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size()));
+   fKDE->fAdaptiveBandwidthFactor = fKDE->fUseMirroring ? kAPPRX_GEO_MEAN / fKDE->fSigmaRob : std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size()));
    transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), fKDE->fAdaptiveBandwidthFactor));
  }
 
