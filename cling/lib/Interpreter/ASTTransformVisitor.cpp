@@ -8,6 +8,8 @@
 
 #include "StmtAddressPrinter.cpp"
 
+#include "llvm/ADT/SmallVector.h"
+
 namespace cling {
 
    //region Constructors
@@ -201,40 +203,76 @@ namespace cling {
    // Here is the test Eval function specialization. Here the CallExpr to the function
    // is created.
    CallExpr *ASTTransformVisitor::BuildEvalCallExpr(const QualType InstTy) {
+      // Set up new context for the new FunctionDecl
       DeclContext *PrevContext = SemaPtr->CurContext;
       FunctionDecl *FDecl = getEvalDecl();
       SemaPtr->CurContext = FDecl->getDeclContext();
       
+      // Create template arguments
       Sema::InstantiatingTemplate Inst(*SemaPtr, SourceLocation(), FDecl);
       TemplateArgument Arg(InstTy);
       TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
       
+      // Substitute the declaration of the templated function, with the 
+      // specified template argument
       Decl *D = SemaPtr->SubstDecl(FDecl, FDecl->getDeclContext(), MultiLevelTemplateArgumentList(TemplateArgs));
       
       FunctionDecl *Fn = dyn_cast<FunctionDecl>(D);
+      // Creates new body of the substituted declaration
       SemaPtr->InstantiateFunctionDefinition(Fn->getLocation(), Fn, true, true);
       
       SemaPtr->CurContext = PrevContext;                            
       
       const FunctionProtoType *Proto = Fn->getType()->getAs<FunctionProtoType>();
+
+      //Walk the params and prepare them for building a new function type
+      llvm::SmallVectorImpl<QualType> ParamTypes(FDecl->getNumParams());
+      for (FunctionDecl::param_iterator P = FDecl->param_begin(), PEnd = FDecl->param_end();
+           P != PEnd;
+           ++P) {
+         ParamTypes.push_back((*P)->getType());
+         
+      }
+      
+      // Build function type, needed by BuildDeclRefExpr 
       QualType FuncT = SemaPtr->BuildFunctionType(Fn->getResultType()
-                                                  , /* ParamsTypes */ 0
-                                                  , /* NumParamTypes */ 0
+                                                  , ParamTypes.data()
+                                                  , ParamTypes.size()
                                                   , Proto->isVariadic()
                                                   , Proto->getTypeQuals()
                                                   , Fn->getLocation()
                                                   , Fn->getDeclName()
                                                   , Proto->getExtInfo());                  
       DeclRefExpr *DRE = SemaPtr->BuildDeclRefExpr(Fn, FuncT, VK_RValue, SourceLocation()).takeAs<DeclRefExpr>();
-      CallExpr *EvalIntCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
-                                                     , DRE
-                                                     , SourceLocation()
-                                                     , MultiExprArg()
-                                                     , SourceLocation()
-                                                     ).takeAs<CallExpr>();
       
-      return EvalIntCall;                  
+      // Prepare the actual arguments for the call
+      ASTOwningVector<Expr*> CallArgs(*SemaPtr);
+      CallArgs.push_back(BuildEvalCharArg());
+
       
+      CallExpr *EvalCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
+                                                  , DRE
+                                                  , SourceLocation()
+                                                  //,MultiExprArg(CallArgs.take() , 1U)
+                                                  , move_arg(CallArgs)
+                                                  , SourceLocation()
+                                                  ).takeAs<CallExpr>();
+      return EvalCall;                  
+      
+   }
+   
+   // Creates the string, which is going to be escaped.
+   Expr *ASTTransformVisitor::BuildEvalCharArg() {
+      ASTContext *c = &SemaPtr->getASTContext();
+      const char *str = "Transform World!";
+      QualType constCharArray = c->getConstantArrayType(c->getConstType(c->CharTy), llvm::APInt(32, 16U), ArrayType::Normal, 0);
+      Expr *SL = StringLiteral::Create(*c, &*str, strlen(str), false, constCharArray, SourceLocation());
+      CXXCastPath BasePath;
+      //FIXME: Figure out how to use ImpCastExprToType instead of creating 1000s stupid casts and using 1000s of types...
+      // SemaPtr->ImpCastExprToType(SL, constCharArray, CK_ArrayToPointerDecay);
+       QualType charType = c->getPointerType(c->getConstType(c->CharTy));
+       ImplicitCastExpr *cast = ImplicitCastExpr::Create(*c, charType, CK_ArrayToPointerDecay, SL, 0, VK_RValue);
+      return cast;
    }
    
 //endregion
