@@ -176,6 +176,8 @@ int main()
    
    TMVA_test.intro();
 
+   // put largest problem first
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kPDEFoam, "PDEFoam", "!H:!V:MultiTargetRegression=F:TargetSelection=Mpv:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=5000:nBin=7:Compress=T:Kernel=Gauss:Nmin=10:VarTransform=None", 10., 15., 4., 6. ));
    TMVA_test.addTest(new utEvent);
    TMVA_test.addTest(new utVariableInfo);
    TMVA_test.addTest(new utDataSetInfo);
