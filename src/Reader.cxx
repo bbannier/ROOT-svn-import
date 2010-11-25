@@ -144,6 +144,7 @@ TMVA::Reader::Reader( const TString& theOption, Bool_t verbose )
 //_______________________________________________________________________
 TMVA::Reader::Reader( std::vector<TString>& inputVars, const TString& theOption, Bool_t verbose )
    : Configurable( theOption ),
+     fDataSetManager( NULL ), // DSMTEST
      fDataSetInfo(),
      fVerbose( verbose ),
      fSilent ( kFALSE ),
@@ -154,6 +155,10 @@ TMVA::Reader::Reader( std::vector<TString>& inputVars, const TString& theOption,
      fLogger ( new MsgLogger(this) )
 {
    // constructor
+
+   fDataSetManager = new DataSetManager( fDataInputHandler ); 
+   fDataSetManager->AddDataSetInfo(fDataSetInfo); 
+
    SetConfigName( GetName() );
    DeclareOptions();
    ParseOptions();
@@ -170,6 +175,7 @@ TMVA::Reader::Reader( std::vector<TString>& inputVars, const TString& theOption,
 //_______________________________________________________________________
 TMVA::Reader::Reader( std::vector<std::string>& inputVars, const TString& theOption, Bool_t verbose )
    : Configurable( theOption ),
+     fDataSetManager( NULL ), // DSMTEST
      fDataSetInfo(),
      fVerbose( verbose ),
      fSilent ( kFALSE ),
@@ -180,6 +186,9 @@ TMVA::Reader::Reader( std::vector<std::string>& inputVars, const TString& theOpt
      fLogger ( new MsgLogger(this) )
 {
    // constructor
+   fDataSetManager = new DataSetManager( fDataInputHandler ); 
+   fDataSetManager->AddDataSetInfo(fDataSetInfo); 
+
    SetConfigName( GetName() );
    DeclareOptions();
    ParseOptions();
@@ -196,6 +205,7 @@ TMVA::Reader::Reader( std::vector<std::string>& inputVars, const TString& theOpt
 //_______________________________________________________________________
 TMVA::Reader::Reader( const std::string& varNames, const TString& theOption, Bool_t verbose )
    : Configurable( theOption ),
+     fDataSetManager( NULL ), // DSMTEST
      fDataSetInfo(),
      fVerbose( verbose ),
      fSilent ( kFALSE ),
@@ -206,6 +216,9 @@ TMVA::Reader::Reader( const std::string& varNames, const TString& theOption, Boo
      fLogger (  new MsgLogger(this) )
 {
    // constructor
+   fDataSetManager = new DataSetManager( fDataInputHandler ); 
+   fDataSetManager->AddDataSetInfo(fDataSetInfo); 
+
    SetConfigName( GetName() );
    DeclareOptions();
    ParseOptions();
@@ -219,6 +232,7 @@ TMVA::Reader::Reader( const std::string& varNames, const TString& theOption, Boo
 //_______________________________________________________________________
 TMVA::Reader::Reader( const TString& varNames, const TString& theOption, Bool_t verbose )
    : Configurable( theOption ),
+     fDataSetManager( NULL ), // DSMTEST
      fDataSetInfo(),
      fVerbose( verbose ),
      fSilent ( kFALSE ),
@@ -229,6 +243,9 @@ TMVA::Reader::Reader( const TString& varNames, const TString& theOption, Bool_t 
      fLogger ( new MsgLogger(this))
 {
    // constructor
+   fDataSetManager = new DataSetManager( fDataInputHandler ); 
+   fDataSetManager->AddDataSetInfo(fDataSetInfo); 
+
    SetConfigName( GetName() );
    DeclareOptions();
    ParseOptions();
