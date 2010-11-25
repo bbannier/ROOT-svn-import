@@ -1323,6 +1323,8 @@ Double_t TMVA::PDEFoam::GetCellDiscr( std::vector<Float_t> &xvec, EKernel kernel
       Log() << kFATAL << "GetCellDiscr: ERROR: wrong kernel!" << Endl;
       return 0;
    }
+
+   return 0;
 }
 
 //_____________________________________________________________________
@@ -1454,6 +1456,8 @@ Double_t TMVA::PDEFoam::GetCellRegValue0( std::vector<Float_t> &xvec, EKernel ke
       Log() << kFATAL << "<GetCellRegValue0>: unknown kernel!" << Endl;
       return 0.;
    }
+
+   return 0.;
 }
 
 //_____________________________________________________________________
@@ -1524,6 +1528,7 @@ Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
    default:
       return kFALSE;
    }
+   return kFALSE;
 }
 
 //_____________________________________________________________________
@@ -1675,6 +1680,8 @@ std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> &
       Log() << kFATAL << "<GetProjectedRegValue>: unsupported kernel!" << Endl;
       return std::vector<Float_t>(GetTotDim()-txvec.size(), 0);
    }
+
+   return std::vector<Float_t>(GetTotDim()-txvec.size(), 0);
 }
 
 //_____________________________________________________________________
@@ -1726,6 +1733,8 @@ Double_t TMVA::PDEFoam::GetCellDensity( std::vector<Float_t> &xvec, EKernel kern
       Log() << kFATAL << "<GetCellDensity(event)> unknown kernel!" << Endl;
       return 0.;
    }
+
+   return 0;
 }
 
 //_____________________________________________________________________
