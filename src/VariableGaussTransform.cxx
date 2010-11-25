@@ -118,13 +118,15 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
    // apply the Gauss transformation
 
    if (!IsCreated()) Log() << kFATAL << "Transformation not yet created" << Endl;
-
-   if (cls <0 || cls > GetNClasses() ) {
-      cls = GetNClasses();
-      if (GetNClasses() == 1 ) cls = (fCumulativePDF[0].size()==1?0:2);
-   }
-
-   // get the variable vector of the current event
+   //EVT this is a workaround to address the reader problem with transforma and EvaluateMVA(std::vector<float/double> ,...) 
+   //EVT if (cls <0 || cls > GetNClasses() ) {
+   //EVT   cls = GetNClasses();
+   //EVT   if (GetNClasses() == 1 ) cls = (fCumulativePDF[0].size()==1?0:2);
+   //EVT}
+   if (cls <0 || cls >=  (int) fCumulativePDF[0].size()) cls = fCumulativePDF[0].size()-1;
+   //EVT workaround end
+ 
+  // get the variable vector of the current event
    const UInt_t nvar = GetNVariables();
    TVectorD vec( nvar );
    for (UInt_t ivar=0; ivar<nvar; ivar++) vec(ivar) = ev->GetValue(ivar);

@@ -108,8 +108,9 @@ std::vector<TString>* TMVA::VariableDecorrTransform::GetTransformationStrings( I
    Int_t whichMatrix = cls;
    // if cls (the class chosen by the user) not existing, assume that user wants to 
    // have the matrix for all classes together. 
+   
    if (cls < 0 || cls > GetNClasses()) whichMatrix = GetNClasses();
-
+   
    TMatrixD* m = fDecorrMatrices.at(whichMatrix);
    if (m == 0) {
       if (whichMatrix == GetNClasses() )
@@ -146,10 +147,13 @@ const TMVA::Event* TMVA::VariableDecorrTransform::Transform( const TMVA::Event* 
 
    Int_t whichMatrix = cls;
    // if cls (the class chosen by the user) not existing, assume that he wants to have the matrix for all classes together. 
-   if (cls < 0 || cls > GetNClasses()) {
-      whichMatrix = GetNClasses();
-      if (GetNClasses() == 1 ) whichMatrix = (fDecorrMatrices.size()==1?0:2);
-   }
+   // EVT this is a workaround to address the reader problem with transforma and EvaluateMVA(std::vector<float/double> ,...) 
+   if (cls < 0 || cls >= (int) fDecorrMatrices.size()) whichMatrix = fDecorrMatrices.size()-1;
+   //EVT workaround end
+   //if (cls < 0 || cls > GetNClasses()) {
+   //   whichMatrix = GetNClasses();
+   //   if (GetNClasses() == 1 ) whichMatrix = (fDecorrMatrices.size()==1?0:2);
+   //}
 
    TMatrixD* m = fDecorrMatrices.at(whichMatrix);
    if (m == 0) {
