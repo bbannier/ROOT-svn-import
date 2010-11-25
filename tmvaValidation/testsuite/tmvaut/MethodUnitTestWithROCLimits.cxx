@@ -181,11 +181,12 @@ void MethodUnitTestWithROCLimits::run()
            std::cout << "ERROR, undefined iTest value "<<iTest<<endl;
            exit(1);
         }
-        
-        diff = TMath::Abs(readerVal-testTreeVal);
-        maxdiff = diff > maxdiff ? diff : maxdiff;
-        sumdiff += diff;
-        if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++; 
+        if (_methodType!=Types::kCuts){
+           diff = TMath::Abs(readerVal-testTreeVal);
+           maxdiff = diff > maxdiff ? diff : maxdiff;
+           sumdiff += diff;
+           if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++; 
+        }
         if (iTest ==0 ) previousVal=readerVal;
      }
 

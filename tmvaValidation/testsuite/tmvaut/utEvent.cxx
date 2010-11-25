@@ -52,6 +52,10 @@ void utEvent::_testConstructor1()
 
    test_(_eventC1->IsDynamic()         == false);
 
+   test_(floatCompare(_eventC1->GetWeight(), 1.));
+   test_(floatCompare(_eventC1->GetOriginalWeight(), 1.));
+   test_(floatCompare(_eventC1->GetBoostWeight(),1.));
+
    test_(_eventC1->GetWeight()         == 1.);
    test_(_eventC1->GetOriginalWeight() == 1.);
    test_(_eventC1->GetBoostWeight()    == 1.);
@@ -71,9 +75,10 @@ void utEvent::_testConstructor2()
 
    test_(_eventC2->IsDynamic()         == false);
    
-   test_(_eventC2->GetWeight()         == (_testWeight*_testBoostWeight));
-   test_(_eventC2->GetOriginalWeight() == _testWeight);
-   test_(_eventC2->GetBoostWeight()    == _testBoostWeight);
+   test_(floatCompare(_eventC2->GetWeight(), _testWeight*_testBoostWeight));
+   test_(floatCompare(_eventC2->GetOriginalWeight(), _testWeight));
+   test_(floatCompare(_eventC2->GetBoostWeight(), _testBoostWeight));
+
    test_(_eventC2->GetClass()          == _testClassVal);
    test_(_eventC2->GetNVariables()     == (UInt_t)_testValueVec.size());
    test_(_eventC2->GetNTargets()       == (UInt_t)_testTargetVec.size());
@@ -112,9 +117,10 @@ void utEvent::_testConstructor3()
 
    test_(_eventC3->IsDynamic()         == false);
 
-   test_(_eventC3->GetWeight()         == (_testWeight*_testBoostWeight));
-   test_(_eventC3->GetOriginalWeight() == _testWeight);
-   test_(_eventC3->GetBoostWeight()    == _testBoostWeight);
+   test_(floatCompare(_eventC3->GetWeight(), _testWeight*_testBoostWeight));
+   test_(floatCompare(_eventC3->GetOriginalWeight(), _testWeight));
+   test_(floatCompare(_eventC3->GetBoostWeight(), _testBoostWeight));
+
    test_(_eventC3->GetClass()          == _testClassVal);
    test_(_eventC3->GetNVariables()     == (UInt_t)_testValueVec.size());
    test_(_eventC3->GetNTargets()       == (UInt_t)_testTargetVec.size());
@@ -152,9 +158,10 @@ void utEvent::_testConstructor4()
 
    test_(_eventC4->IsDynamic()         == false);
 
-   test_(_eventC4->GetWeight()         == (_testWeight*_testBoostWeight));
-   test_(_eventC4->GetOriginalWeight() == _testWeight);
-   test_(_eventC4->GetBoostWeight()    == _testBoostWeight);
+   test_(floatCompare(_eventC4->GetWeight(), _testWeight*_testBoostWeight));
+   test_(floatCompare(_eventC4->GetOriginalWeight(), _testWeight));
+   test_(floatCompare(_eventC4->GetBoostWeight(), _testBoostWeight));
+
    test_(_eventC4->GetClass()          == _testClassVal);
    test_(_eventC4->GetNVariables()     == (UInt_t)_testValueVec.size());
    test_(_eventC4->GetNTargets()       == (UInt_t)_testTargetVec.size());
@@ -183,9 +190,10 @@ void utEvent::_testConstructor5()
 
    test_(_eventC5->IsDynamic()         == false);
 
-   test_(_eventC5->GetWeight()         == (_testWeight*_testBoostWeight));
-   test_(_eventC5->GetOriginalWeight() == _testWeight);
-   test_(_eventC5->GetBoostWeight()    == _testBoostWeight);
+   test_(floatCompare(_eventC5->GetWeight(), _testWeight*_testBoostWeight));
+   test_(floatCompare(_eventC5->GetOriginalWeight(), _testWeight));
+   test_(floatCompare(_eventC5->GetBoostWeight(), _testBoostWeight));
+
    test_(_eventC5->GetClass()          == _testClassVal);
    test_(_eventC5->GetNVariables()     == (UInt_t)_testValueVec.size());
 
@@ -237,31 +245,13 @@ void utEvent::_testMutators()
    test_(_eventC1->GetWeight() == _testWeight);
 
    _eventC1->ScaleWeight(_testScale);
-   //float multiple   = _testWeight*_testScale;
-   //float comparison = _eventC1->GetWeight();
-   //void* multp = &multiple;
-   //void* compp = &comparison;
-   //int getweight = *(int*)(compp);
-   //int testVal = *(int*)(multp);
-   //std::cout << "int casted results "<< getweight<< " " << testVal<< std::endl;
-   //std::cout << "results "<< _eventC1->GetWeight()<< " " << _testWeight*_testScale<< std::endl;
-   //std::cout <<_eventC1->GetWeight() << " " << _testWeight*_testScale << std::endl;
-   test_(TMath::Abs(_eventC1->GetWeight()- _testWeight*_testScale)<1.e-6); //empirical value
-   //if(sizeof(int) == sizeof(float))
-   //   test_(getweight == testVal); // this one does not (Eckhard)
+   test_(floatCompare((float) _eventC1->GetWeight(), _testWeight*_testScale)); 
 
    _eventC1->SetBoostWeight(_testBoostWeight);
-   test_(TMath::Abs(_eventC1->GetBoostWeight()-_testBoostWeight)<1.e-6); //empirical value
+   test_(floatCompare( _eventC1->GetBoostWeight() , _testBoostWeight));
    _eventC1->ScaleBoostWeight(_testScale);
-   //float multiple2   = _testBoostWeight*_testScale;
-   //float comparison2 = _eventC1->GetBoostWeight();
-   //void* multp2 = &multiple2;
-   //void* compp2 = &comparison2;
-   //int getboostweight = *(int*)(compp2);
-   //int testVal2 = *(int*)(multp2);
-   test_(TMath::Abs(_eventC1->GetBoostWeight()- _testBoostWeight*_testScale)<1.e-6); // empirical value
-   //if(sizeof(int) == sizeof(float))
-   //   test_(getboostweight == testVal2); // does not work for me (Eckhard)
+   test_(floatCompare( _eventC1->GetBoostWeight(), _testBoostWeight*_testScale));
+
 
    _eventC1->SetClass(_testClassVal);
    test_(_eventC1->GetClass() == (UInt_t)_testClassVal);
