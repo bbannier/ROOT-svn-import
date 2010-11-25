@@ -1,20 +1,12 @@
 For December 2010 release (5.28):
 
 
-* make it easier for the user to understand that makeclass is not implemented.
-  even an non-implemented makeclass creates a huge c-code output (which is garbage) 
-  We have not implemented makeclass for the following classes: 
-  BayesClassifier CFMlpANN Committee Cuts KNN PDERS RuleFit SVM PDEFoam
-
-* Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, double aux ) does not work in conjuntion with transformations Gauss and Decorr
-* Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, double aux ) does not work with SVM and TMlpAnn
+* Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, double aux ) does not work with TMlpAnn
 * Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, double aux ) does not work with MethodBoost
-* Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, double aux ) does not work with Cuts
 
-* unit test breaks with makeclass and LikelihoodD, LikelihoodPCA BoostedFisher TMlpANN FisherG
-* regression mit MLP und backpropagation (BP)
-* unit test breaks mit BDT
-* unit test breaks von Event::SetWeight
+* unit test breaks with makeclass and LikelihoodD and FisherG (only slight deviation)
+* regression with MLP und backpropagation (BP): bad performance
+* unit test breaks with Regression BDT und VarTransform=N: bad performance
 * Parallel coordinates crashes
 * Problem im CreateMvaPDF for Fisher
-
+* unit test break with Regression-ReaderApplication and PDEFoam
