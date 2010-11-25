@@ -3,6 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include "TString.h"
+#include "TMath.h"
 #include <typeinfo>
 
 using namespace std;
@@ -23,6 +24,13 @@ void UnitTest::do_fail(const std::string& lbl, const char* fname, long lineno)
       {
          *osptr << "failure: " << setw(76) << std::left << lbl << std::right << " [line " << setw(3) << lineno << "]\n";
       }
+}
+
+bool UnitTest::floatCompare(float x1, float x2)
+{
+   bool ret = (TMath::Abs(x1-x2)<1.e-9); // fix me, empirical number
+   if (!ret) cout << "warning floatCompare: x1="<<x1<<" x2="<<x2<<", diff="<<x1-x2<<endl;
+   return ret;
 }
 
 const std::string & UnitTest::name() const
