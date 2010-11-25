@@ -1,6 +1,8 @@
 #include "RegressionUnitTestWithDeviation.h"
 #include "TFile.h"
 #include "TMVA/MethodBase.h"
+#include "TMVA/Reader.h"
+#include <cstdlib>
 
 using namespace std;
 using namespace UnitTesting;
@@ -40,10 +42,10 @@ void RegressionUnitTestWithDeviation::run()
 
   Factory* factory = new Factory( "TMVARegressionUnitTesting", outputFile, factoryOptions );
   
-  factory->AddVariable( "var1", "Variable 1", "units", 'F' );
-  factory->AddVariable( "var2", "Variable 2", "units", 'F' );
-  
-  factory->AddTarget  ( "fvalue" ); 
+  factory->AddVariable( "var1", "Variable 1", "units", 'F' ); // fix me
+  factory->AddVariable( "var2", "Variable 2", "units", 'F' ); // fix me
+  TString _targetname="fvalue";
+  factory->AddTarget  ( _targetname.Data() ); // fix me _targetname.Data() 
   
   TFile* input(0);
 // FIXME:: give the filename of the sample somewhere else?
@@ -87,4 +89,84 @@ void RegressionUnitTestWithDeviation::run()
 
     outputFile->Close();
   delete factory;
+
+  // reader tests
+
+  // setup test tree access
+  TFile* testFile = new TFile("TMVARegUT.root"); // fix me hardcoded file name
+  TTree* testTree = (TTree*)(testFile->Get("TestTree"));
+  const int nTest=2; // 2 reader usages
+  float testTarget,readerVal=0.;
+
+  vector<TString>* _VariableNames = new std::vector<TString>(0); // fix me, move to constructor
+   _VariableNames->push_back("var1");
+   _VariableNames->push_back("var2");
+
+  vector<float>  testvar(_VariableNames->size());
+  vector<float>  dummy(_VariableNames->size());
+  vector<float>  dummy2(_VariableNames->size());
+  vector<float>  testvarFloat(_VariableNames->size());
+  vector<double> testvarDouble(_VariableNames->size());
+  for (UInt_t i=0;i<_VariableNames->size();i++)
+     testTree->SetBranchAddress(_VariableNames->at(i),&testvar[i]);
+  testTree->SetBranchAddress(_methodTitle.Data(),&testTarget);
+
+  TString readerName = _methodTitle + TString(" method");
+  TString dir    = "weights/TMVARegressionUnitTesting_";
+  TString weightfile=dir+_methodTitle+".weights.xml";
+  double diff, maxdiff = 0., sumdiff=0., previousVal=0.;
+  int stuckCount=0, nevt= TMath::Min((int) testTree->GetEntries(),100);
+
+  std::vector< TMVA::Reader* > reader(nTest);
+  for (int iTest=0;iTest<nTest;iTest++){
+     
+     if (iTest<2){
+        reader[iTest] = new TMVA::Reader( "!Color:Silent" );
+        for (UInt_t i=0;i<_VariableNames->size();i++)
+           reader[iTest]->AddVariable( _VariableNames->at(i),&testvar[i]);
+     }
+     //else{
+     //   reader[iTest] = new TMVA::Reader( *_VariableNames, "!Color:Silent" );
+     //}
+
+
+     reader[iTest] ->BookMVA( readerName, weightfile) ;
+     
+     // run the reader application and compare to test tree  
+     for (Long64_t ievt=0;ievt<nevt;ievt++) {
+        testTree->GetEntry(ievt);
+        for (UInt_t i=0;i<_VariableNames->size();i++){
+           testvarDouble[i]= testvar[i];
+           testvarFloat[i]= testvar[i];
+        }
+
+        if (iTest==0){ readerVal=(reader[iTest]->EvaluateRegression( readerName)).at(0);  } 
+        else if (iTest==1){ readerVal=reader[iTest]->EvaluateRegression( 0, readerName);}
+        else {
+           std::cout << "ERROR, undefined iTest value "<<iTest<<endl;
+           exit(1);
+        }
+        
+        diff = TMath::Abs(readerVal-testTarget);
+        maxdiff = diff > maxdiff ? diff : maxdiff;
+        sumdiff += diff;
+        if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++; 
+     
+        if (iTest ==0 ) previousVal=readerVal;
+     }
+     
+  }
+
+  sumdiff=sumdiff/nevt;
+
+  test_(maxdiff <1.e-4);
+  test_(sumdiff <1.e-5);
+  test_(stuckCount<nevt/10);
+
+  testFile->Close();
+
+  //for (int i=0;i<nTest;i++) delete reader[i]; // why is this crashing??
+
+  cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
+  
 }
