@@ -883,13 +883,13 @@ void TMVA::MethodPDERS::RKernelEstimate( const Event & event,
       }
    }
 
+   delete[] dim_normalization;
+
    if (pdfDiv == 0)
       return;
 
    for (Int_t ivar = 0; ivar < fNRegOut ; ivar++)
       pdfSum->at(ivar) /= pdfDiv;
-
-   delete[] dim_normalization;
 
    return;
 }

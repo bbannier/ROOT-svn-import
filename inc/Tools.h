@@ -268,8 +268,7 @@ namespace TMVA {
 } // namespace TMVA
 
 //_______________________________________________________________________
-template<typename T>
-void TMVA::Tools::ReadAttr( void* node, const char* attrname, T& value )
+template<typename T> void TMVA::Tools::ReadAttr( void* node, const char* attrname, T& value )
 {
    // read attribute from xml
    TString val;

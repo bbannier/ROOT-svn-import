@@ -368,7 +368,7 @@ TMVA::IMethod* TMVA::Reader::BookMVA( const TString& methodTag, const TString& w
    if( method && method->GetMethodType() == Types::kCategory ){
       MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method));
       if( !methCat )
-         Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl;
+         Log() << kFATAL << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl;
       methCat->fDataSetManager = fDataSetManager;
    }
 
