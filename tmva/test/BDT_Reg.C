@@ -235,20 +235,24 @@ void StatDialogBDT::DrawNode( TMVA::DecisionTreeNode *n,
 {
    // recursively puts an entries in the histogram for the node and its daughters
    //
+   Float_t xsize=xscale*1.5;
+   Float_t ysize=yscale/3;
+   if (xsize>0.15) xsize=xscale/2;
    if (n->GetLeft() != NULL){
-      TLine *a1 = new TLine(x-xscale/2,y,x-xscale,y-yscale/2);
+      TLine *a1 = new TLine(x-xscale/4,y-ysize,x-xscale,y-ysize*2);
       a1->SetLineWidth(2);
       a1->Draw();
       DrawNode((TMVA::DecisionTreeNode*) n->GetLeft(), x-xscale, y-yscale, xscale/2, yscale, vars);
    }
    if (n->GetRight() != NULL){
-      TLine *a1 = new TLine(x+xscale/2,y,x+xscale,y-yscale/2);
+      TLine *a1 = new TLine(x+xscale/4,y-ysize,x+xscale,y-ysize*2);
       a1->SetLineWidth(2);
       a1->Draw();
       DrawNode((TMVA::DecisionTreeNode*) n->GetRight(), x+xscale, y-yscale, xscale/2, yscale, vars  );
    }
 
-   TPaveText *t = new TPaveText(x-xscale/2,y-yscale/2,x+xscale/2,y+yscale/2, "NDC");
+   //   TPaveText *t = new TPaveText(x-xscale/2,y-yscale/2,x+xscale/2,y+yscale/2, "NDC");
+   TPaveText *t = new TPaveText(x-xsize,y-ysize,x+xsize,y+ysize, "NDC");
 
    t->SetBorderSize(1);
 
@@ -260,7 +264,7 @@ void StatDialogBDT::DrawNode( TMVA::DecisionTreeNode *n,
    char buffer[25];
    //   sprintf( buffer, "N=%f", n->GetNEvents() );
    //   t->AddText(buffer);
-   sprintf( buffer, "R=%4.3f +- %4.3f", n->GetResponse(),n->GetRMS() );
+   sprintf( buffer, "R=%4.1f +- %4.1f", n->GetResponse(),n->GetRMS() );
    t->AddText(buffer);
 
    if (n->GetNodeType() == 0){
@@ -282,7 +286,6 @@ void StatDialogBDT::DrawNode( TMVA::DecisionTreeNode *n,
 
 TMVA::DecisionTree* StatDialogBDT::ReadTree( TString* &vars, Int_t itree )
 {
-  cout << " bla bla bla " << endl;
    cout << "--- Reading Tree " << itree << " from weight file: " << fWfile << endl;
    TMVA::DecisionTree *d = new TMVA::DecisionTree();
 
@@ -305,7 +308,6 @@ TMVA::DecisionTree* StatDialogBDT::ReadTree( TString* &vars, Int_t itree )
       // file header with name
       while (!dummy.Contains("#VAR")) fin >> dummy;
       fin >> dummy >> dummy >> dummy; // the rest of header line
-      cout << "bla: now read variables" << endl;
 
       // number of variables
       Int_t nVars;
@@ -323,7 +325,6 @@ TMVA::DecisionTree* StatDialogBDT::ReadTree( TString* &vars, Int_t itree )
       while (!dummy.Contains(buffer)) {
          fin.getline(line,256);
          dummy = TString(line);
-	 cout << "bla: now read line " << dummy<< endl;
       }
 
       d->Read(fin);
@@ -383,7 +384,6 @@ void StatDialogBDT::DrawTree( Int_t itree )
    if (!fCanvas) fCanvas = new TCanvas( "c1", cbuffer, 200, 0, 1000, 600 ); 
    else          fCanvas->Clear();
    fCanvas->Draw();   
-   cout << "bla now call DrawNode"<<endl;
    DrawNode( (TMVA::DecisionTreeNode*)d->GetRoot(), 0.5, 1.-0.5*ystep, 0.25, ystep ,vars);
   
    // make the legend
