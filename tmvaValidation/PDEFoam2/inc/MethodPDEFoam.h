@@ -70,6 +70,25 @@
 #ifndef ROOT_TMVA_PDEFoam
 #include "TMVA/PDEFoam.h"
 #endif
+#ifndef ROOT_TMVA_PDEFoamDecisionTree
+#include "TMVA/PDEFoamDecisionTree.h"
+#endif
+
+#ifndef ROOT_TMVA_PDEFoamDensity
+#include "TMVA/PDEFoamDensity.h"
+#endif
+#ifndef ROOT_TMVA_PDEFoamTargetDensity
+#include "TMVA/PDEFoamTargetDensity.h"
+#endif
+#ifndef ROOT_TMVA_PDEFoamEventDensity
+#include "TMVA/PDEFoamEventDensity.h"
+#endif
+#ifndef ROOT_TMVA_PDEFoamDiscriminantDensity
+#include "TMVA/PDEFoamDiscriminantDensity.h"
+#endif
+#ifndef ROOT_TMVA_PDEFoamDTDensity
+#include "TMVA/PDEFoamDTDensity.h"
+#endif
 
 namespace TMVA {
 
@@ -141,8 +160,8 @@ namespace TMVA {
       // Set Xmin, Xmax in foam with index 'foam_index'
       void SetXminXmax(TMVA::PDEFoam*);
 
-      // Set foam options
-      void InitFoam(TMVA::PDEFoam*, EFoamType);
+      // create foam and set foam options
+      PDEFoam* InitFoam(TString, EFoamType);
 
       // fill variable names into foam
       void FillVariableNamesToFoam() const;

@@ -112,9 +112,8 @@ TMVA::PDEFoam::PDEFoam() :
    fMaxDepth(0),
    fVolFrac(30.0),
    fFillFoamWithOrigWeights(kFALSE),
-   fDTSeparation(kFoam),
    fPeekMax(kTRUE),
-   fDistr(new PDEFoamDistr()),
+   fDistr(NULL),
    fTimer(new Timer(0, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
    fLogger(new MsgLogger("PDEFoam"))
@@ -147,9 +146,8 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fMaxDepth(0),
    fVolFrac(30.0),
    fFillFoamWithOrigWeights(kFALSE),
-   fDTSeparation(kFoam),
    fPeekMax(kTRUE),
-   fDistr(new PDEFoamDistr()),
+   fDistr(NULL),
    fTimer(new Timer(1, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
    fLogger(new MsgLogger("PDEFoam"))
@@ -347,10 +345,7 @@ void TMVA::PDEFoam::InitCells()
 
    // Exploration of the root cell(s)
    for(Long_t iCell=0; iCell<=fLastCe; iCell++){
-      if (fDTSeparation != kFoam)
-         DTExplore( fCells[iCell] );  // Exploration of root cell(s)
-      else
-         Explore( fCells[iCell] );    // Exploration of root cell(s)
+      Explore( fCells[iCell] );    // Exploration of root cell(s)
    }
 }//InitCells
 
@@ -525,139 +520,6 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
    }
    delete [] volPart;
    delete [] xRand;
-}
-
-//_____________________________________________________________________
-void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
-{
-   // Internal subprogram used by Create.  It explores newly defined
-   // cell with according to the decision tree logic.  The separation
-   // set by the 'fDTSeparation' option is used (see also
-   // GetSeparation()).
-   //
-   // The optimal division point for eventual future cell division is
-   // determined/recorded.  Note that links to parents and initial
-   // volume = 1/2 parent has to be already defined prior to calling
-   // this routine.
-   //
-   // Note, that according to the decision tree logic, a cell is only
-   // split, if the number of (unweighted) events in each dautghter
-   // cell is greater than fNmin.
-
-   if (!cell)
-      Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
-
-   // create edge histograms
-   std::vector<TH1F*> hsig, hbkg, hsig_unw, hbkg_unw;
-   for (Int_t idim=0; idim<fDim; idim++) {
-      hsig.push_back( new TH1F(Form("hsig_%i",idim), 
-                               Form("signal[%i]",idim), fNBin, 0, 1 ));
-      hbkg.push_back( new TH1F(Form("hbkg_%i",idim), 
-                               Form("background[%i]",idim), fNBin, 0, 1 ));
-      hsig_unw.push_back( new TH1F(Form("hsig_unw_%i",idim), 
-                                   Form("signal_unw[%i]",idim), fNBin, 0, 1 ));
-      hbkg_unw.push_back( new TH1F(Form("hbkg_unw_%i",idim), 
-                                   Form("background_unw[%i]",idim), fNBin, 0, 1 ));
-   }
-
-   // Fill histograms
-   fDistr->FillHist(cell, hsig, hbkg, hsig_unw, hbkg_unw);
-
-   // ------ determine the best division edge
-   Float_t xBest = 0.5;   // best division point
-   Int_t   kBest = -1;    // best split dimension
-   Float_t maxGain = -1.0; // maximum gain
-   Float_t nTotS = hsig.at(0)->Integral(0, hsig.at(0)->GetNbinsX()+1);
-   Float_t nTotB = hbkg.at(0)->Integral(0, hbkg.at(0)->GetNbinsX()+1);
-   Float_t nTotS_unw = hsig_unw.at(0)->Integral(0, hsig_unw.at(0)->GetNbinsX()+1);
-   Float_t nTotB_unw = hbkg_unw.at(0)->Integral(0, hbkg_unw.at(0)->GetNbinsX()+1);
-   Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
-
-   for (Int_t idim=0; idim<fDim; idim++) {
-      Float_t nSelS=hsig.at(idim)->GetBinContent(0);
-      Float_t nSelB=hbkg.at(idim)->GetBinContent(0);
-      Float_t nSelS_unw=hsig_unw.at(idim)->GetBinContent(0);
-      Float_t nSelB_unw=hbkg_unw.at(idim)->GetBinContent(0);
-      for(Int_t jLo=1; jLo<fNBin; jLo++) {
-         nSelS += hsig.at(idim)->GetBinContent(jLo);
-         nSelB += hbkg.at(idim)->GetBinContent(jLo);
-         nSelS_unw += hsig_unw.at(idim)->GetBinContent(jLo);
-         nSelB_unw += hbkg_unw.at(idim)->GetBinContent(jLo);
-
-         // proceed if total number of events in left and right cell
-         // is greater than fNmin
-         if ( !( (nSelS_unw + nSelB_unw) >= GetNmin() && 
-                 (nTotS_unw-nSelS_unw + nTotB_unw-nSelB_unw) >= GetNmin() ) )
-            continue;
-
-         Float_t xLo = 1.0*jLo/fNBin;
-
-         // calculate gain
-         Float_t leftGain   = ((nTotS - nSelS) + (nTotB - nSelB))
-            * GetSeparation(nTotS-nSelS,nTotB-nSelB);
-         Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
-         Float_t gain = parentGain - leftGain - rightGain;
-
-         if (gain >= maxGain) {
-            maxGain = gain;
-            xBest   = xLo;
-            kBest   = idim;
-         }
-      } // jLo
-   } // idim
-
-   if (kBest >= fDim || kBest < 0)
-      Log() << kWARNING << "No best division edge found!" << Endl;
-   
-   // set cell properties
-   cell->SetBest(kBest);
-   cell->SetXdiv(xBest);
-   if (nTotB+nTotS > 0)
-      cell->SetIntg( nTotS/(nTotB+nTotS) );
-   else 
-      cell->SetIntg( 0.0 );
-   cell->SetDriv(maxGain);
-   cell->CalcVolume();
-
-   // set cell element 0 (total number of events in cell) during
-   // build-up
-   if (GetNmin() > 0)
-      SetCellElement( cell, 0, nTotS + nTotB);
-
-   // clean up
-   for (UInt_t ih=0; ih<hsig.size(); ih++)  delete hsig.at(ih);
-   for (UInt_t ih=0; ih<hbkg.size(); ih++)  delete hbkg.at(ih);
-   for (UInt_t ih=0; ih<hsig_unw.size(); ih++)  delete hsig_unw.at(ih);
-   for (UInt_t ih=0; ih<hbkg_unw.size(); ih++)  delete hbkg_unw.at(ih);
-}
-
-//_____________________________________________________________________
-Float_t TMVA::PDEFoam::GetSeparation(Float_t s, Float_t b)
-{
-   // Calculate the separation depending on 'fDTSeparation' for the
-   // given number of signal and background events 's', 'b'.  Note,
-   // that if (s+b) < 0 or s < 0 or b < 0 than the return value is 0.
-
-   if (s+b <= 0 || s < 0 || b < 0 )
-      return 0;
-
-   Float_t p = s/(s+b);
-   
-   switch(fDTSeparation) {
-   case kFoam:                   // p
-      return p;
-   case kGiniIndex:              // p * (1-p)
-      return p*(1-p);
-   case kMisClassificationError: // 1 - max(p,1-p)
-      return 1 - TMath::Max(p, 1-p);
-   case kCrossEntropy: // -p*log(p) - (1-p)*log(1-p)
-      return (p<=0 || p >=1 ? 0 : -p*TMath::Log(p) - (1-p)*TMath::Log(1-p));
-   default:
-      Log() << kFATAL << "Unknown separation type" << Endl;
-      break;
-   }
-
-   return 0;
 }
 
 //_____________________________________________________________________
@@ -873,13 +735,10 @@ Int_t TMVA::PDEFoam::Divide(PDEFoamCell *cell)
    Int_t d2 = CellFill(1,   cell);
    cell->SetDau0((fCells[d1]));
    cell->SetDau1((fCells[d2]));
-   if (fDTSeparation != kFoam) {
-      DTExplore( (fCells[d1]) );
-      DTExplore( (fCells[d2]) );
-   } else {
-      Explore( (fCells[d1]) );
-      Explore( (fCells[d2]) );
-   }
+
+   Explore( (fCells[d1]) );
+   Explore( (fCells[d2]) );
+
    return 1;
 } // PDEFoam_Divide
 
@@ -888,7 +747,7 @@ Double_t TMVA::PDEFoam::Eval(Double_t *xRand, Double_t &event_density)
 {
    // Internal subprogram.
    // Evaluates (training) distribution.
-   return fDistr->Density(xRand, event_density);
+   return GetDistr()->Density(xRand, event_density);
 }
 
 //_____________________________________________________________________
@@ -2717,21 +2576,8 @@ void TMVA::PDEFoam::Init()
 //_____________________________________________________________________
 void TMVA::PDEFoam::SetFoamType( EFoamType ft )
 {
-   // Set the foam type.  This determinates the method of the
-   // calculation of the density during the foam build-up.
-   switch (ft) {
-   case kDiscr:
-      GetDistr()->SetDensityCalc(kDISCRIMINATOR);
-      break;
-   case kMonoTarget:
-      GetDistr()->SetDensityCalc(kTARGET);
-      break;
-   default:
-      GetDistr()->SetDensityCalc(kEVENT_DENSITY);
-      break;
-   }
-
-   fFoamType = ft; // set foam type class variable
+   // Set the foam type.
+   fFoamType = ft;
 }
 
 //_____________________________________________________________________

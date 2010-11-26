@@ -44,7 +44,9 @@ TMVAH2       := TSpline2.h TSpline1.h PDF.h BinaryTree.h BinarySearchTreeNode.h 
 		GiniIndexWithLaplace.h SimulatedAnnealing.h
 TMVAH3       := Config.h KDEKernel.h Interval.h FitterBase.h MCFitter.h GeneticFitter.h SimulatedAnnealingFitter.h \
 		MinuitFitter.h MinuitWrapper.h IFitterTarget.h  \
-		PDEFoam.h PDEFoamDistr.h PDEFoamVect.h PDEFoamCell.h BDTEventWrapper.h CCTreeWrapper.h \
+		PDEFoam.h PDEFoamDecisionTree.h PDEFoamDensity.h PDEFoamDiscriminantDensity.h \
+		PDEFoamEventDensity.h PDEFoamTargetDensity.h PDEFoamDTDensity.h \
+		PDEFoamVect.h PDEFoamCell.h BDTEventWrapper.h CCTreeWrapper.h \
 		CCPruner.h CostComplexityPruneTool.h SVEvent.h
 TMVAH4       := TNeuron.h TSynapse.h TActivationChooser.h TActivation.h TActivationSigmoid.h TActivationIdentity.h \
 		TActivationTanh.h TActivationRadial.h TNeuronInputChooser.h TNeuronInput.h TNeuronInputSum.h \
