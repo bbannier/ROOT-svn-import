@@ -18,7 +18,7 @@
 <!-- BinLow: the lowest bin number used for the measurement (inclusive) -->
 <!-- BinHigh: the highest bin number used for the measurement (exclusive) -->
 <!-- Mode: type of the measurement (a closed list of ...) -->
-<!ELEMENT Measurement (POI,ParamSetting*) >
+<!ELEMENT Measurement (POI,ParamSetting*,ConstraintTerm*) >
 <!ATTLIST Measurement 
         Name              CDATA            #REQUIRED
         Lumi              CDATA            #REQUIRED
@@ -39,6 +39,15 @@ of the model in the channel setup. Typically the NormFactor for xsec measurement
 <!ATTLIST ParamSetting 
         Val               CDATA           #IMPLIED
         Const             CDATA           #IMPLIED        
+>
+
+<!-- Specify an alternative shape to use for given constraint terms (Gaussian is used if this is not specified) -->
+<!-- Type: can be Gamma or Uniform -->
+<!-- RelativeUncertainty: relative uncertainty on the shape -->
+<!ELEMENT ConstraintTerm (#PCDATA)>
+<!ATTLIST ConstraintTerm 
+        Type                  CDATA       #REQUIRED
+        RelativeUncertainty   CDATA       #REQUIRED       
 >
 
 <!-- Top element for channels. InputFile, HistoName and HistoPath

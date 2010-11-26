@@ -157,6 +157,8 @@ void topDriver(string input ){
         Int_t lowBin=0, highBin=0;
         string rowTitle, POI, mode;
         vector<string> systToFix;
+        map<string,double> gammaSyst;
+        map<string,double> uniformSyst;
 
         TListIter attribIt = node->GetAttributes();
         TXMLAttr* curAttr = 0;
@@ -197,6 +199,26 @@ void topDriver(string input ){
                   AddSubStrings(systToFix, mnode->GetText());
                 }
               }
+            }
+          }
+          if( mnode->GetNodeName() == TString( "ConstraintTerm" ) ) {
+            vector<string> syst; string type = ""; double rel = 0;
+            AddSubStrings(syst,mnode->GetText());
+            TListIter attribIt = mnode->GetAttributes();
+            TXMLAttr* curAttr = 0;
+            while( ( curAttr = dynamic_cast< TXMLAttr* >( attribIt() ) ) != 0 ) {
+              if( curAttr->GetName() == TString( "Type" ) ) {
+                type = curAttr->GetValue();
+              }
+              if( curAttr->GetName() == TString( "RelativeUncertainty" ) ) {
+                rel = atof(curAttr->GetValue());
+              }
+            }
+            if (type=="Gamma" && rel!=0) {
+              for (vector<string>::const_iterator it=syst.begin(); it!=syst.end(); it++) gammaSyst[(*it).c_str()] = rel;
+            }
+            if (type=="Uniform" && rel!=0) {
+              for (vector<string>::const_iterator it=syst.begin(); it!=syst.end(); it++) uniformSyst[(*it).c_str()] = rel;
             }
           }
           mnode = mnode->GetNextNode();
@@ -260,6 +282,13 @@ void topDriver(string input ){
           ws->defineSet("constrainedParams", *constrainedParams);
           proto_config->SetNuisanceParameters(*constrainedParams);
           ws->Print();
+
+          // Gamma Constraints:
+          // turn some Gaussian constraints into Gamma constraints, rename model newSimPdf
+	  if(gammaSyst.size()>0) {
+	    factory.editSyst(ws,("model_"+oneChannel[0].channel).c_str(),gammaSyst);
+	    proto_config->SetPdf(*ws->pdf("newSimPdf"));
+          }
 
 	  // TO DO:
           // Totally factorize the statistical test in "fit Model" to a different area

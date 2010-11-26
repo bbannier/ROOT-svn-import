@@ -408,6 +408,130 @@ namespace HistFactory{
     proto->factory( edit.c_str() );
   }
 
+  void HistoToWorkspaceFactory::editSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst) {
+    cout << "in edit, map.size = " << gammaSyst.size() << endl;
+    string pdfName(pdfNameChar);
+
+    ModelConfig * combined_config = (ModelConfig *) proto->obj("ModelConfig");
+    const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
+    RooArgSet temp(*constrainedParams);
+    int nskipped = 0;
+    map<string,double>::iterator it;
+    // add beta terms and their constraints
+    for(it=gammaSyst.begin(); it!=gammaSyst.end(); ++it) {
+      cout << "edit for " << it->first << "with rel uncert = " << it->second << endl;
+      if(! proto->var(("alpha_"+it->first).c_str())){
+	cout << "systematic not there" << endl;
+	nskipped++; 
+	continue;
+      }
+
+      double relativeUncertainty = it->second;
+      double scale = 1/sqrt((1+1/pow(relativeUncertainty,2)));
+      
+
+      // this is the Gamma PDF and in a form that doesn't have roundoff problems like the Poisson does
+      proto->factory(Form("beta_%s[1,0,10]",it->first.c_str()));
+      proto->factory(Form("y_%s[%f]",it->first.c_str(),1./pow(relativeUncertainty,2))) ;
+      proto->factory(Form("theta_%s[%f]",it->first.c_str(),pow(relativeUncertainty,2))) ;
+      proto->factory(Form("Gamma::beta_%sConstraint(beta_%s,sum::k_%s(y_%s,one[1]),theta_%s,zero[0])",
+			  it->first.c_str(),
+			  it->first.c_str(),
+			  it->first.c_str(),
+			  it->first.c_str(),
+			  it->first.c_str())) ;
+
+      /*
+      // this has some problems because N in poisson is rounded to nearest integer
+      
+      proto->factory(Form("Poisson::beta_%sConstraint(y_%s[%f],prod::taub_%s(taus_%s[%f],beta_%s[1,0,5]))",
+			  it->first.c_str(),
+			  it->first.c_str(),
+			  1./pow(relativeUncertainty,2),
+			  it->first.c_str(),
+			    it->first.c_str(),
+			  1./pow(relativeUncertainty,2),
+			  it->first.c_str()
+			  ) ) ;
+      */
+      //	combined->factory(Form("expr::alphaOfBeta('(beta-1)/%f',beta)",scale));
+      //	combined->factory(Form("expr::alphaOfBeta_%s('(beta_%s-1)/%f',beta_%s)",it->first.c_str(),it->first.c_str(),scale,it->first.c_str()));
+      proto->factory(Form("PolyVar::alphaOfBeta_%s(beta_%s,{%f,%f})",it->first.c_str(),it->first.c_str(),-1./scale,1./scale));
+	
+
+      // clean up constraints
+      cout << "got here, about to remove" << endl;
+      temp.remove(*proto->var(Form("alpha_%s",it->first.c_str())));
+      temp.add(*proto->var(Form("beta_%s",it->first.c_str())));
+      //      cout << "KC CHECK 2" << endl;
+      //      temp.Print();
+
+      // set beta const status to be same as alpha
+      if(proto->var(Form("alpha_%s",it->first.c_str()))->isConstant())
+	proto->var(Form("beta_%s",it->first.c_str()))->setConstant(true);
+      else
+	proto->var(Form("beta_%s",it->first.c_str()))->setConstant(false);
+      // set alpha const status to true
+      //      proto->var(Form("alpha_%s",it->first.c_str()))->setConstant(true);
+
+    }
+
+    // doesn't seem to be changing nuisance parameters as it should be
+    // but fit to and nll are now auto-detecting the nuisance parameters
+    //    cout << "check new list of nuisance parameters" << endl;
+    //    temp.Print();
+    //    combined_config->SetNuisanceParameters(temp);
+    //    cout << "KC CHECK 3" << endl;
+    combined_config->GetNuisanceParameters()->Print();
+
+    // replace alphas with alphaOfBeta and replace constraints
+    string edit="EDIT::newSimPdf("+pdfName+",";
+    string editList;
+    string lastPdf=pdfName;
+    string preceed="";
+    int numReplacements = 0;
+    for(it=gammaSyst.begin(); it!=gammaSyst.end(); ++it) {
+      if(! proto->var(("alpha_"+it->first).c_str())){
+	cout << "systematic not there" << endl;
+	continue;
+      }
+      numReplacements++;      
+      cout <<         "alpha_"+it->first+"Constraint=beta_" + it->first+ "Constraint" << endl;
+      editList+=preceed + "alpha_"+it->first+"Constraint=beta_" + it->first+ "Constraint";
+      preceed=",";
+      cout <<         "alpha_"+it->first+"=alphaOfBeta_"+ it->first << endl;
+      editList+=preceed + "alpha_"+it->first+"=alphaOfBeta_"+ it->first;
+
+      if( proto->pdf(("alpha_"+it->first+"Constraint").c_str()) && proto->var(("alpha_"+it->first).c_str()) )
+	cout << " checked they are there" << proto->pdf(("alpha_"+it->first+"Constraint").c_str()) << " " << proto->var(("alpha_"+it->first).c_str()) << endl;
+      else
+	cout << "NOT THERE" << endl;
+
+      // EDIT seems to die if the list of edits is too long.  So chunck them up.
+      if(numReplacements%10 == 0 && numReplacements+nskipped!=gammaSyst.size()){
+	edit="EDIT::"+lastPdf+"_("+lastPdf+","+editList+")";
+	lastPdf+="_"; // append an underscore for the edit
+	editList=""; // reset edit list
+	preceed="";
+	cout << edit<< endl;
+	proto->factory( edit.c_str() );
+	RooAbsPdf* newOne = proto->pdf(lastPdf.c_str());
+	if(!newOne)
+	  cout << "\n\n ---------------------\n WARNING: failed to make EDIT\n\n" << endl;
+	
+      }
+
+    }
+    edit="EDIT::newSimPdf("+lastPdf+","+editList+")";
+    cout << edit<< endl;
+    proto->factory( edit.c_str() );
+    proto->writeToFile(("results/"+rowTitle+"_edited.root").c_str());
+    RooAbsPdf* newOne = proto->pdf("newSimPdf");
+    if(newOne)
+      newOne->graphVizTree(("results/"+pdfName+"_"+rowTitle+"newSimPdf.dot").c_str());
+    else
+      cout << "\n\n ---------------------\n WARNING: failed to make EDIT\n\n" << endl;
+  }
 
   void HistoToWorkspaceFactory::printCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename){
     FILE * pFile;
@@ -579,6 +703,8 @@ namespace HistFactory{
 
     proto_config->SetPdf(*model);
     proto->import(*proto_config,proto_config->GetName());
+    proto->importClassCode();
+    proto->writeToFile(("results/model_"+channel+".root").c_str());
 
     return proto;
   }
@@ -669,6 +795,7 @@ namespace HistFactory{
     combined_config->SetPdf(*simPdf);
     customized->graphVizTree(("results/"+resultsPrefixStr.str()+"_simul.dot").c_str());
     combined->import(*combined_config,combined_config->GetName());
+    combined->importClassCode();
     combined->writeToFile("results/combinedModel.root");
 
     return combined;
