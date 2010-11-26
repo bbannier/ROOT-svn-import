@@ -564,7 +564,13 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
          << Endl;
    // insert event to BinarySearchTree
    for (Long64_t k=0; k<GetNEvents(); k++) {
-      const Event* ev = GetEvent(k); 
+      Event *ev = new Event(*GetEvent(k));
+      // since in multi-target regression targets are handled like
+      // variables --> remove targets and add them to the event variabels
+      std::vector<Float_t> targets = ev->GetTargets(); 	 
+      for (UInt_t i = 0; i < targets.size(); i++) 	 
+	 ev->SetVal(i+ev->GetValues().size(), targets.at(i)); 	 
+      ev->GetTargets().clear();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
 	 fFoam.back()->FillBinarySearchTree(ev);
    }
@@ -575,7 +581,13 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all events -> fill foam cells with number of events
    for (UInt_t k=0; k<GetNEvents(); k++) {
-      const Event* ev = GetEvent(k); 
+      Event *ev = new Event(*GetEvent(k));
+      // since in multi-target regression targets are handled like
+      // variables --> remove targets and add them to the event variabels
+      std::vector<Float_t> targets = ev->GetTargets(); 	 
+      for (UInt_t i = 0; i < targets.size(); i++) 	 
+	 ev->SetVal(i+ev->GetValues().size(), targets.at(i)); 	 
+      ev->GetTargets().clear();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
 	 fFoam.back()->FillFoamCells(ev);
    }
