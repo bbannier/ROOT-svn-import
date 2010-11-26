@@ -66,7 +66,7 @@ namespace TMVA {
 
       // density build-up functions
       void Initialize(const PDEFoam *foam = NULL); // create and initialize binary search tree
-      void FillBinarySearchTree( const Event* ev, EFoamType ft, Bool_t NoNegWeights=kFALSE );
+      void FillBinarySearchTree( const Event* ev );
 
       // main function used by PDEFoam
       // returns density at a given point by range searching in BST
