@@ -22,8 +22,6 @@
 
 #include "TMVA/OptimizeConfigParameters.h"
 
-ClassImp(TMVA::OptimizeConfigParameters)
-
 #include <limits>
 #include <cstdlib>
 #include "TMath.h"
@@ -40,6 +38,8 @@ ClassImp(TMVA::OptimizeConfigParameters)
 #include "TMVA/PDF.h"   
 #include "TMVA/MsgLogger.h"
 #include "TMVA/Tools.h"   
+
+ClassImp(TMVA::OptimizeConfigParameters)
    
 //_______________________________________________________________________
 TMVA::OptimizeConfigParameters::OptimizeConfigParameters(MethodBase * const method, std::map<TString,TMVA::Interval> tuneParameters, TString fomType, TString optimizationFitType) 
@@ -255,7 +255,7 @@ Double_t TMVA::OptimizeConfigParameters::GetFOM()
    if (fMethod->DoRegression()){
       std::cout << " ERROR: Sorry, Regression is not yet implement for automatic parameter optimisation"
                 << " --> exit" << std::endl;
-      exit(1);
+      std::exit(1);
    }else{
       if      (fFOMType == "Separation")  fom = GetSeparation();
       else if (fFOMType == "ROCIntegral") fom = GetROCIntegral();
@@ -364,7 +364,7 @@ Double_t TMVA::OptimizeConfigParameters::GetROCIntegral()
       if ( (fMvaSigFineBin->GetXaxis()->GetXmin() !=  fMvaBkgFineBin->GetXaxis()->GetXmin()) ||
            (fMvaSigFineBin->GetNbinsX() !=  fMvaBkgFineBin->GetNbinsX()) ){
          std::cout << " Error in OptimizeConfigParameters GetROCIntegral, unequal histograms for sig and bkg.." << std::endl;
-         exit(1);
+         std::exit(1);
       }else{
           
          Double_t *cumulator  = fMvaBkgFineBin->GetIntegral();
@@ -400,7 +400,7 @@ Double_t TMVA::OptimizeConfigParameters::GetSigEffAt(Double_t bkgEff)
    if ( (fMvaSigFineBin->GetXaxis()->GetXmin() !=  fMvaBkgFineBin->GetXaxis()->GetXmin()) ||
         (fMvaSigFineBin->GetNbinsX() !=  fMvaBkgFineBin->GetNbinsX()) ){
       std::cout << " Error in OptimizeConfigParameters GetSigEffAt, unequal histograms for sig and bkg.." << std::endl;
-      exit(1);
+      std::exit(1);
    }else{
      Double_t *bkgCumulator   = fMvaBkgFineBin->GetIntegral();
       Double_t *sigCumulator   = fMvaSigFineBin->GetIntegral();
