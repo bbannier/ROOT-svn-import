@@ -1203,8 +1203,8 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev)
    Float_t weight               = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
    EFoamType ft                 = GetFoamType();
 
-   if (ft == kMultiTarget)
-      values.insert(values.end(), targets.begin(), targets.end());
+   if (ft == kMultiTarget && (ev->GetNTargets() > 0))
+      Log() << kWARNING << "<FillFoamCells>: event has non-zero target values!" << Endl;
 
    // find corresponding foam cell
    std::vector<Float_t> tvalues = VarTransform(values);
