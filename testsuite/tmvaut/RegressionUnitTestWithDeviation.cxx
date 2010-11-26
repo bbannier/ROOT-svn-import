@@ -95,7 +95,7 @@ void RegressionUnitTestWithDeviation::run()
   // setup test tree access
   TFile* testFile = new TFile("TMVARegUT.root"); // fix me hardcoded file name
   TTree* testTree = (TTree*)(testFile->Get("TestTree"));
-  const int nTest=2; // 2 reader usages
+  const int nTest=3; // 3 reader usages
   float testTarget,readerVal=0.;
 
   vector<TString>* _VariableNames = new std::vector<TString>(0); // fix me, move to constructor
@@ -119,16 +119,10 @@ void RegressionUnitTestWithDeviation::run()
 
   std::vector< TMVA::Reader* > reader(nTest);
   for (int iTest=0;iTest<nTest;iTest++){
-     
-     if (iTest<2){
-        reader[iTest] = new TMVA::Reader( "!Color:Silent" );
-        for (UInt_t i=0;i<_VariableNames->size();i++)
-           reader[iTest]->AddVariable( _VariableNames->at(i),&testvar[i]);
-     }
-     //else{
-     //   reader[iTest] = new TMVA::Reader( *_VariableNames, "!Color:Silent" );
-     //}
-
+     std::cout << "iTest="<<iTest<<std::endl;
+     reader[iTest] = new TMVA::Reader( "!Color:Silent" );
+     for (UInt_t i=0;i<_VariableNames->size();i++)
+        reader[iTest]->AddVariable( _VariableNames->at(i),&testvar[i]);
 
      reader[iTest] ->BookMVA( readerName, weightfile) ;
      
@@ -140,8 +134,9 @@ void RegressionUnitTestWithDeviation::run()
            testvarFloat[i]= testvar[i];
         }
 
-        if (iTest==0){ readerVal=(reader[iTest]->EvaluateRegression( readerName)).at(0);  } 
-        else if (iTest==1){ readerVal=reader[iTest]->EvaluateRegression( 0, readerName);}
+        if (iTest==0){ readerVal=(reader[iTest]->EvaluateRegression( readerName))[0];} 
+        else if (iTest==1){ reader[iTest]->EvaluateRegression( readerName).at(0);}
+        else if (iTest==2){ readerVal=reader[iTest]->EvaluateRegression( 0, readerName);}
         else {
            std::cout << "ERROR, undefined iTest value "<<iTest<<endl;
            exit(1);
@@ -151,6 +146,7 @@ void RegressionUnitTestWithDeviation::run()
         maxdiff = diff > maxdiff ? diff : maxdiff;
         sumdiff += diff;
         if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++; 
+        if (ievt<3) std::cout << "i="<<iTest<<", readerVal="<<readerVal<<" testTarget"<<testTarget<<" diff="<<diff<<std::endl;
      
         if (iTest ==0 ) previousVal=readerVal;
      }
