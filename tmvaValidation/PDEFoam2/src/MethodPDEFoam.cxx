@@ -448,7 +448,8 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       for (Long64_t k=0; k<GetNEvents(); k++) {
          const Event* ev = GetEvent(k);
          if ((i==0 && DataInfo().IsSignal(ev)) || (i==1 && !DataInfo().IsSignal(ev)))
-            fFoam.back()->FillBinarySearchTree(ev, IgnoreEventsWithNegWeightsInTraining());
+	    if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
+	       fFoam.back()->FillBinarySearchTree(ev);
       }
 
       Log() << kINFO << "Build up " << foamcaption[i] << Endl;
@@ -459,7 +460,8 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       for (Long64_t k=0; k<GetNEvents(); k++) {
          const Event* ev = GetEvent(k); 
          if ((i==0 && DataInfo().IsSignal(ev)) || (i==1 && !DataInfo().IsSignal(ev)))
-            fFoam.back()->FillFoamCells(ev, IgnoreEventsWithNegWeightsInTraining());
+	    if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
+	       fFoam.back()->FillFoamCells(ev);
       }
    }
 }
@@ -474,16 +476,22 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
 
    Log() << kVERBOSE << "Filling binary search tree of discriminator foam with events" << Endl;
    // insert event to BinarySearchTree
-   for (Long64_t k=0; k<GetNEvents(); k++)
-      fFoam.back()->FillBinarySearchTree(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
+   for (Long64_t k=0; k<GetNEvents(); k++) {
+      const Event* ev = GetEvent(k); 
+      if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
+	 fFoam.back()->FillBinarySearchTree(ev);
+   }
 
    Log() << kINFO << "Build up discriminator foam" << Endl;
    fFoam.back()->Create(); // build foam
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all training events -> fill foam cells with N_sig and N_Bg
-   for (UInt_t k=0; k<GetNEvents(); k++)
-      fFoam.back()->FillFoamCells(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
+   for (UInt_t k=0; k<GetNEvents(); k++) {
+      const Event* ev = GetEvent(k); 
+      if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
+	 fFoam.back()->FillFoamCells(ev);
+   }
 
    Log() << kVERBOSE << "Calculate cell discriminator"<< Endl;
    // calc discriminator (and it's error) for each cell
@@ -513,16 +521,22 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
 
    Log() << kVERBOSE << "Filling binary search tree with events" << Endl;
    // insert event to BinarySearchTree
-   for (Long64_t k=0; k<GetNEvents(); k++)
-      fFoam.back()->FillBinarySearchTree(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
+   for (Long64_t k=0; k<GetNEvents(); k++) {
+      const Event* ev = GetEvent(k); 
+      if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
+	 fFoam.back()->FillBinarySearchTree(ev);
+   }
 
    Log() << kINFO << "Build mono target regression foam" << Endl;
    fFoam.back()->Create(); // build foam
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all events -> fill foam cells with target
-   for (UInt_t k=0; k<GetNEvents(); k++)
-      fFoam.back()->FillFoamCells(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
+   for (UInt_t k=0; k<GetNEvents(); k++) {
+      const Event* ev = GetEvent(k); 
+      if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
+	 fFoam.back()->FillFoamCells(ev);
+   }
 
    Log() << kVERBOSE << "Calculate average cell targets"<< Endl;
    // calc weight (and it's error) for each cell
@@ -549,16 +563,22 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
    Log() << kVERBOSE << "Filling binary search tree of multi target regression foam with events" 
          << Endl;
    // insert event to BinarySearchTree
-   for (Long64_t k=0; k<GetNEvents(); k++)
-      fFoam.back()->FillBinarySearchTree(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
+   for (Long64_t k=0; k<GetNEvents(); k++) {
+      const Event* ev = GetEvent(k); 
+      if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
+	 fFoam.back()->FillBinarySearchTree(ev);
+   }
 
    Log() << kINFO << "Build multi target regression foam" << Endl;
    fFoam.back()->Create(); // build foam
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all events -> fill foam cells with number of events
-   for (UInt_t k=0; k<GetNEvents(); k++)
-      fFoam.back()->FillFoamCells(GetEvent(k), IgnoreEventsWithNegWeightsInTraining());
+   for (UInt_t k=0; k<GetNEvents(); k++) {
+      const Event* ev = GetEvent(k); 
+      if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
+	 fFoam.back()->FillFoamCells(ev);
+   }
 }
 
 //_______________________________________________________________________

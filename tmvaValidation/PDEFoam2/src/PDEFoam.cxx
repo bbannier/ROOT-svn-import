@@ -1187,7 +1187,7 @@ Double_t TMVA::PDEFoam::GetCellDiscr( std::vector<Float_t> &xvec, EKernel kernel
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
+void TMVA::PDEFoam::FillFoamCells(const Event* ev)
 {
    // This function fills an event into the foam.
    //
@@ -1197,17 +1197,11 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
    //
    // In case of a unified foam this function prepares the calculation of
    // the cell discriminator in every cell.
-   //
-   // If 'NoNegWeights' is true, an event with negative weight will
-   // not be filled into the foam.  (Default value: false)
 
    std::vector<Float_t> values  = ev->GetValues();
    std::vector<Float_t> targets = ev->GetTargets();
    Float_t weight               = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
    EFoamType ft                 = GetFoamType();
-
-   if((NoNegWeights && weight<=0) || weight==0)
-      return;
 
    if (ft == kMultiTarget)
       values.insert(values.end(), targets.begin(), targets.end());
@@ -2550,10 +2544,10 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::FillBinarySearchTree( const Event* ev, Bool_t NoNegWeights )
+void TMVA::PDEFoam::FillBinarySearchTree( const Event* ev )
 {
    // Insert event to internal foam density PDEFoamDistr.
-   GetDistr()->FillBinarySearchTree(ev, GetFoamType(), NoNegWeights);
+   GetDistr()->FillBinarySearchTree(ev);
 }
 
 //_____________________________________________________________________

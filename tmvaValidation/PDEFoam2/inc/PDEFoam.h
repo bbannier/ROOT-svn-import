@@ -212,11 +212,11 @@ namespace TMVA {
       // ---------- Foam creation functions
 
       void Init();                // initialize PDEFoamDensity
-      void FillBinarySearchTree( const Event* ev, Bool_t NoNegWeights=kFALSE );
+      void FillBinarySearchTree( const Event* ev ); // fill event into BST
       void Create();              // build-up foam
 
       // function to fill created cell with given value
-      void FillFoamCells(const Event* ev, Bool_t NoNegWeights=kFALSE);
+      void FillFoamCells(const Event* ev);
 
       // functions to calc discriminators/ mean targets for every cell
       // using filled cell values

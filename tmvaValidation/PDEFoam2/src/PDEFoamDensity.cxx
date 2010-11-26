@@ -95,16 +95,10 @@ void TMVA::PDEFoamDensity::Initialize(const PDEFoam *foam)
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoamDensity::FillBinarySearchTree( const Event* ev, EFoamType ft, Bool_t NoNegWeights )
+void TMVA::PDEFoamDensity::FillBinarySearchTree( const Event* ev )
 {
    // This method inserts the given event 'ev' it into the binary
    // search tree.
-   //
-   // If 'NoNegWeights' is true, an event with negative weight will
-   // not be filled into the foam.  (Default value: false)
-
-   if((NoNegWeights && ev->GetWeight()<=0) || ev->GetOriginalWeight()==0)
-      return;
 
    if (fBst == NULL)
       Log() << kFATAL << "<PDEFoamDensity::FillBinarySearchTree> "
