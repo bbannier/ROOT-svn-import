@@ -60,14 +60,14 @@
 namespace TMVA {
    class PDEFoamCell;
    class PDEFoamVect;
-   class PDEFoamDistr;
+   class PDEFoamDensity;
    class PDEFoam;
 
    enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget };
 }
 
-#ifndef ROOT_TMVA_PDEFoamDistr
-#include "TMVA/PDEFoamDistr.h"
+#ifndef ROOT_TMVA_PDEFoamDensity
+#include "TMVA/PDEFoamDensity.h"
 #endif
 #ifndef ROOT_TMVA_PDEFoamVect
 #include "TMVA/PDEFoamVect.h"
@@ -94,9 +94,6 @@ namespace TMVA {
    // kDensity       : number of events/cell volume
    enum ECellValue { kNev, kDiscriminator, kDiscriminatorError, kTarget0,
                      kTarget0Error, kMeanValue, kRms, kRmsOvMean, kDensity };
-   // separation quantity to use (kFoam: use PDEFoam algorithm)
-   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
-			kCrossEntropy };
 }
 
 namespace TMVA {
@@ -138,9 +135,8 @@ namespace TMVA {
       UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
       Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
-      EDTSeparation fDTSeparation; // split cells according to decision tree logic
       Bool_t fPeekMax;         // peek up cell with max. driver integral for split
-      PDEFoamDistr *fDistr;    //! distribution of training events
+      PDEFoamDensity *fDistr;  //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
       mutable MsgLogger* fLogger;                     //! message logger
@@ -151,7 +147,7 @@ namespace TMVA {
    private:
       // Square function (fastest implementation)
       template<typename T> T Sqr(T x) const { return x*x; }
-      PDEFoamDistr* GetDistr() const { assert(fDistr); return fDistr; }
+      PDEFoamDensity* GetDistr() const { assert(fDistr); return fDistr; }
 
    protected:
       // ---------- TMVA console output
@@ -171,8 +167,7 @@ namespace TMVA {
       // Internal foam initialization functions
       void InitCells();                   // Initialisation of all foam cells
       Int_t CellFill(Int_t, PDEFoamCell*);// Allocates new empty cell and return its index
-      void Explore(PDEFoamCell *Cell);    // Exploration of the new cell, determine <wt>, wtMax etc.
-      void DTExplore(PDEFoamCell *Cell);  // Exploration of the new cell according to decision tree logic
+      virtual void Explore(PDEFoamCell *Cell); // Exploration of the new cell, determine <wt>, wtMax etc.
       void Varedu(Double_t [], Int_t&, Double_t&,Double_t&); // Determines the best edge, variace reduction
       void MakeAlpha();             // Provides random point inside hyperrectangle
       void Grow();                  // build up foam
@@ -180,7 +175,6 @@ namespace TMVA {
       Long_t PeekLast();            // peek last created cell
       Int_t  Divide(PDEFoamCell *); // Divide iCell into two daughters; iCell retained, taged as inactive
       Double_t Eval(Double_t *xRand, Double_t &event_density); // evaluate distribution on point 'xRand'
-      Float_t GetSeparation(Float_t s, Float_t b); // calculate separation
 
       // ---------- Cell value access functions
 
@@ -217,7 +211,7 @@ namespace TMVA {
 
       // ---------- Foam creation functions
 
-      void Init();                    // initialize PDEFoamDistr
+      void Init();                // initialize PDEFoamDensity
       void FillBinarySearchTree( const Event* ev, Bool_t NoNegWeights=kFALSE );
       void Create();              // build-up foam
 
@@ -244,8 +238,8 @@ namespace TMVA {
       void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;} // set VolFrac
       void SetFoamType(EFoamType ft);   // set foam type
       void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
-      void SetDTSeparation(EDTSeparation new_val){fDTSeparation=new_val;}
       void SetPeekMax(Bool_t new_val){ fPeekMax = new_val; }
+      void SetDensity(PDEFoamDensity *dens) { fDistr = dens; }
 
       // coverity[ -tainted_data_return ]
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
@@ -347,7 +341,7 @@ namespace TMVA {
       std::vector<Float_t> GetProjectedRegValue(std::vector<Float_t> &vals, EKernel kernel=kNone, ETargetSelection ts=kMean);
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoam,5) // Tree of PDEFoamCells
+      ClassDef(PDEFoam,6) // Tree of PDEFoamCells
    }; // end of PDEFoam
 
 }  // namespace TMVA

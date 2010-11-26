@@ -440,8 +440,7 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
 
    for(int i=0; i<2; i++) {
       // create 2 PDEFoams
-      fFoam.push_back( new PDEFoam(foamcaption[i]) );
-      InitFoam(fFoam.back(), kSeparate);
+      fFoam.push_back( InitFoam(foamcaption[i], kSeparate) );
 
       Log() << kVERBOSE << "Filling binary search tree of " << foamcaption[i] 
             << " with events" << Endl;
@@ -471,8 +470,7 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
    // Create only one unified foam which contains discriminator
    // (N_sig)/(N_sig + N_bg)
 
-   fFoam.push_back( new PDEFoam("DiscrFoam") );
-   InitFoam(fFoam.back(), kDiscr);
+   fFoam.push_back( InitFoam("DiscrFoam", kDiscr) );
 
    Log() << kVERBOSE << "Filling binary search tree of discriminator foam with events" << Endl;
    // insert event to BinarySearchTree
@@ -511,9 +509,7 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
    else 
       Log() << kDEBUG << "MethodPDEFoam: number of Targets: " << Data()->GetNTargets() << Endl;
 
-   TString foamcaption = "MonoTargetRegressionFoam";
-   fFoam.push_back( new PDEFoam(foamcaption) );
-   InitFoam(fFoam.back(), kMonoTarget);
+   fFoam.push_back( InitFoam("MonoTargetRegressionFoam", kMonoTarget) );
 
    Log() << kVERBOSE << "Filling binary search tree with events" << Endl;
    // insert event to BinarySearchTree
@@ -548,9 +544,7 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
       Log() << kFATAL << "LinNeighbors kernel currently not supported" 
             << " for multi target regression" << Endl;
 
-   TString foamcaption = "MultiTargetRegressionFoam";
-   fFoam.push_back( new PDEFoam(foamcaption) );
-   InitFoam(fFoam.back(), kMultiTarget);
+   fFoam.push_back( InitFoam("MultiTargetRegressionFoam", kMultiTarget) );
 
    Log() << kVERBOSE << "Filling binary search tree of multi target regression foam with events" 
          << Endl;
@@ -659,14 +653,37 @@ void TMVA::MethodPDEFoam::SetXminXmax( TMVA::PDEFoam *pdefoam )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft)
+TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft)
 {
-   // Set foam options (incl. Xmin, Xmax) and initialize foam via 
-   // pdefoam->Init()
+   // Create new PDEFoam and set foam options (incl. Xmin, Xmax) and
+   // initialize foam via pdefoam->Init()
+   
+   PDEFoam *pdefoam = NULL;
+   if (fDTSeparation == kFoam) {
+      pdefoam = new PDEFoam(foamcaption);
+      // set the density type
+      PDEFoamDensity *density = NULL;
+      switch (ft) {
+      case kSeparate:
+      case kMultiTarget:
+	 density = new PDEFoamEventDensity(pdefoam);
+	 break;
+      case kDiscr:
+	 density = new PDEFoamDiscriminantDensity(pdefoam);
+	 break;
+      case kMonoTarget:
+	 density = new PDEFoamTargetDensity(pdefoam);
+	 break;
+      default:
+	 Log() << kFATAL << "Unknown PDEFoam type!" << Endl;
+	 break;
+      }
+      pdefoam->SetDensity(density);
 
-   if (!pdefoam){
-      Log() << kFATAL << "Null pointer given!" << Endl;
-      return;
+   } else {
+      // create a decision tree like pdefoam
+      pdefoam = new PDEFoamDecisionTree(foamcaption, fDTSeparation);
+      pdefoam->SetDensity(new PDEFoamDTDensity(pdefoam));
    }
 
    // set fLogger attributes
@@ -687,7 +704,6 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft)
    pdefoam->SetnBin(        fnBin);      // optional
    pdefoam->SetEvPerBin(    fEvPerBin);  // optional
    pdefoam->SetFillFoamWithOrigWeights(fFillFoamWithOrigWeights);
-   pdefoam->SetDTSeparation(fDTSeparation);
    pdefoam->SetPeekMax(fPeekMax);
 
    // cuts
@@ -699,6 +715,8 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft)
    
    // Set Xmin, Xmax
    SetXminXmax(pdefoam);
+
+   return pdefoam;
 }
 
 //_______________________________________________________________________
