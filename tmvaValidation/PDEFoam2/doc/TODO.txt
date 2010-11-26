@@ -1,0 +1,12 @@
+For December 2010 release (5.28):
+
+
+* Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, double aux ) does not work with TMlpAnn
+* Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, double aux ) does not work with MethodBoost
+
+* unit test breaks with makeclass and LikelihoodD and FisherG (only slight deviation)
+* regression with MLP und backpropagation (BP): bad performance
+* unit test breaks with Regression BDT und VarTransform=N: bad performance
+* Parallel coordinates crashes
+* Problem im CreateMvaPDF for Fisher
+* unit test break with Regression-ReaderApplication and PDEFoam
