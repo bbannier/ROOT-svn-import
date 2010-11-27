@@ -263,7 +263,7 @@ void topDriver(string input ){
           // use factory to create the workspace
           string ch_name=oneChannel[0].channel;
           ch_names.push_back(ch_name);
-          RooWorkspace * ws = factory.makeSingleChannelModel(oneChannel, systToFix);
+          RooWorkspace * ws = factory.MakeSingleChannelModel(oneChannel, systToFix);
           chs.push_back(ws);
           // set poi in ModelConfig
           ModelConfig * proto_config = (ModelConfig *) ws->obj("ModelConfig");
@@ -283,16 +283,16 @@ void topDriver(string input ){
           proto_config->SetNuisanceParameters(*constrainedParams);
           ws->Print();
 
-          // Gamma Constraints:
-          // turn some Gaussian constraints into Gamma constraints, rename model newSimPdf
-	  if(gammaSyst.size()>0) {
-	    factory.editSyst(ws,("model_"+oneChannel[0].channel).c_str(),gammaSyst);
+          // Gamma/Uniform Constraints:
+          // turn some Gaussian constraints into Gamma/Uniform constraints, rename model newSimPdf
+	  if(gammaSyst.size()>0 || uniformSyst.size()>0) {
+	    factory.EditSyst(ws,("model_"+oneChannel[0].channel).c_str(),gammaSyst,uniformSyst);
 	    proto_config->SetPdf(*ws->pdf("newSimPdf"));
           }
 
 	  // TO DO:
           // Totally factorize the statistical test in "fit Model" to a different area
-          factory.fitModel(ws, ch_name, "model_"+ch_name, "expData", false);
+          factory.FitModel(ws, ch_name, "model_"+ch_name, "expData", false);
           fprintf(factory.pFile, " & " );
         }
 
@@ -306,7 +306,7 @@ void topDriver(string input ){
 
           
         if(mode.find("comb")!=string::npos){ 
-          RooWorkspace* ws=factory.makeCombinedModel(ch_names,chs);
+          RooWorkspace* ws=factory.MakeCombinedModel(ch_names,chs);
           //
           // set parameter of interest according to the configuration
           //
@@ -323,7 +323,7 @@ void topDriver(string input ){
 
 	  // TO DO:
           // Totally factorize the statistical test in "fit Model" to a different area
-          factory.fitModel(ws, "combined", "simPdf", "simData", false);
+          factory.FitModel(ws, "combined", "simPdf", "simData", false);
         }
 
 
