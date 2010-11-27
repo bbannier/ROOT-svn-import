@@ -32,19 +32,9 @@ ClassImp(TMVA::PDEFoamKernel)
 //_____________________________________________________________________
 TMVA::PDEFoamKernel::PDEFoamKernel()
    : TObject()
-   , fPDEFoam(NULL)
    , fLogger(new MsgLogger("PDEFoamKernel"))
 {
    // Default constructor for streamer
-}
-
-//_____________________________________________________________________
-TMVA::PDEFoamKernel::PDEFoamKernel(PDEFoam *foam)
-   : TObject()
-   , fPDEFoam(foam)
-   , fLogger(new MsgLogger("PDEFoamKernel"))
-{
-   // User constructor
 }
 
 //_____________________________________________________________________
@@ -56,19 +46,21 @@ TMVA::PDEFoamKernel::~PDEFoamKernel()
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoamKernel::Estimate(std::vector<Float_t> &txvec, ECellValue cv)
+Float_t TMVA::PDEFoamKernel::Estimate(PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv)
 {
    // Simple kernel estimator.  It returns the cell value 'cv',
    // corresponding to the event vector 'txvec' (in foam coordinates).
    //
    // Parameters:
    //
+   // - foam - the pdefoam to search in
+   //
    // - txvec - event vector in foam coordinates [0,1]
    //
    // - cv - cell value to estimate
 
-   if (fPDEFoam == NULL)
+   if (foam == NULL)
       Log() << kFATAL << "<PDEFoamKernel::Estimate>: PDEFoam not set!" << Endl;
 
-   return fPDEFoam->GetCellValue(fPDEFoam->FindCell(txvec), cv);
+   return foam->GetCellValue(foam->FindCell(txvec), cv);
 }

@@ -39,16 +39,14 @@ namespace TMVA {
    class PDEFoamKernel : public TObject {
 
    protected:
-      PDEFoam *fPDEFoam;           //! owner PDEFoam
       mutable MsgLogger* fLogger;  //! message logger
 
    public:
       PDEFoamKernel();                 // Constructor
-      PDEFoamKernel(PDEFoam*);         // USER Constructor
       virtual ~PDEFoamKernel();        // Destructor
 
       // kernel estimator
-      virtual Float_t Estimate( std::vector<Float_t>&, ECellValue );
+      virtual Float_t Estimate( PDEFoam*, std::vector<Float_t>&, ECellValue );
 
       // Message logger
       MsgLogger& Log() const { return *fLogger; }

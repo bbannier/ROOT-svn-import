@@ -175,6 +175,9 @@ namespace TMVA {
       // create foam and set foam options
       PDEFoam* InitFoam(TString, EFoamType);
 
+      // create pdefoam kernel
+      PDEFoamKernel* CreatePDEFoamKernel();
+
       // fill variable names into foam
       void FillVariableNamesToFoam() const;
 
