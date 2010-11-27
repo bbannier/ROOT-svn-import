@@ -61,11 +61,21 @@ namespace TMVA {
    class PDEFoamCell;
    class PDEFoamVect;
    class PDEFoamDensity;
+   class PDEFoamKernel;
    class PDEFoam;
 
    enum EKernel { kNone=0, kGaus=1, kLinN=2 };
    enum ETargetSelection { kMean=0, kMpv=1 };
    enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget };
+
+   // enum type for possible foam cell values
+   // kValue         : cell value who's rms is minimized
+   // kValueError    : error on kValue
+   // kMeanValue     : mean sampling value (saved in fIntegral)
+   // kRms           : rms of sampling distribution (saved in fDriver)
+   // kRmsOvMean     : rms/mean of sampling distribution (saved in
+   //                  fDriver and fIntegral)
+   enum ECellValue { kValue, kValueError, kMeanValue, kRms, kRmsOvMean, kCellVolume };
 }
 
 #ifndef ROOT_TMVA_PDEFoamDensity
@@ -77,17 +87,9 @@ namespace TMVA {
 #ifndef ROOT_TMVA_PDEFoamCell
 #include "TMVA/PDEFoamCell.h"
 #endif
-
-namespace TMVA {
-   // enum type for possible foam cell values
-   // kValue         : cell value who's rms is minimized
-   // kValueError    : error on kValue
-   // kMeanValue     : mean sampling value (saved in fIntegral)
-   // kRms           : rms of sampling distribution (saved in fDriver)
-   // kRmsOvMean     : rms/mean of sampling distribution (saved in
-   //                  fDriver and fIntegral)
-   enum ECellValue { kValue, kValueError, kMeanValue, kRms, kRmsOvMean, kCellVolume };
-}
+#ifndef ROOT_TMVA_PDEFoamKernel
+#include "TMVA/PDEFoamKernel.h"
+#endif
 
 namespace TMVA {
 
@@ -292,7 +294,7 @@ namespace TMVA {
       // ---------- Foam evaluation functions
 
       // get cell value for a given event
-      virtual Float_t GetCellValue( std::vector<Float_t>& xvec, ECellValue cv );
+      virtual Float_t GetCellValue( std::vector<Float_t>& xvec, ECellValue cv, PDEFoamKernel* );
 
       // get cell value stored in a foam cell
       virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv );

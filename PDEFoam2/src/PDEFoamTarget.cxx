@@ -108,7 +108,7 @@ Bool_t TMVA::PDEFoamTarget::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv)
+Float_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel *kernel)
 {
    // This function finds the cell, which corresponds to the given
    // untransformed event vector 'xvec' and return its value, which is
@@ -121,10 +121,13 @@ Float_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValue
    std::vector<Float_t> txvec(VarTransform(xvec));
    PDEFoamCell *cell = FindCell(txvec);
 
-   if (!CellValueIsUndefined(cell))
+   if (!CellValueIsUndefined(cell)) {
       // cell is not empty
-      return GetCellValue(cell, cv);
-   else
+      if (kernel == NULL)
+	 return GetCellValue(cell, cv);
+      else
+	 return kernel->Estimate(txvec, cv);
+   } else
       // cell is empty -> calc average target of neighbor cells
       return GetAverageNeighborsValue(txvec, kValue);
 }

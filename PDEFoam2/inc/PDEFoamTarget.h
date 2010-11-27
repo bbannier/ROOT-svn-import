@@ -59,7 +59,7 @@ namespace TMVA {
       // function to call after foam is grown
       virtual void Finalize();
 
-      Float_t GetCellValue(std::vector<Float_t> &xvec, ECellValue cv);
+      Float_t GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel*);
       using PDEFoam::GetCellValue;
 
       // ---------- ROOT class definition
