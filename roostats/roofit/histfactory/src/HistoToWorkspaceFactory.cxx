@@ -419,8 +419,8 @@ namespace HistFactory{
     string editList;
     string lastPdf=pdfName;
     string preceed="";
-    int numReplacements = 0;
-    int nskipped = 0;
+    unsigned int numReplacements = 0;
+    unsigned int nskipped = 0;
     map<string,double>::iterator it;
 
     // add gamma terms and their constraints
@@ -576,7 +576,7 @@ namespace HistFactory{
   }
 
   void HistoToWorkspaceFactory::PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename){
-    FILE * pFile;
+    //    FILE * pFile;
     pFile = fopen ((filename).c_str(),"w"); 
 
 
