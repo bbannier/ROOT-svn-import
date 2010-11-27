@@ -47,7 +47,8 @@ TMVAH3       := Config.h KDEKernel.h Interval.h FitterBase.h MCFitter.h GeneticF
 		PDEFoam.h PDEFoamDecisionTree.h PDEFoamDensity.h PDEFoamDiscriminantDensity.h \
 		PDEFoamEventDensity.h PDEFoamTargetDensity.h PDEFoamDTDensity.h PDEFoamMultiTarget.h \
 		PDEFoamVect.h PDEFoamCell.h PDEFoamDiscriminant.h PDEFoamEvent.h PDEFoamTarget.h \
-		 BDTEventWrapper.h CCTreeWrapper.h \
+		PDEFoamKernel.h \
+		BDTEventWrapper.h CCTreeWrapper.h \
 		CCPruner.h CostComplexityPruneTool.h SVEvent.h
 TMVAH4       := TNeuron.h TSynapse.h TActivationChooser.h TActivation.h TActivationSigmoid.h TActivationIdentity.h \
 		TActivationTanh.h TActivationRadial.h TNeuronInputChooser.h TNeuronInput.h TNeuronInputSum.h \

@@ -298,6 +298,9 @@ namespace TMVA {
       virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv );
       virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv, Int_t idim1, Int_t idim2 );
 
+      // ---------- friend classes
+      friend class PDEFoamKernel;
+
       // ---------- ROOT class definition
       ClassDef(PDEFoam,6) // Tree of PDEFoamCells
    }; // end of PDEFoam
