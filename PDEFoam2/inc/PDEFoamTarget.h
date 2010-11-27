@@ -43,7 +43,7 @@ namespace TMVA {
       Bool_t CellValueIsUndefined( PDEFoamCell* cell );
 
       // calculate the average of the neighbor cell values
-      Double_t GetAverageNeighborsValue( std::vector<Float_t>&,	ECellValue );
+      Float_t GetAverageNeighborsValue( std::vector<Float_t>&,	ECellValue );
 
       PDEFoamTarget(const PDEFoamTarget&); // Copy Constructor  NOT USED
 
@@ -59,7 +59,7 @@ namespace TMVA {
       // function to call after foam is grown
       virtual void Finalize();
 
-      Double_t GetCellValue(std::vector<Float_t> &xvec, ECellValue cv);
+      Float_t GetCellValue(std::vector<Float_t> &xvec, ECellValue cv);
       using PDEFoam::GetCellValue;
 
       // ---------- ROOT class definition

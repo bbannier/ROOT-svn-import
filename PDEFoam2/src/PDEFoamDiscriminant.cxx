@@ -85,8 +85,8 @@ void TMVA::PDEFoamDiscriminant::Finalize()
       if (!(fCells[iCell]->GetStat()))
          continue;
 
-      Double_t N_sig = GetCellElement(fCells[iCell], 0); // get number of signal events
-      Double_t N_bg  = GetCellElement(fCells[iCell], 1); // get number of bg events
+      Float_t N_sig = GetCellElement(fCells[iCell], 0); // get number of signal events
+      Float_t N_bg  = GetCellElement(fCells[iCell], 1); // get number of bg events
 
       if (N_sig<0.) {
          Log() << kWARNING << "Negative number of signal events in cell " << iCell
@@ -115,7 +115,7 @@ void TMVA::PDEFoamDiscriminant::Finalize()
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDiscriminant::GetCellValue( PDEFoamCell* cell, ECellValue cv,
+Float_t TMVA::PDEFoamDiscriminant::GetCellValue( PDEFoamCell* cell, ECellValue cv,
 						  Int_t idim1, Int_t idim2 )
 {
    // Return the discriminant projected onto the dimensions 'dim1',
@@ -129,7 +129,7 @@ Double_t TMVA::PDEFoamDiscriminant::GetCellValue( PDEFoamCell* cell, ECellValue 
       cell->GetHcub(cellPosi,cellSize);
 
       // calculate cell volume in other dimensions (not including idim1 and idim2)
-      Double_t area_cell = 1.;
+      Float_t area_cell = 1.;
       for (Int_t d1=0; d1<GetTotDim(); d1++){
          if ((d1!=idim1) && (d1!=idim2))
             area_cell *= cellSize[d1];

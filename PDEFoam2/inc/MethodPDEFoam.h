@@ -193,8 +193,8 @@ namespace TMVA {
 
       // options to be used
       Bool_t        fSigBgSeparated;  // Separate Sig and Bg, or not
-      Double_t      fFrac;            // Fraction used for calc of Xmin, Xmax
-      Double_t      fDiscrErrCut;     // cut on discrimant error
+      Float_t       fFrac;            // Fraction used for calc of Xmin, Xmax
+      Float_t       fDiscrErrCut;     // cut on discrimant error
       Float_t       fVolFrac;         // inverse volume fraction (used for density calculation during buildup)
       Float_t       fVolFracInv;      // volume fraction (used for density calculation during buildup)
       Int_t         fnCells;          // Number of Cells  (1000)
@@ -219,7 +219,7 @@ namespace TMVA {
       EDTSeparation fDTSeparation;    // enum which specifies the separation to use for the DT logic
       Bool_t        fPeekMax;         // peek up cell with max. driver integral for split
 
-      std::vector<Double_t> fXmin, fXmax; // range for histograms and foams
+      std::vector<Float_t> fXmin, fXmax; // range for histograms and foams
 
       // foams and densities
       // foam[0]=signal, if Sig and BG are Seperated; else foam[0]=signal/bg

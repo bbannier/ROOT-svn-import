@@ -77,7 +77,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetTargets( std::vector<Float_t> 
    std::vector<Float_t> tvals(VarTransform(vals));
    std::vector<Float_t> target(GetTotDim()-tvals.size(), 0); // returned vector
    std::vector<Float_t> norm(target); // normalisation
-   Double_t max_dens = 0.;            // maximum cell density
+   Float_t max_dens = 0.;            // maximum cell density
 
    // find cells, which fit tvals (no targets)
    std::vector<PDEFoamCell*> cells = FindCells(tvals);
@@ -88,8 +88,8 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetTargets( std::vector<Float_t> 
    for (cell_it=cells.begin(); cell_it!=cells.end(); cell_it++){
 
       // get density of cell
-      Double_t cell_volume  = GetCellValue(*cell_it, kCellVolume);
-      Double_t cell_density = 0;
+      Float_t cell_volume  = GetCellValue(*cell_it, kCellVolume);
+      Float_t cell_density = 0;
       if (cell_volume > 1e-20)
 	 cell_density = GetCellValue(*cell_it, kValue) / cell_volume;
 

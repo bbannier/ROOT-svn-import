@@ -56,7 +56,7 @@ TMVA::PDEFoamVect::PDEFoamVect(Int_t n)
    // and allocating dynamically array of components
 
    if (n>0) {
-      fCoords = new Double_t[fDim];
+      fCoords = new Float_t[fDim];
       for (Int_t i=0; i<n; i++) *(fCoords+i)=0.0;
    }
 }
@@ -93,7 +93,7 @@ TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator =(const PDEFoamVect& Vect)
       Error( "PDEFoamVect","operator=Dims. are different: %d and %d \n ",fDim,Vect.fDim);
    if( fDim != Vect.fDim ) {  // cleanup
       delete [] fCoords;
-      fCoords = new Double_t[fDim];
+      fCoords = new Float_t[fDim];
    }
    fDim=Vect.fDim;
    for(Int_t i=0; i<fDim; i++)
@@ -102,7 +102,7 @@ TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator =(const PDEFoamVect& Vect)
 }
 
 //_____________________________________________________________________
-Double_t &TMVA::PDEFoamVect::operator[](Int_t n)
+Float_t &TMVA::PDEFoamVect::operator[](Int_t n)
 {
    // [] is for access to elements as in ordinary matrix like a[j]=b[j]
    // (Perhaps against some strict rules but rather practical.)
@@ -116,7 +116,7 @@ Double_t &TMVA::PDEFoamVect::operator[](Int_t n)
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator*=(const Double_t &x)
+TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator*=(const Float_t &x)
 {
    // unary multiplication operator *=
 
@@ -172,7 +172,7 @@ TMVA::PDEFoamVect TMVA::PDEFoamVect::operator-(const PDEFoamVect &p2)
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator =(Double_t Vect[])
+TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator =(Float_t Vect[])
 {
    // Loading in ordinary double prec. vector, sometimes can be useful
    for(Int_t i=0; i<fDim; i++)
@@ -181,7 +181,7 @@ TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator =(Double_t Vect[])
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator =(Double_t x)
+TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator =(Float_t x)
 {
    // Loading in double prec. number, sometimes can be useful
    if(fCoords != 0) {

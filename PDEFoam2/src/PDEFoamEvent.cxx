@@ -69,7 +69,7 @@ void TMVA::PDEFoamEvent::FillFoamCells(const Event* ev, Float_t wt)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamEvent::GetCellValue( PDEFoamCell* cell, ECellValue cv,
+Float_t TMVA::PDEFoamEvent::GetCellValue( PDEFoamCell* cell, ECellValue cv,
 					   Int_t idim1, Int_t idim2 )
 {
    // Return the discriminant projected onto the dimensions 'dim1',
@@ -83,9 +83,9 @@ Double_t TMVA::PDEFoamEvent::GetCellValue( PDEFoamCell* cell, ECellValue cv,
       cell->GetHcub(cellPosi,cellSize);
 
       // calculate projected area of cell
-      const Double_t area = cellSize[idim1] * cellSize[idim2];
+      const Float_t area = cellSize[idim1] * cellSize[idim2];
       // calculate projected area of whole foam
-      const Double_t foam_area = (fXmax[idim1]-fXmin[idim1])*(fXmax[idim2]-fXmin[idim2]);
+      const Float_t foam_area = (fXmax[idim1]-fXmin[idim1])*(fXmax[idim2]-fXmin[idim2]);
       if (area<1e-20){
          Log() << kWARNING << "<Project2>: Warning, cell volume too small --> skiping cell!" << Endl;
          return 0;

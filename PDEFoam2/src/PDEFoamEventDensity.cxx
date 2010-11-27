@@ -56,7 +56,7 @@ TMVA::PDEFoamEventDensity::PDEFoamEventDensity(const PDEFoamEventDensity &distr)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamEventDensity::Density( Double_t *Xarg, Double_t &event_density )
+Float_t TMVA::PDEFoamEventDensity::Density( Float_t *Xarg, Float_t &event_density )
 {
    // This function is needed during the foam buildup.  It return the
    // event density within volume (specified by VolFrac).
@@ -77,15 +77,15 @@ Double_t TMVA::PDEFoamEventDensity::Density( Double_t *Xarg, Double_t &event_den
       Xarg[idim] = GetPDEFoam()->VarTransformInvers(idim, Xarg[idim]);
 
    //create volume around point to be found
-   std::vector<Double_t> lb(Dim);
-   std::vector<Double_t> ub(Dim);
+   std::vector<Float_t> lb(Dim);
+   std::vector<Float_t> ub(Dim);
 
    // probevolume relative to hypercube with edge length 1:
-   const Double_t probevolume_inv = std::pow((VolFrac/2), Dim);
+   const Float_t probevolume_inv = std::pow((VolFrac/2), Dim);
 
    // set upper and lower bound for search volume
    for (Int_t idim = 0; idim < Dim; idim++) {
-      Double_t volsize=(GetPDEFoam()->GetXmax(idim) 
+      Float_t volsize=(GetPDEFoam()->GetXmax(idim) 
 			- GetPDEFoam()->GetXmin(idim)) / VolFrac;
       lb[idim] = Xarg[idim] - volsize;
       ub[idim] = Xarg[idim] + volsize;
@@ -100,7 +100,7 @@ Double_t TMVA::PDEFoamEventDensity::Density( Double_t *Xarg, Double_t &event_den
    // store density based on total number of events
    event_density = nodes.size() * probevolume_inv;
 
-   Double_t weighted_count = 0.; // number of events found (sum of weights)
+   Float_t weighted_count = 0.; // number of events found (sum of weights)
    for (UInt_t j=0; j<nodes.size(); j++)
       weighted_count += (nodes.at(j))->GetWeight();
 
