@@ -286,7 +286,6 @@ namespace TMVA {
       void     PrintCells();     // Prints content of all cells
       void     CheckCells(Bool_t remove_empty_cells=false);   // check all cells with respect to critical values
       void     RemoveEmptyCell(Int_t iCell); // removes iCell if its volume is zero
-      void     PrintCellElements();          // print all cells with its elements
 
       // Message logger
       MsgLogger& Log() const { return *fLogger; }

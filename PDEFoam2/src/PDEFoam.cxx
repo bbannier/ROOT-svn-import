@@ -879,7 +879,8 @@ void TMVA::PDEFoam::CheckAll(Int_t level)
 //_____________________________________________________________________
 void TMVA::PDEFoam::PrintCell(Long_t iCell)
 {
-   // Prints geometry of 'iCell'
+   // Prints geometry of and elements of 'iCell', as well as relations
+   // to parent and daughter cells.
 
    if (iCell < 0 || iCell > fLastCe) {
       Log() << kWARNING << "<PrintCell(iCell=" << iCell
@@ -909,6 +910,17 @@ void TMVA::PDEFoam::PrintCell(Long_t iCell)
    }
    Log() << ")" << Endl;
    fCells[iCell]->Print("1");
+   // print the cell elements
+   Log() << "Elements: [";
+   TVectorD *vec = (TVectorD*)fCells[iCell]->GetElement();
+   if (vec != NULL){
+      for (Int_t i=0; i<vec->GetNrows(); i++){
+	 if (i>0) Log() << ", ";
+	 Log() << GetCellElement(fCells[iCell], i);
+      }
+   } else
+      Log() << "not set";
+   Log() << "]" << Endl;
    Log()<<"}"<<Endl;
 }
 
@@ -999,28 +1011,6 @@ void TMVA::PDEFoam::CheckCells( Bool_t remove_empty_cells )
                   << volume << " cell number: " << iCell << Endl;
          }
       }
-   }
-}
-
-//_____________________________________________________________________
-void TMVA::PDEFoam::PrintCellElements()
-{
-   // This debug function prints the cell elements of all active
-   // cells.
-
-   for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
-      if (!fCells[iCell]->GetStat()) continue;
-
-      Log() << "cell[" << iCell << "] elements: [";
-      TVectorD *vec = (TVectorD*)fCells[iCell]->GetElement();
-      if (vec != NULL){
-	 for (Int_t i=0; i<vec->GetNrows(); i++){
-	    if (i>0) Log() << " , ";
-	    Log() << GetCellElement(fCells[iCell], i);
-	 }
-      } else
-	 Log() << "not set";
-      Log() << "]" << Endl;
    }
 }
 
