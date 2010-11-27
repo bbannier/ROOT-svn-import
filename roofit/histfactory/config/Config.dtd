@@ -47,7 +47,7 @@ of the model in the channel setup. Typically the NormFactor for xsec measurement
 <!ELEMENT ConstraintTerm (#PCDATA)>
 <!ATTLIST ConstraintTerm 
         Type                  CDATA       #REQUIRED
-        RelativeUncertainty   CDATA       #REQUIRED       
+        RelativeUncertainty   CDATA       #IMPLIED
 >
 
 <!-- Top element for channels. InputFile, HistoName and HistoPath

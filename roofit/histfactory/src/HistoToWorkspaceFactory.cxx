@@ -94,33 +94,33 @@ namespace HistFactory{
   }
 
   HistoToWorkspaceFactory::HistoToWorkspaceFactory(string row, vector<string> syst, double nomL, double lumiE, int low, int high, TFile* f):
-      rowTitle(row),
-      systToFix(syst),
-      nomLumi(nomL),
-      lumiError(lumiE),
-      lowBin(low),
-      highBin(high),
-      out_f(f) {
+      fRowTitle(row),
+      fSystToFix(syst),
+      fNomLumi(nomL),
+      fLumiError(lumiE),
+      fLowBin(low),
+      fHighBin(high),
+      fOut_f(f) {
 
-    resultsPrefixStr<<"results" << "_" << nomLumi<< "_" << lumiError<< "_" << lowBin<< "_" << highBin;
-    while(rowTitle.find("\\ ")!=string::npos){
-      int pos=rowTitle.find("\\ ");
-      rowTitle.replace(pos, 1, "");
+    fResultsPrefixStr<<"results" << "_" << fNomLumi<< "_" << fLumiError<< "_" << fLowBin<< "_" << fHighBin;
+    while(fRowTitle.find("\\ ")!=string::npos){
+      int pos=fRowTitle.find("\\ ");
+      fRowTitle.replace(pos, 1, "");
     }
-    pFile = fopen (("results/"+resultsPrefixStr.str()+".table").c_str(),"a"); 
+    pFile = fopen (("results/"+fResultsPrefixStr.str()+".table").c_str(),"a"); 
     //RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 
   }
 
-  string HistoToWorkspaceFactory::filePrefixStr(string prefix){
+  string HistoToWorkspaceFactory::FilePrefixStr(string prefix){
 
     stringstream ss;
-    ss << prefix << "_" << nomLumi<< "_" << lumiError<< "_" << lowBin<< "_" << highBin<< "_"<<rowTitle;
+    ss << prefix << "_" << fNomLumi<< "_" << fLumiError<< "_" << fLowBin<< "_" << fHighBin<< "_"<<fRowTitle;
 
     return ss.str();
   }
 
-  void HistoToWorkspaceFactory::processExpectedHisto(TH1F* hist,RooWorkspace* proto, string prefix, string productPrefix, string systTerm, double low, double high, int lowBin, int highBin){
+  void HistoToWorkspaceFactory::ProcessExpectedHisto(TH1F* hist,RooWorkspace* proto, string prefix, string productPrefix, string systTerm, double low, double high, int lowBin, int highBin){
     if(hist)
       cout << "processing hist " << hist->GetName() << endl;
     else
@@ -148,7 +148,7 @@ namespace HistFactory{
     // proto->Print();
   }
 
-  void HistoToWorkspaceFactory::addMultiVarGaussConstraint(RooWorkspace* proto, string prefix,int lowBin, int highBin, vector<string>& likelihoodTermNames){
+  void HistoToWorkspaceFactory::AddMultiVarGaussConstraint(RooWorkspace* proto, string prefix,int lowBin, int highBin, vector<string>& likelihoodTermNames){
     // these are the nominal predictions: eg. the mean of some space of variations
     // later fill these in a loop over histogram bins
     TVectorD mean(highBin-lowBin);
@@ -181,7 +181,7 @@ namespace HistFactory{
   }
 
 
-  void HistoToWorkspaceFactory::linInterpWithConstraint(RooWorkspace* proto, TH1F* nominal, vector<TH1F*> lowHist, vector<TH1F*> highHist, 
+  void HistoToWorkspaceFactory::LinInterpWithConstraint(RooWorkspace* proto, TH1F* nominal, vector<TH1F*> lowHist, vector<TH1F*> highHist, 
              vector<string> sourceName, string prefix, string productPrefix, string systTerm, 
              int lowBin, int highBin, vector<string>& likelihoodTermNames){
     // these are the nominal predictions: eg. the mean of some space of variations
@@ -239,7 +239,7 @@ namespace HistFactory{
 
   }
 
-  string HistoToWorkspaceFactory::addNormFactor(RooWorkspace * proto, string & channel, string & sigmaEpsilon, EstimateSummary & es, bool doRatio){
+  string HistoToWorkspaceFactory::AddNormFactor(RooWorkspace * proto, string & channel, string & sigmaEpsilon, EstimateSummary & es, bool doRatio){
     string overallNorm_times_sigmaEpsilon ;
     string prodNames;
     vector<EstimateSummary::NormFactor> norm=es.normFactor;
@@ -273,7 +273,7 @@ namespace HistFactory{
   }        
 
 
-  void HistoToWorkspaceFactory::addEfficiencyTerms(RooWorkspace* proto, string prefix, string interpName,
+  void HistoToWorkspaceFactory::AddEfficiencyTerms(RooWorkspace* proto, string prefix, string interpName,
         map<string,pair<double,double> > systMap, 
         vector<string>& likelihoodTermNames, vector<string>& totSystTermNames){
     // add variables for all the relative overall uncertainties we expect
@@ -313,7 +313,7 @@ namespace HistFactory{
   }
 
 
-  void  HistoToWorkspaceFactory::makeTotalExpected(RooWorkspace* proto, string totName, string /**/, string /**/, 
+  void  HistoToWorkspaceFactory::MakeTotalExpected(RooWorkspace* proto, string totName, string /**/, string /**/, 
         int lowBin, int highBin, vector<string>& syst_x_expectedPrefixNames, 
         vector<string>& normByNames){
 
@@ -335,7 +335,7 @@ namespace HistFactory{
     }
   }
 
-  void HistoToWorkspaceFactory::addPoissonTerms(RooWorkspace* proto, string prefix, string obsPrefix, string expPrefix, int lowBin, int highBin, 
+  void HistoToWorkspaceFactory::AddPoissonTerms(RooWorkspace* proto, string prefix, string obsPrefix, string expPrefix, int lowBin, int highBin, 
            vector<string>& likelihoodTermNames){
     /////////////////////////////////
     // Relate observables to expected for each bin
@@ -358,7 +358,7 @@ namespace HistFactory{
     proto->defineSet(prefix.c_str(),Pois); // add argset to workspace
   }
 
-   void HistoToWorkspaceFactory::setObsToExpected(RooWorkspace* proto, string obsPrefix, string expPrefix, int lowBin, int highBin){ 
+   void HistoToWorkspaceFactory::SetObsToExpected(RooWorkspace* proto, string obsPrefix, string expPrefix, int lowBin, int highBin){ 
     /////////////////////////////////
     // set observed to expected
      TTree* tree = new TTree();
@@ -392,7 +392,7 @@ namespace HistFactory{
 
   }
 
-  void HistoToWorkspaceFactory::customize(RooWorkspace* proto, const char* pdfNameChar, map<string,string> renameMap) {
+  void HistoToWorkspaceFactory::Customize(RooWorkspace* proto, const char* pdfNameChar, map<string,string> renameMap) {
     cout << "in customizations" << endl;
     string pdfName(pdfNameChar);
     map<string,string>::iterator it;
@@ -408,16 +408,22 @@ namespace HistFactory{
     proto->factory( edit.c_str() );
   }
 
-  void HistoToWorkspaceFactory::editSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst) {
-    cout << "in edit, map.size = " << gammaSyst.size() << endl;
+  void HistoToWorkspaceFactory::EditSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst, map<string,double> uniformSyst) {
+    cout << "in edit, gammamap.size = " << gammaSyst.size() << ", unimap.size = " << uniformSyst.size() << endl;
     string pdfName(pdfNameChar);
 
     ModelConfig * combined_config = (ModelConfig *) proto->obj("ModelConfig");
     const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
     RooArgSet temp(*constrainedParams);
+    string edit="EDIT::newSimPdf("+pdfName+",";
+    string editList;
+    string lastPdf=pdfName;
+    string preceed="";
+    int numReplacements = 0;
     int nskipped = 0;
     map<string,double>::iterator it;
-    // add beta terms and their constraints
+
+    // add gamma terms and their constraints
     for(it=gammaSyst.begin(); it!=gammaSyst.end(); ++it) {
       cout << "edit for " << it->first << "with rel uncert = " << it->second << endl;
       if(! proto->var(("alpha_"+it->first).c_str())){
@@ -425,11 +431,11 @@ namespace HistFactory{
 	nskipped++; 
 	continue;
       }
+      numReplacements++;      
 
       double relativeUncertainty = it->second;
       double scale = 1/sqrt((1+1/pow(relativeUncertainty,2)));
       
-
       // this is the Gamma PDF and in a form that doesn't have roundoff problems like the Poisson does
       proto->factory(Form("beta_%s[1,0,10]",it->first.c_str()));
       proto->factory(Form("y_%s[%f]",it->first.c_str(),1./pow(relativeUncertainty,2))) ;
@@ -458,7 +464,6 @@ namespace HistFactory{
       //	combined->factory(Form("expr::alphaOfBeta_%s('(beta_%s-1)/%f',beta_%s)",it->first.c_str(),it->first.c_str(),scale,it->first.c_str()));
       proto->factory(Form("PolyVar::alphaOfBeta_%s(beta_%s,{%f,%f})",it->first.c_str(),it->first.c_str(),-1./scale,1./scale));
 	
-
       // clean up constraints
       cout << "got here, about to remove" << endl;
       temp.remove(*proto->var(Form("alpha_%s",it->first.c_str())));
@@ -474,28 +479,7 @@ namespace HistFactory{
       // set alpha const status to true
       //      proto->var(Form("alpha_%s",it->first.c_str()))->setConstant(true);
 
-    }
-
-    // doesn't seem to be changing nuisance parameters as it should be
-    // but fit to and nll are now auto-detecting the nuisance parameters
-    //    cout << "check new list of nuisance parameters" << endl;
-    //    temp.Print();
-    //    combined_config->SetNuisanceParameters(temp);
-    //    cout << "KC CHECK 3" << endl;
-    combined_config->GetNuisanceParameters()->Print();
-
-    // replace alphas with alphaOfBeta and replace constraints
-    string edit="EDIT::newSimPdf("+pdfName+",";
-    string editList;
-    string lastPdf=pdfName;
-    string preceed="";
-    int numReplacements = 0;
-    for(it=gammaSyst.begin(); it!=gammaSyst.end(); ++it) {
-      if(! proto->var(("alpha_"+it->first).c_str())){
-	cout << "systematic not there" << endl;
-	continue;
-      }
-      numReplacements++;      
+      // replace alphas with alphaOfBeta and replace constraints
       cout <<         "alpha_"+it->first+"Constraint=beta_" + it->first+ "Constraint" << endl;
       editList+=preceed + "alpha_"+it->first+"Constraint=beta_" + it->first+ "Constraint";
       preceed=",";
@@ -520,20 +504,78 @@ namespace HistFactory{
 	  cout << "\n\n ---------------------\n WARNING: failed to make EDIT\n\n" << endl;
 	
       }
-
     }
+
+    // add uniform terms and their constraints
+    for(it=uniformSyst.begin(); it!=uniformSyst.end(); ++it) {
+      cout << "edit for " << it->first << "with rel uncert = " << it->second << endl;
+      if(! proto->var(("alpha_"+it->first).c_str())){
+	cout << "systematic not there" << endl;
+	nskipped++; 
+	continue;
+      }
+      numReplacements++;      
+
+      // this is the Uniform PDF
+      proto->factory(Form("beta_%s[1,0,10]",it->first.c_str()));
+      proto->factory(Form("Uniform::beta_%sConstraint(beta_%s)",it->first.c_str(),it->first.c_str()));
+      proto->factory(Form("PolyVar::alphaOfBeta_%s(beta_%s,{-1,1})",it->first.c_str(),it->first.c_str()));
+      
+      // clean up constraints
+      cout << "got here, about to remove" << endl;
+      temp.remove(*proto->var(Form("alpha_%s",it->first.c_str())));
+      temp.add(*proto->var(Form("beta_%s",it->first.c_str())));
+      //      cout << "KC CHECK 2" << endl;
+      //      temp.Print();
+
+      // set beta const status to be same as alpha
+      if(proto->var(Form("alpha_%s",it->first.c_str()))->isConstant())
+	proto->var(Form("beta_%s",it->first.c_str()))->setConstant(true);
+      else
+	proto->var(Form("beta_%s",it->first.c_str()))->setConstant(false);
+      // set alpha const status to true
+      //      proto->var(Form("alpha_%s",it->first.c_str()))->setConstant(true);
+
+      // replace alphas with alphaOfBeta and replace constraints
+      cout <<         "alpha_"+it->first+"Constraint=beta_" + it->first+ "Constraint" << endl;
+      editList+=preceed + "alpha_"+it->first+"Constraint=beta_" + it->first+ "Constraint";
+      preceed=",";
+      cout <<         "alpha_"+it->first+"=alphaOfBeta_"+ it->first << endl;
+      editList+=preceed + "alpha_"+it->first+"=alphaOfBeta_"+ it->first;
+
+      if( proto->pdf(("alpha_"+it->first+"Constraint").c_str()) && proto->var(("alpha_"+it->first).c_str()) )
+	cout << " checked they are there" << proto->pdf(("alpha_"+it->first+"Constraint").c_str()) << " " << proto->var(("alpha_"+it->first).c_str()) << endl;
+      else
+	cout << "NOT THERE" << endl;
+
+      // EDIT seems to die if the list of edits is too long.  So chunck them up.
+      if(numReplacements%10 == 0 && numReplacements+nskipped!=gammaSyst.size()){
+	edit="EDIT::"+lastPdf+"_("+lastPdf+","+editList+")";
+	lastPdf+="_"; // append an underscore for the edit
+	editList=""; // reset edit list
+	preceed="";
+	cout << edit<< endl;
+	proto->factory( edit.c_str() );
+	RooAbsPdf* newOne = proto->pdf(lastPdf.c_str());
+	if(!newOne)
+	  cout << "\n\n ---------------------\n WARNING: failed to make EDIT\n\n" << endl;
+	
+      }
+    }
+
+    // commit last bunch of edits
     edit="EDIT::newSimPdf("+lastPdf+","+editList+")";
     cout << edit<< endl;
     proto->factory( edit.c_str() );
-    proto->writeToFile(("results/"+rowTitle+"_edited.root").c_str());
+    proto->writeToFile(("results/"+fRowTitle+"_edited.root").c_str());
     RooAbsPdf* newOne = proto->pdf("newSimPdf");
     if(newOne)
-      newOne->graphVizTree(("results/"+pdfName+"_"+rowTitle+"newSimPdf.dot").c_str());
+      newOne->graphVizTree(("results/"+pdfName+"_"+fRowTitle+"newSimPdf.dot").c_str());
     else
       cout << "\n\n ---------------------\n WARNING: failed to make EDIT\n\n" << endl;
   }
 
-  void HistoToWorkspaceFactory::printCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename){
+  void HistoToWorkspaceFactory::PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename){
     FILE * pFile;
     pFile = fopen ((filename).c_str(),"w"); 
 
@@ -566,7 +608,7 @@ namespace HistFactory{
 
 
   ///////////////////////////////////////////////
-  RooWorkspace* HistoToWorkspaceFactory::makeSingleChannelModel(vector<EstimateSummary> summary, vector<string> systToFix, bool doRatio)
+  RooWorkspace* HistoToWorkspaceFactory::MakeSingleChannelModel(vector<EstimateSummary> summary, vector<string> systToFix, bool doRatio)
   {
     
     // to time the macro
@@ -592,7 +634,7 @@ namespace HistFactory{
     TH1F* pseudoData = 0;
     if(summary.at(0).name=="topmix")  pseudoData = summary.at(0).nominal;
     // range obs
-    processExpectedHisto(pseudoData,proto,"obsN","","",0,10000,lowBin, highBin);
+    ProcessExpectedHisto(pseudoData,proto,"obsN","","",0,10000,fLowBin,fHighBin);
     RooArgSet obsN = *(proto->set("obsN"));
     //proto_config->SetOservables(obsN);
 
@@ -601,12 +643,12 @@ namespace HistFactory{
     // this is ratio of lumi to nominal lumi.  We will include relative uncertainty in model
     std::stringstream lumiStr;
     // lumi range
-    lumiStr<<"["<<nomLumi<<",0.,"<<2*nomLumi<<"]";
+    lumiStr<<"["<<fNomLumi<<",0.,"<<2*fNomLumi<<"]";
     proto->factory(("Lumi"+lumiStr.str()).c_str());
     cout << "lumi str = " << lumiStr.str() << endl;
     
     std::stringstream lumiErrorStr;
-    lumiErrorStr << nomLumi << "," << lumiError ;
+    lumiErrorStr << fNomLumi << "," << fLumiError ;
     proto->factory(("Gaussian::lumiConstraint(Lumi,"+lumiErrorStr.str()+")").c_str());
     likelihoodTermNames.push_back("lumiConstraint");
     cout << "lumi Error str = " << lumiErrorStr.str() << endl;
@@ -621,18 +663,18 @@ namespace HistFactory{
 
       string overallSystName = it->name+"_"+it->channel+"_epsilon"; 
       string systSourcePrefix = "alpha_";
-      addEfficiencyTerms(proto,systSourcePrefix, overallSystName,
+      AddEfficiencyTerms(proto,systSourcePrefix, overallSystName,
              it->overallSyst, 
              likelihoodTermNames, totSystTermNames);    
 
-      overallSystName=addNormFactor(proto, channel, overallSystName, *it, doRatio); 
+      overallSystName=AddNormFactor(proto, channel, overallSystName, *it, doRatio); 
       // get histogram
       TH1F* nominal = it->nominal;
       if(it->lowHists.size() == 0){
         cout << it->name+"_"+it->channel+" has no variation histograms " <<endl;
         string expPrefix=it->name+"_"+it->channel+"_expN";
         string syst_x_expectedPrefix=it->name+"_"+it->channel+"_overallSyst_x_Exp";
-        processExpectedHisto(nominal,proto,expPrefix,syst_x_expectedPrefix,overallSystName, atoi(NoHistConst_Low), atoi(NoHistConst_High),lowBin, highBin);
+        ProcessExpectedHisto(nominal,proto,expPrefix,syst_x_expectedPrefix,overallSystName,atoi(NoHistConst_Low),atoi(NoHistConst_High),fLowBin,fHighBin);
         syst_x_expectedPrefixNames.push_back(syst_x_expectedPrefix);
       } else if(it->lowHists.size() != it->highHists.size()){
         cout << "problem in "+it->name+"_"+it->channel 
@@ -641,13 +683,13 @@ namespace HistFactory{
       } else {
         string constraintPrefix = it->name+"_"+it->channel+"_Hist_alpha"; // name of source for variation
         string syst_x_expectedPrefix = it->name+"_"+it->channel+"_overallSyst_x_HistSyst";
-        linInterpWithConstraint(proto, nominal, it->lowHists, it->highHists, it->systSourceForHist,
+        LinInterpWithConstraint(proto, nominal, it->lowHists, it->highHists, it->systSourceForHist,
               constraintPrefix, syst_x_expectedPrefix, overallSystName, 
-              lowBin, highBin, likelihoodTermNames);
+              fLowBin, fHighBin, likelihoodTermNames);
         syst_x_expectedPrefixNames.push_back(syst_x_expectedPrefix);
       }
 
-      //    addMultiVarGaussConstraint(proto, "exp"+it->first+"N",lowBin, highBin, likelihoodTermNames);
+      //    AddMultiVarGaussConstraint(proto, "exp"+it->first+"N", fLowBin, fHighBin, likelihoodTermNames);
 
       if(it->normName=="")
         normalizationNames.push_back( "Lumi" );
@@ -658,20 +700,20 @@ namespace HistFactory{
 
     ///////////////////////////////////
     // for ith bin calculate totN_i =  lumi * sum_j expected_j * syst_j 
-    makeTotalExpected(proto,channel+"_totN",channel+"_expN","Lumi",lowBin, highBin, 
+    MakeTotalExpected(proto,channel+"_totN",channel+"_expN","Lumi",fLowBin,fHighBin, 
           syst_x_expectedPrefixNames, normalizationNames);
 
     /////////////////////////////////
     // Relate observables to expected for each bin
-    addPoissonTerms(proto, "Pois_"+channel, "obsN", channel+"_totN", lowBin, highBin, likelihoodTermNames);
+    AddPoissonTerms(proto, "Pois_"+channel, "obsN", channel+"_totN", fLowBin, fHighBin, likelihoodTermNames);
 
     /////////////////////////////////
     // set observed to expected for now.  Later use some real data
     if(!pseudoData){
-      setObsToExpected(proto, "obsN",channel+"_totN", lowBin, highBin);
+      SetObsToExpected(proto, "obsN",channel+"_totN", fLowBin, fHighBin);
       cout << " using expected data" << endl;
     }  else{
-      setObsToExpected(proto, "obsN","obsN", lowBin, highBin);
+      SetObsToExpected(proto, "obsN","obsN", fLowBin, fHighBin);
       cout << " using top mix data" << endl;
     }
 
@@ -709,7 +751,7 @@ namespace HistFactory{
     return proto;
   }
 
-  RooWorkspace* HistoToWorkspaceFactory::makeCombinedModel(vector<string> ch_names, vector<RooWorkspace*> chs)
+  RooWorkspace* HistoToWorkspaceFactory::MakeCombinedModel(vector<string> ch_names, vector<RooWorkspace*> chs)
   {
 
     //
@@ -777,14 +819,14 @@ namespace HistFactory{
     //combined->import(*simPdf, RenameVariable("SigXsecOverSM","SigXsecOverSM_comb"));
     cout << "check pointer " << simPdf << endl;
 
-    for(unsigned int i=0; i<systToFix.size(); ++i){
+    for(unsigned int i=0; i<fSystToFix.size(); ++i){
       // make sure they are fixed
-      RooRealVar* temp = combined->var((systToFix.at(i)).c_str());
+      RooRealVar* temp = combined->var((fSystToFix.at(i)).c_str());
       if(temp) {
         temp->setConstant();
-        cout <<"setting " << systToFix.at(i) << " constant" << endl;
+        cout <<"setting " << fSystToFix.at(i) << " constant" << endl;
       }
-      else cout << "could not find variable " << systToFix.at(i) << " could not set it to constant" << endl;
+      else cout << "could not find variable " << fSystToFix.at(i) << " could not set it to constant" << endl;
     }
 
     ///
@@ -793,7 +835,7 @@ namespace HistFactory{
     RooAbsPdf* customized=combined->pdf("simPdf"); 
     //combined_config->SetPdf(*customized);
     combined_config->SetPdf(*simPdf);
-    customized->graphVizTree(("results/"+resultsPrefixStr.str()+"_simul.dot").c_str());
+    customized->graphVizTree(("results/"+fResultsPrefixStr.str()+"_simul.dot").c_str());
     combined->import(*combined_config,combined_config->GetName());
     combined->importClassCode();
     combined->writeToFile("results/combinedModel.root");
@@ -802,7 +844,7 @@ namespace HistFactory{
   }
 
   ///////////////////////////////////////////////
-  void HistoToWorkspaceFactory::fitModel(RooWorkspace * combined, string channel, string model_name, string data_name, bool doParamInspect)
+  void HistoToWorkspaceFactory::FitModel(RooWorkspace * combined, string channel, string model_name, string data_name, bool doParamInspect)
   {
 
     ModelConfig * combined_config = (ModelConfig *) combined->obj("ModelConfig");
@@ -835,7 +877,7 @@ namespace HistFactory{
     cout << "---------------- Doing "<< channel << " Fit" << endl;
     cout << "---------------\n\n" << endl;
     RooFitResult* result = model->fitTo(*simData, Minos(kTRUE), Save(kTRUE), PrintLevel(1), Constrain(*constrainedParams));
-    printCovarianceMatrix(result, allParams, "results/"+filePrefixStr(channel)+"_corrMatrix.table" );
+    PrintCovarianceMatrix(result, allParams, "results/"+FilePrefixStr(channel)+"_corrMatrix.table" );
 
     //
     // assuming there is only on poi
@@ -854,14 +896,14 @@ namespace HistFactory{
     RooAbsReal* profile = nll->createProfile(*poi);
     RooPlot* frame = poi->frame();
     TCanvas* c1 = new TCanvas( channel.c_str(), "",800,600);
-    formatFrameForLikelihood(frame);
+    FormatFrameForLikelihood(frame);
     nll->plotOn(frame, ShiftToZero(), LineColor(kRed), LineStyle(kDashed));
     profile->plotOn(frame);
 
     frame->Draw();
-    c1->SaveAs( ("results/"+filePrefixStr(channel)+"_profileLR.eps").c_str() );
+    c1->SaveAs( ("results/"+FilePrefixStr(channel)+"_profileLR.eps").c_str() );
 
-    out_f->mkdir(channel.c_str())->mkdir("Summary")->cd();
+    fOut_f->mkdir(channel.c_str())->mkdir("Summary")->cd();
 
     // an example of calculating profile for a nuisance parameter not poi
     /*
@@ -873,10 +915,10 @@ namespace HistFactory{
     RooPlot* frame_isrfsr = alpha_isrfsr->frame();
     profile_isrfsr->plotOn(frame_isrfsr, Precision(0.1));
     TCanvas c_isrfsr = new TCanvas( "combined", "",800,600);
-    formatFrameForLikelihood(frame_isrfsr, "alpha_{isrfsr}");
+    FormatFrameForLikelihood(frame_isrfsr, "alpha_{isrfsr}");
     frame_isrfsr->Draw();
-    out_f->cd("Summary");
-    c1->Write((filePrefixStr(channel).str()+"_profileLR_alpha_isrfsr").c_str() );
+    fOut_f->cd("Summary");
+    c1->Write((FilePrefixStr(channel).str()+"_profileLR_alpha_isrfsr").c_str() );
     delete frame; delete c1;
     poi->setConstant(kFALSE);
     */
@@ -909,7 +951,7 @@ namespace HistFactory{
       y_arr_nll[i]=nll->getVal();
     }
     TGraph * g = new TGraph(curve_N, x_arr, y_arr_nll);
-    g->SetName((filePrefixStr(channel)+"_nll").c_str());
+    g->SetName((FilePrefixStr(channel)+"_nll").c_str());
     g->Write(); 
     delete g;
 
@@ -919,7 +961,7 @@ namespace HistFactory{
   }
 
 
-  void HistoToWorkspaceFactory::formatFrameForLikelihood(RooPlot* frame, string XTitle, string YTitle){
+  void HistoToWorkspaceFactory::FormatFrameForLikelihood(RooPlot* frame, string XTitle, string YTitle){
 
       gStyle->SetCanvasBorderMode(0);
       gStyle->SetPadBorderMode(0);
@@ -945,7 +987,7 @@ namespace HistFactory{
       frame->addObject(line95);
   }
 
-  TDirectory * HistoToWorkspaceFactory::makedirs( TDirectory * file, vector<string> names ){
+  TDirectory * HistoToWorkspaceFactory::Makedirs( TDirectory * file, vector<string> names ){
     if(! file) return file;
     string path="";
     TDirectory* ptr=0;
@@ -958,7 +1000,7 @@ namespace HistFactory{
     }
     return ptr;
   }
-  TDirectory * HistoToWorkspaceFactory::mkdir( TDirectory * file, string name ){
+  TDirectory * HistoToWorkspaceFactory::Mkdir( TDirectory * file, string name ){
     if(! file) return file;
     TDirectory* ptr=0;
     ptr=file->GetDirectory(name.c_str());

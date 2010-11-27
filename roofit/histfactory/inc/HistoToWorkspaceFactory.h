@@ -40,55 +40,55 @@ namespace HistFactory{
       HistoToWorkspaceFactory();
       virtual ~HistoToWorkspaceFactory();
 
-      void addEfficiencyTerms(RooWorkspace* proto, string prefix, string interpName,
+      void AddEfficiencyTerms(RooWorkspace* proto, string prefix, string interpName,
             map<string,pair<double,double> > systMap,
             vector<string>& likelihoodTermNames, vector<string>& totSystTermNames);
 
-      string addNormFactor(RooWorkspace *, string & , string & , EstimateSummary & , bool );
+      string AddNormFactor(RooWorkspace *, string & , string & , EstimateSummary & , bool );
 
-      void addMultiVarGaussConstraint(RooWorkspace* proto, string prefix,int lowBin, int highBin, vector<string>& likelihoodTermNames);
+      void AddMultiVarGaussConstraint(RooWorkspace* proto, string prefix,int lowBin, int highBin, vector<string>& likelihoodTermNames);
 
-      void addPoissonTerms(RooWorkspace* proto, string prefix, string obsPrefix, string expPrefix, int lowBin, int highBin,
+      void AddPoissonTerms(RooWorkspace* proto, string prefix, string obsPrefix, string expPrefix, int lowBin, int highBin,
                vector<string>& likelihoodTermNames);
 
-      //void combine_old();
+      //void Combine_old();
 
-      RooWorkspace *  makeCombinedModel(vector<string>, vector<RooWorkspace*>);
+      RooWorkspace *  MakeCombinedModel(vector<string>, vector<RooWorkspace*>);
 
-      //void combine_ratio(vector<string> , vector<RooWorkspace*>);
+      //void Combine_ratio(vector<string> , vector<RooWorkspace*>);
 
-      void customize(RooWorkspace* proto, const char* pdfNameChar, map<string,string> renameMap);
+      void Customize(RooWorkspace* proto, const char* pdfNameChar, map<string,string> renameMap);
 
-      void editSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst);
+      void EditSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst, map<string,double> uniformSyst);
 
-      void formatFrameForLikelihood(RooPlot* frame, string XTitle=string("#sigma / #sigma_{SM}"), string YTitle=string("-log likelihood"));
+      void FormatFrameForLikelihood(RooPlot* frame, string XTitle=string("#sigma / #sigma_{SM}"), string YTitle=string("-log likelihood"));
 
 
-      void linInterpWithConstraint(RooWorkspace* proto, TH1F* nominal, vector<TH1F*> lowHist, vector<TH1F*> highHist,
+      void LinInterpWithConstraint(RooWorkspace* proto, TH1F* nominal, vector<TH1F*> lowHist, vector<TH1F*> highHist,
                  vector<string> sourceName, string prefix, string productPrefix, string systTerm,
                  int lowBin, int highBin, vector<string>& likelihoodTermNames);
 
-      TDirectory* makedirs( TDirectory* file, vector<string> names );
+      TDirectory* Makedirs( TDirectory* file, vector<string> names );
 
-      RooWorkspace* makeSingleChannelModel(vector<RooStats::HistFactory::EstimateSummary> summary, vector<string> systToFix, bool doRatio=false);
+      RooWorkspace* MakeSingleChannelModel(vector<RooStats::HistFactory::EstimateSummary> summary, vector<string> systToFix, bool doRatio=false);
 
-      void  makeTotalExpected(RooWorkspace* proto, string totName, string /**/, string /**/,
+      void  MakeTotalExpected(RooWorkspace* proto, string totName, string /**/, string /**/,
             int lowBin, int highBin, vector<string>& syst_x_expectedPrefixNames,
             vector<string>& normByNames);
 
-      TDirectory* mkdir( TDirectory * file, string name );
+      TDirectory* Mkdir( TDirectory * file, string name );
 
-      void printCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename);
-      void processExpectedHisto(TH1F* hist,RooWorkspace* proto, string prefix, string productPrefix, string systTerm, double low, double high, int lowBin, int highBin);
-      void setObsToExpected(RooWorkspace* proto, string obsPrefix, string expPrefix, int lowBin, int highBin);
-      void fitModel(RooWorkspace *, string, string, string, bool=false  );
-      std::string filePrefixStr(std::string);
+      void PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename);
+      void ProcessExpectedHisto(TH1F* hist,RooWorkspace* proto, string prefix, string productPrefix, string systTerm, double low, double high, int lowBin, int highBin);
+      void SetObsToExpected(RooWorkspace* proto, string obsPrefix, string expPrefix, int lowBin, int highBin);
+      void FitModel(RooWorkspace *, string, string, string, bool=false  );
+      std::string FilePrefixStr(std::string);
 
-      string rowTitle;
-      vector<string> systToFix;
-      double nomLumi, lumiError, lowBin, highBin;    
-      std::stringstream resultsPrefixStr;
-      TFile * out_f;
+      string fRowTitle;
+      vector<string> fSystToFix;
+      double fNomLumi, fLumiError, fLowBin, fHighBin;    
+      std::stringstream fResultsPrefixStr;
+      TFile * fOut_f;
       FILE * pFile;
 
       ClassDef(RooStats::HistFactory::HistoToWorkspaceFactory,1)
