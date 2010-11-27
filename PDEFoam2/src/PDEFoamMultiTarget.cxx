@@ -2,11 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamMultiTarget                                                          *
+ * Classes: PDEFoamMultiTarget                                                    *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Implementations                                                           *
+ *      Implementation.                                                           *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Tancredi Carli   - CERN, Switzerland                                      *
@@ -24,43 +24,11 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-//_____________________________________________________________________
-//
-// Implementation of PDEFoamMultiTarget
-//
-// The PDEFoamMultiTarget method is an
-// extension of the PDERS method, which uses self-adapting binning to
-// divide the multi-dimensional phase space in a finite number of
-// hyper-rectangles (boxes).
-//
-// For a given number of boxes, the binning algorithm adjusts the size
-// and position of the boxes inside the multidimensional phase space,
-// minimizing the variance of the signal and background densities inside
-// the boxes. The binned density information is stored in binary trees,
-// allowing for a very fast and memory-efficient classification of
-// events.
-//
-// The implementation of the PDEFoamMultiTarget is based on the monte-carlo
-// integration package PDEFoamMultiTarget included in the analysis package ROOT.
-//_____________________________________________________________________
-
-
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <cassert>
-#include <climits>
-
-#include "TMath.h"
-
 #ifndef ROOT_TMVA_PDEFoamMultiTarget
 #include "TMVA/PDEFoamMultiTarget.h"
 #endif
 
 ClassImp(TMVA::PDEFoamMultiTarget)
-
-using namespace std;
 
 //_____________________________________________________________________
 TMVA::PDEFoamMultiTarget::PDEFoamMultiTarget() 

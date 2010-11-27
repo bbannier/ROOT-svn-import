@@ -6,7 +6,9 @@
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class for PDEFoamDiscriminant object                                      *
+ *    Concrete PDEFoam sub-class.  This foam stores the discriminant D            *
+ *    = N_sig / (N_bg + N_sig) with every cell, as well as the                    *
+ *    statistical error on the discriminant.                                      *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *

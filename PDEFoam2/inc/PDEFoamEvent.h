@@ -6,7 +6,9 @@
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class for PDEFoamEvent object                                             *
+ *      Concrete PDEFoam sub-class.  This foam stores the number of               *
+ *      events with every cell, as well as the statistical error on               *
+ *      the event number.                                                         *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *

@@ -37,8 +37,6 @@
 
 ClassImp(TMVA::PDEFoamDecisionTree)
 
-using namespace std;
-
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree() 
    : PDEFoamDiscriminant()
