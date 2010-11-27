@@ -45,7 +45,7 @@ namespace TMVA {
       virtual ~PDEFoamDiscriminant(){};       // Default destructor
 
       // function to fill created cell with given value
-      virtual void FillFoamCells(const Event* ev);
+      virtual void FillFoamCells(const Event* ev, Float_t wt);
 
       // function to call after foam is grown
       virtual void Finalize();

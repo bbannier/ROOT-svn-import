@@ -458,10 +458,11 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       Log() << kVERBOSE << "Filling foam cells with events" << Endl;
       // loop over all events -> fill foam cells
       for (Long64_t k=0; k<GetNEvents(); k++) {
-         const Event* ev = GetEvent(k); 
+         const Event* ev = GetEvent(k);
+	 Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
          if ((i==0 && DataInfo().IsSignal(ev)) || (i==1 && !DataInfo().IsSignal(ev)))
 	    if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
-	       fFoam.back()->FillFoamCells(ev);
+	       fFoam.back()->FillFoamCells(ev, weight);
       }
    }
 }
@@ -489,8 +490,9 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
    // loop over all training events -> fill foam cells with N_sig and N_Bg
    for (UInt_t k=0; k<GetNEvents(); k++) {
       const Event* ev = GetEvent(k); 
+      Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
-	 fFoam.back()->FillFoamCells(ev);
+	 fFoam.back()->FillFoamCells(ev, weight);
    }
 
    Log() << kVERBOSE << "Calculate cell discriminator"<< Endl;
@@ -534,8 +536,9 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
    // loop over all events -> fill foam cells with target
    for (UInt_t k=0; k<GetNEvents(); k++) {
       const Event* ev = GetEvent(k); 
+      Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
-	 fFoam.back()->FillFoamCells(ev);
+	 fFoam.back()->FillFoamCells(ev, weight);
    }
 
    Log() << kVERBOSE << "Calculate average cell targets"<< Endl;
@@ -585,11 +588,12 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
       // since in multi-target regression targets are handled like
       // variables --> remove targets and add them to the event variabels
       std::vector<Float_t> targets = ev->GetTargets(); 	 
+      Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
       for (UInt_t i = 0; i < targets.size(); i++) 	 
 	 ev->SetVal(i+ev->GetValues().size(), targets.at(i)); 	 
       ev->GetTargets().clear();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
-	 fFoam.back()->FillFoamCells(ev);
+	 fFoam.back()->FillFoamCells(ev, weight);
    }
 }
 
@@ -745,7 +749,6 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft)
    pdefoam->SetnSampl(      fnSampl);    // optional
    pdefoam->SetnBin(        fnBin);      // optional
    pdefoam->SetEvPerBin(    fEvPerBin);  // optional
-   pdefoam->SetFillFoamWithOrigWeights(fFillFoamWithOrigWeights);
    pdefoam->SetPeekMax(fPeekMax);
 
    // cuts

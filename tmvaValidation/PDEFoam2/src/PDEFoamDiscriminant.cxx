@@ -83,13 +83,11 @@ TMVA::PDEFoamDiscriminant::PDEFoamDiscriminant(const PDEFoamDiscriminant &From)
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoamDiscriminant::FillFoamCells(const Event* ev)
+void TMVA::PDEFoamDiscriminant::FillFoamCells(const Event* ev, Float_t wt)
 {
    // This function fills an event into the discriminant PDEFoam.  The
-   // event weight is filled into cell element 0 if the event is of
-   // class 0, and filled into cell element 1 otherwise.
-
-   Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
+   // event weight 'wt' is filled into cell element 0 if the event is
+   // of class 0, and filled into cell element 1 otherwise.
 
    // find corresponding foam cell
    std::vector<Float_t> values  = ev->GetValues();
@@ -99,9 +97,9 @@ void TMVA::PDEFoamDiscriminant::FillFoamCells(const Event* ev)
    // 0. Element: Number of signal events
    // 1. Element: Number of background events times normalization
    if (ev->GetClass() == 0)
-      SetCellElement(cell, 0, GetCellElement(cell, 0) + weight);
+      SetCellElement(cell, 0, GetCellElement(cell, 0) + wt);
    else
-      SetCellElement(cell, 1, GetCellElement(cell, 1) + weight);
+      SetCellElement(cell, 1, GetCellElement(cell, 1) + wt);
 }
 
 //_____________________________________________________________________
