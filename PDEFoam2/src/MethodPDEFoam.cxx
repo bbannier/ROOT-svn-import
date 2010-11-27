@@ -770,7 +770,7 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
 {
    // Return regression values for both multi and mono target regression
 
-   if (fRegressionReturnVal == 0) fRegressionReturnVal = new std::vector<Float_t>;
+   if (fRegressionReturnVal == 0) fRegressionReturnVal = new std::vector<Float_t>();
    fRegressionReturnVal->clear();
 
    const Event* ev = GetEvent();
@@ -797,13 +797,14 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
       fRegressionReturnVal->push_back(fFoam.at(0)->GetCellValue(vals, kValue));   
    }
 
+   // apply inverse transformation to regression values
    Event * evT = new Event(*ev);
-   for (UInt_t itgt = 0; itgt < evT->GetNTargets(); itgt++) {
+   for (UInt_t itgt = 0; itgt < Data()->GetNTargets(); itgt++) {
       evT->SetTarget(itgt, fRegressionReturnVal->at(itgt) );
    }
    const Event* evT2 = GetTransformationHandler().InverseTransform( evT );
    fRegressionReturnVal->clear();
-   for (UInt_t itgt = 0; itgt < evT->GetNTargets(); itgt++) {
+   for (UInt_t itgt = 0; itgt < Data()->GetNTargets(); itgt++) {
       fRegressionReturnVal->push_back( evT2->GetTarget(itgt) );
    }
 
