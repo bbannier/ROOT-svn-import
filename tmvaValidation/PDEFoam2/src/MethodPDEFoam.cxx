@@ -619,7 +619,7 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
       Float_t density_sig = 0.; // calc signal event density
       Float_t density_bg  = 0.; // calc background event density
       if (Vol_sig > std::numeric_limits<double>::epsilon() 
-	  && Vol_sig > std::numeric_limits<double>::epsilon()) {
+	  && Vol_bg > std::numeric_limits<double>::epsilon()) {
 	 density_sig = fFoam.at(0)->GetCellValue(xvec, kValue) / Vol_sig;
 	 density_bg  = fFoam.at(1)->GetCellValue(xvec, kValue) / Vol_bg;
       }
