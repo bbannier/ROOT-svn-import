@@ -345,7 +345,7 @@ void TMVAClassification( TString myMethodList = "" )
    // Multi-dimensional likelihood estimator using self-adapting phase-space binning
    if (Use["PDEFoam"])
       factory->BookMethod( TMVA::Types::kPDEFoam, "PDEFoam",
-                           "!H:V:SigBgSeparate=T:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:Nmin=100:Kernel=None:Compress=T" );
+                           "!H:!V:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:Nmin=100:Kernel=None:Compress=T" );
 
    if (Use["PDEFoamBoost"])
       factory->BookMethod( TMVA::Types::kPDEFoam, "PDEFoamBoost",

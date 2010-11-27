@@ -74,6 +74,7 @@ TMVA::MethodPDEFoam::MethodPDEFoam( const TString& jobName,
    , fMaxDepth(0)
    , fKernelStr("None")
    , fKernel(kNone)
+   , fKernelEstimator(NULL)
    , fTargetSelectionStr("Mean")
    , fTargetSelection(kMean)
    , fFillFoamWithOrigWeights(kFALSE)
@@ -110,6 +111,7 @@ TMVA::MethodPDEFoam::MethodPDEFoam( DataSetInfo& dsi,
    , fMaxDepth(0)
    , fKernelStr("None")
    , fKernel(kNone)
+   , fKernelEstimator(NULL)
    , fTargetSelectionStr("Mean")
    , fTargetSelection(kMean)
    , fFillFoamWithOrigWeights(kFALSE)
@@ -159,6 +161,7 @@ void TMVA::MethodPDEFoam::Init( void )
    fPeekMax        = kTRUE;    // peek cell with max separation
 
    fKernel         = kNone; // default: use no kernel
+   fKernelEstimator= NULL;  // kernel estimator used during evaluation
    fTargetSelection= kMean; // default: use mean for target selection (only multi target regression!)
 
    fCompress              = kTRUE;  // compress ROOT output file
@@ -271,6 +274,9 @@ TMVA::MethodPDEFoam::~MethodPDEFoam( void )
       if (fFoam.at(i)) delete fFoam.at(i);
    }
    fFoam.clear();
+
+   if (fKernelEstimator != NULL)
+      delete fKernelEstimator;
 }
 
 //_______________________________________________________________________
@@ -613,15 +619,15 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
    if (fSigBgSeparated) {
       std::vector<Float_t> xvec = ev->GetValues();
 
-      Double_t Vol_sig = fFoam.at(0)->GetCellValue(xvec, kCellVolume);
-      Double_t Vol_bg  = fFoam.at(1)->GetCellValue(xvec, kCellVolume);
+      Double_t Vol_sig = fFoam.at(0)->GetCellValue(xvec, kCellVolume, fKernelEstimator);
+      Double_t Vol_bg  = fFoam.at(1)->GetCellValue(xvec, kCellVolume, fKernelEstimator);
 
       Double_t density_sig = 0.; // calc signal event density
       Double_t density_bg  = 0.; // calc background event density
       if (Vol_sig > std::numeric_limits<double>::epsilon() 
-	  && Vol_sig > std::numeric_limits<double>::epsilon()) {
-	 density_sig = fFoam.at(0)->GetCellValue(xvec, kValue) / Vol_sig;
-	 density_bg  = fFoam.at(1)->GetCellValue(xvec, kValue) / Vol_bg;
+	  && Vol_bg > std::numeric_limits<double>::epsilon()) {
+	 density_sig = fFoam.at(0)->GetCellValue(xvec, kValue, fKernelEstimator) / Vol_sig;
+	 density_bg  = fFoam.at(1)->GetCellValue(xvec, kValue, fKernelEstimator) / Vol_bg;
       }
 
       // calc disciminator (normed!)
@@ -631,8 +637,8 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
          discr = 0.5; // assume 50% signal probability, if no events found (bad assumption, but can be overruled by cut on error)
 
       // do error estimation (not jet used in TMVA)
-      Double_t neventsB = fFoam.at(1)->GetCellValue(xvec, kValue);
-      Double_t neventsS = fFoam.at(0)->GetCellValue(xvec, kValue);
+      Double_t neventsB = fFoam.at(1)->GetCellValue(xvec, kValue, fKernelEstimator);
+      Double_t neventsS = fFoam.at(0)->GetCellValue(xvec, kValue, fKernelEstimator);
       Double_t scaleB = 1.;
       Double_t errorS = TMath::Sqrt(neventsS); // estimation of statistical error on counted signal events
       Double_t errorB = TMath::Sqrt(neventsB); // estimation of statistical error on counted background events
@@ -657,8 +663,8 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
       std::vector<Float_t> xvec = ev->GetValues();
       
       // get discriminator direct from the foam
-      discr       = fFoam.at(0)->GetCellValue(xvec, kValue);
-      discr_error = fFoam.at(0)->GetCellValue(xvec, kValueError);
+      discr       = fFoam.at(0)->GetCellValue(xvec, kValue, fKernelEstimator);
+      discr_error = fFoam.at(0)->GetCellValue(xvec, kValueError, fKernelEstimator);
    }
 
    // attribute error
@@ -707,18 +713,22 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft)
       case kSeparate:
 	 pdefoam = new PDEFoamEvent(foamcaption);
 	 density = new PDEFoamEventDensity(pdefoam);
+	 fKernelEstimator = new PDEFoamKernel(pdefoam);
 	 break;
       case kMultiTarget:
 	 pdefoam = new PDEFoamMultiTarget(foamcaption);
 	 density = new PDEFoamEventDensity(pdefoam);
+	 fKernelEstimator = new PDEFoamKernel(pdefoam);
 	 break;
       case kDiscr:
 	 pdefoam = new PDEFoamDiscriminant(foamcaption);
 	 density = new PDEFoamDiscriminantDensity(pdefoam);
+	 fKernelEstimator = new PDEFoamKernel(pdefoam);
 	 break;
       case kMonoTarget:
 	 pdefoam = new PDEFoamTarget(foamcaption);
 	 density = new PDEFoamTargetDensity(pdefoam);
+	 fKernelEstimator = new PDEFoamKernel(pdefoam);
 	 break;
       default:
 	 Log() << kFATAL << "Unknown PDEFoam type!" << Endl;
@@ -769,7 +779,7 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
 {
    // Return regression values for both multi and mono target regression
 
-   if (fRegressionReturnVal == 0) fRegressionReturnVal = new std::vector<Float_t>;
+   if (fRegressionReturnVal == 0) fRegressionReturnVal = new std::vector<Float_t>();
    fRegressionReturnVal->clear();
 
    const Event* ev = GetEvent();
@@ -793,16 +803,17 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
          fRegressionReturnVal->push_back(targets.at(i));
    }
    else {
-      fRegressionReturnVal->push_back(fFoam.at(0)->GetCellValue(vals, kValue));   
+      fRegressionReturnVal->push_back(fFoam.at(0)->GetCellValue(vals, kValue, fKernelEstimator));   
    }
 
+   // apply inverse transformation to regression values
    Event * evT = new Event(*ev);
-   for (UInt_t itgt = 0; itgt < evT->GetNTargets(); itgt++) {
+   for (UInt_t itgt = 0; itgt < Data()->GetNTargets(); itgt++) {
       evT->SetTarget(itgt, fRegressionReturnVal->at(itgt) );
    }
    const Event* evT2 = GetTransformationHandler().InverseTransform( evT );
    fRegressionReturnVal->clear();
-   for (UInt_t itgt = 0; itgt < evT->GetNTargets(); itgt++) {
+   for (UInt_t itgt = 0; itgt < Data()->GetNTargets(); itgt++) {
       fRegressionReturnVal->push_back( evT2->GetTarget(itgt) );
    }
 
@@ -1041,18 +1052,16 @@ void TMVA::MethodPDEFoam::ReadFoamsFromFile()
 
    // read foams from file
    if (DoRegression()) {
-      if (fMultiTargetRegression) 
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("MultiTargetRegressionFoam")) );
-      else                        
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("MonoTargetRegressionFoam")) );
-   }
-   else {
+      if (fMultiTargetRegression)
+         fFoam.push_back( (PDEFoamMultiTarget*) rootFile->Get("MultiTargetRegressionFoam") );
+      else
+         fFoam.push_back( (PDEFoamTarget*) rootFile->Get("MonoTargetRegressionFoam") );
+   } else {
       if (fSigBgSeparated) {
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("SignalFoam")) );
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("BgFoam")) );
-      }
-      else 
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("DiscrFoam")) );
+         fFoam.push_back( (PDEFoamEvent*) rootFile->Get("SignalFoam") );
+         fFoam.push_back( (PDEFoamEvent*) rootFile->Get("BgFoam") );
+      } else
+         fFoam.push_back( (PDEFoamDiscriminant*) rootFile->Get("DiscrFoam") );
    }
    if (!fFoam.at(0) || (!DoRegression() && fSigBgSeparated && !fFoam.at(1)))
       Log() << kFATAL << "Could not load foam!" << Endl;

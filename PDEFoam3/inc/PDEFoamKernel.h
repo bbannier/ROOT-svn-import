@@ -2,13 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamTarget                                                         *
+ * Classes: PDEFoamKernel                                                         *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Concrete PDEFoam sub-class.  This foam stores the first target            *
- *      (index 0) with every cell, as well as the statistical error on            *
- *      the target.                                                               *
+ *      Trivial PDEFoam kernel                                                    *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
@@ -16,7 +14,7 @@
  *      Dominik Dannheim - CERN, Switzerland                                      *
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -25,8 +23,12 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-#ifndef ROOT_TMVA_PDEFoamTarget
-#define ROOT_TMVA_PDEFoamTarget
+#ifndef ROOT_TMVA_PDEFoamKernel
+#define ROOT_TMVA_PDEFoamKernel
+
+#ifndef ROOT_TObject
+#include "TObject.h"
+#endif
 
 #ifndef ROOT_TMVA_PDEFoam
 #include "TMVA/PDEFoam.h"
@@ -34,40 +36,25 @@
 
 namespace TMVA {
 
-   class PDEFoamTarget : public PDEFoam {
+   class PDEFoamKernel : public TObject {
 
    protected:
-      
-      // specific function used during evaluation; determines, whether
-      // a cell value is undefined
-      Bool_t CellValueIsUndefined( PDEFoamCell* cell );
+      PDEFoam *fPDEFoam;           //! owner PDEFoam
+      mutable MsgLogger* fLogger;  //! message logger
 
-      // calculate the average of the neighbor cell values
-      Double_t GetAverageNeighborsValue( std::vector<Float_t>&,	ECellValue );
-
-      PDEFoamTarget(const PDEFoamTarget&); // Copy Constructor  NOT USED
-
-      // ---------- Public functions ----------------------------------
    public:
-      PDEFoamTarget();                  // Default constructor (used only by ROOT streamer)
-      PDEFoamTarget(const TString&);    // Principal user-defined constructor
-      virtual ~PDEFoamTarget(){};       // Default destructor
+      PDEFoamKernel();                 // Constructor
+      PDEFoamKernel(PDEFoam*);         // USER Constructor
+      virtual ~PDEFoamKernel();        // Destructor
 
-      // function to fill created cell with given value
-      virtual void FillFoamCells(const Event* ev, Float_t wt);
+      // kernel estimator
+      virtual Float_t Estimate( std::vector<Float_t>&, ECellValue );
 
-      // function to call after foam is grown
-      virtual void Finalize();
+      // Message logger
+      MsgLogger& Log() const { return *fLogger; }
 
-      Double_t GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel*);
-      using PDEFoam::GetCellValue;
-
-      // ---------- ROOT class definition
-      ClassDef(PDEFoamTarget,1) // Tree of PDEFoamCells
-   }; // end of PDEFoamTarget
-
+      ClassDef(PDEFoamKernel,1) // PDEFoam kernel
+   }; // end of PDEFoamKernel
 }  // namespace TMVA
-
-// ---------- Inline functions
 
 #endif
