@@ -659,6 +659,7 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
       // get discriminator direct from the foam
       discr       = fFoam.at(0)->GetCellValue(xvec, kValue);
       discr_error = fFoam.at(0)->GetCellValue(xvec, kValueError);
+      Log() << "discr = " << discr << Endl;
    }
 
    // attribute error
@@ -1042,17 +1043,17 @@ void TMVA::MethodPDEFoam::ReadFoamsFromFile()
    // read foams from file
    if (DoRegression()) {
       if (fMultiTargetRegression) 
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("MultiTargetRegressionFoam")) );
+         fFoam.push_back( (PDEFoamMultiTarget*) rootFile->Get("MultiTargetRegressionFoam") );
       else                        
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("MonoTargetRegressionFoam")) );
+         fFoam.push_back( (PDEFoamTarget*) rootFile->Get("MonoTargetRegressionFoam") );
    }
    else {
       if (fSigBgSeparated) {
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("SignalFoam")) );
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("BgFoam")) );
+         fFoam.push_back( (PDEFoamEvent*) rootFile->Get("SignalFoam") );
+         fFoam.push_back( (PDEFoamEvent*) rootFile->Get("BgFoam") );
       }
       else 
-         fFoam.push_back( dynamic_cast<PDEFoam*>(rootFile->Get("DiscrFoam")) );
+         fFoam.push_back( (PDEFoamDiscriminant*) rootFile->Get("DiscrFoam") );
    }
    if (!fFoam.at(0) || (!DoRegression() && fSigBgSeparated && !fFoam.at(1)))
       Log() << kFATAL << "Could not load foam!" << Endl;
