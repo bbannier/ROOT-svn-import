@@ -196,7 +196,7 @@ namespace TMVA {
       void Create();              // build-up foam
 
       // function to fill created cell with given value
-      virtual void FillFoamCells(const Event* ev, Float_t wt) = 0;
+      virtual void FillFoamCells(const Event* ev, Float_t wt);
 
       // remove all cell elements
       void ResetCellElements();

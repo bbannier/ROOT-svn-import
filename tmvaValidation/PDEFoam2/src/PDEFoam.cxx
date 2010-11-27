@@ -932,6 +932,25 @@ void TMVA::PDEFoam::PrintCells(void)
 }
 
 //_____________________________________________________________________
+void TMVA::PDEFoam::FillFoamCells(const Event* ev, Float_t wt)
+{
+   // This function fills an weight 'wt' into the PDEFoam cell, which
+   // corresponds to the given event 'ev'.  Cell element 0 is filled
+   // with the weight 'wt', and element 1 is filled with the squared
+   // weight.
+
+   // find corresponding foam cell
+   std::vector<Float_t> values  = ev->GetValues();
+   std::vector<Float_t> tvalues = VarTransform(values);
+   PDEFoamCell *cell = FindCell(tvalues);
+
+   // 0. Element: Sum of weights 'wt'
+   // 1. Element: Sum of weights 'wt' squared
+   SetCellElement(cell, 0, GetCellElement(cell, 0) + wt);
+   SetCellElement(cell, 1, GetCellElement(cell, 1) + wt*wt);
+}
+
+//_____________________________________________________________________
 void TMVA::PDEFoam::ResetCellElements()
 {
    // remove all cell elements
