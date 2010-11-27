@@ -932,6 +932,25 @@ void TMVA::PDEFoam::PrintCells(void)
 }
 
 //_____________________________________________________________________
+void TMVA::PDEFoam::FillFoamCells(const Event* ev, Float_t wt)
+{
+   // This function fills an weight 'wt' into the PDEFoam cell, which
+   // corresponds to the given event 'ev'.  Cell element 0 is filled
+   // with the weight 'wt', and element 1 is filled with the squared
+   // weight.
+
+   // find corresponding foam cell
+   std::vector<Float_t> values  = ev->GetValues();
+   std::vector<Float_t> tvalues = VarTransform(values);
+   PDEFoamCell *cell = FindCell(tvalues);
+
+   // 0. Element: Sum of weights 'wt'
+   // 1. Element: Sum of weights 'wt' squared
+   SetCellElement(cell, 0, GetCellElement(cell, 0) + wt);
+   SetCellElement(cell, 1, GetCellElement(cell, 1) + wt*wt);
+}
+
+//_____________________________________________________________________
 void TMVA::PDEFoam::ResetCellElements()
 {
    // remove all cell elements
@@ -956,14 +975,19 @@ Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv)
+Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel *kernel)
 {
    // This function finds the cell, which corresponds to the given
    // untransformed event vector 'xvec' and return its value, which is
-   // given by the parameter 'cv'.
+   // given by the parameter 'cv'.  If kernel != NULL, then
+   // PDEFoamKernel::Estimate() is called on the transformed event
+   // variables.
    
    std::vector<Float_t> txvec(VarTransform(xvec));
-   return GetCellValue(FindCell(txvec), cv);
+   if (kernel == NULL)
+      return GetCellValue(FindCell(txvec), cv);
+   else
+      return kernel->Estimate(txvec, cv);
 }
 
 //_____________________________________________________________________

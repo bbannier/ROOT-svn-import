@@ -96,7 +96,7 @@ namespace TMVA {
       SeparationBase( const SeparationBase& s );
 
       // destructor
-      virtual ~SeparationBase(){};
+      virtual ~SeparationBase(){}
 
       // Return the gain in separation of the original sample is splitted in two sub-samples
       // (N * Index_parent) - (N_left * Index_left) - (N_right * Index_right)

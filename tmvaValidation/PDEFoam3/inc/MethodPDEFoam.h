@@ -211,6 +211,7 @@ namespace TMVA {
 
       TString       fKernelStr;       // Kernel for GetMvaValue() (option string)
       EKernel       fKernel;          // Kernel for GetMvaValue()
+      PDEFoamKernel *fKernelEstimator;// Kernel estimator
       TString       fTargetSelectionStr; // method of selecting the target (only mulit target regr.)
       ETargetSelection fTargetSelection; // method of selecting the target (only mulit target regr.)
       Bool_t        fFillFoamWithOrigWeights; // fill the foam with boost weights
