@@ -130,7 +130,6 @@ namespace TMVA {
       EFoamType fFoamType;     // type of foam
       Double_t *fXmin;         // [fDim] minimum for variable transform
       Double_t *fXmax;         // [fDim] maximum for variable transform
-      UInt_t fNElements;       // number of variables in every cell
       UInt_t fNmin;            // minimal number of events in cell to split cell
       UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
@@ -223,8 +222,8 @@ namespace TMVA {
       void CalcCellDiscr();
       void CalcCellTarget();
 
-      // init TObject pointer on cells
-      void ResetCellElements(Bool_t allcells = false);
+      // remove all cell elements
+      void ResetCellElements();
 
       // ---------- Getters and Setters
 
@@ -234,7 +233,6 @@ namespace TMVA {
       void SetnBin(Int_t nBin){fNBin = nBin;}          // Sets no of bins in histogs in cell exploration
       void SetEvPerBin(Int_t EvPerBin){fEvPerBin =EvPerBin;} // Sets max. no. of effective events per bin
       void SetInhiDiv(Int_t, Int_t ); // Set inhibition of cell division along certain edge
-      void SetNElements(UInt_t numb){fNElements = numb;} // init every cell element (TVectorD*)
       void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;} // set VolFrac
       void SetFoamType(EFoamType ft);   // set foam type
       void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
@@ -244,7 +242,6 @@ namespace TMVA {
       // coverity[ -tainted_data_return ]
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
-      UInt_t   GetNElements() const {return fNElements; } // returns number of elements, saved on every cell
       Float_t  GetVolumeFraction() const {return fVolFrac;} // get VolFrac from PDEFoam
       EFoamType GetFoamType()      const {return fFoamType;}; // get foam type
       UInt_t   GetNActiveCells()   const {return fNoAct;}; // returns number of active cells
