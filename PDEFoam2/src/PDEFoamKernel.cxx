@@ -51,8 +51,6 @@ TMVA::PDEFoamKernel::PDEFoamKernel(PDEFoam *foam)
 TMVA::PDEFoamKernel::~PDEFoamKernel()
 {
    // Destructor
-   if (fPDEFoam != NULL)
-      delete fPDEFoam;
    if (fLogger != NULL)
       delete fLogger;
 }
