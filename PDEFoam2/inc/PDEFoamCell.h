@@ -109,7 +109,7 @@ namespace TMVA {
       void SetElement(TObject* fobj){ fElement = fobj; }     // Set user variable
       TObject* GetElement() const { return fElement; }       // Get pointer to user varibale
       ////////////////////////////////////////////////////////////////////////////
-      ClassDef(PDEFoamCell,1)  //Single cell of FOAM
+      ClassDef(PDEFoamCell,2)  //Single cell of FOAM
    }; // end of PDEFoamCell
 } // namespace TMVA
 
