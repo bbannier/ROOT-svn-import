@@ -23,6 +23,10 @@
 #pragma link C++ class TMVA::MinuitWrapper+;
 #pragma link C++ class TMVA::IFitterTarget+;
 #pragma link C++ class TMVA::PDEFoam+;
+#pragma link C++ class TMVA::PDEFoamEvent+;
+#pragma link C++ class TMVA::PDEFoamDiscriminant+;
+#pragma link C++ class TMVA::PDEFoamTarget+;
+#pragma link C++ class TMVA::PDEFoamMultiTarget+;
 #pragma link C++ class TMVA::PDEFoamDecisionTree+;
 #pragma link C++ class TMVA::PDEFoamDensity+;
 #pragma link C++ class TMVA::PDEFoamDiscriminantDensity+;

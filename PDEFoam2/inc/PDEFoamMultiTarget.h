@@ -2,11 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamDecisionTree                                                   *
+ * Classes: PDEFoamMultiTarget                                                    *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class for decision tree like PDEFoam object                               *
+ *      Class for PDEFoamMultiTarget object                                       *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
@@ -23,42 +23,36 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-#ifndef ROOT_TMVA_PDEFoamDecisionTree
-#define ROOT_TMVA_PDEFoamDecisionTree
+#ifndef ROOT_TMVA_PDEFoamMultiTarget
+#define ROOT_TMVA_PDEFoamMultiTarget
 
-#ifndef ROOT_TMVA_PDEFoamDiscriminant
-#include "TMVA/PDEFoamDiscriminant.h"
+#ifndef ROOT_TMVA_PDEFoamEvent
+#include "TMVA/PDEFoamEvent.h"
 #endif
 
 namespace TMVA {
 
-   // separation types
-   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
-			kCrossEntropy };
-
-   class PDEFoamDecisionTree : public PDEFoamDiscriminant {
-
-   private:
-      EDTSeparation fDTSeparation; // split cells according to certain separation
+   class PDEFoamMultiTarget : public PDEFoamEvent {
 
    protected:
-
-      virtual void Explore(PDEFoamCell *Cell);     // Exploration of the cell
-      Float_t GetSeparation(Float_t s, Float_t b); // calculate separation
       
-      PDEFoamDecisionTree(const PDEFoamDecisionTree&); // Copy Constructor  NOT USED
+      PDEFoamMultiTarget(const PDEFoamMultiTarget&); // Copy Constructor  NOT USED
 
+      // ---------- Public functions ----------------------------------
    public:
-      PDEFoamDecisionTree();               // Default constructor (used only by ROOT streamer)
-      PDEFoamDecisionTree(const TString&, EDTSeparation sep=kFoam); // Principal user-defined constructor
-      virtual ~PDEFoamDecisionTree();      // Default destructor
+      PDEFoamMultiTarget();                  // Default constructor (used only by ROOT streamer)
+      PDEFoamMultiTarget(const TString&);    // Principal user-defined constructor
+      virtual ~PDEFoamMultiTarget(){};       // Default destructor
 
-      void SetDTSeparation(EDTSeparation new_val){ fDTSeparation = new_val; }
+      // extract the targets from the foam
+      std::vector<Float_t> GetTargets( std::vector<Float_t> &vals, ETargetSelection ts );
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoamDecisionTree,1) // Decision tree like PDEFoam
-   }; // end of PDEFoamDecisionTree
+      ClassDef(PDEFoamMultiTarget,1) // Tree of PDEFoamCells
+   }; // end of PDEFoamMultiTarget
 
 }  // namespace TMVA
+
+// ---------- Inline functions
 
 #endif

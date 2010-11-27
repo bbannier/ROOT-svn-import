@@ -934,87 +934,6 @@ void TMVA::PDEFoam::PrintCells(void)
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::RemoveEmptyCell( Int_t iCell )
-{
-   // This function removes a cell iCell, which has a volume equal to zero.
-   // It works the following way:
-   // 1) find grandparent to iCell
-   // 2) set daughter of the grandparent cell to the sister of iCell
-   //
-   // Result:
-   // iCell and its parent are alone standing ==> will be removed
-
-   // get cell volume
-   Double_t volume = fCells[iCell]->GetVolume();
-
-   if (!fCells[iCell]->GetStat() || volume>0){
-      Log() << kDEBUG << "<RemoveEmptyCell>: cell " << iCell
-            << "is not active or has volume>0 ==> doesn't need to be removed" << Endl;
-      return;
-   }
-
-   // get parent and grandparent Cells
-   PDEFoamCell *pCell  = fCells[iCell]->GetPare();
-   PDEFoamCell *ppCell = fCells[iCell]->GetPare()->GetPare();
-
-   // get neighbour (sister) to iCell
-   PDEFoamCell *sCell;
-   if (pCell->GetDau0() == fCells[iCell])
-      sCell = pCell->GetDau1();
-   else
-      sCell = pCell->GetDau0();
-
-   // cross check
-   if (pCell->GetIntg() != sCell->GetIntg())
-      Log() << kWARNING << "<RemoveEmptyCell> Error: cell integrals are not equal!"
-            << " Intg(parent cell)=" << pCell->GetIntg()
-            << " Intg(sister cell)=" << sCell->GetIntg()
-            << Endl;
-
-   // set daughter of grandparent to sister of iCell
-   if (ppCell->GetDau0() == pCell)
-      ppCell->SetDau0(sCell);
-   else
-      ppCell->SetDau1(sCell);
-
-   // set parent of sister to grandparent of of iCell
-   sCell->SetPare(ppCell);
-
-   // now iCell and its parent are alone ==> set them inactive
-   fCells[iCell]->SetStat(0);
-   pCell->SetStat(0);
-}
-
-//_____________________________________________________________________
-void TMVA::PDEFoam::CheckCells( Bool_t remove_empty_cells )
-{
-   // debug function: checks all cells with respect to critical
-   // values, f.e. cell volume, ...
-
-   for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
-      if (!fCells[iCell]->GetStat())
-         continue;
-
-      Double_t volume = fCells[iCell]->GetVolume();
-      if (volume<1e-10){
-         if (volume<=0){
-            Log() << kWARNING << "Critical: cell volume negative or zero! volume="
-                  << volume << " cell number: " << iCell << Endl;
-            // fCells[iCell]->Print("1"); // debug output
-            if (remove_empty_cells){
-               Log() << kWARNING << "Remove cell " << iCell << Endl;
-               RemoveEmptyCell(iCell);
-            }
-         }
-         else {
-            Log() << kWARNING << "Cell volume close to zero! volume="
-                  << volume << " cell number: " << iCell << Endl;
-         }
-      }
-   }
-}
-
-//_____________________________________________________________________
 void TMVA::PDEFoam::ResetCellElements()
 {
    // remove all cell elements
@@ -1032,590 +951,10 @@ void TMVA::PDEFoam::ResetCellElements()
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::CalcCellTarget()
-{
-   // Calculate average cell target in every cell and save them to the cell.
-   // This function is called when the Mono target regression option is set.
-
-   // loop over cells
-   for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
-      if (!(fCells[iCell]->GetStat()))
-         continue;
-
-      Double_t N_ev  = GetCellElement(fCells[iCell], 0); // get number of events
-      Double_t tar   = GetCellElement(fCells[iCell], 1); // get sum of targets
-
-      if (N_ev > 1e-20){
-         SetCellElement(fCells[iCell], 0, tar/N_ev);  // set average target
-         SetCellElement(fCells[iCell], 1, tar/TMath::Sqrt(N_ev)); // set error on average target
-      }
-      else {
-         SetCellElement(fCells[iCell], 0, 0.0 ); // set mean target
-         SetCellElement(fCells[iCell], 1, -1  ); // set mean target error
-      }
-   }
-}
-
-//_____________________________________________________________________
-void TMVA::PDEFoam::CalcCellDiscr()
-{
-   // Calc discriminator and its error for every cell and save it to the cell.
-   // This function is called when the fSigBgSeparated==False option is set.
-
-   // loop over cells
-   for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
-      if (!(fCells[iCell]->GetStat()))
-         continue;
-
-      Double_t N_sig = GetCellElement(fCells[iCell], 0); // get number of signal events
-      Double_t N_bg  = GetCellElement(fCells[iCell], 1); // get number of bg events
-
-      if (N_sig<0.) {
-         Log() << kWARNING << "Negative number of signal events in cell " << iCell
-               << ": " << N_sig << ". Set to 0." << Endl;
-         N_sig=0.;
-      }
-      if (N_bg<0.) {
-         Log() << kWARNING << "Negative number of background events in cell " << iCell
-               << ": " << N_bg << ". Set to 0." << Endl;
-         N_bg=0.;
-      }
-
-
-      if (N_sig+N_bg > 1e-10){
-         SetCellElement(fCells[iCell], 0, N_sig/(N_sig+N_bg));  // set discriminator
-         SetCellElement(fCells[iCell], 1, TMath::Sqrt( Sqr ( N_sig/Sqr(N_sig+N_bg))*N_sig +
-                                                       Sqr ( N_bg /Sqr(N_sig+N_bg))*N_bg ) ); // set discriminator error
-
-      }
-      else {
-         SetCellElement(fCells[iCell], 0, 0.5); // set discriminator
-         SetCellElement(fCells[iCell], 1, 1. ); // set discriminator error
-      }
-   }
-}
-
-//_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellDiscr( std::vector<Float_t> &xvec, EKernel kernel )
-{
-   // Get discriminator saved in cell (previously calculated in CalcCellDiscr())
-   // which encloses the coordinates given in xvec.
-   // This function is used, when the fSigBgSeparated==False option is set
-   // (unified foams).
-
-   // transform xvec
-   std::vector<Float_t> txvec(VarTransform(xvec));
-
-   // find cell
-   PDEFoamCell *cell= FindCell(txvec);
-
-   if (!cell) return -999.;
-
-   switch (kernel) {
-   case kNone:
-      return GetCellValue(cell, kDiscriminator);
-
-   case kGaus: {
-      Double_t result = 0.;
-      Double_t norm = 0.;
-
-      for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
-         if (!(fCells[iCell]->GetStat())) continue;
-
-         // calc cell density
-         Double_t cell_discr = GetCellValue(fCells[iCell], kDiscriminator);
-         Double_t gau        = WeightGaus(fCells[iCell], txvec);
-
-         result += gau * cell_discr;
-         norm   += gau;
-      }
-
-      return result / norm;
-   }
-
-   case kLinN:
-      return WeightLinNeighbors(txvec, kDiscriminator);
-
-   default:
-      Log() << kFATAL << "GetCellDiscr: ERROR: wrong kernel!" << Endl;
-      return 0;
-   }
-
-   return 0;
-}
-
-//_____________________________________________________________________
-void TMVA::PDEFoam::FillFoamCells(const Event* ev)
-{
-   // This function fills an event into the foam.
-   //
-   // In case of Mono-Target regression this function prepares the
-   // calculation of the average target value in every cell.  Note,
-   // that only target 0 is saved in the cell!
-   //
-   // In case of a unified foam this function prepares the calculation of
-   // the cell discriminator in every cell.
-
-   std::vector<Float_t> values  = ev->GetValues();
-   std::vector<Float_t> targets = ev->GetTargets();
-   Float_t weight               = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
-   EFoamType ft                 = GetFoamType();
-
-   if (ft == kMultiTarget && (ev->GetNTargets() > 0))
-      Log() << kWARNING << "<FillFoamCells>: event has non-zero target values!" << Endl;
-
-   // find corresponding foam cell
-   std::vector<Float_t> tvalues = VarTransform(values);
-   PDEFoamCell *cell = FindCell(tvalues);
-   if (!cell) {
-      Log() << kFATAL << "<PDEFoam::FillFoamCells>: No cell found!" << Endl;
-      return;
-   }
-
-   // Add events to cell
-   switch (ft) {
-   case kSeparate:
-   case kMultiTarget:
-      // 0. Element: Number of events
-      // 1. Element: RMS
-      SetCellElement(cell, 0, GetCellElement(cell, 0) + weight);
-      SetCellElement(cell, 1, GetCellElement(cell, 1) + weight*weight);
-      break;
-
-   case kDiscr:
-      // 0. Element: Number of signal events
-      // 1. Element: Number of background events times normalization
-      if (ev->GetClass() == 0)
-         SetCellElement(cell, 0, GetCellElement(cell, 0) + weight);
-      else
-         SetCellElement(cell, 1, GetCellElement(cell, 1) + weight);
-      break;
-
-   case kMonoTarget:
-      // 0. Element: Number of events
-      // 1. Element: Target 0
-      SetCellElement(cell, 0, GetCellElement(cell, 0) + weight);
-      SetCellElement(cell, 1, GetCellElement(cell, 1) + weight*targets.at(0));
-      break;
-
-   default:
-      Log() << kFATAL << "<FillFoamCells>: unmatched foam type!" << Endl;
-      break;
-   }
-}
-
-//_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellRegValue0( std::vector<Float_t> &xvec, EKernel kernel )
-{
-   // Get regression value 0 from cell that contains the event vector xvec.
-   // This function is used when the MultiTargetRegression==False option is set.
-
-   std::vector<Float_t> txvec(VarTransform(xvec));
-   PDEFoamCell *cell = FindCell(txvec);
-
-   if (!cell) {
-      Log() << kFATAL << "<GetCellRegValue0> ERROR: No cell found!" << Endl;
-      return -999.;
-   }
-
-   switch (kernel) {
-   case kNone:
-      if (GetCellValue(cell, kTarget0Error) != -1)
-         // cell is not empty
-         return GetCellValue(cell, kTarget0);
-      else
-         // cell is empty -> calc average target of neighbor cells
-         return GetAverageNeighborsValue(txvec, kTarget0);
-      break;
-
-   case kGaus: {
-      // return gaus weighted cell density
-      
-      Double_t result = 0.;
-      Double_t norm = 0.;
-
-      for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
-         if (!(fCells[iCell]->GetStat())) continue;
-
-         // calc cell density
-         Double_t cell_val = 0;
-         if (GetCellValue(fCells[iCell], kTarget0Error) != -1)
-            // cell is not empty
-            cell_val = GetCellValue(fCells[iCell], kTarget0);
-         else
-            // cell is empty -> calc average target of neighbor cells
-            cell_val = GetAverageNeighborsValue(txvec, kTarget0);
-         Double_t gau = WeightGaus(fCells[iCell], txvec);
-
-         result += gau * cell_val;
-         norm   += gau;
-      }
-      return result / norm;
-   }
-      break;
-   case kLinN:
-      if (GetCellValue(cell, kTarget0Error) != -1)
-         // cell is not empty -> weight with non-empty neighbors
-         return WeightLinNeighbors(txvec, kTarget0, -1, -1, kTRUE);
-      else
-         // cell is empty -> calc average target of non-empty neighbor
-         // cells
-         return GetAverageNeighborsValue(txvec, kTarget0);
-      break;
-
-   default:
-      Log() << kFATAL << "<GetCellRegValue0>: unknown kernel!" << Endl;
-      return 0.;
-   }
-
-   return 0.;
-}
-
-//_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetAverageNeighborsValue( std::vector<Float_t> &txvec,
-                                                  ECellValue cv )
-{
-   // This function returns the average value 'cv' of only nearest
-   // neighbor cells.  It is used in cases, where empty cells shall
-   // not be evaluated.
-   //
-   // Parameters:
-   // - txvec - event vector, transformed into foam coordinates [0, 1]
-   // - cv - cell value, see definition of ECellValue
-
-   const Double_t xoffset = 1.e-6;
-   Double_t norm   = 0; // normalisation
-   Double_t result = 0; // return value
-
-   PDEFoamCell *cell = FindCell(txvec); // find cooresponding cell
-   PDEFoamVect cellSize(GetTotDim());
-   PDEFoamVect cellPosi(GetTotDim());
-   cell->GetHcub(cellPosi, cellSize); // get cell coordinates
-
-   // loop over all dimensions and find neighbor cells
-   for (Int_t dim=0; dim<GetTotDim(); dim++) {
-      std::vector<Float_t> ntxvec(txvec);
-      PDEFoamCell* left_cell  = 0; // left cell
-      PDEFoamCell* right_cell = 0; // right cell
-
-      // get left cell
-      ntxvec[dim] = cellPosi[dim]-xoffset;
-      left_cell = FindCell(ntxvec);
-      if (!CellValueIsUndefined(left_cell)){
-         // if left cell is not empty, take its value
-         result += GetCellValue(left_cell, cv);
-         norm++;
-      }
-      // get right cell
-      ntxvec[dim] = cellPosi[dim]+cellSize[dim]+xoffset;
-      right_cell = FindCell(ntxvec);
-      if (!CellValueIsUndefined(right_cell)){
-         // if right cell is not empty, take its value
-         result += GetCellValue(right_cell, cv);
-         norm++;
-      }
-   }
-   if (norm>0)  result /= norm; // calc average target
-   else         result = 0;     // return null if all neighbors are empty
-
-   return result;
-}
-
-//_____________________________________________________________________
 Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
 {
    // Returns true, if the value of the given cell is undefined.
-
-   EFoamType ft = GetFoamType();
-   switch(ft){
-   case kSeparate:
-      return kFALSE;
-   case kDiscr:
-      return kFALSE;
-   case kMonoTarget:
-      return GetCellValue(cell, kTarget0Error) == -1;
-   case kMultiTarget:
-      return kFALSE;
-   default:
-      return kFALSE;
-   }
    return kFALSE;
-}
-
-//_____________________________________________________________________
-std::vector<Float_t> TMVA::PDEFoam::GetCellTargets( std::vector<Float_t> &tvals, ETargetSelection ts )
-{
-   // This function is used when the MultiTargetRegression==True
-   // option is set.  It calculates the mean target or most probable
-   // target values if 'tvals' variables are given ('tvals' does not
-   // contain targets)
-   //
-   // Parameters:
-   // - tvals - transformed event variables (element of [0,1]) (no targets!)
-   // - ts - method of target selection (kMean, kMpv)
-   //
-   // Result:
-   // vetor of mean targets or most probable targets over all cells
-   // which first coordinates enclose 'tvals'
-
-   std::vector<Float_t> target(GetTotDim()-tvals.size(), 0); // returned vector
-   std::vector<Float_t> norm(target); // normalisation
-   Double_t max_dens = 0.;            // maximum cell density
-
-   // find cells, which fit tvals (no targets)
-   std::vector<PDEFoamCell*> cells = FindCells(tvals);
-   if (cells.size()<1) return target;
-
-   // loop over all cells found
-   std::vector<PDEFoamCell*>::iterator cell_it(cells.begin());
-   for (cell_it=cells.begin(); cell_it!=cells.end(); cell_it++){
-
-      // get density of cell
-      Double_t cell_density = GetCellValue(*cell_it, kDensity);
-
-      // get cell position and size
-      PDEFoamVect  cellPosi(GetTotDim()), cellSize(GetTotDim());
-      (*cell_it)->GetHcub(cellPosi, cellSize);
-
-      // loop over all target dimensions, in order to calculate target
-      // value
-      if (ts==kMean){
-         // sum cell density times cell center
-         for (UInt_t itar=0; itar<target.size(); itar++){
-            UInt_t idim = itar+tvals.size();
-            target.at(itar) += cell_density *
-               VarTransformInvers(idim, cellPosi[idim]+0.5*cellSize[idim]);
-            norm.at(itar) += cell_density;
-         } // loop over targets
-      } else {
-         // get cell center with maximum event density
-         if (cell_density > max_dens){
-            max_dens = cell_density; // save new max density
-            // fill target values
-            for (UInt_t itar=0; itar<target.size(); itar++){
-               UInt_t idim = itar+tvals.size();
-               target.at(itar) =
-                  VarTransformInvers(idim, cellPosi[idim]+0.5*cellSize[idim]);
-            } // loop over targets
-         }
-      }
-   } // loop over cells
-
-   // normalise mean cell density
-   if (ts==kMean){
-      for (UInt_t itar=0; itar<target.size(); itar++){
-         if (norm.at(itar)>1.0e-15)
-            target.at(itar) /= norm.at(itar);
-         else
-            // normalisation factor is too small -> return approximate
-            // target value
-            target.at(itar) = (fXmax[itar+tvals.size()]-fXmin[itar+tvals.size()])/2.;
-      }
-   }
-
-   return target;
-}
-
-//_____________________________________________________________________
-std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> &vals, EKernel kernel, ETargetSelection ts )
-{
-   // This function is used when the MultiTargetRegression==True option is set.
-   // Returns regression value i, given the event variables 'vals'.
-   // Note: number of foam dimensions = number of variables + number of targets
-   //
-   // Parameters:
-   // - vals - event variables (no targets)
-   // - kernel - used kernel (None or Gaus)
-   // - ts - method of target selection (Mean or Mpv)
-
-   // checkt whether vals are within foam borders.
-   // if not -> push it into foam
-   const Float_t xsmall = 1.e-7;
-   for (UInt_t l=0; l<vals.size(); l++) {
-      if (vals.at(l) <= fXmin[l]){
-         vals.at(l) = fXmin[l] + xsmall;
-      }
-      else if (vals.at(l) >= fXmax[l]){
-         vals.at(l) = fXmax[l] - xsmall;
-      }
-   }
-
-   // transform variables (vals)
-   std::vector<Float_t> txvec(VarTransform(vals));
-
-   // choose kernel
-   switch (kernel) {
-   case kNone:
-      return GetCellTargets(txvec, ts);
-
-   case kGaus: {
-
-      std::vector<Float_t> target(GetTotDim()-txvec.size(), 0); // returned vector
-      std::vector<Float_t> norm(target); // normalisation
-
-      // loop over all active cells to calc gaus weighted target values
-      for (Long_t ice=0; ice<=fLastCe; ice++) {
-         if (!(fCells[ice]->GetStat())) continue;
-
-         // weight with gaus only in non-target dimensions!
-         Double_t gau = WeightGaus(fCells[ice], txvec, vals.size());
-
-         PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
-         fCells[ice]->GetHcub(cellPosi, cellSize);
-
-         // fill new vector with coordinates of new cell
-         std::vector<Float_t> new_vec;
-         for (UInt_t k=0; k<txvec.size(); k++)
-            new_vec.push_back(cellPosi[k] + 0.5*cellSize[k]);
-
-         std::vector<Float_t> val = GetCellTargets(new_vec, ts);
-         for (UInt_t itar=0; itar<target.size(); itar++){
-            target.at(itar) += gau * val.at(itar);
-            norm.at(itar)   += gau;
-         }
-      }
-
-      // normalisation
-      for (UInt_t itar=0; itar<target.size(); itar++){
-         if (norm.at(itar)<1.0e-20){
-            Log() << kWARNING << "Warning: norm too small!" << Endl;
-            target.at(itar) = 0.;
-         } else
-            target.at(itar) /= norm.at(itar);
-      }
-      return target;
-   }
-      break;
-
-   default:
-      Log() << kFATAL << "<GetProjectedRegValue>: unsupported kernel!" << Endl;
-      return std::vector<Float_t>(GetTotDim()-txvec.size(), 0);
-   }
-
-   return std::vector<Float_t>(GetTotDim()-txvec.size(), 0);
-}
-
-//_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellDensity( std::vector<Float_t> &xvec, EKernel kernel )
-{
-   // Returns density (=number of entries / volume) of cell that
-   // encloses the untransformed event vector 'xvec'.  This function
-   // is called by GetMvaValue() in case of two separated foams
-   // (signal and background).  'kernel' can be either kNone or kGaus.
-
-   std::vector<Float_t> txvec(VarTransform(xvec));
-   PDEFoamCell *cell          = FindCell(txvec);
-
-   if (!cell) {
-      Log() << kFATAL << "<GetCellDensity(event)> ERROR: No cell found!" << Endl;
-      return -999.;
-   }
-
-   switch (kernel) {
-   case kNone:
-      // return cell entries over cell volume
-      return GetCellValue(cell, kDensity);
-
-   case kGaus: {
-      // return gaus weighted cell density
-
-      Double_t result = 0;
-      Double_t norm = 0.;
-
-      for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
-         if (!(fCells[iCell]->GetStat())) continue;
-
-         // calc cell density
-         Double_t cell_dens = GetCellValue(fCells[iCell], kDensity);
-         Double_t gau       = WeightGaus(fCells[iCell], txvec);
-
-         result += gau * cell_dens;
-         norm   += gau;
-      }
-
-      return result / norm;
-   }
-      break;
-
-   case kLinN:
-      return WeightLinNeighbors(txvec, kDensity);
-
-   default: 
-      Log() << kFATAL << "<GetCellDensity(event)> unknown kernel!" << Endl;
-      return 0.;
-   }
-
-   return 0;
-}
-
-//_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv )
-{
-   // This function returns a value, which was saved in the foam cell,
-   // depending on the foam type.  The value to return is specified
-   // with the 'cv' parameter.
-
-   switch(cv){
-      
-   case kTarget0:
-      if (GetFoamType() == kMonoTarget) return GetCellElement(cell, 0);
-      break;
-
-   case kTarget0Error:
-      if (GetFoamType() == kMonoTarget) return GetCellElement(cell, 1);
-      break;
-
-   case kDiscriminator:
-      if (GetFoamType() == kDiscr) return GetCellElement(cell, 0);
-      break;
-
-   case kDiscriminatorError:
-      if (GetFoamType() == kDiscr) return GetCellElement(cell, 1);
-      break;
-
-   case kMeanValue:
-      return cell->GetIntg();
-      break;
-
-   case kRms:
-      return cell->GetDriv();
-      break;
-
-   case kRmsOvMean:
-      if (cell->GetIntg() != 0) return cell->GetDriv()/cell->GetIntg();
-      break;
-
-   case kNev:
-      if (GetFoamType() == kSeparate || GetFoamType() == kMultiTarget) 
-         return GetCellElement(cell, 0);
-      break;
-
-   case kDensity: {
-      
-      Double_t volume  = cell->GetVolume();
-      if ( volume > 1.0e-10 ){
-         return GetCellValue(cell, kNev)/volume;
-      } else {
-         if (volume<=0){
-            cell->Print("1"); // debug output
-            Log() << kWARNING << "<GetCellDensity(cell)>: ERROR: cell volume"
-                  << " negative or zero!"
-                  << " ==> return cell density 0!"
-                  << " cell volume=" << volume
-                  << " cell entries=" << GetCellValue(cell, kNev) << Endl;
-            return 0;
-         } else
-            Log() << kWARNING << "<GetCellDensity(cell)>: WARNING: cell volume"
-                  << " close to zero!"
-                  << " cell volume: " << volume << Endl;
-      }
-   } // kDensity
-      
-   default:
-      return 0;
-   }
-
-   return 0;
 }
 
 //_____________________________________________________________________
@@ -1635,156 +974,6 @@ Double_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
    // Returns the number of events, saved in the 'cell' during foam build-up.
    // Only used during foam build-up!
    return GetCellElement(cell, 0);
-}
-
-//_____________________________________________________________________
-Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> &txvec, ECellValue cv, Int_t dim1, Int_t dim2, Bool_t TreatEmptyCells )
-{
-   // Returns the cell value, corresponding to 'txvec' (foam
-   // coordinates [0,1]), weighted by the neighbor cells via a linear
-   // function.
-   //
-   // Parameters:
-   //  - txvec - event vector, transformed into foam coordinates [0,1]
-   //
-   //  - cv - cell value to be weighted
-   //
-   //  - dim1, dim2 - dimensions for two-dimensional projection.
-   //    Default values: dim1 = dim2 = -1
-   //    If dim1 and dim2 are set to values >=0 and <fDim, than
-   //    the function GetProjectionCellValue() is used to get cell
-   //    value.  This is used for projection to two dimensions within
-   //    Project2().
-   //
-   //  - TreatEmptyCells - if this option is set false (default),
-   //    it is not checked, wether the cell or its neighbors are empty
-   //    or not.  If this option is set true, than only non-empty
-   //    neighbor cells are taken into account for weighting.  If the
-   //    cell, which contains txvec is empty, than its value is
-   //    replaced by the average value of the non-empty neighbor cells
-
-   Double_t result = 0.;
-   UInt_t norm     = 0;
-   const Double_t xoffset = 1.e-6;
-
-   if (txvec.size() != UInt_t(GetTotDim()))
-      Log() << kFATAL << "Wrong dimension of event variable!" << Endl;
-
-   // find cell, which contains txvec
-   PDEFoamCell *cell= FindCell(txvec);
-   PDEFoamVect cellSize(GetTotDim());
-   PDEFoamVect cellPosi(GetTotDim());
-   cell->GetHcub(cellPosi, cellSize);
-   // calc value of cell, which contains txvec
-   Double_t cellval = 0;
-   if (!(TreatEmptyCells && CellValueIsUndefined(cell)))
-      // cell is not empty -> get cell value
-      cellval = GetCellValue(cell, cv);
-   else
-      // cell is empty -> get average value of non-empty neighbor
-      // cells
-      cellval = GetAverageNeighborsValue(txvec, cv);
-
-   // loop over all dimensions to find neighbor cells
-   for (Int_t dim=0; dim<GetTotDim(); dim++) {
-      std::vector<Float_t> ntxvec(txvec);
-      Double_t mindist;
-      PDEFoamCell *mindistcell = 0; // cell with minimal distance to txvec
-      // calc minimal distance to neighbor cell
-      mindist = (txvec[dim]-cellPosi[dim])/cellSize[dim];
-      if (mindist<0.5) { // left neighbour
-         ntxvec[dim] = cellPosi[dim]-xoffset;
-         mindistcell = FindCell(ntxvec); // left neighbor cell
-      } else { // right neighbour
-         mindist=1-mindist;
-         ntxvec[dim] = cellPosi[dim]+cellSize[dim]+xoffset;
-         mindistcell = FindCell(ntxvec); // right neighbor cell
-      }
-      Double_t mindistcellval = 0; // value of cell, which contains ntxvec
-      if (dim1>=0 && dim1<GetTotDim() &&
-          dim2>=0 && dim2<GetTotDim() &&
-          dim1!=dim2){
-         cellval        = GetProjectionCellValue(cell, dim1, dim2, cv);
-         mindistcellval = GetProjectionCellValue(mindistcell, dim1, dim2, cv);
-      } else {
-         mindistcellval = GetCellValue(mindistcell, cv);
-      }
-      // if treatment of empty neighbor cells is deactivated, do
-      // normal weighting
-      if (!(TreatEmptyCells && CellValueIsUndefined(mindistcell))){
-         result += cellval        * (0.5 + mindist);
-         result += mindistcellval * (0.5 - mindist);
-         norm++;
-      }
-   }
-   if (norm==0) return cellval;     // all nearest neighbors were empty
-   else         return result/norm; // normalisation
-}
-
-//_____________________________________________________________________
-Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> &txvec,
-                                   UInt_t dim )
-{
-   // Returns the gauss weight between the 'cell' and a given coordinate 'txvec'.
-   //
-   // Parameters:
-   // - cell - the cell
-   //
-   // - txvec - the transformed event variables (in [0,1]) (coordinates <0 are
-   //   set to 0, >1 are set to 1)
-   //
-   // - dim - number of dimensions for the calculation of the euclidean distance.
-   //   If dim=0, all dimensions of the foam are taken.  Else only the first 'dim'
-   //   coordinates of 'txvec' are used for the calculation of the euclidean distance.
-   //
-   // Returns:
-   // exp(-(d/sigma)^2/2), where
-   //  - d - is the euclidean distance between 'txvec' and the point of the 'cell'
-   //    which is most close to 'txvec' (in order to avoid artefacts because of the
-   //    form of the cells).
-   //  - sigma = 1/VolFrac
-
-   // get cell coordinates
-   PDEFoamVect cellSize(GetTotDim());
-   PDEFoamVect cellPosi(GetTotDim());
-   cell->GetHcub(cellPosi, cellSize);
-
-   // calc normalized distance
-   UInt_t dims;            // number of dimensions for gaus weighting
-   if (dim == 0)
-      dims = GetTotDim();  // use all dimensions of cell txvec for weighting
-   else if (dim <= UInt_t(GetTotDim()))
-      dims = dim;          // use only 'dim' dimensions of cell txvec for weighting
-   else {
-      Log() << kFATAL << "ERROR: too many given dimensions for Gaus weight!" << Endl;
-      return 0.;
-   }
-
-   // calc position of nearest edge of cell
-   std::vector<Float_t> cell_center;
-   for (UInt_t i=0; i<dims; i++){
-      if (txvec[i]<0.) txvec[i]=0.;
-      if (txvec[i]>1.) txvec[i]=1.;
-      //cell_center.push_back(cellPosi[i] + (0.5*cellSize[i]));
-      if (cellPosi[i] > txvec.at(i))
-         cell_center.push_back(cellPosi[i]);
-      else if (cellPosi[i]+cellSize[i] < txvec.at(i))
-         cell_center.push_back(cellPosi[i]+cellSize[i]);
-      else
-         cell_center.push_back(txvec.at(i));
-   }
-
-   Float_t distance = 0.; // distance for weighting
-   for (UInt_t i=0; i<dims; i++)
-      distance += Sqr(txvec.at(i)-cell_center.at(i));
-   distance = TMath::Sqrt(distance);
-
-   Float_t width = 1./GetVolumeFraction();
-   if (width < 1.0e-10)
-      Log() << kWARNING << "Warning: wrong volume fraction: " << GetVolumeFraction() << Endl;
-
-   // weight with Gaus with sigma = 1/VolFrac
-   return TMath::Gaus(distance, 0, width, kFALSE);
 }
 
 //_____________________________________________________________________
@@ -1891,13 +1080,8 @@ TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
    // Parameters:
    //
    // - opt - cell_value, rms, rms_ov_mean
-   //   if cell_value is set, the following values will be filled into
-   //   the result histogram:
-   //    - number of events - in case of classification with 2 separate
-   //                         foams or multi-target regression
-   //    - discriminator    - in case of classification with one
-   //                         unified foam
-   //    - target           - in case of mono-target regression
+   //   If cell_value is set, the value who's RMS is minimized during
+   //   the foam build-up will be filled into the histogram bins.
    //
    // - nbin - number of bins of result histogram
    //
@@ -1907,24 +1091,9 @@ TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
    if ( GetTotDim()!=1 ) return 0;
 
    // select value to plot
-   ECellValue cell_value = kNev;
-   EFoamType  foam_type  = GetFoamType();
+   ECellValue cell_value = kValue;
    if (strcmp(opt,"cell_value")==0){
-      switch (foam_type) {
-      case kSeparate:
-      case kMultiTarget:
-         cell_value = kNev;
-         break;
-      case kDiscr:
-         cell_value = kDiscriminator;
-         break;
-      case kMonoTarget:
-         cell_value = kTarget0;
-         break;
-      default:
-         Log() << kFATAL << "<Draw1Dim>: unknown foam type" << Endl;
-         return 0;
-      }
+      cell_value = kValue;
    } else if (strcmp(opt,"rms")==0){
       cell_value = kRms;
    } else if (strcmp(opt,"rms_ov_mean")==0){
@@ -2012,24 +1181,9 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
       return 0;
 
    // select value to plot
-   ECellValue cell_value = kNev;
-   EFoamType  foam_type  = GetFoamType();
+   ECellValue cell_value = kValue;
    if (strcmp(opt,"cell_value")==0){
-      switch (foam_type) {
-      case kSeparate:
-      case kMultiTarget:
-         cell_value = kNev;
-         break;
-      case kDiscr:
-         cell_value = kDiscriminator;
-         break;
-      case kMonoTarget:
-         cell_value = kTarget0;
-         break;
-      default:
-         Log() << kFATAL << "<Draw1Dim>: unknown foam type" << Endl;
-         return 0;
-      }
+      cell_value = kValue;
    } else if (strcmp(opt,"rms")==0){
       cell_value = kRms;
    } else if (strcmp(opt,"rms_ov_mean")==0){
@@ -2084,7 +1238,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
 
       // get cell value (depending on the option)
       // this value will later be filled into the histogram
-      Double_t var = GetProjectionCellValue(fCells[iCell], idim1, idim2, cell_value);
+      Double_t var = GetCellValue(fCells[iCell], cell_value, idim1, idim2);
 
       // coordinates of upper left corner of cell
       Double_t x1 = VarTransformInvers( idim1, cellPosi[idim1] );
@@ -2106,66 +1260,6 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
       // loop over all bins, which the cell occupies
       for (Int_t ibinx=xbin_start; ibinx<xbin_stop; ibinx++) {    //loop over x-bins
          for (Int_t ibiny=ybin_start; ibiny<ybin_stop; ibiny++) { //loop over y-bins
-
-            ////////////////////// weight with kernel ///////////////////////
-            if (kernel == kGaus){
-               Double_t result = 0.;
-               Double_t norm   = 0.;
-
-               // calc current position (depending on ibinx, ibiny)
-               Double_t x_curr =
-                  VarTransform( idim1, ((x2-x1)*ibinx - x2*xbin_start + x1*xbin_stop)/(xbin_stop-xbin_start) );
-               Double_t y_curr =
-                  VarTransform( idim2, ((y2-y1)*ibiny - y2*ybin_start + y1*ybin_stop)/(ybin_stop-ybin_start) );
-
-               // loop over all active cells
-               for (Long_t ice=0; ice<=fLastCe; ice++) {
-                  if (!(fCells[ice]->GetStat())) continue;
-
-                  // get cell value (depending on option)
-                  Double_t cell_var = GetProjectionCellValue(fCells[ice], idim1, idim2, cell_value);
-
-                  // fill ndim coordinate of current cell
-                  std::vector<Float_t> coor;
-                  for (Int_t i=0; i<GetTotDim(); i++) {
-                     if (i == idim1)
-                        coor.push_back(x_curr);
-                     else if (i == idim2)
-                        coor.push_back(y_curr);
-                     else
-                        coor.push_back(cellPosi[i] + 0.5*cellSize[i]); // approximation
-                  }
-
-                  // calc weighted value
-                  Double_t weight_ = WeightGaus(fCells[ice], coor);
-
-                  result += weight_ * cell_var;
-                  norm   += weight_;
-               }
-               var = result/norm;
-            }
-            else if (kernel == kLinN){
-               // calc current position (depending on ibinx, ibiny)
-               Double_t x_curr =
-                  VarTransform( idim1, ((x2-x1)*ibinx - x2*xbin_start + x1*xbin_stop)/(xbin_stop-xbin_start) );
-               Double_t y_curr =
-                  VarTransform( idim2, ((y2-y1)*ibiny - y2*ybin_start + y1*ybin_stop)/(ybin_stop-ybin_start) );
-
-               // fill ndim coordinate of current cell
-               std::vector<Float_t> coor;
-               for (Int_t i=0; i<GetTotDim(); i++) {
-                  if (i == idim1)
-                     coor.push_back(x_curr);
-                  else if (i == idim2)
-                     coor.push_back(y_curr);
-                  else
-                     coor.push_back(cellPosi[i] + 0.5*cellSize[i]); // approximation
-               }
-
-               var = WeightLinNeighbors(coor, cell_value, idim1, idim2);
-            }
-            ////////////////////// END weight with kernel ///////////////////////
-
             // filling value to histogram
             h1->SetBinContent(ibinx, ibiny, var + h1->GetBinContent(ibinx, ibiny));
          } // y-loop
@@ -2176,68 +1270,56 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetProjectionCellValue( PDEFoamCell* cell,
-                                                Int_t idim1,
-                                                Int_t idim2,
-                                                ECellValue cv )
+Double_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
 {
-   // Helper function for projection function Project2().  It returns
-   // the cell value of 'cell' corresponding to the given option 'cv'.
-   // The two dimensions are needed for weighting the return value,
-   // because Project2() projects the foam to two dimensions.
-
-   // get cell position and dimesions
-   PDEFoamVect  cellPosi(GetTotDim()), cellSize(GetTotDim());
-   cell->GetHcub(cellPosi,cellSize);
-   const Double_t foam_area = (fXmax[idim1]-fXmin[idim1])*(fXmax[idim2]-fXmin[idim2]);
+   // Returns the cell value of 'cell' corresponding to the given
+   // option 'cv'.  This function should be overridden by the subclass
+   // in order to specify which cell elements to return for a given
+   // cell value 'cv'.  By default kValue returns cell element 0, and
+   // kValueError returns cell element 1.
 
    // calculate cell value (depending on the given option 'cv')
    switch (cv) {
-   case kNev: {
-      // calculate projected area of cell
-      Double_t area = cellSize[idim1] * cellSize[idim2];
-      if (area<1e-20){
-         Log() << kWARNING << "<Project2>: Warning, cell volume too small --> skiping cell!" << Endl;
-         return 0;
-      }
 
-      // calc cell entries per projected cell area
-      return GetCellValue(cell, kNev)/(area*foam_area);
-   }
-      // =========================================================
+   case kValue:
+      return GetCellElement(cell, 0);
+
+   case kValueError:
+      return GetCellElement(cell, 1);
+
+   case kMeanValue:
+      return cell->GetIntg();
+
    case kRms:
-      return GetCellValue(cell, kRms);
-      // =========================================================
-   case kRmsOvMean:
-      return GetCellValue(cell, kRmsOvMean);
-      // =========================================================
-   case kDiscriminator: {
-      // calculate cell volume in other dimensions (not including idim1 and idim2)
-      Double_t area_cell = 1.;
-      for (Int_t d1=0; d1<GetTotDim(); d1++){
-         if ((d1!=idim1) && (d1!=idim2))
-            area_cell *= cellSize[d1];
-      }
-      if (area_cell<1e-20){
-         Log() << kWARNING << "<Project2>: Warning, cell volume too small --> skiping cell!" << Endl;
-         return 0;
-      }
+      return cell->GetDriv();
 
-      // calc discriminator * (cell area times foam area)
-      // foam is normalized -> length of foam = 1.0
-      return GetCellValue(cell, kDiscriminator)*area_cell;
-   }
-      // =========================================================
-   case kDiscriminatorError:
-      return GetCellValue(cell, kDiscriminator);
-      // =========================================================
-   case kTarget0:
-      // plot mean over all underlying cells?
-      return GetCellValue(cell, kTarget0);
+   case kRmsOvMean:
+      if (cell->GetIntg() != 0)
+	 return cell->GetDriv()/cell->GetIntg();
+      else
+	 return 0;
+
+   case kCellVolume:
+      return cell->GetVolume();
+
    default:
-      Log() << kFATAL << "<Project2>: unknown option" << Endl;
+      Log() << kFATAL << "<GetCellValue>: unknown cell value" << Endl;
       return 0;
    }
+
+   return 0;
+}
+
+//_____________________________________________________________________
+Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv,
+				      Int_t idim1, Int_t idim2)
+{
+   // This works analogous to GetCellValue(cell,cv), but here the
+   // dimensions can be specified for projection of the cell value.
+   // The specific projection algorithm should be specified in a
+   // sub-class by overriding this function.
+
+   return GetCellValue(cell, cv);
 }
 
 //_____________________________________________________________________
@@ -2347,26 +1429,11 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
             << "two-dimensional foams!" << Endl;
 
    // select value to plot
-   ECellValue cell_value = kNev;
-   EFoamType  foam_type  = GetFoamType();
+   ECellValue cell_value = kValue;
    Bool_t plotcellnumber = kFALSE;
    Bool_t fillcells      = kTRUE;
    if (opt.Contains("cell_value")){
-      switch (foam_type) {
-      case kSeparate:
-      case kMultiTarget:
-         cell_value = kNev;
-         break;
-      case kDiscr:
-         cell_value = kDiscriminator;
-         break;
-      case kMonoTarget:
-         cell_value = kTarget0;
-         break;
-      default:
-         Log() << kFATAL << "<Draw1Dim>: unknown foam type" << Endl;
-         return;
-      }
+      cell_value = kValue;
    } else if (opt.Contains("rms_ov_mean")){
       cell_value = kRmsOvMean;
    } else if (opt.Contains("rms")){

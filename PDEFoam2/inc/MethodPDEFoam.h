@@ -73,6 +73,18 @@
 #ifndef ROOT_TMVA_PDEFoamDecisionTree
 #include "TMVA/PDEFoamDecisionTree.h"
 #endif
+#ifndef ROOT_TMVA_PDEFoamEvent
+#include "TMVA/PDEFoamEvent.h"
+#endif
+#ifndef ROOT_TMVA_PDEFoamDiscriminant
+#include "TMVA/PDEFoamDiscriminant.h"
+#endif
+#ifndef ROOT_TMVA_PDEFoamTarget
+#include "TMVA/PDEFoamTarget.h"
+#endif
+#ifndef ROOT_TMVA_PDEFoamMultiTarget
+#include "TMVA/PDEFoamMultiTarget.h"
+#endif
 
 #ifndef ROOT_TMVA_PDEFoamDensity
 #include "TMVA/PDEFoamDensity.h"
