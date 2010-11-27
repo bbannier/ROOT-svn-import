@@ -6,7 +6,7 @@
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Implementations                                                           *
+ *      Implementation.                                                           *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Tancredi Carli   - CERN, Switzerland                                      *
@@ -24,43 +24,15 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-//_____________________________________________________________________
-//
-// Implementation of PDEFoamDiscriminant
-//
-// The PDEFoamDiscriminant method is an
-// extension of the PDERS method, which uses self-adapting binning to
-// divide the multi-dimensional phase space in a finite number of
-// hyper-rectangles (boxes).
-//
-// For a given number of boxes, the binning algorithm adjusts the size
-// and position of the boxes inside the multidimensional phase space,
-// minimizing the variance of the signal and background densities inside
-// the boxes. The binned density information is stored in binary trees,
-// allowing for a very fast and memory-efficient classification of
-// events.
-//
-// The implementation of the PDEFoamDiscriminant is based on the monte-carlo
-// integration package PDEFoamDiscriminant included in the analysis package ROOT.
-//_____________________________________________________________________
-
-
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <cassert>
-#include <climits>
-
+#ifndef ROOT_TMath
 #include "TMath.h"
+#endif
 
 #ifndef ROOT_TMVA_PDEFoamDiscriminant
 #include "TMVA/PDEFoamDiscriminant.h"
 #endif
 
 ClassImp(TMVA::PDEFoamDiscriminant)
-
-using namespace std;
 
 //_____________________________________________________________________
 TMVA::PDEFoamDiscriminant::PDEFoamDiscriminant() 

@@ -6,7 +6,7 @@
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Implementations                                                           *
+ *      Implementation.                                                           *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Tancredi Carli   - CERN, Switzerland                                      *
@@ -24,43 +24,15 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-//_____________________________________________________________________
-//
-// Implementation of PDEFoamTarget
-//
-// The PDEFoamTarget method is an
-// extension of the PDERS method, which uses self-adapting binning to
-// divide the multi-dimensional phase space in a finite number of
-// hyper-rectangles (boxes).
-//
-// For a given number of boxes, the binning algorithm adjusts the size
-// and position of the boxes inside the multidimensional phase space,
-// minimizing the variance of the signal and background densities inside
-// the boxes. The binned density information is stored in binary trees,
-// allowing for a very fast and memory-efficient classification of
-// events.
-//
-// The implementation of the PDEFoamTarget is based on the monte-carlo
-// integration package PDEFoamTarget included in the analysis package ROOT.
-//_____________________________________________________________________
-
-
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <cassert>
-#include <climits>
-
+#ifndef ROOT_TMath
 #include "TMath.h"
+#endif
 
 #ifndef ROOT_TMVA_PDEFoamTarget
 #include "TMVA/PDEFoamTarget.h"
 #endif
 
 ClassImp(TMVA::PDEFoamTarget)
-
-using namespace std;
 
 //_____________________________________________________________________
 TMVA::PDEFoamTarget::PDEFoamTarget() 
@@ -105,7 +77,8 @@ void TMVA::PDEFoamTarget::FillFoamCells(const Event* ev, Float_t wt)
 void TMVA::PDEFoamTarget::Finalize()
 {
    // Calculate average cell target in every cell and save them to the
-   // cell.
+   // cell.  Cell element 0 will contain the average target and cell
+   // element 1 will contain the error on the target.
 
    // loop over cells
    for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
@@ -143,7 +116,7 @@ Double_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValu
    //
    // If cv == kValue, it is checked wether the cell value is
    // undefined.  If this is the case, then the mean of the neighbor's
-   // target values is returned.
+   // target values is returned, using GetAverageNeighborsValue().
    
    std::vector<Float_t> txvec(VarTransform(xvec));
    PDEFoamCell *cell = FindCell(txvec);

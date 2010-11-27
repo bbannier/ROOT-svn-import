@@ -6,7 +6,11 @@
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class for PDEFoamMultiTarget object                                       *
+ *      Concrete PDEFoamEvent sub-class.  This foam stores the number             *
+ *      of events with every cell, as well as the statistical error on            *
+ *      the event number.  In addition to PDEFoamEvent it adds a                  *
+ *      public function for projecting the target values given an                 *
+ *      event with N_variables < dimension of foam                                *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *

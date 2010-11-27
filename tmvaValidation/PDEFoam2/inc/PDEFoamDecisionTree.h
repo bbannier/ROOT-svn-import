@@ -6,7 +6,9 @@
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class for decision tree like PDEFoam object                               *
+ *      Class for decision tree like PDEFoam.  It overrides                       *
+ *      PDEFoam::Explore() to use the decision tree like cell split               *
+ *      algorithm, given a specific separation type.                              *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *

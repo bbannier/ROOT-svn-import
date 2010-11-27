@@ -6,7 +6,9 @@
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class for PDEFoamTarget object                                            *
+ *      Concrete PDEFoam sub-class.  This foam stores the first target            *
+ *      (index 0) with every cell, as well as the statistical error on            *
+ *      the target.                                                               *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
