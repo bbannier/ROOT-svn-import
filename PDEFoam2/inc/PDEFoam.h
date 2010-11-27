@@ -126,7 +126,6 @@ namespace TMVA {
       UInt_t fNmin;            // minimal number of events in cell to split cell
       UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
-      Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
       Bool_t fPeekMax;         // peek up cell with max. driver integral for split
       PDEFoamDensity *fDistr;  //! distribution of training events
       Timer *fTimer;           // timer for graphical output
@@ -197,7 +196,7 @@ namespace TMVA {
       void Create();              // build-up foam
 
       // function to fill created cell with given value
-      virtual void FillFoamCells(const Event* ev) = 0;
+      virtual void FillFoamCells(const Event* ev, Float_t wt) = 0;
 
       // remove all cell elements
       void ResetCellElements();
@@ -215,7 +214,6 @@ namespace TMVA {
       void SetInhiDiv(Int_t, Int_t ); // Set inhibition of cell division along certain edge
       void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;} // set VolFrac
       void SetFoamType(EFoamType ft);   // set foam type
-      void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
       void SetPeekMax(Bool_t new_val){ fPeekMax = new_val; }
       void SetDensity(PDEFoamDensity *dens) { fDistr = dens; }
 
@@ -232,7 +230,6 @@ namespace TMVA {
       // Getters and Setters for user cut options
       void     SetNmin(UInt_t val)     { fNmin=val;      }
       UInt_t   GetNmin()               { return fNmin;   }
-      Bool_t   GetFillFoamWithOrigWeights() const { return fFillFoamWithOrigWeights; }
       void     SetMaxDepth(UInt_t maxdepth) { fMaxDepth = maxdepth; }
       UInt_t   GetMaxDepth() const { return fMaxDepth; }
 
