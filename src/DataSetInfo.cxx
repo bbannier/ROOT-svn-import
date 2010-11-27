@@ -101,6 +101,12 @@ void TMVA::DataSetInfo::ClearDataSet() const
    if(fDataSet!=0) { delete fDataSet; fDataSet=0; }
 }
 
+void
+TMVA::DataSetInfo::SetMsgType( EMsgType t ) const
+{
+   fLogger->SetMinType(t);
+}
+
 //_______________________________________________________________________
 TMVA::ClassInfo* TMVA::DataSetInfo::AddClass( const TString& className ) 
 {
