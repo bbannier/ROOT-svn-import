@@ -975,14 +975,19 @@ Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv)
+Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel *kernel)
 {
    // This function finds the cell, which corresponds to the given
    // untransformed event vector 'xvec' and return its value, which is
-   // given by the parameter 'cv'.
+   // given by the parameter 'cv'.  If kernel != NULL, then
+   // PDEFoamKernel::Estimate() is called on the transformed event
+   // variables.
    
    std::vector<Float_t> txvec(VarTransform(xvec));
-   return GetCellValue(FindCell(txvec), cv);
+   if (kernel == NULL)
+      return GetCellValue(FindCell(txvec), cv);
+   else
+      return kernel->Estimate(txvec, cv);
 }
 
 //_____________________________________________________________________
