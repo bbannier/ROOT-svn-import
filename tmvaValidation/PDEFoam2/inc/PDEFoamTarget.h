@@ -2,11 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamDecisionTree                                                   *
+ * Classes: PDEFoamTarget                                                         *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class for decision tree like PDEFoam object                               *
+ *      Class for PDEFoamTarget object                                            *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
@@ -23,42 +23,49 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-#ifndef ROOT_TMVA_PDEFoamDecisionTree
-#define ROOT_TMVA_PDEFoamDecisionTree
+#ifndef ROOT_TMVA_PDEFoamTarget
+#define ROOT_TMVA_PDEFoamTarget
 
-#ifndef ROOT_TMVA_PDEFoamDiscriminant
-#include "TMVA/PDEFoamDiscriminant.h"
+#ifndef ROOT_TMVA_PDEFoam
+#include "TMVA/PDEFoam.h"
 #endif
 
 namespace TMVA {
 
-   // separation types
-   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
-			kCrossEntropy };
-
-   class PDEFoamDecisionTree : public PDEFoamDiscriminant {
-
-   private:
-      EDTSeparation fDTSeparation; // split cells according to certain separation
+   class PDEFoamTarget : public PDEFoam {
 
    protected:
-
-      virtual void Explore(PDEFoamCell *Cell);     // Exploration of the cell
-      Float_t GetSeparation(Float_t s, Float_t b); // calculate separation
       
-      PDEFoamDecisionTree(const PDEFoamDecisionTree&); // Copy Constructor  NOT USED
+      // specific function used during evaluation; determines, whether
+      // a cell value is undefined
+      Bool_t CellValueIsUndefined( PDEFoamCell* cell );
 
+      // calculate the average of the neighbor cell values
+      Double_t GetAverageNeighborsValue( std::vector<Float_t>&,	ECellValue );
+
+      PDEFoamTarget(const PDEFoamTarget&); // Copy Constructor  NOT USED
+
+      // ---------- Public functions ----------------------------------
    public:
-      PDEFoamDecisionTree();               // Default constructor (used only by ROOT streamer)
-      PDEFoamDecisionTree(const TString&, EDTSeparation sep=kFoam); // Principal user-defined constructor
-      virtual ~PDEFoamDecisionTree();      // Default destructor
+      PDEFoamTarget();                  // Default constructor (used only by ROOT streamer)
+      PDEFoamTarget(const TString&);    // Principal user-defined constructor
+      virtual ~PDEFoamTarget(){};       // Default destructor
 
-      void SetDTSeparation(EDTSeparation new_val){ fDTSeparation = new_val; }
+      // function to fill created cell with given value
+      virtual void FillFoamCells(const Event* ev);
+
+      // function to call after foam is grown
+      virtual void Finalize();
+
+      Double_t GetCellValue(std::vector<Float_t> &xvec, ECellValue cv);
+      using PDEFoam::GetCellValue;
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoamDecisionTree,1) // Decision tree like PDEFoam
-   }; // end of PDEFoamDecisionTree
+      ClassDef(PDEFoamTarget,1) // Tree of PDEFoamCells
+   }; // end of PDEFoamTarget
 
 }  // namespace TMVA
+
+// ---------- Inline functions
 
 #endif

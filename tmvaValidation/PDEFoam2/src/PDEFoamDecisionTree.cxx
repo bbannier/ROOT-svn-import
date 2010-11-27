@@ -41,7 +41,7 @@ using namespace std;
 
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree() 
-   : PDEFoam()
+   : PDEFoamDiscriminant()
    , fDTSeparation(kFoam)
 {
    // Default constructor for streamer, user should not use it.
@@ -49,13 +49,13 @@ TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree()
 
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const TString& Name, EDTSeparation sep)
-   : PDEFoam(Name)
+   : PDEFoamDiscriminant(Name)
    , fDTSeparation(sep)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const PDEFoamDecisionTree &From)
-   : PDEFoam(From)
+   : PDEFoamDiscriminant(From)
    , fDTSeparation(kFoam)
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
