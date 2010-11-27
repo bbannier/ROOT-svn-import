@@ -713,22 +713,18 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft)
       case kSeparate:
 	 pdefoam = new PDEFoamEvent(foamcaption);
 	 density = new PDEFoamEventDensity(pdefoam);
-	 fKernelEstimator = new PDEFoamKernel(pdefoam);
 	 break;
       case kMultiTarget:
 	 pdefoam = new PDEFoamMultiTarget(foamcaption);
 	 density = new PDEFoamEventDensity(pdefoam);
-	 fKernelEstimator = new PDEFoamKernel(pdefoam);
 	 break;
       case kDiscr:
 	 pdefoam = new PDEFoamDiscriminant(foamcaption);
 	 density = new PDEFoamDiscriminantDensity(pdefoam);
-	 fKernelEstimator = new PDEFoamKernel(pdefoam);
 	 break;
       case kMonoTarget:
 	 pdefoam = new PDEFoamTarget(foamcaption);
 	 density = new PDEFoamTargetDensity(pdefoam);
-	 fKernelEstimator = new PDEFoamKernel(pdefoam);
 	 break;
       default:
 	 Log() << kFATAL << "Unknown PDEFoam type!" << Endl;
@@ -741,6 +737,9 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft)
       pdefoam = new PDEFoamDecisionTree(foamcaption, fDTSeparation);
       pdefoam->SetDensity(new PDEFoamDTDensity(pdefoam));
    }
+
+   // create pdefoam kernel
+   fKernelEstimator = CreatePDEFoamKernel();
 
    // set fLogger attributes
    pdefoam->Log().SetMinType(this->Log().GetMinType());
@@ -820,6 +819,22 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
    delete evT;
 
    return (*fRegressionReturnVal);
+}
+
+//_______________________________________________________________________
+TMVA::PDEFoamKernel* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
+{
+   // create a pdefoam kernel estimator, depending on fKernel
+   switch (fKernel) {
+   case kNone:
+      return new PDEFoamKernel();
+   case kGaus:
+   case kLinN:
+   default:
+      Log() << kFATAL << "Kernel: " << fKernel << " not supported!" << Endl;
+      return NULL;
+   }
+   return NULL;
 }
 
 //_______________________________________________________________________
@@ -1030,6 +1045,11 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
    
    // read pure foams from file
    ReadFoamsFromFile();
+
+   // recreate the pdefoam kernel estimator
+   if (fKernelEstimator != NULL)
+      delete fKernelEstimator;
+   fKernelEstimator = CreatePDEFoamKernel();
 }
 
 //_______________________________________________________________________

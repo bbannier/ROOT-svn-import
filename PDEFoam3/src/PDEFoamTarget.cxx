@@ -126,7 +126,7 @@ Double_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValu
       if (kernel == NULL)
 	 return GetCellValue(cell, cv);
       else
-	 return kernel->Estimate(txvec, cv);
+	 return kernel->Estimate(this, txvec, cv);
    } else
       // cell is empty -> calc average target of neighbor cells
       return GetAverageNeighborsValue(txvec, kValue);

@@ -987,7 +987,7 @@ Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, 
    if (kernel == NULL)
       return GetCellValue(FindCell(txvec), cv);
    else
-      return kernel->Estimate(txvec, cv);
+      return kernel->Estimate(this, txvec, cv);
 }
 
 //_____________________________________________________________________
