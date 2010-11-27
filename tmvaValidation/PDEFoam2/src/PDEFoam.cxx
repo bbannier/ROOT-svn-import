@@ -107,7 +107,6 @@ TMVA::PDEFoam::PDEFoam() :
    fFoamType(kDiscr),
    fXmin(0),
    fXmax(0),
-   fNElements(0),
    fNmin(100),
    fMaxDepth(0),
    fVolFrac(30.0),
@@ -141,7 +140,6 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fFoamType(kDiscr),
    fXmin(0),
    fXmax(0),
-   fNElements(0),
    fNmin(100),
    fMaxDepth(0),
    fVolFrac(30.0),
@@ -201,7 +199,6 @@ TMVA::PDEFoam::PDEFoam(const PDEFoam &From) :
    , fFoamType(kSeparate)
    , fXmin(0)
    , fXmax(0)
-   , fNElements(0)
    , fNmin(0)
    , fVolFrac(0)
    , fDistr(0)
@@ -302,6 +299,9 @@ void TMVA::PDEFoam::Create()
    //                     BUILD-UP of the FOAM                            //
    // ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| //
 
+   // prepare PDEFoam for growing
+   ResetCellElements(); // reset all cell elements
+
    // Define and explore root cell(s)
    InitCells();
    Grow();
@@ -309,8 +309,7 @@ void TMVA::PDEFoam::Create()
    TH1::AddDirectory(addStatus);
 
    // prepare PDEFoam for the filling with events
-   SetNElements(2);     // init space for 2 variables on every cell
-   ResetCellElements(); // reset the cell elements of all active cells
+   ResetCellElements(); // reset all cell elements
 } // Create
 
 //_____________________________________________________________________
@@ -331,12 +330,6 @@ void TMVA::PDEFoam::InitCells()
       fCells[i]->SetSerial(i);
    }
    if(fCells==0) Log() << kFATAL << "Cannot initialize CELLS" << Endl;
-
-   // create cell elemets
-   if (GetNmin() > 0) {
-      SetNElements(1); // to save the number of events in the cell
-      ResetCellElements(true);
-   }
 
    /////////////////////////////////////////////////////////////////////////////
    //              Single Root Hypercube                                      //
@@ -1019,57 +1012,32 @@ void TMVA::PDEFoam::PrintCellElements()
       if (!fCells[iCell]->GetStat()) continue;
 
       Log() << "cell[" << iCell << "] elements: [";
-      for (UInt_t i=0; i<GetNElements(); i++){
-         if (i>0) Log() << " ; ";
-         Log() << GetCellElement(fCells[iCell], i);
-      }
+      TVectorD *vec = (TVectorD*)fCells[iCell]->GetElement();
+      if (vec != NULL){
+	 for (Int_t i=0; i<vec->GetNrows(); i++){
+	    if (i>0) Log() << " , ";
+	    Log() << GetCellElement(fCells[iCell], i);
+	 }
+      } else
+	 Log() << "not set";
       Log() << "]" << Endl;
    }
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::ResetCellElements(Bool_t allcells)
+void TMVA::PDEFoam::ResetCellElements()
 {
-   // creates a TVectorD object with fNElements in every cell
-   // and initializes them by zero.
-   // The TVectorD object is used to store classification or
-   // regression data in every foam cell.
-   //
-   // Parameter:
-   //   allcells == true  : create TVectorD on every cell
-   //   allcells == false : create TVectorD on active cells with
-   //                       cell index <= fLastCe (default)
+   // remove all cell elements
 
-   if (!fCells || GetNElements()==0) return;
+   if (!fCells) return;
 
    // delete all old cell elements
    Log() << kVERBOSE << "Delete old cell elements" << Endl;
    for(Long_t iCell=0; iCell<fNCells; iCell++) {
-      if (fCells[iCell]->GetElement() != 0){
+      if (fCells[iCell]->GetElement() != NULL){
          delete dynamic_cast<TVectorD*>(fCells[iCell]->GetElement());
-         fCells[iCell]->SetElement(0);
+         fCells[iCell]->SetElement(NULL);
       }
-   }
-
-   if (allcells){
-      Log() << kVERBOSE << "Reset new cell elements to "
-            << GetNElements() << " value(s) per cell" << Endl;
-   } else {
-      Log() << kVERBOSE << "Reset active cell elements to "
-            << GetNElements() << " value(s) per cell" << Endl;
-   }
-
-   // create new cell elements
-   for(Long_t iCell=0; iCell<(allcells ? fNCells : fLastCe+1); iCell++) {
-      // skip inactive cells if allcells == false
-      if (!allcells && !(fCells[iCell]->GetStat()))
-         continue;
-
-      TVectorD *elem = new TVectorD(GetNElements());
-      for (UInt_t i=0; i<GetNElements(); i++)
-         (*elem)(i) = 0.;
-
-      fCells[iCell]->SetElement(elem);
    }
 }
 
@@ -2287,12 +2255,12 @@ Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 {
    // Returns cell element i of cell 'cell'.
 
-   if (i >= GetNElements()) Log() << kFATAL << "ERROR: Index out of range" << Endl;
-
    // dynamic_cast doesn't seem to work here ?!
    TVectorD *vec = (TVectorD*)cell->GetElement();
 
-   if (!vec) Log() << kFATAL << "<GetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
+   // if vec is not set or index out of range, return 0
+   if (!vec || i >= (UInt_t) vec->GetNrows())
+      return 0;
 
    return (*vec)(i);
 }
@@ -2302,17 +2270,26 @@ void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Double_t value 
 {
    // Set cell element i of cell to value.
 
-   if (i >= GetNElements()) {
-      Log() << kFATAL << "ERROR: Index out of range" << Endl;
-      return;
+   TVectorD *vec = NULL;
+
+   // if no cell elements are set, create TVectorD with i+1 entries,
+   // ranging from [0,i]
+   if (cell->GetElement() == NULL) {
+      vec = new TVectorD(i+1);
+      vec->Zero();       // set all values to zero
+      (*vec)(i) = value; // set element i to value
+      cell->SetElement(vec);
+   } else {
+      // dynamic_cast doesn't seem to work here ?!
+      vec = (TVectorD*)cell->GetElement();
+      if (!vec) 
+	 Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
+      // check vector size and resize if necessary
+      if (i >= (UInt_t) vec->GetNrows())
+	 vec->ResizeTo(0,i);
+      // set element i to value
+      (*vec)(i) = value;
    }
-
-   // dynamic_cast doesn't seem to work here ?!
-   TVectorD *vec = (TVectorD*)cell->GetElement();
-
-   if (!vec) Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
-
-   (*vec)(i) = value;
 }
 
 //_____________________________________________________________________
