@@ -81,8 +81,8 @@ TMVA::MethodPDEFoam::MethodPDEFoam( const TString& jobName,
    , fDTLogic("None")
    , fDTSeparation(kFoam)
    , fPeekMax(kTRUE)
-   , fXmin(std::vector<Double_t>())
-   , fXmax(std::vector<Double_t>())
+   , fXmin(std::vector<Float_t>())
+   , fXmax(std::vector<Float_t>())
    , fFoam(std::vector<PDEFoam*>())
 {
    // init PDEFoam objects
@@ -117,8 +117,8 @@ TMVA::MethodPDEFoam::MethodPDEFoam( DataSetInfo& dsi,
    , fDTLogic("None")
    , fDTSeparation(kFoam)
    , fPeekMax(kTRUE)
-   , fXmin(std::vector<Double_t>())
-   , fXmax(std::vector<Double_t>())
+   , fXmin(std::vector<Float_t>())
+   , fXmax(std::vector<Float_t>())
    , fFoam(std::vector<PDEFoam*>())
 {
    // constructor from weight file
@@ -287,8 +287,8 @@ void TMVA::MethodPDEFoam::CalcXminXmax()
    if (fMultiTargetRegression)
       kDim += tDim;
 
-   Double_t *xmin = new Double_t[kDim];
-   Double_t *xmax = new Double_t[kDim];
+   Float_t *xmin = new Float_t[kDim];
+   Float_t *xmax = new Float_t[kDim];
 
    // set default values
    for (UInt_t dim=0; dim<kDim; dim++) {
@@ -305,7 +305,7 @@ void TMVA::MethodPDEFoam::CalcXminXmax()
    for (Long64_t i=0; i<(GetNEvents()); i++) { // events loop
       const Event* ev = GetEvent(i);    
       for (UInt_t dim=0; dim<kDim; dim++) { // variables loop
-         Double_t val;
+         Float_t val;
          if (fMultiTargetRegression) {
             if (dim < vDim)
                val = ev->GetValue(dim);
@@ -607,17 +607,17 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
    // of the discriminant is stored in 'err'.
 
    const Event* ev = GetEvent();
-   Double_t discr = 0.;
-   Double_t discr_error = 0.;
+   Float_t discr = 0.;
+   Float_t discr_error = 0.;
 
    if (fSigBgSeparated) {
       std::vector<Float_t> xvec = ev->GetValues();
 
-      Double_t Vol_sig = fFoam.at(0)->GetCellValue(xvec, kCellVolume);
-      Double_t Vol_bg  = fFoam.at(1)->GetCellValue(xvec, kCellVolume);
+      Float_t Vol_sig = fFoam.at(0)->GetCellValue(xvec, kCellVolume);
+      Float_t Vol_bg  = fFoam.at(1)->GetCellValue(xvec, kCellVolume);
 
-      Double_t density_sig = 0.; // calc signal event density
-      Double_t density_bg  = 0.; // calc background event density
+      Float_t density_sig = 0.; // calc signal event density
+      Float_t density_bg  = 0.; // calc background event density
       if (Vol_sig > std::numeric_limits<double>::epsilon() 
 	  && Vol_sig > std::numeric_limits<double>::epsilon()) {
 	 density_sig = fFoam.at(0)->GetCellValue(xvec, kValue) / Vol_sig;
@@ -631,11 +631,11 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
          discr = 0.5; // assume 50% signal probability, if no events found (bad assumption, but can be overruled by cut on error)
 
       // do error estimation (not jet used in TMVA)
-      Double_t neventsB = fFoam.at(1)->GetCellValue(xvec, kValue);
-      Double_t neventsS = fFoam.at(0)->GetCellValue(xvec, kValue);
-      Double_t scaleB = 1.;
-      Double_t errorS = TMath::Sqrt(neventsS); // estimation of statistical error on counted signal events
-      Double_t errorB = TMath::Sqrt(neventsB); // estimation of statistical error on counted background events
+      Float_t neventsB = fFoam.at(1)->GetCellValue(xvec, kValue);
+      Float_t neventsS = fFoam.at(0)->GetCellValue(xvec, kValue);
+      Float_t scaleB = 1.;
+      Float_t errorS = TMath::Sqrt(neventsS); // estimation of statistical error on counted signal events
+      Float_t errorB = TMath::Sqrt(neventsB); // estimation of statistical error on counted background events
 
       if (neventsS == 0) // no signal events in cell
          errorS = 1.;

@@ -54,7 +54,7 @@ TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoamDTDensity &distr)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDTDensity::Density( Double_t *Xarg, Double_t &event_density )
+Float_t TMVA::PDEFoamDTDensity::Density( Float_t *Xarg, Float_t &event_density )
 {
    // This function is not used in the decision tree like PDEFoam,
    // instead FillHist() is used.
@@ -93,8 +93,8 @@ void TMVA::PDEFoamDTDensity::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsi
    cell->GetHcub(cellPosi, cellSize);
 
    // determine lower and upper cell bound
-   std::vector<Double_t> lb(Dim); // lower bound
-   std::vector<Double_t> ub(Dim); // upper bound
+   std::vector<Float_t> lb(Dim); // lower bound
+   std::vector<Float_t> ub(Dim); // upper bound
    for (Int_t idim = 0; idim < Dim; idim++) {
       lb[idim] = GetPDEFoam()->VarTransformInvers(idim, cellPosi[idim] - std::numeric_limits<float>::epsilon());
       ub[idim] = GetPDEFoam()->VarTransformInvers(idim, cellPosi[idim] + cellSize[idim] + std::numeric_limits<float>::epsilon());

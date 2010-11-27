@@ -132,7 +132,7 @@ void    TMVA::PDEFoamCell::GetHcub( PDEFoamVect &cellPosi, PDEFoamVect &cellSize
       pCell = dCell->GetPare();
       if( pCell== 0) break;
       Int_t    kDiv = pCell->fBest;
-      Double_t xDivi = pCell->fXdiv;
+      Float_t xDivi = pCell->fXdiv;
       if(dCell == pCell->GetDau0()  ) {
          cellSize[kDiv] *=xDivi;
          cellPosi[kDiv] *=xDivi;
@@ -160,7 +160,7 @@ void    TMVA::PDEFoamCell::GetHSize( PDEFoamVect &cellSize)  const
       pCell = dCell->GetPare();
       if( pCell== 0) break;
       Int_t    kDiv = pCell->fBest;
-      Double_t xDivi = pCell->fXdiv;
+      Float_t xDivi = pCell->fXdiv;
       if(dCell == pCell->GetDau0() ) {
          cellSize[kDiv]=cellSize[kDiv]*xDivi;
       } else if(dCell == pCell->GetDau1()  ) {
@@ -178,7 +178,7 @@ void TMVA::PDEFoamCell::CalcVolume(void)
    // Calculates volume of the cell using size params which are calculated
 
    Int_t k;
-   Double_t volu=1.0;
+   Float_t volu=1.0;
    if(fDim>0) {         // h-cubical subspace
       PDEFoamVect cellSize(fDim);
       GetHSize(cellSize);

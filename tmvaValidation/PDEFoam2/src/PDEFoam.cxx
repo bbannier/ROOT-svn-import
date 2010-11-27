@@ -218,12 +218,12 @@ void TMVA::PDEFoam::SetDim(Int_t kDim)
    fDim = kDim;
    if (fXmin) delete [] fXmin;
    if (fXmax) delete [] fXmax;
-   fXmin = new Double_t[GetTotDim()];
-   fXmax = new Double_t[GetTotDim()];
+   fXmin = new Float_t[GetTotDim()];
+   fXmax = new Float_t[GetTotDim()];
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::SetXmin(Int_t idim, Double_t wmin)
+void TMVA::PDEFoam::SetXmin(Int_t idim, Float_t wmin)
 {
    // set lower foam bound in dimension idim
    if (idim<0 || idim>=GetTotDim())
@@ -233,7 +233,7 @@ void TMVA::PDEFoam::SetXmin(Int_t idim, Double_t wmin)
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::SetXmax(Int_t idim, Double_t wmax)
+void TMVA::PDEFoam::SetXmax(Int_t idim, Float_t wmax)
 {
    // set upper foam bound in dimension idim
    if (idim<0 || idim>=GetTotDim())
@@ -263,11 +263,11 @@ void TMVA::PDEFoam::Create()
    //                   ALLOCATE SMALL LISTS                              //
    //  it is done globally, not for each cell, to save on allocation time //
    /////////////////////////////////////////////////////////////////////////
-   fRvec = new Double_t[fDim];   // Vector of random numbers
+   fRvec = new Float_t[fDim];   // Vector of random numbers
    if(fRvec==0)  Log() << kFATAL << "Cannot initialize buffer fRvec" << Endl;
 
    if(fDim>0){
-      fAlpha = new Double_t[fDim];    // sum<1 for internal parametrization of the simplex
+      fAlpha = new Float_t[fDim];    // sum<1 for internal parametrization of the simplex
       if(fAlpha==0)  Log() << kFATAL << "Cannot initialize buffer fAlpha" << Endl;
    }
 
@@ -358,7 +358,7 @@ Int_t TMVA::PDEFoam::CellFill(Int_t Status, PDEFoamCell *parent)
 
    cell->SetBest( -1);         // pointer for planning division of the cell
    cell->SetXdiv(0.5);         // factor for division
-   Double_t xInt2,xDri2;
+   Float_t xInt2,xDri2;
    if(parent!=0){
       xInt2  = 0.5*parent->GetIntg();
       xDri2  = 0.5*parent->GetDriv();
@@ -391,18 +391,18 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
    // information is used withing PeekMax() to avoid splitting cells
    // which contain less than fNmin events.
 
-   Double_t wt, dx, xBest, yBest;
-   Double_t intOld, driOld;
+   Float_t wt, dx, xBest, yBest;
+   Float_t intOld, driOld;
 
    Long_t iev;
-   Double_t nevMC;
+   Float_t nevMC;
    Int_t i, j, k;
    Int_t nProj, kBest;
-   Double_t ceSum[5], xproj;
+   Float_t ceSum[5], xproj;
 
-   Double_t event_density = 0;
-   Double_t totevents     = 0;
-   Double_t toteventsOld  = 0;
+   Float_t event_density = 0;
+   Float_t totevents     = 0;
+   Float_t toteventsOld  = 0;
 
    PDEFoamVect  cellSize(fDim);
    PDEFoamVect  cellPosi(fDim);
@@ -411,9 +411,9 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
 
    PDEFoamCell  *parent;
 
-   Double_t *xRand = new Double_t[fDim];
+   Float_t *xRand = new Float_t[fDim];
 
-   Double_t *volPart=0;
+   Float_t *volPart=0;
 
    cell->CalcVolume();
    dx = cell->GetVolume();
@@ -433,7 +433,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
 
    for (i=0;i<fDim;i++) ((TH1D *)(*fHistEdg)[i])->Reset(); // Reset histograms
 
-   Double_t nevEff=0.;
+   Float_t nevEff=0.;
    // ||||||||||||||||||||||||||BEGIN MC LOOP|||||||||||||||||||||||||||||
    for (iev=0;iev<fNSampl;iev++){
       MakeAlpha();               // generate uniformly vector inside hypercube
@@ -485,8 +485,8 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
 
    //------------------------------------------------------------------
    nevMC            = ceSum[2];
-   Double_t intTrue = ceSum[0]/(nevMC+0.000001);
-   Double_t intDriv=0.;
+   Float_t intTrue = ceSum[0]/(nevMC+0.000001);
+   Float_t intDriv=0.;
 
    if (kBest == -1) Varedu(ceSum,kBest,xBest,yBest); // determine the best edge,
    intDriv =sqrt(ceSum[1]/nevMC) -intTrue; // Foam build-up, sqrt(<w**2>) -<w>
@@ -500,7 +500,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
       SetCellElement(cell, 0, totevents);
 
    // correct/update integrals in all parent cells to the top of the tree
-   Double_t  parIntg, parDriv;
+   Float_t  parIntg, parDriv;
    for (parent = cell->GetPare(); parent!=0; parent = parent->GetPare()){
       parIntg = parent->GetIntg();
       parDriv = parent->GetDriv();
@@ -514,34 +514,34 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::Varedu(Double_t ceSum[5], Int_t &kBest, Double_t &xBest, Double_t &yBest)
+void TMVA::PDEFoam::Varedu(Float_t ceSum[5], Int_t &kBest, Float_t &xBest, Float_t &yBest)
 {
    // Internal subrogram used by Create.
    // In determines the best edge candidate and the position of the cell division plane
    // in case of the variance reduction for future cell division,
    // using results of the MC exploration run stored in fHistEdg
 
-   Double_t nent   = ceSum[2];
-   Double_t swAll  = ceSum[0];
-   Double_t sswAll = ceSum[1];
-   Double_t ssw    = sqrt(sswAll)/sqrt(nent);
+   Float_t nent   = ceSum[2];
+   Float_t swAll  = ceSum[0];
+   Float_t sswAll = ceSum[1];
+   Float_t ssw    = sqrt(sswAll)/sqrt(nent);
    //
-   Double_t swIn,swOut,sswIn,sswOut,xLo,xUp;
+   Float_t swIn,swOut,sswIn,sswOut,xLo,xUp;
    kBest =-1;
    xBest =0.5;
    yBest =1.0;
-   Double_t maxGain=0.0;
+   Float_t maxGain=0.0;
    // Now go over all projections kProj
    for(Int_t kProj=0; kProj<fDim; kProj++) {
       if( fMaskDiv[kProj]) {
          // initialize search over bins
-         Double_t sigmIn =0.0; Double_t sigmOut =0.0;
-         Double_t sswtBest = gHigh;
-         Double_t gain =0.0;
-         Double_t xMin=0.0; Double_t xMax=0.0;
+         Float_t sigmIn =0.0; Float_t sigmOut =0.0;
+         Float_t sswtBest = gHigh;
+         Float_t gain =0.0;
+         Float_t xMin=0.0; Float_t xMax=0.0;
          // Double loop over all pairs jLo<jUp
          for(Int_t jLo=1; jLo<=fNBin; jLo++) {
-            Double_t aswIn=0;  Double_t asswIn=0;
+            Float_t aswIn=0;  Float_t asswIn=0;
             for(Int_t jUp=jLo; jUp<=fNBin;jUp++) {
                aswIn  +=     ((TH1D *)(*fHistEdg)[kProj])->GetBinContent(jUp);
                asswIn += Sqr(((TH1D *)(*fHistEdg)[kProj])->GetBinError(  jUp));
@@ -602,7 +602,7 @@ Long_t TMVA::PDEFoam::PeekMax()
    Long_t iCell = -1;
 
    Long_t  i;
-   Double_t  drivMax, driv;
+   Float_t  drivMax, driv;
    Bool_t bCutNmin = kTRUE;
    Bool_t bCutMaxDepth = kTRUE;
    //   drivMax = gVlow;
@@ -706,7 +706,7 @@ Int_t TMVA::PDEFoam::Divide(PDEFoamCell *cell)
    // and their properties set with help of MC sampling (PDEFoam_Explore)
    // Returns Code RC=-1 of buffer limit is reached,  fLastCe=fnBuf.
 
-   Double_t xdiv;
+   Float_t xdiv;
    Int_t   kBest;
 
    if(fLastCe+1 >= fNCells) Log() << kFATAL << "Buffer limit is reached, fLastCe=fnBuf" << Endl;
@@ -734,7 +734,7 @@ Int_t TMVA::PDEFoam::Divide(PDEFoamCell *cell)
 } // PDEFoam_Divide
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::Eval(Double_t *xRand, Double_t &event_density)
+Float_t TMVA::PDEFoam::Eval(Float_t *xRand, Float_t &event_density)
 {
    // Internal subprogram.
    // Evaluates (training) distribution.
@@ -890,7 +890,7 @@ void TMVA::PDEFoam::PrintCell(Long_t iCell)
    PDEFoamVect cellPosi(fDim), cellSize(fDim);
    fCells[iCell]->GetHcub(cellPosi,cellSize);
    Int_t    kBest = fCells[iCell]->GetBest();
-   Double_t xBest = fCells[iCell]->GetXdiv();
+   Float_t xBest = fCells[iCell]->GetXdiv();
 
    Log() << "Cell[" << iCell << "]={ ";
    Log() << "  " << fCells[iCell] << "  " << Endl;  // extra DEBUG
@@ -910,7 +910,7 @@ void TMVA::PDEFoam::PrintCell(Long_t iCell)
    fCells[iCell]->Print("1");
    // print the cell elements
    Log() << "Elements: [";
-   TVectorD *vec = (TVectorD*)fCells[iCell]->GetElement();
+   TVectorF *vec = (TVectorF*)fCells[iCell]->GetElement();
    if (vec != NULL){
       for (Int_t i=0; i<vec->GetNrows(); i++){
 	 if (i>0) Log() << ", ";
@@ -942,7 +942,7 @@ void TMVA::PDEFoam::ResetCellElements()
    Log() << kVERBOSE << "Delete old cell elements" << Endl;
    for(Long_t iCell=0; iCell<fNCells; iCell++) {
       if (fCells[iCell]->GetElement() != NULL){
-         delete dynamic_cast<TVectorD*>(fCells[iCell]->GetElement());
+         delete dynamic_cast<TVectorF*>(fCells[iCell]->GetElement());
          fCells[iCell]->SetElement(NULL);
       }
    }
@@ -956,7 +956,7 @@ Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv)
+Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv)
 {
    // This function finds the cell, which corresponds to the given
    // untransformed event vector 'xvec' and return its value, which is
@@ -967,7 +967,7 @@ Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
+Float_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
 {
    // Returns the number of events, saved in the 'cell' during foam build-up.
    // Only used during foam build-up!
@@ -1128,12 +1128,12 @@ TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
          fCells[iCell]->GetHcub(cellPosi,cellSize);
 
          // compare them with txvec
-         const Double_t xsmall = 1.e-10;
+         const Float_t xsmall = 1.e-10;
          if (!( (txvec.at(0)>cellPosi[0]-xsmall) &&
                 (txvec.at(0)<=cellPosi[0]+cellSize[0]+xsmall) ) )
             continue;
 
-         Double_t vol = fCells[iCell]->GetVolume();
+         Float_t vol = fCells[iCell]->GetVolume();
          if (vol<1e-10) {
             Log() << kWARNING << "Project: ERROR: Volume too small!" << Endl;
             continue;
@@ -1236,15 +1236,15 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
 
       // get cell value (depending on the option)
       // this value will later be filled into the histogram
-      Double_t var = GetCellValue(fCells[iCell], cell_value, idim1, idim2);
+      Float_t var = GetCellValue(fCells[iCell], cell_value, idim1, idim2);
 
       // coordinates of upper left corner of cell
-      Double_t x1 = VarTransformInvers( idim1, cellPosi[idim1] );
-      Double_t y1 = VarTransformInvers( idim2, cellPosi[idim2] );
+      Float_t x1 = VarTransformInvers( idim1, cellPosi[idim1] );
+      Float_t y1 = VarTransformInvers( idim2, cellPosi[idim2] );
 
       // coordinates of lower right corner of cell
-      Double_t x2 = VarTransformInvers( idim1, cellPosi[idim1]+cellSize[idim1] );
-      Double_t y2 = VarTransformInvers( idim2, cellPosi[idim2]+cellSize[idim2] );
+      Float_t x2 = VarTransformInvers( idim1, cellPosi[idim1]+cellSize[idim1] );
+      Float_t y2 = VarTransformInvers( idim2, cellPosi[idim2]+cellSize[idim2] );
 
       // most left and most right bins, which correspond to cell
       // borders
@@ -1268,7 +1268,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
+Float_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
 {
    // Returns the cell value of 'cell' corresponding to the given
    // option 'cv'.  This function should be overridden by the subclass
@@ -1309,7 +1309,7 @@ Double_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv,
+Float_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv,
 				      Int_t idim1, Int_t idim2)
 {
    // This works analogous to GetCellValue(cell,cv), but here the
@@ -1321,12 +1321,12 @@ Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv,
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
+Float_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 {
    // Returns cell element i of cell 'cell'.
 
    // dynamic_cast doesn't seem to work here ?!
-   TVectorD *vec = (TVectorD*)cell->GetElement();
+   TVectorF *vec = (TVectorF*)cell->GetElement();
 
    // if vec is not set or index out of range, return 0
    if (!vec || i >= (UInt_t) vec->GetNrows())
@@ -1336,24 +1336,24 @@ Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Double_t value )
+void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Float_t value )
 {
    // Set cell element i of cell to value.
 
-   TVectorD *vec = NULL;
+   TVectorF *vec = NULL;
 
-   // if no cell elements are set, create TVectorD with i+1 entries,
+   // if no cell elements are set, create TVectorF with i+1 entries,
    // ranging from [0,i]
    if (cell->GetElement() == NULL) {
-      vec = new TVectorD(i+1);
+      vec = new TVectorF(i+1);
       vec->Zero();       // set all values to zero
       (*vec)(i) = value; // set element i to value
       cell->SetElement(vec);
    } else {
       // dynamic_cast doesn't seem to work here ?!
-      vec = (TVectorD*)cell->GetElement();
+      vec = (TVectorF*)cell->GetElement();
       if (!vec) 
-	 Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
+	 Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorF*" << Endl;
       // check vector size and resize if necessary
       if (i >= (UInt_t) vec->GetNrows())
 	 vec->ResizeTo(0,i);
@@ -1477,15 +1477,15 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    if (fillcells)
       (colors ? gStyle->SetPalette(1, 0) : gStyle->SetPalette(0) );
 
-   Double_t zmin = 1E8;  // minimal value (for color calculation)
-   Double_t zmax = -1E8; // maximal value (for color calculation)
+   Float_t zmin = 1E8;  // minimal value (for color calculation)
+   Float_t zmax = -1E8; // maximal value (for color calculation)
 
    // if cells shall be filled, calculate minimal and maximal plot
    // value --> store in zmin and zmax
    if (fillcells) {	       
       for (Long_t iCell=1; iCell<=fLastCe; iCell++) {
          if ( fCells[iCell]->GetStat() == 1) {
-            Double_t value = GetCellValue(fCells[iCell], cell_value);
+            Float_t value = GetCellValue(fCells[iCell], cell_value);
             if (value<zmin)
                zmin=value;
             if (value>zmax)
@@ -1493,8 +1493,8 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
          }
       }
       outfile << "// observed minimum and maximum of distribution: " << std::endl;
-      outfile << "// Double_t zmin = "<< zmin << ";" << std::endl;
-      outfile << "// Double_t zmax = "<< zmax << ";" << std::endl;
+      outfile << "// Float_t zmin = "<< zmin << ";" << std::endl;
+      outfile << "// Float_t zmax = "<< zmax << ";" << std::endl;
    }
 
    if (log_colors) {
@@ -1507,14 +1507,14 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    else outfile << "// linear color scale used " << std::endl;
 
    outfile << "// used minimum and maximum of distribution (taking into account log scale if applicable): " << std::endl;
-   outfile << "Double_t zmin = "<< zmin << ";" << std::endl;
-   outfile << "Double_t zmax = "<< zmax << ";" << std::endl;
+   outfile << "Float_t zmin = "<< zmin << ";" << std::endl;
+   outfile << "Float_t zmax = "<< zmax << ";" << std::endl;
 
-   Double_t x1,y1,x2,y2,x,y; // box and text coordintates
-   Double_t offs  = 0.01;
-   Double_t lpag  = 1-2*offs;
+   Float_t x1,y1,x2,y2,x,y; // box and text coordintates
+   Float_t offs  = 0.01;
+   Float_t lpag  = 1-2*offs;
    Int_t ncolors  = colors ? gStyle->GetNumberOfColors() : 100;
-   Double_t scale = (ncolors-1)/(zmax - zmin);
+   Float_t scale = (ncolors-1)/(zmax - zmin);
    PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
 
    // loop over cells and draw a box for every cell (and maybe the
@@ -1530,7 +1530,7 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
          
          if (fillcells) {
             // get cell value
-            Double_t value = GetCellValue(fCells[iCell], cell_value);
+            Float_t value = GetCellValue(fCells[iCell], cell_value);
 
             if (log_colors) {
                if (value<1.) value=1;
@@ -1637,7 +1637,7 @@ void TMVA::PDEFoam::ReadStream( istream & istr )
       return;
    }
 
-   Double_t vfr = -1.;
+   Float_t vfr = -1.;
    istr >> vfr;
    SetVolumeFraction(vfr);
 
@@ -1646,8 +1646,8 @@ void TMVA::PDEFoam::ReadStream( istream & istr )
    // read Class Variables: fXmin, fXmax
    if (fXmin) delete [] fXmin;
    if (fXmax) delete [] fXmax;
-   fXmin = new Double_t[GetTotDim()];
-   fXmax = new Double_t[GetTotDim()];
+   fXmin = new Float_t[GetTotDim()];
+   fXmax = new Float_t[GetTotDim()];
    for (Int_t i=0; i<GetTotDim(); i++)
       istr >> fXmin[i];
    for (Int_t i=0; i<GetTotDim(); i++)
@@ -1715,8 +1715,8 @@ void TMVA::PDEFoam::ReadXML( void* parent )
 
    if (fXmin) delete [] fXmin;
    if (fXmax) delete [] fXmax;
-   fXmin = new Double_t[GetTotDim()];
-   fXmax = new Double_t[GetTotDim()];
+   fXmin = new Float_t[GetTotDim()];
+   fXmax = new Float_t[GetTotDim()];
 
    void *xmin_wrap = gTools().GetChild( variables );
    for (Int_t counter=0; counter<fDim; counter++) {

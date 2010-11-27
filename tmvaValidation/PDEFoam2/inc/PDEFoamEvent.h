@@ -50,7 +50,7 @@ namespace TMVA {
       virtual void FillFoamCells(const Event* ev, Float_t wt);
 
       // get cell value stored in a foam cell
-      virtual Double_t GetCellValue( PDEFoamCell* cell, ECellValue cv, Int_t idim1, Int_t idim2 );
+      virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv, Int_t idim1, Int_t idim2 );
       using PDEFoam::GetCellValue;
 
       // ---------- ROOT class definition

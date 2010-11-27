@@ -37,7 +37,7 @@ namespace TMVA {
 
    private:
       Int_t       fDim;                     // Dimension
-      Double_t   *fCoords;                  // [fDim] Coordinates
+      Float_t    *fCoords;                  // [fDim] Coordinates
 
    public:
       // constructor
@@ -50,18 +50,18 @@ namespace TMVA {
       //                     Overloading operators                                //
       //////////////////////////////////////////////////////////////////////////////
       PDEFoamVect& operator =( const PDEFoamVect& ); // = operator; Substitution
-      Double_t & operator[]( Int_t );                // [] provides POINTER to coordinate
-      PDEFoamVect& operator =( Double_t [] );        // LOAD IN entire double vector
-      PDEFoamVect& operator =( Double_t );           // LOAD IN double number
+      Float_t & operator[]( Int_t );                 // [] provides POINTER to coordinate
+      PDEFoamVect& operator =( Float_t [] );         // LOAD IN entire double vector
+      PDEFoamVect& operator =( Float_t );            // LOAD IN double number
       //////////////////////////   OTHER METHODS    //////////////////////////////////
       PDEFoamVect& operator+=( const  PDEFoamVect& );  // +=; add vector u+=v  (FAST)
       PDEFoamVect& operator-=( const  PDEFoamVect& );  // +=; add vector u+=v  (FAST)
-      PDEFoamVect& operator*=( const  Double_t&  );    // *=; mult. by scalar v*=x (FAST)
+      PDEFoamVect& operator*=( const  Float_t&  );     // *=; mult. by scalar v*=x (FAST)
       PDEFoamVect  operator+ ( const  PDEFoamVect& );  // +;  u=v+s, NEVER USE IT, SLOW!!!
       PDEFoamVect  operator- ( const  PDEFoamVect& );  // -;  u=v-s, NEVER USE IT, SLOW!!!
       void       Print(Option_t *option) const;    // Prints vector
       Int_t      GetDim() const { return fDim; }   // Returns dimension
-      Double_t   GetCoord(Int_t i) const { return fCoords[i]; }   // Returns coordinate
+      Float_t    GetCoord(Int_t i) const { return fCoords[i]; }   // Returns coordinate
 
       ClassDef(PDEFoamVect,1) //n-dimensional vector with dynamical allocation
    }; // end of PDEFoamVect

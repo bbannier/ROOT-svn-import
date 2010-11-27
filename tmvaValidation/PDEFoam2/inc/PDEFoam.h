@@ -114,15 +114,15 @@ namespace TMVA {
       PDEFoamCell **fCells;      // [fNCells] Array of ALL cells
       //------------------ M.C. generation----------------------------
       TObjArray *fHistEdg;       // Histograms of wt, one for each cell edge
-      Double_t *fRvec;           // [fDim] random number vector from r.n. generator fDim+1 maximum elements
+      Float_t *fRvec;           // [fDim] random number vector from r.n. generator fDim+1 maximum elements
       //----------- Procedures
       TRandom3        *fPseRan;  // Pointer to user-defined generator of pseudorandom numbers
       //----------  working space for CELL exploration -------------
-      Double_t *fAlpha;          // [fDim] Internal parameters of the hyperrectangle
+      Float_t *fAlpha;          // [fDim] Internal parameters of the hyperrectangle
       // ---------  PDE-Foam specific variables
       EFoamType fFoamType;     // type of foam
-      Double_t *fXmin;         // [fDim] minimum for variable transform
-      Double_t *fXmax;         // [fDim] maximum for variable transform
+      Float_t *fXmin;         // [fDim] minimum for variable transform
+      Float_t *fXmax;         // [fDim] maximum for variable transform
       UInt_t fNmin;            // minimal number of events in cell to split cell
       UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
@@ -147,19 +147,19 @@ namespace TMVA {
       void InitCells();                   // Initialisation of all foam cells
       Int_t CellFill(Int_t, PDEFoamCell*);// Allocates new empty cell and return its index
       virtual void Explore(PDEFoamCell *Cell); // Exploration of the new cell, determine <wt>, wtMax etc.
-      void Varedu(Double_t [], Int_t&, Double_t&,Double_t&); // Determines the best edge, variace reduction
+      void Varedu(Float_t [], Int_t&, Float_t&,Float_t&); // Determines the best edge, variace reduction
       void MakeAlpha();             // Provides random point inside hyperrectangle
       void Grow();                  // build up foam
       Long_t PeekMax();             // peek cell with max. driver integral
       Long_t PeekLast();            // peek last created cell
       Int_t  Divide(PDEFoamCell *); // Divide iCell into two daughters; iCell retained, taged as inactive
-      Double_t Eval(Double_t *xRand, Double_t &event_density); // evaluate distribution on point 'xRand'
+      Float_t Eval(Float_t *xRand, Float_t &event_density); // evaluate distribution on point 'xRand'
 
       // ---------- Cell value access functions
 
       // low level functions to access a certain cell value
-      Double_t GetCellElement(PDEFoamCell *cell, UInt_t i);  // get Element 'i' in cell 'cell'
-      void SetCellElement(PDEFoamCell *cell, UInt_t i, Double_t value); // set Element 'i' in cell 'cell' to value 'value'
+      Float_t GetCellElement(PDEFoamCell *cell, UInt_t i);  // get Element 'i' in cell 'cell'
+      void SetCellElement(PDEFoamCell *cell, UInt_t i, Float_t value); // set Element 'i' in cell 'cell' to value 'value'
 
       // specific function used during evaluation; determines, whether a cell value is undefined
       virtual Bool_t   CellValueIsUndefined( PDEFoamCell* );
@@ -173,7 +173,7 @@ namespace TMVA {
                               std::vector<PDEFoamCell*> &);
       
       // get number of events in cell during foam build-up
-      Double_t GetBuildUpCellEvents(PDEFoamCell* cell);
+      Float_t GetBuildUpCellEvents(PDEFoamCell* cell);
 
       // get internal density
       PDEFoamDensity* GetDistr() const { assert(fDistr); return fDistr; }
@@ -234,10 +234,10 @@ namespace TMVA {
       UInt_t   GetMaxDepth() const { return fMaxDepth; }
 
       // Getters and Setters for foam boundaries
-      void SetXmin(Int_t idim, Double_t wmin);
-      void SetXmax(Int_t idim, Double_t wmax);
-      Double_t GetXmin(Int_t idim) const {return fXmin[idim];}
-      Double_t GetXmax(Int_t idim) const {return fXmax[idim];}
+      void SetXmin(Int_t idim, Float_t wmin);
+      void SetXmax(Int_t idim, Float_t wmax);
+      Float_t GetXmin(Int_t idim) const {return fXmin[idim];}
+      Float_t GetXmax(Int_t idim) const {return fXmax[idim];}
 
       // Getters and Setters for variable names
       void AddVariableName(const char *s) { AddVariableName(new TObjString(s)); }
@@ -292,11 +292,11 @@ namespace TMVA {
       // ---------- Foam evaluation functions
 
       // get cell value for a given event
-      virtual Double_t GetCellValue( std::vector<Float_t>& xvec, ECellValue cv );
+      virtual Float_t GetCellValue( std::vector<Float_t>& xvec, ECellValue cv );
 
       // get cell value stored in a foam cell
-      virtual Double_t GetCellValue( PDEFoamCell* cell, ECellValue cv );
-      virtual Double_t GetCellValue( PDEFoamCell* cell, ECellValue cv, Int_t idim1, Int_t idim2 );
+      virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv );
+      virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv, Int_t idim1, Int_t idim2 );
 
       // ---------- ROOT class definition
       ClassDef(PDEFoam,6) // Tree of PDEFoamCells
