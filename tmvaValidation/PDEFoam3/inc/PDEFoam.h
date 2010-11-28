@@ -171,9 +171,10 @@ namespace TMVA {
       // finds cell according to given event variables
       PDEFoamCell* FindCell(std::vector<Float_t>&); //!
       std::vector<TMVA::PDEFoamCell*> FindCells(std::vector<Float_t>&); //!
+      std::vector<TMVA::PDEFoamCell*> FindCells(std::map<Int_t,Float_t>&); //!
 
       // find cells, which fit a given event vector
-      void FindCellsRecursive(std::vector<Float_t>&, PDEFoamCell*, 
+      void FindCellsRecursive(std::map<Int_t, Float_t>&, PDEFoamCell*, 
                               std::vector<PDEFoamCell*> &);
       
       // get number of events in cell during foam build-up
