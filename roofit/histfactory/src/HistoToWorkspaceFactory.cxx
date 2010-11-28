@@ -408,14 +408,14 @@ namespace HistFactory{
     proto->factory( edit.c_str() );
   }
 
-
+  //_____________________________________________________________
   void HistoToWorkspaceFactory::EditSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst, map<string,double> uniformSyst) {
     cout << "in edit, gammamap.size = " << gammaSyst.size() << ", unimap.size = " << uniformSyst.size() << endl;
     string pdfName(pdfNameChar);
 
     ModelConfig * combined_config = (ModelConfig *) proto->obj("ModelConfig");
-    const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
-    RooArgSet temp(*constrainedParams);
+    //    const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
+    //    RooArgSet temp(*constrainedParams);
     string edit="EDIT::newSimPdf("+pdfName+",";
     string editList;
     string lastPdf=pdfName;
@@ -467,8 +467,8 @@ namespace HistFactory{
 	
       // clean up constraints
       cout << "got here, about to remove" << endl;
-      temp.remove(*proto->var(Form("alpha_%s",it->first.c_str())));
-      temp.add(*proto->var(Form("beta_%s",it->first.c_str())));
+      //      temp.remove(*proto->var(Form("alpha_%s",it->first.c_str())));
+      //      temp.add(*proto->var(Form("beta_%s",it->first.c_str())));
       //      cout << "KC CHECK 2" << endl;
       //      temp.Print();
 
@@ -524,8 +524,8 @@ namespace HistFactory{
       
       // clean up constraints
       cout << "got here, about to remove" << endl;
-      temp.remove(*proto->var(Form("alpha_%s",it->first.c_str())));
-      temp.add(*proto->var(Form("beta_%s",it->first.c_str())));
+      //      temp.remove(*proto->var(Form("alpha_%s",it->first.c_str())));
+      //      temp.add(*proto->var(Form("beta_%s",it->first.c_str())));
       //      cout << "KC CHECK 2" << endl;
       //      temp.Print();
 
@@ -568,12 +568,15 @@ namespace HistFactory{
     edit="EDIT::newSimPdf("+lastPdf+","+editList+")";
     cout << edit<< endl;
     proto->factory( edit.c_str() );
-    proto->writeToFile(("results/"+fRowTitle+"_edited.root").c_str());
+    proto->writeToFile(("results/model_"+fRowTitle+"_edited.root").c_str());
     RooAbsPdf* newOne = proto->pdf("newSimPdf");
-    if(newOne)
-      newOne->graphVizTree(("results/"+pdfName+"_"+fRowTitle+"newSimPdf.dot").c_str());
-    else
+    if(newOne){
+      // newOne->graphVizTree(("results/"+pdfName+"_"+fRowTitle+"newSimPdf.dot").c_str());
+      combined_config->SetPdf(*newOne);
+    }
+    else{
       cout << "\n\n ---------------------\n WARNING: failed to make EDIT\n\n" << endl;
+    }
   }
 
   void HistoToWorkspaceFactory::PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename){
@@ -742,7 +745,7 @@ namespace HistFactory{
     proto_config->SetPdf(*model);
     proto->import(*proto_config,proto_config->GetName());
     proto->importClassCode();
-    proto->writeToFile(("results/model_"+channel+".root").c_str());
+    //    proto->writeToFile(("results/model_"+channel+".root").c_str());
 
     return proto;
   }
@@ -760,7 +763,7 @@ namespace HistFactory{
     //  cout << "MsgSvc: " << RooMsgService::instance().globalKillBelow() << " INFO " 
     //       << RooMsgService::INFO << " WARNING " << RooMsgService::WARNING << endl;
 
-    RooArgSet* constrainedParams= new RooArgSet("constrainedParams");
+    //    RooArgSet* constrainedParams= new RooArgSet("constrainedParams");
 
     map<string, RooAbsPdf*> pdfMap;
     vector<RooAbsPdf*> models;
@@ -776,7 +779,7 @@ namespace HistFactory{
       RooAbsPdf* model = ch->pdf(("model_"+channel_name).c_str());
       models.push_back(model);
 
-      constrainedParams->add( * ch->set("constrainedParams") );
+      //      constrainedParams->add( * ch->set("constrainedParams") );
       pdfMap[channel_name]=model;
     }
     //constrainedParams->Print();
@@ -788,7 +791,7 @@ namespace HistFactory{
     RooSimultaneous * simPdf= new RooSimultaneous("simPdf","",pdfMap, *channelCat);
     ModelConfig * combined_config = new ModelConfig("ModelConfig");
     combined_config->SetWorkspace(*combined);
-    combined_config->SetNuisanceParameters(*constrainedParams);
+    //    combined_config->SetNuisanceParameters(*constrainedParams);
     
 
     ////////////////////////////////////////////
@@ -831,10 +834,10 @@ namespace HistFactory{
     RooAbsPdf* customized=combined->pdf("simPdf"); 
     //combined_config->SetPdf(*customized);
     combined_config->SetPdf(*simPdf);
-    customized->graphVizTree(("results/"+fResultsPrefixStr.str()+"_simul.dot").c_str());
+    //    customized->graphVizTree(("results/"+fResultsPrefixStr.str()+"_simul.dot").c_str());
     combined->import(*combined_config,combined_config->GetName());
     combined->importClassCode();
-    combined->writeToFile("results/combinedModel.root");
+    combined->writeToFile("results/model_combined.root");
 
     return combined;
   }
