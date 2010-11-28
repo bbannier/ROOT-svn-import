@@ -82,8 +82,8 @@ TMVA::MethodPDEFoam::MethodPDEFoam( const TString& jobName,
    , fDTLogic("None")
    , fDTSeparation(kFoam)
    , fPeekMax(kTRUE)
-   , fXmin(std::vector<Double_t>())
-   , fXmax(std::vector<Double_t>())
+   , fXmin(std::vector<Float_t>())
+   , fXmax(std::vector<Float_t>())
    , fFoam(std::vector<PDEFoam*>())
 {
    // init PDEFoam objects
@@ -119,8 +119,8 @@ TMVA::MethodPDEFoam::MethodPDEFoam( DataSetInfo& dsi,
    , fDTLogic("None")
    , fDTSeparation(kFoam)
    , fPeekMax(kTRUE)
-   , fXmin(std::vector<Double_t>())
-   , fXmax(std::vector<Double_t>())
+   , fXmin(std::vector<Float_t>())
+   , fXmax(std::vector<Float_t>())
    , fFoam(std::vector<PDEFoam*>())
 {
    // constructor from weight file
@@ -293,8 +293,8 @@ void TMVA::MethodPDEFoam::CalcXminXmax()
    if (fMultiTargetRegression)
       kDim += tDim;
 
-   Double_t *xmin = new Double_t[kDim];
-   Double_t *xmax = new Double_t[kDim];
+   Float_t *xmin = new Float_t[kDim];
+   Float_t *xmax = new Float_t[kDim];
 
    // set default values
    for (UInt_t dim=0; dim<kDim; dim++) {
@@ -311,7 +311,7 @@ void TMVA::MethodPDEFoam::CalcXminXmax()
    for (Long64_t i=0; i<(GetNEvents()); i++) { // events loop
       const Event* ev = GetEvent(i);    
       for (UInt_t dim=0; dim<kDim; dim++) { // variables loop
-         Double_t val;
+         Float_t val;
          if (fMultiTargetRegression) {
             if (dim < vDim)
                val = ev->GetValue(dim);
