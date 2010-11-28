@@ -274,7 +274,7 @@ void MethodUnitTestWithROCLimits::run()
      fout << "}" << std::endl;
      fout << "sumdiff=sumdiff/testTree->GetEntries();" << std::endl;
      fout << "if (maxdiff >1.e-2) std::cout << \"maxdiff=\"<<maxdiff<< \", sumdiff=\"<<sumdiff<<std::endl;" << std::endl;
-     fout << "if (sumdiff >1.e-4) ok=false;" << std::endl;
+     fout << "if (sumdiff >2.e-4) ok=false;" << std::endl;
      fout << "testFile->Close();" << std::endl;
      fout << "if (!ok) {" << std::endl;
      fout << "std::cout << \"maxdiff=\"<<maxdiff<< \", sumdiff=\"<<sumdiff<<std::endl;}" << std::endl;
