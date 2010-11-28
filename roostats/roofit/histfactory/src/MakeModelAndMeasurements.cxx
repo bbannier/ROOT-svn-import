@@ -286,19 +286,6 @@ void topDriver(string input ){
           params->add(*poi);
           proto_config->SetParameters(*params);
 
-          RooAbsData* expData = ws->data("expData");
-	  proto_config->GuessObsAndNuisance(*expData);
-	  ws->writeToFile(("results/model_"+ch_name+".root").c_str());
-	  /*
-          // may not be necessary any more
-          RooArgSet* temp =  (RooArgSet*) ws->set("obsN")->Clone("temp");
-          temp->add(*params);
-          RooAbsPdf* model=proto_config->GetPdf();
-          RooArgSet* constrainedParams = model->getParameters(temp);
-          ws->defineSet("constrainedParams", *constrainedParams);
-          proto_config->SetNuisanceParameters(*constrainedParams);
-          ws->Print();
-	  */
 
           // Gamma/Uniform Constraints:
           // turn some Gaussian constraints into Gamma/Uniform constraints, rename model newSimPdf
@@ -307,8 +294,12 @@ void topDriver(string input ){
 	    proto_config->SetPdf(*ws->pdf("newSimPdf"));
           }
 
-	  // TO DO:
-          // Totally factorize the statistical test in "fit Model" to a different area
+	  // fill out ModelConfig and export
+          RooAbsData* expData = ws->data("expData");
+	  proto_config->GuessObsAndNuisance(*expData);
+	  ws->writeToFile((outputFileNamePrefix+"_"+ch_name+"_"+rowTitle+"_model.root").c_str());
+
+	  // do fit unless exportOnly requested
 	  if(!exportOnly)
 	    factory.FitModel(ws, ch_name, "newSimPdf", "expData", false);
           fprintf(factory.pFile, " & " );
@@ -349,7 +340,7 @@ void topDriver(string input ){
           RooAbsData* simData = ws->data("simData");
 	  combined_config->GuessObsAndNuisance(*simData);
 	  //	  ws->writeToFile(("results/model_combined_edited.root").c_str());
-	  ws->writeToFile(("results/model_combined_edited.root"));
+	  ws->writeToFile((outputFileNamePrefix+"_combined_"+rowTitle+"_model.root").c_str());
 
 	  // TO DO:
           // Totally factorize the statistical test in "fit Model" to a different area
