@@ -115,11 +115,11 @@ void RegressionUnitTestWithDeviation::run()
   TString dir    = "weights/TMVARegressionUnitTesting_";
   TString weightfile=dir+_methodTitle+".weights.xml";
   double diff, maxdiff = 0., sumdiff=0., previousVal=0.;
-  int stuckCount=0, nevt= TMath::Min((int) testTree->GetEntries(),100);
+  int stuckCount=0, nevt= TMath::Min((int) testTree->GetEntries(),100); 
 
   std::vector< TMVA::Reader* > reader(nTest);
   for (int iTest=0;iTest<nTest;iTest++){
-     std::cout << "iTest="<<iTest<<std::endl;
+     //std::cout << "iTest="<<iTest<<std::endl;
      reader[iTest] = new TMVA::Reader( "!Color:Silent" );
      for (UInt_t i=0;i<_VariableNames->size();i++)
         reader[iTest]->AddVariable( _VariableNames->at(i),&testvar[i]);
@@ -135,7 +135,7 @@ void RegressionUnitTestWithDeviation::run()
         }
 
         if (iTest==0){ readerVal=(reader[iTest]->EvaluateRegression( readerName))[0];} 
-        else if (iTest==1){ reader[iTest]->EvaluateRegression( readerName).at(0);}
+        else if (iTest==1){ readerVal=(reader[iTest]->EvaluateRegression( readerName)).at(0);}
         else if (iTest==2){ readerVal=reader[iTest]->EvaluateRegression( 0, readerName);}
         else {
            std::cout << "ERROR, undefined iTest value "<<iTest<<endl;
@@ -146,7 +146,7 @@ void RegressionUnitTestWithDeviation::run()
         maxdiff = diff > maxdiff ? diff : maxdiff;
         sumdiff += diff;
         if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++; 
-        if (ievt<3) std::cout << "i="<<iTest<<", readerVal="<<readerVal<<" testTarget"<<testTarget<<" diff="<<diff<<std::endl;
+        //if (ievt<3) std::cout << "i="<<iTest<<", readerVal="<<readerVal<<" testTarget"<<testTarget<<" diff="<<diff<<std::endl;
      
         if (iTest ==0 ) previousVal=readerVal;
      }
@@ -161,7 +161,7 @@ void RegressionUnitTestWithDeviation::run()
 
   testFile->Close();
 
-  //for (int i=0;i<nTest;i++) delete reader[i]; // why is this crashing??
+  for (int i=0;i<nTest;i++) delete reader[i]; 
 
   cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
   
