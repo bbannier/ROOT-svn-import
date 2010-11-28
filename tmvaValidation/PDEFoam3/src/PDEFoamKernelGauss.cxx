@@ -60,13 +60,13 @@ Float_t TMVA::PDEFoamKernelGauss::Estimate(PDEFoam *foam, std::vector<Float_t> &
       Log() << kFATAL << "<PDEFoamKernelGauss::Estimate>: PDEFoam not set!" << Endl;
 
    PDEFoamCell *cell = foam->FindCell(txvec);
-   Double_t result = 0, norm = 0;
+   Float_t result = 0, norm = 0;
 
    for (Long_t iCell=0; iCell<=foam->fLastCe; iCell++) {
       if (!(foam->fCells[iCell]->GetStat())) continue;
 
       // calc cell density
-      Double_t cell_val = 0;
+      Float_t cell_val = 0;
       if (!foam->CellValueIsUndefined(cell))
 	 // cell is not empty
 	 cell_val = foam->GetCellValue(foam->fCells[iCell], cv);
@@ -75,7 +75,7 @@ Float_t TMVA::PDEFoamKernelGauss::Estimate(PDEFoam *foam, std::vector<Float_t> &
 	 cell_val = GetAverageNeighborsValue(foam, txvec, cv);
 
       // calculate gaussian weight between txvec and fCells[iCell]
-      Double_t gau = WeightGaus(foam, foam->fCells[iCell], txvec);
+      Float_t gau = WeightGaus(foam, foam->fCells[iCell], txvec);
 
       result += gau * cell_val;
       norm   += gau;
