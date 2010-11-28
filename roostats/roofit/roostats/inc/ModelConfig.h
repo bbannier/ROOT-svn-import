@@ -155,7 +155,7 @@ public:
     
    // specify the name of the PDF in the workspace to be used
    virtual void SetPdf(const char* name) {
-      if(!fWS){
+      if (! (this->GetWS()) ){
          coutE(ObjectHandling) << "workspace not set" << endl;
          return;
       }
@@ -167,7 +167,7 @@ public:
 
    // specify the name of the PDF in the workspace to be used
    virtual void SetPriorPdf(const char* name) {
-      if(!fWS){
+      if (! (this->GetWS()) ){
          coutE(ObjectHandling) << "workspace not set" << endl;
          return;
       }
@@ -180,7 +180,7 @@ public:
 
    // specify the name of the dataset in the workspace to be used
    virtual void SetProtoData(const char* name){
-      if(!fWS){
+      if (! (this->GetWS()) ){
          coutE(ObjectHandling) << "workspace not set" << endl;
          return;
       }
@@ -195,31 +195,31 @@ public:
 
 
    /// get model PDF (return NULL if pdf has not been specified or does not exist)
-   RooAbsPdf * GetPdf() const { return (fWS) ? fWS->pdf(fPdfName.c_str()) : 0;   }
+   RooAbsPdf * GetPdf() const { return (GetWS()) ? fWS->pdf(fPdfName.c_str()) : 0;   }
 
    /// get RooArgSet containing the parameter of interest (return NULL if not existing) 
-   const RooArgSet * GetParametersOfInterest() const { return (fWS) ? fWS->set(fPOIName.c_str()) : 0; } 
+   const RooArgSet * GetParametersOfInterest() const { return (GetWS()) ? fWS->set(fPOIName.c_str()) : 0; } 
 
    /// get RooArgSet containing the nuisance parameters (return NULL if not existing) 
-   const RooArgSet * GetNuisanceParameters() const { return (fWS) ? fWS->set(fNuisParamsName.c_str()) : 0; } 
+   const RooArgSet * GetNuisanceParameters() const { return (GetWS()) ? fWS->set(fNuisParamsName.c_str()) : 0; } 
 
    /// get RooArgSet containing the constraint parameters (return NULL if not existing) 
-   const RooArgSet * GetConstraintParameters() const { return (fWS) ? fWS->set(fConstrParamsName.c_str()) : 0; } 
+   const RooArgSet * GetConstraintParameters() const { return (GetWS()) ? fWS->set(fConstrParamsName.c_str()) : 0; } 
 
    /// get parameters prior pdf  (return NULL if not existing) 
-   RooAbsPdf * GetPriorPdf() const { return (fWS) ? fWS->pdf(fPriorPdfName.c_str()) : 0; } 
+   RooAbsPdf * GetPriorPdf() const { return (GetWS()) ? fWS->pdf(fPriorPdfName.c_str()) : 0; } 
 
    /// get RooArgSet for observables  (return NULL if not existing)
-   const RooArgSet * GetObservables() const { return (fWS) ? fWS->set(fObservablesName.c_str()) : 0; } 
+   const RooArgSet * GetObservables() const { return (GetWS()) ? fWS->set(fObservablesName.c_str()) : 0; } 
 
    /// get RooArgSet for conditional observables  (return NULL if not existing)
-   const RooArgSet * GetConditionalObservables() const { return (fWS) ? fWS->set(fConditionalObsName.c_str()) : 0; } 
+   const RooArgSet * GetConditionalObservables() const { return (GetWS()) ? fWS->set(fConditionalObsName.c_str()) : 0; } 
 
    /// get RooArgSet for global observables  (return NULL if not existing)
-   const RooArgSet * GetGlobalObservables() const { return (fWS) ? fWS->set(fGlobalObsName.c_str()) : 0; }
+   const RooArgSet * GetGlobalObservables() const { return (GetWS()) ? fWS->set(fGlobalObsName.c_str()) : 0; }
 
    /// get Proto data set (return NULL if not existing) 
-   RooAbsData * GetProtoData()  const {  return (fWS) ? fWS->data(fProtoDataName.c_str()) : 0; } 
+   RooAbsData * GetProtoData()  const {  return (GetWS()) ? fWS->data(fProtoDataName.c_str()) : 0; } 
 
    /// get RooArgSet for parameters for a particular hypothesis  (return NULL if not existing) 
    const RooArgSet * GetSnapshot() const;

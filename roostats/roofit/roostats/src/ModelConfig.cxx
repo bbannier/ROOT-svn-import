@@ -108,7 +108,7 @@ void ModelConfig::GuessObsAndNuisance(const RooAbsData& data) {
 
 void ModelConfig::SetWorkspace(RooWorkspace & ws) {
    // set a workspace that owns all the necessary components for the analysis
-   if (!fWS) { 
+   if (! (this->GetWS()) ) { 
       fWS = &ws;
       fWSName = ws.GetName();
       fRefWS = &ws; 
@@ -134,7 +134,7 @@ RooWorkspace * ModelConfig::GetWS() const {
 void ModelConfig::SetSnapshot(const RooArgSet& set) {
    // save snaphot in the workspace 
    // and use values passed with the set
-   if (!fWS) {
+   if (! (this->GetWS()) ) {
       coutE(ObjectHandling) << "workspace not set" << endl;
       return;
    }
@@ -150,7 +150,7 @@ void ModelConfig::SetSnapshot(const RooArgSet& set) {
 const RooArgSet * ModelConfig::GetSnapshot() const{
    // Load the snapshot from ws and return the corresponding set with the snapshot values.
    // User must delete returned RooArgSet.
-   if (!fWS) return 0; 
+   if (! (this->GetWS()) ) return 0; 
    if (!(fWS->loadSnapshot(fSnapshotName.c_str())) ) return 0;
 
    return dynamic_cast<const RooArgSet*>(fWS->set(fSnapshotName.c_str() )->snapshot());
@@ -158,7 +158,7 @@ const RooArgSet * ModelConfig::GetSnapshot() const{
 
 void ModelConfig::LoadSnapshot() const{
    // load the snapshot from ws if it exists
-   if (!fWS) return;
+   if (! (this->GetWS()) ) return;
 
    // kill output
    RooFit::MsgLevel level = RooMsgService::instance().globalKillBelow();
@@ -169,7 +169,7 @@ void ModelConfig::LoadSnapshot() const{
 
 void ModelConfig::DefineSetInWS(const char* name, const RooArgSet& set) {
    // helper functions to avoid code duplication
-   if (!fWS) {
+   if (! (this->GetWS()) ) {
       coutE(ObjectHandling) << "workspace not set" << endl;
       return;
    }
@@ -186,8 +186,8 @@ void ModelConfig::DefineSetInWS(const char* name, const RooArgSet& set) {
 }
    
 void ModelConfig::ImportPdfInWS(const RooAbsPdf & pdf) { 
-   // internal function to import Pdf in WS
-   if (!fWS) { 
+   // internal function to import Pdf in WS 
+   if (! (this->GetWS()) ) { 
       coutE(ObjectHandling) << "workspace not set" << endl;
       return;
    }
@@ -200,7 +200,7 @@ void ModelConfig::ImportPdfInWS(const RooAbsPdf & pdf) {
    
 void ModelConfig::ImportDataInWS(RooAbsData & data) { 
    // internal function to import data in WS
-   if (!fWS) {
+   if (! (this->GetWS()) ) {
       coutE(ObjectHandling) << "workspace not set" << endl;
       return;
    }

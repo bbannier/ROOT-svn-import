@@ -273,8 +273,11 @@ void topDriver(string input ){
           params->add(*poi);
           proto_config->SetParameters(*params);
 
-          // may not be necessary any more
           RooAbsData* expData = ws->data("expData");
+	  proto_config->GuessObsAndNuisance(*expData);
+	  ws->writeToFile(("results/model_"+ch_name+".root").c_str());
+	  /*
+          // may not be necessary any more
           RooArgSet* temp =  (RooArgSet*) ws->set("obsN")->Clone("temp");
           temp->add(*params);
           RooAbsPdf* model=proto_config->GetPdf();
@@ -282,6 +285,7 @@ void topDriver(string input ){
           ws->defineSet("constrainedParams", *constrainedParams);
           proto_config->SetNuisanceParameters(*constrainedParams);
           ws->Print();
+	  */
 
           // Gamma/Uniform Constraints:
           // turn some Gaussian constraints into Gamma/Uniform constraints, rename model newSimPdf
@@ -309,7 +313,8 @@ void topDriver(string input ){
           RooWorkspace* ws=factory.MakeCombinedModel(ch_names,chs);
           // Gamma/Uniform Constraints:
           // turn some Gaussian constraints into Gamma/Uniform constraints, rename model newSimPdf
-	  if(gammaSyst.size()>0 || uniformSyst.size()>0) factory.EditSyst(ws,"simPdf",gammaSyst,uniformSyst);
+	  if(gammaSyst.size()>0 || uniformSyst.size()>0) 
+	    factory.EditSyst(ws,"simPdf",gammaSyst,uniformSyst);
           //
           // set parameter of interest according to the configuration
           //
@@ -324,7 +329,13 @@ void topDriver(string input ){
           ws->Print();
 
           // Set new PDF if there are gamma/uniform constraint terms
-          if(gammaSyst.size()>0 || uniformSyst.size()>0) combined_config->SetPdf(*ws->pdf("newSimPdf"));
+          if(gammaSyst.size()>0 || uniformSyst.size()>0) 
+	    combined_config->SetPdf(*ws->pdf("newSimPdf"));
+
+          RooAbsData* simData = ws->data("simData");
+	  combined_config->GuessObsAndNuisance(*simData);
+	  //	  ws->writeToFile(("results/model_combined_edited.root").c_str());
+	  ws->writeToFile(("results/model_combined_edited.root"));
 
 	  // TO DO:
           // Totally factorize the statistical test in "fit Model" to a different area
