@@ -85,8 +85,8 @@ void TMVA::PDEFoamTarget::Finalize()
       if (!(fCells[iCell]->GetStat()))
          continue;
 
-      Double_t N_ev  = GetCellElement(fCells[iCell], 0); // get number of events
-      Double_t tar   = GetCellElement(fCells[iCell], 1); // get sum of targets
+      Float_t N_ev  = GetCellElement(fCells[iCell], 0); // get number of events
+      Float_t tar   = GetCellElement(fCells[iCell], 1); // get sum of targets
 
       if (N_ev > 1e-20){
          SetCellElement(fCells[iCell], 0, tar/N_ev);  // set average target
@@ -108,7 +108,7 @@ Bool_t TMVA::PDEFoamTarget::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel *kernel)
+Float_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel *kernel)
 {
    // This function finds the cell, which corresponds to the given
    // untransformed event vector 'xvec' and return its value, which is
