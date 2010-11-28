@@ -1028,11 +1028,11 @@ TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> &xvec )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::FindCellsRecursive(std::vector<Float_t> &txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
+void TMVA::PDEFoam::FindCellsRecursive(std::map<Int_t, Float_t> &txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
 {
    // This is a helper function for FindCells().  It saves in 'cells'
-   // all cells, which contain txvec.  It works analogous to
-   // FindCell().
+   // all cells, which contain the coordinates specifies in 'txvec'.
+   // It works analogous to FindCell().
    //
    // Parameters:
    //
@@ -1051,12 +1051,16 @@ void TMVA::PDEFoam::FindCellsRecursive(std::vector<Float_t> &txvec, PDEFoamCell*
    while (cell->GetStat()!=1) { //go down binary tree until cell is found
       idim=cell->GetBest();  // dimension that changed
 
-      if (idim < Int_t(txvec.size())){
-         // case 1: cell is splitten in dimension of a variable
+      // check if dimension 'idim' is specified in 'txvec'
+      map<Int_t, Float_t>::const_iterator it = txvec.find(idim);
+
+      if (it != txvec.end()){
+         // case 1: cell is splitten in a dimension which is specified
+         // in txvec
          cell0=cell->GetDau0();
          cell0->GetHcub(cellPosi0,cellSize0);
          // check, whether left daughter cell contains txvec
-         if (txvec.at(idim)<=cellPosi0[idim]+cellSize0[idim])
+         if (it->second <= cellPosi0[idim] + cellSize0[idim])
             cell=cell0;
          else
             cell=cell->GetDau1();
@@ -1086,6 +1090,36 @@ std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::vector<Float_t> &t
    //
    // - vector of cells, that fit txvec
 
+   // copy the coordinates from 'txvec' into a map
+   std::map<Int_t, Float_t> txvec_map;
+   for (UInt_t i=0; i<txvec.size(); ++i)
+      txvec_map[i] = txvec.at(i);
+
+   // the cells found
+   std::vector<PDEFoamCell*> cells(0);
+
+   // loop over all target dimensions
+   FindCellsRecursive(txvec_map, fCells[0], cells);
+
+   return cells;
+}
+
+//_____________________________________________________________________
+std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t> &txvec)
+{
+   // Find all cells, that contain the coordinates specified in txvec.
+   // The key in 'txvec' is the dimension, and the corresponding value
+   // is the coordinate.
+   //
+   // Parameters:
+   //
+   // - txvec - map of coordinates (transformed into foam)
+   //
+   // Return value:
+   //
+   // - vector of cells, that fit txvec
+
+   // the cells found
    std::vector<PDEFoamCell*> cells(0);
 
    // loop over all target dimensions
@@ -1182,7 +1216,8 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoa
    //
    // - opt - cell_value, rms, rms_ov_mean
    //
-   // - ker - a PDEFoam kernel
+   // - ker - a PDEFoam kernel.  If NULL is given, than the trivial
+   //         kernel is used.
    //
    // - nbin - number of bins in x and y direction of result histogram.
    //
@@ -1209,8 +1244,11 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoa
    }
 
    // if no kernel is set, use the trivial kernel
-   if (kernel == NULL)
+   Bool_t must_delete_kernel = kFALSE;
+   if (kernel == NULL) {
       kernel = new PDEFoamKernel();
+      must_delete_kernel = kTRUE;
+   }
 
    // root can not handle too many bins in one histogram --> catch this
    // Furthermore, to have more than 1000 bins in the histogram doesn't make
@@ -1236,45 +1274,32 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoa
    if (!h1) Log() << kFATAL << "ERROR: Can not create histo" << hname << Endl;
 
    // ============== start projection algorithm ================
-   // loop over all active cells
-   for (Long_t iCell=0; iCell<=fLastCe; iCell++) { // loop over all active cells
-      if (!(fCells[iCell]->GetStat())) continue;   // cell not active -> continue
+   // loop over all histogram bins (2-dim)
+   for (Int_t xbin = 1; xbin <= h1->GetNbinsX(); ++xbin) {
+      for (Int_t ybin = 1; ybin <= h1->GetNbinsY(); ++ybin) {
+	 // calculate the phase space point, which corresponds to this
+	 // bin combination
+	 std::map<Int_t, Float_t> txvec;
+	 txvec[idim1] = VarTransform(idim1, h1->GetXaxis()->GetBinCenter(xbin));
+	 txvec[idim2] = VarTransform(idim2, h1->GetYaxis()->GetBinCenter(ybin));
 
-      // get cell position and dimesions
-      PDEFoamVect  cellPosi(GetTotDim()), cellSize(GetTotDim());
-      fCells[iCell]->GetHcub(cellPosi,cellSize);
+	 // find the cells, which corresponds to this phase space
+	 // point
+	 std::vector<TMVA::PDEFoamCell*> cells = FindCells(txvec);
 
-      // get cell value (depending on the option)
-      // this value will later be filled into the histogram
-      Double_t var = GetCellValue(fCells[iCell], cell_value, idim1, idim2);
+	 // loop over cells and draw fill the histogram with the cell
+	 // values
+	 std::vector<TMVA::PDEFoamCell*>::iterator it;
+	 Float_t sum_cv = 0; // sum of the cell values
+	 for (it = cells.begin(); it != cells.end(); ++it)
+	    sum_cv += GetCellValue(*it, cell_value, idim1, idim2);
 
-      // coordinates of upper left corner of cell
-      Double_t x1 = VarTransformInvers( idim1, cellPosi[idim1] );
-      Double_t y1 = VarTransformInvers( idim2, cellPosi[idim2] );
+	 // fill the bin content
+	 h1->SetBinContent(xbin, ybin, sum_cv + h1->GetBinContent(xbin, ybin));
+      }
+   }
 
-      // coordinates of lower right corner of cell
-      Double_t x2 = VarTransformInvers( idim1, cellPosi[idim1]+cellSize[idim1] );
-      Double_t y2 = VarTransformInvers( idim2, cellPosi[idim2]+cellSize[idim2] );
-
-      // most left and most right bins, which correspond to cell
-      // borders
-      Int_t xbin_start = TMath::Max(1, h1->GetXaxis()->FindBin(x1));
-      Int_t xbin_stop  = h1->GetXaxis()->FindBin(x2);
-
-      // upper and lower bins, which correspond to cell borders
-      Int_t ybin_start = TMath::Max(1, h1->GetYaxis()->FindBin(y1));
-      Int_t ybin_stop  = h1->GetYaxis()->FindBin(y2);
-
-      // loop over all bins, which the cell occupies
-      for (Int_t ibinx=xbin_start; ibinx<xbin_stop; ibinx++) {    //loop over x-bins
-         for (Int_t ibiny=ybin_start; ibiny<ybin_stop; ibiny++) { //loop over y-bins
-            // filling value to histogram
-            h1->SetBinContent(ibinx, ibiny, var + h1->GetBinContent(ibinx, ibiny));
-         } // y-loop
-      } // x-loop
-   } // cell loop
-
-   if (kernel != NULL)
+   if (must_delete_kernel)
       delete kernel;
 
    return h1;
