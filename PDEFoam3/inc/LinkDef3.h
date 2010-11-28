@@ -37,6 +37,7 @@
 #pragma link C++ class TMVA::PDEFoamCell+;
 #pragma link C++ class TMVA::PDEFoamKernel+;
 #pragma link C++ class TMVA::PDEFoamKernelLinN+;
+#pragma link C++ class TMVA::PDEFoamKernelGauss+;
 #pragma link C++ class TMVA::BDTEventWrapper+;
 #pragma link C++ class TMVA::CCTreeWrapper+;
 #pragma link C++ class TMVA::CCPruner+;

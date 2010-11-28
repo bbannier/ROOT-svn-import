@@ -825,6 +825,7 @@ TMVA::PDEFoamKernel* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
    case kLinN:
       return new PDEFoamKernelLinN();
    case kGaus:
+      return new PDEFoamKernelGauss();
    default:
       Log() << kFATAL << "Kernel: " << fKernel << " not supported!" << Endl;
       return NULL;
