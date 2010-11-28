@@ -1172,7 +1172,7 @@ TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
 }
 
 //_____________________________________________________________________
-TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const char *ker, UInt_t nbin )
+TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoamKernel *kernel, UInt_t nbin )
 {
    // Project foam variable idim1 and variable idim2 to histogram.
    //
@@ -1181,15 +1181,8 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
    // - idim1, idim2 - dimensions to project to
    //
    // - opt - cell_value, rms, rms_ov_mean
-   //   if cell_value is set, the following values will be filled into
-   //   the result histogram:
-   //    - number of events - in case of classification with 2 separate
-   //                         foams or multi-target regression
-   //    - discriminator    - in case of classification with one
-   //                         unified foam
-   //    - target           - in case of mono-target regression
    //
-   // - ker - kGaus, kNone (warning: Gaus may be very slow!)
+   // - ker - a PDEFoam kernel
    //
    // - nbin - number of bins in x and y direction of result histogram.
    //
@@ -1215,16 +1208,9 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
       return 0;
    }
 
-   // select kernel to use
-   EKernel kernel = kNone;
-   if (!strcmp(ker, "kNone"))
-      kernel = kNone;
-   else if (!strcmp(ker, "kGaus"))
-      kernel = kGaus;
-   else if (!strcmp(ker, "kLinN"))
-      kernel = kLinN;
-   else
-      Log() << kWARNING << "Warning: wrong kernel! using kNone instead" << Endl;
+   // if no kernel is set, use the trivial kernel
+   if (kernel == NULL)
+      kernel = new PDEFoamKernel();
 
    // root can not handle too many bins in one histogram --> catch this
    // Furthermore, to have more than 1000 bins in the histogram doesn't make
@@ -1287,6 +1273,9 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
          } // y-loop
       } // x-loop
    } // cell loop
+
+   if (kernel != NULL)
+      delete kernel;
 
    return h1;
 }

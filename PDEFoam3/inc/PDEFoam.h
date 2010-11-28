@@ -283,7 +283,7 @@ namespace TMVA {
 
       // project foam to two-dimensional histogram
       TH2D* Project2(Int_t idim1, Int_t idim2, const char *opt="cell_value", 
-                     const char *ker="kNone", UInt_t maxbins=50);
+                     PDEFoamKernel *kernel=NULL, UInt_t maxbins=50);
 
       // Project one-dimensional foam to a 1-dim histogram
       TH1D* Draw1Dim(const char *opt, Int_t nbin);
