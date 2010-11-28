@@ -910,7 +910,7 @@ void TMVA::PDEFoam::PrintCell(Long_t iCell)
    fCells[iCell]->Print("1");
    // print the cell elements
    Log() << "Elements: [";
-   TVectorD *vec = (TVectorD*)fCells[iCell]->GetElement();
+   TVectorF *vec = (TVectorF*)fCells[iCell]->GetElement();
    if (vec != NULL){
       for (Int_t i=0; i<vec->GetNrows(); i++){
 	 if (i>0) Log() << ", ";
@@ -961,7 +961,7 @@ void TMVA::PDEFoam::ResetCellElements()
    Log() << kVERBOSE << "Delete old cell elements" << Endl;
    for(Long_t iCell=0; iCell<fNCells; iCell++) {
       if (fCells[iCell]->GetElement() != NULL){
-         delete dynamic_cast<TVectorD*>(fCells[iCell]->GetElement());
+         delete dynamic_cast<TVectorF*>(fCells[iCell]->GetElement());
          fCells[iCell]->SetElement(NULL);
       }
    }
@@ -975,7 +975,7 @@ Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel *kernel)
+Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel *kernel)
 {
    // This function finds the cell, which corresponds to the given
    // untransformed event vector 'xvec' and return its value, which is
@@ -991,7 +991,7 @@ Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, 
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
+Float_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
 {
    // Returns the number of events, saved in the 'cell' during foam build-up.
    // Only used during foam build-up!
@@ -1306,7 +1306,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoa
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
+Float_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
 {
    // Returns the cell value of 'cell' corresponding to the given
    // option 'cv'.  This function should be overridden by the subclass
@@ -1369,7 +1369,7 @@ Double_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv,
+Float_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv,
 				      Int_t idim1, Int_t idim2)
 {
    // This function works analogous to GetCellValue(cell,cv), but here
@@ -1384,12 +1384,12 @@ Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv,
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
+Float_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 {
    // Returns cell element i of cell 'cell'.
 
    // dynamic_cast doesn't seem to work here ?!
-   TVectorD *vec = (TVectorD*)cell->GetElement();
+   TVectorF *vec = (TVectorF*)cell->GetElement();
 
    // if vec is not set or index out of range, return 0
    if (!vec || i >= (UInt_t) vec->GetNrows())
@@ -1399,24 +1399,24 @@ Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Double_t value )
+void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Float_t value )
 {
    // Set cell element i of cell to value.
 
-   TVectorD *vec = NULL;
+   TVectorF *vec = NULL;
 
-   // if no cell elements are set, create TVectorD with i+1 entries,
+   // if no cell elements are set, create TVectorF with i+1 entries,
    // ranging from [0,i]
    if (cell->GetElement() == NULL) {
-      vec = new TVectorD(i+1);
+      vec = new TVectorF(i+1);
       vec->Zero();       // set all values to zero
       (*vec)(i) = value; // set element i to value
       cell->SetElement(vec);
    } else {
       // dynamic_cast doesn't seem to work here ?!
-      vec = (TVectorD*)cell->GetElement();
+      vec = (TVectorF*)cell->GetElement();
       if (!vec) 
-	 Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
+	 Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorF*" << Endl;
       // check vector size and resize if necessary
       if (i >= (UInt_t) vec->GetNrows())
 	 vec->ResizeTo(0,i);
@@ -1540,15 +1540,15 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    if (fillcells)
       (colors ? gStyle->SetPalette(1, 0) : gStyle->SetPalette(0) );
 
-   Double_t zmin = 1E8;  // minimal value (for color calculation)
-   Double_t zmax = -1E8; // maximal value (for color calculation)
+   Float_t zmin = 1E8;  // minimal value (for color calculation)
+   Float_t zmax = -1E8; // maximal value (for color calculation)
 
    // if cells shall be filled, calculate minimal and maximal plot
    // value --> store in zmin and zmax
    if (fillcells) {	       
       for (Long_t iCell=1; iCell<=fLastCe; iCell++) {
          if ( fCells[iCell]->GetStat() == 1) {
-            Double_t value = GetCellValue(fCells[iCell], cell_value);
+            Float_t value = GetCellValue(fCells[iCell], cell_value);
             if (value<zmin)
                zmin=value;
             if (value>zmax)
@@ -1556,8 +1556,8 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
          }
       }
       outfile << "// observed minimum and maximum of distribution: " << std::endl;
-      outfile << "// Double_t zmin = "<< zmin << ";" << std::endl;
-      outfile << "// Double_t zmax = "<< zmax << ";" << std::endl;
+      outfile << "// Float_t zmin = "<< zmin << ";" << std::endl;
+      outfile << "// Float_t zmax = "<< zmax << ";" << std::endl;
    }
 
    if (log_colors) {
@@ -1570,14 +1570,14 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    else outfile << "// linear color scale used " << std::endl;
 
    outfile << "// used minimum and maximum of distribution (taking into account log scale if applicable): " << std::endl;
-   outfile << "Double_t zmin = "<< zmin << ";" << std::endl;
-   outfile << "Double_t zmax = "<< zmax << ";" << std::endl;
+   outfile << "Float_t zmin = "<< zmin << ";" << std::endl;
+   outfile << "Float_t zmax = "<< zmax << ";" << std::endl;
 
-   Double_t x1,y1,x2,y2,x,y; // box and text coordintates
-   Double_t offs  = 0.01;
-   Double_t lpag  = 1-2*offs;
+   Float_t x1,y1,x2,y2,x,y; // box and text coordintates
+   Float_t offs  = 0.01;
+   Float_t lpag  = 1-2*offs;
    Int_t ncolors  = colors ? gStyle->GetNumberOfColors() : 100;
-   Double_t scale = (ncolors-1)/(zmax - zmin);
+   Float_t scale = (ncolors-1)/(zmax - zmin);
    PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
 
    // loop over cells and draw a box for every cell (and maybe the
@@ -1593,7 +1593,7 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
          
          if (fillcells) {
             // get cell value
-            Double_t value = GetCellValue(fCells[iCell], cell_value);
+            Float_t value = GetCellValue(fCells[iCell], cell_value);
 
             if (log_colors) {
                if (value<1.) value=1;
@@ -1700,7 +1700,7 @@ void TMVA::PDEFoam::ReadStream( istream & istr )
       return;
    }
 
-   Double_t vfr = -1.;
+   Float_t vfr = -1.;
    istr >> vfr;
    SetVolumeFraction(vfr);
 
