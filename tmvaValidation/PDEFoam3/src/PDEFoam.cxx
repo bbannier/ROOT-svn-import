@@ -1372,10 +1372,13 @@ Double_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
 Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv,
 				      Int_t idim1, Int_t idim2)
 {
-   // This works analogous to GetCellValue(cell,cv), but here the
-   // dimensions can be specified for projection of the cell value.
-   // The specific projection algorithm should be specified in a
-   // sub-class by overriding this function.
+   // This function works analogous to GetCellValue(cell,cv), but here
+   // two dimensions can be specified, which are used during
+   // projection of the cell value (see Project2()).  Per default this
+   // function calls GetCellValue(cell,cv). The specific projection
+   // algorithm (weighting the cell value according to the given
+   // dimensions) should be specified in a derived class by overriding
+   // this function.
 
    return GetCellValue(cell, cv);
 }
