@@ -105,6 +105,31 @@ void ModelConfig::GuessObsAndNuisance(const RooAbsData& data) {
    RooPrintable::defaultPrintStream(&oldstream);
 }
 
+  /*
+void ModelConfig::Print(Option_t* option ) const {
+  // print contents
+  ostream& oldstream = RooPrintable::defaultPrintStream(&ccoutI(InputArguments));
+  ccoutI(InputArguments) << endl << "=== Using the following for " << GetName() << " ===" << endl;
+   if(GetObservables()){
+     ccoutI(InputArguments) << "Observables:             ";
+     GetObservables()->Print("");
+   }
+   if(GetParametersOfInterest()) {
+     ccoutI(InputArguments) << "Parameters of Interest:  ";
+     GetParametersOfInterest()->Print("");
+   }
+   if(GetNuisanceParameters()){
+     ccoutI(InputArguments) << "Nuisance Parameters:     ";
+     GetNuisanceParameters()->Print("");
+   }
+   if(GetGlobalObservables()){
+     ccoutI(InputArguments) << "Global Observables:      ";
+     GetGlobalObservables()->Print("");
+   }
+   ccoutI(InputArguments) << endl;
+   RooPrintable::defaultPrintStream(&oldstream);
+}
+  */
 
 void ModelConfig::SetWorkspace(RooWorkspace & ws) {
    // set a workspace that owns all the necessary components for the analysis

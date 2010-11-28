@@ -161,8 +161,10 @@ void topDriver(string input ){
         map<string,double> uniformSyst;
 	bool exportOnly = false;
 
-        TListIter attribIt = node->GetAttributes();
-        TXMLAttr* curAttr = 0;
+	//        TListIter attribIt = node->GetAttributes();
+	//        TXMLAttr* curAttr = 0;
+        attribIt = node->GetAttributes();
+        curAttr = 0;
         while( ( curAttr = dynamic_cast< TXMLAttr* >( attribIt() ) ) != 0 ) {
           if( curAttr->GetName() == TString( "Lumi" ) ) {
             nominalLumi=atof(curAttr->GetValue());
@@ -198,8 +200,10 @@ void topDriver(string input ){
             POI=mnode->GetText();
           }
           if( mnode->GetNodeName() == TString( "ParamSetting" ) ) {
-            TListIter attribIt = mnode->GetAttributes();
-            TXMLAttr* curAttr = 0;
+	    //            TListIter attribIt = mnode->GetAttributes();
+            //TXMLAttr* curAttr = 0;
+	    attribIt = mnode->GetAttributes();
+	    curAttr = 0;
             while( ( curAttr = dynamic_cast< TXMLAttr* >( attribIt() ) ) != 0 ) {
               if( curAttr->GetName() == TString( "Const" ) ) {
                 if(curAttr->GetValue()==TString("True")){
@@ -211,8 +215,10 @@ void topDriver(string input ){
           if( mnode->GetNodeName() == TString( "ConstraintTerm" ) ) {
             vector<string> syst; string type = ""; double rel = 0;
             AddSubStrings(syst,mnode->GetText());
-            TListIter attribIt = mnode->GetAttributes();
-            TXMLAttr* curAttr = 0;
+	    //            TListIter attribIt = mnode->GetAttributes();
+	    //            TXMLAttr* curAttr = 0;
+	    attribIt = mnode->GetAttributes();
+            curAttr = 0;
             while( ( curAttr = dynamic_cast< TXMLAttr* >( attribIt() ) ) != 0 ) {
               if( curAttr->GetName() == TString( "Type" ) ) {
                 type = curAttr->GetValue();

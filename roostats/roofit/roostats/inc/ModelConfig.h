@@ -83,9 +83,12 @@ public:
    virtual ~ModelConfig(); 
 
    // clone
-   virtual ModelConfig * Clone(const char * name = "ModelConfig") const {
+   virtual ModelConfig * Clone(const char * name = "") const {
       ModelConfig * mc =  new ModelConfig(*this);
-      mc->SetName(name); 
+      if(strcmp(name,"")==0)
+	mc->SetName(this->GetName());
+      else
+	mc->SetName(name); 
       return mc; 
    }
 
@@ -230,6 +233,9 @@ public:
 
    /// guesses Observables and ParametersOfInterest if not already set
    void GuessObsAndNuisance(const RooAbsData& data);
+
+   // overload the print method
+   //   virtual void Print(Option_t* option = "") const;
 
 protected:
    // helper functions to define a set in the WS
