@@ -4,9 +4,9 @@
 #include <string>
 #include <cfloat>
 
+#include "TMVA/PDEFoam.h"
 
 typedef enum { kNEV, kDISCR, kMONO, kRMS, kRMSOVMEAN } EPlotType;
-typedef enum { kSEPARATE, kUNIFIED, kMONOTARGET, kMULTITARGET } EFoamType;
 
 void PlotFoams(	TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root", 
                 bool useTMVAStyle=kTRUE )
@@ -77,7 +77,7 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
    }
 
    // find foams and foam type
-   EFoamType ft;
+   TMVA::EFoamType ft;
    TMVA::PDEFoam *foam  = 0;
    TMVA::PDEFoam *foam2 = 0;
    string foam_capt, foam2_capt;
@@ -86,19 +86,19 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
       foam2 = BgFoam;
       foam_capt  = "Signal Foam";
       foam2_capt = "Background Foam";
-      ft    = kSEPARATE;
+      ft    = TMVA::kSeparate;
    } else if (gDirectory->Get("DiscrFoam")){
       foam = DiscrFoam;
       foam_capt = "Discriminator Foam";
-      ft   = kDISCR;
+      ft   = TMVA::kDiscr;
    } else if (gDirectory->Get("MonoTargetRegressionFoam")){
       foam = MonoTargetRegressionFoam;
       foam_capt = "MonoTargetRegression Foam";
-      ft   = kMONOTARGET;
+      ft   = TMVA::kMonoTarget;
    } else if (gDirectory->Get("MultiTargetRegressionFoam")){
       foam = MultiTargetRegressionFoam;
       foam_capt = "MultiTargetRegression Foam";
-      ft   = kMULTITARGET;
+      ft   = TMVA::kMultiTarget;
    } else {
       cout << "ERROR: no Foams found in file: " << fin << endl;
       return;
@@ -112,8 +112,8 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
    if (kDim==1){
       // draw histogram
       TH1D *hist1 = 0, *hist2 = 0;
-      TCanvas *canv = new TCanvas("canv", "Foam(s)", 400, (ft==kSEPARATE) ? 800 : 400);
-      if (ft==kSEPARATE)
+      TCanvas *canv = new TCanvas("canv", "Foam(s)", 400, (ft==TMVA::kSeparate) ? 800 : 400);
+      if (ft==TMVA::kSeparate)
 	 canv->Divide(0,2);
       canv->cd(1);
 
@@ -123,10 +123,10 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
       hist1->Draw();
       hist1->SetDirectory(0);
       
-      if (ft==kSEPARATE){
+      if (ft==TMVA::kSeparate){
 	 canv->cd(2);
 	 string var_name2 = foam2->GetVariableName(0)->String();
-	 if (ft==kSEPARATE)
+	 if (ft==TMVA::kSeparate)
 	    hist2 = foam2->Draw1Dim(cellval.c_str(), 100);
 	 hist2->SetTitle((cellval_long+" of "+foam2_capt+";"+var_name2).c_str());
 	 hist2->Draw();
@@ -142,6 +142,7 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
       // if dimension of foam > 1, draw foam projections
       TCanvas* canv=0;
       TH2D *proj=0, *proj2=0;
+      TMVA::PDEFoamKernel *kernel = new TMVA::PDEFoamKernel(); // kernel to use for the projection
 
       // draw all possible projections (kDim*(kDim-1)/2)
       for(Int_t i=0; i<kDim; i++){
@@ -162,7 +163,7 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
 			<< ":" << foam->GetVariableName(k)->String()
 			<< ";" << foam->GetVariableName(i)->String()
 			<< ";" << foam->GetVariableName(k)->String();
-	    if (ft==kSEPARATE){
+	    if (ft==TMVA::kSeparate){
 	       title_proj2 << cellval_long << " of " 
 			   << foam2_capt << ": Projection " 
 			   << foam2->GetVariableName(i)->String() 
@@ -173,8 +174,8 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
 
 	    // create canvas
 	    canv = new TCanvas(title.str().c_str(), caption.str().c_str(), 
-			       (Int_t)(400/(1.-0.2)), (ft==kSEPARATE ? 800 : 400));
-	    if (ft==kSEPARATE){
+			       (Int_t)(400/(1.-0.2)), (ft==TMVA::kSeparate ? 800 : 400));
+	    if (ft==TMVA::kSeparate){
 	       canv->Divide(0,2);
 	       canv->GetPad(1)->SetRightMargin(0.2);
 	       canv->GetPad(2)->SetRightMargin(0.2);
@@ -184,16 +185,16 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
 	    canv->cd(1);
 
 	    // do projections
-	    proj = foam->Project2(i, k, cellval.c_str(), "kNone");
+	    proj = foam->Project2(i, k, cellval.c_str(), kernel);
 	    proj->SetTitle(title_proj1.str().c_str());
 	    if (pt==kDISCR)
 	       proj->GetZaxis()->SetRangeUser(-DBL_EPSILON, 1.+DBL_EPSILON);
 	    proj->Draw("COLZ"); // CONT4Z
 	    proj->SetDirectory(0);
 
-	    if (ft==kSEPARATE){
+	    if (ft==TMVA::kSeparate){
 	       canv->cd(2);
-	       proj2 = foam2->Project2(i, k, cellval.c_str(), "kNone");
+	       proj2 = foam2->Project2(i, k, cellval.c_str(), kernel);
 	       proj2->SetTitle(title_proj2.str().c_str());
 	       proj2->Draw("COLZ"); // CONT4Z
 	       proj2->SetDirectory(0);
