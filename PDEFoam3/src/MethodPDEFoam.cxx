@@ -619,16 +619,12 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
    if (fSigBgSeparated) {
       std::vector<Float_t> xvec = ev->GetValues();
 
-      Double_t Vol_sig = fFoam.at(0)->GetCellValue(xvec, kCellVolume, fKernelEstimator);
-      Double_t Vol_bg  = fFoam.at(1)->GetCellValue(xvec, kCellVolume, fKernelEstimator);
-
       Double_t density_sig = 0.; // calc signal event density
       Double_t density_bg  = 0.; // calc background event density
-      if (Vol_sig > std::numeric_limits<double>::epsilon() 
-	  && Vol_bg > std::numeric_limits<double>::epsilon()) {
-	 density_sig = fFoam.at(0)->GetCellValue(xvec, kValue, fKernelEstimator) / Vol_sig;
-	 density_bg  = fFoam.at(1)->GetCellValue(xvec, kValue, fKernelEstimator) / Vol_bg;
-      }
+      density_sig = fFoam.at(0)->GetCellValue(xvec, kValueDensity, fKernelEstimator);
+      density_bg  = fFoam.at(1)->GetCellValue(xvec, kValueDensity, fKernelEstimator);
+
+      Log() << "dens_sig: " << density_sig << " dens_bg: " << density_bg << Endl;
 
       // calc disciminator (normed!)
       if ( (density_sig+density_bg) > 0 )
@@ -828,8 +824,9 @@ TMVA::PDEFoamKernel* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
    switch (fKernel) {
    case kNone:
       return new PDEFoamKernel();
-   case kGaus:
    case kLinN:
+      return new PDEFoamKernelLinN();
+   case kGaus:
    default:
       Log() << kFATAL << "Kernel: " << fKernel << " not supported!" << Endl;
       return NULL;

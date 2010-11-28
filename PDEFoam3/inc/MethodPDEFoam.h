@@ -70,6 +70,7 @@
 #ifndef ROOT_TMVA_PDEFoam
 #include "TMVA/PDEFoam.h"
 #endif
+
 #ifndef ROOT_TMVA_PDEFoamDecisionTree
 #include "TMVA/PDEFoamDecisionTree.h"
 #endif
@@ -100,6 +101,13 @@
 #endif
 #ifndef ROOT_TMVA_PDEFoamDTDensity
 #include "TMVA/PDEFoamDTDensity.h"
+#endif
+
+#ifndef ROOT_TMVA_PDEFoamKernel
+#include "TMVA/PDEFoamKernel.h"
+#endif
+#ifndef ROOT_TMVA_PDEFoamKernelLinN
+#include "TMVA/PDEFoamKernelLinN.h"
 #endif
 
 namespace TMVA {
