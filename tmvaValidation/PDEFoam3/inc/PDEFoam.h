@@ -306,6 +306,7 @@ namespace TMVA {
       // ---------- friend classes
       friend class PDEFoamKernel;
       friend class PDEFoamKernelLinN;
+      friend class PDEFoamKernelGauss;
 
       // ---------- ROOT class definition
       ClassDef(PDEFoam,6) // Tree of PDEFoamCells

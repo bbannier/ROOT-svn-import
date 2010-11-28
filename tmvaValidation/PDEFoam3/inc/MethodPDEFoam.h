@@ -109,6 +109,9 @@
 #ifndef ROOT_TMVA_PDEFoamKernelLinN
 #include "TMVA/PDEFoamKernelLinN.h"
 #endif
+#ifndef ROOT_TMVA_PDEFoamKernelGauss
+#include "TMVA/PDEFoamKernelGauss.h"
+#endif
 
 namespace TMVA {
 
