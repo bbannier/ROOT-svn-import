@@ -18,6 +18,7 @@
 <!-- BinLow: the lowest bin number used for the measurement (inclusive) -->
 <!-- BinHigh: the highest bin number used for the measurement (exclusive) -->
 <!-- Mode: type of the measurement (a closed list of ...) -->
+<!-- ExportOnly: if "True" skip fit, only export model -->
 <!ELEMENT Measurement (POI,ParamSetting*,ConstraintTerm*) >
 <!ATTLIST Measurement 
         Name              CDATA            #REQUIRED
@@ -26,6 +27,7 @@
         BinLow            CDATA            #REQUIRED
         BinHigh           CDATA            #REQUIRED
         Mode              CDATA            #REQUIRED
+        ExportOnly        CDATA            #IMPLIED
 >
 
 <!-- Specify what you are measuring. Corresponds to the name specified in the construction

@@ -159,6 +159,7 @@ void topDriver(string input ){
         vector<string> systToFix;
         map<string,double> gammaSyst;
         map<string,double> uniformSyst;
+	bool exportOnly = false;
 
         TListIter attribIt = node->GetAttributes();
         TXMLAttr* curAttr = 0;
@@ -181,6 +182,12 @@ void topDriver(string input ){
           }
           if( curAttr->GetName() == TString( "Mode" ) ) {
             mode=curAttr->GetValue();
+          }
+          if( curAttr->GetName() == TString( "ExportOnly" ) ) {
+            if(curAttr->GetValue() == TString( "True" ) )
+	      exportOnly = true;
+	    else
+	      exportOnly = false;
           }
         }
         lumiError=nominalLumi*lumiRelError;
@@ -296,7 +303,8 @@ void topDriver(string input ){
 
 	  // TO DO:
           // Totally factorize the statistical test in "fit Model" to a different area
-          factory.FitModel(ws, ch_name, "newSimPdf", "expData", false);
+	  if(!exportOnly)
+	    factory.FitModel(ws, ch_name, "newSimPdf", "expData", false);
           fprintf(factory.pFile, " & " );
         }
 
@@ -339,7 +347,8 @@ void topDriver(string input ){
 
 	  // TO DO:
           // Totally factorize the statistical test in "fit Model" to a different area
-          factory.FitModel(ws, "combined", "simPdf", "simData", false);
+	  if(!exportOnly)
+	    factory.FitModel(ws, "combined", "simPdf", "simData", false);
         }
 
 
