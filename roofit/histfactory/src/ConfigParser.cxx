@@ -76,6 +76,38 @@ void HistFactory::ReadXmlConfig( string filen, vector<EstimateSummary> & summary
     string inputFileName_cache, histoName_cache, histoPathName_cache;
     TXMLNode* node = rootNode->GetChildren();
     while( node != 0 ) {
+      if( node->GetNodeName() == TString( "Data" ) ) {
+        inputFileName_cache=inputFileName;
+        histoName_cache=histoName;
+        histoPathName_cache=histoPathName;
+        EstimateSummary data_channel;
+        data_channel.channel=channelName;
+        data_channel.name="Data";
+
+        attribIt = node->GetAttributes();
+        curAttr = 0;
+        while( ( curAttr = dynamic_cast< TXMLAttr* >( attribIt() ) ) != 0 ) {
+          if( curAttr->GetName() == TString( "InputFile" ) ) {
+            inputFileName = curAttr->GetValue() ;
+          }
+          if( curAttr->GetName() == TString( "HistoName" ) ) {
+            histoName = curAttr->GetValue() ;
+          }
+          if( curAttr->GetName() == TString( "HistoPath" ) ) {
+            histoPathName=curAttr->GetValue();
+          }
+        }
+        data_channel.nominal = (TH1F*) GetHisto(inputFileName, histoPathName, histoName);
+        summary.push_back(data_channel);
+        inputFileName=inputFileName_cache;
+        histoName=histoName_cache;
+        histoPathName=histoPathName_cache;
+        //data_channel.print();
+      }
+      node = node->GetNextNode();
+    }
+    node = rootNode->GetChildren();
+    while( node != 0 ) {
       if( node->GetNodeName() == TString( "Sample" ) ) {
         inputFileName_cache=inputFileName;
         histoName_cache=histoName;
