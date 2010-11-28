@@ -71,11 +71,13 @@ namespace TMVA {
    // enum type for possible foam cell values
    // kValue         : cell value who's rms is minimized
    // kValueError    : error on kValue
+   // kValueDensity  : volume density of kValue
    // kMeanValue     : mean sampling value (saved in fIntegral)
    // kRms           : rms of sampling distribution (saved in fDriver)
    // kRmsOvMean     : rms/mean of sampling distribution (saved in
    //                  fDriver and fIntegral)
-   enum ECellValue { kValue, kValueError, kMeanValue, kRms, kRmsOvMean, kCellVolume };
+   enum ECellValue { kValue, kValueError, kValueDensity, kMeanValue, 
+		     kRms, kRmsOvMean, kCellVolume };
 }
 
 #ifndef ROOT_TMVA_PDEFoamDensity
@@ -302,6 +304,7 @@ namespace TMVA {
 
       // ---------- friend classes
       friend class PDEFoamKernel;
+      friend class PDEFoamKernelLinN;
 
       // ---------- ROOT class definition
       ClassDef(PDEFoam,6) // Tree of PDEFoamCells
