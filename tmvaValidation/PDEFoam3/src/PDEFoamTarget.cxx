@@ -133,7 +133,7 @@ Double_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValu
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamTarget::GetAverageNeighborsValue( std::vector<Float_t> &txvec,
+Float_t TMVA::PDEFoamTarget::GetAverageNeighborsValue( std::vector<Float_t> &txvec,
 							ECellValue cv )
 {
    // This function returns the average value 'cv' of only nearest
@@ -144,9 +144,9 @@ Double_t TMVA::PDEFoamTarget::GetAverageNeighborsValue( std::vector<Float_t> &tx
    // - txvec - event vector, transformed into foam coordinates [0, 1]
    // - cv - cell value, see definition of ECellValue
 
-   const Double_t xoffset = 1.e-6;
-   Double_t norm   = 0; // normalisation
-   Double_t result = 0; // return value
+   const Float_t xoffset = 1.e-6;
+   Float_t norm   = 0; // normalisation
+   Float_t result = 0; // return value
 
    PDEFoamCell *cell = FindCell(txvec); // find cooresponding cell
    PDEFoamVect cellSize(GetTotDim());
