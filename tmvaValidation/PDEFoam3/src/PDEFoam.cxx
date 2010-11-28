@@ -1309,6 +1309,28 @@ Double_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
    case kValueError:
       return GetCellElement(cell, 1);
 
+   case kValueDensity: {
+      
+      Double_t volume  = cell->GetVolume();
+      if ( volume > 1.0e-10 ){
+         return GetCellValue(cell, kValue)/volume;
+      } else {
+         if (volume<=0){
+            cell->Print("1"); // debug output
+            Log() << kWARNING << "<GetCellDensity(cell)>: ERROR: cell volume"
+                  << " negative or zero!"
+                  << " ==> return cell density 0!"
+                  << " cell volume=" << volume
+                  << " cell entries=" << GetCellValue(cell, kValue) << Endl;
+         } else {
+            Log() << kWARNING << "<GetCellDensity(cell)>: WARNING: cell volume"
+                  << " close to zero!"
+                  << " cell volume: " << volume << Endl;
+	 }
+      }
+   }
+      return 0;
+
    case kMeanValue:
       return cell->GetIntg();
 
