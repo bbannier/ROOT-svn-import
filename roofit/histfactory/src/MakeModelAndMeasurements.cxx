@@ -276,7 +276,7 @@ void topDriver(string input ){
           // may not be necessary any more
           RooAbsData* expData = ws->data("expData");
           RooArgSet* temp =  (RooArgSet*) ws->set("obsN")->Clone("temp");
-          temp->add(*poi);
+          temp->add(*params);
           RooAbsPdf* model=proto_config->GetPdf();
           RooArgSet* constrainedParams = model->getParameters(temp);
           ws->defineSet("constrainedParams", *constrainedParams);
@@ -292,7 +292,7 @@ void topDriver(string input ){
 
 	  // TO DO:
           // Totally factorize the statistical test in "fit Model" to a different area
-          factory.FitModel(ws, ch_name, "model_"+ch_name, "expData", false);
+          factory.FitModel(ws, ch_name, "newSimPdf", "expData", false);
           fprintf(factory.pFile, " & " );
         }
 
@@ -307,6 +307,9 @@ void topDriver(string input ){
           
         if(mode.find("comb")!=string::npos){ 
           RooWorkspace* ws=factory.MakeCombinedModel(ch_names,chs);
+          // Gamma/Uniform Constraints:
+          // turn some Gaussian constraints into Gamma/Uniform constraints, rename model newSimPdf
+	  if(gammaSyst.size()>0 || uniformSyst.size()>0) factory.EditSyst(ws,"simPdf",gammaSyst,uniformSyst);
           //
           // set parameter of interest according to the configuration
           //
@@ -320,6 +323,8 @@ void topDriver(string input ){
           combined_config->SetParameters(*params);
           ws->Print();
 
+          // Set new PDF if there are gamma/uniform constraint terms
+          if(gammaSyst.size()>0 || uniformSyst.size()>0) combined_config->SetPdf(*ws->pdf("newSimPdf"));
 
 	  // TO DO:
           // Totally factorize the statistical test in "fit Model" to a different area

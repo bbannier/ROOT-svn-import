@@ -75,7 +75,7 @@ END_HTML
 #define alpha_Low "-5"
 #define alpha_High "5"
 #define NoHistConst_Low "0"
-#define NoHistConst_High "200"
+#define NoHistConst_High "2000"
 
 // use this order for safety on library loading
 using namespace RooFit ;
@@ -408,6 +408,7 @@ namespace HistFactory{
     proto->factory( edit.c_str() );
   }
 
+
   void HistoToWorkspaceFactory::EditSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst, map<string,double> uniformSyst) {
     cout << "in edit, gammamap.size = " << gammaSyst.size() << ", unimap.size = " << uniformSyst.size() << endl;
     string pdfName(pdfNameChar);
@@ -576,7 +577,7 @@ namespace HistFactory{
   }
 
   void HistoToWorkspaceFactory::PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename){
-    FILE * pFile;
+    //    FILE * pFile;
     pFile = fopen ((filename).c_str(),"w"); 
 
 
@@ -638,7 +639,7 @@ namespace HistFactory{
     // this is ratio of lumi to nominal lumi.  We will include relative uncertainty in model
     std::stringstream lumiStr;
     // lumi range
-    lumiStr<<"["<<fNomLumi<<",0.,"<<2*fNomLumi<<"]";
+    lumiStr<<"["<<fNomLumi<<","<<0.5*fNomLumi<<","<<1.5*fNomLumi<<"]";
     proto->factory(("Lumi"+lumiStr.str()).c_str());
     cout << "lumi str = " << lumiStr.str() << endl;
     
@@ -844,7 +845,7 @@ namespace HistFactory{
 
     ModelConfig * combined_config = (ModelConfig *) combined->obj("ModelConfig");
     RooDataSet * simData = (RooDataSet *) combined->obj(data_name.c_str());
-    const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
+    //    const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
     const RooArgSet * POIs=combined_config->GetParametersOfInterest();
 
     /*
@@ -871,7 +872,7 @@ namespace HistFactory{
     cout << "\n\n---------------" << endl;
     cout << "---------------- Doing "<< channel << " Fit" << endl;
     cout << "---------------\n\n" << endl;
-    RooFitResult* result = model->fitTo(*simData, Minos(kTRUE), Save(kTRUE), PrintLevel(1), Constrain(*constrainedParams));
+    RooFitResult* result = model->fitTo(*simData, Minos(kTRUE), Save(kTRUE), PrintLevel(1));
     PrintCovarianceMatrix(result, allParams, "results/"+FilePrefixStr(channel)+"_corrMatrix.table" );
 
     //
@@ -887,14 +888,15 @@ namespace HistFactory{
     }
     fprintf(pFile, " %.4f / %.4f  ", 100*poi->getErrorLo(), 100*poi->getErrorHi());
 
-    RooAbsReal* nll = model->createNLL(*simData,Constrain(*constrainedParams));
+    RooAbsReal* nll = model->createNLL(*simData);
     RooAbsReal* profile = nll->createProfile(*poi);
     RooPlot* frame = poi->frame();
-    TCanvas* c1 = new TCanvas( channel.c_str(), "",800,600);
     FormatFrameForLikelihood(frame);
+    TCanvas* c1 = new TCanvas( channel.c_str(), "",800,600);
     nll->plotOn(frame, ShiftToZero(), LineColor(kRed), LineStyle(kDashed));
     profile->plotOn(frame);
-
+    frame->SetMinimum(0);
+    frame->SetMaximum(2.);
     frame->Draw();
     c1->SaveAs( ("results/"+FilePrefixStr(channel)+"_profileLR.eps").c_str() );
 
@@ -965,17 +967,22 @@ namespace HistFactory{
       gStyle->SetTitleFillColor(255);
       gStyle->SetFrameFillColor(0);  
       gStyle->SetStatColor(255);
-
+      
+      RooAbsRealLValue* var = frame->getPlotVar();
+      double xmin = var->getMin();
+      double xmax = var->getMax();
+      
       frame->SetTitle("");
-      frame->GetXaxis()->SetTitle(XTitle.c_str());
+      //      frame->GetXaxis()->SetTitle(XTitle.c_str());
+      frame->GetXaxis()->SetTitle(var->GetTitle());
       frame->GetYaxis()->SetTitle(YTitle.c_str());
       frame->SetMaximum(2.);
       frame->SetMinimum(0.);
-      TLine * line = new TLine(.5,.5,1.8,.5);
+      TLine * line = new TLine(xmin,.5,xmax,.5);
       line->SetLineColor(kGreen);
-      TLine * line90 = new TLine(.5,2.71/2.,1.8,2.71/2.);
+      TLine * line90 = new TLine(xmin,2.71/2.,xmax,2.71/2.);
       line90->SetLineColor(kGreen);
-      TLine * line95 = new TLine(.5,3.84/2.,1.8,3.84/2.);
+      TLine * line95 = new TLine(xmin,3.84/2.,xmax,3.84/2.);
       line95->SetLineColor(kGreen);
       frame->addObject(line);
       frame->addObject(line90);
