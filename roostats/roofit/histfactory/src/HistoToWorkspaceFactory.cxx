@@ -419,8 +419,8 @@ namespace HistFactory{
     string editList;
     string lastPdf=pdfName;
     string preceed="";
-    unsigned int numReplacements = 0;
-    unsigned int nskipped = 0;
+    int numReplacements = 0;
+    int nskipped = 0;
     map<string,double>::iterator it;
 
     // add gamma terms and their constraints
@@ -576,7 +576,7 @@ namespace HistFactory{
   }
 
   void HistoToWorkspaceFactory::PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename){
-    //    FILE * pFile;
+    FILE * pFile;
     pFile = fopen ((filename).c_str(),"w"); 
 
 
@@ -630,13 +630,8 @@ namespace HistFactory{
     string prefix, range;
 
     /////////////////////////////
-    // observables
-    TH1F* pseudoData = 0;
-    if(summary.at(0).name=="topmix")  pseudoData = summary.at(0).nominal;
-    // range obs
-    ProcessExpectedHisto(pseudoData,proto,"obsN","","",0,10000,fLowBin,fHighBin);
-    RooArgSet obsN = *(proto->set("obsN"));
-    //proto_config->SetOservables(obsN);
+    // observed data
+    if (summary.at(0).name=="Data") ProcessExpectedHisto(summary.at(0).nominal,proto,"obsN","","",0,100000,fLowBin,fHighBin);
 
     /////////////////////////////
     // shared parameters
@@ -659,7 +654,7 @@ namespace HistFactory{
     // and terms that constrain floating to expectation via uncertainties
     vector<EstimateSummary>::iterator it = summary.begin();
     for(; it!=summary.end(); ++it){
-      if(it->name=="topmix") continue;
+      if(it->name=="Data") continue;
 
       string overallSystName = it->name+"_"+it->channel+"_epsilon"; 
       string systSourcePrefix = "alpha_";
@@ -708,13 +703,13 @@ namespace HistFactory{
     AddPoissonTerms(proto, "Pois_"+channel, "obsN", channel+"_totN", fLowBin, fHighBin, likelihoodTermNames);
 
     /////////////////////////////////
-    // set observed to expected for now.  Later use some real data
-    if(!pseudoData){
+    // if no data histogram provided, make asimov data
+    if(summary.at(0).name!="Data"){
       SetObsToExpected(proto, "obsN",channel+"_totN", fLowBin, fHighBin);
-      cout << " using expected data" << endl;
+      cout << " using asimov data" << endl;
     }  else{
       SetObsToExpected(proto, "obsN","obsN", fLowBin, fHighBin);
-      cout << " using top mix data" << endl;
+      cout << " using input data histogram" << endl;
     }
 
     //////////////////////////////////////

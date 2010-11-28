@@ -70,10 +70,9 @@ subelements -->
 For this element there is no sublemenents so the setting will only have local effects -->
 <!ELEMENT Data EMPTY>
 <!ATTLIST Data
-        Name              CDATA            #REQUIRED
-        InputFile         CDATA            #REQUIRED
-        HistoPath         CDATA            #REQUIRED
-        HistoName         CDATA            #REQUIRED
+        InputFile         CDATA            #IMPLIED
+        HistoPath         CDATA            #IMPLIED
+        HistoName         CDATA            #IMPLIED
 >
 
 
