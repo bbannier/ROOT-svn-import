@@ -79,16 +79,18 @@ Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<
    //    value.  This is used for projection to two dimensions within
    //    Project2().
    //
-   //  - TreatEmptyCells - if this option is set false (default),
-   //    it is not checked, wether the cell or its neighbors are empty
-   //    or not.  If this option is set true, than only non-empty
-   //    neighbor cells are taken into account for weighting.  If the
-   //    cell, which contains txvec is empty, than its value is
-   //    replaced by the average value of the non-empty neighbor cells
+   //  - TreatEmptyCells - if this option is set to false (default),
+   //    it is not checked, wether the cell value or neighbor cell
+   //    values are undefined (using foam->CellValueIsUndefined()).
+   //    If this option is set to true, than only non-empty neighbor
+   //    cells are taken into account for weighting.  If the cell
+   //    value of the cell, which contains txvec, is empty, than its
+   //    value is estimated by the average value of the non-empty
+   //    neighbor cells (using GetAverageNeighborsValue()).
 
-   Double_t result = 0.;
+   Float_t result = 0.;
    UInt_t norm     = 0;
-   const Double_t xoffset = 1.e-6;
+   const Float_t xoffset = 1.e-6;
 
    if (txvec.size() != UInt_t(foam->GetTotDim()))
       Log() << kFATAL << "Wrong dimension of event variable!" << Endl;
@@ -99,7 +101,7 @@ Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<
    PDEFoamVect cellPosi(foam->GetTotDim());
    cell->GetHcub(cellPosi, cellSize);
    // calc value of cell, which contains txvec
-   Double_t cellval = 0;
+   Float_t cellval = 0;
    if (!(TreatEmptyCells && foam->CellValueIsUndefined(cell)))
       // cell is not empty -> get cell value
       cellval = foam->GetCellValue(cell, cv);
@@ -111,7 +113,7 @@ Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<
    // loop over all dimensions to find neighbor cells
    for (Int_t dim = 0; dim < foam->GetTotDim(); dim++) {
       std::vector<Float_t> ntxvec(txvec);
-      Double_t mindist;
+      Float_t mindist;
       PDEFoamCell *mindistcell = 0; // cell with minimal distance to txvec
       // calc minimal distance to neighbor cell
       mindist = (txvec[dim]-cellPosi[dim])/cellSize[dim];
@@ -123,7 +125,7 @@ Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<
          ntxvec[dim] = cellPosi[dim]+cellSize[dim]+xoffset;
          mindistcell = foam->FindCell(ntxvec); // right neighbor cell
       }
-      Double_t mindistcellval = 0; // value of cell, which contains ntxvec
+      Float_t mindistcellval = 0; // value of cell, which contains ntxvec
       if (dim1>=0 && dim1<foam->GetTotDim() &&
           dim2>=0 && dim2<foam->GetTotDim() &&
           dim1!=dim2){
@@ -150,17 +152,18 @@ Float_t TMVA::PDEFoamKernelLinN::GetAverageNeighborsValue( PDEFoam *foam,
 							   ECellValue cv )
 {
    // This function returns the average value 'cv' of only nearest
-   // neighbor cells.  It is used in cases, where empty cells shall
-   // not be evaluated.
+   // neighbor cells.  It is used in cases when a cell value is
+   // undefined and the cell value shall be estimated by the
+   // (well-defined) cell values of the neighbor cells.
    //
    // Parameters:
    // - foam - the foam to search in
    // - txvec - event vector, transformed into foam coordinates [0, 1]
    // - cv - cell value, see definition of ECellValue
 
-   const Double_t xoffset = 1.e-6;
-   Double_t norm   = 0; // normalisation
-   Double_t result = 0; // return value
+   const Float_t xoffset = 1.e-6;
+   Float_t norm   = 0; // normalisation
+   Float_t result = 0; // return value
 
    PDEFoamCell *cell = foam->FindCell(txvec); // find cooresponding cell
    PDEFoamVect cellSize(foam->GetTotDim());
