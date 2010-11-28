@@ -305,11 +305,17 @@ namespace HistFactory{
       highVec.push_back(high);
       
     }
-    // this is epsilon(alpha_j), a piece-wise linear interpolation
-    LinInterpVar interp( (interpName).c_str(), "", params, 1., lowVec, highVec);
-    proto->import(interp); // params have already been imported in first loop of this function
+    if(systMap.size()>0){
+      // this is epsilon(alpha_j), a piece-wise linear interpolation
+      LinInterpVar interp( (interpName).c_str(), "", params, 1., lowVec, highVec);
+      proto->import(interp); // params have already been imported in first loop of this function
+    } else{
+      // some strange behavior if params,lowVec,highVec are empty.  
+      //cout << "WARNING: No OverallSyst terms" << endl;
+      RooConstVar interp( (interpName).c_str(), "", 1.);
+      proto->import(interp); // params have already been imported in first loop of this function
+    }
     
-    cout << "k" << endl;
   }
 
 
@@ -410,7 +416,7 @@ namespace HistFactory{
 
   //_____________________________________________________________
   void HistoToWorkspaceFactory::EditSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst, map<string,double> uniformSyst) {
-    cout << "in edit, gammamap.size = " << gammaSyst.size() << ", unimap.size = " << uniformSyst.size() << endl;
+    //    cout << "in edit, gammamap.size = " << gammaSyst.size() << ", unimap.size = " << uniformSyst.size() << endl;
     string pdfName(pdfNameChar);
 
     ModelConfig * combined_config = (ModelConfig *) proto->obj("ModelConfig");
@@ -426,9 +432,9 @@ namespace HistFactory{
 
     // add gamma terms and their constraints
     for(it=gammaSyst.begin(); it!=gammaSyst.end(); ++it) {
-      cout << "edit for " << it->first << "with rel uncert = " << it->second << endl;
+      //cout << "edit for " << it->first << "with rel uncert = " << it->second << endl;
       if(! proto->var(("alpha_"+it->first).c_str())){
-	cout << "systematic not there" << endl;
+	//cout << "systematic not there" << endl;
 	nskipped++; 
 	continue;
       }
@@ -466,7 +472,7 @@ namespace HistFactory{
       proto->factory(Form("PolyVar::alphaOfBeta_%s(beta_%s,{%f,%f})",it->first.c_str(),it->first.c_str(),-1./scale,1./scale));
 	
       // clean up constraints
-      cout << "got here, about to remove" << endl;
+      //      cout << "got here, about to remove" << endl;
       //      temp.remove(*proto->var(Form("alpha_%s",it->first.c_str())));
       //      temp.add(*proto->var(Form("beta_%s",it->first.c_str())));
       //      cout << "KC CHECK 2" << endl;
@@ -481,16 +487,18 @@ namespace HistFactory{
       //      proto->var(Form("alpha_%s",it->first.c_str()))->setConstant(true);
 
       // replace alphas with alphaOfBeta and replace constraints
-      cout <<         "alpha_"+it->first+"Constraint=beta_" + it->first+ "Constraint" << endl;
+      //cout <<         "alpha_"+it->first+"Constraint=beta_" + it->first+ "Constraint" << endl;
       editList+=preceed + "alpha_"+it->first+"Constraint=beta_" + it->first+ "Constraint";
       preceed=",";
-      cout <<         "alpha_"+it->first+"=alphaOfBeta_"+ it->first << endl;
+      //      cout <<         "alpha_"+it->first+"=alphaOfBeta_"+ it->first << endl;
       editList+=preceed + "alpha_"+it->first+"=alphaOfBeta_"+ it->first;
 
+      /*
       if( proto->pdf(("alpha_"+it->first+"Constraint").c_str()) && proto->var(("alpha_"+it->first).c_str()) )
-	cout << " checked they are there" << proto->pdf(("alpha_"+it->first+"Constraint").c_str()) << " " << proto->var(("alpha_"+it->first).c_str()) << endl;
+      cout << " checked they are there" << proto->pdf(("alpha_"+it->first+"Constraint").c_str()) << " " << proto->var(("alpha_"+it->first).c_str()) << endl;
       else
 	cout << "NOT THERE" << endl;
+      */
 
       // EDIT seems to die if the list of edits is too long.  So chunck them up.
       if(numReplacements%10 == 0 && numReplacements+nskipped!=gammaSyst.size()){
@@ -498,7 +506,7 @@ namespace HistFactory{
 	lastPdf+="_"; // append an underscore for the edit
 	editList=""; // reset edit list
 	preceed="";
-	cout << edit<< endl;
+	cout << "Going to issue this edit command\n" << edit<< endl;
 	proto->factory( edit.c_str() );
 	RooAbsPdf* newOne = proto->pdf(lastPdf.c_str());
 	if(!newOne)
@@ -568,7 +576,7 @@ namespace HistFactory{
     edit="EDIT::newSimPdf("+lastPdf+","+editList+")";
     cout << edit<< endl;
     proto->factory( edit.c_str() );
-    proto->writeToFile(("results/model_"+fRowTitle+"_edited.root").c_str());
+    //    proto->writeToFile(("results/model_"+fRowTitle+"_edited.root").c_str());
     RooAbsPdf* newOne = proto->pdf("newSimPdf");
     if(newOne){
       // newOne->graphVizTree(("results/"+pdfName+"_"+fRowTitle+"newSimPdf.dot").c_str());
@@ -625,7 +633,7 @@ namespace HistFactory{
     // our main workspace that we are using to construct the model
     //
     RooWorkspace* proto = new RooWorkspace("proto","proto workspace");
-    ModelConfig * proto_config = new ModelConfig("ModelConfig");
+    ModelConfig * proto_config = new ModelConfig("ModelConfig", proto);
     proto_config->SetWorkspace(*proto);
 
     RooArgSet likelihoodTerms("likelihoodTerms");
@@ -789,7 +797,7 @@ namespace HistFactory{
 
     RooCategory* channelCat = (RooCategory*) combined->factory(("channelCat["+ss.str()+"]").c_str());
     RooSimultaneous * simPdf= new RooSimultaneous("simPdf","",pdfMap, *channelCat);
-    ModelConfig * combined_config = new ModelConfig("ModelConfig");
+    ModelConfig * combined_config = new ModelConfig("ModelConfig", combined);
     combined_config->SetWorkspace(*combined);
     //    combined_config->SetNuisanceParameters(*constrainedParams);
     
@@ -811,10 +819,10 @@ namespace HistFactory{
     //for(int i=0; i<simData->numEntries(); ++i)
     //  simData->get(i)->Print("v");
 
-    combined->import(*simData);
+    combined->import(*simData,RecycleConflictNodes());
 
     cout << "\n\n----------------\n Importing combined model" << endl;
-    combined->import(*simPdf);
+    combined->import(*simPdf,RecycleConflictNodes());
     //combined->import(*simPdf, RenameVariable("SigXsecOverSM","SigXsecOverSM_comb"));
     cout << "check pointer " << simPdf << endl;
 
@@ -837,7 +845,7 @@ namespace HistFactory{
     //    customized->graphVizTree(("results/"+fResultsPrefixStr.str()+"_simul.dot").c_str());
     combined->import(*combined_config,combined_config->GetName());
     combined->importClassCode();
-    combined->writeToFile("results/model_combined.root");
+    //    combined->writeToFile("results/model_combined.root");
 
     return combined;
   }

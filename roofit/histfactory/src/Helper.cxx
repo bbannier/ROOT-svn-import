@@ -101,7 +101,7 @@ namespace HistFactory{
 
   TH1F * GetHisto( TFile * inFile, const string name ){
 
-  if(!inFile || name.empty()){
+  if(!inFile && name.empty()){
     cerr << "Not all necessary info are set to access the input file. Check your config" << endl;
     cerr << "fileptr: " << inFile
          << "path/obj: " << name << endl;
@@ -121,12 +121,6 @@ namespace HistFactory{
 
   TH1 * GetHisto( const string file, const string path, const string obj){
 
-    if(file.empty() || path.empty() || obj.empty()){
-      cerr << "Not all necessary info are set to access the input file. Check your config" << endl;
-      cerr << "filename: " << file
-           << "path: " << path
-           << "obj: " << obj << endl;
-    }
   #ifdef DEBUG
     cout << "Retrieving " << file << ":" << path << obj ;
   #endif
@@ -135,6 +129,13 @@ namespace HistFactory{
   #ifdef DEBUG
     cout << " found at " << ptr << " with integral " << ptr->Integral() << " and mean " << ptr->GetMean() << endl;
   #endif
+    //    if(file.empty() || path.empty() || obj.empty()){
+    if(!ptr){
+      cerr << "Not all necessary info are set to access the input file. Check your config" << endl;
+      cerr << "filename: " << file
+           << "path: " << path
+           << "obj: " << obj << endl;
+    }
     ptr->SetDirectory(0); //         for the current histogram h
     return ptr;
 
