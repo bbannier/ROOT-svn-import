@@ -7,15 +7,16 @@
 //
 /////////////////////////////////////////////////////////////////////////
 
-#ifndef __CINT__
 #include "RooGlobalFunc.h"
-#endif
 #include "RooRealVar.h"
 #include "RooProdPdf.h"
 #include "RooWorkspace.h"
 #include "RooDataSet.h"
+#include "RooPlot.h"
 #include "TCanvas.h"
 #include "TH1.h"
+#include "RooStats/NumberCountingUtils.h"
+#include "RooStats/RooStatsUtils.h"
 
 using namespace RooFit;
 using namespace RooStats;
