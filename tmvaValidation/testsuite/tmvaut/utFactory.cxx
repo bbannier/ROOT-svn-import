@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cassert>
 #include <vector>
+#include <exception>
 
 #include "TTree.h"
 #include "TFile.h"
@@ -29,7 +30,7 @@ TTree* utFactory::create_Tree(const char* opt)
 {
    TString option = opt;
    const int nmax=100; 
-   const int nvar=3, nfval=2, nivar=1, nclass=3;
+   const int nvar=3, nfval=2, nivar=2, nclass=3;
    float weight=1.;
    vector<float> var(nvar), fval(nfval); // fix me hardcoded nvar
    vector<int> ivar(nivar), nevt(nclass);
@@ -64,19 +65,40 @@ TTree* utFactory::create_Tree(const char* opt)
    return tree;
 }
 
-void utFactory::operateSingleFactory(const char* opt)
+bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
 {
+   if (TString(factoryname)=="") factoryname = "TMVATest";
+   std::cout <<"operateSingleFactory option="<<opt<<std::endl;
+   //try {
+   TString option=opt;
+   TTree* tree(0);
+   TFile* inFile(0);
+   if (!(option.Contains("MemoryResidentTree"))){
+      inFile = TFile::Open( "input.root", "RECREATE" );
+      tree = create_Tree();
+      inFile->Write();
+      inFile->Close();
+      if (inFile) delete inFile;
+      inFile = TFile::Open( "input.root");
+      tree = (TTree*) inFile->Get("Tree");
+   }
+   else if (! (option.Contains("LateTreeBooking"))) tree = create_Tree();
+
    TMVA::Types::EMVA _methodType = TMVA::Types::kLD;
    TString _methodTitle="LD",_methodOption="!H:!V"; // fix me
    TString prepareString="";
-   string factoryOptions( "!V:!Silent:Transformations=I;D;P;G,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
+   string factoryOptions( "!V:Silent:Transformations=I;D;P;G,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
    TString outfileName( "TMVA.root" );
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
-   TTree* tree = create_Tree();
-   //TTree* tree2 = create_Tree();
-   Factory* factory = new Factory("TMVATest",outputFile,factoryOptions);
+   if (option.Contains("LateTreeBooking") && option.Contains("MemoryResidentTree")) tree = create_Tree();
+
+   Factory* factory = new Factory(factoryname,outputFile,factoryOptions);
    factory->AddVariable( "var0",  "Variable 0", 'F' );
    factory->AddVariable( "var1",  "Variable 1", 'F' );
+   if (option.Contains("var2"))  factory->AddVariable( "var2",  "Var 2", 'F' );
+   if (option.Contains("ivar0")) factory->AddVariable( "ivar0",  "Var i0", 'I' );
+   if (option.Contains("ivar1")) factory->AddVariable( "ivar1",  "Var i1", 'I' );
+
    factory->AddSpectator( "ievt", 'I' );
    factory->AddSignalTree(tree);
    factory->AddBackgroundTree(tree);
@@ -84,8 +106,8 @@ void utFactory::operateSingleFactory(const char* opt)
    // this crashes "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" ;
    factory->PrepareTrainingAndTestTree( "iclass==0", "iclass==1", prepareString);
 
-   //factory->BookMethod(TMVA::Types::kLD,"LD","!H:!V");
-   factory->BookMethod("LD","LD","!H:!V");
+   if (option.Contains("StringMethodBooking")) factory->BookMethod("LD","LD","!H:!V");
+   else factory->BookMethod(TMVA::Types::kLD,"LD","!H:!V");
 
    //factory->BookMethod(_methodType, _methodTitle, _methodOption);
 
@@ -93,16 +115,35 @@ void utFactory::operateSingleFactory(const char* opt)
    factory->TestAllMethods();
    factory->EvaluateAllMethods();
    MethodBase* theMethod = dynamic_cast<TMVA::MethodBase*> (factory->GetMethod(_methodTitle));
-   double ROCValue = theMethod->GetROCIntegral();
-   test_(ROCValue>0.6);
+   double ROCValue = theMethod->GetROCIntegral();   
+   delete tree;
    delete factory;
    outputFile->Close(); // ???
+   if (option.Contains("InputFile")){
+      inFile->Close();
+   }
+   if (outputFile) delete outputFile;
+   if (inFile) delete inFile;
+
+   return (ROCValue>0.6);
+   //}
+   //catch (...) { return false;}
+
 }
 void utFactory::run()
 {
    // create three factories with two methods each
-   operateSingleFactory("test");
-   // operate them in parallel
+   test_(operateSingleFactory("TMVATest","StringMethodBooking"));
+   test_(operateSingleFactory("TMVATest",""));
+   test_(operateSingleFactory("TMVATest3Var","var2"));
+   test_(operateSingleFactory("TMVATest3VarF2VarI","var2:ivar0:ivar1"));
+
+   //creates crash test_(operateSingleFactory("MemoryResidentTree:StringMethodBooking"));
+   //creates crash test_(operateSingleFactory("MemoryResidentTree"));
+   //creates crash test_(operateSingleFactory("MemoryResidentTree:LateTreeBooking"));
+   //creates crash test_(operateSingleFactory("MemoryResidentTree:LateTreeBooking:StringMethodBooking"));
+
+
 
 }
 
