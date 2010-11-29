@@ -1796,10 +1796,11 @@ TObject* RooWorkspace::obj(const char* name) const
 //_____________________________________________________________________________
 TObject* RooWorkspace::genobj(const char* name)  const
 {
-  // Return generic object with given name
+  // Return generic object with given name or NULL
 
   // Find object by name
   TObject* gobj = _genObjects.FindObject(name) ;
+  if(!gobj) return NULL;
 
   // If found object is wrapper, return payload
   if (gobj->IsA()==RooTObjWrap::Class()) return ((RooTObjWrap*)gobj)->obj() ;
