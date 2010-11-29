@@ -36,7 +36,7 @@ namespace HistFactory{
 
     public:
 
-      HistoToWorkspaceFactory(  string , vector<string> , double =200, double =20, int =0, int =6, TFile * =0);
+    HistoToWorkspaceFactory(  string, string , vector<string> , double =200, double =20, int =0, int =6, TFile * =0);
       HistoToWorkspaceFactory();
       virtual ~HistoToWorkspaceFactory();
 
@@ -84,6 +84,7 @@ namespace HistFactory{
       void FitModel(RooWorkspace *, string, string, string, bool=false  );
       std::string FilePrefixStr(std::string);
 
+      string fFileNamePrefix;
       string fRowTitle;
       vector<string> fSystToFix;
       double fNomLumi, fLumiError, fLowBin, fHighBin;    

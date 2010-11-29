@@ -260,7 +260,7 @@ void topDriver(string input ){
         vector<RooWorkspace*> chs;
         vector<string> ch_names;
         TFile* outFile = new TFile(outputFileName.c_str(), "recreate");
-        HistoToWorkspaceFactory factory( rowTitle, systToFix, nominalLumi, lumiError, lowBin, highBin , outFile);
+        HistoToWorkspaceFactory factory(outputFileNamePrefix, rowTitle, systToFix, nominalLumi, lumiError, lowBin, highBin , outFile);
 
 
         // for results tables
