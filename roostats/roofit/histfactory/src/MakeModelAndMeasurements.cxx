@@ -82,10 +82,13 @@ END_HTML
 #include "RooStats/ModelConfig.h"
 
 // from this package
-#include "RooStats/HistFactory/EstimateSummary.h"
-#include "RooStats/HistFactory/Helper.h"
+//#include "RooStats/HistFactory/EstimateSummary.h"
+//#include "RooStats/HistFactory/Helper.h"
+//#include "RooStats/HistFactory/ConfigParser.h"
+#include "EstimateSummary.h"
+#include "Helper.h"
+#include "ConfigParser.h"
 #include "RooStats/HistFactory/HistoToWorkspaceFactory.h"
-#include "RooStats/HistFactory/ConfigParser.h"
 
 
 using namespace RooFit;

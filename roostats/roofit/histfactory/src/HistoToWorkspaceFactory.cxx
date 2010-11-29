@@ -66,7 +66,8 @@ END_HTML
 #include "TMatrixDSym.h"
 
 // specific to this package
-#include "RooStats/HistFactory/Helper.h"
+//#include "RooStats/HistFactory/Helper.h"
+#include "Helper.h"
 #include "RooStats/HistFactory/LinInterpVar.h"
 #include "RooStats/HistFactory/HistoToWorkspaceFactory.h"
 
