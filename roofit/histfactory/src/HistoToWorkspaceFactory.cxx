@@ -884,7 +884,7 @@ namespace HistFactory{
     cout << "---------------- Doing "<< channel << " Fit" << endl;
     cout << "---------------\n\n" << endl;
     RooFitResult* result = model->fitTo(*simData, Minos(kTRUE), Save(kTRUE), PrintLevel(1));
-    PrintCovarianceMatrix(result, allParams, "results/"+FilePrefixStr(channel)+"_corrMatrix.table" );
+    //    PrintCovarianceMatrix(result, allParams, "results/"+FilePrefixStr(channel)+"_corrMatrix.table" );
 
     //
     // assuming there is only on poi
@@ -897,7 +897,7 @@ namespace HistFactory{
       poi = (RooRealVar*) params_obj;
       cout << "printing results for " << poi->GetName() << " at " << poi->getVal()<< " high " << poi->getErrorLo() << " low " << poi->getErrorHi()<<endl;
     }
-    fprintf(pFile, " %.4f / %.4f  ", 100*poi->getErrorLo(), 100*poi->getErrorHi());
+    fprintf(pFile, " %.4f / %.4f  ", poi->getErrorLo(), poi->getErrorHi());
 
     RooAbsReal* nll = model->createNLL(*simData);
     RooAbsReal* profile = nll->createProfile(*poi);
