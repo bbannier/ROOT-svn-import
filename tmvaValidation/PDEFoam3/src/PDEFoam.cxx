@@ -1129,84 +1129,57 @@ std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t
 }
 
 //_____________________________________________________________________
-TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
+TH1D* TMVA::PDEFoam::Draw1Dim( ECellValue cell_value, Int_t nbin, PDEFoamKernel *kernel )
 {
    // Draws 1-dimensional foam (= histogram)
    //
    // Parameters:
    //
-   // - opt - cell_value, rms, rms_ov_mean
-   //   If cell_value is set, the value who's RMS is minimized during
-   //   the foam build-up will be filled into the histogram bins.
+   // - cell_value - the cell value to draw
    //
    // - nbin - number of bins of result histogram
    //
-   // Warning: This function is not well tested!
+   // - kernel - a PDEFoam kernel.  If NULL is given, than the trivial
+   //            kernel is used.
 
    // avoid plotting of wrong dimensions
-   if ( GetTotDim()!=1 ) return 0;
+   if ( GetTotDim()!=1 ) 
+      Log() << kFATAL << "<Draw1Dim>: function can only be used for 1-dimensional foams!" 
+	    << Endl;
 
-   // select value to plot
-   ECellValue cell_value = kValue;
-   if (strcmp(opt,"cell_value")==0){
-      cell_value = kValue;
-   } else if (strcmp(opt,"rms")==0){
-      cell_value = kRms;
-   } else if (strcmp(opt,"rms_ov_mean")==0){
-      cell_value = kRmsOvMean;
-   } else {
-      Log() << kFATAL << "<Draw1Dim>: unknown option:" << opt << Endl;
-      return 0;
+   // if no kernel is set, use the trivial kernel
+   Bool_t must_delete_kernel = kFALSE;
+   if (kernel == NULL) {
+      kernel = new PDEFoamKernel();
+      must_delete_kernel = kTRUE;
    }
 
-
-   TString hname(Form("h%s",opt));
-
+   TString hname("h_1dim");
    TH1D* h1=(TH1D*)gDirectory->Get(hname);
    if (h1) delete h1;
-   h1= new TH1D(hname, Form("1-dimensional Foam: %s", opt), nbin, fXmin[0], fXmax[0]);
+   h1= new TH1D(hname, "1-dimensional Foam", nbin, fXmin[0], fXmax[0]);
 
    if (!h1) Log() << kFATAL << "ERROR: Can not create histo" << hname << Endl;
 
-   std::vector<Float_t> xvec(GetTotDim(), 0.);
-
    // loop over all bins
-   for (Int_t ibinx=1; ibinx<=nbin; ibinx++) { //loop over  x-bins
-      xvec.at(0) = h1->GetBinCenter(ibinx);
-
-      // transform xvec
-      std::vector<Float_t> txvec(VarTransform(xvec));
-
-      // loop over all active cells
-      for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
-         if (!(fCells[iCell]->GetStat())) continue; // cell not active -> continue
-
-         // get cell position and dimesions
-         PDEFoamVect  cellPosi(GetTotDim()), cellSize(GetTotDim());
-         fCells[iCell]->GetHcub(cellPosi,cellSize);
-
-         // compare them with txvec
-         const Double_t xsmall = 1.e-10;
-         if (!( (txvec.at(0)>cellPosi[0]-xsmall) &&
-                (txvec.at(0)<=cellPosi[0]+cellSize[0]+xsmall) ) )
-            continue;
-
-         Double_t vol = fCells[iCell]->GetVolume();
-         if (vol<1e-10) {
-            Log() << kWARNING << "Project: ERROR: Volume too small!" << Endl;
-            continue;
-         }
-
-         // filling value to histogram
-         h1->SetBinContent(ibinx, 
-                           GetCellValue(fCells[iCell], cell_value) + h1->GetBinContent(ibinx));
-      }
+   for (Int_t ibinx=1; ibinx<=h1->GetNbinsX(); ++ibinx) {
+      // get event vector corresponding to bin
+      std::vector<Float_t> txvec;
+      txvec.push_back( VarTransform(0, h1->GetBinCenter(ibinx)) );
+      // get cell value
+      Float_t val = kernel->Estimate(this, txvec, cell_value);
+      // fill value to histogram
+      h1->SetBinContent(ibinx, val + h1->GetBinContent(ibinx));
    }
+
+   if (must_delete_kernel)
+      delete kernel;
+
    return h1;
 }
 
 //_____________________________________________________________________
-TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoamKernel *kernel, UInt_t nbin )
+TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, PDEFoamKernel *kernel, UInt_t nbin )
 {
    // Project foam variable idim1 and variable idim2 to histogram.
    //
@@ -1214,10 +1187,10 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoa
    //
    // - idim1, idim2 - dimensions to project to
    //
-   // - opt - cell_value, rms, rms_ov_mean
+   // - cell_value - the cell value to draw
    //
-   // - ker - a PDEFoam kernel.  If NULL is given, than the trivial
-   //         kernel is used.
+   // - kernel - a PDEFoam kernel.  If NULL is given, than the trivial
+   //            kernel is used.
    //
    // - nbin - number of bins in x and y direction of result histogram.
    //
@@ -1228,20 +1201,8 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoa
    if ((idim1>=GetTotDim()) || (idim1<0) ||
        (idim2>=GetTotDim()) || (idim2<0) ||
        (idim1==idim2) )
-      return 0;
-
-   // select value to plot
-   ECellValue cell_value = kValue;
-   if (strcmp(opt,"cell_value")==0){
-      cell_value = kValue;
-   } else if (strcmp(opt,"rms")==0){
-      cell_value = kRms;
-   } else if (strcmp(opt,"rms_ov_mean")==0){
-      cell_value = kRmsOvMean;
-   } else {
-      Log() << kFATAL << "unknown option given" << Endl;
-      return 0;
-   }
+      Log() << kFATAL << "<Project2>: wrong dimensions given: "
+	    << idim1 << ", " << idim2 << Endl;
 
    // if no kernel is set, use the trivial kernel
    Bool_t must_delete_kernel = kFALSE;
@@ -1264,12 +1225,12 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoa
    }
 
    // create result histogram
-   TString hname(Form("h%s_%d_vs_%d",opt,idim1,idim2));
+   TString hname(Form("h_%d_vs_%d",idim1,idim2));
 
    // if histogram with this name already exists, delete it
    TH2D* h1=(TH2D*)gDirectory->Get(hname.Data());
    if (h1) delete h1;
-   h1= new TH2D(hname.Data(), Form("%s var%d vs var%d",opt,idim1,idim2), nbin, fXmin[idim1], fXmax[idim1], nbin, fXmin[idim2], fXmax[idim2]);
+   h1= new TH2D(hname.Data(), Form("var%d vs var%d",idim1,idim2), nbin, fXmin[idim1], fXmax[idim1], nbin, fXmin[idim2], fXmax[idim2]);
 
    if (!h1) Log() << kFATAL << "ERROR: Can not create histo" << hname << Endl;
 
@@ -1291,8 +1252,22 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, PDEFoa
 	 // values
 	 std::vector<TMVA::PDEFoamCell*>::iterator it;
 	 Float_t sum_cv = 0; // sum of the cell values
-	 for (it = cells.begin(); it != cells.end(); ++it)
-	    sum_cv += GetCellValue(*it, cell_value, idim1, idim2);
+	 for (it = cells.begin(); it != cells.end(); ++it) {
+	    // get cell position and size
+	    PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
+	    (*it)->GetHcub(cellPosi,cellSize);
+	    // Create complete event vector from txvec.  The missing
+	    // coordinates in center of cell are set to the cell
+	    // center.
+	    std::vector<Float_t> tvec;
+	    for (Int_t i=0; i<GetTotDim(); ++i) {
+	       if ( i != idim1 && i != idim2 )
+	 	  tvec.push_back(cellPosi[i] + 0.5*cellSize[i]);
+	       else
+	 	  tvec.push_back(txvec[i]);
+	    }
+	    sum_cv += kernel->Estimate(this, tvec, cell_value);
+	 }
 
 	 // fill the bin content
 	 h1->SetBinContent(xbin, ybin, sum_cv + h1->GetBinContent(xbin, ybin));

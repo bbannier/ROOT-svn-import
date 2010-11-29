@@ -52,27 +52,27 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
    gStyle->SetNumberContours(999);
    TMVAGlob::SetTMVAStyle();
    
-   string cellval      = ""; // quantity to draw in foam projection
+   TMVA::ECellValue cellval  = TMVA::kValue; // quantity to draw in foam projection
    string cellval_long = ""; // name of quantity to draw in foam projection
 
    if (pt == kNEV){
-      cellval      = "cell_value";
+      cellval      = TMVA::kValueDensity;
       cellval_long = "Event density";
    }
    else if (pt == kDISCR){
-      cellval      = "cell_value";
+      cellval      = TMVA::kValue;
       cellval_long = "Discriminator";
    }
    else if (pt == kMONO){
-      cellval      = "cell_value";
+      cellval      = TMVA::kValue;
       cellval_long = "Target";
    }
    else if (pt == kRMS){
-      cellval      = "rms";
+      cellval      = TMVA::kRms;
       cellval_long = "RMS";
    }
    else if (pt == kRMSOVMEAN){
-      cellval      = "rms_ov_mean";
+      cellval      = TMVA::kRmsOvMean;
       cellval_long = "RMS/Mean";
    }
 
@@ -108,6 +108,9 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
    cout << foam_capt << " loaded" << endl;
    cout << "Dimension of foam: " << kDim << endl;
 
+   // kernel to use for plotting
+   TMVA::PDEFoamKernel *kernel = new TMVA::PDEFoamKernelGauss(); // kernel to use for the projection
+
    // ********** plot foams ********** //
    if (kDim==1){
       // draw histogram
@@ -118,7 +121,7 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
       canv->cd(1);
 
       string var_name = foam->GetVariableName(0)->String();
-      hist1 = foam->Draw1Dim(cellval.c_str(), 100);
+      hist1 = foam->Draw1Dim(cellval, 100, kernel);
       hist1->SetTitle((cellval_long+" of "+foam_capt+";"+var_name).c_str());
       hist1->Draw();
       hist1->SetDirectory(0);
@@ -127,7 +130,7 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
 	 canv->cd(2);
 	 string var_name2 = foam2->GetVariableName(0)->String();
 	 if (ft==TMVA::kSeparate)
-	    hist2 = foam2->Draw1Dim(cellval.c_str(), 100);
+	    hist2 = foam2->Draw1Dim(cellval, 100, kernel);
 	 hist2->SetTitle((cellval_long+" of "+foam2_capt+";"+var_name2).c_str());
 	 hist2->Draw();
 	 hist2->SetDirectory(0);
@@ -135,14 +138,13 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
 
       // save canvas to file
       stringstream fname  (stringstream::in | stringstream::out);
-      fname << "plots/" << "foam_var_" << cellval << "_0";
+      fname << "plots/" << "foam_var_0";
       canv->Update();
       TMVAGlob::imgconv( canv, fname.str() );
    } else{ 
       // if dimension of foam > 1, draw foam projections
       TCanvas* canv=0;
       TH2D *proj=0, *proj2=0;
-      TMVA::PDEFoamKernel *kernel = new TMVA::PDEFoamKernel(); // kernel to use for the projection
 
       // draw all possible projections (kDim*(kDim-1)/2)
       for(Int_t i=0; i<kDim; i++){
@@ -185,16 +187,14 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
 	    canv->cd(1);
 
 	    // do projections
-	    proj = foam->Project2(i, k, cellval.c_str(), kernel);
+	    proj = foam->Project2(i, k, cellval, kernel);
 	    proj->SetTitle(title_proj1.str().c_str());
-	    if (pt==kDISCR)
-	       proj->GetZaxis()->SetRangeUser(-DBL_EPSILON, 1.+DBL_EPSILON);
 	    proj->Draw("COLZ"); // CONT4Z
 	    proj->SetDirectory(0);
 
 	    if (ft==TMVA::kSeparate){
 	       canv->cd(2);
-	       proj2 = foam2->Project2(i, k, cellval.c_str(), kernel);
+	       proj2 = foam2->Project2(i, k, cellval, kernel);
 	       proj2->SetTitle(title_proj2.str().c_str());
 	       proj2->Draw("COLZ"); // CONT4Z
 	       proj2->SetDirectory(0);
@@ -202,7 +202,7 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
                      
 	    // save canvas to file
 	    stringstream fname  (stringstream::in | stringstream::out);
-	    fname << "plots/" << "foam_projection_var_" << cellval << "_" << i << ":" << k;
+	    fname << "plots/" << "foam_projection_var_" << i << ":" << k;
 	    canv->Update();
 	    TMVAGlob::imgconv( canv, fname.str() );
 	 } // loop over all possible projections
