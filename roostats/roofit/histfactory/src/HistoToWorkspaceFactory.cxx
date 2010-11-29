@@ -429,8 +429,8 @@ namespace HistFactory{
     string editList;
     string lastPdf=pdfName;
     string preceed="";
-    int numReplacements = 0;
-    int nskipped = 0;
+    unsigned int numReplacements = 0;
+    unsigned int nskipped = 0;
     map<string,double>::iterator it;
 
     // add gamma terms and their constraints
