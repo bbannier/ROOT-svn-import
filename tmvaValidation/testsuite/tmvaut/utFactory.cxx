@@ -138,10 +138,10 @@ void utFactory::run()
    test_(operateSingleFactory("TMVATest3Var","var2"));
    test_(operateSingleFactory("TMVATest3VarF2VarI","var2:ivar0:ivar1"));
 
-   //creates crash test_(operateSingleFactory("MemoryResidentTree:StringMethodBooking"));
-   //creates crash test_(operateSingleFactory("MemoryResidentTree"));
-   //creates crash test_(operateSingleFactory("MemoryResidentTree:LateTreeBooking"));
-   //creates crash test_(operateSingleFactory("MemoryResidentTree:LateTreeBooking:StringMethodBooking"));
+   //creates crash test_(operateSingleFactory("TMVATest","MemoryResidentTree:StringMethodBooking"));
+   //creates crash test_(operateSingleFactory("TMVATest","MemoryResidentTree"));
+   //creates crash test_(operateSingleFactory("TMVATest","MemoryResidentTree:LateTreeBooking"));
+   //creates crash test_(operateSingleFactory("TMVATest","MemoryResidentTree:LateTreeBooking:StringMethodBooking"));
 
 
 
