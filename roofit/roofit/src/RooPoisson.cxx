@@ -107,8 +107,12 @@ Double_t RooPoisson::analyticalIntegral(Int_t code, const char* rangeName) const
     sum += TMath::Poisson(i,mean)  ;       
   }
   */
-  sum+= ROOT::Math::poisson_cdf(ixmax-2, mean) - ROOT::Math::poisson_cdf(ixmin,mean) ;
-  sum += TMath::Poisson(ixmax-1,mean)*fracHiBin ;
+  if(RooNumber::isInfinite(xmax)){
+    sum+= 1.-ROOT::Math::poisson_cdf(ixmin,mean) ;
+  }  else {
+    sum+= ROOT::Math::poisson_cdf(ixmax-2, mean) - ROOT::Math::poisson_cdf(ixmin,mean) ;
+    sum += TMath::Poisson(ixmax-1,mean)*fracHiBin ;
+  }
   
   return sum ;
   

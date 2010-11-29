@@ -93,7 +93,8 @@ namespace HistFactory{
     fclose(pFile);
   }
 
-  HistoToWorkspaceFactory::HistoToWorkspaceFactory(string row, vector<string> syst, double nomL, double lumiE, int low, int high, TFile* f):
+  HistoToWorkspaceFactory::HistoToWorkspaceFactory(string filePrefix, string row, vector<string> syst, double nomL, double lumiE, int low, int high, TFile* f):
+      fFileNamePrefix(filePrefix),
       fRowTitle(row),
       fSystToFix(syst),
       fNomLumi(nomL),
@@ -102,12 +103,13 @@ namespace HistFactory{
       fHighBin(high),
       fOut_f(f) {
 
-    fResultsPrefixStr<<"results" << "_" << fNomLumi<< "_" << fLumiError<< "_" << fLowBin<< "_" << fHighBin;
+    //    fResultsPrefixStr<<"results" << "_" << fNomLumi<< "_" << fLumiError<< "_" << fLowBin<< "_" << fHighBin;
+    fResultsPrefixStr<< "_" << fRowTitle;
     while(fRowTitle.find("\\ ")!=string::npos){
       int pos=fRowTitle.find("\\ ");
       fRowTitle.replace(pos, 1, "");
     }
-    pFile = fopen (("results/"+fResultsPrefixStr.str()+".table").c_str(),"a"); 
+    pFile = fopen ((filePrefix+"_results.table").c_str(),"a"); 
     //RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 
   }
@@ -126,12 +128,13 @@ namespace HistFactory{
     else
       cout << "hist is empty" << endl;
     RooArgSet argset(prefix.c_str());
+    string highStr = "inf";
     for(Int_t i=lowBin; i<highBin; ++i){
       std::stringstream str;
       std::stringstream range;
       str<<"_"<<i;
       if(hist)
-        range<<"["<<hist->GetBinContent(i+1) << "," << low << "," << high << "]";
+        range<<"["<<hist->GetBinContent(i+1) << "," << low << "," << highStr << "]";
       else
         range<<"["<< low << "," << high << "]";
       cout << "for bin N"+str.str() << " var " << prefix+str.str()+" with range " << range.str() << endl;
@@ -839,7 +842,7 @@ namespace HistFactory{
     ///
     /// writing out the model in graphViz
     /// 
-    RooAbsPdf* customized=combined->pdf("simPdf"); 
+    //    RooAbsPdf* customized=combined->pdf("simPdf"); 
     //combined_config->SetPdf(*customized);
     combined_config->SetPdf(*simPdf);
     //    customized->graphVizTree(("results/"+fResultsPrefixStr.str()+"_simul.dot").c_str());
@@ -875,7 +878,7 @@ namespace HistFactory{
 
     //RooAbsPdf* model=combined->pdf(model_name.c_str()); 
     RooAbsPdf* model=combined_config->GetPdf();
-    RooArgSet* allParams = model->getParameters(*simData);
+    //    RooArgSet* allParams = model->getParameters(*simData);
 
     ///////////////////////////////////////
     //Do combined fit
@@ -883,7 +886,8 @@ namespace HistFactory{
     cout << "\n\n---------------" << endl;
     cout << "---------------- Doing "<< channel << " Fit" << endl;
     cout << "---------------\n\n" << endl;
-    RooFitResult* result = model->fitTo(*simData, Minos(kTRUE), Save(kTRUE), PrintLevel(1));
+    //    RooFitResult* result = model->fitTo(*simData, Minos(kTRUE), Save(kTRUE), PrintLevel(1));
+    model->fitTo(*simData, Minos(kTRUE), PrintLevel(1));
     //    PrintCovarianceMatrix(result, allParams, "results/"+FilePrefixStr(channel)+"_corrMatrix.table" );
 
     //
@@ -909,7 +913,8 @@ namespace HistFactory{
     frame->SetMinimum(0);
     frame->SetMaximum(2.);
     frame->Draw();
-    c1->SaveAs( ("results/"+FilePrefixStr(channel)+"_profileLR.eps").c_str() );
+    //    c1->SaveAs( ("results/"+FilePrefixStr(channel)+"_profileLR.eps").c_str() );
+    c1->SaveAs( (fFileNamePrefix+"_"+channel+"_"+fRowTitle+"_profileLR.eps").c_str() );
 
     fOut_f->mkdir(channel.c_str())->mkdir("Summary")->cd();
 
@@ -950,8 +955,8 @@ namespace HistFactory{
   
     Double_t x_arr[curve_N];
     Double_t y_arr_nll[curve_N];
-    Double_t y_arr_prof_nll[curve_N];
-    Double_t y_arr_prof[curve_N];
+    //    Double_t y_arr_prof_nll[curve_N];
+    //    Double_t y_arr_prof[curve_N];
     for(int i=0; i<curve_N; i++){
       double f=curve_x[i];
       poi->setVal(f);
