@@ -8,6 +8,7 @@
 #define CLING_INTERPRETER_H
 
 #include "llvm/ADT/OwningPtr.h"
+#include "llvm/ExecutionEngine/GenericValue.h"
 
 #include <string>
 #include <vector>
@@ -47,6 +48,12 @@ namespace cling {
     virtual ~Interpreter();
     
     void AddIncludePath(const char *path);
+    template<typename T>
+    T Eval(const char* expr) {
+       llvm::GenericValue result;
+       EvalCore(result, expr);
+       return T();
+    }
      
     int processLine(const std::string& input_line);
     
@@ -92,6 +99,7 @@ namespace cling {
     clang::CompilerInstance* compileString(const std::string& srcCode);
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
+     bool EvalCore(llvm::GenericValue& result, const char* expr);
   };
   
 } // namespace cling

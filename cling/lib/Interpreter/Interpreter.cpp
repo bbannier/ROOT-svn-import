@@ -27,8 +27,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Constants.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/System/DynamicLibrary.h"
-#include "llvm/System/Path.h"
+#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Path.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
 #include "Visitors.h"
@@ -551,6 +551,11 @@ namespace cling {
     m_ExecutionContext->getEngine().InstallLazyFunctionCreator(fp);
   }
   
+
+   // Implements the interpretation of the unknown symbols. 
+   bool Interpreter::EvalCore(llvm::GenericValue& result, const char* expr) {
+      return 0;
+   }
   
 } // namespace cling
 
