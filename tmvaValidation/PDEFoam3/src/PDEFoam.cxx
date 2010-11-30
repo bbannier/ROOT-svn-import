@@ -990,6 +990,38 @@ Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, P
       return kernel->Estimate(this, txvec, cv);
 }
 
+std::vector<Float_t> TMVA::PDEFoam::GetCellValue( std::map<Int_t,Float_t>& xvec, ECellValue cv )
+{
+   // This function finds all cells, which corresponds to the given
+   // (incomplete) untransformed event vector 'xvec' and returns the
+   // cell values, according to the parameter 'cv'.
+   //
+   // Parameters:
+   //
+   // - xvec - map for the untransformed vector.  The key (Int_t) is
+   //   the dimension, and the value (Float_t) is the event
+   //   coordinate.  Note that not all coordinates have to be
+   //   specified.
+   //
+   // - cv - cell values to return
+
+   // transformed event
+   std::map<Int_t,Float_t> txvec;
+   for (std::map<Int_t,Float_t>::iterator it=xvec.begin(); it!=xvec.end(); ++it)
+      txvec[it->first] = VarTransform(it->first, it->second);
+
+   // find all cells, which correspond to the transformed event
+   std::vector<PDEFoamCell*> cells = FindCells(txvec);
+
+   // get the cell values
+   std::vector<Float_t> cell_values;
+   for (std::vector<PDEFoamCell*>::iterator cell_it=cells.begin(); 
+	cell_it!=cells.end(); ++cell_it)
+      cell_values.push_back(GetCellValue(*cell_it, cv));
+
+   return cell_values;
+}
+
 //_____________________________________________________________________
 Float_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
 {

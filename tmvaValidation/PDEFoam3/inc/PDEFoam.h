@@ -299,6 +299,9 @@ namespace TMVA {
       // get cell value for a given event
       virtual Float_t GetCellValue( std::vector<Float_t>& xvec, ECellValue cv, PDEFoamKernel*  );
 
+      // get cell values for a given (incomplete) event vector
+      virtual std::vector<Float_t> GetCellValue( std::map<Int_t,Float_t>& xvec, ECellValue cv );
+
       // get cell value stored in a foam cell
       virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv );
 
