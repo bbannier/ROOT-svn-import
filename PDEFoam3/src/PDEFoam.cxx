@@ -1282,9 +1282,9 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
 
 	 // loop over cells and draw fill the histogram with the cell
 	 // values
-	 std::vector<TMVA::PDEFoamCell*>::iterator it;
 	 Float_t sum_cv = 0; // sum of the cell values
-	 for (it = cells.begin(); it != cells.end(); ++it) {
+	 for (std::vector<TMVA::PDEFoamCell*>::iterator it = cells.begin(); 
+	      it != cells.end(); ++it) {
 	    // get cell position and size
 	    PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
 	    (*it)->GetHcub(cellPosi,cellSize);
