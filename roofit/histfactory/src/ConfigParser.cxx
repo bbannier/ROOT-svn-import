@@ -19,8 +19,8 @@ END_HTML
 
 #include "TDOMParser.h"
 
-#include "RooStats/HistFactory/ConfigParser.h"
-#include "RooStats/HistFactory/Helper.h"
+#include "ConfigParser.h"
+#include "Helper.h"
 
 using namespace RooStats;
 using namespace HistFactory;

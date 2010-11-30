@@ -22,6 +22,8 @@ END_HTML
 
 ClassImp(RooStats::HistFactory::EstimateSummary)
 
+using namespace std; 
+
 namespace RooStats {
   namespace HistFactory {
 
@@ -31,7 +33,7 @@ namespace RooStats {
     }
     EstimateSummary::~EstimateSummary(){}
 
-    void EstimateSummary::print() const {
+    void EstimateSummary::Print(const char * /*opt*/) const {
       cout << "EstimateSummary (name = " << name << " empty = " << name.empty() << ")"<< endl;
       cout << "  TObj name = " << this->GetName() << endl;
       cout << "  Channel = " << channel << endl;
@@ -44,8 +46,8 @@ namespace RooStats {
       cout << "  Number of overall systematics = " << overallSyst.size() << endl;
     }
 
-    void EstimateSummary::AddSyst( string name, TH1F* low, TH1F* high){
-      systSourceForHist.push_back(name);
+    void EstimateSummary::AddSyst(const  string &sname, TH1F* low, TH1F* high){
+      systSourceForHist.push_back(sname);
       lowHists.push_back(low);
       highHists.push_back(high);
     }
@@ -67,7 +69,7 @@ namespace RooStats {
         cout << "norm names don't match : " << normName << " vs " << other.normName << endl;
         return false;
       }
-      if(! compareHisto( this->nominal,  other.nominal ) ) {
+      if(! CompareHisto( this->nominal,  other.nominal ) ) {
         cout << "nominal histo don't match" << endl;
         return false;
       }
@@ -76,10 +78,10 @@ namespace RooStats {
       for( vector<string>::const_iterator itr=systSourceForHist.begin(); itr!=systSourceForHist.end(); ++itr){
         unsigned int ind = find(other.systSourceForHist.begin(), other.systSourceForHist.end(), *itr) - other.systSourceForHist.begin();
         if(ind<other.systSourceForHist.size() && systSourceForHist.size() == other.systSourceForHist.size()){
-          if(! (compareHisto( lowHists[ counter ], other.lowHists[ ind ]))){
+          if(! (CompareHisto( lowHists[ counter ], other.lowHists[ ind ]))){
             cout << "contents of sys histo low " << *itr << " did not match" << endl;
           }
-          else if (!( compareHisto( highHists[counter], other.highHists[ ind ]) ) ){
+          else if (!( CompareHisto( highHists[counter], other.highHists[ ind ]) ) ){
             cout << "contents of sys histo high " << *itr << " did not match" << endl;
           } 
         } else {
@@ -113,7 +115,7 @@ namespace RooStats {
       return true;
     }
 
-    bool EstimateSummary::compareHisto( const TH1 * one, const TH1 * two) const {
+    bool EstimateSummary::CompareHisto( const TH1 * one, const TH1 * two) const {
       
       for(int i=1; i<=one->GetNbinsX(); ++i){
         if(!(one->GetBinContent(i)-two->GetBinContent(i)==0)) return false;

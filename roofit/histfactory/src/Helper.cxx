@@ -20,7 +20,7 @@ END_HTML
 
 
 //#define DEBUG
-#include "RooStats/HistFactory/Helper.h"
+#include "Helper.h"
 
 namespace RooStats{
 namespace HistFactory{
@@ -46,7 +46,7 @@ namespace HistFactory{
     EstimateSummary* summary; 
     while ((summary=(EstimateSummary*) next())) { 
       if(summary){
-        summary->print();
+        summary->Print();
         cout << "was able to read summary with name " << summary->name << endl;
         cout << " nominal hist = " << summary->nominal << endl;
         if(summary->nominal)
