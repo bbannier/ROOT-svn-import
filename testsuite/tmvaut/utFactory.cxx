@@ -65,6 +65,48 @@ TTree* utFactory::create_Tree(const char* opt)
    return tree;
 }
 
+bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* opt)
+{
+   std::cout <<"addEventsToFactoryByHand option="<<opt<<std::endl;
+   TString option=opt;
+   TString _methodTitle="LD",_methodOption="!H:!V"; // fix me
+   TString prepareString="";
+   string factoryOptions( "!V:Silent:Transformations=I:AnalysisType=Classification:!Color:!DrawProgressBar" );
+   TString outfileName( "ByHand.root" );
+   TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
+ Factory* factory = new Factory(factoryname,outputFile,factoryOptions);
+   factory->AddVariable( "var0",  "Variable 0", 'F' );
+   factory->AddVariable( "var1",  "Variable 1", 'F' );
+   if (option.Contains("var2"))  factory->AddVariable( "var2",  "Var 2", 'F' );
+   if (option.Contains("ivar0")) factory->AddVariable( "ivar0",  "Var i0", 'I' );
+   vector <double> vars(2);
+   TRandom3 r(99);
+   for (int i=0;i<100;i++){
+      vars[0]=r.Gaus(1.,2.);
+      vars[1]=0.5*r.Gaus(1.,2.)+r.Rndm();      
+      factory->AddSignalTrainingEvent( vars, 1.0 );
+      factory->AddSignalTestEvent( vars, 1.0 );
+   }
+   for (int i=0;i<100;i++){
+      vars[0]=r.Gaus(0.,2.);
+      vars[1]=-0.5*r.Gaus(1.,2.)+r.Rndm();
+      factory->AddBackgroundTrainingEvent( vars, 1.0 );
+      factory->AddBackgroundTestEvent( vars, 1.0 );
+   }
+   if (prepareString=="") prepareString = "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" ;
+   factory->PrepareTrainingAndTestTree( "", "", prepareString);
+   factory->BookMethod(TMVA::Types::kLD,"LD","!H:!V");
+   factory->TrainAllMethods();
+   factory->TestAllMethods();
+   factory->EvaluateAllMethods();
+   MethodBase* theMethod = dynamic_cast<TMVA::MethodBase*> (factory->GetMethod(_methodTitle));
+   double ROCValue = theMethod->GetROCIntegral(); 
+   delete factory;
+   outputFile->Close(); 
+   if (outputFile) delete outputFile;
+   return (ROCValue>0.7);
+}
+
 bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
 {
    if (TString(factoryname)=="") factoryname = "TMVATest";
@@ -84,7 +126,6 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
    }
    else if (! (option.Contains("LateTreeBooking"))) tree = create_Tree();
 
-   TMVA::Types::EMVA _methodType = TMVA::Types::kLD;
    TString _methodTitle="LD",_methodOption="!H:!V"; // fix me
    TString prepareString="";
    string factoryOptions( "!V:Silent:Transformations=I;D;P;G,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
@@ -137,6 +178,8 @@ void utFactory::run()
    test_(operateSingleFactory("TMVATest",""));
    test_(operateSingleFactory("TMVATest3Var","var2"));
    test_(operateSingleFactory("TMVATest3VarF2VarI","var2:ivar0:ivar1"));
+
+   test_(addEventsToFactoryByHand("ByHand","")); // uses Factory::AddSignalTrainingEvent
 
    //creates crash test_(operateSingleFactory("TMVATest","MemoryResidentTree:StringMethodBooking"));
    //creates crash test_(operateSingleFactory("TMVATest","MemoryResidentTree"));

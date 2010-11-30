@@ -31,6 +31,8 @@ namespace UnitTesting
    protected:
       virtual TTree* create_Tree(const char* opt="");
       virtual bool operateSingleFactory(const char* factoryname, const char* opt="");
+      virtual bool addEventsToFactoryByHand(const char* factoryname, const char* opt="");
+
    private:
       // disallow copy constructor and assignment
       utFactory(const utFactory&);
