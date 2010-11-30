@@ -44,6 +44,8 @@ $(TF_MAKEWORKSPACEEXE): $(TF_MAKEWORKSPACEEXEO) $(ROOTLIBSDEP) $(RINTLIB) $(HIST
 		$(LD) $(LDFLAGS) -o $@ $(TF_MAKEWORKSPACEEXEO)  $(ROOTICON) $(BOOTULIBS)  \
 		   $(ROOTULIBS) $(RPATH) $(ROOTLIBS)  $(RINTLIBS) $(TF_LIBS) $(SYSLIBS)  
 		cp $(MODDIRC)/HistFactorySchema.dtd $(ROOTSYS)/etc/	
+		chmod +x $(MODDIRC)/prepareHistFactory 
+		cp $(MODDIRC)/prepareHistFactory $(ROOTSYS)/bin/
 
 
 ALLEXECS     += $(TF_MAKEWORKSPACEEXE) 
