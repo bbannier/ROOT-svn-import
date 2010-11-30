@@ -13,45 +13,37 @@ HISTFACTORYDIR  := $(MODDIR)
 HISTFACTORYDIRS := $(HISTFACTORYDIR)/src
 HISTFACTORYDIRI := $(HISTFACTORYDIR)/inc
 
+### prepareHIstFactory script
+HF_PREPAREHISTFACTORY := bin/prepareHistFactory
+
+
 ##### tf_makeworkspace.exe #####
-TF_MAKEWORKSPACEEXES   := $(MODDIRS)/MakeModelAndMeasurements.cxx
-TF_MAKEWORKSPACEEXEO   := $(TF_MAKEWORKSPACEEXES:.cxx=.o)
-TF_MAKEWORKSPACEEXEDEP := $(TF_MAKEWORKSPACEEXEO:.o=.d)
+HF_MAKEWORKSPACEEXES   := $(MODDIRS)/MakeModelAndMeasurements.cxx
+HF_MAKEWORKSPACEEXEO   := $(HF_MAKEWORKSPACEEXES:.cxx=.o)
+HF_MAKEWORKSPACEEXEDEP := $(HF_MAKEWORKSPACEEXEO:.o=.d)
 ifeq ($(ARCH),win32gcc)
-TF_MAKEWORKSPACEEXE    := bin/hist2workspace.exe
+HF_MAKEWORKSPACEEXE    := bin/hist2workspace.exe
 else
-TF_MAKEWORKSPACEEXE    := bin/hist2workspace
-#TF_MAKEWORKSPACESH     := bin/tf_makeworkspace
+HF_MAKEWORKSPACEEXE    := bin/hist2workspace
 endif
 ifeq ($(PLATFORM),win32)
-TF_MAKEWORKSPACEEXE    :=
-TF_MAKEWORKSPACESH     :=
+HF_MAKEWORKSPACEEXE    := bin/hist2workspace.exe
 endif
 
-#TF_LIBS := $(HISTFACTORYLIBEXTRA)
+
+HF_LIBS = $(HISTFACTORYLIBEXTRA)
 
 ifeq ($(PLATFORM),win32)
-TF_LIBS= "$(ROOTSYS)/lib/libMinuit.lib"  "$(ROOTSYS)/lib/libRooFit.lib" "$(ROOTSYS)/lib/libRooFitCore.lib" "$(ROOTSYS)/lib/libRoostats.lib"  "$(ROOTSYS)/lib/libXMLParser.lib"  "$(ROOTSYS)/lib/libHistFactory.lib" "$(ROOTSYS)/lib/libFoam.lib"
+HF_LIBS += "$(ROOTSYS)/lib/libHistFactory.lib" 
 else
-TF_LIBS= -lMinuit   -lRooFit -lRooFitCore -lFoam -lRooStats  -lHistFactory -lXMLParser 
+HF_LIBS += -lHistFactory 
 endif
 
 
-TF_LIBSDEP := $(HISTFACTORYLIBDEP)
+HF_LIBSDEP := $(HISTFACTORYLIBDEP)
 
 
-$(TF_MAKEWORKSPACEEXE): $(TF_MAKEWORKSPACEEXEO) $(ROOTLIBSDEP) $(RINTLIB) $(HISTFACTORYLIBDEPM)
-		$(LD) $(LDFLAGS) -o $@ $(TF_MAKEWORKSPACEEXEO)  $(ROOTICON) $(BOOTULIBS)  \
-		   $(ROOTULIBS) $(RPATH) $(ROOTLIBS)  $(RINTLIBS) $(TF_LIBS) $(SYSLIBS)  
-		cp $(MODDIRC)/HistFactorySchema.dtd $(ROOTSYS)/etc/	
-		chmod +x $(MODDIRC)/prepareHistFactory 
-		cp $(MODDIRC)/prepareHistFactory $(ROOTSYS)/bin/
-
-
-ALLEXECS     += $(TF_MAKEWORKSPACEEXE) 
-
-
-##### libRooStats #####
+##### libHistFactory #####
 HISTFACTORYL    := $(MODDIRI)/LinkDef.h
 HISTFACTORYDS   := $(MODDIRS)/G__HistFactory.cxx
 HISTFACTORYDO   := $(HISTFACTORYDS:.cxx=.o)
@@ -101,7 +93,22 @@ $(HISTFACTORYMAP): $(RLIBMAP) $(MAKEFILEDEP) $(HISTFACTORYL)
 		$(RLIBMAP) -o $(HISTFACTORYMAP) -l $(HISTFACTORYLIB) \
 		   -d $(HISTFACTORYLIBDEPM) -c $(HISTFACTORYL)
 
-all-$(MODNAME): $(HISTFACTORYLIB) $(HISTFACTORYMAP)
+
+$(HF_MAKEWORKSPACEEXE): $(HF_MAKEWORKSPACEEXEO) $(ROOTLIBSDEP) $(RINTLIB) $(HISTFACTORYLIBDEPM) \
+		$(HF_PREPAREHISTFACTORY)
+		$(LD) $(LDFLAGS) -o $@ $(HF_MAKEWORKSPACEEXEO)  $(ROOTICON) $(BOOTULIBS)  \
+		   $(ROOTULIBS) $(RPATH) $(ROOTLIBS)  $(RINTLIBS) $(HF_LIBS)  $(SYSLIBS)  
+
+$(HF_PREPAREHISTFACTORY) : 
+		chmod +x $(MODDIRC)/prepareHistFactory 
+		cp $(MODDIRC)/prepareHistFactory $@
+
+
+ALLEXECS     += $(HF_MAKEWORKSPACEEXE) 
+
+
+
+all-$(MODNAME): $(HISTFACTORYLIB) $(HISTFACTORYMAP) $(HF_MAKEWORKSPACEEXE)
 
 clean-$(MODNAME):
 		@rm -f $(HISTFACTORYO) $(HISTFACTORYDO)
