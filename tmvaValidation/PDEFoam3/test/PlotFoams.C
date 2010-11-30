@@ -109,7 +109,7 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
    cout << "Dimension of foam: " << kDim << endl;
 
    // kernel to use for plotting
-   TMVA::PDEFoamKernel *kernel = new TMVA::PDEFoamKernelGauss(); // kernel to use for the projection
+   TMVA::PDEFoamKernel *kernel = new TMVA::PDEFoamKernel(); // kernel to use for the projection
 
    // ********** plot foams ********** //
    if (kDim==1){
