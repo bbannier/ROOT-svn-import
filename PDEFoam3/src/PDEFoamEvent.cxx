@@ -67,33 +67,3 @@ void TMVA::PDEFoamEvent::FillFoamCells(const Event* ev, Float_t wt)
    SetCellElement(cell, 0, GetCellElement(cell, 0) + wt);
    SetCellElement(cell, 1, GetCellElement(cell, 1) + wt*wt);
 }
-
-//_____________________________________________________________________
-Float_t TMVA::PDEFoamEvent::GetCellValue( PDEFoamCell* cell, ECellValue cv,
-					   Int_t idim1, Int_t idim2 )
-{
-   // Return the discriminant projected onto the dimensions 'dim1',
-   // 'dim2'.
-
-   // calculate the projected discriminant
-   if (cv == kValue) {
-
-      // get cell position and dimesions
-      PDEFoamVect  cellPosi(GetTotDim()), cellSize(GetTotDim());
-      cell->GetHcub(cellPosi,cellSize);
-
-      // calculate projected area of cell
-      const Float_t area = cellSize[idim1] * cellSize[idim2];
-      // calculate projected area of whole foam
-      const Float_t foam_area = (fXmax[idim1]-fXmin[idim1])*(fXmax[idim2]-fXmin[idim2]);
-      if (area<1e-20){
-         Log() << kWARNING << "<Project2>: Warning, cell volume too small --> skiping cell!" << Endl;
-         return 0;
-      }
-
-      // calc cell entries per projected cell area
-      return GetCellValue(cell, kValue)/(area*foam_area);
-   } else {
-      return GetCellValue(cell, cv);
-   }
-}

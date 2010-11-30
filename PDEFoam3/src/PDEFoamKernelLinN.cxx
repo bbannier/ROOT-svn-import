@@ -55,11 +55,11 @@ Float_t TMVA::PDEFoamKernelLinN::Estimate(PDEFoam *foam, std::vector<Float_t> &t
    if (foam == NULL)
       Log() << kFATAL << "<PDEFoamKernelLinN::Estimate>: PDEFoam not set!" << Endl;
 
-   return WeightLinNeighbors(foam, txvec, cv, -1, -1, kTRUE);
+   return WeightLinNeighbors(foam, txvec, cv, kTRUE);
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv, Int_t dim1, Int_t dim2, Bool_t TreatEmptyCells )
+Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv, Bool_t TreatEmptyCells )
 {
    // Returns the cell value, corresponding to 'txvec' (foam
    // coordinates [0,1]), weighted by the neighbor cells via a linear
@@ -71,13 +71,6 @@ Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<
    //  - txvec - event vector, transformed into foam coordinates [0,1]
    //
    //  - cv - cell value to be weighted
-   //
-   //  - dim1, dim2 - dimensions for two-dimensional projection.
-   //    Default values: dim1 = dim2 = -1
-   //    If dim1 and dim2 are set to values >=0 and <fDim, than
-   //    the function GetProjectionCellValue() is used to get cell
-   //    value.  This is used for projection to two dimensions within
-   //    Project2().
    //
    //  - TreatEmptyCells - if this option is set to false (default),
    //    it is not checked, wether the cell value or neighbor cell
@@ -125,15 +118,8 @@ Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<
          ntxvec[dim] = cellPosi[dim]+cellSize[dim]+xoffset;
          mindistcell = foam->FindCell(ntxvec); // right neighbor cell
       }
-      Float_t mindistcellval = 0; // value of cell, which contains ntxvec
-      if (dim1>=0 && dim1<foam->GetTotDim() &&
-          dim2>=0 && dim2<foam->GetTotDim() &&
-          dim1!=dim2){
-         cellval        = foam->GetCellValue(cell, cv, dim1, dim2);
-         mindistcellval = foam->GetCellValue(mindistcell, cv, dim1, dim2);
-      } else {
-         mindistcellval = foam->GetCellValue(mindistcell, cv);
-      }
+      // get cell value of cell, which contains ntxvec
+      Float_t mindistcellval = foam->GetCellValue(mindistcell, cv);
       // if treatment of empty neighbor cells is deactivated, do
       // normal weighting
       if (!(TreatEmptyCells && foam->CellValueIsUndefined(mindistcell))){
