@@ -709,7 +709,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft)
 	 density = new PDEFoamEventDensity(pdefoam);
 	 break;
       case kMultiTarget:
-	 pdefoam = new PDEFoamMultiTarget(foamcaption);
+	 pdefoam = new PDEFoamMultiTarget(foamcaption, fTargetSelection);
 	 density = new PDEFoamEventDensity(pdefoam);
 	 break;
       case kDiscr:
@@ -783,10 +783,12 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
    }
 
    if (fMultiTargetRegression) {
-      PDEFoamMultiTarget *MTfoam = dynamic_cast<PDEFoamMultiTarget*>(fFoam.at(0));
-      if (MTfoam == NULL)
-	 Log() << kFATAL << "foam[0] is not a PDEFoamMultiTarget*" << Endl;
-      std::vector<Float_t> targets = MTfoam->GetTargets( vals, fTargetSelection );
+      // create std::map from event variables
+      std::map<Int_t, Float_t> xvec;
+      for (UInt_t i=0; i<vals.size(); ++i)
+	 xvec[i] = vals.at(i);
+      // get the targets
+      std::vector<Float_t> targets = fFoam.at(0)->GetCellValue( xvec, kValue );
 
       // sanity check
       if (targets.size() != Data()->GetNTargets())
