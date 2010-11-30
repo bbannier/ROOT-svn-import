@@ -175,6 +175,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
 {
    // the standard constructor for the "boosted decision trees"
    fMonitorNtuple = NULL;
+   fSepType = NULL;
 }
 
 //_______________________________________________________________________
@@ -210,6 +211,8 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fBoostWeight(0)
    , fErrorFraction(0)
 {
+   fMonitorNtuple = NULL;
+   fSepType = NULL;
    // constructor for calculating BDT-MVA using previously generated decision trees
    // the result of the previous training (the decision trees) are read in via the
    // weight file. Make sure the the variables correspond to the ones used in
