@@ -301,7 +301,6 @@ namespace TMVA {
 
       // get cell value stored in a foam cell
       virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv );
-      virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv, Int_t idim1, Int_t idim2 );
 
       // ---------- friend classes
       friend class PDEFoamKernel;

@@ -52,10 +52,6 @@ namespace TMVA {
       // function to call after foam is grown
       virtual void Finalize();
 
-      // get cell value stored in a foam cell
-      virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv, Int_t idim1, Int_t idim2 );
-      using PDEFoam::GetCellValue;
-
       // ---------- ROOT class definition
       ClassDef(PDEFoamDiscriminant,1) // Tree of PDEFoamCells
    }; // end of PDEFoamDiscriminant

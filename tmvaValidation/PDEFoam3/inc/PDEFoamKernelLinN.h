@@ -39,7 +39,7 @@ namespace TMVA {
 
    protected:
       // helper function, which linear weights with the neighbor cells
-      Float_t WeightLinNeighbors( PDEFoam*, std::vector<Float_t>&, ECellValue, Int_t, Int_t, Bool_t );
+      Float_t WeightLinNeighbors( PDEFoam*, std::vector<Float_t>&, ECellValue, Bool_t );
 
       // helper function for WeightLinNeighbors()
       Float_t GetAverageNeighborsValue( PDEFoam*, std::vector<Float_t>&, ECellValue );

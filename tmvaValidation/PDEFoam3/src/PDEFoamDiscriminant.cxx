@@ -113,36 +113,3 @@ void TMVA::PDEFoamDiscriminant::Finalize()
       }
    }
 }
-
-//_____________________________________________________________________
-Float_t TMVA::PDEFoamDiscriminant::GetCellValue( PDEFoamCell* cell, ECellValue cv,
-						  Int_t idim1, Int_t idim2 )
-{
-   // Return the discriminant projected onto the dimensions 'dim1',
-   // 'dim2'.
-
-   // calculate the projected discriminant
-   if (cv == kValue) {
-
-      // get cell position and dimesions
-      PDEFoamVect  cellPosi(GetTotDim()), cellSize(GetTotDim());
-      cell->GetHcub(cellPosi,cellSize);
-
-      // calculate cell volume in other dimensions (not including idim1 and idim2)
-      Float_t area_cell = 1.;
-      for (Int_t d1=0; d1<GetTotDim(); d1++){
-         if ((d1!=idim1) && (d1!=idim2))
-            area_cell *= cellSize[d1];
-      }
-      if (area_cell<1e-20){
-         Log() << kWARNING << "<Project2>: Warning, cell volume too small --> skiping cell!" << Endl;
-         return 0;
-      }
-
-      // calc discriminator * (cell area times foam area)
-      // foam is normalized -> length of foam = 1.0
-      return GetCellValue(cell, kValue)*area_cell;
-   } else {
-      return GetCellValue(cell, cv);
-   }
-}

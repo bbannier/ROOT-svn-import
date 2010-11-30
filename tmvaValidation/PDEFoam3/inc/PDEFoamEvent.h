@@ -49,10 +49,6 @@ namespace TMVA {
       // function to fill created cell with given value
       virtual void FillFoamCells(const Event* ev, Float_t wt);
 
-      // get cell value stored in a foam cell
-      virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv, Int_t idim1, Int_t idim2 );
-      using PDEFoam::GetCellValue;
-
       // ---------- ROOT class definition
       ClassDef(PDEFoamEvent,1) // Tree of PDEFoamCells
    }; // end of PDEFoamEvent
