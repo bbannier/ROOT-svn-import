@@ -954,10 +954,11 @@ namespace HistFactory{
                                 // changes (corresponds to the Verbose() option of fitTo()
     */
   
-    Double_t x_arr[curve_N];
-    Double_t y_arr_nll[curve_N];
-    //    Double_t y_arr_prof_nll[curve_N];
-    //    Double_t y_arr_prof[curve_N];
+    Double_t * x_arr = new Double_t[curve_N];
+    Double_t * y_arr_nll = new Double_t[curve_N];
+//     Double_t y_arr_prof_nll[curve_N];
+//     Double_t y_arr_prof[curve_N];
+
     for(int i=0; i<curve_N; i++){
       double f=curve_x[i];
       poi->setVal(f);
@@ -968,6 +969,8 @@ namespace HistFactory{
     g->SetName((FilePrefixStr(channel)+"_nll").c_str());
     g->Write(); 
     delete g;
+    delete [] x_arr;
+    delete [] y_arr_nll;
 
     /** find out what's inside the workspace **/
     //combined->Print();
