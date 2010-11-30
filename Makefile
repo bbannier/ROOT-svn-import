@@ -222,7 +222,10 @@ ifeq ($(BUILDCLING),yes)
 MODULES      += cint/cling
 endif
 ifeq ($(BUILDROOFIT),yes)
-MODULES      += roofit/roofitcore roofit/roofit roofit/roostats roofit/histfactory
+MODULES      += roofit/roofitcore roofit/roofit roofit/roostats 
+ifeq ($(BUILDXML),yes)
+MODULES      += roofit/histfactory
+endif
 endif
 ifeq ($(BUILDGDML),yes)
 MODULES      += geom/gdml
