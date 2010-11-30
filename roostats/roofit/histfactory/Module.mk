@@ -31,11 +31,16 @@ HF_MAKEWORKSPACEEXE    := bin/hist2workspace.exe
 endif
 
 
-HF_LIBS = $(HISTFACTORYLIBEXTRA)
+HF_LIBS = 
 
 ifeq ($(PLATFORM),win32)
-HF_LIBS += "$(ROOTSYS)/lib/libHistFactory.lib" 
+HF_LIBS = $(HISTFACTORYLIBEXTRA) "$(ROOTSYS)/lib/libHistFactory.lib" 
 else
+#for other platforms HISTFACTORYLIBEXTRA is not defined 
+#need to copy from config/Makefile.depend
+HF_LIBS = -Llib -lRooFit -lRooFitCore -lTree -lRIO -lMatrix \
+          -lHist -lMathCore -lGraf -lGpad -lMinuit -lFoam \
+          -lRooStats -lXMLParser
 HF_LIBS += -lHistFactory 
 endif
 
@@ -95,7 +100,7 @@ $(HISTFACTORYMAP): $(RLIBMAP) $(MAKEFILEDEP) $(HISTFACTORYL)
 
 
 $(HF_MAKEWORKSPACEEXE): $(HF_MAKEWORKSPACEEXEO) $(ROOTLIBSDEP) $(RINTLIB) $(HISTFACTORYLIBDEPM) \
-		$(HF_PREPAREHISTFACTORY)
+		$(HF_PREPAREHISTFACTORY) $(HISTFACTORYLIB)
 		$(LD) $(LDFLAGS) -o $@ $(HF_MAKEWORKSPACEEXEO)  $(ROOTICON) $(BOOTULIBS)  \
 		   $(ROOTULIBS) $(RPATH) $(ROOTLIBS)  $(RINTLIBS) $(HF_LIBS)  $(SYSLIBS)  
 
