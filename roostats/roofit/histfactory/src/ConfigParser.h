@@ -17,6 +17,7 @@
 #include "TXMLAttr.h"
 
 #include "RooStats/HistFactory/EstimateSummary.h"
+using namespace std; 
 
 // KC: Should make this a class and have it do some of what is done in MakeModelAndMeasurements
 

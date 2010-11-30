@@ -855,7 +855,7 @@ namespace HistFactory{
   }
 
   ///////////////////////////////////////////////
-  void HistoToWorkspaceFactory::FitModel(RooWorkspace * combined, string channel, string model_name, string data_name, bool doParamInspect)
+   void HistoToWorkspaceFactory::FitModel(RooWorkspace * combined, string channel, string /*model_name*/, string data_name, bool /*doParamInspect*/)
   {
 
     ModelConfig * combined_config = (ModelConfig *) combined->obj("ModelConfig");
@@ -978,7 +978,7 @@ namespace HistFactory{
   }
 
 
-  void HistoToWorkspaceFactory::FormatFrameForLikelihood(RooPlot* frame, string XTitle, string YTitle){
+void HistoToWorkspaceFactory::FormatFrameForLikelihood(RooPlot* frame, string /*XTitle*/, string YTitle){
 
       gStyle->SetCanvasBorderMode(0);
       gStyle->SetPadBorderMode(0);

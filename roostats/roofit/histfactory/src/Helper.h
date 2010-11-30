@@ -18,6 +18,7 @@
 #include "TFile.h"
 
 #include "RooStats/HistFactory/EstimateSummary.h"
+using namespace std; 
 
 namespace RooStats{
 namespace HistFactory{

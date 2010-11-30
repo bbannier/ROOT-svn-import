@@ -113,7 +113,7 @@ Double_t LinInterpVar::evaluate() const
   _paramIter->Reset() ;
 
   RooAbsReal* param ;
-  const RooArgSet* nset = _paramList.nset() ;
+  //const RooArgSet* nset = _paramList.nset() ;
   int i=0;
 
   while((param=(RooAbsReal*)_paramIter->Next())) {
