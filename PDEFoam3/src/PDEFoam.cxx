@@ -1060,7 +1060,7 @@ TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> &xvec )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::FindCellsRecursive(std::map<Int_t, Float_t> &txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
+void TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t> &txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
 {
    // This is a helper function for FindCells().  It saves in 'cells'
    // all cells, which contain the coordinates specifies in 'txvec'.
@@ -1068,8 +1068,8 @@ void TMVA::PDEFoam::FindCellsRecursive(std::map<Int_t, Float_t> &txvec, PDEFoamC
    //
    // Parameters:
    //
-   // - txvec - vector of variables (no targets!) (transformed into
-   //   foam)
+   // - txvec - untransformed event vector.  The key is the dimension
+   //   and the value is the event coordinate.
    //
    // - cell - cell to start searching with (usually root cell
    //   fCells[0])
@@ -1098,8 +1098,8 @@ void TMVA::PDEFoam::FindCellsRecursive(std::map<Int_t, Float_t> &txvec, PDEFoamC
             cell=cell->GetDau1();
       } else {
          // case 2: cell is splitten in target dimension
-         FindCellsRecursive(txvec, cell->GetDau0(), cells);
-         FindCellsRecursive(txvec, cell->GetDau1(), cells);
+         FindCells(txvec, cell->GetDau0(), cells);
+         FindCells(txvec, cell->GetDau1(), cells);
          return;
       }
    }
@@ -1131,7 +1131,7 @@ std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::vector<Float_t> &t
    std::vector<PDEFoamCell*> cells(0);
 
    // loop over all target dimensions
-   FindCellsRecursive(txvec_map, fCells[0], cells);
+   FindCells(txvec_map, fCells[0], cells);
 
    return cells;
 }
@@ -1155,7 +1155,7 @@ std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t
    std::vector<PDEFoamCell*> cells(0);
 
    // loop over all target dimensions
-   FindCellsRecursive(txvec, fCells[0], cells);
+   FindCells(txvec, fCells[0], cells);
 
    return cells;
 }
