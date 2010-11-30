@@ -10,7 +10,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/System/Path.h"
+#include "llvm/Support/Path.h"
 
 namespace llvm {
    class LLVMContext;

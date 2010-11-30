@@ -43,7 +43,7 @@ namespace cling {
 
 
    //region DeclVisitor
-
+   
    void ASTTransformVisitor::Visit(Decl *D) {
       Decl *PrevDecl = ASTTransformVisitor::CurrentDecl;
       ASTTransformVisitor::CurrentDecl = D;
@@ -70,7 +70,7 @@ namespace cling {
    
    void ASTTransformVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
       BaseDeclVisitor::VisitFunctionTemplateDecl(D);
-    
+      
       if (D->getNameAsString().compare("Eval") == 0) {
          NamespaceDecl *ND = dyn_cast<NamespaceDecl>(D->getDeclContext());
          if (ND && ND->getNameAsString().compare("cling") == 0) {
@@ -145,6 +145,7 @@ namespace cling {
                // Assume if still dependent void
                if (Exp->isTypeDependent() || Exp->isValueDependent())
                   T = SemaPtr->getASTContext().VoidTy;
+
                *I = BuildEvalCallExpr(T);
             }
          } 
@@ -262,6 +263,7 @@ namespace cling {
                                                   , move_arg(CallArgs)
                                                   , SourceLocation()
                                                   ).takeAs<CallExpr>();
+      // FIXME: Take in mind the string format specifiers in printf("%..")
       return EvalCall;                  
       
    }
@@ -269,7 +271,8 @@ namespace cling {
    // Creates the string, which is going to be escaped.
    Expr *ASTTransformVisitor::BuildEvalCharArg(QualType ToType) {
       ASTContext *c = &SemaPtr->getASTContext();
-      const char *str = "Transform World!";
+      //TODO: Here goes the address printing
+      const char *str = "Transform World!\0";
       QualType constCharArray = c->getConstantArrayType(c->getConstType(c->CharTy), llvm::APInt(32, 16U), ArrayType::Normal, 0);
       Expr *SL = StringLiteral::Create(*c, &*str, strlen(str), false, constCharArray, SourceLocation());
       //FIXME: Figure out how handle the cast kinds in the different cases
