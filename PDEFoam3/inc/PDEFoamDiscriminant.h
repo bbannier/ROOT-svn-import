@@ -52,6 +52,9 @@ namespace TMVA {
       // function to call after foam is grown
       virtual void Finalize();
 
+      // 2-dimensional projection
+      virtual TH2D* Project2( Int_t, Int_t, ECellValue, PDEFoamKernel*, UInt_t );
+
       // ---------- ROOT class definition
       ClassDef(PDEFoamDiscriminant,1) // Tree of PDEFoamCells
    }; // end of PDEFoamDiscriminant

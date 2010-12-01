@@ -280,8 +280,8 @@ namespace TMVA {
       // ---------- Foam projection methods
 
       // project foam to two-dimensional histogram
-      TH2D* Project2(Int_t idim1, Int_t idim2, ECellValue cell_value=kValue, 
-                     PDEFoamKernel *kernel=NULL, UInt_t maxbins=50);
+      virtual TH2D* Project2(Int_t idim1, Int_t idim2, ECellValue cell_value=kValue, 
+			     PDEFoamKernel *kernel=NULL, UInt_t maxbins=50);
 
       // Project one-dimensional foam to a 1-dim histogram
       TH1D* Draw1Dim(ECellValue cell_value, Int_t nbin, PDEFoamKernel *kernel=NULL);
