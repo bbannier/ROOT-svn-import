@@ -132,4 +132,7 @@ public:
    ClassDef(TEveViewerList, 0); // List of Viewers providing common operations on TEveViewer collections.
 };
 
+// AMT: temporary workaround till root pactches are integrated in CMSSW
+#define TEVEVIEW_TQSENDER_SIGNALS_FIX
+
 #endif
