@@ -34,9 +34,10 @@ ClassImp(TEveGeoShapeExtract);
 //______________________________________________________________________________
 TEveGeoShapeExtract::TEveGeoShapeExtract(const char* n, const char* t) :
    TNamed       (n,t),
-
    fRnrSelf     (kTRUE),
    fRnrElements (kTRUE),
+   fRnrFrame    (kTRUE),
+   fMiniFrame   (kTRUE),
    fShape       (0),
    fElements    (0)
 {
@@ -45,6 +46,7 @@ TEveGeoShapeExtract::TEveGeoShapeExtract(const char* n, const char* t) :
    memset(fTrans, 0, sizeof(fTrans));
    fTrans[0] = fTrans[5] = fTrans[10] = fTrans[15] = 1;
    fRGBA [0] = fRGBA [1] = fRGBA [2]  = fRGBA [3]  = 1;
+   fRGBALine[0] = fRGBALine[1] = fRGBALine[2] = 0; fRGBALine[3] = 1;
    gGeoManager = TEveGeoShape::GetGeoMangeur(); // To inforce phony geo-manager on load time.
 }
 
@@ -90,10 +92,19 @@ void TEveGeoShapeExtract::SetTrans(const Double_t arr[16])
 }
 
 //______________________________________________________________________________
-void TEveGeoShapeExtract::SetRGBA (const Float_t  arr[4])
+void TEveGeoShapeExtract::SetRGBA(const Float_t  arr[4])
 {
    // Set RGBA color.
 
    for(Int_t i=0; i<4; ++i)
       fRGBA[i] = arr[i];
+}
+
+//______________________________________________________________________________
+void TEveGeoShapeExtract::SetRGBALine(const Float_t  arr[4])
+{
+   // Set RGBA color for line.
+
+   for(Int_t i=0; i<4; ++i)
+      fRGBALine[i] = arr[i];
 }

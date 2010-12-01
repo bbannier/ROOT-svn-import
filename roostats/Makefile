@@ -274,7 +274,7 @@ ifeq ($(BUILDEDITLINE),yes)
 MODULES      += core/editline
 endif
 ifeq ($(BUILDTMVA),yes)
-MODULES      += tmva
+MODULES      += tmva math/genetic
 endif
 ifeq ($(BUILDXRD),yes)
 ifeq ($(ARCH),win32)
@@ -296,7 +296,7 @@ MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
                 graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
                 proof/proofd proof/proofx proof/clarens proof/peac proof/pq2 \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
-                tmva io/hdfs graf2d/fitsio \
+                tmva math/genetic io/hdfs graf2d/fitsio \
                 roofit/roofitcore roofit/roofit roofit/roostats roofit/histfactory \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
@@ -341,6 +341,8 @@ ROOTLIBS     := $(BOOTLIBS) $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
                 $(LPATH)/libThread.lib
 RINTLIBS     := $(LPATH)/libRint.lib
 endif
+
+ROOTALIB     := $(LPATH)/libRoot.a
 
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
 BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(MATHCORELIB)
@@ -568,6 +570,10 @@ G__c_%.o: G__c_%.c
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
 	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
+cint/cint/%.o: cint/cint/%.cxx
+	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
+	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
+
 cint/cint/%.o: $(ROOT_SRCDIR)/cint/cint/%.cxx
 	$(MAKEDIR)
 	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
@@ -577,10 +583,6 @@ cint/cint/%.o: $(ROOT_SRCDIR)/cint/cint/%.c
 	$(MAKEDIR)
 	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
 	$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
-
-cint/cint/%.o: cint/cint/%.cxx
-	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
 
 build/rmkdepend/%.o: $(ROOT_SRCDIR)/build/rmkdepend/%.cxx
 	$(MAKEDIR)
@@ -692,7 +694,7 @@ $(BUILDTOOLSDIR)/bin/rootcint:
 		fi; \
 		($(MAKE) BUILDTOOLS=yes \
 		   TARGETFLAGS=-DR__$(shell echo $(ARCH) | tr 'a-z' 'A-Z') \
-		   rootcint \
+		   rootcint cint/cint/lib/posix/mktypes \
 		) || exit 1;
 
 distclean::
@@ -728,11 +730,11 @@ config/Makefile.config config/Makefile.comp include/RConfigure.h \
 
 ifeq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean debian redhat),)
 Makefile: $(addprefix $(ROOT_SRCDIR)/,configure config/rootrc.in \
-  config/RConfigure.in config/Makefile.in \
+  config/RConfigure.in config/Makefile.in config/Makefile.$(ARCH) \
   config/Makefile-comp.in config/root-config.in config/rootauthrc.in \
   config/rootdaemonrc.in config/mimes.unix.in config/mimes.win32.in \
   config/proofserv.in config/roots.in) config.status
-	@( $(RECONFIGURE) "$?" "$(ROOT_SRCDIR)" || ( \
+	+@( $(RECONFIGURE) "$?" "$(ROOT_SRCDIR)" || ( \
 	   echo ""; echo "Please, run $(ROOT_SRCDIR)/configure again as config option files ($?) have changed."; \
 	   echo ""; exit 1; \
 	 ) )
@@ -995,7 +997,9 @@ maintainer-clean:: distclean
 version: $(CINTTMP)
 	@$(MAKEVERSION)
 
-static: rootlibs
+static: $(ROOTALIB)
+
+$(ROOTALIB): $(ALLLIBS)
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
 	   "$(XLIBS)" "$(SYSLIBS)" "$(STATICEXTRALIBS)"
 
