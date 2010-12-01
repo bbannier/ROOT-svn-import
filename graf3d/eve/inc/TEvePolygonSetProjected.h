@@ -14,7 +14,6 @@
 
 #include "TEveVector.h"
 #include "TEveShape.h"
-#include "TEveProjectionBases.h"
 
 class TBuffer3D;
 
@@ -41,7 +40,12 @@ protected:
       { fNPnts = x.fNPnts; fPnts = x.fPnts; return *this; }
 
       Int_t FindPoint(Int_t pi)
-      { for (Int_t i=0; i<fNPnts; ++i) if (fPnts[i] == pi) return i; return -1; }
+      {
+         for (Int_t i=0; i<fNPnts; ++i) {
+            if (fPnts[i] == pi) return i;
+         }
+         return -1;
+      }
    };
 
    typedef std::list<Polygon_t>                    vpPolygon_t;
