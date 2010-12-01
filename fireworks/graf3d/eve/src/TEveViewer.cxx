@@ -588,7 +588,10 @@ void TEveViewerList::OnMouseOver(TObject *obj, UInt_t /*state*/)
    TEveElement *el = dynamic_cast<TEveElement*>(obj);
    if (el && !el->IsPickable())
       el = 0;
+
+   void *qsender = gTQSender;
    gEve->GetHighlight()->UserPickedElement(el, kFALSE);
+   gTQSender = qsender;
 
    HandleTooltip();
 }
@@ -607,7 +610,10 @@ void TEveViewerList::OnReMouseOver(TObject *obj, UInt_t /*state*/)
    TEveElement* el = dynamic_cast<TEveElement*>(obj);
    if (el && !el->IsPickable())
       el = 0;
+
+   void *qsender = gTQSender;
    gEve->GetHighlight()->UserRePickedElement(el);
+   gTQSender = qsender;
 
    HandleTooltip();
 }
@@ -626,7 +632,10 @@ void TEveViewerList::OnUnMouseOver(TObject *obj, UInt_t /*state*/)
    TEveElement* el = dynamic_cast<TEveElement*>(obj);
    if (el && !el->IsPickable())
       el = 0;
+
+   void *qsender = gTQSender;
    gEve->GetHighlight()->UserUnPickedElement(el);
+   gTQSender = qsender;
 
    HandleTooltip();
 }
