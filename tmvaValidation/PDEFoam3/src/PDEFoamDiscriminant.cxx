@@ -24,6 +24,8 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
+#include <climits>
+
 #ifndef ROOT_TMath
 #include "TMath.h"
 #endif
@@ -112,4 +114,121 @@ void TMVA::PDEFoamDiscriminant::Finalize()
          SetCellElement(fCells[iCell], 1, 1. ); // set discriminator error
       }
    }
+}
+
+//_____________________________________________________________________
+TH2D* TMVA::PDEFoamDiscriminant::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, PDEFoamKernel *kernel, UInt_t nbin )
+{
+   // Project foam variable idim1 and variable idim2 to histogram.
+   //
+   // Parameters:
+   //
+   // - idim1, idim2 - dimensions to project to
+   //
+   // - cell_value - the cell value to draw
+   //
+   // - kernel - a PDEFoam kernel.  If NULL is given, than the trivial
+   //            kernel is used.
+   //
+   // - nbin - number of bins in x and y direction of result histogram.
+   //
+   // Returns:
+   // a 2-dimensional histogram
+
+   // avoid plotting of wrong dimensions
+   if ((idim1>=GetTotDim()) || (idim1<0) ||
+       (idim2>=GetTotDim()) || (idim2<0) ||
+       (idim1==idim2) )
+      Log() << kFATAL << "<Project2>: wrong dimensions given: "
+	    << idim1 << ", " << idim2 << Endl;
+
+   // if no kernel is set, use the trivial kernel
+   Bool_t must_delete_kernel = kFALSE;
+   if (kernel == NULL) {
+      kernel = new PDEFoamKernel();
+      must_delete_kernel = kTRUE;
+   }
+
+   // root can not handle too many bins in one histogram --> catch this
+   // Furthermore, to have more than 1000 bins in the histogram doesn't make
+   // sense.
+   if (nbin>1000){
+      Log() << kWARNING << "Warning: number of bins too big: " << nbin
+            << " Using 1000 bins for each dimension instead." << Endl;
+      nbin = 1000;
+   } else if (nbin<1) {
+      Log() << kWARNING << "Wrong bin number: " << nbin 
+            << "; set nbin=50" << Endl;
+      nbin = 50;
+   }
+
+   // create result histogram
+   TString hname(Form("h_%d_vs_%d",idim1,idim2));
+
+   // if histogram with this name already exists, delete it
+   TH2D* h1=(TH2D*)gDirectory->Get(hname.Data());
+   if (h1) delete h1;
+   h1= new TH2D(hname.Data(), Form("var%d vs var%d",idim1,idim2), nbin, fXmin[idim1], fXmax[idim1], nbin, fXmin[idim2], fXmax[idim2]);
+
+   if (!h1) Log() << kFATAL << "ERROR: Can not create histo" << hname << Endl;
+   h1->GetZaxis()->SetRangeUser(-std::numeric_limits<float>::epsilon(), 
+				1. + std::numeric_limits<float>::epsilon());
+
+   // ============== start projection algorithm ================
+   // loop over all histogram bins (2-dim)
+   for (Int_t xbin = 1; xbin <= h1->GetNbinsX(); ++xbin) {
+      for (Int_t ybin = 1; ybin <= h1->GetNbinsY(); ++ybin) {
+	 // calculate the phase space point, which corresponds to this
+	 // bin combination
+	 std::map<Int_t, Float_t> txvec;
+	 txvec[idim1] = VarTransform(idim1, h1->GetXaxis()->GetBinCenter(xbin));
+	 txvec[idim2] = VarTransform(idim2, h1->GetYaxis()->GetBinCenter(ybin));
+
+	 // find the cells, which corresponds to this phase space
+	 // point
+	 std::vector<TMVA::PDEFoamCell*> cells = FindCells(txvec);
+
+	 // loop over cells and fill the histogram with the cell
+	 // values
+	 Float_t sum_cv = 0; // sum of the cell values
+	 for (std::vector<TMVA::PDEFoamCell*>::iterator it = cells.begin(); 
+	      it != cells.end(); ++it) {
+	    // get cell position and size
+	    PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
+	    (*it)->GetHcub(cellPosi,cellSize);
+	    // Create complete event vector from txvec.  The missing
+	    // coordinates of txvec are set to the cell center.
+	    std::vector<Float_t> tvec;
+	    for (Int_t i=0; i<GetTotDim(); ++i) {
+	       if ( i != idim1 && i != idim2 )
+	 	  tvec.push_back(cellPosi[i] + 0.5*cellSize[i]);
+	       else
+	 	  tvec.push_back(txvec[i]);
+	    }
+	    // get the cell value using the kernel
+	    Float_t cv = kernel->Estimate(this, tvec, cell_value);
+	    if (cell_value == kValue) {
+	       // calculate cell volume in other dimensions (not
+	       // including idim1 and idim2)
+	       Float_t area_cell = 1.;
+	       for (Int_t d1=0; d1<GetTotDim(); ++d1) {
+		  if ((d1!=idim1) && (d1!=idim2))
+		     area_cell *= cellSize[d1];
+	       }
+	       // calc discriminator * (cell area times foam area)
+	       // foam is normalized -> length of foam = 1.0
+	       cv *= area_cell;
+	    }
+	    sum_cv += cv;
+	 }
+
+	 // fill the bin content
+	 h1->SetBinContent(xbin, ybin, sum_cv + h1->GetBinContent(xbin, ybin));
+      }
+   }
+
+   if (must_delete_kernel)
+      delete kernel;
+
+   return h1;
 }
