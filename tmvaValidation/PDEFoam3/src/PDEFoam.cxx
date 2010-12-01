@@ -1280,7 +1280,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
 	 // point
 	 std::vector<TMVA::PDEFoamCell*> cells = FindCells(txvec);
 
-	 // loop over cells and draw fill the histogram with the cell
+	 // loop over cells and fill the histogram with the cell
 	 // values
 	 Float_t sum_cv = 0; // sum of the cell values
 	 for (std::vector<TMVA::PDEFoamCell*>::iterator it = cells.begin(); 
@@ -1289,8 +1289,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
 	    PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
 	    (*it)->GetHcub(cellPosi,cellSize);
 	    // Create complete event vector from txvec.  The missing
-	    // coordinates in center of cell are set to the cell
-	    // center.
+	    // coordinates of txvec are set to the cell center.
 	    std::vector<Float_t> tvec;
 	    for (Int_t i=0; i<GetTotDim(); ++i) {
 	       if ( i != idim1 && i != idim2 )
@@ -1298,6 +1297,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
 	       else
 	 	  tvec.push_back(txvec[i]);
 	    }
+	    // get the cell value using the kernel
 	    sum_cv += kernel->Estimate(this, tvec, cell_value);
 	 }
 
