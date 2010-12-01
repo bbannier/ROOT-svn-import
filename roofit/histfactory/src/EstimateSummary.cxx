@@ -39,7 +39,7 @@ namespace RooStats {
       cout << "  Channel = " << channel << endl;
       cout << "  NormName = " << normName << endl;
       cout << "  Nominal ptr = " << nominal << endl;
-      cout << "  Nominal hist name = " << nominal->GetName() << endl;
+      if (nominal) cout << "  Nominal hist name = " << nominal->GetName() << endl;
       cout << "  Number of hist variations = " << systSourceForHist.size() 
      << " " << lowHists.size() << " " 
      << " " << highHists.size() << endl;
@@ -69,6 +69,7 @@ namespace RooStats {
         cout << "norm names don't match : " << normName << " vs " << other.normName << endl;
         return false;
       }
+      if (nominal && other.nominal)
       if(! CompareHisto( this->nominal,  other.nominal ) ) {
         cout << "nominal histo don't match" << endl;
         return false;
@@ -116,6 +117,10 @@ namespace RooStats {
     }
 
     bool EstimateSummary::CompareHisto( const TH1 * one, const TH1 * two) const {
+
+       if (!one && !two) return true; 
+       if (!one) return false; 
+       if (!two) return false; 
       
       for(int i=1; i<=one->GetNbinsX(); ++i){
         if(!(one->GetBinContent(i)-two->GetBinContent(i)==0)) return false;
