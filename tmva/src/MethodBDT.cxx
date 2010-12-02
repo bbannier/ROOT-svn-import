@@ -146,6 +146,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
                             TDirectory* theTargetDir ) :
    TMVA::MethodBase( jobName, Types::kBDT, methodTitle, theData, theOption, theTargetDir )
    , fNTrees(0)
+   , fRenormByClass(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fAdaBoostBeta(0)
    , fTransitionPoint(0)
    , fShrinkage(0)
@@ -154,6 +155,9 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fSumOfWeights(0)
    , fNodeMinEvents(0)
    , fNCuts(0)
+   , fUseFisherCuts(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
+   , fMinLinCorrForFisher(.8) // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
+   , fUseExclusiveVars(0)     // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fUseYesNoLeaf(kFALSE)
    , fNodePurityLimit(0)
    , fUseWeightedTrees(kFALSE)
@@ -166,6 +170,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fAutomatic(kFALSE)
    , fRandomisedTrees(kFALSE)
    , fUseNvars(0)
+   , fUsePoissonNvars(0)  // don't use this initialisation, only here to make  Coverity happy. Is set in Init()
    , fUseNTrainEvents(0)
    , fSampleSizeFraction(0)
    , fNoNegWeightsInTraining(kFALSE)
@@ -184,6 +189,7 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
                             TDirectory* theTargetDir )
    : TMVA::MethodBase( Types::kBDT, theData, theWeightFile, theTargetDir )
    , fNTrees(0)
+   , fRenormByClass(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fAdaBoostBeta(0)
    , fTransitionPoint(0)
    , fShrinkage(0)
@@ -192,6 +198,9 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fSumOfWeights(0)
    , fNodeMinEvents(0)
    , fNCuts(0)
+   , fUseFisherCuts(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
+   , fMinLinCorrForFisher(.8) // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
+   , fUseExclusiveVars(0)     // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fUseYesNoLeaf(kFALSE)
    , fNodePurityLimit(0)
    , fUseWeightedTrees(kFALSE)
@@ -204,6 +213,7 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fAutomatic(kFALSE)
    , fRandomisedTrees(kFALSE)
    , fUseNvars(0)
+   , fUsePoissonNvars(0)  // don't use this initialisation, only here to make  Coverity happy. Is set in Init()
    , fUseNTrainEvents(0)
    , fSampleSizeFraction(0)
    , fNoNegWeightsInTraining(kFALSE)
@@ -323,7 +333,7 @@ void TMVA::MethodBDT::DeclareOptions()
    DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events required in a leaf node (default Classification: max(40, N_train/(Nvar^2)/10) ) Regression: 10");
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
    DeclareOptionRef(fUseFisherCuts=kFALSE, "UseFisherCuts", "use multivariate splits using the Fisher criterium");
-   DeclareOptionRef(fMinLinCorrForFisher=1,"MinLinCorrForFisher", "the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting");
+   DeclareOptionRef(fMinLinCorrForFisher=.8,"MinLinCorrForFisher", "the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting");
    DeclareOptionRef(fUseExclusiveVars=kFALSE,"UseExclusiveVars","individual variables already used in fisher criterium are not anymore analysed individually for node splitting");
 
    DeclareOptionRef(fPruneStrength, "PruneStrength", "Pruning strength");
