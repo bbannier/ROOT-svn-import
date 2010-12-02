@@ -879,14 +879,14 @@ void TMVA::MethodBDT::UpdateTargetsRegression(vector<TMVA::Event*> eventSample, 
       temp.push_back(make_pair(fabs(fWeightedResiduals[i].first),fWeightedResiduals[i].second));
       i++;
    }
-   fTransitionPoint = GetWeightedQuantile(temp,0.7,fSumOfWeights);
+   fTransitionPoint = GetWeightedQuantile(temp,0.99,fSumOfWeights);
    i=0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
  
       if(temp[i].first<=fTransitionPoint)
          (*e)->SetTarget(0,fWeightedResiduals[i].first);
       else
-         (*e)->SetTarget(0,fTransitionPoint*(fWeightedResiduals[i].first<0?-1.0:1.0));
+         (*e)->SetTarget(0,fabs(fTransitionPoint)*(fWeightedResiduals[i].first<0?-1.0:1.0));
       i++;
    }
 }
@@ -957,7 +957,7 @@ Double_t TMVA::MethodBDT::GradBoostRegression( vector<TMVA::Event*> eventSample,
       Double_t ResidualMedian = GetWeightedQuantile(iLeave->second,0.5,leaveWeights[iLeave->first]);
       for(UInt_t j=0;j<((iLeave->second).size());j++){
          diff = (iLeave->second)[j].first-ResidualMedian;
-         shift+=1.0/((iLeave->second).size())*((diff<0)?-1.0:1.0)*TMath::Min(fTransitionPoint,fabs(diff));
+         shift+=1.0/((iLeave->second).size())*((diff<0)?-1.0:1.0)*TMath::Min(fabs(fTransitionPoint),fabs(diff));
       }
       (iLeave->first)->SetResponse(fShrinkage*(ResidualMedian+shift));
    }
