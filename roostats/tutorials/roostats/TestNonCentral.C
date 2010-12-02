@@ -1,8 +1,6 @@
 
 using namespace RooFit;
 TestNonCentral(){
-  gSystem->Load("libMathMore");
- 
 
   RooWorkspace w("w");
   // k <2, must use sum
