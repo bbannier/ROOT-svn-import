@@ -148,7 +148,7 @@ protected:
    TGLCameraOverlay  *fCameraOverlay; //! markup size of viewport in scene units
 
    Bool_t         fInitGL;         //! has GL been initialised?
-   Bool_t         fSmartRefresh;   //! cache logicals during scene rebuilds, use TAtt3D time-stamp to determine if they are still valid
+   Bool_t         fSmartRefresh;   //! cache logicals during scene rebuilds
 
    // Debug tracing (for scene rebuilds)
    Bool_t         fDebugMode;            //! debug mode (forced rebuild + draw scene/frustum/interest boxes)

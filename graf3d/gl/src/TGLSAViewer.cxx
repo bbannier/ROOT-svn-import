@@ -383,6 +383,7 @@ void TGLSAViewer::CreateMenus()
    //File/Camera/Help menus.
 
    fFileMenu = new TGPopupMenu(fFrame->GetClient()->GetDefaultRoot());
+   fFileMenu->AddEntry("&Hide Menus", kGLHideMenus);
    fFileMenu->AddEntry("&Edit Object", kGLEditObject);
    fFileMenu->AddSeparator();
    fFileMenu->AddEntry("&Close Viewer", kGLCloseViewer);
@@ -425,7 +426,7 @@ void TGLSAViewer::CreateMenus()
    fMenuBar = new TGMenuBar(fFrame);
    fMenuBar->AddPopup("&File", fFileMenu, new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0));
    fMenuBar->AddPopup("&Camera", fCameraMenu, new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0));
-   fMenuBar->AddPopup("&Help",    fHelpMenu,    new TGLayoutHints(kLHintsTop | kLHintsRight));
+   fMenuBar->AddPopup("&Help",   fHelpMenu,   new TGLayoutHints(kLHintsTop | kLHintsRight));
    fFrame->AddFrame(fMenuBar, new TGLayoutHints(kLHintsTop | kLHintsLeft | kLHintsExpandX, 0, 0, 1, 1));
    gVirtualX->SelectInput(fMenuBar->GetId(),
                           kKeyPressMask | kExposureMask | kPointerMotionMask
@@ -552,6 +553,8 @@ void TGLSAViewer::EnableMenuBarHiding()
 
    fMenuHidingTimer = new TTimer;
    fMenuHidingTimer->Connect("Timeout()", "TGLSAViewer", this, "MenuHidingTimeout()");
+
+   fFileMenu->CheckEntry(kGLHideMenus);
 }
 
 //______________________________________________________________________________
@@ -571,8 +574,11 @@ void TGLSAViewer::DisableMenuBarHiding()
    fFrame->HideFrame(fMenuBut);
    fFrame->Layout();
 
+   fMenuHidingTimer->TurnOff();
    delete fMenuHidingTimer;
    fMenuHidingTimer = 0;
+
+   fFileMenu->UnCheckEntry(kGLHideMenus);
 }
 
 //______________________________________________________________________________
@@ -616,6 +622,10 @@ void TGLSAViewer::HandleMenuBarHiding(Event_t* ev)
 void TGLSAViewer::ResetMenuHidingTimer(Bool_t show_menu)
 {
    // Reset the timer for menu-bar hiding.
+
+   // This happens, mysteriously.
+   if (fMenuHidingTimer == 0)
+      return;
 
    fMenuHidingTimer->TurnOff();
 
@@ -776,6 +786,12 @@ Bool_t TGLSAViewer::ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t)
                }
                SavePicture(file);
             }
+            break;
+         case kGLHideMenus:
+            if (fHideMenuBar)
+               DisableMenuBarHiding();
+            else
+               EnableMenuBarHiding();
             break;
          case kGLEditObject:
             ToggleEditObject();
