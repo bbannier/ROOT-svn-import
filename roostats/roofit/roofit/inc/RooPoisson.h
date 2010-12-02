@@ -29,10 +29,13 @@ public:
   Int_t getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK=kTRUE) const;
   void generateEvent(Int_t code);
 
+  void SetNoRounding(Bool_t flag){fNoRounding = flag;}
+
 protected:
 
   RooRealProxy x ;
   RooRealProxy mean ;
+  Bool_t fNoRounding;
   
   Double_t evaluate() const ;
   Double_t evaluate(Double_t k) const;
@@ -40,7 +43,7 @@ protected:
 
 private:
 
-  ClassDef(RooPoisson,1) // A Poisson PDF
+  ClassDef(RooPoisson,2) // A Poisson PDF
 };
  
 #endif
