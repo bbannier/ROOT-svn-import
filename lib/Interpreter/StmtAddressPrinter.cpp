@@ -11,7 +11,6 @@
 #include "llvm/Support/Format.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -509,20 +508,10 @@ void StmtAddressPrinter::VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *Node) {
     OS << ".";
   }
 
-  OS << Node->getProperty()->getName();
-}
-
-void StmtAddressPrinter::VisitObjCImplicitSetterGetterRefExpr(
-                                        ObjCImplicitSetterGetterRefExpr *Node) {
-  if (Node->isSuperReceiver())
-    OS << "super.";
-  else if (Node->getBase()) {
-    PrintExpr(Node->getBase());
-    OS << ".";
-  }
-  if (Node->getGetterMethod())
-    OS << Node->getGetterMethod();
-
+  if (Node->isImplicitProperty())
+    OS << Node->getImplicitPropertyGetter()->getSelector().getAsString();
+  else
+    OS << Node->getExplicitProperty()->getName();
 }
 
 void StmtAddressPrinter::VisitPredefinedExpr(PredefinedExpr *Node) {
@@ -1364,4 +1353,3 @@ void Stmt::printPretty(llvm::raw_ostream &OS, ASTContext& Context,
 
 // Implement virtual destructor.
 PrinterHelper::~PrinterHelper() {}
-

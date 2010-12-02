@@ -114,7 +114,8 @@ m_Consumer(0) {
                                                  PP.getSelectorTable(), PP.getBuiltinInfo(), 0);
   CI->setASTContext(Ctx);
   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                         PP.getLangOptions().NoBuiltin);
+                                         PP.getLangOptions());
+  /*NoBuiltins = */ //true);
 
 
   m_MemoryBuffer.push_back(new MutableMemoryBuffer("//cling!\n", "CLING") );

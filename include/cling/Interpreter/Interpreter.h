@@ -52,6 +52,7 @@ namespace cling {
     T Eval(const char* expr) {
        llvm::GenericValue result;
        EvalCore(result, expr);
+       //FIXME: we shouldn't return T() 
        return T();
     }
      
