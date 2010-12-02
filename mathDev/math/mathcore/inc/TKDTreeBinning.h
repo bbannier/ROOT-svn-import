@@ -1,5 +1,5 @@
 // @(#)root/mathcore:$Id$
-// Authors: B. Rabacal   11/2010 
+// Authors: B. Rabacal   11/2010
 
 /**********************************************************************
  *                                                                    *
@@ -9,8 +9,8 @@
  **********************************************************************/
 
 // Header file for class TKDTreeBinning
-// 
-// 
+//
+//
 
 #include <map>
 #include <vector>
@@ -55,9 +55,12 @@ public:
    UInt_t GetDim() const;
    UInt_t GetBinContent(UInt_t bin) const;
    TKDTreeID* GetTree() const;
-   Double_t* GetDimData(UInt_t dim) const;
+   const Double_t* GetDimData(UInt_t dim) const;
    Double_t GetDataMin(UInt_t dim) const;
    Double_t GetDataMax(UInt_t dim) const;
+   Double_t GetBinDensity(UInt_t bin) const;
+   Double_t GetBinArea(UInt_t bin) const;
+   const Double_t* GetSortedOneDimensionalBinning() const;
 
    ClassDef(TKDTreeBinning, 1)
 
