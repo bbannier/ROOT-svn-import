@@ -1,5 +1,5 @@
 // @(#)root/mathcore:$Id$
-// Authors: B. Rabacal   11/2010 
+// Authors: B. Rabacal   11/2010
 
 /**********************************************************************
  *                                                                    *
@@ -175,8 +175,8 @@ const Double_t* TKDTreeBinning::GetBinsMinEdges() const {
    // Returns the bins' minimum edges
    if (fDataBins)
       return &fBinMinEdges[0];
-   else
-      this->Warning("GetBinsMinEdges", "Binning kd-tree is nil. No bin edges retrieved.");
+   this->Warning("GetBinsMinEdges", "Binning kd-tree is nil. No bin edges retrieved.");
+   this->Info("GetBinsMinEdges", "Returning null pointer.");
    return (Double_t*)0;
 }
 
@@ -184,8 +184,8 @@ const Double_t* TKDTreeBinning::GetBinsMaxEdges() const {
    // Returns the bins' maximum edges
    if (fDataBins)
       return &fBinMaxEdges[0];
-   else
-      this->Warning("GetBinsMaxEdges", "Binning kd-tree is nil. No bin edges retrieved.");
+   this->Warning("GetBinsMaxEdges", "Binning kd-tree is nil. No bin edges retrieved.");
+   this->Info("GetBinsMaxEdges", "Returning null pointer.");
    return (Double_t*)0;
 }
 
@@ -193,44 +193,47 @@ std::pair<const Double_t*, const Double_t*> TKDTreeBinning::GetBinsEdges() const
    // Returns the bins' edges
    if (fDataBins)
       return std::make_pair(GetBinsMinEdges(), GetBinsMaxEdges());
-   else
-      this->Warning("GetBinsEdges", "Binning kd-tree is nil. No bin edges retrieved.");
+   this->Warning("GetBinsEdges", "Binning kd-tree is nil. No bin edges retrieved.");
+   this->Info("GetBinsEdges", "Returning null pointer pair.");
    return std::make_pair((Double_t*)0, (Double_t*)0);
 }
 
 const Double_t* TKDTreeBinning::GetBinMinEdges(UInt_t bin) const {
-   // Returns the bin's minimum edges 'bin' is between 1 and fNBins
+   // Returns the bin's minimum edges. 'bin' is between 0 and fNBins - 1
    if (fDataBins)
-      if (1 <= bin && bin <= fNBins)
-         return &fBinMinEdges[--bin * fDim];
+      if (bin < fNBins)
+         return &fBinMinEdges[bin * fDim];
       else
-         this->Warning("GetBinMinEdges", "No such bin. Returning null pointer.");
+         this->Warning("GetBinMinEdges", "No such bin. 'bin' is between 0 and %d", fNBins - 1);
    else
       this->Warning("GetBinMinEdges", "Binning kd-tree is nil. No bin edges retrieved.");
+   this->Info("GetBinMinEdges", "Returning null pointer.");
    return (Double_t*)0;
 }
 
 const Double_t* TKDTreeBinning::GetBinMaxEdges(UInt_t bin) const {
-   // Returns the bin's maximum edges 'bin' is between 1 and fNBins
+   // Returns the bin's maximum edges. 'bin' is between 0 and fNBins - 1
    if (fDataBins)
-      if (1 <= bin && bin <= fNBins)
-         return &fBinMaxEdges[--bin * fDim];
+      if (bin < fNBins)
+         return &fBinMaxEdges[bin * fDim];
       else
-         this->Warning("GetBinMaxEdges", "No such bin. Returning null pointer.");
+         this->Warning("GetBinMaxEdges", "No such bin. 'bin' is between 0 and %d", fNBins - 1);
    else
       this->Warning("GetBinMaxEdges", "Binning kd-tree is nil. No bin edges retrieved.");
+   this->Info("GetBinMaxEdges", "Returning null pointer.");
    return (Double_t*)0;
 }
 
 std::pair<const Double_t*, const Double_t*> TKDTreeBinning::GetBinEdges(UInt_t bin) const {
-   // Returns the bin's edges 'bin' is between 1 and fNBins
+   // Returns the bin's edges. 'bin' is between 0 and fNBins - 1
    if (fDataBins)
-      if (1 <= bin && bin <= fNBins)
+      if (bin < fNBins)
          return std::make_pair(GetBinMinEdges(bin), GetBinMaxEdges(bin));
       else
-         this->Warning("GetBinEdges", "No such bin. Returning null pointer.");
+         this->Warning("GetBinEdges", "No such bin. 'bin' is between 0 and %d", fNBins - 1);
    else
       this->Warning("GetBinEdges", "Binning kd-tree is nil. No bin edges retrieved.");
+   this->Info("GetBinEdges", "Returning null pointer pair.");
    return std::make_pair((Double_t*)0, (Double_t*)0);
 }
 
@@ -245,51 +248,91 @@ UInt_t TKDTreeBinning::GetDim() const {
 }
 
 UInt_t TKDTreeBinning::GetBinContent(UInt_t bin) const {
-   // Returns the number of points in bin. 'bin' is between 1 and fNBins
-   if(1 <= bin && bin < fNBins)
+   // Returns the number of points in bin. 'bin' is between 0 and fNBins - 1
+   if(bin < fNBins - 1)
       return fDataBins->GetBucketSize();
-   if (bin == fNBins)
+   if (bin == fNBins - 1)
       return !(fDataSize % fNBins) ? fDataBins->GetBucketSize() : fDataSize % fNBins;
-   this->Warning("GetBinContent", "No such bin. Returning -1.");
-   this->Info("GetBinContent", "'bin' is between 1 and %d", fNBins);
-   return -1;
+   this->Warning("GetBinContent", "No such bin. Returning 0.");
+   this->Info("GetBinContent", "'bin' is between 0 and %d.", fNBins - 1);
+   return 0;
 }
 
 TKDTreeID* TKDTreeBinning::GetTree() const {
    // Returns the kD-Tree structure of the binning
    if (fDataBins)
       return fDataBins;
-   else
-      this->Warning("GetTree", "Binning kd-tree is nil. No embedded kd-tree retrieved. Returning null pointer.");
+   this->Warning("GetTree", "Binning kd-tree is nil. No embedded kd-tree retrieved. Returning null pointer.");
    return (TKDTreeID*)0;
 }
 
-Double_t* TKDTreeBinning::GetDimData(UInt_t dim) const {
-   // Returns the data in the dim coordinate. 'dim' is between 1 and fDim
-   if(1 <= dim && dim <= fDim)
-      return fData[--dim];
-   else
-      this->Warning("GetDimData", "No such dimensional coordinate. No coordinate data retrieved. Returning null pointer.");
-   this->Info("GetDimData", "'dim' is between 1 and %d", fDim);
+const Double_t* TKDTreeBinning::GetDimData(UInt_t dim) const {
+   // Returns the data in the dim coordinate. 'dim' is between 0 and fDim - 1
+   if(dim < fDim)
+      return fData[dim];
+   this->Warning("GetDimData", "No such dimensional coordinate. No coordinate data retrieved. Returning null pointer.");
+   this->Info("GetDimData", "'dim' is between 0 and %d.", fDim - 1);
    return 0;
 }
 
 Double_t TKDTreeBinning::GetDataMin(UInt_t dim) const {
-   // Returns the data minimum in the dim coordinate. 'dim' is between 1 and fDim
-   if(1 <= dim && dim <= fDim)
-      return fDataThresholds[--dim].first;
-   else
-      this->Warning("GetDataMin", "No such dimensional coordinate. No coordinate data minimum retrieved. Returning +inf.");
-   this->Info("GetDataMin", "'dim' is between 1 and %d", fDim);
+   // Returns the data minimum in the dim coordinate. 'dim' is between 0 and fDim - 1
+   if(dim < fDim)
+      return fDataThresholds[dim].first;
+   this->Warning("GetDataMin", "No such dimensional coordinate. No coordinate data minimum retrieved. Returning +inf.");
+   this->Info("GetDataMin", "'dim' is between 0 and %d.", fDim - 1);
    return std::numeric_limits<Double_t>::infinity();
 }
 
 Double_t TKDTreeBinning::GetDataMax(UInt_t dim) const {
-   // Returns the data maximum in the dim coordinate. 'dim' is between 1 and fDim
-   if(1 <= dim && dim <= fDim)
-      return fDataThresholds[--dim].second;
-   else
-      this->Warning("GetDataMax", "No such dimensional coordinate. No coordinate data maximum retrieved. Returning -inf.");
-   this->Info("GetDataMax", "'dim' is between 1 and %d", fDim);
+   // Returns the data maximum in the dim coordinate. 'dim' is between 0 and fDim - 1
+   if(dim < fDim)
+      return fDataThresholds[dim].second;
+   this->Warning("GetDataMax", "No such dimensional coordinate. No coordinate data maximum retrieved. Returning -inf.");
+   this->Info("GetDataMax", "'dim' is between 0 and %d.", fDim - 1);
    return -1 * std::numeric_limits<Double_t>::infinity();
+}
+
+Double_t TKDTreeBinning::GetBinDensity(UInt_t bin) const {
+   // Returns the density in bin. 'bin' is between 0 and fNBins - 1
+   if(bin < fNBins) {
+      Double_t area = GetBinArea(bin);
+      if (!area)
+         this->Warning("GetBinDensity", "Area is null. Returning -1.");
+      return GetBinContent(bin) / area;
+   }
+   this->Warning("GetBinDensity", "No such bin. Returning -1.");
+   this->Info("GetBinDensity", "'bin' is between 0 and %d.", fNBins - 1);
+   return -1.;
+}
+
+Double_t TKDTreeBinning::GetBinArea(UInt_t bin) const {
+   // Returns the (hyper)area of bin. 'bin' is between 0 and fNBins - 1
+   if(bin < fNBins) {
+      std::pair<const Double_t*, const Double_t*> binEdges = GetBinEdges(bin);
+      Double_t area = 1.;
+      for (UInt_t i = 0; i < fDim; ++i) {
+         area *= binEdges.second[i] - binEdges.first[i];
+      }
+      return area;
+   }
+   this->Warning("GetBinArea", "No such bin. Returning 0.");
+   this->Info("GetBinArea", "'bin' is between 0 and %d.", fNBins - 1);
+   return 0.;
+}
+
+const Double_t* TKDTreeBinning::GetSortedOneDimensionalBinning() const {
+   // Returns the sorted minimum edges for one dimensional binning only.
+   if (fDim == 1) {
+      const Double_t* binsMinEdges = GetBinsMinEdges();
+      UInt_t indices[fNBins];
+      TMath::Sort(fNBins, binsMinEdges, indices, kFALSE);
+      Double_t binsEdges[fNBins + 1];
+      for(UInt_t i = 0; i < fNBins; ++i)
+         binsEdges[i] = binsMinEdges[indices[i]];
+      binsEdges[fNBins] = binsMinEdges[indices[fNBins - 1]]; // Upper edge
+   }
+   this->Warning("GetSortedOneDimensionalBinning", "Data is multidimensional. No sorted bin edges retrieved. Returning null pointer.");
+   this->Info("GetSortedOneDimensionalBinning", "This method can only be invoked if the data is a one dimensional set");
+   return 0;
 }
