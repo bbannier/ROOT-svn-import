@@ -117,8 +117,8 @@ void addRegressionTests( UnitTestSuite& TMVA_test, bool full=true)
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kMLP, "MLPBFGS", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=300:HiddenLayers=N+20:TestRate=6:TrainingMethod=BFGS:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-6:ConvergenceTests=15:!UseRegulator" , 0.4, 0.8, 0.2, 0.5 ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kMLP, "MLP", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=300:HiddenLayers=N+20:TestRate=6:TrainingMethod=BP:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-6:ConvergenceTests=15:!UseRegulator" , 0.4, 0.8, 0.2, 0.5 ));
    // SVM regression does not work TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kSVM, "SVM", "Gamma=0.25:Tol=0.001:VarTransform=Norm" , 0., 1., 0., 1. ));
-   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDT","!H:!V",  15., 20., 15., 25. ));
-   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDTN","!H:!V:VarTransform=N",  15., 25., 15., 25. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDT","!H:!V",  8., 15., 5., 10. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDTN","!H:!V:VarTransform=N",  8., 15., 5., 10. ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDT2","!H:!V:NTrees=500:nEventsMin=20:BoostType=AdaBoostR2:SeparationType=GiniIndex:nCuts=20:PruneMethod=CostComplexity:PruneStrength=3", 15., 20., 10., 20. )); 
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDTG","!H:!V:NTrees=1000::BoostType=Grad:Shrinkage=0.3:!UseBaggedGrad:SeparationType=GiniIndex:nCuts=20:nEventsMin=20:NNodesMax=7" ,  5., 8., 3., 5. ));
 } 
@@ -176,7 +176,7 @@ int main()
    UnitTestSuite TMVA_test("TMVA unit testing");
    
    TMVA_test.intro();
- TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kSVM, "SVM", "Gamma=0.25:Tol=0.001:VarTransform=Norm" , 0.88, 0.98) );
+
    TMVA_test.addTest(new utEvent);
    TMVA_test.addTest(new utVariableInfo);
    TMVA_test.addTest(new utDataSetInfo);
