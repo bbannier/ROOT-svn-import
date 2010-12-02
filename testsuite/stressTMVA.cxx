@@ -176,7 +176,7 @@ int main()
    UnitTestSuite TMVA_test("TMVA unit testing");
    
    TMVA_test.intro();
-
+ TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kSVM, "SVM", "Gamma=0.25:Tol=0.001:VarTransform=Norm" , 0.88, 0.98) );
    TMVA_test.addTest(new utEvent);
    TMVA_test.addTest(new utVariableInfo);
    TMVA_test.addTest(new utDataSetInfo);

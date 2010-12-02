@@ -6,6 +6,7 @@
 #include <vector>
 #include <exception>
 
+#include "TMath.h"
 #include "TTree.h"
 #include "TFile.h"
 #include "TString.h"
@@ -69,7 +70,13 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
 {
    std::cout <<"addEventsToFactoryByHand option="<<opt<<std::endl;
    TString option=opt;
-   TString _methodTitle="LD",_methodOption="!H:!V"; // fix me
+   bool useWeights = option.Contains("useWeights");
+   bool useNegWeights = option.Contains("useNegWeights");
+   TString _methodTitle,_methodOption="!H:!V"; // fix me
+   if (option.Contains("useBDT")) _methodTitle="BDT";
+   else if (option.Contains("useMLP")) _methodTitle="MLP";
+   else _methodTitle="LD";
+
    TString prepareString="";
    string factoryOptions( "!V:Silent:Transformations=I:AnalysisType=Classification:!Color:!DrawProgressBar" );
    TString outfileName( "ByHand.root" );
@@ -77,34 +84,45 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
  Factory* factory = new Factory(factoryname,outputFile,factoryOptions);
    factory->AddVariable( "var0",  "Variable 0", 'F' );
    factory->AddVariable( "var1",  "Variable 1", 'F' );
-   if (option.Contains("var2"))  factory->AddVariable( "var2",  "Var 2", 'F' );
-   if (option.Contains("ivar0")) factory->AddVariable( "ivar0",  "Var i0", 'I' );
-   vector <double> vars(2);
+
+   vector <double> vars(3);
    TRandom3 r(99);
+   double weight = 1.;
    for (int i=0;i<100;i++){
-      vars[0]=r.Gaus(1.,2.);
-      vars[1]=0.5*r.Gaus(1.,2.)+r.Rndm();      
-      factory->AddSignalTrainingEvent( vars, 1.0 );
-      factory->AddSignalTestEvent( vars, 1.0 );
+      if (useWeights){
+         vars[0]= 4. * (r.Rndm()-0.5);
+         vars[1]= 4. * (r.Rndm()-0.5);
+         weight = TMath::Gaus(vars[0],1.,1.)*TMath::Gaus(vars[1],0.,1.);
+         if (useNegWeights && i>90) weight = -weight;
+      }
+      else {
+         vars[0]=r.Gaus(1.,1.);
+         vars[1]=r.Gaus(0.,1.);
+      }
+      factory->AddSignalTrainingEvent( vars, weight );
+      factory->AddSignalTestEvent( vars, weight );
    }
    for (int i=0;i<100;i++){
-      vars[0]=r.Gaus(0.,2.);
-      vars[1]=-0.5*r.Gaus(1.,2.)+r.Rndm();
-      factory->AddBackgroundTrainingEvent( vars, 1.0 );
-      factory->AddBackgroundTestEvent( vars, 1.0 );
+      vars[0]= 4. * (r.Rndm()-0.5);
+      vars[1]= 4. * (r.Rndm()-0.5);
+      weight = 1.;
+      factory->AddBackgroundTrainingEvent( vars, weight);
+      factory->AddBackgroundTestEvent( vars, weight);      
    }
    if (prepareString=="") prepareString = "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" ;
    factory->PrepareTrainingAndTestTree( "", "", prepareString);
-   factory->BookMethod(TMVA::Types::kLD,"LD","!H:!V");
+
+   factory->BookMethod(_methodTitle,_methodTitle, "!H:!V");
    factory->TrainAllMethods();
    factory->TestAllMethods();
    factory->EvaluateAllMethods();
    MethodBase* theMethod = dynamic_cast<TMVA::MethodBase*> (factory->GetMethod(_methodTitle));
    double ROCValue = theMethod->GetROCIntegral(); 
+   //cout << "ROC="<<ROCValue<<endl;
    delete factory;
    outputFile->Close(); 
    if (outputFile) delete outputFile;
-   return (ROCValue>0.7);
+   return (ROCValue>0.6);
 }
 
 bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
@@ -128,7 +146,7 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
 
    TString _methodTitle="LD",_methodOption="!H:!V"; // fix me
    TString prepareString="";
-   string factoryOptions( "!V:Silent:Transformations=I;D;P;G,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
+   string factoryOptions( "!V:Silent:Transformations=I,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
    TString outfileName( "TMVA.root" );
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
    if (option.Contains("LateTreeBooking") && option.Contains("MemoryResidentTree")) tree = create_Tree();
@@ -174,12 +192,26 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
 void utFactory::run()
 {
    // create three factories with two methods each
+   test_(addEventsToFactoryByHand("ByHand","")); // uses Factory::AddSignalTrainingEvent
+   test_(addEventsToFactoryByHand("ByHand2","useWeights")); 
+
+   test_(addEventsToFactoryByHand("ByHand","useMLP")); // uses Factory::AddSignalTrainingEvent
+   test_(addEventsToFactoryByHand("ByHand2","useWeights:useMLP")); 
+
+
+   test_(addEventsToFactoryByHand("ByHand","useBDT")); // uses Factory::AddSignalTrainingEvent
+   test_(addEventsToFactoryByHand("ByHand2","useWeights:useNegWeights:useBDT")); 
+   test_(addEventsToFactoryByHand("ByHand2","useWeights:useBDT")); 
+
+
+
    test_(operateSingleFactory("TMVATest","StringMethodBooking"));
    test_(operateSingleFactory("TMVATest",""));
    test_(operateSingleFactory("TMVATest3Var","var2"));
    test_(operateSingleFactory("TMVATest3VarF2VarI","var2:ivar0:ivar1"));
 
-   test_(addEventsToFactoryByHand("ByHand","")); // uses Factory::AddSignalTrainingEvent
+
+// uses Factory::AddSignalTrainingEvent
 
    //creates crash test_(operateSingleFactory("TMVATest","MemoryResidentTree:StringMethodBooking"));
    //creates crash test_(operateSingleFactory("TMVATest","MemoryResidentTree"));
