@@ -120,10 +120,6 @@ void MethodUnitTestWithROCLimits::run()
   
   // Reader tests
 
-  if (_methodTitle == "BoostedFisher") {
-     std::cout << "Warning: reader tests of BoostedFisher give a segfault, skipping reader test"<<std::endl;
-     return;
-  }
   // setup test tree access
   TFile* testFile = new TFile("TMVA.root");
   TTree* testTree = (TTree*)(testFile->Get("TestTree"));
@@ -148,7 +144,11 @@ void MethodUnitTestWithROCLimits::run()
 
   std::vector< TMVA::Reader* > reader(3);
   for (int iTest=0;iTest<nTest;iTest++){
-     
+     //std::cout << "iTest="<<iTest<<std::endl;
+     if (iTest >0 && _methodTitle == "BoostedFisher") {
+        std::cout << "Warning: some reader tests of BoostedFisher give a segfault, skipping reader iTest="<<iTest<<std::endl;
+        continue;
+     }
      if (iTest==0){
         reader[iTest] = new TMVA::Reader( "!Color:Silent" );
         for (UInt_t i=0;i<_VariableNames->size();i++)
