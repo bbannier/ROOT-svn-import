@@ -34,7 +34,8 @@ RooPoisson::RooPoisson(const char *name, const char *title,
 		       RooAbsReal& _mean) :
   RooAbsPdf(name,title), 
   x("x","x",this,_x),
-  mean("mean","mean",this,_mean)
+  mean("mean","mean",this,_mean),
+  fNoRounding(false)
 { 
   // Constructor
 } 
@@ -45,7 +46,8 @@ RooPoisson::RooPoisson(const char *name, const char *title,
  RooPoisson::RooPoisson(const RooPoisson& other, const char* name) :  
    RooAbsPdf(other,name), 
    x("x",this,other.x),
-   mean("mean",this,other.mean)
+   mean("mean",this,other.mean),
+   fNoRounding(other.fNoRounding)
 { 
    // Copy constructor
 } 
@@ -57,8 +59,10 @@ RooPoisson::RooPoisson(const char *name, const char *title,
 Double_t RooPoisson::evaluate() const 
 { 
   // Implementation in terms of the TMath Poisson function
-
+  
   Double_t k = floor(x);  
+  if(fNoRounding) k = x;
+
   return TMath::Poisson(k,mean) ;
 } 
 
