@@ -18,7 +18,13 @@
 
   <Input>./config/example_channel.xml</Input>
 
-  <Measurement Name="Example" Lumi="1" LumiRelErr="0.05" BinLow="0" BinHigh="2" Mode="comb">
+  <Measurement Name="GammaExample" Lumi="1." LumiRelErr="0.1" BinLow="0" BinHigh="2" Mode="comb" >
+    <POI>SigXsecOverSM</POI>
+    <ParamSetting Const="True">Lumi alpha_syst1</ParamSetting>
+    <ConstraintTerm Type="Gamma" RelativeUncertainty="1.4">syst2</ConstraintTerm>
+  </Measurement>
+
+  <Measurement Name="ConstExample" Lumi="1." LumiRelErr="0.1" BinLow="0" BinHigh="2" Mode="comb" ExportOnly="True">
     <POI>SigXsecOverSM</POI>
     <ParamSetting Const="True">Lumi alpha_syst1</ParamSetting>
   </Measurement>
