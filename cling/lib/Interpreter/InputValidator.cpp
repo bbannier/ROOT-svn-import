@@ -20,7 +20,7 @@ m_CI(CI), m_PP(0) {
     = llvm::MemoryBuffer::getMemBuffer("//cling InputSanitizer");
   CI->getSourceManager().createMainFileIDForMemBuffer(MemoryBuffer);
   m_PP->getBuiltinInfo().InitializeBuiltins(m_PP->getIdentifierTable(),
-                                            m_PP->getLangOptions().NoBuiltin);
+                                            m_PP->getLangOptions());
   m_PP->EnterMainSourceFile();  
 }
 
