@@ -81,12 +81,16 @@ ROOFITCORELIBDEPM      = $(HISTLIB) $(GRAFLIB) $(MATRIXLIB) $(TREELIB) \
                          $(MINUITLIB) $(IOLIB) $(MATHCORELIB) $(FOAMLIB)
 ROOFITLIBDEPM          = $(ROOFITCORELIB) $(TREELIB) $(IOLIB) $(MATRIXLIB) \
                          $(MATHCORELIB)
+ifeq ($(BUILDMATHMORE),yes)
+ROOFITLIBDEPM         += $(MATHMORELIB)
+endif
 ROOSTATSLIBDEPM        = $(ROOFITLIB) $(ROOFITCORELIB) $(TREELIB) $(IOLIB) \
-                         $(MATRIXLIB) $(HISTLIB) $(MATHCORELIB) $(GRAFLIB) \
-                         $(GPADLIB)
+                         $(HISTLIB) $(MATRIXLIB) $(MATHCORELIB) $(MINUITLIB) \
+                         $(FOAMLIB) $(GRAFLIB) $(GPADLIB)
 HISTFACTORYLIBDEPM     = $(ROOFITLIB) $(ROOFITCORELIB) $(TREELIB) $(IOLIB) \
-                         $(MATRIXLIB) $(HISTLIB) $(MATHCORELIB) $(GRAFLIB) \
-                         $(GPADLIB) $(XMLLIB) $(ROOSTATSLIB) $(XMLPARSERLIB) 
+                         $(HISTLIB) $(MATRIXLIB) $(MATHCORELIB) $(MINUITLIB) \
+                         $(FOAMLIB) $(GRAFLIB) $(GPADLIB) $(ROOSTATSLIB) \
+                         $(XMLPARSERLIB) 
 CINTEXLIBDEPM          = $(REFLEXLIB)
 REFLEXDICTLIBDEPM      = $(REFLEXLIB)
 RAUTHLIBDEPM           = $(NETLIB) $(IOLIB)
@@ -330,6 +334,9 @@ ROOFITCORELIBEXTRA      = lib/libHist.lib lib/libGraf.lib lib/libMatrix.lib \
                           lib/libMathCore.lib lib/libFoam.lib
 ROOFITLIBEXTRA          = lib/libRooFitCore.lib lib/libTree.lib lib/libRIO.lib \
                           lib/libMatrix.lib lib/libMathCore.lib
+ifeq ($(BUILDMATHMORE),yes)
+ROOFITLIBEXTRA         += lib/libMathMore.lib
+endif
 ROOSTATSLIBEXTRA        = lib/libRooFit.lib lib/libRooFitCore.lib \
                           lib/libTree.lib lib/libRIO.lib lib/libHist.lib \
                           lib/libMatrix.lib lib/libMathCore.lib \
@@ -460,10 +467,13 @@ ALIENLIBEXTRA           = -Llib -lXMLIO -lNetx -lTree -lProofPlayer -lNet -lRIO
 ROOFITCORELIBEXTRA      = -Llib -lHist -lGraf -lMatrix -lTree -lMinuit -lRIO \
                           -lMathCore -lFoam
 ROOFITLIBEXTRA          = -Llib -lRooFitCore -lTree -lRIO -lMatrix -lMathCore
-ROOSTATSLIBEXTRA        = -Llib -lRooFit -lRooFitCore -lTree -lRIO -lMatrix \
-                          -lHist -lMathCore -lMinuit -lFoam -lGraf -lGpad
-HISTFACTORYLIBEXTRA     = -Llib -lRooFit -lRooFitCore -lTree -lRIO -lMatrix \
-                          -lHist -lMathCore -lGraf -lGpad -lMinuit -lFoam \
+ifeq ($(BUILDMATHMORE),yes)
+ROOFITLIBEXTRA         += -lMathMore
+endif
+ROOSTATSLIBEXTRA        = -Llib -lRooFit -lRooFitCore -lTree -lRIO -lHist \
+                          -lMatrix -lMathCore -lMinuit -lFoam -lGraf -lGpad
+HISTFACTORYLIBEXTRA     = -Llib -lRooFit -lRooFitCore -lTree -lRIO -lHist \
+                          -lMatrix -lMathCore -lMinuit -lFoam -lGraf -lGpad \
                           -lRooStats -lXMLParser
 CINTEXLIBEXTRA          = -Llib -lReflex
 REFLEXDICTLIBEXTRA      = -Llib -lReflex
