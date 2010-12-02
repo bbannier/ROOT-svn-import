@@ -2,7 +2,7 @@
 using namespace RooFit;
 TestNonCentral(){
   gSystem->Load("libMathMore");
-  //  gROOT->ProcessLine(".L NonCentralChiSquare.cxx+");
+ 
 
   RooWorkspace w("w");
   // k <2, must use sum
@@ -11,7 +11,7 @@ TestNonCentral(){
   w.factory("NonCentralChiSquare::ncc(x,kk[2.01,0,5],lambda)");
   // kk > 2, force sum
   w.factory("NonCentralChiSquare::nccc(x,kk,lambda)");
-  ((NonCentralChiSquare*)w.pdf("nccc"))->SetForceSum(true);
+  ((RooNonCentralChiSquare*)w.pdf("nccc"))->SetForceSum(true);
 
   // a normal "central" chi-square for comparision when lambda->0
   w.factory("ChiSquarePdf::cs(x,k)");
