@@ -227,7 +227,6 @@ void MethodUnitTestWithROCLimits::run()
       || _methodType==Types::kPDERS
       || _methodType==Types::kRuleFit
       || _methodType==Types::kPDEFoam
-      || _methodType==Types::kSVM
       || _methodTitle == "BoostedFisher"
       ) _DoTestCCode=false;
 
