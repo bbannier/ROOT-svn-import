@@ -26,6 +26,7 @@
 #pragma link C++ class RooNDKeysPdf+ ;
 #pragma link C++ class RooLandau+ ;
 #pragma link C++ class RooNonCPEigenDecay+ ;
+#pragma link C++ class RooNonCentralChiSquare+ ;
 #pragma link C++ class RooNovosibirsk+ ;
 #pragma link C++ class RooParametricStepFunction+ ;
 #pragma link C++ class RooPolynomial+ ;
