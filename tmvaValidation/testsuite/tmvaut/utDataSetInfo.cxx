@@ -53,6 +53,7 @@ void utDataSetInfo::run()
 void utDataSetInfo::testConstructor()
 {
    datasetinfo  = new DataSetInfo(name);
+   datasetinfo->SetMsgType(TMVA::kWARNING);
    test_(datasetinfo->GetName() == name);
 }
 
