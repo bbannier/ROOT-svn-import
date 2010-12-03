@@ -725,10 +725,9 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetMulticlassValues()
       fMulticlassReturnVal = new std::vector<Float_t>();
    fMulticlassReturnVal->clear();
 
-   std::vector<double> temp;
-
+   std::vector<Float_t> temp;  // temp class. values
+   Float_t norm = 0.0;         // normalization
    UInt_t nClasses = DataInfo().GetNClasses();
-   Float_t norm = 0.0;
    for (UInt_t iClass = 0; iClass < nClasses; ++iClass) {
       temp.push_back(fFoam.at(iClass)->GetCellValue(xvec, kValue, fKernelEstimator));
       norm += temp.back();
