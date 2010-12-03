@@ -63,17 +63,20 @@ void MethodUnitTestWithROCLimits::run()
   factory->AddVariable( _VariableNames->at(3),                "Variable 4", "units", 'F' );
   
   TFile* input(0);
-// FIXME:: give the filename of the sample somewhere else?
-  TString fname = "../tmva/test/data/toy_sigbkg.root"; //tmva_example.root"; 
-  TString fname2 = TString("../")+fname;
 
-  input = TFile::Open( fname );  
-  if (input == NULL) input = TFile::Open( fname2 );
-  if (input == NULL) input = TFile::Open( "http://root.cern.ch/files/tmva_example.root" );
-  if (input == NULL) 
-    {
-      cerr << "broken/inaccessible input file" << endl;
-    }
+  FileStat_t stat;
+  
+  TString fname = "../tmva/test/data/toy_sigbkg.root"; //tmva_example.root"; 
+  if(!gSystem->GetPathInfo(fname,stat)) {
+     input = TFile::Open( fname );
+  } else if(!gSystem->GetPathInfo("../"+fname,stat)) {
+     input = TFile::Open( "../"+fname );
+  } else {
+     input = TFile::Open( "http://root.cern.ch/files/tmva_example.root" );
+  }
+  if (input == NULL) {
+     cerr << "broken/inaccessible input file" << endl;
+  }
   
   TTree *signal     = (TTree*)input->Get("TreeS");
   TTree *background = (TTree*)input->Get("TreeB");
@@ -93,7 +96,9 @@ void MethodUnitTestWithROCLimits::run()
   factory->BookMethod(_methodType, _methodTitle, _methodOption);
 
   factory->TrainAllMethods();
+
   factory->TestAllMethods();
+
   factory->EvaluateAllMethods();
 
   _theMethod = dynamic_cast<TMVA::MethodBase*> (factory->GetMethod(_methodTitle));
@@ -116,6 +121,7 @@ void MethodUnitTestWithROCLimits::run()
   }
   outputFile->Close();
   delete factory;
+
   if (outputFile) delete outputFile;
   
   // Reader tests
@@ -157,7 +163,6 @@ void MethodUnitTestWithROCLimits::run()
      else{
         reader[iTest] = new TMVA::Reader( *_VariableNames, "!Color:Silent" );
      }
-
 
      reader[iTest] ->BookMVA( readerName, weightfile) ;
      
@@ -213,7 +218,7 @@ void MethodUnitTestWithROCLimits::run()
 
   //for (int i=0;i<nTest;i++) delete reader[i]; // why is this crashing??
 
-  cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
+  //cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
   bool _DoTestCCode=true; 
   
   // use: grep -A5  'MakeClassSpecific' ../tmva/src/Method*.cxx
