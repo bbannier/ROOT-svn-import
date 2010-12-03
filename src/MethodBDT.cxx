@@ -869,6 +869,7 @@ void TMVA::MethodBDT::UpdateTargetsRegression(vector<TMVA::Event*> eventSample, 
    //Calculate current residuals for all events and update targets for next iteration
    vector< pair<Double_t, Double_t> > temp;
    UInt_t i=0;
+   fSumOfWeights = 0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       if(first){
          fWeightedResiduals[i].first -= fBoostWeights[i];
@@ -878,8 +879,9 @@ void TMVA::MethodBDT::UpdateTargetsRegression(vector<TMVA::Event*> eventSample, 
       }
       temp.push_back(make_pair(fabs(fWeightedResiduals[i].first),fWeightedResiduals[i].second));
       i++;
+      fSumOfWeights += (*e)->GetWeight();
    }
-   fTransitionPoint = GetWeightedQuantile(temp,0.99,fSumOfWeights);
+   fTransitionPoint = GetWeightedQuantile(temp,0.01,fSumOfWeights);
    i=0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
  
@@ -929,11 +931,11 @@ Double_t TMVA::MethodBDT::GradBoost( vector<TMVA::Event*> eventSample, DecisionT
       (iLeave->first)->SetResponse(fShrinkage/DataInfo().GetNClasses()*(iLeave->second)[0]/((iLeave->second)[1]));
    }
    //call UpdateTargets before next tree is grown
+   if (fBaggedGradBoost) GetRandomSubSample();
    if(DoMulticlass())
       UpdateTargets(eventSample, cls);
    else
       UpdateTargets(eventSample);
-   if (fBaggedGradBoost) GetRandomSubSample();
    return 1; //trees all have the same weight
 }
 
@@ -961,6 +963,7 @@ Double_t TMVA::MethodBDT::GradBoostRegression( vector<TMVA::Event*> eventSample,
       }
       (iLeave->first)->SetResponse(fShrinkage*(ResidualMedian+shift));
    }
+   if (fBaggedGradBoost) GetRandomSubSample();
    UpdateTargetsRegression(eventSample);
    return 1;
 }
@@ -981,6 +984,7 @@ void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
          fBoostWeights.push_back(weightedMedian);  
       }
+      if (fBaggedGradBoost) GetRandomSubSample(); 
       UpdateTargetsRegression(eventSample,kTRUE);
    }
    else if(DoMulticlass()){
@@ -993,6 +997,7 @@ void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
             fResiduals[*e].push_back(0);   
          }
       }
+      if (fBaggedGradBoost) GetRandomSubSample(); 
    }
    else{
       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
@@ -1000,8 +1005,8 @@ void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
          (*e)->SetTarget(0,r);
          fResiduals[*e].push_back(0);         
       }
+      if (fBaggedGradBoost) GetRandomSubSample(); 
    }
-   if (fBaggedGradBoost) GetRandomSubSample(); 
 }
 //_______________________________________________________________________
 Double_t TMVA::MethodBDT::TestTreeQuality( DecisionTree *dt )
