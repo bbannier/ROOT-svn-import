@@ -714,7 +714,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft)
 	 break;
       case kDiscr:
 	 pdefoam = new PDEFoamDiscriminant(foamcaption);
-	 density = new PDEFoamDiscriminantDensity(pdefoam);
+	 density = new PDEFoamDiscriminantDensity(pdefoam, 0); // class 0 = signal
 	 break;
       case kMonoTarget:
 	 pdefoam = new PDEFoamTarget(foamcaption);
