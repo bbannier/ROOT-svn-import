@@ -163,6 +163,9 @@ namespace TMVA {
       // regression procedure
       virtual const std::vector<Float_t>& GetRegressionValues();
 
+      // reset the method
+      virtual void Reset();
+
       // ranking of input variables
       const Ranking* CreateRanking() { return 0; }
 

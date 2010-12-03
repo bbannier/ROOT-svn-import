@@ -898,6 +898,20 @@ TMVA::PDEFoamKernel* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
 }
 
 //_______________________________________________________________________
+void TMVA::MethodPDEFoam::Reset()
+{
+   // reset MethodPDEFoam
+
+   // if foams exist, delete them
+   for (UInt_t i=0; i<fFoam.size(); i++)
+      if (fFoam.at(i)) delete fFoam.at(i);
+   fFoam.clear();
+
+   if (fKernelEstimator != NULL)
+      delete fKernelEstimator;
+}
+
+//_______________________________________________________________________
 void TMVA::MethodPDEFoam::PrintCoefficients( void ) 
 {}
 
