@@ -1,0 +1,15 @@
+to run the test from scratch using a standalone TMVA directory do the following
+
+#create standlone tmva directory
+svn co https://root.cern.ch/svn/root/trunk/tmva
+#create unit testsuite
+svn co https://root.cern.ch/svn/root/branches/dev/tmvaValidation/testsuite
+cd tmva
+make
+cd test
+# this source setup.sh is important for the compilation of the unit test
+source setup.sh
+cd ../../testsuite
+make -f Makefile.standalone
+./stressTMVA
+
