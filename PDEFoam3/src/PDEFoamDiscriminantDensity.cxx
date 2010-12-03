@@ -40,16 +40,19 @@ ClassImp(TMVA::PDEFoamDiscriminantDensity)
 //_____________________________________________________________________
 TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity()
    : PDEFoamDensity()
+   , fClass(0)
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(const PDEFoam *foam)
+TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(const PDEFoam *foam, UInt_t cls)
    : PDEFoamDensity(foam)
+   , fClass(cls)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(const PDEFoamDiscriminantDensity &distr)
    : PDEFoamDensity(distr)
+   , fClass(distr.fClass)
 {
    // Copy constructor
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
@@ -105,7 +108,8 @@ Double_t TMVA::PDEFoamDiscriminantDensity::Density( Double_t *Xarg, Double_t &ev
    Double_t N_sig = 0;           // number of signal events found
    // calc number of signal events in nodes
    for (UInt_t j=0; j<nodes.size(); j++) {
-      if (nodes.at(j)->IsSignal()) N_sig += nodes.at(j)->GetWeight();
+      if (nodes.at(j)->GetClass() == fClass) 
+	 N_sig += nodes.at(j)->GetWeight();
       weighted_count += (nodes.at(j))->GetWeight();
    }
 

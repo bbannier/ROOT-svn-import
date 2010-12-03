@@ -2,11 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamDiscriminantDensity                                                  *
+ * Classes: PDEFoamDiscriminantDensity                                            *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class PDEFoamDiscriminantDensity is a class representing                        *
+ *      Class PDEFoamDiscriminantDensity is a class representing                  *
  *      n-dimensional real positive integrand function                            *
  *      The main function is Density() which provides the event density at a      *
  *      given point during the foam build-up (sampling).                          *
@@ -39,14 +39,18 @@ namespace TMVA {
    // class definition of underlying event density
    class PDEFoamDiscriminantDensity : public PDEFoamDensity  {
 
+   protected:
+      UInt_t fClass; // signal class
+
    public:
       PDEFoamDiscriminantDensity();
-      PDEFoamDiscriminantDensity(const PDEFoam *foam);
+      PDEFoamDiscriminantDensity(const PDEFoam *foam, UInt_t);
       PDEFoamDiscriminantDensity(const PDEFoamDiscriminantDensity&);
       virtual ~PDEFoamDiscriminantDensity(){};
 
       // main function used by PDEFoam
-      // returns event density at a given point by range searching in BST
+      // returns discriminant density N_class/N_total at a given point
+      // by range searching in BST
       virtual Double_t Density(Double_t *Xarg, Double_t &event_density);
 
       ClassDef(PDEFoamDiscriminantDensity,1) //Class for Discriminant density
