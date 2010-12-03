@@ -124,7 +124,6 @@ namespace TMVA {
       //----------  working space for CELL exploration -------------
       Double_t *fAlpha;          // [fDim] Internal parameters of the hyperrectangle
       // ---------  PDE-Foam specific variables
-      EFoamType fFoamType;     // type of foam
       Double_t *fXmin;         // [fDim] minimum for variable transform
       Double_t *fXmax;         // [fDim] maximum for variable transform
       UInt_t fNmin;            // minimal number of events in cell to split cell
@@ -215,7 +214,6 @@ namespace TMVA {
       void SetEvPerBin(Int_t EvPerBin){fEvPerBin =EvPerBin;} // Sets max. no. of effective events per bin
       void SetInhiDiv(Int_t, Int_t ); // Set inhibition of cell division along certain edge
       void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;} // set VolFrac
-      void SetFoamType(EFoamType ft);   // set foam type
       void SetPeekMax(Bool_t new_val){ fPeekMax = new_val; }
       void SetDensity(PDEFoamDensity *dens) { fDistr = dens; }
 
@@ -223,7 +221,6 @@ namespace TMVA {
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
       Float_t  GetVolumeFraction() const {return fVolFrac;} // get VolFrac from PDEFoam
-      EFoamType GetFoamType()      const {return fFoamType;}; // get foam type
       UInt_t   GetNActiveCells()   const {return fNoAct;}; // returns number of active cells
       UInt_t   GetNInActiveCells() const {return GetNCells()-GetNActiveCells();}; // returns number of not active cells
       UInt_t   GetNCells()         const {return fNCells;};   // returns number of cells
