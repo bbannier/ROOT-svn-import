@@ -736,9 +736,9 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetMulticlassValues()
       Double_t norm = 0.0;
       for (UInt_t j = 0; j < nClasses; j++) {
          if (iClass != j)
-            norm += exp(temp[j] - temp[iClass]);
+            norm += temp[j];
       }
-      fMulticlassReturnVal->push_back(1.0 / (1.0 + norm));
+      fMulticlassReturnVal->push_back(temp[iClass] / (temp[iClass] + norm));
    }
 
    return *fMulticlassReturnVal;
