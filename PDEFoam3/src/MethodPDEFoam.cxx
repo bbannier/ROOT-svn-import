@@ -725,8 +725,20 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetMulticlassValues()
       fMulticlassReturnVal = new std::vector<Float_t>();
    fMulticlassReturnVal->clear();
 
-   for(UInt_t iClass = 0; iClass < DataInfo().GetNClasses(); ++iClass) {
-      fMulticlassReturnVal->push_back(fFoam.at(iClass)->GetCellValue(xvec, kValue, fKernelEstimator));
+   std::vector<double> temp;
+
+   UInt_t nClasses = DataInfo().GetNClasses();
+   for (UInt_t iClass = 0; iClass < nClasses; ++iClass) {
+      temp.push_back(fFoam.at(iClass)->GetCellValue(xvec, kValue, fKernelEstimator));
+   }
+
+   for (UInt_t iClass = 0; iClass < nClasses; iClass++) {
+      Double_t norm = 0.0;
+      for (UInt_t j = 0; j < nClasses; j++) {
+         if (iClass != j)
+            norm += exp(temp[j] - temp[iClass]);
+      }
+      fMulticlassReturnVal->push_back(1.0 / (1.0 + norm));
    }
 
    return *fMulticlassReturnVal;
