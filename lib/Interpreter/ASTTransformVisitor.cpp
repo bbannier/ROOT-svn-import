@@ -6,9 +6,13 @@
 
 #include "ASTTransformVisitor.h"
 
-#include "StmtAddressPrinter.cpp"
+#include "StmtAddressPrinter.h"
 
 #include "llvm/ADT/SmallVector.h"
+
+namespace llvm {
+   class raw_string_ostream;
+}
 
 namespace cling {
 
@@ -120,8 +124,9 @@ namespace cling {
               I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
          EvalInfo EInfo = Visit(*I);
          if (EInfo.IsEvalNeeded) {
-            if (Expr *Exp = dyn_cast<Expr>(EInfo.getNewStmt()))
-               *I = BuildEvalCallExpr(Exp->getType());
+            if (Expr *E = dyn_cast<Expr>(EInfo.getNewStmt()))
+               // Assume void if still not escaped
+               *I = BuildEvalCallExpr(SemaPtr->getASTContext().VoidTy, E);
          } 
          else {
             *I = EInfo.getNewStmt();
@@ -135,26 +140,26 @@ namespace cling {
       return EvalInfo(E, E->isTypeDependent() || E->isValueDependent());
    }
 
-   EvalInfo ASTTransformVisitor::VisitCompoundStmt(CompoundStmt *S) {
-      for (CompoundStmt::body_iterator
-              I = S->body_begin(), E = S->body_end(); I != E; ++I) {
-         EvalInfo EInfo = Visit(*I);
-         if (EInfo.IsEvalNeeded) {
-            if (Expr *Exp = dyn_cast<Expr>(EInfo.getNewStmt())) {
-               QualType T = Exp->getType();
-               // Assume if still dependent void
-               if (Exp->isTypeDependent() || Exp->isValueDependent())
-                  T = SemaPtr->getASTContext().VoidTy;
+   // EvalInfo ASTTransformVisitor::VisitCompoundStmt(CompoundStmt *S) {
+   //    for (CompoundStmt::body_iterator
+   //            I = S->body_begin(), E = S->body_end(); I != E; ++I) {
+   //       EvalInfo EInfo = Visit(*I);
+   //       if (EInfo.IsEvalNeeded) {
+   //          if (Expr *Exp = dyn_cast<Expr>(EInfo.getNewStmt())) {
+   //             QualType T = Exp->getType();
+   //             // Assume if still dependent void
+   //             if (Exp->isTypeDependent() || Exp->isValueDependent())
+   //                T = SemaPtr->getASTContext().VoidTy;
 
-               *I = BuildEvalCallExpr(T);
-            }
-         } 
-         else {
-            *I = EInfo.getNewStmt();
-         }
-      }
-      return EvalInfo(S, 0);
-   }
+   //             *I = BuildEvalCallExpr(T);
+   //          }
+   //       } 
+   //       else {
+   //          *I = EInfo.getNewStmt();
+   //       }
+   //    }
+   //    return EvalInfo(S, 0);
+   // }
 
    EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *E) {
       if (E->isTypeDependent() || E->isValueDependent()) {
@@ -182,21 +187,22 @@ namespace cling {
       EvalInfo rhs = Visit(binOp->getRHS());
       EvalInfo lhs = Visit(binOp->getLHS());
 
-      if (rhs.IsEvalNeeded && !lhs.IsEvalNeeded) {
-         if (Expr *E = dyn_cast<Expr>(lhs.getNewStmt()))
-            if (!E->isTypeDependent() || !E->isValueDependent()) {
-               const QualType returnTy = E->getType();
-               binOp->setRHS(BuildEvalCallExpr(returnTy));
-            }
+      if (binOp->isAssignmentOp()) {
+         if (rhs.IsEvalNeeded && !lhs.IsEvalNeeded) {
+            if (Expr *E = dyn_cast<Expr>(lhs.getNewStmt()))
+               if (!E->isTypeDependent() || !E->isValueDependent()) {
+                  const QualType returnTy = E->getType();
+                  binOp->setRHS(BuildEvalCallExpr(returnTy, E));
+               }
+         }
       }
-      
-      if (lhs.IsEvalNeeded && !rhs.IsEvalNeeded) {
-         if (Expr *E = dyn_cast<Expr>(rhs.getNewStmt()))
-            if (!E->isTypeDependent() || !E->isValueDependent()) {
-               const QualType returnTy = E->getType();
-               binOp->setLHS(BuildEvalCallExpr(returnTy));
-            }        
-      }      
+      // if (lhs.IsEvalNeeded && !rhs.IsEvalNeeded) {
+      //    if (Expr *E = dyn_cast<Expr>(rhs.getNewStmt()))
+      //       if (!E->isTypeDependent() || !E->isValueDependent()) {
+      //          const QualType returnTy = E->getType();
+      //          binOp->setLHS(BuildEvalCallExpr(returnTy));
+      //       }        
+      // }      
       
       return EvalInfo(binOp, 0);
    }
@@ -208,7 +214,7 @@ namespace cling {
 
    // Here is the test Eval function specialization. Here the CallExpr to the function
    // is created.
-   CallExpr *ASTTransformVisitor::BuildEvalCallExpr(const QualType InstTy) {
+   CallExpr *ASTTransformVisitor::BuildEvalCallExpr(const QualType InstTy, Expr *SubTree) {
       // Set up new context for the new FunctionDecl
       DeclContext *PrevContext = SemaPtr->CurContext;
       FunctionDecl *FDecl = getEvalDecl();
@@ -253,7 +259,7 @@ namespace cling {
       
       // Prepare the actual arguments for the call
       ASTOwningVector<Expr*> CallArgs(*SemaPtr);
-      CallArgs.push_back(BuildEvalCharArg(FDecl->getParamDecl(0U)->getType()));
+      CallArgs.push_back(BuildEvalCharArg(FDecl->getParamDecl(0U)->getType(), SubTree));
 
       
       CallExpr *EvalCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
@@ -269,10 +275,17 @@ namespace cling {
    }
    
    // Creates the string, which is going to be escaped.
-   Expr *ASTTransformVisitor::BuildEvalCharArg(QualType ToType) {
+   Expr *ASTTransformVisitor::BuildEvalCharArg(QualType ToType, Expr *SubTree) {
       ASTContext *c = &SemaPtr->getASTContext();
       //TODO: Here goes the address printing
-      const char *str = "Transform World!\0";
+      std::string sbuf;
+      llvm::raw_string_ostream OS(sbuf);
+
+      StmtAddressPrinter printer(OS, *c, PrintingPolicy(SemaPtr->getLangOptions()));
+      //      printer.Visit(SubTree);
+      printer.PrintExpr(SubTree);
+      OS.flush();
+      const char *str = sbuf.c_str();
       QualType constCharArray = c->getConstantArrayType(c->getConstType(c->CharTy), llvm::APInt(32, 16U), ArrayType::Normal, 0);
       Expr *SL = StringLiteral::Create(*c, &*str, strlen(str), false, constCharArray, SourceLocation());
       //FIXME: Figure out how handle the cast kinds in the different cases
