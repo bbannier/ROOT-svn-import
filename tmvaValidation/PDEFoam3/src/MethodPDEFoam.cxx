@@ -737,9 +737,6 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft)
 
    // set fLogger attributes
    pdefoam->Log().SetMinType(this->Log().GetMinType());
-
-   // Set foam fill value
-   pdefoam->SetFoamType(ft);
    
    // set Options VolFrac, kDim, ...
    if (ft==kMultiTarget)

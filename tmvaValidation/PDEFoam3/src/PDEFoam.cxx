@@ -104,7 +104,6 @@ TMVA::PDEFoam::PDEFoam() :
    fRvec(0),
    fPseRan(new TRandom3(4356)),
    fAlpha(0),
-   fFoamType(kDiscr),
    fXmin(0),
    fXmax(0),
    fNmin(100),
@@ -136,7 +135,6 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fRvec(0),
    fPseRan(new TRandom3(4356)),
    fAlpha(0),
-   fFoamType(kDiscr),
    fXmin(0),
    fXmax(0),
    fNmin(100),
@@ -194,7 +192,6 @@ TMVA::PDEFoam::PDEFoam(const PDEFoam &From) :
    , fRvec(0)
    , fPseRan(0)
    , fAlpha(0)
-   , fFoamType(kSeparate)
    , fXmin(0)
    , fXmax(0)
    , fNmin(0)
@@ -1652,13 +1649,6 @@ void TMVA::PDEFoam::Init()
    // PDEFoamDistr
    GetDistr()->SetPDEFoam(this);
    GetDistr()->Initialize();
-}
-
-//_____________________________________________________________________
-void TMVA::PDEFoam::SetFoamType( EFoamType ft )
-{
-   // Set the foam type.
-   fFoamType = ft;
 }
 
 //_____________________________________________________________________
