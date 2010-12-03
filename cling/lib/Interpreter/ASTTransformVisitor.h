@@ -81,7 +81,7 @@ namespace cling {
 
       EvalInfo VisitStmt(Stmt *Node);
       EvalInfo VisitExpr(Expr *E);
-      EvalInfo VisitCompoundStmt(CompoundStmt *S);
+      // EvalInfo VisitCompoundStmt(CompoundStmt *S);
       EvalInfo VisitCallExpr(CallExpr *E);
       EvalInfo VisitImplicitCastExpr(ImplicitCastExpr *ICE);
       EvalInfo VisitDeclRefExpr(DeclRefExpr *DRE);
@@ -92,8 +92,8 @@ namespace cling {
 
       //region EvalBuilder
 
-      CallExpr *BuildEvalCallExpr(QualType type);
-      Expr *BuildEvalCharArg(QualType ToType);
+      CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree);
+      Expr *BuildEvalCharArg(QualType ToType, Expr *SubTree);
       
       //endregion
       
