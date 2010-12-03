@@ -139,6 +139,7 @@ namespace TMVA {
       void TrainMultiTargetRegression( void );   // Regression output: any number of values
       void TrainSeparatedClassification( void ); // Classification: one foam for Sig, one for Bg
       void TrainUnifiedClassification( void );   // Classification: one foam for Signal and Bg
+      void TrainMultiClassification();           // Classification: one foam for every class
 
       using MethodBase::ReadWeightsFromStream;
 
@@ -155,6 +156,9 @@ namespace TMVA {
 
       // calculate the MVA value
       Double_t GetMvaValue( Double_t* err = 0, Double_t* errUpper = 0 );
+
+      // calculate multiclass MVA values
+      const std::vector<Float_t>& GetMulticlassValues();
 
       // regression procedure
       virtual const std::vector<Float_t>& GetRegressionValues();
@@ -184,7 +188,7 @@ namespace TMVA {
       void SetXminXmax(TMVA::PDEFoam*);
 
       // create foam and set foam options
-      PDEFoam* InitFoam(TString, EFoamType);
+      PDEFoam* InitFoam(TString, EFoamType, UInt_t cls=0);
 
       // create pdefoam kernel
       PDEFoamKernel* CreatePDEFoamKernel();

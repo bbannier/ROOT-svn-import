@@ -66,7 +66,7 @@ namespace TMVA {
 
    enum EKernel { kNone=0, kGaus=1, kLinN=2 };
    enum ETargetSelection { kMean=0, kMpv=1 };
-   enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget };
+   enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget, kMultiClass };
 
    // enum type for possible foam cell values
    // kValue         : cell value who's rms is minimized
