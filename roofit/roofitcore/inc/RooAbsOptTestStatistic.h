@@ -41,8 +41,9 @@ public:
 
   RooAbsReal& function() { return *_funcClone ; }
   const RooAbsReal& function() const { return *_funcClone ; }
-  RooAbsData& data() { return *_dataClone ; }
-  const RooAbsData& data() const { return *_dataClone ; }
+
+  RooAbsData& data();
+  const RooAbsData& data() const;
 
   Bool_t setData(RooAbsData& data, Bool_t cloneData=kTRUE) ;
 
@@ -50,6 +51,12 @@ public:
 
   // Override this to be always true to force calculation of likelihood without parameters
   virtual Bool_t isDerived() const { return kTRUE ; }
+
+  // modifications to keep data private
+  void keepDataPrivate(){
+    _keepDataPrivate = true;
+  }
+
 
 protected:
 
@@ -70,8 +77,9 @@ protected:
   RooAbsReal* _funcClone ; // Pointer to internal clone of input function
   RooArgSet*  _projDeps ; // Set of projected observable
   Bool_t      _ownData  ; // Do we own the dataset
+  Bool_t _keepDataPrivate;
 
-  ClassDef(RooAbsOptTestStatistic,2) // Abstract base class for optimized test statistics
+  ClassDef(RooAbsOptTestStatistic,3) // Abstract base class for optimized test statistics
 };
 
 #endif

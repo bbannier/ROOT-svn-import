@@ -70,6 +70,7 @@ RooAbsOptTestStatistic:: RooAbsOptTestStatistic()
   _funcClone = 0 ;
   _projDeps = 0 ;
   _ownData = kTRUE ;
+  _keepDataPrivate = kFALSE;
 }
 
 
@@ -104,6 +105,8 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
     _normSet = 0 ;
     return ;
   }
+
+  _keepDataPrivate = kFALSE;
 
   RooArgSet obs(*indata.get()) ;
   obs.remove(projDeps,kTRUE,kTRUE) ;
@@ -364,6 +367,8 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const RooAbsOptTestStatistic& oth
     return ;
   }
 
+  _keepDataPrivate = other._keepDataPrivate;
+
   _funcCloneSet = (RooArgSet*) other._funcCloneSet->snapshot(kFALSE) ;
   _funcClone = (RooAbsReal*) _funcCloneSet->find(other._funcClone->GetName()) ;
 
@@ -444,6 +449,21 @@ RooAbsOptTestStatistic::~RooAbsOptTestStatistic()
   delete _normSet ;
 }
 
+//_____________________________________________________________________________
+RooAbsData& RooAbsOptTestStatistic::data() { 
+    if(_keepDataPrivate){
+      return *(new RooDataHist()); 
+    }
+    return *_dataClone ; 
+  }
+
+//_____________________________________________________________________________
+const RooAbsData& RooAbsOptTestStatistic::data() const { 
+    if(_keepDataPrivate){
+      return *(new RooDataHist()); 
+    }
+    return *_dataClone ; 
+  }
 
 
 //_____________________________________________________________________________
