@@ -1041,11 +1041,9 @@ void  TMVA::MethodPDEFoam::ReadWeightsFromStream( istream& istr )
    UInt_t kDim = GetNvar();
    if (fMultiTargetRegression)
       kDim += Data()->GetNTargets();
+   fXmin.assign(kDim, 0);
+   fXmax.assign(kDim, 0);
 
-   for (UInt_t i=0; i<kDim; i++) {
-      fXmin.push_back(0.);
-      fXmax.push_back(0.);
-   }
    // read range
    for (UInt_t i=0; i<kDim; i++) 
       istr >> fXmin.at(i);
@@ -1096,11 +1094,8 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
    UInt_t kDim = GetNvar();
    if (fMultiTargetRegression)
       kDim += Data()->GetNTargets();
-
-   for (UInt_t i=0; i<kDim; i++) {
-      fXmin.push_back(0.);
-      fXmax.push_back(0.);
-   }
+   fXmin.assign(kDim, 0);
+   fXmax.assign(kDim, 0);
 
    // read foam range
    void *xmin_wrap = gTools().GetChild( wghtnode );
