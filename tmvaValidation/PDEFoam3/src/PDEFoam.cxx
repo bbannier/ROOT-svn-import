@@ -931,10 +931,11 @@ void TMVA::PDEFoam::PrintCells(void)
 //_____________________________________________________________________
 void TMVA::PDEFoam::FillFoamCells(const Event* ev, Float_t wt)
 {
-   // This function fills an weight 'wt' into the PDEFoam cell, which
-   // corresponds to the given event 'ev'.  Cell element 0 is filled
-   // with the weight 'wt', and element 1 is filled with the squared
-   // weight.
+   // This function fills a weight 'wt' into the PDEFoam cell, which
+   // corresponds to the given event 'ev'.  Per default cell element 0
+   // is filled with the weight 'wt', and cell element 1 is filled
+   // with the squared weight.  This function can be overridden by a
+   // subclass in order to change the values stored in the foam cells.
 
    // find corresponding foam cell
    std::vector<Float_t> values  = ev->GetValues();
@@ -950,7 +951,7 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Float_t wt)
 //_____________________________________________________________________
 void TMVA::PDEFoam::ResetCellElements()
 {
-   // remove all cell elements
+   // Remove the cell elements from all cells.
 
    if (!fCells) return;
 
@@ -968,6 +969,8 @@ void TMVA::PDEFoam::ResetCellElements()
 Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
 {
    // Returns true, if the value of the given cell is undefined.
+   // Default value: kFALSE.  This function can be overridden by
+   // sub-classes.
    return kFALSE;
 }
 
@@ -979,6 +982,20 @@ Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, P
    // given by the parameter 'cv'.  If kernel != NULL, then
    // PDEFoamKernel::Estimate() is called on the transformed event
    // variables.
+   //
+   // Parameters:
+   // 
+   // - xvec - event vector (untransformed, [fXmin,fXmax])
+   //
+   // - cv - the cell value to return
+   //
+   // - kernel - PDEFoam kernel estimator.  If NULL is given, than the
+   //   pure cell value is returned
+   //
+   // Return:
+   //
+   // The cell value, corresponding to 'xvec', estimated by the given
+   // kernel.
    
    std::vector<Float_t> txvec(VarTransform(xvec));
    if (kernel == NULL)
@@ -1002,6 +1019,10 @@ std::vector<Float_t> TMVA::PDEFoam::GetCellValue( std::map<Int_t,Float_t>& xvec,
    //   specified.
    //
    // - cv - cell values to return
+   //
+   // Return:
+   //
+   // cell values from all cells that were found
 
    // transformed event
    std::map<Int_t,Float_t> txvec;
@@ -1038,6 +1059,14 @@ TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> &xvec )
    // if 'xvec' lies outside the foam, the cell which is nearest to
    // 'xvec' is returned.  (The returned pointer should never be
    // NULL.)
+   //
+   // Parameters:
+   //
+   // - xvec - event vector (in foam coordinates [0,1])
+   //
+   // Return:
+   //
+   // PDEFoam cell corresponding to 'xvec'
 
    PDEFoamVect  cellPosi0(GetTotDim()), cellSize0(GetTotDim());
    PDEFoamCell *cell, *cell0;
@@ -1060,19 +1089,22 @@ TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> &xvec )
 //_____________________________________________________________________
 void TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t> &txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
 {
-   // This is a helper function for FindCells().  It saves in 'cells'
-   // all cells, which contain the coordinates specifies in 'txvec'.
-   // It works analogous to FindCell().
+   // This is a helper function for std::vector<PDEFoamCell*>
+   // FindCells(...) and a generalisation of PDEFoamCell* FindCell().
+   // It saves in 'cells' all cells, which contain the coordinates
+   // specifies in 'txvec'.  Note, that not all coordinates have to be
+   // specified in 'txvec'.
    //
    // Parameters:
    //
-   // - txvec - untransformed event vector.  The key is the dimension
-   //   and the value is the event coordinate.
+   // - txvec - event vector in foam coordinates [0,1].  The key is
+   //   the dimension and the value is the event coordinate.  Note,
+   //   that not all coordinates have to be specified.
    //
    // - cell - cell to start searching with (usually root cell
    //   fCells[0])
    //
-   // - cells - list of cells found
+   // - cells - list of cells that were found
 
    PDEFoamVect  cellPosi0(GetTotDim()), cellSize0(GetTotDim());
    PDEFoamCell *cell0;
@@ -1379,7 +1411,8 @@ Float_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
 //_____________________________________________________________________
 Float_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 {
-   // Returns cell element i of cell 'cell'.
+   // Returns cell element i of cell 'cell'.  If the cell has no
+   // elements or the index 'i' is out of range, than 0 is returned.
 
    // dynamic_cast doesn't seem to work here ?!
    TVectorF *vec = (TVectorF*)cell->GetElement();
@@ -1635,15 +1668,16 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
 //_____________________________________________________________________
 void TMVA::PDEFoam::FillBinarySearchTree( const Event* ev )
 {
-   // Insert event to internal foam density estimator PDEFoamDensity.
+   // Insert event to internal foam's density estimator
+   // PDEFoamDensity.
    GetDistr()->FillBinarySearchTree(ev);
 }
 
 //_____________________________________________________________________
 void TMVA::PDEFoam::DeleteBinarySearchTree()
 { 
-   // Delete the foam density estimator fDistr, which contains the
-   // binary search tree.
+   // Delete the foam's density estimator, which contains the binary
+   // search tree.
    if(fDistr) delete fDistr; 
    fDistr = NULL;
 }
@@ -1651,8 +1685,8 @@ void TMVA::PDEFoam::DeleteBinarySearchTree()
 //_____________________________________________________________________
 void TMVA::PDEFoam::Init()
 {
-   // Initialize binary search tree, stored in object of type
-   // PDEFoamDistr
+   // Initialize the foam's density estimator, which contains the
+   // binary search tree.
    GetDistr()->SetPDEFoam(this);
    GetDistr()->Initialize();
 }
