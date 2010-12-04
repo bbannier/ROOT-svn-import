@@ -264,16 +264,6 @@ namespace TMVA {
       // Message logger
       MsgLogger& Log() const { return *fLogger; }
 
-      // ---------- Foam output
-
-      friend std::ostream& operator<< ( std::ostream& os, const PDEFoam& pdefoam );
-      friend std::istream& operator>> ( std::istream& istr,     PDEFoam& pdefoam );
-
-      void ReadStream(istream &);         // read  foam from stream
-      void PrintStream(ostream  &) const; // write foam from stream
-      void ReadXML( void* parent );       // read  foam variables from xml
-      void AddXMLTo( void* parent );      // write foam variables to xml
-
       // ---------- Foam projection methods
 
       // project foam to two-dimensional histogram
