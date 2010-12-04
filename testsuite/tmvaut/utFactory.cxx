@@ -21,16 +21,16 @@ using namespace std;
 using namespace UnitTesting;
 using namespace TMVA;
 
-utFactory::utFactory(const char* /*theOption*/) 
+utFactory::utFactory(const char* /*theOption*/)
    : UnitTest(string("Factory"))
-{ 
+{
 
 }
 utFactory::~utFactory(){ }
 TTree* utFactory::create_Tree(const char* opt)
 {
    TString option = opt;
-   const int nmax=100; 
+   const int nmax=100;
    const int nvar=3, nfval=2, nivar=2, nclass=3;
    float weight=1.;
    vector<float> var(nvar), fval(nfval); // fix me hardcoded nvar
@@ -87,7 +87,7 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
    factory->AddVariable( "var0",  "Variable 0", 'F' );
    factory->AddVariable( "var1",  "Variable 1", 'F' );
 
-   vector <double> vars(3);
+   vector <double> vars(2);
    TRandom3 r(99);
    double weight = 1.;
    for (int i=0;i<100;i++){
@@ -109,7 +109,7 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
       vars[1]= 4. * (r.Rndm()-0.5);
       weight = 1.;
       factory->AddBackgroundTrainingEvent( vars, weight);
-      factory->AddBackgroundTestEvent( vars, weight);      
+      factory->AddBackgroundTestEvent( vars, weight);
    }
    if (prepareString=="") prepareString = "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" ;
    factory->PrepareTrainingAndTestTree( "", "", prepareString);
@@ -119,10 +119,10 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
    factory->TestAllMethods();
    factory->EvaluateAllMethods();
    MethodBase* theMethod = dynamic_cast<TMVA::MethodBase*> (factory->GetMethod(_methodTitle));
-   double ROCValue = theMethod->GetROCIntegral(); 
+   double ROCValue = theMethod->GetROCIntegral();
    //cout << "ROC="<<ROCValue<<endl;
    delete factory;
-   outputFile->Close(); 
+   outputFile->Close();
    if (outputFile) delete outputFile;
    return (ROCValue>0.6);
 }

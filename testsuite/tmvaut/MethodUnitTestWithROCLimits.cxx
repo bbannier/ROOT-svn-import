@@ -77,7 +77,6 @@ void MethodUnitTestWithROCLimits::run()
    factory->AddVariable( _VariableNames->at(3),                "Variable 4", "units", 'F' );
 
    TFile* input(0);
-
    FileStat_t stat;
 
    TString fname = "../tmva/test/data/toy_sigbkg.root"; //tmva_example.root";
