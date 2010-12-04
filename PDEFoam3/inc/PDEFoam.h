@@ -125,7 +125,6 @@ namespace TMVA {
       Double_t *fXmax;         // [fDim] maximum for variable transform
       UInt_t fNmin;            // minimal number of events in cell to split cell
       UInt_t fMaxDepth;        // maximum depth of cell tree
-      Float_t fVolFrac;        // volume fraction (with respect to total phase space
       PDEFoamDensity *fDistr;  //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names

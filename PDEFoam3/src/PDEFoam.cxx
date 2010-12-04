@@ -155,7 +155,6 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fXmax(0),
    fNmin(100),
    fMaxDepth(0),
-   fVolFrac(30.0),
    fDistr(NULL),
    fTimer(new Timer(1, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -210,7 +209,6 @@ TMVA::PDEFoam::PDEFoam(const PDEFoam &From) :
    , fXmin(0)
    , fXmax(0)
    , fNmin(0)
-   , fVolFrac(0)
    , fDistr(0)
    , fTimer(0)
    , fVariableNames(0)
