@@ -987,6 +987,7 @@ Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, P
       return kernel->Estimate(this, txvec, cv);
 }
 
+//_____________________________________________________________________
 std::vector<Float_t> TMVA::PDEFoam::GetCellValue( std::map<Int_t,Float_t>& xvec, ECellValue cv )
 {
    // This function finds all cells, which corresponds to the given
@@ -1108,12 +1109,13 @@ std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::vector<Float_t> &t
 {
    // Find all cells, that contain txvec.  This function can be used,
    // when the dimension of the foam is greater than the dimension of
-   // txvec.  E.G this is the case for multi-target regression
+   // txvec.  E.g. this is the case for multi-target regression.
    //
    // Parameters:
    //
-   // - txvec - vector of variables (no targets!) (transformed into
-   //   foam)
+   // - txvec - event vector of variables, transformed into foam
+   //   coordinates [0,1].  The size of txvec can be smaller than the
+   //   dimension of the foam.
    //
    // Return value:
    //
@@ -1138,11 +1140,13 @@ std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t
 {
    // Find all cells, that contain the coordinates specified in txvec.
    // The key in 'txvec' is the dimension, and the corresponding value
-   // is the coordinate.
+   // is the coordinate.  Note, that not all coordinates have to be
+   // specified in txvec.
    //
    // Parameters:
    //
-   // - txvec - map of coordinates (transformed into foam)
+   // - txvec - map of coordinates (transformed into foam coordinates
+   //   [0,1])
    //
    // Return value:
    //
@@ -1390,7 +1394,8 @@ Float_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 //_____________________________________________________________________
 void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Float_t value )
 {
-   // Set cell element i of cell to value.
+   // Set cell element i of cell to value.  If the cell element i does
+   // not exist, it is created.
 
    TVectorF *vec = NULL;
 
@@ -1630,14 +1635,15 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
 //_____________________________________________________________________
 void TMVA::PDEFoam::FillBinarySearchTree( const Event* ev )
 {
-   // Insert event to internal foam density PDEFoamDistr.
+   // Insert event to internal foam density estimator PDEFoamDensity.
    GetDistr()->FillBinarySearchTree(ev);
 }
 
 //_____________________________________________________________________
 void TMVA::PDEFoam::DeleteBinarySearchTree()
 { 
-   // Delete the fDistr object, which contains the binary search tree
+   // Delete the foam density estimator fDistr, which contains the
+   // binary search tree.
    if(fDistr) delete fDistr; 
    fDistr = NULL;
 }
