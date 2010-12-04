@@ -234,9 +234,7 @@ void TMVA::MethodPDEFoam::ProcessOptions()
 
    // DT logic is only applicable if a single foam is trained
    if (fSigBgSeparated && fDTLogic != "None") {
-      Log() << kWARNING << "Decision tree logic works only for a single foam (SigBgSeparate=F)" << Endl;
-      fDTLogic = "None";
-      fDTSeparation = kFoam;
+      Log() << kFATAL << "Decision tree logic works only for a single foam (SigBgSeparate=F)" << Endl;
    }
 
    // set separation to use
@@ -767,7 +765,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
    PDEFoam *pdefoam = NULL;
    PDEFoamDensity *density = NULL;
    if (fDTSeparation == kFoam) {
-      // set the density type
+      // use PDEFoam algorithm
       switch (ft) {
       case kSeparate:
 	 pdefoam = new PDEFoamEvent(foamcaption);
@@ -791,9 +789,19 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 	 break;
       }
    } else {
-      // create a decision tree like pdefoam
-      pdefoam = new PDEFoamDecisionTree(foamcaption, 0, fDTSeparation);
-      density = new PDEFoamDTDensity(pdefoam);
+      // create a decision tree like PDEfoam
+      switch (ft) {
+      case kDiscr:
+      case kMultiClass:
+	 pdefoam = new PDEFoamDecisionTree(foamcaption, cls, fDTSeparation);
+	 density = new PDEFoamDTDensity(pdefoam, cls);
+	 break;
+      default:
+	 Log() << kFATAL << "Decision tree cell split algorithm is only"
+	       << " available for (multi) classification with a single"
+	       << " PDE-Foam (SigBgSeparate=F)" << Endl;
+	 break;
+      }
    }
    density->SetVolumeFraction(fVolFrac); // set range-searching volume
    pdefoam->SetDensity(density);

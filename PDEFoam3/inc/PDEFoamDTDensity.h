@@ -41,9 +41,12 @@ namespace TMVA {
    // class definition of underlying event density
    class PDEFoamDTDensity : public PDEFoamDensity  {
 
+   protected:
+      UInt_t fClass; // signal class
+
    public:
       PDEFoamDTDensity();
-      PDEFoamDTDensity(const PDEFoam *foam);
+      PDEFoamDTDensity(const PDEFoam *foam, UInt_t);
       PDEFoamDTDensity(const PDEFoamDTDensity&);
       virtual ~PDEFoamDTDensity(){};
 

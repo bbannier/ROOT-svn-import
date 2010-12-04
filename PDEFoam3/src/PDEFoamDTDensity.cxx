@@ -47,16 +47,19 @@ ClassImp(TMVA::PDEFoamDTDensity)
 //_____________________________________________________________________
 TMVA::PDEFoamDTDensity::PDEFoamDTDensity()
    : PDEFoamDensity()
+   , fClass(0)
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoam *foam)
+TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoam *foam, UInt_t cls)
    : PDEFoamDensity(foam)
+   , fClass(cls)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoamDTDensity &distr)
    : PDEFoamDensity(distr)
+   , fClass(0)
 {
    // Copy constructor
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
