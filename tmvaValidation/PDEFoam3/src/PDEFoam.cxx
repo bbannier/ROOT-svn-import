@@ -28,10 +28,9 @@
 //
 // Implementation of PDEFoam
 //
-// The PDEFoam method is an
-// extension of the PDERS method, which uses self-adapting binning to
-// divide the multi-dimensional phase space in a finite number of
-// hyper-rectangles (boxes).
+// The PDEFoam method is an extension of the PDERS method, which uses
+// self-adapting binning to divide the multi-dimensional phase space
+// in a finite number of hyper-rectangles (boxes).
 //
 // For a given number of boxes, the binning algorithm adjusts the size
 // and position of the boxes inside the multidimensional phase space,
@@ -41,8 +40,24 @@
 // events.
 //
 // The implementation of the PDEFoam is based on the monte-carlo
-// integration package PDEFoam included in the analysis package ROOT.
-//_____________________________________________________________________
+// integration package TFoam included in the analysis package ROOT.
+//
+// The class TMVA::PDEFoam defines the default interface for the
+// PDEFoam variants:
+//
+//   - PDEFoamDiscriminant
+//   - PDEFoamTarget
+//   - PDEFoamMultiTarget
+//   - PDEFoamDecisionTree
+//
+// Per default PDEFoam stores in the cells the number of events (event
+// weights) and therefore acts as an event density estimator.
+//
+// In order to use PDEFoam the user has to set the density estimator
+// of the type TMVA::PDEFoamDensity, which is used to during the foam
+// build-up.  The default PDEFoam should be used with
+// PDEFoamEventDensity.
+// _____________________________________________________________________
 
 
 #include <iostream>
