@@ -68,7 +68,9 @@ TTree* utFactory::create_Tree(const char* opt)
 
 bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* opt)
 {
+#ifdef COUTDEBUG
    std::cout <<"addEventsToFactoryByHand option="<<opt<<std::endl;
+#endif
    TString option=opt;
    bool useWeights = option.Contains("useWeights");
    bool useNegWeights = option.Contains("useNegWeights");
@@ -128,8 +130,9 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
 bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
 {
    if (TString(factoryname)=="") factoryname = "TMVATest";
+#ifdef COUTDEBUG
    std::cout <<"operateSingleFactory option="<<opt<<std::endl;
-   //try {
+#endif
    TString option=opt;
    TTree* tree(0);
    TFile* inFile(0);
@@ -177,7 +180,7 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
    double ROCValue = theMethod->GetROCIntegral();   
    delete tree;
    delete factory;
-   outputFile->Close(); // ???
+   outputFile->Close(); 
    if (option.Contains("InputFile")){
       inFile->Close();
    }
@@ -185,10 +188,8 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
    if (inFile) delete inFile;
 
    return (ROCValue>0.6);
-   //}
-   //catch (...) { return false;}
-
 }
+
 void utFactory::run()
 {
    // create three factories with two methods each

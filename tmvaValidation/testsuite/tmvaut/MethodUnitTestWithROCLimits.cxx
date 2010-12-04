@@ -52,8 +52,9 @@ void MethodUnitTestWithROCLimits::run()
 
 // FIXME:: make the factory option mutable?
 // absolute silence options:
-  string factoryOptions( "!V:Silent:Transformations=I;D;P;G,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
+  string factoryOptions( "!V:Silent:AnalysisType=Classification:!Color:!DrawProgressBar" );
 
+  if (_methodOption.Contains("VarTransform")) factoryOptions+=":Transformations=I;D;P;G";
   Factory* factory = new Factory( "TMVAUnitTesting", outputFile, factoryOptions );
   // factory->AddVariable( "myvar1 := var1+var2", 'F' );
   // factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
@@ -91,7 +92,7 @@ void MethodUnitTestWithROCLimits::run()
   
   // FIXME:: make options string mutable?
   factory->PrepareTrainingAndTestTree( mycuts, mycutb,
-				       "nTrain_Signal=1000:nTrain_Background=1000:SplitMode=Random:NormMode=NumEvents:!V" );
+				       "nTrain_Signal=1000:nTrain_Background=1000:nTest_Signal=5000:nTest_Background=5000:SplitMode=Random:NormMode=NumEvents:!V" );
  
   factory->BookMethod(_methodType, _methodTitle, _methodOption);
 
@@ -152,7 +153,9 @@ void MethodUnitTestWithROCLimits::run()
   for (int iTest=0;iTest<nTest;iTest++){
      //std::cout << "iTest="<<iTest<<std::endl;
      if (iTest >0 && _methodTitle == "BoostedFisher") {
+#ifdef COUTDEBUG
         std::cout << "Warning: some reader tests of BoostedFisher give a segfault, skipping reader iTest="<<iTest<<std::endl;
+#endif
         continue;
      }
      if (iTest==0){
@@ -234,6 +237,10 @@ void MethodUnitTestWithROCLimits::run()
       || _methodType==Types::kPDEFoam
       || _methodTitle == "BoostedFisher"
       ) _DoTestCCode=false;
+
+#ifndef FULL
+  _DoTestCCode=false;
+#endif
 
   if (_DoTestCCode){
      cout << "starting standalone c-code test"<<endl;
