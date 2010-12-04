@@ -15,7 +15,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -23,6 +23,30 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamMultiTarget
+//
+// This PDEFoam variant is used to estimate multiple targets by
+// creating an event density foam (PDEFoamEvent), which has dimension:
+//
+//    dimension = number of variables + number targets
+//
+// This PDEFoam variant stores in every cell the sum of event weights
+// and the sum of the squared event weights.  During evaluation for a
+// given event, which has only variables and no targets (number of
+// event variables is smaller than the foam dimension), the targets
+// are estimated by finding all cells, which correspond to this event
+// and calculate the Mean (or Mpv, depending on the ETargetSelection)
+// cell center weighted by the event density in the cell.
+//
+// This PDEFoam variant should be booked together with the
+// PDEFoamEventDensity density estimator, which returns the event
+// weight density at a given phase space point during the foam
+// build-up.
+//
+//_____________________________________________________________________
 
 #ifndef ROOT_TMVA_PDEFoamMultiTarget
 #include "TMVA/PDEFoamMultiTarget.h"

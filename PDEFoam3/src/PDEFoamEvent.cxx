@@ -15,7 +15,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -23,6 +23,19 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamEvent
+//
+// This PDEFoam variant stores in every cell the sum of event weights
+// and the sum of the squared event weights.  It therefore acts as
+// event density estimator.  It should be booked together with the
+// PDEFoamEventDensity density estimator, which returns the event
+// weight density at a given phase space point during the foam
+// build-up.
+//
+//_____________________________________________________________________
 
 #ifndef ROOT_TMVA_PDEFoamEvent
 #include "TMVA/PDEFoamEvent.h"
@@ -62,8 +75,8 @@ void TMVA::PDEFoamEvent::FillFoamCells(const Event* ev, Float_t wt)
    std::vector<Float_t> tvalues = VarTransform(values);
    PDEFoamCell *cell = FindCell(tvalues);
 
-   // 0. Element: Number of events
-   // 1. Element: RMS
+   // 0. Element: Sum of event weights 'wt'
+   // 1. Element: Sum of squared event weights 'wt'
    SetCellElement(cell, 0, GetCellElement(cell, 0) + wt);
    SetCellElement(cell, 1, GetCellElement(cell, 1) + wt*wt);
 }

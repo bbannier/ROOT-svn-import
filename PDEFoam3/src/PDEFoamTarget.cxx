@@ -15,7 +15,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -23,6 +23,18 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamTarget
+//
+// This PDEFoam variant stores in every cell the average target 0 as
+// well as the statistical error on the target 0.  It therefore acts
+// as a target estimator.  It should be booked together with the
+// PDEFoamTargetDensity density estimator, which returns the target 0
+// density at a given phase space point during the foam build-up.
+//
+//_____________________________________________________________________
 
 #ifndef ROOT_TMath
 #include "TMath.h"
