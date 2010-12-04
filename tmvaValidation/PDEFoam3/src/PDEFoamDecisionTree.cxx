@@ -167,8 +167,13 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
       } // jLo
    } // idim
 
-   if (kBest >= fDim || kBest < 0)
-      Log() << kWARNING << "No best division edge found!" << Endl;
+   if (kBest >= fDim || kBest < 0) {
+      // No best division edge found!  One must ensure, that this cell
+      // is not chosen for splitting in PeekMax().  But since in
+      // PeekMax() it is ensured that cell->GetDriv() > epsilon, one
+      // should set maxGain to -1.0 (or even 0.0?) here.
+      maxGain = -1.0;
+   }
    
    // set cell properties
    cell->SetBest(kBest);
