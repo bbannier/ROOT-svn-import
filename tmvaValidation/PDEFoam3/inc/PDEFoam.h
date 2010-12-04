@@ -95,9 +95,6 @@ namespace TMVA {
 
 namespace TMVA {
 
-   std::ostream& operator<< ( std::ostream& os, const PDEFoam& pdefoam );
-   std::istream& operator>> ( std::istream& istr,     PDEFoam& pdefoam );
-
    class PDEFoam : public TObject {
    protected:
       // COMPONENTS //
