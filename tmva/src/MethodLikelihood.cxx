@@ -759,7 +759,7 @@ void TMVA::MethodLikelihood::MakeClassSpecific( std::ostream& fout, const TStrin
    fout << "   static float fRefB[][" << nbinMax << "]; "
         << "// backgr reference vector [nvars][max_nbins]" << endl << endl;
    fout << "// if a variable has its PDF encoded as a spline0 --> treat it like an Integer valued one" <<endl;
-   fout << "   Bool_t    fHasDiscretPDF[" << GetNvar() <<"]; "<< endl;
+   fout << "   bool    fHasDiscretPDF[" << GetNvar() <<"]; "<< endl;
    fout << "   int    fNbin[" << GetNvar() << "]; "
         << "// number of bins (discrete variables may have less bins)" << endl;
    fout << "   double TransformLikelihoodOutput( double, double ) const;" << endl;
