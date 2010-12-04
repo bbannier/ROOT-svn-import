@@ -69,7 +69,7 @@ Double_t TMVA::PDEFoamTargetDensity::Density( Double_t *Xarg, Double_t &event_de
 {
    // This function is needed during the foam buildup.  It returns the
    // average target value within volume divided by volume (specified
-   // by VolFrac).
+   // by fVolFrac).
 
    if (!GetPDEFoam())
       Log() << kFATAL << "<PDEFoamTargetDensity::Density()> Pointer to owner not set!" << Endl;
@@ -79,7 +79,6 @@ Double_t TMVA::PDEFoamTargetDensity::Density( Double_t *Xarg, Double_t &event_de
 
    // get PDEFoam properties
    Int_t Dim       = GetPDEFoam()->GetTotDim(); // dimension of foam
-   Float_t VolFrac = GetPDEFoam()->GetVolumeFraction(); // get fVolFrac
 
    // make the variable Xarg transform, since Foam only knows about x=[0,1]
    // transformation [0, 1] --> [xmin, xmax]
@@ -91,12 +90,12 @@ Double_t TMVA::PDEFoamTargetDensity::Density( Double_t *Xarg, Double_t &event_de
    std::vector<Double_t> ub(Dim);
 
    // probevolume relative to hypercube with edge length 1:
-   const Double_t probevolume_inv = std::pow((VolFrac/2), Dim);
+   const Double_t probevolume_inv = std::pow((fVolFrac/2), Dim);
 
    // set upper and lower bound for search volume
    for (Int_t idim = 0; idim < Dim; idim++) {
       Double_t volsize=(GetPDEFoam()->GetXmax(idim) 
-			- GetPDEFoam()->GetXmin(idim)) / VolFrac;
+			- GetPDEFoam()->GetXmin(idim)) / fVolFrac;
       lb[idim] = Xarg[idim] - volsize;
       ub[idim] = Xarg[idim] + volsize;
    }

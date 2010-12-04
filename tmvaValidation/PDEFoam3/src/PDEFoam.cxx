@@ -126,7 +126,6 @@ TMVA::PDEFoam::PDEFoam() :
    fXmax(0),
    fNmin(100),
    fMaxDepth(0),
-   fVolFrac(30.0),
    fDistr(NULL),
    fTimer(new Timer(0, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),

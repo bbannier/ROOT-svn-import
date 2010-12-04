@@ -55,6 +55,7 @@ namespace TMVA {
    protected:
       const PDEFoam *fPDEFoam;  // PDEFoam, which owns this PDEFoamDensity
       BinarySearchTree *fBst;   // Binary tree to find events within a volume
+      Float_t fVolFrac;         // volume for range-searching
       mutable MsgLogger* fLogger;                     //! message logger
       MsgLogger& Log() const { return *fLogger; }
 
@@ -75,6 +76,10 @@ namespace TMVA {
       // Getter and setter for the fPDEFoam pointer
       void SetPDEFoam(const PDEFoam *foam){ fPDEFoam = foam; }
       const PDEFoam* GetPDEFoam() const { return fPDEFoam; };
+
+      // get and set the range-searching volume
+      void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;}  // set VolFrac
+      Float_t  GetVolumeFraction() const {return fVolFrac;} // get VolFrac from PDEFoam
 
       ClassDef(PDEFoamDensity,1) //Class for density
    };  //end of PDEFoamDensity

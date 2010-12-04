@@ -765,9 +765,9 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
    // initialize foam via pdefoam->Init()
    
    PDEFoam *pdefoam = NULL;
+   PDEFoamDensity *density = NULL;
    if (fDTSeparation == kFoam) {
       // set the density type
-      PDEFoamDensity *density = NULL;
       switch (ft) {
       case kSeparate:
 	 pdefoam = new PDEFoamEvent(foamcaption);
@@ -793,13 +793,13 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 	 Log() << kFATAL << "Unknown PDEFoam type!" << Endl;
 	 break;
       }
-      pdefoam->SetDensity(density);
-
    } else {
       // create a decision tree like pdefoam
       pdefoam = new PDEFoamDecisionTree(foamcaption, 0, fDTSeparation);
-      pdefoam->SetDensity(new PDEFoamDTDensity(pdefoam));
+      density = new PDEFoamDTDensity(pdefoam);
    }
+   density->SetVolumeFraction(fVolFrac); // set range-searching volume
+   pdefoam->SetDensity(density);
 
    // create pdefoam kernel
    fKernelEstimator = CreatePDEFoamKernel();
@@ -813,7 +813,6 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
       pdefoam->SetDim(      Data()->GetNTargets()+Data()->GetNVariables());
    else
       pdefoam->SetDim(      GetNvar());  // Mandatory!
-   pdefoam->SetVolumeFraction(fVolFrac); // Mandatory!
    pdefoam->SetnCells(      fnCells);    // optional
    pdefoam->SetnSampl(      fnSampl);    // optional
    pdefoam->SetnBin(        fnBin);      // optional
@@ -892,7 +891,7 @@ TMVA::PDEFoamKernel* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
    case kLinN:
       return new PDEFoamKernelLinN();
    case kGaus:
-      return new PDEFoamKernelGauss();
+      return new PDEFoamKernelGauss(1.0/fVolFrac);
    default:
       Log() << kFATAL << "Kernel: " << fKernel << " not supported!" << Endl;
       return NULL;

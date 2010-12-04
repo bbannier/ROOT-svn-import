@@ -42,8 +42,9 @@
 ClassImp(TMVA::PDEFoamKernelGauss)
 
 //_____________________________________________________________________
-TMVA::PDEFoamKernelGauss::PDEFoamKernelGauss()
+TMVA::PDEFoamKernelGauss::PDEFoamKernelGauss(Float_t sigma)
    : PDEFoamKernel()
+   , fSigma(sigma)
 {
    // Default constructor for streamer
 }
@@ -188,6 +189,6 @@ Float_t TMVA::PDEFoamKernelGauss::WeightGaus( PDEFoam *foam, PDEFoamCell* cell,
       distance += Sqr(txvec.at(i)-cell_center.at(i));
    distance = TMath::Sqrt(distance);
 
-   // weight with Gaus with sigma = 1/VolFrac
-   return TMath::Gaus(distance, 0, 1./foam->GetVolumeFraction(), kFALSE);
+   // weight with Gaus
+   return TMath::Gaus(distance, 0, fSigma, kFALSE);
 }
