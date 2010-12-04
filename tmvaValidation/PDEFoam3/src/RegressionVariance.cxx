@@ -34,6 +34,7 @@
  * (http://ttmva.sourceforge.net/LICENSE)                                         *
  **********************************************************************************/
 #include <iostream>
+#include "TMath.h"
 #include "TMVA/RegressionVariance.h"
 
 ClassImp(TMVA::RegressionVariance)
@@ -49,16 +50,20 @@ Double_t TMVA::RegressionVariance::GetSeparationGain(const Double_t &nLeft,
    // by splitting the sample e.g. into a "left-node" and a "right-node"   
    // (N * Index_parent) - (N_left * Index_left) - (N_right * Index_right) 
    // this is then the quality crition which is optimized for when trying  
-   // to increase the information in the system (making the best selection             
+   // to increase the information in the system
+   // for the Regression: as the "Gain is maximised", the RMS (sqrt(variance))
+   // which is used as a "separation" index should be as small as possible.
+   // the "figure of merit" here has to be -(rms left+rms-right) or 1/rms...
+
 
    if  ( nTot==nLeft || nLeft==0 ) return 0.;
 
-   Double_t parentIndex = this->GetSeparationIndex(nTot,targetTot,target2Tot);
-   Double_t leftIndex   = ( (nTot - nLeft) / nTot * this->GetSeparationIndex(nTot-nLeft,targetTot-targetLeft,target2Tot-target2Left) );
-   Double_t rightIndex  =    nLeft / nTot * this->GetSeparationIndex(nLeft,targetLeft,target2Left);
+   // Double_t parentIndex = nTot * this->GetSeparationIndex(nTot,targetTot,target2Tot);
+   Double_t leftIndex   = ( (nTot - nLeft) * this->GetSeparationIndex(nTot-nLeft,targetTot-targetLeft,target2Tot-target2Left) );
+   Double_t rightIndex  =    nLeft * this->GetSeparationIndex(nLeft,targetLeft,target2Left);
     
    //   return (parentIndex - leftIndex - rightIndex)/(parentIndex);   
-   return (parentIndex - leftIndex - rightIndex);   
+   return 1/ (leftIndex + rightIndex);   
 }
 
 //_______________________________________________________________________
@@ -67,7 +72,7 @@ Double_t TMVA::RegressionVariance::GetSeparationIndex(const Double_t& n,
 {
    // Separation Index:  a simple Variance
 
-   return ( target2 - target*target/n) / n;
+   return TMath::Sqrt(( target2 - target*target/n) / n);
 
 }
 

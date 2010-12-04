@@ -146,6 +146,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
                             TDirectory* theTargetDir ) :
    TMVA::MethodBase( jobName, Types::kBDT, methodTitle, theData, theOption, theTargetDir )
    , fNTrees(0)
+   , fRenormByClass(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fAdaBoostBeta(0)
    , fTransitionPoint(0)
    , fShrinkage(0)
@@ -154,6 +155,9 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fSumOfWeights(0)
    , fNodeMinEvents(0)
    , fNCuts(0)
+   , fUseFisherCuts(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
+   , fMinLinCorrForFisher(.8) // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
+   , fUseExclusiveVars(0)     // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fUseYesNoLeaf(kFALSE)
    , fNodePurityLimit(0)
    , fUseWeightedTrees(kFALSE)
@@ -166,6 +170,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fAutomatic(kFALSE)
    , fRandomisedTrees(kFALSE)
    , fUseNvars(0)
+   , fUsePoissonNvars(0)  // don't use this initialisation, only here to make  Coverity happy. Is set in Init()
    , fUseNTrainEvents(0)
    , fSampleSizeFraction(0)
    , fNoNegWeightsInTraining(kFALSE)
@@ -175,6 +180,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
 {
    // the standard constructor for the "boosted decision trees"
    fMonitorNtuple = NULL;
+   fSepType = NULL;
 }
 
 //_______________________________________________________________________
@@ -183,6 +189,7 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
                             TDirectory* theTargetDir )
    : TMVA::MethodBase( Types::kBDT, theData, theWeightFile, theTargetDir )
    , fNTrees(0)
+   , fRenormByClass(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fAdaBoostBeta(0)
    , fTransitionPoint(0)
    , fShrinkage(0)
@@ -191,6 +198,9 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fSumOfWeights(0)
    , fNodeMinEvents(0)
    , fNCuts(0)
+   , fUseFisherCuts(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
+   , fMinLinCorrForFisher(.8) // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
+   , fUseExclusiveVars(0)     // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fUseYesNoLeaf(kFALSE)
    , fNodePurityLimit(0)
    , fUseWeightedTrees(kFALSE)
@@ -203,6 +213,7 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fAutomatic(kFALSE)
    , fRandomisedTrees(kFALSE)
    , fUseNvars(0)
+   , fUsePoissonNvars(0)  // don't use this initialisation, only here to make  Coverity happy. Is set in Init()
    , fUseNTrainEvents(0)
    , fSampleSizeFraction(0)
    , fNoNegWeightsInTraining(kFALSE)
@@ -210,6 +221,8 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fBoostWeight(0)
    , fErrorFraction(0)
 {
+   fMonitorNtuple = NULL;
+   fSepType = NULL;
    // constructor for calculating BDT-MVA using previously generated decision trees
    // the result of the previous training (the decision trees) are read in via the
    // weight file. Make sure the the variables correspond to the ones used in
@@ -317,10 +330,10 @@ void TMVA::MethodBDT::DeclareOptions()
    }else{
       fSepTypeS = "GiniIndex";
    }
-   DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events required in a leaf node (default: max(20, N_train/(Nvar^2)/10) ) ");
+   DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events required in a leaf node (default Classification: max(40, N_train/(Nvar^2)/10) ) Regression: 10");
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
    DeclareOptionRef(fUseFisherCuts=kFALSE, "UseFisherCuts", "use multivariate splits using the Fisher criterium");
-   DeclareOptionRef(fMinLinCorrForFisher=1,"MinLinCorrForFisher", "the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting");
+   DeclareOptionRef(fMinLinCorrForFisher=.8,"MinLinCorrForFisher", "the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting");
    DeclareOptionRef(fUseExclusiveVars=kFALSE,"UseExclusiveVars","individual variables already used in fisher criterium are not anymore analysed individually for node splitting");
 
    DeclareOptionRef(fPruneStrength, "PruneStrength", "Pruning strength");
@@ -436,14 +449,16 @@ void TMVA::MethodBDT::Init( void )
    if (fAnalysisType == Types::kClassification || fAnalysisType == Types::kMulticlass ) {
       fMaxDepth        = 3;
       fBoostType      = "AdaBoost";
+      if(DataInfo().GetNClasses()!=0) //workaround for multiclass application
+         fNodeMinEvents  = TMath::Max( Int_t(40), Int_t( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    }else {
       fMaxDepth = 50;
       fBoostType      = "AdaBoostR2";
       fAdaBoostR2Loss = "Quadratic";
+      if(DataInfo().GetNClasses()!=0) //workaround for multiclass application
+         fNodeMinEvents  = 10;
    }
 
-   if(DataInfo().GetNClasses()!=0) //workaround for multiclass application
-      fNodeMinEvents  = TMath::Max( Int_t(40), Int_t( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    fNCuts          = 20;
    fPruneMethodS   = "NoPruning";
    fPruneMethod    = DecisionTree::kNoPruning;
@@ -854,6 +869,7 @@ void TMVA::MethodBDT::UpdateTargetsRegression(vector<TMVA::Event*> eventSample, 
    //Calculate current residuals for all events and update targets for next iteration
    vector< pair<Double_t, Double_t> > temp;
    UInt_t i=0;
+   fSumOfWeights = 0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       if(first){
          fWeightedResiduals[i].first -= fBoostWeights[i];
@@ -863,15 +879,16 @@ void TMVA::MethodBDT::UpdateTargetsRegression(vector<TMVA::Event*> eventSample, 
       }
       temp.push_back(make_pair(fabs(fWeightedResiduals[i].first),fWeightedResiduals[i].second));
       i++;
+      fSumOfWeights += (*e)->GetWeight();
    }
-   fTransitionPoint = GetWeightedQuantile(temp,0.7,fSumOfWeights);
+   fTransitionPoint = GetWeightedQuantile(temp,0.01,fSumOfWeights);
    i=0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
  
       if(temp[i].first<=fTransitionPoint)
          (*e)->SetTarget(0,fWeightedResiduals[i].first);
       else
-         (*e)->SetTarget(0,fTransitionPoint*(fWeightedResiduals[i].first<0?-1.0:1.0));
+         (*e)->SetTarget(0,fabs(fTransitionPoint)*(fWeightedResiduals[i].first<0?-1.0:1.0));
       i++;
    }
 }
@@ -914,11 +931,11 @@ Double_t TMVA::MethodBDT::GradBoost( vector<TMVA::Event*> eventSample, DecisionT
       (iLeave->first)->SetResponse(fShrinkage/DataInfo().GetNClasses()*(iLeave->second)[0]/((iLeave->second)[1]));
    }
    //call UpdateTargets before next tree is grown
+   if (fBaggedGradBoost) GetRandomSubSample();
    if(DoMulticlass())
       UpdateTargets(eventSample, cls);
    else
       UpdateTargets(eventSample);
-   if (fBaggedGradBoost) GetRandomSubSample();
    return 1; //trees all have the same weight
 }
 
@@ -942,10 +959,11 @@ Double_t TMVA::MethodBDT::GradBoostRegression( vector<TMVA::Event*> eventSample,
       Double_t ResidualMedian = GetWeightedQuantile(iLeave->second,0.5,leaveWeights[iLeave->first]);
       for(UInt_t j=0;j<((iLeave->second).size());j++){
          diff = (iLeave->second)[j].first-ResidualMedian;
-         shift+=1.0/((iLeave->second).size())*((diff<0)?-1.0:1.0)*TMath::Min(fTransitionPoint,fabs(diff));
+         shift+=1.0/((iLeave->second).size())*((diff<0)?-1.0:1.0)*TMath::Min(fabs(fTransitionPoint),fabs(diff));
       }
       (iLeave->first)->SetResponse(fShrinkage*(ResidualMedian+shift));
    }
+   if (fBaggedGradBoost) GetRandomSubSample();
    UpdateTargetsRegression(eventSample);
    return 1;
 }
@@ -966,6 +984,7 @@ void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
          fBoostWeights.push_back(weightedMedian);  
       }
+      if (fBaggedGradBoost) GetRandomSubSample(); 
       UpdateTargetsRegression(eventSample,kTRUE);
    }
    else if(DoMulticlass()){
@@ -978,6 +997,7 @@ void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
             fResiduals[*e].push_back(0);   
          }
       }
+      if (fBaggedGradBoost) GetRandomSubSample(); 
    }
    else{
       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
@@ -985,8 +1005,8 @@ void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
          (*e)->SetTarget(0,r);
          fResiduals[*e].push_back(0);         
       }
+      if (fBaggedGradBoost) GetRandomSubSample(); 
    }
-   if (fBaggedGradBoost) GetRandomSubSample(); 
 }
 //_______________________________________________________________________
 Double_t TMVA::MethodBDT::TestTreeQuality( DecisionTree *dt )
@@ -1766,7 +1786,7 @@ void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TStrin
    fout << "   // constructor of an essentially \"empty\" node floating in space" << endl;
    fout << "   BDT_DecisionTreeNode ( BDT_DecisionTreeNode* left," << endl;
    fout << "                          BDT_DecisionTreeNode* right," << endl;
-   fout << "                          double cutValue, Bool_t cutType, int selector," << endl;
+   fout << "                          double cutValue, bool cutType, int selector," << endl;
    fout << "                          int nodeType, double purity, double response ) :" << endl;
    fout << "   fLeft    ( left     )," << endl;
    fout << "   fRight   ( right    )," << endl;
@@ -1778,10 +1798,10 @@ void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TStrin
    fout << "   fResponse( response ){}" << endl << endl;
    fout << "   virtual ~BDT_DecisionTreeNode();" << endl << endl;
    fout << "   // test event if it decends the tree at this node to the right" << endl;
-   fout << "   virtual Bool_t GoesRight( const std::vector<double>& inputValues ) const;" << endl;
+   fout << "   virtual bool GoesRight( const std::vector<double>& inputValues ) const;" << endl;
    fout << "   BDT_DecisionTreeNode* GetRight( void )  {return fRight; };" << endl << endl;
    fout << "   // test event if it decends the tree at this node to the left " << endl;
-   fout << "   virtual Bool_t GoesLeft ( const std::vector<double>& inputValues ) const;" << endl;
+   fout << "   virtual bool GoesLeft ( const std::vector<double>& inputValues ) const;" << endl;
    fout << "   BDT_DecisionTreeNode* GetLeft( void ) { return fLeft; };   " << endl << endl;
    fout << "   // return  S/(S+B) (purity) at this node (from  training)" << endl << endl;
    fout << "   double GetPurity( void ) const { return fPurity; } " << endl;
@@ -1792,7 +1812,7 @@ void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TStrin
    fout << "   BDT_DecisionTreeNode*   fLeft;     // pointer to the left daughter node" << endl;
    fout << "   BDT_DecisionTreeNode*   fRight;    // pointer to the right daughter node" << endl;
    fout << "   double                  fCutValue; // cut value appplied on this node to discriminate bkg against sig" << endl;
-   fout << "   Bool_t                  fCutType;  // true: if event variable > cutValue ==> signal , false otherwise" << endl;
+   fout << "   bool                  fCutType;  // true: if event variable > cutValue ==> signal , false otherwise" << endl;
    fout << "   int                     fSelector; // index of variable used in node selection (decision tree)   " << endl;
    fout << "   int                     fNodeType; // Type of node: -1 == Bkg-leaf, 1 == Signal-leaf, 0 = internal " << endl;
    fout << "   double                  fPurity;   // Purity of node from training"<< endl;
@@ -1807,16 +1827,16 @@ void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TStrin
    fout << "}; " << endl;
    fout << "   " << endl;
    fout << "//_______________________________________________________________________" << endl;
-   fout << "Bool_t BDT_DecisionTreeNode::GoesRight( const std::vector<double>& inputValues ) const" << endl;
+   fout << "bool BDT_DecisionTreeNode::GoesRight( const std::vector<double>& inputValues ) const" << endl;
    fout << "{" << endl;
    fout << "   // test event if it decends the tree at this node to the right" << endl;
-   fout << "   Bool_t result = (inputValues[fSelector] > fCutValue );" << endl;
+   fout << "   bool result = (inputValues[fSelector] > fCutValue );" << endl;
    fout << "   if (fCutType == true) return result; //the cuts are selecting Signal ;" << endl;
    fout << "   else return !result;" << endl;
    fout << "}" << endl;
    fout << "   " << endl;
    fout << "//_______________________________________________________________________" << endl;
-   fout << "Bool_t BDT_DecisionTreeNode::GoesLeft( const std::vector<double>& inputValues ) const" << endl;
+   fout << "bool BDT_DecisionTreeNode::GoesLeft( const std::vector<double>& inputValues ) const" << endl;
    fout << "{" << endl;
    fout << "   // test event if it decends the tree at this node to the left" << endl;
    fout << "   if (!this->GoesRight(inputValues)) return true;" << endl;

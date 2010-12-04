@@ -768,6 +768,11 @@ void TMVA::MethodBoost::CalcMethodWeight()
    // This is no longer done in SingleBoost();
 
    MethodBase* method =  dynamic_cast<MethodBase*>(fMethods.back());
+   if (!method) {
+      Log() << kFATAL << "Dynamic cast to MethodBase* failed" <<Endl;
+      return;
+   }
+
    Event * ev; Float_t w;
    Double_t sumAll=0, sumWrong=0;
 
@@ -914,7 +919,17 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    // set data sample training / testing
    Data()->SetCurrentType(eTT);
 
-   MethodBase* method = singleMethod ? dynamic_cast<MethodBase*>(fMethods.back()) : 0;
+   MethodBase* method = singleMethod ? dynamic_cast<MethodBase*>(fMethods.back()) : 0; // ToDo CoVerity flags this line as there is no prtection against a zero-pointer delivered by dynamic_cast
+   // to make CoVerity happy (although, OF COURSE, the last method in the commitee
+   // has to be also of type MethodBase as ANY method is... hence the dynamic_cast
+   // will never by "zero" ...
+   if (singleMethod && !method) {
+      Log() << kFATAL << " What do you do? Your method:"
+            << fMethods.back()->GetName() 
+            << " seems not to be a propper TMVA method" 
+            << Endl;
+      exit(1);
+   }
    Double_t err = 0.0;
 
    // temporary renormalize the method weights in case of evaluation
@@ -940,11 +955,11 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    std::vector <Float_t>* mvaRes;
    if (singleMethod && eTT==Types::kTraining)
       mvaRes = fMVAvalues; // values already calculated
-   else {
+   else {  //Helge, please check if this logic is correct. ToDo!!!
       mvaRes = new std::vector <Float_t>(Data()->GetNEvents());
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          Data()->GetEvent(ievt);
-         (*mvaRes)[ievt] = singleMethod ? method->GetMvaValue() : GetMvaValue(&err);
+         (*mvaRes)[ievt] = singleMethod ? method->GetMvaValue(&err) : GetMvaValue(&err);
       }
    }
 
@@ -1029,7 +1044,10 @@ void TMVA::MethodBoost::CalcMVAValues()
 
    Data()->SetCurrentType(Types::kTraining);
    MethodBase* method = dynamic_cast<MethodBase*>(fMethods.back());
-
+   if (!method) {
+      Log() << kFATAL << "dynamic cast to MethodBase* failed" <<Endl;
+      return;
+   }
    // calculate MVA values
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
       Data()->GetEvent(ievt);
