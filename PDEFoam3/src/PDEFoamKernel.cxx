@@ -14,7 +14,7 @@
  *      Dominik Dannheim - CERN, Switzerland                                      *
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -22,6 +22,17 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamKernel
+//
+// This class is a trivial PDEFoam kernel estimator, which also acts
+// as a general kernel interface for PDEFoam.  The Estimate() function
+// returns the cell value, given an event 'txvec'.  Derived classes
+// should override this function to build more a sophisitcated kernel
+// estimator.
+// _____________________________________________________________________
 
 #ifndef ROOT_TMVA_PDEFoamKernel
 #include "TMVA/PDEFoamKernel.h"

@@ -15,7 +15,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2008, 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *

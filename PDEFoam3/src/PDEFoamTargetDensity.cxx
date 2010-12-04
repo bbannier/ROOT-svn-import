@@ -20,7 +20,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2008, 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -28,6 +28,15 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamTargetDensity
+//
+// This is a concrete implementation of PDEFoam.  Density(...)
+// estimates the target 0 density at a given phase-space point using
+// range-searching.
+// _____________________________________________________________________
 
 #include <cmath>
 

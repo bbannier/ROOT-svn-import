@@ -20,7 +20,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2008, 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -28,6 +28,41 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamDensity
+//
+// This is an abstract class, which provides an interface for a
+// PDEFoam density estimator.  Derived classes have to implement the
+// Density(...) function, which returns the density of a certain
+// quantity at a given phase-space point during the foam build-up.
+//
+// Variants of PDEFoamDensity are:
+//
+//   - PDEFoamEventDensity
+//   - PDEFoamDiscriminantDensity
+//   - PDEFoamTargetDensity
+//   - PDEFoamDTDensity
+//
+// Usage:
+//
+// The user has to instantiate a sub class of PDEFoamDensity and set
+// the pointer to the owner, which is a PDEFoam object:
+//
+//   PDEFoamDensity *dens = new MyDensity();
+//   dens->SetPDEFoam(pdefoam);
+//   pdefoam->SetDensity(dens);
+//
+// Afterwards the density must be initialized via (the binary search
+// tree is created and initialized)
+//
+//   dens->Initialize();
+//
+// and binary search tree should be filled with TMVA events:
+//
+//   dens->FillBinarySearchTree(event);
+// _____________________________________________________________________
 
 #ifndef ROOT_TMVA_PDEFoamDensity
 #include "TMVA/PDEFoamDensity.h"
