@@ -55,6 +55,7 @@ $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
 
 
 clean:
+		@rm -f testmakeclass_*
 		@rm -f $(PROGRAMS) $(OBJS) $(TMVAUTOBJECTS)
 
 .$(SrcSuf).$(ObjSuf):
