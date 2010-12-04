@@ -37,13 +37,14 @@ namespace TMVA {
    class PDEFoamDiscriminant : public PDEFoam {
 
    protected:
+      UInt_t fClass; // signal class
       
       PDEFoamDiscriminant(const PDEFoamDiscriminant&); // Copy Constructor  NOT USED
 
       // ---------- Public functions ----------------------------------
    public:
       PDEFoamDiscriminant();                  // Default constructor (used only by ROOT streamer)
-      PDEFoamDiscriminant(const TString&);    // Principal user-defined constructor
+      PDEFoamDiscriminant(const TString&, UInt_t); // Principal user-defined constructor
       virtual ~PDEFoamDiscriminant(){};       // Default destructor
 
       // function to fill created cell with given value

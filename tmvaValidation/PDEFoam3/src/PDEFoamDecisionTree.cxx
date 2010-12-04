@@ -67,8 +67,8 @@ TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree()
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const TString& Name, EDTSeparation sep)
-   : PDEFoamDiscriminant(Name)
+TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const TString& Name, UInt_t cls, EDTSeparation sep)
+   : PDEFoamDiscriminant(Name, cls)
    , fDTSeparation(sep)
 {}
 

@@ -55,18 +55,21 @@ ClassImp(TMVA::PDEFoamDiscriminant)
 //_____________________________________________________________________
 TMVA::PDEFoamDiscriminant::PDEFoamDiscriminant() 
    : PDEFoam()
+   , fClass(0)
 {
    // Default constructor for streamer, user should not use it.
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamDiscriminant::PDEFoamDiscriminant(const TString& Name)
+TMVA::PDEFoamDiscriminant::PDEFoamDiscriminant(const TString& Name, UInt_t cls)
    : PDEFoam(Name)
+   , fClass(cls)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDiscriminant::PDEFoamDiscriminant(const PDEFoamDiscriminant &From)
    : PDEFoam(From)
+   , fClass(0)
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
@@ -84,9 +87,9 @@ void TMVA::PDEFoamDiscriminant::FillFoamCells(const Event* ev, Float_t wt)
    std::vector<Float_t> tvalues = VarTransform(values);
    PDEFoamCell *cell = FindCell(tvalues);
 
-   // 0. Element: Number of signal events
+   // 0. Element: Number of signal events (even class == fClass)
    // 1. Element: Number of background events times normalization
-   if (ev->GetClass() == 0)
+   if (ev->GetClass() == fClass)
       SetCellElement(cell, 0, GetCellElement(cell, 0) + wt);
    else
       SetCellElement(cell, 1, GetCellElement(cell, 1) + wt);
