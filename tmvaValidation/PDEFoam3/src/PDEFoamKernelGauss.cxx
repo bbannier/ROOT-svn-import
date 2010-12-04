@@ -14,7 +14,7 @@
  *      Dominik Dannheim - CERN, Switzerland                                      *
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -22,6 +22,14 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamKernelGauss
+//
+// This PDEFoam kernel estimates a cell value for a given event by
+// weighting all cell values with a gauss function.
+// _____________________________________________________________________
 
 #ifndef ROOT_TMath
 #include "TMath.h"

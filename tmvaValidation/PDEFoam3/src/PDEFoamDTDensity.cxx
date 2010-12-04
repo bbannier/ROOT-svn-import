@@ -2,7 +2,7 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamDTDensity                                                   *
+ * Classes: PDEFoamDTDensity                                                      *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
@@ -20,7 +20,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2008, 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -28,6 +28,15 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamDTDensity
+//
+// This is a concrete implementation of PDEFoam.  The Density(...)
+// function returns allways 0.  The function FillHist() is added,
+// which returns all events in a given PDEFoam cell.
+// _____________________________________________________________________
 
 #ifndef ROOT_TMVA_PDEFoamDTDensity
 #include "TMVA/PDEFoamDTDensity.h"

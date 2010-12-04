@@ -19,7 +19,7 @@
  * Original author of the TFoam implementation:                                   *
  *      S. Jadach - Institute of Nuclear Physics, Cracow, Poland                  *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
