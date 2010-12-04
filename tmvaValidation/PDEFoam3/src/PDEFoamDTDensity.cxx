@@ -150,9 +150,8 @@ void TMVA::PDEFoamDTDensity::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsi
    for (UInt_t iev=0; iev<nodes.size(); iev++) {
       std::vector<Float_t> ev = nodes.at(iev)->GetEventV();
       Float_t              wt = nodes.at(iev)->GetWeight();
-      Bool_t           signal = nodes.at(iev)->IsSignal();
       for (Int_t idim=0; idim<Dim; idim++) {
-	 if (signal) {
+	 if (nodes.at(iev)->GetClass() == fClass) {
 	    hsig.at(idim)->Fill(GetPDEFoam()->VarTransform(idim,ev.at(idim)), wt);
 	    hsig_unw.at(idim)->Fill(GetPDEFoam()->VarTransform(idim,ev.at(idim)), 1);
 	 } else {
