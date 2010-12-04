@@ -782,11 +782,11 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 	 density = new PDEFoamEventDensity(pdefoam);
 	 break;
       case kDiscr:
-	 pdefoam = new PDEFoamDiscriminant(foamcaption);
+	 pdefoam = new PDEFoamDiscriminant(foamcaption, 0);
 	 density = new PDEFoamDiscriminantDensity(pdefoam, 0); // class 0 = signal
 	 break;
       case kMultiClass:
-	 pdefoam = new PDEFoamDiscriminant(foamcaption);
+	 pdefoam = new PDEFoamDiscriminant(foamcaption, cls);
 	 density = new PDEFoamDiscriminantDensity(pdefoam, cls);
 	 break;
       case kMonoTarget:
@@ -801,7 +801,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 
    } else {
       // create a decision tree like pdefoam
-      pdefoam = new PDEFoamDecisionTree(foamcaption, fDTSeparation);
+      pdefoam = new PDEFoamDecisionTree(foamcaption, 0, fDTSeparation);
       pdefoam->SetDensity(new PDEFoamDTDensity(pdefoam));
    }
 

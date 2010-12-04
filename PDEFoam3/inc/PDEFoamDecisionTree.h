@@ -52,7 +52,7 @@ namespace TMVA {
 
    public:
       PDEFoamDecisionTree();               // Default constructor (used only by ROOT streamer)
-      PDEFoamDecisionTree(const TString&, EDTSeparation sep=kFoam); // Principal user-defined constructor
+      PDEFoamDecisionTree(const TString&, UInt_t, EDTSeparation sep=kFoam); // Principal user-defined constructor
       virtual ~PDEFoamDecisionTree();      // Default destructor
 
       void SetDTSeparation(EDTSeparation new_val){ fDTSeparation = new_val; }
