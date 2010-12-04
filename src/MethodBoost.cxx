@@ -87,6 +87,7 @@ TMVA::MethodBoost::MethodBoost( const TString& jobName,
    , fBoostedMethodOptions(theOption)
    , fMonitorHist(0)
    , fMonitorBoostedMethod(kFALSE)
+   , fMonitorTree(0)
    , fBoostStage(Types::kBoostProcBegin)
    , fDefaultHistNum(0)
    , fRecalculateMVACut(kFALSE)
@@ -259,7 +260,7 @@ void TMVA::MethodBoost::CheckSetup()
    Log() << kDEBUG << "CheckSetup: fBoostWeight="<<fBoostWeight<<Endl;
    Log() << kDEBUG << "CheckSetup: fMethodError="<<fMethodError<<Endl;
    Log() << kDEBUG << "CheckSetup: fOrigMethodError="<<fOrigMethodError<<Endl;
-   Log() << kDEBUG << "CheckSetup: fBoostNum="<<fBoostNum<< " fMonitorHist="<< fMonitorHist<< Endl;              
+   Log() << kDEBUG << "CheckSetup: fBoostNum="<<fBoostNum<< " fMonitorHist="<< fMonitorHist<< Endl;
    Log() << kDEBUG << "CheckSetup: fRandomSeed=" << fRandomSeed<< Endl;
    Log() << kDEBUG << "CheckSetup: fDefaultHistNum=" << fDefaultHistNum << " fRecalculateMVACut=" << (fRecalculateMVACut? "true" : "false") << Endl;
    Log() << kDEBUG << "CheckSetup: fTrainSigMVAHist.size()="<<fTrainSigMVAHist.size()<<Endl;
@@ -268,7 +269,7 @@ void TMVA::MethodBoost::CheckSetup()
    Log() << kDEBUG << "CheckSetup: MName=" << fBoostedMethodName << " Title="<< fBoostedMethodTitle<< Endl;
    Log() << kDEBUG << "CheckSetup: MOptions="<< fBoostedMethodOptions << Endl;
    Log() << kDEBUG << "CheckSetup: fBoostStage=" << fBoostStage<<Endl;
-   Log() << kDEBUG << "CheckSetup: fMonitorTree" << fMonitorTree<<Endl;
+   Log() << kDEBUG << "CheckSetup: fMonitorTree" << fMonitorTree <<Endl;
    Log() << kDEBUG << "CheckSetup: fMethodIndex=" <<fMethodIndex << Endl;
    if (fMethods.size()>0) Log() << kDEBUG << "CheckSetup: fMethods[0]" <<fMethods[0]<<Endl;
    Log() << kDEBUG << "CheckSetup: fMethodWeight.size()" << fMethodWeight.size() << Endl;
