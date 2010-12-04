@@ -115,7 +115,7 @@ void RegressionUnitTestWithDeviation::run()
   TString dir    = "weights/TMVARegressionUnitTesting_";
   TString weightfile=dir+_methodTitle+".weights.xml";
   double diff, maxdiff = 0., sumdiff=0., previousVal=0.;
-  int stuckCount=0, nevt= TMath::Min((int) testTree->GetEntries(),100); 
+  int stuckCount=0, nevt= TMath::Min((int) testTree->GetEntries(),50); 
 
   std::vector< TMVA::Reader* > reader(nTest);
   for (int iTest=0;iTest<nTest;iTest++){
@@ -163,6 +163,7 @@ void RegressionUnitTestWithDeviation::run()
 
   for (int i=0;i<nTest;i++) delete reader[i]; 
 
+#ifdef COUTDEBUG
   cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
-  
+#endif  
 }
