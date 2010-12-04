@@ -15,7 +15,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -23,6 +23,22 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamDiscriminant
+//
+// This PDEFoam variant stores in every cell the discriminant
+//
+//    D = #events with given class / total number of events
+//
+// as well as the statistical error on the discriminant.  It therefore
+// acts as a discriminant estimator.  It should be booked together
+// with the PDEFoamDiscriminantDensity density estimator, which
+// returns the discriminant density at a given phase space point
+// during the foam build-up.
+//
+//_____________________________________________________________________
 
 #include <climits>
 

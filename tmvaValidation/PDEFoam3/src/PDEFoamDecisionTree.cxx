@@ -15,7 +15,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -23,6 +23,27 @@
  * modification, are permitted according to the terms listed in LICENSE           *
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
+
+//_____________________________________________________________________
+//
+// PDEFoamDecisionTree
+//
+// This PDEFoam variant acts like a decision tree and stores in every
+// cell the discriminant
+//
+//    D = #events with given class / total number of events
+//
+// as well as the statistical error on the discriminant.  It therefore
+// acts as a discriminant estimator.  The decision tree-like behaviour
+// is achieved by overriding PDEFoamDiscriminant::Explore() to use a
+// decision tree-like cell splitting algorithm (given a separation
+// type).
+//
+// This PDEFoam variant should be booked together with the
+// PDEFoamDTDensity density estimator, which returns the events in a
+// cell without sampling.
+//
+//_____________________________________________________________________
 
 #ifndef ROOT_TMath
 #include "TMath.h"

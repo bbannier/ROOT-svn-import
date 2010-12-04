@@ -45,6 +45,7 @@
 // The class TMVA::PDEFoam defines the default interface for the
 // PDEFoam variants:
 //
+//   - PDEFoamEvent
 //   - PDEFoamDiscriminant
 //   - PDEFoamTarget
 //   - PDEFoamMultiTarget
@@ -52,6 +53,8 @@
 //
 // Per default PDEFoam stores in the cells the number of events (event
 // weights) and therefore acts as an event density estimator.
+// However, the above listed derived classes override this behaviour
+// to implement certain PDEFoam variations.
 //
 // In order to use PDEFoam the user has to set the density estimator
 // of the type TMVA::PDEFoamDensity, which is used to during the foam
