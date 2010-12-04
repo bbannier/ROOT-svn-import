@@ -20,7 +20,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -75,6 +75,7 @@ TMVA::PDEFoamDensity::PDEFoamDensity()
    : TObject(),
      fPDEFoam(NULL),
      fBst(NULL),
+     fVolFrac(30.0),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {}
 
@@ -83,6 +84,7 @@ TMVA::PDEFoamDensity::PDEFoamDensity(const PDEFoam *foam)
    : TObject(),
      fPDEFoam(foam),
      fBst(NULL),
+     fVolFrac(30.0),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {}
 
@@ -98,6 +100,7 @@ TMVA::PDEFoamDensity::PDEFoamDensity(const PDEFoamDensity &distr)
    : TObject(),
      fPDEFoam         (distr.fPDEFoam),
      fBst             (distr.fBst),
+     fVolFrac         (distr.fVolFrac),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {
    // Copy constructor

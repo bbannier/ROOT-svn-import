@@ -208,13 +208,11 @@ namespace TMVA {
       void SetnBin(Int_t nBin){fNBin = nBin;}          // Sets no of bins in histogs in cell exploration
       void SetEvPerBin(Int_t EvPerBin){fEvPerBin =EvPerBin;} // Sets max. no. of effective events per bin
       void SetInhiDiv(Int_t, Int_t ); // Set inhibition of cell division along certain edge
-      void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;} // set VolFrac
       void SetDensity(PDEFoamDensity *dens) { fDistr = dens; }
 
       // coverity[ -tainted_data_return ]
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
-      Float_t  GetVolumeFraction() const {return fVolFrac;} // get VolFrac from PDEFoam
       UInt_t   GetNActiveCells()   const {return fNoAct;}; // returns number of active cells
       UInt_t   GetNInActiveCells() const {return GetNCells()-GetNActiveCells();}; // returns number of not active cells
       UInt_t   GetNCells()         const {return fNCells;};   // returns number of cells

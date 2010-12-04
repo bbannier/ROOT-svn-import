@@ -38,6 +38,7 @@ namespace TMVA {
    class PDEFoamKernelGauss : public PDEFoamKernel {
 
    protected:
+      Float_t fSigma;          // width of gauss curve
 
       // Square function (fastest implementation)
       template<typename T> T Sqr(T x) const { return x*x; }
@@ -49,7 +50,7 @@ namespace TMVA {
       Float_t GetAverageNeighborsValue( PDEFoam*, std::vector<Float_t>&, ECellValue );
 
    public:
-      PDEFoamKernelGauss();                 // Constructor
+      PDEFoamKernelGauss(Float_t sigma);    // Constructor
       virtual ~PDEFoamKernelGauss(){};      // Destructor
 
       // kernel estimator
