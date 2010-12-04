@@ -126,7 +126,6 @@ namespace TMVA {
       UInt_t fNmin;            // minimal number of events in cell to split cell
       UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
-      Bool_t fPeekMax;         // peek up cell with max. driver integral for split
       PDEFoamDensity *fDistr;  //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
@@ -151,7 +150,6 @@ namespace TMVA {
       void MakeAlpha();             // Provides random point inside hyperrectangle
       void Grow();                  // build up foam
       Long_t PeekMax();             // peek cell with max. driver integral
-      Long_t PeekLast();            // peek last created cell
       Int_t  Divide(PDEFoamCell *); // Divide iCell into two daughters; iCell retained, taged as inactive
       Double_t Eval(Double_t *xRand, Double_t &event_density); // evaluate distribution on point 'xRand'
 
@@ -211,7 +209,6 @@ namespace TMVA {
       void SetEvPerBin(Int_t EvPerBin){fEvPerBin =EvPerBin;} // Sets max. no. of effective events per bin
       void SetInhiDiv(Int_t, Int_t ); // Set inhibition of cell division along certain edge
       void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;} // set VolFrac
-      void SetPeekMax(Bool_t new_val){ fPeekMax = new_val; }
       void SetDensity(PDEFoamDensity *dens) { fDistr = dens; }
 
       // coverity[ -tainted_data_return ]

@@ -81,7 +81,6 @@ TMVA::MethodPDEFoam::MethodPDEFoam( const TString& jobName,
    , fUseYesNoCell(kFALSE)
    , fDTLogic("None")
    , fDTSeparation(kFoam)
-   , fPeekMax(kTRUE)
    , fXmin(std::vector<Float_t>())
    , fXmax(std::vector<Float_t>())
    , fFoam(std::vector<PDEFoam*>())
@@ -118,7 +117,6 @@ TMVA::MethodPDEFoam::MethodPDEFoam( DataSetInfo& dsi,
    , fUseYesNoCell(kFALSE)
    , fDTLogic("None")
    , fDTSeparation(kFoam)
-   , fPeekMax(kTRUE)
    , fXmin(std::vector<Float_t>())
    , fXmax(std::vector<Float_t>())
    , fFoam(std::vector<PDEFoam*>())
@@ -159,7 +157,6 @@ void TMVA::MethodPDEFoam::Init( void )
    fUseYesNoCell   = kFALSE;   // return -1 or 1 for bg or signal events
    fDTLogic        = "None";   // decision tree algorithmus
    fDTSeparation   = kFoam;    // separation type
-   fPeekMax        = kTRUE;    // peek cell with max separation
 
    fKernel         = kNone; // default: use no kernel
    fKernelEstimator= NULL;  // kernel estimator used during evaluation
@@ -201,7 +198,6 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    AddPreDefVal(TString("GiniIndex"));
    AddPreDefVal(TString("MisClassificationError"));
    AddPreDefVal(TString("CrossEntropy"));
-   DeclareOptionRef( fPeekMax = kTRUE, "PeekMax", "Peek up cell with max. driver integral for the next split");
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -822,7 +818,6 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
    pdefoam->SetnSampl(      fnSampl);    // optional
    pdefoam->SetnBin(        fnBin);      // optional
    pdefoam->SetEvPerBin(    fEvPerBin);  // optional
-   pdefoam->SetPeekMax(fPeekMax);
 
    // cuts
    pdefoam->SetNmin(fNmin);

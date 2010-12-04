@@ -127,7 +127,6 @@ TMVA::PDEFoam::PDEFoam() :
    fNmin(100),
    fMaxDepth(0),
    fVolFrac(30.0),
-   fPeekMax(kTRUE),
    fDistr(NULL),
    fTimer(new Timer(0, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -158,7 +157,6 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fNmin(100),
    fMaxDepth(0),
    fVolFrac(30.0),
-   fPeekMax(kTRUE),
    fDistr(NULL),
    fTimer(new Timer(1, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -661,55 +659,6 @@ Long_t TMVA::PDEFoam::PeekMax()
 }
 
 //_____________________________________________________________________
-Long_t TMVA::PDEFoam::PeekLast()
-{
-   // Internal subprogram used by Create.  It finds the last created
-   // active cell for the purpose of the division.  Analogous to
-   // PeekMax() it is cut on the number of events in the cell (fNmin)
-   // and the cell tree depth (GetMaxDepth() > 0).
-
-   Long_t iCell = -1;
-
-   Bool_t bCutNmin = kTRUE;
-   Bool_t bCutMaxDepth = kTRUE;
-
-   for(Long_t i=fLastCe; i>=0; i--) {
-      if( fCells[i]->GetStat() == 1 ) {
-         // if driver integral < numeric limit, skip cell
-         if (fCells[i]->GetDriv() < std::numeric_limits<float>::epsilon())
-            continue;
-
-         // apply cut on depth
-         if (GetMaxDepth() > 0)
-            bCutMaxDepth = fCells[i]->GetDepth() < GetMaxDepth();
-
-         // apply Nmin-cut
-         if (GetNmin() > 0)
-            bCutNmin = GetBuildUpCellEvents(fCells[i]) > GetNmin();
-
-         // choose cell
-         if(bCutNmin && bCutMaxDepth) {
-            iCell = i;
-            break;
-         }
-      }
-   }
-
-   if (iCell == -1){
-      if (!bCutNmin)
-         Log() << kVERBOSE << "Warning: No cell with more than " 
-               << GetNmin() << " events found!" << Endl;
-      else if (!bCutMaxDepth)
-         Log() << kVERBOSE << "Warning: Maximum depth reached: " 
-               << GetMaxDepth() << Endl;
-      else
-         Log() << kWARNING << "Warning: PDEFoam::PeekLast: no more candidate cells found for further splitting." << Endl;
-   }
-
-   return(iCell);
-}
-
-//_____________________________________________________________________
 Int_t TMVA::PDEFoam::Divide(PDEFoamCell *cell)
 {
    // Internal subrogram used by Create.
@@ -770,10 +719,7 @@ void TMVA::PDEFoam::Grow()
    PDEFoamCell* newCell;
 
    while ( (fLastCe+2) < fNCells ) {  // this condition also checked inside Divide
-      if (fPeekMax)
-         iCell = PeekMax(); // peek up cell with maximum driver integral
-      else
-         iCell = PeekLast(); // peek up last cell created
+      iCell = PeekMax(); // peek up cell with maximum driver integral
 
       if ( (iCell<0) || (iCell>fLastCe) ) {
          Log() << kVERBOSE << "Break: "<< fLastCe+1 << " cells created" << Endl;
