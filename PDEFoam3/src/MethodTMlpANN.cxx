@@ -325,7 +325,7 @@ void TMVA::MethodTMlpANN::Train( void )
    // write weights to File;
    // this is not nice, but fMLP gets deleted at the end of Train()
    delete localTrainingTree;
-   delete vArr;
+   delete [] vArr;
 }
 
 
@@ -453,7 +453,7 @@ void  TMVA::MethodTMlpANN::ReadWeightsFromStream( istream& istr )
    fMLP->LoadWeights( "./TMlp.nn.weights.temp" );
    // here we can delete the temporary file
    // how?
-   delete d;
+   delete [] d;
 }
 
 //_______________________________________________________________________

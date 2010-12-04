@@ -356,7 +356,7 @@ int main( int argc, char** argv )
 
    // Linear discriminant (same as Fisher discriminant)
    if (Use["LD"])
-      factory->BookMethod( TMVA::Types::kLD, "LD", "H:!V:VarTransform=None" );
+      factory->BookMethod( TMVA::Types::kLD, "LD", "H:!V:VarTransform=None:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=50:NsmoothMVAPdf=10" );
 
    // Fisher discriminant (same as LD)
    if (Use["Fisher"])
@@ -420,7 +420,7 @@ int main( int argc, char** argv )
    // Boosted Decision Trees
    if (Use["BDTG"]) // Gradient Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDTG",
-                           "!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:SeparationType=GiniIndex:nCuts=20:NNodesMax=5" );
+                           "!H:!V:NTrees=4000:BoostType=Grad:Shrinkage=0.05:UseBaggedGrad:GradBaggingFraction=0.1:SeparationType=RegressionVariance:nCuts=20:NNodesMax=11" );
 
    if (Use["BDT"])  // Adaptive Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDT",
