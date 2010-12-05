@@ -190,8 +190,9 @@ TH2D* TMVA::PDEFoamDiscriminant::Project2( Int_t idim1, Int_t idim2, ECellValue 
    h1= new TH2D(hname.Data(), Form("var%d vs var%d",idim1,idim2), nbin, fXmin[idim1], fXmax[idim1], nbin, fXmin[idim2], fXmax[idim2]);
 
    if (!h1) Log() << kFATAL << "ERROR: Can not create histo" << hname << Endl;
-   h1->GetZaxis()->SetRangeUser(-std::numeric_limits<float>::epsilon(), 
-				1. + std::numeric_limits<float>::epsilon());
+   if (cell_value == kValue)
+      h1->GetZaxis()->SetRangeUser(-std::numeric_limits<float>::epsilon(), 
+                                   1. + std::numeric_limits<float>::epsilon());
 
    // ============== start projection algorithm ================
    // loop over all histogram bins (2-dim)
