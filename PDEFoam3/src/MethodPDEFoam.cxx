@@ -914,8 +914,10 @@ void TMVA::MethodPDEFoam::Reset()
       if (fFoam.at(i)) delete fFoam.at(i);
    fFoam.clear();
 
-   if (fKernelEstimator != NULL)
+   if (fKernelEstimator != NULL) {
       delete fKernelEstimator;
+      fKernelEstimator = NULL;
+   }
 }
 
 //_______________________________________________________________________
