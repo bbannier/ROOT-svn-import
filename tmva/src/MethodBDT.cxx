@@ -434,7 +434,7 @@ void TMVA::MethodBDT::ProcessOptions()
    }
 
    //    if (2*fNodeMinEvents >  Data()->GetNTrainingEvents()) {
-   //       Log() << kFATAL << "you've demanded a minimun number of events in a leaf node " 
+   //       Log() << kFATAL << "you've demanded a minimun number of events in a leaf node "
    //             << " that is larger than 1/2 the total number of events in the training sample."
    //             << " Hence I cannot make any split at all... this will not work!" << Endl;
    //    }
@@ -444,7 +444,7 @@ void TMVA::MethodBDT::ProcessOptions()
 void TMVA::MethodBDT::Init( void )
 {
    // common initialisation with defaults for the BDT-Method
-      
+
    fNTrees         = 400;
    if (fAnalysisType == Types::kClassification || fAnalysisType == Types::kMulticlass ) {
       fMaxDepth        = 3;

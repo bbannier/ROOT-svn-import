@@ -113,6 +113,7 @@ TMVA::MethodBoost::MethodBoost( DataSetInfo& dsi,
    , fBoostedMethodOptions("")
    , fMonitorHist(0)
    , fMonitorBoostedMethod(kFALSE)
+   , fMonitorTree(0)
    , fBoostStage(Types::kBoostProcBegin)
    , fDefaultHistNum(0)
    , fRecalculateMVACut(kFALSE)
@@ -269,12 +270,12 @@ void TMVA::MethodBoost::CheckSetup()
    Log() << kDEBUG << "CheckSetup: MName=" << fBoostedMethodName << " Title="<< fBoostedMethodTitle<< Endl;
    Log() << kDEBUG << "CheckSetup: MOptions="<< fBoostedMethodOptions << Endl;
    Log() << kDEBUG << "CheckSetup: fBoostStage=" << fBoostStage<<Endl;
-   Log() << kDEBUG << "CheckSetup: fMonitorTree" << fMonitorTree <<Endl;
+   Log() << kDEBUG << "CheckSetup: fMonitorTree=" << fMonitorTree <<Endl;
    Log() << kDEBUG << "CheckSetup: fMethodIndex=" <<fMethodIndex << Endl;
    if (fMethods.size()>0) Log() << kDEBUG << "CheckSetup: fMethods[0]" <<fMethods[0]<<Endl;
    Log() << kDEBUG << "CheckSetup: fMethodWeight.size()" << fMethodWeight.size() << Endl;
    if (fMethodWeight.size()>0) Log() << kDEBUG << "CheckSetup: fMethodWeight[0]="<<fMethodWeight[0]<<Endl;
-   Log() << kDEBUG << "CheckSetup: gtrying to repair things" << Endl;
+   Log() << kDEBUG << "CheckSetup: trying to repair things" << Endl;
 
    //TMVA::MethodBase::CheckSetup();
    if (fMonitorHist == 0){
@@ -302,7 +303,7 @@ void TMVA::MethodBoost::Train()
    ResetBoostWeights();
 
    // clean boosted method options
-   CleanBoostOptions(); 
+   CleanBoostOptions();
    //
    // training and boosting the classifiers
    for (fMethodIndex=0;fMethodIndex<fBoostNum;fMethodIndex++) {
@@ -317,7 +318,7 @@ void TMVA::MethodBoost::Train()
 
       // supressing the rest of the classifier output the right way
       MethodBase *meth = (dynamic_cast<MethodBase*>(method));
-         
+
       if(meth==0) continue;
 
       // set fDataSetManager if MethodCategory (to enable Category to create datasetinfo objects) // DSMTEST
@@ -524,7 +525,7 @@ void TMVA::MethodBoost::TestClassification()
    MethodBase::TestClassification();
    if (fMonitorBoostedMethod) {
       UInt_t nloop = fTestSigMVAHist.size();
-      if (fMethods.size()<nloop) nloop = fMethods.size(); 
+      if (fMethods.size()<nloop) nloop = fMethods.size();
       //running over all the events and populating the test MVA histograms
       Data()->SetCurrentType(Types::kTesting);
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
