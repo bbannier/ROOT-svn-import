@@ -345,10 +345,10 @@ def abort():
     sys.exit(1)
 
 def getTMVAVersion():
-    reldir = 'TMVA'
-    for i in range(0,4):
+    reldir = 'tmva'
+    for i in range(4):
         if os.path.isdir( reldir ):
-            v = reldir + '/src/Version.h'
+            v = reldir + '/inc/Version.h'
             if not os.path.isfile( v ):
                 return '-<i><font color="red">unknown</font></i>'
             file = open( v, 'r' )
@@ -357,6 +357,9 @@ def getTMVAVersion():
                     return line.replace('TMVA_RELEASE','').replace('#define','').replace('"','').strip()
         else:
             reldir = '../' + reldir
+
+    # no version found
+    return '-<i><font color="red">unknown</font></i>'
 
 # Main routine
 def main():
@@ -536,7 +539,8 @@ def main():
         print '<center>'
         print '<table border="0"  cellpadding="2" cellspacing="0" width="800"  bgcolor="#ffffff">'
         print '<tr><td bgcolor=gainsboro> <table width=100%><tr><td><font size=+1><b>TMVA Configuration Options Reference</b>'
-        print '</font></td><td align="right"><a style="text-decoration:none" href="http://sourceforge.net/project/showfiles.php?group_id=152074" title="Download this version of TMVA"><font color="red">Reference version: TMVA-v' + getTMVAVersion() + '</font></a>'
+        vtmva = getTMVAVersion()
+        print '</font></td><td align="right"><a style="text-decoration:none" href="http://tmva.sf.net" title="Download this version of TMVA"><font color="red">Reference version: TMVA-v' + vtmva + '</font></a>'
         print '</td>'
         print '<td align="right"><a STYLE="text-decoration: none" href="javascript:openPageWindow(\'%s\',\'%s\')" title="Reference for TMVA versions in ROOT releases">TMVA-version @ ROOT</a></td>' % (DEFAULT_VERSIONREF,'ROOT vs TMVA Version Reference')
         print '</tr></table></td></tr>'

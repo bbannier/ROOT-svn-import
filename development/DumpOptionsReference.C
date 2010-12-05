@@ -47,13 +47,13 @@ void DumpOptionsReference()
    // Define the input variables that shall be used for the MVA training
    // note that you may also use variable expressions, such as: "3*var1/var2*abs(var3)"
    // [all types of expressions that can also be parsed by TTree::Draw( "expression" )]
-   factory->AddVariable( "var1+var2", 'F' );
-   factory->AddVariable( "var1-var2", 'F' );
-   factory->AddVariable( "var3",      'F' );
-   factory->AddVariable( "var4",      'F' );
+   factory->AddVariable( "var1", 'F' );
+   factory->AddVariable( "var2", 'F' );
+   factory->AddVariable( "var3", 'F' );
+   factory->AddVariable( "var4", 'F' );
 
    TFile *input(0);
-    TString fname = "./tmva_example.root";
+    TString fname = "../tmva/test/tmva_example.root";
     if (!gSystem->AccessPathName( fname )) {
        // first we try to find tmva_example.root in the local directory
        std::cout << "--- DumpOptionsReference    : Accessing " << fname << std::endl;
