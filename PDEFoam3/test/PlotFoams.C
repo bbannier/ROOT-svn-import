@@ -1,12 +1,12 @@
 #include "tmvaglob.C"
 #include "TControlBar.h"
+#include "TMap.h"
+
 #include <sstream>
 #include <string>
 #include <cfloat>
 
 #include "TMVA/PDEFoam.h"
-
-typedef enum { kNEV, kDISCR, kMONO, kRMS, kRMSOVMEAN } EPlotType;
 
 void PlotFoams( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root", 
                 bool useTMVAStyle=kTRUE )
@@ -21,22 +21,27 @@ void PlotFoams( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.
    TControlBar* cbar = new TControlBar( "vertical", "Choose cell value for plot:", 50, 50 );
    if ((gDirectory->Get("SignalFoam") && gDirectory->Get("BgFoam")) || 
        gDirectory->Get("MultiTargetRegressionFoam")) {
-      TString macro = Form( "Plot(\"%s\", kNEV)", fin.Data() );
+      TString macro = Form( "Plot(\"%s\", TMVA::kValueDensity, \"Event density\", %s)", 
+			    fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
       cbar->AddButton( "Event density", macro, "Plot event density", "button" );
-   } else if (gDirectory->Get("DiscrFoam")){
-      TString macro = Form( "Plot(\"%s\", kDISCR)", fin.Data() );
+   } else if (gDirectory->Get("DiscrFoam") || gDirectory->Get("MultiClassFoam0")){
+      TString macro = Form( "Plot(\"%s\", TMVA::kValue, \"Discriminator\", %s)", 
+			    fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
       cbar->AddButton( "Discriminator", macro, "Plot discriminator", "button" );
    } else if (gDirectory->Get("MonoTargetRegressionFoam")){
-      TString macro = Form( "Plot(\"%s\", kMONO)", fin.Data() );
+      TString macro = Form( "Plot(\"%s\", TMVA::kValue, \"Target\", %s)", 
+			    fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
       cbar->AddButton( "Target", macro, "Plot target", "button" );
    } else {
       cout << "Error: no foams found in file: " << fin << endl;
       return;
    }
    
-   TString macro_rms = Form( "Plot(\"%s\", kRMS)", fin.Data() );
+   TString macro_rms = Form( "Plot(\"%s\", TMVA::kRms, \"RMS\", %s)", 
+			     fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
    cbar->AddButton( "RMS", macro_rms, "Plot RMS (Variance)", "button" );
-   TString macro_rms_ov_mean = Form( "Plot(\"%s\", kRMSOVMEAN)", fin.Data() );
+   TString macro_rms_ov_mean = Form( "Plot(\"%s\", TMVA::kRmsOvMean, \"RMS/Mean\", %s)", 
+				     fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
    cbar->AddButton( "RMS over Mean", macro_rms_ov_mean, "Plot RMS over Mean", "button" );
 
    cbar->Show();
@@ -44,169 +49,116 @@ void PlotFoams( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.
 }
 
 // foam plotting macro
-void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root", EPlotType pt )
+void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root", 
+	   TMVA::ECellValue cv, TString cv_long, bool useTMVAStyle=kTRUE )
 {
    cout << "read file: " << fin << endl;
    TFile *file = TFile::Open(fin);
 
    gStyle->SetNumberContours(999);
-   TMVAGlob::SetTMVAStyle();
-   
-   TMVA::ECellValue cellval  = TMVA::kValue; // quantity to draw in foam projection
-   string cellval_long = ""; // name of quantity to draw in foam projection
-
-   if (pt == kNEV){
-      cellval      = TMVA::kValueDensity;
-      cellval_long = "Event density";
-   }
-   else if (pt == kDISCR){
-      cellval      = TMVA::kValue;
-      cellval_long = "Discriminator";
-   }
-   else if (pt == kMONO){
-      cellval      = TMVA::kValue;
-      cellval_long = "Target";
-   }
-   else if (pt == kRMS){
-      cellval      = TMVA::kRms;
-      cellval_long = "RMS";
-   }
-   else if (pt == kRMSOVMEAN){
-      cellval      = TMVA::kRmsOvMean;
-      cellval_long = "RMS/Mean";
-   }
+   if (useTMVAStyle)  TMVAGlob::SetTMVAStyle();
 
    // find foams and foam type
-   TMVA::EFoamType ft;
-   TMVA::PDEFoam *foam  = 0;
-   TMVA::PDEFoam *foam2 = 0;
-   string foam_capt, foam2_capt;
+   TList foam_list; // the foams and their captions
    if (gDirectory->Get("SignalFoam") && gDirectory->Get("BgFoam")){
-      foam  = SignalFoam;
-      foam2 = BgFoam;
-      foam_capt  = "Signal Foam";
-      foam2_capt = "Background Foam";
-      ft    = TMVA::kSeparate;
+      foam_list.Add(new TPair(SignalFoam, new TObjString("Signal Foam")));
+      foam_list.Add(new TPair(BgFoam, new TObjString("Background Foam")));
    } else if (gDirectory->Get("DiscrFoam")){
-      foam = DiscrFoam;
-      foam_capt = "Discriminator Foam";
-      ft   = TMVA::kDiscr;
+      foam_list.Add(new TPair(DiscrFoam, new TObjString("Discriminator Foam")));
+   } else if (gDirectory->Get("MultiClassFoam0")){
+      UInt_t cls = 0;
+      TMVA::PDEFoam *fm = NULL;
+      while (fm = (TMVA::PDEFoam*) gDirectory->Get(Form("MultiClassFoam%u", cls))) {
+	 foam_list.Add(new TPair(fm, new TObjString(Form("Discriminator Foam %u",cls))));
+	 cls++;
+      }
    } else if (gDirectory->Get("MonoTargetRegressionFoam")){
-      foam = MonoTargetRegressionFoam;
-      foam_capt = "MonoTargetRegression Foam";
-      ft   = TMVA::kMonoTarget;
+      foam_list.Add(new TPair(MonoTargetRegressionFoam, 
+			      new TObjString("MonoTargetRegression Foam")));
    } else if (gDirectory->Get("MultiTargetRegressionFoam")){
-      foam = MultiTargetRegressionFoam;
-      foam_capt = "MultiTargetRegression Foam";
-      ft   = TMVA::kMultiTarget;
+      foam_list.Add(new TPair(MultiTargetRegressionFoam, 
+			      new TObjString("MultiTargetRegression Foam")));
    } else {
       cout << "ERROR: no Foams found in file: " << fin << endl;
       return;
    }
 
-   Int_t kDim = foam->GetTotDim();
-   cout << foam_capt << " loaded" << endl;
-   cout << "Dimension of foam: " << kDim << endl;
+   // loop over all foams and print out a debug message
+   TListIter foamIter(&foam_list);
+   TPair *fm_pair = NULL;
+   Int_t kDim; // foam dimensions
+   while (fm_pair = (TPair*) foamIter()) {
+      kDim = ((TMVA::PDEFoam*) fm_pair->Key())->GetTotDim();
+      cout << "Foam loaded: " << ((TObjString*) fm_pair->Value())->String()
+	   << " (dimension = " << kDim << ")" << endl;
+   }
 
-   // kernel to use for plotting
-   TMVA::PDEFoamKernel *kernel = new TMVA::PDEFoamKernel(); // kernel to use for the projection
+   // kernel to use for the projection
+   TMVA::PDEFoamKernel *kernel = new TMVA::PDEFoamKernel();
 
    // ********** plot foams ********** //
-   if (kDim==1){
+   if (kDim == 1){
       // draw histogram
-      TH1D *hist1 = 0, *hist2 = 0;
-      TCanvas *canv = new TCanvas("canv", "Foam(s)", 400, (ft==TMVA::kSeparate) ? 800 : 400);
-      if (ft==TMVA::kSeparate)
-	 canv->Divide(0,2);
-      canv->cd(1);
+      TCanvas *canv = NULL; // the canvas
+      TH1D *proj = NULL;    // the foam projection
 
-      string var_name = foam->GetVariableName(0)->String();
-      hist1 = foam->Draw1Dim(cellval, 100, kernel);
-      hist1->SetTitle((cellval_long+" of "+foam_capt+";"+var_name).c_str());
-      hist1->Draw();
-      hist1->SetDirectory(0);
-      
-      if (ft==TMVA::kSeparate){
-	 canv->cd(2);
-	 string var_name2 = foam2->GetVariableName(0)->String();
-	 if (ft==TMVA::kSeparate)
-	    hist2 = foam2->Draw1Dim(cellval, 100, kernel);
-	 hist2->SetTitle((cellval_long+" of "+foam2_capt+";"+var_name2).c_str());
-	 hist2->Draw();
-	 hist2->SetDirectory(0);
-      }
+      // loop over all foams and draw the projection
+      TListIter it(&foam_list); // the iterator
+      TPair *fm_pair = NULL;    // the (foam, caption) pair
+      while (fm_pair = (TPair*) it()) {
+	 TMVA::PDEFoam *foam = (TMVA::PDEFoam*) fm_pair->Key();
+	 TString foam_capt(((TObjString*) fm_pair->Value())->String());
 
-      // save canvas to file
-      stringstream fname  (stringstream::in | stringstream::out);
-      fname << "plots/" << "foam_var_0";
-      canv->Update();
-      TMVAGlob::imgconv( canv, fname.str() );
-   } else{ 
+	 canv = new TCanvas(Form("canvas_%u",foam), "1-dimensional PDEFoam", 400, 400);
+
+	 TString var_name = foam->GetVariableName(0)->String();
+	 proj = foam->Draw1Dim(cv, 100, kernel);
+	 proj->SetTitle(cv_long+" of "+foam_capt+";"+var_name);
+	 proj->Draw();
+	 proj->SetDirectory(0);
+
+	 canv->Update();
+      } // loop over foams
+   } else { 
       // if dimension of foam > 1, draw foam projections
-      TCanvas* canv=0;
-      TH2D *proj=0, *proj2=0;
+      TCanvas *canv = NULL; // the canvas
+      TH2D *proj = NULL;    // the foam projection
 
-      // draw all possible projections (kDim*(kDim-1)/2)
-      for(Int_t i=0; i<kDim; i++){
-	 for (Int_t k=i+1; k<kDim; k++){
+      // loop over all foams and draw the projection
+      TListIter it(&foam_list); // the iterator
+      TPair *fm_pair = NULL;    // the (foam, caption) pair
+      while (fm_pair = (TPair*) it()) {
+	 TMVA::PDEFoam *foam = (TMVA::PDEFoam*) fm_pair->Key();
+	 TString foam_capt(((TObjString*) fm_pair->Value())->String());
 
-	    // set titles of canvas and foam projections
-	    stringstream title (stringstream::in | stringstream::out);
-	    stringstream caption (stringstream::in | stringstream::out);
-	    title   << "combined_"         << i << ":" << k;
-	    caption << "Foam projections " << i << ":" << k;
-	    cout    << "draw projection: " << i << ":" << k << endl;
-                     
-	    stringstream title_proj1 (stringstream::in | stringstream::out);
-	    stringstream title_proj2 (stringstream::in | stringstream::out);
-	    title_proj1 << cellval_long << " of " 
-			<< foam_capt << ": Projection " 
-			<< foam->GetVariableName(i)->String()
-			<< ":" << foam->GetVariableName(k)->String()
-			<< ";" << foam->GetVariableName(i)->String()
-			<< ";" << foam->GetVariableName(k)->String();
-	    if (ft==TMVA::kSeparate){
-	       title_proj2 << cellval_long << " of " 
-			   << foam2_capt << ": Projection " 
-			   << foam2->GetVariableName(i)->String() 
-			   << ":" << foam2->GetVariableName(k)->String()
-			   << ";" << foam2->GetVariableName(i)->String()
-			   << ";" << foam2->GetVariableName(k)->String();
-	    }
+	 // draw all possible projections (kDim*(kDim-1)/2)
+	 for(Int_t i=0; i<kDim; i++){
+	    for (Int_t k=i+1; k<kDim; k++){
 
-	    // create canvas
-	    canv = new TCanvas(title.str().c_str(), caption.str().c_str(), 
-			       (Int_t)(400/(1.-0.2)), (ft==TMVA::kSeparate ? 800 : 400));
-	    if (ft==TMVA::kSeparate){
-	       canv->Divide(0,2);
-	       canv->GetPad(1)->SetRightMargin(0.2);
-	       canv->GetPad(2)->SetRightMargin(0.2);
-	    } else {
+	       // create canvas
+	       canv = new TCanvas(Form("canvas_%u_%i:%i",foam,i,k),
+				  Form("Foam projections %i:%i",i,k),
+				  (Int_t)(400/(1.-0.2)), 400);
 	       canv->SetRightMargin(0.2);
-	    }
-	    canv->cd(1);
 
-	    // do projections
-	    proj = foam->Project2(i, k, cellval, kernel);
-	    proj->SetTitle(title_proj1.str().c_str());
-	    proj->Draw("COLZ"); // CONT4Z
-	    proj->SetDirectory(0);
+	       TString title_proj = Form("%s of %s: Projection %s:%s;%s;%s",
+					 cv_long.Data(),
+					 foam_capt.Data(),
+					 foam->GetVariableName(i)->String().Data(),
+					 foam->GetVariableName(k)->String().Data(),
+					 foam->GetVariableName(i)->String().Data(),
+					 foam->GetVariableName(k)->String().Data() );
 
-	    if (ft==TMVA::kSeparate){
-	       canv->cd(2);
-	       proj2 = foam2->Project2(i, k, cellval, kernel);
-	       proj2->SetTitle(title_proj2.str().c_str());
-	       proj2->Draw("COLZ"); // CONT4Z
-	       proj2->SetDirectory(0);
-	    }
-                     
-	    // save canvas to file
-	    stringstream fname  (stringstream::in | stringstream::out);
-	    fname << "plots/" << "foam_projection_var_" << i << ":" << k;
-	    canv->Update();
-	    TMVAGlob::imgconv( canv, fname.str() );
+	       // do projections
+	       proj = foam->Project2(i, k, cv, kernel);
+	       proj->SetTitle(title_proj);
+	       proj->Draw("COLZ"); // CONT4Z
+	       proj->SetDirectory(0);
+
+	       canv->Update();
+	    } // loop over all possible projections
 	 } // loop over all possible projections
-      } // loop over all possible projections
+      } // loop over foams
    } // if dimension > 1
 
    file->Close();

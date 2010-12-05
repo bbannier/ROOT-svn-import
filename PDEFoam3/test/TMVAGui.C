@@ -249,7 +249,7 @@ void TMVAGui( const char* fName = "TMVA.root" )
    title = Form( "(%i) Plot Foams (PDEFoam)", ++ic );
    ActionButton( cbar,  
                  title,
-                 ".x PlotFoams.C",
+                 ".x PlotFoams.C(\"weights/TMVAClassification_PDEFoam.weights_foams.root\")",
                  "Plot Foams (macro PlotFoams.C)",
                  buttonType, "PDEFoam" );
 
