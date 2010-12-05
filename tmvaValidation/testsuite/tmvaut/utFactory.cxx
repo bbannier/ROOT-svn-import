@@ -83,7 +83,7 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
    string factoryOptions( "!V:Silent:Transformations=I:AnalysisType=Classification:!Color:!DrawProgressBar" );
    TString outfileName( "ByHand.root" );
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
- Factory* factory = new Factory(factoryname,outputFile,factoryOptions);
+   Factory* factory = new Factory(factoryname,outputFile,factoryOptions);
    factory->AddVariable( "var0",  "Variable 0", 'F' );
    factory->AddVariable( "var1",  "Variable 1", 'F' );
 
@@ -124,6 +124,7 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
    delete factory;
    outputFile->Close();
    if (outputFile) delete outputFile;
+   std::cout << ROCValue << std::endl;
    return (ROCValue>0.6);
 }
 

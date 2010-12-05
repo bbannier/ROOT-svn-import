@@ -22,6 +22,15 @@ TMVALD  = -L$(TMVASYS)/lib
 TMVALIB = -lTMVA.1
 endif
 
+ifneq ($(FULL),)
+PREPROCOPT += -DFULL
+endif
+
+ifneq ($(DEBUG),)
+PREPROCOPT += -DCOUTDEBUG
+endif
+
+
 #------------------------------------------------------------------------------
 
 
@@ -46,7 +55,7 @@ TMVAUTOBJECTS    = $(TMVAUTSOURCES:.cxx=.o)
 TMVAUTH          = $(TMVAUTSOURCES:.cxx=.h)
 
 $(TMVAUTOBJECTS): %.o : %.cxx $(TMVAUTH)
-	$(CXX) $(TMVAINC) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(TMVAINC) $(CXXFLAGS) $(PREPROCOPT) -c $< -o $@
 
 $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
 	$(LD) $(LDFLAGS) $^ $(TMVALD) $(LIBS) $(TMVALIB) -lTMVA -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
@@ -59,4 +68,4 @@ clean:
 		@rm -f $(PROGRAMS) $(OBJS) $(TMVAUTOBJECTS)
 
 .$(SrcSuf).$(ObjSuf):
-	$(CXX)  $(CXXFLAGS) -c $<
+	$(CXX)  $(CXXFLAGS) $(PREPROCOPT) -c $<
