@@ -247,6 +247,7 @@ void MethodUnitTestWithROCLimits::run()
        || _methodType==Types::kPDERS
        || _methodType==Types::kRuleFit
        || _methodType==Types::kPDEFoam
+       || _methodType==Types::kTMlpANN
        || _methodTitle == "BoostedFisher"
        ) _DoTestCCode=false;
 
@@ -260,7 +261,7 @@ void MethodUnitTestWithROCLimits::run()
       TString macroName=Form("testmakeclass_%s",_methodTitle.Data());
       TString macroFileName=TString("./")+macroName+TString(".C");
       TString methodTypeName = Types::Instance().GetMethodName(_methodType);
-      gSystem->Exec(Form("rm %s",macroFileName.Data()));
+      gSystem->Exec(Form("rm -f %s",macroFileName.Data()));
       ofstream fout( macroFileName );
       fout << "// generic macro file to test TMVA reader and standalone C code " << std::endl;
       fout << "#include \"TFile.h\""<<std::endl;
@@ -305,7 +306,7 @@ void MethodUnitTestWithROCLimits::run()
       fout << "}" << std::endl;
 
       gROOT->ProcessLine(Form(".L %s+",macroFileName.Data()));
-      test_(gROOT->ProcessLine(Form("%s()",macroName.Data())));
+      test_(gROOT->ProcessLine(Form("%s();",macroName.Data())));
    }
 
 }

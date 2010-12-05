@@ -49,7 +49,13 @@ void UnitTestSuite::intro() const
 {
    if (osptr) {
       *osptr << "************************************************************************************************" << endl;
-      *osptr << "* TMVA - S T R E S S and U N I T test suite                                                    *" << endl;
+      *osptr << "* TMVA - S T R E S S and U N I T test suite ";
+#ifdef FULL
+      *osptr << "(FULL)";
+#else
+      *osptr << "(FAST)";
+#endif
+      *osptr << "                                             *" << endl;
       *osptr << "************************************************************************************************" << endl;
    }
 }
