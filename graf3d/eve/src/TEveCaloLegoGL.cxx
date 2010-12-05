@@ -579,7 +579,6 @@ void  TEveCaloLegoGL::GetScaleForMatrix(Float_t& sx, Float_t& sy, Float_t& sz) c
    if (fM->fScaleAbs)
    {
       sz = fM->GetMaxTowerH() / fM->fMaxValAbs;
-      printf("zscale %f \n", sz);
    }
    else if (!fM->fData->Empty())
    {
