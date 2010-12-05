@@ -265,7 +265,7 @@ void TMVA::MethodLikelihood::DeclareCompatibilityOptions()
    fNsmoothVarS = new Int_t[GetNvar()];
    fNsmoothVarB = new Int_t[GetNvar()];
    fInterpolateString = new TString[GetNvar()];
-   for(Int_t i=0; i<GetNvar(); ++i) {
+   for(UInt_t i=0; i<GetNvar(); ++i) {
       fAverageEvtPerBinVarS[i] = fAverageEvtPerBinVarB[i] = 0;
       fNsmoothVarS[i] = fNsmoothVarB[i] = 0;
       fInterpolateString[i] = "";
