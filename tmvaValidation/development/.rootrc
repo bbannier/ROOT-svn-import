@@ -1,6 +1,7 @@
-Unix.*.Root.MacroPath:   .:../macros
+Unix.*.Root.MacroPath:   .:../tmva/test
 
-Rint.Load:               ../macros/TMVAalias.C
-Rint.Logon:              ../macros/TMVAlogon.C
-Rint.Logoff:             ../macros/TMVAlogoff.C
+Unix.*.Root.DynamicPath: ../tmva/lib
+
+Rint.Logon:              ../tmva/test/TMVAlogon.C
+Rint.Logoff:             ../tmva/test/TMVAlogoff.C
 Rint.History:            ./.root_hist
