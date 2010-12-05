@@ -27,7 +27,7 @@ PREPROCOPT += -DFULL
 endif
 
 ifneq ($(DEBUG),)
-PREPROCOPT += -DCOUTDEBUG
+PREPROCOPT +=  -ggdb -DCOUTDEBUG
 endif
 
 

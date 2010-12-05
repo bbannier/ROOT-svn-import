@@ -13,3 +13,12 @@ cd ../../testsuite
 make -f Makefile.standalone
 ./stressTMVA
 
+# alternatively you can do the following, which allows you to test any TMVA directory that you are working on
+
+export TMVASYS=<TMVA directory of your choice>
+export LD_LIBRARY_PATH=$TMVASYS/lib:$LD_LIBRARY_PATH
+cd testsuite
+make [FULL=1] [DEBUG=1]
+
+FULL=1 runs all tests (~30 min), by default it runs the short version (~2 min)
+DEBUG=1 enables debugging output, by default the tests are silent
