@@ -19,9 +19,9 @@
 #include "TKDTree.h"
 #endif
 
-namespace ROOT { 
-   namespace Fit { 
-      class BinData; 
+namespace ROOT {
+   namespace Fit {
+      class BinData;
    }
 }
 
@@ -36,6 +36,13 @@ class TKDTreeBinning : public TObject {
    std::vector<std::pair<Double_t, Double_t> > fDataThresholds;
    std::vector<std::vector<std::pair<Bool_t, Bool_t> > > fCheckedBinEdges;
    std::vector<std::map<Double_t, std::vector<UInt_t> > > fCommonBinEdges;
+   Bool_t fIsSorted;
+   Bool_t fIsSortedAsc;
+   std::vector<UInt_t> fBinsContent;
+   struct CompareAsc;
+   friend struct CompareAsc;
+   struct CompareDesc;
+   friend struct CompareDesc;
    TKDTreeBinning(TKDTreeBinning& bins);           // Disallowed copy constructor
    TKDTreeBinning operator=(TKDTreeBinning& bins); // Disallowed assign operator
    void SetData(Double_t* data);
@@ -43,14 +50,15 @@ class TKDTreeBinning : public TObject {
    void SetBinsEdges();
    void SetBinMinMaxEdges(Double_t* binEdges);
    void SetCommonBinEdges(Double_t* binEdges);
+   void SetBinsContent();
    void ReadjustMinBinEdges(Double_t* binEdges);
    void ReadjustMaxBinEdges(Double_t* binEdges);
 
 public:
-
    TKDTreeBinning(UInt_t dataSize, UInt_t dataDim, Double_t* data, UInt_t nBins = 100);
    ~TKDTreeBinning();
    void SetNBins(UInt_t bins);
+   void SortBinsByDensity(Bool_t sortAsc = kTRUE);
    const Double_t* GetBinsMinEdges() const;
    const Double_t* GetBinsMaxEdges() const;
    std::pair<const Double_t*, const Double_t*> GetBinsEdges() const;
@@ -67,7 +75,10 @@ public:
    Double_t GetBinDensity(UInt_t bin) const;
    Double_t GetBinVolume(UInt_t bin) const;
    const Double_t* GetOneDimBinEdges() const;
-   void FillBinData(ROOT::Fit::BinData & data) const; 
+   const Double_t* GetBinCenter(UInt_t bin) const;
+   UInt_t GetBinMaxDensity() const;
+   UInt_t GetBinMinDensity() const;
+   void FillBinData(ROOT::Fit::BinData & data) const;
 
    ClassDef(TKDTreeBinning, 1)
 
