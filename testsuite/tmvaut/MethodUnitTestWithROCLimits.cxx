@@ -291,7 +291,7 @@ void MethodUnitTestWithROCLimits::run()
   cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
 #endif
 
-  bool _DoTestCCode=false; //EVT change me 
+  bool _DoTestCCode=true; 
   
   // use: grep -A5  'MakeClassSpecific' ../tmva/src/Method*.cxx
 
