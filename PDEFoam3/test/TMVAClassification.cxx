@@ -420,7 +420,7 @@ int main( int argc, char** argv )
    // Boosted Decision Trees
    if (Use["BDTG"]) // Gradient Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDTG",
-                           "!H:!V:NTrees=4000:BoostType=Grad:Shrinkage=0.05:UseBaggedGrad:GradBaggingFraction=0.1:SeparationType=RegressionVariance:nCuts=20:NNodesMax=11" );
+                           "!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.10:UseBaggedGrad:GradBaggingFraction=0.5:nCuts=20:NNodesMax=5" );
 
    if (Use["BDT"])  // Adaptive Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDT",

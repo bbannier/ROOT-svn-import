@@ -209,6 +209,7 @@ TMVA::PDEFoam::PDEFoam(const PDEFoam &From) :
    , fXmin(0)
    , fXmax(0)
    , fNmin(0)
+   , fMaxDepth(0)
    , fDistr(0)
    , fTimer(0)
    , fVariableNames(0)
