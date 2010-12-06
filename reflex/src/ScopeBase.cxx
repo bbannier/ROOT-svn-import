@@ -245,7 +245,7 @@ Reflex::ScopeBase::MemberByName2(const std::vector<Member>& members,
    if (signature && *signature) {
       if (matchReturnType) {
          for (Members::const_iterator it = members.begin(), itend = members.end(); it != itend; ++it) {
-            if (it->ToMemberBase()->MemberBase::Name() == name) {
+            if (strcmp(it->ToMemberBase()->MemberBase::Name_c_str(), name.c_str()) == 0) {
                if (signature->IsEquivalentTo(it->TypeOf(), modifiers_mask)) {
                   return *it;
                }
@@ -253,7 +253,7 @@ Reflex::ScopeBase::MemberByName2(const std::vector<Member>& members,
          }
       } else {
          for (Members::const_iterator it = members.begin(), itend = members.end(); it != itend; ++it) {
-      if (it->ToMemberBase()->MemberBase::Name() == name) {
+			if (strcmp(it->ToMemberBase()->MemberBase::Name_c_str(), name.c_str()) == 0) {
                if (signature->IsSignatureEquivalentTo(it->TypeOf(), modifiers_mask)) {
                   return *it;
                }
@@ -262,7 +262,7 @@ Reflex::ScopeBase::MemberByName2(const std::vector<Member>& members,
          }
    } else {
       for (Members::const_iterator it = members.begin(), itend = members.end(); it != itend; ++it) {
-         if (it->ToMemberBase()->MemberBase::Name() == name) {
+         if (strcmp(it->ToMemberBase()->MemberBase::Name_c_str(), name.c_str()) == 0) {
             return *it;
          }
       }
