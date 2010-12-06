@@ -73,17 +73,15 @@ ClassImp(TMVA::PDEFoamDensity)
 TMVA::PDEFoamDensity::PDEFoamDensity() 
    : TObject(),
      fBst(NULL),
-     fDim(0),
-     fVolFrac(30.0),
+     fBox(std::vector<Double_t>()),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDensity::PDEFoamDensity(Int_t dim)
+TMVA::PDEFoamDensity::PDEFoamDensity(std::vector<Double_t> box)
    : TObject(),
      fBst(NULL),
-     fDim(dim),
-     fVolFrac(30.0),
+     fBox(box),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {}
 
@@ -98,8 +96,7 @@ TMVA::PDEFoamDensity::~PDEFoamDensity()
 TMVA::PDEFoamDensity::PDEFoamDensity(const PDEFoamDensity &distr)
    : TObject(),
      fBst             (distr.fBst),
-     fDim             (distr.fDim),
-     fVolFrac         (distr.fVolFrac),
+     fBox             (distr.fBox),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {
    // Copy constructor
@@ -122,10 +119,10 @@ void TMVA::PDEFoamDensity::Initialize()
    }
 
    // set periode (number of variables)
-   if (fDim < 1)
-      Log() << kFATAL << "Dimension of PDEFoamDensity < 1" << Endl;
+   if (fBox.size() == 0)
+      Log() << kFATAL << "Dimension of PDEFoamDensity is zero" << Endl;
 
-   fBst->SetPeriode(fDim);
+   fBst->SetPeriode(fBox.size());
 }
 
 //_____________________________________________________________________
@@ -140,4 +137,16 @@ void TMVA::PDEFoamDensity::FillBinarySearchTree( const Event* ev )
 
    // insert into binary search tree
    fBst->Insert(ev);
+}
+
+//_____________________________________________________________________
+Double_t TMVA::PDEFoamDensity::GetBoxVolume() const
+{
+   // calculate box volume
+   Double_t volume = 1.0;
+   for (std::vector<Double_t>::const_iterator it = fBox.begin();
+	it != fBox.end(); ++it) {
+      volume *= *it;
+   }
+   return volume;
 }

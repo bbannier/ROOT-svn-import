@@ -60,8 +60,8 @@ TMVA::MethodPDEFoam::MethodPDEFoam( const TString& jobName,
    , fSigBgSeparated(kFALSE)
    , fFrac(0.001)
    , fDiscrErrCut(-1.0)
-   , fVolFrac(30.0)
-   , fVolFracInv(1.0/30.0)
+   , fVolFrac(15.0)
+   , fVolFracInv(1.0/15.0)
    , fnCells(999)
    , fnActiveCells(500)
    , fnSampl(2000)
@@ -96,8 +96,8 @@ TMVA::MethodPDEFoam::MethodPDEFoam( DataSetInfo& dsi,
    , fSigBgSeparated(kFALSE)
    , fFrac(0.001)
    , fDiscrErrCut(-1.0)
-   , fVolFrac(30.0)
-   , fVolFracInv(1.0/30.0)
+   , fVolFrac(15.0)
+   , fVolFracInv(1.0/15.0)
    , fnCells(999)
    , fnActiveCells(500)
    , fnSampl(2000)
@@ -144,8 +144,8 @@ void TMVA::MethodPDEFoam::Init( void )
    fSigBgSeparated = kFALSE;   // default: unified foam
    fFrac           = 0.001;    // fraction of outlier events
    fDiscrErrCut    = -1.;      // cut on discriminator error
-   fVolFrac        = 30.0;     // inverse range searching box size
-   fVolFracInv     = 1./30.;   // range searching box size
+   fVolFrac        = 15.0;     // inverse range searching box size
+   fVolFracInv     = 1./15.;   // range searching box size
    fnActiveCells   = 500;      // number of active cells to create
    fnCells         = fnActiveCells*2-1; // total number of cells
    fnSampl         = 2000;     // number of sampling points in cell
@@ -183,7 +183,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    //
    DeclareOptionRef( fSigBgSeparated = kFALSE, "SigBgSeparate", "Separate foams for signal and background" );
    DeclareOptionRef( fFrac = 0.001,           "TailCut",  "Fraction of outlier events that are excluded from the foam in each dimension" );
-   DeclareOptionRef( fVolFracInv = 1./30.,    "VolFrac",  "Size of sampling box, used for density calculation during foam build-up (maximum value: 1.0 is equivalent to volume of entire foam)");
+   DeclareOptionRef( fVolFracInv = 1./15.,    "VolFrac",  "Size of sampling box, used for density calculation during foam build-up (maximum value: 1.0 is equivalent to volume of entire foam)");
    DeclareOptionRef( fnActiveCells = 500,     "nActiveCells",  "Maximum number of active cells to be created by the foam");
    DeclareOptionRef( fnSampl = 2000,          "nSampl",   "Number of generated MC events per cell");
    DeclareOptionRef( fnBin = 5,               "nBin",     "Number of bins in edge histograms");
@@ -773,6 +773,12 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
    else
       dim = GetNvar();
 
+   // calculate range-searching box
+   std::vector<Double_t> box;
+   for (Int_t idim = 0; idim < dim; ++idim) {
+      box.push_back((fXmax.at(idim) - fXmin.at(idim)) / fVolFrac);
+   }
+
    // create PDEFoam and PDEFoamDensity
    PDEFoam *pdefoam = NULL;
    PDEFoamDensity *density = NULL;
@@ -781,20 +787,20 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
       switch (ft) {
       case kSeparate:
 	 pdefoam = new PDEFoamEvent(foamcaption);
-	 density = new PDEFoamEventDensity(dim);
+	 density = new PDEFoamEventDensity(box);
 	 break;
       case kMultiTarget:
 	 pdefoam = new PDEFoamMultiTarget(foamcaption, fTargetSelection);
-	 density = new PDEFoamEventDensity(dim);
+	 density = new PDEFoamEventDensity(box);
 	 break;
       case kDiscr:
       case kMultiClass:
 	 pdefoam = new PDEFoamDiscriminant(foamcaption, cls);
-	 density = new PDEFoamDiscriminantDensity(dim, cls);
+	 density = new PDEFoamDiscriminantDensity(box, cls);
 	 break;
       case kMonoTarget:
 	 pdefoam = new PDEFoamTarget(foamcaption);
-	 density = new PDEFoamTargetDensity(dim);
+	 density = new PDEFoamTargetDensity(box);
 	 break;
       default:
 	 Log() << kFATAL << "Unknown PDEFoam type!" << Endl;
@@ -806,7 +812,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
       case kDiscr:
       case kMultiClass:
 	 pdefoam = new PDEFoamDecisionTree(foamcaption, cls, fDTSeparation);
-	 density = new PDEFoamDTDensity(dim, cls);
+	 density = new PDEFoamDTDensity(box, cls);
 	 break;
       default:
 	 Log() << kFATAL << "Decision tree cell split algorithm is only"
@@ -815,7 +821,6 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 	 break;
       }
    }
-   density->SetVolumeFraction(fVolFrac); // set range-searching volume
    pdefoam->SetDensity(density);
 
    // create pdefoam kernel
@@ -1279,7 +1284,7 @@ void TMVA::MethodPDEFoam::GetHelpMessage() const
    Log() << "        SigBgSeparate   False   Separate Signal and Background" << Endl;
    Log() << "              TailCut   0.001   Fraction of outlier events that excluded" << Endl;
    Log() << "                                from the foam in each dimension " << Endl;
-   Log() << "              VolFrac  0.0333   Volume fraction (used for density calculation" << Endl;
+   Log() << "              VolFrac  0.0666   Volume fraction (used for density calculation" << Endl;
    Log() << "                                during foam build-up) " << Endl;
    Log() << "         nActiveCells     500   Maximal number of active cells in final foam " << Endl;
    Log() << "               nSampl    2000   Number of MC events per cell in foam build-up " << Endl;
@@ -1317,7 +1322,7 @@ void TMVA::MethodPDEFoam::GetHelpMessage() const
    Log() << "it will result in a more precise local estimate of the sampled" << Endl;
    Log() << "density. In general, higher dimensional problems require larger box" << Endl;
    Log() << "sizes, due to the reduced average number of events per box volume. The" << Endl;
-   Log() << "default value of 0.0333 was optimised for an example with 5" << Endl;
+   Log() << "default value of 0.0666 was optimised for an example with 5" << Endl;
    Log() << "observables and training samples of the order of 50000 signal and" << Endl;
    Log() << "background events each." << Endl;
    Log() << Endl;

@@ -18,7 +18,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -54,14 +54,16 @@ namespace TMVA {
 
    protected:
       BinarySearchTree *fBst;   // Binary tree to find events within a volume
-      Int_t fDim;               // dimensionality of density
-      Float_t fVolFrac;         // volume for range-searching
+      std::vector<Double_t> fBox; // range-searching box
       mutable MsgLogger* fLogger;                     //! message logger
       MsgLogger& Log() const { return *fLogger; }
 
+      // calculate volume of fBox
+      Double_t GetBoxVolume() const;
+
    public:
       PDEFoamDensity();
-      PDEFoamDensity(Int_t dim);
+      PDEFoamDensity(std::vector<Double_t> box);
       PDEFoamDensity(const PDEFoamDensity&);
       virtual ~PDEFoamDensity();
 
@@ -71,11 +73,7 @@ namespace TMVA {
 
       // main function used by PDEFoam
       // returns density at a given point by range searching in BST
-      virtual Double_t Density(const PDEFoam *foam, std::vector<Double_t> &Xarg, Double_t &event_density) = 0;
-
-      // get and set the range-searching volume
-      void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;}  // set VolFrac
-      Float_t  GetVolumeFraction() const {return fVolFrac;} // get VolFrac from PDEFoam
+      virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density) = 0;
 
       ClassDef(PDEFoamDensity,1) //Class for density
    };  //end of PDEFoamDensity
