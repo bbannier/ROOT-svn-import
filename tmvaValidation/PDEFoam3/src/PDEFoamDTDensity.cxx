@@ -66,7 +66,7 @@ TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoamDTDensity &distr)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDTDensity::Density(const PDEFoam *foam, Double_t *Xarg, Double_t &event_density)
+Double_t TMVA::PDEFoamDTDensity::Density(const PDEFoam *foam, std::vector<Double_t> &Xarg, Double_t &event_density)
 {
    // This function is not used in the decision tree like PDEFoam,
    // instead FillHist() is used.

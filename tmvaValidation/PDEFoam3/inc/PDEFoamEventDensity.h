@@ -47,7 +47,7 @@ namespace TMVA {
 
       // main function used by PDEFoam
       // returns event density at a given point by range searching in BST
-      virtual Double_t Density(const PDEFoam *foam, Double_t *Xarg, Double_t &event_density);
+      virtual Double_t Density(const PDEFoam *foam, std::vector<Double_t> &Xarg, Double_t &event_density);
 
       ClassDef(PDEFoamEventDensity,1) //Class for Event density
    };  //end of PDEFoamEventDensity

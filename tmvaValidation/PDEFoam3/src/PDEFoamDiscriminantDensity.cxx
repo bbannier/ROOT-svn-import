@@ -70,7 +70,7 @@ TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(const PDEFoamDiscri
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDiscriminantDensity::Density( const PDEFoam *foam, Double_t *Xarg, Double_t &event_density )
+Double_t TMVA::PDEFoamDiscriminantDensity::Density( const PDEFoam *foam, std::vector<Double_t> &Xarg, Double_t &event_density )
 {
    // This function is needed during the foam buildup.  It returns the
    // average target value within volume divided by volume (specified
@@ -82,23 +82,15 @@ Double_t TMVA::PDEFoamDiscriminantDensity::Density( const PDEFoam *foam, Double_
    if (!fBst)
       Log() << kFATAL << "<PDEFoamDiscriminantDensity::Density()> Binary tree not found!"<< Endl;
 
-   // get PDEFoam properties
-   Int_t Dim = foam->GetTotDim(); // dimension of foam
-
-   // make the variable Xarg transform, since Foam only knows about x=[0,1]
-   // transformation [0, 1] --> [xmin, xmax]
-   for (Int_t idim=0; idim<Dim; idim++)
-      Xarg[idim] = foam->VarTransformInvers(idim, Xarg[idim]);
-
    //create volume around point to be found
-   std::vector<Double_t> lb(Dim);
-   std::vector<Double_t> ub(Dim);
+   std::vector<Double_t> lb(fDim);
+   std::vector<Double_t> ub(fDim);
 
    // probevolume relative to hypercube with edge length 1:
-   const Double_t probevolume_inv = std::pow((fVolFrac/2), Dim);
+   const Double_t probevolume_inv = std::pow((fVolFrac/2), fDim);
 
    // set upper and lower bound for search volume
-   for (Int_t idim = 0; idim < Dim; idim++) {
+   for (Int_t idim = 0; idim < fDim; idim++) {
       Double_t volsize=(foam->GetXmax(idim) 
 			- foam->GetXmin(idim)) / fVolFrac;
       lb[idim] = Xarg[idim] - volsize;
