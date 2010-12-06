@@ -699,7 +699,16 @@ Double_t TMVA::PDEFoam::Eval(Double_t *xRand, Double_t &event_density)
 {
    // Internal subprogram.
    // Evaluates (training) distribution.
-   return GetDistr()->Density(this, xRand, event_density);
+   
+   // Transform variable xRand, since Foam boundaries are [0,1] and
+   // fDistr is filled with events which range in [fXmin,fXmax]
+   //
+   // Transformation:  [0, 1] --> [xmin, xmax]
+   std::vector<Double_t> xvec;
+   for (Int_t idim = 0; idim < GetTotDim(); ++idim)
+      xvec.push_back( VarTransformInvers(idim, xRand[idim]) );
+
+   return GetDistr()->Density(this, xvec, event_density);
 }
 
 //_____________________________________________________________________
