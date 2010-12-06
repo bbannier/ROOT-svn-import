@@ -40,9 +40,6 @@
 #ifndef ROOT_TMVA_Event
 #include "TMVA/Event.h"
 #endif
-#ifndef ROOT_TMVA_PDEFoam
-#include "TMVA/PDEFoam.h"
-#endif
 #ifndef ROOT_TMVA_MsgLogger
 #include "TMVA/MsgLogger.h"
 #endif
