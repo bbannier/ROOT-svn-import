@@ -18,7 +18,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -46,14 +46,14 @@ namespace TMVA {
 
    public:
       PDEFoamDTDensity();
-      PDEFoamDTDensity(const PDEFoam *foam, UInt_t);
+      PDEFoamDTDensity(Int_t dim, UInt_t cls);
       PDEFoamDTDensity(const PDEFoamDTDensity&);
       virtual ~PDEFoamDTDensity(){};
 
       // main function used by PDEFoam
       // returns event density at a given point by range searching in BST
-      virtual Double_t Density(Double_t *Xarg, Double_t &event_density);
-      virtual void FillHist(PDEFoamCell*, std::vector<TH1F*>&, std::vector<TH1F*>&, std::vector<TH1F*>&, std::vector<TH1F*>&);
+      virtual Double_t Density(const PDEFoam *foam, Double_t *Xarg, Double_t &event_density);
+      virtual void FillHist(const PDEFoam *foam, PDEFoamCell*, std::vector<TH1F*>&, std::vector<TH1F*>&, std::vector<TH1F*>&, std::vector<TH1F*>&);
 
       ClassDef(PDEFoamDTDensity,1) //Class for DT density
    };  //end of PDEFoamDTDensity

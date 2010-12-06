@@ -18,7 +18,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -44,14 +44,14 @@ namespace TMVA {
 
    public:
       PDEFoamDiscriminantDensity();
-      PDEFoamDiscriminantDensity(const PDEFoam *foam, UInt_t);
+      PDEFoamDiscriminantDensity(Int_t dim, UInt_t cls);
       PDEFoamDiscriminantDensity(const PDEFoamDiscriminantDensity&);
       virtual ~PDEFoamDiscriminantDensity(){};
 
       // main function used by PDEFoam
       // returns discriminant density N_class/N_total at a given point
       // by range searching in BST
-      virtual Double_t Density(Double_t *Xarg, Double_t &event_density);
+      virtual Double_t Density(const PDEFoam *foam, Double_t *Xarg, Double_t &event_density);
 
       ClassDef(PDEFoamDiscriminantDensity,1) //Class for Discriminant density
    };  //end of PDEFoamDiscriminantDensity

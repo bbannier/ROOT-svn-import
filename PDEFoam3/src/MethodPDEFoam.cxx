@@ -764,7 +764,16 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 {
    // Create new PDEFoam and set foam options (incl. Xmin, Xmax) and
    // initialize foam via pdefoam->Init()
-   
+
+   // number of foam dimensions
+   Int_t dim = 1;
+   if (ft == kMultiTarget)
+      // dimension of foam = number of targets + non-targets
+      dim = Data()->GetNTargets() + Data()->GetNVariables();
+   else
+      dim = GetNvar();
+
+   // create PDEFoam and PDEFoamDensity
    PDEFoam *pdefoam = NULL;
    PDEFoamDensity *density = NULL;
    if (fDTSeparation == kFoam) {
@@ -772,20 +781,20 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
       switch (ft) {
       case kSeparate:
 	 pdefoam = new PDEFoamEvent(foamcaption);
-	 density = new PDEFoamEventDensity(pdefoam);
+	 density = new PDEFoamEventDensity(dim);
 	 break;
       case kMultiTarget:
 	 pdefoam = new PDEFoamMultiTarget(foamcaption, fTargetSelection);
-	 density = new PDEFoamEventDensity(pdefoam);
+	 density = new PDEFoamEventDensity(dim);
 	 break;
       case kDiscr:
       case kMultiClass:
 	 pdefoam = new PDEFoamDiscriminant(foamcaption, cls);
-	 density = new PDEFoamDiscriminantDensity(pdefoam, cls);
+	 density = new PDEFoamDiscriminantDensity(dim, cls);
 	 break;
       case kMonoTarget:
 	 pdefoam = new PDEFoamTarget(foamcaption);
-	 density = new PDEFoamTargetDensity(pdefoam);
+	 density = new PDEFoamTargetDensity(dim);
 	 break;
       default:
 	 Log() << kFATAL << "Unknown PDEFoam type!" << Endl;
@@ -797,7 +806,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
       case kDiscr:
       case kMultiClass:
 	 pdefoam = new PDEFoamDecisionTree(foamcaption, cls, fDTSeparation);
-	 density = new PDEFoamDTDensity(pdefoam, cls);
+	 density = new PDEFoamDTDensity(dim, cls);
 	 break;
       default:
 	 Log() << kFATAL << "Decision tree cell split algorithm is only"

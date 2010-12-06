@@ -9,7 +9,8 @@
  *      The TFDSITR class provides an interface between the Binary search tree    *
  *      and the PDEFoam object.  In order to build-up the foam one needs to       *
  *      calculate the density of events at a given point (sampling during         *
- *      Foam build-up).  The function PDEFoamEventDensity::Density() does this job.  It  *
+ *      Foam build-up).  The function PDEFoamEventDensity::Density() does         *
+ *      this job.  It                                                             *
  *      uses a binary search tree, filled with training events, in order to       *
  *      provide this density.                                                     *
  *                                                                                *
@@ -20,7 +21,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -52,8 +53,8 @@ TMVA::PDEFoamEventDensity::PDEFoamEventDensity()
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamEventDensity::PDEFoamEventDensity(const PDEFoam *foam)
-   : PDEFoamDensity(foam)
+TMVA::PDEFoamEventDensity::PDEFoamEventDensity(Int_t dim)
+   : PDEFoamDensity(dim)
 {}
 
 //_____________________________________________________________________
@@ -65,24 +66,24 @@ TMVA::PDEFoamEventDensity::PDEFoamEventDensity(const PDEFoamEventDensity &distr)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamEventDensity::Density( Double_t *Xarg, Double_t &event_density )
+Double_t TMVA::PDEFoamEventDensity::Density( const PDEFoam *foam, Double_t *Xarg, Double_t &event_density )
 {
    // This function is needed during the foam buildup.  It return the
    // event density within volume (specified by fVolFrac).
 
-   if (!GetPDEFoam())
+   if (!foam)
       Log() << kFATAL << "<PDEFoamEventDensity::Density()> Pointer to owner not set!" << Endl;
 
    if (!fBst)
       Log() << kFATAL << "<PDEFoamEventDensity::Density()> Binary tree not found!"<< Endl;
 
    // get PDEFoam properties
-   Int_t Dim       = GetPDEFoam()->GetTotDim(); // dimension of foam
+   Int_t Dim = foam->GetTotDim(); // dimension of foam
 
    // make the variable Xarg transform, since Foam only knows about x=[0,1]
    // transformation [0, 1] --> [xmin, xmax]
    for (Int_t idim=0; idim<Dim; idim++)
-      Xarg[idim] = GetPDEFoam()->VarTransformInvers(idim, Xarg[idim]);
+      Xarg[idim] = foam->VarTransformInvers(idim, Xarg[idim]);
 
    //create volume around point to be found
    std::vector<Double_t> lb(Dim);
@@ -93,8 +94,8 @@ Double_t TMVA::PDEFoamEventDensity::Density( Double_t *Xarg, Double_t &event_den
 
    // set upper and lower bound for search volume
    for (Int_t idim = 0; idim < Dim; idim++) {
-      Double_t volsize=(GetPDEFoam()->GetXmax(idim) 
-			- GetPDEFoam()->GetXmin(idim)) / fVolFrac;
+      Double_t volsize=(foam->GetXmax(idim) 
+			- foam->GetXmin(idim)) / fVolFrac;
       lb[idim] = Xarg[idim] - volsize;
       ub[idim] = Xarg[idim] + volsize;
    }

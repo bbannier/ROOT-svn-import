@@ -15,7 +15,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -122,7 +122,7 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
    PDEFoamDTDensity *distr = dynamic_cast<PDEFoamDTDensity*>(fDistr);
    if (distr == NULL)
       Log() << kFATAL << "<PDEFoamDecisionTree::Explore>: cast failed: PDEFoamDensity* --> PDEFoamDTDensity*" << Endl;
-   distr->FillHist(cell, hsig, hbkg, hsig_unw, hbkg_unw);
+   distr->FillHist(this, cell, hsig, hbkg, hsig_unw, hbkg_unw);
 
    // ------ determine the best division edge
    Float_t xBest = 0.5;   // best division point

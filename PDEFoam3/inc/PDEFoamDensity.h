@@ -53,29 +53,25 @@ namespace TMVA {
    class PDEFoamDensity : public ::TObject  {
 
    protected:
-      const PDEFoam *fPDEFoam;  // PDEFoam, which owns this PDEFoamDensity
       BinarySearchTree *fBst;   // Binary tree to find events within a volume
+      Int_t fDim;               // dimensionality of density
       Float_t fVolFrac;         // volume for range-searching
       mutable MsgLogger* fLogger;                     //! message logger
       MsgLogger& Log() const { return *fLogger; }
 
    public:
       PDEFoamDensity();
-      PDEFoamDensity(const PDEFoam *foam);
+      PDEFoamDensity(Int_t dim);
       PDEFoamDensity(const PDEFoamDensity&);
       virtual ~PDEFoamDensity();
 
       // density build-up functions
-      void Initialize(const PDEFoam *foam = NULL); // create and initialize binary search tree
+      void Initialize(); // create and initialize binary search tree
       void FillBinarySearchTree( const Event* ev );
 
       // main function used by PDEFoam
       // returns density at a given point by range searching in BST
-      virtual Double_t Density(Double_t *Xarg, Double_t &event_density) = 0;
-
-      // Getter and setter for the fPDEFoam pointer
-      void SetPDEFoam(const PDEFoam *foam){ fPDEFoam = foam; }
-      const PDEFoam* GetPDEFoam() const { return fPDEFoam; };
+      virtual Double_t Density(const PDEFoam *foam, Double_t *Xarg, Double_t &event_density) = 0;
 
       // get and set the range-searching volume
       void SetVolumeFraction(Float_t vfr){fVolFrac = vfr;}  // set VolFrac

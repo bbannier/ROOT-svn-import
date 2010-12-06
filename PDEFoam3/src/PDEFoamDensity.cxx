@@ -50,8 +50,7 @@
 // The user has to instantiate a sub class of PDEFoamDensity and set
 // the pointer to the owner, which is a PDEFoam object:
 //
-//   PDEFoamDensity *dens = new MyDensity();
-//   dens->SetPDEFoam(pdefoam);
+//   PDEFoamDensity *dens = new MyDensity(dim);
 //   pdefoam->SetDensity(dens);
 //
 // Afterwards the density must be initialized via (the binary search
@@ -73,17 +72,17 @@ ClassImp(TMVA::PDEFoamDensity)
 //_____________________________________________________________________
 TMVA::PDEFoamDensity::PDEFoamDensity() 
    : TObject(),
-     fPDEFoam(NULL),
      fBst(NULL),
+     fDim(0),
      fVolFrac(30.0),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDensity::PDEFoamDensity(const PDEFoam *foam)
+TMVA::PDEFoamDensity::PDEFoamDensity(Int_t dim)
    : TObject(),
-     fPDEFoam(foam),
      fBst(NULL),
+     fDim(dim),
      fVolFrac(30.0),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {}
@@ -98,8 +97,8 @@ TMVA::PDEFoamDensity::~PDEFoamDensity()
 //_____________________________________________________________________
 TMVA::PDEFoamDensity::PDEFoamDensity(const PDEFoamDensity &distr)
    : TObject(),
-     fPDEFoam         (distr.fPDEFoam),
      fBst             (distr.fBst),
+     fDim             (distr.fDim),
      fVolFrac         (distr.fVolFrac),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {
@@ -108,16 +107,10 @@ TMVA::PDEFoamDensity::PDEFoamDensity(const PDEFoamDensity &distr)
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoamDensity::Initialize(const PDEFoam *foam)
+void TMVA::PDEFoamDensity::Initialize()
 {
    // Initialisation of binary search tree.  
    // Set dimension and create new BinarySearchTree.
-
-   if (foam != NULL)
-      SetPDEFoam(foam);
-   if (!GetPDEFoam())
-      Log() << kFATAL << "<PDEFoamDensity::Initialize()>: "
-	    << "Pointer to owner not set!" << Endl;
 
    // create binary search tree
    if (fBst) delete fBst;
@@ -129,7 +122,10 @@ void TMVA::PDEFoamDensity::Initialize(const PDEFoam *foam)
    }
 
    // set periode (number of variables)
-   fBst->SetPeriode(GetPDEFoam()->GetTotDim());
+   if (fDim < 1)
+      Log() << kFATAL << "Dimension of PDEFoamDensity < 1" << Endl;
+
+   fBst->SetPeriode(fDim);
 }
 
 //_____________________________________________________________________

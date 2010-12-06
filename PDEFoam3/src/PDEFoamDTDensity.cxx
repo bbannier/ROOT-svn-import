@@ -20,7 +20,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -51,8 +51,8 @@ TMVA::PDEFoamDTDensity::PDEFoamDTDensity()
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoam *foam, UInt_t cls)
-   : PDEFoamDensity(foam)
+TMVA::PDEFoamDTDensity::PDEFoamDTDensity(Int_t dim, UInt_t cls)
+   : PDEFoamDensity(dim)
    , fClass(cls)
 {}
 
@@ -66,7 +66,7 @@ TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoamDTDensity &distr)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDTDensity::Density( Double_t *Xarg, Double_t &event_density )
+Double_t TMVA::PDEFoamDTDensity::Density(const PDEFoam *foam, Double_t *Xarg, Double_t &event_density)
 {
    // This function is not used in the decision tree like PDEFoam,
    // instead FillHist() is used.
@@ -74,16 +74,16 @@ Double_t TMVA::PDEFoamDTDensity::Density( Double_t *Xarg, Double_t &event_densit
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoamDTDensity::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, std::vector<TH1F*> &hbkg, std::vector<TH1F*> &hsig_unw, std::vector<TH1F*> &hbkg_unw)
+void TMVA::PDEFoamDTDensity::FillHist(const PDEFoam *foam, PDEFoamCell* cell, std::vector<TH1F*> &hsig, std::vector<TH1F*> &hbkg, std::vector<TH1F*> &hsig_unw, std::vector<TH1F*> &hbkg_unw)
 {
    // fill the given histograms with signal and background events,
    // which are located in the given cell
 
-   if (!GetPDEFoam())
+   if (!foam)
       Log() << kFATAL << "<PDEFoamDistr::FillHist> Pointer to owner not set!" << Endl;
 
    // get PDEFoam properties
-   Int_t Dim = GetPDEFoam()->GetTotDim(); // dimension of foam
+   Int_t Dim = foam->GetTotDim(); // dimension of foam
 
    // sanity check
    if (!cell)
@@ -108,8 +108,8 @@ void TMVA::PDEFoamDTDensity::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsi
    std::vector<Double_t> lb(Dim); // lower bound
    std::vector<Double_t> ub(Dim); // upper bound
    for (Int_t idim = 0; idim < Dim; idim++) {
-      lb[idim] = GetPDEFoam()->VarTransformInvers(idim, cellPosi[idim] - std::numeric_limits<float>::epsilon());
-      ub[idim] = GetPDEFoam()->VarTransformInvers(idim, cellPosi[idim] + cellSize[idim] + std::numeric_limits<float>::epsilon());
+      lb[idim] = foam->VarTransformInvers(idim, cellPosi[idim] - std::numeric_limits<float>::epsilon());
+      ub[idim] = foam->VarTransformInvers(idim, cellPosi[idim] + cellSize[idim] + std::numeric_limits<float>::epsilon());
    }
 
    // create TMVA::Volume object needed for searching within the BST
@@ -132,14 +132,14 @@ void TMVA::PDEFoamDTDensity::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsi
 
    // reset histogram ranges
    for (Int_t idim=0; idim<Dim; idim++) {
-      hsig.at(idim)->GetXaxis()->SetLimits(GetPDEFoam()->VarTransform(idim,xmin.at(idim)), 
-					   GetPDEFoam()->VarTransform(idim,xmax.at(idim)));
-      hbkg.at(idim)->GetXaxis()->SetLimits(GetPDEFoam()->VarTransform(idim,xmin.at(idim)), 
-					   GetPDEFoam()->VarTransform(idim,xmax.at(idim)));
-      hsig_unw.at(idim)->GetXaxis()->SetLimits(GetPDEFoam()->VarTransform(idim,xmin.at(idim)), 
-					       GetPDEFoam()->VarTransform(idim,xmax.at(idim)));
-      hbkg_unw.at(idim)->GetXaxis()->SetLimits(GetPDEFoam()->VarTransform(idim,xmin.at(idim)), 
-					       GetPDEFoam()->VarTransform(idim,xmax.at(idim)));
+      hsig.at(idim)->GetXaxis()->SetLimits(foam->VarTransform(idim,xmin.at(idim)), 
+					   foam->VarTransform(idim,xmax.at(idim)));
+      hbkg.at(idim)->GetXaxis()->SetLimits(foam->VarTransform(idim,xmin.at(idim)), 
+					   foam->VarTransform(idim,xmax.at(idim)));
+      hsig_unw.at(idim)->GetXaxis()->SetLimits(foam->VarTransform(idim,xmin.at(idim)), 
+					       foam->VarTransform(idim,xmax.at(idim)));
+      hbkg_unw.at(idim)->GetXaxis()->SetLimits(foam->VarTransform(idim,xmin.at(idim)), 
+					       foam->VarTransform(idim,xmax.at(idim)));
       hsig.at(idim)->Reset();
       hbkg.at(idim)->Reset();
       hsig_unw.at(idim)->Reset();
@@ -152,11 +152,11 @@ void TMVA::PDEFoamDTDensity::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsi
       Float_t              wt = nodes.at(iev)->GetWeight();
       for (Int_t idim=0; idim<Dim; idim++) {
 	 if (nodes.at(iev)->GetClass() == fClass) {
-	    hsig.at(idim)->Fill(GetPDEFoam()->VarTransform(idim,ev.at(idim)), wt);
-	    hsig_unw.at(idim)->Fill(GetPDEFoam()->VarTransform(idim,ev.at(idim)), 1);
+	    hsig.at(idim)->Fill(foam->VarTransform(idim,ev.at(idim)), wt);
+	    hsig_unw.at(idim)->Fill(foam->VarTransform(idim,ev.at(idim)), 1);
 	 } else {
-	    hbkg.at(idim)->Fill(GetPDEFoam()->VarTransform(idim,ev.at(idim)), wt);
-	    hbkg_unw.at(idim)->Fill(GetPDEFoam()->VarTransform(idim,ev.at(idim)), 1);
+	    hbkg.at(idim)->Fill(foam->VarTransform(idim,ev.at(idim)), wt);
+	    hbkg_unw.at(idim)->Fill(foam->VarTransform(idim,ev.at(idim)), 1);
 	 }
       }
    }

@@ -699,7 +699,7 @@ Double_t TMVA::PDEFoam::Eval(Double_t *xRand, Double_t &event_density)
 {
    // Internal subprogram.
    // Evaluates (training) distribution.
-   return GetDistr()->Density(xRand, event_density);
+   return GetDistr()->Density(this, xRand, event_density);
 }
 
 //_____________________________________________________________________
@@ -1648,6 +1648,5 @@ void TMVA::PDEFoam::Init()
 {
    // Initialize the foam's density estimator, which contains the
    // binary search tree.
-   GetDistr()->SetPDEFoam(this);
    GetDistr()->Initialize();
 }
