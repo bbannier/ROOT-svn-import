@@ -96,6 +96,7 @@ void addRegressionTests( UnitTestSuite& TMVA_test, bool full=true)
    //                       full low/high , 90 low/high
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kMLP, "MLPBFGSN", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=300:HiddenLayers=N+20:TestRate=6:TrainingMethod=BFGS:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-7:ConvergenceTests=15:!UseRegulator:VarTransform=N" , 0.4, 0.8, 0.2, 0.5 ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDTG","!H:!V:NTrees=1000::BoostType=Grad:Shrinkage=0.3:!UseBaggedGrad:SeparationType=GiniIndex:nCuts=20:nEventsMin=20:NNodesMax=7" ,  5., 8., 3., 5. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kBDT, "BDTG2","!H:!V:NTrees=2000::BoostType=Grad:Shrinkage=0.1:UseBaggedGrad:GradBaggingFraction=0.5:nCuts=20:MaxDepth=3:NNodesMax=15" ,  2., 5., 1., 3. ));
 
    if (!full) return;
 
