@@ -82,7 +82,7 @@ Double_t TMVA::PDEFoamTargetDensity::Density(std::vector<Double_t> &Xarg, Double
    const Double_t probevolume_inv = 1.0 / GetBoxVolume();
 
    // set upper and lower bound for search volume
-   for (Int_t idim = 0; idim < fBox.size(); ++idim) {
+   for (UInt_t idim = 0; idim < fBox.size(); ++idim) {
       lb[idim] = Xarg[idim] - fBox.at(idim)/2.0;
       ub[idim] = Xarg[idim] + fBox.at(idim)/2.0;
    }
