@@ -20,7 +20,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -55,8 +55,8 @@ TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity()
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(const PDEFoam *foam, UInt_t cls)
-   : PDEFoamDensity(foam)
+TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(Int_t dim, UInt_t cls)
+   : PDEFoamDensity(dim)
    , fClass(cls)
 {}
 
@@ -70,25 +70,25 @@ TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(const PDEFoamDiscri
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDiscriminantDensity::Density( Double_t *Xarg, Double_t &event_density )
+Double_t TMVA::PDEFoamDiscriminantDensity::Density( const PDEFoam *foam, Double_t *Xarg, Double_t &event_density )
 {
    // This function is needed during the foam buildup.  It returns the
    // average target value within volume divided by volume (specified
    // by fVolFrac).
 
-   if (!GetPDEFoam())
+   if (!foam)
       Log() << kFATAL << "<PDEFoamDiscriminantDensity::Density()> Pointer to owner not set!" << Endl;
 
    if (!fBst)
       Log() << kFATAL << "<PDEFoamDiscriminantDensity::Density()> Binary tree not found!"<< Endl;
 
    // get PDEFoam properties
-   Int_t Dim       = GetPDEFoam()->GetTotDim(); // dimension of foam
+   Int_t Dim = foam->GetTotDim(); // dimension of foam
 
    // make the variable Xarg transform, since Foam only knows about x=[0,1]
    // transformation [0, 1] --> [xmin, xmax]
    for (Int_t idim=0; idim<Dim; idim++)
-      Xarg[idim] = GetPDEFoam()->VarTransformInvers(idim, Xarg[idim]);
+      Xarg[idim] = foam->VarTransformInvers(idim, Xarg[idim]);
 
    //create volume around point to be found
    std::vector<Double_t> lb(Dim);
@@ -99,8 +99,8 @@ Double_t TMVA::PDEFoamDiscriminantDensity::Density( Double_t *Xarg, Double_t &ev
 
    // set upper and lower bound for search volume
    for (Int_t idim = 0; idim < Dim; idim++) {
-      Double_t volsize=(GetPDEFoam()->GetXmax(idim) 
-			- GetPDEFoam()->GetXmin(idim)) / fVolFrac;
+      Double_t volsize=(foam->GetXmax(idim) 
+			- foam->GetXmin(idim)) / fVolFrac;
       lb[idim] = Xarg[idim] - volsize;
       ub[idim] = Xarg[idim] + volsize;
    }
