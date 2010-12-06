@@ -186,7 +186,9 @@ int main()
    TMVA_test.run();
 
    long int nFail = TMVA_test.report();
+#ifdef COUTDEBUG
    cout << "Total number of failures: " << nFail << endl;
+#endif
    cout << "************************************************************************************************" << endl;
    //  return eventTest.report();
 }

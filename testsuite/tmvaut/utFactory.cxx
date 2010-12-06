@@ -124,7 +124,6 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
    delete factory;
    outputFile->Close();
    if (outputFile) delete outputFile;
-   std::cout << ROCValue << std::endl;
    return (ROCValue>0.6);
 }
 
