@@ -82,32 +82,29 @@ void TMVA::PDEFoamDTDensity::FillHist(const PDEFoam *foam, PDEFoamCell* cell, st
    if (!foam)
       Log() << kFATAL << "<PDEFoamDistr::FillHist> Pointer to owner not set!" << Endl;
 
-   // get PDEFoam properties
-   Int_t Dim = foam->GetTotDim(); // dimension of foam
-
    // sanity check
    if (!cell)
       Log() << kFATAL << "<PDEFoamDistr::FillHist> Null pointer for cell given!" << Endl;
-   if (Int_t(hsig.size()) != Dim || Int_t(hbkg.size()) != Dim || 
-       Int_t(hsig_unw.size()) != Dim || Int_t(hbkg_unw.size()) != Dim)
+   if (Int_t(hsig.size()) != fDim || Int_t(hbkg.size()) != fDim || 
+       Int_t(hsig_unw.size()) != fDim || Int_t(hbkg_unw.size()) != fDim)
       Log() << kFATAL << "<PDEFoamDistr::FillHist> Edge histograms have wrong size!" << Endl;
 
    // check histograms
-   for (Int_t idim=0; idim<Dim; idim++) {
+   for (Int_t idim=0; idim<fDim; idim++) {
       if (!hsig.at(idim) || !hbkg.at(idim) || 
 	  !hsig_unw.at(idim) || !hbkg_unw.at(idim))
 	 Log() << kFATAL << "<PDEFoamDistr::FillHist> Histogram not initialized!" << Endl;
    }
 
    // get cell position and size
-   PDEFoamVect  cellSize(Dim);
-   PDEFoamVect  cellPosi(Dim);
+   PDEFoamVect  cellSize(fDim);
+   PDEFoamVect  cellPosi(fDim);
    cell->GetHcub(cellPosi, cellSize);
 
    // determine lower and upper cell bound
-   std::vector<Double_t> lb(Dim); // lower bound
-   std::vector<Double_t> ub(Dim); // upper bound
-   for (Int_t idim = 0; idim < Dim; idim++) {
+   std::vector<Double_t> lb(fDim); // lower bound
+   std::vector<Double_t> ub(fDim); // upper bound
+   for (Int_t idim = 0; idim < fDim; idim++) {
       lb[idim] = foam->VarTransformInvers(idim, cellPosi[idim] - std::numeric_limits<float>::epsilon());
       ub[idim] = foam->VarTransformInvers(idim, cellPosi[idim] + cellSize[idim] + std::numeric_limits<float>::epsilon());
    }
@@ -120,18 +117,18 @@ void TMVA::PDEFoamDTDensity::FillHist(const PDEFoam *foam, PDEFoamCell* cell, st
    fBst->SearchVolume(&volume, &nodes);
 
    // calc xmin and xmax of events found in cell
-   std::vector<Float_t> xmin(Dim, std::numeric_limits<float>::max());
-   std::vector<Float_t> xmax(Dim, -std::numeric_limits<float>::max());
+   std::vector<Float_t> xmin(fDim, std::numeric_limits<float>::max());
+   std::vector<Float_t> xmax(fDim, -std::numeric_limits<float>::max());
    for (UInt_t iev=0; iev<nodes.size(); iev++) {
       std::vector<Float_t> ev = nodes.at(iev)->GetEventV();
-      for (Int_t idim=0; idim<Dim; idim++) {
+      for (Int_t idim=0; idim<fDim; idim++) {
 	 if (ev.at(idim) < xmin.at(idim))  xmin.at(idim) = ev.at(idim);
 	 if (ev.at(idim) > xmax.at(idim))  xmax.at(idim) = ev.at(idim);
       }
    }
 
    // reset histogram ranges
-   for (Int_t idim=0; idim<Dim; idim++) {
+   for (Int_t idim=0; idim<fDim; idim++) {
       hsig.at(idim)->GetXaxis()->SetLimits(foam->VarTransform(idim,xmin.at(idim)), 
 					   foam->VarTransform(idim,xmax.at(idim)));
       hbkg.at(idim)->GetXaxis()->SetLimits(foam->VarTransform(idim,xmin.at(idim)), 
@@ -150,7 +147,7 @@ void TMVA::PDEFoamDTDensity::FillHist(const PDEFoam *foam, PDEFoamCell* cell, st
    for (UInt_t iev=0; iev<nodes.size(); iev++) {
       std::vector<Float_t> ev = nodes.at(iev)->GetEventV();
       Float_t              wt = nodes.at(iev)->GetWeight();
-      for (Int_t idim=0; idim<Dim; idim++) {
+      for (Int_t idim=0; idim<fDim; idim++) {
 	 if (nodes.at(iev)->GetClass() == fClass) {
 	    hsig.at(idim)->Fill(foam->VarTransform(idim,ev.at(idim)), wt);
 	    hsig_unw.at(idim)->Fill(foam->VarTransform(idim,ev.at(idim)), 1);
