@@ -35,6 +35,9 @@
 #ifndef ROOT_TMVA_PDEFoamDensity
 #include "TMVA/PDEFoamDensity.h"
 #endif
+#ifndef ROOT_TMVA_PDEFoam
+#include "TMVA/PDEFoam.h"
+#endif
 
 namespace TMVA {
 
