@@ -425,8 +425,13 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
 
    Double_t *volPart=0;
 
+   // calculate volume scale
+   Double_t vol_scale = 1.0;
+   for (Int_t idim = 0; idim < fDim; ++idim)
+      vol_scale *= fXmax[idim] - fXmin[idim];
+
    cell->CalcVolume();
-   dx = cell->GetVolume();
+   dx = cell->GetVolume() * vol_scale;
    intOld = cell->GetIntg(); //memorize old values,
    driOld = cell->GetDriv(); //will be needed for correcting parent cells
    if (GetNmin() > 0)
@@ -708,7 +713,7 @@ Double_t TMVA::PDEFoam::Eval(Double_t *xRand, Double_t &event_density)
    for (Int_t idim = 0; idim < GetTotDim(); ++idim)
       xvec.push_back( VarTransformInvers(idim, xRand[idim]) );
 
-   return GetDistr()->Density(this, xvec, event_density);
+   return GetDistr()->Density(xvec, event_density);
 }
 
 //_____________________________________________________________________

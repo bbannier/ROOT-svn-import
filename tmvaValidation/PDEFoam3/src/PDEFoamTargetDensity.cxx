@@ -52,8 +52,8 @@ TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity()
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(Int_t dim)
-   : PDEFoamDensity(dim)
+TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(std::vector<Double_t> box)
+   : PDEFoamDensity(box)
 {}
 
 //_____________________________________________________________________
@@ -65,31 +65,26 @@ TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(const PDEFoamTargetDensity &dis
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamTargetDensity::Density( const PDEFoam *foam, std::vector<Double_t> &Xarg, Double_t &event_density )
+Double_t TMVA::PDEFoamTargetDensity::Density(std::vector<Double_t> &Xarg, Double_t &event_density)
 {
    // This function is needed during the foam buildup.  It returns the
    // average target value within volume divided by volume (specified
    // by fVolFrac).
 
-   if (!foam)
-      Log() << kFATAL << "<PDEFoamTargetDensity::Density()> Pointer to PDEFoam is NULL" << Endl;
-
    if (!fBst)
       Log() << kFATAL << "<PDEFoamTargetDensity::Density()> Binary tree not found!"<< Endl;
 
    //create volume around point to be found
-   std::vector<Double_t> lb(fDim);
-   std::vector<Double_t> ub(fDim);
+   std::vector<Double_t> lb(fBox.size());
+   std::vector<Double_t> ub(fBox.size());
 
    // probevolume relative to hypercube with edge length 1:
-   const Double_t probevolume_inv = std::pow((fVolFrac/2), fDim);
+   const Double_t probevolume_inv = 1.0 / GetBoxVolume();
 
    // set upper and lower bound for search volume
-   for (Int_t idim = 0; idim < fDim; idim++) {
-      Double_t volsize=(foam->GetXmax(idim) 
-			- foam->GetXmin(idim)) / fVolFrac;
-      lb[idim] = Xarg[idim] - volsize;
-      ub[idim] = Xarg[idim] + volsize;
+   for (Int_t idim = 0; idim < fBox.size(); ++idim) {
+      lb[idim] = Xarg[idim] - fBox.at(idim)/2.0;
+      ub[idim] = Xarg[idim] + fBox.at(idim)/2.0;
    }
 
    TMVA::Volume volume(&lb, &ub);                        // volume to search in

@@ -46,13 +46,13 @@ namespace TMVA {
 
    public:
       PDEFoamDTDensity();
-      PDEFoamDTDensity(Int_t dim, UInt_t cls);
+      PDEFoamDTDensity(std::vector<Double_t> box, UInt_t cls);
       PDEFoamDTDensity(const PDEFoamDTDensity&);
       virtual ~PDEFoamDTDensity(){};
 
       // main function used by PDEFoam
       // returns event density at a given point by range searching in BST
-      virtual Double_t Density(const PDEFoam *foam, std::vector<Double_t> &Xarg, Double_t &event_density);
+      virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density);
       virtual void FillHist(const PDEFoam *foam, PDEFoamCell*, std::vector<TH1F*>&, std::vector<TH1F*>&, std::vector<TH1F*>&, std::vector<TH1F*>&);
 
       ClassDef(PDEFoamDTDensity,1) //Class for DT density

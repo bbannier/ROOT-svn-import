@@ -55,8 +55,8 @@ TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity()
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(Int_t dim, UInt_t cls)
-   : PDEFoamDensity(dim)
+TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(std::vector<Double_t> box, UInt_t cls)
+   : PDEFoamDensity(box)
    , fClass(cls)
 {}
 
@@ -70,31 +70,26 @@ TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(const PDEFoamDiscri
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDiscriminantDensity::Density( const PDEFoam *foam, std::vector<Double_t> &Xarg, Double_t &event_density )
+Double_t TMVA::PDEFoamDiscriminantDensity::Density(std::vector<Double_t> &Xarg, Double_t &event_density)
 {
    // This function is needed during the foam buildup.  It returns the
    // average target value within volume divided by volume (specified
    // by fVolFrac).
 
-   if (!foam)
-      Log() << kFATAL << "<PDEFoamDiscriminantDensity::Density()> Pointer to owner not set!" << Endl;
-
    if (!fBst)
-      Log() << kFATAL << "<PDEFoamDiscriminantDensity::Density()> Binary tree not found!"<< Endl;
+      Log() << kFATAL << "<PDEFoamDiscriminantDensity::Density()> Binary tree not set!"<< Endl;
 
    //create volume around point to be found
-   std::vector<Double_t> lb(fDim);
-   std::vector<Double_t> ub(fDim);
+   std::vector<Double_t> lb(fBox.size());
+   std::vector<Double_t> ub(fBox.size());
 
    // probevolume relative to hypercube with edge length 1:
-   const Double_t probevolume_inv = std::pow((fVolFrac/2), fDim);
+   const Double_t probevolume_inv = 1.0 / GetBoxVolume();
 
    // set upper and lower bound for search volume
-   for (Int_t idim = 0; idim < fDim; idim++) {
-      Double_t volsize=(foam->GetXmax(idim) 
-			- foam->GetXmin(idim)) / fVolFrac;
-      lb[idim] = Xarg[idim] - volsize;
-      ub[idim] = Xarg[idim] + volsize;
+   for (UInt_t idim = 0; idim < fBox.size(); ++idim) {
+      lb[idim] = Xarg[idim] - fBox.at(idim)/2.0;
+      ub[idim] = Xarg[idim] + fBox.at(idim)/2.0;
    }
 
    TMVA::Volume volume(&lb, &ub);                        // volume to search in

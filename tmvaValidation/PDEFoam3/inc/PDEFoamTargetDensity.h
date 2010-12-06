@@ -41,13 +41,13 @@ namespace TMVA {
 
    public:
       PDEFoamTargetDensity();
-      PDEFoamTargetDensity(Int_t dim);
+      PDEFoamTargetDensity(std::vector<Double_t> box);
       PDEFoamTargetDensity(const PDEFoamTargetDensity&);
       virtual ~PDEFoamTargetDensity(){};
 
       // main function used by PDEFoam
       // returns event density at a given point by range searching in BST
-      virtual Double_t Density(const PDEFoam *foam, std::vector<Double_t> &Xarg, Double_t &event_density);
+      virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density);
 
       ClassDef(PDEFoamTargetDensity,1) //Class for Target density
    };  //end of PDEFoamTargetDensity

@@ -51,8 +51,8 @@ TMVA::PDEFoamDTDensity::PDEFoamDTDensity()
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDTDensity::PDEFoamDTDensity(Int_t dim, UInt_t cls)
-   : PDEFoamDensity(dim)
+TMVA::PDEFoamDTDensity::PDEFoamDTDensity(std::vector<Double_t> box, UInt_t cls)
+   : PDEFoamDensity(box)
    , fClass(cls)
 {}
 
@@ -66,7 +66,7 @@ TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoamDTDensity &distr)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDTDensity::Density(const PDEFoam *foam, std::vector<Double_t> &Xarg, Double_t &event_density)
+Double_t TMVA::PDEFoamDTDensity::Density(std::vector<Double_t> &Xarg, Double_t &event_density)
 {
    // This function is not used in the decision tree like PDEFoam,
    // instead FillHist() is used.
@@ -85,26 +85,26 @@ void TMVA::PDEFoamDTDensity::FillHist(const PDEFoam *foam, PDEFoamCell* cell, st
    // sanity check
    if (!cell)
       Log() << kFATAL << "<PDEFoamDistr::FillHist> Null pointer for cell given!" << Endl;
-   if (Int_t(hsig.size()) != fDim || Int_t(hbkg.size()) != fDim || 
-       Int_t(hsig_unw.size()) != fDim || Int_t(hbkg_unw.size()) != fDim)
+   if (Int_t(hsig.size()) != foam->GetTotDim() || Int_t(hbkg.size()) != foam->GetTotDim() || 
+       Int_t(hsig_unw.size()) != foam->GetTotDim() || Int_t(hbkg_unw.size()) != foam->GetTotDim())
       Log() << kFATAL << "<PDEFoamDistr::FillHist> Edge histograms have wrong size!" << Endl;
 
    // check histograms
-   for (Int_t idim=0; idim<fDim; idim++) {
+   for (Int_t idim=0; idim<foam->GetTotDim(); idim++) {
       if (!hsig.at(idim) || !hbkg.at(idim) || 
 	  !hsig_unw.at(idim) || !hbkg_unw.at(idim))
 	 Log() << kFATAL << "<PDEFoamDistr::FillHist> Histogram not initialized!" << Endl;
    }
 
    // get cell position and size
-   PDEFoamVect  cellSize(fDim);
-   PDEFoamVect  cellPosi(fDim);
+   PDEFoamVect  cellSize(foam->GetTotDim());
+   PDEFoamVect  cellPosi(foam->GetTotDim());
    cell->GetHcub(cellPosi, cellSize);
 
    // determine lower and upper cell bound
-   std::vector<Double_t> lb(fDim); // lower bound
-   std::vector<Double_t> ub(fDim); // upper bound
-   for (Int_t idim = 0; idim < fDim; idim++) {
+   std::vector<Double_t> lb(foam->GetTotDim()); // lower bound
+   std::vector<Double_t> ub(foam->GetTotDim()); // upper bound
+   for (Int_t idim = 0; idim < foam->GetTotDim(); idim++) {
       lb[idim] = foam->VarTransformInvers(idim, cellPosi[idim] - std::numeric_limits<float>::epsilon());
       ub[idim] = foam->VarTransformInvers(idim, cellPosi[idim] + cellSize[idim] + std::numeric_limits<float>::epsilon());
    }
@@ -117,18 +117,18 @@ void TMVA::PDEFoamDTDensity::FillHist(const PDEFoam *foam, PDEFoamCell* cell, st
    fBst->SearchVolume(&volume, &nodes);
 
    // calc xmin and xmax of events found in cell
-   std::vector<Float_t> xmin(fDim, std::numeric_limits<float>::max());
-   std::vector<Float_t> xmax(fDim, -std::numeric_limits<float>::max());
+   std::vector<Float_t> xmin(foam->GetTotDim(), std::numeric_limits<float>::max());
+   std::vector<Float_t> xmax(foam->GetTotDim(), -std::numeric_limits<float>::max());
    for (UInt_t iev=0; iev<nodes.size(); iev++) {
       std::vector<Float_t> ev = nodes.at(iev)->GetEventV();
-      for (Int_t idim=0; idim<fDim; idim++) {
+      for (Int_t idim=0; idim<foam->GetTotDim(); idim++) {
 	 if (ev.at(idim) < xmin.at(idim))  xmin.at(idim) = ev.at(idim);
 	 if (ev.at(idim) > xmax.at(idim))  xmax.at(idim) = ev.at(idim);
       }
    }
 
    // reset histogram ranges
-   for (Int_t idim=0; idim<fDim; idim++) {
+   for (Int_t idim=0; idim<foam->GetTotDim(); idim++) {
       hsig.at(idim)->GetXaxis()->SetLimits(foam->VarTransform(idim,xmin.at(idim)), 
 					   foam->VarTransform(idim,xmax.at(idim)));
       hbkg.at(idim)->GetXaxis()->SetLimits(foam->VarTransform(idim,xmin.at(idim)), 
@@ -147,7 +147,7 @@ void TMVA::PDEFoamDTDensity::FillHist(const PDEFoam *foam, PDEFoamCell* cell, st
    for (UInt_t iev=0; iev<nodes.size(); iev++) {
       std::vector<Float_t> ev = nodes.at(iev)->GetEventV();
       Float_t              wt = nodes.at(iev)->GetWeight();
-      for (Int_t idim=0; idim<fDim; idim++) {
+      for (Int_t idim=0; idim<foam->GetTotDim(); idim++) {
 	 if (nodes.at(iev)->GetClass() == fClass) {
 	    hsig.at(idim)->Fill(foam->VarTransform(idim,ev.at(idim)), wt);
 	    hsig_unw.at(idim)->Fill(foam->VarTransform(idim,ev.at(idim)), 1);
