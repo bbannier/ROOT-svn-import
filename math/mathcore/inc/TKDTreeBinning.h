@@ -13,12 +13,17 @@
 //
 
 #include <map>
-#include <vector>
 #include <utility>
 
 #ifndef ROOT_TKDTree
 #include "TKDTree.h"
 #endif
+
+namespace ROOT { 
+   namespace Fit { 
+      class BinData; 
+   }
+}
 
 class TKDTreeBinning : public TObject {
    Double_t** fData;
@@ -42,6 +47,7 @@ class TKDTreeBinning : public TObject {
    void ReadjustMaxBinEdges(Double_t* binEdges);
 
 public:
+
    TKDTreeBinning(UInt_t dataSize, UInt_t dataDim, Double_t* data, UInt_t nBins = 100);
    ~TKDTreeBinning();
    void SetNBins(UInt_t bins);
@@ -59,8 +65,9 @@ public:
    Double_t GetDataMin(UInt_t dim) const;
    Double_t GetDataMax(UInt_t dim) const;
    Double_t GetBinDensity(UInt_t bin) const;
-   Double_t GetBinArea(UInt_t bin) const;
-   const Double_t* GetSortedOneDimensionalBinning() const;
+   Double_t GetBinVolume(UInt_t bin) const;
+   const Double_t* GetOneDimBinEdges() const;
+   void FillBinData(ROOT::Fit::BinData & data) const; 
 
    ClassDef(TKDTreeBinning, 1)
 

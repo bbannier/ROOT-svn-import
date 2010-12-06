@@ -20,6 +20,8 @@
 
 #include "TKDTreeBinning.h"
 
+#include "Fit/BinData.h"
+
 ClassImp(TKDTreeBinning)
 
 
@@ -101,11 +103,20 @@ void TKDTreeBinning::SetBinMinMaxEdges(Double_t* binEdges) {
    // Sets the bins' minimum and maximum edges
    fBinMinEdges.reserve(fNBins * fDim);
    fBinMaxEdges.reserve(fNBins * fDim);
-   for (UInt_t i = 0; i < fNBins; ++i)
+   for (UInt_t i = 0; i < fNBins; ++i) {
       for (UInt_t j = 0; j < fDim; ++j) {
          fBinMinEdges.push_back(binEdges[(i * fDim + j) * 2]);
          fBinMaxEdges.push_back(binEdges[(i * fDim + j) * 2 + 1]);
       }
+   }
+   // sort the bin edges in case of one dim data
+   if (fDim == 1) { 
+      std::sort(fBinMinEdges.begin(), fBinMinEdges.end() );
+      std::sort(fBinMaxEdges.begin(), fBinMaxEdges.end() );
+      // add also the upper edge to the min 
+      fBinMinEdges.push_back(fBinMaxEdges.back() );
+   }
+   
 }
 
 void TKDTreeBinning::SetCommonBinEdges(Double_t* binEdges) {
@@ -296,9 +307,9 @@ Double_t TKDTreeBinning::GetDataMax(UInt_t dim) const {
 Double_t TKDTreeBinning::GetBinDensity(UInt_t bin) const {
    // Returns the density in bin. 'bin' is between 0 and fNBins - 1
    if(bin < fNBins) {
-      Double_t area = GetBinArea(bin);
+      Double_t area = GetBinVolume(bin);
       if (!area)
-         this->Warning("GetBinDensity", "Area is null. Returning -1.");
+         this->Warning("GetBinDensity", "valume is null. Returning -1.");
       return GetBinContent(bin) / area;
    }
    this->Warning("GetBinDensity", "No such bin. Returning -1.");
@@ -306,33 +317,38 @@ Double_t TKDTreeBinning::GetBinDensity(UInt_t bin) const {
    return -1.;
 }
 
-Double_t TKDTreeBinning::GetBinArea(UInt_t bin) const {
-   // Returns the (hyper)area of bin. 'bin' is between 0 and fNBins - 1
+Double_t TKDTreeBinning::GetBinVolume(UInt_t bin) const {
+   // Returns the (hyper)volume of bin. 'bin' is between 0 and fNBins - 1
    if(bin < fNBins) {
       std::pair<const Double_t*, const Double_t*> binEdges = GetBinEdges(bin);
       Double_t area = 1.;
       for (UInt_t i = 0; i < fDim; ++i) {
-         area *= binEdges.second[i] - binEdges.first[i];
+         area *= (binEdges.second[i] - binEdges.first[i]);
       }
       return area;
    }
-   this->Warning("GetBinArea", "No such bin. Returning 0.");
-   this->Info("GetBinArea", "'bin' is between 0 and %d.", fNBins - 1);
+   this->Warning("GetBinVolume", "No such bin. Returning 0.");
+   this->Info("GetBinVolume", "'bin' is between 0 and %d.", fNBins - 1);
    return 0.;
 }
 
-const Double_t* TKDTreeBinning::GetSortedOneDimensionalBinning() const {
+const double * TKDTreeBinning::GetOneDimBinEdges() const  {
    // Returns the sorted minimum edges for one dimensional binning only.
+   // size of the vector is Nbins +1 
    if (fDim == 1) {
-      const Double_t* binsMinEdges = GetBinsMinEdges();
-      UInt_t indices[fNBins];
-      TMath::Sort(fNBins, binsMinEdges, indices, kFALSE);
-      Double_t binsEdges[fNBins + 1];
-      for(UInt_t i = 0; i < fNBins; ++i)
-         binsEdges[i] = binsMinEdges[indices[i]];
-      binsEdges[fNBins] = binsMinEdges[indices[fNBins - 1]]; // Upper edge
+      // no need to sort here because vector is already sorted in one dim
+      return &fBinMinEdges.front(); 
    }
    this->Warning("GetSortedOneDimensionalBinning", "Data is multidimensional. No sorted bin edges retrieved. Returning null pointer.");
    this->Info("GetSortedOneDimensionalBinning", "This method can only be invoked if the data is a one dimensional set");
    return 0;
+}
+
+void TKDTreeBinning::FillBinData(ROOT::Fit::BinData & data) const {
+   // fill the bin data set with the result of the TKDTree binning 
+   data.Initialize(fNBins, fDim);
+   for (unsigned int i = 0; i < fNBins; ++i) { 
+      data.Add( GetBinMinEdges(i), GetBinDensity(i), std::sqrt(GetBinContent(i) )/ GetBinVolume(i) );
+      data.AddBinUpEdge(GetBinMaxEdges(i) );
+   }
 }
