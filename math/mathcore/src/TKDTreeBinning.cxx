@@ -430,12 +430,27 @@ const Double_t* TKDTreeBinning::GetBinCenter(UInt_t bin) const {
       Double_t* result = new Double_t[fDim];
       std::pair<const Double_t*, const Double_t*> binEdges = GetBinEdges(bin);
       for (UInt_t i = 0; i < fDim; ++i) {
-         result[i] = (binEdges.second[i] - binEdges.first[i]) / 2.;
+         result[i] = (binEdges.second[i] + binEdges.first[i]) / 2.;
       }
       return result;
    }
    this->Warning("GetBinCenter", "No such bin. Returning null pointer.");
    this->Info("GetBinCenter", "'bin' is between 0 and %d.", fNBins - 1);
+   return 0;
+}
+
+const Double_t* TKDTreeBinning::GetBinWidth(UInt_t bin) const {
+   // Returns the geometric center of of the bin. 'bin' is between 0 and fNBins - 1
+   if(bin < fNBins) {
+      Double_t* result = new Double_t[fDim];
+      std::pair<const Double_t*, const Double_t*> binEdges = GetBinEdges(bin);
+      for (UInt_t i = 0; i < fDim; ++i) {
+         result[i] = (binEdges.second[i] - binEdges.first[i]);
+      }
+      return result;
+   }
+   this->Warning("GetBinWidth", "No such bin. Returning null pointer.");
+   this->Info("GetBinWidth", "'bin' is between 0 and %d.", fNBins - 1);
    return 0;
 }
 
