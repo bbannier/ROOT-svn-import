@@ -76,6 +76,7 @@ public:
    Double_t GetBinVolume(UInt_t bin) const;
    const Double_t* GetOneDimBinEdges() const;
    const Double_t* GetBinCenter(UInt_t bin) const;
+   const Double_t* GetBinWidth(UInt_t bin) const;
    UInt_t GetBinMaxDensity() const;
    UInt_t GetBinMinDensity() const;
    void FillBinData(ROOT::Fit::BinData & data) const;
