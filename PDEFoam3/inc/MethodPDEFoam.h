@@ -115,6 +115,10 @@
 
 namespace TMVA {
 
+   // separation types
+   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
+			kCrossEntropy };
+
    class MethodPDEFoam : public MethodBase {
 
    public:

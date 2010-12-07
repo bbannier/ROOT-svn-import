@@ -655,7 +655,7 @@ Long_t TMVA::PDEFoam::PeekMax()
          Log() << kVERBOSE << "Warning: Maximum depth reached: " 
                << GetMaxDepth() << Endl;
       else
-         Log() << kWARNING << "Warning: PDEFoam::PeekMax: no more candidate cells (drivMax>0) found for further splitting." << Endl;
+         Log() << kWARNING << "<PDEFoam::PeekMax>: no more candidate cells (drivMax>0) found for further splitting." << Endl;
    }
 
    return(iCell);
