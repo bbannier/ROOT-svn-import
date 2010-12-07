@@ -60,9 +60,11 @@ long UnitTest::report() const
 
 void UnitTest::intro() const
 {
+#ifdef FULL
    if (osptr) {
       *osptr << "************************************************************************************************" << endl;
       *osptr << "* Starting U N I T test : " << name() << " (file " << fFileName << ")" << endl;
       *osptr << "************************************************************************************************" << endl;
    }
+#endif
 }
