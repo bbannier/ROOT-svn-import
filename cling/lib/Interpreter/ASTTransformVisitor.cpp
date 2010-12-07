@@ -122,22 +122,38 @@ namespace cling {
    EvalInfo ASTTransformVisitor::VisitStmt(Stmt *Node) {
       for (Stmt::child_iterator
               I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
-         EvalInfo EInfo = Visit(*I);
-         if (EInfo.IsEvalNeeded) {
-            if (Expr *E = dyn_cast<Expr>(EInfo.getNewStmt()))
-               // Assume void if still not escaped
-               *I = BuildEvalCallExpr(SemaPtr->getASTContext().VoidTy, E);
-         } 
-         else {
-            *I = EInfo.getNewStmt();
+         if (*I) {
+            EvalInfo EInfo = Visit(*I);
+            if (EInfo.IsEvalNeeded) {
+               if (Expr *E = dyn_cast<Expr>(EInfo.getNewStmt()))
+                  // Assume void if still not escaped
+                  *I = BuildEvalCallExpr(SemaPtr->getASTContext().VoidTy, E);
+            } 
+            else {
+               *I = EInfo.getNewStmt();
+            }
          }
       }
       
       return EvalInfo(Node, 0);
    }
    
-   EvalInfo ASTTransformVisitor::VisitExpr(Expr *E) {
-      return EvalInfo(E, E->isTypeDependent() || E->isValueDependent());
+   EvalInfo ASTTransformVisitor::VisitExpr(Expr *Node) {
+      for (Stmt::child_iterator
+              I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
+         if (*I) {
+            EvalInfo EInfo = Visit(*I);
+            if (EInfo.IsEvalNeeded) {
+               if (Expr *E = dyn_cast<Expr>(EInfo.getNewStmt()))
+                  // Assume void if still not escaped
+                  *I = BuildEvalCallExpr(SemaPtr->getASTContext().VoidTy, E);
+            } 
+            else {
+               *I = EInfo.getNewStmt();
+            }
+         }
+      }
+      return EvalInfo(Node, Node->isTypeDependent() || Node->isValueDependent());
    }
 
    // EvalInfo ASTTransformVisitor::VisitCompoundStmt(CompoundStmt *S) {
@@ -164,6 +180,7 @@ namespace cling {
    EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *E) {
       if (E->isTypeDependent() || E->isValueDependent()) {
          // FIXME: Handle the arguments
+         EvalInfo EInfo = Visit(E->getCallee());
 
          return EvalInfo(E, 1);
       
@@ -196,13 +213,6 @@ namespace cling {
                }
          }
       }
-      // if (lhs.IsEvalNeeded && !rhs.IsEvalNeeded) {
-      //    if (Expr *E = dyn_cast<Expr>(rhs.getNewStmt()))
-      //       if (!E->isTypeDependent() || !E->isValueDependent()) {
-      //          const QualType returnTy = E->getType();
-      //          binOp->setLHS(BuildEvalCallExpr(returnTy));
-      //       }        
-      // }      
       
       return EvalInfo(binOp, 0);
    }

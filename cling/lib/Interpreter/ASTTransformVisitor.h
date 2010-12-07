@@ -80,14 +80,14 @@ namespace cling {
       //region StmtVisitor
 
       EvalInfo VisitStmt(Stmt *Node);
-      EvalInfo VisitExpr(Expr *E);
+      EvalInfo VisitExpr(Expr *Node);
       // EvalInfo VisitCompoundStmt(CompoundStmt *S);
       EvalInfo VisitCallExpr(CallExpr *E);
       EvalInfo VisitImplicitCastExpr(ImplicitCastExpr *ICE);
       EvalInfo VisitDeclRefExpr(DeclRefExpr *DRE);
       EvalInfo VisitBinaryOperator(BinaryOperator *binOp);
       EvalInfo VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node);
-      
+
       //endregion
 
       //region EvalBuilder
