@@ -61,21 +61,29 @@ ClassImp(TMVA::PDEFoamDecisionTree)
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree() 
    : PDEFoamDiscriminant()
-   , fDTSeparation(kFoam)
+   , fSepType(NULL)
 {
    // Default constructor for streamer, user should not use it.
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const TString& Name, UInt_t cls, EDTSeparation sep)
+TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const TString& Name, SeparationBase *sepType, UInt_t cls)
    : PDEFoamDiscriminant(Name, cls)
-   , fDTSeparation(sep)
-{}
+   , fSepType(sepType)
+{
+   // Parameters:
+   //
+   // - Name - name of the foam
+   //
+   // - sepType - separation type used for the cell splitting
+   //
+   // - cls - class to consider as signal when calcualting the purity
+}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const PDEFoamDecisionTree &From)
    : PDEFoamDiscriminant(From)
-   , fDTSeparation(kFoam)
+   , fSepType(NULL)
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
@@ -90,8 +98,7 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
 {
    // Internal subprogram used by Create.  It explores newly defined
    // cell with according to the decision tree logic.  The separation
-   // set by the 'fDTSeparation' option is used (see also
-   // GetSeparation()).
+   // set via the 'sepType' option in the constructor.
    //
    // The optimal division point for eventual future cell division is
    // determined/recorded.  Note that links to parents and initial
@@ -132,7 +139,6 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
    Float_t nTotB = hbkg.at(0)->Integral(0, hbkg.at(0)->GetNbinsX()+1);
    Float_t nTotS_unw = hsig_unw.at(0)->Integral(0, hsig_unw.at(0)->GetNbinsX()+1);
    Float_t nTotB_unw = hbkg_unw.at(0)->Integral(0, hbkg_unw.at(0)->GetNbinsX()+1);
-   Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
 
    for (Int_t idim=0; idim<fDim; idim++) {
       Float_t nSelS=hsig.at(idim)->GetBinContent(0);
@@ -153,11 +159,8 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
 
          Float_t xLo = 1.0*jLo/fNBin;
 
-         // calculate gain
-         Float_t leftGain   = ((nTotS - nSelS) + (nTotB - nSelB))
-            * GetSeparation(nTotS-nSelS,nTotB-nSelB);
-         Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
-         Float_t gain = parentGain - leftGain - rightGain;
+         // calculate separation gain
+         Float_t gain = fSepType->GetSeparationGain(nSelS, nSelB, nTotS, nTotB);
 
          if (gain >= maxGain) {
             maxGain = gain;
@@ -195,33 +198,4 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
    for (UInt_t ih=0; ih<hbkg.size(); ih++)  delete hbkg.at(ih);
    for (UInt_t ih=0; ih<hsig_unw.size(); ih++)  delete hsig_unw.at(ih);
    for (UInt_t ih=0; ih<hbkg_unw.size(); ih++)  delete hbkg_unw.at(ih);
-}
-
-//_____________________________________________________________________
-Float_t TMVA::PDEFoamDecisionTree::GetSeparation(Float_t s, Float_t b)
-{
-   // Calculate the separation depending on 'fDTSeparation' for the
-   // given number of signal and background events 's', 'b'.  Note,
-   // that if (s+b) < 0 or s < 0 or b < 0 than the return value is 0.
-
-   if (s+b <= 0 || s < 0 || b < 0 )
-      return 0;
-
-   Float_t p = s/(s+b);
-   
-   switch(fDTSeparation) {
-   case kFoam:                   // p
-      return p;
-   case kGiniIndex:              // p * (1-p)
-      return p*(1-p);
-   case kMisClassificationError: // 1 - max(p,1-p)
-      return 1 - TMath::Max(p, 1-p);
-   case kCrossEntropy: // -p*log(p) - (1-p)*log(1-p)
-      return (p<=0 || p >=1 ? 0 : -p*TMath::Log(p) - (1-p)*TMath::Log(1-p));
-   default:
-      Log() << kFATAL << "Unknown separation type" << Endl;
-      break;
-   }
-
-   return 0;
 }

@@ -45,6 +45,10 @@
 #include "TMVA/Types.h"
 #include "TMVA/ClassifierFactory.h"
 #include "TMVA/Config.h"
+#include "TMVA/SeparationBase.h"
+#include "TMVA/GiniIndex.h"
+#include "TMVA/MisClassificationError.h"
+#include "TMVA/CrossEntropy.h"
 
 REGISTER_METHOD(PDEFoam)
 
@@ -803,10 +807,26 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
       }
    } else {
       // create a decision tree like PDEfoam
+      SeparationBase *sepType = NULL;
+      switch (fDTSeparation) {
+      case kGiniIndex:
+	 sepType = new GiniIndex();
+	 break;
+      case kMisClassificationError:
+	 sepType = new MisClassificationError();
+	 break;
+      case kCrossEntropy:
+	 sepType = new CrossEntropy();
+	 break;
+      default:
+	 Log() << kFATAL << "Separation type " << fDTSeparation 
+	       << " currently not supported" << Endl;
+	 break;
+      }
       switch (ft) {
       case kDiscr:
       case kMultiClass:
-	 pdefoam = new PDEFoamDecisionTree(foamcaption, cls, fDTSeparation);
+	 pdefoam = new PDEFoamDecisionTree(foamcaption, sepType, cls);
 	 density = new PDEFoamDTDensity(box, cls);
 	 break;
       default:

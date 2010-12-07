@@ -16,7 +16,7 @@
  *      Dominik Dannheim - CERN, Switzerland                                      *
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -31,31 +31,27 @@
 #ifndef ROOT_TMVA_PDEFoamDiscriminant
 #include "TMVA/PDEFoamDiscriminant.h"
 #endif
+#ifndef ROOT_TMVA_SeparationBase
+#include "TMVA/SeparationBase.h"
+#endif
 
 namespace TMVA {
-
-   // separation types
-   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
-			kCrossEntropy };
 
    class PDEFoamDecisionTree : public PDEFoamDiscriminant {
 
    private:
-      EDTSeparation fDTSeparation; // split cells according to certain separation
+      SeparationBase *fSepType;    // separation type
 
    protected:
 
       virtual void Explore(PDEFoamCell *Cell);     // Exploration of the cell
-      Float_t GetSeparation(Float_t s, Float_t b); // calculate separation
       
       PDEFoamDecisionTree(const PDEFoamDecisionTree&); // Copy Constructor  NOT USED
 
    public:
       PDEFoamDecisionTree();               // Default constructor (used only by ROOT streamer)
-      PDEFoamDecisionTree(const TString&, UInt_t, EDTSeparation sep=kFoam); // Principal user-defined constructor
+      PDEFoamDecisionTree(const TString&, SeparationBase *sepType, UInt_t cls); // Principal user-defined constructor
       virtual ~PDEFoamDecisionTree();      // Default destructor
-
-      void SetDTSeparation(EDTSeparation new_val){ fDTSeparation = new_val; }
 
       // ---------- ROOT class definition
       ClassDef(PDEFoamDecisionTree,1) // Decision tree like PDEFoam
