@@ -1,0 +1,12 @@
+The directory RootTest of the TMVA unit test suite contains the script that 
+transforms the unit tests suite and its stressTest into a standalone, one-file 
+Program that only requires ROOT libraries. The file itself is approximately 
+2.5k lines of code and behaves exactly like the short, non-verbose stressTest 
+of the full TMVA unit test suite
+
+To create the standalone programe use the makefile
+The command "make" creates stressTMVA.cxx using the script buildRootTest.sh.
+It also creates an executable.
+
+
+
