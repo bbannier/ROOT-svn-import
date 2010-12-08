@@ -1657,11 +1657,3 @@ void TMVA::PDEFoam::DeleteBinarySearchTree()
    if(fDistr) delete fDistr; 
    fDistr = NULL;
 }
-
-//_____________________________________________________________________
-void TMVA::PDEFoam::Init()
-{
-   // Initialize the foam's density estimator, which contains the
-   // binary search tree.
-   GetDistr()->Initialize();
-}

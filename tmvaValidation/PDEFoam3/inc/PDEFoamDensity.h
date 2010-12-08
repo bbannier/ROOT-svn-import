@@ -64,8 +64,7 @@ namespace TMVA {
       PDEFoamDensity(const PDEFoamDensity&);
       virtual ~PDEFoamDensity();
 
-      // density build-up functions
-      void Initialize(); // create and initialize binary search tree
+      // fill event into binary search tree
       void FillBinarySearchTree( const Event* ev );
 
       // main function used by PDEFoam
