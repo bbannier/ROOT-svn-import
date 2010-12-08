@@ -9,6 +9,7 @@
 #include "TMath.h"
 #include "TTree.h"
 #include "TFile.h"
+#include "TSystem.h"
 #include "TString.h"
 
 #include "TMVA/Factory.h"
@@ -81,7 +82,7 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
 
    TString prepareString="";
    string factoryOptions( "!V:Silent:Transformations=I:AnalysisType=Classification:!Color:!DrawProgressBar" );
-   TString outfileName( "ByHand.root" );
+   TString outfileName( "weights/ByHand.root" );
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
    Factory* factory = new Factory(factoryname,outputFile,factoryOptions);
    factory->AddVariable( "var0",  "Variable 0", 'F' );
@@ -137,12 +138,12 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
    TTree* tree(0);
    TFile* inFile(0);
    if (!(option.Contains("MemoryResidentTree"))){
-      inFile = TFile::Open( "input.root", "RECREATE" );
+      inFile = TFile::Open( "weights/input.root", "RECREATE" );
       tree = create_Tree();
       inFile->Write();
       inFile->Close();
       if (inFile) delete inFile;
-      inFile = TFile::Open( "input.root");
+      inFile = TFile::Open( "weights/input.root");
       tree = (TTree*) inFile->Get("Tree");
    }
    else if (! (option.Contains("LateTreeBooking"))) tree = create_Tree();
@@ -150,7 +151,7 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
    TString _methodTitle="LD",_methodOption="!H:!V"; // fix me
    TString prepareString="";
    string factoryOptions( "!V:Silent:Transformations=I,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
-   TString outfileName( "TMVA.root" );
+   TString outfileName( "weights/TMVA.root" );
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
    if (option.Contains("LateTreeBooking") && option.Contains("MemoryResidentTree")) tree = create_Tree();
 
@@ -192,6 +193,15 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
 
 void utFactory::run()
 {
+   // create directory weights if necessary 
+   FileStat_t stat;
+   // FIXME:: give the filename of the sample somewhere else?
+   if(gSystem->GetPathInfo("./weights",stat)) {
+      gSystem->MakeDirectory("weights"); 
+#ifdef COUTDEBUG
+      std::cout << "creating directory weights"<<std::endl;
+#endif
+   }
    // create three factories with two methods each
    test_(addEventsToFactoryByHand("ByHand","")); // uses Factory::AddSignalTrainingEvent
    test_(addEventsToFactoryByHand("ByHand2","useWeights")); 

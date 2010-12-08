@@ -18,7 +18,6 @@ MethodUnitTestWithROCLimits::MethodUnitTestWithROCLimits(const Types::EMVA& theM
 														const std::string & name,const std::string & filename, std::ostream* sptr) :
    UnitTest((string)methodTitle, __FILE__), _methodType(theMethod) , _methodTitle(methodTitle), _methodOption(theOption), _upROCLimit(upLimit), _lowROCLimit(lowLimit), _VariableNames(0), _TreeVariableNames(0)
 {
-   //_OutputROOTFile="TMVA.root";
    _VariableNames  = new std::vector<TString>(0);
    _TreeVariableNames = new std::vector<TString>(0);
    _VariableNames->push_back("var1+var2");
@@ -43,7 +42,7 @@ bool MethodUnitTestWithROCLimits::ROCIntegralWithinInterval()
 
 void MethodUnitTestWithROCLimits::run()
 {
-   TString outfileName( "TMVA.root" );                                                                                                                       
+   TString outfileName( "weights/TMVA.root" );                                                                                                                       
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );         
 
 // FIXME:: if file can't be created do something more?
@@ -135,7 +134,7 @@ void MethodUnitTestWithROCLimits::run()
   vector<double> testvarDouble(_VariableNames->size());
 
   // setup test tree access
-  TFile* testFile = new TFile("TMVA.root");
+  TFile* testFile = new TFile("weights/TMVA.root");
   TTree* testTree = (TTree*)(testFile->Get("TestTree"));
   for (UInt_t i=0;i<_VariableNames->size();i++)
      testTree->SetBranchAddress(_TreeVariableNames->at(i),&testvar[i]);
@@ -144,7 +143,7 @@ void MethodUnitTestWithROCLimits::run()
   std::vector<TString> variableNames2;
   variableNames2.push_back("var0");
   variableNames2.push_back("var1");
-  TFile* testFile2 = new TFile("ByHand.root");
+  TFile* testFile2 = new TFile("weights/ByHand.root");
   TTree* testTree2 = (TTree*)(testFile2->Get("TestTree"));
   testTree2->SetBranchAddress("var0",&dummy[0]);
   testTree2->SetBranchAddress("var1",&dummy[1]);
@@ -317,9 +316,12 @@ void MethodUnitTestWithROCLimits::run()
 #endif
      // create generic macro
      TString macroName=Form("testmakeclass_%s",_methodTitle.Data());
-     TString macroFileName=TString("./")+macroName+TString(".C");
+     TString macroFileName=TString("weights/")+macroName+TString(".C");
      TString methodTypeName = Types::Instance().GetMethodName(_methodType);
-     gSystem->Exec(Form("rm %s",macroFileName.Data()));
+     FileStat_t stat;
+     if(!gSystem->GetPathInfo(macroFileName.Data(),stat)) {
+        gSystem->Exec(Form("rm %s",macroFileName.Data()));
+     }
      ofstream fout( macroFileName );
      fout << "// generic macro file to test TMVA reader and standalone C code " << std::endl;
      fout << "#include \"TFile.h\""<<std::endl;
@@ -333,7 +335,7 @@ void MethodUnitTestWithROCLimits::run()
      for (UInt_t i=0;i<_VariableNames->size();i++)
         fout << Form("vars[%d]=\"%s\";",i,_VariableNames->at(i).Data()) << std::endl;  
      fout << Form("Read%s  aa(vars);", _methodTitle.Data()) << std::endl;
-     fout << "TFile* testFile = new TFile(\"TMVA.root\");" << std::endl; // fix me hardcode TMVA.root
+     fout << "TFile* testFile = new TFile(\"weights/TMVA.root\");" << std::endl; // fix me hardcode TMVA.root
      fout << " TTree* testTree = (TTree*)(testFile->Get(\"TestTree\"));" << std::endl;
      fout << Form("vector<float> testvar(%d);",(Int_t) _VariableNames->size()) << std::endl;
      fout << Form("vector<double> testvarDouble(%d);", (Int_t) _VariableNames->size()) << std::endl;

@@ -30,7 +30,8 @@ $(STRESSTMVA):  $(STRESSTMVAO)
 
 
 clean:
-	@rm -f $(PROGRAMS) $(OBJS) $(STRESSTMVAS)
+	@rm -f $(PROGRAMS) $(OBJS) $(STRESSTMVAS) 
+	@rm -rf weights
 
 .$(SrcSuf).$(ObjSuf):
 	$(CXX) -g $(CXXFLAGS) -c $<

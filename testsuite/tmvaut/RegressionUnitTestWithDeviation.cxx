@@ -30,7 +30,7 @@ bool RegressionUnitTestWithDeviation::DeviationWithinLimits()
 void RegressionUnitTestWithDeviation::run()
 {
    // FIXME:: create _this_ file or rather somewhere else?
-   TString outfileName( "TMVARegUT.root" );
+   TString outfileName( "weights/TMVARegUT.root" );
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
 
    // FIXME:: if file can't be created do something more?
@@ -97,7 +97,7 @@ void RegressionUnitTestWithDeviation::run()
    // reader tests
 
    // setup test tree access
-   TFile* testFile = new TFile("TMVARegUT.root"); // fix me hardcoded file name
+   TFile* testFile = new TFile("weights/TMVARegUT.root"); // fix me hardcoded file name
    TTree* testTree = (TTree*)(testFile->Get("TestTree"));
    const int nTest=3; // 3 reader usages
    float testTarget,readerVal=0.;
