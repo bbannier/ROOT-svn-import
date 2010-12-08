@@ -15,7 +15,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                      *
+ * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -44,10 +44,6 @@
 // cell without sampling.
 //
 //_____________________________________________________________________
-
-#ifndef ROOT_TMath
-#include "TMath.h"
-#endif
 
 #ifndef ROOT_TMVA_PDEFoamDecisionTree
 #include "TMVA/PDEFoamDecisionTree.h"
@@ -113,38 +109,56 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
 
    // create edge histograms
-   std::vector<TH1F*> hsig, hbkg, hsig_unw, hbkg_unw;
+   std::vector<TH1D*> hsig, hbkg, hsig_unw, hbkg_unw;
    for (Int_t idim=0; idim<fDim; idim++) {
-      hsig.push_back( new TH1F(Form("hsig_%i",idim), 
-                               Form("signal[%i]",idim), fNBin, 0, 1 ));
-      hbkg.push_back( new TH1F(Form("hbkg_%i",idim), 
-                               Form("background[%i]",idim), fNBin, 0, 1 ));
-      hsig_unw.push_back( new TH1F(Form("hsig_unw_%i",idim), 
-                                   Form("signal_unw[%i]",idim), fNBin, 0, 1 ));
-      hbkg_unw.push_back( new TH1F(Form("hbkg_unw_%i",idim), 
-                                   Form("background_unw[%i]",idim), fNBin, 0, 1 ));
+      hsig.push_back( new TH1D(Form("hsig_%i",idim), 
+                               Form("signal[%i]",idim), fNBin, fXmin[idim], fXmax[idim] ));
+      hbkg.push_back( new TH1D(Form("hbkg_%i",idim), 
+                               Form("background[%i]",idim), fNBin, fXmin[idim], fXmax[idim] ));
+      hsig_unw.push_back( new TH1D(Form("hsig_unw_%i",idim), 
+                                   Form("signal_unw[%i]",idim), fNBin, fXmin[idim], fXmax[idim] ));
+      hbkg_unw.push_back( new TH1D(Form("hbkg_unw_%i",idim), 
+                                   Form("background_unw[%i]",idim), fNBin, fXmin[idim], fXmax[idim] ));
    }
 
-   // Fill histograms
+   // get cell position and size
+   PDEFoamVect  cellSize(GetTotDim()), cellPosi(GetTotDim());
+   cell->GetHcub(cellPosi, cellSize);
+
+   // determine lower and upper cell bound
+   std::vector<Double_t> lb(GetTotDim()); // lower bound
+   std::vector<Double_t> ub(GetTotDim()); // upper bound
+   for (Int_t idim = 0; idim < GetTotDim(); idim++) {
+      lb[idim] = VarTransformInvers(idim, cellPosi[idim] - std::numeric_limits<float>::epsilon());
+      ub[idim] = VarTransformInvers(idim, cellPosi[idim] + cellSize[idim] + std::numeric_limits<float>::epsilon());
+   }
+
+   // fDistr must be of type PDEFoamDTDensity*
    PDEFoamDTDensity *distr = dynamic_cast<PDEFoamDTDensity*>(fDistr);
    if (distr == NULL)
-      Log() << kFATAL << "<PDEFoamDecisionTree::Explore>: cast failed: PDEFoamDensity* --> PDEFoamDTDensity*" << Endl;
-   distr->FillHist(this, cell, hsig, hbkg, hsig_unw, hbkg_unw);
+      Log() << kFATAL << "<PDEFoamDecisionTree::Explore>: cast failed: "
+	    << "PDEFoamDensity* --> PDEFoamDTDensity*" << Endl;
+
+   // create TMVA::Volume object needed for searching within the BST
+   TMVA::Volume volume(&lb, &ub);
+
+   // fill the signal and background histograms for the given volume
+   distr->FillHistograms(volume, hsig, hbkg, hsig_unw, hbkg_unw);
 
    // ------ determine the best division edge
-   Float_t xBest = 0.5;   // best division point
-   Int_t   kBest = -1;    // best split dimension
-   Float_t maxGain = -1.0; // maximum gain
-   Float_t nTotS = hsig.at(0)->Integral(0, hsig.at(0)->GetNbinsX()+1);
-   Float_t nTotB = hbkg.at(0)->Integral(0, hbkg.at(0)->GetNbinsX()+1);
-   Float_t nTotS_unw = hsig_unw.at(0)->Integral(0, hsig_unw.at(0)->GetNbinsX()+1);
-   Float_t nTotB_unw = hbkg_unw.at(0)->Integral(0, hbkg_unw.at(0)->GetNbinsX()+1);
+   Double_t xBest = 0.5;    // best division point
+   Int_t    kBest = -1;     // best split dimension
+   Double_t maxGain = -1.0; // maximum gain
+   Double_t nTotS = hsig.at(0)->Integral(0, hsig.at(0)->GetNbinsX()+1);
+   Double_t nTotB = hbkg.at(0)->Integral(0, hbkg.at(0)->GetNbinsX()+1);
+   Double_t nTotS_unw = hsig_unw.at(0)->Integral(0, hsig_unw.at(0)->GetNbinsX()+1);
+   Double_t nTotB_unw = hbkg_unw.at(0)->Integral(0, hbkg_unw.at(0)->GetNbinsX()+1);
 
-   for (Int_t idim=0; idim<fDim; idim++) {
-      Float_t nSelS=hsig.at(idim)->GetBinContent(0);
-      Float_t nSelB=hbkg.at(idim)->GetBinContent(0);
-      Float_t nSelS_unw=hsig_unw.at(idim)->GetBinContent(0);
-      Float_t nSelB_unw=hbkg_unw.at(idim)->GetBinContent(0);
+   for (Int_t idim = 0; idim < fDim; ++idim) {
+      Double_t nSelS=hsig.at(idim)->GetBinContent(0);
+      Double_t nSelB=hbkg.at(idim)->GetBinContent(0);
+      Double_t nSelS_unw=hsig_unw.at(idim)->GetBinContent(0);
+      Double_t nSelB_unw=hbkg_unw.at(idim)->GetBinContent(0);
       for(Int_t jLo=1; jLo<fNBin; jLo++) {
          nSelS += hsig.at(idim)->GetBinContent(jLo);
          nSelB += hbkg.at(idim)->GetBinContent(jLo);
@@ -157,10 +171,10 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
                  (nTotS_unw-nSelS_unw + nTotB_unw-nSelB_unw) >= GetNmin() ) )
             continue;
 
-         Float_t xLo = 1.0*jLo/fNBin;
+         Double_t xLo = 1.0*jLo/fNBin;
 
          // calculate separation gain
-         Float_t gain = fSepType->GetSeparationGain(nSelS, nSelB, nTotS, nTotB);
+         Double_t gain = fSepType->GetSeparationGain(nSelS, nSelB, nTotS, nTotB);
 
          if (gain >= maxGain) {
             maxGain = gain;

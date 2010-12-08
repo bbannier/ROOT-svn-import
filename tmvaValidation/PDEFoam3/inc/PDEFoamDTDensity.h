@@ -18,7 +18,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                      *
+ * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -32,11 +32,15 @@
 
 #include <vector>
 
+#ifndef ROOT_TH2
+#include "TH2.h"
+#endif
+
 #ifndef ROOT_TMVA_PDEFoamDensity
 #include "TMVA/PDEFoamDensity.h"
 #endif
-#ifndef ROOT_TMVA_PDEFoam
-#include "TMVA/PDEFoam.h"
+#ifndef ROOT_TMVA_Volume
+#include "TMVA/Volume.h"
 #endif
 
 namespace TMVA {
@@ -53,12 +57,13 @@ namespace TMVA {
       PDEFoamDTDensity(const PDEFoamDTDensity&);
       virtual ~PDEFoamDTDensity(){};
 
-      // main function used by PDEFoam
-      // returns event density at a given point by range searching in BST
+      // returns allways 0
       virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density);
-      virtual void FillHist(const PDEFoam *foam, PDEFoamCell*, std::vector<TH1F*>&, std::vector<TH1F*>&, std::vector<TH1F*>&, std::vector<TH1F*>&);
 
-      ClassDef(PDEFoamDTDensity,1) //Class for DT density
+      // fill histograms with events found in volume
+      virtual void FillHistograms(TMVA::Volume&, std::vector<TH1D*>&, std::vector<TH1D*>&, std::vector<TH1D*>&, std::vector<TH1D*>&);
+
+      ClassDef(PDEFoamDTDensity,1) // Class for decision tree like PDEFoam density
    };  //end of PDEFoamDTDensity
 
 }  // namespace TMVA
