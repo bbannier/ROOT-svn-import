@@ -53,12 +53,8 @@
 //   PDEFoamDensity *dens = new MyDensity(dim);
 //   pdefoam->SetDensity(dens);
 //
-// Afterwards the density must be initialized via (the binary search
-// tree is created and initialized)
-//
-//   dens->Initialize();
-//
-// and binary search tree should be filled with TMVA events:
+// Afterwards the binary search tree should be filled with TMVA
+// events:
 //
 //   dens->FillBinarySearchTree(event);
 // _____________________________________________________________________
@@ -72,7 +68,7 @@ ClassImp(TMVA::PDEFoamDensity)
 //_____________________________________________________________________
 TMVA::PDEFoamDensity::PDEFoamDensity() 
    : TObject(),
-     fBst(NULL),
+     fBst(new TMVA::BinarySearchTree()),
      fBox(std::vector<Double_t>()),
      fLogger( new MsgLogger("PDEFoamDensity"))
 {}
@@ -80,10 +76,16 @@ TMVA::PDEFoamDensity::PDEFoamDensity()
 //_____________________________________________________________________
 TMVA::PDEFoamDensity::PDEFoamDensity(std::vector<Double_t> box)
    : TObject(),
-     fBst(NULL),
+     fBst(new TMVA::BinarySearchTree()),
      fBox(box),
      fLogger( new MsgLogger("PDEFoamDensity"))
-{}
+{
+   if (box.size() == 0)
+      Log() << kFATAL << "Dimension of PDEFoamDensity is zero" << Endl;
+
+   // set periode (number of variables) of binary search tree
+   fBst->SetPeriode(box.size());
+}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDensity::~PDEFoamDensity() 
@@ -101,28 +103,6 @@ TMVA::PDEFoamDensity::PDEFoamDensity(const PDEFoamDensity &distr)
 {
    // Copy constructor
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
-}
-
-//_____________________________________________________________________
-void TMVA::PDEFoamDensity::Initialize()
-{
-   // Initialisation of binary search tree.  
-   // Set dimension and create new BinarySearchTree.
-
-   // create binary search tree
-   if (fBst) delete fBst;
-   fBst = new TMVA::BinarySearchTree();
-
-   if (!fBst){
-      Log() << kFATAL << "<PDEFoamDensity::Initialize> "
-            << "ERROR: an not create binary tree !" << Endl;
-   }
-
-   // set periode (number of variables)
-   if (fBox.size() == 0)
-      Log() << kFATAL << "Dimension of PDEFoamDensity is zero" << Endl;
-
-   fBst->SetPeriode(fBox.size());
 }
 
 //_____________________________________________________________________
