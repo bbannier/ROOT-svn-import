@@ -767,6 +767,9 @@ void TMVA::MethodLikelihood::MakeClassSpecific( std::ostream& fout, const TStrin
    fout << "   bool    fHasDiscretPDF[" << GetNvar() <<"]; "<< endl;
    fout << "   int    fNbin[" << GetNvar() << "]; "
         << "// number of bins (discrete variables may have less bins)" << endl;
+   fout << "   double    fHistMin[" << GetNvar() << "]; " << endl;
+   fout << "   double    fHistMax[" << GetNvar() << "]; " << endl;
+
    fout << "   double TransformLikelihoodOutput( double, double ) const;" << endl;
    fout << "};" << endl;
    fout << "" << endl;
@@ -775,6 +778,8 @@ void TMVA::MethodLikelihood::MakeClassSpecific( std::ostream& fout, const TStrin
    fout << "   fEpsilon = " << fEpsilon << ";" << endl;
    for (UInt_t ivar=0; ivar<GetNvar(); ivar++) {
       fout << "   fNbin[" << ivar << "] = " << (*fPDFSig)[ivar]->GetPDFHist()->GetNbinsX() << ";" << endl;
+      fout << "   fHistMin[" << ivar << "] = " << (*fPDFSig)[ivar]->GetPDFHist()->GetXaxis()->GetXmin() << ";" << endl;
+      fout << "   fHistMax[" << ivar << "] = " << (*fPDFSig)[ivar]->GetPDFHist()->GetXaxis()->GetXmax() << ";" << endl;
       // sanity check (for previous code lines)
       if ((((*fPDFSig)[ivar]->GetPDFHist()->GetNbinsX() != nbin[ivar] ||
             (*fPDFBgd)[ivar]->GetPDFHist()->GetNbinsX() != nbin[ivar])
@@ -817,17 +822,17 @@ void TMVA::MethodLikelihood::MakeClassSpecific( std::ostream& fout, const TStrin
    fout << endl;
    fout << "         // interpolate linearly between adjacent bins" << endl;
    fout << "         // this is not useful for discrete variables (or forced Spline0)" << endl;
-   fout << "         int bin = int((x[itype] - fVmin[ivar])/(fVmax[ivar] - fVmin[ivar])*fNbin[ivar]) + 0;" << endl;
+   fout << "         int bin = int((x[itype] - fHistMin[ivar])/(fHistMax[ivar] - fHistMin[ivar])*fNbin[ivar]) + 0;" << endl;
    fout << endl;
    fout << "         // since the test data sample is in general different from the training sample" << endl;
    fout << "         // it can happen that the min/max of the training sample are trespassed --> correct this" << endl;
    fout << "         if      (bin < 0) {" << endl;
    fout << "            bin = 0;" << endl;
-   fout << "            x[itype] = fVmin[ivar];" << endl;
+   fout << "            x[itype] = fHistMin[ivar];" << endl;
    fout << "         }" << endl;
    fout << "         else if (bin >= fNbin[ivar]) {" << endl;
    fout << "            bin = fNbin[ivar]-1;" << endl;
-   fout << "            x[itype] = fVmax[ivar];" << endl;
+   fout << "            x[itype] = fHistMax[ivar];" << endl;
    fout << "         }" << endl;
    fout << endl;
    fout << "         // find corresponding histogram from cached indices" << endl;
@@ -843,7 +848,7 @@ void TMVA::MethodLikelihood::MakeClassSpecific( std::ostream& fout, const TStrin
    fout << "         double p = ref;" << endl;
    fout << endl;
    fout << "         if (GetType(ivar) != 'I' && !fHasDiscretPDF[ivar]) {" << endl;
-   fout << "            float bincenter = (bin + 0.5)/fNbin[ivar]*(fVmax[ivar] - fVmin[ivar]) + fVmin[ivar];" << endl;
+   fout << "            float bincenter = (bin + 0.5)/fNbin[ivar]*(fHistMax[ivar] - fHistMin[ivar]) + fHistMin[ivar];" << endl;
    fout << "            int nextbin = bin;" << endl;
    fout << "            if ((x[itype] > bincenter && bin != fNbin[ivar]-1) || bin == 0) " << endl;
    fout << "               nextbin++;" << endl;
@@ -851,7 +856,7 @@ void TMVA::MethodLikelihood::MakeClassSpecific( std::ostream& fout, const TStrin
    fout << "               nextbin--;  " << endl;
    fout << endl;
    fout << "            double refnext      = (itype == 0) ? fRefS[ivar][nextbin] : fRefB[ivar][nextbin];" << endl;
-   fout << "            float nextbincenter = (nextbin + 0.5)/fNbin[ivar]*(fVmax[ivar] - fVmin[ivar]) + fVmin[ivar];" << endl;
+   fout << "            float nextbincenter = (nextbin + 0.5)/fNbin[ivar]*(fHistMax[ivar] - fHistMin[ivar]) + fHistMin[ivar];" << endl;
    fout << endl;
    fout << "            double dx = bincenter - nextbincenter;" << endl;
    fout << "            double dy = ref - refnext;" << endl;
