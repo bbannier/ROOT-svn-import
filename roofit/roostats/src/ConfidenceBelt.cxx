@@ -46,7 +46,8 @@ ClassImp(RooStats::ConfidenceBelt) ;
 using namespace RooStats;
 
 //____________________________________________________________________
-ConfidenceBelt::ConfidenceBelt() 
+ConfidenceBelt::ConfidenceBelt() : 
+   TNamed(), fParameterPoints(0)
 {
    // Default constructor
 }
@@ -239,7 +240,6 @@ AcceptanceRegion* ConfidenceBelt::GetAcceptanceRegion(RooArgSet &parameterPoint,
       TIter it = parameterPoint.createIterator();
       RooRealVar *myarg; 
       while ( samePoint && (myarg = (RooRealVar *)it.Next())) { 
-	if(!myarg) continue;
 	if(myarg->getVal() != thisPoint->getRealValue(myarg->GetName()))
 	  samePoint = false;
       }
