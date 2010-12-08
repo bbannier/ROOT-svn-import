@@ -26,7 +26,7 @@ bool MethodUnitTestWithComplexData::ROCIntegralWithinInterval()
 void MethodUnitTestWithComplexData::run()
 {
 	// FIXME:: create _this_ file or rather somewhere else?
-  TString outfileName( "TMVA.root" );
+  TString outfileName( "weights/TMVA.root" );
   TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
 
 // FIXME:: if file can't be created do something more?
@@ -48,9 +48,9 @@ void MethodUnitTestWithComplexData::run()
   
   TFile* input(0);
 // FIXME:: give the filename of the sample somewhere else?
-  TString fname = "./tmva_complex_data.root"; 
+  TString fname = "weights/tmva_complex_data.root"; 
   input = TFile::Open( fname );  
-  if (input == NULL) create_data("tmva_complex_data.root");
+  if (input == NULL) create_data("weights/tmva_complex_data.root");
   input = TFile::Open( fname );  
   if (input == NULL) 
     {
