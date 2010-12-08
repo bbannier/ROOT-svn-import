@@ -67,6 +67,9 @@ namespace TMVA {
       // fill event into binary search tree
       void FillBinarySearchTree( const Event* ev );
 
+      // set the range-searching box
+      void SetBox(std::vector<Double_t> box){ fBox = box; };
+
       // main function used by PDEFoam
       // returns density at a given point by range searching in BST
       virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density) = 0;
