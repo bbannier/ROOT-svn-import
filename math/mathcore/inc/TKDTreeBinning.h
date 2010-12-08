@@ -26,22 +26,22 @@ namespace ROOT {
 }
 
 class TKDTreeBinning : public TObject {
-   Double_t** fData;
-   std::vector<Double_t> fBinMinEdges;
-   std::vector<Double_t> fBinMaxEdges;
-   TKDTreeID* fDataBins;
-   UInt_t fNBins;
-   UInt_t fDim;
-   UInt_t fDataSize;
-   std::vector<std::pair<Double_t, Double_t> > fDataThresholds;
-   std::vector<std::vector<std::pair<Bool_t, Bool_t> > > fCheckedBinEdges;
-   std::vector<std::map<Double_t, std::vector<UInt_t> > > fCommonBinEdges;
-   Bool_t fIsSorted;
-   Bool_t fIsSortedAsc;
-   std::vector<UInt_t> fBinsContent;
-   struct CompareAsc;
+   Double_t** fData; // The data from which a KDTree partition is computed for binning
+   std::vector<Double_t> fBinMinEdges; // The minimum values for the bins' edges for each dimension
+   std::vector<Double_t> fBinMaxEdges; // The maximum values for the bins' edges for each dimension
+   TKDTreeID* fDataBins; // The binning inner structure.
+   UInt_t fNBins; // The number of bins
+   UInt_t fDim; // The data dimension
+   UInt_t fDataSize; // The data size
+   std::vector<std::pair<Double_t, Double_t> > fDataThresholds; // Minimum and maximum data values.
+   std::vector<std::vector<std::pair<Bool_t, Bool_t> > > fCheckedBinEdges; // Auxiliary structure for readjusting the bin edges. Flags if the bin edge was processed in  the algorithm
+   std::vector<std::map<Double_t, std::vector<UInt_t> > > fCommonBinEdges; // Auxiliary structure for readjusting the bin edges. Keeps the common bin boundaries
+   Bool_t fIsSorted; // Flags if the bin edges are sorted densitywise
+   Bool_t fIsSortedAsc; // Flags if the bin edges are sorted densitywise in ascending order
+   std::vector<UInt_t> fBinsContent; // Holds the contents of the bins
+   struct CompareAsc; // Predicate for ascending sort
    friend struct CompareAsc;
-   struct CompareDesc;
+   struct CompareDesc; // Predicate for descending sort
    friend struct CompareDesc;
    TKDTreeBinning(TKDTreeBinning& bins);           // Disallowed copy constructor
    TKDTreeBinning operator=(TKDTreeBinning& bins); // Disallowed assign operator
@@ -55,6 +55,13 @@ class TKDTreeBinning : public TObject {
    void ReadjustMaxBinEdges(Double_t* binEdges);
 
 public:
+
+   // flag bits
+   enum {
+      kAdjustBinEdges     = BIT(14)  // adjust bin edges to avoid overlapping with data
+   };
+
+
    TKDTreeBinning(UInt_t dataSize, UInt_t dataDim, Double_t* data, UInt_t nBins = 100);
    ~TKDTreeBinning();
    void SetNBins(UInt_t bins);
