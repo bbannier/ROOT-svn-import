@@ -193,11 +193,10 @@ int main()
    TMVA_test.report();
 #endif
 
-   //#ifdef CLEANUP
+#ifndef NOCLEANUP
    //FileStat_t stat;
    //if(!gSystem->GetPathInfo("./weights",stat)) {
-   //   gSystem->Exec("rm -rf weights"); // ToDo make this platform independent
-   //}
-   //#endif
+   gSystem->Exec("rm -rf weights/*"); 
+#endif
 
 }
