@@ -102,7 +102,7 @@ TList* ProfileInspector::GetListOfProfilePlots( RooAbsData& data, RooStats::Mode
     Double_t min = dynamic_cast<RooAbsRealLValue*>(poi)->getMin();
     Double_t step = (max-min)/(curve_N-1);
     curve_x=new Double_t[curve_N];
-    for(unsigned int i=0; i<curve_N; ++i){
+    for(int i=0; i<curve_N; ++i){
       curve_x[i]=min+step*i;
     }
   }
