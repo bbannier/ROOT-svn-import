@@ -37,12 +37,12 @@ void PlotFoams( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.
       return;
    }
    
-   TString macro_rms = Form( "Plot(\"%s\", TMVA::kRms, \"RMS\", %s)", 
+   TString macro_rms = Form( "Plot(\"%s\", TMVA::kRms, \"Variance\", %s)", 
 			     fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
-   cbar->AddButton( "RMS", macro_rms, "Plot RMS (Variance)", "button" );
-   TString macro_rms_ov_mean = Form( "Plot(\"%s\", TMVA::kRmsOvMean, \"RMS/Mean\", %s)", 
+   cbar->AddButton( "Variance", macro_rms, "Plot variance", "button" );
+   TString macro_rms_ov_mean = Form( "Plot(\"%s\", TMVA::kRmsOvMean, \"Variance/Mean\", %s)", 
 				     fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
-   cbar->AddButton( "RMS over Mean", macro_rms_ov_mean, "Plot RMS over Mean", "button" );
+   cbar->AddButton( "Variance/Mean", macro_rms_ov_mean, "Plot variance over mean", "button" );
    TString macro_cell_tree = Form( "PlotCellTree(\"%s\", \"Cell tree\", %s)",
 				   fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
    cbar->AddButton( "Cell tree", macro_cell_tree, "Plot cell tree", "button" );
@@ -232,10 +232,12 @@ void DrawCell( TMVA::PDEFoamCell *cell, TMVA::PDEFoam *foam,
    t->SetFillStyle(1);
 
    // draw all cell elements
+   t->AddText( Form("Intg=%.5f", cell->GetIntg()) );
+   t->AddText( Form("Var=%.5f", cell->GetDriv()) );
    TVectorF *vec = (TVectorF*) cell->GetElement();
    if (vec != NULL){
       for (Int_t i = 0; i < vec->GetNrows(); ++i) {
-	 t->AddText( Form("V[%i]=%.5f", i, vec(i)) );
+	 t->AddText( Form("E[%i]=%.5f", i, vec(i)) );
       }
    }
 
