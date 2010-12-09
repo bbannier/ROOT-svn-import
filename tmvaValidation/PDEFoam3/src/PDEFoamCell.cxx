@@ -206,6 +206,23 @@ UInt_t TMVA::PDEFoamCell::GetDepth()
 }
 
 //_____________________________________________________________________
+UInt_t TMVA::PDEFoamCell::GetTreeDepth(UInt_t depth)
+{
+   // Get depth of cell tree, starting at this cell.
+
+   if (GetStat() == 1)    // this is an active cell
+      return depth + 1;
+
+   UInt_t depth0 = 0, depth1 = 0;
+   if (GetDau0() != NULL)
+      depth0 = GetDau0()->GetTreeDepth(depth+1);
+   if (GetDau1() != NULL)
+      depth1 = GetDau1()->GetTreeDepth(depth+1);
+
+   return (depth0 > depth1 ? depth0 : depth1);
+}
+
+//_____________________________________________________________________
 void TMVA::PDEFoamCell::Print(Option_t *option) const
 {
    // Printout of the cell geometry parameters for the debug purpose
