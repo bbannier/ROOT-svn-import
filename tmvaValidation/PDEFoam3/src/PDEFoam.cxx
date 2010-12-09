@@ -1180,20 +1180,12 @@ TH1D* TMVA::PDEFoam::Draw1Dim( ECellValue cell_value, Int_t nbin, PDEFoamKernel 
    //
    // - nbin - number of bins of result histogram
    //
-   // - kernel - a PDEFoam kernel.  If NULL is given, than the trivial
-   //            kernel is used.
+   // - kernel - a PDEFoam kernel.
 
    // avoid plotting of wrong dimensions
    if ( GetTotDim()!=1 ) 
       Log() << kFATAL << "<Draw1Dim>: function can only be used for 1-dimensional foams!" 
 	    << Endl;
-
-   // if no kernel is set, use the trivial kernel
-   Bool_t must_delete_kernel = kFALSE;
-   if (kernel == NULL) {
-      kernel = new PDEFoamKernel();
-      must_delete_kernel = kTRUE;
-   }
 
    TString hname("h_1dim");
    TH1D* h1=(TH1D*)gDirectory->Get(hname);
@@ -1207,14 +1199,16 @@ TH1D* TMVA::PDEFoam::Draw1Dim( ECellValue cell_value, Int_t nbin, PDEFoamKernel 
       // get event vector corresponding to bin
       std::vector<Float_t> txvec;
       txvec.push_back( VarTransform(0, h1->GetBinCenter(ibinx)) );
-      // get cell value
-      Float_t val = kernel->Estimate(this, txvec, cell_value);
+      Float_t val = 0;
+      if (kernel != NULL) {
+	 // get cell value using the kernel
+	 val = kernel->Estimate(this, txvec, cell_value);
+      } else {
+	 val = GetCellValue(FindCell(txvec), cell_value);
+      }
       // fill value to histogram
       h1->SetBinContent(ibinx, val + h1->GetBinContent(ibinx));
    }
-
-   if (must_delete_kernel)
-      delete kernel;
 
    return h1;
 }
@@ -1230,8 +1224,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
    //
    // - cell_value - the cell value to draw
    //
-   // - kernel - a PDEFoam kernel.  If NULL is given, than the trivial
-   //            kernel is used.
+   // - kernel - a PDEFoam kernel.
    //
    // - nbin - number of bins in x and y direction of result histogram.
    //
@@ -1244,13 +1237,6 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
        (idim1==idim2) )
       Log() << kFATAL << "<Project2>: wrong dimensions given: "
 	    << idim1 << ", " << idim2 << Endl;
-
-   // if no kernel is set, use the trivial kernel
-   Bool_t must_delete_kernel = kFALSE;
-   if (kernel == NULL) {
-      kernel = new PDEFoamKernel();
-      must_delete_kernel = kTRUE;
-   }
 
    // root can not handle too many bins in one histogram --> catch this
    // Furthermore, to have more than 1000 bins in the histogram doesn't make
@@ -1306,17 +1292,18 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
 	       else
 	 	  tvec.push_back(txvec[i]);
 	    }
-	    // get the cell value using the kernel
-	    sum_cv += kernel->Estimate(this, tvec, cell_value);
+	    if (kernel != NULL) {
+	       // get the cell value using the kernel
+	       sum_cv += kernel->Estimate(this, tvec, cell_value);
+	    } else {
+	       sum_cv += GetCellValue(FindCell(tvec), cell_value);
+	    }
 	 }
 
 	 // fill the bin content
 	 h1->SetBinContent(xbin, ybin, sum_cv + h1->GetBinContent(xbin, ybin));
       }
    }
-
-   if (must_delete_kernel)
-      delete kernel;
 
    return h1;
 }

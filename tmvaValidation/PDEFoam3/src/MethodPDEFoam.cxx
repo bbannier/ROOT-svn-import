@@ -924,7 +924,7 @@ TMVA::PDEFoamKernel* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
    // create a pdefoam kernel estimator, depending on fKernel
    switch (fKernel) {
    case kNone:
-      return new PDEFoamKernel();
+      return new PDEFoamKernelTrivial();
    case kLinN:
       return new PDEFoamKernelLinN();
    case kGaus:

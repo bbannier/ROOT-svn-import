@@ -2,11 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamKernel                                                         *
+ * Classes: PDEFoamKernelTrivial                                                  *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Implementation of PDEFoam kernel interface                                *
+ *      Implementation of trivial PDEFoam kernel                                  *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
@@ -25,30 +25,41 @@
 
 //_____________________________________________________________________
 //
-// PDEFoamKernel
+// PDEFoamKernelTrivial
 //
-// This class is the abstract kernel interface for PDEFoam.  Derived
-// classes must override the Estimate() function.
+// This class is a trivial PDEFoam kernel estimator.  The Estimate()
+// function returns the cell value, given an event 'txvec'.
 // _____________________________________________________________________
 
-#ifndef ROOT_TMVA_PDEFoamKernel
-#include "TMVA/PDEFoamKernel.h"
+#ifndef ROOT_TMVA_PDEFoamKernelTrivial
+#include "TMVA/PDEFoamKernelTrivial.h"
 #endif
 
-ClassImp(TMVA::PDEFoamKernel)
+ClassImp(TMVA::PDEFoamKernelTrivial)
 
 //_____________________________________________________________________
-TMVA::PDEFoamKernel::PDEFoamKernel()
-   : TObject()
-   , fLogger(new MsgLogger("PDEFoamKernel"))
+TMVA::PDEFoamKernelTrivial::PDEFoamKernelTrivial()
+   : PDEFoamKernel()
 {
    // Default constructor for streamer
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamKernel::~PDEFoamKernel()
+Float_t TMVA::PDEFoamKernelTrivial::Estimate(PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv)
 {
-   // Destructor
-   if (fLogger != NULL)
-      delete fLogger;
+   // Simple kernel estimator.  It returns the cell value 'cv',
+   // corresponding to the event vector 'txvec' (in foam coordinates).
+   //
+   // Parameters:
+   //
+   // - foam - the pdefoam to search in
+   //
+   // - txvec - event vector in foam coordinates [0,1]
+   //
+   // - cv - cell value to estimate
+
+   if (foam == NULL)
+      Log() << kFATAL << "<PDEFoamKernelTrivial::Estimate>: PDEFoam not set!" << Endl;
+
+   return foam->GetCellValue(foam->FindCell(txvec), cv);
 }

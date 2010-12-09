@@ -282,6 +282,7 @@ namespace TMVA {
 
       // ---------- friend classes
       friend class PDEFoamKernel;
+      friend class PDEFoamKernelTrivial;
       friend class PDEFoamKernelLinN;
       friend class PDEFoamKernelGauss;
 

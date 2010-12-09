@@ -2,11 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamKernel                                                         *
+ * Classes: PDEFoamKernelTrivial                                                  *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Implementation of PDEFoam kernel interface                                *
+ *      Trivial PDEFoam kernel                                                    *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
@@ -23,32 +23,29 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-//_____________________________________________________________________
-//
-// PDEFoamKernel
-//
-// This class is the abstract kernel interface for PDEFoam.  Derived
-// classes must override the Estimate() function.
-// _____________________________________________________________________
+#ifndef ROOT_TMVA_PDEFoamKernelTrivial
+#define ROOT_TMVA_PDEFoamKernelTrivial
 
+#ifndef ROOT_TMVA_PDEFoam
+#include "TMVA/PDEFoam.h"
+#endif
 #ifndef ROOT_TMVA_PDEFoamKernel
 #include "TMVA/PDEFoamKernel.h"
 #endif
 
-ClassImp(TMVA::PDEFoamKernel)
+namespace TMVA {
 
-//_____________________________________________________________________
-TMVA::PDEFoamKernel::PDEFoamKernel()
-   : TObject()
-   , fLogger(new MsgLogger("PDEFoamKernel"))
-{
-   // Default constructor for streamer
-}
+   class PDEFoamKernelTrivial : public PDEFoamKernel {
 
-//_____________________________________________________________________
-TMVA::PDEFoamKernel::~PDEFoamKernel()
-{
-   // Destructor
-   if (fLogger != NULL)
-      delete fLogger;
-}
+   public:
+      PDEFoamKernelTrivial();                 // Constructor
+      virtual ~PDEFoamKernelTrivial(){};      // Destructor
+
+      // kernel estimator
+      virtual Float_t Estimate( PDEFoam*, std::vector<Float_t>&, ECellValue );
+
+      ClassDef(PDEFoamKernelTrivial,1) // trivial PDEFoam kernel
+   }; // end of PDEFoamKernelTrivial
+}  // namespace TMVA
+
+#endif

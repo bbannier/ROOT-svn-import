@@ -161,13 +161,6 @@ TH2D* TMVA::PDEFoamDiscriminant::Project2( Int_t idim1, Int_t idim2, ECellValue 
       Log() << kFATAL << "<Project2>: wrong dimensions given: "
 	    << idim1 << ", " << idim2 << Endl;
 
-   // if no kernel is set, use the trivial kernel
-   Bool_t must_delete_kernel = kFALSE;
-   if (kernel == NULL) {
-      kernel = new PDEFoamKernel();
-      must_delete_kernel = kTRUE;
-   }
-
    // root can not handle too many bins in one histogram --> catch this
    // Furthermore, to have more than 1000 bins in the histogram doesn't make
    // sense.
@@ -226,7 +219,12 @@ TH2D* TMVA::PDEFoamDiscriminant::Project2( Int_t idim1, Int_t idim2, ECellValue 
 	 	  tvec.push_back(txvec[i]);
 	    }
 	    // get the cell value using the kernel
-	    Float_t cv = kernel->Estimate(this, tvec, cell_value);
+	    Float_t cv = 0;
+	    if (kernel != NULL) {
+	       cv = kernel->Estimate(this, tvec, cell_value);
+	    } else {
+	       cv = GetCellValue(FindCell(tvec), cell_value);
+	    }
 	    if (cell_value == kValue) {
 	       // calculate cell volume in other dimensions (not
 	       // including idim1 and idim2)
@@ -246,9 +244,6 @@ TH2D* TMVA::PDEFoamDiscriminant::Project2( Int_t idim1, Int_t idim2, ECellValue 
 	 h1->SetBinContent(xbin, ybin, sum_cv + h1->GetBinContent(xbin, ybin));
       }
    }
-
-   if (must_delete_kernel)
-      delete kernel;
 
    return h1;
 }

@@ -6,7 +6,7 @@
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Trivial PDEFoam kernel                                                    *
+ *      PDEFoam kernel interface                                                  *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
@@ -14,7 +14,7 @@
  *      Dominik Dannheim - CERN, Switzerland                                      *
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -46,7 +46,7 @@ namespace TMVA {
       virtual ~PDEFoamKernel();        // Destructor
 
       // kernel estimator
-      virtual Float_t Estimate( PDEFoam*, std::vector<Float_t>&, ECellValue );
+      virtual Float_t Estimate( PDEFoam*, std::vector<Float_t>&, ECellValue ) = 0;
 
       // Message logger
       MsgLogger& Log() const { return *fLogger; }
