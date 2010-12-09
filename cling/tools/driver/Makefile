@@ -17,7 +17,7 @@ CXXFLAGS = -fno-rtti
 # This tool has no plugins, optimize startup time.
 TOOL_NO_EXPORTS = 1
 
-LDFLAGS += -lcurses
+LIBS += -lcurses
 
 USEDLIBS = clingUserInterface.a clingMetaProcessor.a clingInterpreter.a clingEditLine.a clangFrontend.a clangSerialization.a clangDriver.a clangCodeGen.a clangSema.a clangChecker.a clangAnalysis.a clangRewrite.a clangAST.a clangParse.a clangLex.a clangBasic.a
 
