@@ -97,7 +97,7 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
    }
 
    // kernel to use for the projection
-   TMVA::PDEFoamKernel *kernel = new TMVA::PDEFoamKernel();
+   TMVA::PDEFoamKernel *kernel = new TMVA::PDEFoamKernelTrivial();
 
    // ********** plot foams ********** //
    if (kDim == 1){
