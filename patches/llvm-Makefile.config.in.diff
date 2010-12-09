@@ -1,0 +1,13 @@
+Index: Makefile.config.in
+===================================================================
+--- Makefile.config.in	(revision 121247)
++++ Makefile.config.in	(working copy)
+@@ -180,7 +180,7 @@
+ HAVE_PERL    := @HAVE_PERL@
+ HAVE_PTHREAD := @HAVE_PTHREAD@
+ 
+-LIBS       := @LIBS@
++LIBS       := $(LIBS) @LIBS@
+ 
+ # Targets that we should build
+ TARGETS_TO_BUILD=@TARGETS_TO_BUILD@
