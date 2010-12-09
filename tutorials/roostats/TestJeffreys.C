@@ -1,6 +1,7 @@
 using namespace RooFit;
 
 TestJeffreys(){
+  gROOT->ProcessLine(".L JeffreysPrior.cxx+");
   RooWorkspace w("w");
   w.factory("Uniform::u(x[0,1])");
   w.factory("mu[100,1,200]");
@@ -25,7 +26,7 @@ TestJeffreys(){
   w.defineSet("obs","x");
   //  w.defineSet("obs2","n");
 
-  RooJeffreysPrior pi("jeffreys","jeffreys",*w.pdf("p"),*w.set("poi"),*w.set("obs"));
+  JeffreysPrior pi("jeffreys","jeffreys",*w.pdf("p"),*w.set("poi"),*w.set("obs"));
   //  pi.specialIntegratorConfig(kTRUE)->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D")  ;
   //  pi.specialIntegratorConfig(kTRUE)->getConfigSection("RooIntegrator1D").setRealValue("maxSteps",10);
 
@@ -47,6 +48,7 @@ TestJeffreys(){
 
 //_________________________________________________
 TestJeffreysGaussMean(){
+  gROOT->ProcessLine(".L JeffreysPrior.cxx+");
   RooWorkspace w("w");
   w.factory("Gaussian::g(x[0,-20,20],mu[0,-5,5],sigma[1,0,10])");
   w.factory("n[10,.1,200]");
@@ -70,7 +72,7 @@ TestJeffreysGaussMean(){
   w.defineSet("poi","mu");
   w.defineSet("obs","x");
 
-  RooJeffreysPrior pi("jeffreys","jeffreys",*w.pdf("p"),*w.set("poi"),*w.set("obs"));
+  JeffreysPrior pi("jeffreys","jeffreys",*w.pdf("p"),*w.set("poi"),*w.set("obs"));
   //  pi.specialIntegratorConfig(kTRUE)->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D")  ;
   //  pi.specialIntegratorConfig(kTRUE)->getConfigSection("RooIntegrator1D").setRealValue("maxSteps",3);
 
@@ -96,6 +98,7 @@ TestJeffreysGaussSigma(){
   //   and you get really bizzare shapes
   // if the Gaussian is too wide range(x) ~ sigma then PDF gets renormalized
   //   and the PDF falls off too fast at high sigma
+  gROOT->ProcessLine(".L JeffreysPrior.cxx+");
   RooWorkspace w("w");
   w.factory("Gaussian::g(x[0,-20,20],mu[0,-5,5],sigma[1,1,5])");
   w.factory("n[100,.1,2000]");
@@ -123,7 +126,7 @@ TestJeffreysGaussSigma(){
   w.defineSet("poi","sigma");
   w.defineSet("obs","x");
 
-  RooJeffreysPrior pi("jeffreys","jeffreys",*w.pdf("p"),*w.set("poi"),*w.set("obs"));
+  JeffreysPrior pi("jeffreys","jeffreys",*w.pdf("p"),*w.set("poi"),*w.set("obs"));
   //  pi.specialIntegratorConfig(kTRUE)->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D")  ;
   pi.specialIntegratorConfig(kTRUE)->getConfigSection("RooIntegrator1D").setRealValue("maxSteps",3);
 
@@ -151,6 +154,7 @@ TestJeffreysGaussMeanAndSigma(){
   //   and you get really bizzare shapes
   // if the Gaussian is too wide range(x) ~ sigma then PDF gets renormalized
   //   and the PDF falls off too fast at high sigma
+  gROOT->ProcessLine(".L JeffreysPrior.cxx+");
   RooWorkspace w("w");
   w.factory("Gaussian::g(x[0,-20,20],mu[0,-5,5],sigma[1,1,5])");
   w.factory("n[100,.1,2000]");
@@ -178,7 +182,7 @@ TestJeffreysGaussMeanAndSigma(){
   //  w.defineSet("poi","sigma");
   w.defineSet("obs","x");
 
-  RooJeffreysPrior pi("jeffreys","jeffreys",*w.pdf("p"),*w.set("poi"),*w.set("obs"));
+  JeffreysPrior pi("jeffreys","jeffreys",*w.pdf("p"),*w.set("poi"),*w.set("obs"));
   //  pi.specialIntegratorConfig(kTRUE)->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D")  ;
   pi.specialIntegratorConfig(kTRUE)->getConfigSection("RooIntegrator1D").setRealValue("maxSteps",3);
 
@@ -195,6 +199,7 @@ TestJeffreysGaussMeanAndSigma(){
 
 //_________________________________________________
 TestJeffreysGaussGen(){
+  gROOT->ProcessLine(".L JeffreysPrior.cxx+");
   RooWorkspace w("w");
   w.factory("Gaussian::g(x[0,-50,50],mu[0,-5,5],sigma[2,2,5])");
   w.factory("n[100,.1,200]");
