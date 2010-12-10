@@ -121,7 +121,7 @@ void TMVA::PDEFoamDiscriminant::Finalize()
       }
 
       // calculate discriminant
-      if (N_sig+N_bg > 1e-10){
+      if (N_sig+N_bg > 0){
 	 // discriminant
          SetCellElement(fCells[iCell], 0, N_sig/(N_sig+N_bg));
 	 // discriminant error
