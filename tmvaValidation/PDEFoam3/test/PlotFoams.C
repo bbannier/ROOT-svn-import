@@ -234,7 +234,7 @@ void DrawCell( TMVA::PDEFoamCell *cell, TMVA::PDEFoam *foam,
    // draw all cell elements
    t->AddText( Form("Intg=%.5f", cell->GetIntg()) );
    t->AddText( Form("Var=%.5f", cell->GetDriv()) );
-   TVectorF *vec = (TVectorF*) cell->GetElement();
+   TVectorD *vec = (TVectorD*) cell->GetElement();
    if (vec != NULL){
       for (Int_t i = 0; i < vec->GetNrows(); ++i) {
 	 t->AddText( Form("E[%i]=%.5f", i, vec(i)) );

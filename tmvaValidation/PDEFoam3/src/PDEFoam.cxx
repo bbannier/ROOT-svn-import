@@ -883,7 +883,7 @@ void TMVA::PDEFoam::PrintCell(Long_t iCell)
    fCells[iCell]->Print("1");
    // print the cell elements
    Log() << "Elements: [";
-   TVectorF *vec = (TVectorF*)fCells[iCell]->GetElement();
+   TVectorD *vec = (TVectorD*)fCells[iCell]->GetElement();
    if (vec != NULL){
       for (Int_t i=0; i<vec->GetNrows(); i++){
 	 if (i>0) Log() << ", ";
@@ -935,7 +935,7 @@ void TMVA::PDEFoam::ResetCellElements()
    Log() << kVERBOSE << "Delete old cell elements" << Endl;
    for(Long_t iCell=0; iCell<fNCells; iCell++) {
       if (fCells[iCell]->GetElement() != NULL){
-         delete dynamic_cast<TVectorF*>(fCells[iCell]->GetElement());
+         delete dynamic_cast<TVectorD*>(fCells[iCell]->GetElement());
          fCells[iCell]->SetElement(NULL);
       }
    }
@@ -1378,7 +1378,7 @@ Float_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
    // elements or the index 'i' is out of range, than 0 is returned.
 
    // dynamic_cast doesn't seem to work here ?!
-   TVectorF *vec = (TVectorF*)cell->GetElement();
+   TVectorD *vec = (TVectorD*)cell->GetElement();
 
    // if vec is not set or index out of range, return 0
    if (!vec || i >= (UInt_t) vec->GetNrows())
@@ -1393,20 +1393,20 @@ void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Float_t value )
    // Set cell element i of cell to value.  If the cell element i does
    // not exist, it is created.
 
-   TVectorF *vec = NULL;
+   TVectorD *vec = NULL;
 
-   // if no cell elements are set, create TVectorF with i+1 entries,
+   // if no cell elements are set, create TVectorD with i+1 entries,
    // ranging from [0,i]
    if (cell->GetElement() == NULL) {
-      vec = new TVectorF(i+1);
+      vec = new TVectorD(i+1);
       vec->Zero();       // set all values to zero
       (*vec)(i) = value; // set element i to value
       cell->SetElement(vec);
    } else {
       // dynamic_cast doesn't seem to work here ?!
-      vec = (TVectorF*)cell->GetElement();
+      vec = (TVectorD*)cell->GetElement();
       if (!vec) 
-	 Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorF*" << Endl;
+	 Log() << kFATAL << "<SetCellElement> ERROR: cell element is not a TVectorD*" << Endl;
       // check vector size and resize if necessary
       if (i >= (UInt_t) vec->GetNrows())
 	 vec->ResizeTo(0,i);
