@@ -2,16 +2,16 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamDTDensity                                                      *
+ * Classes: PDEFoamDecisionTreeDensity                                            *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      The TFDSITR class provides an interface between the Binary search tree    *
+ *      This class provides an interface between the Binary search tree           *
  *      and the PDEFoam object.  In order to build-up the foam one needs to       *
  *      calculate the density of events at a given point (sampling during         *
- *      Foam build-up).  The function PDEFoamDTDensity::Density() does this job.  It  *
- *      uses a binary search tree, filled with training events, in order to       *
- *      provide this density.                                                     *
+ *      Foam build-up).  The function PDEFoamDecisionTreeDensity::Density()       *
+ *      does this job. It uses a binary search tree, filled with training         *
+ *      events, in order to provide this density.                                 *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Tancredi Carli   - CERN, Switzerland                                      *
@@ -31,7 +31,7 @@
 
 //_____________________________________________________________________
 //
-// PDEFoamDTDensity
+// PDEFoamDecisionTreeDensity
 //
 // This is a concrete implementation of PDEFoam.  The Density(...)
 // function returns allways 0.  The function FillHistograms() is
@@ -40,26 +40,26 @@
 
 #include <limits>
 
-#ifndef ROOT_TMVA_PDEFoamDTDensity
-#include "TMVA/PDEFoamDTDensity.h"
+#ifndef ROOT_TMVA_PDEFoamDecisionTreeDensity
+#include "TMVA/PDEFoamDecisionTreeDensity.h"
 #endif
 
-ClassImp(TMVA::PDEFoamDTDensity)
+ClassImp(TMVA::PDEFoamDecisionTreeDensity)
 
 //_____________________________________________________________________
-TMVA::PDEFoamDTDensity::PDEFoamDTDensity()
+TMVA::PDEFoamDecisionTreeDensity::PDEFoamDecisionTreeDensity()
    : PDEFoamDensity()
    , fClass(0)
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDTDensity::PDEFoamDTDensity(std::vector<Double_t> box, UInt_t cls)
+TMVA::PDEFoamDecisionTreeDensity::PDEFoamDecisionTreeDensity(std::vector<Double_t> box, UInt_t cls)
    : PDEFoamDensity(box)
    , fClass(cls)
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoamDTDensity &distr)
+TMVA::PDEFoamDecisionTreeDensity::PDEFoamDecisionTreeDensity(const PDEFoamDecisionTreeDensity &distr)
    : PDEFoamDensity(distr)
    , fClass(0)
 {
@@ -68,7 +68,7 @@ TMVA::PDEFoamDTDensity::PDEFoamDTDensity(const PDEFoamDTDensity &distr)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDTDensity::Density(std::vector<Double_t> &Xarg, Double_t &event_density)
+Double_t TMVA::PDEFoamDecisionTreeDensity::Density(std::vector<Double_t> &Xarg, Double_t &event_density)
 {
    // This function is not used in the decision tree like PDEFoam,
    // instead FillHist() is used.
@@ -76,7 +76,7 @@ Double_t TMVA::PDEFoamDTDensity::Density(std::vector<Double_t> &Xarg, Double_t &
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoamDTDensity::FillHistograms(TMVA::Volume &volume, std::vector<TH1D*> &hsig, std::vector<TH1D*> &hbkg, std::vector<TH1D*> &hsig_unw, std::vector<TH1D*> &hbkg_unw)
+void TMVA::PDEFoamDecisionTreeDensity::FillHistograms(TMVA::Volume &volume, std::vector<TH1D*> &hsig, std::vector<TH1D*> &hbkg, std::vector<TH1D*> &hsig_unw, std::vector<TH1D*> &hbkg_unw)
 {
    // Fill the given histograms with signal and background events,
    // which are found in the volume.

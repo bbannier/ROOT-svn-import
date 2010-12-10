@@ -40,7 +40,7 @@
 // type).
 //
 // This PDEFoam variant should be booked together with the
-// PDEFoamDTDensity density estimator, which returns the events in a
+// PDEFoamDecisionTreeDensity density estimator, which returns the events in a
 // cell without sampling.
 //
 //_____________________________________________________________________
@@ -48,8 +48,8 @@
 #ifndef ROOT_TMVA_PDEFoamDecisionTree
 #include "TMVA/PDEFoamDecisionTree.h"
 #endif
-#ifndef ROOT_TMVA_PDEFoamDTDensity
-#include "TMVA/PDEFoamDTDensity.h"
+#ifndef ROOT_TMVA_PDEFoamDecisionTreeDensity
+#include "TMVA/PDEFoamDecisionTreeDensity.h"
 #endif
 
 ClassImp(TMVA::PDEFoamDecisionTree)
@@ -133,11 +133,11 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
       ub[idim] = VarTransformInvers(idim, cellPosi[idim] + cellSize[idim] + std::numeric_limits<float>::epsilon());
    }
 
-   // fDistr must be of type PDEFoamDTDensity*
-   PDEFoamDTDensity *distr = dynamic_cast<PDEFoamDTDensity*>(fDistr);
+   // fDistr must be of type PDEFoamDecisionTreeDensity*
+   PDEFoamDecisionTreeDensity *distr = dynamic_cast<PDEFoamDecisionTreeDensity*>(fDistr);
    if (distr == NULL)
       Log() << kFATAL << "<PDEFoamDecisionTree::Explore>: cast failed: "
-	    << "PDEFoamDensity* --> PDEFoamDTDensity*" << Endl;
+	    << "PDEFoamDensity* --> PDEFoamDecisionTreeDensity*" << Endl;
 
    // create TMVA::Volume object needed for searching within the BST
    TMVA::Volume volume(&lb, &ub);

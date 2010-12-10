@@ -2,11 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamDTDensity                                                      *
+ * Classes: PDEFoamDecisionTreeDensity                                            *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class PDEFoamDTDensity is a class representing                            *
+ *      Class PDEFoamDecisionTreeDensity is a class representing                  *
  *      n-dimensional real positive integrand function                            *
  *      The main function is Density() which provides the event density at a      *
  *      given point during the foam build-up (sampling).                          *
@@ -27,8 +27,8 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-#ifndef ROOT_TMVA_PDEFoamDTDensity
-#define ROOT_TMVA_PDEFoamDTDensity
+#ifndef ROOT_TMVA_PDEFoamDecisionTreeDensity
+#define ROOT_TMVA_PDEFoamDecisionTreeDensity
 
 #include <vector>
 
@@ -46,16 +46,16 @@
 namespace TMVA {
 
    // class definition of underlying event density
-   class PDEFoamDTDensity : public PDEFoamDensity  {
+   class PDEFoamDecisionTreeDensity : public PDEFoamDensity  {
 
    protected:
       UInt_t fClass; // signal class
 
    public:
-      PDEFoamDTDensity();
-      PDEFoamDTDensity(std::vector<Double_t> box, UInt_t cls);
-      PDEFoamDTDensity(const PDEFoamDTDensity&);
-      virtual ~PDEFoamDTDensity(){};
+      PDEFoamDecisionTreeDensity();
+      PDEFoamDecisionTreeDensity(std::vector<Double_t> box, UInt_t cls);
+      PDEFoamDecisionTreeDensity(const PDEFoamDecisionTreeDensity&);
+      virtual ~PDEFoamDecisionTreeDensity(){};
 
       // returns allways 0
       virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density);
@@ -63,8 +63,8 @@ namespace TMVA {
       // fill histograms with events found in volume
       virtual void FillHistograms(TMVA::Volume&, std::vector<TH1D*>&, std::vector<TH1D*>&, std::vector<TH1D*>&, std::vector<TH1D*>&);
 
-      ClassDef(PDEFoamDTDensity,1) // Class for decision tree like PDEFoam density
-   };  //end of PDEFoamDTDensity
+      ClassDef(PDEFoamDecisionTreeDensity,1) // Class for decision tree like PDEFoam density
+   };  //end of PDEFoamDecisionTreeDensity
 
 }  // namespace TMVA
 
