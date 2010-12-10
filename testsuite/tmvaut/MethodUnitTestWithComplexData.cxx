@@ -8,7 +8,7 @@ using namespace TMVA;
 
 MethodUnitTestWithComplexData::MethodUnitTestWithComplexData(const TString& treestring, const TString& preparestring, const Types::EMVA& theMethod, const TString& methodTitle, const TString& theOption,
 														double lowLimit, double upLimit,
-														const std::string & name,const std::string & filename, std::ostream* sptr) :
+                                                             const std::string & /* xname */ ,const std::string & /* filename */ , std::ostream* /* sptr */) :
    UnitTest(string("ComplexData_")+(string)methodTitle+(string)treestring, __FILE__),  _methodType(theMethod) , _treeString(treestring), _prepareString(preparestring), _methodTitle(methodTitle), _methodOption(theOption), _upROCLimit(upLimit), _lowROCLimit(lowLimit)
 {
 }

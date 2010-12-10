@@ -34,7 +34,7 @@ clean:
 	@rm -rf weights
 
 .$(SrcSuf).$(ObjSuf):
-	$(CXX) -g $(CXXFLAGS) -c $<
+	$(CXX) -g $(CXXFLAGS) -Wunused-variable -Wuninitialized -Wshadow -c $<
 
 $(STRESSTMVAS): ../tmvaut/*.cxx ../tmvaut/*.h ../stressTMVA.cxx
 	./buildRootTest.sh

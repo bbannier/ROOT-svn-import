@@ -188,15 +188,18 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
    if (outputFile) delete outputFile;
    if (inFile) delete inFile;
 
-   return (ROCValue>0.6);
+   Bool_t ret = (ROCValue>0.6);
+   if (!ret) {
+      std::cout <<"FAILURE with operateSingleFactory option="<<opt<< ",  bad value ROC="<<ROCValue<<std::endl;
+   }
+   return ret;
 }
 
 void utFactory::run()
 {
    // create directory weights if necessary 
-   FileStat_t stat;
-   // FIXME:: give the filename of the sample somewhere else?
-   if(gSystem->GetPathInfo("./weights",stat)) {
+   FileStat_t stat;   
+   if(gSystem->GetPathInfo("./weights",stat)) {// FIXME:: give the filename of the sample somewhere else?
       gSystem->MakeDirectory("weights"); 
 #ifdef COUTDEBUG
       std::cout << "creating directory weights"<<std::endl;

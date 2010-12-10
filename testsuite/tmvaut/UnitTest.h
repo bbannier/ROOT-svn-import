@@ -23,7 +23,7 @@ namespace UnitTesting
    class UnitTest
    {
    public:
-      UnitTest(const std::string & name="", const std::string & filename="", std::ostream* osptr = &std::cout);
+      UnitTest(const std::string & xname="", const std::string & filename="", std::ostream* osptr = &std::cout);
       virtual ~UnitTest(){}
       virtual void run() = 0;
       long getNumPassed() const;
@@ -50,10 +50,10 @@ namespace UnitTesting
       UnitTest& operator=(const UnitTest&);
    };
 
-   inline UnitTest::UnitTest(const std::string & name,
+   inline UnitTest::UnitTest(const std::string & xname,
                              const std::string & filename,
                              std::ostream* sptr) :
-      fName(name),
+      fName(xname),
       fFileName(filename)
    {
       this->osptr = sptr;

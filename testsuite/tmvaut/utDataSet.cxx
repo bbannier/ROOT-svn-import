@@ -19,7 +19,7 @@ utDataSet::utDataSet() :
    //   vecevent;
    //  results;
 
-   TString name       = "name";
+   TString xname       = "name";
    TString expression1 = "expression1";
    TString expression2 = "expression2";
    TString expression3 = "expression3";
@@ -55,7 +55,7 @@ utDataSet::utDataSet() :
    VariableInfo* varinfo1     = new VariableInfo( expression1, title,  unit, varcounter++, vartype, external, min, max, normalized);
    VariableInfo* varinfo2     = new VariableInfo( expression2, title,  unit, varcounter++, vartype, external, min, max, normalized);
    VariableInfo* varinfo3     = new VariableInfo( expression3, title,  unit, varcounter++, vartype, external, min, max, normalized);
-   datasetinfo               = new DataSetInfo(name);
+   datasetinfo               = new DataSetInfo(xname);
    datasetinfo->AddVariable(*varinfo1);
    datasetinfo->AddVariable(*varinfo2);
    datasetinfo->AddVariable(*varinfo3);
