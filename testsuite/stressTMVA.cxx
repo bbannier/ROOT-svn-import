@@ -1,8 +1,8 @@
 // Authors: Christoph Rosemann, Eckhard von Toerne   July 2010
 // TMVA unit tests
 
-#include <iostream>
-#include <cstdlib>
+#include "Riostream.h"
+#include "TSystem.h"
 #include "tmvaut/UnitTestSuite.h"
 
 #include "tmvaut/utEvent.h"
