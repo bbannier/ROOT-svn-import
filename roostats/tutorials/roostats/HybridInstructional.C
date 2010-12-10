@@ -1,11 +1,12 @@
 /*
-
-A hypothesis testing example based on number counting 
-with background uncertainty.
+HybridInstructional
 
 Authors: Kyle Cranmer, Wouter Verkerke, and Sven Kreiss
 date  May 2010 Part 1-3 
 date  Dec 2010 Part 4-6
+
+A hypothesis testing example based on number counting 
+with background uncertainty.
 
 NOTE: This example must be run with the ACLIC (the + option ) due to the 
 new class that is defined.
@@ -111,7 +112,7 @@ ClassImp(BinCountTestStat)
 // The Actual Tutorial Macro
 //////////////////////////////////////////////////
 
-void Zbi_Zgamma_hybrid() {
+void HybridInstructional() {
   
   // This tutorial has 6 parts
   // Table of Contents
@@ -602,6 +603,9 @@ Real time 0:01:25, CP time 0.580
   // Uses Gaussian prior
   // CL_b = 6.218476e-04, Significance = 3.228665 sigma
   //
+  //////////////////////////////////////////
+  // Comparison
+  ///////////////////////////////////////////
   // Asymptotics
   // From the value of the profile likelihood ratio (5.0338) 
   // The significance can be estimated using Wilks's theorem
