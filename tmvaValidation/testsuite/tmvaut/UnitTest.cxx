@@ -17,7 +17,7 @@ void UnitTest::do_test(bool cond, const std::string& lbl, const char* fname, lon
       succeed_();
 }
 
-void UnitTest::do_fail(const std::string& lbl, const char* fname, long lineno)
+void UnitTest::do_fail(const std::string& lbl, const char* /* fname */ , long lineno)
 {
    ++nFail;
    if (osptr)

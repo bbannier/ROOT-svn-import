@@ -15,7 +15,7 @@ using namespace TMVA;
 
 MethodUnitTestWithROCLimits::MethodUnitTestWithROCLimits(const Types::EMVA& theMethod, const TString& methodTitle, const TString& theOption,
 														double lowLimit, double upLimit,
-														const std::string & name,const std::string & filename, std::ostream* sptr) :
+                                                         const std::string & /* xname */ ,const std::string & /* filename */ , std::ostream* /* sptr */ ) :
    UnitTest((string)methodTitle, __FILE__), _methodType(theMethod) , _methodTitle(methodTitle), _methodOption(theOption), _upROCLimit(upLimit), _lowROCLimit(lowLimit), _VariableNames(0), _TreeVariableNames(0)
 {
    _VariableNames  = new std::vector<TString>(0);
@@ -117,6 +117,9 @@ void MethodUnitTestWithROCLimits::run()
 #ifdef COUTDEBUG
      std::cout << "ROC integral = "<<_ROCValue <<" low limit="<<_lowROCLimit<<" high limit="<<_upROCLimit<<std::endl;
 #endif     
+     if (!ROCIntegralWithinInterval()){
+        std::cout << "failure in " << _methodTitle<<", ROC integral = "<<_ROCValue <<" low limit="<<_lowROCLimit<<" high limit="<<_upROCLimit<<std::endl;
+     }     
      test_(ROCIntegralWithinInterval());
   }
   outputFile->Close();
@@ -234,25 +237,25 @@ void MethodUnitTestWithROCLimits::run()
            else readerVal=reader[iTest]->EvaluateMVA( testvarDouble, readerName);  
         }
         else if (iTest==3 ){
-           double dummy = reader2->EvaluateMVA( testvarDouble, readerName2);
+           double dummy3 = reader2->EvaluateMVA( testvarDouble, readerName2);
            if (_methodType==Types::kCuts) 
               readerVal = reader[iTest]->EvaluateMVA( testvarDouble, readerName, effS );
            else readerVal=reader[iTest]->EvaluateMVA( testvarDouble, readerName);  
-           dummy += reader2->EvaluateMVA( testvarDouble, readerName2);
+           dummy3 += reader2->EvaluateMVA( testvarDouble, readerName2);
         }
         else if (iTest==4){
-           double dummy = reader2->EvaluateMVA( testvarDouble, readerName);
+           double dummy4 = reader2->EvaluateMVA( testvarDouble, readerName);
            if (_methodType==Types::kCuts) 
               readerVal = reader[iTest]->EvaluateMVA( testvarDouble, readerName, effS );
            else readerVal=reader[iTest]->EvaluateMVA( testvarDouble, readerName);  
-           dummy += reader2->EvaluateMVA( testvarDouble, readerName);
+           dummy4 += reader2->EvaluateMVA( testvarDouble, readerName);
         }
         else if (iTest==5){
-           double dummy = reader2->EvaluateMVA( readerName2);
+           double dummy5 = reader2->EvaluateMVA( readerName2);
            if (_methodType==Types::kCuts) 
               readerVal = reader[iTest]->EvaluateMVA( readerName, effS );
            else readerVal=reader[iTest]->EvaluateMVA( readerName);  
-           dummy += reader2->EvaluateMVA( readerName2);
+           dummy5 += reader2->EvaluateMVA( readerName2);
         }
         else {
            std::cout << "ERROR, undefined iTest value "<<iTest<<endl;
@@ -268,26 +271,31 @@ void MethodUnitTestWithROCLimits::run()
      }
 
   }
-
+  Bool_t ok=false;
   sumdiff=sumdiff/nevt;
   if (_methodType!=Types::kCuts){
      test_(maxdiff <1.e-4);
      test_(sumdiff <1.e-5);
      test_(stuckCount<nevt/10);
+     if (maxdiff <1.e-4 && sumdiff <1.e-5 && stuckCount<nevt/10) ok=true;
   }
   if (_methodType==Types::kCuts){
      test_(stuckCount<nevt-20);
      test_(sumdiff <0.005);
+     if (stuckCount<nevt-20 && sumdiff <0.005) ok=true;
   }
-
   testFile->Close();
 
   for (int i=0;i<nTest;i++) delete reader[i]; 
   if (reader2) delete reader2;
 
-
+  if (!ok){
+     cout << "Failure in reader test "<< _methodTitle <<": maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
+  } 
 #ifdef COUTDEBUG
-  cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
+  if (ok){
+     cout << "end of reader test maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
+  }
 #endif
 
   bool _DoTestCCode=true; 
@@ -318,8 +326,8 @@ void MethodUnitTestWithROCLimits::run()
      TString macroName=Form("testmakeclass_%s",_methodTitle.Data());
      TString macroFileName=TString("weights/")+macroName+TString(".C");
      TString methodTypeName = Types::Instance().GetMethodName(_methodType);
-     FileStat_t stat;
-     if(!gSystem->GetPathInfo(macroFileName.Data(),stat)) {
+     FileStat_t stat2;
+     if(!gSystem->GetPathInfo(macroFileName.Data(),stat2)) {
         gSystem->Exec(Form("rm %s",macroFileName.Data()));
      }
      ofstream fout( macroFileName );
