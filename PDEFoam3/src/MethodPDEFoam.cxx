@@ -762,7 +762,7 @@ void TMVA::MethodPDEFoam::SetXminXmax( TMVA::PDEFoam *pdefoam )
 TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, UInt_t cls)
 {
    // Create new PDEFoam and set foam options (incl. Xmin, Xmax) and
-   // initialize foam via pdefoam->Init()
+   // initialize foam via pdefoam->Initialize()
 
    // number of foam dimensions
    Int_t dim = 1;
@@ -860,7 +860,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
    pdefoam->SetMaxDepth(fMaxDepth); // maximum cell tree depth
 
    // Init PDEFoam
-   pdefoam->Init();
+   pdefoam->Initialize();
    
    // Set Xmin, Xmax
    SetXminXmax(pdefoam);

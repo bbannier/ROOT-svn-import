@@ -186,7 +186,7 @@ namespace TMVA {
 
       // ---------- Foam creation functions
 
-      void Init(){};              // initialize the PDEFoam
+      void Initialize(){};        // initialize the PDEFoam
       void FillBinarySearchTree( const Event* ev ); // fill event into BST
       void Create();              // build-up foam
 
