@@ -36,18 +36,19 @@ focuses on hypothesis testing instead of interval estimation.
 More background on this 'prototype problem' can be found in the 
 following papers:
 
-Evaluation of three methods for calculating statistical significance when incorporating a
-systematic uncertainty into a test of the background-only hypothesis for a Poisson process<br />
-Authors: Robert D. Cousins, James T. Linnemann, Jordan Tucker<br />
-http://arxiv.org/abs/physics/0702156<br />
-NIM  A 595 (2008) 480--501</li>
+Evaluation of three methods for calculating statistical significance 
+when incorporating a systematic uncertainty into a test of the 
+background-only hypothesis for a Poisson process
+Authors: Robert D. Cousins, James T. Linnemann, Jordan Tucker
+http://arxiv.org/abs/physics/0702156
+NIM  A 595 (2008) 480--501
 
-Statistical Challenges for Searches for New Physics at the LHC<br />
-Authors: Kyle Cranmer<br />
+Statistical Challenges for Searches for New Physics at the LHC
+Authors: Kyle Cranmer
 http://arxiv.org/abs/physics/0511028
 
- Measures of Significance in HEP and Astrophysics<br />
- Authors: J. T. Linnemann<br />
+ Measures of Significance in HEP and Astrophysics
+ Authors: J. T. Linnemann
  http://arxiv.org/abs/physics/0312059
 */
 
