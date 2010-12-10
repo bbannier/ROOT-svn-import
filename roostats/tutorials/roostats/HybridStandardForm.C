@@ -1,5 +1,5 @@
 /*
-HybridInstructional
+HybridStandardForm
 
 Authors: Kyle Cranmer, Wouter Verkerke, and Sven Kreiss
 date  May 2010 Part 1-3 
@@ -8,8 +8,28 @@ date  Dec 2010 Part 4-6
 A hypothesis testing example based on number counting 
 with background uncertainty.
 
-NOTE: This example must be run with the ACLIC (the + option ) due to the 
-new class that is defined.
+NOTE: This example is like HybridInstructional, but the model is more clearly
+generalizable to an analysis with shapes.  There is a lot of flexability
+for how one models a problem in RooFit/RooStats.  Models come in a few 
+common forms:
+  - standard form: extended PDF of some discriminating variable m:
+  eg: P(m) ~ S*fs(m) + B*fb(m), with S+B events expected
+  in this case the dataset has N rows corresponding to N events
+  and the extended term is Pois(N|S+B)
+
+  - fractional form: non-extended PDF of some discriminating variable m:
+  eg: P(m) ~ s*fs(m) + (1-s)*fb(m), where s is a signal fraction
+  in this case the dataset has N rows corresponding to N events
+  and there is no extended term
+
+  - number counting form: in which there is no discriminating variable
+  and the counts are modeled directly (see HybridInstructional)
+  eg: P(N) = Pois(N|S+B)
+  in this case the dataset has 1 row corresponding to N events
+  and the extended term is the PDF itself.
+
+Here we convert the number counting form into the standard form by 
+introducing a dummy discriminating variable m with a uniform distribution.
 
 This example:
  - demonstrates the usage of the HybridCalcultor (Part 4-6)
@@ -121,14 +141,15 @@ void HybridStandardForm() {
   // Setup
   //   1. Make the model for the 'prototype problem'
   // Special cases
-  //   2. Use RooFit's direct integration to get p-value & significance
+  //   2. NOT RELEVANT HERE
   //   3. Use RooStats analytic solution for this problem 
   // RooStats HybridCalculator -- can be generalized
   //   4. RooStats ToyMC version of 2. & 3. 
   //   5. RooStats ToyMC with an equivalent test statistic
   //   6. RooStats ToyMC with simultaneous control & main measurement
 
-  // It takes ~4 min without PROOF and ~2 min with PROOF on 4 cores.
+  // Part 4 takes ~4 min without PROOF.
+  // Part 5 takes about ~2 min with PROOF on 4 cores.
   // Of course, everything looks nicer with more toys, which takes longer.
 
 
@@ -163,7 +184,7 @@ void HybridStandardForm() {
   // Use PROOF-lite on multi-core machines
   ProofConfig* pc = NULL;
   // uncomment below if you want to use PROOF
-  //  pc = new ProofConfig(*w, 4, "workers=4"); // machine with 4 cores
+  pc = new ProofConfig(*w, 4, "workers=4"); // machine with 4 cores
   //  pc = new ProofConfig(*w, 2, "workers=2"); // machine with 2 cores
 
   /////////////////////////////////////////////////
@@ -383,7 +404,21 @@ Results HybridCalculator_result:
 Real time 0:04:43, CP time 283.780
 
   */
+  /* With PROOF
+-----------------------------------------
+Part 5
 
+Results HybridCalculator_result: 
+ - Null p-value = 0.00105 +/- 0.000206022
+ - Significance = 3.07571 sigma
+ - Number of S+B toys: 1000
+ - Number of B toys: 20000
+ - Test statistic evaluated on data: 10.8198
+ - CL_b: 0.99895 +/- 0.000229008
+ - CL_s+b: 0.491 +/- 0.0158088
+ - CL_s: 0.491516 +/- 0.0158258
+Real time 0:02:22, CP time 0.990
+  */
 
   //////////////////////////////////////////
   // Comparison
