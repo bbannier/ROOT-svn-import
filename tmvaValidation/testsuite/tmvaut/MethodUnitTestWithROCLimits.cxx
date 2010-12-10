@@ -165,12 +165,6 @@ void MethodUnitTestWithROCLimits::run()
   std::vector< TMVA::Reader* > reader(nTest);
   for (int iTest=0;iTest<nTest;iTest++){
      //std::cout << "iTest="<<iTest<<std::endl;
-     if (iTest >0 && _methodTitle == "BoostedFisher") {
-#ifdef COUTDEBUG
-        std::cout << "Warning: some reader tests of BoostedFisher give a segfault, skipping reader iTest="<<iTest<<std::endl;
-#endif
-        continue;
-     }
      if (iTest==0){
         reader[iTest] = new TMVA::Reader( readerOption );
         for (UInt_t i=0;i<_VariableNames->size();i++)
