@@ -1,7 +1,9 @@
 /*
 
-A hypothesis testing example based on number counting with background uncertainty.
-author: Kyle Cranmer, Wouter Verkerke, and Sven Kreiss
+A hypothesis testing example based on number counting 
+with background uncertainty.
+
+Authors: Kyle Cranmer, Wouter Verkerke, and Sven Kreiss
 date  May 2010 Part 1-3 
 date  Dec 2010 Part 4-6
 
@@ -13,11 +15,26 @@ This example:
  - demonstrates the numerical integration of RooFit (Part 2)
  - validates the RooStats against an example with a known analytic answer
  - demonstrates usage of different test statistics
- - explains subtle choices in the prior used for hybrid frequentist/Bayesian methods
+ - explains subtle choices in the prior used for hybrid methods
+ - demonstrates usage of different priors for the nuisance parameters
  - demonstrates usage of PROOF
 
+The basic setup here is that a main measurement has observed x events with an 
+expectation of s+b.  One can choose an ad hoc prior for the uncertainty on b,
+or try to base it on an auxiliary measurement.  In this case, the auxiliary
+measurement (aka control measurement, sideband) is another counting experiment
+with measurement y and expectation tau*b.  With an 'original prior' on b, 
+called \eta(b) then one can obtain a posterior from the auxiliary measurement
+\pi(b) = \eta(b) * Pois(y|tau*b).  This is a principled choice for a prior
+on b in the main measurement of x, which can then be treated in a hybrid 
+Bayesian/Frequentist way.  Additionally, one can try to treat the two 
+measurements simultaneously, which is detailed in Part 6 of the tutorial.
 
-More background on this 'prototype problem' can be found in the following papers:
+This tutorial is related to the FourBin.C tutorial in the modeling, but
+focuses on hypothesis testing instead of interval estimation.
+
+More background on this 'prototype problem' can be found in the 
+following papers:
 
 Evaluation of three methods for calculating statistical significance when incorporating a
 systematic uncertainty into a test of the background-only hypothesis for a Poisson process<br />
@@ -110,6 +127,14 @@ void Zbi_Zgamma_hybrid() {
   // It takes ~4 min without PROOF and ~2 min with PROOF on 4 cores.
   // Of course, everything looks nicer with more toys, which takes longer.
 
+#ifdef __CINT__
+  cout << "DO NOT RUN WITH CINT: we are using a custom test statistic ";
+  cout << "which requires that this tutorial must be compiled ";
+  cout << "with ACLIC" << endl;
+  return;
+#endif
+
+
   TStopwatch t;
   t.Start();
   TCanvas *c = new TCanvas;
@@ -135,7 +160,7 @@ void Zbi_Zgamma_hybrid() {
   // Use PROOF-lite on multi-core machines
   ProofConfig* pc = NULL;
   // uncomment below if you want to use PROOF
-  //  pc = new ProofConfig(*w, 4, "workers=4"); // machine with 4 cores
+  // pc = new ProofConfig(*w, 4, "workers=4"); // machine with 4 cores
   // pc = new ProofConfig(*w, 2, "workers=2"); // machine with 2 cores
 
   ///////////////////////////////////////////////////////
@@ -270,6 +295,9 @@ void Zbi_Zgamma_hybrid() {
   w->factory("Gaussian::gauss_prior(b,y, expr::sqrty('sqrt(y)',y))");
   // this corresponds to the "Z_N" calculation.
   //
+  // or one could use the analogous log-normal prior
+  w->factory("Lognormal::lognorm_prior(b,y, expr::kappa('1+1./sqrt(y)',y))");
+  //
   // Ideally, the HybridCalculator would be able to inspect the full
   // model Pois(x | s+b) * Pois(y | tau b ) and be given the original
   // prior \eta(b) to form \pi(b) = Pois(y|tau*b) * \eta(b).
@@ -296,6 +324,9 @@ void Zbi_Zgamma_hybrid() {
   // if you wanted to use the ad hoc Gaussian prior instead
   //  hc1.ForcePriorNuisanceAlt(*w->pdf("gauss_prior"));
   //  hc1.ForcePriorNuisanceNull(*w->pdf("gauss_prior"));
+  // if you wanted to use the ad hoc log-normal prior instead
+  //  hc1.ForcePriorNuisanceAlt(*w->pdf("lognorm_prior"));
+  //  hc1.ForcePriorNuisanceNull(*w->pdf("lognorm_prior"));
 
   // enable proof
   // NOTE: This test statistic is defined in this macro, and is not 
@@ -340,6 +371,9 @@ void Zbi_Zgamma_hybrid() {
   // if you wanted to use the ad hoc Gaussian prior instead
   //  hc2.ForcePriorNuisanceAlt(*w->pdf("gauss_prior"));
   //  hc2.ForcePriorNuisanceNull(*w->pdf("gauss_prior"));
+  // if you wanted to use the ad hoc log-normal prior instead
+  //  hc2.ForcePriorNuisanceAlt(*w->pdf("lognorm_prior"));
+  //  hc2.ForcePriorNuisanceNull(*w->pdf("lognorm_prior"));
 
   // enable proof
   if(pc) toymcs2->SetProofConfig(pc);     
@@ -372,15 +406,7 @@ void Zbi_Zgamma_hybrid() {
   // different way.  They are considering x,y simultaneously.
   // and the PDF should be Pois(x | s+b) * Pois(y | tau b )
   // and the set 'obs' should be {x,y}.
-
-  if(pc){
-    // need a new proof config for some reason
-    // this is a hack, I don't understand why PROOF changes the behavior.
-    RooWorkspace* ww = new RooWorkspace(*w);
-    w = ww;
-    pc = new ProofConfig(*w, 4, "workers=4"); // machine with 4 cores
-  }
-  
+ 
   w->defineSet("obsXY","x,y");
   
   // create a toy dataset with the x=150, y=100
@@ -406,7 +432,7 @@ void Zbi_Zgamma_hybrid() {
   sb_modelXY.SetSnapshot(*w->set("poi"));
 
   // without this print, their can be a crash when using PROOF.  Strange.
-  w->Print();
+  //  w->Print();
 
   // Test statistics like the profile likelihood ratio  
   // (or the ratio of profiled likelihoods (Tevatron) or the MLE for s)
@@ -475,6 +501,7 @@ void Zbi_Zgamma_hybrid() {
   p3->Draw();
 
   c->SaveAs("zbi.pdf");
+
 
   ///////////////////////////////////////////////////////////
   // OUTPUT W/O PROOF (2.66 GHz Intel Core i7)
@@ -564,6 +591,20 @@ Results HybridCalculator_result:
  - CL_s: 0.518363 +/- 0.0158124
 Real time 0:01:25, CP time 0.580
 
-
    */
+
+  //////////////////////////////////////////
+  // Comparison
+  ///////////////////////////////////////////
+  // LEPStatToolsForLHC
+  // https://plone4.fnal.gov:4430/P0/phystat/packages/0703002
+  // Uses Gaussian prior
+  // CL_b = 6.218476e-04, Significance = 3.228665 sigma
+  //
+  // Asymptotics
+  // From the value of the profile likelihood ratio (5.0338) 
+  // The significance can be estimated using Wilks's theorem
+  // significance = sqrt(2*profileLR) = 3.1729 sigma
+
+
 }
