@@ -106,8 +106,8 @@ void TMVA::PDEFoamDiscriminant::Finalize()
       if (!(fCells[iCell]->GetStat()))
          continue;
 
-      Float_t N_sig = GetCellElement(fCells[iCell], 0); // get number of signal events
-      Float_t N_bg  = GetCellElement(fCells[iCell], 1); // get number of bg events
+      Double_t N_sig = GetCellElement(fCells[iCell], 0); // get number of signal events
+      Double_t N_bg  = GetCellElement(fCells[iCell], 1); // get number of bg events
 
       if (N_sig<0.) {
          Log() << kWARNING << "Negative number of signal events in cell " << iCell

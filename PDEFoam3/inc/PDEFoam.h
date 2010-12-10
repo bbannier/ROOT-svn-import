@@ -155,8 +155,8 @@ namespace TMVA {
       // ---------- Cell value access functions
 
       // low level functions to access a certain cell value
-      Float_t GetCellElement(PDEFoamCell *cell, UInt_t i);  // get Element 'i' in cell 'cell'
-      void SetCellElement(PDEFoamCell *cell, UInt_t i, Float_t value); // set Element 'i' in cell 'cell' to value 'value'
+      Double_t GetCellElement(PDEFoamCell *cell, UInt_t i);  // get Element 'i' in cell 'cell'
+      void SetCellElement(PDEFoamCell *cell, UInt_t i, Double_t value); // set Element 'i' in cell 'cell' to value 'value'
 
       // specific function used during evaluation; determines, whether a cell value is undefined
       virtual Bool_t   CellValueIsUndefined( PDEFoamCell* );
@@ -168,7 +168,7 @@ namespace TMVA {
       void FindCells(std::map<Int_t, Float_t>&, PDEFoamCell*, std::vector<PDEFoamCell*> &);
       
       // get number of events in cell during foam build-up
-      Float_t GetBuildUpCellEvents(PDEFoamCell* cell);
+      Double_t GetBuildUpCellEvents(PDEFoamCell* cell);
 
       // get internal density
       PDEFoamDensity* GetDistr() const { assert(fDistr); return fDistr; }

@@ -1018,7 +1018,7 @@ std::vector<Float_t> TMVA::PDEFoam::GetCellValue( std::map<Int_t,Float_t>& xvec,
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
+Double_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
 {
    // Returns the number of events, saved in the 'cell' during foam build-up.
    // Only used during foam build-up!
@@ -1372,7 +1372,7 @@ Float_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
+Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 {
    // Returns cell element i of cell 'cell'.  If the cell has no
    // elements or the index 'i' is out of range, than 0 is returned.
@@ -1388,7 +1388,7 @@ Float_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Float_t value )
+void TMVA::PDEFoam::SetCellElement( PDEFoamCell *cell, UInt_t i, Double_t value )
 {
    // Set cell element i of cell to value.  If the cell element i does
    // not exist, it is created.

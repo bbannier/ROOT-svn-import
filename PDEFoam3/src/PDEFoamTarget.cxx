@@ -97,8 +97,8 @@ void TMVA::PDEFoamTarget::Finalize()
       if (!(fCells[iCell]->GetStat()))
          continue;
 
-      Float_t N_ev  = GetCellElement(fCells[iCell], 0); // get number of events
-      Float_t tar   = GetCellElement(fCells[iCell], 1); // get sum of targets
+      Double_t N_ev  = GetCellElement(fCells[iCell], 0); // get number of events
+      Double_t tar   = GetCellElement(fCells[iCell], 1); // get sum of targets
 
       if (N_ev > 1e-20){
          SetCellElement(fCells[iCell], 0, tar/N_ev);  // set average target
