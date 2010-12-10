@@ -196,7 +196,7 @@ void PlotCellTree( TString fin = "weights/TMVAClassification_PDEFoam.weights_foa
 			 Form("%s of %s",cv_long.Data(),name.Data()), 640, 480);
 
       // get cell tree depth
-      UInt_t   depth = foam->GetRootCell()->GetTreeDepth();
+      UInt_t   depth = foam->GetRootCell()->GetTreeDepth() - 1;
       Double_t ystep = 1.0/(depth + 1.0);
       DrawCell(foam->GetRootCell(), foam, 0.5, 1.-0.5*ystep, 0.25, ystep);
    }
