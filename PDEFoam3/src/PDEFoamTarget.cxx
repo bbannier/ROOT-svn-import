@@ -100,7 +100,7 @@ void TMVA::PDEFoamTarget::Finalize()
       Double_t N_ev  = GetCellElement(fCells[iCell], 0); // get number of events
       Double_t tar   = GetCellElement(fCells[iCell], 1); // get sum of targets
 
-      if (N_ev > 1e-20){
+      if (N_ev > 0){
          SetCellElement(fCells[iCell], 0, tar/N_ev);  // set average target
          SetCellElement(fCells[iCell], 1, tar/TMath::Sqrt(N_ev)); // set error on average target
       }
