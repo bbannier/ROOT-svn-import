@@ -588,12 +588,12 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
    //       the actual VALUES at (at least for the scan, guess also in GA) are always
    //       read from the middle of the bins. Hence.. the choice of Intervals e.g. for the
    //       MaxDepth, in order to make nice interger values!!!
-   tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,5,5))); //==stepsize 
-   // tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,15.,15))); // stepsize 1
-   // tuneParameters.insert(std::pair<TString,Interval>("NodeMinEvents", Interval(50,500,10)));  // 50 to 500 stepsize 25  
-   // tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,20))); //  stepsize 50
+
+   tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,10,10))); // stepsize 1
+   tuneParameters.insert(std::pair<TString,Interval>("NodeMinEvents", Interval(50,500,10)));  // 50 to 500 stepsize 25  
+   tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,20))); //  stepsize 50
    // tuneParameters.insert(std::pair<TString,Interval>("NodePurityLimit",Interval(.4,.6,3)));   // stepsize .1
-   tuneParameters.insert(std::pair<TString,Interval>("AdaBoostBeta",   Interval(.5,1.50,10)));   //== stepsize .1
+   // tuneParameters.insert(std::pair<TString,Interval>("AdaBoostBeta",   Interval(.5,1.50,10)));   //== stepsize .1
 
    OptimizeConfigParameters optimize(this, tuneParameters, fomType, fitType);
    tunedParameters=optimize.optimize();
