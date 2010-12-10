@@ -42,21 +42,25 @@ void UnitTestSuite::run()
          assert(tests[i]);
          tests[i]->intro();
          tests[i]->run();
+#ifndef FULL
+         tests[i]->report();
+#endif
       }
 }
 
 void UnitTestSuite::intro() const
 {
    if (osptr) {
-      *osptr << "************************************************************************************************" << endl;
+      *osptr << "**********************************************************************" << endl;
       *osptr << "* TMVA - S T R E S S and U N I T test suite ";
 #ifdef FULL
       *osptr << "(FULL)";
 #else
       *osptr << "(FAST)";
 #endif
-      *osptr << "                                             *" << endl;
-      *osptr << "************************************************************************************************" << endl;
+      //*osptr << "                                             *" << endl;
+      *osptr << "**********************************************************************" << endl;
+
    }
 }
 
@@ -71,8 +75,10 @@ long UnitTestSuite::report() const
       for (i = 0; i < tests.size(); ++i)
          {
             assert(tests[i]);
+#ifdef FULL
             *osptr << "Test " << setw(2) << i << " : ";
             totFail += tests[i]->report();
+#endif
          }
       return totFail;
    }

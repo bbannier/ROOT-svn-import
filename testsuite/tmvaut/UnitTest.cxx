@@ -49,7 +49,7 @@ long UnitTest::report() const
 
          *osptr << name() << counts;
 
-         UInt_t ndots = 82-name().size() - counts.size();
+         UInt_t ndots = 82-19-name().size() - counts.size();
 
          for (UInt_t i=0; i<ndots; ++i) *osptr << '.';
 
