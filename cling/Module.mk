@@ -4,7 +4,7 @@
 # Author: Axel Naumann, 2009-10-06
 
 MODNAME      := cling
-MODDIR       := cint/$(MODNAME)
+MODDIR       := $(ROOT_SRCDIR)/cint/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
@@ -12,36 +12,37 @@ CLINGDIR     := $(MODDIR)
 CLINGDIRS    := $(CLINGDIR)/src
 CLINGDIRI    := $(CLINGDIR)/inc
 
+##### libRCling #####
 CLINGL       := $(MODDIRI)/LinkDef.h
-CLINGDS      := $(MODDIRS)/G__Cling.cxx
+CLINGDS      := $(call stripsrc,$(MODDIRS)/G__Cling.cxx)
 CLINGDO      := $(CLINGDS:.cxx=.o)
 CLINGDH      := $(CLINGDS:.cxx=.h)
 
-##### rootcling #####
-ROOTCLINGS   := $(MODDIRS)/rootcling.cxx
-ROOTCLINGO   := $(ROOTCLINGS:.cxx=.o)
-ROOTCLING    := bin/rootcling$(EXEEXT)
-
-##### libRCling #####
 CLINGH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 CLINGS       := $(filter-out $(ROOTCLINGS),$(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx)))
-CLINGO       := $(CLINGS:.cxx=.o)
+CLINGO       := $(call stripsrc,$(CLINGS:.cxx=.o))
 
 CLINGDEP     := $(CLINGO:.o=.d) $(CLINGDO:.o=.d) $(ROOTCLINGO:.o=.d)
 
+### TODO: rename cling-based TCint to TCling, move into libRCling
+CLINGLIB     := $(LPATH)/libRCling.$(SOEXT)
+CLINGMAP     := $(CLINGLIB:.$(SOEXT)=.rootmap)
+
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(CLINGH))
-ALLEXECS     += $(ROOTCLING)
-
-### TODO: rename cling-based TCint to TCling, move into libRCling
-#CLINGLIB     := $(LPATH)/libRCling.$(SOEXT)
-#CLINGMAP     := $(CLINGLIB:.$(SOEXT)=.rootmap)
-
-#ALLLIBS      += $(CLINGLIB)
-#ALLMAPS      += $(CLINGMAP)
+ALLLIBS      += $(CLINGLIB)
+ALLMAPS      += $(CLINGMAP)
 
 # include all dependency files
 INCLUDEFILES += $(CLINGDEP)
+
+##### rootcling #####
+ROOTCLINGS   := $(MODDIRS)/rootcling.cxx
+ROOTCLINGO   := $(call stripsrc,$(ROOTCLINGS:.cxx=.o))
+ROOTCLING    := bin/rootcling$(EXEEXT)
+
+# used in the main Makefile
+ALLEXECS     += $(ROOTCLING)
 
 ##### local rules #####
 ifeq ($(strip $(LLVMDIR)),)
@@ -54,10 +55,25 @@ endif
 include/%.h:    $(CLINGDIRI)/%.h
 		cp $< $@
 
-#$(CLINGLIB):    $(CLINGO) $(CLINGDO) $(ORDER_) $(MAINLIBS)
-#		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-#		   "$(SOFLAGS)" libRCling.$(SOEXT) $@ "$(CLINGO) $(CLINGDO)" \
-#		   "$(CLINGLIBEXTRA)" -L$(LLVMDIR)/lib -lCling
+$(CLINGLIB):    $(CLINGO) $(CLINGDO)
+		@echo HELLO
+		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
+		   "$(SOFLAGS)" libRCling.$(SOEXT) $@ "$(CLINGO) $(CLINGDO)" \
+		   "$(CLINGLIBEXTRA) \
+-L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
+ -lclingInterpreter -lclingMetaProcessor -lclingEditLine -lclangFrontend \
+ -lclangSerialization -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
+ -lclangBasic -lclangDriver -lclangAST -Llib -lReflex -lLLVMMCDisassembler \
+ -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
+ -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86Disassembler \
+ -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86AsmPrinter \
+ -lLLVMX86Info -lLLVMAsmPrinter -lLLVMMCParser -lLLVMCodeGen -lLLVMScalarOpts \
+ -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
+ -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
+ -lLLVMCore -lLLVMSupport -lLLVMSystem"
+
+CLINGLIBDEP += $(REFLEXLIB)
+
 
 $(CLINGDS):     $(CLINGH) $(CLINGL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
@@ -86,16 +102,17 @@ distclean::     distclean-$(MODNAME)
 $(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS \
                                   -I$(LLVMDIR)/include -I. -Wno-unused-parameter -Wno-shadow
 
-CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
- -lclingInterpreter -lclingMetaProcessor -lclingEditLine -lclangFrontend \
- -lclangSerialization -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
- -lclangBasic -lclangDriver -lclangAST -Llib -lReflex -lLLVMMCDisassembler \
- -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
- -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86Disassembler \
- -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86AsmPrinter \
- -lLLVMX86Info -lLLVMAsmPrinter -lLLVMMCParser -lLLVMCodeGen -lLLVMScalarOpts \
- -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
- -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
- -lLLVMCore -lLLVMSupport -lLLVMSystem
+#CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
+# -lclingInterpreter -lclingMetaProcessor -lclingEditLine -lclangFrontend \
+# -lclangSerialization -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
+# -lclangBasic -lclangDriver -lclangAST -Llib -lReflex -lLLVMMCDisassembler \
+# -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
+# -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86Disassembler \
+# -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86AsmPrinter \
+# -lLLVMX86Info -lLLVMAsmPrinter -lLLVMMCParser -lLLVMCodeGen -lLLVMScalarOpts \
+# -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
+# -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
+# -lLLVMCore -lLLVMSupport -lLLVMSystem
+CORELIBEXTRA += -Llib -lRCling
 
-CORELIBDEP += $(REFLEXLIB)
+CORELIBDEP += $(REFLEXLIB) $(CLINGLIB)
