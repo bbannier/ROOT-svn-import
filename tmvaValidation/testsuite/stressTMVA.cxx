@@ -3,6 +3,8 @@
 
 #include "Riostream.h"
 #include "TSystem.h"
+#include "TROOT.h"
+#include "TApplication.h"
 #include "tmvaut/UnitTestSuite.h"
 
 #include "tmvaut/utEvent.h"
@@ -160,6 +162,10 @@ void addComplexClassificationTests( UnitTestSuite& TMVA_test, bool full=true )
 
 int main()
 {
+
+   TApplication theApp("App", &argc, argv);
+   gBenchmark = new TBenchmark();
+   gBenchmark->Start("stress");
    bool full=false;
 #ifdef FULL
    full=true;
@@ -198,5 +204,10 @@ int main()
    //if(!gSystem->GetPathInfo("./weights",stat)) {
    gSystem->Exec("rm -rf weights/*"); 
 #endif
-
+   gBenchmark->Stop("stress");
+   
+   Float_t ct = gBenchmark->GetCpuTime("stress");
+   printf("******************************************************************\n");
+   printf("*  CPUTIME   =%6.1f   *  Root%-8s  %d/%d\n",ct       ,gROOT->GetVersion(),gROOT->GetVersionDate(),gROOT->GetVersionTime());
+   printf("******************************************************************\n");
 }
