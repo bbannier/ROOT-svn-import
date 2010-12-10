@@ -4,6 +4,7 @@
 #include "Riostream.h"
 #include "TSystem.h"
 #include "TROOT.h"
+#include "TBenchmark.h"
 #include "TApplication.h"
 #include "tmvaut/UnitTestSuite.h"
 
@@ -202,10 +203,36 @@ int main(int argc, char **argv)
 #ifndef NOCLEANUP
    //FileStat_t stat;
    //if(!gSystem->GetPathInfo("./weights",stat)) {
-   gSystem->Exec("rm -rf weights/*"); 
+#ifdef WIN32
+   gSystem->Exec("erase /f /q weights\\*.*");
+#else
+   gSystem->Exec("rm -rf weights/*");
+#endif
 #endif
    gBenchmark->Stop("stress");
-   gBenchmark->Print("stress");
+   Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
+   printf("******************************************************************\n");
+   if (UNIX) {
+      TString sp = gSystem->GetFromPipe("uname -a");
+      sp.Resize(60);
+      printf("*  SYS: %s\n",sp.Data());
+      if (strstr(gSystem->GetBuildNode(),"Linux")) {
+         sp = gSystem->GetFromPipe("lsb_release -d -s");
+         printf("*  SYS: %s\n",sp.Data());
+      }
+      if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+         sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+         sp += " Mac OS X ";
+         printf("*  SYS: %s\n",sp.Data());
+      }
+   } else {
+      const char *os = gSystem->Getenv("OS");
+      if (!os) printf("*  SYS: Windows 95\n");
+      else     printf("*  SYS: %s %s \n",os,gSystem->Getenv("PROCESSOR_IDENTIFIER"));
+   }
+
+   //printf("******************************************************************\n");
+   //gBenchmark->Print("stress");
    Float_t ct = gBenchmark->GetCpuTime("stress");
    printf("******************************************************************\n");
    printf("*  CPUTIME   =%6.1f   *  Root%-8s  %d/%d\n",ct       ,gROOT->GetVersion(),gROOT->GetVersionDate(),gROOT->GetVersionTime());

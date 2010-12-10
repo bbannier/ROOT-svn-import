@@ -322,7 +322,8 @@ void MethodUnitTestWithROCLimits::run()
      TString methodTypeName = Types::Instance().GetMethodName(_methodType);
      FileStat_t stat2;
      if(!gSystem->GetPathInfo(macroFileName.Data(),stat2)) {
-        gSystem->Exec(Form("rm %s",macroFileName.Data()));
+        gSystem->Unlink(macroFileName.Data());
+        //gSystem->Exec(Form("rm %s",macroFileName.Data()));
      }
      ofstream fout( macroFileName );
      fout << "// generic macro file to test TMVA reader and standalone C code " << std::endl;
