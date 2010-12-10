@@ -47,7 +47,7 @@ DICTH2       := TSpline2.h TSpline1.h PDF.h BinaryTree.h BinarySearchTreeNode.h 
 DICTH3       := Config.h KDEKernel.h Interval.h FitterBase.h MCFitter.h GeneticFitter.h SimulatedAnnealingFitter.h \
 		MinuitFitter.h MinuitWrapper.h IFitterTarget.h \
 		PDEFoam.h PDEFoamDecisionTree.h PDEFoamDensity.h PDEFoamDiscriminantDensity.h \
-		PDEFoamEventDensity.h PDEFoamTargetDensity.h PDEFoamDTDensity.h PDEFoamMultiTarget.h \
+		PDEFoamEventDensity.h PDEFoamTargetDensity.h PDEFoamDecisionTreeDensity.h PDEFoamMultiTarget.h \
 		PDEFoamVect.h PDEFoamCell.h PDEFoamDiscriminant.h PDEFoamEvent.h PDEFoamTarget.h \
 		PDEFoamKernel.h PDEFoamKernelTrivial.h PDEFoamKernelLinN.h PDEFoamKernelGauss.h \
 		BDTEventWrapper.h CCTreeWrapper.h \

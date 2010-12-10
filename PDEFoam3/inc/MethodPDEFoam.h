@@ -99,8 +99,8 @@
 #ifndef ROOT_TMVA_PDEFoamDiscriminantDensity
 #include "TMVA/PDEFoamDiscriminantDensity.h"
 #endif
-#ifndef ROOT_TMVA_PDEFoamDTDensity
-#include "TMVA/PDEFoamDTDensity.h"
+#ifndef ROOT_TMVA_PDEFoamDecisionTreeDensity
+#include "TMVA/PDEFoamDecisionTreeDensity.h"
 #endif
 
 #ifndef ROOT_TMVA_PDEFoamKernel

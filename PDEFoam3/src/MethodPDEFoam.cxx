@@ -888,7 +888,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
       case kDiscr:
       case kMultiClass:
 	 pdefoam = new PDEFoamDecisionTree(foamcaption, sepType, cls);
-	 density = new PDEFoamDTDensity(box, cls);
+	 density = new PDEFoamDecisionTreeDensity(box, cls);
 	 break;
       default:
 	 Log() << kFATAL << "Decision tree cell split algorithm is only"

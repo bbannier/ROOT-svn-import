@@ -43,7 +43,7 @@
 //   - PDEFoamEventDensity
 //   - PDEFoamDiscriminantDensity
 //   - PDEFoamTargetDensity
-//   - PDEFoamDTDensity
+//   - PDEFoamDecisionTreeDensity
 //
 // Usage:
 //

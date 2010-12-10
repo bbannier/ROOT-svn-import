@@ -32,7 +32,7 @@
 #pragma link C++ class TMVA::PDEFoamDiscriminantDensity+;
 #pragma link C++ class TMVA::PDEFoamEventDensity+;
 #pragma link C++ class TMVA::PDEFoamTargetDensity+;
-#pragma link C++ class TMVA::PDEFoamDTDensity+;
+#pragma link C++ class TMVA::PDEFoamDecisionTreeDensity+;
 #pragma link C++ class TMVA::PDEFoamVect+;
 #pragma link C++ class TMVA::PDEFoamCell+;
 #pragma link C++ class TMVA::PDEFoamKernel+;
