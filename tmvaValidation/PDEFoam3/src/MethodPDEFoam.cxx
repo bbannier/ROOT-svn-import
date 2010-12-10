@@ -166,9 +166,7 @@ void TMVA::MethodPDEFoam::Init( void )
    fCompress              = kTRUE;  // compress ROOT output file
    fMultiTargetRegression = kFALSE; // multi-target regression
 
-   for (UInt_t i=0; i<fFoam.size(); i++) 
-      if (fFoam.at(i)) delete fFoam.at(i);
-   fFoam.clear();
+   DeleteFoams();
 
    if (fUseYesNoCell)
       SetSignalReferenceCut( 0.0 ); // MVA output in [-1, 1]
@@ -264,10 +262,7 @@ void TMVA::MethodPDEFoam::ProcessOptions()
 TMVA::MethodPDEFoam::~MethodPDEFoam( void )
 {
    // destructor
-   for (UInt_t i=0; i<fFoam.size(); i++) {
-      if (fFoam.at(i)) delete fFoam.at(i);
-   }
-   fFoam.clear();
+   DeleteFoams();
 
    if (fKernelEstimator != NULL)
       delete fKernelEstimator;
@@ -391,9 +386,7 @@ void TMVA::MethodPDEFoam::Train( void )
    CalcXminXmax();
 
    // delete foams
-   for (UInt_t i=0; i<fFoam.size(); i++) 
-      if (fFoam.at(i)) delete fFoam.at(i);
-   fFoam.clear();
+   DeleteFoams();
 
    // start training
    if (DoRegression()) {
@@ -424,8 +417,7 @@ void TMVA::MethodPDEFoam::Train( void )
       }
    }
 
-   // check cells and delete the binary search tree in order to save
-   // memory
+   // delete the binary search tree in order to save memory
    for(UInt_t i=0; i<fFoam.size(); i++) {
       if(fFoam.at(i)) 
 	 fFoam.at(i)->DeleteBinarySearchTree();
@@ -937,14 +929,19 @@ TMVA::PDEFoamKernel* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
 }
 
 //_______________________________________________________________________
+void TMVA::MethodPDEFoam::DeleteFoams()
+{
+   // Deletes all trained foams
+   for (UInt_t i=0; i<fFoam.size(); i++)
+      if (fFoam.at(i)) delete fFoam.at(i);
+   fFoam.clear();   
+}
+
+//_______________________________________________________________________
 void TMVA::MethodPDEFoam::Reset()
 {
    // reset MethodPDEFoam
-
-   // if foams exist, delete them
-   for (UInt_t i=0; i<fFoam.size(); i++)
-      if (fFoam.at(i)) delete fFoam.at(i);
-   fFoam.clear();
+   DeleteFoams();
 
    if (fKernelEstimator != NULL) {
       delete fKernelEstimator;
@@ -1152,9 +1149,7 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
    }
 
    // if foams exist, delete them
-   for (UInt_t i=0; i<fFoam.size(); i++)
-      if (fFoam.at(i)) delete fFoam.at(i);
-   fFoam.clear();
+   DeleteFoams();
    
    // read pure foams from file
    ReadFoamsFromFile();

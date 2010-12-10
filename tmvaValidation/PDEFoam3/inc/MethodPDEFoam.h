@@ -203,6 +203,9 @@ namespace TMVA {
       // create pdefoam kernel
       PDEFoamKernel* CreatePDEFoamKernel();
 
+      // delete all trained foams
+      void DeleteFoams();
+
       // fill variable names into foam
       void FillVariableNamesToFoam() const;
 
