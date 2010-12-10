@@ -1,3 +1,35 @@
+/*
+JeffreysPriorDemo.C
+
+author Kyle Cranmer
+date   Dec. 2010
+
+This tutorial demonstraites and validates the RooJeffreysPrior class
+
+Jeffreys's prior is an 'objective prior' based on formal rules.  
+It is calculated from the Fisher information matrix.  
+
+Read more:
+http://en.wikipedia.org/wiki/Jeffreys_prior
+
+The analytic form is not known for most PDFs, but it is for 
+simple cases like the Poisson mean, Gaussian mean, Gaussian sigma.
+
+This class uses numerical tricks to calculate the Fisher Information Matrix
+efficiently.  In particular, it takes advantage of a property of the
+'Asimov data' as described in 
+Asymptotic formulae for likelihood-based tests of new physics
+Glen Cowan, Kyle Cranmer, Eilam Gross, Ofer Vitells
+http://arxiv.org/abs/arXiv:1007.1727
+
+This Demo has four parts:
+TestJeffreysPriorDemo -- validates Poisson mean case 1/sqrt(mu)
+TestJeffreysGaussMean -- validates Gaussian mean case
+TestJeffreysGaussSigma -- validates Gaussian sigma case 1/sigma
+TestJeffreysGaussMeanAndSigma -- demonstraites 2-d example
+
+*/
+
 #include "RooJeffreysPrior.h"
 
 #include "RooWorkspace.h"
@@ -14,7 +46,7 @@
 
 using namespace RooFit;
 
-void TestJeffreys(){
+void JeffreysPriorDemo(){
   RooWorkspace w("w");
   w.factory("Uniform::u(x[0,1])");
   w.factory("mu[100,1,200]");
