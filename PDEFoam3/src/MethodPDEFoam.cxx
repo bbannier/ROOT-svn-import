@@ -729,6 +729,75 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetMulticlassValues()
 }
 
 //_______________________________________________________________________
+const TMVA::Ranking* TMVA::MethodPDEFoam::CreateRanking()
+{
+   // Compute ranking of input variables
+
+   // create the ranking object
+   fRanking = new Ranking(GetName(), "Variable Importance");
+   std::vector<Float_t> importance(GetNvar(), 0);
+
+   // determine variable importances
+   for (UInt_t ifoam = 0; ifoam < fFoam.size(); ++ifoam) {
+      // get the number of cuts made in every dimension of foam
+      PDEFoamCell *root_cell = fFoam.at(ifoam)->GetRootCell();
+      std::vector<UInt_t> nCuts(fFoam.at(ifoam)->GetTotDim(), 0);
+      GetNCuts(root_cell, nCuts);
+
+      // fill the importance vector (ignoring the target dimensions in
+      // case of a multi-target regression foam)
+      UInt_t SumCuts = 0;
+      std::vector<Float_t> tmp_importance;
+      for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
+         SumCuts += nCuts.at(ivar);
+         tmp_importance.push_back( nCuts.at(ivar) );
+      }
+      // normalization of the variable importances of this foam: the
+      // sum of all variable importances equals 1 for this foam
+      for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
+	 if (SumCuts > 0)
+	    tmp_importance.at(ivar) /= SumCuts;
+	 else
+	    tmp_importance.at(ivar) = 0;
+      }
+      // the overall variable importance is the average over all foams
+      for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
+	 importance.at(ivar) += tmp_importance.at(ivar) / fFoam.size();
+      }      
+   }
+
+   // fill ranking vector
+   for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
+      fRanking->AddRank(Rank(GetInputLabel(ivar), importance.at(ivar)));
+   }
+
+   return fRanking;
+}
+
+//_______________________________________________________________________
+void TMVA::MethodPDEFoam::GetNCuts(PDEFoamCell *cell, std::vector<UInt_t> &nCuts)
+{
+   // Fill in 'nCuts' the number of cuts made in every foam dimension,
+   // starting at the root cell.
+   //
+   // Parameters:
+   //
+   // - cell - root cell to start the counting from
+   //
+   // - nCuts - the number of cuts are saved in this vector
+
+   if (cell->GetStat() == 1) // cell is active
+      return;
+
+   nCuts.at(cell->GetBest())++;
+
+   if (cell->GetDau0() != NULL)
+      GetNCuts(cell->GetDau0(), nCuts);
+   if (cell->GetDau1() != NULL)
+      GetNCuts(cell->GetDau1(), nCuts);
+}
+
+//_______________________________________________________________________
 void TMVA::MethodPDEFoam::SetXminXmax( TMVA::PDEFoam *pdefoam )
 {
    // Set Xmin, Xmax for every dimension in the given pdefoam object

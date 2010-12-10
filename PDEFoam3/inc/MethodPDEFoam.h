@@ -174,7 +174,10 @@ namespace TMVA {
       virtual void Reset();
 
       // ranking of input variables
-      const Ranking* CreateRanking() { return 0; }
+      const Ranking* CreateRanking();
+
+      // get number of cuts in every dimension, starting at cell
+      void GetNCuts(PDEFoamCell *cell, std::vector<UInt_t> &nCuts);
 
       // helper functions to convert enum types to UInt_t and back
       EKernel GetKernel( void ) { return fKernel; }
