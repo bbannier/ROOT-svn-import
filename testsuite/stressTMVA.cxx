@@ -160,7 +160,7 @@ void addComplexClassificationTests( UnitTestSuite& TMVA_test, bool full=true )
 }
 
 
-int main()
+int main(int argc, char **argv)
 {
 
    TApplication theApp("App", &argc, argv);
@@ -205,7 +205,7 @@ int main()
    gSystem->Exec("rm -rf weights/*"); 
 #endif
    gBenchmark->Stop("stress");
-   
+   gBenchmark->Print("stress");
    Float_t ct = gBenchmark->GetCpuTime("stress");
    printf("******************************************************************\n");
    printf("*  CPUTIME   =%6.1f   *  Root%-8s  %d/%d\n",ct       ,gROOT->GetVersion(),gROOT->GetVersionDate(),gROOT->GetVersionTime());
