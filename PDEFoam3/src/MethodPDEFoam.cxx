@@ -208,6 +208,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
 }
 
 
+//_______________________________________________________________________
 void TMVA::MethodPDEFoam::DeclareCompatibilityOptions() {
    MethodBase::DeclareCompatibilityOptions();
    DeclareOptionRef(fCutNmin = kTRUE, "CutNmin",  "Requirement for minimal number of events in cell");
@@ -867,7 +868,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 	 break;
       }
    } else {
-      // create a decision tree like PDEfoam
+      // create a decision tree like PDEFoam
       SeparationBase *sepType = NULL;
       switch (fDTSeparation) {
       case kGiniIndex:
@@ -905,12 +906,8 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
    // set fLogger attributes
    pdefoam->Log().SetMinType(this->Log().GetMinType());
    
-   // set Options VolFrac, kDim, ...
-   if (ft==kMultiTarget)
-      // dimension of foam = number of targets + non-targets
-      pdefoam->SetDim(      Data()->GetNTargets()+Data()->GetNVariables());
-   else
-      pdefoam->SetDim(      GetNvar());  // Mandatory!
+   // set PDEFoam parameters
+   pdefoam->SetDim(         dim);
    pdefoam->SetnCells(      fnCells);    // optional
    pdefoam->SetnSampl(      fnSampl);    // optional
    pdefoam->SetnBin(        fnBin);      // optional
@@ -932,7 +929,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 //_______________________________________________________________________
 const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
 {
-   // Return regression values for both multi and mono target regression
+   // Return regression values for both multi- and mono-target regression
 
    if (fRegressionReturnVal == 0) fRegressionReturnVal = new std::vector<Float_t>();
    fRegressionReturnVal->clear();
@@ -982,7 +979,8 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
 //_______________________________________________________________________
 TMVA::PDEFoamKernel* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
 {
-   // create a pdefoam kernel estimator, depending on fKernel
+   // create a pdefoam kernel estimator, depending on the current
+   // value of fKernel
    switch (fKernel) {
    case kNone:
       return new PDEFoamKernelTrivial();

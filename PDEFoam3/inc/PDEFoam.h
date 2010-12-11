@@ -14,7 +14,7 @@
  *      Dominik Dannheim - CERN, Switzerland                                      *
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -166,9 +166,6 @@ namespace TMVA {
       std::vector<TMVA::PDEFoamCell*> FindCells(std::vector<Float_t>&); //!
       std::vector<TMVA::PDEFoamCell*> FindCells(std::map<Int_t,Float_t>&); //!
       void FindCells(std::map<Int_t, Float_t>&, PDEFoamCell*, std::vector<PDEFoamCell*> &);
-      
-      // get number of events in cell during foam build-up
-      Double_t GetBuildUpCellEvents(PDEFoamCell* cell);
 
       // get internal density
       PDEFoamDensity* GetDistr() const { assert(fDistr); return fDistr; }
