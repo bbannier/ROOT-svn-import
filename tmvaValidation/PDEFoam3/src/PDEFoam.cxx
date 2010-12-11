@@ -15,7 +15,7 @@
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -435,8 +435,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
    dx = cell->GetVolume() * vol_scale;
    intOld = cell->GetIntg(); //memorize old values,
    driOld = cell->GetDriv(); //will be needed for correcting parent cells
-   if (GetNmin() > 0)
-      toteventsOld = GetBuildUpCellEvents(cell);
+   toteventsOld = GetCellElement(cell, 0);
 
    /////////////////////////////////////////////////////
    //    Special Short MC sampling to probe cell      //
@@ -512,8 +511,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
    cell->SetXdiv(xBest);
    cell->SetIntg(intTrue);
    cell->SetDriv(intDriv);
-   if (GetNmin() > 0)
-      SetCellElement(cell, 0, totevents);
+   SetCellElement(cell, 0, totevents);
 
    // correct/update integrals in all parent cells to the top of the tree
    Double_t  parIntg, parDriv;
@@ -522,8 +520,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
       parDriv = parent->GetDriv();
       parent->SetIntg( parIntg   +intTrue -intOld );
       parent->SetDriv( parDriv   +intDriv -driOld );
-      if (GetNmin() > 0)
-         SetCellElement( parent, 0, GetBuildUpCellEvents(parent) + totevents - toteventsOld);
+      SetCellElement( parent, 0, GetCellElement(parent, 0) + totevents - toteventsOld);
    }
    delete [] volPart;
    delete [] xRand;
@@ -637,7 +634,7 @@ Long_t TMVA::PDEFoam::PeekMax()
 
          // apply Nmin-cut
          if (GetNmin() > 0)
-            bCutNmin = GetBuildUpCellEvents(fCells[i]) > GetNmin();
+            bCutNmin = GetCellElement(fCells[i], 0) > GetNmin();
 
          // choose cell
          if(driv > drivMax && bCutNmin && bCutMaxDepth) {
@@ -1015,14 +1012,6 @@ std::vector<Float_t> TMVA::PDEFoam::GetCellValue( std::map<Int_t,Float_t>& xvec,
       cell_values.push_back(GetCellValue(*cell_it, cv));
 
    return cell_values;
-}
-
-//_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
-{
-   // Returns the number of events, saved in the 'cell' during foam build-up.
-   // Only used during foam build-up!
-   return GetCellElement(cell, 0);
 }
 
 //_____________________________________________________________________
