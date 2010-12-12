@@ -47,8 +47,10 @@
 #include "TMVA/Config.h"
 #include "TMVA/SeparationBase.h"
 #include "TMVA/GiniIndex.h"
+#include "TMVA/GiniIndexWithLaplace.h"
 #include "TMVA/MisClassificationError.h"
 #include "TMVA/CrossEntropy.h"
+#include "TMVA/SdivSqrtSplusB.h"
 
 REGISTER_METHOD(PDEFoam)
 
@@ -197,6 +199,8 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    AddPreDefVal(TString("GiniIndex"));
    AddPreDefVal(TString("MisClassificationError"));
    AddPreDefVal(TString("CrossEntropy"));
+   AddPreDefVal(TString("GiniIndexWithLaplace"));
+   AddPreDefVal(TString("SdivSqrtSplusB"));
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -244,6 +248,10 @@ void TMVA::MethodPDEFoam::ProcessOptions()
       fDTSeparation = kMisClassificationError;
    else if (fDTLogic == "CrossEntropy")
       fDTSeparation = kCrossEntropy;
+   else if (fDTLogic == "GiniIndexWithLaplace")
+      fDTSeparation = kGiniIndexWithLaplace;
+   else if (fDTLogic == "SdivSqrtSplusB")
+      fDTSeparation = kSdivSqrtSplusB;
    else {
       Log() << kWARNING << "Unknown separation type: " << fDTLogic 
 	    << ", setting to None" << Endl;
@@ -879,6 +887,12 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 	 break;
       case kCrossEntropy:
 	 sepType = new CrossEntropy();
+	 break;
+      case kGiniIndexWithLaplace:
+	 sepType = new GiniIndexWithLaplace();
+	 break;
+      case kSdivSqrtSplusB:
+	 sepType = new SdivSqrtSplusB();
 	 break;
       default:
 	 Log() << kFATAL << "Separation type " << fDTSeparation 
