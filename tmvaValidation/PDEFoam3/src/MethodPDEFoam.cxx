@@ -779,7 +779,7 @@ const TMVA::Ranking* TMVA::MethodPDEFoam::CreateRanking()
 void TMVA::MethodPDEFoam::GetNCuts(PDEFoamCell *cell, std::vector<UInt_t> &nCuts)
 {
    // Fill in 'nCuts' the number of cuts made in every foam dimension,
-   // starting at the root cell.
+   // starting at the root cell 'cell'.
    //
    // Parameters:
    //
@@ -861,7 +861,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 	 break;
       case kMonoTarget:
 	 pdefoam = new PDEFoamTarget(foamcaption);
-	 density = new PDEFoamTargetDensity(box);
+	 density = new PDEFoamTargetDensity(box, 0);
 	 break;
       default:
 	 Log() << kFATAL << "Unknown PDEFoam type!" << Endl;

@@ -34,8 +34,8 @@
 // PDEFoamTargetDensity
 //
 // This is a concrete implementation of PDEFoam.  Density(...)
-// estimates the target 0 density at a given phase-space point using
-// range-searching.
+// estimates the target density (target number: fTarget) at a given
+// phase-space point using range-searching.
 // _____________________________________________________________________
 
 #include <cmath>
@@ -49,16 +49,25 @@ ClassImp(TMVA::PDEFoamTargetDensity)
 //_____________________________________________________________________
 TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity()
    : PDEFoamDensity()
+   , fTarget(0)
 {}
 
 //_____________________________________________________________________
-TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(std::vector<Double_t> box)
+TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(std::vector<Double_t> box, UInt_t target)
    : PDEFoamDensity(box)
-{}
+   , fTarget(target)
+{
+   // Parameters:
+   //
+   // - box - size of sampling box in each dimension
+   //
+   // - target - the target number to calculate the density for
+}
 
 //_____________________________________________________________________
 TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(const PDEFoamTargetDensity &distr)
    : PDEFoamDensity(distr)
+   , fTarget(distr.fTarget)
 {
    // Copy constructor
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
@@ -101,7 +110,7 @@ Double_t TMVA::PDEFoamTargetDensity::Density(std::vector<Double_t> &Xarg, Double
    // now sum over all nodes->GetTarget(0);
    for (std::vector<const TMVA::BinarySearchTreeNode*>::iterator it = nodes.begin();
 	it != nodes.end(); ++it) {
-      N_tar += ((*it)->GetTargets()).at(0) * ((*it)->GetWeight());
+      N_tar += ((*it)->GetTargets()).at(fTarget) * ((*it)->GetWeight());
       weighted_count += (*it)->GetWeight();
    }
 
