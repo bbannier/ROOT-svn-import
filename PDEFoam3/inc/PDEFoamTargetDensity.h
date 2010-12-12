@@ -39,9 +39,12 @@ namespace TMVA {
    // class definition of underlying event density
    class PDEFoamTargetDensity : public PDEFoamDensity  {
 
+   protected:
+      UInt_t fTarget; // the target to calculate the density for
+
    public:
       PDEFoamTargetDensity();
-      PDEFoamTargetDensity(std::vector<Double_t> box);
+      PDEFoamTargetDensity(std::vector<Double_t> box, UInt_t target);
       PDEFoamTargetDensity(const PDEFoamTargetDensity&);
       virtual ~PDEFoamTargetDensity(){};
 
