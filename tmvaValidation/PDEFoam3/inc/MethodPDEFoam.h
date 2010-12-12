@@ -120,7 +120,7 @@ namespace TMVA {
 
    // separation types
    enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
-			kCrossEntropy };
+			kCrossEntropy, kGiniIndexWithLaplace, kSdivSqrtSplusB };
    // kernel types
    enum EKernel { kNone=0, kGaus=1, kLinN=2 };
    // foam types
