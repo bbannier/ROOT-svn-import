@@ -121,6 +121,10 @@ namespace TMVA {
    // separation types
    enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
 			kCrossEntropy };
+   // kernel types
+   enum EKernel { kNone=0, kGaus=1, kLinN=2 };
+   // foam types
+   enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget, kMultiClass };
 
    class MethodPDEFoam : public MethodBase {
 
