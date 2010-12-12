@@ -64,10 +64,6 @@ namespace TMVA {
    class PDEFoamKernel;
    class PDEFoam;
 
-   enum EKernel { kNone=0, kGaus=1, kLinN=2 };
-   enum ETargetSelection { kMean=0, kMpv=1 };
-   enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget, kMultiClass };
-
    // enum type for possible foam cell values
    // kValue         : cell value who's rms is minimized
    // kValueError    : error on kValue
@@ -162,9 +158,9 @@ namespace TMVA {
       virtual Bool_t   CellValueIsUndefined( PDEFoamCell* );
 
       // finds cell according to given event variables
-      PDEFoamCell* FindCell(std::vector<Float_t>&); //!
-      std::vector<TMVA::PDEFoamCell*> FindCells(std::vector<Float_t>&); //!
-      std::vector<TMVA::PDEFoamCell*> FindCells(std::map<Int_t,Float_t>&); //!
+      PDEFoamCell* FindCell(std::vector<Float_t>&);
+      std::vector<TMVA::PDEFoamCell*> FindCells(std::vector<Float_t>&);
+      std::vector<TMVA::PDEFoamCell*> FindCells(std::map<Int_t,Float_t>&);
       void FindCells(std::map<Int_t, Float_t>&, PDEFoamCell*, std::vector<PDEFoamCell*> &);
 
       // get internal density

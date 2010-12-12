@@ -18,7 +18,7 @@
  *      Dominik Dannheim - CERN, Switzerland                                      *
  *      Alexander Voigt  - CERN, Switzerland                                      *
  *                                                                                *
- * Copyright (c) 2008, 2010:                                                            *
+ * Copyright (c) 2008, 2010:                                                      *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -36,11 +36,14 @@
 
 namespace TMVA {
 
+   // target selection method
+   enum ETargetSelection { kMean=0, kMpv=1 };
+
    class PDEFoamMultiTarget : public PDEFoamEvent {
 
    protected:
       ETargetSelection fTargetSelection; // the target selection method
-      
+
       PDEFoamMultiTarget(const PDEFoamMultiTarget&); // Copy Constructor  NOT USED
 
       // ---------- Public functions ----------------------------------
