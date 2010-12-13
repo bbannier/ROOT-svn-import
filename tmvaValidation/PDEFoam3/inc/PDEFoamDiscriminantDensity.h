@@ -15,7 +15,7 @@
  *      Tancredi Carli   - CERN, Switzerland                                      *
  *      Dominik Dannheim - CERN, Switzerland                                      *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
- *      Alexander Voigt  - CERN, Switzerland                                      *
+ *      Alexander Voigt  - TU Dresden, Germany                                    *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
  * Copyright (c) 2008, 2010:                                                      *

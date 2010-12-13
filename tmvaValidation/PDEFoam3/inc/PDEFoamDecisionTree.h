@@ -14,7 +14,7 @@
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
  *      Tancredi Carli   - CERN, Switzerland                                      *
  *      Dominik Dannheim - CERN, Switzerland                                      *
- *      Alexander Voigt  - CERN, Switzerland                                      *
+ *      Alexander Voigt  - TU Dresden, Germany                                    *
  *                                                                                *
  * Copyright (c) 2010:                                                            *
  *      CERN, Switzerland                                                         *
