@@ -13,7 +13,7 @@
  * Authors (alphabetical):                                                        *
  *      Tancredi Carli   - CERN, Switzerland                                      *
  *      Dominik Dannheim - CERN, Switzerland                                      *
- *      Alexander Voigt  - CERN, Switzerland                                      *
+ *      Alexander Voigt  - TU Dresden, Germany                                    *
  *      Peter Speckmayer - CERN, Switzerland                                      *
  *                                                                                *
  * Original author of the TFoam implementation:                                   *
