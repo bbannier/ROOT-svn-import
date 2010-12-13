@@ -118,13 +118,8 @@
 
 namespace TMVA {
 
-   // separation types
-   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
-			kCrossEntropy, kGiniIndexWithLaplace, kSdivSqrtSplusB };
    // kernel types
    enum EKernel { kNone=0, kGaus=1, kLinN=2 };
-   // foam types
-   enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget, kMultiClass };
 
    class MethodPDEFoam : public MethodBase {
 
@@ -255,6 +250,7 @@ namespace TMVA {
       Bool_t        fUseYesNoCell;    // return -1 or 1 for bg or signal like event
       TString       fDTLogic;         // use DT algorithm to split cells
       EDTSeparation fDTSeparation;    // enum which specifies the separation to use for the DT logic
+      Bool_t        fPeekMax;         // BACKWARDS COMPATIBILITY: peek up cell with max. driver integral for split
 
       std::vector<Float_t> fXmin, fXmax; // range for histograms and foams
 
