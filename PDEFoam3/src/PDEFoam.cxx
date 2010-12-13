@@ -122,10 +122,16 @@ TMVA::PDEFoam::PDEFoam() :
    fRvec(0),
    fPseRan(new TRandom3(4356)),
    fAlpha(0),
+   fFoamType(kSeparate),
    fXmin(0),
    fXmax(0),
+   fNElements(0),
    fNmin(100),
    fMaxDepth(0),
+   fVolFrac(1.0/15.0),
+   fFillFoamWithOrigWeights(kFALSE),
+   fDTSeparation(kFoam),
+   fPeekMax(kTRUE),
    fDistr(NULL),
    fTimer(new Timer(0, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -151,10 +157,16 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fRvec(0),
    fPseRan(new TRandom3(4356)),
    fAlpha(0),
+   fFoamType(kSeparate),
    fXmin(0),
    fXmax(0),
+   fNElements(0),
    fNmin(100),
    fMaxDepth(0),
+   fVolFrac(1.0/15.0),
+   fFillFoamWithOrigWeights(kFALSE),
+   fDTSeparation(kFoam),
+   fPeekMax(kTRUE),
    fDistr(NULL),
    fTimer(new Timer(1, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -206,10 +218,16 @@ TMVA::PDEFoam::PDEFoam(const PDEFoam &From) :
    , fRvec(0)
    , fPseRan(0)
    , fAlpha(0)
+   , fFoamType(kSeparate)
    , fXmin(0)
    , fXmax(0)
+   , fNElements(0)
    , fNmin(0)
    , fMaxDepth(0)
+   , fVolFrac(1.0/15.0)
+   , fFillFoamWithOrigWeights(kFALSE)
+   , fDTSeparation(kFoam)
+   , fPeekMax(kTRUE)
    , fDistr(0)
    , fTimer(0)
    , fVariableNames(0)

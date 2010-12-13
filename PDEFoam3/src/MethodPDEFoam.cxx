@@ -86,6 +86,7 @@ TMVA::MethodPDEFoam::MethodPDEFoam( const TString& jobName,
    , fUseYesNoCell(kFALSE)
    , fDTLogic("None")
    , fDTSeparation(kFoam)
+   , fPeekMax(kTRUE)
    , fXmin(std::vector<Float_t>())
    , fXmax(std::vector<Float_t>())
    , fFoam(std::vector<PDEFoam*>())
@@ -121,6 +122,7 @@ TMVA::MethodPDEFoam::MethodPDEFoam( DataSetInfo& dsi,
    , fUseYesNoCell(kFALSE)
    , fDTLogic("None")
    , fDTSeparation(kFoam)
+   , fPeekMax(kTRUE)
    , fXmin(std::vector<Float_t>())
    , fXmax(std::vector<Float_t>())
    , fFoam(std::vector<PDEFoam*>())
@@ -216,6 +218,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
 void TMVA::MethodPDEFoam::DeclareCompatibilityOptions() {
    MethodBase::DeclareCompatibilityOptions();
    DeclareOptionRef(fCutNmin = kTRUE, "CutNmin",  "Requirement for minimal number of events in cell");
+   DeclareOptionRef(fPeekMax = kTRUE, "PeekMax",  "Peek cell with max. loss for the next split");
 }
 
 //_______________________________________________________________________
@@ -1262,22 +1265,22 @@ void TMVA::MethodPDEFoam::ReadFoamsFromFile()
    // read foams from file
    if (DoRegression()) {
       if (fMultiTargetRegression)
-         fFoam.push_back( (PDEFoamMultiTarget*) rootFile->Get("MultiTargetRegressionFoam") );
+         fFoam.push_back( (PDEFoam*) rootFile->Get("MultiTargetRegressionFoam") );
       else
-         fFoam.push_back( (PDEFoamTarget*) rootFile->Get("MonoTargetRegressionFoam") );
+         fFoam.push_back( (PDEFoam*) rootFile->Get("MonoTargetRegressionFoam") );
    } else {
       if (fSigBgSeparated) {
-	 fFoam.push_back( (PDEFoamEvent*) rootFile->Get("SignalFoam") );
-	 fFoam.push_back( (PDEFoamEvent*) rootFile->Get("BgFoam") );
+	 fFoam.push_back( (PDEFoam*) rootFile->Get("SignalFoam") );
+	 fFoam.push_back( (PDEFoam*) rootFile->Get("BgFoam") );
       } else {
 	 // try to load discriminator foam
-	 PDEFoam *foam = (PDEFoamDiscriminant*) rootFile->Get("DiscrFoam");
+	 PDEFoam *foam = (PDEFoam*) rootFile->Get("DiscrFoam");
 	 if (foam != NULL)
 	    fFoam.push_back( foam );
 	 else {
 	    // load multiclass foams
 	    for (UInt_t iClass=0; iClass<DataInfo().GetNClasses(); ++iClass) {
-	       fFoam.push_back( (PDEFoamDiscriminant*) rootFile->Get(Form("MultiClassFoam%u",iClass)) );
+	       fFoam.push_back( (PDEFoam*) rootFile->Get(Form("MultiClassFoam%u",iClass)) );
 	    }
 	 }
       }

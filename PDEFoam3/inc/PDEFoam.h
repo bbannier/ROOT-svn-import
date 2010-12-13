@@ -64,6 +64,13 @@ namespace TMVA {
    class PDEFoamKernel;
    class PDEFoam;
 
+   // separation types
+   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
+			kCrossEntropy, kGiniIndexWithLaplace, kSdivSqrtSplusB };
+
+   // foam types
+   enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget, kMultiClass };
+
    // enum type for possible foam cell values
    // kValue         : cell value who's rms is minimized
    // kValueError    : error on kValue
@@ -117,10 +124,16 @@ namespace TMVA {
       //----------  working space for CELL exploration -------------
       Double_t *fAlpha;          // [fDim] Internal parameters of the hyperrectangle
       // ---------  PDE-Foam specific variables
+      EFoamType fFoamType;     // BACKWARDS COMPATIBILITY: type of foam
       Double_t *fXmin;         // [fDim] minimum for variable transform
       Double_t *fXmax;         // [fDim] maximum for variable transform
+      UInt_t fNElements;       // BACKWARDS COMPATIBILITY: number of variables in every cell
       UInt_t fNmin;            // minimal number of events in cell to split cell
       UInt_t fMaxDepth;        // maximum depth of cell tree
+      Float_t fVolFrac;        // BACKWARDS COMPATIBILITY: volume fraction (with respect to total phase space
+      Bool_t fFillFoamWithOrigWeights; // BACKWARDS COMPATIBILITY: fill the foam with boost or orig. weights
+      EDTSeparation fDTSeparation; // BACKWARDS COMPATIBILITY: split cells according to decision tree logic
+      Bool_t fPeekMax;         // BACKWARDS COMPATIBILITY: peek up cell with max. driver integral for split
       PDEFoamDensity *fDistr;  //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
