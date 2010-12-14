@@ -149,6 +149,10 @@ namespace cling {
     //delete m_prev_module;
     //m_prev_module = 0; // Don't do this, the engine does it.
   }
+
+  const char* Interpreter::getVersion() const {
+    return "$Id$";
+  }
    
   void Interpreter::AddIncludePath(const char *incpath)
   {
