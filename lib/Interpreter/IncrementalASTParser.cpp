@@ -19,8 +19,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Sema/SemaConsumer.h"
 
-#include "DependentNodesTransform.h"
-
 #include <stdio.h>
 #include <sstream>
 
@@ -147,11 +145,14 @@ m_Consumer(0) {
   if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
     SC->InitializeSema(*m_Sema.get());
 
+  // Create the visitor that will transform all dependents that are left.
+  m_Transformer = new ASTTransformVisitor(this, m_Sema.get());
 }
 
 cling::IncrementalASTParser::~IncrementalASTParser()
 {
   m_CI->takeLLVMContext(); // Don't take down the context with the CI.
+  delete m_Transformer; // remove the ASTNodeTransformer
 }
 
 clang::CompilerInstance*
@@ -189,7 +190,7 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
   clang::Parser::DeclGroupPtrTy ADecl;
   
   bool atEOF = false;
-  if (m_Parser->getCurToken().is(tok::eof)) {
+  if (m_Parser->getCurToken().is(clang::tok::eof)) {
     atEOF = true;
   }
   else {
@@ -202,10 +203,12 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
     // skipping something.
     if (ADecl) {
       clang::DeclGroupRef DGR = ADecl.getAsVal<clang::DeclGroupRef>();
-      // for(clang::DeclGroupRef::iterator i=DGR.begin(); i< DGR.end(); ++i) {
+      for(clang::DeclGroupRef::iterator i=DGR.begin(); i< DGR.end(); ++i) {
+         getTransformer()->Visit(*i);
+          
       //    printf("\ndecl:\n");
       //    (*i)->dump();
-      // } 
+      } 
       // printf("\nend decl.\n");
       Consumer->HandleTopLevelDecl(DGR);
 
@@ -228,7 +231,7 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
         }
       } // valid m_InterruptHere
     } // ADecl
-    if (m_Parser->getCurToken().is(tok::eof)) {
+    if (m_Parser->getCurToken().is(clang::tok::eof)) {
       atEOF = true;
     }
     else {
@@ -244,12 +247,6 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
        I = m_Sema->WeakTopLevelDecls().begin(),
        E = m_Sema->WeakTopLevelDecls().end(); I != E; ++I) {
     Consumer->HandleTopLevelDecl(clang::DeclGroupRef(*I));
-  }
-
-  {
-    // Here we are substituting the dependent nodes with Cling invocations.
-    DependentNodesTransform transformer;
-    transformer.TransformNodes(m_Sema.get());
   }
   
   clang::ASTContext *Ctx = &m_CI->getASTContext();

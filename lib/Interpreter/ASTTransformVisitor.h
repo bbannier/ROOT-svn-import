@@ -34,10 +34,10 @@ namespace cling {
       FunctionDecl *EvalDecl; // FIXME: ownership is what?
       
    public: // members
-      
+      void *gCling; //Pointer to the Interpreter object
       clang::Sema *SemaPtr; // Sema is needed, FIXME: ownership is what?
       Decl *CurrentDecl; // FIXME: ownership is what?
-
+      
    public: // types
       
       typedef DeclVisitor<ASTTransformVisitor> BaseDeclVisitor;
@@ -48,14 +48,28 @@ namespace cling {
    public:
       
       //region Constructors
-      explicit ASTTransformVisitor();
-      ASTTransformVisitor(Sema *SemaPtr);
+      
+      explicit ASTTransformVisitor()
+         : EvalDecl(0), gCling(0), SemaPtr(0), CurrentDecl(0){}
+      
+      ASTTransformVisitor(void* gCling, Sema *SemaPtr)
+         : EvalDecl(0), gCling(gCling),  SemaPtr(SemaPtr), CurrentDecl(0){}
 
       //endregion
       
       //region Destructor
 
-      //~ASTTransformVisitor();
+      ~ASTTransformVisitor() {
+         // delete EvalDecl;
+         // EvalDecl = 0;
+         // delete SemaPtr;
+         // SemaPtr = 0;
+         // delete CurrentDecl;
+         // CurrentDecl = 0;
+         // delete gCling;
+         // gCling = 0;
+      }
+      
       
       //endregion
 
@@ -66,12 +80,9 @@ namespace cling {
       //region DeclVisitor
       
       void Visit(Decl *D);
-      void VisitDeclaratorDecl(DeclaratorDecl *D);
       void VisitFunctionDecl(FunctionDecl *D);
-      void VisitFunctionTemplateDecl(FunctionTemplateDecl *D); 
-      void VisitObjCMethodDecl(ObjCMethodDecl *D);
-      void VisitBlockDecl(BlockDecl *D);
-      void VisitVarDecl(VarDecl *D);
+      void VisitTemplateDecl(TemplateDecl *D); 
+      
       void VisitDecl(Decl *D);
       void VisitDeclContext(DeclContext *DC);
 
@@ -83,7 +94,7 @@ namespace cling {
       EvalInfo VisitExpr(Expr *Node);
       // EvalInfo VisitCompoundStmt(CompoundStmt *S);
       EvalInfo VisitCallExpr(CallExpr *E);
-      EvalInfo VisitImplicitCastExpr(ImplicitCastExpr *ICE);
+      // EvalInfo VisitImplicitCastExpr(ImplicitCastExpr *ICE);
       EvalInfo VisitDeclRefExpr(DeclRefExpr *DRE);
       EvalInfo VisitBinaryOperator(BinaryOperator *binOp);
       EvalInfo VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node);
@@ -94,7 +105,8 @@ namespace cling {
 
       CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree);
       Expr *BuildEvalCharArg(QualType ToType, Expr *SubTree);
-      
+      bool IsArtificiallyDependent(CallExpr *Node);
+      bool ShouldVisit(Decl *D);
       //endregion
       
    };
