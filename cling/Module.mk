@@ -56,7 +56,6 @@ include/%.h:    $(CLINGDIRI)/%.h
 		cp $< $@
 
 $(CLINGLIB):    $(CLINGO) $(CLINGDO)
-		@echo HELLO
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libRCling.$(SOEXT) $@ "$(CLINGO) $(CLINGDO)" \
 		   "$(CLINGLIBEXTRA) \
