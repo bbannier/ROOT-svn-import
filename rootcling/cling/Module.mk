@@ -60,17 +60,7 @@ $(CLINGLIB):    $(CLINGO) $(CLINGDO)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libRCling.$(SOEXT) $@ "$(CLINGO) $(CLINGDO)" \
 		   "$(CLINGLIBEXTRA) \
--L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
- -lclingInterpreter -lclingMetaProcessor -lclingEditLine -lclangFrontend \
- -lclangSerialization -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
- -lclangBasic -lclangDriver -lclangAST -Llib -lReflex -lLLVMMCDisassembler \
- -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
- -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86Disassembler \
- -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86AsmPrinter \
- -lLLVMX86Info -lLLVMAsmPrinter -lLLVMMCParser -lLLVMCodeGen -lLLVMScalarOpts \
- -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
- -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
- -lLLVMCore -lLLVMSupport -lLLVMSystem"
+-L$(LLVMDIR)/lib -lcling"
 
 CLINGLIBDEP += $(REFLEXLIB)
 
@@ -113,6 +103,7 @@ $(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_C
 # -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
 # -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
 # -lLLVMCore -lLLVMSupport -lLLVMSystem
-CORELIBEXTRA += -Llib -lRCling
+BOOTLIBS += -lRCling -L$(LLVMDIR)/lib -lcling
+ROOTLIBS += -lRCling -L$(LLVMDIR)/lib -lcling
 
 CORELIBDEP += $(REFLEXLIB) $(CLINGLIB)
