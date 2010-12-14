@@ -1442,7 +1442,7 @@ void TMVA::PDEFoam::OutputGrow( Bool_t finished )
 
 //_____________________________________________________________________
 void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
-                                  Bool_t CreateCanvas, Bool_t colors, Bool_t log_colors )
+                                  Bool_t CreateCanvas, Bool_t colors )
 {
    // Debugging tool which plots the cells of a 2-dimensional PDEFoam
    // as rectangles in C++ format readable for ROOT.
@@ -1466,8 +1466,6 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    // - CreateCanvas - whether to create a new canvas or not
    //
    // - colors - whether to fill cells with colors or shades of grey
-   //
-   // - log_colors - whether to fill cells with colors (logarithmic scale)
    //
    // Example:
    //
@@ -1557,15 +1555,6 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
       outfile << "// Float_t zmax = "<< zmax << ";" << std::endl;
    }
 
-   if (log_colors) {
-      if (zmin<1)
-         zmin=1;
-      zmin=TMath::Log(zmin);
-      zmax=TMath::Log(zmax);
-      outfile << "// logarthmic color scale used " << std::endl;
-   } 
-   else outfile << "// linear color scale used " << std::endl;
-
    outfile << "// used minimum and maximum of distribution (taking into account log scale if applicable): " << std::endl;
    outfile << "Float_t zmin = "<< zmin << ";" << std::endl;
    outfile << "Float_t zmax = "<< zmax << ";" << std::endl;
@@ -1591,11 +1580,6 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
          if (fillcells) {
             // get cell value
             Float_t value = GetCellValue(fCells[iCell], cell_value);
-
-            if (log_colors) {
-               if (value<1.) value=1;
-               value = TMath::Log(value);
-            }
 
             // calculate fill color
             Int_t color;
