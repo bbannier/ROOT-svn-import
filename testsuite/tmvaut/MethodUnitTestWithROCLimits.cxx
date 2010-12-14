@@ -238,11 +238,11 @@ void MethodUnitTestWithROCLimits::run()
            dummy3 += reader2->EvaluateMVA( testvarDouble, readerName2);
         }
         else if (iTest==4){
-           double dummy4 = reader2->EvaluateMVA( testvarDouble, readerName);
+           double dummy4 = reader2->EvaluateMVA( testvarDouble, readerName2);
            if (_methodType==Types::kCuts) 
               readerVal = reader[iTest]->EvaluateMVA( testvarDouble, readerName, effS );
            else readerVal=reader[iTest]->EvaluateMVA( testvarDouble, readerName);  
-           dummy4 += reader2->EvaluateMVA( testvarDouble, readerName);
+           dummy4 += reader2->EvaluateMVA( testvarDouble, readerName2);
         }
         else if (iTest==5){
            double dummy5 = reader2->EvaluateMVA( readerName2);
