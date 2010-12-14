@@ -30,7 +30,6 @@ public:
    ~CIBuilder();
 
    clang::CompilerInstance* createCI() const;
-   bool createDiagnostics(clang::CompilerInstance* &CI) const;
    llvm::LLVMContext* getLLVMContext() const { return m_llvm_context.get(); }
    llvm::sys::Path getResourcePath(){return m_resource_path;}
 

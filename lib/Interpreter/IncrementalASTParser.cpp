@@ -19,6 +19,8 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Sema/SemaConsumer.h"
 
+#include "cling/Interpreter/Diagnostics.h"
+
 #include <stdio.h>
 #include <sstream>
 
@@ -44,7 +46,7 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
       B[newlen - 1] = 0;
       init(B, B + newlen - 1);
     }
-    
+
   public:
     MutableMemoryBuffer(llvm::StringRef Code, llvm::StringRef Name)
     : MemoryBuffer(), m_FileID(Name), m_Alloc(0) {
@@ -186,6 +188,9 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
      // printf("src:%s\n",src.data());
   }
   
+  cling::DiagnosticPrinter* DC = reinterpret_cast<cling::DiagnosticPrinter*>(&m_CI->getDiagnosticClient());
+  DC->ResetCounts();
+
   clang::ASTConsumer* Consumer = &m_CI->getASTConsumer();
   clang::Parser::DeclGroupPtrTy ADecl;
   
@@ -266,10 +271,10 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
   //   CI->getPreprocessor().EndSourceFile();
   //}
   //CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
-  m_CI->getDiagnosticClient().EndSourceFile();
-  unsigned err_count = m_CI->getDiagnosticClient().getNumErrors();
+  DC->EndSourceFile();
+  unsigned err_count = DC->getNumErrors();
   if (err_count) {
-    fprintf(stderr, "Interpreter::compileString: Parse failed!\n");
+    fprintf(stderr, "IncrementalASTParser::parse(): Parse failed!\n");
     return 0;
   }
   return m_CI.get();  

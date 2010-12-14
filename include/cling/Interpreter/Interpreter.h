@@ -9,6 +9,7 @@
 
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <string>
 #include <vector>
@@ -80,7 +81,9 @@ namespace cling {
     clang::PragmaNamespace& getPragmaHandler() const { return *m_PragmaHandler; }
     void installLazyFunctionCreator(void* (*fp)(const std::string&));
 
-     void RequestContinuation(const clang::SourceLocation&);
+    llvm::raw_ostream& getValuePrinterStream() const { return *m_ValuePrintStream; }
+
+    void RequestContinuation(const clang::SourceLocation&);
     
   private:
     llvm::OwningPtr<cling::CIBuilder> m_CIBuilder; // our compiler intsance builder
@@ -90,6 +93,7 @@ namespace cling {
     clang::PragmaNamespace* m_PragmaHandler; // pragma cling ..., owned by Preprocessor
     unsigned long long m_UniqueCounter; // number of generated call wrappers
     bool m_printAST; // whether to print the AST to be processed
+    llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream; // stream to dump values into
     
   private:
     

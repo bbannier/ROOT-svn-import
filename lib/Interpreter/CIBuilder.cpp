@@ -6,9 +6,10 @@
 
 #include "cling/Interpreter/CIBuilder.h"
 
+#include "cling/Interpreter/Diagnostics.h"
+
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
-#include "clang/Frontend/TextDiagnosticBuffer.h"
 
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/LLVMContext.h"
@@ -69,20 +70,6 @@ cling::CIBuilder::~CIBuilder()
    // Destruct the instance builder
 }
 
-bool
-cling::CIBuilder::createDiagnostics(clang::CompilerInstance* &CI) const
-{
-   // Create diagnostics. Deletes and zeroes CI in case of problems.
-   CI->createDiagnostics(m_argc - 1, m_argv + 1);
-   if (!CI->hasDiagnostics()) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
-      return false;
-   }
-   return true;
-}
-
 clang::CompilerInstance*
 cling::CIBuilder::createCI() const {
    //
@@ -95,11 +82,11 @@ cling::CIBuilder::createCI() const {
       //  Buffer the error messages while we process
       //  the compiler options.
       //
-      clang::TextDiagnosticBuffer *DiagsBuffer = new clang::TextDiagnosticBuffer();
       clang::DiagnosticOptions DiagOpts;
-      clang::DiagnosticClient *Client = new clang::DiagnosticClient();
+      DiagOpts.ShowColors = 1;
+      clang::DiagnosticClient *Client = new cling::DiagnosticPrinter();
       llvm::IntrusiveRefCntPtr<clang::Diagnostic> Diags = clang::CompilerInstance::createDiagnostics(DiagOpts, 0, 0, Client);
-
+      CI->setDiagnostics(Diags.getPtr());
 
       clang::CompilerInvocation::CreateFromArgs
          (CI->getInvocation(),
@@ -111,11 +98,6 @@ cling::CIBuilder::createCI() const {
          CI->getHeaderSearchOpts().ResourceDir.empty()) {
          CI->getHeaderSearchOpts().ResourceDir = m_resource_path.str();
       }
-      if (!createDiagnostics(CI)) {
-         return 0;
-      }
-      // Output the buffered error messages now.
-      DiagsBuffer->FlushDiagnostics(CI->getDiagnostics());
       if (CI->getDiagnostics().hasErrorOccurred()) {
          CI->takeLLVMContext();
          delete CI;

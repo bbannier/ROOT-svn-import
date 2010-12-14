@@ -10,28 +10,19 @@
 
 #include <string>
 
-namespace clang {
-  class raw_ostream
+namespace llvm {
+  class raw_ostream;
 }
 
 namespace cling {
   
   // Can be re-implemented to print type-specific details, e.g. as
   //   template <typename ACTUAL>
-  //   void dumpPtr(clang::raw_ostream& o, const clang::Decl* a, ACTUAL* ac,
+  //   void dumpPtr(llvm::raw_ostream& o, const clang::Decl* a, ACTUAL* ac,
   //                int flags, const char* tname);
   template <typename TY>
-  void printValue(clang::raw_ostream& o, const void* const t, TY* u, int flags,
-                  const char* tname) {
-    if (flags & kIsConst) {
-      o << "const ";
-    }
-    o << tname;
-    if (!(flags & kIsObj)) {
-      o << "*";
-    }
-    o << " @ " << t << '\n';
-  }
+  void printValue(llvm::raw_ostream& o, const void* const t, TY* u, int flags,
+                  const char* tname);
   
   class ValuePrinter {
   public:
@@ -44,11 +35,11 @@ namespace cling {
   protected:
     template <typename TY>
     struct TypedPrinter {
-      void operator()(clang::raw_ostream& o, const TY& t) {
+      void operator()(llvm::raw_ostream& o, const TY& t) {
         std::string n;
         printValue(o, &t, &t, kIsObj | kIsConst, getTypeName(&t, n));
       }
-      void operator()(clang::raw_ostream& o, TY& t) {
+      void operator()(llvm::raw_ostream& o, TY& t) {
         std::string n;
         printValue(o, &t, &t, kIsObj, getTypeName(&t, n));
       }
@@ -56,7 +47,7 @@ namespace cling {
     
     template <typename TY>
     struct TypedPrinter<TY*> {
-      void operator()(clang::raw_ostream& o, TY* t) {
+      void operator()(llvm::raw_ostream& o, TY* t) {
         std::string n;
         printValue(o, t, t, 0, getTypeName(t, n));
       }
@@ -64,18 +55,19 @@ namespace cling {
 
   public:
     template <typename T>
-    void print(clang::raw_ostream& o, const T& t) {
+    ValuePrinter(llvm::raw_ostream& o, const T& t) {
       // give temporaries a defined lifetime
       TypedPrinter<T> d; d(o, t);
     }
     
     template <typename T>
-    void print(clang::raw_ostream& o, T& t) {
+    ValuePrinter(llvm::raw_ostream& o, T& t) {
       // give temporaries a defined lifetime
       TypedPrinter<T> d; d(o, t);
     }
     
     template <typename T>
+    static
     const char* getTypeName(T*,std::string& n) {
       // Get the type name. This function is always compiled with clang,
       // thus the layout of its name is fixed.
@@ -87,6 +79,25 @@ namespace cling {
       return n.c_str();
     }
   };
+
+  // Can be re-implemented to print type-specific details, e.g. as
+  //   template <typename ACTUAL>
+  //   void dumpPtr(llvm::raw_ostream& o, const clang::Decl* a, ACTUAL* ac,
+  //                int flags, const char* tname);
+  template <typename TY>
+  inline
+  void printValue(llvm::raw_ostream& o, const void* const t, TY* u, int flags,
+                  const char* tname) {
+    if (flags & ValuePrinter::kIsConst) {
+      o << "const ";
+    }
+    o << tname;
+    if (!(flags & ValuePrinter::kIsObj)) {
+      o << "*";
+    }
+    o << " @ " << t << '\n';
+  }
+  
 }
 
 #endif // CLING_VALUEPRINTER_H
