@@ -20,6 +20,7 @@
 #include "clang/Sema/SemaConsumer.h"
 
 #include "cling/Interpreter/Diagnostics.h"
+#include "ASTTransformVisitor.h"
 
 #include <stdio.h>
 #include <sstream>

@@ -12,8 +12,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
-#include "ASTTransformVisitor.h"
-
 namespace clang {
   class CompilerInstance;
   class Parser;
@@ -27,6 +25,7 @@ namespace clang {
 namespace cling {
   class MutableMemoryBuffer;
   class ChainedASTConsumer;
+  class ASTTransformVisitor;
 
   class IncrementalASTParser {
   public:
