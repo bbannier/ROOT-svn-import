@@ -31,8 +31,8 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/System/Host.h"
-#include "llvm/System/Signals.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Target/TargetSelect.h"
 
 #include "cling/Interpreter/Interpreter.h"
@@ -243,7 +243,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
 
    PP.getBuiltinInfo().InitializeBuiltins
       (PP.getIdentifierTable (),
-       PP.getLangOptions().NoBuiltin);
+       PP.getLangOptions());
 
    PrintInfo (CI);
 
