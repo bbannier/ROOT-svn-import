@@ -47,6 +47,8 @@ namespace cling {
     //! Destructor
     //---------------------------------------------------------------------
     virtual ~Interpreter();
+
+    const char* getVersion() const;
     
     void AddIncludePath(const char *path);
 	// Using static to avoid creating a Member call, which needs this pointer
