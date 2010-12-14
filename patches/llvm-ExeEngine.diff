@@ -1,8 +1,8 @@
 Index: include/llvm/ExecutionEngine/ExecutionEngine.h
 ===================================================================
---- include/llvm/ExecutionEngine/ExecutionEngine.h	(revision 116193)
+--- include/llvm/ExecutionEngine/ExecutionEngine.h	(revision 121774)
 +++ include/llvm/ExecutionEngine/ExecutionEngine.h	(working copy)
-@@ -183,6 +183,22 @@
+@@ -213,6 +213,22 @@
    virtual void addModule(Module *M) {
      Modules.push_back(M);
    }
@@ -23,5 +23,5 @@ Index: include/llvm/ExecutionEngine/ExecutionEngine.h
 +
 +   
    
-   //===----------------------------------------------------------------------===//
+   //===--------------------------------------------------------------------===//
  
