@@ -1696,7 +1696,7 @@ void TScanner::Scan(clang::ASTContext* C, clang::Decl* D,
       //      pos = selectionFileName.find("linkdef.h");
       if (filename.CompareTo("linkdef.h", TString::kIgnoreCase))
          sr.setSelectionFileType(kLinkdefFile);
-      else if (filename.Data() == "--deep") {
+      else if (filename == "--deep") {
          sr.setDeep(true);
          deep = true;
          std::cout<<"Deep set"<<std::endl;
