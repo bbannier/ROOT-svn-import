@@ -121,11 +121,11 @@ namespace cling {
 
     // Allow the interpreter to find itself.
     // OBJ first: if it exists it should be more up to date
-    // AddIncludePath(CLING_SRCDIR_INCL);
-    // AddIncludePath(CLING_INSTDIR_INCL);
-    // compileString("#define __STDC_LIMIT_MACROS\n");
-    // compileString("#define __STDC_CONSTANT_MACROS\n");
-    // compileString("#include \"cling/Interpreter/Interpreter.h\"\n");
+    AddIncludePath(CLING_SRCDIR_INCL);
+    AddIncludePath(CLING_INSTDIR_INCL);
+    compileString("#define __STDC_LIMIT_MACROS\n");
+    compileString("#define __STDC_CONSTANT_MACROS\n");
+    compileString("#include \"cling/Interpreter/Interpreter.h\"\n");
   }
   
   //---------------------------------------------------------------------------
@@ -562,6 +562,7 @@ namespace cling {
 
    // Implements the interpretation of the unknown symbols. 
    bool Interpreter::EvalCore(llvm::GenericValue& result, const char* expr) {
+      printf("%s", expr);
       return 0;
    }
   

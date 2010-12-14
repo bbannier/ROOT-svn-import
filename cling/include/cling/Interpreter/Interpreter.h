@@ -48,11 +48,13 @@ namespace cling {
     virtual ~Interpreter();
     
     void AddIncludePath(const char *path);
+	// Using static to avoid creating a Member call, which needs this pointer
     template<typename T>
-    T Eval(const char* expr) {
+    static T Eval(size_t This, const char* expr) {
        llvm::GenericValue result;
-       EvalCore(result, expr);
-       //FIXME: we shouldn't return T() 
+       ((Interpreter*) (void*)This)->EvalCore(result, expr);
+       //FIXME: we should return T calculated from result
+       Eval<int>(This, expr);
        return T();
     }
      

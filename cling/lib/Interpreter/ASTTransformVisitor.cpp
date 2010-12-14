@@ -10,55 +10,23 @@
 
 #include "llvm/ADT/SmallVector.h"
 
+//#include "clang/Sema/Lookup.h"
+
 namespace llvm {
    class raw_string_ostream;
 }
 
 namespace cling {
 
-   //region Constructors
-
-   ASTTransformVisitor::ASTTransformVisitor()
-     : EvalDecl(0), SemaPtr(0), CurrentDecl(0)
-   {
-   }
-
-   ASTTransformVisitor::ASTTransformVisitor(Sema *SemaPtr)
-     : EvalDecl(0), SemaPtr(SemaPtr), CurrentDecl(0)
-   {
-   }
-
-   //endregion
-
-
-   //region Destructor
-
-   //ASTTransformVisitor::~ASTTransformVisitor()
-   //{
-   //   delete EvalDecl;
-   //   EvalDecl = 0;
-   //   delete SemaPtr;
-   //   SemaPtr = 0;
-   //   delete CurrentDecl;
-   //   CurrentDecl = 0;
-   //}
-   
-   //endregion
-
-
    //region DeclVisitor
    
    void ASTTransformVisitor::Visit(Decl *D) {
-      Decl *PrevDecl = ASTTransformVisitor::CurrentDecl;
-      ASTTransformVisitor::CurrentDecl = D;
-      BaseDeclVisitor::Visit(D);
-      ASTTransformVisitor::CurrentDecl = PrevDecl;
-   }
-   
-   void ASTTransformVisitor::VisitDeclaratorDecl(DeclaratorDecl *D) {
-      BaseDeclVisitor::VisitDeclaratorDecl(D);
-      //     if (TypeSourceInfo *TInfo = D->getTypeSourceInfo())
-      //       Visit(TInfo->getTypeLoc());
+      //if (ShouldVisit(D)) {
+         Decl *PrevDecl = ASTTransformVisitor::CurrentDecl;
+         ASTTransformVisitor::CurrentDecl = D;
+         BaseDeclVisitor::Visit(D);
+         ASTTransformVisitor::CurrentDecl = PrevDecl;
+       //}
    }
    
    void ASTTransformVisitor::VisitFunctionDecl(FunctionDecl *D) {
@@ -71,38 +39,22 @@ namespace cling {
             D->setBody(New);
       }
    }
-   
-   void ASTTransformVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
-      BaseDeclVisitor::VisitFunctionTemplateDecl(D);
-      
+ 
+   void ASTTransformVisitor::VisitTemplateDecl(TemplateDecl *D) {     
       if (D->getNameAsString().compare("Eval") == 0) {
-         NamespaceDecl *ND = dyn_cast<NamespaceDecl>(D->getDeclContext());
-         if (ND && ND->getNameAsString().compare("cling") == 0) {
-            setEvalDecl(D->getTemplatedDecl());
+         CXXRecordDecl *CXX = dyn_cast<CXXRecordDecl>(D->getDeclContext());
+         if (CXX && CXX->getNameAsString().compare("Interpreter") == 0) {  
+            NamespaceDecl *ND = dyn_cast<NamespaceDecl>(CXX->getDeclContext());
+            if (ND && ND->getNameAsString().compare("cling") == 0) {
+               if (FunctionDecl *FDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl()))
+                  setEvalDecl(FDecl);
+            }
          }
       }
-      
    }
-   
-   void ASTTransformVisitor::VisitObjCMethodDecl(ObjCMethodDecl *D) {
-      BaseDeclVisitor::VisitObjCMethodDecl(D);
-      if (D->getBody())
-         Visit(D->getBody());
-   }
-   
-   void ASTTransformVisitor::VisitBlockDecl(BlockDecl *D) {
-      BaseDeclVisitor::VisitBlockDecl(D);
-      Visit(D->getBody());
-   }
-   
-   void ASTTransformVisitor::VisitVarDecl(VarDecl *D) {
-      BaseDeclVisitor::VisitVarDecl(D);
-      if (Expr *Init = D->getInit())
-         Visit(Init);
-   }
-   
+  
    void ASTTransformVisitor::VisitDecl(Decl *D) {
-      if (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D) || isa<BlockDecl>(D))
+      if (!ShouldVisit(D))
          return;
       
       if (DeclContext *DC = dyn_cast<DeclContext>(D))
@@ -111,8 +63,9 @@ namespace cling {
    
    void ASTTransformVisitor::VisitDeclContext(DeclContext *DC) {
       for (DeclContext::decl_iterator
-              I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I)
-         Visit(*I);
+              I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I)        
+         if (ShouldVisit(*I))
+            Visit(*I);
    }
    
    //endregion
@@ -153,7 +106,7 @@ namespace cling {
             }
          }
       }
-      return EvalInfo(Node, Node->isTypeDependent() || Node->isValueDependent());
+      return EvalInfo(Node, 0);
    }
 
    // EvalInfo ASTTransformVisitor::VisitCompoundStmt(CompoundStmt *S) {
@@ -178,26 +131,26 @@ namespace cling {
    // }
 
    EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *E) {
-      if (E->isTypeDependent() || E->isValueDependent()) {
+      if (IsArtificiallyDependent(E)) {
          // FIXME: Handle the arguments
-         EvalInfo EInfo = Visit(E->getCallee());
-
+         // EvalInfo EInfo = Visit(E->getCallee());
+         
          return EvalInfo(E, 1);
-      
+         
       }
       return EvalInfo(E, 0);
    }
    
-   EvalInfo ASTTransformVisitor::VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
-      return EvalInfo(ICE, 0);
-   }
+   // EvalInfo ASTTransformVisitor::VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
+   //    return EvalInfo(ICE, 0);
+   // }
    
    EvalInfo ASTTransformVisitor::VisitDeclRefExpr(DeclRefExpr *DRE) {
-      return EvalInfo(DRE, 0);
+         return EvalInfo(DRE, 0);
    }
       
    EvalInfo ASTTransformVisitor::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node) {
-      return EvalInfo(Node, 1);
+         return EvalInfo(Node, 1);
    }
 
    EvalInfo ASTTransformVisitor::VisitBinaryOperator(BinaryOperator *binOp) {
@@ -224,10 +177,15 @@ namespace cling {
 
    // Here is the test Eval function specialization. Here the CallExpr to the function
    // is created.
-   CallExpr *ASTTransformVisitor::BuildEvalCallExpr(const QualType InstTy, Expr *SubTree) {
+   CallExpr *ASTTransformVisitor::BuildEvalCallExpr(const QualType InstTy, Expr *SubTree) {      
+      // we need the ASTContext
+      ASTContext &C = SemaPtr->getASTContext();
       // Set up new context for the new FunctionDecl
       DeclContext *PrevContext = SemaPtr->CurContext;
       FunctionDecl *FDecl = getEvalDecl();
+      
+      assert(FDecl && "The Eval function not found!");
+
       SemaPtr->CurContext = FDecl->getDeclContext();
       
       // Create template arguments
@@ -269,7 +227,16 @@ namespace cling {
       
       // Prepare the actual arguments for the call
       ASTOwningVector<Expr*> CallArgs(*SemaPtr);
-      CallArgs.push_back(BuildEvalCharArg(FDecl->getParamDecl(0U)->getType(), SubTree));
+
+      //ParmVarDecl *Param0 = FDecl->getParamDecl(0U);
+      ParmVarDecl *Param1 = FDecl->getParamDecl(1U);
+
+      // Pass the address of the Interpreter object in
+      const llvm::APInt gClingAddr(8 * sizeof(void *), (uint64_t)gCling);
+      IntegerLiteral *IntLiteral = IntegerLiteral::Create(C, gClingAddr, C.UnsignedLongTy, SourceLocation());
+
+      CallArgs.push_back(IntLiteral);
+      CallArgs.push_back(BuildEvalCharArg(Param1->getType(), SubTree));
 
       
       CallExpr *EvalCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
@@ -279,7 +246,6 @@ namespace cling {
                                                   , move_arg(CallArgs)
                                                   , SourceLocation()
                                                   ).takeAs<CallExpr>();
-      // FIXME: Take in mind the string format specifiers in printf("%..")
       return EvalCall;                  
       
    }
@@ -302,6 +268,42 @@ namespace cling {
       SemaPtr->ImpCastExprToType(SL, ToType, CK_ArrayToPointerDecay);
 
       return SL;
+   }
+
+   bool ASTTransformVisitor::ShouldVisit(Decl *D) {
+      while (true) {
+         if (isa<TemplateTemplateParmDecl>(D))
+            return false;
+         if (isa<ClassTemplateDecl>(D))
+            return false;
+         if (isa<FriendTemplateDecl>(D))
+            return false;
+         if (isa<ClassTemplatePartialSpecializationDecl>(D))
+            return false;
+         if (CXXRecordDecl *CXX = dyn_cast<CXXRecordDecl>(D)) {
+            if (CXX->getDescribedClassTemplate())
+               return false;
+         }
+         if (CXXMethodDecl *CXX = dyn_cast<CXXMethodDecl>(D)) {
+            if (CXX->getDescribedFunctionTemplate())
+               return false;
+         }
+         if (isa<TranslationUnitDecl>(D)) {
+            break;
+         }
+         
+         if (DeclContext* DC = D->getDeclContext())
+            if (!(D = dyn_cast<Decl>(DC)))
+                break;
+      }
+      
+      return true;
+   }
+
+   bool ASTTransformVisitor::IsArtificiallyDependent(CallExpr *Node) {
+      if (!Node->isValueDependent() || !Node->isTypeDependent())
+          return false;     
+      return true;
    }
    
 //endregion

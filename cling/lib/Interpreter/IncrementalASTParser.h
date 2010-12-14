@@ -12,6 +12,8 @@
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
+#include "ASTTransformVisitor.h"
+
 namespace clang {
   class CompilerInstance;
   class Parser;
@@ -44,6 +46,9 @@ namespace cling {
     MutableMemoryBuffer* getCurBuffer() {
        return m_MemoryBuffer.back();
     }
+     
+   ASTTransformVisitor *getTransformer() const { return m_Transformer; }
+
   private:
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Sema> m_Sema; // sema used for parsing
@@ -52,6 +57,7 @@ namespace cling {
     clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedASTConsumer* m_Consumer; // CI owns it
     clang::SourceLocation m_InterruptHere; // where to stop parsing top level decls
+    ASTTransformVisitor *m_Transformer;
   };
 }
 #endif // CLING_INCREMENTAL_AST_PARSER_H
