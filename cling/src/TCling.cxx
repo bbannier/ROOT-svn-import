@@ -49,7 +49,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Frontend/HeaderSearchOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "llvm/System/DynamicLibrary.h"
+#include "llvm/Support/DynamicLibrary.h"
 
 #include <map>
 #include <vector>
