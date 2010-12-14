@@ -29,6 +29,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
 #include "Visitors.h"
@@ -115,6 +116,8 @@ namespace cling {
     m_ExecutionContext.reset(new ExecutionContext(*this));
     
     m_InputValidator.reset(new InputValidator(createCI()));
+
+    m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
     
     compileString(""); // Consume initialization.
     compileString("#include <stdio.h>\n");
@@ -126,6 +129,16 @@ namespace cling {
     compileString("#define __STDC_LIMIT_MACROS\n");
     compileString("#define __STDC_CONSTANT_MACROS\n");
     compileString("#include \"cling/Interpreter/Interpreter.h\"\n");
+    compileString("#include \"cling/Interpreter/ValuePrinter.h\"\n");
+
+    std::stringstream sstr;
+    // Would like
+    // namespace cling {Interpreter* gCling = (Interpreter*)0x875478643;"
+    // but we can't handle namespaced decls yet :-(
+    // sstr << "namespace cling {Interpreter* gCling = (Interpreter*)" << (void*) this << "; (void) gCling; \n"
+    sstr << "cling::Interpreter* gCling = (cling::Interpreter*)"
+         << (const void*) this << ";";
+    compileString(sstr.str());
   }
   
   //---------------------------------------------------------------------------
@@ -250,7 +263,12 @@ namespace cling {
     std::string stmtVsDeclFunc = stmtFunc + "_stmt_vs_decl";
     std::vector<clang::Stmt*> stmts;
     clang::CompilerInstance* CI = 0;
+    bool haveSemicolon = false;
     {
+      size_t endsrc = src.length();
+      while (endsrc && isspace(src[endsrc - 1])) --endsrc;
+      haveSemicolon = src[endsrc - 1] == ';';
+
       std::string nonTUsrc = "void " + stmtVsDeclFunc + "() {\n" + src + ";}";
       // Create an ASTConsumer for this frontend run which
       // will produce a list of statements seen.
@@ -276,6 +294,7 @@ namespace cling {
     std::string held_globals;
     std::string wrapped_globals;
     std::string wrapped_stmts;
+    std::string final_stmt; // last statement for value printer
     {
       clang::SourceManager& SM = CI->getSourceManager();
       const clang::LangOptions& LO = CI->getLangOpts();
@@ -283,6 +302,13 @@ namespace cling {
       std::vector<clang::Stmt*>::iterator stmt_end = stmts.end();
       for (; stmt_iter != stmt_end; ++stmt_iter) {
         clang::Stmt* cur_stmt = *stmt_iter;
+        
+        if (dyn_cast<clang::NullStmt>(cur_stmt)) continue;
+
+        if (!final_stmt.empty()) {
+           wrapped_stmts.append(final_stmt + '\n');
+        }
+
         //const llvm::MemoryBuffer* MB = SM.getBuffer(SM.getFileID(cur_stmt->getLocStart()));
         //const llvm::MemoryBuffer* MB = SM.getBuffer(SM.getMainFileID());
         const llvm::MemoryBuffer* MB = (const llvm::MemoryBuffer*)m_IncrASTParser->getCurBuffer();
@@ -301,7 +327,7 @@ namespace cling {
           const clang::Expr* expr = dyn_cast<clang::Expr>(cur_stmt);
           if (expr) {
             //fprintf(stderr, "have expr stmt.\n");
-            wrapped_stmts.append(stmt_string + '\n');
+            final_stmt = stmt_string;
             continue;
           }
         }
@@ -311,7 +337,7 @@ namespace cling {
         const clang::DeclStmt* DS = dyn_cast<clang::DeclStmt>(cur_stmt);
         if (!DS) {
           //fprintf(stderr, "not expr, not declaration.\n");
-          wrapped_stmts.append(stmt_string + '\n');
+          final_stmt = stmt_string;
           continue;
         }
         //
@@ -385,9 +411,8 @@ namespace cling {
           if (!ILE) {
             //fprintf(stderr, "var decl, init is not list.\n");
             std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
-            wrapped_stmts.append(std::string(VD->getName())  + " = " +
-                                 std::string(buffer + r.first, r.second - r.first)
-                                 + ";\n");
+            final_stmt = std::string(VD->getName())  + " = " +
+               std::string(buffer + r.first, r.second - r.first) + ";";
             wrapped_globals.append(decl + ";\n");
             held_globals.append(decl + ";\n");
             continue;
@@ -404,16 +429,25 @@ namespace cling {
             std::pair<unsigned, unsigned> r =
             getStmtRange(ILE->getInit(j), SM, LO);
             stm << std::string(buffer + r.first, r.second - r.first) << ";\n";
-            wrapped_stmts.append(stm.str());
+            final_stmt = stm.str();
           }
           wrapped_globals.append(decl + ";\n");
           held_globals.append(decl + ";\n");
         }
       }
-      haveStatements = !wrapped_stmts.empty();
+      haveStatements = !final_stmt.empty();
       if (haveStatements) {
-        wrapped_stmts = "extern \"C\" void " + stmtFunc + "() {\n"
-        + wrapped_stmts + ";}\n";
+            std::stringstream sstr_stmt;
+            sstr_stmt << "extern \"C\" void " << stmtFunc << "() {\n"
+                      << wrapped_stmts;
+         if (!haveSemicolon) {
+            sstr_stmt << "cling::ValuePrinter(((cling::Interpreter*)"
+                      << (void*)this << ")->getValuePrinterStream(),"
+                      << final_stmt << ");}\n";
+         } else {
+            sstr_stmt << final_stmt << ";}\n";
+         }
+         wrapped_stmts = sstr_stmt.str();
       } else {
         stmtFunc = "";
       }
@@ -437,6 +471,7 @@ namespace cling {
     //CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
     //CI->getDiagnosticClient().EndSourceFile();
     unsigned err_count = CI->getDiagnosticClient().getNumErrors();
+    // reset diag client
     if (err_count) {
       wrapped.clear();
       return;
