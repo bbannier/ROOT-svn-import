@@ -22,7 +22,7 @@ namespace cling {
    public:
       DiagnosticPrinter();
       virtual ~DiagnosticPrinter();
-      void ResetCounts();
+      void resetCounts();
    };
 } // namespace cling
 

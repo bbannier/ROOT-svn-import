@@ -74,6 +74,7 @@ namespace cling {
       m_printAST = print;
       return prev;
     }
+    void dumpAST(bool newestTopLevelDecl = false) const;
     
     clang::CompilerInstance* getCI() const;
     clang::CompilerInstance* createCI() const;

@@ -604,6 +604,16 @@ namespace cling {
       printf("%s", expr);
       return 0;
    }
+
+   void cling::Interpreter::dumpAST(bool newestTopLevelDecl/*=false*/) const {
+      clang::Decl* D = 0;
+     if (newestTopLevelDecl) {
+        D = m_IncrASTParser->getCI()->getASTContext().getTranslationUnitDecl();
+     } else {
+        D = m_IncrASTParser->getLastTopLevelDecl();
+     }
+     if (D) D->dump();
+   }
   
 } // namespace cling
 

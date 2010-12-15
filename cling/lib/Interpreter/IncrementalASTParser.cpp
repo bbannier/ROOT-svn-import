@@ -103,7 +103,7 @@ e = Consumers.end(); i != e; ++i) (*i)->WHAT PARAM; \
 cling::IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
                                                   clang::ASTConsumer* Consumer,
                                                 clang::PragmaNamespace* Pragma):
-m_Consumer(0) {
+  m_Consumer(0), m_LastTopLevelDecl(0) {
   assert(CI && "CompilerInstance is (null)!");
   m_CI.reset(CI);
     
@@ -186,11 +186,11 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
 
      clang::Token &tok = const_cast<clang::Token&>(m_Parser->getCurToken());
      tok.setKind(clang::tok::semi);
-     // printf("src:%s\n",src.data());
   }
   
   cling::DiagnosticPrinter* DC = reinterpret_cast<cling::DiagnosticPrinter*>(&m_CI->getDiagnosticClient());
-  DC->ResetCounts();
+  DC->resetCounts();
+  m_CI->getDiagnostics().Reset();
 
   clang::ASTConsumer* Consumer = &m_CI->getASTConsumer();
   clang::Parser::DeclGroupPtrTy ADecl;
@@ -209,15 +209,11 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
     // skipping something.
     if (ADecl) {
       clang::DeclGroupRef DGR = ADecl.getAsVal<clang::DeclGroupRef>();
-      for(clang::DeclGroupRef::iterator i=DGR.begin(); i< DGR.end(); ++i) {
-         getTransformer()->Visit(*i);
-          
-      //    printf("\ndecl:\n");
-      //    (*i)->dump();
+      for (clang::DeclGroupRef::iterator i=DGR.begin(); i< DGR.end(); ++i) {
+         m_LastTopLevelDecl = *i;
+         getTransformer()->Visit(m_LastTopLevelDecl);
       } 
-      // printf("\nend decl.\n");
       Consumer->HandleTopLevelDecl(DGR);
-
       if (m_InterruptHere.isValid()) {
         clang::Decl* D = 0;
         if (DGR.isSingleDecl()) {
@@ -244,7 +240,6 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
       atEOF = m_Parser->ParseTopLevelDecl(ADecl);
     }
   };
-  // printf("end decl loop.\n");
 
   m_InterruptHere = clang::SourceLocation();
 
@@ -258,25 +253,29 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
   clang::ASTContext *Ctx = &m_CI->getASTContext();
   Consumer->HandleTranslationUnit(*Ctx);
   
-  //if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
-  //   SC->ForgetSema();
-  
-  // END REPLACEMENT clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
-  
-  
   if (AddConsumer) {
     m_Consumer->Consumers.pop_back();
   }
-  //CI->setASTConsumer(0);
-  //if (CI->hasPreprocessor()) {
-  //   CI->getPreprocessor().EndSourceFile();
-  //}
-  //CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
   DC->EndSourceFile();
   unsigned err_count = DC->getNumErrors();
   if (err_count) {
     fprintf(stderr, "IncrementalASTParser::parse(): Parse failed!\n");
+    emptyLastFunction();
     return 0;
   }
   return m_CI.get();  
+}
+
+
+void cling::IncrementalASTParser::emptyLastFunction() {
+   // Given a broken AST (e.g. due to a syntax error),
+   // replace the last function's body by a null statement.
+
+   // Note: this does not touch the identifier table.
+   clang::ASTContext& Ctx = m_CI->getASTContext();
+   clang::FunctionDecl* F = dyn_cast<clang::FunctionDecl>(m_LastTopLevelDecl);
+   if (F && F->getBody()) {
+      clang::NullStmt* NStmt = new (Ctx) clang::NullStmt(clang::SourceLocation());
+      F->setBody(NStmt);
+   }
 }

@@ -14,6 +14,7 @@
 
 namespace clang {
   class CompilerInstance;
+  class Decl;
   class Parser;
   class Sema;
   class ASTConsumer;
@@ -48,6 +49,9 @@ namespace cling {
      
    ASTTransformVisitor *getTransformer() const { return m_Transformer; }
 
+   void emptyLastFunction();
+   clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
+
   private:
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Sema> m_Sema; // sema used for parsing
@@ -57,6 +61,7 @@ namespace cling {
     ChainedASTConsumer* m_Consumer; // CI owns it
     clang::SourceLocation m_InterruptHere; // where to stop parsing top level decls
     ASTTransformVisitor *m_Transformer;
+    clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
   };
 }
 #endif // CLING_INCREMENTAL_AST_PARSER_H
