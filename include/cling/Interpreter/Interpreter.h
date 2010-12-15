@@ -57,7 +57,6 @@ namespace cling {
        llvm::GenericValue result;
        ((Interpreter*) (void*)This)->EvalCore(result, expr);
        //FIXME: we should return T calculated from result
-       Eval<int>(This, expr);
        return T();
     }
      
