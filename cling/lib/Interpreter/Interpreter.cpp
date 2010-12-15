@@ -590,10 +590,6 @@ namespace cling {
     return 0;
   }
 
-  void Interpreter::RequestContinuation(const clang::SourceLocation&) {
-    printf("...\n");
-  }
-  
   void Interpreter::installLazyFunctionCreator(void* (*fp)(const std::string&)) {
     m_ExecutionContext->getEngine().InstallLazyFunctionCreator(fp);
   }

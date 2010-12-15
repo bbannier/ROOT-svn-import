@@ -39,9 +39,6 @@ namespace cling {
     clang::Parser* getParser() const { return m_Parser.get(); }
     clang::CompilerInstance* parse(llvm::StringRef src,
       clang::ASTConsumer* Consumer = 0);
-    void RequestParseInterrupt(const clang::SourceLocation& Loc) {
-      m_InterruptHere = Loc; }
-
     
     MutableMemoryBuffer* getCurBuffer() {
        return m_MemoryBuffer.back();
@@ -59,7 +56,6 @@ namespace cling {
     std::vector<MutableMemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
     clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedASTConsumer* m_Consumer; // CI owns it
-    clang::SourceLocation m_InterruptHere; // where to stop parsing top level decls
     ASTTransformVisitor *m_Transformer;
     clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
   };
