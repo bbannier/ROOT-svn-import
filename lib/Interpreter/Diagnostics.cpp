@@ -33,7 +33,7 @@ namespace cling {
       clang::TextDiagnosticPrinter(llvm::errs(), getDefaultDiagOpts()) {}
    DiagnosticPrinter::~DiagnosticPrinter() {}
 
-   void DiagnosticPrinter::ResetCounts() {
+   void DiagnosticPrinter::resetCounts() {
       NumWarnings = 0;
       NumErrors = 0;
    }
