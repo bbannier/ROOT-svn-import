@@ -21,9 +21,9 @@ namespace cling {
   //   void dumpPtr(llvm::raw_ostream& o, const clang::Decl* a, ACTUAL* ac,
   //                int flags, const char* tname);
   template <typename TY>
-  void printValue(llvm::raw_ostream& o, const void* const t, TY* u, int flags,
-                  const char* tname);
-  
+  void printValue(llvm::raw_ostream& o, const void* const p,
+                  TY* const u, int flags, const char* tname);
+
   class ValuePrinter {
   public:
     
@@ -35,21 +35,17 @@ namespace cling {
   protected:
     template <typename TY>
     struct TypedPrinter {
-      void operator()(llvm::raw_ostream& o, const TY& t) {
+      TypedPrinter(llvm::raw_ostream& o, const TY& t, int isConst) {
         std::string n;
-        printValue(o, &t, &t, kIsObj | kIsConst, getTypeName(&t, n));
-      }
-      void operator()(llvm::raw_ostream& o, TY& t) {
-        std::string n;
-        printValue(o, &t, &t, kIsObj, getTypeName(&t, n));
+        printValue(o, (TY*)&t, (TY*)&t, kIsObj | isConst, TypeName<TY>::get(n));
       }
     };
     
     template <typename TY>
     struct TypedPrinter<TY*> {
-      void operator()(llvm::raw_ostream& o, TY* t) {
+      TypedPrinter(llvm::raw_ostream& o, const TY* t, int isConst) {
         std::string n;
-        printValue(o, t, t, 0, getTypeName(t, n));
+        printValue(o, (TY*)t, (TY*)t, /*isConst*/0, TypeName<TY*>::get(n));
       }
     };
 
@@ -57,48 +53,96 @@ namespace cling {
     template <typename T>
     ValuePrinter(llvm::raw_ostream& o, const T& t) {
       // give temporaries a defined lifetime
-      TypedPrinter<T> d; d(o, t);
+      TypedPrinter<T>(o, t, kIsConst);
     }
     
     template <typename T>
     ValuePrinter(llvm::raw_ostream& o, T& t) {
       // give temporaries a defined lifetime
-      TypedPrinter<T> d; d(o, t);
+      TypedPrinter<T>(o, t, 0);
     }
     
     template <typename T>
-    static
-    const char* getTypeName(T*,std::string& n) {
-      // Get the type name. This function is always compiled with clang,
-      // thus the layout of its name is fixed.
-      n = __PRETTY_FUNCTION__;
-      n.erase(0,24);
-      n.erase(n.length() - 17, std::string::npos);
-      size_t l = n.length();
-      if (n[l - 1] == ' ') n.erase(l - 1);
-      return n.c_str();
-    }
+    struct TypeName {
+      static const char* get(std::string& n) {
+        // Get the type name. This function is always compiled with clang,
+        // thus the layout of its name is fixed.
+        n = __PRETTY_FUNCTION__;
+        n.erase(0,49);
+        n.erase(n.length() - 21, std::string::npos);
+        size_t l = n.length();
+        if (n[l - 1] == ' ') n.erase(l - 1);
+        return n.c_str();
+      }
+    };
   };
+
+  // Allows to map const T to T, because CanStream<T>
+  // is the same whether T is const or not.
+  template <typename T> struct NoConst { typedef T Type; };
+  template <typename T> struct NoConst<T const> { typedef T Type; };
+
+  // CanStream<T>::get is 0 if a T object cannot be streamed to
+  // llvm::raw_ostream, 1 otherwise. This can be specialized for user
+  // types defining thier own streaming operators.
+  template<typename T> struct CanStream { enum {get = 0}; };
+  template<> struct CanStream<bool> { enum {get = 1}; };
+  template<> struct CanStream<char> { enum {get = 1}; };
+  template<> struct CanStream<unsigned char> { enum {get = 1}; };
+  template<> struct CanStream<short> { enum {get = 1}; };
+  template<> struct CanStream<unsigned short> { enum {get = 1}; };
+  template<> struct CanStream<int> { enum {get = 1}; };
+  template<> struct CanStream<unsigned int> { enum {get = 1}; };
+  template<> struct CanStream<long> { enum {get = 1}; };
+  template<> struct CanStream<unsigned long> { enum {get = 1}; };
+  template<> struct CanStream<long long> { enum {get = 1}; };
+  template<> struct CanStream<unsigned long long> { enum {get = 1}; };
+  template<> struct CanStream<float> { enum {get = 1}; };
+  template<> struct CanStream<double> { enum {get = 1}; };
+  template<> struct CanStream<long double> { enum {get = 1}; };
+  // char* is often an arbitrary memory address with ptr arith,
+  // so don't print as text:
+  template<> struct CanStream<char*> { enum {get = 0}; };
+  template<> struct CanStream<const char*> { enum {get = 1}; };
+  // aka string literals:
+  template<int N> struct CanStream<char[N]> { enum {get = 1}; };
+
+  // Can be reimplemented to stream an object (not a pointer!) of
+  // type T.
+  template <typename T>
+  llvm::raw_ostream& StreamObject(llvm::raw_ostream& o, const T& v) {
+    return o << v; }
+  llvm::raw_ostream& StreamObject(llvm::raw_ostream& o, const char* v) {
+    // Needed to surround strings with '"'
+    return o << '"' << v << '"'; }
 
   // Can be re-implemented to print type-specific details, e.g. as
   //   template <typename ACTUAL>
-  //   void dumpPtr(llvm::raw_ostream& o, const clang::Decl* a, ACTUAL* ac,
-  //                int flags, const char* tname);
+  //   void dumpPtr(llvm::raw_ostream& o, const clang::Decl* a,
+  //                ACTUAL* ap, int flags, const char* tname);
   template <typename TY>
   inline
-  void printValue(llvm::raw_ostream& o, const void* const t, TY* u, int flags,
-                  const char* tname) {
+  void printValue(llvm::raw_ostream& o, const void* const t,
+                  TY* const u, int flags, const char* tname) {
+    o << "(" << tname;
     if (flags & ValuePrinter::kIsConst) {
-      o << "const ";
+      o << " const";
     }
-    o << tname;
     if (!(flags & ValuePrinter::kIsObj)) {
-      o << "*";
+      o << ") " << t << '\n';
+    } else {
+      o << ") ";
+      if (CanStream<TY>::get
+          || CanStream<typename NoConst<TY>::Type>::get) {
+        StreamObject(o, *u);
+        o << '\n';
+      } else {
+        o << "@" << t << '\n';
+      }
     }
-    o << " @ " << t << '\n';
     o.flush();
   }
-  
+
 }
 
 #endif // CLING_VALUEPRINTER_H
