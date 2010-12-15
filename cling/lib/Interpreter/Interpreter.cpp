@@ -279,9 +279,13 @@ namespace cling {
       StmtSplitter splitter(stmts);
       FunctionBodyConsumer* consumer =
         new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
-      
+
+      clang::Diagnostic& Diag = m_IncrASTParser->getCI()->getDiagnostics();
+      bool prevDiagSupp = Diag.getSuppressAllDiagnostics();
+      Diag.setSuppressAllDiagnostics(true);
       // fprintf(stderr,"nonTUsrc=%s\n",nonTUsrc.c_str());
       CI = m_IncrASTParser->parse(nonTUsrc, consumer);
+      Diag.setSuppressAllDiagnostics(prevDiagSupp);
 
       if (!CI) {
         wrapped.clear();
