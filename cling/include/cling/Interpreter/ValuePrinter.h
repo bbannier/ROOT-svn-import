@@ -96,6 +96,7 @@ namespace cling {
       o << "*";
     }
     o << " @ " << t << '\n';
+    o.flush();
   }
   
 }
