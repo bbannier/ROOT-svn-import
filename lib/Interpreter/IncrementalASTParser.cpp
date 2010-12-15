@@ -149,13 +149,12 @@ cling::IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
     SC->InitializeSema(*m_Sema.get());
 
   // Create the visitor that will transform all dependents that are left.
-  m_Transformer = new ASTTransformVisitor(this, m_Sema.get());
+  m_Transformer.reset(new ASTTransformVisitor(this, m_Sema.get()));
 }
 
 cling::IncrementalASTParser::~IncrementalASTParser()
 {
   m_CI->takeLLVMContext(); // Don't take down the context with the CI.
-  delete m_Transformer; // remove the ASTNodeTransformer
 }
 
 clang::CompilerInstance*

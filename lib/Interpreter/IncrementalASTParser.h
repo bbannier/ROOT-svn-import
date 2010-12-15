@@ -44,7 +44,7 @@ namespace cling {
        return m_MemoryBuffer.back();
     }
      
-   ASTTransformVisitor *getTransformer() const { return m_Transformer; }
+   ASTTransformVisitor *getTransformer() const { return m_Transformer.get(); }
 
    void emptyLastFunction();
    clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
@@ -53,10 +53,10 @@ namespace cling {
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Sema> m_Sema; // sema used for parsing
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
+    llvm::OwningPtr<ASTTransformVisitor> m_Transformer; // delayed id lookup
     std::vector<MutableMemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
     clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedASTConsumer* m_Consumer; // CI owns it
-    ASTTransformVisitor *m_Transformer;
     clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
   };
 }
