@@ -608,9 +608,9 @@ namespace cling {
    void cling::Interpreter::dumpAST(bool newestTopLevelDecl/*=false*/) const {
       clang::Decl* D = 0;
      if (newestTopLevelDecl) {
-        D = m_IncrASTParser->getCI()->getASTContext().getTranslationUnitDecl();
-     } else {
         D = m_IncrASTParser->getLastTopLevelDecl();
+     } else {
+        D = m_IncrASTParser->getCI()->getASTContext().getTranslationUnitDecl();
      }
      if (D) D->dump();
    }
