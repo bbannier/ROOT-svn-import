@@ -1,7 +1,7 @@
-Index: clang/lib/Sema/SemaExpr.cpp
+Index: tools/clang/lib/Sema/SemaExpr.cpp
 ===================================================================
---- clang/lib/Sema/SemaExpr.cpp	(revision 121773)
-+++ clang/lib/Sema/SemaExpr.cpp	(working copy)
+--- tools/clang/lib/Sema/SemaExpr.cpp	(revision 121975)
++++ tools/clang/lib/Sema/SemaExpr.cpp	(working copy)
 @@ -1495,11 +1495,18 @@
        if (D) R.addDecl(D);
      }
