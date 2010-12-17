@@ -2,11 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamKernel                                                         *
+ * Classes: PDEFoamKernelBase                                                     *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      PDEFoam kernel interface                                                  *
+ *      Implementation of PDEFoam kernel interface                                *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
@@ -23,36 +23,32 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-#ifndef ROOT_TMVA_PDEFoamKernel
-#define ROOT_TMVA_PDEFoamKernel
+//_____________________________________________________________________
+//
+// PDEFoamKernelBase
+//
+// This class is the abstract kernel interface for PDEFoam.  Derived
+// classes must override the Estimate() function.
+// _____________________________________________________________________
 
-#ifndef ROOT_TObject
-#include "TObject.h"
+#ifndef ROOT_TMVA_PDEFoamKernelBase
+#include "TMVA/PDEFoamKernelBase.h"
 #endif
 
-#ifndef ROOT_TMVA_PDEFoam
-#include "TMVA/PDEFoam.h"
-#endif
+ClassImp(TMVA::PDEFoamKernelBase)
 
-namespace TMVA {
+//_____________________________________________________________________
+TMVA::PDEFoamKernelBase::PDEFoamKernelBase()
+   : TObject()
+   , fLogger(new MsgLogger("PDEFoamKernelBase"))
+{
+   // Default constructor for streamer
+}
 
-   class PDEFoamKernel : public TObject {
-
-   protected:
-      mutable MsgLogger* fLogger;  //! message logger
-
-   public:
-      PDEFoamKernel();                 // Constructor
-      virtual ~PDEFoamKernel();        // Destructor
-
-      // kernel estimator
-      virtual Float_t Estimate( PDEFoam*, std::vector<Float_t>&, ECellValue ) = 0;
-
-      // Message logger
-      MsgLogger& Log() const { return *fLogger; }
-
-      ClassDef(PDEFoamKernel,1) // PDEFoam kernel
-   }; // end of PDEFoamKernel
-}  // namespace TMVA
-
-#endif
+//_____________________________________________________________________
+TMVA::PDEFoamKernelBase::~PDEFoamKernelBase()
+{
+   // Destructor
+   if (fLogger != NULL)
+      delete fLogger;
+}

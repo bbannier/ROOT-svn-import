@@ -120,7 +120,7 @@ Bool_t TMVA::PDEFoamTarget::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel *kernel)
+Float_t TMVA::PDEFoamTarget::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernelBase *kernel)
 {
    // This function finds the cell, which corresponds to the given
    // untransformed event vector 'xvec' and return its value, which is

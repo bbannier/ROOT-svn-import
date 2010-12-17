@@ -29,13 +29,13 @@
 #ifndef ROOT_TMVA_PDEFoam
 #include "TMVA/PDEFoam.h"
 #endif
-#ifndef ROOT_TMVA_PDEFoamKernel
-#include "TMVA/PDEFoamKernel.h"
+#ifndef ROOT_TMVA_PDEFoamKernelBase
+#include "TMVA/PDEFoamKernelBase.h"
 #endif
 
 namespace TMVA {
 
-   class PDEFoamKernelLinN : public PDEFoamKernel {
+   class PDEFoamKernelLinN : public PDEFoamKernelBase {
 
    protected:
       // helper function, which linear weights with the neighbor cells

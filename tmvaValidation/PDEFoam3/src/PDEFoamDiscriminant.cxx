@@ -136,7 +136,7 @@ void TMVA::PDEFoamDiscriminant::Finalize()
 }
 
 //_____________________________________________________________________
-TH2D* TMVA::PDEFoamDiscriminant::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, PDEFoamKernel *kernel, UInt_t nbin )
+TH2D* TMVA::PDEFoamDiscriminant::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, PDEFoamKernelBase *kernel, UInt_t nbin )
 {
    // Project foam variable idim1 and variable idim2 to histogram.
    //

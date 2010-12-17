@@ -966,12 +966,12 @@ Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernel *kernel)
+Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernelBase *kernel)
 {
    // This function finds the cell, which corresponds to the given
    // untransformed event vector 'xvec' and return its value, which is
    // given by the parameter 'cv'.  If kernel != NULL, then
-   // PDEFoamKernel::Estimate() is called on the transformed event
+   // PDEFoamKernelBase::Estimate() is called on the transformed event
    // variables.
    //
    // Parameters:
@@ -1177,7 +1177,7 @@ std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t
 }
 
 //_____________________________________________________________________
-TH1D* TMVA::PDEFoam::Draw1Dim( ECellValue cell_value, Int_t nbin, PDEFoamKernel *kernel )
+TH1D* TMVA::PDEFoam::Draw1Dim( ECellValue cell_value, Int_t nbin, PDEFoamKernelBase *kernel )
 {
    // Draws 1-dimensional foam (= histogram)
    //
@@ -1221,7 +1221,7 @@ TH1D* TMVA::PDEFoam::Draw1Dim( ECellValue cell_value, Int_t nbin, PDEFoamKernel 
 }
 
 //_____________________________________________________________________
-TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, PDEFoamKernel *kernel, UInt_t nbin )
+TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, PDEFoamKernelBase *kernel, UInt_t nbin )
 {
    // Project foam variable idim1 and variable idim2 to histogram.
    //
