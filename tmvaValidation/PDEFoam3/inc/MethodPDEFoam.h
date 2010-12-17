@@ -87,8 +87,8 @@
 #include "TMVA/PDEFoamMultiTarget.h"
 #endif
 
-#ifndef ROOT_TMVA_PDEFoamDensity
-#include "TMVA/PDEFoamDensity.h"
+#ifndef ROOT_TMVA_PDEFoamDensityBase
+#include "TMVA/PDEFoamDensityBase.h"
 #endif
 #ifndef ROOT_TMVA_PDEFoamTargetDensity
 #include "TMVA/PDEFoamTargetDensity.h"

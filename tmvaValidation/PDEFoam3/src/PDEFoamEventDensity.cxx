@@ -49,17 +49,17 @@ ClassImp(TMVA::PDEFoamEventDensity)
 
 //_____________________________________________________________________
 TMVA::PDEFoamEventDensity::PDEFoamEventDensity()
-   : PDEFoamDensity()
+   : PDEFoamDensityBase()
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamEventDensity::PDEFoamEventDensity(std::vector<Double_t> box)
-   : PDEFoamDensity(box)
+   : PDEFoamDensityBase(box)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamEventDensity::PDEFoamEventDensity(const PDEFoamEventDensity &distr)
-   : PDEFoamDensity(distr)
+   : PDEFoamDensityBase(distr)
 {
    // Copy constructor
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;

@@ -30,14 +30,14 @@
 #ifndef ROOT_TMVA_PDEFoamDiscriminantDensity
 #define ROOT_TMVA_PDEFoamDiscriminantDensity
 
-#ifndef ROOT_TMVA_PDEFoamDensity
-#include "TMVA/PDEFoamDensity.h"
+#ifndef ROOT_TMVA_PDEFoamDensityBase
+#include "TMVA/PDEFoamDensityBase.h"
 #endif
 
 namespace TMVA {
 
    // class definition of underlying event density
-   class PDEFoamDiscriminantDensity : public PDEFoamDensity  {
+   class PDEFoamDiscriminantDensity : public PDEFoamDensityBase  {
 
    protected:
       UInt_t fClass; // signal class

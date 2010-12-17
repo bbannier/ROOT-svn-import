@@ -48,13 +48,13 @@ ClassImp(TMVA::PDEFoamTargetDensity)
 
 //_____________________________________________________________________
 TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity()
-   : PDEFoamDensity()
+   : PDEFoamDensityBase()
    , fTarget(0)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(std::vector<Double_t> box, UInt_t target)
-   : PDEFoamDensity(box)
+   : PDEFoamDensityBase(box)
    , fTarget(target)
 {
    // Parameters:
@@ -66,7 +66,7 @@ TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(std::vector<Double_t> box, UInt
 
 //_____________________________________________________________________
 TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(const PDEFoamTargetDensity &distr)
-   : PDEFoamDensity(distr)
+   : PDEFoamDensityBase(distr)
    , fTarget(distr.fTarget)
 {
    // Copy constructor

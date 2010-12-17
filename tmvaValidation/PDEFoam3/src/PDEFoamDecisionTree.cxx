@@ -137,7 +137,7 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
    PDEFoamDecisionTreeDensity *distr = dynamic_cast<PDEFoamDecisionTreeDensity*>(fDistr);
    if (distr == NULL)
       Log() << kFATAL << "<PDEFoamDecisionTree::Explore>: cast failed: "
-	    << "PDEFoamDensity* --> PDEFoamDecisionTreeDensity*" << Endl;
+	    << "PDEFoamDensityBase* --> PDEFoamDecisionTreeDensity*" << Endl;
 
    // create TMVA::Volume object needed for searching within the BST
    TMVA::Volume volume(&lb, &ub);

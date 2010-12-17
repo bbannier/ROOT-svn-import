@@ -28,7 +28,7 @@
 #pragma link C++ class TMVA::PDEFoamTarget+;
 #pragma link C++ class TMVA::PDEFoamMultiTarget+;
 #pragma link C++ class TMVA::PDEFoamDecisionTree+;
-#pragma link C++ class TMVA::PDEFoamDensity+;
+#pragma link C++ class TMVA::PDEFoamDensityBase+;
 #pragma link C++ class TMVA::PDEFoamDiscriminantDensity+;
 #pragma link C++ class TMVA::PDEFoamEventDensity+;
 #pragma link C++ class TMVA::PDEFoamTargetDensity+;

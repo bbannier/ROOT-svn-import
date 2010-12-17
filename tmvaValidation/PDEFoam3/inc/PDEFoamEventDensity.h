@@ -30,14 +30,14 @@
 #ifndef ROOT_TMVA_PDEFoamEventDensity
 #define ROOT_TMVA_PDEFoamEventDensity
 
-#ifndef ROOT_TMVA_PDEFoamDensity
-#include "TMVA/PDEFoamDensity.h"
+#ifndef ROOT_TMVA_PDEFoamDensityBase
+#include "TMVA/PDEFoamDensityBase.h"
 #endif
 
 namespace TMVA {
 
    // class definition of underlying event density
-   class PDEFoamEventDensity : public PDEFoamDensity  {
+   class PDEFoamEventDensity : public PDEFoamDensityBase  {
 
    public:
       PDEFoamEventDensity();

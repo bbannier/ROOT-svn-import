@@ -50,19 +50,19 @@ ClassImp(TMVA::PDEFoamDiscriminantDensity)
 
 //_____________________________________________________________________
 TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity()
-   : PDEFoamDensity()
+   : PDEFoamDensityBase()
    , fClass(0)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(std::vector<Double_t> box, UInt_t cls)
-   : PDEFoamDensity(box)
+   : PDEFoamDensityBase(box)
    , fClass(cls)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(const PDEFoamDiscriminantDensity &distr)
-   : PDEFoamDensity(distr)
+   : PDEFoamDensityBase(distr)
    , fClass(distr.fClass)
 {
    // Copy constructor
