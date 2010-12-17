@@ -34,10 +34,12 @@
 #include "TMVA/PDEFoamDensityBase.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
    // class definition of underlying event density
-   class PDEFoamTargetDensity : public PDEFoamDensityBase  {
+   class PDEFoamTargetDensity : public PDEFoamDensityBase
+   {
 
    protected:
       UInt_t fTarget; // the target to calculate the density for
@@ -46,13 +48,13 @@ namespace TMVA {
       PDEFoamTargetDensity();
       PDEFoamTargetDensity(std::vector<Double_t> box, UInt_t target);
       PDEFoamTargetDensity(const PDEFoamTargetDensity&);
-      virtual ~PDEFoamTargetDensity(){};
+      virtual ~PDEFoamTargetDensity() {};
 
       // main function used by PDEFoam
       // returns event density at a given point by range searching in BST
       virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density);
 
-      ClassDef(PDEFoamTargetDensity,1) //Class for Target density
+      ClassDef(PDEFoamTargetDensity, 1) //Class for Target density
    };  //end of PDEFoamTargetDensity
 
 }  // namespace TMVA

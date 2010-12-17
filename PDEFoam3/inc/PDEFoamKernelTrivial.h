@@ -33,18 +33,20 @@
 #include "TMVA/PDEFoamKernelBase.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
-   class PDEFoamKernelTrivial : public PDEFoamKernelBase {
+   class PDEFoamKernelTrivial : public PDEFoamKernelBase
+   {
 
    public:
       PDEFoamKernelTrivial();                 // Constructor
-      virtual ~PDEFoamKernelTrivial(){};      // Destructor
+      virtual ~PDEFoamKernelTrivial() {};     // Destructor
 
       // kernel estimator
-      virtual Float_t Estimate( PDEFoam*, std::vector<Float_t>&, ECellValue );
+      virtual Float_t Estimate(PDEFoam*, std::vector<Float_t>&, ECellValue);
 
-      ClassDef(PDEFoamKernelTrivial,1) // trivial PDEFoam kernel
+      ClassDef(PDEFoamKernelTrivial, 1) // trivial PDEFoam kernel
    }; // end of PDEFoamKernelTrivial
 }  // namespace TMVA
 

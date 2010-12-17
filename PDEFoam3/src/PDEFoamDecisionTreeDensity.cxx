@@ -89,17 +89,17 @@ void TMVA::PDEFoamDecisionTreeDensity::FillHistograms(TMVA::Volume &volume, std:
    //   unweighted signal and background events
 
    // sanity check
-   if (hsig.size() != volume.fLower->size() 
-       || hbkg.size() != volume.fLower->size() 
-       || hsig_unw.size() != volume.fLower->size() 
+   if (hsig.size() != volume.fLower->size()
+       || hbkg.size() != volume.fLower->size()
+       || hsig_unw.size() != volume.fLower->size()
        || hbkg_unw.size() != volume.fLower->size())
       Log() << kFATAL << "<PDEFoamDistr::FillHistograms> Edge histograms have wrong size!" << Endl;
 
    // check histograms
    for (UInt_t idim = 0; idim < hsig.size(); ++idim) {
-      if (!hsig.at(idim) || !hbkg.at(idim) || 
-	  !hsig_unw.at(idim) || !hbkg_unw.at(idim))
-	 Log() << kFATAL << "<PDEFoamDistr::FillHist> Histograms not initialized!" << Endl;
+      if (!hsig.at(idim) || !hbkg.at(idim) ||
+          !hsig_unw.at(idim) || !hbkg_unw.at(idim))
+         Log() << kFATAL << "<PDEFoamDistr::FillHist> Histograms not initialized!" << Endl;
    }
 
    // BST nodes found in volume
@@ -112,11 +112,11 @@ void TMVA::PDEFoamDecisionTreeDensity::FillHistograms(TMVA::Volume &volume, std:
    std::vector<Float_t> xmin(volume.fLower->size(), std::numeric_limits<float>::max());
    std::vector<Float_t> xmax(volume.fLower->size(), -std::numeric_limits<float>::max());
    for (std::vector<const TMVA::BinarySearchTreeNode*>::const_iterator it = nodes.begin();
-	it != nodes.end(); ++it) {
+        it != nodes.end(); ++it) {
       std::vector<Float_t> ev = (*it)->GetEventV();
       for (UInt_t idim = 0; idim < xmin.size(); ++idim) {
-	 if (ev.at(idim) < xmin.at(idim))  xmin.at(idim) = ev.at(idim);
-	 if (ev.at(idim) > xmax.at(idim))  xmax.at(idim) = ev.at(idim);
+         if (ev.at(idim) < xmin.at(idim))  xmin.at(idim) = ev.at(idim);
+         if (ev.at(idim) > xmax.at(idim))  xmax.at(idim) = ev.at(idim);
       }
    }
 
@@ -134,17 +134,17 @@ void TMVA::PDEFoamDecisionTreeDensity::FillHistograms(TMVA::Volume &volume, std:
 
    // fill histograms with events found
    for (std::vector<const TMVA::BinarySearchTreeNode*>::const_iterator it = nodes.begin();
-	it != nodes.end(); ++it) {
+        it != nodes.end(); ++it) {
       std::vector<Float_t> ev = (*it)->GetEventV();
       Float_t              wt = (*it)->GetWeight();
       for (UInt_t idim = 0; idim < ev.size(); ++idim) {
-	 if ((*it)->GetClass() == fClass) {
-	    hsig.at(idim)->Fill(ev.at(idim), wt);
-	    hsig_unw.at(idim)->Fill(ev.at(idim), 1);
-	 } else {
-	    hbkg.at(idim)->Fill(ev.at(idim), wt);
-	    hbkg_unw.at(idim)->Fill(ev.at(idim), 1);
-	 }
+         if ((*it)->GetClass() == fClass) {
+            hsig.at(idim)->Fill(ev.at(idim), wt);
+            hsig_unw.at(idim)->Fill(ev.at(idim), 1);
+         } else {
+            hbkg.at(idim)->Fill(ev.at(idim), wt);
+            hbkg_unw.at(idim)->Fill(ev.at(idim), 1);
+         }
       }
    }
 }

@@ -44,7 +44,7 @@
 ClassImp(TMVA::PDEFoamEvent)
 
 //_____________________________________________________________________
-TMVA::PDEFoamEvent::PDEFoamEvent() 
+TMVA::PDEFoamEvent::PDEFoamEvent()
    : PDEFoam()
 {
    // Default constructor for streamer, user should not use it.
@@ -78,5 +78,5 @@ void TMVA::PDEFoamEvent::FillFoamCells(const Event* ev, Float_t wt)
    // 0. Element: Sum of event weights 'wt'
    // 1. Element: Sum of squared event weights 'wt'
    SetCellElement(cell, 0, GetCellElement(cell, 0) + wt);
-   SetCellElement(cell, 1, GetCellElement(cell, 1) + wt*wt);
+   SetCellElement(cell, 1, GetCellElement(cell, 1) + wt * wt);
 }

@@ -34,22 +34,24 @@
 #include "TMVA/PDEFoamDensityBase.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
    // class definition of underlying event density
-   class PDEFoamEventDensity : public PDEFoamDensityBase  {
+   class PDEFoamEventDensity : public PDEFoamDensityBase
+   {
 
    public:
       PDEFoamEventDensity();
       PDEFoamEventDensity(std::vector<Double_t> box);
       PDEFoamEventDensity(const PDEFoamEventDensity&);
-      virtual ~PDEFoamEventDensity(){};
+      virtual ~PDEFoamEventDensity() {};
 
       // main function used by PDEFoam
       // returns event density at a given point by range searching in BST
       virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density);
 
-      ClassDef(PDEFoamEventDensity,1) //Class for Event density
+      ClassDef(PDEFoamEventDensity, 1) //Class for Event density
    };  //end of PDEFoamEventDensity
 
 }  // namespace TMVA

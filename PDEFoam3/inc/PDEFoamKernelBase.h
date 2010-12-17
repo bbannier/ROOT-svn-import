@@ -34,9 +34,11 @@
 #include "TMVA/PDEFoam.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
-   class PDEFoamKernelBase : public TObject {
+   class PDEFoamKernelBase : public TObject
+   {
 
    protected:
       mutable MsgLogger* fLogger;  //! message logger
@@ -46,12 +48,12 @@ namespace TMVA {
       virtual ~PDEFoamKernelBase();        // Destructor
 
       // kernel estimator
-      virtual Float_t Estimate( PDEFoam*, std::vector<Float_t>&, ECellValue ) = 0;
+      virtual Float_t Estimate(PDEFoam*, std::vector<Float_t>&, ECellValue) = 0;
 
       // Message logger
       MsgLogger& Log() const { return *fLogger; }
 
-      ClassDef(PDEFoamKernelBase,1) // PDEFoam kernel
+      ClassDef(PDEFoamKernelBase, 1) // PDEFoam kernel
    }; // end of PDEFoamKernelBase
 }  // namespace TMVA
 

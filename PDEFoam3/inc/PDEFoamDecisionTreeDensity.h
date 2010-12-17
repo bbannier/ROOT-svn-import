@@ -43,10 +43,12 @@
 #include "TMVA/Volume.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
    // class definition of underlying event density
-   class PDEFoamDecisionTreeDensity : public PDEFoamDensityBase  {
+   class PDEFoamDecisionTreeDensity : public PDEFoamDensityBase
+   {
 
    protected:
       UInt_t fClass; // signal class
@@ -55,7 +57,7 @@ namespace TMVA {
       PDEFoamDecisionTreeDensity();
       PDEFoamDecisionTreeDensity(std::vector<Double_t> box, UInt_t cls);
       PDEFoamDecisionTreeDensity(const PDEFoamDecisionTreeDensity&);
-      virtual ~PDEFoamDecisionTreeDensity(){};
+      virtual ~PDEFoamDecisionTreeDensity() {};
 
       // returns allways 0
       virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density);
@@ -63,7 +65,7 @@ namespace TMVA {
       // fill histograms with events found in volume
       virtual void FillHistograms(TMVA::Volume&, std::vector<TH1D*>&, std::vector<TH1D*>&, std::vector<TH1D*>&, std::vector<TH1D*>&);
 
-      ClassDef(PDEFoamDecisionTreeDensity,1) // Class for decision tree like PDEFoam density
+      ClassDef(PDEFoamDecisionTreeDensity, 1) // Class for decision tree like PDEFoam density
    };  //end of PDEFoamDecisionTreeDensity
 
 }  // namespace TMVA

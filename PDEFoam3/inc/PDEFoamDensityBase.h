@@ -44,15 +44,17 @@
 #include "TMVA/MsgLogger.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
    // class definition of underlying density
-   class PDEFoamDensityBase : public ::TObject  {
+   class PDEFoamDensityBase : public ::TObject
+   {
 
    protected:
-      BinarySearchTree *fBst;   // Binary tree to find events within a volume
+      BinarySearchTree *fBst;     // Binary tree to find events within a volume
       std::vector<Double_t> fBox; // range-searching box
-      mutable MsgLogger* fLogger;                     //! message logger
+      mutable MsgLogger *fLogger; //! message logger
       MsgLogger& Log() const { return *fLogger; }
 
       // calculate volume of fBox
@@ -65,16 +67,16 @@ namespace TMVA {
       virtual ~PDEFoamDensityBase();
 
       // fill event into binary search tree
-      void FillBinarySearchTree( const Event* ev );
+      void FillBinarySearchTree(const Event* ev);
 
       // set the range-searching box
-      void SetBox(std::vector<Double_t> box){ fBox = box; };
+      void SetBox(std::vector<Double_t> box) { fBox = box; };
 
       // main function used by PDEFoam
       // returns density at a given point by range searching in BST
       virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density) = 0;
 
-      ClassDef(PDEFoamDensityBase,1) //Class for density
+      ClassDef(PDEFoamDensityBase, 1) //Class for density
    };  //end of PDEFoamDensityBase
 
 }  // namespace TMVA

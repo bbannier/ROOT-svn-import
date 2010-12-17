@@ -66,11 +66,11 @@
 ClassImp(TMVA::PDEFoamDensityBase)
 
 //_____________________________________________________________________
-TMVA::PDEFoamDensityBase::PDEFoamDensityBase() 
+TMVA::PDEFoamDensityBase::PDEFoamDensityBase()
    : TObject(),
      fBst(new TMVA::BinarySearchTree()),
      fBox(std::vector<Double_t>()),
-     fLogger( new MsgLogger("PDEFoamDensityBase"))
+     fLogger(new MsgLogger("PDEFoamDensityBase"))
 {}
 
 //_____________________________________________________________________
@@ -78,7 +78,7 @@ TMVA::PDEFoamDensityBase::PDEFoamDensityBase(std::vector<Double_t> box)
    : TObject(),
      fBst(new TMVA::BinarySearchTree()),
      fBox(box),
-     fLogger( new MsgLogger("PDEFoamDensityBase"))
+     fLogger(new MsgLogger("PDEFoamDensityBase"))
 {
    if (box.size() == 0)
       Log() << kFATAL << "Dimension of PDEFoamDensityBase is zero" << Endl;
@@ -88,7 +88,7 @@ TMVA::PDEFoamDensityBase::PDEFoamDensityBase(std::vector<Double_t> box)
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamDensityBase::~PDEFoamDensityBase() 
+TMVA::PDEFoamDensityBase::~PDEFoamDensityBase()
 {
    if (fBst)    delete fBst;
    if (fLogger) delete fLogger;
@@ -97,16 +97,16 @@ TMVA::PDEFoamDensityBase::~PDEFoamDensityBase()
 //_____________________________________________________________________
 TMVA::PDEFoamDensityBase::PDEFoamDensityBase(const PDEFoamDensityBase &distr)
    : TObject(),
-     fBst             (distr.fBst),
-     fBox             (distr.fBox),
-     fLogger( new MsgLogger("PDEFoamDensityBase"))
+     fBst(distr.fBst),
+     fBox(distr.fBox),
+     fLogger(new MsgLogger("PDEFoamDensityBase"))
 {
    // Copy constructor
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoamDensityBase::FillBinarySearchTree( const Event* ev )
+void TMVA::PDEFoamDensityBase::FillBinarySearchTree(const Event* ev)
 {
    // This method inserts the given event 'ev' it into the binary
    // search tree.
@@ -125,7 +125,7 @@ Double_t TMVA::PDEFoamDensityBase::GetBoxVolume() const
    // calculate box volume
    Double_t volume = 1.0;
    for (std::vector<Double_t>::const_iterator it = fBox.begin();
-	it != fBox.end(); ++it) {
+        it != fBox.end(); ++it) {
       volume *= *it;
    }
    return volume;
