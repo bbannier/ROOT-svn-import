@@ -871,7 +871,7 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 	 density = new PDEFoamDiscriminantDensity(box, cls);
 	 break;
       case kMonoTarget:
-	 pdefoam = new PDEFoamTarget(foamcaption);
+	 pdefoam = new PDEFoamTarget(foamcaption, 0);
 	 density = new PDEFoamTargetDensity(box, 0);
 	 break;
       default:
