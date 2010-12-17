@@ -2,11 +2,11 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Classes: PDEFoamDensity                                                        *
+ * Classes: PDEFoamDensityBase                                                    *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Class PDEFoamDensity is an Abstract class representing                    *
+ *      Class PDEFoamDensityBase is an Abstract class representing                *
  *      n-dimensional real positive integrand function                            *
  *      The main function is Density() which provides the event density at a      *
  *      given point during the foam build-up (sampling).                          *
@@ -27,8 +27,8 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-#ifndef ROOT_TMVA_PDEFoamDensity
-#define ROOT_TMVA_PDEFoamDensity
+#ifndef ROOT_TMVA_PDEFoamDensityBase
+#define ROOT_TMVA_PDEFoamDensityBase
 
 #ifndef ROOT_TObject
 #include "TObject.h"
@@ -47,7 +47,7 @@
 namespace TMVA {
 
    // class definition of underlying density
-   class PDEFoamDensity : public ::TObject  {
+   class PDEFoamDensityBase : public ::TObject  {
 
    protected:
       BinarySearchTree *fBst;   // Binary tree to find events within a volume
@@ -59,10 +59,10 @@ namespace TMVA {
       Double_t GetBoxVolume() const;
 
    public:
-      PDEFoamDensity();
-      PDEFoamDensity(std::vector<Double_t> box);
-      PDEFoamDensity(const PDEFoamDensity&);
-      virtual ~PDEFoamDensity();
+      PDEFoamDensityBase();
+      PDEFoamDensityBase(std::vector<Double_t> box);
+      PDEFoamDensityBase(const PDEFoamDensityBase&);
+      virtual ~PDEFoamDensityBase();
 
       // fill event into binary search tree
       void FillBinarySearchTree( const Event* ev );
@@ -74,8 +74,8 @@ namespace TMVA {
       // returns density at a given point by range searching in BST
       virtual Double_t Density(std::vector<Double_t> &Xarg, Double_t &event_density) = 0;
 
-      ClassDef(PDEFoamDensity,1) //Class for density
-   };  //end of PDEFoamDensity
+      ClassDef(PDEFoamDensityBase,1) //Class for density
+   };  //end of PDEFoamDensityBase
 
 }  // namespace TMVA
 

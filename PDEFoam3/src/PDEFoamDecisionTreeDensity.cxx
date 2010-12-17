@@ -48,19 +48,19 @@ ClassImp(TMVA::PDEFoamDecisionTreeDensity)
 
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTreeDensity::PDEFoamDecisionTreeDensity()
-   : PDEFoamDensity()
+   : PDEFoamDensityBase()
    , fClass(0)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTreeDensity::PDEFoamDecisionTreeDensity(std::vector<Double_t> box, UInt_t cls)
-   : PDEFoamDensity(box)
+   : PDEFoamDensityBase(box)
    , fClass(cls)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTreeDensity::PDEFoamDecisionTreeDensity(const PDEFoamDecisionTreeDensity &distr)
-   : PDEFoamDensity(distr)
+   : PDEFoamDensityBase(distr)
    , fClass(0)
 {
    // Copy constructor

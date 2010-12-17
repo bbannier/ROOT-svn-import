@@ -851,9 +851,9 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
       box.push_back((fXmax.at(idim) - fXmin.at(idim))* fVolFrac);
    }
 
-   // create PDEFoam and PDEFoamDensity
+   // create PDEFoam and PDEFoamDensityBase
    PDEFoam *pdefoam = NULL;
-   PDEFoamDensity *density = NULL;
+   PDEFoamDensityBase *density = NULL;
    if (fDTSeparation == kFoam) {
       // use PDEFoam algorithm
       switch (ft) {

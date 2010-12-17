@@ -60,7 +60,7 @@
 namespace TMVA {
    class PDEFoamCell;
    class PDEFoamVect;
-   class PDEFoamDensity;
+   class PDEFoamDensityBase;
    class PDEFoamKernelBase;
    class PDEFoam;
 
@@ -83,8 +83,8 @@ namespace TMVA {
 		     kRms, kRmsOvMean, kCellVolume };
 }
 
-#ifndef ROOT_TMVA_PDEFoamDensity
-#include "TMVA/PDEFoamDensity.h"
+#ifndef ROOT_TMVA_PDEFoamDensityBase
+#include "TMVA/PDEFoamDensityBase.h"
 #endif
 #ifndef ROOT_TMVA_PDEFoamVect
 #include "TMVA/PDEFoamVect.h"
@@ -134,7 +134,7 @@ namespace TMVA {
       Bool_t fFillFoamWithOrigWeights; // BACKWARDS COMPATIBILITY: fill the foam with boost or orig. weights
       EDTSeparation fDTSeparation; // BACKWARDS COMPATIBILITY: split cells according to decision tree logic
       Bool_t fPeekMax;         // BACKWARDS COMPATIBILITY: peek up cell with max. driver integral for split
-      PDEFoamDensity *fDistr;  //! distribution of training events
+      PDEFoamDensityBase *fDistr;  //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
       mutable MsgLogger* fLogger;                     //! message logger
@@ -177,7 +177,7 @@ namespace TMVA {
       void FindCells(std::map<Int_t, Float_t>&, PDEFoamCell*, std::vector<PDEFoamCell*> &);
 
       // get internal density
-      PDEFoamDensity* GetDistr() const { assert(fDistr); return fDistr; }
+      PDEFoamDensityBase* GetDistr() const { assert(fDistr); return fDistr; }
 
       // Square function (fastest implementation)
       template<typename T> T Sqr(T x) const { return x*x; }
@@ -213,7 +213,7 @@ namespace TMVA {
       void SetnBin(Int_t nBin){fNBin = nBin;}          // Sets no of bins in histogs in cell exploration
       void SetEvPerBin(Int_t EvPerBin){fEvPerBin =EvPerBin;} // Sets max. no. of effective events per bin
       void SetInhiDiv(Int_t, Int_t ); // Set inhibition of cell division along certain edge
-      void SetDensity(PDEFoamDensity *dens) { fDistr = dens; }
+      void SetDensity(PDEFoamDensityBase *dens) { fDistr = dens; }
 
       // coverity[ -tainted_data_return ]
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension

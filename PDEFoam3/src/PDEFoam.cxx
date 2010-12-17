@@ -57,7 +57,7 @@
 // to implement certain PDEFoam variations.
 //
 // In order to use PDEFoam the user has to set the density estimator
-// of the type TMVA::PDEFoamDensity, which is used to during the foam
+// of the type TMVA::PDEFoamDensityBase, which is used to during the foam
 // build-up.  The default PDEFoam should be used with
 // PDEFoamEventDensity.
 // _____________________________________________________________________
@@ -1623,7 +1623,7 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
 void TMVA::PDEFoam::FillBinarySearchTree( const Event* ev )
 {
    // Insert event to internal foam's density estimator
-   // PDEFoamDensity.
+   // PDEFoamDensityBase.
    GetDistr()->FillBinarySearchTree(ev);
 }
 

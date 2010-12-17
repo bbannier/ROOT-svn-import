@@ -30,14 +30,14 @@
 #ifndef ROOT_TMVA_PDEFoamTargetDensity
 #define ROOT_TMVA_PDEFoamTargetDensity
 
-#ifndef ROOT_TMVA_PDEFoamDensity
-#include "TMVA/PDEFoamDensity.h"
+#ifndef ROOT_TMVA_PDEFoamDensityBase
+#include "TMVA/PDEFoamDensityBase.h"
 #endif
 
 namespace TMVA {
 
    // class definition of underlying event density
-   class PDEFoamTargetDensity : public PDEFoamDensity  {
+   class PDEFoamTargetDensity : public PDEFoamDensityBase  {
 
    protected:
       UInt_t fTarget; // the target to calculate the density for

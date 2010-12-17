@@ -36,8 +36,8 @@
 #include "TH2.h"
 #endif
 
-#ifndef ROOT_TMVA_PDEFoamDensity
-#include "TMVA/PDEFoamDensity.h"
+#ifndef ROOT_TMVA_PDEFoamDensityBase
+#include "TMVA/PDEFoamDensityBase.h"
 #endif
 #ifndef ROOT_TMVA_Volume
 #include "TMVA/Volume.h"
@@ -46,7 +46,7 @@
 namespace TMVA {
 
    // class definition of underlying event density
-   class PDEFoamDecisionTreeDensity : public PDEFoamDensity  {
+   class PDEFoamDecisionTreeDensity : public PDEFoamDensityBase  {
 
    protected:
       UInt_t fClass; // signal class
