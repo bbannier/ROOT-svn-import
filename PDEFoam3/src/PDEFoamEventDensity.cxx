@@ -103,7 +103,7 @@ Double_t TMVA::PDEFoamEventDensity::Density(std::vector<Double_t> &Xarg, Double_
    event_density = nodes.size() * probevolume_inv;
 
    Double_t weighted_count = 0.; // number of events found (sum of weights)
-   for (std::vector<const TMVA::BinarySearchTreeNode*>::iterator it = nodes.begin();
+   for (std::vector<const TMVA::BinarySearchTreeNode*>::const_iterator it = nodes.begin();
 	it != nodes.end(); ++it) {
       weighted_count += (*it)->GetWeight();
    }

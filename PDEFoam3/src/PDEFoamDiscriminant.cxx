@@ -204,7 +204,7 @@ TH2D* TMVA::PDEFoamDiscriminant::Project2( Int_t idim1, Int_t idim2, ECellValue 
 	 // loop over cells and fill the histogram with the cell
 	 // values
 	 Float_t sum_cv = 0; // sum of the cell values
-	 for (std::vector<TMVA::PDEFoamCell*>::iterator it = cells.begin(); 
+	 for (std::vector<TMVA::PDEFoamCell*>::const_iterator it = cells.begin(); 
 	      it != cells.end(); ++it) {
 	    // get cell position and size
 	    PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());

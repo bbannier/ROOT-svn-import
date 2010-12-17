@@ -104,7 +104,7 @@ Double_t TMVA::PDEFoamDiscriminantDensity::Density(std::vector<Double_t> &Xarg, 
    Double_t weighted_count = 0.; // number of events found (sum of weights)
    Double_t N_sig = 0;           // number of signal events found
    // calc number of signal events in nodes
-   for (std::vector<const TMVA::BinarySearchTreeNode*>::iterator it = nodes.begin();
+   for (std::vector<const TMVA::BinarySearchTreeNode*>::const_iterator it = nodes.begin();
 	it != nodes.end(); ++it) {
       if ((*it)->GetClass() == fClass) // signal node
 	 N_sig += (*it)->GetWeight();
