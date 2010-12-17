@@ -111,7 +111,7 @@ void TMVA::PDEFoamDecisionTreeDensity::FillHistograms(TMVA::Volume &volume, std:
    // calc xmin and xmax of events found in cell
    std::vector<Float_t> xmin(volume.fLower->size(), std::numeric_limits<float>::max());
    std::vector<Float_t> xmax(volume.fLower->size(), -std::numeric_limits<float>::max());
-   for (std::vector<const TMVA::BinarySearchTreeNode*>::iterator it = nodes.begin();
+   for (std::vector<const TMVA::BinarySearchTreeNode*>::const_iterator it = nodes.begin();
 	it != nodes.end(); ++it) {
       std::vector<Float_t> ev = (*it)->GetEventV();
       for (UInt_t idim = 0; idim < xmin.size(); ++idim) {
@@ -133,7 +133,7 @@ void TMVA::PDEFoamDecisionTreeDensity::FillHistograms(TMVA::Volume &volume, std:
    }
 
    // fill histograms with events found
-   for (std::vector<const TMVA::BinarySearchTreeNode*>::iterator it = nodes.begin();
+   for (std::vector<const TMVA::BinarySearchTreeNode*>::const_iterator it = nodes.begin();
 	it != nodes.end(); ++it) {
       std::vector<Float_t> ev = (*it)->GetEventV();
       Float_t              wt = (*it)->GetWeight();

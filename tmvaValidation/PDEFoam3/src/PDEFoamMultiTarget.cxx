@@ -97,7 +97,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue( std::map<Int_t,Floa
 
    // transform event vector
    std::map<Int_t,Float_t> txvec; // transformed event vector
-   for (std::map<Int_t,Float_t>::iterator it=xvec.begin(); 
+   for (std::map<Int_t,Float_t>::const_iterator it=xvec.begin(); 
 	it!=xvec.end(); ++it) {
       Float_t coordinate = it->second; // event coordinate
       Int_t dim = it->first;           // dimension
@@ -121,7 +121,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue( std::map<Int_t,Floa
       return std::vector<Float_t>(xvec.size(), 0);
 
    // loop over all cells that were found
-   for (std::vector<PDEFoamCell*>::iterator cell_it=cells.begin(); 
+   for (std::vector<PDEFoamCell*>::const_iterator cell_it=cells.begin(); 
 	cell_it!=cells.end(); cell_it++) {
 
       // get event density in cell
@@ -135,7 +135,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue( std::map<Int_t,Floa
       // missing in txvec), in order to calculate target value
       for (Int_t idim=0; idim<GetTotDim(); ++idim) {
 	 // is idim a target dimension, i.e. is idim missing in txvec?
-	 std::map<Int_t,Float_t>::iterator txvec_it = txvec.find(idim);
+	 std::map<Int_t,Float_t>::const_iterator txvec_it = txvec.find(idim);
 	 if (txvec_it == txvec.end()) {
 	    // idim is missing in txvec --> this is a target
 	    // dimension!
@@ -166,7 +166,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue( std::map<Int_t,Floa
       // loop over all dimensions
       for (Int_t idim=0; idim<GetTotDim(); ++idim) {
 	 // is idim in target map?
-	 std::map<Int_t,Float_t>::iterator target_it = target.find(idim);
+	 std::map<Int_t,Float_t>::const_iterator target_it = target.find(idim);
 	 if (target_it != target.end()) {
 	    // idim is in target map! --> Normalize
 	    if (norm[idim] > std::numeric_limits<float>::epsilon())
@@ -181,7 +181,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue( std::map<Int_t,Floa
 
    // copy targets to result vector
    std::vector<Float_t> result;
-   for (std::map<Int_t,Float_t>::iterator it=target.begin(); 
+   for (std::map<Int_t,Float_t>::const_iterator it=target.begin(); 
 	it!=target.end(); ++it)
       result.push_back(it->second);
 

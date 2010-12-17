@@ -1017,7 +1017,7 @@ std::vector<Float_t> TMVA::PDEFoam::GetCellValue( std::map<Int_t,Float_t>& xvec,
 
    // transformed event
    std::map<Int_t,Float_t> txvec;
-   for (std::map<Int_t,Float_t>::iterator it=xvec.begin(); it!=xvec.end(); ++it)
+   for (std::map<Int_t,Float_t>::const_iterator it=xvec.begin(); it!=xvec.end(); ++it)
       txvec[it->first] = VarTransform(it->first, it->second);
 
    // find all cells, which correspond to the transformed event
@@ -1025,8 +1025,8 @@ std::vector<Float_t> TMVA::PDEFoam::GetCellValue( std::map<Int_t,Float_t>& xvec,
 
    // get the cell values
    std::vector<Float_t> cell_values;
-   for (std::vector<PDEFoamCell*>::iterator cell_it=cells.begin(); 
-	cell_it!=cells.end(); ++cell_it)
+   for (std::vector<PDEFoamCell*>::const_iterator cell_it=cells.begin(); 
+	cell_it != cells.end(); ++cell_it)
       cell_values.push_back(GetCellValue(*cell_it, cv));
 
    return cell_values;
@@ -1285,7 +1285,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
 	 // loop over cells and fill the histogram with the cell
 	 // values
 	 Float_t sum_cv = 0; // sum of the cell values
-	 for (std::vector<TMVA::PDEFoamCell*>::iterator it = cells.begin(); 
+	 for (std::vector<TMVA::PDEFoamCell*>::const_iterator it = cells.begin(); 
 	      it != cells.end(); ++it) {
 	    // get cell position and size
 	    PDEFoamVect cellPosi(GetTotDim()), cellSize(GetTotDim());
