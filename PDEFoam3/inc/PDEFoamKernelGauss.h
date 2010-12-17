@@ -29,13 +29,13 @@
 #ifndef ROOT_TMVA_PDEFoam
 #include "TMVA/PDEFoam.h"
 #endif
-#ifndef ROOT_TMVA_PDEFoamKernel
-#include "TMVA/PDEFoamKernel.h"
+#ifndef ROOT_TMVA_PDEFoamKernelBase
+#include "TMVA/PDEFoamKernelBase.h"
 #endif
 
 namespace TMVA {
 
-   class PDEFoamKernelGauss : public PDEFoamKernel {
+   class PDEFoamKernelGauss : public PDEFoamKernelBase {
 
    protected:
       Float_t fSigma;          // width of gauss curve

@@ -39,7 +39,7 @@ ClassImp(TMVA::PDEFoamKernelLinN)
 
 //_____________________________________________________________________
 TMVA::PDEFoamKernelLinN::PDEFoamKernelLinN()
-   : PDEFoamKernel()
+   : PDEFoamKernelBase()
 {
    // Default constructor for streamer
 }

@@ -103,8 +103,8 @@
 #include "TMVA/PDEFoamDecisionTreeDensity.h"
 #endif
 
-#ifndef ROOT_TMVA_PDEFoamKernel
-#include "TMVA/PDEFoamKernel.h"
+#ifndef ROOT_TMVA_PDEFoamKernelBase
+#include "TMVA/PDEFoamKernelBase.h"
 #endif
 #ifndef ROOT_TMVA_PDEFoamKernelTrivial
 #include "TMVA/PDEFoamKernelTrivial.h"
@@ -203,7 +203,7 @@ namespace TMVA {
       PDEFoam* InitFoam(TString, EFoamType, UInt_t cls=0);
 
       // create pdefoam kernel
-      PDEFoamKernel* CreatePDEFoamKernel();
+      PDEFoamKernelBase* CreatePDEFoamKernel();
 
       // delete all trained foams
       void DeleteFoams();
@@ -243,7 +243,7 @@ namespace TMVA {
 
       TString       fKernelStr;       // Kernel for GetMvaValue() (option string)
       EKernel       fKernel;          // Kernel for GetMvaValue()
-      PDEFoamKernel *fKernelEstimator;// Kernel estimator
+      PDEFoamKernelBase *fKernelEstimator;// Kernel estimator
       TString       fTargetSelectionStr; // method of selecting the target (only mulit target regr.)
       ETargetSelection fTargetSelection; // method of selecting the target (only mulit target regr.)
       Bool_t        fFillFoamWithOrigWeights; // fill the foam with boost weights

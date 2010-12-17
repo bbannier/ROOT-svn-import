@@ -994,7 +994,7 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
 }
 
 //_______________________________________________________________________
-TMVA::PDEFoamKernel* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
+TMVA::PDEFoamKernelBase* TMVA::MethodPDEFoam::CreatePDEFoamKernel()
 {
    // create a pdefoam kernel estimator, depending on the current
    // value of fKernel

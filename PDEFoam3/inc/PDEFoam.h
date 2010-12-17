@@ -61,7 +61,7 @@ namespace TMVA {
    class PDEFoamCell;
    class PDEFoamVect;
    class PDEFoamDensity;
-   class PDEFoamKernel;
+   class PDEFoamKernelBase;
    class PDEFoam;
 
    // separation types
@@ -92,8 +92,8 @@ namespace TMVA {
 #ifndef ROOT_TMVA_PDEFoamCell
 #include "TMVA/PDEFoamCell.h"
 #endif
-#ifndef ROOT_TMVA_PDEFoamKernel
-#include "TMVA/PDEFoamKernel.h"
+#ifndef ROOT_TMVA_PDEFoamKernelBase
+#include "TMVA/PDEFoamKernelBase.h"
 #endif
 
 namespace TMVA {
@@ -265,10 +265,10 @@ namespace TMVA {
 
       // project foam to two-dimensional histogram
       virtual TH2D* Project2(Int_t idim1, Int_t idim2, ECellValue cell_value=kValue, 
-			     PDEFoamKernel *kernel=NULL, UInt_t maxbins=50);
+			     PDEFoamKernelBase *kernel=NULL, UInt_t maxbins=50);
 
       // Project one-dimensional foam to a 1-dim histogram
-      TH1D* Draw1Dim(ECellValue cell_value, Int_t nbin, PDEFoamKernel *kernel=NULL);
+      TH1D* Draw1Dim(ECellValue cell_value, Int_t nbin, PDEFoamKernelBase *kernel=NULL);
 
       // Generates C++ code (root macro) for drawing foam with boxes (only 2-dim!)
       void RootPlot2dim( const TString& filename, TString opt,
@@ -277,7 +277,7 @@ namespace TMVA {
       // ---------- Foam evaluation functions
 
       // get cell value for a given event
-      virtual Float_t GetCellValue( std::vector<Float_t>& xvec, ECellValue cv, PDEFoamKernel*  );
+      virtual Float_t GetCellValue( std::vector<Float_t>& xvec, ECellValue cv, PDEFoamKernelBase*  );
 
       // get cell values for a given (incomplete) event vector
       virtual std::vector<Float_t> GetCellValue( std::map<Int_t,Float_t>& xvec, ECellValue cv );
@@ -286,7 +286,7 @@ namespace TMVA {
       virtual Float_t GetCellValue( PDEFoamCell* cell, ECellValue cv );
 
       // ---------- friend classes
-      friend class PDEFoamKernel;
+      friend class PDEFoamKernelBase;
       friend class PDEFoamKernelTrivial;
       friend class PDEFoamKernelLinN;
       friend class PDEFoamKernelGauss;
