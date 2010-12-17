@@ -37,7 +37,8 @@ namespace TMVA {
    class PDEFoamTarget : public PDEFoam {
 
    protected:
-      
+      UInt_t fTarget; // the target to fill the cells with
+
       // specific function used during evaluation; determines, whether
       // a cell value is undefined
       Bool_t CellValueIsUndefined( PDEFoamCell* cell );
@@ -50,7 +51,7 @@ namespace TMVA {
       // ---------- Public functions ----------------------------------
    public:
       PDEFoamTarget();                  // Default constructor (used only by ROOT streamer)
-      PDEFoamTarget(const TString&);    // Principal user-defined constructor
+      PDEFoamTarget(const TString&, UInt_t); // Principal user-defined constructor
       virtual ~PDEFoamTarget(){};       // Default destructor
 
       // function to fill created cell with given value

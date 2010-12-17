@@ -49,18 +49,21 @@ ClassImp(TMVA::PDEFoamTarget)
 //_____________________________________________________________________
 TMVA::PDEFoamTarget::PDEFoamTarget() 
    : PDEFoam()
+   , fTarget(0)
 {
    // Default constructor for streamer, user should not use it.
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamTarget::PDEFoamTarget(const TString& Name)
+TMVA::PDEFoamTarget::PDEFoamTarget(const TString& Name, UInt_t target)
    : PDEFoam(Name)
+   , fTarget(target)
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamTarget::PDEFoamTarget(const PDEFoamTarget &From)
    : PDEFoam(From)
+   , fTarget(From.fTarget)
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
@@ -71,7 +74,7 @@ void TMVA::PDEFoamTarget::FillFoamCells(const Event* ev, Float_t wt)
 {
    // This function fills an event into the discriminant PDEFoam.  The
    // weight 'wt' is filled into cell element 0 if the event is of
-   // class 0, and filled into cell element 1 otherwise.
+   // class 'fTarget', and filled into cell element 1 otherwise.
 
    // find corresponding foam cell
    std::vector<Float_t> values  = ev->GetValues();
@@ -82,7 +85,7 @@ void TMVA::PDEFoamTarget::FillFoamCells(const Event* ev, Float_t wt)
    // 0. Element: Number of events
    // 1. Element: Target 0
    SetCellElement(cell, 0, GetCellElement(cell, 0) + wt);
-   SetCellElement(cell, 1, GetCellElement(cell, 1) + wt*targets.at(0));
+   SetCellElement(cell, 1, GetCellElement(cell, 1) + wt*targets.at(fTarget));
 }
 
 //_____________________________________________________________________
