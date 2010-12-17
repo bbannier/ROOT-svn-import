@@ -34,12 +34,14 @@
 #include "TMVA/PDEFoamEvent.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
    // target selection method
-   enum ETargetSelection { kMean=0, kMpv=1 };
+   enum ETargetSelection { kMean = 0, kMpv = 1 };
 
-   class PDEFoamMultiTarget : public PDEFoamEvent {
+   class PDEFoamMultiTarget : public PDEFoamEvent
+   {
 
    protected:
       ETargetSelection fTargetSelection; // the target selection method
@@ -50,14 +52,14 @@ namespace TMVA {
    public:
       PDEFoamMultiTarget();                  // Default constructor (used only by ROOT streamer)
       PDEFoamMultiTarget(const TString&, ETargetSelection); // Principal user-defined constructor
-      virtual ~PDEFoamMultiTarget(){};       // Default destructor
+      virtual ~PDEFoamMultiTarget() {};      // Default destructor
 
       // overridden from PDEFoam: extract the targets from the foam
-      virtual std::vector<Float_t> GetCellValue( std::map<Int_t,Float_t>&, ECellValue );
+      virtual std::vector<Float_t> GetCellValue(std::map<Int_t, Float_t>&, ECellValue);
       using PDEFoam::GetCellValue;
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoamMultiTarget,1) // Tree of PDEFoamCells
+      ClassDef(PDEFoamMultiTarget, 1) // Tree of PDEFoamCells
    }; // end of PDEFoamMultiTarget
 
 }  // namespace TMVA

@@ -33,30 +33,32 @@
 #include "TMVA/PDEFoamKernelBase.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
-   class PDEFoamKernelGauss : public PDEFoamKernelBase {
+   class PDEFoamKernelGauss : public PDEFoamKernelBase
+   {
 
    protected:
       Float_t fSigma;          // width of gauss curve
 
       // Square function (fastest implementation)
-      template<typename T> T Sqr(T x) const { return x*x; }
+      template<typename T> T Sqr(T x) const { return x * x; }
 
       // calculate gaussian weight
-      Float_t WeightGaus( PDEFoam*, PDEFoamCell*, std::vector<Float_t>& );
+      Float_t WeightGaus(PDEFoam*, PDEFoamCell*, std::vector<Float_t>&);
 
       // estimate the cell value by its neighbors
-      Float_t GetAverageNeighborsValue( PDEFoam*, std::vector<Float_t>&, ECellValue );
+      Float_t GetAverageNeighborsValue(PDEFoam*, std::vector<Float_t>&, ECellValue);
 
    public:
       PDEFoamKernelGauss(Float_t sigma);    // Constructor
-      virtual ~PDEFoamKernelGauss(){};      // Destructor
+      virtual ~PDEFoamKernelGauss() {};     // Destructor
 
       // kernel estimator
-      virtual Float_t Estimate( PDEFoam*, std::vector<Float_t>&, ECellValue );
+      virtual Float_t Estimate(PDEFoam*, std::vector<Float_t>&, ECellValue);
 
-      ClassDef(PDEFoamKernelGauss,1) // PDEFoam kernel
+      ClassDef(PDEFoamKernelGauss, 1) // PDEFoam kernel
    }; // end of PDEFoamKernelGauss
 }  // namespace TMVA
 

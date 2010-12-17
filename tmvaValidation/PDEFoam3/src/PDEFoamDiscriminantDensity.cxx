@@ -77,7 +77,7 @@ Double_t TMVA::PDEFoamDiscriminantDensity::Density(std::vector<Double_t> &Xarg, 
    // by fVolFrac).
 
    if (!fBst)
-      Log() << kFATAL << "<PDEFoamDiscriminantDensity::Density()> Binary tree not set!"<< Endl;
+      Log() << kFATAL << "<PDEFoamDiscriminantDensity::Density()> Binary tree not set!" << Endl;
 
    //create volume around point to be found
    std::vector<Double_t> lb(fBox.size());
@@ -88,8 +88,8 @@ Double_t TMVA::PDEFoamDiscriminantDensity::Density(std::vector<Double_t> &Xarg, 
 
    // set upper and lower bound for search volume
    for (UInt_t idim = 0; idim < fBox.size(); ++idim) {
-      lb[idim] = Xarg[idim] - fBox.at(idim)/2.0;
-      ub[idim] = Xarg[idim] + fBox.at(idim)/2.0;
+      lb[idim] = Xarg[idim] - fBox.at(idim) / 2.0;
+      ub[idim] = Xarg[idim] + fBox.at(idim) / 2.0;
    }
 
    TMVA::Volume volume(&lb, &ub);                        // volume to search in
@@ -105,12 +105,12 @@ Double_t TMVA::PDEFoamDiscriminantDensity::Density(std::vector<Double_t> &Xarg, 
    Double_t N_sig = 0;           // number of signal events found
    // calc number of signal events in nodes
    for (std::vector<const TMVA::BinarySearchTreeNode*>::const_iterator it = nodes.begin();
-	it != nodes.end(); ++it) {
+        it != nodes.end(); ++it) {
       if ((*it)->GetClass() == fClass) // signal node
-	 N_sig += (*it)->GetWeight();
+         N_sig += (*it)->GetWeight();
       weighted_count += ((*it))->GetWeight();
    }
 
    // return:  (N_sig/N_total) / (cell_volume)
-   return (N_sig/(weighted_count+0.1))*probevolume_inv;
+   return (N_sig / (weighted_count + 0.1)) * probevolume_inv;
 }

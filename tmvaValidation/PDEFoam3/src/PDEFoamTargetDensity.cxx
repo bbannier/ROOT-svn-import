@@ -81,7 +81,7 @@ Double_t TMVA::PDEFoamTargetDensity::Density(std::vector<Double_t> &Xarg, Double
    // by fVolFrac).
 
    if (!fBst)
-      Log() << kFATAL << "<PDEFoamTargetDensity::Density()> Binary tree not found!"<< Endl;
+      Log() << kFATAL << "<PDEFoamTargetDensity::Density()> Binary tree not found!" << Endl;
 
    //create volume around point to be found
    std::vector<Double_t> lb(fBox.size());
@@ -92,8 +92,8 @@ Double_t TMVA::PDEFoamTargetDensity::Density(std::vector<Double_t> &Xarg, Double
 
    // set upper and lower bound for search volume
    for (UInt_t idim = 0; idim < fBox.size(); ++idim) {
-      lb[idim] = Xarg[idim] - fBox.at(idim)/2.0;
-      ub[idim] = Xarg[idim] + fBox.at(idim)/2.0;
+      lb[idim] = Xarg[idim] - fBox.at(idim) / 2.0;
+      ub[idim] = Xarg[idim] + fBox.at(idim) / 2.0;
    }
 
    TMVA::Volume volume(&lb, &ub);                        // volume to search in
@@ -109,11 +109,11 @@ Double_t TMVA::PDEFoamTargetDensity::Density(std::vector<Double_t> &Xarg, Double
    Double_t N_tar = 0;           // number of target events found
    // now sum over all nodes->GetTarget(0);
    for (std::vector<const TMVA::BinarySearchTreeNode*>::const_iterator it = nodes.begin();
-	it != nodes.end(); ++it) {
+        it != nodes.end(); ++it) {
       N_tar += ((*it)->GetTargets()).at(fTarget) * ((*it)->GetWeight());
       weighted_count += (*it)->GetWeight();
    }
 
    // return:  (N_tar/N_total) / (cell_volume)
-   return (N_tar/(weighted_count+0.1))*probevolume_inv;
+   return (N_tar / (weighted_count + 0.1)) * probevolume_inv;
 }

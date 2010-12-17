@@ -32,19 +32,21 @@
 #include "TMVA/PDEFoam.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
-   class PDEFoamTarget : public PDEFoam {
+   class PDEFoamTarget : public PDEFoam
+   {
 
    protected:
       UInt_t fTarget; // the target to fill the cells with
 
       // specific function used during evaluation; determines, whether
       // a cell value is undefined
-      Bool_t CellValueIsUndefined( PDEFoamCell* cell );
+      Bool_t CellValueIsUndefined(PDEFoamCell* cell);
 
       // calculate the average of the neighbor cell values
-      Float_t GetAverageNeighborsValue( std::vector<Float_t>&, ECellValue );
+      Float_t GetAverageNeighborsValue(std::vector<Float_t>&, ECellValue);
 
       PDEFoamTarget(const PDEFoamTarget&); // Copy Constructor  NOT USED
 
@@ -52,7 +54,7 @@ namespace TMVA {
    public:
       PDEFoamTarget();                  // Default constructor (used only by ROOT streamer)
       PDEFoamTarget(const TString&, UInt_t); // Principal user-defined constructor
-      virtual ~PDEFoamTarget(){};       // Default destructor
+      virtual ~PDEFoamTarget() {};      // Default destructor
 
       // function to fill created cell with given value
       virtual void FillFoamCells(const Event* ev, Float_t wt);
@@ -64,7 +66,7 @@ namespace TMVA {
       using PDEFoam::GetCellValue;
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoamTarget,1) // Tree of PDEFoamCells
+      ClassDef(PDEFoamTarget, 1) // Tree of PDEFoamCells
    }; // end of PDEFoamTarget
 
 }  // namespace TMVA

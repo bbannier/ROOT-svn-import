@@ -55,7 +55,7 @@
 ClassImp(TMVA::PDEFoamDecisionTree)
 
 //_____________________________________________________________________
-TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree() 
+TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree()
    : PDEFoamDiscriminant()
    , fSepType(NULL)
 {
@@ -110,15 +110,15 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
 
    // create edge histograms
    std::vector<TH1D*> hsig, hbkg, hsig_unw, hbkg_unw;
-   for (Int_t idim=0; idim<fDim; idim++) {
-      hsig.push_back( new TH1D(Form("hsig_%i",idim), 
-                               Form("signal[%i]",idim), fNBin, fXmin[idim], fXmax[idim] ));
-      hbkg.push_back( new TH1D(Form("hbkg_%i",idim), 
-                               Form("background[%i]",idim), fNBin, fXmin[idim], fXmax[idim] ));
-      hsig_unw.push_back( new TH1D(Form("hsig_unw_%i",idim), 
-                                   Form("signal_unw[%i]",idim), fNBin, fXmin[idim], fXmax[idim] ));
-      hbkg_unw.push_back( new TH1D(Form("hbkg_unw_%i",idim), 
-                                   Form("background_unw[%i]",idim), fNBin, fXmin[idim], fXmax[idim] ));
+   for (Int_t idim = 0; idim < fDim; idim++) {
+      hsig.push_back(new TH1D(Form("hsig_%i", idim),
+                              Form("signal[%i]", idim), fNBin, fXmin[idim], fXmax[idim]));
+      hbkg.push_back(new TH1D(Form("hbkg_%i", idim),
+                              Form("background[%i]", idim), fNBin, fXmin[idim], fXmax[idim]));
+      hsig_unw.push_back(new TH1D(Form("hsig_unw_%i", idim),
+                                  Form("signal_unw[%i]", idim), fNBin, fXmin[idim], fXmax[idim]));
+      hbkg_unw.push_back(new TH1D(Form("hbkg_unw_%i", idim),
+                                  Form("background_unw[%i]", idim), fNBin, fXmin[idim], fXmax[idim]));
    }
 
    // get cell position and size
@@ -137,7 +137,7 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
    PDEFoamDecisionTreeDensity *distr = dynamic_cast<PDEFoamDecisionTreeDensity*>(fDistr);
    if (distr == NULL)
       Log() << kFATAL << "<PDEFoamDecisionTree::Explore>: cast failed: "
-	    << "PDEFoamDensityBase* --> PDEFoamDecisionTreeDensity*" << Endl;
+            << "PDEFoamDensityBase* --> PDEFoamDecisionTreeDensity*" << Endl;
 
    // create TMVA::Volume object needed for searching within the BST
    TMVA::Volume volume(&lb, &ub);
@@ -149,17 +149,17 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
    Double_t xBest = 0.5;    // best division point
    Int_t    kBest = -1;     // best split dimension
    Double_t maxGain = -1.0; // maximum gain
-   Double_t nTotS = hsig.at(0)->Integral(0, hsig.at(0)->GetNbinsX()+1);
-   Double_t nTotB = hbkg.at(0)->Integral(0, hbkg.at(0)->GetNbinsX()+1);
-   Double_t nTotS_unw = hsig_unw.at(0)->Integral(0, hsig_unw.at(0)->GetNbinsX()+1);
-   Double_t nTotB_unw = hbkg_unw.at(0)->Integral(0, hbkg_unw.at(0)->GetNbinsX()+1);
+   Double_t nTotS = hsig.at(0)->Integral(0, hsig.at(0)->GetNbinsX() + 1);
+   Double_t nTotB = hbkg.at(0)->Integral(0, hbkg.at(0)->GetNbinsX() + 1);
+   Double_t nTotS_unw = hsig_unw.at(0)->Integral(0, hsig_unw.at(0)->GetNbinsX() + 1);
+   Double_t nTotB_unw = hbkg_unw.at(0)->Integral(0, hbkg_unw.at(0)->GetNbinsX() + 1);
 
    for (Int_t idim = 0; idim < fDim; ++idim) {
-      Double_t nSelS=hsig.at(idim)->GetBinContent(0);
-      Double_t nSelB=hbkg.at(idim)->GetBinContent(0);
-      Double_t nSelS_unw=hsig_unw.at(idim)->GetBinContent(0);
-      Double_t nSelB_unw=hbkg_unw.at(idim)->GetBinContent(0);
-      for(Int_t jLo=1; jLo<fNBin; jLo++) {
+      Double_t nSelS = hsig.at(idim)->GetBinContent(0);
+      Double_t nSelB = hbkg.at(idim)->GetBinContent(0);
+      Double_t nSelS_unw = hsig_unw.at(idim)->GetBinContent(0);
+      Double_t nSelB_unw = hbkg_unw.at(idim)->GetBinContent(0);
+      for (Int_t jLo = 1; jLo < fNBin; jLo++) {
          nSelS += hsig.at(idim)->GetBinContent(jLo);
          nSelB += hbkg.at(idim)->GetBinContent(jLo);
          nSelS_unw += hsig_unw.at(idim)->GetBinContent(jLo);
@@ -167,11 +167,11 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
 
          // proceed if total number of events in left and right cell
          // is greater than fNmin
-         if ( !( (nSelS_unw + nSelB_unw) >= GetNmin() && 
-                 (nTotS_unw-nSelS_unw + nTotB_unw-nSelB_unw) >= GetNmin() ) )
+         if (!((nSelS_unw + nSelB_unw) >= GetNmin() &&
+               (nTotS_unw - nSelS_unw + nTotB_unw - nSelB_unw) >= GetNmin()))
             continue;
 
-         Double_t xLo = 1.0*jLo/fNBin;
+         Double_t xLo = 1.0 * jLo / fNBin;
 
          // calculate separation gain
          Double_t gain = fSepType->GetSeparationGain(nSelS, nSelB, nTotS, nTotB);
@@ -191,25 +191,25 @@ void TMVA::PDEFoamDecisionTree::Explore(PDEFoamCell *cell)
       // should set maxGain to -1.0 (or even 0.0?) here.
       maxGain = -1.0;
    }
-   
+
    // set cell properties
    cell->SetBest(kBest);
    cell->SetXdiv(xBest);
-   if (nTotB+nTotS > 0)
-      cell->SetIntg( nTotS/(nTotB+nTotS) );
-   else 
-      cell->SetIntg( 0.0 );
+   if (nTotB + nTotS > 0)
+      cell->SetIntg(nTotS / (nTotB + nTotS));
+   else
+      cell->SetIntg(0.0);
    cell->SetDriv(maxGain);
    cell->CalcVolume();
 
    // set cell element 0 (total number of events in cell) during
    // build-up
    if (GetNmin() > 0)
-      SetCellElement( cell, 0, nTotS + nTotB);
+      SetCellElement(cell, 0, nTotS + nTotB);
 
    // clean up
-   for (UInt_t ih=0; ih<hsig.size(); ih++)  delete hsig.at(ih);
-   for (UInt_t ih=0; ih<hbkg.size(); ih++)  delete hbkg.at(ih);
-   for (UInt_t ih=0; ih<hsig_unw.size(); ih++)  delete hsig_unw.at(ih);
-   for (UInt_t ih=0; ih<hbkg_unw.size(); ih++)  delete hbkg_unw.at(ih);
+   for (UInt_t ih = 0; ih < hsig.size(); ih++)  delete hsig.at(ih);
+   for (UInt_t ih = 0; ih < hbkg.size(); ih++)  delete hbkg.at(ih);
+   for (UInt_t ih = 0; ih < hsig_unw.size(); ih++)  delete hsig_unw.at(ih);
+   for (UInt_t ih = 0; ih < hbkg_unw.size(); ih++)  delete hbkg_unw.at(ih);
 }

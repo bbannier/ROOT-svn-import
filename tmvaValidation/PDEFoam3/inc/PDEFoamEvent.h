@@ -32,25 +32,27 @@
 #include "TMVA/PDEFoam.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
-   class PDEFoamEvent : public PDEFoam {
+   class PDEFoamEvent : public PDEFoam
+   {
 
    protected:
-      
+
       PDEFoamEvent(const PDEFoamEvent&); // Copy Constructor  NOT USED
 
       // ---------- Public functions ----------------------------------
    public:
       PDEFoamEvent();                  // Default constructor (used only by ROOT streamer)
       PDEFoamEvent(const TString&);    // Principal user-defined constructor
-      virtual ~PDEFoamEvent(){};       // Default destructor
+      virtual ~PDEFoamEvent() {};      // Default destructor
 
       // function to fill created cell with given value
       virtual void FillFoamCells(const Event* ev, Float_t wt);
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoamEvent,1) // Tree of PDEFoamCells
+      ClassDef(PDEFoamEvent, 1) // Tree of PDEFoamCells
    }; // end of PDEFoamEvent
 
 }  // namespace TMVA

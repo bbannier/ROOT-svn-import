@@ -67,7 +67,7 @@ Float_t TMVA::PDEFoamKernelLinN::Estimate(PDEFoam *foam, std::vector<Float_t> &t
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv, Bool_t TreatEmptyCells )
+Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors(PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv, Bool_t TreatEmptyCells)
 {
    // Returns the cell value, corresponding to 'txvec' (foam
    // coordinates [0,1]), weighted by the neighbor cells via a linear
@@ -117,33 +117,33 @@ Float_t TMVA::PDEFoamKernelLinN::WeightLinNeighbors( PDEFoam *foam, std::vector<
       Float_t mindist;
       PDEFoamCell *mindistcell = 0; // cell with minimal distance to txvec
       // calc minimal distance to neighbor cell
-      mindist = (txvec[dim]-cellPosi[dim])/cellSize[dim];
-      if (mindist<0.5) { // left neighbour
-         ntxvec[dim] = cellPosi[dim]-xoffset;
+      mindist = (txvec[dim] - cellPosi[dim]) / cellSize[dim];
+      if (mindist < 0.5) { // left neighbour
+         ntxvec[dim] = cellPosi[dim] - xoffset;
          mindistcell = foam->FindCell(ntxvec); // left neighbor cell
       } else { // right neighbour
-         mindist=1-mindist;
-         ntxvec[dim] = cellPosi[dim]+cellSize[dim]+xoffset;
+         mindist = 1 - mindist;
+         ntxvec[dim] = cellPosi[dim] + cellSize[dim] + xoffset;
          mindistcell = foam->FindCell(ntxvec); // right neighbor cell
       }
       // get cell value of cell, which contains ntxvec
       Float_t mindistcellval = foam->GetCellValue(mindistcell, cv);
       // if treatment of empty neighbor cells is deactivated, do
       // normal weighting
-      if (!(TreatEmptyCells && foam->CellValueIsUndefined(mindistcell))){
+      if (!(TreatEmptyCells && foam->CellValueIsUndefined(mindistcell))) {
          result += cellval        * (0.5 + mindist);
          result += mindistcellval * (0.5 - mindist);
          norm++;
       }
    }
-   if (norm==0) return cellval;     // all nearest neighbors were empty
-   else         return result/norm; // normalisation
+   if (norm == 0) return cellval;   // all nearest neighbors were empty
+   else         return result / norm; // normalisation
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoamKernelLinN::GetAverageNeighborsValue( PDEFoam *foam,
-							   std::vector<Float_t> &txvec,
-							   ECellValue cv )
+Float_t TMVA::PDEFoamKernelLinN::GetAverageNeighborsValue(PDEFoam *foam,
+                                                          std::vector<Float_t> &txvec,
+                                                          ECellValue cv)
 {
    // This function returns the average value 'cv' of only nearest
    // neighbor cells.  It is used in cases when a cell value is
@@ -165,29 +165,29 @@ Float_t TMVA::PDEFoamKernelLinN::GetAverageNeighborsValue( PDEFoam *foam,
    cell->GetHcub(cellPosi, cellSize); // get cell coordinates
 
    // loop over all dimensions and find neighbor cells
-   for (Int_t dim=0; dim<foam->GetTotDim(); dim++) {
+   for (Int_t dim = 0; dim < foam->GetTotDim(); dim++) {
       std::vector<Float_t> ntxvec(txvec);
       PDEFoamCell* left_cell  = 0; // left cell
       PDEFoamCell* right_cell = 0; // right cell
 
       // get left cell
-      ntxvec[dim] = cellPosi[dim]-xoffset;
+      ntxvec[dim] = cellPosi[dim] - xoffset;
       left_cell   = foam->FindCell(ntxvec);
-      if (!foam->CellValueIsUndefined(left_cell)){
+      if (!foam->CellValueIsUndefined(left_cell)) {
          // if left cell is not empty, take its value
          result += foam->GetCellValue(left_cell, cv);
          norm++;
       }
       // get right cell
-      ntxvec[dim] = cellPosi[dim]+cellSize[dim]+xoffset;
+      ntxvec[dim] = cellPosi[dim] + cellSize[dim] + xoffset;
       right_cell  = foam->FindCell(ntxvec);
-      if (!foam->CellValueIsUndefined(right_cell)){
+      if (!foam->CellValueIsUndefined(right_cell)) {
          // if right cell is not empty, take its value
          result += foam->GetCellValue(right_cell, cv);
          norm++;
       }
    }
-   if (norm>0)  result /= norm; // calc average target
+   if (norm > 0)  result /= norm; // calc average target
    else         result = 0;     // return null if all neighbors are empty
 
    return result;

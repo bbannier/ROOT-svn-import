@@ -32,20 +32,22 @@
 #include "TMVA/PDEFoam.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
-   class PDEFoamDiscriminant : public PDEFoam {
+   class PDEFoamDiscriminant : public PDEFoam
+   {
 
    protected:
       UInt_t fClass; // signal class
-      
+
       PDEFoamDiscriminant(const PDEFoamDiscriminant&); // Copy Constructor  NOT USED
 
       // ---------- Public functions ----------------------------------
    public:
       PDEFoamDiscriminant();                  // Default constructor (used only by ROOT streamer)
       PDEFoamDiscriminant(const TString&, UInt_t); // Principal user-defined constructor
-      virtual ~PDEFoamDiscriminant(){};       // Default destructor
+      virtual ~PDEFoamDiscriminant() {};      // Default destructor
 
       // function to fill created cell with given value
       virtual void FillFoamCells(const Event* ev, Float_t wt);
@@ -54,10 +56,10 @@ namespace TMVA {
       virtual void Finalize();
 
       // 2-dimensional projection
-      virtual TH2D* Project2( Int_t, Int_t, ECellValue, PDEFoamKernelBase*, UInt_t );
+      virtual TH2D* Project2(Int_t, Int_t, ECellValue, PDEFoamKernelBase*, UInt_t);
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoamDiscriminant,1) // Tree of PDEFoamCells
+      ClassDef(PDEFoamDiscriminant, 1) // Tree of PDEFoamCells
    }; // end of PDEFoamDiscriminant
 
 }  // namespace TMVA

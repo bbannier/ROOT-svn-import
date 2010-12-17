@@ -33,25 +33,27 @@
 #include "TMVA/PDEFoamKernelBase.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
-   class PDEFoamKernelLinN : public PDEFoamKernelBase {
+   class PDEFoamKernelLinN : public PDEFoamKernelBase
+   {
 
    protected:
       // helper function, which linear weights with the neighbor cells
-      Float_t WeightLinNeighbors( PDEFoam*, std::vector<Float_t>&, ECellValue, Bool_t );
+      Float_t WeightLinNeighbors(PDEFoam*, std::vector<Float_t>&, ECellValue, Bool_t);
 
       // helper function for WeightLinNeighbors()
-      Float_t GetAverageNeighborsValue( PDEFoam*, std::vector<Float_t>&, ECellValue );
+      Float_t GetAverageNeighborsValue(PDEFoam*, std::vector<Float_t>&, ECellValue);
 
    public:
       PDEFoamKernelLinN();                 // Constructor
-      virtual ~PDEFoamKernelLinN(){};      // Destructor
+      virtual ~PDEFoamKernelLinN() {};     // Destructor
 
       // kernel estimator
-      virtual Float_t Estimate( PDEFoam*, std::vector<Float_t>&, ECellValue );
+      virtual Float_t Estimate(PDEFoam*, std::vector<Float_t>&, ECellValue);
 
-      ClassDef(PDEFoamKernelLinN,1) // PDEFoam kernel
+      ClassDef(PDEFoamKernelLinN, 1) // PDEFoam kernel
    }; // end of PDEFoamKernelLinN
 }  // namespace TMVA
 

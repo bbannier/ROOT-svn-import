@@ -35,9 +35,11 @@
 #include "TMVA/SeparationBase.h"
 #endif
 
-namespace TMVA {
+namespace TMVA
+{
 
-   class PDEFoamDecisionTree : public PDEFoamDiscriminant {
+   class PDEFoamDecisionTree : public PDEFoamDiscriminant
+   {
 
    private:
       SeparationBase *fSepType;    // separation type
@@ -45,7 +47,7 @@ namespace TMVA {
    protected:
 
       virtual void Explore(PDEFoamCell *Cell);     // Exploration of the cell
-      
+
       PDEFoamDecisionTree(const PDEFoamDecisionTree&); // Copy Constructor  NOT USED
 
    public:
@@ -54,7 +56,7 @@ namespace TMVA {
       virtual ~PDEFoamDecisionTree();      // Default destructor
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoamDecisionTree,1) // Decision tree like PDEFoam
+      ClassDef(PDEFoamDecisionTree, 1) // Decision tree like PDEFoam
    }; // end of PDEFoamDecisionTree
 
 }  // namespace TMVA
