@@ -450,17 +450,33 @@ void TMVA::MethodBase::ProcessBaseOptions()
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition, 
+void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinitionIn, 
 						TMVA::DataSetInfo& dataInfo, 
 						TMVA::TransformationHandler& transformationHandler,
 						TMVA::MsgLogger& log)
 {
    // create variable transformations
 
+   TString trafoDefinition(trafoDefinitionIn);
    if (trafoDefinition == "None") // no transformations
       return;
 
-   if( trafoDefinition.Contains("+") || trafoDefinition.Contains("(") ) { // new format
+   Int_t parenthesisCount = 0;
+   for( Int_t position = 0, size = trafoDefinition.Sizeof(); position < size; ++position ){
+      TString ch = trafoDefinition(position,1);
+      std::cout << "position " << position << " ch " << ch << std::endl;
+      if( ch == "(" )
+	 ++parenthesisCount;
+      if( ch == ")" )
+	 --parenthesisCount;
+      if( ch == "," && parenthesisCount == 0 ){
+	 trafoDefinition.Replace(position,1,'+');
+      }
+   }
+   std::cout << "replaced: " << trafoDefinition.Data() << std::endl;
+
+//    if( trafoDefinition.Contains("+") || trafoDefinition.Contains("(") ) { // new format
+
       TList* trList = gTools().ParseFormatLine( trafoDefinition, "+" );
       TListIter trIt(trList);
       while (TObjString* os = (TObjString*)trIt()) {
@@ -544,62 +560,6 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition,
 
 
       return;
-   }
-
-   if (trafoDefinition != "None") { // old format
-      TList* trList = gTools().ParseFormatLine( trafoDefinition, "," );
-      TListIter trIt(trList);
-      while (TObjString* os = (TObjString*)trIt()) {
-         Int_t idxCls = -1;
-
-         TList* trClsList = gTools().ParseFormatLine( os->GetString(), "_" ); // split entry to get trf-name and class-name
-         TListIter trClsIt(trClsList);
-         const TString& trName = ((TObjString*)trClsList->At(0))->GetString();
-
-         if (trClsList->GetEntries() > 1) {
-            TString trCls = "AllClasses";
-            ClassInfo *ci = NULL;
-            trCls  = ((TObjString*)trClsList->At(1))->GetString();
-            if (trCls != "AllClasses") {
-               ci = dataInfo.GetClassInfo( trCls );
-               if (ci == NULL)
-                  log << kFATAL << "Class " << trCls << " not known for variable transformation "
-                        << trName << ", please check." << Endl;
-               else
-                  idxCls = ci->GetNumber();
-            }
-         }
-
-	 VariableTransformBase* transformation = NULL;
-	 TString variables = "_V_";
-         if      (trName == "I" || trName == "Ident" || trName == "Identity")
-	    transformation = new VariableIdentityTransform( dataInfo);
-         else if (trName == "D" || trName == "Deco" || trName == "Decorrelate")
-	    transformation = new VariableDecorrTransform( dataInfo);
-         else if (trName == "P" || trName == "PCA")
-	    transformation = new VariableGaussTransform ( dataInfo);
-         else if (trName == "G" || trName == "Gauss")
-	    transformation = new VariableGaussTransform ( dataInfo);
-         else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize"){
-	    variables = "_V_,_T_";
-	    transformation = new VariableNormalizeTransform( dataInfo);
-	 }
-         else
-            log << kFATAL << "<ProcessOptions> Variable transform '"
-                  << trName << "' unknown." << Endl;
-	 ClassInfo* clsInfo = dataInfo.GetClassInfo(idxCls);
-	 if( clsInfo )
-	    log << kINFO << "create Transformation " << trName << " with reference class " << clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
-	 else
-	    log << kINFO << "create Transformation " << trName << " with events of all classes." << Endl;
-	    
-
-	 if( transformation ){
-	    transformation->SelectInput( variables );
-	    transformationHandler.AddTransformation(transformation, idxCls);
-	 }
-      }
-   }
 }
 
 //_______________________________________________________________________
