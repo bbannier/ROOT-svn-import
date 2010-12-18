@@ -317,6 +317,7 @@ void TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Floa
    }
 
    input.clear();
+//   event->Print(std::cout);
    for( ; itEntry != itEntryEnd; ++itEntry ) {
       Char_t type = (*itEntry).first;
       Int_t  idx  = (*itEntry).second;
