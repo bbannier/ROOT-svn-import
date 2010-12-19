@@ -68,7 +68,7 @@
 #include <fstream>
 #include <sstream>
 #include <cassert>
-#include <climits>
+#include <limits>
 
 #include "TMVA/Event.h"
 #include "TMVA/Tools.h"
@@ -1336,7 +1336,7 @@ Float_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
    case kValueDensity: {
       
       Double_t volume  = cell->GetVolume();
-      if ( volume > 1.0e-10 ){
+      if (volume > numeric_limits<double>::epsilon()) {
          return GetCellValue(cell, kValue)/volume;
       } else {
          if (volume<=0){
@@ -1365,7 +1365,7 @@ Float_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
       if (cell->GetIntg() != 0)
 	 return cell->GetDriv()/cell->GetIntg();
       else
-	 return 0;
+         return 0;
 
    case kCellVolume:
       return cell->GetVolume();
