@@ -18,6 +18,7 @@ class ExecutionEngine;
 
 namespace clang {
 class CompilerInstance;
+class CodeGenerator;
 }
 
 namespace cling {
@@ -36,13 +37,18 @@ public:
 
    void installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp);
 
-   bool doCodegen(clang::CompilerInstance* CI,
-                  const std::string& filename);
+  bool startCodegen(clang::CompilerInstance* CI,
+                 const std::string& filename);
+  bool getModuleFromCodegen();
 
    void executeFunction(llvm::StringRef funcname);
   
   llvm::ExecutionEngine& getEngine() {
     return *m_engine.get();
+  }
+  
+  clang::CodeGenerator* getCodeGenerator() const {
+    return m_codeGen.get();
   }
 
 private:
@@ -52,7 +58,8 @@ private:
 
    llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance for growing AST.
    llvm::OwningPtr<llvm::ExecutionEngine> m_engine; // We own, our JIT.
-   llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
+  llvm::OwningPtr<clang::CodeGenerator> m_codeGen;
+  llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
    std::pair<unsigned,unsigned> m_posInitGlobals; // position (module idx, global idx) of next global to be initialized in m_ASTCI's AST
 
    Interpreter* m_Interpreter;

@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -217,6 +218,15 @@ namespace cling {
     }
     
     //
+    // Start the code generation on the old AST:
+    //
+    if (!m_ExecutionContext->startCodegen(m_IncrASTParser->getCI(),
+                                          "Interpreter::processLine() input")) {
+      fprintf(stderr, "Module creation failed!\n");
+      return 0;
+    }
+
+    //
     //  Send the wrapped code through the
     //  frontend to produce a translation unit.
     //
@@ -235,7 +245,7 @@ namespace cling {
     //  Send the translation unit through the
     //  llvm code generator to make a module.
     //
-    if (!m_ExecutionContext->doCodegen(CI, "Interpreter::processLine() input")) {
+    if (!m_ExecutionContext->getModuleFromCodegen()) {
       fprintf(stderr, "Module creation failed!\n");
       return 0;
     }
@@ -498,7 +508,8 @@ namespace cling {
   clang::CompilerInstance*
   Interpreter::compileString(const std::string& argCode)
   {
-    return m_IncrASTParser->parse(argCode);
+    return m_IncrASTParser->parse(argCode,
+                                  m_ExecutionContext->getCodeGenerator());
   }
   
   clang::CompilerInstance*
@@ -539,12 +550,17 @@ namespace cling {
     if (allowSharedLib && tryLoadSharedLib(filename))
       return 0;
     
+    if (!m_ExecutionContext->startCodegen(m_IncrASTParser->getCI(), filename)) {
+      fprintf(stderr, "Error: could not compile prompt history!\n");
+      return 1;
+    }    
+    
     clang::CompilerInstance* CI = compileFile(filename, trailcode);
     if (!CI) {
       return 1;
     }
     
-    if (!m_ExecutionContext->doCodegen(CI, filename)) {
+    if (!m_ExecutionContext->getModuleFromCodegen()) {
       fprintf(stderr, "Error: Backend did not create a module!\n");
       return 1;
     }
