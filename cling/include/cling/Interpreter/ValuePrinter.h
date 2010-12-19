@@ -109,13 +109,30 @@ namespace cling {
 
   // Can be reimplemented to stream an object (not a pointer!) of
   // type T.
+  template <typename T, bool CANSTREAM>
+  struct StreamObject {
+    StreamObject(llvm::raw_ostream& o, const T& v) {
+      o << "@" << (void*)&v << '\n';
+    }
+  };
   template <typename T>
-  llvm::raw_ostream& StreamObject(llvm::raw_ostream& o, const T& v) {
-    return o << v; }
-  llvm::raw_ostream& StreamObject(llvm::raw_ostream& o, const char* v) {
+  struct StreamObject<T,true> {
+    StreamObject(llvm::raw_ostream& o, const T& v) {
+      o << v << '\n'; }
+  };
+  template<>
+  struct StreamObject<const char*, true> {
+    StreamObject(llvm::raw_ostream& o, const char* v) {
     // Needed to surround strings with '"'
-    return o << '"' << v << '"'; }
-
+    o << '"' << v << "\"\n"; }
+  };
+  template<int N>
+  struct StreamObject<char[N], true> {
+    StreamObject(llvm::raw_ostream& o, const char* v) {
+      // Needed to surround strings with '"'
+      o << '"' << v << "\"\n"; }
+  };
+  
   // Can be re-implemented to print type-specific details, e.g. as
   //   template <typename ACTUAL>
   //   void dumpPtr(llvm::raw_ostream& o, const clang::Decl* a,
@@ -128,17 +145,12 @@ namespace cling {
     if (flags & ValuePrinter::kIsConst) {
       o << " const";
     }
-    if (!(flags & ValuePrinter::kIsObj)) {
-      o << ") " << t << '\n';
+    o << ") ";
+    if (flags & ValuePrinter::kIsObj) {
+      StreamObject<TY, CanStream<TY>::get
+      || CanStream<typename NoConst<TY>::Type>::get>(o, *u);
     } else {
-      o << ") ";
-      if (CanStream<TY>::get
-          || CanStream<typename NoConst<TY>::Type>::get) {
-        StreamObject(o, *u);
-        o << '\n';
-      } else {
-        o << "@" << t << '\n';
-      }
+      o << t << '\n';
     }
     o.flush();
   }
