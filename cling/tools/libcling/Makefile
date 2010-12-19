@@ -16,8 +16,9 @@ LINK_LIBS_IN_SHARED = 1
 SHARED_LIBRARY = 1
 
 LINK_COMPONENTS := all
-USEDLIBS = clingUserInterface.a clingMetaProcessor.a clingInterpreter.a clingEditLine.a clangFrontend.a clangSerialization.a clangDriver.a clangCodeGen.a clangSema.a clangChecker.a clangAnalysis.a clangRewrite.a clangAST.a clangParse.a clangLex.a clangBasic.a
-
+USEDLIBS = clingUserInterface.a clingMetaProcessor.a clingInterpreter.a clingEditLine.a clangFrontend.a clangSerialization.a clangDriver.a clangCodeGen.a clangSema.a clangChecker.a clangAnalysis.a clangRewrite.a clangAST.a clangParse.a clangLex.a clangBasic.a llvmSupport.a
+LLVMLIBS = LLVMSupport.a
+LIBS += -lncurses
 include $(CLING_LEVEL)/Makefile
 
 ##===----------------------------------------------------------------------===##
