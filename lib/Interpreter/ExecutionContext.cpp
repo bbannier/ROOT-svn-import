@@ -162,35 +162,42 @@ ExecutionContext::executeFunction(llvm::StringRef funcname)
 
 
 bool
-ExecutionContext::doCodegen(clang::CompilerInstance* CI,
+ExecutionContext::startCodegen(clang::CompilerInstance* CI,
                             const std::string& filename)
 {
-   // CodeGen + pass module to execution engine.
+   // CodeGen start: parse old AST
 
    clang::TranslationUnitDecl* tu =
       CI->getASTContext().getTranslationUnitDecl();
    if (!tu) {
       fprintf(stderr,
-              "Interpreter::doCodegen: No translation unit decl passed!\n");
+              "ExecutionContext::startCodegen: No translation unit decl passed!\n");
       return false;
    }
 
-   llvm::OwningPtr<clang::CodeGenerator> codeGen(
+   m_codeGen.reset(
       CreateLLVMCodeGen(CI->getDiagnostics(), filename, CI->getCodeGenOpts(),
                         CI->getLLVMContext()));
-   codeGen->Initialize(CI->getASTContext());
+  m_codeGen->Initialize(CI->getASTContext());
    clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
    clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();
    //fprintf(stderr, "Running code generation.\n");
    for (; iter != iter_end; ++iter) {
-      codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
+      m_codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
    }
-   codeGen->HandleTranslationUnit(CI->getASTContext());
-   //fprintf(stderr, "Finished code generation.\n");
-   llvm::Module* m = codeGen->ReleaseModule();
+  return true;
+}
+
+bool
+ExecutionContext::getModuleFromCodegen()
+{
+   llvm::Module* m = m_codeGen->ReleaseModule();
+  // Remove Codegen, it's once per start / getModuleFromCodeGen() pair
+  m_codeGen.reset(0);
+
    if (!m) {
       fprintf(stderr,
-              "Interpreter::doCodegen: Code generation did not create a module!\n");
+              "ExecutionContext::getModuleFromCodeGen: Code generation did not create a module!\n");
       return false;
    }
 
