@@ -61,8 +61,6 @@ private:
   llvm::OwningPtr<clang::CodeGenerator> m_codeGen;
   llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
    std::pair<unsigned,unsigned> m_posInitGlobals; // position (module idx, global idx) of next global to be initialized in m_ASTCI's AST
-
-   Interpreter* m_Interpreter;
 };
 }
 #endif // CLING_EXECUTIONCONTEXT_H

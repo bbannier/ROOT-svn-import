@@ -108,13 +108,12 @@ copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src,
 
 
 ExecutionContext::ExecutionContext(Interpreter& Interp):
-   m_prev_module(0),
-   m_Interpreter(&Interp)
+   m_prev_module(0)
 {
-   m_CI.reset(m_Interpreter->createCI());
+   m_CI.reset(Interp.createCI());
    m_prev_module
       = new llvm::Module("_Clang_first",
-                         *m_Interpreter->getCIBuilder().getLLVMContext());
+                         *Interp.getCIBuilder().getLLVMContext());
    //
    //  Create an execution engine to use.
    //
