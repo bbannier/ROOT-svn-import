@@ -309,7 +309,6 @@ namespace cling {
     //  to the global namespace and change the code so that
     //  the new global variables are used.
     //
-    std::string held_globals;
     std::string wrapped_globals;
     std::string wrapped_stmts;
     std::string final_stmt; // last statement for value printer
@@ -372,7 +371,6 @@ namespace cling {
             if (DS->isSingleDecl()) {
               //fprintf(stderr, "decl, not var decl, single decl.\n");
               wrapped_globals.append(stmt_string + '\n');
-              held_globals.append(stmt_string + '\n');
               continue;
             }
             //fprintf(stderr, "decl, not var decl, not single decl.\n");
@@ -384,7 +382,6 @@ namespace cling {
             getRangeWithSemicolon(SLoc, ELoc, SM, LO);
             std::string decl = std::string(buffer + r.first, r.second - r.first);
             wrapped_globals.append(decl + ";\n");
-            held_globals.append(decl + ";\n");
             continue;
           }
           //
@@ -407,7 +404,6 @@ namespace cling {
               //fprintf(stderr, "var decl, init is constructor.\n");
             }
             wrapped_globals.append(decl + ";\n"); // FIXME: wrong for constructor
-            held_globals.append(decl + ";\n");
             continue;
           }
           //
@@ -419,7 +415,6 @@ namespace cling {
             wrapped_globals.append(decl + " = " +
                                    std::string(buffer + r.first, r.second - r.first)
                                    + ";\n");
-            held_globals.append(decl + ";\n");
             continue;
           }
           //
@@ -432,7 +427,6 @@ namespace cling {
             final_stmt = std::string(VD->getName())  + " = " +
                std::string(buffer + r.first, r.second - r.first) + ";";
             wrapped_globals.append(decl + ";\n");
-            held_globals.append(decl + ";\n");
             continue;
           }
           //
@@ -450,7 +444,6 @@ namespace cling {
             final_stmt = stm.str();
           }
           wrapped_globals.append(decl + ";\n");
-          held_globals.append(decl + ";\n");
         }
       }
       haveStatements = !final_stmt.empty();
@@ -471,21 +464,10 @@ namespace cling {
       }
     }
     //
-    //fprintf(stderr, "m_globalDeclarations:\n%s\n",
-    //   m_globalDeclarations.c_str());
-    //fprintf(stderr, "held_globals:\n%s\n", held_globals.c_str());
-    //fprintf(stderr, "---\n");
     //fprintf(stderr, "wrapped_globals:\n%s\n", wrapped_globals.c_str());
     //fprintf(stderr, "wrapped_stmts:\n%s\n", wrapped_stmts.c_str());
     wrapped += wrapped_globals + wrapped_stmts;
-    //
-    //  Shutdown parse.
-    //
-    //CI->setASTConsumer(0);
-    //CI->setASTContext(0);
-    //if (CI->hasPreprocessor()) {
-    //   CI->getPreprocessor().EndSourceFile();
-    //}
+
     //CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
     //CI->getDiagnosticClient().EndSourceFile();
     unsigned err_count = CI->getDiagnosticClient().getNumErrors();
