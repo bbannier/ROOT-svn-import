@@ -33,7 +33,7 @@ public:
 
    clang::CompilerInstance* getCI() { return m_CI.get(); }
 
-   void useModule(llvm::Module*& m);
+   void useModule(llvm::Module* m);
 
    void installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp);
 
@@ -59,8 +59,9 @@ private:
    llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance for growing AST.
    llvm::OwningPtr<llvm::ExecutionEngine> m_engine; // We own, our JIT.
   llvm::OwningPtr<clang::CodeGenerator> m_codeGen;
-  llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
-   std::pair<unsigned,unsigned> m_posInitGlobals; // position (module idx, global idx) of next global to be initialized in m_ASTCI's AST
+  llvm::Module* m_ee_module; // ExeEngine init module, owned by m_engine.
+  llvm::Module* m_module; // IncrAST module, owned by m_engine.
+   unsigned m_posInitGlobals; // position (global idx in out module) of next global to be initialized in m_ASTCI's AST
 };
 }
 #endif // CLING_EXECUTIONCONTEXT_H

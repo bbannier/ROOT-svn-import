@@ -30,95 +30,20 @@
 
 using namespace cling;
 
-namespace {
-
-//-------------------------------------------------------------------------
-// Copy the execution engine memory mappings for the global
-// variables in the source module to the destination module.
-//-------------------------------------------------------------------------
-static
-void
-copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src,
-                   llvm::Module* dst)
-{
-   // Loop over all the global variables in the destination module.
-   std::string new_global_name;
-   llvm::Module::global_iterator dst_iter = dst->global_begin();
-   llvm::Module::global_iterator dst_end = dst->global_end();
-   for (; dst_iter != dst_end; ++dst_iter) {
-      new_global_name = dst_iter->getName();
-      if (new_global_name.size() > 1) {
-         if (new_global_name.substr(0, 5) == "llvm.") {
-            continue;
-         }
-         if (new_global_name[0] == '_') {
-            if (
-               (new_global_name[1] == '_') ||
-               std::isupper(new_global_name[1])
-            ) {
-               continue;
-            }
-         }
-         if (new_global_name[0] == '.') {
-            continue;
-         }
-      }
-      //fprintf(stderr, "Destination module has global: %s\n",
-      //        new_global_name.c_str());
-      //fprintf(stderr, "Search source module for global var: %s\n",
-      //        dst_iter->getName().data());
-      // Find the same variable (by name) in the source module.
-      llvm::GlobalVariable* src_gv =
-         src->getGlobalVariable(dst_iter->getName());
-      if (!src_gv) { // no such global in prev module
-         continue; // skip it
-      }
-      // Get the mapping from the execution engine for the source
-      // global variable and create a new mapping to the same
-      // address for the destination global variable.  Now they
-      // share the same allocated memory (and so have the same value).
-      // FIXME: We should compare src var and dst var types here!
-      void* p = ee->getPointerToGlobal(src_gv);
-      //fprintf(stderr, "Setting mapping for: %s to %lx\n",
-      //   dst_iter->getName().data(), (unsigned long) p);
-      // And duplicate it for the destination module.
-      ee->addGlobalMapping(&*dst_iter, p);
-   }
-   // This example block copies the global variable and the mapping.
-   //GlobalVariable* src_gv = &*src_global_iter;
-   //void* p = ee->getPointerToGlobal(src_gv);
-   //string name = src_gv->getName();
-   //// New global variable is owned by destination module.
-   //GlobalVariable* dst_gv = new GlobalVariable(
-   //  *dest_module, // Module&
-   //  src_gv->getType(), // const Type*
-   //  src_gv->isConstant(), // bool, isConstant
-   //  src_gv->getLinkage(), // LinkageTypes
-   //  src_gv->getInitializer(), // Constant*, Initializer
-   //  "" // const Twine&, Name
-   //);
-   //dst_gv->copyAttributesFrom(src_gv);
-   //++src_global_iter;
-   //src_gv->eraseFromParent();
-   //dst_gv->setName(name);
-   //ee->addGlobalMapping(dst_gv, p);
-}
-
-} // unnamed namespace
-
-
 ExecutionContext::ExecutionContext(Interpreter& Interp):
-   m_prev_module(0)
+   m_ee_module(0),
+   m_module(0),
+   m_posInitGlobals(0)
 {
    m_CI.reset(Interp.createCI());
-   m_prev_module
+   m_ee_module
       = new llvm::Module("_Clang_first",
                          *Interp.getCIBuilder().getLLVMContext());
    //
    //  Create an execution engine to use.
    //
    // Note: Engine takes ownership of the module.
-   llvm::EngineBuilder builder(m_prev_module);
+   llvm::EngineBuilder builder(m_ee_module);
    std::string errMsg;
    builder.setErrorStr(&errMsg);
    builder.setEngineKind(llvm::EngineKind::JIT);
@@ -127,10 +52,17 @@ ExecutionContext::ExecutionContext(Interpreter& Interp):
       std::cerr << "Error: Unable to create the execution engine!\n";
       std::cerr << errMsg << '\n';
    }
+
+  // temporarily set m_module to run initializers:
+  m_module = m_ee_module;
+  runNewStaticConstructorsDestructors();
+  m_module = 0;
 }
+
 ExecutionContext::~ExecutionContext()
 {
    m_CI->takeLLVMContext(); // Don't take down the context with the CI.
+  m_codeGen->ReleaseModule();
 }
 
 
@@ -154,8 +86,6 @@ ExecutionContext::executeFunction(llvm::StringRef funcname)
    //
    // Print the result.
    //llvm::outs() << "Result: " << ret.IntVal << "\n";
-   // Run global destruction.
-   //m_engine->runStaticConstructorsDestructors(true);
    m_engine->freeMachineCodeForFunction(f);
 }
 
@@ -164,35 +94,35 @@ bool
 ExecutionContext::startCodegen(clang::CompilerInstance* CI,
                             const std::string& filename)
 {
-   // CodeGen start: parse old AST
-
-   clang::TranslationUnitDecl* tu =
-      CI->getASTContext().getTranslationUnitDecl();
-   if (!tu) {
+  // CodeGen start: parse old AST
+  
+  if (!m_codeGen.get()) {
+    clang::TranslationUnitDecl* tu =
+    CI->getASTContext().getTranslationUnitDecl();
+    if (!tu) {
       fprintf(stderr,
               "ExecutionContext::startCodegen: No translation unit decl passed!\n");
       return false;
-   }
-
-   m_codeGen.reset(
-      CreateLLVMCodeGen(CI->getDiagnostics(), filename, CI->getCodeGenOpts(),
-                        CI->getLLVMContext()));
-  m_codeGen->Initialize(CI->getASTContext());
-   clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
-   clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();
-   //fprintf(stderr, "Running code generation.\n");
-   for (; iter != iter_end; ++iter) {
+    }
+    
+    m_codeGen.reset(
+                    CreateLLVMCodeGen(CI->getDiagnostics(), filename, CI->getCodeGenOpts(),
+                                      CI->getLLVMContext()));
+    m_codeGen->Initialize(CI->getASTContext());
+    clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
+    clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();
+    //fprintf(stderr, "Running code generation.\n");
+    for (; iter != iter_end; ++iter) {
       m_codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
-   }
+    }
+  }
   return true;
 }
-
+  
 bool
 ExecutionContext::getModuleFromCodegen()
 {
-   llvm::Module* m = m_codeGen->ReleaseModule();
-  // Remove Codegen, it's once per start / getModuleFromCodeGen() pair
-  m_codeGen.reset(0);
+   llvm::Module* m = m_codeGen->GetModule();
 
    if (!m) {
       fprintf(stderr,
@@ -237,70 +167,50 @@ ExecutionContext::printModule(llvm::Module* m)
 bool
 ExecutionContext::runNewStaticConstructorsDestructors()
 {
-   // incremental version of m_engine->runStaticConstructorsDestructors(false);
-
-   for (unsigned mi = m_posInitGlobals.first, e = m_engine->modules_size();
-        mi != e; ++mi) {
-      const llvm::Module* module = m_engine->modules_at(mi);
-      llvm::GlobalVariable *GV = module->getNamedGlobal("llvm.global_ctors");
-      if (!GV) continue;
-      llvm::ConstantArray *InitList = dyn_cast<llvm::ConstantArray>(GV->getInitializer());
-      m_posInitGlobals.first = mi;
-      if (!InitList) continue;
-      for (unsigned i = m_posInitGlobals.second, e = InitList->getNumOperands(); i != e; ++i) {
-         m_posInitGlobals.second = 0;
-         if (llvm::ConstantStruct *CS = 
-             dyn_cast<llvm::ConstantStruct>(InitList->getOperand(i))) {
-            if (CS->getNumOperands() != 2)
-               return false; // Not array of 2-element structs.
-
-            llvm::Constant *FP = CS->getOperand(1);
-            if (FP->isNullValue())
-               break;  // Found a null terminator, exit.
-   
-            if (llvm::ConstantExpr *CE = dyn_cast<llvm::ConstantExpr>(FP))
-               if (CE->isCast())
-                  FP = CE->getOperand(0);
-            if (llvm::Function *F = dyn_cast<llvm::Function>(FP)) {
-               // Execute the ctor/dtor function!
-               m_engine->runFunction(F, std::vector<llvm::GenericValue>());
-            }
-         }
-         m_posInitGlobals.second = i + 1;
+  // incremental version of m_engine->runStaticConstructorsDestructors(false);
+  
+  if (!m_module) return true;
+  llvm::GlobalVariable *GV = m_module->getNamedGlobal("llvm.global_ctors");
+  if (!GV) return true;
+  llvm::ConstantArray *InitList = dyn_cast<llvm::ConstantArray>(GV->getInitializer());
+  if (!InitList) return true;
+  for (unsigned i = m_posInitGlobals, e = InitList->getNumOperands(); i != e; ++i) {
+    m_posInitGlobals = 0;
+    if (llvm::ConstantStruct *CS = 
+        dyn_cast<llvm::ConstantStruct>(InitList->getOperand(i))) {
+      if (CS->getNumOperands() != 2)
+        return false; // Not array of 2-element structs.
+      
+      llvm::Constant *FP = CS->getOperand(1);
+      if (FP->isNullValue())
+        break;  // Found a null terminator, exit.
+      
+      if (llvm::ConstantExpr *CE = dyn_cast<llvm::ConstantExpr>(FP))
+        if (CE->isCast())
+          FP = CE->getOperand(0);
+      if (llvm::Function *F = dyn_cast<llvm::Function>(FP)) {
+        // Execute the ctor/dtor function!
+        m_engine->runFunction(F, std::vector<llvm::GenericValue>());
       }
-   }
-   return true;
+    }
+    m_posInitGlobals = i + 1;
+  }
+  return true;
 }
-
+  
 
 void
-ExecutionContext::useModule(llvm::Module*& m)
+ExecutionContext::useModule(llvm::Module* m)
 {
    // Use a new module, replacing the existing one.
    // Transfers global mappings before replacement.
    // Note: we take ownership of the module m!
 
-   //
-   //  Transfer global mappings from previous module.
-   //
-   copyGlobalMappings(m_engine.get(), m_prev_module, m);
-
-   //  All done with previous module, delete it.
-   //
-   {
-      bool ok = m_engine->removeModule(m_prev_module);
-      if (!ok) {
-         fprintf(stderr, "Previous module not found in execution engine!\n");
-      }
-      delete m_prev_module;
-      m_prev_module = m;
-   }
-   //
-   //  Give new module to the execution engine.
-   //
-   m_engine->addModule(m); // Note: The engine takes ownership of the module.
-   runNewStaticConstructorsDestructors();
-   m = 0;
+  if (!m_module) {
+    m_engine->addModule(m); // Note: The engine takes ownership of the module.
+    m_module = m;
+  }
+  runNewStaticConstructorsDestructors();
 }
 
 
