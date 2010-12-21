@@ -52,6 +52,14 @@ TMVA::PDEFoamKernelGauss::PDEFoamKernelGauss(Float_t sigma)
 }
 
 //_____________________________________________________________________
+TMVA::PDEFoamKernelGauss::PDEFoamKernelGauss(const PDEFoamKernelGauss &other)
+   : PDEFoamKernelBase(other)
+   , fSigma(other.fSigma)
+{
+   // Copy constructor
+}
+
+//_____________________________________________________________________
 Float_t TMVA::PDEFoamKernelGauss::Estimate(PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv)
 {
    // Linear neighbors kernel estimator.  It returns the cell value

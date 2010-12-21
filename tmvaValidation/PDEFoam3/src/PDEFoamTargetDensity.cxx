@@ -72,7 +72,6 @@ TMVA::PDEFoamTargetDensity::PDEFoamTargetDensity(const PDEFoamTargetDensity &dis
    , fTarget(distr.fTarget)
 {
    // Copy constructor
-   Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
 }
 
 //_____________________________________________________________________

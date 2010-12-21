@@ -233,7 +233,7 @@ TMVA::PDEFoam::PDEFoam(const PDEFoam &From) :
    , fDistr(0)
    , fTimer(0)
    , fVariableNames(0)
-   , fLogger(new MsgLogger("PDEFoam"))
+   , fLogger(new MsgLogger(*From.fLogger))
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
