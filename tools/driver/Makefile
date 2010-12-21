@@ -19,4 +19,4 @@ TOOL_NO_EXPORTS = 1
 
 include $(LEVEL)/Makefile.common
 
-LIBS += -lcurses $(LibDir)/libcling.so
+LIBS += -lcurses $(LibDir)/libcling$(SHLIBEXT)
