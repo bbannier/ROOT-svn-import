@@ -68,7 +68,6 @@ TMVA::PDEFoamDiscriminantDensity::PDEFoamDiscriminantDensity(const PDEFoamDiscri
    , fClass(distr.fClass)
 {
    // Copy constructor
-   Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
 }
 
 //_____________________________________________________________________

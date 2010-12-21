@@ -48,6 +48,14 @@ TMVA::PDEFoamKernelBase::PDEFoamKernelBase()
 }
 
 //_____________________________________________________________________
+TMVA::PDEFoamKernelBase::PDEFoamKernelBase(const PDEFoamKernelBase &other)
+   : TObject()
+   , fLogger(new MsgLogger(*other.fLogger))
+{
+   // Copy constructor
+}
+
+//_____________________________________________________________________
 TMVA::PDEFoamKernelBase::~PDEFoamKernelBase()
 {
    // Destructor

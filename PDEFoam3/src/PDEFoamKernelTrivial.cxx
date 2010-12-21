@@ -47,6 +47,13 @@ TMVA::PDEFoamKernelTrivial::PDEFoamKernelTrivial()
 }
 
 //_____________________________________________________________________
+TMVA::PDEFoamKernelTrivial::PDEFoamKernelTrivial(const PDEFoamKernelTrivial &other)
+   : PDEFoamKernelBase(other)
+{
+   // Copy constructor
+}
+
+//_____________________________________________________________________
 Float_t TMVA::PDEFoamKernelTrivial::Estimate(PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv)
 {
    // Simple kernel estimator.  It returns the cell value 'cv',

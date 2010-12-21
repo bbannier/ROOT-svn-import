@@ -43,6 +43,7 @@ namespace TMVA
 
    public:
       PDEFoamKernelTrivial();                 // Constructor
+      PDEFoamKernelTrivial(const PDEFoamKernelTrivial&); // Copy Constructor
       virtual ~PDEFoamKernelTrivial() {};     // Destructor
 
       // kernel estimator

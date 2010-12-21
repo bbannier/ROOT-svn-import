@@ -63,10 +63,9 @@ TMVA::PDEFoamDecisionTreeDensity::PDEFoamDecisionTreeDensity(std::vector<Double_
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTreeDensity::PDEFoamDecisionTreeDensity(const PDEFoamDecisionTreeDensity &distr)
    : PDEFoamDensityBase(distr)
-   , fClass(0)
+   , fClass(distr.fClass)
 {
    // Copy constructor
-   Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
 }
 
 //_____________________________________________________________________

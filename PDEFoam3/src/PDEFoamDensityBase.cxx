@@ -99,12 +99,14 @@ TMVA::PDEFoamDensityBase::~PDEFoamDensityBase()
 //_____________________________________________________________________
 TMVA::PDEFoamDensityBase::PDEFoamDensityBase(const PDEFoamDensityBase &distr)
    : TObject(),
-     fBst(distr.fBst),
+     fBst(new BinarySearchTree(*distr.fBst)),
      fBox(distr.fBox),
-     fLogger(new MsgLogger("PDEFoamDensityBase"))
+     fLogger(new MsgLogger(*distr.fLogger))
 {
    // Copy constructor
-   Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
+   //
+   // Creates a deep copy, using the copy constructor of
+   // TMVA::BinarySearchTree
 }
 
 //_____________________________________________________________________

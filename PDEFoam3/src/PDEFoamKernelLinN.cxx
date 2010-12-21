@@ -47,6 +47,13 @@ TMVA::PDEFoamKernelLinN::PDEFoamKernelLinN()
 }
 
 //_____________________________________________________________________
+TMVA::PDEFoamKernelLinN::PDEFoamKernelLinN(const PDEFoamKernelLinN &other)
+   : PDEFoamKernelBase(other)
+{
+   // Copy constructor
+}
+
+//_____________________________________________________________________
 Float_t TMVA::PDEFoamKernelLinN::Estimate(PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv)
 {
    // Linear neighbors kernel estimator.  It returns the cell value

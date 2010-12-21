@@ -47,6 +47,7 @@ namespace TMVA
 
    public:
       PDEFoamKernelBase();                 // Constructor
+      PDEFoamKernelBase(const PDEFoamKernelBase&); // Copy constructor
       virtual ~PDEFoamKernelBase();        // Destructor
 
       // kernel estimator
