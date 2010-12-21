@@ -438,6 +438,13 @@ void TMVA::MethodBDT::ProcessOptions()
    //             << " that is larger than 1/2 the total number of events in the training sample."
    //             << " Hence I cannot make any split at all... this will not work!" << Endl;
    //    }
+   
+   if (fNTrees==0){
+     Log() << kERROR << " Zero Decision Trees demanded... that does not work !! "
+           << " I set it to 1 .. just so that the program does not crash"
+           << Endl;
+     fNTrees = 1;
+   }
 
 }
 //_______________________________________________________________________
@@ -581,13 +588,31 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
    //       the actual VALUES at (at least for the scan, guess also in GA) are always
    //       read from the middle of the bins. Hence.. the choice of Intervals e.g. for the
    //       MaxDepth, in order to make nice interger values!!!
-   tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,5,5))); //==stepsize 
-   // tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,15.,15))); // stepsize 1
-   // tuneParameters.insert(std::pair<TString,Interval>("NodeMinEvents", Interval(50,500,10)));  // 50 to 500 stepsize 25  
-   // tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,20))); //  stepsize 50
-   // tuneParameters.insert(std::pair<TString,Interval>("NodePurityLimit",Interval(.4,.6,3)));   // stepsize .1
-   tuneParameters.insert(std::pair<TString,Interval>("AdaBoostBeta",   Interval(.5,1.50,10)));   //== stepsize .1
 
+   // find some reasonable ranges for the optimisation of NodeMinEvents:
+   
+   Int_t N  = Int_t( Data()->GetNEvtSigTrain()) ;            
+   Int_t min  = TMath::Max( 20,    ( ( N/10000 - (N/10000)%10)  ) );
+   Int_t max  = TMath::Max( min*10, TMath::Min( 10000, ( ( N/10    - (N/10)   %100) ) ) );
+
+   tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(1,10,10)));    // stepsize 1
+   tuneParameters.insert(std::pair<TString,Interval>("NodeMinEvents",  Interval(min,max,10))); // 
+   tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,20))); //  stepsize 50
+   // tuneParameters.insert(std::pair<TString,Interval>("NodePurityLimit",Interval(.4,.6,3)));   // stepsize .1
+   // tuneParameters.insert(std::pair<TString,Interval>("AdaBoostBeta",   Interval(.5,1.50,10)));   //== stepsize .1
+
+   Log() << kINFO << "Automatic optimisation of tuning parameters in BDT uses:" << Endl;
+   
+   std::map<TString,TMVA::Interval>::iterator it;
+   
+   for (it=tuneParameters.begin(); it!=tuneParameters.end();it++) {
+      Log() << kINFO << it->first 
+            << " in range from: " << it->second.GetMin()
+            << " to: " << it->second.GetMax()
+            << " in : " << it->second.GetNbins()  << " steps"
+            << Endl;
+   }
+   Log() << kINFO << " using the options: " << fomType << " and " << fitType << Endl;
    OptimizeConfigParameters optimize(this, tuneParameters, fomType, fitType);
    tunedParameters=optimize.optimize();
 
@@ -621,6 +646,13 @@ void TMVA::MethodBDT::Train()
    // (needs to be done here and cannot be done in "init" as the options need to be 
    // known). 
    InitEventSample();
+
+   if (fNTrees==0){
+     Log() << kERROR << " Zero Decision Trees demanded... that does not work !! "
+           << " I set it to 1 .. just so that the program does not crash"
+           << Endl;
+     fNTrees = 1;
+   }
 
    // HHV (it's been here since looong but I really don't know why we cannot handle
    // normalized variables in BDTs...  todo

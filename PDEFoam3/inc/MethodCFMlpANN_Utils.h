@@ -198,7 +198,7 @@ namespace TMVA {
 
    private:
       MsgLogger * fLogger;
-      MsgLogger& ULog()  { if (fLogger) return *fLogger; else return *(fLogger = new MsgLogger("CFMLP_Utils")); }
+      MsgLogger& ULog()  { if (fLogger) return *fLogger; return *(fLogger = new MsgLogger("CFMLP_Utils")); }
 
    public:
 
