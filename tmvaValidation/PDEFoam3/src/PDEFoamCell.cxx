@@ -1,3 +1,5 @@
+// @(#)root/tmva $Id$
+// Author: S.Jadach, Tancredi Carli, Dominik Dannheim, Alexander Voigt
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
