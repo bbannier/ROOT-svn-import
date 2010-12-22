@@ -9,14 +9,13 @@
 
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <string>
-#include <vector>
 
-//------------------------------------------------------------------------------
-// Forward declarations from CLANG
-//------------------------------------------------------------------------------
+namespace llvm {
+  class raw_ostream;
+}
+
 namespace clang {
   class ASTConsumer;
   class CompilerInstance;
