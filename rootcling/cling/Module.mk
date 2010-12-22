@@ -61,6 +61,7 @@ $(CLINGLIB):    $(CLINGO) $(CLINGDO)
 		   "$(CLINGLIBEXTRA) \
 -L$(LLVMDIR)/lib -lcling"
 
+CLINGLIBEXTRA += -Llib -lReflex
 CLINGLIBDEP += $(REFLEXLIB)
 
 
@@ -102,7 +103,5 @@ $(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_C
 # -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
 # -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
 # -lLLVMCore -lLLVMSupport -lLLVMSystem
-BOOTLIBS += -lRCling -L$(LLVMDIR)/lib -lcling
-ROOTLIBS += -lRCling -L$(LLVMDIR)/lib -lcling
-
-CORELIBDEP += $(REFLEXLIB) $(CLINGLIB)
+CORELIBEXTRA += -Llib -lRCling
+CORELIBDEP += $(CLINGLIB)
