@@ -120,19 +120,20 @@ namespace cling {
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
     
-    compileString(""); // Consume initialization.
-    compileString("#include <stdio.h>\n");
-
     // Allow the interpreter to find itself.
     // OBJ first: if it exists it should be more up to date
     AddIncludePath(CLING_SRCDIR_INCL);
     AddIncludePath(CLING_INSTDIR_INCL);
-    compileString("#define __STDC_LIMIT_MACROS\n");
-    compileString("#define __STDC_CONSTANT_MACROS\n");
-    compileString("#include \"cling/Interpreter/Interpreter.h\"\n");
-    compileString("#include \"cling/Interpreter/ValuePrinter.h\"\n");
+
+    compileString(""); // Consume initialization.
 
     std::stringstream sstr;
+    sstr << "#include <stdio.h>\n"
+    << "#define __STDC_LIMIT_MACROS\n"
+    << "#define __STDC_CONSTANT_MACROS\n"
+    << "#include \"cling/Interpreter/Interpreter.h\"\n"
+    << "#include \"cling/Interpreter/ValuePrinter.h\"\n";
+
     // Would like
     // namespace cling {Interpreter* gCling = (Interpreter*)0x875478643;"
     // but we can't handle namespaced decls yet :-(
