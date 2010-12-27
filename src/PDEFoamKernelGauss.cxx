@@ -62,10 +62,10 @@ TMVA::PDEFoamKernelGauss::PDEFoamKernelGauss(const PDEFoamKernelGauss &other)
 //_____________________________________________________________________
 Float_t TMVA::PDEFoamKernelGauss::Estimate(PDEFoam *foam, std::vector<Float_t> &txvec, ECellValue cv)
 {
-   // Linear neighbors kernel estimator.  It returns the cell value
-   // 'cv', corresponding to the event vector 'txvec' (in foam
-   // coordinates) linear weighted by the cell values of the neighbor
-   // cells.
+   // Gaussian kernel estimator.  It returns the cell value 'cv',
+   // corresponding to the event vector 'txvec' (in foam coordinates)
+   // weighted by the cell values of all other cells, where the weight
+   // is a gaussian function.
    //
    // Parameters:
    //
@@ -78,7 +78,6 @@ Float_t TMVA::PDEFoamKernelGauss::Estimate(PDEFoam *foam, std::vector<Float_t> &
    if (foam == NULL)
       Log() << kFATAL << "<PDEFoamKernelGauss::Estimate>: PDEFoam not set!" << Endl;
 
-   PDEFoamCell *cell = foam->FindCell(txvec);
    Float_t result = 0, norm = 0;
 
    for (Long_t iCell = 0; iCell <= foam->fLastCe; iCell++) {
@@ -86,7 +85,7 @@ Float_t TMVA::PDEFoamKernelGauss::Estimate(PDEFoam *foam, std::vector<Float_t> &
 
       // calc cell density
       Float_t cell_val = 0;
-      if (!foam->CellValueIsUndefined(cell))
+      if (!foam->CellValueIsUndefined(foam->fCells[iCell]))
          // cell is not empty
          cell_val = foam->GetCellValue(foam->fCells[iCell], cv);
       else
