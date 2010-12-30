@@ -52,15 +52,19 @@ namespace TMVA
    // class definition of underlying density
    class PDEFoamDensityBase : public ::TObject
    {
+   private:
+      std::vector<Double_t> fBox; // range-searching box
+      Double_t fBoxVolume;        // volume of range searching box
+      Bool_t fBoxHasChanged;      // range searching box has changed
 
    protected:
       BinarySearchTree *fBst;     // Binary tree to find events within a volume
-      std::vector<Double_t> fBox; // range-searching box
       mutable MsgLogger *fLogger; //! message logger
+
       MsgLogger& Log() const { return *fLogger; }
 
       // calculate volume of fBox
-      Double_t GetBoxVolume() const;
+      Double_t GetBoxVolume();
 
    public:
       PDEFoamDensityBase();
@@ -72,7 +76,10 @@ namespace TMVA
       void FillBinarySearchTree(const Event* ev);
 
       // set the range-searching box
-      void SetBox(std::vector<Double_t> box) { fBox = box; };
+      void SetBox(std::vector<Double_t> box) { fBox = box; fBoxHasChanged = kTRUE; }
+
+      // get the range-searching box
+      const std::vector<Double_t>& GetBox() const { return fBox; }
 
       // main function used by PDEFoam
       // returns density at a given point by range searching in BST

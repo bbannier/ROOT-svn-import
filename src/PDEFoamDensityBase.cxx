@@ -61,6 +61,8 @@
 //   dens->FillBinarySearchTree(event);
 // _____________________________________________________________________
 
+#include <numeric>
+
 #ifndef ROOT_TMVA_PDEFoamDensityBase
 #include "TMVA/PDEFoamDensityBase.h"
 #endif
@@ -70,16 +72,20 @@ ClassImp(TMVA::PDEFoamDensityBase)
 //_____________________________________________________________________
 TMVA::PDEFoamDensityBase::PDEFoamDensityBase()
    : TObject(),
-     fBst(new TMVA::BinarySearchTree()),
      fBox(std::vector<Double_t>()),
+     fBoxVolume(1.0),
+     fBoxHasChanged(kTRUE),
+     fBst(new TMVA::BinarySearchTree()),
      fLogger(new MsgLogger("PDEFoamDensityBase"))
 {}
 
 //_____________________________________________________________________
 TMVA::PDEFoamDensityBase::PDEFoamDensityBase(std::vector<Double_t> box)
    : TObject(),
-     fBst(new TMVA::BinarySearchTree()),
      fBox(box),
+     fBoxVolume(1.0),
+     fBoxHasChanged(kTRUE),
+     fBst(new TMVA::BinarySearchTree()),
      fLogger(new MsgLogger("PDEFoamDensityBase"))
 {
    if (box.size() == 0)
@@ -99,8 +105,10 @@ TMVA::PDEFoamDensityBase::~PDEFoamDensityBase()
 //_____________________________________________________________________
 TMVA::PDEFoamDensityBase::PDEFoamDensityBase(const PDEFoamDensityBase &distr)
    : TObject(),
-     fBst(new BinarySearchTree(*distr.fBst)),
      fBox(distr.fBox),
+     fBoxVolume(distr.fBoxVolume),
+     fBoxHasChanged(distr.fBoxHasChanged),
+     fBst(new BinarySearchTree(*distr.fBst)),
      fLogger(new MsgLogger(*distr.fLogger))
 {
    // Copy constructor
@@ -124,13 +132,17 @@ void TMVA::PDEFoamDensityBase::FillBinarySearchTree(const Event* ev)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoamDensityBase::GetBoxVolume() const
+Double_t TMVA::PDEFoamDensityBase::GetBoxVolume()
 {
-   // calculate box volume
-   Double_t volume = 1.0;
-   for (std::vector<Double_t>::const_iterator it = fBox.begin();
-        it != fBox.end(); ++it) {
-      volume *= *it;
+   // Returns the volume of range searching box fBox.
+   //
+   // If the range searching box 'fBox' has changed (fBoxHasChanged is
+   // kTRUE), recalculate the box volume and set fBoxHasChanged to
+   // kFALSE
+   if (fBoxHasChanged) {
+      fBoxHasChanged = kFALSE;
+      fBoxVolume = std::accumulate(fBox.begin(), fBox.end(), 1.0,
+                                   std::multiplies<Double_t>());
    }
-   return volume;
+   return fBoxVolume;
 }
