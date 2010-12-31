@@ -97,21 +97,19 @@ Double_t TMVA::PDEFoamDiscriminantDensity::Density(std::vector<Double_t> &Xarg, 
    std::vector<const TMVA::BinarySearchTreeNode*> nodes; // BST nodes found
 
    // do range searching
-   fBst->SearchVolume(&volume, &nodes);
+   Double_t SumOfWeights = fBst->SearchVolume(&volume, &nodes);
 
    // store density based on total number of events
    event_density = nodes.size() * probevolume_inv;
 
-   Double_t weighted_count = 0.; // number of events found (sum of weights)
    Double_t N_sig = 0;           // number of signal events found
    // calc number of signal events in nodes
    for (std::vector<const TMVA::BinarySearchTreeNode*>::const_iterator it = nodes.begin();
         it != nodes.end(); ++it) {
       if ((*it)->GetClass() == fClass) // signal node
          N_sig += (*it)->GetWeight();
-      weighted_count += ((*it))->GetWeight();
    }
 
    // return:  (N_sig/N_total) / (cell_volume)
-   return (N_sig / (weighted_count + 0.1)) * probevolume_inv;
+   return (N_sig / (SumOfWeights + 0.1)) * probevolume_inv;
 }
