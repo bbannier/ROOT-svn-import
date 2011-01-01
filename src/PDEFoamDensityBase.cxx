@@ -49,14 +49,18 @@
 //
 // Usage:
 //
-// The user has to instantiate a sub class of PDEFoamDensityBase and set
-// the pointer to the owner, which is a PDEFoam object:
+// The user has to instantiate a child class of PDEFoamDensityBase and
+// set the pointer to the owner, which is a PDEFoam object:
 //
-//   PDEFoamDensityBase *dens = new MyDensity(dim);
+//   PDEFoamDensityBase *dens = new MyDensity();
 //   pdefoam->SetDensity(dens);
 //
 // Afterwards the binary search tree should be filled with TMVA
-// events:
+// events, by either using
+//
+//   pdefoam->FillBinarySearchTree(event);
+//
+// or
 //
 //   dens->FillBinarySearchTree(event);
 // _____________________________________________________________________

@@ -30,7 +30,7 @@
 // PDEFoamKernelLinN
 //
 // This PDEFoam kernel estimates a cell value for a given event by
-// weighting with cell values of the nearest neighbor cell.
+// weighting with cell values of the nearest neighbor cells.
 // _____________________________________________________________________
 
 #ifndef ROOT_TMVA_PDEFoamKernelLinN
