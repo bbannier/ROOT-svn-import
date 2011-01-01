@@ -1233,9 +1233,12 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
    //
    // - cell_value - the cell value to draw
    //
-   // - kernel - a PDEFoam kernel.
+   // - kernel - a PDEFoam kernel (optional).  If NULL is given, the
+   //            kernel is ignored and the pure cell values are
+   //            plotted.
    //
-   // - nbin - number of bins in x and y direction of result histogram.
+   // - nbin - number of bins in x and y direction of result histogram
+   //          (optional, default is 50).
    //
    // Returns:
    // a 2-dimensional histogram

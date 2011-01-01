@@ -29,8 +29,13 @@
 //
 // PDEFoamKernelBase
 //
-// This class is the abstract kernel interface for PDEFoam.  Derived
-// classes must override the Estimate() function.
+// This class is the abstract kernel interface for PDEFoam.  The
+// kernel can be used for manipulating (smearing) the cell values of a
+// PDEFoam, by passing it as an argument to
+// PDEFoam::GetCellValue(...).
+//
+// Derived classes must implement the Estimate() function to provide a
+// specific kernel behaviour.
 // _____________________________________________________________________
 
 #ifndef ROOT_TMVA_PDEFoamKernelBase

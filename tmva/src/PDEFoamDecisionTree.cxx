@@ -42,8 +42,8 @@
 // type).
 //
 // This PDEFoam variant should be booked together with the
-// PDEFoamDecisionTreeDensity density estimator, which returns the events in a
-// cell without sampling.
+// PDEFoamDecisionTreeDensity density estimator, which returns the
+// events in a cell without sampling.
 //
 //_____________________________________________________________________
 

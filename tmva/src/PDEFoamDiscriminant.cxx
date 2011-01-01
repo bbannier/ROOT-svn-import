@@ -82,7 +82,7 @@ void TMVA::PDEFoamDiscriminant::FillFoamCells(const Event* ev, Float_t wt)
 {
    // This function fills an event into the discriminant PDEFoam.  The
    // event weight 'wt' is filled into cell element 0 if the event is
-   // of class 0, and filled into cell element 1 otherwise.
+   // of class fClass, and filled into cell element 1 otherwise.
 
    // find corresponding foam cell
    std::vector<Float_t> values  = ev->GetValues();
@@ -141,6 +141,11 @@ void TMVA::PDEFoamDiscriminant::Finalize()
 TH2D* TMVA::PDEFoamDiscriminant::Project2(Int_t idim1, Int_t idim2, ECellValue cell_value, PDEFoamKernelBase *kernel, UInt_t nbin)
 {
    // Project foam variable idim1 and variable idim2 to histogram.
+   // The projection algorithm is modified such that the z axis range
+   // of the returned histogram is [0, 1], as necessary for the
+   // interpretation as a discriminator.  This is done by weighting
+   // the cell values (in case of cell_value = kValue) by the cell
+   // volume in all dimensions, excluding 'idim1' and 'idim2'.
    //
    // Parameters:
    //
@@ -148,10 +153,12 @@ TH2D* TMVA::PDEFoamDiscriminant::Project2(Int_t idim1, Int_t idim2, ECellValue c
    //
    // - cell_value - the cell value to draw
    //
-   // - kernel - a PDEFoam kernel.  If NULL is given, than the trivial
-   //            kernel is used.
+   // - kernel - a PDEFoam kernel (optional).  If NULL is given, the
+   //            kernel is ignored and the pure cell values are
+   //            plotted.
    //
-   // - nbin - number of bins in x and y direction of result histogram.
+   // - nbin - number of bins in x and y direction of result histogram
+   //          (optional, default is 50).
    //
    // Returns:
    // a 2-dimensional histogram

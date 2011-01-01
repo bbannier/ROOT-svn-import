@@ -30,11 +30,12 @@
 //
 // PDEFoamTarget
 //
-// This PDEFoam variant stores in every cell the average target 0 as
-// well as the statistical error on the target 0.  It therefore acts
-// as a target estimator.  It should be booked together with the
-// PDEFoamTargetDensity density estimator, which returns the target 0
-// density at a given phase space point during the foam build-up.
+// This PDEFoam variant stores in every cell the average target
+// fTarget (see the Constructor) as well as the statistical error on
+// the target fTarget.  It therefore acts as a target estimator.  It
+// should be booked together with the PDEFoamTargetDensity density
+// estimator, which returns the target fTarget density at a given
+// phase space point during the foam build-up.
 //
 //_____________________________________________________________________
 
