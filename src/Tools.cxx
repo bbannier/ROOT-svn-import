@@ -1396,14 +1396,14 @@ Bool_t TMVA::Tools::HistoHasEquidistantBins(const TH1& h)
 
 //_______________________________________________________________________
 std::vector<TMatrixDSym*>*
-TMVA::Tools::CalcCovarianceMatrices( const std::vector<Event*>& events, Int_t maxCls )
+TMVA::Tools::CalcCovarianceMatrices( const std::vector<Event*>& events, Int_t maxCls, Int_t maxNumberVar )
 {
    // compute covariance matrices
 
    if (events.size() == 0) return 0;
 
 
-   UInt_t nvar = events.at(0)->GetNVariables(), ivar = 0, jvar = 0;
+   UInt_t nvar = (maxNumberVar == -1 ? events.at(0)->GetNVariables():maxNumberVar), ivar = 0, jvar = 0;
 
    // init matrices
    Int_t matNum = maxCls;
