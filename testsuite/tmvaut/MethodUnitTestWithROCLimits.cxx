@@ -204,7 +204,6 @@ void MethodUnitTestWithROCLimits::run()
         std::exit(1);
      }
 
-     
      // run the reader application and compare to test tree  
      for (Long64_t ievt=0;ievt<nevt;ievt++) {
         testTree->GetEntry(ievt);
