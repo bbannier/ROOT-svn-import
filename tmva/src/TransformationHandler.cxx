@@ -65,6 +65,7 @@
 #include "TMVA/VariablePCATransform.h"
 #include "TMVA/VariableGaussTransform.h"
 #include "TMVA/VariableNormalizeTransform.h"
+#include "TMVA/VariableRearrangeTransform.h"
 
 //_______________________________________________________________________
 TMVA::TransformationHandler::TransformationHandler( DataSetInfo& dsi, const TString& callerName ) 
@@ -151,14 +152,19 @@ const TMVA::Event* TMVA::TransformationHandler::Transform( const Event* ev ) con
 }
 
 //_______________________________________________________________________
-const TMVA::Event* TMVA::TransformationHandler::InverseTransform( const Event* ev ) const 
+const TMVA::Event* TMVA::TransformationHandler::InverseTransform( const Event* ev, Bool_t suppressIfNoTargets ) const 
 {
    // the inverse transformation
    TListIter trIt(&fTransformations);
    std::vector< Int_t >::const_iterator rClsIt = fTransformationsReferenceClasses.begin();
    const Event* trEv = ev;
+   UInt_t nvars = 0, ntgts = 0, nspcts = 0;
    while (VariableTransformBase *trf = (VariableTransformBase*) trIt() ) {
-      if (trf->IsCreated()) trEv = trf->InverseTransform(ev, (*rClsIt) );
+      if (trf->IsCreated()) {
+	 trf->CountVariableTypes( nvars, ntgts, nspcts );	 
+	 if( !(suppressIfNoTargets && ntgts==0) )
+	    trEv = trf->InverseTransform(ev, (*rClsIt) );
+      }
       else break;
       rClsIt++;
    }
@@ -713,12 +719,22 @@ void TMVA::TransformationHandler::PlotVariables( const std::vector<Event*>& even
       while (VariableTransformBase *trf = (VariableTransformBase*) trIt())
          outputDir += "_" + TString(trf->GetShortName());
 
-      TObject* o = fRootBaseDir->FindObject(outputDir);
-      if (o != 0) {
-         Log() << kFATAL << "A " << o->ClassName() << " with name " << o->GetName() << " already exists in " 
-               << fRootBaseDir->GetPath() << "("<<outputDir<<")" << Endl;
+      TString uniqueOutputDir = outputDir;
+      Int_t counter = 0;
+      TObject* o = NULL;
+      while( (o = fRootBaseDir->FindObject(uniqueOutputDir)) != 0 ){
+	 uniqueOutputDir = outputDir+Form("_%d",counter);
+         Log() << kINFO << "A " << o->ClassName() << " with name " << o->GetName() << " already exists in " 
+               << fRootBaseDir->GetPath() << ", I will try with "<<uniqueOutputDir<<"." << Endl;
+	 ++counter;
       }
-      localDir = fRootBaseDir->mkdir( outputDir );
+
+//       TObject* o = fRootBaseDir->FindObject(outputDir);
+//       if (o != 0) {
+//          Log() << kFATAL << "A " << o->ClassName() << " with name " << o->GetName() << " already exists in " 
+//                << fRootBaseDir->GetPath() << "("<<outputDir<<")" << Endl;
+//       }
+      localDir = fRootBaseDir->mkdir( uniqueOutputDir );
       localDir->cd();
    
       Log() << kVERBOSE << "Create and switch to directory " << localDir->GetPath() << Endl;
@@ -850,8 +866,16 @@ void TMVA::TransformationHandler::ReadFromXML( void* trfsnode )
       else if (trfname == "Gauss" ) {
          newtrf = new VariableGaussTransform(fDataSetInfo);
       }
+      else if (trfname == "Uniform" ) {
+         newtrf = new VariableGaussTransform(fDataSetInfo, "Uniform");
+      }
       else if (trfname == "Normalize" ) {
          newtrf = new VariableNormalizeTransform(fDataSetInfo);
+      }
+      else if (trfname == "Rearrange" ) {
+         newtrf = new VariableRearrangeTransform(fDataSetInfo);
+      } 
+      else if (trfname != "None") {
       }
       else {
          Log() << kFATAL << "<ReadFromXML> Variable transform '"

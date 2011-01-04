@@ -57,6 +57,7 @@
 #include "TMVA/Ranking.h"
 #include "TMVA/VariableInfo.h"
 #include "TMVA/DataSetManager.h"
+#include "TMVA/VariableRearrangeTransform.h"
 
 REGISTER_METHOD(Category)
 
@@ -131,8 +132,20 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
 
    Log() << kINFO << "Adding sub-classifier: " << addedMethodName << "::" << theTitle << Endl;
 
+   // add transformation to rearrange the input variables
+   VariableRearrangeTransform* rearrangeTransformation = new VariableRearrangeTransform(DataInfo());
+   TString variables(theVariables);
+   variables.ReplaceAll(":",","); // use ',' as separator between variables
+   std::cout << "variables " << variables.Data() << std::endl;
+
    DataSetInfo& dsi = CreateCategoryDSI(theCut, theVariables, theTitle);
 
+   rearrangeTransformation->SetOutputDataSetInfo( &dsi );
+   rearrangeTransformation->ToggleInputSortOrder(kFALSE); // take the order of variables from the option string
+   rearrangeTransformation->SelectInput( variables, kTRUE );
+   std::cout << "set input done "  << std::endl;
+
+   rearrangeTransformation->SetEnabled(kFALSE);
    IMethod* addedMethod = ClassifierFactory::Instance().Create(addedMethodName,GetJobName(),theTitle,dsi,theOptions);
 
    MethodBase *method = (dynamic_cast<MethodBase*>(addedMethod));
@@ -141,6 +154,7 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
    
    method->SetupMethod();
    method->ParseOptions();
+   method->GetTransformationHandler().AddTransformation( rearrangeTransformation, -1 );
    method->ProcessSetup();
 
    // set or create correct method base dir for added method
@@ -171,6 +185,8 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
    primaryDSI.AddSpectator( Form("%s_cat%i:=%s", GetName(),(int)fMethods.size(),theCut.GetTitle()),
                             Form("%s:%s",GetName(),method->GetName()),
                             "pass", 0, 0, 'C' );
+
+   rearrangeTransformation->SetEnabled(kTRUE);
 
    return method;
 }
@@ -582,14 +598,7 @@ Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err, Double_t* errUpper )
    }
 
    // get mva value from the suitable sub-classifier
-   ev->SetVariableArrangement(&fVarMaps[methodToUse]);
-   MethodBase* m = dynamic_cast<MethodBase*>(fMethods[methodToUse]);
-   Double_t mvaValue = 0;
-   if(m!=0) {
-      mvaValue = m->GetMvaValue(ev,err);
-   }
-   if (errUpper) *errUpper=-1; // using same convention as in NoErrorCalc()
-   ev->SetVariableArrangement(0);
+   Double_t mvaValue = dynamic_cast<MethodBase*>(fMethods[methodToUse])->GetMvaValue(ev,err,errUpper);
 
    return mvaValue;
 }

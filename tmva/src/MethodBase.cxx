@@ -427,7 +427,10 @@ void TMVA::MethodBase::ProcessBaseOptions()
       SetOptions( fMVAPdfS->GetOptions() );
    }
 
-   CreateVariableTransforms( fVarTransformString );
+   TMVA::MethodBase::CreateVariableTransforms( fVarTransformString, 
+					       DataInfo(),
+					       GetTransformationHandler(),
+					       Log() );
 
    if (!HasMVAPdfs()) {
       if (fDefaultPDF!= 0) { delete fDefaultPDF; fDefaultPDF = 0; }
@@ -452,16 +455,54 @@ void TMVA::MethodBase::ProcessBaseOptions()
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
+void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinitionIn, 
+						TMVA::DataSetInfo& dataInfo, 
+						TMVA::TransformationHandler& transformationHandler,
+						TMVA::MsgLogger& log)
 {
-   if (trafoDefinition != "None") {
-      TList* trList = gTools().ParseFormatLine( trafoDefinition, "," );
+   // create variable transformations
+
+   TString trafoDefinition(trafoDefinitionIn);
+   if (trafoDefinition == "None") // no transformations
+      return;
+
+   Int_t parenthesisCount = 0;
+   for( Int_t position = 0, size = trafoDefinition.Sizeof(); position < size; ++position ){
+      TString ch = trafoDefinition(position,1);
+//      std::cout << "position " << position << " ch " << ch << std::endl;
+      if( ch == "(" )
+	 ++parenthesisCount;
+      if( ch == ")" )
+	 --parenthesisCount;
+      if( ch == "," && parenthesisCount == 0 ){
+	 trafoDefinition.Replace(position,1,'+');
+      }
+   }
+//   std::cout << "replaced: " << trafoDefinition.Data() << std::endl;
+
+//    if( trafoDefinition.Contains("+") || trafoDefinition.Contains("(") ) { // new format
+
+      TList* trList = gTools().ParseFormatLine( trafoDefinition, "+" );
       TListIter trIt(trList);
       while (TObjString* os = (TObjString*)trIt()) {
+	 TString tdef = os->GetString();
          Int_t idxCls = -1;
 
-         TList* trClsList = gTools().ParseFormatLine( os->GetString(), "_" ); // split entry to get trf-name and class-name
+	 TString variables = "_V_";
+	 if( tdef.Contains("(") ) { // contains selection of variables
+	    Ssiz_t parStart = tdef.Index( "(" );
+	    Ssiz_t parLen   = tdef.Index( ")", parStart )-parStart+1;
+
+	    variables = tdef(parStart,parLen);
+	    tdef.Remove(parStart,parLen);
+	    variables.Remove(parLen-1,1);
+	    variables.Remove(0,1);
+	 }
+
+         TList* trClsList = gTools().ParseFormatLine( tdef, "_" ); // split entry to get trf-name and class-name
          TListIter trClsIt(trClsList);
+	 if( trClsList->GetSize() < 1 )
+	    log << kFATAL << "Incorrect transformation string provided." << Endl;
          const TString& trName = ((TObjString*)trClsList->At(0))->GetString();
 
          if (trClsList->GetEntries() > 1) {
@@ -469,36 +510,63 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
             ClassInfo *ci = NULL;
             trCls  = ((TObjString*)trClsList->At(1))->GetString();
             if (trCls != "AllClasses") {
-               ci = DataInfo().GetClassInfo( trCls );
+               ci = dataInfo.GetClassInfo( trCls );
                if (ci == NULL)
-                  Log() << kFATAL << "Class " << trCls << " not known for variable transformation "
+                  log << kFATAL << "Class " << trCls << " not known for variable transformation "
                         << trName << ", please check." << Endl;
                else
                   idxCls = ci->GetNumber();
             }
          }
 
-         if      (trName == "D" || trName == "Deco" || trName == "Decorrelate")
-            GetTransformationHandler().AddTransformation( new VariableDecorrTransform   ( DataInfo()) , idxCls );
-         else if (trName == "P" || trName == "PCA")
-            GetTransformationHandler().AddTransformation( new VariablePCATransform      ( DataInfo()), idxCls );
-         else if (trName == "U" || trName == "Uniform")
-            GetTransformationHandler().AddTransformation( new VariableGaussTransform    ( DataInfo(),"Uniform"), idxCls );
-         else if (trName == "G" || trName == "Gauss")
-            GetTransformationHandler().AddTransformation( new VariableGaussTransform    ( DataInfo()), idxCls );
-         else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize")
-            GetTransformationHandler().AddTransformation( new VariableNormalizeTransform( DataInfo()), idxCls );
-         else
-            Log() << kFATAL << "<ProcessOptions> Variable transform '"
+	 VariableTransformBase* transformation = NULL;
+         if      (trName == "I" || trName == "Ident" || trName == "Identity"){
+	    if( variables.Length() == 0 )
+	       variables = "_V_";
+	    transformation = new VariableIdentityTransform( dataInfo);
+	 }
+     else if (trName == "D" || trName == "Deco" || trName == "Decorrelate"){
+	    if( variables.Length() == 0 )
+	       variables = "_V_";
+	    transformation = new VariableDecorrTransform( dataInfo);
+	 }
+     else if (trName == "P" || trName == "PCA"){
+	    if( variables.Length() == 0 )
+	       variables = "_V_";
+	    transformation = new VariablePCATransform   ( dataInfo);
+	 }
+     else if (trName == "U" || trName == "Uniform"){
+	    if( variables.Length() == 0 )
+	       variables = "_V_,_T_";
+	    transformation = new VariableGaussTransform ( dataInfo, "Uniform" );
+	 }
+     else if (trName == "G" || trName == "Gauss"){
+	    if( variables.Length() == 0 )
+	       variables = "_V_,_T_";
+	    transformation = new VariableGaussTransform ( dataInfo);
+	 }
+     else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize")
+	 {
+	    if( variables.Length() == 0 )
+	       variables = "_V_,_T_";
+	    transformation = new VariableNormalizeTransform( dataInfo);
+	 }
+     else
+            log << kFATAL << "<ProcessOptions> Variable transform '"
                   << trName << "' unknown." << Endl;
-         ClassInfo* clsInfo = DataInfo().GetClassInfo(idxCls);
-         if( clsInfo )
-            Log() << kINFO << " create Transformation " << trName << " with reference class " <<clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
-         else
-            Log() << kINFO << " create Transformation " << trName << " with events of all classes." << Endl;
 
+	 if( transformation ){
+	    ClassInfo* clsInfo = dataInfo.GetClassInfo(idxCls);
+         if( clsInfo )
+	       log << kINFO << "create Transformation " << trName << " with reference class " << clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
+         else
+	       log << kINFO << "create Transformation " << trName << " with events of all classes." << Endl;
+
+	    transformation->SelectInput( variables );
+	    transformationHandler.AddTransformation(transformation, idxCls);
       }
    }
+      return;
 }
 
 //_______________________________________________________________________

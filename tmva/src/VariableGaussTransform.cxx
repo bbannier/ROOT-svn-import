@@ -35,6 +35,8 @@
 #include <iomanip>
 #include <list>
 #include <limits>
+#include <exception>
+#include <stdexcept>
 
 #include "TVectorF.h"
 #include "TVectorD.h"
@@ -93,9 +95,10 @@ Bool_t TMVA::VariableGaussTransform::PrepareTransformation( const std::vector<Ev
 
    Log() << kINFO << "Preparing the Gaussian transformation..." << Endl;
 
-   SetNVariables(events[0]->GetNVariables());
+   UInt_t inputSize = fGet.size();
+   SetNVariables(inputSize);
 
-   if (GetNVariables() > 200) { 
+   if (inputSize > 200) { 
       Log() << kWARNING << "----------------------------------------------------------------------------" 
               << Endl;
       Log() << kWARNING 
@@ -125,25 +128,29 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
    //EVT}
    if (cls <0 || cls >=  (int) fCumulativePDF[0].size()) cls = fCumulativePDF[0].size()-1;
    //EVT workaround end
- 
+
   // get the variable vector of the current event
-   const UInt_t nvar = GetNVariables();
-   TVectorD vec( nvar );
-   for (UInt_t ivar=0; ivar<nvar; ivar++) vec(ivar) = ev->GetValue(ivar);
+   UInt_t inputSize = fGet.size();
+
+   std::vector<Float_t> input;
+   GetInput( ev, input );
+
+//   TVectorD vec( inputSize );
+//   for (UInt_t ivar=0; ivar<inputSize; ivar++) vec(ivar) = input.at(ivar);
    Double_t cumulant;
    //transformation   
-   for (UInt_t ivar=0; ivar<nvar; ivar++) {
+   for (UInt_t ivar=0; ivar<inputSize; ivar++) {
       if (0 != fCumulativePDF[ivar][cls]) { 
          // first make it flat
          if(fTMVAVersion>TMVA_VERSION(3,9,7))
-            cumulant = (fCumulativePDF[ivar][cls])->GetVal(vec(ivar)); 
+            cumulant = (fCumulativePDF[ivar][cls])->GetVal(input.at(ivar)); 
          else
-            cumulant = OldCumulant(vec(ivar), fCumulativePDF[ivar][cls]->GetOriginalHist() );
+            cumulant = OldCumulant(input.at(ivar), fCumulativePDF[ivar][cls]->GetOriginalHist() );
          cumulant = TMath::Min(cumulant,1.-10e-10);
          cumulant = TMath::Max(cumulant,0.+10e-10);
 
          if (fFlatNotGauss)
-            vec(ivar) = cumulant; 
+            input.at(ivar) = cumulant; 
          else {
             // sanity correction for out-of-range values
             Double_t maxErfInvArgRange = 0.99999999;
@@ -151,7 +158,7 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
             arg = TMath::Min(+maxErfInvArgRange,arg);
             arg = TMath::Max(-maxErfInvArgRange,arg);
             
-            vec(ivar) = 1.414213562*TMath::ErfInverse(arg);
+            input.at(ivar) = 1.414213562*TMath::ErfInverse(arg);
          }
       }
    }
@@ -161,12 +168,7 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
       fTransformedEvent = new Event();
    }
 
-   for (UInt_t itgt = 0; itgt < ev->GetNTargets(); itgt++) fTransformedEvent->SetTarget( itgt, ev->GetTarget(itgt) );
-   for (UInt_t ivar=0; ivar<nvar; ivar++)                  fTransformedEvent->SetVal   ( ivar, vec(ivar) );
-
-   fTransformedEvent->SetWeight     ( ev->GetWeight() );
-   fTransformedEvent->SetBoostWeight( ev->GetBoostWeight() );
-   fTransformedEvent->SetClass      ( ev->GetClass() );
+   SetOutput( fTransformedEvent, input, ev );
 
    return fTransformedEvent;
 }
@@ -230,7 +232,10 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
 {
    // fill the cumulative distributions
 
-   const UInt_t nvar = GetNVariables();
+   const UInt_t inputSize = fGet.size();
+//   const UInt_t nCls = GetNClasses();
+
+//   const UInt_t nvar = GetNVariables();
    UInt_t nevt = events.size();
    
    const UInt_t nClasses = GetNClasses();
@@ -243,11 +248,12 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
    std::list< TMVA::TMVAGaussPair >  **listsForBinning = new std::list<TMVA::TMVAGaussPair>* [numDist];
    std::vector< Float_t >   **vsForBinning = new std::vector<Float_t>* [numDist];
    for (UInt_t i=0; i < numDist; i++) {
-      listsForBinning[i] = new std::list<TMVA::TMVAGaussPair> [nvar];
-      vsForBinning[i]    = new std::vector<Float_t> [nvar];
-      nbins[i] = new UInt_t[nvar];  // nbins[0] = number of bins for signal distributions. It depends on the number of entries, thus it's the same for all the input variables, but it isn't necessary for some "weird" reason.
+      listsForBinning[i] = new std::list<TMVA::TMVAGaussPair> [inputSize];
+      vsForBinning[i]    = new std::vector<Float_t> [inputSize];
+      nbins[i] = new UInt_t[inputSize];  // nbins[0] = number of bins for signal distributions. It depends on the number of entries, thus it's the same for all the input variables, but it isn't necessary for some "weird" reason.
    }
 
+   std::vector<Float_t> input;
 
    // perform event loop
    Float_t *sumOfWeights = new Float_t[numDist]; 
@@ -261,13 +267,20 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
    for (UInt_t ievt=0; ievt < nevt; ievt++) {
       const Event* ev= events[ievt];
       Int_t cls = ev->GetClass();
-      sumOfWeights[cls] += ev->GetWeight();
-      if (minWeight[cls] > ev->GetWeight()) minWeight[cls]=ev->GetWeight();
-      if (maxWeight[cls] < ev->GetWeight()) maxWeight[cls]=ev->GetWeight();
-      if (numDist>1) sumOfWeights[numDist-1] += ev->GetWeight();
-      for (UInt_t ivar=0; ivar<nvar; ivar++) {
-         listsForBinning[cls][ivar].push_back(TMVA::TMVAGaussPair(ev->GetValue(ivar),ev->GetWeight()));  
-         if (numDist>1)listsForBinning[numDist-1][ivar].push_back(TMVA::TMVAGaussPair(ev->GetValue(ivar),ev->GetWeight()));  
+      Float_t eventWeight = ev->GetWeight();
+      sumOfWeights[cls] += eventWeight;
+      if (minWeight[cls] > eventWeight) minWeight[cls]=eventWeight;
+      if (maxWeight[cls] < eventWeight) maxWeight[cls]=eventWeight;
+      if (numDist>1) sumOfWeights[numDist-1] += eventWeight;
+
+      GetInput( ev, input );
+
+      Int_t ivar = 0;
+      for( std::vector<Float_t>::iterator itInput = input.begin(), itInputEnd = input.end(); itInput != itInputEnd; ++itInput ) {
+	 Float_t value = (*itInput);
+         listsForBinning[cls][ivar].push_back(TMVA::TMVAGaussPair(value,eventWeight));  
+         if (numDist>1)listsForBinning[numDist-1][ivar].push_back(TMVA::TMVAGaussPair(value,eventWeight));  
+	 ++ivar;
       }  
    }
    if (numDist > 1) {
@@ -282,7 +295,7 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
    const UInt_t nbinsmax=2000; // maximum number of bins
 
    for (UInt_t icl=0; icl< numDist; icl++){
-      for (UInt_t ivar=0; ivar<nvar; ivar++) {
+      for (UInt_t ivar=0; ivar<inputSize; ivar++) {
          listsForBinning[icl][ivar].sort();  
          std::list< TMVA::TMVAGaussPair >::iterator it;
          Float_t sumPerBin = sumOfWeights[icl]/nbinsmax;
@@ -315,9 +328,9 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
    delete[] maxWeight;
 
    // create histogram for the cumulative distribution.
-   fCumulativeDist.resize(nvar);
+   fCumulativeDist.resize(inputSize);
    for (UInt_t icls = 0; icls < numDist; icls++) {
-      for (UInt_t ivar=0; ivar < nvar; ivar++){
+      for (UInt_t ivar=0; ivar < inputSize; ivar++){
          Float_t* binnings = new Float_t[nbins[icls][ivar]];
          //the binning for this particular histogram:
          for (UInt_t k =0 ; k < nbins[icls][ivar]; k++){
@@ -352,10 +365,17 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
       
       const Event* ev= events[ievt];
       Int_t cls = ev->GetClass();
+      Float_t eventWeight = ev->GetWeight();
       
-      for (UInt_t ivar=0; ivar<nvar; ivar++) {
-         fCumulativeDist[ivar][cls]->Fill(ev->GetValue(ivar),ev->GetWeight());;               
-         if (numDist>1) fCumulativeDist[ivar][numDist-1]->Fill(ev->GetValue(ivar),ev->GetWeight());;               
+      GetInput( ev, input );
+
+      Int_t ivar = 0;
+      for( std::vector<Float_t>::iterator itInput = input.begin(), itInputEnd = input.end(); itInput != itInputEnd; ++itInput ) {
+	 Float_t value = (*itInput);
+         fCumulativeDist[ivar][cls]->Fill(value,eventWeight);               
+         if (numDist>1) fCumulativeDist[ivar][numDist-1]->Fill(value,eventWeight);               
+
+	 ++ivar;
       }
    }         
    
@@ -364,7 +384,7 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
 
    // now sum up in order to get the real cumulative distribution   
    Double_t  sum = 0, total=0;
-   for (UInt_t ivar=0; ivar<nvar; ivar++) {
+   for (UInt_t ivar=0; ivar<inputSize; ivar++) {
       fCumulativePDF.resize(ivar+1);
       for (UInt_t icls=0; icls<numDist; icls++) {      
          (fCumulativeDist[ivar][icls])->Smooth(); 
@@ -418,9 +438,12 @@ void TMVA::VariableGaussTransform::AttachXMLTo(void* parent) {
    gTools().AddAttr(trfxml, "Name",        "Gauss");
    gTools().AddAttr(trfxml, "FlatOrGauss", (fFlatNotGauss?"Flat":"Gauss") );
 
-   for (UInt_t ivar=0; ivar<GetNVariables(); ivar++) {
+   VariableTransformBase::AttachXMLTo( trfxml );
+
+   UInt_t nvar = fGet.size();
+   for (UInt_t ivar=0; ivar<nvar; ivar++) {
       void* varxml = gTools().AddChild( trfxml, "Variable");
-      gTools().AddAttr( varxml, "Name",     Variables()[ivar].GetLabel() );
+//      gTools().AddAttr( varxml, "Name",     Variables()[ivar].GetLabel() );
       gTools().AddAttr( varxml, "VarIndex", ivar );
          
       if ( fCumulativePDF[ivar][0]==0 || fCumulativePDF[ivar][1]==0 )
@@ -440,17 +463,37 @@ void TMVA::VariableGaussTransform::ReadFromXML( void* trfnode ) {
    // clean up first
    CleanUpCumulativeArrays();
    TString FlatOrGauss;
+
    gTools().ReadAttr(trfnode, "FlatOrGauss", FlatOrGauss );
+
    if (FlatOrGauss == "Flat") fFlatNotGauss = kTRUE;
    else                       fFlatNotGauss = kFALSE;
 
+   Bool_t newFormat = kFALSE;
+
+   void* inpnode = NULL;
+   
+   inpnode = gTools().GetChild(trfnode, "Selection"); // new xml format
+   if( inpnode!=NULL )
+      newFormat = kTRUE; // new xml format
+
+   void* varnode = NULL;
+   if( newFormat ){
+      // ------------- new format --------------------
+      // read input
+      VariableTransformBase::ReadFromXML( inpnode );
+
+      varnode = gTools().GetNextChild(inpnode);
+   }else
+      varnode = gTools().GetChild(trfnode);
+
    // Read the cumulative distribution
-   void* varnode = gTools().GetChild( trfnode );
 
    TString varname, histname, classname;
    UInt_t ivar;
    while(varnode) {
-      gTools().ReadAttr(varnode, "Name", varname);
+      if( gTools().HasAttr(varnode,"Name") )
+         gTools().ReadAttr(varnode, "Name", varname);
       gTools().ReadAttr(varnode, "VarIndex", ivar);
       
       void* clsnode = gTools().GetChild( varnode);
@@ -617,11 +660,13 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
 {
    // creates the transformation function
    //
-   const UInt_t nvar = GetNVariables();
+   const UInt_t nvar = fGet.size();
    UInt_t numDist  = GetNClasses() + 1;
    Int_t nBins = 1000; 
    // creates the gauss transformation function
    if (part==1) {
+      fout << std::endl;
+      fout << "   int nvar;" << std::endl;
       fout << std::endl;
       // declare variables
       fout << "   double  cumulativeDist["<<nvar<<"]["<<numDist<<"]["<<nBins+1<<"];"<<std::endl;
@@ -635,6 +680,7 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::InitTransform_"<<trCounter<<"()" << std::endl;
       fout << "{" << std::endl;
+      fout << "   nvar=" << nvar << ";" << std::endl;
       // fill meat here
       // loop over nvar , cls, loop over nBins
       // fill cumulativeDist with fCumulativePDF[ivar][cls])->GetValue(vec(ivar)
@@ -642,6 +688,21 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
          for (UInt_t ivar=0; ivar<nvar; ivar++) {
             Double_t xmn=(fCumulativePDF[ivar][icls])->GetXmin();
             Double_t xmx=(fCumulativePDF[ivar][icls])->GetXmax();
+
+            Int_t idx = 0;
+            try{
+               idx = fGet.at(ivar).second;
+               Char_t type = fGet.at(ivar).first;
+               if( type != 'v' ){
+                  Log() << kWARNING << "MakeClass for the Gauss transformation works only for the transformation of variables. The transformation of targets/spectators is not implemented." << Endl;
+               }
+            }catch( std::out_of_range except ){
+               Log() << kWARNING << "MakeClass for the Gauss transformation searched for a non existing variable index (" << ivar << ")" << Endl;
+            } 
+
+//            Double_t xmn=Variables()[idx].GetMin();
+//            Double_t xmx=Variables()[idx].GetMax();
+
             fout << "    xMin["<<ivar<<"]["<<icls<<"]="<<xmn<<";"<<std::endl;
             fout << "    xMax["<<ivar<<"]["<<icls<<"]="<<xmx<<";"<<std::endl;
             for (Int_t ibin=0; ibin<=nBins; ibin++) {
@@ -661,24 +722,30 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << "       else cls = "<<(fCumulativePDF[0].size()==1?0:2)<<";"<< std::endl;
       fout << "   }"<< std::endl;
       
+      fout << "   // copy the variables which are going to be transformed" << std::endl;
+      VariableTransformBase::MakeFunction(fout, fcncName, 0, trCounter, 0 );
+      fout << "   std::vector<double> dv(nvar);" << std::endl;
+      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];" << std::endl;
+
+      
       fout << "   bool FlatNotGauss = "<< (fFlatNotGauss? "true": "false") <<";"<< std::endl;
       fout << "   double cumulant;"<< std::endl;
-      fout << "   const int nvar = "<<GetNVariables()<<";"<< std::endl;
+      fout << "   const int nvar = "<<nvar<<";"<< std::endl;
       fout << "   for (int ivar=0; ivar<nvar; ivar++) {"<< std::endl;
-      // ibin = (xval -xmin) / (xmax-xmin) *1000 
-      fout << "   int ibin1 = (int) ((iv[ivar]-xMin[ivar][cls])/(xMax[ivar][cls]-xMin[ivar][cls])*"<<nBins<<");"<<std::endl;
+      // ibin = (xval -xMin) / (xMax-xMin) *1000 
+      fout << "   int ibin1 = (int) ((dv[ivar]-xMin[ivar][cls])/(xMax[ivar][cls]-xMin[ivar][cls])*"<<nBins<<");"<<std::endl;
       fout << "   if (ibin1<=0) { cumulant = cumulativeDist[ivar][cls][0];}"<<std::endl;
       fout << "   else if (ibin1>="<<nBins<<") { cumulant = cumulativeDist[ivar][cls]["<<nBins<<"];}"<<std::endl;
       fout << "   else {"<<std::endl;
       fout << "           int ibin2 = ibin1+1;" << std::endl;
-      fout << "           double dx = iv[ivar]-(xMin[ivar][cls]+"<< (1./nBins)
+      fout << "           double dx = dv[ivar]-(xMin[ivar][cls]+"<< (1./nBins)
            << "           * ibin1* (xMax[ivar][cls]-xMin[ivar][cls]));"  
            << std::endl;
       fout << "           double eps=dx/(xMax[ivar][cls]-xMin[ivar][cls])*"<<nBins<<";"<<std::endl;
       fout << "           cumulant = eps*cumulativeDist[ivar][cls][ibin1] + (1-eps)*cumulativeDist[ivar][cls][ibin2];" << std::endl;
       fout << "           if (cumulant>1.-10e-10) cumulant = 1.-10e-10;"<< std::endl;
       fout << "           if (cumulant<10e-10)    cumulant = 10e-10;"<< std::endl;
-      fout << "           if (FlatNotGauss) iv[ivar] = cumulant;"<< std::endl;
+      fout << "           if (FlatNotGauss) dv[ivar] = cumulant;"<< std::endl;
       fout << "           else {"<< std::endl;
       fout << "              double maxErfInvArgRange = 0.99999999;"<< std::endl;
       fout << "              double arg = 2.0*cumulant - 1.0;"<< std::endl;
@@ -690,11 +757,14 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << "                else if (erf(inverf)<=arg && erf(inverf+stp)>=arg) stp=stp/5. ;"<<std::endl;
       fout << "                else inverf += stp;"<<std::endl;
       fout << "              } ;"<<std::endl;
-      fout << "              //iv[ivar] = 1.414213562*TMath::ErfInverse(arg);"<< std::endl;
-      fout << "              iv[ivar] = 1.414213562* inverf;"<< std::endl;
+      fout << "              //dv[ivar] = 1.414213562*TMath::ErfInverse(arg);"<< std::endl;
+      fout << "              dv[ivar] = 1.414213562* inverf;"<< std::endl;
       fout << "           }"<< std::endl;
       fout << "       }"<< std::endl;
       fout << "   }"<< std::endl;
+
+      fout << "   // copy the transformed variables back" << std::endl;
+      fout << "   for (int ivar=0; ivar<nvar; ivar++) iv[ivar] = dv[indicesPut.at(ivar)];" << std::endl;
       fout << "}" << std::endl;
    }
 }
