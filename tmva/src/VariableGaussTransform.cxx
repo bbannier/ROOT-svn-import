@@ -730,7 +730,7 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       
       fout << "   bool FlatNotGauss = "<< (fFlatNotGauss? "true": "false") <<";"<< std::endl;
       fout << "   double cumulant;"<< std::endl;
-      fout << "   const int nvar = "<<nvar<<";"<< std::endl;
+      fout << "   //const int nvar = "<<nvar<<";"<< std::endl;
       fout << "   for (int ivar=0; ivar<nvar; ivar++) {"<< std::endl;
       // ibin = (xval -xMin) / (xMax-xMin) *1000 
       fout << "   int ibin1 = (int) ((dv[ivar]-xMin[ivar][cls])/(xMax[ivar][cls]-xMin[ivar][cls])*"<<nBins<<");"<<std::endl;
