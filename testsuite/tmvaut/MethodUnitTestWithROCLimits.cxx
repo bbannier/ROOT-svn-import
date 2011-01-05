@@ -312,13 +312,13 @@ void MethodUnitTestWithROCLimits::run()
 #endif
 
   if (_DoTestCCode){
-#ifdef COUTDEBUG
-     cout << "starting standalone c-code test"<<endl;
-#endif
      // create generic macro
      TString macroName=Form("testmakeclass_%s",_methodTitle.Data());
      TString macroFileName=TString("weights/")+macroName+TString(".C");
      TString methodTypeName = Types::Instance().GetMethodName(_methodType);
+#ifdef COUTDEBUG
+     cout << "starting standalone c-code test for type="<<methodTypeName<<endl;
+#endif
      FileStat_t stat2;
      if(!gSystem->GetPathInfo(macroFileName.Data(),stat2)) {
         gSystem->Unlink(macroFileName.Data());
@@ -329,14 +329,17 @@ void MethodUnitTestWithROCLimits::run()
      fout << "#include \"TFile.h\""<<std::endl;
      fout << "#include \"TTree.h\""<<std::endl;
      fout << "#include <vector>"<<std::endl;
-     fout << Form("#include \"weights/TMVAUnitTesting_%s.class.C\"",_methodTitle.Data()) << std::endl;
+     fout << "#include <iostream>"<<std::endl;
+     if (methodTypeName != "TMlpANN") fout << Form("#include \"weights/TMVAUnitTesting_%s.class.C\"",_methodTitle.Data()) << std::endl;
+     else fout << Form("#include \"weights/TMVAUnitTesting_%s.cxx\"",_methodTitle.Data()) << std::endl;
      fout << Form("bool %s(){",macroName.Data()) << std::endl;
      fout << "std::vector<std::string> vars(4);" << std::endl; // fix me 4
      fout << "std::vector<double> val(4);" << std::endl;  // fix me 4
      fout << "bool ok=true;" << std::endl;  // fix me 4
      for (UInt_t i=0;i<_VariableNames->size();i++)
         fout << Form("vars[%d]=\"%s\";",i,_VariableNames->at(i).Data()) << std::endl;  
-     fout << Form("Read%s  aa(vars);", _methodTitle.Data()) << std::endl;
+     if (methodTypeName != "TMlpANN") fout << Form("Read%s  aa(vars);", _methodTitle.Data()) << std::endl;
+     else fout << Form("TMVAUnitTesting_%s aa;", _methodTitle.Data()) << std::endl;
      fout << "TFile* testFile = new TFile(\"weights/TMVA.root\");" << std::endl; // fix me hardcode TMVA.root
      fout << " TTree* testTree = (TTree*)(testFile->Get(\"TestTree\"));" << std::endl;
      fout << Form("vector<float> testvar(%d);",(Int_t) _VariableNames->size()) << std::endl;
@@ -349,8 +352,8 @@ void MethodUnitTestWithROCLimits::run()
      fout << "  for (Long64_t ievt=0; ievt<nevt;ievt++) {" << std::endl;
      fout << "    testTree->GetEntry(ievt);" << std::endl;
      fout << Form("for (UInt_t i=0;i<%d;i++) testvarDouble[i]= testvar[i];",(Int_t) _VariableNames->size()) << std::endl;
-     fout << "double ccode_val = aa.GetMvaValue(testvarDouble);" << std::endl;
-
+     if (methodTypeName != "TMlpANN") fout << "double ccode_val = aa.GetMvaValue(testvarDouble);" << std::endl;
+     else fout << "double ccode_val = aa.Value(0,testvarDouble[0],testvarDouble[1],testvarDouble[2],testvarDouble[3]);" << std::endl;
      fout << "diff = TMath::Abs(ccode_val-testTreeVal);" << std::endl;
      fout << "nrm = TMath::Max(TMath::Abs(ccode_val),1.);" << std::endl;
      fout << "diff = diff/nrm;" << std::endl;
