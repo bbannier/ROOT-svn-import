@@ -136,14 +136,14 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
    VariableRearrangeTransform* rearrangeTransformation = new VariableRearrangeTransform(DataInfo());
    TString variables(theVariables);
    variables.ReplaceAll(":",","); // use ',' as separator between variables
-   std::cout << "variables " << variables.Data() << std::endl;
+//   std::cout << "variables " << variables.Data() << std::endl;
 
    DataSetInfo& dsi = CreateCategoryDSI(theCut, theVariables, theTitle);
 
    rearrangeTransformation->SetOutputDataSetInfo( &dsi );
    rearrangeTransformation->ToggleInputSortOrder(kFALSE); // take the order of variables from the option string
    rearrangeTransformation->SelectInput( variables, kTRUE );
-   std::cout << "set input done "  << std::endl;
+//   std::cout << "set input done "  << std::endl;
 
    rearrangeTransformation->SetEnabled(kFALSE);
    IMethod* addedMethod = ClassifierFactory::Instance().Create(addedMethodName,GetJobName(),theTitle,dsi,theOptions);

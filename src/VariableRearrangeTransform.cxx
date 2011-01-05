@@ -95,10 +95,10 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::Transform( const TMVA::Even
 //    std::cout << "vartypes&varrearrtransf/trnsfrm: " << nvars << " " << ntgts << " " << nspcts << std::endl;
 //    ev->Print(std::cout);
    GetInput( ev, input );
-   for( std::vector<Float_t>::iterator it = input.begin(), itEnd = input.end(); it != itEnd; ++it ){
-      std::cout << (*it) << "  ";
-   }
-   std::cout << std::endl;
+//    for( std::vector<Float_t>::iterator it = input.begin(), itEnd = input.end(); it != itEnd; ++it ){
+//       std::cout << (*it) << "  ";
+//    }
+//    std::cout << std::endl;
    SetOutput( fTransformedEvent, input, ev );
 //    std::cout << "transformed ---" << std::endl;
 //    fTransformedEvent->Print(std::cout);
