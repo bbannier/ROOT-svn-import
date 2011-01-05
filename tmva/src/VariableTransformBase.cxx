@@ -214,11 +214,11 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables, B
 	 ++idx;
       }
       for( SelectedIndices::iterator it = tgtIndices.begin(), itEnd = tgtIndices.end(); it != itEnd; ++it ) {
-	 fPut.push_back( std::make_pair<Char_t,UInt_t>('v',idx) );
+	 fPut.push_back( std::make_pair<Char_t,UInt_t>('t',idx) );
 	 ++idx;
       }
       for( SelectedIndices::iterator it = spctIndices.begin(), itEnd = spctIndices.end(); it != itEnd; ++it ) {
-	 fPut.push_back( std::make_pair<Char_t,UInt_t>('v',idx) );
+	 fPut.push_back( std::make_pair<Char_t,UInt_t>('s',idx) );
 	 ++idx;
       }
    }else {

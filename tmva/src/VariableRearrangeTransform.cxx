@@ -67,7 +67,7 @@ Bool_t TMVA::VariableRearrangeTransform::PrepareTransformation( const std::vecto
 
    UInt_t nvars = 0, ntgts = 0, nspcts = 0;
    CountVariableTypes( nvars, ntgts, nspcts );
-   std::cout << "vartypes&varrearrtransf: " << nvars << " " << ntgts << " " << nspcts << std::endl;
+//   std::cout << "vartypes&varrearrtransf: " << nvars << " " << ntgts << " " << nspcts << std::endl;
 //   events[0]->Print(std::cout);
    if( ntgts>0 )
       Log() << kFATAL << "Targets used in Rearrange-transformation." << Endl;
@@ -120,12 +120,12 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::InverseTransform( const TMV
       fBackTransformedEvent = new Event( *ev );
 
    FloatVector input;  // will be filled with the selected variables, targets, (spectators)
-   std::cout << "inv =====" << std::endl;
+//   std::cout << "inv =====" << std::endl;
    GetInput( ev, input, kTRUE );
 //   ev->Print(std::cout);
    SetOutput( fBackTransformedEvent, input, ev, kTRUE );
-   std::cout << "inv ---" << std::endl;
-   fBackTransformedEvent->Print(std::cout);
+//    std::cout << "inv ---" << std::endl;
+//    fBackTransformedEvent->Print(std::cout);
 
 
    return fBackTransformedEvent;

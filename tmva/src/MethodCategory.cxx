@@ -141,7 +141,7 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
    DataSetInfo& dsi = CreateCategoryDSI(theCut, theVariables, theTitle);
 
    rearrangeTransformation->SetOutputDataSetInfo( &dsi );
-   rearrangeTransformation->ToggleInputSortOrder(kFALSE); // take the order of variables from the option string
+   rearrangeTransformation->ToggleInputSortOrder(kFALSE); // kFALSE --> take the order of variables from the option string
    rearrangeTransformation->SelectInput( variables, kTRUE );
 //   std::cout << "set input done "  << std::endl;
 
@@ -233,7 +233,9 @@ TMVA::DataSetInfo& TMVA::MethodCategory::CreateCategoryDSI(const TCut& theCut,
 
       // check the variables of the old dsi for the variable that we want to add
       for (itrVarInfo = oldDSI.GetVariableInfos().begin(); itrVarInfo != oldDSI.GetVariableInfos().end(); itrVarInfo++) {
-         if((*itrVariables==itrVarInfo->GetLabel()) || (*itrVariables==itrVarInfo->GetExpression())) {
+         if((*itrVariables==itrVarInfo->GetLabel()) ) { // || (*itrVariables==itrVarInfo->GetExpression())) { 
+	    // don't compare the expression, since the user might take two times the same expression, but with different labels
+	    // and apply different transformations to the variables.
             dsi->AddVariable(*itrVarInfo);
             varMap.push_back(counter);
             found = kTRUE;
@@ -243,7 +245,9 @@ TMVA::DataSetInfo& TMVA::MethodCategory::CreateCategoryDSI(const TCut& theCut,
       
       // check the spectators of the old dsi for the variable that we want to add
       for (itrVarInfo = oldDSI.GetSpectatorInfos().begin(); itrVarInfo != oldDSI.GetSpectatorInfos().end(); itrVarInfo++) {
-         if((*itrVariables==itrVarInfo->GetLabel()) || (*itrVariables==itrVarInfo->GetExpression())) {
+         if((*itrVariables==itrVarInfo->GetLabel()) ) { // || (*itrVariables==itrVarInfo->GetExpression())) {
+	    // don't compare the expression, since the user might take two times the same expression, but with different labels
+	    // and apply different transformations to the variables.
             dsi->AddVariable(*itrVarInfo);
             varMap.push_back(counter);
             found = kTRUE;
