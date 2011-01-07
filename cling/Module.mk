@@ -44,16 +44,31 @@ ROOTCLING    := bin/rootcling$(EXEEXT)
 # used in the main Makefile
 ALLEXECS     += $(ROOTCLING)
 
+##### ROOT.pch #####
+ROOTPCH := lib/ROOT.pch
+ALLROOTH := $(MODDIRS)/allroot.h
+$(ALLROOTH): cling-ALWAYS
+	cat $(addprefix $(call stripsrc,$(CLINGDIRS))/,$(foreach m,$(MODULES),$(notdir $(subst .cxx,_dicthdr.h,$(sort $(notdir $(wildcard $(m)/src/G__*.cxx))))))) > $@.tmp
+	if ! diff $@.tmp $@ > /dev/null 2>& 1; then cp $@.tmp $@; fi
+	rm $@.tmp
+
+$(ROOTPCH): $(ALLROOTH) $(ALLHDRS)
+	clang++ $(CXXFLAGS) \
+	  `grep '^// -I' $< | sed 's,^//,,'` \
+	  -I. -Xclang -emit-pch -Xclang -relocatable-pch -x c++-header $< -o $@
+
 ##### local rules #####
 ifeq ($(strip $(LLVMDIR)),)
 PRINTME:=$(shell echo 'ERROR: you forgot to define LLVMDIR!' >&2)
 EXITING-BECAUSE-OF-ERROR
 endif
 
-.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) check-cling-header
+.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) check-cling-header cling-ALWAYS
 
 include/%.h:    $(CLINGDIRI)/%.h
 		cp $< $@
+
+CORELIBDEP += $(ROOTPCH)
 
 $(CLINGLIB):    $(CLINGO) $(CLINGDO)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
