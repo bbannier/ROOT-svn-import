@@ -1370,7 +1370,7 @@ void TMVA::Tools::TMVACitation( MsgLogger& logger, ECitation citType )
 
    case kLaTeX:
       logger << "%\\cite{TMVA2007}" << Endl;
-      logger << "\bibitem{TMVA2007}" << Endl;
+      logger << "\\bibitem{TMVA2007}" << Endl;
       logger << "  A.~Hoecker, P.~Speckmayer, J.~Stelzer, J.~Therhaag, E.~von Toerne, H.~Voss" << Endl;
       logger << "  %``TMVA: Toolkit for multivariate data analysis,''" << Endl;
       logger << "  PoS A {\\bf CAT} (2007) 040" << Endl;
