@@ -76,7 +76,8 @@ TMVA::MethodMLP::MethodMLP( const TString& jobName,
    : MethodANNBase( jobName, Types::kMLP, methodTitle, theData, theOption, theTargetDir ),
      fPrior(0.0),//zjh
      fSamplingFraction(1.0),
-     fSamplingEpoch   (0.0)
+     fSamplingEpoch   (0.0),
+     fWeightRange     (1.0)
 {
    // standard constructor
 }
@@ -88,7 +89,8 @@ TMVA::MethodMLP::MethodMLP( DataSetInfo& theData,
    : MethodANNBase( Types::kMLP, theData, theWeightFile, theTargetDir ),
      fPrior(0.0),//zjh
      fSamplingFraction(1.0),
-     fSamplingEpoch(0.0)
+     fSamplingEpoch(0.0),
+     fWeightRange(1.0)
 {
    // constructor from a weight file
 }
@@ -184,6 +186,10 @@ void TMVA::MethodMLP::DeclareOptions()
                     "Number of updates for regulator before stop training");   //zjh
    DeclareOptionRef(fCalculateErrors=kFALSE, "CalculateErrors",
                     "Calculates inverse Hessian matrix at the end of the training to be able to calculate the uncertainties of an MVA value");   //zjh
+
+   DeclareOptionRef(fWeightRange=1.0, "WeightRange",
+                    "Take the events for the estimator calculations from small deviations from the desired value to large deviations only over the weight range");
+
 }
 
 //_______________________________________________________________________
@@ -261,6 +267,13 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
    Int_t  nEvents  = GetNEvents();
    UInt_t nClasses = DataInfo().GetNClasses();
    UInt_t nTgts = DataInfo().GetNTargets();
+
+
+   Float_t sumOfWeights = 0.f;
+   if( fWeightRange < 1.f ){
+      fDeviationsFromTargets = new std::vector<std::pair<Float_t,Float_t> >(nEvents);
+   }
+
    for (Int_t i = 0; i < nEvents; i++) {
 
       const Event* ev = GetEvent(i);
@@ -283,9 +296,10 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
          if (fEstimator==kCE){
             Double_t norm(0);
             for (UInt_t icls = 0; icls < nClasses; icls++) {
-               norm += exp( GetOutputNeuron( icls )->GetActivationValue());
+	       Float_t activationValue = GetOutputNeuron( icls )->GetActivationValue();
+               norm += exp( activationValue );
                if(icls==cls)
-                  d = exp( GetOutputNeuron( icls )->GetActivationValue());
+                  d = exp( activationValue );
             }
             d = -TMath::Log(d/norm);
          }
@@ -305,9 +319,37 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
          estimator += d*w; //zjh
       }
 
+      if( fDeviationsFromTargets )
+	 fDeviationsFromTargets->push_back(std::pair<Float_t,Float_t>(d,w));
+
+      sumOfWeights += w;
+
+
       // fill monitoring histograms
       if (DataInfo().IsSignal(ev) && histS != 0) histS->Fill( float(v), float(w) );
       else if              (histB != 0) histB->Fill( float(v), float(w) );
+   }
+
+
+   if( fDeviationsFromTargets ) {
+      std::sort(fDeviationsFromTargets->begin(),fDeviationsFromTargets->end());
+
+      Float_t sumOfWeightsInRange = fWeightRange*sumOfWeights;
+      estimator = 0.f;
+
+      Float_t weightRangeCut = fWeightRange*sumOfWeights;
+      Float_t weightSum      = 0.f;
+      for(std::vector<std::pair<Float_t,Float_t> >::iterator itDev = fDeviationsFromTargets->begin(), itDevEnd = fDeviationsFromTargets->end(); itDev != itDevEnd; ++itDev ){
+	 float deviation = (*itDev).first;
+	 float devWeight = (*itDev).second;
+	 weightSum += devWeight; // add the weight of this event
+	 if( weightSum <= weightRangeCut ) { // if within the region defined by fWeightRange
+	    estimator += devWeight*deviation;
+	 }
+      }
+
+      sumOfWeights = sumOfWeightsInRange;
+      delete fDeviationsFromTargets;
    }
 
    if (histS != 0) fEpochMonHistS.push_back( histS );
@@ -316,9 +358,9 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
    //if      (DoRegression()) estimator = TMath::Sqrt(estimator/Float_t(nEvents));
    //else if (DoMulticlass()) estimator = TMath::Sqrt(estimator/Float_t(nEvents));
    //else                     estimator = estimator*0.5/Float_t(nEvents);
-   if      (DoRegression()) estimator = estimator/Float_t(nEvents);
-   else if (DoMulticlass()) estimator = estimator/Float_t(nEvents);
-   else                     estimator = estimator/Float_t(nEvents);
+   if      (DoRegression()) estimator = estimator/Float_t(sumOfWeights);
+   else if (DoMulticlass()) estimator = estimator/Float_t(sumOfWeights);
+   else                     estimator = estimator/Float_t(sumOfWeights);
 
 
    //if (fUseRegulator) estimator+=fPrior/Float_t(nEvents);  //zjh
@@ -524,13 +566,17 @@ void TMVA::MethodMLP::BFGSMinimize( Int_t nEpochs )
       }
 
       // draw progress
-      TString convText = Form( "<D^2> (train/test): %.4g/%.4g", trainE, testE ); //zjh
+      TString convText = Form( "<D^2> (train/test/epoch): %.4g/%.4g/%d", trainE, testE,i  ); //zjh
       if (fSteps > 0) {
          Float_t progress = 0;
          if (Float_t(i)/nEpochs < fSamplingEpoch)
-            progress = Progress()*fSamplingEpoch*fSamplingFraction*100;
+//            progress = Progress()*fSamplingEpoch*fSamplingFraction*100;
+            progress = Progress()*fSamplingFraction*100*fSamplingEpoch;
          else
-            progress = 100.0*(fSamplingEpoch*fSamplingFraction+(1.0-fSamplingFraction*fSamplingEpoch)*Progress());
+	 {
+//            progress = 100.0*(fSamplingEpoch*fSamplingFraction+(1.0-fSamplingFraction*fSamplingEpoch)*Progress());
+            progress = 100.0*(fSamplingFraction*fSamplingEpoch+(1.0-fSamplingEpoch)*Progress());
+	 }
          Float_t progress2= 100.0*RegUpdateTimes/fUpdateLimit; //zjh
          if (progress2>progress) progress=progress2; //zjh
          timer.DrawProgressBar( Int_t(progress), convText );
@@ -1143,7 +1189,7 @@ void TMVA::MethodMLP::UpdateNetwork(std::vector<Float_t>& desired, Double_t even
 {
    // update the network based on how closely
    // the output matched the desired output
-   for (UInt_t i = 0; i < desired.size(); i++) {
+   for (UInt_t i = 0, iEnd = desired.size(); i < iEnd; ++i) {
       Double_t error = GetOutputNeuron( i )->GetActivationValue() - desired.at(i);
       error *= eventWeight;
       GetOutputNeuron( i )->SetError(error);
