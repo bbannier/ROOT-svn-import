@@ -220,6 +220,11 @@ namespace TMVA {
       Int_t           fGA_SC_rate; // GA settings: SC_rate
       Double_t        fGA_SC_factor;   // GA settings: SC_factor
 
+      // regression, storage of deviations
+      std::vector<std::pair<Float_t,Float_t> >* fDeviationsFromTargets; // deviation from the targets, event weight
+
+      Float_t         fWeightRange;    // suppress outliers for the estimator calculation
+
 #ifdef MethodMLP_UseMinuit__
       // minuit variables -- commented out because they rely on a static pointer
       Int_t          fNumberOfWeights; // Minuit: number of weights
