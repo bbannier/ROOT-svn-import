@@ -24,6 +24,12 @@ using namespace std;
 
 void addClassificationTests( UnitTestSuite& TMVA_test, bool full=true)
 {
+
+   
+   // problem with the make function of the Gauss transformation when only some variables are selected 
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN_selVar_Gauss", "H:!V:VarTransform=G(var4,myvar1)" , 0.88, 0.98) ); 
+
+
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsGA",
                                                       "H:!V:FitMethod=GA:CutRangeMin[0]=-10:CutRangeMax[0]=10:VarProp[1]=FMax:EffSel:Steps=20:Cycles=4:PopSize=300:SC_steps=10:SC_rate=5:SC_factor=0.95" , 0.4, 0.98) );
 
@@ -99,6 +105,10 @@ void addClassificationTests( UnitTestSuite& TMVA_test, bool full=true)
 
 void addRegressionTests( UnitTestSuite& TMVA_test, bool full=true)
 {
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LDG", "!H:!V:VarTransform=G",      15., 30.,    10., 25. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LDG1", "!H:!V:VarTransform=G(_V1_)",      15., 30.,    10., 20. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LDP2", "!H:!V:VarTransform=P(_V0_,_V1_)",      15., 25.,    10., 20. ));
+
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LD", "!H:!V:VarTransform=None",      15., 25.,    10., 20. ));
    //                       full low/high , 90 low/high
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kMLP, "MLPBFGSN", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=300:HiddenLayers=N+20:TestRate=6:TrainingMethod=BFGS:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-7:ConvergenceTests=15:!UseRegulator:VarTransform=N" , 0.4, 0.8, 0.2, 0.5 ));
