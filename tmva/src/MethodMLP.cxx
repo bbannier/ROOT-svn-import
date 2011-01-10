@@ -77,6 +77,7 @@ TMVA::MethodMLP::MethodMLP( const TString& jobName,
      fPrior(0.0),//zjh
      fSamplingFraction(1.0),
      fSamplingEpoch   (0.0),
+     fDeviationsFromTargets(0),
      fWeightRange     (1.0)
 {
    // standard constructor
@@ -90,6 +91,7 @@ TMVA::MethodMLP::MethodMLP( DataSetInfo& theData,
      fPrior(0.0),//zjh
      fSamplingFraction(1.0),
      fSamplingEpoch(0.0),
+     fDeviationsFromTargets(0),
      fWeightRange(1.0)
 {
    // constructor from a weight file
