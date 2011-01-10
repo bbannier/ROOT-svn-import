@@ -48,62 +48,12 @@ std::map <clang::Decl*, std::string> TScanner::fgAnonymousEnumMap;
 SelectionRules sr;
 std::string outputFileName;
 std::ofstream outputFile;
-//______________________________________________________________________________
-void ClrStubFunction (void* result, void* obj, const std::vector<void*>& params, void* ctx)
-{
-   TContext* context = reinterpret_cast <TContext *> (ctx);
-   assert (context != NULL);
-   std::cout << "Calling stub function " << context->index << ", " << context->name << std::endl;
-
-   // TO DO: call LLVM function context->func
-}
-
-//______________________________________________________________________________
-TContext* TScanner::AllocateContext ()
-{
-   TContext* result = new TContext;
-
-   #if 0
-   if (fLastContext == NULL)
-      fFirstContext = result;
-   else
-      fLastContext->next = result;
-
-   fLastContext = result;
-   #endif
-
-   return result;
-}
-
-
-
-//______________________________________________________________________________
-#if 0
-void TScanner::DeleteContexts ()
-{
-   TContext* p = fFirstContext;
-   while (p != NULL)
-   {
-      TContext* t = p;
-      p = p->next;
-      delete t;
-   }
-
-   fFirstContext = NULL;
-   fLastContext = NULL;
-}
-#endif
 
 //______________________________________________________________________________
 TScanner::TScanner ()
 {
    fCtx = NULL;
    fReporter = new TObject;
-
-   #if 0
-   fFirstContext = NULL;
-   fLastContext = NULL;
-   #endif
 
    for (int i = 0; i <= fgDeclLast; i ++)
       fDeclTable [i] = false;
@@ -958,7 +908,6 @@ TString TScanner::ConvTemplateParams(clang::TemplateDecl* D)
 {
    return ConvTemplateParameterList(D->getTemplateParameters());
 }
-#endif // COMPLETE_TEMPLATES
 
 //______________________________________________________________________________
 TString TScanner::ConvTemplateArguments(const clang::TemplateArgumentList& list)
@@ -968,6 +917,7 @@ TString TScanner::ConvTemplateArguments(const clang::TemplateArgumentList& list)
    return clang::TemplateSpecializationType::PrintTemplateArgumentList
           (list.data(), list.size(), print_opts);
 }
+#endif // COMPLETE_TEMPLATES
 
 /********************************** FUNCTION **********************************/
 
@@ -1462,13 +1412,13 @@ bool TScanner::VisitFunctionDecl(clang::FunctionDecl* D)
       
       TString params = FuncParameters(D);
       int modifiers = FuncModifiers(D);
-      
-      TContext* context = AllocateContext ();
-      context->name = func_name;
-      
-      Reflex::StubFunction stub = ClrStubFunction;
-      void* stub_ctx = context;
-      
+
+      Reflex::StubFunction stub = NULL;
+      void* stub_ctx = NULL;
+      // create auxiliary function stub and context,
+      // context is used during generating real stub in genrflxdict.cxx
+      gClrReg->GetFunctionStub(func_name, stub, stub_ctx);
+
       clang::DeclContext * ctx = D->getDeclContext();
       clang::Decl* parent = dyn_cast<clang::Decl> (ctx);
       if (!parent) {

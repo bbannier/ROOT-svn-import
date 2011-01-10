@@ -6,7 +6,71 @@
 
 #include "Reflex/Reflex.h"
 #include "TString.h"
-#include "clr-util.h" // class THtmlHelper
+#include <fstream> // class ofstream
+#include <sstream> // class ostringstream
+
+/* -------------------------------------------------------------------------- */
+
+class THtmlHelper {
+private:
+   int  fIndent;
+   bool fStartLine;
+
+   std::ofstream* fFileStream;
+   std::ostringstream* fStringStream;
+   std::ostream* fStream;
+
+protected:
+   bool fUseHtml;
+   TString fStyleFileName;
+
+   void PutPlainStr(const TString s);
+   void PutPlainChr(char c);
+
+   virtual void OpenLine();
+   virtual void CloseLine();
+
+public:
+   void Open(const TString name);
+   void Close();
+
+   void OpenString();
+   TString CloseString();
+
+   void EnableHtml(bool param_use_html) { fUseHtml = param_use_html; }
+   bool HtmlEnabled() { return fUseHtml; }
+
+   void SetStyleFileName(const TString fileName) { fStyleFileName = fileName; }
+
+   void Put(const TString s);
+   void PutChr(char c);
+   void PutEol();
+   void PutLn(const TString s);
+
+   void SetIndent(int i);
+   void IncIndent();
+   void DecIndent();
+
+   void Style();
+
+   void Head(const TString title);
+   void Tail();
+
+   static TString FceHtmlEscape(const TString s);
+   void Attr(const TString name, const TString value);
+
+   void Href(const TString url, const TString style, const TString text);
+   void Name(const TString name, const TString text);
+
+   void StyleBegin(const TString style);
+   void StyleEnd();
+   void StyledText(const TString text, const TString style);
+
+   void PutHtmlEscape(const TString s);
+
+   THtmlHelper();
+   virtual ~ THtmlHelper();
+};
 
 /* -------------------------------------------------------------------------- */
 
@@ -14,6 +78,7 @@ class TReflexPrinter : public THtmlHelper {
 private:
    void PrintLine(TString key, TString name);
    void PrintNote(TString s);
+   void PrintProperties(const Reflex::PropertyList& list);
 
    void PrintTypeName(Reflex::Type t);
    void PrintTypeNotes(Reflex::Type t);

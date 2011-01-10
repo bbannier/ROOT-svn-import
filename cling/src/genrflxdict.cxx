@@ -1,5 +1,6 @@
+// @(#)root/cint:$Id$
 
-/* dict.cxx */
+/* genrflxdict.cxx */
 
 /* based on Reflex source code from 27-05-2010 */
 
@@ -9,53 +10,18 @@
 
 using namespace Reflex;
 
-#define CLASSIC_CODE
-// #define CLING_STUB
 #define ONLY_FUNCTIONS
 #define NUMBERED_FUNCTIONS
-// #define REGISTER_FUNCTIONS
+#define REGISTER_FUNCTIONS
+
+// output similar to genreflex
+// #define EQUAL_OUTPUT
 
 #include "clr-scan.h"
-#include "clr-info.h"
 
 #ifdef REGISTER_FUNCTIONS
-   #include "G__ci.h"
-   // #include "clr-reg.h"
+   #include "clr-reg.h"
 #endif
-
-TContext* gFirstContext = NULL;
-TContext* gLastContext = NULL;
-
-TContext* GetFirstContext ()
-{
-   return gFirstContext;
-}
-
-void LinkContext (TContext * context)
-{
-   if (gLastContext == NULL)
-      gFirstContext = context;
-   else
-      gLastContext->next = context;
-
-   gLastContext = context;
-
-   context->next = NULL;
-}
-
-void DeleteContexts ()
-{
-   TContext* p = gFirstContext;
-   while (p != NULL)
-   {
-      TContext* t = p;
-      p = p->next;
-      delete t;
-   }
-
-   gFirstContext = NULL;
-   gLastContext = NULL;
-}
 
 inline std::string IntToStd (int num)
 {
@@ -161,6 +127,10 @@ DataMember_GenerateDict(const Member & obj, DictionaryGenerator& generator) {
    }
 } // GenerateDict
 
+void FunctionMember_Head(const Member & obj, DictionaryGenerator& generator);
+void FunctionMember_Body(const Member & obj, DictionaryGenerator& generator, bool withRet);
+void FunctionMember_Tail(const Member & obj, DictionaryGenerator& generator);
+
 //-------------------------------------------------------------------------------
 void
 FunctionMember_GenerateDict(const Member & obj, DictionaryGenerator& generator) {
@@ -170,6 +140,41 @@ FunctionMember_GenerateDict(const Member & obj, DictionaryGenerator& generator) 
    std::string mName = obj.Name();
 
    if (mName != "__getNewDelFunctions" && mName != "__getBasesTable") {
+
+      FunctionMember_Head(obj, generator);
+      generator.AddIntoClasses("{\n");
+
+      #ifdef EQUAL_OUTPUT
+         generator.AddIntoClasses("  ");
+      #else
+         generator.AddIntoClasses("   ");
+      #endif
+
+      const Type& retT = obj.TypeOf().ReturnType();
+      if (obj.IsConstructor() || retT.Name() != "void")
+      {
+         FunctionMember_Body(obj, generator, true);
+         #ifdef EQUAL_OUTPUT
+            generator.AddIntoClasses("else   ");
+         #else
+            generator.AddIntoClasses("   else ");
+         #endif
+      }
+
+      FunctionMember_Body(obj, generator, false);
+
+      generator.AddIntoClasses("}\n");
+      FunctionMember_Tail(obj, generator);
+   }
+} // GenerateDict
+
+// see: cint/reflex/python/genreflex/gendict.py, function genMCODef
+// see: cint/cint/src/rflx_gensrc.cxx, function gen_classdictdecls
+
+//-------------------------------------------------------------------------------
+void
+FunctionMember_Head(const Member & obj, DictionaryGenerator& generator) {
+//-------------------------------------------------------------------------------
       // The return type
       const Type& retT = obj.TypeOf().ReturnType();
 
@@ -183,7 +188,7 @@ FunctionMember_GenerateDict(const Member & obj, DictionaryGenerator& generator) 
       if (obj.IsPrivate()) {
          generator.AddIntoShadow(obj.Name(SCOPED) + "();\n");
       }
-      #endif
+      #endif // ONLY_FUNCTIONS
 
       // Get a number for the function type
       //std::string number = generator.GetTypeNumber( TypeOf() );
@@ -237,157 +242,246 @@ FunctionMember_GenerateDict(const Member & obj, DictionaryGenerator& generator) 
       } else if (obj.IsDestructor()) {
          generator.AddIntoFree(", destructor_");
       }
-      #endif
+      #endif // ONLY_FUNCTIONS
 
-      #ifdef CLASSIC_CODE
+      // STUB HEADER
       if (obj.IsConstructor()) {
+         // CORRECT_FUNCTIONS
          #ifdef NUMBERED_FUNCTIONS
-         generator.AddIntoClasses("void* __stub_");
+         generator.AddIntoClasses("void __stub_");
          #else
-         generator.AddIntoClasses("static void* constructor_");
+         generator.AddIntoClasses("static void constructor_");
          #endif
 
       } else if (obj.IsDestructor()) {
+         // CORRECT_FUNCTIONS
          #ifdef NUMBERED_FUNCTIONS
-         generator.AddIntoClasses("void* __stub_");
+         generator.AddIntoClasses("void __stub_");
          #else
-         generator.AddIntoClasses("static void* destructor_");
+         generator.AddIntoClasses("static void destructor_");
          #endif
 
       } else {
          if (!(obj.DeclaringScope().IsNamespace())) {
             #ifndef ONLY_FUNCTIONS
             generator.AddIntoFree(", method_");
-            #endif
+            #endif // ONLY_FUNCTIONS
 
+            // CORRECT_FUNCTIONS
             #ifdef NUMBERED_FUNCTIONS
-            generator.AddIntoClasses("\n void* __stub_");
+            generator.AddIntoClasses("void __stub_");
             #else
-            generator.AddIntoClasses("\nstatic void* method_");
+            generator.AddIntoClasses("static void method_");
             #endif
 
          } else {
             // free function
+            // CORRECT_FUNCTIONS
             #ifdef NUMBERED_FUNCTIONS
-            generator.AddIntoClasses("\nvoid* __stub_");
+            generator.AddIntoClasses("void __stub_");
             #else
-            generator.AddIntoClasses("\nstatic void* function_");
+            generator.AddIntoClasses("static void function_");
             #endif
          }
       }
 
       #ifdef NUMBERED_FUNCTIONS
          // info ("Registering stub function " + IntToStd (method_index));
+
+         // check if stub function is our function -- only for verification
          assert (obj.Stubfunction() == ClrStubFunction);
-         TContext * context = reinterpret_cast <TContext *> (obj.Stubcontext ());
+
+         // typecast stub context into our type
+         TClrContext * context = reinterpret_cast <TClrContext *> (obj.Stubcontext ());
          assert (context != NULL);
+
+         // store function number into context
          context->index = method_index;
-         LinkContext (context);
-         info ("Stub function written " + IntToStd (context->index));
+
+         // add context to linked list of all contexts
+         gClrReg->LinkContext (context);
       #endif
 
       #ifndef ONLY_FUNCTIONS
       if (!(obj.DeclaringScope().IsNamespace())) {
          generator.AddIntoFree(number);                                     //method_n
-
-
       }
-      #endif
+      #endif // ONLY_FUNCTIONS
       generator.AddIntoClasses(number);
 
       #ifdef REGISTER_FUNCTIONS
-         #if 0
-         std::string funcName = obj.Name(Reflex::SCOPED) + "(";
-         bool first = true;
-         for (Type_Iterator params = obj.TypeOf().FunctionParameter_Begin();
-              params != obj.TypeOf().FunctionParameter_End(); ++params) {
-            if (! first)
-               funcName += ",";
-            first = false;
-
-            Reflex::Type t = *params;
-            funcName += t.Name(Reflex::SCOPED);
-         }
-         funcName += ")";
-         #endif
          std::string funcName = TScanner::GetFuncProp(obj.Properties());
 
-         gClrReg->RegisterFunctionStub (funcName.c_str (), NULL); // !?
-
-         generator.AddIntoInstances("      RegisterFunctionStub(");
+         // generate code
+         generator.AddIntoInstances("      wrappers[");
 
          generator.AddIntoInstances("\"");
          generator.AddIntoInstances(funcName);
          // generator.AddIntoInstances(G__map_cpp_name (funcName.c_str ()));
          generator.AddIntoInstances("\"");
 
-         generator.AddIntoInstances(", ");
+         generator.AddIntoInstances("] = ");
 
-         if (obj.IsConstructor()) {
-            generator.AddIntoInstances("constructor_");
-         } else if (obj.IsDestructor()) {
-            generator.AddIntoInstances("destructor_");
-         } else {
-            generator.AddIntoInstances("method_");
-         }
+         #ifdef NUMBERED_FUNCTIONS
+            generator.AddIntoInstances("__stub_");
+         #else
+            if (obj.IsConstructor()) {
+               generator.AddIntoInstances("constructor_");
+            } else if (obj.IsDestructor()) {
+               generator.AddIntoInstances("destructor_");
+            } else {
+               generator.AddIntoInstances("method_");
+            }
+         #endif
          generator.AddIntoInstances(number);                                     //method_n
-         generator.AddIntoInstances(");\n");
+         generator.AddIntoInstances(";\n");
       #endif
 
       if (obj.IsConstructor()) {   // these have parameters
-         generator.AddIntoClasses("(void* mem, const std::vector<void*>&");
-
+         // CORRECT_FUNCTIONS
+         generator.AddIntoClasses("(void* retaddr, void* mem, const std::vector<void*>&");
          if (obj.FunctionParameterSize()) {
             generator.AddIntoClasses(" arg");
          }
-
-         generator.AddIntoClasses(", void*)\n{");
-         generator.AddIntoClasses("\n  return ::new(mem) " + namespc);
-         generator.AddIntoClasses("(");
+         generator.AddIntoClasses(", void*)\n");
 
       } //is constructor/destructor with parameters
       else if (obj.IsDestructor()) {
-         generator.AddIntoClasses("(void * o, const std::vector<void*>&, void *) {\n");
-         generator.AddIntoClasses("  ((" + namespc + "*)o)->~" + obj.DeclaringScope().Name() + "(");
+         // CORRECT_FUNCTIONS
+         generator.AddIntoClasses("(void*");
+         if (retT.Name() != "void")
+            generator.AddIntoClasses(" retaddr");
+         generator.AddIntoClasses(", void * o, const std::vector<void*>&, void *)\n");
       } else {
          // method function with parameters
 
          if (obj.DeclaringScope().IsNamespace()) {
-            generator.AddIntoClasses(" (void*, const std::vector<void*>&"); // arg, void*)\n{");
-
+            // CORRECT_FUNCTIONS
+            generator.AddIntoClasses(" (void*");
+            if (retT.Name() != "void")
+               generator.AddIntoClasses(" retaddr");
+            generator.AddIntoClasses(", void*, const std::vector<void*>&"); // arg, void*)\n{");
          } else {
-            generator.AddIntoClasses(" (void* o, const std::vector<void*>&"); // arg, void*)\n{");
+            // CORRECT_FUNCTIONS
+            generator.AddIntoClasses(" (void*");
+            if (retT.Name() != "void")
+               generator.AddIntoClasses(" retaddr");
+            generator.AddIntoClasses(", void* o, const std::vector<void*>&"); // arg, void*)\n{");
          }
 
          if (obj.FunctionParameterSize() > 0) {
             generator.AddIntoClasses(" arg");
          }
 
-         generator.AddIntoClasses(", void*)\n{");
+         generator.AddIntoClasses(", void*)\n");
+      }
+
+
+} // FunctionMember_Head
+
+//-------------------------------------------------------------------------------
+void
+FunctionMember_Body(const Member & obj, DictionaryGenerator& generator, bool withRet) {
+//-------------------------------------------------------------------------------
+      const Type& retT = obj.TypeOf().ReturnType();
+
+      std::string namespc = obj.DeclaringScope().Name(SCOPED);
+      namespc = "::" + namespc;
+
+      if (obj.IsConstructor()) {
+         if (withRet)
+         {
+            generator.AddIntoClasses("if (retaddr) *(void**)");
+            #ifndef EQUAL_OUTPUT
+               generator.AddIntoClasses(" ");
+            #endif
+            generator.AddIntoClasses("retaddr = ");
+         }
+         generator.AddIntoClasses("::new(mem) " + namespc);
+         generator.AddIntoClasses("(");
+      }
+      else if (obj.IsDestructor()) {
+         #ifdef EQUAL_OUTPUT
+            generator.AddIntoClasses(" ");
+            generator.AddIntoClasses("(");
+         #endif
+         generator.AddIntoClasses("((" + namespc + "*)o)->");
+         #ifdef EQUAL_OUTPUT
+            generator.AddIntoClasses("::" + obj.DeclaringScope().Name() + "::");
+         #endif
+         generator.AddIntoClasses("~" + obj.DeclaringScope().Name());
+         #ifdef EQUAL_OUTPUT
+            generator.AddIntoClasses(")");
+         #endif
+         generator.AddIntoClasses("(");
+      } else {
+         // method function
 
          if (retT.Name() != "void") {
+            #if 0
             if (retT.IsFundamental()) {
                generator.AddIntoClasses("static " + retT.Name(SCOPED) + " ret;\n");
                generator.AddIntoClasses("ret = ");
-            } else if (retT.IsReference() || retT.IsPointer()) {
-               generator.AddIntoClasses("return (void*)");
-
-               if (retT.IsReference()) {
-                  generator.AddIntoClasses("&");
+            } else
+            #endif
+              if (retT.IsReference() || retT.IsPointer()) {
+               // CORRECT_FUNCTIONS
+               if (withRet)
+               {
+                  generator.AddIntoClasses("if (retaddr) *(void**)");
+                  #ifndef EQUAL_OUTPUT
+                     generator.AddIntoClasses(" ");
+                  #endif
+                  generator.AddIntoClasses("retaddr = (void*)");
+                  #ifdef EQUAL_OUTPUT
+                     generator.AddIntoClasses(" ");
+                  #endif
+                  if (retT.IsReference()) {
+                     generator.AddIntoClasses("&");
+                  }
                }
+
             } else { // compound type
-               generator.AddIntoClasses("return new " + retT.Name(SCOPED) + "(");
+               // CORRECT_FUNCTIONS
+               if (withRet)
+               {
+                  generator.AddIntoClasses("if (retaddr) new (retaddr) (");
+                  #ifndef EQUAL_OUTPUT
+                     if (retT.IsClass())
+                        generator.AddIntoClasses("::");
+                  #endif
+                  generator.AddIntoClasses(retT.Name(SCOPED));
+                  generator.AddIntoClasses(")");
+                  #ifndef EQUAL_OUTPUT
+                     generator.AddIntoClasses(" ");
+                  #endif
+                  generator.AddIntoClasses("(");
+               }
             }
          }
 
          if (obj.DeclaringScope().IsNamespace()) {
-            generator.AddIntoClasses(obj.Name() + "( ");
-
+            generator.AddIntoClasses(obj.Name());
          } else {
-            generator.AddIntoClasses("((" + namespc + "*)o)->" + obj.Name() + "( ");
+            #ifdef EQUAL_OUTPUT
+               generator.AddIntoClasses("(");
+            #endif
+            generator.AddIntoClasses("((");
+            #ifdef EQUAL_OUTPUT
+               if (obj.IsConst ())
+                  generator.AddIntoClasses("const "); // not necessary
+            #endif
+            generator.AddIntoClasses(namespc + "*)o)->" + obj.Name());
+            #ifdef EQUAL_OUTPUT
+               generator.AddIntoClasses(")");
+            #endif
          }
-
+         #ifndef EQUAL_OUTPUT
+            generator.AddIntoClasses(" ");
+         #endif
+         generator.AddIntoClasses("(");
       }
+
 
       // Add to Stub Functions with some parameters
       if (obj.FunctionParameterSize() > 0) {
@@ -417,18 +511,24 @@ FunctionMember_GenerateDict(const Member & obj, DictionaryGenerator& generator) 
                paraT = paraT.substr(0, paraT.length() - 1);
             }
 
+            if (methpara->IsClass() /* || methpara->IsPointer() && methpara->ReturnType().IsClass() */ )
+               generator.AddIntoClasses("::");
             generator.AddIntoClasses(paraT);
 
             if (!methpara->IsPointer()) {
                generator.AddIntoClasses("*");
             }
 
-            generator.AddIntoClasses(") arg[" + temp2.str() + "]");
+            generator.AddIntoClasses(")arg[" + temp2.str() + "]");
 
             //still parameters left
             if ((args + 1) < obj.FunctionParameterSize()) {
-               generator.AddIntoClasses(", ");
-            }
+               #ifdef EQUAL_OUTPUT
+                  generator.AddIntoClasses(",\n    ");
+               #else
+                  generator.AddIntoClasses(", ");
+               #endif
+         }
 
             ++args;
             //fundam
@@ -438,46 +538,55 @@ FunctionMember_GenerateDict(const Member & obj, DictionaryGenerator& generator) 
       } // funct. params!=0
 
       if (obj.IsConstructor()) {
-         generator.AddIntoClasses(");\n} \n");
-
-      } else {
          generator.AddIntoClasses(")");
-
-         if (retT.Name() == "void") {
-            generator.AddIntoClasses(";\n  return 0;\n");
+      } else if (obj.IsDestructor()) {
+         generator.AddIntoClasses(")");
+      } else {
+         if (retT.IsReference()) {
+            // reference must be tested first
+            generator.AddIntoClasses(")");
+         } else if (retT.Name() == "void") {
+            // CORRECT_FUNCTIONS
+            generator.AddIntoClasses(")");
          } else if (retT.IsFundamental()) {
-            generator.AddIntoClasses(";\n  return & ret;\n");
-         } else if (retT.IsPointer() || retT.IsReference()) {
-            generator.AddIntoClasses(";\n");
+            // CORRECT_FUNCTIONS
+            generator.AddIntoClasses(")");
+            if (withRet)
+               generator.AddIntoClasses(")");
+         } else if (retT.IsPointer()) {
+            generator.AddIntoClasses(")");
+            #ifdef EQUAL_OUTPUT
+            // if (withRet)
+            //    generator.AddIntoClasses(")");
+            #endif
          } else { // compound type
-            generator.AddIntoClasses(");\n");
+            generator.AddIntoClasses(")");
+            if (withRet)
+               generator.AddIntoClasses(")");
          }
-
-         generator.AddIntoClasses("\n} \n"); //);
       }
 
+      generator.AddIntoClasses(";\n");
+} // FunctionMember_Body
+
+//-------------------------------------------------------------------------------
+void
+FunctionMember_Tail(const Member & obj, DictionaryGenerator& generator) {
+//-------------------------------------------------------------------------------
       #ifndef ONLY_FUNCTIONS
       if (obj.DeclaringScope().IsNamespace()) {
          generator.AddIntoInstances(", 0");
       } else {
          generator.AddIntoFree(", 0");
       }
-      #endif
-      #endif
-
-      #ifdef CLING_STUB
-         if (!(obj.DeclaringScope().IsNamespace())) {
-            generator.AddIntoFree(", ClingStub, new StubParam (\"");
-            std::string s = obj.Properties().PropertyAsString ("func"); // !? TScanner::fgFuncKey
-            generator.AddIntoFree(s);
-            generator.AddIntoFree("\")");
-         }
-      #endif
+      #endif // ONLY_FUNCTIONS
 
       #ifndef ONLY_FUNCTIONS
       if (obj.DeclaringScope().IsNamespace()) {
          generator.AddIntoInstances(", \"");
-      } else { generator.AddIntoFree(", \""); }
+      } else {
+         generator.AddIntoFree(", \"");
+      }
 
       // Get the names of the function param.types (like MyInt)
       if (obj.TypeOf().FunctionParameterSize()) {
@@ -512,7 +621,9 @@ FunctionMember_GenerateDict(const Member & obj, DictionaryGenerator& generator) 
 
       if (obj.DeclaringScope().IsNamespace()) {
          generator.AddIntoInstances("\"");
-      } else { generator.AddIntoFree("\""); }
+      } else {
+         generator.AddIntoFree("\"");
+      }
 
       if (obj.DeclaringScope().IsNamespace()) {  // free func
          generator.AddIntoInstances(", ");
@@ -562,9 +673,8 @@ FunctionMember_GenerateDict(const Member & obj, DictionaryGenerator& generator) 
 
          generator.AddIntoFree(")\n");
       }
-      #endif
-   }
-} // GenerateDict
+      #endif // ONLY_FUNCTIONS
+} // FunctionMember_Tail
 
 //-------------------------------------------------------------------------------
 void
@@ -694,14 +804,16 @@ Class_GenerateDict(const TypeBase & obj, DictionaryGenerator& generator) {
          generator.AddIntoFree(" | VIRTUAL");
       }
       generator.AddIntoFree(" | CLASS)\n");
-      #endif
+      #endif // ONLY_FUNCTIONS
 
       generator.AddIntoClasses("\n// -- Stub functions for class " + obj.ThisType().Name() + "--\n");
+      generator.AddIntoClasses("\n");
 
       Scope scope = obj;
       for (Member_Iterator mi = scope.Member_Begin();
            mi != scope.Member_End(); ++mi) {
          Member_GenerateDict(*mi, generator);      // call Members' own gendict
+         generator.AddIntoClasses("\n");
       }
 
       #ifndef ONLY_FUNCTIONS
@@ -742,7 +854,7 @@ Class_GenerateDict(const TypeBase & obj, DictionaryGenerator& generator) {
       if (!(obj.ThisType().DeclaringScope().IsClass())) {
          generator.AddIntoFree(";\n}\n");
       }
-      #endif
+      #endif // ONLY_FUNCTIONS
 
    } //new type
 } // GenerateDict
@@ -797,7 +909,7 @@ ScopeBase_GenerateDict(const Scope & obj, DictionaryGenerator& generator) {
              // std::cout << "Enum " << e->Name() << std::endl;
              #ifndef ONLY_FUNCTIONS
                 Enum_GenerateDict (s, generator);
-             #endif
+             #endif // ONLY_FUNCTIONS
          }
       }
   }
@@ -813,7 +925,7 @@ Member_GenerateDict(const Member & obj, DictionaryGenerator& generator) {
       // MemberBase* d = obj.ToMemberBase();
       #ifndef ONLY_FUNCTIONS
          DataMember_GenerateDict (obj, generator);
-      #endif
+      #endif // ONLY_FUNCTIONS
    }
    else if (obj.IsFunctionMember ()) {
       // MemberBase* f = obj.ToMemberBase();
@@ -825,11 +937,16 @@ Member_GenerateDict(const Member & obj, DictionaryGenerator& generator) {
 void
 GlobalScope_GenerateDict(DictionaryGenerator& generator) {
 //-------------------------------------------------------------------------------
-   gFirstContext = NULL;
-   gLastContext = NULL;
-
+   gClrReg->ResetContexts();
    const ScopeBase * b = Scope::GlobalScope().ToScopeBase();
    generator.AddIntoClasses("} // end of namespace"); // !? NO NAMESPACE - SHOULD BE CHANGED
+   #ifdef REGISTER_FUNCTIONS
+   generator.AddIntoInstances("      std::map<std::string, Reflex::StubFunction> wrappers;\n");
+   #endif
    Namespace_GenerateDict (*b, generator);
+   #ifdef REGISTER_FUNCTIONS
+   generator.AddIntoClasses("void gAddWrapperMap (std::map<std::string, Reflex::StubFunction> & wrappers);\n"); // !?
+   generator.AddIntoInstances("      gAddWrapperMap(wrappers);\n");
+   #endif
    generator.AddIntoClasses("namespace {");
 }

@@ -1,12 +1,11 @@
+// @(#)root/cint:$Id$
 // Author: Zdenek Culik   16/04/2010
 
 #include "clr-reg.h"
 
-// FIXME: Need include for Reflex::StubFunction here!!!
-#include "TObjString.h"
-
 TClrReg* gClrReg = 0;
 
+//______________________________________________________________________________
 void TClrReg::Init()
 {
    if (!gClrReg) {
@@ -14,33 +13,77 @@ void TClrReg::Init()
    }
 }
 
+//______________________________________________________________________________
 TClrReg::TClrReg()
 {
+   fFirstContext = NULL;
+   fLastContext = NULL;
 }
 
-class TRegEntry : public TObject {
-public:
-   Reflex::StubFunction fValue;
-};
-
-void TClrReg::RegisterFunctionStub(const char* name, Reflex::StubFunction value)
+//______________________________________________________________________________
+void TClrReg::ResetContexts ()
 {
-   if (fDict.GetValue(name) != 0) {
-   }
-   TObjString* key = new TObjString(name);
-   TRegEntry* obj = new TRegEntry;
-   obj->fValue = value;
-   fDict.Add(key, obj);
-   if (fDict.GetValue(name) != obj) {
-   }
+   fFirstContext = NULL;
+   fLastContext = NULL;
 }
 
-Reflex::StubFunction TClrReg::GetFunctionStub(const char* name)
+//______________________________________________________________________________
+void TClrReg::LinkContext (TClrContext * context)
 {
-   TRegEntry* obj = (TRegEntry*) fDict.GetValue(name);
-   if (!obj) {
-      return 0;
+   if (fLastContext == NULL)
+      fFirstContext = context;
+   else
+      fLastContext->next = context;
+
+   fLastContext = context;
+
+   context->next = NULL;
+}
+
+//______________________________________________________________________________
+void TClrReg::DeleteContexts ()
+{
+   TClrContext* p = fFirstContext;
+   while (p != NULL)
+   {
+      TClrContext* t = p;
+      p = p->next;
+      delete t;
    }
-   return obj->fValue;
+
+   fFirstContext = NULL;
+   fLastContext = NULL;
+}
+
+//______________________________________________________________________________
+void TClrReg::GetFunctionStub(const std::string& func_name,
+                              Reflex::StubFunction& stub,
+                              void*& context)
+{
+   // create function stub and context
+   // for stroring into Reflex dictionary when Reflex information is scanned
+
+   TClrContext * c  = new TClrContext;
+   // DO NOT LinkContext (c);
+   c->name = func_name;
+
+   stub = ClrStubFunction;
+   context = c;
+}
+
+//______________________________________________________________________________
+void ClrStubFunction (void* result, void* obj, const std::vector<void*>& params, void* ctx)
+{
+   TClrContext* context = reinterpret_cast <TClrContext *> (ctx);
+   assert (context != NULL);
+   std::cerr << "CLR clr-reg:   ClrStubFunction: Calling stub function " << context->index << ", " << context->name << std::endl;
+
+   // TO DO: call LLVM function context->func
+}
+
+//______________________________________________________________________________
+void gAddWrapperMap (std::map<std::string, Reflex::StubFunction> & wrappers)
+{
+   gClrReg->AddWrapperMap (wrappers);
 }
 
