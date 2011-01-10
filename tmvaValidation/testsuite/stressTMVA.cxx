@@ -61,7 +61,7 @@ void addClassificationTests( UnitTestSuite& TMVA_test, bool full=true)
    if (full) TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kPDERS, "PDERSPCA",
                                                                 "!H:!V:VolumeRangeMode=Adaptive:KernelEstimator=Gauss:GaussSigma=0.3:NEventsMin=100:NEventsMax=600:VarTransform=PCA" , 0.88, 0.98) );
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kPDEFoam, "PDEFoam",
-                                                      "H:!V:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:Nmin=100:Kernel=None:Compress=T" , 0.8, 0.98) );
+                                                      "!H:!V:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0666:nActiveCells=500:nSampl=2000:nBin=5:Nmin=100:Kernel=None:Compress=T" , 0.8, 0.98) );
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kKNN, "KNN",
                                                       "H:nkNN=20:ScaleFrac=0.8:SigmaFact=1.0:Kernel=Gaus:UseKernel=F:UseWeight=T:!Trim" , 0.8, 0.98) );
    if (full) TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kHMatrix, "HMatrix", "!H:!V:VarTransform=G" , 0.88, 0.98) );
@@ -119,7 +119,7 @@ void addRegressionTests( UnitTestSuite& TMVA_test, bool full=true)
 
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kPDERS, "PDERS", "!H:!V:NormTree=T:VolumeRangeMode=Adaptive:KernelEstimator=Gauss:GaussSigma=1.0:NEventsMin=10:NEventsMax=60:VarTransform=None", 10., 15., 5., 10. ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kPDERS, "PDERSkNN", "!H:!V:VolumeRangeMode=kNN:KernelEstimator=Gauss:GaussSigma=1.0:NEventsMin=10:NEventsMax=60" , 10., 15., 5., 10. ));
-   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kPDEFoam, "PDEFoam", "!H:!V:MultiTargetRegression=F:TargetSelection=Mpv:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=5000:nBin=7:Compress=T:Kernel=Gauss:Nmin=10:VarTransform=None", 10., 15., 4., 6. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kPDEFoam, "PDEFoam", "!H:!V:MultiTargetRegression=F:TargetSelection=Mpv:TailCut=0.001:VolFrac=0.0666:nActiveCells=500:nSampl=5000:nBin=7:Compress=T:Kernel=Gauss:Nmin=10:VarTransform=None", 10., 15., 4., 6. ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kKNN, "KNN",  "nkNN=20:ScaleFrac=0.8:SigmaFact=1.0:Kernel=Gaus:UseKernel=F:UseWeight=T:!Trim" , 10., 15., 4., 6. ));
    TString baseRegFDAstring="!H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x0*x1+(4)*x0*x0+(5)*x1*x1:ParRanges=(-1,1);(-2,2);(-2,2);(-2,2);(-2,2);(-2,2):";
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kFDA, "FDA_MC", baseRegFDAstring+"FitMethod=MC:SampleSize=1000:Sigma=0.1:VarTransform=N", 15., 25., 10., 20. ));
