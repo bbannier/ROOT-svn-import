@@ -75,7 +75,11 @@ using namespace std;
 
 R__EXTERN int optind;
 
-std::map<std::string, std::string> class_to_library_map;
+static std::map<std::string, std::string>& class_to_library_map() {
+   static std::map<std::string, std::string> s;
+   return s;
+}
+
 static void loadClassToLibraryMap();
 
 extern "C" int ScriptCompiler(const char *filename, const char *opt) {
@@ -132,8 +136,8 @@ static void* autoloadCallback(const std::string& mangled_name)
    }
    //fprintf(stderr, "name: '%s'\n", name.c_str());
    // Now we have the class or namespace name, so do the lookup.
-   std::map<std::string, std::string>::iterator iter = class_to_library_map.find(name);
-   if (iter == class_to_library_map.end()) {
+   std::map<std::string, std::string>::iterator iter = class_to_library_map().find(name);
+   if (iter == class_to_library_map().end()) {
       // Not found in the map, all done.
       return 0;
    }
@@ -1725,10 +1729,6 @@ static void loadClassToLibraryMap()
          if (entry_value == "") {
             continue;
          }
-         TString delim(" ");
-         TObjArray* lib_list = entry_value.Tokenize(delim);
-         const char* libname = ((TObjString*)lib_list->At(0))->GetName();
-         delete lib_list;
          entry_name.Remove(0, 8);
          entry_name.ReplaceAll("@@", "::");
          entry_name.ReplaceAll("-", " ");
@@ -1753,19 +1753,22 @@ static void loadClassToLibraryMap()
                   break;
                }
                std::map<std::string, std::string>::iterator iter =
-                  class_to_library_map.find(qual_id.Data());
+                  class_to_library_map().find(qual_id.Data());
                if (
                   (
-                     (iter == class_to_library_map.end()) ||
+                     (iter == class_to_library_map().end()) ||
                      !iter->second.size()
                   ) &&
                   !rec->FindObject(qual_id)
                ) {
-                  class_to_library_map[qual_id.Data()] = "";
+                  class_to_library_map()[qual_id.Data()] = "";
                }
             }
          }
-         class_to_library_map[entry_name.Data()] = libname;
+         Ssiz_t from = 0;
+         TString libname;
+         entry_value.Tokenize(libname, from);
+         class_to_library_map()[entry_name.Data()] = libname.Data();
       }
    }
 }
