@@ -26,28 +26,7 @@
 #include "LinkdefReader.h"
 #include <stack>
 
-//using namespace clang;
-/* -------------------------------------------------------------------------- */
-
-void ClrStubFunction (void* result, void* obj, const std::vector<void*>& params, void* ctx);
-
-struct TContext
-{
-   const llvm::Function * func;
-
-   // Reflex::Member* member;
-   std::string name; // only for debugging
-
-   int index;
-   TContext * next;
-
-   TContext () :
-      func (NULL),
-      // member (NULL),
-      index (0),
-      next (NULL)
-      { }
-};
+#include "clr-reg.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -88,19 +67,7 @@ private:
 
    clang::Decl * fLastDecl;
 
-#if 0
 private:
-   TContext* fFirstContext;
-   TContext* fLastContext;
-public:
-   void DeleteContexts ();
-   TContext* GetFirstContext () { return fFirstContext; }
-#endif
-private:
-   TContext* AllocateContext ();
-
-   //private:
-public:
    void ShowInfo(const TString msg, const TString location = "");
    void ShowWarning(const TString msg, const TString location = "");
    void ShowError(const TString msg, const TString location = "");

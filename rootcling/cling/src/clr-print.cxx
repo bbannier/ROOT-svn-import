@@ -8,6 +8,19 @@
 
 /*********************** HTML FROM REFLEX DICTIONARIES ************************/
 
+const int qual_opt = Reflex::FINAL | Reflex::SCOPED | Reflex::QUALIFIED;
+const int mini_opt = 0;
+
+//______________________________________________________________________________
+inline TString NumToStr(size_t num)
+{
+   TString txt = "";
+   txt += num;
+   return txt;
+}
+
+/********************************* HTML STYLE **********************************/
+
 const TString key_style = "key";
 const TString name_style = "name";
 
@@ -21,18 +34,438 @@ const TString template_style = "template";
 
 const TString error_style = "error";
 const TString comment_style = "comment";
-
-/* -------------------------------------------------------------------------- */
-
-const int qual_opt = Reflex::FINAL | Reflex::SCOPED | Reflex::QUALIFIED;
-const int mini_opt = 0;
+const TString property_style = "property";
 
 //______________________________________________________________________________
-inline TString NumToStr(size_t num)
+void THtmlHelper::Style()
 {
-   TString txt = "";
-   txt += num;
-   return txt;
+   PutLn (".key { color: Blue; }");
+   PutLn (".name { color: Orange; }");
+
+   PutLn (".namespace { color: Gold; }");
+   PutLn (".enum { color: DarkOrange; }");
+   PutLn (".class { color: Blue; }");
+   PutLn (".function { color: Green; }");
+   PutLn (".type { color: Chocolate; }");
+   PutLn (".variable { color: SaddleBrown; }");
+   PutLn (".template { color: DarkViolet; }");
+
+   PutLn (".error { color: Red; }");
+   PutLn (".comment { color: Grey; /* font-style:italic; */ }");
+   PutLn (".property { color: CornFlowerBlue; }");
+
+   PutLn ("h1 {");
+   IncIndent();
+      PutLn ("margin: 0.5em auto 0.5em auto;");
+      PutLn ("padding: 15px 10px 15px 55px;");
+      PutLn ("color: Blue;");
+      PutLn ("background: #ffff70;");
+      PutLn ("border: 1px solid #c0c0e0;");
+   DecIndent();
+   PutLn ("}");
+}
+
+/********************************* HTML HELPER *********************************/
+
+//______________________________________________________________________________
+THtmlHelper::THtmlHelper():
+   fIndent(0),
+   fStartLine(true),
+   fFileStream(NULL),
+   fStringStream(NULL),
+   fStream(NULL),
+   fUseHtml(true)
+{
+}
+
+//______________________________________________________________________________
+THtmlHelper::~THtmlHelper()
+{
+   if (fStream != NULL)
+      delete fStream;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::Open(const TString file_name)
+{
+   fFileStream = new std::ofstream();
+   fFileStream->open(file_name.Data());
+   fStream = fFileStream;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::Close()
+{
+   fFileStream->close();
+}
+
+//______________________________________________________________________________
+void THtmlHelper::OpenString()
+{
+   fStringStream = new std::ostringstream();
+   fStream = fStringStream;
+}
+
+//______________________________________________________________________________
+TString THtmlHelper::CloseString()
+{
+   return fStringStream->str();
+}
+
+//______________________________________________________________________________
+void THtmlHelper::SetIndent(int i)
+{
+   fIndent = i;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::IncIndent()
+{
+   fIndent += 3;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::DecIndent()
+{
+   fIndent -= 3;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::PutPlainStr(const TString s)
+{
+   (*fStream) << s;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::PutPlainChr(char c)
+{
+   (*fStream) << c;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::OpenLine()
+{
+   TString spaces(' ', fIndent);
+   // TString (character, count)
+   // std::string (count, character)
+   PutPlainStr(spaces);
+   fStartLine = false;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::CloseLine()
+{
+   fStartLine = true;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::Put(const TString s)
+{
+   if (fStartLine)
+      OpenLine();
+
+   PutPlainStr(s);
+}
+
+//______________________________________________________________________________
+void THtmlHelper::PutChr(char c)
+{
+   if (fStartLine)
+      OpenLine();
+
+   PutPlainChr(c);
+}
+
+//______________________________________________________________________________
+void THtmlHelper::PutEol()
+{
+   if (fUseHtml)
+      PutPlainStr("\r\n");
+   else
+      PutPlainStr("\n");
+
+   CloseLine();
+}
+
+//______________________________________________________________________________
+void THtmlHelper::PutLn(const TString s)
+{
+   Put(s);
+   PutEol();
+}
+
+//______________________________________________________________________________
+TString QuoteStrContent(const TString value)
+{
+   int len = value.Length();
+
+   bool simple = true;
+   for (int i = 0; i < len && simple; i++) {
+      unsigned char ch = value [i];
+      if (ch < ' ' || ch == '\\' || ch == '"' || ch == 128 || ch >= 255)
+         simple = false;
+   }
+
+   if (simple) {
+      return value;
+   } else {
+      TString result = "";
+      const char hex [16+1] = "0123456789abcdef";
+
+      for (int i = 0; i < len; i++) {
+         unsigned char ch = value [i];
+
+         if (ch < ' ' || ch == 128 || ch >= 255) {
+            result = result + '\\';
+            switch (ch) {
+               case '\a':
+                  result = result + 'a';
+                  break;
+               case '\b':
+                  result = result + 'b';
+                  break;
+               case '\f':
+                  result = result + 'f';
+                  break;
+               case '\n':
+                  result = result + 'n';
+                  break;
+               case '\r':
+                  result = result + 'r';
+                  break;
+               case '\t':
+                  result = result + 't';
+                  break;
+               case '\v':
+                  result = result + 'v';
+                  break;
+
+               default:
+                  result = result + 'x' + hex [ch >> 4] + hex [ch & 15];
+                  break;
+            }
+         } else {
+            if (ch == '\\' || ch == '"')
+               result = result + '\\';
+            result = result + value [i]; // variable ch is unsigned char
+         }
+      }
+
+      return result;
+   }
+}
+
+const char quote2 = '"';
+
+//______________________________________________________________________________
+TString QuoteStr(const TString value, char quote = quote2)
+{
+   return quote + QuoteStrContent(value) + quote;
+}
+
+//______________________________________________________________________________
+inline TString FceAttr(const TString name, const TString value)
+{
+   return name + "=" + quote2 + QuoteStrContent(value) + quote2;
+}
+
+//______________________________________________________________________________
+void THtmlHelper::Attr(const TString name, const TString value)
+// name = "value"
+{
+   if (fUseHtml) {
+      Put(name);
+      PutChr('=');
+      PutChr(quote2);
+      Put(QuoteStrContent(value));
+      PutChr(quote2);
+   }
+}
+
+//______________________________________________________________________________
+void THtmlHelper::Href(const TString url, const TString style, const TString text)
+// <a href="url" class="style"> text </a>
+{
+   if (fUseHtml) {
+      Put("<a ");
+      Attr("href", url);
+
+      if (style != "") {
+         Put(" ");
+         Attr("class", style);
+      }
+
+      Put(">");
+      Put(text);
+      Put("</a>");
+   }
+}
+
+//______________________________________________________________________________
+void THtmlHelper::Name(const TString name, const TString text)
+// <a name="name"> text </a>
+{
+   if (fUseHtml) {
+      Put("<a ");
+      Attr("name", name);
+
+      if (text == "") {
+         Put("/>");
+      } else {
+         Put(">");
+         Put(text);
+         Put("</a>");
+      }
+   }
+}
+
+//______________________________________________________________________________
+void THtmlHelper::StyleBegin(const TString style)
+{
+   if (fUseHtml) {
+      Put("<span ");
+      Attr("class", style);
+      Put(">");
+   }
+}
+
+//______________________________________________________________________________
+void THtmlHelper::StyleEnd()
+{
+   if (fUseHtml)
+      Put("</span>");
+}
+
+//______________________________________________________________________________
+void THtmlHelper::StyledText(const TString text, const TString style)
+{
+   if (fUseHtml) {
+      Put("<span ");
+      Attr("class", style);
+      Put(">");
+      Put(text);
+      Put("</span>");
+   } else {
+      Put(text);
+   }
+}
+
+//______________________________________________________________________________
+TString THtmlHelper::FceHtmlEscape(const TString s)
+{
+   int len = s.Length();
+
+   bool ok = true;
+   for (int i = 0; i < len; i++) {
+      char c = s[i];
+      if (c == '<' || c == '>' || c == '&')
+         ok = false;
+   }
+
+   if (ok) {
+      return s;
+   } else {
+      TString result = "";
+
+      for (int i = 0; i < len; i++) {
+         char c = s[i];
+         if (c == '<')
+            result += "&lt;";
+         else if (c == '>')
+            result += "&gt;";
+         else if (c == '&')
+            result += "&amp;";
+         else
+            result += c;
+      }
+
+      return result;
+   }
+}
+
+//______________________________________________________________________________
+void THtmlHelper::PutHtmlEscape(const TString s)
+// Replace < > & characters
+{
+   if (fUseHtml) {
+      int len = s.Length();
+
+      bool ok = true;
+      for (int i = 0; i < len; i++) {
+         char c = s[i];
+         if (c == '<' || c == '>' || c == '&')
+            ok = false;
+      }
+
+      if (ok) {
+         Put(s);
+      } else {
+         for (int i = 0; i < len; i++) {
+            char c = s[i];
+            if (c == '<')
+               Put("&lt;");
+            else if (c == '>')
+               Put("&gt;");
+            else if (c == '&')
+               Put("&amp;");
+            else
+               PutChr(c);
+         }
+      }
+   } else {
+      Put (s);
+   }
+}
+
+//______________________________________________________________________________
+void THtmlHelper::Head(const TString title)
+{
+   if (fUseHtml) {
+      TString charset = "ISO-8859-1";
+
+      PutLn("<?xml " + FceAttr("version", "1.0") + "?>");
+
+      PutLn("<!DOCTYPE html PUBLIC " +
+            QuoteStr("-//W3C//DTD XHTML 1.0 Transitional//EN") + " " +
+            QuoteStr("http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd") + ">");
+
+      PutLn("<html " + FceAttr("xmlns", "http://www.w3.org/1999/xhtml") + " " +
+            FceAttr("xml:lang", "en") + " " +
+            FceAttr("lang", "en") + ">");
+
+      PutLn("<Head>");
+
+      PutLn("<meta " + FceAttr("http-equiv", "Content-Type") + " " +
+            FceAttr("content", "text/html; charset=" + charset) + " />");
+
+      PutLn("<title>" + title + "</title>");
+
+      if (fStyleFileName != "") {
+         PutLn("<link " + FceAttr("rel", "stylesheet") + " " +
+               FceAttr("type", "text/css") + " " +
+               FceAttr("href", fStyleFileName) + " />");
+      }
+      else
+      {
+         PutLn("<style " + FceAttr("type", "text/css") + ">");
+	 IncIndent();
+	 Style();
+	 DecIndent();
+         PutLn("</style>");
+      }
+
+      PutLn("</Head>");
+      PutLn("<body>");
+   }
+}
+
+//______________________________________________________________________________
+void THtmlHelper::Tail()
+{
+   if (fUseHtml) {
+      PutLn("</body>");
+      PutLn("</html>");
+   }
 }
 
 /******************************* REFLEX PRINTER *******************************/
@@ -52,6 +485,18 @@ void TReflexPrinter::PrintNote(TString s)
    PutChr(' ');
    s = "// " + s;
    StyledText(s, comment_style);
+}
+
+//______________________________________________________________________________
+void TReflexPrinter::PrintProperties(const Reflex::PropertyList& list)
+{
+   for (Reflex::StdString_Iterator i = list.Key_Begin(); i != list.Key_End(); ++i) {
+       std::string key = *i;
+       std::string value = list.PropertyAsString (key);
+
+       TString s = " // property " + key + " = "+ value;
+       StyledText(s, property_style);
+   }
 }
 
 //______________________________________________________________________________
@@ -270,6 +715,7 @@ void TReflexPrinter::PrintClass(Reflex::Scope s)
 
       Put(m.Name(qual_opt));
    }
+   PrintProperties (s.Properties ());
    PutEol();
 
    StyledText("{", class_style);
@@ -469,6 +915,10 @@ void TReflexPrinter::PrintMember(Reflex::Member m)
 
    if (m.IsTransient())
       PrintNote("transient");
+
+   /* properties */
+
+   PrintProperties (m.Properties ());
 
    PutEol();
 
@@ -756,7 +1206,6 @@ void TReflexPrinter::Print(Reflex::Scope scope)
 {
    if (fUseHtml) {
       TString title = "pseudo code from Reflex dictionary " + scope.Name(qual_opt);
-      // Head(title, style_file_name);
       Head(title);
       PutLn("<h1>" + title + "</h1>");
       PutLn("<pre>");
@@ -774,5 +1223,4 @@ void TReflexPrinter::Print(Reflex::Scope scope)
       PutLn("</pre>");
       Tail();
    }
-
 }
