@@ -1102,8 +1102,8 @@ void TMVA::MethodMLP::DecaySynapseWeights(Bool_t lateEpoch)
    TSynapse* synapse;
    Int_t numSynapses = fSynapses->GetEntriesFast();
    for (Int_t i = 0; i < numSynapses; i++) {
-      synapse = (TSynapse*)fSynapses->At(i);
-      if (lateEpoch) synapse->DecayLearningRate(fDecayRate*fDecayRate);
+      synapse = (TSynapse*)fSynapses->At(i);      
+      if (lateEpoch) synapse->DecayLearningRate(TMath::Sqrt(fDecayRate)); // In order to lower the learning rate even more, we need to apply sqrt instead of square.
       else           synapse->DecayLearningRate(fDecayRate);
    }
 }
