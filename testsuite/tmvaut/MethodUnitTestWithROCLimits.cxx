@@ -118,7 +118,17 @@ void MethodUnitTestWithROCLimits::run()
      std::cout << "ROC integral = "<<_ROCValue <<" low limit="<<_lowROCLimit<<" high limit="<<_upROCLimit<<std::endl;
 #endif     
      if (!ROCIntegralWithinInterval()){
-        std::cout << "failure in " << _methodTitle<<", ROC integral = "<<_ROCValue <<" low limit="<<_lowROCLimit<<" high limit="<<_upROCLimit<<std::endl;
+        if (_ROCValue < _lowROCLimit) 
+           std::cout << "failure in "       << _methodTitle
+                     << ", ROC integral = " << _ROCValue 
+                     <<" low limit="        << _lowROCLimit
+                     <<" high limit="       << _upROCLimit << std::endl;
+        else  
+           std::cout << "Improvement of method beyond upper limit (counted as \"failure\"): " 
+                     << _methodTitle
+                     << ", ROC integral = " << _ROCValue  
+                     << " low limit="       << _lowROCLimit
+                     << " high limit="      << _upROCLimit << std::endl;
      }     
      test_(ROCIntegralWithinInterval());
   }

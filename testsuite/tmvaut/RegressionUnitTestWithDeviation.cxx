@@ -91,12 +91,22 @@ void RegressionUnitTestWithDeviation::run()
         << _upper90PercentDeviationLimit << endl;
 #endif
    }
-   else {      
-      cout << "Failure "<<_methodTitle<<", deviation, dev90= " << _theFullDeviation << ", " <<  _the90PercentDeviation << endl;
-   cout << "Full limits " << _lowerFullDeviationLimit      << " "
-        << _upperFullDeviationLimit
-        << ", 90% limits "  << _lower90PercentDeviationLimit << " "
-        << _upper90PercentDeviationLimit << endl;
+   else { 
+      if (_the90PercentDeviation < _lower90PercentDeviationLimit || 
+          _theFullDeviation      < _lowerFullDeviationLimit ){
+         cout << "Improvement of method beyond limit (counted as \"failure\"): "<<_methodTitle<<", deviation, dev90= " << _theFullDeviation << ", " <<  _the90PercentDeviation << endl;
+         cout << "Full limits " << _lowerFullDeviationLimit      << " "
+              << _upperFullDeviationLimit
+              << ", 90% limits "  << _lower90PercentDeviationLimit << " "
+              << _upper90PercentDeviationLimit << endl;
+      }
+      else {
+         cout << "Failure "<<_methodTitle<<", deviation, dev90= " << _theFullDeviation << ", " <<  _the90PercentDeviation << endl;
+         cout << "Full limits " << _lowerFullDeviationLimit      << " "
+              << _upperFullDeviationLimit
+              << ", 90% limits "  << _lower90PercentDeviationLimit << " "
+              << _upper90PercentDeviationLimit << endl;
+      }
    }
    test_(DeviationWithinLimits());
    
