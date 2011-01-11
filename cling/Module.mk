@@ -45,7 +45,7 @@ ROOTCLING    := bin/rootcling$(EXEEXT)
 ALLEXECS     += $(ROOTCLING)
 
 ##### ROOT.pch #####
-ROOTPCH := lib/ROOT.pch
+ROOTPCH := include/ROOT.pch
 ALLROOTH := $(MODDIRS)/allroot.h
 $(ALLROOTH): cling-ALWAYS
 	cat $(addprefix $(call stripsrc,$(CLINGDIRS))/,$(foreach m,$(MODULES),$(notdir $(subst .cxx,_dicthdr.h,$(sort $(notdir $(wildcard $(m)/src/G__*.cxx))))))) > $@.tmp
@@ -53,9 +53,9 @@ $(ALLROOTH): cling-ALWAYS
 	rm $@.tmp
 
 $(ROOTPCH): $(ALLROOTH) $(ALLHDRS)
-	clang++ $(CXXFLAGS) \
+	clang++ -cc1 -fexceptions $(filter-out -pipe -m64 -fPIC,$(CXXFLAGS)) \
 	  `grep '^// -I' $< | sed 's,^//,,'` \
-	  -I. -Xclang -emit-pch -Xclang -relocatable-pch -x c++-header $< -o $@
+	  -I. -emit-pch -x c++-header -relocatable-pch $< -o $@
 
 ##### local rules #####
 ifeq ($(strip $(LLVMDIR)),)
@@ -88,7 +88,7 @@ $(CLINGMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(CLINGL)
 		$(RLIBMAP) -o $(CLINGMAP) -l $(CLINGLIB) -d $(CLINGLIBDEPM) -c $(CLINGL)
 
 $(ROOTCLING):   $(ROOTCLINGO) $(BOOTLIBSDEP)
-		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) $(BOOTULIBS) -lReflex \
+		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) -L$(LLVMDIR)/lib -lcling $(BOOTULIBS) -lReflex \
 		  $(RPATH) $(BOOTLIBS) $(SYSLIBS)
 
 all-$(MODNAME): $(CLINGLIB) $(CLINGMAP) $(ROOTCLING)

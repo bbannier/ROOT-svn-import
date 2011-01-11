@@ -267,27 +267,108 @@ TCint::TCint(const char *name, const char *title) :
    clang::CompilerInstance * CI = fInterpreter->getCI ();
 
    clang::LangOptions & langInfo = CI->getLangOpts ();
-   //langInfo.C99         = 1;
-   //langInfo.HexFloats   = 1;
-   langInfo.BCPLComment = 1; // Only for C99/C++.
-   langInfo.Digraphs    = 1; // C94, C99, C++.
-   langInfo.CPlusPlus   = 1;
-   //langInfo.CPlusPlus0x = 1;
-   langInfo.CXXOperatorNames = 1;
-   langInfo.Bool = 1;
-   langInfo.NeXTRuntime = 1;
-   langInfo.NoInline = 1;
-   langInfo.Exceptions = 1;
-   langInfo.GNUMode = 1;
-   langInfo.NoInline = 1;
-   langInfo.GNUInline = 1;
-   langInfo.DollarIdents = 1;
-   langInfo.POSIXThreads = 1;
 
-   #ifdef DBG
-//   clang::HeaderSearchOptions & headerOpts = CI->getHeaderSearchOpts ();
-//   headerOpts.Verbose = 1;
-   #endif
+
+   langInfo.Trigraphs = 1; // Trigraphs in source files.
+   langInfo.BCPLComment = 1; // BCPL-style '//' comments.
+   langInfo.Bool = 1; // 'bool', 'true', 'false' keywords.
+   langInfo.DollarIdents = 1; // '$' allowed in identifiers.
+   langInfo.AsmPreprocessor = 0; // Preprocessor in asm mode.
+   langInfo.GNUMode = 1; // True in gnu99 mode false in c99 mode (etc)
+   langInfo.GNUKeywords = 0; // True if GNU-only keywords are allowed
+   langInfo.ImplicitInt = 0; // C89 implicit 'int'.
+   langInfo.Digraphs = 1; // C94, C99 and C++
+   langInfo.HexFloats = 1; // C99 Hexadecimal float constants.
+   langInfo.C99 = 1; // C99 Support
+   langInfo.Microsoft = 0; // Microsoft extensions.
+   langInfo.Borland = 0; // Borland extensions.
+   langInfo.CPlusPlus = 1; // C++ Support
+   langInfo.CPlusPlus0x = 1; // C++0x Support
+   langInfo.CXXOperatorNames = 1; // Treat C++ operator names as keywords.
+
+   langInfo.ObjC1 = 0; // Objective-C 1 support enabled.
+   langInfo.ObjC2 = 0; // Objective-C 2 support enabled.
+   langInfo.ObjCNonFragileABI = 0; // Objective-C modern abi enabled
+   langInfo.ObjCNonFragileABI2 = 0; // Objective-C enhanced modern abi enabled
+   langInfo.ObjCDefaultSynthProperties = 0; // Objective-C auto-synthesized properties.
+   langInfo.AppleKext = 0; // Allow apple kext features.
+
+   langInfo.PascalStrings = 0; // Allow Pascal strings
+   langInfo.WritableStrings  = 0; // Allow writable strings
+   langInfo.ConstStrings = 1; // Add const qualifier to strings (-Wwrite-strings)
+   langInfo.LaxVectorConversions = 0;
+   langInfo.AltiVec = 0; // Support AltiVec-style vector initializers.
+   langInfo.Exceptions = 1; // Support exception handling.
+   langInfo.SjLjExceptions = 0; // Use setjmp-longjump exception handling.
+   langInfo.RTTI = 1; // Support RTTI information.
+
+   langInfo.NeXTRuntime = 1; // Use NeXT runtime.
+   langInfo.Freestanding = 0; // Freestanding implementation
+   langInfo.NoBuiltin = 0; // Do not use builtin functions (-fno-builtin)
+
+   langInfo.ThreadsafeStatics = 1; // Whether static initializers are protected
+                                  // by locks.
+   langInfo.POSIXThreads = 1; // Compiling with POSIX thread support (-pthread)
+   langInfo.Blocks = 0; // block extension to C
+   langInfo.EmitAllDecls = 1; // Emit all declarations, even if
+                              // they are unused.
+   langInfo.MathErrno = 1; // Math functions must respect errno
+                           // (modulo the platform support).
+
+   langInfo.HeinousExtensions  = 0; // Extensions that we really don't like and
+                                    // may be ripped out at any time.
+
+   langInfo.Optimize = 0; // Whether __OPTIMIZE__ should be defined.
+   langInfo.OptimizeSize = 0; // Whether __OPTIMIZE_SIZE__ should be
+                              // defined.
+   langInfo.Static = 0; // Should __STATIC__ be defined (as
+                        // opposed to __DYNAMIC__).
+   langInfo.PICLevel = 0; // The value for __PIC__, if non-zero.
+
+   langInfo.GNUInline = 0; // Should GNU inline semantics be
+                           // used (instead of C99 semantics).
+   langInfo.NoInline = 1; // Should __NO_INLINE__ be defined.
+
+   langInfo.ObjCGCBitmapPrint = 0; // Enable printing of gc's bitmap layout
+                                   // for __weak/__strong ivars.
+
+   langInfo.AccessControl = 1; // Whether C++ access control should
+                               // be enabled.
+   langInfo.CharIsSigned = 1; // Whether char is a signed or unsigned type
+   langInfo.ShortWChar = 1; // Force wchar_t to be unsigned short int.
+
+   langInfo.ShortEnums = 0; // The enum type will be equivalent to the
+                            // smallest integer type with enough room.
+
+   langInfo.OpenCL = 0; // OpenCL C99 language extensions.
+   langInfo.CUDA = 0; // CUDA C++ language extensions.
+
+   langInfo.AssumeSaneOperatorNew = 1; // Whether to add __attribute__((malloc))
+                                      // to the declaration of C++'s new
+                                      // operators
+   langInfo.ElideConstructors = 1; // Whether C++ copy constructors should be
+                                   // elided if possible.
+   langInfo.CatchUndefined = 1; // Generate code to check for undefined ops.
+   langInfo.DumpRecordLayouts = 0; /// Dump the layout of IRgen'd records.
+   langInfo.DumpVTableLayouts = 0; /// Dump the layouts of emitted vtables.
+   langInfo.NoConstantCFStrings = 0;  // Do not do CF strings
+   langInfo.InlineVisibilityHidden = 0; // Whether inline C++ methods have
+                                        // hidden visibility by default.
+
+   langInfo.SpellChecking = 0; // Whether to perform spell-checking for error
+                               // recovery.
+   langInfo.SinglePrecisionConstants = 0; // Whether to treat double-precision
+                                          // floating point constants as
+                                          // single precision constants.
+   langInfo.FastRelaxedMath  = 0; // OpenCL fast relaxed math (on its own,
+                                  // defines __FAST_RELAXED_MATH__).
+   langInfo.NoBitFieldTypeAlign = 0; // FIXME: This is just a temporary option, for testing purposes.
+
+
+#ifdef DBG
+   //clang::HeaderSearchOptions & headerOpts = CI->getHeaderSearchOpts ();
+   //headerOpts.Verbose = 1;
+#endif
 
    // addPath (CI, headerOpts.ResourceDir); // llvm/lib/clang/1.5
 
@@ -303,10 +384,12 @@ TCint::TCint(const char *name, const char *title) :
    TCint::AddIncludePath(ROOTINCDIR);
 #endif
 
-   #ifdef DBG
-      printInfo (CI);
-   #endif
-
+#ifdef DBG
+   printInfo (CI);
+#endif
+   TString pch_filename = gSystem->Getenv("ROOTSYS");
+   pch_filename.Append("/include/ROOT.pch");
+   CI->createPCHExternalASTSource(pch_filename.Data(), true, 0);
    fMetaProcessor = new cling::MetaProcessor(*fInterpreter);
 
    // to pull in gPluginManager
