@@ -199,7 +199,7 @@ namespace cling {
     
     std::string wrapped;
     std::string stmtFunc;
-    if (strncmp(input_line.c_str(),"#include ",strlen("#include ")) != 0) {
+    if (strncmp(input_line.c_str(),"#include ", 9) != 0) {
       //
       //  Wrap input into a function along with
       //  the saved global declarations.
@@ -453,6 +453,9 @@ namespace cling {
             sstr_stmt << "extern \"C\" void " << stmtFunc << "() {\n"
                       << wrapped_stmts;
          if (!haveSemicolon) {
+            if (final_stmt[final_stmt.length() - 1] == ';') {
+               final_stmt.erase(final_stmt.length() - 1);
+            }
             sstr_stmt << "cling::ValuePrinter(((cling::Interpreter*)"
                       << (void*)this << ")->getValuePrinterStream(),"
                       << final_stmt << ");}\n";
