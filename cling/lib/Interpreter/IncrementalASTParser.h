@@ -50,6 +50,8 @@ namespace cling {
    clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
 
   private:
+    void handlePendingSemaActions();
+
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Sema> m_Sema; // sema used for parsing
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
