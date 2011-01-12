@@ -62,7 +62,8 @@ ExecutionContext::ExecutionContext(Interpreter& Interp):
 ExecutionContext::~ExecutionContext()
 {
    m_CI->takeLLVMContext(); // Don't take down the context with the CI.
-  m_codeGen->ReleaseModule();
+   if (m_codeGen)
+      m_codeGen->ReleaseModule();
 }
 
 
