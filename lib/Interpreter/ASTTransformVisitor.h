@@ -74,7 +74,7 @@ namespace cling {
       //endregion
 
       FunctionDecl *getEvalDecl() { return EvalDecl; }
-      void setEvalDecl(FunctionDecl *FDecl) { EvalDecl = FDecl; }
+      void setEvalDecl(FunctionDecl *FDecl) { if (!EvalDecl) EvalDecl = FDecl; }
       
       
       //region DeclVisitor
