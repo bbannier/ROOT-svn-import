@@ -33,6 +33,8 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
+#include "clang/Sema/Sema.h"
+
 #include "Visitors.h"
 #include "ClangUtils.h"
 #include "ExecutionContext.h"
@@ -607,14 +609,20 @@ namespace cling {
       return 0;
    }
 
-   void cling::Interpreter::dumpAST(bool newestTopLevelDecl/*=false*/) const {
-      clang::Decl* D = 0;
-     if (newestTopLevelDecl) {
-        D = m_IncrASTParser->getLastTopLevelDecl();
-     } else {
+   void cling::Interpreter::dumpAST(unsigned int policy) const {
+     clang::Decl* D = 0;
+     int oldPolicy = m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump;
+
+     m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump = policy & DumpDetails;
+
+     if (policy & DumpEverything) {
         D = m_IncrASTParser->getCI()->getASTContext().getTranslationUnitDecl();
+     } else {
+        D = m_IncrASTParser->getLastTopLevelDecl();
      }
+     
      if (D) D->dump();
+     m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
    }
   
 } // namespace cling
