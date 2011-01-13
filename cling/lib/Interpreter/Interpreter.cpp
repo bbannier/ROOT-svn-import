@@ -141,7 +141,7 @@ namespace cling {
     // but we can't handle namespaced decls yet :-(
     // sstr << "namespace cling {Interpreter* gCling = (Interpreter*)" << (void*) this << "; (void) gCling; \n"
     sstr << "cling::Interpreter* gCling = (cling::Interpreter*)"
-         << (const void*) this << ";";
+         << (const void*) this << ";\n";
     compileString(sstr.str());
   }
   
@@ -455,12 +455,13 @@ namespace cling {
             sstr_stmt << "extern \"C\" void " << stmtFunc << "() {\n"
                       << wrapped_stmts;
          if (!haveSemicolon) {
-            if (final_stmt[final_stmt.length() - 1] == ';') {
-               final_stmt.erase(final_stmt.length() - 1);
+            std::string final_stmt_no_semicolon = final_stmt;
+            if (final_stmt_no_semicolon[final_stmt_no_semicolon.length() - 1] == ';') {
+               final_stmt_no_semicolon.erase(final_stmt_no_semicolon.length() - 1);
             }
             sstr_stmt << "cling::ValuePrinter(((cling::Interpreter*)"
                       << (void*)this << ")->getValuePrinterStream(),"
-                      << final_stmt << ");}\n";
+                      << final_stmt_no_semicolon << ");}\n";
          } else {
             sstr_stmt << final_stmt << ";}\n";
          }
