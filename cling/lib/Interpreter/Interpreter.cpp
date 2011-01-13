@@ -32,9 +32,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-
-#include "clang/Sema/Sema.h"
-
 #include "Visitors.h"
 #include "ClangUtils.h"
 #include "ExecutionContext.h"
@@ -107,7 +104,8 @@ namespace cling {
   Interpreter::Interpreter(const char* llvmdir /*= 0*/):
   m_CIBuilder(0),
   m_UniqueCounter(0),
-  m_printAST(false)
+  m_printAST(false),
+  m_LastDump(0)
   {
     m_PragmaHandler = new clang::PragmaNamespace("cling");
 
@@ -141,7 +139,7 @@ namespace cling {
     // but we can't handle namespaced decls yet :-(
     // sstr << "namespace cling {Interpreter* gCling = (Interpreter*)" << (void*) this << "; (void) gCling; \n"
     sstr << "cling::Interpreter* gCling = (cling::Interpreter*)"
-         << (const void*) this << ";\n";
+         << (const void*) this << ";";
     compileString(sstr.str());
   }
   
@@ -201,7 +199,7 @@ namespace cling {
     
     std::string wrapped;
     std::string stmtFunc;
-    if (strncmp(input_line.c_str(),"#include ", 9) != 0) {
+    if (strncmp(input_line.c_str(),"#include ",strlen("#include ")) != 0) {
       //
       //  Wrap input into a function along with
       //  the saved global declarations.
@@ -455,13 +453,9 @@ namespace cling {
             sstr_stmt << "extern \"C\" void " << stmtFunc << "() {\n"
                       << wrapped_stmts;
          if (!haveSemicolon) {
-            std::string final_stmt_no_semicolon = final_stmt;
-            if (final_stmt_no_semicolon[final_stmt_no_semicolon.length() - 1] == ';') {
-               final_stmt_no_semicolon.erase(final_stmt_no_semicolon.length() - 1);
-            }
             sstr_stmt << "cling::ValuePrinter(((cling::Interpreter*)"
                       << (void*)this << ")->getValuePrinterStream(),"
-                      << final_stmt_no_semicolon << ");}\n";
+                      << final_stmt << ");}\n";
          } else {
             sstr_stmt << final_stmt << ";}\n";
          }
@@ -609,20 +603,58 @@ namespace cling {
       printf("%s", expr);
       return 0;
    }
-
-   void cling::Interpreter::dumpAST(unsigned int policy) const {
-     clang::Decl* D = 0;
+   
+   void cling::Interpreter::dumpAST(bool showAST, int last) {
+     clang::Decl* D = m_LastDump;
      int oldPolicy = m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump;
 
-     m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump = policy & DumpDetails;
-
-     if (policy & DumpEverything) {
-        D = m_IncrASTParser->getCI()->getASTContext().getTranslationUnitDecl();
-     } else {
-        D = m_IncrASTParser->getLastTopLevelDecl();
+     if (!D && last == -1 ) {
+        fprintf(stderr, "No last dump found! Assuming ALL \n");
+        last = 0;
+        showAST = false;        
      }
-     
-     if (D) D->dump();
+
+     m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump = showAST;
+
+     if (last == -1) {
+        while ((D = D->getNextDeclInContext())) {
+           D->dump();
+        }
+     }
+     else if (last == 0) {
+        m_IncrASTParser->getCI()->getASTContext().getTranslationUnitDecl()->dump();
+     } else {
+        clang::Decl *FD = m_IncrASTParser->getFirstTopLevelDecl(); // First Decl to print
+        clang::Decl *LD = FD;
+
+        // FD and LD are first
+
+        clang::Decl *NextLD = 0;
+        for (int i = 1; i < last; ++i) {
+           NextLD = LD->getNextDeclInContext();
+           if (NextLD) {
+              LD = NextLD;
+           }
+        }
+
+        // LD is last Decls after FD: [FD x y z LD a b c d]
+
+        while ((NextLD = LD->getNextDeclInContext())) {
+           // LD not yet at end: move window
+           FD = FD->getNextDeclInContext();
+           LD = NextLD;
+        }
+
+        // Now LD is == getLastDeclinContext(), and FD is last decls before
+        // LD is last Decls after FD: [x y z a FD b c LD]
+        
+        while (FD) {
+           FD->dump();
+           FD = FD->getNextDeclInContext();
+        }        
+     }
+
+     m_LastDump = m_IncrASTParser->getLastTopLevelDecl();     
      m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
    }
   
