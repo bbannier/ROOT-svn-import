@@ -1,3 +1,4 @@
+_ZN4llvm5APInt12initSlowCaseEjmb
 _ZN4llvm11raw_ostream14flush_nonemptyEv
 _ZN4llvm11raw_ostream5writeEh
 _ZN4llvm11raw_ostream5writeEPKcm

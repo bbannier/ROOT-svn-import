@@ -600,7 +600,7 @@ namespace cling {
 
    // Implements the interpretation of the unknown symbols. 
    bool Interpreter::EvalCore(llvm::GenericValue& result, const char* expr) {
-      printf("%s", expr);
+      printf("%s\n", expr);
       return 0;
    }
    
