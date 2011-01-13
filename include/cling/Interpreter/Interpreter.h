@@ -73,7 +73,9 @@ namespace cling {
       m_printAST = print;
       return prev;
     }
-    void dumpAST(bool newestTopLevelDecl = false) const;
+
+    enum DumpPolicy { DumpDetails = 1, DumpEverything = 2 }; 
+    void dumpAST(unsigned int policy = DumpDetails) const;
     
     clang::CompilerInstance* getCI() const;
     clang::CompilerInstance* createCI() const;
