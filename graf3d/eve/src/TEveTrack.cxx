@@ -12,7 +12,6 @@
 #include "TEveTrack.h"
 #include "TEveTrackPropagator.h"
 #include "TEvePointSet.h"
-#include "TEveVSDStructs.h"
 
 #include "TPolyLine3D.h"
 #include "TMarker.h"
@@ -128,6 +127,32 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* prop):
 }
 
 //______________________________________________________________________________
+TEveTrack::TEveTrack(TEveRecTrackD* t, TEveTrackPropagator* prop) :
+   TEveLine(),
+
+   fV(t->fV),
+   fP(t->fP),
+   fPEnd(),
+   fBeta(t->fBeta),
+   fPdg(0),
+   fCharge(t->fSign),
+   fLabel(t->fLabel),
+   fIndex(t->fIndex),
+   fStatus(t->fStatus),
+   fLockPoints(kFALSE),
+   fPathMarks(),
+   fLastPMIdx(0),
+   fPropagator(0)
+{
+   // Constructor from TEveRecTrack<double> reconstructed track.
+
+   SetPropagator(prop);
+   fMainColorPtr = &fLineColor;
+
+   SetName(t->GetName());
+}
+
+//______________________________________________________________________________
 TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* prop) :
    TEveLine(),
 
@@ -145,7 +170,9 @@ TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* prop) :
    fLastPMIdx(0),
    fPropagator(0)
 {
-   // Constructor from TEveUtil reconstructed track.
+   // Constructor from TEveRecTrack<float> reconstructed track.
+   // It is recomended to use constructor with  TEveRecTrack<double> since
+   // TEveTrackPropagator operates with double type.
 
    SetPropagator(prop);
    fMainColorPtr = &fLineColor;
@@ -217,7 +244,7 @@ void TEveTrack::ComputeBBox()
       }
       for (vPathMark_ci i = fPathMarks.begin(); i != fPathMarks.end(); ++i)
       {
-         BBoxCheckPoint(i->fV);
+         BBoxCheckPoint(i->fV.fX, i->fV.fY,i->fV.fZ);
       }
    }
    else
@@ -318,17 +345,17 @@ void TEveTrack::MakeTrack(Bool_t recurse)
 
       TEveTrackPropagator& rTP((fPropagator != 0) ? *fPropagator : TEveTrackPropagator::fgDefault);
 
-      const Float_t maxRsq = rTP.GetMaxR() * rTP.GetMaxR();
-      const Float_t maxZ   = rTP.GetMaxZ();
+      const Double_t maxRsq = rTP.GetMaxR() * rTP.GetMaxR();
+      const Double_t maxZ   = rTP.GetMaxZ();
 
       if ( ! TEveTrackPropagator::IsOutsideBounds(fV, maxRsq, maxZ))
       {
-         TEveVector currP = fP;
+         TEveVectorD currP = fP;
          Bool_t decay = kFALSE;
          fPropagator->InitTrack(fV, fCharge);
          for (vPathMark_i pm = fPathMarks.begin(); pm != fPathMarks.end(); ++pm, ++fLastPMIdx)
          {
-            if (rTP.GetFitReferences() && pm->fType == TEvePathMark::kReference)
+            if (rTP.GetFitReferences() && pm->fType == TEvePathMarkD::kReference)
             {
                if (TEveTrackPropagator::IsOutsideBounds(pm->fV, maxRsq, maxZ))
                   break;
@@ -341,7 +368,7 @@ void TEveTrack::MakeTrack(Bool_t recurse)
                   break;
                }
             }
-            else if (rTP.GetFitDaughters() && pm->fType == TEvePathMark::kDaughter)
+            else if (rTP.GetFitDaughters() && pm->fType == TEvePathMarkD::kDaughter)
             {
                if (TEveTrackPropagator::IsOutsideBounds(pm->fV, maxRsq, maxZ))
                   break;
@@ -354,7 +381,7 @@ void TEveTrack::MakeTrack(Bool_t recurse)
                   break;
                }
             }
-            else if (rTP.GetFitDecay() && pm->fType == TEvePathMark::kDecay)
+            else if (rTP.GetFitDecay() && pm->fType == TEvePathMarkD::kDecay)
             {
                if (TEveTrackPropagator::IsOutsideBounds(pm->fV, maxRsq, maxZ))
                   break;
@@ -364,13 +391,13 @@ void TEveTrack::MakeTrack(Bool_t recurse)
                ++fLastPMIdx;
                break;
             }
-            else if (rTP.GetFitCluster2Ds() && pm->fType == TEvePathMark::kCluster2D)
+            else if (rTP.GetFitCluster2Ds() && pm->fType == TEvePathMarkD::kCluster2D)
             {
-               TEveVector itsect;
+               TEveVectorD itsect;
                if (fPropagator->IntersectPlane(currP, pm->fV, pm->fP, itsect))
                {
-                  TEveVector delta   = itsect - pm->fV;
-                  TEveVector vtopass = pm->fV + pm->fE*(pm->fE.Dot(delta));
+                  TEveVectorD delta   = itsect - pm->fV;
+                  TEveVectorD vtopass = pm->fV + pm->fE*(pm->fE.Dot(delta));
                   if (TEveTrackPropagator::IsOutsideBounds(vtopass, maxRsq, maxZ))
                      break;
                   if ( ! fPropagator->GoToVertex(vtopass, currP))
@@ -450,7 +477,7 @@ namespace
 {
    struct Cmp_pathmark_t
    {
-      bool operator()(TEvePathMark const & a, TEvePathMark const & b)
+      bool operator()(TEvePathMarkD const & a, TEvePathMarkD const & b)
       { return a.fTime < b.fTime; }
    };
 }
@@ -703,7 +730,7 @@ void TEveTrackList::FindMomentumLimits(TEveElement* el, Bool_t recurse)
 }
 
 //______________________________________________________________________________
-Float_t TEveTrackList::RoundMomentumLimit(Float_t x)
+Double_t TEveTrackList::RoundMomentumLimit(Double_t x)
 {
    // Round the momentum limit up to a nice value.
 
@@ -1002,7 +1029,7 @@ void TEveTrackList::SetMarkerSize(Size_t size, TEveElement* el)
 //==============================================================================
 
 //______________________________________________________________________________
-void TEveTrackList::SelectByPt(Float_t min_pt, Float_t max_pt)
+void TEveTrackList::SelectByPt(Double_t min_pt, Double_t max_pt)
 {
    // Select visibility of tracks by transverse momentum.
    // If data-member fRecurse is set, the selection is applied
@@ -1011,12 +1038,12 @@ void TEveTrackList::SelectByPt(Float_t min_pt, Float_t max_pt)
    fMinPt = min_pt;
    fMaxPt = max_pt;
 
-   const Float_t minptsq = min_pt*min_pt;
-   const Float_t maxptsq = max_pt*max_pt;
+   const Double_t minptsq = min_pt*min_pt;
+   const Double_t maxptsq = max_pt*max_pt;
 
    for (List_i i=BeginChildren(); i!=EndChildren(); ++i)
    {
-      const Float_t ptsq = ((TEveTrack*)(*i))->fP.Perp2();
+      const Double_t ptsq = ((TEveTrack*)(*i))->fP.Perp2();
       Bool_t on = ptsq >= minptsq && ptsq <= maxptsq;
       (*i)->SetRnrState(on);
       if (on && fRecurse)
@@ -1025,19 +1052,19 @@ void TEveTrackList::SelectByPt(Float_t min_pt, Float_t max_pt)
 }
 
 //______________________________________________________________________________
-void TEveTrackList::SelectByPt(Float_t min_pt, Float_t max_pt, TEveElement* el)
+void TEveTrackList::SelectByPt(Double_t min_pt, Double_t max_pt, TEveElement* el)
 {
    // Select visibility of el's children tracks by transverse momentum.
 
-   const Float_t minptsq = min_pt*min_pt;
-   const Float_t maxptsq = max_pt*max_pt;
+   const Double_t minptsq = min_pt*min_pt;
+   const Double_t maxptsq = max_pt*max_pt;
 
    for (List_i i=el->BeginChildren(); i!=el->EndChildren(); ++i)
    {
       TEveTrack* track = dynamic_cast<TEveTrack*>(*i);
       if (track)
       {
-         const Float_t ptsq = track->fP.Perp2();
+         const Double_t ptsq = track->fP.Perp2();
          Bool_t on = ptsq >= minptsq && ptsq <= maxptsq;
          track->SetRnrState(on);
          if (on && fRecurse)
@@ -1046,8 +1073,8 @@ void TEveTrackList::SelectByPt(Float_t min_pt, Float_t max_pt, TEveElement* el)
    }
 }
 
-//______________________________________________________________________________
-void TEveTrackList::SelectByP(Float_t min_p, Float_t max_p)
+//_________ ___________________________________________________________________
+void TEveTrackList::SelectByP(Double_t min_p, Double_t max_p)
 {
    // Select visibility of tracks by momentum.
    // If data-member fRecurse is set, the selection is applied
@@ -1056,12 +1083,12 @@ void TEveTrackList::SelectByP(Float_t min_p, Float_t max_p)
    fMinP = min_p;
    fMaxP = max_p;
 
-   const Float_t minpsq = min_p*min_p;
-   const Float_t maxpsq = max_p*max_p;
+   const Double_t minpsq = min_p*min_p;
+   const Double_t maxpsq = max_p*max_p;
 
    for (List_i i=BeginChildren(); i!=EndChildren(); ++i)
    {
-      const Float_t psq  = ((TEveTrack*)(*i))->fP.Mag2();
+      const Double_t psq  = ((TEveTrack*)(*i))->fP.Mag2();
       Bool_t on = psq >= minpsq && psq <= maxpsq;
       (*i)->SetRnrState(psq >= minpsq && psq <= maxpsq);
       if (on && fRecurse)
@@ -1070,19 +1097,19 @@ void TEveTrackList::SelectByP(Float_t min_p, Float_t max_p)
 }
 
 //______________________________________________________________________________
-void TEveTrackList::SelectByP(Float_t min_p, Float_t max_p, TEveElement* el)
+void TEveTrackList::SelectByP(Double_t min_p, Double_t max_p, TEveElement* el)
 {
    // Select visibility of el's children tracks by momentum.
 
-   const Float_t minpsq = min_p*min_p;
-   const Float_t maxpsq = max_p*max_p;
+   const Double_t minpsq = min_p*min_p;
+   const Double_t maxpsq = max_p*max_p;
 
    for (List_i i=el->BeginChildren(); i!=el->EndChildren(); ++i)
    {
       TEveTrack* track = dynamic_cast<TEveTrack*>(*i);
       if (track)
       {
-         const Float_t psq  = ((TEveTrack*)(*i))->fP.Mag2();
+         const Double_t psq  = ((TEveTrack*)(*i))->fP.Mag2();
          Bool_t on = psq >= minpsq && psq <= maxpsq;
          track->SetRnrState(on);
          if (on && fRecurse)
