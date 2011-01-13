@@ -21,6 +21,7 @@ namespace clang {
   class CompilerInstance;
   class PragmaNamespace;
   class SourceLocation;
+  class Decl;
 }
 
 namespace cling {
@@ -73,9 +74,8 @@ namespace cling {
       m_printAST = print;
       return prev;
     }
-
-    enum DumpPolicy { DumpDetails = 1, DumpEverything = 2 }; 
-    void dumpAST(unsigned int policy = DumpDetails) const;
+ 
+    void dumpAST(bool showAST = true, int last = -1);
     
     clang::CompilerInstance* getCI() const;
     clang::CompilerInstance* createCI() const;
@@ -97,7 +97,8 @@ namespace cling {
     unsigned long long m_UniqueCounter; // number of generated call wrappers
     bool m_printAST; // whether to print the AST to be processed
     llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream; // stream to dump values into
-    
+    clang::Decl *m_LastDump; // last dump point
+
   private:
     
     void createWrappedSrc(const std::string& src, std::string& wrapped,
@@ -109,7 +110,7 @@ namespace cling {
     clang::CompilerInstance* compileString(const std::string& srcCode);
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
-     bool EvalCore(llvm::GenericValue& result, const char* expr);
+    bool EvalCore(llvm::GenericValue& result, const char* expr);
   };
   
 } // namespace cling

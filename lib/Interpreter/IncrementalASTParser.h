@@ -48,10 +48,9 @@ namespace cling {
 
    void emptyLastFunction();
    clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
+   clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
 
   private:
-    void handlePendingSemaActions();
-
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Sema> m_Sema; // sema used for parsing
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
@@ -60,6 +59,7 @@ namespace cling {
     clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedASTConsumer* m_Consumer; // CI owns it
     clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
+    clang::Decl* m_FirstTopLevelDecl; // first top level decl
   };
 }
 #endif // CLING_INCREMENTAL_AST_PARSER_H
