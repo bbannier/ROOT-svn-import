@@ -334,7 +334,21 @@ namespace cling {
         {
           std::pair<unsigned, unsigned> r =
           getStmtRangeWithSemicolon(cur_stmt, SM, LO);
-          stmt_string = std::string(buffer + r.first, r.second - r.first);
+          if (r.first == 0 && r.second == 0) { //what is the point of dumping instead of using src var
+             bool oldDumpPolicy = CI->getASTContext().PrintingPolicy.Dump;
+             CI->getASTContext().PrintingPolicy.Dump = 0;
+
+             llvm::raw_string_ostream OS(stmt_string);
+             cur_stmt->printPretty(OS, 0, CI->getASTContext().PrintingPolicy);
+             
+             CI->getASTContext().PrintingPolicy.Dump = oldDumpPolicy;
+
+             OS << ";\n";
+             //OS.flush();
+             fprintf(stderr, "%s", stmt_string.c_str());
+          }
+          else
+             stmt_string = std::string(buffer + r.first, r.second - r.first);
           //fprintf(stderr, "stmt: %s\n", stmt_string.c_str());
         }
         //
