@@ -133,7 +133,6 @@ namespace cling {
     << "#define __STDC_CONSTANT_MACROS\n"
     << "#include \"cling/Interpreter/Interpreter.h\"\n"
     << "#include \"cling/Interpreter/ValuePrinter.h\"\n";
-
     // Would like
     // namespace cling {Interpreter* gCling = (Interpreter*)0x875478643;"
     // but we can't handle namespaced decls yet :-(
@@ -650,6 +649,7 @@ namespace cling {
         
         while (FD) {
            FD->dump();
+           fprintf(stderr, "\n"); // New line for every decl
            FD = FD->getNextDeclInContext();
         }        
      }
