@@ -1,4 +1,4 @@
-// @(#)root/tmva $Id$
+
 // Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
 
 /**********************************************************************************
@@ -129,6 +129,7 @@
 #include "TMVA/Results.h"
 #include "TMVA/ResultsMulticlass.h"
 #include "TMVA/Interval.h"
+#include "TMVA/PDF.h"
 
 using std::vector;
 
@@ -691,13 +692,18 @@ void TMVA::MethodBDT::Train()
    TH1* h = new TH1F("BoostWeight",hname,nBins,xMin,xMax);
    TH1* nodesBeforePruningVsTree = new TH1I("NodesBeforePruning","nodes before pruning",fNTrees,0,fNTrees);
    TH1* nodesAfterPruningVsTree = new TH1I("NodesAfterPruning","nodes after pruning",fNTrees,0,fNTrees);
+   TH1* boostMonitor = new TH1F("BoostMonitor","ROC Integral Vs iTree",fNTrees,0,fNTrees);
 
    if(!DoMulticlass()){
       Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
 
       h->SetXTitle("boost weight");
       results->Store(h, "BoostWeights");
+
+      results->Store(boostMonitor, "BoostMonitor");
+
       
+
       // weights applied in boosting vs tree number
       h = new TH1F("BoostWeightVsTree","Boost weights vs tree",fNTrees,0,fNTrees);
       h->SetXTitle("#tree");
@@ -823,6 +829,7 @@ void TMVA::MethodBDT::Train()
          
          fITree = itree;
          fMonitorNtuple->Fill();
+         BoostMonitor(itree);
       }
    }
 
@@ -1089,24 +1096,61 @@ Double_t TMVA::MethodBDT::Boost( vector<TMVA::Event*> eventSample, DecisionTree 
    // apply the boosting alogrithim (the algorithm is selecte via the the "option" given
    // in the constructor. The return value is the boosting weight
 
-   if      (fBoostType=="AdaBoost")    return this->AdaBoost  (eventSample, dt);
-   else if (fBoostType=="Bagging")     return this->Bagging   (eventSample, iTree);
-   else if (fBoostType=="RegBoost")    return this->RegBoost  (eventSample, dt);
-   else if (fBoostType=="AdaBoostR2")  return this->AdaBoostR2(eventSample, dt);
+   Double_t returnVal=-1;
+
+   if      (fBoostType=="AdaBoost")    returnVal = this->AdaBoost  (eventSample, dt);
+   else if (fBoostType=="Bagging")     returnVal = this->Bagging   (eventSample, iTree);
+   else if (fBoostType=="RegBoost")    returnVal = this->RegBoost  (eventSample, dt);
+   else if (fBoostType=="AdaBoostR2")  returnVal = this->AdaBoostR2(eventSample, dt);
    else if (fBoostType=="Grad"){
       if(DoRegression())
-         return this->GradBoostRegression(eventSample, dt);
+         returnVal = this->GradBoostRegression(eventSample, dt);
       else if(DoMulticlass())
-         return this->GradBoost (eventSample, dt, cls);
+         returnVal = this->GradBoost (eventSample, dt, cls);
       else
-         return this->GradBoost (eventSample, dt);
+         returnVal = this->GradBoost (eventSample, dt);
    }
    else {
       Log() << kINFO << GetOptions() << Endl;
       Log() << kFATAL << "<Boost> unknown boost option " << fBoostType<< " called" << Endl;
    }
 
-   return -1;
+   return returnVal;
+}
+
+//_______________________________________________________________________
+void TMVA::MethodBDT::BoostMonitor(Int_t iTree)
+{
+   // fills the ROCIntegral vs Itree from the testSample for the monitoring plots
+   // during the training .. but using the testing events 
+
+   TH1F *tmpS = new TH1F( "tmpS", "",     100 , -1., 1.00001 );
+   TH1F *tmpB = new TH1F( "tmpB", "",     100 , -1., 1.00001 );
+   TH1F *tmp;
+
+   const std::vector<Event*> events=Data()->GetEventCollection(Types::kTesting);
+   UInt_t signalClassNr = DataInfo().GetClassInfo("Signal")->GetNumber();
+ 
+   //   fMethod->GetTransformationHandler().CalcTransformations(fMethod->Data()->GetEventCollection(Types::kTesting));
+   for (UInt_t iev=0; iev < events.size() ; iev++){
+      if (events[iev]->GetClass() == signalClassNr) tmp=tmpS;
+      else                                          tmp=tmpB;
+      tmp->Fill(PrivateGetMvaValue(*(events[iev])),events[iev]->GetWeight());
+   }
+   
+   TMVA::PDF *sig = new TMVA::PDF( " PDF Sig", tmpS, TMVA::PDF::kSpline3 );
+   TMVA::PDF *bkg = new TMVA::PDF( " PDF Bkg", tmpB, TMVA::PDF::kSpline3 );
+   
+   Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
+   results->GetHist("BoostMonitor")->SetBinContent(iTree+1,GetROCIntegral(sig,bkg));
+
+   tmpS->Delete();
+   tmpB->Delete();
+   
+   delete sig;
+   delete bkg;
+
+   return;
 }
 
 //_______________________________________________________________________
@@ -1486,6 +1530,15 @@ Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, Double_t* errUpper, UInt_t
    // Return the MVA value (range [-1;1]) that classifies the
    // event according to the majority vote from the total number of
    // decision trees.
+   return PrivateGetMvaValue(const_cast<TMVA::Event&>(*GetEvent()), err, errUpper, useNTrees);
+
+}
+//_______________________________________________________________________
+   Double_t TMVA::MethodBDT::PrivateGetMvaValue(TMVA::Event& ev, Double_t* err, Double_t* errUpper, UInt_t useNTrees )
+{
+   // Return the MVA value (range [-1;1]) that classifies the
+   // event according to the majority vote from the total number of
+   // decision trees.
 
    // cannot determine error
    NoErrorCalc(err, errUpper);
@@ -1493,20 +1546,21 @@ Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, Double_t* errUpper, UInt_t
    // allow for the possibility to use less trees in the actual MVA calculation
    // than have been originally trained.
    UInt_t nTrees = fForest.size();
+
    if (useNTrees > 0 ) nTrees = useNTrees;
 
-   if (fBoostType=="Grad") return GetGradBoostMVA(const_cast<TMVA::Event&>(*GetEvent()),nTrees);
+   if (fBoostType=="Grad") return GetGradBoostMVA(ev,nTrees);
    
    Double_t myMVA = 0;
    Double_t norm  = 0;
    for (UInt_t itree=0; itree<nTrees; itree++) {
       //
       if (fUseWeightedTrees) {
-         myMVA += fBoostWeights[itree] * fForest[itree]->CheckEvent(*GetEvent(),fUseYesNoLeaf);
+         myMVA += fBoostWeights[itree] * fForest[itree]->CheckEvent(ev,fUseYesNoLeaf);
          norm  += fBoostWeights[itree];
       }
       else {
-         myMVA += fForest[itree]->CheckEvent(*GetEvent(),fUseYesNoLeaf);
+         myMVA += fForest[itree]->CheckEvent(ev,fUseYesNoLeaf);
          norm  += 1;
       }
    }

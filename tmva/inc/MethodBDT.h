@@ -110,6 +110,8 @@ namespace TMVA {
 
    private:
       Double_t GetMvaValue( Double_t* err, Double_t* errUpper, UInt_t useNTrees );
+      Double_t PrivateGetMvaValue( TMVA::Event& ev, Double_t* err=0, Double_t* errUpper=0, UInt_t useNTrees=0 );
+      void     BoostMonitor(Int_t iTree);
 
    public:
       const std::vector<Float_t>& GetMulticlassValues();
