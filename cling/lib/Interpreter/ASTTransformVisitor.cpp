@@ -9,6 +9,7 @@
 #include "StmtAddressPrinter.h"
 
 #include "llvm/ADT/SmallVector.h"
+//#include "llvm/ADT.DenseMap.h"
 
 //#include "clang/Sema/Lookup.h"
 
@@ -80,7 +81,7 @@ namespace cling {
             if (EInfo.IsEvalNeeded) {
                if (Expr *E = dyn_cast<Expr>(EInfo.getNewStmt()))
                   // Assume void if still not escaped
-                  *I = BuildEvalCallExpr(SemaPtr->getASTContext().VoidTy, E);
+                  *I = SubstituteUnknownSymbol(SemaPtr->getASTContext().VoidTy, E);
             } 
             else {
                *I = EInfo.getNewStmt();
@@ -99,7 +100,7 @@ namespace cling {
             if (EInfo.IsEvalNeeded) {
                if (Expr *E = dyn_cast<Expr>(EInfo.getNewStmt()))
                   // Assume void if still not escaped
-                  *I = BuildEvalCallExpr(SemaPtr->getASTContext().VoidTy, E);
+                  *I = SubstituteUnknownSymbol(SemaPtr->getASTContext().VoidTy, E);
             } 
             else {
                *I = EInfo.getNewStmt();
@@ -162,18 +163,25 @@ namespace cling {
             if (Expr *E = dyn_cast<Expr>(lhs.getNewStmt()))
                if (!E->isTypeDependent() || !E->isValueDependent()) {
                   const QualType returnTy = E->getType();
-                  binOp->setRHS(BuildEvalCallExpr(returnTy, E));
+                  binOp->setRHS(SubstituteUnknownSymbol(returnTy, E));
                }
          }
       }
       
-      return EvalInfo(binOp, 0);
+      return EvalInfo(binOp, IsArtificiallyDependent(binOp));
    }
    
    //endregion
 
    //region EvalBuilder
 
+
+   Expr *ASTTransformVisitor::SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree) {
+      CallExpr* EvalCall = BuildEvalCallExpr(InstTy, SubTree);
+      getSubstSymbolMap()[EvalCall] = SubTree;
+      
+      return EvalCall;
+   }
 
    // Here is the test Eval function specialization. Here the CallExpr to the function
    // is created.
@@ -300,11 +308,12 @@ namespace cling {
       return true;
    }
 
-   bool ASTTransformVisitor::IsArtificiallyDependent(CallExpr *Node) {
+   bool ASTTransformVisitor::IsArtificiallyDependent(Expr *Node) {
       if (!Node->isValueDependent() || !Node->isTypeDependent())
           return false;     
       return true;
    }
+
    
 //endregion
 
