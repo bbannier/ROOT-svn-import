@@ -39,6 +39,7 @@ namespace UnitTesting
       void do_test(bool cond, const std::string& lbl, const char* fname, long lineno);
       void do_fail(const std::string& lbl, const char* fname, long lineno);
       bool floatCompare(float x1, float x2);
+      bool roughFloatCompare(float x1, float x2);
    private:
       std::ostream* osptr;
       long nPass;
