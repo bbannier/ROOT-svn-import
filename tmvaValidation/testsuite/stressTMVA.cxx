@@ -13,6 +13,7 @@
 #include "tmvaut/utDataSetInfo.h"
 #include "tmvaut/utDataSet.h"
 #include "tmvaut/utFactory.h"
+#include "tmvaut/utWeightHandling.h"
 #include "tmvaut/utReader.h"
 #include "tmvaut/MethodUnitTestWithROCLimits.h"
 #include "tmvaut/MethodUnitTestWithComplexData.h"
@@ -126,6 +127,8 @@ void addRegressionTests( UnitTestSuite& TMVA_test, bool full=true)
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kFDA, "FDA_GA", baseRegFDAstring+"FitMethod=GA:PopSize=100:Cycles=3:Steps=30:Trim=True:SaveBestGen=1:VarTransform=Norm",  0.5, 1.0, 0.5 , 0.8 ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kFDA, "FDA_MT", baseRegFDAstring+"FitMethod=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=2:UseImprove:UseMinos:SetBatch" , 100., 250., 100., 200. ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kFDA, "FDA_GAMT",baseRegFDAstring+"FitMethod=GA:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:UseImprove:UseMinos:SetBatch:Cycles=1:PopSize=20:Steps=5:Trim" ,  100., 250., 100., 220. ));
+   baseRegFDAstring="!H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x0*x1+(4)*x0*x0+(5)*x1*x1:ParRanges=(-100,100);(-200,200);(-200,200);(-200,200);(-200,200);(-200,200):";
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kFDA, "FDA_GA", baseRegFDAstring+"FitMethod=GA:PopSize=100:Cycles=3:Steps=30:Trim=True:SaveBestGen=1",  0.3, 0.5, 0.2 , 0.4 ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kMLP, "MLPBFGS", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=300:HiddenLayers=N+20:TestRate=6:TrainingMethod=BFGS:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-6:ConvergenceTests=15:!UseRegulator" , 0.4, 0.8, 0.2, 0.5 ));
    // this does not work satisfactory TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kMLP, "MLP", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=300:HiddenLayers=N+20:TestRate=6:TrainingMethod=BP:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-6:ConvergenceTests=15:!UseRegulator" , 0.4, 0.8, 0.2, 0.5 ));
    // SVM regression does not work TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kSVM, "SVM", "Gamma=0.25:Tol=0.001:VarTransform=Norm" , 0., 1., 0., 1. ));
@@ -196,6 +199,7 @@ int main(int argc, char **argv)
    TMVA_test.addTest(new utDataSetInfo);
    TMVA_test.addTest(new utDataSet);
    TMVA_test.addTest(new utFactory);
+   TMVA_test.addTest(new utWeightHandling);
    TMVA_test.addTest(new utReader);
 
    addClassificationTests(TMVA_test, full);

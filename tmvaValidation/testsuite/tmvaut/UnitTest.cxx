@@ -32,6 +32,12 @@ bool UnitTest::floatCompare(float x1, float x2)
    if (!ret) cout << "warning floatCompare: x1="<<x1<<" x2="<<x2<<", diff="<<x1-x2<<endl;
    return ret;
 }
+bool UnitTest::roughFloatCompare(float x1, float x2)
+{
+   bool ret = (TMath::Abs(x1-x2)<1.e-5); // fix me, empirical number
+   if (!ret) cout << "warning roughFloatCompare: x1="<<x1<<" x2="<<x2<<", diff="<<x1-x2<<endl;
+   return ret;
+}
 
 const std::string & UnitTest::name() const
 {
