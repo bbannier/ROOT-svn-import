@@ -612,8 +612,17 @@ void TMVA::MethodBoost::FindMVACut()
       // creating a fine histograms containing the error rate
       const Int_t nValBins=1000;
       Double_t* err=new Double_t[nValBins];
-      const Double_t valmin=-1.5;
-      const Double_t valmax=1.5;
+      Double_t* sigmva=new Double_t[nValBins];
+      Double_t* bkgmva=new Double_t[nValBins];
+      Double_t valmin=150000;
+      Double_t valmax=-150000;
+      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+        GetEvent(ievt);
+        Double_t val=lastMethod->GetMvaValue();
+        if (val>valmax) valmax=val;
+        if (val<valmin) valmin=val;
+      }
+      //      cout << "MVA min: "<<valmin << "  MVA max: "<<valmax << endl;
       for (Int_t i=0;i<nValBins;i++) err[i]=0.;
       Double_t sum = 0.;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
@@ -625,10 +634,12 @@ void TMVA::MethodBoost::FindMVACut()
          if (ibin>=nValBins) ibin = nValBins-1;
          if (ibin<0) ibin = 0;
          if (DataInfo().IsSignal(Data()->GetEvent(ievt))){
-            for (Int_t i=ibin;i<nValBins;i++) err[i]+=weight;
+           for (Int_t i=ibin;i<nValBins;i++) err[i]+=weight;
+           sigmva[ibin]+=weight;
          }
          else {
-            for (Int_t i=0;i<ibin;i++) err[i]+=weight;
+           for (Int_t i=0;i<ibin;i++) err[i]+=weight;
+           bkgmva[ibin]+=weight;
          }
       }
       Double_t minerr=1.e6;
@@ -639,9 +650,9 @@ void TMVA::MethodBoost::FindMVACut()
             minbin=i;
          }
       }
+
       delete[] err;
-      
-      
+            
       Double_t sigCutVal = valmin + ((valmax-valmin)*minbin)/Float_t(nValBins+1);
       lastMethod->SetSignalReferenceCut(sigCutVal);
       
