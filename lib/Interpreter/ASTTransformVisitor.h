@@ -22,6 +22,8 @@ using namespace clang;
 
 namespace cling {
 
+   typedef llvm::DenseMap<Stmt*, Stmt*> MapTy;
+
    // Ideally the visitor should traverse the dependent nodes, which actially are 
    // the language extensions. For example File::Open("MyFile"); h->Draw() is not valid C++ call
    // if h->Draw() is defined in MyFile. In that case we need to skip Sema diagnostics, so the 
@@ -31,12 +33,13 @@ namespace cling {
                                public StmtVisitor<ASTTransformVisitor, EvalInfo> {
       
    private: // members
-      FunctionDecl *EvalDecl; // FIXME: ownership is what?
+      FunctionDecl *EvalDecl;
+      MapTy m_SubstSymbolMap;
       
    public: // members
       void *gCling; //Pointer to the Interpreter object
-      clang::Sema *SemaPtr; // Sema is needed, FIXME: ownership is what?
-      Decl *CurrentDecl; // FIXME: ownership is what?
+      clang::Sema *SemaPtr;
+      Decl *CurrentDecl;
       
    public: // types
       
@@ -75,7 +78,7 @@ namespace cling {
 
       FunctionDecl *getEvalDecl() { return EvalDecl; }
       void setEvalDecl(FunctionDecl *FDecl) { if (!EvalDecl) EvalDecl = FDecl; }
-      
+      MapTy &getSubstSymbolMap() { return m_SubstSymbolMap; }
       
       //region DeclVisitor
       
@@ -103,9 +106,10 @@ namespace cling {
 
       //region EvalBuilder
 
+      Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree);
       CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree);
       Expr *BuildEvalCharArg(QualType ToType, Expr *SubTree);
-      bool IsArtificiallyDependent(CallExpr *Node);
+      bool IsArtificiallyDependent(Expr *Node);
       bool ShouldVisit(Decl *D);
       //endregion
       

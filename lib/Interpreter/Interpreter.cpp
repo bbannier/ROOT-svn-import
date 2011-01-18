@@ -37,6 +37,7 @@
 #include "ExecutionContext.h"
 #include "IncrementalASTParser.h"
 #include "InputValidator.h"
+#include "ASTTransformVisitor.h"
 
 #include <cstdio>
 #include <iostream>
@@ -332,23 +333,20 @@ namespace cling {
         const char* buffer = MB->getBufferStart();
         std::string stmt_string;
         {
-          std::pair<unsigned, unsigned> r =
-          getStmtRangeWithSemicolon(cur_stmt, SM, LO);
-          if (r.first == 0 && r.second == 0) { //what is the point of dumping instead of using src var
-             bool oldDumpPolicy = CI->getASTContext().PrintingPolicy.Dump;
-             CI->getASTContext().PrintingPolicy.Dump = 0;
-
-             llvm::raw_string_ostream OS(stmt_string);
-             cur_stmt->printPretty(OS, 0, CI->getASTContext().PrintingPolicy);
-             
-             CI->getASTContext().PrintingPolicy.Dump = oldDumpPolicy;
-
-             OS << ";\n";
-             //OS.flush();
-             fprintf(stderr, "%s", stmt_string.c_str());
+          std::pair<unsigned, unsigned> r = getStmtRangeWithSemicolon(cur_stmt, SM, LO);
+          if (r.first == 0 && r.second == 0) {
+             MapTy& Map = m_IncrASTParser->getTransformer()->getSubstSymbolMap();
+             MapTy::const_iterator I = Map.find(cur_stmt);
+             if (I != Map.end()) {
+                r = getStmtRangeWithSemicolon(I->second, SM, LO);
+             }
+             else {
+                fprintf(stderr, "%s", "Cannot find source for statement!\n ");
+                cur_stmt->dump();
+             }
           }
-          else
-             stmt_string = std::string(buffer + r.first, r.second - r.first);
+          //else
+          stmt_string = std::string(buffer + r.first, r.second - r.first);
           //fprintf(stderr, "stmt: %s\n", stmt_string.c_str());
         }
         //
@@ -460,6 +458,9 @@ namespace cling {
           wrapped_globals.append(decl + ";\n");
         }
       }
+      // clear the DenseMap
+      m_IncrASTParser->getTransformer()->getSubstSymbolMap().clear();
+
       haveStatements = !final_stmt.empty();
       if (haveStatements) {
             std::stringstream sstr_stmt;
