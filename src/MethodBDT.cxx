@@ -113,6 +113,7 @@
 #include "TRandom3.h"
 #include "TMath.h"
 #include "TObjString.h"
+#include "TGraph.h"
 
 #include "TMVA/ClassifierFactory.h"
 #include "TMVA/MethodBDT.h"
@@ -692,17 +693,25 @@ void TMVA::MethodBDT::Train()
    TH1* h = new TH1F("BoostWeight",hname,nBins,xMin,xMax);
    TH1* nodesBeforePruningVsTree = new TH1I("NodesBeforePruning","nodes before pruning",fNTrees,0,fNTrees);
    TH1* nodesAfterPruningVsTree = new TH1I("NodesAfterPruning","nodes after pruning",fNTrees,0,fNTrees);
-   TH1* boostMonitor = new TH1F("BoostMonitor","ROC Integral Vs iTree",fNTrees,0,fNTrees);
+
+      
 
    if(!DoMulticlass()){
       Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
 
       h->SetXTitle("boost weight");
       results->Store(h, "BoostWeights");
+  
 
+      // Monitor the performance (on TEST sample) versus number of trees
+      TH2* boostMonitor = new TH2F("BoostMonitor","ROC Integral Vs iTree",2,0,fNTrees,2,0,1.05);
+      boostMonitor->SetXTitle("#tree");
+      boostMonitor->SetYTitle("ROC Integral");
       results->Store(boostMonitor, "BoostMonitor");
-
-      
+      TGraph *boostMonitorGraph = new TGraph();
+      boostMonitorGraph->SetName("BoostMonitorGraph");
+      boostMonitorGraph->SetTitle("ROCIntegralVsNTrees");
+      results->Store(boostMonitorGraph, "BoostMonitorGraph");
 
       // weights applied in boosting vs tree number
       h = new TH1F("BoostWeightVsTree","Boost weights vs tree",fNTrees,0,fNTrees);
@@ -829,7 +838,14 @@ void TMVA::MethodBDT::Train()
          
          fITree = itree;
          fMonitorNtuple->Fill();
-         BoostMonitor(itree);
+         if (  itree==fNTrees-1 ||  (!(itree%500)) ||
+               (!(itree%250) && itree <1000)||
+               (!(itree%100) && itree < 500)||
+               (!(itree%50)  && itree < 250)||
+               (!(itree%25)  && itree < 150)||
+               (!(itree%10)  && itree <  50)||
+               (!(itree%5)   && itree <  20)
+               ) BoostMonitor(itree);
       }
    }
 
@@ -1142,7 +1158,10 @@ void TMVA::MethodBDT::BoostMonitor(Int_t iTree)
    TMVA::PDF *bkg = new TMVA::PDF( " PDF Bkg", tmpB, TMVA::PDF::kSpline3 );
    
    Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
-   results->GetHist("BoostMonitor")->SetBinContent(iTree+1,GetROCIntegral(sig,bkg));
+   TGraph*  gr=results->GetGraph("BoostMonitorGraph");
+   Int_t nPoints = gr->GetN();
+   gr->Set(nPoints+1);
+   gr->SetPoint(nPoints,(Double_t)iTree+1,GetROCIntegral(sig,bkg));
 
    tmpS->Delete();
    tmpB->Delete();
