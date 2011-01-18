@@ -17,6 +17,60 @@ namespace llvm {
    class raw_string_ostream;
 }
 
+namespace {
+ 
+   class StmtPrinterHelper : public PrinterHelper  {
+   private:
+      PrintingPolicy Policy;
+   public:
+      
+      StmtPrinterHelper(const PrintingPolicy &Policy) : Policy(Policy) {}
+      
+      virtual ~StmtPrinterHelper() {}
+      
+      //TODO: Here goes the address printing      
+      virtual bool handledStmt(Stmt* S, llvm::raw_ostream& OS) {
+
+         // DeclRefExpr
+         // DependentScopeDeclRefExpr
+         // CallExpr
+         // MemberExpr
+         // CXXDependentScopeMemberExpr
+         if (DeclRefExpr *Node = dyn_cast<DeclRefExpr>(S)) {
+            if (NestedNameSpecifier *Qualifier = Node->getQualifier())
+               Qualifier->print(OS, Policy);
+            OS << Node->getNameInfo();
+            if (Node->hasExplicitTemplateArgs())
+               OS << TemplateSpecializationType::PrintTemplateArgumentList(
+                                                                           Node->getTemplateArgs(),
+                                                                           Node->getNumTemplateArgs(),
+                                                                           Policy);  
+            if (Node->hasExplicitTemplateArgs())
+               assert((Node->getTemplateArgs() || Node->getNumTemplateArgs()) && "There shouldn't be template paramlist");
+
+            return true;            
+         }
+         else if (DependentScopeDeclRefExpr *Node = dyn_cast<DependentScopeDeclRefExpr>(S)) {
+            if (NestedNameSpecifier *Qualifier = Node->getQualifier())
+               Qualifier->print(OS, Policy);
+            OS << Node->getNameInfo();
+            if (Node->hasExplicitTemplateArgs())
+               OS << TemplateSpecializationType::PrintTemplateArgumentList(
+                                                                           Node->getTemplateArgs(),
+                                                                           Node->getNumTemplateArgs(),
+                                                                           Policy);
+            
+            
+            
+            return true;
+         }
+         
+         return false;
+      }
+   };
+} // end anonymous namespace
+
+
 namespace cling {
 
    //region DeclVisitor
@@ -257,19 +311,26 @@ namespace cling {
       return EvalCall;                  
       
    }
+
+   // Helper function for converting the Stmt to string 
+   const char *ASTTransformVisitor::ToString(Stmt *S) {
+      ASTContext *c = &SemaPtr->getASTContext();
+      std::string sbuf;
+      llvm::raw_string_ostream OS(sbuf);
+      const PrintingPolicy &Policy = c->PrintingPolicy;
+
+      StmtPrinterHelper *helper = new StmtPrinterHelper(Policy);      
+      S->printPretty(OS, helper, Policy);
+
+      OS.flush();
+      return sbuf.c_str();
+   }
    
    // Creates the string, which is going to be escaped.
    Expr *ASTTransformVisitor::BuildEvalCharArg(QualType ToType, Expr *SubTree) {
       ASTContext *c = &SemaPtr->getASTContext();
-      //TODO: Here goes the address printing
-      std::string sbuf;
-      llvm::raw_string_ostream OS(sbuf);
-
-      StmtAddressPrinter printer(OS, *c, PrintingPolicy(SemaPtr->getLangOptions()));
-      //      printer.Visit(SubTree);
-      printer.PrintExpr(SubTree);
-      OS.flush();
-      const char *str = sbuf.c_str();
+      
+      const char *str = ToString(SubTree);
       QualType constCharArray = c->getConstantArrayType(c->getConstType(c->CharTy), llvm::APInt(32, 16U), ArrayType::Normal, 0);
       Expr *SL = StringLiteral::Create(*c, &*str, strlen(str), false, constCharArray, SourceLocation());
       //FIXME: Figure out how handle the cast kinds in the different cases

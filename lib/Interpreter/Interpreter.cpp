@@ -318,6 +318,9 @@ namespace cling {
       const clang::LangOptions& LO = CI->getLangOpts();
       std::vector<clang::Stmt*>::iterator stmt_iter = stmts.begin();
       std::vector<clang::Stmt*>::iterator stmt_end = stmts.end();
+
+      MapTy& Map = m_IncrASTParser->getTransformer()->getSubstSymbolMap(); // delayed id substitutions
+
       for (; stmt_iter != stmt_end; ++stmt_iter) {
         clang::Stmt* cur_stmt = *stmt_iter;
         
@@ -335,10 +338,8 @@ namespace cling {
         {
           std::pair<unsigned, unsigned> r = getStmtRangeWithSemicolon(cur_stmt, SM, LO);
           if (r.first == 0 && r.second == 0) {
-             MapTy& Map = m_IncrASTParser->getTransformer()->getSubstSymbolMap();
-             MapTy::const_iterator I = Map.find(cur_stmt);
-             if (I != Map.end()) {
-                r = getStmtRangeWithSemicolon(I->second, SM, LO);
+             if (Stmt *S = Map.lookup(cur_stmt)) {
+                r = getStmtRangeWithSemicolon(S, SM, LO);
              }
              else {
                 fprintf(stderr, "%s", "Cannot find source for statement!\n ");
@@ -356,8 +357,12 @@ namespace cling {
           const clang::Expr* expr = dyn_cast<clang::Expr>(cur_stmt);
           if (expr) {
             //fprintf(stderr, "have expr stmt.\n");
-            final_stmt = stmt_string;
-            continue;
+             final_stmt = stmt_string;
+             if (Map.lookup(cur_stmt)) {
+                final_stmt = m_IncrASTParser->getTransformer()->ToString(cur_stmt);
+             }             
+
+             continue;
           }
         }
         //
@@ -459,7 +464,7 @@ namespace cling {
         }
       }
       // clear the DenseMap
-      m_IncrASTParser->getTransformer()->getSubstSymbolMap().clear();
+      Map.clear();
 
       haveStatements = !final_stmt.empty();
       if (haveStatements) {
