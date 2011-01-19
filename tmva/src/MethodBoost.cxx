@@ -63,7 +63,9 @@
 #include "TMVA/Config.h"
 
 #include "TMVA/SeparationBase.h"
+#include "TMVA/MisClassificationError.h"
 #include "TMVA/GiniIndex.h"
+#include "TMVA/CrossEntropy.h"
 #include "TMVA/RegressionVariance.h"
 
 REGISTER_METHOD(Boost)
@@ -213,7 +215,8 @@ Bool_t TMVA::MethodBoost::BookMethod( Types::EMVA theMethod, TString methodTitle
 
 //_______________________________________________________________________
 void TMVA::MethodBoost::Init()
-{}
+{ 
+}
 
 //_______________________________________________________________________
 void TMVA::MethodBoost::InitHistos()
@@ -259,6 +262,15 @@ void TMVA::MethodBoost::InitHistos()
    fMonitorTree->Branch("boostWeight",&fBoostWeight,"boostWeight/D");
    fMonitorTree->Branch("errorFraction",&fMethodError,"errorFraction/D");
    fMonitorBoostedMethod = kTRUE;
+
+
+   Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
+   TVectorF * mvaCutValues = new TVectorF(fBoostNum);
+   //mvaCutValues->ResizeTo(fBoostNum);
+   //   mvaCutValues->SetName("mvaCutValues");
+   results->Store(mvaCutValues,"mvaCutValues");
+
+
 }
 
 
@@ -608,53 +620,73 @@ void TMVA::MethodBoost::FindMVACut()
       if(m)
          lastMethod->SetSignalReferenceCut(m->GetSignalReferenceCut());
    } else {
-
+      
       // creating a fine histograms containing the error rate
-      const Int_t nValBins=1000;
-      Double_t* err=new Double_t[nValBins];
-      Double_t* sigmva=new Double_t[nValBins];
-      Double_t* bkgmva=new Double_t[nValBins];
-      Double_t valmin=150000;
-      Double_t valmax=-150000;
+      const Int_t nBins=100;
+      Double_t minMVA=150000;
+      Double_t maxMVA=-150000;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-        GetEvent(ievt);
-        Double_t val=lastMethod->GetMvaValue();
-        if (val>valmax) valmax=val;
-        if (val<valmin) valmin=val;
-      }
-      //      cout << "MVA min: "<<valmin << "  MVA max: "<<valmax << endl;
-      for (Int_t i=0;i<nValBins;i++) err[i]=0.;
-      Double_t sum = 0.;
-      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-         Double_t weight = GetEvent(ievt)->GetWeight();
-         sum +=weight;
+         GetEvent(ievt);
          Double_t val=lastMethod->GetMvaValue();
-         Int_t ibin = (Int_t) (((val-valmin)/(valmax-valmin))*nValBins);
-         
-         if (ibin>=nValBins) ibin = nValBins-1;
-         if (ibin<0) ibin = 0;
+         if (val>maxMVA) maxMVA=val;
+         if (val<minMVA) minMVA=val;
+      }
+      
+      Double_t sum = 0.;
+      
+      TH1F *mvaS= new TH1F("mvaS","",nBins,minMVA,maxMVA);
+      TH1F *mvaB= new TH1F("mvaB","",nBins,minMVA,maxMVA);
+      TH1F *mvaSC= new TH1F("mvaSC","",nBins,minMVA,maxMVA);
+      TH1F *mvaBC= new TH1F("mvaBC","",nBins,minMVA,maxMVA);
+      
+      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+        
+         Double_t weight = GetEvent(ievt)->GetWeight();
+         Double_t mvaVal=lastMethod->GetMvaValue();
+         sum +=weight;
          if (DataInfo().IsSignal(Data()->GetEvent(ievt))){
-           for (Int_t i=ibin;i<nValBins;i++) err[i]+=weight;
-           sigmva[ibin]+=weight;
-         }
-         else {
-           for (Int_t i=0;i<ibin;i++) err[i]+=weight;
-           bkgmva[ibin]+=weight;
+            mvaS->Fill(mvaVal,weight);
+         }else {
+            mvaB->Fill(mvaVal,weight);
          }
       }
-      Double_t minerr=1.e6;
-      Int_t minbin=-1;
-      for (Int_t i=0;i<nValBins;i++){
-         if (err[i]<=minerr){
-            minerr=err[i];
-            minbin=i;
+      //SeparationBase *sepGain = new MisClassificationError();
+      //SeparationBase *sepGain = new GiniIndex();
+      SeparationBase *sepGain = new CrossEntropy();
+      Double_t sTot = mvaS->GetSum();
+      Double_t bTot = mvaB->GetSum();
+      
+      mvaSC->SetBinContent(1,mvaS->GetBinContent(1));
+      mvaBC->SetBinContent(1,mvaB->GetBinContent(1));
+      Double_t sSel=mvaSC->GetBinContent(1);
+      Double_t bSel=mvaSC->GetBinContent(1);
+      Double_t separationGain=sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
+      Double_t mvaCut=mvaSC->GetBinCenter(1);
+      for (Int_t ibin=2;ibin<nBins;ibin++){ 
+         mvaSC->SetBinContent(ibin,mvaS->GetBinContent(ibin)+mvaSC->GetBinContent(ibin-1));
+         mvaSC->SetBinContent(ibin,mvaB->GetBinContent(ibin)+mvaBC->GetBinContent(ibin-1));
+         
+         sSel=mvaSC->GetBinContent(ibin);
+         bSel=mvaBC->GetBinContent(ibin);
+         
+         if (separationGain < sepGain->GetSeparationGain(sSel,bSel,sTot,bTot)){
+            separationGain = sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
+            mvaCut=mvaSC->GetBinCenter(ibin);
          }
       }
-
-      delete[] err;
-            
-      Double_t sigCutVal = valmin + ((valmax-valmin)*minbin)/Float_t(nValBins+1);
-      lastMethod->SetSignalReferenceCut(sigCutVal);
+      
+   cout << "Min="<<minMVA << " Max=" << maxMVA 
+        << " sTot=" << sTot
+        << " bTot=" << bTot
+        << " sepGain="<<separationGain
+        << " cut=" << mvaCut << endl;
+      
+      lastMethod->SetSignalReferenceCut(mvaCut);
+      
+      Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
+      TVectorF *m = (TVectorF*) results->GetObject("mvaCutValues");
+      cout << "vector has " << m->GetNoElements()<< " elements " << endl;
+      (*m)[fMethodIndex]=mvaCut;
       
       Log() << kDEBUG << "(old step) Setting method cut to " <<lastMethod->GetSignalReferenceCut()<< Endl;
       
