@@ -358,8 +358,9 @@ namespace cling {
           if (expr) {
             //fprintf(stderr, "have expr stmt.\n");
              final_stmt = stmt_string;
-             if (Map.lookup(cur_stmt)) {
-                final_stmt = m_IncrASTParser->getTransformer()->ToString(cur_stmt);
+             // FIXME: Fix the source location of the node
+             if (Stmt *S = Map.lookup(cur_stmt)) {
+                final_stmt = m_IncrASTParser->getTransformer()->ToString(S);
              }             
 
              continue;
