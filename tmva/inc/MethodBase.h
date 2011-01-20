@@ -313,9 +313,11 @@ namespace TMVA {
 
       // sets the minimum requirement on the MVA output to declare an event signal-like
       Double_t         GetSignalReferenceCut() const { return fSignalReferenceCut; }
+      Double_t         GetSignalReferenceCutOrientation() const { return fSignalReferenceCutOrientation; }
 
       // sets the minimum requirement on the MVA output to declare an event signal-like
       void             SetSignalReferenceCut( Double_t cut ) { fSignalReferenceCut = cut; }
+      void             SetSignalReferenceCutOrientation( Double_t cutOrientation ) { fSignalReferenceCutOrientation = cutOrientation; }
 
       // pointers to ROOT directories
       TDirectory*      BaseDir()       const;
@@ -358,7 +360,10 @@ namespace TMVA {
       // this method is used to decide whether an event is signal- or background-like
       // the reference cut "xC" is taken to be where
       // Int_[-oo,xC] { PDF_S(x) dx } = Int_[xC,+oo] { PDF_B(x) dx }
-      virtual Bool_t        IsSignalLike() { return GetMvaValue() > GetSignalReferenceCut() ? kTRUE : kFALSE; }
+      virtual Bool_t        IsSignalLike() { 
+        return GetMvaValue()*GetSignalReferenceCutOrientation() > GetSignalReferenceCut()*GetSignalReferenceCutOrientation() ? kTRUE : kFALSE; }
+      virtual Bool_t        IsSignalLike(Double_t mvaVal) { 
+        return mvaVal*GetSignalReferenceCutOrientation() > GetSignalReferenceCut()*GetSignalReferenceCutOrientation() ? kTRUE : kFALSE; }
 
       DataSet* Data() const { return DataInfo().GetDataSet(); }
 
@@ -513,6 +518,7 @@ namespace TMVA {
       DataSetInfo&     fDataSetInfo;         //! the data set information (sometimes needed)
 
       Double_t         fSignalReferenceCut;  // minimum requirement on the MVA output to declare an event signal-like
+      Double_t         fSignalReferenceCutOrientation;  // minimum requirement on the MVA output to declare an event signal-like
       Types::ESBType   fVariableTransformType;  // this is the event type (sig or bgd) assumed for variable transform
 
       // naming and versioning

@@ -798,7 +798,7 @@ void TMVA::MethodBDT::Train()
          
          if (fBoostType!="Grad")
             if (fUseYesNoLeaf && !DoRegression() ){ // remove leaf nodes where both daughter nodes are of same type
-               nNodesBeforePruning = fForest.back()->CleanTree();
+              nNodesBeforePruning = fForest.back()->CleanTree();
             }
          nNodesBeforePruningCount += nNodesBeforePruning;
          nodesBeforePruningVsTree->SetBinContent(itree+1,nNodesBeforePruning);
@@ -829,7 +829,7 @@ void TMVA::MethodBDT::Train()
             }
             
             if (fUseYesNoLeaf && !DoRegression() ){ // remove leaf nodes where both daughter nodes are of same type
-               fForest.back()->CleanTree();
+              fForest.back()->CleanTree();
             }
          }
          nNodesAfterPruning = fForest.back()->GetNNodes();
@@ -1234,6 +1234,10 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
                << "and this is not implemented... a typo in the options ??" <<Endl;
       }
    }
+
+   Log() << kDEBUG << "BDT AdaBoos  wrong/all: " << sumGlobalwfalse << "/" << sumGlobalw << Endl;
+
+
    Double_t newSumGlobalw=0;
    vector<Double_t> newSumw(sumw.size(),0);
 
@@ -1269,6 +1273,7 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
    }
 
    Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
+
 
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
  

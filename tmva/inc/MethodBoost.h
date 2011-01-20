@@ -223,9 +223,7 @@ namespace TMVA {
       DataSetManager* fDataSetManager; // DSMTEST
       friend class Factory; // DSMTEST
       friend class Reader;  // DSMTEST
-
-
-
+      
 
 
    protected:
