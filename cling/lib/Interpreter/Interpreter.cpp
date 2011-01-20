@@ -10,11 +10,13 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclGroup.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/ExprCXX.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclGroup.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -291,12 +293,12 @@ namespace cling {
       FunctionBodyConsumer* consumer =
         new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
 
-      clang::Diagnostic& Diag = m_IncrASTParser->getCI()->getDiagnostics();
-      bool prevDiagSupp = Diag.getSuppressAllDiagnostics();
-      Diag.setSuppressAllDiagnostics(true);
+      //clang::Diagnostic& Diag = m_IncrASTParser->getCI()->getDiagnostics();
+      //bool prevDiagSupp = Diag.getSuppressAllDiagnostics();
+      //Diag.setSuppressAllDiagnostics(true);
       // fprintf(stderr,"nonTUsrc=%s\n",nonTUsrc.c_str());
       CI = m_IncrASTParser->parse(nonTUsrc, consumer);
-      Diag.setSuppressAllDiagnostics(prevDiagSupp);
+      //Diag.setSuppressAllDiagnostics(prevDiagSupp);
 
       if (!CI) {
         wrapped.clear();
@@ -312,7 +314,8 @@ namespace cling {
     //
     std::string wrapped_globals;
     std::string wrapped_stmts;
-    std::string final_stmt; // last statement for value printer
+    std::string finalStmtStr; // last statement for value printer
+    const clang::Expr* finalExpr = 0;
     {
       clang::SourceManager& SM = CI->getSourceManager();
       const clang::LangOptions& LO = CI->getLangOpts();
@@ -326,8 +329,8 @@ namespace cling {
         
         if (dyn_cast<clang::NullStmt>(cur_stmt)) continue;
 
-        if (!final_stmt.empty()) {
-           wrapped_stmts.append(final_stmt + '\n');
+        if (!finalStmtStr.empty()) {
+           wrapped_stmts.append(finalStmtStr + '\n');
         }
 
         //const llvm::MemoryBuffer* MB = SM.getBuffer(SM.getFileID(cur_stmt->getLocStart()));
@@ -357,10 +360,12 @@ namespace cling {
           const clang::Expr* expr = dyn_cast<clang::Expr>(cur_stmt);
           if (expr) {
             //fprintf(stderr, "have expr stmt.\n");
-             final_stmt = stmt_string;
+            finalStmtStr = stmt_string;
+            finalExpr = expr;
              // FIXME: Fix the source location of the node
              if (Stmt *S = Map.lookup(cur_stmt)) {
-                final_stmt = m_IncrASTParser->getTransformer()->ToString(S);
+                finalStmtStr = m_IncrASTParser->getTransformer()->ToString(S);
+                finalExpr = dyn_cast<clang::Expr>(S);
              }             
 
              continue;
@@ -372,7 +377,8 @@ namespace cling {
         const clang::DeclStmt* DS = dyn_cast<clang::DeclStmt>(cur_stmt);
         if (!DS) {
           //fprintf(stderr, "not expr, not declaration.\n");
-          final_stmt = stmt_string;
+          finalStmtStr = stmt_string;
+          finalExpr = 0;
           continue;
         }
         //
@@ -430,9 +436,13 @@ namespace cling {
           if (I->isConstantInitializer(CI->getASTContext(), false)) {
             //fprintf(stderr, "var decl, init is const.\n");
             std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
-            wrapped_globals.append(decl + " = " +
-                                   std::string(buffer + r.first, r.second - r.first)
-                                   + ";\n");
+            // Here, we copy! the initializer expression into the stmt wrapper.
+            // The other copy is on the globals' decl scope.
+            // But that's fine, we don't have to worry about side effects of the
+            // initializer because we know it's a constant initializer.
+            finalStmtStr = std::string(buffer + r.first, r.second - r.first);
+            finalExpr = I;
+            wrapped_globals.append(decl + " = " + finalStmtStr + ";\n");
             continue;
           }
           //
@@ -442,8 +452,9 @@ namespace cling {
           if (!ILE) {
             //fprintf(stderr, "var decl, init is not list.\n");
             std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
-            final_stmt = std::string(VD->getName())  + " = " +
+            finalStmtStr = std::string(VD->getName())  + " = " +
                std::string(buffer + r.first, r.second - r.first) + ";";
+            finalExpr = I;
             wrapped_globals.append(decl + ";\n");
             continue;
           }
@@ -459,7 +470,8 @@ namespace cling {
             std::pair<unsigned, unsigned> r =
             getStmtRange(ILE->getInit(j), SM, LO);
             stm << std::string(buffer + r.first, r.second - r.first) << ";\n";
-            final_stmt = stm.str();
+            finalStmtStr = stm.str();
+            finalExpr = ILE->getInit(j);
           }
           wrapped_globals.append(decl + ";\n");
         }
@@ -467,19 +479,66 @@ namespace cling {
       // clear the DenseMap
       Map.clear();
 
-      haveStatements = !final_stmt.empty();
+      if (finalExpr) {
+        // Users don't care about implicit casts (e.g. from InitExpr)
+        const clang::ImplicitCastExpr* ICE = dyn_cast<clang::ImplicitCastExpr>(finalExpr);
+        if (ICE) {
+          finalExpr = ICE->getSubExprAsWritten();
+        }
+      }
+
+      haveStatements = !finalStmtStr.empty();
       if (haveStatements) {
-            std::stringstream sstr_stmt;
-            sstr_stmt << "extern \"C\" void " << stmtFunc << "() {\n"
-                      << wrapped_stmts;
-         if (!haveSemicolon) {
-            sstr_stmt << "cling::ValuePrinter(((cling::Interpreter*)"
-                      << (void*)this << ")->getValuePrinterStream(),"
-                      << final_stmt << ");}\n";
-         } else {
-            sstr_stmt << final_stmt << ";}\n";
-         }
-         wrapped_stmts = sstr_stmt.str();
+        std::stringstream sstr_stmt;
+        sstr_stmt << "extern \"C\" void " << stmtFunc << "() {\n"
+                  << wrapped_stmts;
+        if (!haveSemicolon && finalExpr) {
+          clang::QualType QT = finalExpr->getType();
+          if (!QT.isNull() && QT->isVoidType()) {
+            sstr_stmt << finalStmtStr << ";}\n";           
+          } else {
+            int Flags = 0;
+            enum DumperFlags {
+              kIsPtr = 1,
+              kIsConst = 2,
+              kIsPolymorphic
+            };
+
+            if (finalExpr->isRValue()) Flags |= kIsConst;
+
+            if (!QT.isNull()) {
+              if (QT.isConstant(CI->getASTContext()) || QT.isLocalConstQualified()) {
+                Flags |= kIsConst;
+              }
+              clang::PointerType* PT = dyn_cast<clang::PointerType>(QT.getTypePtr());
+              if (PT) {
+                // treat arrary-to-pointer decay as array:
+                clang::QualType PQT = PT->getPointeeType();
+                clang::Type* PTT = PQT.getTypePtr();
+                if (!PTT || !PTT->isArrayType()) {
+                  Flags |= kIsPtr;
+                  clang::RecordType* RT = dyn_cast<clang::RecordType>(QT.getTypePtr());
+                  if (RT) {
+                    clang::RecordDecl* RD = RT->getDecl();
+                    if (RD) {
+                      clang::CXXRecordDecl* CRD = dyn_cast<clang::CXXRecordDecl>(RD);
+                      if (CRD && CRD->isPolymorphic()) {
+                        Flags |= kIsPolymorphic;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            
+            sstr_stmt << "cling::valuePrinterInternal::PrintValue(((cling::Interpreter*)"
+                      << (void*)this << ")->getValuePrinterStream()," << Flags << ","
+                      << finalStmtStr << ");}\n";
+          }
+        } else {
+          sstr_stmt << finalStmtStr << ";}\n";
+        }
+        wrapped_stmts = sstr_stmt.str();
       } else {
         stmtFunc = "";
       }
