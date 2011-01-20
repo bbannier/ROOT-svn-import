@@ -113,6 +113,7 @@ void TMVA::MethodCompositeBase::AddWeightsXMLTo( void* parent ) const
       gTools().AddAttr(methxml,"Index",          i ); 
       gTools().AddAttr(methxml,"Weight",         fMethodWeight[i]); 
       gTools().AddAttr(methxml,"MethodSigCut",   method->GetSignalReferenceCut());
+      gTools().AddAttr(methxml,"MethodSigCutOrientation", method->GetSignalReferenceCutOrientation());
       gTools().AddAttr(methxml,"MethodTypeName", method->GetMethodTypeName());
       gTools().AddAttr(methxml,"MethodName",     method->GetMethodName()   ); 
       gTools().AddAttr(methxml,"JobName",        method->GetJobName());
@@ -146,9 +147,10 @@ void TMVA::MethodCompositeBase::ReadWeightsFromXML( void* wghtnode )
    gTools().ReadAttr( wghtnode, "NMethods",  nMethods );
    void* ch = gTools().GetChild(wghtnode);
    for (UInt_t i=0; i< nMethods; i++) {
-      Double_t methodWeight, methodSigCut;
+      Double_t methodWeight, methodSigCut, methodSigCutOrientation;
       gTools().ReadAttr( ch, "Weight",   methodWeight   );
       gTools().ReadAttr( ch, "MethodSigCut", methodSigCut);
+      gTools().ReadAttr( ch, "MethodSigCutOrientation", methodSigCutOrientation);
       gTools().ReadAttr( ch, "MethodTypeName",  methodTypeName );
       gTools().ReadAttr( ch, "MethodName",  methodName );
       gTools().ReadAttr( ch, "JobName",  jobName );
@@ -175,6 +177,7 @@ void TMVA::MethodCompositeBase::ReadWeightsFromXML( void* wghtnode )
       meth->ProcessSetup();
       meth->CheckSetup();
       meth->SetSignalReferenceCut(methodSigCut);
+      meth->SetSignalReferenceCutOrientation(methodSigCutOrientation);
 
       ch = gTools().GetNextChild(ch);
    }

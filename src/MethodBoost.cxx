@@ -650,42 +650,58 @@ void TMVA::MethodBoost::FindMVACut()
             mvaB->Fill(mvaVal,weight);
          }
       }
-      //SeparationBase *sepGain = new MisClassificationError();
-      //SeparationBase *sepGain = new GiniIndex();
-      SeparationBase *sepGain = new CrossEntropy();
+      SeparationBase *sepGain;
+      //sepGain = new MisClassificationError();
+      sepGain = new GiniIndex();
+      //sepGain = new CrossEntropy();
+
       Double_t sTot = mvaS->GetSum();
       Double_t bTot = mvaB->GetSum();
       
       mvaSC->SetBinContent(1,mvaS->GetBinContent(1));
       mvaBC->SetBinContent(1,mvaB->GetBinContent(1));
       Double_t sSel=mvaSC->GetBinContent(1);
-      Double_t bSel=mvaSC->GetBinContent(1);
+      Double_t bSel=mvaBC->GetBinContent(1);
       Double_t separationGain=sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
       Double_t mvaCut=mvaSC->GetBinCenter(1);
+      Double_t mvaCutOrientation=1; // 1 if mva > mvaCut --> Signal and -1 if mva < mvaCut (i.e. mva*-1 > mvaCut*-1) --> Signal
+      Double_t SoBRight=1, SoBLeft=1;
       for (Int_t ibin=2;ibin<nBins;ibin++){ 
          mvaSC->SetBinContent(ibin,mvaS->GetBinContent(ibin)+mvaSC->GetBinContent(ibin-1));
-         mvaSC->SetBinContent(ibin,mvaB->GetBinContent(ibin)+mvaBC->GetBinContent(ibin-1));
+         mvaBC->SetBinContent(ibin,mvaB->GetBinContent(ibin)+mvaBC->GetBinContent(ibin-1));
          
          sSel=mvaSC->GetBinContent(ibin);
          bSel=mvaBC->GetBinContent(ibin);
          
-         if (separationGain < sepGain->GetSeparationGain(sSel,bSel,sTot,bTot)){
+         if (separationGain < sepGain->GetSeparationGain(sSel,bSel,sTot,bTot) 
+             //  &&           (mvaSC->GetBinCenter(ibin) >0 || (fMethodIndex+1)%2 )
+             ){
             separationGain = sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
             mvaCut=mvaSC->GetBinCenter(ibin);
+            if (sSel/bSel > (sTot-sSel)/(bTot-bSel)) mvaCutOrientation=-1;
+            else                                     mvaCutOrientation=1;
+            SoBRight=sSel/bSel;
+            SoBLeft=(sTot-sSel)/(bTot-bSel);
          }
       }
       
-   cout << "Min="<<minMVA << " Max=" << maxMVA 
-        << " sTot=" << sTot
-        << " bTot=" << bTot
-        << " sepGain="<<separationGain
-        << " cut=" << mvaCut << endl;
       
+      // cout << "Min="<<minMVA << " Max=" << maxMVA 
+      //      << " sTot=" << sTot
+      //      << " bTot=" << bTot
+      //      << " sepGain="<<separationGain
+      //      << " cut=" << mvaCut 
+      //      << " cutOrientation="<<mvaCutOrientation
+      //      << endl;
+      // cout << "S/B right="<<SoBRight << " left="<<SoBLeft<<endl;
+      // if (fMethodIndex==0)mvaCut = -1.9616885110735893e-02;
+      // if (fMethodIndex==1)mvaCut = -6.8812005221843719e-02;
+      if (SoBRight<1&&SoBLeft<1) mvaCutOrientation = 0;
       lastMethod->SetSignalReferenceCut(mvaCut);
+      lastMethod->SetSignalReferenceCutOrientation(mvaCutOrientation);
       
       Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
       TVectorF *m = (TVectorF*) results->GetObject("mvaCutValues");
-      cout << "vector has " << m->GetNoElements()<< " elements " << endl;
       (*m)[fMethodIndex]=mvaCut;
       
       Log() << kDEBUG << "(old step) Setting method cut to " <<lastMethod->GetSignalReferenceCut()<< Endl;
@@ -721,12 +737,13 @@ void TMVA::MethodBoost::SingleBoost()
       }
       sumAll += w;
       sumAllOrig += wo;
-      if ( sig != (fMVAvalues->at(ievt) > method->GetSignalReferenceCut()) ) {
-	 WrongDetection[ievt]=kTRUE; 
-	 sumWrong+=w; 
+      if (sig  == method->IsSignalLike(fMVAvalues->at(ievt))){   
+         WrongDetection[ievt]=kFALSE;
+      }else{
+         WrongDetection[ievt]=kTRUE; 
+         sumWrong+=w; 
 	 sumWrongOrig+=wo;
       }
-      else WrongDetection[ievt]=kFALSE;
    }
    fMethodError=sumWrong/sumAll;
    fOrigMethodError = sumWrongOrig/sumAllOrig;
@@ -837,10 +854,20 @@ void TMVA::MethodBoost::CalcMethodWeight()
       ev      = Data()->GetEvent(ievt);
       w       = ev->GetWeight();
       sumAll += w;
-      if ( DataInfo().IsSignal(ev) != 
-	   (fMVAvalues->at(ievt) > method->GetSignalReferenceCut()) )
+      if ( DataInfo().IsSignal(ev) != method->IsSignalLike(fMVAvalues->at(ievt))) {
 	 sumWrong += w;
+      }
+      
+      // if (ievt < 10)
+      // cout << " TYpe=" << DataInfo().IsSignal(ev) 
+      //      << " mvaValue="<<fMVAvalues->at(ievt)
+      //      << " mvaCutVal="<<method->GetSignalReferenceCut()
+      //      << " mvaCutValOrien="<<method->GetSignalReferenceCutOrientation()
+      //      << " isSignallike="<<method->IsSignalLike(fMVAvalues->at(ievt))
+      //      << endl;
    }
+
+   //   cout << "sumWrong="<<sumWrong << " sumAll="<<sumAll<<endl;
    fMethodError=sumWrong/sumAll;
 
    // calculating the fMethodError and the fBoostWeight out of it uses
@@ -924,6 +951,7 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err, Double_t* errUpper )
       if(m==0) continue;
       Double_t val = fTmpEvent ? m->GetMvaValue(fTmpEvent) : m->GetMvaValue();
       Double_t sigcut = m->GetSignalReferenceCut();
+      
       // default is no transform
       if (fTransformString == "linear"){
 
@@ -934,8 +962,8 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err, Double_t* errUpper )
          val = TMath::Log((val-sigcut)+epsilon);
       }
       else if (fTransformString == "step" ){
-         if (val < sigcut) val = -1.;
-         else val = 1.;
+         if (m->IsSignalLike(val)) val = 1.;
+         else val = -1.;
       }
       else {
          Log() << kFATAL << "error unknown transformation " << fTransformString<<Endl;
