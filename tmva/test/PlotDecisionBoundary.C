@@ -9,7 +9,6 @@
 #include <cstdlib>
 #include <vector>
 #include <iostream>
-#include <map>
 #include <string>
 
 #include "TFile.h"
@@ -50,8 +49,8 @@ void plot(TH2D *sig, TH2D *bkg, TH2F *MVA, TString v0="var0", TString v1="var1",
    MVA->SetLineColor(1);
    MVA->SetContour(1, contours);
    MVA->Draw("CONT1");
-   sig->SetMarkerColor(2);
-   bkg->SetMarkerColor(4);
+   sig->SetMarkerColor(4);
+   bkg->SetMarkerColor(2);
    sig->SetMarkerStyle(20);
    bkg->SetMarkerStyle(20);
    sig->SetMarkerSize(.2);
@@ -61,7 +60,7 @@ void plot(TH2D *sig, TH2D *bkg, TH2F *MVA, TString v0="var0", TString v1="var1",
 }
 
 
-void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_Fisher_B0001.weights.xml",TString v0="var0", TString v1="var1", TString dataFileName = "circledata.root") 
+void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_Fisher_B0064.weights.xml",TString v0="var0", TString v1="var1", TString dataFileName = "circledata.root") 
 {   
    //---------------------------------------------------------------
    // default MVA methods to be trained + tested
@@ -125,8 +124,8 @@ void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_Fish
    TH2D *hs=new TH2D("hs","",nbin,xmin,xmax,nbin,ymin,ymax);   
    TH2D *hb=new TH2D("hb","",nbin,xmin,xmax,nbin,ymin,ymax);   
 
-   hb->SetMarkerColor(4);
-   hs->SetMarkerColor(2);
+   hs->SetMarkerColor(4);
+   hb->SetMarkerColor(2);
 
 
    TH2F * hist = new TH2F( "MVA",    "MVA",    nbin,xmin,xmax,nbin,ymin,ymax);
@@ -188,20 +187,23 @@ void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_Fish
    mvaSC->SetBinContent(1,mvaS->GetBinContent(1));
    mvaBC->SetBinContent(1,mvaB->GetBinContent(1));
    Double_t sSel=mvaSC->GetBinContent(1);
-   Double_t bSel=mvaSC->GetBinContent(1);
+   Double_t bSel=mvaBC->GetBinContent(1);
    Double_t separationGain=sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
    Double_t mvaCut=mvaSC->GetBinCenter(1);
+   Double_t mvaCutOrientation=1; // 1 if mva > mvaCut --> Signal and -1 if mva < mvaCut (i.e. mva*-1 > mvaCut*-1) --> Signal
    for (Int_t ibin=2;ibin<nValBins;ibin++){ 
       mvaSC->SetBinContent(ibin,mvaS->GetBinContent(ibin)+mvaSC->GetBinContent(ibin-1));
-      mvaSC->SetBinContent(ibin,mvaB->GetBinContent(ibin)+mvaBC->GetBinContent(ibin-1));
+      mvaBC->SetBinContent(ibin,mvaB->GetBinContent(ibin)+mvaBC->GetBinContent(ibin-1));
     
       sSel=mvaSC->GetBinContent(ibin);
       bSel=mvaBC->GetBinContent(ibin);
 
-      if (separationGain < sepGain->GetSeparationGain(sSel,bSel,sTot,bTot)){
+      if (separationGain < sepGain->GetSeparationGain(sSel,bSel,sTot,bTot) && mvaSC->GetBinCenter(ibin)<0){
          separationGain = sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
          mvaCut=mvaSC->GetBinCenter(ibin);
-      }
+         if (sSel/bSel > (sTot-sSel)/(bTot-bSel)) mvaCutOrientation=-1;
+         else                                     mvaCutOrientation=1;
+     }
    }
    
 
@@ -209,7 +211,9 @@ void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_Fish
         << " sTot=" << sTot
         << " bTot=" << bTot
         << " sepGain="<<separationGain
-        << " cut=" << mvaCut << endl;
+        << " cut=" << mvaCut
+        << " cutOrientation="<<mvaCutOrientation
+        << endl;
 
 
    delete reader;
