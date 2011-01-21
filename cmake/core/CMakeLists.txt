@@ -110,8 +110,6 @@ GENERATE_ROOTMAP("${LibCore_LINKDEF}" Core)
 
 include_directories( ${INCLUDE_DIRECTORIES})
 
-message("DICT---> ${CORE_DICTIONARIES}")
-
 # Here all objects ar put together into one share library
 Add_Library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES})
 Target_Link_Libraries(Core ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_NCURSES_LIBRARY} ${CURSES_CURSES_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})

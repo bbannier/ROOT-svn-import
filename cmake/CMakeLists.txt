@@ -39,7 +39,7 @@ option(enable_gsl_shared         "" OFF)
 option(enable_hdfs               "" ON)
 option(enable_krb5               "" ON)
 option(enable_ldap               "" ON)
-option(enable_mathmore           "" ON)
+option(enable_mathmore           "" OFF)
 option(enable_memstat            "" ON)
 option(enable_minuit2            "" OFF)
 option(enable_monalisa           "" ON)
@@ -137,7 +137,7 @@ set(ROOT_DICTTYPE cint)
 set(ROOT_CONFIGARGS "")
 
 configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/RConfigure.in include/RConfigure.h)
-install(FILES include/RConfigure.h DESTINATION include)
+install(FILES ${CMAKE_BINARY_DIR}/include/RConfigure.h DESTINATION include)
 
 get_enabled_root_install_options()
 configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/root-config.in
@@ -184,14 +184,14 @@ Add_Subdirectory (main)
 #          )
 
 configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/RConfigOptions.in include/RConfigOptions.h)
-install(FILES include/RConfigOptions.h DESTINATION include)
+install(FILES ${CMAKE_BINARY_DIR}/include/RConfigOptions.h DESTINATION include)
 
 execute_Process(COMMAND uname -a OUTPUT_VARIABLE BuildNodeInfo OUTPUT_STRIP_TRAILING_WHITESPACE )
 
 message("BuildInfo ${BuildNodeInfo}")
 
 configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.in include/compiledata.h)
-install(FILES  include/compiledata.h DESTINATION include)
+install(FILES  ${CMAKE_BINARY_DIR}/include/compiledata.h DESTINATION include)
 
 #Execute_Process(COMMAND cmake -E copy_directory 
 #                        ${CMAKE_SOURCE_DIR}/etc ${CMAKE_BINARY_DIR}/etc
