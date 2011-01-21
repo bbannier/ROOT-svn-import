@@ -53,9 +53,9 @@ namespace cling {
     void AddIncludePath(const char *path);
 	// Using static to avoid creating a Member call, which needs this pointer
     template<typename T>
-    static T Eval(size_t This, const char* expr) {
+    static T Eval(size_t This, const char* expr, void* varaddr[] ) {
        llvm::GenericValue result;
-       ((Interpreter*) (void*)This)->EvalCore(result, expr);
+       ((Interpreter*) (void*)This)->EvalCore(result, expr, varaddr);
        //FIXME: we should return T calculated from result
        return T();
     }
@@ -110,7 +110,7 @@ namespace cling {
     clang::CompilerInstance* compileString(const std::string& srcCode);
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
-    bool EvalCore(llvm::GenericValue& result, const char* expr);
+     bool EvalCore(llvm::GenericValue& result, const char* expr, void* varaddr);
   };
   
 } // namespace cling

@@ -341,8 +341,11 @@ namespace cling {
         {
           std::pair<unsigned, unsigned> r = getStmtRangeWithSemicolon(cur_stmt, SM, LO);
           if (r.first == 0 && r.second == 0) {
-             if (Stmt *S = Map.lookup(cur_stmt)) {
-                r = getStmtRangeWithSemicolon(S, SM, LO);
+             MapTy::const_iterator It = Map.find(cur_stmt);
+             if (It != Map.end()) {
+                if (!It->second)
+                   continue;
+                r = getStmtRangeWithSemicolon(It->second, SM, LO);                
              }
              else {
                 fprintf(stderr, "%s", "Cannot find source for statement!\n ");
@@ -510,14 +513,14 @@ namespace cling {
               if (QT.isConstant(CI->getASTContext()) || QT.isLocalConstQualified()) {
                 Flags |= kIsConst;
               }
-              clang::PointerType* PT = dyn_cast<clang::PointerType>(QT.getTypePtr());
+              const clang::PointerType* PT = dyn_cast<clang::PointerType>(QT.getTypePtr());
               if (PT) {
                 // treat arrary-to-pointer decay as array:
                 clang::QualType PQT = PT->getPointeeType();
-                clang::Type* PTT = PQT.getTypePtr();
+                const clang::Type* PTT = PQT.getTypePtr();
                 if (!PTT || !PTT->isArrayType()) {
                   Flags |= kIsPtr;
-                  clang::RecordType* RT = dyn_cast<clang::RecordType>(QT.getTypePtr());
+                  const clang::RecordType* RT = dyn_cast<clang::RecordType>(QT.getTypePtr());
                   if (RT) {
                     clang::RecordDecl* RD = RT->getDecl();
                     if (RD) {
@@ -678,8 +681,8 @@ namespace cling {
   
 
    // Implements the interpretation of the unknown symbols. 
-   bool Interpreter::EvalCore(llvm::GenericValue& result, const char* expr) {
-      printf("%s\n", expr);
+   bool Interpreter::EvalCore(llvm::GenericValue& result, const char* expr, void* varaddr) {
+      printf("%s\n%p\n", expr, varaddr);
       return 0;
    }
    

@@ -39,7 +39,9 @@ namespace {
          if (DeclRefExpr *Node = dyn_cast<DeclRefExpr>(S)) {
             if (NestedNameSpecifier *Qualifier = Node->getQualifier())
                Qualifier->print(OS, Policy);
-            OS << Node->getNameInfo();
+
+            OS << Node->getNameInfo(); // prints the parameters
+
             if (Node->hasExplicitTemplateArgs())
                OS << TemplateSpecializationType::PrintTemplateArgumentList(
                                                                            Node->getTemplateArgs(),
@@ -230,8 +232,46 @@ namespace cling {
    //region EvalBuilder
 
 
-   Expr *ASTTransformVisitor::SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree) {
-      CallExpr* EvalCall = BuildEvalCallExpr(InstTy, SubTree);
+   Expr *ASTTransformVisitor::SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree/*, CompoundStmt *Parent*/) {
+      ASTContext &C = SemaPtr->getASTContext();
+      
+      // Prepare the actual arguments for the call
+      // Arg list for static T Eval(size_t This, const char* expr, void* varaddr[] )
+      ASTOwningVector<Expr*> CallArgs(*SemaPtr);
+
+      // Arg 0:
+      const llvm::APInt gClingAddr(8 * sizeof(void *), (uint64_t)gCling);
+      IntegerLiteral *Arg0 = IntegerLiteral::Create(C, gClingAddr, C.UnsignedLongTy, SourceLocation());
+      CallArgs.push_back(Arg0);
+
+      // Arg 1:
+      QualType CastTo = C.getPointerType(C.getConstType(C.CharTy));
+      Expr *Arg1 = BuildEvalCharArg(CastTo, SubTree);
+      CallArgs.push_back(Arg1);
+
+      // Arg 2:
+      QualType VarAddrTy = SemaPtr->BuildArrayType(C.VoidPtrTy, 
+                                                   ArrayType::Normal,
+                                                   /*ArraySize*/0
+                                                   , Qualifiers()
+                                                   , SourceRange()
+                                                   , DeclarationName() );
+      // FIXME: Get the init list from the SubTree...
+      ASTOwningVector<Expr*> Inits(*SemaPtr);
+
+      // We need fake the SourceLocation just to avoid assert(InitList.isExplicit()....)
+      SourceLocation SLoc = getEvalDecl()->getLocStart();
+      SourceLocation ELoc = getEvalDecl()->getLocEnd();
+      InitListExpr *ILE = SemaPtr->ActOnInitList(SLoc, move_arg(Inits), ELoc).takeAs<InitListExpr>();
+      Expr *Arg2 = SemaPtr->BuildCompoundLiteralExpr(SourceLocation(), C.CreateTypeSourceInfo(VarAddrTy), SourceLocation(), ILE).takeAs<CompoundLiteralExpr>();
+      SemaPtr->ImpCastExprToType(Arg2, C.getPointerType(C.VoidPtrTy), CK_ArrayToPointerDecay);
+      CallArgs.push_back(Arg2);
+
+
+      // Build the call
+      CallExpr* EvalCall = BuildEvalCallExpr(InstTy, SubTree, CallArgs);
+
+      // Add substitution mapping
       getSubstSymbolMap()[EvalCall] = SubTree;
       
       return EvalCall;
@@ -239,9 +279,8 @@ namespace cling {
 
    // Here is the test Eval function specialization. Here the CallExpr to the function
    // is created.
-   CallExpr *ASTTransformVisitor::BuildEvalCallExpr(const QualType InstTy, Expr *SubTree) {      
-      // we need the ASTContext
-      ASTContext &C = SemaPtr->getASTContext();
+   CallExpr *ASTTransformVisitor::BuildEvalCallExpr(const QualType InstTy, Expr *SubTree, 
+                                                    ASTOwningVector<Expr*> &CallArgs) {      
       // Set up new context for the new FunctionDecl
       DeclContext *PrevContext = SemaPtr->CurContext;
       FunctionDecl *FDecl = getEvalDecl();
@@ -285,21 +324,8 @@ namespace cling {
                                                   , Fn->getLocation()
                                                   , Fn->getDeclName()
                                                   , Proto->getExtInfo());                  
-      DeclRefExpr *DRE = SemaPtr->BuildDeclRefExpr(Fn, FuncT, VK_RValue, SourceLocation()).takeAs<DeclRefExpr>();
       
-      // Prepare the actual arguments for the call
-      ASTOwningVector<Expr*> CallArgs(*SemaPtr);
-
-      //ParmVarDecl *Param0 = FDecl->getParamDecl(0U);
-      ParmVarDecl *Param1 = FDecl->getParamDecl(1U);
-
-      // Pass the address of the Interpreter object in
-      const llvm::APInt gClingAddr(8 * sizeof(void *), (uint64_t)gCling);
-      IntegerLiteral *IntLiteral = IntegerLiteral::Create(C, gClingAddr, C.UnsignedLongTy, SourceLocation());
-
-      CallArgs.push_back(IntLiteral);
-      CallArgs.push_back(BuildEvalCharArg(Param1->getType(), SubTree));
-
+      DeclRefExpr *DRE = SemaPtr->BuildDeclRefExpr(Fn, FuncT, VK_RValue, SourceLocation()).takeAs<DeclRefExpr>();
       
       CallExpr *EvalCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
                                                   , DRE
@@ -308,24 +334,11 @@ namespace cling {
                                                   , move_arg(CallArgs)
                                                   , SourceLocation()
                                                   ).takeAs<CallExpr>();
+      assert (EvalCall && "Cannot create call to Eval");
       return EvalCall;                  
       
    }
 
-   // Helper function for converting the Stmt to string 
-   const char *ASTTransformVisitor::ToString(Stmt *S) {
-      ASTContext *c = &SemaPtr->getASTContext();
-      std::string sbuf;
-      llvm::raw_string_ostream OS(sbuf);
-      const PrintingPolicy &Policy = c->PrintingPolicy;
-
-      StmtPrinterHelper *helper = new StmtPrinterHelper(Policy);      
-      S->printPretty(OS, helper, Policy);
-
-      OS.flush();
-      return sbuf.c_str();
-   }
-   
    // Creates the string, which is going to be escaped.
    Expr *ASTTransformVisitor::BuildEvalCharArg(QualType ToType, Expr *SubTree) {
       ASTContext *c = &SemaPtr->getASTContext();
@@ -339,6 +352,19 @@ namespace cling {
       return SL;
    }
 
+   // Helper function for converting the Stmt to string 
+   const char *ASTTransformVisitor::ToString(Stmt *S) {
+      std::string sbuf;
+      llvm::raw_string_ostream OS(sbuf);
+      const PrintingPolicy &Policy = SemaPtr->getASTContext().PrintingPolicy;
+
+      StmtPrinterHelper *helper = new StmtPrinterHelper(Policy);      
+      S->printPretty(OS, helper, Policy);
+
+      OS.flush();
+      return sbuf.c_str();
+   }
+   
    bool ASTTransformVisitor::ShouldVisit(Decl *D) {
       while (true) {
          if (isa<TemplateTemplateParmDecl>(D))

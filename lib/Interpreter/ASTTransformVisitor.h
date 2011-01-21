@@ -106,8 +106,8 @@ namespace cling {
 
       //region EvalBuilder
 
-      Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree);
-      CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree);
+      Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree/*, CompoundStmt *Parent*/);
+      CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree, ASTOwningVector<Expr*> &CallArgs);
       const char *ToString(Stmt *S);
       Expr *BuildEvalCharArg(QualType ToType, Expr *SubTree);
       bool IsArtificiallyDependent(Expr *Node);
