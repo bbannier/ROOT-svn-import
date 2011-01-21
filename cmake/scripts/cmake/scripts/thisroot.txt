@@ -1,0 +1,5 @@
+FILE QUARANTINED
+
+Microsoft Forefront Security has identified that the attachment called "root_cmake_r33856.tar.gz->->cmake/scripts/thisroot.csh" is potentially dangerous and has been replaced by this message. (reference CERNMX31:root_cmake_r33856.tar.gz->->cmake/scripts/thisroot.csh)
+For more information see: [http://cern.ch/mmmservices/Help/?kBID=171010]
+The CERN Antivirus Service
