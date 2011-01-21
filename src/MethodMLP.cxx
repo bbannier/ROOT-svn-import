@@ -22,7 +22,7 @@
  *      Joerg Stelzer         <stelzer@cern.ch>        - DESY, Germany            *
  *      Jiahang Zhong         <Jiahang.Zhong@cern.ch>  - Academia Sinica, Taipei  *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
