@@ -45,22 +45,24 @@ void plot(TH2D *sig, TH2D *bkg, TH2F *MVA, TString v0="var0", TString v1="var1",
    MVA->SetStats(0);
    Double_t contours[1];
    contours[0]=mvaCut;
-   MVA->SetLineWidth(3);
+   MVA->SetLineWidth(7);
+   MVA->SetLineStyle(1);
+   MVA->SetMarkerColor(1);
    MVA->SetLineColor(1);
    MVA->SetContour(1, contours);
-   MVA->Draw("CONT1");
    sig->SetMarkerColor(4);
    bkg->SetMarkerColor(2);
    sig->SetMarkerStyle(20);
    bkg->SetMarkerStyle(20);
    sig->SetMarkerSize(.2);
    bkg->SetMarkerSize(.2);
-   sig->Draw("same");
+   sig->Draw();
    bkg->Draw("same");
+   MVA->Draw("CONT2 same");
 }
 
 
-void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_Fisher_B0064.weights.xml",TString v0="var0", TString v1="var1", TString dataFileName = "circledata.root") 
+void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_BDT.weights.xml",TString v0="var0", TString v1="var1", TString dataFileName = "/home/hvoss/TMVA/TMVA_data/data/data_circ.root") 
 {   
    //---------------------------------------------------------------
    // default MVA methods to be trained + tested
@@ -123,7 +125,10 @@ void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_Fish
 
    TH2D *hs=new TH2D("hs","",nbin,xmin,xmax,nbin,ymin,ymax);   
    TH2D *hb=new TH2D("hb","",nbin,xmin,xmax,nbin,ymin,ymax);   
-
+   hs->SetXTitle(v0);
+   hs->SetYTitle(v1);
+   hb->SetXTitle(v0);
+   hb->SetYTitle(v1);
    hs->SetMarkerColor(4);
    hb->SetMarkerColor(2);
 
