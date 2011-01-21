@@ -57,6 +57,7 @@ namespace cling {
        llvm::GenericValue result;
        ((Interpreter*) (void*)This)->EvalCore(result, expr, varaddr);
        //FIXME: we should return T calculated from result
+       //printf("%s", expr);
        return T();
     }
      

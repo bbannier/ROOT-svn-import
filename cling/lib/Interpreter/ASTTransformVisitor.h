@@ -35,7 +35,8 @@ namespace cling {
    private: // members
       FunctionDecl *EvalDecl;
       MapTy m_SubstSymbolMap;
-      
+      std::string m_EvalExpressionBuf; //the string we escape
+
    public: // members
       void *gCling; //Pointer to the Interpreter object
       clang::Sema *SemaPtr;
@@ -108,7 +109,7 @@ namespace cling {
 
       Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree/*, CompoundStmt *Parent*/);
       CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree, ASTOwningVector<Expr*> &CallArgs);
-      const char *ToString(Stmt *S);
+      const char *ToString(Stmt *S, std::string &sbuf);
       Expr *BuildEvalCharArg(QualType ToType, Expr *SubTree);
       bool IsArtificiallyDependent(Expr *Node);
       bool ShouldVisit(Decl *D);

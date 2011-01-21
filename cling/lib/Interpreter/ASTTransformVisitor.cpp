@@ -9,9 +9,6 @@
 #include "StmtAddressPrinter.h"
 
 #include "llvm/ADT/SmallVector.h"
-//#include "llvm/ADT.DenseMap.h"
-
-//#include "clang/Sema/Lookup.h"
 
 namespace llvm {
    class raw_string_ostream;
@@ -75,7 +72,7 @@ namespace {
 
 namespace cling {
 
-   //region DeclVisitor
+   // DeclVisitor
    
    void ASTTransformVisitor::Visit(Decl *D) {
       //if (ShouldVisit(D)) {
@@ -125,9 +122,9 @@ namespace cling {
             Visit(*I);
    }
    
-   //endregion
+   // end DeclVisitor
    
-   //region StmtVisitor
+   // StmtVisitor
    
    EvalInfo ASTTransformVisitor::VisitStmt(Stmt *Node) {
       for (Stmt::child_iterator
@@ -213,7 +210,7 @@ namespace cling {
    EvalInfo ASTTransformVisitor::VisitBinaryOperator(BinaryOperator *binOp) {
       EvalInfo rhs = Visit(binOp->getRHS());
       EvalInfo lhs = Visit(binOp->getLHS());
-
+      /*
       if (binOp->isAssignmentOp()) {
          if (rhs.IsEvalNeeded && !lhs.IsEvalNeeded) {
             if (Expr *E = dyn_cast<Expr>(lhs.getNewStmt()))
@@ -223,7 +220,7 @@ namespace cling {
                }
          }
       }
-      
+      */
       return EvalInfo(binOp, IsArtificiallyDependent(binOp));
    }
    
@@ -343,9 +340,13 @@ namespace cling {
    Expr *ASTTransformVisitor::BuildEvalCharArg(QualType ToType, Expr *SubTree) {
       ASTContext *c = &SemaPtr->getASTContext();
       
-      const char *str = ToString(SubTree);
-      QualType constCharArray = c->getConstantArrayType(c->getConstType(c->CharTy), llvm::APInt(32, 16U), ArrayType::Normal, 0);
-      Expr *SL = StringLiteral::Create(*c, &*str, strlen(str), false, constCharArray, SourceLocation());
+      //ASTOwningVector<const char*, 2> buf(*SemaPtr);
+      
+      //buf.push_back(ToString(SubTree, m_EvalExpressionBuf));
+
+      ToString(SubTree, m_EvalExpressionBuf);
+      QualType constCharArray = c->getConstantArrayType(c->getConstType(c->CharTy), llvm::APInt(8 * sizeof(void *), strlen(m_EvalExpressionBuf.c_str()) + 1), ArrayType::Normal, 0);
+      Expr *SL = StringLiteral::Create(*c, &*m_EvalExpressionBuf.c_str(), strlen(m_EvalExpressionBuf.c_str()) + 1, false, constCharArray, SourceLocation());
       //FIXME: Figure out how handle the cast kinds in the different cases
       SemaPtr->ImpCastExprToType(SL, ToType, CK_ArrayToPointerDecay);
 
@@ -353,8 +354,8 @@ namespace cling {
    }
 
    // Helper function for converting the Stmt to string 
-   const char *ASTTransformVisitor::ToString(Stmt *S) {
-      std::string sbuf;
+   const char *ASTTransformVisitor::ToString(Stmt *S, std::string& sbuf) {
+      sbuf = "";
       llvm::raw_string_ostream OS(sbuf);
       const PrintingPolicy &Policy = SemaPtr->getASTContext().PrintingPolicy;
 
@@ -402,6 +403,6 @@ namespace cling {
    }
 
    
-//endregion
+// end StmtVisitor
 
 }//end cling
