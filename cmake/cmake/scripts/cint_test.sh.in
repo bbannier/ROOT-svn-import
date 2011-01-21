@@ -1,0 +1,10 @@
+#!/bin/bash
+
+export ROOTSYS=@ROOTSYS@
+export PATH=@CMAKE_BINARY_DIR@/bin:$PATH
+
+cd @CMAKE_CURRENT_BINARY_DIR@/test
+
+@CMAKE_BINARY_DIR@/bin/@CintName@ -I@CMAKE_BINARY_DIR@/cint/cint/include -I@CMAKE_BINARY_DIR@/include @CintTestScriptName@ -f @CintTestName@
+
+#killall cint

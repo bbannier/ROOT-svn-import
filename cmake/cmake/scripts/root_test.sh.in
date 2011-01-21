@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export ROOTSYS=@CMAKE_BINARY_DIR@
+
+$ROOTSYS/bin/@_testname@

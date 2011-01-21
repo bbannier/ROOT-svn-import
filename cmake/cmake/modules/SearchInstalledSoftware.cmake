@@ -1,0 +1,88 @@
+Macro(SearchInstalledSoftware)
+
+#Check for installed packages
+
+# Check if (N)Curses is installed. If neither is installed
+# switch of editline 
+Message(STATUS "Looking for NCurses")
+Set(CURSES_NEED_NCURSES TRUE)
+Find_Package(Curses)
+If(NOT CURSES_FOUND)
+  Message(STATUS "Looking for Curses")
+  Set(CURSES_NEED_NCURSES FALSE)
+  Find_Package(Curses)
+EndIf(NOT CURSES_FOUND)
+If(CURSES_FOUND)
+  Set(BuildEditLine TRUE)
+  Set(RootConfigFeatures "${RootConfigFeatures} editline")
+  If(CURSES_HAVE_CURSES_H)
+    Set(CURSES_HEADER_FILE ${CURSES_HAVE_CURSES_H})
+  EndIf(CURSES_HAVE_CURSES_H)
+  If(CURSES_HAVE_NCURSES_H)
+    Set(CURSES_HEADER_FILE ${CURSES_HAVE_NCURSES_H})
+  EndIf(CURSES_HAVE_NCURSES_H)
+Else(CURSES_FOUND)
+  Set(BuildEditLine FALSE)
+EndIf(CURSES_FOUND)
+
+Set(RootConfigFeatures "${RootConfigFeatures} builtin_zlib")
+Message(STATUS "Looking for ZLib")
+Find_Package(ZLIB)
+If(ZLIB_FOUND)
+  Set(BuildZlib FALSE)
+Else(ZLIB_FOUND)
+  Set(BuildZlib TRUE)
+  Set(RootConfigFeatures "${RootConfigFeatures} builtin_zlib")
+EndIf(ZLIB_FOUND)
+
+Set(RootConfigFeatures "${RootConfigFeatures} builtin_freetype")
+Message(STATUS "Looking for Freetype")
+Find_Package(Freetype)
+If(FREETYPE_FOUND)
+  Set(BuildFreeType FALSE)
+Else(FREETYPE_FOUND)
+  Set(BuildFreeType TRUE)
+  Set(RootConfigFeatures "${RootConfigFeatures} builtin_freetype")
+EndIf(FREETYPE_FOUND)
+
+# Check for X11 which is amandatory lib on Unix 
+Message(STATUS "Looking for X11")
+Find_Package(X11 REQUIRED)
+If(X11_FOUND)
+  Message("X11_INCLUDE_DIR: ${X11_INCLUDE_DIR}")
+  Message("X11_LIBRARIES: ${X11_LIBRARIES}")
+Else(X11_FOUND)
+  Message(FATAL_ERROR "libX11 and X11 headers must be installed.")
+EndIf(X11_FOUND)
+If(X11_Xpm_FOUND)
+  Message("X11_Xpm_INCLUDE_PATH: ${X11_Xpm_INCLUDE_PATH}")
+  Message("X11_Xpm_LIB: ${X11_Xpm_LIB}")
+Else(X11_Xpm_FOUND)
+  Message(FATAL_ERROR "libXpm and Xpm headers must be installed.")
+EndIf(X11_Xpm_FOUND)
+If(X11_Xft_FOUND)
+  Message("X11_Xft_INCLUDE_PATH: ${X11_Xft_INCLUDE_PATH}")
+  Message("X11_Xft_LIB: ${X11_Xft_LIB}")
+Else(X11_Xft_FOUND)
+  Message(FATAL_ERROR "libXft and Xft headers must be installed.")
+EndIf(X11_Xft_FOUND)
+If(X11_Xext_FOUND)
+  Message("X11_Xext_INCLUDE_PATH: ${X11_Xext_INCLUDE_PATH}")
+  Message("X11_Xext_LIB: ${X11_Xext_LIB}")
+Else(X11_Xext_FOUND)
+  Message(FATAL_ERROR "libXext and Xext headers must be installed.")
+EndIf(X11_Xext_FOUND)
+
+#Check for all kind of graphics includes needed by libAfterImage
+Find_Package(GIF)
+Find_Package(TIFF)
+Find_Package(PNG)
+Message("PNG_INCLUDE_DIR: ${PNG_INCLUDE_DIR}")
+Find_Package(JPEG)
+
+#MESSAGE("ROOT FEATURES: ${RootConfigFeatures}")
+
+EndMacro(SearchInstalledSoftware)
+
+
+
