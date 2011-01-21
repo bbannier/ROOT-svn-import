@@ -359,9 +359,11 @@ void TMVA::MethodCategory::Train()
    const Int_t  MinNoTrainingEvents = 10;
 
    // THIS NEEDS TO BE CHANGED:
-   TString what("Classification");
-   what.ToLower();
-   Types::EAnalysisType analysisType = ( what.CompareTo("regression")==0 ? Types::kRegression : Types::kClassification );
+//    TString what("Classification");
+//    what.ToLower();
+//    Types::EAnalysisType analysisType = ( what.CompareTo("regression")==0 ? Types::kRegression : Types::kClassification );
+
+   Types::EAnalysisType analysisType = GetAnalysisType();
 
    // start the training
    Log() << kINFO << "Train all sub-classifiers for " 
@@ -380,6 +382,7 @@ void TMVA::MethodCategory::Train()
 
       MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
       if(!mva) continue;
+      mva->SetAnalysisType(GetAnalysisType());
       if (!mva->HasAnalysisType( analysisType, 
                                  mva->DataInfo().GetNClasses(), 
                                  mva->DataInfo().GetNTargets() ) ) {
