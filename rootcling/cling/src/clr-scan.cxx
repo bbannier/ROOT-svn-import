@@ -394,7 +394,7 @@ void TScanner::UnimplementedType(clang::QualType qual_type)
 }
 
 //______________________________________________________________________________
-void TScanner::UnimplementedType (clang::Type* T)
+void TScanner::UnimplementedType (const clang::Type* T)
 {
    clang::Type::TypeClass k = T->getTypeClass();
 
@@ -516,21 +516,21 @@ Reflex::ClassBuilder* TScanner::GetClassBuilder(clang::RecordDecl* D, TString te
 /*********************************** TYPES ************************************/
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExplorePointerType(clang::PointerType* T)
+Reflex::Type TScanner::ExplorePointerType(const clang::PointerType* T)
 {
    Reflex::Type element = ExploreQualType(T->getPointeeType());
    return Reflex::PointerBuilder(element);
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreLValueReferenceType(clang::LValueReferenceType* T)
+Reflex::Type TScanner::ExploreLValueReferenceType(const clang::LValueReferenceType* T)
 {
    Reflex::Type element = ExploreQualType(T->getPointeeType());
    return Reflex::ReferenceBuilder(element);
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreMemberPointerType(clang::MemberPointerType* T)
+Reflex::Type TScanner::ExploreMemberPointerType(const clang::MemberPointerType* T)
 {
    Reflex::Type element = ExploreQualType(T->getPointeeType());
 
@@ -557,12 +557,12 @@ Reflex::Type TScanner::ExploreMemberPointerType(clang::MemberPointerType* T)
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreArrayType(clang::ArrayType* T)
+Reflex::Type TScanner::ExploreArrayType(const clang::ArrayType* T)
 {
    Reflex::Type element = ExploreQualType(T->getElementType());
 
    size_t size = 0;
-   if (clang::ConstantArrayType* CT = dyn_cast <clang::ConstantArrayType> (T)) {
+   if (const clang::ConstantArrayType* CT = dyn_cast <const clang::ConstantArrayType> (T)) {
       size = APIntToSize(CT->getSize()) ;
    } else {
       ShowWarning("Unknown array size");  // !?
@@ -572,26 +572,26 @@ Reflex::Type TScanner::ExploreArrayType(clang::ArrayType* T)
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreIncompleteArrayType(clang::IncompleteArrayType* T)
+Reflex::Type TScanner::ExploreIncompleteArrayType(const clang::IncompleteArrayType* T)
 {
    UnimplementedType(T);
    return Reflex::Type(); // !? !!
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreDependentSizedArrayType(clang::DependentSizedArrayType* T)
+Reflex::Type TScanner::ExploreDependentSizedArrayType(const clang::DependentSizedArrayType* T)
 {
    UnimplementedType(T);
    return Reflex::Type(); // !? !!
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreFunctionType(clang::FunctionType* T)
+Reflex::Type TScanner::ExploreFunctionType(const clang::FunctionType* T)
 {
    // parameters
    std::vector <Reflex::Type> vec;
 
-   if (clang::FunctionProtoType* FT = dyn_cast <clang::FunctionProtoType> (T)) {
+   if (const clang::FunctionProtoType* FT = dyn_cast <const clang::FunctionProtoType> (T)) {
       for (clang::FunctionProtoType::arg_type_iterator I = FT->arg_type_begin(), E = FT->arg_type_end(); I != E; ++I) {
          Reflex::Type param_type = ExploreQualType(*I);
          vec.push_back(param_type);
@@ -605,27 +605,27 @@ Reflex::Type TScanner::ExploreFunctionType(clang::FunctionType* T)
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreEnumType(clang::EnumType* T)
+Reflex::Type TScanner::ExploreEnumType(const clang::EnumType* T)
 {
    std::string enum_name = GetEnumName(T->getDecl());
    return Reflex::TypeBuilder(enum_name.c_str ());
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreRecordType(clang::RecordType* T)
+Reflex::Type TScanner::ExploreRecordType(const clang::RecordType* T)
 {
    std::string cls_name = GetClassName(T->getDecl());
    return Reflex::TypeBuilder(cls_name.c_str ());
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreElaboratedType(clang::ElaboratedType* T)
+Reflex::Type TScanner::ExploreElaboratedType(const clang::ElaboratedType* T)
 {
    return ExploreQualType(T->getNamedType()); // !?
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreTypedefType(clang::TypedefType* T)
+Reflex::Type TScanner::ExploreTypedefType(const clang::TypedefType* T)
 {
    clang::TypedefDecl* D = T->getDecl();
    std::string name = D->getQualifiedNameAsString();
@@ -634,7 +634,7 @@ Reflex::Type TScanner::ExploreTypedefType(clang::TypedefType* T)
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreBuiltinType(clang::BuiltinType* T)
+Reflex::Type TScanner::ExploreBuiltinType(const clang::BuiltinType* T)
 {
    clang::LangOptions lang_opts; // !?
    const char* name = T->getName(lang_opts);
@@ -644,14 +644,14 @@ Reflex::Type TScanner::ExploreBuiltinType(clang::BuiltinType* T)
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreInjectedClassNameType(clang::InjectedClassNameType* T)
+Reflex::Type TScanner::ExploreInjectedClassNameType(const clang::InjectedClassNameType* T)
 {
    // ShowInfo ("InjectedClassNameType " + TString (name));
    return ExploreQualType(T->getInjectedSpecializationType()); // !?
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreDependentNameType(clang::DependentNameType* T)
+Reflex::Type TScanner::ExploreDependentNameType(const clang::DependentNameType* T)
 {
    const clang::IdentifierInfo* N = T->getIdentifier();
    const char* name = N->getNameStart();
@@ -661,7 +661,7 @@ Reflex::Type TScanner::ExploreDependentNameType(clang::DependentNameType* T)
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreTemplateTypeParmType(clang::TemplateTypeParmType* T)
+Reflex::Type TScanner::ExploreTemplateTypeParmType(const clang::TemplateTypeParmType* T)
 {
    clang::IdentifierInfo* N = T->getName();
    const char* name = N->getNameStart();
@@ -671,7 +671,7 @@ Reflex::Type TScanner::ExploreTemplateTypeParmType(clang::TemplateTypeParmType* 
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreSubstTemplateTypeParmType(clang::SubstTemplateTypeParmType* T)
+Reflex::Type TScanner::ExploreSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* T)
 {
    clang::IdentifierInfo* N = T->getName();
    const char* name = N->getNameStart();
@@ -681,7 +681,7 @@ Reflex::Type TScanner::ExploreSubstTemplateTypeParmType(clang::SubstTemplateType
 }
 
 //______________________________________________________________________________
-Reflex::Type TScanner::ExploreTemplateSpecializationType(clang::TemplateSpecializationType* T)
+Reflex::Type TScanner::ExploreTemplateSpecializationType(const clang::TemplateSpecializationType* T)
 {
    clang::TemplateName N = T->getTemplateName();
    TString name = ConvTemplateName(N);
@@ -694,22 +694,22 @@ Reflex::Type TScanner::ExploreTemplateSpecializationType(clang::TemplateSpeciali
 Reflex::Type TScanner::ExploreQualType(clang::QualType qual_type)
 {
    Reflex::Type type;
-   clang::Type* T = qual_type.getTypePtr();
+   const clang::Type* T = qual_type.getTypePtr();
 
    // see clang/include/clang/AST/TypeNodes.def
 
    switch (T->getTypeClass ())
    {
       case clang::Type::Pointer:
-         type = ExplorePointerType(dyn_cast <clang::PointerType> (T));
+         type = ExplorePointerType(dyn_cast <const clang::PointerType> (T));
          break;
 
       case clang::Type::MemberPointer:
-         type = ExploreMemberPointerType(dyn_cast <clang::MemberPointerType> (T));
+         type = ExploreMemberPointerType(dyn_cast <const clang::MemberPointerType> (T));
          break;
 
       case clang::Type::LValueReference:
-         type = ExploreLValueReferenceType(dyn_cast <clang::LValueReferenceType> (T));
+         type = ExploreLValueReferenceType(dyn_cast <const clang::LValueReferenceType> (T));
          break;
 
       case clang::Type::RValueReference:
@@ -717,15 +717,15 @@ Reflex::Type TScanner::ExploreQualType(clang::QualType qual_type)
          break;
 
       case clang::Type::ConstantArray:
-         type = ExploreArrayType(dyn_cast <clang::ArrayType> (T));
+         type = ExploreArrayType(dyn_cast <const clang::ArrayType> (T));
          break;
 
       case clang::Type::IncompleteArray:
-         type = ExploreIncompleteArrayType(dyn_cast <clang::IncompleteArrayType> (T));
+         type = ExploreIncompleteArrayType(dyn_cast <const clang::IncompleteArrayType> (T));
          break;
 
       case clang::Type::DependentSizedArray:
-         type = ExploreDependentSizedArrayType(dyn_cast <clang::DependentSizedArrayType> (T));
+         type = ExploreDependentSizedArrayType(dyn_cast <const clang::DependentSizedArrayType> (T));
          break;
 
       case clang::Type::VariableArray:
@@ -734,19 +734,19 @@ Reflex::Type TScanner::ExploreQualType(clang::QualType qual_type)
          break;
 
       case clang::Type::Enum:
-         type = ExploreEnumType(dyn_cast <clang::EnumType> (T));
+         type = ExploreEnumType(dyn_cast <const clang::EnumType> (T));
          break;
 
       case clang::Type::Record:
-         type = ExploreRecordType(dyn_cast <clang::RecordType> (T));
+         type = ExploreRecordType(dyn_cast <const clang::RecordType> (T));
          break;
 
       case clang::Type::Elaborated:
-         type = ExploreElaboratedType(dyn_cast <clang::ElaboratedType> (T));
+         type = ExploreElaboratedType(dyn_cast <const clang::ElaboratedType> (T));
          break;
 
       case clang::Type::FunctionProto:
-         type = ExploreFunctionType(dyn_cast <clang::FunctionType> (T));
+         type = ExploreFunctionType(dyn_cast <const clang::FunctionType> (T));
          break;
 
       case clang::Type::FunctionNoProto:
@@ -754,11 +754,11 @@ Reflex::Type TScanner::ExploreQualType(clang::QualType qual_type)
          break;
 
       case clang::Type::Typedef:
-         type = ExploreTypedefType(dyn_cast <clang::TypedefType> (T));
+         type = ExploreTypedefType(dyn_cast <const clang::TypedefType> (T));
          break;
 
       case clang::Type::Builtin:
-        type = ExploreBuiltinType(dyn_cast <clang::BuiltinType> (T));
+        type = ExploreBuiltinType(dyn_cast <const clang::BuiltinType> (T));
          break;
 
       case clang::Type::Complex:
@@ -766,23 +766,23 @@ Reflex::Type TScanner::ExploreQualType(clang::QualType qual_type)
          break;
 
       case clang::Type::InjectedClassName:
-         type = ExploreInjectedClassNameType(dyn_cast <clang::InjectedClassNameType> (T));
+         type = ExploreInjectedClassNameType(dyn_cast <const clang::InjectedClassNameType> (T));
          break;
 
       case clang::Type::DependentName:
-         type = ExploreDependentNameType(dyn_cast <clang::DependentNameType> (T));
+         type = ExploreDependentNameType(dyn_cast <const clang::DependentNameType> (T));
          break;
 
       case clang::Type::SubstTemplateTypeParm:
-         type = ExploreSubstTemplateTypeParmType(dyn_cast <clang::SubstTemplateTypeParmType> (T));
+         type = ExploreSubstTemplateTypeParmType(dyn_cast <const clang::SubstTemplateTypeParmType> (T));
          break;
 
       case clang::Type::TemplateTypeParm:
-         type = ExploreTemplateTypeParmType(dyn_cast <clang::TemplateTypeParmType> (T));
+         type = ExploreTemplateTypeParmType(dyn_cast <const clang::TemplateTypeParmType> (T));
          break;
 
       case clang::Type::TemplateSpecialization:
-         type = ExploreTemplateSpecializationType(dyn_cast <clang::TemplateSpecializationType> (T));
+         type = ExploreTemplateSpecializationType(dyn_cast <const clang::TemplateSpecializationType> (T));
          break;
 
       default:
