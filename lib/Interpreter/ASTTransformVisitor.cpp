@@ -6,8 +6,6 @@
 
 #include "ASTTransformVisitor.h"
 
-#include "StmtAddressPrinter.h"
-
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
