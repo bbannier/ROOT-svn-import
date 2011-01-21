@@ -367,7 +367,7 @@ namespace cling {
             finalExpr = expr;
              // FIXME: Fix the source location of the node
              if (Stmt *S = Map.lookup(cur_stmt)) {
-                finalStmtStr = m_IncrASTParser->getTransformer()->ToString(S);
+                m_IncrASTParser->getTransformer()->ToString(S, finalStmtStr);
                 finalExpr = dyn_cast<clang::Expr>(S);
              }             
 
@@ -682,7 +682,9 @@ namespace cling {
 
    // Implements the interpretation of the unknown symbols. 
    bool Interpreter::EvalCore(llvm::GenericValue& result, const char* expr, void* varaddr) {
-      printf("%s\n%p\n", expr, varaddr);
+      printf("%s\n", expr);
+      printf("%p", varaddr);
+      printf("\n");
       return 0;
    }
    
