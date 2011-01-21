@@ -264,12 +264,6 @@ void TMVA::MethodBoost::InitHistos()
    fMonitorBoostedMethod = kTRUE;
 
 
-   Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
-   TVectorF * mvaCutValues = new TVectorF(fBoostNum);
-   //mvaCutValues->ResizeTo(fBoostNum);
-   //   mvaCutValues->SetName("mvaCutValues");
-   results->Store(mvaCutValues,"mvaCutValues");
-
 
 }
 
@@ -634,10 +628,10 @@ void TMVA::MethodBoost::FindMVACut()
       
       Double_t sum = 0.;
       
-      TH1F *mvaS= new TH1F("mvaS","",nBins,minMVA,maxMVA);
-      TH1F *mvaB= new TH1F("mvaB","",nBins,minMVA,maxMVA);
-      TH1F *mvaSC= new TH1F("mvaSC","",nBins,minMVA,maxMVA);
-      TH1F *mvaBC= new TH1F("mvaBC","",nBins,minMVA,maxMVA);
+      TH1F *mvaS  = new TH1F("mvaS","",nBins,minMVA,maxMVA);
+      TH1F *mvaB  = new TH1F("mvaB","",nBins,minMVA,maxMVA);
+      TH1F *mvaSC = new TH1F("mvaSC","",nBins,minMVA,maxMVA);
+      TH1F *mvaBC = new TH1F("mvaBC","",nBins,minMVA,maxMVA);
       
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
         
@@ -700,12 +694,12 @@ void TMVA::MethodBoost::FindMVACut()
       lastMethod->SetSignalReferenceCut(mvaCut);
       lastMethod->SetSignalReferenceCutOrientation(mvaCutOrientation);
       
-      Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
-      TVectorF *m = (TVectorF*) results->GetObject("mvaCutValues");
-      (*m)[fMethodIndex]=mvaCut;
-      
       Log() << kDEBUG << "(old step) Setting method cut to " <<lastMethod->GetSignalReferenceCut()<< Endl;
-      
+
+      mvaS ->Delete();  
+      mvaB ->Delete();
+      mvaSC->Delete();
+      mvaBC->Delete();
    }
    
 }
