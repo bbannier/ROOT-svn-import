@@ -58,9 +58,9 @@ void Boost2(){
 
    TString fisher="!H:!V";
    factory->BookMethod( TMVA::Types::kFisher, "Fisher", fisher );
-   factory->BookMethod( TMVA::Types::kBDT, "BDTMitFisher", "!H:V:NTrees=100:NCuts=101:MaxDepth=1:UseFisherCuts:UseExclusiveVars:MinLinCorrForFisher=0." );
+   factory->BookMethod( TMVA::Types::kBDT, "BDTMitFisher", "!H:V:NTrees=150:NCuts=101:MaxDepth=1:UseFisherCuts:UseExclusiveVars:MinLinCorrForFisher=0." );
 //   factory->BookMethod( TMVA::Types::kFisher, "FisherBS", fisher+":Boost_Num=100:Boost_Type=Bagging:Boost_Transform=step" );
-   factory->BookMethod( TMVA::Types::kFisher, "FisherS", fisher+":Boost_Num=100:Boost_Type=AdaBoost:Boost_Transform=step" );
+   factory->BookMethod( TMVA::Types::kFisher, "FisherS", fisher+":Boost_Num=150:Boost_Type=AdaBoost:Boost_Transform=step" );
 
 
   // Train MVAs using the set of training events
