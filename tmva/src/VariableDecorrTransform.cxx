@@ -27,6 +27,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 #include "TVectorF.h"
 #include "TVectorD.h"
@@ -182,11 +183,27 @@ const TMVA::Event* TMVA::VariableDecorrTransform::Transform( const TMVA::Event* 
                << Endl;
    }
 
+   if (fTransformedEvent==0 || fTransformedEvent->GetNVariables()!=ev->GetNVariables()) {
+      if (fTransformedEvent!=0) { delete fTransformedEvent; fTransformedEvent = 0; }
+      fTransformedEvent = new Event();
+   }
+
    // transformation to decorrelate the variables
    const Int_t nvar = fGet.size();
 
    std::vector<Float_t> input;
-   GetInput( ev, input );
+   std::vector<Char_t> mask; // entries with kTRUE must not be transformed
+   Bool_t hasMaskedEntries = GetInput( ev, input, mask );
+
+   if( hasMaskedEntries ){ // targets might be masked (for events where the targets have not been computed yet)
+      UInt_t numMasked = std::count(mask.begin(), mask.end(), kTRUE);
+      UInt_t numOK     = std::count(mask.begin(), mask.end(), kFALSE);
+      if( numMasked>0 && numOK>0 ){
+	 Log() << kFATAL << "You mixed variables and targets in the decorrelation transformation. This is not possible." << Endl;
+      }
+      SetOutput( fTransformedEvent, input, mask, ev );
+      return fTransformedEvent;
+   }
 
    TVectorD vec( nvar );
   for (Int_t ivar=0; ivar<nvar; ivar++) vec(ivar) = input.at(ivar);
@@ -194,15 +211,10 @@ const TMVA::Event* TMVA::VariableDecorrTransform::Transform( const TMVA::Event* 
    // diagonalise variable vectors
    vec *= *m;
 
-   if (fTransformedEvent==0 || fTransformedEvent->GetNVariables()!=ev->GetNVariables()) {
-      if (fTransformedEvent!=0) { delete fTransformedEvent; fTransformedEvent = 0; }
-      fTransformedEvent = new Event();
-   }
-
    input.clear();
    for (Int_t ivar=0; ivar<nvar; ivar++) input.push_back( vec(ivar) );
 
-   SetOutput( fTransformedEvent, input, ev );
+   SetOutput( fTransformedEvent, input, mask, ev );
 
    return fTransformedEvent;
 }
@@ -212,7 +224,7 @@ const TMVA::Event* TMVA::VariableDecorrTransform::InverseTransform( const TMVA::
 {
    // apply the inverse decorrelation transformation ... 
    // TODO : ... build the inverse transformation
-   Log() << kFATAL << "Inverse transformation for decorrelation transformation not yet implemented. Hence, this transformation cannot be applied together with regression. Please contact the authors if necessary." << Endl;
+   Log() << kFATAL << "Inverse transformation for decorrelation transformation not yet implemented. Hence, this transformation cannot be applied together with regression if targets should be transformed. Please contact the authors if necessary." << Endl;
 
 
    return fBackTransformedEvent;

@@ -28,6 +28,7 @@
 #include <iostream>
 #include <iomanip>
 #include <stdexcept>
+#include <algorithm>
 
 #include "TVectorF.h"
 #include "TVectorD.h"
@@ -133,23 +134,23 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
    }
 
    std::vector<Float_t> input;
+   std::vector<Char_t>  mask;
    std::vector<Float_t> principalComponents;
 
-   // set the variable values
-//    const std::vector<UInt_t>* varArrange = ev->GetVariableArrangement();
-//    if(!varArrange) {
-      GetInput( ev, input );
-      X2P( principalComponents, input, cls );
-      SetOutput( fTransformedEvent, principalComponents, ev );
-//    } else {
-//       // TODO: check what has to be done here
-//       std::vector<Float_t> rv(inputSize);
-//       for (Int_t ivar=0; ivar<inputSize; ++ivar)
-//          rv[ivar] = ev->GetValue(ivar);
-//       X2P( principalComponents, input, cls );
-//       for (Int_t ivar=0; ivar<inputSize; ++ivar)
-//          fTransformedEvent->SetVal(ivar, rv[ivar]);
-//    }
+   Bool_t hasMaskedEntries = GetInput( ev, input, mask );
+
+   if( hasMaskedEntries ){ // targets might be masked (for events where the targets have not been computed yet)
+      UInt_t numMasked = std::count(mask.begin(), mask.end(), kTRUE);
+      UInt_t numOK     = std::count(mask.begin(), mask.end(), kFALSE);
+      if( numMasked>0 && numOK>0 ){
+	 Log() << kFATAL << "You mixed variables and targets in the decorrelation transformation. This is not possible." << Endl;
+      }
+      SetOutput( fTransformedEvent, input, mask, ev );
+      return fTransformedEvent;
+   }
+
+   X2P( principalComponents, input, cls );
+   SetOutput( fTransformedEvent, principalComponents, mask, ev );
 
    return fTransformedEvent;
 }
@@ -180,25 +181,12 @@ const TMVA::Event* TMVA::VariablePCATransform::InverseTransform( const Event* co
 
 
    std::vector<Float_t> principalComponents;
+   std::vector<Char_t>  mask;
    std::vector<Float_t> output;
 
-   // set the variable values
-//    const std::vector<UInt_t>* varArrange = ev->GetVariableArrangement();
-//    if(!varArrange) {
-
-      GetInput( ev, principalComponents, kTRUE );
-      P2X( output, principalComponents, cls );
-      SetOutput( fBackTransformedEvent, output, ev, kTRUE );
-
-//    } else {
-//       // TODO: check what has to be done here
-//       std::vector<Float_t> rv(inputSize);
-//       for (Int_t ivar=0; ivar<inputSize; ++ivar)
-//          rv[ivar] = ev->GetValue(ivar);
-//       P2X( principalComponents, output, cls );
-//       for (Int_t ivar=0; ivar<inputSize; ++ivar)
-//          fBackTransformedEvent->SetVal(ivar, rv[ivar]);
-//    }
+   GetInput( ev, principalComponents, mask, kTRUE );
+   P2X( output, principalComponents, cls );
+   SetOutput( fBackTransformedEvent, output, mask, ev, kTRUE );
 
    return fBackTransformedEvent;
 }
@@ -231,11 +219,17 @@ void TMVA::VariablePCATransform::CalculatePrincipalComponents( const std::vector
    Double_t *dvec = new Double_t[inputSize];
 
    std::vector<Float_t> input;
+   std::vector<Char_t>  mask;
    for (ievt=0; ievt<entries; ievt++) {
       Event* ev = events[ievt];
       UInt_t cls = ev->GetClass();
 
-      GetInput( ev, input );
+      Bool_t hasMaskedEntries = GetInput( ev, input, mask );
+      if (hasMaskedEntries){
+	 Log() << kWARNING << "Print event which triggers an error" << Endl;
+	 ev->Print(Log());
+	 Log() << kFATAL << "Masked entries found in event read in when calculating the principal components for the PCA transformation." << Endl;
+      }
 
       UInt_t iinp = 0;
       for( std::vector<Float_t>::iterator itInp = input.begin(), itInpEnd = input.end(); itInp != itInpEnd; ++itInp )
