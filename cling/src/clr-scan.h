@@ -91,31 +91,31 @@ private:
    void UnsupportedType(clang::QualType qual_type);
    void UnimportantType(clang::QualType qual_type);
    void UnimplementedType(clang::QualType qual_type);
-   void UnimplementedType (clang::Type* T);
+   void UnimplementedType (const clang::Type* T);
 
    std::string GetClassName(clang::RecordDecl* D);
    std::string GetEnumName(clang::EnumDecl* D);
    Reflex::ClassBuilder* GetClassBuilder(clang::RecordDecl* D, TString template_params = "");
 
-   Reflex::Type ExplorePointerType(clang::PointerType* T);
-   Reflex::Type ExploreLValueReferenceType(clang::LValueReferenceType* T);
-   Reflex::Type ExploreMemberPointerType(clang::MemberPointerType* T);
-   Reflex::Type ExploreArrayType(clang::ArrayType* T);
-   Reflex::Type ExploreIncompleteArrayType(clang::IncompleteArrayType* T);
-   Reflex::Type ExploreDependentSizedArrayType(clang::DependentSizedArrayType* T);
-   Reflex::Type ExploreFunctionType(clang::FunctionType* T);
-   Reflex::Type ExploreEnumType(clang::EnumType* T);
-   Reflex::Type ExploreRecordType(clang::RecordType* T);
+   Reflex::Type ExplorePointerType(const clang::PointerType* T);
+   Reflex::Type ExploreLValueReferenceType(const clang::LValueReferenceType* T);
+   Reflex::Type ExploreMemberPointerType(const clang::MemberPointerType* T);
+   Reflex::Type ExploreArrayType(const clang::ArrayType* T);
+   Reflex::Type ExploreIncompleteArrayType(const clang::IncompleteArrayType* T);
+   Reflex::Type ExploreDependentSizedArrayType(const clang::DependentSizedArrayType* T);
+   Reflex::Type ExploreFunctionType(const clang::FunctionType* T);
+   Reflex::Type ExploreEnumType(const clang::EnumType* T);
+   Reflex::Type ExploreRecordType(const clang::RecordType* T);
 
-   Reflex::Type ExploreElaboratedType(clang::ElaboratedType* T);
-   Reflex::Type ExploreTypedefType(clang::TypedefType* T);
-   Reflex::Type ExploreBuiltinType(clang::BuiltinType* T);
-   Reflex::Type ExploreInjectedClassNameType(clang::InjectedClassNameType* T);
-   Reflex::Type ExploreDependentNameType(clang::DependentNameType* T);
+   Reflex::Type ExploreElaboratedType(const clang::ElaboratedType* T);
+   Reflex::Type ExploreTypedefType(const clang::TypedefType* T);
+   Reflex::Type ExploreBuiltinType(const clang::BuiltinType* T);
+   Reflex::Type ExploreInjectedClassNameType(const clang::InjectedClassNameType* T);
+   Reflex::Type ExploreDependentNameType(const clang::DependentNameType* T);
 
-   Reflex::Type ExploreTemplateTypeParmType(clang::TemplateTypeParmType* T);
-   Reflex::Type ExploreSubstTemplateTypeParmType(clang::SubstTemplateTypeParmType* T);
-   Reflex::Type ExploreTemplateSpecializationType(clang::TemplateSpecializationType* T);
+   Reflex::Type ExploreTemplateTypeParmType(const clang::TemplateTypeParmType* T);
+   Reflex::Type ExploreSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* T);
+   Reflex::Type ExploreTemplateSpecializationType(const clang::TemplateSpecializationType* T);
 
    Reflex::Type ExploreQualType(clang::QualType qual_type);
 
