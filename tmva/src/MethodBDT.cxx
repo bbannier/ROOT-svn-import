@@ -838,14 +838,16 @@ void TMVA::MethodBDT::Train()
          
          fITree = itree;
          fMonitorNtuple->Fill();
-         if (  itree==fNTrees-1 ||  (!(itree%500)) ||
-               (!(itree%250) && itree <1000)||
-               (!(itree%100) && itree < 500)||
-               (!(itree%50)  && itree < 250)||
-               (!(itree%25)  && itree < 150)||
-               (!(itree%10)  && itree <  50)||
-               (!(itree%5)   && itree <  20)
-               ) BoostMonitor(itree);
+         if (! DoRegression() ){
+            if (  itree==fNTrees-1 ||  (!(itree%500)) ||
+                  (!(itree%250) && itree <1000)||
+                  (!(itree%100) && itree < 500)||
+                  (!(itree%50)  && itree < 250)||
+                  (!(itree%25)  && itree < 150)||
+                  (!(itree%10)  && itree <  50)||
+                  (!(itree%5)   && itree <  20)
+                  ) BoostMonitor(itree);
+         }
       }
    }
 
