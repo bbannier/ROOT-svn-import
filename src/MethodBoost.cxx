@@ -413,7 +413,7 @@ void TMVA::MethodBoost::Train()
          {
             timer.DrawProgressBar( fBoostNum );
             fBoostNum = fMethodIndex+1; 
-            Log() << kINFO << "Error rate has reached 0.5, boosting process stopped at #" << fBoostNum << " classifier" << Endl;
+            Log() << kERROR << "Error rate has reached 0.5, boosting process stopped at #" << fBoostNum << " classifier" << Endl;
             if (fBoostNum < 5)
                Log() << kINFO << "The classifier might be too strong to boost with Beta = " << fADABoostBeta << ", try reducing it." <<Endl;
             for (Int_t i=0;i<fDefaultHistNum;i++)

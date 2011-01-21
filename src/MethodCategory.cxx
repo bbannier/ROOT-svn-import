@@ -11,10 +11,15 @@
  *      Virtual base class for all MVA method                                     *
  *                                                                                *
  * Authors (alphabetical):                                                        *
+ *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
  *      Nadim Sah       <Nadim.Sah@cern.ch>      - Berlin, Germany                *
+ *      Peter Speckmayer <Peter.Speckmazer@cern.ch> - CERN, Switzerland           *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
+ *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
+ *      Jan Therhaag  <Jan.Therhaag@cern.ch>        - U of Bonn, Germany          *
+ *      Eckhard v. Toerne  <evt@uni-bonn.de>        - U of Bonn, Germany          *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
  *      U. of Victoria, Canada                                                    *
  *      MPI-K Heidelberg, Germany                                                 *
@@ -605,5 +610,41 @@ Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err, Double_t* errUpper )
    Double_t mvaValue = dynamic_cast<MethodBase*>(fMethods[methodToUse])->GetMvaValue(ev,err,errUpper);
 
    return mvaValue;
+}
+
+
+
+//_______________________________________________________________________
+const std::vector<Float_t> &TMVA::MethodCategory::GetRegressionValues() 
+{
+   // returns the mva value of the right sub-classifier
+
+   if (fMethods.size()==0) return MethodBase::GetRegressionValues();
+
+   UInt_t methodToUse = 0;
+   const Event* ev = GetEvent();
+
+   // determine which sub-classifier to use for this event
+   Int_t suitableCutsN = 0;
+
+   for (UInt_t i=0; i<fMethods.size(); ++i) {
+      if (PassesCut(ev, i)) {
+         ++suitableCutsN;
+         methodToUse=i;
+      }
+   }
+
+   if (suitableCutsN == 0) {
+      Log() << kWARNING << "Event does not lie within the cut of any sub-classifier." << Endl;
+      return MethodBase::GetRegressionValues();
+   }
+
+   if (suitableCutsN > 1) {
+      Log() << kFATAL << "The defined categories are not disjoint." << Endl;
+      return MethodBase::GetRegressionValues();
+   }
+
+   // get mva value from the suitable sub-classifier
+   return dynamic_cast<MethodBase*>(fMethods[methodToUse])->GetRegressionValues();
 }
 
