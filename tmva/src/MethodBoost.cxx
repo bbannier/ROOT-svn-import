@@ -12,15 +12,15 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmazer@cern.ch> - CERN, Switzerland           *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
- *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
- *      Or Cohen        <orcohenor@gmail.com>    - Weizmann Inst., Israel         *
+ *      Jan Therhaag  <Jan.Therhaag@cern.ch>        - U of Bonn, Germany          *
  *      Eckhard v. Toerne  <evt@uni-bonn.de>        - U of Bonn, Germany          *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
- *      U. of Victoria, Canada                    #include "TMVA/Timer.h"         *
+ *      U. of Victoria, Canada                                                    *
  *      MPI-K Heidelberg, Germany                                                 *
  *      U. of Bonn, Germany                                                       *
  *                                                                                *
@@ -548,8 +548,8 @@ void TMVA::MethodBoost::TestClassification()
       if (fMethods.size()<nloop) nloop = fMethods.size();
       //running over all the events and populating the test MVA histograms
       Data()->SetCurrentType(Types::kTesting);
-      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-         Event* ev = Data()->GetEvent(ievt);
+      for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
+         const Event* ev = GetEvent(ievt);
          Float_t w = ev->GetWeight();
          if (DataInfo().IsSignal(ev)) {
             for (UInt_t imtd=0; imtd<nloop; imtd++) {
@@ -717,11 +717,11 @@ void TMVA::MethodBoost::SingleBoost()
    if(!method) return;
    Event * ev; Float_t w,v,wo; Bool_t sig=kTRUE;
    Double_t sumAll=0, sumWrong=0, sumAllOrig=0, sumWrongOrig=0, sumAll1=0;
-   Bool_t* WrongDetection=new Bool_t[Data()->GetNEvents()];
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) WrongDetection[ievt]=kTRUE;
+   Bool_t* WrongDetection=new Bool_t[GetNEvents()];
+   for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) WrongDetection[ievt]=kTRUE;
 
    // finding the wrong events and calculating their total weights
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+   for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
       ev = Data()->GetEvent(ievt);
       sig=DataInfo().IsSignal(ev);
       v = fMVAvalues->at(ievt);
@@ -771,7 +771,7 @@ void TMVA::MethodBoost::SingleBoost()
       // touching the original weights (changing only the boosted weight of all the events)
       // first reweight
       Double_t newSum=0., oldSum=0.;
-      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
          ev =  Data()->GetEvent(ievt);
          oldSum += ev->GetWeight();
          //         ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 1.0)));
@@ -783,7 +783,7 @@ void TMVA::MethodBoost::SingleBoost()
       Double_t normWeight = oldSum/newSum;
       // bla      std::cout << "Normalize weight by (Boost)" << normWeight <<  " = " << oldSum<<"/"<<newSum<< " eventBoostFactor="<<fBoostWeight<<std::endl;
       // next normalize the weights
-      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
          Data()->GetEvent(ievt)->ScaleBoostWeight(normWeight);
       }
 
@@ -791,7 +791,7 @@ void TMVA::MethodBoost::SingleBoost()
    else if (fBoostType == "Bagging") {
       // Bagging or Bootstrap boosting, gives new random weight for every event
       TRandom3*trandom   = new TRandom3(fRandomSeed+fMethods.size());
-      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
          ev->SetBoostWeight(trandom->Rndm());
          sumAll1+=ev->GetWeight();
@@ -799,7 +799,7 @@ void TMVA::MethodBoost::SingleBoost()
       // rescaling all the weights to have the same sum, but without touching the original
       // weights (changing only the boosted weight of all the events)
       Double_t Factor=sumAll/sumAll1;
-      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
          ev->ScaleBoostWeight(Factor);
       }
@@ -810,7 +810,7 @@ void TMVA::MethodBoost::SingleBoost()
       // from the MVA cut value
       Double_t MVACutValue = method->GetSignalReferenceCut();
       sumAll1 = 0;
-      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
 	 if (fBoostType == "HighEdgeGauss")
 	    ev->SetBoostWeight( TMath::Exp( -std::pow(fMVAvalues->at(ievt)-MVACutValue,2)/(0.1*fADABoostBeta) ) );
@@ -825,7 +825,7 @@ void TMVA::MethodBoost::SingleBoost()
       // touching the original weights (changing only the boosted
       // weight of all the events)
       Double_t Factor=sumAll/sumAll1;
-      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++)
+      for (Long64_t ievt=0; ievt<GetNEvents(); ievt++)
          Data()->GetEvent(ievt)->ScaleBoostWeight(Factor);
    }
    delete[] WrongDetection;
@@ -850,7 +850,7 @@ void TMVA::MethodBoost::CalcMethodWeight()
    FindMVACut();
 
    // finding the wrong events and calculating their total weights
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+   for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
       ev      = Data()->GetEvent(ievt);
       w       = ev->GetWeight();
       sumAll += w;
@@ -1037,8 +1037,8 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    if (singleMethod && eTT==Types::kTraining)
       mvaRes = fMVAvalues; // values already calculated
    else {  //Helge, please check if this logic is correct. ToDo!!!
-      mvaRes = new std::vector <Float_t>(Data()->GetNEvents());
-      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      mvaRes = new std::vector <Float_t>(GetNEvents());
+      for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
          Data()->GetEvent(ievt);
          (*mvaRes)[ievt] = singleMethod ? method->GetMvaValue(&err) : GetMvaValue(&err);
       }
@@ -1130,7 +1130,7 @@ void TMVA::MethodBoost::CalcMVAValues()
       return;
    }
    // calculate MVA values
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+   for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
       Data()->GetEvent(ievt);
       fMVAvalues->at(ievt) = method->GetMvaValue();
    }
