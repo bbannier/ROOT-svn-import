@@ -301,7 +301,7 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables, B
 
 
 //_______________________________________________________________________
-void TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Float_t>& input, Bool_t backTransformation ) const
+Bool_t TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Float_t>& input, std::vector<Char_t>& mask, Bool_t backTransformation ) const
 {
    // select the values from the event
 
@@ -318,33 +318,45 @@ void TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Floa
    }
 
    input.clear();
+   mask.clear();
+   Bool_t hasMaskedEntries = kFALSE;
 //   event->Print(std::cout);
    for( ; itEntry != itEntryEnd; ++itEntry ) {
       Char_t type = (*itEntry).first;
       Int_t  idx  = (*itEntry).second;
 
-      switch( type ) {
-      case 'v':
-	 input.push_back( event->GetValue(idx) );
-	 break;
-      case 't':
-	 input.push_back( event->GetTarget(idx) );
-	 break;
-      case 's':
-	 input.push_back( event->GetSpectator(idx) );
-	 break;
-      default:
-	 Log() << kFATAL << "VariableTransformBase/GetInput : unknown type '" << type << "'." << Endl;
+      try{
+	 switch( type ) {
+	 case 'v':
+	    input.push_back( event->GetValue(idx) );
+	    break;
+	 case 't':
+	    input.push_back( event->GetTarget(idx) );
+	    break;
+	 case 's':
+	    input.push_back( event->GetSpectator(idx) );
+	    break;
+	 default:
+	    Log() << kFATAL << "VariableTransformBase/GetInput : unknown type '" << type << "'." << Endl;
+	 }
+	 mask.push_back(kFALSE);
+      }
+      catch(std::out_of_range& excpt){ // happens when an event is transformed which does not yet have the targets calculated (in the application phase)
+	 input.push_back(0.f);
+	 mask.push_back(kTRUE);
+	 hasMaskedEntries = kTRUE;
       }
    }
+   return hasMaskedEntries;
 }
 
 //_______________________________________________________________________
-void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>& output, const Event* oldEvent, Bool_t backTransformation ) const
+void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>& output, std::vector<Char_t>& mask, const Event* oldEvent, Bool_t backTransformation ) const
 {
    // select the values from the event
    
    std::vector<Float_t>::iterator itOutput = output.begin();
+   std::vector<Char_t>::iterator  itMask   = mask.begin();
 
    if( oldEvent )
       event->CopyVarValues( *oldEvent );
@@ -365,6 +377,13 @@ void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>&
 
 
       for( ; itEntry != itEntryEnd; ++itEntry ) {
+
+	 if( (*itMask) ){ // if the value is masked
+//	    ++itOutput; // no value available
+	    ++itMask;
+	    continue;
+	 }
+
 	 Char_t type = (*itEntry).first;
 	 Int_t  idx  = (*itEntry).second;
 	 

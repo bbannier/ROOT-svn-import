@@ -60,7 +60,7 @@ void TMVA::VariableRearrangeTransform::Initialize()
 }
 
 //_______________________________________________________________________
-Bool_t TMVA::VariableRearrangeTransform::PrepareTransformation( const std::vector<Event*>& events )
+Bool_t TMVA::VariableRearrangeTransform::PrepareTransformation( const std::vector<Event*>& /*events*/ )
 {
    // prepare transformation --> (nothing to do)
    if (!IsEnabled() || IsCreated()) return kTRUE;
@@ -89,17 +89,18 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::Transform( const TMVA::Even
       fTransformedEvent = new Event();
 
    FloatVector input; // will be filled with the selected variables, (targets)
+   std::vector<Char_t> mask; // masked variables
 //    std::cout << "========" << std::endl;
 //    UInt_t nvars = 0, ntgts = 0, nspcts = 0;
 //    CountVariableTypes( nvars, ntgts, nspcts );
 //    std::cout << "vartypes&varrearrtransf/trnsfrm: " << nvars << " " << ntgts << " " << nspcts << std::endl;
 //    ev->Print(std::cout);
-   GetInput( ev, input );
+   GetInput( ev, input, mask );
 //    for( std::vector<Float_t>::iterator it = input.begin(), itEnd = input.end(); it != itEnd; ++it ){
 //       std::cout << (*it) << "  ";
 //    }
 //    std::cout << std::endl;
-   SetOutput( fTransformedEvent, input, ev );
+   SetOutput( fTransformedEvent, input, mask, ev );
 //    std::cout << "transformed ---" << std::endl;
 //    fTransformedEvent->Print(std::cout);
 
@@ -120,10 +121,11 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::InverseTransform( const TMV
       fBackTransformedEvent = new Event( *ev );
 
    FloatVector input;  // will be filled with the selected variables, targets, (spectators)
+   std::vector<Char_t> mask; // masked variables
 //   std::cout << "inv =====" << std::endl;
-   GetInput( ev, input, kTRUE );
+   GetInput( ev, input, mask, kTRUE );
 //   ev->Print(std::cout);
-   SetOutput( fBackTransformedEvent, input, ev, kTRUE );
+   SetOutput( fBackTransformedEvent, input, mask, ev, kTRUE );
 //    std::cout << "inv ---" << std::endl;
 //    fBackTransformedEvent->Print(std::cout);
 

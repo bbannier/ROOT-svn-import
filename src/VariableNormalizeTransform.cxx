@@ -114,7 +114,8 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::Transform( const TMVA::Even
 
    FloatVector input; // will be filled with the selected variables, targets, (spectators)
    FloatVector output; // will be filled with the selected variables, targets, (spectators)
-   GetInput( ev, input );
+   std::vector<Char_t> mask; // entries with kTRUE must not be transformed
+   GetInput( ev, input, mask );
 
    if (fTransformedEvent==0) fTransformedEvent = new Event();
 
@@ -123,7 +124,15 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::Transform( const TMVA::Even
    const FloatVector& maxVector = fMax.at(cls);
    
    UInt_t iidx = 0;          
+   std::vector<Char_t>::iterator itMask = mask.begin();
    for ( std::vector<Float_t>::iterator itInp = input.begin(), itInpEnd = input.end(); itInp != itInpEnd; ++itInp) { // loop over input variables
+      if( (*itMask) ){
+	 ++iidx;
+	 ++itMask;
+	 // don't put any value into output if the value is masked
+	 continue;
+      }
+
       Float_t val = (*itInp);
 
       min = minVector.at(iidx); 
@@ -135,9 +144,10 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::Transform( const TMVA::Even
       output.push_back( valnorm );
 
       ++iidx;
+      ++itMask;
    }
    
-   SetOutput( fTransformedEvent, output, ev );
+   SetOutput( fTransformedEvent, output, mask, ev );
    return fTransformedEvent;
 }
 
@@ -156,7 +166,8 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::InverseTransform( const TMV
 
    FloatVector input;  // will be filled with the selected variables, targets, (spectators)
    FloatVector output; // will be filled with the output
-   GetInput( ev, input, kTRUE );
+   std::vector<Char_t> mask;
+   GetInput( ev, input, mask, kTRUE );
 
    if (fBackTransformedEvent==0) fBackTransformedEvent = new Event( *ev );
 
@@ -179,7 +190,7 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::InverseTransform( const TMV
       ++iidx;
    }
 
-   SetOutput( fBackTransformedEvent, output, ev, kTRUE );
+   SetOutput( fBackTransformedEvent, output, mask, ev, kTRUE );
 
    return fBackTransformedEvent;
 }
@@ -192,6 +203,7 @@ void TMVA::VariableNormalizeTransform::CalcNormalizationParams( const std::vecto
       Log() << kFATAL << "Not enough events (found " << events.size() << ") to calculate the normalization" << Endl;
    
    FloatVector input; // will be filled with the selected variables, targets, (spectators)
+   std::vector<Char_t> mask;
 
    UInt_t inputSize = fGet.size(); // number of input variables
 
@@ -222,7 +234,7 @@ void TMVA::VariableNormalizeTransform::CalcNormalizationParams( const std::vecto
       FloatVector& minVectorAll = fMin.at(all);
       FloatVector& maxVectorAll = fMax.at(all);
 
-      GetInput(event,input);    // select the input variables for the transformation and get them from the event
+      GetInput(event,input,mask);    // select the input variables for the transformation and get them from the event
       UInt_t iidx = 0;          
       for ( std::vector<Float_t>::iterator itInp = input.begin(), itInpEnd = input.end(); itInp != itInpEnd; ++itInp) { // loop over input variables
          Float_t val = (*itInp);

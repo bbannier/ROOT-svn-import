@@ -89,8 +89,8 @@ namespace TMVA {
 
       // variable selection
       virtual void           SelectInput( const TString& inputVariables, Bool_t putIntoVariables = kFALSE );
-      virtual void           GetInput ( const Event* event, std::vector<Float_t>& input, Bool_t backTransform = kFALSE  ) const;
-      virtual void           SetOutput( Event* event, std::vector<Float_t>& output, const Event* oldEvent = 0, Bool_t backTransform = kFALSE ) const;
+      virtual Bool_t         GetInput ( const Event* event, std::vector<Float_t>& input, std::vector<Char_t>& mask, Bool_t backTransform = kFALSE  ) const;
+      virtual void           SetOutput( Event* event, std::vector<Float_t>& output, std::vector<Char_t>& mask, const Event* oldEvent = 0, Bool_t backTransform = kFALSE ) const;
       virtual void           CountVariableTypes( UInt_t& nvars, UInt_t& ntgts, UInt_t& nspcts ) const;
 
       void ToggleInputSortOrder( const Bool_t sortOrder ) { fSortGet = sortOrder; }

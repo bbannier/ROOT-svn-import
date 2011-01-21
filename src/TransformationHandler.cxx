@@ -109,7 +109,7 @@ TMVA::VariableTransformBase* TMVA::TransformationHandler::AddTransformation( Var
    trf->Log().SetSource(TString(fCallerName+"_"+tfname+"_TF").Data());
    fTransformations.Add(trf);
    fTransformationsReferenceClasses.push_back( cls );
-   return trf;
+  return trf;
 }
 
 //_______________________________________________________________________
@@ -140,7 +140,7 @@ void TMVA::TransformationHandler::SetTransformationReferenceClass( Int_t cls )
 const TMVA::Event* TMVA::TransformationHandler::Transform( const Event* ev ) const 
 {
    // the transformation
-
+   
    TListIter trIt(&fTransformations);
    std::vector<Int_t>::const_iterator rClsIt = fTransformationsReferenceClasses.begin();
    const Event* trEv = ev;

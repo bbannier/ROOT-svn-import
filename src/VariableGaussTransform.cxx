@@ -12,6 +12,7 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch> - CERN, Switzerland           *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Eckhard v. Toerne     <evt@uni-bonn.de>  - Uni Bonn, Germany              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
@@ -133,13 +134,24 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
    UInt_t inputSize = fGet.size();
 
    std::vector<Float_t> input;
-   GetInput( ev, input );
+   std::vector<Float_t> output;
 
+   std::vector<Char_t> mask; // entries with kTRUE must not be transformed
+   GetInput( ev, input, mask );
+
+   std::vector<Char_t>::iterator itMask = mask.begin();
+   
 //   TVectorD vec( inputSize );
 //   for (UInt_t ivar=0; ivar<inputSize; ivar++) vec(ivar) = input.at(ivar);
    Double_t cumulant;
    //transformation   
    for (UInt_t ivar=0; ivar<inputSize; ivar++) {
+
+      if ( (*itMask) ){
+	 ++itMask;
+	 continue;
+      }
+
       if (0 != fCumulativePDF[ivar][cls]) { 
          // first make it flat
          if(fTMVAVersion>TMVA_VERSION(3,9,7))
@@ -150,7 +162,7 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
          cumulant = TMath::Max(cumulant,0.+10e-10);
 
          if (fFlatNotGauss)
-            input.at(ivar) = cumulant; 
+            output.push_back( cumulant ); 
          else {
             // sanity correction for out-of-range values
             Double_t maxErfInvArgRange = 0.99999999;
@@ -158,7 +170,7 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
             arg = TMath::Min(+maxErfInvArgRange,arg);
             arg = TMath::Max(-maxErfInvArgRange,arg);
             
-            input.at(ivar) = 1.414213562*TMath::ErfInverse(arg);
+            output.push_back( 1.414213562*TMath::ErfInverse(arg) );
          }
       }
    }
@@ -168,7 +180,7 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
       fTransformedEvent = new Event();
    }
 
-   SetOutput( fTransformedEvent, input, ev );
+   SetOutput( fTransformedEvent, output, mask, ev );
 
    return fTransformedEvent;
 }
@@ -178,7 +190,7 @@ const TMVA::Event* TMVA::VariableGaussTransform::InverseTransform( const Event* 
 {
    // apply the Gauss transformation
    // TODO: implementation of inverse transformation
-   Log() << kFATAL << "Inverse transformation for Gauss transformation not yet implemented. Hence, this transformation cannot be applied together with regression. Please contact the authors if necessary." << Endl;
+   Log() << kFATAL << "Inverse transformation for Gauss transformation not yet implemented. Hence, this transformation cannot be applied together with regression if targets should be transformed. Please contact the authors if necessary." << Endl;
 
    if (!IsCreated())
       Log() << kFATAL << "Transformation not yet created" 
@@ -254,6 +266,7 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
    }
 
    std::vector<Float_t> input;
+   std::vector<Char_t> mask; // entries with kTRUE must not be transformed
 
    // perform event loop
    Float_t *sumOfWeights = new Float_t[numDist]; 
@@ -273,7 +286,13 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
       if (maxWeight[cls] < eventWeight) maxWeight[cls]=eventWeight;
       if (numDist>1) sumOfWeights[numDist-1] += eventWeight;
 
-      GetInput( ev, input );
+      Bool_t hasMaskedEntries = GetInput( ev, input, mask );
+      if( hasMaskedEntries ){
+	 Log() << kWARNING << "Incomplete event" << Endl;
+	 ev->Print(Log());
+	 Log() << kFATAL << "Targets or variables masked by transformation. Apparently (a) value(s) is/are missing in this event." << Endl;
+      }
+	 
 
       Int_t ivar = 0;
       for( std::vector<Float_t>::iterator itInput = input.begin(), itInputEnd = input.end(); itInput != itInputEnd; ++itInput ) {
@@ -367,7 +386,7 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
       Int_t cls = ev->GetClass();
       Float_t eventWeight = ev->GetWeight();
       
-      GetInput( ev, input );
+      GetInput( ev, input, mask );
 
       Int_t ivar = 0;
       for( std::vector<Float_t>::iterator itInput = input.begin(), itInputEnd = input.end(); itInput != itInputEnd; ++itInput ) {
