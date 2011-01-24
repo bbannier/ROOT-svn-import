@@ -35,7 +35,14 @@ namespace cling {
    private: // members
       FunctionDecl *EvalDecl;
       MapTy m_SubstSymbolMap;
-      std::string m_EvalExpressionBuf; //the string we escape
+      /* 
+         Specifies the unknown symbol surrounding
+         Example: int a; ...; h->Draw(a); -> Eval(gCling, "*(int*)@0", {&a});
+         m_EvalExpressionBuf holds the types of the variables.
+         m_Environment holds the refs from which runtime addresses are built.
+      */
+      std::string m_EvalExpressionBuf;
+      llvm::SmallVector<DeclRefExpr*, 64> *m_Environment;
 
    public: // members
       void *gCling; //Pointer to the Interpreter object
@@ -54,10 +61,10 @@ namespace cling {
       //region Constructors
       
       explicit ASTTransformVisitor()
-         : EvalDecl(0), gCling(0), SemaPtr(0), CurrentDecl(0){}
+         : EvalDecl(0), m_Environment(0), gCling(0), SemaPtr(0), CurrentDecl(0){}
       
       ASTTransformVisitor(void* gCling, Sema *SemaPtr)
-         : EvalDecl(0), gCling(gCling),  SemaPtr(SemaPtr), CurrentDecl(0){}
+         : EvalDecl(0), m_Environment(0), gCling(gCling), SemaPtr(SemaPtr), CurrentDecl(0){}
 
       //endregion
       
@@ -81,19 +88,14 @@ namespace cling {
       void setEvalDecl(FunctionDecl *FDecl) { if (!EvalDecl) EvalDecl = FDecl; }
       MapTy &getSubstSymbolMap() { return m_SubstSymbolMap; }
       
-      //region DeclVisitor
-      
+      // DeclVisitor      
       void Visit(Decl *D);
       void VisitFunctionDecl(FunctionDecl *D);
       void VisitTemplateDecl(TemplateDecl *D); 
-      
       void VisitDecl(Decl *D);
       void VisitDeclContext(DeclContext *DC);
 
-      //endregion
-
-      //region StmtVisitor
-
+      // StmtVisitor
       EvalInfo VisitStmt(Stmt *Node);
       EvalInfo VisitExpr(Expr *Node);
       // EvalInfo VisitCompoundStmt(CompoundStmt *S);
@@ -103,17 +105,13 @@ namespace cling {
       EvalInfo VisitBinaryOperator(BinaryOperator *binOp);
       EvalInfo VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node);
 
-      //endregion
-
-      //region EvalBuilder
-
+      //EvalBuilder
       Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree/*, CompoundStmt *Parent*/);
       CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree, ASTOwningVector<Expr*> &CallArgs);
       const char *ToString(Stmt *S, std::string &sbuf);
-      Expr *BuildEvalCharArg(QualType ToType, Expr *SubTree);
+      Expr *BuildEvalEnvironment(QualType ToType, Expr *SubTree);
       bool IsArtificiallyDependent(Expr *Node);
       bool ShouldVisit(Decl *D);
-      //endregion
       
    };
    

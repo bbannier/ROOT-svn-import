@@ -16,10 +16,12 @@ namespace {
  
    class StmtPrinterHelper : public PrinterHelper  {
    private:
-      PrintingPolicy Policy;
+      PrintingPolicy m_Policy;
+      llvm::SmallVector<clang::DeclRefExpr*, 64> m_Environment;
    public:
       
-      StmtPrinterHelper(const PrintingPolicy &Policy) : Policy(Policy) {}
+      StmtPrinterHelper(const PrintingPolicy &Policy, llvm::SmallVector<clang::DeclRefExpr*, 64> &Environment) : 
+         m_Policy(Policy), m_Environment(Environment) {}
       
       virtual ~StmtPrinterHelper() {}
       
@@ -33,7 +35,7 @@ namespace {
          // CXXDependentScopeMemberExpr
          if (DeclRefExpr *Node = dyn_cast<DeclRefExpr>(S)) {
             if (NestedNameSpecifier *Qualifier = Node->getQualifier())
-               Qualifier->print(OS, Policy);
+               Qualifier->print(OS, m_Policy);
 
             OS << Node->getNameInfo(); // prints the parameters
 
@@ -41,7 +43,7 @@ namespace {
                OS << TemplateSpecializationType::PrintTemplateArgumentList(
                                                                            Node->getTemplateArgs(),
                                                                            Node->getNumTemplateArgs(),
-                                                                           Policy);  
+                                                                           m_Policy);  
             if (Node->hasExplicitTemplateArgs())
                assert((Node->getTemplateArgs() || Node->getNumTemplateArgs()) && "There shouldn't be template paramlist");
 
@@ -49,13 +51,13 @@ namespace {
          }
          else if (DependentScopeDeclRefExpr *Node = dyn_cast<DependentScopeDeclRefExpr>(S)) {
             if (NestedNameSpecifier *Qualifier = Node->getQualifier())
-               Qualifier->print(OS, Policy);
+               Qualifier->print(OS, m_Policy);
             OS << Node->getNameInfo();
             if (Node->hasExplicitTemplateArgs())
                OS << TemplateSpecializationType::PrintTemplateArgumentList(
                                                                            Node->getTemplateArgs(),
                                                                            Node->getNumTemplateArgs(),
-                                                                           Policy);
+                                                                           m_Policy);
             
             
             
@@ -241,7 +243,7 @@ namespace cling {
 
       // Arg 1:
       QualType CastTo = C.getPointerType(C.getConstType(C.CharTy));
-      Expr *Arg1 = BuildEvalCharArg(CastTo, SubTree);
+      Expr *Arg1 = BuildEvalEnvironment(CastTo, SubTree);
       CallArgs.push_back(Arg1);
 
       // Arg 2:
@@ -335,7 +337,7 @@ namespace cling {
    }
 
    // Creates the string, which is going to be escaped.
-   Expr *ASTTransformVisitor::BuildEvalCharArg(QualType ToType, Expr *SubTree) {
+   Expr *ASTTransformVisitor::BuildEvalEnvironment(QualType ToType, Expr *SubTree) {
       ASTContext *c = &SemaPtr->getASTContext();
       
       //ASTOwningVector<const char*, 2> buf(*SemaPtr);
@@ -356,8 +358,8 @@ namespace cling {
       sbuf = "";
       llvm::raw_string_ostream OS(sbuf);
       const PrintingPolicy &Policy = SemaPtr->getASTContext().PrintingPolicy;
-
-      StmtPrinterHelper *helper = new StmtPrinterHelper(Policy);      
+      
+      StmtPrinterHelper *helper = new StmtPrinterHelper(Policy, *m_Environment);      
       S->printPretty(OS, helper, Policy);
 
       OS.flush();
