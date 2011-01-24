@@ -83,7 +83,6 @@ namespace cling {
       EvalInfo VisitExpr(Expr *Node);
       EvalInfo VisitCallExpr(CallExpr *E);
       EvalInfo VisitDeclRefExpr(DeclRefExpr *DRE);
-      EvalInfo VisitBinaryOperator(BinaryOperator *binOp);
       EvalInfo VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node);
 
       // EvalBuilder
@@ -97,8 +96,7 @@ namespace cling {
 
       // Helper
       bool IsArtificiallyDependent(Expr *Node);
-      bool ShouldVisit(Decl *D);
-      
+      bool ShouldVisit(Decl *D);      
    };
    
 }//end cling
