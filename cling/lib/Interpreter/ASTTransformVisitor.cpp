@@ -25,20 +25,34 @@ namespace {
       
       virtual ~StmtPrinterHelper() {}
       
-      //TODO: Here goes the address printing      
-      virtual bool handledStmt(Stmt* S, llvm::raw_ostream& OS) {
 
-         // DeclRefExpr
-         // DependentScopeDeclRefExpr
-         // CallExpr
-         // MemberExpr
-         // CXXDependentScopeMemberExpr
+      // Handle only DeclRefExprs since they are local and the call wrapper
+      // won't "see" them. Consequently we don't need to handle:
+      // * DependentScopeDeclRefExpr
+      // * CallExpr
+      // * MemberExpr
+      // * CXXDependentScopeMemberExpr
+      virtual bool handledStmt(Stmt* S, llvm::raw_ostream& OS) {
          if (DeclRefExpr *Node = dyn_cast<DeclRefExpr>(S)) {
             if (NestedNameSpecifier *Qualifier = Node->getQualifier())
                Qualifier->print(OS, m_Policy);
-
-            OS << Node->getNameInfo(); // prints the parameters
-
+            m_Environment.push_back(Node);
+            OS << "*("; 
+            // Copy-paste from the StmtPrinter
+            QualType T = Node->getType();
+            SplitQualType T_split = T.split();
+            OS << QualType::getAsString(T_split);
+ 
+            if (!T.isNull()) {
+               // If the type is sugared, also dump a (shallow) desugared type.
+               SplitQualType D_split = T.getSplitDesugaredType();
+               if (T_split != D_split)
+                  OS << ":'" << QualType::getAsString(D_split) << "'";
+            }
+            // end
+            
+            OS <<"*)@";
+                       
             if (Node->hasExplicitTemplateArgs())
                OS << TemplateSpecializationType::PrintTemplateArgumentList(
                                                                            Node->getTemplateArgs(),
@@ -48,20 +62,6 @@ namespace {
                assert((Node->getTemplateArgs() || Node->getNumTemplateArgs()) && "There shouldn't be template paramlist");
 
             return true;            
-         }
-         else if (DependentScopeDeclRefExpr *Node = dyn_cast<DependentScopeDeclRefExpr>(S)) {
-            if (NestedNameSpecifier *Qualifier = Node->getQualifier())
-               Qualifier->print(OS, m_Policy);
-            OS << Node->getNameInfo();
-            if (Node->hasExplicitTemplateArgs())
-               OS << TemplateSpecializationType::PrintTemplateArgumentList(
-                                                                           Node->getTemplateArgs(),
-                                                                           Node->getNumTemplateArgs(),
-                                                                           m_Policy);
-            
-            
-            
-            return true;
          }
          
          return false;
