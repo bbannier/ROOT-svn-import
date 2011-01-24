@@ -47,7 +47,7 @@ namespace {
                // If the type is sugared, also dump a (shallow) desugared type.
                SplitQualType D_split = T.getSplitDesugaredType();
                if (T_split != D_split)
-                  OS << ":'" << QualType::getAsString(D_split) << "'";
+                  OS << ":" << QualType::getAsString(D_split);
             }
             // end
             
