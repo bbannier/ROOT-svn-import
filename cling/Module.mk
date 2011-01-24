@@ -53,9 +53,9 @@ $(ALLROOTH): cling-ALWAYS
 	rm $@.tmp
 
 $(ROOTPCH): $(ALLROOTH) $(ALLHDRS)
-	clang++ -cc1 -fexceptions $(filter-out -pipe -m64 -fPIC,$(CXXFLAGS)) \
+	clang++ $(CXXFLAGS) \
 	  `grep '^// -I' $< | sed 's,^//,,'` \
-	  -I. -emit-pch -x c++-header -relocatable-pch $< -o $@
+	  -I. -Xclang -emit-pch -Xclang -relocatable-pch -x c++-header $< -o $@
 
 ##### local rules #####
 ifeq ($(strip $(LLVMDIR)),)
@@ -88,8 +88,8 @@ $(CLINGMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(CLINGL)
 		$(RLIBMAP) -o $(CLINGMAP) -l $(CLINGLIB) -d $(CLINGLIBDEPM) -c $(CLINGL)
 
 $(ROOTCLING):   $(ROOTCLINGO) $(BOOTLIBSDEP)
-		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) -L$(LLVMDIR)/lib -lcling $(BOOTULIBS) -lReflex \
-		  $(RPATH) $(BOOTLIBS) $(SYSLIBS)
+		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) $(BOOTULIBS) -lReflex \
+		  $(RPATH) $(BOOTLIBS) $(SYSLIBS) -L$(LLVMDIR)/lib -lcling 
 
 all-$(MODNAME): $(CLINGLIB) $(CLINGMAP) $(ROOTCLING)
 
