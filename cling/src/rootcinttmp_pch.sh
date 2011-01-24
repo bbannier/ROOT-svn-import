@@ -1,5 +1,6 @@
 #! /bin/bash
 if "$@"; then
+    rootsys=$PWD
     shift 3 # rootcint -cint -f
     dict=cint/cling/src/`basename $1 | sed 's,.cxx,_dicthdr.h,'`
     echo "" > $dict
@@ -12,7 +13,9 @@ if "$@"; then
             *) if test "x$incl" != "x"; then echo "//" $incl > $dict;  incl=""; fi
                islinkdef=""
                if ! (echo $1 | grep -i linkdef > /dev/null 2>&1 ); then
-                   echo '#include "'$1'"' >> $dict
+                   hdr=`echo $1 | sed 's,^'$rootsys',..,'`
+                   hdr=`echo $hdr | sed 's,^include/,,'`
+                   echo '#include "'$hdr'"' >> $dict
                fi
                ;;
         esac
