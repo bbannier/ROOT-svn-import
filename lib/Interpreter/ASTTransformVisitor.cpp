@@ -230,6 +230,8 @@ namespace cling {
 
 
    Expr *ASTTransformVisitor::SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree/*, CompoundStmt *Parent*/) {
+      BuildEvalEnvironment(SubTree);
+      
       ASTContext &C = SemaPtr->getASTContext();
       
       // Prepare the actual arguments for the call
@@ -242,8 +244,12 @@ namespace cling {
       CallArgs.push_back(Arg0);
 
       // Arg 1:
+      QualType constCharArray = C.getConstantArrayType(C.getConstType(C.CharTy), llvm::APInt(8 * sizeof(void *), strlen(m_EvalExpressionBuf.c_str()) + 1), ArrayType::Normal, 0);
+      Expr *Arg1 = StringLiteral::Create(C, &*m_EvalExpressionBuf.c_str(), strlen(m_EvalExpressionBuf.c_str()) + 1, false, constCharArray, SourceLocation());
+      //FIXME: Figure out how handle the cast kinds in the different cases
       QualType CastTo = C.getPointerType(C.getConstType(C.CharTy));
-      Expr *Arg1 = BuildEvalEnvironment(CastTo, SubTree);
+      SemaPtr->ImpCastExprToType(Arg1, CastTo, CK_ArrayToPointerDecay);
+
       CallArgs.push_back(Arg1);
 
       // Arg 2:
@@ -272,6 +278,19 @@ namespace cling {
       getSubstSymbolMap()[EvalCall] = SubTree;
       
       return EvalCall;
+   }
+
+   // Creates the string, which is going to be escaped.
+   void ASTTransformVisitor::BuildEvalEnvironment(Expr *SubTree) {
+      m_EvalExpressionBuf = "";
+      llvm::raw_string_ostream OS(m_EvalExpressionBuf);
+      const PrintingPolicy &Policy = SemaPtr->getASTContext().PrintingPolicy;
+      
+      StmtPrinterHelper *helper = new StmtPrinterHelper(Policy, m_Environment);      
+      SubTree->printPretty(OS, helper, Policy);
+      
+      OS.flush();
+   
    }
 
    // Here is the test Eval function specialization. Here the CallExpr to the function
@@ -334,36 +353,6 @@ namespace cling {
       assert (EvalCall && "Cannot create call to Eval");
       return EvalCall;                  
       
-   }
-
-   // Creates the string, which is going to be escaped.
-   Expr *ASTTransformVisitor::BuildEvalEnvironment(QualType ToType, Expr *SubTree) {
-      ASTContext *c = &SemaPtr->getASTContext();
-      
-      //ASTOwningVector<const char*, 2> buf(*SemaPtr);
-      
-      //buf.push_back(ToString(SubTree, m_EvalExpressionBuf));
-
-      ToString(SubTree, m_EvalExpressionBuf);
-      QualType constCharArray = c->getConstantArrayType(c->getConstType(c->CharTy), llvm::APInt(8 * sizeof(void *), strlen(m_EvalExpressionBuf.c_str()) + 1), ArrayType::Normal, 0);
-      Expr *SL = StringLiteral::Create(*c, &*m_EvalExpressionBuf.c_str(), strlen(m_EvalExpressionBuf.c_str()) + 1, false, constCharArray, SourceLocation());
-      //FIXME: Figure out how handle the cast kinds in the different cases
-      SemaPtr->ImpCastExprToType(SL, ToType, CK_ArrayToPointerDecay);
-
-      return SL;
-   }
-
-   // Helper function for converting the Stmt to string 
-   const char *ASTTransformVisitor::ToString(Stmt *S, std::string& sbuf) {
-      sbuf = "";
-      llvm::raw_string_ostream OS(sbuf);
-      const PrintingPolicy &Policy = SemaPtr->getASTContext().PrintingPolicy;
-      
-      StmtPrinterHelper *helper = new StmtPrinterHelper(Policy, *m_Environment);      
-      S->printPretty(OS, helper, Policy);
-
-      OS.flush();
-      return sbuf.c_str();
    }
    
    bool ASTTransformVisitor::ShouldVisit(Decl *D) {
