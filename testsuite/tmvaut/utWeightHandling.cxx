@@ -47,7 +47,7 @@ TTree* utWeightHandling::create_Tree(const char* opt)
                                         Form( "ivar%i/I", i ));
    tree->Branch("iclass",&iclass,"iclass/I");
    tree->Branch("ievt",&ievt,"ievt/I");
-   tree->Branch("weight",&weight,"weight/F");
+   tree->Branch("wght",&weight,"wght/F");
    tree->Branch("origweight",&weight,"origweight/F");
    TRandom3 R( 99 );
 
@@ -107,8 +107,8 @@ bool utWeightHandling::operateSingleFactory(const char* factoryname, const char*
    factory->AddTree(tree,"Signal"    ,  0.3, "iclass==0");
    factory->AddTree(tree,"Background",  1.5, "iclass==1");
    factory->AddTree(tree,"Background", 10.3, "iclass==2");
-   factory->SetSignalWeightExpression(    "weight" );
-   factory->SetBackgroundWeightExpression("weight" );
+   factory->SetSignalWeightExpression(    "wght" );
+   factory->SetBackgroundWeightExpression("wght" );
 
    TString normmode="None";
    if (option.Contains("UseNumEvents"))      normmode = "NumEvents"; 
