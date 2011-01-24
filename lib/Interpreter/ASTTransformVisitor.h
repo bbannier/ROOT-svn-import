@@ -106,9 +106,13 @@ namespace cling {
       EvalInfo VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node);
 
       //EvalBuilder
-      Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree/*, CompoundStmt *Parent*/);
+      Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree);
       CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree, ASTOwningVector<Expr*> &CallArgs);
       void BuildEvalEnvironment(Expr *SubTree);
+      void BuildEvalArgs(ASTOwningVector<Expr*> &Result);
+      Expr *BuildEvalArg0(ASTContext &C);
+      Expr *BuildEvalArg1(ASTContext &C);
+      Expr *BuildEvalArg2(ASTContext &C);
       bool IsArtificiallyDependent(Expr *Node);
       bool ShouldVisit(Decl *D);
       
