@@ -75,12 +75,10 @@ namespace cling {
    // DeclVisitor
    
    void ASTTransformVisitor::Visit(Decl *D) {
-      //if (ShouldVisit(D)) {
-         Decl *PrevDecl = ASTTransformVisitor::CurrentDecl;
-         ASTTransformVisitor::CurrentDecl = D;
-         BaseDeclVisitor::Visit(D);
-         ASTTransformVisitor::CurrentDecl = PrevDecl;
-       //}
+      Decl *PrevDecl = ASTTransformVisitor::CurrentDecl;
+      ASTTransformVisitor::CurrentDecl = D;
+      BaseDeclVisitor::Visit(D);
+      ASTTransformVisitor::CurrentDecl = PrevDecl;     
    }
    
    void ASTTransformVisitor::VisitFunctionDecl(FunctionDecl *D) {
@@ -124,8 +122,8 @@ namespace cling {
    
    // end DeclVisitor
    
-   // StmtVisitor
-   
+   // StmtVisitor   
+
    EvalInfo ASTTransformVisitor::VisitStmt(Stmt *Node) {
       for (Stmt::child_iterator
               I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
@@ -163,27 +161,6 @@ namespace cling {
       return EvalInfo(Node, 0);
    }
 
-   // EvalInfo ASTTransformVisitor::VisitCompoundStmt(CompoundStmt *S) {
-   //    for (CompoundStmt::body_iterator
-   //            I = S->body_begin(), E = S->body_end(); I != E; ++I) {
-   //       EvalInfo EInfo = Visit(*I);
-   //       if (EInfo.IsEvalNeeded) {
-   //          if (Expr *Exp = dyn_cast<Expr>(EInfo.getNewStmt())) {
-   //             QualType T = Exp->getType();
-   //             // Assume if still dependent void
-   //             if (Exp->isTypeDependent() || Exp->isValueDependent())
-   //                T = SemaPtr->getASTContext().VoidTy;
-
-   //             *I = BuildEvalCallExpr(T);
-   //          }
-   //       } 
-   //       else {
-   //          *I = EInfo.getNewStmt();
-   //       }
-   //    }
-   //    return EvalInfo(S, 0);
-   // }
-
    EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *E) {
       if (IsArtificiallyDependent(E)) {
          // FIXME: Handle the arguments
@@ -194,11 +171,7 @@ namespace cling {
       }
       return EvalInfo(E, 0);
    }
-   
-   // EvalInfo ASTTransformVisitor::VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
-   //    return EvalInfo(ICE, 0);
-   // }
-   
+      
    EvalInfo ASTTransformVisitor::VisitDeclRefExpr(DeclRefExpr *DRE) {
          return EvalInfo(DRE, 0);
    }
@@ -206,28 +179,10 @@ namespace cling {
    EvalInfo ASTTransformVisitor::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node) {
          return EvalInfo(Node, 1);
    }
-
-   EvalInfo ASTTransformVisitor::VisitBinaryOperator(BinaryOperator *binOp) {
-      EvalInfo rhs = Visit(binOp->getRHS());
-      EvalInfo lhs = Visit(binOp->getLHS());
-      /*
-      if (binOp->isAssignmentOp()) {
-         if (rhs.IsEvalNeeded && !lhs.IsEvalNeeded) {
-            if (Expr *E = dyn_cast<Expr>(lhs.getNewStmt()))
-               if (!E->isTypeDependent() || !E->isValueDependent()) {
-                  const QualType returnTy = E->getType();
-                  binOp->setRHS(SubstituteUnknownSymbol(returnTy, E));
-               }
-         }
-      }
-      */
-      return EvalInfo(binOp, IsArtificiallyDependent(binOp));
-   }
    
-   //endregion
+   // end StmtVisitor
 
-   //region EvalBuilder
-
+   // EvalBuilder
 
    Expr *ASTTransformVisitor::SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree) {
       // Get the addresses
@@ -256,7 +211,6 @@ namespace cling {
       SubTree->printPretty(OS, helper, Policy);
       
       OS.flush();
-   
    }
    
    // Prepare the actual arguments for the call
@@ -275,7 +229,6 @@ namespace cling {
       // Arg 2:
       Expr *Arg2 = BuildEvalArg2(C);          
       Result.push_back(Arg2);
-
    }
    
    // Eval Arg0: size_t This
@@ -378,8 +331,12 @@ namespace cling {
       assert (EvalCall && "Cannot create call to Eval");
       return EvalCall;                  
       
-   }
+   } 
+
+   // end EvalBuilder
    
+   // Helpers
+
    bool ASTTransformVisitor::ShouldVisit(Decl *D) {
       while (true) {
          if (isa<TemplateTemplateParmDecl>(D))
@@ -415,8 +372,6 @@ namespace cling {
           return false;     
       return true;
    }
-
-   
-// end StmtVisitor
+   // end Helpers   
 
 }//end cling

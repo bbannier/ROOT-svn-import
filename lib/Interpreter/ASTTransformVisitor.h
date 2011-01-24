@@ -37,7 +37,7 @@ namespace cling {
       MapTy m_SubstSymbolMap;
       /* 
          Specifies the unknown symbol surrounding
-         Example: int a; ...; h->Draw(a); -> Eval(gCling, "*(int*)@0", {&a});
+         Example: int a; ...; h->Draw(a); -> Eval(gCling, "*(int*)@", {&a});
          m_EvalExpressionBuf holds the types of the variables.
          m_Environment holds the refs from which runtime addresses are built.
       */
@@ -58,31 +58,14 @@ namespace cling {
 
    public:
       
-      //region Constructors
-      
+      //Constructors
       explicit ASTTransformVisitor()
-         : EvalDecl(0), gCling(0), SemaPtr(0), CurrentDecl(0){}
-      
+         : EvalDecl(0), gCling(0), SemaPtr(0), CurrentDecl(0){}      
       ASTTransformVisitor(void* gCling, Sema *SemaPtr)
          : EvalDecl(0), gCling(gCling), SemaPtr(SemaPtr), CurrentDecl(0){}
-
-      //endregion
       
-      //region Destructor
-
-      ~ASTTransformVisitor() {
-         // delete EvalDecl;
-         // EvalDecl = 0;
-         // delete SemaPtr;
-         // SemaPtr = 0;
-         // delete CurrentDecl;
-         // CurrentDecl = 0;
-         // delete gCling;
-         // gCling = 0;
-      }
-      
-      
-      //endregion
+      // Destructors
+      ~ASTTransformVisitor() { }
 
       FunctionDecl *getEvalDecl() { return EvalDecl; }
       void setEvalDecl(FunctionDecl *FDecl) { if (!EvalDecl) EvalDecl = FDecl; }
@@ -98,14 +81,12 @@ namespace cling {
       // StmtVisitor
       EvalInfo VisitStmt(Stmt *Node);
       EvalInfo VisitExpr(Expr *Node);
-      // EvalInfo VisitCompoundStmt(CompoundStmt *S);
       EvalInfo VisitCallExpr(CallExpr *E);
-      // EvalInfo VisitImplicitCastExpr(ImplicitCastExpr *ICE);
       EvalInfo VisitDeclRefExpr(DeclRefExpr *DRE);
       EvalInfo VisitBinaryOperator(BinaryOperator *binOp);
       EvalInfo VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node);
 
-      //EvalBuilder
+      // EvalBuilder
       Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree);
       CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree, ASTOwningVector<Expr*> &CallArgs);
       void BuildEvalEnvironment(Expr *SubTree);
@@ -113,6 +94,8 @@ namespace cling {
       Expr *BuildEvalArg0(ASTContext &C);
       Expr *BuildEvalArg1(ASTContext &C);
       Expr *BuildEvalArg2(ASTContext &C);
+
+      // Helper
       bool IsArtificiallyDependent(Expr *Node);
       bool ShouldVisit(Decl *D);
       
