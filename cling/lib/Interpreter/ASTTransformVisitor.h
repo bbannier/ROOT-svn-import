@@ -42,7 +42,7 @@ namespace cling {
          m_Environment holds the refs from which runtime addresses are built.
       */
       std::string m_EvalExpressionBuf;
-      llvm::SmallVector<DeclRefExpr*, 64> *m_Environment;
+      llvm::SmallVector<DeclRefExpr*, 64> m_Environment;
 
    public: // members
       void *gCling; //Pointer to the Interpreter object
@@ -61,10 +61,10 @@ namespace cling {
       //region Constructors
       
       explicit ASTTransformVisitor()
-         : EvalDecl(0), m_Environment(0), gCling(0), SemaPtr(0), CurrentDecl(0){}
+         : EvalDecl(0), gCling(0), SemaPtr(0), CurrentDecl(0){}
       
       ASTTransformVisitor(void* gCling, Sema *SemaPtr)
-         : EvalDecl(0), m_Environment(0), gCling(gCling), SemaPtr(SemaPtr), CurrentDecl(0){}
+         : EvalDecl(0), gCling(gCling), SemaPtr(SemaPtr), CurrentDecl(0){}
 
       //endregion
       
@@ -108,8 +108,7 @@ namespace cling {
       //EvalBuilder
       Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree/*, CompoundStmt *Parent*/);
       CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree, ASTOwningVector<Expr*> &CallArgs);
-      const char *ToString(Stmt *S, std::string &sbuf);
-      Expr *BuildEvalEnvironment(QualType ToType, Expr *SubTree);
+      void BuildEvalEnvironment(Expr *SubTree);
       bool IsArtificiallyDependent(Expr *Node);
       bool ShouldVisit(Decl *D);
       
