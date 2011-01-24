@@ -17,7 +17,7 @@ namespace {
    class StmtPrinterHelper : public PrinterHelper  {
    private:
       PrintingPolicy m_Policy;
-      llvm::SmallVector<clang::DeclRefExpr*, 64> m_Environment;
+      llvm::SmallVector<clang::DeclRefExpr*, 64> &m_Environment;
    public:
       
       StmtPrinterHelper(const PrintingPolicy &Policy, llvm::SmallVector<clang::DeclRefExpr*, 64> &Environment) : 
@@ -258,8 +258,16 @@ namespace cling {
                                                    , Qualifiers()
                                                    , SourceRange()
                                                    , DeclarationName() );
-      // FIXME: Get the init list from the SubTree...
+
       ASTOwningVector<Expr*> Inits(*SemaPtr);
+      for (unsigned int i = 0; i < m_Environment.size(); ++i) {
+         Expr *UnOp = SemaPtr->BuildUnaryOp(SemaPtr->getScopeForContext(SemaPtr->CurContext), 
+                               SourceLocation(), 
+                               UO_AddrOf,
+                               m_Environment[i]).takeAs<UnaryOperator>();
+         SemaPtr->ImpCastExprToType(UnOp, C.getPointerType(C.VoidPtrTy), CK_BitCast);
+         Inits.push_back(UnOp);
+      }
 
       // We need fake the SourceLocation just to avoid assert(InitList.isExplicit()....)
       SourceLocation SLoc = getEvalDecl()->getLocStart();
@@ -324,7 +332,6 @@ namespace cling {
       CallExpr *EvalCall = SemaPtr->ActOnCallExpr(SemaPtr->getScopeForContext(SemaPtr->CurContext)
                                                   , DRE
                                                   , SourceLocation()
-                                                  //,MultiExprArg(CallArgs.take() , 1U)
                                                   , move_arg(CallArgs)
                                                   , SourceLocation()
                                                   ).takeAs<CallExpr>();
