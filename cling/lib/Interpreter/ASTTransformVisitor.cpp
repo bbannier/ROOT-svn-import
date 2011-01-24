@@ -229,47 +229,13 @@ namespace cling {
    //region EvalBuilder
 
 
-   Expr *ASTTransformVisitor::SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree/*, CompoundStmt *Parent*/) {
+   Expr *ASTTransformVisitor::SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree) {
+      // Get the addresses
       BuildEvalEnvironment(SubTree);
-      
-      ASTContext &C = SemaPtr->getASTContext();
-      
-      // Prepare the actual arguments for the call
-      // Arg list for static T Eval(size_t This, const char* expr, void* varaddr[] )
+
+      //Build the arguments for the call
       ASTOwningVector<Expr*> CallArgs(*SemaPtr);
-
-      // Arg 0:
-      const llvm::APInt gClingAddr(8 * sizeof(void *), (uint64_t)gCling);
-      IntegerLiteral *Arg0 = IntegerLiteral::Create(C, gClingAddr, C.UnsignedLongTy, SourceLocation());
-      CallArgs.push_back(Arg0);
-
-      // Arg 1:
-      QualType constCharArray = C.getConstantArrayType(C.getConstType(C.CharTy), llvm::APInt(8 * sizeof(void *), strlen(m_EvalExpressionBuf.c_str()) + 1), ArrayType::Normal, 0);
-      Expr *Arg1 = StringLiteral::Create(C, &*m_EvalExpressionBuf.c_str(), strlen(m_EvalExpressionBuf.c_str()) + 1, false, constCharArray, SourceLocation());
-      //FIXME: Figure out how handle the cast kinds in the different cases
-      QualType CastTo = C.getPointerType(C.getConstType(C.CharTy));
-      SemaPtr->ImpCastExprToType(Arg1, CastTo, CK_ArrayToPointerDecay);
-
-      CallArgs.push_back(Arg1);
-
-      // Arg 2:
-      QualType VarAddrTy = SemaPtr->BuildArrayType(C.VoidPtrTy, 
-                                                   ArrayType::Normal,
-                                                   /*ArraySize*/0
-                                                   , Qualifiers()
-                                                   , SourceRange()
-                                                   , DeclarationName() );
-      // FIXME: Get the init list from the SubTree...
-      ASTOwningVector<Expr*> Inits(*SemaPtr);
-
-      // We need fake the SourceLocation just to avoid assert(InitList.isExplicit()....)
-      SourceLocation SLoc = getEvalDecl()->getLocStart();
-      SourceLocation ELoc = getEvalDecl()->getLocEnd();
-      InitListExpr *ILE = SemaPtr->ActOnInitList(SLoc, move_arg(Inits), ELoc).takeAs<InitListExpr>();
-      Expr *Arg2 = SemaPtr->BuildCompoundLiteralExpr(SourceLocation(), C.CreateTypeSourceInfo(VarAddrTy), SourceLocation(), ILE).takeAs<CompoundLiteralExpr>();
-      SemaPtr->ImpCastExprToType(Arg2, C.getPointerType(C.VoidPtrTy), CK_ArrayToPointerDecay);
-      CallArgs.push_back(Arg2);
-
+      BuildEvalArgs(CallArgs);
 
       // Build the call
       CallExpr* EvalCall = BuildEvalCallExpr(InstTy, SubTree, CallArgs);
@@ -291,6 +257,65 @@ namespace cling {
       
       OS.flush();
    
+   }
+   
+   // Prepare the actual arguments for the call
+   // Arg list for static T Eval(size_t This, const char* expr, void* varaddr[] )
+   void ASTTransformVisitor::BuildEvalArgs(ASTOwningVector<Expr*> &Result) {
+      ASTContext &C = SemaPtr->getASTContext();
+
+      // Arg 0:
+      Expr *Arg0 = BuildEvalArg0(C);
+      Result.push_back(Arg0);
+
+      // Arg 1:
+      Expr *Arg1 = BuildEvalArg1(C);    
+      Result.push_back(Arg1);
+
+      // Arg 2:
+      Expr *Arg2 = BuildEvalArg2(C);          
+      Result.push_back(Arg2);
+
+   }
+   
+   // Eval Arg0: size_t This
+   Expr *ASTTransformVisitor::BuildEvalArg0(ASTContext &C) {
+      const llvm::APInt gClingAddr(8 * sizeof(void *), (uint64_t)gCling);
+      IntegerLiteral *Arg0 = IntegerLiteral::Create(C, gClingAddr, C.UnsignedLongTy, SourceLocation());
+
+      return Arg0;
+   }
+
+   // Eval Arg1: const char* expr
+   Expr *ASTTransformVisitor::BuildEvalArg1(ASTContext &C) {
+      QualType constCharArray = C.getConstantArrayType(C.getConstType(C.CharTy), llvm::APInt(8 * sizeof(void *), strlen(m_EvalExpressionBuf.c_str()) + 1), ArrayType::Normal, 0);
+      Expr *Arg1 = StringLiteral::Create(C, &*m_EvalExpressionBuf.c_str(), strlen(m_EvalExpressionBuf.c_str()) + 1, false, constCharArray, SourceLocation());
+      //FIXME: Figure out how handle the cast kinds in the different cases
+      QualType CastTo = C.getPointerType(C.getConstType(C.CharTy));
+      SemaPtr->ImpCastExprToType(Arg1, CastTo, CK_ArrayToPointerDecay);
+
+      return Arg1;
+   }
+
+   // Eval Arg2: void* varaddr[]
+   Expr *ASTTransformVisitor::BuildEvalArg2(ASTContext &C) {
+      QualType VarAddrTy = SemaPtr->BuildArrayType(C.VoidPtrTy, 
+                                                   ArrayType::Normal,
+                                                   /*ArraySize*/0
+                                                   , Qualifiers()
+                                                   , SourceRange()
+                                                   , DeclarationName() );
+      // FIXME: Get the init list from the SubTree...
+      ASTOwningVector<Expr*> Inits(*SemaPtr);
+
+      // We need fake the SourceLocation just to avoid assert(InitList.isExplicit()....)
+      SourceLocation SLoc = getEvalDecl()->getLocStart();
+      SourceLocation ELoc = getEvalDecl()->getLocEnd();
+      InitListExpr *ILE = SemaPtr->ActOnInitList(SLoc, move_arg(Inits), ELoc).takeAs<InitListExpr>();
+      Expr *Arg2 = SemaPtr->BuildCompoundLiteralExpr(SourceLocation(), C.CreateTypeSourceInfo(VarAddrTy), SourceLocation(), ILE).takeAs<CompoundLiteralExpr>();
+      SemaPtr->ImpCastExprToType(Arg2, C.getPointerType(C.VoidPtrTy), CK_ArrayToPointerDecay);
+
+      return Arg2;
    }
 
    // Here is the test Eval function specialization. Here the CallExpr to the function
