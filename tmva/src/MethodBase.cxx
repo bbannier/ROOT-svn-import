@@ -559,9 +559,9 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinitionIn
 	 if( transformation ){
 	    ClassInfo* clsInfo = dataInfo.GetClassInfo(idxCls);
          if( clsInfo )
-	       log << kINFO << "create Transformation " << trName << " with reference class " << clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
+	       log << kINFO << "Create Transformation \"" << trName << "\" with reference class " << clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
          else
-	       log << kINFO << "create Transformation " << trName << " with events of all classes." << Endl;
+	       log << kINFO << "Create Transformation \"" << trName << "\" with events from all classes." << Endl;
 
 	    transformation->SelectInput( variables );
 	    transformationHandler.AddTransformation(transformation, idxCls);
