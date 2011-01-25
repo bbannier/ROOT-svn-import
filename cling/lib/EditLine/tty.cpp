@@ -1110,7 +1110,7 @@ tty_noquotemode(EditLine_t* el) {
 el_protected int
 /*ARGSUSED*/
 tty_stty(EditLine_t* el, int /*argc*/, const char** cargv) {
-   char** argv = (char**) cargv;
+   char** argv = const_cast<char**>(cargv);
 
    /** ^^^^ HUGE KLUDGE
        This func doesn't really modify argv, but does do

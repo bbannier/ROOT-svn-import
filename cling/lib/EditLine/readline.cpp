@@ -284,7 +284,7 @@ rl_initialize(void) {
     */
    li = el_line(gEditLine);
    /* LINTED const cast */
-   rl_line_buffer = (char*) li->fBuffer;
+   rl_line_buffer = const_cast<char*>(li->fBuffer);
    rl_point = rl_end = 0;
 
    return 0;
@@ -369,7 +369,7 @@ readline(const char* prompt, bool newline) {
       tty_cookedmode(gEditLine);
    }
    /* LINTED const cast */
-   return (char*) ret;
+   return const_cast<char*>(ret);
 } // readline
 
 
@@ -1404,7 +1404,7 @@ filename_completion_function(const char* text, int state) {
          closedir(dir);
          dir = NULL;
       }
-      temp = strrchr((char*)text, '/');
+      temp = strrchr(const_cast<char*>(text), '/');
 
       if (temp) {
          temp++;

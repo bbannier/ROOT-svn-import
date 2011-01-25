@@ -1076,20 +1076,20 @@ term_set(EditLine_t* el, const char* term) {
       }
    } else {
       /* auto/magic margins */
-      Val(T_am) = tgetflag((char*)"am");
-      Val(T_xn) = tgetflag((char*)"xn");
+      Val(T_am) = tgetflag(const_cast<char*>("am"));
+      Val(T_xn) = tgetflag(const_cast<char*>("xn"));
       /* Can we tab */
-      Val(T_pt) = tgetflag((char*)"pt");
-      Val(T_xt) = tgetflag((char*)"xt");
+      Val(T_pt) = tgetflag(const_cast<char*>("pt"));
+      Val(T_xt) = tgetflag(const_cast<char*>("xt"));
       /* do we have a meta? */
-      Val(T_km) = tgetflag((char*)"km");
-      Val(T_MT) = tgetflag((char*)"MT");
+      Val(T_km) = tgetflag(const_cast<char*>("km"));
+      Val(T_MT) = tgetflag(const_cast<char*>("MT"));
       /* Get the size */
-      Val(T_co) = tgetnum((char*)"co");
-      Val(T_li) = tgetnum((char*)"li");
+      Val(T_co) = tgetnum(const_cast<char*>("co"));
+      Val(T_li) = tgetnum(const_cast<char*>("li"));
 
       for (t = tstr; t->fName != NULL; t++) {
-         term_alloc(el, t, tgetstr((char*)t->fName, &area));
+         term_alloc(el, t, tgetstr(const_cast<char*>(t->fName), &area));
       }
    }
 
@@ -1853,7 +1853,7 @@ term_echotc(EditLine_t* el, int /*argc*/, const char** argv) {
    }
 
    if (t->fName == NULL) {
-      scap = tgetstr((char*)*argv, &area);
+      scap = tgetstr(const_cast<char*>(*argv), &area);
    }
 
    if (!scap || scap[0] == '\0') {

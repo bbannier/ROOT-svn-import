@@ -210,7 +210,7 @@ el_push(EditLine_t* el, const char* str) {
    if (str != NULL && ma->fLevel + 1 < EL_MAXMACRO) {
       ma->fLevel++;
       /* LINTED const cast */
-      ma->fMacro[ma->fLevel] = (char*) str;
+      ma->fMacro[ma->fLevel] = const_cast<char*>(str);
    } else {
       term_beep(el);
       term__flush();

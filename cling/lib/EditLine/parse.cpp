@@ -73,13 +73,13 @@
  */
 el_protected int
 parse_line(EditLine_t* el, const char* line) {
-   char** argv;
+   union {char** argv; const char** cargv;};
    int argc;
    Tokenizer_t* tok;
 
    tok = tok_init(NULL);
    tok_line(tok, line, &argc, &argv);
-   argc = el_parse(el, argc, (const char**) argv);
+   argc = el_parse(el, argc, cargv);
    tok_end(tok);
    return argc;
 }
