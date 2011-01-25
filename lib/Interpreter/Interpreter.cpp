@@ -688,11 +688,11 @@ namespace cling {
   
 
    // Implements the interpretation of the unknown symbols. 
-   bool Interpreter::EvalCore(llvm::GenericValue& result, const char* expr, void* varaddr) {
+   llvm::GenericValue Interpreter::EvalCore(const char* expr, void* varaddr) {
       printf("%s\n", expr);
       printf("%p", varaddr);
       printf("\n");
-      return 0;
+      return llvm::GenericValue();
    }
    
    void cling::Interpreter::dumpAST(bool showAST, int last) {
