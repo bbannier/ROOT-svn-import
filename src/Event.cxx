@@ -114,8 +114,6 @@ TMVA::Event::Event( const std::vector<Float_t*>*& evdyn, UInt_t nvar )
      fBoostWeight(0),
      fDynamic(true)
 {
-
-   //std::cout << "CON 2 " << evdyn->size() << std::endl;
    // constructor for single events
    fValuesDynamic = (std::vector<Float_t*>*) evdyn;
 }
@@ -141,19 +139,6 @@ TMVA::Event::~Event()
 }
 
 //____________________________________________________________
-void TMVA::Event::ClearDynamicVariables()
-{
-   // clear global variable
-//    if (fValuesDynamic != 0) { 
-//       fValuesDynamic->clear();
-//       delete fValuesDynamic;
-//       fValuesDynamic = 0;
-//    }
-}
-
-
-
-//____________________________________________________________
 void TMVA::Event::CopyVarValues( const Event& other )
 {
    // copies only the variable values
@@ -172,8 +157,6 @@ Float_t TMVA::Event::GetValue( UInt_t ivar ) const
    // return value of i'th variable
    Float_t retval;
 
-   //if(fDynamic)
-   //   std::cout << fValuesDynamic->size() << "   index = " << ivar << std::endl;
    retval = fDynamic ?( *(*fValuesDynamic)[ivar] ) : fValues[ivar];
    return retval;
 }
@@ -191,10 +174,6 @@ const std::vector<Float_t>& TMVA::Event::GetValues() const
 {
    // return value vector
    if (fDynamic) {
-//       if (fValuesDynamic->size()-GetNSpectators() != fValues.size()) {
-//          std::cout << "ERROR Event::GetValues() is trying to change the size of the variable vector, exiting ..." << std::endl;
-//          assert(0);
-//       }
       fValues.clear();
       for (std::vector<Float_t*>::const_iterator it = fValuesDynamic->begin(); 
            it != fValuesDynamic->end()-GetNSpectators(); it++) { 

@@ -1767,7 +1767,7 @@ void TMVA::MethodCuts::GetHelpMessage() const
    Log() << "  - Sqrt: InitialTemperature / Sqrt(StepNumber+2) * TemperatureScale" << brk << Endl;
    Log() << "  - Log:  InitialTemperature / Log(StepNumber+2) * TemperatureScale" << brk << Endl;
    Log() << "  - Homo: InitialTemperature / (StepNumber+2) * TemperatureScale" << brk << Endl;
-   Log() << "  - Sin:  ( Sin( StepNumber / TemperatureScale ) + 1 ) / (StepNumber + 1) * InitialTemperature + Eps" << brk << Endl;
+   Log() << "  - Sin:  (Sin(StepNumber / TemperatureScale) + 1) / (StepNumber + 1)*InitialTemperature + Eps" << brk << Endl;
    Log() << "  - Geo:  CurrentTemperature * TemperatureScale" << Endl;
    Log() << "" << Endl;
    Log() << "Their performance can be improved by adjusting initial temperature" << Endl;
