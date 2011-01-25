@@ -797,6 +797,13 @@ Double_t TMVA::MethodBase::GetMvaValue( const Event* const ev, Double_t* err, Do
    return val;
 }
 
+Bool_t TMVA::MethodBase::IsSignalLike() { 
+   return GetMvaValue()*GetSignalReferenceCutOrientation() > GetSignalReferenceCut()*GetSignalReferenceCutOrientation() ? kTRUE : kFALSE; 
+}
+Bool_t TMVA::MethodBase::IsSignalLike(Double_t mvaVal) { 
+   return mvaVal*GetSignalReferenceCutOrientation() > GetSignalReferenceCut()*GetSignalReferenceCutOrientation() ? kTRUE : kFALSE; 
+}
+
 //_______________________________________________________________________
 void TMVA::MethodBase::AddClassifierOutput( Types::ETreeType type )
 {

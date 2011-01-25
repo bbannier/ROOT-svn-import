@@ -413,7 +413,7 @@ void TMVA::MethodBoost::Train()
          {
             timer.DrawProgressBar( fBoostNum );
             fBoostNum = fMethodIndex+1; 
-            Log() << kERROR << "Error rate has reached 0.5, boosting process stopped at #" << fBoostNum << " classifier" << Endl;
+            Log() << kINFO << "Error rate has reached 0.5 ("<< fMethodError<<"), boosting process stopped at #" << fBoostNum << " classifier" << Endl;
             if (fBoostNum < 5)
                Log() << kINFO << "The classifier might be too strong to boost with Beta = " << fADABoostBeta << ", try reducing it." <<Endl;
             for (Int_t i=0;i<fDefaultHistNum;i++)
@@ -616,7 +616,7 @@ void TMVA::MethodBoost::FindMVACut()
    } else {
       
       // creating a fine histograms containing the error rate
-      const Int_t nBins=100;
+      const Int_t nBins=101;
       Double_t minMVA=150000;
       Double_t maxMVA=-150000;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
@@ -657,7 +657,10 @@ void TMVA::MethodBoost::FindMVACut()
       Double_t sSel=mvaSC->GetBinContent(1);
       Double_t bSel=mvaBC->GetBinContent(1);
       Double_t separationGain=sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
-      Double_t mvaCut=mvaSC->GetBinCenter(1);
+      Double_t mvaCut=mvaSC->GetBinLowEdge(1);
+      //      cout << "minMVA =" << minMVA << " maxMVA = " << maxMVA << " width = " << mvaSC->GetBinWidth(1) <<  endl;
+
+      //      for (Int_t ibin=1;ibin<=nBins;ibin++) cout << " cutvalues[" << ibin<<"]="<<mvaSC->GetBinLowEdge(ibin) << "  " << mvaSC->GetBinCenter(ibin) << endl;
       Double_t mvaCutOrientation=1; // 1 if mva > mvaCut --> Signal and -1 if mva < mvaCut (i.e. mva*-1 > mvaCut*-1) --> Signal
       Double_t SoBRight=1, SoBLeft=1;
       for (Int_t ibin=2;ibin<nBins;ibin++){ 
@@ -672,11 +675,20 @@ void TMVA::MethodBoost::FindMVACut()
              ){
             separationGain = sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
             mvaCut=mvaSC->GetBinCenter(ibin);
+            mvaCut=mvaSC->GetBinLowEdge(ibin+1);
             if (sSel/bSel > (sTot-sSel)/(bTot-bSel)) mvaCutOrientation=-1;
             else                                     mvaCutOrientation=1;
             SoBRight=sSel/bSel;
             SoBLeft=(sTot-sSel)/(bTot-bSel);
          }
+      }
+
+      if (SoBRight<1 && SoBLeft<1) {
+         if (mvaCutOrientation == -1) mvaCut = mvaSC->GetBinCenter(1)-mvaSC->GetBinWidth(1);
+         if (mvaCutOrientation ==  1) mvaCut = mvaSC->GetBinCenter(nBins)+mvaSC->GetBinWidth(nBins);
+      } else if (SoBRight>1 && SoBLeft>1) {
+         if (mvaCutOrientation ==  1) mvaCut = mvaSC->GetBinCenter(1)-mvaSC->GetBinWidth(1);
+         if (mvaCutOrientation == -1) mvaCut = mvaSC->GetBinCenter(nBins)+mvaSC->GetBinWidth(nBins);
       }
       
       
@@ -690,7 +702,6 @@ void TMVA::MethodBoost::FindMVACut()
       // cout << "S/B right="<<SoBRight << " left="<<SoBLeft<<endl;
       // if (fMethodIndex==0)mvaCut = -1.9616885110735893e-02;
       // if (fMethodIndex==1)mvaCut = -6.8812005221843719e-02;
-      if (SoBRight<1&&SoBLeft<1) mvaCutOrientation = 0;
       lastMethod->SetSignalReferenceCut(mvaCut);
       lastMethod->SetSignalReferenceCutOrientation(mvaCutOrientation);
       
@@ -742,6 +753,7 @@ void TMVA::MethodBoost::SingleBoost()
    fMethodError=sumWrong/sumAll;
    fOrigMethodError = sumWrongOrig/sumAllOrig;
    Log() << kDEBUG << "AdaBoost err (MethodErr1)= " << fMethodError<<" = wrong/all: " << sumWrong << "/" << sumAll<< " cut="<<method->GetSignalReferenceCut()<< Endl;
+   Log() << kERROR << "AdaBoost err (MethodErr1)= " << fMethodError<<" = wrong/all: " << sumWrong << "/" << sumAll<< " cut="<<method->GetSignalReferenceCut()<< Endl;
 
    // calculating the fMethodError and the fBoostWeight out of it uses the formula 
    // w = ((1-err)/err)^beta
@@ -753,6 +765,8 @@ void TMVA::MethodBoost::SingleBoost()
    }
    else fBoostWeight = 1000;
 
+
+   Log() << kERROR << "fBoostWeight="<<fBoostWeight << " log(fBoostWeight)="<<TMath::Log(fBoostWeight) << Endl;
    Double_t alphaWeight = ( fBoostWeight > 0.0 ? TMath::Log(fBoostWeight) : 0.0);
    if (alphaWeight>5.) alphaWeight = 5.;
    if (alphaWeight<0.){
@@ -777,10 +791,14 @@ void TMVA::MethodBoost::SingleBoost()
       Double_t normWeight = oldSum/newSum;
       // bla      std::cout << "Normalize weight by (Boost)" << normWeight <<  " = " << oldSum<<"/"<<newSum<< " eventBoostFactor="<<fBoostWeight<<std::endl;
       // next normalize the weights
+      Double_t normSig=0, normBkg=0;
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
          Data()->GetEvent(ievt)->ScaleBoostWeight(normWeight);
+         if (Data()->GetEvent(ievt)->GetClass()) normBkg+=Data()->GetEvent(ievt)->GetWeight();
+         else                                    normSig+=Data()->GetEvent(ievt)->GetWeight();
       }
-
+      Log() << kERROR << "new Nsig="<<normSig << " new Nbkg="<<normBkg << Endl;
+      
    }
    else if (fBoostType == "Bagging") {
       // Bagging or Bootstrap boosting, gives new random weight for every event
