@@ -1357,7 +1357,7 @@ map_bind(EditLine_t* el, int argc, const char** argv) {
          ACHTUNG: the (char *) cast is a bogus, quick hack to accomodate
          const changes in this code. TODO: fix 'in'!!!
        */
-      in = (char*) argv[argc++];
+      in = const_cast<char*>(argv[argc++]);
    } else if ((in = parse__string(inbuf, argv[argc++])) == NULL) {
       (void) fprintf(el->fErrFile,
                      "%s: Invalid \\ or ^ in instring.\n",
