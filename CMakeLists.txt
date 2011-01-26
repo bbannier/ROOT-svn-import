@@ -6,74 +6,6 @@ enable_language(Fortran)
 project(ROOT)
 
 #---Options----------------------------------------------------------------------------------------
-option(enable_afs "Set to ON to build the AFS authentication" OFF)  
-option(enable_alien "Set to ON to build the Alien interface" OFF)
-option(enable_alloc              "" OFF)
-option(enable_asimage            "" ON)      
-option(enable_astiff             "" ON)
-option(enable_bonjour            "" ON)
-option(enable_builtin_afterimage "" ON)
-option(enable_builtin_ftgl       "" OFF)
-option(enable_builtin_freetype   "" OFF)
-option(enable_builtin_glew       "" OFF)
-option(enable_builtin_pcre       "" OFF)
-option(enable_builtin_zlib       "" OFF)
-option(enable_castor             "" ON)
-option(enable_chirp              "" ON)
-option(enable_cintex             "" ON)
-option(enable_clarens            "" ON)
-option(enable_cling              "" ON)
-option(enable_editline           "" ON)
-option(enable_dcache             "" ON)
-option(enable_exceptions         "" ON)
-option(enable_explicitlink       "" OFF)
-option(enable_fftw3              "" ON)
-option(enable_fitsio             "" ON)
-option(enable_gviz               "" ON)
-option(enable_gdml               "" OFF)
-option(enable_genvector          "" ON)
-option(enable_gfal               "" ON)
-option(enable_glite              "" ON)
-option(enable_globus             "" OFF)
-option(enable_gsl_shared         "" OFF)
-option(enable_hdfs               "" ON)
-option(enable_krb5               "" ON)
-option(enable_ldap               "" ON)
-option(enable_mathmore           "" OFF)
-option(enable_memstat            "" ON)
-option(enable_minuit2            "" OFF)
-option(enable_monalisa           "" ON)
-option(enable_mysql              "" ON)
-option(enable_odbc               "" ON)
-option(enable_opengl             "" ON)
-option(enable_oracle             "" ON)
-option(enable_peac               "" ON)
-option(enable_pgsql              "" ON)
-option(enable_pythia6            "" ON)
-option(enable_pythia8            "" ON)
-option(enable_python             "" ON)
-option(enable_qt                 "" OFF)
-option(enable_qtgsi              "" OFF)
-option(enable_reflex             "" ON)
-option(enable_roofit             "" OFF)
-option(enable_ruby               "" OFF)
-option(enable_rfio               "" ON)
-option(enable_rpath              "" OFF)
-option(enable_sapdb              "" ON)
-option(enable_shadowpw           "" ON)
-option(enable_shared             "" ON)
-option(enable_soversion          "" OFF)
-option(enable_srp                "" ON)
-option(enable_ssl                "" ON)
-option(enable_table              "" OFF)
-option(enable_tmva               "" ON)
-option(enable_unuran             "" OFF)
-option(enable_winrtdebug         "" ON)
-option(enable_x11                "" ON)
-option(enable_xft                "" ON)
-option(enable_xml                "" ON)
-option(enable_xrootd             "" ON)
-                        
 
 # Set pathes where to put the libraries, executables and headers
 Set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
@@ -136,16 +68,12 @@ configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/RConfigure.in include/RConfig
 install(FILES ${CMAKE_BINARY_DIR}/include/RConfigure.h DESTINATION include)
 
 get_enabled_root_install_options()
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/root-config.in
-               ${EXECUTABLE_OUTPUT_PATH}/root-config @ONLY)
 
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/rootrc.in
-               ${PROJECT_BINARY_DIR}/etc/system.rootrc @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/root-config.in ${EXECUTABLE_OUTPUT_PATH}/root-config @ONLY)
+install(FILES ${EXECUTABLE_OUTPUT_PATH}/root-config DESTINATION bin)
 
-#MESSAGE("LDFLAGS: ${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS}") 
-#MESSAGE("LDFLAGS: ${CMAKE_SHARED_LINKER_FLAGS}") 
-#MESSAGE("LDFLAGS: ${CMAKE_MODULE_LINKER_FLAGS}") 
-#MESSAGE("LDFLAGS: ${CMAKE_EXE_LINKER_FLAGS}") 
+configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/rootrc.in ${CMAKE_BINARY_DIR}/etc/system.rootrc @ONLY)
+install(FILES ${CMAKE_BINARY_DIR}/etc/system.rootrc DESTINATION etc)
 
 #Add_Custom_Target(check COMMAND ${CMAKE_CTEST_COMMAND})
 Add_Custom_Target(check)
@@ -174,12 +102,6 @@ Add_Subdirectory (rootx)
 Add_Subdirectory (misc)
 Add_Subdirectory (main)
 
-#MESSAGE("ALL Headers: $ENV{HeadersToInstall}")
-#PM---->INSTALL_ALL_HEADERS()
-#add_custom_target(HEADER_FILES ALL
-#           DEPENDS $ENV{HeadersToInstall} 
-#          )
-
 configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/RConfigOptions.in include/RConfigOptions.h)
 install(FILES ${CMAKE_BINARY_DIR}/include/RConfigOptions.h DESTINATION include)
 
@@ -196,38 +118,23 @@ install(FILES  ${CMAKE_BINARY_DIR}/include/compiledata.h DESTINATION include)
 
 If(UNIX)
   configure_file(${PROJECT_SOURCE_DIR}/config/mimes.unix.in ${CMAKE_BINARY_DIR}/etc/root.mimes)
+  install(FILES ${CMAKE_BINARY_DIR}/etc/root.mimes DESTINATION etc)
 EndIf(UNIX)
 
 set(bindir ${CMAKE_INSTALL_PREFIX}/bin)
 set(libdir ${CMAKE_INSTALL_PREFIX}/lib)
 set(mandir ${CMAKE_INSTALL_PREFIX}/man)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex.in
-#               ${EXECUTABLE_OUTPUT_PATH}/genreflex @ONLY)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex-rootcint.in
-#               ${EXECUTABLE_OUTPUT_PATH}/genreflex-rootcint @ONLY)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/memprobe.in
-#               ${EXECUTABLE_OUTPUT_PATH}/memprobe @ONLY)
+
+configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex.in ${EXECUTABLE_OUTPUT_PATH}/genreflex @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex-rootcint.in ${EXECUTABLE_OUTPUT_PATH}/genreflex-rootcint @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/memprobe.in ${EXECUTABLE_OUTPUT_PATH}/memprobe @ONLY)
 configure_file(${PROJECT_SOURCE_DIR}/config/thisroot.sh ${EXECUTABLE_OUTPUT_PATH}/thisroot.sh @ONLY)
 configure_file(${PROJECT_SOURCE_DIR}/config/thisroot.csh ${EXECUTABLE_OUTPUT_PATH}/thisroot.csh @ONLY)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex.final.in
-#               ${EXECUTABLE_OUTPUT_PATH}/final/genreflex @ONLY)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex-rootcint.final.in
-#               ${EXECUTABLE_OUTPUT_PATH}/final/genreflex-rootcint @ONLY)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/memprobe.final.in
-#               ${EXECUTABLE_OUTPUT_PATH}/final/memprobe @ONLY)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/thisroot.sh.final.in
-#               ${EXECUTABLE_OUTPUT_PATH}/final/thisroot.sh @ONLY)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/thisroot.csh.final.in
-#               ${EXECUTABLE_OUTPUT_PATH}/final/thisroot.csh @ONLY)
-#
-#Install(FILES ${EXECUTABLE_OUTPUT_PATH}/final/genreflex
-#              ${EXECUTABLE_OUTPUT_PATH}/final/genreflex-rootcint
-#              ${EXECUTABLE_OUTPUT_PATH}/final/memprobe
-#              ${EXECUTABLE_OUTPUT_PATH}/final/thisroot.sh
-#              ${EXECUTABLE_OUTPUT_PATH}/final/thisroot.csh
-#        DESTINATION ${BIN_INSTALL_DIR}
-#)
-install(FILES ${EXECUTABLE_OUTPUT_PATH}/thisroot.sh
+
+install(FILES ${EXECUTABLE_OUTPUT_PATH}/genreflex
+              ${EXECUTABLE_OUTPUT_PATH}/genreflex-rootcint
+              ${EXECUTABLE_OUTPUT_PATH}/memprobe
+              ${EXECUTABLE_OUTPUT_PATH}/thisroot.sh
               ${EXECUTABLE_OUTPUT_PATH}/thisroot.csh
               DESTINATION bin)
 

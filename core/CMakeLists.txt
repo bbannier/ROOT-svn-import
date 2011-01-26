@@ -19,7 +19,7 @@ If(BuildPcre)
   add_subdirectory (pcre)
   Set(RootConfigFeatures "${RootConfigFeatures} builtin_pcre")
   Set(PCRE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/core/pcre/pcre-7.8)
-  Set(PCRE_LIBRARIES "-L${HEADER_OUTPUT_PATH} -lpcre") 
+  Set(PCRE_LIBRARIES "-L${LIBRARY_OUTPUT_PATH} -lpcre") 
 EndIf(BuildPcre)
 
 Set(BuildZlib TRUE)

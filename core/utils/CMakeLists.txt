@@ -9,6 +9,7 @@ ROOT_USE_PACKAGE(core/metautils)
 ROOT_EXECUTABLE(rootcint rootcint.cxx RStl.cxx
                          ${METAUTILS_CXX_SOURCES} 
                          ${CMAKE_SOURCE_DIR}/core/clib/src/strlcpy.c 
+                         ${CMAKE_SOURCE_DIR}/core/clib/src/strlcat.c 
                          LIBRARIES Cint)
 add_dependencies(rootcint IOSENUM_H)
 
@@ -25,6 +26,7 @@ set_source_files_properties(loadfile_tmp.cxx rootcint_tmp.cxx RStl_tmp.cxx PROPE
 ROOT_EXECUTABLE(rootcint_tmp  rootcint_tmp.cxx RStl_tmp.cxx loadfile_tmp.cxx
                               ${METAUTILS_CXX_SOURCES}
                               ${CMAKE_SOURCE_DIR}/core/clib/src/strlcpy.c 
+                              ${CMAKE_SOURCE_DIR}/core/clib/src/strlcat.c 
                               LIBRARIES Cint_static)
 add_dependencies(rootcint_tmp IOSENUM_H)
 
