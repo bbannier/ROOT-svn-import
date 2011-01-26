@@ -1,4 +1,4 @@
-// @(#)root/proofx:$Id:$
+// @(#)root/proofx:$Id$
 // Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
@@ -44,9 +44,7 @@ class TProofBenchRunCleanup : public TProofBenchRun
 
 private:
 
-   TProof* fProof;               //proof
-
-   TProofBenchRun::ECleanupType fCleanupType; //cleanup type
+   EPBCleanupType fCleanupType; //cleanup type
    TString fDataSetCleanup;      //data set to be cleaned up at nodes using
                                  // fadvice
    Int_t fDebug;                 //debug switch
@@ -62,25 +60,26 @@ protected:
 
 public:
 
-   TProofBenchRunCleanup(TProofBenchRun::ECleanupType cleanuptype=TProofBenchRun::kCleanupNotSpecified,
+   TProofBenchRunCleanup(EPBCleanupType cleanuptype = kPBCleanupNotSpecified,
                          TDirectory* dirproofbench=0, TProof* proof=0,
                          Int_t debug=0);
 
    virtual ~TProofBenchRunCleanup();
 
-   void Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t debug, Int_t);
+   void Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t debug, Int_t);
+   void Run(const char *, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t) { }
 
    void DrawPerfProfiles();
 
    void Print(Option_t* option="") const;
 
-   void SetCleanupType(TProofBenchRun::ECleanupType cleanuptype);
+   void SetCleanupType(EPBCleanupType cleanuptype);
    void SetDataSetCleanup(const TString& dataset);
    void SetDebug(Int_t debug);
    void SetDirProofBench(TDirectory* dir);
    void SetName(TString name);
 
-   TProofBenchRun::ECleanupType GetCleanupType() const;
+   EPBCleanupType GetCleanupType() const;
    TString GetDataSetCleanup() const;
    Int_t GetDebug() const;
    TDirectory* GetDirProofBench() const;
