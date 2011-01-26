@@ -323,6 +323,7 @@ namespace cling {
                                                   , ParamTypes.size()
                                                   , Proto->isVariadic()
                                                   , Proto->getTypeQuals()
+                                                  , RQ_None
                                                   , Fn->getLocation()
                                                   , Fn->getDeclName()
                                                   , Proto->getExtInfo());                  
