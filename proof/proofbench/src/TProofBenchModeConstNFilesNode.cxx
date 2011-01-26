@@ -39,17 +39,23 @@ ClassImp(TProofBenchModeConstNFilesNode)
 //______________________________________________________________________________
 TProofBenchModeConstNFilesNode::TProofBenchModeConstNFilesNode(Int_t nfiles,
                                           TProof* proof, TProofNodes* nodes)
-:fProof(proof), fNFiles(nfiles), fNodes(nodes), fName("ConstNFilesNode")
+: TProofBenchMode(proof,"ConstNFilesNode"), fNFiles(nfiles), fNodes(nodes)
 {
+       //Default constructor
 
-   if (!fProof){
-      fProof=gProof;
+   if (TestBit(kInvalidObject)) {
+      Error("TProofBenchModeConstNFilesNode",
+            "problems validating PROOF session or enabling selector PAR");
+      return;
    }
 
-   if (fNFiles==-1){
+   // Get nodes info if not given
+   if (!fNodes) fNodes = new TProofNodes(fProof);
+
+   if (fNFiles == -1){
       //Assign maximum number of workers on nodes in the cluster
-      Int_t maxnworkers=fNodes->GetMaxNWorkersANode();
-      fNFiles=maxnworkers;
+      Int_t maxnworkers = fNodes ? fNodes->GetMaxWrksPerNode() : -1;
+      fNFiles = maxnworkers;
    }
 }
 
@@ -61,7 +67,6 @@ TProofBenchModeConstNFilesNode::~TProofBenchModeConstNFilesNode()
 //______________________________________________________________________________
 void TProofBenchModeConstNFilesNode::Print(Option_t* option) const
 {
-   if (fProof) fProof->Print(option);
    Printf("fNFiles=%d", fNFiles);
    if (fNodes) fNodes->Print(option);
    Printf("fName=%s", fName.Data());
@@ -81,23 +86,48 @@ TMap* TProofBenchModeConstNFilesNode::FilesToProcess(Int_t nf)
    // Returns
    //    Map of files to be generated on the worker nodes.
    
-   if (nf==-1){
-      nf=fNFiles;
-   }
+   if (nf == -1) nf = fNFiles;
 
+#if 0
    TMap *filesmap = new TMap;
    filesmap->SetName("PROOF_FilesToProcess");
    TList* nodes=fNodes->GetListOfNodes();
    TIter nxtnode(nodes);
    TList* node=0;
+   TString fn;
    while ((node = (TList*) nxtnode())) {
       TList *files = new TList;
       files->SetName(node->GetName());
       for (Int_t i = 0; i<nf; i++) {
-         files->Add(new TObjString(TString::Format("%s_EventTree_Benchmark_%d_0.root", node->GetName(), i)));
+         fn.Form("%s_EventTree_Benchmark_%d_0.root", node->GetName(), i);
+         Info("FilesToProcess", "%s: %s", node->GetName(), fn.Data());
+         files->Add(new TObjString(fn));
       }
       filesmap->Add(new TObjString(node->GetName()), files);
    }
+#else
+   TMap *filesmap = new TMap;
+   filesmap->SetName("PROOF_FilesToProcess");
+   TMap *nodes = fNodes->GetMapOfNodes();
+   TIter nxk(nodes);
+   TObject *key = 0;
+   TString fn;
+   while ((key = nxk()) != 0) {
+      TList *node = dynamic_cast<TList *>(nodes->GetValue(key));
+      if (node) {
+         TList *files = new TList;
+         files->SetName(node->GetName());
+         for (Int_t i = 0; i<nf; i++) {
+            fn.Form("%s_EventTree_Benchmark_%d_0.root", node->GetName(), i);
+            Info("FilesToProcess", "%s: %s", node->GetName(), fn.Data());
+            files->Add(new TObjString(fn));
+         }
+         filesmap->Add(new TObjString(node->GetName()), files);
+      } else {
+         Warning("FilesToProcess", "could not get list for node '%s'", key->GetName()); 
+      }
+   }
+#endif
 
    Info("FilesToProcess", "Map of files to be generated:");
    filesmap->Print("A", -1);
@@ -108,7 +138,7 @@ TMap* TProofBenchModeConstNFilesNode::FilesToProcess(Int_t nf)
 //______________________________________________________________________________
 Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t start,
                                  Int_t stop, Int_t step, const TList* listfiles,
-                                 const char* option, TProof* proof, Int_t nx)
+                                 const char* option, TProof* proof)
 {
    // Make data sets out of list of files 'listfiles' and register them.
    // Input parameters
@@ -117,15 +147,9 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t start,
    //    start: Start scan at 'start' number of workers.
    //    stop: Stop scan at 'stop' number of workers.
    //    step: Scan every 'step' workers.
-   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built
-   //               and registered.
+   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
-   //    nx: When it is 1, 'start', 'stop' and 'step' are the number of active
-   //        workers per node. The same number of workers are activated on all
-   //        nodes in the cluster for all test points. When it is 0, 'start,
-   //        'stop' and 'step' are the total number of active workers in the
-   //        cluster.
    // Return
    //   0 when ok
    //  <0 otherwise
@@ -146,28 +170,14 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t start,
       //                                                            GetName());
    }
 
-   if (nx==0){
-      //Scan upto all workers in the cluster
-      const Int_t maxnworkers=fNodes->GetNWorkersCluster();
-      if (stop==-1 || stop>maxnworkers){
-         stop=maxnworkers;
-      }
-      Info("MakeDataSets", "Making data sets for mode %s, number of files a"
-           " node=%d, %d ~ %d active worker(s), every %d worker(s).", 
-           GetName(), nf, start, stop, step);
+   // Default max worker number is the number of all workers in the cluster
+   if (stop==-1){
+      stop = fNodes->GetNWorkersCluster();
+   }
 
-   }
-   else if (nx==1){
-      //Make sure to activate the same number of workers on all nodes in the
-      // cluster
-      const Int_t maxnworkers=fNodes->GetMinNWorkersANode();
-      if (stop==-1 || stop>maxnworkers){
-         stop=maxnworkers;
-      }
-      Info("MakeDataSets", "Making data sets for mode %s, number of files a"
-           " node=%d, %d ~ %d active worker(s)/node, every %d worker(s)/node.", 
+   Info("MakeDataSets", "Making data sets for mode %s, number of files a node"
+        "=%d, %d ~ %d active worker(s), every %d worker(s).", 
          GetName(), nf, start, stop, step);
-   }
 
    const Int_t np=(stop-start)/step+1;
    Int_t wp[np];
@@ -177,32 +187,23 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t start,
       i++;
    }
 
-   return MakeDataSets(nf, np, wp, listfiles, option, proof, nx);
+   return MakeDataSets(nf, np, wp, listfiles, option, proof);
 }
 
 //______________________________________________________________________________
 Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t np,
                                        const Int_t *wp, const TList* listfiles,
-                                       const char *option, TProof* proof,
-                                       Int_t nx)
+                                       const char *option, TProof* proof)
 {
    // Make data sets out of list of files 'listfiles' and register them.
-   // Data set name has the form :
-   //            DataSetEventConstNFilesNode_nactiveworkersincluster_nfilesanode
+   // Data set name has the form : DataSetEventConstNFilesNode_nactiveworkersincluster_nfilesanode
    // Input parameters
    //    nf: Number of files a node.
    //    np: Number of test points.
-   //    wp: 'np'-sized array containing the number of active workers to
-   // process files.
-   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built
-   //               and registered.
+   //    wp: 'np'-sized array containing the number of active workers to process files.
+   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
-   //    nx: When it is 1, 'start', 'stop' and 'step' are the number of active
-   //        workers per node. The same number of workers are activated on all
-   //        nodes in the cluster for all test points. When it is 0, 'start,
-   //        'stop' and 'step' are the total number of active workers in the
-   //        cluster.
    // Return
    //   0 when ok
    //  <0 otherwise
@@ -227,24 +228,27 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t np,
    Int_t kp;
    for (kp=0; kp<np; kp++) {
       // Dataset name
-      if (nx==0){
-         dsname.Form("DataSetEvent%s_%d_%d", GetName(), wp[kp], nf);
-         Info("MakeDataSets", "Creating dataset '%s' for %d active worker(s).",
-               dsname.Data(), wp[kp]);
-      }
-      else if (nx==1){
-         dsname.Form("DataSetEvent%s_%dX_%d", GetName(), wp[kp], nf);
-         Info("MakeDataSets", "Creating dataset '%s' for %d active worker(s)"
-              "/node.", dsname.Data(), wp[kp]);
-      }
-
+      dsname.Form("DataSetEvent%s_%d_%d", GetName(), wp[kp], nf);
+      Info("MakeDataSets", "Creating dataset '%s' for %d active worker(s).",
+            dsname.Data(), wp[kp]);
       // Create the TFileCollection
       TFileCollection *fc = new TFileCollection;
-
+#if 0
       TList* nodes=fNodes->GetListOfNodes();
       TIter nxtnode(nodes);
       TList *node = 0;
       while ((node = (TList*) nxtnode())) {
+#else
+      TMap *nodes = fNodes->GetMapOfNodes();
+      TIter nxk(nodes);
+      TObject *key = 0;
+      while ((key = nxk()) != 0) {
+         TList *node = dynamic_cast<TList *>(nodes->GetValue(key));
+         if (!node) {
+            Warning("MakeDataSets", "could not get list for node '%s'", key->GetName());
+            continue;
+         }
+#endif         
          TString nodename=node->GetName();
 
          //set number of files to add for each node
@@ -266,7 +270,7 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t np,
             if (hostname!=nodename) continue;
 
             //filename=root://hostname//directory/
-            //         EventTree_Benchmark_filenumber_serial.root
+            //EventTree_Benchmark_filenumber_serial.root
             //remove upto "Benchmark_"
             tmpstring=filename;
             TString stem="_Benchmark_";
@@ -314,9 +318,9 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t np,
 }
 
 //______________________________________________________________________________
-TProofBenchMode::EFileType TProofBenchModeConstNFilesNode::GetFileType()
+EPBFileType TProofBenchModeConstNFilesNode::GetFileType()
 {
-   return TProofBenchMode::kFileBenchmark;
+   return kPBFileBenchmark;
 }
 
 //______________________________________________________________________________

@@ -35,7 +35,6 @@
 class TProof;
 class TCanvas;
 class TProfile;
-class TH2;
 class TTree;
 
 class TProofBenchMode;
@@ -47,7 +46,7 @@ class TProofBenchRunDataRead : public TProofBenchRun{
 private:
    TProof* fProof;               //pointer to proof
 
-   TProofBenchRun::EReadType fReadType; //read type
+   EPBReadType fReadType; //read type
    TProofBenchMode* fMode;              //mode
    TProofBenchRunCleanup* fRunCleanup;  //clean-up run
 
@@ -56,7 +55,6 @@ private:
    Int_t fStart;                 //start number of workers
    Int_t fStop;                  //stop number of workers
    Int_t fStep;                  //test to be performed every fStep workers
-   Int_t fNx;                    //
    Int_t fDebug;                 //debug switch
 
    TDirectory* fDirProofBench;   //directory for proof outputs
@@ -72,16 +70,13 @@ private:
 
 protected:
 
-   void FillPerfStatProfiles(TTree* t, TProfile* profile_event,
-                           TProfile* profile_IO, TH2* hist_event,
-                           TH2* hist_IO, Int_t nactive);
+   void FillPerfStatProfiles(TTree* t, TProfile* profile_event, TProfile* profile_IO, Int_t nactive);
 
    Int_t SetParameters();
    Int_t DeleteParameters();
 
    TString BuildPatternName(const TString& objname, const TString& delimiter="_");
-   TString BuildNewPatternName(const TString& objname, Int_t nactive,
-                    Int_t tries, Int_t nx, const TString& delimiter="_");
+   TString BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter="_");
    TString BuildProfileName(const TString& objname, const TString& type, const TString& delimiter="_");
    TString BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter=" ");
 
@@ -89,21 +84,34 @@ public:
 
    TProofBenchRunDataRead(TProofBenchMode* mode,
           TProofBenchRunCleanup* runcleanup,
-          TProofBenchRun::EReadType readtype=TProofBenchRun::kReadNotSpecified,
+          EPBReadType readtype=kPBReadNotSpecified,
           TDirectory* dirproofbench=0, TProof* proof=0, TProofNodes* nodes=0,
           Long64_t nevents=-1, Int_t ntries=2, Int_t start=1, Int_t stop=-1,
-          Int_t step=1, Int_t nx=0, Int_t debug=0);
+          Int_t step=1, Int_t debug=0);
 
    virtual ~TProofBenchRunDataRead();
 
-   void Run(Long64_t nevents, Int_t start, Int_t stop, Int_t step, Int_t ntries,
-            Int_t nx, Int_t debug, Int_t);
+   void Run(Long64_t nevents,
+            Int_t start,
+            Int_t stop,
+            Int_t step,
+            Int_t ntries,
+            Int_t debug,
+            Int_t);
+   void Run(const char *dset,
+            Int_t start,
+            Int_t stop,
+            Int_t step,
+            Int_t ntries,
+            Int_t debug,
+            Int_t);
+
 
    void DrawPerfProfiles();
 
    void Print(Option_t* option="") const;
 
-   void SetReadType(TProofBenchRun::EReadType readtype);
+   void SetReadType(EPBReadType readtype);
    void SetMode(TProofBenchMode* mode);
    void SetRunCleanup(TProofBenchRunCleanup* runcleanup);
    void SetNEvents(Long64_t nevents);
@@ -111,11 +119,10 @@ public:
    void SetStart(Int_t start);
    void SetStop(Int_t stop);
    void SetStep(Int_t step);
-   void SetNx(Int_t nx);
    void SetDebug(Int_t debug);
    void SetDirProofBench(TDirectory* dir);
 
-   TProofBenchRun::EReadType GetReadType() const;
+   EPBReadType GetReadType() const;
    TProofBenchMode* GetMode() const;
    TProofBenchRunCleanup* GetRunCleanup() const;
    Long64_t GetNEvents() const;
@@ -123,7 +130,6 @@ public:
    Int_t GetStart() const;
    Int_t GetStop() const;
    Int_t GetStep() const;
-   Int_t GetNx() const;
    Int_t GetDebug() const;
    TDirectory* GetDirProofBench() const;
    TList* GetListOfPerfStats() const;

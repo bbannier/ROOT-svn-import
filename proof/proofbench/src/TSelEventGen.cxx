@@ -25,7 +25,7 @@
 #include "TSelEventGen.h"
 #include "TParameter.h"
 #include "TProofNodeInfo.h"
-#include "TProofBenchMode.h"
+#include "TProofBenchTypes.h"
 #include "TProof.h"
 #include "TMap.h" 
 #include "TDSet.h"
@@ -33,15 +33,16 @@
 #include "TFile.h"
 #include "TSortedList.h"
 #include "TRandom.h"
-#include "test/Event.h"
+#include "Event.h"
+#include "TProofServ.h"
 
 ClassImp(TSelEventGen)
 
 //______________________________________________________________________________
 TSelEventGen::TSelEventGen():
-fFileType(TProofBenchMode::kFileNotSpecified), fBaseDir(""), fNEvents(100000),
-fNTracks(100), fRegenerate(kFALSE), fNWorkersPerNode(0), fWorkerNumber(0),
-fTotalGen(0), fFilesGenerated(0), fChain(0)
+fFileType(kPBFileNotSpecified), fBaseDir(""), fNEvents(100000),
+fNTracks(100), fNTracksMax(-1), fRegenerate(kFALSE), fNWorkersPerNode(0),
+fWorkerNumber(0), fTotalGen(0), fFilesGenerated(0), fChain(0)
 {
    if (gProofServ){
       fBaseDir=gProofServ->GetDataDir();
@@ -97,6 +98,7 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    Bool_t found_basedir=kFALSE;
    Bool_t found_nevents=kFALSE;
    Bool_t found_ntracks=kFALSE;
+   Bool_t found_ntrkmax=kFALSE;
    Bool_t found_regenerate=kFALSE;
    Bool_t found_slaveinfos=kFALSE;
 
@@ -114,7 +116,7 @@ void TSelEventGen::SlaveBegin(TTree *tree)
       if (sinput.Contains("PROOF_BenchmarkFileType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fFileType=(TProofBenchMode::EFileType)a->GetVal();
+            fFileType=(EPBFileType)a->GetVal();
             found_filetype=kTRUE; 
          }
          else{
@@ -128,20 +130,23 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          if (a){
             TString proof_benchmarkbasedir=a->GetTitle();
             if (!proof_benchmarkbasedir.IsNull()){
-               if (!gSystem->AccessPathName(proof_benchmarkbasedir,
-                                            kWritePermission)){
-                  //directory is writable
-                  fBaseDir=proof_benchmarkbasedir;
-                  Info("BeginSlave", "Using directory \"%s\"", fBaseDir.Data());
-               }
-               else{
-                  //directory is not writable, use default directory
-                  Warning("BeginSlave", "\"%s\" directory is not writable,"
+               TUrl u(proof_benchmarkbasedir, kTRUE);
+               Bool_t isLocal = !strcmp(u.GetProtocol(), "file") ? kTRUE : kFALSE;
+               if (isLocal && !gSystem->IsAbsoluteFileName(u.GetFile()))
+                  u.SetFile(TString::Format("%s/%s", fBaseDir.Data(), u.GetFile())); 
+               if ((gSystem->AccessPathName(u.GetFile()) &&
+                    gSystem->mkdir(u.GetFile(), kTRUE) == 0) ||
+                    gSystem->AccessPathName(u.GetFile(), kWritePermission)) {
+                    // Directory is writable
+                    fBaseDir = u.GetFile();
+                    Info("SlaveBegin", "Using directory \"%s\"", fBaseDir.Data());
+               } else{
+                  // Directory is not writable or not available, use default directory
+                  Warning("BeginSlave", "\"%s\" directory is not writable or not existing,"
                           " using default directory: %s",
                           proof_benchmarkbasedir.Data(), fBaseDir.Data());
                }
-            } 
-            else{
+            } else{
                Info("BeginSlave", "Using default directory: %s",
                                    fBaseDir.Data());
             }
@@ -172,6 +177,18 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          }
          else{
             Error("SlaveBegin", "PROOF_BenchmarkNTracks not type TParameter"
+                                "<Int_t>*");
+         }
+         continue;
+      }
+      if (sinput.Contains("PROOF_BenchmarkNTracksMax")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fNTracksMax=a->GetVal();
+            found_ntrkmax=kTRUE; 
+         }
+         else{
+            Error("SlaveBegin", "PROOF_BenchmarkNTracksMax not type TParameter"
                                 "<Int_t>*");
          }
          continue;
@@ -216,6 +233,15 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    if (!found_ntracks){
       Warning("SlaveBegin", "PROOF_BenchmarkNTracks not found; using default:"
                             " %d", fNTracks);
+   }
+   if (!found_ntrkmax){
+      Warning("SlaveBegin", "PROOF_BenchmarkNTracksMax not found; using default:"
+                            " %d", fNTracksMax);
+   } else if (fNTracksMax <= fNTracks) {
+      Warning("SlaveBegin", "PROOF_BenchmarkNTracksMax must be larger then"
+                            " fNTracks=%d ; ignoring", fNTracks);
+      fNTracksMax = -1;
+      found_ntrkmax = kFALSE;
    }
    if (!found_regenerate){
       Warning("SlaveBegin", "PROOF_BenchmarkRegenerate not found; using"
@@ -291,29 +317,31 @@ void TSelEventGen::SlaveBegin(TTree *tree)
 }
 
 //______________________________________________________________________________
-Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype,
+Long64_t TSelEventGen::GenerateFiles(EPBFileType filetype,
                                      TString filename, Long64_t sizenevents)
 {
 //Generate files for IO-bound run
 //Input parameters
-//   filetype: File type either TProofBenchMode::kFileBenchmark or
-//                TProofBenchMode::kFileCleanup
+//   filetype: File type either kPBFileBenchmark or
+//                kPBFileCleanup
 //   filename: The name of the file to be generated
 //   sizenevents: Either the number of events to generate when
-//                filetype==TProofBenchMode::kFileBenchmark
+//                filetype==kPBFileBenchmark
 //                or the size of the file to generate when
-//                filetype==TProofBenchMode::kFileCleanup
+//                filetype==kPBFileCleanup
 //Returns
 //   Either Number of entries in the file when
-//   filetype==TProofBenchMode::kFileBenchmark
-//   or bytes written when filetype==TProofBenchMode::kFileCleanup
+//   filetype==kPBFileBenchmark
+//   or bytes written when filetype==kPBFileCleanup
 //return 0 in case error
 
-   if (!(filetype==TProofBenchMode::kFileBenchmark
-     || filetype==TProofBenchMode::kFileCleanup)){
+   if (!(filetype==kPBFileBenchmark
+     || filetype==kPBFileCleanup)){
       Error("GenerateFiles", "File type not supported; %d", filetype);
       return 0;
    }
+   Info("GenerateFiles","file: %s", filename.Data());
+   if (0) return 0;
     
    Long64_t nentries=0;
    TDirectory* savedir = gDirectory;
@@ -337,23 +365,27 @@ Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype,
    Long64_t i=0;
    Long64_t size_generated=0;
 
-   f->SetCompressionLevel(0); //no compression
-
-   if (filetype==TProofBenchMode::kFileBenchmark){
+//   f->SetCompressionLevel(0); //no compression
+   Int_t ntrks = fNTracks;
+   if (filetype==kPBFileBenchmark){
       Info("GenerateFiles", "Generating %s", filename.Data());   
       while (sizenevents--){
          //event->Build(i++,fNTracksBench,0);
-         event->Build(i++, fNTracks, 0);
+         if (fNTracksMax > fNTracks) {
+            // Required to smear the number of tracks between [min,max]
+            ntrks = fNTracks + gRandom->Rndm() * (fNTracksMax - fNTracks);
+         }
+         event->Build(i++, ntrks, 0);
          size_generated+=eventtree->Fill();
       }
       nentries=eventtree->GetEntries();
       Info("GenerateFiles", "%s generated with %lld entries", filename.Data(),
                                                               nentries);
    }
-   else if (filetype==TProofBenchMode::kFileCleanup){
+   else if (filetype==kPBFileCleanup){
       Info("GenerateFiles", "Generating %s", filename.Data());   
       while (size_generated<sizenevents){
-         event->Build(i++, fNTracks, 0);
+         event->Build(i++, ntrks, 0);
          size_generated+=eventtree->Fill();
       }
       Info("GenerateFiles", "%s generated with %lld bytes", filename.Data(),
@@ -373,8 +405,8 @@ Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype,
    event->Delete();
    savedir->cd();
 
-   if (filetype==TProofBenchMode::kFileBenchmark) return nentries;
-   else if (filetype==TProofBenchMode::kFileCleanup) return size_generated;
+   if (filetype==kPBFileBenchmark) return nentries;
+   else if (filetype==kPBFileCleanup) return size_generated;
    else return 0;
 }
 
@@ -427,7 +459,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
    TString seed = hostfqdn+"/"+filename;
 
    //generate files
-   if (fFileType==TProofBenchMode::kFileBenchmark){
+   if (fFileType==kPBFileBenchmark){
       Long64_t neventstogenerate=fNEvents;
 
       Bool_t filefound=kFALSE;
@@ -459,7 +491,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
          fFilesGenerated->Add(fi);
       }
    }
-   else if (fFileType==TProofBenchMode::kFileCleanup){
+   else if (fFileType==kPBFileCleanup){
 
       //(re)generate files
       MemInfo_t meminfo;

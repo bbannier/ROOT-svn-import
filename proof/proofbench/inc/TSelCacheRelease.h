@@ -9,61 +9,50 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_TSelHist
-#define ROOT_TSelHist
+#ifndef ROOT_TSelCacheRelease
+#define ROOT_TSelCacheRelease
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TSelHist                                                             //
-// PROOF selector for CPU-intensive benchmark test.                     //
-// Events are generated and 1-D, 2-D, and/or 3-D histograms are filled. //
+// TSelCacheRelease                                                     //
+//                                                                      //
+// PROOF selector for file cache release.                               //
+// List of files to be cleaned for each node is provided by client.     //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef ROOT_TSelector
 #include <TSelector.h>
 #endif
-
-#ifndef ROOT_TProofBenchTypes
-#include "TProofBenchTypes.h"
+#ifndef ROOT_TString
+#include <TString.h>
 #endif
 
-class TH1F;
-class TH2F;
-class TH3F;
-class TRandom3;
-class TCanvas;
+class TList;
 
-class TSelHist : public TSelector {
+class TSelCacheRelease : public TSelector {
+
+private:
+
 public :
 
-   // Specific members
-   EPBHistType	    fHistType;
-   Int_t            fNHists;
-   Bool_t 	    fDraw;
-   TH1F           **fHist1D;//[fNHists]
-   TH2F           **fHist2D;//[fNHists]
-   TH3F           **fHist3D;//[fNHists]
-   TRandom3        *fRandom;
-   TCanvas	*fCHist1D;
-   TCanvas	*fCHist2D;
-   TCanvas	*fCHist3D;
-
-   TSelHist();
-   virtual ~TSelHist();
-   virtual Int_t   Version() const { return 2; }
-   virtual void    Begin(TTree *tree);
-   virtual void    SlaveBegin(TTree *tree);
+   TSelCacheRelease() { }
+   virtual ~TSelCacheRelease() { }
+   virtual Int_t   Version() const {return 2;}
+   virtual void    Begin(TTree *) { }
+   virtual void    SlaveBegin(TTree *) { }
+   virtual void    Init(TTree *) { }
+   virtual Bool_t  Notify() { return kTRUE; }
    virtual Bool_t  Process(Long64_t entry);
    virtual void    SetOption(const char *option) { fOption = option; }
    virtual void    SetObject(TObject *obj) { fObject = obj; }
-   virtual void    SetInputList(TList *input) { fInput = input; }
+   virtual void    SetInputList(TList *input) {fInput = input;}
    virtual TList  *GetOutputList() const { return fOutput; }
-   virtual void    SlaveTerminate();
-   virtual void    Terminate();
-   virtual void    Print(Option_t* option = "") const;
+   virtual void    SlaveTerminate() { }
+   virtual void    Terminate() { }
 
-   ClassDef(TSelHist,0)  //PROOF selector for CPU-intensive benchmark test
+   ClassDef(TSelCacheRelease,0)     //PROOF selector for event file generation
 };
 
 #endif
+

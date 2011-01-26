@@ -41,10 +41,8 @@ class TProofBenchModeConstNFilesNode : public TProofBenchMode {
 
 private:
 
-   TProof* fProof;   //proof
    Int_t fNFiles;    //number of files per node
    TProofNodes * fNodes;    //list of nodes
-   TString fName;    //name of this mode
 
 protected:
 
@@ -58,13 +56,13 @@ public:
 
    Int_t MakeDataSets(Int_t nfiles, Int_t start, Int_t stop, Int_t step,
                       const TList* listfiles, const char* option,
-                      TProof* proof, Int_t flag_nx);
+                      TProof* proof);
    
    Int_t MakeDataSets(Int_t nfiles, Int_t np, const Int_t *wp,
                       const TList* listfiles, const char *option,
-                      TProof* proof, Int_t flag_nx);
+                      TProof* proof);
 
-   TProofBenchMode::EFileType GetFileType();
+   EPBFileType GetFileType();
 
    void Print(Option_t* option=0) const;
 

@@ -1,4 +1,4 @@
-// @(#)root/proofx:$Id:$
+// @(#)root/proofx:$Id$
 // Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
@@ -29,26 +29,25 @@
 #ifndef ROOT_TTree
 #include <TTree.h>
 #endif
-#ifndef ROOT_TProofServ
-#include <TProofServ.h>
+#ifndef ROOT_TString
+#include <TString.h>
 #endif
-#ifndef ROOT_TProofBenchMode
-#include <TProofBenchMode.h>
+#ifndef ROOT_TProofBenchTypes
+#include <TProofBenchTypes.h>
 #endif
 
-class Event;
-
-R__EXTERN TProofServ *gProofServ;
+class TList;
 
 class TSelEventGen : public TSelector {
 
 private:
 
-   TProofBenchMode::EFileType fFileType;      //event file type
+   EPBFileType fFileType;      //event file type
    TString fBaseDir;                          //directory where the generated files will be written to
    //Int_t fMaxNWorkers;
    Long64_t fNEvents;                         //number of events in a file
-   Int_t fNTracks;                            //number of tracks in an event
+   Int_t fNTracks;                            //avg or min-avg number of tracks in an event
+   Int_t fNTracksMax;                         //max-avg number of tracks in an event
    Int_t fRegenerate;                         //force generation of cleanup files
 
    Int_t fNWorkersPerNode;                    //total number of workers on this node
@@ -58,13 +57,13 @@ private:
 
 protected:
 
-   Long64_t GenerateFiles(TProofBenchMode::EFileType filetype, TString filename, Long64_t sizenevents);
+   Long64_t GenerateFiles(EPBFileType filetype, TString filename, Long64_t sizenevents);
 
 public :
 
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
 
-   TSelEventGen(TTree *);
+//   TSelEventGen(TTree *);
    TSelEventGen();
    virtual ~TSelEventGen() { }
    virtual Int_t   Version() const {return 1;}

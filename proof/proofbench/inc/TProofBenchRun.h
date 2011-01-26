@@ -1,4 +1,4 @@
-// @(#)root/proofx:$Id:$
+// @(#)root/proofx:$Id$
 // Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
@@ -23,43 +23,32 @@
 #ifndef ROOT_TObject
 #include "TObject.h"
 #endif
+#ifndef ROOT_TProofBenchTypes
+#include "TProofBenchTypes.h"
+#endif
 
-class TFile;
+//class TFile;
+class TProof;
 
 class TProofBenchRun : public TObject {
 
 private:
 
+protected:
+
+   TProof* fProof;               //proof
+
 public:
 
-   enum EReadType {
-      kReadNotSpecified=0,                    //read type not specified
-      kReadFull=1,                            //read in a full event
-      kReadOpt=2,                             //read in part of an event
-      kReadNo=4,                              //do not read in event
-      kReadAll=kReadFull | kReadOpt | kReadNo //read in a full event,
-                                              // part of a event and no event
-   };
-
-   enum EHistType {
-      kHistNotSpecified=0,                  //histogram type not specified
-      kHist1D=1,                            //1-D histogram
-      kHist2D=2,                            //2-D histogram
-      kHist3D=4,                            //3-D histogram
-      kHistAll=kHist1D | kHist2D | kHist3D  //1-D, 2-D and 3-D histograms
-   };
-
-   enum ECleanupType {
-      kCleanupNotSpecified=0,               //clean-up type not specified
-      kCleanupFileAdvise=1,                 //clean-up by system call
-      kCleanupReadInFiles=2                 //clean-up by reading in dedicated
-                                            //files
-   };
+   TProofBenchRun(TProof *proof = 0);
 
    virtual ~TProofBenchRun();
 
-   virtual void Run(Long64_t nevents=-1, Int_t start=-1, Int_t stop=-1,
-                    Int_t step=-1, Int_t ntries=-1, Int_t nx=-1, Int_t debug=-1,
+   virtual void Run(Long64_t nevents, Int_t start=-1, Int_t stop=-1,
+                    Int_t step=-1, Int_t ntries=-1, Int_t debug=-1,
+                    Int_t draw=-1)=0;
+   virtual void Run(const char *dset, Int_t start=-1, Int_t stop=-1,
+                    Int_t step=-1, Int_t ntries=-1, Int_t debug=-1,
                     Int_t draw=-1)=0;
 
    virtual void Print(Option_t* option="")const=0;

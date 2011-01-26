@@ -22,39 +22,40 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TObject
-#include "TObject.h"
+#ifndef ROOT_TNamed
+#include "TNamed.h"
+#endif
+#ifndef ROOT_TProofBenchTypes
+#include "TProofBenchTypes.h"
 #endif
 
 class TProof;
 class TList;
 class TMap;
 
-class TProofBenchMode: public TObject{
+class TProofBenchMode: public TNamed {
 
 private:
+   
+protected:
+   TProof* fProof;   //proof
 
 public:
 
-   enum EFileType {kFileNotSpecified=0,  //type not specified
-                   kFileBenchmark,       //file for benchmark test
-                   kFileCleanup};        //file for cleaning up memory between
-                                         // runs
-
+   TProofBenchMode(TProof *proof = 0, const char *name = "");
    virtual ~TProofBenchMode();
 
    virtual TMap* FilesToProcess(Int_t nf)=0;
 
    virtual Int_t MakeDataSets(Int_t nf=-1, Int_t start=1, Int_t stop=-1,
                               Int_t step=1, const TList* listfiles=0,
-                              const char* option="", TProof* proof=0,
-                              Int_t flag_nx=-1)=0;
+                              const char* option="", TProof* proof=0)=0;
 
    virtual Int_t MakeDataSets(Int_t nfiles, Int_t np, const Int_t *wp,
                               const TList* listfiles=0, const char *option="",
-                              TProof* proof=0, Int_t flag_nx=-1)=0;
+                              TProof* proof=0)=0;
 
-   virtual EFileType GetFileType()=0;
+   virtual EPBFileType GetFileType()=0;
 
    virtual void Print(Option_t* option="") const=0;
 

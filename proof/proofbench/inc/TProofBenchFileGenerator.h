@@ -1,4 +1,4 @@
-// @(#)root/proofx:$Id:$
+// @(#)root/proofx:$Id$
 // Author: Sangsu Ryu 22/6/2010
 
 /*************************************************************************
@@ -50,9 +50,6 @@ private:
    Int_t fNTracks;          //number of tracks to generate in an event
    Int_t fRegenerate;       //when true, regenerate files
 
-   Int_t fNx;               //when 1, the same number of workers on the nodes
-                            //in the cluster are activated at the same time
-
    TProofNodes* fNodes;     //nodes information
    TList* fFilesGenerated;  //list of files generated at worker nodes
                             //for benchmarking
@@ -62,8 +59,8 @@ public:
    TProofBenchFileGenerator(TProofBenchMode* mode=0, Long64_t nevents=10000,
                             Int_t start=1, Int_t stop=-1, Int_t step=1,
                             TString basedir="", Int_t ntracks=100,
-                            Bool_t regenerate=kFALSE, Int_t nx=0,
-                            TProof* proof=0, TProofNodes* nodes=0);
+                            Bool_t regenerate=kFALSE, TProof* proof=0,
+                            TProofNodes* nodes=0);
 
    virtual ~TProofBenchFileGenerator();
 
@@ -73,13 +70,12 @@ public:
 
    virtual Int_t MakeDataSets(Int_t nfiles=-1, Int_t start=-1, Int_t stop=-1,
                               Int_t step=-1, const TList* listfiles=0,
-                              const char* option="V", Int_t nx=-1);
+                              const char* option="V");
 
    virtual Int_t MakeDataSets(const char* option);
 
    virtual Int_t MakeDataSets(Int_t nfiles, Int_t np, const Int_t *wp,
-                              const TList* listfiles=0, const char *option="V",
-                              Int_t nx=-1);
+                              const TList* listfiles=0, const char *option="V");
 
    virtual void Print(Option_t* option="") const;
 
@@ -91,7 +87,6 @@ public:
    void SetBaseDir(TString basedir);
    void SetNTracks(Int_t ntracks);
    void SetRegenerate(Int_t regenerate);
-   void SetNx(Int_t nx);
 
    TProofBenchMode* GetMode() const;
    Long64_t GetNEvents() const;
@@ -101,7 +96,6 @@ public:
    TString GetBaseDir() const;
    Int_t GetNTracks() const;
    Int_t GetRegenerate() const;
-   Int_t GetNx() const;
 
    ClassDef(TProofBenchFileGenerator,0)  //Generate files and register them 
                                          //as datasets to be used for the Proof
