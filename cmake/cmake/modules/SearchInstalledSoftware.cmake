@@ -1,9 +1,8 @@
 Macro(SearchInstalledSoftware)
 
-#Check for installed packages
+#---Check for installed packages------------------------------------------------
 
-# Check if (N)Curses is installed. If neither is installed
-# switch of editline 
+#---Check if (N)Curses is installed. If neither is installed switch of editline 
 Message(STATUS "Looking for NCurses")
 Set(CURSES_NEED_NCURSES TRUE)
 Find_Package(Curses)
@@ -25,6 +24,7 @@ Else(CURSES_FOUND)
   Set(BuildEditLine FALSE)
 EndIf(CURSES_FOUND)
 
+#---Check for Zlib ------------------------------------------------------------------
 Set(RootConfigFeatures "${RootConfigFeatures} builtin_zlib")
 Message(STATUS "Looking for ZLib")
 Find_Package(ZLIB)
@@ -35,6 +35,7 @@ Else(ZLIB_FOUND)
   Set(RootConfigFeatures "${RootConfigFeatures} builtin_zlib")
 EndIf(ZLIB_FOUND)
 
+#---Check for Freetype---------------------------------------------------------------
 Set(RootConfigFeatures "${RootConfigFeatures} builtin_freetype")
 Message(STATUS "Looking for Freetype")
 Find_Package(Freetype)
@@ -45,10 +46,11 @@ Else(FREETYPE_FOUND)
   Set(RootConfigFeatures "${RootConfigFeatures} builtin_freetype")
 EndIf(FREETYPE_FOUND)
 
-# Check for X11 which is amandatory lib on Unix 
+#---Check for X11 which is mandatory lib on Unix 
 Message(STATUS "Looking for X11")
 Find_Package(X11 REQUIRED)
 If(X11_FOUND)
+  list(REMOVE_DUPLICATES X11_INCLUDE_DIR)
   Message("X11_INCLUDE_DIR: ${X11_INCLUDE_DIR}")
   Message("X11_LIBRARIES: ${X11_LIBRARIES}")
 Else(X11_FOUND)
@@ -73,14 +75,11 @@ Else(X11_Xext_FOUND)
   Message(FATAL_ERROR "libXext and Xext headers must be installed.")
 EndIf(X11_Xext_FOUND)
 
-#Check for all kind of graphics includes needed by libAfterImage
+#---Check for all kind of graphics includes needed by libAfterImage
 Find_Package(GIF)
 Find_Package(TIFF)
 Find_Package(PNG)
-Message("PNG_INCLUDE_DIR: ${PNG_INCLUDE_DIR}")
 Find_Package(JPEG)
-
-#MESSAGE("ROOT FEATURES: ${RootConfigFeatures}")
 
 EndMacro(SearchInstalledSoftware)
 

@@ -87,8 +87,7 @@ Set(RootConfigOptions)
 Set(RootConfigFeatures)
 Set(ENV{HeadersToInstall})
 
-# where to look first for cmake modules, before ${CMAKE_ROOT}/Modules/ 
-# is checked
+# where to look first for cmake modules, before ${CMAKE_ROOT}/Modules/ is checked
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 # Load some basic macros which are needed later on
@@ -100,13 +99,10 @@ include(MacroEnsureVersion)
 include(SearchInstalledSoftware)
 include(CTest)
 
-MESSAGE("The length of void* is ${CMAKE_SIZEOF_VOID_P}")
-
 #Check the compiler and set the compile and link flags
 Check_Compiler()
 
-# Check if the user wants to build the project in the source
-# directory
+# Check if the user wants to build the project in the source directory
 CHECK_OUT_OF_SOURCE_BUILD()
 
 # Check if we are on an UNIX system. If not stop with an error
@@ -161,6 +157,7 @@ Add_Custom_Target(check)
 #Include(${CMAKE_SOURCE_DIR}/cint/CMakeLists_include.txt)
 Add_Subdirectory (cint)
 Add_Subdirectory (core)
+Add_Subdirectory (build)
 Add_Subdirectory (math)
 Add_Subdirectory (hist)
 Add_Subdirectory (tree)
@@ -198,21 +195,20 @@ install(FILES  ${CMAKE_BINARY_DIR}/include/compiledata.h DESTINATION include)
 #               )
 
 If(UNIX)
-  configure_file(${PROJECT_SOURCE_DIR}/config/mimes.unix.in
-                 ${CMAKE_BINARY_DIR}/etc/root.mimes)
+  configure_file(${PROJECT_SOURCE_DIR}/config/mimes.unix.in ${CMAKE_BINARY_DIR}/etc/root.mimes)
 EndIf(UNIX)
 
+set(bindir ${CMAKE_INSTALL_PREFIX}/bin)
+set(libdir ${CMAKE_INSTALL_PREFIX}/lib)
+set(mandir ${CMAKE_INSTALL_PREFIX}/man)
 #configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex.in
 #               ${EXECUTABLE_OUTPUT_PATH}/genreflex @ONLY)
 #configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex-rootcint.in
 #               ${EXECUTABLE_OUTPUT_PATH}/genreflex-rootcint @ONLY)
 #configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/memprobe.in
 #               ${EXECUTABLE_OUTPUT_PATH}/memprobe @ONLY)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/thisroot.sh.in
-#               ${EXECUTABLE_OUTPUT_PATH}/thisroot.sh @ONLY)
-#configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/thisroot.csh.in
-#               ${EXECUTABLE_OUTPUT_PATH}/thisroot.csh @ONLY)
-#
+configure_file(${PROJECT_SOURCE_DIR}/config/thisroot.sh ${EXECUTABLE_OUTPUT_PATH}/thisroot.sh @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/config/thisroot.csh ${EXECUTABLE_OUTPUT_PATH}/thisroot.csh @ONLY)
 #configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex.final.in
 #               ${EXECUTABLE_OUTPUT_PATH}/final/genreflex @ONLY)
 #configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex-rootcint.final.in
@@ -231,3 +227,7 @@ EndIf(UNIX)
 #              ${EXECUTABLE_OUTPUT_PATH}/final/thisroot.csh
 #        DESTINATION ${BIN_INSTALL_DIR}
 #)
+install(FILES ${EXECUTABLE_OUTPUT_PATH}/thisroot.sh
+              ${EXECUTABLE_OUTPUT_PATH}/thisroot.csh
+              DESTINATION bin)
+

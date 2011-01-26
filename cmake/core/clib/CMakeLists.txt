@@ -7,7 +7,7 @@ if(BuildEditLine)
   list(REMOVE_ITEM sources ${CMAKE_CURRENT_SOURCE_DIR}/src/Getline.c)
 endif()
 
-ROOT_GENERATE_DICTIONARY(G__Clib Getline.h LINKDEF LinkDef.h)
+ROOT_GENERATE_DICTIONARY(G__Clib strlcpy.h snprintf.h Getline.h LINKDEF LinkDef.h)
 
 set(CLIB_DICTIONARY  ${CMAKE_CURRENT_BINARY_DIR}/G__Clib.cxx PARENT_SCOPE)
 
