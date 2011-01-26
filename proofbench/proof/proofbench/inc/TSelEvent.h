@@ -1,4 +1,4 @@
-// @(#)root/proofx:$Id:$
+// @(#)root/proofx:$Id$
 // Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
@@ -34,24 +34,29 @@
 #ifndef ROOT_TSelector
 #include <TSelector.h>
 #endif
-#ifndef ROOT_TProofBenchRun
-#include <TProofBenchRun.h>
+#ifndef ROOT_TRef
+#include <TRef.h>
+#endif
+#ifndef ROOT_TProofBenchTypes
+#include <TProofBenchTypes.h>
 #endif
 #ifndef ROOT_Event
-#include <test/Event.h>
+#include <Event.h>
 #endif
 
 class TROOT;
-class TFile;
-class TH1;
+class TH1F;
 class TCanvas;
+class THashList;
+class TClonesArray;
+class TRefArray;
 
 class TSelEvent : public TSelector {
 
 private:
 
-   TProofBenchRun::EReadType fReadType;       //read type
-   TProofBenchRun::ECleanupType fCleanupType; //clean-up type
+   EPBReadType fReadType;       //read type
+   EPBCleanupType fCleanupType; //clean-up type
    THashList* fFilesToCleanupCacheFor;        //list of files to clean up cache for
    Bool_t fDebug;                             //debug switch
    TCanvas* fCHist;                           //canvas to display histograms
@@ -65,7 +70,7 @@ public :
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
 
    // Declaration of leave types
-   Event           *event;
+//   Event           *event;
    Char_t          fType[20];
    Char_t          *fEventName;
    Int_t           fNtrack;
@@ -124,13 +129,13 @@ public :
    virtual void    SlaveTerminate();
    virtual void    Terminate();
 
-   TProofBenchRun::EReadType GetReadType(){return fReadType;}
-   TProofBenchRun::ECleanupType GetCleanupType(){return fCleanupType;}
+   EPBReadType GetReadType(){return fReadType;}
+   EPBCleanupType GetCleanupType(){return fCleanupType;}
    THashList* GetFilesToCleanupCacheFor(){return fFilesToCleanupCacheFor;}
    Bool_t GetDebug(){return fDebug;}
    TCanvas* GetCHist(){return fCHist;}
-   TH1* GetPtHist(){return fPtHist;}
-   TH1* GetNTracksHist(){return fNTracksHist;}
+   TH1F* GetPtHist(){return fPtHist;}
+   TH1F* GetNTracksHist(){return fNTracksHist;}
 
    ClassDef(TSelEvent,0) //PROOF selector for I/O-intensive benchmark test
 };

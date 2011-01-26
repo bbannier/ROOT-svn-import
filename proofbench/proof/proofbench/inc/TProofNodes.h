@@ -25,28 +25,33 @@
 #endif
 
 class TProof;
-class TList;
+class TMap;
 
-class TProofNodes: public TObject
-{
+class TProofNodes: public TObject {
 private:
-   TProof* fProof;
-   TList* fNodes;   //List of node infos
+   TProof *fProof;
+   TMap   *fNodes;        // List of node infos
+   Int_t   fMaxWrksNode;  // Max number of workers per node
+   Int_t   fMinWrksNode;  // Min number of workers per node
+   Int_t   fNNodes;       // Number of nodes
+   Int_t   fNWrks;        // Number of workers
+   Int_t   fNActiveWrks;  // Number of active workers
 
    void Build();
 public:
    TProofNodes(TProof* proof);
 
    virtual ~TProofNodes();
-   Int_t ActivateWorkers(const TString& workers);
-   Int_t GetMaxNWorkersANode() const;
-   Int_t GetNWorkersCluster() const;
-   Int_t GetNNodes() const;
-   Int_t GetMinNWorkersANode() const;
-   Int_t TProofNodes::GetNActives() const;
-   TList* GetListOfNodes() const;
+   Int_t ActivateWorkers(const char *workers);
+   Int_t GetMaxWrksPerNode() const { return fMaxWrksNode; }
+   Int_t GetNWorkersCluster() const { return fNWrks; }
+   Int_t GetNNodes() const { return fNNodes; }
+   Int_t GetMinWrksPerNode() const { return fMinWrksNode; }
+   Int_t GetNActives() const { return fNActiveWrks; }
+   TMap* GetMapOfNodes() const { return fNodes; }
    void Print(Option_t* option="") const;
-   //ClassDef(TProofNodes, 0) //Node and worker information
+   
+   ClassDef(TProofNodes, 0) //Node and worker information
 };
 
 #endif

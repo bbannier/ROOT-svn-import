@@ -30,21 +30,20 @@
 #endif
 
 class TCanvas;
+class TList;
 class TProof;
 class TProfile;
-class TH2;
 class TTree;
 
 class TProofBenchMode;
 class TProofNodes;
+class TH2;
 
-class TProofBenchRunCPU : public TProofBenchRun{
+class TProofBenchRunCPU : public TProofBenchRun {
 
 private:
 
-   TProof* fProof;               //proof
-
-   TProofBenchRun::EHistType fHistType;  //histogram type
+   EPBHistType fHistType;  //histogram type
    Int_t fNHists;                //number of histograms
 
    Long64_t fNEvents;            //number of events to generate
@@ -53,7 +52,6 @@ private:
    Int_t fStart;                 //start number of workers to scan
    Int_t fStop;                  //stop number of workers to scan
    Int_t fStep;                  //test to be performed every fStep workers
-   Int_t fNx;
 
    Int_t fDraw;                  //draw switch
    Int_t fDebug;                 //debug switch
@@ -70,8 +68,7 @@ private:
 
 protected:
 
-   void FillPerfStatProfiles(TTree* t, TProfile* profile_event, TH2* hist_event,
-                             Int_t nactive);
+   void FillPerfStatProfiles(TTree* t, TH2* profile, Int_t nactive);
 
    Int_t SetParameters();
    Int_t DeleteParameters();
@@ -79,8 +76,7 @@ protected:
    TString BuildPatternName(const TString& objname,
                             const TString& delimiter="_");
    TString BuildNewPatternName(const TString& objname, Int_t nactive,
-                               Int_t tries, Int_t nx,
-                               const TString& delimiter="_");
+                               Int_t tries, const TString& delimiter="_");
    TString BuildProfileName(const TString& objname, const TString& type,
                             const TString& delimiter="_");
    TString BuildProfileTitle(const TString& objname, const TString& type,
@@ -88,42 +84,41 @@ protected:
 
 public:
 
-   TProofBenchRunCPU(TProofBenchRun::EHistType histtype=TProofBenchRun::kHistNotSpecified,
+   TProofBenchRunCPU(EPBHistType histtype=kPBHistNotSpecified,
                      Int_t nhists=16, TDirectory* dirproofbench=0,
                      TProof* proof=0, TProofNodes* nodes=0,
                      Long64_t nevents=1000000, Int_t ntries=2, Int_t start=1,
-                     Int_t stop=-1, Int_t step=1, Int_t nx=0, Int_t draw=0, Int_t debug=0);
+                     Int_t stop=-1, Int_t step=1, Int_t draw=0, Int_t debug=0);
 
    virtual ~TProofBenchRunCPU();
 
    void Run(Long64_t nevents, Int_t start, Int_t stop, Int_t step, Int_t ntries,
-            Int_t nx, Int_t debug, Int_t draw);
+            Int_t debug, Int_t draw);
+   void Run(const char *, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t) { }
 
    void DrawPerfProfiles();
 
    void Print(Option_t* option="") const;
 
-   void SetHistType(TProofBenchRun::EHistType histtype);
+   void SetHistType(EPBHistType histtype);
    void SetNHists(Int_t nhists);
    void SetNEvents(Long64_t nevents);
    void SetNTries(Int_t ntries);
    void SetStart(Int_t start);
    void SetStop(Int_t stop);
    void SetStep(Int_t step);
-   void SetNx(Int_t nx);
    void SetDraw(Int_t draw);
    void SetDebug(Int_t debug);
 
    void SetDirProofBench(TDirectory* dir);
 
-   TProofBenchRun::EHistType GetHistType() const;
+   EPBHistType GetHistType() const;
    Int_t GetNHists() const;
    Long64_t GetNEvents() const;
    Int_t GetNTries() const;
    Int_t GetStart() const;
    Int_t GetStop() const;
    Int_t GetStep() const;
-   Int_t GetNx() const;
    Int_t GetDraw() const;
    Int_t GetDebug() const;
    TDirectory* GetDirProofBench() const;

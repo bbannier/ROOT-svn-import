@@ -25,14 +25,16 @@
 #define TSelEvent_cxx
 
 #include "TSelEvent.h"
-#include <TH1.h>
+#include <TH1F.h>
 #include <TStyle.h>
 #include "TParameter.h"
-#include "TProofBenchRun.h"
+#include "TProofBenchTypes.h"
 #include "TTree.h"
 #include "TCanvas.h"
 #include "TFileInfo.h"
 #include "THashList.h"
+#include "TClonesArray.h"
+#include "TRefArray.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -43,10 +45,10 @@ ClassImp(TSelEvent)
 
 //______________________________________________________________________________
 TSelEvent::TSelEvent(TTree *):
-fReadType(TProofBenchRun::kReadNotSpecified),
-fCleanupType(TProofBenchRun::kCleanupNotSpecified),
+fReadType(kPBReadNotSpecified),
+fCleanupType(kPBCleanupNotSpecified),
 fFilesToCleanupCacheFor(0), fDebug(kFALSE), fCHist(0), fPtHist(0),
-fNTracksHist(0), event(0), fEventName(0), fTracks(0), fHighPt(0), fMuons(0),
+fNTracksHist(0), fEventName(0), fTracks(0), fHighPt(0), fMuons(0),
 fH(0), b_event_fType(0), b_fEventName(0), b_event_fNtrack(0), b_event_fNseg(0),
 b_event_fNvertex(0), b_event_fFlag(0), b_event_fTemperature(0),
 b_event_fMeasures(0), b_event_fMatrix(0), b_fClosestDistance(0),
@@ -57,10 +59,10 @@ b_event_fTriggerBits(0), b_event_fIsValid(0)
 
 //______________________________________________________________________________
 TSelEvent::TSelEvent():
-fReadType(TProofBenchRun::kReadNotSpecified),
-fCleanupType(TProofBenchRun::kCleanupNotSpecified),
+fReadType(kPBReadNotSpecified),
+fCleanupType(kPBCleanupNotSpecified),
 fFilesToCleanupCacheFor(0), fDebug(kFALSE), fCHist(0), fPtHist(0),
-fNTracksHist(0), event(0), fEventName(0), fTracks(0), fHighPt(0), fMuons(0),
+fNTracksHist(0), fEventName(0), fTracks(0), fHighPt(0), fMuons(0),
 fH(0), b_event_fType(0), b_fEventName(0), b_event_fNtrack(0), b_event_fNseg(0),
 b_event_fNvertex(0), b_event_fFlag(0), b_event_fTemperature(0),
 b_event_fMeasures(0), b_event_fMatrix(0), b_fClosestDistance(0),
@@ -94,7 +96,7 @@ void TSelEvent::Begin(TTree *)
       if (sinput.Contains("PROOF_BenchmarkReadType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fReadType=TProofBenchRun::EReadType(a->GetVal());
+            fReadType=EPBReadType(a->GetVal());
             found_readtype=kTRUE;
             //Info("Begin", "PROOF_BenchmarkReadType=%d", fReadType);
          }
@@ -107,7 +109,7 @@ void TSelEvent::Begin(TTree *)
       if (sinput.Contains("PROOF_BenchmarkCleanupType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fCleanupType=TProofBenchRun::ECleanupType(a->GetVal());
+            fCleanupType=EPBCleanupType(a->GetVal());
             found_cleanuptype=kTRUE;
             //Info("Begin", "PROOF_BenchmarkCleanupType=%d", fCleanupType);
          }
@@ -182,7 +184,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
       if (sinput.Contains("PROOF_BenchmarkReadType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fReadType=TProofBenchRun::EReadType(a->GetVal());
+            fReadType=EPBReadType(a->GetVal());
             found_readtype=kTRUE;
             //Info("SlaveBegin", "PROOF_BenchmarkReadType=%d", fReadType);
          }
@@ -195,7 +197,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
       if (sinput.Contains("PROOF_BenchmarkCleanupType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fCleanupType=TProofBenchRun::ECleanupType(a->GetVal());
+            fCleanupType=EPBCleanupType(a->GetVal());
             found_cleanuptype=kTRUE;
             //Info("SlaveBegin", "PROOF_BenchmarkCleanupType=%d", fCleanupType);
          }
@@ -264,7 +266,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
    }
 
    //clear file cache
-   if (fCleanupType==TProofBenchRun::kCleanupFileAdvise){
+   if (fCleanupType==kPBCleanupFileAdvise){
       TIter nxtf(fFilesToCleanupCacheFor);
       TFileInfo* fi=0;
       while ((fi=dynamic_cast<TFileInfo*>(nxtf()))){
@@ -274,7 +276,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
 //            if (!url) break;
             TString hostname=url->GetHostFQDN(); 
             TString localhostname=TUrl(gSystem->HostName()).GetHostFQDN();
-            if (hostname==localhostname){
+            if (hostname.IsNull() || hostname == localhostname){
                TString filename=url->GetFile();
                Info("SlaveBegin", "Cleaning up file cache of file %s.",
                                    filename.Data());
@@ -315,14 +317,14 @@ Bool_t TSelEvent::Process(Long64_t entry)
    //  Assuming that fChain is the pointer to the TChain being processed,
    //  use fChain->GetTree()->GetEntry(entry).
  
-   if (fReadType!=TProofBenchRun::kReadNotSpecified){
+   if (fReadType!=kPBReadNotSpecified){
       switch (fReadType){
-      case TProofBenchRun::kReadNotSpecified:
+      case kPBReadNotSpecified:
          Info("Process", "Run type not specified, doing nothing");
          //return kTRUE; 
          return kFALSE; 
          break;
-      case TProofBenchRun::kReadFull://full read
+      case kPBReadFull://full read
          fChain->GetTree()->GetEntry(entry);
          if (fDebug){
             //printf("fNtrack=%d\n", fNtrack);
@@ -335,7 +337,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
          }
          fTracks->Clear("C");
          break;
-      case TProofBenchRun::kReadOpt: //partial read
+      case kPBReadOpt: //partial read
          b_event_fNtrack->GetEntry(entry);
    
          if (fDebug){
@@ -354,7 +356,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
             fTracks->Clear("C");
          }
          break;
-      case TProofBenchRun::kReadNo: //no read
+      case kPBReadNo: //no read
          break;
       default:
          Error("Process", "Read type not supported; %d", fReadType);
@@ -362,9 +364,9 @@ Bool_t TSelEvent::Process(Long64_t entry)
          break;
       }
    }
-   if (fCleanupType!=TProofBenchRun::kCleanupNotSpecified){
+   if (fCleanupType!=kPBCleanupNotSpecified){
       switch (fCleanupType){
-      case TProofBenchRun::kCleanupReadInFiles:
+      case kPBCleanupReadInFiles:
          fChain->GetTree()->GetEntry(entry);
          if (fDebug){
             //printf("fNtrack=%d\n", fNtrack);
@@ -378,7 +380,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
          fTracks->Clear("C");
          break;
 
-      case TProofBenchRun::kCleanupFileAdvise:
+      case kPBCleanupFileAdvise:
          break;
       default:
          Error("Process", "Cleanup type not supported; %d", fCleanupType);

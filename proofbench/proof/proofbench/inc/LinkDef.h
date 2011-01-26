@@ -14,10 +14,15 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class Event+;
-#pragma link C++ class EventHeader+;
-#pragma link C++ class Track+;
-#pragma link C++ class HistogramManager+;
+#pragma link C++ enum EPBFileType;
+#pragma link C++ enum EPBReadType;
+#pragma link C++ enum EPBHistType;
+#pragma link C++ enum EPBCleanupType;
+
+// #pragma link C++ class Event+;
+// #pragma link C++ class EventHeader+;
+// #pragma link C++ class Track+;
+// #pragma link C++ class HistogramManager+;
 #pragma link C++ class TProofBench+;
 #pragma link C++ class TProofBenchFileGenerator+;
 #pragma link C++ class TProofBenchRun+;
@@ -25,12 +30,13 @@
 #pragma link C++ class TProofBenchRunCPU+;
 #pragma link C++ class TProofBenchRunDataRead+;
 #pragma link C++ class TProofBenchMode+;
-#pragma link C++ class TProofBenchModeCleanup+;
-#pragma link C++ class TProofBenchModeVaryingNFilesWorker+;
+// #pragma link C++ class TProofBenchModeCleanup+;
+// #pragma link C++ class TProofBenchModeVaryingNFilesWorker+;
 #pragma link C++ class TProofBenchModeConstNFilesNode+;
-#pragma link C++ class TProofBenchModeConstNFilesWorker+;
-#pragma link C++ class TSelHist+;
-#pragma link C++ class TSelEvent+;
-#pragma link C++ class TSelEventGen+;
+#pragma link C++ class TProofNodes+;
+// #pragma link C++ class TProofBenchModeConstNFilesWorker+;
+// #pragma link C++ class TSelHist+;
+// #pragma link C++ class TSelEvent+;
+// #pragma link C++ class TSelEventGen+;
 
 #endif

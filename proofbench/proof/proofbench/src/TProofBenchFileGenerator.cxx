@@ -20,6 +20,7 @@
 
 #include "TProofBenchFileGenerator.h"
 #include "TProofBenchMode.h"
+#include "TProofBenchTypes.h"
 #include "TProofNodes.h"
 #include "TFile.h"
 #include "TFileCollection.h"
@@ -41,11 +42,11 @@ ClassImp(TProofBenchFileGenerator)
 TProofBenchFileGenerator::TProofBenchFileGenerator(TProofBenchMode* mode,
                                Long64_t nevents, Int_t start, Int_t stop,
                                Int_t step, TString basedir, Int_t ntracks,
-                               Bool_t regenerate, Int_t nx, TProof* proof,
+                               Bool_t regenerate, TProof* proof,
                                TProofNodes* nodes)
 :fProof(0), fMode(mode), fNEvents(nevents), fStart(start), fStop(stop),
 fStep(step), fBaseDir(basedir), fNTracks(ntracks), fRegenerate(regenerate),
-fNx(nx), fNodes(nodes), fFilesGenerated(0)
+fNodes(nodes), fFilesGenerated(0)
 {
    fProof=proof?proof:gProof;
 
@@ -99,17 +100,22 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nfiles, Long64_t nevents,
    //    0 when ok
    //   <0 otherwise
 
+   if (!fMode){
+      Error("GenerateFiles", "mode not set, doing nothing");
+      return -1;
+   }
+
    Info("GenerateFiles", "Generating files for mode %s.", fMode->GetName());
    Int_t nactive_sav;
 
    if (fProof){
       nactive_sav=fProof->GetParallel();
       fProof->SetParallel(99999);
-   }
-   else{
+   } else{
       Error("GenerateFiles", "Proof not set, doing nothing");
       return -1;
    }
+
 
    // Check input parameters
    if (nfiles==-1){
@@ -142,7 +148,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nfiles, Long64_t nevents,
 
    TIter nwl(wl);
    TSlaveInfo *si=0;
-   while (si=(TSlaveInfo*)nwl()){
+   while ((si = (TSlaveInfo *)nwl())) {
       wlcopy->Add(new TSlaveInfo(*si));
    }
    fProof->AddInput(wlcopy);
@@ -159,7 +165,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nfiles, Long64_t nevents,
    // Add the file map in the input list
    fProof->AddInput(filesmap);
 
-   TProofBenchMode::EFileType filetype=fMode->GetFileType();
+   EPBFileType filetype = fMode->GetFileType();
    fProof->SetParameter("PROOF_BenchmarkFileType", filetype);
    fProof->SetParameter("PROOF_BenchmarkBaseDir", basedir.Data());
    fProof->SetParameter("PROOF_BenchmarkNEvents", nevents);
@@ -194,9 +200,9 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nfiles, Long64_t nevents,
       if (outputname.Contains("PROOF_FilesGenerated")){
          if ((lfilesgenerated=dynamic_cast<TList*>(obj))){
             TIter nxtobj(lfilesgenerated);
-            TObject* obj=0;
-            while (obj=nxtobj()){
-               fFilesGenerated->Add(obj);
+            TObject* xobj=0;
+            while ((xobj = nxtobj())) {
+               fFilesGenerated->Add(xobj);
             }
          }
          else{
@@ -217,7 +223,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nfiles, Long64_t nevents,
 
    TIter nxtfi(fFilesGenerated);
    TFileInfo* fi=0;
-   while (fi=(TFileInfo*)nxtfi()){
+   while ((fi = (TFileInfo*)nxtfi())) {
       fi->GetFirstUrl()->SetProtocol(datapoolprotocol);
       fi->GetFirstUrl()->SetPort(datapoolport);
    }
@@ -250,7 +256,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nfiles, Long64_t nevents,
 //______________________________________________________________________________
 Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nfiles, Int_t start,
                                 Int_t stop, Int_t step, const TList* listfiles,
-                                const char* option, Int_t nx)
+                                const char* option)
 {
    // Make data sets out of list of files 'listfiles' and register them
    // for benchmark test
@@ -289,17 +295,14 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nfiles, Int_t start,
        return -1;
    }
 
-   nx=(nx==-1)?fNx:nx;
-
    if (listfiles){
-      fMode->MakeDataSets(nfiles, start, stop, step, listfiles, option, fProof,
-                          nx);
+      fMode->MakeDataSets(nfiles, start, stop, step, listfiles, option, fProof);
       return 0;
    }
    else{
       if (fFilesGenerated){
          fMode->MakeDataSets(nfiles, start, stop, step, fFilesGenerated,
-                             option, fProof, nx);
+                             option, fProof);
       }
       else{
          Error("MakeDataSet", "Empty data set; Either generate files first"
@@ -323,7 +326,7 @@ Int_t TProofBenchFileGenerator::MakeDataSets(const char* option)
 
    if ( fFilesGenerated ) {
       fMode->MakeDataSets(-1, fStart, fStop, fStep, fFilesGenerated, option,
-                         fProof, fNx);
+                         fProof);
    }
    else{
       Error("MakeDataSet", "Generate files first");
@@ -336,7 +339,7 @@ Int_t TProofBenchFileGenerator::MakeDataSets(const char* option)
 //______________________________________________________________________________
 Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nfiles, Int_t np,
                                 const Int_t *wp, const TList* listfiles,
-                                const char* option, Int_t nx)
+                                const char* option)
 {
    // Create the data sets out of list of files 'listfiles' and register them
    // for benchmark test
@@ -355,15 +358,12 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nfiles, Int_t np,
    //    0 when ok
    //   <0 otherwise
 
-   nx=(nx==-1)?fNx:nx;
-
    if (listfiles){
-      fMode->MakeDataSets(nfiles, np, wp, listfiles, option, fProof, nx);
+      fMode->MakeDataSets(nfiles, np, wp, listfiles, option, fProof);
    }
    else{
       if ( fFilesGenerated ) {
-         fMode->MakeDataSets(nfiles, np, wp, fFilesGenerated, option, fProof,
-                             nx);
+         fMode->MakeDataSets(nfiles, np, wp, fFilesGenerated, option, fProof);
       }
       else{
          Error("MakeDataSet", "Empty data set; Either generate files first or"
@@ -387,7 +387,6 @@ void TProofBenchFileGenerator::Print(Option_t* option) const
    Printf("fBaseDir=\"%s\"", fBaseDir.Data()); 
    Printf("fNTracksBench=%d", fNTracks);
    Printf("fRegenerate=%d", fRegenerate);
-   Printf("fNx=%d", fNx);
    if (fNodes) fNodes->Print(option);
    if (fFilesGenerated) fFilesGenerated->Print(option);
 }
