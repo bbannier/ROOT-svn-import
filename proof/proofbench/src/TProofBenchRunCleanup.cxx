@@ -47,15 +47,17 @@ ClassImp(TProofBenchRunCleanup)
 
 //______________________________________________________________________________
 TProofBenchRunCleanup::TProofBenchRunCleanup(
-               TProofBenchRun::ECleanupType cleanuptype,
-               TDirectory* dirproofbench, TProof* proof, Int_t debug):
-fProof(proof), fCleanupType(cleanuptype), fDebug(debug),
+               EPBCleanupType cleanuptype,
+               TDirectory* dirproofbench, TProof* proof, Int_t debug) : TProofBenchRun(proof),
+fCleanupType(cleanuptype), fDebug(debug),
 fDirProofBench(dirproofbench)
 {
    //Default constructor
- 
-   if (!fProof){
-       fProof=gProof;
+
+   if (TestBit(kInvalidObject)) {
+      Error("TProofBenchRunCleanup",
+            "problems validating PROOF session or enabling selector PAR");
+      return;
    }
 
    TString name="Cleanup"+GetNameStem();
@@ -78,10 +80,10 @@ TString TProofBenchRunCleanup::GetNameStem() const
 {
    TString namestem;
    switch (fCleanupType){
-   case TProofBenchRun::kCleanupReadInFiles:
+   case kPBCleanupReadInFiles:
       namestem="ReadInFiles";
       break;
-   case TProofBenchRun::kCleanupFileAdvise:
+   case kPBCleanupFileAdvise:
       namestem="FileAdvise";
       break;
    default:
@@ -91,13 +93,12 @@ TString TProofBenchRunCleanup::GetNameStem() const
 }
 
 //______________________________________________________________________________
-void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t,
+void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t,
                                 Int_t debug, Int_t)
 {
    // Clean up cache between bench mark runs. 
    // Input parameters
    //    Long64_t Ignored.
-   //    Int_t    Ignored.
    //    Int_t    Ignored.
    //    Int_t    Ignored.
    //    Int_t    Ignored.
@@ -119,7 +120,7 @@ void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t,
    DeleteParameters();
    SetParameters();
 
-   if (fCleanupType==TProofBenchRun::kCleanupReadInFiles){
+   if (fCleanupType==kPBCleanupReadInFiles){
       TString dsname="DataSetEventCleanup";
       Info("Run", "Cleaning up file cache by reading in files of data set %s.",
                    dsname.Data());
@@ -214,7 +215,7 @@ void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t,
          ncalls++;
       }
    }
-   else if (fCleanupType==TProofBenchRun::kCleanupFileAdvise){
+   else if (fCleanupType==kPBCleanupFileAdvise){
       TString inputdataname="PROOF_BenchmarkFilesToCleanupCacheFor";
       //fProof->ClearInputData(inputdataname.Data());
 
@@ -230,8 +231,12 @@ void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t,
 
          Info("Run", "Cleaning up file cache of data set %s.",
                      fDataSetCleanup.Data());
+         TString packetizer;
+         if (TProof::GetParameter(fProof->GetInputList(), "PROOF_Packetizer", packetizer) != 0) packetizer = "";
+         fProof->SetParameter("PROOF_Packetizer", "TPacketizerUnit");
          fProof->Process("TSelEvent", Long64_t(1));
          fProof->ClearInputData(inputdataname.Data()); 
+         if (!packetizer.IsNull()) fProof->SetParameter("PROOF_Packetizer", packetizer);
          delete lcopy;
          //Wait a second or 2 because start time of TQueryResult has only 1-second precision.
          gSystem->Sleep(1500);
@@ -240,10 +245,10 @@ void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t, Int_t,
          Error("Run", "DataSet not found: %s", fDataSetCleanup.Data());
       }
    }
-   else if (fCleanupType==TProofBenchRun::kCleanupNotSpecified){
-      Error("Run", "fCleanupType==kCleanupNotSpecified; try again"
-                   " with either TProofBenchRun::kCleanupReadInFiles"
-                   " or TProofBenchRun::kCleanupFileAdvise");
+   else if (fCleanupType==kPBCleanupNotSpecified){
+      Error("Run", "fCleanupType==kPBCleanupNotSpecified; try again"
+                   " with either TProofBenchRun::kPBCleanupReadInFiles"
+                   " or TProofBenchRun::kPBCleanupFileAdvise");
    }
 
    DeleteParameters();
@@ -270,7 +275,7 @@ void TProofBenchRunCleanup::DrawPerfProfiles()
 
 //______________________________________________________________________________
 void TProofBenchRunCleanup::SetCleanupType
-       (TProofBenchRun::ECleanupType cleanuptype)
+       (EPBCleanupType cleanuptype)
 {
    fCleanupType=cleanuptype;
 }
@@ -294,7 +299,7 @@ void TProofBenchRunCleanup::SetDirProofBench(TDirectory* dir)
 }
 
 //______________________________________________________________________________
-TProofBenchRun::ECleanupType TProofBenchRunCleanup::GetCleanupType() const
+EPBCleanupType TProofBenchRunCleanup::GetCleanupType() const
 {
    return fCleanupType;
 }
