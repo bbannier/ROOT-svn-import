@@ -193,6 +193,29 @@ function(ROOT_LINKER_LIBRARY library)
   #install(EXPORT ${CMAKE_PROJECT_NAME}Exports DESTINATION cmake) 
 endfunction()
 
+#---------------------------------------------------------------------------------------------------
+#---ROOT_MODULE_LIBRARY( <name> source1 source2 ... [DLLEXPORT] LIBRARIES library1 library2 ...)
+#---------------------------------------------------------------------------------------------------
+function(ROOT_MODULE_LIBRARY library)
+  PARSE_ARGUMENTS(ARG "LIBRARIES" "" ${ARGN})
+  set(lib_srcs)
+  foreach( fp ${ARG_DEFAULT_ARGS})
+    file(GLOB files src/${fp})
+    if(files) 
+      set( lib_srcs ${lib_srcs} ${files})
+    else()
+      set( lib_srcs ${lib_srcs} ${fp})
+    endif()
+  endforeach()
+  include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_BINARY_DIR}/include )
+  add_library( ${library} MODULE ${lib_srcs})
+  set_target_properties(${library} PROPERTIES  SUFFIX .so )
+  target_link_libraries(${library} ${ARG_LIBRARIES})
+  #----Installation details-------------------------------------------------------
+  #install(TARGETS ${library} EXPORT ${CMAKE_PROJECT_NAME}Exports DESTINATION ${lib})
+  install(TARGETS ${library} DESTINATION ${lib})
+  #install(EXPORT ${CMAKE_PROJECT_NAME}Exports DESTINATION cmake) 
+endfunction()
 
 #---------------------------------------------------------------------------------------------------
 #---ROOT_USE_PACKAGE( package )
@@ -235,9 +258,12 @@ function(ROOT_GENERATE_ROOTMAP library)
       set(_linkdef ${_linkdef} ${CMAKE_CURRENT_SOURCE_DIR}/inc/${f})
     endif()
   endforeach()
+  foreach(d ${ARG_DEPENDENCIES})
+    set(_dependencies ${_dependencies} ${libprefix}${d}${CMAKE_SHARED_LIBRARY_SUFFIX})
+  endforeach()
   #---Build the rootmap file--------------------------------------
   add_custom_command(OUTPUT ${outfile}
-                     COMMAND rlibmap -o ${outfile} -l ${libprefix}${library}${CMAKE_SHARED_LIBRARY_SUFFIX} -d ${ARG_DEPENDENCIES} -c ${_linkdef} 
+                     COMMAND rlibmap -o ${outfile} -l ${libprefix}${library}${CMAKE_SHARED_LIBRARY_SUFFIX} -d ${_dependencies} -c ${_linkdef} 
                      DEPENDS ${library} ${_linkdef} rlibmap )
   add_custom_target( ${libprefix}${library}.rootmap ALL DEPENDS  ${outfile})
   #---Install the rootmap file------------------------------------
@@ -272,21 +298,32 @@ function(ROOT_STANDARD_LIBRARY_PACKAGE libname)
   ROOT_INSTALL_HEADERS()
 endfunction()
 
+#---------------------------------------------------------------------------------------------------
+#---GET_SOURCES( <variable> cwd <sources> ...)
+#---------------------------------------------------------------------------------------------------
+function(GET_SOURCES variable cwd )
+  set(sources)
+  foreach( fp ${ARGN})  
+    if( IS_ABSOLUTE ${fp}) 
+      file(GLOB files ${fp})     
+    else()
+      file(GLOB files ${cwd}/${fp})
+    endif()
+    if(files) 
+      set(sources ${sources} ${files})
+    else()
+      set(sources ${sources} ${fp})
+    endif()
+  endforeach()
+  set(${variable} ${sources} PARENT_SCOPE)
+endfunction()
 
 #---------------------------------------------------------------------------------------------------
 #---ROOT_EXECUTABLE( <name> source1 source2 ... LIBRARIES library1 library2 ...)
 #---------------------------------------------------------------------------------------------------
 function(ROOT_EXECUTABLE executable)
   PARSE_ARGUMENTS(ARG "LIBRARIES" "" ${ARGN})
-  set(exe_srcs)
-  foreach( fp ${ARG_DEFAULT_ARGS})  
-    file(GLOB files src/${fp})
-    if(files) 
-      set( exe_srcs ${exe_srcs} ${files})
-    else()
-      set( exe_srcs ${exe_srcs} ${fp})
-    endif()
-  endforeach()
+  GET_SOURCES(exe_srcs src ${ARG_DEFAULT_ARGS})
   include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_BINARY_DIR}/include )
   add_executable( ${executable} ${exe_srcs})
   target_link_libraries(${executable} ${ARG_LIBRARIES} )
@@ -294,8 +331,6 @@ function(ROOT_EXECUTABLE executable)
   #----Installation details-------------------------------------------------------
   install(TARGETS ${executable} RUNTIME DESTINATION ${bin})
 endfunction()
-
-
 
 #---------------------------------------------------------------------------------------------------
 #---REFLEX_BUILD_DICTIONARY( dictionary headerfiles selectionfile OPTIONS opt1 opt2 ...  LIBRARIES lib1 lib2 ... )

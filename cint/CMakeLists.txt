@@ -17,6 +17,7 @@ Execute_Process(COMMAND cmake -E make_directory ${CMAKE_BINARY_DIR}/cint/cint
 Add_Subdirectory(cint)
 #Add_Subdirectory(test)
 Add_Subdirectory(ROOT)
+Add_Subdirectory(reflex)
 ## TODO: Add cling support
 #Add_Subdirectory(cling)
 

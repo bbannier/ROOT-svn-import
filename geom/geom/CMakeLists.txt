@@ -1,6 +1,5 @@
 ############################################################################
 # CMakeLists.txt file for building ROOT geom/geom package
-# @author Pere Mato, CERN
 ############################################################################
 
 set(libname Geom)
