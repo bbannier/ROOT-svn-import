@@ -100,7 +100,7 @@ namespace TMVA {
       void    SetTarget             ( UInt_t itgt, Float_t value );
       void    SetSpectator          ( UInt_t ivar, Float_t value );
 
-      static void ClearDynamicVariables();
+      static void ClearDynamicVariables() {}
 
       void    CopyVarValues( const Event& other );
       void    Print        ( std::ostream & o ) const;
