@@ -20,7 +20,7 @@ execute_process(
   COMMAND cmake -E copy_if_different ${CMAKE_SOURCE_DIR}/cint/cint/src/loadfile.cxx loadfile_tmp.cxx
 )
 
-add_definitions("-UR__HAVE_CONFIG -DROOTBUILD")
+#add_definitions("-UR__HAVE_CONFIG -DROOTBUILD")
 set_source_files_properties(loadfile_tmp.cxx rootcint_tmp.cxx RStl_tmp.cxx PROPERTIES COMPILE_FLAGS 
                             "-I${CMAKE_SOURCE_DIR}/core/utils/src -I${CMAKE_SOURCE_DIR}/cint/cint/src -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY")
 ROOT_EXECUTABLE(rootcint_tmp  rootcint_tmp.cxx RStl_tmp.cxx loadfile_tmp.cxx
