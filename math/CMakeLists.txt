@@ -15,4 +15,5 @@ add_subdirectory(foam)
 add_subdirectory(smatrix)   #special CMakeList.txt
 add_subdirectory(splot)
 add_subdirectory(mathcore/test EXCLUDE_FROM_ALL)
+add_subdirectory(genvector)
 

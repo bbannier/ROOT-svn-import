@@ -28,7 +28,7 @@ configargs="@ROOT_CONFIGARGS@"
 altcc="@CMAKE_C_COMPILER@"
 altcxx="@CMAKE_CXX_COMPILER@"
 altf77="@CMAKE_Fortran_COMPILER@"
-altld="@CMAKE_LINKER@"
+altld="@CMAKE_CXX_COMPILER@"
 dicttype=@ROOT_DICTTYPE@ 
 zliblib=@zliblib@ 
 

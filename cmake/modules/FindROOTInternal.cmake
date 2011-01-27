@@ -250,6 +250,8 @@ CHANGE_ROOT_INSTALL_OPTIONS("builtin_freetype" "disable")
 CHANGE_ROOT_INSTALL_OPTIONS("builtin_ftgl" "disable")
 CHANGE_ROOT_INSTALL_OPTIONS("builtin_pcre" "disable")
 CHANGE_ROOT_INSTALL_OPTIONS("builtin_zlib" "disable")
+CHANGE_ROOT_INSTALL_OPTIONS("mathmore" "disable")
+
 #show_root_install_options()
 
 #set all directories where to install parts of root
