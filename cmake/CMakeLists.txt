@@ -70,7 +70,6 @@ install(FILES ${CMAKE_BINARY_DIR}/include/RConfigure.h DESTINATION include)
 get_enabled_root_install_options()
 
 configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/root-config.in ${EXECUTABLE_OUTPUT_PATH}/root-config @ONLY)
-install(FILES ${EXECUTABLE_OUTPUT_PATH}/root-config DESTINATION bin)
 
 configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/rootrc.in ${CMAKE_BINARY_DIR}/etc/system.rootrc @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/etc/system.rootrc DESTINATION etc)
@@ -136,5 +135,7 @@ install(FILES ${EXECUTABLE_OUTPUT_PATH}/genreflex
               ${EXECUTABLE_OUTPUT_PATH}/memprobe
               ${EXECUTABLE_OUTPUT_PATH}/thisroot.sh
               ${EXECUTABLE_OUTPUT_PATH}/thisroot.csh
+              ${EXECUTABLE_OUTPUT_PATH}/root-config
+              PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ 
               DESTINATION bin)
 
