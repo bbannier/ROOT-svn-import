@@ -10,6 +10,7 @@
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
 
 namespace llvm {
 class Module;
@@ -24,12 +25,33 @@ class CodeGenerator;
 namespace cling {
 class Interpreter;
 
+class EventListener : public llvm::JITEventListener {
+private:
+   std::vector<llvm::Function *> m_vec_functions;
+   llvm::ExecutionEngine *m_engine; 
+
+public:
+  EventListener() { }
+  virtual ~EventListener() { }
+
+  virtual void NotifyFunctionEmitted(const llvm::Function&, void *, size_t,
+                                     const JITEventListener::EmittedFunctionDetails&);
+  virtual void NotifyFreeingMachineCode(void *OldPtr) {}
+  
+          void CleanupList();
+          void UnregisterFunctionMapping(llvm::ExecutionEngine&);
+};
+
 class ExecutionContext {
 public:
    typedef void* (*LazyFunctionCreatorFunc_t)(const std::string&);
 
    ExecutionContext(Interpreter& Interp);
    ~ExecutionContext();
+
+   static void* LazyFunction(const std::string&);
+   
+   static void* LazyFunctionCreator(const std::string&);
 
    clang::CompilerInstance* getCI() { return m_CI.get(); }
 
@@ -52,6 +74,12 @@ public:
   }
 
 private:
+
+   EventListener m_listener;
+
+   static std::vector<std::string> m_vec_unresolved;
+   static std::vector<LazyFunctionCreatorFunc_t> m_vec_lazy_function;
+
    int verifyModule(llvm::Module* m);
    void printModule(llvm::Module* m);
    bool runNewStaticConstructorsDestructors();

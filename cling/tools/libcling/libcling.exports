@@ -100,3 +100,4 @@ _ZNK5cling9CIBuilder8createCIEv
 _ZTVN4llvm11raw_ostreamE
 _ZTVN4llvm18raw_string_ostreamE
 _ZTVN5clang11ASTConsumerE
+_ZTVN5cling13EventListenerE
