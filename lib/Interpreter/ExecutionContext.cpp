@@ -15,6 +15,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/Support/DynamicLibrary.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -27,8 +28,42 @@
 #include <cstdio>
 #include <iostream>
 #include <utility>
+#include <cxxabi.h>
 
 using namespace cling;
+
+void EventListener::NotifyFunctionEmitted(const llvm::Function &F,
+                                          void *Code, size_t Size,
+                                          const JITEventListener::EmittedFunctionDetails &Details)
+{
+   std::cerr << "EventListener::NotifyFunctionEmitted: m_vec_functions.push_back("
+             << F.getName().data() << "); Code @ " << Code << std::endl;
+   m_vec_functions.push_back((llvm::Function *)&F);
+}
+
+void EventListener::CleanupList()
+{
+   m_vec_functions.clear(); 
+}
+
+void EventListener::UnregisterFunctionMapping(llvm::ExecutionEngine &engine)
+{
+   std::vector<llvm::Function *>::reverse_iterator it;
+
+   for (it=m_vec_functions.rbegin(); it < m_vec_functions.rend(); it++) {
+      llvm::Function *ff = (llvm::Function *)*it;
+      std::cerr << "EventListener::UnregisterFunctionMapping: updateGlobalMapping("
+                << ff->getName().data() << ", 0); Global @" << engine.getPointerToGlobalIfAvailable(ff) << std::endl;
+      engine.freeMachineCodeForFunction(ff);
+      engine.updateGlobalMapping(ff, 0);
+      std::cerr << "Global after delete @" << engine.getPointerToGlobalIfAvailable(ff) << std::endl;
+   }
+   m_vec_functions.clear(); 
+}
+
+
+std::vector<std::string> ExecutionContext::m_vec_unresolved;
+std::vector<ExecutionContext::LazyFunctionCreatorFunc_t> ExecutionContext::m_vec_lazy_function;
 
 ExecutionContext::ExecutionContext(Interpreter& Interp):
    m_ee_module(0),
@@ -53,6 +88,9 @@ ExecutionContext::ExecutionContext(Interpreter& Interp):
       std::cerr << errMsg << '\n';
    }
 
+   // install lazy function
+   m_engine->InstallLazyFunctionCreator(LazyFunctionCreator);
+
   // temporarily set m_module to run initializers:
   m_module = m_ee_module;
   runNewStaticConstructorsDestructors();
@@ -66,6 +104,35 @@ ExecutionContext::~ExecutionContext()
       m_codeGen->ReleaseModule();
 }
 
+void unresolvedSymbol()
+{
+   // throw exception?
+   std::cerr << "Error: calling unresolved symbol (should never happen)!"
+             << std::endl;
+}
+
+void* ExecutionContext::LazyFunction(const std::string& mangled_name)
+{
+   // Not found in the map, add the symbol in the list of unresolved symbols
+   std::vector<std::string>::iterator it;
+   it = find (m_vec_unresolved.begin(), m_vec_unresolved.end(), mangled_name);
+   if (it == m_vec_unresolved.end())
+      m_vec_unresolved.push_back(mangled_name);
+   return (void *)unresolvedSymbol;
+}
+
+void*
+ExecutionContext::LazyFunctionCreator(const std::string& mangled_name)
+{
+   void *ret = 0;
+   std::vector<LazyFunctionCreatorFunc_t>::iterator it;
+  
+   for (it=m_vec_lazy_function.begin(); it < m_vec_lazy_function.end(); it++) {
+      ret = (void*)((LazyFunctionCreatorFunc_t)*it)(mangled_name);
+      if (ret != 0) return ret;
+   }
+   return LazyFunction(mangled_name);
+}
 
 void
 ExecutionContext::executeFunction(llvm::StringRef funcname)
@@ -80,6 +147,35 @@ ExecutionContext::executeFunction(llvm::StringRef funcname)
       );
       return;
    }
+   // register the listener
+   m_engine->RegisterJITEventListener(&m_listener);
+   m_engine->getPointerToFunction(f);
+   // check if there is any unresolved symbol in the list
+   if (!m_vec_unresolved.empty()) {
+      std::cerr << "ExecutionContext::executeFunction:" << std::endl;
+      for (size_t i = 0, e = m_vec_unresolved.size(); i != e; ++i) {
+         std::cerr << "Error: Symbol \'" << m_vec_unresolved[i] << 
+                      "\' unresolved!" << std::endl;
+         llvm::Function *ff = m_engine->FindFunctionNamed(m_vec_unresolved[i].c_str());
+         if (ff) {
+            m_engine->updateGlobalMapping(ff, 0);
+            m_engine->freeMachineCodeForFunction(ff);
+         }
+         else {
+            std::cerr << "Error: Canot find symbol \'" << m_vec_unresolved[i] << 
+                         std::endl;
+         }
+      }
+      m_vec_unresolved.clear();
+      // cleanup functions
+      m_listener.UnregisterFunctionMapping(getEngine());   
+      m_engine->UnregisterJITEventListener(&m_listener);
+      return;
+   }
+   // cleanup list and unregister our listener
+   m_listener.CleanupList();
+   m_engine->UnregisterJITEventListener(&m_listener);
+
    std::vector<llvm::GenericValue> args;
    llvm::GenericValue ret = m_engine->runFunction(f, args);
    //
@@ -218,6 +314,7 @@ ExecutionContext::useModule(llvm::Module* m)
 void
 ExecutionContext::installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp)
 {
-   m_engine->InstallLazyFunctionCreator(fp);
+   m_vec_lazy_function.push_back(fp);
+   //m_engine->InstallLazyFunctionCreator(fp);
 }
 
