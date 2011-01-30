@@ -239,11 +239,28 @@ void HypoTestResult::UpdatePValue(const SamplingDistribution* distr, Double_t *p
 
    if(IsNaN(fTestStatisticData)) return;
 
+   /* Got to be careful for discrete distributions:
+    * To get the right behaviour for limits, the p-value for the Null must not
+    * include the value of fTestStatistic (ie the value is in the confidence level),
+    * but for the Alt, it must be included.
+    *
+    * Technical note: to find out, whether we are doing the calc for Null or Alt,
+    * we compare the pIsRightTail given to this function to fPValueIsRightTail which
+    * always refers to the Null. Therefore, if they are equal it is the Null, if not
+    * it is the Alt.
+    */
    if(distr) {
-      if(pIsRightTail)
-         *pvalue = distr->Integral(fTestStatisticData, RooNumber::infinity());
-      else
-         *pvalue = distr->Integral(-RooNumber::infinity(), fTestStatisticData);
+      if(pIsRightTail) {
+         *pvalue = distr->Integral(fTestStatisticData, RooNumber::infinity(), kTRUE,
+            pIsRightTail == fPValueIsRightTail ? kFALSE : kTRUE,     // lowClosed
+            kTRUE       // highClosed
+         ); // [or( fTestStatistic, inf ]
+      }else{
+         *pvalue = distr->Integral(-RooNumber::infinity(), fTestStatisticData, kTRUE,
+            kTRUE,      // lowClosed
+            pIsRightTail == fPValueIsRightTail ? kFALSE : kTRUE      // highClosed
+         ); // [ -inf, fTestStatistic )or]
+      }
    }
 }
 
