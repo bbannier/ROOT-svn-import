@@ -14,11 +14,10 @@ ROOT_EXECUTABLE(rootcint rootcint.cxx RStl.cxx
 add_dependencies(rootcint IOSENUM_H)
 
 #---rootcint_tmp executable--------------------------------------------------
-execute_process(
-  COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/src/rootcint.cxx rootcint_tmp.cxx
-  COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/src/RStl.cxx RStl_tmp.cxx
-  COMMAND cmake -E copy_if_different ${CMAKE_SOURCE_DIR}/cint/cint/src/loadfile.cxx loadfile_tmp.cxx
-)
+add_custom_command(OUTPUT rootcint_tmp.cxx RStl_tmp.cxx loadfile_tmp.cxx
+                   COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/src/rootcint.cxx rootcint_tmp.cxx
+                   COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/src/RStl.cxx RStl_tmp.cxx
+                   COMMAND cmake -E copy_if_different ${CMAKE_SOURCE_DIR}/cint/cint/src/loadfile.cxx loadfile_tmp.cxx )
 
 #add_definitions("-UR__HAVE_CONFIG -DROOTBUILD")
 set_source_files_properties(loadfile_tmp.cxx rootcint_tmp.cxx RStl_tmp.cxx PROPERTIES COMPILE_FLAGS 
