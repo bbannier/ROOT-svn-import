@@ -19,10 +19,14 @@ endif()
 include_directories(${FREETYPE_INCLUDE_DIR} ${AFTERIMAGE_INCLUDE_DIR})
 
 
+set(ASEXTRALIBS jpeg tiff ungif png z)
+set(XLIBS Xext X11)
+
+
 ROOT_GENERATE_DICTIONARY(G__ASImage TASImage.h TASImagePlugin.h TASPluginGS.h LINKDEF LinkDef.h)
 ROOT_GENERATE_ROOTMAP(ASImage LINKDEF LinkDef.h)
 ROOT_LINKER_LIBRARY(ASImage TASImage.cxx TASPluginGS.cxx  G__ASImage.cxx 
-                    LIBRARIES  ${AFTERIMAGE_LIBRARIES} ${FREETYPE_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+                    LIBRARIES  ${AFTERIMAGE_LIBRARIES} ${FREETYPE_LIBRARIES} ${ASEXTRALIBS} ${XLIBS})
 add_dependencies(ASImage ${AFTER_VERSION})
 
 ROOT_GENERATE_DICTIONARY(G__ASImageGui TASPaletteEditor.h LINKDEF LinkDefGui.h)
