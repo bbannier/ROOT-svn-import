@@ -96,6 +96,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue(std::map<Int_t, Floa
    //
    // Return:
    // Targets, ordered by missing dimensions in 'xvec'.
+   // The size of the returned vector = foam dimension - size of xvec.
 
    // transform event vector
    std::map<Int_t, Float_t> txvec; // transformed event vector
@@ -119,8 +120,11 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue(std::map<Int_t, Floa
 
    // find cells, which fit txvec
    std::vector<PDEFoamCell*> cells = FindCells(txvec);
-   if (cells.size() < 1)
-      return std::vector<Float_t>(xvec.size(), 0);
+   if (cells.size() < 1) {
+      // return empty target vector (size = dimension of foam -
+      // number of variables)
+      return std::vector<Float_t>(GetTotDim() - xvec.size(), 0);
+   }
 
    // loop over all cells that were found
    for (std::vector<PDEFoamCell*>::const_iterator cell_it = cells.begin();
