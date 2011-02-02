@@ -213,7 +213,7 @@ cling::IncrementalASTParser::parse(llvm::StringRef src,
             m_FirstTopLevelDecl = *i;
 
          m_LastTopLevelDecl = *i;
-//         getTransformer()->Visit(m_LastTopLevelDecl);
+         getTransformer()->Visit(m_LastTopLevelDecl);
       } 
       Consumer->HandleTopLevelDecl(DGR);
     } // ADecl

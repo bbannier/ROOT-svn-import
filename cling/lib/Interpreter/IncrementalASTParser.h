@@ -49,6 +49,7 @@ namespace cling {
    void emptyLastFunction();
    clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
    clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
+   clang::Sema* getSema() const { return m_Sema.get(); }
 
   private:
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
