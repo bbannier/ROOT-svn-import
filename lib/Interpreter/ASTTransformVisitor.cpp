@@ -4,9 +4,12 @@
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
-#include "ASTTransformVisitor.h"
-
 #include "llvm/ADT/SmallVector.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/Sema/Scope.h"
+#include "clang/Sema/Lookup.h"
+
+#include "ASTTransformVisitor.h"
 
 namespace llvm {
    class raw_string_ostream;
@@ -33,36 +36,38 @@ namespace {
       // * MemberExpr
       // * CXXDependentScopeMemberExpr
       virtual bool handledStmt(Stmt* S, llvm::raw_ostream& OS) {
-         if (DeclRefExpr *Node = dyn_cast<DeclRefExpr>(S)) {
-            if (NestedNameSpecifier *Qualifier = Node->getQualifier())
-               Qualifier->print(OS, m_Policy);
-            m_Environment.push_back(Node);
-            OS << "*("; 
-            // Copy-paste from the StmtPrinter
-            QualType T = Node->getType();
-            SplitQualType T_split = T.split();
-            OS << QualType::getAsString(T_split);
- 
-            if (!T.isNull()) {
-               // If the type is sugared, also dump a (shallow) desugared type.
-               SplitQualType D_split = T.getSplitDesugaredType();
-               if (T_split != D_split)
-                  OS << ":" << QualType::getAsString(D_split);
-            }
-            // end
-            
-            OS <<"*)@";
-                       
-            if (Node->hasExplicitTemplateArgs())
-               OS << TemplateSpecializationType::PrintTemplateArgumentList(
-                                                                           Node->getTemplateArgs(),
-                                                                           Node->getNumTemplateArgs(),
-                                                                           m_Policy);  
-            if (Node->hasExplicitTemplateArgs())
-               assert((Node->getTemplateArgs() || Node->getNumTemplateArgs()) && "There shouldn't be template paramlist");
+         if (DeclRefExpr *Node = dyn_cast<DeclRefExpr>(S))
+            // Exclude the artificially dependent DeclRefExprs, created by the Lookup
+            if (!Node->isTypeDependent()) {
+               if (NestedNameSpecifier *Qualifier = Node->getQualifier())
+                  Qualifier->print(OS, m_Policy);
+               m_Environment.push_back(Node);
+               OS << "*("; 
+               // Copy-paste from the StmtPrinter
+               QualType T = Node->getType();
+               SplitQualType T_split = T.split();
+               OS << QualType::getAsString(T_split);
 
-            return true;            
-         }
+               if (!T.isNull()) {
+                  // If the type is sugared, also dump a (shallow) desugared type.
+                  SplitQualType D_split = T.getSplitDesugaredType();
+                  if (T_split != D_split)
+                     OS << ":" << QualType::getAsString(D_split);
+               }
+               // end
+               
+               OS <<"*)@";
+               
+               if (Node->hasExplicitTemplateArgs())
+                  OS << TemplateSpecializationType::PrintTemplateArgumentList(
+                                                                              Node->getTemplateArgs(),
+                                                                              Node->getNumTemplateArgs(),
+                                                                              m_Policy);  
+               if (Node->hasExplicitTemplateArgs())
+               assert((Node->getTemplateArgs() || Node->getNumTemplateArgs()) && "There shouldn't be template paramlist");
+               
+               return true;            
+            }
          
          return false;
       }
@@ -71,6 +76,27 @@ namespace {
 
 
 namespace cling {
+   
+   // DynamicLookupSource
+   bool ASTTransformVisitor::PerformLookup(clang::LookupResult &R, Scope *S) {
+      DeclarationName Name = R.getLookupName();
+      IdentifierInfo *II = Name.getAsIdentifierInfo();
+      SourceLocation NameLoc = R.getNameLoc();
+      FunctionDecl *D = dyn_cast<FunctionDecl>(R.getSema().ImplicitlyDefineFunction(NameLoc, *II, S));
+      if (D) { 
+         clang::BuiltinType *Ty = new BuiltinType(BuiltinType::Dependent);
+         clang::QualType QTy(Ty, 0);            
+         D->setType(QTy);
+         R.addDecl(D);
+         // Mark this declaration for removal
+         m_FakeDecls.push_back(D);
+         
+         // Say that we can handle the situation. Clang should try to recover
+         return true;
+      }
+      // We cannot handle the situation. Give up
+      return false;              
+   }
 
    // DeclVisitor
    
@@ -82,9 +108,7 @@ namespace cling {
    }
    
    void ASTTransformVisitor::VisitFunctionDecl(FunctionDecl *D) {
-      BaseDeclVisitor::VisitFunctionDecl(D);
-     
-      if (D->isThisDeclarationADefinition()) {
+      if (!D->isDependentContext() && D->isThisDeclarationADefinition()) {
          Stmt *Old = D->getBody();
          Stmt *New = Visit(Old).getNewStmt();
          if (Old != New)
@@ -103,14 +127,15 @@ namespace cling {
             }
          }
       }
-   }
+    }
   
    void ASTTransformVisitor::VisitDecl(Decl *D) {
       if (!ShouldVisit(D))
          return;
       
       if (DeclContext *DC = dyn_cast<DeclContext>(D))
-         static_cast<ASTTransformVisitor*>(this)->VisitDeclContext(DC);
+         if (!(DC->isDependentContext()))
+            static_cast<ASTTransformVisitor*>(this)->VisitDeclContext(DC);
    }
    
    void ASTTransformVisitor::VisitDeclContext(DeclContext *DC) {
@@ -162,22 +187,17 @@ namespace cling {
    }
 
    EvalInfo ASTTransformVisitor::VisitCallExpr(CallExpr *E) {
-      if (IsArtificiallyDependent(E)) {
-         // FIXME: Handle the arguments
-         // EvalInfo EInfo = Visit(E->getCallee());
-         
-         return EvalInfo(E, 1);
-         
-      }
-      return EvalInfo(E, 0);
+      // FIXME: Maybe we need to handle the arguments
+      // EvalInfo EInfo = Visit(E->getCallee());
+      return EvalInfo (E, IsArtificiallyDependent(E));
    }
       
    EvalInfo ASTTransformVisitor::VisitDeclRefExpr(DeclRefExpr *DRE) {
-         return EvalInfo(DRE, 0);
+      return EvalInfo(DRE, IsArtificiallyDependent(DRE));
    }
       
    EvalInfo ASTTransformVisitor::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node) {
-         return EvalInfo(Node, 1);
+      return EvalInfo(Node, IsArtificiallyDependent(Node));
    }
    
    // end StmtVisitor
@@ -196,8 +216,8 @@ namespace cling {
       CallExpr* EvalCall = BuildEvalCallExpr(InstTy, SubTree, CallArgs);
 
       // Add substitution mapping
-      getSubstSymbolMap()[EvalCall] = SubTree;
-      
+      getSubstSymbolMap()[EvalCall] = SubTree;      
+
       return EvalCall;
    }
 
@@ -344,6 +364,14 @@ namespace cling {
    // end EvalBuilder
    
    // Helpers
+
+   // Removes the implicitly created functions, which help to emulate the dynamic scopes
+   void ASTTransformVisitor::RemoveFakeDecls() {      
+      Scope *S = SemaPtr->getScopeForContext(SemaPtr->getASTContext().getTranslationUnitDecl());
+      for (unsigned int i = 0; i < m_FakeDecls.size(); ++i) {
+         S->RemoveDecl(m_FakeDecls[i]);
+      }
+   }
 
    bool ASTTransformVisitor::ShouldVisit(Decl *D) {
       while (true) {

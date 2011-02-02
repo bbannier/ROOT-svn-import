@@ -122,6 +122,8 @@ namespace cling {
     m_InputValidator.reset(new InputValidator(createCI()));
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
+
+    m_IncrASTParser->getSema()->DynamicLookup = m_IncrASTParser->getTransformer();
     
     // Allow the interpreter to find itself.
     // OBJ first: if it exists it should be more up to date
@@ -234,6 +236,9 @@ namespace cling {
     //  frontend to produce a translation unit.
     //
     clang::CompilerInstance* CI = compileString(wrapped);
+    // First clear up all the fake decls
+    m_IncrASTParser->getTransformer()->RemoveFakeDecls();
+
     if (!CI) {
       return 0;
     }

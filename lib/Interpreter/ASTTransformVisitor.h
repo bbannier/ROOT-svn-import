@@ -4,17 +4,15 @@
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
+#include "llvm/Support/MemoryBuffer.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/StmtVisitor.h"
-
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Stmt.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
-
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Stmt.h"
-
-#include "llvm/Support/MemoryBuffer.h"
+#include "clang/Sema/DynamicLookupSource.h"
 
 #include "EvalInfo.h"
 
@@ -29,7 +27,8 @@ namespace cling {
    // if h->Draw() is defined in MyFile. In that case we need to skip Sema diagnostics, so the 
    // h->Draw() is marked as dependent node. That requires the ASTTransformVisitor to find all
    // dependent nodes and escape them to the interpreter, using pre-defined Eval function.
-   class ASTTransformVisitor : public DeclVisitor<ASTTransformVisitor>,
+   class ASTTransformVisitor : public DynamicLookupSource,
+                               public DeclVisitor<ASTTransformVisitor>,
                                public StmtVisitor<ASTTransformVisitor, EvalInfo> {
       
    private: // members
@@ -43,6 +42,7 @@ namespace cling {
       */
       std::string m_EvalExpressionBuf;
       llvm::SmallVector<DeclRefExpr*, 64> m_Environment;
+      llvm::SmallVector<Decl*, 8> m_FakeDecls;
 
    public: // members
       void *gCling; //Pointer to the Interpreter object
@@ -70,7 +70,11 @@ namespace cling {
       FunctionDecl *getEvalDecl() { return EvalDecl; }
       void setEvalDecl(FunctionDecl *FDecl) { if (!EvalDecl) EvalDecl = FDecl; }
       MapTy &getSubstSymbolMap() { return m_SubstSymbolMap; }
+      void RemoveFakeDecls();
       
+      // DynamicLookupSource 
+      bool PerformLookup(LookupResult &R, Scope *S);
+
       // DeclVisitor      
       void Visit(Decl *D);
       void VisitFunctionDecl(FunctionDecl *D);
