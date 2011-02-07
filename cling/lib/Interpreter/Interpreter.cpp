@@ -694,8 +694,8 @@ namespace cling {
 
    // Implements the interpretation of the unknown symbols. 
    llvm::GenericValue Interpreter::EvalCore(const char* expr, void* varaddr) {
-      printf("%s\n", expr);
-      printf("%p", varaddr);
+      printf("The expression that is going to be escaped is: %s\n", expr);
+      printf("The address of the array containing the env is: %p", varaddr);
       printf("\n");
       return llvm::GenericValue();
    }
