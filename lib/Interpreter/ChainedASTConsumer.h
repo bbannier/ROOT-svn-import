@@ -12,7 +12,7 @@
 #include "clang/AST/DeclGroup.h"
 
 namespace clang {
-   class ASTContext;  
+   class ASTContext;
 }
 
 namespace cling {
