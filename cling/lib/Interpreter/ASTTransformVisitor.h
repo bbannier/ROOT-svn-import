@@ -4,6 +4,9 @@
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
+#ifndef CLING_AST_TRANFORM_VISITOR_H
+#define CLING_AST_TRANFORM_VISITOR_H
+
 #include "llvm/Support/MemoryBuffer.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/StmtVisitor.h"
@@ -103,4 +106,6 @@ namespace cling {
       bool ShouldVisit(Decl *D);      
    };
    
-}//end cling
+} // namespace cling
+
+#endif
