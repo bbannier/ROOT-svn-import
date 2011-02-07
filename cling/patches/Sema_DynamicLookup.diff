@@ -1,0 +1,125 @@
+Index: include/clang/Sema/DynamicLookupSource.h
+===================================================================
+--- include/clang/Sema/DynamicLookupSource.h	(revision 0)
++++ include/clang/Sema/DynamicLookupSource.h	(revision 0)
+@@ -0,0 +1,40 @@
++//===--- DynamicLookupSource.h - Dynamic Lookup Interface -------*- C++ -*-===//
++//
++//                     The LLVM Compiler Infrastructure
++//
++// This file is distributed under the University of Illinois Open Source
++// License. See LICENSE.TXT for details.
++//
++//===----------------------------------------------------------------------===//
++//
++//  This file defines the DynamicLookupSource interface.
++//
++//===----------------------------------------------------------------------===//
++#ifndef LLVM_CLANG_SEMA_DYNAMIC_LOOKUP_SOURCE_H
++#define LLVM_CLANG_SEMA_DYNAMIC_LOOKUP_SOURCE_H
++
++namespace clang {
++   class LookupResult;
++   class Scope;
++
++   /// \brief An abstract interface that provides dynamic, identifier-driven
++   /// lookup. It allows emulation of dynamic scopes in C++. It is invoked with
++   /// lowest precedence, if all regular language-specific lookups failed.
++   class DynamicLookupSource {
++   public:
++      DynamicLookupSource(){}
++      virtual ~DynamicLookupSource();
++      /// \brief Provides external resource for lookup, reacting dynamically on
++      /// the provided LookupResult (that is a lookup request upon calling).
++      /// Gives Sema a chance to recover from unknown identifiers.
++      ///
++      /// \param R a LookupResult that is being recovered.
++      ///
++      /// \param S the Scope of the identifier occurence.
++      ///
++      /// \return true to tell Sema to recover using the LookupResult.
++      virtual bool PerformLookup(LookupResult &R, Scope *S) = 0;
++   };
++} // end namespace clang
++
++#endif // LLVM_CLANG_SEMA_DYNAMIC_LOOKUP_SOURCE_H
+Index: include/clang/Sema/Sema.h
+===================================================================
+--- include/clang/Sema/Sema.h	(revision 124859)
++++ include/clang/Sema/Sema.h	(working copy)
+@@ -78,6 +78,7 @@
+   class Expr;
+   class ExtVectorType;
+   class ExternalSemaSource;
++  class DynamicLookupSource;
+   class FormatAttr;
+   class FriendDecl;
+   class FunctionDecl;
+@@ -217,6 +218,9 @@
+   Diagnostic &Diags;
+   SourceManager &SourceMgr;
+ 
++  /// \brief Source of identifier-driven lookup information.
++  DynamicLookupSource *DynamicLookup;
++
+   /// \brief Source of additional semantic information.
+   ExternalSemaSource *ExternalSource;
+ 
+Index: lib/Sema/SemaLookup.cpp
+===================================================================
+--- lib/Sema/SemaLookup.cpp	(revision 124859)
++++ lib/Sema/SemaLookup.cpp	(working copy)
+@@ -18,6 +18,7 @@
+ #include "clang/Sema/Scope.h"
+ #include "clang/Sema/ScopeInfo.h"
+ #include "clang/Sema/TemplateDeduction.h"
++#include "clang/Sema/DynamicLookupSource.h"
+ #include "clang/AST/ASTContext.h"
+ #include "clang/AST/CXXInheritance.h"
+ #include "clang/AST/Decl.h"
+@@ -1130,7 +1131,11 @@
+   if (AllowBuiltinCreation)
+     return LookupBuiltin(*this, R);
+ 
+-  return false;
++  // If we didn't find a use of this identifier, the DynamicLookup 
++  // may be able to handle the situation. 
++  // Note: some lookup failures are expected!
++  // See e.g. R.isForRedeclaration().
++  return (DynamicLookup && DynamicLookup->PerformLookup(R, S));
+ }
+ 
+ /// @brief Perform qualified name lookup in the namespaces nominated by
+Index: lib/Sema/Sema.cpp
+===================================================================
+--- lib/Sema/Sema.cpp	(revision 124859)
++++ lib/Sema/Sema.cpp	(working copy)
+@@ -21,6 +21,7 @@
+ #include "clang/Sema/CXXFieldCollector.h"
+ #include "clang/Sema/TemplateDeduction.h"
+ #include "clang/Sema/ExternalSemaSource.h"
++#include "clang/Sema/DynamicLookupSource.h"
+ #include "clang/Sema/ObjCMethodList.h"
+ #include "clang/Sema/PrettyDeclStackTrace.h"
+ #include "clang/Sema/Scope.h"
+@@ -134,8 +135,8 @@
+   : TheTargetAttributesSema(0),
+     LangOpts(pp.getLangOptions()), PP(pp), Context(ctxt), Consumer(consumer),
+     Diags(PP.getDiagnostics()), SourceMgr(PP.getSourceManager()),
+-    ExternalSource(0), CodeCompleter(CodeCompleter), CurContext(0), 
+-    PackContext(0), VisContext(0), ParsingDeclDepth(0),
++    DynamicLookup(0), ExternalSource(0), CodeCompleter(CodeCompleter), 
++    CurContext(0), PackContext(0), VisContext(0), ParsingDeclDepth(0),
+     IdResolver(pp.getLangOptions()), CXXTypeInfoDecl(0), MSVCGuidDecl(0),
+     GlobalNewDeleteDeclared(false), 
+     CompleteTranslationUnit(CompleteTranslationUnit),
+@@ -585,6 +586,9 @@
+ }
+ 
+ // Pin this vtable to this file.
++DynamicLookupSource::~DynamicLookupSource() {}
++
++// Pin this vtable to this file.
+ ExternalSemaSource::~ExternalSemaSource() {}
+ 
+ std::pair<ObjCMethodList, ObjCMethodList>
