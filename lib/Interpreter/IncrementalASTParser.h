@@ -43,7 +43,7 @@ namespace cling {
     MutableMemoryBuffer* getCurBuffer() {
        return m_MemoryBuffer.back();
     }
-     
+   
    ASTTransformVisitor *getTransformer() const { return m_Transformer.get(); }
 
    void emptyLastFunction();
