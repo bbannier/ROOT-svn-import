@@ -44,52 +44,36 @@ ROOTCLING    := bin/rootcling$(EXEEXT)
 # used in the main Makefile
 ALLEXECS     += $(ROOTCLING)
 
-##### ROOT.pch #####
-ROOTPCH := include/ROOT.pch
-ALLROOTH := $(MODDIRS)/allroot.h
-$(ALLROOTH): cling-ALWAYS
-	cat $(addprefix $(call stripsrc,$(CLINGDIRS))/,$(foreach m,$(MODULES),$(notdir $(subst .cxx,_dicthdr.h,$(sort $(notdir $(wildcard $(m)/src/G__*.cxx))))))) > $@.tmp
-	if ! diff $@.tmp $@ > /dev/null 2>& 1; then cp $@.tmp $@; fi
-	rm $@.tmp
-
-$(ROOTPCH): $(ALLROOTH) $(ALLHDRS)
-	clang++ $(CXXFLAGS) \
-	  `grep '^// -I' $< | sed 's,^//,,'` \
-	  -I. -Xclang -emit-pch -Xclang -relocatable-pch -x c++-header $< -o $@
-
 ##### local rules #####
 ifeq ($(strip $(LLVMDIR)),)
 PRINTME:=$(shell echo 'ERROR: you forgot to define LLVMDIR!' >&2)
 EXITING-BECAUSE-OF-ERROR
 endif
 
-.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) check-cling-header cling-ALWAYS
+CLINGLIBEXTRA += -Llib -lReflex
+CLINGLIBDEP   += $(REFLEXLIB)
+
+.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) check-cling-header
 
 include/%.h:    $(CLINGDIRI)/%.h
 		cp $< $@
 
-CORELIBDEP += $(ROOTPCH)
-
-$(CLINGLIB):    $(CLINGO) $(CLINGDO)
+$(CLINGLIB):    $(CLINGO) $(CLINGDO) $(CLINGLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libRCling.$(SOEXT) $@ "$(CLINGO) $(CLINGDO)" \
-		   "$(CLINGLIBEXTRA) \
--L$(LLVMDIR)/lib -lcling"
-
-CLINGLIBEXTRA += -Llib -lReflex
-CLINGLIBDEP += $(REFLEXLIB)
-
+		   "$(CLINGLIBEXTRA) -L$(LLVMDIR)/lib -lcling"
 
 $(CLINGDS):     $(CLINGH) $(CLINGL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(CLINGH) $(CLINGL)
 
 $(CLINGMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(CLINGL)
-		$(RLIBMAP) -o $(CLINGMAP) -l $(CLINGLIB) -d $(CLINGLIBDEPM) -c $(CLINGL)
+		$(RLIBMAP) -o $@ -l $(CLINGLIB) -d $(CLINGLIBDEPM) -c $(CLINGL)
 
-$(ROOTCLING):   $(ROOTCLINGO) $(BOOTLIBSDEP)
-		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) $(BOOTULIBS) -lReflex \
-		  $(RPATH) $(BOOTLIBS) $(SYSLIBS) -L$(LLVMDIR)/lib -lcling 
+$(ROOTCLING):   $(ROOTCLINGO) $(BOOTLIBSDEP) $(CLINGLIBDEP)
+		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) $(BOOTULIBS) \
+		   $(CLINGLIBEXTRA) $(RPATH) $(BOOTLIBS) $(SYSLIBS) \
+		   -L$(LLVMDIR)/lib -lcling 
 
 all-$(MODNAME): $(CLINGLIB) $(CLINGMAP) $(ROOTCLING)
 
@@ -102,10 +86,13 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(CLINGDEP) $(CLINGDS) $(CLINGDH) $(CLINGLIB) $(CLINGMAP)
 
 distclean::     distclean-$(MODNAME)
+		@(find . -name "*_dicthdr.h" -exec rm -f {} \; >/dev/null 2>&1;true)
+		@rm -f lib/*.pch
 
 ##### extra rules ######
-$(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS \
-                                  -I$(LLVMDIR)/include -I. -Wno-unused-parameter -Wno-shadow
+$(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS \
+   -D__STDC_CONSTANT_MACROS \
+   -I$(LLVMDIR)/include -I. -Wno-unused-parameter -Wno-shadow
 
 #CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
 # -lclingInterpreter -lclingMetaProcessor -lclingEditLine -lclangFrontend \
