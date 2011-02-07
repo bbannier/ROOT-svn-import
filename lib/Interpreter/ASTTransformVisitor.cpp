@@ -79,6 +79,8 @@ namespace cling {
    
    // DynamicLookupSource
    bool ASTTransformVisitor::PerformLookup(clang::LookupResult &R, Scope *S) {
+      if (R.getLookupKind() != Sema::LookupOrdinaryName) return false;
+      if (R.isForRedeclaration()) return false;
       DeclarationName Name = R.getLookupName();
       IdentifierInfo *II = Name.getAsIdentifierInfo();
       SourceLocation NameLoc = R.getNameLoc();
