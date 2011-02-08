@@ -106,8 +106,9 @@ cling::IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
   
   bool CompleteTranslationUnit = false;
   clang::CodeCompleteConsumer* CCC = 0;
-  m_Sema.reset(new clang::Sema(PP, *Ctx, *m_Consumer, CompleteTranslationUnit,
-                               CCC));
+  CI->createSema(CompleteTranslationUnit, CCC);
+  //  m_Sema.reset(new clang::Sema(PP, *Ctx, *m_Consumer, CompleteTranslationUnit, CCC));
+  m_Sema.reset(CI->takeSema());
   // Initialize the parser.
   m_Parser.reset(new clang::Parser(PP, *m_Sema.get()));
   PP.EnterMainSourceFile();
