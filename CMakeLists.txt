@@ -55,8 +55,7 @@ SET(ROOT_LIBRARY_PROPERTIES ${ROOT_LIBRARY_PROPERTIES}
     SUFFIX ".${LibSuffix}"
 )
 
-# Here we look for installed software and switch on and of the
-# different build options
+# Here we look for installed software and switch on and of the different build options
 SearchInstalledSoftware()
 
 #set dictionary type to cint
@@ -69,19 +68,11 @@ install(FILES ${CMAKE_BINARY_DIR}/include/RConfigure.h DESTINATION include)
 
 get_enabled_root_install_options()
 
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/root-config.in ${EXECUTABLE_OUTPUT_PATH}/root-config @ONLY)
-
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/rootrc.in ${CMAKE_BINARY_DIR}/etc/system.rootrc @ONLY)
-install(FILES ${CMAKE_BINARY_DIR}/etc/system.rootrc DESTINATION etc)
-
-#Add_Custom_Target(check COMMAND ${CMAKE_CTEST_COMMAND})
 Add_Custom_Target(check)
-#Add_Dependencies(test check)
 
 # Recurse into the given subdirectories.  This does not actually
 # cause another cmake executable to run.  The same process will walk through
 # the project's entire directory structure.
-#Include(${CMAKE_SOURCE_DIR}/cint/CMakeLists_include.txt)
 Add_Subdirectory (cint)
 Add_Subdirectory (core)
 Add_Subdirectory (build)
@@ -101,34 +92,29 @@ Add_Subdirectory (rootx)
 Add_Subdirectory (misc)
 Add_Subdirectory (main)
 
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/RConfigOptions.in include/RConfigOptions.h)
-install(FILES ${CMAKE_BINARY_DIR}/include/RConfigOptions.h DESTINATION include)
 
+#---Configure and install varrious files----------------------------------------------------------------------
 execute_Process(COMMAND uname -a OUTPUT_VARIABLE BuildNodeInfo OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-message("BuildInfo ${BuildNodeInfo}")
-
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/root-config.in ${EXECUTABLE_OUTPUT_PATH}/root-config @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/rootrc.in ${CMAKE_BINARY_DIR}/etc/system.rootrc @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/RConfigOptions.in include/RConfigOptions.h)
 configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.in include/compiledata.h)
-install(FILES  ${CMAKE_BINARY_DIR}/include/compiledata.h DESTINATION include)
-
-#Execute_Process(COMMAND cmake -E copy_directory 
-#                        ${CMAKE_SOURCE_DIR}/etc ${CMAKE_BINARY_DIR}/etc
-#               )
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/Makefile-comp.in config/Makefile.comp)
 
 If(UNIX)
   configure_file(${PROJECT_SOURCE_DIR}/config/mimes.unix.in ${CMAKE_BINARY_DIR}/etc/root.mimes)
-  install(FILES ${CMAKE_BINARY_DIR}/etc/root.mimes DESTINATION etc)
 EndIf(UNIX)
 
 set(bindir ${CMAKE_INSTALL_PREFIX}/bin)
 set(libdir ${CMAKE_INSTALL_PREFIX}/lib)
 set(mandir ${CMAKE_INSTALL_PREFIX}/man)
 
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex.in ${EXECUTABLE_OUTPUT_PATH}/genreflex @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/genreflex-rootcint.in ${EXECUTABLE_OUTPUT_PATH}/genreflex-rootcint @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/memprobe.in ${EXECUTABLE_OUTPUT_PATH}/memprobe @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/config/thisroot.sh ${EXECUTABLE_OUTPUT_PATH}/thisroot.sh @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/config/thisroot.csh ${EXECUTABLE_OUTPUT_PATH}/thisroot.csh @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/genreflex.in ${EXECUTABLE_OUTPUT_PATH}/genreflex @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/genreflex-rootcint.in ${EXECUTABLE_OUTPUT_PATH}/genreflex-rootcint @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/memprobe.in ${EXECUTABLE_OUTPUT_PATH}/memprobe @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.sh ${EXECUTABLE_OUTPUT_PATH}/thisroot.sh @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.csh ${EXECUTABLE_OUTPUT_PATH}/thisroot.csh @ONLY)
 
 install(FILES ${EXECUTABLE_OUTPUT_PATH}/genreflex
               ${EXECUTABLE_OUTPUT_PATH}/genreflex-rootcint
@@ -139,3 +125,13 @@ install(FILES ${EXECUTABLE_OUTPUT_PATH}/genreflex
               PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ 
               DESTINATION bin)
 
+install(FILES ${CMAKE_BINARY_DIR}/include/RConfigOptions.h
+              ${CMAKE_BINARY_DIR}/include/compiledata.h 
+              DESTINATION include)
+
+install(FILES ${CMAKE_BINARY_DIR}/etc/root.mimes 
+              ${CMAKE_BINARY_DIR}/etc/system.rootrc
+              DESTINATION etc)
+
+install(FILES ${CMAKE_BINARY_DIR}/config/Makefile.comp
+              DESTINATION config)
