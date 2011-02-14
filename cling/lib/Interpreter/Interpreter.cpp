@@ -124,9 +124,9 @@ namespace cling {
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
       // Create the visitor that will transform all dependents that are left.
-    m_IncrASTParser->setTransformer(new ASTTransformVisitor(this, m_IncrASTParser->getSema()));
+    m_IncrASTParser->setTransformer(new ASTTransformVisitor(this, &m_IncrASTParser->getCI()->getSema()));
 
-    m_IncrASTParser->getSema()->DynamicLookup = m_IncrASTParser->getTransformer();
+    m_IncrASTParser->getCI()->getSema().DynamicLookup = m_IncrASTParser->getTransformer();
     
     // Allow the interpreter to find itself.
     // OBJ first: if it exists it should be more up to date
