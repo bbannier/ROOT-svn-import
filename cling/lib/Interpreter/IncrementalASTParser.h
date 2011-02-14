@@ -53,7 +53,7 @@ namespace cling {
 
   private:
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
-    llvm::OwningPtr<clang::Sema> m_Sema; // sema used for parsing
+    clang::Sema *m_Sema; // sema used for parsing (owned by CI)
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
     llvm::OwningPtr<ASTTransformVisitor> m_Transformer; // delayed id lookup
     std::vector<MutableMemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
