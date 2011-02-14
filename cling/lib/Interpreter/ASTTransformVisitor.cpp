@@ -263,10 +263,10 @@ namespace cling {
 
    // Eval Arg1: const char* expr
    Expr *ASTTransformVisitor::BuildEvalArg1(ASTContext &C) {
-      QualType constCharArray = C.getConstantArrayType(C.getConstType(C.CharTy), llvm::APInt(8 * sizeof(void *), strlen(m_EvalExpressionBuf.c_str()) + 1), ArrayType::Normal, 0);
-      Expr *Arg1 = StringLiteral::Create(C, &*m_EvalExpressionBuf.c_str(), strlen(m_EvalExpressionBuf.c_str()) + 1, false, constCharArray, SourceLocation());
-      //FIXME: Figure out how handle the cast kinds in the different cases
-      QualType CastTo = C.getPointerType(C.getConstType(C.CharTy));
+      const QualType ConstChar = C.getConstType(C.CharTy);
+      const QualType ConstCharArray = C.getConstantArrayType(ConstChar, llvm::APInt(C.getTypeSize(ConstChar), m_EvalExpressionBuf.length() + 1), ArrayType::Normal, /*IndexTypeQuals=*/ 0);
+      Expr *Arg1 = StringLiteral::Create(C, &*m_EvalExpressionBuf.c_str(), m_EvalExpressionBuf.length(), /*Wide=*/ false, ConstCharArray, SourceLocation());
+      const QualType CastTo = C.getPointerType(C.getConstType(C.CharTy));
       SemaPtr->ImpCastExprToType(Arg1, CastTo, CK_ArrayToPointerDecay);
 
       return Arg1;

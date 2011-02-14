@@ -123,6 +123,9 @@ namespace cling {
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
+      // Create the visitor that will transform all dependents that are left.
+    m_IncrASTParser->setTransformer(new ASTTransformVisitor(this, m_IncrASTParser->getSema()));
+
     m_IncrASTParser->getSema()->DynamicLookup = m_IncrASTParser->getTransformer();
     
     // Allow the interpreter to find itself.
@@ -374,13 +377,13 @@ namespace cling {
              if (Stmt *S = Map.lookup(cur_stmt)) {
                 finalStmtStr = "";
                 llvm::raw_string_ostream OS(finalStmtStr);
-                bool oldDumpPolicy = m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump;
-                m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump = false;
-                const PrintingPolicy &Policy = m_IncrASTParser->getCI()->getASTContext().PrintingPolicy;                
+                bool oldDumpPolicy = CI->getASTContext().PrintingPolicy.Dump;
+                CI->getASTContext().PrintingPolicy.Dump = false;
+                const PrintingPolicy &Policy = CI->getASTContext().PrintingPolicy;                
                 S->printPretty(OS, 0, Policy);
                 OS.flush();                
                 finalExpr = dyn_cast<clang::Expr>(S);
-                m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump = oldDumpPolicy;
+                CI->getASTContext().PrintingPolicy.Dump = oldDumpPolicy;
              }             
 
              continue;
@@ -694,10 +697,67 @@ namespace cling {
 
    // Implements the interpretation of the unknown symbols. 
    llvm::GenericValue Interpreter::EvalCore(const char* expr, void* varaddr[]) {
-      printf("The expression that is going to be escaped is: %s\n", expr);
-      printf("The address of the array containing the env is: %p", varaddr[0]);
+      std::string exprStr(expr);
+      int i = 0;
+      size_t found;
+      while ((found = exprStr.find("@")) && (found != std::string::npos)) { 
+         std::stringstream address;
+         address << varaddr[i];
+         exprStr = exprStr.insert(found + 1, address.str());
+         exprStr = exprStr.erase(found, 1);
+         ++i;    
+      }
+      printf("The expression that is going to be escaped is: %s\n", exprStr.c_str());
       printf("\n");
-      return llvm::GenericValue();
+      return Evaluate(exprStr.c_str());
+   }
+   
+   llvm::GenericValue Interpreter::Evaluate(const char* expr) {
+      // Wrap the expression
+      const std::string ExprStr(expr);
+      const std::string WrapperName = createUniqueName();
+      std::string Wrapper = "extern \"C\" extern void* " + WrapperName + " () {\n";
+      //Wrapper += "return llvm::GenericValue(" + ExprStr + ");\n}";
+      Wrapper += "return (void*)gCling->getVersion();\n}";
+      fprintf(stderr, "Function:\n %s\n",  Wrapper.c_str());
+
+      // Set up the declaration context
+      //clang::DeclContext* CurContext;
+      //CurContext = m_IncrASTParser->getCI()->getSema().CurContext;
+      //m_IncrASTParser->getCI()->getSema().CurContext = m_IncrASTParser->getCI()->getSema().getFunctionLevelDeclContext();
+      // Parse
+    //
+    // Start the code generation on the old AST:
+    //
+      if (!m_ExecutionContext->startCodegen(m_IncrASTParser->getCI(),
+                                            "Interpreter::processLine() input")) {
+         fprintf(stderr, "Module creation failed!\n");
+      }
+      
+      //
+      //  Send the wrapped code through the
+      //  frontend to produce a translation unit.
+      //
+      clang::CompilerInstance* CI = compileString(Wrapper);
+      if (!CI) {
+         fprintf(stderr, "Cannot compile string!\n");
+      }
+      // Note: We have a valid compiler instance at this point.
+      clang::TranslationUnitDecl* tu =
+         CI->getASTContext().getTranslationUnitDecl();
+      if (!tu) { // Parse failed, return.
+         fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
+      }
+      //
+      //  Send the translation unit through the
+      //  llvm code generator to make a module.
+      //
+      m_ExecutionContext->getModuleFromCodegen();
+      
+      // Execute and get the result
+      llvm::GenericValue Result;
+      m_ExecutionContext->executeFunction(WrapperName, &Result);
+      return Result;
    }
    
    void cling::Interpreter::dumpAST(bool showAST, int last) {

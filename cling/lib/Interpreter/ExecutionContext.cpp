@@ -38,7 +38,7 @@ void EventListener::NotifyFunctionEmitted(const llvm::Function &F,
 {
    std::cerr << "EventListener::NotifyFunctionEmitted: m_vec_functions.push_back("
              << F.getName().data() << "); Code @ " << Code << std::endl;
-   m_vec_functions.push_back((llvm::Function *)&F);
+   m_vec_functions.push_back(const_cast<llvm::Function *>(&F));
 }
 
 void EventListener::CleanupList()
@@ -69,8 +69,7 @@ ExecutionContext::ExecutionContext(Interpreter& Interp):
    m_ee_module(0),
    m_module(0),
    m_posInitGlobals(0)
-{
-   m_CI.reset(Interp.createCI());
+{  
    m_ee_module
       = new llvm::Module("_Clang_first",
                          *Interp.getCIBuilder().getLLVMContext());
@@ -99,7 +98,6 @@ ExecutionContext::ExecutionContext(Interpreter& Interp):
 
 ExecutionContext::~ExecutionContext()
 {
-   m_CI->takeLLVMContext(); // Don't take down the context with the CI.
    if (m_codeGen)
       m_codeGen->ReleaseModule();
 }
@@ -135,8 +133,9 @@ ExecutionContext::LazyFunctionCreator(const std::string& mangled_name)
 }
 
 void
-ExecutionContext::executeFunction(llvm::StringRef funcname)
+ExecutionContext::executeFunction(llvm::StringRef funcname, llvm::GenericValue* returnValue)
 {
+
    // Call an extern C function without arguments
    llvm::Function* f = m_engine->FindFunctionNamed(funcname.data());
    if (!f) {
@@ -177,7 +176,11 @@ ExecutionContext::executeFunction(llvm::StringRef funcname)
    m_engine->UnregisterJITEventListener(&m_listener);
 
    std::vector<llvm::GenericValue> args;
-   llvm::GenericValue ret = m_engine->runFunction(f, args);
+   llvm::GenericValue val;
+   if (!returnValue)
+      returnValue = &val;
+
+   *returnValue = m_engine->runFunction(f, args);
    //
    //fprintf(stderr, "Finished running generated code with JIT.\n");
    //
