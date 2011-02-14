@@ -11,6 +11,8 @@
 
 #include "ASTTransformVisitor.h"
 
+using namespace clang;
+
 namespace llvm {
    class raw_string_ostream;
 }

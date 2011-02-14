@@ -373,18 +373,6 @@ namespace cling {
             //fprintf(stderr, "have expr stmt.\n");
             finalStmtStr = stmt_string;
             finalExpr = expr;
-             // FIXME: Fix the source location of the node
-             if (Stmt *S = Map.lookup(cur_stmt)) {
-                finalStmtStr = "";
-                llvm::raw_string_ostream OS(finalStmtStr);
-                bool oldDumpPolicy = CI->getASTContext().PrintingPolicy.Dump;
-                CI->getASTContext().PrintingPolicy.Dump = false;
-                const PrintingPolicy &Policy = CI->getASTContext().PrintingPolicy;                
-                S->printPretty(OS, 0, Policy);
-                OS.flush();                
-                finalExpr = dyn_cast<clang::Expr>(S);
-                CI->getASTContext().PrintingPolicy.Dump = oldDumpPolicy;
-             }             
 
              continue;
           }
