@@ -110,7 +110,9 @@ namespace cling {
     clang::CompilerInstance* compileString(const std::string& srcCode);
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
-     llvm::GenericValue EvalCore(const char* expr, void* varaddr[]);
+    llvm::GenericValue EvalCore(const char* expr, void* varaddr[]);
+  public:
+    llvm::GenericValue Evaluate(const char* expr);
   };
   
 } // namespace cling

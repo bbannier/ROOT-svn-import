@@ -45,6 +45,7 @@ namespace cling {
     }
    
    ASTTransformVisitor *getTransformer() const { return m_Transformer.get(); }
+   void setTransformer(ASTTransformVisitor* value) { m_Transformer.reset(value); }
 
    void emptyLastFunction();
    clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }

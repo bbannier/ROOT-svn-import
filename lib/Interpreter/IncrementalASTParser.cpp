@@ -108,7 +108,7 @@ cling::IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
   clang::CodeCompleteConsumer* CCC = 0;
   CI->createSema(CompleteTranslationUnit, CCC);
   //  m_Sema.reset(new clang::Sema(PP, *Ctx, *m_Consumer, CompleteTranslationUnit, CCC));
-  m_Sema.reset(CI->takeSema());
+  m_Sema.reset(&CI->getSema());
   // Initialize the parser.
   m_Parser.reset(new clang::Parser(PP, *m_Sema.get()));
   PP.EnterMainSourceFile();
@@ -117,9 +117,6 @@ cling::IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
   
   if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
     SC->InitializeSema(*m_Sema.get());
-
-  // Create the visitor that will transform all dependents that are left.
-  m_Transformer.reset(new ASTTransformVisitor(this, m_Sema.get()));
 }
 
 cling::IncrementalASTParser::~IncrementalASTParser()
