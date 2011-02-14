@@ -108,15 +108,15 @@ cling::IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
   clang::CodeCompleteConsumer* CCC = 0;
   CI->createSema(CompleteTranslationUnit, CCC);
   //  m_Sema.reset(new clang::Sema(PP, *Ctx, *m_Consumer, CompleteTranslationUnit, CCC));
-  m_Sema.reset(&CI->getSema());
+  m_Sema = &CI->getSema();
   // Initialize the parser.
-  m_Parser.reset(new clang::Parser(PP, *m_Sema.get()));
+  m_Parser.reset(new clang::Parser(PP, *m_Sema));
   PP.EnterMainSourceFile();
   m_Parser->Initialize();
   m_Sema->Initialize();
   
   if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
-    SC->InitializeSema(*m_Sema.get());
+    SC->InitializeSema(*m_Sema);
 }
 
 cling::IncrementalASTParser::~IncrementalASTParser()
