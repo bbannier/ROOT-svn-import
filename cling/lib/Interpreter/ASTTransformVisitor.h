@@ -19,23 +19,21 @@
 
 #include "EvalInfo.h"
 
-using namespace clang;
-
 namespace cling {
 
-   typedef llvm::DenseMap<Stmt*, Stmt*> MapTy;
+   typedef llvm::DenseMap<clang::Stmt*, clang::Stmt*> MapTy;
 
    // Ideally the visitor should traverse the dependent nodes, which actially are 
    // the language extensions. For example File::Open("MyFile"); h->Draw() is not valid C++ call
    // if h->Draw() is defined in MyFile. In that case we need to skip Sema diagnostics, so the 
    // h->Draw() is marked as dependent node. That requires the ASTTransformVisitor to find all
    // dependent nodes and escape them to the interpreter, using pre-defined Eval function.
-   class ASTTransformVisitor : public DynamicLookupSource,
-                               public DeclVisitor<ASTTransformVisitor>,
-                               public StmtVisitor<ASTTransformVisitor, EvalInfo> {
+   class ASTTransformVisitor : public clang::DynamicLookupSource,
+                               public clang::DeclVisitor<ASTTransformVisitor>,
+                               public clang::StmtVisitor<ASTTransformVisitor, EvalInfo> {
       
    private: // members
-      FunctionDecl *EvalDecl;
+      clang::FunctionDecl *EvalDecl;
       MapTy m_SubstSymbolMap;
       /* 
          Specifies the unknown symbol surrounding
@@ -44,66 +42,66 @@ namespace cling {
          m_Environment holds the refs from which runtime addresses are built.
       */
       std::string m_EvalExpressionBuf;
-      llvm::SmallVector<DeclRefExpr*, 64> m_Environment;
-      llvm::SmallVector<Decl*, 8> m_FakeDecls;
+      llvm::SmallVector<clang::DeclRefExpr*, 64> m_Environment;
+      llvm::SmallVector<clang::Decl*, 8> m_FakeDecls;
 
    public: // members
       void *gCling; //Pointer to the Interpreter object
       clang::Sema *SemaPtr;
-      Decl *CurrentDecl;
+      clang::Decl *CurrentDecl;
       
    public: // types
       
-      typedef DeclVisitor<ASTTransformVisitor> BaseDeclVisitor;
-      typedef StmtVisitor<ASTTransformVisitor, EvalInfo> BaseStmtVisitor;
+      typedef clang::DeclVisitor<ASTTransformVisitor> BaseDeclVisitor;
+      typedef clang::StmtVisitor<ASTTransformVisitor, EvalInfo> BaseStmtVisitor;
 
       using BaseStmtVisitor::Visit;
 
    public:
       
       //Constructors
-      explicit ASTTransformVisitor()
+      ASTTransformVisitor()
          : EvalDecl(0), gCling(0), SemaPtr(0), CurrentDecl(0){}      
-      ASTTransformVisitor(void* gCling, Sema *SemaPtr)
+      ASTTransformVisitor(void* gCling, clang::Sema *SemaPtr)
          : EvalDecl(0), gCling(gCling), SemaPtr(SemaPtr), CurrentDecl(0){}
       
       // Destructors
       ~ASTTransformVisitor() { }
 
-      FunctionDecl *getEvalDecl() { return EvalDecl; }
-      void setEvalDecl(FunctionDecl *FDecl) { if (!EvalDecl) EvalDecl = FDecl; }
+      clang::FunctionDecl *getEvalDecl() { return EvalDecl; }
+      void setEvalDecl(clang::FunctionDecl *FDecl) { if (!EvalDecl) EvalDecl = FDecl; }
       MapTy &getSubstSymbolMap() { return m_SubstSymbolMap; }
       void RemoveFakeDecls();
       
       // DynamicLookupSource 
-      bool PerformLookup(LookupResult &R, Scope *S);
+      bool PerformLookup(clang::LookupResult &R, clang::Scope *S);
 
       // DeclVisitor      
-      void Visit(Decl *D);
-      void VisitFunctionDecl(FunctionDecl *D);
-      void VisitTemplateDecl(TemplateDecl *D); 
-      void VisitDecl(Decl *D);
-      void VisitDeclContext(DeclContext *DC);
+      void Visit(clang::Decl *D);
+      void VisitFunctionDecl(clang::FunctionDecl *D);
+      void VisitTemplateDecl(clang::TemplateDecl *D); 
+      void VisitDecl(clang::Decl *D);
+      void VisitDeclContext(clang::DeclContext *DC);
 
       // StmtVisitor
-      EvalInfo VisitStmt(Stmt *Node);
-      EvalInfo VisitExpr(Expr *Node);
-      EvalInfo VisitCallExpr(CallExpr *E);
-      EvalInfo VisitDeclRefExpr(DeclRefExpr *DRE);
-      EvalInfo VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node);
+      EvalInfo VisitStmt(clang::Stmt *Node);
+      EvalInfo VisitExpr(clang::Expr *Node);
+      EvalInfo VisitCallExpr(clang::CallExpr *E);
+      EvalInfo VisitDeclRefExpr(clang::DeclRefExpr *DRE);
+      EvalInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr *Node);
 
       // EvalBuilder
-      Expr *SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree);
-      CallExpr *BuildEvalCallExpr(QualType type, Expr *SubTree, ASTOwningVector<Expr*> &CallArgs);
-      void BuildEvalEnvironment(Expr *SubTree);
-      void BuildEvalArgs(ASTOwningVector<Expr*> &Result);
-      Expr *BuildEvalArg0(ASTContext &C);
-      Expr *BuildEvalArg1(ASTContext &C);
-      Expr *BuildEvalArg2(ASTContext &C);
+      clang::Expr *SubstituteUnknownSymbol(const clang::QualType InstTy, clang::Expr *SubTree);
+      clang::CallExpr *BuildEvalCallExpr(clang::QualType type, clang::Expr *SubTree, clang::ASTOwningVector<clang::Expr*> &CallArgs);
+      void BuildEvalEnvironment(clang::Expr *SubTree);
+      void BuildEvalArgs(clang::ASTOwningVector<clang::Expr*> &Result);
+      clang::Expr *BuildEvalArg0(clang::ASTContext &C);
+      clang::Expr *BuildEvalArg1(clang::ASTContext &C);
+      clang::Expr *BuildEvalArg2(clang::ASTContext &C);
 
       // Helper
-      bool IsArtificiallyDependent(Expr *Node);
-      bool ShouldVisit(Decl *D);      
+      bool IsArtificiallyDependent(clang::Expr *Node);
+      bool ShouldVisit(clang::Decl *D);      
    };
    
 } // namespace cling
