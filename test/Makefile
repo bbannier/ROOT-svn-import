@@ -8,7 +8,7 @@ MAKEFLAGS = --no-print-directory -r -s
 INCLUDE = -I../ $(shell root-config --cflags)
 LIBS    = -L../lib -lTMVA.1 $(shell root-config --libs) -lMLP -lTreePlayer -lMinuit
 
-BINS = TMVAClassification \
+BINS = testPDF TMVAClassification \
 	TMVAClassificationCategory \
 	TMVAClassificationApplication \
 	TMVAClassificationCategoryApplication \
