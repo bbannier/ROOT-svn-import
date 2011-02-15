@@ -262,7 +262,7 @@ namespace TMVA {
       // default initialisation called by all constructors
       void Init( void );
 
-      ClassDef(MethodPDEFoam,0) // Analysis of PDEFoam discriminant (PDEFoam or Mahalanobis approach)
+      ClassDef(MethodPDEFoam,0) // Multi-dimensional probability density estimator using TFoam (PDE-Foam)
    };
 
 } // namespace TMVA
