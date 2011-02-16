@@ -1567,7 +1567,8 @@ Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, Double_t* errUpper, UInt_t
    // Return the MVA value (range [-1;1]) that classifies the
    // event according to the majority vote from the total number of
    // decision trees.
-   return PrivateGetMvaValue(const_cast<TMVA::Event&>(*GetEvent()), err, errUpper, useNTrees);
+   const Event* ev = GetEvent();
+   return PrivateGetMvaValue(const_cast<TMVA::Event&>(*ev), err, errUpper, useNTrees);
 
 }
 //_______________________________________________________________________
