@@ -2522,6 +2522,38 @@ Double_t TMVA::MethodBase::GetSeparation( PDF* pdfS, PDF* pdfB ) const
    }
 }
 
+ //_______________________________________________________________________
+Double_t TMVA::MethodBase::GetROCIntegral(TH1F *histS, TH1F *histB) const
+{
+   // calculate the area (integral) under the ROC curve as a
+   // overall quality measure of the classification
+
+   // note, if zero pointers given, use internal pdf
+   // sanity check first
+   if ((!histS && histB) || (histS && !histB))
+      Log() << kFATAL << "<GetROCIntegral(TH1F*, TH1F*)> Mismatch in hists" << Endl;
+
+   if(histS==0 || histB==0) return 0.;
+
+   TMVA::PDF *pdfS = new TMVA::PDF( " PDF Sig", histS, TMVA::PDF::kSpline3 );
+   TMVA::PDF *pdfB = new TMVA::PDF( " PDF Bkg", histB, TMVA::PDF::kSpline3 );
+
+
+   Double_t xmin = TMath::Min(pdfS->GetXmin(), pdfB->GetXmin());
+   Double_t xmax = TMath::Max(pdfS->GetXmax(), pdfB->GetXmax());
+
+   Double_t integral = 0;
+   UInt_t   nsteps = 1000;
+   Double_t step = (xmax-xmin)/Double_t(nsteps);
+   Double_t cut = xmin;
+   for (UInt_t i=0; i<nsteps; i++){
+      integral += (1-pdfB->GetIntegral(cut,xmax)) * pdfS->GetVal(cut);
+      cut+=step;
+   } 
+   return integral*step;
+}
+   
+
 //_______________________________________________________________________
 Double_t TMVA::MethodBase::GetROCIntegral(PDF *pdfS, PDF *pdfB) const
 {
