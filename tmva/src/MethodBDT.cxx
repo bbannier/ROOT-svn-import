@@ -351,6 +351,8 @@ void TMVA::MethodBDT::DeclareOptions()
    }else{
       DeclareOptionRef(fMaxDepth=3,"MaxDepth","Max depth of the decision tree allowed");
    }
+   DeclareOptionRef(fDoBoostMonitor=kFALSE,"DoBoostMonitor","create control plot with ROC integral vs tree number");
+
 }
 
 void TMVA::MethodBDT::DeclareCompatibilityOptions() {
@@ -704,14 +706,16 @@ void TMVA::MethodBDT::Train()
   
 
       // Monitor the performance (on TEST sample) versus number of trees
-      TH2* boostMonitor = new TH2F("BoostMonitor","ROC Integral Vs iTree",2,0,fNTrees,2,0,1.05);
-      boostMonitor->SetXTitle("#tree");
-      boostMonitor->SetYTitle("ROC Integral");
-      results->Store(boostMonitor, "BoostMonitor");
-      TGraph *boostMonitorGraph = new TGraph();
-      boostMonitorGraph->SetName("BoostMonitorGraph");
-      boostMonitorGraph->SetTitle("ROCIntegralVsNTrees");
-      results->Store(boostMonitorGraph, "BoostMonitorGraph");
+      if (fDoBoostMonitor){
+         TH2* boostMonitor = new TH2F("BoostMonitor","ROC Integral Vs iTree",2,0,fNTrees,2,0,1.05);
+         boostMonitor->SetXTitle("#tree");
+         boostMonitor->SetYTitle("ROC Integral");
+         results->Store(boostMonitor, "BoostMonitor");
+         TGraph *boostMonitorGraph = new TGraph();
+         boostMonitorGraph->SetName("BoostMonitorGraph");
+         boostMonitorGraph->SetTitle("ROCIntegralVsNTrees");
+         results->Store(boostMonitorGraph, "BoostMonitorGraph");
+      }
 
       // weights applied in boosting vs tree number
       h = new TH1F("BoostWeightVsTree","Boost weights vs tree",fNTrees,0,fNTrees);
@@ -838,15 +842,17 @@ void TMVA::MethodBDT::Train()
          
          fITree = itree;
          fMonitorNtuple->Fill();
-         if (! DoRegression() ){
-            if (  itree==fNTrees-1 ||  (!(itree%500)) ||
-                  (!(itree%250) && itree <1000)||
-                  (!(itree%100) && itree < 500)||
-                  (!(itree%50)  && itree < 250)||
-                  (!(itree%25)  && itree < 150)||
-                  (!(itree%10)  && itree <  50)||
-                  (!(itree%5)   && itree <  20)
-                  ) BoostMonitor(itree);
+         if (fDoBoostMonitor){
+            if (! DoRegression() ){
+               if (  itree==fNTrees-1 ||  (!(itree%500)) ||
+                     (!(itree%250) && itree <1000)||
+                     (!(itree%100) && itree < 500)||
+                     (!(itree%50)  && itree < 250)||
+                     (!(itree%25)  && itree < 150)||
+                     (!(itree%10)  && itree <  50)||
+                     (!(itree%5)   && itree <  20)
+                     ) BoostMonitor(itree);
+            }
          }
       }
    }
