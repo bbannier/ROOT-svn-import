@@ -160,7 +160,6 @@ namespace TMVA {
 
       void GetHelpMessage() const;
 
-      virtual Bool_t        IsSignalLike() { return GetMvaValue() > 0;}
    protected:
       void DeclareCompatibilityOptions();
 
@@ -238,7 +237,7 @@ namespace TMVA {
 
       Double_t                         fSampleSizeFraction; // relative size of bagged event sample to original sample size
       Bool_t                           fNoNegWeightsInTraining; // ignore negative event weights in the training
-
+      Bool_t                           fDoBoostMonitor; //create control plot with ROC integral vs tree number
 
 
       //some histograms for monitoring

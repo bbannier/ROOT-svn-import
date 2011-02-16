@@ -74,6 +74,8 @@ class TGraph;
 class TTree;
 class TDirectory;
 class TSpline;
+class TH1F;
+class TH1D;
 
 namespace TMVA {
 
@@ -272,6 +274,8 @@ namespace TMVA {
       virtual std::vector<Float_t> GetMulticlassEfficiency( std::vector<std::vector<Float_t> >& purity );
       virtual std::vector<Float_t> GetMulticlassTrainingEfficiency(std::vector<std::vector<Float_t> >& purity );
       virtual Double_t GetSignificance() const;
+      virtual Double_t GetROCIntegral(TH1F *histS, TH1F *histB) const;
+      //      virtual Double_t GetROCIntegral(TH1D *histS, TH1D *histB) const;
       virtual Double_t GetROCIntegral(PDF *pdfS=0, PDF *pdfB=0) const;
       virtual Double_t GetMaximumSignificance( Double_t SignalEvents, Double_t BackgroundEvents, 
                                                Double_t& optimal_significance_value  ) const;
@@ -547,6 +551,8 @@ namespace TMVA {
       PDF*             fMVAPdfS;             // signal MVA PDF
       PDF*             fMVAPdfB;             // background MVA PDF
 
+      TH1F*            fmvaS;                // PDFs of MVA distribution (signal)
+      TH1F*            fmvaB;                // PDFs of MVA distribution (background)
       PDF*             fSplS;                // PDFs of MVA distribution (signal)
       PDF*             fSplB;                // PDFs of MVA distribution (background)
       TSpline*         fSpleffBvsS;          // splines for signal eff. versus background eff.
