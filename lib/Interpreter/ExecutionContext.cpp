@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Target/TargetOptions.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -69,7 +70,10 @@ ExecutionContext::ExecutionContext(Interpreter& Interp):
    m_ee_module(0),
    m_module(0),
    m_posInitGlobals(0)
-{  
+{
+  // If not set, exception handling will not be turned on
+  llvm::JITExceptionHandling = true;
+
    m_ee_module
       = new llvm::Module("_Clang_first",
                          *Interp.getCIBuilder().getLLVMContext());
@@ -78,6 +82,7 @@ ExecutionContext::ExecutionContext(Interpreter& Interp):
    //
    // Note: Engine takes ownership of the module.
    llvm::EngineBuilder builder(m_ee_module);
+   builder.setOptLevel(llvm::CodeGenOpt::Less);
    std::string errMsg;
    builder.setErrorStr(&errMsg);
    builder.setEngineKind(llvm::EngineKind::JIT);
@@ -116,7 +121,9 @@ void* ExecutionContext::LazyFunction(const std::string& mangled_name)
    it = find (m_vec_unresolved.begin(), m_vec_unresolved.end(), mangled_name);
    if (it == m_vec_unresolved.end())
       m_vec_unresolved.push_back(mangled_name);
-   return (void *)unresolvedSymbol;
+   // Avoid "ISO C++ forbids casting between pointer-to-function and
+   // pointer-to-object":
+   return (void*)reinterpret_cast<size_t>(unresolvedSymbol);
 }
 
 void*
