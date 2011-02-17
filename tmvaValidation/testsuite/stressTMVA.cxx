@@ -30,6 +30,7 @@ void addClassificationTests( UnitTestSuite& TMVA_test, bool full=true)
    
    // problem with the make function of the Gauss transformation when only some variables are selected 
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN_selVar_Gauss", "H:!V:VarTransform=G(var4,myvar1)" , 0.88, 0.98) ); 
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN_selVar_Uniform", "H:!V:VarTransform=U(var4,myvar1)" , 0.88, 0.98) ); 
 
 
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsGA",
@@ -110,6 +111,7 @@ void addRegressionTests( UnitTestSuite& TMVA_test, bool full=true)
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LDG", "!H:!V:VarTransform=G",      15., 30.,    10., 25. ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LDG1", "!H:!V:VarTransform=G(_V1_)",      15., 30.,    10., 20. ));
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LDP2", "!H:!V:VarTransform=P(_V0_,_V1_)",      15., 25.,    10., 20. ));
+   TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LDU1", "!H:!V:VarTransform=G(_V1_)",      15., 30.,    10., 20. ));
 
    TMVA_test.addTest(new RegressionUnitTestWithDeviation( TMVA::Types::kLD, "LD", "!H:!V:VarTransform=None",      15., 25.,    10., 20. ));
    //                       full low/high , 90 low/high
