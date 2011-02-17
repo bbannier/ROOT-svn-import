@@ -1,19 +1,16 @@
-#
-Set(BuildFreeType TRUE)
 ROOT_USE_PACKAGE(graf2d/gpad)
 ROOT_USE_PACKAGE(graf2d/graf)
 
-If(BuildFreeType)
-  Add_Subdirectory(freetype)
-  Set(FREETYPE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/graf2d/freetype/${FREETYPE_VERSION}/include)
-  Set(FREETYPE_LIBRARIES "-L${LIBRARY_OUTPUT_PATH} -lfreetype")
-EndIf(BuildFreeType)
+if(builtin_fretype)
+  add_subdirectory(freetype)
+endif()
+add_subdirectory(gpad)
+add_subdirectory(graf)
+add_subdirectory(postscript)
+add_subdirectory(x11)         # special CMakeLists.txt
+add_subdirectory(x11ttf)      # special CMakeLists.txt
+add_subdirectory(asimage)     # special CMakeLists.txt
+if(qt)
+  add_subdirectory(qt)
+endif()
 
-Add_Subdirectory(gpad)
-Add_Subdirectory(graf)
-Add_Subdirectory(postscript)
-Add_Subdirectory(x11)         # special CMakeLists.txt
-Add_Subdirectory(x11ttf)      # special CMakeLists.txt
-Add_Subdirectory(asimage)     # special CMakeLists.txt
-
-Set(RootConfigFeatures ${RootConfigFeatures} PARENT_SCOPE)

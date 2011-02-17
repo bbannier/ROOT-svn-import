@@ -84,6 +84,7 @@ Set(CINTBUILDLOADER
     multimap2 
     multiset 
     valarray
+    complex
 )
 
 Set(CINTDLLCXXFLAGS "${CINT_CXX_DEFINITIONS} -DG__HAVE_CONFIG -DG__NOMAKEINFO")
@@ -99,9 +100,9 @@ Set(CINTDLLCFLAGS "${CINT_C_DEFINITIONS} -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__S
 #                COMMAND cmake -E create_symlink ${CMAKE_SOURCE_DIR}/cint/cint/stl ${CMAKE_BINARY_DIR}/cint/cint/stl 
 #)
 
-Set(AdditionalHeaderFiles ${HEADER_OUTPUT_PATH}/cintdictversion.h)
+Set(AdditionalHeaderFiles ${CMAKE_SOURCE_DIR}/cint/cint/inc/cintdictversion.h)
 #Set(IncludeDirs -I${CMAKE_SOURCE_DIR}/cint/cint/lib -I${CMAKE_SOURCE_DIR}/cint/cint/lib/dll_stl)
-Set(IncludeDirs -I${CMAKE_SOURCE_DIR}/cint/cint/inc)
+Set(IncludeDirs -I${CMAKE_SOURCE_DIR}/cint/cint/inc -I${HEADER_OUTPUT_PATH})
 Set(AllFiles)
 ForEach(_name ${CINTSTLDLLNAMES}) 
   Set(OutFileName ${CMAKE_CURRENT_BINARY_DIR}/G__cpp_${_name}.cxx)
@@ -166,12 +167,12 @@ ForEach(_name ${CINTSTLDLLNAMES})
     Set_Source_Files_Properties(${DictSource} 
                                 COMPILE_FLAGS "${CINTDLLCXXFLAGS} -DG__CINTBODY -I${HEADER_OUTPUT_PATH}"
                                )
-    Add_Library(lib${_name}Dict SHARED ${DictSource} )
-    Set_Target_properties(lib${_name}Dict PROPERTIES SUFFIX ".so")
-#  Install(TARGETS lib${_name}Dict DESTINATION ${LIB_INSTALL_DIR})
+    Add_Library(${_name}Dict SHARED ${DictSource} )
+    Set_Target_properties(${_name}Dict PROPERTIES SUFFIX ".so")
+    Install(TARGETS ${_name}Dict DESTINATION lib)
 
-    Set(LIBNAME lib${_name}Dict) 
-    Set(MAP_OUTFILE "${LIBRARY_OUTPUT_PATH}/${LIBNAME}.rootmap")
+    Set(LIBNAME ${_name}Dict) 
+    Set(MAP_OUTFILE "${LIBRARY_OUTPUT_PATH}/lib${LIBNAME}.rootmap")
 #    Set(MAP_INFILE "${LIBRARY_OUTPUT_PATH}/lib${_name}.dll")
 
     Add_Custom_Command(OUTPUT ${MAP_OUTFILE}
@@ -179,7 +180,7 @@ ForEach(_name ${CINTSTLDLLNAMES})
                        DEPENDS ${LIBNAME} ${LINKDEF_FILE} rlibmap
                       )
 
-  Install(FILES ${MAP_OUTFILE} DESTINATION ${INCLUDE_INSTALL_DIR})
+  Install(FILES ${MAP_OUTFILE} DESTINATION lib)
 
   Add_Custom_Target(${LIBNAME}.rootmap ALL
                     DEPENDS ${MAP_OUTFILE}
@@ -277,9 +278,9 @@ ForEach(_name ${CINTINCDLLNAMES})
                        DEPENDS ${HEADER_OUTPUT_PATH}/systypes.h
                       ) 
 
-    If(macosx105)
+    if(${MACOSX_MINOR} GREATER 4)
       Set(_ExtraFlag "-D__DARWIN_UNIX03")
-    EndIf(macosx105)
+    endif()
 
     Add_Custom_Command(OUTPUT ${OutFileName} 
                        COMMAND ${EXECUTABLE_OUTPUT_PATH}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${_ExtraFlag} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles} ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h ${CMAKE_SOURCE_DIR}/cint/cint/lib/posix/posix.h

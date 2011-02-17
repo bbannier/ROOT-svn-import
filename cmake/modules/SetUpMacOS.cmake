@@ -8,13 +8,13 @@ Set(CILIBS "-lm ${EXTRA_LDFLAGS} ${FINK_LDFLAGS} -ldl")
 if (CMAKE_SYSTEM_NAME MATCHES Darwin)
   EXECUTE_PROCESS(COMMAND sw_vers "-productVersion" 
                   COMMAND cut -d . -f 1-2 
-                  OUTPUT_VARIABLE MAC_OS_VERSION)
-  MESSAGE(STATUS "Found a Mac OS X System ${MAC_OS_VERSION}")
+                  OUTPUT_VARIABLE MACOSX_VERSION)
+  MESSAGE(STATUS "Found a Mac OS X System ${MACOSX_VERSION}")
   EXECUTE_PROCESS(COMMAND sw_vers "-productVersion" 
                   COMMAND cut -d . -f 2 
-                  OUTPUT_VARIABLE MINOR_MAC_OS_VERSION)
-  if(${MINOR_MAC_OS_VERSION} GREATER 4)
-    set(macosx105 TRUE)
+                  OUTPUT_VARIABLE MACOSX_MINOR)
+                  
+  if(${MACOSX_MINOR} GREATER 4)
     #TODO: check haveconfig and rpath -> set rpath true
     #TODO: check Thread, define link command
     #TODO: more stuff check configure script
@@ -34,7 +34,7 @@ if (CMAKE_SYSTEM_NAME MATCHES Darwin)
        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
        SET(CMAKE_FORTRAN_FLAGS "${CMAKE_FORTRAN_FLAGS} -m32")
     endif(${SYSCTL_OUTPUT} MATCHES 64)
-  endif(${MINOR_MAC_OS_VERSION} GREATER 4)
+  endif()
   
   if (CMAKE_COMPILER_IS_GNUCXX)
      MESSAGE(STATUS "Found GNU compiler collection")

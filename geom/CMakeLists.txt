@@ -1,4 +1,7 @@
-Add_Subdirectory (geom)        # special CMakeLists.txt
-Add_Subdirectory (geombuilder) # special CMakeLists.txt
-Add_Subdirectory (geompainter) # special CMakeLists.txt
+add_subdirectory (geom)        # special CMakeLists.txt
+add_subdirectory (geombuilder) # special CMakeLists.txt
+add_subdirectory (geompainter) # special CMakeLists.txt
+if(gdml)
+  add_subdirectory(gdml)
+endif()
 

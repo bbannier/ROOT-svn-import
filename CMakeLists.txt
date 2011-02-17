@@ -28,7 +28,7 @@ include(RootNewMacros)
 include(CheckCompiler)
 include(FindROOTInternal)
 include(MacroEnsureVersion)
-include(SearchInstalledSoftware)
+
 include(CTest)
 
 #Check the compiler and set the compile and link flags
@@ -43,20 +43,18 @@ IF(NOT UNIX)
   MESSAGE(FATAL_ERROR "You're not on an UNIX system. The project was up to now only tested on UNIX systems, so we break here. If you want to go on please edit the CMakeLists.txt in the source directory.")
 ENDIF(NOT UNIX)  
 
-# Set the library version in the main CMakeLists.txt
-Set(ROOT_MAJOR_VERSION 5)
-Set(ROOT_MINOR_VERSION 26)
-Set(ROOT_PATCH_VERSION 00)
-Set(ROOT_VERSION "${ROOT_MAJOR_VERSION}.${ROOT_MINOR_VERSION}.${ROOT_PATCH_VERSION}")
-Set(LibSuffix "so")
-SET(ROOT_LIBRARY_PROPERTIES ${ROOT_LIBRARY_PROPERTIES}
-    VERSION "${ROOT_VERSION}"
-    SOVERSION "${ROOT_MAJOR_VERSION}"
-    SUFFIX ".${LibSuffix}"
-)
 
-# Here we look for installed software and switch on and of the different build options
-SearchInstalledSoftware()
+#---Here we declare the required build options--------------------------------------------------
+include(RootBuildOptions)
+#---Here we look for installed software and switch on and of the different build options--------
+include(SearchInstalledSoftware)
+ROOT_SHOW_OPTIONS()
+
+#---Set the library version in the main CMakeLists.txt-------------------------------------------
+set(ROOT_MAJOR_VERSION 5)
+set(ROOT_MINOR_VERSION 28)
+set(ROOT_PATCH_VERSION 00)
+set(ROOT_VERSION "${ROOT_MAJOR_VERSION}.${ROOT_MINOR_VERSION}.${ROOT_PATCH_VERSION}")
 
 #set dictionary type to cint
 #TODO: Make this more flexible
@@ -91,6 +89,7 @@ Add_Subdirectory (geom)
 Add_Subdirectory (rootx)
 Add_Subdirectory (misc)
 Add_Subdirectory (main)
+Add_Subdirectory (bindings)
 
 
 #---Configure and install varrious files----------------------------------------------------------------------

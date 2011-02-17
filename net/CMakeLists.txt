@@ -1,2 +1,5 @@
-Add_Subdirectory(net)
-Add_Subdirectory(auth)  # special CMakeListst.txt
+add_subdirectory(net)
+add_subdirectory(auth)  # special CMakeListst.txt
+if(bonjour)
+  add_subdirectory(bonjour)
+endif()
