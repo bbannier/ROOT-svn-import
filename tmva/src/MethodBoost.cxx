@@ -409,18 +409,18 @@ void TMVA::MethodBoost::Train()
       // thought of counting a few steps, but it doesn't seem to be necessary
       Log() << kDEBUG << "AdaBoost (methodErr) err = " << fMethodError << Endl;
       if (fMethodError > 0.49999) StopCounter++; 
-      if (StopCounter > 0 && fBoostType != "Bagging")
-         {
-            timer.DrawProgressBar( fBoostNum );
-            fBoostNum = fMethodIndex+1; 
-            Log() << kINFO << "Error rate has reached 0.5 ("<< fMethodError<<"), boosting process stopped at #" << fBoostNum << " classifier" << Endl;
-            if (fBoostNum < 5)
-               Log() << kINFO << "The classifier might be too strong to boost with Beta = " << fADABoostBeta << ", try reducing it." <<Endl;
-            for (Int_t i=0;i<fDefaultHistNum;i++)
-               (*fMonitorHist)[i]->SetBins(fBoostNum,0,fBoostNum);
-            break;
-         }
+      if (StopCounter > 0 && fBoostType != "Bagging"){
+         timer.DrawProgressBar( fBoostNum );
+         fBoostNum = fMethodIndex+1; 
+         Log() << kINFO << "Error rate has reached 0.5 ("<< fMethodError<<"), boosting process stopped at #" << fBoostNum << " classifier" << Endl;
+         if (fBoostNum < 5)
+            Log() << kINFO << "The classifier might be too strong to boost with Beta = " << fADABoostBeta << ", try reducing it." <<Endl;
+         for (Int_t i=0;i<fDefaultHistNum;i++)
+            (*fMonitorHist)[i]->SetBins(fBoostNum,0,fBoostNum);
+         break;
+      }
    }
+
    if (fMethodWeightType == "LastMethod") { fMethodWeight.back() = AllMethodsWeight = 1.0; }
 
    ResetBoostWeights();
@@ -753,7 +753,6 @@ void TMVA::MethodBoost::SingleBoost()
    fMethodError=sumWrong/sumAll;
    fOrigMethodError = sumWrongOrig/sumAllOrig;
    Log() << kDEBUG << "AdaBoost err (MethodErr1)= " << fMethodError<<" = wrong/all: " << sumWrong << "/" << sumAll<< " cut="<<method->GetSignalReferenceCut()<< Endl;
-   Log() << kERROR << "AdaBoost err (MethodErr1)= " << fMethodError<<" = wrong/all: " << sumWrong << "/" << sumAll<< " cut="<<method->GetSignalReferenceCut()<< Endl;
 
    // calculating the fMethodError and the fBoostWeight out of it uses the formula 
    // w = ((1-err)/err)^beta
@@ -766,11 +765,10 @@ void TMVA::MethodBoost::SingleBoost()
    else fBoostWeight = 1000;
 
 
-   Log() << kERROR << "fBoostWeight="<<fBoostWeight << " log(fBoostWeight)="<<TMath::Log(fBoostWeight) << Endl;
    Double_t alphaWeight = ( fBoostWeight > 0.0 ? TMath::Log(fBoostWeight) : 0.0);
    if (alphaWeight>5.) alphaWeight = 5.;
    if (alphaWeight<0.){
-      //Log()<<kWARNING<<"alphaWeight is too small in AdaBoost alpha=" << alphaWeight<< Endl;
+      Log()<<kWARNING<<"alphaWeight is too small in AdaBoost alpha=" << alphaWeight<< Endl;
       alphaWeight = -alphaWeight;
    }
    if (fBoostType == "AdaBoost") {
@@ -782,9 +780,13 @@ void TMVA::MethodBoost::SingleBoost()
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
          ev =  Data()->GetEvent(ievt);
          oldSum += ev->GetWeight();
-         //         ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 1.0)));
-         //ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 0)));
-         if (WrongDetection[ievt]) ev->ScaleBoostWeight(fBoostWeight);
+         if (WrongDetection[ievt] && fBoostWeight != 0){
+            if (ev->GetWeight() > 0){
+               ev->ScaleBoostWeight(fBoostWeight);
+            }else{
+               ev->ScaleBoostWeight(1./fBoostWeight);
+            }
+         }
          newSum += ev->GetWeight();
       }
 
@@ -797,7 +799,6 @@ void TMVA::MethodBoost::SingleBoost()
          if (Data()->GetEvent(ievt)->GetClass()) normBkg+=Data()->GetEvent(ievt)->GetWeight();
          else                                    normSig+=Data()->GetEvent(ievt)->GetWeight();
       }
-      Log() << kERROR << "new Nsig="<<normSig << " new Nbkg="<<normBkg << Endl;
       
    }
    else if (fBoostType == "Bagging") {
