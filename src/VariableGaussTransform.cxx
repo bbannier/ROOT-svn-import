@@ -275,7 +275,7 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
    for (UInt_t i=0; i<numDist; i++) {
       sumOfWeights[i]=0;
       minWeight[i]=10E10;
-      maxWeight[i]=0;
+      maxWeight[i]=0; // QUESTION: wouldn't there be negative events possible?
    }
    for (UInt_t ievt=0; ievt < nevt; ievt++) {
       const Event* ev= events[ievt];
@@ -403,17 +403,18 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
 
    // now sum up in order to get the real cumulative distribution   
    Double_t  sum = 0, total=0;
+   fCumulativePDF.resize(inputSize);
    for (UInt_t ivar=0; ivar<inputSize; ivar++) {
-      fCumulativePDF.resize(ivar+1);
+//      fCumulativePDF.resize(ivar+1);
       for (UInt_t icls=0; icls<numDist; icls++) {      
          (fCumulativeDist[ivar][icls])->Smooth(); 
          sum = 0;
          total = 0.;
-         for (Int_t ibin=1; ibin <=fCumulativeDist[ivar][icls]->GetNbinsX() ; ibin++){
+         for (Int_t ibin=1, ibinEnd=fCumulativeDist[ivar][icls]->GetNbinsX(); ibin <=ibinEnd ; ibin++){
             Float_t val = (fCumulativeDist[ivar][icls])->GetBinContent(ibin);
             if (val>0) total += val;
          }
-         for (Int_t ibin=1; ibin <=fCumulativeDist[ivar][icls]->GetNbinsX() ; ibin++){
+         for (Int_t ibin=1, ibinEnd=fCumulativeDist[ivar][icls]->GetNbinsX(); ibin <=ibinEnd ; ibin++){
             Float_t val = (fCumulativeDist[ivar][icls])->GetBinContent(ibin);
             if (val>0) sum += val;
             (fCumulativeDist[ivar][icls])->SetBinContent(ibin,sum/total);
@@ -783,7 +784,7 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << "   }"<< std::endl;
 
       fout << "   // copy the transformed variables back" << std::endl;
-      fout << "   for (int ivar=0; ivar<nvar; ivar++) iv[ivar] = dv[indicesPut.at(ivar)];" << std::endl;
+      fout << "   for (int ivar=0; ivar<nvar; ivar++) iv[indicesPut.at(ivar)] = dv[ivar];" << std::endl;
       fout << "}" << std::endl;
    }
 }
