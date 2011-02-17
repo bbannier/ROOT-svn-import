@@ -35,7 +35,7 @@ void MethodUnitTestWithComplexData::run()
 
 // FIXME:: make the factory option mutable?
 // absolute silence options:
-  string factoryOptions( "!V:Silent:Transformations=I;D;P;G,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
+  string factoryOptions( "!V:Silent:Transformations=I;D;P;G;N;U:AnalysisType=Classification:!Color:!DrawProgressBar" );
 
   Factory* factory = new Factory( "TMVAUnitTesting", outputFile, factoryOptions );
   

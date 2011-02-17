@@ -39,7 +39,7 @@ void RegressionUnitTestWithDeviation::run()
 
    // FIXME:: make the factory option mutable?
    // absolute silence options:
-   string factoryOptions( "!V:Silent:Transformations=I;D;P;G,D:AnalysisType=Regression:!Color:!DrawProgressBar" );
+   string factoryOptions( "!V:Silent:Transformations=I;D;P;G;N;U:AnalysisType=Regression:!Color:!DrawProgressBar" );
 
    Factory* factory = new Factory( "TMVARegressionUnitTesting", outputFile, factoryOptions );
 

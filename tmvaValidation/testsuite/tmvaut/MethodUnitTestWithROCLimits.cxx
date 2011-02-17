@@ -53,7 +53,7 @@ void MethodUnitTestWithROCLimits::run()
 // absolute silence options:
   string factoryOptions( "!V:Silent:AnalysisType=Classification:!Color:!DrawProgressBar" );
 
-  if (_methodOption.Contains("VarTransform")) factoryOptions+=":Transformations=I;D;P;G";
+  if (_methodOption.Contains("VarTransform")) factoryOptions+=":Transformations=I;D;P;G;N;U";
   Factory* factory = new Factory( "TMVAUnitTesting", outputFile, factoryOptions );
   // factory->AddVariable( "myvar1 := var1+var2", 'F' );
   // factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
@@ -271,8 +271,8 @@ void MethodUnitTestWithROCLimits::run()
         }
         if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++; 
         if (iTest ==0 ) previousVal=readerVal;
+        //std::cout <<": maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
      }
-
   }
   Bool_t ok=false;
   sumdiff=sumdiff/nevt;
