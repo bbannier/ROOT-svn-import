@@ -543,7 +543,7 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinitionIn
 	 }
      else if (trName == "G" || trName == "Gauss"){
 	    if( variables.Length() == 0 )
-	       variables = "_V_,_T_";
+	       variables = "_V_";
 	    transformation = new VariableGaussTransform ( dataInfo);
 	 }
      else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize")
