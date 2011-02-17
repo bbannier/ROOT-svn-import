@@ -489,7 +489,7 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinitionIn
 	 TString tdef = os->GetString();
          Int_t idxCls = -1;
 
-	 TString variables = "_V_";
+	 TString variables = "";
 	 if( tdef.Contains("(") ) { // contains selection of variables
 	    Ssiz_t parStart = tdef.Index( "(" );
 	    Ssiz_t parLen   = tdef.Index( ")", parStart )-parStart+1;
