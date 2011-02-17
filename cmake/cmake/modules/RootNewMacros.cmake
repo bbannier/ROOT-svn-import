@@ -26,6 +26,16 @@ else()
   set(libprefix lib)
 endif()
 
+if(soversion)
+  set(ROOT_LIBRARY_PROPERTIES ${ROOT_LIBRARY_PROPERTIES}
+      VERSION ${ROOT_VERSION}
+      SOVERSION ${ROOT_MAJOR_VERSION}
+      SUFFIX .so )
+else()
+  set(ROOT_LIBRARY_PROPERTIES ${ROOT_LIBRARY_PROPERTIES}
+      SUFFIX .so )
+endif()
+
 set(CMAKE_VERBOSE_MAKEFILES OFF)
 set(CMAKE_INCLUDE_CURRENT_DIR OFF)
 
@@ -171,14 +181,14 @@ function(ROOT_LINKER_LIBRARY library)
   endforeach()
   include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_BINARY_DIR}/include )
   if(WIN32 AND NOT BUILD_DLLEXPORT_LIBS AND NOT ARG_DLLEXPORT)
-	add_library( ${library}-arc STATIC EXCLUDE_FROM_ALL ${lib_srcs})
+	  add_library( ${library}-arc STATIC EXCLUDE_FROM_ALL ${lib_srcs})
     set_target_properties(${library}-arc PROPERTIES COMPILE_FLAGS -DGAUDI_LINKER_LIBRARY )
     add_custom_command( 
       OUTPUT ${library}.def
 	  COMMAND ${genwindef_cmd} -o ${library}.def -l ${library} ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR}/${library}-arc.lib
 	  DEPENDS ${library}-arc genwindef)
-	#---Needed to create a dummy source file to please Windows IDE builds with the manifest
-	file( WRITE ${CMAKE_CURRENT_BINARY_DIR}/${library}.cpp "// empty file\n" )
+	  #---Needed to create a dummy source file to please Windows IDE builds with the manifest
+	  file( WRITE ${CMAKE_CURRENT_BINARY_DIR}/${library}.cpp "// empty file\n" )
     add_library( ${library} SHARED ${library}.cpp ${library}.def)
     target_link_libraries(${library} ${library}-arc ${ARG_LIBRARIES})
     set_target_properties(${library} PROPERTIES LINK_INTERFACE_LIBRARIES "${ARG_LIBRARIES}" )

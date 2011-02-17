@@ -11,41 +11,32 @@ ROOT_USE_PACKAGE(core/unix)
 ROOT_USE_PACKAGE(core/zip)
 ROOT_USE_PACKAGE(cint/cint)
 
-
-#TODO: Check for system installation of pcre and zlib
-# Now build the builtin version of pcre and zlib 
-Set(BuildPcre TRUE)
-If(BuildPcre)
-  add_subdirectory (pcre)
-  Set(RootConfigFeatures "${RootConfigFeatures} builtin_pcre")
-  Set(PCRE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/core/pcre/pcre-7.8)
-  Set(PCRE_LIBRARIES "-L${LIBRARY_OUTPUT_PATH} -lpcre") 
-EndIf(BuildPcre)
+#---Now build the builtin version of pcre and zlib ----------------------------------------
+if(builtin_pcre)
+  add_subdirectory(pcre)
+  set(PCRE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/core/pcre/pcre-7.8)
+  set(PCRE_LIBRARIES "-L${LIBRARY_OUTPUT_PATH} -lpcre") 
+endif()
 
 Set(BuildZlib TRUE)
 Set(ZLIB_LIBRARY "")
 
-add_subdirectory (metautils)
-add_subdirectory (utils)
-
 add_subdirectory(rint)
 add_subdirectory(thread)
 add_subdirectory(newdelete)
-
-add_subdirectory (clib)
-add_subdirectory (cont)
-If(BuildEditLine)
-  add_subdirectory (editline)
-  Set(RootConfigFeatures "${RootConfigFeatures} editline")
-EndIf(BuildEditLine)
-
-add_subdirectory (meta)
-If(UNIX)
-  add_subdirectory (unix)
-EndIf(UNIX)
-add_subdirectory (zip)
-
-add_subdirectory (base)
+add_subdirectory(clib)
+add_subdirectory(cont)
+if(editline)
+  add_subdirectory(editline)
+endif()
+add_subdirectory(meta)
+if(UNIX)
+  add_subdirectory(unix)
+endif()
+add_subdirectory(zip)
+add_subdirectory(base)
+add_subdirectory(metautils)
+add_subdirectory(utils)
 
 Set(CORE_DICTIONARIES 
     ${METAUTILS_DICTIONARY}
@@ -106,7 +97,8 @@ Set(INCLUDE_DIRECTORIES
     ${ROOT_INCLUDE_DIR} 
    ) 
 
-GENERATE_ROOTMAP("${LibCore_LINKDEF}" Core)
+#GENERATE_ROOTMAP("${LibCore_LINKDEF}" Core)
+ROOT_GENERATE_ROOTMAP(Core LINKDEF ${LibCore_LINKDEF})
 
 include_directories( ${INCLUDE_DIRECTORIES})
 

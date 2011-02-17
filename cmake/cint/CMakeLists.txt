@@ -14,12 +14,16 @@ Execute_Process(COMMAND cmake -E make_directory ${CMAKE_BINARY_DIR}/cint/cint
 )
 
 
-Add_Subdirectory(cint)
-#Add_Subdirectory(test)
-Add_Subdirectory(ROOT)
-Add_Subdirectory(reflex)
+add_subdirectory(cint)
+add_subdirectory(ROOT)
+if(reflex)
+  add_subdirectory(reflex)
+endif()
+if(cintex)
+  add_subdirectory(cintex)
+endif()
 ## TODO: Add cling support
-#Add_Subdirectory(cling)
+#add_Ssbdirectory(cling)
 
 # The following line is needed to transport the definition
 # to the root scope, because the variable is needed also in

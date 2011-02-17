@@ -3,7 +3,7 @@
 ############################################################################
 
 file(GLOB sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
-if(BuildEditLine)
+if(editline)
   list(REMOVE_ITEM sources ${CMAKE_CURRENT_SOURCE_DIR}/src/Getline.c)
 endif()
 
