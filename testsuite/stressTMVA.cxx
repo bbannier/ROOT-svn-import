@@ -31,7 +31,8 @@ void addClassificationTests( UnitTestSuite& TMVA_test, bool full=true)
    // problem with the make function of the Gauss transformation when only some variables are selected 
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN_selVar_Gauss", "H:!V:VarTransform=G(var4,myvar1)" , 0.88, 0.98) ); 
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN_selVar_P", "H:!V:VarTransform=P(var3,var4)" , 0.88, 0.98) ); 
-   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN_selVar_P", "H:!V:VarTransform=D(myvar1,myvar2,var3)" , 0.88, 0.98) ); 
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN_selVar_D", "H:!V:VarTransform=D(myvar1,myvar2,var3)" , 0.88, 0.98) ); 
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN_selVar_N", "H:!V:VarTransform=N(myvar1,myvar2,var3)" , 0.88, 0.98) ); 
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LDN_selVar_Uniform", "H:!V:VarTransform=U(var4,myvar1)" , 0.88, 0.98) ); 
 
 
