@@ -119,10 +119,7 @@ cling::IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
     SC->InitializeSema(*m_Sema);
 }
 
-cling::IncrementalASTParser::~IncrementalASTParser()
-{
-  m_CI->takeLLVMContext(); // Don't take down the context with the CI.
-}
+cling::IncrementalASTParser::~IncrementalASTParser() {}
 
 clang::CompilerInstance*
 cling::IncrementalASTParser::parse(llvm::StringRef src,

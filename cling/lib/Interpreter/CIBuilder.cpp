@@ -76,7 +76,6 @@ namespace cling {
       // Create and setup a compiler instance.
       //
       clang::CompilerInstance* CI = new clang::CompilerInstance();
-      CI->setLLVMContext(m_llvm_context.get());
       {
          //
          //  Buffer the error messages while we process
@@ -99,7 +98,6 @@ namespace cling {
             CI->getHeaderSearchOpts().ResourceDir = m_resource_path.str();
          }
          if (CI->getDiagnostics().hasErrorOccurred()) {
-            CI->takeLLVMContext();
             delete CI;
             CI = 0;
             return 0;
@@ -108,7 +106,6 @@ namespace cling {
       CI->setTarget(clang::TargetInfo::CreateTargetInfo(CI->getDiagnostics(),
                                                         CI->getTargetOpts()));
       if (!CI->hasTarget()) {
-         CI->takeLLVMContext();
          delete CI;
          CI = 0;
          return 0;
