@@ -4,35 +4,35 @@
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
-#include <set>
+#ifndef CLING_EVALINFO_H
+#define CLING_EVALINFO_H
 
 namespace clang {
    class Stmt;
-   class DeclRefExpr;
 }
 
 namespace cling {
-   class EvalInfo {      
-   private:
-      typedef clang::Stmt Stmt;
-      typedef clang::DeclRefExpr DeclRefExpr;
-      
-      Stmt *m_newStmt; // the new/old node
-      std::set<DeclRefExpr*> m_variables; // the DeclRefs
-
+   // The ASTTransformVisitor needs to have information about the nodes
+   // it visits in order to escape properly the unknown symbols. Walking up 
+   // it needs to know not only the node, which is being returned from the 
+   // visited subnode, but it needs information from its subnode if the 
+   // subnode can handle the dependent symbol itself or it wants delegate it
+   // to its parent.
+   // Ideally when given subnode has enough information to handle the unknown
+   // symbol it should do it instead of delegating to the parent. This limits
+   // the size of the expressions/statements being escaped.
+   class EvalInfo {
+   private:      
+      clang::Stmt *m_newStmt; // the new/old node
    public:
       bool IsEvalNeeded; // whether to emit the Eval call or not
  
-      EvalInfo(Stmt *stmt, bool needed)
-         :m_newStmt(stmt), IsEvalNeeded(needed) {};
+      EvalInfo(clang::Stmt *S, bool needed)
+         :m_newStmt(S), IsEvalNeeded(needed) {};
 
-      Stmt *getNewStmt() const { return m_newStmt; }
-      void setNewStmt(Stmt *stmt) { m_newStmt = stmt; } 
-      
-      const std::set<DeclRefExpr*> &getVariables() const { return m_variables; }
-      void addVariable(DeclRefExpr *var) { 
-         m_variables.insert(var);
-      }
+      clang::Stmt *getNewStmt() const { return m_newStmt; }
+      void setNewStmt(clang::Stmt *S) { m_newStmt = S; } 
    };
 
 } //end cling
+#endif
