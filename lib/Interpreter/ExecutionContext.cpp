@@ -15,6 +15,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/LLVMContext.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -211,10 +212,11 @@ ExecutionContext::startCodegen(clang::CompilerInstance* CI,
               "ExecutionContext::startCodegen: No translation unit decl passed!\n");
       return false;
     }
-    
-    m_codeGen.reset(
-                    CreateLLVMCodeGen(CI->getDiagnostics(), filename, CI->getCodeGenOpts(),
-                                      CI->getLLVMContext()));
+    m_codeGen.reset(CreateLLVMCodeGen(CI->getDiagnostics(), 
+                                      filename,
+                                      CI->getCodeGenOpts(), 
+                                      * new llvm::LLVMContext())
+                    );
     m_codeGen->Initialize(CI->getASTContext());
     clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
     clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();

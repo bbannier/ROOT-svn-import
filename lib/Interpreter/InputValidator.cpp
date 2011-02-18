@@ -24,9 +24,7 @@ m_CI(CI), m_PP(0) {
   m_PP->EnterMainSourceFile();  
 }
 
-cling::InputValidator::~InputValidator() {
-  m_CI->takeLLVMContext(); // Don't take down the context with the CI.
-}
+cling::InputValidator::~InputValidator() {}
 
 cling::InputValidator::Result
 cling::InputValidator::validate(llvm::StringRef code) {
