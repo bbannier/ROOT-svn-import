@@ -546,12 +546,12 @@ void TMVA::VariableNormalizeTransform::MakeFunction( std::ostream& fout, const T
 {
    // creates a normalizing function
    // TODO include target-transformation into makefunction
-   UInt_t nvar = fGet.size();
+   UInt_t nVar = fGet.size();
    UInt_t numC = fMin.size();
    if (part==1) {
       fout << std::endl;
-      fout << "   double fMin_"<<trCounter<<"["<<numC<<"]["<<nvar<<"];" << std::endl;
-      fout << "   double fMax_"<<trCounter<<"["<<numC<<"]["<<nvar<<"];" << std::endl;
+      fout << "   double fMin_"<<trCounter<<"["<<numC<<"]["<<nVar<<"];" << std::endl;
+      fout << "   double fMax_"<<trCounter<<"["<<numC<<"]["<<nVar<<"];" << std::endl;
    }
 
    if (part==2) {
@@ -559,7 +559,7 @@ void TMVA::VariableNormalizeTransform::MakeFunction( std::ostream& fout, const T
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::InitTransform_"<<trCounter<<"()" << std::endl;
       fout << "{" << std::endl;
-      for (UInt_t ivar=0; ivar<nvar; ivar++) {
+      for (UInt_t ivar=0; ivar<nVar; ivar++) {
          Float_t min = FLT_MAX;
          Float_t max = -FLT_MAX;
          for (UInt_t icls = 0; icls < numC; icls++) {
@@ -580,13 +580,13 @@ void TMVA::VariableNormalizeTransform::MakeFunction( std::ostream& fout, const T
       fout << "   if ("<<GetNClasses()<<" > 1 ) cls = "<<GetNClasses()<<";"<< std::endl;
       fout << "      else cls = "<<(fMin.size()==1?0:2)<<";"<< std::endl;
       fout << "   }"<< std::endl;
-      fout << "   const int nvar = " << nvar << ";" << std::endl << std::endl;
+      fout << "   const int nVar = " << nVar << ";" << std::endl << std::endl;
       fout << "   // get indices of used variables" << std::endl;
       VariableTransformBase::MakeFunction(fout, fcncName, 0, trCounter, 0 );
-      fout << "   std::vector<double> dv(nvar);" << std::endl;
-      fout << "   for (int ivar=0; ivar<nvar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];" << std::endl;
+      fout << "   std::vector<double> dv(nVar);" << std::endl;
+      fout << "   for (int ivar=0; ivar<nVar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];" << std::endl;
 
-      fout << "   for (int ivar=0;ivar<"<<nvar<<";ivar++) {" << std::endl;
+      fout << "   for (int ivar=0;ivar<"<<nVar<<";ivar++) {" << std::endl;
       fout << "      double offset = fMin_"<<trCounter<<"[cls][ivar];" << std::endl;
       fout << "      double scale  = 1.0/(fMax_"<<trCounter<<"[cls][ivar]-fMin_"<<trCounter<<"[cls][ivar]);" << std::endl;
       fout << "      iv[indicesPut.at(ivar)] = (dv[ivar]-offset)*scale * 2 - 1;" << std::endl;
