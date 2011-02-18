@@ -133,8 +133,8 @@ const TMVA::Event* TMVA::VariableGaussTransform::Transform(const Event* const ev
   // get the variable vector of the current event
    UInt_t inputSize = fGet.size();
 
-   std::vector<Float_t> input;
-   std::vector<Float_t> output;
+   std::vector<Float_t> input(0);
+   std::vector<Float_t> output(0);
 
    std::vector<Char_t> mask; // entries with kTRUE must not be transformed
    GetInput( ev, input, mask );
@@ -274,7 +274,7 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
    Float_t *maxWeight = new Float_t[numDist]; 
    for (UInt_t i=0; i<numDist; i++) {
       sumOfWeights[i]=0;
-      minWeight[i]=10E10;
+      minWeight[i]=10E10; // TODO: change this to std::max ?
       maxWeight[i]=0; // QUESTION: wouldn't there be negative events possible?
    }
    for (UInt_t ievt=0; ievt < nevt; ievt++) {
