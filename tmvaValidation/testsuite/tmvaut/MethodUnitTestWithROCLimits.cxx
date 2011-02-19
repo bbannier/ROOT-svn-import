@@ -167,7 +167,7 @@ void MethodUnitTestWithROCLimits::run()
   TString weightfile=dir+_methodTitle+".weights.xml";
   TString weightfile2="weights/ByHand_BDT.weights.xml"; //TMVATest3VarF2VarI_BDT.weights.xml
   TString readerName2 = "BDT method";
-  double diff, maxdiff = 0., sumdiff=0., previousVal=0.;
+  double diff=-1.f, maxdiff = 0., sumdiff=0., previousVal=0.;
   int stuckCount=0, nevt= TMath::Min((int) testTree->GetEntries(),100);
   const float effS=0.301;
 
@@ -271,7 +271,33 @@ void MethodUnitTestWithROCLimits::run()
         }
         if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++; 
         if (iTest ==0 ) previousVal=readerVal;
-        //std::cout <<": maxdiff="<<maxdiff<<", sumdiff="<<sumdiff<<" stuckcount="<<stuckCount<<endl;
+     }
+
+     if (diff>0.f){
+	std::cout << "#test: " << iTest << "  diff=" << diff << " | ";
+
+        if (iTest==0)
+	   std::cout << "reader->EvaluateMVA( \"" << readerName << "\" );  ";
+        else if (iTest==1)
+	   std::cout << "reader->EvaluateMVA( testvarFloat, readerName );  ";
+        else if (iTest==2)
+	   std::cout << "reader->EvaluateMVA( testvarDouble, readerName );  ";
+        else if (iTest==3 ){
+	   std::cout << "dummy3=reader->EvaluateMVA( testvarDouble, readerName2 );  ";
+	   std::cout << "reader[3]=reader->EvaluateMVA( testvarDouble, readerName );  ";
+	   std::cout << "dummy3+=reader->EvaluateMVA( testvarDouble, readerName2 );  ";
+        }
+        else if (iTest==4){
+	   std::cout << "dummy4=reader->EvaluateMVA( testvarDouble, readerName2 );  ";
+	   std::cout << "reader[4]=reader->EvaluateMVA( testvarDouble, readerName );  ";
+	   std::cout << "dummy4+=reader->EvaluateMVA( testvarDouble, readerName2 );  ";
+        }
+        else if (iTest==5){
+	   std::cout << "dummy5=reader->EvaluateMVA( readerName2 );  ";
+	   std::cout << "reader[5]=reader->EvaluateMVA( readerName );  ";
+	   std::cout << "dummy5+=reader->EvaluateMVA( readerName2 );  ";
+        }
+	std::cout << endl;
      }
   }
   Bool_t ok=false;
