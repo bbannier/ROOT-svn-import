@@ -121,7 +121,7 @@ TMVA::Event::Event( const std::vector<Float_t*>*& evdyn, UInt_t nvar )
 //____________________________________________________________
 TMVA::Event::Event( const Event& event ) 
    : fValues(event.fValues),
-     fValuesDynamic(0),
+     fValuesDynamic(event.fValuesDynamic),
      fTargets(event.fTargets),
      fSpectators(event.fSpectators),
      fClass(event.fClass),
@@ -145,6 +145,8 @@ void TMVA::Event::CopyVarValues( const Event& other )
    fValues      = other.fValues;
    fTargets     = other.fTargets;
    fSpectators  = other.fSpectators;
+   fDynamic     = other.fDynamic;
+   fValuesDynamic = other.fValuesDynamic;
 
    fClass       = other.fClass;
    fWeight      = other.fWeight;
@@ -175,8 +177,8 @@ const std::vector<Float_t>& TMVA::Event::GetValues() const
    // return value vector
    if (fDynamic) {
       fValues.clear();
-      for (std::vector<Float_t*>::const_iterator it = fValuesDynamic->begin(); 
-           it != fValuesDynamic->end()-GetNSpectators(); it++) { 
+      for (std::vector<Float_t*>::const_iterator it = fValuesDynamic->begin(), itEnd=fValuesDynamic->end()-GetNSpectators(); 
+           it != itEnd; ++it) { 
          Float_t val = *(*it); 
          fValues.push_back( val ); 
       }

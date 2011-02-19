@@ -465,7 +465,10 @@ Double_t TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const 
    IMethod* imeth = FindMVA( methodTag );
    MethodBase* meth = dynamic_cast<TMVA::MethodBase*>(imeth);
    if(meth==0) return 0;
-   Event* tmpEvent=new Event(inputVec, 2); // ToDo resolve magic 2 issue
+
+//   Event* tmpEvent=new Event(inputVec, 2); // ToDo resolve magic 2 issue
+   Event* tmpEvent=new Event(inputVec, DataInfo().GetNVariables()); // is this the solution?
+
    if (meth->GetMethodType() == TMVA::Types::kCuts) {
       TMVA::MethodCuts* mc = dynamic_cast<TMVA::MethodCuts*>(meth);
       if(mc)
