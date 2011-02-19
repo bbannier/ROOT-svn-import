@@ -606,7 +606,7 @@ void TMVA::VariablePCATransform::MakeFunction( std::ostream& fout, const TString
       fout << std::endl;
       fout << "   // Perform PCA and put it into PCAed events tree" << std::endl;
       fout << "   this->X2P_"<<trCounter<<"( dv, rv, cls );" << std::endl;
-      fout << "   for (int ivar=0; ivar<nVar; ivar++) iv[ivar] = rv[indicesPut.at(ivar)];" << std::endl;
+      fout << "   for (int ivar=0; ivar<nVar; ivar++) iv[indicesPut.at(ivar)] = rv[ivar];" << std::endl;
 //      fout << "   for (int ivar=0; ivar<nVar; ivar++) iv[ivar] = rv[ivar];" << std::endl;
       fout << std::endl;
       fout << "   delete [] dv;" << std::endl;
