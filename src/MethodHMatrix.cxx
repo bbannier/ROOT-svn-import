@@ -190,17 +190,21 @@ void TMVA::MethodHMatrix::ComputeCovariance( Bool_t isSignal, TMatrixD* mat )
    Double_t *xval = new Double_t[nvar];
 
    // perform event loop
-   for (Int_t i=0; i<Data()->GetNEvents(); i++) {
+   for (Int_t i=0, iEnd=Data()->GetNEvents(); i<iEnd; ++i) {
 
-      // retrieve the event
-      const Event* ev = GetEvent(i);
-      Double_t weight = ev->GetWeight();
+      // retrieve the original (not transformed) event
+      const Event* origEvt = Data()->GetEvent(i);
+      Double_t weight = origEvt->GetWeight();
 
       // in case event with neg weights are to be ignored
       if (IgnoreEventsWithNegWeightsInTraining() && weight <= 0) continue;
 
-      if (DataInfo().IsSignal(ev) != isSignal) continue;
+      if (DataInfo().IsSignal(origEvt) != isSignal) continue;
 
+      // transform the event
+      GetTransformationHandler().SetTransformationReferenceClass( origEvt->GetClass() );
+      const Event* ev = GetTransformationHandler().Transform( origEvt );
+      
       // event is of good type
       sumOfWeights += weight;
 
@@ -249,52 +253,65 @@ Double_t TMVA::MethodHMatrix::GetMvaValue( Double_t* err, Double_t* errUpper )
    return (b - s)/(s + b);
 }
 
+// //_______________________________________________________________________
+// Double_t TMVA::MethodHMatrix::GetChi2( TMVA::Event* e,  Types::ESBType type ) const
+// {
+//    // compute chi2-estimator for event according to type (signal/background)
+
+//    // loop over variables
+//    UInt_t ivar,jvar, nvar=GetNvar();
+//    vector<Double_t> val( nvar );
+//    for (ivar=0; ivar<nvar; ivar++) {
+//       val[ivar] = e->GetValue(ivar);
+//       if (IsNormalised()) val[ivar] = gTools().NormVariable( val[ivar], GetXmin( ivar ), GetXmax( ivar ) );
+//    }
+
+//    Double_t chi2 = 0;
+//    for (ivar=0; ivar<nvar; ivar++) {
+//       for (jvar=0; jvar<nvar; jvar++) {
+//          if (type == Types::kSignal) 
+//             chi2 += ( (val[ivar] - (*fVecMeanS)(ivar))*(val[jvar] - (*fVecMeanS)(jvar))
+//                       * (*fInvHMatrixS)(ivar,jvar) );
+//          else
+//             chi2 += ( (val[ivar] - (*fVecMeanB)(ivar))*(val[jvar] - (*fVecMeanB)(jvar))
+//                       * (*fInvHMatrixB)(ivar,jvar) );
+//       }
+//    }
+
+//    // sanity check
+//    if (chi2 < 0) Log() << kFATAL << "<GetChi2> negative chi2: " << chi2 << Endl;
+
+//    return chi2;
+// }
+
 //_______________________________________________________________________
-Double_t TMVA::MethodHMatrix::GetChi2( TMVA::Event* e,  Types::ESBType type ) const
+Double_t TMVA::MethodHMatrix::GetChi2( Types::ESBType type ) 
 {
    // compute chi2-estimator for event according to type (signal/background)
 
-   // loop over variables
-   UInt_t ivar,jvar;
-   vector<Double_t> val( GetNvar() );
-   for (ivar=0; ivar<GetNvar(); ivar++) {
-      val[ivar] = e->GetValue(ivar);
-      if (IsNormalised()) val[ivar] = gTools().NormVariable( val[ivar], GetXmin( ivar ), GetXmax( ivar ) );
-   }
+   // get original (not transformed) event
 
-   Double_t chi2 = 0;
-   for (ivar=0; ivar<GetNvar(); ivar++) {
-      for (jvar=0; jvar<GetNvar(); jvar++) {
-         if (type == Types::kSignal) 
-            chi2 += ( (val[ivar] - (*fVecMeanS)(ivar))*(val[jvar] - (*fVecMeanS)(jvar))
-                      * (*fInvHMatrixS)(ivar,jvar) );
-         else
-            chi2 += ( (val[ivar] - (*fVecMeanB)(ivar))*(val[jvar] - (*fVecMeanB)(jvar))
-                      * (*fInvHMatrixB)(ivar,jvar) );
-      }
-   }
-
-   // sanity check
-   if (chi2 < 0) Log() << kFATAL << "<GetChi2> negative chi2: " << chi2 << Endl;
-
-   return chi2;
-}
-
-//_______________________________________________________________________
-Double_t TMVA::MethodHMatrix::GetChi2( Types::ESBType type ) const
-{
-   // compute chi2-estimator for event according to type (signal/background)
-
-   const Event * ev = GetEvent();
+   const Event * origEvt = fTmpEvent?fTmpEvent:Data()->GetEvent();
 
    // loop over variables
-   UInt_t ivar,jvar;
-   vector<Double_t> val( GetNvar() );
-   for (ivar=0; ivar<GetNvar(); ivar++) val[ivar] = ev->GetValue( ivar );
+   UInt_t ivar,jvar, nvar=GetNvar();
+   vector<Double_t> val( nvar );
+
+   static UInt_t signalClass    =DataInfo().GetClassInfo("Signal")->GetNumber();
+   static UInt_t backgroundClass=DataInfo().GetClassInfo("Background")->GetNumber();
+   // transform the event according to the given type (signal/background)
+   if (type==Types::kSignal)
+      GetTransformationHandler().SetTransformationReferenceClass( signalClass     );
+   else
+      GetTransformationHandler().SetTransformationReferenceClass( backgroundClass );
+
+   const Event* ev = GetTransformationHandler().Transform( origEvt );
+
+   for (ivar=0; ivar<nvar; ivar++) val[ivar] = ev->GetValue( ivar );
 
    Double_t chi2 = 0;
-   for (ivar=0; ivar<GetNvar(); ivar++) {
-      for (jvar=0; jvar<GetNvar(); jvar++) {
+   for (ivar=0; ivar<nvar; ivar++) {
+      for (jvar=0; jvar<nvar; jvar++) {
          if (type == Types::kSignal) 
             chi2 += ( (val[ivar] - (*fVecMeanS)(ivar))*(val[jvar] - (*fVecMeanS)(jvar))
                       * (*fInvHMatrixS)(ivar,jvar) );
@@ -392,8 +409,14 @@ void TMVA::MethodHMatrix::MakeClassSpecific( std::ostream& fout, const TString& 
    fout << "inline double " << className << "::GetMvaValue__( const std::vector<double>& inputValues ) const" << endl;
    fout << "{" << endl;
    fout << "   // returns the H-matrix signal estimator" << endl;
-   fout << "   double s = GetChi2( inputValues, " << Types::kSignal << " );" << endl;
-   fout << "   double b = GetChi2( inputValues, " << Types::kBackground << " );" << endl;
+   fout << "   std::vector<double> inputValuesSig = inputValues;" << endl;
+   fout << "   std::vector<double> inputValuesBgd = inputValues;" << endl;
+   if (GetTransformationHandler().GetTransformationList().GetSize() != 0) {
+      fout << "   Transform(inputValuesSig,0);" << endl;
+      fout << "   Transform(inputValuesBgd,1);" << endl;
+   }
+   fout << "   double s = GetChi2( inputValuesSig, " << Types::kSignal << " );" << endl;
+   fout << "   double b = GetChi2( inputValuesBgd, " << Types::kBackground << " );" << endl;
    fout << "   " << endl;
    fout << "   if (s+b <= 0) std::cout << \"Problem in class " << className << "::GetMvaValue__: s+b = \"" << endl;
    fout << "                           << s+b << \" <= 0 \"  << std::endl;" << endl;
