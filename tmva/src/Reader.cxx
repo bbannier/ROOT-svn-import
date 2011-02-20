@@ -164,9 +164,8 @@ TMVA::Reader::Reader( std::vector<TString>& inputVars, const TString& theOption,
 
    // arguments: names of input variables (vector)
    //            verbose flag
-   for (std::vector<TString>::iterator ivar = inputVars.begin(); ivar != inputVars.end(); ivar++) {
+   for (std::vector<TString>::iterator ivar = inputVars.begin(); ivar != inputVars.end(); ivar++) 
       DataInfo().AddVariable( *ivar );
-   }
 
    Init();
 }
@@ -194,9 +193,8 @@ TMVA::Reader::Reader( std::vector<std::string>& inputVars, const TString& theOpt
 
    // arguments: names of input variables (vector)
    //            verbose flag
-   for (std::vector<std::string>::iterator ivar = inputVars.begin(); ivar != inputVars.end(); ivar++) {
+   for (std::vector<std::string>::iterator ivar = inputVars.begin(); ivar != inputVars.end(); ivar++) 
       DataInfo().AddVariable( ivar->c_str() );
-   }
 
    Init();
 }
