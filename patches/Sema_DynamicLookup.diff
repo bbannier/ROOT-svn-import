@@ -1,7 +1,7 @@
-Index: include/clang/Sema/DynamicLookupSource.h
+Index: tools/clang/include/clang/Sema/DynamicLookupSource.h
 ===================================================================
---- include/clang/Sema/DynamicLookupSource.h	(revision 0)
-+++ include/clang/Sema/DynamicLookupSource.h	(revision 0)
+--- tools/clang/include/clang/Sema/DynamicLookupSource.h	(revision 0)
++++ tools/clang/include/clang/Sema/DynamicLookupSource.h	(revision 0)
 @@ -0,0 +1,40 @@
 +//===--- DynamicLookupSource.h - Dynamic Lookup Interface -------*- C++ -*-===//
 +//
@@ -43,10 +43,10 @@ Index: include/clang/Sema/DynamicLookupSource.h
 +} // end namespace clang
 +
 +#endif // LLVM_CLANG_SEMA_DYNAMIC_LOOKUP_SOURCE_H
-Index: include/clang/Sema/Sema.h
+Index: tools/clang/include/clang/Sema/Sema.h
 ===================================================================
---- include/clang/Sema/Sema.h	(revision 125489)
-+++ include/clang/Sema/Sema.h	(working copy)
+--- tools/clang/include/clang/Sema/Sema.h	(revision 125489)
++++ tools/clang/include/clang/Sema/Sema.h	(working copy)
 @@ -78,6 +78,7 @@
    class Expr;
    class ExtVectorType;
@@ -65,10 +65,10 @@ Index: include/clang/Sema/Sema.h
    /// \brief Source of additional semantic information.
    ExternalSemaSource *ExternalSource;
  
-Index: lib/Sema/SemaLookup.cpp
+Index: tools/clang/lib/Sema/SemaLookup.cpp
 ===================================================================
---- lib/Sema/SemaLookup.cpp	(revision 125489)
-+++ lib/Sema/SemaLookup.cpp	(working copy)
+--- tools/clang/lib/Sema/SemaLookup.cpp	(revision 125489)
++++ tools/clang/lib/Sema/SemaLookup.cpp	(working copy)
 @@ -18,6 +18,7 @@
  #include "clang/Sema/Scope.h"
  #include "clang/Sema/ScopeInfo.h"
@@ -90,10 +90,10 @@ Index: lib/Sema/SemaLookup.cpp
  }
  
  /// @brief Perform qualified name lookup in the namespaces nominated by
-Index: lib/Sema/Sema.cpp
+Index: tools/clang/lib/Sema/Sema.cpp
 ===================================================================
---- lib/Sema/Sema.cpp	(revision 125489)
-+++ lib/Sema/Sema.cpp	(working copy)
+--- tools/clang/lib/Sema/Sema.cpp	(revision 125489)
++++ tools/clang/lib/Sema/Sema.cpp	(working copy)
 @@ -21,6 +21,7 @@
  #include "clang/Sema/CXXFieldCollector.h"
  #include "clang/Sema/TemplateDeduction.h"
