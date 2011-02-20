@@ -700,6 +700,7 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::InitTransform_"<<trCounter<<"()" << std::endl;
       fout << "{" << std::endl;
+      fout << "   // Gauss/Uniform transformation, initialisation" << std::endl;
       fout << "   nvar=" << nvar << ";" << std::endl;
       // fill meat here
       // loop over nvar , cls, loop over nBins
@@ -737,6 +738,7 @@ void TMVA::VariableGaussTransform::MakeFunction( std::ostream& fout, const TStri
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::Transform_"<<trCounter<<"( std::vector<double>& iv, int cls) const" << std::endl;
       fout << "{" << std::endl;
+      fout << "   // Gauss/Uniform transformation" << std::endl;
       fout << "   if (cls < 0 || cls > "<<GetNClasses()<<") {"<< std::endl;
       fout << "       if ("<<GetNClasses()<<" > 1 ) cls = "<<GetNClasses()<<";"<< std::endl;
       fout << "       else cls = "<<(fCumulativePDF[0].size()==1?0:2)<<";"<< std::endl;

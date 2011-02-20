@@ -559,6 +559,7 @@ void TMVA::VariableNormalizeTransform::MakeFunction( std::ostream& fout, const T
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::InitTransform_"<<trCounter<<"()" << std::endl;
       fout << "{" << std::endl;
+      fout << "   // Normalization transformation, initialisation" << std::endl;
       for (UInt_t ivar=0; ivar<nVar; ivar++) {
          Float_t min = FLT_MAX;
          Float_t max = -FLT_MAX;
@@ -575,7 +576,8 @@ void TMVA::VariableNormalizeTransform::MakeFunction( std::ostream& fout, const T
       fout << std::endl;
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::Transform_"<<trCounter<<"( std::vector<double>& iv, int cls) const" << std::endl;
-      fout << "   {" << std::endl;
+      fout << "{" << std::endl;
+      fout << "   // Normalization transformation" << std::endl;
       fout << "   if (cls < 0 || cls > "<<GetNClasses()<<") {"<< std::endl;
       fout << "   if ("<<GetNClasses()<<" > 1 ) cls = "<<GetNClasses()<<";"<< std::endl;
       fout << "      else cls = "<<(fMin.size()==1?0:2)<<";"<< std::endl;
