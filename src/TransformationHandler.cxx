@@ -159,7 +159,7 @@ const TMVA::Event* TMVA::TransformationHandler::InverseTransform( const Event* e
    std::vector< Int_t >::const_iterator rClsIt = fTransformationsReferenceClasses.begin();
    const Event* trEv = ev;
    UInt_t nvars = 0, ntgts = 0, nspcts = 0;
-   while (VariableTransformBase *trf = (VariableTransformBase*) trIt() ) {
+   while (VariableTransformBase *trf = (VariableTransformBase*) trIt() ) { // shouldn't be the transformation called in the inverse order for the inversetransformation?????
       if (trf->IsCreated()) {
 	 trf->CountVariableTypes( nvars, ntgts, nspcts );	 
 	 if( !(suppressIfNoTargets && ntgts==0) )
