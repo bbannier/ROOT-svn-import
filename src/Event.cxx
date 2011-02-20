@@ -130,6 +130,26 @@ TMVA::Event::Event( const Event& event )
      fDynamic(event.fDynamic)
 {
    // copy constructor
+   if (event.fDynamic){
+      fValues.clear();
+      UInt_t nvar = event.GetNVariables();
+      UInt_t idx=0;
+      std::vector<Float_t*>::iterator itDyn=event.fValuesDynamic->begin(), itDynEnd=event.fValuesDynamic->end();
+      for (; itDyn!=itDynEnd && idx<nvar; ++itDyn){
+	 Float_t value=*(*itDyn);
+	 fValues.push_back( value );
+	 ++idx;
+      }
+      fSpectators.clear();
+      for (; itDyn!=itDynEnd; ++itDyn){
+	 Float_t value=*(*itDyn);
+	 fSpectators.push_back( value );
+	 ++idx;
+      }
+
+      fDynamic=kFALSE;
+      fValuesDynamic=NULL;
+   }
 }
 
 //____________________________________________________________
@@ -145,8 +165,25 @@ void TMVA::Event::CopyVarValues( const Event& other )
    fValues      = other.fValues;
    fTargets     = other.fTargets;
    fSpectators  = other.fSpectators;
-   fDynamic     = other.fDynamic;
-   fValuesDynamic = other.fValuesDynamic;
+   if (other.fDynamic){
+      UInt_t nvar = other.GetNVariables();
+      fValues.clear();
+      UInt_t idx=0;
+      std::vector<Float_t*>::iterator itDyn=other.fValuesDynamic->begin(), itDynEnd=other.fValuesDynamic->end();
+      for (; itDyn!=itDynEnd && idx<nvar; ++itDyn){
+	 Float_t value=*(*itDyn);
+	 fValues.push_back( value );
+	 ++idx;
+      }
+      fSpectators.clear();
+      for (; itDyn!=itDynEnd; ++itDyn){
+	 Float_t value=*(*itDyn);
+	 fSpectators.push_back( value );
+	 ++idx;
+      }
+   }
+   fDynamic     = kFALSE;
+   fValuesDynamic = NULL;
 
    fClass       = other.fClass;
    fWeight      = other.fWeight;
@@ -159,7 +196,13 @@ Float_t TMVA::Event::GetValue( UInt_t ivar ) const
    // return value of i'th variable
    Float_t retval;
 
-   retval = fDynamic ?( *(*fValuesDynamic)[ivar] ) : fValues[ivar];
+   if (fDynamic){
+      retval = *((*fValuesDynamic).at(ivar));
+   }
+   else{
+      retval = fValues.at(ivar);
+   }
+
    return retval;
 }
 
