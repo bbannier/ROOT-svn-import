@@ -308,9 +308,12 @@ void TMVA::MethodLikelihood::Train( void )
    // the reference histograms require the correct boundaries. Since in Likelihood classification
    // the transformations are applied using both classes, also the corresponding boundaries
    // need to take this into account
-   vector<Double_t> xmin(GetNvar()), xmax(GetNvar());
-   for (UInt_t ivar=0; ivar<GetNvar(); ivar++) {xmin[ivar]=1e30; xmax[ivar]=-1e30;}
-   for (Int_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+   UInt_t nvar=GetNvar();
+   vector<Double_t> xmin(nvar), xmax(nvar);
+   for (UInt_t ivar=0; ivar<nvar; ivar++) {xmin[ivar]=1e30; xmax[ivar]=-1e30;}
+
+   UInt_t nevents=Data()->GetNEvents();
+   for (UInt_t ievt=0; ievt<nevents; ievt++) {
       // use the true-event-type's transformation
       // set the event true event types transformation
       const Event* origEv = Data()->GetEvent(ievt);
@@ -319,7 +322,7 @@ void TMVA::MethodLikelihood::Train( void )
       for (int cls=0;cls<2;cls++){
          GetTransformationHandler().SetTransformationReferenceClass(cls);
          const Event* ev = GetTransformationHandler().Transform( origEv );
-         for (UInt_t ivar=0; ivar<GetNvar(); ivar++) {
+         for (UInt_t ivar=0; ivar<nvar; ivar++) {
             Float_t value  = ev->GetValue(ivar);
             if (value < xmin[ivar]) xmin[ivar] = value;
             if (value > xmax[ivar]) xmax[ivar] = value;
