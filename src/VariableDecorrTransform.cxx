@@ -430,6 +430,7 @@ void TMVA::VariableDecorrTransform::MakeFunction( std::ostream& fout, const TStr
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::InitTransform_"<<trCounter<<"()" << std::endl;
       fout << "{" << std::endl;
+      fout << "   // Decorrelation transformation, initialisation" << std::endl;
       for (UInt_t icls = 0; icls < numC; icls++){
          TMatrixD* matx = fDecorrMatrices.at(icls); 
          for (int i=0; i<matx->GetNrows(); i++) {
@@ -444,6 +445,7 @@ void TMVA::VariableDecorrTransform::MakeFunction( std::ostream& fout, const TStr
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::Transform_"<<trCounter<<"( std::vector<double>& iv, int cls) const" << std::endl;
       fout << "{" << std::endl;
+      fout << "   // Decorrelation transformation" << std::endl;
       fout << "   if (cls < 0 || cls > "<<GetNClasses()<<") {"<< std::endl;
       fout << "       if ("<<GetNClasses()<<" > 1 ) cls = "<<GetNClasses()<<";"<< std::endl;
       fout << "       else cls = "<<(fDecorrMatrices.size()==1?0:2)<<";"<< std::endl;
