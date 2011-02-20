@@ -562,6 +562,7 @@ void TMVA::VariablePCATransform::MakeFunction( std::ostream& fout, const TString
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::InitTransform_"<<trCounter<<"()" << std::endl;
       fout << "{" << std::endl;
+      fout << "   // PCA transformation, initialisation" << std::endl;
 
       // fill vector of mean values
       fout << "   // initialise vector of mean values" << std::endl;
@@ -590,6 +591,7 @@ void TMVA::VariablePCATransform::MakeFunction( std::ostream& fout, const TString
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::Transform_"<<trCounter<<"( std::vector<double>& iv, int cls ) const" << std::endl;
       fout << "{" << std::endl;
+      fout << "   // PCA transformation" << std::endl;
       fout << "   const int nVar = " << nvar << ";" << std::endl;
       fout << "   double *dv = new double[nVar];" << std::endl;
       fout << "   double *rv = new double[nVar];" << std::endl;
@@ -601,13 +603,12 @@ void TMVA::VariablePCATransform::MakeFunction( std::ostream& fout, const TString
       VariableTransformBase::MakeFunction(fout, fcncName, 0, trCounter, 0 );
 
       fout << "   for (int ivar=0; ivar<nVar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];" << std::endl;
-//      fout << "   for (int ivar=0; ivar<nVar; ivar++) dv[ivar] = iv[ivar];" << std::endl;
 
       fout << std::endl;
       fout << "   // Perform PCA and put it into PCAed events tree" << std::endl;
       fout << "   this->X2P_"<<trCounter<<"( dv, rv, cls );" << std::endl;
       fout << "   for (int ivar=0; ivar<nVar; ivar++) iv[indicesPut.at(ivar)] = rv[ivar];" << std::endl;
-//      fout << "   for (int ivar=0; ivar<nVar; ivar++) iv[ivar] = rv[ivar];" << std::endl;
+
       fout << std::endl;
       fout << "   delete [] dv;" << std::endl;
       fout << "   delete [] rv;" << std::endl;
