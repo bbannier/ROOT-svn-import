@@ -90,7 +90,9 @@ Add_Subdirectory (rootx)
 Add_Subdirectory (misc)
 Add_Subdirectory (main)
 Add_Subdirectory (bindings)
-
+if(tmva)
+  add_subdirectory(tmva)
+endif()
 
 #---Configure and install varrious files----------------------------------------------------------------------
 execute_Process(COMMAND uname -a OUTPUT_VARIABLE BuildNodeInfo OUTPUT_STRIP_TRAILING_WHITESPACE )
