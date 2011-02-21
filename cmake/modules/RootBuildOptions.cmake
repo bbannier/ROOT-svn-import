@@ -88,5 +88,7 @@ ROOT_BUILD_OPTION(winrtdebug OFF "Link against the Windows debug runtime library
 ROOT_BUILD_OPTION(xft ON "Xft support (X11 antialiased fonts)")                
 ROOT_BUILD_OPTION(xml ON "XML parser interface")
 ROOT_BUILD_OPTION(x11 ON "X11 support")
-ROOT_BUILD_OPTION(xrootd OFF "Build xrootd file server and its client (if supported)")              
+ROOT_BUILD_OPTION(xrootd OFF "Build xrootd file server and its client (if supported)")
+ROOT_BUILD_OPTION(fail-on-missing OFF "Fail the configure step if a required external package is missing")
+              
 

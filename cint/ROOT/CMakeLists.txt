@@ -278,7 +278,7 @@ ForEach(_name ${CINTINCDLLNAMES})
                        DEPENDS ${HEADER_OUTPUT_PATH}/systypes.h
                       ) 
 
-    if(${MACOSX_MINOR} GREATER 4)
+    if(MACOSX_MINOR GREATER 4)
       Set(_ExtraFlag "-D__DARWIN_UNIX03")
     endif()
 
