@@ -18,12 +18,17 @@ link_directories(${XROOTD_LIBRARY_DIR})
 if(WIN32)
   ROOT_LINKER_LIBRARY(XrdProofd XrdProofConn.cxx XrdProofPhyConn.cxx XProofProtUtils.cxx LIBRARIES XrdClient)
 else()
-  set(libs XrdOuc XrdNet XrdSys XrdClient XrdSut ${BONJOUR_LIBRARIES})
-  set(exelibs libXrd.a libXrdClient.a libXrdNet.a libXrdOuc.a libXrdSys.a libXrdSut.a)
+  set(libs XrdOuc XrdNet XrdNetUtil XrdSys XrdClient XrdSut ${BONJOUR_LIBRARIES})
+  set(exelibs libXrd.a libXrdClient.a libXrdNet.a libXrdNetUtil.a libXrdOuc.a libXrdSys.a libXrdSut.a)
 
-  ROOT_EXECUTABLE(proofd proofd.cxx LIBRARIES ${exelibs} rpdutil rsa ${OPENSSL_LIBRARIES})
-  ROOT_EXECUTABLE(xproofd X*.cxx LIBRARIES ${exelibs})
+  ROOT_EXECUTABLE(proofd proofd.cxx ${CMAKE_SOURCE_DIR}/core/clib/src/strlcat.c 
+                         LIBRARIES ${exelibs} rpdutil rsa ${OPENSSL_LIBRARIES} ${CRYPTLIBS})
+  ROOT_EXECUTABLE(xproofd X*.cxx LIBRARIES ${exelibs} ${SYSLIBS})
   ROOT_LINKER_LIBRARY(XrdProofd X*.cxx LIBRARIES ${libs})
+
+  add_dependencies(proofd XROOTD_LOCAL_TARGET)
+  add_dependencies(xproofd XROOTD_LOCAL_TARGET)
+  add_dependencies(XrdProofd XROOTD_LOCAL_TARGET)
 endif()
 
 ROOT_INSTALL_HEADERS()

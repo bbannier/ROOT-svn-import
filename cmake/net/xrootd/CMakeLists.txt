@@ -28,7 +28,7 @@ foreach(bin ${xrootdexes})
   set(finalexes ${finalexes} ${EXECUTABLE_OUTPUT_PATH}/${bin})
 endforeach()
 
-add_custom_target(xrootd ALL DEPENDS ${finalexes} ${finallibs})
+add_custom_target(XROOTD_LOCAL_TARGET ALL DEPENDS ${finalexes} ${finallibs})
 
 if(NOT WIN32)
   execute_process(COMMAND uname -r OUTPUT_VARIABLE RELE)
