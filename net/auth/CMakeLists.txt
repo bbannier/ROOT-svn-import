@@ -19,12 +19,16 @@ list(REMOVE_ITEM sources ${CMAKE_CURRENT_SOURCE_DIR}/src/DaemonUtils.cxx
                          ${CMAKE_CURRENT_SOURCE_DIR}/src/AFSAuth.cxx
                          ${CMAKE_CURRENT_SOURCE_DIR}/src/TAFS.cxx)
 
+#---static library needed for rootd and proofd --------------------------------------------
+add_library(rsa STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/rsaaux.cxx
+                       ${CMAKE_CURRENT_SOURCE_DIR}/src/rsalib.cxx
+                       ${CMAKE_CURRENT_SOURCE_DIR}/src/rsafun.cxx)
 
 ROOT_GENERATE_DICTIONARY(G__RootAuth ${headers} LINKDEF LinkDefRoot.h)
 ROOT_GENERATE_ROOTMAP(RootAuth LINKDEF LinkDefRoot.h DEPENDENCIES Net RIO )
 ROOT_LINKER_LIBRARY(RootAuth ${sources} G__RootAuth.cxx LIBRARIES Net RIO )
 
-if(BuildAFS)
+if(afs)
   ROOT_GENERATE_DICTIONARY(G__AFSAuth AFSAuth.h AFSAuthTypes.h TAFS.h LINKDEF LinkDefAFS.h)
   ROOT_GENERATE_ROOTMAP(AFSAuth LINKDEF LinkDefAFS.h DEPENDENCIES Net RIO )
   ROOT_LINKER_LIBRARY(AFSAuth AFSAuth.cxx TAFS.cxx G__AFSAuth.cxx LIBRARIES Net RIO )

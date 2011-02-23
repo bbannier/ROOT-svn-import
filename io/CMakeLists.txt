@@ -1,3 +1,6 @@
-Add_Subdirectory(io)  # special CMakeListst.txt 
-Add_Subdirectory(sql)
-Add_Subdirectory(xml)
+add_subdirectory(io)  # special CMakeListst.txt 
+add_subdirectory(sql)
+if(xml)
+  add_subdirectory(xml)
+  add_subdirectory(xmlparser)
+endif()

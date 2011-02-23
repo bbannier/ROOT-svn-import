@@ -1,12 +1,30 @@
 ############################################################################
 # CMakeLists.txt file for building ROOT graf3d/gl package
 ############################################################################
+ROOT_USE_PACKAGE(gui/ged)
+if(builtin_glew)
+  ROOT_USE_PACKAGE(graf3d/glew)
+endif()
+if(builtin_ftgl)
+  ROOT_USE_PACKAGE(graf3d/ftgl)
+endif()
+include_directories(${OPENGL_INCLUDE_DIR})
 
+file(GLOB headers RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.h)
+list(REMOVE_ITEM headers  gl2ps.h CsgOps.h TGLIncludes.h TGLWSIncludes.h TGLContextPrivate.h 
+                     TGLMarchingCubes.h TKDEAdapter.h TGL5DPainter.h TKDEFGT.h TGLIsoMesh.h)
+file(GLOB sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cxx)
 
-ROOT_GENERATE_DICTIONARY(G__Eve1 ${headers1} LINKDEF src/SolarisCCDictHack.h LinkDef1.h)
-ROOT_GENERATE_DICTIONARY(G__Eve2 ${headers2} LINKDEF src/SolarisCCDictHack.h LinkDef2.h)
+if(WIN32)
+  list(REMOVE_ITEM headers TX11GL.h)
+  list(REMOVE_ITEM sources TX11GL.cxx)  
+endif()
 
-ROOT_GENERATE_ROOTMAP(Eve LINKDEF LinkDef1.h LinkDef2.h DEPENDENCIES Geom GeomPainter Graf3D Gui)
-ROOT_LINKER_LIBRARY(Eve *.cxx G__Eve1.cxx G__Eve2.cxx LIBRARIES)
+set_source_files_properties(src/TGLFontManager.cxx PROPERTIES COMPILE_FLAGS "-I${FREETYPE_INCLUDE_DIR} -DBUILTIN_FTGL")
+set_source_files_properties(src/TGLText.cxx PROPERTIES COMPILE_FLAGS "-I${FREETYPE_INCLUDE_DIR} -DBUILTIN_FTGL")
+
+ROOT_GENERATE_DICTIONARY(G__GL ${headers} LINKDEF LinkDef.h)
+ROOT_GENERATE_ROOTMAP(RGL LINKDEF LinkDef.h DEPENDENCIES Graf3d Gui Graf Hist Ged MathCore Tree TreePlayer)
+ROOT_LINKER_LIBRARY(RGL ${sources} G__GL.cxx  LIBRARIES)
 
 ROOT_INSTALL_HEADERS()
