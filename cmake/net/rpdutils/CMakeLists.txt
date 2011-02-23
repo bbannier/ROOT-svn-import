@@ -1,0 +1,21 @@
+############################################################################
+# CMakeLists.txt file for building ROOT net/rpdutils package
+# @author Pere Mato, CERN
+############################################################################
+
+ROOT_USE_PACKAGE(net/net)
+ROOT_USE_PACKAGE(net/auth)
+
+file(GLOB rpdutilsrcs ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cxx)
+
+if(GLOBUS_FOUND)
+else()
+  list(REMOVE_ITEM rpdutilsrcs ${CMAKE_CURRENT_SOURCE_DIR}/src/globus.cxx)
+endif()
+
+#---static library needed for rootd and proofd --------------------------------------------
+add_library(rpdutil STATIC ${rpdutilsrcs})
+
+ROOT_LINKER_LIBRARY(SrvAuth rpdutils.cxx ssh.cxx LIBRARIES)
+
+

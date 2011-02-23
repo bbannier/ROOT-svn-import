@@ -1,8 +1,6 @@
 Set(ROOT_ARCHITECTURE linux)
 Set(ROOT_PLATFORM linux)
 
-
-
 execute_process(COMMAND uname -m OUTPUT_VARIABLE SYSCTL_OUTPUT)
     
 If(${SYSCTL_OUTPUT} MATCHES x86_64)

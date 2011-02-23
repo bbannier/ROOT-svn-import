@@ -1,14 +1,14 @@
 # - Try to find Kerberos5 
 #  Check for libkrb5.a
 #
-#  KRB5_INCLUDE_DIR - where to find krb5.h.h, etc.
+#  KRB5_INCLUDE_DIR - where to find krb5.h, etc.
 #  KRB5_LIBRARIES   - List of libraries when using ....
 #  KRB5_FOUND       - True if Kerberos 5 libraries found.
 
 set(KRB5_FOUND FALSE)
 set(KBR5_LIBRARIES)
 
-find_path(KRB5_INCLUDE_DIR krb5.h 
+find_path(KRB5_INCLUDE_DIR NAMES krb5.h 
   /usr/kerberos/include
   /usr/krb5/include
   /usr/local/kerberos/include
@@ -18,7 +18,7 @@ find_path(KRB5_INCLUDE_DIR krb5.h
   $ENV{KRB5_DIR}/include
 )
 
-find_library(KRB5_MIT_LIBRARY libk5crypto.so
+find_library(KRB5_MIT_LIBRARY NAMES libk5crypto
   /usr/kerberos/lib
   /usr/krb5/lib 
   /usr/local/kerberos/lib
@@ -31,7 +31,7 @@ if(KRB5_MIT_LIBRARY)
   set(KRB5_LIBRARIES ${KRB5_LIBRARIES} ${KRB5_MIT_LIBRARY})
 endif()
  
-find_library(KRB5_LIBRARY libkrb5.so
+find_library(KRB5_LIBRARY NAMES libkrb5
   /usr/kerberos/lib
   /usr/krb5/lib 
   /usr/local/kerberos/lib
@@ -44,12 +44,13 @@ if(KRB5_LIBRARY)
   set(KRB5_LIBRARIES ${KRB5_LIBRARIES} ${KRB5_LIBRARY})
 endif()
 
-find_program(KRB5_INIT kinit
+find_program(KRB5_INIT NAMES kinit
   /usr/kerberos/bin
   /usr/krb5/bin 
   /usr/local/kerberos/bin
   /usr/bin
   /usr/local/bin
+  $ENV{KRB5_DIR}/bin
 )
 
 if(KRB5_INCLUDE_DIR AND KRB5_LIBRARIES)

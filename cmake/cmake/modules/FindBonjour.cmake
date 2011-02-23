@@ -27,6 +27,8 @@ if(NOT APPLE)
     set(BONJOUR_LIBRARIES ${BONJOUR_LIBRARY} )
     set(BONJOUR_FOUND TRUE)
   endif()
+else()
+  set(BONJOUR_FOUND TRUE)
 endif()
 if (CMAKE_SYSTEM_NAME MATCHES Linux)
   # The compatibility layer is needed for the Bonjour record management.

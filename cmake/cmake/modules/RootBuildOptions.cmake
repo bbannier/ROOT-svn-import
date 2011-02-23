@@ -89,6 +89,10 @@ ROOT_BUILD_OPTION(xft ON "Xft support (X11 antialiased fonts)")
 ROOT_BUILD_OPTION(xml ON "XML parser interface")
 ROOT_BUILD_OPTION(x11 ON "X11 support")
 ROOT_BUILD_OPTION(xrootd OFF "Build xrootd file server and its client (if supported)")
-ROOT_BUILD_OPTION(fail-on-missing OFF "Fail the configure step if a required external package is missing")
+  
+option(fail-on-missing "Fail the configure step if a required external package is missing" OFF)
+option(minimal "Do not automatically search for support libraries" OFF)
+option(gminimal "Do not automatically search for support libraries, but include X11" OFF)
+  
               
 
