@@ -18,7 +18,7 @@ find_path(KRB5_INCLUDE_DIR NAMES krb5.h
   $ENV{KRB5_DIR}/include
 )
 
-find_library(KRB5_MIT_LIBRARY NAMES libk5crypto
+find_library(KRB5_MIT_LIBRARY NAMES k5crypto
   /usr/kerberos/lib
   /usr/krb5/lib 
   /usr/local/kerberos/lib
@@ -31,7 +31,7 @@ if(KRB5_MIT_LIBRARY)
   set(KRB5_LIBRARIES ${KRB5_LIBRARIES} ${KRB5_MIT_LIBRARY})
 endif()
  
-find_library(KRB5_LIBRARY NAMES libkrb5
+find_library(KRB5_LIBRARY NAMES krb5
   /usr/kerberos/lib
   /usr/krb5/lib 
   /usr/local/kerberos/lib
