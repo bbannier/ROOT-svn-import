@@ -21,90 +21,85 @@ set(PCRE_VERSION ${PCRE_VERSION} PARENT_SCOPE)
 set(PCRE_TARGZFILE ${PCRE_SRCDIR}/${PCRE_VERSION}.tar.gz)
 set(PCRE_TARFILE ${PCRE_SRCDIR}/${PCRE_VERSION}.tar)
 
-# Define special compiler settings for prce
-set(PCRE_CC ${CMAKE_C_COMPILER})
-set(PCRE_CFLAGS "-O")
-if(${ROOT_ARCHITECTURE} MATCHES alphacxx6)
-  set(PCRE_CC "cc")  
-endif(${ROOT_ARCHITECTURE} MATCHES alphacxx6)
-if(${ROOT_ARCHITECTURE} MATCHES linux)
-  set(PCRE_CFLAGS "-m32 -O")
-endif(${ROOT_ARCHITECTURE} MATCHES linux)
-if(${ROOT_ARCHITECTURE} MATCHES linuxx8664gcc)
-  set(PCRE_CFLAGS "-m64 -O")
-endif(${ROOT_ARCHITECTURE} MATCHES linuxx8664gcc)
-if(${ROOT_ARCHITECTURE} MATCHES linuxicc)
-  set(PCRE_CFLAGS "-m32 -O")
-endif(${ROOT_ARCHITECTURE} MATCHES linuxicc)
-if(${ROOT_ARCHITECTURE} MATCHES linuxx8664icc)
-  set(PCRE_CFLAGS "-m64 -O")
-endif(${ROOT_ARCHITECTURE} MATCHES linuxx8664icc)
-if(${ROOT_ARCHITECTURE} MATCHES macosx)
-  set(PCRE_CFLAGS "-m32 -O")
-endif(${ROOT_ARCHITECTURE} MATCHES macosx)
-if(${ROOT_ARCHITECTURE} MATCHES macosx64)
-  set(PCRE_CFLAGS "-m64 -O")
-endif(${ROOT_ARCHITECTURE} MATCHES macosx64)
-if(${ROOT_ARCHITECTURE} MATCHES solaris64CC5)
-  set(PCRE_CFLAGS "-m64 -O")
-endif(${ROOT_ARCHITECTURE} MATCHES solaris64CC5)
-
-if(${ROOT_ARCHITECTURE} MATCHES sgicc64)
-  set(PCRE_CC "cc")  
-  set(PCRE_CFLAGS "-64 -O")
-endif(${ROOT_ARCHITECTURE} MATCHES sgicc64)
-if(${ROOT_ARCHITECTURE} MATCHES linuxppc64gcc)
-  set(PCRE_CFLAGS "-m64 -O")
-endif(${ROOT_ARCHITECTURE} MATCHES linuxppc64gcc)
-if(${ROOT_ARCHITECTURE} MATCHES hpuxia64acc)
-  set(PCRE_CC "cc")  
-  set(PCRE_CFLAGS "+DD64 -Ae -O")
-endif(${ROOT_ARCHITECTURE} MATCHES hpuxia64acc)
-
-# copy tarfile from source directory to build directory, unpack the tarfile
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/unpacked
-                   COMMAND cmake -E copy ${PCRE_TARGZFILE} .
-                   COMMAND gunzip ${PCRE_VERSION}.tar.gz
-                   COMMAND tar xf ${PCRE_VERSION}.tar
-                   COMMAND touch ${PCRE_VERSION}/unpacked
-                   COMMAND cmake -E remove -f ${PCRE_VERSION}.tar
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} 
-                   )
-# configure and make pcre, this command depends on the unpacked package 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/.libs/libpcre.a  
-                   COMMAND CC=${PCRE_CC} CFLAGS=${PCRE_CFLAGS} ./configure --with-pic --disable-shared > /dev/null 2>& 1
-                   COMMAND make libpcre.la > /dev/null 2>& 1
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION} 
-                   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/unpacked
-                  )
+if(WIN32)
+  set(pcreliba ${CMAKE_CURRENT_BINARY_DIR}/libpcre-7.8.lib)
+  set(pcrelib  ${LIBRARY_OUTPUT_PATH}/libpcre.lib)
+  if(winrtdebug)  
+    set(pcrebuild "libpcre - Win32 Debug")
+  else()
+    set(pcrebuild "libpcre - Win32 Release")
+  endif()
+  add_custom_command( OUTPUT ${pcreliba}
+                      COMMAND xcopy ${PCRE_SRCDIR}/win32 .
+		                  COMMAND nmake -nologo -f Makefile.msc CFG=${pcrebuild}
+                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
+else()
+  set(pcreliba ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/.libs/libpcre.a)
+  set(pcrelib  ${LIBRARY_OUTPUT_PATH}/libpcre.a)
+  # Define special compiler settings for prce
+  set(PCRE_CC ${CMAKE_C_COMPILER})
+  set(PCRE_CFLAGS "-O")
+  if(ROOT_ARCHITECTURE MATCHES alphacxx6)
+    set(PCRE_CC "cc")  
+  elseif(ROOT_ARCHITECTURE MATCHES linux)
+    set(PCRE_CFLAGS "-m32 -O")
+  elseif(ROOT_ARCHITECTURE MATCHES linuxx8664gcc)
+    set(PCRE_CFLAGS "-m64 -O")
+  elseif(ROOT_ARCHITECTURE MATCHES linuxicc)
+    set(PCRE_CFLAGS "-m32 -O")
+  elseif(ROOT_ARCHITECTURE MATCHES linuxx8664icc)
+    set(PCRE_CFLAGS "-m64 -O")
+  elseif(ROOT_ARCHITECTURE MATCHES macosx)
+    set(PCRE_CFLAGS "-m32 -O")
+  elseif(ROOT_ARCHITECTURE MATCHES macosx64)
+    set(PCRE_CFLAGS "-m64 -O")
+  elseif(ROOT_ARCHITECTURE MATCHES solaris64CC5)
+    set(PCRE_CFLAGS "-m64 -O")
+  elseif(ROOT_ARCHITECTURE MATCHES sgicc64)
+    set(PCRE_CC "cc")  
+    set(PCRE_CFLAGS "-64 -O")
+  elseif(ROOT_ARCHITECTURE MATCHES linuxppc64gcc)
+    set(PCRE_CFLAGS "-m64 -O")
+  elseif(ROOT_ARCHITECTURE MATCHES hpuxia64acc)
+    set(PCRE_CC "cc")  
+    set(PCRE_CFLAGS "+DD64 -Ae -O")
+  endif()
+    
+  # copy tarfile from source directory to build directory, unpack the tarfile
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/unpacked
+                     COMMAND cmake -E copy ${PCRE_TARGZFILE} .
+                     COMMAND gunzip ${PCRE_VERSION}.tar.gz
+                     COMMAND tar xf ${PCRE_VERSION}.tar
+                     COMMAND touch ${PCRE_VERSION}/unpacked
+                     COMMAND cmake -E remove -f ${PCRE_VERSION}.tar
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
+  # configure and make pcre, this command depends on the unpacked package 
+  add_custom_command(OUTPUT ${pcreliba}  
+                     COMMAND CC=${PCRE_CC} CFLAGS=${PCRE_CFLAGS} ./configure --with-pic --disable-shared > /dev/null 2>& 1
+                     COMMAND make libpcre.la > /dev/null 2>& 1
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION} 
+                     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/unpacked )
+endif()
 
 # copy the created library into the library directory in the build directory
 # This command depends on the created libpcre.a
-if(${ROOT_PLATFORM} MATCHES macosx)
-  add_custom_command(OUTPUT ${LIBRARY_OUTPUT_PATH}/libpcre.a
-                     COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/.libs/libpcre.a ${LIBRARY_OUTPUT_PATH}
-                     COMMAND ranlib ${LIBRARY_OUTPUT_PATH}/libpcre.a
-                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION} 
-                     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/.libs/libpcre.a
-                   )
-else(${ROOT_PLATFORM} MATCHES macosx)
-  add_custom_command(OUTPUT ${LIBRARY_OUTPUT_PATH}/libpcre.a
-                     COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/.libs/libpcre.a ${LIBRARY_OUTPUT_PATH}
-                     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/.libs/libpcre.a
-                    )
-endif(${ROOT_PLATFORM} MATCHES macosx)
+if(ROOT_PLATFORM MATCHES macosx)
+  add_custom_command(OUTPUT ${pcrelib}
+                     COMMAND cmake -E copy_if_different ${pcreliba} ${LIBRARY_OUTPUT_PATH}
+                     COMMAND ranlib ${pcrelib}
+                     DEPENDS ${pcreliba} )
+else()
+  add_custom_command(OUTPUT ${pcrelib}
+                     COMMAND cmake -E copy_if_different ${pcreliba} ${LIBRARY_OUTPUT_PATH}
+                     DEPENDS ${pcreliba} )
+endif()
                 
 # create a target which will always be build and does actually nothing. The target is only
 # needed that the dependencies are build, f they are not up to date. If everything is up to
 # dte nothing is done. This target depends on the libpcre.a in the library directory of the 
 # build directory.
-add_custom_target(${PCRE_VERSION} 
-                  DEPENDS ${LIBRARY_OUTPUT_PATH}/libpcre.a
-                 )
-
+add_custom_target(${PCRE_VERSION} DEPENDS ${pcrelib})
 # import libpcre.a which is not in the scope of CMake. This step makes it possible that
 # make clean will remove the library  
-#add_library(${LIBRARY_OUTPUT_PATH}/libpcre.a STATIC IMPORTED)
 add_library(pcre STATIC IMPORTED)
-#INSTALL(TARGET ${LIBRARY_OUTPUT_PATH}/libpcre.a DESTINATION ${LIB_INSTALL_DIR})
-#INSTALL(FILES ${LIBRARY_OUTPUT_PATH}/libpcre.a DESTINATION ${LIB_INSTALL_DIR})
+
