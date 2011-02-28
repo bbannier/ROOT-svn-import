@@ -22,6 +22,8 @@ namespace clang {
   class PragmaNamespace;
   class SourceLocation;
   class Decl;
+  class DeclContext;
+  class QualType;
 }
 
 namespace cling {
@@ -50,11 +52,14 @@ namespace cling {
 
     const char* getVersion() const;
     
-    void AddIncludePath(const char *path);
-	// Using static to avoid creating a Member call, which needs this pointer
+     void AddIncludePath(const char *path);
+     // Using static to avoid creating a Member call, which needs this pointer
     template<typename T>
-    static T Eval(size_t This, const char* expr, void* varaddr[] ) {
-       llvm::GenericValue result(((Interpreter*) (void*)This)->EvalCore(expr, varaddr));
+    static T Eval(size_t This, 
+                  const char* expr,
+                  void* varaddr[],
+                  clang::DeclContext* DC ) {
+       llvm::GenericValue result(((Interpreter*) (void*)This)->EvalCore(expr, varaddr, DC));
        //FIXME: we should return T calculated from result
        //printf("%s", expr);
        return T();
@@ -67,7 +72,7 @@ namespace cling {
                  bool allowSharedLib = true);
     
     int executeFile(const std::string& filename);
-    
+    clang::QualType getQualType(llvm::StringRef type);
     
     bool setPrintAST(bool print = true) {
       bool prev = m_printAST;
@@ -107,12 +112,15 @@ namespace cling {
     std::string createUniqueName();
     
     clang::ASTConsumer* maybeGenerateASTPrinter() const;
-    clang::CompilerInstance* compileString(const std::string& srcCode);
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
-    llvm::GenericValue EvalCore(const char* expr, void* varaddr[]);
+    llvm::GenericValue EvalCore(const char* expr, 
+                                void* varaddr[], 
+                                clang::DeclContext* DC);
   public:
-    llvm::GenericValue Evaluate(const char* expr);
+     // compileString should be private, when we create the Runtime Env class.
+     clang::CompilerInstance* compileString(const std::string& srcCode);
+     llvm::GenericValue Evaluate(const char* expr, clang::DeclContext* DC);
   };
   
 } // namespace cling

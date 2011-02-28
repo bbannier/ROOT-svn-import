@@ -4,12 +4,13 @@
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
+#include "ASTTransformVisitor.h"
+#include "cling/Interpreter/Interpreter.h"
+
 #include "llvm/ADT/SmallVector.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Lookup.h"
-
-#include "ASTTransformVisitor.h"
 
 using namespace clang;
 
@@ -22,10 +23,10 @@ namespace {
    class StmtPrinterHelper : public PrinterHelper  {
    private:
       PrintingPolicy m_Policy;
-      llvm::SmallVector<clang::DeclRefExpr*, 64> &m_Environment;
+      llvm::SmallVector<DeclRefExpr*, 64> &m_Environment;
    public:
       
-      StmtPrinterHelper(const PrintingPolicy &Policy, llvm::SmallVector<clang::DeclRefExpr*, 64> &Environment) : 
+      StmtPrinterHelper(const PrintingPolicy &Policy, llvm::SmallVector<DeclRefExpr*, 64> &Environment) : 
          m_Policy(Policy), m_Environment(Environment) {}
       
       virtual ~StmtPrinterHelper() {}
@@ -78,9 +79,20 @@ namespace {
 
 
 namespace cling {
+   // Constructors
+   ASTTransformVisitor::ASTTransformVisitor(Interpreter* Interp, Sema* SemaPtr)
+      : m_EvalDecl(0), m_CurDeclContext(0), m_Interpreter(Interp), SemaPtr(SemaPtr) {
+   }
+
+   ASTTransformVisitor::ASTTransformVisitor(): m_EvalDecl(0), m_CurDeclContext(0), m_Interpreter(0), SemaPtr(0){
+   }
+   
+   void ASTTransformVisitor::Initialize() {
+      m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");      
+   }
    
    // DynamicLookupSource
-   bool ASTTransformVisitor::LookupUnqualified(clang::LookupResult &R, Scope *S) {
+   bool ASTTransformVisitor::LookupUnqualified(LookupResult &R, Scope *S) {
       if (R.getLookupKind() != Sema::LookupOrdinaryName) return false;
       if (R.isForRedeclaration()) return false;
       DeclarationName Name = R.getLookupName();
@@ -88,8 +100,8 @@ namespace cling {
       SourceLocation NameLoc = R.getNameLoc();
       FunctionDecl *D = dyn_cast<FunctionDecl>(R.getSema().ImplicitlyDefineFunction(NameLoc, *II, S));
       if (D) { 
-         clang::BuiltinType *Ty = new BuiltinType(BuiltinType::Dependent);
-         clang::QualType QTy(Ty, 0);            
+         BuiltinType *Ty = new BuiltinType(BuiltinType::Dependent);
+         QualType QTy(Ty, 0);            
          D->setType(QTy);
          R.addDecl(D);
          // Mark this declaration for removal
@@ -105,10 +117,10 @@ namespace cling {
    // DeclVisitor
    
    void ASTTransformVisitor::Visit(Decl *D) {
-      Decl *PrevDecl = ASTTransformVisitor::CurrentDecl;
-      ASTTransformVisitor::CurrentDecl = D;
+      //Decl *PrevDecl = ASTTransformVisitor::CurrentDecl;
+      //ASTTransformVisitor::CurrentDecl = D;
       BaseDeclVisitor::Visit(D);
-      ASTTransformVisitor::CurrentDecl = PrevDecl;     
+      //ASTTransformVisitor::CurrentDecl = PrevDecl;     
    }
    
    void ASTTransformVisitor::VisitFunctionDecl(FunctionDecl *D) {
@@ -143,6 +155,7 @@ namespace cling {
    }
    
    void ASTTransformVisitor::VisitDeclContext(DeclContext *DC) {
+      m_CurDeclContext = DC;
       for (DeclContext::decl_iterator
               I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I)        
          if (ShouldVisit(*I))
@@ -253,11 +266,16 @@ namespace cling {
       // Arg 2:
       Expr *Arg2 = BuildEvalArg2(C);          
       Result.push_back(Arg2);
+
+      // Arg 3:
+      Expr *Arg3 = BuildEvalArg3(C);          
+      Result.push_back(Arg3);
+
    }
    
    // Eval Arg0: size_t This
    Expr *ASTTransformVisitor::BuildEvalArg0(ASTContext &C) {
-      const llvm::APInt gClingAddr(8 * sizeof(void *), (uint64_t)gCling);
+      const llvm::APInt gClingAddr(8 * sizeof(void *), (uint64_t)m_Interpreter);
       IntegerLiteral *Arg0 = IntegerLiteral::Create(C, gClingAddr, C.UnsignedLongTy, SourceLocation());
 
       return Arg0;
@@ -301,6 +319,21 @@ namespace cling {
       SemaPtr->ImpCastExprToType(Arg2, C.getPointerType(C.VoidPtrTy), CK_ArrayToPointerDecay);
 
       return Arg2;
+   }
+
+   // Eval Arg3: DeclContext* DC
+   Expr *ASTTransformVisitor::BuildEvalArg3(ASTContext &C) {
+
+      //if (m_LexedDeclContextType == 0)
+      
+      const llvm::APInt DCAddr(8 * sizeof(void *), (uint64_t)m_CurDeclContext);
+      
+      Expr *Arg3 = IntegerLiteral::Create(C, DCAddr, C.UnsignedLongTy, SourceLocation());
+      //TypeSourceInfo *TSI = C.CreateTypeSourceInfo(m_LexedDeclContextType);
+      //Arg3 = SemaPtr->BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), Arg3).takeAs<Expr>();
+      SemaPtr->ImpCastExprToType(Arg3, m_DeclContextType, CK_IntegralToPointer);
+
+      return Arg3;
    }
 
    // Here is the test Eval function specialization. Here the CallExpr to the function
