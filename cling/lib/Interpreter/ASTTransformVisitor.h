@@ -15,7 +15,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
-#include "clang/Sema/DynamicLookupSource.h"
+#include "clang/Sema/ExternalSemaSource.h"
 
 #include "EvalInfo.h"
 
@@ -28,7 +28,7 @@ namespace cling {
    // if h->Draw() is defined in MyFile. In that case we need to skip Sema diagnostics, so the 
    // h->Draw() is marked as dependent node. That requires the ASTTransformVisitor to find all
    // dependent nodes and escape them to the interpreter, using pre-defined Eval function.
-   class ASTTransformVisitor : public clang::DynamicLookupSource,
+   class ASTTransformVisitor : public clang::ExternalSemaSource,
                                public clang::DeclVisitor<ASTTransformVisitor>,
                                public clang::StmtVisitor<ASTTransformVisitor, EvalInfo> {
       
@@ -74,7 +74,7 @@ namespace cling {
       void RemoveFakeDecls();
       
       // DynamicLookupSource 
-      bool PerformLookup(clang::LookupResult &R, clang::Scope *S);
+      bool LookupUnqualified(clang::LookupResult &R, clang::Scope *S);
 
       // DeclVisitor      
       void Visit(clang::Decl *D);
