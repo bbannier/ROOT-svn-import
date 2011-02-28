@@ -27,14 +27,16 @@ namespace cling {
   class MutableMemoryBuffer;
   class ChainedASTConsumer;
   class ASTTransformVisitor;
+  class Interpreter;
 
   class IncrementalASTParser {
   public:
     IncrementalASTParser(clang::CompilerInstance* CI,
                          clang::ASTConsumer* Consumer,
-                         clang::PragmaNamespace* Pragma);
+                         clang::PragmaNamespace* Pragma,
+                         Interpreter* Interp);
     ~IncrementalASTParser();
-
+    void Initialize();
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
     clang::CompilerInstance* parse(llvm::StringRef src,
@@ -45,13 +47,14 @@ namespace cling {
     }
    
    ASTTransformVisitor *getTransformer() const { return m_Transformer.get(); }
-   void setTransformer(ASTTransformVisitor* value) { m_Transformer.reset(value); }
 
    void emptyLastFunction();
    clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
    clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
 
   private:
+    // Should be removed because breaks the encapsulation
+    Interpreter* m_Interpreter;  // needed by the m_Transformer
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     clang::Sema *m_Sema; // sema used for parsing (owned by CI)
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)

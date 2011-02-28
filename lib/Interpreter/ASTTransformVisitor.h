@@ -19,8 +19,12 @@
 
 #include "EvalInfo.h"
 
-namespace cling {
+namespace clang {
+   class Decl;
+}
 
+namespace cling {
+   class Interpreter;
    typedef llvm::DenseMap<clang::Stmt*, clang::Stmt*> MapTy;
 
    // Ideally the visitor should traverse the dependent nodes, which actially are 
@@ -33,7 +37,7 @@ namespace cling {
                                public clang::StmtVisitor<ASTTransformVisitor, EvalInfo> {
       
    private: // members
-      clang::FunctionDecl *EvalDecl;
+      clang::FunctionDecl* m_EvalDecl;
       MapTy m_SubstSymbolMap;
       /* 
          Specifies the unknown symbol surrounding
@@ -44,11 +48,11 @@ namespace cling {
       std::string m_EvalExpressionBuf;
       llvm::SmallVector<clang::DeclRefExpr*, 64> m_Environment;
       llvm::SmallVector<clang::Decl*, 8> m_FakeDecls;
-
+      clang::DeclContext* m_CurDeclContext; // We need it for Evaluate()
+      clang::QualType m_DeclContextType; // Used for building Eval args
    public: // members
-      void *gCling; //Pointer to the Interpreter object
-      clang::Sema *SemaPtr;
-      clang::Decl *CurrentDecl;
+      Interpreter* m_Interpreter; //Pointer to the Interpreter object
+      clang::Sema* SemaPtr;
       
    public: // types
       
@@ -60,22 +64,21 @@ namespace cling {
    public:
       
       //Constructors
-      ASTTransformVisitor()
-         : EvalDecl(0), gCling(0), SemaPtr(0), CurrentDecl(0){}      
-      ASTTransformVisitor(void* gCling, clang::Sema *SemaPtr)
-         : EvalDecl(0), gCling(gCling), SemaPtr(SemaPtr), CurrentDecl(0){}
+      ASTTransformVisitor();      
+      ASTTransformVisitor(Interpreter* Interp, clang::Sema* SemaPtr);
       
       // Destructors
       ~ASTTransformVisitor() { }
 
-      clang::FunctionDecl *getEvalDecl() { return EvalDecl; }
-      void setEvalDecl(clang::FunctionDecl *FDecl) { if (!EvalDecl) EvalDecl = FDecl; }
+      void Initialize();
+      clang::FunctionDecl *getEvalDecl() { return m_EvalDecl; }
+      void setEvalDecl(clang::FunctionDecl *FDecl) { if (!m_EvalDecl) m_EvalDecl = FDecl; }
       MapTy &getSubstSymbolMap() { return m_SubstSymbolMap; }
       void RemoveFakeDecls();
       
-      // DynamicLookupSource 
-      bool LookupUnqualified(clang::LookupResult &R, clang::Scope *S);
-
+      // ExternalSemaSource
+      virtual bool LookupUnqualified(clang::LookupResult &R, clang::Scope *S);
+      
       // DeclVisitor      
       void Visit(clang::Decl *D);
       void VisitFunctionDecl(clang::FunctionDecl *D);
@@ -98,6 +101,7 @@ namespace cling {
       clang::Expr *BuildEvalArg0(clang::ASTContext &C);
       clang::Expr *BuildEvalArg1(clang::ASTContext &C);
       clang::Expr *BuildEvalArg2(clang::ASTContext &C);
+      clang::Expr *BuildEvalArg3(clang::ASTContext &C);
 
       // Helper
       bool IsArtificiallyDependent(clang::Expr *Node);

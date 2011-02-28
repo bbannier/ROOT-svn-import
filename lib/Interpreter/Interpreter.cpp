@@ -28,6 +28,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Lookup.h"
 #include "llvm/Constants.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -116,38 +117,16 @@ namespace cling {
 
     m_IncrASTParser.reset(new IncrementalASTParser(createCI(),
                                                    maybeGenerateASTPrinter(),
-                                                   &getPragmaHandler()));
+                                                   &getPragmaHandler(),
+                                                   this));
     m_ExecutionContext.reset(new ExecutionContext(*this));
     
     m_InputValidator.reset(new InputValidator(createCI()));
 
-    m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
+    m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));   
 
-      // Create the visitor that will transform all dependents that are left.
-    m_IncrASTParser->setTransformer(new ASTTransformVisitor(this, &m_IncrASTParser->getCI()->getSema()));
-
-    m_IncrASTParser->getCI()->getSema().ExternalSource = m_IncrASTParser->getTransformer();
-    
-    // Allow the interpreter to find itself.
-    // OBJ first: if it exists it should be more up to date
-    AddIncludePath(CLING_SRCDIR_INCL);
-    AddIncludePath(CLING_INSTDIR_INCL);
-
-    compileString(""); // Consume initialization.
-
-    std::stringstream sstr;
-    sstr << "#include <stdio.h>\n"
-    << "#define __STDC_LIMIT_MACROS\n"
-    << "#define __STDC_CONSTANT_MACROS\n"
-    << "#include \"cling/Interpreter/Interpreter.h\"\n"
-    << "#include \"cling/Interpreter/ValuePrinter.h\"\n";
-    // Would like
-    // namespace cling {Interpreter* gCling = (Interpreter*)0x875478643;"
-    // but we can't handle namespaced decls yet :-(
-    // sstr << "namespace cling {Interpreter* gCling = (Interpreter*)" << (void*) this << "; (void) gCling; \n"
-    sstr << "cling::Interpreter* gCling = (cling::Interpreter*)"
-         << (const void*) this << ";";
-    compileString(sstr.str());
+    // Warm them up
+    m_IncrASTParser->Initialize();
   }
   
   //---------------------------------------------------------------------------
@@ -157,8 +136,10 @@ namespace cling {
   {
     //delete m_prev_module;
     //m_prev_module = 0; // Don't do this, the engine does it.
+    //delete m_IncrASTParser;
+    //m_IncrASTParser = 0;
   }
-
+   
   const char* Interpreter::getVersion() const {
     return "$Id$";
   }
@@ -678,13 +659,26 @@ namespace cling {
     return 0;
   }
 
+  clang::QualType Interpreter::getQualType(llvm::StringRef type) {
+     std::string typeWrapper = type.str() + "* " + createUniqueName() + ";\n";
+     clang::CompilerInstance* CI = compileString(typeWrapper);
+     if (CI) {
+        if (clang::ValueDecl* D = dyn_cast<clang::ValueDecl>(m_IncrASTParser->getLastTopLevelDecl())) {
+           return D->getType();
+        }
+     }
+
+     fprintf(stderr, "Cannot find the type:%s", type.data());
+     return clang::QualType();
+  }
+
   void Interpreter::installLazyFunctionCreator(void* (*fp)(const std::string&)) {
     m_ExecutionContext->getEngine().InstallLazyFunctionCreator(fp);
   }
   
 
    // Implements the interpretation of the unknown symbols. 
-   llvm::GenericValue Interpreter::EvalCore(const char* expr, void* varaddr[]) {
+   llvm::GenericValue Interpreter::EvalCore(const char* expr, void* varaddr[], clang::DeclContext* DC) {
       std::string exprStr(expr);
       int i = 0;
       size_t found;
@@ -697,10 +691,10 @@ namespace cling {
       }
       printf("The expression that is going to be escaped is: %s\n", exprStr.c_str());
       printf("\n");
-      return Evaluate(exprStr.c_str());
+      return Evaluate(exprStr.c_str(), DC);
    }
    
-   llvm::GenericValue Interpreter::Evaluate(const char* expr) {
+   llvm::GenericValue Interpreter::Evaluate(const char* expr, clang::DeclContext* DC) {
       // Wrap the expression
       const std::string ExprStr(expr);
       const std::string WrapperName = createUniqueName();
