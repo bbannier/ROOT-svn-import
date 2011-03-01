@@ -305,8 +305,8 @@ void MethodUnitTestWithROCLimits::run()
   if (_methodType!=Types::kCuts){
      test_(maxdiff <1.e-4);
      test_(sumdiff <1.e-5);
-     test_(stuckCount<nevt/10);
-     if (maxdiff <1.e-4 && sumdiff <1.e-5 && stuckCount<nevt/10) ok=true;
+     test_(stuckCount<nevt/2);
+     if (maxdiff <1.e-4 && sumdiff <1.e-5 && stuckCount<nevt/2) ok=true;
   }
   if (_methodType==Types::kCuts){
      test_(stuckCount<nevt-20);
@@ -340,7 +340,7 @@ void MethodUnitTestWithROCLimits::run()
       || _methodType==Types::kPDERS
       || _methodType==Types::kRuleFit
       || _methodType==Types::kPDEFoam
-      || _methodTitle == "BoostedFisher"
+      || _methodTitle.Contains("Boosted")
       ) _DoTestCCode=false;
 
 #ifndef FULL
