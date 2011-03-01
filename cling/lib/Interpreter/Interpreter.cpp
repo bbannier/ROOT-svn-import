@@ -28,6 +28,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Scope.h"
 #include "clang/Sema/Lookup.h"
 #include "llvm/Constants.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -660,16 +661,36 @@ namespace cling {
   }
 
   clang::QualType Interpreter::getQualType(llvm::StringRef type) {
-     std::string typeWrapper = type.str() + "* " + createUniqueName() + ";\n";
-     clang::CompilerInstance* CI = compileString(typeWrapper);
+     std::string className = createUniqueName();
+     clang::QualType Result;
+     clang::CompilerInstance* CI;
+
+     // template<typename T> class dummy{}; 
+     std::string templatedClass = "template<typename T> class " + className + "{};\n";
+     CI  = compileString(templatedClass);
+     clang::Decl *templatedClassDecl = 0;
+     if (CI)
+        templatedClassDecl = m_IncrASTParser->getLastTopLevelDecl();
+
+     //template <> dummy<clang::DeclContext*> {};
+     std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
+     CI = compileString(explicitSpecialization);
      if (CI) {
-        if (clang::ValueDecl* D = dyn_cast<clang::ValueDecl>(m_IncrASTParser->getLastTopLevelDecl())) {
-           return D->getType();
+        if (clang::ClassTemplateSpecializationDecl* D = dyn_cast<clang::ClassTemplateSpecializationDecl>(m_IncrASTParser->getLastTopLevelDecl())) {
+           Result = D->getTemplateArgs()[0].getAsType();
+
+           // Remove the fake Decls
+           clang::Scope *S = CI->getSema().getScopeForContext(CI->getSema().getASTContext().getTranslationUnitDecl());
+           S->RemoveDecl(D);
+           if (templatedClassDecl)
+              S->RemoveDecl(templatedClassDecl);
+
+           return Result;
         }
      }
 
      fprintf(stderr, "Cannot find the type:%s", type.data());
-     return clang::QualType();
+     return Result;
   }
 
   void Interpreter::installLazyFunctionCreator(void* (*fp)(const std::string&)) {
