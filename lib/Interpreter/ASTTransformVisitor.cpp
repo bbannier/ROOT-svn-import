@@ -88,7 +88,7 @@ namespace cling {
    }
    
    void ASTTransformVisitor::Initialize() {
-      m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");      
+      m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");
    }
    
    // DynamicLookupSource
