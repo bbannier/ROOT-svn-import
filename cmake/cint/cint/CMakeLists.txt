@@ -143,19 +143,5 @@ ROOT_EXECUTABLE(makecint ${CMAKE_SOURCE_DIR}/cint/tool/makecint.cxx LIBRARIES ${
 #---Installation--------------------------------------------------------------------------------------------
 ROOT_INSTALL_HEADERS()
 
-#---Configuration-------------------------------------------------------------------------------------------
-# Create the cint-config script needed to run the tests
-# Probably this file has not to be installed
-# TODO: Check this
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/cint-config.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint-config @ONLY)
 
-# Create the configcint.h header file and copy the file 
-# first to the cint/cint directory. Copy it to the 
-# temporary include directory only if there is a change.
-# Otherwise you have to recompile unneccessarily some files 
-# depending on configcint.h all the time. 
-include(WriteConfigCint)
-WRITE_CONFIG_CINT( ${CMAKE_CURRENT_BINARY_DIR}/tmp/configcint.h)
-execute_process(COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/tmp/configcint.h ${HEADER_OUTPUT_PATH})
-install(FILES ${HEADER_OUTPUT_PATH}/configcint.h DESTINATION include)
 
