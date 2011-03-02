@@ -130,11 +130,16 @@ else()
 endif()
 Target_Link_Libraries(Core ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
 Set_Target_properties(Core PROPERTIES ${ROOT_LIBRARY_PROPERTIES})
-Add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY EDITLINE_DICTIONARY META_DICTIONARY METAUTILS_DICTIONARY 
+Add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY  META_DICTIONARY METAUTILS_DICTIONARY 
                       UNIX_DICTIONARY BASE_DICTIONARY)
+if(editline)
+  add_dependencies(Core EDITLINE_DICTIONARY)
+endif()
 if(builtin_pcre)
   add_dependencies(Core PCRE)
 endif()
-Install(TARGETS Core DESTINATION ${LIB_INSTALL_DIR})
 
+install(TARGETS Core RUNTIME DESTINATION bin
+                     LIBRARY DESTINATION lib
+                     ARCHIVE DESTINATION lib)
 Set(RootConfigFeatures ${RootConfigFeatures} PARENT_SCOPE)
