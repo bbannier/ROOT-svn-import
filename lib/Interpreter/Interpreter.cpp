@@ -96,6 +96,36 @@ namespace {
   }
   
 }
+namespace {
+   class ASTTLDPrinter : public clang::ASTConsumer {
+      llvm::raw_ostream &Out;
+      bool Dump;
+      
+   public:
+      ASTTLDPrinter(llvm::raw_ostream* o = NULL, bool Dump = false)
+  : Out(o? *o : llvm::outs()), Dump(Dump) { }
+
+      virtual void HandleTopLevelDecl(clang::DeclGroupRef D) {
+         for (clang::DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I)
+            HandleTopLevelSingleDecl(*I);
+      }
+      
+      void HandleTopLevelSingleDecl(clang::Decl *D) {
+         clang::PrintingPolicy Policy = D->getASTContext().PrintingPolicy;
+         Policy.Dump = Dump;
+
+         if (isa<clang::FunctionDecl>(D) || isa<clang::ObjCMethodDecl>(D)) {
+            D->dump();
+            
+            if (clang::Stmt *Body = D->getBody()) {
+               llvm::errs() << "DeclStmts:---------------------------------\n";
+               Body->dump();
+               llvm::errs() << "End DeclStmts:-----------------------------\n\n\n\n";
+            }
+         }
+      }
+   };
+} // end anonymous namespace
 
 namespace cling {
 
@@ -110,24 +140,35 @@ namespace cling {
   m_CIBuilder(0),
   m_UniqueCounter(0),
   m_printAST(false),
-  m_LastDump(0)
+  m_LastDump(0),
+  m_ASTDumper(0)
   {
     m_PragmaHandler = new clang::PragmaNamespace("cling");
 
     m_CIBuilder.reset(new CIBuilder(fake_argc, fake_argv, llvmdir));
 
     m_IncrASTParser.reset(new IncrementalASTParser(createCI(),
-                                                   maybeGenerateASTPrinter(),
                                                    &getPragmaHandler(),
                                                    this));
     m_ExecutionContext.reset(new ExecutionContext(*this));
     
     m_InputValidator.reset(new InputValidator(createCI()));
 
-    m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));   
+    m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));       
+    
+    // Allow the interpreter to find itself.
+    // OBJ first: if it exists it should be more up to date
+    AddIncludePath(CLING_SRCDIR_INCL);
+    AddIncludePath(CLING_INSTDIR_INCL);
 
     // Warm them up
     m_IncrASTParser->Initialize();
+
+    // Set up the gCling variable
+    std::stringstream initializer;
+    initializer << "gCling=(Interpreter*)" << this <<";\n";    
+
+    processLine(initializer.str());
   }
   
   //---------------------------------------------------------------------------
@@ -545,16 +586,7 @@ namespace cling {
       return;
     }
   }
-  
-  clang::ASTConsumer*
-  Interpreter::maybeGenerateASTPrinter() const
-  {
-    if (m_printAST) {
-      return clang::CreateASTDumper();
-    }
-    return new clang::ASTConsumer();
-  }
-  
+    
   clang::CompilerInstance*
   Interpreter::compileString(const std::string& argCode)
   {
@@ -679,17 +711,22 @@ namespace cling {
         if (clang::ClassTemplateSpecializationDecl* D = dyn_cast<clang::ClassTemplateSpecializationDecl>(m_IncrASTParser->getLastTopLevelDecl())) {
            Result = D->getTemplateArgs()[0].getAsType();
 
-           // Remove the fake Decls
-           clang::Scope *S = CI->getSema().getScopeForContext(CI->getSema().getASTContext().getTranslationUnitDecl());
+           // TODO: Remove the fake Decls
+           // We couldn't remove the template specialization and leave only the
+           // template
+           /*clang::Scope *S = CI->getSema().getScopeForContext(CI->getSema().getASTContext().getTranslationUnitDecl());
            S->RemoveDecl(D);
-           if (templatedClassDecl)
+           //D->getDeclContext()->removeDecl(D);
+           if (templatedClassDecl) {
+              templatedClassDecl->getDeclContext()->removeDecl(templatedClassDecl);
               S->RemoveDecl(templatedClassDecl);
+              }*/
 
            return Result;
         }
      }
 
-     fprintf(stderr, "Cannot find the type:%s", type.data());
+     fprintf(stderr, "Cannot find the type:%s\n", type.data());
      return Result;
   }
 
@@ -762,6 +799,20 @@ namespace cling {
       m_ExecutionContext->executeFunction(WrapperName, &Result);
       return Result;
    }
+
+   bool cling::Interpreter::setPrintAST(bool print /*=true*/) {
+      bool prev = m_printAST;
+      m_printAST = print;
+      if (m_printAST) {
+         if (!m_ASTDumper)
+            m_ASTDumper = new ASTTLDPrinter();
+         m_IncrASTParser->addConsumer(m_ASTDumper);
+      }
+      else
+         m_IncrASTParser->removeConsumer(m_ASTDumper);
+      return prev;
+   }
+   
    
    void cling::Interpreter::dumpAST(bool showAST, int last) {
      clang::Decl* D = m_LastDump;

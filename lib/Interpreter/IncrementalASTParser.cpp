@@ -70,7 +70,6 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
 
 
    IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
-                                              clang::ASTConsumer* Consumer,
                                               clang::PragmaNamespace* Pragma,
                                               Interpreter* Interp):
       m_Interpreter(Interp), m_Consumer(0), m_LastTopLevelDecl(0), m_FirstTopLevelDecl(0) {
@@ -101,7 +100,7 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
       }
       
       m_Consumer = new ChainedASTConsumer();
-      m_Consumer->Consumers.push_back(Consumer);
+      m_Consumer->Consumers.push_back(new clang::ASTConsumer());
       m_Consumer->Initialize(*Ctx);
       CI->setASTConsumer(m_Consumer);
       
@@ -125,25 +124,15 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
    IncrementalASTParser::~IncrementalASTParser() {}
    
    void IncrementalASTParser::Initialize() {
-      // Allow the interpreter to find itself.
-      // OBJ first: if it exists it should be more up to date
-      m_Interpreter->AddIncludePath(CLING_SRCDIR_INCL);
-      m_Interpreter->AddIncludePath(CLING_INSTDIR_INCL);
+
+      parse(""); // Consume initialization.
+      // Set up common declarations which are going to be available
+      // only at runtime
+      // Make surethat the universe won't be included to compile time
+      parse("#define __cling__ 1");
       
-      m_Interpreter->compileString(""); // Consume initialization.
-      
-      std::stringstream sstr;
-      sstr << "#include <stdio.h>\n"
-           << "#define __STDC_LIMIT_MACROS\n"
-           << "#define __STDC_CONSTANT_MACROS\n"
-           << "#include \"cling/Interpreter/Interpreter.h\"\n"
-           << "#include \"cling/Interpreter/ValuePrinter.h\"\n";
-      // Would like
-      // namespace cling {Interpreter* gCling = (Interpreter*)0x875478643;"
-      // but we can't handle namespaced decls yet :-(
-      sstr << "cling::Interpreter* gCling = (cling::Interpreter*)"
-           << (const void*) this << ";";
-      m_Interpreter->compileString(sstr.str());
+      parse("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+
       // Attach the dynamic lookup
       getTransformer()->Initialize();
       getCI()->getSema().ExternalSource = getTransformer();
@@ -253,5 +242,19 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
          clang::NullStmt* NStmt = new (Ctx) clang::NullStmt(clang::SourceLocation());
          F->setBody(NStmt);
       }
-   }   
+   } 
+
+   void IncrementalASTParser::addConsumer(clang::ASTConsumer* consumer) {
+      m_Consumer->Consumers.push_back(consumer);
+   }
+
+   void IncrementalASTParser::removeConsumer(clang::ASTConsumer* consumer) {
+      for (unsigned int i = 0; i != m_Consumer->Consumers.size(); ++i) {
+         if (m_Consumer->Consumers[i] == consumer) {
+            m_Consumer->Consumers.erase(m_Consumer->Consumers.begin() + i);
+            break;
+         }         
+      }
+   }
+ 
 } // namespace cling

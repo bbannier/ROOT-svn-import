@@ -32,7 +32,6 @@ namespace cling {
   class IncrementalASTParser {
   public:
     IncrementalASTParser(clang::CompilerInstance* CI,
-                         clang::ASTConsumer* Consumer,
                          clang::PragmaNamespace* Pragma,
                          Interpreter* Interp);
     ~IncrementalASTParser();
@@ -51,6 +50,10 @@ namespace cling {
    void emptyLastFunction();
    clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
    clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
+
+   void addConsumer(clang::ASTConsumer* consumer);
+   void removeConsumer(clang::ASTConsumer* consumer);
+  
 
   private:
     // Should be removed because breaks the encapsulation
