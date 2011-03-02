@@ -26,7 +26,7 @@ set(headers2 TSpline2.h TSpline1.h PDF.h BinaryTree.h BinarySearchTreeNode.h Bin
 	     GiniIndexWithLaplace.h SimulatedAnnealing.h)
 set(headers3 Config.h KDEKernel.h Interval.h FitterBase.h MCFitter.h GeneticFitter.h SimulatedAnnealingFitter.h
 	     MinuitFitter.h MinuitWrapper.h IFitterTarget.h 
-             PDEFoam.h PDEFoamDistr.h PDEFoamVect.h PDEFoamCell.h BDTEventWrapper.h CCTreeWrapper.h
+         PDEFoam.h PDEFoamDistr.h PDEFoamVect.h PDEFoamCell.h BDTEventWrapper.h CCTreeWrapper.h
 	     CCPruner.h CostComplexityPruneTool.h SVEvent.h OptimizeConfigParameters.h)
 set(headers4 TNeuron.h TSynapse.h TActivationChooser.h TActivation.h TActivationSigmoid.h TActivationIdentity.h
 	     TActivationTanh.h TActivationRadial.h TNeuronInputChooser.h TNeuronInput.h TNeuronInputSum.h
@@ -34,17 +34,25 @@ set(headers4 TNeuron.h TSynapse.h TActivationChooser.h TActivation.h TActivation
 	     VariableTransformBase.h VariableIdentityTransform.h VariableDecorrTransform.h VariablePCATransform.h 
 	     VariableGaussTransform.h VariableNormalizeTransform.h)
 
-ROOT_GENERATE_DICTIONARY(G__TMVA1 ${headers1} LINKDEF LinkDef1.h)
-ROOT_GENERATE_DICTIONARY(G__TMVA2 ${headers2} LINKDEF LinkDef2.h)
-ROOT_GENERATE_DICTIONARY(G__TMVA3 ${headers3} LINKDEF LinkDef3.h)
-ROOT_GENERATE_DICTIONARY(G__TMVA4 ${headers4} LINKDEF LinkDef4.h)
+#---Need to suffix each header name by TMVA/  -----------------
+foreach(hs headers1 headers2 headers3 headers4)
+  foreach(h ${${hs}})
+    set(t${hs} ${t${hs}} TMVA/${h})
+  endforeach()
+endforeach()
 
-ROOT_GENERATE_ROOTMAP(TMVA LINKDEF LinkDef1.h LinkDef2.h LinkDef3.h LinkDef4.h
+ROOT_GENERATE_DICTIONARY(G__TMVA1 ${theaders1} LINKDEF TMVA/LinkDef1.h)
+ROOT_GENERATE_DICTIONARY(G__TMVA2 ${theaders2} LINKDEF TMVA/LinkDef2.h)
+ROOT_GENERATE_DICTIONARY(G__TMVA3 ${theaders3} LINKDEF TMVA/LinkDef3.h)
+ROOT_GENERATE_DICTIONARY(G__TMVA4 ${theaders4} LINKDEF TMVA/LinkDef4.h)
+
+ROOT_GENERATE_ROOTMAP(TMVA LINKDEF TMVA/LinkDef1.h TMVA/LinkDef2.h TMVA/LinkDef3.h TMVA/LinkDef4.h
                            DEPENDENCIES RIO Hist Matrix Tree Graf Gpad TreePlayer MLP Minuit MathCore XMLIO)
 
-ROOT_LINKER_LIBRARY(TMVA *.cxx G__TMVA1.cxx G__TMVA2.cxx G__TMVA3.cxx G__TMVA4.cxx LIBRARIES)
+ROOT_LINKER_LIBRARY(TMVA *.cxx G__TMVA1.cxx G__TMVA2.cxx G__TMVA3.cxx G__TMVA4.cxx LIBRARIES Core Cint 
+                    DEPENDENCIES RIO Hist Tree MLP Minuit XMLIO)
 
-install(DIRECTORY inc/ DESTINATION include/TMVA 
+install(DIRECTORY inc/ DESTINATION include
                        PATTERN ".svn" EXCLUDE
                        REGEX "LinkDef" EXCLUDE )
 

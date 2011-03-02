@@ -9,6 +9,6 @@ endif()
 if(xrootd)
   add_subdirectory(xrootd)
   add_subdirectory(netx)
+  add_subdirectory(rpdutils)
 endif()
-add_subdirectory(rpdutils)
 

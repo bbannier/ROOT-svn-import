@@ -12,18 +12,33 @@ set(CINT_C_SRCS ${CINT_C_SRCS}
   ${CMAKE_CURRENT_SOURCE_DIR}/src/config/snprintf.c )
 
 file(GLOB CINT_CXX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cxx)
-set(CINT_CXX_SRCS  ${CINT_CXX_SRCS} 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/Apiif.cxx
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/stdstrct.cxx
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/libstrm.cxx )
+list(APPEND CINT_CXX_SRCS  
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/Apiif.cxx
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/stdstrct.cxx)
+			
+list(REMOVE_ITEM CINT_CXX_SRCS
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/config/sunos.cxx 
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/config/macos.cxx 
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/config/winnt.cxx 
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/config/newsos.cxx )
 
-set(filter_out 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/sunos.cxx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/macos.cxx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/winnt.cxx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/newsos.cxx 
-)
-list(REMOVE_ITEM CINT_CXX_SRCS ${filter_out})
+if(ROOT_PLATFORM STREQUAL linux)  
+  list(APPEND CINT_CXX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/libstrm.cxx )
+elseif(ROOT_PLATFORM STREQUAL macosx)
+  list(APPEND CINT_CXX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/libstrm.cxx )
+elseif(ROOT_PLATFORM STREQUAL win32)
+  list(APPEND CINT_CXX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/config/winnt.cxx)
+  if(VC_MAJOR EQUAL 16)
+    list(APPEND CINT_CXX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/vc10strm.cxx)
+  elseif(VC_MAJOR EQUAL 13 AND VC_MINOR EQUAL 10)
+    list(APPEND CINT_CXX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/vc7strm.cxx)
+  elseif(VC_MAJOR LESS 14)	
+    list(APPEND CINT_CXX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/vc7strm.cxx)
+  else()
+    list(APPEND CINT_CXX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/dict/iccstrm.cxx)
+  endif()
+  #---TODO the rest of the cases....
+endif()  
 
 #---Add/remove sourcefiles depending on the platform---------------------------------------------------
 include(${CMAKE_CURRENT_SOURCE_DIR}/PlatformDependentSettings.cmake)
@@ -100,6 +115,7 @@ include_directories(src)
 
 #---Define libraries and executables to be build------------------------------------------------------------
 
+add_definitions(-DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY)
 # This static library is needed due to some cmake internal feature/bug
 # If a source file is added to several programs the file is compiled
 # more than once. In case of cint, cint_tmp, rootcint and rootcint_tmp
@@ -112,9 +128,10 @@ add_dependencies(Cint_static INSTALL_HEADERS CONFIGCINT_INSTALL IOSENUM_H)
 
 #---Create the shared Cint library--------------------------------------------------------------------------
 ROOT_LINKER_LIBRARY(Cint loadfile.cxx LIBRARIES Cint_static ${CMAKE_THREAD_LIBS_INIT})
+set_target_properties(Cint PROPERTIES LINK_INTERFACE_LIBRARIES "" )
 
 #---Create the cint cint executable-------------------------------------------------------------------------
-ROOT_EXECUTABLE(cintexe ${CMAKE_CURRENT_SOURCE_DIR}/main/cppmain.cxx LIBRARIES Cint)
+ROOT_EXECUTABLE(cint.exe ${CMAKE_CURRENT_SOURCE_DIR}/main/cppmain.cxx LIBRARIES Cint)
 
 #---Create the temporary cint_tmp executable----------------------------------------------------------------
 ROOT_EXECUTABLE(cint_tmp ${CMAKE_CURRENT_SOURCE_DIR}/main/cppmain.cxx 
@@ -130,7 +147,7 @@ ROOT_INSTALL_HEADERS()
 # Create the cint-config script needed to run the tests
 # Probably this file has not to be installed
 # TODO: Check this
-configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/cint-config.in ${EXECUTABLE_OUTPUT_PATH}/cint-config @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/cint-config.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint-config @ONLY)
 
 # Create the configcint.h header file and copy the file 
 # first to the cint/cint directory. Copy it to the 

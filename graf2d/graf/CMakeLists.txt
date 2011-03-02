@@ -16,4 +16,8 @@ ROOT_GENERATE_ROOTMAP(${libname} LINKDEF LinkDef.h DEPENDENCIES Hist Matrix Math
 include_directories(${FREETYPE_INCLUDE_DIR})
 
 ROOT_LINKER_LIBRARY(${libname} *.cxx G__${libname}.cxx LIBRARIES ${FREETYPE_LIBRARIES} Hist Matrix MathCore RIO)
+
+if(builtin_freetype)
+  add_dependencies(${libname} FREETYPE)
+endif()
 ROOT_INSTALL_HEADERS()

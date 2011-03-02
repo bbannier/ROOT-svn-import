@@ -118,7 +118,7 @@ ForEach(_name ${CINTSTLDLLNAMES})
 
 
   Add_Custom_Command(OUTPUT ${OutFileName} 
-                     COMMAND ${EXECUTABLE_OUTPUT_PATH}/cint_tmp -w1 -z${_name} -n${OutFileName} ${AdditionalFlags} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-1 -A -Z0 ${InFileName} ${AdditionalHeaderFiles}
+                     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint_tmp -w1 -z${_name} -n${OutFileName} ${AdditionalFlags} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-1 -A -Z0 ${InFileName} ${AdditionalHeaderFiles}
                      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                      DEPENDS cint_tmp
                     ) 
@@ -168,12 +168,15 @@ ForEach(_name ${CINTSTLDLLNAMES})
                                 COMPILE_FLAGS "${CINTDLLCXXFLAGS} -DG__CINTBODY -I${HEADER_OUTPUT_PATH}"
                                )
     Add_Library(${_name}Dict SHARED ${DictSource} )
-    Set_Target_properties(${_name}Dict PROPERTIES SUFFIX ".so")
+    Set_Target_properties(${_name}Dict PROPERTIES SUFFIX ${libsuffix})
     Install(TARGETS ${_name}Dict DESTINATION lib)
+	if(explicitlink)
+	  target_link_libraries(${_name}Dict Cint Core)
+	endif()
 
     Set(LIBNAME ${_name}Dict) 
-    Set(MAP_OUTFILE "${LIBRARY_OUTPUT_PATH}/lib${LIBNAME}.rootmap")
-#    Set(MAP_INFILE "${LIBRARY_OUTPUT_PATH}/lib${_name}.dll")
+    Set(MAP_OUTFILE "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${LIBNAME}.rootmap")
+#    Set(MAP_INFILE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${_name}.dll")
 
     Add_Custom_Command(OUTPUT ${MAP_OUTFILE}
                        COMMAND rlibmap -o ${MAP_OUTFILE} -l ${_name}.dll -c ${LINKDEF_FILE} 
@@ -199,7 +202,7 @@ ForEach(_name ${CINTSTLDLLNAMES})
 
 #  include_directories( ${INCLUDE_DIRECTORIES})
   Add_Library(${_name} ${LoaderName} ${OutFileName} )
-  Set_Target_properties(${_name} PROPERTIES SUFFIX ".dll")
+  Set_Target_properties(${_name} PROPERTIES SUFFIX ${libsuffix})
 #  Install(TARGETS ${_name} DESTINATION ${LIB_INSTALL_DIR})
    
 
@@ -213,7 +216,7 @@ ForEach(_name ${CINTINCDLLNAMES})
 
   If(${_name} MATCHES stdfunc)
     Add_Custom_Command(OUTPUT ${OutFileName} 
-                       COMMAND ${EXECUTABLE_OUTPUT_PATH}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles}
+                       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles}
                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                        DEPENDS cint_tmp
                       ) 
@@ -234,7 +237,7 @@ ForEach(_name ${CINTINCDLLNAMES})
 
   If(${_name} MATCHES ipc)
     Add_Custom_Command(OUTPUT ${OutFileName} 
-                       COMMAND ${EXECUTABLE_OUTPUT_PATH}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles}
+                       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles}
                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                        DEPENDS ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h
                                cint_tmp
@@ -265,7 +268,7 @@ ForEach(_name ${CINTINCDLLNAMES})
                       ) 
     Add_Executable(mktypes ${CMAKE_CURRENT_BINARY_DIR}/mktypes.c)
     Add_Custom_Command(OUTPUT ${HEADER_OUTPUT_PATH}/systypes.h 
-                       COMMAND ${EXECUTABLE_OUTPUT_PATH}/mktypes
+                       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/mktypes
                        DEPENDS mktypes
                       ) 
     Add_Custom_Command(OUTPUT ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h 
@@ -283,7 +286,7 @@ ForEach(_name ${CINTINCDLLNAMES})
     endif()
 
     Add_Custom_Command(OUTPUT ${OutFileName} 
-                       COMMAND ${EXECUTABLE_OUTPUT_PATH}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${_ExtraFlag} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles} ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h ${CMAKE_SOURCE_DIR}/cint/cint/lib/posix/posix.h
+                       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${_ExtraFlag} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles} ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h ${CMAKE_SOURCE_DIR}/cint/cint/lib/posix/posix.h
                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                        DEPENDS ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h
                                cint_tmp

@@ -94,5 +94,50 @@ option(fail-on-missing "Fail the configure step if a required external package i
 option(minimal "Do not automatically search for support libraries" OFF)
 option(gminimal "Do not automatically search for support libraries, but include X11" OFF)
   
-              
+if(WIN32)
+  set(x11 OFF)
+  set(editline OFF)
+  set(memstat OFF)
+  set(explicitlink ON)
+endif()
+
+#---General Build options----------------------------------------------------------------------
+# use, i.e. don't skip the full RPATH for the build tree
+set(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+# when building, don't use the install RPATH already (but later on when installing)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+
+# the RPATH to be used when installing
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+#---Set all directories where to install parts of root up to now everything is installed ------
+#---according to the setting of CMAKE_INSTALL_DIR
+
+if(ROOT_INSTALL_DIR)
+  set(CMAKE_INSTALL_PREFIX ${ROOT_INSTALL_DIR})
+  add_definitions(-DR__HAVE_CONFIG)
+else()
+  set(CMAKE_INSTALL_PREFIX ${ROOTSYS})
+endif()
+
+set(ROOT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
+set(BIN_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/bin)
+set(LIB_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib)
+set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include)
+set(ETC_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/etc)
+set(DATA_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
+set(DOC_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
+set(MACRO_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/macro)
+set(SRC_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/src)
+set(ICON_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/icons)
+set(FONT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/fonts)
+set(CINT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/cint)
+
+
+
 

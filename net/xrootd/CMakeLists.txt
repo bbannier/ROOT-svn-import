@@ -21,11 +21,11 @@ set(xrootdlibs  libXrdBwm libXrdCrypto libXrdRootd libXrdSeckrb5	libXrdSecssl li
                 libXrdClient libXrdCryptossl libXrdSec libXrdSecpwd libXrdSecsss libXrdSut)
 foreach(lib ${xrootdlibs})
   set(makelibs ${makelibs} ${xrootddir}/lib/${lib}.${SOEXT})
-  set(finallibs ${finallibs} ${LIBRARY_OUTPUT_PATH}/${lib}.${SOEXT})
+  set(finallibs ${finallibs} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${lib}.${SOEXT})
 endforeach()
 foreach(bin ${xrootdexes})
   set(makeexes ${makeexes} ${xrootddir}/bin/${bin})
-  set(finalexes ${finalexes} ${EXECUTABLE_OUTPUT_PATH}/${bin})
+  set(finalexes ${finalexes} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${bin})
 endforeach()
 
 add_custom_target(XROOTD_LOCAL_TARGET ALL DEPENDS ${finalexes} ${finallibs})
@@ -154,13 +154,13 @@ endif()
 
 #---Copy the binaries and libraries to destination----------------------------------------------
 foreach(lib ${xrootdlibs})
-  add_custom_command(OUTPUT ${LIBRARY_OUTPUT_PATH}/${lib}.${SOEXT}
-                     COMMAND cmake -E copy_if_different ${xrootddir}/lib/${lib}.${SOEXT} ${LIBRARY_OUTPUT_PATH}
+  add_custom_command(OUTPUT ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${lib}.${SOEXT}
+                     COMMAND cmake -E copy_if_different ${xrootddir}/lib/${lib}.${SOEXT} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
                      DEPENDS ${xrootddir}/lib/${lib}.${SOEXT} )
 endforeach()
 foreach(bin ${xrootdexes})
-  add_custom_command(OUTPUT ${EXECUTABLE_OUTPUT_PATH}/${bin}
-                     COMMAND cmake -E copy_if_different ${xrootddir}/bin/${bin} ${EXECUTABLE_OUTPUT_PATH}
+  add_custom_command(OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${bin}
+                     COMMAND cmake -E copy_if_different ${xrootddir}/bin/${bin} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
                      DEPENDS ${xrootddir}/bin/${bin} )
 endforeach()
 

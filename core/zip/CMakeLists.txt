@@ -46,33 +46,28 @@ Set(ZipNewSource
 
 # Depending on the system either the old and the new
 # or only the old compression is build 
-If(BuildZlib)
-  Set(ZLIB_HEADERS ${ZipNewHeaders} ${ZipOldHeaders}) 
-  Set(ZLIB_SRCS ${ZipNewSource} ${ZipOldSource}) 
-Else(BuildZlib)
-  Set(ZLIB_HEADERS ${ZipOldHeaders}) 
-  Set(ZLIB_SRCS ${ZipOldSource}) 
-EndIf(BuildZlib)
-
-# Copy the header files to the include subdirectory
-# of the build directory
-INSTALL_HEADERS("ZLIB_HEADERS")
-
+if(builtin_zlib)
+  set(ZLIB_HEADERS ${ZipNewHeaders} ${ZipOldHeaders}) 
+  set(ZLIB_SRCS ${ZipNewSource} ${ZipOldSource}) 
+else()
+  set(ZLIB_HEADERS ${ZipOldHeaders}) 
+  set(ZLIB_SRCS ${ZipOldSource}) 
+endif()
 
 # Define all the header files which should be installed when
 # doing a "make install"
-Install(FILES ${ZLIB_HEADERS} DESTINATION ${INCLUDE_INSTALL_DIR})
+install(FILES ${ZLIB_HEADERS} DESTINATION include)
 
 # Add all source files of this subdirectory to the source files
 # neede to build the Core library
 # Variables are only defined in this directory-. Some of the
 # variables are needed in the parent scope so they are exported
 # to the parent scope
-List(APPEND LibCore_SRCS ${ZLIB_SRCS})
-List(APPEND LibCore_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+list(APPEND LibCore_SRCS ${ZLIB_SRCS})
+list(APPEND LibCore_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
-Set(LibCore_SRCS ${LibCore_SRCS} PARENT_SCOPE)
-Set(LibCore_INCLUDE_DIRS ${LibCore_INCLUDE} PARENT_SCOPE)
+set(LibCore_SRCS ${LibCore_SRCS} PARENT_SCOPE)
+set(LibCore_INCLUDE_DIRS ${LibCore_INCLUDE} PARENT_SCOPE)
 
 
 
