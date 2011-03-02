@@ -105,6 +105,9 @@ void addClassificationTests( UnitTestSuite& TMVA_test, bool full=true)
                                                                 "!H:!V:NTrees=400:nEventsMin=100:BoostType=Bagging:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" , 0.8, 0.98) );
    if (full) TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kBDT, "BDTD",
                                                                 "!H:!V:NTrees=400:nEventsMin=200:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=10:PruneMethod=NoPruning:VarTransform=Decorrelate" , 0.88, 0.98) );
+   if (full) TMVA_test.addTest(new MethodUnitTestWithROCLimits( 
+   TMVA::Types::kBDT, "BDTMitFisher", "!H:V:NTrees=150:NCuts=101:MaxDepth=1:UseFisherCuts:UseExclusiveVars:MinLinCorrForFisher=0.",0.85, 0.95));
+
    if (full) TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kRuleFit, "RuleFit",
                                                                 "H:!V:RuleFitModule=RFTMVA:Model=ModRuleLinear:MinImp=0.001:RuleMinDist=0.001:NTrees=20:fEventsMin=0.01:fEventsMax=0.5:GDTau=-1.0:GDTauPrec=0.01:GDStep=0.01:GDNSteps=10000:GDErrScale=1.02" , 0.88, 0.98) );
 }
@@ -207,31 +210,29 @@ void addTestwithSphereTutorial( UnitTestSuite& TMVA_test, bool full=true )
 void addGeneralBoostTests(UnitTestSuite& TMVA_test, bool full=true )
 {
    if (!full) return;
+   for (int i=1;i<=16;i+=5)
+      TMVA_test.addTest(new MethodUnitTestWithROCLimits( 
+      TMVA::Types::kMLP, Form("BoostedMLP_%d",i),
+      Form("H:!V:Boost_Num=%d:Boost_Transform=step:Boost_Type=AdaBoost:NCycles=20:HiddenLayers=N,N+5:Boost_AdaBoostBeta=0.5",i), 0.9-0.3/i, 0.98));
 
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( 
    TMVA::Types::kMLP, "BoostedMLP",
-   "H:!V:Boost_Num=10:Boost_Transform=step:Boost_Type=AdaBoost:NCycles=20:HiddenLayers=N,N+5:Boost_AdaBoostBeta=2.5", 0.6, 0.9));
+   "H:!V:Boost_Num=10:Boost_Transform=step:Boost_Type=AdaBoost:NCycles=20:HiddenLayers=N,N+5:NeuronType=sigmoid:Boost_AdaBoostBeta=1.0", 0.8, 0.93));
 
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( 
    TMVA::Types::kFisher, "BoostedFisher",
-   "H:!V:Boost_Num=10:Boost_Transform=log:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.2", 0.6, 0.95));
+   "H:!V:Boost_Num=10:Boost_Transform=log:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.5", 0.8, 0.95));
 
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( 
    TMVA::Types::kFisher, "BoostedFisher_step",
-   "H:!V:Boost_Num=10:Boost_Transform=step:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.2", 0.6, 0.9));
-
-   TMVA_test.addTest(new MethodUnitTestWithROCLimits( 
-   TMVA::Types::kBDT, "BDTMitFisher", "!H:V:NTrees=150:NCuts=101:MaxDepth=1:UseFisherCuts:UseExclusiveVars:MinLinCorrForFisher=0.",0.85, 0.95));
-
-//    for (int i=1;i<=35;i+=5)
-//       TMVA_test.addTest(new MethodUnitTestWithROCLimits( 
-//       TMVA::Types::kMLP, Form("BoostedMLP_%d",i),
-//       Form("H:!V:Boost_Num=%d:Boost_Transform=step:Boost_Type=AdaBoost:NCycles=20:HiddenLayers=N,N+5:Boost_AdaBoostBeta=1.2",i), 0.88, 0.98));
+   "H:!V:Boost_Num=10:Boost_Transform=step:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.5", 0.8, 0.9));
 
    TString trees="sigfull_bgdfull";
    TString prep="nTrain_Signal=2000:nTrain_Background=2000:nTest_Signal=1000:nTest_Background=1000:!V";
    // complex data tests boosted Fisher 
-   TMVA_test.addTest(new MethodUnitTestWithComplexData( trees, prep,TMVA::Types::kFisher, "Fisher", "H:!V:Boost_Num=50:Boost_Transform=step:Boost_Type=AdaBoost:Boost_AdaBoostBeta=1.2", 0.9, 0.955) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData( trees, prep,TMVA::Types::kFisher, "Fisher", "H:!V:Boost_Num=50:Boost_Transform=step:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.5", 0.9, 0.955) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData( trees, prep,TMVA::Types::kMLP, "MLP", "H:!V:Boost_Num=20:Boost_Transform=step:Boost_Type=AdaBoost:Boost_AdaBoostBeta=1.0:NCycles=20:HiddenLayers=N,N+5", 0.93, 0.985) );
+  
 }
 
 int main(int argc, char **argv)
