@@ -232,7 +232,15 @@ void addGeneralBoostTests(UnitTestSuite& TMVA_test, bool full=true )
    // complex data tests boosted Fisher 
    TMVA_test.addTest(new MethodUnitTestWithComplexData( trees, prep,TMVA::Types::kFisher, "Fisher", "H:!V:Boost_Num=50:Boost_Transform=step:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.5", 0.9, 0.955) );
    TMVA_test.addTest(new MethodUnitTestWithComplexData( trees, prep,TMVA::Types::kMLP, "MLP", "H:!V:Boost_Num=20:Boost_Transform=step:Boost_Type=AdaBoost:Boost_AdaBoostBeta=1.0:NCycles=20:HiddenLayers=N,N+5", 0.93, 0.985) );
-  
+
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits(
+   TMVA::Types::kPDEFoam, "BoostedPDEFoam",
+   "H:!V:Boost_Num=10:Boost_Transform=linear:SigBgSeparate=F:TailCut=0.001:nActiveCells=500:nBin=5:Nmin=100:Kernel=None:Compress=T", 0.6, 0.9));
+
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits(
+   TMVA::Types::kPDEFoam, "BoostedDTPDEFoam",
+   "H:!V:Boost_Num=30:Boost_Transform=linear:SigBgSeparate=F:MaxDepth=4:UseYesNoCell=T:DTLogic=MisClassificationError:FillFoamWithOrigWeights=F:TailCut=0:nActiveCells=500:nBin=20:Nmin=400:Kernel=None:Compress=T", 0.6, 0.9));
+
 }
 
 int main(int argc, char **argv)
