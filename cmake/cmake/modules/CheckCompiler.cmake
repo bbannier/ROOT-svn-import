@@ -26,6 +26,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   string(REGEX REPLACE "^[0-9]+\\.[0-9]+\\.([0-9])" "\\1" GCC_PATCH "${_gcc_version_info}")
   message(STATUS "Found GCC. Major version ${GCC_MAJOR}, minor version ${GCC_MINOR}")
   set(COMPILER_VERSION gcc${GCC_MAJOR}${GCC_MINOR}${GCC_PATCH})
+else()
+  set(GCC_MAJOR 0)
+  set(GCC_MINOR 0)
 endif()
 
 #---Set a default build type for single-configuration CMake generators if no build type is set------
