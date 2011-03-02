@@ -16,7 +16,7 @@ configure_file(${PROJECT_SOURCE_DIR}/cmake/scripts/cint-config.in ${CMAKE_RUNTIM
 #   depending on configcint.h all the time. 
 include(WriteConfigCint)
 WRITE_CONFIG_CINT( ${CMAKE_CURRENT_BINARY_DIR}/tmp/configcint.h)
-execute_process(COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/tmp/configcint.h ${HEADER_OUTPUT_PATH})
+execute_process(COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/tmp/configcint.h ${HEADER_OUTPUT_PATH}/configcint.h)
 install(FILES ${HEADER_OUTPUT_PATH}/configcint.h DESTINATION include)
 
 #---RConfigure.h---------------------------------------------------------------------------------------------
