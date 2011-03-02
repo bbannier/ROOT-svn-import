@@ -1,0 +1,44 @@
+//------------------------------------------------------------------------------
+// CLING - the C++ LLVM-based InterpreterG :)
+// version: $Id: ASTTransformVisitor.cpp 36608 2010-11-11 18:21:02Z vvassilev $
+// author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
+//------------------------------------------------------------------------------
+#ifndef __cling__
+#error "This file must not be included by compiled programs."
+#endif
+#ifdef CLING_RUNTIME_UNIVERSE_H
+#error "CLING_RUNTIME_UNIVERSE_H Must only include once."
+#endif
+
+#define CLING_RUNTIME_UNIVERSE_H
+
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS // needed by System/DataTypes.h
+#endif
+
+#ifndef __STDC_CONSTANT_MACROS
+#define __STDC_CONSTANT_MACROS // needed by System/DataTypes.h
+#endif
+
+#include <stdio.h>
+#include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/ValuePrinter.h"
+
+namespace cling {
+   namespace runtime {
+      // Stores the declarations of variables, which are going to be available
+      // only during runtime
+      Interpreter* gCling = 0;
+      namespace internal {
+         // Annotates that these variables shouldn't be used unless you know
+         // what you're doing
+
+         // Uncomment next line when figure out how to remove explicit template
+         // specialization
+         //template<typename T> class TypeExtractionHelper{};
+      }
+   } // end namespace runtime
+} // end namespace cling
+
+using namespace cling;
+using namespace cling::runtime;

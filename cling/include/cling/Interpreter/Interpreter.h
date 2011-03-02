@@ -74,11 +74,7 @@ namespace cling {
     int executeFile(const std::string& filename);
     clang::QualType getQualType(llvm::StringRef type);
     
-    bool setPrintAST(bool print = true) {
-      bool prev = m_printAST;
-      m_printAST = print;
-      return prev;
-    }
+    bool setPrintAST(bool print = true);
  
     void dumpAST(bool showAST = true, int last = -1);
     
@@ -103,6 +99,7 @@ namespace cling {
     bool m_printAST; // whether to print the AST to be processed
     llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream; // stream to dump values into
     clang::Decl *m_LastDump; // last dump point
+    clang::ASTConsumer* m_ASTDumper;
 
   private:
     
@@ -111,7 +108,6 @@ namespace cling {
     
     std::string createUniqueName();
     
-    clang::ASTConsumer* maybeGenerateASTPrinter() const;
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
     llvm::GenericValue EvalCore(const char* expr, 
