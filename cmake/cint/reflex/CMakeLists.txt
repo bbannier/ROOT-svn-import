@@ -14,9 +14,9 @@ if(CMAKE_PROJECT_NAME STREQUAL ROOT)
   list(REMOVE_ITEM headers Reflex/Builder/ReflexBuilder.h Reflex/Reflex.h 
                            Reflex/SharedLibrary.h Reflex/DictionaryGenerator.h)
   #---Rootcint dictionary ---------------------------------------------------
-  ROOT_GENERATE_DICTIONARY(G__Reflex ${headers} LINKDEF LinkDef.h OPTIONS -p)
-  ROOT_GENERATE_ROOTMAP(Reflex LINKDEF LinkDef.h DEPENDENCIES )
-  ROOT_MODULE_LIBRARY(ReflexDict G__Reflex.cxx LIBRARIES Reflex Cint Core)
+  #ROOT_GENERATE_DICTIONARY(G__Reflex ${headers} LINKDEF LinkDef.h OPTIONS -p)
+  #ROOT_GENERATE_ROOTMAP(Reflex LINKDEF LinkDef.h DEPENDENCIES )
+  #ROOT_MODULE_LIBRARY(ReflexDict G__Reflex.cxx LIBRARIES Reflex Cint Core)
   #---Reflex library---------------------------------------------------------
   ROOT_LINKER_LIBRARY(Reflex *.cxx LIBRARIES )  
   #---genreflex files--------------------------------------------------------

@@ -8,19 +8,14 @@ ROOT_USE_PACKAGE(core/cont)
 ROOT_USE_PACKAGE(core/meta)
 ROOT_USE_PACKAGE(core/editline)
 ROOT_USE_PACKAGE(core/unix)
+ROOT_USE_PACKAGE(core/winnt)
 ROOT_USE_PACKAGE(core/zip)
 ROOT_USE_PACKAGE(cint/cint)
 
-#---Now build the builtin version of pcre and zlib ----------------------------------------
+
 if(builtin_pcre)
   add_subdirectory(pcre)
-  set(PCRE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/core/pcre/pcre-7.8)
-  set(PCRE_LIBRARIES "-L${LIBRARY_OUTPUT_PATH} -lpcre") 
 endif()
-
-Set(BuildZlib TRUE)
-Set(ZLIB_LIBRARY "")
-
 add_subdirectory(rint)
 add_subdirectory(thread)
 add_subdirectory(newdelete)
@@ -32,6 +27,9 @@ endif()
 add_subdirectory(meta)
 if(UNIX)
   add_subdirectory(unix)
+endif()
+if(WIN32)
+  add_subdirectory(winnt)
 endif()
 add_subdirectory(zip)
 add_subdirectory(base)
@@ -45,6 +43,7 @@ Set(CORE_DICTIONARIES
     ${EDITLINE_DICTIONARY} 
     ${META_DICTIONARY} 
     ${UNIX_DICTIONARY} 
+    ${WINNT_DICTIONARY} 
     ${BASE1_DICTIONARY} 
     ${BASE2_DICTIONARY} 
     ${BASE3_DICTIONARY} 
@@ -54,9 +53,16 @@ Set(CORE_DICTIONARIES
 Set_Source_Files_Properties(${METAUTILS_DICTIONARY} GENERATED)
 Set_Source_Files_Properties(${CLIB_DICTIONARY} GENERATED)
 Set_Source_Files_Properties(${CONT_DICTIONARY} GENERATED)
-Set_Source_Files_Properties(${EDITLINE_DICTIONARY} GENERATED)
+if(editline)
+  Set_Source_Files_Properties(${EDITLINE_DICTIONARY} GENERATED)
+endif()
 Set_Source_Files_Properties(${META_DICTIONARY} GENERATED)
-Set_Source_Files_Properties(${UNIX_DICTIONARY} GENERATED)
+if(UNIX)
+  Set_Source_Files_Properties(${UNIX_DICTIONARY} GENERATED)
+endif()
+if(WIN32)
+  Set_Source_Files_Properties(${WINNT_DICTIONARY} GENERATED)
+endif()
 Set_Source_Files_Properties(${BASE1_DICTIONARY} GENERATED)
 Set_Source_Files_Properties(${BASE2_DICTIONARY} GENERATED)
 Set_Source_Files_Properties(${BASE3_DICTIONARY} GENERATED)
@@ -102,11 +108,33 @@ ROOT_GENERATE_ROOTMAP(Core LINKDEF ${LibCore_LINKDEF})
 
 include_directories( ${INCLUDE_DIRECTORIES})
 
+
 # Here all objects ar put together into one share library
-Add_Library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES})
-Target_Link_Libraries(Core ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_NCURSES_LIBRARY} ${CURSES_CURSES_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+if(WIN32)
+	foreach(src ${LibCore_SRCS} ${CORE_DICTIONARIES})
+	  string (REPLACE ${CMAKE_CURRENT_SOURCE_DIR} "" lsrc ${src})
+	  string (REPLACE ${CMAKE_CURRENT_BINARY_DIR} "" msrc ${lsrc})
+	  string (REGEX REPLACE "\\.cxx" ".obj" pobj ${msrc})
+	  string (REGEX REPLACE "\\.c" ".obj" obj ${pobj})
+	  set(lib_objs ${lib_objs} ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/Core.dir/${obj})
+	endforeach()
+	add_library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES} Core.def)
+    add_custom_command(TARGET Core PRE_LINK
+                       COMMAND bindexplib
+                       ARGS -o Core.def libCore ${lib_objs} 
+					   DEPENDS bindexplib )
+    set_source_files_properties(Core.def PROPERTIES GENERATED 1)
+    set(corelinklibs Cint shell32.lib WSock32.lib Oleaut32.lib Iphlpapi.lib)
+else()
+   add_library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES})
+endif()
+Target_Link_Libraries(Core ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
 Set_Target_properties(Core PROPERTIES ${ROOT_LIBRARY_PROPERTIES})
-Add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY EDITLINE_DICTIONARY META_DICTIONARY METAUTILS_DICTIONARY UNIX_DICTIONARY BASE_DICTIONARY ${PCRE_VERSION})
+Add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY EDITLINE_DICTIONARY META_DICTIONARY METAUTILS_DICTIONARY 
+                      UNIX_DICTIONARY BASE_DICTIONARY)
+if(builtin_pcre)
+  add_dependencies(Core PCRE)
+endif()
 Install(TARGETS Core DESTINATION ${LIB_INSTALL_DIR})
 
 Set(RootConfigFeatures ${RootConfigFeatures} PARENT_SCOPE)

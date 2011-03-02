@@ -17,25 +17,26 @@
 # Define package related variables 
 set(PCRE_SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(PCRE_VERSION "pcre-7.8")
-set(PCRE_VERSION ${PCRE_VERSION} PARENT_SCOPE)
 set(PCRE_TARGZFILE ${PCRE_SRCDIR}/${PCRE_VERSION}.tar.gz)
 set(PCRE_TARFILE ${PCRE_SRCDIR}/${PCRE_VERSION}.tar)
 
 if(WIN32)
-  set(pcreliba ${CMAKE_CURRENT_BINARY_DIR}/libpcre-7.8.lib)
-  set(pcrelib  ${LIBRARY_OUTPUT_PATH}/libpcre.lib)
+  set(pcreliba ${CMAKE_CURRENT_BINARY_DIR}/win32/libpcre-7.8.lib)
+  set(pcrelib  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libpcre.lib)
   if(winrtdebug)  
     set(pcrebuild "libpcre - Win32 Debug")
   else()
     set(pcrebuild "libpcre - Win32 Release")
   endif()
   add_custom_command( OUTPUT ${pcreliba}
-                      COMMAND xcopy ${PCRE_SRCDIR}/win32 .
-		                  COMMAND nmake -nologo -f Makefile.msc CFG=${pcrebuild}
-                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
+                      COMMAND cmake -E copy_directory ${PCRE_SRCDIR}/win32 win32
+                      COMMAND cmake -E tar xvzf ${PCRE_TARGZFILE}
+		              COMMAND cmake -E chdir win32 nmake -nologo -f Makefile.msc 
+					                               CFG=${pcrebuild} 
+												   NMCXXFLAGS="-I${CMAKE_SOURCE_DIR}/build/win -FIw32pragma.h")
 else()
   set(pcreliba ${CMAKE_CURRENT_BINARY_DIR}/${PCRE_VERSION}/.libs/libpcre.a)
-  set(pcrelib  ${LIBRARY_OUTPUT_PATH}/libpcre.a)
+  set(pcrelib  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libpcre.a)
   # Define special compiler settings for prce
   set(PCRE_CC ${CMAKE_C_COMPILER})
   set(PCRE_CFLAGS "-O")
@@ -85,21 +86,18 @@ endif()
 # This command depends on the created libpcre.a
 if(ROOT_PLATFORM MATCHES macosx)
   add_custom_command(OUTPUT ${pcrelib}
-                     COMMAND cmake -E copy_if_different ${pcreliba} ${LIBRARY_OUTPUT_PATH}
+                     COMMAND cmake -E copy_if_different ${pcreliba} ${pcrelib}
                      COMMAND ranlib ${pcrelib}
                      DEPENDS ${pcreliba} )
 else()
   add_custom_command(OUTPUT ${pcrelib}
-                     COMMAND cmake -E copy_if_different ${pcreliba} ${LIBRARY_OUTPUT_PATH}
+                     COMMAND cmake -E copy_if_different ${pcreliba} ${pcrelib}
                      DEPENDS ${pcreliba} )
 endif()
                 
 # create a target which will always be build and does actually nothing. The target is only
-# needed that the dependencies are build, f they are not up to date. If everything is up to
+# needed that the dependencies are build, if they are not up to date. If everything is up to
 # dte nothing is done. This target depends on the libpcre.a in the library directory of the 
 # build directory.
-add_custom_target(${PCRE_VERSION} DEPENDS ${pcrelib})
-# import libpcre.a which is not in the scope of CMake. This step makes it possible that
-# make clean will remove the library  
-add_library(pcre STATIC IMPORTED)
+add_custom_target(PCRE DEPENDS ${pcrelib})
 

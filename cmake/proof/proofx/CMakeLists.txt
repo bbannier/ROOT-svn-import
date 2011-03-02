@@ -18,7 +18,7 @@ endif()
 
 #---Using or nor an external installation of XROOTD-------------------------
 if(NOT XROOTD_FOUND)
-  set(XROOTD_LIBRARY_DIR ${LIBRARY_OUTPUT_PATH})
+  set(XROOTD_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
   set(XROOTD_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/net/xrootd/src/xrootd/src)
 endif()
 
