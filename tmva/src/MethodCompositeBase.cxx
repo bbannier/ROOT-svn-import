@@ -155,6 +155,11 @@ void TMVA::MethodCompositeBase::ReadWeightsFromXML( void* wghtnode )
       gTools().ReadAttr( ch, "MethodName",  methodName );
       gTools().ReadAttr( ch, "JobName",  jobName );
       gTools().ReadAttr( ch, "Options",  optionString );
+      
+      //remove trailing "~" to signal that options have to be reused
+      optionString.ReplaceAll("~","");
+      //ignore meta-options for method Boost
+      optionString.ReplaceAll("Boost_","~Boost_");
 
       if (i==0){
          // the cast on MethodBoost is ugly, but a similar line is also in ReadWeightsFromFile --> needs to be fixed later
@@ -171,11 +176,11 @@ void TMVA::MethodCompositeBase::ReadWeightsFromXML( void* wghtnode )
 
       void* methXML = gTools().GetChild(ch);
       meth->SetupMethod();
-      meth->ReadWeightsFromXML(methXML);
       meth->SetMsgType(kWARNING);
       meth->ParseOptions();
       meth->ProcessSetup();
       meth->CheckSetup();
+      meth->ReadWeightsFromXML(methXML);
       meth->SetSignalReferenceCut(methodSigCut);
       meth->SetSignalReferenceCutOrientation(methodSigCutOrientation);
 
