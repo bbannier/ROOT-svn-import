@@ -40,5 +40,4 @@ namespace cling {
    } // end namespace runtime
 } // end namespace cling
 
-using namespace cling;
 using namespace cling::runtime;
