@@ -210,6 +210,9 @@ Bool_t TMVA::MethodBoost::BookMethod( Types::EMVA theMethod, TString methodTitle
    fBoostedMethodName = Types::Instance().GetMethodName( theMethod );
    fBoostedMethodTitle = methodTitle;
    fBoostedMethodOptions = theOption;
+   TString opts=theOption;
+   opts.ToLower();
+   if (opts.Contains("vartransform")) Log() << kFATAL << "It is not possible to use boost in conjunction with variable transform. Please remove either Boost_Num or VarTransform from the option string"<< methodTitle<<Endl;
    return kTRUE;
 }
 
