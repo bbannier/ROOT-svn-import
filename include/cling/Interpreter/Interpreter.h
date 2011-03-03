@@ -30,7 +30,7 @@ namespace cling {
   namespace runtime {
     namespace internal {
       template <typename T>
-      T EvalProxy(const char* expr, void* varaddr[], clang::DeclContext* DC); 
+      T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC); 
     }
   }
   class CIBuilder;
@@ -106,9 +106,9 @@ namespace cling {
     llvm::GenericValue EvalCore(const char* expr, 
                                 void* varaddr[], 
                                 clang::DeclContext* DC);
-    // Define EvalProxy as friend because it will use EvalCore
+    // Define EvaluateProxyT as friend because it will use EvalCore
     template<typename T> 
-    friend T runtime::internal::EvalProxy(const char* expr,
+    friend T runtime::internal::EvaluateProxyT(const char* expr,
                                           void* varaddr[],
                                           clang::DeclContext* DC); 
     
