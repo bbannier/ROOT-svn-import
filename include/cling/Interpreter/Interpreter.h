@@ -27,7 +27,12 @@ namespace clang {
 }
 
 namespace cling {
-  
+  namespace runtime {
+    namespace internal {
+      template <typename T>
+      T EvalProxy(const char* expr, void* varaddr[], clang::DeclContext* DC); 
+    }
+  }
   class CIBuilder;
   class ExecutionContext;
   class IncrementalASTParser;
@@ -52,19 +57,7 @@ namespace cling {
 
     const char* getVersion() const;
     
-     void AddIncludePath(const char *path);
-     // Using static to avoid creating a Member call, which needs this pointer
-    template<typename T>
-    static T Eval(size_t This, 
-                  const char* expr,
-                  void* varaddr[],
-                  clang::DeclContext* DC ) {
-       llvm::GenericValue result(((Interpreter*) (void*)This)->EvalCore(expr, varaddr, DC));
-       //FIXME: we should return T calculated from result
-       //printf("%s", expr);
-       return T();
-    }
-     
+    void AddIncludePath(const char *path);
     int processLine(const std::string& input_line);
     
     int loadFile(const std::string& filename,
@@ -75,7 +68,7 @@ namespace cling {
     clang::QualType getQualType(llvm::StringRef type);
     
     bool setPrintAST(bool print = true);
- 
+    
     void dumpAST(bool showAST = true, int last = -1);
     
     clang::CompilerInstance* getCI() const;
@@ -84,7 +77,7 @@ namespace cling {
     
     clang::PragmaNamespace& getPragmaHandler() const { return *m_PragmaHandler; }
     void installLazyFunctionCreator(void* (*fp)(const std::string&));
-
+    
     llvm::raw_ostream& getValuePrinterStream() const { return *m_ValuePrintStream; }
 
     void RequestContinuation(const clang::SourceLocation&);
@@ -100,7 +93,7 @@ namespace cling {
     llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream; // stream to dump values into
     clang::Decl *m_LastDump; // last dump point
     clang::ASTConsumer* m_ASTDumper;
-
+    
   private:
     
     void createWrappedSrc(const std::string& src, std::string& wrapped,
@@ -113,10 +106,17 @@ namespace cling {
     llvm::GenericValue EvalCore(const char* expr, 
                                 void* varaddr[], 
                                 clang::DeclContext* DC);
+    // Define EvalProxy as friend because it will use EvalCore
+    template<typename T> 
+    friend T runtime::internal::EvalProxy(const char* expr,
+                                          void* varaddr[],
+                                          clang::DeclContext* DC); 
+    
   public:
-     // compileString should be private, when we create the Runtime Env class.
-     clang::CompilerInstance* compileString(const std::string& srcCode);
-     llvm::GenericValue Evaluate(const char* expr, clang::DeclContext* DC);
+    // compileString should be private, when we create the Runtime Env class.
+    clang::CompilerInstance* compileString(const std::string& srcCode);
+    llvm::GenericValue Evaluate(const char* expr, clang::DeclContext* DC);
+    
   };
   
 } // namespace cling
