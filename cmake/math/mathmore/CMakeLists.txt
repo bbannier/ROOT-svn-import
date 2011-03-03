@@ -3,6 +3,7 @@
 ############################################################################
 
 ROOT_USE_PACKAGE(GSL)
+add_definitions(-DUSE_ROOT_ERROR )
 
 set(headers Math/DistFuncMathMore.h Math/SpecFuncMathMore.h Math/PdfFuncMathMore.h
             Math/Polynomial.h Math/Derivator.h Math/Interpolator.h 

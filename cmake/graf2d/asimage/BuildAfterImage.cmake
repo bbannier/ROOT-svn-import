@@ -112,5 +112,6 @@ endif()
 # date nothing is done. This target depends on the libAfterImage.a in the library directory of the 
 # build directory.
 add_custom_target(AFTERIMAGE DEPENDS ${afterimagelib} )
+set_target_properties(AFTERIMAGE PROPERTIES FOLDER Builtins)
 
 install(FILES ${afterimagelib} DESTINATION lib)

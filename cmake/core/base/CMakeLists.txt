@@ -44,6 +44,7 @@ add_custom_target(BASE_DICTIONARY DEPENDS G__Base1.cxx
                                           G__Base2.cxx 
                                           G__Base3.cxx 
                                           ${base4dict} )
+set_target_properties(BASE_DICTIONARY PROPERTIES FOLDER Dictionaries)
 ROOT_INSTALL_HEADERS()
 
 #---Extra options-----------------------------------------------------------------------

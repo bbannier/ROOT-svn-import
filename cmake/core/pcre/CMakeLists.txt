@@ -100,4 +100,5 @@ endif()
 # dte nothing is done. This target depends on the libpcre.a in the library directory of the 
 # build directory.
 add_custom_target(PCRE DEPENDS ${pcrelib})
+set_target_properties(PCRE PROPERTIES FOLDER Builtins)
 

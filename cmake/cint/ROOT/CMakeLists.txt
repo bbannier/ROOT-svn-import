@@ -118,7 +118,7 @@ ForEach(_name ${CINTSTLDLLNAMES})
 
 
   Add_Custom_Command(OUTPUT ${OutFileName} 
-                     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint_tmp -w1 -z${_name} -n${OutFileName} ${AdditionalFlags} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-1 -A -Z0 ${InFileName} ${AdditionalHeaderFiles}
+                     COMMAND cint_tmp -w1 -z${_name} -n${OutFileName} ${AdditionalFlags} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-1 -A -Z0 ${InFileName} ${AdditionalHeaderFiles}
                      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                      DEPENDS cint_tmp
                     ) 
@@ -168,7 +168,7 @@ ForEach(_name ${CINTSTLDLLNAMES})
                                 COMPILE_FLAGS "${CINTDLLCXXFLAGS} -DG__CINTBODY -I${HEADER_OUTPUT_PATH}"
                                )
     Add_Library(${_name}Dict SHARED ${DictSource} )
-    Set_Target_properties(${_name}Dict PROPERTIES SUFFIX ${libsuffix})
+    Set_Target_properties(${_name}Dict PROPERTIES SUFFIX ${libsuffix} FOLDER Dictionaries)
     Install(TARGETS ${_name}Dict DESTINATION lib)
 	if(explicitlink)
 	  target_link_libraries(${_name}Dict Cint Core)
@@ -202,7 +202,7 @@ ForEach(_name ${CINTSTLDLLNAMES})
 
 #  include_directories( ${INCLUDE_DIRECTORIES})
   Add_Library(${_name} ${LoaderName} ${OutFileName} )
-  Set_Target_properties(${_name} PROPERTIES SUFFIX ${libsuffix})
+  Set_Target_properties(${_name} PROPERTIES SUFFIX ${libsuffix} FOLDER Dictionaries)
 #  Install(TARGETS ${_name} DESTINATION ${LIB_INSTALL_DIR})
    
 
@@ -216,7 +216,7 @@ ForEach(_name ${CINTINCDLLNAMES})
 
   If(${_name} MATCHES stdfunc)
     Add_Custom_Command(OUTPUT ${OutFileName} 
-                       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles}
+                       COMMAND cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles}
                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                        DEPENDS cint_tmp
                       ) 
@@ -231,13 +231,13 @@ ForEach(_name ${CINTINCDLLNAMES})
 
 #    include_directories( ${INCLUDE_DIRECTORIES})
     Add_Library(${_name} ${OutFileName})
-    Set_Target_properties(${_name} PROPERTIES SUFFIX ".dll")
+    Set_Target_properties(${_name} PROPERTIES SUFFIX ".dll" FOLDER Dictionaries)
 #  Install(TARGETS ${_name} DESTINATION ${LIB_INSTALL_DIR})
   EndIf(${_name} MATCHES stdfunc)
 
   If(${_name} MATCHES ipc)
     Add_Custom_Command(OUTPUT ${OutFileName} 
-                       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles}
+                       COMMAND cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${IncludeDirs} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles}
                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                        DEPENDS ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h
                                cint_tmp
@@ -254,7 +254,7 @@ ForEach(_name ${CINTINCDLLNAMES})
 
 #    include_directories( ${INCLUDE_DIRECTORIES})
     Add_Library(${_name} ${OutFileName})
-    Set_Target_properties(${_name} PROPERTIES SUFFIX ".dll")
+    Set_Target_properties(${_name} PROPERTIES SUFFIX ".dll" FOLDER Dictionaries)
 #  Install(TARGETS ${_name} DESTINATION ${LIB_INSTALL_DIR})
   EndIf(${_name} MATCHES ipc)
 
@@ -286,7 +286,7 @@ ForEach(_name ${CINTINCDLLNAMES})
     endif()
 
     Add_Custom_Command(OUTPUT ${OutFileName} 
-                       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${_ExtraFlag} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles} ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h ${CMAKE_SOURCE_DIR}/cint/cint/lib/posix/posix.h
+                       COMMAND cint_tmp -K -w1 -z${_name} -n${OutFileName} -D__MAKECINT__ -DG__MAKECINT ${_ExtraFlag} -c-2 -Z0 ${InFileName} ${AdditionalHeaderFiles} ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h ${CMAKE_SOURCE_DIR}/cint/cint/lib/posix/posix.h
                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                        DEPENDS ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h
                                cint_tmp

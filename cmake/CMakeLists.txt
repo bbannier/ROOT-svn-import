@@ -14,6 +14,9 @@ set(ROOT_INCLUDE_DIR ${HEADER_OUTPUT_PATH})
 #---Where to look first for cmake modules, before ${CMAKE_ROOT}/Modules/ is checked-------------
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
+#---Enable Folders in IDE like Visual Studio----------------------------------------------------
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 #---Load some basic macros which are needed later for the confiuration and build----------------
 include(RootNewMacros)
 include(CheckCompiler)

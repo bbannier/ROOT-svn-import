@@ -12,5 +12,5 @@ set(LibCore_SRCS ${LibCore_SRCS} ${sources} PARENT_SCOPE)
 set(LibCore_LINKDEF ${LibCore_LINKDEF} ${CMAKE_CURRENT_SOURCE_DIR}/inc/LinkDef.h PARENT_SCOPE)
 set(EDITLINE_CXX_SOURCES  ${sources} PARENT_SCOPE)
 add_custom_target(EDITLINE_DICTIONARY DEPENDS G__Editline.cxx)
-
+set_target_properties(EDITLINE_DICTIONARY PROPERTIES FOLDER Dictionaries)
 ROOT_INSTALL_HEADERS()

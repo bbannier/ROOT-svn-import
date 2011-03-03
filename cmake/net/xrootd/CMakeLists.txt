@@ -28,7 +28,8 @@ foreach(bin ${xrootdexes})
   set(finalexes ${finalexes} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${bin})
 endforeach()
 
-add_custom_target(XROOTD_LOCAL_TARGET ALL DEPENDS ${finalexes} ${finallibs})
+add_custom_target(XROOTD ALL DEPENDS ${finalexes} ${finallibs})
+set_target_properties(XROOTD PROPERTIES FOLDER Builtins)
 
 if(NOT WIN32)
   execute_process(COMMAND uname -r OUTPUT_VARIABLE RELE)

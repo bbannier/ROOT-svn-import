@@ -35,7 +35,7 @@ add_custom_command( OUTPUT ${gdklib} ${gdkdll}
 					DEPENDS ${gdkliba} )
 
 add_custom_target(GDKLIB DEPENDS ${gdklib})
-
+set_target_properties(GDKLIB PROPERTIES FOLDER Builtins)
 
 ROOT_GENERATE_DICTIONARY(G__Win32gdk TGWin32.h TGWin32GL.h LINKDEF LinkDef.h)
 ROOT_GENERATE_ROOTMAP(Win32gdk LINKDEF LinkDef.h DEPENDENCIES)
