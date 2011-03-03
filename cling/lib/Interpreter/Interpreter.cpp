@@ -325,7 +325,9 @@ namespace cling {
       //bool prevDiagSupp = Diag.getSuppressAllDiagnostics();
       //Diag.setSuppressAllDiagnostics(true);
       // fprintf(stderr,"nonTUsrc=%s\n",nonTUsrc.c_str());
-      CI = m_IncrASTParser->parse(nonTUsrc, consumer);
+      m_IncrASTParser->addConsumer(consumer);
+      CI = m_IncrASTParser->parse(nonTUsrc);
+      m_IncrASTParser->removeConsumer(consumer);
       //Diag.setSuppressAllDiagnostics(prevDiagSupp);
 
       if (!CI) {
@@ -587,8 +589,7 @@ namespace cling {
   clang::CompilerInstance*
   Interpreter::compileString(const std::string& argCode)
   {
-    return m_IncrASTParser->parse(argCode,
-                                  m_ExecutionContext->getCodeGenerator());
+    return m_IncrASTParser->parse(argCode);
   }
   
   clang::CompilerInstance*

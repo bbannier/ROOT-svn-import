@@ -138,8 +138,7 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
    }
    
    clang::CompilerInstance*
-   IncrementalASTParser::parse(llvm::StringRef src,
-                               clang::ASTConsumer* AddConsumer /* = 0 */)
+   IncrementalASTParser::parse(llvm::StringRef src)
    {
       // Add src to the memory buffer, parse it, and add it to
       // the AST. Returns the CompilerInstance (and thus the AST).
@@ -148,11 +147,7 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
       
       clang::Preprocessor& PP = m_CI->getPreprocessor();
       m_CI->getDiagnosticClient().BeginSourceFile(m_CI->getLangOpts(), &PP);
-      
-      if (AddConsumer) {
-         m_Consumer->Consumers.push_back(AddConsumer);
-      }
-      
+            
       if (src.size()) {
          std::ostringstream source_name;
          source_name << "input_line_" << (m_MemoryBuffer.size()+1);
@@ -217,9 +212,6 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
       clang::ASTContext *Ctx = &m_CI->getASTContext();
       Consumer->HandleTranslationUnit(*Ctx);
       
-      if (AddConsumer) {
-         m_Consumer->Consumers.pop_back();
-      }
       DC->EndSourceFile();
       unsigned err_count = DC->getNumErrors();
       if (err_count) {
