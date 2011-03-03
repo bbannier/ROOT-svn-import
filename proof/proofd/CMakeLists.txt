@@ -26,9 +26,9 @@ else()
   ROOT_EXECUTABLE(xproofd X*.cxx LIBRARIES ${exelibs} ${SYSLIBS})
   ROOT_LINKER_LIBRARY(XrdProofd X*.cxx LIBRARIES ${libs})
 
-  add_dependencies(proofd XROOTD_LOCAL_TARGET)
-  add_dependencies(xproofd XROOTD_LOCAL_TARGET)
-  add_dependencies(XrdProofd XROOTD_LOCAL_TARGET)
+  add_dependencies(proofd XROOTD)
+  add_dependencies(xproofd XROOTD)
+  add_dependencies(XrdProofd XROOTD)
 endif()
 
 ROOT_INSTALL_HEADERS()

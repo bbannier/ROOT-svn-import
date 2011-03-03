@@ -108,29 +108,36 @@ ROOT_GENERATE_ROOTMAP(Core LINKDEF ${LibCore_LINKDEF})
 
 include_directories( ${INCLUDE_DIRECTORIES})
 
-
-# Here all objects ar put together into one share library
 if(WIN32)
-	foreach(src ${LibCore_SRCS} ${CORE_DICTIONARIES})
-	  string (REPLACE ${CMAKE_CURRENT_SOURCE_DIR} "" lsrc ${src})
-	  string (REPLACE ${CMAKE_CURRENT_BINARY_DIR} "" msrc ${lsrc})
-	  string (REGEX REPLACE "\\.cxx" ".obj" pobj ${msrc})
-	  string (REGEX REPLACE "\\.c" ".obj" obj ${pobj})
-	  set(lib_objs ${lib_objs} ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/Core.dir/${obj})
-	endforeach()
-	add_library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES} Core.def)
-    add_custom_command(TARGET Core PRE_LINK
-                       COMMAND bindexplib
-                       ARGS -o Core.def libCore ${lib_objs} 
-					   DEPENDS bindexplib )
-    set_source_files_properties(Core.def PROPERTIES GENERATED 1)
-    set(corelinklibs Cint shell32.lib WSock32.lib Oleaut32.lib Iphlpapi.lib)
-else()
-   add_library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES})
+   set(corelinklibs Cint shell32.lib WSock32.lib Oleaut32.lib Iphlpapi.lib)
 endif()
-Target_Link_Libraries(Core ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
-Set_Target_properties(Core PROPERTIES ${ROOT_LIBRARY_PROPERTIES})
-Add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY  META_DICTIONARY METAUTILS_DICTIONARY 
+
+ROOT_LINKER_LIBRARY(Core ${LibCore_SRCS} ${CORE_DICTIONARIES} 
+                    LIBRARIES ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
+ 
+# Here all objects ar put together into one share library
+#=if(WIN32)
+#=	foreach(src ${LibCore_SRCS} ${CORE_DICTIONARIES})
+#=	  string (REPLACE ${CMAKE_CURRENT_SOURCE_DIR} "" lsrc ${src})
+#=	  string (REPLACE ${CMAKE_CURRENT_BINARY_DIR} "" msrc ${lsrc})
+#=	  string (REGEX REPLACE "\\.cxx" ".obj" pobj ${msrc})
+#=	  string (REGEX REPLACE "\\.c" ".obj" obj ${pobj})
+#=	  set(lib_objs ${lib_objs} ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/Core.dir/${obj})
+#=	endforeach()
+#=	add_library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES} Core.def)
+#=    add_custom_command(TARGET Core PRE_LINK
+#=                       COMMAND bindexplib
+#=                       ARGS -o Core.def libCore ${lib_objs} 
+#=					   DEPENDS bindexplib )
+#=    set_source_files_properties(Core.def PROPERTIES GENERATED 1)
+#=    set(corelinklibs Cint shell32.lib WSock32.lib Oleaut32.lib Iphlpapi.lib)
+#=else()
+#=   add_library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES})
+#=endif()
+#=Target_Link_Libraries(Core ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
+#=Set_Target_properties(Core PROPERTIES ${ROOT_LIBRARY_PROPERTIES})
+
+add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY  META_DICTIONARY METAUTILS_DICTIONARY 
                       UNIX_DICTIONARY BASE_DICTIONARY)
 if(editline)
   add_dependencies(Core EDITLINE_DICTIONARY)
@@ -139,7 +146,7 @@ if(builtin_pcre)
   add_dependencies(Core PCRE)
 endif()
 
-install(TARGETS Core RUNTIME DESTINATION bin
-                     LIBRARY DESTINATION lib
-                     ARCHIVE DESTINATION lib)
-Set(RootConfigFeatures ${RootConfigFeatures} PARENT_SCOPE)
+#install(TARGETS Core RUNTIME DESTINATION bin
+#                     LIBRARY DESTINATION lib
+#                     ARCHIVE DESTINATION lib)
+#Set(RootConfigFeatures ${RootConfigFeatures} PARENT_SCOPE)

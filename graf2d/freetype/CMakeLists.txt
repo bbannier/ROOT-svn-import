@@ -110,4 +110,5 @@ endif()
 # dte nothing is done. This target depends on the libfreetype.a in the library directory of the 
 # build directory.
 add_custom_target(FREETYPE DEPENDS ${freetypelib})
+set_target_properties(FREETYPE PROPERTIES FOLDER Builtins)
 install(FILES ${freetypelib} DESTINATION lib)

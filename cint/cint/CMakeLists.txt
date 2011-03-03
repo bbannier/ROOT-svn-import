@@ -87,7 +87,7 @@ add_custom_target(IOSENUM_H
    COMMAND cmake -E copy ${CMAKE_CURRENT_BINARY_DIR}/iosenum.h  ${HEADER_OUTPUT_PATH}/iosenum.h
    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/iosenum.h 
 )
-
+set_target_properties(IOSENUM_H PROPERTIES FOLDER Builtins)
 #---special compile settings------------------------------------------------------------------------------
 foreach(_value ${CINT_SRCS})
   get_filename_component(_name ${_value} NAME_WE) 

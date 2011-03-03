@@ -22,5 +22,5 @@ set(LibCore_SRCS ${LibCore_SRCS} ${sources} PARENT_SCOPE)
 set(LibCore_LINKDEF ${LibCore_LINKDEF} ${CMAKE_CURRENT_SOURCE_DIR}/inc/LinkDef.h PARENT_SCOPE)
 add_custom_target(META_DICTIONARY DEPENDS ${dictionaries})
 set(META_DICTIONARY ${dictionaries}  PARENT_SCOPE)
-
+set_target_properties(META_DICTIONARY PROPERTIES FOLDER Dictionaries)
 ROOT_INSTALL_HEADERS()
