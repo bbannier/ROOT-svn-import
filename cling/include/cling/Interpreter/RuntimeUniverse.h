@@ -38,7 +38,7 @@ namespace cling {
       //template<typename T> class TypeExtractionHelper{};
       
       template<typename T>
-      T EvalProxy(const char* expr, void* varaddr[], clang::DeclContext* DC ) {
+      T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC ) {
         llvm::GenericValue result(gCling->EvalCore(expr, varaddr, DC));
         //FIXME: we should return T calculated from result
         //printf("%s", expr);

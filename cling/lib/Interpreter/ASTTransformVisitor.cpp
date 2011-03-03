@@ -133,7 +133,7 @@ namespace cling {
   }
   
   void ASTTransformVisitor::VisitTemplateDecl(TemplateDecl *D) {     
-    if (D->getNameAsString().compare("EvalProxy") == 0) {
+    if (D->getNameAsString().compare("EvaluateProxyT") == 0) {
       NamespaceDecl* internal = dyn_cast<NamespaceDecl>(D->getDeclContext());
       if (internal && internal->getNameAsString().compare("internal") == 0) {
         NamespaceDecl* runtime = dyn_cast<NamespaceDecl>(internal->getParent());
