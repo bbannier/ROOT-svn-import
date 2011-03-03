@@ -39,7 +39,7 @@ namespace cling {
       
       template<typename T>
       T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC ) {
-        llvm::GenericValue result(gCling->EvalCore(expr, varaddr, DC));
+        llvm::GenericValue result(gCling->EvaluateWithContext(expr, varaddr, DC));
         //FIXME: we should return T calculated from result
         //printf("%s", expr);
         return T();
@@ -49,3 +49,4 @@ namespace cling {
 } // end namespace cling
 
 using namespace cling::runtime;
+

@@ -734,7 +734,9 @@ namespace cling {
   
 
    // Implements the interpretation of the unknown symbols. 
-   llvm::GenericValue Interpreter::EvalCore(const char* expr, void* varaddr[], clang::DeclContext* DC) {
+   llvm::GenericValue Interpreter::EvaluateWithContext(const char* expr,
+                                                       void* varaddr[],
+                                                       clang::DeclContext* DC) {
       std::string exprStr(expr);
       int i = 0;
       size_t found;
