@@ -146,7 +146,7 @@ namespace cling {
     m_PragmaHandler = new clang::PragmaNamespace("cling");
 
     m_CIBuilder.reset(new CIBuilder(fake_argc, fake_argv, llvmdir));
-
+    
     m_IncrASTParser.reset(new IncrementalASTParser(createCI(),
                                                    &getPragmaHandler(),
                                                    this));
@@ -154,7 +154,14 @@ namespace cling {
     
     m_InputValidator.reset(new InputValidator(createCI()));
 
-    m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));       
+    m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
+
+    // Start the code generation on the old AST:
+    if (!m_ExecutionContext->startCodegen(m_IncrASTParser->getCI(),
+                                          "Interpreter::processLine() input")) {
+      fprintf(stderr, "Module creation failed!\n");
+    }
+    m_IncrASTParser->addConsumer(m_ExecutionContext->getCodeGenerator());
     
     // Allow the interpreter to find itself.
     // OBJ first: if it exists it should be more up to date
@@ -166,8 +173,7 @@ namespace cling {
 
     // Set up the gCling variable
     std::stringstream initializer;
-    initializer << "gCling=(Interpreter*)" << this <<";\n";    
-
+    initializer << "gCling=(cling::Interpreter*)" << this <<";\n";    
     processLine(initializer.str());
   }
   
@@ -248,15 +254,6 @@ namespace cling {
       wrapped = input_line;
     }
     
-    //
-    // Start the code generation on the old AST:
-    //
-    if (!m_ExecutionContext->startCodegen(m_IncrASTParser->getCI(),
-                                          "Interpreter::processLine() input")) {
-      fprintf(stderr, "Module creation failed!\n");
-      return 0;
-    }
-
     //
     //  Send the wrapped code through the
     //  frontend to produce a translation unit.

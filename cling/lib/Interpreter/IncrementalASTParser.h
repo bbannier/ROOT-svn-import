@@ -56,8 +56,6 @@ namespace cling {
   
 
   private:
-    // Should be removed because breaks the encapsulation
-    Interpreter* m_Interpreter;  // needed by the m_Transformer
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     clang::Sema *m_Sema; // sema used for parsing (owned by CI)
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)

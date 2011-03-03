@@ -72,7 +72,7 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
    IncrementalASTParser::IncrementalASTParser(clang::CompilerInstance* CI,
                                               clang::PragmaNamespace* Pragma,
                                               Interpreter* Interp):
-      m_Interpreter(Interp), m_Consumer(0), m_LastTopLevelDecl(0), m_FirstTopLevelDecl(0) {
+      m_Consumer(0), m_LastTopLevelDecl(0), m_FirstTopLevelDecl(0) {
       assert(CI && "CompilerInstance is (null)!");
       m_CI.reset(CI);
       
@@ -100,7 +100,6 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
       }
       
       m_Consumer = new ChainedASTConsumer();
-      m_Consumer->Consumers.push_back(new clang::ASTConsumer());
       m_Consumer->Initialize(*Ctx);
       CI->setASTConsumer(m_Consumer);
       
@@ -118,7 +117,7 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
          SC->InitializeSema(*m_Sema);
       
       // Create the visitor that will transform all dependents that are left.
-      m_Transformer.reset(new ASTTransformVisitor(m_Interpreter, &CI->getSema()));      
+      m_Transformer.reset(new ASTTransformVisitor(&CI->getSema()));      
    }
    
    IncrementalASTParser::~IncrementalASTParser() {}
@@ -246,6 +245,7 @@ class MutableMemoryBuffer: public llvm::MemoryBuffer {
 
    void IncrementalASTParser::addConsumer(clang::ASTConsumer* consumer) {
       m_Consumer->Consumers.push_back(consumer);
+      consumer->Initialize(getCI()->getSema().getASTContext());
    }
 
    void IncrementalASTParser::removeConsumer(clang::ASTConsumer* consumer) {

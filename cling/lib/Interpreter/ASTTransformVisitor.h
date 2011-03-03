@@ -51,7 +51,6 @@ namespace cling {
       clang::DeclContext* m_CurDeclContext; // We need it for Evaluate()
       clang::QualType m_DeclContextType; // Used for building Eval args
    public: // members
-      Interpreter* m_Interpreter; //Pointer to the Interpreter object
       clang::Sema* SemaPtr;
       
    public: // types
@@ -65,7 +64,7 @@ namespace cling {
       
       //Constructors
       ASTTransformVisitor();      
-      ASTTransformVisitor(Interpreter* Interp, clang::Sema* SemaPtr);
+      ASTTransformVisitor(clang::Sema* SemaPtr);
       
       // Destructors
       ~ASTTransformVisitor() { }
@@ -101,7 +100,6 @@ namespace cling {
       clang::Expr *BuildEvalArg0(clang::ASTContext &C);
       clang::Expr *BuildEvalArg1(clang::ASTContext &C);
       clang::Expr *BuildEvalArg2(clang::ASTContext &C);
-      clang::Expr *BuildEvalArg3(clang::ASTContext &C);
 
       // Helper
       bool IsArtificiallyDependent(clang::Expr *Node);
