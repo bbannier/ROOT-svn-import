@@ -103,9 +103,9 @@ namespace cling {
     
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
-    llvm::GenericValue EvalCore(const char* expr, 
-                                void* varaddr[], 
-                                clang::DeclContext* DC);
+    llvm::GenericValue EvaluateWithContext(const char* expr, 
+                                           void* varaddr[], 
+                                           clang::DeclContext* DC);
     // Define EvaluateProxyT as friend because it will use EvalCore
     template<typename T> 
     friend T runtime::internal::EvaluateProxyT(const char* expr,
