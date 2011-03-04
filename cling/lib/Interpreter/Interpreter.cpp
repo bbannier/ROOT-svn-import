@@ -6,7 +6,7 @@
 
 #include "cling/Interpreter/Interpreter.h"
 
-#include "cling/Interpreter/CIBuilder.h"
+#include "cling/Interpreter/CIFactory.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -137,7 +137,7 @@ namespace cling {
   // Constructor
   //---------------------------------------------------------------------------
   Interpreter::Interpreter(const char* llvmdir /*= 0*/):
-  m_CIBuilder(0),
+  m_CIFactory(0),
   m_UniqueCounter(0),
   m_printAST(false),
   m_LastDump(0),
@@ -145,7 +145,7 @@ namespace cling {
   {
     m_PragmaHandler = new clang::PragmaNamespace("cling");
 
-    m_CIBuilder.reset(new CIBuilder(fake_argc, fake_argv, llvmdir));
+    m_CIFactory.reset(new CIFactory(fake_argc, fake_argv, llvmdir));
     
     m_IncrParser.reset(new IncrementalParser(createCI(), &getPragmaHandler()));
     m_ExecutionContext.reset(new ExecutionContext(*this));
@@ -213,7 +213,7 @@ namespace cling {
   clang::CompilerInstance*
   Interpreter::createCI() const
   {
-    return m_CIBuilder->createCI();
+    return m_CIFactory->createCI();
   }
   
   clang::CompilerInstance*
