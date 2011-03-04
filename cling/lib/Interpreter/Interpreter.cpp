@@ -257,8 +257,6 @@ namespace cling {
     //  frontend to produce a translation unit.
     //
     clang::CompilerInstance* CI = compileString(wrapped);
-    // First clear up all the fake decls
-    m_IncrParser->getTransformer()->RemoveFakeDecls();
 
     if (!CI) {
       return 0;

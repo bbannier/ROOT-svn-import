@@ -5,12 +5,11 @@
 //------------------------------------------------------------------------------
 
 #include "ASTTransformVisitor.h"
+#include "DynamicLookup.h"
 #include "cling/Interpreter/Interpreter.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/Sema/Scope.h"
-#include "clang/Sema/Lookup.h"
 
 using namespace clang;
 
@@ -82,6 +81,9 @@ namespace cling {
   // Constructors
   ASTTransformVisitor::ASTTransformVisitor(Sema* SemaPtr)
       : m_EvalDecl(0), m_CurDeclContext(0), SemaPtr(SemaPtr) {
+    m_DynIDHandler.reset(new DynamicIDHandler(SemaPtr));
+    SemaPtr->ExternalSource = m_DynIDHandler.get();
+    
   }
   
   ASTTransformVisitor::ASTTransformVisitor(): m_EvalDecl(0), m_CurDeclContext(0), SemaPtr(0){
@@ -90,30 +92,7 @@ namespace cling {
   void ASTTransformVisitor::Initialize() {
     //m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");
   }
-  
-  // DynamicLookupSource
-  bool ASTTransformVisitor::LookupUnqualified(LookupResult &R, Scope *S) {
-    if (R.getLookupKind() != Sema::LookupOrdinaryName) return false;
-    if (R.isForRedeclaration()) return false;
-    DeclarationName Name = R.getLookupName();
-    IdentifierInfo *II = Name.getAsIdentifierInfo();
-    SourceLocation NameLoc = R.getNameLoc();
-    FunctionDecl *D = dyn_cast<FunctionDecl>(R.getSema().ImplicitlyDefineFunction(NameLoc, *II, S));
-    if (D) { 
-      BuiltinType *Ty = new BuiltinType(BuiltinType::Dependent);
-      QualType QTy(Ty, 0);            
-      D->setType(QTy);
-      R.addDecl(D);
-      // Mark this declaration for removal
-      m_FakeDecls.push_back(D);
-      
-      // Say that we can handle the situation. Clang should try to recover
-      return true;
-    }
-    // We cannot handle the situation. Give up
-    return false;              
-  }
-  
+    
   // DeclVisitor
   
   void ASTTransformVisitor::Visit(Decl *D) {
@@ -236,7 +215,11 @@ namespace cling {
     CallExpr* EvalCall = BuildEvalCallExpr(InstTy, SubTree, CallArgs);
     
     // Add substitution mapping
-    getSubstSymbolMap()[EvalCall] = SubTree;      
+    getSubstSymbolMap()[EvalCall] = SubTree;
+    
+    // Tell the DynamicIDHandler that the ID has been substituted and it can 
+    // clean up
+    m_DynIDHandler->RemoveFakeDecls();
     
     return EvalCall;
   }
@@ -390,15 +373,7 @@ namespace cling {
   // end EvalBuilder
   
   // Helpers
-  
-  // Removes the implicitly created functions, which help to emulate the dynamic scopes
-  void ASTTransformVisitor::RemoveFakeDecls() {      
-    Scope *S = SemaPtr->getScopeForContext(SemaPtr->getASTContext().getTranslationUnitDecl());
-    for (unsigned int i = 0; i < m_FakeDecls.size(); ++i) {
-      S->RemoveDecl(m_FakeDecls[i]);
-    }
-  }
-  
+    
   bool ASTTransformVisitor::ShouldVisit(Decl *D) {
     while (true) {
       if (isa<TemplateTemplateParmDecl>(D))
