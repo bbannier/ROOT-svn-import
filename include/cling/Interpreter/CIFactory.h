@@ -4,8 +4,8 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
-#ifndef CLING_CIBUILDER_H
-#define CLING_CIBUILDER_H
+#ifndef CLING_CIFACTORY_H
+#define CLING_CIFACTORY_H
 
 #include "clang/Frontend/CompilerInstance.h"
 
@@ -21,13 +21,13 @@ namespace clang {
 }
 
 namespace cling {
-class CIBuilder {
+class CIFactory {
 public:
    //---------------------------------------------------------------------
    //! Constructor
    //---------------------------------------------------------------------
-   CIBuilder(int argc, const char* const *argv, const char* llvmdir = 0);
-   ~CIBuilder();
+   CIFactory(int argc, const char* const *argv, const char* llvmdir = 0);
+   ~CIFactory();
 
    clang::CompilerInstance* createCI() const;
    llvm::LLVMContext* getLLVMContext() const { return m_llvm_context.get(); }
@@ -40,4 +40,4 @@ private:
    mutable llvm::OwningPtr<llvm::LLVMContext> m_llvm_context; // We own, our types.
 };
 }
-#endif // CLING_CIBUILDER_H
+#endif // CLING_CIFACTORY_H

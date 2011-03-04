@@ -24,7 +24,7 @@
 #include "clang/AST/DeclGroup.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 
-#include "cling/Interpreter/CIBuilder.h"
+#include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/Interpreter.h"
 
 #include <cstdio>
@@ -77,7 +77,7 @@ ExecutionContext::ExecutionContext(Interpreter& Interp):
 
    m_ee_module
       = new llvm::Module("_Clang_first",
-                         *Interp.getCIBuilder().getLLVMContext());
+                         *Interp.getCIFactory().getLLVMContext());
    //
    //  Create an execution engine to use.
    //

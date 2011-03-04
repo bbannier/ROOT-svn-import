@@ -217,7 +217,7 @@ namespace cling {
     DC->EndSourceFile();
     unsigned err_count = DC->getNumErrors();
     if (err_count) {
-      fprintf(stderr, "IncrementalASTParser::parse(): Parse failed!\n");
+      fprintf(stderr, "IncrementalParser::parse(): Parse failed!\n");
       emptyLastFunction();
       return 0;
     }

@@ -4,7 +4,7 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
-#include "cling/Interpreter/CIBuilder.h"
+#include "cling/Interpreter/CIFactory.h"
 
 #include "cling/Interpreter/Diagnostics.h"
 
@@ -25,7 +25,7 @@ namespace cling {
    {
    }
    
-   CIBuilder::CIBuilder(int argc, const char* const *argv, const char* llvmdir):
+   CIFactory::CIFactory(int argc, const char* const *argv, const char* llvmdir):
       m_argc(argc),
       m_argv(argv),
       m_llvm_context(0)
@@ -65,13 +65,13 @@ namespace cling {
       }
    }
    
-   CIBuilder::~CIBuilder()
+   CIFactory::~CIFactory()
    {
       // Destruct the instance builder
    }
    
    clang::CompilerInstance*
-   CIBuilder::createCI() const {
+   CIFactory::createCI() const {
       //
       // Create and setup a compiler instance.
       //
