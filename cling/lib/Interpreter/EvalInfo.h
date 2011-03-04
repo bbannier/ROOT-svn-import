@@ -12,7 +12,7 @@ namespace clang {
 }
 
 namespace cling {
-   // The ASTTransformVisitor needs to have information about the nodes
+   // The DynamicExprTransformer needs to have information about the nodes
    // it visits in order to escape properly the unknown symbols. Walking up 
    // it needs to know not only the node, which is being returned from the 
    // visited subnode, but it needs information from its subnode if the 

@@ -20,7 +20,6 @@
 
 #include "cling/Interpreter/Diagnostics.h"
 #include "cling/Interpreter/Interpreter.h"
-#include "ASTTransformVisitor.h"
 #include "DynamicLookup.h"
 #include "ChainedASTConsumer.h"
 
@@ -120,7 +119,7 @@ namespace cling {
       SC->InitializeSema(*m_Sema);
     
     // Create the visitor that will transform all dependents that are left.
-    m_Transformer.reset(new ASTTransformVisitor(&CI->getSema()));      
+    m_Transformer.reset(new DynamicExprTransformer(&CI->getSema()));      
   }
   
   IncrementalParser::~IncrementalParser() {}

@@ -13,6 +13,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
@@ -38,10 +39,10 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "Visitors.h"
 #include "ClangUtils.h"
+#include "DynamicLookup.h"
 #include "ExecutionContext.h"
 #include "IncrementalParser.h"
 #include "InputValidator.h"
-#include "ASTTransformVisitor.h"
 
 #include <cstdio>
 #include <iostream>
