@@ -21,6 +21,7 @@
 #include "cling/Interpreter/Diagnostics.h"
 #include "cling/Interpreter/Interpreter.h"
 #include "ASTTransformVisitor.h"
+#include "DynamicLookup.h"
 #include "ChainedASTConsumer.h"
 
 #include <stdio.h>
@@ -136,7 +137,6 @@ namespace cling {
     
     // Attach the dynamic lookup
     getTransformer()->Initialize();
-    getCI()->getSema().ExternalSource = getTransformer();
   }
   
   clang::CompilerInstance*
@@ -221,7 +221,7 @@ namespace cling {
       emptyLastFunction();
       return 0;
     }
-    return m_CI.get();  
+    return m_CI.get();
   }   
   
   void IncrementalParser::emptyLastFunction() {
