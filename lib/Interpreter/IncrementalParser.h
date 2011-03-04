@@ -4,8 +4,8 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
-#ifndef CLING_INCREMENTAL_AST_PARSER_H
-#define CLING_INCREMENTAL_AST_PARSER_H
+#ifndef CLING_INCREMENTAL_PARSER_H
+#define CLING_INCREMENTAL_PARSER_H
 
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/OwningPtr.h"
@@ -28,32 +28,31 @@ namespace cling {
   class ChainedASTConsumer;
   class ASTTransformVisitor;
   class Interpreter;
-
-  class IncrementalASTParser {
+  
+  class IncrementalParser {
   public:
-    IncrementalASTParser(clang::CompilerInstance* CI,
-                         clang::PragmaNamespace* Pragma,
-                         Interpreter* Interp);
-    ~IncrementalASTParser();
+    IncrementalParser(clang::CompilerInstance* CI, 
+                      clang::PragmaNamespace* Pragma);
+    ~IncrementalParser();
     void Initialize();
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
     clang::CompilerInstance* parse(llvm::StringRef src);
     
     MutableMemoryBuffer* getCurBuffer() {
-       return m_MemoryBuffer.back();
+      return m_MemoryBuffer.back();
     }
-   
-   ASTTransformVisitor *getTransformer() const { return m_Transformer.get(); }
-
-   void emptyLastFunction();
-   clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
-   clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
-
-   void addConsumer(clang::ASTConsumer* consumer);
-   void removeConsumer(clang::ASTConsumer* consumer);
-  
-
+    
+    ASTTransformVisitor *getTransformer() const { return m_Transformer.get(); }
+    
+    void emptyLastFunction();
+    clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
+    clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
+    
+    void addConsumer(clang::ASTConsumer* consumer);
+    void removeConsumer(clang::ASTConsumer* consumer);
+    
+    
   private:
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     clang::Sema *m_Sema; // sema used for parsing (owned by CI)
@@ -66,4 +65,4 @@ namespace cling {
     clang::Decl* m_FirstTopLevelDecl; // first top level decl
   };
 }
-#endif // CLING_INCREMENTAL_AST_PARSER_H
+#endif // CLING_INCREMENTAL_PARSER_H

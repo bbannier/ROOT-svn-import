@@ -35,7 +35,7 @@ namespace cling {
   }
   class CIBuilder;
   class ExecutionContext;
-  class IncrementalASTParser;
+  class IncrementalParser;
   class InputValidator;
   
   //---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ namespace cling {
   private:
     llvm::OwningPtr<cling::CIBuilder> m_CIBuilder; // our compiler intsance builder
     llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
-    llvm::OwningPtr<IncrementalASTParser> m_IncrASTParser; // incremental AST and its parser
+    llvm::OwningPtr<IncrementalParser> m_IncrParser; // incremental AST and its parser
     llvm::OwningPtr<InputValidator> m_InputValidator; // balanced paren etc
     clang::PragmaNamespace* m_PragmaHandler; // pragma cling ..., owned by Preprocessor
     unsigned long long m_UniqueCounter; // number of generated call wrappers
@@ -116,7 +116,6 @@ namespace cling {
     // compileString should be private, when we create the Runtime Env class.
     clang::CompilerInstance* compileString(const std::string& srcCode);
     llvm::GenericValue Evaluate(const char* expr, clang::DeclContext* DC);
-    
   };
   
 } // namespace cling
