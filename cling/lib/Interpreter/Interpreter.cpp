@@ -39,7 +39,7 @@
 #include "Visitors.h"
 #include "ClangUtils.h"
 #include "ExecutionContext.h"
-#include "IncrementalASTParser.h"
+#include "IncrementalParser.h"
 #include "InputValidator.h"
 #include "ASTTransformVisitor.h"
 
@@ -147,9 +147,7 @@ namespace cling {
 
     m_CIBuilder.reset(new CIBuilder(fake_argc, fake_argv, llvmdir));
     
-    m_IncrASTParser.reset(new IncrementalASTParser(createCI(),
-                                                   &getPragmaHandler(),
-                                                   this));
+    m_IncrParser.reset(new IncrementalParser(createCI(), &getPragmaHandler()));
     m_ExecutionContext.reset(new ExecutionContext(*this));
     
     m_InputValidator.reset(new InputValidator(createCI()));
@@ -157,11 +155,11 @@ namespace cling {
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
     // Start the code generation on the old AST:
-    if (!m_ExecutionContext->startCodegen(m_IncrASTParser->getCI(),
+    if (!m_ExecutionContext->startCodegen(m_IncrParser->getCI(),
                                           "Interpreter::processLine() input")) {
       fprintf(stderr, "Module creation failed!\n");
     }
-    m_IncrASTParser->addConsumer(m_ExecutionContext->getCodeGenerator());
+    m_IncrParser->addConsumer(m_ExecutionContext->getCodeGenerator());
     
     // Allow the interpreter to find itself.
     // OBJ first: if it exists it should be more up to date
@@ -169,7 +167,7 @@ namespace cling {
     AddIncludePath(CLING_INSTDIR_INCL);
 
     // Warm them up
-    m_IncrASTParser->Initialize();
+    m_IncrParser->Initialize();
 
     // Set up the gCling variable
     std::stringstream initializer;
@@ -221,7 +219,7 @@ namespace cling {
   clang::CompilerInstance*
   Interpreter::getCI() const
   {
-    return m_IncrASTParser->getCI();
+    return m_IncrParser->getCI();
   }
   
   int
@@ -260,7 +258,7 @@ namespace cling {
     //
     clang::CompilerInstance* CI = compileString(wrapped);
     // First clear up all the fake decls
-    m_IncrASTParser->getTransformer()->RemoveFakeDecls();
+    m_IncrParser->getTransformer()->RemoveFakeDecls();
 
     if (!CI) {
       return 0;
@@ -325,9 +323,9 @@ namespace cling {
       //bool prevDiagSupp = Diag.getSuppressAllDiagnostics();
       //Diag.setSuppressAllDiagnostics(true);
       // fprintf(stderr,"nonTUsrc=%s\n",nonTUsrc.c_str());
-      m_IncrASTParser->addConsumer(consumer);
-      CI = m_IncrASTParser->parse(nonTUsrc);
-      m_IncrASTParser->removeConsumer(consumer);
+      m_IncrParser->addConsumer(consumer);
+      CI = m_IncrParser->parse(nonTUsrc);
+      m_IncrParser->removeConsumer(consumer);
       //Diag.setSuppressAllDiagnostics(prevDiagSupp);
 
       if (!CI) {
@@ -352,7 +350,7 @@ namespace cling {
       std::vector<clang::Stmt*>::iterator stmt_iter = stmts.begin();
       std::vector<clang::Stmt*>::iterator stmt_end = stmts.end();
 
-      MapTy& Map = m_IncrASTParser->getTransformer()->getSubstSymbolMap(); // delayed id substitutions
+      MapTy& Map = m_IncrParser->getTransformer()->getSubstSymbolMap(); // delayed id substitutions
 
       for (; stmt_iter != stmt_end; ++stmt_iter) {
         clang::Stmt* cur_stmt = *stmt_iter;
@@ -365,7 +363,7 @@ namespace cling {
 
         //const llvm::MemoryBuffer* MB = SM.getBuffer(SM.getFileID(cur_stmt->getLocStart()));
         //const llvm::MemoryBuffer* MB = SM.getBuffer(SM.getMainFileID());
-        const llvm::MemoryBuffer* MB = (const llvm::MemoryBuffer*)m_IncrASTParser->getCurBuffer();
+        const llvm::MemoryBuffer* MB = (const llvm::MemoryBuffer*)m_IncrParser->getCurBuffer();
         const char* buffer = MB->getBufferStart();
         std::string stmt_string;
         {
@@ -589,7 +587,7 @@ namespace cling {
   clang::CompilerInstance*
   Interpreter::compileString(const std::string& argCode)
   {
-    return m_IncrASTParser->parse(argCode);
+    return m_IncrParser->parse(argCode);
   }
   
   clang::CompilerInstance*
@@ -630,7 +628,7 @@ namespace cling {
     if (allowSharedLib && tryLoadSharedLib(filename))
       return 0;
     
-    if (!m_ExecutionContext->startCodegen(m_IncrASTParser->getCI(), filename)) {
+    if (!m_ExecutionContext->startCodegen(m_IncrParser->getCI(), filename)) {
       fprintf(stderr, "Error: could not compile prompt history!\n");
       return 1;
     }    
@@ -700,13 +698,13 @@ namespace cling {
      CI  = compileString(templatedClass);
      clang::Decl *templatedClassDecl = 0;
      if (CI)
-        templatedClassDecl = m_IncrASTParser->getLastTopLevelDecl();
+        templatedClassDecl = m_IncrParser->getLastTopLevelDecl();
 
      //template <> dummy<clang::DeclContext*> {};
      std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
      CI = compileString(explicitSpecialization);
      if (CI) {
-        if (clang::ClassTemplateSpecializationDecl* D = dyn_cast<clang::ClassTemplateSpecializationDecl>(m_IncrASTParser->getLastTopLevelDecl())) {
+        if (clang::ClassTemplateSpecializationDecl* D = dyn_cast<clang::ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
            Result = D->getTemplateArgs()[0].getAsType();
 
            // TODO: Remove the fake Decls
@@ -769,7 +767,7 @@ namespace cling {
     //
     // Start the code generation on the old AST:
     //
-      if (!m_ExecutionContext->startCodegen(m_IncrASTParser->getCI(),
+      if (!m_ExecutionContext->startCodegen(m_IncrParser->getCI(),
                                             "Interpreter::processLine() input")) {
          fprintf(stderr, "Module creation failed!\n");
       }
@@ -806,17 +804,17 @@ namespace cling {
       if (m_printAST) {
          if (!m_ASTDumper)
             m_ASTDumper = new ASTTLDPrinter();
-         m_IncrASTParser->addConsumer(m_ASTDumper);
+         m_IncrParser->addConsumer(m_ASTDumper);
       }
       else
-         m_IncrASTParser->removeConsumer(m_ASTDumper);
+         m_IncrParser->removeConsumer(m_ASTDumper);
       return prev;
    }
    
    
    void cling::Interpreter::dumpAST(bool showAST, int last) {
      clang::Decl* D = m_LastDump;
-     int oldPolicy = m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump;
+     int oldPolicy = m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump;
 
      if (!D && last == -1 ) {
         fprintf(stderr, "No last dump found! Assuming ALL \n");
@@ -824,7 +822,7 @@ namespace cling {
         showAST = false;        
      }
 
-     m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump = showAST;
+     m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = showAST;
 
      if (last == -1) {
         while ((D = D->getNextDeclInContext())) {
@@ -832,9 +830,9 @@ namespace cling {
         }
      }
      else if (last == 0) {
-        m_IncrASTParser->getCI()->getASTContext().getTranslationUnitDecl()->dump();
+        m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl()->dump();
      } else {
-        clang::Decl *FD = m_IncrASTParser->getFirstTopLevelDecl(); // First Decl to print
+        clang::Decl *FD = m_IncrParser->getFirstTopLevelDecl(); // First Decl to print
         clang::Decl *LD = FD;
 
         // FD and LD are first
@@ -865,8 +863,8 @@ namespace cling {
         }        
      }
 
-     m_LastDump = m_IncrASTParser->getLastTopLevelDecl();     
-     m_IncrASTParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
+     m_LastDump = m_IncrParser->getLastTopLevelDecl();     
+     m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
    }
   
 } // namespace cling
