@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------*- C++ -*-
 // CLING - the C++ LLVM-based InterpreterG :)
-// version: $Id: Interpreter.h 35384 2010-09-22 15:06:50Z axel $
+// version: $Id$
 // author:  Axel naumann <ljanyst@cern.ch>
 //------------------------------------------------------------------------------
 

@@ -7,7 +7,7 @@
  * For the list of contributors see CREDITS.                             *
  *************************************************************************/
 
-// version: $Id: ParseEnvironment.h 30397 2009-09-24 13:08:16Z axel $
+// version: $Id$
 // author: Axel Naumann, 2010-12-14
 
 #include "cling/Interpreter/Diagnostics.h"

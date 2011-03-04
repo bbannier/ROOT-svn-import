@@ -6,7 +6,7 @@
  * For the list of contributors see CREDITS.                             *
  *************************************************************************/
 
-// version: $Id: ParseEnvironment.h 30604 2009-10-07 15:10:56Z pcanal $
+// version: $Id$
 // author:  Alexei Svitkine
 
 #include "ClangUtils.h"
