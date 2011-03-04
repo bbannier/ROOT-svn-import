@@ -137,14 +137,20 @@ ROOT_LINKER_LIBRARY(Core ${LibCore_SRCS} ${CORE_DICTIONARIES}
 #=Target_Link_Libraries(Core ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
 #=Set_Target_properties(Core PROPERTIES ${ROOT_LIBRARY_PROPERTIES})
 
-add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY  META_DICTIONARY METAUTILS_DICTIONARY 
-                      UNIX_DICTIONARY BASE_DICTIONARY)
+add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY  META_DICTIONARY METAUTILS_DICTIONARY BASE_DICTIONARY)
+if(UNIX)
+  add_dependencies(Core UNIX_DICTIONARY)
+endif()
+if(WIN32)
+  add_dependencies(Core WINNT_DICTIONARY)
+endif()
 if(editline)
   add_dependencies(Core EDITLINE_DICTIONARY)
 endif()
 if(builtin_pcre)
   add_dependencies(Core PCRE)
 endif()
+
 
 #install(TARGETS Core RUNTIME DESTINATION bin
 #                     LIBRARY DESTINATION lib
