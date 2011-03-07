@@ -27,7 +27,13 @@ namespace cling {
     
     // Override this to provide last resort lookup for failed unqualified lookups
     virtual bool LookupUnqualified(clang::LookupResult &R, clang::Scope *S);
-    //Remove the fake dependent declarations
+
+    // Check whether the failed lookup is marked as artificially dependent.
+    // The difference comes from the DeclContext if the DeclContext is marked
+    // as dependent then we don't need to handle the failed lookup
+    bool IsDynamicLookup (clang::LookupResult& R, clang::Scope* S);
+
+    // Remove the fake dependent declarations
     void RemoveFakeDecls();
   private:
     llvm::SmallVector<clang::Decl*, 8> m_FakeDecls;
