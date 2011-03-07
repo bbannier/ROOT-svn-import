@@ -221,9 +221,9 @@ ExecutionContext::startCodegen(clang::CompilerInstance* CI,
     clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
     clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();
     //fprintf(stderr, "Running code generation.\n");
-    for (; iter != iter_end; ++iter) {
-      m_codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
-    }
+    //for (; iter != iter_end; ++iter) {
+    //  m_codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
+    //}
   }
   return true;
 }

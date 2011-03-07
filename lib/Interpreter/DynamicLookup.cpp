@@ -28,9 +28,11 @@ namespace cling {
   // and the diagnostics are suppressed. After that is our responsibility to
   // fix all these fake declarations and lookups. It is done by the
   // DynamicExpressionTransformer
-  bool DynamicIDHandler::LookupUnqualified(LookupResult &R, Scope *S) {
-    if (R.getLookupKind() != Sema::LookupOrdinaryName) return false;
-    if (R.isForRedeclaration()) return false;
+  bool DynamicIDHandler::LookupUnqualified(LookupResult& R, Scope* S) {
+
+    if (!IsDynamicLookup(R, S))
+      return false;
+
     DeclarationName Name = R.getLookupName();
     IdentifierInfo *II = Name.getAsIdentifierInfo();
     SourceLocation NameLoc = R.getNameLoc();
@@ -48,6 +50,18 @@ namespace cling {
     }
     // We cannot handle the situation. Give up
     return false;              
+  }
+
+  bool DynamicIDHandler::IsDynamicLookup (LookupResult& R, Scope* S) {
+    if (R.getLookupKind() != Sema::LookupOrdinaryName) return false;
+    if (R.isForRedeclaration()) return false;
+    for (Scope* DepScope = S; DepScope; DepScope = DepScope->getParent()) {
+      if (DeclContext* Ctx = static_cast<DeclContext*>(DepScope->getEntity())) {
+        return !Ctx->isDependentContext();
+      }
+    }
+    
+    return true;
   }
 
   // Removes the implicitly created functions, which help to emulate the dynamic scopes
