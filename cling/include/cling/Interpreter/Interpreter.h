@@ -113,8 +113,6 @@ namespace cling {
                                           clang::DeclContext* DC); 
     
   public:
-    // compileString should be private, when we create the Runtime Env class.
-    clang::CompilerInstance* compileString(const std::string& srcCode);
     llvm::GenericValue Evaluate(const char* expr, clang::DeclContext* DC);
   };
   

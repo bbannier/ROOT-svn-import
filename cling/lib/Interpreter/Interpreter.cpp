@@ -257,7 +257,7 @@ namespace cling {
     //  Send the wrapped code through the
     //  frontend to produce a translation unit.
     //
-    clang::CompilerInstance* CI = compileString(wrapped);
+    clang::CompilerInstance* CI = m_IncrParser->parse(wrapped);
 
     if (!CI) {
       return 0;
@@ -582,12 +582,6 @@ namespace cling {
       return;
     }
   }
-    
-  clang::CompilerInstance*
-  Interpreter::compileString(const std::string& argCode)
-  {
-    return m_IncrParser->parse(argCode);
-  }
   
   clang::CompilerInstance*
   Interpreter::compileFile(const std::string& filename,
@@ -596,7 +590,7 @@ namespace cling {
     std::string code;
     code += "#include \"" + filename + "\"\n";
     if (trailcode) code += *trailcode;
-    return compileString(code);
+    return m_IncrParser->parse(code);
   }
   
   static
@@ -694,14 +688,14 @@ namespace cling {
 
      // template<typename T> class dummy{}; 
      std::string templatedClass = "template<typename T> class " + className + "{};\n";
-     CI  = compileString(templatedClass);
+     CI  = m_IncrParser->parse(templatedClass);
      clang::Decl *templatedClassDecl = 0;
      if (CI)
         templatedClassDecl = m_IncrParser->getLastTopLevelDecl();
 
      //template <> dummy<clang::DeclContext*> {};
      std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
-     CI = compileString(explicitSpecialization);
+     CI = m_IncrParser->parse(explicitSpecialization);
      if (CI) {
         if (clang::ClassTemplateSpecializationDecl* D = dyn_cast<clang::ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
            Result = D->getTemplateArgs()[0].getAsType();
@@ -775,7 +769,7 @@ namespace cling {
       //  Send the wrapped code through the
       //  frontend to produce a translation unit.
       //
-      clang::CompilerInstance* CI = compileString(Wrapper);
+      clang::CompilerInstance* CI = m_IncrParser->parse(Wrapper);
       if (!CI) {
          fprintf(stderr, "Cannot compile string!\n");
       }
