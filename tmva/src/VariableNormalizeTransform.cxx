@@ -515,7 +515,7 @@ void TMVA::VariableNormalizeTransform::ReadTransformationFromStream( std::istrea
 }
 
 //_______________________________________________________________________
-void TMVA::VariableNormalizeTransform::PrintTransformation( ostream& o ) 
+void TMVA::VariableNormalizeTransform::PrintTransformation( ostream& /* o */ ) 
 {
    // prints the transformation ranges
 
@@ -524,18 +524,18 @@ void TMVA::VariableNormalizeTransform::PrintTransformation( ostream& o )
    if (nCls <= 1 ) numC = 1;
    for (Int_t icls = 0; icls < numC; icls++ ) {
       if( icls == nCls )
-	 Log() << kINFO << "Transformation for all classes based on these ranges:" << Endl;
+         Log() << kINFO << "Transformation for all classes based on these ranges:" << Endl;
       else
-      Log() << kINFO << "Transformation for class " << icls << " based on these ranges:" << Endl;
+         Log() << kINFO << "Transformation for class " << icls << " based on these ranges:" << Endl;
       UInt_t iinp = 0;
       for( ItVarTypeIdxConst itGet = fGet.begin(), itGetEnd = fGet.end(); itGet != itGetEnd; ++itGet ){
-	 Char_t type = (*itGet).first;
-	 UInt_t idx  = (*itGet).second;
-
-	 TString typeString = (type=='v'?"Variable: ": (type=='t'?"Target : ":"Spectator : ") );
-	 Log() << typeString.Data() << std::setw(20) << fMin[icls][idx] << std::setw(20) << fMax[icls][idx] << Endl;
-	 
-	 ++iinp;
+         Char_t type = (*itGet).first;
+         UInt_t idx  = (*itGet).second;
+         
+         TString typeString = (type=='v'?"Variable: ": (type=='t'?"Target : ":"Spectator : ") );
+         Log() << typeString.Data() << std::setw(20) << fMin[icls][idx] << std::setw(20) << fMax[icls][idx] << Endl;
+         
+         ++iinp;
       }
    }
 }
