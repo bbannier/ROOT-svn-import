@@ -160,6 +160,7 @@ TMVA::MethodBase::MethodBase( const TString& jobName,
    fSplTrainB                 ( 0 ),
    fSplTrainEffBvsS           ( 0 ),
    fVarTransformString        ( "None" ),
+   fTransformationPointer     ( 0 ),
    fTransformation            ( dsi, methodTitle ),
    fVerbose                   ( kFALSE ),
    fVerbosityLevelString      ( "Default" ),
@@ -216,6 +217,7 @@ TMVA::MethodBase::MethodBase( Types::EMVA methodType,
    fSplTrainB                 ( 0 ),
    fSplTrainEffBvsS           ( 0 ),
    fVarTransformString        ( "None" ),
+   fTransformationPointer     ( 0 ),
    fTransformation            ( dsi, "" ),
    fVerbose                   ( kFALSE ),
    fVerbosityLevelString      ( "Default" ),
@@ -1226,7 +1228,7 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
       AddTargetsXMLTo(parent);
 
    // write transformations
-   GetTransformationHandler().AddXMLTo( parent );
+   GetTransformationHandler(false).AddXMLTo( parent );
 
    // write MVA variable distributions
    void* pdfs = gTools().AddChild(parent, "MVAPdfs");

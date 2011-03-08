@@ -118,6 +118,10 @@ void TMVA::MethodCompositeBase::AddWeightsXMLTo( void* parent ) const
       gTools().AddAttr(methxml,"MethodName",     method->GetMethodName()   ); 
       gTools().AddAttr(methxml,"JobName",        method->GetJobName());
       gTools().AddAttr(methxml,"Options",        method->GetOptions()); 
+      if (method->fTransformationPointer)
+	 gTools().AddAttr(methxml,"UseMainMethodTransformation",  TString("true")); 
+      else
+	 gTools().AddAttr(methxml,"UseMainMethodTransformation",  TString("false")); 
       method->AddWeightsXMLTo(methxml);
    }
 }
@@ -155,6 +159,15 @@ void TMVA::MethodCompositeBase::ReadWeightsFromXML( void* wghtnode )
       gTools().ReadAttr( ch, "MethodName",  methodName );
       gTools().ReadAttr( ch, "JobName",  jobName );
       gTools().ReadAttr( ch, "Options",  optionString );
+
+      Bool_t rerouteTransformation = kFALSE;
+      if (gTools().HasAttr( ch, "UseMainMethodTransformation")) {
+	 TString rerouteString("");
+	 gTools().ReadAttr( ch, "UseMainMethodTransformation",  rerouteString );
+	 rerouteString.ToLower();
+	 if (rerouteString=="true")
+	    rerouteTransformation=kTRUE;
+      }
       
       //remove trailing "~" to signal that options have to be reused
       optionString.ReplaceAll("~","");
@@ -183,6 +196,8 @@ void TMVA::MethodCompositeBase::ReadWeightsFromXML( void* wghtnode )
       meth->ReadWeightsFromXML(methXML);
       meth->SetSignalReferenceCut(methodSigCut);
       meth->SetSignalReferenceCutOrientation(methodSigCutOrientation);
+
+      meth->RerouteTransformationHandler (&(this->GetTransformationHandler()));
 
       ch = gTools().GetNextChild(ch);
    }

@@ -188,7 +188,7 @@ void TMVA::Tools::ComputeStat( const std::vector<TMVA::Event*>& events, std::vec
       Log() << kFATAL << "<Tools::ComputeStat> value vector is zero pointer" << Endl;
    
    if ( events.size() != valVec->size() ) 
-      Log() << kFATAL << "<Tools::ComputeStat> event and value vector have different lengths " 
+      Log() << kWARNING << "<Tools::ComputeStat> event and value vector have different lengths " 
             << events.size() << "!=" << valVec->size() << Endl;
 
    Long64_t entries = valVec->size();

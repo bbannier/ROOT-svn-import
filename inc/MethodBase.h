@@ -339,8 +339,16 @@ namespace TMVA {
       TString          GetTrainingTMVAVersionString() const;
       TString          GetTrainingROOTVersionString() const;
 
-      TransformationHandler&        GetTransformationHandler() { return fTransformation; }
-      const TransformationHandler&  GetTransformationHandler() const { return fTransformation; }
+      TransformationHandler&        GetTransformationHandler(Bool_t takeReroutedIfAvailable=true) 
+          { 
+	     if(fTransformationPointer && takeReroutedIfAvailable) return *fTransformationPointer; else return fTransformation; 
+	  }
+      const TransformationHandler&  GetTransformationHandler(Bool_t takeReroutedIfAvailable=true) const 
+          { 
+	     if(fTransformationPointer && takeReroutedIfAvailable) return *fTransformationPointer; else return fTransformation; 
+	  }
+
+      void             RerouteTransformationHandler (TransformationHandler* fTargetTransformation) { fTransformationPointer=fTargetTransformation; }
 
       // ---------- event accessors ------------------------------------------------
 
@@ -574,7 +582,8 @@ namespace TMVA {
       // variable preprocessing
       TString          fVarTransformString;          // labels variable transform method
 
-      TransformationHandler fTransformation;         // the list of transformations
+      TransformationHandler* fTransformationPointer;  // pointer to the rest of transformations
+      TransformationHandler  fTransformation;         // the list of transformations
 
 
       // help and verbosity
