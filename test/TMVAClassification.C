@@ -375,7 +375,7 @@ void TMVAClassification( TString myMethodList = "" )
    // Composite classifier: ensemble (tree) of boosted Fisher classifiers
    if (Use["BoostedFisher"])
       factory->BookMethod( TMVA::Types::kFisher, "BoostedFisher", 
-                           "H:!V:Boost_Num=20:Boost_Transform=log:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.2" );
+                           "H:!V:Boost_Num=30:Boost_Transform=log:Boost_Type=AdaBoost:Boost_AdaBoostBeta=0.2:Boost_DetailedMonitoring" );
 
    // Function discrimination analysis (FDA) -- test of various fitters - the recommended one is Minuit (or GA or SA)
    if (Use["FDA_MC"])
