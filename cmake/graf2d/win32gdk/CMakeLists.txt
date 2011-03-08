@@ -3,7 +3,7 @@
 # @author Pere Mato, CERN
 ############################################################################
 ROOT_USE_PACKAGE(gui/gui)
-include_directories(${FREETYPE_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/gdk/src 
+include_directories(${FREETYPE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/gdk/src 
                     ${CMAKE_CURRENT_SOURCE_DIR}/gdk/src/gdk ${CMAKE_CURRENT_SOURCE_DIR}/gdk/src/glib)
 
 set(gdklib   ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/gdk-1.3.lib)

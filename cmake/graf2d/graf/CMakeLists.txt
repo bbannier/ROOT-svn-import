@@ -13,7 +13,7 @@ include_directories(${CMAKE_SOURCE_DIR}/hist/hist/inc)  # This is to avoid a cir
 ROOT_GENERATE_DICTIONARY(G__${libname} *.h LINKDEF LinkDef.h)
 ROOT_GENERATE_ROOTMAP(${libname} LINKDEF LinkDef.h DEPENDENCIES Hist Matrix MathCore RIO)
 
-include_directories(${FREETYPE_INCLUDE_DIR})
+include_directories(${FREETYPE_INCLUDE_DIRS})
 
 ROOT_LINKER_LIBRARY(${libname} *.cxx G__${libname}.cxx LIBRARIES ${FREETYPE_LIBRARIES} Hist Matrix MathCore RIO)
 

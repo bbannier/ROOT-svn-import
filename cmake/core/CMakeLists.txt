@@ -68,8 +68,8 @@ Set_Source_Files_Properties(${BASE2_DICTIONARY} GENERATED)
 Set_Source_Files_Properties(${BASE3_DICTIONARY} GENERATED)
 Set_Source_Files_Properties(${BASE4_DICTIONARY} GENERATED)
 
-Set_Source_Files_Properties(${EDITLINE_CXX_SOURCES} 
-                            COMPILE_FLAGS -DR__CURSESHDR=\\"${CURSES_HEADER_FILE}\\"
+Set_Source_Files_Properties(${EDITLINE_CXX_SOURCES} PROPERTIES
+                            COMPILE_DEFINITIONS R__CURSESHDR="${CURSES_HEADER_FILE}"
                            )
 
 
