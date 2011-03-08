@@ -199,6 +199,7 @@ void TMVA::MethodBoost::DeclareOptions()
    AddPreDefVal(TString("step"));
    AddPreDefVal(TString("linear"));
    AddPreDefVal(TString("log"));
+   AddPreDefVal(TString("gauss"));
 
    DeclareOptionRef( fRandomSeed = 0, "Boost_RandomSeed",
                      "Seed for random number generator used for bagging" );
@@ -215,7 +216,7 @@ Bool_t TMVA::MethodBoost::BookMethod( Types::EMVA theMethod, TString methodTitle
    fBoostedMethodOptions  = theOption;
    TString opts=theOption;
    opts.ToLower();
-   if (opts.Contains("vartransform")) Log() << kFATAL << "It is not possible to use boost in conjunction with variable transform. Please remove either Boost_Num or VarTransform from the option string" << methodTitle << Endl;
+//    if (opts.Contains("vartransform")) Log() << kFATAL << "It is not possible to use boost in conjunction with variable transform. Please remove either Boost_Num or VarTransform from the option string"<< methodTitle<<Endl;
 
    return kTRUE;
 }
@@ -315,21 +316,34 @@ void TMVA::MethodBoost::Train()
    if (fMethods.size() > 0) fMethods.clear();
    fMVAvalues->resize(Data()->GetNTrainingEvents(), 0.0);
 
-   Log() << kINFO << "Training "<< fBoostNum << " " << fBoostedMethodName << " Classifiers ... patience please" << Endl;
+   Log() << kINFO << "Training "<< fBoostNum << " " << fBoostedMethodName << " with title " << fBoostedMethodTitle << " Classifiers ... patience please" << Endl;
    Timer timer( fBoostNum, GetName() );
 
    ResetBoostWeights();
 
    // clean boosted method options
    CleanBoostOptions();
+
+
+   // remove transformations for individual boosting steps
+   // the transformation of the main method will be rerouted to each of the boost steps
+   Ssiz_t varTrafoStart=fBoostedMethodOptions.Index("~VarTransform=");
+   if (varTrafoStart >0) {
+      Ssiz_t varTrafoEnd  =fBoostedMethodOptions.Index(":",varTrafoStart);
+      if (varTrafoEnd<varTrafoStart)
+	 varTrafoEnd=fBoostedMethodOptions.Length();
+      fBoostedMethodOptions.Remove(varTrafoStart,varTrafoEnd-varTrafoStart);
+   }
+
    //
    // training and boosting the classifiers
    for (fMethodIndex=0;fMethodIndex<fBoostNum;fMethodIndex++) {
       // the first classifier shows the option string output, the rest not
       if (fMethodIndex>0) TMVA::MsgLogger::InhibitOutput();
+
       IMethod* method = ClassifierFactory::Instance().Create(std::string(fBoostedMethodName),
                                                              GetJobName(),
-                                                             Form("%s_B%04i", fBoostedMethodName.Data(),fMethodIndex),
+                                                             Form("%s_B%04i", fBoostedMethodTitle.Data(),fMethodIndex),
                                                              DataInfo(),
                                                              fBoostedMethodOptions);
       TMVA::MsgLogger::EnableOutput();
@@ -354,6 +368,11 @@ void TMVA::MethodBoost::Train()
       meth->SetAnalysisType( GetAnalysisType() );
       meth->ProcessSetup();
       meth->CheckSetup();
+
+      
+      // reroute transformationhandler
+      meth->RerouteTransformationHandler (&(this->GetTransformationHandler()));
+
 
       // creating the directory of the classifier
       if (fMonitorBoostedMethod) {
@@ -475,7 +494,7 @@ void TMVA::MethodBoost::CreateMVAHistorgrams()
    if (DataInfo().GetClassInfo("Signal") != 0) {
       signalClass = DataInfo().GetClassInfo("Signal")->GetNumber();
    }
-   gTools().ComputeStat( Data()->GetEventCollection(), fMVAvalues,
+   gTools().ComputeStat( GetEventCollection( Types::kMaxTreeType ), fMVAvalues,
                          meanS, meanB, rmsS, rmsB, xmin, xmax, signalClass );
 
    fNbins = gConfig().fVariablePlotting.fNbinsXOfROCCurve;
@@ -497,7 +516,7 @@ void TMVA::MethodBoost::CreateMVAHistorgrams()
 void TMVA::MethodBoost::ResetBoostWeights()
 {
    // resetting back the boosted weights of the events to 1
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+   for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
       Event *ev = Data()->GetEvent(ievt);
       ev->SetBoostWeight( 1.0 );
    }
@@ -639,7 +658,7 @@ void TMVA::MethodBoost::FindMVACut()
          Double_t weight = GetEvent(ievt)->GetWeight();
          Double_t mvaVal=lastMethod->GetMvaValue();
          sum +=weight;
-         if (DataInfo().IsSignal(Data()->GetEvent(ievt))){
+         if (DataInfo().IsSignal(GetEvent(ievt))){
             mvaS->Fill(mvaVal,weight);
          }else {
             mvaB->Fill(mvaVal,weight);
@@ -721,14 +740,14 @@ void TMVA::MethodBoost::SingleBoost()
 {
    MethodBase* method =  dynamic_cast<MethodBase*>(fMethods.back());
    if (!method) return;
-   Event * ev; Float_t w,v,wo; Bool_t sig=kTRUE;
+   Float_t w,v,wo; Bool_t sig=kTRUE;
    Double_t sumAll=0, sumWrong=0, sumAllOrig=0, sumWrongOrig=0, sumAll1=0;
    Bool_t* WrongDetection=new Bool_t[GetNEvents()];
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) WrongDetection[ievt]=kTRUE;
 
    // finding the wrong events and calculating their total weights
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-      ev = Data()->GetEvent(ievt);
+      const Event* ev = GetEvent(ievt);
       sig=DataInfo().IsSignal(ev);
       v = fMVAvalues->at(ievt);
       w = ev->GetWeight();
@@ -779,7 +798,7 @@ void TMVA::MethodBoost::SingleBoost()
       // first reweight
       Double_t newSum=0., oldSum=0.;
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         ev =  Data()->GetEvent(ievt);
+         Event* ev =  Data()->GetEvent(ievt);
          oldSum += ev->GetWeight();
          if (WrongDetection[ievt] && fBoostWeight != 0) {
             if (ev->GetWeight() > 0) ev->ScaleBoostWeight(fBoostWeight);
@@ -793,16 +812,17 @@ void TMVA::MethodBoost::SingleBoost()
       // next normalize the weights
       Double_t normSig=0, normBkg=0;
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         Data()->GetEvent(ievt)->ScaleBoostWeight(normWeight);
-         if (Data()->GetEvent(ievt)->GetClass()) normBkg+=Data()->GetEvent(ievt)->GetWeight();
-         else                                    normSig+=Data()->GetEvent(ievt)->GetWeight();
+         Event* ev = Data()->GetEvent(ievt);
+	 ev->ScaleBoostWeight(normWeight);
+         if (ev->GetClass()) normBkg+=ev->GetWeight();
+         else                normSig+=ev->GetWeight();
       }      
    }
    else if (fBoostType == "Bagging") {
       // Bagging or Bootstrap boosting, gives new random weight for every event
       TRandom3*trandom   = new TRandom3(fRandomSeed+fMethods.size());
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         ev = Data()->GetEvent(ievt);
+         Event* ev = Data()->GetEvent(ievt);
          ev->SetBoostWeight(trandom->Rndm());
          sumAll1+=ev->GetWeight();
       }
@@ -810,7 +830,7 @@ void TMVA::MethodBoost::SingleBoost()
       // weights (changing only the boosted weight of all the events)
       Double_t Factor=sumAll/sumAll1;
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         ev = Data()->GetEvent(ievt);
+         Event* ev = Data()->GetEvent(ievt);
          ev->ScaleBoostWeight(Factor);
       }
    }
@@ -821,7 +841,7 @@ void TMVA::MethodBoost::SingleBoost()
       Double_t MVACutValue = method->GetSignalReferenceCut();
       sumAll1 = 0;
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         ev = Data()->GetEvent(ievt);
+         Event* ev = Data()->GetEvent(ievt);
 	 if (fBoostType == "HighEdgeGauss")
 	    ev->SetBoostWeight( TMath::Exp( -std::pow(fMVAvalues->at(ievt)-MVACutValue,2)/(0.1*fADABoostBeta) ) );
 	 else if (fBoostType == "HighEdgeCoPara")
@@ -853,7 +873,7 @@ void TMVA::MethodBoost::CalcMethodWeight()
       return;
    }
 
-   Event * ev; Float_t w;
+   Float_t w;
    Double_t sumAll=0, sumWrong=0;
 
    // finding the MVA cut value for IsSignalLike, stored in the method
@@ -861,7 +881,7 @@ void TMVA::MethodBoost::CalcMethodWeight()
 
    // finding the wrong events and calculating their total weights
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-      ev      = Data()->GetEvent(ievt);
+      const Event* ev = GetEvent(ievt);
       w       = ev->GetWeight();
       sumAll += w;
       if ( DataInfo().IsSignal(ev) != method->IsSignalLike(fMVAvalues->at(ievt))) {
@@ -975,6 +995,9 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err, Double_t* errUpper )
          if (m->IsSignalLike(val)) val = 1.;
          else val = -1.;
       }
+      else if (fTransformString == "gauss"){
+         val = TMath::Gaus((val-sigcut),1);
+      }
       else {
          Log() << kFATAL << "error unknown transformation " << fTransformString<<Endl;
       }
@@ -1049,7 +1072,7 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    else {  //Helge, please check if this logic is correct. ToDo!!!
       mvaRes = new std::vector <Float_t>(GetNEvents());
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         Data()->GetEvent(ievt);
+         GetEvent(ievt);
          (*mvaRes)[ievt] = singleMethod ? method->GetMvaValue(&err) : GetMvaValue(&err);
       }
    }
@@ -1063,7 +1086,7 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    if (DataInfo().GetClassInfo("Signal") != 0) {
       signalClass = DataInfo().GetClassInfo("Signal")->GetNumber();
    }
-   gTools().ComputeStat( Data()->GetEventCollection(eTT), mvaRes,
+   gTools().ComputeStat( GetEventCollection(eTT), mvaRes,
                          meanS, meanB, rmsS, rmsB, xmin, xmax, signalClass );
 
    fNbins = gConfig().fVariablePlotting.fNbinsXOfROCCurve;
@@ -1141,7 +1164,7 @@ void TMVA::MethodBoost::CalcMVAValues()
    }
    // calculate MVA values
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-      Data()->GetEvent(ievt);
+      GetEvent(ievt);
       fMVAvalues->at(ievt) = method->GetMvaValue();
    }
 }

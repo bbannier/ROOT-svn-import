@@ -873,13 +873,13 @@ Double_t TMVA::MethodCuts::ComputeEstimator( std::vector<Double_t>& pars )
    // retrieve signal and background efficiencies for given cut
    switch (fEffMethod) {
    case kUsePDFs:
-      this->GetEffsfromPDFs( &fTmpCutMin[0], &fTmpCutMax[0], effS, effB );
+      this->GetEffsfromPDFs      (&fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
       break;
    case kUseEventSelection:
-      this->GetEffsfromSelection( &fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
+      this->GetEffsfromSelection (&fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
       break;
    default:
-      this->GetEffsfromSelection( &fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
+      this->GetEffsfromSelection (&fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
    }
 
    Double_t eta = 0;      
