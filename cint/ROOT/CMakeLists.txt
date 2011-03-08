@@ -129,9 +129,9 @@ ForEach(_name ${CINTSTLDLLNAMES})
                        COMMAND cmake -E copy_if_different ${CMAKE_SOURCE_DIR}/core/metautils/src/stlLoader.cc  ${LoaderName}
                       )
 
-    Set(_compile_flags "${CINTDLLCXXFLAGS} -DWHAT=\\\"${_name}\\\" -I${CMAKE_SOURCE_DIR}/cint/cint/inc")
-    Set_Source_Files_Properties(${LoaderName} 
-                                COMPILE_FLAGS ${_compile_flags}
+    Set_Source_Files_Properties(${LoaderName} PROPERTIES
+                                COMPILE_FLAGS "${CINTDLLCXXFLAGS} -I${CMAKE_SOURCE_DIR}/cint/cint/inc"
+								COMPILE_DEFINITIONS WHAT="${_name}"
                                )
     Set(DictSource ${CMAKE_CURRENT_BINARY_DIR}/rootcint_${_name}.cxx)
     Set(DictHeader ${CMAKE_CURRENT_BINARY_DIR}/rootcint_${_name}.h)
@@ -268,7 +268,7 @@ ForEach(_name ${CINTINCDLLNAMES})
                       ) 
     Add_Executable(mktypes ${CMAKE_CURRENT_BINARY_DIR}/mktypes.c)
     Add_Custom_Command(OUTPUT ${HEADER_OUTPUT_PATH}/systypes.h 
-                       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/mktypes
+                       COMMAND mktypes
                        DEPENDS mktypes
                       ) 
     Add_Custom_Command(OUTPUT ${CMAKE_BINARY_DIR}/cint/cint/include/sys/types.h 
