@@ -34,7 +34,7 @@ if "$@"; then
         shift
     done
 
-    CC1OPTS=`echo "" | clang -c -o /dev/null -v -x c++ - 2>&1 | \
+    CC1OPTS=`echo "" | $LLVMDIR/bin/clang -c -o /dev/null -v -x c++ - 2>&1 | \
              grep [-]cc1 | head -n1 | sed -e 's,-emit-obj ,,' \
                 -e 's,-main-file-name - ,,' -e 's,-v ,,' \
                 -e 's,-o /dev/null ,,' -e 's,c++ -,c++,' \
