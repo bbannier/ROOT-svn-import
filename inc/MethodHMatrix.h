@@ -109,7 +109,6 @@ namespace TMVA {
       void ProcessOptions();
 
       // returns chi2 estimator for given type (signal or background)
-//      Double_t GetChi2( Event* e, Types::ESBType ) const;
       Double_t GetChi2( Types::ESBType );
 
       // compute correlation matrices

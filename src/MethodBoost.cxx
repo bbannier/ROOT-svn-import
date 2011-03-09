@@ -204,7 +204,7 @@ void TMVA::MethodBoost::DeclareOptions()
    DeclareOptionRef( fRandomSeed = 0, "Boost_RandomSeed",
                      "Seed for random number generator used for bagging" );
 
-   TMVA::MethodCompositeBase::fMethods.reserve(fBoostNum);;
+   TMVA::MethodCompositeBase::fMethods.reserve(fBoostNum);
 }
 
 //_______________________________________________________________________

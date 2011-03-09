@@ -291,14 +291,15 @@ Double_t TMVA::MethodHMatrix::GetChi2( Types::ESBType type )
 
    // get original (not transformed) event
 
-   const Event * origEvt = fTmpEvent?fTmpEvent:Data()->GetEvent();
+   const Event* origEvt = fTmpEvent ? fTmpEvent:Data()->GetEvent();
 
    // loop over variables
-   UInt_t ivar,jvar, nvar=GetNvar();
+   UInt_t ivar(0), jvar(0), nvar(GetNvar());
    vector<Double_t> val( nvar );
 
-   static UInt_t signalClass    =DataInfo().GetClassInfo("Signal")->GetNumber();
-   static UInt_t backgroundClass=DataInfo().GetClassInfo("Background")->GetNumber();
+   static UInt_t signalClass     = DataInfo().GetClassInfo("Signal")->GetNumber();
+   static UInt_t backgroundClass = DataInfo().GetClassInfo("Background")->GetNumber();
+
    // transform the event according to the given type (signal/background)
    if (type==Types::kSignal)
       GetTransformationHandler().SetTransformationReferenceClass( signalClass     );
@@ -328,24 +329,30 @@ Double_t TMVA::MethodHMatrix::GetChi2( Types::ESBType type )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodHMatrix::AddWeightsXMLTo( void* parent ) const {
+void TMVA::MethodHMatrix::AddWeightsXMLTo( void* parent ) const 
+{
+   // create XML description for HMatrix classification
+
    void* wght = gTools().AddChild(parent, "Weights");
-   gTools().WriteTVectorDToXML(wght,"VecMeanS",fVecMeanS); 
-   gTools().WriteTVectorDToXML(wght,"VecMeanB", fVecMeanB);
-   gTools().WriteTMatrixDToXML(wght,"InvHMatS",fInvHMatrixS); 
-   gTools().WriteTMatrixDToXML(wght,"InvHMatB",fInvHMatrixB);
-   //Log() << kFATAL << "Please implement writing of weights as XML" << Endl;
+   gTools().WriteTVectorDToXML( wght, "VecMeanS", fVecMeanS    ); 
+   gTools().WriteTVectorDToXML( wght, "VecMeanB", fVecMeanB    );
+   gTools().WriteTMatrixDToXML( wght, "InvHMatS", fInvHMatrixS ); 
+   gTools().WriteTMatrixDToXML( wght, "InvHMatB", fInvHMatrixB );
 }
 
-void TMVA::MethodHMatrix::ReadWeightsFromXML( void* wghtnode ){
+//_______________________________________________________________________
+void TMVA::MethodHMatrix::ReadWeightsFromXML( void* wghtnode )
+{
+   // read weights from XML file
+
    void* descnode = gTools().GetChild(wghtnode);
-   gTools().ReadTVectorDFromXML(descnode,"VecMeanS",fVecMeanS);
+   gTools().ReadTVectorDFromXML( descnode, "VecMeanS", fVecMeanS    );
    descnode = gTools().GetNextChild(descnode);
-   gTools().ReadTVectorDFromXML(descnode,"VecMeanB", fVecMeanB);
+   gTools().ReadTVectorDFromXML( descnode, "VecMeanB", fVecMeanB    );
    descnode = gTools().GetNextChild(descnode);
-   gTools().ReadTMatrixDFromXML(descnode,"InvHMatS",fInvHMatrixS); 
+   gTools().ReadTMatrixDFromXML( descnode, "InvHMatS", fInvHMatrixS ); 
    descnode = gTools().GetNextChild(descnode);
-   gTools().ReadTMatrixDFromXML(descnode,"InvHMatB",fInvHMatrixB);
+   gTools().ReadTMatrixDFromXML( descnode, "InvHMatB", fInvHMatrixB );
 }
 
 //_______________________________________________________________________
