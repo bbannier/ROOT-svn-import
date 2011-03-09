@@ -143,13 +143,10 @@ namespace cling {
 
     //m_CIFactory.reset(new CIFactory(fake_argc, fake_argv, llvmdir));
     
-    m_IncrParser.reset(new IncrementalParser(&getPragmaHandler()));
+    m_IncrParser.reset(new IncrementalParser(&getPragmaHandler(), llvmdir));
     m_ExecutionContext.reset(new ExecutionContext());
     
-    llvm::MemoryBuffer* MemoryBuffer
-      = llvm::MemoryBuffer::getMemBuffer("//cling InputSanitizer");
-
-    m_InputValidator.reset(new InputValidator(m_IncrParser->getCIFactory().createCI(MemoryBuffer)));
+    m_InputValidator.reset(new InputValidator(m_IncrParser->getCIFactory().createCI("//cling InputSanitizer")));
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
