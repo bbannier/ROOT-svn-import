@@ -1,3 +1,4 @@
+// @(#)root/cint:$Id$
 
 /* rootcling.cxx */
 
@@ -31,20 +32,14 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ManagedStatic.h"
-#ifdef LLVM_2_8
-   #include "llvm/System/Host.h"
-   #include "llvm/System/Signals.h"
-#else
-   #include "llvm/Support/Host.h"
-   #include "llvm/Support/Signals.h"
-#endif
+#include "llvm/Support/Host.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Target/TargetSelect.h"
 
-#ifndef INDEPENDENT
-   #include "cling/Interpreter/CIBuilder.h"
-#endif
+#include "cling/Interpreter/CIFactory.h"
 
 #include "TSystem.h"
+#include "TError.h"
 
 #include "clr-scan.h"
 #include "genrflxdict.h"
@@ -55,36 +50,7 @@
 #include <sstream>
 #include <stdexcept> // class std::runtime_error
 
-#ifdef INDEPENDENT
-   #include <string.h> // function strdup
-   #include <queue>
-   #include "clang/Frontend/TextDiagnosticPrinter.h"
-#endif
-
-#ifdef TRACE
-   #include "clr-trace.h"
-#endif
-
 /* -------------------------------------------------------------------------- */
-
-#define ENABLE_DEBUG_PRINT
-#define ENABLE_DEBUG_COMMANDS
-
-#ifdef ENABLE_DEBUG_PRINT
-   #include "clr-print.h"
-#endif
-
-#ifdef ENABLE_DEBUG_COMMANDS
-   #include "clr-cmds.h"
-   #include "TCanvas.h"
-#endif
-
-/* -------------------------------------------------------------------------- */
-
-inline std::string CharsToStd (const char * s)
-{
-   return (s == NULL) ? "" : s;
-}
 
 inline std::string IntToStd (int num)
 {
@@ -92,7 +58,6 @@ inline std::string IntToStd (int num)
    stream << num;
    return stream.str ();
 }
-
 
 bool IsPCH (std::string fileName)
 {
@@ -105,39 +70,20 @@ bool IsPCH (std::string fileName)
 
 /* ---------------------------------------------------------------------- */
 
-void show_message (const std::string msg, const std::string location)
+void info (const std::string msg)
 {
-   std::string txt = location;
-
-   if (txt != "")
-      txt = txt + " ";
-
-   txt = txt + msg;
-
-   std::cerr << "CLR " << txt << std::endl;
+   Info("rootcling", msg.c_str());
 }
 
-void info (const std::string msg, const std::string location = "")
+void error (const std::string msg)
 {
-   show_message (msg, location);
-}
-
-void warning (const std::string msg, const std::string location = "")
-{
-   show_message ("warning: " + msg, location);
-}
-
-void error (const std::string msg, const std::string location = "")
-{
-   show_message ("error: " + msg, location);
-   throw new std::runtime_error ("error: " + msg  + ", " +  location);
+   Error("rootcling", msg.c_str());
+   throw new std::runtime_error ("error: " + msg);
 }
 
 /* -------------------------------------------------------------------------- */
 
-#ifndef INDEPENDENT
-
-cling::CIBuilder* gCIBuilder = NULL;
+cling::CIFactory* gCIFactory = NULL;
 
 clang::CompilerInstance* CreateCI ()
 {
@@ -145,257 +91,19 @@ clang::CompilerInstance* CreateCI ()
 
    static const int argc = sizeof (argv) / sizeof (argv[0]);
 
-   const char* llvmdir = NULL;
+   const char* llvmdir = gSystem->Getenv("LLVMDIR");
 
    // Create a compiler instance to handle the actual work.
-   gCIBuilder = new cling::CIBuilder(argc, argv, llvmdir);
+   gCIFactory = new cling::CIFactory(argc, argv, llvmdir);
 
-   return gCIBuilder->createCI ();
+   return gCIFactory->createCI ();
 }
 
 void DestroyCI ()
 {
-   if (gCIBuilder != NULL)
-       delete gCIBuilder;
+   if (gCIFactory != NULL)
+       delete gCIFactory;
 }
-#endif
-
-/* -------------------------------------------------------------------------- */
-
-#ifdef INDEPENDENT
-void ReadOptions (std::string file_name,
-                  int & result_argc,
-                  const char * * & result_argv)
-{
-   // add options from file
-
-   int old_argc = result_argc;
-   const char * * old_argv = result_argv;
-
-   std::queue <std::string> list;
-
-   ifstream f (file_name.c_str ());
-   if (!f.good ())
-      error (std::string ("Cannot open configuration file: ") + file_name);
-
-   while (! f.eof ())
-   {
-      const int max = 256;
-      char buf [max];
-      f.getline (buf, max);
-      std::string txt = std::string (buf);
-      // info ("line: " + txt);
-
-      int len = txt.length ();
-      int inx = 0;
-
-      while (inx < len)
-      {
-         while (inx < len && txt[inx] <= ' ') inx ++; // skip spaces
-         int start = inx;
-         while (inx < len && txt[inx] > ' ') inx ++; // valid characters
-         if (start < inx)
-         {
-            std::string item = txt.substr(start, inx-start);
-            list.push (item);
-         }
-      }
-   }
-   f.close ();
-
-   int cnt = list.size ();
-
-   int new_argc = old_argc + cnt;
-   const char * * new_argv = new const char* [new_argc];
-
-   for (int i = 0; i < old_argc; i ++)
-      new_argv[i] = old_argv[i];
-
-   for (int i = 0; i < cnt; i ++)
-   {
-      std::string txt = list.front ();
-      list.pop ();
-      new_argv[old_argc+i] = strdup (txt.c_str());
-   }
-
-   /*
-   for (int i = 0; i < new_argc; i ++)
-      info ("arg [" + IntToStd (i) + "] = " + CharsToStd (new_argv [i]));
-   */
-
-   result_argc = new_argc;
-   result_argv = new_argv;
-}
-#endif
-
-/* -------------------------------------------------------------------------- */
-
-#ifdef INDEPENDENT
-clang::CompilerInstance* CreateCI ()
-{
-   static const char * args [] = { "program", "-x", "c++" };
-
-   const char * * argv = args;
-   int argc = sizeof (args) / sizeof (args[0]);
-
-   #ifdef LLVM_2_8
-      ReadOptions ("gcc-options.txt", argc, argv);
-   #endif
-
-   llvm::InitializeAllTargets();
-   llvm::InitializeAllAsmPrinters();
-
-   clang::CompilerInstance* CI = new clang::CompilerInstance();
-   CI->setLLVMContext(new llvm::LLVMContext);
-
-   clang::DiagnosticOptions DiagOpts;
-   DiagOpts.ShowColors = 1;
-   clang::DiagnosticClient *Client =
-      new clang::TextDiagnosticPrinter (llvm::errs(), clang::DiagnosticOptions ());
-   #ifdef LLVM_2_8
-      clang::Diagnostic Diags (Client);
-   #else
-      llvm::IntrusiveRefCntPtr<clang::Diagnostic> Diags = clang::CompilerInstance::createDiagnostics(DiagOpts, 0, 0, Client);
-      CI->setDiagnostics(Diags.getPtr());
-   #endif
-
-   #if 0
-      clang::driver::Driver driver ("simple",
-                                    llvm::sys::getHostTriple(),
-                                    "a.out",
-                                    /* IsProduction = */ false,
-                                    /* CXXIsProduction = */ false,
-                                    Diags);
-
-      driver.setTitle ("clang interpreter");
-   #endif
-
-   clang::CompilerInvocation::CreateFromArgs
-      (CI->getInvocation(),
-       (argv + 1),
-       (argv + argc),
-       #ifdef LLVM_2_8
-          Diags
-       #else
-          *Diags
-       #endif
-       );
-
-   // Create the compilers actual diagnostics engine.
-   CI->createDiagnostics (argc, const_cast <char**> (argv));
-   if (! CI->hasDiagnostics ())
-      error ("No diagnostics");
-
-   CI->setTarget(clang::TargetInfo::CreateTargetInfo(CI->getDiagnostics(),
-                 CI->getTargetOpts()));
-   if (!CI->hasTarget())
-      error ("No target");
-
-   CI->getTarget().setForcedLangOptions(CI->getLangOpts());
-   CI->createFileManager();
-   #ifdef LLVM_2_8
-      CI->createSourceManager();
-   #else
-      CI->createSourceManager(CI->getFileManager());
-   #endif
-
-   return CI;
-}
-
-void DestroyCI ()
-{
-}
-#endif
-
-/* -------------------------------------------------------------------------- */
-
-#ifdef INDEPENDENT
-#if 0
-clang::CompilerInstance* CreateCI ()
-{
-   static const char * args [] = { "program", "-x", "c++" };
-
-   const char * * argv = args;
-   int argc = sizeof (args) / sizeof (args[0]);
-
-   #ifdef LLVM_2_8
-      ReadOptions ("gcc-options.txt", argc, argv);
-   #endif
-
-   clang::TextDiagnosticPrinter * diagClient =
-      new clang::TextDiagnosticPrinter (llvm::errs(), clang::DiagnosticOptions ());
-
-   #ifdef LLVM_2_8
-      clang::Diagnostic diags (diagClient);
-   #else
-      clang::DiagnosticOptions diagOpts;
-      diagOpts.ShowColors = 1;
-      llvm::IntrusiveRefCntPtr<clang::Diagnostic> diags =
-         clang::CompilerInstance::createDiagnostics(diagOpts, 0, 0, diagClient);
-      // CI->setDiagnostics(diags.getPtr());
-   #endif
-
-   #if 0
-   clang::driver::Driver driver ("simple",
-                                 llvm::sys::getHostTriple(),
-                                 "a.out",
-                                 /* IsProduction = */ false,
-                                 /* CXXIsProduction = */ false,
-                                 diags);
-
-   driver.setTitle ("clang interpreter");
-   #endif
-
-   clang::CompilerInvocation * invocation = new clang::CompilerInvocation;
-   clang::CompilerInvocation::CreateFromArgs
-       (*invocation,
-        argv + 1, // skip program name
-        argv + argc,
-        #ifdef LLVM_2_8
-          diags
-        #else
-          *diags
-        #endif
-       );
-
-   // Create a compiler instance to handle the actual work.
-   clang::CompilerInstance * CI = new clang::CompilerInstance;
-   llvm::LLVMContext * context = new llvm::LLVMContext;
-   CI->setLLVMContext (context);
-   CI->setInvocation (invocation);
-
-   // Create the compilers actual diagnostics engine.
-   CI->createDiagnostics (argc, const_cast <char**> (argv));
-   if (! CI->hasDiagnostics ())
-      error ("No diagnostics");
-
-   CI->setTarget
-   (
-      clang::TargetInfo::CreateTargetInfo
-         (CI->getDiagnostics (),
-          CI->getTargetOpts ())
-   );
-
-   if (!CI->hasTarget ())
-      error ("No target");
-
-   CI->getTarget().setForcedLangOptions(CI->getLangOpts());
-   CI->createFileManager();
-
-   #ifdef LLVM_2_8
-      CI->createSourceManager();
-   #else
-      CI->createSourceManager (CI->getFileManager());
-   #endif
-
-   return CI;
-}
-
-void DestroyCI ()
-{
-}
-#endif
-#endif
 
 /* -------------------------------------------------------------------------- */
 
@@ -466,11 +174,7 @@ void OpenPCH (clang::CompilerInstance* CI, std::string fileName)
    clang::PreprocessorOptions & PO = CI->getInvocation().getPreprocessorOpts();
 
    std::string originalFile =
-      #ifdef LLVM_2_8
-      clang::ASTReader::getOriginalSourceFile(fileName, CI->getDiagnostics());
-      #else
       clang::ASTReader::getOriginalSourceFile(fileName, CI->getFileManager(), /*CI->getFileSystemOpts(),*/ CI->getDiagnostics());
-      #endif
 
    if (! originalFile.empty())
    {
@@ -519,11 +223,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
    PP.getBuiltinInfo().InitializeBuiltins
       (
        PP.getIdentifierTable (),
-       #ifdef LLVM_2_8
-          PP.getLangOptions().NoBuiltin
-       #else
-          PP.getLangOptions()
-       #endif
+       PP.getLangOptions()
       );
 
    PrintInfo (CI);
@@ -545,15 +245,11 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
          error ("compileString: Failed to create main file id");
    }
    else {
-      #ifdef LLVM_2_8
-         const clang::FileEntry* File = CI->getFileManager().getFile(fileName);
-      #else
-         const clang::FileEntry* File = CI->getFileManager().getFile(fileName);
-      #endif
+      const clang::FileEntry* File = CI->getFileManager().getFile(fileName);
       if (File)
          CI->getSourceManager().createMainFileID(File);
       if (CI->getSourceManager().getMainFileID().isInvalid())
-         error ("Error reading file");
+         error ("Error reading file: "+ fileName);
    }
 
    clang::ParseAST(PP, & CI->getASTConsumer (), CI->getASTContext ());
@@ -561,18 +257,10 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
    if (CI->hasPreprocessor())
       CI->getPreprocessor().EndSourceFile();
 
-   #ifdef LLVM_2_8
-      CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
-   #else
-      CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnosticClient().getNumErrors());
-   #endif
+   CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnosticClient().getNumErrors());
    CI->getDiagnosticClient().EndSourceFile();
 
-   #ifdef LLVM_2_8
-      unsigned err_count = CI->getDiagnostics().getNumErrors();
-   #else
-      unsigned err_count = CI->getDiagnosticClient().getNumErrors();
-   #endif
+   unsigned err_count = CI->getDiagnosticClient().getNumErrors();
    if (err_count != 0)
       error ("Parse failed");
 
@@ -607,23 +295,12 @@ void FillDictionary (const std::string& inputFileName,
 
 void WriteDictionary (const std::string& outputFileName)
 {
+   info ("Writing " + outputFileName);
    Reflex::DictionaryGenerator generator;
    GlobalScope_GenerateDict (generator);
 
    std::ofstream stream (outputFileName.c_str ());
    stream << generator;
-}
-
-void WriteClassicDictionary (const std::string& outputFileName,
-                             const std::string& selectionFileName)
-{
-   Reflex::Scope scope = Reflex::Scope::GlobalScope ();
-
-   Reflex::DictionaryGenerator generator;
-   scope.GenerateDict(generator);
-
-   generator.Use_selection (selectionFileName);
-   generator.Print (outputFileName);
 }
 
 void Process (const std::string& inputFileName)
@@ -653,7 +330,7 @@ void Process (const std::string& inputFileName)
       CreateLLVMCodeGen (CI->getDiagnostics(),
                          "SIMPLE_MODULE",
                          CI->getCodeGenOpts(),
-                         CI->getLLVMContext())
+                         * new llvm::LLVMContext())
    );
 
    codeGen->Initialize (CI->getASTContext ());
@@ -728,52 +405,13 @@ void Process (const std::string& inputFileName)
 
 /* -------------------------------------------------------------------------- */
 
-void SimpleTest ()
-{
-   Reflex::Type t;
-   Reflex::Object o;
-   Reflex::Member m;
-
-   t = Reflex::Type::ByName("Example");
-
-   o = t.Construct();
-
-   m = t.MemberByName("hello");
-   m.Invoke(o);
-}
-
-/* -------------------------------------------------------------------------- */
-
 int main (int argc, const char **argv)
 {
-   #ifdef TRACE
-      set_error_handlers ();
-   #endif
-
-   #if 0
-      std::cout << "size of Example::t is " << sizeof (Example::t) << std::endl;
-      std::cout << "size of C::t is " << sizeof (C::t) << std::endl;
-      std::cout << "size of Example::u is " << sizeof (Example::u) << std::endl;
-      return 0;
-   #endif
-
-   #if 0
-      llvm::sys::PrintStackTraceOnErrorSignal();
-      llvm::PrettyStackTraceProgram X(argc, argv);
-   #endif
-
    std::string input_file = "";
    std::string selection_file = "";
 
    std::string dict_file = "";
    std::string classic_dict_file = "";
-
-   #ifdef ENABLE_DEBUG_PRINT
-   std::string debug_print_file = "";
-   #endif
-   #ifdef ENABLE_DEBUG_COMMANDS
-   std::string debug_command_file = "";
-   #endif
 
    bool unknown_option = false;
    bool too_many_args = false;
@@ -787,15 +425,7 @@ int main (int argc, const char **argv)
             dict_file = argv[++i];
          else if (s == "--classic-dict" && i+1<argc)
             classic_dict_file = argv[++i];
-         #ifdef ENABLE_DEBUG_PRINT
-         else if (s == "--debug-print" && i+1<argc)
-            debug_print_file = argv[++i];
-         #endif
-         #ifdef ENABLE_DEBUG_COMMANDS
-         else if (s == "--debug-commands" && i+1<argc)
-            debug_command_file = argv[++i];
-         #endif
-            else
+         else
             unknown_option = true;
 
          } else {
@@ -813,15 +443,8 @@ int main (int argc, const char **argv)
    if (input_file == "" || selection_file == "" || unknown_option || too_many_args) {
       std::cout << "Usage: " << argv[0] << " input_file selection.xml|linkdef.h" << std::endl;
       std::cout << "   [--dict file_name]" << std::endl;
-      std::cout << "   [--classic-dict file_name]" << std::endl;
-      #ifdef ENABLE_DEBUG_PRINT
-      std::cout << "   [--debug-print file_name]" << std::endl;
-      #endif
-      #ifdef ENABLE_DEBUG_COMMANDS
-      std::cout << "   [--debug-commands file_name]" << std::endl;
-      #endif
-         return 1;
-      }
+      return 1;
+   }
 
    // allocate gClrReg singleton
    TClrReg::Init();
@@ -831,38 +454,7 @@ int main (int argc, const char **argv)
    if (dict_file != "")
       WriteDictionary (dict_file);
 
-   if (classic_dict_file != "")
-      WriteClassicDictionary (classic_dict_file, selection_file);
-
-   #if 1
    Process(input_file);
-   #endif
-
-   #if 0
-      SimpleTest ();
-   #endif
-
-   #ifdef ENABLE_DEBUG_PRINT
-   if (debug_print_file != "") {
-      /* print Reflex dictionary - only for debugging */
-      Reflex::Scope scope = Reflex::Scope::GlobalScope();
-      TReflexPrinter io;
-      io.Open(debug_print_file);
-      io.EnableHtml(true);
-      io.Print(scope);
-      io.Close();
-   }
-   #endif
-
-   #ifdef ENABLE_DEBUG_COMMANDS
-   if (debug_command_file != "") {
-      /* execute some methods - only for debugging */
-      TReflexCommands io;
-      io.Open(debug_command_file);
-      io.Statements();
-      io.Close();
-   }
-   #endif
 
    return 0;
 }
