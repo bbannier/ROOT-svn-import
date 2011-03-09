@@ -33,7 +33,6 @@ namespace cling {
       T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC); 
     }
   }
-  class CIFactory;
   class ExecutionContext;
   class IncrementalParser;
   class InputValidator;
@@ -72,9 +71,7 @@ namespace cling {
     void dumpAST(bool showAST = true, int last = -1);
     
     clang::CompilerInstance* getCI() const;
-    clang::CompilerInstance* createCI() const;
-    CIFactory& getCIFactory() const { return *m_CIFactory.get(); }
-    
+
     clang::PragmaNamespace& getPragmaHandler() const { return *m_PragmaHandler; }
     void installLazyFunctionCreator(void* (*fp)(const std::string&));
     
@@ -83,7 +80,6 @@ namespace cling {
     void RequestContinuation(const clang::SourceLocation&);
     
   private:
-    llvm::OwningPtr<cling::CIFactory> m_CIFactory; // our compiler intsance builder
     llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
     llvm::OwningPtr<IncrementalParser> m_IncrParser; // incremental AST and its parser
     llvm::OwningPtr<InputValidator> m_InputValidator; // balanced paren etc

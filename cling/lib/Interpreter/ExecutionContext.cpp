@@ -67,7 +67,7 @@ void EventListener::UnregisterFunctionMapping(llvm::ExecutionEngine &engine)
 std::vector<std::string> ExecutionContext::m_vec_unresolved;
 std::vector<ExecutionContext::LazyFunctionCreatorFunc_t> ExecutionContext::m_vec_lazy_function;
 
-ExecutionContext::ExecutionContext(Interpreter& Interp):
+ExecutionContext::ExecutionContext():
    m_ee_module(0),
    m_module(0),
    m_posInitGlobals(0)
@@ -75,9 +75,7 @@ ExecutionContext::ExecutionContext(Interpreter& Interp):
   // If not set, exception handling will not be turned on
   llvm::JITExceptionHandling = true;
 
-   m_ee_module
-      = new llvm::Module("_Clang_first",
-                         *Interp.getCIFactory().getLLVMContext());
+   m_ee_module = new llvm::Module("_Clang_first", * new llvm::LLVMContext());
    //
    //  Create an execution engine to use.
    //
