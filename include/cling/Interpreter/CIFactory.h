@@ -13,31 +13,32 @@
 #include "llvm/Support/Path.h"
 
 namespace llvm {
-   class LLVMContext;
+  class LLVMContext;
+  class MemoryBuffer;
 }
 
 namespace clang {
-  class PragmaHandler;
+  class PragmaNamespace;
 }
 
 namespace cling {
-class CIFactory {
-public:
-   //---------------------------------------------------------------------
-   //! Constructor
-   //---------------------------------------------------------------------
-   CIFactory(int argc, const char* const *argv, const char* llvmdir = 0);
-   ~CIFactory();
-
-   clang::CompilerInstance* createCI() const;
-   llvm::LLVMContext* getLLVMContext() const { return m_llvm_context.get(); }
-   llvm::sys::Path getResourcePath(){return m_resource_path;}
-
-private:
-   int         m_argc;
-   const char* const *m_argv;
-   llvm::sys::Path m_resource_path;
-   mutable llvm::OwningPtr<llvm::LLVMContext> m_llvm_context; // We own, our types.
-};
-}
+  class CIFactory {
+  public:
+    //---------------------------------------------------------------------
+    //! Constructor
+    //---------------------------------------------------------------------
+    CIFactory(int argc = 0, const char* const *argv = 0, const char* llvmdir = 0);
+    ~CIFactory();
+    
+    clang::CompilerInstance* createCI(llvm::MemoryBuffer* buffer, clang::PragmaNamespace* Pragma = 0) const;
+    clang::CompilerInstance* createCI(llvm::StringRef code, clang::PragmaNamespace* Pragma = 0) const;
+    llvm::sys::Path getResourcePath(){return m_resource_path;}
+    
+  private:
+    int         m_argc;
+    const char* const *m_argv;
+    llvm::sys::Path m_resource_path;
+    mutable llvm::OwningPtr<llvm::LLVMContext> m_llvm_context; // We own, our types.
+  };
+} // namespace cling
 #endif // CLING_CIFACTORY_H

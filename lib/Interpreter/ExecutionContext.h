@@ -47,7 +47,7 @@ namespace cling {
   public:
     typedef void* (*LazyFunctionCreatorFunc_t)(const std::string&);
     
-    ExecutionContext(Interpreter& Interp);
+    ExecutionContext();
     ~ExecutionContext();
     
     static void* LazyFunction(const std::string&);

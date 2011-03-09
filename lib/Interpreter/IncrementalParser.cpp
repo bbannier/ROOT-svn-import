@@ -5,6 +5,7 @@
 //------------------------------------------------------------------------------
 
 #include "IncrementalParser.h"
+#include "cling/Interpreter/CIFactory.h"
 
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -69,52 +70,38 @@ namespace cling {
   };
 
   
-  IncrementalParser::IncrementalParser(clang::CompilerInstance* CI,
-                                       clang::PragmaNamespace* Pragma):
+  IncrementalParser::IncrementalParser(clang::PragmaNamespace* Pragma):
     m_Consumer(0), 
     m_LastTopLevelDecl(0),
     m_FirstTopLevelDecl(0) 
   {
+    m_CIFactory.reset(new CIFactory());
+    m_MemoryBuffer.push_back(new MutableMemoryBuffer("//cling!\n", "CLING") );
+    clang::CompilerInstance* CI = getCIFactory().createCI(m_MemoryBuffer[0], Pragma);
     assert(CI && "CompilerInstance is (null)!");
     m_CI.reset(CI);
-    
-    CI->createPreprocessor();
-    clang::Preprocessor& PP = CI->getPreprocessor();
-    PP.AddPragmaHandler(Pragma);
-    clang::ASTContext *Ctx = new clang::ASTContext(CI->getLangOpts(),
-                                                   PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-                                                   PP.getSelectorTable(), PP.getBuiltinInfo(), 0);
-    CI->setASTContext(Ctx);
-    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                           PP.getLangOptions());
-    /*NoBuiltins = */ //true);
-    
-      
-    m_MemoryBuffer.push_back(new MutableMemoryBuffer("//cling!\n", "CLING") );
-      
-    CI->getSourceManager().clearIDTables();
-    m_MBFileID = CI->getSourceManager().createMainFileIDForMemBuffer(m_MemoryBuffer[0]);
-    CI->getSourceManager().getBuffer(m_MBFileID, clang::SourceLocation());
+
+    m_MBFileID = CI->getSourceManager().getMainFileID();
+    //CI->getSourceManager().getBuffer(m_MBFileID, clang::SourceLocation()); // do we need it?
+
+
     if (CI->getSourceManager().getMainFileID().isInvalid()) {
       fprintf(stderr, "Interpreter::compileString: Failed to create main "
               "file id!\n");
       return;
     }
     
-    m_Consumer = new ChainedASTConsumer();
-    m_Consumer->Initialize(*Ctx);
-    CI->setASTConsumer(m_Consumer);
-    
-    bool CompleteTranslationUnit = false;
-    clang::CodeCompleteConsumer* CCC = 0;
-    CI->createSema(CompleteTranslationUnit, CCC);
+    m_Consumer = dyn_cast<ChainedASTConsumer>(&CI->getASTConsumer());
+    assert(m_Consumer && "Expected ChainedASTConsumer!");
+
     // Initialize the parser.
-    m_Parser.reset(new clang::Parser(PP, CI->getSema()));
-    PP.EnterMainSourceFile();
+    m_Parser.reset(new clang::Parser(CI->getPreprocessor(), CI->getSema()));
+    CI->getPreprocessor().EnterMainSourceFile();
     m_Parser->Initialize();
     
-    if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
-      SC->InitializeSema(CI->getSema());
+    //if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
+    //  SC->InitializeSema(CI->getSema()); // do we really need this? We know 
+    // that we will have ChainedASTConsumer, which is initialized in createCI
     
     // Create the visitor that will transform all dependents that are left.
     m_Transformer.reset(new DynamicExprTransformer(&CI->getSema()));      

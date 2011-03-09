@@ -6,8 +6,6 @@
 
 #include "cling/Interpreter/Interpreter.h"
 
-#include "cling/Interpreter/CIFactory.h"
-
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -43,6 +41,7 @@
 #include "ExecutionContext.h"
 #include "IncrementalParser.h"
 #include "InputValidator.h"
+#include "cling/Interpreter/CIFactory.h"
 
 #include <cstdio>
 #include <iostream>
@@ -50,9 +49,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-static const char* fake_argv[] = { "clang", "-x", "c++", "-D__CLING__", "-I.", 0 };
-static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
 
 namespace {
   static
@@ -138,7 +134,6 @@ namespace cling {
   // Constructor
   //---------------------------------------------------------------------------
   Interpreter::Interpreter(const char* llvmdir /*= 0*/):
-  m_CIFactory(0),
   m_UniqueCounter(0),
   m_printAST(false),
   m_LastDump(0),
@@ -146,12 +141,15 @@ namespace cling {
   {
     m_PragmaHandler = new clang::PragmaNamespace("cling");
 
-    m_CIFactory.reset(new CIFactory(fake_argc, fake_argv, llvmdir));
+    //m_CIFactory.reset(new CIFactory(fake_argc, fake_argv, llvmdir));
     
-    m_IncrParser.reset(new IncrementalParser(createCI(), &getPragmaHandler()));
-    m_ExecutionContext.reset(new ExecutionContext(*this));
+    m_IncrParser.reset(new IncrementalParser(&getPragmaHandler()));
+    m_ExecutionContext.reset(new ExecutionContext());
     
-    m_InputValidator.reset(new InputValidator(createCI()));
+    llvm::MemoryBuffer* MemoryBuffer
+      = llvm::MemoryBuffer::getMemBuffer("//cling InputSanitizer");
+
+    m_InputValidator.reset(new InputValidator(m_IncrParser->getCIFactory().createCI(MemoryBuffer)));
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
@@ -209,12 +207,6 @@ namespace cling {
                                     PP.getLangOptions(),
                                     PP.getTargetInfo().getTriple());
       
-  }
-   
-  clang::CompilerInstance*
-  Interpreter::createCI() const
-  {
-    return m_CIFactory->createCI();
   }
   
   clang::CompilerInstance*
