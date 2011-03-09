@@ -96,7 +96,7 @@ clang::CompilerInstance* CreateCI ()
    // Create a compiler instance to handle the actual work.
    gCIFactory = new cling::CIFactory(argc, argv, llvmdir);
 
-   return gCIFactory->createCI ();
+   return gCIFactory->createCI ("//rootcling");
 }
 
 void DestroyCI ()
