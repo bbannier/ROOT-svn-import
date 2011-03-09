@@ -1031,7 +1031,7 @@ Bool_t TMVA::Tools::HasAttr( void* node, const char* attrname )
 void TMVA::Tools::ReadAttr( void* node, const char* attrname, TString& value )
 {
    // add attribute from xml
-   if(!HasAttr(node, attrname)) {
+   if (!HasAttr(node, attrname)) {
       const char * nodename = xmlengine().GetNodeName(node);
       Log() << kFATAL << "Trying to read non-existing attribute '" << attrname << "' from xml node '" << nodename << "'" << Endl;
    }
@@ -1150,7 +1150,7 @@ TString TMVA::Tools::StringFromDouble( Double_t d )
 }
 
 //_______________________________________________________________________
-void TMVA::Tools::WriteTMatrixDToXML(void* node, const char* name, TMatrixD* mat)
+void TMVA::Tools::WriteTMatrixDToXML( void* node, const char* name, TMatrixD* mat )
 {
    // XML helpers
    void* matnode = xmlengine().NewChild(node, 0, name);
@@ -1159,39 +1159,37 @@ void TMVA::Tools::WriteTMatrixDToXML(void* node, const char* name, TMatrixD* mat
    std::stringstream s;
    for (Int_t row = 0; row<mat->GetNrows(); row++) {
       for (Int_t col = 0; col<mat->GetNcols(); col++) {
-         s << (*mat)[row][col] << " ";
+         s << Form( "%5.15e ", (*mat)[row][col] );
       }
    }
    xmlengine().AddRawLine( matnode, s.str().c_str() );
 }
 
 //_______________________________________________________________________
-void TMVA::Tools::WriteTVectorDToXML(void* node, const char* name, TVectorD* vec)
+void TMVA::Tools::WriteTVectorDToXML( void* node, const char* name, TVectorD* vec )
 {
    TMatrixD mat(1,vec->GetNoElements(),&((*vec)[0]));
-   WriteTMatrixDToXML(node, name, &mat);
+   WriteTMatrixDToXML( node, name, &mat );
 }
 
 //_______________________________________________________________________
-void TMVA::Tools::ReadTVectorDFromXML(void* node, const char* name, TVectorD* vec)
+void TMVA::Tools::ReadTVectorDFromXML( void* node, const char* name, TVectorD* vec )
 {
    TMatrixD mat(1,vec->GetNoElements(),&((*vec)[0]));
-   ReadTMatrixDFromXML(node,name,&mat);
-   for (int i=0;i<vec->GetNoElements();++i){
-      (*vec)[i]=mat[0][i];
-   }
+   ReadTMatrixDFromXML( node, name, &mat );
+   for (int i=0;i<vec->GetNoElements();++i) (*vec)[i] = mat[0][i];
 }
 
 //_______________________________________________________________________
-void TMVA::Tools::ReadTMatrixDFromXML(void* node, const char* name, TMatrixD* mat)
+void TMVA::Tools::ReadTMatrixDFromXML( void* node, const char* name, TMatrixD* mat )
 {
    if (strcmp(xmlengine().GetNodeName(node),name)!=0){
       Log() << kWARNING << "Possible Error: Name of matrix in weight file"
             << " does not match name of matrix passed as argument!" << Endl;
    }
    Int_t nrows, ncols;
-   ReadAttr(node, "Rows", nrows);
-   ReadAttr(node, "Columns", ncols);
+   ReadAttr( node, "Rows",    nrows );
+   ReadAttr( node, "Columns", ncols );
    if (mat->GetNrows() != nrows || mat->GetNcols() != ncols){
       Log() << kWARNING << "Possible Error: Dimension of matrix in weight file"
             << " does not match dimension of matrix passed as argument!" << Endl;
