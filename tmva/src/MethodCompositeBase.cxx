@@ -173,6 +173,7 @@ void TMVA::MethodCompositeBase::ReadWeightsFromXML( void* wghtnode )
       optionString.ReplaceAll("~","");
       //ignore meta-options for method Boost
       optionString.ReplaceAll("Boost_","~Boost_");
+      optionString.ReplaceAll("!~","~!");
 
       if (i==0){
          // the cast on MethodBoost is ugly, but a similar line is also in ReadWeightsFromFile --> needs to be fixed later
