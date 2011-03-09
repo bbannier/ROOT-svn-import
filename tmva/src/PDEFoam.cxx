@@ -959,7 +959,7 @@ void TMVA::PDEFoam::ResetCellElements()
 }
 
 //_____________________________________________________________________
-Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
+Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* /* cell */ )
 {
    // Returns true, if the value of the given cell is undefined.
    // Default value: kFALSE.  This function can be overridden by
