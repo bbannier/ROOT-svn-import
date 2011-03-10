@@ -75,9 +75,9 @@ namespace cling {
     m_LastTopLevelDecl(0),
     m_FirstTopLevelDecl(0) 
   {
-    m_CIFactory.reset(new CIFactory(0, 0, llvmdir));
+    //m_CIFactory.reset(new CIFactory(0, 0, llvmdir));
     m_MemoryBuffer.push_back(new MutableMemoryBuffer("//cling!\n", "CLING") );
-    clang::CompilerInstance* CI = getCIFactory().createCI(m_MemoryBuffer[0], Pragma);
+    clang::CompilerInstance* CI = CIFactory::createCI(m_MemoryBuffer[0], Pragma, llvmdir);
     assert(CI && "CompilerInstance is (null)!");
     m_CI.reset(CI);
 
