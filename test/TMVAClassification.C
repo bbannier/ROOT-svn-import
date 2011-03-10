@@ -304,7 +304,7 @@ void TMVAClassification( TString myMethodList = "" )
    // Likelihood ("naive Bayes estimator")
    if (Use["Likelihood"])
       factory->BookMethod( TMVA::Types::kLikelihood, "Likelihood",
-                           "H:!V:!TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmoothBkg[1]=10:NSmooth=1:NAvEvtPerBin=50" );
+                           "H:!V:VarTransform=Decorrelate:!TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmoothBkg[1]=10:NSmooth=1:NAvEvtPerBin=50" );
 
    // Decorrelated likelihood
    if (Use["LikelihoodD"])
@@ -358,7 +358,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    // H-Matrix (chi2-squared) method
    if (Use["HMatrix"])
-      factory->BookMethod( TMVA::Types::kHMatrix, "HMatrix", "!H:!V" );
+      factory->BookMethod( TMVA::Types::kHMatrix, "HMatrix", "!H:!V:VarTransform=Norm" );
 
    // Linear discriminant (same as Fisher discriminant)
    if (Use["LD"])
@@ -366,7 +366,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    // Fisher discriminant (same as LD)
    if (Use["Fisher"])
-      factory->BookMethod( TMVA::Types::kFisher, "Fisher", "H:!V:Fisher:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=50:NsmoothMVAPdf=10" );
+      factory->BookMethod( TMVA::Types::kFisher, "Fisher", "H:!V:Fisher:VarTransform=None:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=50:NsmoothMVAPdf=10" );
 
    // Fisher with Gauss-transformed input variables
    if (Use["FisherG"])

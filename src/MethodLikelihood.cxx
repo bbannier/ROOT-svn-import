@@ -435,8 +435,6 @@ Double_t TMVA::MethodLikelihood::GetMvaValue( Double_t* err, Double_t* errUpper 
    // need to distinguish signal and background in case of variable transformation
    // signal first
 
-//   std::cout << "sig " << fSignalClass << " bkg " << fBackgroundClass << std::endl;
-
    GetTransformationHandler().SetTransformationReferenceClass( fSignalClass );
    // temporary: JS  --> FIX
    //GetTransformationHandler().SetTransformationReferenceClass( 0 );
@@ -462,7 +460,7 @@ Double_t TMVA::MethodLikelihood::GetMvaValue( Double_t* err, Double_t* errUpper 
 
          // verify limits
          if      (x[itype] >= (*fPDFSig)[ivar]->GetXmax()) x[itype] = (*fPDFSig)[ivar]->GetXmax() - 1.0e-10;
-         else if (x[itype] < (*fPDFSig)[ivar]->GetXmin()) x[itype] = (*fPDFSig)[ivar]->GetXmin();
+         else if (x[itype] <  (*fPDFSig)[ivar]->GetXmin()) x[itype] = (*fPDFSig)[ivar]->GetXmin();
 
          // find corresponding histogram from cached indices
          PDF* pdf = (itype == 0) ? (*fPDFSig)[ivar] : (*fPDFBgd)[ivar];

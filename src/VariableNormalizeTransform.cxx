@@ -334,7 +334,7 @@ void TMVA::VariableNormalizeTransform::AttachXMLTo(void* parent)
          gTools().AddAttr(mmxml, "Index", iinp);
          gTools().AddAttr(mmxml, "Min", fMin.at(icls).at(iinp) );
          gTools().AddAttr(mmxml, "Max", fMax.at(icls).at(iinp) );
-	 ++iinp;
+         ++iinp;
       }
    }
 }
@@ -442,8 +442,8 @@ void TMVA::VariableNormalizeTransform::ReadFromXML( void* trfnode )
 }
 
 //_______________________________________________________________________
-void
-TMVA::VariableNormalizeTransform::BuildTransformationFromVarInfo( const std::vector<TMVA::VariableInfo>& var ) {
+void TMVA::VariableNormalizeTransform::BuildTransformationFromVarInfo( const std::vector<TMVA::VariableInfo>& var ) 
+{
    // this method is only used when building a normalization transformation
    // from old text files
    // in this case regression didn't exist and there were no targets
@@ -561,11 +561,9 @@ void TMVA::VariableNormalizeTransform::MakeFunction( std::ostream& fout, const T
       fout << "{" << std::endl;
       fout << "   // Normalization transformation, initialisation" << std::endl;
       for (UInt_t ivar=0; ivar<nVar; ivar++) {
-         Float_t min = FLT_MAX;
-         Float_t max = -FLT_MAX;
          for (UInt_t icls = 0; icls < numC; icls++) {
-            min = TMath::Min(min, fMin.at(icls).at(ivar) );
-            max = TMath::Max(max, fMax.at(icls).at(ivar) );
+            Double_t min = TMath::Min( FLT_MAX, fMin.at(icls).at(ivar) );
+            Double_t max = TMath::Max(-FLT_MAX, fMax.at(icls).at(ivar) );
             fout << "   fMin_"<<trCounter<<"["<<icls<<"]["<<ivar<<"] = " << std::setprecision(12)
                  << min << ";" << std::endl;
             fout << "   fMax_"<<trCounter<<"["<<icls<<"]["<<ivar<<"] = " << std::setprecision(12)
