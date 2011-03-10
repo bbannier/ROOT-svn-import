@@ -1,11 +1,11 @@
 // Author: Zdenek Culik   16/04/2010
 // Modified by: Velislava Spasova
 
+#include "clr-scan.h"
+#include "TObject.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "TObject.h"
-#include "clr-scan.h"
 
 #include <iostream>
 #include <sstream> // class ostringstream
