@@ -30,32 +30,49 @@ namespace cling {
   void locate_cling_executable()
   {
   }
+
+  clang::CompilerInstance* CIFactory::createCI(llvm::StringRef code) {
+    return createCI(llvm::MemoryBuffer::getMemBuffer(code), 0, 0);
+  }
+
+  clang::CompilerInstance* CIFactory::createCI(llvm::MemoryBuffer* buffer, 
+                                               clang::PragmaNamespace* Pragma, 
+                                               const char* llvmdir) {
+    return createCI(buffer, Pragma, fake_argc, fake_argv, llvmdir, new llvm::LLVMContext() );
+
+  }
+
+  clang::CompilerInstance* CIFactory::createCI(llvm::StringRef code,
+                                               int argc,
+                                               const char* const *argv,
+                                               const char* llvmdir) {
+    return createCI(llvm::MemoryBuffer::getMemBuffer(code), 0, argc, argv, llvmdir, new llvm::LLVMContext());
+  }
+
+
   
-  CIFactory::CIFactory(int argc /*= 0*/,
-                       const char* const *argv /*= 0*/,
-                       const char* llvmdir /*= 0*/):
-    m_argc(argc),
-    m_argv(argv),
-    m_llvm_context(0)
-  {
-    if (!argc)
-      m_argc = fake_argc;
-    if (!argv)
-      m_argv = fake_argv;
-    
+  clang::CompilerInstance* CIFactory::createCI(llvm::MemoryBuffer* buffer, 
+                                               clang::PragmaNamespace* Pragma, 
+                                               int argc, 
+                                               const char* const *argv,
+                                               const char* llvmdir,
+                                               llvm::LLVMContext* llvm_context){
+    if (!Pragma) {
+      Pragma = new clang::PragmaNamespace("cling");
+    }
+
     // Create an instance builder, passing the llvmdir and arguments.
-    
     //
     //  Initialize the llvm library.
     //
     llvm::InitializeAllTargets();
     llvm::InitializeAllAsmPrinters();
-    
+    llvm::sys::Path resource_path;
     if (llvmdir) {
-      m_resource_path = llvmdir;
-      m_resource_path.appendComponent("lib");
-      m_resource_path.appendComponent("clang");
-      m_resource_path.appendComponent(CLANG_VERSION_STRING);
+      resource_path = llvmdir;
+      resource_path.appendComponent("lib");
+      resource_path.appendComponent("clang");
+      resource_path.appendComponent(CLANG_VERSION_STRING);
     } else {
       // FIXME: The first arg really does need to be argv[0] on FreeBSD.
       //
@@ -71,30 +88,11 @@ namespace cling {
       //
       // Note: Otherwise it uses dladdr().
       //
-      m_resource_path =
+      resource_path =
         clang::CompilerInvocation::GetResourcesPath
         ("cling", (void*)(intptr_t) locate_cling_executable);
     }
-  }
-  
-  CIFactory::~CIFactory()
-  {
-    // Destruct the instance builder
-  }
-  
-  clang::CompilerInstance* 
-  CIFactory::createCI(llvm::StringRef code, clang::PragmaNamespace* Pragma) const {
-    llvm::MemoryBuffer* buffer = llvm::MemoryBuffer::getMemBuffer(code);
-    return createCI(buffer, Pragma);
-  }
 
-
-  clang::CompilerInstance*
-  CIFactory::createCI(llvm::MemoryBuffer* buffer, 
-                      clang::PragmaNamespace* Pragma /*=0*/) const {
-    if (!Pragma) {
-      Pragma = new clang::PragmaNamespace("cling");
-    }
 
     // Create and setup a compiler instance.
     clang::CompilerInstance* CI = new clang::CompilerInstance();
@@ -111,13 +109,13 @@ namespace cling {
       
       clang::CompilerInvocation::CreateFromArgs
         (CI->getInvocation(),
-         (m_argv + 1),
-         (m_argv + m_argc),
+         (argv + 1),
+         (argv + argc),
          *Diags
          );
       if (CI->getHeaderSearchOpts().UseBuiltinIncludes &&
           CI->getHeaderSearchOpts().ResourceDir.empty()) {
-        CI->getHeaderSearchOpts().ResourceDir = m_resource_path.str();
+        CI->getHeaderSearchOpts().ResourceDir = resource_path.str();
       }
       if (CI->getDiagnostics().hasErrorOccurred()) {
         delete CI;
@@ -133,14 +131,15 @@ namespace cling {
       return 0;
     }
     CI->getTarget().setForcedLangOptions(CI->getLangOpts());
-
+    
     // Set up source and file managers
     CI->createFileManager();
     CI->createSourceManager(CI->getFileManager());
     
     // Set up the memory buffer
-    CI->getSourceManager().createMainFileIDForMemBuffer(buffer);
-
+    if (buffer)
+      CI->getSourceManager().createMainFileIDForMemBuffer(buffer);
+    
     // Set up the preprocessor
     CI->createPreprocessor();
     clang::Preprocessor& PP = CI->getPreprocessor();
@@ -148,7 +147,7 @@ namespace cling {
     PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                            PP.getLangOptions());
     /*NoBuiltins = */ //true);
-
+    
     // Set up the ASTContext
     clang::ASTContext *Ctx = new clang::ASTContext(CI->getLangOpts(),
                                                    PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
@@ -160,14 +159,14 @@ namespace cling {
     ChainedASTConsumer* Consumer = new ChainedASTConsumer();
     Consumer->Initialize(*Ctx);
     CI->setASTConsumer(Consumer);
-
-
+    
+    
     // Set up Sema
     bool CompleteTranslationUnit = false;
     clang::CodeCompleteConsumer* CCC = 0;
     CI->createSema(CompleteTranslationUnit, CCC);
-
-
+    
+    
     //
     //  If we are managing a permanent CI,
     //  the code looks like this:
@@ -181,8 +180,7 @@ namespace cling {
     //}
     
     return CI;
-  }
-  
+  }  
   // Pin this vtable to this file.
   ChainedASTConsumer::~ChainedASTConsumer() {}
 } // end namespace

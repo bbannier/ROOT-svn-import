@@ -51,7 +51,6 @@ namespace cling {
     
     void addConsumer(clang::ASTConsumer* consumer);
     void removeConsumer(clang::ASTConsumer* consumer);
-    CIFactory& getCIFactory() const { return *m_CIFactory.get(); }    
     
   private:
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
@@ -62,7 +61,6 @@ namespace cling {
     ChainedASTConsumer* m_Consumer; // CI owns it
     clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
     clang::Decl* m_FirstTopLevelDecl; // first top level decl
-    llvm::OwningPtr<cling::CIFactory> m_CIFactory; // our compiler intsance builder
   };
 }
 #endif // CLING_INCREMENTAL_PARSER_H

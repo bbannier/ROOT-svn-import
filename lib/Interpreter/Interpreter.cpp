@@ -146,7 +146,7 @@ namespace cling {
     m_IncrParser.reset(new IncrementalParser(&getPragmaHandler(), llvmdir));
     m_ExecutionContext.reset(new ExecutionContext());
     
-    m_InputValidator.reset(new InputValidator(m_IncrParser->getCIFactory().createCI("//cling InputSanitizer")));
+    m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer")));
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
