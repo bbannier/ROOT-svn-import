@@ -358,7 +358,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    // H-Matrix (chi2-squared) method
    if (Use["HMatrix"])
-      factory->BookMethod( TMVA::Types::kHMatrix, "HMatrix", "!H:!V:VarTransform=Norm" );
+      factory->BookMethod( TMVA::Types::kHMatrix, "HMatrix", "!H:!V:VarTransform=None" );
 
    // Linear discriminant (same as Fisher discriminant)
    if (Use["LD"])
