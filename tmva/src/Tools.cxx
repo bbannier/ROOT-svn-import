@@ -1145,7 +1145,7 @@ TString TMVA::Tools::StringFromDouble( Double_t d )
 {
    // string tools
    std::stringstream s;
-   s << d;
+   s << Form( "%5.15e", d );
    return TString(s.str().c_str());
 }
 
