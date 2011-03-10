@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/ValuePrinter.h"
+#include "cling/Interpreter/Value.h"
 
 namespace cling {
   namespace runtime {
@@ -39,7 +40,7 @@ namespace cling {
       
       template<typename T>
       T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC ) {
-        llvm::GenericValue result(gCling->EvaluateWithContext(expr, varaddr, DC));
+        Value result(gCling->EvaluateWithContext(expr, varaddr, DC));
         //FIXME: we should return T calculated from result
         //printf("%s", expr);
         return T();

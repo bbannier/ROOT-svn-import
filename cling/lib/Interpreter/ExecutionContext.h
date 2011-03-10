@@ -25,6 +25,7 @@ namespace clang {
 
 namespace cling {
   class Interpreter;
+  class Value;
   
   class EventListener : public llvm::JITEventListener {
   private:
@@ -64,7 +65,7 @@ namespace cling {
                       const std::string& filename);
     bool getModuleFromCodegen();
     
-    void executeFunction(llvm::StringRef function, llvm::GenericValue* returnValue = 0);
+    void executeFunction(llvm::StringRef function, Value* returnValue = 0);
     
     llvm::ExecutionEngine& getEngine() {
       return *m_engine.get();
