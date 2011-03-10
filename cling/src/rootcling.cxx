@@ -81,32 +81,6 @@ void error (const std::string msg)
    throw new std::runtime_error ("error: " + msg);
 }
 
-/* -------------------------------------------------------------------------- */
-
-cling::CIFactory* gCIFactory = NULL;
-
-clang::CompilerInstance* CreateCI ()
-{
-   static const char* argv [] = { "program", "-x", "c++" };
-
-   static const int argc = sizeof (argv) / sizeof (argv[0]);
-
-   const char* llvmdir = gSystem->Getenv("LLVMDIR");
-
-   // Create a compiler instance to handle the actual work.
-   gCIFactory = new cling::CIFactory(argc, argv, llvmdir);
-
-   return gCIFactory->createCI ("//rootcling");
-}
-
-void DestroyCI ()
-{
-   if (gCIFactory != NULL)
-       delete gCIFactory;
-}
-
-/* -------------------------------------------------------------------------- */
-
 void AddIncludePath (clang::CompilerInstance* CI, const std::string fileName)
 {
    info ("AddIncludePath [" + fileName + "]");
@@ -193,14 +167,18 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
 
    bool pch = IsPCH (fileName);
 
-   clang::CompilerInstance * CI = CreateCI ();
+   static const char* argv [] = { "program", "-x", "c++" };
+   static const int argc = sizeof (argv) / sizeof (argv[0]);
+   const char* llvmdir = gSystem->Getenv("LLVMDIR");
+
+   // Create a compiler instance to handle the actual work.
+   
+   clang::CompilerInstance * CI =  cling::CIFactory::createCI(0, 0, argc, argv, llvmdir, new llvm::LLVMContext());
 
    if (pch)
       OpenPCH (CI, fileName);
 
    SetupCI (CI);
-   // set include directories before CI->createPreprocessor()
-
    CI->createPreprocessor();
    clang::Preprocessor & PP = CI->getPreprocessor();
 
@@ -219,13 +197,13 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
    );
 
    CI->setASTConsumer (new clang::ASTConsumer());
-
+   
    PP.getBuiltinInfo().InitializeBuiltins
       (
        PP.getIdentifierTable (),
        PP.getLangOptions()
       );
-
+   
    PrintInfo (CI);
 
    if (pch || sourceCode != "") {
