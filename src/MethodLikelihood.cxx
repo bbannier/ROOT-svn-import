@@ -435,15 +435,17 @@ Double_t TMVA::MethodLikelihood::GetMvaValue( Double_t* err, Double_t* errUpper 
    // need to distinguish signal and background in case of variable transformation
    // signal first
 
-   //GetTransformationHandler().SetTransformationReferenceClass( DataInfo().GetClassInfo("Signal")->GetNumber() );
+//   std::cout << "sig " << fSignalClass << " bkg " << fBackgroundClass << std::endl;
+
+   GetTransformationHandler().SetTransformationReferenceClass( fSignalClass );
    // temporary: JS  --> FIX
-   GetTransformationHandler().SetTransformationReferenceClass( 0 );
+   //GetTransformationHandler().SetTransformationReferenceClass( 0 );
    const Event* ev = GetEvent();
    for (ivar=0; ivar<GetNvar(); ivar++) vs(ivar) = ev->GetValue(ivar);
 
-   //GetTransformationHandler().SetTransformationReferenceClass( DataInfo().GetClassInfo("Background")->GetNumber() );
+   GetTransformationHandler().SetTransformationReferenceClass( fBackgroundClass );
    // temporary: JS  --> FIX
-   GetTransformationHandler().SetTransformationReferenceClass( 1 );
+   //GetTransformationHandler().SetTransformationReferenceClass( 1 );
    ev = GetEvent();
    for (ivar=0; ivar<GetNvar(); ivar++) vb(ivar) = ev->GetValue(ivar);
 

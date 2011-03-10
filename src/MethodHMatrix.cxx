@@ -12,6 +12,7 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch> - CERN, Switzerland           *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
@@ -297,14 +298,11 @@ Double_t TMVA::MethodHMatrix::GetChi2( Types::ESBType type )
    UInt_t ivar(0), jvar(0), nvar(GetNvar());
    vector<Double_t> val( nvar );
 
-   static UInt_t signalClass     = DataInfo().GetClassInfo("Signal")->GetNumber();
-   static UInt_t backgroundClass = DataInfo().GetClassInfo("Background")->GetNumber();
-
    // transform the event according to the given type (signal/background)
    if (type==Types::kSignal)
-      GetTransformationHandler().SetTransformationReferenceClass( signalClass     );
+      GetTransformationHandler().SetTransformationReferenceClass( fSignalClass     );
    else
-      GetTransformationHandler().SetTransformationReferenceClass( backgroundClass );
+      GetTransformationHandler().SetTransformationReferenceClass( fBackgroundClass );
 
    const Event* ev = GetTransformationHandler().Transform( origEvt );
 
@@ -419,11 +417,21 @@ void TMVA::MethodHMatrix::MakeClassSpecific( std::ostream& fout, const TString& 
    fout << "   std::vector<double> inputValuesSig = inputValues;" << endl;
    fout << "   std::vector<double> inputValuesBgd = inputValues;" << endl;
    if (GetTransformationHandler().GetTransformationList().GetSize() != 0) {
-      fout << "   Transform(inputValuesSig,0);" << endl;
-      fout << "   Transform(inputValuesBgd,1);" << endl;
+
+      UInt_t signalClass    =DataInfo().GetClassInfo("Signal")->GetNumber();
+      UInt_t backgroundClass=DataInfo().GetClassInfo("Background")->GetNumber();
+
+      fout << "   Transform(inputValuesSig," << signalClass << ");" << endl;
+      fout << "   Transform(inputValuesBgd," << backgroundClass << ");" << endl;
    }
+
+//   fout << "   for(uint i=0; i<GetNvar(); ++i) std::cout << inputValuesSig.at(i) << \"  \" << inputValuesBgd.at(i) << std::endl; " << endl;
+
    fout << "   double s = GetChi2( inputValuesSig, " << Types::kSignal << " );" << endl;
    fout << "   double b = GetChi2( inputValuesBgd, " << Types::kBackground << " );" << endl;
+
+//   fout << "   std::cout << s << \"  \" << b << std::endl; " << endl;
+
    fout << "   " << endl;
    fout << "   if (s+b <= 0) std::cout << \"Problem in class " << className << "::GetMvaValue__: s+b = \"" << endl;
    fout << "                           << s+b << \" <= 0 \"  << std::endl;" << endl;
