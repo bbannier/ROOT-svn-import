@@ -2947,12 +2947,17 @@ void TMVA::MethodBase::MakeClass( const TString& theClassFileName ) const
    fout << "                 varIt != inputValues.end(); varIt++, ivar++) {" << endl;
    fout << "               iV.push_back(NormVariable( *varIt, fVmin[ivar], fVmax[ivar] ));" << endl;
    fout << "            }" << endl;
-   if (GetTransformationHandler().GetTransformationList().GetSize()!=0 && GetMethodType() != Types::kLikelihood)
+   if (GetTransformationHandler().GetTransformationList().GetSize()!=0 && 
+       GetMethodType() != Types::kLikelihood &&
+       GetMethodType() != Types::kHMatrix) {
       fout << "            Transform( iV, -1 );" << endl;
+   }
    fout << "            retval = GetMvaValue__( iV );" << endl;
    fout << "         }" << endl;
    fout << "         else {" << endl;
-   if (GetTransformationHandler().GetTransformationList().GetSize()!=0 && GetMethodType() != Types::kLikelihood) {
+   if (GetTransformationHandler().GetTransformationList().GetSize()!=0 && 
+       GetMethodType() != Types::kLikelihood &&
+       GetMethodType() != Types::kHMatrix) {
       fout << "            std::vector<double> iV;" << endl;
       fout << "            int ivar = 0;" << endl;
       fout << "            for (std::vector<double>::const_iterator varIt = inputValues.begin();" << endl;
