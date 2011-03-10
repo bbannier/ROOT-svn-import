@@ -5,11 +5,9 @@
 //------------------------------------------------------------------------------
 
 #include "DynamicLookup.h"
-#include "EvalInfo.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Template.h"
-
 
 namespace clang {
   class LookupResult;
@@ -468,7 +466,7 @@ namespace cling {
       return false;     
     return true;
   }
-  // end Helpers   
+  // end Helpers
   
 } // end namespace cling
 
