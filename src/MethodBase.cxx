@@ -1794,9 +1794,13 @@ void TMVA::MethodBase::ReadClassesFromXML( void* clsnode )
    if (DataInfo().GetClassInfo("Signal") != 0) {
       fSignalClass = DataInfo().GetClassInfo("Signal")->GetNumber();
    }
+   else
+      fSignalClass=0;
    if (DataInfo().GetClassInfo("Background") != 0) {
       fBackgroundClass = DataInfo().GetClassInfo("Background")->GetNumber();
    }
+   else
+      fBackgroundClass=1;
 }
 
 //_______________________________________________________________________
