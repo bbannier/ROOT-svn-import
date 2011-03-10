@@ -26,6 +26,7 @@
 
 #include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/Value.h"
 
 #include <cstdio>
 #include <iostream>
@@ -139,7 +140,7 @@ ExecutionContext::LazyFunctionCreator(const std::string& mangled_name)
 }
 
 void
-ExecutionContext::executeFunction(llvm::StringRef funcname, llvm::GenericValue* returnValue)
+ExecutionContext::executeFunction(llvm::StringRef funcname, Value* returnValue)
 {
 
    // Call an extern C function without arguments
@@ -182,11 +183,11 @@ ExecutionContext::executeFunction(llvm::StringRef funcname, llvm::GenericValue* 
    m_engine->UnregisterJITEventListener(&m_listener);
 
    std::vector<llvm::GenericValue> args;
-   llvm::GenericValue val;
+   Value TGV;
    if (!returnValue)
-      returnValue = &val;
+      returnValue = &TGV;
 
-   *returnValue = m_engine->runFunction(f, args);
+   returnValue->value = m_engine->runFunction(f, args);
    //
    //fprintf(stderr, "Finished running generated code with JIT.\n");
    //

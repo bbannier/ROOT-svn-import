@@ -36,7 +36,7 @@ namespace cling {
   class ExecutionContext;
   class IncrementalParser;
   class InputValidator;
-  
+  class Value;
   //---------------------------------------------------------------------------
   //! Class for managing many translation units supporting automatic
   //! forward declarations and linking
@@ -99,17 +99,17 @@ namespace cling {
     
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
-    llvm::GenericValue EvaluateWithContext(const char* expr, 
-                                           void* varaddr[], 
-                                           clang::DeclContext* DC);
+    Value EvaluateWithContext(const char* expr, 
+                              void* varaddr[], 
+                              clang::DeclContext* DC);
     // Define EvaluateProxyT as friend because it will use EvalCore
     template<typename T> 
     friend T runtime::internal::EvaluateProxyT(const char* expr,
-                                          void* varaddr[],
-                                          clang::DeclContext* DC); 
+                                               void* varaddr[],
+                                               clang::DeclContext* DC); 
     
   public:
-    llvm::GenericValue Evaluate(const char* expr, clang::DeclContext* DC);
+    Value Evaluate(const char* expr, clang::DeclContext* DC);
   };
   
 } // namespace cling

@@ -42,6 +42,7 @@
 #include "IncrementalParser.h"
 #include "InputValidator.h"
 #include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/Value.h"
 
 #include <cstdio>
 #include <iostream>
@@ -712,142 +713,143 @@ namespace cling {
     m_ExecutionContext->getEngine().InstallLazyFunctionCreator(fp);
   }
   
+  
+  // Implements the interpretation of the unknown symbols. 
+  Value Interpreter::EvaluateWithContext(const char* expr,
+                                         void* varaddr[],
+                                         clang::DeclContext* DC) {
+    std::string exprStr(expr);
+    int i = 0;
+    size_t found;
+    while ((found = exprStr.find("@")) && (found != std::string::npos)) { 
+      std::stringstream address;
+      address << varaddr[i];
+      exprStr = exprStr.insert(found + 1, address.str());
+      exprStr = exprStr.erase(found, 1);
+      ++i;    
+    }
+    printf("The expression that is going to be escaped is: %s\n", exprStr.c_str());
+    printf("\n");
+    return Evaluate(exprStr.c_str(), DC);
+  }
+  
+  Value Interpreter::Evaluate(const char* expr, clang::DeclContext* DC) {
+    // Execute and get the result
+    Value Result;
 
-   // Implements the interpretation of the unknown symbols. 
-   llvm::GenericValue Interpreter::EvaluateWithContext(const char* expr,
-                                                       void* varaddr[],
-                                                       clang::DeclContext* DC) {
-      std::string exprStr(expr);
-      int i = 0;
-      size_t found;
-      while ((found = exprStr.find("@")) && (found != std::string::npos)) { 
-         std::stringstream address;
-         address << varaddr[i];
-         exprStr = exprStr.insert(found + 1, address.str());
-         exprStr = exprStr.erase(found, 1);
-         ++i;    
-      }
-      printf("The expression that is going to be escaped is: %s\n", exprStr.c_str());
-      printf("\n");
-      return Evaluate(exprStr.c_str(), DC);
-   }
-   
-   llvm::GenericValue Interpreter::Evaluate(const char* expr, clang::DeclContext* DC) {
-      // Wrap the expression
-      const std::string ExprStr(expr);
-      const std::string WrapperName = createUniqueName();
-      std::string Wrapper = "extern \"C\" extern void* " + WrapperName + " () {\n";
-      //Wrapper += "return llvm::GenericValue(" + ExprStr + ");\n}";
-      Wrapper += "return (void*)gCling->getVersion();\n}";
-      fprintf(stderr, "Function:\n %s\n",  Wrapper.c_str());
-
-      // Set up the declaration context
-      //clang::DeclContext* CurContext;
-      //CurContext = m_IncrASTParser->getCI()->getSema().CurContext;
-      //m_IncrASTParser->getCI()->getSema().CurContext = m_IncrASTParser->getCI()->getSema().getFunctionLevelDeclContext();
-      // Parse
+    // Wrap the expression
+    const std::string ExprStr(expr);
+    const std::string WrapperName = createUniqueName();
+    std::string Wrapper = "extern \"C\" extern void* " + WrapperName + " () {\n";
+    //Wrapper += "return llvm::GenericValue(" + ExprStr + ");\n}";
+    Wrapper += "return (void*)gCling->getVersion();\n}";
+    fprintf(stderr, "Function:\n %s\n",  Wrapper.c_str());
+    
+    // Set up the declaration context
+    //clang::DeclContext* CurContext;
+    //CurContext = m_IncrASTParser->getCI()->getSema().CurContext;
+    //m_IncrASTParser->getCI()->getSema().CurContext = m_IncrASTParser->getCI()->getSema().getFunctionLevelDeclContext();
+    // Parse
     //
     // Start the code generation on the old AST:
     //
-      if (!m_ExecutionContext->startCodegen(m_IncrParser->getCI(),
-                                            "Interpreter::processLine() input")) {
-         fprintf(stderr, "Module creation failed!\n");
+    if (!m_ExecutionContext->startCodegen(m_IncrParser->getCI(),
+                                          "Interpreter::processLine() input")) {
+      fprintf(stderr, "Module creation failed!\n");
+    }
+    
+    //
+    //  Send the wrapped code through the
+    //  frontend to produce a translation unit.
+    //
+    clang::CompilerInstance* CI = m_IncrParser->parse(Wrapper);
+    if (!CI) {
+      fprintf(stderr, "Cannot compile string!\n");
+    }
+    // Note: We have a valid compiler instance at this point.
+    clang::TranslationUnitDecl* tu =
+      CI->getASTContext().getTranslationUnitDecl();
+    if (!tu) { // Parse failed, return.
+      fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
+    }
+    //
+    //  Send the translation unit through the
+    //  llvm code generator to make a module.
+    //
+    m_ExecutionContext->getModuleFromCodegen();
+    
+    m_ExecutionContext->executeFunction(WrapperName, &Result);
+    return Result;
+  }
+  
+  bool cling::Interpreter::setPrintAST(bool print /*=true*/) {
+    bool prev = m_printAST;
+    m_printAST = print;
+    if (m_printAST) {
+      if (!m_ASTDumper)
+        m_ASTDumper = new ASTTLDPrinter();
+      m_IncrParser->addConsumer(m_ASTDumper);
+    }
+    else
+      m_IncrParser->removeConsumer(m_ASTDumper);
+    return prev;
+  }
+  
+  
+  void cling::Interpreter::dumpAST(bool showAST, int last) {
+    clang::Decl* D = m_LastDump;
+    int oldPolicy = m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump;
+    
+    if (!D && last == -1 ) {
+      fprintf(stderr, "No last dump found! Assuming ALL \n");
+      last = 0;
+      showAST = false;        
+    }
+    
+    m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = showAST;
+    
+    if (last == -1) {
+      while ((D = D->getNextDeclInContext())) {
+        D->dump();
+      }
+    }
+    else if (last == 0) {
+      m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl()->dump();
+    } else {
+      clang::Decl *FD = m_IncrParser->getFirstTopLevelDecl(); // First Decl to print
+      clang::Decl *LD = FD;
+      
+      // FD and LD are first
+      
+      clang::Decl *NextLD = 0;
+      for (int i = 1; i < last; ++i) {
+        NextLD = LD->getNextDeclInContext();
+        if (NextLD) {
+          LD = NextLD;
+        }
       }
       
-      //
-      //  Send the wrapped code through the
-      //  frontend to produce a translation unit.
-      //
-      clang::CompilerInstance* CI = m_IncrParser->parse(Wrapper);
-      if (!CI) {
-         fprintf(stderr, "Cannot compile string!\n");
-      }
-      // Note: We have a valid compiler instance at this point.
-      clang::TranslationUnitDecl* tu =
-         CI->getASTContext().getTranslationUnitDecl();
-      if (!tu) { // Parse failed, return.
-         fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
-      }
-      //
-      //  Send the translation unit through the
-      //  llvm code generator to make a module.
-      //
-      m_ExecutionContext->getModuleFromCodegen();
+      // LD is last Decls after FD: [FD x y z LD a b c d]
       
-      // Execute and get the result
-      llvm::GenericValue Result;
-      m_ExecutionContext->executeFunction(WrapperName, &Result);
-      return Result;
-   }
-
-   bool cling::Interpreter::setPrintAST(bool print /*=true*/) {
-      bool prev = m_printAST;
-      m_printAST = print;
-      if (m_printAST) {
-         if (!m_ASTDumper)
-            m_ASTDumper = new ASTTLDPrinter();
-         m_IncrParser->addConsumer(m_ASTDumper);
+      while ((NextLD = LD->getNextDeclInContext())) {
+        // LD not yet at end: move window
+        FD = FD->getNextDeclInContext();
+        LD = NextLD;
       }
-      else
-         m_IncrParser->removeConsumer(m_ASTDumper);
-      return prev;
-   }
-   
-   
-   void cling::Interpreter::dumpAST(bool showAST, int last) {
-     clang::Decl* D = m_LastDump;
-     int oldPolicy = m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump;
-
-     if (!D && last == -1 ) {
-        fprintf(stderr, "No last dump found! Assuming ALL \n");
-        last = 0;
-        showAST = false;        
-     }
-
-     m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = showAST;
-
-     if (last == -1) {
-        while ((D = D->getNextDeclInContext())) {
-           D->dump();
-        }
-     }
-     else if (last == 0) {
-        m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl()->dump();
-     } else {
-        clang::Decl *FD = m_IncrParser->getFirstTopLevelDecl(); // First Decl to print
-        clang::Decl *LD = FD;
-
-        // FD and LD are first
-
-        clang::Decl *NextLD = 0;
-        for (int i = 1; i < last; ++i) {
-           NextLD = LD->getNextDeclInContext();
-           if (NextLD) {
-              LD = NextLD;
-           }
-        }
-
-        // LD is last Decls after FD: [FD x y z LD a b c d]
-
-        while ((NextLD = LD->getNextDeclInContext())) {
-           // LD not yet at end: move window
-           FD = FD->getNextDeclInContext();
-           LD = NextLD;
-        }
-
-        // Now LD is == getLastDeclinContext(), and FD is last decls before
-        // LD is last Decls after FD: [x y z a FD b c LD]
-        
-        while (FD) {
-           FD->dump();
-           fprintf(stderr, "\n"); // New line for every decl
-           FD = FD->getNextDeclInContext();
-        }        
-     }
-
-     m_LastDump = m_IncrParser->getLastTopLevelDecl();     
-     m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
-   }
+      
+      // Now LD is == getLastDeclinContext(), and FD is last decls before
+      // LD is last Decls after FD: [x y z a FD b c LD]
+      
+      while (FD) {
+        FD->dump();
+        fprintf(stderr, "\n"); // New line for every decl
+        FD = FD->getNextDeclInContext();
+      }        
+    }
+    
+    m_LastDump = m_IncrParser->getLastTopLevelDecl();     
+    m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
+  }
   
 } // namespace cling
 
