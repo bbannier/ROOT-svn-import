@@ -1935,16 +1935,29 @@ void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TStrin
    fout << "   // constructor of an essentially \"empty\" node floating in space" << endl;
    fout << "   BDT_DecisionTreeNode ( BDT_DecisionTreeNode* left," << endl;
    fout << "                          BDT_DecisionTreeNode* right," << endl;
-   fout << "                          double cutValue, bool cutType, int selector," << endl;
+   if (fUseFisherCuts){
+     fout << "                          int nFisherCoeff," << endl;
+     for (UInt_t i=0;i<GetNVariables()+1;i++){
+       fout << "                          double fisherCoeff"<<i<<"," << endl;
+     }
+   }
+   fout << "                          int selector, double cutValue, bool cutType, " << endl;
    fout << "                          int nodeType, double purity, double response ) :" << endl;
-   fout << "   fLeft    ( left     )," << endl;
-   fout << "   fRight   ( right    )," << endl;
-   fout << "   fCutValue( cutValue )," << endl;
-   fout << "   fCutType ( cutType  )," << endl;
-   fout << "   fSelector( selector )," << endl;
-   fout << "   fNodeType( nodeType )," << endl;
-   fout << "   fPurity  ( purity   )," << endl;
-   fout << "   fResponse( response ){}" << endl << endl;
+   fout << "   fLeft         ( left         )," << endl;
+   fout << "   fRight        ( right        )," << endl;
+   if (fUseFisherCuts) fout << "   fNFisherCoeff ( nFisherCoeff )," << endl;
+   fout << "   fSelector     ( selector     )," << endl;
+   fout << "   fCutValue     ( cutValue     )," << endl;
+   fout << "   fCutType      ( cutType      )," << endl;
+   fout << "   fNodeType     ( nodeType     )," << endl;
+   fout << "   fPurity       ( purity       )," << endl;
+   fout << "   fResponse     ( response     ){" << endl;
+   if (fUseFisherCuts){
+     for (UInt_t i=0;i<GetNVariables()+1;i++){
+       fout << "     fFisherCoeff.push_back(fisherCoeff"<<i<<");" << endl;
+     }
+   }
+   fout << "   }" << endl << endl;
    fout << "   virtual ~BDT_DecisionTreeNode();" << endl << endl;
    fout << "   // test event if it decends the tree at this node to the right" << endl;
    fout << "   virtual bool GoesRight( const std::vector<double>& inputValues ) const;" << endl;
@@ -1960,9 +1973,13 @@ void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TStrin
    fout << "private:" << endl << endl;
    fout << "   BDT_DecisionTreeNode*   fLeft;     // pointer to the left daughter node" << endl;
    fout << "   BDT_DecisionTreeNode*   fRight;    // pointer to the right daughter node" << endl;
+   if (fUseFisherCuts){
+     fout << "   int                     fNFisherCoeff; // =0 if this node doesn use fisher, else =nvar+1 " << endl;
+     fout << "   std::vector<double>     fFisherCoeff;  // the fisher coeff (offset at the last element)" << endl;
+   }
+   fout << "   int                     fSelector; // index of variable used in node selection (decision tree)   " << endl;
    fout << "   double                  fCutValue; // cut value appplied on this node to discriminate bkg against sig" << endl;
    fout << "   bool                    fCutType;  // true: if event variable > cutValue ==> signal , false otherwise" << endl;
-   fout << "   int                     fSelector; // index of variable used in node selection (decision tree)   " << endl;
    fout << "   int                     fNodeType; // Type of node: -1 == Bkg-leaf, 1 == Signal-leaf, 0 = internal " << endl;
    fout << "   double                  fPurity;   // Purity of node from training"<< endl;
    fout << "   double                  fResponse; // Regression response value of node" << endl;
@@ -1979,7 +1996,19 @@ void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TStrin
    fout << "bool BDT_DecisionTreeNode::GoesRight( const std::vector<double>& inputValues ) const" << endl;
    fout << "{" << endl;
    fout << "   // test event if it decends the tree at this node to the right" << endl;
-   fout << "   bool result = (inputValues[fSelector] > fCutValue );" << endl;
+   fout << "   bool result;" << endl;
+   if (fUseFisherCuts){
+     fout << "   if (fNFisherCoeff == 0){" << endl;
+     fout << "     result = (inputValues[fSelector] > fCutValue );" << endl;
+     fout << "   }else{" << endl;
+     fout << "     double fisher = fFisherCoeff.at(fFisherCoeff.size()-1);" << endl;
+     fout << "     for (unsigned int ivar=0; ivar<fFisherCoeff.size()-1; ivar++)" << endl;
+     fout << "       fisher += fFisherCoeff.at(ivar)*inputValues.at(ivar);" << endl;
+     fout << "     result = fisher > fCutValue;" << endl;
+     fout << "   }" << endl;
+   }else{
+     fout << "     result = (inputValues[fSelector] > fCutValue );" << endl;
+   }
    fout << "   if (fCutType == true) return result; //the cuts are selecting Signal ;" << endl;
    fout << "   else return !result;" << endl;
    fout << "}" << endl;
@@ -2019,12 +2048,21 @@ void TMVA::MethodBDT::MakeClassInstantiateNode( DecisionTreeNode *n, std::ostrea
       fout << "0";
    }
    fout << ", " <<  endl
-        << setprecision(6)
+        << setprecision(6);
+   if (fUseFisherCuts){
+     fout << n->GetNFisherCoeff() << ", ";
+     for (UInt_t i=0; i< GetNVariables()+1; i++) {
+       if (n->GetNFisherCoeff() == 0 ){
+         fout <<  "0, ";
+       }else{
+         fout << n->GetFisherCoeff(i) << ", ";
+       }
+     }
+   }
+   fout << n->GetSelector() << ", "
         << n->GetCutValue() << ", "
         << n->GetCutType() << ", "
-        << n->GetSelector() << ", "
         << n->GetNodeType() << ", "
         << n->GetPurity() << ","
         << n->GetResponse() << ") ";
-
 }
