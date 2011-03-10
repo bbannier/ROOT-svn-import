@@ -254,37 +254,6 @@ Double_t TMVA::MethodHMatrix::GetMvaValue( Double_t* err, Double_t* errUpper )
    return (b - s)/(s + b);
 }
 
-// //_______________________________________________________________________
-// Double_t TMVA::MethodHMatrix::GetChi2( TMVA::Event* e,  Types::ESBType type ) const
-// {
-//    // compute chi2-estimator for event according to type (signal/background)
-
-//    // loop over variables
-//    UInt_t ivar,jvar, nvar=GetNvar();
-//    vector<Double_t> val( nvar );
-//    for (ivar=0; ivar<nvar; ivar++) {
-//       val[ivar] = e->GetValue(ivar);
-//       if (IsNormalised()) val[ivar] = gTools().NormVariable( val[ivar], GetXmin( ivar ), GetXmax( ivar ) );
-//    }
-
-//    Double_t chi2 = 0;
-//    for (ivar=0; ivar<nvar; ivar++) {
-//       for (jvar=0; jvar<nvar; jvar++) {
-//          if (type == Types::kSignal) 
-//             chi2 += ( (val[ivar] - (*fVecMeanS)(ivar))*(val[jvar] - (*fVecMeanS)(jvar))
-//                       * (*fInvHMatrixS)(ivar,jvar) );
-//          else
-//             chi2 += ( (val[ivar] - (*fVecMeanB)(ivar))*(val[jvar] - (*fVecMeanB)(jvar))
-//                       * (*fInvHMatrixB)(ivar,jvar) );
-//       }
-//    }
-
-//    // sanity check
-//    if (chi2 < 0) Log() << kFATAL << "<GetChi2> negative chi2: " << chi2 << Endl;
-
-//    return chi2;
-// }
-
 //_______________________________________________________________________
 Double_t TMVA::MethodHMatrix::GetChi2( Types::ESBType type ) 
 {
