@@ -1220,7 +1220,7 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
       AddSpectatorsXMLTo( parent );
 
    // write class info if in multiclass mode
-   if(DoMulticlass())
+//   if(DoMulticlass())
       AddClassesXMLTo(parent);
    
    // write target info if in regression mode
@@ -1403,7 +1403,8 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
          ReadSpectatorsFromXML(ch);
       }
       else if (nodeName=="Classes") {
-         if(DataInfo().GetNClasses()==0 && DoMulticlass())
+//         if(DataInfo().GetNClasses()==0 && DoMulticlass())
+         if(DataInfo().GetNClasses()==0)
             ReadClassesFromXML(ch);
       }
       else if (nodeName=="Targets") {
@@ -1653,9 +1654,20 @@ void TMVA::MethodBase::AddSpectatorsXMLTo( void* parent ) const
 void TMVA::MethodBase::AddClassesXMLTo( void* parent ) const 
 {
    // write class info to XML 
-   void* targets = gTools().AddChild(parent, "Classes");
-   gTools().AddAttr( targets, "NClass", gTools().StringFromInt(DataInfo().GetNClasses()) );
+   UInt_t nClasses=DataInfo().GetNClasses();
+   
+   void* classes = gTools().AddChild(parent, "Classes");
+   gTools().AddAttr( classes, "NClass", nClasses );
+   
+   for (UInt_t iCls=0; iCls<nClasses; ++iCls){
+      ClassInfo *classInfo=DataInfo().GetClassInfo (iCls);
+      TString  className  =classInfo->GetName();
+      UInt_t   classNumber=classInfo->GetNumber();
 
+      void* classNode=gTools().AddChild(classes, "Class");
+      gTools().AddAttr( classNode, "Name",  className   );
+      gTools().AddAttr( classNode, "Index", classNumber );
+   }
 }
 //_______________________________________________________________________
 void TMVA::MethodBase::AddTargetsXMLTo( void* parent ) const 
@@ -1758,10 +1770,32 @@ void TMVA::MethodBase::ReadClassesFromXML( void* clsnode )
    // coverity[tainted_data_argument]
    gTools().ReadAttr( clsnode, "NClass", readNCls);
 
-   for(UInt_t icls = 0; icls<readNCls;++icls){
-      TString classname = Form("class%i",icls);
-      DataInfo().AddClass(classname);
+   TString className="";
+   UInt_t  classIndex=0;
+   void* ch = gTools().GetChild(clsnode);
+   if (!ch) {
+      for(UInt_t icls = 0; icls<readNCls;++icls){
+	 TString classname = Form("class%i",icls);
+	 DataInfo().AddClass(classname);
 
+      }
+   }
+   else{
+      while (ch) {
+	 gTools().ReadAttr( ch, "Index", classIndex);
+	 gTools().ReadAttr( ch, "Name",  className );
+	 DataInfo().AddClass(className);
+
+	 ch = gTools().GetNextChild(ch);
+      }
+   }
+
+   // retrieve signal and background class index
+   if (DataInfo().GetClassInfo("Signal") != 0) {
+      fSignalClass = DataInfo().GetClassInfo("Signal")->GetNumber();
+   }
+   if (DataInfo().GetClassInfo("Background") != 0) {
+      fBackgroundClass = DataInfo().GetClassInfo("Background")->GetNumber();
    }
 }
 
