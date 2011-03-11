@@ -710,7 +710,7 @@ namespace cling {
   }
 
   void Interpreter::installLazyFunctionCreator(void* (*fp)(const std::string&)) {
-    m_ExecutionContext->getEngine().InstallLazyFunctionCreator(fp);
+    m_ExecutionContext->installLazyFunctionCreator(fp);
   }
   
   
