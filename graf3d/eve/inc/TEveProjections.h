@@ -54,8 +54,10 @@ protected:
    EGeoMode_e          fGeoMode;       // strategy of polygon projection (what to try first)
    TString             fName;          // name
 
-   TEveVector          fCenter;        // center of distortion
-   TEveVector          fZeroPosVal;    // projected origin (0, 0, 0)
+   TEveVector          fCenter;        // center of distortionprivate:
+   TEveVector          fProjectedCenter; // projected center of distortion.
+
+   bool                fDisplaceCenter; // displace point before projection
 
    Bool_t              fUsePreScale;   // use pre-scaling
    vPreScale_t         fPreScales[3];  // scaling before the distortion
@@ -96,8 +98,11 @@ public:
    const   Char_t*     GetName() const            { return fName.Data(); }
    void                SetName(const Char_t* txt) { fName = txt; }
 
-   virtual void        SetCenter(TEveVector& v)   { fCenter = v; UpdateLimit(); }
-   virtual Float_t*    GetProjectedCenter()       { return fCenter.Arr(); }
+   virtual void        SetCenter(TEveVector& v);
+   virtual Float_t*    GetProjectedCenter() { return fProjectedCenter.Arr(); }
+  
+   void                SetDisplaceCenter(bool);
+   Bool_t              GetDisplaceCenter() const { return fDisplaceCenter; }
 
    void                SetType(EPType_e t)        { fType = t; }
    EPType_e            GetType() const            { return fType; }
@@ -154,9 +159,6 @@ public:
 
 class TEveRhoZProjection: public TEveProjection
 {
-private:
-   TEveVector   fProjectedCenter; // projected center of distortion.
-
 public:
    TEveRhoZProjection();
    virtual ~TEveRhoZProjection() {}
@@ -165,9 +167,6 @@ public:
    virtual Bool_t      Is3D() const { return kFALSE; }
 
    virtual void        ProjectPoint(Float_t& x, Float_t& y, Float_t& z, Float_t d, EPProc_e proc = kPP_Full);
-
-   virtual void        SetCenter(TEveVector& center);
-   virtual Float_t*    GetProjectedCenter() { return fProjectedCenter.Arr(); }
 
    virtual void        UpdateLimit();
 
