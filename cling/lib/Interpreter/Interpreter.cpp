@@ -750,13 +750,6 @@ namespace cling {
     //CurContext = m_IncrASTParser->getCI()->getSema().CurContext;
     //m_IncrASTParser->getCI()->getSema().CurContext = m_IncrASTParser->getCI()->getSema().getFunctionLevelDeclContext();
     // Parse
-    //
-    // Start the code generation on the old AST:
-    //
-    if (!m_ExecutionContext->startCodegen(m_IncrParser->getCI(),
-                                          "Interpreter::processLine() input")) {
-      fprintf(stderr, "Module creation failed!\n");
-    }
     
     //
     //  Send the wrapped code through the
