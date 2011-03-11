@@ -47,7 +47,7 @@ namespace cling {
       }
       memcpy(B + oldlen, code.data(), applen);
       B[newlen - 1] = 0;
-      init(B, B + newlen - 1);
+      init(B, B + newlen - 1, /*RequireNullTerminator=*/ true);
     }
     
   public:
