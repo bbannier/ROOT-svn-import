@@ -1048,7 +1048,9 @@ void TMVA::Tools::AddAttr( void* node, const char* attrname, const char* value )
 }
 
 //_______________________________________________________________________
-void* TMVA::Tools::AddChild( void* parent, const char* childname, const char* content, bool isRootNode ) {
+void* TMVA::Tools::AddChild( void* parent, const char* childname, const char* content, bool isRootNode ) 
+{
+   // add child node
    if( !isRootNode && parent == 0 ) return 0;
    return gTools().xmlengine().NewChild(parent, 0, childname, content);
 }
@@ -1061,6 +1063,7 @@ Bool_t TMVA::Tools::AddComment( void* node, const char* comment ) {
  //_______________________________________________________________________
 void* TMVA::Tools::GetParent( void* child)
 {
+   // get parent node
    void* par = xmlengine().GetParent(child);
    
    return par;
@@ -1068,6 +1071,7 @@ void* TMVA::Tools::GetParent( void* child)
 //_______________________________________________________________________
 void* TMVA::Tools::GetChild( void* parent, const char* childname )
 {
+   // get child node
    void* ch = xmlengine().GetChild(parent);
    if (childname != 0) {
       while (ch!=0 && strcmp(xmlengine().GetNodeName(ch),childname) != 0) ch = xmlengine().GetNext(ch);
