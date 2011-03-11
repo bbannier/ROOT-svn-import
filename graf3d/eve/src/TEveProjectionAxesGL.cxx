@@ -65,7 +65,7 @@ void TEveProjectionAxesGL::FilterOverlappingLabels(Int_t idx, Float_t ref) const
    TGLAxisPainter::LabVec_t &orig = fAxisPainter.RefLabVec();
    if (orig.size() == 0) return;
 
-   Float_t center = fM->GetManager()->GetCenter()[idx];
+   Float_t center = fM->GetManager()->GetProjection()->GetProjectedCenter()[idx];
 
    // Get index of label closest to the distortion center.
    // Needed to keep simetry around center.
@@ -326,8 +326,8 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
 
    if (fM->fUseColorSet)
    {
-       TGLUtil::Color(rnrCtx.ColorSet().Markup());
-       fAxisPainter.SetUseAxisColors(kFALSE);
+      TGLUtil::Color(rnrCtx.ColorSet().Markup());
+      fAxisPainter.SetUseAxisColors(kFALSE);
    }
 
    fProjection = fM->GetManager()->GetProjection();
@@ -361,14 +361,14 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
 
    //
    // Axes.
-   {
+   try {
       using namespace TMath;
       GLint   vp[4];
       glGetIntegerv(GL_VIEWPORT, vp);
       Float_t refLength =  TMath::Sqrt((TMath::Power(vp[2]-vp[0], 2) + TMath::Power(vp[3]-vp[1], 2)));
       Float_t tickLength = TMath::Sqrt((TMath::Power(r-l, 2) + TMath::Power(t-b, 2)));
       fAxisPainter.SetFontMode(TGLFont::kPixmap);
-      fAxisPainter.SetLabelFont(rnrCtx, TGLFontManager::GetFontNameFromId(fM->GetLabelFont()),  TMath::CeilNint(refLength*0.02), tickLength*fM->GetLabelSize());
+      fAxisPainter.SetLabelFont(rnrCtx, TGLFontManager::GetFontNameFromId(fM->GetLabelFont()),  TMath::CeilNint(refLength*fM->GetLabelSize()), tickLength*fM->GetLabelSize());
 
       Float_t min, max;
       // X-axis.
@@ -388,7 +388,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          fAxisPainter.RnrLabels();
          fAxisPainter.RnrLines();
          glPopMatrix();
-
+         
          // Top.
          glPushMatrix();
          glTranslatef( 0, t, 0);
@@ -427,6 +427,11 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          glPopMatrix();
       }
    }
+   catch (TEveException& exc)
+   {
+      Warning("TEveProjectionAxesGL::DirectDraw", Form( "failed: '%s'.", exc.Data()));
+   }
+
    glDepthRange(old_depth_range[0], old_depth_range[1]);
 
    glPopAttrib();
