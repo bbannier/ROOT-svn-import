@@ -39,8 +39,8 @@ void EventListener::NotifyFunctionEmitted(const llvm::Function &F,
                                           void *Code, size_t Size,
                                           const JITEventListener::EmittedFunctionDetails &Details)
 {
-   std::cerr << "EventListener::NotifyFunctionEmitted: m_vec_functions.push_back("
-             << F.getName().data() << "); Code @ " << Code << std::endl;
+   //BB std::cerr << "EventListener::NotifyFunctionEmitted: m_vec_functions.push_back("
+   //BB           << F.getName().data() << "); Code @ " << Code << std::endl;
    m_vec_functions.push_back(const_cast<llvm::Function *>(&F));
 }
 
@@ -55,11 +55,11 @@ void EventListener::UnregisterFunctionMapping(llvm::ExecutionEngine &engine)
 
    for (it=m_vec_functions.rbegin(); it < m_vec_functions.rend(); it++) {
       llvm::Function *ff = (llvm::Function *)*it;
-      std::cerr << "EventListener::UnregisterFunctionMapping: updateGlobalMapping("
-                << ff->getName().data() << ", 0); Global @" << engine.getPointerToGlobalIfAvailable(ff) << std::endl;
+      //BB std::cerr << "EventListener::UnregisterFunctionMapping: updateGlobalMapping("
+      //BB          << ff->getName().data() << ", 0); Global @" << engine.getPointerToGlobalIfAvailable(ff) << std::endl;
       engine.freeMachineCodeForFunction(ff);
       engine.updateGlobalMapping(ff, 0);
-      std::cerr << "Global after delete @" << engine.getPointerToGlobalIfAvailable(ff) << std::endl;
+      //BB std::cerr << "Global after delete @" << engine.getPointerToGlobalIfAvailable(ff) << std::endl;
    }
    m_vec_functions.clear(); 
 }
