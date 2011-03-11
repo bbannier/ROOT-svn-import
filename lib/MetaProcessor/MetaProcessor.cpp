@@ -202,6 +202,10 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //  Unrecognized command.
    //
    //fprintf(stderr, "Unrecognized command.\n");
+   if (cmd == "I" || cmd == "i") {
+     m_Interp.AddIncludePath(param.c_str());
+     return true;
+   }
    return false;
 }
 

@@ -56,7 +56,7 @@ namespace cling {
 
     const char* getVersion() const;
     
-    void AddIncludePath(const char *path);
+    void AddIncludePath(const char *incpath);
     int processLine(const std::string& input_line);
     
     int loadFile(const std::string& filename,
