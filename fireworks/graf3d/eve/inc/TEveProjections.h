@@ -55,7 +55,6 @@ protected:
    TString             fName;          // name
 
    TEveVector          fCenter;        // center of distortionprivate:
-   TEveVector          fProjectedCenter; // projected center of distortion.
 
    bool                fDisplaceCenter; // displace point before projection
 
@@ -95,8 +94,8 @@ public:
    const   Char_t*     GetName() const            { return fName.Data(); }
    void                SetName(const Char_t* txt) { fName = txt; }
 
-   virtual void        SetCenter(TEveVector& v);
-   virtual Float_t*    GetProjectedCenter() { return fProjectedCenter.Arr(); }
+   virtual void        SetCenter(TEveVector& v) { fCenter = v; }
+   virtual Float_t*    GetProjectedCenter();
   
    void                SetDisplaceCenter(bool);
    Bool_t              GetDisplaceCenter() const { return fDisplaceCenter; }
@@ -154,6 +153,9 @@ public:
 
 class TEveRhoZProjection: public TEveProjection
 {
+private:
+   TEveVector   fProjectedCenter; // projected center of distortion.
+
 public:
    TEveRhoZProjection();
    virtual ~TEveRhoZProjection() {}
@@ -162,6 +164,9 @@ public:
    virtual Bool_t      Is3D() const { return kFALSE; }
 
    virtual void        ProjectPoint(Float_t& x, Float_t& y, Float_t& z, Float_t d, EPProc_e proc = kPP_Full);
+
+   virtual void        SetCenter(TEveVector& v); 
+   virtual Float_t*    GetProjectedCenter() { return fProjectedCenter.Arr(); }
 
    virtual Bool_t      HasSeveralSubSpaces() const { return kTRUE; }
    virtual Bool_t      AcceptSegment(TEveVector& v1, TEveVector& v2, Float_t tolerance) const;

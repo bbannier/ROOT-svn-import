@@ -295,14 +295,18 @@ void TEveProjection::SetPastFixRFac(Float_t x)
    fPastFixRFac   = x;
    fPastFixRScale = TMath::Power(10.0f, fPastFixRFac) / fScaleR;
 }
- 
-void  TEveProjection::SetCenter(TEveVector& v)
-{
-   // Set center of distortion (virtual method).
 
-   fCenter = v;
-   fProjectedCenter = fCenter;
-   ProjectVector(fProjectedCenter, 0);
+//______________________________________________________________________________
+Float_t* TEveProjection::GetProjectedCenter()
+{
+   // Get projected center.
+
+   static TEveVector zero;
+
+   if (fDisplaceCenter)
+      return zero.Arr();
+   else 
+      return fCenter.Arr();
 }
 
 //______________________________________________________________________________
@@ -314,8 +318,8 @@ void  TEveProjection::SetDisplaceCenter(Bool_t x)
    // gap around projected center in RhoZ projection. 
 
    fDisplaceCenter = x;
-   fProjectedCenter = fCenter;
-   ProjectVector(fProjectedCenter, 0);
+   // update projected center
+   SetCenter(fCenter);
 }
 
 //______________________________________________________________________________
@@ -389,9 +393,9 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
    TEveVector vec;
    TEveVector dirVec;
    SetDirectionalVector(axisIdx, dirVec);
-  
+
    // search from -/+ infinity according to sign of screen value
-   if (sv > fProjectedCenter[axisIdx])
+   if (sv > 0)
    {
       xL = 0;
       xR = maxVal;
@@ -409,7 +413,7 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
             throw(eH + Form("positive projected %f, value %f,xL, xR ( %f, %f)\n", vec[axisIdx], sv, xL, xR));
       }
    }
-   else if (sv < fProjectedCenter[axisIdx])
+   else if (sv < 0)
    {
       xR = 0;
       xL = -maxVal;
@@ -451,8 +455,8 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
 
    } while (TMath::Abs(vec[axisIdx] - sv) >= fgEps && cnt < maxSteps);
 
-  
-    return xM;
+
+   return xM; 
 }
 
 //______________________________________________________________________________
@@ -543,6 +547,27 @@ void TEveRhoZProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
       }
    }
    z = d;
+}
+
+
+//______________________________________________________________________________
+void TEveRhoZProjection::SetCenter(TEveVector& v)
+{
+   // Set center of distortion (virtual method).
+
+   fCenter = v;
+
+   if (fDisplaceCenter)
+   {
+      fProjectedCenter.Set(0.f, 0.f, 0.f);
+   }
+   else
+   {
+      Float_t r = TMath::Sqrt(v.fX*v.fX + v.fY*v.fY);
+      fProjectedCenter.fX = fCenter.fZ;
+      fProjectedCenter.fY = TMath::Sign(r, fCenter.fY);
+      fProjectedCenter.fZ = 0;
+   }
 }
 
 //______________________________________________________________________________
