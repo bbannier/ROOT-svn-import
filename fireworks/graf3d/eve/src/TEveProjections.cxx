@@ -40,7 +40,7 @@ TEveProjection::TEveProjection() :
    fGeoMode       (kGM_Unknown),
    fName          (0),
    fCenter        (),
-   fDisplaceCenter (kFALSE),
+   fDisplaceOrigin (kFALSE),
    fUsePreScale   (kFALSE),
    fDistortion    (0.0f),
    fFixR          (300), fFixZ          (400),
@@ -303,21 +303,21 @@ Float_t* TEveProjection::GetProjectedCenter()
 
    static TEveVector zero;
 
-   if (fDisplaceCenter)
+   if (fDisplaceOrigin)
       return zero.Arr();
    else 
       return fCenter.Arr();
 }
 
 //______________________________________________________________________________
-void  TEveProjection::SetDisplaceCenter(Bool_t x)
+void  TEveProjection::SetDisplaceOrigin(Bool_t x)
 {
    // Set flag to displace for center.
    // This options is useful if want to have projected center
    // at (0, 0) position in projected coordinates and want to dismiss
    // gap around projected center in RhoZ projection. 
 
-   fDisplaceCenter = x;
+   fDisplaceOrigin = x;
    // update projected center
    SetCenter(fCenter);
 }
@@ -404,7 +404,7 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
       while (cnt < maxSteps)
       {
          vec.Mult(dirVec, xR);
-         if (fDisplaceCenter) vec += fCenter;
+         if (fDisplaceOrigin) vec += fCenter;
          ProjectVector(vec, 0);
          if (vec[axisIdx] > sv || vec[axisIdx] == sv) break;
          xL = xR; xR *= 2;
@@ -421,7 +421,7 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
       while (cnt < maxSteps)
       {
          vec.Mult(dirVec, xL); 
-         if (fDisplaceCenter) vec += fCenter;
+         if (fDisplaceOrigin) vec += fCenter;
          ProjectVector(vec, 0);
          if (vec[axisIdx] < sv || vec[axisIdx] == sv) break;
          xR = xL; xL *= 2;
@@ -442,7 +442,7 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
       //printf("search value with bisection xL=%f, xR=%f; vec[axisIdx]=%f, sv=%f\n", xL, xR, vec[axisIdx], sv);
       xM = 0.5f * (xL + xR);
       vec.Mult(dirVec, xM);
-      if (fDisplaceCenter) vec += fCenter;
+      if (fDisplaceOrigin) vec += fCenter;
 
       ProjectVector(vec, 0);
       if (vec[axisIdx] > sv)
@@ -466,7 +466,7 @@ Float_t TEveProjection::GetScreenVal(Int_t i, Float_t x)
 
    TEveVector dv;
    SetDirectionalVector(i, dv); dv = dv*x;
-   if (fDisplaceCenter) dv += fCenter;
+   if (fDisplaceOrigin) dv += fCenter;
 
    ProjectVector(dv, 0);
    return dv[i];
@@ -503,7 +503,7 @@ void TEveRhoZProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
 
    using namespace TMath;
 
-   if (fDisplaceCenter) {
+   if (fDisplaceOrigin) {
       x -= fCenter.fX; 
       y -= fCenter.fY;
       z -= fCenter.fZ;
@@ -522,7 +522,7 @@ void TEveRhoZProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
 
       // distort
 
-      if (!fDisplaceCenter) {  
+      if (!fDisplaceOrigin) {  
          x -= fProjectedCenter.fX;
          y -= fProjectedCenter.fY;
       }
@@ -541,7 +541,7 @@ void TEveRhoZProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
       else
          y =  y * fScaleR / (1.0f + Abs(y)*fDistortion);
 
-      if (!fDisplaceCenter) {  
+      if (!fDisplaceOrigin) {  
          x += fProjectedCenter.fX;
          y += fProjectedCenter.fY;
       }
@@ -557,7 +557,7 @@ void TEveRhoZProjection::SetCenter(TEveVector& v)
 
    fCenter = v;
 
-   if (fDisplaceCenter)
+   if (fDisplaceOrigin)
    {
       fProjectedCenter.Set(0.f, 0.f, 0.f);
    }
@@ -661,7 +661,7 @@ void TEveRPhiProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
 
    using namespace TMath;
  
-   if (fDisplaceCenter)
+   if (fDisplaceOrigin)
    {
       x  -= fCenter.fX;
       y  -= fCenter.fY;
@@ -680,7 +680,7 @@ void TEveRPhiProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
          y = r*Sin(phi);
       }
 
-      if (!fDisplaceCenter)
+      if (!fDisplaceOrigin)
       {
          x  -= fCenter.fX;
          y  -= fCenter.fY;
@@ -696,7 +696,7 @@ void TEveRPhiProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
       else
          r =  r * fScaleR / (1.0f + r*fDistortion);
 
-      if (!fDisplaceCenter)
+      if (!fDisplaceOrigin)
       {
          x = r*Cos(phi) + fCenter.fX;
          y = r*Sin(phi) + fCenter.fY;

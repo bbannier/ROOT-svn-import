@@ -56,7 +56,7 @@ protected:
 
    TEveVector          fCenter;        // center of distortionprivate:
 
-   bool                fDisplaceCenter; // displace point before projection
+   bool                fDisplaceOrigin; // displace point before projection
 
    Bool_t              fUsePreScale;   // use pre-scaling
    vPreScale_t         fPreScales[3];  // scaling before the distortion
@@ -97,8 +97,8 @@ public:
    virtual void        SetCenter(TEveVector& v) { fCenter = v; }
    virtual Float_t*    GetProjectedCenter();
   
-   void                SetDisplaceCenter(bool);
-   Bool_t              GetDisplaceCenter() const { return fDisplaceCenter; }
+   void                SetDisplaceOrigin(bool);
+   Bool_t              GetDisplaceOrigin() const { return fDisplaceOrigin; }
 
    void                SetType(EPType_e t)        { fType = t; }
    EPType_e            GetType() const            { return fType; }
