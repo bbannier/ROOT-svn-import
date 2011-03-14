@@ -9,6 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#include "TError.h"
+
 #include "TEveProjections.h"
 #include "TEveTrans.h"
 #include "TEveUtil.h"
@@ -45,14 +47,7 @@ TEveProjection::TEveProjection() :
    fPastFixRFac   (0),   fPastFixZFac   (0),
    fScaleR        (1),   fScaleZ        (1),
    fPastFixRScale (1),   fPastFixZScale (1),
-   fMaxTrackStep  (5),
-   fLowLimit(-std::numeric_limits<Float_t>::infinity(),
-             -std::numeric_limits<Float_t>::infinity(),
-             -std::numeric_limits<Float_t>::infinity()),
-   fUpLimit ( std::numeric_limits<Float_t>::infinity(),
-              std::numeric_limits<Float_t>::infinity(),
-              std::numeric_limits<Float_t>::infinity())
-
+   fMaxTrackStep  (5)
 {
    // Constructor.
 }
@@ -261,20 +256,6 @@ void TEveProjection::ClearPreScales()
 }
 
 //______________________________________________________________________________
-void TEveProjection::UpdateLimit()
-{
-   // Update convergence in +inf and -inf.
-
-   if (fDistortion == 0.0f)
-      return;
-
-   Float_t lim = 1.0f/fDistortion + fFixR;
-   Float_t *c  = GetProjectedCenter();
-   fUpLimit .Set( lim + c[0],  lim + c[1], c[2]);
-   fLowLimit.Set(-lim + c[0], -lim + c[1], c[2]);
-}
-
-//______________________________________________________________________________
 void TEveProjection::SetDistortion(Float_t d)
 {
    // Set distortion.
@@ -284,7 +265,6 @@ void TEveProjection::SetDistortion(Float_t d)
    fScaleZ        = 1.0f + fFixZ*fDistortion;
    fPastFixRScale = TMath::Power(10.0f, fPastFixRFac) / fScaleR;
    fPastFixZScale = TMath::Power(10.0f, fPastFixZFac) / fScaleZ;
-   UpdateLimit();
 }
 
 //______________________________________________________________________________
@@ -295,7 +275,6 @@ void TEveProjection::SetFixR(Float_t r)
    fFixR          = r;
    fScaleR        = 1 + fFixR*fDistortion;
    fPastFixRScale = TMath::Power(10.0f, fPastFixRFac) / fScaleR;
-   UpdateLimit();
 }
 
 //______________________________________________________________________________
@@ -306,7 +285,6 @@ void TEveProjection::SetFixZ(Float_t z)
    fFixZ          = z;
    fScaleZ        = 1 + fFixZ*fDistortion;
    fPastFixZScale = TMath::Power(10.0f, fPastFixZFac) / fScaleZ;
-   UpdateLimit();
 }
 
 //______________________________________________________________________________
@@ -325,15 +303,19 @@ void  TEveProjection::SetCenter(TEveVector& v)
    fCenter = v;
    fProjectedCenter = fCenter;
    ProjectVector(fProjectedCenter, 0);
-   UpdateLimit();
 }
 
-void  TEveProjection::SetDisplaceCenter(bool x)
+//______________________________________________________________________________
+void  TEveProjection::SetDisplaceCenter(Bool_t x)
 {
+   // Set flag to displace for center.
+   // This options is useful if want to have projected center
+   // at (0, 0) position in projected coordinates and want to dismiss
+   // gap around projected center in RhoZ projection. 
+
    fDisplaceCenter = x;
    fProjectedCenter = fCenter;
    ProjectVector(fProjectedCenter, 0);
-   UpdateLimit();
 }
 
 //______________________________________________________________________________
@@ -373,6 +355,16 @@ void TEveProjection::BisectBreakPoint(TEveVector& vL, TEveVector& vR, Float_t ep
 }
 
 //______________________________________________________________________________
+Float_t TEveProjection::GetLimit(Int_t, Bool_t)
+{
+   // Method previously used by  TEveProjectionAxesGL. Now obsolete.
+
+  ::Warning("TEveProjection::GetLimits", "method is obsolete");
+
+   return 0;
+}
+
+//______________________________________________________________________________
 void TEveProjection::SetDirectionalVector(Int_t screenAxis, TEveVector& vec)
 {
    // Get vector for axis in a projected space.
@@ -391,17 +383,13 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
    static const TEveException eH("TEveProjection::GetValForScreenPos ");
    static int maxSteps = 5000;
 
-   // TODO :: get max val frpm projection manager
-   static int maxVal = 10000; // estimatiom of max limits of scene which is projected
-  
+   // estimate range by factoring value relative to center 
+   static int maxVal = 10;
    Float_t xL, xM, xR;
    TEveVector vec;
    TEveVector dirVec;
    SetDirectionalVector(axisIdx, dirVec);
-   if (fDistortion > 0.0f && ((sv > 0 && sv > fUpLimit[axisIdx]) || (sv < 0 && sv < fLowLimit[axisIdx])))
-      throw(eH + Form("screen value '%f' out of limit '%f'.", sv, sv > 0 ? fUpLimit[axisIdx] : fLowLimit[axisIdx]));
-
-
+  
    // search from -/+ infinity according to sign of screen value
    if (sv > fProjectedCenter[axisIdx])
    {
@@ -555,21 +543,6 @@ void TEveRhoZProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
       }
    }
    z = d;
-}
-
-//______________________________________________________________________________
-void TEveRhoZProjection::UpdateLimit()
-{
-   // Update convergence in +inf and -inf.
-
-   if (fDistortion == 0.0f)
-      return;
-
-   Float_t limR = 1.0f/fDistortion + fFixR;
-   Float_t limZ = 1.0f/fDistortion + fFixZ;
-   Float_t *c   = GetProjectedCenter();
-   fUpLimit .Set( limZ + c[0],  limR + c[1], c[2]);
-   fLowLimit.Set(-limZ + c[0], -limR + c[1], c[2]);
 }
 
 //______________________________________________________________________________

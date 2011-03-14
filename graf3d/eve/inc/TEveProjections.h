@@ -73,9 +73,6 @@ protected:
    Float_t             fPastFixZScale; // relative scaling beyond fFixZ
    Float_t             fMaxTrackStep;  // maximum distance between two points on a track
 
-   TEveVector          fLowLimit;      // convergence of point +infinity
-   TEveVector          fUpLimit;       // convergence of point -infinity
-
    void PreScaleVariable(Int_t dim, Float_t& v);
 
 public:
@@ -110,8 +107,6 @@ public:
    void                SetGeoMode(EGeoMode_e m)   { fGeoMode = m; }
    EGeoMode_e          GetGeoMode() const         { return fGeoMode; }
 
-   virtual void        UpdateLimit();
-
    Bool_t   GetUsePreScale() const   { return fUsePreScale; }
    void     SetUsePreScale(Bool_t x) { fUsePreScale = x; }
 
@@ -144,7 +139,7 @@ public:
    // utils to draw axis
    virtual Float_t     GetValForScreenPos(Int_t ax, Float_t value);
    virtual Float_t     GetScreenVal(Int_t ax, Float_t value);
-   Float_t             GetLimit(Int_t i, Bool_t pos) { return pos ? fUpLimit[i] : fLowLimit[i]; }
+   Float_t             GetLimit(Int_t i, Bool_t pos);
 
    static   Float_t    fgEps;    // resolution of projected points
    static   Float_t    fgEpsSqr; // square of resolution of projected points
@@ -167,8 +162,6 @@ public:
    virtual Bool_t      Is3D() const { return kFALSE; }
 
    virtual void        ProjectPoint(Float_t& x, Float_t& y, Float_t& z, Float_t d, EPProc_e proc = kPP_Full);
-
-   virtual void        UpdateLimit();
 
    virtual Bool_t      HasSeveralSubSpaces() const { return kTRUE; }
    virtual Bool_t      AcceptSegment(TEveVector& v1, TEveVector& v2, Float_t tolerance) const;
