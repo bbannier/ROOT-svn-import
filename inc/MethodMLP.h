@@ -112,7 +112,7 @@ namespace TMVA {
       enum EBPTrainingMode { kSequential=0, kBatch };
 
       bool     HasInverseHessian() { return fCalculateErrors; }
-      Double_t GetMvaValueAsymError( Double_t* errUpper, Double_t* errLower );
+      Double_t GetMvaValue( Double_t* err=0, Double_t* errUpper=0 );
 
    protected:
 

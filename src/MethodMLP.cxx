@@ -184,8 +184,8 @@ void TMVA::MethodMLP::DeclareOptions()
 
    DeclareOptionRef(fUseRegulator=kFALSE, "UseRegulator",
                     "Use regulator to avoid over-training");   //zjh
-   DeclareOptionRef(fUpdateLimit=10, "UpdateLimit",
-                    "Number of updates for regulator before stop training");   //zjh
+   DeclareOptionRef(fUpdateLimit=10000, "UpdateLimit",
+		    "Maximum times of regulator update");   //zjh
    DeclareOptionRef(fCalculateErrors=kFALSE, "CalculateErrors",
                     "Calculates inverse Hessian matrix at the end of the training to be able to calculate the uncertainties of an MVA value");   //zjh
 
@@ -392,7 +392,7 @@ void TMVA::MethodMLP::Train(Int_t nEpochs)
    Int_t nEvents=GetNEvents();
    Int_t nSynapses=fSynapses->GetEntriesFast();
    if (nSynapses>nEvents) 
-      Log()<<kFATAL<<"ANN too complicated: #events="<<nEvents<<"\t#synapses="<<nSynapses<<Endl;
+      Log()<<kWARNING<<"ANN too complicated: #events="<<nEvents<<"\t#synapses="<<nSynapses<<Endl;
 
 #ifdef MethodMLP_UseMinuit__
    if (useMinuit) MinuitMinimize();
@@ -528,11 +528,9 @@ void TMVA::MethodMLP::BFGSMinimize( Int_t nEpochs )
       //zjh+
       if (dError<0) Log()<<kWARNING<<"\nnegative dError=" <<dError<<Endl;
       AccuError+=dError;
-      if (std::abs(dError)>0.0001) RegUpdateCD=0;
 
-      if ( fUseRegulator && RegUpdateTimes<fUpdateLimit && RegUpdateCD>=((0.4*fResetStep)>50?50:(0.4*fResetStep)) && i<0.8*nEpochs && AccuError>0.01 ) {
-         Log()<<kDEBUG <<Endl;
-         Log()<<kDEBUG<<"\nUpdate regulators "<<RegUpdateTimes<<" on epoch "<<i<<"\tdError="<<dError<<Endl;
+      if ( fUseRegulator && RegUpdateTimes<fUpdateLimit && RegUpdateCD>=5 && fabs(dError)<0.1*AccuError) {
+         Log()<<kDEBUG<<"\n\nUpdate regulators "<<RegUpdateTimes<<" on epoch "<<i<<"\tdError="<<dError<<Endl;
          UpdateRegulators();
          Hessian.UnitMatrix();
          RegUpdateCD=0;
@@ -1420,12 +1418,12 @@ void TMVA::MethodMLP::GetApproxInvHessian(TMatrixD& InvHessian, bool regulate)  
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodMLP::GetMvaValueAsymError( Double_t* errLower, Double_t* errUpper )
+Double_t TMVA::MethodMLP::GetMvaValue( Double_t* errLower, Double_t* errUpper )
 {
-   Double_t MvaValue = GetMvaValue();// contains back propagation
+  Double_t MvaValue = MethodANNBase::GetMvaValue();// contains back propagation
 
    // no hessian (old training file) or no error reqested
-   if (fInvHessian.GetNcols()==0 || errLower==0 || errUpper==0)
+   if (!fCalculateErrors || errLower==0 || errUpper==0)
       return MvaValue;
 
    Double_t MvaUpper,MvaLower,median,variance;
@@ -1448,8 +1446,13 @@ Double_t TMVA::MethodMLP::GetMvaValueAsymError( Double_t* errLower, Double_t* er
    TMatrixD sig=sensT*fInvHessian*sens;
    variance=sig[0][0];
    median=GetOutputNeuron()->GetValue();
-   //Log()<<kDEBUG<<"median="<<median<<"\tvariance="<<variance<<Endl;
 
+   if (variance<0) {
+     Log()<<kWARNING<<"Negative variance!!! median=" << median << "\tvariance(sigma^2)=" << variance <<Endl;
+     variance=0;
+   }
+   variance=sqrt(variance);
+ 
    //upper
    MvaUpper=fOutput->Eval(median+variance);
    if(errUpper)
@@ -1460,12 +1463,6 @@ Double_t TMVA::MethodMLP::GetMvaValueAsymError( Double_t* errLower, Double_t* er
    if(errLower)
       *errLower=MvaValue-MvaLower;
 
-   if (variance<0) {
-      Log()<<kWARNING<<"median=" << median << "\tvariance=" << variance
-           <<"MvaLower=" << MvaLower <<"\terrLower=" << (errLower?*errLower:0)
-           <<"MvaUpper=" << MvaUpper <<"\terrUpper=" << (errUpper?*errUpper:0)
-           <<Endl;
-   }
    return MvaValue;
 }
 
