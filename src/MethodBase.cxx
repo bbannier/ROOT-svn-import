@@ -469,6 +469,18 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinitionIn
    if (trafoDefinition == "None") // no transformations
       return;
 
+   // workaround for transformations to complicated to be handled by makeclass/Reader, ToDo fix this in a later release
+   // count number of transformations with incomplete set of variables
+   TString trafoDefinitionCheck(trafoDefinitionIn);
+   int npartial = 0, ntrafo=0;
+   for( Int_t pos = 0, siz = trafoDefinition.Sizeof(); pos < siz; ++pos ){
+      TString ch = trafoDefinition(pos,1);
+      if( ch == "(" ) npartial++;
+      if( ch == "+" || ch == ",") ntrafo++;
+   }
+   if (npartial>1) log << kFATAL << "sorry, the booking of multiple partial variable transformations is not yet implemented, please book a less complicated variable transform than: "<<trafoDefinitionIn<< Endl; //ToDo make kFATAL
+   // workaround end
+
    Int_t parenthesisCount = 0;
    for( Int_t position = 0, size = trafoDefinition.Sizeof(); position < size; ++position ){
       TString ch = trafoDefinition(position,1);
