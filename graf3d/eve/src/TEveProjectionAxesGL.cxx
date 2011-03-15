@@ -229,6 +229,13 @@ void TEveProjectionAxesGL::SplitIntervalByVal(Float_t p1, Float_t p2, Int_t ax) 
 
    Float_t pFirst, pSecond; // position of first, second order of tickmarks
    Float_t v = bl1;
+
+   // cache values here
+   TEveVector dirVec;
+   fProjection->SetDirectionalVector(ax, dirVec);
+   TEveVector oCenter;
+   fProjection->GetOrthogonalCenter(ax, oCenter);
+
    // step
    for (Int_t l=0; l<=bn1; l++)
    {
@@ -240,7 +247,7 @@ void TEveProjectionAxesGL::SplitIntervalByVal(Float_t p1, Float_t p2, Int_t ax) 
       // Tickmarks.
       for (Int_t k=1; k<bn2; k++)
       {
-         pSecond = fProjection->GetScreenVal(ax, v+k*bw2);
+         pSecond = fProjection->GetScreenVal(ax, v+k*bw2, dirVec, oCenter);
          if (pSecond > p2)  break;
          tmVec.push_back(TGLAxisPainter::TM_t(pSecond, 1));
       }
@@ -251,7 +258,7 @@ void TEveProjectionAxesGL::SplitIntervalByVal(Float_t p1, Float_t p2, Int_t ax) 
    v = bl1 -bw2;
    while ( v > v1)
    {
-      pSecond = fProjection->GetScreenVal(ax, v);
+      pSecond = fProjection->GetScreenVal(ax, v, dirVec, oCenter);
       if (pSecond < p1)  break;
       tmVec.push_back(TGLAxisPainter::TM_t(pSecond, 1));
       v -= bw2;
@@ -308,7 +315,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    // Actual rendering code.
    // Virtual from TGLLogicalShape.
 
-   if (rnrCtx.Selection() || rnrCtx.Highlight()) return;
+   if (rnrCtx.Selection() || rnrCtx.Highlight() || fM->fManager->GetBBox() == 0) return;
 
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
 
