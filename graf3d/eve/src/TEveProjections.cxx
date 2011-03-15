@@ -410,24 +410,24 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
 
    TEveVector dirVec;
    SetDirectionalVector(axisIdx, dirVec);
+
    TEveVector zero;
    if (fDisplaceOrigin) zero = fCenter;
+
    TEveVector zeroProjected = zero;
    ProjectVector(zeroProjected, 0.f);
-   TEveVector centerOO;
-   GetOrthogonalCenter(axisIdx, centerOO);
 
    // search from -/+ infinity according to sign of screen value
    if (sv > zeroProjected[axisIdx])
    {
-      xL = zero.Dot(dirVec);
-      xR = xL + kMaxVal;
+      xL = 0;
+      xR = kMaxVal;
       
       int cnt = 0;
       while (cnt < kMaxSteps)
       {
          vec.Mult(dirVec, xR);
-         if (fDisplaceOrigin) vec += centerOO;
+         if (fDisplaceOrigin) vec += fCenter;
 
          ProjectVector(vec, 0);
          if (vec[axisIdx] >= sv) break;
@@ -439,14 +439,14 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
    }
    else if (sv < zeroProjected[axisIdx])
    {
-      xR = zero.Dot(dirVec);
-      xL = xR - kMaxVal;
+      xR = 0;
+      xL = -kMaxVal;
 
       int cnt = 0;
       while (cnt < kMaxSteps)
       {
          vec.Mult(dirVec, xL); 
-         if (fDisplaceOrigin) vec += centerOO;
+         if (fDisplaceOrigin) vec += fCenter;
 
          ProjectVector(vec, 0);
          if (vec[axisIdx] <= sv) break;
@@ -467,7 +467,7 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
       //printf("search value with bisection xL=%f, xR=%f; vec[axisIdx]=%f, sv=%f\n", xL, xR, vec[axisIdx], sv);
       xM = 0.5f * (xL + xR);
       vec.Mult(dirVec, xM);
-      if (fDisplaceOrigin) vec += centerOO;
+      if (fDisplaceOrigin) vec += fCenter;
       ProjectVector(vec, 0);
       if (vec[axisIdx] > sv)
          xR = xM;
@@ -483,16 +483,17 @@ Float_t TEveProjection::GetValForScreenPos(Int_t axisIdx, Float_t sv)
 }
 
 //______________________________________________________________________________
-Float_t TEveProjection::GetScreenVal(Int_t i, Float_t x, TEveVector& dirVec, TEveVector& oCenter)
+Float_t TEveProjection::GetScreenVal(Int_t i, Float_t x, TEveVector& dirVec, TEveVector& /*oCenter*/)
 {
    // Project point on given axis and return projected value.
 
    TEveVector pos = dirVec*x;
 
    if (fDisplaceOrigin)
-      pos += oCenter;
+      pos += fCenter;
 
    ProjectVector(pos , 0.f);
+
    return pos[i];
 }
 
@@ -504,7 +505,7 @@ Float_t TEveProjection::GetScreenVal(Int_t i, Float_t x)
    TEveVector dirVec;
    SetDirectionalVector(i, dirVec);
    TEveVector oCenter;
-   GetOrthogonalCenter(i, oCenter);
+   // GetOrthogonalCenter(i, oCenter);
    return GetScreenVal(i, x, dirVec, oCenter);
 }
 
@@ -732,10 +733,13 @@ void TEveRPhiProjection::ProjectPoint(Float_t& x, Float_t& y, Float_t& z,
       else
          r =  r * fScaleR / (1.0f + r*fDistortion);
 
+      x = r*Cos(phi);
+      y = r*Sin(phi);
+
       if (!fDisplaceOrigin)
       {
-         x = r*Cos(phi) + fCenter.fX;
-         y = r*Sin(phi) + fCenter.fY;
+         x += fCenter.fX;
+         y += fCenter.fY;
       }
    }
    z = d;
