@@ -136,9 +136,12 @@ public:
    virtual void        SetDirectionalVector(Int_t screenAxis, TEveVector& vec);
 
    // utils to draw axis
+   TEveVector          GetOrthogonalCenter(int idx, TEveVector& out);
    virtual Float_t     GetValForScreenPos(Int_t ax, Float_t value);
    virtual Float_t     GetScreenVal(Int_t ax, Float_t value);
+   Float_t             GetScreenVal(Int_t i, Float_t x, TEveVector& dirVec, TEveVector& oCenter);
    Float_t             GetLimit(Int_t i, Bool_t pos);
+
 
    static   Float_t    fgEps;    // resolution of projected points
    static   Float_t    fgEpsSqr; // square of resolution of projected points
