@@ -146,6 +146,9 @@ namespace cling {
   }
   
   void DynamicExprTransformer::Initialize() {
+    m_EvalDecl = LookupForEvaluateProxyT();
+    assert(m_EvalDecl && "Cannot find EvaluateProxyT!\n");
+
     //m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");
   }
     
@@ -166,23 +169,7 @@ namespace cling {
         D->setBody(New);
     }
   }
-  
-  void DynamicExprTransformer::VisitTemplateDecl(TemplateDecl *D) {     
-    if (D->getNameAsString().compare("EvaluateProxyT") == 0) {
-      NamespaceDecl* internal = dyn_cast<NamespaceDecl>(D->getDeclContext());
-      if (internal && internal->getNameAsString().compare("internal") == 0) {
-        NamespaceDecl* runtime = dyn_cast<NamespaceDecl>(internal->getParent());
-        if (runtime && runtime->getNameAsString().compare("runtime") == 0) {
-          NamespaceDecl* cling = dyn_cast<NamespaceDecl>(runtime->getParent());
-          if (cling && cling->getNameAsString().compare("cling") == 0) {
-            if (FunctionDecl *FDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl()))
-              setEvalDecl(FDecl);
-          }
-        }
-      }
-    }
-  }
-  
+    
   void DynamicExprTransformer::VisitDecl(Decl *D) {
     if (!ShouldVisit(D))
       return;
@@ -203,6 +190,51 @@ namespace cling {
   // end DeclVisitor
   
   // StmtVisitor   
+
+  // Temp
+  EvalInfo DynamicExprTransformer::VisitDeclStmt(DeclStmt *Node) {
+    // Node is MyClass a;
+    // Node MyClass b (a);
+    // if (Node->isSingleDecl())
+    //   if (VarDecl* VD = dyn_cast<VarDecl>(Node->getSingleDecl())) {
+    //     if (VD->getNameAsString().compare("a") == 0)
+    //       classA = VD;
+    //     if (VD->getNameAsString().compare("b") == 0) {
+    //       ASTContext &c = m_Sema->getASTContext();
+    //       VD->setType(c.getLValueReferenceType(VD->getType()));
+    //       Expr* Init = m_Sema->BuildDeclRefExpr(classA, classA->getType(), VK_LValue, SourceLocation()).take();
+    //       VD->setInit(Init);
+
+    //       ASTOwningVector<Stmt*> Statements(*m_Sema);
+          
+    //       //IdentifierInfo& II = c.Idents.get("aaaaa");
+          
+    //       VarDecl* FakeVD = VarDecl::Create(c,
+    //                                         //m_Sema->CurContext,
+    //                                         VD->getDeclContext(),
+    //                                         SourceLocation(),
+    //                                         SourceLocation(),
+    //                                         //&II,
+    //                                         0,
+    //                                         classA->getType(),
+    //                                         /*TypeSourceInfo**/0,
+    //                                         SC_None,
+    //                                         SC_None);
+    //       VD->getDeclContext()->addDecl(FakeVD);
+    //       DeclStmt* DS = new (c) DeclStmt(DeclGroupRef(FakeVD), SourceLocation(), SourceLocation());
+
+    //       Statements.push_back(DS);
+    //       Statements.push_back(Node);
+    //       Stmt* CS = m_Sema->ActOnCompoundStmt(SourceLocation(), SourceLocation(), move_arg(Statements), /*isStmtExpr*/ false).take();
+    //       //return EvalInfo(DS, 0);
+    //       return EvalInfo(CS, 0);
+          
+    //     }
+    //   }
+    return EvalInfo(Node, 0);
+  }
+  // end Temp
+
   
   EvalInfo DynamicExprTransformer::VisitStmt(Stmt *Node) {
     for (Stmt::child_iterator
@@ -465,6 +497,69 @@ namespace cling {
     if (!Node->isValueDependent() || !Node->isTypeDependent())
       return false;     
     return true;
+  }
+
+  // Looks for the special EvaluateProxyT function and provides it to the 
+  // transformer. With that function (EvaluateProxyT) the unknown symbols 
+  // are going to be substituted.
+  FunctionDecl* DynamicExprTransformer::LookupForEvaluateProxyT() {
+    ASTContext& c = m_Sema->getASTContext();
+    DeclarationName Name(&c.Idents.get("cling"));
+    NamespaceDecl* ClingNS = 0;
+    NamespaceDecl* ClingRuntimeNS = 0;
+    NamespaceDecl* ClingRuntimeInternalNS = 0;
+
+    DeclContext::lookup_result Lookup = c.getTranslationUnitDecl()->lookup(Name);
+    // We need to dig down into the DeclContext in order to find the one, in
+    // which the lookup is going to be performed
+    while (Lookup.first != Lookup.second) {
+      if (NamespaceDecl* FoundNS = dyn_cast<NamespaceDecl>(*Lookup.first) ) {
+        
+        if (!ClingNS) {
+          ClingNS = FoundNS;
+          Name = DeclarationName(&c.Idents.get("runtime"));
+        }
+        else if (!ClingRuntimeNS) {
+          ClingRuntimeNS = FoundNS;
+          Name = DeclarationName(&c.Idents.get("internal"));
+        }
+        else if (!ClingRuntimeInternalNS) {
+          ClingRuntimeInternalNS = FoundNS;
+          break;
+        }
+
+        Lookup = FoundNS->lookup(Name);
+        continue;
+      }
+
+      ++Lookup.first;
+    }    
+    
+    // After we have the context we simply lookup what we need inside
+    if (ClingRuntimeInternalNS) {
+      // Here is how we can get arbitrary identifier
+      IdentifierInfo& II = c.Idents.get("EvaluateProxyT");
+      DeclarationName Name(&II);
+      const DeclarationNameInfo NameInfo(Name, SourceLocation());
+      LookupResult R(*m_Sema, NameInfo, Sema::LookupOrdinaryName);
+      m_Sema->LookupQualifiedName(R, ClingRuntimeInternalNS);
+
+      // We might need to handle the overloads, that may occur in the lookup 
+      // result
+      if (!R.empty()) {
+        unsigned ResultCount = R.end() - R.begin();
+        TemplateDecl* Template = 0;
+        if (ResultCount > 1)
+          Template = c.getOverloadedTemplateName(R.begin(), R.end()).getAsTemplateDecl();
+        else
+          Template = cast<TemplateDecl>((*R.begin())->getUnderlyingDecl());
+
+        if (Template)
+          return dyn_cast<FunctionDecl>(Template->getTemplatedDecl());
+      }
+    }
+
+    return 0;
   }
   // end Helpers
   
