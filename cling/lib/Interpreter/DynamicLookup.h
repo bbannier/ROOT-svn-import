@@ -94,6 +94,7 @@ namespace cling {
     llvm::SmallVector<clang::DeclRefExpr*, 64> m_Environment;
     clang::DeclContext* m_CurDeclContext; // We need it for Evaluate()
     clang::QualType m_DeclContextType; // Used for building Eval args
+    clang::VarDecl* classA;
   public: // members
     clang::Sema* m_Sema;
     
@@ -121,11 +122,11 @@ namespace cling {
     // DeclVisitor      
     void Visit(clang::Decl *D);
     void VisitFunctionDecl(clang::FunctionDecl *D);
-    void VisitTemplateDecl(clang::TemplateDecl *D); 
     void VisitDecl(clang::Decl *D);
     void VisitDeclContext(clang::DeclContext *DC);
     
     // StmtVisitor
+    EvalInfo VisitDeclStmt(clang::DeclStmt *Node);
     EvalInfo VisitStmt(clang::Stmt *Node);
     EvalInfo VisitExpr(clang::Expr *Node);
     EvalInfo VisitCallExpr(clang::CallExpr *E);
@@ -143,7 +144,8 @@ namespace cling {
     
     // Helper
     bool IsArtificiallyDependent(clang::Expr *Node);
-    bool ShouldVisit(clang::Decl *D);      
+    bool ShouldVisit(clang::Decl *D);
+    clang::FunctionDecl* LookupForEvaluateProxyT();
   };
 } // end namespace cling
 #endif // CLING_DYNAMIC_LOOKUP_H
