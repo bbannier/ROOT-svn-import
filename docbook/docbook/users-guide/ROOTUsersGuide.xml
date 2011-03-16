@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<book xmlns="http://docbook.org/ns/docbook" version="5.0">     
+    <title>ROOT User's Guide</title>
+    <xi:include href="Preface.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="Introduction.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="GettingStarted.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="Histograms.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="Graphs.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="FittingHistograms.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="ALittleC++.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="CINT.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="ObjectOwnership.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="Graphics.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="FoldersTasks.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="InputOutput.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="Trees.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="MathLibraries.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="LinearAlgebra.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="AddingaClass.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="CollectionClasses.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="PhysicsVectors.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="Geometry.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="PythonRuby.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="TutorialsandTests.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="ExampleAnalysis.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="Networking.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="Threads.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="PROOF.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="WritingGUI.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="ROOTandQt.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="HTMLDoc.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="InstallandBuild.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <index/>
+</book>

@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter xmlns="http://docbook.org/ns/docbook" version="5.0">
+<title>Getting Started</title>
+<para>
+We begin by showing you how to use ROOT interactively. There are two examples to
+click through and learn how to use the GUI. We continue by using the command 
+line, and explaining the coding conventions, global variables and the 
+environment setup. If you have not installed ROOT, you can do so by following 
+the instructions in the appendix, or on the ROOT web site: 
+http://root.cern.ch/root/Availability.html
+</para>
+<sect1>
+<title>Setting the Environment Variables</title>
+<para>
+Before you can run ROOT you need to set the environment variable 
+<code>ROOTSYS</code> and change your path to include <code>root/bin</code> and 
+library path variables to include <code>root/lib</code>. Please note: the syntax
+is for <code>bash</code>, if you are running <code>tcsh</code> you will have to 
+use <code>setenv</code> instead of <code>export</code>.
+</para>
+<para>
+1. Define the variable $ROOTSYS to the directory where you unpacked the ROOT:
+</para>
+<programlisting>$ export ROOTSYS=$HOME/root</programlisting>
+<para>
+2. Add ROOTSYS/bin to your PATH:
+</para>
+<programlisting>$ export PATH=$PATH:$ROOTSYS/bin</programlisting>
+<para>
+3. Setting the Library Path
+</para>
+<para>
+On HP-UX, before executing the interactive module, you must set the library 
+path:
+</para>
+<programlisting>$ export SHLIB_PATH=$SHLIB_PATH:$ROOTSYS/lib</programlisting>
+<para>
+On AIX, before executing the interactive module, you must set the library path:
+</para>
+<programlisting>$ [ -z "$LIBPATH" ] &amp;&amp; export LIBPATH=/lib:/usr/lib
+$ export LIBPATH=$LIBPATH:$ROOTSYS/lib </programlisting>
+<para>
+On Linux, Solaris, Alpha OSF and SGI, before executing the interactive module, 
+you must set the library path:
+</para>
+<programlisting>$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib</programlisting>
+<para>
+On Solaris, in case your LD_LIBRARY_PATH is empty, you should set it:
+</para>
+<programlisting>$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib:/usr/dt/lib</programlisting>
+<para>
+If you use the <code>afs</code> version you should set (
+<emphasis role="italic"><emphasis role="bold"><code>vers</code></emphasis></emphasis> = 
+version number, 
+<emphasis role="italic"><emphasis role="bold"><code>arch</code></emphasis></emphasis> = 
+architecture): </para>
+<programlisting>$ export ROOTSYS=/afs/cern.ch/sw/lcg/external/root/<emphasis role="italic"><emphasis role="bold">vers</emphasis></emphasis>/<emphasis role="italic"><emphasis role="bold">arch</emphasis></emphasis>/root </programlisting>
+<para>
+If ROOT was installed in <code>$HOME/myroot</code> directory on a local machine,
+one can do:
+</para>
+<programlisting>cd $HOME/myroot
+. bin/thisroot.sh       // or source bin/thisroot.sh</programlisting>
+<para>
+The new <code>$ROOTSYS/bin/thisroot.[c]sh</code> scripts will set correctly the 
+<code>ROOTSYS</code>, <code>LD_LIBRARY_PATH</code> or other paths depending on 
+the platform and the MANPATH. To run the program just type: <code>root</code>.
+</para>
+</sect1>
+<sect1>
+<title>Start and Quit a ROOT Session</title>
+<programlisting>% root
+*******************************************
+*                                         *
+*        W E L C O M E  to  R O O T       *
+*                                         *
+*   Version   5.20/00      24 June 2007   *
+*                                         *
+*  You are welcome to visit our Web site  *
+*          http://root.cern.ch            *
+*                                         *
+*******************************************
+
+ROOT 5.20/00 (trunk@24525, Jun 25 2008, 12:52:00 on linux)
+
+CINT/ROOT C/C++ Interpreter version 5.16.29, June 08, 2008
+Type ? for help. Commands must be C++ statements.
+Enclose multiple statements between { }.
+root [0]
+</programlisting>
+<para>
+To start ROOT you can type <code>root</code> at the system prompt.
+This starts up CINT, the ROOT command line C/C++ interpreter, and it 
+gives you the ROOT prompt (<code>root[0]</code>)
+</para>
+<para>
+It is possible to launch ROOT with some command line options, as shown below:
+</para>
+<programlisting>% <emphasis role="bold">root -/?</emphasis>
+Usage: root [-l] [-b] [-n] [-q] [file1.C ... fileN.C]
+ Options:
+   -b : run in batch mode without graphics
+   -n : do not execute logon and logoff macros as
+        specified in .rootrc
+   -q : exit after processing command line script files
+   -l : do not show the image logo (splash screen)
+</programlisting>  
+    <itemizedlist>
+        <listitem>
+            <para>
+                <emphasis role="bold"><code>-b</code></emphasis>  ROOT session runs 
+                in batch mode, without graphics display. 
+                This mode is useful in case one does not want to set the DISPLAY 
+                or cannot do it for some reason.
+            </para>
+        </listitem>
+        <listitem>
+            <para>
+                <emphasis role="bold"><code>-n</code></emphasis>  usually, launching 
+                a ROOT session will execute a logon script 
+                and quitting will execute a logoff script. This option prevents 
+                the execution of these two scripts.
+            </para>
+        </listitem>
+        <listitem>
+            <para>
+                it is also possible to execute a script without entering a ROOT session. 
+                One simply adds the name of the script(s) after the ROOT command. 
+                Be warned: after finishing the execution of the script, ROOT will 
+                normally enter a new session.
+            </para>
+        </listitem>
+        <listitem>
+            <para>
+                <emphasis role="bold"><code>-q</code></emphasis> process command line 
+                script files and exit.
+            </para>
+        </listitem>
+    </itemizedlist>
+ <para>
+     For example if you would like to run a script <code>myMacro.C</code> in the background, 
+     redirect the output into a file <code>myMacro.log</code>, and exit after the script 
+     execution, use the following syntax:
+ </para>
+    
+</sect1>
+<sect1>
+<title>Using the GUI</title>
+<para></para>
+</sect1>
+<sect1>
+<title>The ROOT Command Line</title>
+<para></para>
+</sect1>
+<sect1>
+<title>Conventions</title>
+<para></para>
+</sect1>
+<sect1>
+<title>Global Variables</title>
+<para></para>
+</sect1>
+<sect1>
+<title>Environment Setup</title>
+<para></para>
+</sect1>
+<sect1>
+<title>Converting from PAW to ROOT</title>
+<para></para>
+</sect1>
+</chapter>
