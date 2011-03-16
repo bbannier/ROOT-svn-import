@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter xmlns="http://docbook.org/ns/docbook" version="5.0">
+<title>Graphics</title>
+<para>
+Graphical capabilities of ROOT range from 2D objects (lines, polygons, arrows) to various plots, 
+histograms, and 3D graphical objects. In this chapter, we are going to focus on principals of 
+graphics and 2D objects. Plots and histograms are discussed in a chapter of their own.
+</para>
+    
+<sect1>
+<title>Drawing Objects</title>
+    <para></para>
+</sect1>
+
+<sect1>
+<title>Interacting with Graphical Objects</title>
+    <para></para>
+</sect1>
+
+<sect1>
+<title>Graphical Containers: Canvas and Pad</title>
+    <para></para>
+</sect1>
+</chapter>
