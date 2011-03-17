@@ -1042,7 +1042,7 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
             << fMethods.back()->GetName() 
             << " seems not to be a propper TMVA method" 
             << Endl;
-      exit(1);
+      std::exit(1);
    }
    Double_t err = 0.0;
 
@@ -1069,7 +1069,7 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    std::vector <Float_t>* mvaRes;
    if (singleMethod && eTT==Types::kTraining)
       mvaRes = fMVAvalues; // values already calculated
-   else {  //Helge, please check if this logic is correct. ToDo!!!
+   else {  
       mvaRes = new std::vector <Float_t>(GetNEvents());
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
          GetEvent(ievt);
