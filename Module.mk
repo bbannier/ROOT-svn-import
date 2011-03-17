@@ -49,12 +49,12 @@ TMVAH3       := Config.h KDEKernel.h Interval.h FitterBase.h MCFitter.h GeneticF
 		PDEFoamVect.h PDEFoamCell.h PDEFoamDiscriminant.h PDEFoamEvent.h PDEFoamTarget.h \
 		PDEFoamKernelBase.h PDEFoamKernelTrivial.h PDEFoamKernelLinN.h PDEFoamKernelGauss.h \
 		BDTEventWrapper.h CCTreeWrapper.h \
-		CCPruner.h CostComplexityPruneTool.h SVEvent.h
+		CCPruner.h CostComplexityPruneTool.h SVEvent.h OptimizeConfigParameters.h
 TMVAH4       := TNeuron.h TSynapse.h TActivationChooser.h TActivation.h TActivationSigmoid.h TActivationIdentity.h \
 		TActivationTanh.h TActivationRadial.h TNeuronInputChooser.h TNeuronInput.h TNeuronInputSum.h \
 		TNeuronInputSqSum.h TNeuronInputAbs.h Types.h Ranking.h RuleFit.h RuleFitAPI.h IMethod.h MsgLogger.h \
 		VariableTransformBase.h VariableIdentityTransform.h VariableDecorrTransform.h VariablePCATransform.h \
-		VariableGaussTransform.h VariableNormalizeTransform.h
+		VariableGaussTransform.h VariableNormalizeTransform.h VariableRearrangeTransform.h
 TMVAH1C      := $(patsubst %,include/TMVA/%,$(TMVAH1))
 TMVAH2C      := $(patsubst %,include/TMVA/%,$(TMVAH2))
 TMVAH3C      := $(patsubst %,include/TMVA/%,$(TMVAH3))

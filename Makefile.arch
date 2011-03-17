@@ -123,7 +123,7 @@ CXX           = KCC --one_instantiation_per_object
 CXXFLAGS      = -O4 -KPIC
 LD            = KCC
 LDFLAGS       = -O4
-SOFLAGS       =
+SOFLAGS       = 
 endif
 
 ifeq ($(ARCH),solarisx86)
@@ -434,27 +434,12 @@ LDFLAGS       = -O2 -bind_at_load
 # The SOFLAGS will be used to create the .dylib,
 # the .so will be created separately
 DllSuf        = dylib
-ifeq ($(MACOSX_MINOR),6)
+ifeq ($(subst $(MACOSX_MINOR),,12),12)
 UNDEFOPT      = dynamic_lookup
-LD            = MACOSX_DEPLOYMENT_TARGET=10.6 c++
-else
-ifeq ($(MACOSX_MINOR),5)
-UNDEFOPT      = dynamic_lookup
-LD            = MACOSX_DEPLOYMENT_TARGET=10.5 c++
-else
-ifeq ($(MACOSX_MINOR),4)
-UNDEFOPT      = dynamic_lookup
-LD            = MACOSX_DEPLOYMENT_TARGET=10.4 c++
-else
-ifeq ($(MACOSX_MINOR),3)
-UNDEFOPT      = dynamic_lookup
-LD            = MACOSX_DEPLOYMENT_TARGET=10.3 c++
+LD            = MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR) c++
 else
 UNDEFOPT      = suppress
 LD            = c++
-endif
-endif
-endif
 endif
 SOFLAGS       = -dynamiclib -single_module -undefined $(UNDEFOPT)
 endif
@@ -468,22 +453,12 @@ LDFLAGS       = -O2 -bind_at_load
 # The SOFLAGS will be used to create the .dylib,
 # the .so will be created separately
 DllSuf        = dylib
-ifeq ($(MACOSX_MINOR),5)
+ifeq ($(subst $(MACOSX_MINOR),,12),12)
 UNDEFOPT      = dynamic_lookup
-LD            = MACOSX_DEPLOYMENT_TARGET=10.5 c++
-else
-ifeq ($(MACOSX_MINOR),4)
-UNDEFOPT      = dynamic_lookup
-LD            = MACOSX_DEPLOYMENT_TARGET=10.4 c++
-else
-ifeq ($(MACOSX_MINOR),3)
-UNDEFOPT      = dynamic_lookup
-LD            = MACOSX_DEPLOYMENT_TARGET=10.3 c++
+LD            = MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR) c++
 else
 UNDEFOPT      = suppress
 LD            = c++
-endif
-endif
 endif
 SOFLAGS       = -dynamiclib -single_module -undefined $(UNDEFOPT)
 endif
@@ -492,13 +467,15 @@ ifeq ($(ARCH),macosx64)
 # MacOS X >= 10.4 with gcc 64 bit mode (GNU gcc 4.*)
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
 CXX           = c++
-CXXFLAGS      = -m64 -O2 -pipe -Wall -W -Woverloaded-virtual 
+CXXFLAGS      = -m64 -O2 -pipe -Wall -W -Woverloaded-virtual -Wshadow
 LDFLAGS       = -m64 -O2 -bind_at_load
 # The SOFLAGS will be used to create the .dylib,
 # the .so will be created separately
 DllSuf        = dylib
-LD            = MACOSX_DEPLOYMENT_TARGET=10.4 c++
+ifeq ($(subst $(MACOSX_MINOR),,12),12)
+LD            = MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR) c++
 SOFLAGS       = -m64 -dynamiclib -single_module -undefined dynamic_lookup
+endif
 endif
 
 ifeq ($(ARCH),macosxxlc)
