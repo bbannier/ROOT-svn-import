@@ -125,9 +125,10 @@ class TMacro;
 //           package download, dataset caching
 // 28 -> 29: Support for config parameters in EnablePackage, idle-timeout
 // 29 -> 30: Add information about data dir in TSlaveInfo
+// 30 -> 31: Development cycle 5.29
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 30;            // protocol version number
+const Int_t       kPROOF_Protocol        = 31;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -639,7 +640,7 @@ private:
 
    void     ReleaseMonitor(TMonitor *mon);
 
-   void     FindUniqueSlaves();
+   virtual  void FindUniqueSlaves();
    TSlave  *FindSlave(TSocket *s) const;
    TList   *GetListOfSlaves() const { return fSlaves; }
    TList   *GetListOfInactiveSlaves() const { return fInactiveSlaves; }

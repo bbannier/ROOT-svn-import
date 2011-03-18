@@ -329,7 +329,7 @@ TObjArray *TRef::GetListOfExecs()
    if (!fgExecs) fgExecs = new TObjArray(10);
 #endif
    return fgExecs;
-   
+
 }
 
 
@@ -388,13 +388,13 @@ void TRef::SetAction(const char *name)
    // Store the exec number (in the ROOT list of Execs)
    // into the fBits of this TRef.
 
-   TExec *exec = (TExec*)fgExecs->FindObject(name);
+   TExec *exec = (TExec*)GetListOfExecs()->FindObject(name);
    if (!exec) {
       Error("SetAction","Unknow TExec: %s",name);
       return;
    }
    Int_t execid = 1 + fgExecs->IndexOf(exec);
-   SetBit(execid << 8);
+   SetBit(execid << 16);
 }
 
 //______________________________________________________________________________

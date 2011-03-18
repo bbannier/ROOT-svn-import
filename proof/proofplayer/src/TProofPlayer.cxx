@@ -331,8 +331,8 @@ void TProofPlayer::AddQueryResult(TQueryResult *q)
                delete qr;
                break;
             }
-            // Record position according to end time
-            if (qr->GetStartTime().Convert() < q->GetStartTime().Convert())
+            // Record position according to start time
+            if (qr->GetStartTime().Convert() <= q->GetStartTime().Convert())
                qp = qr;
          }
 
@@ -799,6 +799,12 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       if (TProof::GetParameter(fInput, "PROOF_UseParallelUnzip", useParallelUnzip) == 0) {
          if (useParallelUnzip > -1 && useParallelUnzip < 2)
             gEnv->SetValue("ProofPlayer.UseParallelUnzip", useParallelUnzip);
+      }
+      // OS file caching (Mac Os X only)
+      Int_t dontCacheFiles = 0;
+      if (TProof::GetParameter(fInput, "PROOF_DontCacheFiles", dontCacheFiles) == 0) {
+         if (dontCacheFiles == 1)
+            gEnv->SetValue("ProofPlayer.DontCacheFiles", 1);
       }
       fEvIter = TEventIter::Create(dset, fSelector, first, nentries);
 

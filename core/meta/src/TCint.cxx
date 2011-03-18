@@ -152,11 +152,11 @@ int TCint_GenerateDictionary(const std::vector<std::string> &classes,
          if (cl && cl->GetDeclFileName()) {
             TString header(gSystem->BaseName(cl->GetDeclFileName()));
             TString dir(gSystem->DirName(cl->GetDeclFileName()));
-            while (dir.Length() && dir != "."
-                   && dir != "include" && dir != "inc"
-                   && !dir.EndsWith("/include") && !dir.EndsWith("\\include")
-                   && !dir.EndsWith("/inc") && !dir.EndsWith("\\inc")) {
-               gSystem->PrependPathName(gSystem->BaseName(dir), header);
+            TString dirbase(gSystem->BaseName(dir));
+            while (dirbase.Length() && dirbase != "."
+                   && dirbase != "include" && dirbase != "inc"
+                   && dirbase != "prec_stl") {
+               gSystem->PrependPathName(dirbase, header);
                dir = gSystem->DirName(dir);
             }
             fileContent += TString("#include \"") + header + "\"\n";
@@ -1821,6 +1821,16 @@ Int_t TCint::UnloadLibraryMap(const char *library)
       }
    }
 
+   if (ret >= 0) {
+      TString library_rootmap(library);
+      library_rootmap.Append(".rootmap");
+      TNamed *mfile = 0;
+      while( (mfile = (TNamed*)fRootmapFiles->FindObject(library_rootmap)) ) {
+         fRootmapFiles->Remove(mfile);
+         delete mfile;
+      }
+      fRootmapFiles->Compress();
+   }
    return ret;
 }
 

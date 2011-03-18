@@ -854,12 +854,6 @@ Int_t TBranch::Fill()
       if (fTree->TestBit(TTree::kCircular)) {
          return nbytes;
       }
-      Int_t nevbuf = basket->GetNevBuf();
-      if (fEntryOffsetLen > 10 &&  (4*nevbuf) < fEntryOffsetLen ) {
-         fEntryOffsetLen = nevbuf < 3 ? 10 : 4*nevbuf; // assume some fluctuations.
-      } else if (fEntryOffsetLen && nevbuf > fEntryOffsetLen) {
-         fEntryOffsetLen = 2*nevbuf; // assume some fluctuations.
-      }
       Int_t nout = WriteBasket(basket,fWriteBasket);
       return (nout >= 0) ? nbytes : -1;
    }
@@ -1305,6 +1299,26 @@ Int_t TBranch::GetEntryExport(Long64_t entry, Int_t /*getall*/, TClonesArray* li
    leaf->ReadBasketExport(*buf, li, nentries);
    nbytes = buf->Length() - bufbegin;
    return nbytes;
+}
+
+//______________________________________________________________________________
+Int_t TBranch::GetExpectedType(TClass *&expectedClass,EDataType &expectedType)
+{
+   // Fill expectedClass and expectedType with information on the data type of the 
+   // object/values contained in this branch (and thus the type of pointers
+   // expected to be passed to Set[Branch]Address
+   // return 0 in case of success and > 0 in case of failure.
+   
+   expectedClass = 0;
+   expectedType = kOther_t;
+   TLeaf* l = (TLeaf*) GetListOfLeaves()->At(0);
+   if (l) {
+      expectedType = (EDataType) gROOT->GetType(l->GetTypeName())->GetType();
+      return 0;
+   } else {
+      Error("GetExpectedType", "Did not find any leaves in %s",GetName());
+      return 1;
+   }
 }
 
 //______________________________________________________________________________
@@ -2287,6 +2301,15 @@ Int_t TBranch::WriteBasket(TBasket* basket, Int_t where)
    // Write the current basket to disk and return the number of bytes
    // written to the file.
 
+   Int_t nevbuf = basket->GetNevBuf();
+   if (fEntryOffsetLen > 10 &&  (4*nevbuf) < fEntryOffsetLen ) {
+      // Make sure that the fEntryOffset array does not stay large unnecessarily.
+      fEntryOffsetLen = nevbuf < 3 ? 10 : 4*nevbuf; // assume some fluctuations.
+   } else if (fEntryOffsetLen && nevbuf > fEntryOffsetLen) {
+      // Increase the array ... 
+      fEntryOffsetLen = 2*nevbuf; // assume some fluctuations.
+   }
+
    Int_t nout  = basket->WriteBuffer();    //  Write buffer
    fBasketBytes[where]  = basket->GetNbytes();
    fBasketSeek[where]   = basket->GetSeekKey();
@@ -2312,6 +2335,8 @@ Int_t TBranch::WriteBasket(TBasket* basket, Int_t where)
       fBaskets.AddAtAndExpand(reusebasket,fWriteBasket);
       fBasketEntry[fWriteBasket] = fEntryNumber;
    } else {
+      --fNBaskets;
+      fBaskets[where] = 0;
       basket->DropBuffers();
       delete basket;
    }

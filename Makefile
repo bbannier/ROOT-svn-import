@@ -4,20 +4,7 @@
 # Author: Fons Rademakers, 29/2/2000
 
 
-##### Include path/location macros (result of ./configure) #####
-##### However, if we are building packages or cleaning,    #####
-##### config/Makefile.config isn't made yet - the package  #####
-##### scripts want's to make it them selves - so we don't  #####
-
-ifeq ($(findstring $(MAKECMDGOALS), debian redhat),)
-include config/Makefile.config
-endif
-ifeq ($(MAKECMDGOALS),maintainer-clean)
--include config/Makefile.config
-endif
-ifeq ($(MAKECMDGOALS),clean)
-include config/Makefile.config
-endif
+##### Check version of GNU make #####
 
 MAKE_VERSION_MAJOR := $(word 1,$(subst ., ,$(MAKE_VERSION)))
 MAKE_VERSION_MINOR := $(shell echo $(word 2,$(subst ., ,$(MAKE_VERSION))) | \
@@ -27,6 +14,10 @@ MAKE_VERSION_MINOR ?= 0
 ORDER_ := $(shell test $(MAKE_VERSION_MAJOR) -gt 3 || \
                   test $(MAKE_VERSION_MAJOR) -eq 3 && \
                   test $(MAKE_VERSION_MINOR) -ge 80 && echo '|')
+
+##### Include path/location macros (result of ./configure) #####
+
+include config/Makefile.config
 
 ##### Include compiler overrides specified via ./configure #####
 ##### However, if we are building packages or cleaning, we #####
@@ -46,7 +37,7 @@ endif
 ##### don't include this file since it may screw up things #####
 
 ifndef ROOT_SRCDIR
-$(error Please run ./configure again, the build system has been updated)
+$(error Please run ./configure first)
 endif
 
 ifeq ($(findstring $(MAKECMDGOALS), maintainer-clean debian redhat),)
@@ -268,7 +259,7 @@ ifeq ($(BUILDPEAC),yes)
 MODULES      += proof/peac
 endif
 ifneq ($(ARCH),win32)
-MODULES      += net/rpdutils net/rootd proof/proofd proof/pq2
+MODULES      += net/rpdutils net/rootd proof/proofd proof/pq2 proof/proofbench
 endif
 ifeq ($(BUILDEDITLINE),yes)
 MODULES      += core/editline
@@ -300,7 +291,8 @@ MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
                 roofit/roofit roofit/roostats roofit/histfactory \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
-                math/genvector net/bonjour graf3d/gviz3d graf2d/gviz
+                math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
+                proof/proofbench
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -402,6 +394,11 @@ CXXOUT ?= -o # keep whitespace after "-o"
 ifneq ($(findstring clang,$(CXX)),)
 CLANG_MAJOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$3}' | cut -d'.' -f1)
 CLANG_MINOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$3}' | cut -d'.' -f2)
+ifeq ($(CLANG_MAJOR),version)
+   # Apple version of clang has different -v layout
+   CLANG_MAJOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$4}' | cut -d'.' -f1)
+   CLANG_MINOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$4}' | cut -d'.' -f2)
+endif
 else
 ifneq ($(findstring gnu,$(COMPILER)),)
 GCC_MAJOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f1)

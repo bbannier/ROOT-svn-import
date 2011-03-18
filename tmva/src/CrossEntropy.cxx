@@ -32,7 +32,8 @@
 //             -p log (p) - (1-p)log(1-p);     p=purity                        
 //_______________________________________________________________________
 
-#include <math.h>
+//#include <math.h>
+#include "TMath.h"
 #include "TMVA/CrossEntropy.h"
 
 ClassImp(TMVA::CrossEntropy)
@@ -45,5 +46,6 @@ Double_t  TMVA::CrossEntropy::GetSeparationIndex( const Double_t &s, const Doubl
    if (s+b <= 0) return 0;
    Double_t p = s/(s+b);
    if (p<=0 || p >=1) return 0;
-   return - ( p * log (p) + (1-p)*log(1-p) );
+   //   return - ( p * log (p) + (1-p)*log(1-p) );
+   return - ( p * TMath::Log2(p) + (1-p)*TMath::Log2(1-p) );
 }

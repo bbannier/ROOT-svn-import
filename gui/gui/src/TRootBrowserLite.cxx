@@ -1785,7 +1785,7 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                // fallthrough
             case kCM_MENU:
 
-               switch (parm1) {
+               switch ((ERootBrowserCommands)parm1) {
                   // Handle File menu items...
                   case kFileNewBrowserLite:
                      new TBrowser("Browser", "ROOT Object Browser");
@@ -2017,6 +2017,8 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                      hd->SetText(gHelpRemote);
                      hd->Popup();
                      break;
+                  default:
+                     break;
                }
                break;
             case kCM_COMBOBOX:
@@ -2046,7 +2048,12 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
          switch (GET_SUBMSG(msg)) {
 
             case kCT_ITEMCLICK:
-               if (parm1 == kButton1 || parm1 == kButton3) {
+               // tell coverity that parm1 is a Long_t, and not an enum (even
+               // if we compare it with an enum value) and the meaning of 
+               // parm1 depends on GET_MSG(msg) and GET_SUBMSG(msg)
+               // coverity[mixed_enums]
+               if (((EMouseButton)parm1 == kButton1) || 
+                   ((EMouseButton)parm1 == kButton3)) {
                   HideTextEdit();
                   TGListTreeItem *item2;
                   TObject *obj2 = 0;
