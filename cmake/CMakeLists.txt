@@ -24,7 +24,7 @@ include(CheckCompiler)
 include(MacroEnsureVersion)
 
 #---Enable CTest package -----------------------------------------------------------------------
-include(CTest)
+#include(CTest)
 #---Check if the user wants to build the project in the source directory------------------------
 ROOT_CHECK_OUT_OF_SOURCE_BUILD()
 
@@ -71,5 +71,8 @@ add_subdirectory (main)
 add_subdirectory (bindings)
 if(tmva)
   add_subdirectory(tmva)
+endif()
+if(roofit)
+  add_subdirectory(roofit)
 endif()
 
