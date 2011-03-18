@@ -1,5 +1,91 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <chapter xmlns="http://docbook.org/ns/docbook" version="5.0">
     <title>Fitting Histograms</title>
-    <para> </para>
+    <para>To fit a histogram </para>
+    <sect1>
+        <title>The Fit Method</title>
+        <para>
+            To fit
+        </para>
+    </sect1>
+    <sect1>
+        <title>Fit with a Predefined Function</title>
+        <para>
+            To fit
+        </para>
+    </sect1>
+    <sect1>
+        <title>Fit with a User Defined Function</title>
+        <para>
+            You can
+        </para>
+    </sect1>
+    <sect1>
+        <title>Fixing and Setting Parameter's Bounds</title>
+        <para>
+            Parameters
+        </para>
+    </sect1>
+    <sect1>
+        <title>Fitting Sub Ranges</title>
+        <para>
+            By default,
+        </para>
+    </sect1>
+    <sect1>
+        <title>The Fit Panel</title>
+        <para>
+            To Display
+        </para>
+    </sect1>
+    <sect1>
+        <title>Fitting Multiple Sub Ranges</title>
+        <para>
+            The script,
+        </para>
+    </sect1>
+    <sect1>
+        <title>Adding Functions to the List</title>
+        <para>
+            The example
+        </para>
+    </sect1>
+    <sect1>
+        <title>Combining Functions</title>
+        <para> You can combine functions to fit a histogram with their sum as it is illustrated in
+            the macro <code>FitDemo.C</code> (<code>$ROOTSYS/tutorials/fit/FittingDemo.C</code>). We
+            have a function that is the combination of a background and Lorentzian peak. Each
+            function contributes 3 parameters: 
+        </para>
+            <para>
+            <inlineequation>
+                <mml:math xmlns:mml="http://www.w3.org/1998/Math/MathML">
+                    <mml:mrow>
+                        <mml:mi>y(E)</mml:mi>
+                        <mml:mo>=</mml:mo>
+                        <mml:msub>
+                            <mml:mi>a</mml:mi>
+                            <mml:mn>1</mml:mn>
+                        </mml:msub>
+                        <mml:mo>+</mml:mo>
+                        <mml:msub>
+                            <mml:mi>a</mml:mi>
+                            <mml:mn>2</mml:mn>
+                        </mml:msub>
+                        <mml:mi>E</mml:mi>
+                        <mml:mo>+</mml:mo>
+                        <mml:msub>
+                            <mml:mi>a</mml:mi>
+                            <mml:mn>3</mml:mn>
+                        </mml:msub>
+                        <mml:msup>
+                            <mml:mi>E</mml:mi>
+                            <mml:mn>2</mml:mn>
+                        </mml:msup>
+                        <mml:mo>+</mml:mo>
+                    </mml:mrow>
+                </mml:math>
+            </inlineequation>
+        </para>
+    </sect1>
 </chapter>
