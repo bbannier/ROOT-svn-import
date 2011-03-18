@@ -288,7 +288,7 @@ function(ROOT_GENERATE_ROOTMAP library)
   #---Build the rootmap file--------------------------------------
   add_custom_command(OUTPUT ${outfile}
                      COMMAND rlibmap -o ${outfile} -l ${libprefix}${library}${CMAKE_SHARED_LIBRARY_SUFFIX} -d ${_dependencies} -c ${_linkdef} 
-                     DEPENDS ${library} ${_linkdef} rlibmap )
+                     DEPENDS ${_linkdef} rlibmap )
   add_custom_target( ${libprefix}${library}.rootmap ALL DEPENDS  ${outfile})
   set_target_properties(${libprefix}${library}.rootmap PROPERTIES FOLDER RootMaps )
   #---Install the rootmap file------------------------------------
