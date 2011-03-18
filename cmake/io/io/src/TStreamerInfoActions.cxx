@@ -38,14 +38,9 @@ namespace TStreamerInfoActions
    void TConfiguration::AddToOffset(Int_t delta)
    {
       // Add the (potentially negative) delta to all the configuration's offset.  This is used by
-      // TTBranchElement in the case of split sub-object.
-      // However, do not add it to the base element which already contain it.
+      // TBranchElement in the case of split sub-object.
 
-      TStreamerInfo *info = (TStreamerInfo*)fInfo;
-      TStreamerElement *aElement = (TStreamerElement*)info->GetElems()[fElemId];
-      if (! aElement->IsBase() ) {
-         fOffset += delta;
-      }
+      fOffset += delta;
    }
 
    void TConfiguredAction::PrintDebug(TBuffer &buf, void *addr) const
@@ -219,11 +214,11 @@ namespace TStreamerInfoActions
       TVirtualCollectionProxy::DeleteTwoIterators_t fDeleteTwoIterators;
 
       TConfigSTL(TVirtualStreamerInfo *info, UInt_t id, Int_t offset, UInt_t length, TClass *oldClass, const char *type_name, Bool_t isbase) : 
-         TConfiguration(info,id,offset,length), fOldClass(oldClass), fNewClass(oldClass), fTypeName(type_name), fIsSTLBase(isbase),
+         TConfiguration(info,id,offset,length), fOldClass(oldClass), fNewClass(oldClass), fStreamer(0), fTypeName(type_name), fIsSTLBase(isbase),
          fCreateIterators(0), fCopyIterator(0), fDeleteIterator(0), fDeleteTwoIterators(0) { Init(); }
 
       TConfigSTL(TVirtualStreamerInfo *info, UInt_t id, Int_t offset, UInt_t length, TClass *oldClass, TClass *newClass, const char *type_name, Bool_t isbase) : 
-         TConfiguration(info,id,offset,length), fOldClass(oldClass), fNewClass(newClass), fTypeName(type_name), fIsSTLBase(isbase),
+         TConfiguration(info,id,offset,length), fOldClass(oldClass), fNewClass(newClass), fStreamer(0), fTypeName(type_name), fIsSTLBase(isbase),
          fCreateIterators(0), fCopyIterator(0), fDeleteIterator(0), fDeleteTwoIterators(0) { Init(); }
 
       TConfigSTL(TVirtualStreamerInfo *info, UInt_t id, Int_t offset, UInt_t length, TClass *oldClass, TMemberStreamer* streamer, const char *type_name, Bool_t isbase) : 
@@ -770,6 +765,12 @@ namespace TStreamerInfoActions
    }
 
    // Support for collections.
+   
+   Int_t ReadLoopInvalid(TBuffer &, void *, const void *, const TConfiguration *config)
+   {
+      Fatal("ReadSequence","The sequence of actions to read %s:%d member-wise was not initialized.",config->fInfo->GetName(),config->fInfo->GetClassVersion());
+      return 0;
+   }
 
    Int_t GenericVectorPtrAction(TBuffer &buf, void *iter, const void *end, const TConfiguration *config) 
    {
@@ -1097,6 +1098,20 @@ void TStreamerInfo::Compile()
          // when it is making branches for a split object.
          continue;
       }
+      if (TestBit(kCannotOptimize) && element->IsBase()) 
+      {
+         // Make sure the StreamerInfo for the base class is also
+         // not optimized.
+         TClass *bclass = element->GetClassPointer();
+         Int_t clversion = ((TStreamerBase*)element)->GetBaseVersion();
+         TStreamerInfo *binfo = ((TStreamerInfo*)bclass->GetStreamerInfo(clversion));
+         binfo->SetBit(kCannotOptimize);
+         if (binfo->IsOptimized())
+         {
+            // Optimizing does not work with splitting.
+            binfo->Compile();
+         }      
+      }
       Int_t asize = element->GetSize();
       if (element->GetArrayLength()) {
          asize /= element->GetArrayLength();
@@ -1159,6 +1174,10 @@ void TStreamerInfo::Compile()
    if ( ! isOptimized ) {
       if (fReadMemberWise) fReadMemberWise->fActions.clear();
       else fReadMemberWise = new TStreamerInfoActions::TActionSequence(this,ndata);
+   } else {
+      if (fReadMemberWise) fReadMemberWise->fActions.clear();
+      else fReadMemberWise = new TStreamerInfoActions::TActionSequence(this,ndata);
+      fReadMemberWise->AddAction( ReadLoopInvalid, new TConfiguration(this,0,0) );
    }
 
    for (i = 0; i < fNdata; ++i) {
@@ -1360,6 +1379,10 @@ void TStreamerInfo::Compile()
 TStreamerInfoActions::TActionSequence *TStreamerInfoActions::TActionSequence::CreateReadMemberWiseActions(TVirtualStreamerInfo *info, TVirtualCollectionProxy &proxy)
 {
    // Create the bundle of the actions necessary for the streaming memberwise of the content described by 'info' into the collection described by 'proxy'
+
+   if (info == 0) {
+      return new TStreamerInfoActions::TActionSequence(0,0);
+   }
 
    if (info->IsOptimized()) {
       // For now insures that the StreamerInfo is not optimized

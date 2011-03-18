@@ -3521,7 +3521,7 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
                cvar = '*';
                cvar += m.Name();
                for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  snprintf(cdim,1024, "[%d]", m.MaxIndex(dim));
+                  snprintf(cdim,1024, "[%ld]", m.MaxIndex(dim));
                   cvar += cdim;
                }
                (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", &"
@@ -3562,7 +3562,7 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
                cvar = '*';
                cvar += m.Name();
                for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  snprintf(cdim,1024, "[%d]", m.MaxIndex(dim));
+                  snprintf(cdim,1024, "[%ld]", m.MaxIndex(dim));
                   cvar += cdim;
                }
                (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", &"
@@ -3578,7 +3578,7 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
             } else if (m.Property() & G__BIT_ISARRAY) {
                cvar = m.Name();
                for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  snprintf(cdim,1024, "[%d]", m.MaxIndex(dim));
+                  snprintf(cdim,1024, "[%ld]", m.MaxIndex(dim));
                   cvar += cdim;
                }
                (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", "
@@ -4723,12 +4723,12 @@ int main(int argc, char **argv)
          if (strcmp("-pipe", argv[ic])!=0) {
             // filter out undesirable options
             string argkeep;
-            // [coverity: tainted_data] The OS should already limit the argument size, so we are safe here
+            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
             StrcpyArg(argkeep, argv[i]);
 	    int ncha = argkeep.length()+1;
-            // [coverity: tainted_data] The OS should already limit the argument size, so we are safe here
+            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
             argvv[argcc++] = (char*)calloc(ncha,1);
-            // [coverity: tainted_data] The OS should already limit the argument size, so we are safe here
+            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
             strlcpy(argvv[argcc-1],argkeep.c_str(),ncha);
          }
       }
@@ -5403,6 +5403,8 @@ int main(int argc, char **argv)
       } else {
          const size_t endStr = gLibsNeeded.find_last_not_of(" \t");
          outputfile << gLibsNeeded.substr(0, endStr+1) << endl;
+         // Add explicit delimiter
+         outputfile << "# Now the list of classes\n";
          G__ClassInfo clFile;
          clFile.Init();
          while (clFile.Next()) {

@@ -1320,7 +1320,8 @@ void TSessionFrame::UpdateListOfDataSets()
 
       // TODO: is now returning a TMap; viewer has to be adapted
       TList *dsetlist = 0; //fViewer->GetActDesc()->fProof->GetDataSets();
-      if(dsetlist) {
+      // coverity[dead_error_condition]: to be changed for TMap usage
+      if (dsetlist) {
          TGListTreeItem *dsetitem;
          fDataSetTree->OpenItem(fDataSetTree->GetFirstItem());
          TIter nextdset(dsetlist);
@@ -2118,6 +2119,7 @@ void TEditQueryFrame::Build(TSessionViewer *gui)
          TGNumberFormat::kNESInteger, TGNumberFormat::kNEAAnyNumber,
          TGNumberFormat::kNELNoLimits), new TGTableLayoutHints(1, 2, 1, 2,
          0, 17, 0, 0, 8));
+   // coverity[negative_returns]: no problem with -1, the format is kNESInteger
    fNumEntries->SetIntNumber(-1);
    // add "First Entry" label and number entry
    fFrmMore->AddFrame(new TGLabel(fFrmMore, "First entry :"),
@@ -3587,6 +3589,7 @@ TSessionViewer::TSessionViewer(const char *name, UInt_t w, UInt_t h) :
 
    // only one session viewer allowed
    if (gSessionViewer)
+      // coverity[uninit_member]: already done
       return;
    Build();
    SetWindowName(name);
@@ -3603,6 +3606,7 @@ TSessionViewer::TSessionViewer(const char *name, Int_t x, Int_t y, UInt_t w,
 
    // only one session viewer allowed
    if (gSessionViewer)
+      // coverity[uninit_member]: already done
       return;
    Build();
    SetWindowName(name);

@@ -373,6 +373,9 @@ TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
    } else if (!(strstr(masterurl, "://"))) {
       fUrl.SetProtocol("proof");
    }
+   if (!strcmp(fUrl.GetHost(), "localhost") ||
+       !strncmp(fUrl.GetHost(), "localhost.", strlen("localhost.")))
+      fUrl.SetHost(gSystem->HostName());
 
    // Port
    if (fUrl.GetPort() == TUrl(" ").GetPort())
@@ -423,6 +426,9 @@ TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
       fMasterServ = kTRUE;
       SetBit(TProof::kIsMaster);
    }
+   // Flag that we are a client
+   if (TestBit(TProof::kIsClient))
+      if (!gSystem->Getenv("ROOTPROOFCLIENT")) gSystem->Setenv("ROOTPROOFCLIENT","");
 
    Init(masterurl, conffile, confdir, loglevel, alias);
 
@@ -824,9 +830,7 @@ Int_t TProof::Init(const char *, const char *conffile,
    } else {
 
       TString sandbox = gEnv->GetValue("Proof.Sandbox", "");
-      if (sandbox.IsNull()) {
-         sandbox.Form("~/%s", kPROOF_WorkDir);
-      }
+      if (sandbox.IsNull()) sandbox.Form("~/%s", kPROOF_WorkDir);
       gSystem->ExpandPathName(sandbox);
       if (AssertPath(sandbox, kTRUE) != 0) {
          Error("Init", "failure asserting directory %s", sandbox.Data());
@@ -1151,7 +1155,7 @@ Int_t TProof::AddWorkers(TList *workerList)
       if (sport == -1)
          sport = fUrl.GetPort();
 
-      // create slave server
+      // Create worker server
       TString fullord;
       if (worker->GetOrdinal().Length() > 0) {
          fullord.Form("%s.%s", gProofServ->GetOrdinal(), worker->GetOrdinal().Data());
@@ -1159,8 +1163,10 @@ Int_t TProof::AddWorkers(TList *workerList)
          fullord.Form("%s.%d", gProofServ->GetOrdinal(), ord);
       }
 
-      // create slave server
-      TUrl u(Form("%s:%d",worker->GetNodeName().Data(), sport));
+      // Create worker server
+      TString wn(worker->GetNodeName());
+      if (wn == "localhost" || wn.BeginsWith("localhost.")) wn = gSystem->HostName();
+      TUrl u(TString::Format("%s:%d", wn.Data(), sport));
       // Add group info in the password firdl, if any
       if (strlen(gProofServ->GetGroup()) > 0) {
          // Set also the user, otherwise the password is not exported
@@ -3225,6 +3231,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
             TString stag;
             (*mess) >> stag;
             SetName(stag);
+            // In the TSlave object
+            sl->SetSessionTag(stag);
             // New servers send also the group
             if ((mess->BufferSize() > mess->Length()))
                (*mess) >> fGroup;
@@ -6564,7 +6572,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
       }
    }
 
-   if (opt <= kBuildAll && !IsLite()) {
+   if (opt <= kBuildAll && (!IsLite() || !buildOnClient)) {
       TMessage mess(kPROOF_CACHE);
       mess << Int_t(kBuildPackage) << pac;
       Broadcast(mess, kUnique);
@@ -6583,7 +6591,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
       }
 
       fStatus = 0;
-      if (!IsLite())
+      if (!IsLite() || !buildOnClient)
          Collect(kAllUnique);
 
       if (fStatus < 0 || st < 0)
@@ -6762,7 +6770,7 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
                }
             }
 
-            if (gSystem->Exec("PROOF-INF/BUILD.sh")) {
+            if (gSystem->Exec("export ROOTPROOFCLIENT=\"1\" ; PROOF-INF/BUILD.sh")) {
                Error("BuildPackageOnClient", "building package %s on the client failed", pack);
                status = -1;
             }
@@ -7597,8 +7605,12 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
 {
    // Load the specified macro on master, workers and, if notOnClient is
    // kFALSE, on the client. The macro file is uploaded if new or updated.
-   // If existing, the corresponding header basename(macro).h or .hh, is also
-   // uploaded. The default is to load the macro also on the client.
+   // Additional files to be uploaded (or updated, if needed) can be specified
+   // after a comma, e.g. "mymacro.C+,thisheader.h,thatheader.h".
+   // If existing in the same directory, a header basename(macro).h or .hh, is also
+   // uploaded.
+   // The default is to load the macro also on the client; notOnClient can be used
+   // to avoid loading on the client.
    // On masters, if uniqueWorkers is kTRUE, the macro is loaded on unique workers
    // only, and collection is not done; if uniqueWorkers is kFALSE, collection
    // from the previous request is done, and broadcasting + collection from the
@@ -7620,7 +7632,13 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
       }
 
       // Extract the file implementation name first
-      TString implname = macro;
+      TString addsname, implname = macro;
+      Ssiz_t icom = implname.Index(",");
+      if (icom != kNPOS) {
+         addsname = implname(icom + 1, implname.Length());
+         implname.Remove(icom);
+      }
+      TString basemacro = gSystem->BaseName(implname), mainmacro(implname);
       TString acmode, args, io;
       implname = gSystem->SplitAclicMode(implname, acmode, args, io);
 
@@ -7647,30 +7665,73 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
                             h.Data(), headname.Data());
          }
       }
+      
+      // Is there any additional file ?
+      TString addincs;
+      TList addfiles;
+      if (!addsname.IsNull()) {
+         TString fn;
+         Int_t from = 0;
+         while (addsname.Tokenize(fn, from, ",")) {
+            if (gSystem->AccessPathName(fn, kReadPermission)) {
+               Error("Load", "additional file '%s' not found", fn.Data());
+               return -1;
+            }
+            // Create the additional include statement
+            if (!notOnClient) {
+               TString dirn(gSystem->DirName(fn));
+               if (addincs.IsNull()) {
+                  addincs.Form("-I%s", dirn.Data());
+               } else if (!addincs.Contains(dirn)) {
+                  addincs += TString::Format(" -I%s", dirn.Data());
+               }
+            }
+            // Remember these files ...
+            addfiles.Add(new TObjString(fn));
+         }
+      }
 
       // Send files now; the md5 check is run here; see SendFile for more
       // details.
       if (SendFile(implname, kAscii | kForward , "cache") == -1) {
-         Info("Load", "problems sending implementation file %s", implname.Data());
+         Error("Load", "problems sending implementation file %s", implname.Data());
          return -1;
       }
       if (hasHeader)
          if (SendFile(headname, kAscii | kForward , "cache") == -1) {
-            Info("Load", "problems sending header file %s", headname.Data());
+            Error("Load", "problems sending header file %s", headname.Data());
             return -1;
          }
-
+      // Additional files
+      if (addfiles.GetSize() > 0) {
+         TIter nxfn(&addfiles);
+         TObjString *os = 0;
+         while ((os = (TObjString *) nxfn())) {
+            if (SendFile(os->GetName(), kAscii | kForward , "cache") == -1) {
+               Error("Load", "problems sending additional file %s", os->GetName());
+               return -1;
+            }
+         }
+         addfiles.SetOwner(kTRUE);
+      }
+         
       // The files are now on the workers: now we send the loading request
-      TString basemacro = gSystem->BaseName(macro);
       TMessage mess(kPROOF_CACHE);
       mess << Int_t(kLoadMacro) << basemacro;
       Broadcast(mess, kActive);
 
       // Load locally, if required
       if (!notOnClient) {
-         // by first forwarding the load command to the master and workers
+         // Mofify the include path
+         TString oldincs = gSystem->GetIncludePath();
+         if (!addincs.IsNull()) gSystem->AddIncludePath(addincs);
+         
+         // By first forwarding the load command to the master and workers
          // and only then loading locally we load/build in parallel
-         gROOT->ProcessLine(Form(".L %s", macro));
+         gROOT->ProcessLine(Form(".L %s", mainmacro.Data()));
+         
+         // Restore include path
+         if (!addincs.IsNull()) gSystem->SetIncludePath(oldincs);
 
          // Update the macro path
          TString mp(TROOT::GetMacroPath());
@@ -9836,20 +9897,26 @@ Int_t TProof::SetDataSetTreeName(const char *dataset, const char *treename)
 }
 
 //______________________________________________________________________________
-TMap *TProof::GetDataSets(const char *uri, const char* optStr)
+TMap *TProof::GetDataSets(const char *uri, const char *optStr)
 {
    // Lists all datasets that match given uri.
-
+   // The 'optStr' can contain a comma-separated list of servers for which the
+   // information is wanted. If ':lite:' (case insensitive) is specified in 'optStr'
+   // only the global information in the TFileCollection is retrieved; useful to only
+   // get the list of available datasets.
+   
    if (fProtocol < 15) {
       Info("GetDataSets",
            "functionality not available: the server does not have dataset support");
       return 0;
    }
+   if (fProtocol < 31 && strstr(optStr, ":lite:"))
+      Warning("GetDataSets", "'lite' option not supported by the server");
 
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kGetDataSets);
-   mess << TString(uri?uri:"");
-   mess << TString(optStr?optStr:"");
+   mess << TString(uri ? uri : "");
+   mess << TString(optStr ? optStr : "");
    Broadcast(mess);
    Collect(kActive, fCollectTimeout);
 

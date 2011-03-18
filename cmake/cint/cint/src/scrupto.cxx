@@ -294,7 +294,7 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
       if (G__srcfile[G__nfile].filename) {
          // --
 #ifndef G__OLDIMPLEMENTATION1546
-         unsigned int len = strlen(G__srcfile[G__nfile].filename);
+         size_t len = strlen(G__srcfile[G__nfile].filename);
          if (
             (len > strlen(G__NAMEDMACROEXT2)) &&
             !strcmp(G__srcfile[G__nfile].filename + len - strlen(G__NAMEDMACROEXT2), G__NAMEDMACROEXT2)
@@ -309,10 +309,15 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
    }
    G__nfile = nfile;
 #ifdef G__SHAREDLIB
+   int store_nperm = nperm;
    while (nperm) {
       --nperm;
-      ++G__srcfile_serial;  // just in case the re-init of the dictionary triggers some autoloading.
       G__srcfile[G__nfile++] = permanentsl[nperm];
+   }
+   ++G__srcfile_serial;  // just in case the re-init of the dictionary triggers some autoloading.
+   nperm = store_nperm;
+   while (nperm) {
+      --nperm;
       if (permanentsl[nperm].initsl) {
          G__input_file store_ifile = G__ifile;
          G__ifile.filenum = G__nfile - 1;
@@ -638,11 +643,11 @@ static int G__destroy_upto_vararray(G__var_array* var, int global, int ig15)
                   // FIXME: Do we really need this special case?
                   long store_globalvarpointer = G__globalvarpointer;
                   int size = G__struct.size[G__tagnum];
-                  int num_of_elements = var->varlabel[idx][1] /* number of elements */;
+                  size_t num_of_elements = var->varlabel[idx][1] /* number of elements */;
                   if (!num_of_elements) {
                      num_of_elements = 1;
                   }
-                  for (int i = num_of_elements - 1; i >= 0; --i) {
+                  for (long i = num_of_elements - 1; i >= 0; --i) {
                      G__store_struct_offset = var->p[idx] + (i * size);
                      G__globalvarpointer = G__store_struct_offset;
                      int known = 0;
@@ -659,7 +664,7 @@ static int G__destroy_upto_vararray(G__var_array* var, int global, int ig15)
                else {
                   // -- The variable is *not* and array with auto storage duration.
                   G__store_struct_offset = var->p[idx];
-                  int i = var->varlabel[idx][1] /* number of elements */;
+                  size_t i = var->varlabel[idx][1] /* number of elements */;
                   if (i > 0)  {
                      G__cpp_aryconstruct = i;
                   }
@@ -671,11 +676,11 @@ static int G__destroy_upto_vararray(G__var_array* var, int global, int ig15)
             else {
                // -- The class is interpreted.
                int size = G__struct.size[G__tagnum];
-               int num_of_elements = var->varlabel[idx][1] /* number of elements */;
+               size_t num_of_elements = var->varlabel[idx][1] /* number of elements */;
                if (!num_of_elements) {
                   num_of_elements = 1;
                }
-               for (int i = num_of_elements - 1; i >= 0; --i) {
+               for (long i = num_of_elements - 1; i >= 0; --i) {
                   G__store_struct_offset = var->p[idx] + (i * size);
                   if (G__dispsource) {
                      G__fprinterr(G__serr, "\n0x%lx.%s", G__store_struct_offset, temp());
@@ -705,7 +710,7 @@ static int G__destroy_upto_vararray(G__var_array* var, int global, int ig15)
             var->p[idx] // has memory allocated.
          ) {
             // -- Decrement the reference counts for each member of the pointer array.
-            int i = var->varlabel[idx][1] /* number of elements */;
+            long i = var->varlabel[idx][1] /* number of elements */;
             if (!i) {
                i = 1;
             }
@@ -1199,7 +1204,7 @@ int G__close_inputfiles()
       if (G__srcfile[iarg].filename) {
          // --
 #ifndef G__OLDIMPLEMENTATION1546
-         int len = strlen(G__srcfile[iarg].filename);
+         size_t len = strlen(G__srcfile[iarg].filename);
          if (len > (int)strlen(G__NAMEDMACROEXT2) &&
                strcmp(G__srcfile[iarg].filename + len - strlen(G__NAMEDMACROEXT2),
                       G__NAMEDMACROEXT2) == 0) {
