@@ -246,7 +246,7 @@ void TMVA::VariableDecorrTransform::CalcSQRMats( const std::vector<Event*>& even
    const UInt_t matNum = (maxCls<=1)?maxCls:maxCls+1;
    fDecorrMatrices.resize( matNum, (TMatrixD*) 0 );
       
-   std::vector<TMatrixDSym*>* covMat = gTools().CalcCovarianceMatrices( events, maxCls, fGet.size() );
+   std::vector<TMatrixDSym*>* covMat = gTools().CalcCovarianceMatrices( events, maxCls, this );
    
    
    for (UInt_t cls=0; cls<matNum; cls++) {
