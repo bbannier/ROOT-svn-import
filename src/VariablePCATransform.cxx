@@ -175,11 +175,6 @@ const TMVA::Event* TMVA::VariablePCATransform::InverseTransform( const Event* co
 
    if (fBackTransformedEvent==0 ) fBackTransformedEvent = new Event();
 
-
-   // Perform PCA and put it into PCAed events tree
-   if (fBackTransformedEvent==0 ) fBackTransformedEvent = new Event();
-
-
    std::vector<Float_t> principalComponents;
    std::vector<Char_t>  mask;
    std::vector<Float_t> output;

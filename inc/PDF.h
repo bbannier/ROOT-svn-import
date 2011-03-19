@@ -85,7 +85,8 @@ namespace TMVA {
       void BuildPDF (const TH1* theHist);
 
       // returns probability density at given abscissa
-      Double_t GetVal( Double_t x ) const;
+      Double_t GetVal       ( Double_t x ) const;
+      Double_t GetValInverse( Double_t y, Bool_t isMonotonouslyIncreasingFunction=kFALSE ) const;
 
       void AddXMLTo( void* parent );
       void ReadXML( void* pdfnode );
@@ -143,6 +144,9 @@ namespace TMVA {
 
       // do we use the original histogram as reference ?
       Bool_t   UseHistogram() const { return fUseHistogram; }
+
+      void FindBinInverse( const TH1* histogram, Int_t& lowerBin, Int_t& higherBin, Double_t& lowerBinValue, Double_t& higherBinValue, 
+			   Double_t y, Bool_t isMonotonouslyIncreasingFunction=kFALSE ) const;
 
 
       void     BuildSplinePDF();
