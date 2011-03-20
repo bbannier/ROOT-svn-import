@@ -1149,7 +1149,7 @@ TString TMVA::Tools::StringFromDouble( Double_t d )
 {
    // string tools
    std::stringstream s;
-   s << Form( "%5.10e", d );
+   s << Form( "%5.8e", d );
    return TString(s.str().c_str());
 }
 
@@ -1414,8 +1414,6 @@ TMVA::Tools::CalcCovarianceMatrices( const std::vector<Event*>& events, Int_t ma
       nspcts=events.at(0)->GetNSpectators();
    }
 
-
-   std::cout << "nvars " << nvars << std::endl;
 
    // init matrices
    Int_t matNum = maxCls;
