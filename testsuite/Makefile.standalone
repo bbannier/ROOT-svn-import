@@ -41,6 +41,14 @@ $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
 	$(MT_EXE)
 	@echo "$@ done"
 
+makeclasstest: testMakeClass.o
+	$(LD) $(LDFLAGS) $^ $(TMVALOCALLIBS) $(LIBS) -lTMVA.1 -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
+	./makeclasstest
+
+testMakeClass.o: testMakeClass.cxx testMakeClass.sh $(STRESSTMVA)
+	./stressTMVA
+	./testMakeClass.sh
+	$(CXX) -g $(TMVAINCLUDE) $(CXXFLAGS) -I. -c $<
 
 clean:
 	@rm -f $(PROGRAMS) $(OBJS) $(TMVAUTOBJECTS)

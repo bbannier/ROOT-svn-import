@@ -42,7 +42,7 @@ bool MethodUnitTestWithROCLimits::ROCIntegralWithinInterval()
 
 void MethodUnitTestWithROCLimits::run()
 {
-   TString outfileName( "weights/TMVA.root" );                                                                                                                       
+   TString outfileName = Form("weights/TMVA_%s.root",_methodTitle.Data());
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );         
 
 // FIXME:: if file can't be created do something more?
@@ -147,7 +147,7 @@ void MethodUnitTestWithROCLimits::run()
   vector<double> testvarDouble(_VariableNames->size());
 
   // setup test tree access
-  TFile* testFile = new TFile("weights/TMVA.root");
+  TFile* testFile = new TFile(Form("weights/TMVA_%s.root",_methodTitle.Data()));
   TTree* testTree = (TTree*)(testFile->Get("TestTree"));
   for (UInt_t i=0;i<_VariableNames->size();i++)
      testTree->SetBranchAddress(_TreeVariableNames->at(i),&testvar[i]);
@@ -369,6 +369,7 @@ void MethodUnitTestWithROCLimits::run()
      if (methodTypeName != "TMlpANN") fout << Form("#include \"weights/TMVAUnitTesting_%s.class.C\"",_methodTitle.Data()) << std::endl;
      else fout << Form("#include \"weights/TMVAUnitTesting_%s.cxx\"",_methodTitle.Data()) << std::endl;
      fout << Form("bool %s(){",macroName.Data()) << std::endl;
+     fout << Form("std::cout << \"%s\" <<std::endl;",_methodTitle.Data())<<std::endl;
      fout << "std::vector<std::string> vars(4);" << std::endl; // fix me 4
      fout << "std::vector<double> val(4);" << std::endl;  // fix me 4
      fout << "bool ok=true;" << std::endl;  // fix me 4
@@ -376,10 +377,10 @@ void MethodUnitTestWithROCLimits::run()
         fout << Form("vars[%d]=\"%s\";",i,_VariableNames->at(i).Data()) << std::endl;  
      if (methodTypeName != "TMlpANN") fout << Form("Read%s  aa(vars);", _methodTitle.Data()) << std::endl;
      else fout << Form("TMVAUnitTesting_%s aa;", _methodTitle.Data()) << std::endl;
-     fout << "TFile* testFile = new TFile(\"weights/TMVA.root\");" << std::endl; // fix me hardcode TMVA.root
+     fout << Form("TFile* testFile = new TFile(\"weights/TMVA_%s.root\");",_methodTitle.Data()) << std::endl; // fix me hardcode TMVA.root
      fout << " TTree* testTree = (TTree*)(testFile->Get(\"TestTree\"));" << std::endl;
-     fout << Form("vector<float> testvar(%d);",(Int_t) _VariableNames->size()) << std::endl;
-     fout << Form("vector<double> testvarDouble(%d);", (Int_t) _VariableNames->size()) << std::endl;
+     fout << Form("std::vector<float> testvar(%d);",(Int_t) _VariableNames->size()) << std::endl;
+     fout << Form("std::vector<double> testvarDouble(%d);", (Int_t) _VariableNames->size()) << std::endl;
      for (UInt_t j=0;j<_VariableNames->size();j++)
         fout << Form("testTree->SetBranchAddress(\"%s\",&testvar[%d]);",_TreeVariableNames->at(j).Data(),j) << std::endl;
      fout << "float testTreeVal,diff,nrm,maxdiff=0.,sumdiff=0.;" << std::endl;
@@ -402,7 +403,7 @@ void MethodUnitTestWithROCLimits::run()
      fout << "if (sumdiff >2.e-4) ok=false;" << std::endl;
      fout << "testFile->Close();" << std::endl;
      fout << "if (!ok) {" << std::endl;
-     fout << "std::cout << \"maxdiff=\"<<maxdiff<< \", sumdiff=\"<<sumdiff<<std::endl;}" << std::endl;
+     fout << "std::cout << \"maxdiff=\"<<maxdiff<< \", sumdiff=\"<<sumdiff<<\" not ok\"<<std::endl;}" << std::endl;
      fout << "return ok;" << std::endl;
      fout << "}" << std::endl;
      
