@@ -61,7 +61,10 @@
             <inlineequation>
                 <mml:math xmlns:mml="http://www.w3.org/1998/Math/MathML">
                     <mml:mrow>
-                        <mml:mi>y(E)</mml:mi>
+                        <mml:mi>y</mml:mi>
+                        <mml:mi>(</mml:mi>
+                        <mml:mi>E</mml:mi>
+                        <mml:mi>)</mml:mi>
                         <mml:mo>=</mml:mo>
                         <mml:msub>
                             <mml:mi>a</mml:mi>
