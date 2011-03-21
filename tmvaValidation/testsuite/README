@@ -22,3 +22,13 @@ make [FULL=1] [DEBUG=1]
 
 FULL=1 runs all tests (~30 min), by default it runs the short version (~2 min)
 DEBUG=1 enables debugging output, by default the tests are silent
+
+-------------------------------------------------------------------
+
+# Independent Test of the TMVA standalone classes
+# after the full stresstest, run the script testMakeClass.sh
+./testMakeClass.sh
+next compile the executable, adding . to the include path
+
+alternatively one can use the makefile
+make -f Makefile.standalone makeclasstest
