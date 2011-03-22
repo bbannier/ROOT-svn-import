@@ -33,6 +33,8 @@ MethodUnitTestWithROCLimits::MethodUnitTestWithROCLimits(const Types::EMVA& theM
 
 MethodUnitTestWithROCLimits::~MethodUnitTestWithROCLimits()
 {
+   delete  _VariableNames;
+   delete _TreeVariableNames;
 }
 
 bool MethodUnitTestWithROCLimits::ROCIntegralWithinInterval()
@@ -134,9 +136,10 @@ void MethodUnitTestWithROCLimits::run()
   }
   outputFile->Close();
   delete factory;
-
   if (outputFile) delete outputFile;
-  
+  input->Close();
+  if (input) delete input;
+
   // Reader tests
   const int nTest=6; // 3 reader usages + 3 tests with additional readers
   float testTreeVal,readerVal=0.;
@@ -314,7 +317,9 @@ void MethodUnitTestWithROCLimits::run()
      if (stuckCount<nevt-20 && sumdiff <0.005) ok=true;
   }
   testFile->Close();
-
+  if (testFile) delete testFile;
+  testFile2->Close();
+  if (testFile2) delete testFile2;
   for (int i=0;i<nTest;i++) delete reader[i]; 
   if (reader2) delete reader2;
 
@@ -328,7 +333,7 @@ void MethodUnitTestWithROCLimits::run()
 #endif
 
   bool _DoTestCCode=true; 
-  
+
   // use: grep -A5  'MakeClassSpecific' ../tmva/src/Method*.cxx
 
   if (_methodType==Types::kCuts  // non-implemented makeclass methods BayesClassifier CFMlpANN Committee Cuts KNN PDERS RuleFit SVM
@@ -402,6 +407,7 @@ void MethodUnitTestWithROCLimits::run()
      fout << "if (maxdiff >1.e-2) std::cout << \"maxdiff=\"<<maxdiff<< \", sumdiff=\"<<sumdiff<<std::endl;" << std::endl;
      fout << "if (sumdiff >2.e-4) ok=false;" << std::endl;
      fout << "testFile->Close();" << std::endl;
+     fout << "if (testFile) delete testFile;" << std::endl;
      fout << "if (!ok) {" << std::endl;
      fout << "std::cout << \"maxdiff=\"<<maxdiff<< \", sumdiff=\"<<sumdiff<<\" not ok\"<<std::endl;}" << std::endl;
      fout << "return ok;" << std::endl;
