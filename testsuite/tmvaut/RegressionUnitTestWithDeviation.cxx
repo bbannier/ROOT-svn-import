@@ -112,6 +112,8 @@ void RegressionUnitTestWithDeviation::run()
    
    outputFile->Close();
    delete factory;
+   input->Close();
+   if (input) delete input;
 
    // reader tests
 
@@ -183,6 +185,7 @@ void RegressionUnitTestWithDeviation::run()
    test_(stuckCount<nevt/10);
 
    testFile->Close();
+   if (testFile) delete testFile;
 
    for (int i=0;i<nTest;i++) delete reader[i];
 

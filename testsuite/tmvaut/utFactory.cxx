@@ -83,7 +83,8 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
    TString prepareString="";
    string factoryOptions( "!V:Silent:Transformations=I:AnalysisType=Classification:!Color:!DrawProgressBar" );
    TString outfileName( "weights/ByHand.root" );
-   TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
+   TFile* outputFile = new TFile( outfileName, "RECREATE" );
+   outputFile->cd();
    Factory* factory = new Factory(factoryname,outputFile,factoryOptions);
    factory->AddVariable( "var0",  "Variable 0", 'F' );
    factory->AddVariable( "var1",  "Variable 1", 'F' );

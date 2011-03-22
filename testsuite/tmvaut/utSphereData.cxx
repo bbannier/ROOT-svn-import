@@ -91,6 +91,9 @@ void utSphereData::run()
      test_(ROCIntegralWithinInterval());
   }
   outputFile->Close();
+  if (outputFile) delete outputFile;
   delete factory;
+  input->Close();
+  if (input) delete input;
 }
 
