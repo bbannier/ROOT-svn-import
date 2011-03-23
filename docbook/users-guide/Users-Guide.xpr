@@ -11,6 +11,17 @@
                         <scenarioAssociation-array>
                             <scenarioAssociation>
                                 <field name="name">
+                                    <String xml:space="preserve">ROOT Docbook HTML</String>
+                                </field>
+                                <field name="type">
+                                    <String xml:space="preserve">XSL</String>
+                                </field>
+                                <field name="url">
+                                    <String xml:space="preserve">FittingHistograms.xml</String>
+                                </field>
+                            </scenarioAssociation>
+                            <scenarioAssociation>
+                                <field name="name">
                                     <String xml:space="preserve">ROOT Docbook HTML - Chunk</String>
                                 </field>
                                 <field name="type">
@@ -18,17 +29,6 @@
                                 </field>
                                 <field name="url">
                                     <String xml:space="preserve">ROOTUsersGuide.xml</String>
-                                </field>
-                            </scenarioAssociation>
-                            <scenarioAssociation>
-                                <field name="name">
-                                    <String xml:space="preserve">ROOT Docbook PDF</String>
-                                </field>
-                                <field name="type">
-                                    <String xml:space="preserve">XSL</String>
-                                </field>
-                                <field name="url">
-                                    <String xml:space="preserve">FittingHistograms.xml</String>
                                 </field>
                             </scenarioAssociation>
                             <scenarioAssociation>
