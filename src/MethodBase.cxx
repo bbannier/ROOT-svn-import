@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss, Kai Voss
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss, Kai Voss, Eckhard von Toerne, Jan Therhaag
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -16,12 +16,14 @@
  *      Peter Speckmayer  <Peter.Speckmayer@cern.ch>  - CERN, Switzerland         *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
+ *      Jan Therhaag       <Jan.Therhaag@cern.ch>     - U of Bonn, Germany        *
+ *      Eckhard v. Toerne  <evt@uni-bonn.de>          - U of Bonn, Germany        *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
  *      U. of Victoria, Canada                                                    *
  *      MPI-K Heidelberg, Germany                                                 *
- *      LAPP, Annecy, France                                                      *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -1294,7 +1296,7 @@ void TMVA::MethodBase::ReadStateFromFile()
          << gTools().Color("lightblue") << tfname << gTools().Color("reset") << Endl;
 
    if (tfname.EndsWith(".xml") ) {
-      void* doc = gTools().xmlengine().ParseFile(tfname);
+      void* doc = gTools().xmlengine().ParseFile(tfname); // the default buffer size in TXMLEngine::ParseFile is 100k. Starting with ROOT 5.29 one can set the buffer size, see: http://savannah.cern.ch/bugs/?78864. This might be necessary for large XML files
       void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
       ReadStateFromXML(rootnode);
       gTools().xmlengine().FreeDoc(doc);
