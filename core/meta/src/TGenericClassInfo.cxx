@@ -192,7 +192,7 @@ namespace ROOT {
       delete fStreamer;
       if (!fClass) delete fIsA; // fIsA is adopted by the class if any.
       fIsA = 0;
-      if (!gROOT) return;
+      if (!gROOT || !gROOT->GetListOfClasses()) return;
       if (fAction) GetAction().Unregister(GetClassName());
    }
 
@@ -253,7 +253,7 @@ namespace ROOT {
       if ( vect.empty() ) {
          return;
       }
-      
+
       //------------------------------------------------------------------------
       // Get the rules set
       //------------------------------------------------------------------------
@@ -263,6 +263,7 @@ namespace ROOT {
       // Process the rules
       //------------------------------------------------------------------------
       TSchemaRule* rule;
+      TString errmsg;
       std::vector<TSchemaHelper>::iterator it;
       for( it = vect.begin(); it != vect.end(); ++it ) {
          rule = new TSchemaRule();
@@ -285,9 +286,9 @@ namespace ROOT {
             rule->SetRuleType( TSchemaRule::kReadRawRule );
             rule->SetReadRawFunctionPointer( (TSchemaRule::ReadRawFuncPtr_t)it->fFunctionPtr );
          }
-         if( !rset->AddRule( rule ) ) {
-            ::Warning( "TGenericClassInfo", "The rule for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because it conflicts with one of the other rules.",
-                        GetClassName(), it->fVersion.c_str(), it->fTarget.c_str() );
+         if( !rset->AddRule( rule, TSchemaRuleSet::kCheckAll, &errmsg ) ) {
+            ::Warning( "TGenericClassInfo", "The rule for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because %s.",
+                        GetClassName(), it->fVersion.c_str(), it->fTarget.c_str(), errmsg.Data() );
             delete rule;
          }
       }
@@ -325,7 +326,7 @@ namespace ROOT {
    const std::vector<TSchemaHelper>& TGenericClassInfo::GetReadRawRules() const
    {
       // Return the list of rule give raw access to the TBuffer.
-      
+
       return fReadRawRules;
    }
 
@@ -449,14 +450,14 @@ namespace ROOT {
       }
       return 0;
    }
-   
+
    void TGenericClassInfo::SetStreamerFunc(ClassStreamerFunc_t streamer)
    {
       // Set a wrapper around the Streamer memger function.
-      
+
       fStreamerFunc = streamer;
       if (fClass) fClass->SetStreamerFunc(streamer);
-   }      
+   }
 
    const char *TGenericClassInfo::GetDeclFileName() const
    {

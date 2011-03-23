@@ -802,7 +802,6 @@ Long_t TApplication::ProcessLine(const char *line, Bool_t sync, Int_t *err)
       Info("ProcessLine", "Bye... (try '.qqqqqqq' if still running)");
       gSystem->Exit(1);
    } else if (!strncasecmp(line, ".exit", 4) || !strncasecmp(line, ".quit", 2)) {
-      gInterpreter->ResetGlobals();
       Terminate(0);
       return 0;
    }
@@ -862,7 +861,7 @@ Long_t TApplication::ProcessLine(const char *line, Bool_t sync, Int_t *err)
          Ssiz_t posSpace = cmd.Index(' ');
          if (posSpace == -1) cmd.Remove(1);
          else cmd.Remove(posSpace);
-         static TString tempbuf;
+         TString tempbuf;
          if (sync) {
             tempbuf.Form(".%s %s%s%s", cmd.Data(), mac, aclicMode.Data(),io.Data());
             retval = gInterpreter->ProcessLineSynch(tempbuf,
@@ -1027,7 +1026,7 @@ again:
       exname += arguments;
       exname += io;
 
-      static TString tempbuf;
+      TString tempbuf;
       if (tempfile) {
          tempbuf.Form(".x %s", exname.Data());
       } else {
@@ -1101,6 +1100,9 @@ void TApplication::Terminate(Int_t status)
 {
    // Terminate the application by call TSystem::Exit() unless application has
    // been told to return from Run(), by a call to SetReturnFromRun().
+
+   gROOT->CloseFiles(); // Close any files or sockets before emptying CINT.
+   gInterpreter->ResetGlobals();
 
    //close TMemStat
    if (fUseMemstat) {

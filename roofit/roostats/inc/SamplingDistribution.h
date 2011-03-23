@@ -66,9 +66,9 @@ namespace RooStats {
     Int_t GetSize() const{return fSamplingDist.size();}
 
     // Get test statistics values
-    std::vector<Double_t> GetSamplingDistribution() const {return fSamplingDist;}
+    const std::vector<Double_t> & GetSamplingDistribution() const {return fSamplingDist;}
     // Get the sampling weights 
-    std::vector<Double_t> GetSampleWeights() const {return fSampleWeights;}
+    const std::vector<Double_t> & GetSampleWeights() const {return fSampleWeights;}
 
     const TString GetVarName() const {return fVarName;}
     

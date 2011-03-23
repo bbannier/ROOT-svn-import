@@ -37,6 +37,7 @@ void G__arrayindexerror(int varid, struct G__var_array* var, const char* name, i
 #ifdef G__ASM
 int G__asm_execerr(const char* message, int num);
 #endif // G__ASM
+int G__assign_using_null_pointer_error(const char* item);
 int G__assign_error(const char* item, G__value* pbuf);
 int G__reference_error(const char* item);
 int G__warnundefined(const char* item);
@@ -79,8 +80,8 @@ static const char* G__findrpos(const char* s1, const char* s2)
    if (!s1 || !s2) {
       return 0;
    }
-   int i = strlen(s1);
-   int s2len = strlen(s2);
+   size_t i = strlen(s1);
+   size_t s2len = strlen(s2);
    int nest = 0;
    int double_quote = 0;
    int single_quote = 0;
@@ -190,8 +191,8 @@ void G__arrayindexerror(int varid, struct G__var_array* var, const char* name, i
 {
    G__fprinterr(G__serr, "Error: Array index out of range %s -> [%d] ", name, index);
    G__fprinterr(G__serr, " valid upto %s", var->varnamebuf[varid]);
-   const int num_of_elements = var->varlabel[varid][1];
-   const int stride = var->varlabel[varid][0];
+   const size_t num_of_elements = var->varlabel[varid][1];
+   const size_t stride = var->varlabel[varid][0];
    if (num_of_elements) {
       G__fprinterr(G__serr, "[%d]", (num_of_elements / stride) - 1);
    }
@@ -217,6 +218,24 @@ int G__asm_execerr(const char* message, int num)
    return 0;
 }
 #endif // G__ASM
+
+//______________________________________________________________________________
+int G__assign_using_null_pointer_error(const char* item)
+{
+   if (!G__prerun) {
+      G__fprinterr(
+           G__serr
+         , "Error: Attempted assignment using %s, but the value of %s is NULL."
+         , item
+         , item
+      );
+      G__genericerror(0);
+   }
+#ifdef G__SECURITY
+   G__security_error = G__RECOVERABLE;
+#endif // G__SECURITY
+   return 0;
+}
 
 //______________________________________________________________________________
 int G__assign_error(const char* item, G__value* pbuf)
@@ -314,10 +333,12 @@ int G__unexpectedEOF(const char* message)
 int G__shl_load_error(const char* shlname, const char* message)
 {
    G__fprinterr(G__serr, "%s: Failed to load Dynamic link library %s\n", message, shlname);
-   G__CHECK(G__SECURE_EXIT_AT_ERROR, 1, G__return = G__RETURN_EXIT1);
-#ifdef G__SECURITY
-   G__security_error = G__RECOVERABLE;
-#endif // G__SECURITY
+   // No: not being able to load a library is not generally an interpreter error.
+   //G__CHECK(G__SECURE_EXIT_AT_ERROR, 1, G__return = G__RETURN_EXIT1);
+   // #ifdef G__SECURITY
+   // G__security_error = G__RECOVERABLE;
+   // #endif // G__SECURITY
+   G__return = G__RETURN_EXIT1;
    return 0;
 }
 

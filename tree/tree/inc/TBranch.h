@@ -36,6 +36,10 @@
 #include "TAttFill.h"
 #endif
 
+#ifndef ROOT_TDataType
+#include "TDataType.h"
+#endif
+
 class TTree;
 class TBasket;
 class TLeaf;
@@ -140,6 +144,7 @@ public:
            Int_t     GetEntryOffsetLen() const { return fEntryOffsetLen; }
            Int_t     GetEvent(Long64_t entry=0) {return GetEntry(entry);}
    const char       *GetIconName() const;
+   virtual Int_t     GetExpectedType(TClass *&clptr,EDataType &type);
    virtual TLeaf    *GetLeaf(const char *name) const;
    virtual TFile    *GetFile(Int_t mode=0);
    const char       *GetFileName()    const {return fFileName.Data();}
@@ -189,6 +194,7 @@ public:
    virtual void      SetOffset(Int_t offset=0) {fOffset=offset;}
    virtual void      SetStatus(Bool_t status=1);
    virtual void      SetTree(TTree *tree) { fTree = tree;}
+   virtual void      SetupAddresses();
    virtual void      UpdateAddress() {;}
    virtual void      UpdateFile();
 

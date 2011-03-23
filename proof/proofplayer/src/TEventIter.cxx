@@ -43,6 +43,9 @@
 
 #include "TError.h"
 
+#if defined(R__MACOSX)
+#include "fcntl.h"
+#endif
 
 ClassImp(TEventIter)
 
@@ -458,6 +461,7 @@ TEventIterTree::TEventIterTree(TDSet *dset, TSelector *sel, Long64_t first, Long
    } else {
       TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kDisable);
    }
+   fDontCacheFiles = gEnv->GetValue("ProofPlayer.DontCacheFiles", 0);
 }
 
 //______________________________________________________________________________
@@ -633,6 +637,13 @@ TTree* TEventIterTree::Load(TDSetElement *e, Bool_t &localfile)
          return (TTree *)0;
       }
 
+#if defined(R__MACOSX)
+      // If requested set the no cache mode
+      if (fDontCacheFiles && localfile) {
+         fcntl(f->GetFd(), F_NOCACHE, 1);
+      }
+#endif
+
       // Create TFileTree instance in the list
       ft = new TFileTree(TUrl(f->GetName()).GetFileAndOptions(), f, localfile);
       fFileTrees->Add(ft);
@@ -753,7 +764,7 @@ Long64_t TEventIterTree::GetNextEvent()
          TTree *newTree = GetTrees(fElem);
          if (newTree) {
             if (newTree != fTree) {
-               // The old tree is wonwd by TFileTree and will be deleted there
+               // The old tree is owned by TFileTree and will be deleted there
                fTree = newTree;
                attach = kTRUE;
                fOldBytesRead = fTree->GetCurrentFile()->GetBytesRead();
@@ -811,7 +822,7 @@ Long64_t TEventIterTree::GetNextEvent()
    }
 
    if ( attach ) {
-      PDB(kLoop,1) Info("GetNextEvent","Call Init(%p) and Notify()",fTree);
+      PDB(kLoop,1) Info("GetNextEvent", "call Init(%p) and Notify()",fTree);
       fSel->Init(fTree);
       fSel->Notify();
       TIter next(fSel->GetOutputList());

@@ -1872,7 +1872,7 @@ void TString::FormImp(const char *fmt, va_list ap)
    va_list sap;
    R__VA_COPY(sap, ap);
 
-   int n;
+   int n, vc = 0;
 again:
    n = vsnprintf(fData, buflen, fmt, ap);
    // old vsnprintf's return -1 if string is truncated new ones return
@@ -1885,9 +1885,12 @@ again:
       Clobber(buflen);
       va_end(ap);
       R__VA_COPY(ap, sap);
+      vc = 1;
       goto again;
    }
    va_end(sap);
+   if (vc)
+      va_end(ap);
 
    Pref()->fNchars = strlen(fData);
 }
@@ -1952,15 +1955,28 @@ static char *SlowFormat(const char *format, va_list ap, int hint)
       slowBuffer = new char[slowBufferSize];
    }
 
+   va_list sap;
+   R__VA_COPY(sap, ap);
+
    int n = vsnprintf(slowBuffer, slowBufferSize, format, ap);
    // old vsnprintf's return -1 if string is truncated new ones return
    // total number of characters that would have been written
    if (n == -1 || n >= slowBufferSize) {
       if (n == -1) n = 2 * slowBufferSize;
       if (n == slowBufferSize) n++;
-      if (n <= 0) return 0; // int overflow!
-      return SlowFormat(format, ap, n);
+      if (n <= 0) {
+         va_end(sap);
+         return 0; // int overflow!
+      }
+      va_end(ap);
+      R__VA_COPY(ap, sap);
+      char *buf = SlowFormat(format, ap, n);
+      va_end(sap);
+      va_end(ap);
+      return buf;
    }
+
+   va_end(sap);
 
    return slowBuffer;
 }
@@ -1978,12 +1994,22 @@ static char *Format(const char *format, va_list ap)
    if (buf+fld_size > gEndbuf)
       buf = gFormbuf;
 
+   va_list sap;
+   R__VA_COPY(sap, ap);
+
    int n = vsnprintf(buf, fld_size, format, ap);
    // old vsnprintf's return -1 if string is truncated new ones return
    // total number of characters that would have been written
    if (n == -1 || n >= fld_size) {
-      return SlowFormat(format, ap, n);
+      va_end(ap);
+      R__VA_COPY(ap, sap);
+      buf = SlowFormat(format, ap, n);
+      va_end(sap);
+      va_end(ap);
+      return buf;
    }
+
+   va_end(sap);
 
    gBfree = buf+n+1;
    return buf;

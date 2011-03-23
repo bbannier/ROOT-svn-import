@@ -37,6 +37,7 @@
 #include "THLimitsFinder.h"
 #include "TStyle.h"
 #include "TClass.h"
+#include "TColor.h"
 
 ClassImp(TSelectorDraw)
 
@@ -108,6 +109,7 @@ void TSelectorDraw::Begin(TTree *tree)
    fSelectedRows   = 0;
    fTree = tree;
    fDimension = 0;
+   fAction = 0;
 
    const char *varexp0   = fInput->FindObject("varexp")->GetTitle();
    const char *selection = fInput->FindObject("selection")->GetTitle();
@@ -219,7 +221,7 @@ void TSelectorDraw::Begin(TTree *tree)
       }
 
       if (i) {
-         strlcpy(varexp,varexp0,i+1); 
+         strlcpy(varexp,varexp0,i+1);
 
          Int_t mustdelete=0;
          SetBit(kCustomHistogram);
@@ -455,7 +457,7 @@ void TSelectorDraw::Begin(TTree *tree)
 
    // Decode varexp and selection
    if (!CompileVariables(varexp, realSelection.GetTitle())) {
-      SetStatus(-1); 
+      SetStatus(-1);
       delete [] varexp;
       return;
    }
@@ -643,6 +645,8 @@ void TSelectorDraw::Begin(TTree *tree)
          } else {
             h2 = new TH2F(hname,htitle.Data(),fNbins[1],fVmin[1], fVmax[1], fNbins[0], fVmin[0], fVmax[0]);
             h2->SetLineColor(fTree->GetLineColor());
+            h2->SetLineWidth(fTree->GetLineWidth());
+            h2->SetLineStyle(fTree->GetLineStyle());
             h2->SetFillColor(fTree->GetFillColor());
             h2->SetFillStyle(fTree->GetFillStyle());
             h2->SetMarkerStyle(fTree->GetMarkerStyle());
@@ -775,6 +779,8 @@ void TSelectorDraw::Begin(TTree *tree)
          } else {
             h2 = new TH2F(hname,htitle.Data(),fNbins[1],fVmin[1], fVmax[1], fNbins[0], fVmin[0], fVmax[0]);
             h2->SetLineColor(fTree->GetLineColor());
+            h2->SetLineWidth(fTree->GetLineWidth());
+            h2->SetLineStyle(fTree->GetLineStyle());
             h2->SetFillColor(fTree->GetFillColor());
             h2->SetFillStyle(fTree->GetFillStyle());
             h2->SetMarkerStyle(fTree->GetMarkerStyle());
@@ -800,6 +806,8 @@ void TSelectorDraw::Begin(TTree *tree)
          } else {
             h3 = new TH3F(hname,htitle.Data(),fNbins[2],fVmin[2], fVmax[2],fNbins[1],fVmin[1], fVmax[1], fNbins[0], fVmin[0], fVmax[0]);
             h3->SetLineColor(fTree->GetLineColor());
+            h3->SetLineWidth(fTree->GetLineWidth());
+            h3->SetLineStyle(fTree->GetLineStyle());
             h3->SetFillColor(fTree->GetFillColor());
             h3->SetFillStyle(fTree->GetFillStyle());
             h3->SetMarkerStyle(fTree->GetMarkerStyle());
@@ -1121,6 +1129,7 @@ void TSelectorDraw::ProcessFillMultiple(Long64_t /*entry*/)
 
    // Calculate the first values
    if (fSelect) {
+      // coverity[var_deref_model] fSelectMultiple==kTRUE => fSelect != 0 
       fW[fNfill] = fWeight*fSelect->EvalInstance(0);
       if (!fW[fNfill] && !fSelectMultiple) return;
    } else fW[fNfill] = fWeight;
@@ -1145,6 +1154,7 @@ void TSelectorDraw::ProcessFillMultiple(Long64_t /*entry*/)
 
    for (Int_t i=1;i<ndata;i++) {
       if (fSelectMultiple) {
+         // coverity[var_deref_model] fSelectMultiple==kTRUE => fSelect != 0 
          ww = fWeight*fSelect->EvalInstance(i);
          if (ww == 0) continue;
          if (fNfill == nfill0) {
@@ -1293,6 +1303,7 @@ void TSelectorDraw::TakeAction()
       pm->SetMarkerColor(fTree->GetMarkerColor());
       pm->SetMarkerSize(fTree->GetMarkerSize());
       pm->SetLineColor(fTree->GetLineColor());
+      pm->SetLineWidth(fTree->GetLineWidth());
       pm->SetLineStyle(fTree->GetLineStyle());
       pm->SetFillColor(fTree->GetFillColor());
       pm->SetFillStyle(fTree->GetFillStyle());
@@ -1368,6 +1379,10 @@ void TSelectorDraw::TakeAction()
       TakeEstimate();
       TH3 *h3 =(TH3*)fObject;
       Int_t ncolors  = gStyle->GetNumberOfColors();
+      if (ncolors == 0) {
+         TColor::InitializeColors();
+         ncolors  = gStyle->GetNumberOfColors();
+      }
       TObjArray *pms = (TObjArray*)h3->GetListOfFunctions()->FindObject("polymarkers");
       Int_t col;
       TPolyMarker3D *pm3d;
@@ -1389,8 +1404,8 @@ void TSelectorDraw::TakeAction()
       h3->SetMaximum(fVmax[3]);
       for (i=0;i<fNfill;i++) {
          col = Int_t(ncolors*((fVal[3][i]-fVmin[3])/(fVmax[3]-fVmin[3])));
-         if (col < 0) col = 0;
          if (col > ncolors-1) col = ncolors-1;
+         if (col < 0) col = 0;
          pm3d = (TPolyMarker3D*)pms->UncheckedAt(col);
          pm3d->SetPoint(pm3d->GetLastPoint()+1,fVal[2][i],fVal[1][i],fVal[0][i]);
       }
@@ -1512,14 +1527,30 @@ void TSelectorDraw::TakeEstimate()
       pm->SetMarkerColor(fTree->GetMarkerColor());
       pm->SetMarkerSize(fTree->GetMarkerSize());
       pm->SetLineColor(fTree->GetLineColor());
+      pm->SetLineWidth(fTree->GetLineWidth());
       pm->SetLineStyle(fTree->GetLineStyle());
       pm->SetFillColor(fTree->GetFillColor());
       pm->SetFillStyle(fTree->GetFillStyle());
       if (!fDraw && !strstr(fOption.Data(),"goff")) {
-         if (fOption.Length() == 0 || strcasecmp(fOption.Data(),"same")==0)  pm->Draw("p");
-         else                                                                pm->Draw(fOption.Data());
+         if (fOption.Length() == 0 || strcasecmp(fOption.Data(),"same")==0) {
+            pm->Draw("p");
+         }
+         else {
+            if (fOption.Contains("a")) {
+               TString temp(fOption);
+               temp.ReplaceAll("same","");
+               if (temp.Contains("a")) {
+                  if (h2->TestBit(kCanDelete)) {
+                     // h2 will be deleted, the axis setting is delegated to only
+                     // the TGraph.
+                     h2 = 0;
+                  }
+               }
+            }
+            pm->Draw(fOption.Data());
+         }
       }
-      if (!h2->TestBit(kCanDelete)) {
+      if (h2 && !h2->TestBit(kCanDelete)) {
          for (i=0;i<fNfill;i++) h2->Fill(fVal[1][i],fVal[0][i],fW[i]);
       }
    //__________________________3D scatter plot with option col_______________________

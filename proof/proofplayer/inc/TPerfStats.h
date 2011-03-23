@@ -98,6 +98,8 @@ private:
    Bool_t         fDoTraceRate;  //!Trace processing rate in master
    Bool_t         fDoSlaveTrace; //!Full tracing in workers
    Bool_t         fDoQuota;      //!Save stats on SQL server for quota management
+   
+   Bool_t         fMonitorPerPacket; //!Whether to send the full entry per each packet 
 
    TVirtualMonitoringWriter *fMonitoringWriter; //!Monitoring engine
 
@@ -116,6 +118,7 @@ public:
 
    void FileOpenEvent(TFile *file, const char *filename, Double_t start);
    void FileReadEvent(TFile *file, Int_t len, Double_t start);
+   void FileUnzipEvent(TFile *file, Long64_t pos, Double_t start, Int_t complen, Int_t objlen);
    void RateEvent(Double_t proctime, Double_t deltatime,
                   Long64_t eventsprocessed, Long64_t bytesRead);
    void SetBytesRead(Long64_t num);

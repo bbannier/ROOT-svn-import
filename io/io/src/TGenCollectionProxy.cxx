@@ -1430,7 +1430,10 @@ TStreamerInfoActions::TActionSequence *TGenCollectionProxy::GetConversionReadMem
 {
    // Return the set of action necessary to stream in this collection member-wise coming from
    // the old value class layout refered to by 'version'.
-   
+
+   if (oldClass == 0) { 
+      return 0;
+   }   
    TObjArray* arr = 0;
    TStreamerInfoActions::TActionSequence *result = 0;
    if (fConversionReadMemberWise) {
@@ -1480,18 +1483,15 @@ TStreamerInfoActions::TActionSequence *TGenCollectionProxy::GetReadMemberWiseAct
    // the old value class layout refered to by 'version'.
    
    TStreamerInfoActions::TActionSequence *result = 0;
-   if (version <= fReadMemberWise->GetSize()) {
+   if (version < (fReadMemberWise->GetSize()-1)) { // -1 because the 'index' starts at -1
       result = (TStreamerInfoActions::TActionSequence *)fReadMemberWise->At(version);
    }
    if (result == 0) {
       // Need to create it.
       TClass *valueClass = GetValueClass();
-      if (valueClass == 0) {
-         return 0;
-      }
-      TVirtualStreamerInfo *info = valueClass->GetStreamerInfo(version);
-      if (info == 0) {
-         return 0;
+      TVirtualStreamerInfo *info = 0;
+      if (valueClass) {
+         info = valueClass->GetStreamerInfo(version);
       }
       result = TStreamerInfoActions::TActionSequence::CreateReadMemberWiseActions(info,*this);
       fReadMemberWise->AddAtAndExpand(result,version);

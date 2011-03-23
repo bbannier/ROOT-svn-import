@@ -22,6 +22,7 @@
 #include "Math/OneDimFunctionAdapter.h"
 
 #include "Math/ProbFuncMathCore.h"
+#include "Math/QuantFuncMathCore.h"
 
 #include "TMath.h"  
 #include "Math/RichardsonDerivator.h"
@@ -236,8 +237,8 @@ bool FitResult::Update(const ROOT::Math::Minimizer & min, bool isValid, unsigned
    fCovStatus = min.CovMatrixStatus();
 
    // update number of function calls
-   if ( min.NCalls() > 0)   fNCalls += min.NCalls();
-   else fNCalls += ncalls;
+   if ( min.NCalls() > 0)   fNCalls = min.NCalls();
+   else fNCalls = ncalls;
 
    // copy parameter value and errors 
    std::copy(min.X(), min.X() + npar, fParams.begin());
@@ -452,22 +453,28 @@ void FitResult::PrintCovMatrix(std::ostream &os) const {
    os.precision(prevPrec);
 }
 
-void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, unsigned int stride2, const double * x, double * ci, double cl ) const {     
+void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, unsigned int stride2, const double * x, double * ci, double cl, bool norm ) const {     
    // stride1 stride in coordinate  stride2 stride in dimension space
    // i.e. i-th point in k-dimension is x[ stride1 * i + stride2 * k]
    // compute the confidence interval of the fit on the given data points
    // the dimension of the data points must match the dimension of the fit function
    // confidence intervals are returned in array ci
 
-   // use student quantile
-   //double t = - TMath::StudentQuantile((1.-cl)/2, f->GetNDF()); 
-   double t = TMath::StudentQuantile(0.5 + cl/2, fNdf); 
-   double chidf = TMath::Sqrt(fChi2/fNdf);
-
    if (!fFitFunc) {
-      MATH_ERROR_MSG("FitResult::GetConfidenceIntervals","cannot compute Confidence Intervals without fitter function");
+      MATH_ERROR_MSG("FitResult::GetConfidenceIntervals","Cannot compute Confidence Intervals without fitter function");
       return;
    }
+
+   // use student quantile in case of normalized errors 
+   double corrFactor = 1; 
+   if (fChi2 <= 0 || fNdf == 0) norm = false;
+   if (norm) 
+      corrFactor = TMath::StudentQuantile(0.5 + cl/2, fNdf) * std::sqrt( fChi2/fNdf ); 
+   else 
+      // value to go up in chi2 (1: 1 sigma error(CL=0.683) , 4: 2 sigma errors
+      corrFactor = ROOT::Math::chisquared_quantile(cl, 1);
+
+
 
    unsigned int ndim = fFitFunc->NDim(); 
    unsigned int npar = fFitFunc->NPar(); 
@@ -511,11 +518,11 @@ void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, uns
          r2 += grad[ipar] * vsum[ipar]; 
       }
       double r = std::sqrt(r2); 
-      ci[ipoint] = r * t * chidf; 
+      ci[ipoint] = r * corrFactor;  
    }
 }
 
-void FitResult::GetConfidenceIntervals(const BinData & data, double * ci, double cl ) const { 
+      void FitResult::GetConfidenceIntervals(const BinData & data, double * ci, double cl, bool norm ) const { 
    // implement confidence intervals from a given bin data sets
    // currently copy the data from Bindata. 
    // could implement otherwise directly
@@ -528,7 +535,7 @@ void FitResult::GetConfidenceIntervals(const BinData & data, double * ci, double
       std::copy(x,x+ndim,itr);
    }
    // points are arraned as x0,y0,z0, ....xN,yN,zN  (stride1=ndim, stride2=1)
-   GetConfidenceIntervals(np,ndim,1,&xdata.front(),ci,cl);
+   GetConfidenceIntervals(np,ndim,1,&xdata.front(),ci,cl,norm);
 }
 
    } // end namespace Fit

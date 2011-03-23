@@ -21,7 +21,7 @@
  *      Joerg Stelzer         <stelzer@cern.ch>        - DESY, Germany            *
  *      Jiahang Zhong         <Jiahang.Zhong@cern.ch>  - Academia Sinica, Taipei  *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -65,17 +65,18 @@ ClassImp(TMVA::MethodANNBase)
 TMVA::MethodANNBase::MethodANNBase( const TString& jobName,
                                     Types::EMVA methodType,
                                     const TString& methodTitle,
-                                    DataSetInfo& theData, 
+                                    DataSetInfo& theData,
                                     const TString& theOption,
                                     TDirectory* theTargetDir )
    : TMVA::MethodBase( jobName, methodType, methodTitle, theData, theOption, theTargetDir )
    , fEstimator(kMSE)
    , fUseRegulator(kFALSE)
+   , fRandomSeed(0)
 {
    // standard constructor
    // Note: Right now it is an option to choose the neuron input function,
    // but only the input function "sum" leads to weight convergence --
-   // otherwise the weights go to nan and lead to an ABORT.   
+   // otherwise the weights go to nan and lead to an ABORT.
    InitANNBase();
 
    DeclareOptions();
@@ -83,14 +84,15 @@ TMVA::MethodANNBase::MethodANNBase( const TString& jobName,
 
 //______________________________________________________________________________
 TMVA::MethodANNBase::MethodANNBase( Types::EMVA methodType,
-                                    DataSetInfo& theData, 
+                                    DataSetInfo& theData,
                                     const TString& theWeightFile,
                                     TDirectory* theTargetDir )
-   : TMVA::MethodBase( methodType, theData, theWeightFile, theTargetDir ) 
+   : TMVA::MethodBase( methodType, theData, theWeightFile, theTargetDir )
    , fEstimator(kMSE)
    , fUseRegulator(kFALSE)
+   , fRandomSeed(0)
 {
-   // construct the Method from the weight file 
+   // construct the Method from the weight file
    InitANNBase();
 
    DeclareOptions();
@@ -99,14 +101,14 @@ TMVA::MethodANNBase::MethodANNBase( Types::EMVA methodType,
 //______________________________________________________________________________
 void TMVA::MethodANNBase::DeclareOptions()
 {
-   // define the options (their key words) that can be set in the option string 
+   // define the options (their key words) that can be set in the option string
    // here the options valid for ALL MVA methods are declared.
    // know options: NCycles=xx              :the number of training cycles
    //               Normalize=kTRUE,kFALSe  :if normalised in put variables should be used
    //               HiddenLayser="N-1,N-2"  :the specification of the hidden layers
    //               NeuronType=sigmoid,tanh,radial,linar  : the type of activation function
    //                                                       used at the neuronn
-   //                
+   //
 
    DeclareOptionRef( fNcycles    = 500,       "NCycles",         "Number of training cycles" );
    DeclareOptionRef( fLayerSpec  = "N,N-1",   "HiddenLayers",    "Specification of hidden layer architecture" );
@@ -230,7 +232,6 @@ void TMVA::MethodANNBase::DeleteNetwork()
          layer = (TObjArray*)fNetwork->At(i);
          DeleteNetworkLayer(layer);
       }
-    
       delete fNetwork;
    }
 
@@ -270,13 +271,10 @@ void TMVA::MethodANNBase::BuildNetwork( vector<Int_t>* layout, vector<Double_t>*
    // build network given a layout (number of neurons in each layer)
    // and optional weights array
 
-   if (fEstimator!=kMSE && fEstimator!=kCE) {
-      if (fEstimatorS == "MSE")  fEstimator = kMSE;    //zjh
-      else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
-   }
+   if (fEstimatorS == "MSE")  fEstimator = kMSE;    //zjh
+   else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
+   else Log()<<kWARNING<<"fEstimator="<<fEstimator<<"\tfEstimatorS="<<fEstimatorS<<Endl;
    if (fEstimator!=kMSE && fEstimator!=kCE) Log()<<kWARNING<<"Estimator type unspecified \t"<<Endl; //zjh
-
-
 
    Log() << kINFO << "Building Network" << Endl;
 

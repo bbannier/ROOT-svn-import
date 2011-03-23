@@ -25,7 +25,8 @@ extern "C" {
 **************************************************************************/
 void G__inheritclass(int to_tagnum,int from_tagnum,char baseaccess)
 {
-  int i,offset,basen;
+  int i,basen;
+  long offset;
   struct G__inheritance *to_base,*from_base;
   int isvirtualbase;
 
@@ -68,11 +69,11 @@ void G__inheritclass(int to_tagnum,int from_tagnum,char baseaccess)
 #ifdef G__VIRTUALBASE
     if(to_base->herit[to_base->basen]->property&G__ISVIRTUALBASE) {
       G__struct.virtual_offset[to_tagnum] 
-        =offset+G__struct.virtual_offset[from_tagnum]+G__DOUBLEALLOC;
+         = offset+G__struct.virtual_offset[from_tagnum]+G__DOUBLEALLOC;
     }
     else {
       G__struct.virtual_offset[to_tagnum] 
-        =offset+G__struct.virtual_offset[from_tagnum];
+         = offset+G__struct.virtual_offset[from_tagnum];
     }
 #else
     G__struct.virtual_offset[to_tagnum] 
@@ -363,18 +364,31 @@ int G__baseconstructor(int n, G__baseparam *pbaseparamin)
           pbaseparam=pbaseparam->next;
         }
       }
-      if(flag) construct.Format("%s(%s)" ,tagname,pbaseparam->param);
-      else construct.Format("%s()",tagname);
-      if(G__dispsource) {
-         G__fprinterr(G__serr,"\n!!!Calling base class constructor %s",construct());
+      if (flag) {
+         construct.Format("%s(%s)", tagname, pbaseparam->param);
       }
-      if(G__CPPLINK==G__struct.iscpplink[G__tagnum]) { /* C++ compiled class */
-        G__globalvarpointer=G__store_struct_offset;
+      else {
+         construct.Format("%s()", tagname);
       }
-      else G__globalvarpointer=G__PVOID;
-      { 
-        int tmp=0;
-        G__getfunction(construct,&tmp ,G__TRYCONSTRUCTOR);
+      if (G__dispsource) {
+         G__fprinterr(
+              G__serr
+            , "\n!!!Calling base class constructor %s  %s:%d\n"
+            , construct()
+            , __FILE__
+            , __LINE__
+         );
+      }
+      if (G__struct.iscpplink[G__tagnum] == G__CPPLINK) {
+         // c++ compiled class
+         G__globalvarpointer = G__store_struct_offset;
+      }
+      else {
+         G__globalvarpointer = G__PVOID;
+      }
+      {
+         int tmp = 0;
+         G__getfunction(construct, &tmp , G__TRYCONSTRUCTOR);
       }
       /* Set virtual_offset to every base classes for possible multiple
        * inheritance. */
@@ -470,10 +484,16 @@ int G__baseconstructor(int n, G__baseparam *pbaseparamin)
             continue;
           }
         }
-        if(G__dispsource) {
-           G__fprinterr(G__serr,"\n!!!Calling class member constructor %s",construct());
+        if (G__dispsource) {
+           G__fprinterr(
+                G__serr
+              , "\n!!!Calling class member constructor %s  %s:%d\n"
+              , construct()
+              , __FILE__
+              , __LINE__
+           );
         }
-        int linear_index = mem->varlabel[i][1] /* number of elements */;
+        long linear_index = mem->varlabel[i][1] /* number of elements */;
         if (linear_index) {
           --linear_index;
         }
@@ -554,7 +574,7 @@ int G__baseconstructor(int n, G__baseparam *pbaseparamin)
                 break;
               case 'i':
                 lval = G__int(G__getexpr(pbaseparam->param));
-                *(int*)addr = lval;
+                *(int*)addr = (int)lval;
                 break;
               case 'k':
                 lval = G__int(G__getexpr(pbaseparam->param));
@@ -632,7 +652,7 @@ int G__basedestructor()
   int i,j;
   G__FastAllocString destruct(G__ONELINE);
   long store_globalvarpointer;
-  int store_addstros=0;
+  long store_addstros=0;
 
   /* store current tag information */
   store_tagnum=G__tagnum;
@@ -688,8 +708,15 @@ int G__basedestructor()
         *(long*)(G__store_struct_offset+G__struct.virtual_offset[G__tagnum])
           = G__tagnum;
       destruct.Format("~%s()",G__struct.name[G__tagnum]);
-      if(G__dispsource) 
-         G__fprinterr(G__serr,"\n!!!Calling base class destructor %s",destruct());
+      if (G__dispsource) {
+         G__fprinterr(
+              G__serr
+            , "\n!!!Calling base class destructor %s  %s:%d\n"
+            , destruct()
+            , __FILE__
+            , __LINE__
+         );
+      }
       j=0;
       if(G__CPPLINK==G__struct.iscpplink[G__tagnum]) {
         G__globalvarpointer = G__store_struct_offset;
@@ -737,7 +764,7 @@ int G__basedestructrc(G__var_array *mem)
       G__tagnum = mem->p_tagtable[i];
       G__store_struct_offset = store_struct_offset + mem->p[i];
       destruct.Format("~%s()", G__struct.name[G__tagnum]);
-      int linear_index = mem->varlabel[i][1] /* number of elements */;
+      long linear_index = mem->varlabel[i][1] /* number of elements */;
       if (linear_index) {
         --linear_index;
       }
@@ -758,7 +785,13 @@ int G__basedestructrc(G__var_array *mem)
         if (G__struct.virtual_offset[G__tagnum] != -1) 
           *((long*) (G__store_struct_offset + G__struct.virtual_offset[G__tagnum])) = G__tagnum;
         if (G__dispsource) {
-           G__fprinterr(G__serr, "\n!!!Calling class member destructor %s", destruct());
+           G__fprinterr(
+                G__serr
+              , "\n!!!Calling class member destructor %s  %s:%d\n"
+              , destruct()
+              , __FILE__
+              , __LINE__
+           );
         }
         G__getfunction(destruct, &known, G__TRYDESTRUCTOR);
         G__store_struct_offset -= size;
@@ -776,7 +809,7 @@ int G__basedestructrc(G__var_array *mem)
       !G__no_exec_compile &&
       isupper(mem->type[i])
     ) {
-      int linear_index = mem->varlabel[i][1] /* number of elements */;
+      long linear_index = mem->varlabel[i][1] /* number of elements */;
       if (linear_index) {
         --linear_index;
       }
@@ -803,7 +836,7 @@ int G__basedestructrc(G__var_array *mem)
 * else return -1
 * Used in standard pointer conversion
 **************************************************************************/
-int G__ispublicbase(int basetagnum,int derivedtagnum
+long G__ispublicbase(int basetagnum,int derivedtagnum
 #ifdef G__VIRTUALBASE
                     ,long pobject
 #endif
@@ -848,7 +881,7 @@ int G__ispublicbase(int basetagnum,int derivedtagnum
 * to the base object. If faulse, return -1.
 * Used in cast operatotion
 **************************************************************************/
-int G__isanybase(int basetagnum,int derivedtagnum
+long G__isanybase(int basetagnum,int derivedtagnum
 #ifdef G__VIRTUALBASE
                     ,long pobject
 #endif
@@ -893,7 +926,7 @@ int G__isanybase(int basetagnum,int derivedtagnum
 *  Used in G__interpret_func to subtract offset for calling virtual function
 *
 **************************************************************************/
-int G__find_virtualoffset(int virtualtag
+long G__find_virtualoffset(long virtualtag
 #ifdef G__VIRTUALBASE
                           , long pobject
 #endif
@@ -955,7 +988,7 @@ long G__getvirtualbaseoffset(long pobject,int tagnum
 /***********************************************************************
 * G__publicinheritance()
 ***********************************************************************/
-int G__publicinheritance(G__value *val1,G__value *val2)
+long G__publicinheritance(G__value *val1,G__value *val2)
 {
   long lresult;
   if('U'==val1->type && 'U'==val2->type) {

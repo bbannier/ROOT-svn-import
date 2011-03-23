@@ -127,7 +127,6 @@ void TGFileBrowser::CreateBrowser()
    lb->Resize(lb->GetWidth(), 120);
    Int_t dropt = 1;
    fDrawOption->AddEntry("", dropt++);
-   fDrawOption->AddEntry(" alp", dropt++);
    fDrawOption->AddEntry(" box", dropt++);
    fDrawOption->AddEntry(" colz", dropt++);
    fDrawOption->AddEntry(" lego", dropt++);
@@ -188,7 +187,10 @@ void TGFileBrowser::CreateBrowser()
    fFileType->Resize(200, 20);
    fBotFrame->AddFrame(fFileType, new TGLayoutHints(kLHintsLeft | kLHintsTop |
                 kLHintsExpandX, 2, 2, 2, 2));
-   fFileType->Connect("Selected(Int_t)", "TGFileBrowser", this, "ApplyFilter(Int_t)");
+   fFileType->Connect("Selected(Int_t)", "TGFileBrowser", this,
+                      "ApplyFilter(Int_t)");
+   fFileType->GetTextEntry()->Connect("ReturnPressed()", "TGFileBrowser", 
+                                      this, "ApplyFilter(Int_t = -1)");
    AddFrame(fBotFrame, new TGLayoutHints(kLHintsLeft | kLHintsTop |
             kLHintsExpandX, 2, 2, 2, 2));
 
@@ -590,6 +592,7 @@ void TGFileBrowser::Refresh(Bool_t /*force*/)
 
    TTimer::SingleShot(200, "TGFileBrowser", this, "Update()");
    return; // disable refresh for the time being...
+   // coverity[unreachable]
    TCursorSwitcher cursorSwitcher(this, fListTree);
    static UInt_t prev = 0;
    UInt_t curr =  gROOT->GetListOfBrowsables()->GetSize();
@@ -787,8 +790,15 @@ void TGFileBrowser::ApplyFilter(Int_t id)
 
    if (fFilter) delete fFilter;
    fFilter = 0;
-   if (id > 1)
+   if ((id > 1) && (id < 5))
       fFilter = new TRegexp(filters[id], kTRUE);
+   else if ((id < 0) || (id > 4)) {
+      TGTextLBEntry *lbe = (TGTextLBEntry *)fFileType->GetSelectedEntry();
+      if (lbe) {
+         const char *text = lbe->GetTitle();
+         fFilter = new TRegexp(text, kTRUE);
+      }
+   }
    TGListTreeItem *item = fCurrentDir;
    if (!item)
       item = fRootDir;
@@ -926,7 +936,7 @@ void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
       if (obj->InheritsFrom("TKey") && (obj->IsA() != TClass::Class())) {
          Chdir(item);
          const char *clname = (const char *)gROOT->ProcessLine(TString::Format("((TKey *)0x%lx)->GetClassName();", (ULong_t)obj));
-         if (clname) {
+         if (clname && strcmp(clname, "TGeoManager")) {
             TClass *cl = TClass::GetClass(clname);
             TString name = (const char *)gROOT->ProcessLine(TString::Format("((TKey *)0x%lx)->GetName();", (ULong_t)obj));
             name += ";";

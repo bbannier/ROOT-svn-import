@@ -104,7 +104,9 @@ Bool_t TInterruptHandler::Notify()
       if (TROOT::Initialized()) {
          Getlinem(kInit, "Root > ");
          gCint->RewindDictionary();
+#ifndef WIN32
          Throw(GetSignal());
+#endif
       }
    }
    return kTRUE;
@@ -272,7 +274,7 @@ TRint::~TRint()
    fInputHandler->Remove();
    delete fInputHandler;
    // We can't know where the signal handler was changed since we started ...
-   // so for now let's now delete it.
+   // so for now let's not delete it.
 //   TSignalHandler *ih  = GetSignalHandler();
 //   ih->Remove();
 //   SetSignalHandler(0);
@@ -617,6 +619,9 @@ void TRint::Terminate(Int_t status)
       delete gTabCom;
       gTabCom = 0;
 
+      gROOT->CloseFiles(); // Close any files or sockets before emptying CINT.
+      gInterpreter->ResetGlobals();
+
       //Execute logoff macro
       const char *logoff;
       logoff = gEnv->GetValue("Rint.Logoff", (char*)0);
@@ -627,7 +632,6 @@ void TRint::Terminate(Int_t status)
          delete [] mac;
       }
       TApplication::Terminate(status);
-      //gSystem->Exit(status);
    }
 }
 

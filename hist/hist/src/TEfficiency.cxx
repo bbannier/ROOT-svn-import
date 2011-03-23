@@ -288,7 +288,7 @@ ClassImp(TEfficiency)
 //    </td>
 //    </tr>
 //    <tr>
-//    <td>Feldman-Cousins</td><td>kFAC</td>
+//    <td>Feldman-Cousins</td><td>kFFC</td>
 //    <td>
 //     <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:FeldmanCousins">FeldmanCousins</a>
 //    </td>
@@ -1122,12 +1122,12 @@ Double_t TEfficiency::FeldmanCousins(Int_t total,Int_t passed,Double_t level,Boo
    //
    Double_t lower = 0; 
    Double_t upper = 1;
-   if (!FeldmanCousinsInterval(total,passed,level, upper,lower)) { 
+   if (!FeldmanCousinsInterval(total,passed,level, lower, upper)) { 
       ::Error("FeldmanCousins","Error running FC method - return 0 or 1");
    }
    return (bUpper) ? upper : lower; 
 }
-Bool_t TEfficiency::FeldmanCousinsInterval(Int_t total,Int_t passed,Double_t level,Double_t & upper, Double_t & lower)
+Bool_t TEfficiency::FeldmanCousinsInterval(Int_t total,Int_t passed,Double_t level,Double_t & lower, Double_t & upper)
 {
    //calculates the interval boundaries using the frequentist methods of Feldman-Cousins
    //
@@ -1938,7 +1938,23 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
 }
 
 //______________________________________________________________________________
-void TEfficiency::Draw(const Option_t* opt)
+Int_t TEfficiency::DistancetoPrimitive(Int_t px, Int_t py)
+{
+   // Compute distance from point px,py to a graph.
+   //
+   //  Compute the closest distance of approach from point px,py to this line.
+   //  The distance is computed in pixels units.
+   //
+   // Forward the call to the painted graph
+   
+   if (fPaintGraph) return fPaintGraph->DistancetoPrimitive(px,py);
+   if (fPaintHisto) return fPaintHisto->DistancetoPrimitive(px,py);
+   return 0;
+}
+
+
+//______________________________________________________________________________
+void TEfficiency::Draw(Option_t* opt)
 {
    //draws the current TEfficiency object
    //
@@ -1955,11 +1971,29 @@ void TEfficiency::Draw(const Option_t* opt)
    //check options
    TString option = opt;
    option.ToLower();
+   // use by default "AP"
+   if (option.IsNull() ) option = "ap"; 
 
    if(gPad && !option.Contains("same"))
       gPad->Clear();
 
    AppendPad(option.Data());
+}
+
+//______________________________________________________________________________
+void TEfficiency::ExecuteEvent(Int_t event, Int_t px, Int_t py)
+{
+   // Execute action corresponding to one event.
+   //
+   //  This member function is called when the drawn class is clicked with the locator
+   //  If Left button clicked on one of the line end points, this point
+   //     follows the cursor until button is released.
+   //
+   //  if Middle button clicked, the line is moved parallel to itself
+   //     until the button is released.
+   // Forward the call to the underlying graph
+   if (fPaintGraph) fPaintGraph->ExecuteEvent(event,px,py);
+   else if (fPaintHisto) fPaintHisto->ExecuteEvent(event,px,py);
 }
 
 //______________________________________________________________________________
@@ -2389,6 +2423,18 @@ void TEfficiency::Paint(const Option_t* opt)
    //paints this TEfficiency object
    //
    //For details on the possible option see Draw(Option_t*)
+   //
+   // Note for 1D classes
+   // In 1D the TEfficiency uses a TGraphAsymmErrors for drawing
+   // The TGraph is created only the first time Paint is used. The user can manipulate the 
+   // TGraph via the method TEfficiency::GetPaintedGraph()
+   // The TGraph creates behing an histogram for the axis. The histogram is created also only the first time.
+   // If the axis needs to be updated because in the meantime the class changed use this trick  
+   // which will trigger a re-calculation of the axis of the graph
+   // TEfficiency::GetPaintedGraph()->Set(0)
+   //
+
+
    
    if(!gPad)
       return;
@@ -2406,32 +2452,61 @@ void TEfficiency::Paint(const Option_t* opt)
 	 fPaintGraph = new TGraphAsymmErrors(npoints);
 	 fPaintGraph->SetName("eff_graph");
       }
-      //refresh title before painting
-      fPaintGraph->SetTitle(GetTitle());
 
       //errors for points
-      Double_t xlow,xup,ylow,yup;
+             Double_t x,y,xlow,xup,ylow,yup;
       //point i corresponds to bin i+1 in histogram   
       // point j is point graph index
+      // LM: cannot use TGraph::SetPoint because it deletes the underlying
+      // histogram  each time (see TGraph::SetPoint)  
+      // so use it only when extra points are added to the graph
       Int_t j = 0;
+      double * px = fPaintGraph->GetX();
+      double * py = fPaintGraph->GetY(); 
+      double * exl = fPaintGraph->GetEXlow();
+      double * exh = fPaintGraph->GetEXhigh();
+      double * eyl = fPaintGraph->GetEYlow();
+      double * eyh = fPaintGraph->GetEYhigh();
       for (Int_t i = 0; i < npoints; ++i) {
-         if (!plot0Bins && fTotalHistogram->GetBinContent(i+1) == 0 ) continue;
-	 fPaintGraph->SetPoint(j,fTotalHistogram->GetBinCenter(i+1),GetEfficiency(i+1));
+         if (!plot0Bins && fTotalHistogram->GetBinContent(i+1) == 0 )    continue;
+         x = fTotalHistogram->GetBinCenter(i+1);
+         y = GetEfficiency(i+1);
 	 xlow = fTotalHistogram->GetBinCenter(i+1) - fTotalHistogram->GetBinLowEdge(i+1);
 	 xup = fTotalHistogram->GetBinWidth(i+1) - xlow;
 	 ylow = GetEfficiencyErrorLow(i+1);
 	 yup = GetEfficiencyErrorUp(i+1);
-	 fPaintGraph->SetPointError(j,xlow,xup,ylow,yup);
+         // in the case the graph already existed and extra points have been added 
+         if (j >= fPaintGraph->GetN() ) { 
+            fPaintGraph->SetPoint(j,x,y);
+            fPaintGraph->SetPointError(j,xlow,xup,ylow,yup);
+         }
+         else { 
+            px[j] = x;
+            py[j] = y;
+            exl[j] = xlow;
+            exh[j] = xup; 
+            eyl[j] = ylow; 
+            eyh[j] = yup;
+         }
          j++;
       }
+
       // tell the graph the effective number of points 
       fPaintGraph->Set(j);
-      fPaintGraph->SetMaximum(1);
+      //refresh title before painting if changed 
+      TString oldTitle = fPaintGraph->GetTitle(); 
+      TString newTitle = GetTitle();
+      if (oldTitle != newTitle )
+         fPaintGraph->SetTitle(newTitle);
 
       //copying style information
       TAttLine::Copy(*fPaintGraph);
       TAttFill::Copy(*fPaintGraph);
       TAttMarker::Copy(*fPaintGraph);
+
+      // this method forces the graph to compute correctly the axis
+      // according to the given points
+      fPaintGraph->GetHistogram();
       
       //paint graph      
       fPaintGraph->Paint(option.Data());
@@ -2457,9 +2532,24 @@ void TEfficiency::Paint(const Option_t* opt)
    if(GetDimension() == 2) {
       Int_t nbinsx = fTotalHistogram->GetNbinsX();
       Int_t nbinsy = fTotalHistogram->GetNbinsY();
+      TAxis * xaxis = fTotalHistogram->GetXaxis();
+      TAxis * yaxis = fTotalHistogram->GetYaxis();
       if(!fPaintHisto) {
-	 fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,fTotalHistogram->GetXaxis()->GetXbins()->GetArray(),
-				nbinsy,fTotalHistogram->GetYaxis()->GetXbins()->GetArray());
+         if (xaxis->IsVariableBinSize() && yaxis->IsVariableBinSize() ) 
+            fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,xaxis->GetXbins()->GetArray(),
+                                   nbinsy,yaxis->GetXbins()->GetArray());
+         else if (xaxis->IsVariableBinSize() && ! yaxis->IsVariableBinSize() )
+            fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,xaxis->GetXbins()->GetArray(),
+                                   nbinsy,yaxis->GetXmin(), yaxis->GetXmax());
+         else if (!xaxis->IsVariableBinSize() &&  yaxis->IsVariableBinSize() )
+            fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,xaxis->GetXmin(), xaxis->GetXmax(),
+                                   nbinsy,yaxis->GetXbins()->GetArray());
+         else 
+            fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,xaxis->GetXmin(), xaxis->GetXmax(),
+                                   nbinsy,yaxis->GetXmin(), yaxis->GetXmax());
+         
+
+
 	 fPaintHisto->SetDirectory(0);
       }
       //refresh title before each painting

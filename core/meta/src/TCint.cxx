@@ -152,10 +152,11 @@ int TCint_GenerateDictionary(const std::vector<std::string> &classes,
          if (cl && cl->GetDeclFileName()) {
             TString header(gSystem->BaseName(cl->GetDeclFileName()));
             TString dir(gSystem->DirName(cl->GetDeclFileName()));
-            while (dir.Length() && dir != "."
-                   && !dir.EndsWith("/include") && !dir.EndsWith("\\include")
-                   && !dir.EndsWith("/inc") && !dir.EndsWith("\\inc")) {
-               gSystem->PrependPathName(gSystem->BaseName(dir), header);
+            TString dirbase(gSystem->BaseName(dir));
+            while (dirbase.Length() && dirbase != "."
+                   && dirbase != "include" && dirbase != "inc"
+                   && dirbase != "prec_stl") {
+               gSystem->PrependPathName(dirbase, header);
                dir = gSystem->DirName(dir);
             }
             fileContent += TString("#include \"") + header + "\"\n";
@@ -337,6 +338,9 @@ TCint::~TCint()
    delete fMapfile;
    delete fRootmapFiles;
    gCint = 0;
+#ifdef R__COMPLETE_MEM_TERMINATION
+   G__scratch_all();
+#endif
 }
 
 //______________________________________________________________________________
@@ -699,6 +703,17 @@ void TCint::ResetGlobals()
    R__LOCKGUARD(gCINTMutex);
 
    G__scratch_globals_upto(&fDictPosGlobals);
+}
+
+//______________________________________________________________________________
+void TCint::ResetGlobalVar(void *obj)
+{
+   // Reset the CINT global object state to the state saved by the last
+   // call to TCint::SaveGlobalsContext().
+
+   R__LOCKGUARD(gCINTMutex);
+
+   G__resetglobalvar(obj);
 }
 
 //______________________________________________________________________________
@@ -1817,6 +1832,16 @@ Int_t TCint::UnloadLibraryMap(const char *library)
       }
    }
 
+   if (ret >= 0) {
+      TString library_rootmap(library);
+      library_rootmap.Append(".rootmap");
+      TNamed *mfile = 0;
+      while( (mfile = (TNamed*)fRootmapFiles->FindObject(library_rootmap)) ) {
+         fRootmapFiles->Remove(mfile);
+         delete mfile;
+      }
+      fRootmapFiles->Compress();
+   }
    return ret;
 }
 

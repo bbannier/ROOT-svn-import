@@ -120,6 +120,12 @@ TMVA::ClassInfo* TMVA::DataSetInfo::AddClass( const TString& className )
 }
 
 //_______________________________________________________________________
+void TMVA::DataSetInfo::SetMsgType( EMsgType t ) const 
+{  
+    fLogger->SetMinType(t);  
+} 
+
+//_______________________________________________________________________
 TMVA::ClassInfo* TMVA::DataSetInfo::GetClassInfo( const TString& name ) const 
 {
    for (std::vector<ClassInfo*>::iterator it = fClasses.begin(); it < fClasses.end(); it++) {
@@ -417,8 +423,6 @@ TMVA::DataSet* TMVA::DataSetInfo::GetDataSet() const
       if( !fDataSetManager )
 	 Log() << kFATAL << "DataSetManager has not been set in DataSetInfo (GetDataSet() )." << Endl;
       fDataSet = fDataSetManager->CreateDataSet(GetName());
-
-
 
       fNeedsRebuilding = kFALSE;
    }

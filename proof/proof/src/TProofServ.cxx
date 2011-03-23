@@ -681,6 +681,33 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    if (gProofDebugLevel > 0)
       Info("TProofServ", "DebugLevel %d Mask 0x%x", gProofDebugLevel, gProofDebugMask);
 
+   // Max log file size
+   fLogFileMaxSize = -1;
+   TString logmx = gEnv->GetValue("ProofServ.LogFileMaxSize", "");
+   if (!logmx.IsNull()) {
+      Long64_t xf = 1;
+      if (!logmx.IsDigit()) {
+         if (logmx.EndsWith("K")) {
+            xf = 1024;
+            logmx.Remove(TString::kTrailing, 'K');
+         } else if (logmx.EndsWith("M")) {
+            xf = 1024*1024;
+            logmx.Remove(TString::kTrailing, 'M');
+         } if (logmx.EndsWith("G")) {
+            xf = 1024*1024*1024;
+            logmx.Remove(TString::kTrailing, 'G');
+         }
+      }
+      if (logmx.IsDigit()) {
+         fLogFileMaxSize = logmx.Atoi() * xf;
+         if (fLogFileMaxSize > 0)
+            Info("TProofServ", "keeping the log file size within %lld bytes", fLogFileMaxSize);
+      } else {
+         logmx = gEnv->GetValue("ProofServ.LogFileMaxSize", "");
+         Warning("TProofServ", "bad formatted log file size limit ignored: '%s'", logmx.Data());
+      }
+   }
+   
    // Parse options
    GetOptions(argc, argv);
 
@@ -1119,7 +1146,7 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
       if (fPlayer)
          status = fPlayer->GetProgressStatus();
       else {
-         Error("GetNextPacket", "No progress status object");
+         Error("GetNextPacket", "no progress status object");
          return 0;
       }
       // the CPU and wallclock proc times are kept in the TProofServ and here
@@ -1134,6 +1161,11 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
       Long64_t cacheSize = (fPlayer) ? fPlayer->GetCacheSize() : -1;
       Int_t learnent = (fPlayer) ? fPlayer->GetLearnEntries() : -1;
       req << cacheSize << learnent;
+
+      // Sent over the number of entries in the file, used by packetizer do not relying
+      // on initial validation. Also, -1 means that the file could not be open, which is
+      // used to flag files as missing
+      req << totalEntries;
 
       PDB(kLoop, 1) {
          PDB(kLoop, 2) status->Print();
@@ -1258,6 +1290,10 @@ void TProofServ::HandleSocketInput()
    TMessage *mess;
    Int_t rc = 0;
    TString exmsg;
+
+   // Check log file lenght (before the action, so we have the chance to keep the
+   // latest logs)
+   TruncateLogFile();
 
    try {
    
@@ -3867,7 +3903,7 @@ Int_t TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
       }
       if (IsTopMaster()) {
          // Send total size
-         msg.Form("%s: grand total: sent %d objects, size: %d bytes       ",
+         msg.Form("%s: grand total: sent %d objects, size: %d bytes                            ",
                                         fPrefix.Data(), olsz, totsz);
          SendAsynMessage(msg.Data());
       }
@@ -4121,6 +4157,12 @@ void TProofServ::ProcessNext(TString *slb)
 
    // Send back the results
    TQueryResult *pqr = pq->CloneInfo();
+   // At least the TDSet name in the light object
+   Info("ProcessNext", "adding info about dataset '%s' in the light query result", dset->GetName());
+   TList rin;
+   TDSet *ds = new TDSet(dset->GetName(), dset->GetObjName());
+   rin.Add(ds);
+   pqr->SetInputList(&rin, kTRUE);
    if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
       PDB(kGlobal, 2)
          Info("ProcessNext", "sending results");
@@ -4139,13 +4181,13 @@ void TProofServ::ProcessNext(TString *slb)
 
    // Remove aborted queries from the list
    if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
+      delete pqr;
       if (fQMgr) fQMgr->RemoveQuery(pq);
    } else {
       // Keep in memory only light infor about a query
       if (!(pq->IsDraw())) {
          if (fQMgr && fQMgr->Queries()) {
-            if (pqr)
-               fQMgr->Queries()->Add(pqr);
+            fQMgr->Queries()->Add(pqr);
             // Remove from the fQueries list
             fQMgr->Queries()->Remove(pq);
          }
@@ -5609,10 +5651,10 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
          buf.Form("%s: %s:<%.*s>: %s", fgSysLogEntity.Data(), type, ipos, location, msg);
    }
    fflush(fgErrorHandlerFile);
-
+   
    if (tosyslog)
       gSystem->Syslog(loglevel, buf);
-
+   
    if (abort) {
 
       static Bool_t recursive = kFALSE;
@@ -6033,6 +6075,53 @@ void TProofServ::FlushLogFile()
 }
 
 //______________________________________________________________________________
+void TProofServ::TruncateLogFile()
+{
+   // Truncate the log file to the 80% of the required max size if this
+   // is set.
+#ifndef WIN32
+   TString emsg;
+   if (fLogFileMaxSize > 0 && fLogFileDes > 0) {
+      fflush(stdout);
+      struct stat st;
+      if (fstat(fLogFileDes, &st) == 0) {
+         if (st.st_size >= fLogFileMaxSize) {
+            off_t truncsz = (off_t) (( fLogFileMaxSize * 80 ) / 100 );
+            if (truncsz < 100) {
+               emsg.Form("+++ WARNING +++: %s: requested truncate size too small"
+                         " (%lld,%lld) - ignore ", fPrefix.Data(), (Long64_t) truncsz, fLogFileMaxSize);
+               SendAsynMessage(emsg.Data());
+               return;
+            }
+            TSystem::ResetErrno();
+            while (ftruncate(fileno(stdout), truncsz) != 0 &&
+                   (TSystem::GetErrno() == EINTR)) {
+               TSystem::ResetErrno();
+            }
+            if (TSystem::GetErrno() > 0) {
+               Error("TruncateLogFile", "truncating to %lld bytes; file size is %lld bytes (errno: %d)",
+                                        (Long64_t)truncsz, (Long64_t)st.st_size, TSystem::GetErrno());
+               emsg.Form("+++ WARNING +++: %s: problems truncating log file to %lld bytes; file size is %lld bytes"
+                         " (errno: %d)", fPrefix.Data(), (Long64_t)truncsz, (Long64_t)st.st_size, TSystem::GetErrno());
+               SendAsynMessage(emsg.Data());
+            } else {
+               Info("TruncateLogFile", "file truncated to %lld bytes (80%% of %lld); file size was %lld bytes ",
+                                       (Long64_t)truncsz, fLogFileMaxSize, (Long64_t)st.st_size);
+               emsg.Form("+++ WARNING +++: %s: log file truncated to %lld bytes (80%% of %lld)",
+                                       fPrefix.Data(), (Long64_t)truncsz, fLogFileMaxSize);
+               SendAsynMessage(emsg.Data());
+            }
+         }
+      } else {
+         emsg.Form("+++ WARNING +++: %s: could not stat log file descriptor"
+                   " for truncation (errno: %d)", fPrefix.Data(), TSystem::GetErrno());
+         SendAsynMessage(emsg.Data());
+      }
+   }
+#endif
+}
+
+//______________________________________________________________________________
 void TProofServ::HandleException(Int_t sig)
 {
    // Exception handler: we do not try to recover here, just exit.
@@ -6123,7 +6212,13 @@ Int_t TProofServ::HandleDataSets(TMessage *mess, TString *slb)
             (*mess) >> uri >> opt;
             if (slb) slb->Form("%d %s %s", type, uri.Data(), opt.Data());
             // Get the datasets and fill a map
-            TMap *returnMap = fDataSetManager->GetDataSets(uri, (UInt_t)TDataSetManager::kExport);
+            UInt_t omsk = (UInt_t)TDataSetManager::kExport;
+            Ssiz_t kLite = opt.Index(":lite:", 0, TString::kIgnoreCase);
+            if (kLite != kNPOS) {
+               omsk |= (UInt_t)TDataSetManager::kReadShort;
+               opt.Remove(kLite, strlen(":lite:"));
+            }
+            TMap *returnMap = fDataSetManager->GetDataSets(uri, omsk);
             // If defines, option gives the name of a server for which to extract the information
             if (returnMap && !opt.IsNull()) {
                // The return map will be in the form   </group/user/datasetname> --> <dataset>

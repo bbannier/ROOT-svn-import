@@ -1654,6 +1654,14 @@ void TSystem::ShowOutput(RedirectHandle_t *h)
 //---- Dynamic Loading ---------------------------------------------------------
 
 //______________________________________________________________________________
+void TSystem::AddDynamicPath(const char *)
+{
+   // Add a new directory to the dynamic path.
+   
+   AbstractMethod("AddDynamicPath");
+}
+
+//______________________________________________________________________________
 const char* TSystem::GetDynamicPath()
 {
    // Return the dynamic path (used to find shared libraries).
@@ -1776,44 +1784,42 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
 
    char *path = DynamicPathName(module);
 
-   // load any dependent libraries
-   int ret;
-   TString deplibs = gInterpreter->GetSharedLibDeps(moduleBasename);
-   if (deplibs.IsNull()) {
-      TString libmapfilename;
-      if (path) {
+   int ret = -1;
+   if (path) {
+      // load any dependent libraries
+      TString deplibs = gInterpreter->GetSharedLibDeps(moduleBasename);
+      if (deplibs.IsNull()) {
+         TString libmapfilename;
          libmapfilename = path;
          idx = libmapfilename.Last('.');
          if (idx != kNPOS) {
             libmapfilename.Remove(idx);
          }
          libmapfilename += ".rootmap";
-      }
-      if (gSystem->GetPathInfo(libmapfilename, 0, (Long_t*)0, 0, 0) == 0) {
-         if (gDebug > 0) Info("Load", "loading %s", libmapfilename.Data());
-         gInterpreter->LoadLibraryMap(libmapfilename);
-         deplibs = gInterpreter->GetSharedLibDeps(moduleBasename);
-      }
-   }
-   if (!deplibs.IsNull()) {
-      TString delim(" ");
-      TObjArray *tokens = deplibs.Tokenize(delim);
-      for (Int_t i = tokens->GetEntriesFast()-1; i > 0; i--) {
-         const char *deplib = ((TObjString*)tokens->At(i))->GetName();
-         if (gDebug > 0)
-            Info("Load", "loading dependent library %s for library %s",
-                 deplib, ((TObjString*)tokens->At(0))->GetName());
-         if ((ret = Load(deplib, "", system)) < 0) {
-            delete tokens;
-            recCall--;
-            return ret;
+         if (gSystem->GetPathInfo(libmapfilename, 0, (Long_t*)0, 0, 0) == 0) {
+            if (gDebug > 0) Info("Load", "loading %s", libmapfilename.Data());
+            gInterpreter->LoadLibraryMap(libmapfilename);
+            deplibs = gInterpreter->GetSharedLibDeps(moduleBasename);
          }
+      } else {
+         TString delim(" ");
+         TObjArray *tokens = deplibs.Tokenize(delim);
+         for (Int_t i = tokens->GetEntriesFast()-1; i > 0; i--) {
+            const char *deplib = ((TObjString*)tokens->At(i))->GetName();
+            if (strcmp(module,deplib)==0) {
+               continue;
+            }
+            if (gDebug > 0)
+               Info("Load", "loading dependent library %s for library %s",
+                    deplib, ((TObjString*)tokens->At(0))->GetName());
+            if ((ret = Load(deplib, "", system)) < 0) {
+               delete tokens;
+               recCall--;
+               return ret;
+            }
+         }
+         delete tokens;
       }
-      delete tokens;
-   }
-
-   ret = -1;
-   if (path) {
       if (!system) {
          // Mark the library in $ROOTSYS/lib as system.
          const char *dirname = DirName(path);
@@ -3324,9 +3330,21 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
       while ( liblist >> libtoload ) {
          // Load the needed library except for the library we are currently building!
+         if (libtoload == "#") {
+            // The comment terminates the list of libraries.
+            std::string toskipcomment;
+            std::getline(liblist,toskipcomment);
+            break;
+         }
          if (libtoload != library && libtoload != libname && libtoload != libname_ext) {
             if (produceRootmap) {
-               if (loadLib || linkDepLibraries /* For GetLibraries to Work */) gROOT->LoadClass("", libtoload);
+               if (loadLib || linkDepLibraries /* For GetLibraries to Work */) {
+                  result = gROOT->LoadClass("", libtoload) >= 0;
+                  if (!result) {
+                     // We failed to load one of the dependency.
+                     break;
+                  }
+               }
                if (!linkedlibs.Contains(libtoload)) {
                   libmapfile << " " << libtoload;
                   all_libtoload.Append(" ").Append(libtoload);
@@ -3349,6 +3367,10 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
          std::string clname;
          while ( std::getline(liblist,clname) ) {
+            if (clname[0] == '#') {
+               // Skip comments.
+               continue;
+            }
             std::replace(clname.begin(), clname.end(), ':', '@');
             std::replace(clname.begin(), clname.end(), ' ', '_');
             libmapfile << endl;
@@ -3529,7 +3551,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          if (!compilationResult) {
             ::Info("ACLiC","The compiler has not found any problem with your macro.\n"
             "\tProbably your macro uses something rootcint can't parse.\n"
-            "\tCheck http://root.cern.ch/root/Cint.phtml?limitations for Cint's limitations.");
+            "\tCheck http://root.cern.ch/viewvc/trunk/cint/doc/limitati.txt for Cint's limitations.");
             TString objfile=expFileName;
             Ssiz_t len=objfile.Length();
             objfile.Replace(len-extension.Length(), len, GetObjExt());

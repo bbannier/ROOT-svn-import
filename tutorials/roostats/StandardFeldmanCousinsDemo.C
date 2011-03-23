@@ -1,3 +1,4 @@
+// Standard demo of the Feldman-Cousins calculator
 /*
 StandardFeldmanCousinsDemo 
 
@@ -115,7 +116,8 @@ void StandardFeldmanCousinsDemo(const char* infile = "",
   // in the model config
   FeldmanCousins fc(*data,*mc);
   fc.SetConfidenceLevel(0.95); // 95% interval
-  //  fc.UseAdaptiveSampling(true); // speed it up a bit
+  //fc.AdditionalNToysFactor(0.1); // to speed up the result 
+  fc.UseAdaptiveSampling(true); // speed it up a bit
   fc.SetNBins(10); // set how many points per parameter of interest to scan
   fc.CreateConfBelt(true); // save the information in the belt for plotting
 
@@ -134,8 +136,8 @@ void StandardFeldmanCousinsDemo(const char* infile = "",
   }
 
   // We can use PROOF to speed things along in parallel
-  //  ProofConfig pc(*w, 1, "workers=4"); 
-  //  ToyMCSampler*  toymcsampler = (ToyMCSampler*) fc.GetTestStatSampler(); 
+  //  ProofConfig pc(*w, 1, "workers=4", kFALSE);
+  //  ToyMCSampler*  toymcsampler = (ToyMCSampler*) fc.GetTestStatSampler();
   //  toymcsampler->SetProofConfig(&pc);	// enable proof
 
 

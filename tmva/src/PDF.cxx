@@ -144,7 +144,7 @@ TMVA::PDF::PDF( const TString& name,
    fMinNsmooth    (-1 ),
    fMaxNsmooth    (-1 ),
    fNSmoothHist   ( 0 ),
-   fInterpolMethod( PDF::kSpline0 ),
+   fInterpolMethod( PDF::kKDE ),
    fSpline        ( 0 ),
    fPDFHist       ( 0 ),
    fHist          ( 0 ),
@@ -248,7 +248,7 @@ void TMVA::PDF::BuildPDF( const TH1* hist )
 
    // histogram should be non empty
    if (hist->GetEntries() <= 0)
-      Log() << kFATAL << "Number of entries <= 0 in histogram: " << hist->GetTitle() << Endl;
+      Log() << kFATAL << "Number of entries <= 0 (" << hist->GetEntries() << " in histogram: " << hist->GetTitle() << Endl;
 
    if (fInterpolMethod == PDF::kKDE) {
       Log() << "Create "

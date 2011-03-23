@@ -331,8 +331,8 @@ void TProofPlayer::AddQueryResult(TQueryResult *q)
                delete qr;
                break;
             }
-            // Record position according to end time
-            if (qr->GetStartTime().Convert() < q->GetStartTime().Convert())
+            // Record position according to start time
+            if (qr->GetStartTime().Convert() <= q->GetStartTime().Convert())
                qp = qr;
          }
 
@@ -799,6 +799,12 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       if (TProof::GetParameter(fInput, "PROOF_UseParallelUnzip", useParallelUnzip) == 0) {
          if (useParallelUnzip > -1 && useParallelUnzip < 2)
             gEnv->SetValue("ProofPlayer.UseParallelUnzip", useParallelUnzip);
+      }
+      // OS file caching (Mac Os X only)
+      Int_t dontCacheFiles = 0;
+      if (TProof::GetParameter(fInput, "PROOF_DontCacheFiles", dontCacheFiles) == 0) {
+         if (dontCacheFiles == 1)
+            gEnv->SetValue("ProofPlayer.DontCacheFiles", 1);
       }
       fEvIter = TEventIter::Create(dset, fSelector, first, nentries);
 
@@ -1979,6 +1985,22 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
             TIter nxo(parms);
             TObject *o = 0;
             while ((o = nxo())) fOutput->Add(o);
+         }
+         
+         // If other invalid elements were found during processing, add them to the
+         // list of missing elements
+         TDSetElement *elem = 0;
+         if (fPacketizer->GetFailedPackets()) {
+            TString type = (fPacketizer->TestBit(TVirtualPacketizer::kIsTree)) ? "TTree" : "";
+            TList *listOfMissingFiles = (TList *) fOutput->FindObject("MissingFiles");
+            if (!listOfMissingFiles) {
+               listOfMissingFiles = new TList;
+               listOfMissingFiles->SetName("MissingFiles");
+            }
+            TIter nxe(fPacketizer->GetFailedPackets());
+            while ((elem = (TDSetElement *)nxe()))
+               listOfMissingFiles->Add(elem->GetFileInfo(type));
+            if (!fOutput->FindObject(listOfMissingFiles)) fOutput->Add(listOfMissingFiles);
          }
       }
 

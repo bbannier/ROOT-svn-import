@@ -898,7 +898,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The options "E3" and "E4" draw an error band through the end points of the
+<p>The options "E3" and "E4" draw an error band through the end points of the
 vertical error bars. With "E4" the error band is smoothed. Because of the
 smoothing algorithm used some artefacts may appear at the end of the band
 like in the following example. In such cases "E3" should be used instead
@@ -1007,7 +1007,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-To control the bar width (default is the bin width) <tt>TH1::SetBarWidth()</tt>
+<p>To control the bar width (default is the bin width) <tt>TH1::SetBarWidth()</tt>
 should be used.
 <br>
 To control the bar offset (default is 0) <tt>TH1::SetBarOffset()</tt> should
@@ -1026,6 +1026,12 @@ drawn. A maximum of <tt>kNMAX</tt> points per cell is drawn. If the maximum is a
 If option is of the form <tt>"scat=ff"</tt>, (eg <tt>scat=1.8</tt>,
 <tt>scat=1e-3</tt>), then <tt>ff</tt> is used as a scale factor to compute the
 number of dots. <tt>"scat=1"</tt> is the default.
+<p>
+By default the scatter plot is painted with a "dot marker" which not scalable
+(see the <a href="http://root.cern.ch/root/html/TAttMarker.html#M3">TAttMarker
+documentation</a>). To change the marker size, a scalable marker type should be
+used. For instance a circle (marker style 20).
+
 
 End_Html
 Begin_Macro(source)
@@ -1097,7 +1103,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-With option <tt>"BOX1"</tt> a button is drawn for each cell with surface
+<p>With option <tt>"BOX1"</tt> a button is drawn for each cell with surface
 proportional to content's absolute value. A sunken button is drawn for
 negative values a raised one for positive.
 
@@ -1122,7 +1128,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-When the option <tt>"SAME"</tt> (or "SAMES") is used with the option <tt>"BOX"</tt>,
+<p>When the option <tt>"SAME"</tt> (or "SAMES") is used with the option <tt>"BOX"</tt>,
 the boxes' sizes are computing taking the previous plots into account. The range
 along the Z axis is imposed by the first plot (the one without option
 <tt>"SAME"</tt>); therefore the order in which the plots are done is relevant.
@@ -1204,7 +1210,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-In the following example, the histogram has some negative bins; the empty
+<p>In the following example, the histogram has some negative bins; the empty
 bins (containing 0) <u>are drawn</u>.
 
 End_Html
@@ -1367,7 +1373,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"CONT1Z"</tt>. The option <tt>"CONT1"</tt> draws a contour plot using the
 line colors to distinguish contours. Combined with the option <tt>"CONT1"</tt>,
 the option <tt>"Z"</tt> allows to display the color palette defined by
@@ -1391,7 +1397,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"CONT2"</tt>. The option <tt>"CONT2"</tt> draws a contour plot using the
 line styles to distinguish contours.
 
@@ -1412,7 +1418,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"CONT3"</tt>. The option <tt>"CONT3"</tt> draws contour plot solid lines for
 all contours.
 
@@ -1433,7 +1439,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"CONT4"</tt>. The option <tt>"CONT4"</tt> draws a contour plot using surface
 colors to distinguish contours (<tt>"SURF"</tt> option at theta = 0). Combined
 with the option <tt>"CONT"</tt> (or <tt>"CONT0"</tt>), the option <tt>"Z"</tt>
@@ -1457,7 +1463,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The default number of contour levels is 20 equidistant levels and can be changed
+<p>The default number of contour levels is 20 equidistant levels and can be changed
 with <tt>TH1::SetContour()</tt> or <tt>TStyle::SetNumberContours()</tt>.
 
 <a name="HP16a"></a><h4><u>The LIST option</u></h4>
@@ -1498,7 +1504,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following options select the <tt>"CONT4"</tt> option and are useful for
+<p>The following options select the <tt>"CONT4"</tt> option and are useful for
 sky maps or exposure maps.
 
 <table border=0>
@@ -1555,8 +1561,8 @@ When used with any LEGO option, the empty bins are not drawn.
 
 </table>
 See the limitations with <a href="#HP060a">the option "SAME"</a>.
-<p>
-The following example shows a 2D histogram plotted with the option
+
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"LEGO"</tt>. The option <tt>"LEGO"</tt> draws a lego plot using the hidden
 lines removal technique.
 
@@ -1577,7 +1583,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"LEGO1"</tt>. The option <tt>"LEGO1"</tt> draws a lego plot using the
 hidden surface removal technique. Combined with any <tt>"LEGOn"</tt> option, the
 option <tt>"0"</tt> allows to not drawn the empty bins.
@@ -1601,7 +1607,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"LEGO2"</tt>. The option <tt>"LEGO2"</tt> draws a lego plot using colors to
 show the cell contents.  Combined with the option <tt>"LEGO2"</tt>, the option
 <tt>"Z"</tt> allows to display the color palette defined by
@@ -1694,7 +1700,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"SURF1"</tt>. The option <tt>"SURF1"</tt> draws a surface plot using the
 hidden surface removal technique.  Combined with the option <tt>"SURF1"</tt>,
 the option <tt>"Z"</tt> allows to display the color palette defined by
@@ -1717,7 +1723,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"SURF2"</tt>. The option <tt>"SURF2"</tt> draws a surface plot using colors
 to show the cell contents. Combined with the option <tt>"SURF2"</tt>, the option
 <tt>"Z"</tt> allows to display the color palette defined by
@@ -1740,7 +1746,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"SURF3"</tt>. The option <tt>"SURF3"</tt> draws a surface plot using the
 hidden line removal technique with, in addition, a filled contour view drawn on the
 top.  Combined with the option <tt>"SURF3"</tt>, the option <tt>"Z"</tt> allows
@@ -1763,7 +1769,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"SURF4"</tt>. The option <tt>"SURF4"</tt> draws a surface using the Gouraud
 shading technique.
 
@@ -1785,7 +1791,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"SURF5 CYL"</tt>.  Combined with the option <tt>"SURF5"</tt>, the option
 <tt>"Z"</tt> allows to display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
@@ -1807,7 +1813,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 2D histogram plotted with the option
+<p>The following example shows a 2D histogram plotted with the option
 <tt>"SURF7"</tt>. The option <tt>"SURF7"</tt> draws a surface plot using the
 hidden surfaces removal technique with, in addition, a line contour view drawn on the
 top.  Combined with the option <tt>"SURF7"</tt>, the option <tt>"Z"</tt> allows
@@ -1830,7 +1836,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-As shown in the following example, when a contour plot is painted on top of a
+<p>As shown in the following example, when a contour plot is painted on top of a
 surface plot using the option <tt>SAME</tt>, the contours appear in 3D on the
 surface.
 
@@ -1917,7 +1923,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows the same histogram as a surface plot is the four
+<p>The following example shows the same histogram as a surface plot is the four
 different coordinates systems.
 
 End_Html
@@ -1986,7 +1992,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-This option also works for horizontal plots. The example given in the section
+<p>This option also works for horizontal plots. The example given in the section
 <a href="http://root.cern.ch/root/html/THistPainter.html#HP100">
 "The bar chart option"</a> appears as follow:
 
@@ -2036,10 +2042,57 @@ Begin_Html
 
 <a name="HP20a"></a><h3>TH2Poly Drawing</h3>
 
-<tt>TH2Poly</tt> can be drawn as a color plot (option COL).
-<tt>TH2Poly</tt> bins can have any shapes. The bins are defined as graphs. The
-following macro is a very simple example showing how to book a TH2Poly and draw
-it.
+
+The following options are supported:
+
+<table border=0>
+
+<tr><th valign=top>"SCAT"</th><td>
+Draw a scatter plot (default).
+</td></tr>
+
+<tr><th valign=top>"COL"</th><td>
+Draw a color plot. All the none empty bins are painted. Empty bins are not
+painted.
+</td></tr>
+
+<tr><th valign=top>"COLZ"</th><td>
+Same as "COL". In addition the color palette is also drawn.
+</td></tr>
+
+<tr><th valign=top>"TEXT"</th><td>
+Draw bin contents as text (format set via <tt>gStyle->SetPaintTextFormat</tt>).
+</td></tr>
+
+<tr><th valign=top>"TEXTN"</th><td>
+Draw bin names as text.
+</td></tr>
+
+<tr><th valign=top>"TEXTnn"</th><td>
+Draw bin contents as text at angle nn (0 < nn < 90).
+</td></tr>
+
+<tr><th valign=top>"L"</th><td>
+Draw the bins boundaries as lines.
+The lines attibutes are the TGraphs ones.
+</td></tr>
+
+<tr><th valign=top>"P"</th><td>
+Draw the bins boundaries as markers.
+The markers attibutes are the TGraphs ones.
+</td></tr>
+
+<tr><th valign=top>"F"</th><td>
+Draw the bins boundaries as filled polygons.
+The filled polygons attibutes are the TGraphs ones.
+</td></tr>
+
+</table>
+
+<p><a href="http://root.cern.ch/root/html/TH2Poly.html"><tt>TH2Poly</tt></a> can
+be drawn as a color plot (option COL). <tt>TH2Poly</tt> bins can have any
+shapes. The bins are defined as graphs. The following macro is a very simple
+example showing how to book a TH2Poly and draw it.
 End_Html
 Begin_Macro(source)
 {
@@ -2071,8 +2124,9 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-<p>Rectangular bins are a frequent case. The method <tt>AddBinBox</tt> allows
-to define them more easily like shown in the following example.
+<p>Rectangular bins are a frequent case. The special version of
+the <tt>AddBin</tt> method allows to define them more easily like
+shown in the following example.
 
 End_Html
 Begin_Macro(source)
@@ -2080,6 +2134,71 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
+<p>One <tt>TH2Poly</tt> bin can be a list of polygons. Such bins are defined
+by calling <tt>AddBin</tt> with a <tt>TMultiGraph</tt>. The following example
+shows a such case:
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *ch2p2 = new TCanvas("ch2p2","ch2p2",600,400);
+
+   Int_t i, bin;
+   const Int_t nx = 48;
+   char *states [nx] = {
+      "alabama",      "arizona",        "arkansas",       "california",
+      "colorado",     "connecticut",    "delaware",       "florida",
+      "georgia",      "idaho",          "illinois",       "indiana",
+      "iowa",         "kansas",         "kentucky",       "louisiana",
+      "maine",        "maryland",       "massachusetts",  "michigan",
+      "minnesota",    "mississippi",    "missouri",       "montana",
+      "nebraska",     "nevada",         "new_hampshire",  "new_jersey",
+      "new_mexico",   "new_york",       "north_carolina", "north_dakota",
+      "ohio",         "oklahoma",       "oregon",         "pennsylvania",
+      "rhode_island", "south_carolina", "south_dakota",   "tennessee",
+      "texas",        "utah",           "vermont",        "virginia",
+      "washington",   "west_virginia",  "wisconsin",      "wyoming"
+   };
+   Float_t pop[nx] = {
+    4708708, 6595778,  2889450, 36961664, 5024748,  3518288,  885122, 18537969,
+    9829211, 1545801, 12910409,  6423113, 3007856,  2818747, 4314113,  4492076,
+    1318301, 5699478,  6593587,  9969727, 5266214,  2951996, 5987580,   974989,
+    1796619, 2643085,  1324575,  8707739, 2009671, 19541453, 9380884,   646844,
+   11542645, 3687050,  3825657, 12604767, 1053209,  4561242,  812383,  6296254,
+   24782302, 2784572,   621760,  7882590, 6664195,  1819777, 5654774,   544270
+   };
+
+   Double_t lon1 = -130;
+   Double_t lon2 = -65;
+   Double_t lat1 = 24;
+   Double_t lat2 = 50;
+   TH2Poly *p = new TH2Poly("USA","USA Population",lon1,lon2,lat1,lat2);
+
+   TFile *f;
+   f = TFile::Open("http://root.cern.ch/files/usa.root");
+
+   TMultiGraph *mg;
+   TKey *key;
+   TIter nextkey(gDirectory->GetListOfKeys());
+   while (key = (TKey*)nextkey()) {
+      obj = key->ReadObj();
+      if (obj->InheritsFrom("TMultiGraph")) {
+         mg = (TMultiGraph*)obj;
+         bin = p->AddBin(mg);
+      }
+   }
+
+   for (i=0; i<nx; i++) p->Fill(states[i], pop[i]);
+
+   gStyle->SetOptStat(11);
+   gStyle->SetPalette(1);
+   p->Draw("COLZ L");
+   return ch2p2;
+}
+End_Macro
+Begin_Html
+
+<p> <tt>TH2Poly</tt> histograms can also be plotted using the GL interface using
+the option "GLLEGO".
 
 <a name="HP21"></a><h3>The SPEC option</h3>
 
@@ -2209,7 +2328,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 3D histogram plotted with the option <tt>"BOX"</tt>.
+<p>The following example shows a 3D histogram plotted with the option <tt>"BOX"</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -2229,7 +2348,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-The following example shows a 3D histogram plotted with the option <tt>"ISO"</tt>.
+<p>The following example shows a 3D histogram plotted with the option <tt>"ISO"</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -2281,7 +2400,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-If at least one of the histograms in the stack has errors, the whole stack is
+<p>If at least one of the histograms in the stack has errors, the whole stack is
 visualized by default with error bars. To visualize it without errors the
 option <tt>"HIST"</tt> should be used.
 
@@ -2383,7 +2502,7 @@ The following types of plots are provided:
 <table border=0>
 
 <tr><th valign=top>"GLLEGO"</th><td>
-Draw a lego plot.
+Draw a lego plot. It works also for <tt>TH2Poly</tt>.
 </td></tr>
 
 <tr><th valign=top>"GLLEGO2</th><td>
@@ -3372,6 +3491,10 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
    if (strstr(chopt,"H"))   Hoption.Hist =2;
    if (strstr(chopt,"P0"))  Hoption.Mark =10;
 
+   if (fH->InheritsFrom(TH2Poly::Class())) {
+      if (Hoption.Fill+Hoption.Line+Hoption.Mark != 0 ) Hoption.Scat = 0;
+   }
+
    if (strstr(chopt,"E")) {
       if (fH->GetDimension() == 1) {
          Hoption.Error = 1;
@@ -4204,25 +4327,6 @@ void THistPainter::PaintBoxes(Option_t *)
    if (Hoption.Box == 11) {
       light = TColor::GetColorBright(color);
       dark  = TColor::GetColorDark(color);
-/*
-      if (color == 0) {
-         light = 0;
-         dark  = 0;
-      } else if (color <= 50 && color != 0) {
-         light = color + 150;
-         dark  = color + 100;
-      } else {
-         Float_t r, g, b, h, l, s;
-         TColor *c = gROOT->GetColor(color);
-         if (c) c->GetRGB(r, g, b);
-         else {r = 0.5; g=0.5; b=0.5;}
-         TColor::RGBtoHLS(r, g, b, h, l, s);
-         TColor::HLStoRGB(h, 0.7*l, s, r, g, b);
-         dark = TColor::GetColor(r, g, b);
-         TColor::HLStoRGB(h, 1.2*l, s, r, g, b);
-         light = TColor::GetColor(r, g, b);
-      }
-*/
    }
 
    // Loop over all the bins and draw the boxes
@@ -4248,7 +4352,7 @@ void THistPainter::PaintBoxes(Option_t *)
             else        z = zmin;
          }
 
-         if (z <  zmin) continue; //   Can be the case with
+         if (z <  zmin) continue; // Can be the case with
          if (z >  zmax) z = zmax; // option Same
 
          if (dz == 0) continue;
@@ -4279,6 +4383,9 @@ void THistPainter::PaintBoxes(Option_t *)
          ylow = TMath::Max(ylow, gPad->GetUymin());
          xup  = TMath::Min(xup , gPad->GetUxmax());
          yup  = TMath::Min(yup , gPad->GetUymax());
+
+         if (xlow >= xup) continue;
+         if (ylow >= yup) continue;
 
          if (Hoption.Box == 1) {
             fH->SetFillColor(color);
@@ -4343,18 +4450,23 @@ void THistPainter::PaintColorLevels(Option_t *)
 
    Double_t zmin = fH->GetMinimum();
    Double_t zmax = fH->GetMaximum();
+
+   Double_t dz = zmax - zmin;
+   if (dz <= 0) { // Histogram filled with a constant value
+      zmax += 0.1*TMath::Abs(zmax);
+      zmin -= 0.1*TMath::Abs(zmin);
+      dz = zmax - zmin;
+   }
+
    if (Hoption.Logz) {
       if (zmin > 0) {
          zmin = TMath::Log10(zmin);
          zmax = TMath::Log10(zmax);
+         dz = zmax - zmin;
       } else {
          return;
       }
    }
-
-   Double_t dz = zmax - zmin;
-
-   if (dz <= 0) return;
 
    Style_t fillsav   = fH->GetFillStyle();
    Style_t colsav    = fH->GetFillColor();
@@ -5308,7 +5420,15 @@ void THistPainter::PaintFunction(Option_t *)
    while (lnk) {
       obj = lnk->GetObject();
       TVirtualPad *padsave = gPad;
-      if (obj->InheritsFrom(TF1::Class())) {
+      if (obj->InheritsFrom(TF2::Class())) {
+         if (obj->TestBit(TF2::kNotDraw) == 0) {
+            if (Hoption.Lego || Hoption.Surf) {
+               obj->Paint("surf same");
+            } else {
+               obj->Paint("cont3 same");
+            }
+         }
+      } else if (obj->InheritsFrom(TF1::Class())) {
          if (obj->TestBit(TF1::kNotDraw) == 0) obj->Paint("lsame");
       } else  {
          obj->Paint(lnk->GetOption());
@@ -5469,6 +5589,7 @@ void THistPainter::PaintH3(Option_t *option)
    char *cmd;
    TString opt = fH->GetDrawOption();
    opt.ToLower();
+   Int_t irep;
 
    if (fH->GetDrawOption() && (strstr(opt,"box") ||  strstr(opt,"lego"))) {
       cmd = Form("TMarker3DBox::PaintH3((TH1 *)0x%lx,\"%s\");",(Long_t)fH,option);
@@ -5481,12 +5602,20 @@ void THistPainter::PaintH3(Option_t *option)
    } else {
       cmd = Form("TPolyMarker3D::PaintH3((TH1 *)0x%lx,\"%s\");",(Long_t)fH,option);
    }
-   gROOT->ProcessLine(cmd);
 
-   // Draw axis
-   if (Hoption.Same) return;
    TView *view = gPad->GetView();
    if (!view) return;
+   Double_t thedeg =  90 - gPad->GetTheta();
+   Double_t phideg = -90 - gPad->GetPhi();
+   Double_t psideg = view->GetPsi();
+   view->SetView(phideg, thedeg, psideg, irep);
+
+   // Paint the data
+   gROOT->ProcessLine(cmd);
+
+   if (Hoption.Same) return;
+
+   // Draw axis
    view->SetOutlineToCube();
    view->GetOutline()->Paint(option);
    Hoption.System = kCARTESIAN;
@@ -6461,8 +6590,8 @@ void THistPainter::PaintScatterPlot(Option_t *option)
    Double_t zmin  = fH->GetMinimum();
    if (zmin == 0 && zmax == 0) return;
    if (zmin == zmax) {
-      zmax += 0.01*TMath::Abs(zmax);
-      zmin -= 0.01*TMath::Abs(zmin);
+      zmax += 0.1*TMath::Abs(zmax);
+      zmin -= 0.1*TMath::Abs(zmin);
    }
    Int_t ncells = (Hparam.ylast-Hparam.yfirst)*(Hparam.xlast-Hparam.xfirst);
    if (Hoption.Logz) {
@@ -7666,9 +7795,12 @@ void THistPainter::PaintTable(Option_t *option)
    }
 
    if (fH->InheritsFrom(TH2Poly::Class())) {
+      if (Hoption.Fill)    PaintTH2PolyBins("f");
       if (Hoption.Color)   PaintTH2PolyColorLevels(option);
       if (Hoption.Scat)    PaintTH2PolyScatterPlot(option);
       if (Hoption.Text)    PaintTH2PolyText(option);
+      if (Hoption.Line)    PaintTH2PolyBins("l");
+      if (Hoption.Mark)    PaintTH2PolyBins("P");
    } else if (fH->GetEntries() != 0 && Hoption.Axis<=0) {
       if (Hoption.Scat)    PaintScatterPlot(option);
       if (Hoption.Arrow)   PaintArrows(option);
@@ -8813,14 +8945,16 @@ void THistPainter::ShowProjectionX(Int_t /*px*/, Int_t py)
 
    // Draw slice corresponding to mouse position
    TH1D *hp = ((TH2*)fH)->ProjectionX("_px", biny1, biny2);
-   hp->SetFillColor(38);
-   if (biny1 == biny2) hp->SetTitle(Form("ProjectionX of biny=%d", biny1));
-   else hp->SetTitle(Form("ProjectionX of biny=[%d,%d]", biny1,biny2));
-   hp->SetXTitle(fH->GetXaxis()->GetTitle());
-   hp->SetYTitle("Number of Entries");
-   hp->Draw();
-   c->Update();
-   padsav->cd();
+   if (hp) {
+      hp->SetFillColor(38);
+      if (biny1 == biny2) hp->SetTitle(Form("ProjectionX of biny=%d", biny1));
+      else hp->SetTitle(Form("ProjectionX of biny=[%d,%d]", biny1,biny2));
+      hp->SetXTitle(fH->GetXaxis()->GetTitle());
+      hp->SetYTitle("Number of Entries");
+      hp->Draw();
+      c->Update();
+      padsav->cd();
+   }
 }
 
 
@@ -8872,14 +9006,16 @@ void THistPainter::ShowProjectionY(Int_t px, Int_t /*py*/)
 
    // Draw slice corresponding to mouse position
    TH1D *hp = ((TH2*)fH)->ProjectionY("_py", binx1, binx2);
-   hp->SetFillColor(38);
-   if (binx1 == binx2) hp->SetTitle(Form("ProjectionY of binx=%d", binx1));
-   else hp->SetTitle(Form("ProjectionY of binx=[%d,%d]", binx1,binx2));
-   hp->SetXTitle(fH->GetYaxis()->GetTitle());
-   hp->SetYTitle("Number of Entries");
-   hp->Draw();
-   c->Update();
-   padsav->cd();
+   if (hp) {
+      hp->SetFillColor(38);
+      if (binx1 == binx2) hp->SetTitle(Form("ProjectionY of binx=%d", binx1));
+      else hp->SetTitle(Form("ProjectionY of binx=[%d,%d]", binx1,binx2));
+      hp->SetXTitle(fH->GetYaxis()->GetTitle());
+      hp->SetYTitle("Number of Entries");
+      hp->Draw();
+      c->Update();
+      padsav->cd();
+   }
 }
 
 

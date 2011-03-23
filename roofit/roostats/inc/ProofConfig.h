@@ -29,7 +29,6 @@ END_HTML
 #endif
 
 #include "RooWorkspace.h"
-#include "RooStudyManager.h"
 
 
 namespace RooStats {
@@ -37,7 +36,7 @@ namespace RooStats {
 class ProofConfig {
 
    public:
-      ProofConfig(RooWorkspace &w, Int_t nExperiments = 8, const char *host = "", Bool_t showGui = kFALSE) :
+      ProofConfig(RooWorkspace &w, Int_t nExperiments = 8, const char *host = "", Bool_t showGui = kTRUE) :
          fWorkspace(w),
          fNExperiments(nExperiments),
          fHost(host),
@@ -47,9 +46,6 @@ class ProofConfig {
 
       virtual ~ProofConfig() {
       }
-
-      /// close all proof connections
-      void CloseProof(Option_t *option = "s") { RooStudyManager::closeProof(option); }
 
       // returns fWorkspace
       RooWorkspace& GetWorkspace(void) { return fWorkspace; }

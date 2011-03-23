@@ -1582,16 +1582,16 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
          }
          if (bre->GetStreamerType() < 0) {
             if (branch->GetListOfBranches()->GetEntriesFast()) {
-               fprintf(fp,"%s%-15s *%s;\n",headcom,bre->GetClassName(), bre->GetName());
+               fprintf(fp,"%s%-15s *%s;\n",headcom,bre->GetClassName(), branchname);
             } else {
-               fprintf(fp,"%s%-15s *%s;\n",head,bre->GetClassName(), bre->GetName());
+               fprintf(fp,"%s%-15s *%s;\n",head,bre->GetClassName(), branchname);
                mustInit.Add(bre);
             }
             continue;
          }
          if (bre->GetStreamerType() == 0) {
             if (!TClass::GetClass(bre->GetClassName())->GetClassInfo()) {leafStatus[l] = 1; head = headcom;}
-            fprintf(fp,"%s%-15s *%s;\n",head,bre->GetClassName(), bre->GetName());
+            fprintf(fp,"%s%-15s *%s;\n",head,bre->GetClassName(), branchname);
             if (leafStatus[l] == 0) mustInit.Add(bre);
             continue;
          }
@@ -2366,7 +2366,10 @@ Int_t TTreePlayer::MakeProxy(const char *proxyClassname,
    // The skeleton will then be generated in the file:
    //    fileprefix.h
    // located in the current directory or in 'path/' if it is specified.
-   // The class generated will be named 'fileprefix'
+   // The class generated will be named 'fileprefix'.
+   // If the fileprefix contains a period, the right side of the period
+   // will be used as the extension (instead of 'h') and the left side
+   // will be used as the classname.
    //
    // "macrofilename" and optionally "cutfilename" are expected to point
    // to source file which will be included in by the generated skeletong.

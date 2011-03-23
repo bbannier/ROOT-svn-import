@@ -152,6 +152,7 @@ protected:
    virtual Int_t    CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType datatype, Bool_t ptr);
    virtual TBranch *BronchExec(const char* name, const char* classname, void* addobj, Bool_t isptrptr, Int_t bufsize, Int_t splitlevel);
    friend  TBranch *TTreeBranchImpRef(TTree *tree, const char* branchname, TClass* ptrClass, EDataType datatype, void* addobj, Int_t bufsize, Int_t splitlevel);
+   Int_t    SetBranchAddressImp(TBranch *branch, void* addr, TBranch** ptr);
 
    class TFriendLock {
       // Helper class to prevent infinite recursion in the
@@ -169,6 +170,9 @@ protected:
       ~TFriendLock();
    };
    friend class TFriendLock;
+   // So that the index class can use TFriendLock:
+   friend class TTreeIndex;
+   friend class TChainIndex;
 
    // use to update fFriendLockStatus
    enum ELockStatusBits {
@@ -385,7 +389,7 @@ public:
    virtual Long64_t        Merge(TCollection* list, Option_t* option = "");
    static  TTree          *MergeTrees(TList* list, Option_t* option = "");
    virtual Bool_t          Notify();
-   virtual void            OptimizeBaskets(Int_t maxMemory=10000000, Float_t minComp=1.1, Option_t *option=""); 
+   virtual void            OptimizeBaskets(ULong64_t maxMemory=10000000, Float_t minComp=1.1, Option_t *option=""); 
    TPrincipal             *Principal(const char* varexp = "", const char* selection = "", Option_t* option = "np", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual void            Print(Option_t* option = "") const; // *MENU*
    virtual void            PrintCacheStats(Option_t* option = "") const;
@@ -418,13 +422,19 @@ public:
    virtual Int_t           SetBranchAddress(const char *bname,void *add, TClass *realClass, EDataType datatype, Bool_t isptr);
    virtual Int_t           SetBranchAddress(const char *bname,void *add, TBranch **ptr, TClass *realClass, EDataType datatype, Bool_t isptr);
    template <class T> Int_t SetBranchAddress(const char *bname, T **add, TBranch **ptr = 0) {
-      return SetBranchAddress(bname,add,ptr,TClass::GetClass(typeid(T)),TDataType::GetType(typeid(T)),true);
+      TClass *cl = TClass::GetClass(typeid(T));
+      EDataType type = kOther_t;
+      if (cl==0) type = TDataType::GetType(typeid(T));
+      return SetBranchAddress(bname,add,ptr,cl,type,true);
    }
 #ifndef R__NO_CLASS_TEMPLATE_SPECIALIZATION
    // This can only be used when the template overload resolution can distringuish between
    // T* and T**
    template <class T> Int_t SetBranchAddress(const char *bname, T *add, TBranch **ptr = 0) {
-      return SetBranchAddress(bname,add,ptr,TClass::GetClass(typeid(T)),TDataType::GetType(typeid(T)),false);
+      TClass *cl = TClass::GetClass(typeid(T));
+      EDataType type = kOther_t;
+      if (cl==0) type = TDataType::GetType(typeid(T));
+      return SetBranchAddress(bname,add,ptr,cl,type,false);
    }
 #endif
    virtual void            SetBranchStatus(const char* bname, Bool_t status = 1, UInt_t* found = 0);

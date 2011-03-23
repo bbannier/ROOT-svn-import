@@ -135,6 +135,17 @@ endif
 STRESSMATHMORE    = stressMathMore$(ExeSuf)
 endif
 
+ifeq ($(shell $(ROOTCONFIG) --has-tmva),yes)
+STRESSTMVAO   = stressTMVA.$(ObjSuf)
+STRESSTMVAS   = stressTMVA.$(SrcSuf)
+ifeq ($(PLATFORM),win32)
+STRESSTMVALIBS = '$(ROOTSYS)/lib/libTMVA.lib'  
+else
+STRESSTMVALIBS = -lTMVA -lMinuit -lXMLIO -lMLP -lTreePlayer
+endif
+STRESSTMVA    = stressTMVA$(ExeSuf)
+endif
+
 VLAZYO        = vlazy.$(ObjSuf)
 VLAZYS        = vlazy.$(SrcSuf)
 VLAZY         = vlazy$(ExeSuf)
@@ -225,6 +236,10 @@ THREADSO      = threads.$(ObjSuf)
 THREADSS      = threads.$(SrcSuf)
 THREADS       = threads$(ExeSuf)
 
+STRESSINTERPO = stressInterpreter.$(ObjSuf)
+STRESSINTERPS = stressInterpreter.$(SrcSuf)
+STRESSINTERP  = stressInterpreter$(ExeSuf)
+
 STRESSITERO    = stressIterators.$(ObjSuf)
 STRESSITERS    = stressIterators.$(SrcSuf)
 STRESSITER     = stressIterators$(ExeSuf)
@@ -242,16 +257,18 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(EVENTMTO) $(HWORLDO) $(HSIMPLEO) $(MIN
                 $(CTORTUREO) $(QPRANDOMO) $(THREADSO) $(STRESSVECO) \
                 $(STRESSMATHO) $(STRESSFITO) $(STRESSHISTOFITO) $(STRESSHEPIXO) \
                 $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSPROOFO) \
-                $(STRESSMATHMOREO) $(STRESSITERO) $(STRESSHISTO) $(STRESSGUIO)
+                $(STRESSMATHMOREO) $(STRESSTMVAO) $(STRESSINTERPO) $(STRESSITERO) \
+                $(STRESSHISTO) $(STRESSGUIO)
 
 PROGRAMS      = $(EVENT) $(EVENTMTSO) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(TCOLLEX) $(TCOLLBM) $(VVECTOR) $(VMATRIX) $(VLAZY) \
                 $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
-                $(STRESSVEC) $(STRESSFIT) $(STRESSHISTOFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
-                $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH)  \
-                $(STRESSMATHMORE) $(STRESSITER) $(STRESSHIST) $(STRESSGUI)
+                $(STRESSVEC) $(STRESSFIT) $(STRESSHISTOFIT) $(STRESSHEPIX) \
+                $(STRESSENTRYLIST) $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH) \
+                $(STRESSMATHMORE) $(STRESSTMVA) $(STRESSINTERP)  $(STRESSITER) \
+                $(STRESSHIST) $(STRESSGUI)
 
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
@@ -470,6 +487,14 @@ else
 endif
 		@echo "$@ done"
 
+$(STRESSTMVA):   $(STRESSTMVAO)
+ifeq ($(PLATFORM),win32)
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(STRESSTMVALIBS)  $(OutPutOpt)$@
+		$(MT_EXE)
+else
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(STRESSTMVALIBS)  $(OutPutOpt)$@
+endif
+		@echo "$@ done"
 
 $(TESTBITS):    $(TESTBITSO)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
@@ -558,12 +583,20 @@ $(STRESSHEPIX): $(STRESSHEPIXO) $(STRESSGEOMETRY) $(STRESSFIT) $(STRESSL) \
 
 $(STRESSROOFITO): stressRooFit_tests.cxx
 
+ifeq ($(shell $(ROOTCONFIG) --has-mathmore),yes)
+ifeq ($(PLATFORM),win32)
+EXTRAROOFITLIBS = '$(ROOTSYS)/lib/libMathMore.lib'
+else
+EXTRAROOFITLIBS = -lMathMore
+endif
+endif
+
 $(STRESSROOFIT): $(STRESSROOFITO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libRooFit.lib' '$(ROOTSYS)/lib/libRooFitCore.lib' '$(ROOTSYS)/lib/libHtml.lib' '$(ROOTSYS)/lib/libThread.lib' '$(ROOTSYS)/lib/libMinuit.lib' '$(ROOTSYS)/lib/libFoam.lib' '$(ROOTSYS)/lib/libProof.lib' $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libRooFit.lib' '$(ROOTSYS)/lib/libRooFitCore.lib' '$(ROOTSYS)/lib/libHtml.lib' '$(ROOTSYS)/lib/libThread.lib' '$(ROOTSYS)/lib/libMinuit.lib' '$(ROOTSYS)/lib/libFoam.lib' '$(ROOTSYS)/lib/libProof.lib' $(EXTRAROOFITLIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 else
-		$(LD) $(LDFLAGS) $^ $(LIBS) -lRooFit -lRooFitCore -lHtml -lThread -lMinuit -lFoam $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) -lRooFit -lRooFitCore -lHtml -lThread -lMinuit -lFoam $(EXTRAROOFITLIBS) $(OutPutOpt)$@
 endif
 		@echo "$@ done"
 
@@ -683,6 +716,11 @@ else
 endif
 endif
 endif
+
+$(STRESSINTERP): $(STRESSINTERPO) 
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
+		$(MT_EXE)
+		@echo "$@ done"
 
 $(STRESSITER):	$(STRESSITERO) 
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@

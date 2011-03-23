@@ -82,8 +82,6 @@ namespace TMVA {
       UInt_t  GetNTargets()          const;
       UInt_t  GetNSpectators()       const;
 
-      const std::vector<UInt_t>* GetVariableArrangement() const { return fVariableArrangement; }
-
       Float_t GetValue( UInt_t ivar) const;
       const std::vector<Float_t>& GetValues() const;
 
@@ -101,9 +99,8 @@ namespace TMVA {
       void    SetVal                ( UInt_t ivar, Float_t val );
       void    SetTarget             ( UInt_t itgt, Float_t value );
       void    SetSpectator          ( UInt_t ivar, Float_t value );
-      void    SetVariableArrangement( std::vector<UInt_t>* const m ) const;
 
-      static void ClearDynamicVariables();
+      static void ClearDynamicVariables() {}
 
       void    CopyVarValues( const Event& other );
       void    Print        ( std::ostream & o ) const;
@@ -111,17 +108,14 @@ namespace TMVA {
    private:
 
       mutable std::vector<Float_t>   fValues;               // the event values
-      static  std::vector<Float_t*>* fgValuesDynamic;       // the event values
+      mutable std::vector<Float_t*>* fValuesDynamic;       // the event values
       mutable std::vector<Float_t>   fTargets;              // target values for regression
       mutable std::vector<Float_t>   fSpectators;           // "visisting" variables which are never used for any calculation
-      mutable std::vector<UInt_t>*   fVariableArrangement;  // needed for MethodCategories, where we can train on other than the main variables
 
       UInt_t                         fClass;           // signal or background type: signal=1, background=0
       Double_t                       fWeight;          // event weight (product of global and individual weights)
       Double_t                       fBoostWeight;     // internal weight to be set by boosting algorithm
       Bool_t                         fDynamic;         // is set when the dynamic values are taken
-      
-      static Int_t                   fgCount;          // count instances of Event
    };
 }
 

@@ -95,7 +95,7 @@ TMVA::OptimizeConfigParameters::~OptimizeConfigParameters()
 std::map<TString,Double_t> TMVA::OptimizeConfigParameters::optimize()
 {
    if      (fOptimizationFitType == "Scan"    ) this->optimizeScan();
-   else if (fOptimizationFitType == "GA" || fOptimizationFitType == "Minuit" ) this->optimizeFit();
+   else if (fOptimizationFitType == "FitGA" || fOptimizationFitType == "Minuit" ) this->optimizeFit();
    else {
       Log() << kFATAL << "You have chosen as optimization type " << fOptimizationFitType
                 << " that is not (yet) coded --> exit()" << Endl;
@@ -179,33 +179,39 @@ void TMVA::OptimizeConfigParameters::optimizeFit()
      fitter = new MinuitFitter(  *this, 
                                  "FitterMinuit_BDTOptimize", 
                                  ranges, opt );
-   }else if ( fOptimizationFitType == "GA"  ) {
+   }else if ( fOptimizationFitType == "FitGA"  ) {
      TString opt="PopSize=20:Steps=30:Cycles=3:ConvCrit=0.01:SaveBestCycle=5";
      fitter = new GeneticFitter( *this, 
                                  "FitterGA_BDTOptimize", 
                                  ranges, opt );
-   }
-
-
+   } else {
+      Log() << kWARNING << " you did not specify a valid OptimizationFitType " 
+            << " will use the default (FitGA) " << Endl;
+      TString opt="PopSize=20:Steps=30:Cycles=3:ConvCrit=0.01:SaveBestCycle=5";
+      fitter = new GeneticFitter( *this, 
+                                  "FitterGA_BDTOptimize", 
+                                  ranges, opt );      
+   } 
+   
    fitter->CheckForUnusedOptions();
-
+   
    // perform the fit
    fitter->Run(pars);      
    
    // clean up
    for (UInt_t ipar=0; ipar<ranges.size(); ipar++) delete ranges[ipar];
-
-
+   
+   
    GetMethod()->Reset();
-
+   
    fTunedParameters.clear();
    Int_t jcount=0;
    for (it=fTuneParameters.begin(); it!=fTuneParameters.end(); it++){
       fTunedParameters.insert(std::pair<TString,Double_t>(it->first,pars[jcount++]));
    }
-
-   GetMethod()->SetTuneParameters(fTunedParameters);
    
+   GetMethod()->SetTuneParameters(fTunedParameters);
+      
 }
 
 //_______________________________________________________________________

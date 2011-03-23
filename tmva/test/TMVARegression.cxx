@@ -206,7 +206,7 @@ int main( int argc, char** argv )
 
    if (Use["PDEFoam"])
        factory->BookMethod( TMVA::Types::kPDEFoam, "PDEFoam", 
-			    "!H:!V:MultiTargetRegression=F:TargetSelection=Mpv:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:Compress=T:Kernel=None:Nmin=10:VarTransform=None" );
+			    "!H:!V:MultiTargetRegression=F:TargetSelection=Mpv:TailCut=0.001:VolFrac=0.0666:nActiveCells=500:nSampl=2000:nBin=5:Compress=T:Kernel=None:Nmin=10:VarTransform=None" );
 
    // K-Nearest Neighbour classifier (KNN)
    if (Use["KNN"])
@@ -250,7 +250,7 @@ int main( int argc, char** argv )
 
    if (Use["BDTG"])
      factory->BookMethod( TMVA::Types::kBDT, "BDTG",
-                           "!H:!V:NTrees=1000::BoostType=Grad:Shrinkage=0.3:!UseBaggedGrad:SeparationType=GiniIndex:nCuts=20:NNodesMax=10" );
+                           "!H:!V:NTrees=2000::BoostType=Grad:Shrinkage=0.1:UseBaggedGrad:GradBaggingFraction=0.5nCuts=20:MaxDepth=3:NNodesMax=15" );
    // --------------------------------------------------------------------------------------------------
 
    // ---- Now you can tell the factory to train, test, and evaluate the MVAs

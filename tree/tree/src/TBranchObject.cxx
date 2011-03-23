@@ -211,18 +211,7 @@ Int_t TBranchObject::GetEntry(Long64_t entry, Int_t getall)
 
    if (nbranches) {
       if (fAddress == 0) {
-         // try to create object
-         if (!TestBit(kWarn)) {
-            TClass* cl = TClass::GetClass(fClassName);
-            if (cl) {
-               TObject** voidobj = (TObject**) new Long_t[1];
-               *voidobj = (TObject*) cl->New();
-               SetAddress(voidobj);
-            } else {
-               Warning("GetEntry", "Cannot get class: %s", fClassName.Data());
-               SetBit(kWarn);
-            }
-         }
+         SetupAddresses();
       }
       nbytes = 0;
       Int_t nb;
@@ -240,6 +229,25 @@ Int_t TBranchObject::GetEntry(Long64_t entry, Int_t getall)
       nbytes = TBranch::GetEntry(entry, getall);
    }
    return nbytes;
+}
+
+//______________________________________________________________________________
+Int_t TBranchObject::GetExpectedType(TClass *&expectedClass,EDataType &expectedType)
+{
+   // Fill expectedClass and expectedType with information on the data type of the 
+   // object/values contained in this branch (and thus the type of pointers
+   // expected to be passed to Set[Branch]Address
+   // return 0 in case of success and > 0 in case of failure.
+   
+   expectedClass = 0;
+   expectedType = kOther_t;
+   TLeafObject* lobj = (TLeafObject*) GetListOfLeaves()->At(0);
+   if (!lobj) {
+      Error("GetExpectedType", "Did not find any leaves in %s",GetName());
+      return 1;
+   }
+   expectedClass = lobj->GetClass();
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -559,6 +567,29 @@ void TBranchObject::Streamer(TBuffer& R__b)
       }
       fDirectory = dirsav;
    }
+}
+
+//______________________________________________________________________________
+void TBranchObject::SetupAddresses()
+{
+   // -- If the branch address is not set,  we set all addresses starting with
+   // the top level parent branch.  This is required to be done in order for
+   // GetOffset to be correct and for GetEntry to run.
+ 
+   if (fAddress == 0) {
+      // try to create object
+      if (!TestBit(kWarn)) {
+         TClass* cl = TClass::GetClass(fClassName);
+         if (cl) {
+            TObject** voidobj = (TObject**) new Long_t[1];
+            *voidobj = (TObject*) cl->New();
+            SetAddress(voidobj);
+         } else {
+            Warning("GetEntry", "Cannot get class: %s", fClassName.Data());
+            SetBit(kWarn);
+         }
+      }
+   }   
 }
 
 //______________________________________________________________________________

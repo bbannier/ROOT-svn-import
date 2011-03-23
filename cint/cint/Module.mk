@@ -29,7 +29,6 @@ endif
 CINTCONF     := $(call stripsrc,$(CINTDIRI)/configcint.h)
 CINTH        := $(filter-out $(CINTDIRI)/configcint.h,$(wildcard $(CINTDIRI)/*.h))
 CINTHT       := $(patsubst $(CINTDIRI)/%.h,include/%.h,$(CINTH))
-CINTHT       += $(patsubst $(call stripsrc,$(CINTDIRI))/%.h,include/%.h,$(CINTCONF))
 CINTS1       := $(wildcard $(MODDIRS)/*.c) \
                 $(MODDIRS)/config/strlcpy.c $(MODDIRS)/config/strlcat.c \
                 $(MODDIRS)/config/snprintf.c
@@ -158,6 +157,10 @@ ifeq ($(CLANG_MAJOR),2)
 CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))
 CINTS2       += $(MODDIRSD)/gcc4strm.cxx
 endif
+ifeq ($(CLANG_MAJOR),3)
+CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))
+CINTS2       += $(MODDIRSD)/gcc4strm.cxx
+endif
 ifeq ($(CXXCMD),xlC)
 ifeq ($(PLATFORM),macosx)
 CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))
@@ -189,6 +192,9 @@ MAKECINT     := bin/makecint$(EXEEXT)
 ##### iosenum.h #####
 IOSENUM      := $(call stripsrc,$(MODDIR)/include/iosenum.h)
 IOSENUMC     := $(CINTDIRIOSEN)/iosenum.cxx
+ifeq ($(CLANG_MAJOR),3)
+IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
+else
 ifeq ($(CLANG_MAJOR),2)
 IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
 else
@@ -199,6 +205,7 @@ ifeq ($(GCC_MAJOR),3)
 IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
 else
 IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)
+endif
 endif
 endif
 endif

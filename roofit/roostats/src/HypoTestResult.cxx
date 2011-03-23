@@ -51,6 +51,7 @@ ClassImp(RooStats::HypoTestResult) ;
 
 using namespace RooStats;
 
+
 //____________________________________________________________________
 HypoTestResult::HypoTestResult(const char* name) : 
    TNamed(name,name),
@@ -137,50 +138,74 @@ Bool_t HypoTestResult::HasTestStatisticData(void) const {
 }
 
 Double_t HypoTestResult::NullPValueError() const {
+   // compute error on Null pvalue 
+   // Use binomial error and 
    if(!fNullDistr  ||  !HasTestStatisticData()) return 0.0;
 
    double squares = 0.0;
-   vector<Double_t> values = fNullDistr->GetSamplingDistribution();
-   vector<Double_t> weights = fNullDistr->GetSampleWeights();
-   size_t entries = values.size();
+   //vector<Double_t> values = fNullDistr->GetSamplingDistribution();
+   const vector<Double_t> & weights = fNullDistr->GetSampleWeights();
+   size_t entries = weights.size();
 
-
-   // weights
+   
+   // compute sum of weight and sum of weight square 
+   double sumw = 0.0;
    for(size_t i=0; i < entries; i++) {
-      if( (GetPValueIsRightTail()  &&  values[i] > fTestStatisticData) ||
-          (!GetPValueIsRightTail()  &&  values[i] < fTestStatisticData)
-      ) {
-         squares += pow(weights[i], 2);
-      }
+      sumw += weights[i];
+      squares += weights[i]*weights[i];
    }
-   squares /= entries;
+   if (sumw == 0) return 0.0;
+   double neff = sumw*sumw/squares; 
 
-   //cout << "NullPValue Binomial error: " << TMath::Sqrt(NullPValue() * (1. - NullPValue()) / entries) << endl;
-   return sqrt( (squares - pow(NullPValue(),2)) / entries );
+   return sqrt( NullPValue()*(1.- NullPValue() )/ neff );
+
+   // // weights
+   // for(size_t i=0; i < entries; i++) {
+   //    if( (GetPValueIsRightTail()  &&  values[i] > fTestStatisticData) ||
+   //        (!GetPValueIsRightTail()  &&  values[i] < fTestStatisticData)
+   //    ) {
+   //       squares += pow(weights[i], 2);
+   //    }
+   // }
+   // squares /= entries;
+
+   // //cout << "NullPValue Binomial error: " << TMath::Sqrt(NullPValue() * (1. - NullPValue()) / entries) << endl;
+   // return sqrt( (squares - pow(NullPValue(),2)) / entries );
 }
 
 //____________________________________________________________________
 Double_t HypoTestResult::CLbError() const {
+   // compute CLb error
+   // Clb =  1 - NullPValue() 
+   // must use opposite condition that routine above
+
    if(!fNullDistr  ||  !HasTestStatisticData()) return 0.0;
 
+   double sumw = 0.0; 
    double squares = 0.0;
-   vector<Double_t> values = fNullDistr->GetSamplingDistribution();
-   vector<Double_t> weights = fNullDistr->GetSampleWeights();
-   size_t entries = values.size();
+   //vector<Double_t> values = fNullDistr->GetSamplingDistribution();
+   const vector<Double_t> & weights = fNullDistr->GetSampleWeights();
+   size_t entries = weights.size();
 
+   // // weights
+   // for(size_t i=0; i < entries; i++) {
+   //    if( (GetPValueIsRightTail()  &&  values[i] <= fTestStatisticData) ||
+   //        (!GetPValueIsRightTail()  &&  values[i] >= fTestStatisticData)
+   //    ) {
+   //       squares += pow(weights[i], 2);
+   //    }
+   // }
+   // squares /= entries;
 
-   // weights
    for(size_t i=0; i < entries; i++) {
-      if( (GetPValueIsRightTail()  &&  values[i] < fTestStatisticData) ||
-          (!GetPValueIsRightTail()  &&  values[i] > fTestStatisticData)
-      ) {
-         squares += pow(weights[i], 2);
-      }
+      sumw += weights[i];
+      squares += weights[i]*weights[i];
    }
-   squares /= entries;
+   if (sumw == 0) return 0.0;
+   double neff = sumw*sumw/squares; 
 
-   //cout << "CLb Binomial error: " << TMath::Sqrt(CLb() * (1. - CLb()) / entries) << endl;
-   return sqrt( (squares - pow(CLb(),2)) / entries );
+   return sqrt( CLb()*(1.-CLb() )/ neff );
+
 }
 
 //____________________________________________________________________
@@ -188,23 +213,34 @@ Double_t HypoTestResult::CLsplusbError() const {
    if(!fAltDistr  ||  !HasTestStatisticData()) return 0.0;
 
    double squares = 0.0;
-   vector<Double_t> values = fAltDistr->GetSamplingDistribution();
-   vector<Double_t> weights = fAltDistr->GetSampleWeights();
-   size_t entries = values.size();
+   //vector<Double_t> values = fAltDistr->GetSamplingDistribution();
+   const vector<Double_t> & weights = fAltDistr->GetSampleWeights();
+   size_t entries = weights.size();
 
 
-   // weights
-   for(size_t i=0; i < entries; i++) {
-      if( (GetPValueIsRightTail()  &&  values[i] < fTestStatisticData) ||
-          (!GetPValueIsRightTail()  &&  values[i] > fTestStatisticData)
-      ) {
-         squares += pow(weights[i], 2);
-      }
-   }
-   squares /= entries;
+   // // weights
+   // for(size_t i=0; i < entries; i++) {
+   //    if( (GetPValueIsRightTail()  &&  values[i] <= fTestStatisticData) ||
+   //        (!GetPValueIsRightTail()  &&  values[i] >= fTestStatisticData)
+   //    ) {
+   //       squares += pow(weights[i], 2);
+   //    }
+   // }
+   // squares /= entries;
 
    //cout << "CLs+b Binomial error: " << TMath::Sqrt(CLsplusb() * (1. - CLsplusb()) / entries) << endl;
-   return sqrt( (squares - pow(CLsplusb(),2)) / entries );
+   //return sqrt( (squares - pow(CLsplusb(),2)) / entries );
+
+   double sumw = 0.0;
+   for(size_t i=0; i < entries; i++) {
+      sumw += weights[i];
+      squares += weights[i]*weights[i];
+   }
+   if (sumw == 0) return 0.0;
+   double neff = sumw*sumw/squares; 
+
+   return sqrt( CLsplusb()*(1.-CLsplusb() )/ neff );
+
 }
 
 
@@ -219,15 +255,15 @@ Double_t HypoTestResult::CLsError() const {
 
    if(!fAltDistr || !fNullDistr) return 0.0;
 
-   unsigned const int n_b = fNullDistr->GetSamplingDistribution().size();
-   unsigned const int n_sb = fAltDistr->GetSamplingDistribution().size();
+   // unsigned const int n_b = fNullDistr->GetSamplingDistribution().size();
+   // unsigned const int n_sb = fAltDistr->GetSamplingDistribution().size();
 
-   if (CLb() == 0 || CLsplusb() == 0) return 0.0;
+   if (CLb() == 0 ) return numeric_limits<double>::infinity();
 
-   double cl_b_err = (1. - CLb()) / (n_b * CLb());
-   double cl_sb_err = (1. - CLsplusb()) / (n_sb * CLsplusb());
+   double cl_b_err2 = pow(CLbError(),2);
+   double cl_sb_err2 = pow(CLsplusbError(),2);
 
-   return CLs() * TMath::Sqrt(cl_b_err + cl_sb_err);
+   return TMath::Sqrt(cl_sb_err2 + cl_b_err2 * pow(CLs(),2))/CLb();
 }
 
 

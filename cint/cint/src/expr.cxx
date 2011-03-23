@@ -34,8 +34,8 @@ G__value G__getexpr(const char* expression);
 G__value G__getprod(char* expression1);
 G__value G__getpower(const char* expression2);
 G__value G__getitem(const char* item);
-int G__test(const char* expr);
-int G__btest(int operator2, G__value lresult, G__value rresult);
+long G__test(const char* expr);
+long G__btest(int operator2, G__value lresult, G__value rresult);
 long double G__atolf(const char* expr);
 
 // Functions in the C interface.
@@ -361,7 +361,6 @@ G__value G__calc(const char* exprwithspace);
          ppointer_and[pp_and] = G__asm_cp+2; \
          G__inc_cp_asm(3,0); \
       } \
-      ++G__templevel; /* 1516 */ \
       ++pp_and; \
    }
 
@@ -388,7 +387,6 @@ G__value G__calc(const char* exprwithspace);
          ppointer_or[pp_or] = G__asm_cp+3; \
          G__inc_cp_asm(4,0); \
       } \
-      ++G__templevel; /* 1516 */ \
       ++pp_or; \
    }
 
@@ -403,13 +401,12 @@ G__value G__calc(const char* exprwithspace);
 
 //______________________________________________________________________________
 #define DBGCOM \
-   G__fprinterr(G__serr,"pp_and=%d  G__templevel=%d  G__p_tepbuf->level=%d G__decl=%d\n",pp_and,G__templevel,G__p_tempbuf->level,G__decl);
+   G__fprinterr(G__serr,"pp_and=%d G__decl=%d\n",pp_and,G__decl);
 
 //______________________________________________________________________________
 #define G__RESTORE_ANDOPR \
    if(G__asm_noverflow) { \
       while(pp_and) { \
-         G__free_tempobject(); --G__templevel; /* 1516 */ \
          if(G__asm_dbg) \
             G__fprinterr(G__serr,"   %3x: CNDJMP assigned for AND %3x  %s:%d\n", ppointer_and[pp_and-1] - 1, G__asm_cp, __FILE__, __LINE__); \
          if(G__PVOID==G__asm_inst[ppointer_and[pp_and-1]]) /* 1575 */ \
@@ -417,7 +414,7 @@ G__value G__calc(const char* exprwithspace);
          else --pp_and; /* 1575 */ \
       } \
    } \
-   else while(pp_and) {G__free_tempobject();--G__templevel; --pp_and;/*1524*/}
+   else while(pp_and) {--pp_and;/*1524*/}
 
 //______________________________________________________________________________
 #define G__RESTORE_NOEXEC_OROPR \
@@ -432,13 +429,12 @@ G__value G__calc(const char* exprwithspace);
 #define G__RESTORE_OROPR \
    if(G__asm_noverflow) { \
       while(pp_or) { \
-         G__free_tempobject(); --G__templevel; \
          if(G__asm_dbg) \
             G__fprinterr(G__serr,"   %3x: CND1JMP assigned for OR %3x  %s:%d\n", ppointer_or[pp_or-1] - 1, G__asm_cp, __FILE__, __LINE__); \
          G__asm_inst[ppointer_or[--pp_or]] = G__asm_cp; \
       } \
    } \
-   else while(pp_or) {G__free_tempobject();--G__templevel; --pp_or;/*1524*/}
+   else while(pp_or) {--pp_or;/*1524*/}
 
 //
 #else // G__ASM_DBG
@@ -459,7 +455,6 @@ G__value G__calc(const char* exprwithspace);
          ppointer_and[pp_and] = G__asm_cp+2; \
          G__inc_cp_asm(3,0); \
       } \
-      ++G__templevel; \
       ++pp_and; \
    }
 
@@ -480,7 +475,6 @@ G__value G__calc(const char* exprwithspace);
          ppointer_or[pp_or] = G__asm_cp+3; \
          G__inc_cp_asm(4,0); \
       } \
-      ++G__templevel; /* 1516 */ \
       ++pp_or; \
    }
 
@@ -496,13 +490,12 @@ G__value G__calc(const char* exprwithspace);
 #define G__RESTORE_ANDOPR \
    if(G__asm_noverflow) { \
       while(pp_and) { \
-         G__free_tempobject();--G__templevel; \
          if(G__PVOID==G__asm_inst[ppointer_and[pp_and-1]]) \
             G__asm_inst[ppointer_and[--pp_and]] = G__asm_cp; \
          else --pp_and; \
       } \
    } \
-   else while(pp_and) {G__free_tempobject();--G__templevel; --pp_and;}
+   else while(pp_and) {--pp_and;}
 
 //______________________________________________________________________________
 #define G__RESTORE_NOEXEC_OROPR \
@@ -516,11 +509,10 @@ G__value G__calc(const char* exprwithspace);
 #define G__RESTORE_OROPR \
    if(G__asm_noverflow) { \
       while(pp_or) { \
-         G__free_tempobject();--G__templevel; \
          G__asm_inst[ppointer_or[--pp_or]] = G__asm_cp; \
       } \
    } \
-   else while(pp_or) {G__free_tempobject();--G__templevel; --pp_or;}
+   else while(pp_or) {--pp_or;}
 
 //
 #endif // G__ASM_DBG
@@ -544,7 +536,7 @@ static void G__getiparseobject(G__value* result, char* item)
    // assert(xx != 0);
    result->type = item[2];
    result->obj.reftype.reftype = (int)(item[3] - '0');
-   result->isconst = (int)(item[4] - '0');
+   result->isconst = (G__SIGNEDCHAR_T)(item[4] - '0');
    result->typenum = -1;
    *xx = 0;
    result->tagnum = atoi(xtmp);
@@ -558,7 +550,7 @@ static void G__getiparseobject(G__value* result, char* item)
 static G__value G__conditionaloperator(G__value defined, const char* expression, int ig1, char* ebuf)
 {
    // -- Evaluate a?b:c operator.
-   int tempop = 0;
+   long tempop = 0;
    int ppointer = 0;
    int store_no_exec_compile = 0;
    // Evalulate the condition.
@@ -1114,15 +1106,15 @@ G__value G__getexpr(const char* expression)
    int op = 0;               /* operator stack pointer */
    int unaopr[G__STACKDEPTH]; /* unary operator stack */
    int up = 0;                    /* unary operator stack pointer */
-   int c; /* temp char */
+   char c; /* temp char */
    int ig1 = 0;  /* input expression pointer */
    int nest = 0; /* parenthesis nesting state variable */
    int single_quote = 0, double_quote = 0; /* quotation flags */
-   int iscastexpr = 0; /* whether this expression start with a cast */
+   long iscastexpr = 0; /* whether this expression start with a cast */
    G__value defined = G__null;
-   int store_var_type = G__var_type;
+   char store_var_type = G__var_type;
    int explicitdtor = 0;
-   int inew = 0; /* ON994 */
+   size_t inew = 0; /* ON994 */
    int pp_and = 0, pp_or = 0;
    int ppointer_and[G__STACKDEPTH], ppointer_or[G__STACKDEPTH];
    int store_no_exec_compile_and[G__STACKDEPTH];
@@ -1132,18 +1124,18 @@ G__value G__getexpr(const char* expression)
    //
    // Return null for no expression.
    //
-   int length = strlen(expression);
+   size_t length = strlen(expression);
    if (!length) {
       return G__null;
    }
 
    G__FastAllocString ebuf(length);
-   int lenbuf = 0;
+   size_t lenbuf = 0;
 
    //
    // Operator expression.
    //
-   for (ig1 = 0; ig1 < length; ++ig1) {
+   for (ig1 = 0; ig1 < (int)length; ++ig1) {
       c = expression[ig1];
       if (!single_quote && !double_quote) {
          if (lenbuf > 1 && ebuf[lenbuf - 1] == ' ') {
@@ -1153,7 +1145,8 @@ G__value G__getexpr(const char* expression)
                 || (c == '>' && beforeSpaceChar == '>')) {}
             else {
                // not two identifiers / template "> >" - replace the space
-               ebuf[--lenbuf] = 0;
+               lenbuf--;
+               ebuf[lenbuf] = 0;
             }
          }
       }
@@ -1509,8 +1502,8 @@ G__value G__getprod(char* expression1)
    G__FastAllocString ebuf1(G__ONELINE);
    int operator1, prodpower = 0;
    int lenbuf1 = 0;
-   int ig11, ig2;
-   int length1;
+   size_t ig11, ig2;
+   size_t length1;
    int nest1 = 0;
    int single_quote = 0, double_quote = 0;
 
@@ -2000,7 +1993,7 @@ G__value G__getitem(const char* item)
 
 //______________________________________________________________________________
 extern "C"
-int G__test(const char* expr)
+long G__test(const char* expr)
 {
    G__value result = G__getexpr(expr);
    if (result.type == 'u') {
@@ -2011,7 +2004,7 @@ int G__test(const char* expr)
 
 //______________________________________________________________________________
 extern "C"
-int G__btest(int operator2, G__value lresult, G__value rresult)
+long G__btest(int operator2, G__value lresult, G__value rresult)
 {
    // --
    if (lresult.type == 'u' || rresult.type == 'u') {

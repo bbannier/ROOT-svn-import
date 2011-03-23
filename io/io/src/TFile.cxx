@@ -166,6 +166,19 @@ TFile::TFile() : TDirectoryFile(), fInfoCache(0)
    fAsyncOpenStatus = kAOSNotAsync;
    SetBit(kBinaryFile, kTRUE);
 
+   fBEGIN          = 0;
+   fEND            = 0;
+   fBytesRead      = 0;
+   fBytesReadExtra = 0;
+   fBytesWrite     = 0;
+   fCompress       = 0;
+   fNbytesFree     = 0;
+   fNbytesInfo     = 0;
+   fSeekFree       = 0;
+   fSeekInfo       = 0;
+   fUnits          = 0;
+   fVersion        = 0;
+
    if (gDebug)
       Info("TFile", "default ctor");
 }
@@ -482,8 +495,14 @@ TFile::~TFile()
    gROOT->GetListOfFiles()->Remove(this);
    gROOT->GetUUIDs()->RemoveUUID(GetUniqueID());
 
+   if (IsOnHeap()) {
+      // Delete object from CINT symbol table so it can not be used anymore.
+      // CINT object are always on the heap.
+      gInterpreter->ResetGlobalVar(this);
+   }
+      
    if (gDebug)
-      Info("~TFile", "dtor called for %s [%lx]", GetName(),(Long_t)this);
+      Info("~TFile", "dtor called for %s [%lx]", GetName(),(Long_t)this);  
 }
 
 //______________________________________________________________________________
@@ -737,7 +756,13 @@ void TFile::Init(Bool_t create)
       Int_t lenIndex = gROOT->GetListOfStreamerInfo()->GetSize()+1;
       if (lenIndex < 5000) lenIndex = 5000;
       fClassIndex = new TArrayC(lenIndex);
-      if (fgReadInfo && fSeekInfo > fBEGIN) ReadStreamerInfo();
+      if (fgReadInfo) {
+         if (fSeekInfo > fBEGIN) {
+            ReadStreamerInfo();
+         } else if (fVersion != gROOT->GetVersionInt() && fVersion > 30000) {
+            Warning("Init","no StreamerInfo found in %s therefore preventing schema evolution when reading this file.",GetName());
+         }
+      }
    }
 
    // Count number of TProcessIDs in this file
@@ -2273,12 +2298,14 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       return;
    }
 
+   TString subdirname( gSystem->BaseName(dirname) );
+
    // Start the source file
-   TString spath; spath.Form("%s/%sProjectSource.cxx",dirname,dirname);
+   TString spath; spath.Form("%s/%sProjectSource.cxx",dirname,subdirname.Data());
    FILE *sfp = fopen(spath.Data(),"w");
-   fprintf(sfp, "#include \"%sProjectHeaders.h\"\n\n",dirname );
-   if (!genreflex) fprintf(sfp, "#include \"%sLinkDef.h\"\n\n",dirname );
-   fprintf(sfp, "#include \"%sProjectDict.cxx\"\n\n",dirname );
+   fprintf(sfp, "#include \"%sProjectHeaders.h\"\n\n",subdirname.Data() );
+   if (!genreflex) fprintf(sfp, "#include \"%sLinkDef.h\"\n\n",subdirname.Data() );
+   fprintf(sfp, "#include \"%sProjectDict.cxx\"\n\n",subdirname.Data() );
    fprintf(sfp, "struct DeleteObjectFunctor {\n");
    fprintf(sfp, "   template <typename T>\n");
    fprintf(sfp, "   void operator()(const T *ptr) const {\n");
@@ -2400,12 +2427,12 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       subClasses.Clear("nodelete");
    }
    TString path;
-   path.Form("%s/%sProjectHeaders.h",dirname,dirname);
+   path.Form("%s/%sProjectHeaders.h",dirname,subdirname.Data());
    FILE *allfp = fopen(path,"a");
    if (!allfp) {
       Error("MakeProject","Cannot open output file:%s\n",path.Data());
    } else {
-      fprintf(allfp,"#include \"%sProjectInstances.h\"\n", dirname);
+      fprintf(allfp,"#include \"%sProjectInstances.h\"\n", subdirname.Data());
       fclose(allfp);
    }
 
@@ -2441,7 +2468,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
 
    // Add rootcint/genreflex statement generating ProjectDict.cxx
    FILE *ifp = 0;
-   path.Form("%s/%sProjectInstances.h",dirname,dirname);
+   path.Form("%s/%sProjectInstances.h",dirname,subdirname.Data());
 #ifdef R__WINGCC
    ifp = fopen(path,"wb");
 #else
@@ -2457,11 +2484,11 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    }
 
    if (genreflex) {
-      fprintf(fpMAKE,"genreflex %sProjectHeaders.h -o %sProjectDict.cxx --comments --iocomments %s ",dirname,dirname,gSystem->GetIncludePath());
-      path.Form("%s/%sSelection.xml",dirname,dirname);
+      fprintf(fpMAKE,"genreflex %sProjectHeaders.h -o %sProjectDict.cxx --comments --iocomments %s ",subdirname.Data(),subdirname.Data(),gSystem->GetIncludePath());
+      path.Form("%s/%sSelection.xml",dirname,subdirname.Data());
    } else {
-      fprintf(fpMAKE,"rootcint -f %sProjectDict.cxx -c %s ",dirname,gSystem->GetIncludePath());
-      path.Form("%s/%sLinkDef.h",dirname,dirname);
+      fprintf(fpMAKE,"rootcint -f %sProjectDict.cxx -c %s ",subdirname.Data(),gSystem->GetIncludePath());
+      path.Form("%s/%sLinkDef.h",dirname,subdirname.Data());
    }
    // Create the LinkDef.h or xml selection file by looping on all *.h files
    // replace any existing file.
@@ -2557,7 +2584,10 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
                      }
                   } else {
                      what.ReplaceAll("std::","");
-                     fprintf(fp,"#pragma link C++ class %s+;\n",what.Data());
+                     TClass *paircl = TClass::GetClass(what.Data());
+                     if (paircl == 0 || paircl->GetClassInfo() == 0) {
+                        fprintf(fp,"#pragma link C++ class %s+;\n",what.Data());
+                     }
                   }
                   break;
                }
@@ -2632,14 +2662,14 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    fclose(fp);
    fclose(ifp);
    if (genreflex) {
-      fprintf(fpMAKE,"-s %sSelection.xml \n",dirname);
+      fprintf(fpMAKE,"-s %sSelection.xml \n",subdirname.Data());
    } else {
-      fprintf(fpMAKE,"%sProjectHeaders.h ",dirname);
-      fprintf(fpMAKE,"%sLinkDef.h \n",dirname);
+      fprintf(fpMAKE,"%sProjectHeaders.h ",subdirname.Data());
+      fprintf(fpMAKE,"%sLinkDef.h \n",subdirname.Data());
    }
 
    // add compilation line
-   TString sdirname(dirname);
+   TString sdirname(subdirname);
 
    TString cmd = gSystem->GetMakeSharedLib();
    TString sources( sdirname+"ProjectSource.cxx ");
@@ -2679,7 +2709,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       int res = !gSystem->Exec("MAKEP");
 #endif
       gSystem->ChangeDirectory(path);
-      path.Form("%s/%s.%s",dirname,dirname,gSystem->GetSoExt());
+      path.Form("%s/%s.%s",dirname,subdirname.Data(),gSystem->GetSoExt());
       if (res) printf("Shared lib %s has been generated\n",path.Data());
 
       //dynamically link the generated shared lib
@@ -2738,6 +2768,7 @@ void TFile::ReadStreamerInfo()
                } else {
                   Warning("ReadStreamerInfo","%s has a %s in the list of TStreamerInfo.", GetName(), info->IsA()->GetName());
                }
+               info->SetBit(kCanDelete);
             }
             lnk = lnk->Next();
             continue;
@@ -2845,6 +2876,7 @@ void TFile::WriteStreamerInfo()
    TStreamerInfo *info;
    TList list;
    TList listOfRules;
+   listOfRules.SetOwner(kTRUE);
    listOfRules.SetName("listOfRules");
    std::set<TClass*> classSet;
 
@@ -2899,7 +2931,6 @@ void TFile::WriteStreamerInfo()
    fClassIndex->fArray[0] = 0;
    fCompress = compress;
 
-   listOfRules.Delete();
    list.RemoveLast(); // remove the listOfRules.
 }
 

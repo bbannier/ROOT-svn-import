@@ -152,16 +152,19 @@ int G__Lsizeof(const char *type_name)
   }
 
   /* searching for struct/union tagtable */
-  if((strncmp(type_name,"struct",6)==0)
-     || strncmp(type_name,"signed",6)==0
+  if((strncmp(type_name,"struct ",7)==0)
+     || strncmp(type_name,"signed ",7)==0
      ) {
+    type_name = type_name+7;
+    while (isspace(type_name[0])) ++type_name;
+  }
+  else if((strncmp(type_name,"class ",6)==0)) {
     type_name = type_name+6;
+    while (isspace(type_name[0])) ++type_name;
   }
-  else if((strncmp(type_name,"class",5)==0)) {
-    type_name = type_name+5;
-  }
-  else if((strncmp(type_name,"union",5)==0)) {
-    type_name = type_name+5;
+  else if((strncmp(type_name,"union ",6)==0)) {
+    type_name = type_name+6;
+    while (isspace(type_name[0])) ++type_name;
   }
 
   tagnum = G__defined_tagname(type_name,1); /* case 8) */
@@ -239,12 +242,12 @@ int G__Lsizeof(const char *type_name)
      (strcmp(type_name,"unsigned long int")==0))
     return(sizeof(long));
   if((strcmp(type_name,"short")==0)||
-     (strcmp(type_name,"shortint")==0)||
+     (strcmp(type_name,"short int")==0)||
      (strcmp(type_name,"unsigned short")==0)||
-     (strcmp(type_name,"unsigned shortint")==0))
+     (strcmp(type_name,"unsigned short int")==0))
     return(sizeof(short));
   if((strcmp(type_name,"char")==0)||
-     (strcmp(type_name,"unsignedchar")==0))
+     (strcmp(type_name,"unsigned char")==0))
     return(sizeof(char));
   if((strcmp(type_name,"float")==0)||
      (strcmp(type_name,"float")==0))
@@ -310,7 +313,7 @@ int G__Lsizeof(const char *type_name)
     if (isupper(buf.type)) {
       buf.obj.reftype.reftype = var->reftype[ig15];
     }
-    int num_of_elements = 0;
+    size_t num_of_elements = 0;
     if (pointlevel > var->paran[ig15] /* array dimensionality */) {
       switch (pointlevel) {
       case 0:
@@ -390,7 +393,6 @@ long *G__typeid(const char *typenamein)
   int c;
   long *type_info;
   int tagnum,typenum,type=0,reftype=G__PARANORMAL,size=0;
-  int len;
   int pointlevel=0,isref=0;
   int tag_type_info;
   G__FastAllocString typenamebuf_sb(G__MAXNAME*2);
@@ -412,7 +414,7 @@ long *G__typeid(const char *typenamein)
   ***********************************************************************/
   typenamebuf_sb = typenamein;
   type_name=typenamebuf;
-  len=strlen(type_name);
+  size_t len=strlen(type_name);
 
   while('*'==(c=type_name[len-1]) || '&'==c) {
     switch(c) {
@@ -554,21 +556,21 @@ long *G__typeid(const char *typenamein)
         size = G__LONGLONGALLOC;
       }
       if((strcmp(type_name,"short")==0)||
-         (strcmp(type_name,"shortint")==0)) {
+         (strcmp(type_name,"short int")==0)) {
         type = 's';
         size = G__SHORTALLOC;
       }
       if((strcmp(type_name,"unsigned short")==0)||
-         (strcmp(type_name,"unsigned shortint")==0)) {
+         (strcmp(type_name,"unsigned short int")==0)) {
         type = 'r';
         size = G__SHORTALLOC;
       }
       if((strcmp(type_name,"char")==0)||
-         (strcmp(type_name,"signedchar")==0)) {
+         (strcmp(type_name,"signed char")==0)) {
         type = 'c';
         size = G__CHARALLOC;
       }
-      if(strcmp(type_name,"unsignedchar")==0) {
+      if(strcmp(type_name,"unsigned char")==0) {
         type = 'b';
         size = G__CHARALLOC;
       }
@@ -612,7 +614,7 @@ long *G__typeid(const char *typenamein)
     if(-1!=tagnum && 'u'==tolower(type) && buf.ref && -1!=G__struct.virtual_offset[tagnum]) {
       /* In case of polymorphic object, get the actual tagnum from the hidden
        * virtual identity field.  */
-      tagnum = *(long*)(buf.obj.i+G__struct.virtual_offset[tagnum]);
+       tagnum = *(long*)(buf.obj.i+G__struct.virtual_offset[tagnum]);
     }
   }
 
@@ -830,7 +832,7 @@ long G__get_classinfo(const char *item,int tagnum)
   char *buf;
   int tag_string_buf;
   struct G__inheritance *baseclass;
-  int p;
+  size_t p;
   int i;
 
   /**********************************************************************
@@ -933,7 +935,7 @@ long G__get_variableinfo(const char *item,long *phandle,long *pindex,int tagnum)
   char *buf;
   int tag_string_buf;
   struct G__var_array *var;
-  int index;
+  long index;
 
   /*******************************************************************
   * new
@@ -1041,9 +1043,9 @@ long G__get_functioninfo(const char *item,long *phandle,long *pindex,int tagnum)
   int tag_string_buf;
   /* char temp[G__MAXNAME]; */
   struct G__ifunc_table_internal *ifunc;
-  int index;
+  long index;
   int i;
-  int p;
+  size_t p;
 
   /*******************************************************************
   * new
@@ -1493,7 +1495,7 @@ void G__typeconversion(G__ifunc_table_internal *ifunc,int ifn
       case 'r':
       case 'h':
       case 'k':
-        libp->para[i].obj.d = libp->para[i].obj.i;
+         libp->para[i].obj.d = (double)libp->para[i].obj.i;
         libp->para[i].type = formal_type;
         libp->para[i].ref = (long)(&libp->para[i].obj.d);
         break;

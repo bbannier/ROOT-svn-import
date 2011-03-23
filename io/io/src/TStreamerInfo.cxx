@@ -53,6 +53,7 @@
 #include "TError.h"
 #include "TRef.h"
 #include "TProcessID.h"
+#include "TSystem.h"
 
 #include "TStreamer.h"
 #include "TContainerConverters.h"
@@ -192,12 +193,12 @@ TStreamerInfo::~TStreamerInfo()
    delete [] fComp;    fComp   =0;
    delete [] fVirtualInfoLoc; fVirtualInfoLoc =0;
 
+   delete fReadObjectWise;
+   delete fReadMemberWise;
+
    if (!fElements) return;
    fElements->Delete();
    delete fElements; fElements=0;
-   
-   delete fReadObjectWise;
-   delete fReadMemberWise;
 }
 
 //______________________________________________________________________________
@@ -714,6 +715,15 @@ void TStreamerInfo::BuildCheck()
                   e2->SetTitle(e1->GetTitle());
                }
             }
+            
+            if (TestBit(kCannotOptimize)) {
+               info->SetBit(TVirtualStreamerInfo::kCannotOptimize);
+               if (info->IsOptimized()) 
+               {
+                  // Optimizing does not work with splitting.
+                  info->Compile();
+               }
+            } 
             done = kTRUE;
          } else {
             array->RemoveAt(fClassVersion);
@@ -809,6 +819,9 @@ void TStreamerInfo::BuildCheck()
          if (fCheckSum != fClass->GetCheckSum(1) && fCheckSum != fClass->GetCheckSum(2)) {
 
             Bool_t warn = !fClass->TestBit(TClass::kWarned);
+            if (warn) {
+               warn = !CompareContent(fClass,0,kFALSE,kFALSE);
+            }
             if (warn && (fOldVersion <= 2)) {
                // Names of STL base classes was modified in vers==3. Allocators removed
                //
@@ -836,6 +849,7 @@ void TStreamerInfo::BuildCheck()
    Do not try to write objects with the current class definition,\n\
    the files will not be readable.\n", GetName(), fClassVersion, GetName(), fClassVersion + 1);
                }
+               CompareContent(fClass,0,kTRUE,kTRUE);
                fClass->SetBit(TClass::kWarned);
             }
          } else {
@@ -1448,8 +1462,8 @@ void TStreamerInfo::BuildOld()
             Bool_t isArray = element->GetArrayLength() >= 1;
             Bool_t hasCount = element->HasCounter();
             newType = dm->GetDataType()->GetType();
-            if ((newType == kChar) && isPointer && !isArray && !hasCount) {
-               newType = kCharStar;
+            if ((newType == ::kChar_t) && isPointer && !isArray && !hasCount) {
+               newType = ::kCharStar;
             } else if (isPointer) {
                newType += kOffsetP;
             } else if (isArray) {
@@ -1737,7 +1751,7 @@ namespace {
          fName = name;
       }
       void SetClassName(const char *name) {
-         fClassName = TClassEdit::ShortType( name, TClassEdit::kDropStlDefault );
+         fClassName = TClassEdit::ShortType( name, TClassEdit::kDropStlDefault | TClassEdit::kDropStd );
       }
       void SetComment(const char *title) {
          const char *left = strstr(title,"[");
@@ -2811,7 +2825,7 @@ Int_t TStreamerInfo::GenerateHeaderFile(const char *dirname, const TList *subCla
       return 0;
    }
 
-   filename.Form("%s/%sProjectHeaders.h",dirname,dirname);
+   filename.Form("%s/%sProjectHeaders.h",dirname,gSystem->BaseName(dirname));
    FILE *allfp = fopen(filename.Data(),"a");
    if (!allfp) {
       Error("MakeProject","Cannot open output file:%s\n",filename.Data());
@@ -2849,7 +2863,7 @@ Int_t TStreamerInfo::GenerateHeaderFile(const char *dirname, const TList *subCla
    }   
    fprintf(fp,"\n");
 
-   TString sourcename; sourcename.Form( "%s/%sProjectSource.cxx", dirname, dirname );
+   TString sourcename; sourcename.Form( "%s/%sProjectSource.cxx", dirname, gSystem->BaseName(dirname) );
    FILE *sfp = fopen( sourcename.Data(), "a" );
    GenerateDeclaration(fp, sfp, subClasses);
    
@@ -3189,7 +3203,8 @@ Double_t TStreamerInfo::GetValue(char *pointer, Int_t i, Int_t j, Int_t len) con
             return 0; // We don't know which member of the class we would want.
          } else {
             TVirtualCollectionProxy *proxy = newClass->GetCollectionProxy();
-            atype = proxy->GetType();
+            // EDataType is a subset of TStreamerInfo::EReadWrite
+            atype = (TStreamerInfo::EReadWrite)proxy->GetType();
             TVirtualCollectionProxy::TPushPop pop(proxy,ladd);
             Int_t nc = proxy->Size();
             if (j >= nc) return 0;

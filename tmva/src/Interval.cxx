@@ -1,4 +1,4 @@
-// @(#)root/tmva $Id$    
+// @(#)root/tmva $Id$
 // Author: Peter Speckmayer
 
 /**********************************************************************************
@@ -42,13 +42,13 @@
 <center><h2>the TMVA::Interval Class</h2></center>
 
 <ul>
-  <li> Interval definition, continuous and discrete    
+   <li> Interval definition, continuous and discrete
    <ul>
          <li>  Interval(min,max)  : a continous interval [min,max]
          <li>  Interval(min,max,n): a "discrete interval" [min,max], i.e the n numbers:<br>
-         min, min+step, min+2*step,...., min+(n-1)*step, min+n*step=max <br> 
-                 e.g.: Interval(1,5,5)=1,2,3,4,5                        <br> 
-         Interval(.5,1.,6)= .5, .6., .7, .8, .9, 1.0                    <br> 
+         min, min+step, min+2*step,...., min+(n-1)*step=max <br>
+         e.g.: Interval(1,5,5)=1,2,3,4,5                    <br>
+         Interval(.5,1.,6)= .5, .6., .7, .8, .9, 1.0        <br>
 
    </ul>
 </ul>
@@ -86,8 +86,8 @@ TMVA::Interval::Interval( Double_t min, Double_t max, Int_t nbins ) :
    if (!fgLogger) fgLogger = new MsgLogger("Interval");
 
    // defines minimum and maximum of an interval
-   // when nbins == 0, interval describes a discrete distribution (equally distributed in the interval)
-   // when nbins > 0, interval describes a continous interval
+   // when nbins > 0, interval describes a discrete distribution (equally distributed in the interval)
+   // when nbins == 0, interval describes a continous interval
    //
    if (fMax - fMin < 0) Log() << kFATAL << "maximum lower than minimum" << Endl;
    if (nbins < 0) {

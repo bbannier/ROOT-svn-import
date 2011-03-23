@@ -37,6 +37,7 @@ MATHCOREDH2  := $(MODDIRI)/TRandom.h \
 		$(MODDIRI)/TRandom3.h \
                 $(MODDIRI)/TVirtualFitter.h \
                 $(MODDIRI)/TKDTree.h \
+                $(MODDIRI)/TKDTreeBinning.h \
                 $(MODDIRI)/Math/IParamFunction.h \
                 $(MODDIRI)/Math/IFunction.h \
                 $(MODDIRI)/Math/ParamFunctor.h \
@@ -61,6 +62,7 @@ MATHCOREDH2  := $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/Math/BrentMinimizer1D.h \
                 $(MODDIRI)/Math/BrentRootFinder.h \
                 $(MODDIRI)/Math/DistSampler.h \
+                $(MODDIRI)/Math/DistSamplerOptions.h \
                 $(MODDIRI)/Math/GoFTest.h \
                 $(MODDIRI)/Math/SpecFuncMathCore.h \
                 $(MODDIRI)/Math/DistFuncMathCore.h

@@ -1,3 +1,5 @@
+// @(#)root/tmva $Id$
+// Author: S. Jadach, Tancredi Carli, Dominik Dannheim, Alexander Voigt
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -13,7 +15,7 @@
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
  *      Tancredi Carli   - CERN, Switzerland                                      *
  *      Dominik Dannheim - CERN, Switzerland                                      *
- *      Alexander Voigt  - CERN, Switzerland                                      *
+ *      Alexander Voigt  - TU Dresden, Germany                                    *
  *                                                                                *
  * Copyright (c) 2008:                                                            *
  *      CERN, Switzerland                                                         *
@@ -33,7 +35,7 @@
 
 using namespace std;
 
-#define SW2 std::setprecision(7) << std::setw(12)
+//#define SW2 std::setw(12)
 
 ClassImp(TMVA::PDEFoamVect)
 
@@ -198,11 +200,13 @@ TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator =(Double_t x)
 //_____________________________________________________________________
 void TMVA::PDEFoamVect::Print(Option_t *option) const
 {
+   streamsize wid = cout.width(); // saving current field width
    // Printout of all vector components
    if(!option) Error( "Print ", "No option set \n");
    cout << "(";
    for(Int_t i=0; i<fDim-1; i++) 
-      cout << SW2 << *(fCoords+i) << ",";
-   cout << SW2 << *(fCoords+fDim-1);
+      cout << std::setw(12) << *(fCoords+i) << ",";
+   cout << std::setw(12) << *(fCoords+fDim-1);
    cout << ")";
+   cout.width(wid);
 }

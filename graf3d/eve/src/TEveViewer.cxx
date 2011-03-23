@@ -24,6 +24,7 @@
 #include "TGLEventHandler.h"
 
 #include "TApplication.h"
+#include "TEnv.h"
 #include "TSystem.h"
 
 //==============================================================================
@@ -178,7 +179,10 @@ TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged, Bool_t stereo)
    cf->SetEditable(kFALSE);
    v->ToggleEditObject();
    v->DisableCloseMenuEntries();
-   v->EnableMenuBarHiding();
+   if (gEnv->GetValue("Eve.Viewer.HideMenus", 1) == 1)
+   {
+      v->EnableMenuBarHiding();
+   }
    SetGLViewer(v, v->GetFrame());
 
    if (stereo)
@@ -560,7 +564,10 @@ void TEveViewerList::OnMouseOver(TObject *obj, UInt_t /*state*/)
    TEveElement *el = dynamic_cast<TEveElement*>(obj);
    if (el && !el->IsPickable())
       el = 0;
+
+   void *qsender = gTQSender;
    gEve->GetHighlight()->UserPickedElement(el, kFALSE);
+   gTQSender = qsender;
 
    HandleTooltip();
 }
@@ -579,7 +586,10 @@ void TEveViewerList::OnReMouseOver(TObject *obj, UInt_t /*state*/)
    TEveElement* el = dynamic_cast<TEveElement*>(obj);
    if (el && !el->IsPickable())
       el = 0;
+
+   void *qsender = gTQSender;
    gEve->GetHighlight()->UserRePickedElement(el);
+   gTQSender = qsender;
 
    HandleTooltip();
 }
@@ -598,7 +608,10 @@ void TEveViewerList::OnUnMouseOver(TObject *obj, UInt_t /*state*/)
    TEveElement* el = dynamic_cast<TEveElement*>(obj);
    if (el && !el->IsPickable())
       el = 0;
+
+   void *qsender = gTQSender;
    gEve->GetHighlight()->UserUnPickedElement(el);
+   gTQSender = qsender;
 
    HandleTooltip();
 }

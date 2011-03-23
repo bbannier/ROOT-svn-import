@@ -269,8 +269,11 @@ public:
       // relation between harddrive speed and network bandwidth.
 
       const TFileNode *obj = dynamic_cast<const TFileNode*>(other);
-      if (!obj) return 0;
-
+      if (!obj) {
+         Error("Compare", "input is not a TPacketizer::TFileNode object");
+         return 0;
+      }
+      
       // how many more events it has than obj
 
       if (fStrategy == 1) {
@@ -669,10 +672,9 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    // Setup file & filenode structure
    Reset();
    // Optimize the number of files to be open when running on subsample
-   Bool_t byfile = kFALSE;
    Int_t validateMode = 0;
-   if (TProof::GetParameter(input, "PROOF_ValidateByFile", validateMode) == 0)
-      byfile = (validateMode > 0 && num > -1) ? kTRUE : kFALSE;
+   Int_t gprc = TProof::GetParameter(input, "PROOF_ValidateByFile", validateMode);
+   Bool_t byfile = (gprc == 0 && validateMode > 0 && num > -1) ? kTRUE : kFALSE;
    ValidateFiles(dset, slaves, num, byfile);
 
 
@@ -688,7 +690,7 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    fFileNodes->Clear();    // then delete all objects
    PDB(kPacketizer,2)
       Info("TPacketizerAdaptive",
-           "processing Range: First %lld, Num %lld", first, num);
+           "processing range: first %lld, num %lld", first, num);
 
    dset->Reset();
    Long64_t cur = 0;
@@ -726,12 +728,13 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
 
          // If this element contains the end of the global range
          // adjust its number of entries
-         if (num != -1 && (first+num < cur+eNum)) {
+         if (num != -1 && (first+num <= cur+eNum)) {
             e->SetNum( first + num - cur );
-            eNum = e->GetNum();
             PDB(kPacketizer,2)
                Info("TPacketizerAdaptive",
                     "processing element: adjust end %lld", first + num - cur);
+            cur += eNum;
+            eNum = e->GetNum();
          }
 
          // If this element contains the start of the global range
@@ -739,14 +742,13 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
          if (cur < first) {
             e->SetFirst( eFirst + (first - cur) );
             e->SetNum( e->GetNum() - (first - cur) );
-            eNum = e->GetNum();
             PDB(kPacketizer,2)
                Info("TPacketizerAdaptive",
                     "processing element: adjust start %lld and end %lld",
                     eFirst + (first - cur), first + num - cur);
+            cur += eNum;
+            eNum = e->GetNum();
          }
-
-         cur += eNum;
       } else {
          TEntryList *enl = dynamic_cast<TEntryList *>(e->GetEntryList());
          if (enl) {
@@ -815,7 +817,7 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
       node->IncEvents(eNum);
       PDB(kPacketizer,2) e->Print("a");
    }
-   PDB(kGlobal,1)
+   PDB(kPacketizer,1)
       Info("TPacketizerAdaptive", "processing %lld entries in %d files on %d hosts",
                                   fTotalEntries, files, fFileNodes->GetSize());
 
@@ -1125,6 +1127,9 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves,
 
    // Some monitoring systems (TXSocketHandler) need to know this
    ((TProof*)gProof)->fCurrentMonitor = &mon;
+
+   // Identify the type
+   if (!strcmp(dset->GetType(), "TTree")) SetBit(TVirtualPacketizer::kIsTree);
 
    // Preparing for client notification
    TString msg("Validating files");
@@ -1615,11 +1620,16 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
                             (sl ? sl->GetName() : "**undef**"));
       return 0;
    }
-   // update stats & free old element
+
+   // Attach to current file
+   TFileStat *file = slstat->fCurFile;
+
+   // Update stats & free old element
 
    Bool_t firstPacket = kFALSE;
    Long64_t cachesz = -1;
    Int_t learnent = -1;
+   Long64_t totalEntries = 0;
    if ( slstat->fCurElem != 0 ) {
 
       Double_t latency, proctime, proccpu;
@@ -1630,12 +1640,14 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
          (*r) >> latency;
          (*r) >> status;
 
-         if (sl->GetProtocol() > 25) (*r) >> cachesz >> learnent;
+         if (sl->GetProtocol() > 25) {
+            (*r) >> cachesz >> learnent;
+            if (r->BufferSize() > r->Length()) (*r) >> totalEntries;
+         }
 
       } else {
 
          Long64_t bytesRead = -1;
-         Long64_t totalEntries = -1;
 
          (*r) >> latency >> proctime >> proccpu;
          // only read new info if available
@@ -1647,14 +1659,24 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
          status = new TProofProgressStatus(totev, bytesRead, -1, proctime, proccpu);
       }
 
-      if (AddProcessed(sl, status, latency))
-         Error("GetNextPacket", "the worker processed a different # of entries");
-      if (fProgressStatus->GetEntries() >= fTotalEntries) {
-         if (fProgressStatus->GetEntries() > fTotalEntries)
-            Error("GetNextPacket", "Processed too many entries! (%lld, %lld)", fProgressStatus->GetEntries(), fTotalEntries);
-         // Send last timer message and stop the timer
-         HandleTimer(0);
-         SafeDelete(fProgress);
+      if (totalEntries >= 0) {
+         if (AddProcessed(sl, status, latency))
+            Error("GetNextPacket", "the worker processed a different # of entries");
+         if (fProgressStatus->GetEntries() >= fTotalEntries) {
+            if (fProgressStatus->GetEntries() > fTotalEntries)
+               Error("GetNextPacket", "Processed too many entries! (%lld, %lld)", fProgressStatus->GetEntries(), fTotalEntries);
+            // Send last timer message and stop the timer
+            HandleTimer(0);
+            SafeDelete(fProgress);
+         }
+      } else if (file && file->GetElement()) {
+         Info("GetNextPacket", "file '%s' could not be open: invalidating related element",
+                               file->GetElement()->GetName()); 
+         file->GetElement()->Invalidate();
+         file->SetDone();
+         // Add it to the failed packets list.
+         if (!fFailedPackets) fFailedPackets = new TList();
+         fFailedPackets->Add(file->GetElement());
       }
    } else {
       firstPacket = kTRUE;
@@ -1665,7 +1687,6 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       return 0;
    }
 
-   TFileStat *file = slstat->fCurFile;
    TString nodeName;
    if (file != 0) nodeName = file->GetNode()->GetName();
    TString nodeHostName(slstat->GetName());

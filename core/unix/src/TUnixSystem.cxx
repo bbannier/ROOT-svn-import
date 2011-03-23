@@ -227,7 +227,12 @@ extern "C" {
 #   define HAVE_DLADDR
 #endif
 #if defined(R__MACOSX)
-#   define USE_GDB_STACK_TRACE
+#   if defined(MAC_OS_X_VERSION_10_5)
+#      define HAVE_BACKTRACE_SYMBOLS_FD
+#      define HAVE_DLADDR
+#   else
+#      define USE_GDB_STACK_TRACE
+#   endif
 #endif
 
 #ifdef HAVE_U_STACK_TRACE
@@ -378,7 +383,7 @@ static const char *GetExePath()
    return exepath;
 }
 
-#if defined(HAVE_DLADDR)
+#if defined(HAVE_DLADDR) && !defined(R__MACOSX)
 //______________________________________________________________________________
 static void SetRootSys()
 {
@@ -421,6 +426,20 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
    TString lib = _dyld_get_image_name(i++);
 
 #ifndef ROOTPREFIX
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+   // first loaded is the app so set ROOTSYS to app bundle
+   if (i == 1) {
+      char respath[kMAXPATHLEN];
+      if (!realpath(lib, respath)) {
+         if (!gSystem->Getenv("ROOTSYS"))
+            ::SysError("TUnixSystem::DylibAdded", "error getting realpath of %s", gSystem->BaseName(lib));
+      } else {
+         TString rs = gSystem->DirName(respath);
+         rs.ReplaceAll(" ", "\\ ");
+         gSystem->Setenv("ROOTSYS", rs);
+      }
+   }
+#else
    if (lib.EndsWith("libCore.dylib") || lib.EndsWith("libCore.so")) {
       char respath[kMAXPATHLEN];
       if (!realpath(lib, respath)) {
@@ -431,6 +450,7 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
          gSystem->Setenv("ROOTSYS", gSystem->DirName(rs));
       }
    }
+#endif
 #endif
 
    // when libSystem.B.dylib is loaded we have finished loading all dylibs
@@ -1178,7 +1198,7 @@ void TUnixSystem::CheckChilds()
    while ((pid = UnixWaitchild()) > 0) {
       TIter next(zombieHandler);
       register UnixPtty *pty;
-      while (pty = (UnixPtty*) next())
+      while ((pty = (UnixPtty*) next()))
          if (pty->GetPid() == pid) {
             zombieHandler->RemovePtr(pty);
             pty->DiedNotify();
@@ -2021,9 +2041,7 @@ void TUnixSystem::Exit(int code, Bool_t mode)
 
    // Insures that the files and sockets are closed before any library is unloaded!
    if (gROOT) {
-      if (gROOT->GetListOfFiles()) gROOT->GetListOfFiles()->Delete("slow");
-      if (gROOT->GetListOfSockets()) gROOT->GetListOfSockets()->Delete();
-      if (gROOT->GetListOfMappedFiles()) gROOT->GetListOfMappedFiles()->Delete("slow");
+      gROOT->CloseFiles();
    }
 
    if (mode)
@@ -2060,10 +2078,15 @@ void TUnixSystem::StackTrace()
    }
    if (gdbscript == "") {
 #ifdef ROOTETCDIR
-      gdbscript.Form("%s/gdb-backtrace.sh ", ROOTETCDIR);
+      gdbscript.Form("%s/gdb-backtrace.sh", ROOTETCDIR);
 #else
-      gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
+      gdbscript.Form("%s/etc/gdb-backtrace.sh", gSystem->Getenv("ROOTSYS"));
 #endif
+      if (AccessPathName(gdbscript, kReadPermission)) {
+         fprintf(stderr, "Error in <TUnixSystem::StackTrace> script %s is missing\n", gdbscript.Data());
+         return;
+      }
+      gdbscript += " ";
    }
 
    TString gdbmess = gEnv->GetValue("Root.StacktraceMessage", "");
@@ -2135,7 +2158,7 @@ void TUnixSystem::StackTrace()
    dup2(stderrfd, STDERR_FILENO);
    close(newfd);
 */
-#elif defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_DLADDR)  // linux
+#elif defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_DLADDR)  // linux + MacOS X >= 10.5
    // we could have used backtrace_symbols_fd, except its output
    // format is pretty bad, so recode that here :-(
 
@@ -2147,12 +2170,20 @@ void TUnixSystem::StackTrace()
    const char *cppfiltarg = "";
 #ifdef R__B64
    const char *format1 = " 0x%016lx in %.200s %s 0x%lx from %.200s\n";
+#ifdef R__MACOSX
+   const char *format2 = " 0x%016lx in %.200s\n";
+#else
    const char *format2 = " 0x%016lx in %.200s at %.200s from %.200s\n";
+#endif
    const char *format3 = " 0x%016lx in %.200s from %.200s\n";
    const char *format4 = " 0x%016lx in <unknown function>\n";
 #else
    const char *format1 = " 0x%08lx in %.200s %s 0x%lx from %.200s\n";
+#ifdef R__MACOSX
+   const char *format2 = " 0x%08lx in %.200s\n";
+#else
    const char *format2 = " 0x%08lx in %.200s at %.200s from %.200s\n";
+#endif
    const char *format3 = " 0x%08lx in %.200s from %.200s\n";
    const char *format4 = " 0x%08lx in <unknown function>\n";
 #endif
@@ -2191,6 +2222,10 @@ void TUnixSystem::StackTrace()
       }
 
       // use gdb to get stack trace
+#ifdef R__MACOSX
+      gdbscript += GetExePath();
+      gdbscript += " ";
+#endif
       gdbscript += GetPid();
       if (gdbmess != "") {
          gdbscript += " ";
@@ -2202,7 +2237,11 @@ void TUnixSystem::StackTrace()
    } else {
       // addr2line uses debug info to convert addresses into file names
       // and line numbers
+#ifdef R__MACOSX
+      char *addr2line = Which(Getenv("PATH"), "atos", kExecutePermission);
+#else
       char *addr2line = Which(Getenv("PATH"), "addr2line", kExecutePermission);
+#endif
       if (addr2line) {
          // might take some time so tell what we are doing...
          if (write(fd, message, strlen(message)) < 0)
@@ -2223,6 +2262,11 @@ void TUnixSystem::StackTrace()
          }
       }
 
+#ifdef R__MACOSX
+      if (addr2line)
+         demangle = kFALSE;  // atos always demangles
+#endif
+
       char buffer[4096];
       void *trace[kMAX_BACKTRACE_DEPTH];
       int  depth = backtrace(trace, kMAX_BACKTRACE_DEPTH);
@@ -2239,6 +2283,11 @@ void TUnixSystem::StackTrace()
             Bool_t  gte = (addr >= symaddr);
             ULong_t diff = (gte) ? addr - symaddr : symaddr - addr;
             if (addr2line && symaddr) {
+               Bool_t nodebug = kTRUE;
+#ifdef R__MACOSX
+               if (libaddr) { }  // use libaddr
+               snprintf(buffer, sizeof(buffer), "%s -p %d 0x%016lx", addr2line, GetPid(), addr);
+#else
                ULong_t offset = (addr >= libaddr) ? addr - libaddr :
                                                     libaddr - addr;
                TString name   = TString(libname);
@@ -2249,13 +2298,17 @@ void TUnixSystem::StackTrace()
                if (noShare) offset = addr;
                if (noPath)  name = "`which " + name + "`";
                snprintf(buffer, sizeof(buffer), "%s -e %s 0x%016lx", addr2line, name.Data(), offset);
-               Bool_t nodebug = kTRUE;
+#endif
                if (FILE *pf = ::popen(buffer, "r")) {
                   char buf[2048];
                   if (fgets(buf, 2048, pf)) {
                      buf[strlen(buf)-1] = 0;  // remove trailing \n
                      if (strncmp(buf, "??", 2)) {
+#ifdef R__MACOSX
+                        snprintf(buffer, sizeof(buffer), format2, addr, buf);
+#else
                         snprintf(buffer, sizeof(buffer), format2, addr, symname, buf, libname);
+#endif
                         nodebug = kFALSE;
                      }
                   }
@@ -4314,6 +4367,19 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
 }
 
 //______________________________________________________________________________
+void TUnixSystem::AddDynamicPath(const char *path)
+{
+   // Add a new directory to the dynamic path.
+
+   if (path) {
+      TString oldpath = DynamicPath(0, kFALSE);
+      oldpath.Append(":");
+      oldpath.Append(path);
+      DynamicPath(oldpath);
+   }
+}
+
+//______________________________________________________________________________
 const char *TUnixSystem::GetDynamicPath()
 {
    // Return the dynamic path (used to find shared libraries).
@@ -4780,6 +4846,11 @@ static void GetDarwinMemInfo(MemInfo_t *meminfo)
 static void GetDarwinProcInfo(ProcInfo_t *procinfo)
 {
    // Get process info for this process on Mac OS X.
+   // Code largely taken from:
+   // http://www.opensource.apple.com/source/top/top-15/libtop.c
+   // The virtual memory usage is slightly over estimated as we don't
+   // subtract shared regions, but the value makes more sense
+   // then pure vsize, which is useless on 64-bit machines.
 
 #ifdef _LP64
 #define vm_region vm_region_64
@@ -4818,9 +4889,10 @@ static void GetDarwinProcInfo(ProcInfo_t *procinfo)
    	mach_port_t object_name;
    	vm_address_t address;
    	vm_region_top_info_data_t info;
-   	vm_size_t vsize, rsize, size;
+   	vm_size_t vsize, vprvt, rsize, size;
    	rsize = ti.resident_size;
    	vsize = ti.virtual_size;
+      vprvt = 0;
       for (address = 0; ; address += size) {
          // get memory region
          count = VM_REGION_TOP_INFO_COUNT;
@@ -4849,14 +4921,37 @@ static void GetDarwinProcInfo(ProcInfo_t *procinfo)
 
                if (b_info.reserved) {
                   vsize -= (SHARED_TEXT_REGION_SIZE + SHARED_DATA_REGION_SIZE);
-                  break;
+                  //break;  // only for vsize
                }
             }
+            // Short circuit the loop if this isn't a shared
+            // private region, since that's the only region
+            // type we care about within the current address range.
+            if (info.share_mode != SM_PRIVATE) {
+               continue;
+            }
+         }
+         switch (info.share_mode) {
+            case SM_COW: {
+               if (info.ref_count == 1) {
+                  vprvt += size;
+               } else {
+                  vprvt += info.private_pages_resident * getpagesize();
+               }
+               break;
+            }
+            case SM_PRIVATE: {
+               vprvt += size;
+               break;
+            }
+            default:
+               break;
          }
       }
 
       procinfo->fMemResident = (Long_t)(rsize / 1024);
-      procinfo->fMemVirtual  = (Long_t)(vsize / 1024);
+      //procinfo->fMemVirtual  = (Long_t)(vsize / 1024);
+      procinfo->fMemVirtual  = (Long_t)(vprvt / 1024);
    }
 }
 #endif

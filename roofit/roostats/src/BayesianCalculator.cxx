@@ -148,7 +148,7 @@ private:
                                               << " x = " << x << " cdf(x) = " << cdf << " +/- " << error << std::endl;
 
       if (!fHasNorm) { 
-         oocoutI((TObject*)0,NumIntegration) << "PosteriorCdfFunction - posterior norm. integral = " 
+         oocoutI((TObject*)0,NumIntegration) << "PosteriorCdfFunction - integral of posterior = " 
                                              << cdf << " +/- " << error << std::endl; 
          return cdf; 
       }
@@ -203,14 +203,14 @@ public:
             new ROOT::Math::Integrator(ROOT::Math::IntegratorOneDim::GetType(integType) ) );
          fIntegratorOneDim->SetFunction(fLikelihood);
          // interested only in relative tolerance
-         fIntegratorOneDim->SetAbsTolerance(1.E-300);
+         //fIntegratorOneDim->SetAbsTolerance(1.E-300);
       }
       else if (fXmin.size() > 1) { // multiDim case          
          fIntegratorMultiDim = 
             std::auto_ptr<ROOT::Math::IntegratorMultiDim>(
                new ROOT::Math::IntegratorMultiDim(ROOT::Math::IntegratorMultiDim::GetType(integType) ) );
          fIntegratorMultiDim->SetFunction(fLikelihood, fXmin.size());
-         fIntegratorMultiDim->SetAbsTolerance(1.E-300);
+         //fIntegratorMultiDim->SetAbsTolerance(1.E-300);
       }
    }
       
@@ -401,16 +401,31 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
    // remove the constant parameters
    RemoveConstantParameters(constrainedParams);
    
-   std::cout <<  "\n in BC::GetPOsteriorFunction " << std::endl;
-   constrainedParams->Print("V");
-
-   std::cout << " prod pdf " << fProductPdf->getVal() << std::endl;
+   //constrainedParams->Print("V");
 
    // use RooFit::Constrain() to make product of likelihood with prior pdf
    fLogLike = fProductPdf->createNLL(*fData, RooFit::Constrain(*constrainedParams) );
 
+   ccoutD(Eval) <<  "BayesianCalculator::GetPosteriorFunction : " 
+                << " pdf x priors = " <<  fProductPdf->getVal() 
+                << " neglogLikelihood = " << fLogLike->getVal() << std::endl;
 
-   std::cout << " log like " << fLogLike->getVal() << std::endl;
+   // check that likelihood evaluation is not inifinity 
+   if ( fLogLike->getVal() > std::numeric_limits<double>::max() ) {
+      coutE(Eval) <<  "BayesianCalculator::GetPosteriorFunction : " 
+                  << " Negative log likelihood evaluates to infinity " << std::endl 
+                  << " Non-const Parameter values : ";
+      RooArgList p(*constrainedParams);
+      for (int i = 0; i < p.getSize(); ++i) {
+         RooRealVar * v = dynamic_cast<RooRealVar *>(&p[i] );
+         if (v!=0) ccoutE(Eval) << v->GetName() << " = " << v->getVal() << "   ";
+      }
+      ccoutE(Eval) << std::endl;
+      ccoutE(Eval) << "--  Perform a full likelihood fit of the model before or set more reasanable parameter values"  
+                   << std::endl; 
+      coutE(Eval) << "BayesianCalculator::GetPosteriorFunction : " << " cannot compute posterior function "  << std::endl; 
+      return 0;
+   }
 
    // if pdf evaluates to zero, should be fixed, but this will
    // stop error messages.
@@ -432,13 +447,18 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
    fNLLMin = 0; 
    if (ret) fNLLMin = minim.FValMinimum();
 
-
-   std::cout << " minimum " << fNLLMin << std::endl;
+   ccoutD(Eval) << "BayesianCalculator::GetPosteriorFunction : minimum of NLL vs POI for POI =  " 
+          << poi->getVal() << " min NLL = " << fNLLMin << std::endl;
 
    delete nllFunc;
    delete constrainedParams;
 
    if ( fNuisanceParameters.getSize() == 0 ||  fIntegrationType.Contains("ROOFIT") ) { 
+
+      ccoutD(Eval) << "BayesianCalculator::GetPosteriorFunction : use ROOFIT integration  " 
+                   << std::endl;
+
+
       // case of no nuisance parameters 
       TString likeName = TString("likelihood_") + TString(fProductPdf->GetName());   
       TString formula; 
@@ -465,9 +485,10 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
 
    }
 
-   fIntegratedLikelihood->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
+   //fIntegratedLikelihood->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
 
-   std::cout << " integr likelihood  " << fIntegratedLikelihood->getVal() << std::endl;
+   // ccoutD(Eval) << "BayesianCalculator::GetPosteriorFunction : use ROOT numerical integration algorithm. "; 
+   // ccoutD(Eval) << " Integrated log-likelihood = " << fIntegratedLikelihood->getVal() << std::endl;
 
 
    return fIntegratedLikelihood; 
@@ -478,10 +499,13 @@ RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
    /// build and return the posterior pdf (i.e posterior function normalized to all range of poi
    ///NOTE: user must delete the returned object 
    
-   RooAbsReal * plike = GetPosteriorFunction(); 
+   RooAbsReal * plike = GetPosteriorFunction();
+   if (!plike) return 0;
+
    
    // create a unique name on the posterior from the names of the components
    TString posteriorName = this->GetName() + TString("_posteriorPdf_") + plike->GetName(); 
+
    RooAbsPdf * posteriorPdf = new RooGenericPdf(posteriorName,"@0",*plike);
 
    return posteriorPdf;
@@ -557,6 +581,7 @@ SimpleInterval* BayesianCalculator::GetInterval() const
       return 0; 
    } 
 
+
    if (fLeftSideFraction < 0 ) { 
       // compute short intervals
       ComputeShortestInterval(); 
@@ -584,7 +609,15 @@ SimpleInterval* BayesianCalculator::GetInterval() const
       }
    }
 
-   fValidInterval = true; 
+   if (!fValidInterval) { 
+      fLower = 1; fUpper = 0;
+      coutE(Eval) << "BayesianCalculator::GetInterval - cannot compute a valid interval - return a dummy [1,0] interval"
+      <<  std::endl;
+   }
+   else {
+      coutI(Eval) << "BayesianCalculator::GetInterval - found a valid interval : [" << fLower << " , " 
+                << fUpper << " ]" << std::endl;
+   }
    
    TString interval_name = TString("BayesianInterval_a") + TString(this->GetName());
    SimpleInterval * interval = new SimpleInterval(interval_name,*poi,fLower,fUpper,ConfidenceLevel());
@@ -609,10 +642,13 @@ double BayesianCalculator::GetMode() const {
 void BayesianCalculator::ComputeIntervalUsingRooFit(double lowerCutOff, double upperCutOff ) const { 
    // compute the interval using RooFit
 
+   coutI(Eval) <<  "BayesianCalculator: Compute interval using RooFit:  posteriorPdf + createCdf + RooBrentRootFinder " << std::endl;
+
    RooRealVar* poi = dynamic_cast<RooRealVar*>( fPOI.first() ); 
    assert(poi);
 
    if (!fPosteriorPdf) fPosteriorPdf = (RooAbsPdf*) GetPosteriorPdf();
+   if (!fPosteriorPdf) return;
          
    RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanNoCdf());
          
@@ -644,14 +680,17 @@ void BayesianCalculator::ComputeIntervalUsingRooFit(double lowerCutOff, double u
    
    delete cdf_bind;
    delete cdf;
+   fValidInterval = true; 
 }
 
 void BayesianCalculator::ComputeIntervalFromCdf(double lowerCutOff, double upperCutOff ) const { 
    // compute the interval using Cdf integration
 
+   coutI(Eval) <<  "BayesianCalculator: Compute the interval from the posterior cdf " << std::endl;
+
    RooRealVar* poi = dynamic_cast<RooRealVar*>( fPOI.first() ); 
    assert(poi);
-   GetPosteriorFunction();
+   if (GetPosteriorFunction() == 0) return; 
 
    // need to remove the constant parameters
    RooArgList bindParams; 
@@ -715,6 +754,7 @@ void BayesianCalculator::ComputeIntervalFromCdf(double lowerCutOff, double upper
    else { 
       fUpper = poi->getMax(); 
    }
+   fValidInterval = true; 
 }
 
 void BayesianCalculator::ApproximatePosterior() const { 
@@ -722,7 +762,7 @@ void BayesianCalculator::ApproximatePosterior() const {
    // scan the values
 
    if (fApproxPosterior) { 
-      // if number of bins of existing function is >= requetsed one - no need to redo the scan
+      // if number of bins of existing function is >= requested one - no need to redo the scan
       if (fApproxPosterior->GetNpx() >= fNScanBins) return;  
       // otherwise redo the scan
       delete fApproxPosterior; 
@@ -730,6 +770,7 @@ void BayesianCalculator::ApproximatePosterior() const {
    }      
 
    RooAbsReal * posterior = GetPosteriorFunction();
+   if (!posterior) return; 
 
    // try to reduce some error messages
    posterior->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
@@ -763,7 +804,11 @@ void BayesianCalculator::ApproximatePosterior() const {
 
 void BayesianCalculator::ComputeIntervalFromApproxPosterior(double lowerCutOff, double upperCutOff ) const { 
    // compute the interval using the approximate posterior function
+
+   ccoutD(Eval) <<  "BayesianCalculator: Compute interval from the approximate posterior " << std::endl;
+
    ApproximatePosterior();
+   if (!fApproxPosterior) return;
 
    double prob[2]; 
    double limits[2];
@@ -772,6 +817,7 @@ void BayesianCalculator::ComputeIntervalFromApproxPosterior(double lowerCutOff, 
    fApproxPosterior->GetQuantiles(2,limits,prob);
    fLower = limits[0]; 
    fUpper = limits[1];
+   fValidInterval = true; 
 }
 
 void BayesianCalculator::ComputeShortestInterval( ) const { 
@@ -780,6 +826,8 @@ void BayesianCalculator::ComputeShortestInterval( ) const {
 
    // compute via the approx posterior function
    ApproximatePosterior(); 
+   if (!fApproxPosterior) return;
+
    TH1D * h1 = dynamic_cast<TH1D*>(fApproxPosterior->GetHistogram() );
    assert(h1 != 0);
    h1->SetName(fApproxPosterior->GetName());
@@ -829,6 +877,7 @@ void BayesianCalculator::ComputeShortestInterval( ) const {
    else 
       coutE(Eval) << "BayesianCalculator::ComputeShortestInterval " << n << " bins are not sufficient " << std::endl;
 
+   fValidInterval = true; 
 
 }
 

@@ -408,7 +408,7 @@ std::string Cint::G__ShadowMaker::GetNonConstTypeName(G__DataMemberInfo &m, bool
          if (*s == '>') lev--;
          if (lev == 0 && strncmp(constwd, s, strlen(constwd)) == 0) {
             const char *after = s + strlen(constwd);
-            if (strspn(after, "&* ") >= 1 || *after == 0) {
+            if (*after == 0 || strspn(after, "&* ") >= 1) {
                s += strlen(constwd) - 1;
                continue;
             }
@@ -724,6 +724,9 @@ void Cint::G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
          while (d.Next()) {
             // fprintf(stderr,"%s %s %ld\n",d.Type()->Name(),d.Name(),d.Property());
             if (d.Property() & G__BIT_ISSTATIC) { // a static member
+               continue;
+            }
+            if (d.Property() & G__BIT_ISUSINGVARIABLE) { // a member brought in via a using statement
                continue;
             }
             if (strcmp("G__virtualinfo", d.Name()) == 0) continue;

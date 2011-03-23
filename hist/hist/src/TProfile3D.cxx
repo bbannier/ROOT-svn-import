@@ -626,7 +626,7 @@ Int_t TProfile3D::Fill(Double_t x, Double_t y, Double_t z, Double_t t)
    Int_t bin,binx,biny,binz;
 
    if (fTmin != fTmax) {
-      if (t <fTmin || t> fTmax) return -1;
+      if (t <fTmin || t> fTmax || TMath::IsNaN(t) ) return -1;
    }
 
    fEntries++;
@@ -676,7 +676,7 @@ Int_t TProfile3D::Fill(Double_t x, Double_t y, Double_t z, Double_t t, Double_t 
    Int_t bin,binx,biny,binz;
 
    if (fTmin != fTmax) {
-      if (t <fTmin || z> fTmax) return -1;
+      if (t <fTmin || z> fTmax || TMath::IsNaN(t) ) return -1;
    }
 
    Double_t u= (w > 0 ? w : -w);
@@ -831,7 +831,7 @@ void TProfile3D::GetStats(Double_t *stats) const
             for (binx=fXaxis.GetFirst();binx<=fXaxis.GetLast();binx++) {
                bin = GetBin(binx,biny,binz);
                w         = fBinEntries.fArray[bin];
-               w2        = (fBinSumw2.fN ? fBinSumw2.fArray[bin] : w*w );
+               w2        = (fBinSumw2.fN ? fBinSumw2.fArray[bin] : w );
                x         = fXaxis.GetBinCenter(binx);
                stats[0]  += w;
                stats[1]  += w2;

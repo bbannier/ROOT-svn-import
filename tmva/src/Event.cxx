@@ -34,23 +34,19 @@
 #include <iomanip>
 #include <cassert>
 #include "TCut.h"
- 
-Int_t TMVA::Event::fgCount = 0;
-std::vector<Float_t*>* TMVA::Event::fgValuesDynamic = 0;
 
 //____________________________________________________________
-TMVA::Event::Event() 
+TMVA::Event::Event()
    : fValues(),
+     fValuesDynamic(0),
      fTargets(),
      fSpectators(),
-     fVariableArrangement(0),
      fClass(0),
      fWeight(1.0),
      fBoostWeight(1.0),
      fDynamic(kFALSE)
 {
    // copy constructor
-   fgCount++; 
 }
 
 //____________________________________________________________
@@ -60,16 +56,15 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
                     Double_t weight,
                     Double_t boostweight )
    : fValues(ev),
+     fValuesDynamic(0),
      fTargets(tg),
      fSpectators(0),
-     fVariableArrangement(0),
      fClass(cls),
      fWeight(weight),
      fBoostWeight(boostweight),
      fDynamic(kFALSE)
 {
    // constructor
-   fgCount++;
 }
 
 //____________________________________________________________
@@ -80,16 +75,15 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
                     Double_t weight,
                     Double_t boostweight )
    : fValues(ev),
+     fValuesDynamic(0),
      fTargets(tg),
      fSpectators(vi),
-     fVariableArrangement(0),
      fClass(cls),
      fWeight(weight),
      fBoostWeight(boostweight),
      fDynamic(kFALSE)
 {
    // constructor
-   fgCount++;
 }
 
 //____________________________________________________________
@@ -98,107 +92,117 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
                     Double_t weight,
                     Double_t boostweight )
    : fValues(ev),
+     fValuesDynamic(0),
      fTargets(0),
      fSpectators(0),
-     fVariableArrangement(0),
      fClass(cls),
      fWeight(weight),
      fBoostWeight(boostweight),
      fDynamic(kFALSE)
 {
    // constructor
-   fgCount++;
 }
 
 //____________________________________________________________
 TMVA::Event::Event( const std::vector<Float_t*>*& evdyn, UInt_t nvar )
    : fValues(nvar),
+     fValuesDynamic(0),
      fTargets(0),
      fSpectators(evdyn->size()-nvar),
-     fVariableArrangement(0),
      fClass(0),
      fWeight(0),
      fBoostWeight(0),
      fDynamic(true)
 {
    // constructor for single events
-   fgValuesDynamic = (std::vector<Float_t*>*) evdyn;
-   fgCount++;
+   fValuesDynamic = (std::vector<Float_t*>*) evdyn;
 }
 
 //____________________________________________________________
 TMVA::Event::Event( const Event& event ) 
    : fValues(event.fValues),
+     fValuesDynamic(event.fValuesDynamic),
      fTargets(event.fTargets),
      fSpectators(event.fSpectators),
-     fVariableArrangement(event.fVariableArrangement),
      fClass(event.fClass),
      fWeight(event.fWeight),
      fBoostWeight(event.fBoostWeight),
      fDynamic(event.fDynamic)
 {
    // copy constructor
-   fgCount++; 
-}
+   if (event.fDynamic){
+      fValues.clear();
+      UInt_t nvar = event.GetNVariables();
+      UInt_t idx=0;
+      std::vector<Float_t*>::iterator itDyn=event.fValuesDynamic->begin(), itDynEnd=event.fValuesDynamic->end();
+      for (; itDyn!=itDynEnd && idx<nvar; ++itDyn){
+	 Float_t value=*(*itDyn);
+	 fValues.push_back( value );
+	 ++idx;
+      }
+      fSpectators.clear();
+      for (; itDyn!=itDynEnd; ++itDyn){
+	 Float_t value=*(*itDyn);
+	 fSpectators.push_back( value );
+	 ++idx;
+      }
 
-//____________________________________________________________
-TMVA::Event::~Event() 
-{
-   // Event destructor
-   fgCount--;;
-   if (fDynamic && fgCount==0) TMVA::Event::ClearDynamicVariables();
-}
- 
-//____________________________________________________________
-void TMVA::Event::ClearDynamicVariables() 
-{ 
-   // clear global variable
-   if (fgValuesDynamic != 0) { 
-      fgValuesDynamic->clear();
-      delete fgValuesDynamic;
-      fgValuesDynamic = 0;
+      fDynamic=kFALSE;
+      fValuesDynamic=NULL;
    }
 }
 
 //____________________________________________________________
-void TMVA::Event::SetVariableArrangement( std::vector<UInt_t>* const m ) const {
-   // set the variable arrangement
-
-   // mapping from global variable index (the position in the vector)
-   // to the new index in the subset of variables used by the
-   // composite classifier
-   fVariableArrangement = m;
+TMVA::Event::~Event()
+{
+   // Event destructor
 }
-
-
 
 //____________________________________________________________
 void TMVA::Event::CopyVarValues( const Event& other )
 {
    // copies only the variable values
    fValues      = other.fValues;
+   fTargets     = other.fTargets;
+   fSpectators  = other.fSpectators;
+   if (other.fDynamic){
+      UInt_t nvar = other.GetNVariables();
+      fValues.clear();
+      UInt_t idx=0;
+      std::vector<Float_t*>::iterator itDyn=other.fValuesDynamic->begin(), itDynEnd=other.fValuesDynamic->end();
+      for (; itDyn!=itDynEnd && idx<nvar; ++itDyn){
+	 Float_t value=*(*itDyn);
+	 fValues.push_back( value );
+	 ++idx;
+      }
+      fSpectators.clear();
+      for (; itDyn!=itDynEnd; ++itDyn){
+	 Float_t value=*(*itDyn);
+	 fSpectators.push_back( value );
+	 ++idx;
+      }
+   }
+   fDynamic     = kFALSE;
+   fValuesDynamic = NULL;
+
    fClass       = other.fClass;
    fWeight      = other.fWeight;
    fBoostWeight = other.fBoostWeight;
 }
 
 //____________________________________________________________
-Float_t TMVA::Event::GetValue( UInt_t ivar ) const 
-{ 
+Float_t TMVA::Event::GetValue( UInt_t ivar ) const
+{
    // return value of i'th variable
    Float_t retval;
-   if (fVariableArrangement==0) {
-      retval = fDynamic ?( *(*fgValuesDynamic)[ivar] ) : fValues[ivar]; 
-   } 
-   else {
-      UInt_t mapIdx = (*fVariableArrangement)[ivar];
-      if (fDynamic) {
-         retval = *(*fgValuesDynamic)[mapIdx];
-      } 
-      else {
-         retval = ( mapIdx<fValues.size() ) ? fValues[mapIdx] : fSpectators[mapIdx-fValues.size()];
-      }
+
+   if (fDynamic){
+      retval = *((*fValuesDynamic).at(ivar));
    }
+   else{
+      retval = fValues.at(ivar);
+   }
+
    return retval;
 }
 
@@ -206,25 +210,18 @@ Float_t TMVA::Event::GetValue( UInt_t ivar ) const
 Float_t TMVA::Event::GetSpectator( UInt_t ivar) const 
 {
    // return spectator content
-   if (fDynamic) return *(fgValuesDynamic->at(GetNVariables()+ivar));
+   if (fDynamic) return *(fValuesDynamic->at(GetNVariables()+ivar));
    else          return fSpectators.at(ivar);
 }
 
 //____________________________________________________________
-const std::vector<Float_t>& TMVA::Event::GetValues() const 
-{  
+const std::vector<Float_t>& TMVA::Event::GetValues() const
+{
    // return value vector
-   if (fVariableArrangement!=0) {
-      assert(0);
-   }
    if (fDynamic) {
-//       if (fgValuesDynamic->size()-GetNSpectators() != fValues.size()) {
-//          std::cout << "ERROR Event::GetValues() is trying to change the size of the variable vector, exiting ..." << std::endl;
-//          assert(0);
-//       }
       fValues.clear();
-      for (std::vector<Float_t*>::const_iterator it = fgValuesDynamic->begin(); 
-           it != fgValuesDynamic->end()-GetNSpectators(); it++) { 
+      for (std::vector<Float_t*>::const_iterator it = fValuesDynamic->begin(), itEnd=fValuesDynamic->end()-GetNSpectators(); 
+           it != itEnd; ++it) { 
          Float_t val = *(*it); 
          fValues.push_back( val ); 
       }
@@ -236,12 +233,7 @@ const std::vector<Float_t>& TMVA::Event::GetValues() const
 UInt_t TMVA::Event::GetNVariables() const 
 {
    // accessor to the number of variables 
-
-   // if variables have to arranged (as it is the case for the
-   // composite classifier) the number of the variables changes
-
-   if (fVariableArrangement==0) return fValues.size();
-   else                         return fVariableArrangement->size();
+   return fValues.size();
 }
 
 //____________________________________________________________
@@ -256,11 +248,7 @@ UInt_t TMVA::Event::GetNSpectators() const
 {
    // accessor to the number of spectators 
 
-   // if variables have to arranged (as it is the case for the
-   // composite classifier) the number of the variables changes
-
-   if (fVariableArrangement==0) return fSpectators.size();
-   else                         return fValues.size()-fVariableArrangement->size();
+   return fSpectators.size();
 }
 
 
@@ -268,10 +256,10 @@ UInt_t TMVA::Event::GetNSpectators() const
 void TMVA::Event::SetVal( UInt_t ivar, Float_t val ) 
 {
    // set variable ivar to val
-   if ((fDynamic ?( (*fgValuesDynamic).size() ) : fValues.size())<=ivar)
-      (fDynamic ?( (*fgValuesDynamic).resize(ivar+1) ) : fValues.resize(ivar+1));
+   if ((fDynamic ?( (*fValuesDynamic).size() ) : fValues.size())<=ivar)
+      (fDynamic ?( (*fValuesDynamic).resize(ivar+1) ) : fValues.resize(ivar+1));
 
-   (fDynamic ?( *(*fgValuesDynamic)[ivar] ) : fValues[ivar])=val;
+   (fDynamic ?( *(*fValuesDynamic)[ivar] ) : fValues[ivar])=val;
 }
 
 //____________________________________________________________

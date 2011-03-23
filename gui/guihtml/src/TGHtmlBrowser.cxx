@@ -196,9 +196,10 @@ TGHtmlBrowser::TGHtmlBrowser(const char *filename, const TGWindow *p, UInt_t w, 
    fComboBox->Resize(200, fURL->GetDefaultHeight());
    fURL->Connect("ReturnPressed()", "TGHtmlBrowser", this, "URLChanged()");
 
-   fComboBox->AddEntry(filename,1);
-   fURL->SetText(filename);
-
+   if (filename) {
+      fComboBox->AddEntry(filename, 1);
+      fURL->SetText(filename);
+   }
    fComboBox->Select(0);
    fComboBox->Connect("Selected(char *)", "TGHtmlBrowser", this, "Selected(char *)");
 
@@ -635,7 +636,7 @@ Bool_t TGHtmlBrowser::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                         new TWin32SplashThread(kTRUE);
 #else
                         char str[32];
-                        sprintf(str, "About ROOT %s...", gROOT->GetVersion());
+                        snprintf(str, 32, "About ROOT %s...", gROOT->GetVersion());
                         TRootHelpDialog *hd = new TRootHelpDialog(this, str,
                                                                   600, 400);
                         hd->SetText(gHelpAbout);

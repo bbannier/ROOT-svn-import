@@ -1349,6 +1349,7 @@ void TGTextLayout::ToPostscript(TString *result) const
             // following this sequence could be interpreted by
             // Postscript as part of this sequence.
 
+               // coverity[secure_coding]
                sprintf(buf + used, "\\%03o", c);
                used += 4;
             } else {
@@ -1983,12 +1984,15 @@ Bool_t TGFontPool::ParseFontName(const char *string, FontAttributes_t *fa)
 
    while ((s = GetToken(0))) {
       n = FindStateNum(gWeightMap, s);
-      if (n != kFontWeightUnknown) {
+      if ((EFontWeight)n != kFontWeightUnknown) {
          fa->fWeight = n;
          continue;
       }
       n = FindStateNum(gSlantMap, s);
-      if (n != kFontSlantUnknown) {
+      // tell coverity that n is an integer value, and not an enum, even if 
+      // we compare it with an enum value (which is -1 in both case anyway)
+      // coverity[mixed_enums]
+      if ((EFontSlant)n != kFontSlantUnknown) {
          fa->fSlant = n;
          continue;
       }

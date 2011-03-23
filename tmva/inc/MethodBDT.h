@@ -110,6 +110,8 @@ namespace TMVA {
 
    private:
       Double_t GetMvaValue( Double_t* err, Double_t* errUpper, UInt_t useNTrees );
+      Double_t PrivateGetMvaValue( TMVA::Event& ev, Double_t* err=0, Double_t* errUpper=0, UInt_t useNTrees=0 );
+      void     BoostMonitor(Int_t iTree);
 
    public:
       const std::vector<Float_t>& GetMulticlassValues();
@@ -158,7 +160,6 @@ namespace TMVA {
 
       void GetHelpMessage() const;
 
-      virtual Bool_t        IsSignalLike() { return GetMvaValue() > 0;}
    protected:
       void DeclareCompatibilityOptions();
 
@@ -205,7 +206,7 @@ namespace TMVA {
       Bool_t                          fBaggedGradBoost; // turn bagging in combination with grad boost on/off
       Double_t                        fSampleFraction;  // fraction of events used for bagged grad boost
       Double_t                        fSumOfWeights;    // sum of all event weights
-      std::vector<std::pair<Double_t, Double_t> >       fWeightedResiduals;  // weighted regression residuals
+      std::map< TMVA::Event*, std::pair<Double_t, Double_t> >       fWeightedResiduals;  // weighted regression residuals
       std::map< TMVA::Event*,std::vector<double> > fResiduals; // individual event residuals for gradient boost
 
       //options for the decision Tree
@@ -236,7 +237,7 @@ namespace TMVA {
 
       Double_t                         fSampleSizeFraction; // relative size of bagged event sample to original sample size
       Bool_t                           fNoNegWeightsInTraining; // ignore negative event weights in the training
-
+      Bool_t                           fDoBoostMonitor; //create control plot with ROC integral vs tree number
 
 
       //some histograms for monitoring

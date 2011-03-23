@@ -3542,33 +3542,48 @@ bool testMergeSparse()
 bool testMerge1DLabelSame()
 {
    // Tests the merge with some equal labels method for 1D Histograms
+   // number of labels used = number of bins
 
    TH1D* h1 = new TH1D("merge1DLabelSame-h1", "h1-Title", numberOfBins, minRange, maxRange);
    TH1D* h2 = new TH1D("merge1DLabelSame-h2", "h2-Title", numberOfBins, minRange, maxRange);
    TH1D* h3 = new TH1D("merge1DLabelSame-h3", "h3-Title", numberOfBins, minRange, maxRange);
    TH1D* h4 = new TH1D("merge1DLabelSame-h4", "h4-Title", numberOfBins, minRange, maxRange);
+   
+   const char labels[10][5] = {"aaa","bbb","ccc","ddd","eee","fff","ggg","hhh","iii","lll"};
 
-   h1->GetXaxis()->SetBinLabel(4, "alpha");
-   h2->GetXaxis()->SetBinLabel(4, "alpha");
-   h3->GetXaxis()->SetBinLabel(4, "alpha");
-   h4->GetXaxis()->SetBinLabel(4, "alpha");
-
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
-      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h1->Fill(x, 1.0);
-      h4->Fill(x, 1.0);
+   for (Int_t i = 0; i < numberOfBins; ++i) {
+      h1->GetXaxis()->SetBinLabel(i+1, labels[i]);
+      h2->GetXaxis()->SetBinLabel(i+1, labels[i]);
+      h3->GetXaxis()->SetBinLabel(i+1, labels[i]);
+      h4->GetXaxis()->SetBinLabel(i+1, labels[i]);
    }
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
-      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h2->Fill(x, 1.0);
-      h4->Fill(x, 1.0);
+
+   for ( Int_t e = 0; e < nEvents ; ++e ) {
+      Int_t i = r.Integer(11);
+      if (i < 10)  { 
+         h1->Fill(labels[i], 1.0);
+         h4->Fill(labels[i], 1.0);
+      }
+      else {
+         // add one empty label
+         // should be added in underflow bin
+         // to test merge of underflows 
+         h1->Fill("", 1.0);
+         h4->Fill("", 1.0);
+      }
    }
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
-      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h3->Fill(x, 1.0);
-      h4->Fill(x, 1.0);
+   for ( Int_t e = 0; e < nEvents ; ++e ) {
+      Int_t i = r.Integer(10);
+      h2->Fill(labels[i], 1.0);
+      h4->Fill(labels[i],1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents ; ++e ) {
+      Int_t i = r.Integer(10);
+      h3->Fill(labels[i], 1.0);
+      h4->Fill(labels[i], 1.0);
    }
 
    TList *list = new TList;
@@ -3577,6 +3592,7 @@ bool testMerge1DLabelSame()
 
    h1->Merge(list);
 
+   
    bool ret = equals("MergeLabelSame1D", h1, h4, cmpOptStats, 1E-10);
    delete h1;
    delete h2;
@@ -3587,6 +3603,10 @@ bool testMerge1DLabelSame()
 bool testMerge2DLabelSame()
 {
    // Tests the merge with some equal labels method for 2D Histograms
+   // Note by LM (Dec 2010) 
+   // In reality in 2D histograms the Merge does not support 
+   // histogram with labels - just merges according to the x-values 
+   // This test is basically useless
 
    TH2D* h1 = new TH2D("merge2DLabelSame-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
@@ -3887,43 +3907,64 @@ bool testMergeProf3DLabelSame()
 
 bool testMerge1DLabelDiff()
 {
-   // Tests the merge with some different labels method for 1D Histograms
-
-   // This test fails, as expected! That is why it is not run in the tests suite.
+   // Tests the merge with some different labels  for 1D Histograms
 
    TH1D* h1 = new TH1D("merge1DLabelDiff-h1", "h1-Title", numberOfBins, minRange, maxRange);
    TH1D* h2 = new TH1D("merge1DLabelDiff-h2", "h2-Title", numberOfBins, minRange, maxRange);
    TH1D* h3 = new TH1D("merge1DLabelDiff-h3", "h3-Title", numberOfBins, minRange, maxRange);
    TH1D* h4 = new TH1D("merge1DLabelDiff-h4", "h4-Title", numberOfBins, minRange, maxRange);
 
-   h1->GetXaxis()->SetBinLabel(2, "gamma");
-   h2->GetXaxis()->SetBinLabel(6, "beta");
-   h3->GetXaxis()->SetBinLabel(4, "alpha");
-   h4->GetXaxis()->SetBinLabel(4, "alpha");
+   // This test fails, as expected! That is why it is not run in the tests suite.
+   const char labels[10][5] = {"aaa","bbb","ccc","ddd","eee","fff","ggg","hhh","iii","lll"};
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
-      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h1->Fill(x, 1.0);
-      h4->Fill(x, 1.0);
+   //choose random same labels (nbins -2)
+   std::vector<TString> labels2(8);
+   for (int i = 0; i < 8; ++i)
+      labels2[i] = labels[r.Integer(10)]; 
+
+   for ( Int_t e = 0; e < nEvents ; ++e ) {
+      int i = r.Integer(8);
+      if (i < 8)  { 
+         h1->Fill(labels2[i], 1.0);
+         h4->Fill(labels2[i], 1.0);
+      }
+      else {
+         // add one empty label
+         h1->Fill("", 1.0);
+         h4->Fill("", 1.0);
+      }
    }
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
-      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h2->Fill(x, 1.0);
-      h4->Fill(x, 1.0);
+   for (int i = 0; i < 8; ++i)
+      labels2[i] = labels[r.Integer(10)]; 
+   for ( Int_t e = 0; e < nEvents ; ++e ) {
+      Int_t i = r.Integer(8);
+      h2->Fill(labels2[i], 1.0);
+      h4->Fill(labels2[i],1.0);
    }
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
-      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h3->Fill(x, 1.0);
-      h4->Fill(x, 1.0);
+   for (int i = 0; i < 8; ++i)
+      labels2[i] = labels[r.Integer(10)]; 
+   for ( Int_t e = 0; e < nEvents ; ++e ) {
+      Int_t i = r.Integer(8);
+      h3->Fill(labels2[i], 1.0);
+      h4->Fill(labels2[i], 1.0);
    }
+
+   // test ordering label for one histo
+   h2->LabelsOption("a");
+   h3->LabelsOption(">");
+
 
    TList *list = new TList;
    list->Add(h2);
    list->Add(h3);
    
    h1->Merge(list);
+
+   // need to order the histo to compare them
+   h1->LabelsOption("a");
+   h4->LabelsOption("a");
 
    bool ret = equals("MergeLabelDiff1D", h1, h4, cmpOptStats, 1E-10);
    delete h1;
@@ -4259,19 +4300,19 @@ bool testMerge1DLabelAll()
       h4->GetXaxis()->SetBinLabel(i, name.str().c_str());
    }
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+   for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h1->Fill(x, 1.0);
       h4->Fill(x, 1.0);
    }
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+   for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(x, 1.0);
       h4->Fill(x, 1.0);
    }
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+   for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h3->Fill(x, 1.0);
       h4->Fill(x, 1.0);
@@ -4281,9 +4322,17 @@ bool testMerge1DLabelAll()
    list->Add(h2);
    list->Add(h3);
    
+   // test to re-order some histos 
+   h1->LabelsOption("a");
+   h2->LabelsOption("<");
+   h3->LabelsOption(">");
+   
    h1->Merge(list);
 
-   bool ret = equals("MergeLabelAll1D", h1, h4, cmpOptStats, 1E-10);
+   h4->LabelsOption("a");
+   
+
+   bool ret = equals("MergeLabelAll1D", h1, h4, cmpOptNone, 1E-10);
    delete h1;
    delete h2;
    delete h3;
@@ -4604,40 +4653,34 @@ bool testMergeProf3DLabelAll()
 
 bool testMerge1DLabelAllDiff()
 {
-   // Tests the merge method with fully differently labelled 1D Histograms
-
-   // This test fails, as expected! That is why it is not run in the tests suite.
+   //LM: Dec 2010 : rmeake this test as 
+   // a test of histogram with some different labels not all filled 
 
    TH1D* h1 = new TH1D("merge1DLabelAllDiff-h1", "h1-Title", numberOfBins, minRange, maxRange);
    TH1D* h2 = new TH1D("merge1DLabelAllDiff-h2", "h2-Title", numberOfBins, minRange, maxRange);
    TH1D* h3 = new TH1D("merge1DLabelAllDiff-h3", "h3-Title", numberOfBins, minRange, maxRange);
    TH1D* h4 = new TH1D("merge1DLabelAllDiff-h4", "h4-Title", numberOfBins, minRange, maxRange);
 
-   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
-      ostringstream name;
-      name << (char) ((int) 'a' + i - 1);
-      h1->GetXaxis()->SetBinLabel(i, name.str().c_str());
-      name << 1;
-      h2->GetXaxis()->SetBinLabel(i, name.str().c_str());
-      name << 2;
-      h3->GetXaxis()->SetBinLabel(i, name.str().c_str());
-      name << 3;
-      h4->GetXaxis()->SetBinLabel(i, name.str().c_str());
-   }
+   Int_t ibin = r.Integer(numberOfBins)+1;
+   h1->GetXaxis()->SetBinLabel(ibin,"aaa");
+   ibin = r.Integer(numberOfBins)+1;
+   h2->GetXaxis()->SetBinLabel(ibin,"bbb");
+   ibin = r.Integer(numberOfBins)+1;
+   h3->GetXaxis()->SetBinLabel(ibin,"ccc");
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+   for ( Int_t e = 0; e < nEvents ; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h1->Fill(x, 1.0);
       h4->Fill(x, 1.0);
    }
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+   for ( Int_t e = 0; e < nEvents ; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(x, 1.0);
       h4->Fill(x, 1.0);
    }
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+   for ( Int_t e = 0; e < nEvents ; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h3->Fill(x, 1.0);
       h4->Fill(x, 1.0);
@@ -4646,8 +4689,16 @@ bool testMerge1DLabelAllDiff()
    TList *list = new TList;
    list->Add(h2);
    list->Add(h3);
-   
+
+   Int_t prevErrorLevel = gErrorIgnoreLevel; 
+   // // to suppress a Warning message
+   //   Warning in <TH1D::Merge>: Histogram FirstClone contains non-empty bins without labels - 
+   //  falling back to bin numbering mode
+   gErrorIgnoreLevel = kError; 
+
    h1->Merge(list);
+   gErrorIgnoreLevel = prevErrorLevel;
+
    
    bool ret = equals("MergeLabelAllDiff1D", h1, h4, cmpOptStats, 1E-10);
    delete h1;
@@ -6946,16 +6997,18 @@ bool testIntegerRebin()
    UInt_t seed = r.GetSeed();
    TH1D* h1 = new TH1D("h1","Original Histogram", TMath::Nint( r.Uniform(1, 5) ) * rebin, minRange, maxRange);
    r.SetSeed(seed);
+   h1->Sumw2();
    for ( Int_t i = 0; i < nEvents; ++i )
-      h1->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+      h1->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) , r.Uniform(0,10) );
 
    TH1D* h2 = static_cast<TH1D*>( h1->Rebin(rebin, "testIntegerRebin") );
 
    TH1D* h3 = new TH1D("testIntegerRebin2", "testIntegerRebin2", 
                        h1->GetNbinsX() / rebin, minRange, maxRange);
    r.SetSeed(seed);
+   h3->Sumw2();
    for ( Int_t i = 0; i < nEvents; ++i )
-      h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+      h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) , r.Uniform(0,10) );
 
    bool ret = equals("TestIntegerRebinHist", h2, h3, cmpOptStats  );
    delete h1;
@@ -7141,27 +7194,78 @@ bool test2DRebin()
    Int_t yrebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
    // make the bins of the orginal histo not an exact divider to leave an extra bin
    TH2D* h2d = new TH2D("h2d","Original Histogram", 
-                       xrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange, 
-                       yrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange);
+                        xrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange, 
+                        yrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange);
 
+   h2d->Sumw2();
    UInt_t seed = r.GetSeed();
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
-      h2d->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ));
+      h2d->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ),
+                 r.Uniform(0,10.) );
+
 
    TH2D* h2d2 = (TH2D*) h2d->Rebin2D(xrebin,yrebin, "p2d2");
 
    // range of rebinned histogram may be different than original one
    TH2D* h3 = new TH2D("test2DRebin", "test2DRebin", 
                        h2d->GetNbinsX() / xrebin, h2d2->GetXaxis()->GetXmin(), h2d2->GetXaxis()->GetXmax(),
-                       h2d->GetNbinsY() / yrebin, h2d2->GetYaxis()->GetXmin(), h2d2->GetYaxis()->GetXmax() );
+                       h2d->GetNbinsY() / yrebin, h2d2->GetYaxis()->GetXmin(), h2d2->GetYaxis()->GetXmax());
+
+   h3->Sumw2();
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
-      h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+      h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ),
+                r.Uniform(0,10.) );
+   
 
    bool ret = equals("TestIntRebin2D", h2d2, h3, cmpOptStats); // | cmpOptDebug);
    delete h2d;
    delete h2d2;
+   return ret;
+}
+
+bool test3DRebin()
+{
+   // Tests rebin method for 2D Histogram
+
+   Int_t xrebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
+   Int_t yrebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
+   Int_t zrebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
+
+   // make the bins of the orginal histo not an exact divider to leave an extra bin
+   TH3D* h3d = new TH3D("h3d","Original Histogram", 
+                        xrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange, 
+                        yrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange,
+                        zrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange);
+   h3d->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < 10*nEvents; ++i )
+      h3d->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), 
+                 r.Uniform( minRange * .9 , maxRange * 1.1 ),
+                 r.Uniform( minRange * .9 , maxRange * 1.1 ), 
+                 r.Uniform(0,10.) );
+
+   TH3D* h3d2 = (TH3D*) h3d->Rebin3D(xrebin,yrebin, zrebin, "h3-rebin");
+
+   // range of rebinned histogram may be different than original one
+   TH3D* h3 = new TH3D("test3DRebin", "test3DRebin", 
+                       h3d->GetNbinsX() / xrebin, h3d2->GetXaxis()->GetXmin(), h3d2->GetXaxis()->GetXmax(),
+                       h3d->GetNbinsY() / yrebin, h3d2->GetYaxis()->GetXmin(), h3d2->GetYaxis()->GetXmax(),
+                       h3d->GetNbinsZ() / zrebin, h3d2->GetZaxis()->GetXmin(), h3d2->GetZaxis()->GetXmax() );
+   h3->Sumw2();
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < 10*nEvents; ++i )
+      h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ),
+                r.Uniform( minRange * .9 , maxRange * 1.1 ), 
+                r.Uniform( minRange * .9 , maxRange * 1.1 ),
+                r.Uniform(0,10.) );
+
+   bool ret = equals("TestIntRebin3D", h3d2, h3, cmpOptStats); // | cmpOptDebug);
+   delete h3d;
+   delete h3d2;
    return ret;
 }
 
@@ -8681,11 +8785,11 @@ int stressHistogram()
                                         rangeTestPointer };
 
   // Test 4
-   const unsigned int numberOfRebin = 9;
+   const unsigned int numberOfRebin = 10;
    pointer2Test rebinTestPointer[numberOfRebin] = { testIntegerRebin,       testIntegerRebinProfile,
                                                     testIntegerRebinNoName, testIntegerRebinNoNameProfile,
                                                     testArrayRebin,         testArrayRebinProfile,
-                                                    test2DRebin, test2DRebinProfile,
+                                                    test2DRebin, test3DRebin, test2DRebinProfile,
                                                     testSparseRebin1};
    struct TTestSuite rebinTestSuite = { numberOfRebin, 
                                         "Histogram Rebinning..............................................",
@@ -8782,7 +8886,7 @@ int stressHistogram()
 
    // Test 10
    // Merge Tests
-   const unsigned int numberOfMerge = 34;
+   const unsigned int numberOfMerge = 36;
    pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D,                 testMergeProf1D,
                                                     testMergeVar1D,              testMergeProfVar1D,
                                                     testMerge2D,                 testMergeProf2D,
@@ -8792,13 +8896,13 @@ int stressHistogram()
                                                     testMerge2DLabelSame,        testMergeProf2DLabelSame,
                                                     testMerge3DLabelSame,        testMergeProf3DLabelSame,
 
-                                                    /*testMerge1DLabelDiff,*/    testMergeProf1DLabelDiff,
+                                                    testMerge1DLabelDiff,        testMergeProf1DLabelDiff,
                                                     testMerge2DLabelDiff,        testMergeProf2DLabelDiff,
                                                     testMerge3DLabelDiff,        testMergeProf3DLabelDiff,
                                                     testMerge1DLabelAll,         testMergeProf1DLabelAll,
                                                     testMerge2DLabelAll,         testMergeProf2DLabelAll,
                                                     testMerge3DLabelAll,         testMergeProf3DLabelAll,
-                                                    /*testMerge1DLabelAllDiff*/  testMergeProf1DLabelAllDiff,
+                                                    testMerge1DLabelAllDiff,     testMergeProf1DLabelAllDiff,
                                                     testMerge2DLabelAllDiff,     testMergeProf2DLabelAllDiff,
                                                     testMerge3DLabelAllDiff,     testMergeProf3DLabelAllDiff,
                                                     testMerge1DDiff,             testMergeProf1DDiff,
@@ -9145,7 +9249,7 @@ int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
    
    for ( int i = 0; i <= h1->GetNbinsX() + 1; ++i )
       for ( int j = 0; j <= h1->GetNbinsY() + 1; ++j )
-         for ( int h = 0; h <= h1->GetNbinsY() + 1; ++h )
+         for ( int h = 0; h <= h1->GetNbinsZ() + 1; ++h )
       {
          Double_t x = h1->GetXaxis()->GetBinCenter(i);
          Double_t y = h1->GetYaxis()->GetBinCenter(j);

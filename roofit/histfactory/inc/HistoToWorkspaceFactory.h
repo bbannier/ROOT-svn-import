@@ -27,11 +27,12 @@
 #include <TH1F.h>
 #include <TDirectory.h>
 
-//#include "RooStats/HistFactory/EstimateSummary.h"
-
 
 namespace RooStats{
 namespace HistFactory{
+
+  struct EstimateSummary;
+   
   class HistoToWorkspaceFactory: public TObject {
 
     public:
@@ -87,7 +88,8 @@ namespace HistFactory{
       string fFileNamePrefix;
       string fRowTitle;
       vector<string> fSystToFix;
-      double fNomLumi, fLumiError, fLowBin, fHighBin;    
+     double fNomLumi, fLumiError;
+      int  fLowBin, fHighBin;    
       std::stringstream fResultsPrefixStr;
       TFile * fOut_f;
       FILE * pFile;

@@ -1,3 +1,4 @@
+// Example showing confidence intervals with four techniques.
 /*
 IntervalExamples
 
@@ -107,7 +108,7 @@ void IntervalExamples()
   fc.FluctuateNumDataEntries(false); 
 
   // Proof
-  //  ProofConfig pc(*wspace, 4, "workers=4");    // proof-lite
+  //  ProofConfig pc(*wspace, 4, "workers=4", kFALSE);    // proof-lite
   //ProofConfig pc(w, 8, "localhost");    // proof cluster at "localhost"
   //  ToyMCSampler* toymcsampler = (ToyMCSampler*) fc.GetTestStatSampler();
   //  toymcsampler->SetProofConfig(&pc);     // enable proof

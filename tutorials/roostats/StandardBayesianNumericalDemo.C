@@ -1,5 +1,7 @@
+// Standard demo of the numerical Bayesian calculator
+
 /*
-StandardProfileLikelihoodDemo 
+
 
 Author: Kyle Cranmer
 date: Dec. 2010
@@ -129,6 +131,10 @@ void StandardBayesianNumericalDemo(const char* infile = "",
   SimpleInterval* interval = bayesianCalc.GetInterval();
 
   // make a plot (slightly inconsistent interface)
+  // since plotting may take a long time (it requires evaluating 
+  // the posterior in many points) this command will speed up 
+  // by reducing the number of points to plot - do 40
+  bayesianCalc.SetScanOfPosterior(40);
   RooPlot * plot = bayesianCalc.GetPosteriorPlot();
   plot->Draw();
   

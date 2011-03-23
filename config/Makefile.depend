@@ -36,6 +36,7 @@ PROOFPLAYERLIBDEPM     = $(PROOFLIB) $(HISTLIB) $(IOLIB) $(TREELIB) $(NETLIB) \
 PROOFDRAWLIBDEPM       = $(TREEPLAYERLIB) $(G3DLIB) $(GRAFLIB) $(GPADLIB) \
                          $(PROOFPLAYERLIB) $(HISTLIB) $(TREELIB) $(PROOFLIB)
 PROOFXLIBDEPM          = $(NETLIB) $(PROOFLIB) $(THREADLIB)
+PROOFBENCHLIBDEPM      = $(PROOFLIB) $(PROOFDRAWLIB) $(HISTLIB)
 SESSIONVIEWERLIBDEPM   = $(PROOFLIB) $(GUILIB) $(HISTLIB) $(GPADLIB) $(GRAFLIB) \
                          $(TREELIB) $(MATHCORELIB)
 X3DLIBDEPM             = $(G3DLIB) $(GUILIB)
@@ -74,7 +75,7 @@ QTROOTLIBDEPM          = $(GUILIB) $(GQTLIB)
 GQTLIBDEPM             = $(GUILIB) $(GPADLIB) $(GRAFLIB) $(RINTLIB)
 RUBYLIBDEPM            = $(HISTLIB) $(MATHCORELIB)
 GUIBLDLIBDEPM          = $(GUILIB) $(GRAFLIB) $(MATHCORELIB)
-FOAMLIBDEPM            = $(HISTLIB)
+FOAMLIBDEPM            = $(HISTLIB) $(MATHCORELIB)
 ALIENLIBDEPM           = $(XMLLIB) $(NETXLIB) $(TREELIB) $(PROOFPLAYERLIB) \
                          $(NETLIB) $(IOLIB)
 ROOFITCORELIBDEPM      = $(HISTLIB) $(GRAFLIB) $(MATRIXLIB) $(TREELIB) \
@@ -161,6 +162,7 @@ PROOFLIBDEP            = $(PROOFLIBDEPM)
 PROOFPLAYERLIBDEP      = $(PROOFPLAYERLIBDEPM)
 PROOFDRAWLIBDEP        = $(PROOFDRAWLIBDEPM)
 PROOFXLIBDEP           = $(PROOFXLIBDEPM)
+PROOFBENCHLIBDEP       = $(PROOFBENCHLIBDEPM)
 SESSIONVIEWERLIBDEP    = $(SESSIONVIEWERLIBDEPM)
 CLARENSLIBDEP          = $(CLARENSLIBDEPM)
 PEACLIBDEP             = $(PEACLIBDEPM)
@@ -275,6 +277,7 @@ PROOFDRAWLIBEXTRA       = lib/libTreePlayer.lib lib/libGraf3d.lib \
                           lib/libProofPlayer.lib lib/libHist.lib \
                           lib/libTree.lib lib/libProof.lib
 PROOFXLIBEXTRA          = lib/libNet.lib lib/libProof.lib lib/libThread.lib
+PROOFBENCHLIBEXTRA      = lib/libProof.lib lib/libProofDraw.lib lib/libHist.lib
 SESSIONVIEWERLIBEXTRA   = lib/libProof.lib lib/libGui.lib lib/libHist.lib \
                           lib/libGpad.lib lib/libGraf.lib lib/libTree.lib \
                           lib/libMathCore.lib
@@ -328,7 +331,7 @@ RUBYLIBEXTRA            = lib/libHist.lib lib/libMathCore.lib
 GUIBLDLIBEXTRA          = lib/libGui.lib lib/libGraf.lib lib/libMathCore.lib
 GUIHTMLLIBEXTRA         = lib/libGui.lib lib/libGraf.lib lib/libNet.lib
 XMLLIBEXTRA             = lib/libRIO.lib
-FOAMLIBEXTRA            = lib/libHist.lib
+FOAMLIBEXTRA            = lib/libHist.lib lib/libMathCore.lib
 ALIENLIBEXTRA           = lib/libXMLIO.lib lib/libNetx.lib lib/libTree.lib \
                           lib/libProofPlayer.lib lib/libNet.lib lib/RIO.lib
 ROOFITCORELIBEXTRA      = lib/libHist.lib lib/libGraf.lib lib/libMatrix.lib \
@@ -423,6 +426,7 @@ PROOFPLAYERLIBEXTRA     = -Llib -lProof -lHist -lTree -lRIO -lNet -lThread \
 PROOFDRAWLIBEXTRA       = -Llib -lTreePlayer -lGraf3d -lGraf -lGpad \
                           -lProofPlayer -lHist -lTree -lProof
 PROOFXLIBEXTRA          = -Llib -lNet -lProof -lThread
+PROOFBENCHLIBEXTRA      = -Llib -lProof -lProofDraw -lHist
 SESSIONVIEWERLIBEXTRA   = -Llib -lProof -lGui -lHist -lGpad -lGraf -lTree \
                           -lMathCore
 CLARENSLIBEXTRA         = -Llib -lMathCore
@@ -466,7 +470,7 @@ RUBYLIBEXTRA            = -Llib -lHist -lMathCore
 GUIBLDLIBEXTRA          = -Llib -lGui -lGraf -lMathCore
 GUIHTMLLIBEXTRA         = -Llib -lGui -lGraf -lNet
 XMLLIBEXTRA             = -Llib -lRIO
-FOAMLIBEXTRA            = -Llib -lHist
+FOAMLIBEXTRA            = -Llib -lHist -lMathCore
 ALIENLIBEXTRA           = -Llib -lXMLIO -lNetx -lTree -lProofPlayer -lNet -lRIO
 ROOFITCORELIBEXTRA      = -Llib -lHist -lGraf -lMatrix -lTree -lMinuit -lRIO \
                           -lMathCore -lFoam

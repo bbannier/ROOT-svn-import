@@ -17,6 +17,7 @@
 #include "TROOT.h"
 #include "TObject.h"
 #include "TClassEdit.h"
+#include "TClassRef.h"
 #include "TCollection.h"
 #include "TFunction.h"
 #include "TMethodArg.h"
@@ -336,15 +337,13 @@ Bool_t PyROOT::Utility::AddBinaryOperator( PyObject* pyclass, const char* op, co
 }
 
 //____________________________________________________________________________
-Bool_t PyROOT::Utility::AddBinaryOperator( PyObject* pyclass, const std::string& lcname,
-   const std::string& rcname, const char* op, const char* label )
-{
-// find a global function with a matching signature and install the result on pyclass
-   TCollection* funcs = gROOT->GetListOfGlobalFunctions( kTRUE );
-   TIter ifunc( funcs );
-
+static inline TFunction* FindAndAddOperator( const std::string& lcname, const std::string& rcname,
+     const char* op, TCollection* funcs ) {
+// helper to find a function with matching signature in 'funcs'
    std::string opname = "operator";
    opname += op;
+
+   TIter ifunc( funcs );
 
    TFunction* func = 0;
    while ( (func = (TFunction*)ifunc.Next()) ) {
@@ -352,19 +351,46 @@ Bool_t PyROOT::Utility::AddBinaryOperator( PyObject* pyclass, const std::string&
          continue;
 
       if ( func->GetName() == opname ) {
-         if ( ( lcname == TClassEdit::ResolveTypedef(
-                           ((TMethodArg*)func->GetListOfMethodArgs()->At(0))->GetTypeName(), true ) ) &&
-              ( rcname == TClassEdit::ResolveTypedef(
-                           ((TMethodArg*)func->GetListOfMethodArgs()->At(1))->GetTypeName(), true ) ) ) {
-         // found a matching overload; add to class
-            PyCallable* pyfunc = new TFunctionHolder< TScopeAdapter, TMemberAdapter >( func );
-            Utility::AddToClass( pyclass, label ? label : gC2POperatorMapping[ op ].c_str(), pyfunc );
+         if ( ( lcname == TClassEdit::ResolveTypedef( TClassEdit::CleanType(
+                  ((TMethodArg*)func->GetListOfMethodArgs()->At(0))->GetTypeName(), 1 ).c_str(), true ) ) &&
+              ( rcname == TClassEdit::ResolveTypedef( TClassEdit::CleanType(
+                  ((TMethodArg*)func->GetListOfMethodArgs()->At(1))->GetTypeName(), 1 ).c_str(), true ) ) ) {
 
          // done; break out loop
-            return kTRUE;
+            return func;
          }
 
       }
+   }
+
+   return 0;
+}
+
+Bool_t PyROOT::Utility::AddBinaryOperator( PyObject* pyclass, const std::string& lcname,
+   const std::string& rcname, const char* op, const char* label )
+{
+// find a global function with a matching signature and install the result on pyclass;
+// in addition, __gnu_cxx is searched pro-actively (as there's AFAICS no way to unearth
+// using information)
+   static TClassRef gnucxx( "__gnu_cxx" );
+
+   TFunction* func = 0;
+   if ( gnucxx.GetClass() ) {
+      func = FindAndAddOperator( lcname, rcname, op, gnucxx->GetListOfMethods() );
+      if ( func ) {
+         PyCallable* pyfunc = new TFunctionHolder< TScopeAdapter, TMemberAdapter >(
+            TScopeAdapter::ByName( "__gnu_cxx" ), func );
+         return Utility::AddToClass( pyclass, label ? label : gC2POperatorMapping[ op ].c_str(), pyfunc );
+      }
+   }
+
+   if ( ! func )
+      func = FindAndAddOperator( lcname, rcname, op, gROOT->GetListOfGlobalFunctions( kTRUE ) );
+
+   if ( func ) {
+   // found a matching overload; add to class
+      PyCallable* pyfunc = new TFunctionHolder< TScopeAdapter, TMemberAdapter >( func );
+      return Utility::AddToClass( pyclass, label ? label : gC2POperatorMapping[ op ].c_str(), pyfunc );
    }
 
    return kFALSE;
@@ -468,7 +494,7 @@ int PyROOT::Utility::GetBuffer( PyObject* pyobject, char tc, int size, void*& bu
       Py_ssize_t buflen = bufinfo.len;
 #endif
 
-      if ( check == kTRUE ) {
+      if ( buf && check == kTRUE ) {
       // determine buffer compatibility (use "buf" as a status flag)
          PyObject* pytc = PyObject_GetAttr( pyobject, PyStrings::gTypeCode );
          if ( pytc != 0 ) {     // for array objects
@@ -608,10 +634,11 @@ const std::string PyROOT::Utility::Compound( const std::string& name )
 
    std::string compound = "";
    for ( int ipos = (int)cleanName.size()-1; 0 <= ipos; --ipos ) {
-      if ( isspace( cleanName[ipos] ) ) continue;
-      if ( isalnum( cleanName[ipos] ) || cleanName[ipos] == '>' ) break;
+      char c = cleanName[ipos];
+      if ( isspace( c ) ) continue;
+      if ( isalnum( c ) || c == '_' || c == '>' ) break;
 
-      compound = cleanName[ipos] + compound;
+      compound = c + compound;
    }
 
    return compound;
@@ -752,6 +779,13 @@ Long_t PyROOT::Utility::InstallMethod( G__ClassInfo* scope, PyObject* callback,
    std::string tagname;                     // used as a buffer
    if ( rtype ) {
       tagname = rtype;
+      if ( tagname == "TPyReturn" ) {
+      // special case: setup a pseudo-inherited class to allow callbacks to work
+         tagname += mtName;
+         G__linked_taginfo tpy_pti = { "TPyReturn", 'c', -1 };
+         pti.tagname = tagname.c_str();
+         G__inheritance_setup( G__get_linked_tagnum( &pti ), G__get_linked_tagnum( &tpy_pti ), 0, 1, 1 );
+      }
    } else {
       const char* cname = scope ? scope->Fullname() : 0;
       tagname = cname ? std::string( cname ) + "::" + mtName : mtName;
