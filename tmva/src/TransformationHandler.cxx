@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss, Eckhard von Toerne
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss, Eckhard von Toerne, Jan Therhaag
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -14,10 +14,11 @@
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
  *      Peter Speckmayer <speckmay@mail.cern.ch>  - CERN, Switzerland             *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
- *      Eckhard v. Toerne  <evt@uni-bonn.de>     - U of Bonn, Germany          *  
+ *      Jan Therhaag       <Jan.Therhaag@cern.ch>     - U of Bonn, Germany        *
+ *      Eckhard v. Toerne  <evt@uni-bonn.de>     - U of Bonn, Germany             *  
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *      U. of Bonn, Germany                                                       *

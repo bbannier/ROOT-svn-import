@@ -1,5 +1,5 @@
 
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Eckhard v. Toerne, Jan Therhaag
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -16,11 +16,13 @@
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *      Doug Schouten   <dschoute@sfu.ca>        - Simon Fraser U., Canada        *
  *      Jan Therhaag    <jan.therhaag@cern.ch>   - U. of Bonn, Germany            *
+ *      Eckhard v. Toerne     <evt@uni-bonn.de>        - U of Bonn, Germany       *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
  *      U. of Victoria, Canada                                                    *
  *      MPI-K Heidelberg, Germany                                                 *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *

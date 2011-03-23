@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Asen Christov, Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
+// Author: Asen Christov, Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Jan Therhaag
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -13,6 +13,7 @@
  * Authors (alphabetical):                                                        *
  *      Asen Christov   <christov@physik.uni-freiburg.de> - Freiburg U., Germany  *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Jan Therhaag       <Jan.Therhaag@cern.ch>     - U of Bonn, Germany        *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
@@ -21,6 +22,7 @@
  *      U. of Victoria, Canada                                                    *
  *      MPI-K Heidelberg, Germany                                                 *
  *      Freiburg U., Germany                                                      *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
