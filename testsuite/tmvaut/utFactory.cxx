@@ -149,7 +149,6 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
    }
    else if (! (option.Contains("LateTreeBooking"))) tree = create_Tree();
 
-   TString _methodTitle="LD",_methodOption="!H:!V"; // fix me
    TString prepareString="";
    string factoryOptions( "!V:Silent:Transformations=I,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
    TString outfileName( "weights/TMVA.root" );
@@ -164,16 +163,31 @@ bool utFactory::operateSingleFactory(const char* factoryname, const char* opt)
    if (option.Contains("ivar1")) factory->AddVariable( "ivar1",  "Var i1", 'I' );
 
    factory->AddSpectator( "ievt", 'I' );
-   factory->AddSignalTree(tree);
-   factory->AddBackgroundTree(tree);
+   if (option.Contains("reverseSB")){
+      //std::cout << "reverse SB!"<<std::endl;
+      factory->AddBackgroundTree(tree);
+      factory->AddSignalTree(tree);
+   } else {
+      factory->AddSignalTree(tree);
+      factory->AddBackgroundTree(tree);
+   }
+
    if (prepareString=="") prepareString = "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" ;
    // this crashes "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" ;
    factory->PrepareTrainingAndTestTree( "iclass==0", "iclass==1", prepareString);
 
-   if (option.Contains("StringMethodBooking")) factory->BookMethod("LD","LD","!H:!V");
-   else factory->BookMethod(TMVA::Types::kLD,"LD","!H:!V");
-
-   //factory->BookMethod(_methodType, _methodTitle, _methodOption);
+   TString _methodTitle,_methodOption="!H:!V";
+   if (option.Contains("TypeMethodBooking")){
+      //std::cout << "TypeMethodBooking"<<std::endl;
+      _methodTitle="LD";
+      factory->BookMethod(TMVA::Types::kLD,_methodTitle,_methodOption);
+   }
+   else {
+      _methodTitle="LD";
+      if (option.Contains("BDT")) _methodTitle="BDT";
+      if (option.Contains("MLP")) _methodTitle="MLP";
+      factory->BookMethod(_methodTitle,_methodTitle,_methodOption);
+   }
 
    factory->TrainAllMethods();
    factory->TestAllMethods();
@@ -220,7 +234,12 @@ void utFactory::run()
 
 
 
-   test_(operateSingleFactory("TMVATest","StringMethodBooking"));
+   test_(operateSingleFactory("TMVATest","TypeMethodBooking"));
+   test_(operateSingleFactory("TMVATest","BDT"));
+   test_(operateSingleFactory("TMVATest","BDT:reverseSB"));
+   test_(operateSingleFactory("TMVATest","MLP"));
+   test_(operateSingleFactory("TMVATest","MLP:reverseSB"));
+   test_(operateSingleFactory("TMVATest","reverseSB"));
    test_(operateSingleFactory("TMVATest",""));
    test_(operateSingleFactory("TMVATest3Var","var2"));
    test_(operateSingleFactory("TMVATest3VarF2VarI","var2:ivar0:ivar1"));
