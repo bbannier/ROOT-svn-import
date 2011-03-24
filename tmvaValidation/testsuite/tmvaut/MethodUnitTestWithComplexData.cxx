@@ -37,7 +37,7 @@ void MethodUnitTestWithComplexData::run()
 // absolute silence options:
   string factoryOptions( "!V:Silent:Transformations=I;D;P;G;N;U:AnalysisType=Classification:!Color:!DrawProgressBar" );
 
-  Factory* factory = new Factory( "TMVAUnitTesting", outputFile, factoryOptions );
+  Factory* factory = new Factory( "TMVAComplexUnitTesting", outputFile, factoryOptions );
   
   factory->AddVariable( "var0",  "Variable 0", 'F' );
   factory->AddVariable( "var1",  "Variable 1", 'F' );

@@ -42,13 +42,16 @@ $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
 	@echo "$@ done"
 
 makeclasstest: testMakeClass.o
-	$(LD) $(LDFLAGS) $^ $(TMVALOCALLIBS) $(LIBS) -lTMVA.1 -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
+	$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
 	./makeclasstest
 
-testMakeClass.o: testMakeClass.cxx testMakeClass.sh $(STRESSTMVA)
-	./stressTMVA
+testMakeClass.cxx: weights/*.C testMakeClass.sh $(STRESSTMVA)
+#	./stressTMVA
+	echo "make sure you executed ./stressTMVA before doing this test"
 	./testMakeClass.sh
-	$(CXX) -g $(TMVAINCLUDE) $(CXXFLAGS) -I. -c $<
+
+testMakeClass.o: testMakeClass.cxx
+	$(CXX) -g $(CXXFLAGS) -I. -c $<
 
 clean:
 	@rm -f $(PROGRAMS) $(OBJS) $(TMVAUTOBJECTS)
