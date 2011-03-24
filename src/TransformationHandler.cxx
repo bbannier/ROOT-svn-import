@@ -146,6 +146,7 @@ const TMVA::Event* TMVA::TransformationHandler::Transform( const Event* ev ) con
    std::vector<Int_t>::const_iterator rClsIt = fTransformationsReferenceClasses.begin();
    const Event* trEv = ev;
    while (VariableTransformBase *trf = (VariableTransformBase*) trIt()) {
+      if (rClsIt == fTransformationsReferenceClasses.end()) Log() << kFATAL<< "invalid read in TransformationHandler::Transform " <<Endl;
       trEv = trf->Transform(trEv, (*rClsIt) );
       rClsIt++;
    }
