@@ -1932,9 +1932,9 @@ void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TStrin
    TString nodeName = className;
    nodeName.ReplaceAll("Read","");
    nodeName.Append("Node");
-   fout << "#ifndef NN" << endl;
-   fout << "#define NN new "<<nodeName << endl;
-   fout << "#endif" << endl;
+   //fout << "#ifndef NN" << endl; commented out on purpose see next line
+   fout << "#define NN new "<<nodeName << endl; // NN definition depends on individual methods. Important to have NO #ifndef if several BDT methods compile together
+   //fout << "#endif" << endl; commented out on purpose see previous line
    fout << "   " << endl;
    fout << "#ifndef "<<nodeName<<"__def" << endl;
    fout << "#define "<<nodeName<<"__def" << endl;
