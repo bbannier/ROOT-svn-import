@@ -790,8 +790,7 @@ void TMVA::MethodBDT::Train()
          }
       }
       else{
-         
-         fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0,
+         fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, fSignalClass,
                                               fRandomisedTrees, fUseNvars, fUsePoissonNvars, fNNodesMax, fMaxDepth,
                                               itree, fNodePurityLimit, itree));
          if (fUseFisherCuts) {
@@ -1199,12 +1198,16 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
 
    vector<Double_t> sumw; //for individually re-scaling  each class
 
+   UInt_t maxCls = sumw.size();
    Double_t maxDev=0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       Double_t w = (*e)->GetWeight();
       sumGlobalw += w;
       UInt_t iclass=(*e)->GetClass();
-      if (iclass+1 > sumw.size()) sumw.resize(iclass+1,0);
+      if (iclass+1 > maxCls) {
+	 sumw.resize(iclass+1,0);
+	 maxCls = sumw.size();
+      }
       sumw[iclass] += w;
 
       if ( DoRegression() ) {
