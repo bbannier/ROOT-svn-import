@@ -31,4 +31,5 @@ DEBUG=1 enables debugging output, by default the tests are silent
 next compile the executable, adding . to the include path
 
 alternatively one can use the makefile
+./stressTMVA
 make -f Makefile.standalone makeclasstest
