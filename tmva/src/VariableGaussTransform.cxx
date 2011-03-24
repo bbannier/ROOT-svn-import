@@ -473,7 +473,8 @@ void TMVA::VariableGaussTransform::AttachXMLTo(void* parent) {
 //      gTools().AddAttr( varxml, "Name",     Variables()[ivar].GetLabel() );
       gTools().AddAttr( varxml, "VarIndex", ivar );
          
-      if ( fCumulativePDF[ivar][0]==0 || fCumulativePDF[ivar][1]==0 )
+      if ( fCumulativePDF[ivar][0]==0 || 
+           (fCumulativePDF[ivar].size()>1 && fCumulativePDF[ivar][1]==0 ))
          Log() << kFATAL << "Cumulative histograms for variable " << ivar << " don't exist, can't write it to weight file" << Endl;
       
       for (UInt_t icls=0; icls<fCumulativePDF[ivar].size(); icls++){

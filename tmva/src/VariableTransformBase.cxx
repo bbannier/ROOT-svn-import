@@ -386,7 +386,7 @@ void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>&
 
 	 Char_t type = (*itEntry).first;
 	 Int_t  idx  = (*itEntry).second;
-	 
+	 if (itOutput == output.end()) Log() << kFATAL << "Read beyond array boundaries in VariableTransformBase::SetOutput"<<Endl;
 	 Float_t value = (*itOutput);
 
 	 switch( type ) {
