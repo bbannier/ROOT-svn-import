@@ -379,8 +379,6 @@ void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>&
       for( ; itEntry != itEntryEnd; ++itEntry ) {
 
 	 if( (*itMask) ){ // if the value is masked
-//	    ++itOutput; // no value available
-	    ++itMask;
 	    continue;
 	 }
 
@@ -402,7 +400,9 @@ void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>&
 	 default:
 	    Log() << kFATAL << "VariableTransformBase/GetInput : unknown type '" << type << "'." << Endl;
 	 }
-	 ++itOutput;
+	 if( !(*itMask) ) ++itOutput;
+    ++itMask;
+
       }
    }catch( std::exception& except ){
       Log() << kFATAL << "VariableTransformBase/SetOutput : exception/" << except.what() << Endl;
