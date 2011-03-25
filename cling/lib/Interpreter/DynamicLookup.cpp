@@ -18,6 +18,13 @@ using namespace clang;
 
 namespace cling {
   extern "C" int printf(const char* fmt, ...);
+
+  // Constructor
+  DynamicIDHandler::DynamicIDHandler(clang::Sema* Sema)
+    : m_Sema(Sema), m_Context(Sema->getASTContext())
+  {}
+
+
   // pin the vtable to this file
   DynamicIDHandler::~DynamicIDHandler(){}
 
@@ -64,7 +71,7 @@ namespace cling {
 
   // Removes the implicitly created functions, which help to emulate the dynamic scopes
   void DynamicIDHandler::RemoveFakeDecls() {      
-    Scope *S = m_Sema->getScopeForContext(m_Sema->getASTContext().getTranslationUnitDecl());
+    Scope *S = m_Sema->getScopeForContext(m_Context.getTranslationUnitDecl());
     for (unsigned int i = 0; i < m_FakeDecls.size(); ++i) {
       printf("\nI am about to remove:\n");
       m_FakeDecls[i]->dump();
@@ -136,13 +143,14 @@ namespace {
 namespace cling {
   // Constructors
   DynamicExprTransformer::DynamicExprTransformer(Sema* Sema)
-      : m_EvalDecl(0), m_CurDeclContext(0), m_Sema(Sema) {
+    : m_EvalDecl(0), 
+      m_CurDeclContext(0), 
+      m_Sema(Sema), 
+      m_Context(Sema->getASTContext()) 
+  {
     m_DynIDHandler.reset(new DynamicIDHandler(Sema));
     m_Sema->ExternalSource = m_DynIDHandler.get();
     
-  }
-  
-  DynamicExprTransformer::DynamicExprTransformer(): m_EvalDecl(0), m_CurDeclContext(0), m_Sema(0){
   }
   
   void DynamicExprTransformer::Initialize() {
@@ -207,7 +215,6 @@ namespace cling {
     //     if (VD->getNameAsString().compare("a") == 0)
     //       classA = VD;
     //     if (VD->getNameAsString().compare("b") == 0 && !VD->getType()->isLValueReferenceType()) {
-    //       ASTContext &c = m_Sema->getASTContext();
     //       VD->setType(c.getLValueReferenceType(VD->getType()));
     //       Expr* Init = m_Sema->BuildDeclRefExpr(classA, classA->getType(), VK_LValue, SourceLocation()).take();
     //       VD->setInit(Init);
@@ -252,7 +259,7 @@ namespace cling {
         if (EInfo.IsEvalNeeded) {
           if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
             // Assume void if still not escaped
-            *I = SubstituteUnknownSymbol(m_Sema->getASTContext().VoidTy, E);
+            *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
         } 
         else {
           *I = EInfo.Stmt();
@@ -275,7 +282,7 @@ namespace cling {
         if (EInfo.IsEvalNeeded) {
           if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
             // Assume void if still not escaped
-            *I = SubstituteUnknownSymbol(m_Sema->getASTContext().VoidTy, E);
+            *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
         } 
         else {
           *I = EInfo.Stmt();
@@ -295,7 +302,7 @@ namespace cling {
         if (EInfo.IsEvalNeeded) {
           if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
             // Assume void if still not escaped
-            *I = SubstituteUnknownSymbol(m_Sema->getASTContext().VoidTy, E);
+            *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
         } 
         else {
           *I = EInfo.Stmt();
@@ -306,8 +313,6 @@ namespace cling {
   }
 
   EvalInfo DynamicExprTransformer::VisitCompoundStmt(CompoundStmt *Node) {
-    ASTContext &C = m_Sema->getASTContext();
-
     llvm::SmallVector<Stmt*, 32> Stmts;
     if (GetChildren(Stmts, Node)) {
       llvm::SmallVector<Stmt*, 32>::iterator it;
@@ -317,7 +322,7 @@ namespace cling {
           for (unsigned j = 0; j < EInfo.StmtCount(); ++j) {
             Stmts.insert(it + j, EInfo.Stmts[j]);
           }
-          Node->setStmts(C, Stmts.data(), Stmts.size());
+          Node->setStmts(m_Context, Stmts.data(), Stmts.size());
           // Resolve all 1:n replacements
           Visit(Node);
         }
@@ -325,7 +330,7 @@ namespace cling {
           if (EInfo.IsEvalNeeded) {
             if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
               // Assume void if still not escaped
-              *it = SubstituteUnknownSymbol(m_Sema->getASTContext().VoidTy, E);
+              *it = SubstituteUnknownSymbol(m_Context.VoidTy, E);
           }
           else {
             //assert(*it == EInfo.Stmt() && "Visitor shouldn't return something else!");
@@ -334,7 +339,7 @@ namespace cling {
       }
     }
 
-    Node->setStmts(C, Stmts.data(), Stmts.size());
+    Node->setStmts(m_Context, Stmts.data(), Stmts.size());
 
     return EvalInfo(Node, 0);
 
@@ -383,7 +388,7 @@ namespace cling {
   void DynamicExprTransformer::BuildEvalEnvironment(Expr *SubTree) {
     m_EvalExpressionBuf = "";
     llvm::raw_string_ostream OS(m_EvalExpressionBuf);
-    const PrintingPolicy &Policy = m_Sema->getASTContext().PrintingPolicy;
+    const PrintingPolicy &Policy = m_Context.PrintingPolicy;
     
     StmtPrinterHelper *helper = new StmtPrinterHelper(Policy, m_Environment);      
     SubTree->printPretty(OS, helper, Policy);
@@ -394,36 +399,39 @@ namespace cling {
   // Prepare the actual arguments for the call
   // Arg list for static T Eval(size_t This, const char* expr, void* varaddr[], clang::DeclContext* DC )
   void DynamicExprTransformer::BuildEvalArgs(ASTOwningVector<Expr*> &Result) {
-    ASTContext &C = m_Sema->getASTContext();
-
     // Arg 0:
-    Expr *Arg0 = BuildEvalArg0(C);    
+    Expr *Arg0 = BuildEvalArg0();    
     Result.push_back(Arg0);
     
     // Arg 1:
-    Expr *Arg1 = BuildEvalArg1(C);          
+    Expr *Arg1 = BuildEvalArg1();          
     Result.push_back(Arg1);
     
     // Arg 2:
-    Expr *Arg2 = BuildEvalArg2(C);          
+    Expr *Arg2 = BuildEvalArg2();          
     Result.push_back(Arg2);
     
   }
     
   // Eval Arg0: const char* expr
-  Expr *DynamicExprTransformer::BuildEvalArg0(ASTContext &C) {
-    const QualType ConstChar = C.getConstType(C.CharTy);
-    const QualType ConstCharArray = C.getConstantArrayType(ConstChar, llvm::APInt(C.getTypeSize(ConstChar), m_EvalExpressionBuf.length() + 1), ArrayType::Normal, /*IndexTypeQuals=*/ 0);
-    Expr *Arg0 = StringLiteral::Create(C, &*m_EvalExpressionBuf.c_str(), m_EvalExpressionBuf.length(), /*Wide=*/ false, ConstCharArray, SourceLocation());
-    const QualType CastTo = C.getPointerType(C.getConstType(C.CharTy));
+  Expr *DynamicExprTransformer::BuildEvalArg0() {
+    const QualType ConstChar = m_Context.getConstType(m_Context.CharTy);
+    const QualType ConstCharArray = m_Context.getConstantArrayType(ConstChar, llvm::APInt(m_Context.getTypeSize(ConstChar), m_EvalExpressionBuf.length() + 1), ArrayType::Normal, /*IndexTypeQuals=*/ 0);
+    Expr *Arg0 = StringLiteral::Create(m_Context, 
+                                       &*m_EvalExpressionBuf.c_str(), 
+                                       m_EvalExpressionBuf.length(), 
+                                       /*Wide=*/ false,
+                                       ConstCharArray, 
+                                       SourceLocation());
+    const QualType CastTo = m_Context.getPointerType(m_Context.getConstType(m_Context.CharTy));
     m_Sema->ImpCastExprToType(Arg0, CastTo, CK_ArrayToPointerDecay);
     
     return Arg0;
   }
   
   // Eval Arg1: void* varaddr[]
-  Expr *DynamicExprTransformer::BuildEvalArg1(ASTContext &C) {
-    QualType VarAddrTy = m_Sema->BuildArrayType(C.VoidPtrTy, 
+  Expr *DynamicExprTransformer::BuildEvalArg1() {
+    QualType VarAddrTy = m_Sema->BuildArrayType(m_Context.VoidPtrTy, 
                                                  ArrayType::Normal,
                                                  /*ArraySize*/0,
                                                  Qualifiers(),
@@ -436,7 +444,9 @@ namespace cling {
                                          SourceLocation(), 
                                          UO_AddrOf,
                                          m_Environment[i]).takeAs<UnaryOperator>();
-      m_Sema->ImpCastExprToType(UnOp, C.getPointerType(C.VoidPtrTy), CK_BitCast);
+      m_Sema->ImpCastExprToType(UnOp, 
+                                m_Context.getPointerType(m_Context.VoidPtrTy), 
+                                CK_BitCast);
       Inits.push_back(UnOp);
     }
     
@@ -444,20 +454,28 @@ namespace cling {
     SourceLocation SLoc = getEvalDecl()->getLocStart();
     SourceLocation ELoc = getEvalDecl()->getLocEnd();
     InitListExpr *ILE = m_Sema->ActOnInitList(SLoc, move_arg(Inits), ELoc).takeAs<InitListExpr>();
-    Expr *Arg1 = m_Sema->BuildCompoundLiteralExpr(SourceLocation(), C.CreateTypeSourceInfo(VarAddrTy), SourceLocation(), ILE).takeAs<CompoundLiteralExpr>();
-    m_Sema->ImpCastExprToType(Arg1, C.getPointerType(C.VoidPtrTy), CK_ArrayToPointerDecay);
+    Expr *Arg1 = m_Sema->BuildCompoundLiteralExpr(SourceLocation(), 
+                                                  m_Context.CreateTypeSourceInfo(VarAddrTy), 
+                                                  SourceLocation(),
+                                                  ILE).take();
+    m_Sema->ImpCastExprToType(Arg1,
+                              m_Context.getPointerType(m_Context.VoidPtrTy),
+                              CK_ArrayToPointerDecay);
     
     return Arg1;
   }
   
   // Eval Arg2: DeclContext* DC
-  Expr *DynamicExprTransformer::BuildEvalArg2(ASTContext &C) {
+  Expr *DynamicExprTransformer::BuildEvalArg2() {
     ParmVarDecl* param2 = getEvalDecl()->getParamDecl(2);
     QualType DeclContextTy = param2->getOriginalType();     
     
     const llvm::APInt DCAddr(8 * sizeof(void *), (uint64_t)m_CurDeclContext);
     
-    Expr *Arg2 = IntegerLiteral::Create(C, DCAddr, C.UnsignedLongTy, SourceLocation());
+    Expr *Arg2 = IntegerLiteral::Create(m_Context,
+                                        DCAddr, 
+                                        m_Context.UnsignedLongTy, 
+                                        SourceLocation());
     m_Sema->ImpCastExprToType(Arg2, DeclContextTy, CK_IntegralToPointer);
     
     return Arg2;
@@ -570,13 +588,12 @@ namespace cling {
   // transformer. With that function (EvaluateProxyT) the unknown symbols 
   // are going to be substituted.
   FunctionDecl* DynamicExprTransformer::LookupForEvaluateProxyT() {
-    ASTContext& c = m_Sema->getASTContext();
-    DeclarationName Name(&c.Idents.get("cling"));
+    DeclarationName Name(&m_Context.Idents.get("cling"));
     NamespaceDecl* ClingNS = 0;
     NamespaceDecl* ClingRuntimeNS = 0;
     NamespaceDecl* ClingRuntimeInternalNS = 0;
 
-    DeclContext::lookup_result Lookup = c.getTranslationUnitDecl()->lookup(Name);
+    DeclContext::lookup_result Lookup = m_Context.getTranslationUnitDecl()->lookup(Name);
     // We need to dig down into the DeclContext in order to find the one, in
     // which the lookup is going to be performed
     while (Lookup.first != Lookup.second) {
@@ -584,11 +601,11 @@ namespace cling {
         
         if (!ClingNS) {
           ClingNS = FoundNS;
-          Name = DeclarationName(&c.Idents.get("runtime"));
+          Name = DeclarationName(&m_Context.Idents.get("runtime"));
         }
         else if (!ClingRuntimeNS) {
           ClingRuntimeNS = FoundNS;
-          Name = DeclarationName(&c.Idents.get("internal"));
+          Name = DeclarationName(&m_Context.Idents.get("internal"));
         }
         else if (!ClingRuntimeInternalNS) {
           ClingRuntimeInternalNS = FoundNS;
@@ -605,7 +622,7 @@ namespace cling {
     // After we have the context we simply lookup what we need inside
     if (ClingRuntimeInternalNS) {
       // Here is how we can get arbitrary identifier
-      IdentifierInfo& II = c.Idents.get("EvaluateProxyT");
+      IdentifierInfo& II = m_Context.Idents.get("EvaluateProxyT");
       DeclarationName Name(&II);
       const DeclarationNameInfo NameInfo(Name, SourceLocation());
       LookupResult R(*m_Sema, NameInfo, Sema::LookupOrdinaryName);
@@ -617,7 +634,7 @@ namespace cling {
         unsigned ResultCount = R.end() - R.begin();
         TemplateDecl* Template = 0;
         if (ResultCount > 1)
-          Template = c.getOverloadedTemplateName(R.begin(), R.end()).getAsTemplateDecl();
+          Template = m_Context.getOverloadedTemplateName(R.begin(), R.end()).getAsTemplateDecl();
         else
           Template = cast<TemplateDecl>((*R.begin())->getUnderlyingDecl());
 

@@ -21,7 +21,7 @@ namespace clang {
 namespace cling {
   class DynamicIDHandler : public clang::ExternalSemaSource {
   public:
-    DynamicIDHandler(clang::Sema* Sema) : m_Sema(Sema){}
+    DynamicIDHandler(clang::Sema* Sema);
     ~DynamicIDHandler();
     
     // Override this to provide last resort lookup for failed unqualified lookups
@@ -37,6 +37,7 @@ namespace cling {
   private:
     llvm::SmallVector<clang::Decl*, 8> m_FakeDecls;
     clang::Sema* m_Sema;
+    clang::ASTContext& m_Context;
   };
 } // end namespace cling
 
@@ -104,6 +105,7 @@ namespace cling {
     clang::VarDecl* classA;
   public: // members
     clang::Sema* m_Sema;
+    clang::ASTContext& m_Context;
     
   public: // types
     
@@ -115,7 +117,6 @@ namespace cling {
   public:
     
     //Constructors
-    DynamicExprTransformer();      
     DynamicExprTransformer(clang::Sema* Sema);
     
     // Destructors
@@ -146,9 +147,9 @@ namespace cling {
     clang::CallExpr *BuildEvalCallExpr(clang::QualType type, clang::Expr *SubTree, clang::ASTOwningVector<clang::Expr*> &CallArgs);
     void BuildEvalEnvironment(clang::Expr *SubTree);
     void BuildEvalArgs(clang::ASTOwningVector<clang::Expr*> &Result);
-    clang::Expr *BuildEvalArg0(clang::ASTContext &C);
-    clang::Expr *BuildEvalArg1(clang::ASTContext &C);
-    clang::Expr *BuildEvalArg2(clang::ASTContext &C);
+    clang::Expr *BuildEvalArg0();
+    clang::Expr *BuildEvalArg1();
+    clang::Expr *BuildEvalArg2();
     
     // Helper
     bool IsArtificiallyDependent(clang::Expr *Node);
