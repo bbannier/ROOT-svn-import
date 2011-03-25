@@ -241,6 +241,25 @@ namespace cling {
           
     //     }
     //   }
+    // -------------------------------------------------------------------------
+    // Visit all the children
+    for (Stmt::child_iterator
+           I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
+      if (*I) {
+        EvalInfo EInfo = Visit(*I);
+        assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
+
+        if (EInfo.IsEvalNeeded) {
+          if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
+            // Assume void if still not escaped
+            *I = SubstituteUnknownSymbol(m_Sema->getASTContext().VoidTy, E);
+        } 
+        else {
+          *I = EInfo.Stmt();
+        }
+      }
+    }
+    
     return EvalInfo(Node, 0);
   }
   // end Temp
