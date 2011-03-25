@@ -52,15 +52,22 @@ namespace cling {
   // the size of the expressions/statements being escaped.
   class EvalInfo {
   private:      
-    clang::Stmt *m_newStmt; // the new/old node
+    //clang::Stmt *m_newStmt; // the new/old node
   public:
+    EvalInfo(clang::Stmt *S, bool needed) : IsEvalNeeded(needed) {
+      Stmts.push_back(S);
+    }
+
+    EvalInfo(llvm::SmallVector<clang::Stmt*, 2> stmts, bool needed) : Stmts(stmts), IsEvalNeeded(needed) { }
+
+    //:m_newStmt(S), IsEvalNeeded(needed) {};
+    llvm::SmallVector<clang::Stmt*, 2> Stmts;
     bool IsEvalNeeded; // whether to emit the Eval call or not
-    
-    EvalInfo(clang::Stmt *S, bool needed)
-      :m_newStmt(S), IsEvalNeeded(needed) {};
-    
-    clang::Stmt *getNewStmt() const { return m_newStmt; }
-    void setNewStmt(clang::Stmt *S) { m_newStmt = S; } 
+    clang::Stmt *Stmt() { return Stmts[0]; }
+    bool isMultiStmt() { return Stmts.size() > 1; }
+    unsigned StmtCount() { return Stmts.size(); }
+    //clang::Stmt *getNewStmt() const { return m_newStmt; }
+    //void setNewStmt(clang::Stmt *S) { m_newStmt = S; } 
   };
   
 } //end namespace cling
@@ -129,6 +136,7 @@ namespace cling {
     EvalInfo VisitDeclStmt(clang::DeclStmt *Node);
     EvalInfo VisitStmt(clang::Stmt *Node);
     EvalInfo VisitExpr(clang::Expr *Node);
+    EvalInfo VisitCompoundStmt(clang::CompoundStmt *Node);
     EvalInfo VisitCallExpr(clang::CallExpr *E);
     EvalInfo VisitDeclRefExpr(clang::DeclRefExpr *DRE);
     EvalInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr *Node);
@@ -146,6 +154,7 @@ namespace cling {
     bool IsArtificiallyDependent(clang::Expr *Node);
     bool ShouldVisit(clang::Decl *D);
     clang::FunctionDecl* LookupForEvaluateProxyT();
+    bool GetChildren(llvm::SmallVector<clang::Stmt*, 32> &Stmts, clang::Stmt *Node);
   };
 } // end namespace cling
 #endif // CLING_DYNAMIC_LOOKUP_H

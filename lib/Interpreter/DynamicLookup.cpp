@@ -162,11 +162,18 @@ namespace cling {
   }
   
   void DynamicExprTransformer::VisitFunctionDecl(FunctionDecl *D) {
+    // Handle the case: 
+    // function-definition: 
+    //   [decl-specifier-seq] declarator [ctor-initializer] function-body
+    //TODO:[decl-specifier-seq] declarator [ctor-initializer] function-try-block
+    //   function-body: compount-statement
     if (!D->isDependentContext() && D->isThisDeclarationADefinition()) {
-      Stmt *Old = D->getBody();
-      Stmt *New = Visit(Old).getNewStmt();
-      if (Old != New)
-        D->setBody(New);
+      if (D->hasBody()) {
+        // Here we expect clang::CompoundStmt
+        EvalInfo EInfo = Visit(D->getBody());
+        
+        D->setBody(EInfo.Stmt());
+      }
     }
   }
     
@@ -193,19 +200,19 @@ namespace cling {
 
   // Temp
   EvalInfo DynamicExprTransformer::VisitDeclStmt(DeclStmt *Node) {
-    // Node is MyClass a;
-    // Node MyClass b (a);
+    //Node is MyClass a;
+    //Node MyClass b (a);
     // if (Node->isSingleDecl())
     //   if (VarDecl* VD = dyn_cast<VarDecl>(Node->getSingleDecl())) {
     //     if (VD->getNameAsString().compare("a") == 0)
     //       classA = VD;
-    //     if (VD->getNameAsString().compare("b") == 0) {
+    //     if (VD->getNameAsString().compare("b") == 0 && !VD->getType()->isLValueReferenceType()) {
     //       ASTContext &c = m_Sema->getASTContext();
     //       VD->setType(c.getLValueReferenceType(VD->getType()));
     //       Expr* Init = m_Sema->BuildDeclRefExpr(classA, classA->getType(), VK_LValue, SourceLocation()).take();
     //       VD->setInit(Init);
 
-    //       ASTOwningVector<Stmt*> Statements(*m_Sema);
+    //       //ASTOwningVector<Stmt*> Statements(*m_Sema);
           
     //       //IdentifierInfo& II = c.Idents.get("aaaaa");
           
@@ -223,11 +230,14 @@ namespace cling {
     //       VD->getDeclContext()->addDecl(FakeVD);
     //       DeclStmt* DS = new (c) DeclStmt(DeclGroupRef(FakeVD), SourceLocation(), SourceLocation());
 
-    //       Statements.push_back(DS);
-    //       Statements.push_back(Node);
-    //       Stmt* CS = m_Sema->ActOnCompoundStmt(SourceLocation(), SourceLocation(), move_arg(Statements), /*isStmtExpr*/ false).take();
+    //       EvalInfo EInfo(DS, 0);
+    //       //EInfo.Stmts.push_back(Node);
+    //       //Statements.push_back(DS);
+    //       //Statements.push_back(Node);
+    //       //Stmt* CS = m_Sema->ActOnCompoundStmt(SourceLocation(), SourceLocation(), move_arg(Statements), /*isStmtExpr*/ false).take();
+    //       //EInfo.Stmts.push_back(CS);
     //       //return EvalInfo(DS, 0);
-    //       return EvalInfo(CS, 0);
+    //       return EInfo;
           
     //     }
     //   }
@@ -241,13 +251,15 @@ namespace cling {
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
       if (*I) {
         EvalInfo EInfo = Visit(*I);
+        assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
+
         if (EInfo.IsEvalNeeded) {
-          if (Expr *E = dyn_cast<Expr>(EInfo.getNewStmt()))
+          if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
             // Assume void if still not escaped
             *I = SubstituteUnknownSymbol(m_Sema->getASTContext().VoidTy, E);
         } 
         else {
-          *I = EInfo.getNewStmt();
+          *I = EInfo.Stmt();
         }
       }
     }
@@ -260,17 +272,53 @@ namespace cling {
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
       if (*I) {
         EvalInfo EInfo = Visit(*I);
+        assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
         if (EInfo.IsEvalNeeded) {
-          if (Expr *E = dyn_cast<Expr>(EInfo.getNewStmt()))
+          if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
             // Assume void if still not escaped
             *I = SubstituteUnknownSymbol(m_Sema->getASTContext().VoidTy, E);
         } 
         else {
-          *I = EInfo.getNewStmt();
+          *I = EInfo.Stmt();
         }
       }
     }
     return EvalInfo(Node, 0);
+  }
+
+  EvalInfo DynamicExprTransformer::VisitCompoundStmt(CompoundStmt *Node) {
+    ASTContext &C = m_Sema->getASTContext();
+
+    llvm::SmallVector<Stmt*, 32> Stmts;
+    if (GetChildren(Stmts, Node)) {
+      llvm::SmallVector<Stmt*, 32>::iterator it;
+      for (it = Stmts.begin(); it != Stmts.end(); ++it) {
+        EvalInfo EInfo = Visit(*it);
+        if (EInfo.isMultiStmt()) {
+          for (unsigned j = 0; j < EInfo.StmtCount(); ++j) {
+            Stmts.insert(it + j, EInfo.Stmts[j]);
+          }
+          Node->setStmts(C, Stmts.data(), Stmts.size());
+          // Resolve all 1:n replacements
+          Visit(Node);
+        }
+        else {
+          if (EInfo.IsEvalNeeded) {
+            if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
+              // Assume void if still not escaped
+              *it = SubstituteUnknownSymbol(m_Sema->getASTContext().VoidTy, E);
+          }
+          else {
+            //assert(*it == EInfo.Stmt() && "Visitor shouldn't return something else!");
+          }
+        }
+      }
+    }
+
+    Node->setStmts(C, Stmts.data(), Stmts.size());
+
+    return EvalInfo(Node, 0);
+
   }
   
   EvalInfo DynamicExprTransformer::VisitCallExpr(CallExpr *E) {
@@ -561,6 +609,16 @@ namespace cling {
 
     return 0;
   }
+  bool DynamicExprTransformer::GetChildren(llvm::SmallVector<Stmt*, 32> &Stmts, Stmt *Node) {
+    if (std::distance(Node->child_begin(), Node->child_end()) < 1)
+      return false;
+    for (Stmt::child_iterator
+           I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
+      Stmts.push_back(*I);
+    }
+    return true;
+  }
+
   // end Helpers
   
 } // end namespace cling
