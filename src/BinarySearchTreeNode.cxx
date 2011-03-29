@@ -50,7 +50,7 @@
 ClassImp(TMVA::BinarySearchTreeNode)
 
 //_______________________________________________________________________
-TMVA::BinarySearchTreeNode::BinarySearchTreeNode( const Event* e, UInt_t signalClass ) 
+TMVA::BinarySearchTreeNode::BinarySearchTreeNode( const Event* e, UInt_t /* signalClass */ ) 
    : TMVA::Node(),
      fEventV  ( std::vector<Float_t>() ),
      fTargets ( std::vector<Float_t>() ),
