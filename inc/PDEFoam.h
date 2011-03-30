@@ -166,17 +166,17 @@ namespace TMVA {
       // ---------- Cell value access functions
 
       // low level functions to access a certain cell value
-      Double_t GetCellElement(PDEFoamCell *cell, UInt_t i);  // get Element 'i' in cell 'cell'
+      Double_t GetCellElement(const PDEFoamCell *cell, UInt_t i) const;  // get Element 'i' in cell 'cell'
       void SetCellElement(PDEFoamCell *cell, UInt_t i, Double_t value); // set Element 'i' in cell 'cell' to value 'value'
 
       // specific function used during evaluation; determines, whether a cell value is undefined
-      virtual Bool_t   CellValueIsUndefined( PDEFoamCell* );
+      virtual Bool_t  CellValueIsUndefined( PDEFoamCell* );
 
       // finds cell according to given event variables
-      PDEFoamCell* FindCell(std::vector<Float_t>&);
-      std::vector<TMVA::PDEFoamCell*> FindCells(std::vector<Float_t>&);
-      std::vector<TMVA::PDEFoamCell*> FindCells(std::map<Int_t,Float_t>&);
-      void FindCells(std::map<Int_t, Float_t>&, PDEFoamCell*, std::vector<PDEFoamCell*> &);
+      PDEFoamCell* FindCell(const std::vector<Float_t>&) const ;
+      std::vector<TMVA::PDEFoamCell*> FindCells(const std::vector<Float_t>&) const;
+      std::vector<TMVA::PDEFoamCell*> FindCells(const std::map<Int_t,Float_t>&) const;
+      void FindCells(const std::map<Int_t, Float_t>&, PDEFoamCell*, std::vector<PDEFoamCell*> &) const;
 
       // get internal density
       PDEFoamDensityBase* GetDistr() const { assert(fDistr); return fDistr; }

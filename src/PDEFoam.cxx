@@ -1035,7 +1035,7 @@ std::vector<Float_t> TMVA::PDEFoam::GetCellValue( std::map<Int_t,Float_t>& xvec,
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> &xvec )
+TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( const std::vector<Float_t> &xvec ) const
 {
    // Find cell that contains 'xvec' (in foam coordinates [0,1]).
    //
@@ -1072,7 +1072,7 @@ TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> &xvec )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t> &txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
+void TMVA::PDEFoam::FindCells(const std::map<Int_t, Float_t> &txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells) const
 {
    // This is a helper function for std::vector<PDEFoamCell*>
    // FindCells(...) and a generalisation of PDEFoamCell* FindCell().
@@ -1122,7 +1122,7 @@ void TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t> &txvec, PDEFoamCell* cell
 }
 
 //_____________________________________________________________________
-std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::vector<Float_t> &txvec)
+std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(const std::vector<Float_t> &txvec) const
 {
    // Find all cells, that contain txvec.  This function can be used,
    // when the dimension of the foam is greater than the dimension of
@@ -1153,7 +1153,7 @@ std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::vector<Float_t> &t
 }
 
 //_____________________________________________________________________
-std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::map<Int_t, Float_t> &txvec)
+std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(const std::map<Int_t, Float_t> &txvec) const
 {
    // Find all cells, that contain the coordinates specified in txvec.
    // The key in 'txvec' is the dimension, and the corresponding value
@@ -1384,7 +1384,7 @@ Float_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
+Double_t TMVA::PDEFoam::GetCellElement( const PDEFoamCell *cell, UInt_t i ) const
 {
    // Returns cell element i of cell 'cell'.  If the cell has no
    // elements or the index 'i' is out of range, than 0 is returned.
