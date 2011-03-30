@@ -127,6 +127,44 @@ namespace {
 
 namespace cling {
 
+  Interpreter::NamedDeclResult::NamedDeclResult(llvm::StringRef Decl, 
+                                                Interpreter* interp, 
+                                                clang::DeclContext* Within)
+    : m_Interpreter(interp),
+      m_Context(m_Interpreter->getCI()->getASTContext()),
+      m_CurDeclContext(Within),
+      m_Result(0)
+  {
+    LookupDecl(Decl);
+  }
+
+  Interpreter::NamedDeclResult& Interpreter::NamedDeclResult::LookupDecl(llvm::StringRef Decl) {
+    using namespace clang;
+
+    DeclarationName Name(&m_Context.Idents.get(Decl));
+    DeclContext::lookup_result Lookup = m_CurDeclContext->lookup(Name);
+    // FIXME: We need to traverse over each found result in the pair in order to
+    // solve possible ambiguities.
+    if (Lookup.first != Lookup.second) {
+      if (DeclContext* DC = dyn_cast<DeclContext>(*Lookup.first))
+        m_CurDeclContext = DC;
+      else
+        m_CurDeclContext = (*Lookup.first)->getDeclContext();
+      
+      m_Result = (*Lookup.first);
+    }
+    else {
+      // TODO: Find the template instantiations with using a wrapper (getQualType). 
+        m_Result = 0;
+    }
+
+    return *this;
+  }
+
+  Interpreter::NamedDeclResult::operator clang::NamedDecl* () const {
+    return dyn_cast<clang::NamedDecl>(m_Result);
+  }
+
   //
   //  Interpreter
   //
@@ -170,6 +208,9 @@ namespace cling {
     std::stringstream initializer;
     initializer << "gCling=(cling::Interpreter*)" << this <<";\n";    
     processLine(initializer.str());
+    Interpreter::NamedDeclResult R(LookupDecl("cling").LookupDecl("runtime"));
+    clang::NamedDecl* ND = R.LookupDecl("internal").LookupDecl("EvaluateProxyT");
+    ND->dump();
   }
   
   //---------------------------------------------------------------------------
@@ -707,6 +748,12 @@ namespace cling {
 
      fprintf(stderr, "Cannot find the type:%s\n", type.data());
      return Result;
+  }
+
+  Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl, clang::DeclContext* Within) {
+    if (!Within)
+      Within = getCI()->getASTContext().getTranslationUnitDecl();
+    return Interpreter::NamedDeclResult(Decl, this, Within);
   }
 
   void Interpreter::installLazyFunctionCreator(void* (*fp)(const std::string&)) {

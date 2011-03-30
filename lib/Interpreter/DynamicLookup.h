@@ -55,6 +55,7 @@ namespace cling {
   private:      
     //clang::Stmt *m_newStmt; // the new/old node
   public:
+    EvalInfo() : IsEvalNeeded(0){}
     EvalInfo(clang::Stmt *S, bool needed) : IsEvalNeeded(needed) {
       Stmts.push_back(S);
     }
@@ -70,7 +71,7 @@ namespace cling {
     //clang::Stmt *getNewStmt() const { return m_newStmt; }
     //void setNewStmt(clang::Stmt *S) { m_newStmt = S; } 
   };
-  
+
 } //end namespace cling
 
 namespace cling {
@@ -154,7 +155,9 @@ namespace cling {
     // Helper
     bool IsArtificiallyDependent(clang::Expr *Node);
     bool ShouldVisit(clang::Decl *D);
-    clang::FunctionDecl* LookupForEvaluateProxyT();
+    clang::NamespaceDecl* LookForNamespace(std::string Namespace);
+    clang::NamespaceDecl* LookForNamespace(llvm::SmallVector<std::string, 4> NSComponents);
+    clang::NamedDecl* LookFor(std::string FunctionName, std::string Namespace = "");
     bool GetChildren(llvm::SmallVector<clang::Stmt*, 32> &Stmts, clang::Stmt *Node);
   };
 } // end namespace cling

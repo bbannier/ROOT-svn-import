@@ -8,6 +8,7 @@
 #define CLING_INTERPRETER_H
 
 #include "llvm/ADT/OwningPtr.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 
 #include <string>
@@ -18,11 +19,13 @@ namespace llvm {
 
 namespace clang {
   class ASTConsumer;
+  class ASTContext;
   class CompilerInstance;
-  class PragmaNamespace;
-  class SourceLocation;
   class Decl;
   class DeclContext;
+  class NamedDecl;
+  class PragmaNamespace;
+  class SourceLocation;
   class QualType;
 }
 
@@ -43,6 +46,20 @@ namespace cling {
   //---------------------------------------------------------------------------
   class Interpreter {
   public:
+    class NamedDeclResult {
+    private:
+      Interpreter* m_Interpreter;
+      clang::ASTContext& m_Context;
+      clang::DeclContext* m_CurDeclContext;
+      clang::NamedDecl* m_Result;
+      NamedDeclResult(llvm::StringRef Decl, Interpreter* interp, clang::DeclContext* Within = 0);
+    public:
+      NamedDeclResult& LookupDecl(llvm::StringRef);
+      operator clang::NamedDecl* () const;
+      
+      friend class Interpreter;
+    };
+
     
     //---------------------------------------------------------------------
     //! Constructor
@@ -110,6 +127,7 @@ namespace cling {
     
   public:
     Value Evaluate(const char* expr, clang::DeclContext* DC);
+    NamedDeclResult LookupDecl(llvm::StringRef Decl, clang::DeclContext* Within = 0);
   };
   
 } // namespace cling

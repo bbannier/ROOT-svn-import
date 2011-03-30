@@ -154,7 +154,8 @@ namespace cling {
   }
   
   void DynamicExprTransformer::Initialize() {
-    m_EvalDecl = LookupForEvaluateProxyT();
+    m_EvalDecl = dyn_cast<FunctionDecl>(LookFor("EvaluateProxyT", "cling::runtime::internal"));
+    
     assert(m_EvalDecl && "Cannot find EvaluateProxyT!\n");
 
     //m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");
@@ -253,24 +254,61 @@ namespace cling {
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
       if (*I) {
-        EvalInfo EInfo = Visit(*I);
-        assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
+        EvalInfo EInfo;
+        //EvalInfo EInfo = Visit(*I);
 
-        if (EInfo.IsEvalNeeded) {
-          if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
-            // Assume void if still not escaped
-            *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
-        } 
-        else {
-          *I = EInfo.Stmt();
-        }
+        // In principle it is possible to have more than one declaration
+        // e.g int a = 2, c = 4; can be int a = 2, b = 3, c = 4;
+        // Allowing that needs many typechecking because we have to be sure that
+        // the new added declarations have the same type
+        // For now I don't forsee any reasonable use-case so I just disable it.
+        //assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
+
+        //if (EInfo.IsEvalNeeded) {
+          // TODO: Make sure that we are in the case MyClass a(h->Draw());
+          // 1-st: Add the LifetimeHandler
+          // 2-nd: Transform the variable into reference.
+        if (Expr* E = dyn_cast<Expr>(*I))
+          if (IsArtificiallyDependent(E))
+            if (VarDecl* VD = dyn_cast<VarDecl>(Node->getSingleDecl())) {
+              if (!VD->getType()->isLValueReferenceType())
+                // 1. Find the lifetime handler
+                if (NamedDecl* LH = LookFor("LifetimeHandler", "cling::runtime::internal")) {
+                  // 2. Create VarDecl pX
+                  IdentifierInfo& II = m_Context.Idents.get("__aaaaa__");
+                  VarDecl* FakeVD = VarDecl::Create(m_Context,
+                                                    //m_Sema->CurContext,
+                                                    VD->getDeclContext(),
+                                                    SourceLocation(),
+                                                    SourceLocation(),
+                                                    &II,
+                                                    //0,
+                                                    VD->getType(),
+                                                    /*TypeSourceInfo**/0,
+                                                    SC_None,
+                                                    SC_None);
+                  VD->getDeclContext()->addDecl(FakeVD);
+                  DeclStmt* DS = new (m_Context) DeclStmt(DeclGroupRef(FakeVD), SourceLocation(), SourceLocation());
+                  EInfo.Stmts.push_back(DS);
+                  LH->dump();
+                }
+
+              
+              
+              *I = SubstituteUnknownSymbol(VD->getType(), E);
+              EInfo.Stmts.push_back(*I);
+              return EInfo;
+            }
+        //} 
+        //else {
+        //  *I = EInfo.Stmt();
+        //}
+        //}
       }
     }
-    
     return EvalInfo(Node, 0);
+    // end Temp
   }
-  // end Temp
-
   
   EvalInfo DynamicExprTransformer::VisitStmt(Stmt *Node) {
     for (Stmt::child_iterator
@@ -579,67 +617,94 @@ namespace cling {
   }
   
   bool DynamicExprTransformer::IsArtificiallyDependent(Expr *Node) {
+    // TODO: Check all parent DeclContext whether they are dependent of not
+    // Then we will be 100% sure that we are not visiting the wrong stmt.
     if (!Node->isValueDependent() || !Node->isTypeDependent())
       return false;     
     return true;
   }
 
-  // Looks for the special EvaluateProxyT function and provides it to the 
-  // transformer. With that function (EvaluateProxyT) the unknown symbols 
-  // are going to be substituted.
-  FunctionDecl* DynamicExprTransformer::LookupForEvaluateProxyT() {
-    DeclarationName Name(&m_Context.Idents.get("cling"));
-    NamespaceDecl* ClingNS = 0;
-    NamespaceDecl* ClingRuntimeNS = 0;
-    NamespaceDecl* ClingRuntimeInternalNS = 0;
+  // Splits the namespace into components.
+  NamespaceDecl* DynamicExprTransformer::LookForNamespace(std::string Namespace) {
+    std::string str(Namespace);
+    std::string delim("::");
+    size_t found, pos = 0;
+    llvm::SmallVector<std::string, 4> components;
+    while ((found = str.find(delim, pos)) && (found != std::string::npos)) { 
+      components.push_back(str.substr(pos, found - pos));
+      pos = found + delim.length(); 
+    }
+    if (pos < str.length())
+      components.push_back(str.substr(pos));
 
+    return LookForNamespace(components);
+  }
+  
+  // Looks for namespace. The namespace specifier should be taken component by
+  // component. E.g: cling::runtime::internal has three components:
+  // cling, runtime, internal
+  NamespaceDecl* DynamicExprTransformer::LookForNamespace(llvm::SmallVector<std::string, 4> NSComponents) {
+    unsigned i = 0;
+    DeclarationName Name(&m_Context.Idents.get(NSComponents[i]));
     DeclContext::lookup_result Lookup = m_Context.getTranslationUnitDecl()->lookup(Name);
+
     // We need to dig down into the DeclContext in order to find the one, in
     // which the lookup is going to be performed
-    while (Lookup.first != Lookup.second) {
+    while (i < NSComponents.size() || (Lookup.first != Lookup.second)) {
       if (NamespaceDecl* FoundNS = dyn_cast<NamespaceDecl>(*Lookup.first) ) {
+        if (i == NSComponents.size() - 1)
+          return FoundNS;
         
-        if (!ClingNS) {
-          ClingNS = FoundNS;
-          Name = DeclarationName(&m_Context.Idents.get("runtime"));
-        }
-        else if (!ClingRuntimeNS) {
-          ClingRuntimeNS = FoundNS;
-          Name = DeclarationName(&m_Context.Idents.get("internal"));
-        }
-        else if (!ClingRuntimeInternalNS) {
-          ClingRuntimeInternalNS = FoundNS;
-          break;
-        }
-
+        ++i;
+        Name = DeclarationName(&m_Context.Idents.get(NSComponents[i]));
         Lookup = FoundNS->lookup(Name);
         continue;
       }
-
       ++Lookup.first;
-    }    
-    
-    // After we have the context we simply lookup what we need inside
-    if (ClingRuntimeInternalNS) {
+    }
+
+    return 0;
+  }
+
+  // Looks for the special EvaluateProxyT function and provides it to the 
+  // transformer. With that function (EvaluateProxyT) the unknown symbols 
+  // are going to be substituted.
+  NamedDecl* DynamicExprTransformer::LookFor(std::string FunctionName, 
+                                             std::string Namespace) {
+    DeclContext* DC = 0;
+    if (Namespace.empty())
+      DC = m_Context.getTranslationUnitDecl();
+    else 
+      // TODO: We might want to cache the runtime and/or internal namespace, 
+      // will be used a lot
+      // After we have the context we simply lookup what we need inside
+      DC = LookForNamespace("cling::runtime::internal");
+
+    if (DC) {
       // Here is how we can get arbitrary identifier
-      IdentifierInfo& II = m_Context.Idents.get("EvaluateProxyT");
+      IdentifierInfo& II = m_Context.Idents.get(FunctionName);
       DeclarationName Name(&II);
       const DeclarationNameInfo NameInfo(Name, SourceLocation());
       LookupResult R(*m_Sema, NameInfo, Sema::LookupOrdinaryName);
-      m_Sema->LookupQualifiedName(R, ClingRuntimeInternalNS);
+      m_Sema->LookupQualifiedName(R, DC);
 
-      // We might need to handle the overloads, that may occur in the lookup 
-      // result
       if (!R.empty()) {
-        unsigned ResultCount = R.end() - R.begin();
-        TemplateDecl* Template = 0;
-        if (ResultCount > 1)
-          Template = m_Context.getOverloadedTemplateName(R.begin(), R.end()).getAsTemplateDecl();
-        else
-          Template = cast<TemplateDecl>((*R.begin())->getUnderlyingDecl());
-
-        if (Template)
-          return dyn_cast<FunctionDecl>(Template->getTemplatedDecl());
+        if (R.getResultKind() == LookupResult::Found) {
+          return R.getFoundDecl();
+        }
+        // We might need to handle the overloads, that may occur in the lookup 
+        // result
+        else if (R.getResultKind() == LookupResult::FoundOverloaded) {
+          unsigned ResultCount = R.end() - R.begin();
+          TemplateDecl* Template = 0;
+          if (ResultCount > 1)
+            Template = m_Context.getOverloadedTemplateName(R.begin(), R.end()).getAsTemplateDecl();
+          else
+            Template = cast<TemplateDecl>((*R.begin())->getUnderlyingDecl());
+          
+          if (Template)
+            return Template->getTemplatedDecl();
+        }
       }
     }
 
