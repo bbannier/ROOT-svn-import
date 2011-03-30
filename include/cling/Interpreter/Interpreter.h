@@ -55,7 +55,8 @@ namespace cling {
       NamedDeclResult(llvm::StringRef Decl, Interpreter* interp, clang::DeclContext* Within = 0);
     public:
       NamedDeclResult& LookupDecl(llvm::StringRef);
-      operator clang::NamedDecl* () const;
+      operator clang::NamedDecl* () const { return getSingleDecl(); }
+      clang::NamedDecl* getSingleDecl() const;
       
       friend class Interpreter;
     };

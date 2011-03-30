@@ -161,7 +161,8 @@ namespace cling {
     return *this;
   }
 
-  Interpreter::NamedDeclResult::operator clang::NamedDecl* () const {
+  clang::NamedDecl* Interpreter::NamedDeclResult::getSingleDecl() const {
+    // TODO: Check whether it is only one decl if (end-begin == 1 )
     return dyn_cast<clang::NamedDecl>(m_Result);
   }
 
@@ -208,9 +209,6 @@ namespace cling {
     std::stringstream initializer;
     initializer << "gCling=(cling::Interpreter*)" << this <<";\n";    
     processLine(initializer.str());
-    Interpreter::NamedDeclResult R(LookupDecl("cling").LookupDecl("runtime"));
-    clang::NamedDecl* ND = R.LookupDecl("internal").LookupDecl("EvaluateProxyT");
-    ND->dump();
   }
   
   //---------------------------------------------------------------------------
