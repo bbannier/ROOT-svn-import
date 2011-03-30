@@ -182,7 +182,7 @@ namespace cling {
 
     //m_CIFactory.reset(new CIFactory(fake_argc, fake_argv, llvmdir));
     
-    m_IncrParser.reset(new IncrementalParser(&getPragmaHandler(), llvmdir));
+    m_IncrParser.reset(new IncrementalParser(this, &getPragmaHandler(), llvmdir));
     m_ExecutionContext.reset(new ExecutionContext());
     
     m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer")));

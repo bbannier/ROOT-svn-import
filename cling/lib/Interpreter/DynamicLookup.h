@@ -105,6 +105,7 @@ namespace cling {
     clang::QualType m_DeclContextType; // Used for building Eval args
     clang::VarDecl* classA;
   public: // members
+    Interpreter* m_Interpreter;
     clang::Sema* m_Sema;
     clang::ASTContext& m_Context;
     
@@ -118,7 +119,7 @@ namespace cling {
   public:
     
     //Constructors
-    DynamicExprTransformer(clang::Sema* Sema);
+    DynamicExprTransformer(Interpreter* interp, clang::Sema* Sema);
     
     // Destructors
     ~DynamicExprTransformer() { }

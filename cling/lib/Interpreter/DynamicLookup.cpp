@@ -5,6 +5,8 @@
 //------------------------------------------------------------------------------
 
 #include "DynamicLookup.h"
+#include "cling/Interpreter/Interpreter.h"
+
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Template.h"
@@ -142,9 +144,10 @@ namespace {
 
 namespace cling {
   // Constructors
-  DynamicExprTransformer::DynamicExprTransformer(Sema* Sema)
+  DynamicExprTransformer::DynamicExprTransformer(Interpreter* interp, Sema* Sema)
     : m_EvalDecl(0), 
-      m_CurDeclContext(0), 
+      m_CurDeclContext(0),
+      m_Interpreter(interp),
       m_Sema(Sema), 
       m_Context(Sema->getASTContext()) 
   {

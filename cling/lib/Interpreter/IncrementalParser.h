@@ -32,7 +32,7 @@ namespace cling {
   
   class IncrementalParser {
   public:
-    IncrementalParser(clang::PragmaNamespace* Pragma, const char* llvmdir);
+    IncrementalParser(Interpreter* interp,clang::PragmaNamespace* Pragma, const char* llvmdir);
     ~IncrementalParser();
     void Initialize();
     clang::CompilerInstance* getCI() const { return m_CI.get(); }

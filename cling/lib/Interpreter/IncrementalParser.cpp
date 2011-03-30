@@ -70,7 +70,9 @@ namespace cling {
   };
 
   
-  IncrementalParser::IncrementalParser(clang::PragmaNamespace* Pragma, const char* llvmdir):
+  IncrementalParser::IncrementalParser(Interpreter* interp,
+                                       clang::PragmaNamespace* Pragma,
+                                       const char* llvmdir):
     m_Consumer(0), 
     m_LastTopLevelDecl(0),
     m_FirstTopLevelDecl(0) 
@@ -104,7 +106,7 @@ namespace cling {
     // that we will have ChainedASTConsumer, which is initialized in createCI
     
     // Create the visitor that will transform all dependents that are left.
-    m_Transformer.reset(new DynamicExprTransformer(&CI->getSema()));      
+    m_Transformer.reset(new DynamicExprTransformer(interp, &CI->getSema()));      
   }
   
   IncrementalParser::~IncrementalParser() {}
