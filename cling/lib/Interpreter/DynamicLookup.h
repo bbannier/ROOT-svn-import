@@ -156,9 +156,6 @@ namespace cling {
     // Helper
     bool IsArtificiallyDependent(clang::Expr *Node);
     bool ShouldVisit(clang::Decl *D);
-    clang::NamespaceDecl* LookForNamespace(std::string Namespace);
-    clang::NamespaceDecl* LookForNamespace(llvm::SmallVector<std::string, 4> NSComponents);
-    clang::NamedDecl* LookFor(std::string FunctionName, std::string Namespace = "");
     bool GetChildren(llvm::SmallVector<clang::Stmt*, 32> &Stmts, clang::Stmt *Node);
   };
 } // end namespace cling

@@ -157,8 +157,10 @@ namespace cling {
   }
   
   void DynamicExprTransformer::Initialize() {
-    m_EvalDecl = dyn_cast<FunctionDecl>(LookFor("EvaluateProxyT", "cling::runtime::internal"));
+    TemplateDecl* TD = dyn_cast<TemplateDecl>(m_Interpreter->LookupDecl("cling").LookupDecl("runtime").LookupDecl("internal").LookupDecl("EvaluateProxyT").getSingleDecl());
+    assert(TD && "Cannot find EvaluateProxyT TemplateDecl!\n");
     
+    m_EvalDecl = dyn_cast<FunctionDecl>(TD->getTemplatedDecl());    
     assert(m_EvalDecl && "Cannot find EvaluateProxyT!\n");
 
     //m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");
@@ -276,7 +278,7 @@ namespace cling {
             if (VarDecl* VD = dyn_cast<VarDecl>(Node->getSingleDecl())) {
               if (!VD->getType()->isLValueReferenceType())
                 // 1. Find the lifetime handler
-                if (NamedDecl* LH = LookFor("LifetimeHandler", "cling::runtime::internal")) {
+                if (NamedDecl* LH = m_Interpreter->LookupDecl("cling").LookupDecl("runtime").LookupDecl("internal").LookupDecl("LifetimeHandler")) {
                   // 2. Create VarDecl pX
                   IdentifierInfo& II = m_Context.Idents.get("__aaaaa__");
                   VarDecl* FakeVD = VarDecl::Create(m_Context,
@@ -627,92 +629,6 @@ namespace cling {
     return true;
   }
 
-  // Splits the namespace into components.
-  NamespaceDecl* DynamicExprTransformer::LookForNamespace(std::string Namespace) {
-    std::string str(Namespace);
-    std::string delim("::");
-    size_t found, pos = 0;
-    llvm::SmallVector<std::string, 4> components;
-    while ((found = str.find(delim, pos)) && (found != std::string::npos)) { 
-      components.push_back(str.substr(pos, found - pos));
-      pos = found + delim.length(); 
-    }
-    if (pos < str.length())
-      components.push_back(str.substr(pos));
-
-    return LookForNamespace(components);
-  }
-  
-  // Looks for namespace. The namespace specifier should be taken component by
-  // component. E.g: cling::runtime::internal has three components:
-  // cling, runtime, internal
-  NamespaceDecl* DynamicExprTransformer::LookForNamespace(llvm::SmallVector<std::string, 4> NSComponents) {
-    unsigned i = 0;
-    DeclarationName Name(&m_Context.Idents.get(NSComponents[i]));
-    DeclContext::lookup_result Lookup = m_Context.getTranslationUnitDecl()->lookup(Name);
-
-    // We need to dig down into the DeclContext in order to find the one, in
-    // which the lookup is going to be performed
-    while (i < NSComponents.size() || (Lookup.first != Lookup.second)) {
-      if (NamespaceDecl* FoundNS = dyn_cast<NamespaceDecl>(*Lookup.first) ) {
-        if (i == NSComponents.size() - 1)
-          return FoundNS;
-        
-        ++i;
-        Name = DeclarationName(&m_Context.Idents.get(NSComponents[i]));
-        Lookup = FoundNS->lookup(Name);
-        continue;
-      }
-      ++Lookup.first;
-    }
-
-    return 0;
-  }
-
-  // Looks for the special EvaluateProxyT function and provides it to the 
-  // transformer. With that function (EvaluateProxyT) the unknown symbols 
-  // are going to be substituted.
-  NamedDecl* DynamicExprTransformer::LookFor(std::string FunctionName, 
-                                             std::string Namespace) {
-    DeclContext* DC = 0;
-    if (Namespace.empty())
-      DC = m_Context.getTranslationUnitDecl();
-    else 
-      // TODO: We might want to cache the runtime and/or internal namespace, 
-      // will be used a lot
-      // After we have the context we simply lookup what we need inside
-      DC = LookForNamespace("cling::runtime::internal");
-
-    if (DC) {
-      // Here is how we can get arbitrary identifier
-      IdentifierInfo& II = m_Context.Idents.get(FunctionName);
-      DeclarationName Name(&II);
-      const DeclarationNameInfo NameInfo(Name, SourceLocation());
-      LookupResult R(*m_Sema, NameInfo, Sema::LookupOrdinaryName);
-      m_Sema->LookupQualifiedName(R, DC);
-
-      if (!R.empty()) {
-        if (R.getResultKind() == LookupResult::Found) {
-          return R.getFoundDecl();
-        }
-        // We might need to handle the overloads, that may occur in the lookup 
-        // result
-        else if (R.getResultKind() == LookupResult::FoundOverloaded) {
-          unsigned ResultCount = R.end() - R.begin();
-          TemplateDecl* Template = 0;
-          if (ResultCount > 1)
-            Template = m_Context.getOverloadedTemplateName(R.begin(), R.end()).getAsTemplateDecl();
-          else
-            Template = cast<TemplateDecl>((*R.begin())->getUnderlyingDecl());
-          
-          if (Template)
-            return Template->getTemplatedDecl();
-        }
-      }
-    }
-
-    return 0;
-  }
   bool DynamicExprTransformer::GetChildren(llvm::SmallVector<Stmt*, 32> &Stmts, Stmt *Node) {
     if (std::distance(Node->child_begin(), Node->child_end()) < 1)
       return false;
