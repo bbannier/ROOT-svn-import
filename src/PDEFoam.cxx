@@ -968,7 +968,7 @@ Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* /* cell */ )
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernelBase *kernel)
+Float_t TMVA::PDEFoam::GetCellValue(const std::vector<Float_t> &xvec, ECellValue cv, PDEFoamKernelBase *kernel)
 {
    // This function finds the cell, which corresponds to the given
    // untransformed event vector 'xvec' and return its value, which is
@@ -998,7 +998,7 @@ Float_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv, P
 }
 
 //_____________________________________________________________________
-std::vector<Float_t> TMVA::PDEFoam::GetCellValue( std::map<Int_t,Float_t>& xvec, ECellValue cv )
+std::vector<Float_t> TMVA::PDEFoam::GetCellValue( const std::map<Int_t,Float_t>& xvec, ECellValue cv )
 {
    // This function finds all cells, which corresponds to the given
    // (incomplete) untransformed event vector 'xvec' and returns the
@@ -1321,7 +1321,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, ECellValue cell_value, 
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoam::GetCellValue(PDEFoamCell* cell, ECellValue cv)
+Float_t TMVA::PDEFoam::GetCellValue(const PDEFoamCell* cell, ECellValue cv)
 {
    // Returns the cell value of 'cell' corresponding to the given
    // option 'cv'.  This function should be overridden by the subclass
