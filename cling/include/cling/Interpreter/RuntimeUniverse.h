@@ -45,6 +45,24 @@ namespace cling {
         //printf("%s", expr);
         return T();
       }
+
+      class LifetimeHandler {
+      private:
+        void* m_Memory;
+        llvm::StringRef m_Type;
+      public:
+        // Temp constructor just to build what we need and then
+        // we will give the concrete parameters
+        LifetimeHandler(){}
+        LifetimeHandler(llvm::StringRef expr, llvm::StringRef type) {
+          // should use Evaluate
+          //gCling->processLine();
+        }
+        ~LifetimeHandler() {
+          //gCling->processLine("delete (%s*)%p;", m_Type, m_Memory);
+        }
+        void* getMemory() const { return m_Memory; }
+      };
     }
   } // end namespace runtime
 } // end namespace cling
