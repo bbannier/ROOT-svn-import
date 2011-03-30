@@ -212,8 +212,8 @@ void TMVAClassification( TString myMethodList = "" )
    Double_t backgroundWeight = 1.0;
    
    // You can add an arbitrary number of signal or background trees
-   factory->AddBackgroundTree( background, backgroundWeight );
    factory->AddSignalTree    ( signal,     signalWeight     );
+   factory->AddBackgroundTree( background, backgroundWeight );
    
    // To give different trees for training and testing, do as follows:
    //    factory->AddSignalTree( signalTrainingTree, signalTrainWeight, "Training" );
