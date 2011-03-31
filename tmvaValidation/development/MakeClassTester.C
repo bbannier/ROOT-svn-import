@@ -25,12 +25,12 @@ void MakeClassTester( TString myMethodList = "" )
                                    "SVM_Gauss", "SVM_Poly", "SVM_Lin",
                                    "FDA_MT", "FDA_MC", "FDA_GA" };
 
-   Bool_t iuse[Nmvas] = { 1, 0, 1, 0,
-                          1, 1,
-                          1, 
-                          0, 0, 1,
-                          1, 0, 0,
-                          1, 0, 0 };
+   Bool_t iuse[Nmvas] = { 0, 0, 0, 0,
+                          1, 0,
+                          0, 
+                          0, 
+                          0, 0, 0,
+                          0, 0, 0 };
 
    // interpret input list
    if (myMethodList != "") {
@@ -62,22 +62,27 @@ void MakeClassTester( TString myMethodList = "" )
    reader->AddVariable( inputVars[2].c_str(), &var3 );
    reader->AddVariable( inputVars[3].c_str(), &var4 );
 
+   // Spectator variables declared in the training have to be added to the reader, too
+   Float_t spec1,spec2;
+   reader->AddSpectator( "spec1 := var1*2",   &spec1 );
+   reader->AddSpectator( "spec2 := var1*3",   &spec2 );
+
    // book Reader classifier and preload standalone classes
    string dir    = "weights/";
-   string prefix = "TMVAnalysis";
+   string prefix = "TMVAClassification";
 
    for (Int_t imva=0; imva<Nmvas; imva++) {
       if (iuse[imva]) {
-         TString wfile = dir + prefix + "_" + bulkname[imva] + ".weights.txt";
+         TString wfile = dir + prefix + "_" + bulkname[imva] + ".weights.xml";
          TString cfile = dir + prefix + "_" + bulkname[imva] + ".class.C+";
 
          cout << "=== Macro        : Loading weight file: " << wfile << endl;         
          cout << "=== Macro        : Loading class  file: " << cfile << endl;         
 
          // book the classifier through reader
-         cout << TString(bulkname[imva]) + " method" << endl;
-         cout << wfile << endl;
+         cout << "=== Macro        : Booking method" << endl;
          reader->BookMVA( TString(bulkname[imva]) + " method", wfile );
+         cout << "=== Macro        : ...done!" << endl;
 
          // book the classifier through standalone class
          gROOT->LoadMacro( cfile );

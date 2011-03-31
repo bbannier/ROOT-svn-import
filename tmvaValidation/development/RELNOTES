@@ -1,11 +1,20 @@
 
-  T M V A   ---   Toolkit for Multivariate Data Analysis with ROOT (http://tmva.sf.net)
+    T M V A   ---   Toolkit for Multivariate Data Analysis (http://tmva.sf.net)
 =======================================================================================
 
 Release notes (started for release 3.7.3). Append to the top.
 _______________________________________________________________________________________
 
-Release v4.1.0 (newest):
+Release v4.1.1 (newest):
+ 
+  - Bug fixes:
+
+    o  Fixed problems in classification of some methods when booking background training 
+       tree before signal one. 
+
+    o  Fixed preprocessing transformation bug in HMatrix
+
+Release v4.1.0:
 
   - The most important new feature is the support for the simulataneous classification 
     of multiple output classes for several multivariate methods. A lot of effort went 
