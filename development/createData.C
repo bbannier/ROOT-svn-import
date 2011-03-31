@@ -250,7 +250,7 @@ void create_lin_Nvar_withFriend(Int_t N = 2000)
 
 
 // create the data
-void create_lin_Nvar(Int_t N = 50000)
+void create_lin_Nvar(Int_t N = 6000)
 {
    const Int_t nvar = 4;
    Float_t xvar[nvar];
@@ -439,7 +439,7 @@ void create_lin_Nvar_categories(Int_t N = 10000, Int_t type = 2)
 
 
 // create the data
-void create_lin_Nvar_weighted(Int_t N = 10000, int WeightedSignal=0, int WeightedBkg=1)
+void create_lin_Nvar_weighted(Int_t N = 6000, int WeightedSignal=0, int WeightedBkg=1)
 {
    const Int_t nvar = 4;
    Float_t xvar[nvar];
@@ -466,17 +466,17 @@ void create_lin_Nvar_weighted(Int_t N = 10000, int WeightedSignal=0, int Weighte
    if (WeightedBkg)    treeB->Branch( "weight", &weight,"weight/F" );
       
    TRandom R( 100 );
-   Float_t xS[nvar] = {  0.2,  0.3,  0.4,  0.8 };
-   Float_t xB[nvar] = { -0.2, -0.3, -0.4, -0.5 };
+   Float_t xS[nvar] = {  0.1,  0.2,  0.3,  0.4 };
+   Float_t xB[nvar] = { -0.1, -0.2, -0.3, -0.4 };
    Float_t dx[nvar] = {  1.0,  1.0, 1.0, 1.0 };
    TArrayD* v = new TArrayD( nvar );
    Float_t rho[20];
-   rho[1*2] = 0.4;
-   rho[1*3] = 0.6;
-   rho[1*4] = 0.9;
-   rho[2*3] = 0.7;
-   rho[2*4] = 0.8;
-   rho[3*4] = 0.93;
+   rho[1*2] = 0.0;
+   rho[1*3] = 0.0;
+   rho[1*4] = 0.98;
+   rho[2*3] = 0.0;
+   rho[2*4] = 0.0;
+   rho[3*4] = 0.0;
 
    // create covariance matrix
    TMatrixD* covMatS = new TMatrixD( nvar, nvar );
@@ -535,7 +535,7 @@ void create_lin_Nvar_weighted(Int_t N = 10000, int WeightedSignal=0, int Weighte
             if (tmp < weight){
                weight = 1./weight;
                tree->Fill();
-               if (i%10 == 0) cout << "... event: " << i << " (" << N << ")" << endl;
+               if (i%100 == 0) cout << "... event: " << i << " (" << N << ")" << endl;
                i++;
             }
          }
@@ -660,7 +660,7 @@ void create_lin_Nvar_Arr(Int_t N = 1000)
          for(Int_t iA = 0; iA<aSize; iA++) {
             for (Int_t ivar=0; ivar<nvar; ivar++) {
                getGaussRnd( *v, *m, R );
-               for (Int_t ivar=0; ivar<nvar; ivar++) xvar[ivar]->push_back((*v)[ivar] + x[ivar]);
+               for (Int_t jvar=0; jvar<nvar; jvar++) xvar[jvar]->push_back((*v)[jvar] + x[jvar]);
             }
          }
          tree->Fill();

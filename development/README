@@ -7,7 +7,7 @@ Creation of html page for option reference:
    python CreateOptionRef.py       # this creates the file optionRef.html
 
    # copy to sourceforge:
-   scp optionRef.html andreas.hoecker@tmva.sourceforge.net:tmva/htdocs/
+   scp optionRef.html andreas.hoecker@web.sourceforge.net:tmva/htdocs/
 
    # and check that it looks right:
    http://tmva.sourceforge.net/optionRef.html
@@ -20,7 +20,7 @@ Creation of html page for TMVA@ROOT version reference:
    python CreateRootVersionRef.py  # this creates the file versionRef.html
 
    # copy to sourceforge:
-   scp versionRef.html andreas.hoecker@tmva.sourceforge.net:tmva/htdocs/
+   scp versionRef.html andreas.hoecker@web.sourceforge.net:tmva/htdocs/
 
    # and check that it looks right:
    http://tmva.sourceforge.net/versionRef.html
