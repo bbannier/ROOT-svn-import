@@ -73,6 +73,7 @@ namespace cling {
   IncrementalParser::IncrementalParser(Interpreter* interp,
                                        clang::PragmaNamespace* Pragma,
                                        const char* llvmdir):
+    m_Enabled(true),
     m_Consumer(0), 
     m_LastTopLevelDecl(0),
     m_FirstTopLevelDecl(0) 
@@ -176,7 +177,8 @@ namespace cling {
             m_FirstTopLevelDecl = *i;
           
           m_LastTopLevelDecl = *i;
-          getTransformer()->Visit(m_LastTopLevelDecl);
+          if (m_Enabled)
+            getTransformer()->Visit(m_LastTopLevelDecl);
         } 
         Consumer->HandleTopLevelDecl(DGR);
       } // ADecl
@@ -208,8 +210,8 @@ namespace cling {
       return 0;
     }
     return m_CI.get();
-  }   
-  
+  }
+   
   void IncrementalParser::emptyLastFunction() {
     // Given a broken AST (e.g. due to a syntax error),
     // replace the last function's body by a null statement.

@@ -84,6 +84,7 @@ namespace cling {
     int executeFile(const std::string& filename);
     clang::QualType getQualType(llvm::StringRef type);
     
+    bool setDynamicLookup(bool value = true);
     bool setPrintAST(bool print = true);
     
     void dumpAST(bool showAST = true, int last = -1);

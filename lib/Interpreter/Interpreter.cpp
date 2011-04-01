@@ -819,6 +819,12 @@ namespace cling {
     m_ExecutionContext->executeFunction(WrapperName, &Result);
     return Result;
   }
+
+  bool cling::Interpreter::setDynamicLookup(bool value /*=true*/){
+    bool prev = m_IncrParser->getEnabled();
+    m_IncrParser->setEnabled(value);
+    return prev;
+  }
   
   bool cling::Interpreter::setPrintAST(bool print /*=true*/) {
     bool prev = m_printAST;
