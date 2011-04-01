@@ -206,6 +206,24 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
      m_Interp.AddIncludePath(param.c_str());
      return true;
    }
+
+   // Enable/Disable DynamicExprTransformer
+   if (cmd == "dynamicExtensions") {
+      if (param.empty()) {
+         // toggle:
+        bool dynlookup = !m_Interp.setDynamicLookup(true);
+         m_Interp.setDynamicLookup(dynlookup);
+         printf("%ssing dynamic lookup extensions\n", dynlookup?"U":"Not u");
+      } else if (param == "1") {
+         m_Interp.setDynamicLookup(true);
+      } else if (param == "0") {
+         m_Interp.setDynamicLookup(false);
+      } else {
+         fprintf(stderr, ".dynamicExtensions: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
+      }
+      return true;
+   }
+
    return false;
 }
 

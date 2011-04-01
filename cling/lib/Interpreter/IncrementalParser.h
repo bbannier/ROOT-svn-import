@@ -43,6 +43,8 @@ namespace cling {
       return m_MemoryBuffer.back();
     }
     
+    void setEnabled(bool value = true) { m_Enabled = value; }
+    bool getEnabled() { return m_Enabled; }
     DynamicExprTransformer *getTransformer() const { return m_Transformer.get(); }
     
     void emptyLastFunction();
@@ -55,6 +57,7 @@ namespace cling {
   private:
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
+    bool m_Enabled; // enable/disable dynamic scope
     llvm::OwningPtr<DynamicExprTransformer> m_Transformer; // delayed id lookup
     std::vector<MutableMemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
     clang::FileID m_MBFileID; // file ID of the memory buffer
