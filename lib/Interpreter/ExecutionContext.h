@@ -10,7 +10,6 @@
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
-#include "llvm/ExecutionEngine/JITEventListener.h"
 
 namespace llvm {
   class Module;
@@ -26,23 +25,6 @@ namespace clang {
 namespace cling {
   class Interpreter;
   class Value;
-  
-  class EventListener : public llvm::JITEventListener {
-  private:
-    std::vector<llvm::Function *> m_vec_functions;
-    llvm::ExecutionEngine *m_engine; 
-    
-  public:
-    EventListener() { }
-    virtual ~EventListener() { }
-    
-    virtual void NotifyFunctionEmitted(const llvm::Function&, void *, size_t,
-                                       const JITEventListener::EmittedFunctionDetails&);
-    virtual void NotifyFreeingMachineCode(void *OldPtr) {}
-    
-    void CleanupList();
-    void UnregisterFunctionMapping(llvm::ExecutionEngine&);
-  };
   
   class ExecutionContext {
   public:
@@ -76,8 +58,6 @@ namespace cling {
     }
     
   private:
-    
-    EventListener m_listener;
     
     static std::vector<std::string> m_vec_unresolved;
     static std::vector<LazyFunctionCreatorFunc_t> m_vec_lazy_function;
