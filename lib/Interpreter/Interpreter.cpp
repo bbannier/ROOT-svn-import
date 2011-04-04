@@ -541,6 +541,19 @@ namespace cling {
         }
       }
 
+      {
+        size_t lenFinalStmtStr = finalStmtStr.length();
+        while (lenFinalStmtStr && isspace(finalStmtStr[lenFinalStmtStr - 1])) {
+          --lenFinalStmtStr;
+        }
+        if (lenFinalStmtStr && finalStmtStr[lenFinalStmtStr - 1] == ';') {
+          finalStmtStr.erase(lenFinalStmtStr - 1);
+        }
+        while (lenFinalStmtStr && isspace(finalStmtStr[lenFinalStmtStr - 1])) {
+          --lenFinalStmtStr;
+        }
+      }
+
       haveStatements = !finalStmtStr.empty();
       if (haveStatements) {
         std::stringstream sstr_stmt;
@@ -549,7 +562,7 @@ namespace cling {
         if (!haveSemicolon && finalExpr) {
           clang::QualType QT = finalExpr->getType();
           if (!QT.isNull() && QT->isVoidType()) {
-            sstr_stmt << finalStmtStr << ";}\n";           
+            sstr_stmt << finalStmtStr << ";}\n";
           } else {
             int Flags = 0;
             enum DumperFlags {
