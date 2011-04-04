@@ -15,6 +15,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Target/TargetOptions.h"
@@ -35,27 +36,47 @@
 
 using namespace cling;
 
-void EventListener::NotifyFunctionEmitted(const llvm::Function &F,
+namespace {
+  class JITtedFunctionCollector : public llvm::JITEventListener {
+  private:
+    std::vector<llvm::Function *> m_vec_functions;
+    llvm::ExecutionEngine *m_engine; 
+    
+  public:
+    JITtedFunctionCollector() { }
+    virtual ~JITtedFunctionCollector() { }
+    
+    virtual void NotifyFunctionEmitted(const llvm::Function&, void *, size_t,
+                                       const JITEventListener::EmittedFunctionDetails&);
+    virtual void NotifyFreeingMachineCode(void *OldPtr) {}
+    
+    void CleanupList();
+    void UnregisterFunctionMapping(llvm::ExecutionEngine&);
+  };
+}
+
+
+void JITtedFunctionCollector::NotifyFunctionEmitted(const llvm::Function &F,
                                           void *Code, size_t Size,
                                           const JITEventListener::EmittedFunctionDetails &Details)
 {
-   //BB std::cerr << "EventListener::NotifyFunctionEmitted: m_vec_functions.push_back("
+   //BB std::cerr << "JITtedFunctionCollector::NotifyFunctionEmitted: m_vec_functions.push_back("
    //BB           << F.getName().data() << "); Code @ " << Code << std::endl;
    m_vec_functions.push_back(const_cast<llvm::Function *>(&F));
 }
 
-void EventListener::CleanupList()
+void JITtedFunctionCollector::CleanupList()
 {
    m_vec_functions.clear(); 
 }
 
-void EventListener::UnregisterFunctionMapping(llvm::ExecutionEngine &engine)
+void JITtedFunctionCollector::UnregisterFunctionMapping(llvm::ExecutionEngine &engine)
 {
    std::vector<llvm::Function *>::reverse_iterator it;
 
    for (it=m_vec_functions.rbegin(); it < m_vec_functions.rend(); it++) {
       llvm::Function *ff = (llvm::Function *)*it;
-      //BB std::cerr << "EventListener::UnregisterFunctionMapping: updateGlobalMapping("
+      //BB std::cerr << "JITtedFunctionCollector::UnregisterFunctionMapping: updateGlobalMapping("
       //BB          << ff->getName().data() << ", 0); Global @" << engine.getPointerToGlobalIfAvailable(ff) << std::endl;
       engine.freeMachineCodeForFunction(ff);
       engine.updateGlobalMapping(ff, 0);
@@ -153,8 +174,9 @@ ExecutionContext::executeFunction(llvm::StringRef funcname, Value* returnValue)
       );
       return;
    }
+   JITtedFunctionCollector listener;
    // register the listener
-   m_engine->RegisterJITEventListener(&m_listener);
+   m_engine->RegisterJITEventListener(&listener);
    m_engine->getPointerToFunction(f);
    // check if there is any unresolved symbol in the list
    if (!m_vec_unresolved.empty()) {
@@ -174,13 +196,13 @@ ExecutionContext::executeFunction(llvm::StringRef funcname, Value* returnValue)
       }
       m_vec_unresolved.clear();
       // cleanup functions
-      m_listener.UnregisterFunctionMapping(getEngine());   
-      m_engine->UnregisterJITEventListener(&m_listener);
+      listener.UnregisterFunctionMapping(getEngine());   
+      m_engine->UnregisterJITEventListener(&listener);
       return;
    }
    // cleanup list and unregister our listener
-   m_listener.CleanupList();
-   m_engine->UnregisterJITEventListener(&m_listener);
+   listener.CleanupList();
+   m_engine->UnregisterJITEventListener(&listener);
 
    std::vector<llvm::GenericValue> args;
    Value TGV;
