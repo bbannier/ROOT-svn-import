@@ -42,6 +42,9 @@ namespace cling {
       }
       size_t newlen = oldlen + applen + 1;
       if (newlen > m_Alloc) {
+        if (m_Alloc) {
+           fprintf(stderr, "MutableMemoryBuffer reallocation doesn't work (Preprocessor isn't told about the new location, should instead just add a new memory buffer)!\n");
+        }
         m_Alloc += 64*1024;
         B = (char*)realloc(B, m_Alloc);
       }
