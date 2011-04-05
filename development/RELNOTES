@@ -7,6 +7,13 @@ ________________________________________________________________________________
 
 Release v4.1.1 (newest):
 
+  - Variable transformations can now be applied to a user-defined subset of variables 
+    (and regression targets). 
+    Description:     
+
+
+  - Enable variable transformations for general boosting
+
   - Extended PDEFoam functionality:
 
     o  Multiclass classification by training of one discriminator foam for each
@@ -27,6 +34,14 @@ Release v4.1.1 (newest):
     must be doubled in order to give the same results as in TMVA 4.1.0.  The default 
     VolFrac value was also changed from 0.0333 to 0.0666.
  
+  - New configuration variable "NbinsMVAoutput" defining the bins of the MVA output
+    variables in the TMVA training plots produced via the GUI. As always, Config 
+    settings can be modified in the training script via, eg, the command
+ 
+        (TMVA::gConfig().GetVariablePlotting()).fNbinsMVAoutput = 50;
+
+    to be called AFTER initialising the TMVA Factory object. 
+
   - Bug fixes:
 
     o  Fix for MethodBoost which ensures that the method options for the boosted 
