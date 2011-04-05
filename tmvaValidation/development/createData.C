@@ -14,7 +14,7 @@
 #include "TBranch.h"
 #include <vector>
 
-void plot( TString fname = "data.root", TString var0="var0", TString var1="var1" ) 
+void plot( TString fname = "data.root" ) 
 {
    TFile* dataFile = TFile::Open( fname );
 
@@ -47,10 +47,10 @@ void plot( TString fname = "data.root", TString var0="var0", TString var1="var1"
    TMVAStyle->cd();
 
 
-   Float_t xmin = TMath::Min( treeS->GetMinimum( var0 ), treeB->GetMinimum( var0 ) );
-   Float_t xmax = TMath::Max( treeS->GetMaximum( var0 ), treeB->GetMaximum( var0 ) );
-   Float_t ymin = TMath::Min( treeS->GetMinimum( var1 ), treeB->GetMinimum( var1 ) );
-   Float_t ymax = TMath::Max( treeS->GetMaximum( var1 ), treeB->GetMaximum( var1 ) );
+   Float_t xmin = TMath::Min( treeS->GetMinimum( "var0" ), treeB->GetMinimum( "var0" ) );
+   Float_t xmax = TMath::Max( treeS->GetMaximum( "var0" ), treeB->GetMaximum( "var0" ) );
+   Float_t ymin = TMath::Min( treeS->GetMinimum( "var1" ), treeB->GetMinimum( "var1" ) );
+   Float_t ymax = TMath::Max( treeS->GetMaximum( "var1" ), treeB->GetMaximum( "var1" ) );
 
    Int_t nbin = 500;
    TH2F* frameS = new TH2F( "DataS", "DataS", nbin, xmin, xmax, nbin, ymin, ymax );
@@ -61,16 +61,16 @@ void plot( TString fname = "data.root", TString var0="var0", TString var1="var1"
    treeB->Draw( "var1:var0>>DataB", "", "0" );
 
    // set style
-   frameS->SetMarkerSize( 1.6 );
+   frameS->SetMarkerSize( 0.2 );
    frameS->SetMarkerColor( 4 );
 
-   frameB->SetMarkerSize( 1.6 );
+   frameB->SetMarkerSize( 0.2 );
    frameB->SetMarkerColor( 2 );
 
    // legend
-   frameS->SetTitle( var1+" versus "+var0+" for signal and background" );
-   frameS->GetXaxis()->SetTitle( var0 );
-   frameS->GetYaxis()->SetTitle( var1 );
+   frameS->SetTitle( "var1 versus var0 for signal and background" );
+   frameS->GetXaxis()->SetTitle( "var0" );
+   frameS->GetYaxis()->SetTitle( "var1" );
 
    frameS->SetLabelSize( 0.04, "X" );
    frameS->SetLabelSize( 0.04, "Y" );
@@ -230,6 +230,11 @@ void create_lin_Nvar_withFriend(Int_t N = 2000)
       }
    }
 
+
+
+
+
+
 //    treeS->AddFriend(treeSF);
 //    treeB->AddFriend(treeBF);
 
@@ -250,7 +255,7 @@ void create_lin_Nvar_withFriend(Int_t N = 2000)
 
 
 // create the data
-void create_lin_Nvar(Int_t N = 6000)
+void create_lin_Nvar(Int_t N = 50000)
 {
    const Int_t nvar = 4;
    Float_t xvar[nvar];
@@ -278,6 +283,7 @@ void create_lin_Nvar(Int_t N = 6000)
    rho[2*3] = 0.7;
    rho[2*4] = 0.8;
    rho[3*4] = 0.93;
+ //  for (Int_t i=0;i<20;i++)rho[i]=0;
 
    // create covariance matrix
    TMatrixD* covMatS = new TMatrixD( nvar, nvar );
@@ -437,9 +443,8 @@ void create_lin_Nvar_categories(Int_t N = 10000, Int_t type = 2)
    cout << "created data file: " << dataFile->GetName() << endl;
 }
 
-
 // create the data
-void create_lin_Nvar_weighted(Int_t N = 6000, int WeightedSignal=0, int WeightedBkg=1)
+void create_lin_Nvar_weighted(Int_t N = 10000, int WeightedSignal=0, int WeightedBkg=1, Float_t BackgroundContamination=0, Int_t seed=100)
 {
    const Int_t nvar = 4;
    Float_t xvar[nvar];
@@ -453,7 +458,11 @@ void create_lin_Nvar_weighted(Int_t N = 6000, int WeightedSignal=0, int Weighted
 
 
    // output flie
-   TFile* dataFile = TFile::Open( "data.root", "RECREATE" );
+   TString fileName;
+   if (BackgroundContamination) fileName = Form("linCorGauss%d_weighted+background.root",seed);
+   else                         fileName = Form("linCorGauss%d_weighted.root",seed);
+   
+   TFile* dataFile = TFile::Open( fileName.Data(), "RECREATE" );
 
    // create signal and background trees
    TTree* treeS = new TTree( "TreeS", "TreeS", 1 );   
@@ -462,21 +471,21 @@ void create_lin_Nvar_weighted(Int_t N = 6000, int WeightedSignal=0, int Weighted
       treeS->Branch( TString(Form( "var%i", ivar+1 )).Data(), &xvar[ivar], TString(Form( "var%i/F", ivar+1 )).Data() );
       treeB->Branch( TString(Form( "var%i", ivar+1 )).Data(), &xvar[ivar], TString(Form( "var%i/F", ivar+1 )).Data() );
    }
-   if (WeightedSignal) treeS->Branch( "weight", &weight,"weight/F" );
+   if (WeightedSignal||BackgroundContamination>0||1) treeS->Branch( "weight", &weight,"weight/F" );
    if (WeightedBkg)    treeB->Branch( "weight", &weight,"weight/F" );
       
-   TRandom R( 100 );
-   Float_t xS[nvar] = {  0.1,  0.2,  0.3,  0.4 };
-   Float_t xB[nvar] = { -0.1, -0.2, -0.3, -0.4 };
+   TRandom R( seed );
+   Float_t xS[nvar] = {  0.2,  0.3,  0.4,  0.8 };
+   Float_t xB[nvar] = { -0.2, -0.3, -0.4, -0.5 };
    Float_t dx[nvar] = {  1.0,  1.0, 1.0, 1.0 };
    TArrayD* v = new TArrayD( nvar );
    Float_t rho[20];
-   rho[1*2] = 0.0;
-   rho[1*3] = 0.0;
-   rho[1*4] = 0.98;
-   rho[2*3] = 0.0;
-   rho[2*4] = 0.0;
-   rho[3*4] = 0.0;
+   rho[1*2] = 0.4;
+   rho[1*3] = 0.6;
+   rho[1*4] = 0.9;
+   rho[2*3] = 0.7;
+   rho[2*4] = 0.8;
+   rho[3*4] = 0.93;
 
    // create covariance matrix
    TMatrixD* covMatS = new TMatrixD( nvar, nvar );
@@ -535,12 +544,33 @@ void create_lin_Nvar_weighted(Int_t N = 6000, int WeightedSignal=0, int Weighted
             if (tmp < weight){
                weight = 1./weight;
                tree->Fill();
-               if (i%100 == 0) cout << "... event: " << i << " (" << N << ")" << endl;
+               if (i%10 == 0) cout << "... event: " << i << " (" << N << ")" << endl;
                i++;
             }
          }
       } while (i<N);
    }
+
+
+   if (BackgroundContamination > 0){  // add "background contamination" in the Signal (which later is again "subtracted" with 
+            // using (statistically indepentent) background events with negative weight)
+      Float_t*  x=xB;
+      TMatrixD* m = sqrtMatB;
+      TTree* tree = treeS;
+      for (Int_t i=0; i<N*BackgroundContamination*2; i++) {
+         if (i%1000 == 0) cout << "... event: " << i << " (" << N << ")" << endl;
+         getGaussRnd( *v, *m, R );
+         for (Int_t ivar=0; ivar<nvar; ivar++) xvar[ivar] = (*v)[ivar] + x[ivar];
+
+         // add weights
+         if (i%2) weight = 1;
+         else weight = -1;
+         
+         tree->Fill();
+      }
+   }
+
+
 
    // write trees
    treeS->Write();
@@ -884,7 +914,7 @@ void create_lin_Nvar_discrete()
 void create_ManyVars()
 {
    Int_t N = 20000;
-   const Int_t nvar = 20;
+   const Int_t nvar = 10;
    Float_t xvar[nvar];
 
    // output flie
@@ -906,27 +936,6 @@ void create_ManyVars()
       xB[ivar] = 0 - ivar*0.05;
       dx[ivar] = 1;
    }
-
-   xS[0] =   0.2;
-   xB[0] =  -0.2;
-   dx[0] =   1.0;
-   xS[1] =   0.3;
-   xB[1] =  -0.3;
-   dx[1] =   1.0;
-   xS[2] =   0.4;
-   xB[2] =  -0.4;
-   dx[2] =  1.0 ;
-   xS[3] =   0.8 ;
-   xB[3] =  -0.5 ;
-   dx[3] =   1.0 ;
-   TArrayD* v = new TArrayD( nvar );
-   Float_t rho[20];
-   rho[1*2] = 0.4;
-   rho[1*3] = 0.6;
-   rho[1*4] = 0.9;
-   rho[2*3] = 0.7;
-   rho[2*4] = 0.8;
-   rho[3*4] = 0.93;
 
    TRandom R( 100 );
 
@@ -957,7 +966,6 @@ void create_ManyVars()
    treeB->Show(1);
 
    dataFile->Close();
-   plot();
    cout << "created data file: " << dataFile->GetName() << endl;
 }
 
@@ -965,7 +973,7 @@ void create_ManyVars()
 void create_lin_NvarObsolete()
 {
    Int_t N = 20000;
-   const Int_t nvar = 20;
+   const Int_t nvar = 6;
    Float_t xvar[nvar];
 
    // output flie
@@ -1137,6 +1145,9 @@ void create_lin(Int_t N = 2000)
 
    plot();
 }
+
+
+
 
 void create_fullcirc(Int_t nmax  = 20000,  Bool_t distort=false)
 {
@@ -1518,7 +1529,7 @@ void create_schachbrett_3D(Int_t nEvents = 20000) {
 }
 
 
-void create_schachbrett_2D(Int_t nEvents = 100000, Int_t nbumps=2) {
+void create_schachbrett_2D(Int_t nEvents = 100000) {
 
    const Int_t nvar = 2;
    Float_t xvar[nvar];
@@ -1534,12 +1545,12 @@ void create_schachbrett_2D(Int_t nEvents = 100000, Int_t nbumps=2) {
       treeB->Branch( TString(Form( "var%i", ivar )).Data(), &xvar[ivar], TString(Form( "var%i/F", ivar )).Data() );
    }
 
-   Int_t   nSeed   = 345;
+   Int_t   nSeed   = 12345;
    TRandom *m_rand = new TRandom(nSeed);
-   Double_t sigma=0.35;
+   Double_t sigma=0.3;
    Int_t itype[nvar];
    Int_t iev=0;
-   Int_t m_nDim = nbumps; // actually the boundary, there is a "bump" for every interger value
+   Int_t m_nDim = 2; // actually the boundary, there is a "bump" for every interger value
                      // between in the Inteval [-m_nDim,m_nDim]
 
    int idx[nvar];
@@ -1716,11 +1727,6 @@ void create_multiclassdata(Int_t nmax  = 20000)
    dataFile->Close();
    
 } 
-
-
-
-
-
 
 // create the data
 void create_array_with_different_lengths(Int_t N = 100)
