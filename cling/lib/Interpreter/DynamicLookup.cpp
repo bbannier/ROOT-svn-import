@@ -61,6 +61,9 @@ namespace cling {
 
   bool DynamicIDHandler::IsDynamicLookup (LookupResult& R, Scope* S) {
     if (R.getLookupKind() != Sema::LookupOrdinaryName) return false;
+    // FIXME: This breaks for example 
+    // MyClass a (dep->Symbol(), h->Draw());
+    // the second argument is for redeclaration.
     if (R.isForRedeclaration()) return false;
     for (Scope* DepScope = S; DepScope; DepScope = DepScope->getParent()) {
       if (DeclContext* Ctx = static_cast<DeclContext*>(DepScope->getEntity())) {
@@ -210,111 +213,8 @@ namespace cling {
   
   // end DeclVisitor
   
-  // StmtVisitor   
+  // StmtVisitor
 
-  // Temp
-  EvalInfo DynamicExprTransformer::VisitDeclStmt(DeclStmt *Node) {
-    //Node is MyClass a;
-    //Node MyClass b (a);
-    // if (Node->isSingleDecl())
-    //   if (VarDecl* VD = dyn_cast<VarDecl>(Node->getSingleDecl())) {
-    //     if (VD->getNameAsString().compare("a") == 0)
-    //       classA = VD;
-    //     if (VD->getNameAsString().compare("b") == 0 && !VD->getType()->isLValueReferenceType()) {
-    //       VD->setType(c.getLValueReferenceType(VD->getType()));
-    //       Expr* Init = m_Sema->BuildDeclRefExpr(classA, classA->getType(), VK_LValue, SourceLocation()).take();
-    //       VD->setInit(Init);
-
-    //       //ASTOwningVector<Stmt*> Statements(*m_Sema);
-          
-    //       //IdentifierInfo& II = c.Idents.get("aaaaa");
-          
-    //       VarDecl* FakeVD = VarDecl::Create(c,
-    //                                         //m_Sema->CurContext,
-    //                                         VD->getDeclContext(),
-    //                                         SourceLocation(),
-    //                                         SourceLocation(),
-    //                                         //&II,
-    //                                         0,
-    //                                         classA->getType(),
-    //                                         /*TypeSourceInfo**/0,
-    //                                         SC_None,
-    //                                         SC_None);
-    //       VD->getDeclContext()->addDecl(FakeVD);
-    //       DeclStmt* DS = new (c) DeclStmt(DeclGroupRef(FakeVD), SourceLocation(), SourceLocation());
-
-    //       EvalInfo EInfo(DS, 0);
-    //       //EInfo.Stmts.push_back(Node);
-    //       //Statements.push_back(DS);
-    //       //Statements.push_back(Node);
-    //       //Stmt* CS = m_Sema->ActOnCompoundStmt(SourceLocation(), SourceLocation(), move_arg(Statements), /*isStmtExpr*/ false).take();
-    //       //EInfo.Stmts.push_back(CS);
-    //       //return EvalInfo(DS, 0);
-    //       return EInfo;
-          
-    //     }
-    //   }
-    // -------------------------------------------------------------------------
-    // Visit all the children
-    for (Stmt::child_iterator
-           I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
-      if (*I) {
-        EvalInfo EInfo;
-        //EvalInfo EInfo = Visit(*I);
-
-        // In principle it is possible to have more than one declaration
-        // e.g int a = 2, c = 4; can be int a = 2, b = 3, c = 4;
-        // Allowing that needs many typechecking because we have to be sure that
-        // the new added declarations have the same type
-        // For now I don't forsee any reasonable use-case so I just disable it.
-        //assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
-
-        //if (EInfo.IsEvalNeeded) {
-          // TODO: Make sure that we are in the case MyClass a(h->Draw());
-          // 1-st: Add the LifetimeHandler
-          // 2-nd: Transform the variable into reference.
-        if (Expr* E = dyn_cast<Expr>(*I))
-          if (IsArtificiallyDependent(E))
-            if (VarDecl* VD = dyn_cast<VarDecl>(Node->getSingleDecl())) {
-              if (!VD->getType()->isLValueReferenceType())
-                // 1. Find the lifetime handler
-                if (NamedDecl* LH = m_Interpreter->LookupDecl("cling").LookupDecl("runtime").LookupDecl("internal").LookupDecl("LifetimeHandler")) {
-                  // 2. Create VarDecl pX
-                  IdentifierInfo& II = m_Context.Idents.get("__aaaaa__");
-                  VarDecl* FakeVD = VarDecl::Create(m_Context,
-                                                    //m_Sema->CurContext,
-                                                    VD->getDeclContext(),
-                                                    SourceLocation(),
-                                                    SourceLocation(),
-                                                    &II,
-                                                    //0,
-                                                    VD->getType(),
-                                                    /*TypeSourceInfo**/0,
-                                                    SC_None,
-                                                    SC_None);
-                  VD->getDeclContext()->addDecl(FakeVD);
-                  DeclStmt* DS = new (m_Context) DeclStmt(DeclGroupRef(FakeVD), SourceLocation(), SourceLocation());
-                  EInfo.Stmts.push_back(DS);
-                  LH->dump();
-                }
-
-              
-              
-              *I = SubstituteUnknownSymbol(VD->getType(), E);
-              EInfo.Stmts.push_back(*I);
-              return EInfo;
-            }
-        //} 
-        //else {
-        //  *I = EInfo.Stmt();
-        //}
-        //}
-      }
-    }
-    return EvalInfo(Node, 0);
-    // end Temp
-  }
-  
   EvalInfo DynamicExprTransformer::VisitStmt(Stmt *Node) {
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
@@ -336,25 +236,6 @@ namespace cling {
     return EvalInfo(Node, 0);
   }
   
-  EvalInfo DynamicExprTransformer::VisitExpr(Expr *Node) {
-    for (Stmt::child_iterator
-           I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
-      if (*I) {
-        EvalInfo EInfo = Visit(*I);
-        assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
-        if (EInfo.IsEvalNeeded) {
-          if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
-            // Assume void if still not escaped
-            *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
-        } 
-        else {
-          *I = EInfo.Stmt();
-        }
-      }
-    }
-    return EvalInfo(Node, 0);
-  }
-
   EvalInfo DynamicExprTransformer::VisitCompoundStmt(CompoundStmt *Node) {
     llvm::SmallVector<Stmt*, 32> Stmts;
     if (GetChildren(Stmts, Node)) {
@@ -362,9 +243,10 @@ namespace cling {
       for (it = Stmts.begin(); it != Stmts.end(); ++it) {
         EvalInfo EInfo = Visit(*it);
         if (EInfo.isMultiStmt()) {
-          for (unsigned j = 0; j < EInfo.StmtCount(); ++j) {
-            Stmts.insert(it + j, EInfo.Stmts[j]);
-          }
+          Stmts.insert(it, EInfo.Stmts.begin(), EInfo.Stmts.end());
+          // Remove the last element, which is the one that is 
+          // being replaced          
+          Stmts.erase(it + EInfo.StmtCount());
           Node->setStmts(m_Context, Stmts.data(), Stmts.size());
           // Resolve all 1:n replacements
           Visit(Node);
@@ -387,6 +269,161 @@ namespace cling {
     return EvalInfo(Node, 0);
 
   }
+
+  EvalInfo DynamicExprTransformer::VisitDeclStmt(DeclStmt *Node) {
+    // Visit all the children, which are the contents of the DeclGroupRef
+    for (Stmt::child_iterator
+           I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
+      if (*I) {
+        // 1. Check whether this is the case of MyClass A(dep->symbol())
+        // 2. Insert the RuntimeUniverse's LifetimeHandler instance
+        // 3. Change the A's initializer to *(MyClass*)instance.getMemory()
+        // 4. Make A reference (&A)
+        // 5. Set the new initializer of A
+        Expr* E = cast_or_null<Expr>(*I);
+        if (!E || !IsArtificiallyDependent(E)) 
+          continue;
+        //FIXME: don't assume there is only one decl.
+        assert(Node->isSingleDecl() && "There is more that one decl in stmt");
+        VarDecl* CuredDecl = cast_or_null<VarDecl>(Node->getSingleDecl());
+        QualType CuredDeclTy = CuredDecl->getType();
+        if (!CuredDecl && !CuredDeclTy->isLValueReferenceType())
+          continue;
+        
+        // 2.1 Find the LifetimeHandler type
+        CXXRecordDecl* Handler 
+          = cast_or_null<CXXRecordDecl>(m_Interpreter->LookupDecl("cling").
+                                        LookupDecl("runtime").
+                                        LookupDecl("internal").
+                                        LookupDecl("LifetimeHandler").
+                                        getSingleDecl());
+        assert(Handler && "LifetimeHandler type not found!");
+        if (Handler) {
+          EvalInfo EInfo;
+          // 2.2 Get unique name for the LifetimeHandler instance and initialize it
+          IdentifierInfo& II = m_Context.Idents.get(m_Interpreter->createUniqueName());
+
+          // Prepare the initialization Exprs.
+          // We want to call LifetimeHandler(llvm::StringRef expr, 
+          //                                 llvm::StringRef type)
+          ASTOwningVector<Expr*> Inits(*m_Sema);
+          // Add MyClass in LifetimeHandler unique("MyClass", "dep->Symbol()")
+          Inits.push_back(ConstructllvmStringRefExpr(CuredDeclTy->
+                                                     getAsCXXRecordDecl()->
+                                                     getQualifiedNameAsString().
+                                                     c_str()));
+          // Strip dep->Symbol(arg1, ..., argN) in the m_EvalExpressionBuf
+          BuildEvalEnvironment(E);
+          Inits.push_back(ConstructllvmStringRefExpr(m_EvalExpressionBuf.c_str()));
+
+          // 2.3 Create a variable from LifetimeHandler.
+          QualType HandlerTy 
+            = m_Context.getTypeDeclType(Handler).getNonReferenceType();
+          VarDecl* HandlerInstance = VarDecl::Create(m_Context,
+                                                     CuredDecl->getDeclContext(),
+                                                     SourceLocation(),
+                                                     SourceLocation(),
+                                                     &II,
+                                                     HandlerTy,
+                                                     /*TypeSourceInfo**/0,
+                                                     SC_None,
+                                                     SC_None);
+          
+          // 2.4 Call the best-match constructor. The method does overload 
+          // resolution of the constructors and then initializes the new
+          // variable with it
+          m_Sema->AddCXXDirectInitializerToDecl(HandlerInstance,
+                                                SourceLocation(),
+                                                move_arg(Inits),
+                                                SourceLocation(),
+                                                /*TypeMayContainAuto*/ false);
+
+          // 2.5 Register the instance in the enclosing context
+          CuredDecl->getDeclContext()->addDecl(HandlerInstance);
+          EInfo.Stmts.push_back(new (m_Context) 
+                                DeclStmt(DeclGroupRef(HandlerInstance),
+                                         SourceLocation(),
+                                         SourceLocation())
+                                );
+          
+          // 3.1 Find the declaration - LifetimeHandler::getMemory()
+          CXXMethodDecl* getMemDecl 
+            = m_Interpreter->LookupDecl("getMemory", Handler).getAs<CXXMethodDecl>();
+          assert(getMemDecl && "LifetimeHandler::getMemory not found!");
+          // 3.2 Build a DeclRefExpr, which holds the object
+          DeclRefExpr* MemberExprBase 
+            = m_Sema->BuildDeclRefExpr(HandlerInstance,
+                                       HandlerTy,
+                                       VK_LValue,
+                                       SourceLocation()
+                                       ).takeAs<DeclRefExpr>();
+          // 3.3 Create a MemberExpr to getMemory from its declaration.
+          CXXScopeSpec SS;
+          LookupResult MemberLookup(*m_Sema, getMemDecl->getDeclName(), 
+                                    SourceLocation(),Sema::LookupMemberName);
+          // Add the declaration as if doesn't exist.
+          // TODO: Check whether this is the most appropriate variant
+          MemberLookup.addDecl(getMemDecl, AS_public);
+          MemberLookup.resolveKind();          
+          Expr* MemberExpr = 
+            m_Sema->BuildMemberReferenceExpr(MemberExprBase,
+                                             HandlerTy,
+                                             SourceLocation(),
+                                             /*IsArrow=*/false,
+                                             SS,
+                                             /*FirstQualifierInScope=*/0,
+                                             MemberLookup,
+                                             /*TemplateArgs=*/0
+                                             ).take();
+          // 3.4 Build the actual call
+          Expr* theCall = m_Sema->ActOnCallExpr(0,
+                                                MemberExpr,
+                                                SourceLocation(),
+                                                MultiExprArg(),
+                                                SourceLocation()).take();
+          // Cast to the type LHS type
+          Expr* Result = 
+            m_Sema->BuildCStyleCastExpr(SourceLocation(),
+                                        m_Context.CreateTypeSourceInfo(m_Context.getPointerType(CuredDeclTy)),
+                                        SourceLocation(),
+                                        theCall).take();
+          // Cast once more (dereference the cstyle cast)
+          Result = m_Sema->BuildUnaryOp(/*Scope*/0,
+                                        SourceLocation(),
+                                        UO_Deref,
+                                        Result).take();
+          // 4.
+          CuredDecl->setType(m_Context.getLValueReferenceType(CuredDeclTy));
+          // 5.
+          CuredDecl->setInit(Result);
+
+          EInfo.Stmts.push_back(Node);
+          return EInfo;
+        }
+      }
+    }
+    return EvalInfo(Node, 0);
+  }
+
+  EvalInfo DynamicExprTransformer::VisitExpr(Expr *Node) {
+    for (Stmt::child_iterator
+           I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
+      if (*I) {
+        EvalInfo EInfo = Visit(*I);
+        assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
+        if (EInfo.IsEvalNeeded) {
+          if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
+            // Assume void if still not escaped
+            *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
+        } 
+        else {
+          *I = EInfo.Stmt();
+        }
+      }
+    }
+    return EvalInfo(Node, 0);
+  }
+
   
   EvalInfo DynamicExprTransformer::VisitCallExpr(CallExpr *E) {
     // FIXME: Maybe we need to handle the arguments
@@ -523,10 +560,38 @@ namespace cling {
     
     return Arg2;
   }
+
+  // Construct initializer (llvm::StringRef(Str))
+  Expr* DynamicExprTransformer::ConstructllvmStringRefExpr(const char* Str) {
+    // Try to find llvm::StringRef
+    CXXRecordDecl* CXXRD = dyn_cast<CXXRecordDecl>(m_Interpreter->
+                                                   LookupDecl("llvm").
+                                                   LookupDecl("StringRef").getSingleDecl());
+    // Exit if not "llvm/ADT/StringRef.h" included
+    if (!CXXRD)
+      return 0;
+
+    // Create the const char* Expr, which will be passed to the constructor
+    const QualType ConstChar = m_Context.getConstType(m_Context.CharTy);
+    const QualType ConstCharArray = m_Context.getConstantArrayType(ConstChar, llvm::APInt(m_Context.getTypeSize(ConstChar), strlen(Str) + 1), ArrayType::Normal, /*IndexTypeQuals=*/ 0);
+    Expr *Result = StringLiteral::Create(m_Context, 
+                                         &*Str, 
+                                         strlen(Str), 
+                                         /*Wide=*/ false,
+                                         ConstCharArray, 
+                                         SourceLocation());
+    const QualType CastTo = m_Context.getPointerType(m_Context.getConstType(m_Context.CharTy));
+    // Cast const char lvalue to const char *
+    m_Sema->ImpCastExprToType(Result, CastTo, CK_ArrayToPointerDecay);
+
+    return Result;    
+  }
+
+
   
   // Here is the test Eval function specialization. Here the CallExpr to the function
   // is created.
-  CallExpr *DynamicExprTransformer::BuildEvalCallExpr(const QualType InstTy, Expr *SubTree, 
+  CallExpr* DynamicExprTransformer::BuildEvalCallExpr(const QualType InstTy, Expr *SubTree, 
                                                    ASTOwningVector<Expr*> &CallArgs) {      
     // Set up new context for the new FunctionDecl
     DeclContext *PrevContext = m_Sema->CurContext;

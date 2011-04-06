@@ -57,6 +57,9 @@ namespace cling {
       NamedDeclResult& LookupDecl(llvm::StringRef);
       operator clang::NamedDecl* () const { return getSingleDecl(); }
       clang::NamedDecl* getSingleDecl() const;
+      template<typename T> T* getAs(){
+        return static_cast<T*>(getSingleDecl());
+      }
       
       friend class Interpreter;
     };
@@ -73,7 +76,7 @@ namespace cling {
     virtual ~Interpreter();
 
     const char* getVersion() const;
-    
+    std::string createUniqueName();
     void AddIncludePath(const char *incpath);
     int processLine(const std::string& input_line);
     
@@ -112,10 +115,7 @@ namespace cling {
   private:
     
     void createWrappedSrc(const std::string& src, std::string& wrapped,
-                          std::string& stmtFunc);
-    
-    std::string createUniqueName();
-    
+                          std::string& stmtFunc);  
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
     Value EvaluateWithContext(const char* expr, 

@@ -136,23 +136,42 @@ namespace cling {
     void VisitDeclContext(clang::DeclContext *DC);
     
     // StmtVisitor
-    EvalInfo VisitDeclStmt(clang::DeclStmt *Node);
     EvalInfo VisitStmt(clang::Stmt *Node);
-    EvalInfo VisitExpr(clang::Expr *Node);
     EvalInfo VisitCompoundStmt(clang::CompoundStmt *Node);
+    /// \brief Transforms a declaration with initializer of dependent type. 
+    /// The expected type couldn't be determined.
+    ///
+    /// For example:
+    /// @code
+    /// MyClass my(h->Draw())
+    /// @endcode
+    /// where h->Draw() is of artificially 
+    /// dependent type, ends up as:
+    /// @code
+    /// cling::runtime::internal::LifetimeHandler __unique("MyClass","h->Draw()");
+    /// MyClass &my(*(MyClass*)__unique.getMemory())
+    /// @endcode
+    ///
+    /// Note: here our main priority is to preserve equivalent behavior. We have
+    /// to clean the heap memory afterwords.
+    ///
+    EvalInfo VisitDeclStmt(clang::DeclStmt *Node);
+    EvalInfo VisitExpr(clang::Expr *Node);
     EvalInfo VisitCallExpr(clang::CallExpr *E);
     EvalInfo VisitDeclRefExpr(clang::DeclRefExpr *DRE);
     EvalInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr *Node);
     
     // EvalBuilder
-    clang::Expr *SubstituteUnknownSymbol(const clang::QualType InstTy, clang::Expr *SubTree);
-    clang::CallExpr *BuildEvalCallExpr(clang::QualType type, clang::Expr *SubTree, clang::ASTOwningVector<clang::Expr*> &CallArgs);
-    void BuildEvalEnvironment(clang::Expr *SubTree);
-    void BuildEvalArgs(clang::ASTOwningVector<clang::Expr*> &Result);
-    clang::Expr *BuildEvalArg0();
-    clang::Expr *BuildEvalArg1();
-    clang::Expr *BuildEvalArg2();
-    
+    clang::Expr* SubstituteUnknownSymbol(const clang::QualType InstTy, clang::Expr* SubTree);
+    clang::CallExpr* BuildEvalCallExpr(clang::QualType type, clang::Expr* SubTree, clang::ASTOwningVector<clang::Expr*>& CallArgs);
+    void BuildEvalEnvironment(clang::Expr* SubTree);
+    void BuildEvalArgs(clang::ASTOwningVector<clang::Expr*>& Result);
+    clang::Expr* BuildEvalArg0();
+    clang::Expr* BuildEvalArg1();
+    clang::Expr* BuildEvalArg2();
+
+    clang::Expr* ConstructllvmStringRefExpr(const char* Str);
+
     // Helper
     bool IsArtificiallyDependent(clang::Expr *Node);
     bool ShouldVisit(clang::Decl *D);
