@@ -163,7 +163,7 @@ namespace cling {
 
   clang::NamedDecl* Interpreter::NamedDeclResult::getSingleDecl() const {
     // TODO: Check whether it is only one decl if (end-begin == 1 )
-    return dyn_cast<clang::NamedDecl>(m_Result);
+    return static_cast<clang::NamedDecl*>(m_Result);
   }
 
   //
