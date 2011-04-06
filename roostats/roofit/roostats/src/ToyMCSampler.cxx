@@ -334,7 +334,7 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistributionSingleWorker(RooArgSe
    *allVars = *saveAll;
    delete saveAll;
    delete allVars;
-   if (!allVars2) delete allVars2;
+   if (allVars2) delete allVars2;
    if(np) delete np;
 
    // return

@@ -201,7 +201,7 @@ Double_t SamplingDistribution::IntegralAndError(Double_t & error, Double_t low, 
       sum /= norm;
 
       // use formula for binomial error in case of weighted events 
-      // expression can derive using a MLE for a weighted binomial likelihood 
+      // expression can be derived using a MLE for a weighted binomial likelihood 
       error = std::sqrt( sum2 * (1. - 2. * sum) + norm2 * sum * sum ) / norm;  
    }
    else { 
