@@ -68,62 +68,152 @@ namespace RooStats {
 
 
 struct  LikelihoodFunction { 
-   LikelihoodFunction(RooFunctor & f, double offset = 0) : fFunc(f), fOffset(offset) {}
+   LikelihoodFunction(RooFunctor & f, double offset = 0) : fFunc(f), fOffset(offset), fMaxL(0) {
+      fFunc.binding().resetNumCall(); 
+   }
 
    double operator() (const double *x ) const { 
       double nll = fFunc(x) - fOffset;
       double likelihood =  std::exp(-nll);
-//       ooccoutD((TObject*)0,NumIntegration)  
-//      std::cout     << "x[0] = " << x[0] << " x[1] = " << x[1]  << " func " << fFunc(x) << " nll = " << nll << "offset " << fOffset << " likelihood = " << likelihood << std::endl;
+
+      int nCalls = fFunc.binding().numCall();
+      if (nCalls > 0 && nCalls % 1000 == 0) { 
+         ooccoutD((TObject*)0,Eval) << "Likelihood evaluation ncalls = " << nCalls
+                                              << " x0 " << x[0] << "  nll = " << nll+fOffset 
+                                              << " likelihood " << likelihood 
+                                              << " max Likelihood " << fMaxL << std::endl;                                            
+      }
+ 
+      if  (likelihood > fMaxL ) { 
+         fMaxL = likelihood; 
+         if ( likelihood > 1.E10) { 
+            ooccoutW((TObject*)0,Eval) << "Huge max likelihood value found for  parameters ";
+            for (int i = 0; i < fFunc.nObs(); ++i) 
+               ooccoutW((TObject*)0,Eval) << " x[" << i << " ] = " << x[i]; 
+            ooccoutW((TObject*)0,Eval) << "nll = " << nll << " likelihood = " << std::endl;
+         }
+      }
+
       return likelihood; 
    }
 
    // for the 1D case
    double operator() (double x) const { 
       double tmp = x; 
-      return (*this)(&tmp); 
+      double likelihood =  (*this)(&tmp); 
+
+      int nCalls = fFunc.binding().numCall();
+      if (nCalls > 0 && nCalls % 100 == 0) { 
+         ooccoutD((TObject*)0,NumIntegration) << "Likelihood evaluation ncalls = " << nCalls
+                                              << " x " << x 
+            //<< "  nll = " << nll+fOffset 
+                                              << " likelihood " << likelihood << std::endl;                                            
+      }
+
+      return likelihood;
    }
 
    RooFunctor & fFunc;     // functor representing the nll function 
-   double fOffset;         //  offset used to bring the nll in a reasanble range for computing the exponent whch can be computed 
+   double fOffset;         //  offset used to bring the nll in a reasanble range for computing the exponent
+   mutable double fMaxL;
 };
+
+//______________________________________________________________________
+
+// Posterior CDF Function class 
+// for integral of posterior function in nuisance and POI
+// 1-Dim function as function of the poi 
 
 class PosteriorCdfFunction : public ROOT::Math::IGenFunction { 
 
 public:
-   PosteriorCdfFunction(ROOT::Math::IntegratorMultiDim & ig, double * xmin, double * xmax) : 
-      fIntegrator(ig), fXmin(xmin), fXmax(xmax), fNorm(1.0), fOffset(0.0), fMaxX(xmax[0]), 
-      fHasNorm(false), fUseOldValues(true) 
-   {
+
+   PosteriorCdfFunction(RooAbsReal & nll, RooArgList & bindParams, const char * integType = 0, double nllMinimum = 0) : 
+      fFunctor(nll, bindParams, RooArgList() ),  // functor 
+      fLikelihood(fFunctor, nllMinimum),         // integral of exp(-nll) function
+      fIntegrator(ROOT::Math::IntegratorMultiDim::GetType(integType) ),  // integrator 
+      fXmin(bindParams.getSize() ),               // vector of parameters (min values) 
+      fXmax(bindParams.getSize() ),               // vector of parameter (max values) 
+      fNorm(1.0), fOffset(0), fMaxPOI(0), 
+      fHasNorm(false),  fUseOldValues(true), fError(false) 
+   {     
+
+      fIntegrator.SetFunction(fLikelihood, bindParams.getSize() );
+         
+      ooccoutD((TObject*)0,NumIntegration) << "PosteriorCdfFunction::Compute integral of posterior in nuisance and poi" << std::endl; 
+   
+      std::vector<double> par(bindParams.getSize());
+      for (unsigned int i = 0; i < fXmin.size(); ++i) { 
+         RooRealVar & var = (RooRealVar &) bindParams[i]; 
+         fXmin[i] = var.getMin(); 
+         fXmax[i] = var.getMax();
+         par[i] = var.getVal();
+         ooccoutD((TObject*)0,NumIntegration) << "PosteriorFunction::Integrate" << var.GetName() 
+                                              << " in interval [ " <<  fXmin[i] << " , " << fXmax[i] << " ] " << std::endl;
+      } 
+
+      fIntegrator.Options().Print(ooccoutD((TObject*)0,NumIntegration));
+
+      // store max POI value because it will be changed when evaluating the function 
+      fMaxPOI = fXmax[0];
+
       // compute first the normalization with  the poi 
-      fNorm = (*this)(xmax[0] );  
+      fNorm = (*this)( fMaxPOI );  
+      if (fError) ooccoutE((TObject*)0,NumIntegration) << "PosteriorFunction::Error computing normalization - norm = " << fNorm << std::endl;
       fHasNorm = true; 
-      fNormCdfValues.insert(std::make_pair(xmin[0], 0) );
-      fNormCdfValues.insert(std::make_pair(xmax[0], 1.0) );
-
+      fNormCdfValues.insert(std::make_pair(fXmin[0], 0) );
+      fNormCdfValues.insert(std::make_pair(fXmax[0], 1.0) );
    }
+   
+   // copy constructor 
+   // need special treatment because integrator 
+   // has no copy constuctor
+   PosteriorCdfFunction(const PosteriorCdfFunction & rhs) : 
+      ROOT::Math::IGenFunction(),
+      fFunctor(rhs.fFunctor),
+      fLikelihood(fFunctor, rhs.fLikelihood.fOffset),  
+      fIntegrator(ROOT::Math::IntegratorMultiDim::GetType( rhs.fIntegrator.Name().c_str() ) ),  // integrator 
+      fXmin( rhs.fXmin), 
+      fXmax( rhs.fXmax), 
+      fNorm( rhs.fNorm), 
+      fOffset(rhs.fOffset), 
+      fMaxPOI(rhs.fMaxPOI), 
+      fHasNorm(rhs.fHasNorm), 
+      fUseOldValues(rhs.fUseOldValues), 
+      fError(rhs.fError), 
+      fNormCdfValues(rhs.fNormCdfValues)
+   { 
+      fIntegrator.SetFunction(fLikelihood, fXmin.size() );
+   }
+                                   
+    
+   bool HasError() const { return fError; }
 
-//    PosteriorCdfFunction(ROOT::Math::IntegratorMultiDim & ig, double * xmin, double * xmax, double norm) : 
-//       fIntegrator(ig), fXmin(xmin), fXmax(xmax), fNorm(norm), fOffset(0.0), fMaxX(xmax[0]), fHasNorm(true)  {
-//       // compute posterior cdf from a normalization given from outside 
-//    }
 
    ROOT::Math::IGenFunction * Clone() const { 
       ooccoutD((TObject*)0,NumIntegration) << " cloning function .........." << std::endl;
       return new PosteriorCdfFunction(*this); 
    }
 
+   // offset value for computing the root
    void SetOffset(double offset) { fOffset = offset; }
 
 private:
-   double DoEval (double x) const { 
-      // evaluate cdf at poi value x by integrating poi from [-xmin,x] and all the nuisances  
+
+   // make assignment operator private
+   PosteriorCdfFunction& operator=(const PosteriorCdfFunction &) { 
+      return *this; 
+   }
+
+   double DoEval (double x) const {
+ 
+      // evaluate cdf at poi value x by integrating poi from [xmin,x] and all the nuisances  
       fXmax[0] = x;
       if (x <= fXmin[0] ) return -fOffset; 
       // could also avoid a function evaluation at maximum
-      if (x >= fMaxX && fHasNorm) return 1. - fOffset;  // cdf is bound to these values
+      if (x >= fMaxPOI && fHasNorm) return 1. - fOffset;  // cdf is bound to these values
 
-      // computes the intergral using previous cdf estimate
+      // computes the integral using a previous cdf estimate
       double  normcdf0 = 0; 
       if (fHasNorm && fUseOldValues) { 
          // look in the map of the stored cdf values the closes one
@@ -132,17 +222,28 @@ private:
          if (itr != fNormCdfValues.end() ) { 
             fXmin[0] = itr->first; 
             normcdf0 = itr->second;
-            ooccoutD((TObject*)0,NumIntegration) << "PosteriorCdfFunction:   position for x = " << x << " is  = " << itr->first << std::endl; 
+            // ooccoutD((TObject*)0,NumIntegration) << "PosteriorCdfFunction:   computing integral between in poi interval : " 
+            //                                      << fXmin[0] << " -  " << fXmax[0] << std::endl; 
          }
       }
 
+      fFunctor.binding().resetNumCall();  // reset number of calls for debug
 
-      double cdf = fIntegrator.Integral(fXmin,fXmax);  
+      double cdf = fIntegrator.Integral(&fXmin[0],&fXmax[0]);  
       double error = fIntegrator.Error(); 
       double normcdf =  cdf/fNorm;  // normalize the cdf 
-      ooccoutD((TObject*)0,NumIntegration) << "PosteriorCdfFunction:   x0 = " << fXmin[0] << " x =  " 
-                                          << x << " cdf(x) =  " << cdf << " +/- " << error 
-                                          << "  norm-cdf(x) = " << normcdf << std::endl; 
+
+      ooccoutD((TObject*)0,NumIntegration) << "PosteriorCdfFunction: poi = [" << fXmin[0] << " , " 
+                                           << fXmax[0] << "] integral =  " << cdf << " +/- " << error 
+                                           << "  norm-integ = " << normcdf << " cdf(x) = " << normcdf+normcdf0 
+                                           << " ncalls = " << fFunctor.binding().numCall() << std::endl; 
+
+      if (TMath::IsNaN(cdf) || cdf > std::numeric_limits<double>::max()) { 
+         ooccoutE((TObject*)0,NumIntegration) << "PosteriorFunction::Error computing integral - cdf = " 
+                                              << cdf << std::endl;
+         fError = true; 
+      }
+
       if (cdf != 0 && error/cdf > 0.2 ) 
          oocoutW((TObject*)0,NumIntegration) << "PosteriorCdfFunction: integration error  is larger than 20 %   x0 = " << fXmin[0]  
                                               << " x = " << x << " cdf(x) = " << cdf << " +/- " << error << std::endl;
@@ -168,16 +269,24 @@ private:
       return normcdf - fOffset;  // apply an offset (for finding the roots) 
    }
 
-   ROOT::Math::IntegratorMultiDim & fIntegrator; 
-   mutable double * fXmin; 
-   mutable double * fXmax; 
-   double fNorm; 
-   double fOffset;
-   double fMaxX;  // maxumum value of x 
+   mutable RooFunctor fFunctor;                         // functor binding nll 
+   LikelihoodFunction fLikelihood;              // likelihood function
+   mutable ROOT::Math::IntegratorMultiDim  fIntegrator; // integrator  (mutable because Integral() is not const
+   mutable std::vector<double> fXmin;    // min value of parameters (poi+nuis) - 
+   mutable std::vector<double> fXmax;   // max value of parameters (poi+nuis) - max poi changes so it is mutable
+   double fNorm;      // normalization value (computed in ctor) 
+   double fOffset;   // offset for computing the root 
+   double fMaxPOI;  // maximum value of POI 
    bool fHasNorm; // flag to control first call to the function 
    bool fUseOldValues;  // use old cdf values
+   mutable bool fError;     // flag to indicate if a numerical evaluation error occurred
    mutable std::map<double,double> fNormCdfValues; 
 };
+
+//__________________________________________________________________
+// Posterior Function class 
+// 1-Dim function as function of the poi 
+// and it integrated all the nuisance parameters 
 
 class PosteriorFunction : public ROOT::Math::IGenFunction { 
 
@@ -193,10 +302,13 @@ public:
       fNorm(norm)      
    { 
 
+      ooccoutD((TObject*)0,NumIntegration) << "PosteriorFunction::Evaluate the posterior function by integrating the nuisances: " << std::endl;
       for (unsigned int i = 0; i < fXmin.size(); ++i) { 
          RooRealVar & var = (RooRealVar &) nuisParams[i]; 
          fXmin[i] = var.getMin(); 
          fXmax[i] = var.getMax();
+         ooccoutD((TObject*)0,NumIntegration) << "PosteriorFunction::Integrate" << var.GetName() 
+                                              << " in interval [" <<  fXmin[i] << " , " << fXmax[i] << " ] " << std::endl;
       }
       if (fXmin.size() == 1) { // 1D case  
          fIntegratorOneDim = std::auto_ptr<ROOT::Math::Integrator>(
@@ -204,6 +316,7 @@ public:
          fIntegratorOneDim->SetFunction(fLikelihood);
          // interested only in relative tolerance
          //fIntegratorOneDim->SetAbsTolerance(1.E-300);
+         fIntegratorOneDim->Options().Print(ooccoutD((TObject*)0,NumIntegration) );
       }
       else if (fXmin.size() > 1) { // multiDim case          
          fIntegratorMultiDim = 
@@ -211,6 +324,7 @@ public:
                new ROOT::Math::IntegratorMultiDim(ROOT::Math::IntegratorMultiDim::GetType(integType) ) );
          fIntegratorMultiDim->SetFunction(fLikelihood, fXmin.size());
          //fIntegratorMultiDim->SetAbsTolerance(1.E-300);
+         fIntegratorMultiDim->Options().Print(ooccoutD((TObject*)0,NumIntegration) );
       }
    }
       
@@ -222,9 +336,12 @@ public:
    
 private: 
    double DoEval (double x) const { 
+
       // evaluate posterior function at a poi value x by integrating all nuisance parameters
 
       fPoi->setVal(x);
+      fFunctor.binding().resetNumCall();  // reset number of calls for debug
+
       double f = 0; 
       double error = 0; 
       if (fXmin.size() == 1) { // 1D case  
@@ -239,6 +356,15 @@ private:
          f = fLikelihood(&x);
       }
 
+      // debug 
+      ooccoutD((TObject*)0,NumIntegration) << "PosteriorFunction:  POI value  =  " 
+                                           << x << "\tf(x) =  " << f << " +/- " << error 
+                                           << "  norm-f(x) = " << f/fNorm 
+                                           << " ncalls = " << fFunctor.binding().numCall() << std::endl; 
+
+
+
+
       if (f != 0 && error/f > 0.2 ) 
          ooccoutW((TObject*)0,NumIntegration) << "PosteriorFunction::DoEval - Error from integration in " 
                                               << fXmin.size() <<  " Dim is larger than 20 % " 
@@ -247,7 +373,7 @@ private:
       return f / fNorm;
    }
 
-   RooFunctor fFunctor; 
+   mutable RooFunctor fFunctor; 
    LikelihoodFunction fLikelihood; 
    RooRealVar * fPoi;
    std::auto_ptr<ROOT::Math::Integrator>  fIntegratorOneDim; 
@@ -699,31 +825,15 @@ void BayesianCalculator::ComputeIntervalFromCdf(double lowerCutOff, double upper
    
    // this code could be put inside the PosteriorCdfFunction
          
-   RooFunctor functor_nll(*fLogLike, bindParams, RooArgList());
-         
-   
-   // compute the integral of the exp(-nll) function
-   LikelihoodFunction fll(functor_nll, fNLLMin);
-      
-   ROOT::Math::IntegratorMultiDim ig(ROOT::Math::IntegratorMultiDim::GetType(fIntegrationType)); 
-   ig.SetFunction(fll,bindParams.getSize()); 
-   
-   std::vector<double> pmin(bindParams.getSize());
-   std::vector<double> pmax(bindParams.getSize());
-   std::vector<double> par(bindParams.getSize());
-   for (unsigned int i = 0; i < pmin.size(); ++i) { 
-      RooRealVar & var = (RooRealVar &) bindParams[i]; 
-      pmin[i] = var.getMin(); 
-      pmax[i] = var.getMax();
-      par[i] = var.getVal();
-   } 
-         
-         
    //bindParams.Print("V");
+   fValidInterval = false; 
          
-   PosteriorCdfFunction cdf(ig, &pmin[0], &pmax[0] ); 
-         
-         
+   PosteriorCdfFunction cdf(*fLogLike, bindParams, fIntegrationType ); 
+   if(cdf.HasError() ) { 
+      coutE(Eval) <<  "BayesianCalculator: Numerical error computing CDF integral - try different method " << std::endl;      
+      return;
+   }
+                  
    //find the roots 
 
    ROOT::Math::RootFinder rf(kRootFinderType); 
@@ -754,6 +864,7 @@ void BayesianCalculator::ComputeIntervalFromCdf(double lowerCutOff, double upper
    else { 
       fUpper = poi->getMax(); 
    }
+
    fValidInterval = true; 
 }
 
