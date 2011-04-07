@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$   
-// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss, Jan Therhaag
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -14,13 +14,14 @@
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Peter Speckmayer <Peter.Speckmayer@cern.ch>  - CERN, Switzerland          *
+ *      Jan Therhaag       <Jan.Therhaag@cern.ch>     - U of Bonn, Germany        *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         * 
  *      U. of Victoria, Canada                                                    * 
  *      MPI-K Heidelberg, Germany                                                 * 
- *      LAPP, Annecy, France                                                      *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -76,34 +77,34 @@ namespace TMVA {
       Double_t GetWeight()         const { return fWeight*fBoostWeight; }
       Double_t GetOriginalWeight() const { return fWeight; }
       Double_t GetBoostWeight()    const { return TMath::Max(Double_t(0.0001),fBoostWeight); }
-      UInt_t  GetClass()          const { return fClass; }  
+      UInt_t   GetClass()          const { return fClass; }  
 
-      UInt_t  GetNVariables()        const;
-      UInt_t  GetNTargets()          const;
-      UInt_t  GetNSpectators()       const;
+      UInt_t   GetNVariables()        const;
+      UInt_t   GetNTargets()          const;
+      UInt_t   GetNSpectators()       const;
 
-      Float_t GetValue( UInt_t ivar) const;
+      Float_t  GetValue( UInt_t ivar) const;
       const std::vector<Float_t>& GetValues() const;
 
-      Float_t GetTarget( UInt_t itgt ) const { return fTargets.at(itgt); }
+      Float_t  GetTarget( UInt_t itgt ) const { return fTargets.at(itgt); }
       std::vector<Float_t>& GetTargets() const { return fTargets; }
 
-      Float_t GetSpectator( UInt_t ivar) const;
+      Float_t  GetSpectator( UInt_t ivar) const;
       std::vector<Float_t>& GetSpectators() const { return fSpectators; }
 
-      void    ScaleWeight           ( Double_t s ) { fWeight*=s; }
-      void    SetWeight             ( Double_t w ) { fWeight=w; }
-      void    SetBoostWeight        ( Double_t w ) { fBoostWeight=w; }
-      void    ScaleBoostWeight      ( Double_t s ) { fBoostWeight *= s; }
-      void    SetClass              ( UInt_t t )  { fClass=t; }
-      void    SetVal                ( UInt_t ivar, Float_t val );
-      void    SetTarget             ( UInt_t itgt, Float_t value );
-      void    SetSpectator          ( UInt_t ivar, Float_t value );
+      void     ScaleWeight           ( Double_t s ) { fWeight*=s; }
+      void     SetWeight             ( Double_t w ) { fWeight=w; }
+      void     SetBoostWeight        ( Double_t w ) { fBoostWeight=w; }
+      void     ScaleBoostWeight      ( Double_t s ) { fBoostWeight *= s; }
+      void     SetClass              ( UInt_t t )  { fClass=t; }
+      void     SetVal                ( UInt_t ivar, Float_t val );
+      void     SetTarget             ( UInt_t itgt, Float_t value );
+      void     SetSpectator          ( UInt_t ivar, Float_t value );
 
       static void ClearDynamicVariables() {}
 
-      void    CopyVarValues( const Event& other );
-      void    Print        ( std::ostream & o ) const;
+      void     CopyVarValues( const Event& other );
+      void     Print        ( std::ostream & o ) const;
 
    private:
 
@@ -112,7 +113,7 @@ namespace TMVA {
       mutable std::vector<Float_t>   fTargets;              // target values for regression
       mutable std::vector<Float_t>   fSpectators;           // "visisting" variables which are never used for any calculation
 
-      UInt_t                         fClass;           // signal or background type: signal=1, background=0
+      UInt_t                         fClass;           // class number
       Double_t                       fWeight;          // event weight (product of global and individual weights)
       Double_t                       fBoostWeight;     // internal weight to be set by boosting algorithm
       Bool_t                         fDynamic;         // is set when the dynamic values are taken
