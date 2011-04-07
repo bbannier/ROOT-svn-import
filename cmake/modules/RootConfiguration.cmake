@@ -42,6 +42,7 @@ set(docdir "$(ROOTSYS)")
 set(testdir "$(ROOTSYS)/test")
 set(tutdir "$(ROOTSYS)/tutorials")
 set(aclocaldir "$(ROOTSYS)/build/misc")
+set(LibSuffix ${SOEXT})
 
 set(buildx11 ${value${x11}})
 set(x11libdir -L${X11_LIBRARY_DIR})
@@ -356,13 +357,8 @@ configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.in include/compiled
 configure_file(${CMAKE_SOURCE_DIR}/config/Makefile-comp.in config/Makefile.comp)
 configure_file(${CMAKE_SOURCE_DIR}/config/Makefile.in config/Makefile.config)
 configure_file(${CMAKE_SOURCE_DIR}/config/mimes.unix.in ${CMAKE_BINARY_DIR}/etc/root.mimes)
-configure_file(${CMAKE_SOURCE_DIR}/config/genreflex.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/config/genreflex-rootcint.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex-rootcint @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/config/memprobe.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/memprobe @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.sh ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.sh @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.csh ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.csh @ONLY)
 
-#---Especial definitions for root-config----------------------------------------------------------------------
+#---Especial definitions for root-config et al.--------------------------------------------------------------
 set(prefix $ROOTSYS)
 set(bindir $ROOTSYS/bin)
 set(libdir $ROOTSYS/lib)
@@ -370,6 +366,11 @@ set(incdir $ROOTSYS/include)
 set(etcdir $ROOTSYS/etc)
 set(mandir $ROOTSYS/man/man1)
 configure_file(${CMAKE_SOURCE_DIR}/config/root-config.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/root-config @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/memprobe.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/memprobe @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.sh ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.sh @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.csh ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.csh @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/genreflex.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/genreflex-rootcint.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex-rootcint @ONLY)
 
 install(FILES ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex
               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex-rootcint

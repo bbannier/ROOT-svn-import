@@ -77,7 +77,7 @@ set(CINTBUILDLOADER
 set(CINTDLLCXXFLAGS "${CINT_CXX_DEFINITIONS} -DG__HAVE_CONFIG -DG__NOMAKEINFO")
 set(CINTDLLCFLAGS "${CINT_C_DEFINITIONS} -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__SYSTYPES")
 
-set(AdditionalHeaderFiles ${CMAKE_SOURCE_DIR}/cint/cint/inc/cintdictversion.h)
+#set(AdditionalHeaderFiles ${CMAKE_SOURCE_DIR}/cint/cint/inc/cintdictversion.h)
 set(IncludeDirs -I${CMAKE_SOURCE_DIR}/cint/cint/inc -I${HEADER_OUTPUT_PATH})
 
 foreach(_name ${CINTSTLDLLNAMES}) 
@@ -128,16 +128,19 @@ foreach(_name ${CINTSTLDLLNAMES})
     install(TARGETS ${_name}Dict DESTINATION lib)
     if(explicitlink)
       target_link_libraries(${_name}Dict Cint Core)
-	  endif()
-    ROOT_GENERATE_ROOTMAP( ${_name}Dict LINKDEF ${linkdeffile})
-
+    endif()
+    if(_name STREQUAL vector) 
+      ROOT_GENERATE_ROOTMAP( ${_name}Dict LIBRARY vector.dll DEPENDENCIES vectorbool.dll LINKDEF ${linkdeffile})
+    else()
+      ROOT_GENERATE_ROOTMAP( ${_name}Dict LIBRARY ${_name}.dll LINKDEF ${linkdeffile})
+    endif()
   else()
     set(LoaderName)
   endif()
 
-  add_Library(${_name} ${LoaderName} ${OutFileName} )
+  add_Library(${_name} SHARED ${LoaderName} ${OutFileName} )
   set_target_properties(${_name} PROPERTIES PREFIX "" SUFFIX ".dll" FOLDER Dictionaries)
-  #install(TARGETS ${_name} DESTINATION cint/cint/stl)
+  install(TARGETS ${_name} DESTINATION cint/cint/stl)
 endforeach()
 
 
@@ -157,7 +160,7 @@ foreach(_name ${CINTINCDLLNAMES})
     set_source_files_properties(${OutFileName} 
                                 COMPILE_FLAGS "${CINTDLLCFLAGS} -I${CMAKE_SOURCE_DIR}/cint/cint/inc"
                                )
-    add_Library(${_name} ${OutFileName})
+    add_Library(${_name} SHARED ${OutFileName})
     set_target_properties(${_name} PROPERTIES PREFIX "" SUFFIX ".dll" FOLDER Dictionaries)
     #install(TARGETS ${_name} DESTINATION cint/cint/include)
 
@@ -172,9 +175,9 @@ foreach(_name ${CINTINCDLLNAMES})
                                 COMPILE_FLAGS "${CINTDLLCFLAGS} -I${CMAKE_SOURCE_DIR}/cint/cint/inc"
                                )
 
-    add_Library(${_name} ${OutFileName})
+    add_Library(${_name} SHARED ${OutFileName})
     set_target_properties(${_name} PROPERTIES PREFIX "" SUFFIX ".dll" FOLDER Dictionaries)
-    #install(TARGETS ${_name} DESTINATION cint/cint/include)
+    install(TARGETS ${_name} DESTINATION cint/cint/include)
 
   elseif(_name MATCHES posix)
     
@@ -209,8 +212,8 @@ foreach(_name ${CINTINCDLLNAMES})
                                 COMPILE_FLAGS " -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY"
                                )
 
-    add_library(${_name} ${OutFileName} ${CMAKE_SOURCE_DIR}/cint/cint/lib/posix/exten.c)
+    add_library(${_name} SHARED ${OutFileName} ${CMAKE_SOURCE_DIR}/cint/cint/lib/posix/exten.c)
     set_target_properties(${_name} PROPERTIES PREFIX "" SUFFIX ".dll" FOLDER Dictionaries)
-    #install(TARGETS ${_name} DESTINATION cint/cint/include)
+    install(TARGETS ${_name} DESTINATION cint/cint/include)
   endif()
 endforeach()

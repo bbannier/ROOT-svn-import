@@ -268,10 +268,10 @@ macro( ROOT_USE_PACKAGE package )
 endmacro()
 
 #---------------------------------------------------------------------------------------------------
-#---ROOT_GENERATE_ROOTMAP( library LINKDEF linkdef DEPENDENCIES lib1 lib2 )
+#---ROOT_GENERATE_ROOTMAP( library LINKDEF linkdef LIBRRARY lib DEPENDENCIES lib1 lib2 )
 #---------------------------------------------------------------------------------------------------
 function(ROOT_GENERATE_ROOTMAP library)
-  PARSE_ARGUMENTS(ARG "LINKDEF;DEPENDENCIES" "" ${ARGN})
+  PARSE_ARGUMENTS(ARG "LINKDEF;LIBRARY;DEPENDENCIES" "" ${ARGN})
   get_filename_component(libname ${library} NAME_WE)
   get_filename_component(path ${library} PATH)
   set(outfile ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${libprefix}${libname}.rootmap)
@@ -283,11 +283,21 @@ function(ROOT_GENERATE_ROOTMAP library)
     endif()
   endforeach()
   foreach(d ${ARG_DEPENDENCIES})
-    set(_dependencies ${_dependencies} ${libprefix}${d}${CMAKE_SHARED_LIBRARY_SUFFIX})
+    get_filename_component(_ext ${d} EXT)
+    if(_ext)
+      set(_dependencies ${_dependencies} ${d})
+    else()
+      set(_dependencies ${_dependencies} ${libprefix}${d}${CMAKE_SHARED_LIBRARY_SUFFIX})
+    endif()
   endforeach()
+  if(ARG_LIBRARY)
+    set(_library ${ARG_LIBRARY})
+  else()
+    set(_library ${libprefix}${library}${CMAKE_SHARED_LIBRARY_SUFFIX})
+  endif()
   #---Build the rootmap file--------------------------------------
   add_custom_command(OUTPUT ${outfile}
-                     COMMAND rlibmap -o ${outfile} -l ${libprefix}${library}${CMAKE_SHARED_LIBRARY_SUFFIX} -d ${_dependencies} -c ${_linkdef} 
+                     COMMAND rlibmap -o ${outfile} -l ${_library} -d ${_dependencies} -c ${_linkdef} 
                      DEPENDS ${_linkdef} rlibmap )
   add_custom_target( ${libprefix}${library}.rootmap ALL DEPENDS  ${outfile})
   set_target_properties(${libprefix}${library}.rootmap PROPERTIES FOLDER RootMaps )

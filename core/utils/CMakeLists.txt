@@ -21,7 +21,7 @@ add_custom_command(OUTPUT rootcint_tmp.cxx RStl_tmp.cxx loadfile_tmp.cxx
 
 #add_definitions("-UR__HAVE_CONFIG -DROOTBUILD")
 set_source_files_properties(loadfile_tmp.cxx rootcint_tmp.cxx RStl_tmp.cxx PROPERTIES COMPILE_FLAGS 
-                            "-I${CMAKE_SOURCE_DIR}/core/utils/src -I${CMAKE_SOURCE_DIR}/cint/cint/src -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY")
+                            "-I${CMAKE_SOURCE_DIR}/core/utils/src -I${CMAKE_SOURCE_DIR}/cint/cint/src ${CINT_CXX_DEFINITIONS} -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY -UR__HAVE_CONFIG -DROOTBUILD")
 ROOT_EXECUTABLE(rootcint_tmp  rootcint_tmp.cxx RStl_tmp.cxx loadfile_tmp.cxx
                               ${METAUTILS_CXX_SOURCES}
                               ${CMAKE_SOURCE_DIR}/core/clib/src/strlcpy.c 
