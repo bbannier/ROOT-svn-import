@@ -30,46 +30,32 @@ namespace cling {
   public:
     typedef void* (*LazyFunctionCreatorFunc_t)(const std::string&);
     
-    ExecutionContext();
+    ExecutionContext(clang::CompilerInstance* CI);
     ~ExecutionContext();
     
-    static void* LazyFunction(const std::string&);
-    
-    static void* LazyFunctionCreator(const std::string&);
-    
-    clang::CompilerInstance* getCI() { return m_CI.get(); }
-    
-    void useModule(llvm::Module* m);
+    llvm::ExecutionEngine& getEngine() { return *m_engine; }
+    clang::CodeGenerator* getCodeGenerator() const { return m_codeGen.get(); }
     
     void installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp);
-    
-    bool startCodegen(clang::CompilerInstance* CI,
-                      const std::string& filename);
-    bool getModuleFromCodegen();
+
+    void runCodeGen();
     
     void executeFunction(llvm::StringRef function, Value* returnValue = 0);
     
-    llvm::ExecutionEngine& getEngine() {
-      return *m_engine.get();
-    }
-    
-    clang::CodeGenerator* getCodeGenerator() const {
-      return m_codeGen.get();
-    }
-    
   private:
+    static void* HandleMissingFunction(const std::string&);
+    static void* NotifyLazyFunctionCreators(const std::string&);
+
+    int verifyModule(llvm::Module* m);
+    void printModule(llvm::Module* m);
+    bool runNewStaticConstructorsDestructors();
+    void InitializeBuilder();
     
     static std::vector<std::string> m_vec_unresolved;
     static std::vector<LazyFunctionCreatorFunc_t> m_vec_lazy_function;
     
-    int verifyModule(llvm::Module* m);
-    void printModule(llvm::Module* m);
-    bool runNewStaticConstructorsDestructors();
-    
-    llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance for growing AST.
-    llvm::OwningPtr<llvm::ExecutionEngine> m_engine; // We own, our JIT.
     llvm::OwningPtr<clang::CodeGenerator> m_codeGen;
-    llvm::Module* m_ee_module; // ExeEngine init module, owned by m_engine.
+    llvm::ExecutionEngine* m_engine; // Owned by JIT
     llvm::Module* m_module; // IncrAST module, owned by m_engine.
     unsigned m_posInitGlobals; // position (global idx in out module) of next global to be initialized in m_ASTCI's AST
    };

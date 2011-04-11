@@ -184,19 +184,13 @@ namespace cling {
     //m_CIFactory.reset(new CIFactory(fake_argc, fake_argv, llvmdir));
     
     m_IncrParser.reset(new IncrementalParser(this, &getPragmaHandler(), llvmdir));
-    m_ExecutionContext.reset(new ExecutionContext());
+    m_ExecutionContext.reset(new ExecutionContext(m_IncrParser->getCI()));
+    m_IncrParser->addConsumer(m_ExecutionContext->getCodeGenerator());
     
     m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer")));
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
-    // Start the code generation on the old AST:
-    if (!m_ExecutionContext->startCodegen(m_IncrParser->getCI(),
-                                          "Interpreter::processLine() input")) {
-      fprintf(stderr, "Module creation failed!\n");
-    }
-    m_IncrParser->addConsumer(m_ExecutionContext->getCodeGenerator());
-    
     // Allow the interpreter to find itself.
     // OBJ first: if it exists it should be more up to date
     AddIncludePath(CLING_SRCDIR_INCL);
@@ -296,14 +290,6 @@ namespace cling {
       CI->getASTContext().getTranslationUnitDecl();
     if (!tu) { // Parse failed, return.
       fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
-      return 0;
-    }
-    //
-    //  Send the translation unit through the
-    //  llvm code generator to make a module.
-    //
-    if (!m_ExecutionContext->getModuleFromCodegen()) {
-      fprintf(stderr, "Module creation failed!\n");
       return 0;
     }
     //
@@ -663,20 +649,12 @@ namespace cling {
     if (allowSharedLib && tryLoadSharedLib(filename))
       return 0;
     
-    if (!m_ExecutionContext->startCodegen(m_IncrParser->getCI(), filename)) {
-      fprintf(stderr, "Error: could not compile prompt history!\n");
-      return 1;
-    }    
-    
     clang::CompilerInstance* CI = compileFile(filename, trailcode);
     if (!CI) {
       return 1;
     }
     
-    if (!m_ExecutionContext->getModuleFromCodegen()) {
-      fprintf(stderr, "Error: Backend did not create a module!\n");
-      return 1;
-    }
+    m_ExecutionContext->runCodeGen();
     return 0;
   }
   
@@ -823,12 +801,6 @@ namespace cling {
     if (!tu) { // Parse failed, return.
       fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
     }
-    //
-    //  Send the translation unit through the
-    //  llvm code generator to make a module.
-    //
-    m_ExecutionContext->getModuleFromCodegen();
-    
     m_ExecutionContext->executeFunction(WrapperName, &Result);
     return Result;
   }
