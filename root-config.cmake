@@ -1,0 +1,8 @@
+get_filename_component(ROOTSYS ${CMAKE_CURRENT_LIST_FILE} PATH)
+
+set(ROOT_FOUND TRUE)
+set(ROOT_INCLUDE_DIRS ${ROOTSYS}/include)
+set(ROOT_LIBRARY_DIRS ${ROOTSYS}/lib)
+
+
+

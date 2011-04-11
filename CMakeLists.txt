@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 cmake_policy(SET CMP0005 NEW)
 #---Set name of the project to "ROOT". Has to be done after check of cmake version--------------
 project(ROOT)
+set(IntegratedBuild ON)
 
 #---Set pathes where to put the libraries, executables and headers------------------------------
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

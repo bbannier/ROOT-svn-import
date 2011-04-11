@@ -2,9 +2,16 @@
 # CMakeLists.txt file for building ROOT tmva package
 # @author Pere Mato, CERN
 ############################################################################
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 #---The following is needed becuase client codes of TMVA (in ROOT itself) assumes to find header files under /TVMA
-execute_process(COMMAND cmake -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/TMVA)
+#execute_process(COMMAND cmake -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/TMVA)
+
+if(NOT IntegratedBuild)
+  project(RooStats)
+  find_package(ROOT)
+  include(${ROOTSYS}/cmake/modules/StandaloneBuild.cmake)
+endif()
 
 ROOT_USE_PACKAGE(math/mathcore)
 ROOT_USE_PACKAGE(math/minuit)
