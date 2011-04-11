@@ -68,6 +68,10 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
             }
          }
       } while (!line);
+      if (line && line[0] == -1) {
+         m_MetaProcessor->requestQuit(true);
+         continue;
+      }
       add_history(line);
       write_history(histfile);
       int indent = m_MetaProcessor->process(line);
