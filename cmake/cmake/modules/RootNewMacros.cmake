@@ -41,6 +41,16 @@ else()
       IMPORT_PREFIX ${libprefix} )
 endif()
 
+#---Modify the behaviour for local and non-local builds--------------------------------------------
+if(CMAKE_PROJECT_NAME STREQUAL ROOT)
+  set(rootcint_cmd rootcint_tmp)
+  set(rlibmap_cmd rlibmap)
+else()
+  set(rootcint_cmd ${ROOTSYS}/bin/rootcint)   
+  set(rlibmap_cmd rlibmap)   
+  #set(rootcint_cmd ${ROOTSYS}/bin/rootcint)   
+  #set(rlibmap_cmd ${ROOTSYS}/bin/rlibmap)   
+endif()
 
 set(CMAKE_VERBOSE_MAKEFILES OFF)
 set(CMAKE_INCLUDE_CURRENT_DIR OFF)
@@ -142,11 +152,15 @@ function(ROOT_GENERATE_DICTIONARY dictionary)
   endforeach() 
   #---Get the list of include directories------------------
   get_directory_property(incdirs INCLUDE_DIRECTORIES)
-  set(includedirs -I${CMAKE_CURRENT_SOURCE_DIR}/inc 
-                  -I${CMAKE_BINARY_DIR}/include
-                  -I${CMAKE_SOURCE_DIR}/cint/cint/include 
-                  -I${CMAKE_SOURCE_DIR}/cint/cint/stl 
-                  -I${CMAKE_SOURCE_DIR}/cint/cint/lib) 
+  if(CMAKE_PROJECT_NAME STREQUAL ROOT)
+    set(includedirs -I${CMAKE_CURRENT_SOURCE_DIR}/inc 
+                    -I${CMAKE_BINARY_DIR}/include
+                    -I${CMAKE_SOURCE_DIR}/cint/cint/include 
+                    -I${CMAKE_SOURCE_DIR}/cint/cint/stl 
+                    -I${CMAKE_SOURCE_DIR}/cint/cint/lib)
+  else()
+    set(includedirs -I${CMAKE_CURRENT_SOURCE_DIR}/inc) 
+  endif() 
   foreach( d ${incdirs})    
    set(includedirs ${includedirs} -I${d})
   endforeach()
@@ -164,9 +178,9 @@ function(ROOT_GENERATE_DICTIONARY dictionary)
   endforeach()
   #---call rootcint------------------------------------------
   add_custom_command(OUTPUT ${dictionary}.cxx ${dictionary}.h
-                     COMMAND rootcint_tmp -cint -f  ${dictionary}.cxx 
+                     COMMAND ${rootcint_cmd} -cint -f  ${dictionary}.cxx 
                                           -c ${ARG_OPTIONS} ${includedirs} ${headerfiles} ${_linkdef} 
-                     DEPENDS ${headerfiles} ${_linkdef} rootcint_tmp )
+                     DEPENDS ${headerfiles} ${_linkdef} ${rootcint_cmd})
 endfunction()
 
 
@@ -174,7 +188,7 @@ endfunction()
 #---ROOT_LINKER_LIBRARY( <name> source1 source2 ...[TYPE STATIC|SHARED] [DLLEXPORT] LIBRARIES library1 library2 ...)
 #---------------------------------------------------------------------------------------------------
 function(ROOT_LINKER_LIBRARY library)
-  PARSE_ARGUMENTS(ARG "TYPE;LIBRARIES;DEPENDENCIES" "DLLEXPORT" ${ARGN})
+  PARSE_ARGUMENTS(ARG "TYPE;LIBRARIES;DEPENDENCIES" "DLLEXPORT;CMAKENOEXPORT" ${ARGN})
   ROOT_GET_SOURCES(lib_srcs src ${ARG_DEFAULT_ARGS})
   if(NOT ARG_TYPE)
     set(ARG_TYPE SHARED)
@@ -217,11 +231,17 @@ function(ROOT_LINKER_LIBRARY library)
     target_link_libraries(${library} ${ARG_LIBRARIES})
   endif()
   #----Installation details-------------------------------------------------------
-  #install(TARGETS ${library} EXPORT ${CMAKE_PROJECT_NAME}Exports DESTINATION ${lib})
-  install(TARGETS ${library} RUNTIME DESTINATION bin
-                             LIBRARY DESTINATION lib
-                             ARCHIVE DESTINATION lib)
-  #install(EXPORT ${CMAKE_PROJECT_NAME}Exports DESTINATION cmake) 
+  if(ARG_CMAKENOEXPORT)
+    install(TARGETS ${library} RUNTIME DESTINATION bin
+                               LIBRARY DESTINATION lib
+                               ARCHIVE DESTINATION lib)
+  else()
+    install(TARGETS ${library} EXPORT ${CMAKE_PROJECT_NAME}Exports
+                               RUNTIME DESTINATION bin
+                               LIBRARY DESTINATION lib
+                               ARCHIVE DESTINATION lib)
+    install(EXPORT ${CMAKE_PROJECT_NAME}Exports DESTINATION cmake/modules) 
+  endif()
 endfunction()
 
 #---------------------------------------------------------------------------------------------------
@@ -246,24 +266,26 @@ endfunction()
 #---ROOT_USE_PACKAGE( package )
 #---------------------------------------------------------------------------------------------------
 macro( ROOT_USE_PACKAGE package )
-  if( EXISTS ${CMAKE_SOURCE_DIR}/${package}/CMakeLists.txt)
-    include_directories( ${CMAKE_SOURCE_DIR}/${package}/inc ) 
-    file(READ ${CMAKE_SOURCE_DIR}/${package}/CMakeLists.txt file_contents)
-    string( REGEX MATCHALL "ROOT_USE_PACKAGE[ ]*[(][ ]*([^ )])+" vars ${file_contents})
-    foreach( var ${vars})
-      string(REGEX REPLACE "ROOT_USE_PACKAGE[ ]*[(][ ]*([^ )])" "\\1" p ${var})
-      ROOT_USE_PACKAGE(${p})
-    endforeach()
-  else()
-    find_package(${package})
-    GET_PROPERTY(parent DIRECTORY PROPERTY PARENT_DIRECTORY)
-    if(parent)
-      set(${package}_environment  ${${package}_environment} PARENT_SCOPE)
+  if(IntegratedBuild)
+    if( EXISTS ${CMAKE_SOURCE_DIR}/${package}/CMakeLists.txt)
+      include_directories( ${CMAKE_SOURCE_DIR}/${package}/inc ) 
+      file(READ ${CMAKE_SOURCE_DIR}/${package}/CMakeLists.txt file_contents)
+      string( REGEX MATCHALL "ROOT_USE_PACKAGE[ ]*[(][ ]*([^ )])+" vars ${file_contents})
+      foreach( var ${vars})
+        string(REGEX REPLACE "ROOT_USE_PACKAGE[ ]*[(][ ]*([^ )])" "\\1" p ${var})
+        ROOT_USE_PACKAGE(${p})
+      endforeach()
     else()
-      set(${package}_environment  ${${package}_environment} )
+      find_package(${package})
+      GET_PROPERTY(parent DIRECTORY PROPERTY PARENT_DIRECTORY)
+      if(parent)
+        set(${package}_environment  ${${package}_environment} PARENT_SCOPE)
+       else()
+        set(${package}_environment  ${${package}_environment} )
+      endif()
+      include_directories( ${${package}_INCLUDE_DIRS} ) 
+      link_directories( ${${package}_LIBRARY_DIRS} ) 
     endif()
-    include_directories( ${${package}_INCLUDE_DIRS} ) 
-    link_directories( ${${package}_LIBRARY_DIRS} ) 
   endif()
 endmacro()
 
@@ -297,8 +319,8 @@ function(ROOT_GENERATE_ROOTMAP library)
   endif()
   #---Build the rootmap file--------------------------------------
   add_custom_command(OUTPUT ${outfile}
-                     COMMAND rlibmap -o ${outfile} -l ${_library} -d ${_dependencies} -c ${_linkdef} 
-                     DEPENDS ${_linkdef} rlibmap )
+                     COMMAND ${rlibmap_cmd} -o ${outfile} -l ${_library} -d ${_dependencies} -c ${_linkdef} 
+                     DEPENDS ${_linkdef} ${rlibmap_cmd} )
   add_custom_target( ${libprefix}${library}.rootmap ALL DEPENDS  ${outfile})
   set_target_properties(${libprefix}${library}.rootmap PROPERTIES FOLDER RootMaps )
   #---Install the rootmap file------------------------------------
@@ -344,8 +366,9 @@ function(ROOT_EXECUTABLE executable)
   if(WIN32 AND ${executable} MATCHES .exe)  
     set_target_properties(${executable} PROPERTIES SUFFIX "")
   endif()
-  #----Installation details-------------------------------------------------------
-  install(TARGETS ${executable} RUNTIME DESTINATION ${bin})
+  #----Installation details------------------------------------------------------
+  install(TARGETS ${executable} EXPORT ${CMAKE_PROJECT_NAME}Exports RUNTIME DESTINATION ${bin})
+  install(EXPORT ${CMAKE_PROJECT_NAME}Exports DESTINATION cmake/modules) 
 endfunction()
 
 #---------------------------------------------------------------------------------------------------
@@ -397,3 +420,4 @@ macro(ROOT_CHECK_OUT_OF_SOURCE_BUILD)
      message(FATAL_ERROR "ROOT should be installed as an out of source build, to keep the source directory clean. Please create a extra build directory and run the command 'cmake <path_to_source_dir>' in this newly created directory. You have also to delete the directory CMakeFiles and the file CMakeCache.txt in the source directory. Otherwise cmake will complain even if you run it from an out-of-source directory.") 
   endif()
 endmacro()
+

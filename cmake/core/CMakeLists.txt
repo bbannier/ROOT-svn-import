@@ -36,7 +36,7 @@ add_subdirectory(base)
 add_subdirectory(metautils)
 add_subdirectory(utils)
 
-Set(CORE_DICTIONARIES 
+set(CORE_DICTIONARIES 
     ${METAUTILS_DICTIONARY}
     ${CLIB_DICTIONARY} 
     ${CONT_DICTIONARY} 
@@ -50,49 +50,48 @@ Set(CORE_DICTIONARIES
     ${BASE4_DICTIONARY} 
    ) 
 
-Set_Source_Files_Properties(${METAUTILS_DICTIONARY} GENERATED)
-Set_Source_Files_Properties(${CLIB_DICTIONARY} GENERATED)
-Set_Source_Files_Properties(${CONT_DICTIONARY} GENERATED)
+set_source_files_properties(${METAUTILS_DICTIONARY} GENERATED)
+set_source_files_properties(${CLIB_DICTIONARY} GENERATED)
+set_source_files_properties(${CONT_DICTIONARY} GENERATED)
 if(editline)
-  Set_Source_Files_Properties(${EDITLINE_DICTIONARY} GENERATED)
+  set_source_files_properties(${EDITLINE_DICTIONARY} GENERATED)
 endif()
-Set_Source_Files_Properties(${META_DICTIONARY} GENERATED)
+set_source_files_properties(${META_DICTIONARY} GENERATED)
 if(UNIX)
-  Set_Source_Files_Properties(${UNIX_DICTIONARY} GENERATED)
+  set_source_files_properties(${UNIX_DICTIONARY} GENERATED)
 endif()
 if(WIN32)
-  Set_Source_Files_Properties(${WINNT_DICTIONARY} GENERATED)
+  set_source_files_properties(${WINNT_DICTIONARY} GENERATED)
 endif()
-Set_Source_Files_Properties(${BASE1_DICTIONARY} GENERATED)
-Set_Source_Files_Properties(${BASE2_DICTIONARY} GENERATED)
-Set_Source_Files_Properties(${BASE3_DICTIONARY} GENERATED)
-Set_Source_Files_Properties(${BASE4_DICTIONARY} GENERATED)
+set_source_files_properties(${BASE1_DICTIONARY} GENERATED)
+set_source_files_properties(${BASE2_DICTIONARY} GENERATED)
+set_source_files_properties(${BASE3_DICTIONARY} GENERATED)
+set_source_files_properties(${BASE4_DICTIONARY} GENERATED)
 
-Set_Source_Files_Properties(${EDITLINE_CXX_SOURCES} PROPERTIES
+set_source_files_properties(${EDITLINE_CXX_SOURCES} PROPERTIES
                             COMPILE_DEFINITIONS R__CURSESHDR="${CURSES_HEADER_FILE}"
                            )
 
 
-Set_Source_Files_Properties(${CMAKE_SOURCE_DIR}/core/base/src/TPRegexp.cxx
+set_source_files_properties(${CMAKE_SOURCE_DIR}/core/base/src/TPRegexp.cxx
                             ${BASE1_DICTIONARY} ${BASE2_DICTIONARY}
                             COMPILE_FLAGS -I${PCRE_INCLUDE_DIR}
                            )
 
-If(${GCC_MAJOR} EQUAL 4 AND ${GCC_MINOR} EQUAL 1)
-  Set_Source_Files_Properties(${CMAKE_SOURCE_DIR}/core/base/src/TString.cxx
+if(${GCC_MAJOR} EQUAL 4 AND ${GCC_MINOR} EQUAL 1)
+  set_source_files_properties(${CMAKE_SOURCE_DIR}/core/base/src/TString.cxx
                               ${CMAKE_SOURCE_DIR}/core/base/src/TContextMenu.cxx
                               COMPILE_FLAGS -Wno-strict-aliasing
                              )
-EndIf(${GCC_MAJOR} EQUAL 4 AND ${GCC_MINOR} EQUAL 1)
+endif()
 
-If(${ROOT_ARCHITECTURE} MATCHES linuxicc)
-  Set_Source_Files_Properties(${BASE3_DICTIONARY} 
-                              COMPILE_FLAGS -wd191
-                             )
-EndIf(${ROOT_ARCHITECTURE} MATCHES linuxicc)
+if(${ROOT_ARCHITECTURE} MATCHES linuxicc)
+  set_source_files_properties(${BASE3_DICTIONARY} 
+                              COMPILE_FLAGS -wd191)
+endif()
 
 
-Set(INCLUDE_DIRECTORIES 
+set(INCLUDE_DIRECTORIES 
     ${CMAKE_SOURCE_DIR}/core/metautils/inc 
     ${CMAKE_SOURCE_DIR}/core/meta/inc 
     ${CMAKE_SOURCE_DIR}/core/cont/inc 
@@ -100,10 +99,8 @@ Set(INCLUDE_DIRECTORIES
     ${CMAKE_SOURCE_DIR}/graf3d/g3d/inc
     ${CMAKE_SOURCE_DIR}/net/net/inc
     ${CMAKE_SOURCE_DIR}/core/base/src 
-    ${ROOT_INCLUDE_DIR} 
-   ) 
+    ${ROOT_INCLUDE_DIR} ) 
 
-#GENERATE_ROOTMAP("${LibCore_LINKDEF}" Core)
 ROOT_GENERATE_ROOTMAP(Core LINKDEF ${LibCore_LINKDEF})
 
 include_directories( ${INCLUDE_DIRECTORIES})
@@ -115,28 +112,6 @@ endif()
 ROOT_LINKER_LIBRARY(Core ${LibCore_SRCS} ${CORE_DICTIONARIES} 
                     LIBRARIES ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
  
-# Here all objects ar put together into one share library
-#=if(WIN32)
-#=	foreach(src ${LibCore_SRCS} ${CORE_DICTIONARIES})
-#=	  string (REPLACE ${CMAKE_CURRENT_SOURCE_DIR} "" lsrc ${src})
-#=	  string (REPLACE ${CMAKE_CURRENT_BINARY_DIR} "" msrc ${lsrc})
-#=	  string (REGEX REPLACE "\\.cxx" ".obj" pobj ${msrc})
-#=	  string (REGEX REPLACE "\\.c" ".obj" obj ${pobj})
-#=	  set(lib_objs ${lib_objs} ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/Core.dir/${obj})
-#=	endforeach()
-#=	add_library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES} Core.def)
-#=    add_custom_command(TARGET Core PRE_LINK
-#=                       COMMAND bindexplib
-#=                       ARGS -o Core.def libCore ${lib_objs} 
-#=					   DEPENDS bindexplib )
-#=    set_source_files_properties(Core.def PROPERTIES GENERATED 1)
-#=    set(corelinklibs Cint shell32.lib WSock32.lib Oleaut32.lib Iphlpapi.lib)
-#=else()
-#=   add_library(Core SHARED ${LibCore_SRCS} ${CORE_DICTIONARIES})
-#=endif()
-#=Target_Link_Libraries(Core ${PCRE_LIBRARIES} ${ZLIB_LIBRARY} ${CURSES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
-#=Set_Target_properties(Core PROPERTIES ${ROOT_LIBRARY_PROPERTIES})
-
 add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY  META_DICTIONARY METAUTILS_DICTIONARY BASE_DICTIONARY)
 if(UNIX)
   add_dependencies(Core UNIX_DICTIONARY)
@@ -150,9 +125,3 @@ endif()
 if(builtin_pcre)
   add_dependencies(Core PCRE)
 endif()
-
-
-#install(TARGETS Core RUNTIME DESTINATION bin
-#                     LIBRARY DESTINATION lib
-#                     ARCHIVE DESTINATION lib)
-#Set(RootConfigFeatures ${RootConfigFeatures} PARENT_SCOPE)
