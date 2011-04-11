@@ -291,7 +291,7 @@ ifneq ($(PLATFORM),win32)
 		      cp -p $$bexe bin/$$i ; \
 		   fi ; \
 		done ; \
-		touch $(XROOTDBUILD))
+		pwd; ls -l $(dir $(XROOTDBUILD)); touch $(XROOTDBUILD))
 else
 		@(cd $(XROOTDDIRD); \
 		echo "*** Building xrootd ..."; \
