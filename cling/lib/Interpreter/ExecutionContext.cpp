@@ -89,37 +89,50 @@ void JITtedFunctionCollector::UnregisterFunctionMapping(llvm::ExecutionEngine &e
 std::vector<std::string> ExecutionContext::m_vec_unresolved;
 std::vector<ExecutionContext::LazyFunctionCreatorFunc_t> ExecutionContext::m_vec_lazy_function;
 
-ExecutionContext::ExecutionContext():
-   m_ee_module(0),
-   m_module(0),
-   m_posInitGlobals(0)
+ExecutionContext::ExecutionContext(clang::CompilerInstance* CI):
+  m_engine(0),
+  m_module(0),
+  m_posInitGlobals(0)
 {
   // If not set, exception handling will not be turned on
   llvm::JITExceptionHandling = true;
+  m_codeGen.reset(CreateLLVMCodeGen(CI->getDiagnostics(), 
+                                    "cling input",
+                                    CI->getCodeGenOpts(), 
+                                    * new llvm::LLVMContext())
+                  );
+  m_codeGen->Initialize(CI->getASTContext());
+}
 
-   m_ee_module = new llvm::Module("_Clang_first", * new llvm::LLVMContext());
+void
+ExecutionContext::InitializeBuilder()
+{
    //
    //  Create an execution engine to use.
    //
    // Note: Engine takes ownership of the module.
-   llvm::EngineBuilder builder(m_ee_module);
+   if (m_engine) return;
+
+   assert(m_codeGen && "Cannot initialize builder without module!");
+
+   m_module = m_codeGen->GetModule();
+
+   llvm::EngineBuilder builder(m_module);
    builder.setOptLevel(llvm::CodeGenOpt::Less);
    std::string errMsg;
    builder.setErrorStr(&errMsg);
    builder.setEngineKind(llvm::EngineKind::JIT);
-   m_engine.reset(builder.create());
+   m_engine = builder.create();
    if (!m_engine) {
       std::cerr << "Error: Unable to create the execution engine!\n";
       std::cerr << errMsg << '\n';
    }
+   m_engine->addModule(m_module); // Note: The engine takes ownership of the module.
 
    // install lazy function
-   m_engine->InstallLazyFunctionCreator(LazyFunctionCreator);
+   m_engine->InstallLazyFunctionCreator(NotifyLazyFunctionCreators);
 
-  // temporarily set m_module to run initializers:
-  m_module = m_ee_module;
   runNewStaticConstructorsDestructors();
-  m_module = 0;
 }
 
 ExecutionContext::~ExecutionContext()
@@ -135,7 +148,7 @@ void unresolvedSymbol()
              << std::endl;
 }
 
-void* ExecutionContext::LazyFunction(const std::string& mangled_name)
+void* ExecutionContext::HandleMissingFunction(const std::string& mangled_name)
 {
    // Not found in the map, add the symbol in the list of unresolved symbols
    std::vector<std::string>::iterator it;
@@ -148,7 +161,7 @@ void* ExecutionContext::LazyFunction(const std::string& mangled_name)
 }
 
 void*
-ExecutionContext::LazyFunctionCreator(const std::string& mangled_name)
+ExecutionContext::NotifyLazyFunctionCreators(const std::string& mangled_name)
 {
    void *ret = 0;
    std::vector<LazyFunctionCreatorFunc_t>::iterator it;
@@ -157,14 +170,15 @@ ExecutionContext::LazyFunctionCreator(const std::string& mangled_name)
       ret = (void*)((LazyFunctionCreatorFunc_t)*it)(mangled_name);
       if (ret != 0) return ret;
    }
-   return LazyFunction(mangled_name);
+   return HandleMissingFunction(mangled_name);
 }
 
 void
 ExecutionContext::executeFunction(llvm::StringRef funcname, Value* returnValue)
 {
-
    // Call an extern C function without arguments
+  runCodeGen();
+
    llvm::Function* f = m_engine->FindFunctionNamed(funcname.data());
    if (!f) {
       fprintf(
@@ -219,55 +233,11 @@ ExecutionContext::executeFunction(llvm::StringRef funcname, Value* returnValue)
 }
 
 
-bool
-ExecutionContext::startCodegen(clang::CompilerInstance* CI,
-                            const std::string& filename)
-{
-  // CodeGen start: parse old AST
-  
-  if (!m_codeGen.get()) {
-    clang::TranslationUnitDecl* tu =
-    CI->getASTContext().getTranslationUnitDecl();
-    if (!tu) {
-      fprintf(stderr,
-              "ExecutionContext::startCodegen: No translation unit decl passed!\n");
-      return false;
-    }
-    m_codeGen.reset(CreateLLVMCodeGen(CI->getDiagnostics(), 
-                                      filename,
-                                      CI->getCodeGenOpts(), 
-                                      * new llvm::LLVMContext())
-                    );
-    m_codeGen->Initialize(CI->getASTContext());
-    clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
-    clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();
-    //fprintf(stderr, "Running code generation.\n");
-    //for (; iter != iter_end; ++iter) {
-    //  m_codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
-    //}
-  }
-  return true;
-}
-  
-bool
-ExecutionContext::getModuleFromCodegen()
-{
-   llvm::Module* m = m_codeGen->GetModule();
-
-   if (!m) {
-      fprintf(stderr,
-              "ExecutionContext::getModuleFromCodeGen: Code generation did not create a module!\n");
-      return false;
-   }
-
-   //printModule(m);
-
-   //
-   //  Give new module to the execution engine.
-   //
-   useModule(m); // Note: The engine takes ownership of the module.
-
-   return true;
+void
+ExecutionContext::runCodeGen() {
+  InitializeBuilder();
+  assert(m_module && "Code generation did not create a module!");
+  runNewStaticConstructorsDestructors();
 }
 
 int
@@ -328,21 +298,6 @@ ExecutionContext::runNewStaticConstructorsDestructors()
   return true;
 }
   
-
-void
-ExecutionContext::useModule(llvm::Module* m)
-{
-   // Use a new module, replacing the existing one.
-   // Transfers global mappings before replacement.
-   // Note: we take ownership of the module m!
-
-  if (!m_module) {
-    m_engine->addModule(m); // Note: The engine takes ownership of the module.
-    m_module = m;
-  }
-  runNewStaticConstructorsDestructors();
-}
-
 
 void
 ExecutionContext::installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp)
