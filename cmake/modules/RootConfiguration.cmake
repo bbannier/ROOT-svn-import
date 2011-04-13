@@ -313,6 +313,8 @@ set(dicttype ${ROOT_DICTTYPE})
 #---RConfigure-------------------------------------------------------------------------------------------------
 set(hasON define)
 set(hasOFF undef)
+set(hason define)
+set(hasoff undef)
 set(has1 define)
 set(has0 undef)
 set(setresuid undef)
