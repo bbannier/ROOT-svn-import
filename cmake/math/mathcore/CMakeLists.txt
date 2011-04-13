@@ -5,11 +5,46 @@
 ROOT_USE_PACKAGE(core)
 include_directories(${CMAKE_SOURCE_DIR}/hist/hist/inc)  # Explicit to avoid circular dependencies mathcore <--> hist :-(
 
+set(MATHCORE_HEADERS  TRandom.h 
+                TRandom1.h 
+                TRandom2.h 
+		TRandom3.h 
+                TVirtualFitter.h 
+                TKDTree.h 
+                TKDTreeBinning.h 
+                Math/IParamFunction.h 
+                Math/IFunction.h 
+                Math/ParamFunctor.h 
+                Math/Functor.h 
+                Math/Minimizer.h 
+                Math/MinimizerOptions.h 
+                Math/IntegratorOptions.h 
+                Math/IOptions.h 
+                Math/Integrator.h 
+                Math/VirtualIntegrator.h 
+                Math/AllIntegrationTypes.h 
+                Math/AdaptiveIntegratorMultiDim.h 
+                Math/IntegratorMultiDim.h 
+                Math/Factory.h 
+                Math/FitMethodFunction.h 
+                Math/GaussIntegrator.h 
+                Math/GaussLegendreIntegrator.h 
+                Math/RootFinder.h 
+                Math/IRootFinderMethod.h 
+                Math/RichardsonDerivator.h 
+                Math/BrentMethods.h 
+                Math/BrentMinimizer1D.h 
+                Math/BrentRootFinder.h 
+                Math/DistSampler.h 
+                Math/DistSamplerOptions.h 
+                Math/GoFTest.h 
+                Math/SpecFuncMathCore.h 
+                Math/DistFuncMathCore.h
+)
+
 
 ROOT_GENERATE_DICTIONARY(G__Math     TComplex.h TMath.h LINKDEF LinkDef1.h)
-ROOT_GENERATE_DICTIONARY(G__MathCore TRandom.h TRandom1.h TRandom2.h TRandom3.h
- 				     TVirtualFitter.h TKDTree.h TKDTreeBinning.h 
-                                     Math/*.h LINKDEF LinkDef2.h)
+ROOT_GENERATE_DICTIONARY(G__MathCore ${MATHCORE_HEADERS} LINKDEF LinkDef2.h)
 ROOT_GENERATE_DICTIONARY(G__MathFit  Fit/*.h LINKDEF LinkDef3.h)
 
 
