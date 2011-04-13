@@ -3,6 +3,10 @@
 # @author Pere Mato, CERN
 ############################################################################
 
+#---The following is needed becuase client codes of HistFactory assumes to find header files under RooStats/HistFactory
+execute_process(COMMAND cmake -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/inc/RooStats)
+execute_process(COMMAND cmake -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/RooStats/HistFactory)
+
 ROOT_USE_PACKAGE(roofit/roostats)
 ROOT_USE_PACKAGE(io/xmlparser)
 
@@ -16,4 +20,7 @@ ROOT_LINKER_LIBRARY(HistFactory *.cxx G__HistFactory.cxx LIBRARIES Core Cint
 ROOT_EXECUTABLE(hist2workspace MakeModelAndMeasurements.cxx 
                                LIBRARIES HistFactory RooFit RooFitCore Tree RIO Matrix Hist MathCore Graf Gpad Minuit Foam RooStats XMLParser)
 
-ROOT_INSTALL_HEADERS()
+#ROOT_INSTALL_HEADERS()
+install(DIRECTORY inc/ DESTINATION include/RooStats/HistFactory 
+                       PATTERN ".svn" EXCLUDE
+                       REGEX "LinkDef" EXCLUDE )

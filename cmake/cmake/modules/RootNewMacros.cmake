@@ -46,10 +46,8 @@ if(CMAKE_PROJECT_NAME STREQUAL ROOT)
   set(rootcint_cmd rootcint_tmp)
   set(rlibmap_cmd rlibmap)
 else()
-  set(rootcint_cmd ${ROOTSYS}/bin/rootcint)   
+  set(rootcint_cmd LD_LIBRARY_PATH=${ROOTSYS}/lib ${ROOTSYS}/bin/rootcint)   
   set(rlibmap_cmd rlibmap)   
-  #set(rootcint_cmd ${ROOTSYS}/bin/rootcint)   
-  #set(rlibmap_cmd ${ROOTSYS}/bin/rlibmap)   
 endif()
 
 set(CMAKE_VERBOSE_MAKEFILES OFF)
@@ -180,7 +178,7 @@ function(ROOT_GENERATE_DICTIONARY dictionary)
   add_custom_command(OUTPUT ${dictionary}.cxx ${dictionary}.h
                      COMMAND ${rootcint_cmd} -cint -f  ${dictionary}.cxx 
                                           -c ${ARG_OPTIONS} ${includedirs} ${headerfiles} ${_linkdef} 
-                     DEPENDS ${headerfiles} ${_linkdef} ${rootcint_cmd})
+                     DEPENDS ${headerfiles} ${_linkdef} rootcint)
 endfunction()
 
 
