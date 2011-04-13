@@ -31,11 +31,10 @@ if(WIN32)
   add_custom_command( OUTPUT ${freetypeliba}
                       COMMAND cmake -E copy_directory ${FREETYPE_SRCDIR}/win win
                       COMMAND cmake -E tar xvzf ${FREETYPE_TARGZFILE}
-					  COMMAND cmake -E copy win/freetype.mak ${FREETYPE_VERSION}/builds/win32/visualc
-					  COMMAND cmake -E copy win/freetype.dep ${FREETYPE_VERSION}/builds/win32/visualc
-		              COMMAND cmake -E chdir ${FREETYPE_VERSION}/builds/win32/visualc 
-					                   nmake -nologo -f freetype.mak CFG=${freetypebuild} NMAKECXXFLAGS="-D_CRT_SECURE_NO_DEPRECATE"
-					)
+                      COMMAND cmake -E copy win/freetype.mak ${FREETYPE_VERSION}/builds/win32/visualc
+                      COMMAND cmake -E copy win/freetype.dep ${FREETYPE_VERSION}/builds/win32/visualc
+                      COMMAND cmake -E chdir ${FREETYPE_VERSION}/builds/win32/visualc 
+                              nmake -nologo -f freetype.mak CFG=${freetypebuild} NMAKECXXFLAGS="-D_CRT_SECURE_NO_DEPRECATE" )
 else()
   set(freetypelib  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfreetype.a)
   set(freetypeliba ${CMAKE_CURRENT_BINARY_DIR}/${FREETYPE_VERSION}/objs/.libs/libfreetype.a)

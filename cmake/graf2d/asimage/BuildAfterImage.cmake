@@ -22,9 +22,9 @@ if(WIN32)
 add_custom_command( OUTPUT ${afterimageliba}
                     COMMAND cmake -E copy_directory  ${CMAKE_CURRENT_SOURCE_DIR}/src/libAfterImage libAfterImage
                     COMMAND echo "*** Building ${afterimageliba}"
-		            COMMAND cmake -E chdir libAfterImage 
-					        nmake -nologo -f libAfterImage.mak FREETYPEDIRI=-I${FREETYPE_INCLUDE_DIR} 
-							CFG=${astepbld} NMAKECXXFLAGS="${CMAKE_CXX_FLAGS} /wd4244")
+                    COMMAND cmake -E chdir libAfterImage 
+                            nmake -nologo -f libAfterImage.mak FREETYPEDIRI=-I${FREETYPE_INCLUDE_DIR} 
+                            CFG=${astepbld} NMAKECXXFLAGS="${CMAKE_CXX_FLAGS} /wd4244")
 else() 
   set(afterimagelib  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libAfterImage.a)
   set(afterimageliba ${CMAKE_CURRENT_BINARY_DIR}/libAfterImage/libAfterImage.a)
@@ -67,10 +67,11 @@ else()
     set(JPEGINCLUDE "--with-jpeg-includes=-I${JPEG_INCLUDE_DIR}")
   endif()
   if(PNG_FOUND)
-    foreach(_dir ${PNG_INCLUDE_DIR})
-      set(PNG_INC_DIR ${PNG_INC_DIR} -I${_dir})
-	endforeach()
-    set(PNGINCLUDE "--with-png-includes=\"${PNG_INC_DIR}\"")
+    #foreach(_dir ${PNG_INCLUDE_DIR})
+    #  set(PNG_INC_DIR "${PNG_INC_DIR} -I${_dir}")
+	  #endforeach()
+    #set(PNGINCLUDE "--with-png-includes=${PNG_INC_DIR}")
+    set(PNGINCLUDE "--with-png-includes=${PNG_PNG_INCLUDE_DIR}")
   endif()
   if(TIFF_FOUND)
     set(TIFFINCLUDE "--with-tiff-includes=-I${TIFF_INCLUDE_DIR}")
