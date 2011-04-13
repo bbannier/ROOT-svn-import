@@ -20,10 +20,11 @@
 #define __STDC_CONSTANT_MACROS // needed by System/DataTypes.h
 #endif
 
-#include <stdio.h>
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/ValuePrinter.h"
 #include "cling/Interpreter/Value.h"
+
+#include <stdio.h>
 
 namespace cling {
   namespace runtime {
@@ -41,25 +42,28 @@ namespace cling {
       template<typename T>
       T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC ) {
         Value result(gCling->EvaluateWithContext(expr, varaddr, DC));
-        //FIXME: we should return T calculated from result
-        //printf("%s", expr);
-        return T();
+        return result.getAs<T>();
       }
 
       class LifetimeHandler {
       private:
         void* m_Memory;
-        llvm::StringRef m_Type;
+        std::string m_Type;
       public:
         // Temp constructor just to build what we need and then
         // we will give the concrete parameters
         LifetimeHandler(){}
-        LifetimeHandler(llvm::StringRef expr, llvm::StringRef type) {
-          // should use Evaluate
-          //gCling->processLine();
+        LifetimeHandler(llvm::StringRef type, llvm::StringRef expr) {
+          m_Type = type;
+          // m_memory = new m_Type(expr)
+          // "new %s(%s)",m_Type, expr.?
+          // m_memory = gCling->Evaluate(expr);
         }
         ~LifetimeHandler() {
-          //gCling->processLine("delete (%s*)%p;", m_Type, m_Memory);
+          std::string str;
+          llvm::raw_string_ostream stream(str);
+          stream<<"delete ("<< m_Type << "*) "<< m_Memory;
+          gCling->processLine(str);
         }
         void* getMemory() const { return m_Memory; }
       };

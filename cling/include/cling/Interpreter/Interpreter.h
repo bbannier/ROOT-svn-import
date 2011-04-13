@@ -10,6 +10,7 @@
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/Support/Casting.h"
 
 #include <string>
 
@@ -57,8 +58,8 @@ namespace cling {
       NamedDeclResult& LookupDecl(llvm::StringRef);
       operator clang::NamedDecl* () const { return getSingleDecl(); }
       clang::NamedDecl* getSingleDecl() const;
-      template<typename T> T* getAs(){
-        return static_cast<T*>(getSingleDecl());
+      template<class T> T* getAs(){
+        return llvm::dyn_cast<T>(getSingleDecl());
       }
       
       friend class Interpreter;
@@ -121,7 +122,7 @@ namespace cling {
     Value EvaluateWithContext(const char* expr, 
                               void* varaddr[], 
                               clang::DeclContext* DC);
-    // Define EvaluateProxyT as friend because it will use EvalCore
+    // Define EvaluateProxyT as friend because it will use EvaluateWithContext
     template<typename T> 
     friend T runtime::internal::EvaluateProxyT(const char* expr,
                                                void* varaddr[],
