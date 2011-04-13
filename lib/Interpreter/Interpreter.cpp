@@ -163,7 +163,7 @@ namespace cling {
 
   clang::NamedDecl* Interpreter::NamedDeclResult::getSingleDecl() const {
     // TODO: Check whether it is only one decl if (end-begin == 1 )
-    return static_cast<clang::NamedDecl*>(m_Result);
+    return dyn_cast<clang::NamedDecl>(m_Result);
   }
 
   //
@@ -776,31 +776,75 @@ namespace cling {
     // Wrap the expression
     const std::string ExprStr(expr);
     const std::string WrapperName = createUniqueName();
-    std::string Wrapper = "extern \"C\" extern void* " + WrapperName + " () {\n";
+    std::string Wrapper = "void " + WrapperName + " () {\n";
     //Wrapper += "return llvm::GenericValue(" + ExprStr + ");\n}";
-    Wrapper += "return (void*)gCling->getVersion();\n}";
-    fprintf(stderr, "Function:\n %s\n",  Wrapper.c_str());
+    // //"auto UNIQUE() {return gCling->getVersion();}"
+    Wrapper += "gCling->getVersion();\n}";
+    // fprintf(stderr, "Function:\n %s\n",  Wrapper.c_str());
     
     // Set up the declaration context
-    //clang::DeclContext* CurContext;
-    //CurContext = m_IncrASTParser->getCI()->getSema().CurContext;
-    //m_IncrASTParser->getCI()->getSema().CurContext = m_IncrASTParser->getCI()->getSema().getFunctionLevelDeclContext();
-    // Parse
-    
-    //
-    //  Send the wrapped code through the
-    //  frontend to produce a translation unit.
-    //
+    clang::DeclContext* CurContext;
+    CurContext = m_IncrParser->getCI()->getSema().CurContext;
+    m_IncrParser->getCI()->getSema().CurContext = DC;
+
+    //assert(processLine(expr) && "Failed to create the requested wrapper");
+
+    // Temporary stop the code gen
+    m_IncrParser->removeConsumer(m_ExecutionContext->getCodeGenerator());
     clang::CompilerInstance* CI = m_IncrParser->parse(Wrapper);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
     }
+
+    m_IncrParser->getCI()->getSema().CurContext = CurContext;
+
     // Note: We have a valid compiler instance at this point.
-    clang::TranslationUnitDecl* tu =
-      CI->getASTContext().getTranslationUnitDecl();
-    if (!tu) { // Parse failed, return.
-      fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
-    }
+    // clang::TranslationUnitDecl* tu =
+    //   CI->getASTContext().getTranslationUnitDecl();
+    // if (!tu) { // Parse failed, return.
+    //   fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
+    // }
+    //
+    //  Send the translation unit through the
+    //  llvm code generator to make a module.
+    //
+
+    
+    m_ExecutionContext->runCodeGen();
+    // get the clang::Type
+    clang::FunctionDecl* TopLevelFD 
+      = dyn_cast<clang::FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
+    CurContext = m_IncrParser->getCI()->getSema().CurContext;
+    m_IncrParser->getCI()->getSema().CurContext = TopLevelFD;
+
+    if (clang::Stmt* S = TopLevelFD->getBody())
+      if (clang::CompoundStmt* CS = dyn_cast<clang::CompoundStmt>(S))
+        if (clang::Expr* E = dyn_cast<clang::Expr>(CS->body_back())) {
+          clang::QualType RetTy = E->getType();
+          Result.type = RetTy.getTypePtrOrNull();
+          // Change the void function's return type
+          clang::FunctionProtoType::ExtProtoInfo EPI;
+          clang::QualType FuncTy
+            = getCI()->getASTContext().getFunctionType(RetTy,
+                                                       /*ArgArray*/0,
+                                                       /*NumArgs*/0,
+                                                       EPI);
+
+          TopLevelFD->setType(FuncTy);
+          // add return stmt
+          clang::Stmt* RetS = getCI()->getSema().ActOnReturnStmt(clang::SourceLocation(), E).take();
+          TopLevelFD->setBody(RetS);
+        }
+    m_IncrParser->getCI()->getSema().CurContext = CurContext;
+    assert(Result.type && "clang::Type cannot be found!");
+    // resume the code gen
+    m_IncrParser->addConsumer(m_ExecutionContext->getCodeGenerator());
+    m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(clang::DeclGroupRef(TopLevelFD));
+    //m_ExecutionContext->getCodeGenerator()->HandleTranslationUnit(getCI()->getASTContext());
+
+    // generate the code
+    m_ExecutionContext->runCodeGen();
+
     m_ExecutionContext->executeFunction(WrapperName, &Result);
     return Result;
   }

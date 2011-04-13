@@ -7,6 +7,7 @@
 #include "DynamicLookup.h"
 #include "cling/Interpreter/Interpreter.h"
 
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Template.h"
@@ -61,10 +62,23 @@ namespace cling {
 
   bool DynamicIDHandler::IsDynamicLookup (LookupResult& R, Scope* S) {
     if (R.getLookupKind() != Sema::LookupOrdinaryName) return false;
-    // FIXME: This breaks for example 
-    // MyClass a (dep->Symbol(), h->Draw());
-    // the second argument is for redeclaration.
     if (R.isForRedeclaration()) return false;
+    // FIXME: Figure out better way to handle:
+    // C++ [basic.lookup.classref]p1:
+    //   In a class member access expression (5.2.5), if the . or -> token is
+    //   immediately followed by an identifier followed by a <, the
+    //   identifier must be looked up to determine whether the < is the
+    //   beginning of a template argument list (14.2) or a less-than operator.
+    //   The identifier is first looked up in the class of the object
+    //   expression. If the identifier is not found, it is then looked up in
+    //   the context of the entire postfix-expression and shall name a class
+    //   or function template.
+    // 
+    // We want to ignore object(.|->)member<template>
+    if (m_Sema->PP.LookAhead(0).getKind() == tok::less)
+      // TODO: check for . or -> in the cached token stream
+      return false;
+
     for (Scope* DepScope = S; DepScope; DepScope = DepScope->getParent()) {
       if (DeclContext* Ctx = static_cast<DeclContext*>(DepScope->getEntity())) {
         return !Ctx->isDependentContext();
@@ -79,7 +93,7 @@ namespace cling {
     Scope *S = m_Sema->getScopeForContext(m_Context.getTranslationUnitDecl());
     for (unsigned int i = 0; i < m_FakeDecls.size(); ++i) {
       printf("\nI am about to remove:\n");
-      m_FakeDecls[i]->dump();
+      m_FakeDecls[i]->dump();      
       S->RemoveDecl(m_FakeDecls[i]);
     }
   }
@@ -274,6 +288,10 @@ namespace cling {
     // Visit all the children, which are the contents of the DeclGroupRef
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
+      // TODO: figure out how to filter const char * a = dep->symbol()
+      // EvalInfo einfo = Visit(*I);
+      // assert (!einfo.isMultiStmt() && "Not implemented yet!");
+      // *I = einfo.Stmt();
       if (*I) {
         // 1. Check whether this is the case of MyClass A(dep->symbol())
         // 2. Insert the RuntimeUniverse's LifetimeHandler instance
@@ -424,7 +442,6 @@ namespace cling {
     return EvalInfo(Node, 0);
   }
 
-  
   EvalInfo DynamicExprTransformer::VisitCallExpr(CallExpr *E) {
     // FIXME: Maybe we need to handle the arguments
     // EvalInfo EInfo = Visit(E->getCallee());
