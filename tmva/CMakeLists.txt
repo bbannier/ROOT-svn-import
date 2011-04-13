@@ -2,14 +2,13 @@
 # CMakeLists.txt file for building ROOT tmva package
 # @author Pere Mato, CERN
 ############################################################################
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
 #---The following is needed becuase client codes of TMVA (in ROOT itself) assumes to find header files under /TVMA
-#execute_process(COMMAND cmake -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/TMVA)
+execute_process(COMMAND cmake -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/TMVA)
 
-if(NOT IntegratedBuild)
-  project(RooStats)
-  find_package(ROOT)
+if(NOT CMAKE_PROJECT_NAME STREQUAL ROOT)
+  project(TMVA)
   include(${ROOTSYS}/cmake/modules/StandaloneBuild.cmake)
 endif()
 
@@ -63,7 +62,7 @@ ROOT_GENERATE_ROOTMAP(TMVA LINKDEF TMVA/LinkDef1.h TMVA/LinkDef2.h TMVA/LinkDef3
 ROOT_LINKER_LIBRARY(TMVA *.cxx G__TMVA1.cxx G__TMVA2.cxx G__TMVA3.cxx G__TMVA4.cxx LIBRARIES Core Cint 
                     DEPENDENCIES RIO Hist Tree MLP Minuit XMLIO)
 
-install(DIRECTORY inc/ DESTINATION include
+install(DIRECTORY inc/ DESTINATION include/TMVA
                        PATTERN ".svn" EXCLUDE
                        REGEX "LinkDef" EXCLUDE )
 
