@@ -168,6 +168,8 @@ namespace TMVA {
       // Init used in the various constructors
       void Init( void );
 
+      void PreProcessNegativeEventWeights();
+
       // boosting algorithm (adaptive boosting)
       Double_t AdaBoost( std::vector<TMVA::Event*>, DecisionTree *dt );
 
@@ -238,6 +240,9 @@ namespace TMVA {
 
       Double_t                         fSampleSizeFraction; // relative size of bagged event sample to original sample size
       Bool_t                           fNoNegWeightsInTraining; // ignore negative event weights in the training
+      Bool_t                           fPairNegWeightsGlobal;   // pair ev. with neg. and pos. weights in traning sample and "annihilate" them 
+      Bool_t                           fPairNegWeightsInNode;   // randomly pair miscl. ev. with neg. and pos. weights in node and don't boost them
+      Bool_t                           fTrainWithNegWeights; // yes there are negative event weights and we don't ignore them
       Bool_t                           fDoBoostMonitor; //create control plot with ROC integral vs tree number
 
 
