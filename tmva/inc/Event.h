@@ -109,10 +109,10 @@ namespace TMVA {
 
    private:
 
-      mutable std::vector<Float_t>   fValues;               // the event values
-      mutable std::vector<Float_t*>* fValuesDynamic;       // the event values
-      mutable std::vector<Float_t>   fTargets;              // target values for regression
-      mutable std::vector<Float_t>   fSpectators;           // "visisting" variables which are never used for any calculation
+      mutable std::vector<Float_t>   fValues;          // the event values
+      mutable std::vector<Float_t*>* fValuesDynamic;   // the event values
+      mutable std::vector<Float_t>   fTargets;         // target values for regression
+      mutable std::vector<Float_t>   fSpectators;      // "visisting" variables not used in MVAs
 
       UInt_t                         fClass;           // class number
       Double_t                       fWeight;          // event weight (product of global and individual weights)

@@ -13,7 +13,7 @@ void plot_efficiencies( TFile* file, Int_t type = 2, TDirectory* BinDir)
    Float_t x1 = 0;
    Float_t x2 = 1;
    Float_t y1 = 0;
-   Float_t y2 = 0.8;
+   Float_t y2 = 1; //0.8;
 
    // reverse order if "rejection"
    if (type == 2) {

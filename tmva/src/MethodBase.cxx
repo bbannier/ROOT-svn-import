@@ -2395,6 +2395,8 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency(const TString& theString)
 
          Double_t theVal    = GetMvaValue();
          Double_t theWeight = ev->GetWeight();
+         cout << ievt << " : " << ev->GetValue(1) << " -> " 
+              << theVal << " " << theWeight << " " << DataInfo().IsSignal(ev) << endl;
 
          TH1* theEffHist = DataInfo().IsSignal(ev) ? mva_eff_tr_s : mva_eff_tr_b;
          TH1* theClsHist = DataInfo().IsSignal(ev) ? mva_s_tr : mva_b_tr;
@@ -2408,10 +2410,8 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency(const TString& theString)
          if (sign > 0 && maxbin < 1      ) maxbin = 1;
          if (sign < 0 && maxbin > fNbinsH) maxbin = fNbinsH;
 
-         if (sign > 0)
-            for (Int_t ibin=1; ibin<=maxbin; ibin++) theEffHist->AddBinContent( ibin , theWeight );
-         else 
-            for (Int_t ibin=maxbin+1; ibin<=fNbinsH; ibin++) theEffHist->AddBinContent( ibin , theWeight );
+         if (sign > 0) for (Int_t ibin=1;        ibin<=maxbin;  ibin++) theEffHist->AddBinContent( ibin , theWeight );
+         else          for (Int_t ibin=maxbin+1; ibin<=fNbinsH; ibin++) theEffHist->AddBinContent( ibin , theWeight );
       }
 
       // normalise output distributions
