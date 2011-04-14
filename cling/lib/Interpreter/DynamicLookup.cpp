@@ -23,10 +23,9 @@ namespace cling {
   extern "C" int printf(const char* fmt, ...);
 
   // Constructor
-  DynamicIDHandler::DynamicIDHandler(clang::Sema* Sema)
+  DynamicIDHandler::DynamicIDHandler(Sema* Sema)
     : m_Sema(Sema), m_Context(Sema->getASTContext())
   {}
-
 
   // pin the vtable to this file
   DynamicIDHandler::~DynamicIDHandler(){}
@@ -45,9 +44,13 @@ namespace cling {
     IdentifierInfo *II = Name.getAsIdentifierInfo();
     SourceLocation NameLoc = R.getNameLoc();
     FunctionDecl *D = dyn_cast<FunctionDecl>(R.getSema().ImplicitlyDefineFunction(NameLoc, *II, S));
-    if (D) { 
-      BuiltinType *Ty = new BuiltinType(BuiltinType::Dependent);
-      QualType QTy(Ty, 0);            
+    if (D) {            
+      FunctionProtoType::ExtProtoInfo EPI;
+      QualType QTy = m_Context.getFunctionType(m_Context.DependentTy,
+                                               /*ArgArray*/0,
+                                               /*NumArgs*/0,
+                                               EPI);
+      
       D->setType(QTy);
       R.addDecl(D);
       // Mark this declaration for removal
