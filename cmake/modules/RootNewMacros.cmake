@@ -356,7 +356,7 @@ endfunction()
 #---ROOT_EXECUTABLE( <name> source1 source2 ... LIBRARIES library1 library2 ...)
 #---------------------------------------------------------------------------------------------------
 function(ROOT_EXECUTABLE executable)
-  PARSE_ARGUMENTS(ARG "LIBRARIES" "" ${ARGN})
+  PARSE_ARGUMENTS(ARG "LIBRARIES" "CMAKENOEXPORT" ${ARGN})
   ROOT_GET_SOURCES(exe_srcs src ${ARG_DEFAULT_ARGS})
   include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_BINARY_DIR}/include )
   add_executable( ${executable} ${exe_srcs})
@@ -365,8 +365,12 @@ function(ROOT_EXECUTABLE executable)
     set_target_properties(${executable} PROPERTIES SUFFIX "")
   endif()
   #----Installation details------------------------------------------------------
-  install(TARGETS ${executable} EXPORT ${CMAKE_PROJECT_NAME}Exports RUNTIME DESTINATION ${bin})
-  install(EXPORT ${CMAKE_PROJECT_NAME}Exports DESTINATION cmake/modules) 
+  if(ARG_CMAKENOEXPORT)
+    install(TARGETS ${executable} RUNTIME DESTINATION ${bin})
+  else()
+    install(TARGETS ${executable} EXPORT ${CMAKE_PROJECT_NAME}Exports RUNTIME DESTINATION ${bin})
+    install(EXPORT ${CMAKE_PROJECT_NAME}Exports DESTINATION cmake/modules) 
+  endif()
 endfunction()
 
 #---------------------------------------------------------------------------------------------------
