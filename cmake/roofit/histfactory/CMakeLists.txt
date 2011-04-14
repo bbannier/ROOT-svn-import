@@ -15,10 +15,10 @@ ROOT_GENERATE_DICTIONARY(G__HistFactory RooStats/HistFactory/*.h LINKDEF RooStat
 ROOT_GENERATE_ROOTMAP(HistFactory LINKDEF RooStats/HistFactory/LinkDef.h 
                                   DEPENDENCIES RooFit RooFitCore Tree RIO Hist Matrix MathCore Minuit Foam Graf Gpad RooStats XmlParser )
                                                
-ROOT_LINKER_LIBRARY(HistFactory *.cxx G__HistFactory.cxx LIBRARIES Core Cint 
+ROOT_LINKER_LIBRARY(HistFactory *.cxx G__HistFactory.cxx CMAKENOEXPORT LIBRARIES Core Cint 
                                 DEPENDENCIES RooFit RooFitCore Tree RIO Hist Matrix MathCore Minuit Foam Graf Gpad RooStats XmlParser)
-ROOT_EXECUTABLE(hist2workspace MakeModelAndMeasurements.cxx 
-                               LIBRARIES HistFactory RooFit RooFitCore Tree RIO Matrix Hist MathCore Graf Gpad Minuit Foam RooStats XMLParser)
+ROOT_EXECUTABLE(hist2workspace MakeModelAndMeasurements.cxx CMAKENOEXPORT
+			       LIBRARIES HistFactory RooFit RooFitCore Tree RIO Matrix Hist MathCore Graf Gpad Minuit Foam RooStats XMLParser)
 
 #ROOT_INSTALL_HEADERS()
 install(DIRECTORY inc/ DESTINATION include/RooStats/HistFactory 
