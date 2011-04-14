@@ -272,7 +272,7 @@ void TMVA::MethodBDT::DeclareOptions()
    // nEventsMin:      the minimum number of events in a node (leaf criteria, stop splitting)
    // nCuts:           the number of steps in the optimisation of the cut for a node (if < 0, then
    //                  step size is determined by the events)
-   // UseFisherCuts:   use multivariate splits using the Fisher criterium
+   // UseFisherCuts:   use multivariate splits using the Fisher criterion
    // UseYesNoLeaf     decide if the classification is done simply by the node type, or the S/B
    //                  (from the training) in the leaf node
    // NodePurityLimit  the minimum purity to classify a node as a signal node (used in pruning and boosting to determine
@@ -293,7 +293,7 @@ void TMVA::MethodBDT::DeclareOptions()
    // MaxDepth         maximum depth of the decision tree allowed before further splitting is stopped
 
    DeclareOptionRef(fNTrees, "NTrees", "Number of trees in the forest");
-   DeclareOptionRef(fRenormByClass=kFALSE,"RenormByClass","individually re-normalize each event class to the original size after boosting");
+   DeclareOptionRef(fRenormByClass=kFALSE,"RenormByClass","Individually re-normalize each event class to the original size after boosting");
    DeclareOptionRef(fBoostType, "BoostType", "Boosting type for the trees in the forest");
    AddPreDefVal(TString("AdaBoost"));
    AddPreDefVal(TString("Bagging"));
@@ -316,8 +316,8 @@ void TMVA::MethodBDT::DeclareOptions()
    DeclareOptionRef(fAdaBoostBeta=1.0, "AdaBoostBeta", "Parameter for AdaBoost algorithm");
    DeclareOptionRef(fRandomisedTrees,"UseRandomisedTrees","Choose at each node splitting a random set of variables");
    DeclareOptionRef(fUseNvars,"UseNvars","Number of variables used if randomised tree option is chosen");
-   DeclareOptionRef(fUsePoissonNvars,"UsePoissonNvars", "use *UseNvars* not as fixed number but as mean of a possion distr. in each split");
-   DeclareOptionRef(fUseNTrainEvents,"UseNTrainEvents","number of randomly picked training events used in randomised (and bagged) trees");
+   DeclareOptionRef(fUsePoissonNvars,"UsePoissonNvars", "Interpret \"UseNvars\" not as fixed number but as mean of a Possion distribution in each split");
+   DeclareOptionRef(fUseNTrainEvents,"UseNTrainEvents","Number of randomly picked training events used in randomised (and bagged) trees");
 
    DeclareOptionRef(fUseWeightedTrees=kTRUE, "UseWeightedTrees",
                     "Use weighted trees or simple average in classification from the forest");
@@ -341,11 +341,11 @@ void TMVA::MethodBDT::DeclareOptions()
    }else{
       fSepTypeS = "GiniIndex";
    }
-   DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events required in a leaf node (default Classification: max(40, N_train/(Nvar^2)/10) ) Regression: 10");
+   DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events required in a leaf node (default: Classification: max(40, N_train/(Nvar^2)/10), Regression: 10)");
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
-   DeclareOptionRef(fUseFisherCuts=kFALSE, "UseFisherCuts", "use multivariate splits using the Fisher criterium");
-   DeclareOptionRef(fMinLinCorrForFisher=.8,"MinLinCorrForFisher", "the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting");
-   DeclareOptionRef(fUseExclusiveVars=kFALSE,"UseExclusiveVars","individual variables already used in fisher criterium are not anymore analysed individually for node splitting");
+   DeclareOptionRef(fUseFisherCuts=kFALSE, "UseFisherCuts", "Use multivariate splits using the Fisher criterion");
+   DeclareOptionRef(fMinLinCorrForFisher=.8,"MinLinCorrForFisher", "The minimum linear correlation between two variables demanded for use in Fisher criterion in node splitting");
+   DeclareOptionRef(fUseExclusiveVars=kFALSE,"UseExclusiveVars","Variables already used in fisher criterion are not anymore analysed individually for node splitting");
 
    DeclareOptionRef(fPruneStrength, "PruneStrength", "Pruning strength");
    DeclareOptionRef(fPruneMethodS, "PruneMethod", "Method used for pruning (removal) of statistically insignificant branches");
@@ -360,10 +360,10 @@ void TMVA::MethodBDT::DeclareOptions()
    }else{
       DeclareOptionRef(fMaxDepth=3,"MaxDepth","Max depth of the decision tree allowed");
    }
-   DeclareOptionRef(fDoBoostMonitor=kFALSE,"DoBoostMonitor","create control plot with ROC integral vs tree number");
+   DeclareOptionRef(fDoBoostMonitor=kFALSE,"DoBoostMonitor","Create control plot with ROC integral vs tree number");
 
-   DeclareOptionRef(fPairNegWeightsGlobal,"PairNegWeightsGlobal","pair ev. with neg. and pos. weights in traning sample and *annihilate* them (!!) experimental");
-   DeclareOptionRef(fPairNegWeightsInNode,"PairNegWeightsInNode","randomly pair miscl. ev. with neg. and pos. weights in node and don't boost them (!!) experimental");
+   DeclareOptionRef(fPairNegWeightsGlobal,"PairNegWeightsGlobal","Pair events with negative and positive weights in traning sample and *annihilate* them - experimental (!!)");
+   DeclareOptionRef(fPairNegWeightsInNode,"PairNegWeightsInNode","Randomly pair events with negative and positive weights in leaf node and do not boost them - experimental (!!)");
 
 
 }
@@ -907,7 +907,7 @@ void TMVA::MethodBDT::Train()
                fForest.back()->SetMinLinCorrForFisher(fMinLinCorrForFisher); 
                fForest.back()->SetUseExclusiveVars(fUseExclusiveVars); 
             }
-            // the minimum linear correlation between two variables demanded for use in fisher criterium in node splitting
+            // the minimum linear correlation between two variables demanded for use in fisher criterion in node splitting
 
             if (fBaggedGradBoost){
                nNodesBeforePruning = fForest.back()->BuildTree(fSubSample);
