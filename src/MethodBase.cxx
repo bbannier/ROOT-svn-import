@@ -2395,8 +2395,6 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency(const TString& theString)
 
          Double_t theVal    = GetMvaValue();
          Double_t theWeight = ev->GetWeight();
-         cout << ievt << " : " << ev->GetValue(1) << " -> " 
-              << theVal << " " << theWeight << " " << DataInfo().IsSignal(ev) << endl;
 
          TH1* theEffHist = DataInfo().IsSignal(ev) ? mva_eff_tr_s : mva_eff_tr_b;
          TH1* theClsHist = DataInfo().IsSignal(ev) ? mva_s_tr : mva_b_tr;
