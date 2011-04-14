@@ -663,11 +663,11 @@ void TMVA::MethodBDT::PreProcessNegativeEventWeights(){
          }
          
          if (iMin > -1) { 
-            std::cout << "Happily pairing .. weight before : " << negEvents[nev]->GetWeight() << " and " << fEventSample[iMin]->GetWeight();
+            //std::cout << "Happily pairing .. weight before : " << negEvents[nev]->GetWeight() << " and " << fEventSample[iMin]->GetWeight();
             Double_t newWeight= (negEvents[nev]->GetWeight() + fEventSample[iMin]->GetWeight());
             negEvents[nev]->SetBoostWeight( newWeight/negEvents[nev]->GetWeight() );
             fEventSample[iMin]->SetBoostWeight( newWeight/fEventSample[iMin]->GetWeight() );
-            std::cout << " and afterwards " <<  negEvents[nev]->GetWeight() <<  " and the paired " << fEventSample[iMin]->GetWeight() << " dist="<<minDist<< std::endl;
+            //std::cout << " and afterwards " <<  negEvents[nev]->GetWeight() <<  " and the paired " << fEventSample[iMin]->GetWeight() << " dist="<<minDist<< std::endl;
          } else Log() << kFATAL << "preprocessing didn't find event to pair with the negative weight ... probably a bug" << Endl;
          weight = negEvents[nev]->GetWeight();
       }
