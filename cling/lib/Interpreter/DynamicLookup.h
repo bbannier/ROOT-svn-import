@@ -66,6 +66,7 @@ namespace cling {
     llvm::SmallVector<clang::Stmt*, 2> Stmts;
     bool IsEvalNeeded; // whether to emit the Eval call or not
     clang::Stmt *Stmt() { return Stmts[0]; }
+    template <typename T> T* getAs() { return dyn_cast<T>(Stmts[0]); }
     bool isMultiStmt() { return Stmts.size() > 1; }
     unsigned StmtCount() { return Stmts.size(); }
     //clang::Stmt *getNewStmt() const { return m_newStmt; }
@@ -155,11 +156,12 @@ namespace cling {
     /// Note: here our main priority is to preserve equivalent behavior. We have
     /// to clean the heap memory afterwords.
     ///
-    EvalInfo VisitDeclStmt(clang::DeclStmt *Node);
-    EvalInfo VisitExpr(clang::Expr *Node);
-    EvalInfo VisitCallExpr(clang::CallExpr *E);
-    EvalInfo VisitDeclRefExpr(clang::DeclRefExpr *DRE);
-    EvalInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr *Node);
+    EvalInfo VisitDeclStmt(clang::DeclStmt* Node);
+    EvalInfo VisitExpr(clang::Expr* Node);
+    EvalInfo VisitBinaryOperator(clang::BinaryOperator* Node);
+    EvalInfo VisitCallExpr(clang::CallExpr* E);
+    EvalInfo VisitDeclRefExpr(clang::DeclRefExpr* DRE);
+    EvalInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr* Node);
     
     // EvalBuilder
     clang::Expr* SubstituteUnknownSymbol(const clang::QualType InstTy, clang::Expr* SubTree);

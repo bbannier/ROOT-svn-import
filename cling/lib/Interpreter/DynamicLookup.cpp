@@ -426,7 +426,7 @@ namespace cling {
     return EvalInfo(Node, 0);
   }
 
-  EvalInfo DynamicExprTransformer::VisitExpr(Expr *Node) {
+  EvalInfo DynamicExprTransformer::VisitExpr(Expr* Node) {
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
       if (*I) {
@@ -445,17 +445,40 @@ namespace cling {
     return EvalInfo(Node, 0);
   }
 
-  EvalInfo DynamicExprTransformer::VisitCallExpr(CallExpr *E) {
+  EvalInfo DynamicExprTransformer::VisitBinaryOperator(BinaryOperator* Node) {
+    EvalInfo rhs = Visit(Node->getRHS());
+    EvalInfo lhs = Visit(Node->getLHS());
+    assert((!lhs.isMultiStmt() || !rhs.isMultiStmt()) && 
+           "1:N replacements are not implemented yet!");
+
+    // Try find out the type of the left-hand-side of the operator
+    // and give the hint to the right-hand-side in order to replace the 
+    // dependent symbol
+    if (Node->isAssignmentOp() && rhs.IsEvalNeeded && !lhs.IsEvalNeeded) {
+      if (Expr* LHSExpr = dyn_cast<Expr>(lhs.Stmt()))
+        if (!IsArtificiallyDependent(LHSExpr)) {
+          const QualType LHSTy = LHSExpr->getType();
+          Node->setRHS(SubstituteUnknownSymbol(LHSTy, rhs.getAs<Expr>()));
+          Node->setTypeDependent(false);
+          Node->setValueDependent(false);
+          return EvalInfo(Node, /*needs eval*/false);
+        }
+    }
+    
+    return EvalInfo(Node, IsArtificiallyDependent(Node));    
+  }
+
+  EvalInfo DynamicExprTransformer::VisitCallExpr(CallExpr* E) {
     // FIXME: Maybe we need to handle the arguments
     // EvalInfo EInfo = Visit(E->getCallee());
     return EvalInfo (E, IsArtificiallyDependent(E));
   }
   
-  EvalInfo DynamicExprTransformer::VisitDeclRefExpr(DeclRefExpr *DRE) {
+  EvalInfo DynamicExprTransformer::VisitDeclRefExpr(DeclRefExpr* DRE) {
     return EvalInfo(DRE, IsArtificiallyDependent(DRE));
   }
   
-  EvalInfo DynamicExprTransformer::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *Node) {
+  EvalInfo DynamicExprTransformer::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr* Node) {
     return EvalInfo(Node, IsArtificiallyDependent(Node));
   }
   
@@ -463,7 +486,8 @@ namespace cling {
   
   // EvalBuilder
   
-  Expr *DynamicExprTransformer::SubstituteUnknownSymbol(const QualType InstTy, Expr *SubTree) {
+  Expr *DynamicExprTransformer::SubstituteUnknownSymbol(const QualType InstTy, Expr* SubTree) {
+    assert(SubTree && "No subtree specified!");
     // Get the addresses
     BuildEvalEnvironment(SubTree);
     
@@ -567,16 +591,22 @@ namespace cling {
   
   // Eval Arg2: DeclContext* DC
   Expr *DynamicExprTransformer::BuildEvalArg2() {
-    ParmVarDecl* param2 = getEvalDecl()->getParamDecl(2);
-    QualType DeclContextTy = param2->getOriginalType();     
-    
+    ParmVarDecl* p2 = getEvalDecl()->getParamDecl(2);
+    TypeSourceInfo* TSI = m_Context.CreateTypeSourceInfo(p2->getOriginalType());
     const llvm::APInt DCAddr(8 * sizeof(void *), (uint64_t)m_CurDeclContext);
     
     Expr *Arg2 = IntegerLiteral::Create(m_Context,
                                         DCAddr, 
                                         m_Context.UnsignedLongTy, 
                                         SourceLocation());
-    m_Sema->ImpCastExprToType(Arg2, DeclContextTy, CK_IntegralToPointer);
+    // TODO: Maybe is better to have a variable and nice cast
+    // It will be better for debugging we will have DC from clang::DeclContext
+    // type instead of (clang::DeclContext*) long int (the pointer)
+    Arg2 = m_Sema->BuildCStyleCastExpr(SourceLocation(),
+                                       TSI,
+                                       SourceLocation(),
+                                       Arg2).take();
+    //m_Sema->ImpCastExprToType(Arg2, DeclContextTy, CK_IntegralToPointer);
     
     return Arg2;
   }
