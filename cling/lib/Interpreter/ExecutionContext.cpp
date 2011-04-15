@@ -174,7 +174,8 @@ ExecutionContext::NotifyLazyFunctionCreators(const std::string& mangled_name)
 }
 
 void
-ExecutionContext::executeFunction(llvm::StringRef funcname, Value* returnValue)
+ExecutionContext::executeFunction(llvm::StringRef funcname, 
+                                  llvm::GenericValue* returnValue)
 {
    // Call an extern C function without arguments
   runCodeGen();
@@ -219,11 +220,11 @@ ExecutionContext::executeFunction(llvm::StringRef funcname, Value* returnValue)
    m_engine->UnregisterJITEventListener(&listener);
 
    std::vector<llvm::GenericValue> args;
-   Value TGV;
+   llvm::GenericValue val;
    if (!returnValue)
-      returnValue = &TGV;
+      returnValue = &val;
 
-   returnValue->value = m_engine->runFunction(f, args);
+   *returnValue = m_engine->runFunction(f, args);
    //
    //fprintf(stderr, "Finished running generated code with JIT.\n");
    //

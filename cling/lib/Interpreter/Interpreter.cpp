@@ -809,8 +809,6 @@ namespace cling {
     //  llvm code generator to make a module.
     //
 
-    
-    m_ExecutionContext->runCodeGen();
     // get the clang::Type
     clang::FunctionDecl* TopLevelFD 
       = dyn_cast<clang::FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
@@ -840,12 +838,9 @@ namespace cling {
     // resume the code gen
     m_IncrParser->addConsumer(m_ExecutionContext->getCodeGenerator());
     m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(clang::DeclGroupRef(TopLevelFD));
-    //m_ExecutionContext->getCodeGenerator()->HandleTranslationUnit(getCI()->getASTContext());
 
-    // generate the code
-    m_ExecutionContext->runCodeGen();
-
-    m_ExecutionContext->executeFunction(WrapperName, &Result);
+    // get the result
+    m_ExecutionContext->executeFunction(WrapperName, &Result.value);
     return Result;
   }
 
