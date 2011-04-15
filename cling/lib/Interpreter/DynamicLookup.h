@@ -32,8 +32,6 @@ namespace cling {
     // as dependent then we don't need to handle the failed lookup
     bool IsDynamicLookup (clang::LookupResult& R, clang::Scope* S);
 
-    // Remove the fake dependent declarations
-    void RemoveFakeDecls();
   private:
     llvm::SmallVector<clang::Decl*, 8> m_FakeDecls;
     clang::Sema* m_Sema;
