@@ -181,6 +181,8 @@ namespace cling {
     bool IsArtificiallyDependent(clang::Expr *Node);
     bool ShouldVisit(clang::Decl *D);
     bool GetChildren(llvm::SmallVector<clang::Stmt*, 32> &Stmts, clang::Stmt *Node);
+    void AttachDynIDHandler();
+    void DetachDynIDHandler();
   };
 } // end namespace cling
 #endif // CLING_DYNAMIC_LOOKUP_H

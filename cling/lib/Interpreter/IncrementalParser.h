@@ -43,7 +43,7 @@ namespace cling {
       return m_MemoryBuffer.back();
     }
     
-    void setEnabled(bool value = true) { m_Enabled = value; }
+    void setEnabled(bool value = true);
     bool getEnabled() { return m_Enabled; }
     DynamicExprTransformer *getTransformer() const { return m_Transformer.get(); }
     
