@@ -181,7 +181,6 @@ namespace cling {
     assert(TD && "Cannot find EvaluateProxyT TemplateDecl!\n");
     
     m_EvalDecl = dyn_cast<FunctionDecl>(TD->getTemplatedDecl());    
-    assert(m_EvalDecl && "Cannot find EvaluateProxyT!\n");
 
     //m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");
   }
@@ -690,12 +689,15 @@ namespace cling {
     
     DeclRefExpr *DRE = m_Sema->BuildDeclRefExpr(Fn, FuncT, VK_RValue, SourceLocation()).takeAs<DeclRefExpr>();
     
+    // TODO: Figure out a way to avoid passing in wrong source locations
+    // of the symbol being replaced. This is important when we calculate the
+    // size of the memory buffers and may lead to creation of wrong wrappers. 
     CallExpr *EvalCall = m_Sema->ActOnCallExpr(m_Sema->getScopeForContext(m_Sema->CurContext),
-                                                DRE,
-                                                SourceLocation(),
-                                                move_arg(CallArgs),
-                                                SourceLocation()
-                                                ).takeAs<CallExpr>();
+                                               DRE,
+                                               SubTree->getLocStart(),
+                                               move_arg(CallArgs),
+                                               SubTree->getLocEnd()
+                                               ).takeAs<CallExpr>();
     assert (EvalCall && "Cannot create call to Eval");
 
     return EvalCall;                  

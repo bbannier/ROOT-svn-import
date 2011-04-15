@@ -126,7 +126,10 @@ namespace cling {
     ~DynamicExprTransformer() { }
     
     void Initialize();
-    clang::FunctionDecl *getEvalDecl() { return m_EvalDecl; }
+    clang::FunctionDecl *getEvalDecl() { 
+      assert(m_EvalDecl && "EvaluateProxyT not found!");
+      return m_EvalDecl; 
+    }
     void setEvalDecl(clang::FunctionDecl *FDecl) { if (!m_EvalDecl) m_EvalDecl = FDecl; }
     MapTy &getSubstSymbolMap() { return m_SubstSymbolMap; }
     
