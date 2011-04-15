@@ -3,7 +3,7 @@
 // version: $Id$
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
-#ifndef __cling__
+#ifndef __CLING__
 #error "This file must not be included by compiled programs."
 #endif
 #ifdef CLING_RUNTIME_UNIVERSE_H
