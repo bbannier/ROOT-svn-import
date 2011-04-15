@@ -1,0 +1,28 @@
+# Source this script to set up stanalone packages build against ROOT 
+# This script if for the csh like shells
+# Author: Pere Mato, 15/4/2010
+
+set ARGS=($_)
+set THIS="`dirname ${ARGS[2]}`"
+setenv @CMAKE_PROJECT_NAME@SYS "`(cd ${THIS}/..;pwd)`"
+setenv ROOTSYS @ROOTSYS@
+
+if ($?@CMAKE_PROJECT_NAME@SYS) then
+   setenv OLD_@CMAKE_PROJECT_NAME@SYS "$@CMAKE_PROJECT_NAME@SYS"
+endif
+
+if ($?OLD_@CMAKE_PROJECT_NAME@SYS) then
+   setenv PATH `$ROOTSYS/bin/drop_from_path -D -e -p "$PATH" "$OLD_@CMAKE_PROJECT_NAME@SYS/bin"`
+   if ($?LD_LIBRARY_PATH) then
+      setenv LD_LIBRARY_PATH `$ROOTSYS/bin/drop_from_path -D -e -p "$LD_LIBRARY_PATH" "$OLD_@CMAKE_PROJECT_NAME@SYS/lib"`
+   endif
+   if ($?DYLD_LIBRARY_PATH) then
+      setenv DYLD_LIBRARY_PATH `$ROOTSYS/bin/drop_from_path -D -e -p "$DYLD_LIBRARY_PATH" "$OLD_@CMAKE_PROJECT_NAME@SYS/lib"`
+   endif
+endif
+
+source $ROOTSYS/bin/thisroot.csh
+setenv PATH $@CMAKE_PROJECT_NAME@SYS/bin:$PATH
+setenv LD_LIBRARY_PATH $@CMAKE_PROJECT_NAME@SYS/lib:$LD_LIBRARY_PATH      # Linux, ELF HP-UX
+setenv DYLD_LIBRARY_PATH $@CMAKE_PROJECT_NAME@SYS/lib:$DYLD_LIBRARY_PATH  # Mac OS X
+

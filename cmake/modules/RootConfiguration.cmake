@@ -343,7 +343,7 @@ set(pythonvers ${PYTHON_VERSION})
 include(WriteConfigCint)
 WRITE_CONFIG_CINT( ${CMAKE_CURRENT_BINARY_DIR}/tmp/configcint.h)
 execute_process(COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/tmp/configcint.h ${HEADER_OUTPUT_PATH}/configcint.h)
-install(FILES ${HEADER_OUTPUT_PATH}/configcint.h DESTINATION include)
+#install(FILES ${HEADER_OUTPUT_PATH}/configcint.h DESTINATION include)
 
 #---RConfigure.h---------------------------------------------------------------------------------------------
 configure_file(${PROJECT_SOURCE_DIR}/config/RConfigure.in include/RConfigure.h)
@@ -380,6 +380,7 @@ install(FILES ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex
               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.sh
               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.csh
               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/root-config
+              ${CMAKE_SOURCE_DIR}/cmake/scripts/setenvwrap.csh
               PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ 
               DESTINATION bin)
 

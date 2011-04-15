@@ -144,6 +144,12 @@ ROOT_EXECUTABLE(makecint ${CMAKE_SOURCE_DIR}/cint/tool/makecint.cxx LIBRARIES ${
 
 #---Installation--------------------------------------------------------------------------------------------
 ROOT_INSTALL_HEADERS()
+if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_INSTALL_PREFIX)
+  install(DIRECTORY lib     DESTINATION cint/cint PATTERN ".dll" EXCLUDE PATTERN ".svn" EXCLUDE) 
+  install(DIRECTORY include DESTINATION cint/cint PATTERN ".dll" EXCLUDE PATTERN ".svn" EXCLUDE) 
+  install(DIRECTORY stl     DESTINATION cint/cint PATTERN ".dll" EXCLUDE PATTERN ".svn" EXCLUDE) 
+endif()
+
 
 
 

@@ -65,4 +65,8 @@ ROOT_LINKER_LIBRARY(TMVA *.cxx G__TMVA1.cxx G__TMVA2.cxx G__TMVA3.cxx G__TMVA4.c
 install(DIRECTORY inc/ DESTINATION include/TMVA
                        PATTERN ".svn" EXCLUDE
                        REGEX "LinkDef" EXCLUDE )
+if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_INSTALL_PREFIX)
+  install(DIRECTORY test DESTINATION tmva PATTERN ".svn" EXCLUDE)
+endif()
+
 
