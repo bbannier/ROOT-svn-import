@@ -90,16 +90,6 @@ namespace cling {
     
     return true;
   }
-
-  // Removes the implicitly created functions, which help to emulate the dynamic scopes
-  void DynamicIDHandler::RemoveFakeDecls() {      
-    Scope *S = m_Sema->getScopeForContext(m_Context.getTranslationUnitDecl());
-    for (unsigned int i = 0; i < m_FakeDecls.size(); ++i) {
-      printf("\nI am about to remove:\n");
-      m_FakeDecls[i]->dump();      
-      S->RemoveDecl(m_FakeDecls[i]);
-    }
-  }
 } // end namespace cling
 
 namespace {
@@ -498,10 +488,6 @@ namespace cling {
     
     // Add substitution mapping
     getSubstSymbolMap()[EvalCall] = SubTree;
-    
-    // Tell the DynamicIDHandler that the ID has been substituted and it can 
-    // clean up
-    m_DynIDHandler->RemoveFakeDecls();
     
     return EvalCall;
   }
