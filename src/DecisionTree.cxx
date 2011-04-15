@@ -337,11 +337,11 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
       for (UInt_t i=0; i<eventSample.size(); i++) {
          if (eventSample[i]->GetClass() != fSigClass) {
             nBkg += eventSample[i]->GetWeight();
-            Log() << kINFO << "Event "<< i<< " has (original) weight: " <<  eventSample[i]->GetWeight()/eventSample[i]->GetBoostWeight() 
+            Log() << kDEBUG << "Event "<< i<< " has (original) weight: " <<  eventSample[i]->GetWeight()/eventSample[i]->GetBoostWeight() 
                   << " boostWeight: " << eventSample[i]->GetBoostWeight() << Endl;
          }
       }
-      Log() << kINFO << " that gives in total: " << nBkg<<Endl;
+      Log() << kDEBUG << " that gives in total: " << nBkg<<Endl;
    }
 
    node->SetNSigEvents(s);

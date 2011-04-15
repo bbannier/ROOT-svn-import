@@ -177,6 +177,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fUseNTrainEvents(0)
    , fSampleSizeFraction(0)
    , fNoNegWeightsInTraining(kFALSE)
+   , fInverseBoostNegWeights(kFALSE)
    , fPairNegWeightsGlobal(kFALSE)
    , fPairNegWeightsInNode(kFALSE)
    , fTrainWithNegWeights(kFALSE)
@@ -223,6 +224,7 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fUseNTrainEvents(0)
    , fSampleSizeFraction(0)
    , fNoNegWeightsInTraining(kFALSE)
+   , fInverseBoostNegWeights(kFALSE)
    , fPairNegWeightsGlobal(kFALSE)
    , fPairNegWeightsInNode(kFALSE)
    , fTrainWithNegWeights(kFALSE)
@@ -286,9 +288,10 @@ void TMVA::MethodBDT::DeclareOptions()
    // PruneStrength    a parameter to adjust the amount of pruning. Should be large enough such that overtraining is avoided.
    // PruneBeforeBoost flag to prune the tree before applying boosting algorithm
    // PruningValFraction   number of events to use for optimizing pruning (only if PruneStrength < 0, i.e. automatic pruning)
-   // IgnoreNegWeightsInTraining  Ignore negative weight events in the training.
-   // PairNegWeightsGlobal    pair ev. with neg. and pos. weights in traning sample and "annihilate" them 
-   // PairNegWeightsInNode    randomly pair miscl. ev. with neg. and pos. weights in node and don't boost them
+   // NegWeightTreatment      IgnoreNegWeightsInTraining  Ignore negative weight events in the training.
+   //                         DecreaseBoostWeight     Boost ev. with neg. weight with 1/boostweight instead of boostweight
+   //                         PairNegWeightsGlobal    Pair ev. with neg. and pos. weights in traning sample and "annihilate" them 
+   //                         PairNegWeightsInNode    Randomly pair miscl. ev. with neg. and pos. weights in node and don't boost them
    // NNodesMax        maximum number of nodes allwed in the tree splitting, then it stops.
    // MaxDepth         maximum depth of the decision tree allowed before further splitting is stopped
 
@@ -362,16 +365,18 @@ void TMVA::MethodBDT::DeclareOptions()
    }
    DeclareOptionRef(fDoBoostMonitor=kFALSE,"DoBoostMonitor","Create control plot with ROC integral vs tree number");
 
-   DeclareOptionRef(fPairNegWeightsGlobal,"PairNegWeightsGlobal","Pair events with negative and positive weights in traning sample and *annihilate* them - experimental (!!)");
-   DeclareOptionRef(fPairNegWeightsInNode,"PairNegWeightsInNode","Randomly pair events with negative and positive weights in leaf node and do not boost them - experimental (!!)");
-
+   DeclareOptionRef(fNegWeightTreatment="InverseBoostNegWeights","NegWeightTreatment","How to treat events with negative weights in the BDT training (particular the boosting) : Ignore;  Boost With inverse boostweight; Pair events with negative and positive weights in traning sample and *annihilate* them (experimental!); Randomly pair events with negative and positive weights in leaf node and do not boost them (experimental!) ");
+   AddPreDefVal(TString("IgnoreNegWeights"));
+   AddPreDefVal(TString("NoNegWeightsInTraining"));
+   AddPreDefVal(TString("InverseBoostNegWeights"));
+   AddPreDefVal(TString("PairNegWeightsGlobal"));
+   AddPreDefVal(TString("PairNegWeightsInNode"));
 
 }
 
 void TMVA::MethodBDT::DeclareCompatibilityOptions() {
    MethodBase::DeclareCompatibilityOptions();
    DeclareOptionRef(fSampleSizeFraction=1.0,"SampleSizeFraction","Relative size of bagged event sample to original size of the data sample" );
-   DeclareOptionRef(fNoNegWeightsInTraining,"NoNegWeightsInTraining","Ignore negative event weights in the training process" );
 
 }
 
@@ -412,7 +417,14 @@ void TMVA::MethodBDT::ProcessOptions()
    fAdaBoostR2Loss.ToLower();
    
    if (fBoostType!="Grad") fBaggedGradBoost=kFALSE;
-   else fPruneMethod = DecisionTree::kNoPruning;
+   else {
+      fPruneMethod = DecisionTree::kNoPruning;
+      if (fNegWeightTreatment=="InverseBoostNegWeights"){
+         Log() << kWARNING << "the option *InverseBoostNegWeights* does not exist for BoostType=Grad --> change to *IgnoreNegWeights*" << Endl;
+         fNegWeightTreatment="IgnoreNegWeights";
+         fNoNegWeightsInTraining=kTRUE;
+       }
+   }
    if (fFValidationEvents < 0.0) fFValidationEvents = 0.0;
    if (fAutomatic && fFValidationEvents > 0.5) {
       Log() << kWARNING << "You have chosen to use more than half of your training sample "
@@ -463,6 +475,25 @@ void TMVA::MethodBDT::ProcessOptions()
            << Endl;
      fNTrees = 1;
    }
+
+   fNegWeightTreatment.ToLower();
+   if      (fNegWeightTreatment == "ignorenegweights")       fNoNegWeightsInTraining = kTRUE;
+   else if (fNegWeightTreatment == "nonegweightsintraining") fNoNegWeightsInTraining = kTRUE;
+   else if (fNegWeightTreatment == "inverseboostnegweights") fInverseBoostNegWeights = kTRUE;
+   else if (fNegWeightTreatment == "pairnegweightsglobal")   fPairNegWeightsGlobal   = kTRUE;
+   else if (fNegWeightTreatment == "pairnegweightsinnode")   fPairNegWeightsInNode   = kTRUE;
+   else {
+      Log() << kINFO << GetOptions() << Endl;
+      Log() << kFATAL << "<ProcessOptions> unknown option for treating negative event weights during training " << fNegWeightTreatment << " requested" << Endl;
+   }
+   
+   if (fNegWeightTreatment == "pairnegweightsglobal") 
+      Log() << kWARNING << " you specified the option NegWeightTreatment=PairNegWeightsGlobal : This option is still considered EXPERIMENTAL !! " << Endl;
+   if (fNegWeightTreatment == "pairnegweightsginnode") 
+      Log() << kWARNING << " you specified the option NegWeightTreatment=PairNegWeightsInNode : This option is still considered EXPERIMENTAL !! " << Endl;
+   if (fNegWeightTreatment == "pairnegweightsginnode" && fNCuts <= 0) 
+      Log() << kFATAL << " sorry, the option NegWeightTreatment=PairNegWeightsInNode is not yet implemented for NCuts < 0" << Endl;
+
 
 }
 //_______________________________________________________________________
@@ -553,22 +584,30 @@ void TMVA::MethodBDT::InitEventSample( void )
    } else {
 
       UInt_t nevents = Data()->GetNTrainingEvents();
-      Bool_t first=kTRUE;
-      
+      Bool_t firstNegWeight=kTRUE;
+
       for (UInt_t ievt=0; ievt<nevents; ievt++) {
          
          Event* event = new Event( *GetTrainingEvent(ievt) );
          
-         if (!IgnoreEventsWithNegWeightsInTraining() || event->GetWeight() > 0) {
-            if (first && event->GetWeight() < 0) {
-               first = kFALSE;
+         if (event->GetWeight() < 0 && (IgnoreEventsWithNegWeightsInTraining() || fNoNegWeightsInTraining)){
+            if (firstNegWeight) {
+               Log() << kWARNING << " Note, you have events with negative event weight in the sample, but you've chosen to ignore them" << Endl;
+               firstNegWeight=kFALSE;
+            }
+            delete event;
+         }else{
+            if (event->GetWeight() < 0) {
                fTrainWithNegWeights=kTRUE;
-               Log() << kWARNING << "Events with negative event weights are USED during "
-                     << "the BDT training. This might cause problems with small node sizes " 
-                     << "or with the boosting. Please remove negative events from training "
-                     << "using the option *IgnoreEventsWithNegWeightsInTraining* in case you "
-                     << "observe problems with the boosting"
-                     << Endl;
+               if (firstNegWeight){
+                  firstNegWeight = kFALSE;
+                  Log() << kWARNING << "Events with negative event weights are USED during "
+                        << "the BDT training. This might cause problems with small node sizes " 
+                        << "or with the boosting. Please remove negative events from training "
+                        << "using the option *IgnoreEventsWithNegWeightsInTraining* in case you "
+                        << "observe problems with the boosting"
+                        << Endl;
+               }
             }
             // if fAutomatic == true you need a validation sample to optimize pruning
             if (fAutomatic) {
@@ -580,16 +619,16 @@ void TMVA::MethodBDT::InitEventSample( void )
             else {
                fEventSample.push_back(event);
             }
-         } else {
-            delete event;
-         }
-         if (fAutomatic) {
-            Log() << kINFO << "<InitEventSample> Internally I use " << fEventSample.size()
-                  << " for Training  and " << fValidationSample.size()
-                  << " for Pruning Validation (" << ((Float_t)fValidationSample.size())/((Float_t)fEventSample.size()+fValidationSample.size())*100.0
-                  << "% of training used for validation)" << Endl;
          }
       }
+
+      if (fAutomatic) {
+         Log() << kINFO << "<InitEventSample> Internally I use " << fEventSample.size()
+               << " for Training  and " << fValidationSample.size()
+               << " for Pruning Validation (" << ((Float_t)fValidationSample.size())/((Float_t)fEventSample.size()+fValidationSample.size())*100.0
+               << "% of training used for validation)" << Endl;
+      }
+      
       // some pre-processing for events with negative weights
       if (fPairNegWeightsGlobal) PreProcessNegativeEventWeights();
    }
@@ -1431,7 +1470,7 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
             // Helge change back            (*e)->ScaleBoostWeight(boostfactor);
             if (DoRegression()) results->GetHist("BoostWeights")->Fill(boostfactor);
          } else {
-            if ( !(fPairNegWeightsGlobal || fPairNegWeightsInNode) )(*e)->ScaleBoostWeight( 1. / boostfactor); // if the original event weight is negative, and you want to "increase" the events "positive" influence, you'd reather make the event weight "smaller" in terms of it's absolute value while still keeping it something "negative"
+            if ( fInverseBoostNegWeights )(*e)->ScaleBoostWeight( 1. / boostfactor); // if the original event weight is negative, and you want to "increase" the events "positive" influence, you'd reather make the event weight "smaller" in terms of it's absolute value while still keeping it something "negative"
          }
       }
       newSumGlobalw+=(*e)->GetWeight();
