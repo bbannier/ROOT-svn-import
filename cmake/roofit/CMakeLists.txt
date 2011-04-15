@@ -10,6 +10,11 @@ ROOT_USE_PACKAGE(math/foam)
 ROOT_USE_PACKAGE(math/minuit)
 ROOT_USE_PACKAGE(proof/proof)
 
+if(mathmore)
+  ROOT_USE_PACKAGE(math/mathmore)
+  set(ROOT_MATHMORE_LIBRARY MathMore)
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/roofit/inc) 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/roofitcore/inc) 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/roostats/inc) 

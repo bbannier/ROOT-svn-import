@@ -359,6 +359,7 @@ configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.in include/compiled
 configure_file(${CMAKE_SOURCE_DIR}/config/Makefile-comp.in config/Makefile.comp)
 configure_file(${CMAKE_SOURCE_DIR}/config/Makefile.in config/Makefile.config)
 configure_file(${CMAKE_SOURCE_DIR}/config/mimes.unix.in ${CMAKE_BINARY_DIR}/etc/root.mimes)
+ROOT_WRITE_OPTIONS(${CMAKE_BINARY_DIR}/ROOTConfig.cmake)
 
 #---Especial definitions for root-config et al.--------------------------------------------------------------
 set(prefix $ROOTSYS)
@@ -395,6 +396,9 @@ install(FILES ${CMAKE_BINARY_DIR}/etc/root.mimes
 install(FILES ${CMAKE_BINARY_DIR}/config/Makefile.comp
               ${CMAKE_BINARY_DIR}/config/Makefile.config
               DESTINATION config)
+
+install(FILES ${CMAKE_BINARY_DIR}/ROOTConfig.cmake
+              DESTINATION cmake/modules)
 
 endfunction()
 RootConfigure()
