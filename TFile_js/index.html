@@ -3,13 +3,21 @@
 <html>
 <head>
 <title>TFile</title>
-<link href="jsxgraph/jsxgraph.css" rel="stylesheet" type="text/css">
+<!-- link href="jsxgraph/jsxgraph.css" rel="stylesheet" type="text/css" -->
 <!-- script type="text/javascript" src="jsxgraph/jsxgraphcore.js"></script -->
 <script type="text/javascript" src="rawinflate.js"></script>
 <script type="text/javascript" src="rawdeflate.js"></script>
 <script type="text/javascript" src="TFile.js"></script>
 </head>
 <body>
-<p><form><a href="javascript:loadfile();">GO</a> <textarea rows="20" cols="80" id="log"></textarea></form></p>
+<p>
+This is a small proof of concept, showing how to list the content of an arbitrary ROOT file served through a default web server. It uses a few JavaScript routines. You can see the source <a href="http://root.cern.ch/viewvc/branches/dev/axel/TFile_js/">here</a>.
+</p>
+<p><form onsubmit="javascript:outarea.style.visibility='visible';loadfile(filename.value,outarea);return false">
+File URL (*): <input id="filename" value="f.root" />
+<input type="submit" value="Go!"/>
+<br/>
+<textarea id="outarea" style="visibility:hidden" rows="20" cols="40"></textarea></form></p>
+*: Other URLs might not work because of cross site scripting protection, see e.g. <a href="https://developer.mozilla.org/en/http_access_control">https://developer.mozilla.org/en/http_access_control</a> on how to avoid it.
 </body>
 </html>

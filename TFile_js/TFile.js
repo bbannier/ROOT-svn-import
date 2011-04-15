@@ -1,5 +1,7 @@
 // See https://developer.mozilla.org/En/Using_XMLHttpRequest
 
+var logobj = null;
+
 function load_binary_resource_a(url) {  
    var req = new XMLHttpRequest();  
    req.open('GET', url, true);
@@ -33,14 +35,13 @@ function load_binary_resource(url) {
 }  
 
 function log(s, i) {
-   var l = document.getElementById('log');
    if (!i) i = '';
    for (var e in s) {
       if (s[e] != null && typeof(s[e]) == 'object') {
-         l.value += i + e + ':\n';
+         logobj.value += i + e + ':\n';
          log(s[e], i + '  ');
       } else {
-         l.value += i + e + ' = ' + s[e] + '\n';
+         logobj.value += i + e + ' = ' + s[e] + '\n';
       }
    }
 }
@@ -90,7 +91,7 @@ function readheader(str) {
       return null;
    }
    if (header['nbytesInfo'] != 3062) {
-      alert("File too new: this version of TStreamerInfo still needs to be implemented");
+      alert("File too new: this version of TStreamerInfo (nbytesInfo = " + header['nbytesInfo'] + ") still needs to be implemented");
       return null;
    }
    log(header);
@@ -202,7 +203,8 @@ function showfile(str) {
    } while (offset < end);
 }
 
-function loadfile() {
-   document.getElementById('log').value = '';
-   load_binary_resource('http://127.0.0.1/TFile_JS/f.root');
+function loadfile(fileurl, log) {
+   log.value = '';
+   logobj = log;
+   load_binary_resource(fileurl);
 }
