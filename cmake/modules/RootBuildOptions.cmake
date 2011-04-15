@@ -30,6 +30,20 @@ function(ROOT_SHOW_OPTIONS)
   endif()
 endfunction()
 
+#---------------------------------------------------------------------------------------------------
+#---ROOT_WRITE_OPTIONS(file )
+#---------------------------------------------------------------------------------------------------
+function(ROOT_WRITE_OPTIONS file)
+  file(WRITE ${file} "#---Options enabled for the build of ROOT-----------------------------------------------\n")
+  foreach(opt ${root_build_options})
+    if(${opt})
+      file(APPEND ${file} "set(${opt} ON)\n")
+    else()
+      file(APPEND ${file} "set(${opt} OFF)\n")
+    endif()
+  endforeach()
+endfunction()
+
 ROOT_BUILD_OPTION(afs OFF "AFS support, requires AFS libs and objects")                 
 ROOT_BUILD_OPTION(alien OFF "AliEn support, requires libgapiUI from ALICE")               
 ROOT_BUILD_OPTION(asimage ON "Image processing support, requires libAfterImage")             
