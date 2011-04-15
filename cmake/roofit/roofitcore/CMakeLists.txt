@@ -3,11 +3,6 @@
 # @author Pere Mato, CERN
 ############################################################################
 
-ROOT_USE_PACKAGE(math/mathcore)
-ROOT_USE_PACKAGE(math/foam)
-ROOT_USE_PACKAGE(math/minuit)
-ROOT_USE_PACKAGE(proof/proof)
-include_directories(${CMAKE_SOURCE_DIR}/roofit/roofit/inc)  # This is to avoid a circular dependency roofit <--> roofitcore 
 
 
 set(headers1 Roo1DTable.h RooAbsArg.h RooAbsBinning.h RooAbsCategory.h RooAbsCategoryLValue.h RooAbsCollection.h

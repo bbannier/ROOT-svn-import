@@ -77,3 +77,18 @@ if(roofit)
   add_subdirectory(roofit)
 endif()
 
+#---Installation of project-wise artifacts-------------------------------------------------------
+if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_INSTALL_PREFIX)
+  install(FILES LICENSE DESTINATION .)
+  install(DIRECTORY README/ DESTINATION README PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY etc/ DESTINATION etc PATTERN ".svn" EXCLUDE 
+                         REGEX system.rootrc EXCLUDE REGEX root.mimes EXCLUDE)
+  install(DIRECTORY geom/   DESTINATION geom PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY fonts/  DESTINATION fonts PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY icons/  DESTINATION icons PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY macros/ DESTINATION macros PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY man/    DESTINATION man PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY test/      DESTINATION test PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY tutorials/ DESTINATION tutorials PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY cmake/modules DESTINATION cmake PATTERN ".svn" EXCLUDE)
+endif()

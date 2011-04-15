@@ -126,12 +126,17 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 #---Set all directories where to install parts of root up to now everything is installed ------
 #---according to the setting of CMAKE_INSTALL_DIR
 
-if(ROOT_INSTALL_DIR)
-  set(CMAKE_INSTALL_PREFIX ${ROOT_INSTALL_DIR})
-  add_definitions(-DR__HAVE_CONFIG)
-else()
-  set(CMAKE_INSTALL_PREFIX ${ROOTSYS})
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  message(STATUS "Setting default installation prefix CMAKE_INSTALL_PREFIX to ${ROOTSYS}")
+  set(CMAKE_INSTALL_PREFIX ${ROOTSYS} CACHE PATH "Default installation of ROOT" FORCE)
 endif()
+
+#if(ROOT_INSTALL_DIR)
+#  set(CMAKE_INSTALL_PREFIX ${ROOT_INSTALL_DIR})
+#  add_definitions(-DR__HAVE_CONFIG)
+#else()
+#  set(CMAKE_INSTALL_PREFIX ${ROOTSYS})
+#endif()
 
 set(ROOT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
 set(BIN_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/bin)

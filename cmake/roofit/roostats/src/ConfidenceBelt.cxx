@@ -71,6 +71,7 @@ ConfidenceBelt::ConfidenceBelt(const char* name, RooAbsData& data) :
   TNamed(name,name), fParameterPoints((RooAbsData*)data.Clone("PointsToTestForBelt"))
 {
    // Alternate constructor
+  
 }
 
 //____________________________________________________________________
