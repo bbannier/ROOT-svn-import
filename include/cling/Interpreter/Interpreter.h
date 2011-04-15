@@ -34,7 +34,8 @@ namespace cling {
   namespace runtime {
     namespace internal {
       template <typename T>
-      T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC); 
+      T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC);
+      class LifetimeHandler;
     }
   }
   class ExecutionContext;
@@ -126,7 +127,8 @@ namespace cling {
     template<typename T> 
     friend T runtime::internal::EvaluateProxyT(const char* expr,
                                                void* varaddr[],
-                                               clang::DeclContext* DC); 
+                                               clang::DeclContext* DC);
+    friend class runtime::internal::LifetimeHandler;
     
   public:
     Value Evaluate(const char* expr, clang::DeclContext* DC);

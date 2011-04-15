@@ -40,7 +40,8 @@ namespace cling {
 
     void runCodeGen();
     
-    void executeFunction(llvm::StringRef function, Value* returnValue = 0);
+    void executeFunction(llvm::StringRef function, 
+                         llvm::GenericValue* returnValue = 0);
     
   private:
     static void* HandleMissingFunction(const std::string&);
