@@ -172,8 +172,7 @@ namespace cling {
       m_Context(Sema->getASTContext()) 
   {
     m_DynIDHandler.reset(new DynamicIDHandler(Sema));
-    m_Sema->ExternalSource = m_DynIDHandler.get();
-    
+    AttachDynIDHandler();    
   }
   
   void DynamicExprTransformer::Initialize() {
@@ -754,6 +753,14 @@ namespace cling {
       Stmts.push_back(*I);
     }
     return true;
+  }
+  void DynamicExprTransformer::AttachDynIDHandler() {
+    assert(m_DynIDHandler.get() && "No DynamicIDHandler initialized!");
+    m_Sema->ExternalSource = m_DynIDHandler.get();
+  }
+
+  void DynamicExprTransformer::DetachDynIDHandler() {
+    m_Sema->ExternalSource = 0;
   }
 
   // end Helpers

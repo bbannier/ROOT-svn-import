@@ -214,6 +214,15 @@ namespace cling {
     }
     return m_CI.get();
   }
+
+  void IncrementalParser::setEnabled(bool value) {
+    m_Enabled = value;
+    if (m_Enabled)
+      getTransformer()->AttachDynIDHandler();
+    else
+      getTransformer()->DetachDynIDHandler();    
+  }
+
    
   void IncrementalParser::emptyLastFunction() {
     // Given a broken AST (e.g. due to a syntax error),
