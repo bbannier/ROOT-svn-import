@@ -110,7 +110,10 @@ namespace cling {
     // that we will have ChainedASTConsumer, which is initialized in createCI
     
     // Create the visitor that will transform all dependents that are left.
-    m_Transformer.reset(new DynamicExprTransformer(interp, &CI->getSema()));      
+    m_Transformer.reset(new DynamicExprTransformer(interp, &CI->getSema()));
+    // Attach the DynamicIDHandler if enabled
+    if (m_Enabled)
+      getTransformer()->AttachDynIDHandler();
   }
   
   IncrementalParser::~IncrementalParser() {}
