@@ -382,19 +382,15 @@ namespace cling {
         std::string stmt_string;
         {
           std::pair<unsigned, unsigned> r = getStmtRangeWithSemicolon(cur_stmt, SM, LO);
-          if (r.first == 0 && r.second == 0) {
-             MapTy::const_iterator It = Map.find(cur_stmt);
-             if (It != Map.end()) {
-                if (!It->second)
-                   continue;
-                r = getStmtRangeWithSemicolon(It->second, SM, LO);                
-             }
-             else {
-                fprintf(stderr, "%s", "Cannot find source for statement!\n ");
-                cur_stmt->dump();
-             }
+          // if the node was marked as artificially dependent the source locations 
+          // would be wrong. Recalculate them.
+          MapTy::const_iterator It = Map.find(cur_stmt);
+          if (It != Map.end()) {
+            if (!It->second)
+              continue;
+            r = getStmtRangeWithSemicolon(It->second, SM, LO);                
           }
-          //else
+
           stmt_string = std::string(buffer + r.first, r.second - r.first);
           //fprintf(stderr, "stmt: %s\n", stmt_string.c_str());
         }
