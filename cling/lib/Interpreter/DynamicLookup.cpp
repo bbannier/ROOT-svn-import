@@ -532,6 +532,7 @@ namespace cling {
                                        &*m_EvalExpressionBuf.c_str(), 
                                        m_EvalExpressionBuf.length(), 
                                        /*Wide=*/ false,
+                                       /*Pascal=*/false,
                                        ConstCharArray, 
                                        SourceLocation());
     const QualType CastTo = m_Context.getPointerType(m_Context.getConstType(m_Context.CharTy));
@@ -615,6 +616,7 @@ namespace cling {
                                          &*Str, 
                                          strlen(Str), 
                                          /*Wide=*/ false,
+                                         /*Pascal=*/false,
                                          ConstCharArray, 
                                          SourceLocation());
     const QualType CastTo = m_Context.getPointerType(m_Context.getConstType(m_Context.CharTy));
