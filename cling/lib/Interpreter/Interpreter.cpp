@@ -810,12 +810,11 @@ namespace cling {
       = dyn_cast<clang::FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
     CurContext = m_IncrParser->getCI()->getSema().CurContext;
     m_IncrParser->getCI()->getSema().CurContext = TopLevelFD;
-
+    clang::QualType RetTy;
     if (clang::Stmt* S = TopLevelFD->getBody())
       if (clang::CompoundStmt* CS = dyn_cast<clang::CompoundStmt>(S))
         if (clang::Expr* E = dyn_cast<clang::Expr>(CS->body_back())) {
-          clang::QualType RetTy = E->getType();
-          Result.type = RetTy.getTypePtrOrNull();
+          RetTy = E->getType();
           // Change the void function's return type
           clang::FunctionProtoType::ExtProtoInfo EPI;
           clang::QualType FuncTy
@@ -830,14 +829,14 @@ namespace cling {
           TopLevelFD->setBody(RetS);
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
-    assert(Result.type && "clang::Type cannot be found!");
     // resume the code gen
     m_IncrParser->addConsumer(m_ExecutionContext->getCodeGenerator());
     m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(clang::DeclGroupRef(TopLevelFD));
 
     // get the result
-    m_ExecutionContext->executeFunction(WrapperName, &Result.value);
-    return Result;
+    llvm::GenericValue val;
+    m_ExecutionContext->executeFunction(WrapperName, &val);
+    return Value(val, RetTy.getTypePtrOrNull());
   }
 
   bool cling::Interpreter::setDynamicLookup(bool value /*=true*/){
@@ -916,4 +915,3 @@ namespace cling {
   }
   
 } // namespace cling
-
