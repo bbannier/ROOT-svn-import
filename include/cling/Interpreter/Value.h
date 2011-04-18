@@ -27,6 +27,7 @@ namespace cling {
     const clang::Type* type;
     template <typename T> struct TypedAccess;
     Value() : value(0), type(0) {}
+    Value(llvm::GenericValue& v, const clang::Type* t) : value(v), type(t){}
     ~Value() {}
     template <typename T>
     T getAs() const;
