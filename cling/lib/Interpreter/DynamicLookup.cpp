@@ -357,7 +357,7 @@ namespace cling {
                                          SourceLocation(),
                                          SourceLocation())
                                 );
-          
+
           // 3.1 Find the declaration - LifetimeHandler::getMemory()
           CXXMethodDecl* getMemDecl 
             = m_Interpreter->LookupDecl("getMemory", Handler).getAs<CXXMethodDecl>();
@@ -372,7 +372,7 @@ namespace cling {
           // 3.3 Create a MemberExpr to getMemory from its declaration.
           CXXScopeSpec SS;
           LookupResult MemberLookup(*m_Sema, getMemDecl->getDeclName(), 
-                                    SourceLocation(),Sema::LookupMemberName);
+                                    SourceLocation(), Sema::LookupMemberName);
           // Add the declaration as if doesn't exist.
           // TODO: Check whether this is the most appropriate variant
           MemberLookup.addDecl(getMemDecl, AS_public);
@@ -388,7 +388,8 @@ namespace cling {
                                              /*TemplateArgs=*/0
                                              ).take();
           // 3.4 Build the actual call
-          Expr* theCall = m_Sema->ActOnCallExpr(0,
+          Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
+          Expr* theCall = m_Sema->ActOnCallExpr(S,
                                                 MemberExpr,
                                                 SourceLocation(),
                                                 MultiExprArg(),
@@ -630,8 +631,10 @@ namespace cling {
   
   // Here is the test Eval function specialization. Here the CallExpr to the function
   // is created.
-  CallExpr* DynamicExprTransformer::BuildEvalCallExpr(const QualType InstTy, Expr *SubTree, 
-                                                   ASTOwningVector<Expr*> &CallArgs) {      
+  CallExpr* 
+  DynamicExprTransformer::BuildEvalCallExpr(const QualType InstTy,
+                                            Expr *SubTree, 
+                                            ASTOwningVector<Expr*> &CallArgs) {
     // Set up new context for the new FunctionDecl
     DeclContext *PrevContext = m_Sema->CurContext;
     FunctionDecl *FDecl = getEvalDecl();
@@ -647,42 +650,33 @@ namespace cling {
     
     // Substitute the declaration of the templated function, with the 
     // specified template argument
-    Decl *D = m_Sema->SubstDecl(FDecl, FDecl->getDeclContext(), MultiLevelTemplateArgumentList(TemplateArgs));
+    Decl *D = m_Sema->SubstDecl(FDecl, 
+                                FDecl->getDeclContext(), 
+                                MultiLevelTemplateArgumentList(TemplateArgs));
     
     FunctionDecl *Fn = dyn_cast<FunctionDecl>(D);
     // Creates new body of the substituted declaration
     m_Sema->InstantiateFunctionDefinition(Fn->getLocation(), Fn, true, true);
     
-    m_Sema->CurContext = PrevContext;                            
+    m_Sema->CurContext = PrevContext;
     
-    const FunctionProtoType *Proto = Fn->getType()->getAs<FunctionProtoType>();
-    
-    //Walk the params and prepare them for building a new function type
-    llvm::SmallVectorImpl<QualType> ParamTypes(FDecl->getNumParams());
-    for (FunctionDecl::param_iterator P = FDecl->param_begin(), PEnd = FDecl->param_end();
-         P != PEnd;
-         ++P) {
-      ParamTypes.push_back((*P)->getType());
-      
-    }
-    
-    // Build function type, needed by BuildDeclRefExpr 
-    QualType FuncT = m_Sema->BuildFunctionType(Fn->getResultType(),
-                                               ParamTypes.data(),
-                                               ParamTypes.size(),
-                                               Proto->isVariadic(),
-                                               Proto->getTypeQuals(),
-                                               RQ_None,
-                                               Fn->getLocation(),
-                                               Fn->getDeclName(),
-                                               Proto->getExtInfo());                  
-    
-    DeclRefExpr *DRE = m_Sema->BuildDeclRefExpr(Fn, FuncT, VK_RValue, SourceLocation()).takeAs<DeclRefExpr>();
+    const FunctionProtoType *FPT = Fn->getType()->getAs<FunctionProtoType>();
+    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+    QualType FnTy = m_Context.getFunctionType(Fn->getResultType(),
+                                               FPT->arg_type_begin(),
+                                               FPT->getNumArgs(),
+                                               EPI);
+    DeclRefExpr *DRE = m_Sema->BuildDeclRefExpr(Fn,
+                                                FnTy,
+                                                VK_RValue,
+                                                SourceLocation()
+                                                ).takeAs<DeclRefExpr>();
     
     // TODO: Figure out a way to avoid passing in wrong source locations
     // of the symbol being replaced. This is important when we calculate the
     // size of the memory buffers and may lead to creation of wrong wrappers. 
-    CallExpr *EvalCall = m_Sema->ActOnCallExpr(m_Sema->getScopeForContext(m_Sema->CurContext),
+    Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
+    CallExpr *EvalCall = m_Sema->ActOnCallExpr(S,
                                                DRE,
                                                SubTree->getLocStart(),
                                                move_arg(CallArgs),
