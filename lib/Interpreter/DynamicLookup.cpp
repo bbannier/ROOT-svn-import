@@ -42,8 +42,9 @@ namespace cling {
 
     DeclarationName Name = R.getLookupName();
     IdentifierInfo *II = Name.getAsIdentifierInfo();
-    SourceLocation NameLoc = R.getNameLoc();
-    FunctionDecl *D = dyn_cast<FunctionDecl>(R.getSema().ImplicitlyDefineFunction(NameLoc, *II, S));
+    SourceLocation Loc = R.getNameLoc();
+    FunctionDecl *D 
+      = dyn_cast<FunctionDecl>(R.getSema().ImplicitlyDefineFunction(Loc, *II, S));
     if (D) {            
       FunctionProtoType::ExtProtoInfo EPI;
       QualType QTy = m_Context.getFunctionType(m_Context.DependentTy,
@@ -161,15 +162,17 @@ namespace cling {
       m_Sema(Sema), 
       m_Context(Sema->getASTContext()) 
   {
-    m_DynIDHandler.reset(new DynamicIDHandler(Sema));
-    AttachDynIDHandler();    
   }
   
   void DynamicExprTransformer::Initialize() {
-    TemplateDecl* TD = dyn_cast<TemplateDecl>(m_Interpreter->LookupDecl("cling").LookupDecl("runtime").LookupDecl("internal").LookupDecl("EvaluateProxyT").getSingleDecl());
-    assert(TD && "Cannot find EvaluateProxyT TemplateDecl!\n");
+    TemplateDecl* D = dyn_cast<TemplateDecl>(m_Interpreter->LookupDecl("cling").
+                                             LookupDecl("runtime").
+                                             LookupDecl("internal").
+                                             LookupDecl("EvaluateProxyT").
+                                             getSingleDecl());
+    assert(D && "Cannot find EvaluateProxyT TemplateDecl!\n");
     
-    m_EvalDecl = dyn_cast<FunctionDecl>(TD->getTemplatedDecl());    
+    m_EvalDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl());    
 
     //m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");
   }
@@ -740,8 +743,12 @@ namespace cling {
     }
     return true;
   }
+
   void DynamicExprTransformer::AttachDynIDHandler() {
-    assert(m_DynIDHandler.get() && "No DynamicIDHandler initialized!");
+    if (!m_DynIDHandler.get()) {
+      m_DynIDHandler.reset(new DynamicIDHandler(m_Sema));
+    }
+
     m_Sema->ExternalSource = m_DynIDHandler.get();
   }
 
