@@ -50,9 +50,6 @@ namespace cling {
         void* m_Memory;
         std::string m_Type;
       public:
-        // Temp constructor just to build what we need and then
-        // we will give the concrete parameters
-        LifetimeHandler(){}
         LifetimeHandler(llvm::StringRef expr,
                         void* varaddr[],
                         clang::DeclContext* DC,
@@ -60,9 +57,9 @@ namespace cling {
           m_Type = type;
           std::string ctor("new ");
           ctor += type;
-          ctor += "(";
+          ctor += "(\"";
           ctor += expr;
-          ctor += ")";
+          ctor += "\")";
           Value res = gCling->EvaluateWithContext(ctor.c_str(), varaddr, DC);
           //m_memory = (void*)res.value.Untyped;
         }
@@ -79,4 +76,3 @@ namespace cling {
 } // end namespace cling
 
 using namespace cling::runtime;
-
