@@ -194,6 +194,7 @@ namespace cling {
     //   function-body: compount-statement
     if (!D->isDependentContext() && D->isThisDeclarationADefinition()) {
       if (D->hasBody()) {
+        m_CurDeclContext = D->getParent();
         // Here we expect clang::CompoundStmt
         EvalInfo EInfo = Visit(D->getBody());
         

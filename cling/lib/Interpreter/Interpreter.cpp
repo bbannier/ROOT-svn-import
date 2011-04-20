@@ -826,7 +826,7 @@ namespace cling {
           TopLevelFD->setType(FuncTy);
           // add return stmt
           clang::Stmt* RetS = getCI()->getSema().ActOnReturnStmt(clang::SourceLocation(), E).take();
-          TopLevelFD->setBody(RetS);
+          CS->setStmts(getCI()->getASTContext(), &RetS, 1);
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
     // resume the code gen
