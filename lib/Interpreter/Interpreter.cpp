@@ -666,6 +666,9 @@ namespace cling {
       pairFileArgs.second = ")";
     }
     StringRefPair pairPathFile = pairFileArgs.first.rsplit('/');
+    if (pairPathFile.second.empty()) {
+       pairPathFile.second = pairPathFile.first;
+    }
     StringRefPair pairFuncExt = pairPathFile.second.rsplit('.');
 
     //fprintf(stderr, "funcname: %s\n", pairFuncExt.first.data());
