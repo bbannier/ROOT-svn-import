@@ -90,6 +90,7 @@ std::vector<std::string> ExecutionContext::m_vec_unresolved;
 std::vector<ExecutionContext::LazyFunctionCreatorFunc_t> ExecutionContext::m_vec_lazy_function;
 
 ExecutionContext::ExecutionContext(clang::CompilerInstance* CI):
+  m_CI(CI),
   m_engine(0),
   m_module(0),
   m_posInitGlobals(0)
@@ -127,12 +128,10 @@ ExecutionContext::InitializeBuilder()
       std::cerr << "Error: Unable to create the execution engine!\n";
       std::cerr << errMsg << '\n';
    }
-   m_engine->addModule(m_module); // Note: The engine takes ownership of the module.
+   //m_engine->addModule(m_module); // Note: The engine takes ownership of the module.
 
    // install lazy function
    m_engine->InstallLazyFunctionCreator(NotifyLazyFunctionCreators);
-
-  runNewStaticConstructorsDestructors();
 }
 
 ExecutionContext::~ExecutionContext()
@@ -238,7 +237,13 @@ void
 ExecutionContext::runCodeGen() {
   InitializeBuilder();
   assert(m_module && "Code generation did not create a module!");
-  runNewStaticConstructorsDestructors();
+  m_engine->runStaticConstructorsDestructors(false);
+  m_codeGen->ResetInitializers();
+  llvm::GlobalVariable* gctors = m_module->getGlobalVariable("llvm.global_ctors", true);
+   if (gctors) {
+      gctors->dropAllReferences();
+      gctors->eraseFromParent();
+   }
 }
 
 int
@@ -264,41 +269,6 @@ ExecutionContext::printModule(llvm::Module* m)
    PM.add(llvm::createPrintModulePass(&llvm::outs()));
    PM.run(*m);
 }
-
-bool
-ExecutionContext::runNewStaticConstructorsDestructors()
-{
-  // incremental version of m_engine->runStaticConstructorsDestructors(false);
-  
-  if (!m_module) return true;
-  llvm::GlobalVariable *GV = m_module->getNamedGlobal("llvm.global_ctors");
-  if (!GV) return true;
-  llvm::ConstantArray *InitList = dyn_cast<llvm::ConstantArray>(GV->getInitializer());
-  if (!InitList) return true;
-  for (unsigned i = m_posInitGlobals, e = InitList->getNumOperands(); i != e; ++i) {
-    m_posInitGlobals = 0;
-    if (llvm::ConstantStruct *CS = 
-        dyn_cast<llvm::ConstantStruct>(InitList->getOperand(i))) {
-      if (CS->getNumOperands() != 2)
-        return false; // Not array of 2-element structs.
-      
-      llvm::Constant *FP = CS->getOperand(1);
-      if (FP->isNullValue())
-        break;  // Found a null terminator, exit.
-      
-      if (llvm::ConstantExpr *CE = dyn_cast<llvm::ConstantExpr>(FP))
-        if (CE->isCast())
-          FP = CE->getOperand(0);
-      if (llvm::Function *F = dyn_cast<llvm::Function>(FP)) {
-        // Execute the ctor/dtor function!
-        m_engine->runFunction(F, std::vector<llvm::GenericValue>());
-      }
-    }
-    m_posInitGlobals = i + 1;
-  }
-  return true;
-}
-  
 
 void
 ExecutionContext::installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp)
