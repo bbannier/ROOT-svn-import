@@ -238,7 +238,6 @@ ExecutionContext::runCodeGen() {
   InitializeBuilder();
   assert(m_module && "Code generation did not create a module!");
   m_engine->runStaticConstructorsDestructors(false);
-  m_codeGen->ResetInitializers();
   llvm::GlobalVariable* gctors = m_module->getGlobalVariable("llvm.global_ctors", true);
    if (gctors) {
       gctors->dropAllReferences();
