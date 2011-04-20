@@ -3,7 +3,7 @@
 
 #include <cstdlib>
 int i;
-struct S{int i};
+struct S{int i;};
 i = 42;
 printf("i=%d\n",i); // CHECK: i=42
 if (i != 42) exit(1);
