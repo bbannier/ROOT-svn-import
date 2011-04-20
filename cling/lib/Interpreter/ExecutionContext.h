@@ -49,13 +49,13 @@ namespace cling {
 
     int verifyModule(llvm::Module* m);
     void printModule(llvm::Module* m);
-    bool runNewStaticConstructorsDestructors();
     void InitializeBuilder();
     
     static std::vector<std::string> m_vec_unresolved;
     static std::vector<LazyFunctionCreatorFunc_t> m_vec_lazy_function;
     
     llvm::OwningPtr<clang::CodeGenerator> m_codeGen;
+    clang::CompilerInstance* m_CI;
     llvm::ExecutionEngine* m_engine; // Owned by JIT
     llvm::Module* m_module; // IncrAST module, owned by m_engine.
     unsigned m_posInitGlobals; // position (global idx in out module) of next global to be initialized in m_ASTCI's AST
