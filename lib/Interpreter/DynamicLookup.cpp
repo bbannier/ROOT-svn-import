@@ -312,21 +312,33 @@ namespace cling {
         assert(Handler && "LifetimeHandler type not found!");
         if (Handler) {
           EvalInfo EInfo;
-          // 2.2 Get unique name for the LifetimeHandler instance and initialize it
-          IdentifierInfo& II = m_Context.Idents.get(m_Interpreter->createUniqueName());
+          // 2.2 Get unique name for the LifetimeHandler instance and 
+          // initialize it
+          IdentifierInfo& II 
+            = m_Context.Idents.get(m_Interpreter->createUniqueName());
 
           // Prepare the initialization Exprs.
           // We want to call LifetimeHandler(llvm::StringRef expr, 
+          //                                 void* varaddr[],
+          //                                 DeclContext DC,
           //                                 llvm::StringRef type)
           ASTOwningVector<Expr*> Inits(*m_Sema);
-          // Add MyClass in LifetimeHandler unique("MyClass", "dep->Symbol()")
+          // Add MyClass in LifetimeHandler unique("dep->Symbol(i)",
+          //                                       {&i},
+          //                                       DC,
+          //                                       "MyClass")
+          // Build Arg0 llvm::StringRef
+          BuildEvalEnvironment(E);
+          Inits.push_back(ConstructllvmStringRefExpr(m_EvalExpressionBuf.c_str()));
+          // Build Arg1 void* varaddr[]
+          Inits.push_back(BuildEvalArg1());
+          // Build Arg2 clang::DeclContext* DC
+          Inits.push_back(BuildEvalArg2());
+          // Build Arg3 llvm::StringRef
           Inits.push_back(ConstructllvmStringRefExpr(CuredDeclTy->
                                                      getAsCXXRecordDecl()->
                                                      getQualifiedNameAsString().
                                                      c_str()));
-          // Strip dep->Symbol(arg1, ..., argN) in the m_EvalExpressionBuf
-          BuildEvalEnvironment(E);
-          Inits.push_back(ConstructllvmStringRefExpr(m_EvalExpressionBuf.c_str()));
 
           // 2.3 Create a variable from LifetimeHandler.
           QualType HandlerTy 
@@ -395,8 +407,8 @@ namespace cling {
                                                 MultiExprArg(),
                                                 SourceLocation()).take();
           // Cast to the type LHS type
-          Expr* Result = 
-            m_Sema->BuildCStyleCastExpr(SourceLocation(),
+          Expr* Result 
+            = m_Sema->BuildCStyleCastExpr(SourceLocation(),
                                         m_Context.CreateTypeSourceInfo(m_Context.getPointerType(CuredDeclTy)),
                                         SourceLocation(),
                                         theCall).take();
@@ -509,20 +521,22 @@ namespace cling {
   }
   
   // Prepare the actual arguments for the call
-  // Arg list for static T Eval(size_t This, const char* expr, void* varaddr[], clang::DeclContext* DC )
+  // Arg list for 
+  // T EvaluateProxyT(const char* expr, 
+  //                  void* varaddr[],
+  //                  clang::DeclContext* DC)
   void DynamicExprTransformer::BuildEvalArgs(ASTOwningVector<Expr*> &Result) {
     // Arg 0:
-    Expr *Arg0 = BuildEvalArg0();    
+    Expr *Arg0 = BuildEvalArg0();
     Result.push_back(Arg0);
     
     // Arg 1:
-    Expr *Arg1 = BuildEvalArg1();          
+    Expr *Arg1 = BuildEvalArg1();
     Result.push_back(Arg1);
     
     // Arg 2:
-    Expr *Arg2 = BuildEvalArg2();          
+    Expr *Arg2 = BuildEvalArg2();
     Result.push_back(Arg2);
-    
   }
     
   // Eval Arg0: const char* expr
