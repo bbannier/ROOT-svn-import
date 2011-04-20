@@ -86,7 +86,7 @@ namespace cling {
                  const std::string* trailcode = 0,
                  bool allowSharedLib = true);
     
-    int executeFile(const std::string& filename);
+    int executeFile(const std::string& fileWithArgs);
     clang::QualType getQualType(llvm::StringRef type);
     
     bool setDynamicLookup(bool value = true);

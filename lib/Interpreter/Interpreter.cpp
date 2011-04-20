@@ -655,41 +655,25 @@ namespace cling {
   }
   
   int
-  Interpreter::executeFile(const std::string& filename)
+  Interpreter::executeFile(const std::string& fileWithArgs)
   {
-    std::string::size_type pos = filename.find_last_of('/');
-    if (pos == std::string::npos) {
-      pos = 0;
+    // Look for start of parameters:
+
+    typedef std::pair<llvm::StringRef,llvm::StringRef> StringRefPair;
+
+    StringRefPair pairFileArgs = llvm::StringRef(fileWithArgs).split('(');
+    if (pairFileArgs.second.empty()) {
+      pairFileArgs.second = ")";
     }
-    else {
-      ++pos;
-    }
-    
-    // Note: We are assuming the filename does not end in slash here.
-    std::string funcname(filename, pos);
-    std::string::size_type endFileName = std::string::npos;
-    
-    std::string args("()"); // arguments with enclosing '(', ')'
-    pos = funcname.find_first_of('(');
-    if (pos != std::string::npos) {
-      std::string::size_type posParamsEnd = funcname.find_last_of(')');
-      if (posParamsEnd != std::string::npos) {
-        args = funcname.substr(pos, posParamsEnd - pos + 1);
-        endFileName = filename.find_first_of('(');
-      }
-    }
-    
-    //fprintf(stderr, "funcname: %s\n", funcname.c_str());
-    pos = funcname.find_last_of('.');
-    if (pos != std::string::npos) {
-      funcname.erase(pos);
-      //fprintf(stderr, "funcname: %s\n", funcname.c_str());
-    }
+    StringRefPair pairPathFile = pairFileArgs.first.rsplit('/');
+    StringRefPair pairFuncExt = pairPathFile.second.rsplit('.');
+
+    //fprintf(stderr, "funcname: %s\n", pairFuncExt.first.data());
     
     std::string func = createUniqueName();
     std::string wrapper = "extern \"C\" void " + func;
-    wrapper += "(){\n" + funcname + args + ";\n}";
-    int err = loadFile(filename.substr(0, endFileName), &wrapper);
+    wrapper += "(){\n" + pairFuncExt.first.str() + "(" + pairFileArgs.second.str() + ";\n}";
+    int err = loadFile(pairFileArgs.first, &wrapper);
     if (err) {
       return err;
     }
