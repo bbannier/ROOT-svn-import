@@ -52,6 +52,8 @@
 #include <utility>
 #include <vector>
 
+using namespace clang;
+
 namespace {
   static
   llvm::sys::Path
@@ -96,7 +98,7 @@ namespace {
   
 }
 namespace {
-   class ASTTLDPrinter : public clang::ASTConsumer {
+   class ASTTLDPrinter : public ASTConsumer {
       llvm::raw_ostream &Out;
       bool Dump;
       
@@ -104,19 +106,19 @@ namespace {
       ASTTLDPrinter(llvm::raw_ostream* o = NULL, bool Dump = false)
   : Out(o? *o : llvm::outs()), Dump(Dump) { }
 
-      virtual void HandleTopLevelDecl(clang::DeclGroupRef D) {
-         for (clang::DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I)
+      virtual void HandleTopLevelDecl(DeclGroupRef D) {
+         for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I)
             HandleTopLevelSingleDecl(*I);
       }
       
-      void HandleTopLevelSingleDecl(clang::Decl *D) {
-         clang::PrintingPolicy Policy = D->getASTContext().PrintingPolicy;
+      void HandleTopLevelSingleDecl(Decl *D) {
+         PrintingPolicy Policy = D->getASTContext().PrintingPolicy;
          Policy.Dump = Dump;
 
-         if (isa<clang::FunctionDecl>(D) || isa<clang::ObjCMethodDecl>(D)) {
+         if (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)) {
             D->dump();
             
-            if (clang::Stmt *Body = D->getBody()) {
+            if (Stmt *Body = D->getBody()) {
                llvm::errs() << "DeclStmts:---------------------------------\n";
                Body->dump();
                llvm::errs() << "End DeclStmts:-----------------------------\n\n\n\n";
@@ -130,7 +132,7 @@ namespace cling {
 
   Interpreter::NamedDeclResult::NamedDeclResult(llvm::StringRef Decl, 
                                                 Interpreter* interp, 
-                                                clang::DeclContext* Within)
+                                                DeclContext* Within)
     : m_Interpreter(interp),
       m_Context(m_Interpreter->getCI()->getASTContext()),
       m_CurDeclContext(Within),
@@ -139,9 +141,8 @@ namespace cling {
     LookupDecl(Decl);
   }
 
-  Interpreter::NamedDeclResult& Interpreter::NamedDeclResult::LookupDecl(llvm::StringRef Decl) {
-    using namespace clang;
-
+  Interpreter::NamedDeclResult&
+  Interpreter::NamedDeclResult::LookupDecl(llvm::StringRef Decl) {
     DeclarationName Name(&m_Context.Idents.get(Decl));
     DeclContext::lookup_result Lookup = m_CurDeclContext->lookup(Name);
     // FIXME: We need to traverse over each found result in the pair in order to
@@ -162,9 +163,9 @@ namespace cling {
     return *this;
   }
 
-  clang::NamedDecl* Interpreter::NamedDeclResult::getSingleDecl() const {
+  NamedDecl* Interpreter::NamedDeclResult::getSingleDecl() const {
     // TODO: Check whether it is only one decl if (end-begin == 1 )
-    return dyn_cast<clang::NamedDecl>(m_Result);
+    return dyn_cast<NamedDecl>(m_Result);
   }
 
   //
@@ -180,7 +181,7 @@ namespace cling {
   m_LastDump(0),
   m_ASTDumper(0)
   {
-    m_PragmaHandler = new clang::PragmaNamespace("cling");
+    m_PragmaHandler = new PragmaNamespace("cling");
 
     //m_CIFactory.reset(new CIFactory(fake_argc, fake_argv, llvmdir));
     
@@ -227,29 +228,25 @@ namespace cling {
     // looks for include files. Only one path item can be specified at a
     // time, i.e. "path1:path2" is not supported.
       
-    clang::CompilerInstance* CI = getCI();
-    clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
+    CompilerInstance* CI = getCI();
+    HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
     const bool IsUserSupplied = false;
     const bool IsFramework = false;
     const bool IsSysRootRelative = true;
-    headerOpts.AddPath (incpath, clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
+    headerOpts.AddPath (incpath, frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
       
-    clang::Preprocessor& PP = CI->getPreprocessor();
-    clang::ApplyHeaderSearchOptions(PP.getHeaderSearchInfo(), headerOpts,
+    Preprocessor& PP = CI->getPreprocessor();
+    ApplyHeaderSearchOptions(PP.getHeaderSearchInfo(), headerOpts,
                                     PP.getLangOptions(),
                                     PP.getTargetInfo().getTriple());
       
   }
   
-  clang::CompilerInstance*
-  Interpreter::getCI() const
-  {
+  CompilerInstance* Interpreter::getCI() const {
     return m_IncrParser->getCI();
   }
   
-  int
-  Interpreter::processLine(const std::string& input_line)
-  {
+  int Interpreter::processLine(const std::string& input_line) {
     //
     //  Transform the input line to implement cint
     //  command line semantics (declarations are global),
@@ -281,13 +278,13 @@ namespace cling {
     //  Send the wrapped code through the
     //  frontend to produce a translation unit.
     //
-    clang::CompilerInstance* CI = m_IncrParser->parse(wrapped);
+    CompilerInstance* CI = m_IncrParser->parse(wrapped);
 
     if (!CI) {
       return 0;
     }
     // Note: We have a valid compiler instance at this point.
-    clang::TranslationUnitDecl* tu =
+    TranslationUnitDecl* tu =
       CI->getASTContext().getTranslationUnitDecl();
     if (!tu) { // Parse failed, return.
       fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
@@ -319,8 +316,8 @@ namespace cling {
     bool haveStatements = false;
     stmtFunc = createUniqueName();
     std::string stmtVsDeclFunc = stmtFunc + "_stmt_vs_decl";
-    std::vector<clang::Stmt*> stmts;
-    clang::CompilerInstance* CI = 0;
+    std::vector<Stmt*> stmts;
+    CompilerInstance* CI = 0;
     bool haveSemicolon = false;
     {
       size_t endsrc = src.length();
@@ -334,7 +331,7 @@ namespace cling {
       FunctionBodyConsumer* consumer =
         new FunctionBodyConsumer(splitter, stmtVsDeclFunc.c_str());
 
-      //clang::Diagnostic& Diag = m_IncrASTParser->getCI()->getDiagnostics();
+      //Diagnostic& Diag = m_IncrASTParser->getCI()->getDiagnostics();
       //bool prevDiagSupp = Diag.getSuppressAllDiagnostics();
       //Diag.setSuppressAllDiagnostics(true);
       // fprintf(stderr,"nonTUsrc=%s\n",nonTUsrc.c_str());
@@ -358,19 +355,19 @@ namespace cling {
     std::string wrapped_globals;
     std::string wrapped_stmts;
     std::string finalStmtStr; // last statement for value printer
-    const clang::Expr* finalExpr = 0;
+    const Expr* finalExpr = 0;
     {
-      clang::SourceManager& SM = CI->getSourceManager();
-      const clang::LangOptions& LO = CI->getLangOpts();
-      std::vector<clang::Stmt*>::iterator stmt_iter = stmts.begin();
-      std::vector<clang::Stmt*>::iterator stmt_end = stmts.end();
+      SourceManager& SM = CI->getSourceManager();
+      const LangOptions& LO = CI->getLangOpts();
+      std::vector<Stmt*>::iterator stmt_iter = stmts.begin();
+      std::vector<Stmt*>::iterator stmt_end = stmts.end();
 
       MapTy& Map = m_IncrParser->getTransformer()->getSubstSymbolMap(); // delayed id substitutions
 
       for (; stmt_iter != stmt_end; ++stmt_iter) {
-        clang::Stmt* cur_stmt = *stmt_iter;
+        Stmt* cur_stmt = *stmt_iter;
         
-        if (dyn_cast<clang::NullStmt>(cur_stmt)) continue;
+        if (dyn_cast<NullStmt>(cur_stmt)) continue;
 
         if (!finalStmtStr.empty()) {
            wrapped_stmts.append(finalStmtStr + '\n');
@@ -399,7 +396,7 @@ namespace cling {
         //  Handle expression statements.
         //
         {
-          const clang::Expr* expr = dyn_cast<clang::Expr>(cur_stmt);
+          const Expr* expr = dyn_cast<Expr>(cur_stmt);
           if (expr) {
             //fprintf(stderr, "have expr stmt.\n");
             finalStmtStr = stmt_string;
@@ -411,7 +408,7 @@ namespace cling {
         //
         //  Handle everything that is not a declaration statement.
         //
-        const clang::DeclStmt* DS = dyn_cast<clang::DeclStmt>(cur_stmt);
+        const DeclStmt* DS = dyn_cast<DeclStmt>(cur_stmt);
         if (!DS) {
           //fprintf(stderr, "not expr, not declaration.\n");
           finalStmtStr = stmt_string;
@@ -421,13 +418,13 @@ namespace cling {
         //
         //  Loop over each declarator in the declaration statement.
         //
-        clang::DeclStmt::const_decl_iterator D = DS->decl_begin();
-        clang::DeclStmt::const_decl_iterator E = DS->decl_end();
+        DeclStmt::const_decl_iterator D = DS->decl_begin();
+        DeclStmt::const_decl_iterator E = DS->decl_end();
         for (; D != E; ++D) {
           //
           //  Handle everything that is not a variable declarator.
           //
-          const clang::VarDecl* VD = dyn_cast<clang::VarDecl>(*D);
+          const VarDecl* VD = dyn_cast<VarDecl>(*D);
           if (!VD) {
             if (DS->isSingleDecl()) {
               //fprintf(stderr, "decl, not var decl, single decl.\n");
@@ -435,12 +432,10 @@ namespace cling {
               continue;
             }
             //fprintf(stderr, "decl, not var decl, not single decl.\n");
-            clang::SourceLocation SLoc =
-            SM.getInstantiationLoc((*D)->getLocStart());
-            clang::SourceLocation ELoc =
-            SM.getInstantiationLoc((*D)->getLocEnd());
-            std::pair<unsigned, unsigned> r =
-            getRangeWithSemicolon(SLoc, ELoc, SM, LO);
+            SourceLocation SLoc = SM.getInstantiationLoc((*D)->getLocStart());
+            SourceLocation ELoc = SM.getInstantiationLoc((*D)->getLocEnd());
+            std::pair<unsigned, unsigned> r 
+              = getRangeWithSemicolon(SLoc, ELoc, SM, LO);
             std::string decl = std::string(buffer + r.first, r.second - r.first);
             wrapped_globals.append(decl + ";\n");
             continue;
@@ -451,13 +446,13 @@ namespace cling {
           std::string decl = VD->getNameAsString();
           // FIXME: Probably should not remove the qualifiers!
           VD->getType().getUnqualifiedType().
-          getAsStringInternal(decl, clang::PrintingPolicy(LO));
-          const clang::Expr* I = VD->getInit();
+          getAsStringInternal(decl, PrintingPolicy(LO));
+          const Expr* I = VD->getInit();
           //
           //  Handle variable declarators with no initializer
           //  or with an initializer that is a constructor call.
           //
-          if (!I || dyn_cast<clang::CXXConstructExpr>(I)) {
+          if (!I || dyn_cast<CXXConstructExpr>(I)) {
             if (!I) {
               //fprintf(stderr, "var decl, no init.\n");
             }
@@ -485,7 +480,7 @@ namespace cling {
           //
           //  Handle variable declarators whose initializer is not a list.
           //
-          const clang::InitListExpr* ILE = dyn_cast<clang::InitListExpr>(I);
+          const InitListExpr* ILE = dyn_cast<InitListExpr>(I);
           if (!ILE) {
             //fprintf(stderr, "var decl, init is not list.\n");
             std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
@@ -518,7 +513,7 @@ namespace cling {
 
       if (finalExpr) {
         // Users don't care about implicit casts (e.g. from InitExpr)
-        const clang::ImplicitCastExpr* ICE = dyn_cast<clang::ImplicitCastExpr>(finalExpr);
+        const ImplicitCastExpr* ICE = dyn_cast<ImplicitCastExpr>(finalExpr);
         if (ICE) {
           finalExpr = ICE->getSubExprAsWritten();
         }
@@ -543,7 +538,7 @@ namespace cling {
         sstr_stmt << "extern \"C\" void " << stmtFunc << "() {\n"
                   << wrapped_stmts;
         if (!haveSemicolon && finalExpr) {
-          clang::QualType QT = finalExpr->getType();
+          QualType QT = finalExpr->getType();
           if (!QT.isNull() && QT->isVoidType()) {
             sstr_stmt << finalStmtStr << ";}\n";
           } else {
@@ -560,18 +555,18 @@ namespace cling {
               if (QT.isConstant(CI->getASTContext()) || QT.isLocalConstQualified()) {
                 Flags |= kIsConst;
               }
-              const clang::PointerType* PT = dyn_cast<clang::PointerType>(QT.getTypePtr());
+              const PointerType* PT = dyn_cast<PointerType>(QT.getTypePtr());
               if (PT) {
                 // treat arrary-to-pointer decay as array:
-                clang::QualType PQT = PT->getPointeeType();
-                const clang::Type* PTT = PQT.getTypePtr();
+                QualType PQT = PT->getPointeeType();
+                const Type* PTT = PQT.getTypePtr();
                 if (!PTT || !PTT->isArrayType()) {
                   Flags |= kIsPtr;
-                  const clang::RecordType* RT = dyn_cast<clang::RecordType>(QT.getTypePtr());
+                  const RecordType* RT = dyn_cast<RecordType>(QT.getTypePtr());
                   if (RT) {
-                    clang::RecordDecl* RD = RT->getDecl();
+                    RecordDecl* RD = RT->getDecl();
                     if (RD) {
-                      clang::CXXRecordDecl* CRD = dyn_cast<clang::CXXRecordDecl>(RD);
+                      CXXRecordDecl* CRD = dyn_cast<CXXRecordDecl>(RD);
                       if (CRD && CRD->isPolymorphic()) {
                         Flags |= kIsPolymorphic;
                       }
@@ -608,19 +603,15 @@ namespace cling {
     }
   }
   
-  clang::CompilerInstance*
-  Interpreter::compileFile(const std::string& filename,
-                           const std::string* trailcode /*=0*/)
-  {
+  CompilerInstance* Interpreter::compileFile(const std::string& filename,
+                                             const std::string* trailcode/*=0*/) {
     std::string code;
     code += "#include \"" + filename + "\"\n";
     if (trailcode) code += *trailcode;
     return m_IncrParser->parse(code);
   }
   
-  static
-  bool tryLoadSharedLib(const std::string& filename)
-  {
+  static bool tryLoadSharedLib(const std::string& filename) {
     llvm::sys::Path DynLib = findDynamicLibrary(filename);
     if (!DynLib.isDynamicLibrary())
       return false;
@@ -646,7 +637,7 @@ namespace cling {
     if (allowSharedLib && tryLoadSharedLib(filename))
       return 0;
     
-    clang::CompilerInstance* CI = compileFile(filename, trailcode);
+    CompilerInstance* CI = compileFile(filename, trailcode);
     if (!CI) {
       return 1;
     }
@@ -685,29 +676,29 @@ namespace cling {
     return 0;
   }
 
-  clang::QualType Interpreter::getQualType(llvm::StringRef type) {
+  QualType Interpreter::getQualType(llvm::StringRef type) {
      std::string className = createUniqueName();
-     clang::QualType Result;
-     clang::CompilerInstance* CI;
+     QualType Result;
+     CompilerInstance* CI;
 
      // template<typename T> class dummy{}; 
      std::string templatedClass = "template<typename T> class " + className + "{};\n";
      CI  = m_IncrParser->parse(templatedClass);
-     clang::Decl *templatedClassDecl = 0;
+     Decl *templatedClassDecl = 0;
      if (CI)
         templatedClassDecl = m_IncrParser->getLastTopLevelDecl();
 
-     //template <> dummy<clang::DeclContext*> {};
+     //template <> dummy<DeclContext*> {};
      std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
      CI = m_IncrParser->parse(explicitSpecialization);
      if (CI) {
-        if (clang::ClassTemplateSpecializationDecl* D = dyn_cast<clang::ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
+        if (ClassTemplateSpecializationDecl* D = dyn_cast<ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
            Result = D->getTemplateArgs()[0].getAsType();
 
            // TODO: Remove the fake Decls
            // We couldn't remove the template specialization and leave only the
            // template
-           /*clang::Scope *S = CI->getSema().getScopeForContext(CI->getSema().getASTContext().getTranslationUnitDecl());
+           /*Scope *S = CI->getSema().getScopeForContext(CI->getSema().getASTContext().getTranslationUnitDecl());
            S->RemoveDecl(D);
            //D->getDeclContext()->removeDecl(D);
            if (templatedClassDecl) {
@@ -723,7 +714,8 @@ namespace cling {
      return Result;
   }
 
-  Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl, clang::DeclContext* Within) {
+  Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl, 
+                                                       DeclContext* Within) {
     if (!Within)
       Within = getCI()->getASTContext().getTranslationUnitDecl();
     return Interpreter::NamedDeclResult(Decl, this, Within);
@@ -737,7 +729,7 @@ namespace cling {
   // Implements the interpretation of the unknown symbols. 
   Value Interpreter::EvaluateWithContext(const char* expr,
                                          void* varaddr[],
-                                         clang::DeclContext* DC) {
+                                         DeclContext* DC) {
     std::string exprStr(expr);
     int i = 0;
     size_t found;
@@ -753,7 +745,7 @@ namespace cling {
     return Evaluate(exprStr.c_str(), DC);
   }
   
-  Value Interpreter::Evaluate(const char* expr, clang::DeclContext* DC) {
+  Value Interpreter::Evaluate(const char* expr, DeclContext* DC) {
     // Execute and get the result
     Value Result;
 
@@ -767,7 +759,7 @@ namespace cling {
     // fprintf(stderr, "Function:\n %s\n",  Wrapper.c_str());
     
     // Set up the declaration context
-    clang::DeclContext* CurContext;
+    DeclContext* CurContext;
     CurContext = m_IncrParser->getCI()->getSema().CurContext;
     m_IncrParser->getCI()->getSema().CurContext = DC;
 
@@ -775,7 +767,7 @@ namespace cling {
 
     // Temporary stop the code gen
     m_IncrParser->removeConsumer(m_ExecutionContext->getCodeGenerator());
-    clang::CompilerInstance* CI = m_IncrParser->parse(Wrapper);
+    CompilerInstance* CI = m_IncrParser->parse(Wrapper);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
     }
@@ -783,7 +775,7 @@ namespace cling {
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
 
     // Note: We have a valid compiler instance at this point.
-    // clang::TranslationUnitDecl* tu =
+    // TranslationUnitDecl* tu =
     //   CI->getASTContext().getTranslationUnitDecl();
     // if (!tu) { // Parse failed, return.
     //   fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
@@ -793,19 +785,19 @@ namespace cling {
     //  llvm code generator to make a module.
     //
 
-    // get the clang::Type
-    clang::FunctionDecl* TopLevelFD 
-      = dyn_cast<clang::FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
+    // get the Type
+    FunctionDecl* TopLevelFD 
+      = dyn_cast<FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
     CurContext = m_IncrParser->getCI()->getSema().CurContext;
     m_IncrParser->getCI()->getSema().CurContext = TopLevelFD;
-    clang::QualType RetTy;
-    if (clang::Stmt* S = TopLevelFD->getBody())
-      if (clang::CompoundStmt* CS = dyn_cast<clang::CompoundStmt>(S))
-        if (clang::Expr* E = dyn_cast<clang::Expr>(CS->body_back())) {
+    QualType RetTy;
+    if (Stmt* S = TopLevelFD->getBody())
+      if (CompoundStmt* CS = dyn_cast<CompoundStmt>(S))
+        if (Expr* E = dyn_cast<Expr>(CS->body_back())) {
           RetTy = E->getType();
           // Change the void function's return type
-          clang::FunctionProtoType::ExtProtoInfo EPI;
-          clang::QualType FuncTy
+          FunctionProtoType::ExtProtoInfo EPI;
+          QualType FuncTy
             = getCI()->getASTContext().getFunctionType(RetTy,
                                                        /*ArgArray*/0,
                                                        /*NumArgs*/0,
@@ -813,44 +805,44 @@ namespace cling {
 
           TopLevelFD->setType(FuncTy);
           // add return stmt
-          clang::Stmt* RetS = getCI()->getSema().ActOnReturnStmt(clang::SourceLocation(), E).take();
+          Stmt* RetS = getCI()->getSema().ActOnReturnStmt(SourceLocation(), E).take();
           CS->setStmts(getCI()->getASTContext(), &RetS, 1);
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
     // resume the code gen
     m_IncrParser->addConsumer(m_ExecutionContext->getCodeGenerator());
-    m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(clang::DeclGroupRef(TopLevelFD));
+    m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(DeclGroupRef(TopLevelFD));
 
     // get the result
     llvm::GenericValue val;
     if (!isInCLinkageSpecification(TopLevelFD)) {
         WrapperName = "";
         llvm::raw_string_ostream RawStr(WrapperName);
-        clang::MangleContext* Mangle = getCI()->getASTContext().createMangleContext();
+        MangleContext* Mangle = getCI()->getASTContext().createMangleContext();
         Mangle->mangleName(TopLevelFD, RawStr);
     }
     m_ExecutionContext->executeFunction(WrapperName, &val);
     return Value(val, RetTy.getTypePtrOrNull());
   }
 
-  bool Interpreter::isInCLinkageSpecification(const clang::Decl *D) {
+  bool Interpreter::isInCLinkageSpecification(const Decl *D) {
     D = D->getCanonicalDecl();
-    for (const clang::DeclContext *DC = D->getDeclContext();
+    for (const DeclContext *DC = D->getDeclContext();
          !DC->isTranslationUnit(); DC = DC->getParent()) {
-      if (const clang::LinkageSpecDecl *Linkage = dyn_cast<clang::LinkageSpecDecl>(DC))
-        return Linkage->getLanguage() == clang::LinkageSpecDecl::lang_c;
+      if (const LinkageSpecDecl *Linkage = dyn_cast<LinkageSpecDecl>(DC))
+        return Linkage->getLanguage() == LinkageSpecDecl::lang_c;
     }
     
     return false;
   }
 
-  bool cling::Interpreter::setDynamicLookup(bool value /*=true*/){
+  bool Interpreter::setDynamicLookup(bool value /*=true*/){
     bool prev = m_IncrParser->getEnabled();
     m_IncrParser->setEnabled(value);
     return prev;
   }
   
-  bool cling::Interpreter::setPrintAST(bool print /*=true*/) {
+  bool Interpreter::setPrintAST(bool print /*=true*/) {
     bool prev = m_printAST;
     m_printAST = print;
     if (m_printAST) {
@@ -864,8 +856,8 @@ namespace cling {
   }
   
   
-  void cling::Interpreter::dumpAST(bool showAST, int last) {
-    clang::Decl* D = m_LastDump;
+  void Interpreter::dumpAST(bool showAST, int last) {
+    Decl* D = m_LastDump;
     int oldPolicy = m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump;
     
     if (!D && last == -1 ) {
@@ -884,12 +876,12 @@ namespace cling {
     else if (last == 0) {
       m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl()->dump();
     } else {
-      clang::Decl *FD = m_IncrParser->getFirstTopLevelDecl(); // First Decl to print
-      clang::Decl *LD = FD;
+      Decl *FD = m_IncrParser->getFirstTopLevelDecl(); // First Decl to print
+      Decl *LD = FD;
       
       // FD and LD are first
       
-      clang::Decl *NextLD = 0;
+      Decl *NextLD = 0;
       for (int i = 1; i < last; ++i) {
         NextLD = LD->getNextDeclInContext();
         if (NextLD) {
