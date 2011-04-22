@@ -133,6 +133,7 @@ namespace cling {
   public:
     Value Evaluate(const char* expr, clang::DeclContext* DC);
     NamedDeclResult LookupDecl(llvm::StringRef Decl, clang::DeclContext* Within = 0);
+    bool isInCLinkageSpecification(const clang::Decl *D);
   };
   
 } // namespace cling

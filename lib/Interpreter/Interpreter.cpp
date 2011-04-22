@@ -14,6 +14,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/FileManager.h"
@@ -758,7 +759,7 @@ namespace cling {
 
     // Wrap the expression
     const std::string ExprStr(expr);
-    const std::string WrapperName = createUniqueName();
+    std::string WrapperName = createUniqueName();
     std::string Wrapper = "void " + WrapperName + " () {\n";
     //Wrapper += "return llvm::GenericValue(" + ExprStr + ");\n}";
     // //"auto UNIQUE() {return gCling->getVersion();}"
@@ -822,8 +823,25 @@ namespace cling {
 
     // get the result
     llvm::GenericValue val;
+    if (!isInCLinkageSpecification(TopLevelFD)) {
+        WrapperName = "";
+        llvm::raw_string_ostream RawStr(WrapperName);
+        clang::MangleContext* Mangle = getCI()->getASTContext().createMangleContext();
+        Mangle->mangleName(TopLevelFD, RawStr);
+    }
     m_ExecutionContext->executeFunction(WrapperName, &val);
     return Value(val, RetTy.getTypePtrOrNull());
+  }
+
+  bool Interpreter::isInCLinkageSpecification(const clang::Decl *D) {
+    D = D->getCanonicalDecl();
+    for (const clang::DeclContext *DC = D->getDeclContext();
+         !DC->isTranslationUnit(); DC = DC->getParent()) {
+      if (const clang::LinkageSpecDecl *Linkage = dyn_cast<clang::LinkageSpecDecl>(DC))
+        return Linkage->getLanguage() == clang::LinkageSpecDecl::lang_c;
+    }
+    
+    return false;
   }
 
   bool cling::Interpreter::setDynamicLookup(bool value /*=true*/){
