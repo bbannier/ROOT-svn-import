@@ -101,7 +101,7 @@ namespace {
    class ASTTLDPrinter : public ASTConsumer {
       llvm::raw_ostream &Out;
       bool Dump;
-      
+
    public:
       ASTTLDPrinter(llvm::raw_ostream* o = NULL, bool Dump = false)
   : Out(o? *o : llvm::outs()), Dump(Dump) { }
@@ -753,17 +753,14 @@ namespace cling {
     const std::string ExprStr(expr);
     std::string WrapperName = createUniqueName();
     std::string Wrapper = "void " + WrapperName + " () {\n";
-    //Wrapper += "return llvm::GenericValue(" + ExprStr + ");\n}";
-    // //"auto UNIQUE() {return gCling->getVersion();}"
-    Wrapper += "gCling->getVersion();\n}";
-    // fprintf(stderr, "Function:\n %s\n",  Wrapper.c_str());
+    //expr = "gCling->getVersion()";
+    Wrapper += expr;
+    Wrapper += ";\n}";
     
     // Set up the declaration context
     DeclContext* CurContext;
     CurContext = m_IncrParser->getCI()->getSema().CurContext;
     m_IncrParser->getCI()->getSema().CurContext = DC;
-
-    //assert(processLine(expr) && "Failed to create the requested wrapper");
 
     // Temporary stop the code gen
     m_IncrParser->removeConsumer(m_ExecutionContext->getCodeGenerator());
@@ -773,18 +770,6 @@ namespace cling {
     }
 
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
-
-    // Note: We have a valid compiler instance at this point.
-    // TranslationUnitDecl* tu =
-    //   CI->getASTContext().getTranslationUnitDecl();
-    // if (!tu) { // Parse failed, return.
-    //   fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
-    // }
-    //
-    //  Send the translation unit through the
-    //  llvm code generator to make a module.
-    //
-
     // get the Type
     FunctionDecl* TopLevelFD 
       = dyn_cast<FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
