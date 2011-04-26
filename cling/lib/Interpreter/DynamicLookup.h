@@ -33,7 +33,6 @@ namespace cling {
     bool IsDynamicLookup (clang::LookupResult& R, clang::Scope* S);
 
   private:
-    llvm::SmallVector<clang::Decl*, 8> m_FakeDecls;
     clang::Sema* m_Sema;
     clang::ASTContext& m_Context;
   };

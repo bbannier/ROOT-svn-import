@@ -54,9 +54,6 @@ namespace cling {
       
       D->setType(QTy);
       R.addDecl(D);
-      // Mark this declaration for removal
-      m_FakeDecls.push_back(D);
-      
       // Say that we can handle the situation. Clang should try to recover
       return true;
     }
