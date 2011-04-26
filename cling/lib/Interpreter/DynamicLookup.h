@@ -89,23 +89,44 @@ namespace cling {
                                  public clang::StmtVisitor<DynamicExprTransformer, EvalInfo> {
     
   private: // members
+
+    /// \brief Stores the declaration of the EvaluateProxyT function
     clang::FunctionDecl* m_EvalDecl;
+
+    /// \brief Sema's external source, which provides last resort lookup
     llvm::OwningPtr<DynamicIDHandler> m_DynIDHandler;
+
+    /// \brief Keeps track of the replacements being made. If an AST node is
+    /// changed with another it should be added to the map (newNode->oldNode)
     MapTy m_SubstSymbolMap;
-    /* 
-       Specifies the unknown symbol surrounding
-       Example: int a; ...; h->Draw(a); -> Eval(gCling, "*(int*)@", {&a});
-       m_EvalExpressionBuf holds the types of the variables.
-       m_Environment holds the refs from which runtime addresses are built.
-    */
+
+    /// \brief The unknown symbol surrounding environment, which has to be 
+    /// included when replacing a node.
+    ///
+    /// For example:
+    /// @code
+    /// int a = 5;
+    /// const char* b = dep->Symbol(a);
+    /// @endcode
+    /// This information is kept using the syntax: "dep->Symbol(*(int*)@)",
+    /// where @ denotes that the runtime address the variable "a" is needed.
     std::string m_EvalExpressionBuf;
+
+    /// \brief Stores the addresses of the variables that m_EvalExpressionBuf
+    /// describes.
     llvm::SmallVector<clang::DeclRefExpr*, 64> m_Environment;
+
+    /// \brief Stores the actual declaration context, in which declarations are
+    /// being visited.
     clang::DeclContext* m_CurDeclContext; // We need it for Evaluate()
-    clang::QualType m_DeclContextType; // Used for building Eval args
-    clang::VarDecl* classA;
-  public: // members
+
+    /// \brief Stores pointer to cling, mainly used for declaration lookup
     Interpreter* m_Interpreter;
+
+    /// \brief Sema, which is in the core of all the transformations
     clang::Sema* m_Sema;
+
+    /// \brief The ASTContext
     clang::ASTContext& m_Context;
     
   public: // types
@@ -124,11 +145,6 @@ namespace cling {
     ~DynamicExprTransformer() { }
     
     void Initialize();
-    clang::FunctionDecl *getEvalDecl() { 
-      assert(m_EvalDecl && "EvaluateProxyT not found!");
-      return m_EvalDecl; 
-    }
-    void setEvalDecl(clang::FunctionDecl *FDecl) { if (!m_EvalDecl) m_EvalDecl = FDecl; }
     MapTy &getSubstSymbolMap() { return m_SubstSymbolMap; }
     
     // DeclVisitor      
@@ -163,8 +179,15 @@ namespace cling {
     EvalInfo VisitCallExpr(clang::CallExpr* E);
     EvalInfo VisitDeclRefExpr(clang::DeclRefExpr* DRE);
     EvalInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr* Node);
+    void AttachDynIDHandler();
+    void DetachDynIDHandler();
     
     // EvalBuilder
+  protected:
+    clang::FunctionDecl *getEvalDecl() { 
+      assert(m_EvalDecl && "EvaluateProxyT not found!");
+      return m_EvalDecl; 
+    }
     clang::Expr* SubstituteUnknownSymbol(const clang::QualType InstTy, clang::Expr* SubTree);
     clang::CallExpr* BuildEvalCallExpr(clang::QualType type, clang::Expr* SubTree, clang::ASTOwningVector<clang::Expr*>& CallArgs);
     void BuildEvalEnvironment(clang::Expr* SubTree);
@@ -179,8 +202,6 @@ namespace cling {
     bool IsArtificiallyDependent(clang::Expr *Node);
     bool ShouldVisit(clang::Decl *D);
     bool GetChildren(llvm::SmallVector<clang::Stmt*, 32> &Stmts, clang::Stmt *Node);
-    void AttachDynIDHandler();
-    void DetachDynIDHandler();
   };
 } // end namespace cling
 #endif // CLING_DYNAMIC_LOOKUP_H
