@@ -155,18 +155,24 @@ namespace cling {
     // StmtVisitor
     EvalInfo VisitStmt(clang::Stmt *Node);
     EvalInfo VisitCompoundStmt(clang::CompoundStmt *Node);
-    /// \brief Transforms a declaration with initializer of dependent type. 
-    /// The expected type couldn't be determined.
+    /// \brief Transforms a declaration with initializer of dependent type.
+    /// If an object on the free store is being initialized we use the 
+    /// EvaluateProxyT
+    /// If an object on the stack is being initialized it is transformed into
+    /// reference and an object on the free store is created in order to 
+    /// avoid the copy constructors, which might be missing or private
     ///
     /// For example:
     /// @code
-    /// MyClass my(h->Draw())
+    /// int i = 5;
+    /// MyClass my(dep->Symbol(i))
     /// @endcode
-    /// where h->Draw() is of artificially 
-    /// dependent type, ends up as:
+    /// where dep->Symbol() is of artificially dependent type it is being 
+    /// transformed into:
     /// @code
-    /// cling::runtime::internal::LifetimeHandler __unique("MyClass","h->Draw()");
-    /// MyClass &my(*(MyClass*)__unique.getMemory())
+    /// cling::runtime::internal::LifetimeHandler 
+    /// __unique("dep->Sybmol(*(int*)@)",(void*[]){&i}, DC, "MyClass");
+    /// MyClass &my(*(MyClass*)__unique.getMemory());
     /// @endcode
     ///
     /// Note: here our main priority is to preserve equivalent behavior. We have
