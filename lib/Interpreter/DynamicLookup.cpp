@@ -303,7 +303,7 @@ namespace cling {
           *I = SubstituteUnknownSymbol(CuredDeclTy, CuredDecl->getInit());
           continue;
         }
-        if (!CuredDeclTy->isLValueReferenceType())
+        if (CuredDeclTy->isLValueReferenceType())
           continue;
         
         // 2.1 Find the LifetimeHandler type
