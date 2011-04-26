@@ -319,6 +319,7 @@ namespace cling {
     std::vector<Stmt*> stmts;
     CompilerInstance* CI = 0;
     bool haveSemicolon = false;
+    MapTy& Map = m_IncrParser->getTransformer()->getSubstSymbolMap(); // delayed id substitutions
     {
       size_t endsrc = src.length();
       while (endsrc && isspace(src[endsrc - 1])) --endsrc;
@@ -361,8 +362,6 @@ namespace cling {
       const LangOptions& LO = CI->getLangOpts();
       std::vector<Stmt*>::iterator stmt_iter = stmts.begin();
       std::vector<Stmt*>::iterator stmt_end = stmts.end();
-
-      MapTy& Map = m_IncrParser->getTransformer()->getSubstSymbolMap(); // delayed id substitutions
 
       for (; stmt_iter != stmt_end; ++stmt_iter) {
         Stmt* cur_stmt = *stmt_iter;
@@ -472,6 +471,7 @@ namespace cling {
             // The other copy is on the globals' decl scope.
             // But that's fine, we don't have to worry about side effects of the
             // initializer because we know it's a constant initializer.
+
             finalStmtStr = std::string(buffer + r.first, r.second - r.first);
             finalExpr = I;
             wrapped_globals.append(decl + " = " + finalStmtStr + ";\n");
@@ -484,6 +484,15 @@ namespace cling {
           if (!ILE) {
             //fprintf(stderr, "var decl, init is not list.\n");
             std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
+            // if the node was marked as artificially dependent the source locations 
+            // would be wrong. Recalculate them.
+            MapTy::const_iterator It = Map.find(const_cast<Expr*>(I));
+            if (It != Map.end()) {
+              if (!It->second)
+                continue;
+              r = getStmtRange(It->second, SM, LO);                
+            }
+
             finalStmtStr = std::string(VD->getName())  + " = " +
                std::string(buffer + r.first, r.second - r.first) + ";";
             finalExpr = I;
@@ -508,9 +517,6 @@ namespace cling {
           wrapped_globals.append(decl + ";\n");
         }
       }
-      // clear the DenseMap
-      Map.clear();
-
       if (finalExpr) {
         // Users don't care about implicit casts (e.g. from InitExpr)
         const ImplicitCastExpr* ICE = dyn_cast<ImplicitCastExpr>(finalExpr);
@@ -601,6 +607,9 @@ namespace cling {
       wrapped.clear();
       return;
     }
+
+    // clear the DenseMap
+    Map.clear();
   }
   
   CompilerInstance* Interpreter::compileFile(const std::string& filename,
