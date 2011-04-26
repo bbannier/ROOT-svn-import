@@ -299,8 +299,14 @@ namespace cling {
         //FIXME: don't assume there is only one decl.
         assert(Node->isSingleDecl() && "There is more that one decl in stmt");
         VarDecl* CuredDecl = cast_or_null<VarDecl>(Node->getSingleDecl());
+        assert(CuredDecl && "Not a variable declaration!");
         QualType CuredDeclTy = CuredDecl->getType();
-        if (!CuredDecl && !CuredDeclTy->isLValueReferenceType())
+        // check if the case is sometype * somevar = init;
+        if (CuredDecl->hasInit() && CuredDeclTy->isAnyPointerType()) {
+          *I = SubstituteUnknownSymbol(CuredDeclTy, CuredDecl->getInit());
+          continue;
+        }
+        if (!CuredDeclTy->isLValueReferenceType())
           continue;
         
         // 2.1 Find the LifetimeHandler type
@@ -336,9 +342,7 @@ namespace cling {
           // Build Arg2 clang::DeclContext* DC
           Inits.push_back(BuildEvalArg2());
           // Build Arg3 llvm::StringRef
-          Inits.push_back(ConstructllvmStringRefExpr(CuredDeclTy->
-                                                     getAsCXXRecordDecl()->
-                                                     getQualifiedNameAsString().
+          Inits.push_back(ConstructllvmStringRefExpr(CuredDeclTy.getAsString().
                                                      c_str()));
 
           // 2.3 Create a variable from LifetimeHandler.
