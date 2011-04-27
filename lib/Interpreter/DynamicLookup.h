@@ -94,7 +94,6 @@ namespace cling {
     template <typename T> T* getAs() {
       return dyn_cast<T>(getAsSingleNode());
     }
-
     template <typename T> T* castTo() {
       T* Result = dyn_cast<T>(getAsSingleNode());
       assert(Result && "Cannot cast to type!");
@@ -119,7 +118,7 @@ namespace cling {
   class DynamicExprTransformer : public clang::DeclVisitor<DynamicExprTransformer>,
                                  public clang::StmtVisitor<DynamicExprTransformer, ASTNodeInfo> {
     
-  private: // members
+  private:
 
     /// \brief Stores the declaration of the EvaluateProxyT function
     clang::FunctionDecl* m_EvalDecl;
@@ -160,14 +159,12 @@ namespace cling {
     /// \brief The ASTContext
     clang::ASTContext& m_Context;
     
-  public: // types
+  public:
     
     typedef clang::DeclVisitor<DynamicExprTransformer> BaseDeclVisitor;
     typedef clang::StmtVisitor<DynamicExprTransformer, ASTNodeInfo> BaseStmtVisitor;
     
     using BaseStmtVisitor::Visit;
-    
-  public:
     
     //Constructors
     DynamicExprTransformer(Interpreter* interp, clang::Sema* Sema);
@@ -238,7 +235,7 @@ namespace cling {
     // Helper
     bool IsArtificiallyDependent(clang::Expr *Node);
     bool ShouldVisit(clang::Decl *D);
-    bool GetChildren(llvm::SmallVector<clang::Stmt*, 32> &Stmts, clang::Stmt *Node);
+    bool GetChildren(ASTNodes& Children, clang::Stmt *Node);
   };
 } // end namespace cling
 #endif // CLING_DYNAMIC_LOOKUP_H
