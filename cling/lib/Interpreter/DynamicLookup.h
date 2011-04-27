@@ -19,22 +19,45 @@ namespace clang {
 }
 
 namespace cling {
+
+  /// \brief Provides last chance of recovery for clang semantic analysis.
+  /// When the compiler doesn't find the symbol in its symbol table it asks
+  /// its ExternalSemaSource to look for the symbol.
+  ///
+  /// In contrast to the compiler point of view, where these symbols must be 
+  /// errors, the interpreter's point of view these symbols are to be 
+  /// evaluated at runtime. For that reason the interpreter marks all unknown
+  /// by the compiler symbols to be with delayed lookup (evaluation).
+  /// One have to be carefull in the cases, in which the compiler expects that
+  /// the lookup will fail!
   class DynamicIDHandler : public clang::ExternalSemaSource {
   public:
     DynamicIDHandler(clang::Sema* Sema);
     ~DynamicIDHandler();
     
-    // Override this to provide last resort lookup for failed unqualified lookups
+    /// \brief Provides last resort lookup for failed unqualified lookups
+    ///
+    /// If there is failed looku, tell sema to create an artificial declaration
+    /// which is of dependent type. So the lookup result is marked as dependent
+    /// and the diagnostics are suppressed. After that is's an interpreter's 
+    /// responsibility to fix all these fake declarations and lookups. 
+    /// It is done by the DynamicExprTransformer
+    ///
+    /// @param[out] R The recovered symbol
+    /// @param[in] S The scope in which the lookup failed
     virtual bool LookupUnqualified(clang::LookupResult &R, clang::Scope *S);
-
-    // Check whether the failed lookup is marked as artificially dependent.
-    // The difference comes from the DeclContext if the DeclContext is marked
-    // as dependent then we don't need to handle the failed lookup
-    bool IsDynamicLookup (clang::LookupResult& R, clang::Scope* S);
 
   private:
     clang::Sema* m_Sema;
     clang::ASTContext& m_Context;
+
+    /// \brief Checks whether the failed lookup is not expected from the
+    /// compiler to fail.
+    ///
+    /// @param[out] R The symbol to be checked.
+    /// @param[in] S The scope, where the lookup failed.
+    bool IsDynamicLookup (clang::LookupResult& R, clang::Scope* S);
+
   };
 } // end namespace cling
 
