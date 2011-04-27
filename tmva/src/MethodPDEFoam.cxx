@@ -511,7 +511,7 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
 //_______________________________________________________________________
 void TMVA::MethodPDEFoam::TrainMultiClassification() 
 {
-   // Create one foam discriminator foam for every class, where the
+   // Create one discriminator foam for every class, where the
    // disciminant equals N_class/N_total.
 
    for (UInt_t iClass=0; iClass<DataInfo().GetNClasses(); ++iClass) {
@@ -531,7 +531,8 @@ void TMVA::MethodPDEFoam::TrainMultiClassification()
       fFoam.back()->Create(); // build foam
 
       Log() << kVERBOSE << "Filling foam cells with events" << Endl;
-      // loop over all training events -> fill foam cells with N_sig and N_Bg
+      // loop over all training events and fill foam cells with signal
+      // and background events
       for (UInt_t k=0; k<GetNEvents(); k++) {
 	 const Event* ev = GetEvent(k); 
 	 Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
@@ -750,7 +751,9 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetMulticlassValues()
 //_______________________________________________________________________
 const TMVA::Ranking* TMVA::MethodPDEFoam::CreateRanking()
 {
-   // Compute ranking of input variables
+   // Compute ranking of input variables from the number of cuts made
+   // in each PDEFoam dimension.  The PDEFoam dimension (the variable)
+   // for which the most cuts were done is ranked highest.
 
    // create the ranking object
    fRanking = new Ranking(GetName(), "Variable Importance");
@@ -887,6 +890,9 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
       }
    } else {
       // create a decision tree like PDEFoam
+
+      // create separation type class, which is owned by
+      // PDEFoamDecisionTree (i.e. PDEFoamDecisionTree will delete it)
       SeparationBase *sepType = NULL;
       switch (fDTSeparation) {
       case kGiniIndex:
