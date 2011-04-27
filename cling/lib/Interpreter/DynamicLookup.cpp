@@ -20,7 +20,6 @@ namespace clang {
 using namespace clang;
 
 namespace cling {
-  extern "C" int printf(const char* fmt, ...);
 
   // Constructor
   DynamicIDHandler::DynamicIDHandler(Sema* Sema)
@@ -30,11 +29,6 @@ namespace cling {
   // pin the vtable to this file
   DynamicIDHandler::~DynamicIDHandler(){}
 
-  // If there is failed lookup we tell sema to create artificial declaration
-  // which is of dependent type. So the lookup result is marked as dependent
-  // and the diagnostics are suppressed. After that is our responsibility to
-  // fix all these fake declarations and lookups. It is done by the
-  // DynamicExpressionTransformer
   bool DynamicIDHandler::LookupUnqualified(LookupResult& R, Scope* S) {
 
     if (!IsDynamicLookup(R, S))
@@ -371,8 +365,8 @@ namespace cling {
           NewNode.addNode(new (m_Context) DeclStmt(DeclGroupRef(HandlerInstance),
                                                  SourceLocation(),
                                                  SourceLocation())
-                        );
-          
+                          );
+
           // 3.1 Find the declaration - LifetimeHandler::getMemory()
           CXXMethodDecl* getMemDecl 
             = m_Interpreter->LookupDecl("getMemory", Handler).getAs<CXXMethodDecl>();

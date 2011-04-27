@@ -63,15 +63,10 @@ namespace cling {
 
 namespace cling {
   typedef llvm::SmallVector<clang::Stmt*, 2> ASTNodes;
-  // The DynamicExprTransformer needs to have information about the nodes
-  // it visits in order to escape properly the unknown symbols. Walking up 
-  // it needs to know not only the node, which is being returned from the 
-  // visited subnode, but it needs information from its subnode if the 
-  // subnode can handle the dependent symbol itself or it wants delegate it
-  // to its parent.
-  // Ideally when given subnode has enough information to handle the unknown
-  // symbol it should do it instead of delegating to the parent. This limits
-  // the size of the expressions/statements being escaped.
+
+  /// \brief Helper structure that allows children of a node to delegate how
+  /// to be replaced from their parent. For example a child can return more than
+  /// one replacement node.
   class ASTNodeInfo {
   private:
     ASTNodes Nodes;
@@ -110,11 +105,54 @@ namespace cling {
   
   typedef llvm::DenseMap<clang::Stmt*, clang::Stmt*> MapTy;
   
-  // Ideally the visitor should traverse the dependent nodes, which actially are 
-  // the language extensions. For example File::Open("MyFile"); h->Draw() is not valid C++ call
-  // if h->Draw() is defined in MyFile. In that case we need to skip Sema diagnostics, so the 
-  // h->Draw() is marked as dependent node. That requires the DynamicExprTransformer to find all
-  // dependent nodes and escape them to the interpreter, using pre-defined Eval function.
+  /// \brief In order to implement the runtime type binding and expression 
+  /// evaluation we need to be able to compile code which contains unknown 
+  /// symbols (undefined variables, types, functions, etc.). This cannot be done
+  /// by a compiler like clang, because it is not valid C++ code.
+  ///
+  /// DynamicExprTransformer transforms these unknown symbols into valid C++ 
+  /// code at AST (abstract syntax tree) level. Thus it provides an opportunity
+  /// their evaluation to happen at runtime. Several steps are performed:
+  ///
+  /// 1. Skip compiler's error diagnostics - if a compiler encounters unknown 
+  /// symbol, by definition, it must output an error and it mustn't produce
+  /// machine code. Cling implements an extension to Clang semantic analyzer
+  /// that allows the compiler to recover even an unknown symbol is encountered.
+  /// For instance if the compiler sees a symbol it looks for its definition in
+  /// a internal structure (symbol table) and it is not found it asks whether 
+  /// somebody else could provide the missing symbol. That is the place where
+  /// the DynamicIDHandler, which is controlled by DynamicExprTransformer comes
+  /// into play. It marks all unknown symbols as dependent as if they are
+  /// templates and are going to be resolved at first instantiation, with the 
+  /// only difference that an instantiation never happens. The advantage is that
+  /// the unknown symbols are not diagnosed but the disadvantage is that 
+  /// somebody needs to transform them into valid expressions with valid types.
+  ///
+  /// 2. Replace all dependent symbols - all artificially dependent symbols need
+  /// to be replaced with appropriate valid symbols in order the compiler to
+  /// produce executable machine code. The DynamicExprTransformer walks up all
+  /// statements and declarations that might be possibly marked earlier as
+  /// dependent and replaces them with valid expression, which preserves the
+  /// meant behavior. Main implementation goal is to replace the as little
+  /// as possible part of the statement. The replacement is done immediately 
+  /// after the expected type can be deduced.
+  /// 
+  /// 2.1. EvaluateProxyT - this is a templated function, which is put at the 
+  /// place of the dependent expression. It will be called at runtime and it
+  /// will use the runtime instance of the interpreter (cling interprets itself)
+  /// to evaluate the replaced expression. The template parameter of the
+  /// function carries the expected expression type. If unknown symbol is 
+  /// encountered as a right-hand-side of an assignment one can claim that
+  /// the type of the unknown expression should be compatible with the type of 
+  /// the left-hand-side.
+  ///
+  /// 2.2 LifetimeHanlder - in some more complex situation in order to preserve
+  /// the behavior the expression must be replaced with more complex structures.
+  ///
+  /// 3. Evaluate interface - this is the core function in the interpreter, which
+  /// does the delayed evaluation. It uses a callback function, which should be
+  /// reimplemented in the subsystem that provides the runtime types and 
+  /// addresses of the expressions.
   class DynamicExprTransformer : public clang::DeclVisitor<DynamicExprTransformer>,
                                  public clang::StmtVisitor<DynamicExprTransformer, ASTNodeInfo> {
     
