@@ -41,6 +41,7 @@ namespace cling {
   class ExecutionContext;
   class IncrementalParser;
   class InputValidator;
+  class InterpreterCallbacks;
   class Value;
   //---------------------------------------------------------------------------
   //! Class for managing many translation units supporting automatic
@@ -113,7 +114,10 @@ namespace cling {
     llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream; // stream to dump values into
     clang::Decl *m_LastDump; // last dump point
     clang::ASTConsumer* m_ASTDumper;
-    
+
+    /// \brief The callbacks in the interpreter
+    llvm::OwningPtr<InterpreterCallbacks> m_Callbacks;
+
   private:
     
     void createWrappedSrc(const std::string& src, std::string& wrapped,
