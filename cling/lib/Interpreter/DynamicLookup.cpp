@@ -244,17 +244,17 @@ namespace cling {
   }
   
   ASTNodeInfo DynamicExprTransformer::VisitCompoundStmt(CompoundStmt *Node) {
-    llvm::SmallVector<Stmt*, 32> Stmts;
-    if (GetChildren(Stmts, Node)) {
-      llvm::SmallVector<Stmt*, 32>::iterator it;
-      for (it = Stmts.begin(); it != Stmts.end(); ++it) {
+    ASTNodes Children;
+    if (GetChildren(Children, Node)) {
+      ASTNodes::iterator it;
+      for (it = Children.begin(); it != Children.end(); ++it) {
         ASTNodeInfo NewNode = Visit(*it);
         if (!NewNode.hasSingleNode()) {
-          Stmts.insert(it, NewNode.getNodes().begin(), NewNode.getNodes().end());
+          Children.insert(it, NewNode.getNodes().begin(), NewNode.getNodes().end());
           // Remove the last element, which is the one that is 
           // being replaced          
-          Stmts.erase(it + NewNode.getNodes().size());
-          Node->setStmts(m_Context, Stmts.data(), Stmts.size());
+          Children.erase(it + NewNode.getNodes().size());
+          Node->setStmts(m_Context, Children.data(), Children.size());
           // Resolve all 1:n replacements
           Visit(Node);
         }
@@ -271,7 +271,7 @@ namespace cling {
       }
     }
 
-    Node->setStmts(m_Context, Stmts.data(), Stmts.size());
+    Node->setStmts(m_Context, Children.data(), Children.size());
 
     return ASTNodeInfo(Node, 0);
 
@@ -743,19 +743,23 @@ namespace cling {
   }
   
   bool DynamicExprTransformer::IsArtificiallyDependent(Expr *Node) {
-    // TODO: Check all parent DeclContext whether they are dependent of not
-    // Then we will be 100% sure that we are not visiting the wrong stmt.
     if (!Node->isValueDependent() || !Node->isTypeDependent())
-      return false;     
+      return false;
+    DeclContext* DC = m_CurDeclContext;
+    while (DC) {
+      if (DC->isDependentContext())
+        return false;
+      DC = DC->getParent();
+    }
     return true;
   }
 
-  bool DynamicExprTransformer::GetChildren(llvm::SmallVector<Stmt*, 32> &Stmts, Stmt *Node) {
+  bool DynamicExprTransformer::GetChildren(ASTNodes& Children, Stmt *Node) {
     if (std::distance(Node->child_begin(), Node->child_end()) < 1)
       return false;
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
-      Stmts.push_back(*I);
+      Children.push_back(*I);
     }
     return true;
   }
