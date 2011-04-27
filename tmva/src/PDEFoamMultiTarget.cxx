@@ -111,7 +111,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue(const std::map<Int_t
       else if (coordinate >= fXmax[dim])
          coordinate = fXmax[dim] - std::numeric_limits<float>::epsilon();
       // transform event
-      txvec[dim] = VarTransform(dim, coordinate);
+      txvec.insert(std::pair<Int_t, Float_t>(dim, VarTransform(dim, coordinate)));
    }
 
    // map of targets and normalization
@@ -130,7 +130,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue(const std::map<Int_t
    for (Int_t idim = 0; idim < GetTotDim(); ++idim) {
       // is idim a target dimension, i.e. is idim missing in txvec?
       if (txvec.find(idim) == txvec.end())
-         target[idim] = 0;
+         target.insert(std::pair<Int_t, Float_t>(idim, 0));
    }
 
    // loop over all cells that were found
@@ -194,6 +194,7 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue(const std::map<Int_t
 
    // copy targets to result vector
    std::vector<Float_t> result;
+   result.reserve(target.size());
    for (std::map<Int_t, Float_t>::const_iterator it = target.begin();
         it != target.end(); ++it)
       result.push_back(it->second);

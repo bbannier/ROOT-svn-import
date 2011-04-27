@@ -729,9 +729,11 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetMulticlassValues()
    if (fMulticlassReturnVal == NULL)
       fMulticlassReturnVal = new std::vector<Float_t>();
    fMulticlassReturnVal->clear();
+   fMulticlassReturnVal->reserve(DataInfo().GetNClasses());
 
    std::vector<Float_t> temp;  // temp class. values
    UInt_t nClasses = DataInfo().GetNClasses();
+   temp.reserve(nClasses);
    for (UInt_t iClass = 0; iClass < nClasses; ++iClass) {
       temp.push_back(fFoam.at(iClass)->GetCellValue(xvec, kValue, fKernelEstimator));
    }
@@ -965,6 +967,7 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
 
    if (fRegressionReturnVal == 0) fRegressionReturnVal = new std::vector<Float_t>();
    fRegressionReturnVal->clear();
+   fRegressionReturnVal->reserve(Data()->GetNTargets());
 
    const Event* ev = GetEvent();
    std::vector<Float_t> vals = ev->GetValues(); // get array of event variables (non-targets)   
@@ -977,7 +980,7 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
       // create std::map from event variables
       std::map<Int_t, Float_t> xvec;
       for (UInt_t i=0; i<vals.size(); ++i)
-	 xvec[i] = vals.at(i);
+         xvec.insert(std::pair<Int_t, Float_t>(i, vals.at(i)));
       // get the targets
       std::vector<Float_t> targets = fFoam.at(0)->GetCellValue( xvec, kValue );
 
