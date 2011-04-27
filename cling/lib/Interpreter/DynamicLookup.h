@@ -62,6 +62,7 @@ namespace cling {
 } // end namespace cling
 
 namespace cling {
+  typedef llvm::SmallVector<clang::Stmt*, 2> ASTNodes;
   // The DynamicExprTransformer needs to have information about the nodes
   // it visits in order to escape properly the unknown symbols. Walking up 
   // it needs to know not only the node, which is being returned from the 
@@ -71,26 +72,34 @@ namespace cling {
   // Ideally when given subnode has enough information to handle the unknown
   // symbol it should do it instead of delegating to the parent. This limits
   // the size of the expressions/statements being escaped.
-  class EvalInfo {
-  private:      
-    //clang::Stmt *m_newStmt; // the new/old node
+  class ASTNodeInfo {
+  private:
+    ASTNodes Nodes;
+    bool forReplacement;
   public:
-    EvalInfo() : IsEvalNeeded(0){}
-    EvalInfo(clang::Stmt *S, bool needed) : IsEvalNeeded(needed) {
-      Stmts.push_back(S);
+    ASTNodeInfo() : forReplacement(0){}
+    ASTNodeInfo(clang::Stmt *S, bool needed) : forReplacement(needed) {
+      Nodes.push_back(S);
     }
 
-    EvalInfo(llvm::SmallVector<clang::Stmt*, 2> stmts, bool needed) : Stmts(stmts), IsEvalNeeded(needed) { }
+    bool isForReplacement() { return forReplacement; }
+    void setForReplacement(bool val = true) { forReplacement = val; }
+    bool hasSingleNode() { return Nodes.size() == 1; }
+    clang::Stmt* getAsSingleNode() {
+      assert(hasSingleNode() && "There is more than one node!");
+      return Nodes[0];
+    }
+    ASTNodes getNodes() { return Nodes; }
+    void addNode(clang::Stmt *Node) { Nodes.push_back(Node); }
+    template <typename T> T* getAs() {
+      return dyn_cast<T>(getAsSingleNode());
+    }
 
-    //:m_newStmt(S), IsEvalNeeded(needed) {};
-    llvm::SmallVector<clang::Stmt*, 2> Stmts;
-    bool IsEvalNeeded; // whether to emit the Eval call or not
-    clang::Stmt *Stmt() { return Stmts[0]; }
-    template <typename T> T* getAs() { return dyn_cast<T>(Stmts[0]); }
-    bool isMultiStmt() { return Stmts.size() > 1; }
-    unsigned StmtCount() { return Stmts.size(); }
-    //clang::Stmt *getNewStmt() const { return m_newStmt; }
-    //void setNewStmt(clang::Stmt *S) { m_newStmt = S; } 
+    template <typename T> T* castTo() {
+      T* Result = dyn_cast<T>(getAsSingleNode());
+      assert(Result && "Cannot cast to type!");
+      return Result;
+    }
   };
 
 } //end namespace cling
@@ -98,7 +107,7 @@ namespace cling {
 namespace cling {
   class Interpreter;
   class DynamicIDHandler;
-  class EvalInfo;
+  class ASTNodeInfo;
   
   typedef llvm::DenseMap<clang::Stmt*, clang::Stmt*> MapTy;
   
@@ -108,7 +117,7 @@ namespace cling {
   // h->Draw() is marked as dependent node. That requires the DynamicExprTransformer to find all
   // dependent nodes and escape them to the interpreter, using pre-defined Eval function.
   class DynamicExprTransformer : public clang::DeclVisitor<DynamicExprTransformer>,
-                                 public clang::StmtVisitor<DynamicExprTransformer, EvalInfo> {
+                                 public clang::StmtVisitor<DynamicExprTransformer, ASTNodeInfo> {
     
   private: // members
 
@@ -154,7 +163,7 @@ namespace cling {
   public: // types
     
     typedef clang::DeclVisitor<DynamicExprTransformer> BaseDeclVisitor;
-    typedef clang::StmtVisitor<DynamicExprTransformer, EvalInfo> BaseStmtVisitor;
+    typedef clang::StmtVisitor<DynamicExprTransformer, ASTNodeInfo> BaseStmtVisitor;
     
     using BaseStmtVisitor::Visit;
     
@@ -176,8 +185,8 @@ namespace cling {
     void VisitDeclContext(clang::DeclContext *DC);
     
     // StmtVisitor
-    EvalInfo VisitStmt(clang::Stmt *Node);
-    EvalInfo VisitCompoundStmt(clang::CompoundStmt *Node);
+    ASTNodeInfo VisitStmt(clang::Stmt *Node);
+    ASTNodeInfo VisitCompoundStmt(clang::CompoundStmt *Node);
     /// \brief Transforms a declaration with initializer of dependent type.
     /// If an object on the free store is being initialized we use the 
     /// EvaluateProxyT
@@ -201,12 +210,12 @@ namespace cling {
     /// Note: here our main priority is to preserve equivalent behavior. We have
     /// to clean the heap memory afterwords.
     ///
-    EvalInfo VisitDeclStmt(clang::DeclStmt* Node);
-    EvalInfo VisitExpr(clang::Expr* Node);
-    EvalInfo VisitBinaryOperator(clang::BinaryOperator* Node);
-    EvalInfo VisitCallExpr(clang::CallExpr* E);
-    EvalInfo VisitDeclRefExpr(clang::DeclRefExpr* DRE);
-    EvalInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr* Node);
+    ASTNodeInfo VisitDeclStmt(clang::DeclStmt* Node);
+    ASTNodeInfo VisitExpr(clang::Expr* Node);
+    ASTNodeInfo VisitBinaryOperator(clang::BinaryOperator* Node);
+    ASTNodeInfo VisitCallExpr(clang::CallExpr* E);
+    ASTNodeInfo VisitDeclRefExpr(clang::DeclRefExpr* DRE);
+    ASTNodeInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr* Node);
     void AttachDynIDHandler();
     void DetachDynIDHandler();
     
