@@ -27,29 +27,77 @@
 #include <stdio.h>
 
 namespace cling {
+
+  /// \brief Used to stores the declarations, which are going to be 
+  /// available only at runtime. These are cling runtime builtins
   namespace runtime {
-    // Stores the declarations of variables, which are going to be available
-    // only during runtime
+
+    /// \brief The interpreter provides itself as a builtin, i.e. it
+    /// interprets itself. This is particularly important for implementing
+    /// the dynamic scopes and the runtime bindings
     Interpreter* gCling = 0;
+
+    /// \brief Provides builtins, which are neccessary for the dynamic scopes 
+    /// and runtime bindings. These builtins should be used for other purposes.
     namespace internal {
-      // Annotates that these variables shouldn't be used unless you know
-      // what you're doing
-      
-      // Uncomment next line when figure out how to remove explicit template
-      // specialization
-      //template<typename T> class TypeExtractionHelper{};
-      
-      template<typename T>
-      T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC ) {
+
+      /// \brief EvaluateProxyT is used to replace all invalid source code that
+      /// occurs, when cling's dynamic extensions are enabled.
+      ///
+      /// When the interpreter "sees" invalid code it mark it and skip all the 
+      /// semantic checks (like the templates). Afterwards all these marked
+      /// nodes are replaced with a call to EvaluateProxyT, which makes valid
+      /// C++ code. It is templated because it can be used in expressions and 
+      /// T is the type when the evaluated expression.
+      /// @tparam T The type of the evaluated expression
+      /// @param[in] expr The expression that is being replaced
+      /// @param[in] varadd The addresses of the variables that replaced 
+      /// expression contains
+      /// @param[in] DC The declaration context, in which the expression will be
+      /// evaluated at runtime
+      template<typename T> T EvaluateProxyT(const char* expr,
+                                            void* varaddr[],
+                                            clang::DeclContext* DC ) {
         Value result(gCling->EvaluateWithContext(expr, varaddr, DC));
         return result.getAs<T>();
       }
 
+      /// \brief LifetimeHandler is used in case of initialization using address
+      /// on the automatic store (stack) instead of EvaluateProxyT.
+      ///
+      /// The reason is to avoid the copy constructors that might be missing or
+      /// private. This is part of complex transformation, which aims to 
+      /// preserve the code behavior. For example:
+      /// @code
+      /// int i = 5;
+      /// MyClass my(dep->Symbol(i))
+      /// @endcode
+      /// where dep->Symbol() is a symbol not known at compile-time
+      /// transformed into:
+      /// @code
+      /// cling::runtime::internal::LifetimeHandler 
+      /// __unique("dep->Sybmol(*(int*)@)",(void*[]){&i}, DC, "MyClass");
+      /// MyClass &my(*(MyClass*)__unique.getMemory());
+      /// @endcode
       class LifetimeHandler {
       private:
+        /// \brief The memory on the free store, where the object will be 
+        /// created.
         void* m_Memory;
+
+        /// \brief The type of the object that will be created.
         std::string m_Type;
       public:
+        /// \brief Constructs an expression, which creates the object on the
+        /// free store and tells the interpreter to evaluate it.
+        /// @param[in] expr The expression, which will be prepared for 
+        /// evaluation
+        /// @param[in] varadd The addresses of the variables that the expression
+        /// contains
+        /// @param[in] DC The declaration context, in which the expression will 
+        /// be evaluated at runtime
+        /// @param[in] type The type of the object, which will help to delete
+        /// it, when the LifetimeHandler goes out of scope.
         LifetimeHandler(llvm::StringRef expr,
                         void* varaddr[],
                         clang::DeclContext* DC,
@@ -63,6 +111,9 @@ namespace cling {
           Value res = gCling->EvaluateWithContext(ctor.c_str(), varaddr, DC);
           //m_memory = (void*)res.value.Untyped;
         }
+
+        /// \brief Clears up the free store, when LifetimeHandler goes out of
+        /// scope.
         ~LifetimeHandler() {
           std::string str;
           llvm::raw_string_ostream stream(str);

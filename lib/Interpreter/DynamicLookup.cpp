@@ -285,11 +285,6 @@ namespace cling {
       // assert (!einfo.isMultiStmt() && "Not implemented yet!");
       // *I = einfo.Stmt();
       if (*I) {
-        // 1. Check whether this is the case of MyClass A(dep->symbol())
-        // 2. Insert the RuntimeUniverse's LifetimeHandler instance
-        // 3. Change the A's initializer to *(MyClass*)instance.getMemory()
-        // 4. Make A reference (&A)
-        // 5. Set the new initializer of A
         Expr* E = cast_or_null<Expr>(*I);
         if (!E || !IsArtificiallyDependent(E)) 
           continue;
@@ -303,6 +298,12 @@ namespace cling {
           *I = SubstituteUnknownSymbol(CuredDeclTy, CuredDecl->getInit());
           continue;
         }
+
+        // 1. Check whether this is the case of MyClass A(dep->symbol())
+        // 2. Insert the RuntimeUniverse's LifetimeHandler instance
+        // 3. Change the A's initializer to *(MyClass*)instance.getMemory()
+        // 4. Make A reference (&A)
+        // 5. Set the new initializer of A
         if (CuredDeclTy->isLValueReferenceType())
           continue;
         
