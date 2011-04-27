@@ -193,9 +193,9 @@ namespace cling {
       if (D->hasBody()) {
         m_CurDeclContext = D->getParent();
         // Here we expect clang::CompoundStmt
-        EvalInfo EInfo = Visit(D->getBody());
+        ASTNodeInfo NewNode = Visit(D->getBody());
         
-        D->setBody(EInfo.Stmt());
+        D->setBody(NewNode.getAsSingleNode());
       }
     }
   }
@@ -221,50 +221,51 @@ namespace cling {
   
   // StmtVisitor
 
-  EvalInfo DynamicExprTransformer::VisitStmt(Stmt *Node) {
+  ASTNodeInfo DynamicExprTransformer::VisitStmt(Stmt *Node) {
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
       if (*I) {
-        EvalInfo EInfo = Visit(*I);
-        assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
+        ASTNodeInfo NewNode = Visit(*I);
+        assert(NewNode.hasSingleNode() && 
+               "Cannot have more than one stmt at that point");
 
-        if (EInfo.IsEvalNeeded) {
-          if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
+        if (NewNode.isForReplacement()) {
+          if (Expr *E = NewNode.getAs<Expr>())
             // Assume void if still not escaped
             *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
         } 
         else {
-          *I = EInfo.Stmt();
+          *I = NewNode.getAsSingleNode();
         }
       }
     }
     
-    return EvalInfo(Node, 0);
+    return ASTNodeInfo(Node, 0);
   }
   
-  EvalInfo DynamicExprTransformer::VisitCompoundStmt(CompoundStmt *Node) {
+  ASTNodeInfo DynamicExprTransformer::VisitCompoundStmt(CompoundStmt *Node) {
     llvm::SmallVector<Stmt*, 32> Stmts;
     if (GetChildren(Stmts, Node)) {
       llvm::SmallVector<Stmt*, 32>::iterator it;
       for (it = Stmts.begin(); it != Stmts.end(); ++it) {
-        EvalInfo EInfo = Visit(*it);
-        if (EInfo.isMultiStmt()) {
-          Stmts.insert(it, EInfo.Stmts.begin(), EInfo.Stmts.end());
+        ASTNodeInfo NewNode = Visit(*it);
+        if (!NewNode.hasSingleNode()) {
+          Stmts.insert(it, NewNode.getNodes().begin(), NewNode.getNodes().end());
           // Remove the last element, which is the one that is 
           // being replaced          
-          Stmts.erase(it + EInfo.StmtCount());
+          Stmts.erase(it + NewNode.getNodes().size());
           Node->setStmts(m_Context, Stmts.data(), Stmts.size());
           // Resolve all 1:n replacements
           Visit(Node);
         }
         else {
-          if (EInfo.IsEvalNeeded) {
-            if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
+          if (NewNode.isForReplacement()) {
+            if (Expr *E = NewNode.getAs<Expr>())
               // Assume void if still not escaped
               *it = SubstituteUnknownSymbol(m_Context.VoidTy, E);
           }
           else {
-            //assert(*it == EInfo.Stmt() && "Visitor shouldn't return something else!");
+            //assert(*it == NewNode.Stmt() && "Visitor shouldn't return something else!");
           }
         }
       }
@@ -272,16 +273,16 @@ namespace cling {
 
     Node->setStmts(m_Context, Stmts.data(), Stmts.size());
 
-    return EvalInfo(Node, 0);
+    return ASTNodeInfo(Node, 0);
 
   }
 
-  EvalInfo DynamicExprTransformer::VisitDeclStmt(DeclStmt *Node) {
+  ASTNodeInfo DynamicExprTransformer::VisitDeclStmt(DeclStmt *Node) {
     // Visit all the children, which are the contents of the DeclGroupRef
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
       // TODO: figure out how to filter const char * a = dep->symbol()
-      // EvalInfo einfo = Visit(*I);
+      // ASTNodeInfo NewNode = Visit(*I);
       // assert (!einfo.isMultiStmt() && "Not implemented yet!");
       // *I = einfo.Stmt();
       if (*I) {
@@ -316,7 +317,7 @@ namespace cling {
                                         getSingleDecl());
         assert(Handler && "LifetimeHandler type not found!");
         if (Handler) {
-          EvalInfo EInfo;
+          ASTNodeInfo NewNode;
           // 2.2 Get unique name for the LifetimeHandler instance and 
           // initialize it
           IdentifierInfo& II 
@@ -367,12 +368,11 @@ namespace cling {
 
           // 2.5 Register the instance in the enclosing context
           CuredDecl->getDeclContext()->addDecl(HandlerInstance);
-          EInfo.Stmts.push_back(new (m_Context) 
-                                DeclStmt(DeclGroupRef(HandlerInstance),
-                                         SourceLocation(),
-                                         SourceLocation())
-                                );
-
+          NewNode.addNode(new (m_Context) DeclStmt(DeclGroupRef(HandlerInstance),
+                                                 SourceLocation(),
+                                                 SourceLocation())
+                        );
+          
           // 3.1 Find the declaration - LifetimeHandler::getMemory()
           CXXMethodDecl* getMemDecl 
             = m_Interpreter->LookupDecl("getMemory", Handler).getAs<CXXMethodDecl>();
@@ -425,68 +425,71 @@ namespace cling {
           // 5.
           CuredDecl->setInit(Result);
 
-          EInfo.Stmts.push_back(Node);
-          return EInfo;
+          NewNode.addNode(Node);
+          return NewNode;
         }
       }
     }
-    return EvalInfo(Node, 0);
+    return ASTNodeInfo(Node, 0);
   }
 
-  EvalInfo DynamicExprTransformer::VisitExpr(Expr* Node) {
+  ASTNodeInfo DynamicExprTransformer::VisitExpr(Expr* Node) {
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
       if (*I) {
-        EvalInfo EInfo = Visit(*I);
-        assert(!EInfo.isMultiStmt() && "Cannot have more than one stmt at that point");
-        if (EInfo.IsEvalNeeded) {
-          if (Expr *E = dyn_cast<Expr>(EInfo.Stmt()))
+        ASTNodeInfo NewNode = Visit(*I);
+        assert(NewNode.hasSingleNode() && 
+               "Cannot have more than one stmt at that point");
+        if (NewNode.isForReplacement()) {
+          if (Expr *E = NewNode.getAs<Expr>())
             // Assume void if still not escaped
             *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
         } 
         else {
-          *I = EInfo.Stmt();
+          *I = NewNode.getAsSingleNode();
         }
       }
     }
-    return EvalInfo(Node, 0);
+    return ASTNodeInfo(Node, 0);
   }
 
-  EvalInfo DynamicExprTransformer::VisitBinaryOperator(BinaryOperator* Node) {
-    EvalInfo rhs = Visit(Node->getRHS());
-    EvalInfo lhs = Visit(Node->getLHS());
-    assert((!lhs.isMultiStmt() || !rhs.isMultiStmt()) && 
+  ASTNodeInfo DynamicExprTransformer::VisitBinaryOperator(BinaryOperator* Node) {
+    ASTNodeInfo rhs = Visit(Node->getRHS());
+    ASTNodeInfo lhs = Visit(Node->getLHS());
+    assert((lhs.hasSingleNode() || rhs.hasSingleNode()) && 
            "1:N replacements are not implemented yet!");
 
     // Try find out the type of the left-hand-side of the operator
     // and give the hint to the right-hand-side in order to replace the 
     // dependent symbol
-    if (Node->isAssignmentOp() && rhs.IsEvalNeeded && !lhs.IsEvalNeeded) {
-      if (Expr* LHSExpr = dyn_cast<Expr>(lhs.Stmt()))
+    if (Node->isAssignmentOp() && 
+        rhs.isForReplacement() && 
+        !lhs.isForReplacement()) {
+      if (Expr* LHSExpr = lhs.getAs<Expr>())
         if (!IsArtificiallyDependent(LHSExpr)) {
           const QualType LHSTy = LHSExpr->getType();
-          Node->setRHS(SubstituteUnknownSymbol(LHSTy, rhs.getAs<Expr>()));
+          Node->setRHS(SubstituteUnknownSymbol(LHSTy, rhs.castTo<Expr>()));
           Node->setTypeDependent(false);
           Node->setValueDependent(false);
-          return EvalInfo(Node, /*needs eval*/false);
+          return ASTNodeInfo(Node, /*needs eval*/false);
         }
     }
     
-    return EvalInfo(Node, IsArtificiallyDependent(Node));    
+    return ASTNodeInfo(Node, IsArtificiallyDependent(Node));    
   }
 
-  EvalInfo DynamicExprTransformer::VisitCallExpr(CallExpr* E) {
+  ASTNodeInfo DynamicExprTransformer::VisitCallExpr(CallExpr* E) {
     // FIXME: Maybe we need to handle the arguments
-    // EvalInfo EInfo = Visit(E->getCallee());
-    return EvalInfo (E, IsArtificiallyDependent(E));
+    // ASTNodeInfo NewNode = Visit(E->getCallee());
+    return ASTNodeInfo (E, IsArtificiallyDependent(E));
   }
   
-  EvalInfo DynamicExprTransformer::VisitDeclRefExpr(DeclRefExpr* DRE) {
-    return EvalInfo(DRE, IsArtificiallyDependent(DRE));
+  ASTNodeInfo DynamicExprTransformer::VisitDeclRefExpr(DeclRefExpr* DRE) {
+    return ASTNodeInfo(DRE, IsArtificiallyDependent(DRE));
   }
   
-  EvalInfo DynamicExprTransformer::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr* Node) {
-    return EvalInfo(Node, IsArtificiallyDependent(Node));
+  ASTNodeInfo DynamicExprTransformer::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr* Node) {
+    return ASTNodeInfo(Node, IsArtificiallyDependent(Node));
   }
   
   // end StmtVisitor
