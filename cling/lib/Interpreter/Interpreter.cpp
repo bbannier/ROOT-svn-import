@@ -43,6 +43,7 @@
 #include "IncrementalParser.h"
 #include "InputValidator.h"
 #include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/InterpreterCallbacks.h"
 #include "cling/Interpreter/Value.h"
 
 #include <cstdio>
@@ -192,6 +193,8 @@ namespace cling {
     m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer")));
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
+
+    m_Callbacks.reset(new InterpreterCallbacks());
 
     // Allow the interpreter to find itself.
     // OBJ first: if it exists it should be more up to date
@@ -773,6 +776,9 @@ namespace cling {
 
     // Temporary stop the code gen
     m_IncrParser->removeConsumer(m_ExecutionContext->getCodeGenerator());
+    // Turn off the DynamicExprTranformer, because we don't want to chase 
+    // our tail
+    setDynamicLookup(false);
     CompilerInstance* CI = m_IncrParser->parse(Wrapper);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
@@ -801,6 +807,9 @@ namespace cling {
           // add return stmt
           Stmt* RetS = getCI()->getSema().ActOnReturnStmt(SourceLocation(), E).take();
           CS->setStmts(getCI()->getASTContext(), &RetS, 1);
+
+          // Find the object address of the member call
+          m_Callbacks->LookupObject(CS);
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
     // resume the code gen
@@ -816,6 +825,7 @@ namespace cling {
         Mangle->mangleName(TopLevelFD, RawStr);
     }
     m_ExecutionContext->executeFunction(WrapperName, &val);
+    setDynamicLookup(true);
     return Value(val, RetTy.getTypePtrOrNull());
   }
 
@@ -904,5 +914,8 @@ namespace cling {
     m_LastDump = m_IncrParser->getLastTopLevelDecl();     
     m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
   }
+  
+  // pin the vtable
+  InterpreterCallbacks::~InterpreterCallbacks(){}
   
 } // namespace cling
