@@ -73,7 +73,8 @@ TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const TString& Name, SeparationBa
    //
    // - Name - name of the foam
    //
-   // - sepType - separation type used for the cell splitting
+   // - sepType - separation type used for the cell splitting (will be
+   //   deleted in the destructor)
    //
    // - cls - class to consider as signal when calcualting the purity
 }
@@ -90,6 +91,8 @@ TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const PDEFoamDecisionTree &From)
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTree::~PDEFoamDecisionTree()
 {
+   // Destructor
+   // deletes fSepType
    if (fSepType)
       delete fSepType;
 }

@@ -68,7 +68,27 @@ TMVA::PDEFoamMultiTarget::PDEFoamMultiTarget()
 TMVA::PDEFoamMultiTarget::PDEFoamMultiTarget(const TString& Name, ETargetSelection ts)
    : PDEFoamEvent(Name)
    , fTargetSelection(ts)
-{}
+{
+   // User constructor
+   //
+   // Parameters:
+   //
+   // - Name - name of PDEFoam object
+   //
+   // - ts - target selection method used in
+   //   GetCellValue(const std::map<Int_t, Float_t>& xvec, ECellValue)
+   //   Cadidates are: TMVA::kMean, TMVA::kMpv
+   //
+   //   - TMVA::kMean - The function GetCellValue() finds all cells
+   //     which contain a given event vector 'xvec' and returns the
+   //     mean target (for every target variable in the foam).
+   //
+   //   - TMVA::kMpv - The function GetCellValue() finds all cells
+   //     which contain a given event vector 'xvec' and returns the
+   //     most probable target (for every target variable in the
+   //     foam), that is the target value which corresponds to the
+   //     cell with the largest event density.
+}
 
 //_____________________________________________________________________
 TMVA::PDEFoamMultiTarget::PDEFoamMultiTarget(const PDEFoamMultiTarget &From)
