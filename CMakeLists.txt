@@ -81,8 +81,10 @@ endif()
 if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_INSTALL_PREFIX)
   install(FILES LICENSE DESTINATION .)
   install(DIRECTORY README/ DESTINATION README PATTERN ".svn" EXCLUDE)
-  install(DIRECTORY etc/ DESTINATION etc PATTERN ".svn" EXCLUDE 
-                         REGEX system.rootrc EXCLUDE REGEX root.mimes EXCLUDE)
+  install(DIRECTORY etc/ DESTINATION etc USE_SOURCE_PERMISSIONS 
+                         PATTERN ".svn" EXCLUDE 
+                         REGEX system.rootrc EXCLUDE 
+                         REGEX root.mimes EXCLUDE)
   install(DIRECTORY geom/   DESTINATION geom PATTERN ".svn" EXCLUDE)
   install(DIRECTORY fonts/  DESTINATION fonts PATTERN ".svn" EXCLUDE)
   install(DIRECTORY icons/  DESTINATION icons PATTERN ".svn" EXCLUDE)

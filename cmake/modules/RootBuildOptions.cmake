@@ -137,6 +137,9 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 # which point to directories outside the build tree to the install RPATH
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+#---Avoid creating dependencies to 'non-statndard' header files -------------------------------
+include_regular_expression("^[^.]+$|[.]h$|[.]icc$|[.]hxx$|[.]hpp$")
+
 #---Set all directories where to install parts of root up to now everything is installed ------
 #---according to the setting of CMAKE_INSTALL_DIR
 
