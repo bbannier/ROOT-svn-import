@@ -45,7 +45,10 @@ namespace cling {
     ///
     /// @param[out] R The recovered symbol
     /// @param[in] S The scope in which the lookup failed
-    virtual bool LookupUnqualified(clang::LookupResult &R, clang::Scope *S);
+    virtual bool LookupUnqualified(clang::LookupResult& R, clang::Scope* S);
+
+    // Override the pure virtuals. Maybe we should patch ExternalASTSource.h
+    virtual void getMemoryBufferSizes(clang::ExternalASTSource::MemoryBufferSizes& sizes) const {}
 
   private:
     clang::Sema* m_Sema;
@@ -146,7 +149,7 @@ namespace cling {
   /// the type of the unknown expression should be compatible with the type of 
   /// the left-hand-side.
   ///
-  /// 2.2 LifetimeHanlder - in some more complex situation in order to preserve
+  /// 2.2 LifetimeHandler - in some more complex situation in order to preserve
   /// the behavior the expression must be replaced with more complex structures.
   ///
   /// 3. Evaluate interface - this is the core function in the interpreter, which

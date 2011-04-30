@@ -67,8 +67,13 @@ namespace cling {
       assert(getBufferSize() && "buffer is empty!");
       maybeRealloc(code, getBufferSize());
     }
+ 
     virtual const char *getBufferIdentifier() const {
       return m_FileID.c_str();
+    }
+
+    virtual BufferKind getBufferKind () const {
+      return MemoryBuffer_Malloc;
     }
   };
 
