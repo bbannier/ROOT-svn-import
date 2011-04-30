@@ -141,6 +141,7 @@ namespace TMVA {
       // write/read pure foams to/from file
       void WriteFoamsToFile() const;
       void ReadFoamsFromFile();
+      PDEFoam* ReadClonedFoamFromFile(TFile*, const TString&);
 
       // calculate the MVA value
       Double_t GetMvaValue( Double_t* err = 0, Double_t* errUpper = 0 );

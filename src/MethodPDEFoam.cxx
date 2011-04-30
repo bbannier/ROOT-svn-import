@@ -1319,6 +1319,49 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
 }
 
 //_______________________________________________________________________
+TMVA::PDEFoam* TMVA::MethodPDEFoam::ReadClonedFoamFromFile(TFile* file, const TString& foamname)
+{
+   // Reads a foam with name 'foamname' from file, and returns a clone
+   // of the foam.  The given ROOT file must be open.  (The ROOT file
+   // will not be closed in this function.)
+   //
+   // Parameters:
+   //
+   // - file - an open ROOT file
+   //
+   // - foamname - name of foam to load from the file
+   //
+   // Returns:
+   //
+   // If a foam with name 'foamname' exists in the file, then it is
+   // read from the file, cloned and returned.  If a foam with name
+   // 'foamname' does not exist in the file or the clone operation
+   // does not succeed, then NULL is returned.
+
+   if (file == NULL) {
+      Log() << kFATAL << "<ReadClonedFoamFromFile>: NULL pointer given" << Endl;
+      return NULL;
+   }
+
+   // try to load the foam from the file
+   PDEFoam *foam = (PDEFoam*) file->Get(foamname);
+   if (foam == NULL) {
+      Log() << kFATAL << "<ReadClonedFoamFromFile>: " << foamname
+            << " not found in file" << Endl;
+      return NULL;
+   }
+   // try to clone the foam
+   foam = (PDEFoam*) foam->Clone();
+   if (foam == NULL) {
+      Log() << kFATAL << "<ReadClonedFoamFromFile>: " << foamname
+            << " could not be cloned!" << Endl;
+      return NULL;
+   }
+
+   return foam;
+}
+
+//_______________________________________________________________________
 void TMVA::MethodPDEFoam::ReadFoamsFromFile()
 {
    // read foams from file
@@ -1339,22 +1382,22 @@ void TMVA::MethodPDEFoam::ReadFoamsFromFile()
    // read foams from file
    if (DoRegression()) {
       if (fMultiTargetRegression)
-         fFoam.push_back( (PDEFoam*) rootFile->Get("MultiTargetRegressionFoam") );
+         fFoam.push_back(ReadClonedFoamFromFile(rootFile, "MultiTargetRegressionFoam"));
       else
-         fFoam.push_back( (PDEFoam*) rootFile->Get("MonoTargetRegressionFoam") );
+         fFoam.push_back(ReadClonedFoamFromFile(rootFile, "MonoTargetRegressionFoam"));
    } else {
       if (fSigBgSeparated) {
-	 fFoam.push_back( (PDEFoam*) rootFile->Get("SignalFoam") );
-	 fFoam.push_back( (PDEFoam*) rootFile->Get("BgFoam") );
+	 fFoam.push_back(ReadClonedFoamFromFile(rootFile, "SignalFoam"));
+	 fFoam.push_back(ReadClonedFoamFromFile(rootFile, "BgFoam"));
       } else {
 	 // try to load discriminator foam
-	 PDEFoam *foam = (PDEFoam*) rootFile->Get("DiscrFoam");
+	 PDEFoam *foam = ReadClonedFoamFromFile(rootFile, "DiscrFoam");
 	 if (foam != NULL)
-	    fFoam.push_back( foam );
+	    fFoam.push_back(foam);
 	 else {
 	    // load multiclass foams
 	    for (UInt_t iClass=0; iClass<DataInfo().GetNClasses(); ++iClass) {
-	       fFoam.push_back( (PDEFoam*) rootFile->Get(Form("MultiClassFoam%u",iClass)) );
+	       fFoam.push_back(ReadClonedFoamFromFile(rootFile, Form("MultiClassFoam%u",iClass)));
 	    }
 	 }
       }
