@@ -1339,21 +1339,19 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::ReadClonedFoamFromFile(TFile* file, const TS
    // does not succeed, then NULL is returned.
 
    if (file == NULL) {
-      Log() << kFATAL << "<ReadClonedFoamFromFile>: NULL pointer given" << Endl;
+      Log() << kWARNING << "<ReadClonedFoamFromFile>: NULL pointer given" << Endl;
       return NULL;
    }
 
    // try to load the foam from the file
    PDEFoam *foam = (PDEFoam*) file->Get(foamname);
    if (foam == NULL) {
-      Log() << kFATAL << "<ReadClonedFoamFromFile>: " << foamname
-            << " not found in file" << Endl;
       return NULL;
    }
    // try to clone the foam
    foam = (PDEFoam*) foam->Clone();
    if (foam == NULL) {
-      Log() << kFATAL << "<ReadClonedFoamFromFile>: " << foamname
+      Log() << kWARNING << "<ReadClonedFoamFromFile>: " << foamname
             << " could not be cloned!" << Endl;
       return NULL;
    }
