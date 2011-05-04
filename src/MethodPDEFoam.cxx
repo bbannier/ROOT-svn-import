@@ -475,7 +475,7 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       Log() << kVERBOSE << "Filling binary search tree of " << foamcaption[i] 
             << " with events" << Endl;
       // insert event to BinarySearchTree
-      for (Long64_t k=0; k<GetNEvents(); k++) {
+      for (Long64_t k=0; k<GetNEvents(); ++k) {
          const Event* ev = GetEvent(k);
          if ((i==0 && DataInfo().IsSignal(ev)) || (i==1 && !DataInfo().IsSignal(ev)))
 	    if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
@@ -487,7 +487,7 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
 
       Log() << kVERBOSE << "Filling foam cells with events" << Endl;
       // loop over all events -> fill foam cells
-      for (Long64_t k=0; k<GetNEvents(); k++) {
+      for (Long64_t k=0; k<GetNEvents(); ++k) {
          const Event* ev = GetEvent(k);
 	 Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
          if ((i==0 && DataInfo().IsSignal(ev)) || (i==1 && !DataInfo().IsSignal(ev)))
@@ -507,7 +507,7 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
 
    Log() << kVERBOSE << "Filling binary search tree of discriminator foam with events" << Endl;
    // insert event to BinarySearchTree
-   for (Long64_t k=0; k<GetNEvents(); k++) {
+   for (Long64_t k=0; k<GetNEvents(); ++k) {
       const Event* ev = GetEvent(k); 
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
 	 fFoam.back()->FillBinarySearchTree(ev);
@@ -518,7 +518,7 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all training events -> fill foam cells with N_sig and N_Bg
-   for (UInt_t k=0; k<GetNEvents(); k++) {
+   for (Long64_t k=0; k<GetNEvents(); ++k) {
       const Event* ev = GetEvent(k); 
       Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
@@ -546,7 +546,7 @@ void TMVA::MethodPDEFoam::TrainMultiClassification()
       Log() << kVERBOSE << "Filling binary search tree of multiclass foam "
 	    << iClass << " with events" << Endl;
       // insert event to BinarySearchTree
-      for (Long64_t k=0; k<GetNEvents(); k++) {
+      for (Long64_t k=0; k<GetNEvents(); ++k) {
 	 const Event* ev = GetEvent(k); 
 	 if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
 	    fFoam.back()->FillBinarySearchTree(ev);
@@ -558,7 +558,7 @@ void TMVA::MethodPDEFoam::TrainMultiClassification()
       Log() << kVERBOSE << "Filling foam cells with events" << Endl;
       // loop over all training events and fill foam cells with signal
       // and background events
-      for (UInt_t k=0; k<GetNEvents(); k++) {
+      for (Long64_t k=0; k<GetNEvents(); ++k) {
 	 const Event* ev = GetEvent(k); 
 	 Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
 	 if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
@@ -593,7 +593,7 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
 
    Log() << kVERBOSE << "Filling binary search tree with events" << Endl;
    // insert event to BinarySearchTree
-   for (Long64_t k=0; k<GetNEvents(); k++) {
+   for (Long64_t k=0; k<GetNEvents(); ++k) {
       const Event* ev = GetEvent(k); 
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
 	 fFoam.back()->FillBinarySearchTree(ev);
@@ -604,7 +604,7 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all events -> fill foam cells with target
-   for (UInt_t k=0; k<GetNEvents(); k++) {
+   for (Long64_t k=0; k<GetNEvents(); ++k) {
       const Event* ev = GetEvent(k); 
       Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
@@ -635,7 +635,7 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
    Log() << kVERBOSE << "Filling binary search tree of multi target regression foam with events" 
          << Endl;
    // insert event to BinarySearchTree
-   for (Long64_t k=0; k<GetNEvents(); k++) {
+   for (Long64_t k=0; k<GetNEvents(); ++k) {
       Event *ev = new Event(*GetEvent(k));
       // since in multi-target regression targets are handled like
       // variables --> remove targets and add them to the event variabels
@@ -656,7 +656,7 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
 
    Log() << kVERBOSE << "Filling foam cells with events" << Endl;
    // loop over all events -> fill foam cells with number of events
-   for (UInt_t k=0; k<GetNEvents(); k++) {
+   for (Long64_t k=0; k<GetNEvents(); ++k) {
       Event *ev = new Event(*GetEvent(k));
       // since in multi-target regression targets are handled like
       // variables --> remove targets and add them to the event variabels
