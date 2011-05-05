@@ -71,7 +71,7 @@ namespace cling {
     //---------------------------------------------------------------------
     //! Constructor
     //---------------------------------------------------------------------
-    Interpreter(const char* llvmdir = 0);
+    Interpreter(const char* startupPCH = 0, const char* llvmdir = 0);
     
     //---------------------------------------------------------------------
     //! Destructor
@@ -103,6 +103,8 @@ namespace cling {
     llvm::raw_ostream& getValuePrinterStream() const { return *m_ValuePrintStream; }
 
     void RequestContinuation(const clang::SourceLocation&);
+
+    void writeStartupPCH();
     
   private:
     llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
@@ -119,7 +121,7 @@ namespace cling {
     llvm::OwningPtr<InterpreterCallbacks> m_Callbacks;
 
   private:
-    
+    void processStartupPCH();
     void createWrappedSrc(const std::string& src, std::string& wrapped,
                           std::string& stmtFunc);  
     clang::CompilerInstance* compileFile(const std::string& filename,

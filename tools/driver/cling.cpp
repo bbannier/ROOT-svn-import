@@ -81,7 +81,8 @@ int main( int argc, char **argv )
    const bool IsUserSupplied = false;
    const bool IsFramework = false;
    const bool IsSysRootRelative = true;
-   headerOpts.AddPath (".", clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);   
+   headerOpts.AddPath (".", clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
+   interpreter.writeStartupPCH();
 
    //---------------------------------------------------------------------------
    // We're supposed to parse a file

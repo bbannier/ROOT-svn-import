@@ -176,7 +176,8 @@ namespace cling {
   //---------------------------------------------------------------------------
   // Constructor
   //---------------------------------------------------------------------------
-  Interpreter::Interpreter(const char* llvmdir /*= 0*/):
+   Interpreter::Interpreter(const char* startupPCH /*= 0*/,
+                            const char* llvmdir /*= 0*/):
   m_UniqueCounter(0),
   m_printAST(false),
   m_LastDump(0),
@@ -188,7 +189,8 @@ namespace cling {
     
     m_IncrParser.reset(new IncrementalParser(this, &getPragmaHandler(), llvmdir));
     m_ExecutionContext.reset(new ExecutionContext(m_IncrParser->getCI()));
-    m_IncrParser->addConsumer(m_ExecutionContext->getCodeGenerator());
+    m_IncrParser->addConsumer(IncrementalParser::kCodeGenerator,
+                              m_ExecutionContext->getCodeGenerator());
     
     m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer")));
 
@@ -202,9 +204,12 @@ namespace cling {
     AddIncludePath(CLING_INSTDIR_INCL);
 
     // Warm them up
-    m_IncrParser->Initialize();
+    m_IncrParser->Initialize(startupPCH);
+    if (m_IncrParser->usingStartupPCH()) {
+      processStartupPCH();
+    }
 
-    // Set up the gCling variable
+    // Set up the gCling variable - even if we use PCH ('this' is different)
     std::stringstream initializer;
     initializer << "gCling=(cling::Interpreter*)" << this <<";\n";    
     processLine(initializer.str());
@@ -223,6 +228,29 @@ namespace cling {
    
   const char* Interpreter::getVersion() const {
     return "$Id$";
+  }
+
+  void Interpreter::writeStartupPCH() {
+    m_IncrParser->writeStartupPCH();
+  }
+
+  void Interpreter::processStartupPCH() {
+    clang::TranslationUnitDecl* TU = m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl();
+    for (clang::DeclContext::decl_iterator D = TU->decls_begin(),
+           E = TU->decls_end(); D != E; ++D) {
+      // That's probably overestimating
+      ++m_UniqueCounter;
+      const clang::FunctionDecl* F = dyn_cast<const clang::FunctionDecl>(*D);
+      if (F) {
+        clang::DeclarationName N = F->getDeclName();
+        if (N.isIdentifier()) {
+          clang::IdentifierInfo* II = N.getAsIdentifierInfo();
+          if (II->getName().find("__cling_Un1Qu3") == 0) {
+            m_ExecutionContext->executeFunction(II->getName());
+          }
+        }
+      }
+    }
   }
    
   void Interpreter::AddIncludePath(const char *incpath)
@@ -339,9 +367,10 @@ namespace cling {
       //bool prevDiagSupp = Diag.getSuppressAllDiagnostics();
       //Diag.setSuppressAllDiagnostics(true);
       // fprintf(stderr,"nonTUsrc=%s\n",nonTUsrc.c_str());
-      m_IncrParser->addConsumer(consumer);
+      m_IncrParser->addConsumer(IncrementalParser::kFunctionBodyConsumer,
+                                consumer);
       CI = m_IncrParser->parse(nonTUsrc);
-      m_IncrParser->removeConsumer(consumer);
+      m_IncrParser->removeConsumer(IncrementalParser::kFunctionBodyConsumer);
       //Diag.setSuppressAllDiagnostics(prevDiagSupp);
 
       if (!CI) {
@@ -775,7 +804,7 @@ namespace cling {
     m_IncrParser->getCI()->getSema().CurContext = DC;
 
     // Temporary stop the code gen
-    m_IncrParser->removeConsumer(m_ExecutionContext->getCodeGenerator());
+    m_IncrParser->removeConsumer(IncrementalParser::kCodeGenerator);
     // Turn off the DynamicExprTranformer, because we don't want to chase 
     // our tail
     setDynamicLookup(false);
@@ -813,7 +842,8 @@ namespace cling {
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
     // resume the code gen
-    m_IncrParser->addConsumer(m_ExecutionContext->getCodeGenerator());
+    m_IncrParser->addConsumer(IncrementalParser::kCodeGenerator,
+                              m_ExecutionContext->getCodeGenerator());
     m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(DeclGroupRef(TopLevelFD));
 
     // get the result
@@ -852,10 +882,11 @@ namespace cling {
     if (m_printAST) {
       if (!m_ASTDumper)
         m_ASTDumper = new ASTTLDPrinter();
-      m_IncrParser->addConsumer(m_ASTDumper);
+      m_IncrParser->addConsumer(IncrementalParser::kASTDumper,
+                                m_ASTDumper);
     }
     else
-      m_IncrParser->removeConsumer(m_ASTDumper);
+      m_IncrParser->removeConsumer(IncrementalParser::kASTDumper);
     return prev;
   }
   

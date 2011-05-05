@@ -18,6 +18,7 @@
 #include "clang/Lex/Pragma.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "clang/Serialization/ASTWriter.h"
 
 #include "cling/Interpreter/Diagnostics.h"
 #include "cling/Interpreter/Interpreter.h"
@@ -84,7 +85,8 @@ namespace cling {
     m_Enabled(true),
     m_Consumer(0), 
     m_LastTopLevelDecl(0),
-    m_FirstTopLevelDecl(0) 
+    m_FirstTopLevelDecl(0),
+    m_UsingStartupPCH(false)
   {
     //m_CIFactory.reset(new CIFactory(0, 0, llvmdir));
     m_MemoryBuffer.push_back(new MutableMemoryBuffer("//cling!\n", "CLING") );
@@ -109,7 +111,8 @@ namespace cling {
     m_Parser.reset(new clang::Parser(CI->getPreprocessor(), CI->getSema()));
     CI->getPreprocessor().EnterMainSourceFile();
     m_Parser->Initialize();
-    
+
+    m_Consumer->InitializeSema(CI->getSema());
     //if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
     //  SC->InitializeSema(CI->getSema()); // do we really need this? We know 
     // that we will have ChainedASTConsumer, which is initialized in createCI
@@ -123,19 +126,68 @@ namespace cling {
   
   IncrementalParser::~IncrementalParser() {}
   
-  void IncrementalParser::Initialize() {
-    
-    parse(""); // Consume initialization.
-    // Set up common declarations which are going to be available
-    // only at runtime
-    // Make surethat the universe won't be included to compile time by using
-    // -D __CLING__ as CompilerInstance's arguments
-    parse("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+  void IncrementalParser::Initialize(const char* startupPCH) {
+
+    loadStartupPCH(startupPCH);
+    if (!m_UsingStartupPCH) {
+      parse(""); // Consume initialization.
+      // Set up common declarations which are going to be available
+      // only at runtime
+      // Make surethat the universe won't be included to compile time by using
+      // -D __CLING__ as CompilerInstance's arguments
+      parse("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+    }
     
     // Attach the dynamic lookup
     getTransformer()->Initialize();
   }
-  
+
+  void IncrementalParser::loadStartupPCH(const char* filename) {
+    if (!filename || !filename[0]) return;
+    bool Preamble = m_CI->getPreprocessorOpts().PrecompiledPreambleBytes.first !=0;
+    llvm::OwningPtr<clang::ExternalASTSource> EAS(
+      clang::CompilerInstance::
+      createPCHExternalASTSource(filename,
+                                 "", /* sysroot */
+                                 true, /* disable PCH validation*/
+                                 false, /* disable stat cache */
+                                 m_CI->getPreprocessor(),
+                                 m_CI->getASTContext(),
+                                 0, /* deserialization listener */
+                                 Preamble
+                                 )
+                                                 );
+    if (EAS) {
+       m_CI->getASTContext().setExternalSource(EAS);
+       m_UsingStartupPCH = true;
+    } else {
+      // Valid file name but no (valid) PCH - recreate.
+      bool Chaining = m_CI->getInvocation().getFrontendOpts().ChainedPCH &&
+        !m_CI->getPreprocessorOpts().ImplicitPCHInclude.empty();
+      // We use createOutputFile here because this is exposed via libclang, and we
+      // must disable the RemoveFileOnSignal behavior.
+      llvm::raw_ostream *OS = m_CI->createOutputFile(filename, /*Binary=*/true,
+                                                     /*RemoveFileOnSignal=*/false,
+                                                     filename);
+      m_StartupPCHGenerator.reset(new clang::PCHGenerator(m_CI->getPreprocessor(),
+                                                          filename,
+                                                          Chaining,
+                                                          "", /*isysroot*/
+                                                          OS
+                                                          )
+                                  );
+      m_StartupPCHGenerator->InitializeSema(m_CI->getSema());
+      addConsumer(kPCHGenerator, m_StartupPCHGenerator.get());
+    }
+  }
+
+  void IncrementalParser::writeStartupPCH() {
+    if (!m_StartupPCHGenerator) return;
+    m_StartupPCHGenerator->HandleTranslationUnit(m_CI->getASTContext());
+    removeConsumer(kPCHGenerator);
+    m_StartupPCHGenerator.reset(); // deletes StartupPCHGenerator
+  }
+
   clang::CompilerInstance*
    IncrementalParser::parse(llvm::StringRef src)
   {
@@ -244,17 +296,22 @@ namespace cling {
     }
   } 
   
-  void IncrementalParser::addConsumer(clang::ASTConsumer* consumer) {
-    m_Consumer->Consumers.push_back(consumer);
+  void IncrementalParser::addConsumer(EConsumerIndex I, clang::ASTConsumer* consumer) {
+    m_Consumer->add((ChainedASTConsumer::EConsumerIndex)I, consumer);
     consumer->Initialize(getCI()->getSema().getASTContext());
+    if (m_CI->hasSema()) {
+      clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(consumer);
+      if (SC) {
+        SC->InitializeSema(m_CI->getSema());
+      }
+    }
   }
   
-  void IncrementalParser::removeConsumer(clang::ASTConsumer* consumer) {
-    for (unsigned int i = 0; i != m_Consumer->Consumers.size(); ++i) {
-      if (m_Consumer->Consumers[i] == consumer) {
-        m_Consumer->Consumers.erase(m_Consumer->Consumers.begin() + i);
-        break;
-      }         
+  void IncrementalParser::removeConsumer(EConsumerIndex I) {
+    clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(m_Consumer->Consumers[I]);
+    if (SC) {
+      SC->ForgetSema();
     }
+    m_Consumer->Consumers[I] = 0;
   }  
 } // namespace cling
