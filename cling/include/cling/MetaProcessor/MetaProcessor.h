@@ -9,10 +9,6 @@
 
 #include <string>
 
-namespace llvm {
-   class Module;
-}
-
 namespace cling {
 
    class Interpreter;

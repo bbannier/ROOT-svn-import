@@ -42,6 +42,7 @@
 #include "ExecutionContext.h"
 #include "IncrementalParser.h"
 #include "InputValidator.h"
+#include "cling/Interpreter/InvocationOptions.h"
 #include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/InterpreterCallbacks.h"
 #include "cling/Interpreter/Value.h"
@@ -176,7 +177,8 @@ namespace cling {
   //---------------------------------------------------------------------------
   // Constructor
   //---------------------------------------------------------------------------
-   Interpreter::Interpreter(const char* startupPCH /*= 0*/,
+   Interpreter::Interpreter(int argc, const char* const *argv,
+                            const char* startupPCH /*= 0*/,
                             const char* llvmdir /*= 0*/):
   m_UniqueCounter(0),
   m_printAST(false),
@@ -185,14 +187,28 @@ namespace cling {
   {
     m_PragmaHandler = new PragmaNamespace("cling");
 
-    //m_CIFactory.reset(new CIFactory(fake_argc, fake_argv, llvmdir));
-    
-    m_IncrParser.reset(new IncrementalParser(this, &getPragmaHandler(), llvmdir));
+    std::vector<unsigned> LeftoverArgsIdx;
+    m_Opts = InvocationOptions::CreateFromArgs(argc, argv, LeftoverArgsIdx);
+    std::vector<const char*> LeftoverArgs;
+
+    // We do C++ by default:
+    LeftoverArgs.push_back("-x");
+    LeftoverArgs.push_back("c++");
+
+    for (size_t I = 0, N = LeftoverArgsIdx.size(); I < N; ++I) {
+      LeftoverArgs.push_back(argv[LeftoverArgsIdx[I]]);
+    }
+ 
+    m_IncrParser.reset(new IncrementalParser(this, &getPragmaHandler(),
+                                             LeftoverArgs.size(), &LeftoverArgs[0],
+                                             llvmdir));
     m_ExecutionContext.reset(new ExecutionContext(m_IncrParser->getCI()));
     m_IncrParser->addConsumer(IncrementalParser::kCodeGenerator,
                               m_ExecutionContext->getCodeGenerator());
     
-    m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer")));
+    m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer",
+                                                                  LeftoverArgs.size(), &LeftoverArgs[0],
+                                                                  llvmdir)));
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
@@ -213,6 +229,8 @@ namespace cling {
     std::stringstream initializer;
     initializer << "gCling=(cling::Interpreter*)" << this <<";\n";    
     processLine(initializer.str());
+
+    handleFrontendOptions();
   }
   
   //---------------------------------------------------------------------------
@@ -232,6 +250,15 @@ namespace cling {
 
   void Interpreter::writeStartupPCH() {
     m_IncrParser->writeStartupPCH();
+  }
+
+  void Interpreter::handleFrontendOptions() {
+    if (m_Opts.ShowVersion) {
+      llvm::outs() << getVersion() << '\n';
+    }
+    if (m_Opts.Help) {
+      m_Opts.PrintHelp();
+    }
   }
 
   void Interpreter::processStartupPCH() {

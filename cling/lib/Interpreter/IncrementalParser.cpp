@@ -81,6 +81,8 @@ namespace cling {
   
   IncrementalParser::IncrementalParser(Interpreter* interp,
                                        clang::PragmaNamespace* Pragma,
+                                       int argc,
+                                       const char* const *argv,
                                        const char* llvmdir):
     m_Enabled(true),
     m_Consumer(0), 
@@ -90,7 +92,8 @@ namespace cling {
   {
     //m_CIFactory.reset(new CIFactory(0, 0, llvmdir));
     m_MemoryBuffer.push_back(new MutableMemoryBuffer("//cling!\n", "CLING") );
-    clang::CompilerInstance* CI = CIFactory::createCI(m_MemoryBuffer[0], Pragma, llvmdir);
+    clang::CompilerInstance* CI = CIFactory::createCI(m_MemoryBuffer[0], Pragma,
+                                                      argc, argv, llvmdir);
     assert(CI && "CompilerInstance is (null)!");
     m_CI.reset(CI);
 

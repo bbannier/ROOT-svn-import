@@ -25,23 +25,18 @@ namespace cling {
   class CIFactory {
   public:
     // TODO: Add overload that takes file not MemoryBuffer
-    static clang::CompilerInstance* createCI(llvm::StringRef code);
-
-    static clang::CompilerInstance* createCI(llvm::MemoryBuffer* buffer, 
-                                             clang::PragmaNamespace* Pragma, 
-                                             const char* llvmdir);
-
     static clang::CompilerInstance* createCI(llvm::StringRef code,
                                              int argc,
                                              const char* const *argv,
-                                             const char* llvmdir);
+                                             const char* llvmdir,
+                                             llvm::LLVMContext* llvm_context = 0);
 
     static clang::CompilerInstance* createCI(llvm::MemoryBuffer* buffer, 
                                              clang::PragmaNamespace* Pragma, 
                                              int argc,
                                              const char* const *argv,
                                              const char* llvmdir,
-                                             llvm::LLVMContext* llvm_context);
+                                             llvm::LLVMContext* llvm_context = 0);
   private:
     //---------------------------------------------------------------------
     //! Constructor
