@@ -4,7 +4,8 @@
 
 namespace cling {
 void libcling__symbol_requester() {
-   cling::Interpreter I;
+   const char* const argv[] = {"libcling__symbol_requester", 0};
+   cling::Interpreter I(1, argv);
    cling::UserInterface U(I);
 }
 }

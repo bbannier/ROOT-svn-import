@@ -30,51 +30,10 @@ int main( int argc, char **argv )
    //llvm::sys::PrintStackTraceOnErrorSignal();
    //llvm::PrettyStackTraceProgram X(argc, argv);
 
-   // TODO: factor out, use llvm's / clang option parsing tools
-
-   //---------------------------------------------------------------------------
-   // Determine which file to interpret
-   //---------------------------------------------------------------------------
-   int fileArgN = 1;
-   while (fileArgN < argc && argv[fileArgN][0] == '-')
-      ++fileArgN;
-
-   //---------------------------------------------------------------------------
-   // Check if we should run in the "interactive" mode
-   //---------------------------------------------------------------------------
-   // no file? interactive!
-   bool interactive = (fileArgN == argc);
-
-   interactive |= argc > 1 && std::string(argv[1]) == "-i";
-
-   // for now, -l and -i are mutually exclusive
-   bool nologo = argc > 1 && std::string(argv[1]) == "-l";
-
    //---------------------------------------------------------------------------
    // Set up the interpreter
    //---------------------------------------------------------------------------
-   clang::LangOptions langInfo;
-   //langInfo.C99         = 1;
-   //langInfo.HexFloats   = 1;
-   langInfo.BCPLComment = 1; // Only for C99/C++.
-   langInfo.Digraphs    = 1; // C94, C99, C++.
-   langInfo.CPlusPlus   = 1;
-   //langInfo.CPlusPlus0x = 01;
-   langInfo.CXXOperatorNames = 1;
-   langInfo.Bool = 1;
-
-   langInfo.NeXTRuntime = 1;
-   langInfo.NoInline = 1;
-   
-   langInfo.Exceptions = 1;
-   langInfo.GNUMode = 1;
-   langInfo.NoInline = 1;
-   langInfo.GNUInline = 1;
-   langInfo.DollarIdents = 1;
-
-   langInfo.POSIXThreads = 1;
-
-   cling::Interpreter interpreter;
+   cling::Interpreter interpreter(argc - 1, argv + 1);
    clang::CompilerInstance* CI = interpreter.getCI();
    clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
 
@@ -84,19 +43,27 @@ int main( int argc, char **argv )
    headerOpts.AddPath (".", clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
    interpreter.writeStartupPCH();
 
-   //---------------------------------------------------------------------------
-   // We're supposed to parse a file
-   //---------------------------------------------------------------------------
    int ret = 0;
-   if( !interactive ) {
-      ret = interpreter.executeFile(argv[fileArgN]);
+   const std::vector<std::pair<clang::InputKind, std::string> >& Inputs
+     = CI->getInvocation().getFrontendOpts().Inputs;
+
+   // Interactive means no input (or one input that's "-")
+   bool Interactive = Inputs.empty()
+     || (Inputs.size() == 1 && Inputs[0].second == "-");
+   if (!Interactive) {
+     //---------------------------------------------------------------------------
+     // We're supposed to parse files
+     //---------------------------------------------------------------------------
+      for (size_t I = 0, N = Inputs.size(); I < N; ++I) {
+        ret = interpreter.executeFile(Inputs[I].second);
+      }
    }
    //----------------------------------------------------------------------------
    // We're interactive
    //----------------------------------------------------------------------------
    else {
       cling::UserInterface ui(interpreter);
-      ui.runInteractively(nologo);
+      ui.runInteractively(interpreter.getOptions().NoLogo);
    }
 
    return ret;

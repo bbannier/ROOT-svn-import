@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/Casting.h"
+#include "cling/Interpreter/InvocationOptions.h"
 
 #include <string>
 
@@ -71,12 +72,16 @@ namespace cling {
     //---------------------------------------------------------------------
     //! Constructor
     //---------------------------------------------------------------------
-    Interpreter(const char* startupPCH = 0, const char* llvmdir = 0);
+    Interpreter(int argc, const char* const *argv,
+                const char* startupPCH = 0, const char* llvmdir = 0);
     
     //---------------------------------------------------------------------
     //! Destructor
     //---------------------------------------------------------------------
     virtual ~Interpreter();
+
+    const InvocationOptions& getOptions() const { return m_Opts; }
+    InvocationOptions& getOptions() { return m_Opts; }
 
     const char* getVersion() const;
     std::string createUniqueName();
@@ -107,6 +112,7 @@ namespace cling {
     void writeStartupPCH();
     
   private:
+    InvocationOptions m_Opts; // Interpreter options
     llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
     llvm::OwningPtr<IncrementalParser> m_IncrParser; // incremental AST and its parser
     llvm::OwningPtr<InputValidator> m_InputValidator; // balanced paren etc
@@ -121,6 +127,7 @@ namespace cling {
     llvm::OwningPtr<InterpreterCallbacks> m_Callbacks;
 
   private:
+    void handleFrontendOptions();
     void processStartupPCH();
     void createWrappedSrc(const std::string& src, std::string& wrapped,
                           std::string& stmtFunc);  

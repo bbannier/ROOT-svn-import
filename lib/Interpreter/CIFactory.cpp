@@ -31,24 +31,13 @@ namespace cling {
   {
   }
 
-  clang::CompilerInstance* CIFactory::createCI(llvm::StringRef code) {
-    return createCI(llvm::MemoryBuffer::getMemBuffer(code), 0, 0);
-  }
-
-  clang::CompilerInstance* CIFactory::createCI(llvm::MemoryBuffer* buffer, 
-                                               clang::PragmaNamespace* Pragma, 
-                                               const char* llvmdir) {
-    return createCI(buffer, Pragma, fake_argc, fake_argv, llvmdir, new llvm::LLVMContext() );
-
-  }
-
   clang::CompilerInstance* CIFactory::createCI(llvm::StringRef code,
                                                int argc,
                                                const char* const *argv,
-                                               const char* llvmdir) {
-    return createCI(llvm::MemoryBuffer::getMemBuffer(code), 0, argc, argv, llvmdir, new llvm::LLVMContext());
+                                               const char* llvmdir,
+                                               llvm::LLVMContext* llvm_context /* = 0 */) {
+    return createCI(llvm::MemoryBuffer::getMemBuffer(code), 0, argc, argv, llvmdir, llvm_context);
   }
-
 
   
   clang::CompilerInstance* CIFactory::createCI(llvm::MemoryBuffer* buffer, 
@@ -56,7 +45,12 @@ namespace cling {
                                                int argc, 
                                                const char* const *argv,
                                                const char* llvmdir,
-                                               llvm::LLVMContext* llvm_context){
+                                               llvm::LLVMContext* llvm_context /* = 0 */){
+    // main's argv[0] is skipped!
+
+    if (!llvm_context) {
+      llvm_context = new llvm::LLVMContext();
+    }
     if (!Pragma) {
       Pragma = new clang::PragmaNamespace("cling");
     }
@@ -108,15 +102,13 @@ namespace cling {
       CI->setDiagnostics(Diags.getPtr());
       
       clang::CompilerInvocation::CreateFromArgs
-        (CI->getInvocation(),
-         (argv + 1),
-         (argv + argc),
-         *Diags
-         );
+        (CI->getInvocation(), argv, argv + argc, *Diags);
+
       if (CI->getHeaderSearchOpts().UseBuiltinIncludes &&
           CI->getHeaderSearchOpts().ResourceDir.empty()) {
         CI->getHeaderSearchOpts().ResourceDir = resource_path.str();
       }
+      CI->getInvocation().getPreprocessorOpts().addMacroDef("__CLING__");
       if (CI->getDiagnostics().hasErrorOccurred()) {
         delete CI;
         CI = 0;

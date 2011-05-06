@@ -42,7 +42,8 @@ namespace cling {
       kNConsumers
     };
 
-    IncrementalParser(Interpreter* interp,clang::PragmaNamespace* Pragma, const char* llvmdir);
+    IncrementalParser(Interpreter* interp, clang::PragmaNamespace* Pragma,
+                      int argc, const char* const *argv, const char* llvmdir);
     ~IncrementalParser();
     void Initialize(const char* startupPCH);
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
