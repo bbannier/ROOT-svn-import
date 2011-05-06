@@ -34,6 +34,10 @@ int main( int argc, char **argv )
    // Set up the interpreter
    //---------------------------------------------------------------------------
    cling::Interpreter interpreter(argc - 1, argv + 1);
+   if (interpreter.getOptions().Help) {
+      return 0;
+   }
+  
    clang::CompilerInstance* CI = interpreter.getCI();
    clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
 
@@ -42,6 +46,11 @@ int main( int argc, char **argv )
    const bool IsSysRootRelative = true;
    headerOpts.AddPath (".", clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
    interpreter.writeStartupPCH();
+  
+  for (size_t I = 0, N = interpreter.getOptions().LibsToLoad.size();
+       I < N; ++I) {
+    interpreter.loadFile(interpreter.getOptions().LibsToLoad[I]);
+  }
 
    int ret = 0;
    const std::vector<std::pair<clang::InputKind, std::string> >& Inputs
