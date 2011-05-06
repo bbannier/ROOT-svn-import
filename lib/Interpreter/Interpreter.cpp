@@ -60,6 +60,7 @@ namespace {
   static
   llvm::sys::Path
   findDynamicLibrary(const std::string& filename,
+                     const cling::InvocationOptions& Opts,
                      bool addPrefix = true,
                      bool addSuffix = true)
   {
@@ -71,8 +72,11 @@ namespace {
         return FullPath;
     }
     
-    std::vector<llvm::sys::Path> LibPaths;
-    llvm::sys::Path::GetSystemLibraryPaths(LibPaths);
+    std::vector<llvm::sys::Path> LibPaths(Opts.LibSearchPath.begin(),
+                                          Opts.LibSearchPath.end());
+    std::vector<llvm::sys::Path> SysLibPaths;
+    llvm::sys::Path::GetSystemLibraryPaths(SysLibPaths);
+    LibPaths.insert(LibPaths.end(), SysLibPaths.begin(), SysLibPaths.end());
     for (unsigned i = 0; i < LibPaths.size(); ++i) {
       llvm::sys::Path FullPath(LibPaths[i]);
       FullPath.appendComponent(filename);
@@ -82,7 +86,8 @@ namespace {
     
     if (addPrefix) {
       static const std::string prefix("lib");
-      llvm::sys::Path found = findDynamicLibrary(prefix + filename, false, addSuffix);
+      llvm::sys::Path found = findDynamicLibrary(prefix + filename, Opts,
+                                                 false, addSuffix);
       if (found.isDynamicLibrary())
         return found;
     }
@@ -90,7 +95,7 @@ namespace {
     if (addSuffix) {
       llvm::sys::Path found
       = findDynamicLibrary(filename + llvm::sys::Path::GetDLLSuffix().str(),
-                           false, false);
+                           Opts, false, false);
       if (found.isDynamicLibrary())
         return found;
     }
@@ -679,8 +684,9 @@ namespace cling {
     return m_IncrParser->parse(code);
   }
   
-  static bool tryLoadSharedLib(const std::string& filename) {
-    llvm::sys::Path DynLib = findDynamicLibrary(filename);
+  static bool tryLoadSharedLib(const std::string& filename,
+                               const InvocationOptions& Opts) {
+    llvm::sys::Path DynLib = findDynamicLibrary(filename, Opts);
     if (!DynLib.isDynamicLibrary())
       return false;
     
@@ -702,7 +708,7 @@ namespace cling {
                         const std::string* trailcode /*=0*/,
                         bool allowSharedLib /*=true*/)
   {
-    if (allowSharedLib && tryLoadSharedLib(filename))
+    if (allowSharedLib && tryLoadSharedLib(filename, getOptions()))
       return 0;
     
     CompilerInstance* CI = compileFile(filename, trailcode);
