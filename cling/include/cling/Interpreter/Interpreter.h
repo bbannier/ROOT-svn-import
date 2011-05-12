@@ -96,7 +96,8 @@ namespace cling {
     clang::QualType getQualType(llvm::StringRef type);
     
     bool setDynamicLookup(bool value = true);
-    bool setPrintAST(bool print = true);
+    bool getPrintAST() { return m_printAST; }
+    void setPrintAST(bool print = true);
     
     void dumpAST(bool showAST = true, int last = -1);
     
@@ -123,9 +124,6 @@ namespace cling {
     clang::Decl *m_LastDump; // last dump point
     clang::ASTConsumer* m_ASTDumper;
 
-    /// \brief The callbacks in the interpreter
-    llvm::OwningPtr<InterpreterCallbacks> m_Callbacks;
-
   private:
     void handleFrontendOptions();
     void processStartupPCH();
@@ -146,7 +144,8 @@ namespace cling {
   public:
     Value Evaluate(const char* expr, clang::DeclContext* DC);
     NamedDeclResult LookupDecl(llvm::StringRef Decl, clang::DeclContext* Within = 0);
-    bool isInCLinkageSpecification(const clang::Decl *D);
+    bool isInCLinkageSpecification(const clang::Decl* D);
+    void setRuntimeCallbacks(InterpreterCallbacks* C);
   };
   
 } // namespace cling

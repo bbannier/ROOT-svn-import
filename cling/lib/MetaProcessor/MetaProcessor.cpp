@@ -168,9 +168,9 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    if (cmd == "printAST") {
       if (param.empty()) {
          // toggle:
-         bool print = !m_Interp.setPrintAST(true);
-         m_Interp.setPrintAST(print);
-         printf("%srinting AST\n", print?"P":"Not p");
+        bool print = !m_Interp.getPrintAST();
+        m_Interp.setPrintAST(print);
+        printf("%srinting AST\n", print?"P":"Not p");
       } else if (param == "1") {
          m_Interp.setPrintAST(true);
       } else if (param == "0") {
