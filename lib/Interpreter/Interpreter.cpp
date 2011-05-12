@@ -217,8 +217,6 @@ namespace cling {
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
-    m_Callbacks.reset(new InterpreterCallbacks());
-
     // Allow the interpreter to find itself.
     // OBJ first: if it exists it should be more up to date
     AddIncludePath(CLING_SRCDIR_INCL);
@@ -820,6 +818,7 @@ namespace cling {
   }
   
   Value Interpreter::Evaluate(const char* expr, DeclContext* DC) {
+    setRuntimeCallbacks(new InterpreterCallbacks(this));
     // Execute and get the result
     Value Result;
 
@@ -838,9 +837,7 @@ namespace cling {
 
     // Temporary stop the code gen
     m_IncrParser->removeConsumer(IncrementalParser::kCodeGenerator);
-    // Turn off the DynamicExprTranformer, because we don't want to chase 
-    // our tail
-    setDynamicLookup(false);
+
     CompilerInstance* CI = m_IncrParser->parse(Wrapper);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
@@ -869,9 +866,6 @@ namespace cling {
           // add return stmt
           Stmt* RetS = getCI()->getSema().ActOnReturnStmt(SourceLocation(), E).take();
           CS->setStmts(getCI()->getASTContext(), &RetS, 1);
-
-          // Find the object address of the member call
-          m_Callbacks->LookupObject(CS);
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
     // resume the code gen
@@ -888,7 +882,9 @@ namespace cling {
         Mangle->mangleName(TopLevelFD, RawStr);
     }
     m_ExecutionContext->executeFunction(WrapperName, &val);
-    setDynamicLookup(true);
+
+    setRuntimeCallbacks(0);
+
     return Value(val, RetTy.getTypePtrOrNull());
   }
 
@@ -903,24 +899,25 @@ namespace cling {
     return false;
   }
 
+  void Interpreter::setRuntimeCallbacks(InterpreterCallbacks* C) {
+    m_IncrParser->getTransformer()->SetRuntimeCallbacks(C);
+  }
+
   bool Interpreter::setDynamicLookup(bool value /*=true*/){
     bool prev = m_IncrParser->getEnabled();
     m_IncrParser->setEnabled(value);
     return prev;
   }
-  
-  bool Interpreter::setPrintAST(bool print /*=true*/) {
-    bool prev = m_printAST;
-    m_printAST = print;
-    if (m_printAST) {
+
+  void Interpreter::setPrintAST(bool print /*=true*/) {
+    if (print) {
       if (!m_ASTDumper)
         m_ASTDumper = new ASTTLDPrinter();
-      m_IncrParser->addConsumer(IncrementalParser::kASTDumper,
-                                m_ASTDumper);
+      m_IncrParser->addConsumer(IncrementalParser::kASTDumper, m_ASTDumper);
     }
     else
       m_IncrParser->removeConsumer(IncrementalParser::kASTDumper);
-    return prev;
+    m_printAST = !m_printAST;
   }
   
   
@@ -978,8 +975,5 @@ namespace cling {
     m_LastDump = m_IncrParser->getLastTopLevelDecl();     
     m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
   }
-  
-  // pin the vtable
-  InterpreterCallbacks::~InterpreterCallbacks(){}
   
 } // namespace cling

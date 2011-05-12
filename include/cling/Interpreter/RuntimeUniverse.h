@@ -65,9 +65,9 @@ namespace cling {
       /// \brief LifetimeHandler is used in case of initialization using address
       /// on the automatic store (stack) instead of EvaluateProxyT.
       ///
-      /// The reason is to avoid the copy constructors that might be missing or
-      /// private. This is part of complex transformation, which aims to 
-      /// preserve the code behavior. For example:
+      /// The reason is to avoid the copy constructors that might be private.
+      /// This is part of complex transformation, which aims to preserve the
+      /// code behavior. For example:
       /// @code
       /// int i = 5;
       /// MyClass my(dep->Symbol(i))

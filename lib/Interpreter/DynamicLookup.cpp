@@ -6,6 +6,7 @@
 
 #include "DynamicLookup.h"
 #include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/InterpreterCallbacks.h"
 
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Scope.h"
@@ -23,31 +24,38 @@ namespace cling {
 
   // Constructor
   DynamicIDHandler::DynamicIDHandler(Sema* Sema)
-    : m_Sema(Sema), m_Context(Sema->getASTContext())
+    : Callbacks(0), m_Sema(Sema), m_Context(Sema->getASTContext())
   {}
 
   // pin the vtable to this file
-  DynamicIDHandler::~DynamicIDHandler(){}
+  DynamicIDHandler::~DynamicIDHandler(){
+    delete Callbacks;
+    Callbacks = 0;
+  }
 
   bool DynamicIDHandler::LookupUnqualified(LookupResult& R, Scope* S) {
 
     if (!IsDynamicLookup(R, S))
       return false;
 
+    if (Callbacks) {
+      return Callbacks->LookupObject(R, S);
+    }
+
     DeclarationName Name = R.getLookupName();
-    IdentifierInfo *II = Name.getAsIdentifierInfo();
+    IdentifierInfo* II = Name.getAsIdentifierInfo();
     SourceLocation Loc = R.getNameLoc();
-    FunctionDecl *D 
-      = dyn_cast<FunctionDecl>(R.getSema().ImplicitlyDefineFunction(Loc, *II, S));
-    if (D) {            
-      FunctionProtoType::ExtProtoInfo EPI;
-      QualType QTy = m_Context.getFunctionType(m_Context.DependentTy,
-                                               /*ArgArray*/0,
-                                               /*NumArgs*/0,
-                                               EPI);
-      
-      D->setType(QTy);
-      R.addDecl(D);
+    VarDecl* Result = VarDecl::Create(m_Context,
+                                      R.getSema().getFunctionLevelDeclContext(),
+                                      Loc,
+                                      Loc,
+                                      II,
+                                      m_Context.DependentTy,
+                                      /*TypeSourceInfo*/0,
+                                      SC_None,
+                                      SC_None);
+    if (Result) {            
+      R.addDecl(Result);
       // Say that we can handle the situation. Clang should try to recover
       return true;
     }

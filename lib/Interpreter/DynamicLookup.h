@@ -20,6 +20,8 @@ namespace clang {
 
 namespace cling {
 
+  class InterpreterCallbacks;
+
   /// \brief Provides last chance of recovery for clang semantic analysis.
   /// When the compiler doesn't find the symbol in its symbol table it asks
   /// its ExternalSemaSource to look for the symbol.
@@ -32,6 +34,7 @@ namespace cling {
   /// the lookup will fail!
   class DynamicIDHandler : public clang::ExternalSemaSource {
   public:
+    InterpreterCallbacks* Callbacks;
     DynamicIDHandler(clang::Sema* Sema);
     ~DynamicIDHandler();
     
@@ -46,9 +49,6 @@ namespace cling {
     /// @param[out] R The recovered symbol
     /// @param[in] S The scope in which the lookup failed
     virtual bool LookupUnqualified(clang::LookupResult& R, clang::Scope* S);
-
-    // Override the pure virtuals. Maybe we should patch ExternalASTSource.h
-    virtual void getMemoryBufferSizes(clang::ExternalASTSource::MemoryBufferSizes& sizes) const {}
 
   private:
     clang::Sema* m_Sema;
@@ -230,7 +230,7 @@ namespace cling {
     /// EvaluateProxyT
     /// If an object on the stack is being initialized it is transformed into
     /// reference and an object on the free store is created in order to 
-    /// avoid the copy constructors, which might be missing or private
+    /// avoid the copy constructors, which might be private
     ///
     /// For example:
     /// @code
@@ -256,6 +256,9 @@ namespace cling {
     ASTNodeInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr* Node);
     void AttachDynIDHandler();
     void DetachDynIDHandler();
+    void SetRuntimeCallbacks(InterpreterCallbacks* C) {
+      m_DynIDHandler->Callbacks = C;
+    }
     
     // EvalBuilder
   protected:
