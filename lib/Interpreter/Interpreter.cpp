@@ -43,8 +43,8 @@
 #include "IncrementalParser.h"
 #include "InputValidator.h"
 #include "cling/Interpreter/InvocationOptions.h"
-#include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/InterpreterCallbacks.h"
+#include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/Value.h"
 
 #include <cstdio>
@@ -818,7 +818,6 @@ namespace cling {
   }
   
   Value Interpreter::Evaluate(const char* expr, DeclContext* DC) {
-    setRuntimeCallbacks(new InterpreterCallbacks(this));
     // Execute and get the result
     Value Result;
 
@@ -883,8 +882,6 @@ namespace cling {
     }
     m_ExecutionContext->executeFunction(WrapperName, &val);
 
-    setRuntimeCallbacks(0);
-
     return Value(val, RetTy.getTypePtrOrNull());
   }
 
@@ -899,7 +896,11 @@ namespace cling {
     return false;
   }
 
-  void Interpreter::setRuntimeCallbacks(InterpreterCallbacks* C) {
+  void Interpreter::setRuntimeCallbacks(bool Enabled /*=true*/) {
+    InterpreterCallbacks* C = 0;
+    if (Enabled)
+      C = new InterpreterCallbacks(this);
+
     m_IncrParser->getTransformer()->SetRuntimeCallbacks(C);
   }
 

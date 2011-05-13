@@ -145,7 +145,7 @@ namespace cling {
     Value Evaluate(const char* expr, clang::DeclContext* DC);
     NamedDeclResult LookupDecl(llvm::StringRef Decl, clang::DeclContext* Within = 0);
     bool isInCLinkageSpecification(const clang::Decl* D);
-    void setRuntimeCallbacks(InterpreterCallbacks* C);
+    void setRuntimeCallbacks(bool Enable = true);
   };
   
 } // namespace cling
