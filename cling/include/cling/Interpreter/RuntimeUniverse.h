@@ -58,7 +58,9 @@ namespace cling {
       template<typename T> T EvaluateProxyT(const char* expr,
                                             void* varaddr[],
                                             clang::DeclContext* DC ) {
+        gCling->setRuntimeCallbacks();
         Value result(gCling->EvaluateWithContext(expr, varaddr, DC));
+        gCling->setRuntimeCallbacks(false);
         return result.getAs<T>();
       }
 
