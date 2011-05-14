@@ -32,10 +32,11 @@ namespace clang {
 }
 
 namespace cling {
+  class DynamicExprInfo;
   namespace runtime {
     namespace internal {
       template <typename T>
-      T EvaluateProxyT(const char* expr, void* varaddr[], clang::DeclContext* DC);
+      T EvaluateProxyT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC);
       class LifetimeHandler;
     }
   }
@@ -44,6 +45,31 @@ namespace cling {
   class InputValidator;
   class InterpreterCallbacks;
   class Value;
+
+  class DynamicExprInfo {
+  private:
+    const char* m_Cache;
+
+    /// \brief The unknown symbol surrounding environment, which has to be 
+    /// included when replacing a node.
+    ///
+    /// For example:
+    /// @code
+    /// int a = 5;
+    /// const char* b = dep->Symbol(a);
+    /// @endcode
+    /// This information is kept using the syntax: "dep->Symbol(*(int*)@)",
+    /// where @ denotes that the runtime address the variable "a" is needed.
+    const char*  m_Template;
+
+    /// \brief Stores the addresses of the variables that m_Template describes.
+    void** m_Addresses;
+  public:
+    DynamicExprInfo(const char* templ, void* addresses[]) : 
+      m_Cache(0), m_Template(templ), m_Addresses(addresses){}
+    const char* getExpr();
+  };
+
   //---------------------------------------------------------------------------
   //! Class for managing many translation units supporting automatic
   //! forward declarations and linking
@@ -68,7 +94,6 @@ namespace cling {
       friend class Interpreter;
     };
 
-    
     //---------------------------------------------------------------------
     //! Constructor
     //---------------------------------------------------------------------

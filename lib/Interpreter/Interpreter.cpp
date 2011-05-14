@@ -175,6 +175,25 @@ namespace cling {
     return dyn_cast<NamedDecl>(m_Result);
   }
 
+  const char* DynamicExprInfo::getExpr() {
+    if (!m_Cache) {
+      std::string exprStr(m_Template);
+      int i = 0;
+      size_t found;
+      while ((found = exprStr.find("@")) && (found != std::string::npos)) { 
+        std::stringstream address;
+        address << m_Addresses[i];
+        exprStr = exprStr.insert(found + 1, address.str());
+        exprStr = exprStr.erase(found, 1);
+        ++i;    
+      }
+      m_Cache = exprStr.c_str();
+    }
+
+    return m_Cache;
+  }
+  
+
   //
   //  Interpreter
   //

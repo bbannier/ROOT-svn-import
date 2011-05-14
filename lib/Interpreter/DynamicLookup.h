@@ -76,7 +76,7 @@ namespace cling {
     bool forReplacement;
   public:
     ASTNodeInfo() : forReplacement(0){}
-    ASTNodeInfo(clang::Stmt *S, bool needed) : forReplacement(needed) {
+    ASTNodeInfo(clang::Stmt* S, bool needed) : forReplacement(needed) {
       Nodes.push_back(S);
     }
 
@@ -88,7 +88,7 @@ namespace cling {
       return Nodes[0];
     }
     ASTNodes getNodes() { return Nodes; }
-    void addNode(clang::Stmt *Node) { Nodes.push_back(Node); }
+    void addNode(clang::Stmt* Node) { Nodes.push_back(Node); }
     template <typename T> T* getAs() {
       return dyn_cast<T>(getAsSingleNode());
     }
@@ -98,13 +98,11 @@ namespace cling {
       return Result;
     }
   };
-
 } //end namespace cling
 
 namespace cling {
   class Interpreter;
   class DynamicIDHandler;
-  class ASTNodeInfo;
   
   typedef llvm::DenseMap<clang::Stmt*, clang::Stmt*> MapTy;
   
@@ -171,22 +169,6 @@ namespace cling {
     /// changed with another it should be added to the map (newNode->oldNode)
     MapTy m_SubstSymbolMap;
 
-    /// \brief The unknown symbol surrounding environment, which has to be 
-    /// included when replacing a node.
-    ///
-    /// For example:
-    /// @code
-    /// int a = 5;
-    /// const char* b = dep->Symbol(a);
-    /// @endcode
-    /// This information is kept using the syntax: "dep->Symbol(*(int*)@)",
-    /// where @ denotes that the runtime address the variable "a" is needed.
-    std::string m_EvalExpressionBuf;
-
-    /// \brief Stores the addresses of the variables that m_EvalExpressionBuf
-    /// describes.
-    llvm::SmallVector<clang::DeclRefExpr*, 64> m_Environment;
-
     /// \brief Stores the actual declaration context, in which declarations are
     /// being visited.
     clang::DeclContext* m_CurDeclContext; // We need it for Evaluate()
@@ -214,17 +196,17 @@ namespace cling {
     ~DynamicExprTransformer() { }
     
     void Initialize();
-    MapTy &getSubstSymbolMap() { return m_SubstSymbolMap; }
+    MapTy& getSubstSymbolMap() { return m_SubstSymbolMap; }
     
     // DeclVisitor      
-    void Visit(clang::Decl *D);
-    void VisitFunctionDecl(clang::FunctionDecl *D);
-    void VisitDecl(clang::Decl *D);
-    void VisitDeclContext(clang::DeclContext *DC);
+    void Visit(clang::Decl* D);
+    void VisitFunctionDecl(clang::FunctionDecl* D);
+    void VisitDecl(clang::Decl* D);
+    void VisitDeclContext(clang::DeclContext* DC);
     
     // StmtVisitor
-    ASTNodeInfo VisitStmt(clang::Stmt *Node);
-    ASTNodeInfo VisitCompoundStmt(clang::CompoundStmt *Node);
+    ASTNodeInfo VisitStmt(clang::Stmt* Node);
+    ASTNodeInfo VisitCompoundStmt(clang::CompoundStmt* Node);
     /// \brief Transforms a declaration with initializer of dependent type.
     /// If an object on the free store is being initialized we use the 
     /// EvaluateProxyT
@@ -262,24 +244,27 @@ namespace cling {
     
     // EvalBuilder
   protected:
-    clang::FunctionDecl *getEvalDecl() { 
+    clang::FunctionDecl* getEvalDecl() { 
       assert(m_EvalDecl && "EvaluateProxyT not found!");
       return m_EvalDecl; 
     }
-    clang::Expr* SubstituteUnknownSymbol(const clang::QualType InstTy, clang::Expr* SubTree);
-    clang::CallExpr* BuildEvalCallExpr(clang::QualType type, clang::Expr* SubTree, clang::ASTOwningVector<clang::Expr*>& CallArgs);
-    void BuildEvalEnvironment(clang::Expr* SubTree);
-    void BuildEvalArgs(clang::ASTOwningVector<clang::Expr*>& Result);
-    clang::Expr* BuildEvalArg0();
-    clang::Expr* BuildEvalArg1();
-    clang::Expr* BuildEvalArg2();
+    clang::Expr* SubstituteUnknownSymbol(const clang::QualType InstTy, 
+                                         clang::Expr* SubTree);
+    clang::CallExpr* BuildEvalCallExpr(clang::QualType type,
+                                       clang::Expr* SubTree,
+                                clang::ASTOwningVector<clang::Expr*>& CallArgs);
+    clang::Expr* BuildDynamicExprInfo(clang::Expr* SubTree);
 
-    clang::Expr* ConstructllvmStringRefExpr(const char* Str);
+    clang::Expr* ConstructCStyleCasePtrExpr(clang::QualType Ty, uint64_t Ptr);
+    clang::Expr* ConstructllvmStringRefExpr(const char* Val);
+    clang::Expr* ConstructConstCharStarPtrExpr(const char* Val);
 
     // Helper
-    bool IsArtificiallyDependent(clang::Expr *Node);
-    bool ShouldVisit(clang::Decl *D);
-    bool GetChildren(ASTNodes& Children, clang::Stmt *Node);
+    bool IsArtificiallyDependent(clang::Expr* Node);
+    bool ShouldVisit(clang::Decl* D);
+    bool GetChildren(ASTNodes& Children, clang::Stmt* Node);
   };
 } // end namespace cling
 #endif // CLING_DYNAMIC_LOOKUP_H
+
+
