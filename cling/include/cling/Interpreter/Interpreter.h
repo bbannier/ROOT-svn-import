@@ -111,6 +111,7 @@ namespace cling {
     const char* getVersion() const;
     std::string createUniqueName();
     void AddIncludePath(const char *incpath);
+    void DumpIncludePath();
     int processLine(const std::string& input_line);
     
     int loadFile(const std::string& filename,
