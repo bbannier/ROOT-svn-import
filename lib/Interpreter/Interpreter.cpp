@@ -816,26 +816,6 @@ namespace cling {
     m_ExecutionContext->installLazyFunctionCreator(fp);
   }
   
-  
-  // Implements the interpretation of the unknown symbols. 
-  Value Interpreter::EvaluateWithContext(const char* expr,
-                                         void* varaddr[],
-                                         DeclContext* DC) {
-    std::string exprStr(expr);
-    int i = 0;
-    size_t found;
-    while ((found = exprStr.find("@")) && (found != std::string::npos)) { 
-      std::stringstream address;
-      address << varaddr[i];
-      exprStr = exprStr.insert(found + 1, address.str());
-      exprStr = exprStr.erase(found, 1);
-      ++i;    
-    }
-    printf("The expression that is going to be escaped is: %s\n", exprStr.c_str());
-    printf("\n");
-    return Evaluate(exprStr.c_str(), DC);
-  }
-  
   Value Interpreter::Evaluate(const char* expr, DeclContext* DC) {
     // Execute and get the result
     Value Result;

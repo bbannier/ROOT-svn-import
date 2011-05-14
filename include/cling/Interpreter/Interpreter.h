@@ -156,14 +156,6 @@ namespace cling {
                           std::string& stmtFunc);  
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
-    Value EvaluateWithContext(const char* expr, 
-                              void* varaddr[], 
-                              clang::DeclContext* DC);
-    // Define EvaluateProxyT as friend because it will use EvaluateWithContext
-    template<typename T> 
-    friend T runtime::internal::EvaluateProxyT(const char* expr,
-                                               void* varaddr[],
-                                               clang::DeclContext* DC);
     friend class runtime::internal::LifetimeHandler;
     
   public:
