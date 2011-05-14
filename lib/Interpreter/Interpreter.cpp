@@ -318,8 +318,80 @@ namespace cling {
     Preprocessor& PP = CI->getPreprocessor();
     ApplyHeaderSearchOptions(PP.getHeaderSearchInfo(), headerOpts,
                                     PP.getLangOptions(),
-                                    PP.getTargetInfo().getTriple());
-      
+                                    PP.getTargetInfo().getTriple());      
+  }
+
+  void Interpreter::DumpIncludePath() {
+    const HeaderSearchOptions Opts(getCI()->getHeaderSearchOpts());
+    std::vector<std::string> Res;
+    if (Opts.Sysroot != "/") {
+      Res.push_back("-isysroot");
+      Res.push_back(Opts.Sysroot);
+    }
+    
+    /// User specified include entries.
+    for (unsigned i = 0, e = Opts.UserEntries.size(); i != e; ++i) {
+      const HeaderSearchOptions::Entry &E = Opts.UserEntries[i];
+      if (E.IsFramework && (E.Group != frontend::Angled || !E.IsUserSupplied))
+        llvm::report_fatal_error("Invalid option set!");
+      if (E.IsUserSupplied) {
+        if (E.Group == frontend::After) {
+          Res.push_back("-idirafter");
+        } else if (E.Group == frontend::Quoted) {
+          Res.push_back("-iquote");
+        } else if (E.Group == frontend::System) {
+          Res.push_back("-isystem");
+        } else if (E.Group == frontend::CXXSystem) {
+          Res.push_back("-cxx-isystem");
+        } else {
+          assert(E.Group == frontend::Angled && "Invalid group!");
+          Res.push_back(E.IsFramework ? "-F" : "-I");
+        }
+      } else {
+        if (E.Group != frontend::Angled && E.Group != frontend::System)
+          llvm::report_fatal_error("Invalid option set!");
+        Res.push_back(E.Group == frontend::Angled ? "-iwithprefixbefore" :
+                      "-iwithprefix");
+      }
+      Res.push_back(E.Path);
+    }
+    
+    if (!Opts.EnvIncPath.empty()) {
+      // FIXME: Provide an option for this, and move env detection to driver.
+      llvm::report_fatal_error("Not yet implemented!");
+    }
+    if (!Opts.CEnvIncPath.empty()) {
+      // FIXME: Provide an option for this, and move env detection to driver.
+      llvm::report_fatal_error("Not yet implemented!");
+    }
+    if (!Opts.ObjCEnvIncPath.empty()) {
+      // FIXME: Provide an option for this, and move env detection to driver.
+      llvm::report_fatal_error("Not yet implemented!");
+    }
+    if (!Opts.CXXEnvIncPath.empty()) {
+      // FIXME: Provide an option for this, and move env detection to driver.
+      llvm::report_fatal_error("Not yet implemented!");
+    }
+    if (!Opts.ObjCXXEnvIncPath.empty()) {
+      // FIXME: Provide an option for this, and move env detection to driver.
+      llvm::report_fatal_error("Not yet implemented!");
+    }
+    if (!Opts.ResourceDir.empty()) {
+      Res.push_back("-resource-dir");
+      Res.push_back(Opts.ResourceDir);
+    }
+    if (!Opts.UseStandardIncludes)
+      Res.push_back("-nostdinc");
+    if (!Opts.UseStandardCXXIncludes)
+      Res.push_back("-nostdinc++");
+    if (Opts.Verbose)
+      Res.push_back("-v");
+
+    // print'em all
+    for (unsigned i = 0; i < Res.size(); ++i) {
+      llvm::errs() << Res[i] <<"\n";
+    }
+
   }
   
   CompilerInstance* Interpreter::getCI() const {
