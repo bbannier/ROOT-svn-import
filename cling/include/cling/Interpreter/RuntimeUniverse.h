@@ -25,7 +25,6 @@
 #include "cling/Interpreter/Value.h"
 
 #include <stdio.h>
-
 namespace cling {
 
   /// \brief Used to stores the declarations, which are going to be 
@@ -51,15 +50,14 @@ namespace cling {
       /// T is the type when the evaluated expression.
       /// @tparam T The type of the evaluated expression
       /// @param[in] expr The expression that is being replaced
-      /// @param[in] varadd The addresses of the variables that replaced 
+      /// @param[in] varaddr The addresses of the variables that replaced 
       /// expression contains
       /// @param[in] DC The declaration context, in which the expression will be
       /// evaluated at runtime
-      template<typename T> T EvaluateProxyT(const char* expr,
-                                            void* varaddr[],
-                                            clang::DeclContext* DC ) {
+      template<typename T>
+      T EvaluateProxyT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
         gCling->setRuntimeCallbacks();
-        Value result(gCling->EvaluateWithContext(expr, varaddr, DC));
+        Value result(gCling->Evaluate(ExprInfo->getExpr(), DC));
         gCling->setRuntimeCallbacks(false);
         return result.getAs<T>();
       }
@@ -100,17 +98,16 @@ namespace cling {
         /// be evaluated at runtime
         /// @param[in] type The type of the object, which will help to delete
         /// it, when the LifetimeHandler goes out of scope.
-        LifetimeHandler(llvm::StringRef expr,
-                        void* varaddr[],
+        LifetimeHandler(DynamicExprInfo* ExprInfo,
                         clang::DeclContext* DC,
                         llvm::StringRef type) {
           m_Type = type;
           std::string ctor("new ");
           ctor += type;
           ctor += "(\"";
-          ctor += expr;
+          ctor += ExprInfo->getExpr();
           ctor += "\")";
-          Value res = gCling->EvaluateWithContext(ctor.c_str(), varaddr, DC);
+          Value res = gCling->Evaluate(ctor.c_str(), DC);
           //m_memory = (void*)res.value.Untyped;
         }
 
