@@ -56,9 +56,9 @@ namespace cling {
       /// evaluated at runtime
       template<typename T>
       T EvaluateProxyT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
-        gCling->setRuntimeCallbacks();
+        gCling->enableRuntimeCallbacks();
         Value result(gCling->Evaluate(ExprInfo->getExpr(), DC));
-        gCling->setRuntimeCallbacks(false);
+        gCling->enableRuntimeCallbacks(false);
         return result.getAs<T>();
       }
 

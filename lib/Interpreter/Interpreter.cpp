@@ -915,7 +915,7 @@ namespace cling {
     return false;
   }
 
-  void Interpreter::setRuntimeCallbacks(bool Enabled /*=true*/) {
+  void Interpreter::enableRuntimeCallbacks(bool Enabled /*=true*/) {
     InterpreterCallbacks* C = 0;
     if (Enabled)
       C = new InterpreterCallbacks(this);
@@ -929,7 +929,7 @@ namespace cling {
     return prev;
   }
 
-  void Interpreter::setPrintAST(bool print /*=true*/) {
+  void Interpreter::enablePrintAST(bool print /*=true*/) {
     if (print) {
       if (!m_ASTDumper)
         m_ASTDumper = new ASTTLDPrinter();

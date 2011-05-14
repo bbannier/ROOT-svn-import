@@ -168,13 +168,13 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    if (cmd == "printAST") {
       if (param.empty()) {
          // toggle:
-        bool print = !m_Interp.getPrintAST();
-        m_Interp.setPrintAST(print);
+        bool print = !m_Interp.isPrintingAST();
+        m_Interp.enablePrintAST(print);
         printf("%srinting AST\n", print?"P":"Not p");
       } else if (param == "1") {
-         m_Interp.setPrintAST(true);
+         m_Interp.enablePrintAST(true);
       } else if (param == "0") {
-         m_Interp.setPrintAST(false);
+         m_Interp.enablePrintAST(false);
       } else {
          fprintf(stderr, ".printAST: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
       }
@@ -209,19 +209,19 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
 
    // Enable/Disable DynamicExprTransformer
    if (cmd == "dynamicExtensions") {
-      if (param.empty()) {
-         // toggle:
-        bool dynlookup = !m_Interp.setDynamicLookup(true);
-         m_Interp.setDynamicLookup(dynlookup);
-         printf("%ssing dynamic lookup extensions\n", dynlookup?"U":"Not u");
-      } else if (param == "1") {
-         m_Interp.setDynamicLookup(true);
-      } else if (param == "0") {
-         m_Interp.setDynamicLookup(false);
-      } else {
-         fprintf(stderr, ".dynamicExtensions: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
-      }
-      return true;
+     if (param.empty()) {
+       // toggle:
+       bool dynlookup = !m_Interp.setDynamicLookup(true);
+       m_Interp.setDynamicLookup(dynlookup);
+       printf("%ssing dynamic lookup extensions\n", dynlookup?"U":"Not u");
+     } else if (param == "1") {
+       m_Interp.setDynamicLookup(true);
+     } else if (param == "0") {
+       m_Interp.setDynamicLookup(false);
+     } else {
+       fprintf(stderr, ".dynamicExtensions: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
+     }
+     return true;
    }
 
    return false;
