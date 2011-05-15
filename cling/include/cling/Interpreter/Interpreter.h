@@ -36,7 +36,7 @@ namespace cling {
   namespace runtime {
     namespace internal {
       template <typename T>
-      T EvaluateProxyT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC);
+      T EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC);
       class LifetimeHandler;
     }
   }

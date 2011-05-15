@@ -169,9 +169,9 @@ namespace cling {
     TemplateDecl* D = dyn_cast<TemplateDecl>(m_Interpreter->LookupDecl("cling").
                                              LookupDecl("runtime").
                                              LookupDecl("internal").
-                                             LookupDecl("EvaluateProxyT").
+                                             LookupDecl("EvaluateT").
                                              getSingleDecl());
-    assert(D && "Cannot find EvaluateProxyT TemplateDecl!\n");
+    assert(D && "Cannot find EvaluateT TemplateDecl!\n");
     
     m_EvalDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl());    
 
@@ -552,7 +552,7 @@ namespace cling {
     OS.flush();
 
     // 3. Build the template
-    Expr* ExprTemplate = ConstructConstCharStarPtrExpr(Template.c_str());
+    Expr* ExprTemplate = ConstructConstCharPtrExpr(Template.c_str());
 
     // 4. Build the array of addresses
     QualType VarAddrTy = m_Sema->BuildArrayType(m_Context.VoidPtrTy,
@@ -647,7 +647,7 @@ namespace cling {
     TypeSourceInfo* TSI = m_Context.CreateTypeSourceInfo(CXXRDTy);
     ParsedType PT = m_Sema->CreateParsedType(CXXRDTy, TSI);
 
-    Expr* Result = ConstructConstCharStarPtrExpr(Val);
+    Expr* Result = ConstructConstCharPtrExpr(Val);
     // create the temporary in the expr
     Result = m_Sema->ActOnCXXTypeConstructExpr(PT,
                                                SourceLocation(),
@@ -657,11 +657,11 @@ namespace cling {
     return Result;
   }
 
-  Expr* DynamicExprTransformer::ConstructConstCharStarPtrExpr(const char* Val) {
+  Expr* DynamicExprTransformer::ConstructConstCharPtrExpr(const char* Val) {
     const QualType CChar = m_Context.CharTy.withConst();
     unsigned ValLen = strlen(Val);
     llvm::APInt ArraySize(m_Context.getTypeSize(CChar),
-                          ValLen/* + 1 ?*/);
+                          ValLen + 1);
     const QualType CCArray = m_Context.getConstantArrayType(CChar,
                                                             ArraySize,
                                                             ArrayType::Normal,
