@@ -138,7 +138,7 @@ namespace cling {
   /// as possible part of the statement. The replacement is done immediately 
   /// after the expected type can be deduced.
   /// 
-  /// 2.1. EvaluateProxyT - this is a templated function, which is put at the 
+  /// 2.1. EvaluateT - this is a templated function, which is put at the 
   /// place of the dependent expression. It will be called at runtime and it
   /// will use the runtime instance of the interpreter (cling interprets itself)
   /// to evaluate the replaced expression. The template parameter of the
@@ -159,7 +159,7 @@ namespace cling {
     
   private:
 
-    /// \brief Stores the declaration of the EvaluateProxyT function
+    /// \brief Stores the declaration of the EvaluateT function
     clang::FunctionDecl* m_EvalDecl;
 
     /// \brief Sema's external source, which provides last resort lookup
@@ -209,7 +209,7 @@ namespace cling {
     ASTNodeInfo VisitCompoundStmt(clang::CompoundStmt* Node);
     /// \brief Transforms a declaration with initializer of dependent type.
     /// If an object on the free store is being initialized we use the 
-    /// EvaluateProxyT
+    /// EvaluateT
     /// If an object on the stack is being initialized it is transformed into
     /// reference and an object on the free store is created in order to 
     /// avoid the copy constructors, which might be private
@@ -245,7 +245,7 @@ namespace cling {
     // EvalBuilder
   protected:
     clang::FunctionDecl* getEvalDecl() { 
-      assert(m_EvalDecl && "EvaluateProxyT not found!");
+      assert(m_EvalDecl && "EvaluateT not found!");
       return m_EvalDecl; 
     }
     clang::Expr* SubstituteUnknownSymbol(const clang::QualType InstTy, 
@@ -257,7 +257,7 @@ namespace cling {
 
     clang::Expr* ConstructCStyleCasePtrExpr(clang::QualType Ty, uint64_t Ptr);
     clang::Expr* ConstructllvmStringRefExpr(const char* Val);
-    clang::Expr* ConstructConstCharStarPtrExpr(const char* Val);
+    clang::Expr* ConstructConstCharPtrExpr(const char* Val);
 
     // Helper
     bool IsArtificiallyDependent(clang::Expr* Node);

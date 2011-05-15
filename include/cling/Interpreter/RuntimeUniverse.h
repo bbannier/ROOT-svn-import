@@ -40,12 +40,12 @@ namespace cling {
     /// and runtime bindings. These builtins should be used for other purposes.
     namespace internal {
 
-      /// \brief EvaluateProxyT is used to replace all invalid source code that
+      /// \brief EvaluateT is used to replace all invalid source code that
       /// occurs, when cling's dynamic extensions are enabled.
       ///
       /// When the interpreter "sees" invalid code it mark it and skip all the 
       /// semantic checks (like the templates). Afterwards all these marked
-      /// nodes are replaced with a call to EvaluateProxyT, which makes valid
+      /// nodes are replaced with a call to EvaluateT, which makes valid
       /// C++ code. It is templated because it can be used in expressions and 
       /// T is the type when the evaluated expression.
       /// @tparam T The type of the evaluated expression
@@ -55,15 +55,25 @@ namespace cling {
       /// @param[in] DC The declaration context, in which the expression will be
       /// evaluated at runtime
       template<typename T>
-      T EvaluateProxyT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
+      T EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
         gCling->enableRuntimeCallbacks();
         Value result(gCling->Evaluate(ExprInfo->getExpr(), DC));
         gCling->enableRuntimeCallbacks(false);
         return result.getAs<T>();
       }
 
+      /// \brief EvaluateT specialization for the case where we instantiate with
+      /// void.
+      template<>
+      void EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
+        gCling->enableRuntimeCallbacks();
+        Value result(gCling->Evaluate(ExprInfo->getExpr(), DC));
+        gCling->enableRuntimeCallbacks(false);
+      }
+
+
       /// \brief LifetimeHandler is used in case of initialization using address
-      /// on the automatic store (stack) instead of EvaluateProxyT.
+      /// on the automatic store (stack) instead of EvaluateT.
       ///
       /// The reason is to avoid the copy constructors that might be private.
       /// This is part of complex transformation, which aims to preserve the
