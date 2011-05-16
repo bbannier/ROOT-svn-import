@@ -1,4 +1,6 @@
 #!/bin/sh
+#
+# Generate the ROOT User's Guide in PDF format.
 
 docbookdirs="/usr/share/xml/docbook/stylesheet/docbook-xsl \
              /sw/share/xml/xsl/docbook-xsl"
@@ -29,6 +31,9 @@ if [ -z $fopjar ]; then
    echo "No fop.jar file found"
    exit 1
 fi
+
+# for more printed output options see:
+# http://xml.web.cern.ch/XML/www.sagehill.net/xml/docbookxsl/PrintOutput.html
 
 xsltproc --xinclude --output ROOTUsersGuide.fo \
    --stringparam paper.type A4 \

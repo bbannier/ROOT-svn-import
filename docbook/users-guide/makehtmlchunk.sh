@@ -1,4 +1,6 @@
 #!/bin/sh
+#
+# Generate the ROOT User's Guide as multiple HTML files (one per section).
 
 docbookdirs="/usr/share/xml/docbook/stylesheet/docbook-xsl \
              /sw/share/xml/xsl/docbook-xsl"
