@@ -1,6 +1,10 @@
 set -x
+ 
+OXYGENHOME=/Users/couet/Desktop/oxygen
+
 xsltproc --xinclude --output ROOTUsersGuide.fo \
-/Users/couet/Desktop/oxygen/frameworks/docbook/xsl/fo/docbook.xsl \
+$OXYGENHOME/frameworks/docbook/xsl/fo/docbook.xsl \
 ROOTUsersGuide.xml
-java -jar  /Users/couet/Desktop/oxygen/lib/fop.jar ROOTUsersGuide.fo ROOTUsersGuide.pdf
+
+java -jar $OXYGENHOME/lib/fop.jar ROOTUsersGuide.fo ROOTUsersGuide.pdf
 rm ROOTUsersGuide.fo
