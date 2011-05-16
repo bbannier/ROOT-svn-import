@@ -20,37 +20,38 @@
 #include <stdio.h>
 
 namespace textinput {
-  StreamReaderWin::StreamReaderWin(): HaveInputFocus(false), IsConsole(true),
-    OldMode(0), MyMode(0) {
-    In = ::GetStdHandle(STD_INPUT_HANDLE);
-    IsConsole = ::GetConsoleMode(In, &OldMode) != 0;
-    MyMode = OldMode | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS; 
-    MyMode = OldMode & ~(ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_ECHO_INPUT | ENABLE_INSERT_MODE); 
+  StreamReaderWin::StreamReaderWin(): fHaveInputFocus(false), fIsConsole(true),
+    fOldMode(0), fMyMode(0) {
+    fIn = ::GetStdHandle(STD_INPUT_HANDLE);
+    fIsConsole = ::GetConsoleMode(fIn, &fOldMode) != 0;
+    fMyMode = fOldMode | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS; 
+    fMyMode = fOldMode & ~(ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT
+      | ENABLE_ECHO_INPUT | ENABLE_INSERT_MODE); 
   }
 
   StreamReaderWin::~StreamReaderWin() {}
 
   void
   StreamReaderWin::GrabInputFocus() {
-    if (HaveInputFocus) return;
-    if (IsConsole && !SetConsoleMode(In, MyMode)) {
-      IsConsole = false;
+    if (fHaveInputFocus) return;
+    if (fIsConsole && !SetConsoleMode(fIn, fMyMode)) {
+      fIsConsole = false;
     }
-    HaveInputFocus = true;
+    fHaveInputFocus = true;
   }
 
   void
   StreamReaderWin::ReleaseInputFocus() {
-    if (!HaveInputFocus) return;
-    if (IsConsole && !SetConsoleMode(In, OldMode)) {
-      IsConsole = false;
+    if (!fHaveInputFocus) return;
+    if (fIsConsole && !SetConsoleMode(fIn, fOldMode)) {
+      fIsConsole = false;
     }
-    HaveInputFocus = false;
+    fHaveInputFocus = false;
   }
 
   bool
   StreamReaderWin::HavePendingInput() {
-    DWORD ret = ::WaitForSingleObject(In, 0);
+    DWORD ret = ::WaitForSingleObject(fIn, 0);
     if (ret == WAIT_FAILED) {
       HandleError("waiting for console input");
       // We don't know. Better block rather than veto input:
@@ -63,9 +64,9 @@ namespace textinput {
   StreamReaderWin::ReadInput(size_t& nRead, InputData& in) {
     DWORD NRead = 0;
     char C;
-    if (IsConsole) {
+    if (fIsConsole) {
       INPUT_RECORD buf;
-      if (!::ReadConsoleInput(In, &buf, 1, &NRead)) {
+      if (!::ReadConsoleInput(fIn, &buf, 1, &NRead)) {
         HandleError("reading console input");
         return false;
       }
@@ -132,7 +133,7 @@ namespace textinput {
         return false;
       }
     } else {
-      if (!::ReadFile(In, &C, 1, &NRead, NULL)) {
+      if (!::ReadFile(fIn, &C, 1, &NRead, NULL)) {
         HandleError("reading file input");
         return false;
       }
