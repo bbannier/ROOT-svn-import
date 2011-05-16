@@ -598,7 +598,7 @@ namespace cling {
           std::string decl = VD->getNameAsString();
           // FIXME: Probably should not remove the qualifiers!
           VD->getType().getUnqualifiedType().
-          getAsStringInternal(decl, PrintingPolicy(LO));
+            getAsStringInternal(decl, PrintingPolicy(LO));
           const Expr* I = VD->getInit();
           //
           //  Handle variable declarators with no initializer

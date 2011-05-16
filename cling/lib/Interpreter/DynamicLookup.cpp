@@ -408,16 +408,15 @@ namespace cling {
           // TODO: Check whether this is the most appropriate variant
           MemberLookup.addDecl(getMemDecl, AS_public);
           MemberLookup.resolveKind();          
-          Expr* MemberExpr = 
-            m_Sema->BuildMemberReferenceExpr(MemberExprBase,
-                                             HandlerTy,
-                                             m_NoSLoc,
-                                             /*IsArrow=*/false,
-                                             SS,
-                                             /*FirstQualifierInScope=*/0,
-                                             MemberLookup,
-                                             /*TemplateArgs=*/0
-                                             ).take();
+          Expr* MemberExpr = m_Sema->BuildMemberReferenceExpr(MemberExprBase,
+                                                              HandlerTy,
+                                                              m_NoSLoc,
+                                                              /*IsArrow=*/false,
+                                                              SS,
+                                                    /*FirstQualifierInScope=*/0,
+                                                              MemberLookup,
+                                                              /*TemplateArgs=*/0
+                                                              ).take();
           // 3.4 Build the actual call
           Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
           Expr* theCall = m_Sema->ActOnCallExpr(S,
@@ -426,16 +425,14 @@ namespace cling {
                                                 MultiExprArg(),
                                                 m_NoELoc).take();
           // Cast to the type LHS type
-          Expr* Result 
-            = m_Sema->BuildCStyleCastExpr(m_NoSLoc,
-                                        m_Context.CreateTypeSourceInfo(m_Context.getPointerType(CuredDeclTy)),
-                                        m_NoELoc,
-                                        theCall).take();
+          TypeSourceInfo* CuredDeclTSI
+            = m_Context.CreateTypeSourceInfo(m_Context.getPointerType(CuredDeclTy));
+          Expr* Result = m_Sema->BuildCStyleCastExpr(m_NoSLoc,
+                                                     CuredDeclTSI,
+                                                     m_NoELoc,
+                                                     theCall).take();
           // Cast once more (dereference the cstyle cast)
-          Result = m_Sema->BuildUnaryOp(/*Scope*/0,
-                                        m_NoSLoc,
-                                        UO_Deref,
-                                        Result).take();
+          Result = m_Sema->BuildUnaryOp(S, m_NoSLoc, UO_Deref, Result).take();
           // 4.
           CuredDecl->setType(m_Context.getLValueReferenceType(CuredDeclTy));
           // 5.
@@ -572,12 +569,11 @@ namespace cling {
                                                 DeclarationName() );
     
     ASTOwningVector<Expr*> Inits(*m_Sema);
+    Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
     for (unsigned int i = 0; i < Addresses.size(); ++i) {
+
       Expr* UnOp 
-        = m_Sema->BuildUnaryOp(m_Sema->getScopeForContext(m_Sema->CurContext),
-                               m_NoSLoc, 
-                               UO_AddrOf,
-                               Addresses[i]).takeAs<UnaryOperator>();
+        = m_Sema->BuildUnaryOp(S, m_NoSLoc, UO_AddrOf, Addresses[i]).take();
       m_Sema->ImpCastExprToType(UnOp, 
                                 m_Context.getPointerType(m_Context.VoidPtrTy), 
                                 CK_BitCast);
