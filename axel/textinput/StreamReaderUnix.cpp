@@ -125,6 +125,12 @@ namespace textinput {
     fOldTIOS = new termios();
 #ifdef TCSANOW
     tcgetattr(fFD, fOldTIOS);
+    memcpy(fMyTIOS,fOldTIOS, sizeof(struct termios));
+    fMyTIOS->c_iflag &= ~(ISTRIP|IXOFF);
+    fMyTIOS->c_iflag |= BRKINT | INLCR;
+    fMyTIOS->c_lflag &= ~(ICANON|ISIG|TOSTOP|IEXTEN);
+    fMyTIOS->c_cc[VMIN] = 1;
+    fMyTIOS->c_cc[VTIME] = 0;
 #endif
     fMyTIOS = new termios();
   }
@@ -140,12 +146,6 @@ namespace textinput {
     // set to raw i.e. unbuffered
     if (fHaveInputFocus) return;
 #ifdef TCSANOW
-    memcpy(fMyTIOS,fOldTIOS, sizeof(struct termios));
-    fMyTIOS->c_iflag &= ~(ISTRIP|IXOFF);
-    fMyTIOS->c_iflag |= BRKINT | INLCR;
-    fMyTIOS->c_lflag &= ~(ICANON|ISIG|TOSTOP|IEXTEN);
-    fMyTIOS->c_cc[VMIN] = 1;
-    fMyTIOS->c_cc[VTIME] = 0;
     tcsetattr(fFD, TCSANOW, fMyTIOS);
 #endif
     

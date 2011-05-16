@@ -94,6 +94,12 @@ namespace textinput {
     signal(SIGWINCH, TerminalDisplayUnix__handleResizeSignal);
     fOldTIOS = new termios();
     fMyTIOS = new termios();
+#ifdef TCSANOW                  /* POSIX */
+    tcgetattr(fFD, fOldTIOS);
+    memcpy(fMyTIOS, fOldTIOS, sizeof(struct termios));
+    fMyTIOS->c_lflag &= ~(ECHO);
+    fMyTIOS->c_lflag |= ECHOCTL|ECHOKE|ECHOE;
+#endif
     const char* TERM = getenv("TERM");
     if (TERM &&  strstr(TERM, "256")) {
       fNColors = 256;
