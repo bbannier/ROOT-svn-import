@@ -87,7 +87,7 @@ namespace cling {
       assert(hasSingleNode() && "There is more than one node!");
       return Nodes[0];
     }
-    ASTNodes getNodes() { return Nodes; }
+    ASTNodes& getNodes() { return Nodes; }
     void addNode(clang::Stmt* Node) { Nodes.push_back(Node); }
     template <typename T> T* getAs() {
       return dyn_cast<T>(getAsSingleNode());

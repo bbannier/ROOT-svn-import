@@ -265,10 +265,11 @@ namespace cling {
       for (it = Children.begin(); it != Children.end(); ++it) {
         ASTNodeInfo NewNode = Visit(*it);
         if (!NewNode.hasSingleNode()) {
-          Children.insert(it, NewNode.getNodes().begin(), NewNode.getNodes().end());
+          ASTNodes& NewStmts(NewNode.getNodes());
           // Remove the last element, which is the one that is 
           // being replaced          
-          Children.erase(it + NewNode.getNodes().size());
+          Children.erase(it); 
+          Children.insert(it, NewStmts.begin(), NewStmts.end());
           Node->setStmts(m_Context, Children.data(), Children.size());
           // Resolve all 1:n replacements
           Visit(Node);
@@ -278,9 +279,6 @@ namespace cling {
             if (Expr* E = NewNode.getAs<Expr>())
               // Assume void if still not escaped
               *it = SubstituteUnknownSymbol(m_Context.VoidTy, E);
-          }
-          else {
-            //assert(*it == NewNode.Stmt() && "Visitor shouldn't return something else!");
           }
         }
       }
