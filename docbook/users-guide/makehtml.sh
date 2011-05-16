@@ -18,3 +18,5 @@ fi
 xsltproc --xinclude --output ROOTUsersGuide.html \
    $docbook/html/docbook.xsl \
    ROOTUsersGuide.xml
+
+exit 0

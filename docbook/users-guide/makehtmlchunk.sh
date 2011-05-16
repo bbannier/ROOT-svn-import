@@ -25,3 +25,5 @@ cd html
 xsltproc --xinclude --output ROOTUsersGuide.html \
    $docbook/html/chunk.xsl \
    ../ROOTUsersGuide.xml
+
+exit 0
