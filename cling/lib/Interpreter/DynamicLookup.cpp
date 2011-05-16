@@ -173,7 +173,18 @@ namespace cling {
                                              getSingleDecl());
     assert(D && "Cannot find EvaluateT TemplateDecl!\n");
     
-    m_EvalDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl());    
+    m_EvalDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl());
+
+    NamedDecl* ND = m_Interpreter->LookupDecl("cling").
+      LookupDecl("runtime").
+      LookupDecl("internal").
+      LookupDecl("InterpreterGeneratedCodeDiagnosticsMaybeIncorrect");
+
+    assert(ND && "InterpreterGeneratedCodeDiagnosticsMaybeIncorrect");
+
+    m_NoRange = ND->getSourceRange();
+    m_NoSLoc = m_NoRange.getBegin();
+    m_NoELoc =  m_NoRange.getEnd();
 
     //m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");
   }
@@ -356,8 +367,8 @@ namespace cling {
           QualType HandlerTy = m_Context.getTypeDeclType(Handler);
           VarDecl* HandlerInstance = VarDecl::Create(m_Context,
                                                      CuredDecl->getDeclContext(),
-                                                     SourceLocation(),
-                                                     SourceLocation(),
+                                                     m_NoSLoc,
+                                                     m_NoSLoc,
                                                      &II,
                                                      HandlerTy,
                                                      /*TypeSourceInfo**/0,
@@ -368,16 +379,16 @@ namespace cling {
           // resolution of the constructors and then initializes the new
           // variable with it
           m_Sema->AddCXXDirectInitializerToDecl(HandlerInstance,
-                                                SourceLocation(),
+                                                m_NoSLoc,
                                                 move_arg(Inits),
-                                                SourceLocation(),
+                                                m_NoELoc,
                                                 /*TypeMayContainAuto*/ false);
 
           // 2.5 Register the instance in the enclosing context
           CuredDecl->getDeclContext()->addDecl(HandlerInstance);
           NewNode.addNode(new (m_Context) DeclStmt(DeclGroupRef(HandlerInstance),
-                                                 SourceLocation(),
-                                                 SourceLocation())
+                                                   m_NoSLoc,
+                                                   m_NoELoc)
                           );
 
           // 3.1 Find the declaration - LifetimeHandler::getMemory()
@@ -389,12 +400,12 @@ namespace cling {
             = m_Sema->BuildDeclRefExpr(HandlerInstance,
                                        HandlerTy,
                                        VK_LValue,
-                                       SourceLocation()
+                                       m_NoSLoc
                                        ).takeAs<DeclRefExpr>();
           // 3.3 Create a MemberExpr to getMemory from its declaration.
           CXXScopeSpec SS;
           LookupResult MemberLookup(*m_Sema, getMemDecl->getDeclName(), 
-                                    SourceLocation(), Sema::LookupMemberName);
+                                    m_NoSLoc, Sema::LookupMemberName);
           // Add the declaration as if doesn't exist.
           // TODO: Check whether this is the most appropriate variant
           MemberLookup.addDecl(getMemDecl, AS_public);
@@ -402,7 +413,7 @@ namespace cling {
           Expr* MemberExpr = 
             m_Sema->BuildMemberReferenceExpr(MemberExprBase,
                                              HandlerTy,
-                                             SourceLocation(),
+                                             m_NoSLoc,
                                              /*IsArrow=*/false,
                                              SS,
                                              /*FirstQualifierInScope=*/0,
@@ -413,18 +424,18 @@ namespace cling {
           Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
           Expr* theCall = m_Sema->ActOnCallExpr(S,
                                                 MemberExpr,
-                                                SourceLocation(),
+                                                m_NoSLoc,
                                                 MultiExprArg(),
-                                                SourceLocation()).take();
+                                                m_NoELoc).take();
           // Cast to the type LHS type
           Expr* Result 
-            = m_Sema->BuildCStyleCastExpr(SourceLocation(),
+            = m_Sema->BuildCStyleCastExpr(m_NoSLoc,
                                         m_Context.CreateTypeSourceInfo(m_Context.getPointerType(CuredDeclTy)),
-                                        SourceLocation(),
+                                        m_NoELoc,
                                         theCall).take();
           // Cast once more (dereference the cstyle cast)
           Result = m_Sema->BuildUnaryOp(/*Scope*/0,
-                                        SourceLocation(),
+                                        m_NoSLoc,
                                         UO_Deref,
                                         Result).take();
           // 4.
@@ -559,14 +570,14 @@ namespace cling {
                                                 ArrayType::Normal,
                                                 /*ArraySize*/0,
                                                 Qualifiers(),
-                                                SourceRange(),
+                                                m_NoRange,
                                                 DeclarationName() );
     
     ASTOwningVector<Expr*> Inits(*m_Sema);
     for (unsigned int i = 0; i < Addresses.size(); ++i) {
       Expr* UnOp 
         = m_Sema->BuildUnaryOp(m_Sema->getScopeForContext(m_Sema->CurContext),
-                               SourceLocation(), 
+                               m_NoSLoc, 
                                UO_AddrOf,
                                Addresses[i]).takeAs<UnaryOperator>();
       m_Sema->ImpCastExprToType(UnOp, 
@@ -575,16 +586,13 @@ namespace cling {
       Inits.push_back(UnOp);
     }
     
-    // We need fake the SourceLocation just to avoid 
-    // assert(InitList.isExplicit()....)
-    SourceLocation SLoc = getEvalDecl()->getLocStart();
-    SourceLocation ELoc = getEvalDecl()->getLocEnd();
-    InitListExpr* ILE = m_Sema->ActOnInitList(SLoc,
+    // We need valid source locations to avoid assert(InitList.isExplicit()...)
+    InitListExpr* ILE = m_Sema->ActOnInitList(m_NoSLoc,
                                               move_arg(Inits),
-                                              ELoc).takeAs<InitListExpr>();
-    Expr* ExprAddresses = m_Sema->BuildCompoundLiteralExpr(SourceLocation(),
+                                              m_NoELoc).takeAs<InitListExpr>();
+    Expr* ExprAddresses = m_Sema->BuildCompoundLiteralExpr(m_NoSLoc,
                                       m_Context.CreateTypeSourceInfo(VarAddrTy),
-                                                           SourceLocation(),
+                                                           m_NoELoc,
                                                            ILE).take();
     m_Sema->ImpCastExprToType(ExprAddresses,
                               m_Context.getPointerType(m_Context.VoidPtrTy),
@@ -596,21 +604,21 @@ namespace cling {
 
     // 5. Call the constructor
     QualType ExprInfoTy = m_Context.getTypeDeclType(ExprInfo);
-    Expr* Result = m_Sema->BuildCXXNew(SourceLocation(),
+    Expr* Result = m_Sema->BuildCXXNew(m_NoSLoc,
                                        /*UseGlobal=*/false,
-                                       SourceLocation(),
+                                       m_NoSLoc,
                                        /*PlacementArgs=*/MultiExprArg(),
-                                       SourceLocation(),
-                                       SourceRange(),
+                                       m_NoELoc,
+                                       m_NoRange,
                                        ExprInfoTy,
                                      m_Context.CreateTypeSourceInfo(ExprInfoTy),
                                        /*ArraySize=*/0,
                                        //BuildCXXNew depends on the SLoc to be
                                        //valid!
                                        // TODO: Propose a patch in clang
-                                       SLoc,
+                                       m_NoSLoc,
                                        move_arg(ConstructorArgs),
-                                       SourceLocation(),
+                                       m_NoELoc,
                                        /*TypeMayContainAuto*/false
                                        ).take();
     return Result;
@@ -626,10 +634,10 @@ namespace cling {
     Expr* Result = IntegerLiteral::Create(m_Context,
                                           Addr, 
                                           m_Context.UnsignedLongTy, 
-                                          SourceLocation());
-    Result = m_Sema->BuildCStyleCastExpr(SourceLocation(),
+                                          m_NoSLoc);
+    Result = m_Sema->BuildCStyleCastExpr(m_NoSLoc,
                                          TSI,
-                                         SourceLocation(),
+                                         m_NoELoc,
                                          Result).take();
     return Result;
   }
@@ -650,9 +658,9 @@ namespace cling {
     Expr* Result = ConstructConstCharPtrExpr(Val);
     // create the temporary in the expr
     Result = m_Sema->ActOnCXXTypeConstructExpr(PT,
-                                               SourceLocation(),
+                                               m_NoSLoc,
                                                MultiExprArg(&Result, 1U),
-                                               SourceLocation()
+                                               m_NoELoc
                                                ).take();
     return Result;
   }
@@ -672,7 +680,7 @@ namespace cling {
                                          /*Wide=*/ false,
                                          /*Pascal=*/false,
                                          CCArray, 
-                                         SourceLocation());
+                                         m_NoSLoc);
     m_Sema->ImpCastExprToType(Result,
                               m_Context.getPointerType(CChar),
                               CK_ArrayToPointerDecay);
@@ -696,7 +704,7 @@ namespace cling {
     m_Sema->CurContext = FDecl->getDeclContext();
 
     // Create template arguments
-    Sema::InstantiatingTemplate Inst(*m_Sema, SourceLocation(), FDecl);
+    Sema::InstantiatingTemplate Inst(*m_Sema, m_NoSLoc, FDecl);
     TemplateArgument Arg(InstTy);
     TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
 
@@ -721,7 +729,7 @@ namespace cling {
     DeclRefExpr* DRE = m_Sema->BuildDeclRefExpr(Fn,
                                                 FnTy,
                                                 VK_RValue,
-                                                SourceLocation()
+                                                m_NoSLoc
                                                 ).takeAs<DeclRefExpr>();
 
     // TODO: Figure out a way to avoid passing in wrong source locations

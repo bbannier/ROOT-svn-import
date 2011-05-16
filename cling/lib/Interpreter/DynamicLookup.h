@@ -181,6 +181,15 @@ namespace cling {
 
     /// \brief The ASTContext
     clang::ASTContext& m_Context;
+
+    /// \brief Use instead of clang::SourceRange()
+    clang::SourceRange m_NoRange;
+
+    /// \brief Use instead of clang::SourceLocation() as start location
+    clang::SourceLocation m_NoSLoc;
+
+    /// \brief Use instead of clang::SourceLocation() as end location
+    clang::SourceLocation m_NoELoc;
     
   public:
     
