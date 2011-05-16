@@ -31,6 +31,7 @@ if [ -z $fopjar ]; then
 fi
 
 xsltproc --xinclude --output ROOTUsersGuide.fo \
+   --stringparam paper.type A4 \
    $docbook/fo/docbook.xsl \
    ROOTUsersGuide.xml
 
