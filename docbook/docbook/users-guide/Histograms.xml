@@ -40,7 +40,7 @@
 
 <figure><title>The class hierarchy of histogram classes</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0600002E.emz" width="370.55pt" depth="183.7pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0600002E.png" width="370.55pt" depth="183.7pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1208,7 +1208,7 @@ h3 = h1-&gt;GetAsymmetry(h2)
 
 <figure><title>Histograms with alphanumeric bin labels</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0600003B.emz" width="297.95pt" depth="165.7pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0600003B.png" width="297.95pt" depth="165.7pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
