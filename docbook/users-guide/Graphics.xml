@@ -209,7 +209,7 @@ kBottomLeft,  kBottomRight,   kTopLeft,   kTopRight,    kBottomSide,   kLeftSide
 <para>We have talked a lot about canvases, which may be seen as windows. More generally, a graphical entity that contains graphical objects is called a Pad. A Canvas is a special kind of Pad. From now on, when we say something about pads, this also applies to canvases. A pad (class <emphasis role="bold"><code>TPad</code></emphasis>) is a graphical container in the sense it contains other graphical objects like histograms and arrows. It may contain other pads (sub-pads) as well. More technically, each pad has a linked list of pointers to the objects it holds.</para>
 <para>Drawing an object is nothing more than adding its pointer to this list. Look for example at the code of <emphasis role="bold"><code>TH1</code></emphasis><code>::Draw()</code>. It is merely ten lines of code. The last statement is <code>AppendPad()</code>. This statement calls method of <emphasis role="bold"><code>TObject</code></emphasis> that just adds the pointer of the object, here a histogram, to the list of objects attached to the current pad. Since this is a <emphasis role="bold"><code>TObject</code></emphasis>’s method, every object may be "drawn", which means attached to a pad. We can illustrate this by the Figure 9-2. This image corresponds to the following structure:</para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/060000A1.emz" width="117.95pt" depth="78.2pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/060000A1.png" width="117.95pt" depth="78.2pt"/></imageobject></inlinemediaobject>
 </para>
 <para/>
 
@@ -1080,7 +1080,7 @@ Double_t wavelength,Double_t amplitude)
 
 <sect3>
 <title>Fractions</title>
-<para>Fractions denoted by the / symbol are made in the obvious way. The #frac command is used for large fractions in displayed formula; it has two arguments: the numerator and the denominator. For example, the equation<inlinemediaobject><imageobject><imagedata fileref="pictures/060000BB.emz" width="37.85pt" depth="21.1pt"/></imageobject></inlinemediaobject> is obtained by following expression <code>x=#frac{y+z/2}{y^{2}+1}</code>.</para>
+<para>Fractions denoted by the / symbol are made in the obvious way. The #frac command is used for large fractions in displayed formula; it has two arguments: the numerator and the denominator. For example, the equation<inlinemediaobject><imageobject><imagedata fileref="pictures/060000BB.png" width="37.85pt" depth="21.1pt"/></imageobject></inlinemediaobject> is obtained by following expression <code>x=#frac{y+z/2}{y^{2}+1}</code>.</para>
 </sect3>
 
 <sect3>
@@ -1143,8 +1143,8 @@ Double_t wavelength,Double_t amplitude)
 <para><code>#tilde </code>         <code>= </code>tilde</para>
 <para><code>#slash </code>         <code>= </code>special sign. Draw a slash on top of the text between brackets for example </para>
 <para><code>#slash{E}_{T} </code>generates "Missing ET"</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/060000BF.emz" width="11.15pt" depth="13.05pt"/></imageobject></inlinemediaobject>is obtained with <code>#bar{a}</code></para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/060000C0.emz" width="9.95pt" depth="14.3pt"/></imageobject></inlinemediaobject>is obtained with <code>#vec{a}</code></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/060000BF.png" width="11.15pt" depth="13.05pt"/></imageobject></inlinemediaobject>is obtained with <code>#bar{a}</code></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/060000C0.png" width="9.95pt" depth="14.3pt"/></imageobject></inlinemediaobject>is obtained with <code>#vec{a}</code></para>
 </sect3>
 
 <sect3>
@@ -1269,7 +1269,7 @@ root[] <emphasis role="bold"><code>pl-&gt;Draw()</code></emphasis>
 
 <figure><title><code>PaveLabels</code> drawn with different options</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/060000C4.emz" width="229.05pt" depth="54pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/060000C4.png" width="229.05pt" depth="54pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
