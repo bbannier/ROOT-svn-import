@@ -1483,7 +1483,7 @@ of the <code>s[i,j]</code> for all cells. This approximation is used to keep the
 
 <figure><title>A TProfile2D histogram example</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0800003F.wmz" width="279.95pt" depth="209.15pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0800003F.png" width="279.95pt" depth="209.15pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 

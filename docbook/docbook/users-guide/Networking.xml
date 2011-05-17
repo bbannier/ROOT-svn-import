@@ -75,7 +75,7 @@ Socket-&gt;Close();
 
 <figure><title>Server - Client setting-up and closing the connection</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080001FF.wmz" width="5in" depth="226.55pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080001FF.png" width="5in" depth="226.55pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 

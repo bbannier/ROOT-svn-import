@@ -196,7 +196,7 @@ v1.RotateUz(direction);      <code>// direction must be TVector3 of unit length 
 <title>TRotation</title>
 <para>The <emphasis role="bold"><code>TRotation</code></emphasis> class describes a rotation of <emphasis role="bold"><code>TVector3</code></emphasis> object. It is a 3 * 3 matrix of <code>Double_t</code>: </para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AA.wmz" width="54pt" depth="46.55pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AA.png" width="54pt" depth="46.55pt"/></imageobject></inlinemediaobject>
 
 </para>
 <para>It describes a so-called active rotation, i.e. a rotation of objects inside a static system of coordinates. In case you want to rotate the frame and want to know the coordinates of objects in the rotated system, you should apply the inverse rotation to the objects. If you want to transform coordinates from the rotated frame to the original frame you have to apply the direct transformation. A rotation around a specified axis means counterclockwise rotation around the positive direction of the axis.   </para>
@@ -225,11 +225,11 @@ if (r.IsIdentity()) {...}       <code>// test for identity</code>
 <title>Rotation around Axes</title>
 <para>The following matrices describe counter-clockwise rotations around the coordinate axes and are implemented in: <code>RotateX()</code>,<code> RotateY()</code> and <code>RotateZ()</code>: </para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AB.wmz" width="117.95pt" depth="46.55pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AB.png" width="117.95pt" depth="46.55pt"/></imageobject></inlinemediaobject>
 
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AC.wmz" width="119.15pt" depth="47.15pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AC.png" width="119.15pt" depth="47.15pt"/></imageobject></inlinemediaobject>
 
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AD.wmz" width="117.95pt" depth="47.15pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AD.png" width="117.95pt" depth="47.15pt"/></imageobject></inlinemediaobject>
 
 </para>
 <para>
@@ -308,7 +308,7 @@ r = r2 * r1;
 <title>Rotation of TVector3</title>
 <para>The <emphasis role="bold"><code>TRotation</code></emphasis> class provides an <code>operator *</code> which allows expressing a rotation of a <emphasis role="bold"><code>TVector3</code></emphasis> analog to the mathematical notation: </para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AE.wmz" width="91.25pt" depth="47.15pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AE.png" width="91.25pt" depth="47.15pt"/></imageobject></inlinemediaobject>
 </para>
 
 <programlisting language="c++">
@@ -544,7 +544,7 @@ v = l*v;orv *= l;<code>// v = l*v</code>
 <title>TLorentzRotation</title>
 <para>The <emphasis role="bold"><code>TLorentzRotation</code></emphasis> class describes Lorentz transformations including Lorentz boosts and rotations (see <emphasis role="bold"><code>TRotation</code></emphasis>) </para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AF.wmz" width="109.25pt" depth="57.7pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080001AF.png" width="109.25pt" depth="57.7pt"/></imageobject></inlinemediaobject>
 </para>
 
 <sect2>
@@ -627,7 +627,7 @@ l1 = l2.Invert();<code>// invert l2, then  l1=l2</code>
 <para/>
 <para>The matrix for the inverse transformation of a <emphasis role="bold"><code>TLorentzRotation</code></emphasis> is as follows: </para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080001B0.wmz" width="99.95pt" depth="62.7pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080001B0.png" width="99.95pt" depth="62.7pt"/></imageobject></inlinemediaobject>
 </para>
 </sect2>
 

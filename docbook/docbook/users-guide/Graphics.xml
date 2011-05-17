@@ -280,7 +280,7 @@ root[] obj-&gt;Draw()
 
 <figure><title>Pad coordinate systems</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080000A3.wmz" width="253.25pt" depth="72.6pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080000A3.png" width="253.25pt" depth="72.6pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1017,7 +1017,7 @@ Double_t wavelength,Double_t amplitude)
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B5.wmz" width="19.25pt" depth="16.15pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B5.png" width="19.25pt" depth="16.15pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
@@ -1027,7 +1027,7 @@ Double_t wavelength,Double_t amplitude)
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B6.wmz" width="18pt" depth="18pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B6.png" width="18pt" depth="18pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
@@ -1037,7 +1037,7 @@ Double_t wavelength,Double_t amplitude)
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B7.wmz" width="16.75pt" depth="18pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B7.png" width="16.75pt" depth="18pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1049,7 +1049,7 @@ Double_t wavelength,Double_t amplitude)
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B8.wmz" width="18pt" depth="19.25pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B8.png" width="18pt" depth="19.25pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
@@ -1059,7 +1059,7 @@ Double_t wavelength,Double_t amplitude)
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B9.wmz" width="16.75pt" depth="16.15pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080000B9.png" width="16.75pt" depth="16.15pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
@@ -1069,7 +1069,7 @@ Double_t wavelength,Double_t amplitude)
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080000BA.wmz" width="14.9pt" depth="18pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080000BA.png" width="14.9pt" depth="18pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>

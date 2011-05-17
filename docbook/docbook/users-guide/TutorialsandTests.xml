@@ -491,7 +491,7 @@ You read 8.826351 Mbytes/Cputime seconds
 
 <sect3>
 <title>Setting the Split Level</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/080001FA.wmz" width="146.4pt" depth="199.2pt;z-index:-39;visibility:visible;mso-wrap-edited:f;mso-wrap-distance-right:7.2pt"/></imageobject></inlinemediaobject>Split Level = 0:</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/080001FA.png" width="146.4pt" depth="199.2pt;z-index:-39;visibility:visible;mso-wrap-edited:f;mso-wrap-distance-right:7.2pt"/></imageobject></inlinemediaobject>Split Level = 0:</para>
 <para>Now we execute Event with the split parameter set to 0:</para>
 
 <programlisting language="c++">
@@ -516,7 +516,7 @@ root[] <emphasis role="bold"><code>TBrowser browser</code></emphasis>
 
 <para/>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/080001FB.wmz" width="341.4pt" depth="313.45pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/080001FB.png" width="341.4pt" depth="313.45pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
 </para>
 </sect3>
 </sect2>
