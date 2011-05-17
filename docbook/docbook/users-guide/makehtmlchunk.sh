@@ -2,10 +2,15 @@
 #
 # Generate the ROOT User's Guide as multiple HTML files (one per section).
 
+oxygendir="/Applications/oxygen"
+
 docbookdirs="/usr/share/xml/docbook/stylesheet/docbook-xsl \
              /sw/share/xml/xsl/docbook-xsl"
 
-docbook=
+if [ -d $oxygendir ]; then
+   docbookdirs="$oxygendir/frameworks/docbook/xsl"
+fi
+
 for d in $docbookdirs; do
    if [ -d $d ]; then
       docbook=$d
@@ -13,7 +18,7 @@ for d in $docbookdirs; do
 done
 
 if [ -z $docbook ]; then
-   echo "No docbook installation found"
+   echo "$0: no docbook installation found"
    exit 1
 fi
 
