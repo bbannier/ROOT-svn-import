@@ -8,7 +8,6 @@ docbookdirs="/usr/share/xml/docbook/stylesheet/docbook-xsl \
 fopjars="/usr/share/java/fop.jar \
          /sw/share/java/fop/fop.jar"
 
-docbook=
 for d in $docbookdirs; do
    if [ -d $d ]; then
       docbook=$d
@@ -20,16 +19,19 @@ if [ -z $docbook ]; then
    exit 1
 fi
 
-fopjar=
-for f in $fopjars; do
-   if [ -f $f ]; then
-      fopjar=$f
-   fi
-done
+if `which fop > /dev/null 2>& 1`; then
+   fop=`which fop`
+else
+   for f in $fopjars; do
+      if [ -f $f ]; then
+         fopjar=$f
+      fi
+   done
 
-if [ -z $fopjar ]; then
-   echo "No fop.jar file found"
-   exit 1
+   if [ -z $fopjar ]; then
+      echo "No fop.jar file found"
+      exit 1
+   fi
 fi
 
 # for more printed output options see:
@@ -40,7 +42,11 @@ xsltproc --xinclude --output ROOTUsersGuide.fo \
    $docbook/fo/docbook.xsl \
    ROOTUsersGuide.xml
 
-java -Xmx1024m -jar $fopjar ROOTUsersGuide.fo ROOTUsersGuide.pdf
+if [ -x $fop ]; then
+   $fop ROOTUsersGuide.fo ROOTUsersGuide.pdf
+else
+   java -Xmx1024m -jar $fopjar ROOTUsersGuide.fo ROOTUsersGuide.pdf
+fi
 rm ROOTUsersGuide.fo
 
 exit 0
