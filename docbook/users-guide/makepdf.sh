@@ -2,11 +2,18 @@
 #
 # Generate the ROOT User's Guide in PDF format.
 
+oxygendir="/Applications/oxygen"
+
 docbookdirs="/usr/share/xml/docbook/stylesheet/docbook-xsl \
              /sw/share/xml/xsl/docbook-xsl"
 
 fopjars="/usr/share/java/fop.jar \
          /sw/share/java/fop/fop.jar"
+
+if [ -d $oxygendir ]; then
+   docbookdirs="$oxygendir/frameworks/docbook/xsl"
+   fopjars="$oxygendir/lib/fop.jar"
+fi
 
 for d in $docbookdirs; do
    if [ -d $d ]; then
@@ -15,7 +22,7 @@ for d in $docbookdirs; do
 done
 
 if [ -z $docbook ]; then
-   echo "No docbook installation found"
+   echo "$0: no docbook installation found"
    exit 1
 fi
 
@@ -29,7 +36,7 @@ else
    done
 
    if [ -z $fopjar ]; then
-      echo "No fop.jar file found"
+      echo "$0: no fop.jar file found"
       exit 1
    fi
 fi

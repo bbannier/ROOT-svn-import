@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Generate the ROOT User's Guide as a single HTML file.
+# Generate the ROOT User's Guide in ePub format.
 
 oxygendir="/Applications/oxygen"
 
@@ -22,8 +22,17 @@ if [ -z $docbook ]; then
    exit 1
 fi
 
-xsltproc --xinclude --output ROOTUsersGuide.html \
-   $docbook/html/docbook.xsl \
-   ROOTUsersGuide.xml
+dbtoepub=$docbook/epub/bin/dbtoepub
+
+if [ ! -x $dbtoepub ]; then
+   if [ ! -f $dbtoepub ]; then
+      echo "$0: $dbtoepub: not found."
+      exit 1
+   else
+      ruby=ruby
+   fi
+fi
+
+$ruby $dbtoepub --output ROOTUsersGuide.epub ROOTUsersGuide.xml
 
 exit 0
