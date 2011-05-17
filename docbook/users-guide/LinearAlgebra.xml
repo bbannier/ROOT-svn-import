@@ -659,7 +659,7 @@ unit2.SetMatrixArray(data.GetArray());
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0800012E.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0800012E.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
 <code> x</code>
 </para>
 </entry>
@@ -676,9 +676,9 @@ unit2.SetMatrixArray(data.GetArray());
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0800012F.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0800012F.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
 
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000130.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000130.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
@@ -741,7 +741,7 @@ unit2.SetMatrixArray(data.GetArray());
 </code>
 <code>overwrites</code>
 
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000131.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000131.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
 
 </para>
 <para>
@@ -775,7 +775,7 @@ unit2.SetMatrixArray(data.GetArray());
 <para>
 <code>overwrites</code>
 
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000132.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000132.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
 </para>
 <para>
 <code>constructor</code>
@@ -805,7 +805,7 @@ unit2.SetMatrixArray(data.GetArray());
 <para>
 <code>overwrites</code>
 
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000133.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000133.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -821,7 +821,7 @@ unit2.SetMatrixArray(data.GetArray());
 <entry rowsep="1" colsep="1">
 <para>
 <code>constructor of </code>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000134.wmz" width="27.3pt" depth="13.05pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000134.png" width="27.3pt" depth="13.05pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -838,7 +838,7 @@ unit2.SetMatrixArray(data.GetArray());
 <entry rowsep="1" colsep="1">
 <para>
 <code>constructor of </code>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000135.wmz" width="32.9pt" depth="14.9pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000135.png" width="32.9pt" depth="14.9pt"/></imageobject></inlinemediaobject>
 
 </para>
 </entry>
@@ -856,7 +856,7 @@ unit2.SetMatrixArray(data.GetArray());
 <entry rowsep="1" colsep="1">
 <para>
 <code>constructor of </code>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000136.wmz" width="29.8pt" depth="14.3pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000136.png" width="29.8pt" depth="14.3pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -942,7 +942,7 @@ unit2.SetMatrixArray(data.GetArray());
 <para>
 <code>overwrites</code>
 
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000137.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000137.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -962,7 +962,7 @@ unit2.SetMatrixArray(data.GetArray());
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000138.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
+<para>overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000138.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 <row>
@@ -981,7 +981,7 @@ unit2.SetMatrixArray(data.GetArray());
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000139.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
+<para>overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000139.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 </tbody>
@@ -1334,22 +1334,22 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>norm induced by the infinity vector norm, max<emphasis role="italic">i</emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/0800013A.wmz" width="45.3pt" depth="21.7pt"/></imageobject></inlinemediaobject></para>
-<para>max<emphasis role="italic">i</emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/0800013B.wmz" width="47.15pt" depth="21.7pt"/></imageobject></inlinemediaobject> </para>
+<para>norm induced by the infinity vector norm, max<emphasis role="italic">i</emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/0800013A.png" width="45.3pt" depth="21.7pt"/></imageobject></inlinemediaobject></para>
+<para>max<emphasis role="italic">i</emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/0800013B.png" width="47.15pt" depth="21.7pt"/></imageobject></inlinemediaobject> </para>
 <para/>
-<para>norm induced by the 1 vector norm, max<emphasis role="italic">j</emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/0800013C.wmz" width="45.3pt" depth="21.7pt"/></imageobject></inlinemediaobject></para>
-<para>max<emphasis role="italic">j</emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/0800013D.wmz" width="45.3pt" depth="21.7pt"/></imageobject></inlinemediaobject> </para>
+<para>norm induced by the 1 vector norm, max<emphasis role="italic">j</emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/0800013C.png" width="45.3pt" depth="21.7pt"/></imageobject></inlinemediaobject></para>
+<para>max<emphasis role="italic">j</emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/0800013D.png" width="45.3pt" depth="21.7pt"/></imageobject></inlinemediaobject> </para>
 <para/>
 <para>Square of the Euclidean norm,</para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0800013E.wmz" width="45.95pt" depth="19.85pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0800013E.png" width="45.95pt" depth="19.85pt"/></imageobject></inlinemediaobject>
 </para>
 <para>number of elements unequal zero</para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0800013F.wmz" width="45.95pt" depth="19.85pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0800013F.png" width="45.95pt" depth="19.85pt"/></imageobject></inlinemediaobject>
 </para>
-<para>min<emphasis role="italic">ij</emphasis> <inlinemediaobject><imageobject><imagedata fileref="pictures/08000140.wmz" width="22.95pt" depth="19.85pt"/></imageobject></inlinemediaobject></para>
-<para>max<emphasis role="italic">ij</emphasis> <inlinemediaobject><imageobject><imagedata fileref="pictures/08000141.wmz" width="22.95pt" depth="19.85pt"/></imageobject></inlinemediaobject></para>
+<para>min<emphasis role="italic">ij</emphasis> <inlinemediaobject><imageobject><imagedata fileref="pictures/08000140.png" width="22.95pt" depth="19.85pt"/></imageobject></inlinemediaobject></para>
+<para>max<emphasis role="italic">ij</emphasis> <inlinemediaobject><imageobject><imagedata fileref="pictures/08000141.png" width="22.95pt" depth="19.85pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 <row>
@@ -1392,8 +1392,8 @@ The following table shows element wise comparisons between matrix and real:</par
 <para/>
 </entry>
 <entry rowsep="1" colsep="1">
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000142.wmz" width="42.2pt" depth="19.25pt"/></imageobject></inlinemediaobject>, divide each matrix column by vector v. If the second argument is “<code>M</code>“, the column is multiplied.</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000143.wmz" width="42.85pt" depth="19.25pt"/></imageobject></inlinemediaobject>, divide each matrix row by vector v. If the second argument is “<code>M</code>“, the row is multiplied.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000142.png" width="42.2pt" depth="19.25pt"/></imageobject></inlinemediaobject>, divide each matrix column by vector v. If the second argument is “<code>M</code>“, the column is multiplied.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000143.png" width="42.85pt" depth="19.25pt"/></imageobject></inlinemediaobject>, divide each matrix row by vector v. If the second argument is “<code>M</code>“, the row is multiplied.</para>
 </entry>
 </row>
 </tbody>
@@ -1439,7 +1439,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000144.wmz" width="34.15pt" depth="19.25pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000144.png" width="34.15pt" depth="19.25pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1462,7 +1462,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000145.wmz" width="62.05pt" depth="21.7pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000145.png" width="62.05pt" depth="21.7pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1488,7 +1488,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000146.wmz" width="52.15pt" depth="19.85pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000146.png" width="52.15pt" depth="19.85pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1511,7 +1511,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000147.wmz" width="57.7pt" depth="21.7pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000147.png" width="57.7pt" depth="21.7pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1533,7 +1533,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000148.wmz" width="32.9pt" depth="19.25pt"/></imageobject></inlinemediaobject>for <emphasis role="italic">i ==j</emphasis> else 0  </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000148.png" width="32.9pt" depth="19.25pt"/></imageobject></inlinemediaobject>for <emphasis role="italic">i ==j</emphasis> else 0  </para>
 </entry>
 </row>
 <row>
@@ -1554,7 +1554,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000149.wmz" width="117.3pt" depth="19.25pt"/></imageobject></inlinemediaobject>, a random matrix is generated with elements uniformly distributed between α and β</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000149.png" width="117.3pt" depth="19.25pt"/></imageobject></inlinemediaobject>, a random matrix is generated with elements uniformly distributed between α and β</para>
 </entry>
 </row>
 <row>
@@ -1577,7 +1577,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0800014A.wmz" width="42.2pt" depth="19.25pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0800014A.png" width="42.2pt" depth="19.25pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1600,7 +1600,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0800014B.wmz" width="42.2pt" depth="19.25pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0800014B.png" width="42.2pt" depth="19.25pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1683,7 +1683,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>Perform with vector v a rank 1 operation on the matrix: <inlinemediaobject><imageobject><imagedata fileref="pictures/0800014C.wmz" width="83.8pt" depth="16.15pt"/></imageobject></inlinemediaobject></para>
+<para>Perform with vector v a rank 1 operation on the matrix: <inlinemediaobject><imageobject><imagedata fileref="pictures/0800014C.png" width="83.8pt" depth="16.15pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 <row>
@@ -1705,8 +1705,8 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/0800014D.wmz" width="112.95pt" depth="19.25pt"/></imageobject></inlinemediaobject>, a </para>
-<para>random symmetric positive-definite matrix is generated with elements uniformly distributed between<inlinemediaobject><imageobject><imagedata fileref="pictures/0800014E.wmz" width="11.8pt" depth="11.15pt"/></imageobject></inlinemediaobject>and<inlinemediaobject><imageobject><imagedata fileref="pictures/0800014F.wmz" width="11.8pt" depth="16.15pt"/></imageobject></inlinemediaobject></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/0800014D.png" width="112.95pt" depth="19.25pt"/></imageobject></inlinemediaobject>, a </para>
+<para>random symmetric positive-definite matrix is generated with elements uniformly distributed between<inlinemediaobject><imageobject><imagedata fileref="pictures/0800014E.png" width="11.8pt" depth="11.15pt"/></imageobject></inlinemediaobject>and<inlinemediaobject><imageobject><imagedata fileref="pictures/0800014F.png" width="11.8pt" depth="16.15pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 </tbody>
@@ -1742,7 +1742,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>Perform with vector v1 and v2, a rank 1 operation on the matrix: <inlinemediaobject><imageobject><imagedata fileref="pictures/08000150.wmz" width="85.65pt" depth="16.15pt"/></imageobject></inlinemediaobject></para>
+<para>Perform with vector v1 and v2, a rank 1 operation on the matrix: <inlinemediaobject><imageobject><imagedata fileref="pictures/08000150.png" width="85.65pt" depth="16.15pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 </tbody>
@@ -1778,7 +1778,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000151.wmz" width="94.95pt" depth="76.35pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000151.png" width="94.95pt" depth="76.35pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1793,7 +1793,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000152.wmz" width="94.95pt" depth="77.6pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000152.png" width="94.95pt" depth="77.6pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1808,7 +1808,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000153.wmz" width="94.95pt" depth="78.85pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000153.png" width="94.95pt" depth="78.85pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1823,7 +1823,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </entry>
 <entry rowsep="1" colsep="1">
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000154.wmz" width="94.95pt" depth="76.35pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000154.png" width="94.95pt" depth="76.35pt"/></imageobject></inlinemediaobject>
 </para>
 </entry>
 </row>
@@ -1857,7 +1857,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000155.wmz" width="16.15pt" depth="19.25pt"/></imageobject></inlinemediaobject></para>
+<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000155.png" width="16.15pt" depth="19.25pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 <row>
@@ -1870,7 +1870,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000156.wmz" width="16.15pt" depth="19.25pt"/></imageobject></inlinemediaobject></para>
+<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000156.png" width="16.15pt" depth="19.25pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 <row>
@@ -1883,7 +1883,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000157.wmz" width="16.15pt" depth="18pt"/></imageobject></inlinemediaobject></para>
+<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000157.png" width="16.15pt" depth="18pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 <row>
@@ -1896,8 +1896,8 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000158.wmz" width="16.15pt" depth="18pt"/></imageobject></inlinemediaobject></para>
-<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000159.wmz" width="39.1pt" depth="19.25pt"/></imageobject></inlinemediaobject></para>
+<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000158.png" width="16.15pt" depth="18pt"/></imageobject></inlinemediaobject></para>
+<para>element <inlinemediaobject><imageobject><imagedata fileref="pictures/08000159.png" width="39.1pt" depth="19.25pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 </tbody>
@@ -1940,8 +1940,8 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>row <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015A.wmz" width="6.85pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
-<para>column <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015B.wmz" width="8.7pt" depth="12.4pt"/></imageobject></inlinemediaobject></para>
+<para>row <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015A.png" width="6.85pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
+<para>column <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015B.png" width="8.7pt" depth="12.4pt"/></imageobject></inlinemediaobject></para>
 <para>matrix diagonal </para>
 <para>sub matrix</para>
 </entry>
@@ -1965,8 +1965,8 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>row <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015C.wmz" width="6.85pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
-<para>column <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015D.wmz" width="8.7pt" depth="12.4pt"/></imageobject></inlinemediaobject></para>
+<para>row <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015C.png" width="6.85pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
+<para>column <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015D.png" width="8.7pt" depth="12.4pt"/></imageobject></inlinemediaobject></para>
 <para>matrix diagonal</para>
 <para>sub matrix</para>
 </entry>
@@ -1991,8 +1991,8 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>row <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015E.wmz" width="6.85pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
-<para>column <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015F.wmz" width="8.7pt" depth="12.4pt"/></imageobject></inlinemediaobject></para>
+<para>row <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015E.png" width="6.85pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
+<para>column <inlinemediaobject><imageobject><imagedata fileref="pictures/0800015F.png" width="8.7pt" depth="12.4pt"/></imageobject></inlinemediaobject></para>
 <para>matrix diagonal</para>
 <para>sub matrix</para>
 </entry>
@@ -2031,7 +2031,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1">
-<para>add row <inlinemediaobject><imageobject><imagedata fileref="pictures/08000160.wmz" width="13.05pt" depth="13.65pt"/></imageobject></inlinemediaobject> to row <inlinemediaobject><imageobject><imagedata fileref="pictures/08000161.wmz" width="11.15pt" depth="13.65pt"/></imageobject></inlinemediaobject></para>
+<para>add row <inlinemediaobject><imageobject><imagedata fileref="pictures/08000160.png" width="13.05pt" depth="13.65pt"/></imageobject></inlinemediaobject> to row <inlinemediaobject><imageobject><imagedata fileref="pictures/08000161.png" width="11.15pt" depth="13.65pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 <row>
@@ -2047,7 +2047,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1">
-<para>add column<inlinemediaobject><imageobject><imagedata fileref="pictures/08000162.wmz" width="16.15pt" depth="16.15pt"/></imageobject></inlinemediaobject> to column<inlinemediaobject><imageobject><imagedata fileref="pictures/08000163.wmz" width="13.65pt" depth="16.15pt"/></imageobject></inlinemediaobject></para>
+<para>add column<inlinemediaobject><imageobject><imagedata fileref="pictures/08000162.png" width="16.15pt" depth="16.15pt"/></imageobject></inlinemediaobject> to column<inlinemediaobject><imageobject><imagedata fileref="pictures/08000163.png" width="13.65pt" depth="16.15pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 <row>
@@ -2063,7 +2063,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1">
-<para>add <inlinemediaobject><imageobject><imagedata fileref="pictures/08000164.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> diagonal to <inlinemediaobject><imageobject><imagedata fileref="pictures/08000165.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> diagonal</para>
+<para>add <inlinemediaobject><imageobject><imagedata fileref="pictures/08000164.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> diagonal to <inlinemediaobject><imageobject><imagedata fileref="pictures/08000165.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> diagonal</para>
 </entry>
 </row>
 <row>
@@ -2080,7 +2080,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry>
-<para>multiply row <inlinemediaobject><imageobject><imagedata fileref="pictures/08000166.wmz" width="13.05pt" depth="13.65pt"/></imageobject></inlinemediaobject> with row <inlinemediaobject><imageobject><imagedata fileref="pictures/08000167.wmz" width="11.15pt" depth="13.65pt"/></imageobject></inlinemediaobject> element wise</para>
+<para>multiply row <inlinemediaobject><imageobject><imagedata fileref="pictures/08000166.png" width="13.05pt" depth="13.65pt"/></imageobject></inlinemediaobject> with row <inlinemediaobject><imageobject><imagedata fileref="pictures/08000167.png" width="11.15pt" depth="13.65pt"/></imageobject></inlinemediaobject> element wise</para>
 </entry>
 </row>
 <row>
@@ -2096,7 +2096,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry>
-<para>multiply column<inlinemediaobject><imageobject><imagedata fileref="pictures/08000168.wmz" width="16.15pt" depth="16.15pt"/></imageobject></inlinemediaobject> with column<inlinemediaobject><imageobject><imagedata fileref="pictures/08000169.wmz" width="13.65pt" depth="16.15pt"/></imageobject></inlinemediaobject> element wise</para>
+<para>multiply column<inlinemediaobject><imageobject><imagedata fileref="pictures/08000168.png" width="16.15pt" depth="16.15pt"/></imageobject></inlinemediaobject> with column<inlinemediaobject><imageobject><imagedata fileref="pictures/08000169.png" width="13.65pt" depth="16.15pt"/></imageobject></inlinemediaobject> element wise</para>
 </entry>
 </row>
 <row>
@@ -2112,7 +2112,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry>
-<para>multiply <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016A.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> diagonal with <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016B.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> diagonal element wise</para>
+<para>multiply <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016A.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> diagonal with <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016B.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> diagonal element wise</para>
 </entry>
 </row>
 <row>
@@ -2128,7 +2128,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry>
-<para>multiply sub matrix of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016C.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> with sub matrix of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016D.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
+<para>multiply sub matrix of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016C.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> with sub matrix of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016D.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 <row>
@@ -2141,7 +2141,7 @@ The following table shows element wise comparisons between matrix and real:</par
 </para>
 </entry>
 <entry rowsep="1">
-<para>multiply sub matrix of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016E.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> with matrix of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016F.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
+<para>multiply sub matrix of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016E.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> with matrix of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800016F.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
 </entry>
 </row>
 </tbody>
@@ -2160,7 +2160,7 @@ TMatrixDRow(A,1)[2] = 1;
 
 <sect2>
 <title>View Examples</title>
-<para>Inserting row <code>i1 </code>into row<code> i2</code> of matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000170.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> can easily accomplished through:</para>
+<para>Inserting row <code>i1 </code>into row<code> i2</code> of matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000170.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> can easily accomplished through:</para>
 
 <programlisting language="c++">
 TMatrixDRow(A,i1) = TMatrixDRow(A,i2)
@@ -2264,7 +2264,7 @@ TMatrixDSub(m,1,3,1,3) *= m.GetSub(5,7,5,7);
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>the determinant is <code>d1</code> <code>2</code><inlinemediaobject><imageobject><imagedata fileref="pictures/08000171.wmz" width="13.05pt" depth="17.4pt"/></imageobject></inlinemediaobject>. Expressing the determinant this way makes under/over-flow very unlikely</para>
+<para>the determinant is <code>d1</code> <code>2</code><inlinemediaobject><imageobject><imagedata fileref="pictures/08000171.png" width="13.05pt" depth="17.4pt"/></imageobject></inlinemediaobject>. Expressing the determinant this way makes under/over-flow very unlikely</para>
 </entry>
 </row>
 <row>
@@ -2389,7 +2389,7 @@ Bool_t &amp;ok)</code>
 </tgroup>
 </informaltable>
 <para>Through <emphasis role="bold"><code>TDecompSVD</code></emphasis> and <emphasis role="bold"><code>TDecompQRH</code></emphasis> one can solve systems for a (<code>m </code>x <code>n</code>) − <code>A</code> with <code>m&gt;n</code>. However, care has to be taken for methods where the input vector/matrix is replaced by the solution. For instance in the method <emphasis role="bold"><code>Solve(b)</code></emphasis>, the input vector should have length m but only the first n entries of the output contain the solution. For the <emphasis role="bold"><code>Invert(B)</code></emphasis> method, the input matrix B should have size (<code>m </code>x <code>m</code>) so that the returned (<code>m </code>x <code>n</code>) pseudo-inverse can fit in it.</para>
-<para>The classes store the state of the decomposition process of matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000172.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> in the user-definable part of <emphasis role="bold"><code>TObject::fBits</code></emphasis>, see the next table. This guarantees the correct order of the operations:</para>
+<para>The classes store the state of the decomposition process of matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000172.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> in the user-definable part of <emphasis role="bold"><code>TObject::fBits</code></emphasis>, see the next table. This guarantees the correct order of the operations:</para>
 <informaltable frame="all">
 <tgroup cols="2">
 <colspec colwidth="1630*" colname="column-1"/>
@@ -2418,11 +2418,11 @@ Bool_t &amp;ok)</code>
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000173.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><code>assigned</code> </para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000174.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>decomposed, bit <code>kMatrixSet</code> must have been set.</para>
-<para><code>det</code> (<inlinemediaobject><imageobject><imagedata fileref="pictures/08000175.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>) calculated, bit <code>kDecomposed</code> must have been set.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000173.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><code>assigned</code> </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000174.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>decomposed, bit <code>kMatrixSet</code> must have been set.</para>
+<para><code>det</code> (<inlinemediaobject><imageobject><imagedata fileref="pictures/08000175.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>) calculated, bit <code>kDecomposed</code> must have been set.</para>
 <para>||<emphasis role="italic">A</emphasis>||1 ||<emphasis role="italic">A</emphasis>-1||1 is calculated bit <code>kDecomposed</code> must have been set.</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000176.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>is singular </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000176.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>is singular </para>
 </entry>
 </row>
 </tbody>
@@ -2487,11 +2487,11 @@ cout &lt;&lt; "solving failed " &lt;&lt; endl;
 
 <sect2>
 <title>Condition number</title>
-<para>The numerical accuracy of the solution <code>x</code> in <code>Ax = b</code> can be accurately estimated by calculating the condition number <code>k</code> of matrix<inlinemediaobject><imageobject><imagedata fileref="pictures/08000177.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>, which is defined as:</para>
-<para><emphasis role="italic">k</emphasis> = <inlinemediaobject><imageobject><imagedata fileref="pictures/08000178.wmz" width="21.1pt" depth="19.85pt"/></imageobject></inlinemediaobject><inlinemediaobject><imageobject><imagedata fileref="pictures/08000179.wmz" width="27.3pt" depth="20.5pt"/></imageobject></inlinemediaobject>  where <inlinemediaobject><imageobject><imagedata fileref="pictures/0800017A.wmz" width="21.1pt" depth="19.85pt"/></imageobject></inlinemediaobject>= <inlinemediaobject><imageobject><imagedata fileref="pictures/0800017B.wmz" width="60.85pt" depth="30.4pt"/></imageobject></inlinemediaobject></para>
+<para>The numerical accuracy of the solution <code>x</code> in <code>Ax = b</code> can be accurately estimated by calculating the condition number <code>k</code> of matrix<inlinemediaobject><imageobject><imagedata fileref="pictures/08000177.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>, which is defined as:</para>
+<para><emphasis role="italic">k</emphasis> = <inlinemediaobject><imageobject><imagedata fileref="pictures/08000178.png" width="21.1pt" depth="19.85pt"/></imageobject></inlinemediaobject><inlinemediaobject><imageobject><imagedata fileref="pictures/08000179.png" width="27.3pt" depth="20.5pt"/></imageobject></inlinemediaobject>  where <inlinemediaobject><imageobject><imagedata fileref="pictures/0800017A.png" width="21.1pt" depth="19.85pt"/></imageobject></inlinemediaobject>= <inlinemediaobject><imageobject><imagedata fileref="pictures/0800017B.png" width="60.85pt" depth="30.4pt"/></imageobject></inlinemediaobject></para>
 <para>A good rule of thumb is that if the matrix condition number is 10n, the accuracy in <code>x </code>is <code>15−n</code> digits for double precision. </para>
-<para>Hager devised an iterative method (W.W. Hager, Condition estimators, SIAM J. Sci. Stat. Comp., 5 (1984), pp. 311-316) to determine<inlinemediaobject><imageobject><imagedata fileref="pictures/0800017C.wmz" width="29.15pt" depth="21.7pt"/></imageobject></inlinemediaobject> without actually having to calculate<inlinemediaobject><imageobject><imagedata fileref="pictures/0800017D.wmz" width="19.85pt" depth="14.9pt"/></imageobject></inlinemediaobject>. It is used when calling Condition ().</para>
-<para>A code example below shows the usage of the condition number. The matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800017E.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> is a (10x10) <emphasis role="italic">Hilbert</emphasis> matrix that is badly conditioned as its determinant shows. We construct a vector <code>b</code> by summing the matrix rows. Therefore, the components of the solution vector <code>x</code> should be exactly 1. Our rule of thumb to the 2.1012 condition number predicts that the solution accuracy should be around 15−12 = 3 digits. Indeed, the largest deviation is 0.00055 in component 6.</para>
+<para>Hager devised an iterative method (W.W. Hager, Condition estimators, SIAM J. Sci. Stat. Comp., 5 (1984), pp. 311-316) to determine<inlinemediaobject><imageobject><imagedata fileref="pictures/0800017C.png" width="29.15pt" depth="21.7pt"/></imageobject></inlinemediaobject> without actually having to calculate<inlinemediaobject><imageobject><imagedata fileref="pictures/0800017D.png" width="19.85pt" depth="14.9pt"/></imageobject></inlinemediaobject>. It is used when calling Condition ().</para>
+<para>A code example below shows the usage of the condition number. The matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800017E.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> is a (10x10) <emphasis role="italic">Hilbert</emphasis> matrix that is badly conditioned as its determinant shows. We construct a vector <code>b</code> by summing the matrix rows. Therefore, the components of the solution vector <code>x</code> should be exactly 1. Our rule of thumb to the 2.1012 condition number predicts that the solution accuracy should be around 15−12 = 3 digits. Indeed, the largest deviation is 0.00055 in component 6.</para>
 
 <programlisting language="c++">
 TMatrixDSym H = THilbertMatrixDSym(10);
@@ -2530,7 +2530,7 @@ Vector 10 is as follows
 
 <sect2>
 <title>LU</title>
-<para>Decompose an <code>n×n </code>matrix<inlinemediaobject><imageobject><imagedata fileref="pictures/0800017F.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>.</para>
+<para>Decompose an <code>n×n </code>matrix<inlinemediaobject><imageobject><imagedata fileref="pictures/0800017F.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>.</para>
 
 <programlisting language="c++">
 PA = LU
@@ -2544,7 +2544,7 @@ PA = LU
 
 <sect2>
 <title>Bunch-Kaufman</title>
-<para>Decompose a real symmetric matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000180.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
+<para>Decompose a real symmetric matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000180.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject></para>
 
 <programlisting language="c++">
 A = UDUT
@@ -2554,16 +2554,16 @@ A = UDUT
 <para><emphasis role="italic">U </emphasis>is product of permutation and unit upper triangular matrices: </para>
 <para><emphasis role="italic">U = P</emphasis><emphasis role="italic">n-1</emphasis><emphasis role="italic">U</emphasis><emphasis role="italic">n-1</emphasis><emphasis role="italic"> · · ·P</emphasis><emphasis role="italic">k</emphasis><emphasis role="italic">U</emphasis><emphasis role="italic">k</emphasis><emphasis role="italic"> · · · </emphasis>where<emphasis role="italic"> k</emphasis> decreases from <emphasis role="italic">n</emphasis> − 1 to 0 in steps of 1 or 2. Permutation matrix <emphasis role="italic">P</emphasis><emphasis role="italic">k</emphasis> is stored in <code>fIpiv</code>. <emphasis role="italic">U</emphasis><emphasis role="italic">k</emphasis> is a unit upper triangular matrix, such that if the diagonal block <emphasis role="italic">D</emphasis><emphasis role="italic">k</emphasis> is of order <emphasis role="italic">s</emphasis> (<emphasis role="italic">s</emphasis> = 1, 2), then</para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/08000181.wmz" width="81.3pt" depth="55.25pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/08000181.png" width="81.3pt" depth="55.25pt"/></imageobject></inlinemediaobject>
 </para>
-<para>If <emphasis role="italic">s</emphasis> = 1, <code>Dk</code> overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000182.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (k, k)</emphasis>, and v overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000183.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (0: k − 1, k)</emphasis>.</para>
-<para>If <emphasis role="italic">s</emphasis> = 2, the upper triangle of <code>Dk</code>         overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000184.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (k−1, k−1), </emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/08000185.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (k−1, k)</emphasis>, and <inlinemediaobject><imageobject><imagedata fileref="pictures/08000186.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (k, k)</emphasis>, and v overwrites </para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000187.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (0 : k − 2, k − 1 : k)</emphasis>.</para>
+<para>If <emphasis role="italic">s</emphasis> = 1, <code>Dk</code> overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000182.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (k, k)</emphasis>, and v overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000183.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (0: k − 1, k)</emphasis>.</para>
+<para>If <emphasis role="italic">s</emphasis> = 2, the upper triangle of <code>Dk</code>         overwrites <inlinemediaobject><imageobject><imagedata fileref="pictures/08000184.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (k−1, k−1), </emphasis><inlinemediaobject><imageobject><imagedata fileref="pictures/08000185.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (k−1, k)</emphasis>, and <inlinemediaobject><imageobject><imagedata fileref="pictures/08000186.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (k, k)</emphasis>, and v overwrites </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000187.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject><emphasis role="italic"> (0 : k − 2, k − 1 : k)</emphasis>.</para>
 </sect2>
 
 <sect2>
 <title>Cholesky</title>
-<para>Decompose a symmetric, positive definite matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000188.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>.</para>
+<para>Decompose a symmetric, positive definite matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000188.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>.</para>
 
 <programlisting language="c++">
 A = UTU
@@ -2574,7 +2574,7 @@ A = UTU
 
 <sect2>
 <title>QRH</title>
-<para>Decompose a (<emphasis role="italic">m</emphasis> x<emphasis role="italic"> n</emphasis>) - matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000189.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>with <emphasis role="italic">m ≥ n</emphasis><emphasis role="italic">.</emphasis></para>
+<para>Decompose a (<emphasis role="italic">m</emphasis> x<emphasis role="italic"> n</emphasis>) - matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000189.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>with <emphasis role="italic">m ≥ n</emphasis><emphasis role="italic">.</emphasis></para>
 
 <programlisting language="c++">
 A = QRH
@@ -2590,7 +2590,7 @@ A = QRH
 
 <sect2>
 <title>SVD</title>
-<para>Decompose a (<emphasis role="italic">m</emphasis> x <emphasis role="italic">n</emphasis>) - matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018A.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>with <emphasis role="italic">m ≥ n</emphasis>.</para>
+<para>Decompose a (<emphasis role="italic">m</emphasis> x <emphasis role="italic">n</emphasis>) - matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018A.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>with <emphasis role="italic">m ≥ n</emphasis>.</para>
 
 <programlisting language="c++">
 A = USVT
@@ -2599,15 +2599,15 @@ A = USVT
 <para><emphasis role="italic">U</emphasis>  (<emphasis role="italic">m</emphasis> x <emphasis role="italic">m</emphasis>) orthogonal matrix, stored in <code>fU</code>;</para>
 <para><emphasis role="italic">S</emphasis> is diagonal matrix containing the singular values. Diagonal stored in vector <code>fSig</code> which is ordered so that <code>fSig[0] &gt;= fSig[1] &gt;= ... &gt;= fSig[n-1]</code>;</para>
 <para><emphasis role="italic">V</emphasis> (<emphasis role="italic">n</emphasis> x <emphasis role="italic">n</emphasis>) orthogonal matrix, stored in <code>fV</code>.</para>
-<para>The singular value decomposition always exists, so the decomposition will (as long as m ≥ n) never fail. If <emphasis role="italic">m</emphasis> &lt; <emphasis role="italic">n</emphasis>, the user should add sufficient zero rows to <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018B.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>, so that <emphasis role="italic">m</emphasis> == <emphasis role="italic">n</emphasis>. In the <code>SVD</code>, <code>fTol</code> is used to set the threshold on the minimum allowed value of the singular values: <code>min singular = fTol maxi(Sii)</code>.</para>
+<para>The singular value decomposition always exists, so the decomposition will (as long as m ≥ n) never fail. If <emphasis role="italic">m</emphasis> &lt; <emphasis role="italic">n</emphasis>, the user should add sufficient zero rows to <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018B.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject>, so that <emphasis role="italic">m</emphasis> == <emphasis role="italic">n</emphasis>. In the <code>SVD</code>, <code>fTol</code> is used to set the threshold on the minimum allowed value of the singular values: <code>min singular = fTol maxi(Sii)</code>.</para>
 </sect2>
 </sect1>
 
 <sect1>
 <title>Matrix Eigen Analysis</title>
-<para>Classes <emphasis role="bold"><code>TMatrixDEigen</code></emphasis> and <emphasis role="bold"><code>TMatrixDSymEigen</code></emphasis> compute eigenvalues and eigenvectors for general dense and symmetric real matrices, respectively. If matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018C.wmz" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> is symmetric, then<inlinemediaobject><imageobject><imagedata fileref="pictures/0800018D.wmz" width="68.9pt" depth="16.15pt"/></imageobject></inlinemediaobject>, where the eigenvalue matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018E.wmz" width="13.05pt" depth="13.05pt"/></imageobject></inlinemediaobject> is diagonal and the eigenvector matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018F.wmz" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject>is orthogonal. That is, the diagonal values of <inlinemediaobject><imageobject><imagedata fileref="pictures/08000190.wmz" width="13.05pt" depth="13.05pt"/></imageobject></inlinemediaobject> are the eigenvalues, and<inlinemediaobject><imageobject><imagedata fileref="pictures/08000191.wmz" width="49.65pt" depth="16.15pt"/></imageobject></inlinemediaobject>, where <inlinemediaobject><imageobject><imagedata fileref="pictures/08000192.wmz" width="9.95pt" depth="13.05pt"/></imageobject></inlinemediaobject>- is the identity matrix. The columns of <inlinemediaobject><imageobject><imagedata fileref="pictures/08000193.wmz" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject>represent the eigenvectors in the sense that<inlinemediaobject><imageobject><imagedata fileref="pictures/08000194.wmz" width="60.85pt" depth="13.65pt"/></imageobject></inlinemediaobject>. If A is not symmetric, the eigenvalue matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000195.wmz" width="13.05pt" depth="13.05pt"/></imageobject></inlinemediaobject> is block diagonal with the real eigenvalues in 1-by-1 blocks and any complex eigenvalues, <code>a+i*b</code>, in 2-by-2 blocks, <code>[a,b;−b,a]</code>. That is, if the complex eigenvalues look like:</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000196.wmz" width="180.6pt" depth="85.05pt"/></imageobject></inlinemediaobject>    then<inlinemediaobject><imageobject><imagedata fileref="pictures/08000197.wmz" width="13.05pt" depth="13.05pt"/></imageobject></inlinemediaobject> looks like  <inlinemediaobject><imageobject><imagedata fileref="pictures/08000198.wmz" width="127.25pt" depth="86.9pt"/></imageobject></inlinemediaobject></para>
-<para>This keeps <inlinemediaobject><imageobject><imagedata fileref="pictures/08000199.wmz" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject> a real matrix in both symmetric and non-symmetric cases, and<inlinemediaobject><imageobject><imagedata fileref="pictures/0800019A.wmz" width="60.85pt" depth="13.65pt"/></imageobject></inlinemediaobject>. The matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800019B.wmz" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject>may be badly conditioned, or even singular, so the validity of the equation <inlinemediaobject><imageobject><imagedata fileref="pictures/0800019C.wmz" width="67.65pt" depth="16.15pt"/></imageobject></inlinemediaobject> depends upon the condition number of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800019D.wmz" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject>. Next table shows the methods of the classes <emphasis role="bold"><code>TMatrixDEigen</code></emphasis> and <emphasis role="bold"><code>TMatrixDSymEigen</code></emphasis> to obtain the eigenvalues and eigenvectors. Obviously, <emphasis role="bold"><code>MatrixDSymEigen</code></emphasis> constructors can only be called with <emphasis role="bold"><code>TMatrixDSym</code></emphasis>:</para>
+<para>Classes <emphasis role="bold"><code>TMatrixDEigen</code></emphasis> and <emphasis role="bold"><code>TMatrixDSymEigen</code></emphasis> compute eigenvalues and eigenvectors for general dense and symmetric real matrices, respectively. If matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018C.png" width="11.8pt" depth="13.05pt"/></imageobject></inlinemediaobject> is symmetric, then<inlinemediaobject><imageobject><imagedata fileref="pictures/0800018D.png" width="68.9pt" depth="16.15pt"/></imageobject></inlinemediaobject>, where the eigenvalue matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018E.png" width="13.05pt" depth="13.05pt"/></imageobject></inlinemediaobject> is diagonal and the eigenvector matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800018F.png" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject>is orthogonal. That is, the diagonal values of <inlinemediaobject><imageobject><imagedata fileref="pictures/08000190.png" width="13.05pt" depth="13.05pt"/></imageobject></inlinemediaobject> are the eigenvalues, and<inlinemediaobject><imageobject><imagedata fileref="pictures/08000191.png" width="49.65pt" depth="16.15pt"/></imageobject></inlinemediaobject>, where <inlinemediaobject><imageobject><imagedata fileref="pictures/08000192.png" width="9.95pt" depth="13.05pt"/></imageobject></inlinemediaobject>- is the identity matrix. The columns of <inlinemediaobject><imageobject><imagedata fileref="pictures/08000193.png" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject>represent the eigenvectors in the sense that<inlinemediaobject><imageobject><imagedata fileref="pictures/08000194.png" width="60.85pt" depth="13.65pt"/></imageobject></inlinemediaobject>. If A is not symmetric, the eigenvalue matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/08000195.png" width="13.05pt" depth="13.05pt"/></imageobject></inlinemediaobject> is block diagonal with the real eigenvalues in 1-by-1 blocks and any complex eigenvalues, <code>a+i*b</code>, in 2-by-2 blocks, <code>[a,b;−b,a]</code>. That is, if the complex eigenvalues look like:</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/08000196.png" width="180.6pt" depth="85.05pt"/></imageobject></inlinemediaobject>    then<inlinemediaobject><imageobject><imagedata fileref="pictures/08000197.png" width="13.05pt" depth="13.05pt"/></imageobject></inlinemediaobject> looks like  <inlinemediaobject><imageobject><imagedata fileref="pictures/08000198.png" width="127.25pt" depth="86.9pt"/></imageobject></inlinemediaobject></para>
+<para>This keeps <inlinemediaobject><imageobject><imagedata fileref="pictures/08000199.png" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject> a real matrix in both symmetric and non-symmetric cases, and<inlinemediaobject><imageobject><imagedata fileref="pictures/0800019A.png" width="60.85pt" depth="13.65pt"/></imageobject></inlinemediaobject>. The matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800019B.png" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject>may be badly conditioned, or even singular, so the validity of the equation <inlinemediaobject><imageobject><imagedata fileref="pictures/0800019C.png" width="67.65pt" depth="16.15pt"/></imageobject></inlinemediaobject> depends upon the condition number of <inlinemediaobject><imageobject><imagedata fileref="pictures/0800019D.png" width="11.8pt" depth="13.65pt"/></imageobject></inlinemediaobject>. Next table shows the methods of the classes <emphasis role="bold"><code>TMatrixDEigen</code></emphasis> and <emphasis role="bold"><code>TMatrixDSymEigen</code></emphasis> to obtain the eigenvalues and eigenvectors. Obviously, <emphasis role="bold"><code>MatrixDSymEigen</code></emphasis> constructors can only be called with <emphasis role="bold"><code>TMatrixDSym</code></emphasis>:</para>
 <informaltable frame="all">
 <tgroup cols="3">
 <colspec colwidth="3468*" colname="column-1"/>
@@ -2744,7 +2744,7 @@ A = USVT
 </tbody>
 </tgroup>
 </informaltable>
-<para>Below, usage of the eigenvalue class is shown in an example where it is checked that the square of the singular values of a matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800019E.wmz" width="11.15pt" depth="16.75pt"/></imageobject></inlinemediaobject> are identical to the eigenvalues of<inlinemediaobject><imageobject><imagedata fileref="pictures/0800019F.wmz" width="16.15pt" depth="18pt"/></imageobject></inlinemediaobject>. <inlinemediaobject><imageobject><imagedata fileref="pictures/080001A0.wmz" width="11.15pt" depth="16.75pt"/></imageobject></inlinemediaobject>:   </para>
+<para>Below, usage of the eigenvalue class is shown in an example where it is checked that the square of the singular values of a matrix <inlinemediaobject><imageobject><imagedata fileref="pictures/0800019E.png" width="11.15pt" depth="16.75pt"/></imageobject></inlinemediaobject> are identical to the eigenvalues of<inlinemediaobject><imageobject><imagedata fileref="pictures/0800019F.png" width="16.15pt" depth="18pt"/></imageobject></inlinemediaobject>. <inlinemediaobject><imageobject><imagedata fileref="pictures/080001A0.png" width="11.15pt" depth="16.75pt"/></imageobject></inlinemediaobject>:   </para>
 
 <programlisting language="c++">
 const TMatrixD m = THilbertMatrixD(10,10);
