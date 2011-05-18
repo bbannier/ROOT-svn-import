@@ -144,7 +144,7 @@ root[] <emphasis role="bold"><code>T-&gt;Scan("Cost:Age:C</code></emphasis><emph
 
 <figure><title>Activating the tree viewer</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000EF.png" width="152.4pt" depth="235.3pt;z-index:-19"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000EF.png" width="152.4pt" depth="235.3pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -176,14 +176,14 @@ root[] <emphasis role="bold"><code>T-&gt;Scan("Cost:Age:C</code></emphasis><emph
 <para><code>Hist</code>- the histogram drawing mode;</para>
 <para><code>Scan</code>- enables redirecting of <emphasis role="bold"><code>TTree</code></emphasis><code>::Scan </code>command in an ASCII file;</para>
 <para><code>Rec</code> - enables recording of the last issued command.</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/020000F1.jpg" width="27pt" depth="27.1pt;z-index:16"/></imageobject></inlinemediaobject>To draw more than one dimension you can drag and drop any leaf to the   <code>X,Y,Z</code> boxes". Then push the Draw button, witch is marked with the purple icon on the bottom left. </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/020000F1.jpg" width="27pt" depth="27.1pt"/></imageobject></inlinemediaobject>To draw more than one dimension you can drag and drop any leaf to the   <code>X,Y,Z</code> boxes". Then push the Draw button, witch is marked with the purple icon on the bottom left. </para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000F2.png" width="28.35pt" depth="28.35pt;z-index:-26"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000F2.png" width="28.35pt" depth="28.35pt"/></imageobject></inlinemediaobject>
 </para>
 <para>All commands can be interrupted at any time by pressing this button.</para>
 <para/>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000F3.png" width="27.6pt" depth="24.75pt;z-index:-28"/></imageobject></inlinemediaobject>The method <emphasis role="bold"><code>TTree</code></emphasis><code>::Refresh</code> is called by pressing the refresh button in <emphasis role="bold"><code>TTreeViewer</code></emphasis>. It redraws the current exposed expression. Calling <emphasis role="bold"><code>TTree</code></emphasis><code>::Refresh</code> is useful when a tree is produced by a writer process and    concurrently analyzed by one or more readers.</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000F4.png" width="45.7pt" depth="15.65pt;z-index:-27"/></imageobject></inlinemediaobject>To add a cut/weight to the histogram, enter an expression in the "cut box". The cut box is the one with the scissor icon.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000F3.png" width="27.6pt" depth="24.75pt"/></imageobject></inlinemediaobject>The method <emphasis role="bold"><code>TTree</code></emphasis><code>::Refresh</code> is called by pressing the refresh button in <emphasis role="bold"><code>TTreeViewer</code></emphasis>. It redraws the current exposed expression. Calling <emphasis role="bold"><code>TTree</code></emphasis><code>::Refresh</code> is useful when a tree is produced by a writer process and    concurrently analyzed by one or more readers.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000F4.png" width="45.7pt" depth="15.65pt"/></imageobject></inlinemediaobject>To add a cut/weight to the histogram, enter an expression in the "cut box". The cut box is the one with the scissor icon.</para>
 <para>Below them there are two text widgets for specifying the input and output event lists. A Tree Viewer session is made by the list of user-defined expressions and cuts, applying to a specified tree. A session can be saved using File / <code>SaveSource</code> menu or the <code>SaveSource</code> method from the context menu of the right panel. This will create a macro having as default name <code>treeviewer.C</code> that can be ran at any time to reproduce the session.</para>
 <para>Besides the list of user-defined expressions, a session may contain a list of RECORDS. A record can be produced in the following way: dragging leaves/expression on X/Y/Z; changing drawing options; clicking the RED button on the bottom when happy with the histogram</para>
 <para>NOTE that just double clicking a leaf will not produce a record: the histogram must be produced when clicking the DRAW button on the bottom-left. The records will appear on the list of records in the bottom right of the tree viewer. Selecting a record will draw the corresponding histogram. Records can be played using the arrow buttons near to the record button. When saving the session, the list of records is being saved as well.</para>
@@ -352,7 +352,7 @@ other objects (like <emphasis role="bold"><code>TH1</code></emphasis> and <empha
 
 <sect1>
 <title>Adding a Branch to Hold a List of Variables</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000F9.png" width="58.45pt" depth="81.15pt;z-index:-25"/></imageobject></inlinemediaobject>As in the very first example (<code>staff.root</code>) the data we want to save is a list of simple variables, such as integers or floats. In this case, we use the following <emphasis role="bold"><code>TTree</code></emphasis><code>::Branch</code> signature:</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000F9.png" width="58.45pt" depth="81.15pt"/></imageobject></inlinemediaobject>As in the very first example (<code>staff.root</code>) the data we want to save is a list of simple variables, such as integers or floats. In this case, we use the following <emphasis role="bold"><code>TTree</code></emphasis><code>::Branch</code> signature:</para>
 
 <programlisting language="c++">
 <code>tree-&gt;Branch("Ev_Branch",&amp;event,"temp/F:ntrack/I:nseg:nvtex:flag/i ");</code>
@@ -466,10 +466,10 @@ other objects (like <emphasis role="bold"><code>TH1</code></emphasis> and <empha
 <tbody>
 <row>
 <entry>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000FA.png" width="86.75pt" depth="88.2pt;z-index:12"/></imageobject></inlinemediaobject>A tree that is split</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000FA.png" width="86.75pt" depth="88.2pt"/></imageobject></inlinemediaobject>A tree that is split</para>
 </entry>
 <entry>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000FB.png" width="71.2pt" depth="88.7pt;z-index:13"/></imageobject></inlinemediaobject>A tree that is not split</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000FB.png" width="71.2pt" depth="88.7pt"/></imageobject></inlinemediaobject>A tree that is not split</para>
 </entry>
 </row>
 </tbody>
@@ -1039,7 +1039,7 @@ gPad-&gt;GetViewer3D(“x3d”);
 </programlisting>
 
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000FF.png" width="171.85pt" depth="258.5pt;z-index:-30"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000FF.png" width="171.85pt" depth="258.5pt"/></imageobject></inlinemediaobject>
 <inlinemediaobject><imageobject><imagedata fileref="pictures/03000100.png" width="172.55pt" depth="143.4pt"/></imageobject></inlinemediaobject>
 </para>
 </sect2>
@@ -1105,7 +1105,7 @@ t3-&gt;Write("",TObject::kOverwrite);     <code>// save only the new version of 
 <code>tree.Draw("var:ft1.v1:ft2.v2");</code>
 </programlisting>
 
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/02000102.jpg" width="126.7pt" depth="102.5pt;z-index:14"/></imageobject></inlinemediaobject>The picture illustrates the access of the tree and its friends with a <code>Draw</code> command.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/02000102.jpg" width="126.7pt" depth="102.5pt"/></imageobject></inlinemediaobject>The picture illustrates the access of the tree and its friends with a <code>Draw</code> command.</para>
 <para>When <code>AddFriend</code> is called, the ROOT file is automatically opened and the friend tree (<code>ft1)</code> header is read into memory. The new friend (<code>ft1</code>) is added to the list of friends of <code>tree</code>. The number of entries in the friend must be equal or greater to the number of entries of the original tree. If the friend tree has fewer entries, a warning is given and the missing entries are not included in the histogram. </para>
 <para>Use <emphasis role="bold"><code>TTree</code></emphasis><code>::GetListOfFriends</code> to retrieve the list of friends from a tree.</para>
 <para>When the tree is written to file (<emphasis role="bold"><code>TTree</code></emphasis><code>::Write</code>), the friends list is saved with it. Moreover, when the tree is retrieved, the trees on the friends list are also retrieved and the friendship restored. When a tree is deleted, the elements of the friend list are also deleted. It is possible to declare a friend tree that has the same internal structure (same branches and leaves) as the original tree, and compare the same values by specifying the tree.</para>
