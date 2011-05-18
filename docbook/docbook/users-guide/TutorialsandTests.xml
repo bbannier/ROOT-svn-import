@@ -5,7 +5,7 @@
 
 <sect1>
 <title>$ROOTSYS/tutorials</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030001F9.png" width="69.75pt" depth="352.95pt;z-index:-18"/></imageobject></inlinemediaobject>The tutorials directory contains many example scripts. <emphasis role="underline">To have all examples working you must have write permission and you will need to execute </emphasis><emphasis role="underline"><code>hsimple.C</code> first</emphasis>. If you do not have write permission in the directory<code> $ROOTSYS/tutorials</code>, copy the entire directory to your area. The script <code>hsimple.C</code> displays a histogram as it is being filled, and creates a ROOT file used by the other examples. </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030001F9.png" width="69.75pt" depth="352.95pt"/></imageobject></inlinemediaobject>The tutorials directory contains many example scripts. <emphasis role="underline">To have all examples working you must have write permission and you will need to execute </emphasis><emphasis role="underline"><code>hsimple.C</code> first</emphasis>. If you do not have write permission in the directory<code> $ROOTSYS/tutorials</code>, copy the entire directory to your area. The script <code>hsimple.C</code> displays a histogram as it is being filled, and creates a ROOT file used by the other examples. </para>
 <para>To execute it type:</para>
 
 <programlisting language="c++">
@@ -491,7 +491,7 @@ You read 8.826351 Mbytes/Cputime seconds
 
 <sect3>
 <title>Setting the Split Level</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/080001FA.png" width="146.4pt" depth="199.2pt;z-index:-39;visibility:visible"/></imageobject></inlinemediaobject>Split Level = 0:</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/080001FA.png" width="146.4pt" depth="199.2pt"/></imageobject></inlinemediaobject>Split Level = 0:</para>
 <para>Now we execute Event with the split parameter set to 0:</para>
 
 <programlisting language="c++">
