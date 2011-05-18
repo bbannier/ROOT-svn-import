@@ -360,7 +360,7 @@ Hist.Stats.KurtosisY       Kurtosis y
 Root.Html.Charset:
 </programlisting>
 
-<para>Stem of a search engine for the documentation, where <code>%s</code> is replaced by the term entered in the search text box (example:  <uri xmlns:xlink="http://www.google.com/search?q=%s+site%3Aroot.cern.ch%2Froot%2Fhtml">http://www.google.com/search?q=%s+site%3Aroot.cern.ch%2Froot%2Fhtml</uri>,         default is <code>""</code>)</para>
+<para>Stem of a search engine for the documentation, where <code>%s</code> is replaced by the term entered in the search text box (example: <code>http://www.google.com/search?q=%s+site%3Aroot.cern.ch%2Froot%2Fhtml</code>, default is <code>""</code>)</para>
 
 <programlisting language="c++">
 Root.Html.Search:
