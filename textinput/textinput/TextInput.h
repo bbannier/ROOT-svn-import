@@ -59,6 +59,7 @@ namespace textinput {
 
     // Read interface
     EReadResult ReadInput();
+    EReadResult GetReadState() const { return fLastReadResult; }
     const std::string& GetInput();
     void TakeInput(std::string& input); // Take and reset input
     bool AtEOL() const { return fLastReadResult == kRRReadEOLDelimiter || AtEOF(); }
