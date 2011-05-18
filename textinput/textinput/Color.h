@@ -59,7 +59,7 @@ namespace textinput {
     virtual ~Colorizer();
     virtual void ProcessTextChange(EditorRange& Modification, Text& input) = 0;
     virtual void ProcessPromptChange(Text& prompt) = 0;
-    virtual void ProcessCursorChange(size_t Cursor, Text& input) {};
+    virtual void ProcessCursorChange(size_t /*Cursor*/, Text& /*input*/) {};
     virtual bool GetColor(char C, Color& Col) = 0; // C == 0 is default color
     virtual char GetInfoColor() const { return 0; }
   };
