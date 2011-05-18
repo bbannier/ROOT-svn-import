@@ -21,7 +21,7 @@ gSystem.Load("libPhysics.so");
 
 <sect1>
 <title>TVector3</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030001A9.png" width="163.15pt" depth="147.85pt;z-index:5"/></imageobject></inlinemediaobject><emphasis role="bold"><code>TVector3</code></emphasis>         is a general three-vector class, which can be used for description of different vectors in 3D. Components of three vectors: </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030001A9.png" width="163.15pt" depth="147.85pt"/></imageobject></inlinemediaobject><emphasis role="bold"><code>TVector3</code></emphasis>         is a general three-vector class, which can be used for description of different vectors in 3D. Components of three vectors: </para>
 <para><code>x</code>, <code>y</code>, <code>z</code> - basic components </para>
 <para> = azimuth angle </para>
 <para> = polar angle </para>
