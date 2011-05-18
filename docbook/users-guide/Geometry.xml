@@ -2027,7 +2027,7 @@ myNode-&gt;CheckOverlaps(precision);
 
 <figure><title>Safety computation checking</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030001E0.png" width="158.4pt" depth="98.8pt;z-index:-14"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030001E0.png" width="158.4pt" depth="98.8pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -2038,7 +2038,7 @@ myNode-&gt;CheckOverlaps(precision);
 
 <figure><title>Random points</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030001E1.png" width="158.4pt" depth="99.9pt;z-index:-13"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030001E1.png" width="158.4pt" depth="99.9pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -2048,7 +2048,7 @@ myNode-&gt;CheckOverlaps(precision);
 
 <figure><title>Random rays</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030001E2.png" width="158.4pt" depth="103.35pt;z-index:-12"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030001E2.png" width="158.4pt" depth="103.35pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -2068,7 +2068,7 @@ appear as segments having the color of the touched node.
 
 <sect1>
 <title>The Drawing Package</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030001E3.png" width="192.95pt" depth="156.75pt;z-index:-6"/></imageobject></inlinemediaobject>The modeller provides a powerful drawing package, supporting several different options of visualization. A library separated from the main one provides all functionality being linked with the underlying ROOT visualization system. This library is dynamically loaded by the plug-in manager only when drawing features are requested. The geometrical structures that can be visualized are volumes and volume hierarchies. </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030001E3.png" width="192.95pt" depth="156.75pt"/></imageobject></inlinemediaobject>The modeller provides a powerful drawing package, supporting several different options of visualization. A library separated from the main one provides all functionality being linked with the underlying ROOT visualization system. This library is dynamically loaded by the plug-in manager only when drawing features are requested. The geometrical structures that can be visualized are volumes and volume hierarchies. </para>
 <para>The main component of the visualization system is volume primitive painting in a ROOT pad. Starting from this one, several specific options or subsystems are available, like: X3D viewing using hidden line and surface removal algorithms, OpenGL viewing* or ray tracing. </para>
 <para>The method <emphasis role="bold"><code>TGeoManager</code></emphasis><code>::GetGeomPainter()</code>loads the painting library in memory. </para>
 <para>This is generally not needed since it is called automatically by <emphasis role="bold"><code>TGeoVolume</code></emphasis><code>::Draw()</code> as well as by few other methods setting visualization attributes.</para>
