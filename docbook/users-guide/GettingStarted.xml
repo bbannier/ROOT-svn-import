@@ -193,7 +193,7 @@ root[] <emphasis role="bold"><code>f1.Draw()</code></emphasis>
 <sect3>
 <title>File Menu</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000B.png" width="69.3pt" depth="90.75pt;z-index:-23"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000B.png" width="69.3pt" depth="90.75pt"/></imageobject></inlinemediaobject>
 </para>
 <itemizedlist>
 <listitem><para><emphasis role="italic">New Canvas</emphasis>: creates a new canvas window in the current ROOT session.</para></listitem>
@@ -210,7 +210,7 @@ root[] <emphasis role="bold"><code>f1.Draw()</code></emphasis>
 <title>Edit Menu</title>
 <para>There is only one active menu entry in the Edit menu. The others menu entries will be implemented and will become active in the near future.</para>
 <itemizedlist>
-<listitem><para><inlinemediaobject><imageobject><imagedata fileref="pictures/0300000C.png" width="66.7pt" depth="99.2pt;z-index:-22"/></imageobject></inlinemediaobject><emphasis role="italic">Clear</emphasis><emphasis role="italic">:</emphasis> delete all objects in the canvas or in the selected pad according to the selected entry in the submenu.</para></listitem>
+<listitem><para><inlinemediaobject><imageobject><imagedata fileref="pictures/0300000C.png" width="66.7pt" depth="99.2pt"/></imageobject></inlinemediaobject><emphasis role="italic">Clear</emphasis><emphasis role="italic">:</emphasis> delete all objects in the canvas or in the selected pad according to the selected entry in the submenu.</para></listitem>
 </itemizedlist>
 </sect3>
 
@@ -230,7 +230,7 @@ root[] <emphasis role="bold"><code>f1.Draw()</code></emphasis>
 <sect3>
 <title>Options Menu</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000D.png" width="96.75pt" depth="138.4pt;z-index:-21"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000D.png" width="96.75pt" depth="138.4pt"/></imageobject></inlinemediaobject>
 </para>
 <itemizedlist>
 <listitem><para><emphasis role="italic">Auto Resize Canvas</emphasis>:  turns auto-resize of the canvas on/off:</para></listitem>
@@ -252,7 +252,7 @@ root[] <emphasis role="bold"><code>f1.Draw()</code></emphasis>
 <sect3>
 <title>Inspect Menu</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000E.png" width="77.85pt" depth="40.5pt;z-index:-16"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000E.png" width="77.85pt" depth="40.5pt"/></imageobject></inlinemediaobject>
 </para>
 <itemizedlist>
 <listitem><para><emphasis role="italic">ROOT</emphasis>: inspects the top-level <emphasis role="italic"><emphasis role="bold"><code>gROOT</code></emphasis></emphasis> object (in a new canvas).</para></listitem>
@@ -271,7 +271,7 @@ root[] <emphasis role="bold"><code>f1.Draw()</code></emphasis>
 <sect3>
 <title>Help Menu</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000F.png" width="88.1pt" depth="110.5pt;z-index:-20"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000F.png" width="88.1pt" depth="110.5pt"/></imageobject></inlinemediaobject>
 </para>
 <itemizedlist>
 <listitem><para><emphasis role="italic">Canvas</emphasis><emphasis role="italic">: </emphasis> help on canvas as a whiteboard area for drawing.</para></listitem>
@@ -435,7 +435,7 @@ root[] <emphasis role="bold"><code>MyC_3-&gt;cd()</code></emphasis>
 
 <sect2>
 <title>Saving the Canvas</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/0300002B.png" width="98pt" depth="92.8pt;z-index:-15"/></imageobject></inlinemediaobject></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/0300002B.png" width="98pt" depth="92.8pt"/></imageobject></inlinemediaobject></para>
 <para>Using the File menu / Save cascade menu users can save the canvas as one of the files from the list. Please note that saving the canvas this way will overwrite the file with the same name without a warning. </para>
 <para>All supported file types can be saved via File menu / SaveAs… This dialog gives a choice to show or suppress the confirmation message for overwriting an existing file. </para>
 
