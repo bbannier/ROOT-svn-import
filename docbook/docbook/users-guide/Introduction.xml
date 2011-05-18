@@ -2,7 +2,9 @@
 <chapter xmlns="http://docbook.org/ns/docbook" version="5.0">
 <title>Introduction</title>
 <para>In the mid 1990's, René Brun and Fons Rademakers had many years of experience developing interactive tools and simulation packages. They had lead successful projects such as PAW,
-PIAF, and GEANT, and they knew the twenty-year-old FORTRAN libraries had reached their limits. Although still very popular, these tools could not scale up to the challenges offered by
+PIAF, and GEANT, and they knew 
+<indexterm><primary>PAW</primary></indexterm>
+the twenty-year-old FORTRAN libraries had reached their limits. Although still very popular, these tools could not scale up to the challenges offered by
 the Large Hadron Collider, where the data is a few orders of magnitude larger than anything seen before.</para>
 <para>At the same time, computer science had made leaps of progress especially in the area of Object Oriented Design, and René and Fons were ready to take advantage of it.</para>
 <para>ROOT was developed in the context of the NA49 experiment at CERN. NA49 has generated an impressive amount of data, around 10 Terabytes per run. This rate provided the ideal
@@ -23,7 +25,9 @@ mailing list.</para>
 
 <sect1>
 <title>The ROOT Mailing Lists</title>
-<para>The <code>roottalk</code> was the very first active ROOT mailing list. People can subscribe to it by registering at the ROOT web site:
+<para>The <code>roottalk</code> was the very first active ROOT mailing list.
+   <indexterm><primary>mailing list</primary></indexterm>
+ People can subscribe to it by registering at the ROOT web site:
 <uri xmlns:xlink="http://root.cern.ch/root/Registration.phtml">http://root.cern.ch/root/Registration.phtml</uri>.
 The <code>RootTalk</code> Forum  <uri xmlns:xlink="http://root.cern.ch/phpBB2/">http://root.cern.ch/phpBB2/</uri>
 has been gradually replaced this mailing list since September 2003. The <code>RootTalk</code> Forum is a web-based news group with about 10 discussion sub-units.</para>
@@ -50,15 +54,13 @@ and “PROOF: Parallel Processing”.</para>
 <para>We tried to follow a style convention for the sake of clarity. The styles in used are described below.</para>
 <para>To show source code in scripts or source files: </para>
 
-<programlisting language="c++">
-{
-cout &lt;&lt; " Hello" &lt;&lt; endl;
-float x = 3.;
-float y = 5.;
-int   i = 101;
-cout &lt;&lt;" x = "&lt;&lt;x&lt;&lt;" y = "&lt;&lt;y&lt;&lt;" i = "&lt;&lt;i&lt;&lt; endl;
-}
-</programlisting>
+<programlisting language="c++">{
+   cout &lt;&lt; " Hello" &lt;&lt; endl;
+   float x = 3.;
+   float y = 5.;
+   int   i = 101;
+   cout &lt;&lt;" x = "&lt;&lt;x&lt;&lt;" y = "&lt;&lt;y&lt;&lt;" i = "&lt;&lt;i&lt;&lt; endl;
+}</programlisting>
 
 <para>
 To show the ROOT command line, we show the ROOT prompt without numbers. In the interactive system, the ROOT prompt has a line number
@@ -71,7 +73,9 @@ root[] <emphasis role="bold"><code>l.Print()</code></emphasis>
 TLine  X1=0.000000 Y1=0.000000 X2=0.000000 Y2=0.000000
 </programlisting>
 
-<para>Italic bold monotype font indicates a global variable, for example <emphasis role="italic"><emphasis role="bold"><code>gDirectory</code></emphasis></emphasis>.
+<para>Italic bold monotype font indicates a global variable, for example 
+<emphasis role="italic"><emphasis role="bold"><code>gDirectory</code></emphasis></emphasis>.
+<indexterm><primary>gDirectory</primary></indexterm>
 We also used the italic font to <emphasis><code>highlight the comments</code></emphasis> in the code listing. </para>
 <para>When a variable term is used, it is shown between angled brackets. In the example below the variable term &lt;library&gt; can be replaced with any library in the
 <code>$ROOTSYS</code> directory: <code>$ROOTSYS/&lt;library&gt;/inc.</code></para>
@@ -83,10 +87,14 @@ We also used the italic font to <emphasis><code>highlight the comments</code></e
 
 <sect2>
 <title>What Is a Framework?</title>
+<indexterm><primary>framework</primary><secondary>components</secondary></indexterm>
 <para>Programming inside a framework is a little like living in a city. Plumbing, electricity, telephone, and transportation are services provided by the city. In your house, you have interfaces to the services such as light switches, electrical outlets, and telephones. The details, for example, the routing algorithm of the phone switching system, are transparent to you as the user. You do not care; you are only interested in using the phone to communicate with your collaborators to solve your domain specific problems.</para>
 <para>Programming outside of a framework may be compared to living in the country. In order to have transportation and water, you will have to build a road and dig a well. To have services like telephone and electricity you will need to route the wires to your home. In addition, you cannot build some things yourself. For example, you cannot build a commercial airport on your patch of land. From a global perspective, it would make no sense for everyone to build his or her own airport. You see you will be very busy building the infrastructure (or framework) before you can use the phone to communicate with your collaborators and have a drink of water at the same time. In software engineering, it is much the same way. In a framework, the basic utilities and services, such as I/O and graphics, are provided. In addition, ROOT being a HEP analysis framework, it provides a large selection of HEP specific utilities such as histograms and fitting. The drawback of a framework is that you are constrained to it, as you are constraint to use the routing algorithm provided by your telephone service. You also have to learn the framework interfaces, which in this analogy is the same as learning how to use a telephone.</para>
 <para>If you are interested in doing physics, a good HEP framework will save you much work. Next is a list of the more commonly used components of ROOT: Command Line Interpreter, Histograms and Fitting, Writing a Graphical User Interface, 2D Graphics, Input/Output , Collection Classes, Script Processor.</para>
-<para>There are also less commonly used components, as: 3D Graphics, Parallel Processing (PROOF), Run Time Type Identification (RTTI), Socket and Network Communication, Threads.</para>
+<para>There are also less commonly used components, as: 3D Graphics, Parallel Processing (PROOF), 
+Run Time Type Identification (RTTI), Socket and Network Communication, Threads.
+<indexterm><primary>RTTI</primary></indexterm>
+</para>
 
 <sect3>
 <title>Advantages of Frameworks</title>
@@ -106,7 +114,7 @@ We also used the italic font to <emphasis><code>highlight the comments</code></e
 <itemizedlist>
 <listitem><para>Encapsulation enforces data abstraction and increases opportunity for reuse.</para></listitem>
 <listitem><para>Sub classing and inheritance make it possible to extend and modify objects.</para></listitem>
-<listitem><para>Class hierarchies and containment hierarchies provide a flexible mechanism for modeling real-world objects and the relationships among them.</para></listitem>
+<listitem><para>Class hierarchies and containment <indexterm><primary>containment</primary></indexterm> hierarchies provide a flexible mechanism for modeling real-world objects and the relationships among them.</para></listitem>
 <listitem><para>Complexity is reduced because there is little growth of the global state, the state is contained within each object, rather than scattered through the program in the form of global variables.</para></listitem>
 <listitem><para>Objects may come and go, but the basic structure of the program remains relatively static, increases opportunity for reuse of design.</para></listitem>
 </itemizedlist>
@@ -115,10 +123,13 @@ We also used the italic font to <emphasis><code>highlight the comments</code></e
 
 <sect1>
 <title>Installing ROOT</title>
+<indexterm><primary>install ROOT</primary></indexterm>
 <para>To install ROOT you will need to go to the ROOT website at:  <uri xmlns:xlink="http://root.cern.ch/root/Availability.html">http://root.cern.ch/root/Availability.html</uri>. You have a choice to download the binaries or the source. The source is quicker to transfer since it is only ~22 MB, but you will need to compile and link it. The binaries compiled with no degug information range from ~35 MB to ~45 MB depending on the target platform. </para>
 <para>The installation and building of ROOT is described in Appendix A: Install and Build ROOT. You can download the binaries, or the source. The GNU g++ compiler on most UNIX platforms can compile ROOT. </para>
 <para>Before downloading a binary version make sure your machine contains the right run-time environment. In most cases it is not possible to run a version compiled with, e.g., gcc4.0 on a platform where only gcc 3.2 is installed. In such cases you'll have to install ROOT from source.</para>
-<para>ROOT is currently running on the following platforms:</para>
+<para>ROOT is currently running on the following platforms:
+<indexterm><primary>supported platforms</primary></indexterm>
+</para>
 <itemizedlist>
 <listitem><para><code>GNU/Linux x86-32 (IA32) and x86-64 (AMD64)(GCC,Intel/icc,Portland/PGCC,KAI/KCC)</code> </para> </listitem>
 <listitem><para><code>Intel Itanium (IA64) GNU/Linux (GCC, Intel/ecc, SGI/CC) </code></para> </listitem>
@@ -141,6 +152,7 @@ We also used the italic font to <emphasis><code>highlight the comments</code></e
 
 <sect1>
 <title>The Organization of the ROOT Framework</title>
+<indexterm><primary>framework</primary><secondary>organization</secondary></indexterm>
 <para>Now after we know in abstract terms what the ROOT framework is, let us look at the physical directories and files that come with the ROOT installation.
 You may work on a platform where your system administrator has already installed ROOT. You will need to follow the specific development environment for your
 setup and you may not have write access to the directories. In any case, you will need an environment variable called <code>ROOTSYS</code>, which holds the path of the top ROOT directory. </para>
@@ -150,7 +162,9 @@ setup and you may not have write access to the directories. In any case, you wil
 /opt/root
 </programlisting>
 
-<para>In the <code>ROOTSYS</code> directory are examples, executables, tutorials, header files, and, if you opted to download it, the source is here. The directories of special interest to us are <code>bin</code>, <code>tutorials</code>, <code>lib</code>, <code>test</code>, and<code> include</code>.  The next figure shows the contents of these directories.</para>
+<para>In the <code>ROOTSYS</code> directory are examples, executables, tutorials, header 
+<indexterm><primary>tutorials</primary></indexterm>
+files, and, if you opted to download it, the source is here. The directories of special interest to us are <code>bin</code>, <code>tutorials</code>, <code>lib</code>, <code>test</code>, and<code> include</code>.  The next figure shows the contents of these directories.</para>
 
 <figure><title>ROOT framework directories</title>
 <para>
@@ -189,7 +203,10 @@ setup and you may not have write access to the directories. In any case, you wil
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
-<para>the executable that <code>root</code> calls, if you use a debugger such as <code>gdb</code>, you will need to run <code>root.exe</code> directly</para>
+<para>the executable that <code>root</code> calls, if you use a debugger such as <code>gdb</code>, you will 
+need to run <code>root.exe</code> directly
+<indexterm><primary>CINT</primary><secondary>debugger</secondary></indexterm>
+</para>
 </entry>
 </row>
 <row>
@@ -266,6 +283,7 @@ setup and you may not have write access to the directories. In any case, you wil
 <entry rowsep="1" colsep="1">
 <para>
 <code>rootd</code>
+<indexterm><primary>rootd</primary></indexterm>
 </para>
 </entry>
 <entry rowsep="1" colsep="1">
@@ -343,26 +361,49 @@ and make the ROOT classes available in your own program. </para>
 
 <sect3>
 <title>Linktime Library Dependencies</title>
-<para>When building your own executable you will have to link against the libraries that contain the classes you use. The ROOT reference guide states the library a class is defined in. Almost all relevant classes can be found in libraries returned by <code>root-config –glibs</code>; the graphics libraries are retuned by <code>root-config --libs</code>. These commands are commonly used in <code>Makefiles</code>. Using <code>root-config</code> instead of enumerating the libraries by hand allows you to link them in a platform independent way. Also, if ROOT library names change you will not need to change your Makefile.</para>
-<para>A batch program that does not have a graphic display, which creates, fills, and saves histograms and trees, only needs to link the core libraries (<code>libCore</code>, <code>libCint</code>, <code>libRIO</code>), <code>libHist</code> and <code>libTree</code>. If ROOT needs access to other libraries, it loads them dynamically. For example, if the <emphasis role="bold"><code>TreeViewer</code></emphasis> is used, <code>libTreePlayer</code> and all libraries <code>libTreePlayer</code> depends on are loaded also. The dependent libraries are shown in the ROOT reference guide’s library dependency graph. The difference between <code>libHist</code> and <code>libHistPainter</code> is that the former needs to be explicitly linked and the latter will be loaded automatically at runtime when ROOT needs it, by means of the Plugin Manager.</para>
-<para>In the Figure 1-2, the libraries represented by green boxes outside of the core are loaded via the plugin manager or equivalent techniques, while the white ones are not. Of course, if one wants to access a plugin library directly, it has to be explicitly linked. An example of a plugin library is <code>libMinuit</code>. To create and fill histograms you need to link <code>libHist.so</code>. If the code has a call to fit the histogram, the "fitter" will dynamically load libMinuit if it is not yet loaded.</para>
+<para>When building your own executable you will have to link against the libraries that contain the classes 
+you use. The ROOT reference guide states the library a class is 
+<indexterm><primary>reference guide</primary></indexterm>
+defined in. Almost all relevant classes can 
+be found in libraries returned by <code>root-config –glibs</code>; the graphics libraries are retuned by <code>root-config --libs</code>. These commands are commonly used in <code>Makefiles</code>. Using <code>root-config</code> instead of enumerating the libraries by hand allows you to link them in a platform independent way. Also, if ROOT library names change you will not need to change your Makefile.</para>
+<para>A batch program that does not have a graphic display, which creates, fills, and saves histograms and 
+trees, only needs to link the core libraries (<code>libCore</code>, <code>libCint</code>, <code>libRIO</code>),
+<code>libHist</code> and <code>libTree</code>. If ROOT needs access to other libraries, it loads them
+dynamically. For example, if the <emphasis role="bold"><code>TreeViewer</code></emphasis> is used,
+<code>libTreePlayer</code> and all libraries <code>libTreePlayer</code> depends on are loaded also.
+The dependent libraries are shown in the ROOT reference guide’s library dependency graph.
+The difference between <indexterm><primary>reference guide</primary></indexterm>
+<code>libHist</code> and <code>libHistPainter</code> is that the former needs to be explicitly linked and the
+latter will be loaded automatically at runtime when ROOT needs it, by means of the Plugin Manager.
+<indexterm><primary>plugin manager</primary></indexterm>
+</para>
+<para>In the Figure 1-2, the libraries represented by green boxes outside of the core are loaded via the 
+plugin manager <indexterm><primary>plugin manager</primary></indexterm> or equivalent techniques, while the white ones are not. Of course, if one wants to access a plugin library directly, it has to be explicitly linked. An example of a plugin library is <code>libMinuit</code>. To create and fill histograms you need to link <code>libHist.so</code>. If the code has a call to fit the histogram, the "fitter" will dynamically load libMinuit if it is not yet loaded.</para>
 </sect3>
 
 <sect3>
 <title>Plugins: Runtime Library Dependencies for Linking</title>
-<para>The Plugin Manager <emphasis role="bold"><code>TPluginManager</code></emphasis> allows postponing library dependencies to runtime: a plugin library will only be loaded when it is needed. Non-plugins will need to be linked, and are thus loaded at start-up. Plugins are defined by a base class (e.g. <emphasis role="bold"><code>TFile</code></emphasis>) that will be implemented in a plugin, a tag used to identify the plugin (e.g. <code>^rfio:</code> as part of the protocol string), the plugin class of which an object will be created (e.g. <emphasis role="bold"><code>TRFIOFile</code></emphasis>), the library to be loaded (in short <code>libRFIO.so</code> to RFIO), and the constructor to be called (e.g. “<code>TRFIOFile()</code>”). This can be specified in the <code>.rootrc</code> which already contains many plugin definitions, or by calls to <code>gROOT-&gt;GetPluginManager()-&gt;AddHandler()</code>.</para>
+<para>
+<indexterm><primary>plugin manager</primary></indexterm>
+The Plugin Manager <emphasis role="bold"><code>TPluginManager</code></emphasis> allows postponing library dependencies to runtime: a plugin library will only be loaded when it is needed. Non-plugins will need to be linked, and are thus loaded at start-up. Plugins are defined by a base class (e.g. <emphasis role="bold"><code>TFile</code></emphasis>) that will be implemented in a plugin, a tag used to identify the plugin (e.g. <code>^rfio:</code> as part of the protocol string), the plugin class of which an object will be created (e.g. <emphasis role="bold"><code>TRFIOFile</code></emphasis>), the library to be loaded (in short <code>libRFIO.so</code> to RFIO), and the constructor to be called (e.g. “<code>TRFIOFile()</code>”). This can be specified in the <code>.rootrc</code> which already contains many plugin definitions, or by calls to <code>gROOT-&gt;GetPluginManager()-&gt;AddHandler()</code>.</para>
 </sect3>
 
 <sect3>
 <title>Library Autoloading</title>
-<para>When using a class in CINT, e.g. in an interpreted source file, ROOT will automatically load the library that defines this class. On start-up, ROOT parses all files ending on <code>.rootmap</code> that are in one of the <code>$LD_LIBRARY_PATH</code> (or <code>$DYLD_LIBRARY_PATH</code> for <code>MacOS</code>, or <code>$PATH</code> for <code>Windows</code>). They contain class names and the library names that the class depends on. After reading them, ROOT knows which classes are available, and which libraries to load for them.</para>
+<para>When using a class in CINT, e.g. in an interpreted source file, ROOT will automatically load the library
+that defines this class. On start-up, ROOT parses all files ending on <code>.rootmap</code>
+<indexterm><primary>rootmap</primary></indexterm>
+that are in one of the <code>$LD_LIBRARY_PATH</code> (or <code>$DYLD_LIBRARY_PATH</code> for <code>MacOS</code>, or <code>$PATH</code> for <code>Windows</code>). They contain class names and the library names that the class depends on. After reading them, ROOT knows which classes are available, and which libraries to load for them.</para>
 <para>When <emphasis role="bold"><code>TSystem</code></emphasis><code>::Load("ALib")</code> is called, ROOT uses this information to determine which libraries <code>libALib.so</code> depends on. It will load these libraries first. Otherwise, loading the requested library could cause a system (dynamic loader) error due to unresolved symbols.</para>
 </sect3>
 </sect2>
 
 <sect2>
 <title>$ROOTSYS/tutorials</title>
-<para>The tutorials directory contains many example scripts. They assume some basic knowledge of ROOT, and for the new user we recommend reading the chapters: “Histograms” and “Input/Output” before trying the examples. The more experienced user can jump to chapter “The Tutorials and Tests” to find more explicit and specific information about how to build and run the examples.</para>
+<para>
+<indexterm><primary>tutorials</primary></indexterm>
+The tutorials directory contains many example <indexterm><primary>example</primary></indexterm>
+scripts. They assume some basic knowledge of ROOT, and for the new user we recommend reading the chapters: “Histograms” and “Input/Output” before trying the examples. The more experienced user can jump to chapter “The Tutorials and Tests” to find more explicit and specific information about how to build and run the examples.</para>
 <para>The <code>$ROOTSYS/tutorials/</code> directory include the following sub-directories:</para>
 <para>
 <code>fft</code>:      Fast Fourier Transform with the fftw package
@@ -400,7 +441,8 @@ and make the ROOT classes available in your own program. </para>
 
 <sect2>
 <title>$ROOTSYS/test</title>
-<para>The test directory contains a set of examples that represent all areas of the framework. When a new release is cut, the examples in this directory are compiled and run to test the new release's
+<para>The test directory contains a set of examples <indexterm><primary>example</primary></indexterm>
+that represent all areas of the framework. When a new release is cut, the examples in this directory are compiled and run to test the new release's
 backward compatibility. The list of source files is described in chapter “The Tutorials and Tests”.</para>
 <para>The <code>$ROOTSYS/test</code> directory is a gold mine of ROOT-wisdom nuggets, and we encourage you to explore and exploit it. We recommend the new users to read the chapter “Getting Started”.
 The chapter “The Tutorials and Tests” has instructions on how to build all the programs and it goes over the examples <code>Event</code> and <code>stress</code>.</para>
@@ -426,11 +468,23 @@ TVector3.h
 
 <sect1>
 <title>How to Find More Information</title>
-<para>The ROOT web site has up to date documentation. The ROOT source code automatically generates this documentation, so each class is explicitly documented on its own web page, which is always up to date with the latest official release of ROOT. </para>
-<para>The ROOT Reference Guide web pages can be found at  <uri xmlns:xlink="http://root.cern.ch/root/html/ClassIndex.html">http://root.cern.ch/root/html/ClassIndex.html</uri>. Each page contains a class description, and an explanation of each method. It shows the class inheritance tree and lets you jump to the parent class page by clicking on the class name. If you want more details, you can even see the source. There is a help page available in the little box on the upper right hand side of each class documentation page. You can see on the next page what a typical class documentation web page looks like. The ROOT web site also contains in addition to this Reference Guide, "How To's", a list of publications and example applications. </para>
+<para>
+<indexterm><primary>web</primary><secondary>site</secondary></indexterm>
+The ROOT web site has up to date documentation. The ROOT source code automatically generates this documentation, so each class is explicitly documented on its own web page, which is always up to date with the latest official release of ROOT. </para>
+<para>The ROOT Reference Guide web pages can be found at
+<indexterm><primary>class index</primary></indexterm>
+<indexterm><primary>reference guide</primary></indexterm>
+<uri xmlns:xlink="http://root.cern.ch/root/html/ClassIndex.html">http://root.cern.ch/root/html/ClassIndex.html</uri>.
+Each page contains a class description, and an explanation of each method. It shows the class inheritance
+tree and lets you jump to the parent class page by clicking on the class name. If you want more details, you
+can even see the source. There is a help page available in the little box on the upper right hand side of each
+class documentation page. You can see on the next page what a typical class documentation web page looks like.
+The ROOT web site also contains in addition to this Reference Guide, "How To's", a list of publications and
+example applications. </para>
 
 <sect2>
 <title>Class Reference Guide</title>
+<indexterm><primary>reference guide</primary></indexterm>
 <para>The top of any class reference page lets you jump to different parts of the documentation. The first line links to the class index and the index for the current module (a group of classes, often a library). The second line links to the ROOT homepage and the class overviews. The third line links the source information – a HTML version of the source and header file as well as the CVS (the source management system used for the ROOT development) information of the files. The last line links the different parts of the current pages.</para>
 <para>
 <inlinemediaobject><imageobject><imagedata fileref="pictures/03000006.png" width="317.15pt" depth="44.7pt"/></imageobject></inlinemediaobject>
