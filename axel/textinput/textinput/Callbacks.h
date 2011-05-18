@@ -15,22 +15,30 @@
 #ifndef TEXTINPUT_CALLBACKS_H
 #define TEXTINPUT_CALLBACKS_H
 
+#include <vector>
+#include <string>
+
 namespace textinput {
+  class Text;
+  class EditorRange;
+
   class TabCompletion {
   public:
     // Returns false on error
-    bool Complete(Text& Line /*in+out*/,
-                  size_t& Cursor /*in+out*/,
-                  EditorRange& R /*out*/,
-                  std::vector<std::string>& DisplayCompletions /*out*/) = 0;
+    virtual bool Complete(Text& Line /*in+out*/,
+                          size_t& Cursor /*in+out*/,
+                          EditorRange& R /*out*/,
+                          std::vector<std::string>& DisplayCompletions /*out*/)
+    = 0;
   };
+
   class FunKey {
   public:
     // Returns false on error
-    bool OnPressed(int FKey /*in*/,
-                   Text& Line /*in+out*/,
-                   size_t& Cursor /*in+out*/,
-                   EditorRange& R /*out*/) = 0;
+    virtual bool OnPressed(int FKey /*in*/,
+                           Text& Line /*in+out*/,
+                           size_t& Cursor /*in+out*/,
+                           EditorRange& R /*out*/) = 0;
   };
 }
 
