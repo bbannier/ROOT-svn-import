@@ -100,12 +100,12 @@
 
 namespace TMVA {
 
-   // kernel types
-   enum EKernel { kNone=0, kGaus=1, kLinN=2 };
-
    class MethodPDEFoam : public MethodBase {
 
    public:
+
+      // kernel types
+      typedef enum EKernel { kNone=0, kGaus=1, kLinN=2 } EKernel;
 
       MethodPDEFoam( const TString& jobName,
                      const TString& methodTitle,
