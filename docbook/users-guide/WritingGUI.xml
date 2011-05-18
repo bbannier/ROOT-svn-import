@@ -223,7 +223,7 @@ root[]<emphasis role="bold"><code>.x example.C</code></emphasis>
 <listitem><para>Definition of main frame (top level window)</para></listitem>
 <listitem><para>Creation of widgets as children of the top-level frame; assign them desired properties following the steps:</para></listitem>
 <listitem><para>Create a new widget passing its parent in the constructor</para></listitem>
-<listitem><para>Connect widget’s signals with desired slots to ensure desired functionality</para></listitem>
+<listitem><para>Connect widget's signals with desired slots to ensure desired functionality</para></listitem>
 <listitem><para>Define widget’s layout and add it to the parent list of children</para></listitem>
 <listitem><para>Set main window attributes </para></listitem>
 <listitem><para>Map all sub windows</para></listitem>
@@ -1834,11 +1834,10 @@ void <code>TGedEditor</code>::ExcludeClassEditor(TClass* class, Bool_t recurse)
 <para><code>Atom_t  fAction</code>: atom describing the action (copy, move, link); currently, only copy is used.</para>
 <para><code>void   *fData</code>: actual data (buffer).</para>
 <para><code>Int_t</code>         <code>fDataLength</code>: length (size) of data buffer.</para>
-<para>Currently two types are recognized by ROOT: "application/root" for ROOT objects and "text/uri-list" for path/filenames(uri comes from Unique Resource Identifier). A text/uri-list is a standard file listing format for drag and drop that specifies a list of files (each file per line). Each line ends with a carriage return and newline<code> rn</code>. File names have to be valid, url-encoded URIs as shown below: </para>
-<para> <uri xmlns:xlink="file://localhost/usr/bin/opera[rn">file://localhost/usr/bin/opera[rn </uri>] or file://localhost/c:/programs/myfile.txt[rn]</para>
+<para>Currently two types are recognized by ROOT: "application/root" for ROOT objects and "text/uri-list" for path/filenames (uri comes from Unique Resource Identifier). A text/uri-list is a standard file listing format for drag and drop that specifies a list of files (each file per line). Each line ends with a carriage return and newline<code> rn</code>. File names have to be valid, url-encoded URI's as shown below: </para>
+<para> <code>file://localhost/usr/bin/opera</code> or <code>file://localhost/c:/programs/myfile.txt</code></para>
 <para>
-<uri xmlns:xlink="file://server/data/software.xml[rn">file://server/data/software.xml[rn</uri>
-<code>] or http://root.cern.ch/root/images/ftpstats.gif[rn]</code></para>
+<code>file://server/data/software.xml</code> or <code>http://root.cern.ch/root/images/ftpstats.gif</code></para>
 <para>The atoms and the drag and drop manager (<emphasis role="bold"><code>TGDNDManager</code></emphasis>), are created at the main application creation time  (class TGMainFrame).</para>
 <para>Setting a Drag Source - first, create and fill data:</para>
 
