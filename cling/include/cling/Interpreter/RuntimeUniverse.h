@@ -126,7 +126,7 @@ namespace cling {
           ctor += ExprInfo->getExpr();
           ctor += "\")";
           Value res = gCling->Evaluate(ctor.c_str(), DC);
-          //m_memory = (void*)res.value.Untyped;
+          m_Memory = (void*)res.value.PointerVal;
         }
 
         /// \brief Clears up the free store, when LifetimeHandler goes out of
@@ -135,6 +135,7 @@ namespace cling {
           std::string str;
           llvm::raw_string_ostream stream(str);
           stream<<"delete ("<< m_Type << "*) "<< m_Memory;
+          stream.flush();
           gCling->processLine(str);
         }
         void* getMemory() const { return m_Memory; }
