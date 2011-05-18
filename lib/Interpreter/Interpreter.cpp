@@ -939,11 +939,15 @@ namespace cling {
     // resume the code gen
     m_IncrParser->addConsumer(IncrementalParser::kCodeGenerator,
                               m_ExecutionContext->getCodeGenerator());
+    DeclGroupRef DGR(TopLevelFD);
+    // collect the references that are being used
+    m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(DGR);
+    // generate code for the delta
     m_ExecutionContext->getCodeGenerator()->HandleTranslationUnit(Context);
-
+ 
     // get the result
     llvm::GenericValue val;
-    if (!isInCLinkageSpecification(TopLevelFD)) {
+    if (!TopLevelFD->isExternC()) {
         WrapperName = "";
         llvm::raw_string_ostream RawStr(WrapperName);
         MangleContext* Mangle = Context.createMangleContext();
@@ -952,17 +956,6 @@ namespace cling {
     m_ExecutionContext->executeFunction(WrapperName, &val);
 
     return Value(val, RetTy.getTypePtrOrNull());
-  }
-
-  bool Interpreter::isInCLinkageSpecification(const Decl *D) {
-    D = D->getCanonicalDecl();
-    for (const DeclContext *DC = D->getDeclContext();
-         !DC->isTranslationUnit(); DC = DC->getParent()) {
-      if (const LinkageSpecDecl *Linkage = dyn_cast<LinkageSpecDecl>(DC))
-        return Linkage->getLanguage() == LinkageSpecDecl::lang_c;
-    }
-    
-    return false;
   }
 
   void Interpreter::enableRuntimeCallbacks(bool Enabled /*=true*/) {
