@@ -50,7 +50,7 @@ namespace textinput {
 
     // Setters
     void SetPrompt(const char* P);
-    void SetHiddenInput(bool hidden = true) { fHidden = hidden; }
+    void HideInput(bool hidden = true) { fHidden = hidden; }
     void SetColorizer(Colorizer* C);
     
     void SetMaxPendingCharsToRead(size_t nMax) { fMaxChars = nMax; }
