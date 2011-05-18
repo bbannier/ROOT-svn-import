@@ -736,11 +736,9 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
       if (discr_error < 1e-10) discr_error = 1.;
    }
    else { // Signal and Bg not separated
-      std::vector<Float_t> xvec = ev->GetValues();
-      
       // get discriminator direct from the foam
-      discr       = fFoam.at(0)->GetCellValue(xvec, kValue, fKernelEstimator);
-      discr_error = fFoam.at(0)->GetCellValue(xvec, kValueError, fKernelEstimator);
+      discr       = fFoam.at(0)->GetCellValue(ev->GetValues(), kValue, fKernelEstimator);
+      discr_error = fFoam.at(0)->GetCellValue(ev->GetValues(), kValueError, fKernelEstimator);
    }
 
    // attribute error
@@ -1413,7 +1411,7 @@ void TMVA::MethodPDEFoam::ReadFoamsFromFile()
 }
 
 //_______________________________________________________________________
-TMVA::EKernel TMVA::MethodPDEFoam::UIntToKernel(UInt_t iker)
+TMVA::MethodPDEFoam::EKernel TMVA::MethodPDEFoam::UIntToKernel(UInt_t iker)
 {
    // convert UInt_t to EKernel (used for reading weight files)
    switch(iker) {
