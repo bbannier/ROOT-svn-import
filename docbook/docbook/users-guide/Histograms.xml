@@ -423,7 +423,7 @@ h-&gt;Draw("e1same");
 
 <figure><title>Different draw options</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/02000030.jpg" width="280.55pt" depth="200.5pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/02000030.jpg" width="280.55pt" depth="200.5pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -440,7 +440,7 @@ h-&gt;Draw("e1same");
 
 <figure><title>The TEXT option</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/02000031.jpg" width="253.25pt" depth="181.85pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/02000031.jpg" width="253.25pt" depth="181.85pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -463,7 +463,7 @@ h-&gt;Draw("e1same");
 
 <figure><title>Different contour options</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/02000032.jpg" width="262.55pt" depth="189.3pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/02000032.jpg" width="262.55pt" depth="189.3pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1239,7 +1239,7 @@ tree.Draw("Nation::Division");
 
 <figure><title>Using a *char variable type in TTree::Draw</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0200003C.jpg" width="198.6pt" depth="145.25pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0200003C.jpg" width="198.6pt" depth="145.25pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1288,7 +1288,7 @@ integer by adding an arithmetic operation to the expression as shown below.</par
 
 <figure><title>Stacked histograms</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0300003D.png" width="234.6pt" depth="132.85pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0300003D.png" width="234.6pt" depth="132.85pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1570,7 +1570,7 @@ mypie-&gt;SetLabelFormat("%txt (%frac)");
 
 <sect2>
 <title>TH1Editor</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/03000043.png" width="216.6pt" depth="157.65pt;mso-wrap-distance-left:5.65pt;mso-wrap-distance-right:5.65pt"/></imageobject></inlinemediaobject>  <inlinemediaobject><imageobject><imagedata fileref="pictures/03000044.png" width="216.6pt" depth="158.9pt"/></imageobject></inlinemediaobject></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/03000043.png" width="216.6pt" depth="157.65pt"/></imageobject></inlinemediaobject>  <inlinemediaobject><imageobject><imagedata fileref="pictures/03000044.png" width="216.6pt" depth="158.9pt"/></imageobject></inlinemediaobject></para>
 <para>Style Tab:</para>
 <para>Titlesets the title of the histogram.</para>
 <para>Plotdraw a 2D or 3D plot; according to the dimension, different drawing possibilities can be set.</para>

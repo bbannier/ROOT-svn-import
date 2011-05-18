@@ -144,7 +144,7 @@ root[] <emphasis role="bold"><code>T-&gt;Scan("Cost:Age:C</code></emphasis><emph
 
 <figure><title>Activating the tree viewer</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000EF.png" width="152.4pt" depth="235.3pt;z-index:-19;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000EF.png" width="152.4pt" depth="235.3pt;z-index:-19"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -196,8 +196,8 @@ root[] <emphasis role="bold"><code>T-&gt;Scan("Cost:Age:C</code></emphasis><emph
 
 <figure><title>A couple of graphs</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000F6.png" width="165.7pt" depth="155.15pt;mso-wrap-distance-bottom:17pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000F7.png" width="196.15pt" depth="153.3pt;mso-wrap-distance-bottom:17pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000F6.png" width="165.7pt" depth="155.15pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000F7.png" width="196.15pt" depth="153.3pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -352,7 +352,7 @@ other objects (like <emphasis role="bold"><code>TH1</code></emphasis> and <empha
 
 <sect1>
 <title>Adding a Branch to Hold a List of Variables</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000F9.png" width="58.45pt" depth="81.15pt;z-index:-25;mso-wrap-distance-left:2.85pt;mso-wrap-distance-right:2.85pt"/></imageobject></inlinemediaobject>As in the very first example (<code>staff.root</code>) the data we want to save is a list of simple variables, such as integers or floats. In this case, we use the following <emphasis role="bold"><code>TTree</code></emphasis><code>::Branch</code> signature:</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000F9.png" width="58.45pt" depth="81.15pt;z-index:-25"/></imageobject></inlinemediaobject>As in the very first example (<code>staff.root</code>) the data we want to save is a list of simple variables, such as integers or floats. In this case, we use the following <emphasis role="bold"><code>TTree</code></emphasis><code>::Branch</code> signature:</para>
 
 <programlisting language="c++">
 <code>tree-&gt;Branch("Ev_Branch",&amp;event,"temp/F:ntrack/I:nseg:nvtex:flag/i ");</code>
@@ -469,7 +469,7 @@ other objects (like <emphasis role="bold"><code>TH1</code></emphasis> and <empha
 <para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000FA.png" width="86.75pt" depth="88.2pt;z-index:12"/></imageobject></inlinemediaobject>A tree that is split</para>
 </entry>
 <entry>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000FB.png" width="71.2pt" depth="88.7pt;z-index:13;mso-position-horizontal-relative:text;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>A tree that is not split</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000FB.png" width="71.2pt" depth="88.7pt;z-index:13"/></imageobject></inlinemediaobject>A tree that is not split</para>
 </entry>
 </row>
 </tbody>
@@ -667,13 +667,13 @@ other objects (like <emphasis role="bold"><code>TH1</code></emphasis> and <empha
 
 <figure><title>The tree1.root file and its tree in the browser</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000FC.png" width="235.25pt" depth="129.7pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000FC.png" width="235.25pt" depth="129.7pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
 <figure><title>A leaf histogram</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000FD.png" width="178.15pt" depth="155.15pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000FD.png" width="178.15pt" depth="155.15pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -2637,7 +2637,7 @@ root[] <emphasis role="bold"><code>m.Loop() </code></emphasis>
 </programlisting>
 
 <para>You should now see a canvas that looks like this.</para>
-<para> <inlinemediaobject><imageobject><imagedata fileref="pictures/03000106.png" width="254.5pt" depth="202.95pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject> </para>
+<para> <inlinemediaobject><imageobject><imagedata fileref="pictures/03000106.png" width="254.5pt" depth="202.95pt"/></imageobject></inlinemediaobject> </para>
 <para>To conclude the discussion on <code>MakeClass</code> let us lists the steps that got us here.</para>
 <itemizedlist>
 <listitem><para>Call <emphasis role="bold"><code>TTree</code></emphasis><code>::MakeClass</code>, which automatically creates a class to loop over the tree.</para></listitem>
@@ -2710,7 +2710,7 @@ root[]<emphasis role="bold"><code> T-&gt;Process("MySelector.C++","",1000,100);<
 <sect2>
 <title>Performance Benchmarks</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/03000107.png" width="182.5pt" depth="250.75pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/03000107.png" width="182.5pt" depth="250.75pt"/></imageobject></inlinemediaobject>
 </para>
 <para>The program <code>$ROOTSYS/test/bench.cxx</code> compares the I/O performance of STL vectors to the ROOT native <emphasis role="bold"><code>TClonesArray</code></emphasis><code>s</code> collection class. It creates trees with and without compression for the following cases: <code>vector&lt;THit&gt;</code>, <code>vector&lt;THit*&gt;</code>, <emphasis role="bold"><code>TClonesArray</code></emphasis><code>(</code><emphasis role="bold"><code>TObjHit</code></emphasis><code>)</code> <code>not split </code><emphasis role="bold"><code>TClonesArray</code></emphasis><code>(</code><emphasis role="bold"><code>TObjHit</code></emphasis><code>)</code> <code>split.</code></para>
 <para><code>The next graphs show the two columns on the right which represent the split and non-split </code><emphasis role="bold"><code>TClonesArray</code></emphasis><code>, </code>are significantly lower than the vectors. The most significant difference is in reading a file without compression. </para>

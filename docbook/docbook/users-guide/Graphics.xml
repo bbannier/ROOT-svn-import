@@ -215,7 +215,7 @@ kBottomLeft,  kBottomRight,   kTopLeft,   kTopRight,    kBottomSide,   kLeftSide
 
 <figure><title>A histogram drawn in a pad</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/020000A2.jpg" width="253.85pt" depth="158.3pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/020000A2.jpg" width="253.85pt" depth="158.3pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -587,7 +587,7 @@ root[] pad1-&gt;Divide(3,2)
 <figure><title>Dividing a pad into 6 sub-pads</title>
 <para>
 <inlinemediaobject><imageobject><imagedata fileref="pictures/030000A5.png" width="207.95pt" depth="94.35pt"/></imageobject></inlinemediaobject>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/020000A6.jpg" width="164.5pt" depth="98.7pt;mso-wrap-distance-left:22.7pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/020000A6.jpg" width="164.5pt" depth="98.7pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -824,7 +824,7 @@ Option_t *option)
 
 <figure><title>Different arrow formats</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000AD.png" width="2in" depth="119.15pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000AD.png" width="2in" depth="119.15pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -921,7 +921,7 @@ TMarker(Double_t x,Double_t y,Int_t marker)
 <inlinemediaobject><imageobject><imagedata fileref="pictures/030000B1.png" width="199.25pt" depth="60.2pt"/></imageobject></inlinemediaobject>
 </para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000B2.png" width="100.05pt" depth="30.8pt;z-index:-8;mso-wrap-distance-left:5.65pt;mso-wrap-distance-right:5.65pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000B2.png" width="100.05pt" depth="30.8pt;z-index:-8"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1279,7 +1279,7 @@ the only difference. This picture illustrates and explains some of the points of
 
 <figure><title>PaveText examples</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000C5.png" width="275.6pt" depth="256.35pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000C5.png" width="275.6pt" depth="256.35pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1443,7 +1443,7 @@ const char* funcname,Int_t ndiv=510,Option_t* chopt,Double_t gridlength=0)
 
 <figure><title>Y-axis with and without exponent labels</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000C7.png" width="380.5pt" depth="225.3pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000C7.png" width="380.5pt" depth="225.3pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1727,7 +1727,7 @@ axis-&gt;SetTimeFormat("#splitline{%Y}{%d/%m}");
 
 <figure><title>The first axis example</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000CC.png" width="235.25pt" depth="159.5pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000CC.png" width="235.25pt" depth="159.5pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1778,7 +1778,7 @@ axis8-&gt;Draw();
 
 <figure><title>The second axis example</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000CD.png" width="253.85pt" depth="182.5pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000CD.png" width="253.85pt" depth="182.5pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1816,7 +1816,7 @@ A3-&gt;Draw();
 
 <figure><title>An axis example with time display</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000CE.png" width="280.55pt" depth="173.8pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000CE.png" width="280.55pt" depth="173.8pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1947,7 +1947,7 @@ root[] la-&gt;SetTextFont(font)
 
 <figure><title>Font’s examples</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000CF.png" width="317.15pt" depth="209.15pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000CF.png" width="317.15pt" depth="209.15pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -2306,7 +2306,7 @@ root[] <emphasis role="bold"><code>li-&gt;SetLineWidth(width)</code></emphasis>
 </programlisting>
 
 <para>The <code>width</code> is the width expressed in pixel units.</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D1.png" width="77.15pt" depth="35.35pt;z-index:-9;mso-wrap-distance-left:5.65pt;mso-wrap-distance-right:5.65pt"/></imageobject></inlinemediaobject>The user interface for changing the line color, line width and style looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAtt</code></emphasis><emphasis role="bold"><code>Line</code></emphasis>.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D1.png" width="77.15pt" depth="35.35pt;z-index:-9"/></imageobject></inlinemediaobject>The user interface for changing the line color, line width and style looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAtt</code></emphasis><emphasis role="bold"><code>Line</code></emphasis>.</para>
 </sect2>
 
 <sect2>
@@ -2372,7 +2372,7 @@ root[] <emphasis role="bold"><code>color-&gt;SetRGB(r,g,b)</code></emphasis>
 </programlisting>
 
 <para>Where <code>r</code>, <code>g</code> and <code>b</code> go from 0 to 1 and <code>index_color</code> is the color number you wish to change.</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D4.png" width="69.45pt" depth="23.15pt;z-index:-11;mso-wrap-distance-left:5.65pt;mso-wrap-distance-right:5.65pt"/></imageobject></inlinemediaobject>The user interface for changing the fill color and style looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAttFill</code></emphasis>.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D4.png" width="69.45pt" depth="23.15pt;z-index:-11"/></imageobject></inlinemediaobject>The user interface for changing the fill color and style looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAttFill</code></emphasis>.</para>
 
 <sect3>
 <title>Color Palette (for Histograms)</title>
@@ -2425,7 +2425,7 @@ f2-&gt;Draw("cont");
 
 <sect2>
 <title>TAxisEditor</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D5.png" width="75.8pt" depth="162.65pt;z-index:-10;mso-wrap-distantitleeft:5.65pt;mso-wrap-distance-right:5.65pt"/></imageobject></inlinemediaobject></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D5.png" width="75.8pt" depth="162.65pt;z-index:-10"/></imageobject></inlinemediaobject></para>
 <para> This user interface gives the possibility for changing the following axis attributes: </para>
 <para>      color of the selected axis, the axis’ title and labels; </para>
 <para>      the length of thick parameters and the possibility to set them on both axis sides</para>
@@ -2442,7 +2442,7 @@ f2-&gt;Draw("cont");
 
 <sect2>
 <title>TPadEditor</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D6.png" width="76.05pt" depth="126.75pt;z-index:-1;mso-wrap-distantitleeft:5.65pt;mso-wrap-distance-right:5.65pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D6.png" width="76.05pt" depth="126.75pt;z-index:-1"/></imageobject></inlinemediaobject></para>
 <para> It provides the following user interface:</para>
 <para>  Fixed aspect ratio – can be set for pad resizing.</para>
 <para>  Edit – sets pad or canvas as editable.</para>
@@ -2477,7 +2477,7 @@ root[] .x tutorials/hist/draw2dopt.C
 
 <figure><title>Diferent draw options</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000D7.png" width="253.25pt" depth="191.15pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000D7.png" width="253.25pt" depth="191.15pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 

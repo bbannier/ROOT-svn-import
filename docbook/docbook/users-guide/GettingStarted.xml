@@ -193,7 +193,7 @@ root[] <emphasis role="bold"><code>f1.Draw()</code></emphasis>
 <sect3>
 <title>File Menu</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000B.png" width="69.3pt" depth="90.75pt;z-index:-23;mso-position-horizontal-relative:margin"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000B.png" width="69.3pt" depth="90.75pt;z-index:-23"/></imageobject></inlinemediaobject>
 </para>
 <itemizedlist>
 <listitem><para><emphasis role="italic">New Canvas</emphasis>: creates a new canvas window in the current ROOT session.</para></listitem>
@@ -210,7 +210,7 @@ root[] <emphasis role="bold"><code>f1.Draw()</code></emphasis>
 <title>Edit Menu</title>
 <para>There is only one active menu entry in the Edit menu. The others menu entries will be implemented and will become active in the near future.</para>
 <itemizedlist>
-<listitem><para><inlinemediaobject><imageobject><imagedata fileref="pictures/0300000C.png" width="66.7pt" depth="99.2pt;z-index:-22;mso-wrap-distance-left:5.65pt"/></imageobject></inlinemediaobject><emphasis role="italic">Clear</emphasis><emphasis role="italic">:</emphasis> delete all objects in the canvas or in the selected pad according to the selected entry in the submenu.</para></listitem>
+<listitem><para><inlinemediaobject><imageobject><imagedata fileref="pictures/0300000C.png" width="66.7pt" depth="99.2pt;z-index:-22"/></imageobject></inlinemediaobject><emphasis role="italic">Clear</emphasis><emphasis role="italic">:</emphasis> delete all objects in the canvas or in the selected pad according to the selected entry in the submenu.</para></listitem>
 </itemizedlist>
 </sect3>
 
@@ -230,7 +230,7 @@ root[] <emphasis role="bold"><code>f1.Draw()</code></emphasis>
 <sect3>
 <title>Options Menu</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000D.png" width="96.75pt" depth="138.4pt;z-index:-21;mso-wrap-distance-left:5.65pt;mso-wrap-distance-right:5.65pt"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/0300000D.png" width="96.75pt" depth="138.4pt;z-index:-21"/></imageobject></inlinemediaobject>
 </para>
 <itemizedlist>
 <listitem><para><emphasis role="italic">Auto Resize Canvas</emphasis>:  turns auto-resize of the canvas on/off:</para></listitem>
@@ -324,9 +324,9 @@ root[] <emphasis role="bold"><code>f1.Draw()</code></emphasis>
 <title>The Editor Frame</title>
 <para>The ROOT graphics editor loads the corresponding object editor <code>objEditor</code> according to the selected object <code>obj</code> in the canvas respecting the class inheritance. An object in the canvas is selected after the left mouse click on it. For example, if the selected object is <emphasis role="bold"><code>TAxis</code></emphasis>, the <emphasis role="bold"><code>TAxisEditor</code></emphasis> will shows up in the editor frame giving the possibility for changing different axis attributes. The graphics editor can be:</para>
 <para>Embedded – connected only with the canvas in the application window that appears on the left of the canvas window after been activated via View menu / Editor. It appears on the left side if the canvas window allowing users to edit the attributes of the selected object via provided user interface.  The name of the selected object is displayed on the top of the editor frame in red color. If the user interface needs more space then the height of the canvas window, a vertical scroll bar appears for easer navigation.</para>
-<para> <inlinemediaobject><imageobject><imagedata fileref="pictures/03000027.png" width="338.3pt" depth="234.15pt;mso-position-horizontal-relative:char;mso-position-vertical-relative:line"/></imageobject></inlinemediaobject></para>
+<para> <inlinemediaobject><imageobject><imagedata fileref="pictures/03000027.png" width="338.3pt" depth="234.15pt"/></imageobject></inlinemediaobject></para>
 <para>Global – has own application window and can be connected to any created canvas in a ROOT session. It can be activated via the context menu entries for setting line, fill, text and marker attributes for backward compatibility, but there will be a unique entry in the near future.</para>
-<para> <inlinemediaobject><imageobject><imagedata fileref="pictures/03000028.png" width="73.75pt" depth="187.45pt;mso-position-horizontal-relative:char;mso-position-vertical-relative:line"/></imageobject></inlinemediaobject>   <inlinemediaobject><imageobject><imagedata fileref="pictures/03000029.png" width="257.05pt" depth="187pt;mso-position-horizontal-relative:char;mso-position-vertical-relative:line"/></imageobject></inlinemediaobject></para>
+<para> <inlinemediaobject><imageobject><imagedata fileref="pictures/03000028.png" width="73.75pt" depth="187.45pt"/></imageobject></inlinemediaobject>   <inlinemediaobject><imageobject><imagedata fileref="pictures/03000029.png" width="257.05pt" depth="187pt"/></imageobject></inlinemediaobject></para>
 <para>The user interface for the following classes is available since ROOT v.4.04: <emphasis role="bold"><code>TAttLine</code></emphasis>, <emphasis role="bold"><code>TAttFill</code></emphasis>, <emphasis role="bold"><code>TAttMarker</code></emphasis>, <emphasis role="bold"><code>TAttText</code></emphasis>, <emphasis role="bold"><code>TArrow</code></emphasis>, <emphasis role="bold"><code>TAxis</code></emphasis>, <emphasis role="bold"><code>TCurlyArc</code></emphasis>, <emphasis role="bold"><code>TCurlyLine</code></emphasis>, <emphasis role="bold"><code>TFrame</code></emphasis>, <emphasis role="bold"><code>TH1</code></emphasis>, <emphasis role="bold"><code>TH2</code></emphasis>, <emphasis role="bold"><code>TGraph</code></emphasis>, <emphasis role="bold"><code>TPad</code></emphasis>, <emphasis role="bold"><code>TCanvas</code></emphasis>, <emphasis role="bold"><code>TPaveStats</code></emphasis>. For more details, see “The Graphics Editor”, “The User Interface for Histograms”, “The User Interface for Graphs”.</para>
 </sect2>
 

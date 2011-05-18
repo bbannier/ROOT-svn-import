@@ -1617,7 +1617,7 @@ fTracks-&gt;BypassStreamer(kFALSE);    <emphasis role="italic"><code>// use the 
 
 <figure><title>The ROOT schema evolution</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/020000ED.jpg" width="244.55pt" depth="154.55pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/020000ED.jpg" width="244.55pt" depth="154.55pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
