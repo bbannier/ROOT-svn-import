@@ -222,7 +222,7 @@ root[] <emphasis role="bold"><code>hist-&gt;Fit("f1","","",-2,2)</code></emphasi
 
 <sect1>
 <title>The Fit Panel</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/03000061.png" width="209.45pt" depth="363.65pt;z-index:43"/></imageobject></inlinemediaobject>To display the Fit Panel right click on a histogram to pop up the context menu, and then select the menu entry Fit Panel.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/03000061.png" width="209.45pt" depth="363.65pt"/></imageobject></inlinemediaobject>To display the Fit Panel right click on a histogram to pop up the context menu, and then select the menu entry Fit Panel.</para>
 <para>The new Fit Panel GUI is available in ROOT v5.14. Its goal is to replace the old Fit Panel and to provide more user friendly way for performing, exploring and comparing fits. </para>
 <para>By design, this user interface is planned to contain two tabs: “General” and “Minimization”. Currently, the “General” tab provides user interface elements for setting the fit function, fit method and different fit, draw, print options. </para>
 <para>The new fit panel is a modeless dialog, i.e. when opened, it does not prevent users from interacting with other windows. Its first prototype is a singleton application. When the Fit Panel is activated, users can select an object for fitting in the usual way, i.e. by left-mouse click on it. If the selected object is suitable for fitting, the fit panel is connected with this object and users can perform fits by setting different parameters and options.</para>
@@ -647,7 +647,7 @@ gMinuit-&gt;SetGraphicsMode(kFALSE);
 
 <sect2>
 <title>The MLP</title>
-<para>The multilayer perceptron is a simple feed-forward network with the following structure showed on the left.<inlinemediaobject><imageobject><imagedata fileref="pictures/0300008D.png" width="108pt" depth="115.5pt;z-index:-17"/></imageobject></inlinemediaobject></para>
+<para>The multilayer perceptron is a simple feed-forward network with the following structure showed on the left.<inlinemediaobject><imageobject><imagedata fileref="pictures/0300008D.png" width="108pt" depth="115.5pt"/></imageobject></inlinemediaobject></para>
 <para>It is made of neurons characterized by a bias and weighted links in between  - let's call those links synapses. The input neurons receive the inputs, normalize them and forward them to the first hidden layer. Each neuron in any subsequent layer first computes a linear combination of the outputs of the previous layer. The output of the neuron is then function of that combination with f being linear for output neurons or a sigmoid for hidden layers. </para>
 <para>Such a structure is very useful because of two theorems:</para>
 <para>1. A linear combination of <code>sigmoids</code> can approximate any continuous function.</para>
