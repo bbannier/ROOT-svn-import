@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <csignal>
 #include <cstring>
+#include <sstream>
 
 namespace {
   textinput::TerminalDisplayUnix*& gTerminalDisplayUnix() {
@@ -119,6 +120,14 @@ namespace textinput {
     int ret = ioctl(fFD, TIOCGWINSZ, (char*)&sz);
     if (!ret && sz.ws_col) {
       SetWidth(sz.ws_col);
+
+      // Export what we found.
+      std::stringstream s;
+      s << sz.ws_col;
+      setenv("COLUMS", s.str().c_str(), 1 /*overwrite*/);
+      s.clear();
+      s << sz.ws_row;
+      setenv("LINES", s.str().c_str(), 1 /*overwrite*/);
     }
 #else
     // try $COLUMNS
