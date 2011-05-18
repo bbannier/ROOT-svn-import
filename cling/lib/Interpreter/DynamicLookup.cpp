@@ -260,17 +260,18 @@ namespace cling {
   
   ASTNodeInfo DynamicExprTransformer::VisitCompoundStmt(CompoundStmt* Node) {
     ASTNodes Children;
+    ASTNodes NewChildren;
     if (GetChildren(Children, Node)) {
       ASTNodes::iterator it;
       for (it = Children.begin(); it != Children.end(); ++it) {
         ASTNodeInfo NewNode = Visit(*it);
         if (!NewNode.hasSingleNode()) {
+
           ASTNodes& NewStmts(NewNode.getNodes());
-          // Remove the last element, which is the one that is 
-          // being replaced          
-          Children.erase(it); 
-          Children.insert(it, NewStmts.begin(), NewStmts.end());
-          Node->setStmts(m_Context, Children.data(), Children.size());
+          for(unsigned i = 0; i < NewStmts.size(); ++i)
+            NewChildren.push_back(NewStmts[i]);
+
+          Node->setStmts(m_Context, NewChildren.data(), NewChildren.size());
           // Resolve all 1:n replacements
           Visit(Node);
         }
@@ -278,13 +279,15 @@ namespace cling {
           if (NewNode.isForReplacement()) {
             if (Expr* E = NewNode.getAs<Expr>())
               // Assume void if still not escaped
-              *it = SubstituteUnknownSymbol(m_Context.VoidTy, E);
+              NewChildren.push_back(SubstituteUnknownSymbol(m_Context.VoidTy, E));
           }
+          else
+            NewChildren.push_back(*it);
         }
       }
     }
 
-    Node->setStmts(m_Context, Children.data(), Children.size());
+    Node->setStmts(m_Context, NewChildren.data(), NewChildren.size());
 
     return ASTNodeInfo(Node, 0);
 
@@ -337,17 +340,16 @@ namespace cling {
             = m_Context.Idents.get(m_Interpreter->createUniqueName());
 
           // Prepare the initialization Exprs.
-          // We want to call LifetimeHandler(llvm::StringRef expr, 
-          //                                 void* varaddr[],
+          // We want to call LifetimeHandler(DynamicExprInfo* ExprInfo, 
           //                                 DeclContext DC,
           //                                 llvm::StringRef type)
           ASTOwningVector<Expr*> Inits(*m_Sema);
           // Add MyClass in LifetimeHandler unique(DynamicExprInfo* ExprInfo
           //                                       DC,
           //                                       "MyClass")
-          // Build Arg0 llvm::StringRef
+          // Build Arg0 DynamicExprInfo
           Inits.push_back(BuildDynamicExprInfo(E));
-          // Build Arg2 clang::DeclContext* DC
+          // Build Arg1 clang::DeclContext* DC
           CXXRecordDecl* D = dyn_cast<CXXRecordDecl>(m_Interpreter->
                                                      LookupDecl("clang").
                                                      LookupDecl("DeclContext").
@@ -357,9 +359,13 @@ namespace cling {
           Inits.push_back(ConstructCStyleCasePtrExpr(DCTy, 
                                                      (uint64_t)m_CurDeclContext)
                           );
-          // Build Arg3 llvm::StringRef
-          Inits.push_back(ConstructllvmStringRefExpr(CuredDeclTy.getAsString().
-                                                     c_str()));
+          // Build Arg2 llvm::StringRef
+          // Get the type of the type without specifiers 
+          PrintingPolicy Policy(m_Context.getLangOptions());
+          Policy.SuppressTagKeyword = 1;
+          std::string Res;
+          CuredDeclTy.getAsStringInternal(Res, Policy);
+          Inits.push_back(ConstructllvmStringRefExpr(Res.c_str()));
 
           // 2.3 Create a variable from LifetimeHandler.
           QualType HandlerTy = m_Context.getTypeDeclType(Handler);
@@ -372,7 +378,7 @@ namespace cling {
                                                      /*TypeSourceInfo**/0,
                                                      SC_None,
                                                      SC_None);
-          
+
           // 2.4 Call the best-match constructor. The method does overload 
           // resolution of the constructors and then initializes the new
           // variable with it

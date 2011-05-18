@@ -896,7 +896,6 @@ namespace cling {
     const std::string ExprStr(expr);
     std::string WrapperName = createUniqueName();
     std::string Wrapper = "void " + WrapperName + " () {\n";
-    //expr = "gCling->getVersion()";
     Wrapper += expr;
     Wrapper += ";\n}";
     
@@ -919,6 +918,7 @@ namespace cling {
       = dyn_cast<FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
     CurContext = m_IncrParser->getCI()->getSema().CurContext;
     m_IncrParser->getCI()->getSema().CurContext = TopLevelFD;
+    ASTContext& Context(getCI()->getASTContext());
     QualType RetTy;
     if (Stmt* S = TopLevelFD->getBody())
       if (CompoundStmt* CS = dyn_cast<CompoundStmt>(S))
@@ -926,29 +926,27 @@ namespace cling {
           RetTy = E->getType();
           // Change the void function's return type
           FunctionProtoType::ExtProtoInfo EPI;
-          QualType FuncTy
-            = getCI()->getASTContext().getFunctionType(RetTy,
-                                                       /*ArgArray*/0,
-                                                       /*NumArgs*/0,
-                                                       EPI);
-
+          QualType FuncTy = Context.getFunctionType(RetTy,
+                                                    /*ArgArray*/0,
+                                                    /*NumArgs*/0,
+                                                    EPI);
           TopLevelFD->setType(FuncTy);
           // add return stmt
           Stmt* RetS = getCI()->getSema().ActOnReturnStmt(SourceLocation(), E).take();
-          CS->setStmts(getCI()->getASTContext(), &RetS, 1);
+          CS->setStmts(Context, &RetS, 1);
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
     // resume the code gen
     m_IncrParser->addConsumer(IncrementalParser::kCodeGenerator,
                               m_ExecutionContext->getCodeGenerator());
-    m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(DeclGroupRef(TopLevelFD));
+    m_ExecutionContext->getCodeGenerator()->HandleTranslationUnit(Context);
 
     // get the result
     llvm::GenericValue val;
     if (!isInCLinkageSpecification(TopLevelFD)) {
         WrapperName = "";
         llvm::raw_string_ostream RawStr(WrapperName);
-        MangleContext* Mangle = getCI()->getASTContext().createMangleContext();
+        MangleContext* Mangle = Context.createMangleContext();
         Mangle->mangleName(TopLevelFD, RawStr);
     }
     m_ExecutionContext->executeFunction(WrapperName, &val);
