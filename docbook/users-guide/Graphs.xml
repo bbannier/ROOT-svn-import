@@ -205,7 +205,7 @@ gr2-&gt;Draw("CP");
 
 <figure><title>Graphs with different draw options of error bars</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/03000050.png" width="189.3pt" depth="150.2pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/03000050.png" width="189.3pt" depth="150.2pt"/></imageobject></inlinemediaobject>
 <inlinemediaobject><imageobject><imagedata fileref="pictures/03000051.png" width="191.8pt" depth="149.6pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>

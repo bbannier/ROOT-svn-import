@@ -422,7 +422,7 @@ signalFcn-&gt;Draw("same");
 
 <figure><title>The output of the FittingDemo() example</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/03000070.png" width="260.05pt" depth="222.2pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/03000070.png" width="260.05pt" depth="222.2pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -647,7 +647,7 @@ gMinuit-&gt;SetGraphicsMode(kFALSE);
 
 <sect2>
 <title>The MLP</title>
-<para>The multilayer perceptron is a simple feed-forward network with the following structure showed on the left.<inlinemediaobject><imageobject><imagedata fileref="pictures/0300008D.png" width="108pt" depth="115.5pt;z-index:-17;mso-position-horizontal-relative:text;mso-position-vertical-relative:text"/></imageobject></inlinemediaobject></para>
+<para>The multilayer perceptron is a simple feed-forward network with the following structure showed on the left.<inlinemediaobject><imageobject><imagedata fileref="pictures/0300008D.png" width="108pt" depth="115.5pt;z-index:-17"/></imageobject></inlinemediaobject></para>
 <para>It is made of neurons characterized by a bias and weighted links in between  - let's call those links synapses. The input neurons receive the inputs, normalize them and forward them to the first hidden layer. Each neuron in any subsequent layer first computes a linear combination of the outputs of the previous layer. The output of the neuron is then function of that combination with f being linear for output neurons or a sigmoid for hidden layers. </para>
 <para>Such a structure is very useful because of two theorems:</para>
 <para>1. A linear combination of <code>sigmoids</code> can approximate any continuous function.</para>

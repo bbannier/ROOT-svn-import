@@ -67,7 +67,7 @@ TH1::AddDirectory(<code>kFALSE</code>);
 
 <figure><title>The ROOT Object Browser</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/03000094.png" width="227.8pt" depth="201.1pt;mso-position-vertical-relative:page"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/03000094.png" width="227.8pt" depth="201.1pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
