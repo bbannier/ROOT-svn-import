@@ -4,7 +4,7 @@
 
 <sect1>
 <title>Folders</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000E1.png" width="220.7pt" depth="476.65pt;z-index:8"/></imageobject></inlinemediaobject>A <emphasis role="bold"><code>TFolder</code></emphasis> is a collection of objects visible and expandable in the ROOT object browser. Folders have a name and a title and are identified in the folder hierarchy by an "UNIX-like" naming convention. The base of all folders is <code>//root</code>. It is visible at the top of the left panel in the browser. The browser shows several folders under <code>//root</code>. </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000E1.png" width="220.7pt" depth="476.65pt"/></imageobject></inlinemediaobject>A <emphasis role="bold"><code>TFolder</code></emphasis> is a collection of objects visible and expandable in the ROOT object browser. Folders have a name and a title and are identified in the folder hierarchy by an "UNIX-like" naming convention. The base of all folders is <code>//root</code>. It is visible at the top of the left panel in the browser. The browser shows several folders under <code>//root</code>. </para>
 <para>New folders can be added and removed to/from a folder.</para>
 </sect1>
 
@@ -21,7 +21,7 @@
 </para>
 <para>In the second diagram, a reference to the data is in the folder and the consumers refer to the folder rather than each other to access the data. The naming and search service provided by the ROOT folders hierarchy provides an alternative. It loosely couples the classes and greatly enhances I/O operations. In this way, folders separate the data from the algorithms and greatly improve the modularity of an application by minimizing the class dependencies. </para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/020000E3.jpg" width="135.75pt" depth="54.6pt;z-index:-34"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/020000E3.jpg" width="135.75pt" depth="54.6pt"/></imageobject></inlinemediaobject>
 </para>
 <para>In addition, the folder hierarchy creates a picture of the data organization. This is useful when discussing data design issues or when learning the data organization. The example below illustrates this point.</para>
 <para/>
@@ -71,7 +71,7 @@
 <sect2>
 <title>Posting Data to a Folder (Producer)</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000E4.png" width="199.25pt" depth="298.65pt;z-index:5"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000E4.png" width="199.25pt" depth="298.65pt"/></imageobject></inlinemediaobject>
 </para>
 <para>A <emphasis role="bold"><code>TFolder</code></emphasis> can contain other folders as shown above or any <emphasis role="bold"><code>TObject</code></emphasis> descendents. In general, users will not post a single object to a folder; they will store a collection or multiple collections in a folder. For example, to add an array to a folder:</para>
 
@@ -198,7 +198,7 @@ new TBrowser;
 
 <figure><title>Tasks in the ROOT browser</title>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000E5.png" width="185.45pt" depth="219.45pt;z-index:-36"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000E5.png" width="185.45pt" depth="219.45pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
