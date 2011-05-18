@@ -921,7 +921,7 @@ TMarker(Double_t x,Double_t y,Int_t marker)
 <inlinemediaobject><imageobject><imagedata fileref="pictures/030000B1.png" width="199.25pt" depth="60.2pt"/></imageobject></inlinemediaobject>
 </para>
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/030000B2.png" width="100.05pt" depth="30.8pt;z-index:-8"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/030000B2.png" width="100.05pt" depth="30.8pt"/></imageobject></inlinemediaobject>
 </para>
 </figure>
 
@@ -1085,7 +1085,7 @@ Double_t wavelength,Double_t amplitude)
 
 <sect3>
 <title>Roots</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000BC.png" width="48.3pt" depth="22.65pt;z-index:7"/></imageobject></inlinemediaobject>The <code>#sqrt</code> command produces the square ROOT of its argument; it has an optional first argument for other roots. </para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000BC.png" width="48.3pt" depth="22.65pt"/></imageobject></inlinemediaobject>The <code>#sqrt</code> command produces the square ROOT of its argument; it has an optional first argument for other roots. </para>
 <para>Example:         <code>#sqrt{10}  #sqrt[3]{10}</code></para>
 </sect3>
 
@@ -2278,7 +2278,7 @@ root[]<emphasis role="bold"><code> la-&gt;SetTextSize(size)</code></emphasis>
 <listitem><para>If current pad is horizontal, the size in pixels  = <code>textsize * canvas_height</code> </para></listitem>
 <listitem><para>If current pad is vertical, the size in pixels      = <code>textsize * canvas_width</code>   </para></listitem>
 </itemizedlist>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D0.png" width="63.35pt" depth="36.6pt;z-index:-7"/></imageobject></inlinemediaobject>The user interface for changing the text color, size, font and allignment looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAttText</code></emphasis><emphasis role="bold">.</emphasis></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D0.png" width="63.35pt" depth="36.6pt"/></imageobject></inlinemediaobject>The user interface for changing the text color, size, font and allignment looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAttText</code></emphasis><emphasis role="bold">.</emphasis></para>
 <para/>
 </sect3>
 </sect2>
@@ -2306,7 +2306,7 @@ root[] <emphasis role="bold"><code>li-&gt;SetLineWidth(width)</code></emphasis>
 </programlisting>
 
 <para>The <code>width</code> is the width expressed in pixel units.</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D1.png" width="77.15pt" depth="35.35pt;z-index:-9"/></imageobject></inlinemediaobject>The user interface for changing the line color, line width and style looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAtt</code></emphasis><emphasis role="bold"><code>Line</code></emphasis>.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D1.png" width="77.15pt" depth="35.35pt"/></imageobject></inlinemediaobject>The user interface for changing the line color, line width and style looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAtt</code></emphasis><emphasis role="bold"><code>Line</code></emphasis>.</para>
 </sect2>
 
 <sect2>
@@ -2356,7 +2356,7 @@ root[] <emphasis role="bold"><code>h-&gt;SetFillStyle(style)</code></emphasis>
 </figure>
 
 <para>
-<inlinemediaobject><imageobject><imagedata fileref="pictures/image212.jpg" width="108.6pt" depth="162.9pt;z-index:21"/></imageobject></inlinemediaobject>
+<inlinemediaobject><imageobject><imagedata fileref="pictures/image212.jpg" width="108.6pt" depth="162.9pt"/></imageobject></inlinemediaobject>
 </para>
 <para>The list of currently supported basic colors (here dark and bright colors are not shown) are shown. The color numbers specified in the basic palette, and the picture above, can be viewed by selecting the menu entry Colors in the View canvas menu. The user may define other colors. To do this, one has to build a new <emphasis role="bold"><code>TColor</code></emphasis>:</para>
 
@@ -2372,7 +2372,7 @@ root[] <emphasis role="bold"><code>color-&gt;SetRGB(r,g,b)</code></emphasis>
 </programlisting>
 
 <para>Where <code>r</code>, <code>g</code> and <code>b</code> go from 0 to 1 and <code>index_color</code> is the color number you wish to change.</para>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D4.png" width="69.45pt" depth="23.15pt;z-index:-11"/></imageobject></inlinemediaobject>The user interface for changing the fill color and style looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAttFill</code></emphasis>.</para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D4.png" width="69.45pt" depth="23.15pt"/></imageobject></inlinemediaobject>The user interface for changing the fill color and style looks like shown in this picture. It takes place in the editor frame anytime the selected object inherits the class <emphasis role="bold"><code>TAttFill</code></emphasis>.</para>
 
 <sect3>
 <title>Color Palette (for Histograms)</title>
@@ -2425,7 +2425,7 @@ f2-&gt;Draw("cont");
 
 <sect2>
 <title>TAxisEditor</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D5.png" width="75.8pt" depth="162.65pt;z-index:-10"/></imageobject></inlinemediaobject></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D5.png" width="75.8pt" depth="162.65pt"/></imageobject></inlinemediaobject></para>
 <para> This user interface gives the possibility for changing the following axis attributes: </para>
 <para>      color of the selected axis, the axis’ title and labels; </para>
 <para>      the length of thick parameters and the possibility to set them on both axis sides</para>
@@ -2442,7 +2442,7 @@ f2-&gt;Draw("cont");
 
 <sect2>
 <title>TPadEditor</title>
-<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D6.png" width="76.05pt" depth="126.75pt;z-index:-1"/></imageobject></inlinemediaobject></para>
+<para><inlinemediaobject><imageobject><imagedata fileref="pictures/030000D6.png" width="76.05pt" depth="126.75pt"/></imageobject></inlinemediaobject></para>
 <para> It provides the following user interface:</para>
 <para>  Fixed aspect ratio – can be set for pad resizing.</para>
 <para>  Edit – sets pad or canvas as editable.</para>
