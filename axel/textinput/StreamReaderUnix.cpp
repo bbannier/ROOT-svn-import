@@ -123,6 +123,7 @@ namespace textinput {
   StreamReaderUnix::StreamReaderUnix():
   fFD(0),fIsTTY(isatty(0)), fHaveInputFocus(false) {
     fOldTIOS = new termios();
+    fMyTIOS = new termios();
 #ifdef TCSANOW
     tcgetattr(fFD, fOldTIOS);
     memcpy(fMyTIOS,fOldTIOS, sizeof(struct termios));
@@ -132,7 +133,6 @@ namespace textinput {
     fMyTIOS->c_cc[VMIN] = 1;
     fMyTIOS->c_cc[VTIME] = 0;
 #endif
-    fMyTIOS = new termios();
   }
   
   StreamReaderUnix::~StreamReaderUnix() {
