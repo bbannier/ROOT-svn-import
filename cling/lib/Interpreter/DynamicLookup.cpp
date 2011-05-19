@@ -166,11 +166,12 @@ namespace cling {
   }
   
   void DynamicExprTransformer::Initialize() {
-    TemplateDecl* D = dyn_cast<TemplateDecl>(m_Interpreter->LookupDecl("cling").
-                                             LookupDecl("runtime").
-                                             LookupDecl("internal").
-                                             LookupDecl("EvaluateT").
-                                             getSingleDecl());
+    TemplateDecl* D 
+      = cast_or_null<TemplateDecl>(m_Interpreter->LookupDecl("cling").
+                                   LookupDecl("runtime").
+                                   LookupDecl("internal").
+                                   LookupDecl("EvaluateT").
+                                   getSingleDecl());
     assert(D && "Cannot find EvaluateT TemplateDecl!\n");
     
     m_EvalDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl());
