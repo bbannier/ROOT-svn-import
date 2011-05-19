@@ -136,9 +136,10 @@ namespace cling {
       parse(""); // Consume initialization.
       // Set up common declarations which are going to be available
       // only at runtime
-      // Make surethat the universe won't be included to compile time by using
+      // Make sure that the universe won't be included to compile time by using
       // -D __CLING__ as CompilerInstance's arguments
       parse("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+      parse("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
     }
     
     // Attach the dynamic lookup
