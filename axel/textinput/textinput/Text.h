@@ -33,7 +33,9 @@ namespace textinput {
     
     const std::string& GetText() const { return fString; }
     const std::vector<char>& GetColors() const { return fColor; }
+    char GetColor(size_t i) const { return fColor[i]; }
     size_t length() const { return fColor.size(); }
+    bool empty() const { return fColor.empty(); }
 
     void insert(size_t pos, char C) {
       // Insert C at pos, set to default color.

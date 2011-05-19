@@ -144,6 +144,13 @@ namespace textinput {
   void
   TerminalDisplayUnix::SetColor(char CIdx, const Color& C) {
     if (!fIsTTY) return;
+    
+    if (CIdx == 0) {
+      // Default color, reset.
+      static const char text[] = {(char)0x1b, '[', '0', 'm', 0};
+      WriteRawString(text, 4);
+      return;
+    }
 
     int ANSIIdx = 0;
     if (fNColors == 256) {

@@ -136,7 +136,9 @@ namespace textinput {
     }
     
     if (fContext->GetColorizer() && OldCursorPos != fContext->GetCursor()) {
-       fContext->GetColorizer()->ProcessCursorChange(fContext->GetCursor(), fContext->GetLine());
+       fContext->GetColorizer()->ProcessCursorChange(fContext->GetCursor(),
+                                                     fContext->GetLine(),
+                                                     R.fDisplay);
     }
 
     UpdateDisplay(R);
