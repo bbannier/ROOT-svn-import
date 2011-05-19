@@ -671,8 +671,9 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
    fprintf(frc,"ProofServ.RootVersionTag: %s\n", gROOT->GetVersion());
 
    // Work dir
-   TString sandbox = gEnv->GetValue("ProofServ.Sandbox", fSandbox);
-   gSystem->ExpandPathName(sandbox);
+   TString sandbox = fSandbox;
+   if (GetSandbox(sandbox, kFALSE, "ProofServ.Sandbox") != 0)
+      Warning("SetProofServEnv", "problems getting sandbox string for worker");
    fprintf(frc,"# Users sandbox\n");
    fprintf(frc, "ProofServ.Sandbox: %s\n", sandbox.Data());
 
@@ -729,6 +730,8 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
    fprintf(fenv, "export ROOTVERSIONTAG=%s\n", gROOT->GetVersion());
    // This flag can be used to identify the type of worker; for example, in BUILD.sh or SETUP.C ...
    fprintf(fenv, "export ROOTPROOFLITE=%d\n", fNWorkers);
+   // Local files are on the local file system
+   fprintf(fenv, "export LOCALDATASERVER=\"file://\"\n");
    // Set the user envs
    if (fgProofEnvList) {
       TString namelist;
@@ -784,11 +787,7 @@ Int_t TProofLite::CreateSandbox()
    // Create the sandbox for this session
 
    // Make sure the sandbox area exist and is writable
-   fSandbox = gEnv->GetValue("ProofLite.Sandbox", "");
-   if (fSandbox.IsNull())
-      fSandbox = gEnv->GetValue("Proof.Sandbox", TString::Format("~/%s", kPROOF_WorkDir));
-   gSystem->ExpandPathName(fSandbox);
-   if (AssertPath(fSandbox, kTRUE) != 0) return -1;
+   if (GetSandbox(fSandbox, kTRUE, "ProofLite.Sandbox") != 0) return -1;
 
    // Package Dir
    fPackageDir = gEnv->GetValue("Proof.PackageDir", "");

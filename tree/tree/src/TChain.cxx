@@ -47,7 +47,6 @@
 #include "TSelector.h"
 #include "TSystem.h"
 #include "TTree.h"
-#include "TTreeCloner.h"
 #include "TTreeCache.h"
 #include "TUrl.h"
 #include "TVirtualIndex.h"
@@ -876,6 +875,18 @@ Bool_t TChain::GetBranchStatus(const char* branchname) const
 }
 
 //______________________________________________________________________________
+TTree::TClusterIterator TChain::GetClusterIterator(Long64_t /* firstentry */)
+{
+   // Return an iterator over the cluster of baskets starting at firstentry.
+   // 
+   // This iterator is not yet supported for TChain object.
+   //
+   
+   Fatal("GetClusterIterator","Not support for TChain object");
+   return TTree::GetClusterIterator(-1);
+}
+
+//______________________________________________________________________________
 Long64_t TChain::GetChainEntryNumber(Long64_t entry) const
 {
    // -- Return absolute entry number in the chain.
@@ -1662,11 +1673,14 @@ void TChain::Loop(Option_t* option, Long64_t nentries, Long64_t firstentry)
 void TChain::ls(Option_t* option) const
 {
    // -- List the chain.
+   TObject::ls(option);
    TIter next(fFiles);
    TChainElement* file = 0;
+   TROOT::IncreaseDirLevel();
    while ((file = (TChainElement*)next())) {
       file->ls(option);
    }
+   TROOT::DecreaseDirLevel();
 }
 
 //______________________________________________________________________________
@@ -1912,6 +1926,9 @@ void TChain::Print(Option_t *option) const
    TIter next(fFiles);
    TChainElement *element;
    while ((element = (TChainElement*)next())) {
+      Printf("******************************************************************************");
+      Printf("*Chain   :%-10s: %-54s *", GetName(), element->GetTitle());
+      Printf("******************************************************************************");
       TFile *file = TFile::Open(element->GetTitle());
       if (file && !file->IsZombie()) {
          TTree *tree = (TTree*)file->Get(element->GetName());
@@ -2515,24 +2532,29 @@ void TChain::Streamer(TBuffer& b)
    // -- Stream a class object.
 
    if (b.IsReading()) {
+      // Remove using the 'old' name.
+      gROOT->GetListOfCleanups()->Remove(this);
+
       UInt_t R__s, R__c;
       Version_t R__v = b.ReadVersion(&R__s, &R__c);
       if (R__v > 2) {
          b.ReadClassBuffer(TChain::Class(), this, R__v, R__s, R__c);
-         return;
+      } else {
+         //====process old versions before automatic schema evolution
+         TTree::Streamer(b);
+         b >> fTreeOffsetLen;
+         b >> fNtrees;
+         fFiles->Streamer(b);
+         if (R__v > 1) {
+            fStatus->Streamer(b);
+            fTreeOffset = new Long64_t[fTreeOffsetLen];
+            b.ReadFastArray(fTreeOffset,fTreeOffsetLen);
+         }
+         b.CheckByteCount(R__s, R__c, TChain::IsA());
+         //====end of old versions
       }
-      //====process old versions before automatic schema evolution
-      TTree::Streamer(b);
-      b >> fTreeOffsetLen;
-      b >> fNtrees;
-      fFiles->Streamer(b);
-      if (R__v > 1) {
-         fStatus->Streamer(b);
-         fTreeOffset = new Long64_t[fTreeOffsetLen];
-         b.ReadFastArray(fTreeOffset,fTreeOffsetLen);
-      }
-      b.CheckByteCount(R__s, R__c, TChain::IsA());
-      //====end of old versions
+      // Re-add using the new name.
+      gROOT->GetListOfCleanups()->Add(this);
 
    } else {
       b.WriteClassBuffer(TChain::Class(),this);

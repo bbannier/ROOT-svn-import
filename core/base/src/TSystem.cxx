@@ -419,8 +419,9 @@ Bool_t TSystem::ProcessEvents()
    // interrupt flag.
 
    gROOT->SetInterrupt(kFALSE);
-
-   DispatchOneEvent(kTRUE);
+   
+   if (!gROOT->TestBit(TObject::kInvalidObject))
+      DispatchOneEvent(kTRUE);
 
    return gROOT->IsInterrupted();
 }
@@ -2549,6 +2550,9 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    // This method compiles and loads a shared library containing
    // the code from the file "filename".
    //
+   // The return value is true (1) in case of success and false (0)
+   // in case of error.
+   //
    // The possible options are:
    //     k : keep the shared library after the session end.
    //     f : force recompilation.
@@ -3290,7 +3294,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    rcint += "rootcint \"--lib-list-prefix=";
    rcint += mapfile;
    rcint += "\" -f \"";
-   rcint.Append(dict).Append("\" -c -p ").Append(GetIncludePath()).Append(" ");
+   rcint.Append(dict).Append("\" -c -p ").Append(GetIncludePath()).Append(" -D__ACLIC__ ");
    if (produceRootmap) {
       rcint.Append("-DR__ACLIC_ROOTMAP ");
    }
@@ -3400,7 +3404,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    TString cmd = fMakeSharedLib;
    // we do not add filename because it is already included via the dictionary(in dicth) !
    // dict.Append(" ").Append(filename);
-   cmd.ReplaceAll("$SourceFiles","\"$SourceFiles\"");
+   cmd.ReplaceAll("$SourceFiles","-D__ACLIC__ \"$SourceFiles\"");
    cmd.ReplaceAll("$SourceFiles",dict);
    cmd.ReplaceAll("$ObjectFiles","\"$ObjectFiles\"");
    cmd.ReplaceAll("$ObjectFiles",dictObj);
@@ -3449,7 +3453,9 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    TString exec;
    AssignAndDelete( exec, ConcatFileName( build_loc, libname ) );
    exec += "_ACLiC_exec";
+   testcmd.ReplaceAll("$SourceFiles","-D__ACLIC__ \"$SourceFiles\"");
    testcmd.ReplaceAll("$SourceFiles",dict);
+   testcmd.ReplaceAll("$ObjectFiles","\"$ObjectFiles\"");
    testcmd.ReplaceAll("$ObjectFiles",dictObj);
    testcmd.ReplaceAll("$IncludePath",includes);
    testcmd.ReplaceAll("$ExeName",exec);

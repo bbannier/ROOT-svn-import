@@ -60,6 +60,7 @@
 
 Pixel_t          TGListTree::fgGrayPixel = 0;
 const TGFont    *TGListTree::fgDefaultFont = 0;
+TGGC            *TGListTree::fgActiveGC = 0;
 TGGC            *TGListTree::fgDrawGC = 0;
 TGGC            *TGListTree::fgLineGC = 0;
 TGGC            *TGListTree::fgHighlightGC = 0;
@@ -351,6 +352,7 @@ TGListTree::TGListTree(TGWindow *p, UInt_t w, UInt_t h, UInt_t options,
    fGrayPixel   = GetGrayPixel();
    fFont        = GetDefaultFontStruct();
 
+   fActiveGC    = GetActiveGC()();
    fDrawGC      = GetDrawGC()();
    fLineGC      = GetLineGC()();
    fHighlightGC = GetHighlightGC()();
@@ -410,6 +412,7 @@ TGListTree::TGListTree(TGCanvas *p,UInt_t options,ULong_t back) :
    fGrayPixel   = GetGrayPixel();
    fFont        = GetDefaultFontStruct();
 
+   fActiveGC    = GetActiveGC()();
    fDrawGC      = GetDrawGC()();
    fLineGC      = GetLineGC()();
    fHighlightGC = GetHighlightGC()();
@@ -706,6 +709,7 @@ Bool_t TGListTree::HandleCrossing(Event_t *event)
          MouseOver(0, event->fState);
       }
    }
+   ClearViewPort();
    return kTRUE;
 }
 
@@ -973,6 +977,9 @@ Bool_t TGListTree::HandleKey(Event_t *event)
                Checked((TObject *)item->GetUserData(), item->IsChecked());
             }
             break;
+         case kKey_F3:
+            Search(kFALSE);
+            break;
          case kKey_F5:
             Layout();
             break;
@@ -1007,6 +1014,18 @@ Bool_t TGListTree::HandleKey(Event_t *event)
             break;
          default:
             break;
+      }
+      if (event->fState & kKeyControlMask) { // Ctrl key modifier pressed
+         switch((EKeySym)keysym & ~0x20) {   // treat upper and lower the same
+            case kKey_F:
+               Search();
+               break;
+            case kKey_G:
+               Search(kFALSE);
+               break;
+            default:
+               return kTRUE;
+         }
       }
 
    }
@@ -1292,7 +1311,7 @@ void TGListTree::AdjustPosition(TGListTreeItem *item)
 }
 
 //______________________________________________________________________________
-void TGListTree::Search(Bool_t /*close*/)
+void TGListTree::Search(Bool_t close)
 {
    // Invokes search dialog. Looks for item with the entered name.
 
@@ -1301,10 +1320,12 @@ void TGListTree::Search(Bool_t /*close*/)
    static TString buf;
 
    TGSearchType *srch = new TGSearchType;
-   srch->fBuffer = (char*)buf.Data();
+   srch->fBuffer = (char *)StrDup(buf.Data());
 
    TGListTreeItem *item;
-   new TGSearchDialog(fClient->GetDefaultRoot(), fCanvas, 400, 150, srch, &ret);
+   if (close || buf.IsNull())
+      new TGSearchDialog(fClient->GetDefaultRoot(), fCanvas, 400, 150, srch, &ret);
+   else if (!buf.IsNull()) ret = 1;
 
    if (ret) {
       item = FindItemByPathname(srch->fBuffer);
@@ -1513,6 +1534,7 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
 
    if ((yp >= fExposeTop) && (yp <= (Int_t)dim.fHeight))
    {
+      DrawItemName(id, item);
       if (*xroot >= 0) {
          xc = *xroot;
 
@@ -1541,7 +1563,6 @@ void TGListTree::DrawItem(Handle_t id, TGListTreeItem *item, Int_t x, Int_t y,
          pic1->Draw(id, fDrawGC, xpic1, ypicp);
       if (pic2)
          pic2->Draw(id, fDrawGC, xpic2, ypicp);
-      DrawItemName(id, item);
    }
 
    *xroot = xbranch;
@@ -1555,22 +1576,17 @@ void TGListTree::DrawOutline(Handle_t id, TGListTreeItem *item, Pixel_t col,
 {
    // Draw a outline of color 'col' around an item.
 
-   Int_t posx;
    TGPosition pos = GetPagePosition();
    TGDimension dim = GetPageDimension();
 
-   posx = item->fXtext - item->GetPicWidth();
-   posx -= 5;
-   if (item->HasCheckBox())
-      posx -= item->GetCheckBoxPicture()->GetWidth();
    if (clear) {
       gVirtualX->SetForeground(fDrawGC, fCanvas->GetContainer()->GetBackground());
       //ClearViewPort();  // time consuming!!!
    }
    else
       gVirtualX->SetForeground(fDrawGC, col);
-   gVirtualX->DrawRectangle(id, fDrawGC, posx, item->fYtext-pos.fY-2, 
-                            dim.fWidth-posx-2, FontHeight()+4);
+   gVirtualX->DrawRectangle(id, fDrawGC, 1, item->fYtext-pos.fY-2, 
+                            dim.fWidth-3, FontHeight()+4);
    gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
 }
 
@@ -1583,12 +1599,12 @@ void TGListTree::DrawActive(Handle_t id, TGListTreeItem *item)
    TGPosition pos = GetPagePosition();
    TGDimension dim = GetPageDimension();
 
-   width = TextWidth(item->GetText());
+   width = dim.fWidth-2;
    gVirtualX->SetForeground(fDrawGC, item->GetActiveColor());
-   gVirtualX->FillRectangle(id, fDrawGC, item->fXtext-1, 
-                    item->fYtext-pos.fY, width+2, FontHeight()+1);
+   gVirtualX->FillRectangle(id, fDrawGC, 1, item->fYtext-pos.fY-1, width, 
+                            FontHeight()+3);
    gVirtualX->SetForeground(fDrawGC, fgBlackPixel);
-   gVirtualX->DrawString(id, fHighlightGC, item->fXtext, 
+   gVirtualX->DrawString(id, fActiveGC, item->fXtext, 
                          item->fYtext - pos.fY + FontAscent(),
                          item->GetText(), item->GetTextLength());
 }
@@ -1621,7 +1637,8 @@ void TGListTree::DrawItemName(Handle_t id, TGListTreeItem *item)
       gVirtualX->SetForeground(fColorGC, TColor::Number2Pixel(item->GetColor()));
       if (fColorMode & kColorUnderline) {
          Int_t y = item->fYtext-pos.fY + FontAscent() + 2;
-         gVirtualX->DrawLine(id, fColorGC, item->fXtext, y, item->fXtext + width, y);
+         gVirtualX->DrawLine(id, fColorGC, item->fXtext, y, 
+                             item->fXtext + width, y);
       }
       if (fColorMode & kColorBox) {
          Int_t x = item->fXtext + width + 4;
@@ -2293,6 +2310,14 @@ TGListTreeItem *TGListTree::FindItemByPathname(const char *path)
    char dirname[1024];
    TGListTreeItem *item = 0;
    item = FindChildByName(item, "/");
+   if (!gVirtualX->InheritsFrom("TGX11")) {
+      // on Windows, use the current drive instead of root (/)
+      TList *curvol  = gSystem->GetVolumes("cur");
+      if (curvol) {
+         TNamed *drive = (TNamed *)curvol->At(0);
+         item = FindChildByName(0, TString::Format("%s\\", drive->GetName()));
+      }
+   }
    TGListTreeItem *diritem = 0;
    TString fulldir;
 
@@ -2390,6 +2415,31 @@ FontStruct_t TGListTree::GetDefaultFontStruct()
    if (!fgDefaultFont)
       fgDefaultFont = gClient->GetResourcePool()->GetIconFont();
    return fgDefaultFont->GetFontStruct();
+}
+
+//______________________________________________________________________________
+const TGGC &TGListTree::GetActiveGC()
+{
+   // Return default graphics context in use.
+
+   if (!fgActiveGC) {
+      GCValues_t gcv;
+
+      gcv.fMask = kGCLineStyle  | kGCLineWidth  | kGCFillStyle |
+                  kGCForeground | kGCBackground | kGCFont;
+      gcv.fLineStyle  = kLineSolid;
+      gcv.fLineWidth  = 0;
+      gcv.fFillStyle  = kFillSolid;
+      gcv.fFont       = fgDefaultFont->GetFontHandle();
+      gcv.fBackground = fgDefaultSelectedBackground;
+      const TGGC *selgc = gClient->GetResourcePool()->GetSelectedGC();
+      if (selgc)
+         gcv.fForeground = selgc->GetForeground();
+      else 
+         gcv.fForeground = fgWhitePixel;
+      fgActiveGC = gClient->GetGC(&gcv, kTRUE);
+   }
+   return *fgActiveGC;
 }
 
 //______________________________________________________________________________

@@ -23,13 +23,14 @@
 #include "TSelHandleDataSet.h"
 
 #include "TDSet.h"
+#include "TEnv.h"
 #include "TFile.h"
 #include "TMap.h"
 #include "TParameter.h"
 #include "TProofBenchTypes.h"
 #include "TSystem.h"
 #include "TUrl.h"
-
+#include "errno.h"
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -77,13 +78,14 @@ void TSelHandleDataSet::ReleaseCache(const char *fn)
    TString filename(fn);
    Int_t fd;
    fd = open(filename.Data(), O_RDONLY);
-   if (fd) {
+   if (fd > -1) {
       fdatasync(fd);
       posix_fadvise(fd, 0, 0, POSIX_FADV_DONTNEED);
       close(fd);
       Info("ReleaseCache", "file cache for file '%s' cleaned ...", filename.Data());
    } else {
-      Error("ReleaseCache", "cannot open file '%s' for cache clean up", filename.Data());
+      Error("ReleaseCache", "cannot open file '%s' for cache clean up; errno=%d",
+                            filename.Data(), errno);
    }
 #else
    Info("ReleaseCache", "dummy function: file '%s' untouched ...", fn);
@@ -181,18 +183,37 @@ Bool_t TSelHandleDataSet::Process(Long64_t entry)
       }
    }
 
+   // Resolve the file type; this also adjusts names for Xrd based systems
+   TUrl url(fCurrent->GetName());
+   url.SetAnchor(0);
+   TString lfname = gEnv->GetValue("Path.Localroot", "");
+   TFile::EFileType type = TFile::GetType(url.GetUrl(), "", &lfname);
+   if (type == TFile::kLocal &&
+       strcmp(url.GetProtocol(),"root") && strcmp(url.GetProtocol(),"xrd"))
+      lfname = url.GetFileAndOptions();
+
    if (fType->GetType() == TPBHandleDSType::kReleaseCache) {
       // Release the file cache
-      ReleaseCache(TUrl(fCurrent->GetName()).GetFile());
+      if (type == TFile::kLocal) {
+         ReleaseCache(lfname);
+      } else {
+         Error("Process",
+               "attempt to call ReleaseCache for a non-local file: '%s'", lfname.Data());
+      }
    } else if (fType->GetType() == TPBHandleDSType::kCheckCache) {
       // Check the file cache
-      CheckCache(TUrl(fCurrent->GetName()).GetFile());
+      if (type == TFile::kLocal) {
+         CheckCache(lfname);
+      } else {
+         Error("Process",
+               "attempt to call CheckCache for a non-local file: '%s'", lfname.Data());
+      }
    } else if (fType->GetType() == TPBHandleDSType::kRemoveFiles) {
       // Remove the file
-      RemoveFile(fCurrent->GetName());     
+      RemoveFile(url.GetFileAndOptions());     
    } else if (fType->GetType() == TPBHandleDSType::kCopyFiles) {
       // Copy file
-      CopyFile(fCurrent->GetName());     
+      CopyFile(url.GetFileAndOptions());     
    } else {
       // Type unknown
       Warning("Process", "type: %d is unknown", fType->GetType());     

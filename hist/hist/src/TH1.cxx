@@ -785,6 +785,9 @@ void TH1::Add(TF1 *f1, Double_t c1, Option_t *option)
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
 
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
+
 //   - Add statistics
    Double_t s1[10];
    Int_t i;
@@ -792,6 +795,7 @@ void TH1::Add(TF1 *f1, Double_t c1, Option_t *option)
    PutStats(s1);
    SetMinimum();
    SetMaximum();
+
 
 //   - Loop on bins (including underflows/overflows)
    Int_t bin, binx, biny, binz;
@@ -854,6 +858,9 @@ void TH1::Add(const TH1 *h1, Double_t c1)
       Error("Add","Attempt to add a non-existing histogram");
       return;
    }
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
@@ -969,6 +976,9 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
       Error("Add","Attempt to add a non-existing histogram");
       return;
    }
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
    Bool_t normWidth = kFALSE;
    if (h1 == h2 && c2 < 0) {c2 = 0; normWidth = kTRUE;}
@@ -1119,21 +1129,34 @@ Int_t TH1::BufferEmpty(Int_t action)
 {
 // Fill histogram with all entries in the buffer.
 // action = -1 histogram is reset and refilled from the buffer (called by THistPainter::Paint)
-// action =  0 histogram is filled from the buffer
+// action =  0 histogram is reset and filled from the buffer. When the histogram is filled from the 
+//             buffer the value fBuffer[0] is set to a negative number (= - number of entries)
+//             When calling with action == 0 the histogram is NOT refilled when fBuffer[0] is < 0 
+//             While when calling with action = -1 the histogram is reset and ALWAYS refilled independently if
+//             the histogram was filled before. This is needed when drawing the histogram  
+// 
 // action =  1 histogram is filled and buffer is deleted
-//             The buffer is automatically deleted when the number of entries
-//             in the buffer is greater than the number of entries in the histogram
+//             The buffer is automatically deleted when filling the histogram and the entries is 
+//             larger than the buffer size 
+//
 
    // do we need to compute the bin size?
    if (!fBuffer) return 0;
    Int_t nbentries = (Int_t)fBuffer[0];
-   if (!nbentries) return 0;
+
+   // nbentries correspond to the number of entries of histogram 
+   
+   if (nbentries == 0) return 0;
+   if (nbentries < 0 && action == 0) return 0;    // case histogram has been already filled from the buffer 
+
    Double_t *buffer = fBuffer;
    if (nbentries < 0) {
-      if (action == 0) return 0;
       nbentries  = -nbentries;
+      //  a reset might call BufferEmpty() giving an infinite loop
+      // Protect it by setting fBuffer = 0
       fBuffer=0;
-      Reset("ICE"); //do not reset the list of functions
+       //do not reset the list of functions 
+      Reset("ICES"); 
       fBuffer = buffer;
    }
    if (TestBit(kCanRebin) || (fXaxis.GetXmax() <= fXaxis.GetXmin())) {
@@ -1159,10 +1182,20 @@ Int_t TH1::BufferEmpty(Int_t action)
 
    FillN(nbentries,&fBuffer[2],&fBuffer[1],2);
 
-   if (action > 0) { delete [] fBuffer; fBuffer = 0; fBufferSize = 0;}
+   // if action == 1 - delete the buffer
+   if (action > 0) { 
+      delete [] fBuffer; 
+      fBuffer = 0; 
+      fBufferSize = 0;}
    else {
-      if (nbentries == (Int_t)fEntries) fBuffer[0] = -nbentries;
-      else                              fBuffer[0] = 0;
+      // if number of entries is consistent with buffer - set it negative to avoid 
+      // refilling the histogram every time BufferEmpty(0) is called 
+      // In case it is not consistent, by setting fBuffer[0]=0 is like resetting the buffer 
+      // (it will not be used anymore the next time BufferEmpty is called)
+      if (nbentries == (Int_t)fEntries) 
+         fBuffer[0] = -nbentries;
+      else
+         fBuffer[0] = 0;
    }
    return nbentries;
 }
@@ -1177,12 +1210,17 @@ Int_t TH1::BufferFill(Double_t x, Double_t w)
 
    if (!fBuffer) return -2;
    Int_t nbentries = (Int_t)fBuffer[0];
+
+
    if (nbentries < 0) {
+      // reset nbentries to a positive value so next time BufferEmpty()  is called
+      // the histogram will be refilled 
       nbentries  = -nbentries;
       fBuffer[0] =  nbentries;
       if (fEntries > 0) {
+         // set fBuffer to zero to avoid calling BufferEmpty in Reset
          Double_t *buffer = fBuffer; fBuffer=0;
-         Reset();
+         Reset("ICES");  // do not reset list of functions 
          fBuffer = buffer;
       }
    }
@@ -1196,8 +1234,11 @@ Int_t TH1::BufferFill(Double_t x, Double_t w)
    return -2;
 }
 
-bool CheckBinLimits(const TArrayD* h1Array, const TArrayD* h2Array)
+bool TH1::CheckBinLimits(const TAxis* a1, const TAxis * a2)
 {
+
+   const TArrayD * h1Array = a1->GetXbins(); 
+   const TArrayD * h2Array = a2->GetXbins(); 
    Int_t fN = h1Array->fN;
    if ( fN != 0 ) {
       if ( h2Array->fN != fN ) {
@@ -1206,12 +1247,84 @@ bool CheckBinLimits(const TArrayD* h1Array, const TArrayD* h2Array)
       }
       else {
          for ( int i = 0; i < fN; ++i ) {
-            if ( ! TMath::AreEqualAbs( h1Array->GetAt(i), h2Array->GetAt(i), 1E-10 ) ) {
+            if ( ! TMath::AreEqualRel( h1Array->GetAt(i), h2Array->GetAt(i), 1E-10 ) ) {
                throw DifferentBinLimits();
                return false;
             }
          }
       }
+   }
+
+   return true;
+}
+
+bool TH1::CheckAxisLimits(const TAxis *a1, const TAxis *a2 )
+{
+   // Check that the axis limits of the histograms are the same
+   // if a first and last bin is passed the axis is compared between the given range
+
+   if ( ! TMath::AreEqualRel(a1->GetXmin(), a2->GetXmin(),1.E-12) ||
+        ! TMath::AreEqualRel(a1->GetXmax(), a2->GetXmax(),1.E-12) ) {
+      throw DifferentAxisLimits();
+      return false;
+   }
+   return true;
+}
+
+bool TH1::CheckEqualAxes(const TAxis *a1, const TAxis *a2 )
+{
+   // Check that the axis are the same 
+   if (a1->GetNbins() != a2->GetNbins() ) { 
+      //throw DifferentNumberOfBins();
+      ::Info("CheckEqualAxes","Axes have different number of bins : nbin1 = %d nbin2 = %d",a1->GetNbins(),a2->GetNbins() );
+      return false;
+   }
+   try { 
+      CheckAxisLimits(a1,a2);
+   } catch (DifferentAxisLimits&) { 
+      ::Info("CheckEqualAxes","Axes have different limits");
+      return false; 
+   }
+   try { 
+      CheckBinLimits(a1,a2);
+   } catch (DifferentBinLimits&) { 
+      ::Info("CheckEqualAxes","Axes have different bin limits");
+      return false; 
+   }
+   return true;
+}
+
+bool TH1::CheckConsistentSubAxes(const TAxis *a1, Int_t firstBin1, Int_t lastBin1, const TAxis * a2, Int_t firstBin2, Int_t lastBin2 )
+{
+   // Check that two sub axis are the same 
+   // the limits are defined by first bin and last bin
+   // N.B. no check is done in this case for variable bins
+
+   // By default is assumed that no bins are given for the second axis
+   Int_t nbins1   = lastBin1-firstBin1 + 1;
+   Double_t xmin1 = a1->GetBinLowEdge(firstBin1);
+   Double_t xmax1 = a1->GetBinUpEdge(lastBin1);
+
+   Int_t nbins2 = a2->GetNbins();  
+   Double_t xmin2 = a2->GetXmin(); 
+   Double_t xmax2 = a2->GetXmax();
+
+   if (firstBin2 <  lastBin2) { 
+      // in this case assume no bins are given for the second axis
+      nbins2   = lastBin1-firstBin1 + 1;
+      xmin2 = a1->GetBinLowEdge(firstBin1);
+      xmax2 = a1->GetBinUpEdge(lastBin1);
+   }
+
+   if (nbins1 != nbins2 ) { 
+      ::Info("CheckConsistentSubAxes","Axes have different number of bins");
+      return false;
+   }
+
+   if ( ! TMath::AreEqualRel(xmin1,xmin2,1.E-12) ||
+        ! TMath::AreEqualRel(xmax1,xmax2,1.E-12) ) {
+      ::Info("CheckConsistentSubAxes","Axes have different limits");
+      return false;
    }
 
    return true;
@@ -1231,22 +1344,18 @@ bool TH1::CheckConsistency(const TH1* h1, const TH1* h2)
       throw DifferentNumberOfBins();
       return false;
    }
-   // Check that the axis limits of the histograms are the same
-   if (h1->fXaxis.GetXmin() != h2->fXaxis.GetXmin() ||
-       h1->fXaxis.GetXmax() != h2->fXaxis.GetXmax() ||
-       h1->fYaxis.GetXmin() != h2->fYaxis.GetXmin() ||
-       h1->fYaxis.GetXmax() != h2->fYaxis.GetXmax() ||
-       h1->fZaxis.GetXmin() != h2->fZaxis.GetXmin() ||
-       h1->fZaxis.GetXmax() != h2->fZaxis.GetXmax()) {
-      throw DifferentAxisLimits();
-      return false;
-   }
 
-   bool ret = true;
+   bool ret = true; 
 
-   ret &= CheckBinLimits(h1->GetXaxis()->GetXbins(), h2->GetXaxis()->GetXbins());
-   ret &= CheckBinLimits(h1->GetYaxis()->GetXbins(), h2->GetYaxis()->GetXbins());
-   ret &= CheckBinLimits(h1->GetZaxis()->GetXbins(), h2->GetZaxis()->GetXbins());
+   // check axis limits
+   ret &= CheckAxisLimits(h1->GetXaxis(), h2->GetXaxis());
+   ret &= CheckAxisLimits(h1->GetYaxis(), h2->GetYaxis());
+   ret &= CheckAxisLimits(h1->GetZaxis(), h2->GetZaxis());
+
+   // check bin limits
+   ret &= CheckBinLimits(h1->GetXaxis(), h2->GetXaxis());
+   ret &= CheckBinLimits(h1->GetYaxis(), h2->GetYaxis());
+   ret &= CheckBinLimits(h1->GetZaxis(), h2->GetZaxis());
 
    return ret;
 }
@@ -1806,31 +1915,32 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                bin1 = this->GetBinContent(i,j,k);
                bin2 = h2->GetBinContent(i,j,k);
 
-               if ( (bin1 == 0)  && (bin2 == 0) ) {
+
+               if (scaledHistogram) {
+                  // scale bin value to effective bin entries
+                  err1 = this->GetBinError(i,j,k);
+                  if (err1 > 0 ) {
+                     bin1 *= bin1/(err1*err1);
+                     //avoid rounding errors
+                     bin1 = TMath::Floor(bin1+0.5);
+                  }
+                  else
+                     bin1 = 0;
+                  
+                  err2 = h2->GetBinError(i,j,k);
+                  if (err2 > 0) {
+                     bin2 *= bin2/(err2*err2);
+                     //avoid rounding errors
+                     bin2 = TMath::Floor(bin2+0.5);
+                  }
+                  else
+                     bin2 = 0;
+                  
+               }
+
+               if ( (int(bin1) == 0)  && (int(bin2) == 0) ) {
                   --ndf;  //no data means one degree of freedom less
                } else {
-                  if (scaledHistogram) {
-                     // scale bin value to effective bin entries
-                     err1 = this->GetBinError(i,j,k);
-                     if (err1 > 0 ) {
-                        bin1 *= bin1/(err1*err1);
-                        //avoid rounding errors
-                        bin1 = TMath::Floor(bin1+0.5);
-                     }
-                     else
-                        bin1 = 0;
-
-                     err2 = h2->GetBinError(i,j,k);
-                     if (err2 > 0) {
-                        bin2 *= bin2/(err2*err2);
-                        //avoid rounding errors
-                        bin2 = TMath::Floor(bin2+0.5);
-                     }
-                     else
-                        bin2 = 0;
-
-                  }
-
 
 
                   Double_t binsum = bin1 + bin2;
@@ -1881,6 +1991,9 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
 
 
    //unweighted - weighted  comparison
+   // case of err2 = 0 and bin2 not zero is treated without problems
+   // by excluding second chi2 sum
+   // and can be considered as a comparison data-theory
    if ( comparisonUW ) {
       for (i=i_start; i<=i_end; i++) {
          for (j=j_start; j<=j_end; j++) {
@@ -1892,14 +2005,14 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
 
                err2 *= err2;
 
-               // case both histogram have zero biin contents
-               if ( (bin1 == 0) && (bin2 == 0) ) {
+               // case both histogram have zero bin contents
+               if ( (int(bin1) == 0) && (bin2*bin2 == 0) ) {
                   --ndf;  //no data means one degree of freedom less
                   continue;
                }
 
                // case weighted histogram has zero bin content and error
-               if (bin2 == 0 && err2 == 0) {
+               if (bin2*bin2 == 0 && err2 == 0) {
                   if (sumw2 > 0) {
                      // use as approximated  error as 1 scaled by a scaling ratio
                      // estimated from the total sum weight and sum weight squared
@@ -1912,8 +2025,6 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                      chi2 = 0; return 0;
                   }
                }
-               // case of err2 = 0 and bin2 not zero is treated without problems
-               // by excluding second chi2 sum
 
                if (bin1 < 1)  m++;
                if (err2 > 0 && bin2*bin2/err2 < 10) n++;
@@ -1922,6 +2033,7 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                Double_t var2 = var1*var1 + 4*sum2*sum2*bin1*err2;
                // if bin1 is zero and bin2=1 and sum1=sum2 var1=0 && var2 ==0
                // approximate by adding +1 to bin1
+               // LM (this need to be fixed for numerical errors)
                while (var1*var1+bin1 == 0 || var1+var2 == 0) {
                   sum1++;
                   bin1++;
@@ -2007,13 +2119,15 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                err1 *= err1;
                err2 *= err2;
 
-               // case both histogram have zero biin contents
-               if ( (bin1 == 0) && (bin2 == 0) ) {
-                  --ndf;  //no data means one degree of freedom less
-                  continue;
-               }
-               if ( (err1 == 0) && (err2 == 0) ) {
-                  // case of zero errors but non zero bin content
+               // case both histogram have zero bin contents
+               // (use square of bin1 to avoid numerical errors)
+                if ( (bin1*bin1 == 0) && (bin2*bin2 == 0) ) {
+                   --ndf;  //no data means one degree of freedom less
+                   continue;
+                }
+
+                if ( (err1 == 0) && (err2 == 0) ) {
+                   // cannot treat case of booth histogram have zero zero errors 
                   Error("Chi2TestX","h1 and h2 both have bin %d,%d,%d with all zero errors\n", i,j,k);
                   chi2 = 0; return 0;
                }
@@ -2140,20 +2254,23 @@ void TH1::Copy(TObject &obj) const
    ((TH1&)obj).fOption    = fOption;
    ((TH1&)obj).fBuffer    = 0;
    ((TH1&)obj).fBufferSize= fBufferSize;
-   Int_t i;
-   if (fBuffer) {
-      Double_t *buf = new Double_t[fBufferSize];
-      for (i=0;i<fBufferSize;i++) buf[i] = fBuffer[i];
-      ((TH1&)obj).fBuffer    = buf;
-   }
 
    TArray* a = dynamic_cast<TArray*>(&obj);
    if (a) a->Set(fNcells);
    Int_t canRebin = ((TH1&)obj).TestBit(kCanRebin);
    ((TH1&)obj).ResetBit(kCanRebin);  //we want to avoid the call to LabelsInflate
-   for (i=0;i<fNcells;i++) ((TH1&)obj).SetBinContent(i,this->GetBinContent(i));
+   for (Int_t i=0;i<fNcells;i++) ((TH1&)obj).SetBinContent(i,this->GetBinContent(i));
    if (canRebin) ((TH1&)obj).SetBit(kCanRebin);
    ((TH1&)obj).fEntries   = fEntries;
+
+   // copy the Buffer (needs to do after calling Get/SetBinContent 
+   // which will call BufferEmpty. Maybe one should call 
+   // assigment operator on the TArrayD
+   if (fBuffer) {
+      Double_t *buf = new Double_t[fBufferSize];
+      for (Int_t i=0;i<fBufferSize;i++) buf[i] = fBuffer[i];
+      ((TH1&)obj).fBuffer    = buf;
+   }
 
    ((TH1&)obj).fTsumw     = fTsumw;
    ((TH1&)obj).fTsumw2    = fTsumw2;
@@ -2178,6 +2295,7 @@ void TH1::Copy(TObject &obj) const
       gDirectory->Append(&obj);
       ((TH1&)obj).fDirectory = gDirectory;
    }
+
 }
 
 //______________________________________________________________________________
@@ -2233,6 +2351,9 @@ void TH1::Divide(TF1 *f1, Double_t c1)
       Error("Add","Attempt to divide by a non-existing function");
       return;
    }
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
@@ -2302,6 +2423,9 @@ void TH1::Divide(const TH1 *h1)
       Error("Divide","Attempt to divide by a non-existing histogram");
       return;
    }
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
@@ -2389,6 +2513,9 @@ void TH1::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_
       Error("Divide","Attempt to divide by a non-existing histogram");
       return;
    }
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
@@ -2620,6 +2747,10 @@ void TH1::Eval(TF1 *f1, Option_t *option)
    else                   stat  = 0;
    if (opt.Contains("r")) range = 1;
    else                   range = 0;
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
+
    nbinsx  = fXaxis.GetNbins();
    nbinsy  = fYaxis.GetNbins();
    nbinsz  = fZaxis.GetNbins();
@@ -4835,26 +4966,13 @@ Long64_t TH1::Merge(TCollection *li)
    inlist.Add(hclone);
    inlist.AddAll(li);
 
-   THashList allLabels;
-   THashList* labels=GetXaxis()->GetLabels();   
-   //LM is this needed ???? - yoush be enough to do  do: 
-   Bool_t haveOneLabel = (labels != 0);
-   // Bool_t haveOneLabel=kFALSE;
-   // if (labels) {
-   //    TIter iL(labels);
-   //    TObjString* lb;
-   //    while ((lb=(TObjString*)iL())) {
-   //       haveOneLabel |= (lb && lb->String().Length());
-   //       if (!allLabels.FindObject(lb))
-   //          allLabels.Add(lb);
-   //    }
-   // }
 
    TAxis newXAxis;
    Bool_t initialLimitsFound = kFALSE;
-   Bool_t allHaveLabels = haveOneLabel;
+   Bool_t allHaveLabels = kTRUE;  // assume all histo have labels and check later
    Bool_t same = kTRUE;
    Bool_t allHaveLimits = kTRUE;
+   Bool_t foundLabelHist = kFALSE;
 
    TIter next(&inlist);
    while (TObject *o = next()) {
@@ -4864,6 +4982,10 @@ Long64_t TH1::Merge(TCollection *li)
             o->ClassName(),this->ClassName());
          return -1;
       }
+      // skip empty histograms
+      // (call GetEntries() to flush eventually the buffer) 
+      if (h->fTsumw == 0 && h->GetEntries() == 0) continue;
+
       Bool_t hasLimits = h->GetXaxis()->GetXmin() < h->GetXaxis()->GetXmax();
       allHaveLimits = allHaveLimits && hasLimits;
 
@@ -4886,27 +5008,16 @@ Long64_t TH1::Merge(TCollection *li)
       }
       if (allHaveLabels) {
          THashList* hlabels=h->GetXaxis()->GetLabels();
-         // LM: as before we can skipp all this
-         // In case of labels we don't care of the same
-         // Bool_t hasOneLabel=kFALSE;
-         // if (hlabels) {
-         //    TIter iL(hlabels);
-         //    TObjString* lb;
-         //    while ((lb=(TObjString*)iL())) {
-         //       hasOneLabel |= (lb && lb->String().Length());
-         //       if (!allLabels.FindObject(lb)) {
-         //          allLabels.Add(lb);
-         //          same = kFALSE;
-         //       }
-         //    }
-         // }
-         //allHaveLabels&=(labels && hasOneLabel);
+         Bool_t haveOneLabel = (hlabels != 0);
          // do here to print message only one time 
-         if (allHaveLabels && hlabels == 0) {
+         if (foundLabelHist && allHaveLabels && !haveOneLabel) {
             Warning("Merge","Not all histograms have labels. I will ignore labels,"
             " falling back to bin numbering mode.");
          } 
-         allHaveLabels &= (labels && hlabels);
+
+         allHaveLabels &= (haveOneLabel);
+         // for the error message
+         if (haveOneLabel) foundLabelHist = kTRUE;
          // I could add a check if histogram contains bins without a label 
          // and with non-zero bin content
          // Do we want to support this ???
@@ -5064,6 +5175,9 @@ void TH1::Multiply(TF1 *f1, Double_t c1)
       return;
    }
 
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
+
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
    Int_t nbinsz = GetNbinsZ();
@@ -5131,6 +5245,9 @@ void TH1::Multiply(const TH1 *h1)
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
    Int_t nbinsz = GetNbinsZ();
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
    try {
       CheckConsistency(this,h1);
@@ -5204,6 +5321,9 @@ void TH1::Multiply(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Optio
       Error("Multiply","Attempt to multiply by a non-existing histogram");
       return;
    }
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
@@ -5889,6 +6009,9 @@ void  TH1::Smooth(Int_t ntimes, Option_t *option)
       Error("Smooth","Smooth only supported for 1-d histograms");
       return;
    }
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
+
    Int_t nbins = fXaxis.GetNbins();
    Int_t firstbin = 1, lastbin = nbins;
    TString opt = option;
@@ -6099,7 +6222,12 @@ void TH1::Reset(Option_t *option)
    //               ===========================================
    //
    // if option "ICE" is specified, resets only Integral, Contents and Errors.
+   // if option "ICES" is specified, resets only Integral, Contents , Errors and Statistics 
+   //                  This option is used 
    // if option "M"   is specified, resets also Minimum and Maximum
+
+   // The option "ICE" is used when rebinning the histogram (in RebinAxis, LabelInflate, etc..) 
+   // The option "ICES is used in combination with the buffer (see BufferEmpty and BufferFill)
 
    TString opt = option;
    opt.ToUpper();
@@ -6110,13 +6238,26 @@ void TH1::Reset(Option_t *option)
       SetMinimum();
       SetMaximum();
    }
-   if (opt.Contains("ICE")) return;
+
+   if (opt.Contains("ICE") && !opt.Contains("S")) return;
+
+   // Setting fBuffer[0] = 0 is like resetting the buffer but not deleting it 
+   // But what is the sense of calling BufferEmpty() ? For making the axes ? 
+   // BufferEmpty will update contents that later will be 
+   // reset in calling TH1D::Reset. For this we need to reset the stats afterwards
+   // It may be needed for computing the axis limits.... 
    if (fBuffer) {BufferEmpty(); fBuffer[0] = 0;}
+
+   // need to reset also the statistics
+   // (needs to be done after calling BufferEmpty() )
    fTsumw       = 0;
    fTsumw2      = 0;
    fTsumwx      = 0;
    fTsumwx2     = 0;
    fEntries     = 0;
+
+   if (opt == "ICES") return;
+
 
    TObject *stats = fFunctions->FindObject("stats");
    fFunctions->Remove(stats);
@@ -6198,11 +6339,11 @@ void TH1::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    out <<"   "<<endl;
    out <<"   "<< ClassName() <<" *";
 
-   //histogram pointer has by default teh histogram name.
+   //histogram pointer has by default the histogram name.
    //however, in case histogram has no directory, it is safer to add a incremental suffix
    static Int_t hcounter = 0;
    TString histName = GetName();
-   if (!fDirectory && !histName.Contains("Graph")) {
+   if (!fDirectory && !histName.Contains("Graph") && !histName.Contains("_stack_")) {
       hcounter++;
       histName += "__";
       histName += hcounter;
@@ -7152,13 +7293,12 @@ void TH1::SetBuffer(Int_t buffersize, Option_t * /*option*/)
 //______________________________________________________________________________
 void TH1::SetContour(Int_t  nlevels, const Double_t *levels)
 {
-   //   -*-*-*-*-*-*Set the number and values of contour levels*-*-*-*-*-*-*-*-*
-   //               ===========================================
+   //  Set the number and values of contour levels.
    //
-   //  By default the number of contour levels is set to 20.
+   //  By default the number of contour levels is set to 20. The contours values
+   //  in the array "levels" should be specify un increasing order.
    //
    //  if argument levels = 0 or missing, equidistant contours are computed
-   //
 
    Int_t level;
    ResetBit(kUserContour);
@@ -7197,8 +7337,8 @@ void TH1::SetContour(Int_t  nlevels, const Double_t *levels)
 //______________________________________________________________________________
 void TH1::SetContourLevel(Int_t level, Double_t value)
 {
-   //   -*-*-*-*-*-*-*-*-*Set value for one contour level*-*-*-*-*-*-*-*-*-*-*-*
-   //                     ===============================
+   // Set value for one contour level.
+
    if (level <0 || level >= fContour.fN) return;
    SetBit(kUserContour);
    fContour.fArray[level] = value;
@@ -7902,7 +8042,9 @@ TH1* TH1::TransformHisto(TVirtualFFT *fft, TH1* h_output,  Option_t *option)
    opt.ToUpper();
    Int_t *n = fft->GetN();
    TH1 *hout=0;
-   if (h_output) hout = h_output;
+   if (h_output) { 
+      hout = h_output;
+   }
    else {
       TString name = TString::Format("out_%s", opt.Data());
       if (fft->GetNdim()==1)

@@ -1604,6 +1604,250 @@ void TGeoChecker::CheckPoint(Double_t x, Double_t y, Double_t z, Option_t *)
    gPad->Update();
 }  
 
+//_____________________________________________________________________________
+void TGeoChecker::CheckShape(TGeoShape *shape, Int_t testNo, Int_t nsamples, Option_t *option)
+{
+// Test for shape navigation methods. Summary for test numbers:
+//  1: DistFromInside/Outside. Sample points inside the shape. Generate 
+//    directions randomly in cos(theta). Compute DistFromInside and move the 
+//    point with bigger distance. Compute DistFromOutside back from new point.
+//    Plot d-(d1+d2)
+// 2: Safety test. Sample points inside the bounding and compute safety. Generate 
+//    directions randomly in cos(theta) and compute distance to boundary. Check if
+// Distance to boundary is bigger than safety 
+//
+   switch (testNo) {
+      case 1:
+         ShapeDistances(shape, nsamples, option);
+         break;
+      case 2:
+         ShapeSafety(shape, nsamples, option);
+         break;
+      default:
+         Error("CheckShape", "Test number %d not existent", testNo);
+   }      
+}
+
+//_____________________________________________________________________________
+void TGeoChecker::ShapeDistances(TGeoShape *shape, Int_t nsamples, Option_t *)
+{
+//  Test TGeoShape::DistFromInside/Outside. Sample points inside the shape. Generate 
+// directions randomly in cos(theta). Compute d1 = DistFromInside and move the 
+// point on the boundary. Compute DistFromOutside and propagate with d2 making sure that
+// the shape is not re-entered. Swap direction and call DistFromOutside that
+// should fall back on the same point on the boundary (at d2). Propagate back on boundary
+// then compute DistFromInside that should be bigger than d1. 
+//    Plot d-(d1+d2)
+   Double_t dx = ((TGeoBBox*)shape)->GetDX();
+   Double_t dy = ((TGeoBBox*)shape)->GetDY();
+   Double_t dz = ((TGeoBBox*)shape)->GetDZ();
+   Double_t dmax = 2.*TMath::Sqrt(dx*dx+dy*dy+dz*dz);
+   Double_t d1, d2, dmove, dnext;
+   Int_t itot = 0;
+   // Number of tracks shot for every point inside the shape
+   const Int_t kNtracks = 1000;
+   Int_t n10 = nsamples/10;
+   Int_t i,j;
+   Double_t point[3], pnew[3];
+   Double_t dir[3], dnew[3];
+   Double_t theta, phi, delta;
+   TPolyMarker3D *pmfrominside = 0;
+   TPolyMarker3D *pmfromoutside = 0;
+   new TCanvas("shape01", Form("Shape %s (%s)",shape->GetName(),shape->ClassName()), 1000, 800);
+   shape->Draw();
+   TH1D *hist = new TH1D("hTest1", "Residual distance from inside/outside",200,-20, 0);
+   hist->GetXaxis()->SetTitle("delta[cm] - first bin=overflow");
+   hist->GetYaxis()->SetTitle("count");
+   hist->SetMarkerStyle(kFullCircle);
+        
+   if (!fTimer) fTimer = new TStopwatch();
+   fTimer->Reset();
+   fTimer->Start();
+   while (itot<nsamples) {
+      Bool_t inside = kFALSE;
+      while (!inside) {
+         point[0] = gRandom->Uniform(-dx,dx);
+         point[1] = gRandom->Uniform(-dy,dy);
+         point[2] = gRandom->Uniform(-dz,dz);
+         inside = shape->Contains(point);
+      }   
+      itot++;
+      if (n10) {
+         if ((itot%n10) == 0) printf("%i percent\n", Int_t(100*itot/nsamples));
+      }
+      for (i=0; i<kNtracks; i++) {
+         phi = 2*TMath::Pi()*gRandom->Rndm();
+         theta= TMath::ACos(1.-2.*gRandom->Rndm());
+         dir[0]=TMath::Sin(theta)*TMath::Cos(phi);
+         dir[1]=TMath::Sin(theta)*TMath::Sin(phi);
+         dir[2]=TMath::Cos(theta);
+         dmove = dmax;
+         // We have track direction, compute distance from inside
+         d1 = shape->DistFromInside(point,dir,3);
+         if (d1>dmove || d1<TGeoShape::Tolerance()) {
+            // Bad distance or bbox size, to debug
+            printf("DistFromInside: (%19.15f, %19.15f, %19.15f, %19.15f, %19.15f, %19.15f) %f/%f(max)\n",
+                point[0],point[1],point[2],dir[0],dir[1],dir[2], d1,dmove);
+            pmfrominside = new TPolyMarker3D(2);
+            pmfrominside->SetMarkerColor(kRed);
+            pmfrominside->SetMarkerStyle(24);
+            pmfrominside->SetMarkerSize(0.4);
+            pmfrominside->SetNextPoint(point[0],point[1],point[2]);
+            for (j=0; j<3; j++) pnew[j] = point[j] + d1*dir[j];
+            pmfrominside->SetNextPoint(pnew[0],pnew[1],pnew[2]);
+            pmfrominside->Draw();
+            return;
+         }
+         // Propagate BEFORE the boundary and make sure that DistFromOutside
+         // does not return 0 (!!!)
+         // Check if there is a second crossing
+         for (j=0; j<3; j++) pnew[j] = point[j] + (d1-TGeoShape::Tolerance())*dir[j];
+         dnext = shape->DistFromOutside(pnew,dir,3);
+         if (d1+dnext<dmax) dmove = d1+0.5*dnext;
+         // Move point and swap direction
+         for (j=0; j<3; j++) {
+            pnew[j] = point[j] + dmove*dir[j];
+            dnew[j] = -dir[j];
+         }
+         // Compute now distance from outside
+         d2 = shape->DistFromOutside(pnew,dnew,3);
+         delta = dmove-d1-d2;
+         if (TMath::Abs(delta)>1E-6 || dnext<2.*TGeoShape::Tolerance()) {
+            // Error->debug this
+            printf("Error: (%19.15f, %19.15f, %19.15f, %19.15f, %19.15f, %19.15f) d1=%f d2=%f dmove=%f\n",
+                point[0],point[1],point[2],dir[0],dir[1],dir[2], d1,d2,dmove);                
+            if (dnext<2.*TGeoShape::Tolerance()) {
+               printf(" (*)DistFromOutside(%19.15f, %19.15f, %19.15f, %19.15f, %19.15f, %19.15f)  dnext = %f\n",
+                      point[0]+(d1-TGeoShape::Tolerance())*dir[0],
+                      point[1]+(d1-TGeoShape::Tolerance())*dir[1], 
+                      point[2]+(d1-TGeoShape::Tolerance())*dir[2], dir[0],dir[1],dir[2],dnext);
+            } else {          
+               printf("   DistFromOutside(%19.15f, %19.15f, %19.15f, %19.15f, %19.15f, %19.15f)  dnext = %f\n",
+                      point[0]+d1*dir[0],point[1]+d1*dir[1], point[2]+d1*dir[2], dir[0],dir[1],dir[2],dnext);
+            }
+            printf("   DistFromOutside(%19.15f, %19.15f, %19.15f, %19.15f, %19.15f, %19.15f)  = %f\n",   
+                      pnew[0],pnew[1],pnew[2],dnew[0],dnew[1],dnew[2], d2);
+            pmfrominside = new TPolyMarker3D(2);
+            pmfrominside->SetMarkerStyle(24);
+            pmfrominside->SetMarkerSize(0.4);
+            pmfrominside->SetMarkerColor(kRed);
+            pmfrominside->SetNextPoint(point[0],point[1],point[2]);
+            for (j=0; j<3; j++) point[j] += d1*dir[j];
+            pmfrominside->SetNextPoint(point[0],point[1],point[2]);
+            pmfrominside->Draw();
+            pmfromoutside = new TPolyMarker3D(2);
+            pmfromoutside->SetMarkerStyle(20);
+            pmfromoutside->SetMarkerStyle(7);
+            pmfromoutside->SetMarkerSize(0.3);
+            pmfromoutside->SetMarkerColor(kBlue);
+            pmfromoutside->SetNextPoint(pnew[0],pnew[1],pnew[2]);
+            for (j=0; j<3; j++) pnew[j] += d2*dnew[j];
+            if (d2<1E10) pmfromoutside->SetNextPoint(pnew[0],pnew[1],pnew[2]);
+            pmfromoutside->Draw();
+            return;
+         }
+         // Compute distance from inside which should be bigger than d1
+         for (j=0; j<3; j++) pnew[j] += (d2-TGeoShape::Tolerance())*dnew[j];
+         dnext = shape->DistFromInside(pnew,dnew,3);
+         if (dnext<d1-TGeoShape::Tolerance() || dnext>dmax) {
+            printf("Error DistFromInside(%19.15f, %19.15f, %19.15f, %19.15f, %19.15f, %19.15f) d1=%f d1p=%f\n",
+                   pnew[0],pnew[1],pnew[2],dnew[0],dnew[1],dnew[2],d1,dnext);
+            pmfrominside = new TPolyMarker3D(2);
+            pmfrominside->SetMarkerStyle(24);
+            pmfrominside->SetMarkerSize(0.4);
+            pmfrominside->SetMarkerColor(kRed);
+            pmfrominside->SetNextPoint(point[0],point[1],point[2]);
+            for (j=0; j<3; j++) point[j] += d1*dir[j];
+            pmfrominside->SetNextPoint(point[0],point[1],point[2]);
+            pmfrominside->Draw();
+            pmfromoutside = new TPolyMarker3D(2);
+            pmfromoutside->SetMarkerStyle(20);
+            pmfromoutside->SetMarkerStyle(7);
+            pmfromoutside->SetMarkerSize(0.3);
+            pmfromoutside->SetMarkerColor(kBlue);
+            pmfromoutside->SetNextPoint(pnew[0],pnew[1],pnew[2]);
+            for (j=0; j<3; j++) pnew[j] += dnext*dnew[j];
+            if (d2<1E10) pmfromoutside->SetNextPoint(pnew[0],pnew[1],pnew[2]);
+            pmfromoutside->Draw();
+            return;                   
+         }
+         if (TMath::Abs(delta) < 1E-20) delta = 1E-30;
+         hist->Fill(TMath::Max(TMath::Log(TMath::Abs(delta)),-20.));
+      }
+   }
+   fTimer->Stop();
+   fTimer->Print();
+   new TCanvas("Test01", "Residuals DistFromInside/Outside", 800, 600);
+   hist->Draw();
+}   
+
+//_____________________________________________________________________________
+void TGeoChecker::ShapeSafety(TGeoShape *shape, Int_t nsamples, Option_t *)
+{
+// Check of validity of safe distance for a given shape.
+// Sample points inside the 2x bounding box and compute safety. Generate 
+// directions randomly in cos(theta) and compute distance to boundary. Check if
+// distance to boundary is bigger than safety.
+   Double_t dx = ((TGeoBBox*)shape)->GetDX();
+   Double_t dy = ((TGeoBBox*)shape)->GetDY();
+   Double_t dz = ((TGeoBBox*)shape)->GetDZ();
+   // Number of tracks shot for every point inside the shape
+   const Int_t kNtracks = 1000;
+   Int_t n10 = nsamples/10;
+   Int_t i;
+   Double_t dist;
+   Double_t point[3];
+   Double_t dir[3];
+   Double_t theta, phi;
+   TPolyMarker3D *pm1 = 0;
+   TPolyMarker3D *pm2 = 0;
+   if (!fTimer) fTimer = new TStopwatch();
+   fTimer->Reset();
+   fTimer->Start();
+   Int_t itot = 0;
+   while (itot<nsamples) {
+      Bool_t inside = kFALSE;
+      point[0] = gRandom->Uniform(-2*dx,2*dx);
+      point[1] = gRandom->Uniform(-2*dy,2*dy);
+      point[2] = gRandom->Uniform(-2*dz,2*dz);
+      inside = shape->Contains(point);
+      Double_t safe = shape->Safety(point, inside);
+      itot++;
+      if (n10) {
+         if ((itot%n10) == 0) printf("%i percent\n", Int_t(100*itot/nsamples));
+      }
+      for (i=0; i<kNtracks; i++) {
+         phi = 2*TMath::Pi()*gRandom->Rndm();
+         theta= TMath::ACos(1.-2.*gRandom->Rndm());
+         dir[0]=TMath::Sin(theta)*TMath::Cos(phi);
+         dir[1]=TMath::Sin(theta)*TMath::Sin(phi);
+         dir[2]=TMath::Cos(theta);
+         if (inside) dist = shape->DistFromInside(point,dir,3);
+         else        dist = shape->DistFromOutside(point,dir,3);
+         if (dist<safe) {
+            printf("Error safety (%19.15f, %19.15f, %19.15f, %19.15f, %19.15f, %19.15f) safe=%f  dist=%f\n",
+                    point[0],point[1],point[2], dir[0], dir[1], dir[2], safe, dist);
+            new TCanvas("shape02", Form("Shape %s (%s)",shape->GetName(),shape->ClassName()), 1000, 800);
+            shape->Draw();                            
+            pm1 = new TPolyMarker3D(2);
+            pm1->SetMarkerStyle(24);
+            pm1->SetMarkerSize(0.4);
+            pm1->SetMarkerColor(kRed);
+            pm1->SetNextPoint(point[0],point[1],point[2]);
+            pm1->SetNextPoint(point[0]+safe*dir[0],point[1]+safe*dir[1],point[2]+safe*dir[2]);
+            pm1->Draw();
+            pm2 = new TPolyMarker3D(1);
+            pm2->SetMarkerStyle(7);
+            pm2->SetMarkerSize(0.3);
+            pm2->SetMarkerColor(kBlue);
+            pm2->SetNextPoint(point[0]+dist*dir[0],point[1]+dist*dir[1],point[2]+dist*dir[2]);
+            pm2->Draw();
+            return;
+         }
+      }
+   }      
+}     
+
 //______________________________________________________________________________
 TH2F *TGeoChecker::LegoPlot(Int_t ntheta, Double_t themin, Double_t themax,
                             Int_t nphi,   Double_t phimin, Double_t phimax,
@@ -1773,7 +2017,7 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
    TGeoNode *startnode, *endnode;
    Bool_t vis1,vis2;
    Int_t i=0;
-   Int_t ipoint;
+   Int_t ipoint, inull;
    Int_t itot=0;
    Int_t n10=nrays/10;
    Double_t theta,phi, step, normlen;
@@ -1783,9 +2027,10 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
    Double_t dz = ((TGeoBBox*)vol->GetShape())->GetDZ();
    normlen = TMath::Max(dx,dy);
    normlen = TMath::Max(normlen,dz);
-   normlen *= 0.1;
+   normlen *= 0.05;
    while (itot<nrays) {
       itot++;
+      inull = 0;
       ipoint = 0;
       if (n10) {
          if ((itot%n10) == 0) printf("%i percent\n", Int_t(100*itot/nrays));
@@ -1809,13 +2054,13 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
          i++;
          pm->Add(line);
       }
-      // find where we end-up
-      fGeoManager->FindNextBoundaryAndStep();
-      step = fGeoManager->GetStep();
-      endnode = fGeoManager->GetCurrentNode();
-      normal = fGeoManager->FindNormalFast();
-      vis2 = (endnode)?(endnode->IsOnScreen()):kFALSE;
-      while (endnode) {
+      while ((endnode=fGeoManager->FindNextBoundaryAndStep())) {
+         step = fGeoManager->GetStep();
+         if (step<TGeoShape::Tolerance()) inull++;
+         else inull = 0;
+         if (inull>5) break;
+         normal = fGeoManager->FindNormalFast();
+         if (!normal) break;
          istep = 0;
          vis2 = endnode->IsOnScreen();
          if (ipoint>0) {
@@ -1824,7 +2069,7 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
             if (!vis2) {
                normline = new TPolyLine3D(2);
                normline->SetLineColor(kBlue);
-               normline->SetLineWidth(2);
+               normline->SetLineWidth(1);
                normline->SetPoint(0, point[0], point[1], point[2]);
                normline->SetPoint(1, point[0]+normal[0]*normlen, 
                                      point[1]+normal[1]*normlen, 
@@ -1850,11 +2095,6 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
             pm->Add(line);
             pm->Add(normline);
          } 
-         // generate an extra step to cross boundary
-         startnode = endnode;    
-         fGeoManager->FindNextBoundary();
-         step = fGeoManager->GetStep();
-         endnode = fGeoManager->Step();
       }      
    }   
    // draw all segments

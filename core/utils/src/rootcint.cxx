@@ -577,6 +577,25 @@ void SetRootSys()
    }
 }
 
+//______________________________________________________________________________
+bool ParsePragmaLine(const std::string& line, const char* expectedTokens[],
+                     size_t* end = 0) {
+   // Check whether the #pragma line contains expectedTokens (0-terminated array).
+   if (end) *end = 0;
+   if (line[0] != '#') return false;
+   size_t pos = 1;
+   for (const char** iToken = expectedTokens; *iToken; ++iToken) {
+      while (isspace(line[pos])) ++pos;
+      size_t lenToken = strlen(*iToken);
+      if (line.compare(pos, lenToken, *iToken)) {
+         if (end) *end = pos;
+         return false;
+      }
+      pos += lenToken;
+   }
+   if (end) *end = pos;
+   return true;
+}
 
 namespace {
    class R__tmpnamElement {
@@ -994,10 +1013,12 @@ bool CheckClassDef(G__ClassInfo &cl)
    int autoloadEnable = G__set_class_autoloading(0);
    bool inheritsFromTObject = cl.IsBase("TObject");
    bool inheritsFromTSelector = cl.IsBase("TSelector");
+   bool isAbstract = cl.Property() & G__BIT_ISABSTRACT;
    G__set_class_autoloading(autoloadEnable);
 
    bool result = true;
-   if (!inheritsFromTSelector && inheritsFromTObject && !hasClassDef) {
+   if (!inheritsFromTSelector && inheritsFromTObject && !isAbstract
+       && !hasClassDef) {
       Error(cl.Name(),"%s inherits from TObject but does not have its own ClassDef\n",cl.Name());
       // We do want to always output the message (hence the Error level)
       // but still want rootcint to succeed.
@@ -5064,18 +5085,12 @@ int main(int argc, char **argv)
       // Read LinkDef file and process the #pragma link C++ ioctortype
       char consline[256];
       while (fgets(consline, 256, fpld)) {
-         bool constype = false;
-         if ((strcmp(strtok(consline, " "), "#pragma") == 0) &&
-             (strcmp(strtok(0, " "), "link") == 0) &&
-             (strcmp(strtok(0, " "), "C++") == 0) &&
-             (strcmp(strtok(0, " " ), "ioctortype") == 0)) {
-
-            constype = true;
-         }
+         static const char* ioctorTokens[] = {"pragma", "link", "C++", "ioctortype", 0};
+         size_t tokpos = 0;
+         bool constype = ParsePragmaLine(consline, ioctorTokens, &tokpos);
 
          if (constype) {
-
-            char *request = strtok(0, "-!+;");
+            char *request = strtok(consline + tokpos, "-!+;");
             // just in case remove trailing space and tab
             while (*request == ' ') request++;
             int len = strlen(request)-1;
@@ -5153,41 +5168,27 @@ int main(int argc, char **argv)
 
       // Read LinkDef file and process valid entries (STK)
       char line[256];
-      char cline[256];
-      char nline[256];
       while (fgets(line, 256, fpld)) {
 
          bool skip = true;
          bool forceLink = false;
-         strlcpy(cline,line,256);
-         strlcpy(nline,line,256);
          int len = strlen(line);
 
          // Check if the line contains a "#pragma link C++ class" specification,
          // if so, process the class (STK)
-         if ((strcmp(strtok(line, " "), "#pragma") == 0) &&
-             (strcmp(strtok(0, " "), "link") == 0) &&
-             (strcmp(strtok(0, " "), "C++") == 0) &&
-             (strcmp(strtok(0, " " ), "class") == 0)) {
-
+         static const char* linkClassTokens[] = {"pragma", "link", "C++", "class", 0};
+         static const char* createTClassTokens[] = {"pragma", "create", "TClass", 0};
+         static const char* linkNamespaceTokens[] = {"pragma", "link", "C++", "namespace", 0};
+         size_t tokpos = 0;
+         if (ParsePragmaLine(line, linkClassTokens, &tokpos)) {
             skip = false;
             forceLink = false;
-
-         } else if ((strcmp(strtok(cline, " "), "#pragma") == 0) &&
-                    (strcmp(strtok(0, " "), "create") == 0) &&
-                    (strcmp(strtok(0, " "), "TClass") == 0)) {
-
+         } else if (ParsePragmaLine(line, createTClassTokens, &tokpos)) {
             skip = false;
             forceLink = true;
-
-         } else if ((strcmp(strtok(nline, " "), "#pragma") == 0) &&
-                    (strcmp(strtok(0, " "), "link") == 0) &&
-                    (strcmp(strtok(0, " "), "C++") == 0) &&
-                    (strcmp(strtok(0, " " ), "namespace") == 0)) {
-
+         } else if (ParsePragmaLine(line, linkNamespaceTokens, &tokpos)) {
             skip = false;
             forceLink = false;
-
          }
 
          if (!skip) {
@@ -5219,11 +5220,12 @@ int main(int argc, char **argv)
                }
             }
 
-            char *request = strtok(0, "-!+;");
+            while (isspace(line[tokpos])) ++tokpos;
+            char* request = strtok(line + tokpos, "-!+;");
             // just in case remove trailing space and tab
-            while (*request == ' ') request++;
+            while (isspace(*request)) ++request;
             int reqlen = strlen(request)-1;
-            while (request[reqlen]==' ' || request[reqlen]=='\t') request[reqlen--] = '\0';
+            while (isspace(request[reqlen])) request[reqlen--] = '\0';
             request = Compress(request); //no space between tmpl arguments allowed
 
             // In some case, G__ClassInfo will induce template instantiation,

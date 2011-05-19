@@ -101,6 +101,7 @@ protected:
    TCollection     *fTypes;               //List of data types definition
    TCollection     *fGlobals;             //List of global variables
    TCollection     *fGlobalFunctions;     //List of global functions
+   TSeqCollection  *fClosedObjects;       //List of closed objects from the list of files and sockets, so we can delete them if neededCl. 
    TSeqCollection  *fFiles;               //List of files
    TSeqCollection  *fMappedFiles;         //List of memory mapped files
    TSeqCollection  *fSockets;             //List of network sockets
@@ -144,6 +145,7 @@ public:
    virtual TObject  *FindObject(const char *name) const;
    virtual TObject  *FindObject(const TObject *obj) const;
    virtual TObject  *FindObjectAny(const char *name) const;
+   virtual TObject  *FindObjectAnyFile(const char *name) const;
    TObject          *FindSpecialObject(const char *name, void *&where);
    const char       *FindObjectClassName(const char *name) const;
    const char       *FindObjectPathName(const TObject *obj) const;
@@ -178,6 +180,7 @@ public:
    TCollection      *GetListOfTypes(Bool_t load = kFALSE);
    TCollection      *GetListOfGlobals(Bool_t load = kFALSE);
    TCollection      *GetListOfGlobalFunctions(Bool_t load = kFALSE);
+   TSeqCollection   *GetListOfClosedObjects() const { return fClosedObjects; }
    TSeqCollection   *GetListOfFiles() const       { return fFiles; }
    TSeqCollection   *GetListOfMappedFiles() const { return fMappedFiles; }
    TSeqCollection   *GetListOfSockets() const     { return fSockets; }

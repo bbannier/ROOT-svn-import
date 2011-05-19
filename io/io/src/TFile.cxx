@@ -463,6 +463,10 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
 
 zombie:
    // error in file opening occured, make this object a zombie
+   {
+      R__LOCKGUARD2(gROOTMutex);
+      gROOT->GetListOfClosedObjects()->Add(this);
+   }
    MakeZombie();
    gDirectory = gROOT;
 }
@@ -492,7 +496,7 @@ TFile::~TFile()
    SafeDelete(fCacheWrite);
 
    R__LOCKGUARD2(gROOTMutex);
-   gROOT->GetListOfFiles()->Remove(this);
+   gROOT->GetListOfClosedObjects()->Remove(this);
    gROOT->GetUUIDs()->RemoveUUID(GetUniqueID());
 
    if (IsOnHeap()) {
@@ -773,11 +777,16 @@ void TFile::Init(Bool_t create)
          if (!strcmp(key->GetClassName(),"TProcessID")) fNProcessIDs++;
       }
       fProcessIDs = new TObjArray(fNProcessIDs+1);
-      return;
    }
+   return;
 
 zombie:
+   {
+      R__LOCKGUARD2(gROOTMutex);
+      gROOT->GetListOfClosedObjects()->Add(this);
+   }
    // error in file opening occured, make this object a zombie
+   fWritable = kFALSE;
    MakeZombie();
    gDirectory = gROOT;
 }
@@ -864,6 +873,7 @@ void TFile::Close(Option_t *option)
    R__LOCKGUARD2(gROOTMutex);
    gROOT->GetListOfFiles()->Remove(this);
    gROOT->GetListOfBrowsers()->RecursiveRemove(this);
+   gROOT->GetListOfClosedObjects()->Add(this);
 }
 
 //____________________________________________________________________________________
@@ -2340,6 +2350,10 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    TList *list = new TList();
    while ((info = (TStreamerInfo*)flnext())) {
       if (info->IsA() != TStreamerInfo::Class()) {
+         continue;
+      }
+      if (strstr(info->GetName(),"@@")) {
+         // Skip schema evolution support streamerInfo
          continue;
       }
       TClass *cl = TClass::GetClass(info->GetName());

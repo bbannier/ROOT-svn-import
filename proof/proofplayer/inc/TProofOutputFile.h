@@ -37,6 +37,7 @@ class TProofOutputFile : public TNamed {
 
 friend class TProof;
 friend class TProofPlayer;
+friend class TProofPlayerRemote;
 
 public:
    enum ERunType {  kMerge        = 1,      // Type of run: merge or dataset creation
@@ -68,8 +69,9 @@ private:
    TFileMerger *fMerger;  // Instance of the file merger in 'merge' mode
 
    void Init(const char *path, const char *dsname);
-   void SetFileName(const char* name);
-   void SetDir(const char* dir) { fDir = dir; }
+   void SetFileName(const char* name) { fFileName = name; }
+   void SetDir(const char* dir, Bool_t raw = kFALSE) { if (raw) { fRawDir = dir; } else { fDir = dir; } }
+   void SetMerged(Bool_t merged = kTRUE) { fMerged = merged; }
    void SetWorkerOrdinal(const char* ordinal) { fWorkerOrdinal = ordinal; }
 
    void AddFile(TFileMerger *merger, const char *path);
@@ -79,6 +81,7 @@ private:
 protected:
 
 public:
+   enum EStatusBits { kOutputFileNameSet = BIT(16)};
    TProofOutputFile() : fDir(), fRawDir(), fFileName(), fOptionsAnchor(), fOutputFileName(),
                         fWorkerOrdinal(), fLocalHost(), fIsLocal(kFALSE), fMerged(kFALSE),
                         fRunType(kMerge), fTypeOpt(kRemote), fDataSet(0), fMerger(0) { }
@@ -107,6 +110,8 @@ public:
    void Print(Option_t *option = "") const;
    void SetOutputFileName(const char *name);
    void ResetFileCollection() { fDataSet = 0; }
+
+   static Int_t AssertDir(const char *dirpath);
 
    ClassDef(TProofOutputFile,4) // Wrapper class to steer the merging of files produced on workers
 };

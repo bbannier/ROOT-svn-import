@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Jan Therhaag, Eckhard von Toerne 
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -14,11 +14,14 @@
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
+ *      Jan Therhaag       <Jan.Therhaag@cern.ch>     - U of Bonn, Germany        *
+ *      Eckhard v. Toerne  <evt@uni-bonn.de>          - U of Bonn, Germany        *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         * 
  *      U. of Victoria, Canada                                                    * 
  *      MPI-K Heidelberg, Germany                                                 * 
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -190,6 +193,7 @@ namespace TMVA {
       inline void SetUseFisherCuts(Bool_t t=kTRUE)  { fUseFisherCuts = t;}
       inline void SetMinLinCorrForFisher(Double_t min){fMinLinCorrForFisher = min;}
       inline void SetUseExclusiveVars(Bool_t t=kTRUE){fUseExclusiveVars = t;}
+      inline void SetPairNegWeightsInNode(){fPairNegWeightsInNode=kTRUE;}
 
    private:
       // utility functions
@@ -229,8 +233,8 @@ namespace TMVA {
 
       UInt_t     fNNodesMax;     // max # of nodes
       UInt_t     fMaxDepth;      // max depth
-      UInt_t     fClass;         // class which is treated as signal when building the tree
-
+      UInt_t     fSigClass;      // class which is treated as signal when building the tree
+      Bool_t     fPairNegWeightsInNode;  // randomly pair miscl. ev. with neg. and pos. weights in node and don't boost them
       static const Int_t  fgDebugLevel = 0;     // debug level determining some printout/control plots etc.
       Int_t     fTreeID;        // just an ID number given to the tree.. makes debugging easier as tree knows who he is.
 

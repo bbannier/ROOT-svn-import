@@ -107,6 +107,7 @@
 #include "TFunction.h"
 #include "TMethodArg.h"
 #include "TMethodCall.h"
+#include "TProofOutputFile.h"
 
 // global proofserv handle
 TProofServ *gProofServ = 0;
@@ -1156,6 +1157,9 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
          status->IncProcTime(realtime);
          status->IncCPUTime(cputime);
       }
+      // Flag cases with problems in opening files
+      if (totalEntries < 0) status->SetBit(TProofProgressStatus::kFileNotOpen);
+      // Add to the message
       req << status;
       // Send tree cache information
       Long64_t cacheSize = (fPlayer) ? fPlayer->GetCacheSize() : -1;
@@ -1171,6 +1175,9 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
          PDB(kLoop, 2) status->Print();
          Info("GetNextPacket","cacheSize: %lld, learnent: %d", cacheSize, learnent);
       }
+      // Reset the status bits
+      status->ResetBit(TProofProgressStatus::kFileNotOpen);
+      status->ResetBit(TProofProgressStatus::kFileCorrupted);
       status = 0; // status is owned by the player.
    } else {
       req << fLatency.RealTime() << realtime << cputime
@@ -1781,17 +1788,19 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_WORKERLISTS:
-         if (all) {
-            if (IsMaster())
-               HandleWorkerLists(mess);
-            else
-               Warning("HandleSocketInput:kPROOF_WORKERLISTS",
-                       "Action meaning-less on worker nodes: protocol error?");
-         } else {
-            rc = -1;
+         {  Int_t xrc = -1;
+            if (all) {
+               if (IsMaster())
+                  xrc = HandleWorkerLists(mess);
+               else
+                  Warning("HandleSocketInput:kPROOF_WORKERLISTS",
+                        "Action meaning-less on worker nodes: protocol error?");
+            } else {
+               rc = -1;
+            }
+            // Notify
+            SendLogFile(xrc);
          }
-         // Notify
-         SendLogFile();
          break;
 
       case kPROOF_GETSLAVEINFO:
@@ -2928,14 +2937,14 @@ Int_t TProofServ::SetupCommon()
       if (gSystem->AccessPathName(fSessionDir))
          gSystem->mkdir(fSessionDir, kTRUE);
       if (!gSystem->ChangeDirectory(fSessionDir)) {
-         Error("SetupCommon", "can not change to working directory %s",
+         Error("SetupCommon", "can not change to working directory '%s'",
                               fSessionDir.Data());
          return -1;
       }
    }
    gSystem->Setenv("PROOF_SANDBOX", fSessionDir);
    if (gProofDebugLevel > 0)
-      Info("SetupCommon", "session dir is %s", fSessionDir.Data());
+      Info("SetupCommon", "session dir is '%s'", fSessionDir.Data());
 
    // On masters, check and make sure that "queries" and "datasets"
    // directories exist
@@ -3224,6 +3233,8 @@ Bool_t TProofServ::UnlinkDataDir(const char *path)
             dorm = kFALSE;
          }
       }
+      // Close the directory
+      gSystem->FreeDirectory(dirp);
    } else {
       // Cannot open the directory
       dorm = kFALSE;
@@ -5410,14 +5421,14 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
 }
 
 //______________________________________________________________________________
-void TProofServ::HandleWorkerLists(TMessage *mess)
+Int_t TProofServ::HandleWorkerLists(TMessage *mess)
 {
    // Handle here all requests to modify worker lists
 
    PDB(kGlobal, 1)
       Info("HandleWorkerLists", "Enter");
 
-   Int_t type = 0;
+   Int_t type = 0, rc = 0;
    TString ord;
 
    (*mess) >> type;
@@ -5430,20 +5441,24 @@ void TProofServ::HandleWorkerLists(TMessage *mess)
             Int_t nactmax = fProof->GetListOfSlaves()->GetSize() -
                             fProof->GetListOfBadSlaves()->GetSize();
             if (nact < nactmax) {
-               fProof->ActivateWorker(ord);
+               Int_t nwc = fProof->ActivateWorker(ord);
                Int_t nactnew = fProof->GetListOfActiveSlaves()->GetSize();
                if (ord == "*") {
                   if (nactnew == nactmax) {
-                     Info("HandleWorkerList","all workers (re-)activated");
+                     Info("HandleWorkerList", "all workers (re-)activated");
                   } else {
-                     Info("HandleWorkerList","%d workers could not be (re-)activated", nactmax - nactnew);
+                     Info("HandleWorkerList", "%d workers could not be (re-)activated", nactmax - nactnew);
                   }
                } else {
-                  if (nactnew == (nact + 1)) {
-                     Info("HandleWorkerList","worker %s (re-)activated", ord.Data());
+                  if (nactnew == (nact + nwc)) {
+                     Info("HandleWorkerList","worker(s) %s (re-)activated", ord.Data());
                   } else {
-                     Info("HandleWorkerList","worker %s could not be (re-)activated;"
-                                             " # of actives: %d --> %d", ord.Data(), nact, nactnew);
+                     if (nwc != -2) {
+                        Error("HandleWorkerList", "some worker(s) could not be (re-)activated;"
+                                                  " # of actives: %d --> %d (nwc: %d)",
+                                                  nact, nactnew, nwc);
+                     }
+                     rc = (nwc < 0) ? nwc : -1;
                   }
                }
             } else {
@@ -5458,7 +5473,7 @@ void TProofServ::HandleWorkerLists(TMessage *mess)
          if (fProof) {
             Int_t nact = fProof->GetListOfActiveSlaves()->GetSize();
             if (nact > 0) {
-               fProof->DeactivateWorker(ord);
+               Int_t nwc = fProof->DeactivateWorker(ord);
                Int_t nactnew = fProof->GetListOfActiveSlaves()->GetSize();
                if (ord == "*") {
                   if (nactnew == 0) {
@@ -5467,11 +5482,15 @@ void TProofServ::HandleWorkerLists(TMessage *mess)
                      Info("HandleWorkerList","%d workers could not be deactivated", nactnew);
                   }
                } else {
-                  if (nactnew == (nact - 1)) {
-                     Info("HandleWorkerList","worker %s deactivated", ord.Data());
+                  if (nactnew == (nact - nwc)) {
+                     Info("HandleWorkerList","worker(s) %s deactivated", ord.Data());
                   } else {
-                     Info("HandleWorkerList","worker %s could not be deactivated:"
-                                             " # of actives: %d --> %d", ord.Data(), nact, nactnew);
+                     if (nwc != -2) {
+                        Error("HandleWorkerList", "some worker(s) could not be deactivated:"
+                                                  " # of actives: %d --> %d (nwc: %d)",
+                                                  nact, nactnew, nwc);
+                     }
+                     rc = (nwc < 0) ? nwc : -1;
                   }
                }
             } else {
@@ -5483,7 +5502,10 @@ void TProofServ::HandleWorkerLists(TMessage *mess)
          break;
       default:
          Warning("HandleWorkerList","unknown action type (%d)", type);
+         rc = -1;
    }
+   // Done
+   return rc;
 }
 
 //______________________________________________________________________________
@@ -6492,6 +6514,9 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                PDB(kSubmerger, 2) Info("HandleSubmerger",
                                        "kBeMerger: mergerPlayer created (%p) ", mergerPlayer);
 
+               // This may be used internally
+               mergerPlayer->SetBit(TVirtualProofPlayer::kIsSubmerger);
+
                // Accept results from assigned workers
                if (AcceptResults(connections, mergerPlayer)) {
                   PDB(kSubmerger, 2)
@@ -6520,6 +6545,8 @@ void TProofServ::HandleSubmerger(TMessage *mess)
 
                   // Delayed merging if neccessary
                   mergerPlayer->MergeOutput();
+                 
+                  PDB(kSubmerger, 2) mergerPlayer->GetOutputList()->Print();
 
                   PDB(kSubmerger, 2) Info("HandleSubmerger", "delayed merging on %s finished ", fOrdinal.Data());
                   PDB(kSubmerger, 2) Info("HandleSubmerger", "%s sending results to master ", fOrdinal.Data());
@@ -6542,6 +6569,8 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   fSocket->Send(answ);
                   deleteplayer = kFALSE;
                }
+               // Reset
+               mergerPlayer->ResetBit(TVirtualProofPlayer::kIsSubmerger);
             } else {
                Error("HandleSubmerger","kSendOutput: received not on worker");
             }

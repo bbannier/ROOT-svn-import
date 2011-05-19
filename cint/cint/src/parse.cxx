@@ -803,7 +803,7 @@ static void G__set_breakcontinue_breakdestination(int break_destidx, G__breakcon
          // -- This entry in the list is for a break statement.
 #ifdef G__ASM_DBG
          if (G__asm_dbg) {
-            G__fprinterr(G__serr, "  %x: assigned JMP %x (for break)  %s:%d\n", p->idx, break_destidx, __FILE__, __LINE__);
+            G__fprinterr(G__serr, "  %x: assigned JMP %x (for break)  %s:%d\n", p->idx - 1, break_destidx, __FILE__, __LINE__);
          }
 #endif // G__ASM_DBG
          G__asm_inst[p->idx] = break_destidx;
@@ -919,15 +919,21 @@ static G__value G__exec_switch()
       //   G__fgetstream_peek(buf, 30);
       //   fprintf(stderr, "G__exec_switch: compile whole switch block, peek ahead: '%s'\n", buf);
       //}
+      //fprintf(stderr, "G__exec_switch: Begin skipping rest of switch block, but generate bytecode.\n");
       // Flag that we need to generate code for case clauses.
       int store_G__switch = G__switch;
       G__switch = 1;
+      // Flag that we should not exit parser at a case label.
+      int store_G__switch_searching = G__switch_searching;
+      G__switch_searching = 0;
       // Tell the parser to finish the switch block.
       int brace_level = 1;
       // Call the parser.
       G__exec_statement(&brace_level);
       // Restore state.
+      G__switch_searching = store_G__switch_searching;
       G__switch = store_G__switch;
+      //fprintf(stderr, "G__exec_switch: Skipping of switch block completed, bytecode was generated.\n");
    }
    else {
       // -- We are going to execute the switch.
@@ -3881,99 +3887,91 @@ static void G__unsignedintegral()
    fpos_t pos;
    fgetpos(G__ifile.fp, &pos);
    G__unsigned = -1;
+   G__reftype = G__PARANORMAL;
    // Scan the next identifier token in.
    G__FastAllocString name(G__MAXNAME);
+   // G__fgetstream() stops at space, hand-over to G__define_var() thus depends
+   // on spacing between "type * name"!
    G__fgetname(name, 0, "(");
-   //
-   //  And compare against the integral types.
-   //
-   if (!strcmp(name, "int")) {
-      G__var_type = 'i' - 1;
-   }
-   else if (!strcmp(name, "char")) {
-      G__var_type = 'c' - 1;
-   }
-   else if (!strcmp(name, "short")) {
-      G__var_type = 's' - 1;
-   }
-   else if (!strcmp(name, "long")) {
-      G__var_type = 'l' - 1;
-   }
-   else if (!strcmp(name, "int*")) {
-      G__var_type = 'I' - 1;
-   }
-   else if (!strcmp(name, "char*")) {
-      G__var_type = 'C' - 1;
-   }
-   else if (!strcmp(name, "short*")) {
-      G__var_type = 'S' - 1;
-   }
-   else if (!strcmp(name, "long*")) {
-      G__var_type = 'L' - 1;
-   }
-   else if (!strcmp(name, "int&")) {
-      G__var_type = 'i' - 1;
-      G__reftype = G__PARAREFERENCE;
-   }
-   else if (!strcmp(name, "char&")) {
-      G__var_type = 'c' - 1;
-      G__reftype = G__PARAREFERENCE;
-   }
-   else if (!strcmp(name, "short&")) {
-      G__var_type = 's' - 1;
-      G__reftype = G__PARAREFERENCE;
-   }
-   else if (!strcmp(name, "long&")) {
-      G__var_type = 'l' - 1;
-      G__reftype = G__PARAREFERENCE;
-   }
-   else if (strchr(name, '*')) {
-      // -- May have been a pointer.
-      bool nomatch = false;
-      if (!strncmp(name, "int*", 4) || !strncmp(name, "*", 1)) {
-         G__var_type = 'I' - 1;
+   bool isTypeError = false;
+   bool isPtr = false;
+
+   // Extract ptr / ref
+   size_t lenName = strlen(name);
+   if (lenName) {
+      char* last = (char*)name + lenName - 1;
+      if (*last == '&') {
+         *last = 0;
+         --last;
+         G__reftype = G__PARAREFERENCE;
       }
-      else if (!strncmp(name, "char*", 5)) {
-         G__var_type = 'C' - 1;
-      }
-      else if (!strncmp(name, "short*", 6)) {
-         G__var_type = 'S' -1;
-      }
-      else if (!strncmp(name, "long*", 5)) {
-         G__var_type = 'L' -1;
-      } else {
-         // No match at all.
-         nomatch = true;
-      }
-      if (nomatch) {
-         // Set to unsigned int and rewind
-         G__var_type = 'i' - 1;
-         fsetpos(G__ifile.fp, &pos);         
-      } else {
-         if (strstr(name, "******")) {
-            G__reftype = G__PARAP2P + 4;
-         }
-         else if (strstr(name, "*****")) {
-            G__reftype = G__PARAP2P + 3;
-         }
-         else if (strstr(name, "****")) {
-            G__reftype = G__PARAP2P + 2;
-         }
-         else if (strstr(name, "***")) {
-            G__reftype = G__PARAP2P + 1;
-         }
-         else if (strstr(name, "**")) {
-            G__reftype = G__PARAP2P;
+      if (*last == '*') {
+         *last = 0;
+         isPtr = true;
+         while (--last >= name.data() && *last == '*') {
+            if (G__reftype >= G__PARAP2P) {
+               if (G__reftype - G__PARAP2P >= 4) {
+                  G__fprinterr(G__serr, "Error: Pointer level too high in %s!\n", name.data());
+                  isTypeError = true;
+               } else {
+                  ++G__reftype;
+               }
+            } else {
+               if (G__reftype == G__PARAREFERENCE) {
+                  G__fprinterr(G__serr, "Error (CINT limitation): reference only supported for one pointer level!\n");
+                  G__fprinterr(G__serr, "... ignorinmg reference.\n");
+               }
+               G__reftype = G__PARAP2P;
+            }
+            *last = 0;
          }
       }
-   }
-   else {
+
+      if (!isTypeError) {
+         //
+         //  And compare against the integral types.
+         //
+         if (!strcmp(name, "int")) {
+            G__var_type = 'i';
+         }
+         else if (!strcmp(name, "char")) {
+            G__var_type = 'c';
+         }
+         else if (!strcmp(name, "short")) {
+            G__var_type = 's';
+         }
+         else if (!strcmp(name, "long")) {
+            G__var_type = 'l';
+         } else {
+            // unsigned whatever. Set to unsigned int and rewind to
+            // reparse whatever.
+            fsetpos(G__ifile.fp, &pos);
+            G__var_type = 'i';
+            G__reftype = G__PARANORMAL;
+            isPtr = false;
+         }
+      }
+   } else {
       // -- Just plain unsigned is an unsigned int.
-      G__var_type = 'i' - 1;
+      G__var_type = 'i';
       // Undo the scan of the next identifier token.
       // FIXME: The line number, dispmask, and macro expansion state could be wrong now.
       fsetpos(G__ifile.fp, &pos);
    }
+
+   if (isTypeError) {
+      G__fprinterr(G__serr, "... treating as unsigned int.\n");
+      G__printlinenum();
+      G__var_type = 'i';
+   }
+
+   // unsigned:
+   --G__var_type;
+
+   if (isPtr) {
+      G__var_type = toupper(G__var_type);
+   }
+
    //
    //  Declare or define the variable.
    //

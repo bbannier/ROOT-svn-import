@@ -165,6 +165,11 @@ TString RooAbsPdf::_normRangeOverride ;
 RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0), _minDimNormValueCache(999), _valueCacheIntOrder(2), _specGeneratorConfig(0)
 {
   // Default constructor
+  _errorCount = 0 ;
+  _negCount = 0 ;
+  _rawValue = 0 ;
+  _selectComp = kFALSE ;
+  _traceCount = 0 ;
 }
 
 
@@ -234,7 +239,10 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
   // done in integration calls, there is no performance hit.
 
   if (!nset) {
+    RooArgSet* tmp = _normSet ;
+    _normSet = 0 ;
     Double_t val = evaluate() ;
+    _normSet = tmp ;
     Bool_t error = traceEvalPdf(val) ;
     cxcoutD(Tracing) << IsA()->GetName() << "::getVal(" << GetName() 
 		     << "): value = " << val << " (unnormalized)" << endl ;
@@ -834,7 +842,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   if (allConstraints.getSize()>0 && cPars) {   
 
     coutI(Minimization) << " Including the following contraint terms in minimization: " << allConstraints << endl ;
-
+    
     nllCons = new RooConstraintSum(Form("%s_constr",baseName.c_str()),"nllCons",allConstraints,*cPars) ;
     RooAbsReal* orignll = nll ;
 
@@ -2116,6 +2124,16 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Double_t nEven
   }
 
   return hist;
+}
+
+
+
+//_____________________________________________________________________________
+RooDataSet* RooAbsPdf::generateSimGlobal(const RooArgSet& whatVars, Int_t nEvents) 
+{
+  // Special generator interface for generation of 'global observables' -- for RooStats tools
+
+  return generate(whatVars,nEvents) ;
 }
 
 

@@ -340,7 +340,11 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
    if (strcmp(memberName,"fBits") == 0 && strcmp(memberTypeName,"UInt_t") == 0) {
       isbits = kTRUE;
    }
-
+   TClass * dataClass = TClass::GetClass(memberFullTypeName);
+   Bool_t isTString = (dataClass == TString::Class());
+   static TClassRef stdClass("std::string");
+   Bool_t isStdString = (dataClass == stdClass);
+   
    Int_t i;
    for (i = 0;i < kline; i++) line[i] = ' ';
    line[kline-1] = 0;
@@ -397,7 +401,7 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
       } else {
          snprintf(&line[kvalue],kline-kvalue,"->%lx ", (Long_t)p3pointer);
       }
-   } else if (membertype)
+   } else if (membertype) {
       if (isdate) {
          cdatime = (UInt_t*)pointer;
          TDatime::GetDateTime(cdatime[0],cdate,ctime);
@@ -407,9 +411,17 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
       } else {
          strncpy(&line[kvalue], membertype->AsString(pointer), TMath::Min(kline-1-kvalue,(int)strlen(membertype->AsString(pointer))));
       }
-   else
-      snprintf(&line[kvalue],kline-kvalue,"->%lx ", (Long_t)pointer);
-
+   } else {
+      if (isStdString) {
+         std::string *str = (std::string*)pointer;
+         snprintf(&line[kvalue],kline-kvalue,"%s",str->c_str());
+      } else if (isTString) {
+         TString *str = (TString*)pointer;
+         snprintf(&line[kvalue],kline-kvalue,"%s",str->Data());
+      } else {
+         snprintf(&line[kvalue],kline-kvalue,"->%lx ", (Long_t)pointer);
+      }
+   }
    // Encode data member title
    if (isdate == kFALSE && strcmp(memberFullTypeName, "char*") && strcmp(memberFullTypeName, "const char*")) {
       i = strlen(&line[0]); line[i] = ' ';
@@ -834,7 +846,7 @@ TClass::TClass(const char *name, Version_t cversion,
    fTypeInfo(0), fShowMembers(0), fInterShowMembers(0),
    fStreamer(0), fIsA(0), fGlobalIsA(0), fIsAMethod(0),
    fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
-   fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
+   fDestructor(0), fDirAutoAdd(0), fStreamerFunc(0), fSizeof(-1),
    fProperty(0),fVersionUsed(kFALSE), 
    fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
    fCurrentInfo(0), fRefStart(0), fRefProxy(0),

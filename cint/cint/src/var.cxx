@@ -613,10 +613,17 @@ G__value G__letvariable(G__FastAllocString &item, G__value expression, G__var_ar
                case 0:
                   break;
                case 1:
-                  G__reftype = G__PARANORMAL;
+                  if (G__reftype != G__PARAREFERENCE) {
+                     G__reftype = G__PARANORMAL;
+                  }
                   break;
                default:
-                  G__reftype = G__PARAP2P + pointlevel - 2;
+                  if (G__reftype != G__PARAREFERENCE) {
+                     G__reftype = G__PARAP2P + pointlevel - 2;
+                  }
+                  else {
+                     G__reftype = G__PARAREFP2P + pointlevel - 2;
+                  }
                   break;
             }
             ttt = item + i - 1;
@@ -7674,7 +7681,7 @@ struct G__var_array* G__searchvariable(char* varname, int varhash, G__var_array*
                }
                else {
                   if (baseclass->herit[basen]->baseaccess & G__PUBLIC) {
-                     accesslimit = G__PUBLIC;
+                     accesslimit = G__PUBLIC_PROTECTED;
                      G__incsetup_memvar(baseclass->herit[basen]->basetagnum);
                      var = G__struct.memvar[baseclass->herit[basen]->basetagnum];
 #ifdef G__VIRTUALBASE

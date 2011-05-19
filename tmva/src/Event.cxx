@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$   
-// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss, Jan Therhaag
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -14,13 +14,14 @@
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
  *      Peter Speckmayer <Peter.Speckmayer@cern.ch> - CERN, Switzerland           *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
+ *      Jan Therhaag       <Jan.Therhaag@cern.ch>     - U of Bonn, Germany        *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         * 
  *      U. of Victoria, Canada                                                    * 
  *      MPI-K Heidelberg, Germany                                                 * 
- *      LAPP, Annecy, France                                                      *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -44,7 +45,8 @@ TMVA::Event::Event()
      fClass(0),
      fWeight(1.0),
      fBoostWeight(1.0),
-     fDynamic(kFALSE)
+     fDynamic(kFALSE),
+     fDoNotBoost(kFALSE)
 {
    // copy constructor
 }
@@ -62,7 +64,8 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
      fClass(cls),
      fWeight(weight),
      fBoostWeight(boostweight),
-     fDynamic(kFALSE)
+     fDynamic(kFALSE),
+     fDoNotBoost(kFALSE)
 {
    // constructor
 }
@@ -81,7 +84,8 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
      fClass(cls),
      fWeight(weight),
      fBoostWeight(boostweight),
-     fDynamic(kFALSE)
+     fDynamic(kFALSE),
+     fDoNotBoost(kFALSE)
 {
    // constructor
 }
@@ -98,7 +102,8 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
      fClass(cls),
      fWeight(weight),
      fBoostWeight(boostweight),
-     fDynamic(kFALSE)
+     fDynamic(kFALSE),
+     fDoNotBoost(kFALSE)
 {
    // constructor
 }
@@ -112,7 +117,8 @@ TMVA::Event::Event( const std::vector<Float_t*>*& evdyn, UInt_t nvar )
      fClass(0),
      fWeight(0),
      fBoostWeight(0),
-     fDynamic(true)
+     fDynamic(true),
+     fDoNotBoost(kFALSE)
 {
    // constructor for single events
    fValuesDynamic = (std::vector<Float_t*>*) evdyn;
@@ -127,7 +133,8 @@ TMVA::Event::Event( const Event& event )
      fClass(event.fClass),
      fWeight(event.fWeight),
      fBoostWeight(event.fBoostWeight),
-     fDynamic(event.fDynamic)
+     fDynamic(event.fDynamic),
+     fDoNotBoost(kFALSE)
 {
    // copy constructor
    if (event.fDynamic){

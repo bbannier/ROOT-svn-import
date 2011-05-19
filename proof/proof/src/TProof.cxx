@@ -801,11 +801,9 @@ Int_t TProof::Init(const char *, const char *conffile,
       fPackageDir = gProofServ->GetPackageDir();
    } else {
 
-      TString sandbox = gEnv->GetValue("Proof.Sandbox", "");
-      if (sandbox.IsNull()) sandbox.Form("~/%s", kPROOF_WorkDir);
-      gSystem->ExpandPathName(sandbox);
-      if (AssertPath(sandbox, kTRUE) != 0) {
-         Error("Init", "failure asserting directory %s", sandbox.Data());
+      TString sandbox;
+      if (GetSandbox(sandbox, kTRUE) != 0) {
+         Error("Init", "failure asserting sandbox directory %s", sandbox.Data());
          return 0;
       }
 
@@ -905,6 +903,34 @@ Int_t TProof::Init(const char *, const char *conffile,
       gROOT->GetListOfSockets()->Add(this);
    }
    return fActiveSlaves->GetSize();
+}
+
+//______________________________________________________________________________
+Int_t TProof::GetSandbox(TString &sb, Bool_t assert, const char *rc)
+{
+   // Set the sandbox path from ' Proof.Sandbox' or the alternative var 'rc'.
+   // Use the existing setting or the default if nothing is found.
+   // If 'assert' is kTRUE, make also sure that the path exists.
+   // Return 0 on success, -1 on failure
+
+   // Get it from 'rc', if defined
+   if (rc && strlen(rc)) sb = gEnv->GetValue(rc, sb);
+   // Or use the default 'rc'
+   if (sb.IsNull()) sb = gEnv->GetValue("Proof.Sandbox", "");
+   // If nothing found , use the default
+   if (sb.IsNull()) sb.Form("~/%s", kPROOF_WorkDir);
+   // Expand special settings
+   if (sb == ".") {
+      sb = gSystem->pwd();
+   } else if (sb == "..") {
+      sb = gSystem->DirName(gSystem->pwd());
+   }
+   gSystem->ExpandPathName(sb);
+   
+   // Assert the path, if required
+   if (assert && AssertPath(sb, kTRUE) != 0) return -1;
+   // Done
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -1159,10 +1185,11 @@ Int_t TProof::AddWorkers(TList *workerList)
       } else {
          slaveOk = kFALSE;
          fBadSlaves->Add(slave);
+         Warning("AddWorkers", "worker '%s' is invalid", slave->GetOrdinal());
       }
 
       PDB(kGlobal,3)
-         Info("StartSlaves", "worker on host %s created"
+         Info("AddWorkers", "worker on host %s created"
               " and added to list", worker->GetNodeName().Data());
 
       // Notify opening of connection
@@ -9739,19 +9766,25 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    TList fileList;
    fileList.SetOwner();
    void *dataSetDir = gSystem->OpenDirectory(gSystem->DirName(files));
-   const char* ent;
-   TString filesExp(gSystem->BaseName(files));
-   filesExp.ReplaceAll("*",".*");
-   TRegexp rg(filesExp);
-   while ((ent = gSystem->GetDirEntry(dataSetDir))) {
-      TString entryString(ent);
-      if (entryString.Index(rg) != kNPOS) {
-         // Matching dir entry: add to the list
-         TString u = TString::Format("file://%s/%s", gSystem->DirName(files), ent);
-         if (gSystem->AccessPathName(u, kReadPermission) == kFALSE)
-            fileList.Add(new TFileInfo(u));
-      } //if matching dir entry
-   } //while
+   if (dataSetDir) {
+      const char* ent;
+      TString filesExp(gSystem->BaseName(files));
+      filesExp.ReplaceAll("*",".*");
+      TRegexp rg(filesExp);
+      while ((ent = gSystem->GetDirEntry(dataSetDir))) {
+         TString entryString(ent);
+         if (entryString.Index(rg) != kNPOS) {
+            // Matching dir entry: add to the list
+            TString u = TString::Format("file://%s/%s", gSystem->DirName(files), ent);
+            if (gSystem->AccessPathName(u, kReadPermission) == kFALSE)
+               fileList.Add(new TFileInfo(u));
+         } //if matching dir entry
+      } //while
+      // Close the directory
+      gSystem->FreeDirectory(dataSetDir);
+   } else {
+      Warning("UploadDataSet", "cannot open: directory '%s'", gSystem->DirName(files));
+   }
    Int_t fileCount;
    if ((fileCount = fileList.GetSize()) == 0)
       Printf("No files match your selection. The dataset will not be saved");
@@ -10202,7 +10235,7 @@ void TProof::InterruptCurrentMonitor()
 }
 
 //_____________________________________________________________________________
-void TProof::ActivateWorker(const char *ord)
+Int_t TProof::ActivateWorker(const char *ord)
 {
    // Make sure that the worker identified by the ordinal number 'ord' is
    // in the active list. The request will be forwarded to the master
@@ -10210,12 +10243,16 @@ void TProof::ActivateWorker(const char *ord)
    // the worker from the inactive to the active list and rebuild the list
    // of unique workers.
    // Use ord = "*" to activate all inactive workers.
+   // The string 'ord' can also be a comma-separated list of ordinal numbers the
+   // status of which will be modified at once.
+   // Return <0 if something went wrong (-2 if at least one worker was not found)
+   // or the number of workers with status change (on master; 0 on client).
 
-   ModifyWorkerLists(ord, kTRUE);
+   return ModifyWorkerLists(ord, kTRUE);
 }
 
 //_____________________________________________________________________________
-void TProof::DeactivateWorker(const char *ord)
+Int_t TProof::DeactivateWorker(const char *ord)
 {
    // Remove the worker identified by the ordinal number 'ord' from the
    // the active list. The request will be forwarded to the master
@@ -10223,25 +10260,44 @@ void TProof::DeactivateWorker(const char *ord)
    // the worker from the active to the inactive list and rebuild the list
    // of unique workers.
    // Use ord = "*" to deactivate all active workers.
+   // The string 'ord' can also be a comma-separated list of ordinal numbers the
+   // status of which will be modified at once.
+   // Return <0 if something went wrong (-2 if at least one worker was not found)
+   // or the number of workers with status change (on master; 0 on client).
 
-   ModifyWorkerLists(ord, kFALSE);
+   return ModifyWorkerLists(ord, kFALSE);
 }
 
 //_____________________________________________________________________________
-void TProof::ModifyWorkerLists(const char *ord, Bool_t add)
+Int_t TProof::ModifyWorkerLists(const char *ord, Bool_t add)
 {
    // Modify the worker active/inactive list by making the worker identified by
    // the ordinal number 'ord' active (add == TRUE) or inactive (add == FALSE).
+   // The string 'ord' can also be a comma-separated list of ordinal numbers the
+   // status of which will be modified at once.
    // If needed, the request will be forwarded to the master in direct contact
    // with the worker. The end-master will move the worker from one list to the
    // other active and rebuild the list of unique active workers.
    // Use ord = "*" to deactivate all active workers.
+   // Return <0 if something went wrong (-2 if at least one worker was not found)
+   // or the number of workers with status change (on master; 0 on client).
 
    // Make sure the input make sense
    if (!ord || strlen(ord) <= 0) {
       Info("ModifyWorkerLists",
-           "An ordinal number - e.g. \"0.4\" or \"*\" for all - is required as input");
-      return;
+           "an ordinal number - e.g. \"0.4\" or \"*\" for all - is required as input");
+      return -1;
+   }
+   Bool_t allord = strcmp(ord, "*") ? kFALSE : kTRUE;
+
+   // Create the hash list of ordinal numbers
+   THashList *ords = 0;
+   if (!allord) {
+      ords = new THashList();
+      TString oo(ord), o;
+      Int_t from = 0;
+      while(oo.Tokenize(o, from, ","))
+         ords->Add(new TObjString(o));
    }
 
    Bool_t fw = kTRUE;    // Whether to forward one step down
@@ -10251,37 +10307,67 @@ void TProof::ModifyWorkerLists(const char *ord, Bool_t add)
    TList *in = (add) ? fInactiveSlaves : fActiveSlaves;
    TList *out = (add) ? fActiveSlaves : fInactiveSlaves;
 
+   Int_t nwc = 0;
    if (TestBit(TProof::kIsMaster)) {
       fw = IsEndMaster() ? kFALSE : kTRUE;
-      // Look for the worker in the inactive list
+      // Look for the worker in the initial list
+      TObject *os = 0;
+      TSlave *wrk = 0;
       if (in->GetSize() > 0) {
          TIter nxw(in);
-         TSlave *wrk = 0;
          while ((wrk = (TSlave *) nxw())) {
-            if (ord[0] == '*' || !strncmp(wrk->GetOrdinal(), ord, strlen(ord))) {
-               // Add it to the inactive list
+            os = 0;
+            if (allord || (ords && (os = ords->FindObject(wrk->GetOrdinal())))) {
+               // Add it to the final list
                if (!out->FindObject(wrk)) {
                   out->Add(wrk);
                   if (add)
                      fActiveMonitor->Add(wrk->GetSocket());
                }
-               // Remove it from the active list
+               // Remove it from the initial list
                in->Remove(wrk);
                if (!add) {
                   fActiveMonitor->Remove(wrk->GetSocket());
                   wrk->SetStatus(TSlave::kInactive);
                } else
                   wrk->SetStatus(TSlave::kActive);
-
+               // Count
+               nwc++;
                // Nothing to forward (ord is unique)
                fw = kFALSE;
                // Rescan for unique workers (active list modified)
                rs = kTRUE;
-               // We are done, if not option 'all'
-               if (ord[0] != '*')
-                  break;
+               // We may be done, if not option 'all'
+               if (!allord && ords) {
+                  if (os) ords->Remove(os);
+                  if (ords->GetSize() == 0) break;
+                  SafeDelete(os);
+               }
             }
          }
+      }
+      // If some worker not found, notify it
+      if (ords && ords->GetSize() > 0) {
+         TString oo;
+         TIter nxo(ords);
+         while ((os = nxo())) {
+            TIter nxw(out);
+            while ((wrk = (TSlave *) nxw()))
+               if (!strcmp(os->GetName(), wrk->GetOrdinal())) break;
+            if (!wrk) {
+               if (!oo.IsNull()) oo += ",";
+               oo += os->GetName();
+            }
+         }
+         if (!oo.IsNull()) {
+            Warning("ModifyWorkerLists", "worker(s) '%s' not found!", oo.Data());
+            nwc = -2;
+         }
+      }
+      // Cleanup hash list
+      if (ords) {
+         ords->Delete();
+         SafeDelete(ords);
       }
    }
 
@@ -10292,11 +10378,34 @@ void TProof::ModifyWorkerLists(const char *ord, Bool_t add)
    // Forward the request one step down, if needed
    Int_t action = (add) ? (Int_t) kActivateWorker : (Int_t) kDeactivateWorker;
    if (fw) {
-      TMessage mess(kPROOF_WORKERLISTS);
-      mess << action << TString(ord);
-      Broadcast(mess);
-      Collect(kActive, fCollectTimeout);
+      if (fProtocol > 32) {
+         TMessage mess(kPROOF_WORKERLISTS);
+         mess << action << TString(ord);
+         Broadcast(mess);
+         Collect(kActive, fCollectTimeout);
+         if (fStatus != 0) {
+            nwc = (fStatus < nwc) ? fStatus : nwc;
+            if (fStatus == -2) {
+               if (gDebug > 0) Warning("ModifyWorkerLists", "request not completely full filled");
+            } else {
+               Error("ModifyWorkerLists", "request failed");
+            }
+         }
+      } else {
+         TString oo(ord), o;
+         if (oo.Contains(","))
+            Warning("ModifyWorkerLists", "block request not supported by server: splitting into pieces ...");
+         Int_t from = 0;
+         while(oo.Tokenize(o, from, ",")) {
+            TMessage mess(kPROOF_WORKERLISTS);
+            mess << action << o;
+            Broadcast(mess);
+            Collect(kActive, fCollectTimeout);
+         }
+      }
    }
+   // Done
+   return nwc;
 }
 
 //_____________________________________________________________________________
@@ -10579,6 +10688,19 @@ void TProof::SaveWorkerInfo()
          fprintf(fwrk,"%s@%s:%d %d %s %s.%s\n",
                      wrk->GetUser(), wrk->GetName(), wrk->GetPort(), status,
                      wrk->GetOrdinal(), wrk->GetWorkDir(), addlogext.Data());
+      }
+   }
+   
+   // Loop also over the list of bad workers (if they dfailed to startup they are not in
+   // the overall list)
+   TIter nxb(fBadSlaves);
+   while ((wrk = (TSlave *) nxb())) {
+      if (!fSlaves->FindObject(wrk)) {
+         wrk->Print();
+         // Write out record for this worker
+         fprintf(fwrk,"%s@%s:%d 0 %s %s.log\n",
+                     wrk->GetUser(), wrk->GetName(), wrk->GetPort(),
+                     wrk->GetOrdinal(), wrk->GetWorkDir());
       }
    }
 
@@ -11146,19 +11268,27 @@ void TProof::ShowMissingFiles(TQueryResult *qr)
       return;
    }
 
-   Int_t nmf = 0;
+   Int_t nmf = 0, ncf = 0;
    Long64_t msz = 0, mszzip = 0, mev = 0;
    // Scan the list
    TFileInfo *fi = 0;
    TIter nxf(missing);
    while ((fi = (TFileInfo *) nxf())) {
-      fi->Print();
-      nmf++;
+      char status = 'M';
+      if (fi->TestBit(TFileInfo::kCorrupted)) {
+         ncf++;
+         status = 'C';
+      } else {
+         nmf++;
+      }
       TFileInfoMeta *im = fi->GetMetaData();
       if (im) {
          if (im->GetTotBytes() > 0) msz += im->GetTotBytes(); 
          if (im->GetZipBytes() > 0) mszzip += im->GetZipBytes(); 
          mev += im->GetEntries();
+         Printf(" %d. (%c) %s %s %lld", ncf+nmf, status, fi->GetCurrentUrl()->GetUrl(), im->GetName(), im->GetEntries()); 
+      } else {
+         Printf(" %d. (%c) %s '' -1", ncf+nmf, status, fi->GetCurrentUrl()->GetUrl());
       }
    }
 
@@ -11166,8 +11296,14 @@ void TProof::ShowMissingFiles(TQueryResult *qr)
    if (msz <= 0) msz = -1;
    if (mszzip <= 0) mszzip = -1;
    Double_t xf = (Double_t)mev / (mev + xqr->GetEntries()) ; 
-   Printf(" +++ %d files missing, i.e. %lld events (%lld bytes, %lld zipped) --> about %.2f%%  of the total events",
-          nmf, mev, msz, mszzip, xf * 100.);
+   if (msz > 0. || mszzip > 0.) {
+      Printf(" +++ %d file(s) missing, %d corrupted, i.e. %lld unprocessed events -->"
+             " about %.2f%% of the total (%lld bytes, %lld zipped)",
+             nmf, ncf, mev, xf * 100., msz, mszzip);
+   } else {
+      Printf(" +++ %d file(s) missing, %d corrupted, i.e. %lld unprocessed events -->"
+             " about %.2f%% of the total", nmf, ncf, mev, xf * 100.);
+   }
 }
 
 //______________________________________________________________________________

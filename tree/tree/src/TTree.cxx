@@ -36,6 +36,9 @@
 //     Creates a Tree with name and title.
 //
 //     Various kinds of branches can be added to a tree:
+//       A - simple structures or list of variables. (may be for C or Fortran structures)
+//       B - any object (inheriting from TObject). (we expect this option be the most frequent)
+//       C - a ClonesArray. (a specialized object for collections of same class objects)
 //
 //  ==> Case A
 //      ======
@@ -460,6 +463,118 @@ TTree::TFriendLock::~TFriendLock()
    }
 }
 
+//______________________________________________________________________________
+//  Helper class to iterate over cluster of baskets.
+
+//______________________________________________________________________________
+TTree::TClusterIterator::TClusterIterator(TTree *tree, Long64_t firstEntry) : fTree(tree), fClusterRange(0), fStartEntry(0), fNextEntry(0)
+{
+   // Regular constructor.
+   // TTree is not set as const, since we might modify if it is a TChain.
+
+   if ( fTree->GetAutoFlush() <= 0 ) {
+      // Case of old files before November 9 2009
+      fStartEntry = firstEntry;
+   } else if (fTree->fNClusterRange) {
+      // Find the correct cluster range.
+      //
+      // Since fClusterRangeEnd contains the inclusive upper end of the range, we need to search for the
+      // range that was containing the previous entry and add 1 (because BinarySearch consider the values
+      // to be the inclusive start of the bucket).
+      fClusterRange = TMath::BinarySearch(fTree->fNClusterRange, fTree->fClusterRangeEnd, firstEntry - 1) + 1;
+
+      Long64_t entryInRange;
+      Long64_t pedestal;
+      if (fClusterRange == 0) {
+         pedestal = 0;
+         entryInRange = firstEntry;
+      } else {
+         pedestal = fTree->fClusterRangeEnd[fClusterRange-1] + 1;
+         entryInRange = firstEntry - pedestal;
+      }
+      Long64_t autoflush;
+      if (fClusterRange == fTree->fNClusterRange) {
+         autoflush = fTree->fAutoFlush;
+      } else {
+         autoflush = fTree->fClusterSize[fClusterRange];
+      }
+      if (autoflush == 0) {
+         autoflush = GetEstimatedClusterSize();
+      }
+      fStartEntry = pedestal + entryInRange - entryInRange%autoflush; 
+   } else {
+      fStartEntry = firstEntry - firstEntry%fTree->GetAutoFlush();
+   }
+   fNextEntry = fStartEntry; // Position correctly for the first call to Next()
+}
+
+//______________________________________________________________________________
+Long64_t TTree::TClusterIterator::GetEstimatedClusterSize()
+{
+   // In the case where the cluster size was not fixed (old files and 
+   // case where autoflush was explicilty set to zero, we need estimate
+   // a cluster size in relation to the size of the cache.
+
+   Long64_t zipBytes = fTree->GetZipBytes();
+   if (zipBytes == 0) {
+      return fTree->GetEntries() - 1;
+   } else {
+      Long64_t clusterEstimate = 1;
+      Long64_t cacheSize = fTree->GetCacheSize();
+      if (cacheSize > 0) {
+         clusterEstimate = fTree->GetEntries() * cacheSize / zipBytes;
+         if (clusterEstimate == 0)
+            clusterEstimate = 1;
+      }
+      return clusterEstimate;
+   }      
+}
+
+//______________________________________________________________________________
+Long64_t TTree::TClusterIterator::Next() 
+{
+   // Move on to the next cluster and return the starting entry
+   // of this next cluster
+
+   fStartEntry = fNextEntry;
+   if ( fTree->GetAutoFlush() <= 0 ) {
+      // Case of old files before November 9 2009
+      Long64_t clusterEstimate = GetEstimatedClusterSize();
+      fNextEntry = fStartEntry + clusterEstimate;
+   } else {
+      if (fClusterRange == fTree->fNClusterRange) {
+         // We are looking at the last range ; its size
+         // is defined by AutoFlush itself and goes to the GetEntries.
+         fNextEntry += fTree->GetAutoFlush();
+      } else {
+         if (fStartEntry > fTree->fClusterRangeEnd[fClusterRange]) {
+            ++fClusterRange;
+         }
+         if (fClusterRange == fTree->fNClusterRange) {
+            // We are looking at the last range which size
+            // is defined by AutoFlush itself and goes to the GetEntries.
+            fNextEntry += fTree->GetAutoFlush();
+         } else {
+            Long64_t clusterSize = fTree->fClusterSize[fClusterRange];
+            if (clusterSize == 0) {
+               clusterSize = GetEstimatedClusterSize();
+            }
+            fNextEntry += clusterSize;
+            if (fNextEntry > fTree->fClusterRangeEnd[fClusterRange]) {
+               // The last cluster of the range was a partial cluster,
+               // so the next cluster starts at the beginning of the
+               // next range.
+               fNextEntry = fTree->fClusterRangeEnd[fClusterRange] + 1;
+            }
+         }
+      }
+   }
+   if (fNextEntry > fTree->GetEntries()) {
+      fNextEntry = fTree->GetEntries();
+   }   
+   return fStartEntry;
+}
+
 //
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -482,12 +597,16 @@ TTree::TTree()
 , fScanField(25)
 , fUpdate(0)
 , fDefaultEntryOffsetLen(1000)
+, fNClusterRange(0)
+, fMaxClusterRange(0)
 , fMaxEntries(0)
 , fMaxEntryLoop(0)
 , fMaxVirtualSize(0)
 , fAutoSave( -300000000)
 , fAutoFlush(-30000000)
 , fEstimate(1000000)
+, fClusterRangeEnd(0)
+, fClusterSize(0)
 , fCacheSize(0)
 , fChainOffset(0)
 , fReadEntry(-1)
@@ -544,12 +663,16 @@ TTree::TTree(const char* name, const char* title, Int_t splitlevel /* = 99 */)
 , fScanField(25)
 , fUpdate(0)
 , fDefaultEntryOffsetLen(1000)
+, fNClusterRange(0)
+, fMaxClusterRange(0)
 , fMaxEntries(0)
 , fMaxEntryLoop(0)
 , fMaxVirtualSize(0)
 , fAutoSave( -300000000)
 , fAutoFlush(-30000000)
 , fEstimate(1000000)
+, fClusterRangeEnd(0)
+, fClusterSize(0)
 , fCacheSize(0)
 , fChainOffset(0)
 , fReadEntry(-1)
@@ -712,6 +835,10 @@ TTree::~TTree()
    fTreeIndex = 0;
    delete fBranchRef;
    fBranchRef = 0;
+   delete [] fClusterRangeEnd;
+   fClusterRangeEnd = 0;
+   delete [] fClusterSize;
+   fClusterSize = 0;
    // Must be done after the destruction of friends.
    // Note: We do *not* own our directory.
    fDirectory = 0;
@@ -1415,6 +1542,18 @@ TBranch* TTree::Branch(const char* name, void* address, const char* leaflist, In
    //             X         ; variable X, type Float_t
    //             Y/I       : variable Y, type Int_t
    //             Y/I2      ; variable Y, type Int_t converted to a 16 bits integer
+   //
+   //         Arrays of values are supported with the following syntax:
+   //         If leaf name has the form var[nelem], where nelem is alphanumeric, then
+   //         If leaf name has the form var[nelem], where nelem is alphanumeric, then
+   //            if nelem is a leaf name, it is used as the variable size of the array, 
+   //            otherwise return 0.
+   //         If leaf name has the form var[nelem], where nelem is a digit, then
+   //            it is used as the fixed size of the array.
+   //         If leaf name has the form of a multi dimenantion array (eg var[nelem][nelem2])
+   //            where nelem and nelem2 are digits) then
+   //            it is used as a 2 dimensional array of fixed size.
+   //         Any of other form is not supported.
    //
    //    Note that the TTree will assume that all the item are contiguous in memory.
    //    On some platform, this is not always true of the member of a struct or a class,
@@ -3241,6 +3380,8 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    // last (right most) dimension of specifying then with the two characters '[]'
    // is equivalent.  For variable size arrays (and TClonesArray) the range
    // of the first dimension is recalculated for each entry of the tree.
+   // You can also specify the index as an expression of any other variables from the
+   // tree.
    //
    // TTree::Draw also now properly handling operations involving 2 or more arrays.
    //
@@ -3259,6 +3400,11 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  "fMatrix[][2]  - fResults[3][]"    two     on 1st dim of fMatrix and 2nd of
    //                                             fResults (at the same time)
    //  "fMatrix[][]   - fResults[][]"     six     on 1st dim then on  2nd dim
+   //
+   //  "fMatrix[][fResult[][]]"           30      on 1st dim of fMatrix then on both
+   //                                             dimensions of fResults.  The value
+   //                                             if fResults[j][k] is used as the second
+   //                                             index of fMatrix.
    //
    //
    // In summary, TTree::Draw loops through all un-specified dimensions.  To
@@ -3288,6 +3434,16 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //    for (Int_t i0; i < min(3,5); i++) {
    //       for (Int_t i1; i1 < min(3,2); i1++) {
    //          use the value of (fMatrix[i0][i1] - fMatrix[i0][i1])
+   //       }
+   //    }
+   //
+   // So the loop equivalent to "fMatrix[][fResults[][]]" is:
+   //
+   //    for (Int_t i0; i0 < 3; i0++) {
+   //       for (Int_t j2; j2 < 5; j2++) {
+   //          for (Int_t j3; j3 < 2; j3++) {
+   //             i1 = fResults[j2][j3];
+   //             use the value of fMatrix[i0][i1]
    //       }
    //    }
    //
@@ -3506,6 +3662,13 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  The option=prof is automatically selected in case of y:x>>pf
    //  where pf is an existing TProfile histogram.
    //
+   //     Making a 2D Profile histogram
+   //     ==========================
+   //  In case of a 3-Dim expression, one can generate a TProfile2D histogram
+   //  instead of a TH3F histogram by specifying option=prof or option=profs.
+   //  The option=prof is automatically selected in case of z:y:x>>pf
+   //  where pf is an existing TProfile2D histogram.
+   //
    //     Making a 5D plot using GL
    //     =========================
    //  If option GL5D is specified together with 5 variables, a 5D plot is drawn
@@ -3524,6 +3687,10 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  a candle sticks chart. With that option, the number of dimensions is
    //  arbitrary. Giving more than 4 variables without the option=para or
    //  option=candle or option=goff will produce an error.
+   //
+   //     Normalizing the ouput histogram to 1
+   //     ====================================
+   //  When option contains "norm" the output histogram is normalized to 1.
    //
    //     Saving the result of Draw to a TEventList or a TEntryList
    //     =========================================================
@@ -3594,16 +3761,18 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //
    //  Once TTree::Draw has been called, it is possible to access useful
    //  information still stored in the TTree object via the following functions:
-   //    -GetSelectedRows()    // return the number of entries accepted by the
+   //    -GetSelectedRows()    //return the number of values accepted by the
    //                          //selection expression. In case where no selection
-   //                          //was specified, returns the number of entries processed.
+   //                          //was specified, returns the number of values processed.
    //    -GetV1()              //returns a pointer to the double array of V1
    //    -GetV2()              //returns a pointer to the double array of V2
    //    -GetV3()              //returns a pointer to the double array of V3
+   //    -GetV4()              //returns a pointer to the double array of V4
    //    -GetW()               //returns a pointer to the double array of Weights
    //                          //where weight equal the result of the selection expression.
    //   where V1,V2,V3 correspond to the expressions in
-   //   TTree::Draw("V1:V2:V3",selection);
+   //   TTree::Draw("V1:V2:V3:V4",selection);
+   //   If the expression has more than 4 component use GetVal(index)
    //
    //   Example:
    //    Root > ntuple->Draw("py:px","pz>4");
@@ -3614,13 +3783,16 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //    number of entries selected by the expression "pz>4", the x points of the graph
    //    being the px values of the Tree and the y points the py values.
    //
-   //   Important note: By default TTree::Draw creates the arrays obtained
-   //    with GetV1, GetV2, GetV3, GetW with a length corresponding to the
-   //    parameter fEstimate. By default fEstimate=1000000 and can be modified
+   //    Important note: By default TTree::Draw creates the arrays obtained
+   //    with GetW, GetV1, GetV2, GetV3, GetV4, GetVal with a length corresponding 
+   //    to the parameter fEstimate.  The content will be the last
+   //            GetSelectedRows() % GetEstimate()
+   //    values calculated.
+   //    By default fEstimate=10000 and can be modified
    //    via TTree::SetEstimate. A possible recipee is to do
    //       tree->SetEstimate(tree->GetEntries());
    //    You must call SetEstimate if the expected number of selected rows
-   //    is greater than 1000000.
+   //    is greater than 10000.
    //
    //    You can use the option "goff" to turn off the graphics output
    //    of TTree::Draw in the above example.
@@ -3783,24 +3955,46 @@ Int_t TTree::Fill()
              (fAutoFlush>0 && fEntries%TMath::Max((Long64_t)1,fAutoFlush) == 0) ||
              (fAutoSave >0 && fEntries%TMath::Max((Long64_t)1,fAutoSave)  == 0) ) {
 
-            //we take the opportunity to Optimizebaskets at this point (it calls FlushBaskets)
+            //First call FlushBasket to make sure that fTotBytes is up to date.
+            FlushBaskets();
             OptimizeBaskets(fTotBytes,1,"");
             if (gDebug > 0) Info("TTree::Fill","OptimizeBaskets called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
             fFlushedBytes = fZipBytes;
             fAutoFlush    = fEntries;  // Use test on entries rather than bytes
+
             // subsequently in run
             if (fAutoSave < 0) {
                // Set fAutoSave to the largest integer multiple of
                // fAutoFlush events such that fAutoSave*fFlushedBytes
                // < (minus the input value of fAutoSave)
-               fAutoSave =  TMath::Max( fAutoFlush, fEntries*((-fAutoSave/fZipBytes)/fEntries));
+               if (fZipBytes != 0) {
+                  fAutoSave =  TMath::Max( fAutoFlush, fEntries*((-fAutoSave/fZipBytes)/fEntries));                  
+               } else if (fTotBytes != 0) {
+                  fAutoSave =  TMath::Max( fAutoFlush, fEntries*((-fAutoSave/fTotBytes)/fEntries));                  
+               } else {
+                  TBufferFile b(TBuffer::kWrite, 10000);
+                  TTree::Class()->WriteBuffer(b, (TTree*) this);
+                  Long64_t total = b.Length();
+                  fAutoSave =  TMath::Max( fAutoFlush, fEntries*((-fAutoSave/total)/fEntries));                                    
+               }
             } else if(fAutoSave > 0) {
-               fAutoSave = fEntries*(fAutoSave/fEntries);
+               fAutoSave = fAutoFlush*(fAutoSave/fAutoFlush);
             }
             if (fAutoSave!=0 && fEntries >= fAutoSave) AutoSave();    // FlushBaskets not called in AutoSave
             if (gDebug > 0) Info("TTree::Fill","First AutoFlush.  fAutoFlush = %lld, fAutoSave = %lld\n", fAutoFlush, fAutoSave);
          }
-      } else if (fEntries > 1 && fEntries%fAutoFlush == 0) {
+      } else if (fNClusterRange && (fEntries-fClusterRangeEnd[fNClusterRange-1]) % fAutoFlush) {
+         if (fAutoSave != 0 && fEntries%fAutoSave == 0) {
+            //We are at an AutoSave point. AutoSave flushes baskets and saves the Tree header
+            AutoSave("flushbaskets");
+            if (gDebug > 0) Info("TTree::Fill","AutoSave called at entry %lld, fZipBytes=%lld, fSavedBytes=%lld\n",fEntries,fZipBytes,fSavedBytes);
+         } else {
+            //We only FlushBaskets
+            FlushBaskets();
+            if (gDebug > 0) Info("TTree::Fill","FlushBasket called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
+         }
+         fFlushedBytes = fZipBytes;         
+      } else if (fNClusterRange == 0 && fEntries > 1 && fEntries%fAutoFlush == 0) {
          if (fAutoSave != 0 && fEntries%fAutoSave == 0) {
             //We are at an AutoSave point. AutoSave flushes baskets and saves the Tree header
             AutoSave("flushbaskets");
@@ -4305,6 +4499,22 @@ Int_t TTree::GetBranchStyle()
    // style = 1 new Bronch
 
    return fgBranchStyle;
+}
+
+//______________________________________________________________________________
+TTree::TClusterIterator TTree::GetClusterIterator(Long64_t firstentry)
+{
+   // Return an iterator over the cluster of baskets starting at firstentry.
+   // 
+   // This iterator is not yet supported for TChain object.
+   //
+   // TTree::TClusterIterator clusterIter = tree->GetClusterIterator(entry);
+   // Long64_t clusterStart;
+   // while( (clusterStart = clusterIter()) < tree->GetEntries() ) {
+   //    printf("The cluster starts at %lld and ends at %lld (inclusive)\n",clusterStart,clusterIter.GetNextEntry()-1);
+   // }
+   
+   return TClusterIterator(this,firstentry);
 }
 
 //______________________________________________________________________________
@@ -4917,6 +5127,49 @@ TList* TTree::GetUserInfo()
 }
 
 //______________________________________________________________________________
+void TTree::ImportClusterRanges(TTree *fromtree)
+{
+   // Appends the cluster range information stored in 'fromtree' to this tree,
+   // including the value of fAutoFlush.
+   // 
+   // This is used when doing a fast cloning (by TTreeCloner).
+   // See also fAutoFlush and fAutoSave if needed.
+   
+   Long64_t autoflush = fromtree->GetAutoFlush();
+   if (fNClusterRange || fromtree->fNClusterRange) {
+      Int_t newsize = fNClusterRange + 1 + fromtree->fNClusterRange;
+      if (newsize > fMaxClusterRange) {
+         if (fMaxClusterRange) {
+            fClusterRangeEnd = (Long64_t*)TStorage::ReAlloc(fClusterRangeEnd,
+                                                            newsize*sizeof(Long64_t),fMaxClusterRange*sizeof(Long64_t));
+            fClusterSize = (Long64_t*)TStorage::ReAlloc(fClusterSize,
+                                                        newsize*sizeof(Long64_t),fMaxClusterRange*sizeof(Long64_t));
+            fMaxClusterRange = newsize;
+         } else {
+            fMaxClusterRange = newsize;
+            fClusterRangeEnd = new Long64_t[fMaxClusterRange];
+            fClusterSize = new Long64_t[fMaxClusterRange];
+         }         
+      }
+      fClusterRangeEnd[fNClusterRange] = fEntries - 1;
+      fClusterSize[fNClusterRange] = fAutoFlush<0 ? 0 : fAutoFlush;
+      ++fNClusterRange;
+      for (Int_t i = 0 ; i < fromtree->fNClusterRange; ++i) {
+         fClusterRangeEnd[fNClusterRange] = fEntries + fromtree->fClusterRangeEnd[i];
+         fClusterSize[fNClusterRange] = fromtree->fClusterSize[i];
+         ++fNClusterRange;
+      }
+      fAutoFlush = autoflush;
+   } else {
+      SetAutoFlush( autoflush );
+   }
+   Long64_t autosave = GetAutoSave();
+   if (autoflush > 0 && autosave > 0) {
+      SetAutoSave( autoflush*(autosave/autoflush) );
+   }
+}
+   
+//______________________________________________________________________________
 void TTree::KeepCircular()
 {
    // Keep a maximum of fMaxEntries in memory.
@@ -4926,6 +5179,18 @@ void TTree::KeepCircular()
    for (Int_t i = 0; i < nb; ++i)  {
       TBranch* branch = (TBranch*) fBranches.UncheckedAt(i);
       branch->KeepCircular(maxEntries);
+   }
+   if (fNClusterRange) {
+      Long64_t entriesOffset = fEntries - maxEntries;
+      Int_t oldsize = fNClusterRange;
+      for(Int_t i = 0, j = 0; j < oldsize; ++j) {
+         if (fClusterRangeEnd[j] > entriesOffset) {
+            fClusterRangeEnd[i] =  fClusterRangeEnd[j] - entriesOffset;
+            ++i;
+         } else {
+            --fNClusterRange;
+         }
+      }
    }
    fEntries = maxEntries;
    fReadEntry = -1;
@@ -5442,6 +5707,7 @@ void TTree::OptimizeBaskets(ULong64_t maxMemory, Float_t minComp, Option_t *opti
          TBranch *branch = leaf->GetBranch();
          Double_t totBytes = (Double_t)branch->GetTotBytes();
          Double_t idealFactor = totBytes/aveSize;
+         UInt_t sizeOfOneEntry = 1+(UInt_t)(totBytes / (Double_t)branch->GetEntries()); 
          Int_t oldBsize = branch->GetBasketSize();
          oldMemsize += oldBsize;
          oldBaskets += 1+Int_t(totBytes/oldBsize);
@@ -5455,6 +5721,7 @@ void TTree::OptimizeBaskets(ULong64_t maxMemory, Float_t minComp, Option_t *opti
          if (bsize > bmax) bsize = bmax;
          UInt_t newBsize = UInt_t(bsize);
          newBsize = newBsize - newBsize%512;
+         if (newBsize < sizeOfOneEntry) newBsize = sizeOfOneEntry;
          if (newBsize < bmin) newBsize = bmin;
          if (newBsize > 10000000) newBsize = bmax;
          if (pass) {
@@ -5462,7 +5729,10 @@ void TTree::OptimizeBaskets(ULong64_t maxMemory, Float_t minComp, Option_t *opti
             branch->SetBasketSize(newBsize);
          }
          newMemsize += newBsize;
-         newBaskets += 1+Int_t(totBytes/newBsize);
+         // For this number to be somewhat accurate when newBsize is 'low'
+         // we do not include any space for meta data in the requested size (newBsize) even-thouh SetBasketSize will 
+         // not let it be lower than 100+TBranch::fEntryOffsetLen.
+         newBaskets += 1+Int_t(totBytes/newBsize); 
          if (pass == 0) continue;
          //Reset the compression level in case the compression factor is small
          Double_t comp = 1;
@@ -5477,7 +5747,8 @@ void TTree::OptimizeBaskets(ULong64_t maxMemory, Float_t minComp, Option_t *opti
       Double_t bmin_new = bmin*memFactor;
       Double_t bmax_new = bmax*memFactor;
       static const UInt_t hardmax = 1*1024*1024*1024; // Really, really never give more than 1Gb to a single buffer.
-      bmin = (bmin_new > hardmax) ? hardmax : (UInt_t)bmin_new;
+      static const UInt_t hardmin = 8;                // Really, really never go lower than 8 bytes (we use this number so that the calculation of the number of basket is consistent but in fact SetBasketSize will not let the size go below 100+TBranch::fEntryOffsetLen)
+      bmin = (bmin_new > hardmax) ? hardmax : ( bmin_new < hardmin ? hardmin : (UInt_t)bmin_new );
       bmax = (bmax_new > hardmax) ? bmin : (UInt_t)bmax_new;         
    }
    if (pDebug) {
@@ -5526,6 +5797,7 @@ void TTree::Print(Option_t* option) const
    //
    // If option contains "all" friend trees are also printed.
    // If option contains "toponly" only the top level branches are printed.
+   // If option contains "clusters" information about the cluster of baskets is printed.
    //
    // Wildcarding can be used to print only a subset of the branches, e.g.,
    // T.Print("Elec*") will print all branches with name starting with "Elec".
@@ -5561,6 +5833,24 @@ void TTree::Print(Option_t* option) const
    Printf("*Entries : %8lld : Total = %15lld bytes  File  Size = %10lld *", fEntries, total, file);
    Printf("*        :          : Tree compression factor = %6.2f                       *", cx);
    Printf("******************************************************************************");
+
+   if (strncmp(option,"clusterRange",strlen("clusters"))==0) {
+      Printf("%-16s %-16s %-16s %5s",
+             "Cluster Range #", "Entry Start", "Last Entry", "Size");
+      Int_t index= 0;
+      Long64_t clusterRangeStart = 0;
+      if (fNClusterRange) {
+         for( ; index < fNClusterRange; ++index) {
+            Printf("%-16d %-16lld %-16lld %5lld",
+                   index, clusterRangeStart, fClusterRangeEnd[index], fClusterSize[index]);
+            clusterRangeStart = fClusterRangeEnd[index] + 1;
+         }
+      }
+      Printf("%-16d %-16lld %-16lld %5lld",
+             index, clusterRangeStart, fEntries - 1, fAutoFlush);
+      return;
+   }
+
    Int_t nl = const_cast<TTree*>(this)->GetListOfLeaves()->GetEntries();
    Int_t l;
    TBranch* br = 0;
@@ -5765,7 +6055,7 @@ TSQLResult* TTree::Query(const char* varexp, const char* selection, Option_t* op
 }
 
 //______________________________________________________________________________
-Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
+Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor, char delimiter)
 {
    // Create or simply read branches from filename.
    //
@@ -5783,9 +6073,20 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    //  subsequent characters until a whitespace is found (whitespace
    //  characters are considered to be blank, newline and tab).
    //
+   //  delimiter allows for the use of another delimiter besides whitespace.
+   //    This provides support for direct import of common data file formats
+   //    like csv.  If delimiter != ' ' and branchDescriptor == "", then the
+   //    branch description is taken from the first line in the file, but
+   //    delimiter is used for the branch names tokenization rather than ':'.
+   //    Note however that if the values in the first line do not use the
+   //    /[type] syntax, all variables are assumed to be of type "F".
+   //    If the filename ends with extensions .csv or .CSV and a delimiter is
+   //    not specified (besides ' '), the delimiter is automatically set to ','.
+   //
    // Lines in the input file starting with "#" are ignored.
    // This function will read and ignore any whitespace characters
    // (this includes blank spaces and the newline and tab characters).
+   // Handles newlines specified with '\n', '\r', or "\r\n".
    //
    // A TBranch object is created for each variable in the expression.
    // The total number of rows read from the file is returned.
@@ -5803,17 +6104,49 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
       Error("ReadFile","Cannot open file: %s",filename);
       return 0;
    }
-   return ReadStream(in, branchDescriptor);
+   const char* ext = strrchr(filename, '.');
+   if(ext != NULL && ((strcmp(ext, ".csv") == 0) || (strcmp(ext, ".CSV") == 0)) && delimiter == ' ') {
+     delimiter = ',';
+   }
+   return ReadStream(in, branchDescriptor, delimiter);
 }
 
 //______________________________________________________________________________
-Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor)
+char TTree::GetNewlineValue(istream &inputStream)
+{
+   // Determine which newline this file is using.
+
+   long inPos = inputStream.tellg();
+   char newline = '\n';
+   while(1) {
+     char c = inputStream.get();
+     if(!inputStream.good()) {
+       Error("ReadStream","Error reading stream: no newline found.");
+       return 0;
+     }
+     if(c == newline) break;
+     if(c == '\r') { 
+       if(inputStream.get() == newline) break;
+       else {
+         newline = '\r';
+         break;
+       }
+     }
+   }
+   inputStream.clear();
+   inputStream.seekg(inPos);
+   return newline;
+}
+
+//______________________________________________________________________________
+Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor, char delimiter)
 {
    // Create or simply read branches from an input stream.
    //
    // See reference information for TTree::ReadFile
 
    gTree = this;
+   char newline = GetNewlineValue(inputStream);
    std::istream& in = inputStream;
    TBranch *branch;
    Int_t nbranches = fBranches.GetEntries();
@@ -5824,14 +6157,13 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor)
       if (branchDescriptor) nch = strlen(branchDescriptor);
       // branch Descriptor is null, read its definition from the first line in the file
       if (!nch) {
-         in >> bd;
+         in.getline(bd, 100000, newline);
          if (!in.good()) {
             delete [] bdname;
             delete [] bd;
             Error("ReadStream","Error reading stream");
             return 0;
          }
-         in.ignore(8192,'\n');
          nch = strlen(bd);
       } else {
          strlcpy(bd,branchDescriptor,100000);
@@ -5842,8 +6174,10 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor)
       void *address = &bd[90000];
       char *bdcur = bd;
       TString desc="", olddesc="F";
+      char bdelim = ':';
+      if(delimiter != ' ') bdelim = delimiter;
       while (bdcur) {
-         char *colon = strchr(bdcur,':');
+         char *colon = strchr(bdcur,bdelim);
          if (colon) *colon = 0;
          strlcpy(bdname,bdcur,4000);
          char *slash = strchr(bdname,'/');
@@ -5871,7 +6205,6 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor)
       }
       delete [] bdname;
       delete [] bd;
-
    }
 
    //loop on all lines in the file
@@ -5889,13 +6222,28 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor)
             branch = (TBranch*)fBranches.At(i);
             TLeaf *leaf = (TLeaf*)branch->GetListOfLeaves()->At(0);
             leaf->ReadValue(in);
-            if (in.eof()) return nlines;
+            if (in.eof()) {
+              if(i == nbranches-1) {
+                // handle no newline char on last line
+                Fill();
+                nlines++;
+              }
+              return nlines;
+            }
             status = in.good();
             if (!status) {
-               Warning("ReadStream","Illegal value after line %lld\n",nlines);
-               in.clear();
-               break;
+               if(in.fail() && ! in.bad()) { // just couldn't interpret formatted data
+                 Warning("ReadStream","Couldn't read formatted data for branch %s on line %lld",branch->GetName(),nlines+1);
+                 in.clear();
+                 status = kTRUE;
+               }
+               else {
+                 Warning("ReadStream","Illegal value after line %lld",nlines);
+                 in.clear();
+                 break;
+               }
             }
+            if(in.peek() == delimiter) in.get();
          }
          //we are now ready to fill the tree
          if (status) {
@@ -5903,7 +6251,7 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor)
             nlines++;
          }
       }
-      in.ignore(8192,'\n');
+      in.ignore(8192,newline);
    }
 
    return nlines;
@@ -5956,6 +6304,11 @@ void TTree::Refresh()
       return;
    }
    //copy info from tree header into this Tree
+   fEntries = 0;
+   fNClusterRange = 0;
+   ImportClusterRanges(tree);
+
+   fAutoSave = tree->fAutoSave;
    fEntries = tree->fEntries;
    fTotBytes = tree->fTotBytes;
    fZipBytes = tree->fZipBytes;
@@ -6008,6 +6361,7 @@ void TTree::Reset(Option_t* option)
 
    fNotify = 0;
    fEntries = 0;
+   fNClusterRange = 0;
    fTotBytes = 0;
    fZipBytes = 0;
    fSavedBytes = 0;
@@ -6153,7 +6507,71 @@ void TTree::SetAutoFlush(Long64_t autof)
    //
    // Flushing the buffers at regular intervals optimize the location of
    // consecutive entries on the disk.
+   //
+   // The value of autoflush determine a size in number of entries of
+   // a cluster of baskets.
+   //
+   // If the value of autoflush is changed over time (this happens in 
+   // particular when fast merge files), we record the previous values
+   // in the arrays fClusterRangeEnd and fClusterSize.
+   // A range of entries where the size of the cluster of basket is
+   // the same (i.e the value of AutoFlush was constant) is called 
+   // a ClusterRange.
+   // 
+   // The 2 arrays have fNClusterRange active values and have 
+   // fMaxClusterRange allocated entries.
+   // 
+   // fClusterRangeEnd contains the last entries number of a cluster range.
+   // In particular this means that the 'next' cluster starts at fClusterRangeEnd[]+1
+   // fClusterSize contains the size in number of entries of all the cluster
+   // within the given range.
+   // The last range (and the only one if fNClusterRange is zero) start at
+   // fNClusterRange[fNClusterRange-1]+1 and ends at the end of the TTree.  The
+   // size of the cluster in this range is given by the value of fAutoFlush.
+   //
+   // For example printing the beginning and end of each the ranges can be done by:
+   // 
+   //   Printf("%-16s %-16s %-16s %5s",
+   //          "Cluster Range #", "Entry Start", "Last Entry", "Size");
+   //   Int_t index= 0;
+   //   Long64_t clusterRangeStart = 0;
+   //   if (fNClusterRange) {
+   //      for( ; index < fNClusterRange; ++index) {
+   //         Printf("%-16d %-16lld %-16lld %5lld",
+   //                index, clusterRangeStart, fClusterRangeEnd[index], fClusterSize[index]);
+   //         clusterRangeStart = fClusterRangeEnd[index] + 1;
+   //      }
+   //   }
+   //   Printf("%-16d %-16lld %-16lld %5lld",
+   //          index, prevEntry, fEntries - 1, fAutoFlush);
+   //
+   
+   // Note:  We store the end of the cluster rather than its start in order to completely
+   // avoid using the array if the cluster size never varies.
 
+   if (fAutoFlush > 0 || autof > 0) {
+      // The mechanism was already enabled, let's record the previous
+      // cluster if needed.
+      if (fFlushedBytes) {
+         if ( (fNClusterRange+1) > fMaxClusterRange ) {
+            if (fMaxClusterRange) {
+               Int_t newsize = TMath::Max(10,Int_t(2*fMaxClusterRange));
+               fClusterRangeEnd = (Long64_t*)TStorage::ReAlloc(fClusterRangeEnd,
+                                                               newsize*sizeof(Long64_t),fMaxClusterRange*sizeof(Long64_t));
+               fClusterSize = (Long64_t*)TStorage::ReAlloc(fClusterSize,
+                                                           newsize*sizeof(Long64_t),fMaxClusterRange*sizeof(Long64_t));
+               fMaxClusterRange = newsize;
+            } else {
+               fMaxClusterRange = 2;
+               fClusterRangeEnd = new Long64_t[fMaxClusterRange];
+               fClusterSize = new Long64_t[fMaxClusterRange];
+            }
+         }
+         fClusterRangeEnd[fNClusterRange] = fEntries - 1;
+         fClusterSize[fNClusterRange] = fAutoFlush<0 ? 0 : fAutoFlush;
+         ++fNClusterRange;
+      }
+   }
    fAutoFlush = autof;
 }
 
@@ -7065,6 +7483,7 @@ void TTree::Streamer(TBuffer& b)
          OldInfoList.Streamer(b);
          OldInfoList.Delete();
       }
+      fNClusterRange = 0;
       fDefaultEntryOffsetLen = 1000;
       ResetBit(kMustCleanup);
       b.CheckByteCount(R__s, R__c, TTree::IsA());

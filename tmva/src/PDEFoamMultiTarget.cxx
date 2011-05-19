@@ -80,7 +80,7 @@ TMVA::PDEFoamMultiTarget::PDEFoamMultiTarget(const PDEFoamMultiTarget &From)
 }
 
 //_____________________________________________________________________
-std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue(std::map<Int_t, Float_t>& xvec, ECellValue /*cv*/)
+std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue(const std::map<Int_t, Float_t>& xvec, ECellValue /*cv*/)
 {
    // This function is overridden from PDFEFoam.  It returns all
    // regression targets (in order), given an untransformed event
@@ -124,6 +124,13 @@ std::vector<Float_t> TMVA::PDEFoamMultiTarget::GetCellValue(std::map<Int_t, Floa
       // return empty target vector (size = dimension of foam -
       // number of variables)
       return std::vector<Float_t>(GetTotDim() - xvec.size(), 0);
+   }
+
+   // initialize the target map
+   for (Int_t idim = 0; idim < GetTotDim(); ++idim) {
+      // is idim a target dimension, i.e. is idim missing in txvec?
+      if (txvec.find(idim) == txvec.end())
+         target[idim] = 0;
    }
 
    // loop over all cells that were found
