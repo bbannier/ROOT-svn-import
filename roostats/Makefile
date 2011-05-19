@@ -243,11 +243,10 @@ ifneq ($(F77),)
 MODULES      += misc/minicern hist/hbook
 endif
 ifeq ($(BUILDXRD),yes)
-ifneq ($(XRDLIBDIR),)
-MODULES      += net/netx
-else
-MODULES      += net/xrootd net/netx
+MODULES      += net/xrootd
 endif
+ifeq ($(HASXRD),yes)
+MODULES      += net/netx
 ifeq ($(BUILDALIEN),yes)
 MODULES      += net/alien
 endif
@@ -267,11 +266,14 @@ endif
 ifeq ($(BUILDTMVA),yes)
 MODULES      += tmva math/genetic
 endif
-ifeq ($(BUILDXRD),yes)
+ifeq ($(HASXRD),yes)
 ifeq ($(ARCH),win32)
 MODULES      += proof/proofd
 endif
 MODULES      += proof/proofx
+endif
+ifeq ($(BUILDAFDSMGRD),yes)
+MODULES      += proof/afdsmgrd
 endif
 
 -include MyModules.mk   # allow local modules
@@ -292,7 +294,7 @@ MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
                 math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
-                proof/proofbench
+                proof/proofbench proof/afdsmgrd
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -472,6 +474,7 @@ MAKECINTDLL   := $(ROOT_SRCDIR)/build/unix/makecintdll.sh
 MAKECHANGELOG := $(ROOT_SRCDIR)/build/unix/makechangelog.sh
 MAKEHTML      := $(ROOT_SRCDIR)/build/unix/makehtml.sh
 MAKELOGHTML   := $(ROOT_SRCDIR)/build/unix/makeloghtml.sh
+MAKEPLUGINS   := $(ROOT_SRCDIR)/build/unix/makeplugins-ios.sh
 MAKERELNOTES  := $(ROOT_SRCDIR)/build/unix/makereleasenotes.sh
 STATICOBJLIST := $(ROOT_SRCDIR)/build/unix/staticobjectlist.sh
 MAKESTATICLIB := $(ROOT_SRCDIR)/build/unix/makestaticlib.sh
@@ -647,7 +650,7 @@ endif
                 clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
                 releasenotes staticlib static map debian redhat skip postbin \
-                showit help runtimedirs
+                showit help runtimedirs plugins-ios
 
 ifneq ($(findstring map, $(MAKECMDGOALS)),)
 .NOTPARALLEL:
@@ -957,6 +960,7 @@ distclean:: clean
 ifeq ($(PLATFORM),macosx)
 	@rm -f lib/*.dylib
 	@rm -f lib/*.so
+	@(find . -name "*.dSYM" -exec rm -rf {} \; >/dev/null 2>&1;true)
 endif
 	-@(mv -f tutorials/gallery.root tutorials/gallery.root- >/dev/null 2>&1;true)
 	-@(mv -f tutorials/mlp/mlpHiggs.root tutorials/mlp/mlpHiggs.root- >/dev/null 2>&1;true)
@@ -1010,6 +1014,9 @@ $(ROOTA) $(PROOFSERVA): $(ROOTALIB) $(MAKESTATIC) $(STATICOBJLIST)
 
 $(ROOTALIB): $(ALLLIBS) $(MAKESTATICLIB) $(STATICOBJLIST)
 	@$(MAKESTATICLIB) $(STATICOBJLIST)
+
+plugins-ios: $(ROOTEXE)
+	@$(MAKEPLUGINS)
 
 changelog:
 	@$(MAKECHANGELOG)

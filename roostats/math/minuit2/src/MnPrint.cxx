@@ -26,9 +26,39 @@
 #define PRECISION 13
 #define WIDTH     20
 
+
 namespace ROOT {
 
    namespace Minuit2 {
+
+#ifdef DEBUG
+int gPrintLevel = 3; 
+#else
+int gPrintLevel = 0; 
+#endif
+
+
+int MnPrint::SetLevel(int level) { 
+   int prevLevel  = gPrintLevel;
+   gPrintLevel = level;
+   return prevLevel;
+}
+
+int MnPrint::Level( ) { 
+   return gPrintLevel;
+}
+
+      void MnPrint::PrintState(std::ostream & os, const MinimumState & state, const char * msg, int iter) { 
+   // helper function to print state and message in one single line
+   os << msg; 
+   if (iter>=0) os << std::setw(3) << iter; 
+   int pr = os.precision(PRECISION);
+   const int width = PRECISION+3;
+   os << " - FCN = " <<  std::setw(width) << state.Fval();
+   os.precision(pr);
+   os << " Edm = " <<  std::setw(12) << state.Edm() << " NCalls = " << std::setw(6) << state.NFcn();         
+   os << std::endl;
+}
 
 
 std::ostream& operator<<(std::ostream& os, const LAVector& vec) {
@@ -219,8 +249,16 @@ std::ostream& operator<<(std::ostream& os, const FunctionMinimum& min) {
    //os << min.UserCovariance() << std::endl;
    //os << min.UserState().GlobalCC() << std::endl;
    
-   if(!min.IsValid())
-      os <<"WARNING: FunctionMinimum is invalid."<<std::endl;
+   if(!min.IsValid()) {
+      os <<"WARNING: FunctionMinimum is invalid: " << std::endl;
+      if ( !min.State().IsValid() ) 
+         os << "\t State is invalid" << std::endl;
+      if ( min.IsAboveMaxEdm() ) 
+         os << "\t Edm is above max" << std::endl;
+      if ( min.HasReachedCallLimit() ) 
+         os << "\t Reached call limit" << std::endl;
+   }
+
    
    os << std::endl;
    os.precision(pr);

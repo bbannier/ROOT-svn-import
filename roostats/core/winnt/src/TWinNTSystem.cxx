@@ -2562,7 +2562,7 @@ int TWinNTSystem::GetPathInfo(const char *path, FileStat_t &buf)
       buf.fSize   = sbuf.st_size;
       buf.fMtime  = sbuf.st_mtime;
       buf.fIsLink = IsShortcut(newpath); // kFALSE;
-/*
+
       char *lpath = new char[MAX_PATH];
       if (IsShortcut(newpath)) {
          struct _stati64 sbuf2;
@@ -2572,7 +2572,8 @@ int TWinNTSystem::GetPathInfo(const char *path, FileStat_t &buf)
             }
          }
       }
-*/
+      delete [] lpath;
+
       delete [] newpath;
       return 0;
    }
@@ -2923,10 +2924,10 @@ char *TWinNTSystem::ExpandPathName(const char *path)
    char newpath[MAX_PATH];
    if (IsShortcut(path)) {
       if (!ResolveShortCut(path, newpath, MAX_PATH))
-         strlcpy(newpath, path,MAX_PATH);
+         strlcpy(newpath, path, MAX_PATH);
    }
    else
-      strlcpy(newpath, path,MAX_PATH);
+      strlcpy(newpath, path, MAX_PATH);
    TString patbuf = newpath;
    if (ExpandPathName(patbuf)) return 0;
 
@@ -3775,10 +3776,14 @@ void TWinNTSystem::Exit(int code, Bool_t mode)
 {
    // Exit the application.
 
-   // Insures that the files and sockets are closed before any library is unloaded!
+   // Insures that the files and sockets are closed before any library is unloaded
+   // and before emptying CINT.
    if (gROOT) {
       gROOT->CloseFiles();
       if (gROOT->GetListOfBrowsers()) gROOT->GetListOfBrowsers()->Delete();
+   }
+   if (gInterpreter) {
+      gInterpreter->ResetGlobals();
    }
    gVirtualX->CloseDisplay();
 

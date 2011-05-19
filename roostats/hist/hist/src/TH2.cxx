@@ -147,18 +147,27 @@ Int_t TH2::BufferEmpty(Int_t action)
 //             The buffer is automatically deleted when the number of entries
 //             in the buffer is greater than the number of entries in the histogram
 
+
    // do we need to compute the bin size?
    if (!fBuffer) return 0;
    Int_t nbentries = (Int_t)fBuffer[0];
-   if (!nbentries) return 0;
+
+   // nbentries correspond to the number of entries of histogram 
+   
+   if (nbentries == 0) return 0;
+   if (nbentries < 0 && action == 0) return 0;    // case histogram has been already filled from the buffer 
+
    Double_t *buffer = fBuffer;
    if (nbentries < 0) {
-      if (action == 0) return 0;
       nbentries  = -nbentries;
+      //  a reset might call BufferEmpty() giving an infinite loop
+      // Protect it by setting fBuffer = 0
       fBuffer=0;
-      Reset();
+       //do not reset the list of functions 
+      Reset("ICES"); 
       fBuffer = buffer;
    }
+
    if (TestBit(kCanRebin) || fXaxis.GetXmax() <= fXaxis.GetXmin() || fYaxis.GetXmax() <= fYaxis.GetXmin()) {
       //find min, max of entries in buffer
       Double_t xmin = fBuffer[2];
@@ -217,7 +226,7 @@ Int_t TH2::BufferFill(Double_t x, Double_t y, Double_t w)
       fBuffer[0] =  nbentries;
       if (fEntries > 0) {
          Double_t *buffer = fBuffer; fBuffer=0;
-         Reset();
+         Reset("ICES");
          fBuffer = buffer;
       }
    }
@@ -993,6 +1002,18 @@ void TH2::GetStats(Double_t *stats) const
    // stats[4] = sumwy
    // stats[5] = sumwy2
    // stats[6] = sumwxy
+   //
+   // If no axis-subranges are specified (via TAxis::SetRange), the array stats
+   // is simply a copy of the statistics quantities computed at filling time.
+   // If sub-ranges are specified, the function recomputes these quantities
+   // from the bin contents in the current axis ranges.
+   //
+   //  Note that the mean value/RMS is computed using the bins in the currently
+   //  defined ranges (see TAxis::SetRange). By default the ranges include
+   //  all bins from 1 to nbins included, excluding underflows and overflows.
+   //  To force the underflows and overflows in the computation, one must
+   //  call the static function TH1::StatOverflows(kTRUE) before filling
+   //  the histogram.
 
    if (fBuffer) ((TH2*)this)->BufferEmpty();
 
@@ -1905,21 +1926,18 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
       }
       h1 = (TProfile*)h1obj;
       // check profile compatibility
-      if ( h1->GetNbinsX() ==  outAxis.GetNbins() &&
-           h1->GetXaxis()->GetXmin() == outAxis.GetXmin() &&
-           h1->GetXaxis()->GetXmax() == outAxis.GetXmax() ) {
+      bool useAllBins = ((lastOutBin - firstOutBin +1 ) == outAxis.GetNbins() );
+      if (useAllBins && CheckEqualAxes(&outAxis, h1->GetXaxis() ) ) { 
          // enable originalRange option in case a range is set in the outer axis
          originalRange = kTRUE;
          h1->Reset();
       }
-      else if ( h1->GetNbinsX() ==  lastOutBin-firstOutBin+1 &&
-                h1->GetXaxis()->GetXmin() == outAxis.GetBinLowEdge(firstOutBin) &&
-                h1->GetXaxis()->GetXmax() == outAxis.GetBinUpEdge(lastOutBin) ) {
+      else if (!useAllBins && CheckConsistentSubAxes(&outAxis, firstOutBin, lastOutBin, h1->GetXaxis() ) ) { 
          // reset also in case a profile exists with compatible axis with the zoomed original axis
          h1->Reset();
       }
       else {
-         Error("DoProfile","Profile with name %s alread exists and it is not compatible",pname);
+         Error("DoProfile","Profile with name %s already exists and it is not compatible",pname);
          return 0;
       }
    }
@@ -2189,22 +2207,19 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
          return 0;
       }
       h1 = (TH1D*)h1obj;
-      // check histogram compatibility (not perfect for variable bins histograms)
-      if ( h1->GetNbinsX() ==  outAxis->GetNbins() &&
-           h1->GetXaxis()->GetXmin() == outAxis->GetXmin() &&
-           h1->GetXaxis()->GetXmax() == outAxis->GetXmax() ) {
-         // enable originalRange option in case a range is set in the outer axis
-         originalRange = kTRUE;
-         h1->Reset();
+      // check axis compatibility - distinguish case when using all bins or a part of the axis 
+      bool useAllBins = ((lastOutBin - firstOutBin +1 ) == outAxis->GetNbins() );
+      if (useAllBins  && CheckEqualAxes(outAxis, h1->GetXaxis()) ) { 
+            // enable originalRange option in case a range is set in the outer axis
+            originalRange = kTRUE;
+            h1->Reset();
       }
-      else if ( h1->GetNbinsX() ==  lastOutBin-firstOutBin+1 &&
-                h1->GetXaxis()->GetXmin() == outAxis->GetBinLowEdge(firstOutBin) &&
-                h1->GetXaxis()->GetXmax() == outAxis->GetBinUpEdge(lastOutBin) ) {
+      else if (!useAllBins && CheckConsistentSubAxes(outAxis, firstOutBin, lastOutBin, h1->GetXaxis() ) ) { 
          // reset also in case an histogram exists with compatible axis with the zoomed original axis
          h1->Reset();
       }
       else {
-         Error("DoProjection","Histogram with name %s alread exists and it is not compatible",pname);
+         Error("DoProjection","Histogram with name %s already exists and it is not compatible",pname);
          return 0;
       }
    }
@@ -2453,7 +2468,8 @@ void TH2::Reset(Option_t *option)
    TH1::Reset(option);
    TString opt = option;
    opt.ToUpper();
-   if (opt.Contains("ICE")) return;
+
+   if (opt.Contains("ICE") && !opt.Contains("S")) return;
    fTsumwy  = 0;
    fTsumwy2 = 0;
    fTsumwxy = 0;

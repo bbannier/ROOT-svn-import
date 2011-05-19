@@ -281,7 +281,7 @@ Int_t TProfile3D::BufferEmpty(Int_t action)
       if (action == 0) return 0;
       nbentries  = -nbentries;
       fBuffer=0;
-      Reset();
+      Reset("ICES"); // reset without deleting the functions
       fBuffer = buffer;
    }
    if (TestBit(kCanRebin) || fXaxis.GetXmax() <= fXaxis.GetXmin() || fYaxis.GetXmax() <= fYaxis.GetXmin()) {
@@ -351,7 +351,7 @@ Int_t TProfile3D::BufferFill(Double_t x, Double_t y, Double_t z, Double_t t, Dou
       fBuffer[0] =  nbentries;
       if (fEntries > 0) {
          Double_t *buffer = fBuffer; fBuffer=0;
-         Reset();
+         Reset("ICES"); // reset without deleting the functions
          fBuffer = buffer;
       }
    }
@@ -417,6 +417,9 @@ void TProfile3D::Divide(const TH1 *h1)
       return;
    }
    TProfile3D *p1 = (TProfile3D*)h1;
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
 //*-*- Check profile compatibility
    Int_t nx = GetNbinsX();
@@ -1158,7 +1161,7 @@ void TProfile3D::Reset(Option_t *option)
    fBinEntries.Reset();
    TString opt = option;
    opt.ToUpper();
-   if (opt.Contains("ICE")) return;
+   if (opt.Contains("ICE") && !opt.Contains("S")) return;
    fTsumwt = fTsumwt2 = 0;
 }
 

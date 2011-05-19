@@ -533,8 +533,15 @@ bool THtml::TPathDefinition::GetDocDir(const TString& module, TString& doc_dir) 
    // If your software cannot be mapped into this scheme then derive your
    // own class from TPathDefinition and pass it to THtml::SetPathDefinition().
 
+   doc_dir = "";
+   if (GetOwner()->GetProductName() == "ROOT") {
+      doc_dir = "$ROOTSYS";
+      gSystem->ExpandPathName(doc_dir);
+      doc_dir += "/";
+   }
+
    if (module.Length())
-      doc_dir = module + "/";
+      doc_dir += module + "/";
    doc_dir += GetOwner()->GetPathInfo().fDocPath;
    return true;
 }
@@ -724,6 +731,7 @@ void THtml::TFileSysDB::Fill()
    TString dir;
    Ssiz_t posPath = 0;
    while (fName.Tokenize(dir, posPath, THtml::GetDirDelimiter())) {
+      gSystem->ExpandPathName(dir);
       if (gSystem->AccessPathName(dir, kReadPermission)) {
          Warning("Fill", "Cannot read InputPath \"%s\"!", dir.Data());
          continue;
@@ -1145,12 +1153,8 @@ and types, all modules, and the product which you can set by
 <a href="#THtml:SetProductName">THtml::SetProductName()</a>.
 THtml will make use of external documentation in the module and product index,
 either by linking it or by including it.
-For the product THtml will include files found in the directory defined by
-<a href="#THtml:SetProductDocDir">THtml::SetProductDocDir()</a>.
 The files for modules are searched based on the source file directory of the
-module's classes; the (possibly relative) path set by
-<a href="#THtml:SetModuleDocPath">THtml::SetModuleDocPath()</a> will guide THtml
-to the files.</p>
+module's classes.</p>
 
 <p>A filename starting with "index." will be included in the index page;
 all other files will be linked.
@@ -1476,9 +1480,9 @@ void THtml::Convert(const char *filename, const char *title,
 //        includeOutput - if != kNoOutput, run the script passed as filename and
 //                   store all created canvases in PNG files that are
 //                   shown next to the converted source. Bitwise-ORing with
-//                   re-runs the script even if output PNGs exist that are newer
-//                   than the script. If kCompiledOutput is passed, the script is
-//                   run through ACLiC (.x filename+)
+//                   kForceOutput re-runs the script even if output PNGs exist
+//                   that are newer than the script. If kCompiledOutput is
+//                   passed, the script is run through ACLiC (.x filename+)
 //        context  - line shown verbatim at the top of the page; e.g. for links.
 //                   If context is non-empty it is expected to also print the
 //                   title.

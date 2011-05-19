@@ -225,20 +225,23 @@ void TFolder::Clear(Option_t *option)
 //______________________________________________________________________________
 const char *TFolder::FindFullPathName(const char *name) const
 {
-   // Return the full pathname corresponding to subpath name.
-   // The returned path will be re-used by the next call to GetPath().
+   // Return the full pathname corresponding to subpath name if the node is 
+   // gROOT->GetRootFolder() and return a relative path otherwise.
+   // The returned path will be re-used by the next call to FindFullPathName().
 
    TObject *obj = FindObject(name);
    if (obj || !fFolders) {
       gFolderLevel++;
       gFolderD[gFolderLevel] = GetName();
-      gFolderPath[0] = '/';
-      gFolderPath[1] = 0;
-      for (Int_t l=0;l<=gFolderLevel;l++) {
-         strlcat(gFolderPath, "/", sizeof(gFolderPath));
-         strlcat(gFolderPath, gFolderD[l], sizeof(gFolderPath));
+      if (strcmp(gFolderD[0],"root")==0) {
+         strlcpy(gFolderPath,"//root/", sizeof(gFolderPath));
+      } else {
+         gFolderPath[0] = '\0';
       }
-      strlcat(gFolderPath, "/", sizeof(gFolderPath));
+      for (Int_t l = 1; l<=gFolderLevel;l++) {
+         strlcat(gFolderPath, gFolderD[l], sizeof(gFolderPath));
+         strlcat(gFolderPath, "/", sizeof(gFolderPath));
+      }
       strlcat(gFolderPath,name, sizeof(gFolderPath));
       gFolderLevel = -1;
       return gFolderPath;
@@ -250,8 +253,12 @@ const char *TFolder::FindFullPathName(const char *name) const
    gFolderLevel++;
    gFolderD[gFolderLevel] = GetName();
    while ((obj=next())) {
+      // For a TClass object, InheritsFrom does not check the inheritance of
+      // the object but the inheritance of the class described by the object,
+      // so we need to explicitly call IsA
+      if (obj->IsA()->InheritsFrom(TClass::Class())) continue;
+      // For any other object IsA is called by InheritsFrom
       if (!obj->InheritsFrom(TFolder::Class())) continue;
-      if (obj->InheritsFrom(TClass::Class())) continue;
       folder = (TFolder*)obj;
       found = folder->FindFullPathName(name);
       if (found) return found;
@@ -265,7 +272,7 @@ const char *TFolder::FindFullPathName(const char *name) const
 const char *TFolder::FindFullPathName(const TObject *) const
 {
    // Return the full pathname corresponding to subpath name.
-   // The returned path will be re-used by the next call to GetPath().
+   // The returned path will be re-used by the next call to FindFullPathName().
 
    Error("FindFullPathname","Not yet implemented");
    return 0;

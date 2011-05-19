@@ -34,6 +34,7 @@ deprecated_options="         \
 "
 
 options="                    \
+   enable_afdsmgrd           \
    enable_afs                \
    enable_alien              \
    enable_alloc              \
@@ -155,6 +156,7 @@ enable_builtin_ftgl=no
 enable_builtin_glew=no
 enable_builtin_pcre=no
 enable_builtin_zlib=no
+enable_afdsmgrd=no
 
 # Remove old log file
 rm -f $logfile
@@ -450,6 +452,11 @@ check_library() {
             i64=`echo $i | sed -e 's|lib$|lib64|' -e 's|lib/|lib64/|'`
             i="$i64 $i"
         fi
+        # look first in the DEB_HOST_MULTIARCH directories
+        if test "x$debmultiarch" != "x" ; then
+            i64=`echo $i | sed "s|\(lib\)$|\1/$debmultiarch|"`
+            i="$i64 $i"
+        fi
         # look only in the lib64 directories
         if test "x$checkonlylib64" = "xyes" ; then
             i64=`echo $i | sed -e 's|lib$|lib64|' -e 's|lib/|lib64/|'`
@@ -558,6 +565,11 @@ check_library() {
                test "x$found_dir" = "x-L/usr/lib32" || \
                test "x$found_dir" = "x-L/usr/lib64" ; then
                 found_dir=""
+            fi
+            if test "x$debmultiarch" != "x" ; then
+                if test "x$found_dir" = "x-L/usr/lib/$debmultiarch" ; then
+                    found_dir=""
+                fi
             fi
         fi
 
@@ -799,6 +811,10 @@ check_symbol() {
     # look first in the lib64 directories
     if test "x$checklib64" = "xyes" ; then
         usrlib="/usr/lib64 $usrlib"
+    fi
+    # look first in the DEB_HOST_MULTIARCH directories
+    if test "x$debmultiarch" != "x" ; then
+        usrlib="/usr/lib/$debmultiarch $usrlib"
     fi
     # look only in the lib64 directories
     if test "x$checkonlylib64" = "xyes" ; then
@@ -1305,6 +1321,7 @@ the ROOTSYS environment variable.
 
 enable/disable options, prefix with either --enable- or --disable-
 
+  afdsmgrd           Dataset manager for PROOF-based analysis facilities
   afs                AFS support, requires AFS libs and objects
   alien              AliEn support, requires libgapiUI from ALICE
   asimage            Image processing support, requires libAfterImage
@@ -1627,6 +1644,15 @@ if test "x$platform" = "xmacosx" ; then
    if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 6 ]; then
       macosx106=yes
    fi
+fi
+
+debmultiarch=
+if `$cwhich dpkg-architecture > /dev/null 2>&1` ; then
+    if `dpkg-architecture -qDEB_HOST_MULTIARCH > /dev/null 2>&1` ; then
+        logmsg "Checking dpkg-architecture"
+        debmultiarch=`dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null`
+        logmsg "$debmultiarch"
+    fi
 fi
 
 ######################################################################
@@ -4126,6 +4152,12 @@ externalxrd="no"
 if test ! "x$xrdlibdir" = "x" && test ! "x$xrdincdir" = "x"; then
    externalxrd="yes"
    xrdcomm="no, using xrootd at $xrdlibdir, $xrdincdir"
+   if test ! -f "$xrdincdir/XrdVersion.hh" ; then
+      enable_xrootd="no"
+      xrdcomm="no, asked to use installation at $xrdincdir, but version file missing: disabling"
+      xrdincdir=""
+      xrdlibdir=""
+   fi
 elif test ! "x$xrootddir" = "x"; then
    externalxrd="yes"
    if test ! "x$xrdlibdir" = "x" && test ! "x$xrdincdir" = "x"; then
@@ -4133,6 +4165,8 @@ elif test ! "x$xrootddir" = "x"; then
       if test ! -f "$xrdincdir/XrdVersion.hh" ; then
          enable_xrootd="no"
          xrdcomm="no, asked to use installation at $xrdincdir, but version file missing: disabling"
+         xrdincdir=""
+         xrdlibdir=""
       fi
    elif test ! "x$xrootddir" = "x"; then
       xrdlibdir="$xrootddir/lib"
@@ -4144,9 +4178,12 @@ elif test ! "x$xrootddir" = "x"; then
       else
          enable_xrootd="no"
          xrdcomm="no, asked to use installation at $xrootddir, but version file missing: disabling"
+         xrdincdir=""
+         xrdlibdir=""
       fi
    fi
 fi
+
 # Decode version
 xrdver=
 decver=0
@@ -4224,7 +4261,7 @@ if test "x$enable_xrootd" = "xyes" && test "x$externalxrd" = "xyes"; then
       decrefone=20070628
       decreftwo=20070723
       decrefthree=20071004
-      decreffour=20110311
+      decreffour=300000002
       if [ $decver -gt $decrefone ] ; then
          if [ $decver -gt $decreffour ] ; then
             xrdcomm="$xrdcomm"
@@ -4245,16 +4282,11 @@ if test "x$enable_xrootd" = "xyes" && test "x$externalxrd" = "xyes"; then
       fi
    fi
 
-   if test "x$enable_bonjour" = "xyes"; then
-      if test ! -f $xrdincdir/XrdOuc/XrdOucBonjour.hh ; then
-         bjrcomm="External xrootd has no bonjour support: disabling bonjour in XrdProofd"
-         bonjourcppflags=
-      fi
-   fi
-
 else
    if test "x$enable_xrootd" = "x" && test "x$DEFAULTENABLE" = "xno"; then
        enable_xrootd="no"
+       xrdincdir=""
+       xrdlibdir=""
    else
        # Xrootd and its client need thread support
        if test "x$enable_thread" = "xyes"; then
@@ -4288,6 +4320,8 @@ else
                else
                    enable_xrootd="no"
                fi
+               xrdincdir=""
+               xrdlibdir=""
                ;;
            esac
        else
@@ -4297,6 +4331,8 @@ else
            else
                enable_xrootd="no"
            fi
+           xrdincdir=""
+           xrdlibdir=""
        fi
    fi
 
@@ -4306,11 +4342,22 @@ fi
 xrdcomm="$xrdcomm"
 result $xrdcomm
 if test "x$enable_xrootd" = "xyes"; then
-    buildxrd="yes"
     hasxrd=""
     hasnotxrd="#"
     message "Checking for xrootd version"
     result "$xrdver $vercomm"
+    buildxrd="yes"
+    if test "x$externalxrd" = "xyes"; then
+       buildxrd="no"
+       # Check if bonjour is available for code potentially using it ...
+       if test "x$enable_bonjour" = "xyes"; then
+          check_symbol XrdOucBonjour "libXrdOuc.a" "$xrdlibdir"
+          if test  $found_symbol -eq 0 ; then
+             bjrcomm="External xrootd has no bonjour support: disabling bonjour in XrdProofd"
+             bonjourcppflags=
+          fi
+       fi
+    fi
 else
     buildxrd="no"
     hasxrd="#"
@@ -5681,7 +5728,6 @@ result $enable_memstat
 #
 # (See http://clarens.sourceforge.net/)
 #
-
 checking_msg "Clarens support"
 
 if test ! "x$enable_clarens" = "xno" ; then
@@ -5727,7 +5773,6 @@ check_explicit "$enable_clarens" "$enable_clarens_explicit" \
 #
 # (See http://www.clarens.org)
 #
-
 checking_msg "PEAC support"
 
 if test ! "x$enable_peac" = "xno" ; then
@@ -5746,6 +5791,46 @@ fi
 result "$buildpeac"
 check_explicit "$enable_peac" "$enable_peac_explicit" \
      "Explicitly required Peac dependencies not fulfilled"
+
+######################################################################
+#
+### echo %%% Check for afdsmgrd support
+#
+# afdsmgrd -- Dataset manager for PROOF-based analysis facilities
+# by Dario Berzano <dario.berzano@cern.ch>
+# See http://code.google.com/p/afdsmgrd/
+#
+message "Checking whether to build afdsmgrd"
+if test "x$enable_afdsmgrd" = "xyes" ; then
+    afdsmgrd_cmake=`$cwhich cmake`
+    if test "x$afdsmgrd_cmake" = "x" ; then
+        result "`basename $0`: cmake MUST be in \$PATH in order to build afdsmgrd"
+        exit 1
+    fi
+    if test "x$arch" = "xwin32" ; then
+        result "`basename $0`: afdsmgrd can't be enabled on Windows"
+        exit 1
+    fi
+
+    if test ! "x$monalisalibdir" = "x" ; then
+        afdsmgrdapmondir=`dirname -- "${monalisalibdir#-L}"`
+    elif test ! "x$alienlibdir" = "x" ; then
+        afdsmgrdapmondir=`dirname -- "${alienlibdir#-L}"`
+    else
+        afdsmgrdapmondir=""
+    fi
+
+    if test ! "x$afdsmgrdapmondir" = "x" ; then
+        afdsmgrdapmon="--with-apmon=$afdsmgrdapmondir"
+        afdsmgrdapmonmsg=", using ApMon at $afdsmgrdapmondir"
+    else
+        afdsmgrdapmon="--disable-apmon"
+        afdsmgrdapmonmsg=", ApMon support disabled"
+    fi
+else
+    enable_afdsmgrd="no"
+fi
+result "$enable_afdsmgrd$afdsmgrdapmonmsg"
 
 ######################################################################
 #
@@ -6203,6 +6288,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@builtinfreetype@|$enable_builtin_freetype|"      \
     -e "s|@builtinpcre@|$enable_builtin_pcre|"  \
     -e "s|@buildxrd@|$buildxrd|"                \
+    -e "s|@hasxrd@|$enable_xrootd|"             \
     -e "s|@castorincdir@|$castorincdir|"        \
     -e "s|@castorlib@|$castorlib|"              \
     -e "s|@castorlibdir@|$castorlibdir|"        \
@@ -6427,6 +6513,8 @@ sed -e "s|@srcdir@|$ac_srcdir|"                 \
     -e "s|@buildxrdgsi@|$buildxrdgsi|"          \
     -e "s|@buildclarens@|$enable_clarens|"      \
     -e "s|@buildpeac@|$buildpeac|"              \
+    -e "s|@buildafdsmgrd@|$enable_afdsmgrd|"    \
+    -e "s|@afdsmgrdapmon@|$afdsmgrdapmon|"      \
     -e "s|@buildglite@|$enable_glite|"          \
     -e "s|@buildeditline@|$enable_editline|"    \
     < Makefile.tmp > $MAKEOUT

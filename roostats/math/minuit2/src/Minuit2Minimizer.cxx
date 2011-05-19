@@ -50,7 +50,7 @@ namespace Minuit2 {
    // functions needed to control siwthc off of Minuit2 printing level 
 #ifdef USE_ROOT_ERROR
    int TurnOffPrintInfoLevel() { 
-   // switch off Minuit2 printing of INfo message (cut off is 1001) 
+   // switch off Minuit2 printing of INFO message (cut off is 1001) 
    int prevErrorIgnoreLevel = gErrorIgnoreLevel; 
    if (prevErrorIgnoreLevel < 1001) { 
       gErrorIgnoreLevel = 1001; 
@@ -319,8 +319,12 @@ bool Minuit2Minimizer::Minimize() {
    fMinuitFCN->SetErrorDef(ErrorDef() );
 
    if (PrintLevel() >=1)
-      std::cout << "Minuit2Minimizer: Minimize with max iterations " << maxfcn << " edmval " << tol << " strategy " 
+      std::cout << "Minuit2Minimizer: Minimize with max-calls " << maxfcn 
+                << " convergence for edm < " << tol << " strategy " 
                 << strategy << std::endl; 
+
+   // internal minuit messages
+   MnPrint::SetLevel(PrintLevel() );
 
    // switch off Minuit2 printing
    int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
@@ -523,6 +527,8 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
    }
 
    int debugLevel = PrintLevel(); 
+   // internal minuit messages
+   MnPrint::SetLevel( debugLevel );
 
    // to run minos I need function minimum class 
    // redo minimization from current state
@@ -556,8 +562,23 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
    // run MnCross 
    MnCross low;
    MnCross up;
-   if (runLower) low = minos.Loval(i);
-   if (runUpper) up  = minos.Upval(i);
+   int maxfcn = MaxFunctionCalls(); 
+   double tol = Tolerance();
+
+   const char * par_name = fState.Name(i);
+
+   // now input tolerance for migrad calls inside Minos (MnFunctionCross)
+   // before it was fixed to 0.05 
+   // cut off too small tolerance (they are not needed)
+   tol = std::max(tol, 0.01);
+   
+   if (PrintLevel() >=1)
+      std::cout << "Minuit2Minimizer::GetMinosError for parameter " << i << "  " << par_name
+                << " max-calls " << maxfcn << ", tolerance " << tol << std::endl; 
+
+
+   if (runLower) low = minos.Loval(i,maxfcn,tol);
+   if (runUpper) up  = minos.Upval(i,maxfcn,tol);
  
    ROOT::Minuit2::MinosError me(i, fMinimum->UserState().Value(i),low, up);
 
@@ -566,31 +587,32 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
    // debug result of Minos 
    // print error message in Minos
 
+
    if (debugLevel >= 1) {
       if (runLower) { 
          if (!me.LowerValid() )  
-            std::cout << "Minos:  Invalid lower error for parameter " << i << std::endl; 
+            std::cout << "Minos:  Invalid lower error for parameter " << par_name << std::endl; 
          if(me.AtLowerLimit()) 
-            std::cout << "Minos:  Parameter  is at Lower limit."<<std::endl;
+            std::cout << "Minos:  Parameter : " << par_name << "  is at Lower limit."<<std::endl;
          if(me.AtLowerMaxFcn())
             std::cout << "Minos:  Maximum number of function calls exceeded when running for lower error" <<std::endl;   
          if(me.LowerNewMin() )
             std::cout << "Minos:  New Minimum found while running Minos for lower error" <<std::endl;     
 
-         if (debugLevel > 1)  std::cout << "Minos: Lower error for parameter " << i << "  :  " << me.Lower() << std::endl; 
+         if (debugLevel > 1)  std::cout << "Minos: Lower error for parameter " << par_name << "  :  " << me.Lower() << std::endl; 
 
       }
       if (runUpper) {          
          if (!me.UpperValid() )  
-            std::cout << "Minos:  Invalid upper error for parameter " << i << std::endl; 
+            std::cout << "Minos:  Invalid upper error for parameter " << par_name << std::endl; 
          if(me.AtUpperLimit()) 
-            std::cout << "Minos:  Parameter  is at Upper limit."<<std::endl;
+            std::cout << "Minos:  Parameter " << par_name << " is at Upper limit."<<std::endl;
          if(me.AtUpperMaxFcn())
             std::cout << "Minos:  Maximum number of function calls exceeded when running for upper error" <<std::endl;   
          if(me.UpperNewMin() )
             std::cout << "Minos:  New Minimum found while running Minos for upper error" <<std::endl;              
 
-         if (debugLevel > 1)  std::cout << "Minos: Upper error for parameter " << i << "  :  " << me.Upper() << std::endl;
+         if (debugLevel > 1)  std::cout << "Minos: Upper error for parameter " << par_name << "  :  " << me.Upper() << std::endl;
       }
       
    }
@@ -633,6 +655,9 @@ bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
 
    // switch off Minuit2 printing
    int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
+
+   MnPrint::SetLevel( PrintLevel() );
+
 
    // set the precision if needed
    if (Precision() > 0) fState.SetPrecision(Precision());
@@ -692,6 +717,8 @@ bool Minuit2Minimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
    // switch off Minuit2 printing (for level of  0,1)
    int prev_level = (PrintLevel() <= 1 ) ?   TurnOffPrintInfoLevel() : -1; 
 
+   MnPrint::SetLevel( PrintLevel() );
+
    // set the precision if needed
    if (Precision() > 0) fState.SetPrecision(Precision());
 
@@ -732,6 +759,8 @@ bool Minuit2Minimizer::Hesse( ) {
 
    // switch off Minuit2 printing
    int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
+
+   MnPrint::SetLevel( PrintLevel() );
 
    // set the precision if needed
    if (Precision() > 0) fState.SetPrecision(Precision());

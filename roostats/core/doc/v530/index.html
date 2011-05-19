@@ -3,17 +3,128 @@
 <a name="core"></a> 
 <h3>Core</h3>
 
-<h3>TStyle</h3>
+<h4>TString</h4>
+<ul>
+<li>
+Reimplementation of the internals of TString to not use reference counting and
+copy on write, but to use a more modern and thread safe Short String
+Optimization (SSO) technique. Using SSO short strings (&lt;15 on 64-bit and
+&lt;11 on 32-bit) are contained in the  TString internal data structure
+without the need for mallocing the required space.
+</li>
+</ul>
+
+<h4>TObject</h4>
+<ul>
+<li>
+In <tt>TObject::ls</tt>, add support for the option 'noaddr' which 
+prevents the printing of the address of the object.   This
+is useful in particular in roottest.   Use this in <tt>hadd</tt>
+and <tt>TFileMerger</tt>
+</li>
+</ul>
+
+<h4>TROOT</h4>
+<ul>
+<li>New routine <tt>CloseFiles</tt> used automatically shortly before termination to 
+insure closing of files and sockets before the unload of any library.</li>
+<li>New collection '<tt>ClosedObjects</tt>' holding pointers to <tt>TFile</tt> or <tt>TSocket</tt> that
+have been closed but not deleted it.  In the case of <tt>TSocket</tt>, they are added only
+if they are closed by the <tt>CloseFiles</tt>.</li>
+<li>Add a Close member function to <tt>TProofMgr</tt> since it is added to the list of socket.</li>
+<li>Migrate the closing of files from various to a single place (<tt>T*System::Exit</tt>).</li>
+<li>Fill in the implementation of <tt>TROOT::FindObjectAnyFile</tt>.</li>
+<li>Mark TROOT as <tt>TObject::kInvalidObject</tt> as soon as its destructor starts,
+in order to be able to veto some action later on (like autoloading).</li>
+</ul>
+
+<h4>TSystem</h4>
+<ul>
+<li>Better handle the cases where the information in the rootmap file is (almost) empty.   
+Avoid infinite loop if one of the dependent library is missing.</li>
+</ul>
+
+<h4>Meta</h4>
+<ul>
+<li>Improve error message in case a schema evolution rule can not be loaded when the library is loaded
+(from the generic 'it conflicts with one of the other rules' to 'the target member ... is unknown'.</li>
+</ul>
+
+<h4>TFolder</h4>
+<ul>
+<li>Several enhancement and clarification to <tt>TFolder::FindFullPathName</tt>.</li>
+</ul>
+
+<h4>TStyle</h4>
 <ul>
 <li> Add the fill color attribute (<tt>SetLegendFillColor()</tt> and the font
-     attribute (<tt>SetLegendFont()<tt>.
+     attribute (<tt>SetLegendFont()</tt>.
 </li>
-<li> A new TStyle called "Clean" has been implemented. It can be set with:
+<li> A new <tt>TStyle</tt> called "Modern" has been implemented. It can be set with:
      <pre>
-     gROOT->SetStyle("Clean");
+     gROOT->SetStyle("Modern");
      </pre>
      It has very little decoration. It was made looking at the default styles
      usually used by the experiments.
+     <p>
+     A new parameter <tt>Canvas.Style</tt> in <tt>etc/system.rootrc</tt> allows
+     to define the default style. If it is not specified, the <tt>Modern</tt>
+     style is used. To use the old default style one can set it to <tt>Classic</tt> or add
+     <pre>
+     gROOT->SetStyle("Classic");
+     </pre>
+     to your scripts. We seek feedback on improving the Modern style.
+     Please leave comments in the forum.
+     <p>
+     The following table shows the two plots <tt>hpx->Draw()</tt> and <tt>hpxpy->Draw("colz")</tt>
+     in the "Classic" and "Modern" styles.
+     <p>
+     <center>
+     <table border=1>
+     <tr>
+     <td><b>Classic Style</b></td>
+     <td><b>Modern Style</b></td>
+     </tr>
+     <tr>
+     <td><img alt="hpx.Draw() in classic style" width="400" border="0" src="hpxclassic.gif"></td>
+     <td><img alt="hpx.Draw() in modern style" width="400" border="0" src="hpxmodern.gif"></td>
+     </tr>
+     <tr>
+     <td><img alt="hpxpy.Draw() in classic style" width="400" border="0" src="hpxpyclassic.gif"></td>
+     <td><img alt="hpxpy.Draw() in modern style" width="400" border="0" src="hpxpymodern.gif"></td>
+     </tr>
+     </table>
+     </center>
+
+     <p>
+     An other example:
+     <p>
+     <b> Classic style:</b>
+     <p>
+     <img src="hlabclassic.png">
+     <p>
+     <b> Modern style:</b>
+     <p>
+     <img src="hlabmodern.png">
+
 </li>
 </ul>
+
+<h4>ACLiC</h4>
+<ul>
+<li> ACLiC now passes the macro <tt>__ACLIC__</tt> to both the rootcint and compiler phases.
+</li>
+</ul>
+
+<h4>TWinNTSystem</h4>
+<ul>
+<li>Fix 64-bit compatibility issues (__asm keyword is not allowed)</li>
+<li>Try (as much as possible) to avoid the disturbing "There is no disk in the drive. Please insert a disk into drive \Device\..." popup message box when calling AccessPathName() on removable disk drives with no media installed. This should fix the problem reported <a href="http://root.cern.ch/phpBB3/viewtopic.php?t=11704">on the forum</a></li>
+<li> Prevent short timers (e.g. 10ms) to keep looping in the DispatchOneEvent() infinite loop</li>
+<li> Better stdout/stderr redirection (it was impossible to restore stdout using freopen on Windows 7, leaving the console as a zombie...)</li>
+<li> Make sure the stdout/stderr redirection works also in the case there is no console (i.e. in stand-alone applications)</li>
+<li> Make sure the file descriptors are valid before using them
+</ul>
+
+
 

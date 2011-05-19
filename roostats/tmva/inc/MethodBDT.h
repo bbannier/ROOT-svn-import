@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Jan Therhaag
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -17,10 +17,11 @@
  *      Doug Schouten   <dschoute@sfu.ca>        - Simon Fraser U., Canada        *
  *      Jan Therhaag    <jan.therhaag@cern.ch>   - U. of Bonn, Germany            *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
  *      U. of Victoria, Canada                                                    *
  *      MPI-K Heidelberg, Germany                                                 *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -167,6 +168,8 @@ namespace TMVA {
       // Init used in the various constructors
       void Init( void );
 
+      void PreProcessNegativeEventWeights();
+
       // boosting algorithm (adaptive boosting)
       Double_t AdaBoost( std::vector<TMVA::Event*>, DecisionTree *dt );
 
@@ -235,8 +238,13 @@ namespace TMVA {
       Bool_t                           fUsePoissonNvars; // use "fUseNvars" not as fixed number but as mean of a possion distr. in each split
       UInt_t                           fUseNTrainEvents; // number of randomly picked training events used in randomised (and bagged) trees
 
-      Double_t                         fSampleSizeFraction; // relative size of bagged event sample to original sample size
+      Double_t                         fSampleSizeFraction;     // relative size of bagged event sample to original sample size
+      TString                          fNegWeightTreatment;     // variable that holds the option of how to treat negative event weights in training
       Bool_t                           fNoNegWeightsInTraining; // ignore negative event weights in the training
+      Bool_t                           fInverseBoostNegWeights; // boost ev. with neg. weights with 1/boostweight rathre than boostweight
+      Bool_t                           fPairNegWeightsGlobal;   // pair ev. with neg. and pos. weights in traning sample and "annihilate" them 
+      Bool_t                           fPairNegWeightsInNode;   // randomly pair miscl. ev. with neg. and pos. weights in node and don't boost them
+      Bool_t                           fTrainWithNegWeights; // yes there are negative event weights and we don't ignore them
       Bool_t                           fDoBoostMonitor; //create control plot with ROC integral vs tree number
 
 

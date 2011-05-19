@@ -1,6 +1,7 @@
 // Bindings
 #include "PyROOT.h"
 #include "Adapters.h"
+#include "Utility.h"
 
 // ROOT
 #include "TBaseClass.h"
@@ -28,7 +29,7 @@ std::string PyROOT::TReturnTypeAdapter::Name( unsigned int mod ) const
       name = TClassEdit::CleanType( fName.c_str(), 1 );
 
    if ( mod & ( ROOT::Reflex::FINAL | ROOT::Reflex::F ) )
-      return TClassEdit::ResolveTypedef( name.c_str(), true );
+      name = Utility::ResolveTypedef( name );
 
    return name;
 }
@@ -99,12 +100,12 @@ std::string PyROOT::TMemberAdapter::Name( unsigned int mod ) const
          name = arg->GetFullTypeName();
 
       if ( mod & ( ROOT::Reflex::FINAL | ROOT::Reflex::F ) )
-         return TClassEdit::ResolveTypedef( name.c_str(), true );
+         name = Utility::ResolveTypedef( name );
 
       return name;
 
    } else if ( mod & ( ROOT::Reflex::FINAL | ROOT::Reflex::F ) )
-      return TClassEdit::ResolveTypedef( fMember->GetName(), true );
+      return Utility::ResolveTypedef( fMember->GetName() );
 
    return fMember->GetName();
 }
@@ -174,7 +175,7 @@ std::string PyROOT::TMemberAdapter::FunctionParameterDefaultAt( size_t nth ) con
       return "";
 
 // special case for strings: "some value" -> ""some value"
-   if ( strstr( TClassEdit::ResolveTypedef( arg->GetTypeName(), true ).c_str(), "char*" ) ) {
+   if ( strstr( Utility::ResolveTypedef( arg->GetTypeName() ).c_str(), "char*" ) ) {
       std::string sdef = "\"";
       sdef += def;
       sdef += "\"";
@@ -235,10 +236,16 @@ PyROOT::TScopeAdapter::TScopeAdapter( const TMemberAdapter& mb ) :
 }
 
 //____________________________________________________________________________
-PyROOT::TScopeAdapter PyROOT::TScopeAdapter::ByName( const std::string & name )
+PyROOT::TScopeAdapter PyROOT::TScopeAdapter::ByName( const std::string & name, bool quiet )
 {
 // lookup a scope (class) by name
-   return TClass::GetClass( name.c_str() );
+   Int_t oldEIL = gErrorIgnoreLevel;
+   if ( quiet )
+      gErrorIgnoreLevel = 3000;
+   TClass* klass = TClass::GetClass( name.c_str() );
+   gErrorIgnoreLevel = oldEIL;
+
+   return klass;
 }
 
 //____________________________________________________________________________
@@ -253,7 +260,7 @@ std::string PyROOT::TScopeAdapter::Name( unsigned int mod ) const
          name = TClassEdit::CleanType( fName.c_str(), 1 );
 
       if ( mod & ( ROOT::Reflex::FINAL | ROOT::Reflex::F ) )
-         return TClassEdit::ResolveTypedef( name.c_str(), true );
+         name = Utility::ResolveTypedef( name );
 
       return name;
    }

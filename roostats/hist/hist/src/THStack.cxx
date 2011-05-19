@@ -773,7 +773,7 @@ void THStack::Paint(Option_t *option)
             // Erase before drawing the histogram
             h1col  = h1->GetFillColor();
             h1fill = h1->GetFillStyle();
-            h1->SetFillColor(0);
+            h1->SetFillColor(10);
             h1->SetFillStyle(1001);
             h1->Paint(loption);
             static TClassRef clTFrame = TClass::GetClass("TFrame",kFALSE);
@@ -842,6 +842,7 @@ void THStack::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    if (fHistogram) {
       frameNumber++;
       TString hname = fHistogram->GetName();
+      hname += "_stack_";
       hname += frameNumber;
       fHistogram->SetName(hname.Data());
       fHistogram->SavePrimitive(out,"nodraw");

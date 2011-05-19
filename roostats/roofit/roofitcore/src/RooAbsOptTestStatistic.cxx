@@ -71,6 +71,7 @@ RooAbsOptTestStatistic:: RooAbsOptTestStatistic()
   _funcClone = 0 ;
   _projDeps = 0 ;
   _ownData = kTRUE ;
+  _sealed = kFALSE ;
 }
 
 
@@ -104,6 +105,7 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
   if (operMode()!=Slave) {
 //     cout << "RooAbsOptTestStatistic::ctor not slave mode, do nothing" << endl ;
     _normSet = 0 ;
+    _ownData = kFALSE ;
     return ;
   }
 
@@ -363,6 +365,7 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const RooAbsOptTestStatistic& oth
 //     cout << "RooAbsOptTestStatistic::cctor not slave mode, do nothing" << endl ;
     _projDeps = 0 ;
     _normSet = other._normSet ? ((RooArgSet*) other._normSet->snapshot()) : 0 ;   
+    _ownData = kFALSE ;
     return ;
   }
 
@@ -460,7 +463,7 @@ Double_t RooAbsOptTestStatistic::combinedValue(RooAbsReal** array, Int_t n) cons
   Int_t i ;
   for (i=0 ; i<n ; i++) {
     Double_t tmp = array[i]->getVal() ;
-    if (tmp==0) return 0 ;
+    // if (tmp==0) return 0 ; WVE no longer needed
     sum += tmp ;
   }
   return sum ;
@@ -651,6 +654,7 @@ Bool_t RooAbsOptTestStatistic::setData(RooAbsData& indata, Bool_t cloneData)
 
   RooAbsData* origData = _dataClone ;
   Bool_t deleteOrigData = _ownData ;
+
 
   if (!cloneData && _rangeName.size()>0) {
     coutW(InputArguments) << "RooAbsOptTestStatistic::setData(" << GetName() << ") WARNING: test statistic was constructed with range selection on data, "

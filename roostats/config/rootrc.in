@@ -50,11 +50,11 @@ Root.ShowPath:           false
 # 5 million calls is a reasonable number.
 # if your code has been compiled with -fno-omit-frame-pointer you can specify
 # gnubuiltin for Root.TMemStat.system. In this case the backtrace is much faster.
-Root.TMemStat:           0
-Root.TMemStat.buffersize 100000
-Root.TMemStat.maxcalls   5000000
-#Root.TMemStat.system     gnubuiltin
-Root.TMemStat.system    
+Root.TMemStat:            0
+Root.TMemStat.buffersize: 100000
+Root.TMemStat.maxcalls:   5000000
+#Root.TMemStat.system:    gnubuiltin
+Root.TMemStat.system:      
 
 # Activate memory statistics (size and cnt is used to trap allocation of
 # blocks of a certain size after cnt times).
@@ -123,9 +123,12 @@ Canvas.ShowToolTips:        false
 Canvas.ShowToolBar:         false
 Canvas.ShowEditor:          false
 Canvas.AutoExec:            true
-Canvas.PrintDirectory       .
+Canvas.PrintDirectory:      .
 #set the default precision when writing floating point numbers in TCanvas::SaveSource
-Canvas.SavePrecision        7
+Canvas.SavePrecision:       7
+# Set the default TStyle
+# Predefined styles are: Plain, Bold, Video, Pub, Classic, Modern.
+Canvas.Style:               Modern
 
 # Printer settings.
 #WinNT.*.Print.Command:      AcroRd32.exe
@@ -148,22 +151,26 @@ Hist.Binning.3D.Profx:      100
 Hist.Binning.3D.Profy:      100
 
 # Default statistics parameters names.
-Hist.Stats.Entries    Entries
-Hist.Stats.Mean       Mean
-Hist.Stats.MeanX      Mean x
-Hist.Stats.MeanY      Mean y
-Hist.Stats.RMS        RMS
-Hist.Stats.RMSX       RMS x
-Hist.Stats.RMSY       RMS y
-Hist.Stats.Underflow  Underflow
-Hist.Stats.Overflow   Overflow
-Hist.Stats.Integral   Integral
-Hist.Stats.Skewness   Skewness
-Hist.Stats.SkewnessX  Skewness x
-Hist.Stats.SkewnessY  Skewness y
-Hist.Stats.Kurtosis   Kurtosis
-Hist.Stats.KurtosisX  Kurtosis x
-Hist.Stats.KurtosisY  Kurtosis y
+Hist.Stats.Entries:   Entries
+Hist.Stats.Mean:      Mean
+Hist.Stats.MeanX:     Mean x
+Hist.Stats.MeanY:     Mean y
+Hist.Stats.MeanZ:     Mean z
+Hist.Stats.RMS:       RMS
+Hist.Stats.RMSX:      RMS x
+Hist.Stats.RMSY:      RMS y
+Hist.Stats.RMSZ:      RMS z
+Hist.Stats.Underflow: Underflow
+Hist.Stats.Overflow:  Overflow
+Hist.Stats.Integral:  Integral
+Hist.Stats.Skewness:  Skewness
+Hist.Stats.SkewnessX: Skewness x
+Hist.Stats.SkewnessY: Skewness y
+Hist.Stats.SkewnessZ: Skewness z
+Hist.Stats.Kurtosis:  Kurtosis
+Hist.Stats.KurtosisX: Kurtosis x
+Hist.Stats.KurtosisY: Kurtosis y
+Hist.Stats.KurtosisZ: Kurtosis z
 
 # THtml specific settings (for more see doc of THtml class).
 Root.Html.SourceDir:    .
@@ -182,6 +189,8 @@ Root.Html.Search:       http://www.google.com/search?q=%s+site%3A%u+-site%3A%u%2
 # GUI specific settings.
 Gui.Backend:                native
 Gui.Factory:                native
+# GUI style: Modern (flat popup menus) or Classic (win 95 style)
+Gui.Style:                  Modern
 Gui.DefaultFont:            -*-helvetica-medium-r-*-*-12-*-*-*-*-*-iso8859-1
 Gui.MenuFont:               -*-helvetica-medium-r-*-*-12-*-*-*-*-*-iso8859-1
 Gui.MenuHiFont:             -*-helvetica-bold-r-*-*-12-*-*-*-*-*-iso8859-1
@@ -189,9 +198,10 @@ Gui.DocFixedFont:           -*-courier-medium-r-*-*-12-*-*-*-*-*-iso8859-1
 Gui.DocPropFont:            -*-helvetica-medium-r-*-*-12-*-*-*-*-*-iso8859-1
 Gui.IconFont:               -*-helvetica-medium-r-*-*-10-*-*-*-*-*-iso8859-1
 Gui.StatusFont:             -*-helvetica-medium-r-*-*-10-*-*-*-*-*-iso8859-1
-Gui.BackgroundColor:         #c0c0c0
+Gui.BackgroundColor:         #e0e0e0
 Gui.ForegroundColor:         black
-Gui.SelectBackgroundColor:   #000080
+Gui.HighLightColor:          #d0d0d0
+Gui.SelectBackgroundColor:   #86abd9
 Gui.SelectForegroundColor:   white
 Gui.DocumentBackgroundColor: white
 Gui.DocumentForegroundColor: black
@@ -204,7 +214,7 @@ Gui.MimeTypeFile:            $(HOME)/.root.mimes
 # Type of Browser: TRootBrowser or TRootBrowserLite
 Browser.Name:                TRootBrowser
 # Browser Options (plugins)
-# F: File browser E: Text Editor H: HTML browser 
+# F: File browser E: Text Editor H: HTML browser
 # C: Canvas I: I/O redirection P: Proof G: GL viewer
 Browser.Options:             FCEI
 # Can be either small, big, list, details
@@ -274,13 +284,14 @@ ACLiC.Linkdef:          _linkdef
 #  2 - Generate and use rootmap file for each library
 #  3 - Generate rootmap file for each library _and_ explicitly link to the
 #      needed libraries.
+# On Windows, the default is 3
 #ACLiC.LinkLibs:      1
 
 # PROOF related variables
 #
 # PROOF debug options.
-# Proof.DebugLevel:	0
-# Proof.DebugMask:	-1
+# Proof.DebugLevel:     0
+# Proof.DebugMask:      -1
 #
 # PROOF GDB hooks
 # allows a debugger to be attached early in the startup phase of proofserv
@@ -544,7 +555,7 @@ XNet.ReadCacheSize: 10000000
 # XNet.FirstConnectMaxCnt
 #                       - Number of connect retries to the first host
 
-# XNet.PrintTAG         - Print a particular string the developers 
+# XNet.PrintTAG         - Print a particular string the developers
 #                         can choose to quickly recognize the
 #                         version at run time [0]
 

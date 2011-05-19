@@ -160,6 +160,7 @@
 
 
 #include "TROOT.h"
+#include "TApplication.h"
 #include "TSystem.h"
 #include "TMacro.h"
 #include "TInterpreter.h"
@@ -423,9 +424,9 @@ void TGTextEditor::Build()
 
    fTextEdit = new TGTextEdit(this, 10, 10, 1);
    Pixel_t pxl;
-   gClient->GetColorByName("#ccccff", pxl);
+   gClient->GetColorByName("#3399ff", pxl);
    fTextEdit->SetSelectBack(pxl);
-   fTextEdit->SetSelectFore(TGFrame::GetBlackPixel());
+   fTextEdit->SetSelectFore(TGFrame::GetWhitePixel());
    fTextEdit->Associate(this);
    AddFrame(fTextEdit, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
@@ -455,6 +456,7 @@ void TGTextEditor::Build()
    Resize(GetDefaultWidth() + 50, GetDefaultHeight() > 500 ? GetDefaultHeight() : 500);
    Layout();
 
+   gApplication->Connect("Terminate(Int_t)", "TGTextEditor", this, "ClearText()");
    gVirtualX->GrabKey(fId, gVirtualX->KeysymToKeycode(kKey_F3), 0, kTRUE);
 
    AddInput(kKeyPressMask | kEnterWindowMask | kLeaveWindowMask |
@@ -642,6 +644,7 @@ void TGTextEditor::CloseWindow()
          if (fParent == gClient->GetDefaultRoot())
             break;
       case kMBNo:
+         gApplication->Disconnect("Terminate(Int_t)");
          TGMainFrame::CloseWindow();
    }
    fExiting = kFALSE;

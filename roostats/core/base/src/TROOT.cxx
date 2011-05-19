@@ -179,6 +179,8 @@ static void CleanUpROOTAtExit()
          gROOT->GetListOfSockets()->Delete();
       if (gROOT->GetListOfMappedFiles())
          gROOT->GetListOfMappedFiles()->Delete("slow");
+      if (gROOT->GetListOfClosedObjects())
+         gROOT->GetListOfClosedObjects()->Delete("slow");
    }
 }
 
@@ -219,7 +221,7 @@ TROOT::TROOT() : TDirectory(),
      fFromPopUp(kTRUE),fMustClean(kTRUE),fReadingObject(kFALSE),fForceStyle(kFALSE),
      fInterrupt(kFALSE),fEscape(kFALSE),fExecutingMacro(kFALSE),fEditorMode(0),
      fPrimitive(0),fSelectPad(0),fClasses(0),fTypes(0),fGlobals(0),fGlobalFunctions(0),
-     fFiles(0),fMappedFiles(0),fSockets(0),fCanvases(0),fStyles(0),fFunctions(0),
+     fClosedObjects(0),fFiles(0),fMappedFiles(0),fSockets(0),fCanvases(0),fStyles(0),fFunctions(0),
      fTasks(0),fColors(0),fGeometries(0),fBrowsers(0),fSpecials(0),fCleanups(0),
      fMessageHandlers(0),fStreamerInfo(0),fClassGenerators(0),fSecContexts(0),
      fProofs(0),fClipboard(0),fDataSets(0),fUUIDs(0),fRootFolder(0),fBrowsables(0),
@@ -236,7 +238,7 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
      fFromPopUp(kTRUE),fMustClean(kTRUE),fReadingObject(kFALSE),fForceStyle(kFALSE),
      fInterrupt(kFALSE),fEscape(kFALSE),fExecutingMacro(kFALSE),fEditorMode(0),
      fPrimitive(0),fSelectPad(0),fClasses(0),fTypes(0),fGlobals(0),fGlobalFunctions(0),
-     fFiles(0),fMappedFiles(0),fSockets(0),fCanvases(0),fStyles(0),fFunctions(0),
+     fClosedObjects(0),fFiles(0),fMappedFiles(0),fSockets(0),fCanvases(0),fStyles(0),fFunctions(0),
      fTasks(0),fColors(0),fGeometries(0),fBrowsers(0),fSpecials(0),fCleanups(0),
      fMessageHandlers(0),fStreamerInfo(0),fClassGenerators(0),fSecContexts(0),
      fProofs(0),fClipboard(0),fDataSets(0),fUUIDs(0),fRootFolder(0),fBrowsables(0),
@@ -314,6 +316,12 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
 
    // initialize plugin manager early
    fPluginManager->LoadHandlersFromEnv(gEnv);
+#if defined(R__MACOSX) && (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+   if (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR) {
+      TEnv plugins(".plugins-ios");
+      fPluginManager->LoadHandlersFromEnv(&plugins);
+   }
+#endif
 
    TSystemDirectory *workdir = new TSystemDirectory("workdir", gSystem->WorkingDirectory());
 
@@ -326,6 +334,7 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    // fList was created in TDirectory::Build but with different sizing.
    delete fList;
    fList        = new THashList(1000,3);
+   fClosedObjects = new TList; fClosedObjects->SetName("ClosedFiles");
    fFiles       = new TList; fFiles->SetName("Files");
    fMappedFiles = new TList; fMappedFiles->SetName("MappedFiles");
    fSockets     = new TList; fSockets->SetName("Sockets");
@@ -374,6 +383,7 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    fCleanups->Add(fBrowsers); fBrowsers->SetBit(kMustCleanup);
    fCleanups->Add(fTasks);    fTasks->SetBit(kMustCleanup);
    fCleanups->Add(fFiles);    fFiles->SetBit(kMustCleanup);
+   fCleanups->Add(fClosedObjects); fClosedObjects->SetBit(kMustCleanup);
    fCleanups->Add(fInterpreter);
 
    fExecutingMacro= kFALSE;
@@ -403,7 +413,7 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    // Create some styles
    gStyle = 0;
    TStyle::BuildStyles();
-   SetStyle("Default");
+   SetStyle(gEnv->GetValue("Canvas.Style", "Modern"));
 
    // Setup default (batch) graphics and GUI environment
    gBatchGuiFactory = new TGuiFactory;
@@ -454,6 +464,10 @@ TROOT::~TROOT()
 
    if (gROOT == this) {
 
+      // Mark the object as invalid, so that we can veto some actions
+      // (like autoloading) while we are in the destructor.
+      SetBit(TObject::kInvalidObject);
+
       // Turn-off the global mutex to avoid recreating mutexes that have
       // already been deleted during the destruction phase
       gGlobalMutex = 0;
@@ -469,7 +483,9 @@ TROOT::~TROOT()
       SafeDelete(fRootFolder);
       fSpecials->Delete();   SafeDelete(fSpecials);    // delete special objects : PostScript, Minuit, Html
 #endif
-      fFiles->Delete("slow"); SafeDelete(fFiles);       // and files
+      fClosedObjects->Delete("slow"); // and closed files
+      fFiles->Delete("slow");       // and files
+      SafeDelete(fFiles);
       fSecContexts->Delete("slow"); SafeDelete(fSecContexts); // and security contexts
       fSockets->Delete();     SafeDelete(fSockets);     // and sockets
       fMappedFiles->Delete("slow");                     // and mapped files
@@ -477,19 +493,21 @@ TROOT::~TROOT()
       TProcessID::Cleanup();                            // and list of ProcessIDs
       TSeqCollection *tl = fMappedFiles; fMappedFiles = 0; delete tl;
 
+      SafeDelete(fClosedObjects);
+
       fFunctions->Delete();  SafeDelete(fFunctions);   // etc..
       fColors->Delete();     SafeDelete(fColors);
       fStyles->Delete();     SafeDelete(fStyles);
       fGeometries->Delete(); SafeDelete(fGeometries);
       fBrowsers->Delete();   SafeDelete(fBrowsers);
-      
+
 #ifdef R__COMPLETE_MEM_TERMINATION
       if (gGuiFactory != gBatchGuiFactory) SafeDelete(gGuiFactory);
       SafeDelete(gBatchGuiFactory);
       if (gGXBatch != gVirtualX) SafeDelete(gGXBatch);
       SafeDelete(gVirtualX);
 #endif
-      
+
       // Stop emitting signals
       TQObject::BlockAllSignals(kTRUE);
 
@@ -592,16 +610,105 @@ Bool_t TROOT::ClassSaved(TClass *cl)
    return kFALSE;
 }
 
+namespace {
+   static void R__ListSlowClose(TList *files)
+   {
+      static TObject harmless;
+      TObjLink *cursor = files->FirstLink();
+      while (cursor) {
+         TDirectory *dir = static_cast<TDirectory*>( cursor->GetObject() );
+         if (dir) {
+            // In order for the iterator to stay valid, we must
+            // prevent the removal of the object (dir) from the list
+            // (which is done in TFile::Close).   We can also can not
+            // just move to the next iterator since the Close might
+            // also (indirectly) remove that file.
+            // So we SetObject to a harmless value, so that 'dir'
+            // is not seen as part of the list.
+            // We will later, remove all the object (see files->Clear()
+            cursor->SetObject(&harmless); // this must not be zero otherwise things go wrong.
+            dir->Close();
+            // Put it back
+            cursor->SetObject(dir);
+         }
+         cursor = cursor->Next();
+      };
+      // Now were done, clear the list
+      files->Clear();
+   }
+}
+
 //______________________________________________________________________________
 void TROOT::CloseFiles()
 {
    // Close any files and sockets that gROOT knows about.
-   // Delete the corresponding TFile and TSockets objects.
    // This can be used to insures that the files and sockets are closed before any library is unloaded!
 
-   if (fFiles) fFiles->Delete("slow");
-   if (fSockets) fSockets->Delete();
-   if (fMappedFiles) fMappedFiles->Delete("slow");
+   if (fFiles && fFiles->First()) {
+      R__ListSlowClose(static_cast<TList*>(fFiles));
+   }
+   if (fSockets && fSockets->First()) {
+      if (0==fCleanups->FindObject(fSockets) ) {
+         fCleanups->Add(fSockets);
+      }
+      CallFunc_t *socketCloser = gInterpreter->CallFunc_Factory();
+      Long_t offset = 0;
+      TClass *socketClass = TClass::GetClass("TSocket");
+      gInterpreter->CallFunc_SetFuncProto(socketCloser, socketClass->GetClassInfo(), "Close", "", &offset);
+      if (gInterpreter->CallFunc_IsValid(socketCloser)) {
+         static TObject harmless;
+         TObjLink *cursor = static_cast<TList*>(fSockets)->FirstLink();
+         TList notclosed;
+         while (cursor) {
+            TObject *socket = cursor->GetObject();
+            // In order for the iterator to stay valid, we must
+            // prevent the removal of the object (dir) from the list
+            // (which is done in TFile::Close).   We can also can not
+            // just move to the next iterator since the Close might
+            // also (indirectly) remove that file.
+            // So we SetObject to a harmless value, so that 'dir'
+            // is not seen as part of the list.
+            // We will later, remove all the object (see files->Clear()
+            cursor->SetObject(&harmless); // this must not be zero otherwise things go wrong.
+
+            if (socket->IsA()->InheritsFrom(socketClass)) {
+               gInterpreter->CallFunc_Exec(socketCloser, ((char*)socket)+offset);
+               // Put the object in the closed list for later deletion.
+               socket->SetBit(kMustCleanup);
+               fClosedObjects->AddLast(socket);
+            } else {
+               // Crap ... this is not a socket, likely Proof or something, let's try to find a Close
+               Long_t other_offset;
+               CallFunc_t *otherCloser = gInterpreter->CallFunc_Factory();
+               gInterpreter->CallFunc_SetFuncProto(otherCloser, socket->IsA()->GetClassInfo(), "Close", "", &other_offset);
+               if (gInterpreter->CallFunc_IsValid(otherCloser)) {
+                  gInterpreter->CallFunc_Exec(otherCloser, ((char*)socket)+other_offset);
+                  // Put the object in the closed list for later deletion.
+                  socket->SetBit(kMustCleanup);
+                  fClosedObjects->AddLast(socket);
+               } else {
+                  notclosed.AddLast(socket);
+               }
+               gInterpreter->CallFunc_Delete(otherCloser);
+               // Put it back
+               cursor->SetObject(socket);
+            }
+            cursor = cursor->Next();
+         }
+         // Now were done, clear the list
+         fSockets->Clear();
+         // Readd the one we did not close
+         cursor = notclosed.FirstLink();
+         while (cursor) {
+            static_cast<TList*>(fSockets)->AddLast(cursor->GetObject());
+            cursor = cursor->Next();
+         }
+      }
+      gInterpreter->CallFunc_Delete(socketCloser);
+   }
+   if (fMappedFiles && fMappedFiles->First()) {
+      R__ListSlowClose(static_cast<TList*>(fMappedFiles));
+   }
 }
 
 //______________________________________________________________________________
@@ -761,6 +868,22 @@ TObject *TROOT::FindObjectAny(const char *name) const
 }
 
 //______________________________________________________________________________
+TObject *TROOT::FindObjectAnyFile(const char *name) const
+{
+   // Scan the memory lists of all files for an object with name
+
+   TDirectory *d;
+   TIter next(GetListOfFiles());
+   while ((d = (TDirectory*)next())) {
+      // Call explicitly TDirectory::FindObject to restrict the search to the
+      // arlready in memory object.
+      TObject *obj = d->TDirectory::FindObject(name);
+      if (obj) return obj;
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
 const char *TROOT::FindObjectClassName(const char *name) const
 {
    // Returns class name of a ROOT object including CINT globals.
@@ -896,6 +1019,7 @@ TColor *TROOT::GetColor(Int_t color) const
 
    TColor::InitializeColors();
    TObjArray *lcolors = (TObjArray*) GetListOfColors();
+   if (!lcolors) return 0;
    if (color < 0 || color >= lcolors->GetSize()) return 0;
    TColor *col = (TColor*)lcolors->At(color);
    if (col && col->GetNumber() == color) return col;
@@ -1167,10 +1291,30 @@ void TROOT::Idle(UInt_t idleTimeInSec, const char *command)
 }
 
 //______________________________________________________________________________
+static TClass* R__GetClassIfKnown(const char* className) {
+   // Check whether className is a known class, and only autoload
+   // if we can. Helper function for TROOT::IgnoreInclude().
+
+   // Check whether the class is available for auto-loading first:
+   const char* libsToLoad = gInterpreter->GetClassSharedLibs(className);
+   TClass* cla = 0;
+   if (libsToLoad) {
+      // trigger autoload, and only cvreate TClass in this case.
+      return TClass::GetClass(className);
+   } else if (gROOT->GetListOfClasses()
+              && (cla = (TClass*)gROOT->GetListOfClasses()->FindObject(className))) {
+      // cla assigned in if statement
+   } else if (gClassTable->FindObject(className)) {
+      return TClass::GetClass(className);
+   }
+   return cla;
+}
+
+//______________________________________________________________________________
 Int_t TROOT::IgnoreInclude(const char *fname, const char * /*expandedfname*/)
 {
-   // Return 1 if the given include file correspond to a class that has
-   // been loaded through a compiled dictionnary.
+   // Return 1 if the name of the given include file corresponds to a class that
+   //  is known to ROOT, e.g. "TLorentzVector.h" versus TLorentzVector.
 
    if (fname == 0) return 0;
 
@@ -1186,9 +1330,9 @@ Int_t TROOT::IgnoreInclude(const char *fname, const char * /*expandedfname*/)
    }
 
    TString className = gSystem->BaseName(stem);
-   TClass *cla = TClass::GetClass(className);
-
+   TClass* cla = R__GetClassIfKnown(className);
    if (!cla) {
+      // Try again with modifications to the file name:
       className = stem;
       className.ReplaceAll("/", "::");
       className.ReplaceAll("\\", "::");
@@ -1201,16 +1345,20 @@ Int_t TROOT::IgnoreInclude(const char *fname, const char * /*expandedfname*/)
          // detected already before).
          return 0;
       }
-      cla = TClass::GetClass(className);
+      cla = R__GetClassIfKnown(className);
    }
-   if ( cla ) {
-      if (cla->GetDeclFileLine() <= 0) return 0; // to a void an error with VisualC++
-      TString decfile = gSystem->BaseName(cla->GetDeclFileName());
-      if (decfile == gSystem->BaseName(fname)) {
-         return 1;
-      }
+
+   if (!cla) {
+      return 0;
    }
-   return 0;
+
+   // cla is valid, check wether it's actually in the header of the same name:
+   if (cla->GetDeclFileLine() <= 0) return 0; // to a void an error with VisualC++
+   TString decfile = gSystem->BaseName(cla->GetDeclFileName());
+   if (decfile != gSystem->BaseName(fname)) {
+      return 0;
+   }
+   return 1;
 }
 
 //______________________________________________________________________________
@@ -1786,9 +1934,11 @@ void TROOT::SetStyle(const char *stylename)
 {
    // Change current style to style with name stylename
 
-   TStyle *style = GetStyle(stylename);
+   TString style_name = stylename;
+
+   TStyle *style = GetStyle(style_name);
    if (style) style->cd();
-   else       Error("SetStyle","Unknown style:%s",stylename);
+   else       Error("SetStyle","Unknown style:%s",style_name.Data());
 }
 
 

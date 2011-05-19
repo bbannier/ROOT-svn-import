@@ -240,6 +240,7 @@ XMLLIBDIR      := @xmllibdir@
 XMLCLILIB      := @xmllib@
 XMLINCDIR      := $(filter-out /usr/include, @xmlincdir@)
 
+HASXRD         := @hasxrd@
 BUILDXRD       := @buildxrd@
 XRDINCDIR      := @xrdincdir@
 XRDLIBDIR      := @xrdlibdir@
@@ -330,6 +331,9 @@ CLARENSINC     := $(filter-out -I/usr/include, @clarensincdir@)
 CLARENSLIBS    := @clarenslibs@
 
 BUILDPEAC      := @buildpeac@
+
+BUILDAFDSMGRD  := @buildafdsmgrd@
+AFDSMGRDAPMON  := @afdsmgrdapmon@
 
 CURSESINCDIR   := $(filter-out -I/usr/include, -I@cursesincdir@)
 CURSESLIBDIR   := @curseslibdir@

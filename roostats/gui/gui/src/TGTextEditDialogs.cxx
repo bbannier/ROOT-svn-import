@@ -92,15 +92,15 @@ TGSearchDialog::TGSearchDialog(const TGWindow *p, const TGWindow *main,
 
    fLSearch = new TGLabel(fF3, new TGHotString("Search &for:"));
 
-   fBSearch = new TGTextBuffer(100);
-   if (!gLastSearchString.IsNull())
-      fBSearch->AddText(0, gLastSearchString.Data());
-   else
-      fSearchButton->SetState(kButtonDisabled);
-
    fCombo = new TGComboBox(fF3, "");
    fSearch = fCombo->GetTextEntry();
    fBSearch = fSearch->GetBuffer();
+   if (sstruct && sstruct->fBuffer)
+      fBSearch->AddText(0, sstruct->fBuffer);
+   else if (!gLastSearchString.IsNull())
+      fBSearch->AddText(0, gLastSearchString.Data());
+   else
+      fSearchButton->SetState(kButtonDisabled);
    fSearch->Associate(this);
    fCombo->Resize(220, fSearch->GetDefaultHeight());
    fSearch->SelectAll();
@@ -504,8 +504,8 @@ TGGotoDialog::TGGotoDialog(const TGWindow *p, const TGWindow *main,
    fGotoButton->Associate(this);
    fCancelButton->Associate(this);
 
-   fL1 = new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 2, 3, 0);
-   fL21 = new TGLayoutHints(kLHintsTop | kLHintsRight, 2, 5, 10, 0);
+   fL1 = new TGLayoutHints(kLHintsCenterY | kLHintsExpandX, 2, 2, 3, 0);
+   fL21 = new TGLayoutHints(kLHintsCenterY | kLHintsRight, 2, 5, 10, 0);
 
    fF1->AddFrame(fGotoButton, fL1);
    fF1->AddFrame(fCancelButton, fL1);

@@ -619,9 +619,6 @@ void TRint::Terminate(Int_t status)
       delete gTabCom;
       gTabCom = 0;
 
-      gROOT->CloseFiles(); // Close any files or sockets before emptying CINT.
-      gInterpreter->ResetGlobals();
-
       //Execute logoff macro
       const char *logoff;
       logoff = gEnv->GetValue("Rint.Logoff", (char*)0);
@@ -631,6 +628,7 @@ void TRint::Terminate(Int_t status)
             ProcessFile(logoff);
          delete [] mac;
       }
+
       TApplication::Terminate(status);
    }
 }

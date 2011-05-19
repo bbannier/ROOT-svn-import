@@ -1855,7 +1855,7 @@ Int_t TCint::AutoLoad(const char *cls)
 
    Int_t status = 0;
 
-   if (!gROOT || !gInterpreter) return status;
+   if (!gROOT || !gInterpreter || gROOT->TestBit(TObject::kInvalidObject)) return status;
 
    // Prevent the recursion when the library dictionary are loaded.
    Int_t oldvalue = G__set_class_autoloading(0);
@@ -2116,11 +2116,12 @@ const char* TCint::GetSharedLibs()
             needToSkip = (!strncmp(basename, excludelist[i], excludelen[i]));
       }
       if (!needToSkip &&
-           ((len>3 && strcmp(end-2,".a") == 0)    ||
-            (len>4 && (strcmp(end-3,".sl") == 0   ||
+           ((len>2 && strcmp(end-2,".a") == 0)    ||
+            (len>3 && (strcmp(end-3,".sl") == 0   ||
                        strcmp(end-3,".dl") == 0   ||
                        strcmp(end-3,".so") == 0)) ||
-            (len>5 && (strcasecmp(end-4,".dll") == 0)))) {
+            (len>4 && (strcasecmp(end-4,".dll") == 0)) ||
+            (len>6 && (strcasecmp(end-6,".dylib") == 0)))) {
          if (!fSharedLibs.IsNull())
             fSharedLibs.Append(" ");
          fSharedLibs.Append(filename);

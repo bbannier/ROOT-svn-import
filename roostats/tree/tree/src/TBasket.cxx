@@ -629,7 +629,9 @@ void TBasket::Streamer(TBuffer &b)
       b >> fLast;
       b >> flag;
       if (fLast > fBufferSize) fBufferSize = fLast;
-      if (!flag) return;
+      if (!flag) {
+         return;
+      }
       if (flag%10 != 2) {
          delete [] fEntryOffset;
          fEntryOffset = new Int_t[fNevBufSize];
@@ -699,20 +701,24 @@ void TBasket::Streamer(TBuffer &b)
       b << fNevBufSize;
       b << fNevBuf;
       b << fLast;
-      flag = 1;
-      if (!fEntryOffset)  flag  = 2;
-      if (fBufferRef)     flag += 10;
-      if (fDisplacement)  flag += 40;
-      if (fHeaderOnly)    flag  = 0;
-      b << flag;
-      if (fHeaderOnly) return;
-      if (fEntryOffset && fNevBuf) {
-         b.WriteArray(fEntryOffset, fNevBuf);
-         if (fDisplacement) b.WriteArray(fDisplacement, fNevBuf);
-      }
-      if (fBufferRef) {
-         char *buf  = fBufferRef->Buffer();
-         b.WriteFastArray(buf, fLast);
+      if (fHeaderOnly) {
+         flag = 0;
+         b << flag;
+      } else {
+         flag = 1;
+         if (!fEntryOffset)  flag  = 2;
+         if (fBufferRef)     flag += 10;
+         if (fDisplacement)  flag += 40;
+         b << flag;
+
+         if (fEntryOffset && fNevBuf) {
+            b.WriteArray(fEntryOffset, fNevBuf);
+            if (fDisplacement) b.WriteArray(fDisplacement, fNevBuf);
+         }
+         if (fBufferRef) {
+            char *buf  = fBufferRef->Buffer();
+            b.WriteFastArray(buf, fLast);
+         }
       }
    }
 }
@@ -796,10 +802,16 @@ Int_t TBasket::WriteBuffer()
       return nBytes>0 ? fKeylen+nout : -1;
    }
 
-//*-*- Transfer fEntryOffset table at the end of fBuffer. Offsets to fBuffer
-//     are transformed in entry length to optimize compression algorithm.
-   fLast      = fBufferRef->Length();
+   // Transfer fEntryOffset table at the end of fBuffer.
+   fLast = fBufferRef->Length();
    if (fEntryOffset) {
+      // Note: We might want to investigate the compression gain if we 
+      // transform the Offsets to fBuffer in entry length to optimize 
+      // compression algorithm.  The aggregate gain on a (random) CMS files
+      // is around 5.5%. So the code could something like:
+      //      for(Int_t z = fNevBuf; z > 0; --z) {
+      //         if (fEntryOffset[z]) fEntryOffset[z] = fEntryOffset[z] - fEntryOffset[z-1];
+      //      }
       fBufferRef->WriteArray(fEntryOffset,fNevBuf+1);
       if (fDisplacement) {
          fBufferRef->WriteArray(fDisplacement,fNevBuf+1);

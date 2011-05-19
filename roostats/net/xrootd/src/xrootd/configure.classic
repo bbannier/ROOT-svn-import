@@ -235,6 +235,11 @@ check_library() {
             i64=`echo $i | sed 's|lib*|lib64|'`
             i="$i64 $i"
         fi
+        # look first in the DEB_HOST_MULTIARCH directories
+        if test "x$debmultiarch" != "x" ; then
+            i64=`echo $i | sed "s|\(lib\)$|\1/$debmultiarch|"`
+            i="$i64 $i"
+        fi
         for l in $i ; do
             for j in ${libs} ; do
 	        # if we found the file (it's readable by user), we set the
@@ -280,8 +285,12 @@ check_library() {
                test "x$found_dir" = "x-L/usr/lib64" ; then
 		found_dir=""
 	    fi
+            if test "x$debmultiarch" != "x" ; then
+                if test "x$found_dir" = "x-L/usr/lib/$debmultiarch" ; then
+                    found_dir=""
+                fi
+            fi
 	fi
-
     fi
     unset shared
     unset lib
@@ -400,6 +409,10 @@ check_symbol() {
     # look first in the lib64 directories
     if test "x$checklib64" = "xyes" ; then
         usrlib="/usr/lib64 $usrlib"
+    fi
+    # look first in the DEB_HOST_MULTIARCH directories
+    if test "x$debmultiarch" != "x" ; then
+        usrlib="/usr/lib/$debmultiarch $usrlib"
     fi
     # look only in the lib64 directories
     if test "x$checkonlylib64" = "xyes" ; then
@@ -588,8 +601,7 @@ guess_architecture () {
       darwin:power*:*)    arch=macosx          ; platform=macosx; ccflv=macos;;
       darwin:*86*:*)      arch=x86_macosx      ; platform=macosx; ccflv=macos;;
       irix*:sgi*:*)       arch=sgi             ; platform=sgi;    ccflv=sgiCC;;
-      sunos:i86pc:5.10)   arch=sunx86_510      ; platform=solaris; ccflv=sunCCamd510;;
-      sunos:i86pc:5.11)   arch=sunx86_511      ; platform=solaris; ccflv=sunCCamd;;
+      sunos:i86pc:5.11)   arch=sunx86_511      ; platform=solaris; ccflv=sunCC;;
       sunos:i86pc:*)      arch=sunx86_510      ; platform=solaris; ccflv=sunCC;;
       sunos:*:6*)         arch=sun4x_6         ; platform=solaris; ccflv=sunCC;;
       sunos:*:5.6)        arch=sun4x_56        ; platform=solaris; ccflv=sunCC;;
@@ -620,13 +632,11 @@ guess_architecture () {
     fi
     if [ "$platform" = "solaris" -a "$chip" = "i86pc" ]; then
        if `isainfo -b | grep "64" > /dev/null  2>&1` ; then
-          if [ "$rele" = "5.10" ]; then
-             ccflv=sunCCamd510
-          else
-             ccflv=sunCCamd64
-          fi
+          ccflv=sunCCi8664pc
        else
-          ccflv=sunCC
+          if [ "$arch" != "sunx86_510" ]; then
+             ccflv=sunCCi86pc
+          fi
        fi
     fi
     echo "$osys | $chip | $rele | $arch | $ccflv"
@@ -1036,6 +1046,13 @@ if test "x$platform" = "xmacosx" ; then
    if test "x$nccflv" = "xicc" ; then
       nccflv="macosicc"
    fi
+fi
+
+debmultiarch=
+if `which dpkg-architecture > /dev/null 2>&1` ; then
+    if `dpkg-architecture -qDEB_HOST_MULTIARCH > /dev/null 2>&1` ; then
+        debmultiarch=`dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null`
+    fi
 fi
 
 #
@@ -1546,14 +1563,33 @@ fi
 
 ######################################################################
 #
+### echo %%% Check for builtin atomics
+#
+if test "x$hasatomics" = "x"; then
+   message "Checking for builtin atomics"
+   testout="__sync_.out"
+   check_prototype "__sync_" $ccbin "-o $testout"
+   if test "x$found_prototype" = "xyes" ; then
+      echo "yes"
+      hasatomics=" -DHAVE_ATOMICS"
+   else
+      echo "no"
+   fi
+   if test -f $testout ; then
+      rm -fr $testout
+   fi
+else
+   hasatomics=" -DHAVE_ATOMICS"
+fi
+
+######################################################################
+#
 ### echo %%% Flags steering echoing of command lines
 #
 xrdecho="@"
 if test "x$enable_echo" = "xyes" ; then
    xrdecho=""
 fi
-
-
 
 ######################################################################
 #
@@ -3136,6 +3172,7 @@ sed -e "s|@arch@|$arch|"                 \
     -e "s|@hasstrlcpy@|$hasstrlcpy|" \
     -e "s|@hasprotor@|$hasprotor|" \
     -e "s|@hasfstatat@|$hasfstatat|" \
+    -e "s|@hasatomics@|$hasatomics|" \
     -e "s|@hasfuse@|$hasfuse|" \
     -e "s|@libfuse@|$libfuse|" \
     -e "s|@hasreadline@|$hasreadline|" \
@@ -3184,7 +3221,7 @@ echo "done"
 #---------------------------------------------------------------------
 # Solaris GNUmake.rules.xxx
 #
-sunccrules="sunCC sunCCamd sunCCamd510 sunCCamd64 sunCCi86pc"
+sunccrules="sunCC sunCCamd sunCCamd510 sunCCamd64 sunCCi86pc sunCCi8664pc"
 for f in $sunccrules; do
    message "Writing config/$f "
    cp -rp config/GNUmake.rules.$f.in GNUmake.rules.$f.tmp

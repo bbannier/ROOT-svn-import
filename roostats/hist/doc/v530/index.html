@@ -25,9 +25,26 @@ lego or a surface or as a contour plot for any other plotting options.
 <li> The destructor has been completed.</li>
 </ul>
 
+<h4>THStack</h4>
+<ul>
+<li> When the 1D histograms in a stack are painted with patterns or hatches
+  the histograms are first painted with the TFrame background color to avoid
+  the hatches overlaps. In case the TFrame background color was 0 this did not
+  work because in that case the histogram is painted hollow. Instead of 0 we
+  now use 10 (also white).
+</ul>
+
 <h4>TGraph</h4>
 <ul>
-<li> The default browsing option for grapgs is now <tt>"alp"</tt>.<li>
+<li> The default browsing option for graphs is now <tt>"alp"</tt>.<li>
+<li> Like <tt>SetPoint</tt> the method <tt>Apply</tt> modifies the graph
+     content. So, a logic similar to the one implemented in <tt>SetPoint</tt>
+     is now done, ie:
+     <ol>
+     <li> if fHistogram exists it is reset.</li>
+     <li> if gPad exist a gPad->Modified() is issued.</li>
+     <ol>
+</li>
 </ul>
 
 <h4>TGraphErrors</h4>

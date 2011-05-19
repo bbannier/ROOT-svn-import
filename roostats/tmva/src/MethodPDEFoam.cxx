@@ -481,7 +481,7 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
    // Create only one unified foam which contains discriminator
    // (N_sig)/(N_sig + N_bg)
 
-   fFoam.push_back( InitFoam("DiscrFoam", kDiscr, 0) ); // class 0 = signal
+   fFoam.push_back( InitFoam("DiscrFoam", kDiscr, fSignalClass) );
 
    Log() << kVERBOSE << "Filling binary search tree of discriminator foam with events" << Endl;
    // insert event to BinarySearchTree
@@ -615,12 +615,16 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
       Event *ev = new Event(*GetEvent(k));
       // since in multi-target regression targets are handled like
       // variables --> remove targets and add them to the event variabels
-      std::vector<Float_t> targets = ev->GetTargets(); 	 
-      for (UInt_t i = 0; i < targets.size(); i++) 	 
-	 ev->SetVal(i+ev->GetValues().size(), targets.at(i)); 	 
+      std::vector<Float_t> targets(ev->GetTargets());
+      UInt_t NVariables = ev->GetValues().size();
+      for (UInt_t i = 0; i < targets.size(); ++i)
+	 ev->SetVal(i+NVariables, targets.at(i));
       ev->GetTargets().clear();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
 	 fFoam.back()->FillBinarySearchTree(ev);
+      // since the binary search tree copies the event, one can delete
+      // it
+      delete ev;
    }
 
    Log() << kINFO << "Build multi target regression foam" << Endl;
@@ -633,12 +637,15 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
       // since in multi-target regression targets are handled like
       // variables --> remove targets and add them to the event variabels
       std::vector<Float_t> targets = ev->GetTargets(); 	 
+      UInt_t NVariables = ev->GetValues().size();
       Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
-      for (UInt_t i = 0; i < targets.size(); i++) 	 
-	 ev->SetVal(i+ev->GetValues().size(), targets.at(i)); 	 
+      for (UInt_t i = 0; i < targets.size(); ++i) 	 
+	 ev->SetVal(i+NVariables, targets.at(i)); 	 
       ev->GetTargets().clear();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
 	 fFoam.back()->FillFoamCells(ev, weight);
+      // since the PDEFoam copies the event, one can delete it
+      delete ev;
    }
 }
 
@@ -915,7 +922,9 @@ TMVA::PDEFoam* TMVA::MethodPDEFoam::InitFoam(TString foamcaption, EFoamType ft, 
 	 break;
       }
    }
-   pdefoam->SetDensity(density);
+
+   if (pdefoam) pdefoam->SetDensity(density);
+   else Log() << kFATAL << "PDEFoam pointer not set, exiting.." << Endl;
 
    // create pdefoam kernel
    fKernelEstimator = CreatePDEFoamKernel();
@@ -969,7 +978,7 @@ const std::vector<Float_t>& TMVA::MethodPDEFoam::GetRegressionValues()
       // sanity check
       if (targets.size() != Data()->GetNTargets())
 	 Log() << kFATAL << "Something wrong with multi-target regression foam: "
-	       << "number of targest does not match the DataSet()" << Endl;
+	       << "number of targets does not match the DataSet()" << Endl;
       for(UInt_t i=0; i<targets.size(); i++)
          fRegressionReturnVal->push_back(targets.at(i));
    }
@@ -1285,6 +1294,11 @@ void TMVA::MethodPDEFoam::ReadFoamsFromFile()
 	 }
       }
    }
+
+   // Close the root file.  Note, that the foams are still present in
+   // memory!
+   rootFile->Close();
+   delete rootFile;
 
    for (UInt_t i=0; i<fFoam.size(); ++i) {
       if (!fFoam.at(0))

@@ -57,15 +57,16 @@ TStyle::TStyle() :TNamed()
 
 
 //______________________________________________________________________________
-TStyle::TStyle(const char *name, const char *title) : TNamed(name,title)
+TStyle::TStyle(const char *name, const char *title)
 {
    // Create a new TStyle.
    // The following names are reserved to create special styles
-   //   -Default: the default style set in TStyle::Reset
+   //   -Classic: the default style set in TStyle::Reset
    //   -Plain: a black&white oriented style
    //   -Bold:
    //   -Video;
    //   -Pub:
+   //   -Modern:
    //     (see the definition of these styles below).
    //
    // Note a side-effect of calling gStyle->SetFillColor(0). This is nearly
@@ -99,8 +100,12 @@ TStyle::TStyle(const char *name, const char *title) : TNamed(name,title)
    //    "Plain" style
    //  See also TROOT::ForceStyle and TROOT::UseCurrentStyle
 
+   TString style_name = name;
+
+   SetNameTitle(style_name, title);
+
    // If another style was already created with the same name, it is overwrite.
-   delete gROOT->GetStyle(name);
+   delete gROOT->GetStyle(style_name);
 
    Reset();
 
@@ -109,8 +114,8 @@ TStyle::TStyle(const char *name, const char *title) : TNamed(name,title)
       gROOT->GetListOfStyles()->Add(this);
    }
 
-   if (strcmp(name,"Clean") == 0) {
-      // Clean style
+   if (strcmp(style_name,"Modern") == 0) {
+      // Modern style
       SetFrameBorderMode(0);
       SetFrameFillColor(0);
       SetCanvasBorderMode(0);
@@ -138,9 +143,8 @@ TStyle::TStyle(const char *name, const char *title) : TNamed(name,title)
       SetTitleBorderSize(0);
       SetTitleFillColor(0);
       SetStatBorderSize(1);
-      SetOptStat(1110);
-      SetOptFit(111);
-      SetHistFillColor(38);
+      SetOptStat(1111);
+      SetStatY(0.935);
       SetHistLineColor(kBlue+2);
       SetLegendBorderSize(1);
       SetLegendFillColor(0);
@@ -148,8 +152,7 @@ TStyle::TStyle(const char *name, const char *title) : TNamed(name,title)
       SetFuncWidth(2);
       SetFuncColor(2);
    }
-
-   if (strcmp(name,"Plain") == 0) {
+   if (strcmp(style_name,"Plain") == 0) {
       // May be a standard style to be initialized
       SetFrameBorderMode(0);
       SetFrameFillColor(0);
@@ -164,7 +167,7 @@ TStyle::TStyle(const char *name, const char *title) : TNamed(name,title)
       SetLegendBorderSize(1);
       return;
    }
-   if (strcmp(name,"Bold") == 0) {
+   if (strcmp(style_name,"Bold") == 0) {
       // Authors: Art Poskanzer and Jim Thomas, LBNL, Oct. 2000
       SetPalette(1,0);
       SetCanvasColor(10);
@@ -191,7 +194,7 @@ TStyle::TStyle(const char *name, const char *title) : TNamed(name,title)
       SetStatColor(10);
       return;
    }
-   if (strcmp(name,"Video") == 0) {
+   if (strcmp(style_name,"Video") == 0) {
       // Author: Art Poskanzer, LBNL, Oct. 1999
       SetPalette(1,0);
       SetCanvasColor(10);
@@ -216,7 +219,7 @@ TStyle::TStyle(const char *name, const char *title) : TNamed(name,title)
       SetLineWidth(3);
       return;
    }
-   if (strcmp(name,"Pub") == 0) {
+   if (strcmp(style_name,"Pub") == 0) {
       // Authors: Art Poskanzer and Jim Thomas, LBNL, Oct. 2000
       SetOptTitle(0);
       SetOptStat(0);
@@ -287,8 +290,9 @@ void TStyle::BuildStyles()
    new TStyle("Bold",   "Bold Style");;
    new TStyle("Video",  "Style for video presentation histograms");
    new TStyle("Pub",    "Style for Publications");
-   new TStyle("Default","Default Style");
-   new TStyle("Clean",  "Clean Style");
+   new TStyle("Classic","Classic Style");
+   new TStyle("Default","Equivalent to Classic");
+   new TStyle("Modern", "Modern Style");
    delete col;
 }
 
@@ -556,8 +560,10 @@ void TStyle::Reset(Option_t *opt)
 
    fTimeOffset = 788918400; // UTC time at 01/01/95
 
-   if (strcmp(opt,"Clean") == 0) {
-      // Clean style
+   TString style_name = opt;
+
+   if (strcmp(style_name,"Modern") == 0) {
+      // Modern style
       SetFrameBorderMode(0);
       SetFrameFillColor(0);
       SetCanvasBorderMode(0);
@@ -585,9 +591,8 @@ void TStyle::Reset(Option_t *opt)
       SetTitleBorderSize(0);
       SetTitleFillColor(0);
       SetStatBorderSize(1);
-      SetOptStat(1110);
-      SetOptFit(111);
-      SetHistFillColor(38);
+      SetOptStat(1111);
+      SetStatY(0.935);
       SetHistLineColor(kBlue+2);
       SetLegendBorderSize(1);
       SetLegendFillColor(0);
@@ -595,8 +600,7 @@ void TStyle::Reset(Option_t *opt)
       SetFuncWidth(2);
       SetFuncColor(2);
    }
-
-   if (strcmp(opt,"Plain") == 0) {
+   if (strcmp(style_name,"Plain") == 0) {
       SetFrameBorderMode(0);
       SetCanvasBorderMode(0);
       SetPadBorderMode(0);
@@ -609,7 +613,7 @@ void TStyle::Reset(Option_t *opt)
       SetLegendBorderSize(1);
       return;
    }
-   if (strcmp(opt,"Bold") == 0) {
+   if (strcmp(style_name,"Bold") == 0) {
       SetPalette(1,0);
       SetCanvasColor(10);
       SetCanvasBorderMode(0);
@@ -635,7 +639,7 @@ void TStyle::Reset(Option_t *opt)
       SetStatColor(10);
       return;
    }
-   if (strcmp(opt,"Video") == 0) {
+   if (strcmp(style_name,"Video") == 0) {
       SetPalette(1,0);
       SetCanvasColor(10);
       SetCanvasBorderMode(0);
@@ -659,7 +663,7 @@ void TStyle::Reset(Option_t *opt)
       SetLineWidth(3);
       return;
    }
-   if (strcmp(opt,"Pub") == 0) {
+   if (strcmp(style_name,"Pub") == 0) {
       SetOptTitle(0);
       SetOptStat(0);
       SetPalette(8,0);
@@ -1516,7 +1520,7 @@ void TStyle::SaveSource(const char *filename, Option_t *option)
    TString ff = strlen(filename) ? filename : "Rootstyl.C";
 
    // Computes the main method name.
-   const char *fname = gSystem->BaseName(ff.Data());
+   const char *fname = gSystem->BaseName(ff);
    Int_t lenfname = strlen(fname);
    char *sname = new char[lenfname + 1];
    Int_t i = 0;
@@ -1562,7 +1566,7 @@ void TStyle::SaveSource(const char *filename, Option_t *option)
    out << "}" << endl;
    out.close();
 
-   printf(" C++ macro file %s has been generated\n", gSystem->BaseName(ff.Data()));
+   printf(" C++ macro file %s has been generated\n", gSystem->BaseName(ff));
 }
 
 

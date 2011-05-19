@@ -58,7 +58,7 @@ TProofBenchRunDataRead::TProofBenchRunDataRead(TProofBenchDataSet *pbds, TPBRead
                        : TProofBenchRun(proof, kPROOF_BenchSelDataDef), fProof(proof),
                          fReadType(readtype), fDS(pbds),
                          fNEvents(nevents), fNTries(ntries), fStart(start), fStop(stop), fStep(step),
-                         fDebug(debug), fDirProofBench(dirproofbench), fNodes(nodes),
+                         fDebug(debug), fFilesPerWrk(2), fDirProofBench(dirproofbench), fNodes(nodes),
                          fListPerfPlots(0), fProfile_perfstat_event(0), fHist_perfstat_event(0),
                          fProfile_queryresult_event(0), fNorm_queryresult_event(0),
                          fProfile_perfstat_IO(0), fHist_perfstat_IO(0), fProfile_queryresult_IO(0),
@@ -129,6 +129,9 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
    step = (step == -1) ? fStep : step;
    ntries = (ntries == -1) ? fNTries : ntries;
    debug = (debug == -1) ? fDebug : debug;
+
+   Int_t fDebug_sav = fDebug;
+   fDebug = debug;
 
    Bool_t nx = kFALSE;
    if (step == -2){
@@ -233,9 +236,9 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
       // the total one
       TFileCollection *fc = GetDataSet(dsname, nactive, nx);
       fc->Print("F");
-      TString dsn = TString::Format("%s_%d_%d", dsname.Data(), nactive, (Int_t)nx);
+      TString dsn = TString::Format("%s_%d_%d", dsbasename.Data(), nactive, (Int_t)nx);
       fProof->RegisterDataSet(dsn, fc, "OT");
-      fProof->ShowDataSets();
+      fProof->ShowDataSet(dsn, "F");
       
       for (Int_t j=0; j<ntries; j++) {
 
@@ -276,12 +279,20 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
             tnew->SetDirectory(fDirProofBench);
 
             //change the name
-            TString newname = TString::Format("%s_%s", t->GetName(), GetName());
+            TString newname = TString::Format("%s_%s_%dwrks%dthtry", t->GetName(), GetName(), nactive, j);
             tnew->SetName(newname);
 
             if (debug && fDirProofBench->IsWritable()){
-               fDirProofBench->cd();
-               tnew->Write();
+               TDirectory *curdir = gDirectory;
+               TString dirn = nx ? "RunDataReadx" : "RunDataRead";
+               if (!fDirProofBench->GetDirectory(dirn))
+                  fDirProofBench->mkdir(dirn, "RunDataRead results");
+               if (fDirProofBench->cd(dirn)) {
+                  tnew->Write();
+               } else {
+                  Warning("Run", "cannot cd to subdirectory '%s' to store the results!", dirn.Data());
+               }
+               curdir->cd();
             }
          } else {
             Warning("Run", "%s: tree not found", perfstats_name.Data());
@@ -360,41 +371,6 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
             fCPerfProfiles->cd(npad + 3);
             fNorm_queryresult_IO->Draw();
             gPad->Update();
-
-            // Save output histos 
-            if (debug){
-               TString ptdist_name = "pt_dist";
-               TH1 *h = dynamic_cast<TH1 *>(l->FindObject(ptdist_name.Data()));
-               if (h) {
-                  TH1 *hnew = (TH1*)h->Clone("hnew");
-                  hnew->SetDirectory(fDirProofBench);
-                  TString hname = TString::Format("%s_%s", h->GetName(), GetName());
-                  hnew->SetName(hname);
-                  if (fDirProofBench->IsWritable()){
-                     fDirProofBench->cd();
-                     hnew->Write();
-                     delete hnew;
-                  }
-               } else {
-                  Error("Run", "histogram %s not found", ptdist_name.Data());
-               }
-
-               TString tracksdist_name = "ntracks_dist";
-               TH1* h2 = dynamic_cast<TH1*>(l->FindObject(tracksdist_name.Data()));
-               if (h2) {
-                  TH1 *hnew = (TH1*)h2->Clone("hnew");
-                  hnew->SetDirectory(fDirProofBench);
-                  TString hname = TString::Format("%s_%s", h2->GetName(), GetName());
-                  hnew->SetName(hname);
-                  if (fDirProofBench->IsWritable()){
-                     fDirProofBench->cd();
-                     hnew->Write();
-                     delete hnew;
-                  }
-               } else {
-                  Error("Run", "histogram %s not found", tracksdist_name.Data());
-               }
-            }
          }
          fCPerfProfiles->cd(0); 
       }
@@ -428,6 +404,8 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
       }
       curdir->cd();
    }
+   // Restore member data
+   fDebug = fDebug_sav;
 }
 
 //______________________________________________________________________________
@@ -452,7 +430,7 @@ TFileCollection *TProofBenchRunDataRead::GetDataSet(const char *dset,
    }
    
    // Separate info per server
-   TMap *mpref = fcref->GetFilesPerServer(fProof->GetMaster());
+   TMap *mpref = fcref->GetFilesPerServer(fProof->GetMaster(), kTRUE);
    if (!mpref) {
       SafeDelete(fcref);
       Error("GetDataSet", "problems classifying info on per-server base");
@@ -470,54 +448,55 @@ TFileCollection *TProofBenchRunDataRead::GetDataSet(const char *dset,
    }
    mpnodes->Print();
    
+   // Number of files: fFilesPerWrk per active worker
+   Int_t nf = fNodes->GetNActives() * fFilesPerWrk;
+   Printf(" number of files needed (ideally): %d (%d per worker)", nf, fFilesPerWrk);
+   
+   // The output dataset
+   fcsub = new TFileCollection(TString::Format("%s_%d_%d", fcref->GetName(), nact, nx),
+                                                           fcref->GetTitle());
+     
    // Order reference sub-collections
-   TList *listref = new TList;
-   listref->SetOwner(kFALSE);
    TIter nxnd(mpnodes);
    TObject *key = 0;
-   TPair *pr = 0;
+   TFileInfo *fi = 0;
    TFileCollection *xfc = 0;
+   TList *lswrks = 0;
    while ((key = nxnd())) {
       TIter nxsrv(mpref);
       TObject *ksrv = 0;
       while ((ksrv = nxsrv())) {
-         if (!strcmp(TUrl(ksrv->GetName()).GetHostFQDN(), TUrl(key->GetName()).GetHostFQDN()))
-            if ((pr = dynamic_cast<TPair *>(mpref->FindObject(ksrv->GetName()))))
-               if ((xfc = dynamic_cast<TFileCollection *>(pr->Value()))) listref->Add(xfc);
-      }
-   }
-   TIter nxfc(mpref);
-   while ((key = nxfc())) {
-      if ((xfc = dynamic_cast<TFileCollection *>(mpref->GetValue(key)))) {
-         if (!listref->FindObject(xfc)) listref->Add(xfc);
-      }
-   }
-   listref->Print();
-
-   // Number of files: 12 per active worker
-   Int_t nf = fNodes->GetNActives() * 2;
-   Printf(" number of files needed (ideally): %d", nf);
-
-   fcsub = new TFileCollection(TString::Format("%s_%d_%d", fcref->GetName(), nact, nx), fcref->GetTitle());
-   TIter nxordfc(listref);
-   TFileInfo *fi = 0;
-   while (nf > 0) {
-      nxordfc.Reset();
-      while ((xfc = (TFileCollection *) nxordfc()) && nf > 0) {
-         if ((fi = (TFileInfo *) xfc->GetList()->First())) {
-            xfc->GetList()->Remove(fi);
-            fcsub->Add(fi);
-            nf--;
+         TUrl urlsrv(ksrv->GetName());
+         if (TString(urlsrv.GetHostFQDN()).IsNull())
+            urlsrv.SetHost(TUrl(gProof->GetMaster()).GetHostFQDN());
+         if (!strcmp(urlsrv.GetHostFQDN(), TUrl(key->GetName()).GetHostFQDN())) {
+            if ((xfc = dynamic_cast<TFileCollection *>(mpref->GetValue(ksrv)))) {
+               if ((lswrks = dynamic_cast<TList *>(mpnodes->GetValue(key)))) {
+                  Int_t nfnd = fFilesPerWrk * lswrks->GetSize();
+                  while (nfnd-- && xfc->GetList()->GetSize() > 0) {
+                     if ((fi = (TFileInfo *) xfc->GetList()->First())) {
+                        xfc->GetList()->Remove(fi);
+                        fcsub->Add(fi);
+                     }
+                  }
+               } else {
+                  Warning("GetDataSet", "could not attach to worker list for node '%s'",
+                                        key->GetName());
+               }
+            } else {
+               Warning("GetDataSet", "could not attach to file collection for server '%s'",
+                                     ksrv->GetName());
+            }
          }
       }
    }
+
    // Update counters
    fcsub->Update();
    fcsub->Print();
 
    // Cleanup
    SafeDelete(fcref);
-   SafeDelete(listref);
    SafeDelete(mpref);
    // Done
    return fcsub;
