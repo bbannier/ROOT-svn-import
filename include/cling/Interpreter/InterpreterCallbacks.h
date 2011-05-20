@@ -18,10 +18,7 @@ namespace cling {
     Interpreter* m_Interpreter;
   public:
     InterpreterCallbacks(Interpreter* interp) : m_Interpreter(interp){}
-    virtual ~InterpreterCallbacks() {
-      delete m_Interpreter;
-      m_Interpreter = 0;
-    }
+    virtual ~InterpreterCallbacks() {}
 
     /// \brief This callback is invoked whenever the interpreter needs to
     /// resolve the type and the adress of an object, which has been marked for
