@@ -166,6 +166,8 @@ namespace cling {
   }
   
   void DynamicExprTransformer::Initialize() {
+    // include the DynamicLookup specific builtins
+    m_Interpreter->processLine("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
     TemplateDecl* D 
       = cast_or_null<TemplateDecl>(m_Interpreter->LookupDecl("cling").
                                    LookupDecl("runtime").
@@ -806,7 +808,7 @@ namespace cling {
   }
 
   void DynamicExprTransformer::AttachDynIDHandler() {
-    if (!m_DynIDHandler.get()) {
+    if (!m_DynIDHandler) {
       m_DynIDHandler.reset(new DynamicIDHandler(m_Sema));
     }
 

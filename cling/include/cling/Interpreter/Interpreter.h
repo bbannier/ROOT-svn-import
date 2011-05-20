@@ -121,7 +121,9 @@ namespace cling {
     int executeFile(const std::string& fileWithArgs);
     clang::QualType getQualType(llvm::StringRef type);
     
-    bool setDynamicLookup(bool value = true);
+    void enableDynamicLookup(bool value = true);
+    bool isDynamicLookupEnabled();
+
     bool isPrintingAST() { return m_printAST; }
     void enablePrintAST(bool print = true);
     
@@ -162,7 +164,7 @@ namespace cling {
   public:
     Value Evaluate(const char* expr, clang::DeclContext* DC);
     NamedDeclResult LookupDecl(llvm::StringRef Decl, clang::DeclContext* Within = 0);
-    void enableRuntimeCallbacks(bool Enable = true);
+    void setCallbacks(InterpreterCallbacks* C);
   };
   
 } // namespace cling

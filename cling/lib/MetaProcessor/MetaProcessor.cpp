@@ -215,13 +215,13 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    if (cmd == "dynamicExtensions") {
      if (param.empty()) {
        // toggle:
-       bool dynlookup = !m_Interp.setDynamicLookup(true);
-       m_Interp.setDynamicLookup(dynlookup);
+       bool dynlookup = !m_Interp.isDynamicLookupEnabled();
+       m_Interp.enableDynamicLookup(dynlookup);
        printf("%ssing dynamic lookup extensions\n", dynlookup?"U":"Not u");
      } else if (param == "1") {
-       m_Interp.setDynamicLookup(true);
+       m_Interp.enableDynamicLookup(true);
      } else if (param == "0") {
-       m_Interp.setDynamicLookup(false);
+       m_Interp.enableDynamicLookup(false);
      } else {
        fprintf(stderr, ".dynamicExtensions: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
      }

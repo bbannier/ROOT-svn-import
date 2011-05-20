@@ -6,11 +6,20 @@
 #ifndef __CLING__
 #error "This file must not be included by compiled programs."
 #endif
+
 #ifdef CLING_RUNTIME_UNIVERSE_H
 #error "CLING_RUNTIME_UNIVERSE_H Must only include once."
 #endif
 
 #define CLING_RUNTIME_UNIVERSE_H
+
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS // needed by System/DataTypes.h
+#endif
+
+#ifndef __STDC_CONSTANT_MACROS
+#define __STDC_CONSTANT_MACROS // needed by System/DataTypes.h
+#endif
 
 namespace cling {
 

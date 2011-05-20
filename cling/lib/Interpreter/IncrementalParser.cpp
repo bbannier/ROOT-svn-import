@@ -84,8 +84,8 @@ namespace cling {
                                        int argc,
                                        const char* const *argv,
                                        const char* llvmdir):
-    m_Enabled(true),
-    m_Consumer(0), 
+    m_DynamicLookupEnabled(false),
+    m_Consumer(0),
     m_LastTopLevelDecl(0),
     m_FirstTopLevelDecl(0),
     m_UsingStartupPCH(false)
@@ -120,11 +120,12 @@ namespace cling {
     //  SC->InitializeSema(CI->getSema()); // do we really need this? We know 
     // that we will have ChainedASTConsumer, which is initialized in createCI
     
-    // Create the visitor that will transform all dependents that are left.
-    m_Transformer.reset(new DynamicExprTransformer(interp, &CI->getSema()));
     // Attach the DynamicIDHandler if enabled
-    if (m_Enabled)
+    if (m_DynamicLookupEnabled) {
+      // Create the visitor that will transform all dependents that are left.
+      m_Transformer.reset(new DynamicExprTransformer(interp, &CI->getSema()));
       getTransformer()->AttachDynIDHandler();
+    }
   }
   
   IncrementalParser::~IncrementalParser() {}
@@ -139,11 +140,12 @@ namespace cling {
       // Make sure that the universe won't be included to compile time by using
       // -D __CLING__ as CompilerInstance's arguments
       parse("#include \"cling/Interpreter/RuntimeUniverse.h\"");
-      parse("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
+      //parse("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
     }
-    
+
     // Attach the dynamic lookup
-    getTransformer()->Initialize();
+    if (isDynamicLookupEnabled())
+      getTransformer()->Initialize();
   }
 
   void IncrementalParser::loadStartupPCH(const char* filename) {
@@ -160,7 +162,7 @@ namespace cling {
                                  0, /* deserialization listener */
                                  Preamble
                                  )
-                                                 );
+                                                  );
     if (EAS) {
        m_CI->getASTContext().setExternalSource(EAS);
        m_UsingStartupPCH = true;
@@ -193,7 +195,7 @@ namespace cling {
   }
 
   clang::CompilerInstance*
-   IncrementalParser::parse(llvm::StringRef src)
+  IncrementalParser::parse(llvm::StringRef src)
   {
     // Add src to the memory buffer, parse it, and add it to
     // the AST. Returns the CompilerInstance (and thus the AST).
@@ -243,7 +245,7 @@ namespace cling {
             m_FirstTopLevelDecl = *i;
           
           m_LastTopLevelDecl = *i;
-          if (m_Enabled)
+          if (isDynamicLookupEnabled())
             getTransformer()->Visit(m_LastTopLevelDecl);
         } 
         Consumer->HandleTopLevelDecl(DGR);
@@ -278,15 +280,24 @@ namespace cling {
     return m_CI.get();
   }
 
-  void IncrementalParser::setEnabled(bool value) {
-    m_Enabled = value;
-    if (m_Enabled)
+  void IncrementalParser::enableDynamicLookup(bool value) {
+    m_DynamicLookupEnabled = value;
+    if (isDynamicLookupEnabled())
       getTransformer()->AttachDynIDHandler();
     else
-      getTransformer()->DetachDynIDHandler();    
+      getTransformer()->DetachDynIDHandler();
   }
 
-   
+  DynamicExprTransformer* 
+  IncrementalParser::getOrCreateTransformer(Interpreter* interp) {
+    if (!m_Transformer) {
+      m_Transformer.reset(new DynamicExprTransformer(interp, 
+                                                     &getCI()->getSema()));
+      m_Transformer->Initialize();
+    }
+    return m_Transformer.get();
+  }
+
   void IncrementalParser::emptyLastFunction() {
     // Given a broken AST (e.g. due to a syntax error),
     // replace the last function's body by a null statement.
