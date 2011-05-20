@@ -14,9 +14,12 @@
 
 
 #include "textinput/Editor.h"
+
+#include "textinput/Callbacks.h"
 #include "textinput/History.h"
-#include "textinput/TextInputContext.h"
 #include "textinput/KeyBinding.h"
+#include "textinput/TextInput.h"
+#include "textinput/TextInputContext.h"
 
 #include <algorithm>
 
@@ -359,9 +362,24 @@ namespace textinput {
         // Already done for all commands:
         //CancelSpecialInputMode(R);
         return kPRSuccess;
-      case kCmdHistComplete:
       case kCmdComplete:
+      {
+        std::vector<std::string> completions;
+        TabCompletion* tc = fContext->GetCompletion();
+        if (tc) {
+          bool ret = tc->Complete(Line, Cursor, R, completions);
+          if (ret) {
+            fContext->GetTextInput()->DisplayInfo(completions);
+            fContext->SetCursor(Cursor);
+            return kPRSuccess;
+          }
+        }
+        return kPRError;
+      }
       case kCmdWindowResize:
+        fContext->GetTextInput()->HandleResize();
+        return kPRSuccess;
+      case kCmdHistComplete:
         // Not handled yet, todo.
         return kPRError;
     }

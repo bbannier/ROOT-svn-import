@@ -121,7 +121,7 @@ namespace {
 
 namespace textinput {
   StreamReaderUnix::StreamReaderUnix():
-  fFD(0),fIsTTY(isatty(0)), fHaveInputFocus(false) {
+  fFD(0), fHaveInputFocus(false), fIsTTY(isatty(0)) {
     fOldTIOS = new termios();
     fMyTIOS = new termios();
 #ifdef TCSANOW

@@ -35,8 +35,7 @@ namespace textinput {
     void NotifyResetInput();
     void NotifyError();
     void Detach();
-    void DisplayCompletionOptions(const std::vector<std::string>&
-                                  Options);
+    void DisplayInfo(const std::vector<std::string>& Options);
     
   protected:
     TerminalDisplay(): fWidth(80), fWriteLen(0), fPrevColor(-1) {}

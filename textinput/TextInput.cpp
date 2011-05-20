@@ -31,7 +31,7 @@ namespace textinput {
   fLastReadResult(kRRNone),
   fActive(false)
   {
-    fContext = new TextInputContext(HistFile);
+    fContext = new TextInputContext(this, HistFile);
     fContext->AddDisplay(display);
     fContext->AddReader(reader);
   }
@@ -102,6 +102,7 @@ namespace textinput {
          iE = fContext->GetReaders().end(); iR != iE && nRead < nMax; ++iR) {
       if (IsBlockingUntilEOL() || (*iR)->HavePendingInput()) {
         if ((*iR)->ReadInput(nRead, in)) {
+          fLastKey = in.GetRaw(); // rough approximation
           Editor::Command Cmd = fContext->GetKeyBinding()->ToCommand(in);
           
           if (Cmd.GetKind() == Editor::kCKControl
@@ -211,10 +212,19 @@ namespace textinput {
   }
 
   void
-  TextInput::SetColorizer(Colorizer* C) {
-    fContext->SetColorizer(C);
+  TextInput::SetColorizer(Colorizer* c) {
+    fContext->SetColorizer(c);
   }
 
+  void
+  TextInput::SetCompletion(TabCompletion* tc) {
+    // Set the completion handler.
+    fContext->SetCompletion(tc);
+  }
+  void
+  TextInput::SetFunctionKeyHandler(FunKey* fc) {
+    fContext->SetFunctionKeyHandler(fc);
+  }
   
   void
   TextInput::GrabInputOutput() const {
@@ -240,5 +250,25 @@ namespace textinput {
              std::mem_fun(&Display::Detach));
     
     fActive = false;
+  }
+  
+  void
+  TextInput::DisplayInfo(const std::vector<std::string>& lines) {
+    // Display an informational message at the prompt. Acts like
+    // a pop-up. Used e.g. for tab-completion.
+    
+    // for_each fails to build the reference in GCC 4.1.
+    // Iterate manually instead.
+    for (std::vector<Display*>::const_iterator i = fContext->GetDisplays().begin(),
+         e = fContext->GetDisplays().end(); i != e; ++i) {
+      (*i)->DisplayInfo(lines);
+    }
+  }
+
+  void
+  TextInput::HandleResize() {
+    // Resize signal was emitted, tell the displays.
+    for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
+             std::mem_fun(&Display::NotifyWindowChange));
   }
 }

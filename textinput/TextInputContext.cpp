@@ -22,9 +22,11 @@
 #include "textinput/History.h"
 #include "textinput/Color.h"
 
-textinput::TextInputContext::TextInputContext(const char* HistFile):
-fBind(0), fEdit(0), fSignal(0), fColor(0), fHist(0), fCursor(0) {
-  fHist = new History(HistFile);
+textinput::TextInputContext::TextInputContext(TextInput* ti,
+                                              const char* histFile):
+fTextInput(ti), fBind(0), fEdit(0), fSignal(0), fColor(0), fHist(0), fCursor(0),
+fTabCompletion(0), fFunKey(0) {
+  fHist = new History(histFile);
   fEdit = new Editor(this);
   fBind = new KeyBinding();
   fSignal = new SignalHandler();
@@ -34,7 +36,6 @@ textinput::TextInputContext::~TextInputContext() {
   delete fBind;
   delete fEdit;
   delete fSignal;
-  delete fColor;
   delete fHist;
 }
 

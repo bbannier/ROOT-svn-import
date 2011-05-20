@@ -66,8 +66,7 @@ namespace textinput {
   }
 
   void
-  TerminalDisplay::DisplayCompletionOptions(const std::vector<std::string>&
-                                Options) {
+  TerminalDisplay::DisplayInfo(const std::vector<std::string>& Options) {
     char InfoColIdx = GetContext()->GetColorizer()->GetInfoColor();
     WriteRawString("\n", 1);
     for (size_t i = 0, n = Options.size(); i < n; ++i) {
@@ -116,7 +115,7 @@ namespace textinput {
           numThisLine = numToEOL;
         }
         
-        {
+        if (GetContext()->GetColorizer()) {
           // We only write same-color chunks; how long is it?
           const std::vector<char>& Colors = Element.GetColors();
           char ThisColor = Colors[Start];

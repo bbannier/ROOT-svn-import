@@ -26,15 +26,15 @@ namespace textinput {
 
     size_t wEnd = with.fStart + with.fLength;
     if (with.fLength == (size_t) -1) wEnd = (size_t) -1;
-    size_t End = fStart + fLength;
-    if (fLength == (size_t) -1) End = (size_t) -1;
+    size_t end = fStart + fLength;
+    if (fLength == (size_t) -1) end = (size_t) -1;
 
     fStart = PMin(fStart, with.fStart);
-    End = PMax(End, wEnd);
-    if (End == (size_t) -1) {
+    end = PMax(end, wEnd);
+    if (end == (size_t) -1) {
       fLength = (size_t) -1;
     } else {
-      fLength = End - fStart;
+      fLength = end - fStart;
     }
     fPromptUpdate = (EPromptUpdate) (fPromptUpdate | with.fPromptUpdate);
     return *this;
@@ -51,15 +51,15 @@ namespace textinput {
     }
     size_t wEnd = with.fStart + with.fLength;
     if (with.fLength == (size_t) -1) wEnd = (size_t) -1;
-    size_t End = fStart + fLength;
-    if (fLength == (size_t) -1) End = (size_t) -1;
+    size_t end = fStart + fLength;
+    if (fLength == (size_t) -1) end = (size_t) -1;
 
     fStart = PMax(fStart, with.fStart);
-    End = PMin(End, wEnd);
-    if (End == (size_t) -1) {
+    end = PMin(end, wEnd);
+    if (end == (size_t) -1) {
       fLength = (size_t) -1;
     } else {
-      fLength = End - fStart;
+      fLength = end - fStart;
     }
     return *this;
   }

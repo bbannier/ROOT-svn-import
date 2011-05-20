@@ -33,6 +33,7 @@ namespace textinput {
     
     const std::string& GetText() const { return fString; }
     const std::vector<char>& GetColors() const { return fColor; }
+    std::vector<char>& GetColors() { return fColor; }
     char GetColor(size_t i) const { return fColor[i]; }
     size_t length() const { return fColor.size(); }
     bool empty() const { return fColor.empty(); }
@@ -57,7 +58,11 @@ namespace textinput {
     void
     SetColor(const Range &R, char C) {
       // Set colors of characters in range R to C.
-      std::fill_n(fColor.begin() + R.fStart, R.fLength, C);
+      size_t len = R.fLength;
+      if (len == (size_t) -1) {
+        len = length() - R.fStart;
+      }
+      std::fill_n(fColor.begin() + R.fStart, len, C);
     }
     
     char operator[](size_t i) const { return fString[i]; }

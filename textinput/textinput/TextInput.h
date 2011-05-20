@@ -16,13 +16,16 @@
 #define TEXTINPUT_TEXTINPUT_H
 
 #include <string>
+#include <vector>
 
 namespace textinput {
-  class TextInputContext;
-  class Reader;
+  class Colorizer;
   class Display;
   class EditorRange;
-  class Colorizer;
+  class FunKey;
+  class Reader;
+  class TextInputContext;
+  class TabCompletion;
 
   // Main interface to textinput library.
   class TextInput {
@@ -37,7 +40,7 @@ namespace textinput {
     };
 
     TextInput(Reader& reader, Display& display,
-              const char* HistFile = 0);
+              const char* histFile = 0);
     ~TextInput();
 
     // Getters
@@ -49,9 +52,11 @@ namespace textinput {
     bool IsBlockingUntilEOL() const { return fMaxChars == 0; }
 
     // Setters
-    void SetPrompt(const char* P);
+    void SetPrompt(const char* p);
     void HideInput(bool hidden = true) { fHidden = hidden; }
-    void SetColorizer(Colorizer* C);
+    void SetColorizer(Colorizer* c);
+    void SetCompletion(TabCompletion* tc);
+    void SetFunctionKeyHandler(FunKey* fc);
     
     void SetMaxPendingCharsToRead(size_t nMax) { fMaxChars = nMax; }
     void SetReadingAllPendingChars() { fMaxChars = (size_t) -1; }
@@ -60,6 +65,7 @@ namespace textinput {
     // Read interface
     EReadResult ReadInput();
     EReadResult GetReadState() const { return fLastReadResult; }
+    char GetLastKey() const { return fLastKey; }
     const std::string& GetInput();
     void TakeInput(std::string& input); // Take and reset input
     bool AtEOL() const { return fLastReadResult == kRRReadEOLDelimiter || AtEOF(); }
@@ -67,15 +73,18 @@ namespace textinput {
     bool HavePendingInput() const;
     
     // Display interface
-    void UpdateDisplay(const EditorRange& R);
+    void UpdateDisplay(const EditorRange& r);
+    void DisplayInfo(const std::vector<std::string>& lines);
+    void HandleResize();
     
     void GrabInputOutput() const;
     void ReleaseInputOutput() const;
     
   private:
-    void EmitSignal(char C, EditorRange& R);
+    void EmitSignal(char c, EditorRange& r);
     
     bool fHidden; // whether input should be shown
+    char fLastKey; // most recently read key
     size_t fMaxChars; // Num chars to read; 0 for blocking, -1 for all available
     EReadResult fLastReadResult; // current input state
     TextInputContext* fContext; // context object

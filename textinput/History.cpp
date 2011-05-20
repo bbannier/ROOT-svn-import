@@ -73,7 +73,7 @@ namespace textinput {
       // Prune!
       fHistFile.seekp(0);
       size_t nPrune = fPruneLength;
-      if (nPrune == kPruneLengthMaxDepth) {
+      if (nPrune == (size_t)kPruneLengthMaxDepth) {
         nPrune = fMaxDepth;
       }
       for (size_t Idx = fEntries.size() - nPrune,
