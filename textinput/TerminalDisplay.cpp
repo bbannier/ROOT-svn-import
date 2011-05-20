@@ -71,9 +71,10 @@ namespace textinput {
     WriteRawString("\n", 1);
     for (size_t i = 0, n = Options.size(); i < n; ++i) {
       Text t(Options[i], infoColIdx);
-      WriteWrappedElement(Options[i], 0, 0, (size_t) -1);
+      WriteWrappedElement(t, 0, 0, (size_t) -1);
       WriteRawString("\n", 1);
     }
+    fWritePos.fLine = 0; // No need to move up anywhere.
   }
   
   void
