@@ -12,14 +12,6 @@
 
 #define CLING_DYNAMIC_LOOKUP_RUNTIME_UNIVERSE_H
 
-#ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS // needed by System/DataTypes.h
-#endif
-
-#ifndef __STDC_CONSTANT_MACROS
-#define __STDC_CONSTANT_MACROS // needed by System/DataTypes.h
-#endif
-
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/ValuePrinter.h"
 #include "cling/Interpreter/Value.h"
@@ -59,9 +51,9 @@ namespace cling {
       /// evaluated at runtime
       template<typename T>
       T EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
-        gCling->enableRuntimeCallbacks();
+        gCling->enableDynamicLookup();
         Value result(gCling->Evaluate(ExprInfo->getExpr(), DC));
-        gCling->enableRuntimeCallbacks(false);
+        gCling->enableDynamicLookup(false);
         return result.getAs<T>();
       }
 
@@ -69,9 +61,9 @@ namespace cling {
       /// void.
       template<>
       void EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
-        gCling->enableRuntimeCallbacks();
+        gCling->enableDynamicLookup();
         Value result(gCling->Evaluate(ExprInfo->getExpr(), DC));
-        gCling->enableRuntimeCallbacks(false);
+        gCling->enableDynamicLookup(false);
       }
 
       /// \brief LifetimeHandler is used in case of initialization using address

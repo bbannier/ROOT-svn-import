@@ -471,7 +471,9 @@ namespace cling {
     std::vector<Stmt*> stmts;
     CompilerInstance* CI = 0;
     bool haveSemicolon = false;
-    MapTy& Map = m_IncrParser->getTransformer()->getSubstSymbolMap(); // delayed id substitutions
+    MapTy Map;
+    if (m_IncrParser->isDynamicLookupEnabled()) 
+      Map = m_IncrParser->getTransformer()->getSubstSymbolMap(); // delayed id substitutions
     {
       size_t endsrc = src.length();
       while (endsrc && isspace(src[endsrc - 1])) --endsrc;
@@ -534,11 +536,13 @@ namespace cling {
           std::pair<unsigned, unsigned> r = getStmtRangeWithSemicolon(cur_stmt, SM, LO);
           // if the node was marked as artificially dependent the source locations 
           // would be wrong. Recalculate them.
-          MapTy::const_iterator It = Map.find(cur_stmt);
-          if (It != Map.end()) {
-            if (!It->second)
-              continue;
-            r = getStmtRangeWithSemicolon(It->second, SM, LO);                
+          if (isDynamicLookupEnabled()) {
+            MapTy::const_iterator It = Map.find(cur_stmt);
+            if (It != Map.end()) {
+              if (!It->second)
+                continue;
+              r = getStmtRangeWithSemicolon(It->second, SM, LO);                
+            }
           }
 
           stmt_string = std::string(buffer + r.first, r.second - r.first);
@@ -639,13 +643,14 @@ namespace cling {
             std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
             // if the node was marked as artificially dependent the source locations 
             // would be wrong. Recalculate them.
-            MapTy::const_iterator It = Map.find(const_cast<Expr*>(I));
-            if (It != Map.end()) {
-              if (!It->second)
-                continue;
-              r = getStmtRange(It->second, SM, LO);                
+            if (isDynamicLookupEnabled()) {
+              MapTy::const_iterator It = Map.find(const_cast<Expr*>(I));
+              if (It != Map.end()) {
+                if (!It->second)
+                  continue;
+                r = getStmtRange(It->second, SM, LO);                
+              }
             }
-
             finalStmtStr = std::string(VD->getName())  + " = " +
                std::string(buffer + r.first, r.second - r.first) + ";";
             finalExpr = I;
@@ -762,7 +767,8 @@ namespace cling {
     }
 
     // clear the DenseMap
-    Map.clear();
+    if (isDynamicLookupEnabled())
+      Map.clear();
   }
   
   CompilerInstance* Interpreter::compileFile(const std::string& filename,
@@ -958,18 +964,18 @@ namespace cling {
     return Value(val, RetTy.getTypePtrOrNull());
   }
 
-  void Interpreter::enableRuntimeCallbacks(bool Enabled /*=true*/) {
-    InterpreterCallbacks* C = 0;
-    if (Enabled)
-      C = new InterpreterCallbacks(this);
-
-    m_IncrParser->getTransformer()->SetRuntimeCallbacks(C);
+  void Interpreter::setCallbacks(InterpreterCallbacks* C) {
+    m_IncrParser->getOrCreateTransformer(this)->AttachDynIDHandler();
+    enableDynamicLookup(true);
+    m_IncrParser->getTransformer()->SetCallbacks(C);
   }
 
-  bool Interpreter::setDynamicLookup(bool value /*=true*/){
-    bool prev = m_IncrParser->getEnabled();
-    m_IncrParser->setEnabled(value);
-    return prev;
+  void Interpreter::enableDynamicLookup(bool value /*=true*/) {
+    m_IncrParser->enableDynamicLookup(value);
+  }
+
+  bool Interpreter::isDynamicLookupEnabled() {
+    return m_IncrParser->isDynamicLookupEnabled();
   }
 
   void Interpreter::enablePrintAST(bool print /*=true*/) {

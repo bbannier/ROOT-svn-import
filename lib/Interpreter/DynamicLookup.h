@@ -247,7 +247,7 @@ namespace cling {
     ASTNodeInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr* Node);
     void AttachDynIDHandler();
     void DetachDynIDHandler();
-    void SetRuntimeCallbacks(InterpreterCallbacks* C) {
+    void SetCallbacks(InterpreterCallbacks* C) {
       m_DynIDHandler->Callbacks = C;
     }
     

@@ -49,14 +49,17 @@ namespace cling {
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
     clang::CompilerInstance* parse(llvm::StringRef src);
-    
+
     MutableMemoryBuffer* getCurBuffer() {
       return m_MemoryBuffer.back();
     }
-    
-    void setEnabled(bool value = true);
-    bool getEnabled() { return m_Enabled; }
-    DynamicExprTransformer *getTransformer() const { return m_Transformer.get(); }
+
+    void enableDynamicLookup(bool value = true);
+    bool isDynamicLookupEnabled() { 
+      return m_DynamicLookupEnabled; 
+    }
+    DynamicExprTransformer* getTransformer() const { return m_Transformer.get(); }
+    DynamicExprTransformer* getOrCreateTransformer(Interpreter* interp);
     
     void emptyLastFunction();
     clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
@@ -72,7 +75,7 @@ namespace cling {
 
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
-    bool m_Enabled; // enable/disable dynamic scope
+    bool m_DynamicLookupEnabled; // enable/disable dynamic scope
     llvm::OwningPtr<DynamicExprTransformer> m_Transformer; // delayed id lookup
     std::vector<MutableMemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
     clang::FileID m_MBFileID; // file ID of the memory buffer
