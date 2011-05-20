@@ -53,8 +53,7 @@ namespace textinput {
     virtual void NotifyResetInput() {} // The input was "taken", next prompt
     virtual void NotifyError() {} // An error occurred
     virtual void NotifyWindowChange() {} // The window's dimensions changed
-    virtual void DisplayCompletionOptions(const std::vector<std::string>&
-                                          Options) = 0;
+    virtual void DisplayInfo(const std::vector<std::string>& Options) = 0;//Info
     virtual void Attach() {} // Take control e.g. of the terminal
     virtual void Detach() {} // Allow others to control terminal's parameters
     

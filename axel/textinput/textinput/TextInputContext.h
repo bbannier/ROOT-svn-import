@@ -20,26 +20,34 @@
 #include "textinput/Text.h"
 
 namespace textinput {
-  class Reader;
-  class Display;
-  class KeyBinding;
-  class Editor;
-  class SignalHandler;
   class Colorizer;
+  class Display;
+  class Editor;
+  class FunKey;
   class History;
+  class KeyBinding;
+  class Reader;
+  class SignalHandler;
+  class TabCompletion;
+  class TextInput;
 
   // Context for textinput library. Collection of internal objects.
   class TextInputContext {
   public:
-    TextInputContext(const char* HistFile);
+    TextInputContext(TextInput* ti, const char* histFile);
     ~TextInputContext();
 
+    TextInput* GetTextInput() const { return fTextInput; }
     KeyBinding* GetKeyBinding() const { return fBind; }
     Editor* GetEditor() const { return fEdit; }
     SignalHandler* GetSignalHandler() const { return fSignal; }
     Colorizer* GetColorizer() const { return fColor; }
-    void SetColorizer(Colorizer* C) { fColor = C; }
     History* GetHistory() const { return fHist; }
+    TabCompletion* GetCompletion() const { return fTabCompletion; }
+    FunKey* GetFunctionKeyHandler() const { return fFunKey; }
+    void SetColorizer(Colorizer* C) { fColor = C; }
+    void SetCompletion(TabCompletion* tc) { fTabCompletion = tc; }
+    void SetFunctionKeyHandler(FunKey* fc) { fFunKey = fc; }
 
     const Text& GetPrompt() const { return fPrompt; }
     Text& GetPrompt() { return fPrompt; }
@@ -60,11 +68,14 @@ namespace textinput {
   private:
     std::vector<Reader*> fReaders; // readers to use
     std::vector<Display*> fDisplays; // displays to write to
+    TextInput* fTextInput; // Main textinput object
     KeyBinding* fBind; // key binding to use
     Editor* fEdit; // editor to use
     SignalHandler* fSignal; // signal handler to use
     Colorizer* fColor; // colorizer to use
     History* fHist; // history to use
+    TabCompletion* fTabCompletion; // Tab completion handler
+    FunKey* fFunKey; // Function key handler
     Text fPrompt; // current prompt
     Text fLine; // current input
     size_t fCursor; // input cursor position in fLine
