@@ -46,9 +46,11 @@ namespace textinput {
     const TextInputContext* GetContext() const { return fContext; }
     void SetContext(TextInputContext* C) { fContext = C; }
 
-    virtual void Redraw() { NotifyTextChange(Range::AllWithPrompt()); };
+    virtual void Redraw(bool hidden) {
+      NotifyTextChange(Range::AllWithPrompt(), hidden);
+    };
 
-    virtual void NotifyTextChange(Range r) = 0; // Update the displayed text
+    virtual void NotifyTextChange(Range r, bool hidden) = 0; // Update the displayed text
     virtual void NotifyCursorChange() {} // Move the cursor
     virtual void NotifyResetInput() {} // The input was "taken", next prompt
     virtual void NotifyError() {} // An error occurred

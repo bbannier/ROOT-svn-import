@@ -18,6 +18,7 @@
 #include "textinput/TerminalDisplayUnix.h"
 
 #include "textinput/Color.h"
+#include "textinput/TextInput.h"
 
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -241,7 +242,8 @@ namespace textinput {
 #endif
     
     fIsAttached = true;
-    NotifyTextChange(Range::AllWithPrompt());
+    NotifyTextChange(Range::AllWithPrompt(),
+                     GetContext()->GetTextInput()->IsInputHidden());
   }
   
   void

@@ -30,7 +30,7 @@ namespace textinput {
     ~TerminalDisplay();
     static TerminalDisplay* Create();
 
-    void NotifyTextChange(Range r);
+    void NotifyTextChange(Range r, bool hidden);
     void NotifyCursorChange();
     void NotifyResetInput();
     void NotifyError();
@@ -60,7 +60,7 @@ namespace textinput {
     virtual void MoveLeft(size_t nCols = 1) = 0;
     virtual void MoveRight(size_t nCols = 1) = 0;
     virtual void MoveFront() = 0;
-    size_t WriteWrapped(Range::EPromptUpdate PromptUpdate,
+    size_t WriteWrapped(Range::EPromptUpdate PromptUpdate, bool hidden,
                         size_t offset, size_t len = (size_t)-1);
     size_t WriteWrappedElement(const Text& what, size_t TextOffset,
                                size_t WriteOffset, size_t Requested);

@@ -169,9 +169,10 @@ namespace textinput {
       fContext->GetColorizer()->ProcessTextChange(ColModR, fContext->GetLine());
     }
     if (!ColModR.fDisplay.IsEmpty() || ColModR.fDisplay.fPromptUpdate) {
-      std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
-                    std::bind2nd(std::mem_fun(&Display::NotifyTextChange),
-                                 ColModR.fDisplay));
+      for (std::vector<Display*>::const_iterator i = fContext->GetDisplays().begin(),
+           e = fContext->GetDisplays().end(); i != e; ++i) {
+        (*i)->NotifyTextChange(ColModR.fDisplay, IsInputHidden());
+      }
     }
   }
 
@@ -206,9 +207,10 @@ namespace textinput {
       fContext->GetColorizer()->ProcessPromptChange(fContext->GetPrompt());
     }
     if (!fActive) return;
-    std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
-                  std::bind2nd(std::mem_fun(&Display::NotifyTextChange),
-                               Range::AllWithPrompt()));
+    for (std::vector<Display*>::const_iterator i = fContext->GetDisplays().begin(),
+         e = fContext->GetDisplays().end(); i != e; ++i) {
+      (*i)->NotifyTextChange(Range::AllWithPrompt(), IsInputHidden());
+    }
   }
 
   void

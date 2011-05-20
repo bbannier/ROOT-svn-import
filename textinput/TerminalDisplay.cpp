@@ -39,9 +39,9 @@ namespace textinput {
   }
   
   void
-  TerminalDisplay::NotifyTextChange(Range r) {
+  TerminalDisplay::NotifyTextChange(Range r, bool hidden) {
     Attach();
-    WriteWrapped(r.fPromptUpdate, r.fStart, r.fLength);
+    WriteWrapped(r.fPromptUpdate, hidden, r.fStart, r.fLength);
     Move(GetCursor());
   }
   
@@ -169,7 +169,7 @@ namespace textinput {
   }
 
   size_t
-  TerminalDisplay::WriteWrapped(Range::EPromptUpdate PromptUpdate,
+  TerminalDisplay::WriteWrapped(Range::EPromptUpdate PromptUpdate, bool hidden,
                                 size_t Offset, size_t Requested /* = -1*/) {
     Attach();
 
@@ -196,7 +196,16 @@ namespace textinput {
       Move(IndexToPos(PromptLen + EditorPromptLen + Offset));
     }
 
-    size_t avail = WriteWrappedElement(GetContext()->GetLine(), Offset, PromptLen + EditorPromptLen, Requested);
+    size_t avail = 0;
+    if (hidden) {
+      // '*' are nice but less secure for password (length will be known).
+      // Text hide(std::string(GetContext()->GetLine().length(), '*'), 0);
+      // avail = WriteWrappedElement(hide, Offset,
+      //                             PromptLen + EditorPromptLen, Requested);
+    } else {
+      avail = WriteWrappedElement(GetContext()->GetLine(), Offset,
+                                       PromptLen + EditorPromptLen, Requested);
+    }
     fWriteLen = PromptLen + EditorPromptLen + GetContext()->GetLine().length();
     return avail;
   }

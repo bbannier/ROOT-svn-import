@@ -76,6 +76,7 @@ int main (int argc, const char * argv[]) {
     }
     TI.TakeInput(line);
     printf("INPUT: --BEGIN--%s--END--\n", line.c_str());
+    if (line == "h") TI.HideInput(!TI.IsInputHidden());
   } while (!TI.AtEOF() && line != ".q");
 
   delete R;
