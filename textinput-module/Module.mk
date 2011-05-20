@@ -18,11 +18,12 @@ TEXTINPUTDS       := $(call stripsrc,$(MODDIRS)/G__TextInput.cxx)
 TEXTINPUTDO       := $(TEXTINPUTDS:.cxx=.o)
 TEXTINPUTDH       := $(TEXTINPUTDS:.cxx=.h)
 
-TEXTINPUTH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h \
-		$(MODDIRI)/textinput/*.h))
-TEXTINPUTS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx \
-		$(MODDIRS)/*.cpp))
-TEXTINPUTO        := $(call stripsrc,$(subst .cpp,.o,$(TEXTINPUTS:.cxx=.o)))
+LTEXTINPUTS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/textinput/*.cpp))
+LTEXTINPUTO       := $(call stripsrc,$(LTEXTINPUTS:.cpp=.o))
+
+TEXTINPUTH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
+TEXTINPUTS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
+TEXTINPUTO        := $(call stripsrc,$(TEXTINPUTS:.cxx=.o)) $(LTEXTINPUTO)
 
 TEXTINPUTDEP      := $(TEXTINPUTO:.o=.d) $(TEXTINPUTDO:.o=.d)
 
@@ -36,14 +37,11 @@ INCLUDEFILES += $(TEXTINPUTDEP)
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
 include/%.h:    $(TEXTINPUTDIRI)/%.h
-		@(if [ ! -d "include/textinput" ]; then     \
-		   mkdir -p include/textinput;              \
-		fi)
 		cp $< $@
 
-%.o: %.cpp
+$(LTEXTINPUTO): %.o: %.cpp
 		$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-		$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
+		$(CXX) $(OPT) $(CXXFLAGS) -I$(TEXTINPUTDIRS) $(CXXOUT)$@ -c $<
 
 $(TEXTINPUTDS):      $(TEXTINPUTH) $(TEXTINPUTL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
@@ -60,4 +58,4 @@ distclean-$(MODNAME): clean-$(MODNAME)
 
 distclean::     distclean-$(MODNAME)
 
-CXXFLAGS += -I$(TEXTINPUTDIRS)
+$(TEXTINPUTO): CXXFLAGS += -I$(TEXTINPUTDIRS)
