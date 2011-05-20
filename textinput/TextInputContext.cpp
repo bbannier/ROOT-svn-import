@@ -24,8 +24,8 @@
 
 textinput::TextInputContext::TextInputContext(TextInput* ti,
                                               const char* histFile):
-fTextInput(ti), fBind(0), fEdit(0), fSignal(0), fColor(0), fHist(0), fCursor(0),
-fTabCompletion(0), fFunKey(0) {
+fTextInput(ti), fBind(0), fEdit(0), fSignal(0), fColor(0), fHist(0),
+fTabCompletion(0), fFunKey(0), fCursor(0) {
   fHist = new History(histFile);
   fEdit = new Editor(this);
   fBind = new KeyBinding();
