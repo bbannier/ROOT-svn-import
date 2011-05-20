@@ -35,7 +35,7 @@ namespace textinput {
     const std::vector<char>& GetColors() const { return fColor; }
     std::vector<char>& GetColors() { return fColor; }
     char GetColor(size_t i) const { return fColor[i]; }
-    size_t length() const { return fColor.size(); }
+    size_t length() const { return fString.length(); }
     bool empty() const { return fColor.empty(); }
 
     void insert(size_t pos, char C) {

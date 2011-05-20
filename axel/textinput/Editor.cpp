@@ -42,7 +42,8 @@ namespace textinput {
   
   Range
   Editor::ResetText() {
-    if (!fContext->GetTextInput()->IsInputHidden()) {
+    if (!fContext->GetLine().empty()
+        && !fContext->GetTextInput()->IsInputHidden()) {
       fContext->GetHistory()->AddLine(fContext->GetLine().GetText());
     }
     Range R(0, fContext->GetLine().length());
@@ -368,6 +369,8 @@ namespace textinput {
         return kPRSuccess;
       case kCmdComplete:
       {
+        // Completion happens below current input.
+        ProcessMove(kMoveEnd, R);
         std::vector<std::string> completions;
         TabCompletion* tc = fContext->GetCompletion();
         if (tc) {
