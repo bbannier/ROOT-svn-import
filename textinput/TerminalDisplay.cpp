@@ -67,10 +67,10 @@ namespace textinput {
 
   void
   TerminalDisplay::DisplayInfo(const std::vector<std::string>& Options) {
-    char InfoColIdx = GetContext()->GetColorizer()->GetInfoColor();
+    char infoColIdx = GetContext()->GetColorizer()->GetInfoColor();
     WriteRawString("\n", 1);
     for (size_t i = 0, n = Options.size(); i < n; ++i) {
-      Text t(Options[i], InfoColIdx);
+      Text t(Options[i], infoColIdx);
       WriteWrappedElement(Options[i], 0, 0, (size_t) -1);
       WriteRawString("\n", 1);
     }

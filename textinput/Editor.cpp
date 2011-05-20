@@ -237,6 +237,7 @@ namespace textinput {
         R.fEdit.Extend(Range(posWord, Cursor));
         R.fDisplay.Extend(Range(posWord, Range::End()));
         Line.erase(posWord, Cursor - posWord);
+        fContext->SetCursor(posWord);
         return kPRSuccess;
       }
       case kCmdToggleOverwriteMode:
@@ -253,6 +254,7 @@ namespace textinput {
         R.fDisplay.Extend(Range::AllText());
         AddToPasteBuf(-1, Line.GetText().substr(0, Cursor));
         Line.erase(0, Cursor);
+        fContext->SetCursor(0);
         return kPRSuccess;
       case kCmdPaste:
       {
@@ -369,7 +371,10 @@ namespace textinput {
         if (tc) {
           bool ret = tc->Complete(Line, Cursor, R, completions);
           if (ret) {
-            fContext->GetTextInput()->DisplayInfo(completions);
+            if (!completions.empty()) {
+              fContext->GetTextInput()->DisplayInfo(completions);
+              R.fDisplay.Extend(Range::AllWithPrompt());
+            }
             fContext->SetCursor(Cursor);
             return kPRSuccess;
           }
