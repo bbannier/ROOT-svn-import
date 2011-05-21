@@ -46,27 +46,38 @@ namespace cling {
   class InterpreterCallbacks;
   class Value;
 
+  ///\brief Helper structure used to provide specific context of the evaluated
+  /// expression, when needed.
+  ///
+  /// Consider:
+  /// @code
+  /// int a = 5;
+  /// const char* b = dep->Symbol(a);
+  /// @endcode
+  /// In the particular case we need to pass a context to the evaluator of the
+  /// unknown symbol. The addresses of the items in the context are not known at
+  /// compile time, so they cannot be embedded directly. Instead of that we
+  /// need to create an array of addresses of those context items (mainly
+  /// variables) and insert them into the evaluated expression at runtime
+  /// This information is kept using the syntax: "dep->Symbol(*(int*)@)",
+  /// where @ denotes that the runtime address the variable "a" is needed.
+  ///
   class DynamicExprInfo {
   private:
     const char* m_Cache;
 
-    /// \brief The unknown symbol surrounding environment, which has to be 
-    /// included when replacing a node.
-    ///
-    /// For example:
-    /// @code
-    /// int a = 5;
-    /// const char* b = dep->Symbol(a);
-    /// @endcode
-    /// This information is kept using the syntax: "dep->Symbol(*(int*)@)",
-    /// where @ denotes that the runtime address the variable "a" is needed.
+    /// \brief The expression template.
     const char*  m_Template;
 
-    /// \brief Stores the addresses of the variables that m_Template describes.
+    /// \brief The variable list.
     void** m_Addresses;
   public:
     DynamicExprInfo(const char* templ, void* addresses[]) : 
       m_Cache(0), m_Template(templ), m_Addresses(addresses){}
+
+    ///\brief Performs the insertions of the context in the expression just
+    /// before evaluation. To be used only at runtime.
+    ///
     const char* getExpr();
   };
 
@@ -76,6 +87,10 @@ namespace cling {
   //---------------------------------------------------------------------------
   class Interpreter {
   public:
+
+    ///\brief Implements named parameter idiom - allows the idiom 
+    /// LookupDecl().LookupDecl()...
+    /// 
     class NamedDeclResult {
     private:
       Interpreter* m_Interpreter;
@@ -162,8 +177,22 @@ namespace cling {
     friend class runtime::internal::LifetimeHandler;
     
   public:
+    ///\brief Evaluates given expression within given declaration context.
+    ///
+    /// @param[in] expr The expression.
+    /// @param[in] DC The declaration context in which the expression is going
+    /// to be evaluated.
     Value Evaluate(const char* expr, clang::DeclContext* DC);
+
+    ///\brief Looks up declaration within given declaration context. Does top
+    /// down lookup.
+    ///
+    ///@param[in] Decl Declaration name.
+    ///@param[in] Within Starting declaration context.
+    ///
     NamedDeclResult LookupDecl(llvm::StringRef Decl, clang::DeclContext* Within = 0);
+
+    ///\brief Sets callbacks needed for the dynamic lookup.
     void setCallbacks(InterpreterCallbacks* C);
   };
   
