@@ -20,7 +20,7 @@
 namespace cling {
 
   /// \brief Used to stores the declarations, which are going to be 
-  /// available only at runtime. These are cling runtime builtins
+  /// available only at runtime. These are cling runtime builtins.
   namespace runtime {
 
     /// \brief Provides builtins, which are neccessary for the dynamic scopes 
@@ -38,17 +38,18 @@ namespace cling {
       /// \brief EvaluateT is used to replace all invalid source code that
       /// occurs, when cling's dynamic extensions are enabled.
       ///
-      /// When the interpreter "sees" invalid code it mark it and skip all the 
-      /// semantic checks (like the templates). Afterwards all these marked
+      /// When the interpreter "sees" invalid code it marks it and skip all the
+      /// semantic checks (like with templates). Afterwords all these marked
       /// nodes are replaced with a call to EvaluateT, which makes valid
       /// C++ code. It is templated because it can be used in expressions and 
-      /// T is the type when the evaluated expression.
-      /// @tparam T The type of the evaluated expression
-      /// @param[in] expr The expression that is being replaced
-      /// @param[in] varaddr The addresses of the variables that replaced 
-      /// expression contains
+      /// T is the type of the evaluated expression.
+      ///
+      /// @tparam T The type of the evaluated expression.
+      /// @param[in] ExprInfo Helper structure that keeps information about the
+      /// expression that is being replaced and the addresses of the variables
+      /// that the replaced expression contains.
       /// @param[in] DC The declaration context, in which the expression will be
-      /// evaluated at runtime
+      /// evaluated at runtime.
       template<typename T>
       T EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
         gCling->enableDynamicLookup();
@@ -94,14 +95,15 @@ namespace cling {
       public:
         /// \brief Constructs an expression, which creates the object on the
         /// free store and tells the interpreter to evaluate it.
-        /// @param[in] expr The expression, which will be prepared for 
-        /// evaluation
-        /// @param[in] varadd The addresses of the variables that the expression
-        /// contains
+        ///
+        /// @param[in] ExprInfo Helper structure that keeps information about the
+        /// expression that is being replaced and the addresses of the variables
+        /// that the replaced expression contains.
         /// @param[in] DC The declaration context, in which the expression will 
         /// be evaluated at runtime
         /// @param[in] type The type of the object, which will help to delete
         /// it, when the LifetimeHandler goes out of scope.
+        ///
         LifetimeHandler(DynamicExprInfo* ExprInfo,
                         clang::DeclContext* DC,
                         llvm::StringRef type) {
@@ -115,8 +117,12 @@ namespace cling {
           m_Memory = (void*)res.value.PointerVal;
         }
 
+        ///\brief Returns the created object.
+        void* getMemory() const { return m_Memory; }
+
         /// \brief Clears up the free store, when LifetimeHandler goes out of
         /// scope.
+        ///
         ~LifetimeHandler() {
           std::string str;
           llvm::raw_string_ostream stream(str);
@@ -124,7 +130,6 @@ namespace cling {
           stream.flush();
           gCling->processLine(str);
         }
-        void* getMemory() const { return m_Memory; }
       };
     }
   } // end namespace runtime

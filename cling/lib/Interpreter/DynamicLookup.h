@@ -40,14 +40,14 @@ namespace cling {
     
     /// \brief Provides last resort lookup for failed unqualified lookups
     ///
-    /// If there is failed looku, tell sema to create an artificial declaration
+    /// If there is failed lookup, tell sema to create an artificial declaration
     /// which is of dependent type. So the lookup result is marked as dependent
     /// and the diagnostics are suppressed. After that is's an interpreter's 
     /// responsibility to fix all these fake declarations and lookups. 
-    /// It is done by the DynamicExprTransformer
+    /// It is done by the DynamicExprTransformer.
     ///
-    /// @param[out] R The recovered symbol
-    /// @param[in] S The scope in which the lookup failed
+    /// @param[out] R The recovered symbol.
+    /// @param[in] S The scope in which the lookup failed.
     virtual bool LookupUnqualified(clang::LookupResult& R, clang::Scope* S);
 
   private:
@@ -159,61 +159,57 @@ namespace cling {
     
   private:
 
-    /// \brief Stores the declaration of the EvaluateT function
+    /// \brief Stores the declaration of the EvaluateT function.
     clang::FunctionDecl* m_EvalDecl;
 
-    /// \brief Sema's external source, which provides last resort lookup
+    /// \brief Sema's external source, which provides last resort lookup.
     llvm::OwningPtr<DynamicIDHandler> m_DynIDHandler;
 
     /// \brief Keeps track of the replacements being made. If an AST node is
-    /// changed with another it should be added to the map (newNode->oldNode)
+    /// changed with another it should be added to the map (newNode->oldNode).
     MapTy m_SubstSymbolMap;
 
     /// \brief Stores the actual declaration context, in which declarations are
     /// being visited.
-    clang::DeclContext* m_CurDeclContext; // We need it for Evaluate()
+    clang::DeclContext* m_CurDeclContext;
 
-    /// \brief Stores pointer to cling, mainly used for declaration lookup
+    /// \brief Stores pointer to cling, mainly used for declaration lookup.
     Interpreter* m_Interpreter;
 
-    /// \brief Sema, which is in the core of all the transformations
+    /// \brief Sema, which is in the core of all the transformations.
     clang::Sema* m_Sema;
 
-    /// \brief The ASTContext
+    /// \brief The ASTContext.
     clang::ASTContext& m_Context;
 
-    /// \brief Use instead of clang::SourceRange()
+    /// \brief Use instead of clang::SourceRange().
     clang::SourceRange m_NoRange;
 
-    /// \brief Use instead of clang::SourceLocation() as start location
+    /// \brief Use instead of clang::SourceLocation() as start location.
     clang::SourceLocation m_NoSLoc;
 
-    /// \brief Use instead of clang::SourceLocation() as end location
+    /// \brief Use instead of clang::SourceLocation() as end location.
     clang::SourceLocation m_NoELoc;
     
   public:
-    
+
     typedef clang::DeclVisitor<DynamicExprTransformer> BaseDeclVisitor;
     typedef clang::StmtVisitor<DynamicExprTransformer, ASTNodeInfo> BaseStmtVisitor;
-    
+
     using BaseStmtVisitor::Visit;
-    
-    //Constructors
+
     DynamicExprTransformer(Interpreter* interp, clang::Sema* Sema);
     
-    // Destructors
     ~DynamicExprTransformer() { }
     
     void Initialize();
     MapTy& getSubstSymbolMap() { return m_SubstSymbolMap; }
     
-    // DeclVisitor      
     void Visit(clang::Decl* D);
     void VisitFunctionDecl(clang::FunctionDecl* D);
     void VisitDecl(clang::Decl* D);
     void VisitDeclContext(clang::DeclContext* DC);
     
-    // StmtVisitor
     ASTNodeInfo VisitStmt(clang::Stmt* Node);
     ASTNodeInfo VisitCompoundStmt(clang::CompoundStmt* Node);
     /// \brief Transforms a declaration with initializer of dependent type.
@@ -245,33 +241,87 @@ namespace cling {
     ASTNodeInfo VisitCallExpr(clang::CallExpr* E);
     ASTNodeInfo VisitDeclRefExpr(clang::DeclRefExpr* DRE);
     ASTNodeInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr* Node);
+
+    ///\brief [Creates] and attaches the DynamicIDHandler to Sema.
+    ///
     void AttachDynIDHandler();
+
+    ///\brief Detaches the DynamicIDHandler from Sema.
+    ///
     void DetachDynIDHandler();
+
+    ///\brief Sets callbacks so that DynamicIDHandler can use them, when it sees
+    /// the unknown symbol again at runtime. This time the implementation of the
+    /// LookupObject callback should provide the actual definition of the object
+    /// and the lookup may succeed.
+    ///
+    /// @param[in] C The concrete implementation of the callback interface.
+    ///
     void SetCallbacks(InterpreterCallbacks* C) {
       m_DynIDHandler->Callbacks = C;
     }
     
-    // EvalBuilder
   protected:
+    /// @{
+    /// @name Helpers, which simplify node replacement
+
     clang::FunctionDecl* getEvalDecl() { 
       assert(m_EvalDecl && "EvaluateT not found!");
       return m_EvalDecl; 
     }
+
+    ///\brief Replaces given dependent AST node with an instantiation of 
+    /// EvaluateT with the deduced type.
+    ///
+    /// @param[in] InstTy The deduced type used to create instantiation.
+    /// @param[in] SubTree The AST node or subtree, which is being replaced.
+    ///
     clang::Expr* SubstituteUnknownSymbol(const clang::QualType InstTy, 
                                          clang::Expr* SubTree);
-    clang::CallExpr* BuildEvalCallExpr(clang::QualType type,
+
+    ///\brief Builds the actual call expression, which is put in the place of
+    /// the dependent AST node.
+    ///
+    /// @param[in] InstTy The deduced type used to create instantiation.
+    /// @param[in] SubTree The AST node or subtree, which is being replaced.
+    /// @param[in] CallArgs Proper arguments, which the call will use.
+    ///
+    clang::CallExpr* BuildEvalCallExpr(clang::QualType InstTy,
                                        clang::Expr* SubTree,
                                 clang::ASTOwningVector<clang::Expr*>& CallArgs);
+
+    ///\brief Builds the DynamicExprInfo class with proper info.
+    ///
     clang::Expr* BuildDynamicExprInfo(clang::Expr* SubTree);
 
+    ///\brief Creates cstyle casts a pointer expression to a given qualified
+    /// type.
+    ///
     clang::Expr* ConstructCStyleCasePtrExpr(clang::QualType Ty, uint64_t Ptr);
+
+    ///\brief Creates llvm::StringRef expression class with given const char*
+    /// value.
+    ///
     clang::Expr* ConstructllvmStringRefExpr(const char* Val);
+
+    ///\brief Creates const char* expression from given value.
     clang::Expr* ConstructConstCharPtrExpr(const char* Val);
 
-    // Helper
+    ///\brief Checks if the given node is marked as dependent by us.
+    ///
     bool IsArtificiallyDependent(clang::Expr* Node);
+
+    ///\brief Checks if the given declaration should be examined. It checks
+    /// whether a declaration context marked as dependent contains the
+    /// declaration or the declaration type is not one of those we are looking
+    /// for.
+    ///
     bool ShouldVisit(clang::Decl* D);
+
+    /// \brief Gets all children of a given node.
+    ///
     bool GetChildren(ASTNodes& Children, clang::Stmt* Node);
+    /// @}
   };
 } // end namespace cling
 #endif // CLING_DYNAMIC_LOOKUP_H
