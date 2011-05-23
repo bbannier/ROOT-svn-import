@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 39318)
+--- configure	(revision 39343)
 +++ configure	(working copy)
 @@ -31,6 +31,7 @@
  deprecated_options="         \
@@ -121,7 +121,7 @@ Index: configure
  
 Index: proof/proof/src/TProof.cxx
 ===================================================================
---- proof/proof/src/TProof.cxx	(revision 39318)
+--- proof/proof/src/TProof.cxx	(revision 39343)
 +++ proof/proof/src/TProof.cxx	(working copy)
 @@ -107,7 +107,7 @@
  
@@ -143,7 +143,7 @@ Index: proof/proof/src/TProof.cxx
           }
 Index: proof/proofbench/src/TProofBench.cxx
 ===================================================================
---- proof/proofbench/src/TProofBench.cxx	(revision 39318)
+--- proof/proofbench/src/TProofBench.cxx	(revision 39343)
 +++ proof/proofbench/src/TProofBench.cxx	(working copy)
 @@ -681,7 +681,7 @@
        if (isatty(0) != 0 && isatty(1) != 0) {
@@ -156,7 +156,7 @@ Index: proof/proofbench/src/TProofBench.cxx
              Info("CopyDataSet", "removing dataset '%s' ...", dsetdst);
 Index: proof/proofx/src/TXProofMgr.cxx
 ===================================================================
---- proof/proofx/src/TXProofMgr.cxx	(revision 39318)
+--- proof/proofx/src/TXProofMgr.cxx	(revision 39343)
 +++ proof/proofx/src/TXProofMgr.cxx	(working copy)
 @@ -1296,7 +1296,7 @@
  
@@ -178,7 +178,7 @@ Index: proof/proofx/src/TXProofMgr.cxx
           } else {
 Index: core/meta/src/TCint.cxx
 ===================================================================
---- core/meta/src/TCint.cxx	(revision 39318)
+--- core/meta/src/TCint.cxx	(revision 39347)
 +++ core/meta/src/TCint.cxx	(working copy)
 @@ -647,8 +647,8 @@
  }
@@ -193,7 +193,7 @@ Index: core/meta/src/TCint.cxx
     G__SetGetlineFunc(getlineFunc, histaddFunc);
 Index: core/meta/inc/TCint.h
 ===================================================================
---- core/meta/inc/TCint.h	(revision 39318)
+--- core/meta/inc/TCint.h	(revision 39347)
 +++ core/meta/inc/TCint.h	(working copy)
 @@ -107,8 +107,8 @@
     Long_t  ProcessLineAsynch(const char *line, EErrorCode *error = 0);
@@ -208,7 +208,7 @@ Index: core/meta/inc/TCint.h
     void    ResetGlobals();
 Index: core/meta/inc/TInterpreter.h
 ===================================================================
---- core/meta/inc/TInterpreter.h	(revision 39318)
+--- core/meta/inc/TInterpreter.h	(revision 39347)
 +++ core/meta/inc/TInterpreter.h	(working copy)
 @@ -83,8 +83,8 @@
     virtual Long_t   ProcessLine(const char *line, EErrorCode *error = 0) = 0;
@@ -223,7 +223,7 @@ Index: core/meta/inc/TInterpreter.h
     virtual void     ResetGlobals() = 0;
 Index: core/clib/inc/LinkDef.h
 ===================================================================
---- core/clib/inc/LinkDef.h	(revision 39318)
+--- core/clib/inc/LinkDef.h	(revision 39347)
 +++ core/clib/inc/LinkDef.h	(working copy)
 @@ -11,12 +11,6 @@
  
@@ -240,7 +240,7 @@ Index: core/clib/inc/LinkDef.h
  #pragma link C++ function snprintf(char *, size_t, const char *, ...);
 Index: core/clib/Module.mk
 ===================================================================
---- core/clib/Module.mk	(revision 39318)
+--- core/clib/Module.mk	(revision 39347)
 +++ core/clib/Module.mk	(working copy)
 @@ -19,12 +19,8 @@
  CLIBDH       := $(CLIBDS:.cxx=.h)
@@ -256,9 +256,41 @@ Index: core/clib/Module.mk
  CLIBS2       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
  
  CLIBO        := $(call stripsrc,$(CLIBS1:.c=.o) $(CLIBS2:.cxx=.o))
+Index: core/base/src/TApplication.cxx
+===================================================================
+--- core/base/src/TApplication.cxx	(revision 39347)
++++ core/base/src/TApplication.cxx	(working copy)
+@@ -1096,6 +1096,15 @@
+ }
+ 
+ //______________________________________________________________________________
++Int_t TApplication::TabCompletionHook(char* /*buf*/, int* /*pLoc*/, ostream& /*out*/)
++{
++   // What to do when tab is pressed. Re-implemented by TRint.
++   // See TTabCom::Hook() for meaning of return values.
++   return -1;
++}
++
++
++//______________________________________________________________________________
+ void TApplication::Terminate(Int_t status)
+ {
+    // Terminate the application by call TSystem::Exit() unless application has
+Index: core/base/inc/TApplication.h
+===================================================================
+--- core/base/inc/TApplication.h	(revision 39347)
++++ core/base/inc/TApplication.h	(working copy)
+@@ -154,6 +154,7 @@
+    virtual void    Terminate(Int_t status = 0);       //*SIGNAL*
+    virtual void    KeyPressed(Int_t key);             //*SIGNAL*
+    virtual void    ReturnPressed(char *text );        //*SIGNAL*
++   virtual Int_t   TabCompletionHook(char *buf, int *pLoc, ostream& out);
+ 
+    static Long_t   ExecuteFile(const char *file, Int_t *error = 0, Bool_t keep = kFALSE);
+    static TList   *GetApplications();
 Index: core/rint/src/TRint.cxx
 ===================================================================
---- core/rint/src/TRint.cxx	(revision 39318)
+--- core/rint/src/TRint.cxx	(revision 39347)
 +++ core/rint/src/TRint.cxx	(working copy)
 @@ -40,11 +40,7 @@
  #include "TError.h"
@@ -305,20 +337,50 @@ Index: core/rint/src/TRint.cxx
  
        // strip off '\n' and leading and trailing blanks
        sline = sline.Chop();
+@@ -670,3 +663,14 @@
+ 
+    return ret;
+ }
++
++
++//______________________________________________________________________________
++Int_t TRint::TabCompletionHook(char *buf, int *pLoc, ostream& out)
++{
++   // Forward tab completion request to our TTabCom::Hook().
++   if (gTabCom)
++      return gTabCom->Hook(buf, pLoc, out);
++
++   return -1;
++}
 Index: core/rint/src/TTabCom.cxx
 ===================================================================
---- core/rint/src/TTabCom.cxx	(revision 39318)
+--- core/rint/src/TTabCom.cxx	(revision 39347)
 +++ core/rint/src/TTabCom.cxx	(working copy)
-@@ -165,7 +165,7 @@
- extern "C" int gl_root_tab_hook(char *buf, int /*prompt_width */ ,
-                                 int *pLoc)
- {
+@@ -161,14 +161,6 @@
+ //
+ TTabCom *gTabCom = 0;
+ 
+-
+-extern "C" int gl_root_tab_hook(char *buf, int /*prompt_width */ ,
+-                                int *pLoc)
+-{
 -   return gTabCom ? gTabCom->Hook(buf, pLoc) : -1;
-+   return gTabCom ? gTabCom->Hook(buf, pLoc, cout) : -1;
+-}
+-
+-
+ // ----------------------------------------------------------------------------
+ //
+ //              constructors
+@@ -194,8 +186,6 @@
+    fLastIter = 0;
+ 
+    InitPatterns();
+-
+-   Gl_tab_hook = gl_root_tab_hook;
  }
  
- 
-@@ -1243,6 +1243,7 @@
+ //
+@@ -1243,6 +1233,7 @@
  Int_t TTabCom::Complete(const TRegexp & re,
                          const TSeqCollection * pListOfCandidates,
                          const char appendage[],
@@ -326,7 +388,7 @@ Index: core/rint/src/TTabCom.cxx
                          TString::ECaseCompare cmp)
  {
     // [private]
-@@ -1414,15 +1415,15 @@
+@@ -1414,15 +1405,15 @@
              // (except for those excluded by "FileIgnore")
           {
              IfDebug(cerr << "printing ambiguous matches" << endl);
@@ -345,7 +407,7 @@ Index: core/rint/src/TTabCom.cxx
                 }
              }
              pos = -2;
-@@ -1635,7 +1636,7 @@
+@@ -1635,7 +1626,7 @@
  }
  
  //______________________________________________________________________________
@@ -354,7 +416,7 @@ Index: core/rint/src/TTabCom.cxx
  {
     // [private]
  
-@@ -1670,14 +1671,14 @@
+@@ -1670,14 +1661,14 @@
        {
           const TSeqCollection *pListOfUsers = GetListOfUsers();
  
@@ -371,7 +433,7 @@ Index: core/rint/src/TTabCom.cxx
        }
        break;
  
-@@ -1690,8 +1691,8 @@
+@@ -1690,8 +1681,8 @@
           const TSeqCollection *pListOfFiles =
               GetListOfFilesInPath(filePath.Data());
  
@@ -382,7 +444,7 @@ Index: core/rint/src/TTabCom.cxx
        }
        break;
  
-@@ -1706,14 +1707,14 @@
+@@ -1706,14 +1697,14 @@
           const TSeqCollection *pListOfFiles =
               GetListOfFilesInPath(macroPath.Data());
  
@@ -400,7 +462,7 @@ Index: core/rint/src/TTabCom.cxx
        }
        break;
     case kCINT_includeSYS:
-@@ -1723,14 +1724,14 @@
+@@ -1723,14 +1714,14 @@
              TString includePath =
                  DeterminePath(fileName, GetSysIncludePath());
  
@@ -419,7 +481,7 @@ Index: core/rint/src/TTabCom.cxx
           }
        }
        break;
-@@ -1741,14 +1742,14 @@
+@@ -1741,14 +1732,14 @@
           const TSeqCollection *pListOfFiles =
               GetListOfFilesInPath(includePath.Data());
  
@@ -437,7 +499,7 @@ Index: core/rint/src/TTabCom.cxx
        }
        break;
  
-@@ -1759,8 +1760,8 @@
+@@ -1759,8 +1750,8 @@
           const TString dynamicPath = DeterminePath(fileName,gEnv->GetValue("Root.DynamicPath",(char *) 0));
           const TSeqCollection *pListOfFiles = GetListOfFilesInPath(dynamicPath);
  
@@ -448,7 +510,7 @@ Index: core/rint/src/TTabCom.cxx
        }
        break;
  
-@@ -1770,7 +1771,7 @@
+@@ -1770,7 +1761,7 @@
           const TString filePath = DeterminePath(fileName,".");
           const TSeqCollection *pListOfFiles = GetListOfFilesInPath(filePath.Data());
  
@@ -457,7 +519,7 @@ Index: core/rint/src/TTabCom.cxx
        }
        break;
  
-@@ -1884,7 +1885,7 @@
+@@ -1884,7 +1875,7 @@
                 pList->AddAll(pClass->GetListOfAllPublicDataMembers());
              }
  
@@ -466,7 +528,7 @@ Index: core/rint/src/TTabCom.cxx
  
              delete pList;
              if (pClass)
-@@ -1901,7 +1902,7 @@
+@@ -1901,7 +1892,7 @@
              pList->AddAll(pClass->GetListOfAllPublicMethods());
              pList->AddAll(pClass->GetListOfAllPublicDataMembers());
  
@@ -475,7 +537,7 @@ Index: core/rint/src/TTabCom.cxx
  
              delete pList;
              delete pClass;
-@@ -1956,16 +1957,16 @@
+@@ -1956,16 +1947,16 @@
              {
                 int* store_fpLoc = fpLoc;
                 char* store_fBuf = fBuf;
@@ -495,7 +557,7 @@ Index: core/rint/src/TTabCom.cxx
              break;
           default:
              assert(0);
-@@ -2048,19 +2049,19 @@
+@@ -2048,19 +2039,19 @@
           while ((pMethod = (TMethod *) nextMethod())) {
              if (methodName == pMethod->GetName()) {
                 foundOne = kTRUE;
@@ -518,7 +580,7 @@ Index: core/rint/src/TTabCom.cxx
              pos = -2;
           } else {
              gSystem->Beep();
-@@ -2149,19 +2150,19 @@
+@@ -2149,19 +2140,19 @@
           while ((pMethod = (TMethod *) nextMethod())) {
              if (methodName == pMethod->GetName()) {
                 foundOne = kTRUE;
@@ -541,7 +603,7 @@ Index: core/rint/src/TTabCom.cxx
              pos = -2;
           } else {
              gSystem->Beep();
-@@ -2208,7 +2209,7 @@
+@@ -2208,7 +2199,7 @@
           const TSeqCollection *pC3 = GetListOfGlobalFunctions();
           if (pC3) pList->AddAll(pC3);
  
@@ -550,7 +612,7 @@ Index: core/rint/src/TTabCom.cxx
  
           delete pList;
        }
-@@ -2233,11 +2234,11 @@
+@@ -2233,11 +2224,11 @@
              cerr << endl << "no such function: " << dblquote(functionName)
                  << endl;
           } else {
@@ -566,7 +628,7 @@ Index: core/rint/src/TTabCom.cxx
                     << endl;
 Index: core/rint/inc/TTabCom.h
 ===================================================================
---- core/rint/inc/TTabCom.h	(revision 39318)
+--- core/rint/inc/TTabCom.h	(revision 39347)
 +++ core/rint/inc/TTabCom.h	(working copy)
 @@ -42,6 +42,9 @@
  #ifndef ROOT_TRegExp
@@ -597,9 +659,29 @@ Index: core/rint/inc/TTabCom.h
     void       CopyMatch( char dest[], const char localName[], const char appendage[]=0, const char fullName[]=0 ) const;
     EContext_t DetermineContext() const;
     TString    DeterminePath( const TString& fileName, const char defaultPath[] ) const;
+@@ -231,6 +235,6 @@
+    ClassDef(TTabCom,0)  //Perform comand line completion when hitting <TAB>
+ };
+ 
+-extern TTabCom *gTabCom;
++R__EXTERN TTabCom *gTabCom;
+ 
+ #endif
+Index: core/rint/inc/TRint.h
+===================================================================
+--- core/rint/inc/TRint.h	(revision 39347)
++++ core/rint/inc/TRint.h	(working copy)
+@@ -60,6 +60,7 @@
+    virtual void        Run(Bool_t retrn = kFALSE);
+    virtual void        Terminate(int status);
+            void        Interrupt() { fInterrupt = kTRUE; }
++   virtual Int_t       TabCompletionHook(char *buf, int *pLoc, ostream& out);
+ 
+    ClassDef(TRint,0);  //ROOT Interactive Application Interface
+ };
 Index: cint/cint/src/input.cxx
 ===================================================================
---- cint/cint/src/input.cxx	(revision 39318)
+--- cint/cint/src/input.cxx	(revision 39343)
 +++ cint/cint/src/input.cxx	(working copy)
 @@ -198,7 +198,7 @@
  char *G__input(const char *prompt)
@@ -612,7 +694,7 @@ Index: cint/cint/src/input.cxx
  #endif
 Index: cint/cint/inc/Api.h
 ===================================================================
---- cint/cint/inc/Api.h	(revision 39318)
+--- cint/cint/inc/Api.h	(revision 39343)
 +++ cint/cint/inc/Api.h	(working copy)
 @@ -279,8 +279,8 @@
  /*********************************************************************
@@ -627,7 +709,7 @@ Index: cint/cint/inc/Api.h
  G__EXPORT
 Index: Makefile
 ===================================================================
---- Makefile	(revision 39318)
+--- Makefile	(revision 39343)
 +++ Makefile	(working copy)
 @@ -260,9 +260,7 @@
  ifneq ($(ARCH),win32)
@@ -677,7 +759,7 @@ Index: Makefile
  
 Index: net/krb5auth/src/Krb5Auth.cxx
 ===================================================================
---- net/krb5auth/src/Krb5Auth.cxx	(revision 39318)
+--- net/krb5auth/src/Krb5Auth.cxx	(revision 39343)
 +++ net/krb5auth/src/Krb5Auth.cxx	(working copy)
 @@ -718,10 +718,11 @@
     // Check if the user wants to be prompt about principal
@@ -696,7 +778,7 @@ Index: net/krb5auth/src/Krb5Auth.cxx
     }
 Index: net/auth/src/TAuthenticate.cxx
 ===================================================================
---- net/auth/src/TAuthenticate.cxx	(revision 39318)
+--- net/auth/src/TAuthenticate.cxx	(revision 39343)
 +++ net/auth/src/TAuthenticate.cxx	(working copy)
 @@ -1351,8 +1351,9 @@
           return StrDup("None");
@@ -743,7 +825,7 @@ Index: net/auth/src/TAuthenticate.cxx
     return 0;
 Index: config/Makefile.in
 ===================================================================
---- config/Makefile.in	(revision 39318)
+--- config/Makefile.in	(revision 39343)
 +++ config/Makefile.in	(working copy)
 @@ -335,12 +335,6 @@
  BUILDAFDSMGRD  := @buildafdsmgrd@
