@@ -3,6 +3,9 @@
 // RUN: cat %s | %cling -l | FileCheck %s
 
 #include <cstdlib>
+#include <stdio.h>
+
+.I .
 .L cppmacros_1.C
 #undef MYMACRO
 .L cppmacros_2.C
