@@ -423,8 +423,8 @@ namespace ROOT {
 #endif
          while (inclPath.Tokenize(inclDir, posDelim, pdelim))
          {
-            if (sIncl.BeginsWith(inclDir)) {
-               filename += inclDir.Length();
+            if (sIncl.Contains(inclDir)) {
+              filename += sIncl.Index(inclDir)+ inclDir.Length();
                if (filename[0] == ddelim || filename[0] == '/') {
                   ++filename;
                }

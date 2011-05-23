@@ -382,7 +382,9 @@ install(FILES ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex
               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.csh
               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/root-config
               ${CMAKE_SOURCE_DIR}/cmake/scripts/setenvwrap.csh
-              PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ 
+              PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ 
+                          GROUP_EXECUTE GROUP_READ 
+                          WORLD_EXECUTE WORLD_READ 
               DESTINATION bin)
 
 install(FILES ${CMAKE_BINARY_DIR}/include/RConfigOptions.h

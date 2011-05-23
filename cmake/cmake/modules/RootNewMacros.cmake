@@ -142,16 +142,17 @@ function(ROOT_GENERATE_DICTIONARY dictionary)
   set(headerfiles)
   foreach(fp ${ARG_DEFAULT_ARGS})
     file(GLOB files inc/${fp})
-	if(files)
-	   foreach(f ${files})
-	     if(NOT f MATCHES LinkDef)
-		   set(headerfiles ${headerfiles} ${f})
-		 endif()
-	   endforeach()
-	else()
-	  set(headerfiles ${headerfiles} ${fp})
-	endif()
-  endforeach() 
+    if(files)
+      foreach(f ${files})
+        if(NOT f MATCHES LinkDef)
+          set(headerfiles ${headerfiles} ${f})
+        endif()
+      endforeach()
+    else()
+      set(headerfiles ${headerfiles} ${fp})
+    endif()
+  endforeach()
+  string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/inc/" ""  rheaderfiles "${headerfiles}")
   #---Get the list of include directories------------------
   get_directory_property(incdirs INCLUDE_DIRECTORIES)
   if(CMAKE_PROJECT_NAME STREQUAL ROOT)
@@ -181,7 +182,7 @@ function(ROOT_GENERATE_DICTIONARY dictionary)
   #---call rootcint------------------------------------------
   add_custom_command(OUTPUT ${dictionary}.cxx ${dictionary}.h
                      COMMAND ${rootcint_cmd} -cint -f  ${dictionary}.cxx 
-                                          -c ${ARG_OPTIONS} ${includedirs} ${headerfiles} ${_linkdef} 
+                                          -c ${ARG_OPTIONS} ${includedirs} ${rheaderfiles} ${_linkdef} 
                      DEPENDS ${headerfiles} ${_linkdef} rootcint)
 endfunction()
 
