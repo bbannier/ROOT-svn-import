@@ -1,5 +1,5 @@
-/* @(#)root/textinput:$Id$ */
-/* Author: Axel Naumann, 2011 */
+// @(#)root/textinput:$Id$
+// Author: Axel Naumann <axel@cern.ch>, 2011
 
 /*************************************************************************
  * Copyright (C) 1995-2011, Rene Brun and Fons Rademakers.               *
@@ -16,39 +16,39 @@
 
 namespace ROOT {
 
-// Colorization interface.
-class TextInputColorizer: public textinput::Colorizer {
-public:
-  TextInputColorizer();
-  virtual ~TextInputColorizer();
-  void ProcessTextChange(textinput::EditorRange& Modification,
-                         textinput::Text& input);
+   // Colorization interface.
+   class TextInputColorizer: public textinput::Colorizer {
+   public:
+      TextInputColorizer();
+      virtual ~TextInputColorizer();
+      void ProcessTextChange(textinput::EditorRange& Modification,
+                             textinput::Text& input);
   
-  void ProcessPromptChange(textinput::Text& prompt);
+      void ProcessPromptChange(textinput::Text& prompt);
   
-  void ProcessCursorChange(size_t Cursor, textinput::Text& input,
-                           textinput::Range& DisplayR);
-  bool GetColor(char type, textinput::Color& Col);
-  char GetInfoColor() const { return (char) kColorTabComp; }
+      void ProcessCursorChange(size_t Cursor, textinput::Text& input,
+                               textinput::Range& DisplayR);
+      bool GetColor(char type, textinput::Color& Col);
+      char GetInfoColor() const { return (char) kColorTabComp; }
 
   
-  void SetColors(const char* colorType, const char* colorTabComp,
-                 const char* colorBracket, const char* colorBadBracket,
-                 const char* colorPrompt);
-private:
-  enum EColorsTypes {
-    kColorNone,
-    kColorType,
-    kColorTabComp,
-    kColorBracket,
-    kColorBadBracket,
-    kColorPrompt,
-    kNumColors
-  };
+      void SetColors(const char* colorType, const char* colorTabComp,
+                     const char* colorBracket, const char* colorBadBracket,
+                     const char* colorPrompt);
+   private:
+      enum EColorsTypes {
+         kColorNone,
+         kColorType,
+         kColorTabComp,
+         kColorBracket,
+         kColorBadBracket,
+         kColorPrompt,
+         kNumColors
+      };
 
-  textinput::Color fColors[kNumColors]; // Colors used, indexed by EColorsTypes
-  EColorsTypes fPrevBracketColor; // previous bracket: None or [Bad]Bracket
-};
+      textinput::Color fColors[kNumColors]; // Colors used, indexed by EColorsTypes
+      EColorsTypes fPrevBracketColor; // previous bracket: None or [Bad]Bracket
+   };
 
 }
 

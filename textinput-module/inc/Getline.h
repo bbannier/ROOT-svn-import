@@ -1,8 +1,8 @@
-/* @(#)root/clib:$Id$ */
-/* Author: */
+/* @(#)root/textinput:$Id$ */
+/* Author: Axel Naumann <axel@cern.ch>, 2011-05-21 */
 
 /*************************************************************************
- * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
+ * Copyright (C) 1995-2011, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
  *                                                                       *
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
@@ -36,7 +36,6 @@ int  Gl_eof();
 void Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
                   const char* colorBadBracket, const char* colorPrompt);
 
-R__EXTERN int (*Gl_tab_hook)(char *buf, int prompt_width, int *cursor_loc);
 R__EXTERN int (*Gl_beep_hook)();
 R__EXTERN int (*Gl_in_key)(int key);
   
