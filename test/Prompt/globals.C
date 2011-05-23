@@ -2,6 +2,7 @@
 // RUN: cat %s | %cling -l | FileCheck %s
 
 #include <cstdlib>
+#include <stdio.h>
 int i;
 struct S{int i;};
 i = 42;

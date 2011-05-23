@@ -3,6 +3,8 @@
 # undef MYMACRO
 #endif
 
+extern "C" int printf(const char* fmt, ...);
+
 void MYMACRO(void* i) {
    printf("MYMACRO param=%ld\n", (long)i); // CHECK: MYMACRO param=12
 }
