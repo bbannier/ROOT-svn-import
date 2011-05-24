@@ -1,5 +1,5 @@
-// RUN: echo globalinit\(\"%s\"\) | %cling -l %s 
-// RUN: echo globalinit\(\"%s\"\) |  %cling -l %s | FileCheck %s
+// RUN: %cling %s\(\"%s\"\) 
+// RUN: %cling %s\(\"%s\"\) | FileCheck %s
 
 #include <typeinfo>
 
