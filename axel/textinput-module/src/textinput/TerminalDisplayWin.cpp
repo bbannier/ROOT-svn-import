@@ -47,9 +47,9 @@ namespace textinput {
     // There is no underline since DOS has died.
     if (C.fModifiers & Color::kModUnderline) Attribs |= BACKGROUND_INTENSITY;
     if (C.fModifiers & Color::kModBold) Attribs |= FOREGROUND_INTENSITY;
-    if (C.fR > 63) Attribs |= FOREGROUND_RED;
-    if (C.fG > 63) Attribs |= FOREGROUND_GREEN;
-    if (C.fB > 63) Attribs |= FOREGROUND_BLUE;
+    if (C.fR > 64) Attribs |= FOREGROUND_RED;
+    if (C.fG > 64) Attribs |= FOREGROUND_GREEN;
+    if (C.fB > 64) Attribs |= FOREGROUND_BLUE;
     ::SetConsoleTextAttribute(fOut, Attribs);
   }
 
