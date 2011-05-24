@@ -1,6 +1,6 @@
 // RUN: %cling %s | FileCheck %s
-// XFAIL: *
 #include <cmath>
+#include <stdio.h>
 
 struct S{int i;};
 S s = {12 };
