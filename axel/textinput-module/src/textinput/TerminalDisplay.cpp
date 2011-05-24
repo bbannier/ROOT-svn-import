@@ -20,6 +20,7 @@
 #include "textinput/TerminalDisplayUnix.h"
 #endif
 
+#include "textinput/TextInput.h"
 #include "textinput/Color.h"
 #include "textinput/Text.h"
 #include "textinput/Editor.h"
@@ -39,9 +40,10 @@ namespace textinput {
   }
   
   void
-  TerminalDisplay::NotifyTextChange(Range r, bool hidden) {
+  TerminalDisplay::NotifyTextChange(Range r) {
     Attach();
-    WriteWrapped(r.fPromptUpdate, hidden, r.fStart, r.fLength);
+    WriteWrapped(r.fPromptUpdate,GetContext()->GetTextInput()->IsInputHidden(),
+      r.fStart, r.fLength);
     Move(GetCursor());
   }
   
