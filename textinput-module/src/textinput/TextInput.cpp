@@ -54,7 +54,7 @@ namespace textinput {
     fContext->GetEditor()->ResetText();
 
     // Signal displays that the input got taken.
-    for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
+    std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
              std::mem_fun(&Display::NotifyResetInput));
 
     ReleaseInputOutput();
@@ -112,8 +112,9 @@ namespace textinput {
             EmitSignal(Cmd.GetChar(), R);
           } else if (Cmd.GetKind() == Editor::kCKCommand
             && Cmd.GetCommandID() == Editor::kCmdWindowResize) {
-            for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
-                      std::mem_fun(&Display::NotifyWindowChange));
+            std::for_each(fContext->GetDisplays().begin(),
+                          fContext->GetDisplays().end(),
+                          std::mem_fun(&Display::NotifyWindowChange));
           } else {
             if (!in.IsRaw() && in.GetExtendedInput() == InputData::kEIEOF) {
               fLastReadResult = kRREOF;
@@ -122,8 +123,9 @@ namespace textinput {
               Editor::EProcessResult Res = fContext->GetEditor()->Process(Cmd, R);
               if (Res == Editor::kPRError) {
                 // Signal displays that an error has occurred.
-                for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
-                         std::mem_fun(&Display::NotifyError));
+                std::for_each(fContext->GetDisplays().begin(),
+                              fContext->GetDisplays().end(),
+                              std::mem_fun(&Display::NotifyError));
               } else if (Cmd.GetKind() == Editor::kCKCommand
                     && (Cmd.GetCommandID() == Editor::kCmdEnter || 
                     Cmd.GetCommandID() == Editor::kCmdHistReplay)) {
@@ -169,10 +171,8 @@ namespace textinput {
       fContext->GetColorizer()->ProcessTextChange(ColModR, fContext->GetLine());
     }
     if (!ColModR.fDisplay.IsEmpty() || ColModR.fDisplay.fPromptUpdate) {
-      for (std::vector<Display*>::const_iterator i = fContext->GetDisplays().begin(),
-           e = fContext->GetDisplays().end(); i != e; ++i) {
-        (*i)->NotifyTextChange(ColModR.fDisplay, IsInputHidden());
-      }
+      std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
+                    std::bind2nd(std::mem_fun(&Display::NotifyTextChange), ColModR.fDisplay));
     }
   }
 
@@ -207,10 +207,10 @@ namespace textinput {
       fContext->GetColorizer()->ProcessPromptChange(fContext->GetPrompt());
     }
     if (!fActive) return;
-    for (std::vector<Display*>::const_iterator i = fContext->GetDisplays().begin(),
-         e = fContext->GetDisplays().end(); i != e; ++i) {
-      (*i)->NotifyTextChange(Range::AllWithPrompt(), IsInputHidden());
-    }
+    std::for_each(fContext->GetDisplays().begin(),
+                  fContext->GetDisplays().end(),
+                  std::bind2nd(std::mem_fun(&Display::NotifyTextChange),
+                               Range::AllWithPrompt()));
   }
 
   void
@@ -235,8 +235,8 @@ namespace textinput {
     std::for_each(fContext->GetReaders().begin(), fContext->GetReaders().end(),
                   std::mem_fun(&Reader::GrabInputFocus));
     // Signal displays that we are about to display.
-    for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
-             std::mem_fun(&Display::Attach));
+    std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
+                  std::mem_fun(&Display::Attach));
     fActive = true;
   }
   
@@ -248,8 +248,8 @@ namespace textinput {
                   std::mem_fun(&Reader::ReleaseInputFocus));
     
     // Signal displays that we are done displaying.
-    for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
-             std::mem_fun(&Display::Detach));
+    std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
+                  std::mem_fun(&Display::Detach));
     
     fActive = false;
   }
@@ -259,7 +259,7 @@ namespace textinput {
     // Display an informational message at the prompt. Acts like
     // a pop-up. Used e.g. for tab-completion.
     
-    // for_each fails to build the reference in GCC 4.1.
+    // foreach fails to build the reference in GCC 4.1.
     // Iterate manually instead.
     for (std::vector<Display*>::const_iterator i = fContext->GetDisplays().begin(),
          e = fContext->GetDisplays().end(); i != e; ++i) {
@@ -270,7 +270,7 @@ namespace textinput {
   void
   TextInput::HandleResize() {
     // Resize signal was emitted, tell the displays.
-    for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
+    std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
              std::mem_fun(&Display::NotifyWindowChange));
   }
 }

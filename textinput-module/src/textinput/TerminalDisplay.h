@@ -30,7 +30,7 @@ namespace textinput {
     ~TerminalDisplay();
     static TerminalDisplay* Create();
 
-    void NotifyTextChange(Range r, bool hidden);
+    void NotifyTextChange(Range r);
     void NotifyCursorChange();
     void NotifyResetInput();
     void NotifyError();
