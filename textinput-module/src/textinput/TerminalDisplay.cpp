@@ -149,7 +149,7 @@ namespace textinput {
 
     if (Requested == Available) {
       size_t VisL = fWriteLen / GetWidth();
-      size_t Wrote = Element.length() - TextOffset + WriteOffset;
+      size_t Wrote = WriteOffset + TextOffset + Requested;
       size_t WroteL = Wrote / GetWidth();
       size_t NumToEOL = GetWidth() - (Wrote % GetWidth());
       if (fWriteLen > Wrote && NumToEOL > 0) {
