@@ -460,7 +460,7 @@ void TMVA::TransformationHandler::PlotVariables( const std::vector<Event*>& even
 
    Log() << kINFO << "Plot event variables for ";
    if (theDirectory !=0) Log()<< TString(theDirectory->GetName()) << Endl;
-   else Log()<< " ... I do not really know " << GetName() << Endl;
+   else Log() << GetName() << Endl;
 
    // extension for transformation type
    TString transfType = "";
