@@ -1,8 +1,9 @@
-// RUN: cat %s | %cling -l
-// RUN: cat %s | %cling -l | FileCheck %s
+// RUN: cat %s | %cling
+// RUN: cat %s | %cling | FileCheck %s
 #include <cmath>
+#include <stdio.h>
 
-struct S{int i;};
+struct S{int i;} ss;
 S s = {12 };
 
 struct U{void f() const {};};
