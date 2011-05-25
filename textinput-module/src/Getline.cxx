@@ -188,8 +188,7 @@ Getlinem(EGetLineMode mode, const char* prompt) {
       }
       if (mode == kInit) {
          // Trigger attach:
-         TextInputHolder::get().SetMaxPendingCharsToRead(0);
-         TextInputHolder::get().ReadInput();
+         TextInputHolder::get().Redraw();
          return 0;
       }
       TextInputHolder::get().SetBlockingUntilEOL();

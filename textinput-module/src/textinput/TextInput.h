@@ -73,6 +73,7 @@ namespace textinput {
     bool HavePendingInput() const;
     
     // Display interface
+    void Redraw();
     void UpdateDisplay(const EditorRange& r);
     void DisplayInfo(const std::vector<std::string>& lines);
     void HandleResize();
