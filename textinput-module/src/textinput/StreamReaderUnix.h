@@ -19,8 +19,6 @@
 #include "textinput/StreamReader.h"
 #include <queue>
 
-struct termios;
-
 namespace textinput {
   // Input from a tty, file descriptor, or pipe
   class StreamReaderUnix: public StreamReader {
@@ -38,11 +36,8 @@ namespace textinput {
     int ReadRawCharacter();
     bool ProcessCSI(InputData& in);
 
-    int fFD; // file descriptor
     bool fHaveInputFocus; // whether we configured the tty
     bool fIsTTY; // whether input FD is a tty
-    termios* fOldTIOS; // config before input grabbing
-    termios* fMyTIOS; // my config for input (while active)
     std::queue<char> fReadAheadBuffer; // input chars we read too much (CSI)
   };
 }

@@ -17,23 +17,21 @@
 
 #include "textinput/TerminalDisplayUnix.h"
 
+#include "textinput/TerminalConfigUnix.h"
 #include "textinput/Color.h"
 
+#include <stdio.h>
+// putenv not in cstdlib on Solaris
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <termios.h>
-#include <cstdio>
 #include <csignal>
 #include <cstring>
 #include <sstream>
-// putenv not in cstdlib on Solaris
-#include <stdlib.h>
 
 using std::signal;
-using std::memcpy;
 using std::strstr;
-using std::printf;
-using std::fflush;
 
 namespace {
   textinput::TerminalDisplayUnix*& gTerminalDisplayUnix() {
@@ -95,18 +93,16 @@ extern "C" void TerminalDisplayUnix__handleResizeSignal(int) {
 }
 
 namespace textinput {
+  // If input is not a tty don't write in tty-mode either.
   TerminalDisplayUnix::TerminalDisplayUnix():
-    fFD(1), fIsAttached(false), fNColors(16), fIsTTY(isatty(0)) {
+    fIsAttached(false), fNColors(16),
+    fIsTTY(isatty(fileno(stdin)) && isatty(fileno(stdout))) {
     HandleResizeSignal();
     gTerminalDisplayUnix() = this;
     signal(SIGWINCH, TerminalDisplayUnix__handleResizeSignal);
-    fOldTIOS = new termios();
-    fMyTIOS = new termios();
-#ifdef TCSANOW                  /* POSIX */
-    tcgetattr(fFD, fOldTIOS);
-    memcpy(fMyTIOS, fOldTIOS, sizeof(struct termios));
-    fMyTIOS->c_lflag &= ~(ECHO);
-    fMyTIOS->c_lflag |= ECHOCTL|ECHOKE|ECHOE;
+#ifdef TCSANOW
+    TerminalConfigUnix::Get().TIOS()->c_lflag &= ~(ECHO);
+    TerminalConfigUnix::Get().TIOS()->c_lflag |= ECHOCTL|ECHOKE|ECHOE;
 #endif
     const char* TERM = getenv("TERM");
     if (TERM &&  strstr(TERM, "256")) {
@@ -116,15 +112,13 @@ namespace textinput {
 
   TerminalDisplayUnix::~TerminalDisplayUnix() {
     Detach();
-    delete fOldTIOS;
-    delete fMyTIOS;
   }
   
   void
   TerminalDisplayUnix::HandleResizeSignal() {
 #ifdef TIOCGWINSZ
     struct winsize sz;
-    int ret = ioctl(fFD, TIOCGWINSZ, (char*)&sz);
+    int ret = ioctl(fileno(stdout), TIOCGWINSZ, (char*)&sz);
     if (!ret && sz.ws_col) {
       SetWidth(sz.ws_col);
 
@@ -225,7 +219,7 @@ namespace textinput {
 
   void
   TerminalDisplayUnix::WriteRawString(const char *text, size_t len) {
-    write(fFD, text, len);
+    write(fileno(stdout), text, len);
   }
 
   void
@@ -239,14 +233,7 @@ namespace textinput {
     // set to noecho
     if (fIsAttached) return;
     fflush(stdout);
-#ifdef SIGTSTP                  /* POSIX */
-    tcgetattr(fFD, fOldTIOS);
-    memcpy(fMyTIOS, fOldTIOS, sizeof(struct termios));
-    fMyTIOS->c_lflag &= ~(ECHO);
-    fMyTIOS->c_lflag |= ECHOCTL|ECHOKE|ECHOE;
-    tcsetattr(fFD, TCSANOW, fMyTIOS);
-#endif
-    
+    TerminalConfigUnix::Get().Attach();
     fIsAttached = true;
     NotifyTextChange(Range::AllWithPrompt());
   }
@@ -254,8 +241,8 @@ namespace textinput {
   void
   TerminalDisplayUnix::Detach() {
     if (!fIsAttached) return;
-    tcsetattr(fFD, TCSANOW, fOldTIOS);
     fflush(stdout);
+    TerminalConfigUnix::Get().Detach();
     TerminalDisplay::Detach();
     fIsAttached = false;
   }

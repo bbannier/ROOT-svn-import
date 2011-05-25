@@ -17,19 +17,19 @@
 
 #include "textinput/StreamReaderUnix.h"
 
+#include "textinput/TerminalConfigUnix.h"
+
 #include <sys/uio.h>
 #include <sys/select.h>
 #include <unistd.h>
 #include <termios.h>
+#include <stdio.h>
 
 #include <cctype>
-#include <cstring>
 #include <map>
 #include <list>
 
 namespace {
-  using std::memset;
-  using std::memcpy;
   using namespace textinput;
 
   class Rewind {
@@ -124,34 +124,25 @@ namespace {
 
 namespace textinput {
   StreamReaderUnix::StreamReaderUnix():
-  fFD(0), fHaveInputFocus(false), fIsTTY(isatty(0)) {
-    fOldTIOS = new termios();
-    fMyTIOS = new termios();
+    fHaveInputFocus(false), fIsTTY(isatty(fileno(stdin))) {
 #ifdef TCSANOW
-    tcgetattr(fFD, fOldTIOS);
-    memcpy(fMyTIOS,fOldTIOS, sizeof(struct termios));
-    fMyTIOS->c_iflag &= ~(ISTRIP|IXOFF);
-    fMyTIOS->c_iflag |= BRKINT | INLCR;
-    fMyTIOS->c_lflag &= ~(ICANON|ISIG|TOSTOP|IEXTEN);
-    fMyTIOS->c_cc[VMIN] = 1;
-    fMyTIOS->c_cc[VTIME] = 0;
+    TerminalConfigUnix::Get().TIOS()->c_iflag &= ~(ISTRIP|IXOFF);
+    TerminalConfigUnix::Get().TIOS()->c_iflag |= BRKINT | INLCR;
+    TerminalConfigUnix::Get().TIOS()->c_lflag &= ~(ICANON|ISIG|TOSTOP|IEXTEN);
+    TerminalConfigUnix::Get().TIOS()->c_cc[VMIN] = 1;
+    TerminalConfigUnix::Get().TIOS()->c_cc[VTIME] = 0;
 #endif
   }
   
   StreamReaderUnix::~StreamReaderUnix() {
     ReleaseInputFocus();
-    delete fOldTIOS;
-    delete fMyTIOS;
   }
 
   void
   StreamReaderUnix::GrabInputFocus() {
     // set to raw i.e. unbuffered
     if (fHaveInputFocus) return;
-#ifdef TCSANOW
-    tcsetattr(fFD, TCSANOW, fMyTIOS);
-#endif
-    
+    TerminalConfigUnix::Get().Attach();
     fHaveInputFocus = true;
   }
 
@@ -159,7 +150,7 @@ namespace textinput {
   StreamReaderUnix::ReleaseInputFocus() {
     // set to buffered
     if (!fHaveInputFocus) return;
-    tcsetattr(fFD, TCSANOW, fOldTIOS);
+    TerminalConfigUnix::Get().Detach();
     fHaveInputFocus = false;
   }
   
@@ -169,9 +160,9 @@ namespace textinput {
       return true;
     fd_set PollSet;
     FD_ZERO(&PollSet);
-    FD_SET(fFD, &PollSet);
+    FD_SET(fileno(stdin), &PollSet);
     timeval timeout = {0,0}; // sec, musec
-    int avail = select(fFD + 1, &PollSet, 0, 0, &timeout);
+    int avail = select(fileno(stdin) /*fd*/ + 1, &PollSet, 0, 0, &timeout);
     return (avail == 1);
   }
 
@@ -264,7 +255,7 @@ namespace textinput {
       buf = fReadAheadBuffer.front();
       fReadAheadBuffer.pop();
     } else {
-      size_t ret = read(fFD, &buf, 1);
+       size_t ret = read(fileno(stdin), &buf, 1);
       if (ret != 1) return -1;
     }
     return buf;
