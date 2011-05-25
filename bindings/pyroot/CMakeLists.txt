@@ -20,9 +20,9 @@ if(MACOSX_MINOR EQUAL 5)
 endif()
 
 #---Install python modules--------------------------------------------------
-install(FILES ROOT.py DESTINATION lib)
-install(CODE "execute_process(COMMAND python -m py_compile ${CMAKE_INSTALL_PREFIX}/lib/ROOT.py )")
-install(CODE "execute_process(COMMAND python -O -m py_compile ${CMAKE_INSTALL_PREFIX}/lib/ROOT.py )")
+install(FILES ROOT.py DESTINATION ${runtimedir})
+install(CODE "execute_process(COMMAND python -m py_compile ${CMAKE_INSTALL_PREFIX}/${runtimedir}/ROOT.py )")
+install(CODE "execute_process(COMMAND python -O -m py_compile ${CMAKE_INSTALL_PREFIX}/${runtimedir}/ROOT.py )")
 
 #---Install headers----------------------------------------------------------
 ROOT_INSTALL_HEADERS()

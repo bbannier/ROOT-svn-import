@@ -1,6 +1,5 @@
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
-
 if(NOT CMAKE_PROJECT_NAME STREQUAL ROOT)
+  cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
   project(RooFit)
   include(${ROOTSYS}/cmake/modules/StandaloneBuild.cmake)
 endif()
