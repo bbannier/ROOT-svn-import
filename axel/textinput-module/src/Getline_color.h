@@ -15,6 +15,7 @@
 #include "textinput/Color.h"
 
 namespace ROOT {
+   using std::size_t;
 
    // Colorization interface.
    class TextInputColorizer: public textinput::Colorizer {

@@ -23,10 +23,17 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <cstdio>
-#include <cstdlib>
 #include <csignal>
 #include <cstring>
 #include <sstream>
+// putenv not in cstdlib on Solaris
+#include <stdlib.h>
+
+using std::signal;
+using std::memcpy;
+using std::strstr;
+using std::printf;
+using std::fflush;
 
 namespace {
   textinput::TerminalDisplayUnix*& gTerminalDisplayUnix() {

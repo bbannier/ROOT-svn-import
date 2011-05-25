@@ -28,7 +28,10 @@
 #include <list>
 
 namespace {
+  using std::memset;
+  using std::memcpy;
   using namespace textinput;
+
   class Rewind {
   public:
     Rewind(std::queue<char>& rab, InputData::EExtendedInput& ret):

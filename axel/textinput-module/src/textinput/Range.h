@@ -19,6 +19,7 @@
 #include <cstddef>
 
 namespace textinput {
+  using std::size_t;
 
   // From and length; with whatever to update the prompt
   class Range {

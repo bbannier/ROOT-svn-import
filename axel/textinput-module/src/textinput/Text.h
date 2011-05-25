@@ -23,6 +23,7 @@
 
 namespace textinput {
   class Colorizer;
+  using std::strlen;
 
   // A colored string.
   class Text {
