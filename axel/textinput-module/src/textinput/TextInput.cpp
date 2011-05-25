@@ -160,9 +160,17 @@ namespace textinput {
     }
     return fLastReadResult;
   }
+
+  void
+  TextInput::Redraw() {
+    // Attach and redraw.
+    GrabInputOutput();
+    UpdateDisplay(EditorRange(Range::AllText(), Range::AllWithPrompt()));
+  }
   
   void
   TextInput::UpdateDisplay(const EditorRange& R) {
+    // Update changed ranges if attached.
     if (!fActive) {
       return;
     }
