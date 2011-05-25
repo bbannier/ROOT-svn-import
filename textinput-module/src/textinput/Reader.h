@@ -21,6 +21,8 @@
 namespace textinput {
   class TextInputContext;
 
+  using std::size_t;
+
   // Abstract input interface.
   class Reader {
   public:

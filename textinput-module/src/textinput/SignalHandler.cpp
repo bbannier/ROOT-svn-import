@@ -17,6 +17,8 @@
 #include <csignal>
 
 namespace textinput {
+  using std::raise;
+
   void
   SignalHandler::EmitCtrlC() {
     raise(SIGINT);
