@@ -407,7 +407,8 @@ namespace cling {
     
     std::string wrapped;
     std::string stmtFunc;
-    if (strncmp(input_line.c_str(),"#include ",strlen("#include ")) != 0) {
+    if (strncmp(input_line.c_str(),"#include ",strlen("#include ")) != 0 &&
+        strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0) {
       //
       //  Wrap input into a function along with
       //  the saved global declarations.
@@ -422,7 +423,8 @@ namespace cling {
       if (!wrapped.size()) {
          return 0;
       }
-    } else {
+    }
+    else {
       wrapped = input_line;
     }
     
