@@ -18,8 +18,6 @@
 
 #include "textinput/TerminalDisplay.h"
 
-struct termios;
-
 namespace textinput {
   struct Color;
 
@@ -49,9 +47,6 @@ namespace textinput {
     int GetClosestColorIdx16(const Color& C);
 
   private:
-    int fFD; // output file descriptor
-    termios* fOldTIOS; // tty configuration before grabbing
-    termios* fMyTIOS; // tty configuration while active
     bool fIsAttached; // whether tty is configured
     size_t fNColors; // number of colors supported by output
     bool fIsTTY; // whether output is to a terminal

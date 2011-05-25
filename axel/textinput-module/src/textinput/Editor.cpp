@@ -205,6 +205,7 @@ namespace textinput {
         return kPRSuccess;
       case kCmdEnter:
         fReplayHistEntry = (size_t) -1;
+        fCurHistEntry = -1;
         CancelSpecialInputMode(R.fDisplay);
         return kPRSuccess;
       case kCmdDelLeft:
