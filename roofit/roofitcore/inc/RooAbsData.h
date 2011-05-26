@@ -37,6 +37,8 @@ class RooAbsDataStore ;
 class RooAbsData : public TNamed, public RooPrintable {
 public:
 
+  static Bool_t isAlive(RooAbsData*) ;
+
   // Constructors, factory methods etc.
   RooAbsData() ; 
   RooAbsData(const char *name, const char *title, const RooArgSet& vars, RooAbsDataStore* store=0) ;
@@ -194,6 +196,8 @@ public:
 
   Bool_t hasFilledCache() const ; 
 
+  void addOwnedComponent(RooAbsData& data) { _ownedComponents.push_back(&data) ; }
+
 
 protected:
 
@@ -236,9 +240,11 @@ protected:
 
   RooAbsDataStore* _dstore ; // Data storage implementation
 
+  std::list<RooAbsData*> _ownedComponents ; // Owned external components
+
 private:
 
-  ClassDef(RooAbsData,2) // Abstract data collection
+  ClassDef(RooAbsData,3) // Abstract data collection
 };
 
 #endif

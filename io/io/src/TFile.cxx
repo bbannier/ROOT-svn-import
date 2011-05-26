@@ -504,9 +504,9 @@ TFile::~TFile()
       // CINT object are always on the heap.
       gInterpreter->ResetGlobalVar(this);
    }
-      
+
    if (gDebug)
-      Info("~TFile", "dtor called for %s [%lx]", GetName(),(Long_t)this);  
+      Info("~TFile", "dtor called for %s [%lx]", GetName(),(Long_t)this);
 }
 
 //______________________________________________________________________________
@@ -1358,6 +1358,9 @@ Bool_t TFile::ReadBuffer(char *buf, Long64_t pos, Int_t len)
       SetOffset(pos);
 
       Int_t st;
+      Double_t start = 0;
+      if (gPerfStats != 0) start = TTimeStamp();
+
       if ((st = ReadBufferViaCache(buf, len))) {
          if (st == 2)
             return kTRUE;
@@ -1365,10 +1368,7 @@ Bool_t TFile::ReadBuffer(char *buf, Long64_t pos, Int_t len)
       }
 
       Seek(pos);
-
       ssize_t siz;
-      Double_t start = 0;
-      if (gPerfStats != 0) start = TTimeStamp();
 
       while ((siz = SysRead(fD, buf, len)) < 0 && GetErrno() == EINTR)
          ResetErrno();
@@ -1413,8 +1413,8 @@ Bool_t TFile::ReadBuffer(char *buf, Int_t len)
       }
 
       ssize_t siz;
-
       Double_t start = 0;
+
       if (gPerfStats != 0) start = TTimeStamp();
 
       while ((siz = SysRead(fD, buf, len)) < 0 && GetErrno() == EINTR)
@@ -1976,6 +1976,7 @@ void TFile::UseCache(Int_t /*maxCacheSize*/, Int_t /*pageSize*/)
    // The write cache is now managed by TFileCacheWrite
    // Both caches are created automatically by the system.
 
+   Obsolete("UseCache", "v5-30-00", "v5-32-00");
 }
 
 //______________________________________________________________________________
@@ -2268,7 +2269,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
          if (dir == 0) {
             gSystem->mkdir(dirname);
          }
-         
+
       } else if (opt.Contains("recreate")) {
          // check that directory exist, if not create it
          if (dir == 0) {
@@ -2283,7 +2284,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
             dirpath.Form("%s/%s",dirname,afile);
             gSystem->Unlink(dirpath);
          }
-         
+
       } else {
          // new is assumed
          // if directory already exist, print error message and return

@@ -121,6 +121,33 @@
 #include "Riostream.h"
 #include "RooWorkspace.h"
 #include "RooGlobalFunc.h"
+#include "RooConstVar.h"
+#include "RooRealConstant.h"
+
+
+#ifndef _WIN32
+#include <strings.h>
+#else
+static char *strtok_r(char *s1, const char *s2, char **lasts)
+{
+  char *ret;
+  
+  if (s1 == NULL)
+    s1 = *lasts;
+  while(*s1 && strchr(s2, *s1))
+    ++s1;
+  if(*s1 == '\0')
+    return NULL;
+  ret = s1;
+  while(*s1 && !strchr(s2, *s1))
+    ++s1;
+  if(*s1)
+    *s1++ = '\0';
+  *lasts = s1;
+  return ret;
+}
+#endif
+
 
 ClassImp(RooCustomizer) 
 ;
@@ -133,7 +160,6 @@ static Int_t init()
   return 0 ;
 }
 static Int_t dummy = init() ;
-
 
 
 //_____________________________________________________________________________
@@ -411,6 +437,7 @@ RooAbsArg* RooCustomizer::doBuild(const char* masterCatState, Bool_t verbose)
 	TString nameAttrib("ORIGNAME:") ;
 	nameAttrib.Append(node->GetName()) ;
 	specNode->setAttribute(nameAttrib) ;
+	specNode->setStringAttribute("ORIGNAME",node->GetName()) ;
 
       } else {
 
@@ -432,6 +459,7 @@ RooAbsArg* RooCustomizer::doBuild(const char* masterCatState, Bool_t verbose)
 	TString nameAttrib("ORIGNAME:") ;
 	nameAttrib.Append(node->GetName()) ;
 	clone->setAttribute(nameAttrib) ;
+	specNode->setStringAttribute("ORIGNAME",node->GetName()) ;
 
 	// Add to one-time use list and life-time use list
 	clonedMasterNodes.add(*clone) ;
@@ -518,7 +546,8 @@ RooAbsArg* RooCustomizer::doBuild(const char* masterCatState, Bool_t verbose)
     TString nameAttrib("ORIGNAME:") ;
     nameAttrib.Append(branch->GetName()) ;
     clone->setAttribute(nameAttrib) ;
-
+    clone->setStringAttribute("ORIGNAME",branch->GetName()) ;
+    
     clonedMasterBranches.add(*clone) ;      
 
     // Save pointer to clone of top-level pdf
@@ -653,7 +682,32 @@ std::string RooCustomizer::CustIFace::create(RooFactoryWSTool& ft, const char* t
     }
     *sep = 0 ;    
     RooAbsArg* orig = ft.ws().arg(buf) ;
-    RooAbsArg* subst = ft.ws().arg(sep+1) ;
+    RooAbsArg* subst(0) ;
+    if (string(sep+1).find("$REMOVE")==0) {
+
+      // Create a removal dummy ;
+      subst = &RooRealConstant::removalDummy() ;
+
+      // If removal instructed was annotated with target node, encode these in removal dummy
+      char* sep2 = strchr(sep+1,'(') ;
+      if (sep2) {
+	char buf2[1024] ;
+	strlcpy(buf2,sep2+1,1024) ;
+	char* saveptr ;
+	char* tok = strtok_r(buf2,",)",&saveptr) ;
+	while(tok) {
+	  cout << "$REMOVE is restricted to " << tok << endl ;
+	  subst->setAttribute(Form("REMOVE_FROM_%s",tok)) ;
+	  tok = strtok_r(0,",)",&saveptr) ;
+	}
+      } else {
+	// Otherwise mark as universal removal node
+	subst->setAttribute("REMOVE_ALL") ;
+      }
+
+    } else {
+      subst = ft.ws().arg(sep+1) ;
+    }
     if (!orig) {
       throw string(Form("RooCustomizer::CustIFace::create() ERROR: $Replace() input RooAbsArg %s does not exist",buf)) ;
     }

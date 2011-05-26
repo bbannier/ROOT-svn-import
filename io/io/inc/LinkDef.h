@@ -21,6 +21,7 @@
 #pragma link C++ class TFile-;
 #pragma link C++ class TFileCacheRead+;
 #pragma link C++ class TFileCacheWrite+;
+#pragma link C++ class TFileMerger+;
 #pragma link C++ class TFree;
 #pragma link C++ class TKey-;
 #pragma link C++ class TKeyMapFile;
@@ -43,7 +44,8 @@
 #pragma link C++ class TCollectionMemberStreamer-;
 #pragma link C++ options=version(0) class TVirtualObject-;
 #pragma link C++ options=version(0) class TVirtualArray-;
-
+#pragma link C++ class TFPBlock+;
+#pragma link C++ class TFilePrefetch+;
 #pragma link C++ namespace TStreamerInfoActions;
 #pragma link C++ class TStreamerInfoActions::TConfiguredAction+;
 #pragma link C++ class TStreamerInfoActions::TActionSequence+;

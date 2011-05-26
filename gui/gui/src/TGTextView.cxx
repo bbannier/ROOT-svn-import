@@ -455,6 +455,7 @@ Bool_t TGTextView::LoadFile(const char *filename, Long_t startpos, Long_t length
       return kFALSE;
    fclose(fp);
 
+   ShowTop();
    Clear();
    fText->Load(filename, startpos, length);
    Update();
