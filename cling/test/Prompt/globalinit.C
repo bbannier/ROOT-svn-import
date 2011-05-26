@@ -1,5 +1,5 @@
-// RUN: %cling -nologo %s\(\"%s\"\) 
-// RUN: %cling -nologo %s\(\"%s\"\) | FileCheck %s
+// RUN: %cling %s\(\"%s\"\) 
+// RUN: %cling %s\(\"%s\"\) | FileCheck %s
 
 #include <typeinfo>
 

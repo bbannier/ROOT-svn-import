@@ -1,5 +1,5 @@
-// RUN: cat %s | %cling -nologo
-// RUN: cat %s | %cling -nologo | FileCheck %s
+// RUN: cat %s | %cling
+// RUN: cat %s | %cling | FileCheck %s
 #include <cmath>
 
 struct S{int i;} ss;

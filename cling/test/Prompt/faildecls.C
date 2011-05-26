@@ -1,4 +1,4 @@
-// RUN: cat %s | %cling -nologo -l
+// RUN: cat %s | %cling
 // XFAIL: *
 
 // "anonymous structs and classes must be class members"
