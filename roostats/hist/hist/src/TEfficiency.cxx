@@ -1302,7 +1302,7 @@ Bool_t TEfficiency::BetaShortestInterval(Double_t level,Double_t a,Double_t b, D
    // special case when the shortest interval is undefined  return the central interval
    // can happen for a posterior when passed=total=0
    //
-   if ( a==b && a<1.0) { 
+   if ( a==b && a<=1.0) { 
       lower = BetaCentralInterval(level,a,b,kFALSE);
       upper = BetaCentralInterval(level,a,b,kTRUE);
       return kTRUE;
@@ -2273,7 +2273,7 @@ Int_t TEfficiency::GetGlobalBin(Int_t binx,Int_t biny,Int_t binz) const
 }
 
 //______________________________________________________________________________
-void TEfficiency::Merge(TCollection* pList)
+Long64_t TEfficiency::Merge(TCollection* pList)
 {
    //merges the TEfficiency objects in the given list to the given
    //TEfficiency object using the operator+=(TEfficiency&)
@@ -2287,17 +2287,18 @@ void TEfficiency::Merge(TCollection* pList)
    //The new weight is set according to:
    //Begin_Latex #frac{1}{w_{new}} = #sum_{i} \frac{1}{w_{i}}End_Latex 
    
-   if(pList->IsEmpty())
-      return;
-   
-   TIter next(pList);
-   TObject* obj = 0;
-   TEfficiency* pEff = 0;
-   while((obj = next())) {
-      pEff = dynamic_cast<TEfficiency*>(obj);
-      if(pEff)
-	 *this += *pEff;
+   if(!pList->IsEmpty()) {   
+      TIter next(pList);
+      TObject* obj = 0;
+      TEfficiency* pEff = 0;
+      while((obj = next())) {
+         pEff = dynamic_cast<TEfficiency*>(obj);
+         if(pEff) {
+            *this += *pEff;
+         }
+      }
    }
+   return (Long64_t)fTotalHistogram->GetEntries();
 }
 
 //______________________________________________________________________________

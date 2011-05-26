@@ -118,7 +118,9 @@ void RooStudyManager::runProof(Int_t nExperiments, const char* proofHost, Bool_t
   coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") aggregating results data" << endl ;
   TList* olist = (TList*) gROOT->ProcessLineFast(Form("((TProof*)%p)->GetOutputList()",p)) ;
   aggregateData(olist) ;
+  
 }
+
 
 //_____________________________________________________________________________
 void RooStudyManager::closeProof(Option_t *option)
@@ -138,11 +140,10 @@ void RooStudyManager::closeProof(Option_t *option)
     if (gROOT->GetListOfProofs()->LastIndex() != -1) {
       gROOT->ProcessLineFast("delete TProof::gProof ;") ;
     }
-  }else{
+  } else {
     ooccoutW((TObject*)NULL,Generation) << "Global Proof object not found. Cannot close connections." << endl ;
   }
 }
-
 
 
 
