@@ -206,6 +206,7 @@ namespace cling {
                             const char* llvmdir /*= 0*/):
   m_UniqueCounter(0),
   m_printAST(false),
+  m_ValuePrinterEnabled(false),
   m_LastDump(0),
   m_ASTDumper(0)
   {
@@ -783,12 +784,11 @@ namespace cling {
   }
 
   void Interpreter::enableValuePrinter() {
-    static bool enabled = false;
-    if (!enabled) {
+    if (!m_ValuePrinterEnabled) {
       processLine("#include \"cling/Interpreter/Interpreter.h\"");
       processLine("#include \"cling/Interpreter/ValuePrinter.h\"");
       processLine("#include \"cling/Interpreter/Value.h\"");
-      enabled = true;
+      m_ValuePrinterEnabled = true;
     }
   }
   
