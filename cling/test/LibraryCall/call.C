@@ -1,6 +1,5 @@
-// RUN: cat %s | %cling -l | FileCheck %s
+// RUN: cat %s | %cling -nologo -L%llvmlibsdir | FileCheck %s
 
-// RUN: .I %llvmlibsdir/
 .L libcling-test-library.so
 extern "C" int cling_testlibrary_function();
 int i = cling_testlibrary_function();
