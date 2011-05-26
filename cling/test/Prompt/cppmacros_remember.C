@@ -1,13 +1,9 @@
-// RUN: echo '#define MYMACRO(v) if (v) { printf("string:%%s\\n", v);}' > cppmacros_1.C 
-// RUN: echo 'void MYMACRO(void* i) {printf("MYMACRO param=%ld\\n", (long)i);}' > cppmacros_2.C
-// RUN: cat %s | %cling -l | FileCheck %s
+// RUN: cat %s | %cling -nologo | FileCheck %s
 
 #include <cstdlib>
-#include <stdio.h>
-
-.I .
-.L cppmacros_1.C
+extern "C" int printf(const char* fmt, ...);
+#define MYMACRO(v) if (v) { printf("string:%%s\n", v);}
 #undef MYMACRO
-.L cppmacros_2.C
-MYMACRO((void*)42); // CHECK: MYMACRO param=42
+int MYMACRO = 42; // expected-warning {{expression result unused}}
+printf("MYMACRO=%d\n", MYMACRO); // CHECK: MYMACRO=42
 .q
