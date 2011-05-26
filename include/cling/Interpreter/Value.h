@@ -4,6 +4,9 @@
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
+#ifndef CLING_VALUE_H
+#define CLING_VALUE_H
+
 #include "clang/AST/Type.h"
 
 namespace llvm {
@@ -57,3 +60,5 @@ namespace cling {
     return VI.extract(value);
   }
 } // end namespace cling
+
+#endif // CLING_VALUE_H
