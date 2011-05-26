@@ -174,6 +174,7 @@ namespace cling {
                           std::string& stmtFunc);  
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
+    void enableValuePrinter();
     friend class runtime::internal::LifetimeHandler;
     
   public:

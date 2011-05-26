@@ -472,16 +472,12 @@ namespace cling {
     std::string stmtVsDeclFunc = stmtFunc + "_stmt_vs_decl";
     std::vector<Stmt*> stmts;
     CompilerInstance* CI = 0;
-    bool haveSemicolon = false;
     MapTy Map;
     if (m_IncrParser->isDynamicLookupEnabled()) 
       Map = m_IncrParser->getTransformer()->getSubstSymbolMap(); // delayed id substitutions
     {
-      size_t endsrc = src.length();
-      while (endsrc && isspace(src[endsrc - 1])) --endsrc;
-      haveSemicolon = src[endsrc - 1] == ';';
 
-      std::string nonTUsrc = "void " + stmtVsDeclFunc + "() {\n" + src + ";}";
+      std::string nonTUsrc = "void " + stmtVsDeclFunc + "() {\n" + src + "\n;}";
       // Create an ASTConsumer for this frontend run which
       // will produce a list of statements seen.
       StmtSplitter splitter(stmts);
@@ -703,7 +699,12 @@ namespace cling {
         std::stringstream sstr_stmt;
         sstr_stmt << "extern \"C\" void " << stmtFunc << "() {\n"
                   << wrapped_stmts;
-        if (!haveSemicolon && finalExpr) {
+        CompoundStmt* CS 
+          = dyn_cast<CompoundStmt>(m_IncrParser->getLastTopLevelDecl()->getBody());
+        if (!isa<NullStmt>(CS->body_back())) {
+
+          enableValuePrinter();
+
           QualType QT = finalExpr->getType();
           if (!QT.isNull() && QT->isVoidType()) {
             sstr_stmt << finalStmtStr << ";}\n";
@@ -779,6 +780,16 @@ namespace cling {
     code += "#include \"" + filename + "\"\n";
     if (trailcode) code += *trailcode;
     return m_IncrParser->parse(code);
+  }
+
+  void Interpreter::enableValuePrinter() {
+    static bool enabled = false;
+    if (!enabled) {
+      processLine("#include \"cling/Interpreter/Interpreter.h\"");
+      processLine("#include \"cling/Interpreter/ValuePrinter.h\"");
+      processLine("#include \"cling/Interpreter/Value.h\"");
+      enabled = true;
+    }
   }
   
   static bool tryLoadSharedLib(const std::string& filename,
