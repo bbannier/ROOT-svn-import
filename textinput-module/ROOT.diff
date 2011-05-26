@@ -840,3 +840,36 @@ Index: config/Makefile.in
  CPPUNIT        := @cppunit@
  GCCXML         := @gccxml@
  
+Index: graf2d/win32gdk/src/TGWin32InterpreterProxy.cxx
+===================================================================
+--- graf2d/win32gdk/src/TGWin32InterpreterProxy.cxx	(revision 39348)
++++ graf2d/win32gdk/src/TGWin32InterpreterProxy.cxx	(working copy)
+@@ -58,10 +58,10 @@
+ RETURN_METHOD_ARG2(Interpreter,Long_t,ProcessLine,const char*,line,TInterpreter::EErrorCode*,error)
+ RETURN_METHOD_ARG2(Interpreter,Long_t,ProcessLineSynch,const char*,line,TInterpreter::EErrorCode*,error)
+ VOID_METHOD_ARG0(Interpreter,PrintIntro,1)
+-typedef char* (*GetlineFunc_t)(const char* prompt);
+-typedef void (*HistaddFunc_t)(char* line);
++typedef const char* (*GetlineFunc_t)(const char* prompt);
++typedef void (*HistaddFunc_t)(const char* line);
+ VOID_METHOD_ARG2(Interpreter,SetGetline,GetlineFunc_t, getlineFunc,\
+-		 HistaddFunc_t, histaddFunc, 1)
++                 HistaddFunc_t, histaddFunc, 1)
+ VOID_METHOD_ARG0(Interpreter,Reset,1)
+ VOID_METHOD_ARG0(Interpreter,ResetAll,1)
+ VOID_METHOD_ARG0(Interpreter,ResetGlobals,1)
+Index: graf2d/win32gdk/inc/TGWin32InterpreterProxy.h
+===================================================================
+--- graf2d/win32gdk/inc/TGWin32InterpreterProxy.h	(revision 39348)
++++ graf2d/win32gdk/inc/TGWin32InterpreterProxy.h	(working copy)
+@@ -59,8 +59,8 @@
+    Long_t   ProcessLine(const char *line, EErrorCode *error = 0);
+    Long_t   ProcessLineSynch(const char *line, EErrorCode *error = 0);
+    void     PrintIntro();
+-   void     SetGetline(char*(*getlineFunc)(const char* prompt),
+-		       void (*histaddFunc)(char* line));
++   void     SetGetline(const char*(*getlineFunc)(const char* prompt),
++                       void (*histaddFunc)(const char* line));
+    void     Reset();
+    void     ResetAll();
+    void     ResetGlobals();
