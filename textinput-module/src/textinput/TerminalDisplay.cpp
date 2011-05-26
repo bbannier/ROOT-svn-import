@@ -76,7 +76,9 @@ namespace textinput {
       WriteWrappedElement(t, 0, 0, (size_t) -1);
       WriteRawString("\n", 1);
     }
-    fWritePos.fLine = 0; // No need to move up anywhere.
+    // Reset position
+    Detach();
+    Attach();
   }
   
   void

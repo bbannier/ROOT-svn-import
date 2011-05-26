@@ -44,7 +44,8 @@ namespace textinput {
     
     void EraseToRight();
 
-    void HandleError(const char* Where) const;
+    void ShowError(const char* Where) const;
+    void UpdateHandle();
     
   private:
     size_t fStartLine; // line of current prompt in cmd.exe's buffer

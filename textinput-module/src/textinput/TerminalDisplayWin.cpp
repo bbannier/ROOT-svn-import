@@ -21,24 +21,40 @@
 namespace textinput {
   TerminalDisplayWin::TerminalDisplayWin():
     fStartLine(0), fIsAttached(false), fIsConsole(false) {
-    fOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-    fIsConsole = ::GetConsoleMode(fOut, &fOldMode) != 0;
-    fMyMode = fOldMode | ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT;
-
     HandleResizeEvent();
   }
 
-  TerminalDisplayWin::~TerminalDisplayWin() {
+  TerminalDisplayWin::~TerminalDisplayWin() {}
+
+  void
+  TerminalDisplayWin::UpdateHandle() {
+    fOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+    fIsConsole = ::GetConsoleMode(fOut, &fOldMode) != 0;
+    if (!fIsConsole) {
+      fOut = CreateFile("CONOUT$", (GENERIC_READ | GENERIC_WRITE),
+        (FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL, NULL);
+      if (fOut == INVALID_HANDLE_VALUE) {
+        ShowError("opening CONOUT$");
+        fOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+      } else {
+        fIsConsole = ::GetConsoleMode(fOut, &fOldMode) != 0;
+      }
+    }
+    fMyMode = fOldMode | ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT;
   }
   
   void
   TerminalDisplayWin::HandleResizeEvent() {
-    CONSOLE_SCREEN_BUFFER_INFO Info;
-    if (!::GetConsoleScreenBufferInfo(fOut, &Info)) {
-      HandleError("getting console info");
-      return;
+    UpdateHandle();
+    if (fIsConsole) {
+      CONSOLE_SCREEN_BUFFER_INFO Info;
+      if (!::GetConsoleScreenBufferInfo(fOut, &Info)) {
+        ShowError("resize / getting console info");
+        return;
+      }
+      SetWidth(Info.dwSize.X);
     }
-    SetWidth(Info.dwSize.X);
   }
 
   void
@@ -120,7 +136,7 @@ namespace textinput {
       WriteFile(fOut, text, (DWORD) len, &NumWritten, NULL);
     }
     if (NumWritten != len) {
-      HandleError("writing to output");
+      ShowError("writing to output");
     }
   }
   
@@ -128,18 +144,23 @@ namespace textinput {
   TerminalDisplayWin::Attach() {
     // set to noecho
     if (fIsAttached) return;
-    if (fIsConsole && !SetConsoleMode(fOut, fMyMode)) {
-      HandleError("attaching to console output");
+    UpdateHandle();
+    if (fIsConsole && !::SetConsoleMode(fOut, fMyMode)) {
+      ShowError("attaching to console output");
     }
     CONSOLE_SCREEN_BUFFER_INFO Info;
-    ::GetConsoleScreenBufferInfo(fOut, &Info);
-    fStartLine = Info.dwCursorPosition.Y;
-    if (Info.dwCursorPosition.X) {
-      // Whooa - where are we?! Newline and cross fingers:
-      WriteRawString("\n", 1);
-      ++fStartLine;
+    if (fIsConsole) {
+      if (!::GetConsoleScreenBufferInfo(fOut, &Info)) {
+        ShowError("attaching / getting console info");
+      } else {
+        fStartLine = Info.dwCursorPosition.Y;
+        if (Info.dwCursorPosition.X) {
+          // Whooa - where are we?! Newline and cross fingers:
+          WriteRawString("\n", 1);
+          ++fStartLine;
+        }
+      }
     }
-
     fIsAttached = true;
     NotifyTextChange(Range::AllWithPrompt());
   }
@@ -148,14 +169,14 @@ namespace textinput {
   TerminalDisplayWin::Detach() {
     if (!fIsAttached) return;
     if (fIsConsole && !SetConsoleMode(fOut, fOldMode)) {
-      HandleError("detaching to console output");
+      ShowError("detaching to console output");
     }
     TerminalDisplay::Detach();
     fIsAttached = false;
   }
         
   void
-  TerminalDisplayWin::HandleError(const char* Where) const {
+  TerminalDisplayWin::ShowError(const char* Where) const {
     DWORD Err = GetLastError(); 
     LPVOID MsgBuf = 0;
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
