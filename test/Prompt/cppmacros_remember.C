@@ -1,4 +1,4 @@
-// RUN: cat %s | %cling -nologo | FileCheck %s
+// RUN: cat %s | %cling | FileCheck %s
 
 #include <cstdlib>
 extern "C" int printf(const char* fmt, ...);
