@@ -163,6 +163,7 @@ namespace cling {
     clang::PragmaNamespace* m_PragmaHandler; // pragma cling ..., owned by Preprocessor
     unsigned long long m_UniqueCounter; // number of generated call wrappers
     bool m_printAST; // whether to print the AST to be processed
+    bool m_ValuePrinterEnabled; // whether the value printer is loaded
     llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream; // stream to dump values into
     clang::Decl *m_LastDump; // last dump point
     clang::ASTConsumer* m_ASTDumper;
