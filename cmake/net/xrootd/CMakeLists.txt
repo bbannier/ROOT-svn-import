@@ -16,17 +16,29 @@ file(GLOB xrootdconfdep ${xrootddir}/config/*
 set(xrootdmake  ${xrootddir}/GNUmakefile)
 
 #---We need to know the final list of libraries and executables (targets)----
-set(xrootdexes  xrootd xrdcp xrd xrdpwdadmin cmsd xrdstagetool xprep)
-set(xrootdlibs  libXrdBwm libXrdCrypto libXrdRootd libXrdSeckrb5	libXrdSecssl libXrdSecunix
-                libXrdClient libXrdCryptossl libXrdSec libXrdSecpwd libXrdSecsss libXrdSut)
-foreach(lib ${xrootdlibs})
-  set(makelibs ${makelibs} ${xrootddir}/lib/${lib}.${SOEXT})
-  set(finallibs ${finallibs} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${lib}.${SOEXT})
-endforeach()
-foreach(bin ${xrootdexes})
-  set(makeexes ${makeexes} ${xrootddir}/bin/${bin})
-  set(finalexes ${finalexes} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${bin})
-endforeach()
+if(NOT WIN32)
+  set(xrootdexes  xrootd xrdcp xrd xrdpwdadmin cmsd xrdstagetool xprep)
+  set(xrootdlibs  libXrdBwm libXrdCrypto libXrdRootd libXrdSeckrb5	libXrdSecssl libXrdSecunix
+                  libXrdClient libXrdCryptossl libXrdSec libXrdSecpwd libXrdSecsss libXrdSut)
+  foreach(lib ${xrootdlibs})
+    set(makelibs ${makelibs} ${xrootddir}/lib/${lib}.${SOEXT})
+    set(finallibs ${finallibs} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${lib}.${SOEXT})
+  endforeach()
+  foreach(bin ${xrootdexes})
+    set(makeexes ${makeexes} ${xrootddir}/bin/${bin})
+    set(finalexes ${finalexes} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${bin})
+  endforeach()
+else()
+  set(makelibs  ${xrootddir}/lib/libXrdClient.lib)
+  set(finallibs ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libXrdClient.lib)
+  set(makeexes  ${xrootddir}/bin/xrdcp.exe)
+  set(finalexes ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/xrdcp.exe)
+  if(winrtdebug)  
+    set(xrootdtypebuild "Win32 Debug")
+  else()
+    set(xrootdtypebuild "Win32 Release")
+  endif()  
+endif()
 
 add_custom_target(XROOTD ALL DEPENDS ${finalexes} ${finallibs})
 set_target_properties(XROOTD PROPERTIES FOLDER Builtins)
@@ -131,38 +143,43 @@ if(NOT WIN32)
   if(xrootd-opts)
     set(xopt ${xopt} ${xrootd-opts})
   endif()
-	set( xopt ${xopt} --disable-krb4 --enable-echo --no-arch-subdirs --disable-mon 
-	                  --with-cxx=${CMAKE_CXX_COMPILER} --with-ld=${CMAKE_CXX_COMPILER})
-	message(STATUS "Options to Xrootd-configure: ${xarch} ${xopt}")
+  set( xopt ${xopt} --disable-krb4 --enable-echo --no-arch-subdirs --disable-mon 
+                    --with-cxx=${CMAKE_CXX_COMPILER} --with-ld=${CMAKE_CXX_COMPILER})
+  message(STATUS "Options to Xrootd-configure: ${xarch} ${xopt}")
 	
-	add_custom_command(OUTPUT ${xrootdmake}
+  add_custom_command(OUTPUT ${xrootdmake}
                      COMMAND ./configure.classic ${xarch} ${xopt}
                      WORKING_DIRECTORY ${xrootddir}
                      DEPENDS ${xrootdconfdep})
-else(NOT WIN32)
-  #----TODO-----------
-endif(NOT WIN32)  
-
-if(NOT WIN32)
-	add_custom_command(OUTPUT ${makelibs} ${makeexes}
-	                   COMMAND echo "Building xrootd with make ..."
+  add_custom_command(OUTPUT ${makelibs} ${makeexes}
+                     COMMAND echo "Building xrootd with make ..."
                      COMMAND make
                      WORKING_DIRECTORY ${xrootddir}
                      DEPENDS ${xrootdmake} ${xrootdsrcdep})
 else()
-  
+  add_custom_command(OUTPUT ${makelibs} ${makeexes}
+	                 COMMAND echo "Building xrootd with make ..."
+					 COMMAND cmake -E copy_directory pthreads-win32/include ${HEADER_OUTPUT_PATH}
+					 COMMAND cmake -E copy_directory pthreads-win32/lib ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+                     COMMAND nmake -f Makefile.msc CFG=${xrootdtypebuild}
+                     WORKING_DIRECTORY ${xrootddir}
+                     DEPENDS ${xrootdsrcdep})
 endif()
 
 #---Copy the binaries and libraries to destination----------------------------------------------
-foreach(lib ${xrootdlibs})
-  add_custom_command(OUTPUT ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${lib}.${SOEXT}
-                     COMMAND cmake -E copy_if_different ${xrootddir}/lib/${lib}.${SOEXT} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-                     DEPENDS ${xrootddir}/lib/${lib}.${SOEXT} )
+foreach(lib ${makelibs})
+  list(FIND makelibs ${lib} i)
+  list(GET finallibs ${i} flib) 
+  add_custom_command(OUTPUT ${flib}
+                     COMMAND cmake -E copy ${lib} ${flib}
+                     DEPENDS ${lib} )
 endforeach()
-foreach(bin ${xrootdexes})
-  add_custom_command(OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${bin}
-                     COMMAND cmake -E copy_if_different ${xrootddir}/bin/${bin} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                     DEPENDS ${xrootddir}/bin/${bin} )
+foreach(bin ${makeexes})
+  list(FIND makeexes ${bin} i)
+  list(GET finalexes ${i} fbin) 
+  add_custom_command(OUTPUT ${fbin}
+                     COMMAND cmake -E copy ${bin} ${fbin}
+                     DEPENDS ${bin} )
 endforeach()
 
 #---Installation--------------------------------------------------------------------------------
