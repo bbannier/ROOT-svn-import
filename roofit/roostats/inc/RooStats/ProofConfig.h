@@ -20,6 +20,19 @@ Holds configuration options for proof and proof-lite.
 This class will be expanded in the future to hold more specific configuration
 options for the tools in RooStats.
 </p>
+
+
+<p>
+Access to TProof::Mgr for configuration is still possible as usual
+(e.g. to set Root Version to be used on workers). You can do:</p>
+<ul>
+  <li>TProof::Mgr("my.server.url")->ShowROOTVersions()</li>
+  <li>TProof::Mgr("my.server.url")->SetROOTVersion("v5-27-06_dbg")</li>
+</ul>
+
+<p>
+See doc: http://root.cern.ch/drupal/content/changing-default-root-version
+</p>
 END_HTML
 */
 //
@@ -30,7 +43,6 @@ END_HTML
 
 #include "RooWorkspace.h"
 #include "RooStudyManager.h"
-
 
 namespace RooStats {
 
@@ -49,7 +61,7 @@ class ProofConfig {
       }
 
       /// close all proof connections
-      void CloseProof(Option_t *option = "s") { RooStudyManager::closeProof(option); }
+      static void CloseProof(Option_t *option = "s") { RooStudyManager::closeProof(option); }
 
       // returns fWorkspace
       RooWorkspace& GetWorkspace(void) { return fWorkspace; }

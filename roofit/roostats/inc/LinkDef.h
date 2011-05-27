@@ -53,8 +53,9 @@
 #pragma link C++ class RooStats::Heaviside+; 
 #pragma link C++ class RooStats::SequentialProposal+; 
 
-#pragma link C++ class RooStats::HybridCalculatorGeneric+;
+#pragma link C++ class RooStats::HypoTestCalculatorGeneric+;
 #pragma link C++ class RooStats::HybridCalculator+;
+#pragma link C++ class RooStats::FrequentistCalculator+;
 #pragma link C++ class RooStats::HybridCalculatorOriginal+;
 #pragma link C++ class RooStats::HybridPlot+;
 #pragma link C++ class RooStats::HybridResult+;				 
