@@ -17,6 +17,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -45,6 +46,7 @@
 #include "cling/Interpreter/InvocationOptions.h"
 #include "cling/Interpreter/InterpreterCallbacks.h"
 #include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/Diagnostics.h"
 #include "cling/Interpreter/Value.h"
 
 #include <cstdio>
@@ -491,6 +493,9 @@ namespace cling {
       // fprintf(stderr,"nonTUsrc=%s\n",nonTUsrc.c_str());
       m_IncrParser->addConsumer(IncrementalParser::kFunctionBodyConsumer,
                                 consumer);
+      // Disable unused result warning
+      DiagnosticPrinter& Diag = (DiagnosticPrinter&)getCI()->getDiagnosticClient();
+      Diag.ignoreWarning(DiagnosticIDs::getIdFromName("warn_unused_expr"));
       CI = m_IncrParser->parse(nonTUsrc);
       m_IncrParser->removeConsumer(IncrementalParser::kFunctionBodyConsumer);
       //Diag.setSuppressAllDiagnostics(prevDiagSupp);

@@ -1,20 +1,16 @@
-
-/*************************************************************************
- * Copyright (C) 2009-2010, Cling team.                                  *
- * All rights reserved.                                                  *
- *                                                                       *
- * For the licensing terms see LICENSE.                                  *
- * For the list of contributors see CREDITS.                             *
- *************************************************************************/
-
+//--------------------------------------------------------------------*- C++ -*-
+// CLING - the C++ LLVM-based InterpreterG :)
 // version: $Id$
-// author: Axel Naumann, 2010-12-14
+// author:  Axel Naumann <axel@cern.ch>
+//------------------------------------------------------------------------------
 
 #include "cling/Interpreter/Diagnostics.h"
 
 #include "clang/Frontend/DiagnosticOptions.h"
 
 #include "llvm/Support/raw_ostream.h"
+
+using namespace clang;
 
 namespace {
    static
@@ -37,5 +33,10 @@ namespace cling {
       NumWarnings = 0;
       NumErrors = 0;
    }
+  void DiagnosticPrinter::HandleDiagnostic (Diagnostic::Level Level,
+                                            const DiagnosticInfo &Info){
+    if (!isIgnoredWarning(Info.getID()))
+      DiagnosticClient::HandleDiagnostic(Level, Info);
+  }
    
 } // namespace cling
