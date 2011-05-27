@@ -7,7 +7,10 @@
 #ifndef CLING_INTERPRETER_CALLBACKS_H
 #define CLING_INTERPRETER_CALLBACKS_H
 
-#include "clang/Sema/Lookup.h"
+namespace clang {
+  class LookupResult;
+  class Scope;
+}
 
 namespace cling {
   /// \brief  This interface provides a way to observe the actions of the 
@@ -15,7 +18,12 @@ namespace cling {
   /// implement interpreter level tools.
   class InterpreterCallbacks {
   private:
+    // The callbacks should contain the interpreter in case of more than one
+    InterpreterCallbacks(){}
+
+  protected:
     Interpreter* m_Interpreter;
+
   public:
     InterpreterCallbacks(Interpreter* interp) : m_Interpreter(interp){}
     virtual ~InterpreterCallbacks() {}
@@ -23,13 +31,7 @@ namespace cling {
     /// \brief This callback is invoked whenever the interpreter needs to
     /// resolve the type and the adress of an object, which has been marked for
     /// delayed evaluation from the interpreter's dynamic lookup extension
-    virtual bool LookupObject(clang::LookupResult& R, clang::Scope* S) {
-      // Only for demo resolve all unknown objects to gCling
-      clang::NamedDecl* D = m_Interpreter->LookupDecl("cling").LookupDecl("runtime").LookupDecl("gCling");
-      assert (D && "gCling not found!");
-      R.addDecl(D);
-      return true;
-    }
+    virtual bool LookupObject(clang::LookupResult& R, clang::Scope* S) = 0;
   };
 } // end namespace cling
 
