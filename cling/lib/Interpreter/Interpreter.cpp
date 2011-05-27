@@ -636,7 +636,8 @@ namespace cling {
             finalStmtStr = std::string(buffer + r.first, r.second - r.first);
             finalExpr = I;
             wrapped_globals.append(decl + " = " + finalStmtStr + ";\n");
-            finalStmtStr = "";
+            if (isa<InitListExpr>(I))
+              finalStmtStr = "";
             continue;
           }
           //
