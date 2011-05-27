@@ -5,3 +5,4 @@
 
 gCling->setCallbacks(new cling::test::ResolveAlwaysAsGClingCallback(gCling));
 jksghdgsjdf->getVersion() // CHECK: {{.*Interpreter.*}}
+hsdghfjagsp->Draw() // CHECK: (int const) 12
