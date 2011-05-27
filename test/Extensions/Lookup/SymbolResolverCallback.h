@@ -4,8 +4,8 @@
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
-#ifndef CLING_TEST_RESOLVE_ALWAYS_AS_GCLING
-#define CLING_TEST_RESOLVE_ALWAYS_AS_GCLING
+#ifndef CLING_TEST_SYMBOL_RESOLVER_CALLBACK
+#define CLING_TEST_SYMBOL_RESOLVER_CALLBACK
 
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/InterpreterCallbacks.h"
@@ -23,14 +23,14 @@ namespace cling {
 
     TestProxy* Tester = 0;
 
-    class ResolveAlwaysAsGClingCallback: public cling::InterpreterCallbacks {
+    class SymbolResolverCallback: public cling::InterpreterCallbacks {
     public:
-      ResolveAlwaysAsGClingCallback(Interpreter* interp)
+      SymbolResolverCallback(Interpreter* interp)
         : InterpreterCallbacks(interp) {
         interp->processLine("cling::test::Tester = new cling::test::TestProxy()");
       }
       
-      ~ResolveAlwaysAsGClingCallback(){}
+      ~SymbolResolverCallback(){}
       bool LookupObject(clang::LookupResult& R, clang::Scope* S) {
         // Only for demo resolve all unknown objects to gCling
         clang::NamedDecl* D = m_Interpreter->LookupDecl("cling").LookupDecl("test").LookupDecl("Tester");
@@ -42,4 +42,4 @@ namespace cling {
   } // end test
 } // end cling
 
-#endif //CLING_TEST_RESOLVE_ALWAYS_AS_GCLING
+#endif // CLING_TEST_SYMBOL_RESOLVER_CALLBACK
