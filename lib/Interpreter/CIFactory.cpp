@@ -20,6 +20,8 @@
 
 #include "ChainedASTConsumer.h"
 
+using namespace clang;
+
 static const char* fake_argv[] = { "clang", "-x", "c++", "-D__CLING__", "-I.", 0 };
 static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
 
@@ -31,28 +33,28 @@ namespace cling {
   {
   }
 
-  clang::CompilerInstance* CIFactory::createCI(llvm::StringRef code,
-                                               int argc,
-                                               const char* const *argv,
-                                               const char* llvmdir,
-                                               llvm::LLVMContext* llvm_context /* = 0 */) {
+  CompilerInstance* CIFactory::createCI(llvm::StringRef code,
+                                        int argc,
+                                        const char* const *argv,
+                                        const char* llvmdir,
+                                        llvm::LLVMContext* llvm_context /* = 0 */) {
     return createCI(llvm::MemoryBuffer::getMemBuffer(code), 0, argc, argv, llvmdir, llvm_context);
   }
 
   
-  clang::CompilerInstance* CIFactory::createCI(llvm::MemoryBuffer* buffer, 
-                                               clang::PragmaNamespace* Pragma, 
-                                               int argc, 
-                                               const char* const *argv,
-                                               const char* llvmdir,
-                                               llvm::LLVMContext* llvm_context /* = 0 */){
+  CompilerInstance* CIFactory::createCI(llvm::MemoryBuffer* buffer, 
+                                        PragmaNamespace* Pragma, 
+                                        int argc, 
+                                        const char* const *argv,
+                                        const char* llvmdir,
+                                        llvm::LLVMContext* llvm_context /* = 0 */){
     // main's argv[0] is skipped!
 
     if (!llvm_context) {
       llvm_context = new llvm::LLVMContext();
     }
     if (!Pragma) {
-      Pragma = new clang::PragmaNamespace("cling");
+      Pragma = new PragmaNamespace("cling");
     }
 
     // Create an instance builder, passing the llvmdir and arguments.
@@ -82,26 +84,26 @@ namespace cling {
       //
       // Note: Otherwise it uses dladdr().
       //
-      resource_path =
-        clang::CompilerInvocation::GetResourcesPath
-        ("cling", (void*)(intptr_t) locate_cling_executable);
+      resource_path = CompilerInvocation::GetResourcesPath("cling",
+                                       (void*)(intptr_t) locate_cling_executable
+                                                           );
     }
 
 
     // Create and setup a compiler instance.
-    clang::CompilerInstance* CI = new clang::CompilerInstance();
+    CompilerInstance* CI = new CompilerInstance();
     {
       //
       //  Buffer the error messages while we process
       //  the compiler options.
       //
-      clang::DiagnosticOptions DiagOpts;
+      DiagnosticOptions DiagOpts;
       DiagOpts.ShowColors = 1;
-      clang::DiagnosticClient *Client = new cling::DiagnosticPrinter();
-      llvm::IntrusiveRefCntPtr<clang::Diagnostic> Diags = clang::CompilerInstance::createDiagnostics(DiagOpts, 0, 0, Client);
+      DiagnosticClient *Client = new cling::DiagnosticPrinter();
+      llvm::IntrusiveRefCntPtr<Diagnostic> Diags = CompilerInstance::createDiagnostics(DiagOpts, 0, 0, Client);
       CI->setDiagnostics(Diags.getPtr());
       
-      clang::CompilerInvocation::CreateFromArgs
+      CompilerInvocation::CreateFromArgs
         (CI->getInvocation(), argv, argv + argc, *Diags);
 
       if (CI->getHeaderSearchOpts().UseBuiltinIncludes &&
@@ -115,8 +117,8 @@ namespace cling {
         return 0;
       }
     }
-    CI->setTarget(clang::TargetInfo::CreateTargetInfo(CI->getDiagnostics(),
-                                                      CI->getTargetOpts()));
+    CI->setTarget(TargetInfo::CreateTargetInfo(CI->getDiagnostics(),
+                                               CI->getTargetOpts()));
     if (!CI->hasTarget()) {
       delete CI;
       CI = 0;
@@ -134,16 +136,16 @@ namespace cling {
     
     // Set up the preprocessor
     CI->createPreprocessor();
-    clang::Preprocessor& PP = CI->getPreprocessor();
+    Preprocessor& PP = CI->getPreprocessor();
     PP.AddPragmaHandler(Pragma);
     PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                            PP.getLangOptions());
     /*NoBuiltins = */ //true);
     
     // Set up the ASTContext
-    clang::ASTContext *Ctx = new clang::ASTContext(CI->getLangOpts(),
-                                                   PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-                                                   PP.getSelectorTable(), PP.getBuiltinInfo(), 0);
+    ASTContext *Ctx = new ASTContext(CI->getLangOpts(),
+                                     PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
+                                     PP.getSelectorTable(), PP.getBuiltinInfo(), 0);
     CI->setASTContext(Ctx);
     //CI->getSourceManager().clearIDTables(); //do we really need it?
     
@@ -155,7 +157,7 @@ namespace cling {
     
     // Set up Sema
     bool CompleteTranslationUnit = false;
-    clang::CodeCompleteConsumer* CCC = 0;
+    CodeCompleteConsumer* CCC = 0;
     CI->createSema(CompleteTranslationUnit, CCC);
     
     
