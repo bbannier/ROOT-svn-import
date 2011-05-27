@@ -7,16 +7,8 @@ ROOT_USE_PACKAGE(proof/proof)
 ROOT_USE_PACKAGE(net/rpdutils)
 ROOT_USE_PACKAGE(net/auth)
 
-#---Using or nor an external installation of XROOTD-------------------------
-if(NOT XROOTD_FOUND)
-  set(XROOTD_LIBRARY_DIR ${CMAKE_SOURCE_DIR}/net/xrootd/src/xrootd/lib)
-  set(XROOTD_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/net/xrootd/src/xrootd/src)
-endif()
-include_directories(${XROOTD_INCLUDE_DIR})
-link_directories(${XROOTD_LIBRARY_DIR})
-
 if(WIN32)
-  ROOT_LINKER_LIBRARY(XrdProofd XrdProofConn.cxx XrdProofPhyConn.cxx XProofProtUtils.cxx LIBRARIES XrdClient)
+  ROOT_LINKER_LIBRARY(XrdProofd XProofProtUtils.cxx LIBRARIES libXrdClient)
 else()
   set(libs XrdOuc XrdNet XrdNetUtil XrdSys XrdClient XrdSut ${BONJOUR_LIBRARIES})
   set(exelibs libXrd.a libXrdClient.a libXrdNet.a libXrdNetUtil.a libXrdOuc.a libXrdSys.a libXrdSut.a)
