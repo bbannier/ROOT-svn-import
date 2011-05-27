@@ -14,16 +14,27 @@
 
 namespace cling {
   namespace test {
+    class TestProxy {
+    public:
+      TestProxy(){}
+      int Draw(){ return 12; }
+      const char* getVersion(){ return "Interpreter.cpp"; }
+    };
+
+    TestProxy* Tester = 0;
+
     class ResolveAlwaysAsGClingCallback: public cling::InterpreterCallbacks {
     public:
       ResolveAlwaysAsGClingCallback(Interpreter* interp)
-        : InterpreterCallbacks(interp) {}
+        : InterpreterCallbacks(interp) {
+        interp->processLine("cling::test::Tester = new cling::test::TestProxy()");
+      }
       
       ~ResolveAlwaysAsGClingCallback(){}
       bool LookupObject(clang::LookupResult& R, clang::Scope* S) {
         // Only for demo resolve all unknown objects to gCling
-        clang::NamedDecl* D = m_Interpreter->LookupDecl("cling").LookupDecl("runtime").LookupDecl("gCling");
-        assert (D && "gCling not found!");
+        clang::NamedDecl* D = m_Interpreter->LookupDecl("cling").LookupDecl("test").LookupDecl("Tester");
+        assert (D && "Tester not found!");
         R.addDecl(D);
         return true;
       }
