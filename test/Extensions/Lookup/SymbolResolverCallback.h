@@ -14,11 +14,19 @@
 
 namespace cling {
   namespace test {
+    extern "C" int printf(const char* fmt, ...);
     class TestProxy {
     public:
       TestProxy(){}
       int Draw(){ return 12; }
       const char* getVersion(){ return "Interpreter.cpp"; }
+
+      int Add10(int num) { return num + 10;}
+      void PrintString(std::string s) { printf("%s\n", s.c_str()); }
+      void PrintArray(int a[], size_t size) {
+        for (unsigned i = 0; i < size; ++i)
+          printf("%i", a[i]);
+      }
     };
 
     TestProxy* Tester = 0;
