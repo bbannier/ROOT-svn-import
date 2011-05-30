@@ -81,6 +81,7 @@
 
 #pragma link C++ class RooStats::BayesianCalculator+;
 #pragma link C++ class RooStats::HypoTestInverter+;
+#pragma link C++ class RooStats::HypoTestInverterNew+;
 #pragma link C++ class RooStats::HypoTestInverterResult+;
 #pragma link C++ class RooStats::HypoTestInverterPlot+;
 #pragma link C++ class RooStats::HLFactory+;
@@ -119,5 +120,6 @@
 #pragma extra_include "Math/IFunction.h";
 #pragma extra_include "Math/Minimizer.h";
 #pragma extra_include "RooFunctor.h";
+//#pragma extra_include "TGraphErrors.h";
 
 #endif
