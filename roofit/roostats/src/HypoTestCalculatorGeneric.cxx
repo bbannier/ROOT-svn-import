@@ -126,26 +126,26 @@ HypoTestResult* HypoTestCalculatorGeneric::GetHypoTest() const {
 
    // Generate sampling distribution for null
    SetupSampler(*fNullModel);
-   RooArgSet poiNull(*fNullModel->GetParametersOfInterest());
-   if(PreNullHook(&poiNull, obsTestStat) != 0) {
+   RooArgSet paramPointNull(*fNullModel->GetParametersOfInterest());
+   if(PreNullHook(&paramPointNull, obsTestStat) != 0) {
       oocoutE((TObject*)0,Generation) << "PreNullHook did not return 0." << endl;
    }
-   SamplingDistribution* samp_null = fTestStatSampler->GetSamplingDistribution(poiNull);
+   SamplingDistribution* samp_null = fTestStatSampler->GetSamplingDistribution(paramPointNull);
 
    // set parameters back
    *bothParams = *saveAll;
 
    // Generate sampling distribution for alternate
    SetupSampler(*fAltModel);
-   RooArgSet poiAlt(*fAltModel->GetParametersOfInterest());
-   if(PreAltHook(&poiAlt, obsTestStat) != 0) {
+   RooArgSet paramPointAlt(*fAltModel->GetParametersOfInterest());
+   if(PreAltHook(&paramPointAlt, obsTestStat) != 0) {
       oocoutE((TObject*)0,Generation) << "PreAltHook did not return 0." << endl;
    }
-   SamplingDistribution* samp_alt = fTestStatSampler->GetSamplingDistribution(poiAlt);
+   SamplingDistribution* samp_alt = fTestStatSampler->GetSamplingDistribution(paramPointAlt);
 
 
    // create result
-   string resultname = "HybridCalculator_result";
+   string resultname = "HypoTestCalculator_result";
    HypoTestResult* res = new HypoTestResult(resultname.c_str());
    res->SetPValueIsRightTail(fTestStatSampler->GetTestStatistic()->PValueIsRightTail());
    res->SetTestStatisticData(obsTestStat);
