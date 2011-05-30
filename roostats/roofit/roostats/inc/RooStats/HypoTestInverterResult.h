@@ -95,6 +95,7 @@ namespace RooStats {
     TList fYObjects;
 
     friend class HypoTestInverter;
+    friend class HypoTestInverterNew;
 
     ClassDef(HypoTestInverterResult,1)  // HypoTestInverterResult class      
   };
