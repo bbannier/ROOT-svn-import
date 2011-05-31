@@ -32,140 +32,137 @@ class TGraphErrors;
 
 namespace RooStats {
 
-  class HypoTestInverterNew : public IntervalCalculator {
+class HypoTestInverterNew : public IntervalCalculator {
 
-  public:
+public:
 
-     enum ECalculatorType { kUndefined = 0, kHybrid = 1, kFrequentist = 2};
+   enum ECalculatorType { kUndefined = 0, kHybrid = 1, kFrequentist = 2};
 
-    // default constructor (used only for I/O)
-    HypoTestInverterNew();
-
-
-    // constructor
-    HypoTestInverterNew( HypoTestCalculatorGeneric & myhc0,
-		      RooRealVar& scannedVariable, 
-                      double size = 0.05) ;
+   // default constructor (used only for I/O)
+   HypoTestInverterNew();
 
 
-    virtual HypoTestInverterResult* GetInterval() const { return fResults; } ;
+   // constructor
+   HypoTestInverterNew( HypoTestCalculatorGeneric & myhc0,
+                        RooRealVar& scannedVariable, 
+                        double size = 0.05) ;
 
-    //bool RunAutoScan( double xMin, double xMax, double target, double epsilon=0.005, unsigned int numAlgorithm=0 );
 
-    bool RunFixedScan( int nBins, double xMin, double xMax );
+   virtual HypoTestInverterResult* GetInterval() const; 
 
-    bool RunOnePoint( double thisX );
 
-    bool RunSinglePoint( RooWorkspace *w, ModelConfig *mc_s, ModelConfig *mc_b, RooAbsData &data, double &limit, double &limitErr, const double *hint );
+   //bool RunAutoScan( double xMin, double xMax, double target, double epsilon=0.005, unsigned int numAlgorithm=0 );
 
-    void UseCLs( bool on = true) { fUseCLs = on; if (fResults) fResults->UseCLs(on);   }
+   void Clear();
 
-    virtual void  SetData(RooAbsData &) { } // not needed
+   // set for a fixed scan in nbins
+   void SetFixedScan(int nBins, double xMin = 1, double xMax = -1) {
+      fNBins = nBins; 
+      fXmin = xMin; fXmax = xMax; 
+   }
+     
+   // set auto scan (default) 
+   void SetAutoScan() { SetFixedScan(0); }
 
-    virtual void SetModel(const ModelConfig &) { } // not needed 
+   bool RunFixedScan( int nBins, double xMin, double xMax ) const;
 
-    // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
-     virtual void SetTestSize(Double_t size) {fSize = size; if (fResults) fResults->SetTestSize(size); }
-    // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
-    virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;  if (fResults) fResults->SetConfidenceLevel(cl); }
-    // Get the size of the test (eg. rate of Type I error)
-    virtual Double_t Size() const {return fSize;}
-    // Get the Confidence level for the test
-    virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}
+   bool RunOnePoint( double thisX, bool afaptive = false, double clTarget = -1 ) const;
+
+   bool RunLimit(double &limit, double &limitErr, double absTol = 0, double relTol = 0, const double *hint=0) const; 
+
+   void UseCLs( bool on = true) { fUseCLs = on; if (fResults) fResults->UseCLs(on);   }
+
+   virtual void  SetData(RooAbsData &) { } // not needed
+     
+   virtual void SetModel(const ModelConfig &) { } // not needed 
+
+   // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
+   virtual void SetTestSize(Double_t size) {fSize = size; if (fResults) fResults->SetTestSize(size); }
+   // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
+   virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;  if (fResults) fResults->SetConfidenceLevel(cl); }
+   // Get the size of the test (eg. rate of Type I error)
+   virtual Double_t Size() const {return fSize;}
+   // Get the Confidence level for the test
+   virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}
  
-    // destructor
-    virtual ~HypoTestInverterNew() ;
+   // destructor
+   virtual ~HypoTestInverterNew() ;
 
-   void SetVerbose(bool on=true) { fVerbose = on; }
+   // set verbose level (0,1,2)
+   void SetVerbose(int level=1) { fVerbose = level; }
     
-  protected:
+protected:
     
-     void CreateResults(); 
+   void CreateResults() const; 
 
-     // run the hybrid at a single point
-     HypoTestResult * Eval( HypoTestCalculatorGeneric &hc, bool adaptive , double clsTarget);
+   // run the hybrid at a single point
+   HypoTestResult * Eval( HypoTestCalculatorGeneric &hc, bool adaptive , double clsTarget) const;
 
-     // template<class HypoTestCalcType> 
-     // void AddMoreToys(HypoTestCalcType & hc, HypoTestResult & hcResult, 
-     //                  double clsTarget, double & clsMid, double & clsMidErr);
+   // template<class HypoTestCalcType> 
+   // void AddMoreToys(HypoTestCalcType & hc, HypoTestResult & hcResult, 
+   //                  double clsTarget, double & clsMid, double & clsMidErr);
 
     
 
 #ifdef LATER
-     std::pair<double, double> eval(RooWorkspace *w, ModelConfig *mc_s, ModelConfig *mc_b, RooAbsData &data, double rVal, bool adaptive, double clsTarget=-1); 
 
 
 
-
-    struct Setup {
+   struct Setup {
       RooStats::ModelConfig modelConfig, modelConfig_bonly;
       std::auto_ptr<RooAbsPdf> nuisancePdf;
       std::auto_ptr<RooStats::TestStatistic> qvar;
       std::auto_ptr<RooStats::ToyMCSampler>  toymcsampler;
       std::auto_ptr<RooStats::ProofConfig> pc;
-    };
+   };
 
 
-    std::auto_ptr<HybridCalculator> Create(RooWorkspace *w, ModelConfig *mc_s, ModelConfig *mc_b, RooAbsData &data,
-    double rVal, HypoTestInverterNew::Setup &setup);
+   std::auto_ptr<HybridCalculator> Create(RooWorkspace *w, ModelConfig *mc_s, ModelConfig *mc_b, RooAbsData &data,
+                                          double rVal, HypoTestInverterNew::Setup &setup);
 
 
 #endif
 
 
-  private:
+private:
 
 
-     static double fgCLAccuracy;
-     static unsigned int fgNToys;
+   static unsigned int fgNToys;
+   static double fgCLAccuracy;
+   static double fgAbsAccuracy;
+   static double fgRelAccuracy;
+   static std::string fgAlgo;
 
-
-#ifdef LATER
-    static WorkingMode workingMode_;
-    static unsigned int nToys_;
-    static double clsAccuracy_, rAbsAccuracy_, rRelAccuracy_;
-    static bool   rInterval_;
-    static bool CLs_;
-    static bool saveHybridResult_, readHybridResults_; 
-    static std::string rule_, testStat_;
-    static double rValue_;
-    static unsigned int nCpu_, fork_;
-    static bool importanceSamplingNull_, importanceSamplingAlt_;
-    static std::string algo_;
-    static std::string plot_;
-    
-    static bool optimizeProductPdf_;
-    static bool optimizeTestStatistics_;
-
-    // graph, used to compute the limit, not just for plotting!
-     std::auto_ptr<TGraphErrors> limitPlot_;  //! plot of limits
-
-#endif
+   // graph, used to compute the limit, not just for plotting!
+   mutable std::auto_ptr<TGraphErrors> fLimitPlot;  //! plot of limits
     
     
-  // performance counter: remember how many toys have been thrown
-    unsigned int fPerf_totalToysRun;
+   // performance counter: remember how many toys have been thrown
+   mutable unsigned int fPerf_totalToysRun;
 
     
 
-    HypoTestCalculatorGeneric* fCalculator0;   // pointer to the calculator passed in the constructor
-    RooRealVar* fScannedVariable;     // pointer to the constrained variable
-    HypoTestInverterResult* fResults;
+   HypoTestCalculatorGeneric* fCalculator0;   // pointer to the calculator passed in the constructor
+   RooRealVar* fScannedVariable;     // pointer to the constrained variable
+   mutable HypoTestInverterResult* fResults;
+     
+   HypoTestResult *readToysFromFile(double rValue=0);
 
-    HypoTestResult *readToysFromFile(double rValue=0);
+   bool fUseCLs;
+   double fSize;
+   int fVerbose;
+   bool fSystematics;
+   bool fReadToysFromHere;
+   ECalculatorType fCalcType; 
+   int fNBins;
+   double fXmin; 
+   double fXmax; 
 
-    bool fUseCLs;
-    double fSize;
-    bool fVerbose;
-    bool fSystematics;
-    bool fReadToysFromHere;
-     ECalculatorType fCalcType; 
+protected:
 
-  protected:
+   ClassDef(HypoTestInverterNew,1)  // HypoTestInverterNew class
 
-    ClassDef(HypoTestInverterNew,1)  // HypoTestInverterNew class
-
-  };
+};
 }
 
 #endif
