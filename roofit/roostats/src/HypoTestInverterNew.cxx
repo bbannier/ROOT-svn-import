@@ -92,6 +92,16 @@ bool HypoTestInverterNew::optimizeTestStatistics_ = true;
 std::string HypoTestInverterNew::plot_;
 #endif
 
+// helper class to wrap the functionality of the various HypoTestCalculators
+
+template<class HypoTestType> 
+struct HypoTestWrapper { 
+
+   static void SetToys(HypoTestType * h, int toyNull, int toyAlt) { h->SetToys(toyNull,toyAlt); }
+   
+};
+
+
 HypoTestInverterNew::HypoTestInverterNew( ) :
    fCalculator0(0),
    fScannedVariable(0),
@@ -106,21 +116,25 @@ HypoTestInverterNew::HypoTestInverterNew( ) :
 }
 
 
-HypoTestInverterNew::HypoTestInverterNew( HypoTestCalculatorGeneric& myhc0,
+HypoTestInverterNew::HypoTestInverterNew( HypoTestCalculatorGeneric& hc,
 				    RooRealVar& scannedVariable, double size ) :
-   fCalculator0(&myhc0),
+   fCalculator0(&hc),
    fScannedVariable(&scannedVariable), 
    fResults(0),
    fUseCLs(false),
    fSize(size),
    fVerbose(1),
    fSystematics(1),
-   fReadToysFromHere(1)
+   fReadToysFromHere(1),
+   fCalcType(kUndefined)
 {
    // constructor from a reference to an HypoTestCalculator 
    // (it must be an HybridCalculator type) and a RooRealVar for the variable
-
-
+   HybridCalculator * hybrid_calc = dynamic_cast< HybridCalculator *> (&hc);
+   if (hybrid_calc) fCalcType = kHybrid; 
+   FrequentistCalculator * freq_calc = dynamic_cast< FrequentistCalculator *> (&hc);
+   if (freq_calc) fCalcType = kFrequentist; 
+ 
 }
 
 
@@ -314,25 +328,12 @@ std::pair<double, double> HypoTestInverterNew::Eval(RooWorkspace *w, RooStats::M
 }
 #endif
 
-template<class HypoTestCalcType> 
-void HypoTestInverterNew::AddMoreToys(HypoTestCalcType & hc, HypoTestResult & hcResult, 
-                 double clsTarget, double & clsMid, double & clsMidErr) {
-   // add more toys until desired accuracy is reached 
+// template<class HypoTestCalcType> 
+// void HypoTestInverterNew::AddMoreToys(HypoTestCalcType & hc, HypoTestResult & hcResult, 
+//                  double clsTarget, double & clsMid, double & clsMidErr) {
+//    // add more toys until desired accuracy is reached 
 
-   hc.SetToys(fUseCLs ? fgNToys : 1, 4*fgNToys);
-   while (clsMidErr >= fgCLAccuracy && (clsTarget == -1 || fabs(clsMid-clsTarget) < 3*clsMidErr) ) {
-      std::auto_ptr<HypoTestResult> more(hc.GetHypoTest());
-      
-#ifdef LATER_TBI
-      if (testStat_ == "Atlas" || testStat_ == "Profile")
-         more->SetPValueIsRightTail(!more->GetPValueIsRightTail());
-#endif
-      hcResult.Append(more.get());
-      clsMid    = (fUseCLs ? hcResult.CLs()      : hcResult.CLsplusb());
-      clsMidErr = (fUseCLs ? hcResult.CLsError() : hcResult.CLsplusbError());
-      if (fVerbose) std::cout << (fUseCLs ? "\tCLs = " : "\tCLsplusb = ") << clsMid << " +/- " << clsMidErr << std::endl;
-   }
-}
+// }
 
 
 HypoTestResult * HypoTestInverterNew::Eval(HypoTestCalculatorGeneric &hc, bool adaptive, double clsTarget) {
@@ -361,10 +362,23 @@ HypoTestResult * HypoTestInverterNew::Eval(HypoTestCalculatorGeneric &hc, bool a
    //if (fVerbose) std::cout << (fUseCLs ? "\tCLs = " : "\tCLsplusb = ") << clsMid << " +/- " << clsMidErr << std::endl;
    
    if (adaptive) {
-      HybridCalculator * hybrid_calc = dynamic_cast< HybridCalculator *> (&hc);
-      if (hybrid_calc) AddMoreToys(*hybrid_calc, *hcResult, clsTarget, clsMid, clsMidErr);
-      FrequentistCalculator * freq_calc = dynamic_cast< FrequentistCalculator *> (&hc);
-      if (freq_calc) AddMoreToys(*freq_calc, *hcResult, clsTarget, clsMid, clsMidErr);
+ 
+      if (fCalcType == kHybrid) HypoTestWrapper<HybridCalculator>::SetToys((HybridCalculator*)&hc, fUseCLs ? fgNToys : 1, 4*fgNToys);
+      if (fCalcType == kFrequentist) HypoTestWrapper<FrequentistCalculator>::SetToys((FrequentistCalculator*)&hc, fUseCLs ? fgNToys : 1, 4*fgNToys);
+
+   while (clsMidErr >= fgCLAccuracy && (clsTarget == -1 || fabs(clsMid-clsTarget) < 3*clsMidErr) ) {
+      std::auto_ptr<HypoTestResult> more(hc.GetHypoTest());
+      
+#ifdef LATER_TBI
+      if (testStat_ == "Atlas" || testStat_ == "Profile")
+         more->SetPValueIsRightTail(!more->GetPValueIsRightTail());
+#endif
+      hcResult->Append(more.get());
+      clsMid    = (fUseCLs ? hcResult->CLs()      : hcResult->CLsplusb());
+      clsMidErr = (fUseCLs ? hcResult->CLsError() : hcResult->CLsplusbError());
+      if (fVerbose) std::cout << (fUseCLs ? "\tCLs = " : "\tCLsplusb = ") << clsMid << " +/- " << clsMidErr << std::endl;
+   }
+
    }
    if (fVerbose ) {
       std::cout <<
@@ -444,7 +458,7 @@ bool HypoTestInverterNew::RunFixedScan( int nBins, double xMin, double xMax )
 
 bool HypoTestInverterNew::RunOnePoint( double rVal)
 {
-   // run only one point 
+   // run only one point at the given value
 
    CreateResults();
 
@@ -476,7 +490,7 @@ bool HypoTestInverterNew::RunOnePoint( double rVal)
 
    
    // compute the results
-   HypoTestResult* myHybridResult =   Eval(*fCalculator0,false,-1);
+   HypoTestResult* result =   Eval(*fCalculator0,false,-1);
 
    
    double lastXtested;
@@ -486,19 +500,20 @@ bool HypoTestInverterNew::RunOnePoint( double rVal)
    if ( lastXtested==rVal ) {
      
      std::cout << "Merge with previous result\n";
-     HybridResult* latestResult = (HybridResult*) fResults->GetResult(fResults->ArraySize()-1);
-     latestResult->Add((HybridResult*)myHybridResult);
-     delete myHybridResult;
+     HypoTestResult* prevResult =  fResults->GetResult(fResults->ArraySize()-1);
+     prevResult->Append(result);
+     delete result; // t.b.c
 
    } else {
      
      // fill the results in the HypoTestInverterResult array
      fResults->fXValues.push_back(rVal);
-     fResults->fYObjects.Add(myHybridResult);
+     fResults->fYObjects.Add(result);
+
    }
 
-
-   std::cout << "computed: " << fResults->GetYValue(fResults->ArraySize()-1) << endl;
+      // std::cout << "computed value for poi  " << rVal  << " : " << fResults->GetYValue(fResults->ArraySize()-1) 
+      //        << " +/- " << fResults->GetYError(fResults->ArraySize()-1) << endl;
 
    fScannedVariable->setVal(oldValue);
    

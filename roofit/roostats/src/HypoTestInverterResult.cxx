@@ -90,9 +90,9 @@ double HypoTestInverterResult::GetYValue( int index ) const
   }
 
   if (fUseCLs) 
-    return ((HybridResult*)fYObjects.At(index))->CLs();
+    return ((HypoTestResult*)fYObjects.At(index))->CLs();
   else 
-    return ((HybridResult*)fYObjects.At(index))->AlternatePValue();  // CLs+b
+    return ((HypoTestResult*)fYObjects.At(index))->AlternatePValue();  // CLs+b
 }
 
 double HypoTestInverterResult::GetYError( int index ) const
@@ -103,9 +103,9 @@ double HypoTestInverterResult::GetYError( int index ) const
   }
 
   if (fUseCLs) 
-    return ((HybridResult*)fYObjects.At(index))->CLsError();
+    return ((HypoTestResult*)fYObjects.At(index))->CLsError();
   else 
-    return ((HybridResult*)fYObjects.At(index))->CLsplusbError();
+    return ((HypoTestResult*)fYObjects.At(index))->CLsplusbError();
 }
 
 HypoTestResult* HypoTestInverterResult::GetResult( int index ) const
