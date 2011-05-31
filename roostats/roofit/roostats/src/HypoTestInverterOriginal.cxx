@@ -10,15 +10,15 @@
 
 //_________________________________________________________________
 /**
-   HypoTestInverter class for performing an hypothesis test inversion by scanning the hypothesis test results of the 
+   HypoTestInverterOriginal class for performing an hypothesis test inversion by scanning the hypothesis test results of the 
   HybridCalculator  for various values of the parameter of interest. By looking at the confidence level curve of 
  the result  an upper limit, where it intersects the desired confidence level, can be derived.
  The class implements the RooStats::IntervalCalculator interface and returns an  RooStats::HypoTestInverterResult class.
  The result is a SimpleInterval, which via the method UpperLimit returns to the user the upper limit value.
 
-The  HypoTestInverter implements various option for performing the scan. HypoTestInverter::RunFixedScan will scan using a fixed grid the parameter of interest. HypoTestInverter::RunAutoScan will perform an automatic scan to find optimally the curve and it will stop until the desired precision is obtained.
-The confidence level value at a given point can be done via  HypoTestInverter::RunOnePoint.
-The class can scan the CLs+b values or alternativly CLs (if the method HypoTestInverter::UseCLs has been called).
+The  HypoTestInverterOriginal implements various option for performing the scan. HypoTestInverterOriginal::RunFixedScan will scan using a fixed grid the parameter of interest. HypoTestInverterOriginal::RunAutoScan will perform an automatic scan to find optimally the curve and it will stop until the desired precision is obtained.
+The confidence level value at a given point can be done via  HypoTestInverterOriginal::RunOnePoint.
+The class can scan the CLs+b values or alternativly CLs (if the method HypoTestInverterOriginal::UseCLs has been called).
 
 
    New contributions to this class have been written by Matthias Wolf (advanced AutoRun algorithm)
@@ -35,15 +35,15 @@ The class can scan the CLs+b values or alternativly CLs (if the method HypoTestI
 #include "RooStats/HybridResult.h"
 
 // include header file of this class 
-#include "RooStats/HypoTestInverter.h"
+#include "RooStats/HypoTestInverterOriginal.h"
 
 
-ClassImp(RooStats::HypoTestInverter)
+ClassImp(RooStats::HypoTestInverterOriginal)
 
 using namespace RooStats;
 
 
-HypoTestInverter::HypoTestInverter( ) :
+HypoTestInverterOriginal::HypoTestInverterOriginal( ) :
    fCalculator0(0),
    fScannedVariable(0),
    fResults(0),
@@ -54,7 +54,7 @@ HypoTestInverter::HypoTestInverter( ) :
 }
 
 
-HypoTestInverter::HypoTestInverter( HypoTestCalculator& myhc0,
+HypoTestInverterOriginal::HypoTestInverterOriginal( HypoTestCalculator& myhc0,
 				    RooRealVar& scannedVariable, double size ) :
    TNamed( ),
    fCalculator0(&myhc0),
@@ -65,18 +65,18 @@ HypoTestInverter::HypoTestInverter( HypoTestCalculator& myhc0,
 {
    // constructor from a reference to an HypoTestCalculator 
    // (it must be an HybridCalculator type) and a RooRealVar for the variable
-   SetName("HypoTestInverter");
+   SetName("HypoTestInverterOriginal");
 
 
    HybridCalculatorOriginal * hc = dynamic_cast<HybridCalculatorOriginal *> (fCalculator0);
    if (hc == 0) { 
-      Fatal("HypoTestInverter","Using non HybridCalculatorOriginal class IS NOT SUPPORTED");
+      Fatal("HypoTestInverterOriginal","Using non HybridCalculatorOriginal class IS NOT SUPPORTED");
    }
 
 }
 
 
-HypoTestInverter::~HypoTestInverter()
+HypoTestInverterOriginal::~HypoTestInverterOriginal()
 {
   // destructor
   
@@ -84,19 +84,19 @@ HypoTestInverter::~HypoTestInverter()
   if (fResults) delete fResults;
 }
 
-void  HypoTestInverter::CreateResults() { 
+void  HypoTestInverterOriginal::CreateResults() { 
   // create a new HypoTestInverterResult to hold all computed results
    if (fResults == 0) {
       TString results_name = this->GetName();
       results_name += "_results";
       fResults = new HypoTestInverterResult(results_name,*fScannedVariable,ConfidenceLevel());
-      fResults->SetTitle("HypoTestInverter Result");
+      fResults->SetTitle("HypoTestInverterOriginal Result");
    }
    fResults->UseCLs(fUseCLs);
 }
 
 
-bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, double epsilon, unsigned int numAlgorithm  )
+bool HypoTestInverterOriginal::RunAutoScan( double xMin, double xMax, double target, double epsilon, unsigned int numAlgorithm  )
 {
   /// Search for the value of the parameter of interest (vary the
   /// hypothesis being tested) in the specified range [xMin,xMax]
@@ -302,7 +302,7 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, dou
 }
 
 
-bool HypoTestInverter::RunFixedScan( int nBins, double xMin, double xMax )
+bool HypoTestInverterOriginal::RunFixedScan( int nBins, double xMin, double xMax )
 {
    // Run a Fixed scan in npoints between min and max
 
@@ -339,7 +339,7 @@ bool HypoTestInverter::RunFixedScan( int nBins, double xMin, double xMax )
 }
 
 
-bool HypoTestInverter::RunOnePoint( double thisX )
+bool HypoTestInverterOriginal::RunOnePoint( double thisX )
 {
    // run only one point 
 
