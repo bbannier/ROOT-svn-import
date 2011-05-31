@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_HypoTestInverter
-#define ROOSTATS_HypoTestInverter
+#ifndef ROOSTATS_HypoTestInverterOriginal
+#define ROOSTATS_HypoTestInverterOriginal
 
 
 
@@ -30,16 +30,16 @@ class RooRealVar;
 
 namespace RooStats {
 
-  class HypoTestInverter : public IntervalCalculator, public TNamed {
+  class HypoTestInverterOriginal : public IntervalCalculator, public TNamed {
 
   public:
 
     // default constructor (used only for I/O)
-    HypoTestInverter();
+    HypoTestInverterOriginal();
 
 
     // constructor
-    HypoTestInverter( HypoTestCalculator& myhc0,
+    HypoTestInverterOriginal( HypoTestCalculator& myhc0,
 		      RooRealVar& scannedVariable, 
                       double size = 0.05) ;
 
@@ -69,7 +69,7 @@ namespace RooStats {
     virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}
  
     // destructor
-    virtual ~HypoTestInverter() ;
+    virtual ~HypoTestInverterOriginal() ;
 
   private:
 
@@ -84,7 +84,7 @@ namespace RooStats {
 
   protected:
 
-    ClassDef(HypoTestInverter,1)  // HypoTestInverter class
+    ClassDef(HypoTestInverterOriginal,1)  // HypoTestInverterOriginal class
 
   };
 }
