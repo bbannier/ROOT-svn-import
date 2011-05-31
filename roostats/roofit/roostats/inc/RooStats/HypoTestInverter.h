@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_HypoTestInverterNew
-#define ROOSTATS_HypoTestInverterNew
+#ifndef ROOSTATS_HypoTestInverter
+#define ROOSTATS_HypoTestInverter
 
 
 
@@ -33,23 +33,23 @@ namespace RooStats {
    class FrequentistCalculator;
    class HypoTestCalculatorGeneric;
 
-class HypoTestInverterNew : public IntervalCalculator {
+class HypoTestInverter : public IntervalCalculator {
 
 public:
 
    enum ECalculatorType { kUndefined = 0, kHybrid = 1, kFrequentist = 2};
 
    // default constructor (used only for I/O)
-   HypoTestInverterNew();
+   HypoTestInverter();
 
 
    // constructor from hybrid calculator
-   HypoTestInverterNew( HybridCalculator & hc,
+   HypoTestInverter( HybridCalculator & hc,
                         RooRealVar& scannedVariable, 
                         double size = 0.05) ;
 
    // constructor from frequentist calculator
-   HypoTestInverterNew( FrequentistCalculator & hc,
+   HypoTestInverter( FrequentistCalculator & hc,
                         RooRealVar& scannedVariable, 
                         double size = 0.05) ;
 
@@ -93,7 +93,7 @@ public:
    virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}
  
    // destructor
-   virtual ~HypoTestInverterNew() ;
+   virtual ~HypoTestInverter() ;
 
    // set verbose level (0,1,2)
    void SetVerbose(int level=1) { fVerbose = level; }
@@ -139,7 +139,7 @@ private:
 
 protected:
 
-   ClassDef(HypoTestInverterNew,2)  // HypoTestInverterNew class
+   ClassDef(HypoTestInverter,2)  // HypoTestInverter class
 
 };
 

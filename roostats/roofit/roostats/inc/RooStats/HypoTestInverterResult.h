@@ -109,7 +109,7 @@ protected:
 
    TList fYObjects;
 
-   friend class HypoTestInverterNew;
+   friend class HypoTestInverter;
    friend class HypoTestInverterOriginal;
 
    ClassDef(HypoTestInverterResult,1)  // HypoTestInverterResult class      
