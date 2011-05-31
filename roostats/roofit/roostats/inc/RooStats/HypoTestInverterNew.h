@@ -36,6 +36,8 @@ namespace RooStats {
 
   public:
 
+     enum ECalculatorType { kUndefined = 0, kHybrid = 1, kFrequentist = 2};
+
     // default constructor (used only for I/O)
     HypoTestInverterNew();
 
@@ -83,9 +85,9 @@ namespace RooStats {
      // run the hybrid at a single point
      HypoTestResult * Eval( HypoTestCalculatorGeneric &hc, bool adaptive , double clsTarget);
 
-     template<class HypoTestCalcType> 
-     void AddMoreToys(HypoTestCalcType & hc, HypoTestResult & hcResult, 
-                      double clsTarget, double & clsMid, double & clsMidErr);
+     // template<class HypoTestCalcType> 
+     // void AddMoreToys(HypoTestCalcType & hc, HypoTestResult & hcResult, 
+     //                  double clsTarget, double & clsMid, double & clsMidErr);
 
     
 
@@ -157,6 +159,7 @@ namespace RooStats {
     bool fVerbose;
     bool fSystematics;
     bool fReadToysFromHere;
+     ECalculatorType fCalcType; 
 
   protected:
 
