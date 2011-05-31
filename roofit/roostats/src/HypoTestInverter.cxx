@@ -10,18 +10,18 @@
 
 //_________________________________________________________________
 /**
-   HypoTestInverterNew class for performing an hypothesis test inversion by scanning the hypothesis test results of the 
-  HybridCalculator  for various values of the parameter of interest. By looking at the confidence level curve of 
+   HypoTestInverter class for performing an hypothesis test inversion by scanning the hypothesis test results of an 
+  HypoTestCalculator  for various values of the parameter of interest. By looking at the confidence level curve of 
  the result  an upper limit, where it intersects the desired confidence level, can be derived.
- The class implements the RooStats::IntervalCalculator interface and returns an  RooStats::HypoTestInverterNewResult class.
+ The class implements the RooStats::IntervalCalculator interface and returns an  RooStats::HypoTestInverterResult class.
  The result is a SimpleInterval, which via the method UpperLimit returns to the user the upper limit value.
 
-The  HypoTestInverterNew implements various option for performing the scan. HypoTestInverterNew::RunFixedScan will scan using a fixed grid the parameter of interest. HypoTestInverterNew::RunAutoScan will perform an automatic scan to find optimally the curve and it will stop until the desired precision is obtained.
-The confidence level value at a given point can be done via  HypoTestInverterNew::RunOnePoint.
-The class can scan the CLs+b values or alternativly CLs (if the method HypoTestInverterNew::UseCLs has been called).
+The  HypoTestInverter implements various option for performing the scan. HypoTestInverter::RunFixedScan will scan using a fixed grid the parameter of interest. HypoTestInverter::RunAutoScan will perform an automatic scan to find optimally the curve and it will stop until the desired precision is obtained.
+The confidence level value at a given point can be done via  HypoTestInverter::RunOnePoint.
+The class can scan the CLs+b values or alternativly CLs (if the method HypoTestInverter::UseCLs has been called).
 
 
-   New contributions to this class have been written by Matthias Wolf (advanced AutoRun algorithm)
+   Contributions to this class have been written by Giovanni Petrucciani and Annapaola Decosa
 **/
 
 // include other header files
@@ -32,7 +32,7 @@ The class can scan the CLs+b values or alternativly CLs (if the method HypoTestI
 
 #include "RooStats/HybridResult.h"
 
-#include "RooStats/HypoTestInverterNew.h"
+#include "RooStats/HypoTestInverter.h"
 
 
 #include "TF1.h"
@@ -57,17 +57,17 @@ The class can scan the CLs+b values or alternativly CLs (if the method HypoTestI
 
 
 
-ClassImp(RooStats::HypoTestInverterNew)
+ClassImp(RooStats::HypoTestInverter)
 
 using namespace RooStats;
 
 // static variable definitions
-double HypoTestInverterNew::fgCLAccuracy = 0.005;
-unsigned int HypoTestInverterNew::fgNToys = 500;
+double HypoTestInverter::fgCLAccuracy = 0.005;
+unsigned int HypoTestInverter::fgNToys = 500;
 
-double HypoTestInverterNew::fgAbsAccuracy = 0.05;
-double HypoTestInverterNew::fgRelAccuracy = 0.05;
-std::string HypoTestInverterNew::fgAlgo = "logSecant";
+double HypoTestInverter::fgAbsAccuracy = 0.05;
+double HypoTestInverter::fgRelAccuracy = 0.05;
+std::string HypoTestInverter::fgAlgo = "logSecant";
 
 
 // helper class to wrap the functionality of the various HypoTestCalculators
@@ -80,7 +80,7 @@ struct HypoTestWrapper {
 };
 
 
-HypoTestInverterNew::HypoTestInverterNew( ) :
+HypoTestInverter::HypoTestInverter( ) :
    fCalculator0(0),
    fScannedVariable(0),
    fResults(0),
@@ -93,7 +93,7 @@ HypoTestInverterNew::HypoTestInverterNew( ) :
 }
 
 
-HypoTestInverterNew::HypoTestInverterNew( HybridCalculator& hc,
+HypoTestInverter::HypoTestInverter( HybridCalculator& hc,
                                           RooRealVar& scannedVariable, double size ) :
    fCalculator0(&hc),
    fScannedVariable(&scannedVariable), 
@@ -108,7 +108,7 @@ HypoTestInverterNew::HypoTestInverterNew( HybridCalculator& hc,
 }
 
 
-HypoTestInverterNew::HypoTestInverterNew( FrequentistCalculator& hc,
+HypoTestInverter::HypoTestInverter( FrequentistCalculator& hc,
                                           RooRealVar& scannedVariable, double size ) :
    fCalculator0(&hc),
    fScannedVariable(&scannedVariable), 
@@ -123,7 +123,7 @@ HypoTestInverterNew::HypoTestInverterNew( FrequentistCalculator& hc,
 }
 
 
-HypoTestInverterNew::~HypoTestInverterNew()
+HypoTestInverter::~HypoTestInverter()
 {
   // destructor
   
@@ -131,15 +131,15 @@ HypoTestInverterNew::~HypoTestInverterNew()
   if (fResults) delete fResults;
 }
 
-void  HypoTestInverterNew::Clear()  { 
+void  HypoTestInverter::Clear()  { 
    // delete contained result and graph
    if (fResults) delete fResults; 
    fResults = 0;
    if (fLimitPlot.get()) fLimitPlot = std::auto_ptr<TGraphErrors>();
 }   
 
-void  HypoTestInverterNew::CreateResults() const { 
-  // create a new HypoTestInverterNewResult to hold all computed results
+void  HypoTestInverter::CreateResults() const { 
+  // create a new HypoTestInverterResult to hold all computed results
    if (fResults == 0) {
       TString results_name = "HypoInv_result_";
       results_name += fScannedVariable->GetName();
@@ -152,7 +152,7 @@ void  HypoTestInverterNew::CreateResults() const {
    fResults->SetConfidenceLevel(1.-fSize);
 }
 
-HypoTestInverterResult* HypoTestInverterNew::GetInterval() const { 
+HypoTestInverterResult* HypoTestInverter::GetInterval() const { 
    // run a fixed scan or the automatic scan 
 
    // if having a result with more thon one point return it
@@ -174,7 +174,7 @@ HypoTestInverterResult* HypoTestInverterNew::GetInterval() const {
 
 
 
-HypoTestResult * HypoTestInverterNew::Eval(HypoTestCalculatorGeneric &hc, bool adaptive, double clsTarget) const {
+HypoTestResult * HypoTestInverter::Eval(HypoTestCalculatorGeneric &hc, bool adaptive, double clsTarget) const {
 
    // run the hypothesis test 
    HypoTestResult *  hcResult = hc.GetHypoTest();
@@ -237,7 +237,7 @@ HypoTestResult * HypoTestInverterNew::Eval(HypoTestCalculatorGeneric &hc, bool a
 } 
 
 
-bool HypoTestInverterNew::RunFixedScan( int nBins, double xMin, double xMax ) const
+bool HypoTestInverter::RunFixedScan( int nBins, double xMin, double xMax ) const
 {
    // Run a Fixed scan in npoints between min and max
 
@@ -278,7 +278,7 @@ bool HypoTestInverterNew::RunFixedScan( int nBins, double xMin, double xMax ) co
 }
 
 
-bool HypoTestInverterNew::RunOnePoint( double rVal, bool adaptive, double clTarget) const
+bool HypoTestInverter::RunOnePoint( double rVal, bool adaptive, double clTarget) const
 {
    // run only one point at the given value
 
@@ -341,7 +341,7 @@ bool HypoTestInverterNew::RunOnePoint( double rVal, bool adaptive, double clTarg
 
 
 
-bool HypoTestInverterNew::RunLimit(double &limit, double &limitErr, double absAccuracy, double relAccuracy, const double*hint) const {
+bool HypoTestInverter::RunLimit(double &limit, double &limitErr, double absAccuracy, double relAccuracy, const double*hint) const {
 
 // bool HybridNew::runLimit(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::ModelConfig *mc_b, RooAbsData &data, double &limit, double &limitErr, const double *hint) {
 
