@@ -61,7 +61,6 @@ public:
 
    // number of entries in the results array
    int ArraySize() const { return fXValues.size(); };
-   int GetSize() const { return fXValues.size(); };
 
 
    // set the size of the test (rate of Type I error) (eg. 0.05 for a 95% Confidence Interval)

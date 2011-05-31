@@ -17,9 +17,6 @@
 #include "RooStats/IntervalCalculator.h"
 #endif
 
-#ifndef ROOSTATS_HypoTestCalculatorGeneric
-#include "RooStats/HypoTestCalculatorGeneric.h"
-#endif
 
 #ifndef  ROOSTATS_HypoTestInverterResult
 #include "RooStats/HypoTestInverterResult.h"
@@ -32,6 +29,10 @@ class TGraphErrors;
 
 namespace RooStats {
 
+   class HybridCalculator;
+   class FrequentistCalculator;
+   class HypoTestCalculatorGeneric;
+
 class HypoTestInverterNew : public IntervalCalculator {
 
 public:
@@ -42,8 +43,13 @@ public:
    HypoTestInverterNew();
 
 
-   // constructor
-   HypoTestInverterNew( HypoTestCalculatorGeneric & myhc0,
+   // constructor from hybrid calculator
+   HypoTestInverterNew( HybridCalculator & hc,
+                        RooRealVar& scannedVariable, 
+                        double size = 0.05) ;
+
+   // constructor from frequentist calculator
+   HypoTestInverterNew( FrequentistCalculator & hc,
                         RooRealVar& scannedVariable, 
                         double size = 0.05) ;
 
@@ -51,7 +57,6 @@ public:
    virtual HypoTestInverterResult* GetInterval() const; 
 
 
-   //bool RunAutoScan( double xMin, double xMax, double target, double epsilon=0.005, unsigned int numAlgorithm=0 );
 
    void Clear();
 
@@ -67,6 +72,8 @@ public:
    bool RunFixedScan( int nBins, double xMin, double xMax ) const;
 
    bool RunOnePoint( double thisX, bool afaptive = false, double clTarget = -1 ) const;
+
+   //bool RunAutoScan( double xMin, double xMax, double target, double epsilon=0.005, unsigned int numAlgorithm=0 );
 
    bool RunLimit(double &limit, double &limitErr, double absTol = 0, double relTol = 0, const double *hint=0) const; 
 
@@ -98,31 +105,7 @@ protected:
    // run the hybrid at a single point
    HypoTestResult * Eval( HypoTestCalculatorGeneric &hc, bool adaptive , double clsTarget) const;
 
-   // template<class HypoTestCalcType> 
-   // void AddMoreToys(HypoTestCalcType & hc, HypoTestResult & hcResult, 
-   //                  double clsTarget, double & clsMid, double & clsMidErr);
-
     
-
-#ifdef LATER
-
-
-
-   struct Setup {
-      RooStats::ModelConfig modelConfig, modelConfig_bonly;
-      std::auto_ptr<RooAbsPdf> nuisancePdf;
-      std::auto_ptr<RooStats::TestStatistic> qvar;
-      std::auto_ptr<RooStats::ToyMCSampler>  toymcsampler;
-      std::auto_ptr<RooStats::ProofConfig> pc;
-   };
-
-
-   std::auto_ptr<HybridCalculator> Create(RooWorkspace *w, ModelConfig *mc_s, ModelConfig *mc_b, RooAbsData &data,
-                                          double rVal, HypoTestInverterNew::Setup &setup);
-
-
-#endif
-
 
 private:
 
@@ -146,13 +129,9 @@ private:
    RooRealVar* fScannedVariable;     // pointer to the constrained variable
    mutable HypoTestInverterResult* fResults;
      
-   HypoTestResult *readToysFromFile(double rValue=0);
-
    bool fUseCLs;
    double fSize;
    int fVerbose;
-   bool fSystematics;
-   bool fReadToysFromHere;
    ECalculatorType fCalcType; 
    int fNBins;
    double fXmin; 
@@ -160,9 +139,10 @@ private:
 
 protected:
 
-   ClassDef(HypoTestInverterNew,1)  // HypoTestInverterNew class
+   ClassDef(HypoTestInverterNew,2)  // HypoTestInverterNew class
 
 };
+
 }
 
 #endif

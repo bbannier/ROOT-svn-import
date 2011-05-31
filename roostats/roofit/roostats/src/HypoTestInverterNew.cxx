@@ -32,10 +32,10 @@ The class can scan the CLs+b values or alternativly CLs (if the method HypoTestI
 
 #include "RooStats/HybridResult.h"
 
+#include "RooStats/HypoTestInverterNew.h"
 
-#include "TFile.h"
+
 #include "TF1.h"
-#include "TKey.h"
 #include "TLine.h"
 #include "TCanvas.h"
 #include "TGraphErrors.h"
@@ -43,7 +43,6 @@ The class can scan the CLs+b values or alternativly CLs (if the method HypoTestI
 #include "RooArgSet.h"
 #include "RooAbsPdf.h"
 #include "RooRandom.h"
-#include "RooAddPdf.h"
 #include "RooConstVar.h"
 #include "RooMsgService.h"
 #include "RooStats/ModelConfig.h"
@@ -56,21 +55,13 @@ The class can scan the CLs+b values or alternativly CLs (if the method HypoTestI
 #include "RooStats/HypoTestPlot.h"
 #include "RooStats/HypoTestInverterPlot.h"
 
-//#include "../interface/Combine.h"
-//#include "../interface/RooFitGlobalKillSentry.h"
-//#include "../interface/SimplerLikelihoodRatioTestStat.h"
-//#include "../interface/ProfiledLikelihoodRatioTestStat.h"
-
-//#include "RooStats/utils.h"
-
-// include header file of this class 
-#include "RooStats/HypoTestInverterNew.h"
 
 
 ClassImp(RooStats::HypoTestInverterNew)
 
 using namespace RooStats;
 
+// static variable definitions
 double HypoTestInverterNew::fgCLAccuracy = 0.005;
 unsigned int HypoTestInverterNew::fgNToys = 500;
 
@@ -78,23 +69,6 @@ double HypoTestInverterNew::fgAbsAccuracy = 0.05;
 double HypoTestInverterNew::fgRelAccuracy = 0.05;
 std::string HypoTestInverterNew::fgAlgo = "logSecant";
 
-
-#ifdef LATER
-HypoTestInverterNew::WorkingMode HypoTestInverterNew::workingMode_ = MakeLimit;
-std::string HypoTestInverterNew::rule_ = "CLs";
-std::string HypoTestInverterNew::testStat_ = "LEP";
-unsigned int HypoTestInverterNew::nCpu_ = 0; // proof-lite mode
-unsigned int HypoTestInverterNew::fork_ = 1; // fork mode
-double HypoTestInverterNew::rValue_  = 1.0;
-bool HypoTestInverterNew::fUseCLs = false;
-bool HypoTestInverterNew::saveHybridResult_  = false;
-bool HypoTestInverterNew::readHybridResults_ = false; 
-bool HypoTestInverterNew::importanceSamplingNull_ = false;
-bool HypoTestInverterNew::importanceSamplingAlt_  = false;
-bool HypoTestInverterNew::optimizeProductPdf_     = false;
-bool HypoTestInverterNew::optimizeTestStatistics_ = true;
-std::string HypoTestInverterNew::plot_;
-#endif
 
 // helper class to wrap the functionality of the various HypoTestCalculators
 
@@ -113,34 +87,39 @@ HypoTestInverterNew::HypoTestInverterNew( ) :
    fUseCLs(false),
    fSize(0),
    fVerbose(0),
-   fSystematics(1),
-   fReadToysFromHere(1),
    fNBins(0), fXmin(1), fXmax(1)
 {
   // default constructor (doesn't do anything) 
 }
 
 
-HypoTestInverterNew::HypoTestInverterNew( HypoTestCalculatorGeneric& hc,
-				    RooRealVar& scannedVariable, double size ) :
+HypoTestInverterNew::HypoTestInverterNew( HybridCalculator& hc,
+                                          RooRealVar& scannedVariable, double size ) :
    fCalculator0(&hc),
    fScannedVariable(&scannedVariable), 
    fResults(0),
    fUseCLs(false),
    fSize(size),
    fVerbose(0),
-   fSystematics(1),
-   fReadToysFromHere(1),
-   fCalcType(kUndefined), 
+   fCalcType(kHybrid), 
    fNBins(0), fXmin(1), fXmax(1)
 {
-   // constructor from a reference to an HypoTestCalculator 
-   // (it must be an HybridCalculator type) and a RooRealVar for the variable
-   HybridCalculator * hybrid_calc = dynamic_cast< HybridCalculator *> (&hc);
-   if (hybrid_calc) fCalcType = kHybrid; 
-   FrequentistCalculator * freq_calc = dynamic_cast< FrequentistCalculator *> (&hc);
-   if (freq_calc) fCalcType = kFrequentist; 
- 
+   // constructor from a reference to an HybridCalculator
+}
+
+
+HypoTestInverterNew::HypoTestInverterNew( FrequentistCalculator& hc,
+                                          RooRealVar& scannedVariable, double size ) :
+   fCalculator0(&hc),
+   fScannedVariable(&scannedVariable), 
+   fResults(0),
+   fUseCLs(false),
+   fSize(size),
+   fVerbose(0),
+   fCalcType(kFrequentist), 
+   fNBins(0), fXmin(1), fXmax(1)
+{
+   // constructor from a reference to a FrequentistCalculator 
 }
 
 
@@ -177,7 +156,7 @@ HypoTestInverterResult* HypoTestInverterNew::GetInterval() const {
    // run a fixed scan or the automatic scan 
 
    // if having a result with more thon one point return it
-   if (fResults && fResults->GetSize() > 1) return fResults;
+   if (fResults && fResults->ArraySize() > 1) return fResults;
 
    if (fNBins > 0) {
       bool ret = RunFixedScan(fNBins, fXmin, fXmax); 
@@ -194,152 +173,6 @@ HypoTestInverterResult* HypoTestInverterNew::GetInterval() const {
 }
 
 
-#ifdef LATER
-std::auto_ptr<RooStats::HypoTestC> HypoTestInverterNew::Create(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::ModelConfig *mc_b, RooAbsData &data, double rVal, HypoTestInverterNew::Setup &setup) {
-
-  
-  RooArgSet  poi(*mc_s->GetParametersOfInterest());
-  RooRealVar *r = dynamic_cast<RooRealVar *>(poi.first());
-  
-  r->setVal(rVal); 
-  if (testStat_ == "Atlas" || testStat_ == "Profile") {
-    r->setConstant(false); r->setMin(0);
-  } else {
-    r->setConstant(true);
-  }
-  setup.modelConfig = ModelConfig(*mc_s);
-  setup.modelConfig.SetGlobalObservables(RooArgSet()); // NOT for Hybrid
-  
-  setup.modelConfig_bonly = ModelConfig(*mc_b);
-  setup.modelConfig_bonly.SetGlobalObservables(RooArgSet()); // NOT for Hybrid
-
-  if (testStat_ == "Atlas" || testStat_ == "Profile") {
-      // these need the S+B snapshot for both
-      // must set it here and not later because calling SetSnapshot more than once does not work properly
-      setup.modelConfig_bonly.SetSnapshot(poi);
-  } else {
-      RooArgSet poiZero; 
-      setup.modelConfig_bonly.SetSnapshot(poiZero);
-  }
-
-  if (testStat_ == "LEP") {
-      //SLR is evaluated using the central value of the nuisance parameters, so I believe we have to put them in the snapshots
-      RooArgSet snapS; snapS.addClone(poi); 
-      if (fSystematics) snapS.addClone(*mc_s->GetNuisanceParameters());
-      RooArgSet snapB; snapB.addClone(snapS);
-      snapS.setRealValue(r->GetName(), rVal);
-      snapB.setRealValue(r->GetName(),    0);
-      //if (optimizeTestStatistics_ && !mc_s->GetPdf()->canBeExtended()) {
-          //// FIXME
-          ////if (fSystematics && optimizeProductPdf_) {
-          ////    if (w->pdf("modelObs_b") == 0 || w->pdf("modelObs_s") == 0) 
-          ////        throw std::invalid_argument("HypoTestInverterNew: you can't use 'optimizeProduct' if the module does not define 'modelObs_s', 'modelObs_b'");
-          ////    setup.qvar.reset(new SimplerLikelihoodRatioTestStat(*w->pdf("modelObs_b"), *w->pdf("modelObs_s"), snapB, snapS));
-          ////} else {
-          //setup.qvar.reset(new SimplerLikelihoodRatioTestStat(*setup.modelConfig_bonly.GetPdf(),*setup.modelConfig.GetPdf(), snapB, snapS));
-          ////}
-	  //} else {
-          // FIXME
-          //if (fSystematics && optimizeProductPdf_) {
-          //    if (w->pdf("modelObs_b") == 0 || w->pdf("modelObs_s") == 0) 
-          //        throw std::invalid_argument("HypoTestInverterNew: you can't use 'optimizeProduct' if the module does not define 'modelObs_s', 'modelObs_b'");
-          //    setup.qvar.reset(new SimpleLikelihoodRatioTestStat(*w->pdf("modelObs_b"), *w->pdf("modelObs_s")));
-          //} else {
-      setup.qvar.reset(new SimpleLikelihoodRatioTestStat(*setup.modelConfig_bonly.GetPdf(),*setup.modelConfig.GetPdf()));
-          //}
-      ((SimpleLikelihoodRatioTestStat&)*setup.qvar).SetNullParameters(snapB); // Null is B
-      ((SimpleLikelihoodRatioTestStat&)*setup.qvar).SetAltParameters(snapS);
-	  //}
-  } else if (testStat_ == "TEV") {
-      // FIXME
-    /*if (optimizeTestStatistics_ && !w->pdf("model_s")->canBeExtended()) {
-        setup.qvar.reset(new ProfiledLikelihoodRatioTestStat(*setup.modelConfig_bonly.GetPdf(),*setup.modelConfig.GetPdf(), 
-                                                             fSystematics ? w->set("nuisances") : 0, poiZero, poi));
-    } else {*/   // turn this off for now, it does not work properly
-        setup.qvar.reset(new RatioOfProfiledLikelihoodsTestStat(*setup.modelConfig_bonly.GetPdf(),*setup.modelConfig.GetPdf(), setup.modelConfig.GetSnapshot()));
-        ((RatioOfProfiledLikelihoodsTestStat&)*setup.qvar).SetSubtractMLE(false);
-    //}
-  } else if (testStat_ == "Atlas" || testStat_ == "Profile") {
-    setup.qvar.reset(new ProfileLikelihoodTestStat(*setup.modelConfig.GetPdf()));
-    if (testStat_ == "Atlas") {
-       ((ProfileLikelihoodTestStat&)*setup.qvar).SetOneSided(true);
-    }
-  }
-  
-  // FIXME
-  //if (fSystematics && optimizeProductPdf_) {
-  //    if (w->pdf("modelObs_b") == 0 || w->pdf("modelObs_s") == 0) 
-  //        throw std::invalid_argument("HypoTestInverterNew: you can't use 'optimizeProduct' if the module does not define 'modelObs_s', 'modelObs_b'");
-  //   setup.modelConfig.SetPdf(*w->pdf("modelObs_s"));
-  //   setup.modelConfig_bonly.SetPdf(*w->pdf("modelObs_b"));
-  //} 
-
-  setup.toymcsampler.reset(new ToyMCSampler(*setup.qvar, fgNToys));
-
-  if (!mc_b->GetPdf()->canBeExtended()) setup.toymcsampler->SetNEventsPerToy(1);
-  
-  if (nCpu_ > 0) {
-    if (fVerbose > 1) std::cout << "  Will use " << nCpu_ << " CPUs." << std::endl;
-    setup.pc.reset(new ProofConfig(*w, nCpu_, "", kFALSE)); 
-    setup.toymcsampler->SetProofConfig(setup.pc.get());
-  }   
-  
-  std::auto_ptr<HybridCalculator> hc(new HybridCalculator(data,setup.modelConfig, setup.modelConfig_bonly, setup.toymcsampler.get()));
-  if (fSystematics) {
-    // setup.nuisancePdf.reset(utils::makeNuisancePdf(*mc_s));
-    // hc->ForcePriorNuisanceNull(*setup.nuisancePdf);
-    // hc->ForcePriorNuisanceAlt(*setup.nuisancePdf);
-  }
-
-  // we need less B toys than S toys
-  if (workingMode_ == MakeSignificance) {
-      // need only B toys. just keep a few S+B ones to avoid possible divide-by-zero errors somewhere
-      hc->SetToys(fgNToys, int(0.01*fgNToys)+1);
-  } else if (!fUseCLs) {
-      // we need only S+B toys to compute CLs+b
-      hc->SetToys(int(0.01*fgNToys)+1, fgNToys);
-  } else {
-      // need both, but more S+B than B 
-      hc->SetToys(int(0.25*fgNToys)+1, fgNToys);
-  }
-
-  static const char * istr = "__HypoTestInverterNew__importanceSamplingDensity";
-  if(importanceSamplingNull_) {
-    if(fVerbose > 1) std::cout << ">>> Enabling importance sampling for null hyp." << std::endl;
-    if(!fSystematics) {
-      coutE(InputArguments)<<"Importance sampling is not available without systematics";
-      return std::auto_ptr<RooStats::HybridCalculator>();
-      //throw std::invalid_argument("Importance sampling is not available without systematics");
-    }
-    RooArgSet importanceSnapshot;
-    importanceSnapshot.addClone(poi);
-    importanceSnapshot.addClone(*mc_s->GetNuisanceParameters());
-    if (fVerbose > 2) importanceSnapshot.Print("V");
-    hc->SetNullImportanceDensity(mc_b->GetPdf(), &importanceSnapshot);
-  }
-  if(importanceSamplingAlt_) {
-    if(fVerbose > 1) std::cout << ">>> Enabling importance sampling for alt. hyp." << std::endl;
-    if(!fSystematics) {
-      coutE(InputArguments)<<"Importance sampling is not available without systematics";
-      return std::auto_ptr<RooStats::HybridCalculator>();
-    }
-    if (w->pdf(istr) == 0) {
-      w->factory("__oneHalf__[0.5]");
-      RooAddPdf *sum = new RooAddPdf(istr, "fifty-fifty", *mc_s->GetPdf(), *mc_b->GetPdf(), *w->var("__oneHalf__"));
-      w->import(*sum); 
-    }
-    RooArgSet importanceSnapshot;
-    importanceSnapshot.addClone(poi);
-    importanceSnapshot.addClone(*mc_s->GetNuisanceParameters());
-    if (fVerbose > 2) importanceSnapshot.Print("V");
-    hc->SetAltImportanceDensity(w->pdf(istr), &importanceSnapshot);
-  }
-
-  return hc;
-}
-#endif
-
-
 
 HypoTestResult * HypoTestInverterNew::Eval(HypoTestCalculatorGeneric &hc, bool adaptive, double clsTarget) const {
 
@@ -352,12 +185,15 @@ HypoTestResult * HypoTestInverterNew::Eval(HypoTestCalculatorGeneric &hc, bool a
 
    // to be seen.......why CMS codes is  having this - need to check 
 #ifdef LATER_TBI
-   if (testStat_ == "Atlas" || testStat_ == "Profile") {
+   bool flipPValues = false;
+   TestStatistics * testStat = hc.GetStatSapler()->GetTestStatistics();
+   if ( dynamic_cast<ProfileLikelihoodTestStat*>(testStat) ) { 
       // I need to flip the P-values
+      flipPValues = true;
       hcResult->SetPValueIsRightTail(!hcResult->GetPValueIsRightTail());
-      hcResult->SetTestStatisticData(hcResult->GetTestStatisticData()-1e-9); // issue with < vs <= in discrete models
+   //  hcResult->SetTestStatisticData(hcResult->GetTestStatisticData()+1e-9); // issue with < vs <= in discrete models
    } else {
-      hcResult->SetTestStatisticData(hcResult->GetTestStatisticData()+1e-9); // issue with < vs <= in discrete models
+   //  hcResult->SetTestStatisticData(hcResult->GetTestStatisticData()+1e-9); // issue with < vs <= in discrete models
    }
 #endif
 
@@ -375,7 +211,7 @@ HypoTestResult * HypoTestInverterNew::Eval(HypoTestCalculatorGeneric &hc, bool a
       std::auto_ptr<HypoTestResult> more(hc.GetHypoTest());
       
 #ifdef LATER_TBI
-      if (testStat_ == "Atlas" || testStat_ == "Profile")
+      if (flipPValues)
          more->SetPValueIsRightTail(!more->GetPValueIsRightTail());
 #endif
       hcResult->Append(more.get());
@@ -395,14 +231,6 @@ HypoTestResult * HypoTestInverterNew::Eval(HypoTestCalculatorGeneric &hc, bool a
    }
    
    fPerf_totalToysRun += (hcResult->GetAltDistribution()->GetSize() + hcResult->GetNullDistribution()->GetSize());
-
-    // if (!plot_.empty() && workingMode_ != MakeLimit) {
-    //      HypoTestPlot plot(*hcResult, 30);
-    //      TCanvas *c1 = new TCanvas("c1","c1");
-    //      plot.Draw();
-    //      c1->Print(plot_.c_str());
-    //      delete c1;
-    //  }
 
 
    return hcResult;
@@ -511,37 +339,6 @@ bool HypoTestInverterNew::RunOnePoint( double rVal, bool adaptive, double clTarg
    return true;
 }
 
-
-
-// RooStats::HypoTestResult * HypoTestInverterNew::readToysFromFile(double rValue) {
-//     if (!fReadToysFromHere){
-//       coutE(InputArguments)<<"Cannot use readHypoTestResult: option toysFile not specified, or input file empty";
-//       return HypoTestResult();
-//     }
-
-//     TDirectory *toyDir = fReadToysFromHere->GetDirectory("toys");
-//     if (!toyDir){       
-//       coutE(InputArguments)<<"Cannot use readHypoTestResult: option toysFile not specified, or input file empty";
-//       return HypoTestResult();
-//     }
-//     if (fVerbose) std::cout << "Reading toys for r = " << rValue << std::endl;
-//     TString prefix = TString::Format("HypoTestResult_r%g_",rValue);
-//     std::auto_ptr<RooStats::HypoTestResult> ret;
-//     TIter next(toyDir->GetListOfKeys()); TKey *k;
-//     while ((k = (TKey *) next()) != 0) {
-//         if (TString(k->GetName()).Index(prefix) != 0) continue;
-//         RooStats::HypoTestResult *toy = dynamic_cast<RooStats::HypoTestResult *>(toyDir->Get(k->GetName()));
-//         if (toy == 0) continue;
-//         if (fVerbose) std::cout << " - " << k->GetName() << std::endl;
-//         if (ret.get() == 0) {
-//             ret.reset(new RooStats::HypoTestResult(*toy));
-//         } else {
-//             ret->Append(toy);
-//         }
-//     }
-
-//     return ret.release();
-// }
 
 
 bool HypoTestInverterNew::RunLimit(double &limit, double &limitErr, double absAccuracy, double relAccuracy, const double*hint) const {
@@ -726,13 +523,6 @@ bool HypoTestInverterNew::RunLimit(double &limit, double &limitErr, double absAc
       HypoTestInverterPlot plot("plot","plot",fResults);
       fLimitPlot = std::auto_ptr<TGraphErrors>(plot.MakePlot() );
 
-      // //fLimitPlot->Print();
-      // //std::cout << "number of points " << fLimitPlot->GetN() << std::endl;
-      // TCanvas *c=new TCanvas();
-      // c->SetName("TESTCANVAS");
-      // c->SetTitle("TESTCANVAS");
-      // fLimitPlot->Draw("AP");
-      // c->Update();
       
       for (int j = 0; j < fLimitPlot->GetN(); ++j) { 
          if (fLimitPlot->GetX()[j] >= rMinBound && fLimitPlot->GetX()[j] <= rMaxBound) npoints++; 
@@ -761,7 +551,7 @@ bool HypoTestInverterNew::RunLimit(double &limit, double &limitErr, double absAc
 
 //if (!plot_.empty() && fLimitPlot.get()) {
   if (fLimitPlot.get() && fLimitPlot->GetN() > 0) {
-      new TCanvas("c1","c1");
+       //new TCanvas("c1","c1");
       fLimitPlot->Sort();
       fLimitPlot->SetLineWidth(2);
       double xmin = r->getMin(), xmax = r->getMax();
@@ -791,6 +581,10 @@ bool HypoTestInverterNew::RunLimit(double &limit, double &limitErr, double absAc
   fResults->fUpperLimit = limit; 
   fResults->fUpperLimitError = limitErr;
   fResults->fFittedUpperLimit = true;
+  // lower limit are always min of p value
+  fResults->fLowerLimit = fScannedVariable->getMin(); 
+  fResults->fLowerLimitError = 0;
+  fResults->fFittedLowerLimit = true; 
 
   return true;
 }
