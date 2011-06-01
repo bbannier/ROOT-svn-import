@@ -24,19 +24,22 @@ namespace ROOT {
       virtual ~TextInputColorizer();
       void ProcessTextChange(textinput::EditorRange& Modification,
                              textinput::Text& input);
-  
+
       void ProcessPromptChange(textinput::Text& prompt);
-  
+
       void ProcessCursorChange(size_t Cursor, textinput::Text& input,
                                textinput::Range& DisplayR);
       bool GetColor(char type, textinput::Color& Col);
       char GetInfoColor() const { return (char) kColorTabComp; }
 
-  
+
       void SetColors(const char* colorType, const char* colorTabComp,
                      const char* colorBracket, const char* colorBadBracket,
                      const char* colorPrompt);
    private:
+      void ExtendRangeAndSetColor(textinput::Text& input, size_t idx,
+                                  char col, textinput::Range& disp);
+
       enum EColorsTypes {
          kColorNone,
          kColorType,
@@ -48,6 +51,7 @@ namespace ROOT {
       };
 
       textinput::Color fColors[kNumColors]; // Colors used, indexed by EColorsTypes
+      bool fColorIsDefault[kNumColors]; // Whether the fColors entry is the default color.
       EColorsTypes fPrevBracketColor; // previous bracket: None or [Bad]Bracket
    };
 

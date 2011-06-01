@@ -20,34 +20,43 @@
 
 namespace textinput {
   TerminalDisplayWin::TerminalDisplayWin():
-    fStartLine(0), fIsAttached(false), fIsConsole(false) {
+    TerminalDisplay(false), fStartLine(0), fIsAttached(false) {
+    UpdateHandle(true);
     HandleResizeEvent();
   }
 
-  TerminalDisplayWin::~TerminalDisplayWin() {}
+  TerminalDisplayWin::~TerminalDisplayWin() {
+    if (fOut != ::GetStdHandle(STD_OUTPUT_HANDLE)) {
+      // We allocated CONOUT$:
+      CloseHandle(fOut);
+    }
+  }
 
   void
-  TerminalDisplayWin::UpdateHandle() {
+  TerminalDisplayWin::UpdateHandle(bool setup) {
     fOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-    fIsConsole = ::GetConsoleMode(fOut, &fOldMode) != 0;
-    if (!fIsConsole) {
-      fOut = CreateFile("CONOUT$", (GENERIC_READ | GENERIC_WRITE),
-        (FILE_SHARE_READ | FILE_SHARE_WRITE), NULL, OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL, NULL);
-      if (fOut == INVALID_HANDLE_VALUE) {
-        ShowError("opening CONOUT$");
-        fOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-      } else {
-        fIsConsole = ::GetConsoleMode(fOut, &fOldMode) != 0;
+    bool isConsole = ::GetConsoleMode(fOut, &fOldMode) != 0;
+    if (setup) {
+      SetIsTTY(isConsole);
+    } else {
+      if (IsTTY() && !isConsole) {
+        // We had a console, but now stdin is not a console anymore.
+        // This happens if redirection is not reverted properly.
+        // Assume we are meant to stay at the console:
+        fOut = ::CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE,
+          FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+          FILE_ATTRIBUTE_NORMAL, NULL);
+        ::GetConsoleMode(fOut, &fOldMode);
       }
     }
+
     fMyMode = fOldMode | ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT;
   }
-  
+
   void
   TerminalDisplayWin::HandleResizeEvent() {
-    UpdateHandle();
-    if (fIsConsole) {
+    UpdateHandle(false);
+    if (IsTTY()) {
       CONSOLE_SCREEN_BUFFER_INFO Info;
       if (!::GetConsoleScreenBufferInfo(fOut, &Info)) {
         ShowError("resize / getting console info");
@@ -74,20 +83,20 @@ namespace textinput {
     MoveInternal(P);
     fWritePos = P;
   }
-  
+
   void
   TerminalDisplayWin::MoveInternal(Pos P) {
     COORD C = {P.fCol, P.fLine + fStartLine};
     ::SetConsoleCursorPosition(fOut, C);
   }
-  
+
   void
   TerminalDisplayWin::MoveFront() {
     Pos P(fWritePos);
     P.fCol = 0;
     MoveInternal(P);
   }
-  
+
   void
   TerminalDisplayWin::MoveUp(size_t nLines /* = 1 */) {
     Pos P(fWritePos);
@@ -101,21 +110,21 @@ namespace textinput {
     ++P.fLine;
     MoveInternal(P);
   }
-  
+
   void
   TerminalDisplayWin::MoveRight(size_t nCols /* = 1 */) {
     Pos P(fWritePos);
     ++P.fCol;
     MoveInternal(P);
   }
-  
+
   void
   TerminalDisplayWin::MoveLeft(size_t nCols /* = 1 */) {
     Pos P(fWritePos);
     --P.fCol;
     MoveInternal(P);
   }
-  
+
   void
   TerminalDisplayWin::EraseToRight() {
     DWORD NumWritten;
@@ -130,7 +139,7 @@ namespace textinput {
   void
   TerminalDisplayWin::WriteRawString(const char *text, size_t len) {
     DWORD NumWritten = 0;
-    if (fIsConsole) {
+    if (IsTTY()) {
       WriteConsole(fOut, text, (DWORD) len, &NumWritten, NULL);
     } else {
       WriteFile(fOut, text, (DWORD) len, &NumWritten, NULL);
@@ -139,17 +148,17 @@ namespace textinput {
       ShowError("writing to output");
     }
   }
-  
+
   void
   TerminalDisplayWin::Attach() {
     // set to noecho
     if (fIsAttached) return;
-    UpdateHandle();
-    if (fIsConsole && !::SetConsoleMode(fOut, fMyMode)) {
+    UpdateHandle(false);
+    if (IsTTY() && !::SetConsoleMode(fOut, fMyMode)) {
       ShowError("attaching to console output");
     }
     CONSOLE_SCREEN_BUFFER_INFO Info;
-    if (fIsConsole) {
+    if (IsTTY()) {
       if (!::GetConsoleScreenBufferInfo(fOut, &Info)) {
         ShowError("attaching / getting console info");
       } else {
@@ -164,26 +173,26 @@ namespace textinput {
     fIsAttached = true;
     NotifyTextChange(Range::AllWithPrompt());
   }
-  
+
   void
   TerminalDisplayWin::Detach() {
     if (!fIsAttached) return;
-    if (fIsConsole && !SetConsoleMode(fOut, fOldMode)) {
+    if (IsTTY() && !SetConsoleMode(fOut, fOldMode)) {
       ShowError("detaching to console output");
     }
     TerminalDisplay::Detach();
     fIsAttached = false;
   }
-        
+
   void
   TerminalDisplayWin::ShowError(const char* Where) const {
-    DWORD Err = GetLastError(); 
+    DWORD Err = GetLastError();
     LPVOID MsgBuf = 0;
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
       FORMAT_MESSAGE_IGNORE_INSERTS, NULL, Err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
       (LPTSTR) &MsgBuf, 0, NULL);
 
-    printf("Error %d in textinput::TerminalDisplayWin %s: %s\n", Err, Where, MsgBuf); 
+    printf("Error %d in textinput::TerminalDisplayWin %s: %s\n", Err, Where, MsgBuf);
     LocalFree(MsgBuf);
   }
 

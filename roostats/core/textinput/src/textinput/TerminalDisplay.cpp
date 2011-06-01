@@ -38,29 +38,32 @@ namespace textinput {
     return new TerminalDisplayUnix();
 #endif
   }
-  
+
   void
   TerminalDisplay::NotifyTextChange(Range r) {
+    if (!IsTTY()) return;
     Attach();
     WriteWrapped(r.fPromptUpdate,GetContext()->GetTextInput()->IsInputHidden(),
       r.fStart, r.fLength);
     Move(GetCursor());
   }
-  
+
   void
   TerminalDisplay::NotifyCursorChange() {
     Attach();
     Move(GetCursor());
   }
-  
+
   void
   TerminalDisplay::NotifyResetInput() {
     Attach();
-    WriteRawString("\n", 1);
+    if (IsTTY()) {
+      WriteRawString("\n", 1);
+    }
     fWriteLen = 0;
     fWritePos = Pos();
   }
-  
+
   void
   TerminalDisplay::NotifyError() {
     Attach();
@@ -69,7 +72,10 @@ namespace textinput {
 
   void
   TerminalDisplay::DisplayInfo(const std::vector<std::string>& Options) {
-    char infoColIdx = GetContext()->GetColorizer()->GetInfoColor();
+    char infoColIdx = 0;
+    if (GetContext()->GetColorizer()) {
+       infoColIdx = GetContext()->GetColorizer()->GetInfoColor();
+    }
     WriteRawString("\n", 1);
     for (size_t i = 0, n = Options.size(); i < n; ++i) {
       Text t(Options[i], infoColIdx);
@@ -80,12 +86,18 @@ namespace textinput {
     Detach();
     Attach();
   }
-  
+
   void
   TerminalDisplay::Detach() {
-    Color DefaultColor;
-    GetContext()->GetColorizer()->GetColor(0, DefaultColor);
-    SetColor(0, DefaultColor);
+    fWritePos = Pos();
+    fWriteLen = 0;
+    if (GetContext()->GetColorizer()) {
+      Color DefaultColor;
+      GetContext()->GetColorizer()->GetColor(0, DefaultColor);
+      SetColor(0, DefaultColor);
+      // We can't tell whether the application will activate a different color:
+      fPrevColor = -1;
+    }
   }
 
   size_t
@@ -93,7 +105,7 @@ namespace textinput {
                                        size_t WriteOffset, size_t Requested) {
     size_t Start = TextOffset;
     size_t Remaining = Requested;
-    
+
     size_t Available = Element.length() - Start;
     if (Requested == (size_t) -1) {
       Requested = Available;
@@ -119,7 +131,7 @@ namespace textinput {
         if (numThisLine > numToEOL) {
           numThisLine = numToEOL;
         }
-        
+
         if (GetContext()->GetColorizer()) {
           // We only write same-color chunks; how long is it?
           const std::vector<char>& Colors = Element.GetColors();
@@ -129,7 +141,7 @@ namespace textinput {
                  && ThisColor == Colors[Start + numSameColor])
             ++numSameColor;
           numThisLine = numSameColor;
-          
+
           if (ThisColor != fPrevColor) {
             Color C;
             GetContext()->GetColorizer()->GetColor(ThisColor, C);
@@ -183,6 +195,12 @@ namespace textinput {
     const Text& EditPrompt = GetContext()->GetEditor()->GetEditorPrompt();
     size_t EditorPromptLen = EditPrompt.length();
 
+    if (!IsTTY()) {
+       PromptLen = 0;
+       EditorPromptLen = 0;
+       PromptUpdate = Range::kNoPromptUpdate;
+    }
+
     if (PromptUpdate & Range::kUpdatePrompt) {
       // Writing from front means we write the prompt, too
       Move(Pos());
@@ -203,10 +221,9 @@ namespace textinput {
 
     size_t avail = 0;
     if (hidden) {
-      // '*' are nice but less secure for password (length will be known).
-      // Text hide(std::string(GetContext()->GetLine().length(), '*'), 0);
-      // avail = WriteWrappedElement(hide, Offset,
-      //                             PromptLen + EditorPromptLen, Requested);
+      Text hide(std::string(GetContext()->GetLine().length(), '*'), 0);
+      avail = WriteWrappedElement(hide, Offset,
+                                  PromptLen + EditorPromptLen, Requested);
     } else {
       avail = WriteWrappedElement(GetContext()->GetLine(), Offset,
                                        PromptLen + EditorPromptLen, Requested);
@@ -214,7 +231,7 @@ namespace textinput {
     fWriteLen = PromptLen + EditorPromptLen + GetContext()->GetLine().length();
     return avail;
   }
-  
+
   void
   TerminalDisplay::Move(Pos p) {
     Attach();
@@ -226,7 +243,7 @@ namespace textinput {
       MoveDown(p.fLine - fWritePos.fLine);
       fWritePos.fLine += p.fLine - fWritePos.fLine;
     }
-    
+
     if (p.fCol == 0) {
       MoveFront();
       fWritePos.fCol = 0;

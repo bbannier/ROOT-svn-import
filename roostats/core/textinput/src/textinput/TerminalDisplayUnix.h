@@ -19,19 +19,19 @@
 #include "textinput/TerminalDisplay.h"
 
 namespace textinput {
-  struct Color;
+  class Color;
 
   // Output to tty / pipe / file.
   class TerminalDisplayUnix: public TerminalDisplay {
   public:
     TerminalDisplayUnix();
     ~TerminalDisplayUnix();
-    
+
     void HandleResizeSignal();
-    
+
     void Attach();
     void Detach();
-    
+
   protected:
     void MoveUp(size_t nLines = 1);
     void MoveDown(size_t nLines = 1);
@@ -49,7 +49,6 @@ namespace textinput {
   private:
     bool fIsAttached; // whether tty is configured
     size_t fNColors; // number of colors supported by output
-    bool fIsTTY; // whether output is to a terminal
   };
 }
 #endif // TEXTINPUT_TERMINALDISPLAYUNIX_H

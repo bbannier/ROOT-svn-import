@@ -26,9 +26,9 @@ namespace textinput {
   // Abstract input interface.
   class Reader {
   public:
-    Reader() {}
+    Reader(): fContext(0) {}
     virtual ~Reader();
-    
+
     TextInputContext* GetContext() const { return fContext; }
     void SetContext(TextInputContext* C) { fContext = C; }
 

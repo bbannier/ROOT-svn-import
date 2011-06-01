@@ -496,8 +496,8 @@ namespace {
       // thread for processing windows messages (aka Main/Server thread).
       // We need to start the thread outside the TGWin32 / GUI related
       // dll, because starting threads at DLL init time does not work.
-      // Indead, we start an ideling thread at binary startup, and only
-      // call the "real" message provcessing function
+      // Instead, we start an ideling thread at binary startup, and only
+      // call the "real" message processing function
       // TGWin32::GUIThreadMessageFunc() once gVirtualX comes up.
 
       MSG msg;
@@ -3780,7 +3780,16 @@ void TWinNTSystem::Exit(int code, Bool_t mode)
    // and before emptying CINT.
    if (gROOT) {
       gROOT->CloseFiles();
-      if (gROOT->GetListOfBrowsers()) gROOT->GetListOfBrowsers()->Delete();
+      if (gROOT->GetListOfBrowsers()) {
+         // GetListOfBrowsers()->Delete() creates problems when a browser is 
+         // created on the stack, calling CloseWindow() solves the problem
+         //gROOT->GetListOfBrowsers()->Delete();
+         TBrowser *b;
+         TIter next(gROOT->GetListOfBrowsers());
+         while ((b = (TBrowser*) next()))
+            gROOT->ProcessLine(Form("((TBrowser*)0x%lx)->GetBrowserImp()->GetMainFrame()->CloseWindow();",
+                                    (ULong_t)b));
+      }
    }
    if (gInterpreter) {
       gInterpreter->ResetGlobals();

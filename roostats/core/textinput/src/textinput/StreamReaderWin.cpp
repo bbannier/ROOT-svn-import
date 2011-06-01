@@ -20,21 +20,66 @@
 #include <stdio.h>
 #include <Windows.h>
 
+// MSVC 7.1 is missing these definitions:
+#ifndef ENABLE_QUICK_EDIT_MODE
+# define ENABLE_QUICK_EDIT_MODE 0x0040
+#endif
+#ifndef ENABLE_EXTENDED_FLAGS
+# define ENABLE_EXTENDED_FLAGS 0x0080
+#endif
+#ifndef ENABLE_LINE_INPUT
+# define ENABLE_LINE_INPUT 0x0002
+#endif
+#ifndef ENABLE_PROCESSED_INPUT
+# define ENABLE_PROCESSED_INPUT 0x0001
+#endif
+#ifndef ENABLE_ECHO_INPUT
+# define ENABLE_ECHO_INPUT 0x0004
+#endif
+#ifndef ENABLE_INSERT_MODE
+# define ENABLE_INSERT_MODE 0x0020
+#endif
+// End MSVC 7.1 quirks
+
 namespace textinput {
   StreamReaderWin::StreamReaderWin(): fHaveInputFocus(false), fIsConsole(true),
     fOldMode(0), fMyMode(0) {
-    fIn = ::GetStdHandle(STD_INPUT_HANDLE);
-    fIsConsole = ::GetConsoleMode(fIn, &fOldMode) != 0;
-    fMyMode = fOldMode | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS; 
+    UpdateHandle(true);
+    fMyMode = fOldMode | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS;
     fMyMode = fOldMode & ~(ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT
-      | ENABLE_ECHO_INPUT | ENABLE_INSERT_MODE); 
+      | ENABLE_ECHO_INPUT | ENABLE_INSERT_MODE);
   }
 
-  StreamReaderWin::~StreamReaderWin() {}
+  StreamReaderWin::~StreamReaderWin() {
+    if (fIn != ::GetStdHandle(STD_INPUT_HANDLE)) {
+      // We allocated CONIN$:
+      CloseHandle(fIn);
+    }
+  }
+
+  void
+  StreamReaderWin::UpdateHandle(bool setup) {
+    fIn = ::GetStdHandle(STD_INPUT_HANDLE);
+    bool isConsole = ::GetConsoleMode(fIn, &fOldMode) != 0;
+    if (setup) {
+      fIsConsole = isConsole;
+    } else {
+      if (fIsConsole && !isConsole) {
+        // We had a console, but now stdin is not a console anymore.
+        // This happens if redirection is not reverted properly.
+        // Assume we are meant to stay at the console:
+        fIn = ::CreateFile("CONIN$", GENERIC_READ | GENERIC_WRITE,
+          FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+          FILE_ATTRIBUTE_NORMAL, NULL); 
+        ::GetConsoleMode(fIn, &fOldMode);
+      }
+    }
+  }
 
   void
   StreamReaderWin::GrabInputFocus() {
     if (fHaveInputFocus) return;
+    UpdateHandle(false);
     if (fIsConsole && !SetConsoleMode(fIn, fMyMode)) {
       fIsConsole = false;
     }
@@ -84,7 +129,7 @@ namespace textinput {
         }
         if ((Key >= 0x30 && Key <= 0x5A /*0-Z*/)
           || (Key >= VK_NUMPAD0 && Key <= VK_DIVIDE)
-          || (Key >= VK_OEM_PLUS && Key <= VK_OEM_102)
+          || (Key >= VK_OEM_1 && Key <= VK_OEM_102)
           || Key == VK_SPACE) {
             C = buf.Event.KeyEvent.uChar.AsciiChar;
             if (buf.Event.KeyEvent.dwControlKeyState
@@ -142,17 +187,17 @@ namespace textinput {
     HandleKeyEvent(C, in);
     ++nRead;
     return true;
-  } 
+  }
 
   void
   StreamReaderWin::HandleError(const char* Where) const {
-    DWORD Err = GetLastError(); 
+    DWORD Err = GetLastError();
     LPVOID MsgBuf = 0;
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
       FORMAT_MESSAGE_IGNORE_INSERTS, NULL, Err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
       (LPTSTR) &MsgBuf, 0, NULL);
 
-    printf("Error %d in textinput::StreamReaderWin %s: %s\n", Err, Where, MsgBuf); 
+    printf("Error %d in textinput::StreamReaderWin %s: %s\n", Err, Where, MsgBuf);
     LocalFree(MsgBuf);
   }
 

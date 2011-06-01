@@ -23,7 +23,7 @@ using namespace std;
 using namespace textinput;
 
 namespace {
-  
+
    Color ColorFromName(const char* name) {
       // Convert a color name to a Color.
       Color ret;
@@ -32,13 +32,13 @@ namespace {
       size_t lenname = strlen(name);
       for (size_t i = 0; i < lenname; ++i)
          lowname[i] = tolower(lowname[i]);
-    
+
       if (lowname.find("bold") != std::string::npos
           || lowname.find("light") != std::string::npos)
          ret.fModifiers |= Color::kModBold;
       if (lowname.find("under") != std::string::npos)
          ret.fModifiers |= Color::kModUnderline;
-    
+
       size_t poshash = lowname.find('#');
       size_t lenrgb = 0;
       if (poshash != std::string::npos) {
@@ -49,7 +49,7 @@ namespace {
          }
          lenrgb = endrgb - poshash - 1;
       }
-    
+
       int rgb[3] = {0};
       if (lenrgb == 3) {
          for (int i = 0; i < 3; ++i) {
@@ -79,7 +79,7 @@ namespace {
          if (lowname.find("default") != std::string::npos) {
             return ret;
          }
-      
+
          static const char* colornames[] = {
             "black", "red", "green", "yellow",
             "blue", "magenta", "cyan", "white", 0
@@ -89,7 +89,7 @@ namespace {
             {0,0,127}, {127,0,127}, {0,127,127}, {127,127,127},
             {0}
          };
-      
+
          for (int i = 0; colornames[i]; ++i) {
             if (lowname.find(colornames[i]) != std::string::npos) {
                int boldify = 0;
@@ -105,35 +105,43 @@ namespace {
       fprintf(stderr, "Getline_color/ColorFromName: cannot parse color %s!\n", name);
       return Color();
    } // ColorFromName()
-  
+
    bool IsAlnum_(char c) { return c == '_' || isalnum(c); }
    bool IsAlpha_(char c) { return c == '_' || isalpha(c); }
-
-   void ExtendRangeAndSetColor(Text& input, size_t idx, char col, Range& disp) {
-      // Utility function that updates the display modification range if the
-      // color at index idx is different from what it was before.
-
-      if (input.GetColor(idx) != col) {
-         input.SetColor(idx, col);
-         disp.Extend(idx);
-      }
-   }
 } // unnamed namespace
 
 
 ROOT::TextInputColorizer::TextInputColorizer():
-   fPrevBracketColor(kColorNone) {
+   fColorIsDefault(), fPrevBracketColor(kColorNone) {
    // Set the default colors.
    // fColors[kColorNone] stays default initialized.
    fColors[kColorType] = ColorFromName("blue");
    fColors[kColorTabComp] = ColorFromName("magenta");
    fColors[kColorBracket] = ColorFromName("green");
    fColors[kColorBadBracket] = ColorFromName("red");
-   fColors[kColorPrompt] = ColorFromName("cyan");
+   fColors[kColorPrompt] = ColorFromName("default");
+   fColorIsDefault[kColorPrompt] = true;
 }
 
 ROOT::TextInputColorizer::~TextInputColorizer() {
    // pin vtable
+}
+
+
+void ROOT::TextInputColorizer::ExtendRangeAndSetColor(Text& input,
+                                                      size_t idx, char col,
+                                                      Range& disp) {
+   // Utility function that updates the display modification range if the
+   // color at index idx is different from what it was before.
+
+   if (fColorIsDefault[(int)col]) {
+      // Never mind the color: use use default.
+      col = 0;
+   }
+   if (input.GetColor(idx) != col) {
+      input.SetColor(idx, col);
+      disp.Extend(idx);
+   }
 }
 
 bool ROOT::TextInputColorizer::GetColor(char type, Color& col) {
@@ -159,10 +167,15 @@ void ROOT::TextInputColorizer::SetColors(const char* colorType,
    // color name, optionally prepended by "underline" or "bold"
 
    fColors[kColorType] = ColorFromName(colorType);
+   fColorIsDefault[kColorType] = (fColors[kColorType] == Color());
    fColors[kColorTabComp] = ColorFromName(colorTabComp);
+   fColorIsDefault[kColorTabComp] = (fColors[kColorTabComp] == Color());
    fColors[kColorBracket] = ColorFromName(colorBracket);
+   fColorIsDefault[kColorBracket] = (fColors[kColorBracket] == Color());
    fColors[kColorBadBracket] = ColorFromName(colorBadBracket);
+   fColorIsDefault[kColorBadBracket] = (fColors[kColorBadBracket] == Color());
    fColors[kColorPrompt] = ColorFromName(colorPrompt);
+   fColorIsDefault[kColorPrompt] = (fColors[kColorPrompt] == Color());
 }
 
 void ROOT::TextInputColorizer::ProcessTextChange(EditorRange& Modification,
@@ -221,7 +234,7 @@ void ROOT::TextInputColorizer::ProcessTextChange(EditorRange& Modification,
             color = kColorType;
          }
          for (size_t ic = i; ic < i + wordLen; ++ic) {
-            ExtendRangeAndSetColor(input, ic, color, Modification.fDisplay);        
+            ExtendRangeAndSetColor(input, ic, color, Modification.fDisplay);
          }
          i += wordLen;
       } else {
@@ -237,7 +250,7 @@ void ROOT::TextInputColorizer::ProcessTextChange(EditorRange& Modification,
          }
          i += wordLen;
       }
-    
+
       // skip trailing whitespace.
       while (i < modEnd && isspace(text[i])) {
          ExtendRangeAndSetColor(input, i, kColorNone, Modification.fDisplay);
@@ -247,7 +260,11 @@ void ROOT::TextInputColorizer::ProcessTextChange(EditorRange& Modification,
 }
 
 void ROOT::TextInputColorizer::ProcessPromptChange(Text& prompt) {
-   prompt.SetColor(Range::AllText(), kColorPrompt);
+   int idx = kColorPrompt;
+   if (fColorIsDefault[kColorPrompt]) {
+      idx = 0;
+   }
+   prompt.SetColor(Range::AllText(), idx);
 }
 
 void ROOT::TextInputColorizer::ProcessCursorChange(size_t Cursor,
@@ -258,7 +275,7 @@ void ROOT::TextInputColorizer::ProcessCursorChange(size_t Cursor,
 
    static const int numBrackets = 3;
    static const char bTypes[numBrackets][3] = {"()", "{}", "[]"};
-  
+
    if (input.empty()) return;
 
    if (fPrevBracketColor != kColorNone) {
@@ -285,7 +302,7 @@ void ROOT::TextInputColorizer::ProcessCursorChange(size_t Cursor,
    int foundParenIdx = -1;
    int parenType = 0;
    const std::string& text = input.GetText();
-  
+
    if (Cursor < input.length()) {
       // check against each bracket type
       for (; parenType < numBrackets; parenType++) {
@@ -301,7 +318,7 @@ void ROOT::TextInputColorizer::ProcessCursorChange(size_t Cursor,
          }
       }
    }
-  
+
    // current cursor char is not an open bracket, and there is a previous char
    // to check
    if (foundParenIdx == -1 && Cursor > 0) {
@@ -309,7 +326,7 @@ void ROOT::TextInputColorizer::ProcessCursorChange(size_t Cursor,
       --Cursor;
       // check against each bracket type
       parenType = 0;
-    
+
       for (; parenType < numBrackets; parenType++) {
          // if current char is equal to closing bracket, push onto stack
          if (text[Cursor] == bTypes[parenType][1]) {
@@ -318,22 +335,21 @@ void ROOT::TextInputColorizer::ProcessCursorChange(size_t Cursor,
             break;
          }
       }
-    
-      // no bracket found on either current or previous char, return.
-      if (foundParenIdx == -1) {
-         return;
-      }
    }
-  
+   // no bracket found on either current or previous char, return.
+   if (foundParenIdx == -1) {
+      return;
+   }
+
    // terate through remaining letters until find a matching closing bracket
    // if another open bracket of the same type is found, push onto stack
    // and pop on next closing bracket match
    int direction = 1;
-  
+
    if (foundParenIdx == 1) {
       direction = -1;
    }
-  
+
    size_t lenLine = input.length();
    // direction == -1: Cursor - 1 to front.
    size_t scanBegin = Cursor - 1;
@@ -364,7 +380,7 @@ void ROOT::TextInputColorizer::ProcessCursorChange(size_t Cursor,
       // loop termination check before possible underflow ("--0")
       if (i == scanLast) break;
    }
-  
+
    if (!locBrackets.empty()) {
       ExtendRangeAndSetColor(input, Cursor, kColorBadBracket, DisplayR);
       fPrevBracketColor = kColorBadBracket;
