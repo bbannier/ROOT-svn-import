@@ -35,7 +35,7 @@ namespace textinput {
     fContext->AddDisplay(display);
     fContext->AddReader(reader);
   }
-  
+
   TextInput::~TextInput() {
     delete fContext;
   }
@@ -86,69 +86,32 @@ namespace textinput {
     if (fLastReadResult == kRRReadEOLDelimiter
         || fLastReadResult == kRREOF)
       return fLastReadResult;
-    
+
     if (fLastReadResult == kRRNone) {
       GrabInputOutput();
       UpdateDisplay(EditorRange(Range::AllText(), Range::AllWithPrompt()));
     }
-    
+
     size_t nRead = 0;
     size_t nMax = GetMaxPendingCharsToRead();
     if (nMax == 0) nMax = (size_t) -1; // aka "all"
     InputData in;
     EditorRange R;
     size_t OldCursorPos = fContext->GetCursor();
-    for (std::vector<Reader*>::const_iterator iR = fContext->GetReaders().begin(),
-         iE = fContext->GetReaders().end(); iR != iE && nRead < nMax; ++iR) {
-      if (IsBlockingUntilEOL() || (*iR)->HavePendingInput()) {
+    for (std::vector<Reader*>::const_iterator iR
+           = fContext->GetReaders().begin(),
+         iE = fContext->GetReaders().end();
+         iR != iE && nRead < nMax; ++iR) {
+      while ((IsBlockingUntilEOL() && (fLastReadResult == kRRNone))
+             || (nRead < nMax && (*iR)->HavePendingInput())) {
         if ((*iR)->ReadInput(nRead, in)) {
-          fLastKey = in.GetRaw(); // rough approximation
-          Editor::Command Cmd = fContext->GetKeyBinding()->ToCommand(in);
-          
-          if (Cmd.GetKind() == Editor::kCKControl
-              && (Cmd.GetChar() == 3 || Cmd.GetChar() == 26)) {
-            // If there are modifications in the queue, process them now.
-            UpdateDisplay(R);
-            EmitSignal(Cmd.GetChar(), R);
-          } else if (Cmd.GetKind() == Editor::kCKCommand
-            && Cmd.GetCommandID() == Editor::kCmdWindowResize) {
-            std::for_each(fContext->GetDisplays().begin(),
-                          fContext->GetDisplays().end(),
-                          std::mem_fun(&Display::NotifyWindowChange));
-          } else {
-            if (!in.IsRaw() && in.GetExtendedInput() == InputData::kEIEOF) {
-              fLastReadResult = kRREOF;
-              break;
-            } else {
-              Editor::EProcessResult Res = fContext->GetEditor()->Process(Cmd, R);
-              if (Res == Editor::kPRError) {
-                // Signal displays that an error has occurred.
-                std::for_each(fContext->GetDisplays().begin(),
-                              fContext->GetDisplays().end(),
-                              std::mem_fun(&Display::NotifyError));
-              } else if (Cmd.GetKind() == Editor::kCKCommand
-                    && (Cmd.GetCommandID() == Editor::kCmdEnter || 
-                    Cmd.GetCommandID() == Editor::kCmdHistReplay)) {
-                fLastReadResult = kRRReadEOLDelimiter;
-                break;
-              }
-            }
-          }
+          ProcessNewInput(in, R);
+          DisplayNewInput(R, OldCursorPos);
+          if (fLastReadResult == kRREOF
+              || fLastReadResult == kRRReadEOLDelimiter)
+            break;
         }
       }
-    }
-    
-    if (fContext->GetColorizer() && OldCursorPos != fContext->GetCursor()) {
-       fContext->GetColorizer()->ProcessCursorChange(fContext->GetCursor(),
-                                                     fContext->GetLine(),
-                                                     R.fDisplay);
-    }
-
-    UpdateDisplay(R);
-    
-    if (OldCursorPos != fContext->GetCursor()) {
-      std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
-                    std::mem_fun(&Display::NotifyCursorChange));
     }
 
     if (fLastReadResult == kRRNone) {
@@ -162,12 +125,68 @@ namespace textinput {
   }
 
   void
+  TextInput::ProcessNewInput(const InputData& in, EditorRange& R) {
+    // in was read, process it.
+    fLastKey = in.GetRaw(); // rough approximation
+    Editor::Command Cmd = fContext->GetKeyBinding()->ToCommand(in);
+
+    if (Cmd.GetKind() == Editor::kCKControl
+        && (Cmd.GetChar() == 3 || Cmd.GetChar() == 26)) {
+      // If there are modifications in the queue, process them now.
+      UpdateDisplay(R);
+      EmitSignal(Cmd.GetChar(), R);
+    } else if (Cmd.GetKind() == Editor::kCKCommand
+               && Cmd.GetCommandID() == Editor::kCmdWindowResize) {
+      std::for_each(fContext->GetDisplays().begin(),
+                    fContext->GetDisplays().end(),
+                    std::mem_fun(&Display::NotifyWindowChange));
+    } else {
+      if (!in.IsRaw() && in.GetExtendedInput() == InputData::kEIEOF) {
+        fLastReadResult = kRREOF;
+        return;
+      } else {
+        Editor::EProcessResult Res = fContext->GetEditor()->Process(Cmd, R);
+        if (Res == Editor::kPRError) {
+          // Signal displays that an error has occurred.
+          std::for_each(fContext->GetDisplays().begin(),
+                        fContext->GetDisplays().end(),
+                        std::mem_fun(&Display::NotifyError));
+        } else if (Cmd.GetKind() == Editor::kCKCommand
+                   && (Cmd.GetCommandID() == Editor::kCmdEnter ||
+                       Cmd.GetCommandID() == Editor::kCmdHistReplay)) {
+          fLastReadResult = kRRReadEOLDelimiter;
+          return;
+        }
+      }
+    }
+  }
+
+  void
+  TextInput::DisplayNewInput(EditorRange& R, size_t& oldCursorPos) {
+    // Display what has been entered.
+    if (fContext->GetColorizer() && oldCursorPos != fContext->GetCursor()) {
+       fContext->GetColorizer()->ProcessCursorChange(fContext->GetCursor(),
+                                                     fContext->GetLine(),
+                                                     R.fDisplay);
+    }
+
+    UpdateDisplay(R);
+
+    if (oldCursorPos != fContext->GetCursor()) {
+      std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
+                    std::mem_fun(&Display::NotifyCursorChange));
+    }
+
+    oldCursorPos = fContext->GetCursor();
+  }
+
+  void
   TextInput::Redraw() {
     // Attach and redraw.
     GrabInputOutput();
     UpdateDisplay(EditorRange(Range::AllText(), Range::AllWithPrompt()));
   }
-  
+
   void
   TextInput::UpdateDisplay(const EditorRange& R) {
     // Update changed ranges if attached.
@@ -178,7 +197,8 @@ namespace textinput {
     if (!R.fDisplay.IsEmpty() && fContext->GetColorizer()) {
       fContext->GetColorizer()->ProcessTextChange(ColModR, fContext->GetLine());
     }
-    if (!ColModR.fDisplay.IsEmpty() || ColModR.fDisplay.fPromptUpdate) {
+    if (!ColModR.fDisplay.IsEmpty()
+        || ColModR.fDisplay.fPromptUpdate != Range::kNoPromptUpdate) {
       std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
                     std::bind2nd(std::mem_fun(&Display::NotifyTextChange), ColModR.fDisplay));
     }
@@ -194,9 +214,9 @@ namespace textinput {
       Signal->EmitCtrlC();
     else if (C == 26)
       Signal->EmitCtrlZ();
-    
+
     GrabInputOutput();
-    
+
     // Already done by GrabInputOutput():
     //R.Display = Range::AllText();
     // Immediate refresh.
@@ -205,9 +225,9 @@ namespace textinput {
     //                           R.Display));
     // Empty range.
     R.fDisplay = Range::Empty();
-    
+
   }
-  
+
   void
   TextInput::SetPrompt(const char *P) {
     fContext->SetPrompt(P);
@@ -235,7 +255,7 @@ namespace textinput {
   TextInput::SetFunctionKeyHandler(FunKey* fc) {
     fContext->SetFunctionKeyHandler(fc);
   }
-  
+
   void
   TextInput::GrabInputOutput() const {
     if (fActive) return;
@@ -247,26 +267,26 @@ namespace textinput {
                   std::mem_fun(&Display::Attach));
     fActive = true;
   }
-  
+
   void
   TextInput::ReleaseInputOutput() const {
     // Signal readers that we are done reading.
     if (!fActive) return;
     std::for_each(fContext->GetReaders().begin(), fContext->GetReaders().end(),
                   std::mem_fun(&Reader::ReleaseInputFocus));
-    
+
     // Signal displays that we are done displaying.
     std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
                   std::mem_fun(&Display::Detach));
-    
+
     fActive = false;
   }
-  
+
   void
   TextInput::DisplayInfo(const std::vector<std::string>& lines) {
     // Display an informational message at the prompt. Acts like
     // a pop-up. Used e.g. for tab-completion.
-    
+
     // foreach fails to build the reference in GCC 4.1.
     // Iterate manually instead.
     for (std::vector<Display*>::const_iterator i = fContext->GetDisplays().begin(),

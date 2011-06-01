@@ -27,15 +27,15 @@ namespace textinput {
   class History {
   public:
     enum {
-      kPruneLengthMaxDepth = -1 // Prune length equals fMaxDepth
+      kPruneLengthDefault = -1 // Prune length equals 80% of fMaxDepth
     };
     History(const char* filename);
     ~History();
 
+    // If fMaxDepth == 0, do not create history output.
     void SetMaxDepth(size_t maxDepth) { fMaxDepth = maxDepth; }
-    void SetPruneLength(size_t pruneLength = (size_t) kPruneLengthMaxDepth) {
+    void SetPruneLength(size_t pruneLength = (size_t) kPruneLengthDefault) {
       fPruneLength = pruneLength; }
-    size_t GetFileLines() const { return fHistFileLines; }
 
     // Indices are reverse! I.e. 0 is newest!
     const std::string& GetLine(size_t Idx) const {
@@ -44,19 +44,18 @@ namespace textinput {
     size_t GetSize() const { return fEntries.size(); }
 
     size_t MatchIndex(size_t StartIdx, const char* regexp, size_t again = 0);
-    
+
     void AddLine(const std::string& line);
     void ModifyLine(size_t Idx, const char* line) {
       fEntries[fEntries.size() - 1 - Idx] = line;
       // Does not sync to file!
     }
-    
+
     void AppendToFile();
     void ReadFile(const char* FileName);
 
   private:
-    std::ofstream fHistFile; // History file stream
-    size_t fHistFileLines; // Number of lines in hist file
+    std::string fHistFileName; // History file name
     size_t fMaxDepth; // Max number of entries before pruning
     size_t fPruneLength; // Remaining entries after pruning
     std::vector<std::string> fEntries; // Previous input lines

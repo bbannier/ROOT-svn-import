@@ -42,7 +42,7 @@ namespace {
   void InitRGB256(unsigned char rgb256[][3]) {
     // initialize the array with the expected standard colors:
     // (from http://frexx.de/xterm-256-notes)
-    unsigned char rgbidx = 0;
+
     // this is not what I see, though it's supposedly the default:
     //   rgb[0][0] =   0; rgb[0][1] =   0; rgb[0][1] =   0;
     // use this instead, just to be on the safe side:
@@ -54,7 +54,7 @@ namespace {
     rgb256[5][0] = 205; rgb256[5][1] =   0; rgb256[5][1] = 205;
     rgb256[6][0] =   0; rgb256[6][1] = 205; rgb256[6][1] = 205;
     rgb256[7][0] = 229; rgb256[7][1] = 229; rgb256[7][1] = 229;
-    
+
     // this is not what I see, though it's supposedly the default:
     //   rgb256[ 8][0] = 127; rgb256[ 8][1] = 127; rgb256[ 8][1] = 127;
     // use this instead, just to be on the safe side:
@@ -66,17 +66,21 @@ namespace {
     rgb256[13][0] = 255; rgb256[13][1] =   0; rgb256[13][1] = 255;
     rgb256[14][0] =   0; rgb256[14][1] = 255; rgb256[14][1] = 255;
     rgb256[15][0] = 255; rgb256[15][1] = 255; rgb256[15][1] = 255;
-    
-    for (unsigned char red = 0; red < 6; ++red) {
-      for (unsigned char green = 0; green < 6; ++green) {
-        for (unsigned char blue = 0; blue < 6; ++blue) {
-          rgbidx = 16 + (red * 36) + (green * 6) + blue;
-          rgb256[rgbidx][0] = red ? (red * 40 + 55) : 0;
-          rgb256[rgbidx][1] = green ? (green * 40 + 55) : 0;
-          rgb256[rgbidx][2] = blue ? (blue * 40 + 55) : 0;
+
+    // 6 intensity RGB
+    static const int intensities[] = {0, 0x5f, 0x87, 0xaf, 0xd7, 0xff};
+    int idx = 16;
+    for (int r = 0; r < 6; ++r) {
+      for (int g = 0; g < 6; ++g) {
+        for (int b = 0; b < 6; ++b) {
+          rgb256[idx][0] = intensities[r];
+          rgb256[idx][1] = intensities[g];
+          rgb256[idx][2] = intensities[b];
+          ++idx;
         }
       }
     }
+
     // colors 232-255 are a grayscale ramp, intentionally leaving out
     // black and white
     for (unsigned char gray = 0; gray < 24; ++gray) {
@@ -95,8 +99,8 @@ extern "C" void TerminalDisplayUnix__handleResizeSignal(int) {
 namespace textinput {
   // If input is not a tty don't write in tty-mode either.
   TerminalDisplayUnix::TerminalDisplayUnix():
-    fIsAttached(false), fNColors(16),
-    fIsTTY(isatty(fileno(stdin)) && isatty(fileno(stdout))) {
+    TerminalDisplay(isatty(fileno(stdin)) && isatty(fileno(stdout))),
+    fIsAttached(false), fNColors(16) {
     HandleResizeSignal();
     gTerminalDisplayUnix() = this;
     signal(SIGWINCH, TerminalDisplayUnix__handleResizeSignal);
@@ -113,7 +117,7 @@ namespace textinput {
   TerminalDisplayUnix::~TerminalDisplayUnix() {
     Detach();
   }
-  
+
   void
   TerminalDisplayUnix::HandleResizeSignal() {
 #ifdef TIOCGWINSZ
@@ -144,50 +148,63 @@ namespace textinput {
 
   void
   TerminalDisplayUnix::SetColor(char CIdx, const Color& C) {
-    if (!fIsTTY) return;
-    
-    if (CIdx == 0) {
-      // Default color, reset.
-      static const char text[] = {(char)0x1b, '[', '0', 'm', 0};
-      WriteRawString(text, 4);
-      return;
+    if (!IsTTY()) return;
+
+    // Default color, reset previous bold etc.
+    static const char text[] = {(char)0x1b, '[', '0', 'm', 0};
+    WriteRawString(text, 4);
+
+    if (CIdx == 0) return;
+
+    if (fNColors == 256) {
+      int ANSIIdx = GetClosestColorIdx256(C);
+      static const char preamble[] = {'\x1b', '[', '3', '8', ';', '5', ';', 0};
+      std::string buf(preamble);
+      if (ANSIIdx > 100) {
+        buf += '0' + (ANSIIdx / 100);
+      }
+      if (ANSIIdx > 10) {
+        buf += '0' + ((ANSIIdx / 10) % 10);
+      }
+      buf += '0' + (ANSIIdx % 10);
+      buf +=  "m";
+      WriteRawString(buf.c_str(), buf.length());
+    } else {
+      int ANSIIdx = GetClosestColorIdx16(C);
+      char buf[] = {'\x1b', '[', '3', '0' + (ANSIIdx % 8), 'm', 0};
+      if (ANSIIdx > 7) buf[2] += 6;
+      WriteRawString(buf, 5);
     }
 
-    int ANSIIdx = 0;
-    if (fNColors == 256) {
-      ANSIIdx = GetClosestColorIdx256(C);
-    } else {
-      ANSIIdx = GetClosestColorIdx16(C);
+    if (C.fModifiers & Color::kModUnderline) {
+      WriteRawString("\033[4m", 4);
     }
-    char buf[6] = {'\x1b', '[', '0', '0', 'm', 0};
-    int val = 30 + ANSIIdx;
-    if (val > 37) {
-      val = 90 - 30 - 8;
+    if (C.fModifiers & Color::kModBold) {
+      WriteRawString("\033[1m", 4);
     }
-    if (val > 97) {
-      printf("ERROR in SetColor, ANSIIdx=%d, val=%d, RGB=(%d,%d,%d)\n", ANSIIdx,
-             val,(int)C.fR,(int)C.fG,(int)C.fB);
+    if (C.fModifiers & Color::kModInverse) {
+      WriteRawString("\033[7m", 4);
     }
-    buf[2] += val / 10;
-    buf[3] += val % 10;
-    WriteRawString(buf, 5);
+
   }
-  
+
   void
   TerminalDisplayUnix::MoveFront() {
     static const char text[] = {(char)0x1b, '[', '1', 'G', 0};
+    if (!IsTTY()) return;
     WriteRawString(text, sizeof(text));
   }
-  
+
   void
   TerminalDisplayUnix::MoveInternal(char What, size_t n) {
     static const char cmd[] = "\x1b[";
+    if (!IsTTY()) return;
     std::string text;
     for (size_t i = 0; i < n; ++i) {
       text += cmd;
       text += What;
     }
-    WriteRawString(text.c_str(), text.length()); 
+    WriteRawString(text.c_str(), text.length());
   }
 
   void
@@ -197,47 +214,54 @@ namespace textinput {
 
   void
   TerminalDisplayUnix::MoveDown(size_t nLines /* = 1 */) {
+    if (!IsTTY()) return;
     std::string moves(nLines, 0x0a);
     WriteRawString(moves.c_str(), nLines);
   }
-  
+
   void
   TerminalDisplayUnix::MoveRight(size_t nCols /* = 1 */) {
     MoveInternal('C', nCols);
   }
-  
+
   void
   TerminalDisplayUnix::MoveLeft(size_t nCols /* = 1 */) {
     MoveInternal('D', nCols);
   }
-  
+
   void
   TerminalDisplayUnix::EraseToRight() {
     static const char text[] = {(char)0x1b, '[', 'K', 0};
+    if (!IsTTY()) return;
     WriteRawString(text, sizeof(text));
   }
 
   void
   TerminalDisplayUnix::WriteRawString(const char *text, size_t len) {
-    write(fileno(stdout), text, len);
+    if (write(fileno(stdout), text, len) == -1) {
+      // Silence Ubuntu's "unused result". We don't care if it fails.
+    }
   }
 
   void
   TerminalDisplayUnix::ActOnEOL() {
+    if (!IsTTY()) return;
     WriteRawString(" \b", 2);
     //MoveUp();
   }
-  
+
   void
   TerminalDisplayUnix::Attach() {
     // set to noecho
     if (fIsAttached) return;
     fflush(stdout);
     TerminalConfigUnix::Get().Attach();
+    fWritePos = Pos();
+    fWriteLen = 0;
     fIsAttached = true;
     NotifyTextChange(Range::AllWithPrompt());
   }
-  
+
   void
   TerminalDisplayUnix::Detach() {
     if (!fIsAttached) return;
@@ -256,7 +280,7 @@ namespace textinput {
     r = r > sum / 4;
     g = g > sum / 4;
     b = b > sum / 4;
-    
+
     // ANSI:
     return r + (g * 2) + (b * 4);
     // ! ANSI:
@@ -269,28 +293,28 @@ namespace textinput {
     if (rgb256[0][0] == 0) {
       InitRGB256(rgb256);
     }
-    
+
     // Find the closest index.
     // A: the closest color match (square of geometric distance in RGB)
     // B: the closest brightness match
     // Treat them equally, which suppresses differences
     // in color due to squared distance.
-    
+
     // start with black:
     int idx = 0;
-    char r = C.fR;
-    char g = C.fG;
-    char b = C.fB;
-    int graylvl = (r + g + b)/3;
+    unsigned int r = C.fR;
+    unsigned int g = C.fG;
+    unsigned int b = C.fB;
+    unsigned int graylvl = (r + g + b)/3;
     long mindelta = (r*r + g*g + b*b) + graylvl;
     if (mindelta) {
-      for (unsigned int i = 1; i < 256; ++i) {
+      for (unsigned int i = 0; i < 256; ++i) {
         long delta = (rgb256[i][0] + rgb256[i][1] + rgb256[i][2])/3 - graylvl;
         if (delta < 0) delta = -delta;
         delta += (r-rgb256[i][0])*(r-rgb256[i][0]) +
         (g-rgb256[i][1])*(g-rgb256[i][1]) +
         (b-rgb256[i][2])*(b-rgb256[i][2]);
-        
+
         if (delta < mindelta) {
           mindelta = delta;
           idx = i;
@@ -300,7 +324,7 @@ namespace textinput {
     }
     return idx;
   }
-        
+
 }
 
 #endif // #ifndef WIN32

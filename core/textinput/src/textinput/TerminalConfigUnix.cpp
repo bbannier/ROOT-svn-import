@@ -26,6 +26,14 @@
 
 using namespace textinput;
 using std::memcpy;
+using std::signal;
+
+void
+TerminalConfigUnix__handleAbortSignal(int signum) {
+  // Clean up before we are killed.
+  TerminalConfigUnix::Get().HandleAbortSignal(signum);
+
+}
 
 TerminalConfigUnix&
 TerminalConfigUnix::Get() {
@@ -34,13 +42,14 @@ TerminalConfigUnix::Get() {
 }
 
 TerminalConfigUnix::TerminalConfigUnix():
-  fIsAttached(false), fOldTIOS(), fConfTIOS() {
+  fIsAttached(false), fFD(fileno(stdin)), fOldTIOS(), fConfTIOS() {
 #ifdef TCSANOW
   fOldTIOS = new termios;
   fConfTIOS = new termios;
-  tcgetattr(fileno(stdin), fOldTIOS);
+  tcgetattr(fFD, fOldTIOS);
   *fConfTIOS = *fOldTIOS;
 #endif
+  fPrevAbortHandler = signal(SIGABRT, TerminalConfigUnix__handleAbortSignal);
 }
 
 TerminalConfigUnix::~TerminalConfigUnix() {
@@ -50,10 +59,16 @@ TerminalConfigUnix::~TerminalConfigUnix() {
 }
 
 void
+TerminalConfigUnix::HandleAbortSignal(int signum) {
+  Detach();
+  if (fPrevAbortHandler) fPrevAbortHandler(signum);
+}
+
+void
 TerminalConfigUnix::Attach() {
   if (fIsAttached) return;
 #ifdef TCSANOW
-  tcsetattr(fileno(stdin), TCSANOW, fConfTIOS);
+  tcsetattr(fFD, TCSANOW, fConfTIOS);
 #endif
   fIsAttached = true;
 }
@@ -63,7 +78,7 @@ TerminalConfigUnix::Detach() {
   // Reset the terminal configuration.
   if (!fIsAttached) return;
 #ifdef TCSANOW
-  tcsetattr(fileno(stdout), TCSANOW, fOldTIOS);
+  tcsetattr(fFD, TCSANOW, fOldTIOS);
 #endif
   fIsAttached = false;
 }

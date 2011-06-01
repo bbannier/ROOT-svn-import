@@ -1354,8 +1354,8 @@ char *TAuthenticate::PromptUser(const char *remote)
    const char *usrIn = Getline(Form("Name (%s:%s): ", remote, user));
    if (usrIn[0]) {
       TString usr(usrIn);
-      usr[strlen(usr) - 1] = 0; // get rid of \n
-      if (strlen(usr))
+      usr.Remove(usr.Length() - 1); // get rid of \n
+      if (!usr.IsNull())
          return StrDup(usr);
       else
          return StrDup(user);
@@ -1410,8 +1410,8 @@ char *TAuthenticate::PromptPasswd(const char *prompt)
    // Final checks
    if (pw[0]) {
       TString spw(pw);
-      if (spw[strlen(pw) - 1] == '\n')
-         spw[strlen(pw) - 1] = 0;   // get rid of \n
+      if (spw.EndsWith("\n"))
+         spw.Remove(spw.Length() - 1);   // get rid of \n
       char *rpw = StrDup(spw);
       return rpw;
    }

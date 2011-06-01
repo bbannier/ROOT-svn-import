@@ -38,7 +38,7 @@ namespace {
   public:
     Rewind(std::queue<char>& rab, InputData::EExtendedInput& ret):
     RAB(rab), Ret(ret) {}
-    
+
     ~Rewind() {
       if (Ret != InputData::kEIUninitialized) return;
       // RAB.push(0x1b); already handled by ProcessCSI returning false.
@@ -47,17 +47,17 @@ namespace {
         Q.pop();
       }
     }
-    
+
     void push(char C) { Q.push(C); }
-    
+
   private:
     std::queue<char> Q;
     std::queue<char>& RAB;
     InputData::EExtendedInput& Ret;
   };
-  
+
   class ExtKeyMap {
-  public:      
+  public:
     ExtKeyMap& operator[](char k) {
       std::map<char, ExtKeyMap*>::iterator I = Map.find(k);
       ExtKeyMap* N = 0;
@@ -73,13 +73,12 @@ namespace {
       T.EI = ei; return *this; }
     void Set(InputData::EExtendedInput ei, char m = 0) {
       T.EI = ei; T.Mod = m; }
-    
+
     bool empty() const { return Map.empty(); }
-    bool haveSubTree() const { return !empty(); }
-    bool haveExtInp() const { return empty(); }
+    bool haveExtInp() const { return empty(); } // no sub-tree
     InputData::EExtendedInput getExtInp() const { return T.EI; }
     char getMod() const { return T.Mod; }
-    
+
     ExtKeyMap* find(char c) const {
       std::map<char, ExtKeyMap*>::const_iterator I = Map.find(c);
       if (I == Map.end()) return 0;
@@ -104,7 +103,7 @@ namespace {
         return Heap.back()[Watermark++];
       }
     private:
-      static const size_t kChunkSize = 100;
+      enum EChunkSize { kChunkSize = 100 };
       std::list<ExtKeyMap*> Heap;
       size_t Watermark;
     };
@@ -113,12 +112,12 @@ namespace {
       static EKMHolder S;
       return S.next();
     }
-    
+
   private:
     std::map<char, ExtKeyMap*> Map;
     struct T_ {
       T_(): EI(InputData::kEIUninitialized), Mod(0) {}
-      InputData::EExtendedInput EI; 
+      InputData::EExtendedInput EI;
       char Mod;
     } T;
   };
@@ -135,7 +134,7 @@ namespace textinput {
     TerminalConfigUnix::Get().TIOS()->c_cc[VTIME] = 0;
 #endif
   }
-  
+
   StreamReaderUnix::~StreamReaderUnix() {
     ReleaseInputFocus();
   }
@@ -155,7 +154,7 @@ namespace textinput {
     TerminalConfigUnix::Get().Detach();
     fHaveInputFocus = false;
   }
-  
+
   bool
   StreamReaderUnix::HavePendingInput() {
     if (!fReadAheadBuffer.empty())
@@ -201,8 +200,8 @@ namespace textinput {
       gExtKeyMap['O']['D'] = InputData::kEILeft;
       gExtKeyMap['O']['F'] = InputData::kEIEnd;
       gExtKeyMap['O']['H'] = InputData::kEIHome;
-      gExtKeyMap['[']['5']['C'].Set(InputData::kEIRight, InputData::kModCtrl); 
-      gExtKeyMap['[']['5']['D'].Set(InputData::kEILeft, InputData::kModCtrl); 
+      gExtKeyMap['[']['5']['C'].Set(InputData::kEIRight, InputData::kModCtrl);
+      gExtKeyMap['[']['5']['D'].Set(InputData::kEILeft, InputData::kModCtrl);
     }
 
     InputData::EExtendedInput ret = InputData::kEIUninitialized;
