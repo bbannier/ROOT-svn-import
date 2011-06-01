@@ -410,6 +410,7 @@ namespace cling {
     
     std::string wrapped;
     std::string stmtFunc;
+    std::string functName;
     if (strncmp(input_line.c_str(),"#include ",strlen("#include ")) != 0 &&
         strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0) {
       //
@@ -421,38 +422,17 @@ namespace cling {
           fprintf(stderr, "Bad input, dude! That's a code %d\n", ValidatorResult);
         return 0;
       }
+      functName = createUniqueName();
+      wrapped = "void " + functName + "() {\n ";
+      wrapped += input_line;
+      wrapped += "\n}";
 
-      createWrappedSrc(input_line, wrapped, stmtFunc);
-      if (!wrapped.size()) {
-         return 0;
-      }
     }
     else {
       wrapped = input_line;
     }
-    
-    //
-    //  Send the wrapped code through the
-    //  frontend to produce a translation unit.
-    //
-    CompilerInstance* CI = m_IncrParser->parse(wrapped);
 
-    if (!CI) {
-      return 0;
-    }
-    // Note: We have a valid compiler instance at this point.
-    TranslationUnitDecl* tu =
-      CI->getASTContext().getTranslationUnitDecl();
-    if (!tu) { // Parse failed, return.
-      fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
-      return 0;
-    }
-    //
-    //  Run it using the JIT.
-    //
-    if (!stmtFunc.empty())
-      m_ExecutionContext->executeFunction(stmtFunc);
-    return 1;
+    return handleLine(wrapped, functName);
   }
   
   std::string Interpreter::createUniqueName()
@@ -465,7 +445,89 @@ namespace cling {
   }
   
   
-  
+  int Interpreter::handleLine(const std::string& input, 
+                              std::string& FunctionName) {
+    // 2. Disable codegen
+    m_IncrParser->removeConsumer(IncrementalParser::kCodeGenerator);
+    CompilerInstance* CI = m_IncrParser->parse(input);
+    if (!CI) {
+      fprintf(stderr, "Cannot compile string!");
+      return 0;
+    }
+    FunctionDecl* TopLevelFD 
+      = dyn_cast<FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
+    ASTContext& Ctx(getCI()->getASTContext());
+    Sema& TheSema(getCI()->getSema());
+    llvm::SmallVector<Decl*, 4> TouchedDecls;
+    if (TopLevelFD) {
+      if (CompoundStmt* CS = dyn_cast<CompoundStmt>(TopLevelFD->getBody())) {
+        DeclContext* DC = TopLevelFD->getDeclContext();
+        Scope* S = TheSema.getScopeForContext(DC);
+        CompoundStmt::body_iterator I;
+        llvm::SmallVector<Stmt*, 4> Stmts;
+        DC->removeDecl(TopLevelFD);
+        S->RemoveDecl(TopLevelFD);
+          for (I = CS->body_begin(); I != CS->body_end(); ++I) {
+            DeclStmt* DS = dyn_cast<DeclStmt>(*I);
+            if (!DS) {
+              Stmts.push_back(*I);
+              continue;
+            }
+            DeclStmt::decl_iterator J;
+            for (J = DS->decl_begin(); J != DS->decl_end(); ++J)
+            // TODO: Is it possible to have different decl types in a 
+            // DeclGroupRef. Eg VarDecl and FunctionDecl...
+              if (VarDecl* VD = dyn_cast<VarDecl>(*J)) {
+                VD->setDeclContext(DC);
+                VD->setLexicalDeclContext(DC); //FIXME: Watch out
+                VD->setStorageClass(SC_None);
+                VD->setStorageClassAsWritten(SC_None);
+                // reset the linkage to External
+                VD->ClearLinkageCache();
+                DC->addDecl(VD);
+                TouchedDecls.push_back(VD);
+              }
+          }
+          // Remove the empty wrappers, i.e those which contain only decls
+          if (Stmts.size()) {
+            CS->setStmts(Ctx, Stmts.data(), Stmts.size());
+            DC->addDecl(TopLevelFD);
+            S->AddDecl(TopLevelFD);
+            TouchedDecls.push_back(TopLevelFD);
+          }
+          else
+            // tell exec engine not to run the function
+            TopLevelFD = 0;
+      }
+    }
+    else {
+      TouchedDecls.push_back(m_IncrParser->getLastTopLevelDecl());
+    }
+    // resume the code gen
+    m_IncrParser->addConsumer(IncrementalParser::kCodeGenerator,
+                              m_ExecutionContext->getCodeGenerator());
+    DeclGroupRef DGR = DeclGroupRef::Create(Ctx, TouchedDecls.data(), TouchedDecls.size());
+    // collect the references that are being used
+    m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(DGR);
+    // generate code for the delta
+    m_ExecutionContext->getCodeGenerator()->HandleTranslationUnit(Ctx);
+    //
+    //  Run it using the JIT.
+    //
+    if (TopLevelFD) {
+      if (!TopLevelFD->isExternC()) {
+        FunctionName = "";
+        llvm::raw_string_ostream RawStr(FunctionName);
+        MangleContext* Mangle = Ctx.createMangleContext();
+        Mangle->mangleName(TopLevelFD, RawStr);
+      }
+      m_ExecutionContext->executeFunction(FunctionName);
+    }
+
+    return 1;
+
+  }
+
   void
   Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped,
                                 std::string& stmtFunc)
