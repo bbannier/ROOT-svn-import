@@ -312,6 +312,9 @@ namespace cling {
   } 
   
   void IncrementalParser::addConsumer(EConsumerIndex I, clang::ASTConsumer* consumer) {
+    if (m_Consumer->Consumers[I])
+      return;
+
     m_Consumer->add((ChainedASTConsumer::EConsumerIndex)I, consumer);
     consumer->Initialize(getCI()->getSema().getASTContext());
     if (m_CI->hasSema()) {
@@ -323,6 +326,9 @@ namespace cling {
   }
   
   void IncrementalParser::removeConsumer(EConsumerIndex I) {
+    if (!m_Consumer->Consumers[I])
+      return;
+
     clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(m_Consumer->Consumers[I]);
     if (SC) {
       SC->ForgetSema();

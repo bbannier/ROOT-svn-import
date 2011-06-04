@@ -22,8 +22,10 @@ namespace clang {
   class ASTConsumer;
   class ASTContext;
   class CompilerInstance;
+  class CompoundStmt;
   class Decl;
   class DeclContext;
+  class Expr;
   class NamedDecl;
   class PragmaNamespace;
   class SourceLocation;
@@ -175,7 +177,9 @@ namespace cling {
                           std::string& stmtFunc);  
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
-    void enableValuePrinter();
+    void loadValuePrinter();
+    void attachValuePrinter(clang::CompoundStmt* CS);
+    clang::Expr* constructValuePrinter(clang::Expr* To);
     friend class runtime::internal::LifetimeHandler;
     
   public:
