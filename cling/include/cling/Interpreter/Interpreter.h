@@ -9,7 +9,6 @@
 
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/Casting.h"
 #include "cling/Interpreter/InvocationOptions.h"
 

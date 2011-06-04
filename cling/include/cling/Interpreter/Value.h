@@ -7,6 +7,7 @@
 #ifndef CLING_VALUE_H
 #define CLING_VALUE_H
 
+#include "llvm/ExecutionEngine/GenericValue.h"
 #include "clang/AST/Type.h"
 
 namespace llvm {
