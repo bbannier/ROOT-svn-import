@@ -432,8 +432,13 @@ namespace cling {
     else {
       wrapped = input_line;
     }
-
-    return handleLine(wrapped, functName);
+      DiagnosticPrinter& Diag = (DiagnosticPrinter&)getCI()->getDiagnosticClient();
+      // disable that warning when using the prompt
+      unsigned warningID = DiagnosticIDs::getIdFromName("warn_unused_expr");
+      Diag.ignoreWarning(warningID);
+      int result = handleLine(wrapped, functName);
+      Diag.removeIgnoredWarning(warningID);
+      return result;
   }
   
   std::string Interpreter::createUniqueName()
