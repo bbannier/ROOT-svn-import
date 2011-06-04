@@ -416,7 +416,7 @@ namespace cling {
           // Add the declaration as if doesn't exist.
           // TODO: Check whether this is the most appropriate variant
           MemberLookup.addDecl(getMemDecl, AS_public);
-          MemberLookup.resolveKind();          
+          MemberLookup.resolveKind();
           Expr* MemberExpr = m_Sema->BuildMemberReferenceExpr(MemberExprBase,
                                                               HandlerTy,
                                                               m_NoSLoc,
