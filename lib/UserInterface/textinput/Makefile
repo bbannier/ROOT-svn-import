@@ -11,15 +11,11 @@
 #
 ##===----------------------------------------------------------------------===##
 
-LEVEL = ../../../..
-DIRS = textinput
-
-LIBRARYNAME := clingUserInterface
+LEVEL = ../../../../..
+LIBRARYNAME := clingUITextInput
 BUILD_ARCHIVE = 1
 CXXFLAGS = -fno-rtti
-
-CPPFLAGS += -I$(PROJ_SRC_DIR)/../../include -I$(PROJ_SRC_DIR)/../../../clang/include \
--I$(PROJ_SRC_DIR)/../../../clang/lib -I$(PROJ_OBJ_DIR)/../../include -I$(PROJ_OBJ_DIR)/../../../clang/include 
+CPPFLAGS += -I$(PROJ_SRC_DIR)/..
 
 include $(LEVEL)/Makefile.common
 
