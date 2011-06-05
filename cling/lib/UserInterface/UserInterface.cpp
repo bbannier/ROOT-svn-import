@@ -7,7 +7,9 @@
 #include <cling/UserInterface/UserInterface.h>
 
 #include <cling/MetaProcessor/MetaProcessor.h>
-#include <cling/EditLine/EditLine.h>
+#include "textinput/TextInput.h"
+#include "textinput/StreamReader.h"
+#include "textinput/TerminalDisplay.h"
 
 #include <iostream>
 #include <sys/stat.h>
@@ -45,41 +47,35 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
     std::cerr << "* Type .q, exit or ctrl+D to quit       *" << std::endl;
     std::cerr << "*****************************************" << std::endl;
   }
-  struct stat buf;
   static const char* histfile = ".cling_history";
-  using_history();
-  max_input_history = 100;
-  if (stat(histfile, &buf) == 0) {
-    read_history(histfile);
-  }
   const static std::string defaultPrompt("[cling]$ ");
   const static std::string defaultCont("... ");
-  std::string prompt = defaultPrompt;
+
+  using namespace textinput;
+  StreamReader* R = StreamReader::Create();
+  TerminalDisplay* D = TerminalDisplay::Create();
+  TextInput TI(*R, *D, histfile);
+  TI.SetPrompt(defaultPrompt.c_str());
+  std::string line;
+  
+  int promptIndent = 0;
   while (!m_MetaProcessor->isQuitRequested()) {
-    char* line = readline(prompt.c_str(), true);
-    do {
-      line = readline(prompt.c_str(), false);
-      if (line) {
-        for (const char* c = line; *c; ++c) {
-          if (*c == '\a') {
-            line = 0;
-            break;
-          }
-        }
-      }
-    } while (!line);
-    if (line && line[0] == -1) {
+    TextInput::EReadResult RR = TI.ReadInput();
+    TI.TakeInput(line);
+    if (RR == TextInput::kRREOF) {
       m_MetaProcessor->requestQuit(true);
       continue;
     }
-    add_history(line);
-    write_history(histfile);
-    int indent = m_MetaProcessor->process(line);
+    int indent = m_MetaProcessor->process(line.c_str());
     if (indent<=0) {
-      prompt = defaultPrompt;
+      if (promptIndent) {
+        TI.SetPrompt(defaultPrompt.c_str());
+      }
     } else {
-      // Continuation requested.
-      prompt = defaultCont + std::string(indent * 3, ' ');
+      if (promptIndent != indent) {
+        // Continuation requested.
+        TI.SetPrompt((defaultCont + std::string(indent * 3, ' ')).c_str());
+      }
     }
   }
 }
