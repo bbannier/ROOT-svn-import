@@ -35,7 +35,7 @@ namespace cling {
     public:
       SymbolResolverCallback(Interpreter* interp)
         : InterpreterCallbacks(interp) {
-        interp->processLine("cling::test::Tester = new cling::test::TestProxy()");
+        interp->processLine("cling::test::Tester = new cling::test::TestProxy();");
       }
       
       ~SymbolResolverCallback(){}
