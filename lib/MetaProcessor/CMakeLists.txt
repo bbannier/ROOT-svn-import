@@ -2,9 +2,8 @@
 #set(LLVM_USED_LIBS clangBasic clangAST clangParse)
 
 
-add_cling_library(clingUserInterface
-  UserInterface.cpp)
+add_cling_library(clingMetaProcessor
+  MetaProcessor.cpp)
 
-add_subdirectory(textinput)
 #add_dependencies(clangDriver ClangAttrList ClangDiagnosticDriver
 #                 ClangDriverOptions ClangCC1Options ClangCC1AsOptions)
