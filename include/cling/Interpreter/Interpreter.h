@@ -173,8 +173,6 @@ namespace cling {
     void handleFrontendOptions();
     void processStartupPCH();
     int handleLine(const std::string& Input, std::string& FunctionName);
-    void createWrappedSrc(const std::string& src, std::string& wrapped,
-                          std::string& stmtFunc);  
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
     void loadValuePrinter();
