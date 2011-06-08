@@ -21,6 +21,7 @@ namespace cling {
     // Copy of IncrementalParser::EConsumerIndex!
     enum EConsumerIndex {
       kCodeGenerator,
+      kDeclExtractor,
       kASTDumper,
       kPCHGenerator,
       kFunctionBodyConsumer,
