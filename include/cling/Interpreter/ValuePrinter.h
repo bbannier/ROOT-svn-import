@@ -183,7 +183,6 @@ namespace cling {
   //   void dumpPtr(llvm::raw_ostream& o, const clang::Decl* a,
   //                ACTUAL* ap, int flags, const char* tname);
   template <typename TY>
-  inline
   void printValue(llvm::raw_ostream& o, const void* const t,
                   TY* const u, int flags, const char* tname) {
     typedef typename valuePrinterInternal::NonConst<TY>::Type NonConstType;
