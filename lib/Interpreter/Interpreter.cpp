@@ -457,7 +457,7 @@ namespace cling {
     m_IncrParser->removeConsumer(IncrementalParser::kCodeGenerator);
     CompilerInstance* CI = m_IncrParser->parse(input);
     if (!CI) {
-      fprintf(stderr, "Cannot compile string!");
+      fprintf(stderr, "Cannot compile string!\n");
       return 0;
     }
     FunctionDecl* TopLevelFD 
