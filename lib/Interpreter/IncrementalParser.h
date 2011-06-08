@@ -36,6 +36,7 @@ namespace cling {
     // Copy of ChainedASTConsumer::EConsumerIndex!
     enum EConsumerIndex {
       kCodeGenerator,
+      kDeclExtractor,
       kASTDumper,
       kPCHGenerator,
       kFunctionBodyConsumer,
