@@ -204,13 +204,22 @@ namespace cling {
   }
 
   clang::CompilerInstance*
-  IncrementalParser::parse(llvm::StringRef src)
+  IncrementalParser::parse(llvm::StringRef src) {
+    m_Consumer->DisableConsumer(ChainedASTConsumer::kCodeGenerator);
+    clang::CompilerInstance* Result = compile(src);
+    m_Consumer->EnableConsumer(ChainedASTConsumer::kCodeGenerator);
+    return Result;
+  }
+
+
+  clang::CompilerInstance*
+  IncrementalParser::compile(llvm::StringRef src)
   {
     // Add src to the memory buffer, parse it, and add it to
     // the AST. Returns the CompilerInstance (and thus the AST).
     // Diagnostics are reset for each call of parse: they are only covering
     // src.
-    
+
     clang::Preprocessor& PP = m_CI->getPreprocessor();
     m_CI->getDiagnosticClient().BeginSourceFile(m_CI->getLangOpts(), &PP);
     

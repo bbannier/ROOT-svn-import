@@ -42,6 +42,7 @@ namespace cling {
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
     clang::CompilerInstance* parse(llvm::StringRef src);
+    clang::CompilerInstance* compile(llvm::StringRef src);
 
     MutableMemoryBuffer* getCurBuffer() {
       return m_MemoryBuffer.back();
