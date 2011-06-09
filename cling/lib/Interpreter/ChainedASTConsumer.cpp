@@ -146,12 +146,8 @@ namespace cling {
   }
 
   ChainedASTConsumer::ChainedASTConsumer()
-   :  MutationListener(0), DeserializationListener(0) { 
-    for (size_t i = 0; i < kConsumersCount; ++i) {
-      Consumers[i] = 0;
-      Enabled[i] = false;
-    }
-  }
+    :  Consumers(), Enabled(), MutationListener(0),
+       DeserializationListener(0) { }
 
   ChainedASTConsumer::~ChainedASTConsumer() {
     for (size_t i = 0; i < kConsumersCount; ++i)
