@@ -455,10 +455,10 @@ namespace cling {
                               std::string& FunctionName) {
     // if we are using the preprocessor
     if (input.c_str()[0] == '#') {
-      return m_IncrParser->parse(input) != 0;
+      return m_IncrParser->compile(input) != 0;
     }
     
-    CompilerInstance* CI = m_IncrParser->parse(input);
+    CompilerInstance* CI = m_IncrParser->compile(input);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
       return 0;
@@ -490,7 +490,7 @@ namespace cling {
     std::string code;
     code += "#include \"" + filename + "\"\n";
     if (trailcode) code += *trailcode;
-    return m_IncrParser->parse(code);
+    return m_IncrParser->compile(code);
   }
  
   static bool tryLoadSharedLib(const std::string& filename,
@@ -566,14 +566,14 @@ namespace cling {
 
      // template<typename T> class dummy{}; 
      std::string templatedClass = "template<typename T> class " + className + "{};\n";
-     CI  = m_IncrParser->parse(templatedClass);
+     CI  = m_IncrParser->compile(templatedClass);
      Decl *templatedClassDecl = 0;
      if (CI)
         templatedClassDecl = m_IncrParser->getLastTopLevelDecl();
 
      //template <> dummy<DeclContext*> {};
      std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
-     CI = m_IncrParser->parse(explicitSpecialization);
+     CI = m_IncrParser->compile(explicitSpecialization);
      if (CI) {
         if (ClassTemplateSpecializationDecl* D = dyn_cast<ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
            Result = D->getTemplateArgs()[0].getAsType();
@@ -627,7 +627,7 @@ namespace cling {
     // Temporary stop the code gen
     m_IncrParser->removeConsumer(ChainedASTConsumer::kCodeGenerator);
 
-    CompilerInstance* CI = m_IncrParser->parse(Wrapper);
+    CompilerInstance* CI = m_IncrParser->compile(Wrapper);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
     }
