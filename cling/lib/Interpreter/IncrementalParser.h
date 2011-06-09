@@ -12,6 +12,8 @@
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
+#include "ChainedASTConsumer.h"
+
 namespace clang {
   class CompilerInstance;
   class Decl;
@@ -33,16 +35,6 @@ namespace cling {
   
   class IncrementalParser {
   public:
-    // Copy of ChainedASTConsumer::EConsumerIndex!
-    enum EConsumerIndex {
-      kCodeGenerator,
-      kDeclExtractor,
-      kASTDumper,
-      kPCHGenerator,
-      kFunctionBodyConsumer,
-      kNConsumers
-    };
-
     IncrementalParser(Interpreter* interp, clang::PragmaNamespace* Pragma,
                       int argc, const char* const *argv, const char* llvmdir);
     ~IncrementalParser();
@@ -66,8 +58,8 @@ namespace cling {
     clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
     clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
     
-    void addConsumer(EConsumerIndex I, clang::ASTConsumer* consumer);
-    void removeConsumer(EConsumerIndex I);
+    void addConsumer(ChainedASTConsumer::EConsumerIndex I, clang::ASTConsumer* consumer);
+    void removeConsumer(ChainedASTConsumer::EConsumerIndex I);
 
     bool usingStartupPCH() const { return m_UsingStartupPCH; }
     void writeStartupPCH();

@@ -7,81 +7,74 @@
 #ifndef CLING_CHAINED_AST_CONSUMER_H
 #define CLING_CHAINED_AST_CONSUMER_H
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/OwningPtr.h"
 #include "clang/Sema/SemaConsumer.h"
-#include "clang/AST/DeclGroup.h"
+
+#include <bitset>
 
 namespace clang {
-   class ASTContext;
+  class ASTContext;
 }
 
 namespace cling {
+
+  class ChainedASTMutationListener;
+  class ChainedASTDeserializationListener;
+
   class ChainedASTConsumer: public clang::SemaConsumer {
+
   public:
     // Copy of IncrementalParser::EConsumerIndex!
     enum EConsumerIndex {
       kCodeGenerator,
       kDeclExtractor,
+      kValuePrinterSynthesizer,
       kASTDumper,
       kPCHGenerator,
       kFunctionBodyConsumer,
-      kNConsumers
+      kConsumersCount
     };
-    ChainedASTConsumer(): Consumers() {}
+    ChainedASTConsumer();
     virtual ~ChainedASTConsumer();
+
+    // ASTConsumer
+    virtual void Initialize(clang::ASTContext& Context);
+    virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
+    virtual void HandleInterestingDecl(clang::DeclGroupRef D);
+    virtual void HandleTranslationUnit(clang::ASTContext& Ctx);
+    virtual void HandleTagDeclDefinition(clang::TagDecl* D);
+    virtual void CompleteTentativeDefinition(clang::VarDecl* D);
+    virtual void HandleVTable(clang::CXXRecordDecl* RD, bool DefinitionRequired);
+    virtual clang::ASTMutationListener* GetASTMutationListener();
+    virtual clang::ASTDeserializationListener* GetASTDeserializationListener();
+    virtual void PrintStats();
     
-#define CAC_DECL(WHAT, ARGS, PARAM) \
-    void WHAT ARGS { for (int i = 0; i < kNConsumers; ++i) \
-      if (Consumers[i]) Consumers[i]->WHAT PARAM; }
-    CAC_DECL(Initialize,(clang::ASTContext &Context),(Context));
-    CAC_DECL(HandleTopLevelDecl,(clang::DeclGroupRef D),(D));
-    CAC_DECL(HandleInterestingDecl,(clang::DeclGroupRef D),(D));
-    CAC_DECL(HandleTagDeclDefinition,(clang::TagDecl *D),(D));
-    CAC_DECL(CompleteTentativeDefinition,(clang::VarDecl *D),(D));
-    CAC_DECL(HandleVTable,(clang::CXXRecordDecl *RD, bool DefinitionRequired), \
-             (RD, DefinitionRequired));
-    CAC_DECL(PrintStats,(),());
-#undef CAC_DECL
-
-    void HandleTranslationUnit(clang::ASTContext &Ctx) {
-      for (int i = 0; i < kNConsumers; ++i)
-        if (i != kPCHGenerator && Consumers[i]) Consumers[i]->HandleTranslationUnit(Ctx);
+   // SemaConsumer
+    virtual void InitializeSema(clang::Sema& S);
+    virtual void ForgetSema();
+    
+    void Add(EConsumerIndex I, clang::ASTConsumer* C);
+    clang::ASTConsumer** getConsumers() { 
+      return Consumers; 
     }
 
-#define CSC_DECL(WHAT, ARGS, PARAM)                                     \
-    void WHAT ARGS {                                                    \
-      for (int i = 0; i < kNConsumers; ++i) {                           \
-        if (Consumers[i]) {                                             \
-          clang::SemaConsumer* SC =dyn_cast<clang::SemaConsumer>(Consumers[i]);\
-          if (SC) SC->WHAT PARAM;                                       \
-      } } }
-    CSC_DECL(InitializeSema,(clang::Sema &S),(S));
-    CSC_DECL(ForgetSema,(),());
-#undef CSC_DECL
-
-    clang::ASTMutationListener *GetASTMutationListener() {
-      for (int i = 0; i < kNConsumers; ++i) {
-        if (Consumers[i] && Consumers[i]->GetASTMutationListener()) {
-          return Consumers[i]->GetASTMutationListener();
-        }
-      }
-      return 0;
-    }
-    clang::ASTDeserializationListener *GetASTDeserializationListener() {
-      for (int i = 0; i < kNConsumers; ++i) {
-        if (Consumers[i] && Consumers[i]->GetASTDeserializationListener()) {
-          return Consumers[i]->GetASTDeserializationListener();
-        }
-      }
-      return 0;
+    bool Exists(unsigned I) {
+      return Consumers[(EConsumerIndex)I] != 0;
     }
 
-    void add(EConsumerIndex I, clang::ASTConsumer* C) {
-      assert(!Consumers[I] && "Consumer already registered at this index!");
-      Consumers[I] = C;
+    bool Exists(EConsumerIndex I) {
+      return Consumers[I] != 0;
     }
 
-    clang::ASTConsumer* Consumers[kNConsumers];
+    clang::ASTConsumer* getConsumer(EConsumerIndex I) {
+      return Consumers[I];
+    }
+
+  private:
+    clang::ASTConsumer* Consumers[kConsumersCount]; // owns them
+    std::bitset<kConsumersCount> Enabled;
+    llvm::OwningPtr<ChainedASTMutationListener> MutationListener;
+    llvm::OwningPtr<ChainedASTDeserializationListener> DeserializationListener;
   };
 } // namespace cling
 

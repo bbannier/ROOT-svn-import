@@ -92,6 +92,7 @@ namespace cling {
         TopLevelFD = 0;
     }
 
+    // TODO: Should have better way of doing that
     for (unsigned i = 0; i < TouchedDecls.size(); ++i) {
       m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
     }
