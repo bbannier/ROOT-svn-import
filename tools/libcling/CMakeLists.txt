@@ -14,12 +14,22 @@ set(LLVM_USED_LIBS
   clangAST
   clangLex
   clangBasic
-#  LLVMSupport
   )
 
-set( LLVM_LINK_COMPONENTS
-  support
-  )
+#set( LLVM_LINK_COMPONENTS
+#  ${LLVM_TARGETS_TO_BUILD}
+#  asmparser
+#  bitreader
+#  bitwriter
+#  codegen
+#  support
+#  mc
+#  executionengine
+#  target
+#  jit
+#  x86info
+#  x86asmprinter
+#)
 
 set(SOURCES
   Dummy.cpp)

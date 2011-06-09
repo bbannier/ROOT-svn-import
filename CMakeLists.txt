@@ -123,6 +123,11 @@ macro(add_cling_executable name)
 endmacro(add_cling_executable)
 
 include_directories(BEFORE
+  ${CMAKE_CURRENT_BINARY_DIR}/../clang/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../clang/include
+  )
+
+include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
@@ -142,7 +147,9 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
   PATTERN "*.inc"
   )
 
-add_definitions( -D_GNU_SOURCE )
+add_definitions( -D_GNU_SOURCE
+  -DCLING_SRCDIR_INCL="${CLING_SOURCE_DIR}/include"
+  -DCLING_INSTDIR_INCL="${CLING_BINARY_DIR}/include" )
 
 add_subdirectory(lib)
 add_subdirectory(tools)
