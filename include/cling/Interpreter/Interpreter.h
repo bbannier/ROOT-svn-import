@@ -175,9 +175,6 @@ namespace cling {
     int handleLine(const std::string& Input, std::string& FunctionName);
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
-    void loadValuePrinter();
-    void attachValuePrinter(clang::CompoundStmt* CS);
-    clang::Expr* constructValuePrinter(clang::Expr* To);
     friend class runtime::internal::LifetimeHandler;
     
   public:

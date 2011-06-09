@@ -175,6 +175,4 @@ namespace cling {
     
     return CI;
   }  
-  // Pin this vtable to this file.
-  ChainedASTConsumer::~ChainedASTConsumer() {}
 } // end namespace

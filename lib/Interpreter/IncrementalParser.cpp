@@ -22,8 +22,10 @@
 
 #include "cling/Interpreter/Diagnostics.h"
 #include "cling/Interpreter/Interpreter.h"
-#include "DynamicLookup.h"
 #include "ChainedASTConsumer.h"
+#include "DeclExtractor.h"
+#include "DynamicLookup.h"
+#include "ValuePrinterSynthesizer.h"
 
 #include <stdio.h>
 #include <sstream>
@@ -109,6 +111,11 @@ namespace cling {
     
     m_Consumer = dyn_cast<ChainedASTConsumer>(&CI->getASTConsumer());
     assert(m_Consumer && "Expected ChainedASTConsumer!");
+    // Add consumers
+    addConsumer(ChainedASTConsumer::kDeclExtractor,
+                new DeclExtractor());
+    addConsumer(ChainedASTConsumer::kValuePrinterSynthesizer,
+                new ValuePrinterSynthesizer(interp));
 
     // Initialize the parser.
     m_Parser.reset(new clang::Parser(CI->getPreprocessor(), CI->getSema()));
@@ -131,6 +138,8 @@ namespace cling {
   IncrementalParser::~IncrementalParser() {}
   
   void IncrementalParser::Initialize(const char* startupPCH) {
+
+    // Init the consumers    
 
     loadStartupPCH(startupPCH);
     if (!m_UsingStartupPCH) {
@@ -183,14 +192,14 @@ namespace cling {
                                                           )
                                   );
       m_StartupPCHGenerator->InitializeSema(m_CI->getSema());
-      addConsumer(kPCHGenerator, m_StartupPCHGenerator.get());
+      addConsumer(ChainedASTConsumer::kPCHGenerator, m_StartupPCHGenerator.get());
     }
   }
 
   void IncrementalParser::writeStartupPCH() {
     if (!m_StartupPCHGenerator) return;
     m_StartupPCHGenerator->HandleTranslationUnit(m_CI->getASTContext());
-    removeConsumer(kPCHGenerator);
+    removeConsumer(ChainedASTConsumer::kPCHGenerator);
     m_StartupPCHGenerator.reset(); // deletes StartupPCHGenerator
   }
 
@@ -311,11 +320,11 @@ namespace cling {
     }
   } 
   
-  void IncrementalParser::addConsumer(EConsumerIndex I, clang::ASTConsumer* consumer) {
-    if (m_Consumer->Consumers[I])
+  void IncrementalParser::addConsumer(ChainedASTConsumer::EConsumerIndex I, clang::ASTConsumer* consumer) {
+    if (m_Consumer->Exists(I))
       return;
 
-    m_Consumer->add((ChainedASTConsumer::EConsumerIndex)I, consumer);
+    m_Consumer->Add((ChainedASTConsumer::EConsumerIndex)I, consumer);
     consumer->Initialize(getCI()->getSema().getASTContext());
     if (m_CI->hasSema()) {
       clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(consumer);
@@ -325,14 +334,14 @@ namespace cling {
     }
   }
   
-  void IncrementalParser::removeConsumer(EConsumerIndex I) {
-    if (!m_Consumer->Consumers[I])
+  void IncrementalParser::removeConsumer(ChainedASTConsumer::EConsumerIndex I) {
+    if (!m_Consumer->Exists(I))
       return;
 
-    clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(m_Consumer->Consumers[I]);
+    clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(m_Consumer->getConsumer(I));
     if (SC) {
       SC->ForgetSema();
     }
-    m_Consumer->Consumers[I] = 0;
+    m_Consumer->getConsumers()[I] = 0;
   }  
 } // namespace cling
