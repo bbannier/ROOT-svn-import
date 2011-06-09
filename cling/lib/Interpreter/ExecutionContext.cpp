@@ -32,7 +32,6 @@
 #include <cstdio>
 #include <iostream>
 #include <utility>
-#include <cxxabi.h>
 
 using namespace cling;
 
