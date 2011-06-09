@@ -11,7 +11,7 @@
 #include "clang/AST/Type.h"
 
 namespace llvm {
-  class GenericValue;
+  struct GenericValue;
 }
 namespace clang {
   class Type;
