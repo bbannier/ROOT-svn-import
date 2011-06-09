@@ -14,7 +14,7 @@
 namespace llvm {
   class Module;
   class ExecutionEngine;
-  class GenericValue;
+  struct GenericValue;
 }
 
 namespace clang {
