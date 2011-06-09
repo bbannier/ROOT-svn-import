@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // CLING - the C++ LLVM-based InterpreterG :)
-// version: $Id: DynamicLookup.cpp 39556 2011-06-04 21:20:50Z vvassilev $
+// version: $Id$
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
