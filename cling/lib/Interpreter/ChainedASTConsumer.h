@@ -65,6 +65,18 @@ namespace cling {
     clang::ASTConsumer* getConsumer(EConsumerIndex I) {
       return Consumers[I];
     }
+    
+    void EnableConsumer(EConsumerIndex I) {
+      Enabled[I] = true;
+    }
+
+    void DisableConsumer(EConsumerIndex I) {
+      Enabled[I] = false;
+    }
+
+    bool IsConsumerEnabled(EConsumerIndex I) {
+      return Enabled[I];
+    }
 
   private:
     clang::ASTConsumer* Consumers[kConsumersCount]; // owns them
