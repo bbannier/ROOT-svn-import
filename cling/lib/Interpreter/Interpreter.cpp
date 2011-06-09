@@ -38,7 +38,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "Visitors.h"
 #include "ClangUtils.h"
 #include "DynamicLookup.h"
 #include "ExecutionContext.h"
