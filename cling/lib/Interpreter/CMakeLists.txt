@@ -8,9 +8,9 @@ set( LLVM_LINK_COMPONENTS
   mc
   executionengine
   target
-#  jit
-#  x86info
-#  x86asmprinter
+  jit
+  x86info
+  x86asmprinter
 )
 
 #set(LLVM_USED_LIBS
