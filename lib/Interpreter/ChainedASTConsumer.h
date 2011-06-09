@@ -26,12 +26,11 @@ namespace cling {
   public:
     // Copy of IncrementalParser::EConsumerIndex!
     enum EConsumerIndex {
-      kCodeGenerator,
       kDeclExtractor,
       kValuePrinterSynthesizer,
       kASTDumper,
       kPCHGenerator,
-      kFunctionBodyConsumer,
+      kCodeGenerator,
       kConsumersCount
     };
     ChainedASTConsumer();
