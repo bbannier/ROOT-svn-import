@@ -150,9 +150,9 @@ namespace cling {
        DeserializationListener(0) { }
 
   ChainedASTConsumer::~ChainedASTConsumer() {
-    for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Exists((EConsumerIndex)i))
-        delete Consumers[i];
+    //for (size_t i = 0; i < kConsumersCount; ++i)
+      //if (Exists((EConsumerIndex)i))
+        //delete Consumers[i];
   }
   
   void ChainedASTConsumer::Initialize(ASTContext& Context) {
@@ -220,8 +220,8 @@ namespace cling {
   
   void ChainedASTConsumer::ForgetSema() {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (SemaConsumer* SC = dyn_cast<SemaConsumer>(Consumers[i]))
-        if (Exists((EConsumerIndex)i))
+      if (Exists((EConsumerIndex)i))
+        if (SemaConsumer* SC = dyn_cast<SemaConsumer>(Consumers[i]))
           SC->ForgetSema();
   }
   
