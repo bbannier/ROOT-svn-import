@@ -1,5 +1,21 @@
-#set(LLVM_LINK_COMPONENTS mc)
-#set(LLVM_USED_LIBS clangBasic clangAST clangParse)
+set( LLVM_LINK_COMPONENTS
+  ${LLVM_TARGETS_TO_BUILD}
+  asmparser
+  bitreader
+  bitwriter
+  codegen
+  support
+  mc
+  executionengine
+  target
+#  jit
+#  x86info
+#  x86asmprinter
+)
+
+#set(LLVM_USED_LIBS
+#  clingWhatever
+#)
 
 
 add_cling_library(clingInterpreter
