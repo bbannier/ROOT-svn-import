@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // CLING - the C++ LLVM-based InterpreterG :)
-// version: $Id: ChainedASTConsumer.h 39610 2011-06-08 16:02:57Z vvassilev $
-// author:  Axel Naumann <axel@cern.ch>
+// version: $Id$
+// author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
 #include "ChainedASTConsumer.h"
@@ -155,13 +155,13 @@ namespace cling {
 
   ChainedASTConsumer::~ChainedASTConsumer() {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Exists(i))
+      if (Exists((EConsumerIndex)i))
         delete Consumers[i];
   }
   
   void ChainedASTConsumer::Initialize(ASTContext& Context) {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Exists(i))
+      if (Exists((EConsumerIndex)i))
         Consumers[i]->Initialize(Context);
   }
   
@@ -211,13 +211,13 @@ namespace cling {
   
   void ChainedASTConsumer::PrintStats() {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Exists(i))
+      if (Exists((EConsumerIndex)i))
         Consumers[i]->PrintStats();
   }
   
   void ChainedASTConsumer::InitializeSema(Sema& S) {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Exists(i))
+      if (Exists((EConsumerIndex)i))
         if (SemaConsumer* SC = dyn_cast<SemaConsumer>(Consumers[i]))
           SC->InitializeSema(S);
   }
@@ -225,7 +225,7 @@ namespace cling {
   void ChainedASTConsumer::ForgetSema() {
     for (size_t i = 0; i < kConsumersCount; ++i)
       if (SemaConsumer* SC = dyn_cast<SemaConsumer>(Consumers[i]))
-        if (Exists(i))
+        if (Exists((EConsumerIndex)i))
           SC->ForgetSema();
   }
   
@@ -239,7 +239,7 @@ namespace cling {
     std::vector<ASTMutationListener*> mutationListeners;
     std::vector<ASTDeserializationListener*> serializationListeners;
     for (size_t i = 0; i < kConsumersCount; ++i) {
-      if (Exists(i)) {
+      if (Exists((EConsumerIndex)i)) {
         ASTMutationListener* mutationListener =
           Consumers[i]->GetASTMutationListener();
         if (mutationListener)

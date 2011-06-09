@@ -58,10 +58,6 @@ namespace cling {
       return Consumers; 
     }
 
-    bool Exists(unsigned I) {
-      return Consumers[(EConsumerIndex)I] != 0;
-    }
-
     bool Exists(EConsumerIndex I) {
       return Consumers[I] != 0;
     }

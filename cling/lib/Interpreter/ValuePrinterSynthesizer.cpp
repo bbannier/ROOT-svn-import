@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // CLING - the C++ LLVM-based InterpreterG :)
-// version: $Id: DeclExtractor.cpp 39610 2011-06-08 16:02:57Z vvassilev $
+// version: $Id$
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
