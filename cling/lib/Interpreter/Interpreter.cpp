@@ -258,7 +258,7 @@ namespace cling {
 
     // Set up the gCling variable - even if we use PCH ('this' is different)
     std::stringstream initializer;
-    initializer << "gCling=(cling::Interpreter*)" << this <<";\n";    
+    initializer << "gCling=(cling::Interpreter*)" << (long)this <<";\n";    
     processLine(initializer.str());
 
     handleFrontendOptions();
