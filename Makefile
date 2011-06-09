@@ -14,7 +14,7 @@ ifndef CLING_LEVEL
 
 IS_TOP_LEVEL := 1
 CLING_LEVEL := .
-DIRS := include lib tools
+DIRS := include lib tools docs
 
 PARALLEL_DIRS :=
 
@@ -36,6 +36,10 @@ LEVEL := $(CLING_LEVEL)/../..
 
 # Include LLVM common makefile.
 include $(LEVEL)/Makefile.common
+
+ifneq ($(ENABLE_DOCS),1)
+  DIRS := $(filter-out docs, $(DIRS))
+endif
 
 # Set common Cling build flags.
 CPP.Flags += -I$(PROJ_SRC_DIR)/$(CLING_LEVEL)/include -I$(PROJ_OBJ_DIR)/$(CLING_LEVEL)/include
