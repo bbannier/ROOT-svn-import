@@ -49,7 +49,9 @@ namespace cling {
     MutableMemoryBuffer* getCurBuffer() {
       return m_MemoryBuffer.back();
     }
-
+    void enablePrintAST(bool print /*=true*/) {
+      m_Consumer->RestorePreviousState(ChainedASTConsumer::kASTDumper, print);
+    }
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled() { 
       return m_DynamicLookupEnabled; 
