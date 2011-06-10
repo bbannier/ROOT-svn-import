@@ -11,6 +11,7 @@
 
 namespace clang {
   class Expr;
+  class CompoundStmt;
 }
 
 namespace cling {
@@ -35,6 +36,8 @@ public:
   private:
     clang::Expr* SynthesizeVP(clang::Expr* E);
     void LoadValuePrinter();
+    unsigned ClearNullStmts(clang::CompoundStmt* CS);
+
   };
 
 } // namespace cling
