@@ -62,6 +62,14 @@ namespace cling {
               }
             }
           }
+          // Clear the artificial NullStmt-s
+          if (!ClearNullStmts(CS)) {
+            // if no body remove the wrapper
+            DeclContext* DC = FD->getDeclContext();
+            Scope* S = m_Sema->getScopeForContext(DC);
+            S->RemoveDecl(FD);
+            DC->removeDecl(FD); 
+          }
         }
   }
 
@@ -239,6 +247,16 @@ namespace cling {
       m_Interpreter->processLine("#include \"cling/Interpreter/Value.h\"");
       IsValuePrinterLoaded = true;
     }
+  }
+
+  unsigned ValuePrinterSynthesizer::ClearNullStmts(CompoundStmt* CS) {
+    llvm::SmallVector<clang::Stmt*, 8> FBody;
+    for (StmtRange range = CS->children(); range; ++range)
+      if (!isa<NullStmt>(*range))
+        FBody.push_back(*range);
+
+    CS->setStmts(*m_Context, FBody.data(), FBody.size());
+    return FBody.size();
   }
 
 } // namespace cling

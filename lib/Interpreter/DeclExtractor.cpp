@@ -62,21 +62,21 @@ namespace cling {
         
         for (DeclStmt::decl_iterator J = DS->decl_begin();
              J != DS->decl_end(); ++J) {
-          Decl* D = dyn_cast<Decl>(*J);
-          if (D) {
-            D->setDeclContext(DC);
-            D->setLexicalDeclContext(DC); //FIXME: Watch out
+          NamedDecl* ND = dyn_cast<NamedDecl>(*J);
+          if (ND) {
+            ND->setDeclContext(DC);
+            ND->setLexicalDeclContext(DC); //FIXME: Watch out
+            // reset the linkage to External
+            ND->ClearLinkageCache();
           }
           
-          if (VarDecl* VD = dyn_cast<VarDecl>(D)) {
+          if (VarDecl* VD = dyn_cast<VarDecl>(ND)) {
             VD->setStorageClass(SC_None);
             VD->setStorageClassAsWritten(SC_None);
-            // reset the linkage to External
-            VD->ClearLinkageCache();
             DC->addDecl(VD);
           }
 
-          TouchedDecls.push_back(D);
+          TouchedDecls.push_back(ND);
         }
 
         DC->addDecl(TopLevelFD);
@@ -91,12 +91,10 @@ namespace cling {
         // tell exec engine not to run the function
         TopLevelFD = 0;
     }
-
     // TODO: Should have better way of doing that
     for (unsigned i = 0; i < TouchedDecls.size(); ++i) {
-      m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
+     m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
     }
-
   }
 
 

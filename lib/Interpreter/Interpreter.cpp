@@ -438,8 +438,7 @@ namespace cling {
     //  Run it using the JIT.
     //
     FunctionDecl* TopLevelFD 
-      = cast_or_null<FunctionDecl>(LookupDecl(FunctionName).
-                                   getSingleDecl());
+      = cast_or_null<FunctionDecl>(LookupDecl(FunctionName).getSingleDecl());
 
     if (TopLevelFD) {
       if (!TopLevelFD->isExternC()) {
