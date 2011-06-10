@@ -64,13 +64,21 @@ namespace cling {
     clang::ASTConsumer* getConsumer(EConsumerIndex I) {
       return Consumers[I];
     }
-    
-    void EnableConsumer(EConsumerIndex I) {
-      Enabled[I] = true;
+
+    bool EnableConsumer(EConsumerIndex I) {
+      bool PrevousState = Enabled[I];
+      Enabled.set(I);
+      return PrevousState;
     }
 
-    void DisableConsumer(EConsumerIndex I) {
-      Enabled[I] = false;
+    bool DisableConsumer(EConsumerIndex I) {
+      bool PrevousState = Enabled[I];
+      Enabled.reset(I);
+      return PrevousState;
+    }
+
+    void RestorePreviousState(EConsumerIndex I, bool Previous) {
+      Enabled.set(I, Previous);
     }
 
     bool IsConsumerEnabled(EConsumerIndex I) {

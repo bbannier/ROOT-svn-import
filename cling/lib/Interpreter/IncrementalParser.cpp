@@ -143,12 +143,12 @@ namespace cling {
 
     loadStartupPCH(startupPCH);
     if (!m_UsingStartupPCH) {
-      compile(""); // Consume initialization.
+      Compile(""); // Consume initialization.
       // Set up common declarations which are going to be available
       // only at runtime
       // Make sure that the universe won't be included to compile time by using
       // -D __CLING__ as CompilerInstance's arguments
-      compile("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+      Compile("#include \"cling/Interpreter/RuntimeUniverse.h\"");
     }
 
     // Attach the dynamic lookup
@@ -205,14 +205,43 @@ namespace cling {
   clang::CompilerInstance*
   IncrementalParser::parse(llvm::StringRef src) {
     m_Consumer->DisableConsumer(ChainedASTConsumer::kCodeGenerator);
-    clang::CompilerInstance* Result = compile(src);
+    clang::CompilerInstance* Result = Compile(src);
     m_Consumer->EnableConsumer(ChainedASTConsumer::kCodeGenerator);
     return Result;
   }
 
+  clang::CompilerInstance*
+  IncrementalParser::CompileLineFromPrompt(llvm::StringRef input) {
+    assert(input.str()[0] != '#' 
+           && "Preprocessed line! Call CompilePreprocessedLine instead");
+    
+    bool p, q;
+    p = m_Consumer->EnableConsumer(ChainedASTConsumer::kDeclExtractor);
+    q = m_Consumer->EnableConsumer(ChainedASTConsumer::kValuePrinterSynthesizer);
+    clang::CompilerInstance* Result = Compile(input);
+    m_Consumer->RestorePreviousState(ChainedASTConsumer::kDeclExtractor, p);
+    m_Consumer->RestorePreviousState(ChainedASTConsumer::kValuePrinterSynthesizer, q);
+
+    return Result;    
+
+  }
+  
+  clang::CompilerInstance*
+  IncrementalParser::CompilePreprocessed(llvm::StringRef input) {
+    assert(input.str()[0] == '#' && "Preprocessed line starts with #");
+
+    bool p, q;
+    p = m_Consumer->DisableConsumer(ChainedASTConsumer::kDeclExtractor);
+    q = m_Consumer->DisableConsumer(ChainedASTConsumer::kValuePrinterSynthesizer);
+    clang::CompilerInstance* Result = Compile(input);
+    m_Consumer->RestorePreviousState(ChainedASTConsumer::kDeclExtractor, p);
+    m_Consumer->RestorePreviousState(ChainedASTConsumer::kValuePrinterSynthesizer, q);
+
+    return Result;    
+  }
 
   clang::CompilerInstance*
-  IncrementalParser::compile(llvm::StringRef src)
+  IncrementalParser::Compile(llvm::StringRef input)
   {
     // Add src to the memory buffer, parse it, and add it to
     // the AST. Returns the CompilerInstance (and thus the AST).
@@ -222,12 +251,12 @@ namespace cling {
     clang::Preprocessor& PP = m_CI->getPreprocessor();
     m_CI->getDiagnosticClient().BeginSourceFile(m_CI->getLangOpts(), &PP);
     
-    if (src.size()) {
+    if (input.size()) {
       std::ostringstream source_name;
       source_name << "input_line_" << (m_MemoryBuffer.size()+1);
       m_MemoryBuffer.push_back( new MutableMemoryBuffer("//cling!\n", source_name.str()) );
       MutableMemoryBuffer *currentBuffer = m_MemoryBuffer.back();
-      currentBuffer->append(src);
+      currentBuffer->append(input);
       clang::FileID FID = m_CI->getSourceManager().createFileIDForMemBuffer(currentBuffer);
       
       PP.EnterSourceFile(FID, 0, clang::SourceLocation());     
@@ -332,7 +361,10 @@ namespace cling {
     if (m_Consumer->Exists(I))
       return;
 
-    m_Consumer->Add((ChainedASTConsumer::EConsumerIndex)I, consumer);
+    m_Consumer->Add(I, consumer);
+    if (I == ChainedASTConsumer::kCodeGenerator)
+      m_Consumer->EnableConsumer(I);
+
     consumer->Initialize(getCI()->getSema().getASTContext());
     if (m_CI->hasSema()) {
       clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(consumer);

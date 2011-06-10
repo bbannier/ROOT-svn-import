@@ -455,10 +455,10 @@ namespace cling {
                               std::string& FunctionName) {
     // if we are using the preprocessor
     if (input.c_str()[0] == '#') {
-      return m_IncrParser->compile(input) != 0;
+      return m_IncrParser->CompilePreprocessed(input) != 0;
     }
     
-    CompilerInstance* CI = m_IncrParser->compile(input);
+    CompilerInstance* CI = m_IncrParser->CompileLineFromPrompt(input);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
       return 0;
@@ -468,7 +468,8 @@ namespace cling {
     //  Run it using the JIT.
     //
     FunctionDecl* TopLevelFD 
-      = dyn_cast<FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
+      = cast_or_null<FunctionDecl>(LookupDecl(FunctionName).
+                                   getSingleDecl());
 
     if (TopLevelFD) {
       if (!TopLevelFD->isExternC()) {
@@ -490,7 +491,7 @@ namespace cling {
     std::string code;
     code += "#include \"" + filename + "\"\n";
     if (trailcode) code += *trailcode;
-    return m_IncrParser->compile(code);
+    return m_IncrParser->Compile(code);
   }
  
   static bool tryLoadSharedLib(const std::string& filename,
@@ -566,14 +567,14 @@ namespace cling {
 
      // template<typename T> class dummy{}; 
      std::string templatedClass = "template<typename T> class " + className + "{};\n";
-     CI  = m_IncrParser->compile(templatedClass);
+     CI  = m_IncrParser->Compile(templatedClass);
      Decl *templatedClassDecl = 0;
      if (CI)
         templatedClassDecl = m_IncrParser->getLastTopLevelDecl();
 
      //template <> dummy<DeclContext*> {};
      std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
-     CI = m_IncrParser->compile(explicitSpecialization);
+     CI = m_IncrParser->Compile(explicitSpecialization);
      if (CI) {
         if (ClassTemplateSpecializationDecl* D = dyn_cast<ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
            Result = D->getTemplateArgs()[0].getAsType();
@@ -627,7 +628,7 @@ namespace cling {
     // Temporary stop the code gen
     m_IncrParser->removeConsumer(ChainedASTConsumer::kCodeGenerator);
 
-    CompilerInstance* CI = m_IncrParser->compile(Wrapper);
+    CompilerInstance* CI = m_IncrParser->Compile(Wrapper);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
     }
