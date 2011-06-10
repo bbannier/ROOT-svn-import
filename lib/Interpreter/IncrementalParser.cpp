@@ -22,6 +22,7 @@
 
 #include "cling/Interpreter/Diagnostics.h"
 #include "cling/Interpreter/Interpreter.h"
+#include "ASTDumper.h"
 #include "ChainedASTConsumer.h"
 #include "DeclExtractor.h"
 #include "DynamicLookup.h"
@@ -116,6 +117,9 @@ namespace cling {
                 new DeclExtractor());
     addConsumer(ChainedASTConsumer::kValuePrinterSynthesizer,
                 new ValuePrinterSynthesizer(interp));
+
+    addConsumer(ChainedASTConsumer::kASTDumper, new ASTDumper());
+
 
     // Initialize the parser.
     m_Parser.reset(new clang::Parser(CI->getPreprocessor(), CI->getSema()));

@@ -106,36 +106,6 @@ namespace {
   }
   
 }
-namespace {
-   class ASTTLDPrinter : public ASTConsumer {
-      llvm::raw_ostream &Out;
-      bool Dump;
-
-   public:
-      ASTTLDPrinter(llvm::raw_ostream* o = NULL, bool Dump = false)
-  : Out(o? *o : llvm::outs()), Dump(Dump) { }
-
-      virtual void HandleTopLevelDecl(DeclGroupRef D) {
-         for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I)
-            HandleTopLevelSingleDecl(*I);
-      }
-      
-      void HandleTopLevelSingleDecl(Decl *D) {
-         PrintingPolicy Policy = D->getASTContext().PrintingPolicy;
-         Policy.Dump = Dump;
-
-         if (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)) {
-            D->dump();
-            
-            if (Stmt *Body = D->getBody()) {
-               llvm::errs() << "DeclStmts:---------------------------------\n";
-               Body->dump();
-               llvm::errs() << "End DeclStmts:-----------------------------\n\n\n\n";
-            }
-         }
-      }
-   };
-} // end anonymous namespace
 
 namespace cling {
 
@@ -694,13 +664,7 @@ namespace cling {
   }
 
   void Interpreter::enablePrintAST(bool print /*=true*/) {
-    if (print) {
-      if (!m_ASTDumper)
-        m_ASTDumper = new ASTTLDPrinter();
-      m_IncrParser->addConsumer(ChainedASTConsumer::kASTDumper, m_ASTDumper);
-    }
-    else
-      m_IncrParser->removeConsumer(ChainedASTConsumer::kASTDumper);
+    m_IncrParser->enablePrintAST(print);
     m_printAST = !m_printAST;
   }
   
