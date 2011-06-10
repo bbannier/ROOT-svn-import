@@ -15,6 +15,7 @@
 #include "clang/Sema/Template.h"
 
 #include "cling/Interpreter/Interpreter.h"
+#include "ChainedASTConsumer.h"
 
 using namespace clang;
 namespace cling {
@@ -49,7 +50,15 @@ namespace cling {
                  !isa<NullStmt>(*(J + 1)))) {
               if (Expr* To = dyn_cast<Expr>(*J)) {
                   LoadValuePrinter();
+                  ChainedASTConsumer* C
+                    = dyn_cast<ChainedASTConsumer>(&m_Sema->Consumer);
+                  bool p, q;
+                  p = C->DisableConsumer(ChainedASTConsumer::kDeclExtractor);
+                  q = C->DisableConsumer(ChainedASTConsumer::kValuePrinterSynthesizer);
                   *J = SynthesizeVP(To);
+                  C->RestorePreviousState(ChainedASTConsumer::kDeclExtractor, p);
+                  C->RestorePreviousState(ChainedASTConsumer::kValuePrinterSynthesizer, q);
+
               }
             }
           }

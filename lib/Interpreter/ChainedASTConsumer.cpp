@@ -228,7 +228,7 @@ namespace cling {
   void ChainedASTConsumer::Add(EConsumerIndex I, clang::ASTConsumer* C) {
     assert(!Exists(I) && "Consumer already registered at this index!");
     Consumers[I] = C;
-    Enabled[I] = true;
+    DisableConsumer(I);
     // Collect the mutation listeners and deserialization listeners of all
     // children, and create a multiplex listener each if so.
     // TODO: Do it in smarter way. Do not recalculate on every addition.
