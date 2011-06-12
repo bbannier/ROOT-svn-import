@@ -18,7 +18,7 @@
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-#include "ChainedASTConsumer.h"
+#include "ChainedConsumer.h"
 
 using namespace clang;
 
@@ -150,7 +150,7 @@ namespace cling {
     //CI->getSourceManager().clearIDTables(); //do we really need it?
     
     // Set up the ASTConsumers
-    ChainedASTConsumer* Consumer = new ChainedASTConsumer();
+    ChainedConsumer* Consumer = new ChainedConsumer();
     Consumer->Initialize(*Ctx);
     CI->setASTConsumer(Consumer);
     

@@ -4,8 +4,8 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
-#ifndef CLING_CHAINED_AST_CONSUMER_H
-#define CLING_CHAINED_AST_CONSUMER_H
+#ifndef CLING_CHAINED_CONSUMER_H
+#define CLING_CHAINED_CONSUMER_H
 
 #include "llvm/ADT/OwningPtr.h"
 #include "clang/Sema/SemaConsumer.h"
@@ -18,10 +18,10 @@ namespace clang {
 
 namespace cling {
 
-  class ChainedASTMutationListener;
-  class ChainedASTDeserializationListener;
+  class ChainedMutationListener;
+  class ChainedDeserializationListener;
 
-  class ChainedASTConsumer: public clang::SemaConsumer {
+  class ChainedConsumer: public clang::SemaConsumer {
 
   public:
     // Copy of IncrementalParser::EConsumerIndex!
@@ -33,8 +33,8 @@ namespace cling {
       kCodeGenerator,
       kConsumersCount
     };
-    ChainedASTConsumer();
-    virtual ~ChainedASTConsumer();
+    ChainedConsumer();
+    virtual ~ChainedConsumer();
 
     // ASTConsumer
     virtual void Initialize(clang::ASTContext& Context);
@@ -88,8 +88,8 @@ namespace cling {
   private:
     clang::ASTConsumer* Consumers[kConsumersCount]; // owns them
     std::bitset<kConsumersCount> Enabled;
-    llvm::OwningPtr<ChainedASTMutationListener> MutationListener;
-    llvm::OwningPtr<ChainedASTDeserializationListener> DeserializationListener;
+    llvm::OwningPtr<ChainedMutationListener> MutationListener;
+    llvm::OwningPtr<ChainedDeserializationListener> DeserializationListener;
   };
 } // namespace cling
 

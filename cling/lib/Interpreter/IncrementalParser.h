@@ -12,7 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
-#include "ChainedASTConsumer.h"
+#include "ChainedConsumer.h"
 
 namespace clang {
   class CompilerInstance;
@@ -28,7 +28,7 @@ namespace clang {
 
 namespace cling {
   class MutableMemoryBuffer;
-  class ChainedASTConsumer;
+  class ChainedConsumer;
   class DynamicExprTransformer;
   class Interpreter;
   class CIFactory;
@@ -50,7 +50,7 @@ namespace cling {
       return m_MemoryBuffer.back();
     }
     void enablePrintAST(bool print /*=true*/) {
-      m_Consumer->RestorePreviousState(ChainedASTConsumer::kASTDumper, print);
+      m_Consumer->RestorePreviousState(ChainedConsumer::kASTDumper, print);
     }
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled() { 
@@ -63,8 +63,8 @@ namespace cling {
     clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
     clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
     
-    void addConsumer(ChainedASTConsumer::EConsumerIndex I, clang::ASTConsumer* consumer);
-    void removeConsumer(ChainedASTConsumer::EConsumerIndex I);
+    void addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer);
+    void removeConsumer(ChainedConsumer::EConsumerIndex I);
 
     bool usingStartupPCH() const { return m_UsingStartupPCH; }
     void writeStartupPCH();
@@ -77,7 +77,7 @@ namespace cling {
     llvm::OwningPtr<DynamicExprTransformer> m_Transformer; // delayed id lookup
     std::vector<MutableMemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
     clang::FileID m_MBFileID; // file ID of the memory buffer
-    ChainedASTConsumer* m_Consumer; // CI owns it
+    ChainedConsumer* m_Consumer; // CI owns it
     clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
     clang::Decl* m_FirstTopLevelDecl; // first top level decl
     bool m_UsingStartupPCH; // Whether the interpreter is using a PCH file to accelerate its startup
