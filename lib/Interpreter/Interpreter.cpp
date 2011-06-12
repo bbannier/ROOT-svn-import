@@ -201,7 +201,7 @@ namespace cling {
                                              llvmdir));
     m_ExecutionContext.reset(new ExecutionContext(m_IncrParser->getCI()));
 
-    m_IncrParser->addConsumer(ChainedASTConsumer::kCodeGenerator,
+    m_IncrParser->addConsumer(ChainedConsumer::kCodeGenerator,
                               m_ExecutionContext->getCodeGenerator());
 
     m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer",
@@ -595,7 +595,7 @@ namespace cling {
     m_IncrParser->getCI()->getSema().CurContext = DC;
 
     // Temporary stop the code gen
-    m_IncrParser->removeConsumer(ChainedASTConsumer::kCodeGenerator);
+    m_IncrParser->removeConsumer(ChainedConsumer::kCodeGenerator);
 
     CompilerInstance* CI = m_IncrParser->Compile(Wrapper);
     if (!CI) {
@@ -627,7 +627,7 @@ namespace cling {
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
     // resume the code gen
-    m_IncrParser->addConsumer(ChainedASTConsumer::kCodeGenerator,
+    m_IncrParser->addConsumer(ChainedConsumer::kCodeGenerator,
                               m_ExecutionContext->getCodeGenerator());
     DeclGroupRef DGR(TopLevelFD);
     // collect the references that are being used

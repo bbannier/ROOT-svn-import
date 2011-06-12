@@ -23,7 +23,7 @@
 #include "cling/Interpreter/Diagnostics.h"
 #include "cling/Interpreter/Interpreter.h"
 #include "ASTDumper.h"
-#include "ChainedASTConsumer.h"
+#include "ChainedConsumer.h"
 #include "DeclExtractor.h"
 #include "DynamicLookup.h"
 #include "ValuePrinterSynthesizer.h"
@@ -110,15 +110,15 @@ namespace cling {
       return;
     }
     
-    m_Consumer = dyn_cast<ChainedASTConsumer>(&CI->getASTConsumer());
-    assert(m_Consumer && "Expected ChainedASTConsumer!");
+    m_Consumer = dyn_cast<ChainedConsumer>(&CI->getASTConsumer());
+    assert(m_Consumer && "Expected ChainedConsumer!");
     // Add consumers
-    addConsumer(ChainedASTConsumer::kDeclExtractor,
+    addConsumer(ChainedConsumer::kDeclExtractor,
                 new DeclExtractor());
-    addConsumer(ChainedASTConsumer::kValuePrinterSynthesizer,
+    addConsumer(ChainedConsumer::kValuePrinterSynthesizer,
                 new ValuePrinterSynthesizer(interp));
 
-    addConsumer(ChainedASTConsumer::kASTDumper, new ASTDumper());
+    addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
 
 
     // Initialize the parser.
@@ -129,7 +129,7 @@ namespace cling {
     m_Consumer->InitializeSema(CI->getSema());
     //if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
     //  SC->InitializeSema(CI->getSema()); // do we really need this? We know 
-    // that we will have ChainedASTConsumer, which is initialized in createCI
+    // that we will have ChainedConsumer, which is initialized in createCI
     
     // Attach the DynamicIDHandler if enabled
     if (m_DynamicLookupEnabled) {
@@ -195,22 +195,22 @@ namespace cling {
                                                           )
                                   );
       m_StartupPCHGenerator->InitializeSema(m_CI->getSema());
-      addConsumer(ChainedASTConsumer::kPCHGenerator, m_StartupPCHGenerator.get());
+      addConsumer(ChainedConsumer::kPCHGenerator, m_StartupPCHGenerator.get());
     }
   }
 
   void IncrementalParser::writeStartupPCH() {
     if (!m_StartupPCHGenerator) return;
     m_StartupPCHGenerator->HandleTranslationUnit(m_CI->getASTContext());
-    removeConsumer(ChainedASTConsumer::kPCHGenerator);
+    removeConsumer(ChainedConsumer::kPCHGenerator);
     m_StartupPCHGenerator.reset(); // deletes StartupPCHGenerator
   }
 
   clang::CompilerInstance*
   IncrementalParser::parse(llvm::StringRef src) {
-    m_Consumer->DisableConsumer(ChainedASTConsumer::kCodeGenerator);
+    m_Consumer->DisableConsumer(ChainedConsumer::kCodeGenerator);
     clang::CompilerInstance* Result = Compile(src);
-    m_Consumer->EnableConsumer(ChainedASTConsumer::kCodeGenerator);
+    m_Consumer->EnableConsumer(ChainedConsumer::kCodeGenerator);
     return Result;
   }
 
@@ -220,11 +220,11 @@ namespace cling {
            && "Preprocessed line! Call CompilePreprocessedLine instead");
     
     bool p, q;
-    p = m_Consumer->EnableConsumer(ChainedASTConsumer::kDeclExtractor);
-    q = m_Consumer->EnableConsumer(ChainedASTConsumer::kValuePrinterSynthesizer);
+    p = m_Consumer->EnableConsumer(ChainedConsumer::kDeclExtractor);
+    q = m_Consumer->EnableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
     clang::CompilerInstance* Result = Compile(input);
-    m_Consumer->RestorePreviousState(ChainedASTConsumer::kDeclExtractor, p);
-    m_Consumer->RestorePreviousState(ChainedASTConsumer::kValuePrinterSynthesizer, q);
+    m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
+    m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
 
     return Result;    
 
@@ -235,11 +235,11 @@ namespace cling {
     assert(input.str()[0] == '#' && "Preprocessed line starts with #");
 
     bool p, q;
-    p = m_Consumer->DisableConsumer(ChainedASTConsumer::kDeclExtractor);
-    q = m_Consumer->DisableConsumer(ChainedASTConsumer::kValuePrinterSynthesizer);
+    p = m_Consumer->DisableConsumer(ChainedConsumer::kDeclExtractor);
+    q = m_Consumer->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
     clang::CompilerInstance* Result = Compile(input);
-    m_Consumer->RestorePreviousState(ChainedASTConsumer::kDeclExtractor, p);
-    m_Consumer->RestorePreviousState(ChainedASTConsumer::kValuePrinterSynthesizer, q);
+    m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
+    m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
 
     return Result;    
   }
@@ -361,12 +361,12 @@ namespace cling {
     }
   } 
   
-  void IncrementalParser::addConsumer(ChainedASTConsumer::EConsumerIndex I, clang::ASTConsumer* consumer) {
+  void IncrementalParser::addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer) {
     if (m_Consumer->Exists(I))
       return;
 
     m_Consumer->Add(I, consumer);
-    if (I == ChainedASTConsumer::kCodeGenerator)
+    if (I == ChainedConsumer::kCodeGenerator)
       m_Consumer->EnableConsumer(I);
 
     consumer->Initialize(getCI()->getSema().getASTContext());
@@ -378,7 +378,7 @@ namespace cling {
     }
   }
   
-  void IncrementalParser::removeConsumer(ChainedASTConsumer::EConsumerIndex I) {
+  void IncrementalParser::removeConsumer(ChainedConsumer::EConsumerIndex I) {
     if (!m_Consumer->Exists(I))
       return;
 
