@@ -17,9 +17,12 @@ namespace cling {
   class ChainedDeserializationListener: public ASTDeserializationListener {
   public:
     // Does NOT take ownership of the elements in L.
-    ChainedDeserializationListener(const std::vector<ASTDeserializationListener*>& L, const std::bitset<ChainedConsumer::kConsumersCount>& E);
-    virtual ~ChainedDeserializationListener(){}
-
+    ChainedDeserializationListener
+    (
+     ASTDeserializationListener* L[ChainedConsumer::kConsumersCount],
+     std::bitset<ChainedConsumer::kConsumersCount>& E
+     );
+    virtual ~ChainedDeserializationListener();
     virtual void ReaderInitialized(ASTReader* Reader);
     virtual void IdentifierRead(serialization::IdentID ID,
                                 IdentifierInfo* II);
@@ -28,50 +31,62 @@ namespace cling {
     virtual void SelectorRead(serialization::SelectorID iD, Selector Sel);
     virtual void MacroDefinitionRead(serialization::MacroID, 
                                      MacroDefinition* MD);
+    void AddListener(ChainedConsumer::EConsumerIndex I,
+                     ASTDeserializationListener* M) {
+      Listeners[I] = M;
+    }
   private:
-    std::vector<ASTDeserializationListener*> Listeners;
-    const std::bitset<ChainedConsumer::kConsumersCount> Enabled;
+    ASTDeserializationListener* Listeners[ChainedConsumer::kConsumersCount];
+    std::bitset<ChainedConsumer::kConsumersCount> Enabled;
   };
-  ChainedDeserializationListener::ChainedDeserializationListener(const std::vector<ASTDeserializationListener*>& L, const std::bitset<ChainedConsumer::kConsumersCount>& E)
-    : Listeners(L), Enabled(E) {
+  ChainedDeserializationListener::ChainedDeserializationListener
+  (
+   ASTDeserializationListener* L[ChainedConsumer::kConsumersCount],
+   std::bitset<ChainedConsumer::kConsumersCount>& E
+   )
+    : Enabled(E) {
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
+      Listeners[i] = L[i];
   }
   
+  ChainedDeserializationListener::~ChainedDeserializationListener() { }
+
   void ChainedDeserializationListener::ReaderInitialized(ASTReader* Reader) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       Listeners[i]->ReaderInitialized(Reader);
   }
   
   void ChainedDeserializationListener::IdentifierRead(serialization::IdentID ID,
                                                          IdentifierInfo* II) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->IdentifierRead(ID, II);
   }
   
   void ChainedDeserializationListener::TypeRead(serialization::TypeIdx Idx,
                                                    QualType T) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->TypeRead(Idx, T);
   }
   
   void ChainedDeserializationListener::DeclRead(serialization::DeclID ID,
                                                    const Decl* D) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->DeclRead(ID, D);
   }
   
   void ChainedDeserializationListener::SelectorRead(serialization::SelectorID ID,
                                                        Selector Sel) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->SelectorRead(ID, Sel);
   }
   
   void ChainedDeserializationListener::MacroDefinitionRead(serialization::MacroID ID,
                                                               MacroDefinition* MD) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->MacroDefinitionRead(ID, MD);
   }
@@ -81,79 +96,117 @@ namespace cling {
   class ChainedMutationListener : public ASTMutationListener {
   public:
    // Does NOT take ownership of the elements in L.
-    ChainedMutationListener(const std::vector<ASTMutationListener*>& L,
-                               const std::bitset<ChainedConsumer::kConsumersCount>& E);
-    virtual ~ChainedMutationListener(){};
+    ChainedMutationListener(ASTMutationListener* L[ChainedConsumer::kConsumersCount],
+                            std::bitset<ChainedConsumer::kConsumersCount>& E);
+    virtual ~ChainedMutationListener();
 
     virtual void CompletedTagDefinition(const TagDecl* D);
     virtual void AddedVisibleDecl(const DeclContext* DC, const Decl* D);
     virtual void AddedCXXImplicitMember(const CXXRecordDecl* RD, const Decl* D);
     virtual void AddedCXXTemplateSpecialization(const ClassTemplateDecl* TD,
-                                                const ClassTemplateSpecializationDecl* D);
+                                      const ClassTemplateSpecializationDecl* D);
     virtual void AddedCXXTemplateSpecialization(const FunctionTemplateDecl* TD,
                                                 const FunctionDecl* D);
     virtual void CompletedImplicitDefinition(const FunctionDecl* D);
     virtual void StaticDataMemberInstantiated(const VarDecl* D);
+
+    void AddListener(ChainedConsumer::EConsumerIndex I, ASTMutationListener* M) {
+      Listeners[I] = M;
+    }
   private:
-    std::vector<ASTMutationListener*> Listeners;
-    const std::bitset<ChainedConsumer::kConsumersCount> Enabled;
+    ASTMutationListener* Listeners [ChainedConsumer::kConsumersCount];
+    std::bitset<ChainedConsumer::kConsumersCount> Enabled;
   };
   
-  ChainedMutationListener::ChainedMutationListener(const std::vector<ASTMutationListener*>& L, const std::bitset<ChainedConsumer::kConsumersCount>& E)
-    : Listeners(L), Enabled(E) {
+  ChainedMutationListener::ChainedMutationListener
+  (ASTMutationListener* L[ChainedConsumer::kConsumersCount],
+   std::bitset<ChainedConsumer::kConsumersCount>& E
+   )
+    : Enabled(E) {
+    // Good compiler would unroll it
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
+      Listeners[i] = L[i];
   }
   
+  ChainedMutationListener::~ChainedMutationListener() { }
+
   void ChainedMutationListener::CompletedTagDefinition(const TagDecl* D) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->CompletedTagDefinition(D);
   }
   
   void ChainedMutationListener::AddedVisibleDecl(const DeclContext* DC,
                                                     const Decl* D) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->AddedVisibleDecl(DC, D);
   }
   
-  void ChainedMutationListener::AddedCXXImplicitMember(const CXXRecordDecl* RD, 
-                                                          const Decl* D) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+  void ChainedMutationListener::AddedCXXImplicitMember(const CXXRecordDecl* RD,
+                                                       const Decl* D) {
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->AddedCXXImplicitMember(RD, D);
   }
-  void ChainedMutationListener::AddedCXXTemplateSpecialization(const ClassTemplateDecl* TD,
-                                                                  const ClassTemplateSpecializationDecl* D) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+  void ChainedMutationListener::AddedCXXTemplateSpecialization
+  (const ClassTemplateDecl* TD,
+   const ClassTemplateSpecializationDecl* D
+   ) {
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->AddedCXXTemplateSpecialization(TD, D);
   }
-  void ChainedMutationListener::AddedCXXTemplateSpecialization(const FunctionTemplateDecl* TD,
-                                                                  const FunctionDecl* D) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+  void ChainedMutationListener::AddedCXXTemplateSpecialization
+  (const FunctionTemplateDecl* TD,
+   const FunctionDecl* D
+   ) {
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->AddedCXXTemplateSpecialization(TD, D);
   }
   void ChainedMutationListener::CompletedImplicitDefinition(const FunctionDecl* D) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->CompletedImplicitDefinition(D);
   }
   void ChainedMutationListener::StaticDataMemberInstantiated(const VarDecl* D) {
-    for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
         Listeners[i]->StaticDataMemberInstantiated(D);
   }
 
   ChainedConsumer::ChainedConsumer()
     :  Consumers(), Enabled(), MutationListener(0),
-       DeserializationListener(0) { }
+       DeserializationListener(0) {
 
-  ChainedConsumer::~ChainedConsumer() {
-    //for (size_t i = 0; i < kConsumersCount; ++i)
-      //if (Exists((EConsumerIndex)i))
-        //delete Consumers[i];
+    // Collect the mutation listeners and deserialization listeners of all
+    // children, and create a multiplex listener each if so.
+    // NOTE: It would make sense once we add the consumers in the constructor
+    // as package.
+    ASTMutationListener* mListeners[kConsumersCount];
+    ASTDeserializationListener* sListeners[kConsumersCount];
+    for (size_t i = 0; i < kConsumersCount; ++i) {
+      if (Exists((EConsumerIndex)i)) {
+        ASTMutationListener* mListener = Consumers[i]->GetASTMutationListener();
+        if (mListener)
+          mListeners[i] = mListener;
+        ASTDeserializationListener* sListener = 
+          Consumers[i]->GetASTDeserializationListener();
+        if (sListener)
+          sListeners[i] = sListener;
+      }
+    }
+
+    MutationListener.reset(new ChainedMutationListener(mListeners, Enabled));
+
+    DeserializationListener.reset(new ChainedDeserializationListener(sListeners,
+                                                                       Enabled)
+                                    );
+
   }
+
+  ChainedConsumer::~ChainedConsumer() { }
   
   void ChainedConsumer::Initialize(ASTContext& Context) {
     for (size_t i = 0; i < kConsumersCount; ++i)
@@ -229,31 +282,8 @@ namespace cling {
     assert(!Exists(I) && "Consumer already registered at this index!");
     Consumers[I] = C;
     DisableConsumer(I);
-    // Collect the mutation listeners and deserialization listeners of all
-    // children, and create a multiplex listener each if so.
-    // TODO: Do it in smarter way. Do not recalculate on every addition.
-    std::vector<ASTMutationListener*> mutationListeners;
-    std::vector<ASTDeserializationListener*> serializationListeners;
-    for (size_t i = 0; i < kConsumersCount; ++i) {
-      if (Exists((EConsumerIndex)i)) {
-        ASTMutationListener* mutationListener =
-          Consumers[i]->GetASTMutationListener();
-        if (mutationListener)
-          mutationListeners.push_back(mutationListener);
-        ASTDeserializationListener* serializationListener =
-          Consumers[i]->GetASTDeserializationListener();
-        if (serializationListener)
-          serializationListeners.push_back(serializationListener);
-      }
-    }
-    if (mutationListeners.size()) {
-      MutationListener.reset(new ChainedMutationListener(mutationListeners, Enabled));
-    }
-    if (serializationListeners.size()) {
-      DeserializationListener.reset(new ChainedDeserializationListener(serializationListeners, Enabled));
-    }
-    
+    MutationListener->AddListener(I, C->GetASTMutationListener());
+    DeserializationListener->AddListener(I, C->GetASTDeserializationListener());
   }
   
 } // namespace cling
-
