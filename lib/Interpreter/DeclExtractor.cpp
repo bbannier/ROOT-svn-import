@@ -67,14 +67,16 @@ namespace cling {
             ND->setDeclContext(DC);
             ND->setLexicalDeclContext(DC); //FIXME: Watch out
             // reset the linkage to External
-            ND->ClearLinkageCache();
           }
           
           if (VarDecl* VD = dyn_cast<VarDecl>(ND)) {
             VD->setStorageClass(SC_None);
             VD->setStorageClassAsWritten(SC_None);
-            DC->addDecl(VD);
           }
+
+          assert(ND && "Expect NamedDecl!");
+          ND->ClearLinkageCache();
+          DC->addDecl(ND);
 
           TouchedDecls.push_back(ND);
         }
@@ -91,7 +93,8 @@ namespace cling {
         // tell exec engine not to run the function
         TopLevelFD = 0;
     }
-    // TODO: Should have better way of doing that
+    // TODO: Should have better way of doing that. We need a global
+    // registrator and tracking down the declarations recursively.
     for (unsigned i = 0; i < TouchedDecls.size(); ++i) {
      m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
     }
