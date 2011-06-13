@@ -379,10 +379,10 @@ namespace cling {
     //  and compile to produce a module.
     //
     
-    std::string wrapped;
+    std::string wrapped = input_line;
     std::string stmtFunc;
     std::string functName;
-    if (strncmp(input_line.c_str(),"#include ",strlen("#include ")) != 0 &&
+    if (strncmp(input_line.c_str(),"#",strlen("#")) != 0 &&
         strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0) {
       //
       //  Wrap input into a function along with
@@ -393,24 +393,40 @@ namespace cling {
           fprintf(stderr, "Bad input, dude! That's a code %d\n", ValidatorResult);
         return 0;
       }
-      functName = createUniqueName();
-      wrapped = "void " + functName + "() {\n ";
-      wrapped += input_line;
-      wrapped += ";\n}";
+      WrapInput(wrapped, functName);
+    }
 
-    }
-    else {
-      wrapped = input_line;
-    }
-      DiagnosticPrinter& Diag = (DiagnosticPrinter&)getCI()->getDiagnosticClient();
-      // disable that warning when using the prompt
-      unsigned warningID = DiagnosticIDs::getIdFromName("warn_unused_expr");
-      Diag.ignoreWarning(warningID);
-      int result = handleLine(wrapped, functName);
-      Diag.removeIgnoredWarning(warningID);
-      return result;
+    DiagnosticPrinter& Diag = (DiagnosticPrinter&)getCI()->getDiagnosticClient();
+    // disable that warning when using the prompt
+    unsigned warningID = DiagnosticIDs::getIdFromName("warn_unused_expr");
+    Diag.ignoreWarning(warningID);
+    int result = handleLine(wrapped, functName);
+    Diag.removeIgnoredWarning(warningID);
+    return result;
   }
-  
+
+  void Interpreter::WrapInput(std::string& input, std::string& fname) {
+    fname = createUniqueName();
+    input.insert(0, "void " + fname + "() {\n ");
+    input.append(";\n}");
+  }
+
+  void Interpreter::RunFunction(std::string& fname, llvm::GenericValue* res) {
+    FunctionDecl* FD = cast_or_null<FunctionDecl>(LookupDecl(fname).
+                                                  getSingleDecl()
+                                                  );
+    assert(FD && "Function not found!");
+    if (FD) {
+      if (!FD->isExternC()) {
+        fname = "";
+        llvm::raw_string_ostream RawStr(fname);
+        MangleContext* Mangle = getCI()->getASTContext().createMangleContext();
+        Mangle->mangleName(FD, RawStr);
+      }
+      m_ExecutionContext->executeFunction(fname, res);
+    }
+  }
+
   std::string Interpreter::createUniqueName()
   {
     // Create an unique name
@@ -437,18 +453,7 @@ namespace cling {
     //
     //  Run it using the JIT.
     //
-    FunctionDecl* TopLevelFD 
-      = cast_or_null<FunctionDecl>(LookupDecl(FunctionName).getSingleDecl());
-
-    if (TopLevelFD) {
-      if (!TopLevelFD->isExternC()) {
-        FunctionName = "";
-        llvm::raw_string_ostream RawStr(FunctionName);
-        MangleContext* Mangle = getCI()->getASTContext().createMangleContext();
-        Mangle->mangleName(TopLevelFD, RawStr);
-      }
-      m_ExecutionContext->executeFunction(FunctionName);
-    }
+    RunFunction(FunctionName);
 
     return 1;
 
@@ -518,14 +523,15 @@ namespace cling {
 
     //fprintf(stderr, "funcname: %s\n", pairFuncExt.first.data());
     
-    std::string func = createUniqueName();
-    std::string wrapper = "extern \"C\" void " + func;
-    wrapper += "(){\n" + pairFuncExt.first.str() + "(" + pairFileArgs.second.str() + ";\n}";
+    std::string func;
+    std::string wrapper = pairFuncExt.first.str()+"("+pairFileArgs.second.str();
+    WrapInput(wrapper, func);
+
     int err = loadFile(pairFileArgs.first, &wrapper);
     if (err) {
       return err;
     }
-    m_ExecutionContext->executeFunction(func);
+    RunFunction(func);
     return 0;
   }
 
@@ -583,11 +589,9 @@ namespace cling {
     Value Result;
 
     // Wrap the expression
-    const std::string ExprStr(expr);
-    std::string WrapperName = createUniqueName();
-    std::string Wrapper = "void " + WrapperName + " () {\n";
-    Wrapper += expr;
-    Wrapper += ";\n}";
+    std::string WrapperName;
+    std::string Wrapper = expr;
+    WrapInput(Wrapper, WrapperName);
     
     // Set up the declaration context
     DeclContext* CurContext;
@@ -637,13 +641,7 @@ namespace cling {
  
     // get the result
     llvm::GenericValue val;
-    if (!TopLevelFD->isExternC()) {
-        WrapperName = "";
-        llvm::raw_string_ostream RawStr(WrapperName);
-        MangleContext* Mangle = Context.createMangleContext();
-        Mangle->mangleName(TopLevelFD, RawStr);
-    }
-    m_ExecutionContext->executeFunction(WrapperName, &val);
+    RunFunction(WrapperName, &val);
 
     return Value(val, RetTy.getTypePtrOrNull());
   }
