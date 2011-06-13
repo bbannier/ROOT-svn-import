@@ -411,11 +411,10 @@ namespace cling {
     input.append(";\n}");
   }
 
-  void Interpreter::RunFunction(std::string& fname, llvm::GenericValue* res) {
+  int Interpreter::RunFunction(std::string& fname, llvm::GenericValue* res) {
     FunctionDecl* FD = cast_or_null<FunctionDecl>(LookupDecl(fname).
                                                   getSingleDecl()
                                                   );
-    assert(FD && "Function not found!");
     if (FD) {
       if (!FD->isExternC()) {
         fname = "";
@@ -424,7 +423,10 @@ namespace cling {
         Mangle->mangleName(FD, RawStr);
       }
       m_ExecutionContext->executeFunction(fname, res);
+      return 0;
     }
+
+    return 1;
   }
 
   std::string Interpreter::createUniqueName()
