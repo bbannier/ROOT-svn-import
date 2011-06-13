@@ -217,7 +217,7 @@ namespace cling {
   clang::CompilerInstance*
   IncrementalParser::CompileLineFromPrompt(llvm::StringRef input) {
     assert(input.str()[0] != '#' 
-           && "Preprocessed line! Call CompilePreprocessedLine instead");
+           && "Preprocessed line! Call CompilePreprocessed instead");
     
     bool p, q;
     p = m_Consumer->EnableConsumer(ChainedConsumer::kDeclExtractor);

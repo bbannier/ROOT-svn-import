@@ -460,7 +460,7 @@ namespace cling {
     std::string code;
     code += "#include \"" + filename + "\"\n";
     if (trailcode) code += *trailcode;
-    return m_IncrParser->Compile(code);
+    return m_IncrParser->CompilePreprocessed(code);
   }
  
   static bool tryLoadSharedLib(const std::string& filename,
@@ -666,8 +666,7 @@ namespace cling {
     m_IncrParser->enablePrintAST(print);
     m_printAST = !m_printAST;
   }
-  
-  
+
   void Interpreter::dumpAST(bool showAST, int last) {
     Decl* D = m_LastDump;
     int oldPolicy = m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump;
