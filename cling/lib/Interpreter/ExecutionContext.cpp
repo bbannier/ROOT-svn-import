@@ -89,7 +89,6 @@ std::vector<std::string> ExecutionContext::m_vec_unresolved;
 std::vector<ExecutionContext::LazyFunctionCreatorFunc_t> ExecutionContext::m_vec_lazy_function;
 
 ExecutionContext::ExecutionContext(clang::CompilerInstance* CI):
-  m_CI(CI),
   m_engine(0),
   m_module(0),
   m_posInitGlobals(0)
