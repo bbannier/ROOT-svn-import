@@ -16,6 +16,7 @@
 
 namespace llvm {
   class raw_ostream;
+  class GenericValue;
 }
 
 namespace clang {
@@ -175,6 +176,8 @@ namespace cling {
     int handleLine(const std::string& Input, std::string& FunctionName);
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
+    void WrapInput(std::string& input, std::string& fname);
+    void RunFunction(std::string& fname, llvm::GenericValue* res = 0);
     friend class runtime::internal::LifetimeHandler;
     
   public:
