@@ -244,7 +244,6 @@ namespace cling {
     if (!IsValuePrinterLoaded) {
       m_Interpreter->processLine("#include \"cling/Interpreter/Interpreter.h\"");
       m_Interpreter->processLine("#include \"cling/Interpreter/ValuePrinter.h\"");
-      m_Interpreter->processLine("#include \"cling/Interpreter/Value.h\"");
       IsValuePrinterLoaded = true;
     }
   }
