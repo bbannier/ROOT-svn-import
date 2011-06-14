@@ -285,14 +285,14 @@ HypoTestInverterResult* HypoTestInverter::GetInterval() const {
 HypoTestResult * HypoTestInverter::Eval(HypoTestCalculatorGeneric &hc, bool adaptive, double clsTarget) const {
 
    //for debug
-   std::cout << ">>>>>>>>>>> " << std::endl;
-   std::cout << "alternate model " << std::endl;
-   hc.GetAlternateModel()->GetNuisanceParameters()->Print("V");
-   hc.GetAlternateModel()->GetParametersOfInterest()->Print("V");
-   std::cout << "Null model " << std::endl;
-   hc.GetNullModel()->GetNuisanceParameters()->Print("V");
-   hc.GetNullModel()->GetParametersOfInterest()->Print("V");
-   std::cout << "<<<<<<<<<<<<<<< " << std::endl;
+   // std::cout << ">>>>>>>>>>> " << std::endl;
+   // std::cout << "alternate model " << std::endl;
+   // hc.GetAlternateModel()->GetNuisanceParameters()->Print("V");
+   // hc.GetAlternateModel()->GetParametersOfInterest()->Print("V");
+   // std::cout << "Null model " << std::endl;
+   // hc.GetNullModel()->GetNuisanceParameters()->Print("V");
+   // hc.GetNullModel()->GetParametersOfInterest()->Print("V");
+   // std::cout << "<<<<<<<<<<<<<<< " << std::endl;
 
    // run the hypothesis test 
    HypoTestResult *  hcResult = hc.GetHypoTest();
