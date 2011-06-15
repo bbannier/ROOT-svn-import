@@ -72,6 +72,7 @@ namespace cling {
     }
 
     bool DisableConsumer(EConsumerIndex I) {
+      assert(I != kCodeGenerator && "You shouldn't disable codegen!");
       bool PrevousState = Enabled[I];
       Enabled.reset(I);
       return PrevousState;
