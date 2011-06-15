@@ -241,6 +241,11 @@ ExecutionContext::runCodeGen() {
       gctors->dropAllReferences();
       gctors->eraseFromParent();
    }
+   //llvm::Function* F = m_module->getFunction("_GLOBAL__I_a");
+   //if (F) {
+   //  F->deleteBody();
+   //  F->dropAllReferences();
+   //}
 }
 
 int
