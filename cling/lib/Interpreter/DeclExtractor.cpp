@@ -56,17 +56,19 @@ namespace cling {
           Stmts.push_back(*I);
           continue;
         }
-
-        DC->removeDecl(TopLevelFD);
-        S->RemoveDecl(TopLevelFD);
         
         for (DeclStmt::decl_iterator J = DS->decl_begin();
              J != DS->decl_end(); ++J) {
           NamedDecl* ND = dyn_cast<NamedDecl>(*J);
           if (ND) {
+            DeclContext* OldDC = ND->getDeclContext();
+            Scope* OldS = m_Sema->getScopeForContext(OldDC);
+            OldDC->removeDecl(ND);
+            if (OldS)
+              OldS->RemoveDecl(ND);
+            
             ND->setDeclContext(DC);
             ND->setLexicalDeclContext(DC); //FIXME: Watch out
-            // reset the linkage to External
           }
           
           if (VarDecl* VD = dyn_cast<VarDecl>(ND)) {
@@ -74,15 +76,14 @@ namespace cling {
             VD->setStorageClassAsWritten(SC_None);
           }
 
-          assert(ND && "Expect NamedDecl!");
+          assert(ND && "NamedDecl expected!");
+
+          // force recalc of the linkage (to external)
           ND->ClearLinkageCache();
-          DC->addDecl(ND);
 
           TouchedDecls.push_back(ND);
         }
 
-        DC->addDecl(TopLevelFD);
-        S->AddDecl(TopLevelFD);
       }
       // Remove the empty wrappers, i.e those which contain only decls
       if (Stmts.size()) {
@@ -92,11 +93,20 @@ namespace cling {
       else
         // tell exec engine not to run the function
         TopLevelFD = 0;
-    }
-    // TODO: Should have better way of doing that. We need a global
-    // registrator and tracking down the declarations recursively.
-    for (unsigned i = 0; i < TouchedDecls.size(); ++i) {
-     m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
+
+      // TODO: Should have better way of doing that. We need a global
+      // registrator and tracking down the declarations recursively.
+      for (unsigned i = 0; i < TouchedDecls.size(); ++i) {
+        DC->removeDecl(TopLevelFD);
+        S->RemoveDecl(TopLevelFD);
+        
+        DC->addDecl(TouchedDecls[i]);
+        
+        DC->addDecl(TopLevelFD);
+        S->AddDecl(TopLevelFD);
+        
+        m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
+      }
     }
   }
 
