@@ -408,7 +408,7 @@ namespace cling {
   void Interpreter::WrapInput(std::string& input, std::string& fname) {
     fname = createUniqueName();
     input.insert(0, "void " + fname + "() {\n ");
-    input.append(";\n}");
+    input.append("\n;\n}");
   }
 
   int Interpreter::RunFunction(std::string& fname, llvm::GenericValue* res) {
