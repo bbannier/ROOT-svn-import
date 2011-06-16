@@ -41,7 +41,11 @@ namespace cling {
 
   void ValuePrinterSynthesizer::HandleTopLevelDecl(DeclGroupRef DGR) {
     for (DeclGroupRef::iterator I = DGR.begin(), E = DGR.end(); I != E; ++I)
-      if (Decl* FD = dyn_cast<FunctionDecl>(*I))
+      if (FunctionDecl* FD = dyn_cast<FunctionDecl>(*I)) {
+        llvm::StringRef Name (FD->getNameAsString());
+        if (!Name.startswith("__cling_Un1Qu3"))
+          return;
+
         if (CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody())) {
           for (CompoundStmt::body_iterator J = CS->body_begin();
                J != CS->body_end(); ++J) {
@@ -74,6 +78,7 @@ namespace cling {
             DC->removeDecl(FD); 
           }
         }
+      }
   }
 
   void ValuePrinterSynthesizer::ForgetSema() {

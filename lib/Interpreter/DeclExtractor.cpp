@@ -44,6 +44,10 @@ namespace cling {
     llvm::SmallVector<Decl*, 4> TouchedDecls;
     
     if (TopLevelFD) {
+      llvm::StringRef Name (TopLevelFD->getNameAsString());
+      if (!Name.startswith("__cling_Un1Qu3"))
+        return;
+
       CompoundStmt* CS = dyn_cast<CompoundStmt>(TopLevelFD->getBody());
       assert(CS && "Function body not a CompoundStmt?");
       DeclContext* DC = TopLevelFD->getDeclContext();
