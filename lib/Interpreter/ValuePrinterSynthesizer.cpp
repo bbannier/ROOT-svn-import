@@ -191,7 +191,7 @@ namespace cling {
       // Create template arguments
       Sema::InstantiatingTemplate Inst(*m_Sema, NoSLoc, TDecl);
       // Only the last argument is templated
-      TemplateArgument Arg(E->getType());
+      TemplateArgument Arg(E->getType().getCanonicalType());
       TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
       
       // Substitute the declaration of the templated function, with the 
