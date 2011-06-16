@@ -55,7 +55,10 @@ namespace cling {
                   bool p, q;
                   p = C->DisableConsumer(ChainedConsumer::kDeclExtractor);
                   q = C->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
-                  *J = SynthesizeVP(To);
+                  Expr* Result = SynthesizeVP(To);
+                  // Check if it is non-void
+                  if (Result)
+                    *J = Result;
                   C->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
                   C->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
 
@@ -235,7 +238,7 @@ namespace cling {
       S = m_Sema->getScopeForContext(m_Sema->CurContext);
       Expr* Result = m_Sema->ActOnCallExpr(S, DRE, NoSLoc, 
                                            move_arg(CallArgs), NoSLoc).take();
-
+      assert(Result && "Cannot create value printer!");
       return Result;
     }
 
