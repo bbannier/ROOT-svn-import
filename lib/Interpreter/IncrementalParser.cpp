@@ -118,7 +118,7 @@ namespace cling {
     addConsumer(ChainedConsumer::kValuePrinterSynthesizer,
                 new ValuePrinterSynthesizer(interp));
 
-    addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
+    //addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
 
 
     // Initialize the parser.
@@ -126,7 +126,6 @@ namespace cling {
     CI->getPreprocessor().EnterMainSourceFile();
     m_Parser->Initialize();
 
-    m_Consumer->InitializeSema(CI->getSema());
     //if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
     //  SC->InitializeSema(CI->getSema()); // do we really need this? We know 
     // that we will have ChainedConsumer, which is initialized in createCI
@@ -158,6 +157,9 @@ namespace cling {
     // Attach the dynamic lookup
     if (isDynamicLookupEnabled())
       getTransformer()->Initialize();
+
+    m_Consumer->Initialize(m_CI->getASTContext());
+    m_Consumer->InitializeSema(m_CI->getSema());
   }
 
   void IncrementalParser::loadStartupPCH(const char* filename) {
@@ -370,10 +372,10 @@ namespace cling {
       m_Consumer->EnableConsumer(I);
 
     consumer->Initialize(getCI()->getSema().getASTContext());
-    if (m_CI->hasSema()) {
+    if (getCI()->hasSema()) {
       clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(consumer);
       if (SC) {
-        SC->InitializeSema(m_CI->getSema());
+        SC->InitializeSema(getCI()->getSema());
       }
     }
   }

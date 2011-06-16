@@ -151,7 +151,6 @@ namespace cling {
     
     // Set up the ASTConsumers
     ChainedConsumer* Consumer = new ChainedConsumer();
-    Consumer->Initialize(*Ctx);
     CI->setASTConsumer(Consumer);
     
     

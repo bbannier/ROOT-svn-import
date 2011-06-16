@@ -66,12 +66,14 @@ namespace cling {
     }
 
     bool EnableConsumer(EConsumerIndex I) {
+      assert(Exists(I) && "Cannot disable. Consumer not set!");
       bool PrevousState = Enabled[I];
       Enabled.set(I);
       return PrevousState;
     }
 
     bool DisableConsumer(EConsumerIndex I) {
+      assert(Exists(I) && "Cannot disable. Consumer not set!");
       assert(I != kCodeGenerator && "You shouldn't disable codegen!");
       bool PrevousState = Enabled[I];
       Enabled.reset(I);
@@ -79,6 +81,7 @@ namespace cling {
     }
 
     void RestorePreviousState(EConsumerIndex I, bool Previous) {
+      assert(Exists(I) && "Cannot disable. Consumer not set!");
       Enabled.set(I, Previous);
     }
 
