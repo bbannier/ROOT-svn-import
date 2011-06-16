@@ -50,6 +50,10 @@ namespace cling {
       Scope* S = m_Sema->getScopeForContext(DC);
       CompoundStmt::body_iterator I;
       llvm::SmallVector<Stmt*, 4> Stmts;
+
+      DC->removeDecl(TopLevelFD);
+      S->RemoveDecl(TopLevelFD);
+
       for (I = CS->body_begin(); I != CS->body_end(); ++I) {
         DeclStmt* DS = dyn_cast<DeclStmt>(*I);
         if (!DS) {
@@ -74,6 +78,16 @@ namespace cling {
           if (VarDecl* VD = dyn_cast<VarDecl>(ND)) {
             VD->setStorageClass(SC_None);
             VD->setStorageClassAsWritten(SC_None);
+
+            // if we want to print the result of the initializer of int i = 5
+            if (VD->hasInit()) {
+              Expr* DRE = m_Sema->BuildDeclRefExpr(VD, 
+                                                   VD->getType(),
+                                                   VK_LValue,
+                                                   SourceLocation()
+                                                   ).take();
+              Stmts.push_back(DRE);
+            }
           }
 
           assert(ND && "NamedDecl expected!");
@@ -85,28 +99,18 @@ namespace cling {
         }
 
       }
-      // Remove the empty wrappers, i.e those which contain only decls
-      if (Stmts.size()) {
-        CS->setStmts(*m_Context, Stmts.data(), Stmts.size());
-        //TouchedDecls.push_back(TopLevelFD);
-      }
-      else
-        // tell exec engine not to run the function
-        TopLevelFD = 0;
-
-      // TODO: Should have better way of doing that. We need a global
-      // registrator and tracking down the declarations recursively.
+      // Insert the extracted declarations before the wrapper
       for (unsigned i = 0; i < TouchedDecls.size(); ++i) {
-        DC->removeDecl(TopLevelFD);
-        S->RemoveDecl(TopLevelFD);
-        
         DC->addDecl(TouchedDecls[i]);
-        
-        DC->addDecl(TopLevelFD);
-        S->AddDecl(TopLevelFD);
-        
+        S->AddDecl(TouchedDecls[i]);
         m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
       }
+
+      // Add the wrapper even though it is empty. The ValuePrinterSynthesizer
+      // take care of it
+      CS->setStmts(*m_Context, Stmts.data(), Stmts.size());
+      DC->addDecl(TopLevelFD);
+      S->AddDecl(TopLevelFD);
     }
   }
 
