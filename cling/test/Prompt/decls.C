@@ -14,4 +14,8 @@ float f = sin(12);
 int j = i;
 extern "C" int printf(const char* fmt, ...);
 printf("j=%d\n",j); // CHECK:j=12
+#include <string>
+std::string s("abc");
+printf("s=%s\n",s.c_str()) // CHECK: s=abc
+
 .q
