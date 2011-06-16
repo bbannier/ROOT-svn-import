@@ -23,6 +23,8 @@
 #include "RooStats/HypoTestInverterPlot.h"
 #include "RooStats/HybridResult.h"
 #include "RooStats/SamplingDistribution.h"
+#include "RooMsgService.h"
+#include "RooGlobalFunc.h"
 
 #include "TF1.h"
 #include "TGraphErrors.h"
@@ -31,6 +33,7 @@
 ClassImp(RooStats::HypoTestInverterResult)
 
 using namespace RooStats;
+using namespace RooFit;
 
 
 HypoTestInverterResult::HypoTestInverterResult(const char * name ) :
@@ -130,34 +133,39 @@ HypoTestResult* HypoTestInverterResult::GetResult( int index ) const
 
 double HypoTestInverterResult::FindInterpolatedLimit(double target)
 {
-  std::cout << "Interpolate the upper limit between the 2 results closest to the target confidence level" << endl;
+   std::cout << "Interpolate the upper limit between the 2 results closest to the target confidence level" << endl;
 
-  if (ArraySize()<2) {
-    std::cout << "Error: not enough points to get the inverted interval\n";
-    if (target<0.5) return ((RooRealVar*)fParameters.first())->getMax();
-    else return ((RooRealVar*)fParameters.first())->getMin();
-  }
+   if (ArraySize()<2) {
+      std::cout << "Error: not enough points to get the inverted interval\n";
+      if (target<0.5) return ((RooRealVar*)fParameters.first())->getMax();
+      else return ((RooRealVar*)fParameters.first())->getMin();
+   }
 
-  double v1 = fabs(GetYValue(0)-target);
-  int i1 = 0;
-  double v2 = fabs(GetYValue(1)-target);
-  int i2 = 1;
-
-  if (ArraySize()>2)
-    for (int i=2; i<ArraySize(); i++) {
-      double vt = fabs(GetYValue(i)-target);
-      if ( vt<v1 || vt<v2 ) {
-	if ( v1<v2 ) {
-	  v2 = vt;
-	  i2 = i;
-	} else {
-	  v1 = vt;
-	  i1 = i;
-	}
+   // sort the values in x 
+   std::vector<unsigned int> index(ArraySize() );
+   TMath::SortItr(fXValues.begin(), fXValues.end(), index.begin(), false); 
+   
+   double v1 = fabs(GetYValue(index[0])-target);
+   int i1 = index[0];
+   double v2 = fabs(GetYValue(index[1])-target);
+   int i2 = index[1];
+   
+   if (ArraySize()>2)
+      for (int j=2; j<ArraySize(); j++) {
+         int i = index[j];
+         double vt = fabs(GetYValue(i)-target);
+         if ( vt<v1 || vt<v2 ) {
+            if ( v1<v2 ) {
+               v2 = vt;
+               i2 = i;
+            } else {
+               v1 = vt;
+               i1 = i;
+            }
+         }
       }
-    }
-
-  return GetXValue(i1)+(target-GetYValue(i1))*(GetXValue(i2)-GetXValue(i1))/(GetYValue(i2)-GetYValue(i1));
+   
+   return GetXValue(i1)+(target-GetYValue(i1))*(GetXValue(i2)-GetXValue(i1))/(GetYValue(i2)-GetYValue(i1));
 }
 
 int HypoTestInverterResult::FindClosestPointIndex(double target)
@@ -256,7 +264,7 @@ Double_t HypoTestInverterResult::UpperLimitEstimatedError()
 
 SamplingDistribution *  HypoTestInverterResult::GetBackgroundDistribution() const { 
    // get the background distribution
-   // from the first scanned point
+
    HypoTestResult * firstResult = (HypoTestResult*) fYObjects.First();
    if (!firstResult) return 0;
    return (firstResult->GetBackGroundIsAlt() ? firstResult->GetAltDistribution() : firstResult->GetNullDistribution() );       
@@ -290,6 +298,34 @@ SamplingDistribution *  HypoTestInverterResult::GetExpectedDistribution(int inde
    return new SamplingDistribution("expected values","expected values",values);
 }
 
+// struct SortPredicate { 
+   
+//    SortPredicate(HypoTestInverterResult * r) : fResult(r) {}
+//    bool operator() (int i1, int i2) {  
+//       return fResult->GetXValue(i1) > fResult->GetXValue(i2);
+//    }
+//    HypoTestInverterResult * fResult;
+// };
+
+// void  HypoTestInverterResult::Sort()  { 
+//    // sort the resulted points in increasing r 
+//   return ; 
+/*
+   SortPredicate sPred(this);
+   std::vector<int> index(ArraySize() );
+   for (unsigned int i = 0; i < index.size(); ++i) index[i] = i; 
+   std::sort(index.begin(), index.end(), sPred);
+   TIter iter(&fYObjects);
+   std::vector<TObject*> ytemp(iter.Begin(), TIter::End() );
+   std::vector<double> xtemp = fXValues;
+   for (unsigned int i = 0; i < index.size(); ++i) {
+      fYObjects.At(i) = ytemp[index[i]];
+      fXValues[i] = xtemp[index[i] ];
+   }    
+*/
+//}
+
+
 SamplingDistribution *  HypoTestInverterResult::GetUpperLimitDistribution() const { 
 
    //std::cout << "Interpolate the upper limit between the 2 results closest to the target confidence level" << endl;
@@ -299,37 +335,55 @@ SamplingDistribution *  HypoTestInverterResult::GetUpperLimitDistribution() cons
     return 0; 
   }
 
+  oocoutI(this,Eval) << "HypoTestInverterResult - computing upper limit distribution...." << std::endl;
+
+
+
   double target = 1-fConfidenceLevel;
-  SamplingDistribution * dist0 = GetExpectedDistribution(0);
-  SamplingDistribution * dist1 = GetExpectedDistribution(1);
+  std::vector<SamplingDistribution*> distVec(ArraySize() );
+  for (unsigned int i = 0; i < distVec.size(); ++i) {
+     distVec[i] =  GetExpectedDistribution(i);
+  }
+
+  // sort the values in x 
+  std::vector<unsigned int> index(ArraySize() );
+  TMath::SortItr(fXValues.begin(), fXValues.end(), index.begin(), false); 
+
+  SamplingDistribution * dist0 = distVec[index[0]];
+  SamplingDistribution * dist1 = distVec[index[1]];
   int n = dist0->GetSize();
   std::vector<double> limits(n);
+  // loop on the p values and find the limit for each expcted one 
   for (int j = 0; j < n; ++j ) {
+
      double y1 = dist0->GetSamplingDistribution()[j];
      double y2 = dist1->GetSamplingDistribution()[j];
      double v1 = std::abs(y1-target);
-     int i1 = 0;
+     int i1 = index[0];
      double v2 = std::abs(y2-target);
-     int i2 = 1;
+     int i2 = index[1];
 
-     if (ArraySize()>2)
-        for (int i=2; i<ArraySize(); i++) {
-           double yi = GetExpectedDistribution(i)->GetSamplingDistribution()[j];
+     if (ArraySize()>2) {
+        for (int k=2; k<ArraySize(); k++) {
+           double yi = distVec[index[k]]->GetSamplingDistribution()[j];
            double vt = std::abs(y1-target);
            if ( vt<v1 || vt<v2 ) {
               if ( v1<v2 ) {
                  v2 = vt;
                  y2 = yi;
-                 i2 = i;
+                 i2 = index[k];
               } else {
                  v1 = vt;
                  y1 = yi;
-                 i1 = i;
+                 i1 = index[k];
               }
            }
         }
-     
+     }
      limits[j] =  GetXValue(i1)+(target-y1)*(GetXValue(i2)-GetXValue(i1))/(y2-y1);
+     // oocoutI(this,Eval) << "HypoTestInverterResult - interpolate between points " <<  GetXValue(i1) << " ," << y1
+     //                    << " and " << GetXValue(i2)  << " , " << y2 << " limit is " << limits[j] << std::endl;
+
   }
   return new SamplingDistribution("Expected upper Limit","Expected upper limits",limits);
   

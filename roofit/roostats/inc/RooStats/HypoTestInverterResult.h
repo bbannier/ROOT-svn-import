@@ -98,6 +98,12 @@ public:
    SamplingDistribution * GetExpectedDistribution(int index) const; 
 
 
+   SamplingDistribution * GetBackgroundDistribution() const; 
+
+   SamplingDistribution * GetSignalAndBackgroundDistribution(int index) const; 
+
+   double FindInterpolatedLimit(double target);
+
 private:
 
    // merge with the content of another HypoTestInverterResult object
@@ -105,12 +111,8 @@ private:
 
    double CalculateEstimatedError(double target);
    int FindClosestPointIndex(double target);
-   double FindInterpolatedLimit(double target);
 
-   SamplingDistribution * GetBackgroundDistribution() const; 
-
-   SamplingDistribution * GetSignalAndBackgroundDistribution(int index) const; 
-
+ 
 protected:
 
    bool fUseCLs; 
