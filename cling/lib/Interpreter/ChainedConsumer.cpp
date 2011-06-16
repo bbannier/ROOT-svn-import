@@ -216,37 +216,37 @@ namespace cling {
   
   void ChainedConsumer::HandleTopLevelDecl(DeclGroupRef D) {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Enabled[i])
+      if (IsConsumerEnabled((EConsumerIndex)i))
         Consumers[i]->HandleTopLevelDecl(D);
   }
   
   void ChainedConsumer::HandleInterestingDecl(DeclGroupRef D) {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Enabled[i])
+      if (IsConsumerEnabled((EConsumerIndex)i))
         Consumers[i]->HandleInterestingDecl(D);
   }
   
   void ChainedConsumer::HandleTranslationUnit(ASTContext& Ctx) {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Enabled[i] && i != kPCHGenerator)
+      if (IsConsumerEnabled((EConsumerIndex)i) && i != kPCHGenerator)
         Consumers[i]->HandleTranslationUnit(Ctx);
   }
   
   void ChainedConsumer::HandleTagDeclDefinition(TagDecl* D) {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Enabled[i])
+      if (IsConsumerEnabled((EConsumerIndex)i))
         Consumers[i]->HandleTagDeclDefinition(D);
   }
   
   void ChainedConsumer::CompleteTentativeDefinition(VarDecl* D) {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Enabled[i])
+      if (IsConsumerEnabled((EConsumerIndex)i))
         Consumers[i]->CompleteTentativeDefinition(D);
   }
   
   void ChainedConsumer::HandleVTable(CXXRecordDecl* RD, bool DefinitionRequired) {
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (Enabled[i])
+      if (IsConsumerEnabled((EConsumerIndex)i))
         Consumers[i]->HandleVTable(RD, DefinitionRequired);
   }
   
