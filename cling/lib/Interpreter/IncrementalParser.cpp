@@ -8,6 +8,7 @@
 #include "cling/Interpreter/CIFactory.h"
 
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_os_ostream.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -30,6 +31,7 @@
 
 #include <stdio.h>
 #include <sstream>
+#include <iostream>
 
 namespace cling {
   class MutableMemoryBuffer: public llvm::MemoryBuffer {
@@ -117,8 +119,8 @@ namespace cling {
                 new DeclExtractor());
     addConsumer(ChainedConsumer::kValuePrinterSynthesizer,
                 new ValuePrinterSynthesizer(interp));
-
-    //addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
+    llvm::raw_os_ostream* Out = new llvm::raw_os_ostream(std::cout);
+    addConsumer(ChainedConsumer::kASTDumper, new ASTDumper(Out));
 
 
     // Initialize the parser.

@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------*- C++ -*-
 // CLING - the C++ LLVM-based InterpreterG :)
 // version: $Id$
-// author:  Axel naumann <ljanyst@cern.ch>
+// author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
 #include "ExecutionContext.h"
@@ -278,4 +278,3 @@ ExecutionContext::installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp)
    m_vec_lazy_function.push_back(fp);
    //m_engine->InstallLazyFunctionCreator(fp);
 }
-
