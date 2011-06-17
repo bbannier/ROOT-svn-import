@@ -86,8 +86,9 @@ namespace cling {
 
             // if we want to print the result of the initializer of int i = 5
             if (VD->hasInit()) {
+              QualType VDTy = VD->getType().getNonReferenceType();
               Expr* DRE = m_Sema->BuildDeclRefExpr(VD, 
-                                                   VD->getType(),
+                                                   VDTy,
                                                    VK_LValue,
                                                    SourceLocation()
                                                    ).take();
