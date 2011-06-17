@@ -8,6 +8,7 @@
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Decl.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 
@@ -40,23 +41,23 @@ namespace cling {
   }
 
   void DeclExtractor::ExtractDecl(clang::Decl* D) {
-    FunctionDecl* TopLevelFD = dyn_cast<FunctionDecl>(D);
-    llvm::SmallVector<Decl*, 4> TouchedDecls;
+    FunctionDecl* FD = dyn_cast<FunctionDecl>(D);
+    llvm::SmallVector<NamedDecl*, 4> TouchedDecls;
     
-    if (TopLevelFD) {
-      llvm::StringRef Name (TopLevelFD->getNameAsString());
+    if (FD) {
+      llvm::StringRef Name (FD->getNameAsString());
       if (!Name.startswith("__cling_Un1Qu3"))
         return;
 
-      CompoundStmt* CS = dyn_cast<CompoundStmt>(TopLevelFD->getBody());
+      CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody());
       assert(CS && "Function body not a CompoundStmt?");
-      DeclContext* DC = TopLevelFD->getDeclContext();
+      DeclContext* DC = FD->getDeclContext();
       Scope* S = m_Sema->getScopeForContext(DC);
       CompoundStmt::body_iterator I;
       llvm::SmallVector<Stmt*, 4> Stmts;
 
-      DC->removeDecl(TopLevelFD);
-      S->RemoveDecl(TopLevelFD);
+      DC->removeDecl(FD);
+      S->RemoveDecl(FD);
 
       for (I = CS->body_begin(); I != CS->body_end(); ++I) {
         DeclStmt* DS = dyn_cast<DeclStmt>(*I);
@@ -105,16 +106,32 @@ namespace cling {
       }
       // Insert the extracted declarations before the wrapper
       for (unsigned i = 0; i < TouchedDecls.size(); ++i) {
-        DC->addDecl(TouchedDecls[i]);
-        S->AddDecl(TouchedDecls[i]);
+
+        if (VarDecl* VD = dyn_cast<VarDecl>(TouchedDecls[i])) {
+          LookupResult Previous(*m_Sema, VD->getDeclName(), VD->getLocation(),
+                                Sema::LookupOrdinaryName);
+          m_Sema->LookupName(Previous, S);
+
+          bool Redeclaration = false;
+          m_Sema->CheckVariableDeclaration(VD, Previous, Redeclaration);
+          if (!VD->isInvalidDecl()) {
+            DC->addDecl(TouchedDecls[i]);
+            S->AddDecl(TouchedDecls[i]);
+          }
+        }
+        else {
+          DC->addDecl(TouchedDecls[i]);
+          S->AddDecl(TouchedDecls[i]);
+        }
+
         m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
       }
 
       // Add the wrapper even though it is empty. The ValuePrinterSynthesizer
       // take care of it
       CS->setStmts(*m_Context, Stmts.data(), Stmts.size());
-      DC->addDecl(TopLevelFD);
-      S->AddDecl(TopLevelFD);
+      DC->addDecl(FD);
+      S->AddDecl(FD);
     }
   }
 
