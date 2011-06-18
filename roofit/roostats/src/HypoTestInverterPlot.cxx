@@ -197,7 +197,6 @@ void HypoTestInverterPlot::Draw(Option_t * opt) {
    TGraphErrors * gobs = 0;
    TGraph * gplot = 0;
    if (drawObs) { 
-      std::cout << "Draw observed plot ..." << std::endl;
       gobs = MakePlot(); 
       // add object to current directory to avoid mem leak
       if (gDirectory) gDirectory->Add(gobs); 
