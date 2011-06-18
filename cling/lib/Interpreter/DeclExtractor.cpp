@@ -133,6 +133,4 @@ namespace cling {
       S->AddDecl(FD);
     }
   }
-
-
 } // namespace cling

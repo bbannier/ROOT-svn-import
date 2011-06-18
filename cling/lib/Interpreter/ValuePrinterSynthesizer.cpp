@@ -47,25 +47,21 @@ namespace cling {
           return;
 
         if (CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody())) {
-          for (CompoundStmt::body_iterator J = CS->body_begin();
-               J != CS->body_end(); ++J) {
-            if ((CS->body_end() - CS->body_begin() == 1) || 
-                (((J+1) != CS->body_end()) && 
-                 !isa<NullStmt>(*(J + 1)))) {
+          for (CompoundStmt::body_iterator 
+                 J = CS->body_begin(), E = CS->body_end(); J != E; ++J) {
+            if (J+1 == E || !isa<NullStmt>(*(J+1))) {
               if (Expr* To = dyn_cast<Expr>(*J)) {
-                  LoadValuePrinter();
-                  ChainedConsumer* C
-                    = dyn_cast<ChainedConsumer>(&m_Sema->Consumer);
-                  bool p, q;
-                  p = C->DisableConsumer(ChainedConsumer::kDeclExtractor);
-                  q = C->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
-                  Expr* Result = SynthesizeVP(To);
-                  // Check if it is non-void
-                  if (Result)
-                    *J = Result;
-                  C->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
-                  C->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
-
+                LoadValuePrinter();
+                ChainedConsumer* C = dyn_cast<ChainedConsumer>(&m_Sema->Consumer);
+                bool p, q;
+                p = C->DisableConsumer(ChainedConsumer::kDeclExtractor);
+                q = C->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
+                Expr* Result = SynthesizeVP(To);
+                // Check if it is non-void
+                if (Result)
+                  *J = Result;
+                C->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
+                C->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
               }
             }
           }
