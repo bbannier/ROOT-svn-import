@@ -110,7 +110,8 @@ namespace cling {
 
         if (VarDecl* VD = dyn_cast<VarDecl>(TouchedDecls[i])) {
           LookupResult Previous(*m_Sema, VD->getDeclName(), VD->getLocation(),
-                                Sema::LookupOrdinaryName);
+                                Sema::LookupOrdinaryName, Sema::ForRedeclaration
+                                );
           m_Sema->LookupName(Previous, S);
 
           bool Redeclaration = false;
