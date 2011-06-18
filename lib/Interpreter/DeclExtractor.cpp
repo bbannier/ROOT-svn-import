@@ -52,14 +52,14 @@ namespace cling {
       CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody());
       assert(CS && "Function body not a CompoundStmt?");
       DeclContext* DC = FD->getDeclContext();
-      Scope* S = m_Sema->getScopeForContext(DC);
-      CompoundStmt::body_iterator I;
+      Scope* S = m_Sema->getScopeForContext(DC);     
       llvm::SmallVector<Stmt*, 4> Stmts;
 
       DC->removeDecl(FD);
       S->RemoveDecl(FD);
 
-      for (I = CS->body_begin(); I != CS->body_end(); ++I) {
+      for (CompoundStmt::body_iterator I = CS->body_begin(), EI = CS->body_end();
+           I != EI; ++I) {
         DeclStmt* DS = dyn_cast<DeclStmt>(*I);
         if (!DS) {
           Stmts.push_back(*I);
@@ -86,11 +86,13 @@ namespace cling {
 
             // if we want to print the result of the initializer of int i = 5 
             // or the default initializer int i
-            QualType VDTy = VD->getType().getNonReferenceType();
-            Expr* DRE = m_Sema->BuildDeclRefExpr(VD, VDTy,VK_LValue, 
-                                                 SourceLocation()
-                                                 ).take();
-            Stmts.push_back(DRE);
+            if (I+1 == EI || !isa<NullStmt>(*(I+1))) {
+              QualType VDTy = VD->getType().getNonReferenceType();
+              Expr* DRE = m_Sema->BuildDeclRefExpr(VD, VDTy,VK_LValue, 
+                                                   SourceLocation()
+                                                   ).take();
+              Stmts.push_back(DRE);
+            }
           }
 
           assert(ND && "NamedDecl expected!");
