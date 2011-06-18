@@ -63,10 +63,6 @@ public:
    // get expected lower limit distributions
    SamplingDistribution* GetLowerLimitDistribution() const { return 0; }// not yet implemented 
 
-   // get expected upper limit distributions
-   // implemented using interpolation
-   SamplingDistribution* GetUpperLimitDistribution() const;
-
 
    // number of entries in the results array
    int ArraySize() const { return fXValues.size(); };
@@ -97,12 +93,15 @@ public:
    // return expected distribution of p-values (Cls or Clsplusb)
    SamplingDistribution * GetExpectedDistribution(int index) const; 
 
-
-   SamplingDistribution * GetBackgroundDistribution() const; 
+   SamplingDistribution * GetBackgroundDistribution(int index = 0) const; 
 
    SamplingDistribution * GetSignalAndBackgroundDistribution(int index) const; 
 
-   double FindInterpolatedLimit(double target);
+   // get expected upper limit distributions
+   // implemented using interpolation
+   SamplingDistribution* GetUpperLimitDistribution(Option_t * opt = "") const;
+
+   double FindInterpolatedLimit(double target, Option_t * opt = "");
 
 private:
 
@@ -111,6 +110,8 @@ private:
 
    double CalculateEstimatedError(double target);
    int FindClosestPointIndex(double target);
+
+   double GetGraphX(const TGraph & g, double y0, Option_t * opt = "") const;
 
  
 protected:
