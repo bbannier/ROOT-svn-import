@@ -15,7 +15,7 @@ int j = i;
 extern "C" int printf(const char* fmt, ...);
 printf("j=%d\n",j); // CHECK:j=12
 #include <string>
-std::string s("abc");
-printf("s=%s\n",s.c_str()) // CHECK: s=abc
+std::string str("abc");
+printf("str=%s\n",str.c_str()) // CHECK: str=abc
 
 .q
