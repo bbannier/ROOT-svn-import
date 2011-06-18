@@ -84,16 +84,13 @@ namespace cling {
             VD->setStorageClass(SC_None);
             VD->setStorageClassAsWritten(SC_None);
 
-            // if we want to print the result of the initializer of int i = 5
-            if (VD->hasInit()) {
-              QualType VDTy = VD->getType().getNonReferenceType();
-              Expr* DRE = m_Sema->BuildDeclRefExpr(VD, 
-                                                   VDTy,
-                                                   VK_LValue,
-                                                   SourceLocation()
-                                                   ).take();
-              Stmts.push_back(DRE);
-            }
+            // if we want to print the result of the initializer of int i = 5 
+            // or the default initializer int i
+            QualType VDTy = VD->getType().getNonReferenceType();
+            Expr* DRE = m_Sema->BuildDeclRefExpr(VD, VDTy,VK_LValue, 
+                                                 SourceLocation()
+                                                 ).take();
+            Stmts.push_back(DRE);
           }
 
           assert(ND && "NamedDecl expected!");
