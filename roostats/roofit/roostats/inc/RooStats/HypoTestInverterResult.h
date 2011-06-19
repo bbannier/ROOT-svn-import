@@ -99,9 +99,19 @@ public:
 
    // get expected upper limit distributions
    // implemented using interpolation
-   SamplingDistribution* GetUpperLimitDistribution(Option_t * opt = "") const;
+   SamplingDistribution* GetUpperLimitDistribution( ) const;
 
-   double FindInterpolatedLimit(double target, Option_t * opt = "");
+   // get Limit value correspnding at the desired nsigma level (0) is median -1 sigma is 1 sigma
+   double GetExpectedUpperLimit(double nsig = 0) const ; 
+
+   double FindInterpolatedLimit(double target);
+
+   enum InterpolOption_t { kLinear, kSpline };
+
+   // set the interpolation option, linear (kLinear ) or spline  (kSpline)
+   void SetInterpolationOption( InterpolOption_t opt) { fInterpolOption = opt; }
+   
+   InterpolOption_t GetInterpolationOption() const { return fInterpolOption; }
 
 private:
 
@@ -111,16 +121,18 @@ private:
    double CalculateEstimatedError(double target);
    int FindClosestPointIndex(double target);
 
-   double GetGraphX(const TGraph & g, double y0, Option_t * opt = "") const;
+   double GetGraphX(const TGraph & g, double y0) const;
 
  
 protected:
 
+   
    bool fUseCLs; 
    bool fInterpolateLowerLimit;
    bool fInterpolateUpperLimit;
    bool fFittedLowerLimit;
    bool fFittedUpperLimit;
+   InterpolOption_t fInterpolOption;  // interpolatation option (linear or spline)
 
    double fLowerLimitError;
    double fUpperLimitError;

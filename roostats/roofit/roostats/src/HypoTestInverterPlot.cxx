@@ -148,6 +148,7 @@ TMultiGraph* HypoTestInverterPlot::MakeExpectedPlot(double nsig1, double nsig2 )
          g2u->SetPointEYlow(j, q[5]-q[4]);
          g2u->SetPointEYhigh(j, q[6]-q[5]);
       }
+      delete s;
    }
 
 
