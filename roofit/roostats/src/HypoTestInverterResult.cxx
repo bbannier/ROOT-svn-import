@@ -45,6 +45,7 @@ HypoTestInverterResult::HypoTestInverterResult(const char * name ) :
    fInterpolateUpperLimit(true),
    fFittedLowerLimit(false),
    fFittedUpperLimit(false),
+   fInterpolOption(kLinear),
    fLowerLimitError(0),
    fUpperLimitError(0)
 {
@@ -61,6 +62,7 @@ HypoTestInverterResult::HypoTestInverterResult( const char* name,
    fInterpolateUpperLimit(true),
    fFittedLowerLimit(false),
    fFittedUpperLimit(false),
+   fInterpolOption(kLinear),
    fLowerLimitError(0),
    fUpperLimitError(0)
 {
@@ -146,10 +148,13 @@ struct InterpolatedGraph {
    TString fInterpOpt;
 }; 
 
-double HypoTestInverterResult::GetGraphX(const TGraph & graph, double y0, const char * opt) const  {
+double HypoTestInverterResult::GetGraphX(const TGraph & graph, double y0) const  {
    // return the X value of the given graph for the target value y0
    // the graph is evaluated using linea rinterpolation by default. 
    // if option = "S" a TSpline3 is used 
+
+   TString opt = "";
+   if (fInterpolOption == kSpline)  opt = "S";
 
    InterpolatedGraph f(graph,y0,opt);
    ROOT::Math::BrentRootFinder brf;
@@ -173,7 +178,7 @@ double HypoTestInverterResult::GetGraphX(const TGraph & graph, double y0, const 
    return brf.Root();
 }
 
-double HypoTestInverterResult::FindInterpolatedLimit(double target, const char * opt)
+double HypoTestInverterResult::FindInterpolatedLimit(double target )
 {
    // interpolate to find limit value
    std::cout << "Interpolate the upper limit between the 2 results closest to the target confidence level" << endl;
@@ -194,41 +199,8 @@ double HypoTestInverterResult::FindInterpolatedLimit(double target, const char *
       graph.SetPoint(i, GetXValue(index[i]), GetYValue(index[i] ) );
 
    
-   return GetGraphX(graph, target, opt);
+   return GetGraphX(graph, target);
 
-/*   
-   double v1 = GetYValue(index[0])-target;
-   int i1 = index[0];
-   double v2 = GetYValue(index[1])-target;
-   int i2 = index[1];
-
-   
-
-   std::cout << i1 << "  " << i2  << "  " << v1 << "  " << v2 << "  " 
-             << GetXValue(i1) << "  " << GetXValue(i2) << std::endl;
-   
-   if (ArraySize()>2) {
-      for (int j=2; j<ArraySize(); j++) {
-         int i = index[j];
-         double vt = GetYValue(i)-target;
-         if ( vt > 0 && vt < v1  ) { // point above the line
-            v1 = vt; 
-            i1 = i; 
-         }
-         else if ( vt < 0 &&  vt > v2) { // point below the line
-            v2 = vt;
-            i2 = i;
-         }
-         std::cout << i1 << "  " << i2  << "  " << v1 << "  " << v2 << std::endl;
-      }
-   }
-   
-   std::cout << "Interpolate between points " << i1 << "  " << i2  
-             << "  " 
-             << GetXValue(i1) << "  " << GetXValue(i2) << std::endl;
-
-   return GetXValue(i1)+(target-GetYValue(i1))*(GetXValue(i2)-GetXValue(i1))/(GetYValue(i2)-GetYValue(i1));
-*/
 }
 
 int HypoTestInverterResult::FindClosestPointIndex(double target)
@@ -375,7 +347,7 @@ SamplingDistribution *  HypoTestInverterResult::GetExpectedDistribution(int inde
 
 
 
-SamplingDistribution *  HypoTestInverterResult::GetUpperLimitDistribution(const char * opt ) const { 
+SamplingDistribution *  HypoTestInverterResult::GetUpperLimitDistribution( ) const { 
 
    //std::cout << "Interpolate the upper limit between the 2 results closest to the target confidence level" << endl;
 
@@ -384,7 +356,7 @@ SamplingDistribution *  HypoTestInverterResult::GetUpperLimitDistribution(const 
     return 0; 
   }
 
-  oocoutI(this,Eval) << "HypoTestInverterResult - computing upper limit distribution...." << std::endl;
+  ooccoutD(this,Eval) << "HypoTestInverterResult - computing upper limit distribution...." << std::endl;
 
 
 
@@ -412,37 +384,53 @@ SamplingDistribution *  HypoTestInverterResult::GetUpperLimitDistribution(const 
         g.SetPoint(k, GetXValue(index[k]), distVec[index[k]]->GetSamplingDistribution()[j] );
      }
 
-     limits[j] = GetGraphX(g, target,opt);
-
-     // double y1 = dist0->GetSamplingDistribution()[j];
-     // double y2 = dist1->GetSamplingDistribution()[j];
-     // double v1 = std::abs(y1-target);
-     // int i1 = index[0];
-     // double v2 = std::abs(y2-target);
-     // int i2 = index[1];
-
-     // if (ArraySize()>2) {
-     //    for (int k=2; k<ArraySize(); k++) {
-     //       double yi = distVec[index[k]]->GetSamplingDistribution()[j];
-     //       double vt = std::abs(y1-target);
-     //       if ( vt<v1 || vt<v2 ) {
-     //          if ( v1<v2 ) {
-     //             v2 = vt;
-     //             y2 = yi;
-     //             i2 = index[k];
-     //          } else {
-     //             v1 = vt;
-     //             y1 = yi;
-     //             i1 = index[k];
-     //          }
-     //       }
-     //    }
-     // }
-     //limits[j] =  GetXValue(i1)+(target-y1)*(GetXValue(i2)-GetXValue(i1))/(y2-y1);
-     // oocoutI(this,Eval) << "HypoTestInverterResult - interpolate between points " <<  GetXValue(i1) << " ," << y1
-     //                    << " and " << GetXValue(i2)  << " , " << y2 << " limit is " << limits[j] << std::endl;
+     limits[j] = GetGraphX(g, target);
 
   }
+
+  for (unsigned int i = 0; i < distVec.size(); ++i) {
+     delete distVec[i];
+  }
+
+
   return new SamplingDistribution("Expected upper Limit","Expected upper limits",limits);
   
 }
+
+double  HypoTestInverterResult::GetExpectedUpperLimit(double nsig ) const {
+   // Get the expected upper limit  
+   // nsig is used to specify which expected value of the UpperLimitDistribution
+   // FOr example 
+   // nsig = 0 (default value) returns the expected value 
+   // nsig = -1 returns the lower band value at -1 sigma 
+   // nsig + 1 return the upper value 
+   //
+   // Note that different results are obtained if using the quantiles on the distribution of the upper limits 
+   // returned from GetUpperLimitDistribution.
+   // The values retuned here are those ordered according to the expected p values seed for the scanned point not 
+
+   const int nEntries = ArraySize();
+   TGraph  g(nEntries);   
+
+   // sort the arrays based on the x values
+   std::vector<unsigned int> index(nEntries);
+   TMath::SortItr(fXValues.begin(), fXValues.end(), index.begin(), false);
+
+   double p[1];
+   double q[1];
+   p[0] = ROOT::Math::normal_cdf(nsig,1);
+   for (int j=0; j<nEntries; ++j) {
+      int i = index[j]; // i is the order index 
+      SamplingDistribution * s = GetExpectedDistribution(i);
+      const std::vector<double> & values = s->GetSamplingDistribution();
+      double * x = const_cast<double *>(&values[0]); // need to change TMath::Quantiles
+      TMath::Quantiles(values.size(), 1, x,q,p,false);
+      g.SetPoint(j, fXValues[i], q[0] );
+      delete s;
+   }
+
+   // interpolate the graph to obtain the limit
+   double target = 1-fConfidenceLevel;
+   return GetGraphX(g, target);
+}
+
