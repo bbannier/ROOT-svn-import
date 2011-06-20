@@ -27,6 +27,8 @@
 #include "TDirectory.h"
 #include "TLine.h"
 #include "TAxis.h"
+#include "TLegend.h"
+#include "TH1.h"
 #include "Math/DistFuncMathCore.h"
 
 ClassImp(RooStats::HypoTestInverterPlot)
@@ -53,10 +55,22 @@ HypoTestInverterPlot::HypoTestInverterPlot( const char* name,
 }
 
 
-TGraphErrors* HypoTestInverterPlot::MakePlot()
+TGraphErrors* HypoTestInverterPlot::MakePlot(Option_t * opt)
 {
    // Make the plot of the result of the scan 
    // using the observed data
+   // By default plot CLs or CLsb depending if the flag UseCLs is set 
+   //
+   // If Option = "CLb"  return  CLb plot
+   //           = "CLs+b" return  CLs+b plot  independently of the flag 
+   //           = "CLs"   return  CLs plot  independently of the flag 
+
+   TString option(opt);
+   option.ToUpper();
+   int type = 0; // use defult
+   if (option.Contains("CLB")) type = 1; // CLb
+   else if (option.Contains("CLS+B") || option.Contains("CLSPLUSB")) type = 2; // CLs+b
+   else if (option.Contains("CLS" )) type = 3; // CLs
    
    const int nEntries = fResults->ArraySize();
 
@@ -70,16 +84,30 @@ TGraphErrors* HypoTestInverterPlot::MakePlot()
    std::vector<Double_t> yErrArray(nEntries);
    for (int i=0; i<nEntries; i++) {
       xArray[i] = fResults->GetXValue(index[i]);
-      yArray[i] = fResults->GetYValue(index[i]);
-      yErrArray[i] = fResults->GetYError(index[i]);
+      if (type == 0) { 
+         yArray[i] = fResults->GetYValue(index[i]);
+         yErrArray[i] = fResults->GetYError(index[i]);
+      } else if (type == 1) { 
+         yArray[i] = fResults->CLb(index[i]);
+         yErrArray[i] = fResults->CLbError(index[i]);
+      } else if (type == 2) { 
+         yArray[i] = fResults->CLsplusb(index[i]);
+         yErrArray[i] = fResults->CLsplusbError(index[i]);
+      } else if (type == 3) { 
+         yArray[i] = fResults->CLs(index[i]);
+         yErrArray[i] = fResults->CLsError(index[i]);
+      }
    }
 
    TGraphErrors* graph = new TGraphErrors(nEntries,&xArray.front(),&yArray.front(),0,&yErrArray.front());
-   TString name = GetName() + TString("_observed");
-   TString title = TString("Observed ") + GetTitle(); 
+   TString pValueName = "CLs";
+   if (type == 1 ) pValueName = "CLb"; 
+   if (type == 2 || (type == 0 && !fResults->fUseCLs) ) pValueName = "CLs+b"; 
+   TString name = pValueName + TString("_observed");
+   TString title = TString("Observed ") + pValueName; 
    graph->SetName(name);
    graph->SetTitle(title);
-   graph->SetMarkerStyle(kFullDotMedium);
+   graph->SetMarkerStyle(20);
    graph->SetLineWidth(2);
    return graph;
 }
@@ -108,45 +136,49 @@ TMultiGraph* HypoTestInverterPlot::MakeExpectedPlot(double nsig1, double nsig2 )
 
    // create the graphs 
    TGraph * g0 = new TGraph(nEntries);
+   TString pValueName = "CLs";
+   if (!fResults->fUseCLs) pValueName = "CLs+b";
+   g0->SetTitle(TString::Format("Expected %s - Median",pValueName.Data()) );
    TGraphAsymmErrors * g1 = 0;
-   TGraphAsymmErrors * g2l = 0; 
-   TGraphAsymmErrors * g2u = 0; 
-   if (doFirstBand) 
+   TGraphAsymmErrors * g2 = 0; 
+   if (doFirstBand) {
       g1 = new TGraphAsymmErrors(nEntries);
+      if (nsig1 - int(nsig1) < 0.01) 
+         g1->SetTitle(TString::Format("Expected %s %d #sigma",pValueName.Data(),int(nsig1)) );
+      else
+         g1->SetTitle(TString::Format("Expected %s %3.1f #sigma",pValueName.Data(),nsig1) );
+   }
    if (doSecondBand) { 
-      g2l = new TGraphAsymmErrors(nEntries);
-      g2u = new TGraphAsymmErrors(nEntries);
+      g2 = new TGraphAsymmErrors(nEntries);
+      if (nsig2 - int(nsig2) < 0.01) 
+         g2->SetTitle(TString::Format("Expected %s %d #sigma",pValueName.Data(),int(nsig2)) );
+      else 
+         g2->SetTitle(TString::Format("Expected %s %3.1f #sigma",pValueName.Data(),nsig2) );
    }
    double p[7]; 
    double q[7];
    p[0] = ROOT::Math::normal_cdf(-nsig2);
-   p[1] = ROOT::Math::normal_cdf(-0.5*(nsig1+nsig2) );
-   p[2] = ROOT::Math::normal_cdf(-nsig1);
-   p[3] = 0.5;
-   p[4] = ROOT::Math::normal_cdf(nsig1);
-   p[5] = ROOT::Math::normal_cdf(0.5*(nsig1+nsig2));
-   p[6] = ROOT::Math::normal_cdf(nsig2);
+   p[1] = ROOT::Math::normal_cdf(-nsig1);
+   p[2] = 0.5;
+   p[3] = ROOT::Math::normal_cdf(nsig1);
+   p[4] = ROOT::Math::normal_cdf(nsig2);
    for (int j=0; j<nEntries; ++j) {
       int i = index[j]; // i is the order index 
       SamplingDistribution * s = fResults->GetExpectedDistribution(i);
       const std::vector<double> & values = s->GetSamplingDistribution();
       double * x = const_cast<double *>(&values[0]); // need to change TMath::Quantiles
-      TMath::Quantiles(values.size(), 7, x,q,p,false);
-      g0->SetPoint(j, fResults->GetXValue(i),  q[3]);
+      TMath::Quantiles(values.size(), 5, x,q,p,false);
+      g0->SetPoint(j, fResults->GetXValue(i),  q[2]);
       if (g1) { 
-         g1->SetPoint(j, fResults->GetXValue(i),  q[3]);
-         g1->SetPointEYlow(j, q[3] - q[2]); // -1 sigma errorr   
-         g1->SetPointEYhigh(j, q[4] - q[3]);//+1 sigma error
+         g1->SetPoint(j, fResults->GetXValue(i),  q[2]);
+         g1->SetPointEYlow(j, q[2] - q[1]); // -1 sigma errorr   
+         g1->SetPointEYhigh(j, q[3] - q[2]);//+1 sigma error
       }
-      if (g2l && g2u) {
-         g2l->SetPoint(j, fResults->GetXValue(i), q[1]);
-         g2u->SetPoint(j, fResults->GetXValue(i), q[5]);
+      if (g2) {
+         g2->SetPoint(j, fResults->GetXValue(i), q[2]);
 
-         g2l->SetPointEYlow(j, q[1]-q[0]);   // -2 -- -1 sigma error
-         g2l->SetPointEYhigh(j, q[2]-q[1]);
-
-         g2u->SetPointEYlow(j, q[5]-q[4]);
-         g2u->SetPointEYhigh(j, q[6]-q[5]);
+         g2->SetPointEYlow(j, q[2]-q[0]);   // -2 -- -1 sigma error
+         g2->SetPointEYhigh(j, q[4]-q[2]);
       }
       delete s;
    }
@@ -158,15 +190,14 @@ TMultiGraph* HypoTestInverterPlot::MakeExpectedPlot(double nsig1, double nsig2 )
    TMultiGraph* graph = new TMultiGraph(name,title);
   
    // set the graphics options and add in multi graph
+   // orderof adding is drawing order 
+   if (g2) { 
+      g2->SetFillColor(kYellow);
+      graph->Add(g2,"3");
+   }
    if (g1) { 
       g1->SetFillColor(kGreen);
       graph->Add(g1,"3");
-   }
-   if (g2l && g2u) { 
-      g2l->SetFillColor(kYellow);
-      g2u->SetFillColor(kYellow);
-      graph->Add(g2l,"3");
-      graph->Add(g2u,"3");
    }
    g0->SetLineStyle(2);
    g0->SetLineWidth(2);
@@ -187,13 +218,18 @@ void HypoTestInverterPlot::Draw(Option_t * opt) {
    //   OBS  :  draw only the observed plot 
    //   EXP  :  draw only the expected plot 
    // 
+   //   CLB  : draw also the CLB
+   //   2CL  : drow both clsplusb and cls
+   //
    // default draw observed + expected with 1 and 2 sigma bands 
 
    TString option(opt);
    option.ToUpper();
    bool drawAxis = !option.Contains("SAME");
    bool drawObs = option.Contains("OBS") || !option.Contains("EXP");
-   bool drawExp = option.Contains("EXP") || !option.Contains("OBS");      
+   bool drawExp = option.Contains("EXP") || !option.Contains("OBS");     
+   bool drawCLb = option.Contains("CLB");
+   bool draw2CL = option.Contains("2CL");
    
    TGraphErrors * gobs = 0;
    TGraph * gplot = 0;
@@ -202,30 +238,82 @@ void HypoTestInverterPlot::Draw(Option_t * opt) {
       // add object to current directory to avoid mem leak
       if (gDirectory) gDirectory->Add(gobs); 
       if (drawAxis) { 
-         gobs->Draw("APL");
+         gobs->Draw("APL");        
          gplot = gobs;
+         gplot->GetHistogram()->SetTitle( GetTitle() );
       }
       else gobs->Draw("PL");
    }
+   TMultiGraph * gexp = 0;
    if (drawExp) { 
-      TMultiGraph * gexp = MakeExpectedPlot(); 
+      gexp = MakeExpectedPlot(); 
       // add object to current directory to avoid mem leak
       if (gDirectory) gDirectory->Add(gexp); 
-      if (drawAxis && !drawObs) gexp->Draw("A");
+      if (drawAxis && !drawObs) { 
+         gexp->Draw("A");
+         gexp->GetHistogram()->SetTitle( GetTitle() );
+         gplot = (TGraph*) gexp->GetListOfGraphs()->First();
+      }
       else gexp->Draw();
    }
 
    // draw also an horizontal  line at the desired conf level
-   if (gplot) {
+   if (gplot) {     
       double alpha = 1.-fResults->ConfidenceLevel();
       double x1 = gplot->GetXaxis()->GetXmin();
       double x2 = gplot->GetXaxis()->GetXmax();
       TLine * line = new TLine(x1, alpha, x2,alpha);
       line->SetLineColor(kRed);
       line->Draw();
+      // put axis labels 
+      RooAbsArg * arg = fResults->fParameters.first();
+      if (arg) gplot->GetXaxis()->SetTitle(arg->GetName());
+      gplot->GetYaxis()->SetTitle("p value");
    }
 
-   // draw again observed values otherwise will be covered byb the bands
+   // draw again observed values otherwise will be covered by the bands
    if (gobs) gobs->Draw("PL"); 
+
+   TGraph *gclb = 0;
+   if (drawCLb) { 
+      gclb = MakePlot("CLb");
+      if (gDirectory) gDirectory->Add(gclb); 
+      gclb->SetMarkerColor(kBlue+4);
+      gclb->Draw("PL");
+   }
+   TGraph * gclsb = 0;
+   TGraph * gcls = 0;
+   if (draw2CL) { 
+      if (fResults->fUseCLs) {
+         gclsb = MakePlot("CLs+b");
+         if (gDirectory) gDirectory->Add(gclsb); 
+         gclsb->SetMarkerColor(kBlue);
+         gclsb->Draw("PL");
+         gclsb->SetLineStyle(3);
+      }
+      else { 
+         gcls = MakePlot("CLs");
+         if (gDirectory) gDirectory->Add(gcls); 
+         gcls->SetMarkerColor(kBlue);
+         gcls->Draw("PL");
+         gcls->SetLineStyle(3);
+      }
+   }
+   TLegend * l = new TLegend(0.6,0.6,0.9,0.9);
+   if (gobs) l->AddEntry(gobs,"","PEL");
+   if (gclsb) l->AddEntry(gclsb,"","PEL");
+   if (gcls) l->AddEntry(gcls,"","PEL");
+   if (gclb) l->AddEntry(gclb,"","PEL");
+   if (gexp) { 
+      // loop in reverse order (opposite to drawing one)
+      int ngraphs =  gexp->GetListOfGraphs()->GetSize();
+      for (int i = ngraphs-1; i>=0; --i) {
+         TObject * obj =  gexp->GetListOfGraphs()->At(i);
+         TString lopt = "F";
+         if (i == ngraphs-1) lopt = "L";   
+         if (obj)  l->AddEntry(obj,"",lopt);
+      }
+   }
+   l->Draw();
 
 }
