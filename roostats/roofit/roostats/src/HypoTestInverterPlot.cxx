@@ -29,6 +29,7 @@
 #include "TAxis.h"
 #include "TLegend.h"
 #include "TH1.h"
+#include "TPad.h"
 #include "Math/DistFuncMathCore.h"
 
 ClassImp(RooStats::HypoTestInverterPlot)
@@ -315,5 +316,7 @@ void HypoTestInverterPlot::Draw(Option_t * opt) {
       }
    }
    l->Draw();
+   // redraw the axis 
+   if (gPad) gPad->RedrawAxis();
 
 }
