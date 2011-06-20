@@ -91,8 +91,9 @@ bool HypoTestInverterResult::Add( const HypoTestInverterResult& /* otherResult *
  
 double HypoTestInverterResult::GetXValue( int index ) const
 {
+ // function to return the value of the parameter of interest for the i^th entry in the results
   if ( index >= ArraySize() || index<0 ) {
-    std::cout << "Problem: You are asking for an impossible array index value\n";
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
     return -999;
   }
 
@@ -101,8 +102,9 @@ double HypoTestInverterResult::GetXValue( int index ) const
 
 double HypoTestInverterResult::GetYValue( int index ) const
 {
+// function to return the value of the confidence level for the i^th entry in the results
   if ( index >= ArraySize() || index<0 ) {
-    std::cout << "Problem: You are asking for an impossible array index value\n";
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
     return -999;
   }
 
@@ -114,8 +116,9 @@ double HypoTestInverterResult::GetYValue( int index ) const
 
 double HypoTestInverterResult::GetYError( int index ) const
 {
+// function to return the estimated error on the value of the confidence level for the i^th entry in the results
   if ( index >= ArraySize() || index<0 ) {
-    std::cout << "Problem: You are asking for an impossible array index value\n";
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
     return -999;
   }
 
@@ -125,10 +128,69 @@ double HypoTestInverterResult::GetYError( int index ) const
     return ((HypoTestResult*)fYObjects.At(index))->CLsplusbError();
 }
 
+double HypoTestInverterResult::CLb( int index ) const
+{
+  // function to return the observed CLb value  for the i-th entry
+  if ( index >= ArraySize() || index<0 ) {
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
+    return -999;
+  }
+  return ((HypoTestResult*)fYObjects.At(index))->CLb();  
+}
+
+double HypoTestInverterResult::CLsplusb( int index ) const
+{
+  // function to return the observed CLs+b value  for the i-th entry
+  if ( index >= ArraySize() || index<0 ) {
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
+    return -999;
+  }
+  return ((HypoTestResult*)fYObjects.At(index))->CLsplusb();  
+}
+double HypoTestInverterResult::CLs( int index ) const
+{
+  // function to return the observed CLs value  for the i-th entry
+  if ( index >= ArraySize() || index<0 ) {
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
+    return -999;
+  }
+  return ((HypoTestResult*)fYObjects.At(index))->CLs();  
+}
+
+double HypoTestInverterResult::CLbError( int index ) const
+{
+  // function to return the error on the observed CLb value  for the i-th entry
+  if ( index >= ArraySize() || index<0 ) {
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
+    return -999;
+  }
+  return ((HypoTestResult*)fYObjects.At(index))->CLbError();  
+}
+
+double HypoTestInverterResult::CLsplusbError( int index ) const
+{
+  // function to return the error on the observed CLs+b value  for the i-th entry
+  if ( index >= ArraySize() || index<0 ) {
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
+    return -999;
+  }
+  return ((HypoTestResult*)fYObjects.At(index))->CLsplusbError();  
+}
+double HypoTestInverterResult::CLsError( int index ) const
+{
+  // function to return the error on the observed CLs value  for the i-th entry
+  if ( index >= ArraySize() || index<0 ) {
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
+    return -999;
+  }
+  return ((HypoTestResult*)fYObjects.At(index))->CLsError();  
+}
+
+
 HypoTestResult* HypoTestInverterResult::GetResult( int index ) const
 {
   if ( index >= ArraySize() || index<0 ) {
-    std::cout << "Problem: You are asking for an impossible array index value\n";
+    oocoutE(this,InputArguments) << "Problem: You are asking for an impossible array index value\n";
     return 0;
   }
 
@@ -364,6 +426,9 @@ SamplingDistribution *  HypoTestInverterResult::GetUpperLimitDistribution( ) con
   std::vector<SamplingDistribution*> distVec(ArraySize() );
   for (unsigned int i = 0; i < distVec.size(); ++i) {
      distVec[i] =  GetExpectedDistribution(i);
+     // sort the distribution
+     // hack (by calling InverseCDF(0) will sort the sampling distribution
+     distVec[i]->InverseCDF(0);
   }
 
   // sort the values in x 
@@ -392,7 +457,6 @@ SamplingDistribution *  HypoTestInverterResult::GetUpperLimitDistribution( ) con
      delete distVec[i];
   }
 
-
   return new SamplingDistribution("Expected upper Limit","Expected upper limits",limits);
   
 }
@@ -404,10 +468,7 @@ double  HypoTestInverterResult::GetExpectedUpperLimit(double nsig ) const {
    // nsig = 0 (default value) returns the expected value 
    // nsig = -1 returns the lower band value at -1 sigma 
    // nsig + 1 return the upper value 
-   //
-   // Note that different results are obtained if using the quantiles on the distribution of the upper limits 
-   // returned from GetUpperLimitDistribution.
-   // The values retuned here are those ordered according to the expected p values seed for the scanned point not 
+   
 
    const int nEntries = ArraySize();
    TGraph  g(nEntries);   

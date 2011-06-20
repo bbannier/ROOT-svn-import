@@ -32,7 +32,7 @@ namespace RooStats {
                             HypoTestInverterResult* results ) ;
      
       // return a TGraphErrors for the observed plot 
-      TGraphErrors* MakePlot() ;
+      TGraphErrors* MakePlot(Option_t *opt="") ;
 
       // return the TGraphAsymmErrors for the expected plots with the bands specified by 
       TMultiGraph* MakeExpectedPlot(double sig1=1, double sig2=2) ;

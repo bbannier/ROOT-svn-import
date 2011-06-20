@@ -48,7 +48,25 @@ public:
 
    // function to return the estimated error on the value of the confidence level for the i^th entry in the results
    double GetYError( int index ) const ;
-    
+
+   // return the observed CLsplusb value  for the i-th entry
+   double CLsplusb( int index) const; 
+ 
+   // return the observed CLb value  for the i-th entry
+   double CLb( int index) const; 
+
+   // return the observed CLb value  for the i-th entry
+   double CLs( int index) const; 
+
+   // return the observed CLsplusb value  for the i-th entry
+   double CLsplusbError( int index) const; 
+ 
+   // return the observed CLb value  for the i-th entry
+   double CLbError( int index) const; 
+
+   // return the observed CLb value  for the i-th entry
+   double CLsError( int index) const; 
+   
    // return a pointer to the i^th result object
    HypoTestResult* GetResult( int index ) const ;   
 
