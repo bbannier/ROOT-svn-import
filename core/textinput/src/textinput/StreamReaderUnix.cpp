@@ -156,14 +156,15 @@ namespace textinput {
   }
 
   bool
-  StreamReaderUnix::HavePendingInput() {
+  StreamReaderUnix::HavePendingInput(bool wait) {
     if (!fReadAheadBuffer.empty())
       return true;
     fd_set PollSet;
     FD_ZERO(&PollSet);
     FD_SET(fileno(stdin), &PollSet);
     timeval timeout = {0,0}; // sec, musec
-    int avail = select(fileno(stdin) /*fd*/ + 1, &PollSet, 0, 0, &timeout);
+    int avail = select(fileno(stdin) /*fd*/ + 1, &PollSet, 0, 0,
+                       wait ? 0 : &timeout);
     return (avail == 1);
   }
 
@@ -227,6 +228,7 @@ namespace textinput {
   bool
   StreamReaderUnix::ReadInput(size_t& nRead, InputData& in) {
     int c = ReadRawCharacter();
+    in.SetModifier(InputData::kModNone);
     if (c == -1) {
       in.SetExtended(InputData::kEIEOF);
     } else if (c == 0x1b) {

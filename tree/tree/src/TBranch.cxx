@@ -11,6 +11,7 @@
 
 #include "TBranch.h"
 
+#include "Compression.h"
 #include "TBasket.h"
 #include "TBranchBrowsable.h"
 #include "TBrowser.h"
@@ -332,7 +333,7 @@ void TBranch::Init(const char* name, const char* leaflist, Int_t compress)
    if ((compress == -1) && fTree->GetDirectory()) {
       TFile* bfile = fTree->GetDirectory()->GetFile();
       if (bfile) {
-         fCompress = bfile->GetCompressionLevel();
+         fCompress = bfile->GetCompressionSettings();
       }
    }
 
@@ -1246,7 +1247,7 @@ Int_t TBranch::GetEntry(Long64_t entry, Int_t getall)
    Bool_t enabled = !TestBit(kDoNotProcess) || getall;
    TBasket *basket; // will be initialized in the if/then clauses.
    Long64_t first;
-   if (0 && R__likely(enabled && fFirstBasketEntry <= entry && entry < fNextBasketEntry)) {
+   if (R__likely(enabled && fFirstBasketEntry <= entry && entry < fNextBasketEntry)) {
       // We have found the basket containing this entry.
       // make sure basket buffers are in memory.
       basket = fCurrentBasket;
@@ -1975,6 +1976,64 @@ void TBranch::Reset(Option_t*)
    fNBaskets = 0;
 }
 
+
+//______________________________________________________________________________
+void TBranch::ResetAfterMerge(TFileMergeInfo *)
+{
+   // Reset a Branch.
+   //
+   // Existing buffers are deleted.
+   // Entries, max and min are reset.
+   //
+   
+   fReadBasket       = 0;
+   fReadEntry        = -1;
+   fFirstBasketEntry = -1;
+   fNextBasketEntry  = -1;
+   fCurrentBasket    = 0;
+   fWriteBasket      = 0;
+   fEntries          = 0;
+   fTotBytes         = 0;
+   fZipBytes         = 0;
+   fEntryNumber      = 0;
+   
+   if (fBasketBytes) {
+      for (Int_t i = 0; i < fMaxBaskets; ++i) {
+         fBasketBytes[i] = 0;
+      }
+   }
+   
+   if (fBasketEntry) {
+      for (Int_t i = 0; i < fMaxBaskets; ++i) {
+         fBasketEntry[i] = 0;
+      }
+   }
+   
+   if (fBasketSeek) {
+      for (Int_t i = 0; i < fMaxBaskets; ++i) {
+         fBasketSeek[i] = 0;
+      }
+   }
+   
+   TBasket *reusebasket = (TBasket*)fBaskets[fWriteBasket];
+   if (reusebasket) {
+      fBaskets[fWriteBasket] = 0;
+   } else {
+      reusebasket = (TBasket*)fBaskets[fReadBasket];
+      if (reusebasket) {
+         fBaskets[fReadBasket] = 0;
+      }
+   }
+   fBaskets.Delete();
+   if (reusebasket) {
+      fNBaskets = 1;
+      reusebasket->Reset();
+      fBaskets[0] = reusebasket;
+   } else {
+      fNBaskets = 0;
+   }
+}
+
 //______________________________________________________________________________
 void TBranch::ResetAddress()
 {
@@ -2088,17 +2147,52 @@ void TBranch::SetBufferAddress(TBuffer* buf)
 }
 
 //______________________________________________________________________________
+void TBranch::SetCompressionAlgorithm(Int_t algorithm)
+{
+   if (algorithm < 0 || algorithm >= ROOT::kUndefinedCompressionAlgorithm) algorithm = 0;
+   if (fCompress < 0) {
+      fCompress = 100 * algorithm + 1;
+   } else {
+      int level = fCompress % 100;
+      fCompress = 100 * algorithm + level;
+   }
+
+   Int_t nb = fBranches.GetEntriesFast();
+   for (Int_t i=0;i<nb;i++) {
+      TBranch *branch = (TBranch*)fBranches.UncheckedAt(i);
+      branch->SetCompressionAlgorithm(algorithm);
+   }
+}
+
+//______________________________________________________________________________
 void TBranch::SetCompressionLevel(Int_t level)
 {
-   //*-*-*-*-*-*-*-*Set the branch/subbranches compression level
-   //*-*            ============================================
+   if (level < 0) level = 0;
+   if (level > 99) level = 99;
+   if (fCompress < 0) {
+      fCompress = level;
+   } else {
+      int algorithm = fCompress / 100;
+      if (algorithm >= ROOT::kUndefinedCompressionAlgorithm) algorithm = 0;
+      fCompress = 100 * algorithm + level;
+   }
 
-   fCompress = level;
    Int_t nb = fBranches.GetEntriesFast();
-
    for (Int_t i=0;i<nb;i++) {
       TBranch *branch = (TBranch*)fBranches.UncheckedAt(i);
       branch->SetCompressionLevel(level);
+   }
+}
+
+//______________________________________________________________________________
+void TBranch::SetCompressionSettings(Int_t settings)
+{
+   fCompress = settings;
+
+   Int_t nb = fBranches.GetEntriesFast();
+   for (Int_t i=0;i<nb;i++) {
+      TBranch *branch = (TBranch*)fBranches.UncheckedAt(i);
+      branch->SetCompressionSettings(settings);
    }
 }
 

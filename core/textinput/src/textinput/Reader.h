@@ -35,7 +35,8 @@ namespace textinput {
     virtual void GrabInputFocus() {}
     virtual void ReleaseInputFocus() {}
 
-    virtual bool HavePendingInput() = 0;
+    virtual bool HavePendingInput(bool wait) = 0;
+    virtual bool HaveBufferedInput() const { return false; }
     virtual bool ReadInput(size_t& nRead, InputData& in) = 0;
   private:
     TextInputContext* fContext; // Context object

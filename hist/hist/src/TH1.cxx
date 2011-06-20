@@ -1031,9 +1031,17 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
    SetMinimum();
    SetMaximum();
 
-//    Reset the kCanRebin option. Otherwise SetBinContent on the overflow bin
+//    Reset the kCanRebin and time display option. Otherwise SetBinContent on the overflow bin
 //    would resize the axis limits!
-   ResetBit(kCanRebin);
+// we need to do for only X axis since only TH1x::SetBinContent resize the axis
+   Bool_t canRebin = TestBit(kCanRebin);
+   if (canRebin) ResetBit(kCanRebin);
+
+   Bool_t timeDisplayX = fXaxis.GetTimeDisplay();
+   if (timeDisplayX)  fXaxis.SetTimeDisplay(0);
+  
+
+   
 
 
 //   - Loop on bins (including underflows/overflows)
@@ -1088,6 +1096,9 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
       PutStats(s3);
       SetEntries(nEntries);
    }
+
+   if (canRebin) SetBit(kCanRebin);
+   if (timeDisplayX)  fXaxis.SetTimeDisplay(1);
 }
 
 
@@ -4512,8 +4523,9 @@ void TH1::LabelsDeflate(Option_t *ax)
       if (ibin > nbins) nbins = ibin; 
    }
    if (nbins < 1) nbins = 1;
-   TH1 *hold = (TH1*)Clone();
+   TH1 *hold = (TH1*)IsA()->New();;
    hold->SetDirectory(0);
+   Copy(*hold);
 
    Bool_t timedisp = axis->GetTimeDisplay();
    Double_t xmin = axis->GetXmin();
@@ -4561,8 +4573,9 @@ void TH1::LabelsInflate(Option_t *ax)
    if (iaxis == 3) axis = GetZaxis();
    if (!axis) return;
 
-   TH1 *hold = (TH1*)Clone();
+   TH1 *hold = (TH1*)IsA()->New();;
    hold->SetDirectory(0);
+   Copy(*hold);
 
    Bool_t timedisp = axis->GetTimeDisplay();
    Int_t  nbxold = fXaxis.GetNbins();

@@ -128,6 +128,41 @@ TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method, UInt_t option
       fCloneMethod = TTreeCloner::kSortBasketsByOffset;
    }
    if (fToTree) fToStartEntries = fToTree->GetEntries();
+   
+   if (fToTree == 0) {
+      fWarningMsg.Form("An output TTree is required (cloning %s).",
+                       from->GetName());
+      if (!(fOptions & kNoWarnings)) {
+         Warning("TTreeCloner::TTreeCloner", "%s", fWarningMsg.Data());
+      }
+      fIsValid = kFALSE;
+   } else if (fToTree->GetDirectory() == 0) {
+      fWarningMsg.Form("The output TTree (%s) must be associated with a directory.",
+                       fToTree->GetName());
+      if (!(fOptions & kNoWarnings)) {
+         Warning("TTreeCloner::TTreeCloner", "%s", fWarningMsg.Data());
+      }
+      fIsValid = kFALSE;      
+   } else if (fToTree->GetCurrentFile() == 0) {
+      fWarningMsg.Form("The output TTree (%s) must be associated with a directory (%s) that is in a file.",
+                       fToTree->GetName(),fToTree->GetDirectory()->GetName());
+      if (!(fOptions & kNoWarnings)) {
+         Warning("TTreeCloner::TTreeCloner", "%s", fWarningMsg.Data());
+      }
+      fIsValid = kFALSE;
+   } else if (! fToTree->GetDirectory()->IsWritable()) {
+      if (fToTree->GetDirectory()==fToTree->GetCurrentFile()) {
+         fWarningMsg.Form("The output TTree (%s) must be associated with a writeable file (%s).",
+                          fToTree->GetName(),fToTree->GetCurrentFile()->GetName());         
+      } else {
+         fWarningMsg.Form("The output TTree (%s) must be associated with a writeable directory (%s in %s).",
+                          fToTree->GetName(),fToTree->GetDirectory()->GetName(),fToTree->GetCurrentFile()->GetName());
+      }
+      if (!(fOptions & kNoWarnings)) {
+         Warning("TTreeCloner::TTreeCloner", "%s", fWarningMsg.Data());
+      }
+      fIsValid = kFALSE;
+   }
 }
 
 //______________________________________________________________________________
@@ -135,6 +170,9 @@ Bool_t TTreeCloner::Exec()
 {
    // Execute the cloning.
 
+   if (!IsValid()) {
+      return kFALSE;
+   }
    ImportClusterRanges();
    CopyStreamerInfos();
    CopyProcessIds();
@@ -268,6 +306,10 @@ UInt_t TTreeCloner::CollectBranches(TBranch *from, TBranch *to) {
    }
 
    fFromBranches.AddLast(from);
+   if (!from->TestBit(TBranch::kDoNotUseBufferMap)) {
+      // Make sure that we reset the Buffer's map if needed.
+      to->ResetBit(TBranch::kDoNotUseBufferMap);
+   }
    fToBranches.AddLast(to);
 
    numBaskets += from->GetWriteBasket();

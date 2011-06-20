@@ -139,6 +139,7 @@ protected:
    TList         *fClones;            //! List of cloned trees which share our addresses
    TBranchRef    *fBranchRef;         //  Branch supporting the TRefTable (if any)
    UInt_t         fFriendLockStatus;  //! Record which method is locking the friend recursion
+   TBuffer       *fTransientBuffer;   //! Pointer to the current transient buffer.
 
    static Int_t     fgBranchStyle;      //  Old/New branch style
    static Long64_t  fgMaxTreeSize;      //  Maximum size of a file containg a Tree
@@ -408,6 +409,7 @@ public:
    TTreeFormula           *GetSelect()    { return GetPlayer()->GetSelect(); }
    virtual Long64_t        GetSelectedRows() { return GetPlayer()->GetSelectedRows(); }
    virtual Int_t           GetTimerInterval() const { return fTimerInterval; }
+           TBuffer*        GetTransientBuffer(Int_t size);
    virtual Long64_t        GetTotBytes() const { return fTotBytes; }
    virtual TTree          *GetTree() const { return const_cast<TTree*>(this); }
    virtual TVirtualIndex  *GetTreeIndex() const { return fTreeIndex; }
@@ -471,6 +473,7 @@ public:
    virtual void            RecursiveRemove(TObject *obj);
    virtual void            RemoveFriend(TTree*);
    virtual void            Reset(Option_t* option = "");
+   virtual void            ResetAfterMerge(TFileMergeInfo *);
    virtual void            ResetBranchAddress(TBranch *);
    virtual void            ResetBranchAddresses();
    virtual Long64_t        Scan(const char* varexp = "", const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
@@ -534,6 +537,7 @@ public:
    void                    UseCurrentStyle();
    virtual Int_t           Write(const char *name=0, Int_t option=0, Int_t bufsize=0);
    virtual Int_t           Write(const char *name=0, Int_t option=0, Int_t bufsize=0) const;
+
 
    ClassDef(TTree,19)  //Tree descriptor (the main ROOT I/O class)
 };

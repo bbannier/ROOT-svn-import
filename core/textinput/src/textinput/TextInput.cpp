@@ -17,6 +17,7 @@
 #include "textinput/Reader.h"
 #include "textinput/Color.h"
 #include "textinput/Editor.h"
+#include "textinput/History.h"
 #include "textinput/KeyBinding.h"
 #include "textinput/TextInputContext.h"
 #include "textinput/SignalHandler.h"
@@ -28,6 +29,9 @@ namespace textinput {
   TextInput::TextInput(Reader& reader, Display& display,
                        const char* HistFile /* = 0 */):
   fHidden(false),
+  fAutoHistAdd(true),
+  fLastKey(0),
+  fMaxChars(0),
   fLastReadResult(kRRNone),
   fActive(false)
   {
@@ -72,7 +76,7 @@ namespace textinput {
     }
     for (std::vector<Reader*>::const_iterator iR = fContext->GetReaders().begin(),
          iE = fContext->GetReaders().end(); iR != iE; ++iR) {
-      if ((*iR)->HavePendingInput())
+      if ((*iR)->HavePendingInput(false))
         return true;
     }
     return false;
@@ -98,12 +102,17 @@ namespace textinput {
     InputData in;
     EditorRange R;
     size_t OldCursorPos = fContext->GetCursor();
+    // Allow the reader to select() if we want a single line, and we want it
+    // only from one reader
+    bool waitForInput = IsBlockingUntilEOL()
+      && fContext->GetReaders().size() == 1;
     for (std::vector<Reader*>::const_iterator iR
            = fContext->GetReaders().begin(),
          iE = fContext->GetReaders().end();
          iR != iE && nRead < nMax; ++iR) {
       while ((IsBlockingUntilEOL() && (fLastReadResult == kRRNone))
-             || (nRead < nMax && (*iR)->HavePendingInput())) {
+             || (nRead < nMax && (*iR)->HavePendingInput(waitForInput))
+             || (*iR)->HaveBufferedInput()) {
         if ((*iR)->ReadInput(nRead, in)) {
           ProcessNewInput(in, R);
           DisplayNewInput(R, OldCursorPos);
@@ -300,5 +309,19 @@ namespace textinput {
     // Resize signal was emitted, tell the displays.
     std::for_each(fContext->GetDisplays().begin(), fContext->GetDisplays().end(),
              std::mem_fun(&Display::NotifyWindowChange));
+  }
+
+  void
+  TextInput::AddHistoryLine(const char* line) {
+    if (!line) return;
+    std::string sLine(line);
+    while (!sLine.empty()
+           && (sLine[sLine.length() - 1] == '\n'
+               || sLine[sLine.length() - 1] == '\r')) {
+      sLine.erase(sLine.length() - 1);
+    }
+    if (!sLine.empty()) {
+       fContext->GetHistory()->AddLine(sLine);
+    }
   }
 }

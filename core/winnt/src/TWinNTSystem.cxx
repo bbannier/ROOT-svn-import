@@ -37,6 +37,7 @@
 #include "TInterpreter.h"
 #include "TObjString.h"
 #include "TVirtualX.h"
+#include "TUrl.h"
 
 #include <sys/utime.h>
 #include <sys/timeb.h>
@@ -2833,6 +2834,14 @@ Bool_t TWinNTSystem::ExpandPathName(TString &patbuf0)
    const char *p;
    char   *cmd = 0;
    char  *q;
+
+   Int_t old_level = gErrorIgnoreLevel;
+   gErrorIgnoreLevel = kFatal; // Explicitly remove all messages
+   TUrl urlpath(patbuf0, kTRUE);
+   TString proto = urlpath.GetProtocol();
+   gErrorIgnoreLevel = old_level;
+   if (!proto.EqualTo("file")) // don't expand urls!!!
+      return kFALSE;
 
    // skip leading blanks
    while (*patbuf == ' ') {

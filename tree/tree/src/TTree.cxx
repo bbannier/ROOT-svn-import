@@ -635,6 +635,7 @@ TTree::TTree()
 , fClones(0)
 , fBranchRef(0)
 , fFriendLockStatus(0)
+, fTransientBuffer(0)
 {
    // Default constructor and I/O constructor.
    //
@@ -701,6 +702,7 @@ TTree::TTree(const char* name, const char* title, Int_t splitlevel /* = 99 */)
 , fClones(0)
 , fBranchRef(0)
 , fFriendLockStatus(0)
+, fTransientBuffer(0)
 {
    // Normal tree constructor.
    //
@@ -843,6 +845,25 @@ TTree::~TTree()
    // Must be done after the destruction of friends.
    // Note: We do *not* own our directory.
    fDirectory = 0;
+
+   if (fTransientBuffer) {
+      delete fTransientBuffer;
+      fTransientBuffer = 0;
+   }
+}
+
+//______________________________________________________________________________
+TBuffer* TTree::GetTransientBuffer(Int_t size)
+{
+    // Returns the transient buffer currently used by this TTree for reading/writing baskets
+    if (fTransientBuffer) {
+       if (fTransientBuffer->BufferSize() < size) {
+          fTransientBuffer->Expand(size);
+       }
+       return fTransientBuffer;
+    }
+    fTransientBuffer = new TBufferFile(TBuffer::kRead, size);
+    return fTransientBuffer;
 }
 
 //______________________________________________________________________________
@@ -2421,7 +2442,7 @@ TFile* TTree::ChangeFile(TFile* file)
       ++nus;
       Warning("ChangeFile", "file %s already exist, trying with %d underscores", fname, nus+1);
    }
-   Int_t compress = file->GetCompressionLevel();
+   Int_t compress = file->GetCompressionSettings();
    TFile* newfile = TFile::Open(fname, "recreate", "chain files", compress);
    Printf("Fill: Switching to new file: %s", fname);
    // The current directory may contain histograms and trees.
@@ -2695,7 +2716,7 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
    }
    Int_t newcomp = -1;
    if (nfile) {
-      newcomp = nfile->GetCompressionLevel();
+      newcomp = nfile->GetCompressionSettings();
    }
 
    //
@@ -2712,7 +2733,7 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
       }
       TBranch* branch = leaf->GetBranch();
       if (branch && (newcomp > -1)) {
-         branch->SetCompressionLevel(newcomp);
+         branch->SetCompressionSettings(newcomp);
       }
       if (!branch || !branch->TestBit(kDoNotProcess)) {
          continue;
@@ -2776,7 +2797,7 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
       if (fastClone && (nentries < 0)) {
          if ( newtree->CopyEntries( this, -1, option ) < 0 ) {
             // There was a problem!
-            Error("Merge", "TTree has not been cloned\n");
+            Error("CloneTTree", "TTree has not been cloned\n");
             delete newtree;
             newtree = 0;
             return 0;
@@ -3051,6 +3072,7 @@ Long64_t TTree::CopyEntries(TTree* tree, Long64_t nentries /* = -1 */, Option_t*
             cloner.Exec();
          } else {
             if (i == 0) {
+               Warning("CopyEntries","%s",cloner.GetWarning());               
                // If the first cloning does not work, something is really wrong
                // (since apriori the source and target are exactly the same structure!)
                return -1;
@@ -5780,7 +5802,7 @@ void TTree::OptimizeBaskets(ULong64_t maxMemory, Float_t minComp, Option_t *opti
          if (branch->GetZipBytes() > 0) comp = totBytes/Double_t(branch->GetZipBytes());
          if (comp > 1 && comp < minComp) {
             if (pDebug) printf("Disabling compression for branch : %s\n",branch->GetName());
-            branch->SetCompressionLevel(0);
+            branch->SetCompressionSettings(0);
          }
       }
       memFactor = Double_t(maxMemory)/Double_t(newMemsize);
@@ -6423,6 +6445,34 @@ void TTree::Reset(Option_t* option)
       fBranchRef->Reset();
    }
 }
+//______________________________________________________________________________
+void TTree::ResetAfterMerge(TFileMergeInfo *info)
+{
+   // Resets the state of this TTree after a merge (keep the customization but
+   // forget the data).
+   
+   fEntries       = 0;
+   fNClusterRange = 0;
+   fTotBytes      = 0;
+   fZipBytes      = 0;
+   fSavedBytes    = 0;
+   fTotalBuffers  = 0;
+   fChainOffset   = 0;
+   fReadEntry     = -1;
+   
+   delete fTreeIndex;
+   fTreeIndex     = 0;
+   
+   Int_t nb = fBranches.GetEntriesFast();
+   for (Int_t i = 0; i < nb; ++i)  {
+      TBranch* branch = (TBranch*) fBranches.UncheckedAt(i);
+      branch->ResetAfterMerge(info);
+   }
+   
+   if (fBranchRef) {
+      fBranchRef->ResetAfterMerge(info);
+   }
+}
 
 //______________________________________________________________________________
 void TTree::ResetBranchAddress(TBranch *br)
@@ -6929,6 +6979,7 @@ void TTree::SetCacheSize(Long64_t cacheSize)
 
    if (cacheSize < 0) {
       if (fAutoFlush < 0) cacheSize = -fAutoFlush;
+      else if (fAutoFlush == 0) cacheSize = 0;
       else cacheSize = Long64_t(1.5*fAutoFlush*fZipBytes/(fEntries+1));
    }
    TFile* file = GetCurrentFile();
@@ -7015,12 +7066,12 @@ void TTree::SetCircular(Long64_t maxEntries)
          TFile* bfile = fDirectory->GetFile();
          Int_t compress = 1;
          if (bfile) {
-            compress = bfile->GetCompressionLevel();
+            compress = bfile->GetCompressionSettings();
          }
          Int_t nb = fBranches.GetEntriesFast();
          for (Int_t i = 0; i < nb; i++) {
             TBranch* branch = (TBranch*) fBranches.UncheckedAt(i);
-            branch->SetCompressionLevel(compress);
+            branch->SetCompressionSettings(compress);
          }
       }
    } else {

@@ -38,16 +38,20 @@ public:
 
   void Attach();
   void Detach();
-  bool IsAttached() { return fIsAttached; }
+  bool IsAttached() const { return fIsAttached; }
+  bool IsInteractive() const;
 
-  void HandleAbortSignal(int signum);
+  void HandleSignal(int signum);
 
 private:
   TerminalConfigUnix();
 
   bool fIsAttached; // whether fConfTIOS is active.
   int fFD; // file descriptor
-  sig_t fPrevAbortHandler; // Next signal handler to call for SIGABRT
+  enum { kNumHandledSignals = 5 }; // number of fPrevHandler entries
+  static const int
+    fgSignals[kNumHandledSignals]; // signal nums, order as in fPrevHandler
+  sig_t fPrevHandler[kNumHandledSignals]; // next signal handler to call
   termios* fOldTIOS; // tty configuration before grabbing
   termios* fConfTIOS; // tty configuration while active
 };

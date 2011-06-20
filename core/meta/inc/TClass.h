@@ -113,6 +113,7 @@ private:
    mutable TMethodCall *fIsAMethod;       //!saved info to call a IsA member function
 
    ROOT::MergeFunc_t   fMerge;          //pointer to a function implementing Merging objects of this class.
+   ROOT::ResetAfterMergeFunc_t fResetAfterMerge; //pointer to a function implementing Merging objects of this class.
    ROOT::NewFunc_t     fNew;            //pointer to a function newing one object.
    ROOT::NewArrFunc_t  fNewArray;       //pointer to a function newing an array of objects.
    ROOT::DelFunc_t     fDelete;         //pointer to a function deleting one object.
@@ -122,6 +123,7 @@ private:
    ClassStreamerFunc_t fStreamerFunc;   //Wrapper around this class custom Streamer member function.
    Int_t               fSizeof;         //Sizeof the class.
 
+   mutable Int_t      fCanSplit;        //!Indicates whether this class can be split or not.
    mutable Long_t     fProperty;        //!Property
    mutable Bool_t     fVersionUsed;     //!Indicates whether GetClassVersion has been called
 
@@ -285,6 +287,7 @@ public:
    TMethod           *GetMethodAllAny(const char *method);
    Int_t              GetNdata();
    ROOT::MergeFunc_t  GetMerge() const;
+   ROOT::ResetAfterMergeFunc_t  GetResetAfterMerge() const;
    ROOT::NewFunc_t    GetNew() const;
    ROOT::NewArrFunc_t GetNewArray() const;
    Int_t              GetNmethods();
@@ -325,6 +328,7 @@ public:
    void               ResetInstanceCount() { fInstanceCount = fOnHeap = 0; }
    void               ResetMenuList();
    Int_t              Size() const;
+   void               SetCanSplit(Int_t splitmode);
    void               SetCollectionProxy(const ROOT::TCollectionProxyInfo&);
    void               SetContextMenuTitle(const char *title);
    void               SetCurrentStreamerInfo(TVirtualStreamerInfo *info);
@@ -336,6 +340,7 @@ public:
    void               SetDestructor(ROOT::DesFunc_t destructorFunc);
    void               SetImplFileName(const char *implFileName) { fImplFileName = implFileName; }
    void               SetMerge(ROOT::MergeFunc_t mergeFunc);
+   void               SetResetAfterMerge(ROOT::ResetAfterMergeFunc_t resetFunc);
    void               SetNew(ROOT::NewFunc_t newFunc);
    void               SetNewArray(ROOT::NewArrFunc_t newArrayFunc);
    TVirtualStreamerInfo     *SetStreamerInfo(Int_t version, const char *info="");
