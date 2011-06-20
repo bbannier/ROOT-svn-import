@@ -105,6 +105,8 @@ namespace cling {
       
       CompilerInvocation::CreateFromArgs
         (CI->getInvocation(), argv, argv + argc, *Diags);
+      // Set the language options, which cling needs
+      SetClingCustomLangOpts(CI->getLangOpts());
 
       if (CI->getHeaderSearchOpts().UseBuiltinIncludes &&
           CI->getHeaderSearchOpts().ResourceDir.empty()) {
@@ -158,20 +160,11 @@ namespace cling {
     bool CompleteTranslationUnit = false;
     CodeCompleteConsumer* CCC = 0;
     CI->createSema(CompleteTranslationUnit, CCC);
-    
-    
-    //
-    //  If we are managing a permanent CI,
-    //  the code looks like this:
-    //
-    //if (first_time) {
-    //   CI->createSourceManager();
-    //   first_time = false;
-    //}
-    //else {
-    //   CI->getSourceManager().clearIDTables();
-    //}
-    
+
     return CI;
-  }  
+  }
+
+  void CIFactory::SetClingCustomLangOpts(clang::LangOptions& Opts) {
+    Opts.EmitAllDecls = 1;
+  }
 } // end namespace
