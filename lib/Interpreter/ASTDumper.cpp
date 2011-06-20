@@ -31,9 +31,9 @@ namespace cling {
       D->dump();
       
       if (Stmt* Body = D->getBody()) {
-        llvm::errs() << "DeclStmts:---------------------------------\n";
+        llvm::outs() << "DeclStmts:---------------------------------\n";
         Body->dump();
-        llvm::errs() << "End DeclStmts:-----------------------------\n\n\n\n";
+        llvm::outs() << "End DeclStmts:-----------------------------\n\n\n\n";
       }
     }
   }

@@ -119,8 +119,7 @@ namespace cling {
                 new DeclExtractor());
     addConsumer(ChainedConsumer::kValuePrinterSynthesizer,
                 new ValuePrinterSynthesizer(interp));
-    llvm::raw_os_ostream* Out = new llvm::raw_os_ostream(std::cout);
-    addConsumer(ChainedConsumer::kASTDumper, new ASTDumper(Out));
+    addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
 
 
     // Initialize the parser.
