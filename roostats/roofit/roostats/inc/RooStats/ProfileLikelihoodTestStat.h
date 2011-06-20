@@ -294,16 +294,16 @@ namespace RooStats {
 
 
    private:
-      RooProfileLL* fProfile;
-      RooAbsPdf* fPdf;
-      RooNLLVar* fNll;
+      RooProfileLL* fProfile; //! do not persist
+      RooAbsPdf* fPdf; 
+      RooNLLVar* fNll; //! do not persist
       const RooArgSet* fCachedBestFitParams;
       RooAbsData* fLastData;
       //      Double_t fLastMLE;
       Bool_t fOneSided;
 
    protected:
-      ClassDef(ProfileLikelihoodTestStat,2)   // implements the profile likelihood ratio as a test statistic to be used with several tools
+      ClassDef(ProfileLikelihoodTestStat,3)   // implements the profile likelihood ratio as a test statistic to be used with several tools
    };
 }
 
