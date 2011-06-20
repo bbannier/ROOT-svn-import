@@ -27,13 +27,25 @@
 using namespace textinput;
 using std::memcpy;
 using std::signal;
+using std::raise;
 
+namespace {
 void
-TerminalConfigUnix__handleAbortSignal(int signum) {
+TerminalConfigUnix__handleSignal(int signum) {
   // Clean up before we are killed.
-  TerminalConfigUnix::Get().HandleAbortSignal(signum);
-
+  TerminalConfigUnix::Get().HandleSignal(signum);
 }
+}
+
+const int TerminalConfigUnix::fgSignals[kNumHandledSignals] = {
+  // SIGKILL: can't handle by definition
+  // Order: most to least common signal
+  SIGTERM,
+  SIGABRT,
+  SIGSEGV,
+  SIGILL,
+  SIGBUS
+};
 
 TerminalConfigUnix&
 TerminalConfigUnix::Get() {
@@ -49,26 +61,63 @@ TerminalConfigUnix::TerminalConfigUnix():
   tcgetattr(fFD, fOldTIOS);
   *fConfTIOS = *fOldTIOS;
 #endif
-  fPrevAbortHandler = signal(SIGABRT, TerminalConfigUnix__handleAbortSignal);
+  for (int i = 0; i < kNumHandledSignals; ++i) {
+    fPrevHandler[i] = signal(fgSignals[i], TerminalConfigUnix__handleSignal);
+  }
 }
 
 TerminalConfigUnix::~TerminalConfigUnix() {
+  // Restore signals and detach.
+  for (int i = 0; i < kNumHandledSignals; ++i) {
+    if (fPrevHandler[i]) {
+      signal(fgSignals[i], fPrevHandler[i]);
+    } else {
+      // default:
+      signal(fgSignals[i], SIG_DFL);
+    }
+  }
   Detach();
   delete fOldTIOS;
   delete fConfTIOS;
 }
 
 void
-TerminalConfigUnix::HandleAbortSignal(int signum) {
-  Detach();
-  if (fPrevAbortHandler) fPrevAbortHandler(signum);
+TerminalConfigUnix::HandleSignal(int signum) {
+  // Process has received a fatal signal, detach.
+  bool sSignalHandlerActive = false;
+  if (!sSignalHandlerActive) {
+    sSignalHandlerActive = true;
+    Detach();
+    // find previous signal handler index:
+    for (int i = 0; i < kNumHandledSignals; ++i) {
+      if (fgSignals[i] == signum) {
+        // Call previous signal handler if it exists.
+        if (fPrevHandler[i]) {
+          fPrevHandler[i](signum);
+          // should not end up here...
+          sSignalHandlerActive = false;
+          return;
+        } else break;
+      }
+    }
+  }
+
+  // No previous handler found, re-raise to get default handling:
+  signal(signum, SIG_DFL); // unregister ourselves
+  raise(signum); // terminate through default handler
+
+  // should not end up here...
+  signal(signum, TerminalConfigUnix__handleSignal);
+  sSignalHandlerActive = false;
 }
 
 void
 TerminalConfigUnix::Attach() {
   if (fIsAttached) return;
 #ifdef TCSANOW
-  tcsetattr(fFD, TCSANOW, fConfTIOS);
+  if (IsInteractive()) {
+    tcsetattr(fFD, TCSANOW, fConfTIOS);
+  }
 #endif
   fIsAttached = true;
 }
@@ -78,9 +127,19 @@ TerminalConfigUnix::Detach() {
   // Reset the terminal configuration.
   if (!fIsAttached) return;
 #ifdef TCSANOW
-  tcsetattr(fFD, TCSANOW, fOldTIOS);
+  if (IsInteractive()) {
+    tcsetattr(fFD, TCSANOW, fOldTIOS);
+  }
 #endif
   fIsAttached = false;
 }
+
+bool TerminalConfigUnix::IsInteractive() const {
+  // Whether both stdin and stdout are attached to a tty.
+  return isatty(fileno(stdin)) && isatty(fileno(stdout))
+    && (getpgrp() == tcgetpgrp(STDOUT_FILENO));
+}
+
+
 
 #endif // ndef WIN32

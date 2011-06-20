@@ -97,6 +97,7 @@ D: PROOF contributions
 N: Brian Bockelman
 E: bbockelm@math.unl.edu
 D: THDFSFile for accessing the Hadoop file system
+D: Improvement to ROOT I/O disk and memory efficiency. 
 
 N: Sebastian Boeser
 E: sboeser@ifh.de
@@ -177,6 +178,10 @@ D: port to MacOS X
 N: Kyle Cranmer
 E: cranmer@cern.ch
 D: contribution in RooStats
+
+N: David Dagenhart 
+E: wdd@fnal.gov
+D: Support for LZMA compression in ROOT files
 
 N: Bastien Dallapiazza
 E: bastien.dallapiazza@epfl.ch

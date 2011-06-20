@@ -307,7 +307,7 @@ Int_t TChain::Add(const char* name, Long64_t nentries /* = kBigNumber */)
          dotslashpos = next_dot;
          next_dot = basename.Index(".root",dotslashpos+1);
       }
-      if (basename[dotslashpos+5]!='/') {
+      if (dotslashpos>=0 && basename[dotslashpos+5]!='/') {
          // We found the 'last' .root in the name and it is not followed by
          // a '/', so the tree name is _not_ specified in the name.
          dotslashpos = -1;
@@ -1889,7 +1889,7 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
       TBranch* branch = 0;
       TIter nextb(newTree->GetListOfBranches());
       while ((branch = (TBranch*) nextb())) {
-         branch->SetCompressionLevel(file->GetCompressionLevel());
+         branch->SetCompressionSettings(file->GetCompressionSettings());
       }
    }
 
@@ -2012,7 +2012,7 @@ void TChain::RecursiveRemove(TObject *obj)
 //______________________________________________________________________________
 void TChain::Reset(Option_t*)
 {
-   // -- Resets the state of this chain.
+   // Resets the state of this chain.
 
    delete fFile;
    fFile = 0;
@@ -2028,6 +2028,22 @@ void TChain::Reset(Option_t*)
    fDirectory = 0;
 
    TTree::Reset();
+}
+
+//______________________________________________________________________________
+void TChain::ResetAfterMerge(TFileMergeInfo *info)
+{
+   // Resets the state of this chain after a merge (keep the customization but
+   // forget the data).
+   
+   fNtrees         = 0;
+   fTreeNumber     = -1;
+   fTree           = 0;
+   fFile           = 0;
+   fFiles->Delete();
+   fTreeOffset[0]  = 0;
+   
+   TTree::ResetAfterMerge(info);
 }
 
 //_______________________________________________________________________

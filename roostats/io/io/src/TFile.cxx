@@ -43,7 +43,7 @@
 //    25->28 [33->36] nfree       = Number of free data records
 //    29->32 [37->40] fNbytesName = Number of bytes in TNamed at creation time
 //    33->33 [41->41] fUnits      = Number of bytes for file pointers
-//    34->37 [42->45] fCompress   = Zip compression level
+//    34->37 [42->45] fCompress   = Compression level and algorithm
 //    38->41 [46->53] fSeekInfo   = Pointer to TStreamerInfo record
 //    42->45 [54->57] fNbytesInfo = Number of bytes in TStreamerInfo record
 //    46->63 [58->75] fUUID       = Universal Unique ID
@@ -77,6 +77,7 @@
 #endif
 
 #include "Bytes.h"
+#include "Compression.h"
 #include "Riostream.h"
 #include "Strlen.h"
 #include "TArrayC.h"
@@ -147,6 +148,7 @@ TFile::TFile() : TDirectoryFile(), fInfoCache(0)
    fSumBuffer       = 0;
    fSum2Buffer      = 0;
    fClassIndex      = 0;
+   fCompress        = 0;
    fProcessIDs      = 0;
    fNProcessIDs     = 0;
    fOffset          = 0;
@@ -247,18 +249,27 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    // 4 bytes of the freed record on the file are overwritten by GAPSIZE
    // where GAPSIZE = -(Number of bytes occupied by the record).
    //
-   // Option compress is used to specify the compression level:
-   //  compress = 0 objects written to this file will not be compressed.
-   //  compress = 1 minimal compression level but fast.
+   // Option compress is used to specify the compression level and algorithm:
+   //  compress = 100 * algorithm + level
+   //  level = 0, objects written to this file will not be compressed.
+   //  level = 1, minimal compression level but fast.
    //  ....
-   //  compress = 9 maximal compression level but slow.
+   //  level = 9, maximal compression level but slower and might use more memory.
+   // (For the currently supported algorithms, the maximum level is 9)
+   // If compress is negative it indicates the compression level is not set yet.
    //
-   // Note that the compression level may be changed at any time.
-   // The new compression level will only apply to newly written objects.
-   // The function TFile::Map() shows the compression factor
-   // for each object written to this file.
-   // The function TFile::GetCompressionFactor returns the global
-   // compression factor for this file.
+   // The enumeration ROOT::ECompressionAlgorithm associates each
+   // algorithm with a number. There is a utility function to help
+   // to set the value of compress. For example,
+   //   ROOT::CompressionSettings(ROOT::kLZMA, 1)
+   // will build an integer which will set the compression to use
+   // the LZMA algorithm and compression level 1.  These are defined
+   // in the header file Compression.h.
+   //
+   // Note that the compression settings may be changed at any time.
+   // The new compression settings will only apply to branches created
+   // or attached after the setting is changed and other objects written
+   // after the setting is changed.
    //
    // In case the file does not exist or is not a valid ROOT file,
    // it is made a Zombie. One can detect this situation with a code like:
@@ -1896,24 +1907,61 @@ void TFile::Seek(Long64_t offset, ERelativeTo pos)
 }
 
 //______________________________________________________________________________
+void TFile::SetCompressionAlgorithm(Int_t algorithm)
+{
+   // See comments for function SetCompressionSettings
+   if (algorithm < 0 || algorithm >= ROOT::kUndefinedCompressionAlgorithm) algorithm = 0;
+   if (fCompress < 0) {
+      // if the level is not defined yet use 1 as a default
+      fCompress = 100 * algorithm + 1;
+   } else {
+      int level = fCompress % 100;
+      fCompress = 100 * algorithm + level;
+   }
+}
+
+//______________________________________________________________________________
 void TFile::SetCompressionLevel(Int_t level)
 {
-   // Set level of compression for this file:
-   //  level = 0 objects written to this file will not be compressed.
-   //  level = 1 minimal compression level but fast.
-   //  ....
-   //  level = 9 maximal compression level but slow.
-   //
-   // Note that the compression level may be changed at any time.
-   // The new compression level will only apply to newly written objects.
-   // The function TFile::Map shows the compression factor
-   // for each object written to this file.
-   // The function TFile::GetCompressionFactor returns the global
-   // compression factor for this file.
-
+   // See comments for function SetCompressionSettings
    if (level < 0) level = 0;
-   if (level > 9) level = 9;
-   fCompress = level;
+   if (level > 99) level = 99;
+   if (fCompress < 0) {
+      // if the algorithm is not defined yet use 0 as a default
+      fCompress = level;
+   } else {
+      int algorithm = fCompress / 100;
+      if (algorithm >= ROOT::kUndefinedCompressionAlgorithm) algorithm = 0;
+      fCompress = 100 * algorithm + level;
+   }
+}
+
+//______________________________________________________________________________
+void TFile::SetCompressionSettings(Int_t settings)
+{
+   // Used to specify the compression level and algorithm:
+   //  settings = 100 * algorithm + level
+   //
+   //  level = 0, objects written to this file will not be compressed.
+   //  level = 1, minimal compression level but fast.
+   //  ....
+   //  level = 9, maximal compression level but slower and might use more memory.
+   // (For the currently supported algorithms, the maximum level is 9)
+   // If compress is negative it indicates the compression level is not set yet.
+   //
+   // The enumeration ROOT::ECompressionAlgorithm associates each
+   // algorithm with a number. There is a utility function to help
+   // to set the value of the argument. For example,
+   //   ROOT::CompressionSettings(ROOT::kLZMA, 1)
+   // will build an integer which will set the compression to use
+   // the LZMA algorithm and compression level 1.  These are defined
+   // in the header file Compression.h.
+   //
+   // Note that the compression settings may be changed at any time.
+   // The new compression settings will only apply to branches created
+   // or attached after the setting is changed and other objects written
+   // after the setting is changed.
+   fCompress = settings;
 }
 
 //______________________________________________________________________________
@@ -2273,7 +2321,10 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       } else if (opt.Contains("recreate")) {
          // check that directory exist, if not create it
          if (dir == 0) {
-            gSystem->mkdir(dirname);
+            if (gSystem->mkdir(dirname) < 0) {
+               Error("MakeProject","cannot create directory '%s'",dirname);
+               return;               
+            }
          }
          // clear directory
          while (dir) {
@@ -2293,7 +2344,10 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
             gSystem->FreeDirectory(dir);
             return;
          }
-         gSystem->mkdir(dirname);
+         if (gSystem->mkdir(dirname) < 0) {
+            Error("MakeProject","cannot create directory '%s'",dirname);
+            return;               
+         }
       }
       if (dir) {
          gSystem->FreeDirectory(dir);
@@ -2309,11 +2363,28 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       return;
    }
 
-   TString subdirname( gSystem->BaseName(dirname) );
+   TString clean_dirname(dirname);
+   if (clean_dirname[clean_dirname.Length()-1]=='/') {
+      clean_dirname.Remove(clean_dirname.Length()-1);
+   } else if (clean_dirname[clean_dirname.Length()-1]=='\\') {
+      clean_dirname.Remove(clean_dirname.Length()-1);
+      if (clean_dirname[clean_dirname.Length()-1]=='\\') {
+         clean_dirname.Remove(clean_dirname.Length()-1);
+      }
+   }
+   TString subdirname( gSystem->BaseName(clean_dirname) );
+   if (subdirname == "") {
+      Error("MakeProject","Directory name must not be empty.");
+      return;
+   }
 
    // Start the source file
-   TString spath; spath.Form("%s/%sProjectSource.cxx",dirname,subdirname.Data());
+   TString spath; spath.Form("%s/%sProjectSource.cxx",clean_dirname.Data(),subdirname.Data());
    FILE *sfp = fopen(spath.Data(),"w");
+   if (sfp ==0) {
+      Error("MakeProject","Unable to create the source file %s.",spath.Data());
+      return;
+   }
    fprintf(sfp, "#include \"%sProjectHeaders.h\"\n\n",subdirname.Data() );
    if (!genreflex) fprintf(sfp, "#include \"%sLinkDef.h\"\n\n",subdirname.Data() );
    fprintf(sfp, "#include \"%sProjectDict.cxx\"\n\n",subdirname.Data() );
@@ -2438,11 +2509,11 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
             }
          }
       }
-      ngener += info->GenerateHeaderFile(dirname,&subClasses,&extrainfos);
+      ngener += info->GenerateHeaderFile(clean_dirname.Data(),&subClasses,&extrainfos);
       subClasses.Clear("nodelete");
    }
    TString path;
-   path.Form("%s/%sProjectHeaders.h",dirname,subdirname.Data());
+   path.Form("%s/%sProjectHeaders.h",clean_dirname.Data(),subdirname.Data());
    FILE *allfp = fopen(path,"a");
    if (!allfp) {
       Error("MakeProject","Cannot open output file:%s\n",path.Data());
@@ -2451,7 +2522,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       fclose(allfp);
    }
 
-   printf("MakeProject has generated %d classes in %s\n",ngener,dirname);
+   printf("MakeProject has generated %d classes in %s\n",ngener,clean_dirname.Data());
 
    // generate the shared lib
    if (!opt.Contains("+")) {
@@ -2464,9 +2535,9 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    // create the MAKEP file by looping on all *.h files
    // delete MAKEP if it already exists
 #ifdef WIN32
-   path.Form("%s/makep.cmd",dirname);
+   path.Form("%s/makep.cmd",clean_dirname.Data());
 #else
-   path.Form("%s/MAKEP",dirname);
+   path.Form("%s/MAKEP",clean_dirname.Data());
 #endif
 #ifdef R__WINGCC
    FILE *fpMAKE = fopen(path,"wb");
@@ -2483,7 +2554,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
 
    // Add rootcint/genreflex statement generating ProjectDict.cxx
    FILE *ifp = 0;
-   path.Form("%s/%sProjectInstances.h",dirname,subdirname.Data());
+   path.Form("%s/%sProjectInstances.h",clean_dirname.Data(),subdirname.Data());
 #ifdef R__WINGCC
    ifp = fopen(path,"wb");
 #else
@@ -2500,10 +2571,10 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
 
    if (genreflex) {
       fprintf(fpMAKE,"genreflex %sProjectHeaders.h -o %sProjectDict.cxx --comments --iocomments %s ",subdirname.Data(),subdirname.Data(),gSystem->GetIncludePath());
-      path.Form("%s/%sSelection.xml",dirname,subdirname.Data());
+      path.Form("%s/%sSelection.xml",clean_dirname.Data(),subdirname.Data());
    } else {
       fprintf(fpMAKE,"rootcint -f %sProjectDict.cxx -c %s ",subdirname.Data(),gSystem->GetIncludePath());
-      path.Form("%s/%sLinkDef.h",dirname,subdirname.Data());
+      path.Form("%s/%sLinkDef.h",clean_dirname.Data(),subdirname.Data());
    }
    // Create the LinkDef.h or xml selection file by looping on all *.h files
    // replace any existing file.
@@ -2692,7 +2763,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    TString object( sdirname + "ProjectSource." );
    object.Append( gSystem->GetObjExt() );
    cmd.ReplaceAll("$ObjectFiles", object.Data());
-   cmd.ReplaceAll("$IncludePath",TString(gSystem->GetIncludePath()) + " -I" + dirname);
+   cmd.ReplaceAll("$IncludePath",TString(gSystem->GetIncludePath()) + " -I" + clean_dirname.Data());
    cmd.ReplaceAll("$SharedLib",sdirname+"."+gSystem->GetSoExt());
    cmd.ReplaceAll("$LinkedLibs",gSystem->GetLibraries("","SDL"));
    cmd.ReplaceAll("$LibName",sdirname);
@@ -2709,12 +2780,12 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    fprintf(fpMAKE,"%s\n",cmd.Data());
 
    fclose(fpMAKE);
-   printf("%s/MAKEP file has been generated\n",dirname);
+   printf("%s/MAKEP file has been generated\n",clean_dirname.Data());
 
    if (!opt.Contains("nocompilation")) {
       // now execute the generated script compiling and generating the shared lib
       path = gSystem->WorkingDirectory();
-      gSystem->ChangeDirectory(dirname);
+      gSystem->ChangeDirectory(clean_dirname.Data());
 #ifndef WIN32
       gSystem->Exec("chmod +x MAKEP");
       int res = !gSystem->Exec("./MAKEP");
@@ -2724,7 +2795,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       int res = !gSystem->Exec("MAKEP");
 #endif
       gSystem->ChangeDirectory(path);
-      path.Form("%s/%s.%s",dirname,subdirname.Data(),gSystem->GetSoExt());
+      path.Form("%s/%s.%s",clean_dirname.Data(),subdirname.Data(),gSystem->GetSoExt());
       if (res) printf("Shared lib %s has been generated\n",path.Data());
 
       //dynamically link the generated shared lib
@@ -4033,17 +4104,15 @@ void TFile::CpProgress(Long64_t bytesread, Long64_t size, TStopwatch &watch)
 }
 
 //______________________________________________________________________________
-Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
-                 UInt_t buffersize)
+Bool_t TFile::Cp(const char *dst, Bool_t progressbar, UInt_t buffersize)
 {
-   // Allows to copy file from src to dst URL. Returns kTRUE in case of success,
+   // Allows to copy this file to the dst URL. Returns kTRUE in case of success,
    // kFALSE otherwise.
 
    Bool_t rmdestiferror = kFALSE;
    TStopwatch watch;
    Bool_t success = kFALSE;
 
-   TUrl sURL(src, kTRUE);
    TUrl dURL(dst, kTRUE);
 
    TString oopt = "RECREATE";
@@ -4052,43 +4121,28 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
    // Files will be open in RAW mode
    TString raw = "filetype=raw";
 
-   // Set optimization options for the source file
-   TString opt = sURL.GetOptions();
-   if (opt != "") opt += "&";
-   opt += raw;
-   // Netx-related options:
-   //    cachesz = 4*buffersize     -> 4 buffers as peak mem usage
-   //    readaheadsz = 2*buffersize -> Keep at max 4*buffersize bytes outstanding when reading
-   //    rmpolicy = 1               -> Remove from the cache the blk with the least offset
-   opt += Form("&cachesz=%d&readaheadsz=%d&rmpolicy=1", 4*buffersize, 2*buffersize);
-   sURL.SetOptions(opt);
-
    // Set optimization options for the destination file
-   opt = dURL.GetOptions();
+   TString opt = dURL.GetOptions();
    if (opt != "") opt += "&";
    opt += raw;
    dURL.SetOptions(opt);
 
    char *copybuffer = 0;
 
-   TFile *sfile = 0;
+   TFile *sfile = this;
    TFile *dfile = 0;
 
-   // Open source file
-   if (!(sfile = TFile::Open(sURL.GetUrl(), "READ"))) {
-      ::Error("TFile::Cp", "cannot open source file %s", src);
-      goto copyout;
-   }
    // "RECREATE" does not work always well with XROOTD
    // namely when some pieces of the path are missing;
    // we force "NEW" in such a case
-   if (TFile::GetType(ourl, "") == TFile::kNet)
+   if (TFile::GetType(ourl, "") == TFile::kNet) {
       if (gSystem->AccessPathName(ourl)) {
          oopt = "NEW";
          // Force creation of the missing parts of the path
          opt += "&mkpath=1";
          dURL.SetOptions(opt);
       }
+   }
 
    // Open destination file
    if (!(dfile = TFile::Open(dURL.GetUrl(), oopt))) {
@@ -4142,7 +4196,7 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
       read   = sfile->GetBytesRead() - b0;
       if ((read <= 0) || readop) {
          ::Error("TFile::Cp", "cannot read from source file %s. readsize=%lld read=%lld readop=%d",
-                              src, readsize, read, readop);
+                              sfile->GetName(), readsize, read, readop);
          goto copyout;
       }
 
@@ -4164,10 +4218,8 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
    success = kTRUE;
 
 copyout:
-   if (sfile) sfile->Close();
    if (dfile) dfile->Close();
 
-   if (sfile) delete sfile;
    if (dfile) delete dfile;
    if (copybuffer) delete[] copybuffer;
 
@@ -4177,6 +4229,46 @@ copyout:
    watch.Stop();
    watch.Reset();
 
+   return success;
+}
+
+//______________________________________________________________________________
+Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
+                 UInt_t buffersize)
+{
+   // Allows to copy file from src to dst URL. Returns kTRUE in case of success,
+   // kFALSE otherwise.
+   
+   TUrl sURL(src, kTRUE);
+
+   // Files will be open in RAW mode
+   TString raw = "filetype=raw";
+   
+   // Set optimization options for the source file
+   TString opt = sURL.GetOptions();
+   if (opt != "") opt += "&";
+   opt += raw;
+   // Netx-related options:
+   //    cachesz = 4*buffersize     -> 4 buffers as peak mem usage
+   //    readaheadsz = 2*buffersize -> Keep at max 4*buffersize bytes outstanding when reading
+   //    rmpolicy = 1               -> Remove from the cache the blk with the least offset
+   opt += Form("&cachesz=%d&readaheadsz=%d&rmpolicy=1", 4*buffersize, 2*buffersize);
+   sURL.SetOptions(opt);
+
+   TFile *sfile = 0;
+
+   Bool_t success = kFALSE;
+
+   // Open source file
+   if (!(sfile = TFile::Open(sURL.GetUrl(), "READ"))) {
+      ::Error("TFile::Cp", "cannot open source file %s", src);
+   } else {
+      success = sfile->Cp(dst, progressbar, buffersize);
+   }
+
+   if (sfile) sfile->Close();
+   if (sfile) delete sfile;
+   
    return success;
 }
 

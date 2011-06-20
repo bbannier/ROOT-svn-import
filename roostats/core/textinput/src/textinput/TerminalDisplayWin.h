@@ -43,9 +43,9 @@ namespace textinput {
     void WriteRawString(const char* text, size_t len);
 
     void EraseToRight();
+    void CheckCursorPos();
 
     void ShowError(const char* Where) const;
-    void UpdateHandle(bool setup);
 
   private:
     size_t fStartLine; // line of current prompt in cmd.exe's buffer

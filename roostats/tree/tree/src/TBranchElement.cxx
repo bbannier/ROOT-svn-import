@@ -276,7 +276,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
    if (fTree->GetDirectory()) {
       TFile* bfile = fTree->GetDirectory()->GetFile();
       if (bfile) {
-         fCompress = bfile->GetCompressionLevel();
+         fCompress = bfile->GetCompressionSettings();
       }
    }
 
@@ -472,9 +472,9 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
             }
             SetReadLeavesPtr();
             return;
-         } else if (!strcmp(elem_type, "TClonesArray") || !strcmp(elem_type, "TClonesArray*")) {
+         } else if (element->GetClassPointer() == TClonesArray::Class()) {  
             // -- We are a TClonesArray element.
-            Bool_t ispointer = !strcmp(elem_type,"TClonesArray*");
+            Bool_t ispointer = element->IsaPointer();
             TClonesArray *clones;
             if (ispointer) {
                char **ppointer = (char**)(pointer);
@@ -692,7 +692,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent, const char* bname, TClon
    fCompress = compress;
    if (compress == -1 && fTree->GetDirectory()) {
       TFile *bfile = fTree->GetDirectory()->GetFile();
-      if (bfile) fCompress = bfile->GetCompressionLevel();
+      if (bfile) fCompress = bfile->GetCompressionSettings();
    }
 
    if (basketsize < 100) basketsize = 100;
@@ -833,7 +833,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent, const char* bname, TVirt
    if ((compress == -1) && fTree->GetDirectory()) {
       TFile* bfile = fTree->GetDirectory()->GetFile();
       if (bfile) {
-         fCompress = bfile->GetCompressionLevel();
+         fCompress = bfile->GetCompressionSettings();
       }
    }
 
@@ -3669,7 +3669,7 @@ void TBranchElement::ReleaseObject()
 //______________________________________________________________________________
 void TBranchElement::Reset(Option_t* option)
 {
-   // -- Reset a Branch.
+   // Reset a Branch.
    //
    // Existing i/o buffers are deleted.
    // Entries, max and min are reset.
@@ -3682,6 +3682,20 @@ void TBranchElement::Reset(Option_t* option)
    }
    fBranchID = -1;
    TBranch::Reset(option);
+}
+
+//______________________________________________________________________________
+void TBranchElement::ResetAfterMerge(TFileMergeInfo *info)
+{
+   // Reset a Branch after a Merge operation (drop data but keep customizations)
+   //
+   
+   Int_t nbranches = fBranches.GetEntriesFast();
+   for (Int_t i = 0; i < nbranches; ++i) {
+      TBranch* branch = (TBranch*) fBranches[i];
+      branch->ResetAfterMerge(info);
+   }
+   TBranch::ResetAfterMerge(info);
 }
 
 //______________________________________________________________________________
@@ -4814,7 +4828,10 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
             //       container which we are splitting.  It does not
             //       appear in the branch heirarchy either.
             // Note: We can use parent class (clParent) != branch class (elemClass) to detection elision.
-            Int_t unroll = Unroll(name, clParent, clOfBase, ptr + offset, basketsize, splitlevel+splitSTLP, btype);
+            Int_t unroll = -1;
+            if (!elem->CannotSplit() || clOfBase == TObject::Class()) {
+               unroll = Unroll(name, clParent, clOfBase, ptr + offset, basketsize, splitlevel+splitSTLP, btype);
+            }
             if (unroll < 0) {
                // FIXME: We could not split because we are abstract, should we be doing this?
                if (strlen(name)) {
