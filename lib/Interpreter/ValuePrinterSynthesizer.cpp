@@ -42,8 +42,8 @@ namespace cling {
   void ValuePrinterSynthesizer::HandleTopLevelDecl(DeclGroupRef DGR) {
     for (DeclGroupRef::iterator I = DGR.begin(), E = DGR.end(); I != E; ++I)
       if (FunctionDecl* FD = dyn_cast<FunctionDecl>(*I)) {
-        llvm::StringRef Name (FD->getNameAsString());
-        if (!Name.startswith("__cling_Un1Qu3"))
+        const char* WN = "__cling_Un1Qu3";
+        if (strncmp(FD->getNameAsString().c_str(), WN, strlen(WN)) == 0)
           return;
 
         if (CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody())) {
