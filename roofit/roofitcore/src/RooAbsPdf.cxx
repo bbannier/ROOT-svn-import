@@ -155,7 +155,8 @@
 
 ClassImp(RooAbsPdf) 
 ;
-
+ClassImp(RooAbsPdf::GenSpec)
+;
 
 Int_t RooAbsPdf::_verboseEval = 0;
 Bool_t RooAbsPdf::_evalError = kFALSE ;
