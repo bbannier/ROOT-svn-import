@@ -555,7 +555,7 @@ void TMVA::TransformationHandler::PlotVariables( const std::vector<Event*>& even
                Double_t xmin = TMath::Max( GetMin( ( var_tgt*nvar )+ivar), mean - timesRMS*rms );
                Double_t xmax = TMath::Min( GetMax( ( var_tgt*nvar )+ivar), mean + timesRMS*rms );
       
-               std::cout << "Class="<<cls<<" xmin="<<xmin << " xmax="<<xmax<<" mean="<<mean<<" rms="<<rms<<" timesRMS="<<timesRMS<<std::endl;
+               //std::cout << "Class="<<cls<<" xmin="<<xmin << " xmax="<<xmax<<" mean="<<mean<<" rms="<<rms<<" timesRMS="<<timesRMS<<std::endl;
                // protection
                if (xmin >= xmax) xmax = xmin*1.1; // try first...
                if (xmin >= xmax) xmax = xmin + 1; // this if xmin == xmax == 0
