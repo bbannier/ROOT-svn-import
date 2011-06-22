@@ -45,8 +45,7 @@ namespace cling {
     llvm::SmallVector<NamedDecl*, 4> TouchedDecls;
     
     if (FD) {
-      const char* WN = "__cling_Un1Qu3";
-      if (strncmp(FD->getNameAsString().c_str(), WN, strlen(WN)) == 0)
+      if (FD->getNameAsString().find("__cling_Un1Qu3"))
         return;
 
       CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody());
