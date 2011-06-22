@@ -192,7 +192,7 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPoin
    // create the study instance for parallel processing
    ToyMCStudy* toymcstudy = new ToyMCStudy ;
    toymcstudy->SetToyMCSampler(*this);
-   toymcstudy->SetParamPointOfInterest(paramPointIn);
+   toymcstudy->SetParamPoint(paramPointIn);
 
    // temporary workspace for proof to avoid messing with TRef
    RooWorkspace w(fProofConfig->GetWorkspace());
