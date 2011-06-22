@@ -1,5 +1,5 @@
-// RUN: cat %s | %cling
-// RUN: cat %s | %cling | FileCheck %s
+// RUN: cat %s | %cling -I%p
+// RUN: cat %s | %cling -I%p | FileCheck %s
 #include <cmath>
 
 struct S{int i;} ss;
@@ -16,6 +16,6 @@ extern "C" int printf(const char* fmt, ...);
 printf("j=%d\n",j); // CHECK:j=12
 #include <string>
 std::string str("abc");
-printf("str=%s\n",str.c_str()) // CHECK: str=abc
+printf("str=%s\n",str.c_str()); // CHECK: str=abc
 
 .q
