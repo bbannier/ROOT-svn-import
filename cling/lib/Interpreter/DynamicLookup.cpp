@@ -670,16 +670,15 @@ namespace cling {
 
   Expr* DynamicExprTransformer::ConstructConstCharPtrExpr(const char* Val) {
     const QualType CChar = m_Context.CharTy.withConst();
-    unsigned ValLen = strlen(Val);
-    llvm::APInt ArraySize(m_Context.getTypeSize(CChar),
-                          ValLen + 1);
+    llvm::StringRef Value(Val);
+
+    llvm::APInt ArraySize(m_Context.getTypeSize(CChar), Value.size());
     const QualType CCArray = m_Context.getConstantArrayType(CChar,
                                                             ArraySize,
                                                             ArrayType::Normal,
                                                           /*IndexTypeQuals=*/0);
     Expr* Result = StringLiteral::Create(m_Context, 
-                                         &*Val, 
-                                         ValLen, 
+                                         Value, 
                                          /*Wide=*/ false,
                                          /*Pascal=*/false,
                                          CCArray, 
