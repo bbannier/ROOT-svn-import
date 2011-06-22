@@ -6,7 +6,6 @@
 
 #include "cling/Interpreter/Interpreter.h"
 
-#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -201,9 +200,6 @@ namespace cling {
                                              llvmdir));
     m_ExecutionContext.reset(new ExecutionContext(m_IncrParser->getCI()));
 
-    m_IncrParser->addConsumer(ChainedConsumer::kCodeGenerator,
-                              m_ExecutionContext->getCodeGenerator());
-
     m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer",
                                                                   LeftoverArgs.size(), &LeftoverArgs[0],
                                                                   llvmdir)));
@@ -269,7 +265,7 @@ namespace cling {
         if (N.isIdentifier()) {
           clang::IdentifierInfo* II = N.getAsIdentifierInfo();
           if (II->getName().find("__cling_Un1Qu3") == 0) {
-            m_ExecutionContext->executeFunction(II->getName());
+            RunFunction(II->getName());
           }
         }
       }
@@ -411,16 +407,18 @@ namespace cling {
     input.append("\n;\n}");
   }
 
-  int Interpreter::RunFunction(std::string& fname, llvm::GenericValue* res) {
+  int Interpreter::RunFunction(llvm::StringRef fname, llvm::GenericValue* res) {
     FunctionDecl* FD = cast_or_null<FunctionDecl>(LookupDecl(fname).
                                                   getSingleDecl()
                                                   );
     if (FD) {
       if (!FD->isExternC()) {
-        fname = "";
-        llvm::raw_string_ostream RawStr(fname);
+        std::string s = "";
+        llvm::raw_string_ostream RawStr(s);
         MangleContext* Mangle = getCI()->getASTContext().createMangleContext();
         Mangle->mangleName(FD, RawStr);
+        RawStr.flush();
+        fname = s;
       }
       m_ExecutionContext->executeFunction(fname, res);
       return 0;
@@ -441,6 +439,7 @@ namespace cling {
   
   int Interpreter::handleLine(const std::string& input, 
                               std::string& FunctionName) {
+    m_ExecutionContext->runCodeGen(m_IncrParser->GetCodeGenerator()->GetModule());
     // if we are using the preprocessor
     if (input.c_str()[0] == '#') {
       return m_IncrParser->CompilePreprocessed(input) != 0;
@@ -501,8 +500,7 @@ namespace cling {
     if (!CI) {
       return 1;
     }
-    
-    m_ExecutionContext->runCodeGen();
+    m_ExecutionContext->runCodeGen(m_IncrParser->GetCodeGenerator()->GetModule());
     return 0;
   }
   
@@ -633,13 +631,13 @@ namespace cling {
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
     // resume the code gen
-    m_IncrParser->addConsumer(ChainedConsumer::kCodeGenerator,
-                              m_ExecutionContext->getCodeGenerator());
+    //m_IncrParser->addConsumer(ChainedConsumer::kCodeGenerator,
+    //                          m_ExecutionContext->getCodeGenerator());
     DeclGroupRef DGR(TopLevelFD);
     // collect the references that are being used
-    m_ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(DGR);
+    //ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(DGR);
     // generate code for the delta
-    m_ExecutionContext->getCodeGenerator()->HandleTranslationUnit(Context);
+    //ExecutionContext->getCodeGenerator()->HandleTranslationUnit(Context);
  
     // get the result
     llvm::GenericValue val;

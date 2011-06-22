@@ -7,31 +7,40 @@
 #ifndef CLING_INCREMENTAL_PARSER_H
 #define CLING_INCREMENTAL_PARSER_H
 
-#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
-#include <vector>
 
+#include "clang/Basic/SourceLocation.h"
+#include <vector>
 #include "ChainedConsumer.h"
 
-namespace clang {
-  class CompilerInstance;
-  class Decl;
-  class Parser;
-  class Sema;
-  class ASTConsumer;
-  class PragmaNamespace;
-  class SourceLocation;
-  class FileID;
-  class PCHGenerator;
+namespace llvm {
+  class GenericValue;
 }
 
+namespace clang {
+  class ASTConsumer;
+  class CodeGenerator;
+  class CompilerInstance;
+  class Decl;
+  class FileID;
+  class FunctionDecl;
+  class Parser;
+  class PCHGenerator;
+  class PragmaNamespace;
+  class Sema;
+  class SourceLocation;
+}
+
+
 namespace cling {
-  class MutableMemoryBuffer;
   class ChainedConsumer;
-  class DynamicExprTransformer;
-  class Interpreter;
   class CIFactory;
+  class DynamicExprTransformer;
+  class ExecutionContext;
+  class Interpreter;
+  class MutableMemoryBuffer;
+
   
   class IncrementalParser {
   public:
@@ -65,6 +74,7 @@ namespace cling {
     
     void addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer);
     void removeConsumer(ChainedConsumer::EConsumerIndex I);
+    clang::CodeGenerator* GetCodeGenerator();
 
     bool usingStartupPCH() const { return m_UsingStartupPCH; }
     void writeStartupPCH();

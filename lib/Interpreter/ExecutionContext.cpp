@@ -16,7 +16,6 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
-#include "llvm/LLVMContext.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -90,52 +89,39 @@ std::vector<ExecutionContext::LazyFunctionCreatorFunc_t> ExecutionContext::m_vec
 
 ExecutionContext::ExecutionContext(clang::CompilerInstance* CI):
   m_engine(0),
-  m_module(0),
   m_posInitGlobals(0)
 {
   // If not set, exception handling will not be turned on
   llvm::JITExceptionHandling = true;
-  m_codeGen.reset(CreateLLVMCodeGen(CI->getDiagnostics(), 
-                                    "cling input",
-                                    CI->getCodeGenOpts(), 
-                                    * new llvm::LLVMContext())
-                  );
-  m_codeGen->Initialize(CI->getASTContext());
 }
 
 void
-ExecutionContext::InitializeBuilder()
+ExecutionContext::InitializeBuilder(llvm::Module* m)
 {
    //
    //  Create an execution engine to use.
    //
    // Note: Engine takes ownership of the module.
-   if (m_engine) return;
+  assert(m && "Module cannot be null");
 
-   assert(m_codeGen && "Cannot initialize builder without module!");
+  llvm::EngineBuilder builder(m);
+  builder.setOptLevel(llvm::CodeGenOpt::Less);
+  std::string errMsg;
+  builder.setErrorStr(&errMsg);
+  builder.setEngineKind(llvm::EngineKind::JIT);
+  m_engine = builder.create();
+  assert(m_engine && "Cannot initialize builder without module!");
 
-   m_module = m_codeGen->GetModule();
+  //m_engine->addModule(m_module); // Note: The engine takes ownership of the module.
 
-   llvm::EngineBuilder builder(m_module);
-   builder.setOptLevel(llvm::CodeGenOpt::Less);
-   std::string errMsg;
-   builder.setErrorStr(&errMsg);
-   builder.setEngineKind(llvm::EngineKind::JIT);
-   m_engine = builder.create();
-   if (!m_engine) {
-      std::cerr << "Error: Unable to create the execution engine!\n";
-      std::cerr << errMsg << '\n';
-   }
-   //m_engine->addModule(m_module); // Note: The engine takes ownership of the module.
-
-   // install lazy function
-   m_engine->InstallLazyFunctionCreator(NotifyLazyFunctionCreators);
+  // install lazy function
+  m_engine->InstallLazyFunctionCreator(NotifyLazyFunctionCreators);
 }
 
 ExecutionContext::~ExecutionContext()
 {
-   if (m_codeGen)
-      m_codeGen->ReleaseModule();
+  //   if (m_codeGen)
+  //      m_codeGen->ReleaseModule();
 }
 
 void unresolvedSymbol()
@@ -175,7 +161,7 @@ ExecutionContext::executeFunction(llvm::StringRef funcname,
                                   llvm::GenericValue* returnValue)
 {
    // Call an extern C function without arguments
-  runCodeGen();
+  //runCodeGen();
 
    llvm::Function* f = m_engine->FindFunctionNamed(funcname.data());
    if (!f) {
@@ -232,11 +218,15 @@ ExecutionContext::executeFunction(llvm::StringRef funcname,
 
 
 void
-ExecutionContext::runCodeGen() {
-  InitializeBuilder();
-  assert(m_module && "Code generation did not create a module!");
+ExecutionContext::runCodeGen(llvm::Module* m) {
+  assert(m && "There mustn't be null");
+
+  if (!m_engine)
+    InitializeBuilder(m);
+
+  assert(m_engine && "Code generation did not create an engine!");
   m_engine->runStaticConstructorsDestructors(false);
-  llvm::GlobalVariable* gctors = m_module->getGlobalVariable("llvm.global_ctors", true);
+  llvm::GlobalVariable* gctors = m->getGlobalVariable("llvm.global_ctors", true);
    if (gctors) {
       gctors->dropAllReferences();
       gctors->eraseFromParent();

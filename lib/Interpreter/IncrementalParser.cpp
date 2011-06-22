@@ -5,14 +5,17 @@
 //------------------------------------------------------------------------------
 
 #include "IncrementalParser.h"
-#include "cling/Interpreter/CIFactory.h"
 
+#include "llvm/LLVMContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_os_ostream.h"
 
+#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/Mangle.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Lex/Preprocessor.h"
@@ -21,17 +24,21 @@
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTWriter.h"
 
+#include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/Diagnostics.h"
 #include "cling/Interpreter/Interpreter.h"
 #include "ASTDumper.h"
 #include "ChainedConsumer.h"
 #include "DeclExtractor.h"
 #include "DynamicLookup.h"
+#include "ExecutionContext.h"
 #include "ValuePrinterSynthesizer.h"
 
 #include <stdio.h>
 #include <sstream>
 #include <iostream>
+
+using namespace clang;
 
 namespace cling {
   class MutableMemoryBuffer: public llvm::MemoryBuffer {
@@ -115,12 +122,17 @@ namespace cling {
     m_Consumer = dyn_cast<ChainedConsumer>(&CI->getASTConsumer());
     assert(m_Consumer && "Expected ChainedConsumer!");
     // Add consumers
-    addConsumer(ChainedConsumer::kDeclExtractor,
-                new DeclExtractor());
+    addConsumer(ChainedConsumer::kDeclExtractor, new DeclExtractor());
     addConsumer(ChainedConsumer::kValuePrinterSynthesizer,
                 new ValuePrinterSynthesizer(interp));
     addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
+    clang::CodeGenerator* CG = CreateLLVMCodeGen(CI->getDiagnostics(), 
+                                                 "cling input",
+                                                 CI->getCodeGenOpts(), 
+                                                 * new llvm::LLVMContext()
+                                                 );
 
+    addConsumer(ChainedConsumer::kCodeGenerator, CG);
 
     // Initialize the parser.
     m_Parser.reset(new clang::Parser(CI->getPreprocessor(), CI->getSema()));
@@ -390,5 +402,11 @@ namespace cling {
       SC->ForgetSema();
     }
     m_Consumer->getConsumers()[I] = 0;
-  }  
+  }
+
+  CodeGenerator* IncrementalParser::GetCodeGenerator() { 
+    return 
+      (CodeGenerator*)m_Consumer->getConsumer(ChainedConsumer::kCodeGenerator); 
+  }
+
 } // namespace cling

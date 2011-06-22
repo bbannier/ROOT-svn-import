@@ -177,7 +177,7 @@ namespace cling {
     clang::CompilerInstance* compileFile(const std::string& filename,
                                          const std::string* trailcode = 0);
     void WrapInput(std::string& input, std::string& fname);
-    int RunFunction(std::string& fname, llvm::GenericValue* res = 0);
+    int RunFunction(llvm::StringRef fname, llvm::GenericValue* res = 0);
     friend class runtime::internal::LifetimeHandler;
     
   public:
