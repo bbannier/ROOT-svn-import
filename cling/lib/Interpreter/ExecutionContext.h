@@ -34,11 +34,10 @@ namespace cling {
     ~ExecutionContext();
     
     llvm::ExecutionEngine& getEngine() { return *m_engine; }
-    clang::CodeGenerator* getCodeGenerator() const { return m_codeGen.get(); }
     
     void installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp);
     
-    void runCodeGen();
+    void runCodeGen(llvm::Module* m);
     
     void executeFunction(llvm::StringRef function, 
                          llvm::GenericValue* returnValue = 0);
@@ -49,14 +48,12 @@ namespace cling {
     
     int verifyModule(llvm::Module* m);
     void printModule(llvm::Module* m);
-    void InitializeBuilder();
+    void InitializeBuilder(llvm::Module* m);
     
     static std::vector<std::string> m_vec_unresolved;
     static std::vector<LazyFunctionCreatorFunc_t> m_vec_lazy_function;
     
-    llvm::OwningPtr<clang::CodeGenerator> m_codeGen;
     llvm::ExecutionEngine* m_engine; // Owned by JIT
-    llvm::Module* m_module; // IncrAST module, owned by m_engine.
     unsigned m_posInitGlobals; // position (global idx in out module) of next global to be initialized in m_ASTCI's AST
   };
 } // end cling
