@@ -408,17 +408,17 @@ namespace cling {
   }
 
   int Interpreter::RunFunction(llvm::StringRef fname, llvm::GenericValue* res) {
+    std::string mangledNameIfNeeded;
     FunctionDecl* FD = cast_or_null<FunctionDecl>(LookupDecl(fname).
                                                   getSingleDecl()
                                                   );
     if (FD) {
       if (!FD->isExternC()) {
-        std::string s = "";
-        llvm::raw_string_ostream RawStr(s);
+        llvm::raw_string_ostream RawStr(mangledNameIfNeeded);
         MangleContext* Mangle = getCI()->getASTContext().createMangleContext();
         Mangle->mangleName(FD, RawStr);
         RawStr.flush();
-        fname = s;
+        fname = mangledNameIfNeeded;
       }
       m_ExecutionContext->executeFunction(fname, res);
       return 0;
