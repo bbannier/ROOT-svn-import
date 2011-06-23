@@ -15,7 +15,7 @@
 #include "ChainedConsumer.h"
 
 namespace llvm {
-  class GenericValue;
+  struct GenericValue;
 }
 
 namespace clang {
