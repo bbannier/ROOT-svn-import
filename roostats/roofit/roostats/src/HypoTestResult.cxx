@@ -200,7 +200,7 @@ void HypoTestResult::UpdatePValue(const SamplingDistribution* distr, Double_t &p
 
    }else{
       pvalue = distr->IntegralAndError(perror, -RooNumber::infinity(), fTestStatisticData, kTRUE,
-         kTRUE,  kTRUE  ); // // always closed  [ -inf, fTestStatistic ]
+                                       kTRUE,  kTRUE  ); // // always closed  [ -inf, fTestStatistic ]
    }
 }
 
