@@ -219,7 +219,7 @@ ExecutionContext::executeFunction(llvm::StringRef funcname,
 
 void
 ExecutionContext::runCodeGen(llvm::Module* m) {
-  assert(m && "There mustn't be null");
+  assert(m && "Module must not be null");
 
   if (!m_engine)
     InitializeBuilder(m);
