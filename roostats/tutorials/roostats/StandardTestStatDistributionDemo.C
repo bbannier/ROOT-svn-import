@@ -162,6 +162,8 @@ void StandardTestStatDistributionDemo(const char* infile = "",
   SamplingDistribution* sampDist = sampler.GetSamplingDistribution(allParameters);
   SamplingDistPlot plot;
   plot.AddSamplingDistribution(sampDist);
+  plot.GetTH1F(sampDist)->GetYaxis()->SetTitle(Form("f(-log #lambda(#mu=%.2f) | #mu=%.2f)",plcUpperLimit,plcUpperLimit));
+  plot.SetAxisTitle(Form("-log #lambda(#mu=%.2f)",plcUpperLimit));
 
   TCanvas* c1 = new TCanvas("c1");
   c1->SetLogy();
@@ -169,8 +171,7 @@ void StandardTestStatDistributionDemo(const char* infile = "",
   double min = plot.GetTH1F(sampDist)->GetXaxis()->GetXmin();
   double max = plot.GetTH1F(sampDist)->GetXaxis()->GetXmax();
 
-  cout << "min,max = " << min << " " << max << endl;
-  TF1* f = new TF1("f",Form("ROOT::Math::chisquared_pdf(x,%d,0)",nPOI),min,max);
+  TF1* f = new TF1("f",Form("2*ROOT::Math::chisquared_pdf(2*x,%d,0)",nPOI),min,max);
   f->Draw("same");
   c1->SaveAs("standard_test_stat_distribution.pdf");
 
