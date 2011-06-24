@@ -15,6 +15,7 @@
 #include "clang/Sema/Template.h"
 
 #include "cling/Interpreter/Interpreter.h"
+#include "ASTUtils.h"
 #include "ChainedConsumer.h"
 
 using namespace clang;
@@ -96,153 +97,162 @@ namespace cling {
   //     (DeclRefExpr 0x2fdc3f0 'int' lvalue Var 0x2fd1420 'i' 'int')))
 
   Expr* ValuePrinterSynthesizer::SynthesizeVP(Expr* E) {
-    // 1. Get the flags
     QualType QT = E->getType();
-    if (!QT.isNull() && QT->isVoidType()) {
+    if (!QT.isNull() && QT->isVoidType())
       return 0;
-    } else {
-      int Flags = 0;
-      enum DumperFlags {
-        kIsPtr = 1,
-        kIsConst = 2,
-        kIsPolymorphic = 4
-      };
-      
-      if (E->isRValue()) Flags |= kIsConst;
-      if (QT.isConstant(*m_Context) || QT.isLocalConstQualified()) {
-        Flags |= kIsConst;
-      }
-      if (QT->isPointerType()) {
-        // treat arrary-to-pointer decay as array:
-        QualType PQT = QT->getPointeeType();
-        const Type* PTT = PQT.getTypePtr();
-        if (!PTT || !PTT->isArrayType()) {
-          Flags |= kIsPtr;
-          const RecordType* RT = dyn_cast<RecordType>(QT.getTypePtr());
-          if (RT) {
-            RecordDecl* RD = RT->getDecl();
-            if (RD) {
-              CXXRecordDecl* CRD = dyn_cast<CXXRecordDecl>(RD);
-              if (CRD && CRD->isPolymorphic()) {
-                Flags |= kIsPolymorphic;
-              }
-            }
-          }
-        }
-      }
-      // 2. Call gCling->getValuePrinterStream()
-      // 2.1. Find gCling
-      SourceLocation NoSLoc = SourceLocation();
-      VarDecl* VD = dyn_cast<VarDecl>(m_Interpreter->
-                                      LookupDecl("cling").
-                                      LookupDecl("runtime").
-                                      LookupDecl("gCling").getSingleDecl());
-      assert(VD && "gCling not found!");
-      CXXRecordDecl* RD = dyn_cast<CXXRecordDecl>(m_Interpreter->
-                                                  LookupDecl("cling").
-                                                  LookupDecl("Interpreter").
-                                                  getSingleDecl()
-                                                  );
-      QualType RDTy = m_Context->getPointerType(m_Context->getTypeDeclType(RD));
-      // 2.2 Find getValuePrinterStream()
-      CXXMethodDecl* getValPrinterDecl = m_Interpreter->
-        LookupDecl("getValuePrinterStream", RD).getAs<CXXMethodDecl>();
-      assert(getValPrinterDecl && "Decl not found!");
-      
-      // 2.3 Build a DeclRefExpr, which holds the object
-      DeclRefExpr* MemberExprBase = m_Sema->BuildDeclRefExpr(VD, RDTy, 
-                                                             VK_LValue, NoSLoc
-                                                        ).takeAs<DeclRefExpr>();
-      // 2.4 Create a MemberExpr to getMemory from its declaration.
-      CXXScopeSpec SS;
-      LookupResult MemberLookup(*m_Sema, getValPrinterDecl->getDeclName(), 
-                                NoSLoc, Sema::LookupMemberName);
-      // Add the declaration as if doesn't exist. Skips the Lookup, because
-      // we have the declaration already so just add it in
-      MemberLookup.addDecl(getValPrinterDecl, AS_public);
-      MemberLookup.resolveKind();
-      Expr* MemberExpr = m_Sema->BuildMemberReferenceExpr(MemberExprBase,
-                                                          RDTy,
-                                                          NoSLoc,
-                                                          /*IsArrow=*/true,
-                                                          SS,
-                                                    /*FirstQualifierInScope=*/0,
-                                                          MemberLookup,
-                                                          /*TemplateArgs=*/0
-                                                          ).take();
-      // 2.5 Build the gCling->getValuePrinterStream()
-      Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
-      Expr* TheInnerCall = m_Sema->ActOnCallExpr(S, MemberExpr, NoSLoc,
-                                                 MultiExprArg(), NoSLoc).take();
 
-      // 3. Build the final Find cling::valuePrinterInternal::PrintValue call
-      // 3.1. Find cling::valuePrinterInternal::PrintValue
-      TemplateDecl* TD = dyn_cast<TemplateDecl>(m_Interpreter->
+    // 1. Call gCling->getValuePrinterStream()
+    // 1.1. Find gCling
+    SourceLocation NoSLoc = SourceLocation();
+    VarDecl* VD = dyn_cast<VarDecl>(m_Interpreter->
+                                    LookupDecl("cling").
+                                    LookupDecl("runtime").
+                                    LookupDecl("gCling").getSingleDecl());
+    assert(VD && "gCling not found!");
+    CXXRecordDecl* RD = dyn_cast<CXXRecordDecl>(m_Interpreter->
                                                 LookupDecl("cling").
-                                             LookupDecl("valuePrinterInternal").
-                                                LookupDecl("PrintValue").
-                                                getSingleDecl());
-      // 3.2. Instantiate the TemplateDecl
-      FunctionDecl* TDecl = dyn_cast<FunctionDecl>(TD->getTemplatedDecl());
-      
-      assert(TDecl && "The PrintValue function not found!");
+                                                LookupDecl("Interpreter").
+                                                getSingleDecl()
+                                                );
+    QualType RDTy = m_Context->getPointerType(m_Context->getTypeDeclType(RD));
+    // 1.2 Find getValuePrinterStream()
+    CXXMethodDecl* getValPrinterDecl = m_Interpreter->
+      LookupDecl("getValuePrinterStream", RD).getAs<CXXMethodDecl>();
+    assert(getValPrinterDecl && "Decl not found!");
+    
+    // 1.3 Build a DeclRefExpr, which holds the object
+    DeclRefExpr* MemberExprBase = m_Sema->BuildDeclRefExpr(VD, RDTy, 
+                                                           VK_LValue, NoSLoc
+                                                           ).takeAs<DeclRefExpr>();
+    // 1.4 Create a MemberExpr to getMemory from its declaration.
+    CXXScopeSpec SS;
+    LookupResult MemberLookup(*m_Sema, getValPrinterDecl->getDeclName(), 
+                              NoSLoc, Sema::LookupMemberName);
+    // Add the declaration as if doesn't exist. Skips the Lookup, because
+    // we have the declaration already so just add it in
+    MemberLookup.addDecl(getValPrinterDecl, AS_public);
+    MemberLookup.resolveKind();
+    Expr* MemberExpr = m_Sema->BuildMemberReferenceExpr(MemberExprBase,
+                                                        RDTy,
+                                                        NoSLoc,
+                                                        /*IsArrow=*/true,
+                                                        SS,
+                                                        /*FirstQualifierInScope=*/0,
+                                                        MemberLookup,
+                                                        /*TemplateArgs=*/0
+                                                        ).take();
+    // 1.5 Build the gCling->getValuePrinterStream()
+    Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
+    Expr* TheInnerCall = m_Sema->ActOnCallExpr(S, MemberExpr, NoSLoc,
+                                               MultiExprArg(), NoSLoc).take();
+    
+    // 2. Build the final Find cling::valuePrinterInternal::PrintValue call
+    // 2.1. Find cling::valuePrinterInternal::PrintValue
+    TemplateDecl* TD = dyn_cast<TemplateDecl>(m_Interpreter->
+                                              LookupDecl("cling").
+                                              LookupDecl("valuePrinterInternal").
+                                              LookupDecl("PrintValue").
+                                              getSingleDecl());
+    // 2.2. Instantiate the TemplateDecl
+    FunctionDecl* TDecl = dyn_cast<FunctionDecl>(TD->getTemplatedDecl());
+    
+    assert(TDecl && "The PrintValue function not found!");
+    
+    // Set up new context for the new FunctionDecl
+    DeclContext* PrevContext = m_Sema->CurContext;      
+    m_Sema->CurContext = TDecl->getDeclContext();
+    
+    // Create template arguments
+    Sema::InstantiatingTemplate Inst(*m_Sema, NoSLoc, TDecl);
+    // Only the last argument is templated
+    TemplateArgument Arg(E->getType().getCanonicalType());
+    TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
+    
+    // Substitute the declaration of the templated function, with the 
+    // specified template argument
+    Decl* D = m_Sema->SubstDecl(TDecl, 
+                                TDecl->getDeclContext(), 
+                                MultiLevelTemplateArgumentList(TemplateArgs));
+    
+    FunctionDecl* FD = dyn_cast<FunctionDecl>(D);
+    // Creates new body of the substituted declaration
+    m_Sema->InstantiateFunctionDefinition(FD->getLocation(), FD, true, true);
+    
+    m_Sema->CurContext = PrevContext;
+    
+    // 2.3. Build DeclRefExpr from the found decl
+    const FunctionProtoType* FPT = FD->getType()->getAs<FunctionProtoType>();
+    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+    QualType FnTy = m_Context->getFunctionType(FD->getResultType(),
+                                               FPT->arg_type_begin(),
+                                               FPT->getNumArgs(),
+                                               EPI);
+    DeclRefExpr* DRE = m_Sema->BuildDeclRefExpr(FD,
+                                                FnTy,
+                                                VK_RValue,
+                                                NoSLoc
+                                                ).takeAs<DeclRefExpr>();
+    
+    // 2.4. Prepare the params
+    
+    // 2.4.1 Build the ValuePrinterInfo(Expr*, ASTContext*)
+    // 2.4.1.1 Lookup the expr type
+    CXXRecordDecl* ExprRD
+      = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("clang").
+                          LookupDecl("Expr").getSingleDecl());
+    assert(ExprRD && "Declaration of the expr not found!");
+    QualType ExprRDTy = m_Context->getTypeDeclType(ExprRD);
+    // 2.4.1.2 Lookup ASTContext type
+    CXXRecordDecl* ASTContextRD
+      = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("clang").
+                                LookupDecl("ASTContext").getSingleDecl());
+    assert(ASTContextRD && "Declaration of the expr not found!");
+    QualType ASTContextRDTy = m_Context->getTypeDeclType(ASTContextRD);
 
-      // Set up new context for the new FunctionDecl
-      DeclContext* PrevContext = m_Sema->CurContext;      
-      m_Sema->CurContext = TDecl->getDeclContext();
-      
-      // Create template arguments
-      Sema::InstantiatingTemplate Inst(*m_Sema, NoSLoc, TDecl);
-      // Only the last argument is templated
-      TemplateArgument Arg(E->getType().getCanonicalType());
-      TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
-      
-      // Substitute the declaration of the templated function, with the 
-      // specified template argument
-      Decl* D = m_Sema->SubstDecl(TDecl, 
-                                  TDecl->getDeclContext(), 
-                                  MultiLevelTemplateArgumentList(TemplateArgs));
-      
-      FunctionDecl* FD = dyn_cast<FunctionDecl>(D);
-      // Creates new body of the substituted declaration
-      m_Sema->InstantiateFunctionDefinition(FD->getLocation(), FD, true, true);
+    Expr* ExprTy = Synthesize::CStyleCastPtrExpr(m_Sema, ExprRDTy, (uint64_t)E);
+    Expr* ASTContextTy = Synthesize::CStyleCastPtrExpr(m_Sema,
+                                                       ASTContextRDTy,
+                                                       (uint64_t)m_Context);
 
-      m_Sema->CurContext = PrevContext;
+    // 2.4.1.3 Lookup ValuePrinterInfo
+    CXXRecordDecl* VPIRD 
+      = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("cling").
+                                LookupDecl("ValuePrinterInfo").getSingleDecl());
+    assert(VPIRD && "llvm::StringRef not found. Are you missing StringRef.h?");
 
-      // 3.3. Build DeclRefExpr from the found decl
-      const FunctionProtoType* FPT = FD->getType()->getAs<FunctionProtoType>();
-      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-      QualType FnTy = m_Context->getFunctionType(FD->getResultType(),
-                                                 FPT->arg_type_begin(),
-                                                 FPT->getNumArgs(),
-                                                 EPI);
-      DeclRefExpr* DRE = m_Sema->BuildDeclRefExpr(FD,
-                                                  FnTy,
-                                                  VK_RValue,
-                                                  NoSLoc
-                                                  ).takeAs<DeclRefExpr>();
-      
-      // 3.4. Prepare the params
+    QualType VPIRDTy = m_Context->getTypeDeclType(VPIRD);
+    TypeSourceInfo* VPITSI = m_Context->CreateTypeSourceInfo(VPIRDTy);
+    ParsedType VPIPT = m_Sema->CreateParsedType(VPIRDTy, VPITSI);
+    
+    // Prepare VPI's arguments
+    ASTOwningVector<Expr*> VPIArgs(*m_Sema);
+    VPIArgs.push_back(ExprTy);
+    VPIArgs.push_back(ASTContextTy);
+    
+    // create the temporary in the expr
+    Expr* VPI = m_Sema->ActOnCXXTypeConstructExpr(VPIPT,
+                                                  SourceLocation(),
+                                                  move_arg(VPIArgs),
+                                                  SourceLocation()
+                                                  ).take();
 
-      // 3.4.1. Create IntegerLiteral, holding the flags
-      const llvm::APInt Val(m_Context->getTypeSize(m_Context->IntTy), Flags);
-      
-      Expr* FlagsIL = IntegerLiteral::Create(*m_Context, Val, m_Context->IntTy,
-                                             NoSLoc);
-      
-      ASTOwningVector<Expr*> CallArgs(*m_Sema);
-      CallArgs.push_back(TheInnerCall);
-      CallArgs.push_back(FlagsIL);
-      CallArgs.push_back(E);
-
-      S = m_Sema->getScopeForContext(m_Sema->CurContext);
-      Expr* Result = m_Sema->ActOnCallExpr(S, DRE, NoSLoc, 
-                                           move_arg(CallArgs), NoSLoc).take();
-      assert(Result && "Cannot create value printer!");
-      return Result;
-    }
-
+    // const llvm::APInt Val(m_Context->getTypeSize(m_Context->IntTy), Flags);
+    
+    // Expr* FlagsIL = IntegerLiteral::Create(*m_Context, Val, m_Context->IntTy,
+    //                                        NoSLoc);
+    
+    ASTOwningVector<Expr*> CallArgs(*m_Sema);
+    CallArgs.push_back(TheInnerCall);
+    CallArgs.push_back(VPI);
+    CallArgs.push_back(E);
+    
+    S = m_Sema->getScopeForContext(m_Sema->CurContext);
+    Expr* Result = m_Sema->ActOnCallExpr(S, DRE, NoSLoc, 
+                                         move_arg(CallArgs), NoSLoc).take();
+    assert(Result && "Cannot create value printer!");
+    return Result;    
   }
+
   void ValuePrinterSynthesizer::LoadValuePrinter() {
     if (!IsValuePrinterLoaded) {
       m_Interpreter->processLine("#include \"cling/Interpreter/Interpreter.h\"");
