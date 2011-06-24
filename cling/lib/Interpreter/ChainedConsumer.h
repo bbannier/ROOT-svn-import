@@ -24,7 +24,6 @@ namespace cling {
   class ChainedConsumer: public clang::SemaConsumer {
 
   public:
-    // Copy of IncrementalParser::EConsumerIndex!
     enum EConsumerIndex {
       kDeclExtractor,
       kValuePrinterSynthesizer,
