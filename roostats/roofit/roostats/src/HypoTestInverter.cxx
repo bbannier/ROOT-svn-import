@@ -146,6 +146,7 @@ HypoTestInverter::HypoTestInverter( ) :
    fUseCLs(false),
    fSize(0),
    fVerbose(0),
+   fCalcType(kUndefined), 
    fNBins(0), fXmin(1), fXmax(1)
 {
   // default constructor (doesn't do anything) 
