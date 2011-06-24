@@ -11,6 +11,8 @@
 #include <string>
 #include "llvm/Support/raw_ostream.h"
 
+#include "cling/Interpreter/ValuePrinterInfo.h"
+
 namespace llvm {
   class raw_ostream;
 }
@@ -23,7 +25,7 @@ namespace cling {
   //                int flags, const char* tname);
   template <typename TY>
   void printValue(llvm::raw_ostream& o, const void* const p,
-                  TY* const u, int flags, const char* tname);
+                  TY* const u, ValuePrinterInfo VPI);
 
 
   namespace valuePrinterInternal {
@@ -75,11 +77,6 @@ namespace cling {
       }
     };
 
-    enum DumperFlags {
-      kPrintFlagIsPtr = 1,
-      kPrintFlagIsConst = 2,
-      kPrintFlagIsPolymorphic
-    };
 
     template <typename T>
     struct ToNonConstPtr {
@@ -94,12 +91,12 @@ namespace cling {
     };
 
   template <typename T>
-  void PrintValue(llvm::raw_ostream& o, int Flags, const T& value)
+  void PrintValue(llvm::raw_ostream& o, ValuePrinterInfo PVI, const T& value)
   {
     std::string TypeName;
     valuePrinterInternal::TypeName<T>::get(TypeName);
     typename ToNonConstPtr<T>::Type V = ToNonConstPtr<T>::get(value);
-    printValue(o, V, V, Flags, TypeName.c_str());
+    printValue(o, V, V, PVI);
     o.flush();
   }
     
@@ -184,27 +181,27 @@ namespace cling {
   //                ACTUAL* ap, int flags, const char* tname);
   template <typename TY>
   void printValue(llvm::raw_ostream& o, const void* const t,
-                  TY* const u, int flags, const char* tname) {
+                  TY* const u, ValuePrinterInfo PVI) {
     typedef typename valuePrinterInternal::NonConst<TY>::Type NonConstType;
 
     if (valuePrinterInternal::debugLevel > 0)
       o << valuePrinterInternal::DebugPrefix() << __PRETTY_FUNCTION__
-        << ": t=" << t << " u=" << (void*) u << " flags=" << flags << " tname=" << tname << '\n';
+        << ": t=" << t << " u=" << (void*) u << " flags=" << PVI.m_Flags << " tname=" << PVI.m_TypeName.c_str() << '\n';
 
     if (valuePrinterInternal::debugLevel > 1)
       o << valuePrinterInternal::DebugPrefix()
         << "StreamObject<NonConstType*, " << valuePrinterInternal::CanStream<NonConstType*>::get
         << ">, StreamObject<NonConstType, " << valuePrinterInternal::CanStream<NonConstType>::get << ">\n";
 
-    o << "(" << tname;
-    if (flags & valuePrinterInternal::kPrintFlagIsConst) {
+    o << "(" << PVI.m_TypeName.c_str();
+    if (PVI.m_Flags & ValuePrinterInfo::VPI_Const) {
       o << " const";
     }
     o << ") ";
-    if (flags & valuePrinterInternal::kPrintFlagIsPtr) {
-      StreamObject<NonConstType*, valuePrinterInternal::CanStream<NonConstType*>::get>(o, (NonConstType*)u, flags);
+    if (PVI.m_Flags & ValuePrinterInfo::VPI_Ptr) {
+      StreamObject<NonConstType*, valuePrinterInternal::CanStream<NonConstType*>::get>(o, (NonConstType*)u, PVI.m_Flags);
     } else {
-      StreamObject<NonConstType, valuePrinterInternal::CanStream<NonConstType>::get>(o, *(NonConstType*)u, flags);
+      StreamObject<NonConstType, valuePrinterInternal::CanStream<NonConstType>::get>(o, *(NonConstType*)u, PVI.m_Flags);
     }
 
   }
