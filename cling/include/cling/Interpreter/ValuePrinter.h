@@ -64,21 +64,6 @@ namespace cling {
     template<typename T, int N> struct CanStream<T[N]> { enum {get = CanStream<T>::get}; };
 
     template <typename T>
-    struct TypeName {
-      static const char* get(std::string& n) {
-        // Get the type name. This function is always compiled with clang,
-        // thus the layout of its name is fixed.
-        n = __PRETTY_FUNCTION__;
-        n.erase(0,57);
-        n.erase(n.length() - 21, std::string::npos);
-        size_t l = n.length();
-        if (n[l - 1] == ' ') n.erase(l - 1);
-        return n.c_str();
-      }
-    };
-
-
-    template <typename T>
     struct ToNonConstPtr {
       typedef typename NonConst<T>::Type* Type;
       static Type get(const T& t) {return (Type)&t;}
@@ -93,8 +78,6 @@ namespace cling {
   template <typename T>
   void PrintValue(llvm::raw_ostream& o, ValuePrinterInfo PVI, const T& value)
   {
-    std::string TypeName;
-    valuePrinterInternal::TypeName<T>::get(TypeName);
     typename ToNonConstPtr<T>::Type V = ToNonConstPtr<T>::get(value);
     printValue(o, V, V, PVI);
     o.flush();
@@ -193,10 +176,8 @@ namespace cling {
         << "StreamObject<NonConstType*, " << valuePrinterInternal::CanStream<NonConstType*>::get
         << ">, StreamObject<NonConstType, " << valuePrinterInternal::CanStream<NonConstType>::get << ">\n";
 
-    o << "(" << PVI.m_TypeName.c_str();
-    if (PVI.m_Flags & ValuePrinterInfo::VPI_Const) {
-      o << " const";
-    }
+    o << "(";
+    o << PVI.m_TypeName;
     o << ") ";
     if (PVI.m_Flags & ValuePrinterInfo::VPI_Ptr) {
       StreamObject<NonConstType*, valuePrinterInternal::CanStream<NonConstType*>::get>(o, (NonConstType*)u, PVI.m_Flags);
