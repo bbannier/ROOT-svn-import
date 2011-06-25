@@ -73,7 +73,6 @@ namespace cling {
     clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
     
     void addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer);
-    void removeConsumer(ChainedConsumer::EConsumerIndex I);
     clang::CodeGenerator* GetCodeGenerator();
 
     bool usingStartupPCH() const { return m_UsingStartupPCH; }

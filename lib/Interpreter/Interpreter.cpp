@@ -594,9 +594,6 @@ namespace cling {
     CurContext = m_IncrParser->getCI()->getSema().CurContext;
     m_IncrParser->getCI()->getSema().CurContext = DC;
 
-    // Temporary stop the code gen
-    m_IncrParser->removeConsumer(ChainedConsumer::kCodeGenerator);
-
     CompilerInstance* CI = m_IncrParser->Compile(Wrapper);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
