@@ -217,7 +217,6 @@ namespace cling {
   void IncrementalParser::writeStartupPCH() {
     if (!m_StartupPCHGenerator) return;
     m_StartupPCHGenerator->HandleTranslationUnit(m_CI->getASTContext());
-    removeConsumer(ChainedConsumer::kPCHGenerator);
     m_StartupPCHGenerator.reset(); // deletes StartupPCHGenerator
   }
 
@@ -391,17 +390,6 @@ namespace cling {
         SC->InitializeSema(getCI()->getSema());
       }
     }
-  }
-  
-  void IncrementalParser::removeConsumer(ChainedConsumer::EConsumerIndex I) {
-    if (!m_Consumer->Exists(I))
-      return;
-
-    clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(m_Consumer->getConsumer(I));
-    if (SC) {
-      SC->ForgetSema();
-    }
-    m_Consumer->getConsumers()[I] = 0;
   }
 
   CodeGenerator* IncrementalParser::GetCodeGenerator() { 
