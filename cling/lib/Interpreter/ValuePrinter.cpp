@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------*- C++ -*-
 // CLING - the C++ LLVM-based InterpreterG :)
-// version: $Id: ValuePrinter.h 39950 2011-06-24 15:42:26Z vvassilev $
+// version: $Id$
 // author:  Vassil Vassilev <vasil.georgiev.vasilev@cern.ch>
 //------------------------------------------------------------------------------
 
