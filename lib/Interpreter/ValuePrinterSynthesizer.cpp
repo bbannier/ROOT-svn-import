@@ -249,6 +249,8 @@ namespace cling {
     S = m_Sema->getScopeForContext(m_Sema->CurContext);
     Expr* Result = m_Sema->ActOnCallExpr(S, DRE, NoSLoc, 
                                          move_arg(CallArgs), NoSLoc).take();
+    // make sure if there are temporaries to be cleared
+    Result = m_Sema->MaybeCreateExprWithCleanups(Result);
     assert(Result && "Cannot create value printer!");
     return Result;    
   }
