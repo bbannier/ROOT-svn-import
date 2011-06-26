@@ -256,7 +256,7 @@ class ToyMCSampler: public TestStatSampler {
 
       // for importance sampling, specifies the pdf to sample from
       void SetImportanceDensity(RooAbsPdf *p) {
-         oocoutW((TObject*)NULL,InputArguments) << "ToyMCSampler Importance Sampling: This is in beta." << endl;
+         if(p) oocoutW((TObject*)NULL,InputArguments) << "ToyMCSampler Importance Sampling: This is in beta." << endl;
          fImportanceDensity = p;
       }
       // for importance sampling, a snapshot of the parameters used in importance density
