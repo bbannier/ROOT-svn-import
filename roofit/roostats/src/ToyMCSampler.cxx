@@ -152,12 +152,13 @@ class NuisanceParametersSampler {
 
 
 
-Bool_t ToyMCSampler::fUseMultiGen = kFALSE ;
+Bool_t ToyMCSampler::fgAlwaysUseMultiGen = kFALSE ;
 
 
 
 ToyMCSampler::~ToyMCSampler() {
    if(fNuisanceParametersSampler) delete fNuisanceParametersSampler;
+   if (fNullPOI) delete fNullPOI;
 }
 
 
@@ -557,7 +558,7 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
             else          data = pdf.generateBinned(observables, RooFit::Extended());
          }else{
 	   if(protoData) {
-	     if (fUseMultiGen) {
+	     if (fUseMultiGen || fgAlwaysUseMultiGen) {
 	       if (!_gs2) { _gs2 = pdf.prepareMultiGen(observables, RooFit::Extended(), RooFit::ProtoData(*protoData, true, true)) ; }
 	       data = pdf.generate(*_gs2) ;
 	     } else {
@@ -565,7 +566,7 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
 	     }
 	   }
             else  {
-	      if (fUseMultiGen) {
+	      if (fUseMultiGen || fgAlwaysUseMultiGen) {
 		if (!_gs1) { _gs1 = pdf.prepareMultiGen(observables,RooFit::Extended()) ; }
 		data = pdf.generate(*_gs1) ;
 	      } else {
@@ -585,14 +586,14 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
          else          data = pdf.generateBinned(observables, events);
       }else{
 	if(protoData) {
-	  if (fUseMultiGen) {
+	  if (fUseMultiGen || fgAlwaysUseMultiGen) {
 	    if (!_gs3) { _gs3 = pdf.prepareMultiGen(observables, RooFit::NumEvents(events), RooFit::ProtoData(*protoData, true, true)); }
 	    data = pdf.generate(*_gs3) ;
 	  } else {
 	    data = pdf.generate      (observables, events, RooFit::ProtoData(*protoData, true, true));
 	  }
 	} else {
-	  if (fUseMultiGen) {	    
+	  if (fUseMultiGen || fgAlwaysUseMultiGen) {	    
 	    if (!_gs4) { _gs4 = pdf.prepareMultiGen(observables, RooFit::NumEvents(events)); }
 	    data = pdf.generate(*_gs4) ;
 	  } else {
