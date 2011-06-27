@@ -971,8 +971,8 @@ TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
 
       Float_t presel_scale = eventCounts[cls].cutScaling();
 
-      Int_t requestedTraining = eventCounts[cls].nTrainingEventsRequested * presel_scale;
-      Int_t requestedTesting  = eventCounts[cls].nTestingEventsRequested  * presel_scale;
+      Int_t requestedTraining = Int_t(eventCounts[cls].nTrainingEventsRequested * presel_scale);
+      Int_t requestedTesting  = Int_t(eventCounts[cls].nTestingEventsRequested  * presel_scale);
 
       Log() << kDEBUG << "events in training trees    : " << availableTraining  << Endl;
       Log() << kDEBUG << "events in testing trees     : " << availableTesting   << Endl;

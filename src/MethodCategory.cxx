@@ -392,8 +392,6 @@ void TMVA::MethodCategory::Train()
          itrMethod = fMethods.erase( itrMethod );
          continue;
       }
-      mva->Data();
-
       if (mva->Data()->GetNTrainingEvents() >= MinNoTrainingEvents) {
 
          Log() << kINFO << "Train method: " << mva->GetMethodName() << " for "
