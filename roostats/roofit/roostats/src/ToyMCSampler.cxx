@@ -301,6 +301,7 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistributionSingleWorker(RooArgSe
 
    // clean up
    *allVars = *saveAll;
+   delete paramPoint;
    delete saveAll;
    delete allVars;
 
