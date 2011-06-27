@@ -61,6 +61,7 @@ namespace RooStats {
         fCachedBestFitParams = 0;
         fLastData = 0;
 	fOneSided = false;
+        fReuseNll = false;
      }
      ProfileLikelihoodTestStat(RooAbsPdf& pdf) {
        fPdf = &pdf;
@@ -69,6 +70,7 @@ namespace RooStats {
        fCachedBestFitParams = 0;
        fLastData = 0;
        fOneSided = false;
+       fReuseNll = false;
      }
      virtual ~ProfileLikelihoodTestStat() {
        //       delete fRand;
@@ -79,7 +81,8 @@ namespace RooStats {
      }
      void SetOneSided(Bool_t flag=true) {fOneSided = flag;}
 
-     static void setReuseNLL(Bool_t flag) { fReuseNll = flag ; }
+     static void SetAlwaysReuseNLL(Bool_t flag) { fgAlwaysReuseNll = flag ; }
+     void SetReuseNLL(Bool_t flag) { fReuseNll = flag ; }
     
      // Main interface to evaluate the test statistic on a dataset
      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& paramsOfInterest) {
@@ -96,7 +99,7 @@ namespace RooStats {
        RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
        // simple
-       Bool_t reuse=fReuseNll ;
+       Bool_t reuse=(fReuseNll || fgAlwaysReuseNll) ;
        
        Bool_t created(kFALSE) ;
        if (!reuse || fNll==0) {
@@ -331,7 +334,8 @@ namespace RooStats {
       //      Double_t fLastMLE;
       Bool_t fOneSided;
 
-      static Bool_t fReuseNll ;
+      static Bool_t fgAlwaysReuseNll ;
+      Bool_t fReuseNll ;
 
    protected:
       ClassDef(ProfileLikelihoodTestStat,3)   // implements the profile likelihood ratio as a test statistic to be used with several tools
