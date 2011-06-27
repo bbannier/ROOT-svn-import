@@ -302,9 +302,9 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistributionSingleWorker(RooArgSe
 
    // clean up
    *allVars = *saveAll;
-   delete paramPoint;
    delete saveAll;
    delete allVars;
+   delete paramPoint;
 
    // return
    if (testStatWeights.size()) {
