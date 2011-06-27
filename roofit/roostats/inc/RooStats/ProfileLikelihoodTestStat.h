@@ -338,7 +338,7 @@ namespace RooStats {
       Bool_t fReuseNll ;
 
    protected:
-      ClassDef(ProfileLikelihoodTestStat,3)   // implements the profile likelihood ratio as a test statistic to be used with several tools
+      ClassDef(ProfileLikelihoodTestStat,4)   // implements the profile likelihood ratio as a test statistic to be used with several tools
    };
 }
 

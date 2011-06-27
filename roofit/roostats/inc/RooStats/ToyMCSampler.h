@@ -88,13 +88,13 @@ class ToyMCSampler: public TestStatSampler {
          fProofConfig = NULL;
          fNuisanceParametersSampler = NULL;
 
-         fUseMultiGen = kFALSE;
-
 	_allVars = NULL ;
 	_gs1 = NULL ;
 	_gs2 = NULL ;
 	_gs3 = NULL ;
 	_gs4 = NULL ;
+
+	fUseMultiGen = kFALSE ;
       }
       ToyMCSampler(TestStatistic &ts, Int_t ntoys) :
          fTestStat(&ts), fSamplingDistName(ts.GetVarName()), fNToys(ntoys)
@@ -123,13 +123,13 @@ class ToyMCSampler: public TestStatSampler {
          fProofConfig = NULL;
          fNuisanceParametersSampler = NULL;
 
-         fUseMultiGen = kFALSE;
-
 	_allVars = NULL ;
 	_gs1 = NULL ;
 	_gs2 = NULL ;
 	_gs3 = NULL ;
 	_gs4 = NULL ;
+
+	fUseMultiGen = kFALSE ;
       }
 
 
@@ -329,7 +329,7 @@ class ToyMCSampler: public TestStatSampler {
       Bool_t fUseMultiGen ; // Use PrepareMultiGen?
 
    protected:
-   ClassDef(ToyMCSampler,1) // A simple implementation of the TestStatSampler interface
+   ClassDef(ToyMCSampler,2) // A simple implementation of the TestStatSampler interface
 };
 }
 
