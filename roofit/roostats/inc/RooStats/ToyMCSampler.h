@@ -88,6 +88,8 @@ class ToyMCSampler: public TestStatSampler {
          fProofConfig = NULL;
          fNuisanceParametersSampler = NULL;
 
+         fUseMultiGen = kFALSE;
+
 	_allVars = NULL ;
 	_gs1 = NULL ;
 	_gs2 = NULL ;
@@ -120,6 +122,8 @@ class ToyMCSampler: public TestStatSampler {
 
          fProofConfig = NULL;
          fNuisanceParametersSampler = NULL;
+
+         fUseMultiGen = kFALSE;
 
 	_allVars = NULL ;
 	_gs1 = NULL ;
