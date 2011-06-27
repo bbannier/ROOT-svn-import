@@ -47,9 +47,14 @@ namespace cling {
     virtual clang::ASTDeserializationListener* GetASTDeserializationListener();
     virtual void PrintStats();
     
-   // SemaConsumer
+    // SemaConsumer
     virtual void InitializeSema(clang::Sema& S);
     virtual void ForgetSema();
+
+    // Transaction Support
+    void StartTransaction() { m_InTransaction = true; }
+    void FinishTransaction();
+    bool IsInTransaction() { return m_InTransaction; }
     
     void Add(EConsumerIndex I, clang::ASTConsumer* C);
     clang::ASTConsumer** getConsumers() { 
@@ -93,6 +98,8 @@ namespace cling {
     std::bitset<kConsumersCount> Enabled;
     llvm::OwningPtr<ChainedMutationListener> MutationListener;
     llvm::OwningPtr<ChainedDeserializationListener> DeserializationListener;
+    bool m_InTransaction;
+    clang::ASTContext* m_Context;
   };
 } // namespace cling
 

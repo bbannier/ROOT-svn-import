@@ -287,7 +287,8 @@ namespace cling {
     DC->resetCounts();
     m_CI->getDiagnostics().Reset();
     
-    clang::ASTConsumer* Consumer = &m_CI->getASTConsumer();
+    m_Consumer->StartTransaction();
+
     clang::Parser::DeclGroupPtrTy ADecl;
     
     bool atEOF = false;
@@ -312,7 +313,7 @@ namespace cling {
           if (isDynamicLookupEnabled())
             getTransformer()->Visit(m_LastTopLevelDecl);
         } 
-        Consumer->HandleTopLevelDecl(DGR);
+        m_Consumer->HandleTopLevelDecl(DGR);
       } // ADecl
       if (m_Parser->getCurToken().is(clang::tok::eof)) {
         atEOF = true;
@@ -328,11 +329,10 @@ namespace cling {
     for (llvm::SmallVector<clang::Decl*,2>::iterator
            I = getCI()->getSema().WeakTopLevelDecls().begin(),
            E = getCI()->getSema().WeakTopLevelDecls().end(); I != E; ++I) {
-      Consumer->HandleTopLevelDecl(clang::DeclGroupRef(*I));
+      m_Consumer->HandleTopLevelDecl(clang::DeclGroupRef(*I));
     }
-    
-    clang::ASTContext *Ctx = &m_CI->getASTContext();
-    Consumer->HandleTranslationUnit(*Ctx);
+
+    m_Consumer->FinishTransaction();
     
     DC->EndSourceFile();
     unsigned err_count = DC->getNumErrors();
