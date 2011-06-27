@@ -178,7 +178,7 @@ namespace cling {
 
   ChainedConsumer::ChainedConsumer()
     :  Consumers(), Enabled(), MutationListener(0),
-       DeserializationListener(0) {
+       DeserializationListener(0), m_InTransaction(false), m_Context(0) {
 
     // Collect the mutation listeners and deserialization listeners of all
     // children, and create a multiplex listener each if so.
@@ -209,6 +209,7 @@ namespace cling {
   ChainedConsumer::~ChainedConsumer() { }
   
   void ChainedConsumer::Initialize(ASTContext& Context) {
+    m_Context = &Context;
     for (size_t i = 0; i < kConsumersCount; ++i)
       if (Exists((EConsumerIndex)i))
         Consumers[i]->Initialize(Context);
@@ -276,6 +277,11 @@ namespace cling {
       if (Exists((EConsumerIndex)i))
         if (SemaConsumer* SC = dyn_cast<SemaConsumer>(Consumers[i]))
           SC->ForgetSema();
+  }
+
+  void ChainedConsumer::FinishTransaction() {
+    HandleTranslationUnit(*m_Context);
+    m_InTransaction = false;
   }
   
   void ChainedConsumer::Add(EConsumerIndex I, clang::ASTConsumer* C) {
