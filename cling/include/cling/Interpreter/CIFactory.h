@@ -44,6 +44,8 @@ namespace cling {
     CIFactory() {}
     ~CIFactory() {}
     static void SetClingCustomLangOpts(clang::LangOptions& Opts);
+    static void SetClingTargetLangOpts(clang::LangOptions& Opts,
+                                       const clang::TargetInfo& Target);
   };
 } // namespace cling
 #endif // CLING_CIFACTORY_H
