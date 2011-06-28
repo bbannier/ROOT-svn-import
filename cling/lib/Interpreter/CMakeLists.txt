@@ -20,6 +20,7 @@ set( LLVM_LINK_COMPONENTS
 
 add_cling_library(clingInterpreter
   ASTDumper.cpp
+  ASTUtils.cpp
   ChainedConsumer.cpp
   CIFactory.cpp
   ClangUtils.cpp
@@ -31,6 +32,8 @@ add_cling_library(clingInterpreter
   InputValidator.cpp
   Interpreter.cpp
   InvocationOptions.cpp
+  ValuePrinter.cpp
+  ValuePrinterInfo.cpp
   ValuePrinterSynthesizer.cpp)
 
 #add_dependencies(clangDriver ClangAttrList ClangDiagnosticDriver
