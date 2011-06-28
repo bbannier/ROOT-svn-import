@@ -129,7 +129,7 @@ namespace cling {
     clang::CodeGenerator* CG = CreateLLVMCodeGen(CI->getDiagnostics(), 
                                                  "cling input",
                                                  CI->getCodeGenOpts(), 
-                                                 * new llvm::LLVMContext()
+                            /*Owned by codegen*/ * new llvm::LLVMContext()
                                                  );
 
     addConsumer(ChainedConsumer::kCodeGenerator, CG);
@@ -151,7 +151,7 @@ namespace cling {
     }
   }
   
-  IncrementalParser::~IncrementalParser() {}
+  IncrementalParser::~IncrementalParser() { }
   
   void IncrementalParser::Initialize(const char* startupPCH) {
 

@@ -411,7 +411,8 @@ namespace cling {
     if (FD) {
       if (!FD->isExternC()) {
         llvm::raw_string_ostream RawStr(mangledNameIfNeeded);
-        MangleContext* Mangle = getCI()->getASTContext().createMangleContext();
+        llvm::OwningPtr<MangleContext> 
+          Mangle(getCI()->getASTContext().createMangleContext());
         Mangle->mangleName(FD, RawStr);
         RawStr.flush();
         fname = mangledNameIfNeeded;

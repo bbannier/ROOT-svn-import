@@ -28,15 +28,13 @@ namespace cling {
     static clang::CompilerInstance* createCI(llvm::StringRef code,
                                              int argc,
                                              const char* const *argv,
-                                             const char* llvmdir,
-                                             llvm::LLVMContext* llvm_context = 0);
+                                             const char* llvmdir);
 
     static clang::CompilerInstance* createCI(llvm::MemoryBuffer* buffer, 
                                              clang::PragmaNamespace* Pragma, 
                                              int argc,
                                              const char* const *argv,
-                                             const char* llvmdir,
-                                             llvm::LLVMContext* llvm_context = 0);
+                                             const char* llvmdir);
   private:
     //---------------------------------------------------------------------
     //! Constructor

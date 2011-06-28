@@ -206,7 +206,11 @@ namespace cling {
 
   }
 
-  ChainedConsumer::~ChainedConsumer() { }
+  ChainedConsumer::~ChainedConsumer() {
+    for (size_t i = 0; i < kConsumersCount; ++i)
+      if (Exists((EConsumerIndex)i))
+        delete Consumers[i];
+  }
   
   void ChainedConsumer::Initialize(ASTContext& Context) {
     m_Context = &Context;
