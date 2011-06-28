@@ -33,9 +33,8 @@ namespace cling {
   CompilerInstance* CIFactory::createCI(llvm::StringRef code,
                                         int argc,
                                         const char* const *argv,
-                                        const char* llvmdir,
-                                        llvm::LLVMContext* llvm_context /* = 0 */) {
-    return createCI(llvm::MemoryBuffer::getMemBuffer(code), 0, argc, argv, llvmdir, llvm_context);
+                                        const char* llvmdir) {
+    return createCI(llvm::MemoryBuffer::getMemBuffer(code), 0, argc, argv, llvmdir);
   }
 
   
@@ -43,13 +42,9 @@ namespace cling {
                                         PragmaNamespace* Pragma, 
                                         int argc, 
                                         const char* const *argv,
-                                        const char* llvmdir,
-                                        llvm::LLVMContext* llvm_context /* = 0 */){
+                                        const char* llvmdir){
     // main's argv[0] is skipped!
 
-    if (!llvm_context) {
-      llvm_context = new llvm::LLVMContext();
-    }
     if (!Pragma) {
       Pragma = new PragmaNamespace("cling");
     }
@@ -150,8 +145,7 @@ namespace cling {
     //CI->getSourceManager().clearIDTables(); //do we really need it?
     
     // Set up the ASTConsumers
-    ChainedConsumer* Consumer = new ChainedConsumer();
-    CI->setASTConsumer(Consumer);
+    CI->setASTConsumer(new ChainedConsumer());
     
     
     // Set up Sema
