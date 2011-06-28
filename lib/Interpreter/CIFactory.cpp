@@ -124,6 +124,7 @@ namespace cling {
       return 0;
     }
     CI->getTarget().setForcedLangOptions(CI->getLangOpts());
+    SetClingTargetLangOpts(CI->getLangOpts(), CI->getTarget());
     
     // Set up source and file managers
     CI->createFileManager();
@@ -163,5 +164,13 @@ namespace cling {
 
   void CIFactory::SetClingCustomLangOpts(clang::LangOptions& Opts) {
     Opts.EmitAllDecls = 1;
+  }
+
+  void CIFactory::SetClingTargetLangOpts(clang::LangOptions& Opts,
+                                         const clang::TargetInfo& Target) {
+    if (Target.getTriple().getOS() == llvm::Triple::Win32) {
+      Opts.Microsoft = 1;
+      Opts.MSCVersion = 1300;
+    }
   }
 } // end namespace
