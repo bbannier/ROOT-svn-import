@@ -4185,7 +4185,7 @@ void TProofServ::ProcessNext(TString *slb)
    } else {
       if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted)
          Warning("ProcessNext","the output list is empty!");
-      if (SendResults(fSocket) != 0)
+      if (SendResults(fSocket, fPlayer->GetOutputList()) != 0)
          Warning("ProcessNext", "problems sending output list");
       if (slb) slb->Form("%d -1 -1 %.3f", fPlayer->GetExitStatus(), pq->GetUsedCPU());
    }
@@ -6554,7 +6554,6 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   if (SendResults(fSocket, mergerPlayer->GetOutputList()) != 0)
                      Warning("HandleSubmerger","kBeMerger: problems sending output list");
                   mergerPlayer->GetOutputList()->SetOwner(kTRUE);
-                  delete mergerPlayer;
 
                   PDB(kSubmerger, 2) Info("HandleSubmerger","kBeMerger: results sent to master");
                   // Signal the master that we are idle
@@ -6570,7 +6569,7 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   deleteplayer = kFALSE;
                }
                // Reset
-               mergerPlayer->ResetBit(TVirtualProofPlayer::kIsSubmerger);
+               SafeDelete(mergerPlayer);
             } else {
                Error("HandleSubmerger","kSendOutput: received not on worker");
             }

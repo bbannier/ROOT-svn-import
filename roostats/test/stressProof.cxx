@@ -503,7 +503,7 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
    printf("******************************************************************\n");
 
    // Set dynamic mode
-   gDynamicStartup = (!strcmp(url,"lite")) ? kFALSE : dyn;
+   gDynamicStartup = (!strcmp(url,"lite://")) ? kFALSE : dyn;
 
    // Set verbosity
    gverbose = verbose;
@@ -530,7 +530,7 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
    if (!skipds) {
       gSkipDataSetTest = kFALSE;
    } else {
-      gSkipDataSetTest = (!extcluster || !strcmp(url, "lite")) ? kFALSE : kTRUE;
+     gSkipDataSetTest = (!extcluster || !strcmp(url, "lite://")) ? kFALSE : kTRUE;
    }
 
    // Log file path
@@ -575,7 +575,7 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
       printf("*  Using parallel unzip where relevant                          **\n");
       printf("******************************************************************\n");
    }
-   if (!strcmp(url,"lite") && gverbose > 0) {
+   if (!strcmp(url,"lite://") && gverbose > 0) {
       printf("*  PROOF-Lite session (tests #15 and #16 skipped)               **\n");
       printf("******************************************************************\n");
    }
@@ -2199,7 +2199,9 @@ Int_t PT_AdminFunc(void *)
    gSystem->RedirectOutput(glogfile, "a", &gRH);
    TMacro macroLs(testLs);
    TString testLsLine = TString::Format("%s/testMacro.C", gsandbox.Data());
-   testLsLine.Remove(0, testLsLine.Index(".proof-tutorial")); // the first part of <tmp> maybe sligthly different
+   if (testLsLine.Index(".proof-tutorial") != kNPOS)
+      // The first part of <tmp> maybe sligthly different
+      testLsLine.Remove(0, testLsLine.Index(".proof-tutorial"));
    if (!macroLs.GetLineWith(testLsLine)) {
       printf("\n >>> Test failure: Ls: output not consistent (line: '%s')\n", testLsLine.Data());
       printf(" >>> Log file: '%s'\n", testLs.Data());
