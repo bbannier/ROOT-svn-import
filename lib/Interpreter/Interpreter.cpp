@@ -82,9 +82,9 @@ namespace {
     }
     
     if (addPrefix) {
-      static const std::string prefix("lib");
-      llvm::sys::Path found = findDynamicLibrary(prefix + filename, Opts,
-                                                 false, addSuffix);
+      static const char* prefix = "lib";
+      llvm::sys::Path found = findDynamicLibrary(std::string(prefix) + filename,
+                                                 Opts, false, addSuffix);
       if (found.isDynamicLibrary())
         return found;
     }
