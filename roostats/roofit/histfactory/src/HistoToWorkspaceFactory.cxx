@@ -89,7 +89,16 @@ ClassImp(RooStats::HistFactory::HistoToWorkspaceFactory)
 namespace RooStats{
 namespace HistFactory{
 
-  HistoToWorkspaceFactory::HistoToWorkspaceFactory(){}
+  HistoToWorkspaceFactory::HistoToWorkspaceFactory() :
+    fNomLumi(0),
+    fLumiError(0),
+    fLowBin(0),
+    fHighBin(0),   
+    fOut_f(0),
+    pFile(0)
+  {
+  }
+
   HistoToWorkspaceFactory::~HistoToWorkspaceFactory(){
     fclose(pFile);
   }
@@ -256,7 +265,7 @@ namespace HistFactory{
         // remove "doRatio" and name can be changed when ws gets imported to the combined model.
         std::stringstream range;
         range<<"["<<itr->val<<","<<itr->low<<","<<itr->high<<"]";
-        RooRealVar* var = 0;
+        //RooRealVar* var = 0;
 
         string varname;
         if(!prodNames.empty()) prodNames+=",";
@@ -266,7 +275,7 @@ namespace HistFactory{
         else {
           varname=itr->name;
         }
-        var = (RooRealVar*) proto->factory((varname+range.str()).c_str());
+	proto->factory((varname+range.str()).c_str());
         prodNames+=varname;
       }
       overallNorm_times_sigmaEpsilon = es.name+"_"+channel+"_overallNorm_x_sigma_epsilon";
