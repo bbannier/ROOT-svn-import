@@ -36,6 +36,7 @@
 
 #include "TClass.h"
 #include "TObjString.h"
+#include "TVirtualStreamerInfo.h"
 // #include "TGraphStruct.h"
 
 #include "RooMsgService.h"
@@ -1230,7 +1231,7 @@ Int_t RooAbsArg::numProxies() const
 {
   // Return the number of registered proxies.
 
-  return _proxyList.GetSize() ;
+  return _proxyList.GetEntries() ;
 }
 
 
@@ -2254,3 +2255,5 @@ const char* RooAbsArg::aggregateCacheUniqueSuffix() const
   delete iter ;
   return Form("%s",suffix.c_str()) ;
 }
+
+
