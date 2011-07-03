@@ -104,47 +104,7 @@ namespace cling {
     // 1. Call gCling->getValuePrinterStream()
     // 1.1. Find gCling
     SourceLocation NoSLoc = SourceLocation();
-    VarDecl* VD = dyn_cast<VarDecl>(m_Interpreter->
-                                    LookupDecl("cling").
-                                    LookupDecl("runtime").
-                                    LookupDecl("gCling").getSingleDecl());
-    assert(VD && "gCling not found!");
-    CXXRecordDecl* RD = dyn_cast<CXXRecordDecl>(m_Interpreter->
-                                                LookupDecl("cling").
-                                                LookupDecl("Interpreter").
-                                                getSingleDecl()
-                                                );
-    QualType RDTy = m_Context->getPointerType(m_Context->getTypeDeclType(RD));
-    // 1.2 Find getValuePrinterStream()
-    CXXMethodDecl* getValPrinterDecl = m_Interpreter->
-      LookupDecl("getValuePrinterStream", RD).getAs<CXXMethodDecl>();
-    assert(getValPrinterDecl && "Decl not found!");
-    
-    // 1.3 Build a DeclRefExpr, which holds the object
-    DeclRefExpr* MemberExprBase = m_Sema->BuildDeclRefExpr(VD, RDTy, 
-                                                           VK_LValue, NoSLoc
-                                                           ).takeAs<DeclRefExpr>();
-    // 1.4 Create a MemberExpr to getMemory from its declaration.
-    CXXScopeSpec SS;
-    LookupResult MemberLookup(*m_Sema, getValPrinterDecl->getDeclName(), 
-                              NoSLoc, Sema::LookupMemberName);
-    // Add the declaration as if doesn't exist. Skips the Lookup, because
-    // we have the declaration already so just add it in
-    MemberLookup.addDecl(getValPrinterDecl, AS_public);
-    MemberLookup.resolveKind();
-    Expr* MemberExpr = m_Sema->BuildMemberReferenceExpr(MemberExprBase,
-                                                        RDTy,
-                                                        NoSLoc,
-                                                        /*IsArrow=*/true,
-                                                        SS,
-                                                        /*FirstQualifierInScope=*/0,
-                                                        MemberLookup,
-                                                        /*TemplateArgs=*/0
-                                                        ).take();
-    // 1.5 Build the gCling->getValuePrinterStream()
-    Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
-    Expr* TheInnerCall = m_Sema->ActOnCallExpr(S, MemberExpr, NoSLoc,
-                                               MultiExprArg(), NoSLoc).take();
+    Expr* TheInnerCall = Synthesize::CStyleCastPtrExpr(m_Sema, m_Context->VoidPtrTy, (uint64_t)&m_Interpreter->getValuePrinterStream());
     
     // 2. Build the final Find cling::valuePrinterInternal::PrintValue call
     // 2.1. Find cling::valuePrinterInternal::PrintValue
@@ -165,6 +125,14 @@ namespace cling {
     // Create template arguments
     Sema::InstantiatingTemplate Inst(*m_Sema, NoSLoc, TDecl);
     // Only the last argument is templated
+    Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
+
+    // The VP expects non const pointer type. Make sure it gets it
+    QualType ArgTy = E->getType().getCanonicalType();
+    ArgTy.removeLocalConst();
+    if (!ArgTy->isPointerType()) {
+      E = m_Sema->BuildUnaryOp(S, NoSLoc, UO_AddrOf, E).take();
+    }
     TemplateArgument Arg(E->getType().getCanonicalType());
     TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
     
@@ -243,7 +211,9 @@ namespace cling {
     
     ASTOwningVector<Expr*> CallArgs(*m_Sema);
     CallArgs.push_back(TheInnerCall);
-    CallArgs.push_back(VPI);
+    //CallArgs.push_back(VPI);
+    CallArgs.push_back(ExprTy);
+    CallArgs.push_back(ASTContextTy);
     CallArgs.push_back(E);
     
     S = m_Sema->getScopeForContext(m_Sema->CurContext);
@@ -257,8 +227,6 @@ namespace cling {
 
   void ValuePrinterSynthesizer::LoadValuePrinter() {
     if (!IsValuePrinterLoaded) {
-      m_Interpreter->processLine("#include \"cling/Interpreter/Interpreter.h\"");
-      m_Interpreter->processLine("#include \"cling/Interpreter/ValuePrinter.h\"");
       IsValuePrinterLoaded = true;
     }
   }

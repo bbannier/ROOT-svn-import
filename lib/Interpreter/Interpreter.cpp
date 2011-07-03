@@ -214,8 +214,9 @@ namespace cling {
     }
 
     // Set up the gCling variable - even if we use PCH ('this' is different)
+    processLine("#include \"cling/Interpreter/ValuePrinter.h\"");
     std::stringstream initializer;
-    initializer << "gCling=(cling::Interpreter*)" << (long)this <<";\n";    
+    initializer << "gCling=(cling::Interpreter*)" << (long)this <<";\n";
     processLine(initializer.str());
 
     handleFrontendOptions();
@@ -404,6 +405,9 @@ namespace cling {
   }
 
   int Interpreter::RunFunction(llvm::StringRef fname, llvm::GenericValue* res) {
+    if (getCI()->getDiagnosticClient().getNumErrors())
+      return 1;
+
     std::string mangledNameIfNeeded;
     FunctionDecl* FD = cast_or_null<FunctionDecl>(LookupDecl(fname).
                                                   getSingleDecl()

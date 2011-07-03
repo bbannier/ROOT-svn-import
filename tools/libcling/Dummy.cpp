@@ -4,6 +4,8 @@
 #include "cling/Interpreter/ValuePrinterInfo.h"
 #include "cling/UserInterface/UserInterface.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 namespace cling {
 void libcling__symbol_requester() {
    const char* const argv[] = {"libcling__symbol_requester", 0};
@@ -11,5 +13,6 @@ void libcling__symbol_requester() {
    cling::UserInterface U(I);
    cling::ValuePrinterInfo VPI(0, 0); // asserts, but we don't call.
    printValueDefault(llvm::outs(), 0, VPI);
+   flushOStream(llvm::outs());
 }
 }
