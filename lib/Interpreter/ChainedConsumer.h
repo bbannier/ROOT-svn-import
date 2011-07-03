@@ -8,9 +8,13 @@
 #define CLING_CHAINED_CONSUMER_H
 
 #include "llvm/ADT/OwningPtr.h"
+#include "llvm/ADT/DenseMap.h"
+
+#include "clang/AST/DeclGroup.h"
 #include "clang/Sema/SemaConsumer.h"
 
 #include <bitset>
+#include <queue>
 
 namespace clang {
   class ASTContext;
@@ -39,10 +43,11 @@ namespace cling {
     virtual void Initialize(clang::ASTContext& Context);
     virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
     virtual void HandleInterestingDecl(clang::DeclGroupRef D);
-    virtual void HandleTranslationUnit(clang::ASTContext& Ctx);
     virtual void HandleTagDeclDefinition(clang::TagDecl* D);
-    virtual void CompleteTentativeDefinition(clang::VarDecl* D);
     virtual void HandleVTable(clang::CXXRecordDecl* RD, bool DefinitionRequired);
+    virtual void CompleteTentativeDefinition(clang::VarDecl* D);
+    virtual void HandleTranslationUnit(clang::ASTContext& Ctx);
+
     virtual clang::ASTMutationListener* GetASTMutationListener();
     virtual clang::ASTDeserializationListener* GetASTDeserializationListener();
     virtual void PrintStats();
@@ -52,14 +57,14 @@ namespace cling {
     virtual void ForgetSema();
 
     // Transaction Support
-    void StartTransaction() { m_InTransaction = true; }
-    void FinishTransaction();
     bool IsInTransaction() { return m_InTransaction; }
     
     void Add(EConsumerIndex I, clang::ASTConsumer* C);
+    void RecoverFromError();
     clang::ASTConsumer** getConsumers() { 
       return Consumers; 
     }
+
 
     bool Exists(EConsumerIndex I) {
       return Consumers[I] != 0;
@@ -100,6 +105,20 @@ namespace cling {
     llvm::OwningPtr<ChainedDeserializationListener> DeserializationListener;
     bool m_InTransaction;
     clang::ASTContext* m_Context;
+    clang::Sema* m_Sema;
+    enum HandlerIndex {
+      kTopLevelDecl,
+      kInterestingDecl,
+      kTagDeclDefinition,
+      kVTable,      
+      kCompleteTentativeDefinition
+    };
+    struct DGRInfo {
+      clang::DeclGroupRef D;
+      HandlerIndex I;
+      DGRInfo(clang::DeclGroupRef d, HandlerIndex i) : D(d), I(i){}
+    };
+    std::queue<DGRInfo> DeclsQueue;
   };
 } // namespace cling
 
