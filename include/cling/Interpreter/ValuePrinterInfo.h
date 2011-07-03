@@ -10,8 +10,8 @@
 #include <string>
 
 namespace clang {
-  class Expr;
   class ASTContext;
+  class Expr;
 }
 
 namespace cling {
