@@ -8,7 +8,10 @@
 
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
+#include "clang/Sema/Scope.h"
+#include "clang/Sema/Sema.h"
 
 using namespace clang;
 
@@ -220,39 +223,73 @@ namespace cling {
   }
   
   void ChainedConsumer::HandleTopLevelDecl(DeclGroupRef D) {
-    for (size_t i = 0; i < kConsumersCount; ++i)
-      if (IsConsumerEnabled((EConsumerIndex)i))
-        Consumers[i]->HandleTopLevelDecl(D);
+    DeclsQueue.push(DGRInfo(D, kTopLevelDecl));
   }
   
   void ChainedConsumer::HandleInterestingDecl(DeclGroupRef D) {
-    for (size_t i = 0; i < kConsumersCount; ++i)
-      if (IsConsumerEnabled((EConsumerIndex)i))
-        Consumers[i]->HandleInterestingDecl(D);
-  }
-  
-  void ChainedConsumer::HandleTranslationUnit(ASTContext& Ctx) {
-    for (size_t i = 0; i < kConsumersCount; ++i)
-      if (IsConsumerEnabled((EConsumerIndex)i) && i != kPCHGenerator)
-        Consumers[i]->HandleTranslationUnit(Ctx);
+    DeclsQueue.push(DGRInfo(D, kInterestingDecl));
   }
   
   void ChainedConsumer::HandleTagDeclDefinition(TagDecl* D) {
-    for (size_t i = 0; i < kConsumersCount; ++i)
-      if (IsConsumerEnabled((EConsumerIndex)i))
-        Consumers[i]->HandleTagDeclDefinition(D);
+    DeclsQueue.push(DGRInfo(DeclGroupRef(D), kTagDeclDefinition));
   }
-  
-  void ChainedConsumer::CompleteTentativeDefinition(VarDecl* D) {
-    for (size_t i = 0; i < kConsumersCount; ++i)
-      if (IsConsumerEnabled((EConsumerIndex)i))
-        Consumers[i]->CompleteTentativeDefinition(D);
-  }
-  
   void ChainedConsumer::HandleVTable(CXXRecordDecl* RD, bool DefinitionRequired) {
+    assert("Not implemented yet!");
+    DeclsQueue.push(DGRInfo(DeclGroupRef(RD), kVTable));
+  }
+
+  void ChainedConsumer::CompleteTentativeDefinition(VarDecl* D) {
+    DeclsQueue.push(DGRInfo(DeclGroupRef(D), kCompleteTentativeDefinition));
+  }
+
+  void ChainedConsumer::HandleTranslationUnit(ASTContext& Ctx) {
+
+    // We don't want to chase our tail
+    if (IsInTransaction())
+      return;
+
+    m_InTransaction = true;
+
+    // Check for errors...
+    
+    if (m_Sema->getDiagnostics().getClient()->getNumErrors()) {
+      RecoverFromError();
+      m_InTransaction = false;
+      return;
+    }
+
+    // Pass through the consumers
+    // for (llvm::DenseMap<Decl*, HandlerIndex>::iterator D 
+    //        = DeclsQueue.begin(); D != DeclsQueue.end(); ++D)
+    while (!DeclsQueue.empty()) {
+      for (size_t i = 0; i < kConsumersCount; ++i)
+        if (IsConsumerEnabled((EConsumerIndex)i))
+          switch (DeclsQueue.front().I) {
+          case kTopLevelDecl:
+            Consumers[i]->HandleTopLevelDecl(DeclsQueue.front().D);
+            break;
+          case kInterestingDecl:
+            Consumers[i]->HandleInterestingDecl(DeclsQueue.front().D);
+            break;
+          case kTagDeclDefinition:
+            Consumers[i]->HandleTagDeclDefinition((TagDecl*)DeclsQueue.front().D.getSingleDecl());
+            break;
+          case kVTable:
+            assert("Not implemented yet!");
+            break;
+          case kCompleteTentativeDefinition:
+            Consumers[i]->CompleteTentativeDefinition((VarDecl*)DeclsQueue.front().D.getSingleDecl());
+            break;
+          }
+
+      DeclsQueue.pop();
+    }
+
+    m_InTransaction = false;
+
     for (size_t i = 0; i < kConsumersCount; ++i)
-      if (IsConsumerEnabled((EConsumerIndex)i))
-        Consumers[i]->HandleVTable(RD, DefinitionRequired);
+      if (IsConsumerEnabled((EConsumerIndex)i) && i != kPCHGenerator)
+        Consumers[i]->HandleTranslationUnit(Ctx);
   }
   
   ASTMutationListener* ChainedConsumer::GetASTMutationListener() {
@@ -270,6 +307,7 @@ namespace cling {
   }
   
   void ChainedConsumer::InitializeSema(Sema& S) {
+    m_Sema = &S;
     for (size_t i = 0; i < kConsumersCount; ++i)
       if (Exists((EConsumerIndex)i))
         if (SemaConsumer* SC = dyn_cast<SemaConsumer>(Consumers[i]))
@@ -283,11 +321,6 @@ namespace cling {
           SC->ForgetSema();
   }
 
-  void ChainedConsumer::FinishTransaction() {
-    HandleTranslationUnit(*m_Context);
-    m_InTransaction = false;
-  }
-  
   void ChainedConsumer::Add(EConsumerIndex I, clang::ASTConsumer* C) {
     assert(!Exists(I) && "Consumer already registered at this index!");
     Consumers[I] = C;
@@ -298,6 +331,23 @@ namespace cling {
 
     MutationListener->AddListener(I, C->GetASTMutationListener());
     DeserializationListener->AddListener(I, C->GetASTDeserializationListener());
+  }
+
+  void ChainedConsumer::RecoverFromError() {
+    while (!DeclsQueue.empty()) {
+      DeclGroupRef& DGR = DeclsQueue.front().D;
+
+      for (DeclGroupRef::iterator 
+             D = DGR.begin(), E = DGR.end(); D != E; ++D) {
+        DeclContext* DC = (*D)->getDeclContext();
+        DC->removeDecl(*D);
+        Scope* S = m_Sema->getScopeForContext(DC);
+        S->RemoveDecl(*D);
+      }
+
+      DeclsQueue.pop();
+    }
+
   }
   
 } // namespace cling
