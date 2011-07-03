@@ -23,7 +23,6 @@ namespace cling {
     clang::ASTContext* m_Context;
     clang::Sema* m_Sema;
     Interpreter* m_Interpreter;
-    bool IsValuePrinterLoaded;
 
 public:
     ValuePrinterSynthesizer(Interpreter* Interp);
@@ -35,9 +34,7 @@ public:
 
   private:
     clang::Expr* SynthesizeVP(clang::Expr* E);
-    void LoadValuePrinter();
     unsigned ClearNullStmts(clang::CompoundStmt* CS);
-
   };
 
 } // namespace cling

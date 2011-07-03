@@ -23,7 +23,7 @@ namespace cling {
 
 
   ValuePrinterSynthesizer::ValuePrinterSynthesizer(Interpreter* Interp) 
-    : m_Context(0), m_Sema(0), m_Interpreter(Interp), IsValuePrinterLoaded(false)
+    : m_Context(0), m_Sema(0), m_Interpreter(Interp)
   {
 
   }
@@ -51,7 +51,6 @@ namespace cling {
                  J = CS->body_begin(), E = CS->body_end(); J != E; ++J) {
             if (J+1 == E || !isa<NullStmt>(*(J+1))) {
               if (Expr* To = dyn_cast<Expr>(*J)) {
-                LoadValuePrinter();
                 ChainedConsumer* C = dyn_cast<ChainedConsumer>(&m_Sema->Consumer);
                 bool p, q;
                 p = C->DisableConsumer(ChainedConsumer::kDeclExtractor);
@@ -190,12 +189,6 @@ namespace cling {
                                          move_arg(CallArgs), NoSLoc).take();
     assert(Result && "Cannot create value printer!");
     return Result;    
-  }
-
-  void ValuePrinterSynthesizer::LoadValuePrinter() {
-    if (!IsValuePrinterLoaded) {
-      IsValuePrinterLoaded = true;
-    }
   }
 
   unsigned ValuePrinterSynthesizer::ClearNullStmts(CompoundStmt* CS) {
