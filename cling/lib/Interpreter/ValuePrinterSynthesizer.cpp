@@ -82,20 +82,8 @@ namespace cling {
   }
 
   // We need to artificially create:
-  // cling::valuePrinterInternal::PrintValue(gCling->getValuePrinterStream(), 0, i);
-  // So we need the following AST:
-  // (CallExpr 0x2fdc4b8 'void'
-  //   (ImplicitCastExpr 0x2fdc4a0 'void (*)(llvm::raw_ostream &, int, const int &)' <FunctionToPointerDecay>
-  //     (DeclRefExpr 0x2fdc460 'void (llvm::raw_ostream &, int, const int &)' lvalue Function 0x2fd1b50 'PrintValue' 'void (llvm::raw_ostream &, int, const int &)' (FunctionTemplate 0x23b51c0 'PrintValue')))
-  //   (CXXMemberCallExpr 0x2fdc388 'llvm::raw_ostream':'class llvm::raw_ostream' lvalue
-  //     (MemberExpr 0x2fdc350 '<bound member function type>' ->getValuePrinterStream 0x235ae10
-  //       (ImplicitCastExpr 0x2fdc3b0 'const class cling::Interpreter *' <NoOp>
-  //         (ImplicitCastExpr 0x2fdc338 'class cling::Interpreter *' <LValueToRValue>
-  //           (DeclRefExpr 0x2fdc310 'class cling::Interpreter *' lvalue Var 0x1aa89c0 'gCling' 'class cling::Interpreter *')))))
-  //   (IntegerLiteral 0x2fdc3c8 'int' 0)
-  //   (ImplicitCastExpr 0x2fdc4f8 'const int':'const int' lvalue <NoOp>
-  //     (DeclRefExpr 0x2fdc3f0 'int' lvalue Var 0x2fd1420 'i' 'int')))
-
+  // cling::valuePrinterInternal::PrintValue((void*) raw_ostream, 
+  //                                         (ASTContext)Ctx, (Expr*)E, &i);
   Expr* ValuePrinterSynthesizer::SynthesizeVP(Expr* E) {
     QualType QT = E->getType();
     if (!QT.isNull() && QT->isVoidType())
@@ -104,7 +92,10 @@ namespace cling {
     // 1. Call gCling->getValuePrinterStream()
     // 1.1. Find gCling
     SourceLocation NoSLoc = SourceLocation();
-    Expr* TheInnerCall = Synthesize::CStyleCastPtrExpr(m_Sema, m_Context->VoidPtrTy, (uint64_t)&m_Interpreter->getValuePrinterStream());
+    Expr* TheInnerCall 
+      = Synthesize::CStyleCastPtrExpr(m_Sema, m_Context->VoidPtrTy,
+                               (uint64_t)&m_Interpreter->getValuePrinterStream()
+                                      );
     
     // 2. Build the final Find cling::valuePrinterInternal::PrintValue call
     // 2.1. Find cling::valuePrinterInternal::PrintValue
@@ -182,36 +173,8 @@ namespace cling {
                                                        ASTContextRDTy,
                                                        (uint64_t)m_Context);
 
-    // 2.4.1.3 Lookup ValuePrinterInfo
-    CXXRecordDecl* VPIRD 
-      = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("cling").
-                                LookupDecl("ValuePrinterInfo").getSingleDecl());
-    assert(VPIRD && "llvm::StringRef not found. Are you missing StringRef.h?");
-
-    QualType VPIRDTy = m_Context->getTypeDeclType(VPIRD);
-    TypeSourceInfo* VPITSI = m_Context->CreateTypeSourceInfo(VPIRDTy);
-    ParsedType VPIPT = m_Sema->CreateParsedType(VPIRDTy, VPITSI);
-    
-    // Prepare VPI's arguments
-    ASTOwningVector<Expr*> VPIArgs(*m_Sema);
-    VPIArgs.push_back(ExprTy);
-    VPIArgs.push_back(ASTContextTy);
-    
-    // create the temporary in the expr
-    Expr* VPI = m_Sema->ActOnCXXTypeConstructExpr(VPIPT,
-                                                  SourceLocation(),
-                                                  move_arg(VPIArgs),
-                                                  SourceLocation()
-                                                  ).take();
-
-    // const llvm::APInt Val(m_Context->getTypeSize(m_Context->IntTy), Flags);
-    
-    // Expr* FlagsIL = IntegerLiteral::Create(*m_Context, Val, m_Context->IntTy,
-    //                                        NoSLoc);
-    
     ASTOwningVector<Expr*> CallArgs(*m_Sema);
     CallArgs.push_back(TheInnerCall);
-    //CallArgs.push_back(VPI);
     CallArgs.push_back(ExprTy);
     CallArgs.push_back(ASTContextTy);
     CallArgs.push_back(E);
