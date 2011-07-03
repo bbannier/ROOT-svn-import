@@ -64,7 +64,8 @@ namespace cling {
     if (E->isRValue()) // show the user that the var cannot be changed
       o << " const";
     o << ") ";
-    StreamValue(o, p, E->getType());
+    // We force to add addressof in front of the expression. Strip it.
+    StreamValue(o, p, E->getType()->getPointeeType());
     
   }
 
