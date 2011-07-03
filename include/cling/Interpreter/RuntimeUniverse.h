@@ -34,6 +34,15 @@ namespace cling {
     /// the dynamic scopes and the runtime bindings
     Interpreter* gCling = 0;
 
+    namespace internal {
+      /// \brief Some of clang's routines rely on valid source locations and 
+      /// source ranges. This member can be looked up and source locations and
+      /// ranges can be passed in as parameters to these routines.
+      ///
+      /// Use instead of SourceLocation() and SourceRange(). This might help,
+      /// when clang emits diagnostics on artificially inserted AST node.
+      int InterpreterGeneratedCodeDiagnosticsMaybeIncorrect;
+    } // end namespace internal
   } // end namespace runtime
 } // end namespace cling
 
