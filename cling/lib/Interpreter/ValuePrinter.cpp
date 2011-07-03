@@ -10,6 +10,8 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 namespace cling {
   void StreamChar(llvm::raw_ostream& o, char v) {
     o << '"' << v << "\"\n";
@@ -65,4 +67,9 @@ namespace cling {
     StreamValue(o, p, E->getType());
     
   }
+
+  void flushOStream(llvm::raw_ostream& o) {
+    o.flush();
+  }
+
 } // end namespace cling

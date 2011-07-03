@@ -7,10 +7,11 @@
 #ifndef CLING_VALUEPRINTER_H
 #define CLING_VALUEPRINTER_H
 
-#include "llvm/Support/raw_ostream.h"
-
 #include "cling/Interpreter/ValuePrinterInfo.h"
 
+namespace llvm {
+  class raw_ostream;
+}
 
 namespace cling {
   
@@ -25,65 +26,21 @@ namespace cling {
   void printValueDefault(llvm::raw_ostream& o, const void* const p, 
                          const ValuePrinterInfo& PVI);
 
+  void flushOStream(llvm::raw_ostream& o);
+
   namespace valuePrinterInternal {
-    template <typename T> struct NonConst { typedef T Type; };
-    template <typename T> struct NonConst<T const> { typedef T Type; };
 
     template <typename T>
-    struct ToNonConstPtr {
-      typedef typename NonConst<T>::Type* Type;
-      static Type get(const T& t) {return (Type)&t;}
-    };
-    
-    template <typename T>
-    struct ToNonConstPtr<T*> {
-      typedef typename NonConst<T*>::Type Type;
-      static Type get(const T* t) {return (Type)t;}
-    };
-
-    template <typename T>
-    void PrintValue(llvm::raw_ostream& o, ValuePrinterInfo PVI, const T& value)
-    {
-      typename ToNonConstPtr<T>::Type V = ToNonConstPtr<T>::get(value);
-      printValue(o, V, V, PVI);
-      o.flush();
+    void PrintValue(void* o, clang::Expr* E, clang::ASTContext* C, T value) {
+      ValuePrinterInfo VPI(E, C);
+      llvm::raw_ostream &ostream = *(llvm::raw_ostream*)o;
+      printValue(ostream, value, value, VPI);
+      // Only because we don't to include llvm::raw_ostream in the header
+      flushOStream(ostream);
     }
     
   } // namespace valuePrinterInternal
   
-  // Can be reimplemented to stream an object (not a pointer!) of
-  // type T.
-  template <typename T, bool CANSTREAM>
-  struct StreamObject {
-    StreamObject(llvm::raw_ostream& o, const T& v, int) {      
-      o << "@" << (void*)&v << '\n';
-    }
-  };
-  template <typename T, bool CANSTREAM>
-  struct StreamObject<T*, CANSTREAM> {
-    StreamObject(llvm::raw_ostream& o, const T* v, int) {
-      o << (const void*)v << '\n';
-    }
-  };
-  template <typename T>
-  struct StreamObject<T,true> {
-    StreamObject(llvm::raw_ostream& o, const T& v, int) {
-      o << v << '\n'; }
-  };
-  template <typename T, int N>
-  struct StreamObject<T[N], true> {
-    StreamObject(llvm::raw_ostream& o, const T* v, int) {
-      for (int i = 0; i < N; ++i)
-        StreamObject(o, v[i], 0);
-    }
-  };
-  template<int N>
-  struct StreamObject<char[N], true> {
-    StreamObject(llvm::raw_ostream& o, char* v, int) {
-
-    // Needed to surround strings with '"'
-    o << '"' << v << "\"\n"; }
-  };
   
   // Can be re-implemented to print type-specific details, e.g. as
   //   template <typename ACTUAL>
