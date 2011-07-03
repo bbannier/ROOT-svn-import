@@ -133,7 +133,8 @@ namespace cling {
                                                  );
 
     addConsumer(ChainedConsumer::kCodeGenerator, CG);
-
+    m_Consumer->Initialize(CI->getASTContext());
+    m_Consumer->InitializeSema(CI->getSema());
     // Initialize the parser.
     m_Parser.reset(new clang::Parser(CI->getPreprocessor(), CI->getSema()));
     CI->getPreprocessor().EnterMainSourceFile();
@@ -265,7 +266,6 @@ namespace cling {
     // the AST. Returns the CompilerInstance (and thus the AST).
     // Diagnostics are reset for each call of parse: they are only covering
     // src.
-
     clang::Preprocessor& PP = m_CI->getPreprocessor();
     m_CI->getDiagnosticClient().BeginSourceFile(m_CI->getLangOpts(), &PP);
     
@@ -287,8 +287,6 @@ namespace cling {
     DC->resetCounts();
     m_CI->getDiagnostics().Reset();
     
-    m_Consumer->StartTransaction();
-
     clang::Parser::DeclGroupPtrTy ADecl;
     
     bool atEOF = false;
@@ -332,15 +330,16 @@ namespace cling {
       m_Consumer->HandleTopLevelDecl(clang::DeclGroupRef(*I));
     }
 
-    m_Consumer->FinishTransaction();
-    
+    m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
     DC->EndSourceFile();
-    unsigned err_count = DC->getNumErrors();
-    if (err_count) {
-      fprintf(stderr, "IncrementalParser::parse(): Parse failed!\n");
-      emptyLastFunction();
-      return 0;
-    }
+    // unsigned err_count = DC->getNumErrors();
+    // if (err_count) {
+    //   fprintf(stderr, "IncrementalParser::parse(): Parse failed!\n");
+    //   emptyLastFunction();
+    //   return 0;
+    // }
+    
+
     return m_CI.get();
   }
 
