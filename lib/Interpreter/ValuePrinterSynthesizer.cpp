@@ -92,10 +92,6 @@ namespace cling {
     // 1. Call gCling->getValuePrinterStream()
     // 1.1. Find gCling
     SourceLocation NoSLoc = SourceLocation();
-    Expr* TheInnerCall 
-      = Synthesize::CStyleCastPtrExpr(m_Sema, m_Context->VoidPtrTy,
-                               (uint64_t)&m_Interpreter->getValuePrinterStream()
-                                      );
     
     // 2. Build the final Find cling::valuePrinterInternal::PrintValue call
     // 2.1. Find cling::valuePrinterInternal::PrintValue
@@ -154,19 +150,29 @@ namespace cling {
     
     // 2.4. Prepare the params
     
-    // 2.4.1 Build the ValuePrinterInfo(Expr*, ASTContext*)
-    // 2.4.1.1 Lookup the expr type
+    // 2.4.1 Lookup the llvm::raw_ostream
+    CXXRecordDecl* RawOStreamRD
+      = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("llvm").
+                          LookupDecl("raw_ostream").getSingleDecl());
+    assert(RawOStreamRD && "Declaration of the expr not found!");
+    QualType RawOStreamRDTy = m_Context->getTypeDeclType(RawOStreamRD);
+    // 2.4.2 Lookup the expr type
     CXXRecordDecl* ExprRD
       = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("clang").
                           LookupDecl("Expr").getSingleDecl());
     assert(ExprRD && "Declaration of the expr not found!");
     QualType ExprRDTy = m_Context->getTypeDeclType(ExprRD);
-    // 2.4.1.2 Lookup ASTContext type
+    // 2.4.3 Lookup ASTContext type
     CXXRecordDecl* ASTContextRD
       = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("clang").
                                 LookupDecl("ASTContext").getSingleDecl());
     assert(ASTContextRD && "Declaration of the expr not found!");
     QualType ASTContextRDTy = m_Context->getTypeDeclType(ASTContextRD);
+
+    Expr* RawOStreamTy
+      = Synthesize::CStyleCastPtrExpr(m_Sema, RawOStreamRDTy,
+                               (uint64_t)&m_Interpreter->getValuePrinterStream()
+                                      );
 
     Expr* ExprTy = Synthesize::CStyleCastPtrExpr(m_Sema, ExprRDTy, (uint64_t)E);
     Expr* ASTContextTy = Synthesize::CStyleCastPtrExpr(m_Sema,
@@ -174,7 +180,7 @@ namespace cling {
                                                        (uint64_t)m_Context);
 
     ASTOwningVector<Expr*> CallArgs(*m_Sema);
-    CallArgs.push_back(TheInnerCall);
+    CallArgs.push_back(RawOStreamTy);
     CallArgs.push_back(ExprTy);
     CallArgs.push_back(ASTContextTy);
     CallArgs.push_back(E);
