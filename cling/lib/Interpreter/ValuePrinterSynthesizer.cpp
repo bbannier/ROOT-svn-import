@@ -115,11 +115,12 @@ namespace cling {
 
     // The VP expects non const pointer type. Make sure it gets it
     QualType ArgTy = E->getType().getCanonicalType();
+    Expr* AddrOfE = E;
     ArgTy.removeLocalConst();
     if (!ArgTy->isPointerType()) {
-      E = m_Sema->BuildUnaryOp(S, NoSLoc, UO_AddrOf, E).take();
+      AddrOfE = m_Sema->BuildUnaryOp(S, NoSLoc, UO_AddrOf, E).take();
     }
-    TemplateArgument Arg(E->getType().getCanonicalType());
+    TemplateArgument Arg(AddrOfE->getType().getCanonicalType());
     TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
     
     // Substitute the declaration of the templated function, with the 
@@ -182,7 +183,7 @@ namespace cling {
     CallArgs.push_back(RawOStreamTy);
     CallArgs.push_back(ExprTy);
     CallArgs.push_back(ASTContextTy);
-    CallArgs.push_back(E);
+    CallArgs.push_back(AddrOfE);
     
     S = m_Sema->getScopeForContext(m_Sema->CurContext);
     Expr* Result = m_Sema->ActOnCallExpr(S, DRE, NoSLoc, 
