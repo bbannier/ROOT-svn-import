@@ -18,8 +18,7 @@ namespace cling {
     assert(E && "Expression cannot be null!");
     assert(Ctx && "ASTContext cannot be null!");
     // 1. Get the flags
-    // We force to add addressof in front of the expression. Strip it.
-    const QualType QT = m_Expr->getType()->getPointeeType();
+    const QualType QT = m_Expr->getType();
     
     if (E->isRValue() || QT.isLocalConstQualified() || QT.isConstant(*Ctx)){
       m_Flags |= VPI_Const;
