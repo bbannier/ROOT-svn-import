@@ -180,8 +180,8 @@ namespace cling {
   }
 
   ChainedConsumer::ChainedConsumer()
-    :  Consumers(), Enabled(), MutationListener(0),
-       DeserializationListener(0), m_InTransaction(false), m_Context(0) {
+    :  Consumers(), Enabled(), MutationListener(0), DeserializationListener(0),
+       m_InTransaction(false), m_Context(0), m_Queueing(true) {
 
     // Collect the mutation listeners and deserialization listeners of all
     // children, and create a multiplex listener each if so.
@@ -223,69 +223,97 @@ namespace cling {
   }
   
   void ChainedConsumer::HandleTopLevelDecl(DeclGroupRef D) {
-    DeclsQueue.push(DGRInfo(D, kTopLevelDecl));
+    if (IsQueueing())
+      DeclsQueue.push(DGRInfo(D, kTopLevelDecl));
+    else 
+      for (size_t i = 0; i < kConsumersCount; ++i)
+        if (IsConsumerEnabled((EConsumerIndex)i))
+          Consumers[i]->HandleTopLevelDecl(D);
   }
   
   void ChainedConsumer::HandleInterestingDecl(DeclGroupRef D) {
-    DeclsQueue.push(DGRInfo(D, kInterestingDecl));
+    if (IsQueueing())
+      DeclsQueue.push(DGRInfo(D, kInterestingDecl));
+    else 
+      for (size_t i = 0; i < kConsumersCount; ++i)
+        if (IsConsumerEnabled((EConsumerIndex)i))
+          Consumers[i]->HandleInterestingDecl(D);
   }
   
   void ChainedConsumer::HandleTagDeclDefinition(TagDecl* D) {
-    DeclsQueue.push(DGRInfo(DeclGroupRef(D), kTagDeclDefinition));
+    if (IsQueueing())
+      DeclsQueue.push(DGRInfo(DeclGroupRef(D), kTagDeclDefinition));
+    else 
+      for (size_t i = 0; i < kConsumersCount; ++i)
+        if (IsConsumerEnabled((EConsumerIndex)i))
+          Consumers[i]->HandleTagDeclDefinition(D);
   }
+
   void ChainedConsumer::HandleVTable(CXXRecordDecl* RD, bool DefinitionRequired) {
     assert("Not implemented yet!");
-    DeclsQueue.push(DGRInfo(DeclGroupRef(RD), kVTable));
+    if (IsQueueing())
+      DeclsQueue.push(DGRInfo(DeclGroupRef(RD), kVTable));
+    else 
+      for (size_t i = 0; i < kConsumersCount; ++i)
+        if (IsConsumerEnabled((EConsumerIndex)i))
+          Consumers[i]->HandleVTable(RD, DefinitionRequired);
   }
 
   void ChainedConsumer::CompleteTentativeDefinition(VarDecl* D) {
-    DeclsQueue.push(DGRInfo(DeclGroupRef(D), kCompleteTentativeDefinition));
+    if (IsQueueing())
+      DeclsQueue.push(DGRInfo(DeclGroupRef(D), kCompleteTentativeDefinition));
+    else 
+      for (size_t i = 0; i < kConsumersCount; ++i)
+        if (IsConsumerEnabled((EConsumerIndex)i))
+          Consumers[i]->CompleteTentativeDefinition(D);
   }
 
   void ChainedConsumer::HandleTranslationUnit(ASTContext& Ctx) {
 
-    // We don't want to chase our tail
-    if (IsInTransaction())
-      return;
+    if (IsQueueing()) {
+      // We don't want to chase our tail
+      if (IsInTransaction())
+        return;
 
-    m_InTransaction = true;
+      m_InTransaction = true;
 
-    // Check for errors...
+      // Check for errors...
     
-    if (m_Sema->getDiagnostics().getClient()->getNumErrors()) {
-      RecoverFromError();
+      if (m_Sema->getDiagnostics().getClient()->getNumErrors()) {
+        RecoverFromError();
+        m_InTransaction = false;
+        return;
+      }
+
+      // Pass through the consumers
+      // for (llvm::DenseMap<Decl*, HandlerIndex>::iterator D 
+      //        = DeclsQueue.begin(); D != DeclsQueue.end(); ++D)
+      while (!DeclsQueue.empty()) {
+        for (size_t i = 0; i < kConsumersCount; ++i)
+          if (IsConsumerEnabled((EConsumerIndex)i))
+            switch (DeclsQueue.front().I) {
+            case kTopLevelDecl:
+              Consumers[i]->HandleTopLevelDecl(DeclsQueue.front().D);
+              break;
+            case kInterestingDecl:
+              Consumers[i]->HandleInterestingDecl(DeclsQueue.front().D);
+              break;
+            case kTagDeclDefinition:
+              Consumers[i]->HandleTagDeclDefinition((TagDecl*)DeclsQueue.front().D.getSingleDecl());
+              break;
+            case kVTable:
+              assert("Not implemented yet!");
+              break;
+            case kCompleteTentativeDefinition:
+              Consumers[i]->CompleteTentativeDefinition((VarDecl*)DeclsQueue.front().D.getSingleDecl());
+              break;
+            }
+        
+        DeclsQueue.pop();
+      }
+      
       m_InTransaction = false;
-      return;
     }
-
-    // Pass through the consumers
-    // for (llvm::DenseMap<Decl*, HandlerIndex>::iterator D 
-    //        = DeclsQueue.begin(); D != DeclsQueue.end(); ++D)
-    while (!DeclsQueue.empty()) {
-      for (size_t i = 0; i < kConsumersCount; ++i)
-        if (IsConsumerEnabled((EConsumerIndex)i))
-          switch (DeclsQueue.front().I) {
-          case kTopLevelDecl:
-            Consumers[i]->HandleTopLevelDecl(DeclsQueue.front().D);
-            break;
-          case kInterestingDecl:
-            Consumers[i]->HandleInterestingDecl(DeclsQueue.front().D);
-            break;
-          case kTagDeclDefinition:
-            Consumers[i]->HandleTagDeclDefinition((TagDecl*)DeclsQueue.front().D.getSingleDecl());
-            break;
-          case kVTable:
-            assert("Not implemented yet!");
-            break;
-          case kCompleteTentativeDefinition:
-            Consumers[i]->CompleteTentativeDefinition((VarDecl*)DeclsQueue.front().D.getSingleDecl());
-            break;
-          }
-
-      DeclsQueue.pop();
-    }
-
-    m_InTransaction = false;
 
     for (size_t i = 0; i < kConsumersCount; ++i)
       if (IsConsumerEnabled((EConsumerIndex)i) && i != kPCHGenerator)
