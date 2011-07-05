@@ -65,7 +65,6 @@ namespace cling {
       return Consumers; 
     }
 
-
     bool Exists(EConsumerIndex I) {
       return Consumers[I] != 0;
     }
@@ -98,6 +97,8 @@ namespace cling {
       return Enabled[I];
     }
 
+    bool IsQueueing() { return m_Queueing; }
+
   private:
     clang::ASTConsumer* Consumers[kConsumersCount]; // owns them
     std::bitset<kConsumersCount> Enabled;
@@ -119,6 +120,7 @@ namespace cling {
       DGRInfo(clang::DeclGroupRef d, HandlerIndex i) : D(d), I(i){}
     };
     std::queue<DGRInfo> DeclsQueue;
+    bool m_Queueing;
   };
 } // namespace cling
 
