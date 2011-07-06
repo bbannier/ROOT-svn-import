@@ -91,62 +91,25 @@ namespace cling {
     // 1. Call gCling->getValuePrinterStream()
     // 1.1. Find gCling
     SourceLocation NoSLoc = SourceLocation();
-    
-    // 2. Build the final Find cling::valuePrinterInternal::PrintValue call
-    // 2.1. Find cling::valuePrinterInternal::PrintValue
-    TemplateDecl* TD = dyn_cast<TemplateDecl>(m_Interpreter->
-                                              LookupDecl("cling").
-                                              LookupDecl("valuePrinterInternal").
-                                              LookupDecl("PrintValue").
-                                              getSingleDecl());
-    // 2.2. Instantiate the TemplateDecl
-    FunctionDecl* TDecl = dyn_cast<FunctionDecl>(TD->getTemplatedDecl());
-    
-    assert(TDecl && "The PrintValue function not found!");
-    
-    // Set up new context for the new FunctionDecl
-    DeclContext* PrevContext = m_Sema->CurContext;      
-    m_Sema->CurContext = TDecl->getDeclContext();
-    
-    // Create template arguments
-    Sema::InstantiatingTemplate Inst(*m_Sema, NoSLoc, TDecl);
-    // Only the last argument is templated
-    Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
+    DeclarationName Name = &m_Context->Idents.get("PrintValue");
+    LookupResult R(*m_Sema, Name, NoSLoc, Sema::LookupOrdinaryName,
+                   Sema::ForRedeclaration);
+    DeclContext* DC 
+      = cast_or_null<DeclContext>(m_Interpreter->
+                                  LookupDecl("cling").
+                                  LookupDecl("valuePrinterInternal").
+                                  getSingleDecl()
+                              );
+    CXXScopeSpec CSS;
+    bool isMemberOfUnknownSpecialization;
+    Scope* scope = m_Sema->getScopeForContext(DC);
+    m_Sema->LookupTemplateName(R, scope, CSS, QualType(), 
+                               /*EnteringContext*/true, 
+                               isMemberOfUnknownSpecialization);
 
-    // The VP expects non const pointer type. Make sure it gets it
-    QualType ArgTy = E->getType().getCanonicalType();
-    Expr* AddrOfE = E;
-    ArgTy.removeLocalConst();
-    if (!ArgTy->isPointerType()) {
-      AddrOfE = m_Sema->BuildUnaryOp(S, NoSLoc, UO_AddrOf, E).take();
-    }
-    TemplateArgument Arg(AddrOfE->getType().getCanonicalType());
-    TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
-    
-    // Substitute the declaration of the templated function, with the 
-    // specified template argument
-    Decl* D = m_Sema->SubstDecl(TDecl, 
-                                TDecl->getDeclContext(), 
-                                MultiLevelTemplateArgumentList(TemplateArgs));
-    
-    FunctionDecl* FD = dyn_cast<FunctionDecl>(D);
-    // Creates new body of the substituted declaration
-    m_Sema->InstantiateFunctionDefinition(FD->getLocation(), FD, true, true);
-    
-    m_Sema->CurContext = PrevContext;
-    
-    // 2.3. Build DeclRefExpr from the found decl
-    const FunctionProtoType* FPT = FD->getType()->getAs<FunctionProtoType>();
-    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-    QualType FnTy = m_Context->getFunctionType(FD->getResultType(),
-                                               FPT->arg_type_begin(),
-                                               FPT->getNumArgs(),
-                                               EPI);
-    DeclRefExpr* DRE = m_Sema->BuildDeclRefExpr(FD,
-                                                FnTy,
-                                                VK_RValue,
-                                                NoSLoc
-                                                ).takeAs<DeclRefExpr>();
+    m_Sema->LookupQualifiedName(R, DC);
+    Expr* UnresolvedLookup 
+      = m_Sema->BuildDeclarationNameExpr(CSS, R, /*adl*/ false).take();
     
     // 2.4. Prepare the params
     
@@ -183,13 +146,13 @@ namespace cling {
     CallArgs.push_back(RawOStreamTy);
     CallArgs.push_back(ExprTy);
     CallArgs.push_back(ASTContextTy);
-    CallArgs.push_back(AddrOfE);
+    CallArgs.push_back(E);
     
-    S = m_Sema->getScopeForContext(m_Sema->CurContext);
-    Expr* Result = m_Sema->ActOnCallExpr(S, DRE, NoSLoc, 
+    Scope* S = m_Sema->getScopeForContext(m_Sema->CurContext);
+    Expr* Result = m_Sema->ActOnCallExpr(S, UnresolvedLookup, NoSLoc, 
                                          move_arg(CallArgs), NoSLoc).take();
     assert(Result && "Cannot create value printer!");
-    return Result;    
+    return Result;
   }
 
   unsigned ValuePrinterSynthesizer::ClearNullStmts(CompoundStmt* CS) {

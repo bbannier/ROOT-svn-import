@@ -181,7 +181,7 @@ namespace cling {
 
   ChainedConsumer::ChainedConsumer()
     :  Consumers(), Enabled(), MutationListener(0), DeserializationListener(0),
-       m_InTransaction(false), m_Context(0), m_Queueing(true) {
+       m_InTransaction(false), m_Context(0), m_Queueing(false) {
 
     // Collect the mutation listeners and deserialization listeners of all
     // children, and create a multiplex listener each if so.
@@ -241,8 +241,9 @@ namespace cling {
   }
   
   void ChainedConsumer::HandleTagDeclDefinition(TagDecl* D) {
-    if (IsQueueing())
+    if (IsQueueing()) {
       DeclsQueue.push(DGRInfo(DeclGroupRef(D), kTagDeclDefinition));
+    }
     else 
       for (size_t i = 0; i < kConsumersCount; ++i)
         if (IsConsumerEnabled((EConsumerIndex)i))
