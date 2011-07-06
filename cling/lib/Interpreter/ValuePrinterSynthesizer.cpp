@@ -100,16 +100,12 @@ namespace cling {
                                   LookupDecl("valuePrinterInternal").
                                   getSingleDecl()
                               );
-    CXXScopeSpec CSS;
-    bool isMemberOfUnknownSpecialization;
-    Scope* scope = m_Sema->getScopeForContext(DC);
-    m_Sema->LookupTemplateName(R, scope, CSS, QualType(), 
-                               /*EnteringContext*/true, 
-                               isMemberOfUnknownSpecialization);
-
     m_Sema->LookupQualifiedName(R, DC);
+    assert(!R.empty() && "Cannot find PrintValue(...)");
+
+    CXXScopeSpec CSS;
     Expr* UnresolvedLookup 
-      = m_Sema->BuildDeclarationNameExpr(CSS, R, /*adl*/ false).take();
+      = m_Sema->BuildDeclarationNameExpr(CSS, R, /*ADL*/ false).take();
     
     // 2.4. Prepare the params
     
