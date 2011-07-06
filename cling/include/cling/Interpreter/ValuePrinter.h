@@ -32,13 +32,22 @@ namespace cling {
 
     template <typename T>
     void PrintValue(llvm::raw_ostream* o, clang::Expr* E, 
-                    clang::ASTContext* C, T value) {
+                    clang::ASTContext* C, const T& value) {
+      ValuePrinterInfo VPI(E, C);
+      printValue(*o, &value, &value, VPI);
+      // Only because we don't to include llvm::raw_ostream in the header
+      flushOStream(*o);
+    }
+
+    template <typename T>
+    void PrintValue(llvm::raw_ostream* o, clang::Expr* E, 
+                    clang::ASTContext* C, const T* value) {
       ValuePrinterInfo VPI(E, C);
       printValue(*o, value, value, VPI);
       // Only because we don't to include llvm::raw_ostream in the header
       flushOStream(*o);
     }
-    
+
   } // namespace valuePrinterInternal
   
   
