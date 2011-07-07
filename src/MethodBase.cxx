@@ -477,8 +477,8 @@ void TMVA::MethodBase::CreateVariableTransforms( const TString& trafoDefinitionI
    int npartial = 0, ntrafo=0;
    for (Int_t pos = 0, siz = trafoDefinition.Sizeof(); pos < siz; ++pos) {
       TString ch = trafoDefinition(pos,1);
-      if( ch == "(" ) npartial++;
-      if( ch == "+" || ch == ",") ntrafo++;
+      if ( ch == "(" ) npartial++;
+      if ( ch == "+" || ch == ",") ntrafo++;
    }
    if (npartial>1) {
       log << kWARNING << "The use of multiple partial variable transformations during the application phase can be properly invoked via the \"Reader\", but it is not yet implemented in \"MakeClass\", the creation mechanism for standalone C++ application classes. The standalone C++ class produced by this training job is thus INCOMPLETE AND MUST NOT BE USED! The transformation in question is: " << trafoDefinitionIn << Endl; // ToDo make info and do not write the standalone class
@@ -791,8 +791,8 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
 
 //_______________________________________________________________________
 void TMVA::MethodBase::NoErrorCalc(Double_t* const err, Double_t* const errUpper) {
-   if(err) *err=-1;
-   if(errUpper) *errUpper=-1;
+   if (err) *err=-1;
+   if (errUpper) *errUpper=-1;
 }
 
 //_______________________________________________________________________
@@ -999,7 +999,7 @@ void TMVA::MethodBase::TestMulticlass()
    ResultsMulticlass* resMulticlass = dynamic_cast<ResultsMulticlass*>(Data()->GetResults(GetMethodName(), Types::kTesting, Types::kMulticlass));
    if (!resMulticlass) Log() << kFATAL<< "unable to create pointer in TestMulticlass, exiting."<<Endl;
    Log() << kINFO << "Determine optimal multiclass cuts for test data..." << Endl;
-   for(UInt_t icls = 0; icls<DataInfo().GetNClasses(); ++icls) {
+   for (UInt_t icls = 0; icls<DataInfo().GetNClasses(); ++icls) {
       resMulticlass->GetBestMultiClassCuts(icls);
    }
 }
@@ -1220,16 +1220,14 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
    AddVarsXMLTo( parent );
 
    // write spectator info
-   if(!fDisableWriting)
+   if (!fDisableWriting)
       AddSpectatorsXMLTo( parent );
 
    // write class info if in multiclass mode
-   //   if(DoMulticlass())
    AddClassesXMLTo(parent);
    
    // write target info if in regression mode
-   if(DoRegression())
-      AddTargetsXMLTo(parent);
+   if (DoRegression()) AddTargetsXMLTo(parent);
 
    // write transformations
    GetTransformationHandler(false).AddXMLTo( parent );
@@ -1407,13 +1405,10 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
          ReadSpectatorsFromXML(ch);
       }
       else if (nodeName=="Classes") {
-         //         if(DataInfo().GetNClasses()==0 && DoMulticlass())
-         if(DataInfo().GetNClasses()==0)
-            ReadClassesFromXML(ch);
+         if (DataInfo().GetNClasses()==0) ReadClassesFromXML(ch);
       }
       else if (nodeName=="Targets") {
-         if(DataInfo().GetNTargets()==0 && DoRegression())
-            ReadTargetsFromXML(ch);
+         if (DataInfo().GetNTargets()==0 && DoRegression()) ReadTargetsFromXML(ch);
       }
       else if (nodeName=="Transformations") {
          GetTransformationHandler().ReadFromXML(ch);
@@ -1500,7 +1495,7 @@ void TMVA::MethodBase::ReadStateFromStream( std::istream& fin )
    // now we process the options (of the derived class)
    ProcessOptions();
 
-   if(IsNormalised()) {
+   if (IsNormalised()) {
       VariableNormalizeTransform* norm = (VariableNormalizeTransform*)
          GetTransformationHandler().AddTransformation( new VariableNormalizeTransform(DataInfo()), -1 );
       norm->BuildTransformationFromVarInfo( DataInfo().GetVariableInfos() );
@@ -1528,11 +1523,11 @@ void TMVA::MethodBase::ReadStateFromStream( std::istream& fin )
    if (GetTransformationHandler().GetTransformationList().GetSize() > 0) {
       fin.getline(buf,512);
       while (!TString(buf).BeginsWith("#MAT")) fin.getline(buf,512);
-      if(varTrafo) {
+      if (varTrafo) {
          TString trafo(fVariableTransformTypeString); trafo.ToLower();
          varTrafo->ReadTransformationFromStream(fin, trafo );
       }
-      if(varTrafo2) {
+      if (varTrafo2) {
          TString trafo(fVariableTransformTypeString); trafo.ToLower();
          varTrafo2->ReadTransformationFromStream(fin, trafo );
       }
@@ -1777,7 +1772,7 @@ void TMVA::MethodBase::ReadClassesFromXML( void* clsnode )
    UInt_t  classIndex=0;
    void* ch = gTools().GetChild(clsnode);
    if (!ch) {
-      for(UInt_t icls = 0; icls<readNCls;++icls) {
+      for (UInt_t icls = 0; icls<readNCls;++icls) {
          TString classname = Form("class%i",icls);
          DataInfo().AddClass(classname);
 
@@ -1941,10 +1936,12 @@ void TMVA::MethodBase::WriteEvaluationHistosToFile(Types::ETreeType treetype)
    Results* results = Data()->GetResults( GetMethodName(), treetype, Types::kMaxAnalysisType );
    if (!results)
       Log() << kFATAL << "<WriteEvaluationHistosToFile> Unknown result: "
-            << GetMethodName() << (treetype==Types::kTraining?"/kTraining":"/kTesting") << "/kMaxAnalysisType" << Endl;
+            << GetMethodName() << (treetype==Types::kTraining?"/kTraining":"/kTesting") 
+            << "/kMaxAnalysisType" << Endl;
    results->GetStorage()->Write();
-   if(treetype==Types::kTesting)
+   if (treetype==Types::kTesting) {
       GetTransformationHandler().PlotVariables( GetEventCollection( Types::kTesting ), BaseDir() );
+   }
 }
 
 //_______________________________________________________________________
@@ -2514,7 +2511,7 @@ std::vector<Float_t> TMVA::MethodBase::GetMulticlassTrainingEfficiency(std::vect
    if (!resMulticlass) Log() << kFATAL<< "unable to create pointer in GetMulticlassTrainingEfficiency, exiting."<<Endl;
    
    Log() << kINFO << "Determine optimal multiclass cuts for training data..." << Endl;
-   for(UInt_t icls = 0; icls<DataInfo().GetNClasses(); ++icls) {
+   for (UInt_t icls = 0; icls<DataInfo().GetNClasses(); ++icls) {
       resMulticlass->GetBestMultiClassCuts(icls);
    }
     
@@ -2574,7 +2571,7 @@ Double_t TMVA::MethodBase::GetROCIntegral(TH1F *histS, TH1F *histB) const
    if ((!histS && histB) || (histS && !histB))
       Log() << kFATAL << "<GetROCIntegral(TH1F*, TH1F*)> Mismatch in hists" << Endl;
 
-   if(histS==0 || histB==0) return 0.;
+   if (histS==0 || histB==0) return 0.;
 
    TMVA::PDF *pdfS = new TMVA::PDF( " PDF Sig", histS, TMVA::PDF::kSpline3 );
    TMVA::PDF *pdfB = new TMVA::PDF( " PDF Bkg", histB, TMVA::PDF::kSpline3 );
@@ -2608,7 +2605,7 @@ Double_t TMVA::MethodBase::GetROCIntegral(PDF *pdfS, PDF *pdfB) const
    if (!pdfS) pdfS = fSplS;
    if (!pdfB) pdfB = fSplB;
 
-   if(pdfS==0 || pdfB==0) return 0.;
+   if (pdfS==0 || pdfB==0) return 0.;
 
    Double_t xmin = TMath::Min(pdfS->GetXmin(), pdfB->GetXmin());
    Double_t xmax = TMath::Max(pdfS->GetXmax(), pdfB->GetXmax());
