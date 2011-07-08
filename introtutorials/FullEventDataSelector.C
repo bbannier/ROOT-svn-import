@@ -6,7 +6,7 @@
 // http://lcg-heppkg.web.cern.ch/lcg-heppkg/ROOT/eventdata.root
 // i.e run
 //   root [0] f = TFile::Open("http://lcg-heppkg.web.cern.ch/lcg-heppkg/ROOT/eventdata.root");
-//   root [1] EventTree->Process("EventDataSelector.C+")
+//   root [1] EventTree->Process("FullEventDataSelector.C+")
 
 // The following methods are defined in this file:
 //    Begin():        called every time a loop on the tree starts,
@@ -22,9 +22,9 @@
 //
 // To use this file, try the following session on your Tree T:
 //
-// Root > T->Process("EventDataSelector.C")
-// Root > T->Process("EventDataSelector.C","some options")
-// Root > T->Process("EventDataSelector.C+")
+// Root > T->Process("FullEventDataSelector.C")
+// Root > T->Process("FullEventDataSelector.C","some options")
+// Root > T->Process("FullEventDataSelector.C+")
 //
 
 #include <TROOT.h>
@@ -37,9 +37,10 @@
 
 const Int_t kMaxfParticles = 1293;
 
-class EventDataSelector : public TSelector {
+class FullEventDataSelector : public TSelector {
 public :
 
+   TH1         *fPosX; // X position of the particles
    ULong64_t    fTotalDataSize; // sum of data size (in bytes) of all events
 
    // Declaration of leaf types
@@ -54,9 +55,10 @@ public :
    TBranch     *fParticlesMomentumBranch;
    TBranch     *fEventSizeBranch;
 
-   EventDataSelector(TTree * = 0): fTotalDataSize(0) { }
+   FullEventDataSelector(TTree * = 0): fPosX(0), 
+                     fTotalDataSize(0) { }
 
-   virtual ~EventDataSelector() { }
+   virtual ~FullEventDataSelector() { }
    virtual void    Init(TTree *tree);
    virtual void    Begin(TTree *tree);
    virtual void    SlaveBegin(TTree *tree);
@@ -65,10 +67,10 @@ public :
    virtual void    Terminate();
    virtual Int_t   Version() const { return 2; }
 
-   ClassDef(EventDataSelector,0);
+   ClassDef(FullEventDataSelector,0);
 };
 
-void EventDataSelector::Init(TTree *tree)
+void FullEventDataSelector::Init(TTree *tree)
 {
    // The Init() function is called when the selector needs to initialize
    // a new tree or chain. Typically here the branch addresses and branch
@@ -89,7 +91,7 @@ void EventDataSelector::Init(TTree *tree)
    fChain->SetBranchAddress("fEventSize", &fCurrentEventSize, &fEventSizeBranch);
 }
 
-void EventDataSelector::Begin(TTree * /*tree*/)
+void FullEventDataSelector::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
    // When running with PROOF Begin() is only called on the client.
@@ -97,20 +99,25 @@ void EventDataSelector::Begin(TTree * /*tree*/)
 
 }
 
-void EventDataSelector::SlaveBegin(TTree * /*tree*/)
+void FullEventDataSelector::SlaveBegin(TTree * /*tree*/)
 {
    // The SlaveBegin() function is called after the Begin() function.
    // When running with PROOF SlaveBegin() is called on each slave server.
    // The tree argument is deprecated (on PROOF 0 is passed).
 
+   fPosX = new TH1F("hPosX", "Position in X", 20, -5, 5);
+   // enable bin errors:
+   fPosX->Sumw2();
+   // Add to output list (needed for PROOF)
+   GetOutputList()->Add(fPosX);
 }
 
-Bool_t EventDataSelector::Process(Long64_t entry)
+Bool_t FullEventDataSelector::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
    // keyed object in the case of PROOF) to be processed. The entry argument
    // specifies which entry in the currently loaded tree is to be processed.
-   // It can be passed to either EventDataSelector::GetEntry() or TBranch::GetEntry()
+   // It can be passed to either FullEventDataSelector::GetEntry() or TBranch::GetEntry()
    // to read either all or the required parts of the data. When processing
    // keyed objects with PROOF, the object is already loaded and is available
    // via the fObject pointer.
@@ -136,13 +143,17 @@ Bool_t EventDataSelector::Process(Long64_t entry)
    fEventSizeBranch->GetEntry(entry);
 
    // *** 2. *** Do the actual analysis
+   for (int iParticle = 0; iParticle < fParticles; ++iParticle) {
+      if (fParticlesMomentum[iParticle] > 50.)
+         fPosX->Fill(fParticlesPosX[iParticle]);
+   }
 
    fTotalDataSize += fEventSizeBranch;
 
    return kTRUE;
 }
 
-void EventDataSelector::SlaveTerminate()
+void FullEventDataSelector::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
    // have been processed. When running with PROOF SlaveTerminate() is called
@@ -150,7 +161,7 @@ void EventDataSelector::SlaveTerminate()
 
 }
 
-void EventDataSelector::Terminate()
+void FullEventDataSelector::Terminate()
 {
    // The Terminate() function is the last function to be called during
    // a query. It always runs on the client, it can be used to present
@@ -158,4 +169,10 @@ void EventDataSelector::Terminate()
 
    int sizeInMB = fTotalDataSize/1024/1024;
    printf("Total size of all events: %d MB\n", sizeInMB);
+
+   // Fit the histogram:
+   fPosX->Fit("pol2");
+
+   // and draw it:
+   fPosX->Draw();
 }
