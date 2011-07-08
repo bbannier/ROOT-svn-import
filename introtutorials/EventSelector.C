@@ -1,4 +1,3 @@
-#define EventSelector_cxx
 // For more information on the TSelector framework see 
 // $ROOTSYS/README/README.SELECTOR or the ROOT User Manual.
 
@@ -37,14 +36,12 @@ const Int_t kMaxfParticles = 1293;
 class EventSelector : public TSelector {
 public :
 
-   EventSelector(TTree * /*tree*/ = 0) { }
+   EventSelector(TTree * = 0) { }
    virtual ~EventSelector() { }
 
    virtual void    Init(TTree *tree);
-   virtual void    Begin(TTree *tree);
    virtual void    SlaveBegin(TTree *tree);
    virtual Bool_t  Process(Long64_t entry);
-   virtual void    SlaveTerminate();
    virtual void    Terminate();
    virtual Int_t   Version() const { return 2; }
 
@@ -56,14 +53,6 @@ void EventSelector::Init(TTree *tree)
    // The Init() function is called when the selector needs to initialize
    // a new tree or chain. Typically here the branch addresses and branch
    // pointers of the tree will be set.
-}
-
-void EventSelector::Begin(TTree * /*tree*/)
-{
-   // The Begin() function is called at the start of the query.
-   // When running with PROOF Begin() is only called on the client.
-   // The tree argument is deprecated (on PROOF 0 is passed).
-
 }
 
 void EventSelector::SlaveBegin(TTree * /*tree*/)
@@ -89,14 +78,6 @@ Bool_t EventSelector::Process(Long64_t entry)
    // of the event and typically fill histograms.
 
    return kTRUE;
-}
-
-void EventSelector::SlaveTerminate()
-{
-   // The SlaveTerminate() function is called after all entries or objects
-   // have been processed. When running with PROOF SlaveTerminate() is called
-   // on each slave server.
-
 }
 
 void EventSelector::Terminate()
