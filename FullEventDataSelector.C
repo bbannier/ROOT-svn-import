@@ -60,10 +60,8 @@ public :
 
    virtual ~FullEventDataSelector() { }
    virtual void    Init(TTree *tree);
-   virtual void    Begin(TTree *tree);
    virtual void    SlaveBegin(TTree *tree);
    virtual Bool_t  Process(Long64_t entry);
-   virtual void    SlaveTerminate();
    virtual void    Terminate();
    virtual Int_t   Version() const { return 2; }
 
@@ -80,23 +78,15 @@ void FullEventDataSelector::Init(TTree *tree)
    // Init() will be called many times when running on PROOF
    // (once per file to be processed).
 
-   // Set branch addresses and branch pointers
-   if (!tree) return;
-   fChain = tree;
-   fChain->SetMakeClass(1);
+   // To use SetBranchAddress() with simple types (e.g. double, int)
+   // instead of objects (e.g. std::vector&lt;Particle&gt;).
+   tree->SetMakeClass(1);
 
-   fChain->SetBranchAddress("fParticles", &fParticles, &fParticlesBranch);
-   fChain->SetBranchAddress("fParticles.fPosX", fParticlesPosX, &fParticlesPosXBranch);
-   fChain->SetBranchAddress("fParticles.fMomentum", fParticlesMomentum, &fParticlesMomentumBranch);
-   fChain->SetBranchAddress("fEventSize", &fCurrentEventSize, &fEventSizeBranch);
-}
-
-void FullEventDataSelector::Begin(TTree * /*tree*/)
-{
-   // The Begin() function is called at the start of the query.
-   // When running with PROOF Begin() is only called on the client.
-   // The tree argument is deprecated (on PROOF 0 is passed).
-
+   // Connect the branches with their member variables.
+   tree->SetBranchAddress("fParticles", &fParticles, &fParticlesBranch);
+   tree->SetBranchAddress("fParticles.fPosX", fParticlesPosX, &fParticlesPosXBranch);
+   tree->SetBranchAddress("fParticles.fMomentum", fParticlesMomentum, &fParticlesMomentumBranch);
+   tree->SetBranchAddress("fEventSize", &fCurrentEventSize, &fEventSizeBranch);
 }
 
 void FullEventDataSelector::SlaveBegin(TTree * /*tree*/)
@@ -151,14 +141,6 @@ Bool_t FullEventDataSelector::Process(Long64_t entry)
    fTotalDataSize += fEventSizeBranch;
 
    return kTRUE;
-}
-
-void FullEventDataSelector::SlaveTerminate()
-{
-   // The SlaveTerminate() function is called after all entries or objects
-   // have been processed. When running with PROOF SlaveTerminate() is called
-   // on each slave server.
-
 }
 
 void FullEventDataSelector::Terminate()

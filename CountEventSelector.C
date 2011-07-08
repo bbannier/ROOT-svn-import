@@ -37,7 +37,7 @@ const Int_t kMaxfParticles = 1293;
 class CountEventSelector : public TSelector {
 public :
 
-   ULong64_t    fTotalDataSize; // Sum of data size (in bytes) of all events
+   ULong64_t    fTotalDataSize;    // Sum of data size (in bytes) of all events
 
    // Variables used to store the data
    Int_t        fCurrentEventSize; // Size of the current event
@@ -50,10 +50,8 @@ public :
    virtual ~CountEventSelector() { }
 
    virtual void    Init(TTree *tree);
-   virtual void    Begin(TTree *tree);
    virtual void    SlaveBegin(TTree *tree);
    virtual Bool_t  Process(Long64_t entry);
-   virtual void    SlaveTerminate();
    virtual void    Terminate();
    virtual Int_t   Version() const { return 2; }
 
@@ -77,22 +75,6 @@ void CountEventSelector::Init(TTree *tree)
    tree->SetBranchAddress("fEventSize", &fCurrentEventSize, &fEventSizeBranch);
 }
 
-void CountEventSelector::Begin(TTree * /*tree*/)
-{
-   // The Begin() function is called at the start of the query.
-   // When running with PROOF Begin() is only called on the client.
-   // The tree argument is deprecated (on PROOF 0 is passed).
-
-}
-
-void CountEventSelector::SlaveBegin(TTree * /*tree*/)
-{
-   // The SlaveBegin() function is called after the Begin() function.
-   // When running with PROOF SlaveBegin() is called on each slave server.
-   // The tree argument is deprecated (on PROOF 0 is passed).
-
-}
-
 Bool_t CountEventSelector::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
@@ -107,20 +89,16 @@ Bool_t CountEventSelector::Process(Long64_t entry)
    // simple or elaborate selection criteria, run algorithms on the data
    // of the event and typically fill histograms.
 
+   // Load the data for TTree entry number "entry" from branch 
+   // fEventSize into the connected data member (fCurrentEventSize):
    fEventSizeBranch->GetEntry(entry);
-   
-   printf("Size of Event %ld = %d Bytes\n", entry, fCurrentEventSize);
+
+   // We can still print some informations about the current event
+   //printf("Size of Event %ld = %d Bytes\n", entry, fCurrentEventSize);
+
    // compute the total size of all events
    fTotalDataSize += fCurrentEventSize;
    return kTRUE;
-}
-
-void CountEventSelector::SlaveTerminate()
-{
-   // The SlaveTerminate() function is called after all entries or objects
-   // have been processed. When running with PROOF SlaveTerminate() is called
-   // on each slave server.
-
 }
 
 void CountEventSelector::Terminate()
