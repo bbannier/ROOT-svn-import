@@ -31,32 +31,24 @@
 #include <TChain.h>
 #include <TFile.h>
 #include <TSelector.h>
-#include <TProofServ.h>
-#include <TH1.h>
-#include <TStyle.h>
 
 const Int_t kMaxfParticles = 1293;
 
-class EventDataSelector : public TSelector {
+class CountEventSelector : public TSelector {
 public :
 
-   ULong64_t    fTotalDataSize; // sum of data size (in bytes) of all events
+   ULong64_t    fTotalDataSize; // Sum of data size (in bytes) of all events
 
-   // Declaration of leaf types
-   Int_t        fParticles;
-   Double_t     fParticlesPosX[kMaxfParticles];       //[fParticles_]
-   Double_t     fParticlesMomentum[kMaxfParticles];   //[fParticles_]
-   Int_t        fCurrentEventSize;
+   // Variables used to store the data
+   Int_t        fCurrentEventSize; // Size of the current event
 
-   // List of branches
-   TBranch     *fParticlesBranch;
-   TBranch     *fParticlesPosXBranch;
-   TBranch     *fParticlesMomentumBranch;
-   TBranch     *fEventSizeBranch;
+   // Tree branches
+   TBranch     *fEventSizeBranch;  // Pointer to the event.fEventsize branch
+   
+   CountEventSelector(TTree * = 0): fTotalDataSize(0), fCurrentEventSize(0),
+                                    fEventSizeBranch(0) { }
+   virtual ~CountEventSelector() { }
 
-   EventDataSelector(TTree * = 0): fTotalDataSize(0) { }
-
-   virtual ~EventDataSelector() { }
    virtual void    Init(TTree *tree);
    virtual void    Begin(TTree *tree);
    virtual void    SlaveBegin(TTree *tree);
@@ -65,31 +57,27 @@ public :
    virtual void    Terminate();
    virtual Int_t   Version() const { return 2; }
 
-   ClassDef(EventDataSelector,0);
+   ClassDef(CountEventSelector,0);
 };
 
-void EventDataSelector::Init(TTree *tree)
+void CountEventSelector::Init(TTree *tree)
 {
    // The Init() function is called when the selector needs to initialize
    // a new tree or chain. Typically here the branch addresses and branch
    // pointers of the tree will be set.
-   // It is normally not necessary to make changes to the generated
-   // code, but the routine can be extended by the user if needed.
-   // Init() will be called many times when running on PROOF
-   // (once per file to be processed).
 
-   // Set branch addresses and branch pointers
-   if (!tree) return;
-   fChain = tree;
-   fChain->SetMakeClass(1);
+   // To use SetBranchAddress() with simple types (e.g. double, int)
+   // instead of objects (e.g. std::vector&lt;Particle&gt;).
+   tree->SetMakeClass(1);
 
-   fChain->SetBranchAddress("fParticles", &fParticles, &fParticlesBranch);
-   fChain->SetBranchAddress("fParticles.fPosX", fParticlesPosX, &fParticlesPosXBranch);
-   fChain->SetBranchAddress("fParticles.fMomentum", fParticlesMomentum, &fParticlesMomentumBranch);
-   fChain->SetBranchAddress("fEventSize", &fCurrentEventSize, &fEventSizeBranch);
+   // Connect the branch "fEventSize" with the variable 
+   // fCurrentEventSize that we want to contain the data.
+   // While we are at it, ask the tree to save the branch 
+   // in fEventSizeBranch
+   tree->SetBranchAddress("fEventSize", &fCurrentEventSize, &fEventSizeBranch);
 }
 
-void EventDataSelector::Begin(TTree * /*tree*/)
+void CountEventSelector::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
    // When running with PROOF Begin() is only called on the client.
@@ -97,7 +85,7 @@ void EventDataSelector::Begin(TTree * /*tree*/)
 
 }
 
-void EventDataSelector::SlaveBegin(TTree * /*tree*/)
+void CountEventSelector::SlaveBegin(TTree * /*tree*/)
 {
    // The SlaveBegin() function is called after the Begin() function.
    // When running with PROOF SlaveBegin() is called on each slave server.
@@ -105,12 +93,12 @@ void EventDataSelector::SlaveBegin(TTree * /*tree*/)
 
 }
 
-Bool_t EventDataSelector::Process(Long64_t entry)
+Bool_t CountEventSelector::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
    // keyed object in the case of PROOF) to be processed. The entry argument
    // specifies which entry in the currently loaded tree is to be processed.
-   // It can be passed to either EventDataSelector::GetEntry() or TBranch::GetEntry()
+   // It can be passed to either CountEventSelector::GetEntry() or TBranch::GetEntry()
    // to read either all or the required parts of the data. When processing
    // keyed objects with PROOF, the object is already loaded and is available
    // via the fObject pointer.
@@ -118,31 +106,16 @@ Bool_t EventDataSelector::Process(Long64_t entry)
    // This function should contain the "body" of the analysis. It can contain
    // simple or elaborate selection criteria, run algorithms on the data
    // of the event and typically fill histograms.
-   //
-   // The processing can be stopped by calling Abort().
-   //
-   // Use fStatus to set the return value of TTree::Process().
-   //
-   // The return value is currently not used.
 
-   // *** 1. *** Tell the tree to load the data for this entry:
-   // We only need the number of particles...
-   fParticlesBranch->GetEntry(entry);
-   // ... and their position in X...
-   fParticlesPosXBranch->GetEntry(entry);
-   // ... their momentum...
-   fParticlesMomentumBranch->GetEntry(entry);
-   // ... and the size of the event:
    fEventSizeBranch->GetEntry(entry);
-
-   // *** 2. *** Do the actual analysis
-
-   fTotalDataSize += fEventSizeBranch;
-
+   
+   printf("Size of Event %ld = %d Bytes\n", entry, fCurrentEventSize);
+   // compute the total size of all events
+   fTotalDataSize += fCurrentEventSize;
    return kTRUE;
 }
 
-void EventDataSelector::SlaveTerminate()
+void CountEventSelector::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
    // have been processed. When running with PROOF SlaveTerminate() is called
@@ -150,7 +123,7 @@ void EventDataSelector::SlaveTerminate()
 
 }
 
-void EventDataSelector::Terminate()
+void CountEventSelector::Terminate()
 {
    // The Terminate() function is the last function to be called during
    // a query. It always runs on the client, it can be used to present
