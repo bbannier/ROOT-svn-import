@@ -144,7 +144,7 @@ Bool_t FullEventDataSelector::Process(Long64_t entry)
 
    // *** 2. *** Do the actual analysis
    for (int iParticle = 0; iParticle < fParticles; ++iParticle) {
-      if (fParticlesMomentum[iParticle] > 50.)
+      if (fParticlesMomentum[iParticle] > 40.)
          fPosX->Fill(fParticlesPosX[iParticle]);
    }
 
