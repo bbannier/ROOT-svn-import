@@ -9,14 +9,10 @@
 //   root [1] EventTree->Process("EventDataSelector.C+")
 
 // The following methods are defined in this file:
-//    Begin():        called every time a loop on the tree starts,
-//                    a convenient place to create your histograms.
 //    SlaveBegin():   called after Begin(), when on PROOF called only on the
-//                    slave servers.
+//                    slave servers, a convenient place to create your histograms.
 //    Process():      called for each event, in this function you decide what
 //                    to read and fill your histograms.
-//    SlaveTerminate: called at the end of the loop on the tree, when on PROOF
-//                    called only on the slave servers.
 //    Terminate():    called at the end of the loop on the tree,
 //                    a convenient place to draw/fit your histograms.
 //
