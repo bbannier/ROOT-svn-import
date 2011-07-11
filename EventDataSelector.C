@@ -73,7 +73,7 @@ void EventDataSelector::Init(TTree *tree)
    tree->SetMakeClass(1);
 
    // Connect the branches with their member variables.
-   tree->SetBranchAddress("fNParticles", &fNParticles, &fNParticlesBranch);
+   tree->SetBranchAddress("fParticles", &fNParticles, &fNParticlesBranch);
    tree->SetBranchAddress("fParticles.fPosX", fParticlesPosX, &fParticlesPosXBranch);
    tree->SetBranchAddress("fParticles.fMomentum", fParticlesMomentum, &fParticlesMomentumBranch);
 }
