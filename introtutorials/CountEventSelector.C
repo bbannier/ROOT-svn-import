@@ -71,7 +71,7 @@ void CountEventSelector::Init(TTree *tree)
    tree->SetBranchAddress("fEventSize", &fCurrentEventSize, &fEventSizeBranch);
 }
 
-void EventDataSelector::SlaveBegin(TTree *tree)
+void CountEventSelector::SlaveBegin(TTree *tree)
 {
    // SlaveBegin() is a good place to create histograms. 
    // For PROOF, this is called for each worker.
