@@ -6,7 +6,7 @@
 // http://lcg-heppkg.web.cern.ch/lcg-heppkg/ROOT/eventdata.root
 // i.e run
 //   root [0] f = TFile::Open("http://lcg-heppkg.web.cern.ch/lcg-heppkg/ROOT/eventdata.root");
-//   root [1] EventTree->Process("EventDataSelector.C+")
+//   root [1] EventTree->Process("CountEventSelector.C+")
 
 // The following methods are defined in this file:
 //    SlaveBegin():   called after Begin(), when on PROOF called only on the
@@ -18,9 +18,9 @@
 //
 // To use this file, try the following session on your Tree T:
 //
-// Root > T->Process("EventDataSelector.C")
-// Root > T->Process("EventDataSelector.C","some options")
-// Root > T->Process("EventDataSelector.C+")
+// Root > T->Process("CountEventSelector.C")
+// Root > T->Process("CountEventSelector.C","some options")
+// Root > T->Process("CountEventSelector.C+")
 //
 
 #include "TROOT.h"
