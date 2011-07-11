@@ -33,7 +33,7 @@ const Int_t kMaxfParticles = 1293;
 class CountEventSelector : public TSelector {
 public :
 
-   ULong64_t    fTotalDataSize;    // Sum of data size (in bytes) of all events
+   Int_t        fTotalDataSize;    // Sum of data size (in bytes) of all events
 
    // Variables used to store the data
    Int_t        fCurrentEventSize; // Size of the current event
@@ -71,20 +71,25 @@ void CountEventSelector::Init(TTree *tree)
    tree->SetBranchAddress("fEventSize", &fCurrentEventSize, &fEventSizeBranch);
 }
 
+void EventDataSelector::SlaveBegin(TTree *tree)
+{
+   // SlaveBegin() is a good place to create histograms. 
+   // For PROOF, this is called for each worker.
+   // The TTree* is there for backward compatibility; e.g. PROOF passes 0.
+
+}
+
 Bool_t CountEventSelector::Process(Long64_t entry)
 {
-   // The Process() function is called for each entry in the tree (or possibly
-   // keyed object in the case of PROOF) to be processed. The entry argument
-   // specifies which entry in the currently loaded tree is to be processed.
-   // It can be passed to either CountEventSelector::GetEntry() or TBranch::GetEntry()
-   // to read either all or the required parts of the data. When processing
-   // keyed objects with PROOF, the object is already loaded and is available
-   // via the fObject pointer.
+   // The Process() function is called for each entry in the tree to be 
+   // processed. The entry argument specifies which entry in the currently
+   // loaded tree is to be processed.
+   // It can be passed to either EventSelector::GetEntry() or TBranch::GetEntry()
+   // to read either all or the required parts of the TTree.
    //
-   // This function should contain the "body" of the analysis. It can contain
-   // simple or elaborate selection criteria, run algorithms on the data
-   // of the event and typically fill histograms.
-
+   // This function should contain the "body" of the analysis: select relevant
+   // tree entries, run algorithms on the tree entry and typically fill histograms.
+   
    // Load the data for TTree entry number "entry" from branch 
    // fEventSize into the connected data member (fCurrentEventSize):
    fEventSizeBranch->GetEntry(entry);
@@ -99,9 +104,9 @@ Bool_t CountEventSelector::Process(Long64_t entry)
 
 void CountEventSelector::Terminate()
 {
-   // The Terminate() function is the last function to be called during
-   // a query. It always runs on the client, it can be used to present
-   // the results graphically or save the results to file.
+   // The Terminate() function is the last function to be called during the
+   // analysis of a tree with a selector. It always runs on the client, it can
+   // be used to present the results graphically or save the results to file.
 
    int sizeInMB = fTotalDataSize/1024/1024;
    printf("Total size of all events: %d MB\n", sizeInMB);
