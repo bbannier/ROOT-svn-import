@@ -134,7 +134,7 @@ Bool_t FullEventDataSelector::Process(Long64_t entry)
          fPosX->Fill(fParticlesPosX[iParticle]);
    }
 
-   fTotalDataSize += fEventSizeBranch;
+   fTotalDataSize += fCurrentEventSize;
 
    return kTRUE;
 }

@@ -123,7 +123,7 @@ Bool_t EventDataSelector::Process(Long64_t entry)
 
    // *** 2. *** Do the actual analysis
 
-   fTotalDataSize += fEventSizeBranch;
+   fTotalDataSize += fCurrentEventSize;
 
    return kTRUE;
 }
