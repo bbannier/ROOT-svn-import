@@ -37,22 +37,18 @@ class FullEventDataSelector : public TSelector {
 public :
 
    TH1         *fPosX; // X position of the particles
-   ULong64_t    fTotalDataSize; // sum of data size (in bytes) of all events
 
    // Declaration of leaf types
-   Int_t        fParticles;
-   Double_t     fParticlesPosX[kMaxfParticles];       //[fParticles_]
-   Double_t     fParticlesMomentum[kMaxfParticles];   //[fParticles_]
-   Int_t        fCurrentEventSize;
+   Int_t        fNParticles;
+   Double_t     fParticlesPosX[kMaxfParticles];       //[fNParticles]
+   Double_t     fParticlesMomentum[kMaxfParticles];   //[fNParticles]
 
    // List of branches
-   TBranch     *fParticlesBranch;
+   TBranch     *fNParticlesBranch;
    TBranch     *fParticlesPosXBranch;
    TBranch     *fParticlesMomentumBranch;
-   TBranch     *fEventSizeBranch;
 
-   FullEventDataSelector(TTree * = 0): fPosX(0), 
-                     fTotalDataSize(0) { }
+   FullEventDataSelector(TTree * = 0): fPosX(0) { }
 
    virtual ~FullEventDataSelector() { }
    virtual void    Init(TTree *tree);
@@ -79,17 +75,16 @@ void FullEventDataSelector::Init(TTree *tree)
    tree->SetMakeClass(1);
 
    // Connect the branches with their member variables.
-   tree->SetBranchAddress("fParticles", &fParticles, &fParticlesBranch);
+   tree->SetBranchAddress("fNParticles", &fNParticles, &fNParticlesBranch);
    tree->SetBranchAddress("fParticles.fPosX", fParticlesPosX, &fParticlesPosXBranch);
    tree->SetBranchAddress("fParticles.fMomentum", fParticlesMomentum, &fParticlesMomentumBranch);
-   tree->SetBranchAddress("fEventSize", &fCurrentEventSize, &fEventSizeBranch);
 }
 
-void FullEventDataSelector::SlaveBegin(TTree * /*tree*/)
+void FullEventDataSelector::SlaveBegin(TTree *tree)
 {
-   // The SlaveBegin() function is called after the Begin() function.
-   // When running with PROOF SlaveBegin() is called on each slave server.
-   // The tree argument is deprecated (on PROOF 0 is passed).
+   // SlaveBegin() is a good place to create histograms. 
+   // For PROOF, this is called for each worker.
+   // The TTree* is there for backward compatibility; e.g. PROOF passes 0.
 
    fPosX = new TH1F("hPosX", "Position in X", 20, -5, 5);
    // enable bin errors:
@@ -100,53 +95,37 @@ void FullEventDataSelector::SlaveBegin(TTree * /*tree*/)
 
 Bool_t FullEventDataSelector::Process(Long64_t entry)
 {
-   // The Process() function is called for each entry in the tree (or possibly
-   // keyed object in the case of PROOF) to be processed. The entry argument
-   // specifies which entry in the currently loaded tree is to be processed.
-   // It can be passed to either FullEventDataSelector::GetEntry() or TBranch::GetEntry()
-   // to read either all or the required parts of the data. When processing
-   // keyed objects with PROOF, the object is already loaded and is available
-   // via the fObject pointer.
+   // The Process() function is called for each entry in the tree to be 
+   // processed. The entry argument specifies which entry in the currently
+   // loaded tree is to be processed.
+   // It can be passed to either EventSelector::GetEntry() or TBranch::GetEntry()
+   // to read either all or the required parts of the TTree.
    //
-   // This function should contain the "body" of the analysis. It can contain
-   // simple or elaborate selection criteria, run algorithms on the data
-   // of the event and typically fill histograms.
-   //
-   // The processing can be stopped by calling Abort().
-   //
-   // Use fStatus to set the return value of TTree::Process().
-   //
-   // The return value is currently not used.
+   // This function should contain the "body" of the analysis: select relevant
+   // tree entries, run algorithms on the tree entry and typically fill histograms.
 
    // *** 1. *** Tell the tree to load the data for this entry:
    // We only need the number of particles...
-   fParticlesBranch->GetEntry(entry);
+   fNParticlesBranch->GetEntry(entry);
    // ... and their position in X...
    fParticlesPosXBranch->GetEntry(entry);
-   // ... their momentum...
+   // ... and their momentum
    fParticlesMomentumBranch->GetEntry(entry);
-   // ... and the size of the event:
-   fEventSizeBranch->GetEntry(entry);
 
    // *** 2. *** Do the actual analysis
-   for (int iParticle = 0; iParticle < fParticles; ++iParticle) {
-      if (fParticlesMomentum[iParticle] > 40.)
+   for (int iParticle = 0; iParticle < fNParticles; ++iParticle) {
+      if (fParticlesMomentum[iParticle] > 40.0)
          fPosX->Fill(fParticlesPosX[iParticle]);
    }
-
-   fTotalDataSize += fCurrentEventSize;
 
    return kTRUE;
 }
 
 void FullEventDataSelector::Terminate()
 {
-   // The Terminate() function is the last function to be called during
-   // a query. It always runs on the client, it can be used to present
-   // the results graphically or save the results to file.
-
-   int sizeInMB = fTotalDataSize/1024/1024;
-   printf("Total size of all events: %d MB\n", sizeInMB);
+   // The Terminate() function is the last function to be called during the
+   // analysis of a tree with a selector. It always runs on the client, it can
+   // be used to present the results graphically or save the results to file.
 
    // Fit the histogram:
    fPosX->Fit("pol2");
