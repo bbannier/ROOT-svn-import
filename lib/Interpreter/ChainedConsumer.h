@@ -8,13 +8,12 @@
 #define CLING_CHAINED_CONSUMER_H
 
 #include "llvm/ADT/OwningPtr.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/Sema/SemaConsumer.h"
 
 #include <bitset>
-#include <queue>
 
 namespace clang {
   class ASTContext;
@@ -99,6 +98,7 @@ namespace cling {
 
     bool IsQueueing() { return m_Queueing; }
 
+    void DumpQueue();
   private:
     clang::ASTConsumer* Consumers[kConsumersCount]; // owns them
     std::bitset<kConsumersCount> Enabled;
@@ -119,7 +119,7 @@ namespace cling {
       HandlerIndex I;
       DGRInfo(clang::DeclGroupRef d, HandlerIndex i) : D(d), I(i){}
     };
-    std::queue<DGRInfo> DeclsQueue;
+    llvm::SmallVector<DGRInfo, 64> DeclsQueue;
     bool m_Queueing;
   };
 } // namespace cling
