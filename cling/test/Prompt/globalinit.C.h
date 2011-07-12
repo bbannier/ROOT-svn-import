@@ -1,4 +1,3 @@
-#include <typeinfo>
 extern "C" int printf(const char*,...);
 
 struct A {
