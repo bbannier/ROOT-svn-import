@@ -256,7 +256,7 @@ namespace cling {
     m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
     m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
 
-    return Result;    
+    return Result;
   }
 
   clang::CompilerInstance*
@@ -331,6 +331,7 @@ namespace cling {
     }
 
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
+
     DC->EndSourceFile();
     // unsigned err_count = DC->getNumErrors();
     // if (err_count) {
