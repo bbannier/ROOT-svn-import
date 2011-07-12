@@ -1,8 +1,6 @@
 // RUN: %cling %s\(\"%s\"\) 
 // RUN: %cling %s\(\"%s\"\) | FileCheck %s
 
-#include <typeinfo>
-
 #include "cling/Interpreter/Interpreter.h"
 
 void globalinit(const std::string& location) {
