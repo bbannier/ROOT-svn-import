@@ -232,6 +232,7 @@ namespace cling {
   }
   
   void ChainedConsumer::HandleInterestingDecl(DeclGroupRef D) {
+    assert("Not implemented yet!");
     if (IsQueueing())
       DeclsQueue.push_back(DGRInfo(D, kInterestingDecl));
     else 
@@ -261,6 +262,7 @@ namespace cling {
   }
 
   void ChainedConsumer::CompleteTentativeDefinition(VarDecl* D) {
+    assert("Not implemented yet!");
     if (IsQueueing())
       DeclsQueue.push_back(DGRInfo(DeclGroupRef(D), kCompleteTentativeDefinition));
     else 
@@ -392,6 +394,5 @@ namespace cling {
   void ChainedConsumer::Update(VerifyingSemaConsumer* VSC) {
     RecoverFromError();
   }
-
   
 } // namespace cling
