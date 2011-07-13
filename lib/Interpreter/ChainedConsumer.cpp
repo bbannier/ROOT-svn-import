@@ -376,6 +376,8 @@ namespace cling {
     }
 
     DeclsQueue.clear();
+
+    m_Sema->getDiagnostics().Reset();
   }
 
   void ChainedConsumer::DumpQueue() {
@@ -386,5 +388,10 @@ namespace cling {
         (*J)->dump();
     }
   }
+
+  void ChainedConsumer::Update(VerifyingSemaConsumer* VSC) {
+    RecoverFromError();
+  }
+
   
 } // namespace cling

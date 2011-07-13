@@ -23,6 +23,7 @@ namespace cling {
 
   class ChainedMutationListener;
   class ChainedDeserializationListener;
+  class VerifyingSemaConsumer;
 
   class ChainedConsumer: public clang::SemaConsumer {
 
@@ -99,6 +100,7 @@ namespace cling {
     bool IsQueueing() { return m_Queueing; }
 
     void DumpQueue();
+    void Update(VerifyingSemaConsumer* ESSC);
   private:
     clang::ASTConsumer* Consumers[kConsumersCount]; // owns them
     std::bitset<kConsumersCount> Enabled;

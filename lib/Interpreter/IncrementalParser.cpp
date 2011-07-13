@@ -121,8 +121,10 @@ namespace cling {
     
     m_Consumer = dyn_cast<ChainedConsumer>(&CI->getASTConsumer());
     assert(m_Consumer && "Expected ChainedConsumer!");
-    // Add consumers
-    addConsumer(ChainedConsumer::kDeclExtractor, new DeclExtractor());
+    // Add consumers to the ChainedConsumer, which owns them
+    DeclExtractor* DE = new DeclExtractor();
+    DE->Attach(m_Consumer);
+    addConsumer(ChainedConsumer::kDeclExtractor, DE);
     addConsumer(ChainedConsumer::kValuePrinterSynthesizer,
                 new ValuePrinterSynthesizer(interp));
     addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
