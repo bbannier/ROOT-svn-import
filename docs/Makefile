@@ -59,7 +59,7 @@ $(PROJ_OBJ_DIR)/html.tar.gz: $(HTML)
 	$(Echo) Packaging HTML documentation
 	$(Verb) $(RM) -rf $@ $(PROJ_OBJ_DIR)/html.tar
 	$(Verb) cd $(PROJ_SRC_DIR) && \
-	  $(TAR) cf $(PROJ_OBJ_DIR)/html.tar *.html
+	  $(TAR) cf $(PROJ_OBJ_DIR)/html.tar $(PROJ_OBJ_DIR)/doxygen/html/*.html
 	$(Verb) $(GZIPBIN) $(PROJ_OBJ_DIR)/html.tar
 
 install-doxygen: doxygen
