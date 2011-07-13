@@ -14,7 +14,7 @@ ifndef CLING_LEVEL
 
 IS_TOP_LEVEL := 1
 CLING_LEVEL := .
-DIRS := include lib tools docs
+DIRS := include lib tools
 
 PARALLEL_DIRS :=
 
