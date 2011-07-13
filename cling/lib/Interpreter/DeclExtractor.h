@@ -7,29 +7,28 @@
 #ifndef CLING_DECL_EXTRACTOR_H
 #define CLING_DECL_EXTRACTOR_H
 
-#include "clang/Sema/SemaConsumer.h"
+#include "VerifyingSemaConsumer.h"
 
 namespace clang {
   class Decl;
+  class DeclContext;
+  class NamedDecl;
+  class Scope;
 }
 
 namespace cling {
-  class DeclExtractor : public clang::SemaConsumer {
-
-  private:
-    clang::ASTContext* m_Context;
-    clang::Sema* m_Sema;
+  class DeclExtractor : public VerifyingSemaConsumer {
 
   public:
     DeclExtractor();
     virtual ~DeclExtractor();
-    void Initialize(clang::ASTContext& Ctx);
-    void InitializeSema(clang::Sema& S);
-    void HandleTopLevelDecl(clang::DeclGroupRef DGR);
-    void ForgetSema();
+    void TransformTopLevelDecl(clang::DeclGroupRef DGR);
 
   private:
-    void ExtractDecl(clang::Decl* D);    
+    void ExtractDecl(clang::Decl* D);
+    bool CheckForClashingNames(const llvm::SmallVector<clang::NamedDecl*, 4>& Decls, 
+                               clang::DeclContext* DC, clang::Scope* S);
+
   };
 
 } // namespace cling

@@ -23,21 +23,9 @@ namespace cling {
 
   }
 
-  void DeclExtractor::Initialize(clang::ASTContext& Ctx) {
-    m_Context = &Ctx;
-  }
-
-  void DeclExtractor::InitializeSema(clang::Sema& S) {
-    m_Sema = &S;
-  }
-
-  void DeclExtractor::HandleTopLevelDecl(clang::DeclGroupRef DGR) {
+  void DeclExtractor::TransformTopLevelDecl(clang::DeclGroupRef DGR) {
     for (DeclGroupRef::iterator I = DGR.begin(), E = DGR.end(); I != E; ++I)
       ExtractDecl(*I);
-  }
-
-  void DeclExtractor::ForgetSema() {
-    m_Sema = 0;
   }
 
   void DeclExtractor::ExtractDecl(clang::Decl* D) {
@@ -103,28 +91,19 @@ namespace cling {
         }
 
       }
+
+      if (!CheckForClashingNames(TouchedDecls, DC, S)) {
+        
+      
+
       // Insert the extracted declarations before the wrapper
-      for (unsigned i = 0; i < TouchedDecls.size(); ++i) {
+        for (size_t i = 0; i < TouchedDecls.size(); ++i) {
 
-        if (VarDecl* VD = dyn_cast<VarDecl>(TouchedDecls[i])) {
-          LookupResult Previous(*m_Sema, VD->getDeclName(), VD->getLocation(),
-                                Sema::LookupOrdinaryName, Sema::ForRedeclaration
-                                );
-          m_Sema->LookupName(Previous, S);
-
-          bool Redeclaration = false;
-          m_Sema->CheckVariableDeclaration(VD, Previous, Redeclaration);
-          if (!VD->isInvalidDecl()) {
-            DC->addDecl(TouchedDecls[i]);
-            S->AddDecl(TouchedDecls[i]);
-          }
-        }
-        else {
           DC->addDecl(TouchedDecls[i]);
           S->AddDecl(TouchedDecls[i]);
+        
+          m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
         }
-
-        m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
       }
 
       // Add the wrapper even though it is empty. The ValuePrinterSynthesizer
@@ -132,6 +111,28 @@ namespace cling {
       CS->setStmts(*m_Context, Stmts.data(), Stmts.size());
       DC->addDecl(FD);
       S->AddDecl(FD);
+
     }
+  }
+
+  bool DeclExtractor::CheckForClashingNames(const llvm::SmallVector<NamedDecl*, 4>& Decls, 
+                                            DeclContext* DC, Scope* S) {
+    for (size_t i = 0; i < Decls.size(); ++i) {
+
+        if (VarDecl* VD = dyn_cast<VarDecl>(Decls[i])) {
+          LookupResult Previous(*m_Sema, VD->getDeclName(), VD->getLocation(),
+                                Sema::LookupOrdinaryName, Sema::ForRedeclaration
+                                );
+          m_Sema->LookupName(Previous, S);
+
+          bool Redeclaration = false;
+          m_Sema->CheckVariableDeclaration(VD, Previous, Redeclaration);
+          if (VD->isInvalidDecl()) {
+            return true;
+          }
+        }
+      }
+
+    return false;
   }
 } // namespace cling
