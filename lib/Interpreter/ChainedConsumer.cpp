@@ -290,25 +290,25 @@ namespace cling {
 
       // Pass through the consumers
       for (size_t i = 0; i < kConsumersCount; ++i) {
+        if (!IsConsumerEnabled((EConsumerIndex)i)) 
+          continue;
         for (size_t Idx = 0; Idx < DeclsQueue.size(); ++Idx) {
-          if (IsConsumerEnabled((EConsumerIndex)i)) {
-            switch (DeclsQueue[Idx].I) {
-            case kTopLevelDecl:
-              Consumers[i]->HandleTopLevelDecl(DeclsQueue[Idx].D);
-              break;
-            case kInterestingDecl:
-              Consumers[i]->HandleInterestingDecl(DeclsQueue[Idx].D);
-              break;
-            case kTagDeclDefinition:
-              Consumers[i]->HandleTagDeclDefinition((TagDecl*)DeclsQueue[Idx].D.getSingleDecl());
-              break;
-            case kVTable:
-              assert("Not implemented yet!");
-              break;
-            case kCompleteTentativeDefinition:
-              Consumers[i]->CompleteTentativeDefinition((VarDecl*)DeclsQueue[Idx].D.getSingleDecl());
-              break;
-            }
+          switch (DeclsQueue[Idx].I) {
+          case kTopLevelDecl:
+            Consumers[i]->HandleTopLevelDecl(DeclsQueue[Idx].D);
+            break;
+          case kInterestingDecl:
+            Consumers[i]->HandleInterestingDecl(DeclsQueue[Idx].D);
+            break;
+          case kTagDeclDefinition:
+            Consumers[i]->HandleTagDeclDefinition((TagDecl*)DeclsQueue[Idx].D.getSingleDecl());
+            break;
+          case kVTable:
+            assert("Not implemented yet!");
+            break;
+          case kCompleteTentativeDefinition:
+            Consumers[i]->CompleteTentativeDefinition((VarDecl*)DeclsQueue[Idx].D.getSingleDecl());
+            break;
           }
         }
       }
