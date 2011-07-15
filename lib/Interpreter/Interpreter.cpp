@@ -381,11 +381,11 @@ namespace cling {
       //  Wrap input into a function along with
       //  the saved global declarations.
       //
-      InputValidator::Result ValidatorResult = m_InputValidator->validate(input_line);
-      if (ValidatorResult != InputValidator::kValid) {
-          fprintf(stderr, "Bad input, dude! That's a code %d\n", ValidatorResult);
-        return 0;
-      }
+      // InputValidator::Result ValidatorResult = m_InputValidator->validate(input_line);
+      // if (ValidatorResult != InputValidator::kValid) {
+      //     fprintf(stderr, "Bad input, dude! That's a code %d\n", ValidatorResult);
+      //   return 0;
+      // }
       WrapInput(wrapped, functName);
     }
 
@@ -646,7 +646,6 @@ namespace cling {
 
   void Interpreter::setCallbacks(InterpreterCallbacks* C) {
     m_IncrParser->getOrCreateTransformer(this)->AttachDynIDHandler();
-    enableDynamicLookup(true);
     m_IncrParser->getTransformer()->SetCallbacks(C);
   }
 
