@@ -146,12 +146,8 @@ namespace cling {
     //  SC->InitializeSema(CI->getSema()); // do we really need this? We know 
     // that we will have ChainedConsumer, which is initialized in createCI
     
-    // Attach the DynamicIDHandler if enabled
-    if (m_DynamicLookupEnabled) {
-      // Create the visitor that will transform all dependents that are left.
-      m_Transformer.reset(new DynamicExprTransformer(interp, &CI->getSema()));
-      getTransformer()->AttachDynIDHandler();
-    }
+    // Create the visitor that will transform all dependents that are left.
+    m_Transformer.reset(new DynamicExprTransformer(interp, &CI->getSema()));
   }
   
   IncrementalParser::~IncrementalParser() { }
