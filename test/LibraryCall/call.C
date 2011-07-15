@@ -1,6 +1,6 @@
 // RUN: cat %s | %cling | FileCheck %s
 
-.L libcling-test-library.so
+.L libcling-test-library
 extern "C" int cling_testlibrary_function();
 int i = cling_testlibrary_function();
 extern "C" int printf(const char* fmt, ...);
