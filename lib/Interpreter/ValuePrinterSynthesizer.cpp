@@ -56,7 +56,8 @@ namespace cling {
                 p = C->DisableConsumer(ChainedConsumer::kDeclExtractor);
                 q = C->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
                 Expr* Result = SynthesizeVP(To);
-                *J = Result;
+                if (Result)
+                  *J = Result;
                 C->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
                 C->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
               }
