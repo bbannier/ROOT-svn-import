@@ -27,14 +27,15 @@ namespace cling {
     PrintingPolicy Policy = D->getASTContext().PrintingPolicy;
     Policy.Dump = Dump;
 
-    if (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)) {
+    if (D) {
+      llvm::outs() << "\n-------------------Declaration---------------------\n";
       D->dump();
-      
+
       if (Stmt* Body = D->getBody()) {
-        llvm::outs() << "DeclStmts:---------------------------------\n";
+        llvm::outs() << "\n------------------Declaration Body---------------\n";
         Body->dump();
-        llvm::outs() << "End DeclStmts:-----------------------------\n\n\n\n";
       }
+      llvm::outs() << "\n---------------------------------------------------\n";  
     }
   }
 } // namespace cling
