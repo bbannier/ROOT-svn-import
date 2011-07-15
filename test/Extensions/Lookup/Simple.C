@@ -3,7 +3,7 @@
 
 #include "SymbolResolverCallback.h"
 
-gCling->setCallbacks(new cling::test::SymbolResolverCallback(gCling));
+gCling->setCallbacks(new cling::test::SymbolResolverCallback(gCling, /*Enabled=*/true));
 jksghdgsjdf->getVersion() // CHECK: {{.*Interpreter.*}}
 hsdghfjagsp->Draw() // CHECK: (int const) 12
 
