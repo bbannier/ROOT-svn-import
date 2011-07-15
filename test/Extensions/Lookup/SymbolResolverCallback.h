@@ -33,18 +33,24 @@ namespace cling {
 
     class SymbolResolverCallback: public cling::InterpreterCallbacks {
     public:
-      SymbolResolverCallback(Interpreter* interp)
-        : InterpreterCallbacks(interp) {
-        interp->processLine("cling::test::Tester = new cling::test::TestProxy();");
-      }
-      
+      SymbolResolverCallback(Interpreter* interp, bool enabled = false)
+        : InterpreterCallbacks(interp, enabled) {
+        
+      }      
       ~SymbolResolverCallback(){}
+
+      void Initialize() {
+        m_Interpreter->processLine("cling::test::Tester = new cling::test::TestProxy();");
+      }
       bool LookupObject(clang::LookupResult& R, clang::Scope* S) {
         // Only for demo resolve all unknown objects to gCling
-        clang::NamedDecl* D = m_Interpreter->LookupDecl("cling").LookupDecl("test").LookupDecl("Tester");
-        assert (D && "Tester not found!");
-        R.addDecl(D);
-        return true;
+        if (m_Enabled) {
+          clang::NamedDecl* D = m_Interpreter->LookupDecl("cling").LookupDecl("test").LookupDecl("Tester");
+          assert (D && "Tester not found!");
+          R.addDecl(D);
+          return true;
+        }
+        return false;
       }
     };
   } // end test
