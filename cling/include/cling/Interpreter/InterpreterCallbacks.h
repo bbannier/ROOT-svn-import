@@ -23,10 +23,22 @@ namespace cling {
 
   protected:
     Interpreter* m_Interpreter;
+    bool m_Enabled;
 
   public:
-    InterpreterCallbacks(Interpreter* interp) : m_Interpreter(interp){}
+    InterpreterCallbacks(Interpreter* interp, bool enabled = false)
+      : m_Interpreter(interp) {
+      setEnabled(enabled);
+    }
+
     virtual ~InterpreterCallbacks() {}
+
+    void setEnabled(bool e = true) { 
+      m_Interpreter->enableDynamicLookup(e);
+      m_Enabled = e;
+    }
+
+    bool isEnabled() { return m_Enabled; }
 
     /// \brief This callback is invoked whenever the interpreter needs to
     /// resolve the type and the adress of an object, which has been marked for

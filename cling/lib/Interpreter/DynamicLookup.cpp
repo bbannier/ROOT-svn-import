@@ -38,7 +38,7 @@ namespace cling {
     if (!IsDynamicLookup(R, S))
       return false;
 
-    if (Callbacks) {
+    if (Callbacks && Callbacks->isEnabled()) {
       return Callbacks->LookupObject(R, S);
     }
 
