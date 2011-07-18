@@ -6,7 +6,9 @@
 
 #include "ASTUtils.h"
 
+#include "clang/AST/DeclarationName.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/Lookup.h"
 
 using namespace clang;
 
@@ -26,4 +28,42 @@ namespace cling {
     return Result;
 
   }
+
+  NamespaceDecl* Lookup::Namespace(Sema* S, const char* Name,
+                                   DeclContext* Within) {
+    DeclarationName DName = &S->Context.Idents.get(Name);
+    LookupResult R(*S, DName, SourceLocation(), 
+                   Sema::LookupNestedNameSpecifierName);
+    if (!Within)
+      S->LookupName(R, S->TUScope);
+    else
+      S->LookupQualifiedName(R, Within);
+
+    if (R.empty())
+      return 0;
+
+    R.resolveKind();
+
+    return dyn_cast<NamespaceDecl>(R.getFoundDecl());
+  }
+
+  NamedDecl* Lookup::Named(Sema* S, const char* Name, DeclContext* Within) {
+    DeclarationName DName = &S->Context.Idents.get(Name);
+
+    LookupResult R(*S, DName, SourceLocation(), Sema::LookupOrdinaryName,
+                   Sema::ForRedeclaration);
+    if (!Within)
+      S->LookupName(R, S->TUScope);
+    else
+      S->LookupQualifiedName(R, Within);
+
+    if (R.empty())
+      return 0;
+
+    R.resolveKind();
+
+    return R.getFoundDecl();
+    
+  }
+
 } // end namespace cling
