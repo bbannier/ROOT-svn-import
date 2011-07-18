@@ -258,8 +258,10 @@ namespace cling {
     // Diagnostics are reset for each call of parse: they are only covering
     // src.
     clang::Preprocessor& PP = m_CI->getPreprocessor();
-    m_CI->getDiagnosticClient().BeginSourceFile(m_CI->getLangOpts(), &PP);
-    
+    m_CI->getDiagnostics().Reset();
+    DiagnosticClient& DClient = m_CI->getDiagnosticClient();
+    DClient.BeginSourceFile(m_CI->getLangOpts(), &PP);
+
     if (input.size()) {
       std::ostringstream source_name;
       source_name << "input_line_" << (m_MemoryBuffer.size()+1);
@@ -273,7 +275,7 @@ namespace cling {
       clang::Token &tok = const_cast<clang::Token&>(m_Parser->getCurToken());
       tok.setKind(clang::tok::semi);
     }
-        
+
     clang::Parser::DeclGroupPtrTy ADecl;
     
     bool atEOF = false;
@@ -318,6 +320,7 @@ namespace cling {
     }
 
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
+    DClient.EndSourceFile();
 
     m_Interpreter->runStaticInitializersOnce();
 
