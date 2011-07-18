@@ -6,50 +6,33 @@
 
 #include "cling/Interpreter/Interpreter.h"
 
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclGroup.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/ExprCXX.h"
-#include "clang/AST/Mangle.h"
-#include "clang/AST/Stmt.h"
-#include "clang/AST/Type.h"
-#include "clang/Basic/DiagnosticIDs.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/CodeGen/ModuleBuilder.h"
-#include "clang/Frontend/Utils.h"
-#include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/Pragma.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Sema/Lookup.h"
-#include "clang/Sema/Template.h"
-#include "llvm/Constants.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/raw_os_ostream.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "ClangUtils.h"
+#include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/Value.h"
 #include "DynamicLookup.h"
 #include "ExecutionContext.h"
 #include "IncrementalParser.h"
 #include "InputValidator.h"
-#include "cling/Interpreter/InvocationOptions.h"
-#include "cling/Interpreter/InterpreterCallbacks.h"
-#include "cling/Interpreter/CIFactory.h"
-#include "cling/Interpreter/Diagnostics.h"
-#include "cling/Interpreter/Value.h"
+
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Mangle.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGen/ModuleBuilder.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/Utils.h"
+#include "clang/Lex/Pragma.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Sema.h"
+
+#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/raw_os_ostream.h"
 
 #include <cstdio>
 #include <iostream>
 #include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
 
 using namespace clang;
 
