@@ -285,6 +285,9 @@ namespace cling {
     else {
       atEOF = m_Parser->ParseTopLevelDecl(ADecl);
     }
+    // Reset the module builder to clean up global initializers, c'tors, d'tors:
+    GetCodeGenerator()->Initialize(getCI()->getASTContext());
+
     while (!atEOF) {
       // Not end of file.
       // If we got a null return and something *was* parsed, ignore it.  This
