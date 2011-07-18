@@ -161,7 +161,7 @@ namespace cling {
     
   private:
     InvocationOptions m_Opts; // Interpreter options
-    llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
+    llvm::OwningPtr<ExecutionContext> m_ExecutionContext;
     llvm::OwningPtr<IncrementalParser> m_IncrParser; // incremental AST and its parser
     llvm::OwningPtr<InputValidator> m_InputValidator; // balanced paren etc
     clang::PragmaNamespace* m_PragmaHandler; // pragma cling ..., owned by Preprocessor
