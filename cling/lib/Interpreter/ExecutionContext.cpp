@@ -87,7 +87,7 @@ void JITtedFunctionCollector::UnregisterFunctionMapping(llvm::ExecutionEngine &e
 std::vector<std::string> ExecutionContext::m_vec_unresolved;
 std::vector<ExecutionContext::LazyFunctionCreatorFunc_t> ExecutionContext::m_vec_lazy_function;
 
-ExecutionContext::ExecutionContext(clang::CompilerInstance* CI):
+ExecutionContext::ExecutionContext():
   m_engine(0),
   m_posInitGlobals(0)
 {
@@ -192,7 +192,7 @@ ExecutionContext::executeFunction(llvm::StringRef funcname,
       }
       m_vec_unresolved.clear();
       // cleanup functions
-      listener.UnregisterFunctionMapping(getEngine());   
+      listener.UnregisterFunctionMapping(*m_engine);   
       m_engine->UnregisterJITEventListener(&listener);
       return;
    }

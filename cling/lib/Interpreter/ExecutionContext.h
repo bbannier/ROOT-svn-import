@@ -30,11 +30,9 @@ namespace cling {
   public:
     typedef void* (*LazyFunctionCreatorFunc_t)(const std::string&);
     
-    ExecutionContext(clang::CompilerInstance* CI);
+    ExecutionContext();
     ~ExecutionContext();
-    
-    llvm::ExecutionEngine& getEngine() { return *m_engine; }
-    
+        
     void installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp);
     
     void runStaticInitializersOnce(llvm::Module* m);
