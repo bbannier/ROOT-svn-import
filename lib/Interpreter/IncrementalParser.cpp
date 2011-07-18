@@ -91,10 +91,9 @@ namespace cling {
   };
 
   
-  IncrementalParser::IncrementalParser(Interpreter* interp,
-                                       clang::PragmaNamespace* Pragma,
-                                       int argc,
-                                       const char* const *argv,
+  IncrementalParser::IncrementalParser(Interpreter* interp, 
+                                       PragmaNamespace* Pragma, 
+                                       int argc, const char* const *argv,
                                        const char* llvmdir):
     m_Interpreter(interp),
     m_DynamicLookupEnabled(false),
@@ -258,7 +257,6 @@ namespace cling {
     // Diagnostics are reset for each call of parse: they are only covering
     // src.
     clang::Preprocessor& PP = m_CI->getPreprocessor();
-    m_CI->getDiagnostics().Reset();
     DiagnosticClient& DClient = m_CI->getDiagnosticClient();
     DClient.BeginSourceFile(m_CI->getLangOpts(), &PP);
 
@@ -326,6 +324,8 @@ namespace cling {
     DClient.EndSourceFile();
 
     m_Interpreter->runStaticInitializersOnce();
+
+    m_CI->getDiagnostics().Reset();
 
     return m_CI.get();
   }
