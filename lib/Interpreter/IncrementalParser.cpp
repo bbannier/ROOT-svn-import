@@ -273,11 +273,7 @@ namespace cling {
       clang::Token &tok = const_cast<clang::Token&>(m_Parser->getCurToken());
       tok.setKind(clang::tok::semi);
     }
-    
-    DiagnosticPrinter* DC = reinterpret_cast<DiagnosticPrinter*>(&m_CI->getDiagnosticClient());
-    DC->resetCounts();
-    m_CI->getDiagnostics().Reset();
-    
+        
     clang::Parser::DeclGroupPtrTy ADecl;
     
     bool atEOF = false;
@@ -323,7 +319,6 @@ namespace cling {
 
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
-    DC->EndSourceFile();
     m_Interpreter->runStaticInitializersOnce();
 
     return m_CI.get();
