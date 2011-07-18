@@ -24,13 +24,9 @@ namespace cling {
 
   ValuePrinterSynthesizer::ValuePrinterSynthesizer(Interpreter* Interp) 
     : m_Context(0), m_Sema(0), m_Interpreter(Interp)
-  {
+  { }
 
-  }
-
-  ValuePrinterSynthesizer::~ValuePrinterSynthesizer() {
-
-  }
+  ValuePrinterSynthesizer::~ValuePrinterSynthesizer() {}
 
   void ValuePrinterSynthesizer::Initialize(ASTContext& Ctx) {
     m_Context = &Ctx;
@@ -90,16 +86,16 @@ namespace cling {
     // 1. Call gCling->getValuePrinterStream()
     // 1.1. Find gCling
     SourceLocation NoSLoc = SourceLocation();
-    DeclarationName Name = &m_Context->Idents.get("PrintValue");
-    LookupResult R(*m_Sema, Name, NoSLoc, Sema::LookupOrdinaryName,
+
+    NamespaceDecl* NSD = Lookup::Namespace(m_Sema, "cling");
+    NSD = Lookup::Namespace(m_Sema, "valuePrinterInternal", NSD);
+
+
+    DeclarationName PVName = &m_Context->Idents.get("PrintValue");
+    LookupResult R(*m_Sema, PVName, NoSLoc, Sema::LookupOrdinaryName,
                    Sema::ForRedeclaration);
-    DeclContext* DC 
-      = cast_or_null<DeclContext>(m_Interpreter->
-                                  LookupDecl("cling").
-                                  LookupDecl("valuePrinterInternal").
-                                  getSingleDecl()
-                              );
-    m_Sema->LookupQualifiedName(R, DC);
+    
+    m_Sema->LookupQualifiedName(R, NSD);
     assert(!R.empty() && "Cannot find PrintValue(...)");
 
     CXXScopeSpec CSS;
@@ -110,20 +106,21 @@ namespace cling {
     
     // 2.4.1 Lookup the llvm::raw_ostream
     CXXRecordDecl* RawOStreamRD
-      = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("llvm").
-                          LookupDecl("raw_ostream").getSingleDecl());
+      = dyn_cast<CXXRecordDecl>(Lookup::Named(m_Sema, "raw_ostream",
+                                              Lookup::Namespace(m_Sema, "llvm")));
+
     assert(RawOStreamRD && "Declaration of the expr not found!");
     QualType RawOStreamRDTy = m_Context->getTypeDeclType(RawOStreamRD);
     // 2.4.2 Lookup the expr type
     CXXRecordDecl* ExprRD
-      = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("clang").
-                          LookupDecl("Expr").getSingleDecl());
-    assert(ExprRD && "Declaration of the expr not found!");
+      = dyn_cast<CXXRecordDecl>(Lookup::Named(m_Sema, "Expr", 
+                                              Lookup::Namespace(m_Sema, "clang")));
+   assert(ExprRD && "Declaration of the expr not found!");
     QualType ExprRDTy = m_Context->getTypeDeclType(ExprRD);
     // 2.4.3 Lookup ASTContext type
     CXXRecordDecl* ASTContextRD
-      = dyn_cast<CXXRecordDecl>(m_Interpreter->LookupDecl("clang").
-                                LookupDecl("ASTContext").getSingleDecl());
+      = dyn_cast<CXXRecordDecl>(Lookup::Named(m_Sema, "ASTContext", 
+                                              Lookup::Namespace(m_Sema, "clang")));
     assert(ASTContextRD && "Declaration of the expr not found!");
     QualType ASTContextRDTy = m_Context->getTypeDeclType(ASTContextRD);
 
