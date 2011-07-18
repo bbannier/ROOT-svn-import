@@ -282,7 +282,7 @@ namespace cling {
 
       // Check for errors...
     
-      if (m_Sema->getDiagnostics().getClient()->getNumErrors()) {
+      if (m_Sema->getDiagnostics().hasErrorOccurred()) {
         RecoverFromError();
         m_InTransaction = false;
         return;
