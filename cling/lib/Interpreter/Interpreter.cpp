@@ -174,8 +174,7 @@ namespace cling {
   m_UniqueCounter(0),
   m_printAST(false),
   m_ValuePrinterEnabled(false),
-  m_LastDump(0),
-  m_ASTDumper(0)
+  m_LastDump(0)
   {
     m_PragmaHandler = new PragmaNamespace("cling");
 
@@ -365,7 +364,7 @@ namespace cling {
     return m_IncrParser->getCI();
   }
   
-  int Interpreter::processLine(const std::string& input_line) {
+  bool Interpreter::processLine(const std::string& input_line) {
     //
     //  Transform the input line to implement cint
     //  command line semantics (declarations are global),
@@ -393,7 +392,7 @@ namespace cling {
     // disable that warning when using the prompt
     unsigned warningID = DiagnosticIDs::getIdFromName("warn_unused_expr");
     Diag.ignoreWarning(warningID);
-    int result = handleLine(wrapped, functName);
+    bool result = handleLine(wrapped, functName);
     Diag.removeIgnoredWarning(warningID);
     return result;
   }
@@ -404,9 +403,9 @@ namespace cling {
     input.append("\n;\n}");
   }
 
-  int Interpreter::RunFunction(llvm::StringRef fname, llvm::GenericValue* res) {
+  bool Interpreter::RunFunction(llvm::StringRef fname, llvm::GenericValue* res) {
     if (getCI()->getDiagnosticClient().getNumErrors())
-      return 1;
+      return false;
 
     std::string mangledNameIfNeeded;
     FunctionDecl* FD = cast_or_null<FunctionDecl>(LookupDecl(fname).
@@ -422,10 +421,10 @@ namespace cling {
         fname = mangledNameIfNeeded;
       }
       m_ExecutionContext->executeFunction(fname, res);
-      return 0;
+      return true;
     }
 
-    return 1;
+    return false;
   }
 
   std::string Interpreter::createUniqueName()
@@ -438,20 +437,14 @@ namespace cling {
   }
   
   
-  int Interpreter::handleLine(const std::string& input, 
-                              std::string& FunctionName) {
-    m_ExecutionContext->runCodeGen(m_IncrParser->GetCodeGenerator()->GetModule());
+  bool Interpreter::handleLine(llvm::StringRef input, 
+                               llvm::StringRef FunctionName) {
     // if we are using the preprocessor
-    if (input.c_str()[0] == '#') {
-      return m_IncrParser->CompilePreprocessed(input) != 0;
-    }
-    
-    CompilerInstance* CI = m_IncrParser->CompileLineFromPrompt(input);
-    if (!CI) {
-      fprintf(stderr, "Cannot compile string!\n");
-      return 0;
+    if (input[0] == '#') {
+      return (m_IncrParser->CompileAsIs(input));
     }
 
+    m_IncrParser->CompileLineFromPrompt(input);
     //
     //  Run it using the JIT.
     //
@@ -462,14 +455,6 @@ namespace cling {
   }
 
   
-  CompilerInstance* Interpreter::compileFile(const std::string& filename,
-                                             const std::string* trailcode/*=0*/) {
-    std::string code;
-    code += "#include \"" + filename + "\"\n";
-    if (trailcode) code += *trailcode;
-    return m_IncrParser->CompilePreprocessed(code);
-  }
- 
   static bool tryLoadSharedLib(const std::string& filename,
                                const InvocationOptions& Opts) {
     llvm::sys::Path DynLib = findDynamicLibrary(filename, Opts);
@@ -489,7 +474,7 @@ namespace cling {
     return true;
   }
   
-  int
+  bool
   Interpreter::loadFile(const std::string& filename,
                         const std::string* trailcode /*=0*/,
                         bool allowSharedLib /*=true*/)
@@ -497,15 +482,13 @@ namespace cling {
     if (allowSharedLib && tryLoadSharedLib(filename, getOptions()))
       return 0;
     
-    CompilerInstance* CI = compileFile(filename, trailcode);
-    if (!CI) {
-      return 1;
-    }
-    m_ExecutionContext->runCodeGen(m_IncrParser->GetCodeGenerator()->GetModule());
-    return 0;
+    std::string code;
+    code += "#include \"" + filename + "\"\n";
+    if (trailcode) code += *trailcode;
+    return (m_IncrParser->CompileAsIs(code));
   }
   
-  int
+  bool
   Interpreter::executeFile(const std::string& fileWithArgs)
   {
     // Look for start of parameters:
@@ -528,12 +511,10 @@ namespace cling {
     std::string wrapper = pairFuncExt.first.str()+"("+pairFileArgs.second.str();
     WrapInput(wrapper, func);
 
-    int err = loadFile(pairFileArgs.first, &wrapper);
-    if (err) {
-      return err;
+    if (loadFile(pairFileArgs.first, &wrapper)) {
+      return RunFunction(func);
     }
-    RunFunction(func);
-    return 0;
+    return false;
   }
 
   QualType Interpreter::getQualType(llvm::StringRef type) {
@@ -543,14 +524,14 @@ namespace cling {
 
      // template<typename T> class dummy{}; 
      std::string templatedClass = "template<typename T> class " + className + "{};\n";
-     CI  = m_IncrParser->Compile(templatedClass);
+     CI  = m_IncrParser->CompileAsIs(templatedClass);
      Decl *templatedClassDecl = 0;
      if (CI)
         templatedClassDecl = m_IncrParser->getLastTopLevelDecl();
 
      //template <> dummy<DeclContext*> {};
      std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
-     CI = m_IncrParser->Compile(explicitSpecialization);
+     CI = m_IncrParser->CompileAsIs(explicitSpecialization);
      if (CI) {
         if (ClassTemplateSpecializationDecl* D = dyn_cast<ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
            Result = D->getTemplateArgs()[0].getAsType();
@@ -599,7 +580,7 @@ namespace cling {
     CurContext = m_IncrParser->getCI()->getSema().CurContext;
     m_IncrParser->getCI()->getSema().CurContext = DC;
 
-    CompilerInstance* CI = m_IncrParser->Compile(Wrapper);
+    CompilerInstance* CI = m_IncrParser->CompileAsIs(Wrapper);
     if (!CI) {
       fprintf(stderr, "Cannot compile string!\n");
     }
@@ -715,6 +696,14 @@ namespace cling {
     
     m_LastDump = m_IncrParser->getLastTopLevelDecl();     
     m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
+  }
+
+  void Interpreter::runStaticInitializersOnce() const
+  {
+    // Forward to ExecutionContext; should not be called by
+    // anyone except for IncrementalParser.
+    llvm::Module* module = m_IncrParser->GetCodeGenerator()->GetModule();
+    m_ExecutionContext->runStaticInitializersOnce(module);
   }
   
 } // namespace cling

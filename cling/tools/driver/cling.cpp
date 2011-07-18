@@ -52,7 +52,7 @@ int main( int argc, char **argv )
     interpreter.loadFile(interpreter.getOptions().LibsToLoad[I]);
   }
 
-   int ret = 0;
+   bool ret = true;
    const std::vector<std::pair<clang::InputKind, std::string> >& Inputs
      = CI->getInvocation().getFrontendOpts().Inputs;
 
@@ -75,5 +75,5 @@ int main( int argc, char **argv )
       ui.runInteractively(interpreter.getOptions().NoLogo);
    }
 
-   return ret;
+   return ret ? 0 : 1;
 }

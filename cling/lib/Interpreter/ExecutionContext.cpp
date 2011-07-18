@@ -112,7 +112,7 @@ ExecutionContext::InitializeBuilder(llvm::Module* m)
   m_engine = builder.create();
   assert(m_engine && "Cannot initialize builder without module!");
 
-  //m_engine->addModule(m_module); // Note: The engine takes ownership of the module.
+  //m_engine->addModule(m); // Note: The engine takes ownership of the module.
 
   // install lazy function
   m_engine->InstallLazyFunctionCreator(NotifyLazyFunctionCreators);
@@ -120,8 +120,6 @@ ExecutionContext::InitializeBuilder(llvm::Module* m)
 
 ExecutionContext::~ExecutionContext()
 {
-  //   if (m_codeGen)
-  //      m_codeGen->ReleaseModule();
 }
 
 void unresolvedSymbol()
@@ -218,24 +216,38 @@ ExecutionContext::executeFunction(llvm::StringRef funcname,
 
 
 void
-ExecutionContext::runCodeGen(llvm::Module* m) {
+ExecutionContext::runStaticInitializersOnce(llvm::Module* m) {
   assert(m && "Module must not be null");
 
   if (!m_engine)
     InitializeBuilder(m);
 
   assert(m_engine && "Code generation did not create an engine!");
-  m_engine->runStaticConstructorsDestructors(false);
   llvm::GlobalVariable* gctors = m->getGlobalVariable("llvm.global_ctors", true);
-   if (gctors) {
-      gctors->dropAllReferences();
-      gctors->eraseFromParent();
-   }
-   //llvm::Function* F = m_module->getFunction("_GLOBAL__I_a");
-   //if (F) {
-   //  F->deleteBody();
-   //  F->dropAllReferences();
-   //}
+  if (gctors) {
+    m_engine->runStaticConstructorsDestructors(false);
+    //gctors->dump();
+    gctors->eraseFromParent();
+    llvm::Function* F = m->getFunction("_GLOBAL__I_a");
+    if (F) {
+      //m_engine->updateGlobalMapping(F, 0);
+      //m_engine->freeMachineCodeForFunction(F);
+      F->eraseFromParent();
+    }
+    F = m->getFunction("__cxx_global_var_init");
+    if (F) {
+      //m_engine->updateGlobalMapping(F, 0);
+      //m_engine->freeMachineCodeForFunction(F);
+      F->eraseFromParent();
+    }
+    F = m->getFunction("__cxx_global_var_init1");
+    if (F) {
+      //m_engine->updateGlobalMapping(F, 0);
+      //m_engine->freeMachineCodeForFunction(F);
+      F->eraseFromParent();
+    }
+    //m_engine->updateGlobalMapping(gctors, 0);
+  }
 }
 
 int

@@ -129,13 +129,13 @@ namespace cling {
     std::string createUniqueName();
     void AddIncludePath(const char *incpath);
     void DumpIncludePath();
-    int processLine(const std::string& input_line);
+    bool processLine(const std::string& input_line);
     
-    int loadFile(const std::string& filename,
-                 const std::string* trailcode = 0,
-                 bool allowSharedLib = true);
+    bool loadFile(const std::string& filename,
+                  const std::string* trailcode = 0,
+                  bool allowSharedLib = true);
     
-    int executeFile(const std::string& fileWithArgs);
+    bool executeFile(const std::string& fileWithArgs);
     clang::QualType getQualType(llvm::StringRef type);
     
     void enableDynamicLookup(bool value = true);
@@ -156,6 +156,8 @@ namespace cling {
     void RequestContinuation(const clang::SourceLocation&);
 
     void writeStartupPCH();
+
+    void runStaticInitializersOnce() const;
     
   private:
     InvocationOptions m_Opts; // Interpreter options
@@ -168,16 +170,13 @@ namespace cling {
     bool m_ValuePrinterEnabled; // whether the value printer is loaded
     llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream; // stream to dump values into
     clang::Decl *m_LastDump; // last dump point
-    clang::ASTConsumer* m_ASTDumper;
 
   private:
     void handleFrontendOptions();
     void processStartupPCH();
-    int handleLine(const std::string& Input, std::string& FunctionName);
-    clang::CompilerInstance* compileFile(const std::string& filename,
-                                         const std::string* trailcode = 0);
+    bool handleLine(llvm::StringRef Input, llvm::StringRef FunctionName);
     void WrapInput(std::string& input, std::string& fname);
-    int RunFunction(llvm::StringRef fname, llvm::GenericValue* res = 0);
+    bool RunFunction(llvm::StringRef fname, llvm::GenericValue* res = 0);
     friend class runtime::internal::LifetimeHandler;
     
   public:
