@@ -193,7 +193,7 @@ namespace cling {
     m_IncrParser.reset(new IncrementalParser(this, &getPragmaHandler(),
                                              LeftoverArgs.size(), &LeftoverArgs[0],
                                              llvmdir));
-    m_ExecutionContext.reset(new ExecutionContext(m_IncrParser->getCI()));
+    m_ExecutionContext.reset(new ExecutionContext());
 
     m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer",
                                                                   LeftoverArgs.size(), &LeftoverArgs[0],
@@ -391,9 +391,9 @@ namespace cling {
     Diagnostic& Diag = getCI()->getDiagnostics();
     // disable that warning when using the prompt
     unsigned warningID = DiagnosticIDs::getIdFromName("warn_unused_expr");
+    // This gets reset with the clang::Diagnostics().Reset()
     Diag.setDiagnosticMapping(warningID, clang::diag::MAP_IGNORE, SourceLocation());
     bool result = handleLine(wrapped, functName);
-    Diag.setDiagnosticMapping(warningID, clang::diag::MAP_WARNING, SourceLocation());
     return result;
   }
 
