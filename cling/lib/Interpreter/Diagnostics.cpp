@@ -31,6 +31,7 @@ namespace cling {
 
   void DiagnosticPrinter::HandleDiagnostic (Diagnostic::Level Level,
                                             const DiagnosticInfo &Info){
+    TextDiagnosticPrinter::HandleDiagnostic(Level, Info);
   }
    
 } // namespace cling
