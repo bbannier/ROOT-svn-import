@@ -97,6 +97,8 @@ bool
 cling::MetaProcessor::ProcessMeta(const std::string& input_line)
 {
    // The command is the char right after the initial '.' char.
+   // Return whether the meta command was known and thus handled.
+
    const char cmd_char = input_line[1];
 
    //  .q
@@ -138,9 +140,9 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //
    if (cmd_char == 'L') {
       //fprintf(stderr, "Begin load file '%s'.\n", param.c_str());
-      int err = m_Interp.loadFile(param);
+      bool success = m_Interp.loadFile(param);
       //fprintf(stderr, "End load file '%s'.\n", param.c_str());
-      if (err) {
+      if (!success) {
          //fprintf(stderr, "Load file failed.\n");
       }
       return true;
@@ -153,8 +155,8 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //  without extension.
    //
    if ((cmd_char == 'x') || (cmd_char == 'X')) {
-      int err = m_Interp.executeFile(param);
-      if (err) {
+      bool success = m_Interp.executeFile(param);
+      if (!success) {
          //fprintf(stderr, "Execute file failed.\n");
       }
       return true;
@@ -192,8 +194,8 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //      std::cerr << "[i] Failure: cannot unload shared libraries yet!"
    //                << std::endl;
    //   }
-   //   int err = m_Interp.unloadFile(param);
-   //   if (err) {
+   //   bool success = m_Interp.unloadFile(param);
+   //   if (!success) {
    //      //fprintf(stderr, "Unload file failed.\n");
    //   }
    //   return true;

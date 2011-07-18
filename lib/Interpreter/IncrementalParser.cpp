@@ -96,6 +96,7 @@ namespace cling {
                                        int argc,
                                        const char* const *argv,
                                        const char* llvmdir):
+    m_Interpreter(interp),
     m_DynamicLookupEnabled(false),
     m_Consumer(0),
     m_LastTopLevelDecl(0),
@@ -150,7 +151,9 @@ namespace cling {
     m_Transformer.reset(new DynamicExprTransformer(interp, &CI->getSema()));
   }
   
-  IncrementalParser::~IncrementalParser() { }
+  IncrementalParser::~IncrementalParser() {
+     GetCodeGenerator()->ReleaseModule();
+  }
   
   void IncrementalParser::Initialize(const char* startupPCH) {
 
@@ -158,12 +161,12 @@ namespace cling {
 
     loadStartupPCH(startupPCH);
     if (!m_UsingStartupPCH) {
-      Compile(""); // Consume initialization.
+      CompileAsIs(""); // Consume initialization.
       // Set up common declarations which are going to be available
       // only at runtime
       // Make sure that the universe won't be included to compile time by using
       // -D __CLING__ as CompilerInstance's arguments
-      Compile("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+      CompileAsIs("#include \"cling/Interpreter/RuntimeUniverse.h\"");
     }
 
     // Attach the dynamic lookup
@@ -220,14 +223,6 @@ namespace cling {
   }
 
   clang::CompilerInstance*
-  IncrementalParser::parse(llvm::StringRef src) {
-    m_Consumer->DisableConsumer(ChainedConsumer::kCodeGenerator);
-    clang::CompilerInstance* Result = Compile(src);
-    m_Consumer->EnableConsumer(ChainedConsumer::kCodeGenerator);
-    return Result;
-  }
-
-  clang::CompilerInstance*
   IncrementalParser::CompileLineFromPrompt(llvm::StringRef input) {
     assert(input.str()[0] != '#' 
            && "Preprocessed line! Call CompilePreprocessed instead");
@@ -244,9 +239,7 @@ namespace cling {
   }
   
   clang::CompilerInstance*
-  IncrementalParser::CompilePreprocessed(llvm::StringRef input) {
-    assert(input.str()[0] == '#' && "Preprocessed line starts with #");
-
+  IncrementalParser::CompileAsIs(llvm::StringRef input) {
     bool p, q;
     p = m_Consumer->DisableConsumer(ChainedConsumer::kDeclExtractor);
     q = m_Consumer->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
@@ -331,13 +324,7 @@ namespace cling {
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
     DC->EndSourceFile();
-    // unsigned err_count = DC->getNumErrors();
-    // if (err_count) {
-    //   fprintf(stderr, "IncrementalParser::parse(): Parse failed!\n");
-    //   emptyLastFunction();
-    //   return 0;
-    // }
-    
+    m_Interpreter->runStaticInitializersOnce();
 
     return m_CI.get();
   }
@@ -360,19 +347,6 @@ namespace cling {
     return m_Transformer.get();
   }
 
-  void IncrementalParser::emptyLastFunction() {
-    // Given a broken AST (e.g. due to a syntax error),
-    // replace the last function's body by a null statement.
-    
-    // Note: this does not touch the identifier table.
-    clang::ASTContext& Ctx = m_CI->getASTContext();
-    clang::FunctionDecl* F = dyn_cast<clang::FunctionDecl>(m_LastTopLevelDecl);
-    if (F && F->getBody()) {
-      clang::NullStmt* NStmt = new (Ctx) clang::NullStmt(clang::SourceLocation());
-      F->setBody(NStmt);
-    }
-  } 
-  
   void IncrementalParser::addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer) {
     if (m_Consumer->Exists(I))
       return;

@@ -50,10 +50,8 @@ namespace cling {
     void Initialize(const char* startupPCH);
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
-    clang::CompilerInstance* parse(llvm::StringRef src);
     clang::CompilerInstance* CompileLineFromPrompt(llvm::StringRef input);
-    clang::CompilerInstance* CompilePreprocessed(llvm::StringRef input);
-    clang::CompilerInstance* Compile(llvm::StringRef input);
+    clang::CompilerInstance* CompileAsIs(llvm::StringRef input);
 
     MutableMemoryBuffer* getCurBuffer() {
       return m_MemoryBuffer.back();
@@ -68,7 +66,6 @@ namespace cling {
     DynamicExprTransformer* getTransformer() const { return m_Transformer.get(); }
     DynamicExprTransformer* getOrCreateTransformer(Interpreter* interp);
     
-    void emptyLastFunction();
     clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
     clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
     
@@ -78,8 +75,10 @@ namespace cling {
     bool usingStartupPCH() const { return m_UsingStartupPCH; }
     void writeStartupPCH();
   private:
+    clang::CompilerInstance* Compile(llvm::StringRef input);
     void loadStartupPCH(const char* filename);
 
+    Interpreter* m_Interpreter; // our interpreter context
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
     bool m_DynamicLookupEnabled; // enable/disable dynamic scope
