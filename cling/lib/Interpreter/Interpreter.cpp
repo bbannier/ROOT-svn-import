@@ -404,7 +404,7 @@ namespace cling {
   }
 
   bool Interpreter::RunFunction(llvm::StringRef fname, llvm::GenericValue* res) {
-    if (getCI()->getDiagnosticClient().getNumErrors())
+    if (getCI()->getDiagnostics().hasErrorOccurred())
       return false;
 
     std::string mangledNameIfNeeded;
