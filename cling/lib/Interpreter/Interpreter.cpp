@@ -388,12 +388,12 @@ namespace cling {
       WrapInput(wrapped, functName);
     }
 
-    DiagnosticPrinter& Diag = (DiagnosticPrinter&)getCI()->getDiagnosticClient();
+    Diagnostic& Diag = getCI()->getDiagnostics();
     // disable that warning when using the prompt
     unsigned warningID = DiagnosticIDs::getIdFromName("warn_unused_expr");
-    Diag.ignoreWarning(warningID);
+    Diag.setDiagnosticMapping(warningID, clang::diag::MAP_IGNORE, SourceLocation());
     bool result = handleLine(wrapped, functName);
-    Diag.removeIgnoredWarning(warningID);
+    Diag.setDiagnosticMapping(warningID, clang::diag::MAP_WARNING, SourceLocation());
     return result;
   }
 

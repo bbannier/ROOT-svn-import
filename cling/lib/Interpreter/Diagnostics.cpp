@@ -29,14 +29,8 @@ namespace cling {
       clang::TextDiagnosticPrinter(llvm::errs(), getDefaultDiagOpts()) {}
    DiagnosticPrinter::~DiagnosticPrinter() {}
 
-   void DiagnosticPrinter::resetCounts() {
-      NumWarnings = 0;
-      NumErrors = 0;
-   }
   void DiagnosticPrinter::HandleDiagnostic (Diagnostic::Level Level,
                                             const DiagnosticInfo &Info){
-    if (!isIgnoredWarning(Info.getID()))
-      TextDiagnosticPrinter::HandleDiagnostic(Level, Info);
   }
    
 } // namespace cling
