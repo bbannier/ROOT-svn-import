@@ -155,7 +155,7 @@ namespace cling {
 
     // Set CodeGen options
     //CI->getCodeGenOpts().CXAAtExit = 0; // don't use atexit() for d'tors - needs explicit call to runStaticInitializers(d'tors)
-    CI->getCodeGenOpts().DebugInfo = 1; // want debug info
+    // CI->getCodeGenOpts().DebugInfo = 1; // want debug info
     // CI->getCodeGenOpts().EmitDeclMetadata = 1; // For unloading, for later
     CI->getCodeGenOpts().OptimizationLevel = 1; // just a bit
     assert((CI->getCodeGenOpts().VerifyModule = 1) && "When asserts are on, let's also assert the module");
