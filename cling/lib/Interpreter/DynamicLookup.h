@@ -7,12 +7,14 @@
 #ifndef CLING_DYNAMIC_LOOKUP_H
 #define CLING_DYNAMIC_LOOKUP_H
 
-#include "llvm/ADT/OwningPtr.h"
-
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ExternalSemaSource.h"
+
+#include "llvm/ADT/OwningPtr.h"
+#include "llvm/Support/Casting.h"
+
 
 namespace clang {
   class Sema;
@@ -90,10 +92,10 @@ namespace cling {
     ASTNodes& getNodes() { return Nodes; }
     void addNode(clang::Stmt* Node) { Nodes.push_back(Node); }
     template <typename T> T* getAs() {
-      return dyn_cast<T>(getAsSingleNode());
+      return llvm::dyn_cast<T>(getAsSingleNode());
     }
     template <typename T> T* castTo() {
-      T* Result = dyn_cast<T>(getAsSingleNode());
+      T* Result = llvm::dyn_cast<T>(getAsSingleNode());
       assert(Result && "Cannot cast to type!");
       return Result;
     }
