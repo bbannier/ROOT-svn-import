@@ -28,6 +28,8 @@ Release v4.1.2 (newest):
 
    o   Several minor bug fixes for version 4.1.2.
 
+_______________________________________________________________________________________
+
 Release v4.1.1:
 
   - Variable transformations can now be applied to a user-defined subset of variables 
@@ -73,6 +75,8 @@ Release v4.1.1:
        training tree before signal one. 
 
     o  Fixed preprocessing transformation bug in HMatrix
+
+_______________________________________________________________________________________
 
 Release v4.1.0:
 
