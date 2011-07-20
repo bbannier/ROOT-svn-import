@@ -17,7 +17,9 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Casting.h"
 
 namespace cling {
 
@@ -33,7 +35,7 @@ getStmtEndLoc(const clang::Stmt* S)
      return ELoc;
 
   // Is it a decl? Then try via that:
-  const clang::DeclStmt* DS = dyn_cast<clang::DeclStmt>(S);
+  const clang::DeclStmt* DS = llvm::dyn_cast<clang::DeclStmt>(S);
   if (!DS) return ELoc;
 
   if (DS->isSingleDecl()) {
