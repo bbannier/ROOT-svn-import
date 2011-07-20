@@ -34,7 +34,8 @@ add_cling_library(clingInterpreter
   InvocationOptions.cpp
   ValuePrinter.cpp
   ValuePrinterInfo.cpp
-  ValuePrinterSynthesizer.cpp)
+  ValuePrinterSynthesizer.cpp
+  VerifyingSemaConsumer.cpp)
 
 #add_dependencies(clangDriver ClangAttrList ClangDiagnosticDriver
 #                 ClangDriverOptions ClangCC1Options ClangCC1AsOptions)
