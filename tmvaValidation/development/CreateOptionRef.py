@@ -348,7 +348,7 @@ def getTMVAVersion():
     reldir = 'tmva'
     for i in range(4):
         if os.path.isdir( reldir ):
-            v = reldir + '/inc/Version.h'
+            v = reldir + '/inc/TMVA/Version.h'
             if not os.path.isfile( v ):
                 return '-<i><font color="red">unknown</font></i>'
             file = open( v, 'r' )
@@ -477,7 +477,7 @@ def main():
                         first = True
             helptext += c + ' '
 
-        helptext += '</ul><hr><font color="#555555">Created on %s (TMVA, 2006 - 2010)</font>' % time.ctime()
+        helptext += '</ul><hr><font color="#555555">Created on %s (TMVA, 2006&minus;2011)</font>' % time.ctime()
         helptext += '</td></tr></table></body></html>'
         configurable.setHelpText( helptext.replace('"','&quot;' ) )
 
@@ -619,7 +619,7 @@ def main():
         print '<hr>'
         print '</td></tr>'
         print '<tr><td><table border=0 cellpadding=0 cellspacing=0 width=100%><tr><td>'
-        print '<font color="#555555">Page created on %s (&copy; TMVA, 2006&minus;2010)</font></td>' % time.ctime()
+        print '<font color="#555555">Page created on %s (&copy; TMVA, 2006&minus;2011)</font></td>' % time.ctime()
         print '<td align="right"><a href="http://tmva.sf.net"><img border=0 vspace=0  width="80" src="images/tmva_logo.gif"></a>'
         print '</td></tr></table>'
         print '</td></tr>'

@@ -23,6 +23,17 @@ DEFAULT_OUTFNAME = "versionRef.html"
 # color definitions
 columncols = [ 'lavender', 'lightsteelblue' ]
 
+import httplib
+from httplib import HTTP
+from urlparse import urlparse
+
+def checkUrl(url):
+    p = urlparse(url)
+    h = HTTP(p[1])
+    h.putrequest('HEAD', p[2])
+    h.endheaders()
+    return h.getreply()[0] == httplib.OK
+
 def readRootVersions():
     # 
     # first read in all ROOT releases
@@ -40,7 +51,7 @@ def readRootVersions():
     # now search tmva line
     for tag in roottaglist:
         rmodfile = urllib.urlopen( ROOT_SNV_RELDIR + "/" + tag)
-        
+
         tmva_version = ''
 
         while 1:
@@ -48,7 +59,10 @@ def readRootVersions():
             if not line: break    
             if line.find('tmva') > 0:
                 
-                rtmvafile = urllib.urlopen( ROOT_SNV_RELDIR + "/" + tag + '/' + 'tmva/inc/Version.h' )
+                url = ROOT_SNV_RELDIR + "/" + tag + '/' + 'tmva/inc/Version.h'
+                if not checkUrl(url):
+                    url = ROOT_SNV_RELDIR + "/" + tag + '/' + 'tmva/inc/TMVA/Version.h'
+                rtmvafile = urllib.urlopen(url)
 
                 while 1:
                     l = rtmvafile.readline()
@@ -56,6 +70,7 @@ def readRootVersions():
 
                     if l.find(' TMVA_RELEASE ') > 0:
                         tmva_version = l.replace('TMVA_RELEASE','').replace('#define','').replace('"','').strip()
+                        print 'Found in ROOT release: %s TMVA release: %s' % (tag, tmva_version)
 
                 
         if tmva_version != '':

@@ -5,12 +5,74 @@
 Release notes (started for release 3.7.3). Append to the top.
 _______________________________________________________________________________________
 
-Release v4.1.1 (newest):
+Release v4.1.2 (newest):
+
+  TMVA version 4.1.2 is included in ROOT release 5.30/00. 
+  The changes with respect to TMVA-v4.1.0 / ROOT 5.28 are listed below.
+
+  Variable transformation:
+
+  - Variable transformations can now be applied to a user-defined subset of 
+    variables (and regression targets).
+
+  - Variable transformations are now also possible for for generalised boosting.
+
+  - Extended PDEFoam functionality:
+    
+    o  Multiclass classification by training of one discriminator foam for 
+       each variable.
+    o  The cell tree can now be plotted from the macro test/PlotFoams. This 
+       simplifies the comparison of the PDEFoam structure with a decision tree.
+    o  Variable importance ranking by counting the number of cuts made in each 
+       dimension. The variable with which the maximum number of cuts was performed 
+       is ranked highest.
+  - Fixed the size of the sampling box in PDEFoam: In TMVA-v4.1.0 the size of the 
+    PDEFoam sampling box in each dimension was 2*VolFrac times the foam size. This 
+    was contrary to the intention and the documentation in the UserGuide and is now 
+    corrected: in TMVA-v4.1.2 the size of the PDEFoam sampling box in each dimension 
+    is now VolFrac times the foam size. This implies that in TMVA-v4.1.2 the VolFrac 
+    value for training a PDEFoam must be doubled in order to give the same results 
+    as in TMVA-v4.1.0. The default VolFrac value was also changed from 0.0333 to 0.0666.
+   
+  - New configuration variable "NbinsMVAoutput" defining the bins of the MVA output 
+    variables in the TMVA training plots produced via the GUI. As always, Config 
+    settings can be modified in the training script via, eg, the command
+
+    (TMVA::gConfig().GetVariablePlotting()).fNbinsMVAoutput = 50;
+
+    to be called after initialising the TMVA Factory object.
+
+  - Bug fixes:
+
+    o  Requested number of training and testing events was not correct when pre-selection 
+       cuts were applied. Now the number of requested events scales with the preselection 
+       efficiency and hence does not need to be adjusted with the pre-selection. This also 
+       corrects the problems seen in the Category classifier, where pre-selection is used 
+       to build the categories.
+
+   o   Correct histogram boundaries in PlotVariable.
+
+   o   Correct scanning procedure in OptimizeTuningParameters.
+
+   o   Print the significance formula that is actually used
+
+   o   Small speed improvement for PDEFoam functions.
+
+   o   Fix for MethodBoost which ensures that the method options for the boosted classifier 
+       are handled correctly during boosting.
+
+   o   Fixed problems in classification of some methods when booking background training 
+       tree before signal one.
+
+   o   Fixed preprocessing transformation bug in HMatrix.
+
+   o   Several minor bug fixes for version 4.1.2.
+
+Release v4.1.1:
 
   - Variable transformations can now be applied to a user-defined subset of variables 
     (and regression targets). 
     Description:     
-
 
   - Enable variable transformations for general boosting
 
