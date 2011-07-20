@@ -15,6 +15,13 @@ if __name__ == "__main__":
         print "tag should have the format 1.2.3"
         sys.exit(1)
 
+    version = tuple([int(x) for x in newsvntag]);
+
+    code  = version[0] << 16
+    code += version[1] << 8
+    code += version[2]    
+
+    print '#define TMVA_VERSION_CODE %i' % code
 
     infile  = file("inc/Version.h","r")
     outfile = file("inc/Version.new.h","w")
@@ -22,8 +29,6 @@ if __name__ == "__main__":
     lines = infile.readlines()
 
     ltime = time.localtime()
-
-    version = tuple([int(x) for x in newsvntag]);
     
     for line in lines:
         if line.find('TMVA_RELEASE ')!=-1:
