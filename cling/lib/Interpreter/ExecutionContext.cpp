@@ -17,7 +17,6 @@
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Target/TargetOptions.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -91,8 +90,6 @@ ExecutionContext::ExecutionContext():
   m_engine(0),
   m_posInitGlobals(0)
 {
-  // If not set, exception handling will not be turned on
-  llvm::JITExceptionHandling = true;
 }
 
 void
@@ -109,6 +106,7 @@ ExecutionContext::InitializeBuilder(llvm::Module* m)
   std::string errMsg;
   builder.setErrorStr(&errMsg);
   builder.setEngineKind(llvm::EngineKind::JIT);
+  builder.setAllocateGVsWithCode(false);
   m_engine = builder.create();
   assert(m_engine && "Cannot initialize builder without module!");
 

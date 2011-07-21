@@ -16,6 +16,7 @@
 
 namespace llvm {
   struct GenericValue;
+  class MemoryBuffer;
 }
 
 namespace clang {
@@ -39,8 +40,6 @@ namespace cling {
   class DynamicExprTransformer;
   class ExecutionContext;
   class Interpreter;
-  class MutableMemoryBuffer;
-
   
   class IncrementalParser {
   public:
@@ -53,7 +52,7 @@ namespace cling {
     clang::CompilerInstance* CompileLineFromPrompt(llvm::StringRef input);
     clang::CompilerInstance* CompileAsIs(llvm::StringRef input);
 
-    MutableMemoryBuffer* getCurBuffer() {
+    llvm::MemoryBuffer* getCurBuffer() {
       return m_MemoryBuffer.back();
     }
     void enablePrintAST(bool print /*=true*/) {
@@ -83,7 +82,7 @@ namespace cling {
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
     bool m_DynamicLookupEnabled; // enable/disable dynamic scope
     llvm::OwningPtr<DynamicExprTransformer> m_Transformer; // delayed id lookup
-    std::vector<MutableMemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
+    std::vector<llvm::MemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
     clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedConsumer* m_Consumer; // CI owns it
     clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
