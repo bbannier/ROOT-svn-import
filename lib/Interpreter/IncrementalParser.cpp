@@ -41,56 +41,6 @@
 using namespace clang;
 
 namespace cling {
-  class MutableMemoryBuffer: public llvm::MemoryBuffer {
-    std::string m_FileID;
-    size_t m_Alloc;
-  protected:
-    void maybeRealloc(llvm::StringRef code, size_t oldlen) {
-      size_t applen = code.size();
-      char* B = 0;
-      if (oldlen) {
-        B = const_cast<char*>(getBufferStart());
-        assert(!B[oldlen] && "old buffer is not 0 terminated!");
-        // B + oldlen points to trailing '\0'
-      }
-      size_t newlen = oldlen + applen + 1;
-      if (newlen > m_Alloc) {
-        if (m_Alloc) {
-           fprintf(stderr, "MutableMemoryBuffer reallocation doesn't work (Preprocessor isn't told about the new location, should instead just add a new memory buffer)!\n");
-        }
-        m_Alloc += 64*1024;
-        B = (char*)realloc(B, m_Alloc);
-      }
-      memcpy(B + oldlen, code.data(), applen);
-      B[newlen - 1] = 0;
-      init(B, B + newlen - 1, /*RequireNullTerminator=*/ true);
-    }
-    
-  public:
-    MutableMemoryBuffer(llvm::StringRef Code, llvm::StringRef Name)
-      : MemoryBuffer(), m_FileID(Name), m_Alloc(0) {
-      maybeRealloc(Code, 0);
-    }
-    
-    virtual ~MutableMemoryBuffer() {
-      free((void*)getBufferStart());
-    }
-    
-    void append(llvm::StringRef code) {
-      assert(getBufferSize() && "buffer is empty!");
-      maybeRealloc(code, getBufferSize());
-    }
- 
-    virtual const char *getBufferIdentifier() const {
-      return m_FileID.c_str();
-    }
-
-    virtual BufferKind getBufferKind () const {
-      return MemoryBuffer_Malloc;
-    }
-  };
-
-  
   IncrementalParser::IncrementalParser(Interpreter* interp, 
                                        PragmaNamespace* Pragma, 
                                        int argc, const char* const *argv,
@@ -103,7 +53,7 @@ namespace cling {
     m_UsingStartupPCH(false)
   {
     //m_CIFactory.reset(new CIFactory(0, 0, llvmdir));
-    m_MemoryBuffer.push_back(new MutableMemoryBuffer("//cling!\n", "CLING") );
+    m_MemoryBuffer.push_back(llvm::MemoryBuffer::getMemBuffer("//cling!\n", "CLING") );
     clang::CompilerInstance* CI = CIFactory::createCI(m_MemoryBuffer[0], Pragma,
                                                       argc, argv, llvmdir);
     assert(CI && "CompilerInstance is (null)!");
@@ -263,9 +213,8 @@ namespace cling {
     if (input.size()) {
       std::ostringstream source_name;
       source_name << "input_line_" << (m_MemoryBuffer.size()+1);
-      m_MemoryBuffer.push_back( new MutableMemoryBuffer("//cling!\n", source_name.str()) );
-      MutableMemoryBuffer *currentBuffer = m_MemoryBuffer.back();
-      currentBuffer->append(input);
+      m_MemoryBuffer.push_back(llvm::MemoryBuffer::getMemBufferCopy(input, source_name.str()));
+      llvm::MemoryBuffer *currentBuffer = m_MemoryBuffer.back();
       clang::FileID FID = m_CI->getSourceManager().createFileIDForMemBuffer(currentBuffer);
       
       PP.EnterSourceFile(FID, 0, clang::SourceLocation());     

@@ -15,6 +15,7 @@
 #include "clang/Lex/Preprocessor.h"
 
 #include "llvm/Target/TargetSelect.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -53,7 +54,9 @@ namespace cling {
     //
     //  Initialize the llvm library.
     //
-    llvm::InitializeAllTargets();
+    // If not set, exception handling will not be turned on
+    llvm::JITExceptionHandling = true;
+    llvm::InitializeNativeTarget();
     llvm::InitializeAllAsmPrinters();
     llvm::sys::Path resource_path;
     if (llvmdir) {
