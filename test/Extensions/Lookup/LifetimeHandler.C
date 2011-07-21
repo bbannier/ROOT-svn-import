@@ -5,7 +5,6 @@
 
 cling::test::SymbolResolverCallback* SRC;
 SRC = new cling::test::SymbolResolverCallback(gCling, /*Enabled*/ true); // TODO: remove when global inits are fixed
-SRC->Initialize(); // cannot call interpreter->processline in the ctor.
 gCling->setCallbacks(SRC);
 
 class MyClass { private:  const char* Name; public:  MyClass(const char* n):Name(n){} const char* getName(){return Name;} };

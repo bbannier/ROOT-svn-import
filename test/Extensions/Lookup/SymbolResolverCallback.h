@@ -35,13 +35,10 @@ namespace cling {
     public:
       SymbolResolverCallback(Interpreter* interp, bool enabled = false)
         : InterpreterCallbacks(interp, enabled) {
-        
+        m_Interpreter->processLine("cling::test::Tester = new cling::test::TestProxy();");        
       }      
       ~SymbolResolverCallback(){}
 
-      void Initialize() {
-        m_Interpreter->processLine("cling::test::Tester = new cling::test::TestProxy();");
-      }
       bool LookupObject(clang::LookupResult& R, clang::Scope* S) {
         // Only for demo resolve all unknown objects to gCling
         if (m_Enabled) {
