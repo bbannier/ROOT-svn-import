@@ -72,9 +72,9 @@ namespace {
         return found;
     }
     
-    if (addSuffix) {
+    if (addSuffix && llvm::sys::Path::GetDLLSuffix().size()) {
       llvm::sys::Path found
-      = findDynamicLibrary(filename + llvm::sys::Path::GetDLLSuffix().str(),
+      = findDynamicLibrary(filename + "." + llvm::sys::Path::GetDLLSuffix().str(),
                            Opts, false, false);
       if (found.isDynamicLibrary())
         return found;
