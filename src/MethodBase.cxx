@@ -1041,8 +1041,8 @@ void TMVA::MethodBase::TestClassification()
    
    // classifier response distributions for training sample
    // MVA plots used for graphics representation (signal)
-   TH1* mva_s = new TH1F( GetTestvarName() + "_S",GetTestvarName() + "_S", fNbinsMVAoutput, fXmin, sxmax );
-   TH1* mva_b = new TH1F( GetTestvarName() + "_B",GetTestvarName() + "_B", fNbinsMVAoutput, fXmin, sxmax );
+   TH1* mva_s = new TH1D( GetTestvarName() + "_S",GetTestvarName() + "_S", fNbinsMVAoutput, fXmin, sxmax );
+   TH1* mva_b = new TH1D( GetTestvarName() + "_B",GetTestvarName() + "_B", fNbinsMVAoutput, fXmin, sxmax );
    mvaRes->Store(mva_s, "MVA_S");
    mvaRes->Store(mva_b, "MVA_B");
    mva_s->Sumw2();
@@ -1054,16 +1054,16 @@ void TMVA::MethodBase::TestClassification()
    TH1* rarity_b = 0;
    if (HasMVAPdfs()) {
       // P(MVA) plots used for graphics representation
-      proba_s = new TH1F( GetTestvarName() + "_Proba_S", GetTestvarName() + "_Proba_S", fNbinsMVAoutput, 0.0, 1.0 );
-      proba_b = new TH1F( GetTestvarName() + "_Proba_B", GetTestvarName() + "_Proba_B", fNbinsMVAoutput, 0.0, 1.0 );
+      proba_s = new TH1D( GetTestvarName() + "_Proba_S", GetTestvarName() + "_Proba_S", fNbinsMVAoutput, 0.0, 1.0 );
+      proba_b = new TH1D( GetTestvarName() + "_Proba_B", GetTestvarName() + "_Proba_B", fNbinsMVAoutput, 0.0, 1.0 );
       mvaRes->Store(proba_s, "Prob_S");
       mvaRes->Store(proba_b, "Prob_B");
       proba_s->Sumw2();
       proba_b->Sumw2();
 
       // R(MVA) plots used for graphics representation
-      rarity_s = new TH1F( GetTestvarName() + "_Rarity_S", GetTestvarName() + "_Rarity_S", fNbinsMVAoutput, 0.0, 1.0 );
-      rarity_b = new TH1F( GetTestvarName() + "_Rarity_B", GetTestvarName() + "_Rarity_B", fNbinsMVAoutput, 0.0, 1.0 );
+      rarity_s = new TH1D( GetTestvarName() + "_Rarity_S", GetTestvarName() + "_Rarity_S", fNbinsMVAoutput, 0.0, 1.0 );
+      rarity_b = new TH1D( GetTestvarName() + "_Rarity_B", GetTestvarName() + "_Rarity_B", fNbinsMVAoutput, 0.0, 1.0 );
       mvaRes->Store(rarity_s, "Rar_S");
       mvaRes->Store(rarity_b, "Rar_B");
       rarity_s->Sumw2();
@@ -1071,8 +1071,8 @@ void TMVA::MethodBase::TestClassification()
    }
    
    // MVA plots used for efficiency calculations (large number of bins)
-   TH1* mva_eff_s = new TH1F( GetTestvarName() + "_S_high", GetTestvarName() + "_S_high", fNbinsH, fXmin, sxmax );
-   TH1* mva_eff_b = new TH1F( GetTestvarName() + "_B_high", GetTestvarName() + "_B_high", fNbinsH, fXmin, sxmax );
+   TH1* mva_eff_s = new TH1D( GetTestvarName() + "_S_high", GetTestvarName() + "_S_high", fNbinsH, fXmin, sxmax );
+   TH1* mva_eff_b = new TH1D( GetTestvarName() + "_B_high", GetTestvarName() + "_B_high", fNbinsH, fXmin, sxmax );
    mvaRes->Store(mva_eff_s, "MVA_HIGHBIN_S");
    mvaRes->Store(mva_eff_b, "MVA_HIGHBIN_B");
    mva_eff_s->Sumw2();
@@ -2013,9 +2013,9 @@ void TMVA::MethodBase::CreateMVAPdfs()
    Double_t maxVal = *std::max_element(mvaRes->GetValueVector()->begin(),mvaRes->GetValueVector()->end());
 
    // create histograms that serve as basis to create the MVA Pdfs
-   TH1* histMVAPdfS = new TH1F( GetMethodTypeName() + "_tr_S", GetMethodTypeName() + "_tr_S",
+   TH1* histMVAPdfS = new TH1D( GetMethodTypeName() + "_tr_S", GetMethodTypeName() + "_tr_S",
                                 fMVAPdfS->GetHistNBins( mvaRes->GetSize() ), minVal, maxVal );
-   TH1* histMVAPdfB = new TH1F( GetMethodTypeName() + "_tr_B", GetMethodTypeName() + "_tr_B",
+   TH1* histMVAPdfB = new TH1D( GetMethodTypeName() + "_tr_B", GetMethodTypeName() + "_tr_B",
                                 fMVAPdfB->GetHistNBins( mvaRes->GetSize() ), minVal, maxVal );
 
 
@@ -2135,8 +2135,8 @@ Double_t TMVA::MethodBase::GetEfficiency( const TString& theString, Types::ETree
    if (results->GetHist("MVA_EFF_S")==0) {
 
       // for efficiency plot
-      TH1* eff_s = new TH1F( GetTestvarName() + "_effS", GetTestvarName() + " (signal)",     fNbinsH, xmin, xmax );
-      TH1* eff_b = new TH1F( GetTestvarName() + "_effB", GetTestvarName() + " (background)", fNbinsH, xmin, xmax );
+      TH1* eff_s = new TH1D( GetTestvarName() + "_effS", GetTestvarName() + " (signal)",     fNbinsH, xmin, xmax );
+      TH1* eff_b = new TH1D( GetTestvarName() + "_effB", GetTestvarName() + " (background)", fNbinsH, xmin, xmax );
       results->Store(eff_s, "MVA_EFF_S");
       results->Store(eff_b, "MVA_EFF_B");
 
@@ -2174,23 +2174,26 @@ Double_t TMVA::MethodBase::GetEfficiency( const TString& theString, Types::ETree
       }
 
       // renormalise maximum to <=1
-      eff_s->Scale( 1.0/TMath::Max(1.,eff_s->GetMaximum()) );
-      eff_b->Scale( 1.0/TMath::Max(1.,eff_b->GetMaximum()) );
+      // eff_s->Scale( 1.0/TMath::Max(1.,eff_s->GetMaximum()) );
+      // eff_b->Scale( 1.0/TMath::Max(1.,eff_b->GetMaximum()) );
+
+      eff_s->Scale( 1.0/TMath::Max(std::numeric_limits<double>::epsilon(),eff_s->GetMaximum()) );
+      eff_b->Scale( 1.0/TMath::Max(std::numeric_limits<double>::epsilon(),eff_b->GetMaximum()) );
 
       // background efficiency versus signal efficiency
-      TH1* eff_BvsS = new TH1F( GetTestvarName() + "_effBvsS", GetTestvarName() + "", fNbins, 0, 1 );
+      TH1* eff_BvsS = new TH1D( GetTestvarName() + "_effBvsS", GetTestvarName() + "", fNbins, 0, 1 );
       results->Store(eff_BvsS, "MVA_EFF_BvsS");
       eff_BvsS->SetXTitle( "Signal eff" );
       eff_BvsS->SetYTitle( "Backgr eff" );
 
       // background rejection (=1-eff.) versus signal efficiency
-      TH1* rej_BvsS = new TH1F( GetTestvarName() + "_rejBvsS", GetTestvarName() + "", fNbins, 0, 1 );
+      TH1* rej_BvsS = new TH1D( GetTestvarName() + "_rejBvsS", GetTestvarName() + "", fNbins, 0, 1 );
       results->Store(rej_BvsS);
       rej_BvsS->SetXTitle( "Signal eff" );
       rej_BvsS->SetYTitle( "Backgr rejection (1-eff)" );
 
       // inverse background eff (1/eff.) versus signal efficiency
-      TH1* inveff_BvsS = new TH1F( GetTestvarName() + "_invBeffvsSeff",
+      TH1* inveff_BvsS = new TH1D( GetTestvarName() + "_invBeffvsSeff",
                                    GetTestvarName(), fNbins, 0, 1 );
       results->Store(inveff_BvsS);
       inveff_BvsS->SetXTitle( "Signal eff" );
@@ -2198,7 +2201,7 @@ Double_t TMVA::MethodBase::GetEfficiency( const TString& theString, Types::ETree
 
       // use root finder
       // spline background efficiency plot
-      // note that there is a bin shift when going from a TH1F object to a TGraph :-(
+      // note that there is a bin shift when going from a TH1D object to a TGraph :-(
       if (Use_Splines_for_Eff_) {
          fSplRefS  = new TSpline1( "spline2_signal",     new TGraph( eff_s ) );
          fSplRefB  = new TSpline1( "spline2_background", new TGraph( eff_b ) );
@@ -2366,17 +2369,17 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency(const TString& theString)
       Double_t sxmax = fXmax+0.00001;
 
       // MVA plots on the training sample (check for overtraining)
-      TH1* mva_s_tr = new TH1F( GetTestvarName() + "_Train_S",GetTestvarName() + "_Train_S", fNbinsMVAoutput, fXmin, sxmax );
-      TH1* mva_b_tr = new TH1F( GetTestvarName() + "_Train_B",GetTestvarName() + "_Train_B", fNbinsMVAoutput, fXmin, sxmax );
+      TH1* mva_s_tr = new TH1D( GetTestvarName() + "_Train_S",GetTestvarName() + "_Train_S", fNbinsMVAoutput, fXmin, sxmax );
+      TH1* mva_b_tr = new TH1D( GetTestvarName() + "_Train_B",GetTestvarName() + "_Train_B", fNbinsMVAoutput, fXmin, sxmax );
       results->Store(mva_s_tr, "MVA_TRAIN_S");
       results->Store(mva_b_tr, "MVA_TRAIN_B");
       mva_s_tr->Sumw2();
       mva_b_tr->Sumw2();
 
       // Training efficiency plots
-      TH1* mva_eff_tr_s = new TH1F( GetTestvarName() + "_trainingEffS", GetTestvarName() + " (signal)",
+      TH1* mva_eff_tr_s = new TH1D( GetTestvarName() + "_trainingEffS", GetTestvarName() + " (signal)",
                                     fNbinsH, xmin, xmax );
-      TH1* mva_eff_tr_b = new TH1F( GetTestvarName() + "_trainingEffB", GetTestvarName() + " (background)",
+      TH1* mva_eff_tr_b = new TH1D( GetTestvarName() + "_trainingEffB", GetTestvarName() + " (background)",
                                     fNbinsH, xmin, xmax );
       results->Store(mva_eff_tr_s, "MVA_TRAINEFF_S");
       results->Store(mva_eff_tr_b, "MVA_TRAINEFF_B");
@@ -2414,19 +2417,19 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency(const TString& theString)
       gTools().NormHist( mva_b_tr  );
 
       // renormalise to maximum
-      mva_eff_tr_s->Scale( 1.0/TMath::Max(1.0, mva_eff_tr_s->GetMaximum()) );
-      mva_eff_tr_b->Scale( 1.0/TMath::Max(1.0, mva_eff_tr_b->GetMaximum()) );
+      mva_eff_tr_s->Scale( 1.0/TMath::Max(std::numeric_limits<double>::epsilon(), mva_eff_tr_s->GetMaximum()) );
+      mva_eff_tr_b->Scale( 1.0/TMath::Max(std::numeric_limits<double>::epsilon(), mva_eff_tr_b->GetMaximum()) );
 
       // Training background efficiency versus signal efficiency
-      TH1* eff_bvss = new TH1F( GetTestvarName() + "_trainingEffBvsS", GetTestvarName() + "", fNbins, 0, 1 );
+      TH1* eff_bvss = new TH1D( GetTestvarName() + "_trainingEffBvsS", GetTestvarName() + "", fNbins, 0, 1 );
       // Training background rejection (=1-eff.) versus signal efficiency
-      TH1* rej_bvss = new TH1F( GetTestvarName() + "_trainingRejBvsS", GetTestvarName() + "", fNbins, 0, 1 );
+      TH1* rej_bvss = new TH1D( GetTestvarName() + "_trainingRejBvsS", GetTestvarName() + "", fNbins, 0, 1 );
       results->Store(eff_bvss, "EFF_BVSS_TR");
       results->Store(rej_bvss, "REJ_BVSS_TR");
 
       // use root finder
       // spline background efficiency plot
-      // note that there is a bin shift when going from a TH1F object to a TGraph :-(
+      // note that there is a bin shift when going from a TH1D object to a TGraph :-(
       if (Use_Splines_for_Eff_) {
          if (fSplTrainRefS) delete fSplTrainRefS;
          if (fSplTrainRefB) delete fSplTrainRefB;         
@@ -2561,7 +2564,7 @@ Double_t TMVA::MethodBase::GetSeparation( PDF* pdfS, PDF* pdfB ) const
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBase::GetROCIntegral(TH1F *histS, TH1F *histB) const
+Double_t TMVA::MethodBase::GetROCIntegral(TH1D *histS, TH1D *histB) const
 {
    // calculate the area (integral) under the ROC curve as a
    // overall quality measure of the classification
@@ -2569,7 +2572,7 @@ Double_t TMVA::MethodBase::GetROCIntegral(TH1F *histS, TH1F *histB) const
    // note, if zero pointers given, use internal pdf
    // sanity check first
    if ((!histS && histB) || (histS && !histB))
-      Log() << kFATAL << "<GetROCIntegral(TH1F*, TH1F*)> Mismatch in hists" << Endl;
+      Log() << kFATAL << "<GetROCIntegral(TH1D*, TH1D*)> Mismatch in hists" << Endl;
 
    if (histS==0 || histB==0) return 0.;
 
@@ -2634,7 +2637,7 @@ Double_t TMVA::MethodBase::GetMaximumSignificance( Double_t SignalEvents,
 
    Double_t max_significance(0);
    Double_t effS(0),effB(0),significance(0);
-   TH1F *temp_histogram = new TH1F("temp", "temp", fNbinsH, fXmin, fXmax );
+   TH1D *temp_histogram = new TH1D("temp", "temp", fNbinsH, fXmin, fXmax );
 
    if (SignalEvents <= 0 || BackgroundEvents <= 0) {
       Log() << kFATAL << "<GetMaximumSignificance> "
