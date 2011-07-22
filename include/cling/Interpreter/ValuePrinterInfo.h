@@ -28,6 +28,7 @@ namespace cling {
     ValuePrinterInfo(clang::Expr* E, clang::ASTContext* Ctx);
 
     clang::Expr* m_Expr;
+    clang::ASTContext* m_Context;
     unsigned m_Flags;
     std::string m_TypeName;
   };

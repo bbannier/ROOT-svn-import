@@ -12,55 +12,58 @@
 
 #include "llvm/Support/raw_ostream.h"
 
-namespace cling {
-  void StreamChar(llvm::raw_ostream& o, char v) {
-    o << '"' << v << "\"\n";
-  }
+static void StreamChar(llvm::raw_ostream& o, char v) {
+  o << '"' << v << "\"\n";
+}
 
-  void StreamCharPtr(llvm::raw_ostream& o, const char* const v) {
-    o << '"';
-    const char* p = v;
-    for (;*p && p - v < 128; ++p) {
-      o << *p;
-    }
-    if (*p) o << "\"...\n";
-    else o << "\"\n";
+static void StreamCharPtr(llvm::raw_ostream& o, const char* const v) {
+  o << '"';
+  const char* p = v;
+  for (;*p && p - v < 128; ++p) {
+    o << *p;
   }
+  if (*p) o << "\"...\n";
+  else o << "\"\n";
+}
 
-  void StreamInt(llvm::raw_ostream& o, int v) {
-    o << v << "\n";
-  }
-
-  void StreamRef(llvm::raw_ostream& o, const void* v) {
-    // TODO: Print the object members.
-    o <<"&" << v << "\n";
-  }
+static void StreamRef(llvm::raw_ostream& o, const void* v) {
+  // TODO: Print the object members.
+  o <<"&" << v << "\n";
+}
   
-  void StreamObj(llvm::raw_ostream& o, const void* v) {
-    o << "@" << v << "\n";
-  }
+static void StreamObj(llvm::raw_ostream& o, const void* v) {
+  o << "@" << v << "\n";
+}
 
-  void StreamValue(llvm::raw_ostream& o, const void* const p, clang::QualType Ty) {
-    if (Ty->isCharType())
-      StreamChar(o, *(char*)p);
-    else if (Ty->isIntegerType())
-      StreamInt(o, *(int*)p);
-    else if (Ty->isReferenceType())
-      StreamRef(o, p);
-    else if (Ty->isPointerType()) {
-      clang::QualType PointeeTy = Ty->getPointeeType();
-      if (PointeeTy->isCharType())
-        StreamCharPtr(o, (const char*)p);
-    }
-    else
+static void StreamValue(llvm::raw_ostream& o, const void* const p, clang::QualType Ty) {
+  if (Ty->isCharType())
+    StreamChar(o, *(char*)p);
+  else if (const clang::BuiltinType *BT
+           = llvm::dyn_cast<clang::BuiltinType>(Ty.getCanonicalType())) {
+    switch (BT->getKind()) {
+    case clang::BuiltinType::Int:    o << *(int*)p << "\n"; break;
+    case clang::BuiltinType::Float:  o << *(float*)p << "\n"; break;
+    case clang::BuiltinType::Double: o << *(double*)p << "\n"; break;
+    default:
       StreamObj(o, p);
+    }
+  } else if (Ty->isReferenceType())
+    StreamRef(o, p);
+  else if (Ty->isPointerType()) {
+    clang::QualType PointeeTy = Ty->getPointeeType();
+    if (PointeeTy->isCharType())
+      StreamCharPtr(o, (const char*)p);
   }
+  else
+    StreamObj(o, p);
+}
   
+namespace cling {
   void printValueDefault(llvm::raw_ostream& o, const void* const p,
-                         const ValuePrinterInfo& PVI) {
-    clang::Expr* E = PVI.m_Expr;
+                         const ValuePrinterInfo& VPI) {
+    clang::Expr* E = VPI.m_Expr;
     o << "(";
-    o << PVI.m_TypeName;
+    o << VPI.m_TypeName;
     if (E->isRValue()) // show the user that the var cannot be changed
       o << " const";
     o << ") ";
