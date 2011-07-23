@@ -1,11 +1,18 @@
+//--------------------------------------------------------------------*- C++ -*-
+// CLING - the C++ LLVM-based InterpreterG :)
+// version: $Id: ExecutionContext.cpp 40344 2011-07-23 19:30:37Z vvassilev $
+// author:  Axel Naumann <axel@cern.ch>
+//------------------------------------------------------------------------------
+
 #include "cling/Interpreter/InvocationOptions.h"
+#include "cling/Interpreter/ClingOptions.h"
 
 #include "clang/Driver/Arg.h"
 #include "clang/Driver/ArgList.h"
 #include "clang/Driver/Option.h"
 #include "clang/Driver/OptTable.h"
 #include "clang/Driver/CC1Options.h"
-#include "cling/Interpreter/ClingOptions.h"
+
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -78,11 +85,11 @@ cling::InvocationOptions::CreateFromArgs(int argc, const char* const argv[],
 }
 
 void cling::InvocationOptions::PrintHelp() {
-  llvm::OwningPtr<clang::driver::OptTable> Opts(CreateClingOptTable());
+  llvm::OwningPtr<OptTable> Opts(CreateClingOptTable());
   Opts->PrintHelp(llvm::outs(), "cling",
                   "cling: LLVM/clang C++ Interpreter: http://root.cern.ch/drupal/content/cling");
 
-  llvm::OwningPtr<clang::driver::OptTable> OptsC1(clang::driver::createCC1OptTable());
+  llvm::OwningPtr<OptTable> OptsC1(createCC1OptTable());
   OptsC1->PrintHelp(llvm::outs(), "clang -cc1",
                     "LLVM 'Clang' Compiler: http://clang.llvm.org");
   

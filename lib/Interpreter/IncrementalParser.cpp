@@ -6,14 +6,14 @@
 
 #include "IncrementalParser.h"
 
-#include "cling/Interpreter/CIFactory.h"
-#include "cling/Interpreter/Diagnostics.h"
-#include "cling/Interpreter/Interpreter.h"
 #include "ASTDumper.h"
 #include "ChainedConsumer.h"
 #include "DeclExtractor.h"
 #include "DynamicLookup.h"
 #include "ValuePrinterSynthesizer.h"
+#include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/Diagnostics.h"
+#include "cling/Interpreter/Interpreter.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"

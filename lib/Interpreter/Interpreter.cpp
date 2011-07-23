@@ -6,12 +6,12 @@
 
 #include "cling/Interpreter/Interpreter.h"
 
-#include "cling/Interpreter/CIFactory.h"
-#include "cling/Interpreter/Value.h"
 #include "DynamicLookup.h"
 #include "ExecutionContext.h"
 #include "IncrementalParser.h"
 #include "InputValidator.h"
+#include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/Value.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"

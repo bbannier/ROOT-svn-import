@@ -8,8 +8,6 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclObjC.h"
-#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Stmt.h"
 
 using namespace clang;

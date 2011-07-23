@@ -13,11 +13,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Template.h"
 
-namespace clang {
-  class LookupResult;
-  class Scope;
-}
-
 using namespace clang;
 
 namespace cling {
@@ -189,7 +184,7 @@ namespace cling {
     m_NoSLoc = m_NoRange.getBegin();
     m_NoELoc =  m_NoRange.getEnd();
 
-    //m_DeclContextType = m_Interpreter->getQualType("clang::DeclContext");
+    //m_DeclContextType = m_Interpreter->getQualType("DeclContext");
   }
     
   // DeclVisitor
@@ -210,7 +205,7 @@ namespace cling {
     if (!D->isDependentContext() && D->isThisDeclarationADefinition()) {
       if (D->hasBody()) {
         m_CurDeclContext = D->getParent();
-        // Here we expect clang::CompoundStmt
+        // Here we expect CompoundStmt
         ASTNodeInfo NewNode = Visit(D->getBody());
         
         D->setBody(NewNode.getAsSingleNode());
@@ -352,7 +347,7 @@ namespace cling {
           //                                       "MyClass")
           // Build Arg0 DynamicExprInfo
           Inits.push_back(BuildDynamicExprInfo(E));
-          // Build Arg1 clang::DeclContext* DC
+          // Build Arg1 DeclContext* DC
           CXXRecordDecl* D = dyn_cast<CXXRecordDecl>(m_Interpreter->
                                                      LookupDecl("clang").
                                                      LookupDecl("DeclContext").

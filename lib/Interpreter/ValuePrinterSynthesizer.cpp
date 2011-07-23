@@ -6,19 +6,19 @@
 
 #include "ValuePrinterSynthesizer.h"
 
+#include "ASTUtils.h"
+#include "ChainedConsumer.h"
+#include "cling/Interpreter/Interpreter.h"
+
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/Template.h"
-
-#include "cling/Interpreter/Interpreter.h"
-#include "ASTUtils.h"
-#include "ChainedConsumer.h"
 
 using namespace clang;
+
 namespace cling {
 
 
@@ -150,7 +150,7 @@ namespace cling {
   }
 
   unsigned ValuePrinterSynthesizer::ClearNullStmts(CompoundStmt* CS) {
-    llvm::SmallVector<clang::Stmt*, 8> FBody;
+    llvm::SmallVector<Stmt*, 8> FBody;
     for (StmtRange range = CS->children(); range; ++range)
       if (!isa<NullStmt>(*range))
         FBody.push_back(*range);
