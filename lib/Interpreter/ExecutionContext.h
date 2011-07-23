@@ -7,9 +7,9 @@
 #ifndef CLING_EXECUTIONCONTEXT_H
 #define CLING_EXECUTIONCONTEXT_H
 
-#include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Path.h"
+
+#include <vector>
 
 namespace llvm {
   class Module;
