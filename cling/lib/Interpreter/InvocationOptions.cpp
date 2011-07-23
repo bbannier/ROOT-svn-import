@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------*- C++ -*-
 // CLING - the C++ LLVM-based InterpreterG :)
-// version: $Id: ExecutionContext.cpp 40344 2011-07-23 19:30:37Z vvassilev $
+// version: $Id$
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
