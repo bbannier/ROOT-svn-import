@@ -50,13 +50,13 @@ namespace cling {
   {
     //m_CIFactory.reset(new CIFactory(0, 0, llvmdir));
     m_MemoryBuffer.push_back(llvm::MemoryBuffer::getMemBuffer("", "CLING") );
-    clang::CompilerInstance* CI = CIFactory::createCI(m_MemoryBuffer[0], Pragma,
-                                                      argc, argv, llvmdir);
+    CompilerInstance* CI = CIFactory::createCI(m_MemoryBuffer[0], Pragma,
+                                               argc, argv, llvmdir);
     assert(CI && "CompilerInstance is (null)!");
     m_CI.reset(CI);
 
     m_MBFileID = CI->getSourceManager().getMainFileID();
-    //CI->getSourceManager().getBuffer(m_MBFileID, clang::SourceLocation()); // do we need it?
+    //CI->getSourceManager().getBuffer(m_MBFileID, SourceLocation()); // do we need it?
 
 
     if (CI->getSourceManager().getMainFileID().isInvalid()) {
@@ -74,21 +74,21 @@ namespace cling {
     addConsumer(ChainedConsumer::kValuePrinterSynthesizer,
                 new ValuePrinterSynthesizer(interp));
     addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
-    clang::CodeGenerator* CG = CreateLLVMCodeGen(CI->getDiagnostics(), 
-                                                 "cling input",
-                                                 CI->getCodeGenOpts(), 
-                            /*Owned by codegen*/ * new llvm::LLVMContext()
-                                                 );
+    CodeGenerator* CG = CreateLLVMCodeGen(CI->getDiagnostics(), 
+                                          "cling input",
+                                          CI->getCodeGenOpts(), 
+                                  /*Owned by codegen*/ * new llvm::LLVMContext()
+                                          );
 
     addConsumer(ChainedConsumer::kCodeGenerator, CG);
     m_Consumer->Initialize(CI->getASTContext());
     m_Consumer->InitializeSema(CI->getSema());
     // Initialize the parser.
-    m_Parser.reset(new clang::Parser(CI->getPreprocessor(), CI->getSema()));
+    m_Parser.reset(new Parser(CI->getPreprocessor(), CI->getSema()));
     CI->getPreprocessor().EnterMainSourceFile();
     m_Parser->Initialize();
 
-    //if (clang::SemaConsumer *SC = dyn_cast<clang::SemaConsumer>(m_Consumer))
+    //if (SemaConsumer *SC = dyn_cast<SemaConsumer>(m_Consumer))
     //  SC->InitializeSema(CI->getSema()); // do we really need this? We know 
     // that we will have ChainedConsumer, which is initialized in createCI
     
@@ -125,18 +125,17 @@ namespace cling {
   void IncrementalParser::loadStartupPCH(const char* filename) {
     if (!filename || !filename[0]) return;
     bool Preamble = m_CI->getPreprocessorOpts().PrecompiledPreambleBytes.first !=0;
-    llvm::OwningPtr<clang::ExternalASTSource> EAS(
-      clang::CompilerInstance::
-      createPCHExternalASTSource(filename,
-                                 "", /* sysroot */
-                                 true, /* disable PCH validation*/
-                                 false, /* disable stat cache */
-                                 m_CI->getPreprocessor(),
-                                 m_CI->getASTContext(),
-                                 0, /* deserialization listener */
-                                 Preamble
-                                 )
-                                                  );
+    llvm::OwningPtr<ExternalASTSource> 
+      EAS(CompilerInstance::createPCHExternalASTSource(filename,
+                                                       /* sysroot */"",
+                                                /* disable PCH validation*/true,
+                                                   /* disable stat cache */false,
+                                                       m_CI->getPreprocessor(),
+                                                       m_CI->getASTContext(),
+                                                 /* deserialization listener */0,
+                                                       Preamble
+                                                       )
+          );
     if (EAS) {
        m_CI->getASTContext().setExternalSource(EAS);
        m_UsingStartupPCH = true;
@@ -149,12 +148,12 @@ namespace cling {
       llvm::raw_ostream *OS = m_CI->createOutputFile(filename, /*Binary=*/true,
                                                      /*RemoveFileOnSignal=*/false,
                                                      filename);
-      m_StartupPCHGenerator.reset(new clang::PCHGenerator(m_CI->getPreprocessor(),
-                                                          filename,
-                                                          Chaining,
-                                                          "", /*isysroot*/
-                                                          OS
-                                                          )
+      m_StartupPCHGenerator.reset(new PCHGenerator(m_CI->getPreprocessor(),
+                                                   filename,
+                                                   Chaining,
+                                                   "", /*isysroot*/
+                                                   OS
+                                                   )
                                   );
       m_StartupPCHGenerator->InitializeSema(m_CI->getSema());
       addConsumer(ChainedConsumer::kPCHGenerator, m_StartupPCHGenerator.get());
@@ -167,7 +166,7 @@ namespace cling {
     m_StartupPCHGenerator.reset(); // deletes StartupPCHGenerator
   }
 
-  clang::CompilerInstance*
+  CompilerInstance*
   IncrementalParser::CompileLineFromPrompt(llvm::StringRef input) {
     assert(input.str()[0] != '#' 
            && "Preprocessed line! Call CompilePreprocessed instead");
@@ -175,7 +174,7 @@ namespace cling {
     bool p, q;
     p = m_Consumer->EnableConsumer(ChainedConsumer::kDeclExtractor);
     q = m_Consumer->EnableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
-    clang::CompilerInstance* Result = Compile(input);
+    CompilerInstance* Result = Compile(input);
     m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
     m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
 
@@ -183,19 +182,19 @@ namespace cling {
 
   }
   
-  clang::CompilerInstance*
+  CompilerInstance*
   IncrementalParser::CompileAsIs(llvm::StringRef input) {
     bool p, q;
     p = m_Consumer->DisableConsumer(ChainedConsumer::kDeclExtractor);
     q = m_Consumer->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
-    clang::CompilerInstance* Result = Compile(input);
+    CompilerInstance* Result = Compile(input);
     m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
     m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
 
     return Result;
   }
 
-  clang::CompilerInstance*
+  CompilerInstance*
   IncrementalParser::Compile(llvm::StringRef input)
   {
     // Add src to the memory buffer, parse it, and add it to
@@ -237,8 +236,8 @@ namespace cling {
       // is due to a top-level semicolon, an action override, or a parse error
       // skipping something.
       if (ADecl) {
-        clang::DeclGroupRef DGR = ADecl.getAsVal<clang::DeclGroupRef>();
-        for (clang::DeclGroupRef::iterator i=DGR.begin(); i< DGR.end(); ++i) {
+        DeclGroupRef DGR = ADecl.getAsVal<DeclGroupRef>();
+        for (DeclGroupRef::iterator i=DGR.begin(); i< DGR.end(); ++i) {
           if (!m_FirstTopLevelDecl)
             m_FirstTopLevelDecl = *i;
           
@@ -248,7 +247,7 @@ namespace cling {
         } 
         m_Consumer->HandleTopLevelDecl(DGR);
       } // ADecl
-      if (m_Parser->getCurToken().is(clang::tok::eof)) {
+      if (m_Parser->getCurToken().is(tok::eof)) {
         atEOF = true;
       }
       else {
@@ -259,10 +258,10 @@ namespace cling {
     getCI()->getSema().PerformPendingInstantiations();
     
     // Process any TopLevelDecls generated by #pragma weak.
-    for (llvm::SmallVector<clang::Decl*,2>::iterator
+    for (llvm::SmallVector<Decl*,2>::iterator
            I = getCI()->getSema().WeakTopLevelDecls().begin(),
            E = getCI()->getSema().WeakTopLevelDecls().end(); I != E; ++I) {
-      m_Consumer->HandleTopLevelDecl(clang::DeclGroupRef(*I));
+      m_Consumer->HandleTopLevelDecl(DeclGroupRef(*I));
     }
 
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
@@ -293,7 +292,7 @@ namespace cling {
     return m_Transformer.get();
   }
 
-  void IncrementalParser::addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer) {
+  void IncrementalParser::addConsumer(ChainedConsumer::EConsumerIndex I, ASTConsumer* consumer) {
     if (m_Consumer->Exists(I))
       return;
 
@@ -303,7 +302,7 @@ namespace cling {
 
     consumer->Initialize(getCI()->getSema().getASTContext());
     if (getCI()->hasSema()) {
-      clang::SemaConsumer* SC = dyn_cast<clang::SemaConsumer>(consumer);
+      SemaConsumer* SC = dyn_cast<SemaConsumer>(consumer);
       if (SC) {
         SC->InitializeSema(getCI()->getSema());
       }
