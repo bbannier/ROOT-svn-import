@@ -372,10 +372,12 @@ namespace cling {
     }
 
     Diagnostic& Diag = getCI()->getDiagnostics();
-    // disable that warning when using the prompt
-    unsigned warningID = DiagnosticIDs::getIdFromName("warn_unused_expr");
+    // Disable warnings which doesn't make sense when using the prompt
     // This gets reset with the clang::Diagnostics().Reset()
-    Diag.setDiagnosticMapping(warningID, clang::diag::MAP_IGNORE, SourceLocation());
+    Diag.setDiagnosticMapping(DiagnosticIDs::getIdFromName("warn_unused_expr"),
+                              clang::diag::MAP_IGNORE, SourceLocation());
+    Diag.setDiagnosticMapping(DiagnosticIDs::getIdFromName("warn_unused_call"),
+                              clang::diag::MAP_IGNORE, SourceLocation());
     bool result = handleLine(wrapped, functName);
     return result;
   }
