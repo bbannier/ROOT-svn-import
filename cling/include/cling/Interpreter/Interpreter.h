@@ -7,10 +7,11 @@
 #ifndef CLING_INTERPRETER_H
 #define CLING_INTERPRETER_H
 
+#include "cling/Interpreter/InvocationOptions.h"
+
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "cling/Interpreter/InvocationOptions.h"
 
 #include <string>
 
