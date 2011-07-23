@@ -6,30 +6,18 @@
 
 #include "ExecutionContext.h"
 
-#include "llvm/Constants.h"
-#include "llvm/GlobalVariable.h"
+#include "cling/Interpreter/Value.h"
+
 #include "llvm/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Assembly/PrintModulePass.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
-#include "llvm/Support/DynamicLibrary.h"
-
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclGroup.h"
-#include "clang/CodeGen/ModuleBuilder.h"
-
-#include "cling/Interpreter/CIFactory.h"
-#include "cling/Interpreter/Interpreter.h"
-#include "cling/Interpreter/Value.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cstdio>
 #include <iostream>
-#include <utility>
 
 using namespace cling;
 
