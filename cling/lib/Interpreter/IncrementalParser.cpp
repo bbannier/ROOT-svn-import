@@ -53,7 +53,7 @@ namespace cling {
     m_UsingStartupPCH(false)
   {
     //m_CIFactory.reset(new CIFactory(0, 0, llvmdir));
-    m_MemoryBuffer.push_back(llvm::MemoryBuffer::getMemBuffer("//cling!\n", "CLING") );
+    m_MemoryBuffer.push_back(llvm::MemoryBuffer::getMemBuffer("", "CLING") );
     clang::CompilerInstance* CI = CIFactory::createCI(m_MemoryBuffer[0], Pragma,
                                                       argc, argv, llvmdir);
     assert(CI && "CompilerInstance is (null)!");
@@ -206,7 +206,7 @@ namespace cling {
     // the AST. Returns the CompilerInstance (and thus the AST).
     // Diagnostics are reset for each call of parse: they are only covering
     // src.
-    clang::Preprocessor& PP = m_CI->getPreprocessor();
+    Preprocessor& PP = m_CI->getPreprocessor();
     DiagnosticClient& DClient = m_CI->getDiagnosticClient();
     DClient.BeginSourceFile(m_CI->getLangOpts(), &PP);
 
@@ -215,18 +215,18 @@ namespace cling {
       source_name << "input_line_" << (m_MemoryBuffer.size()+1);
       m_MemoryBuffer.push_back(llvm::MemoryBuffer::getMemBufferCopy(input, source_name.str()));
       llvm::MemoryBuffer *currentBuffer = m_MemoryBuffer.back();
-      clang::FileID FID = m_CI->getSourceManager().createFileIDForMemBuffer(currentBuffer);
+      FileID FID = m_CI->getSourceManager().createFileIDForMemBuffer(currentBuffer);
       
-      PP.EnterSourceFile(FID, 0, clang::SourceLocation());     
+      PP.EnterSourceFile(FID, 0, SourceLocation());     
       
-      clang::Token &tok = const_cast<clang::Token&>(m_Parser->getCurToken());
-      tok.setKind(clang::tok::semi);
+      Token &tok = const_cast<Token&>(m_Parser->getCurToken());
+      tok.setKind(tok::semi);
     }
 
-    clang::Parser::DeclGroupPtrTy ADecl;
+    Parser::DeclGroupPtrTy ADecl;
     
     bool atEOF = false;
-    if (m_Parser->getCurToken().is(clang::tok::eof)) {
+    if (m_Parser->getCurToken().is(tok::eof)) {
       atEOF = true;
     }
     else {
