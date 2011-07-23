@@ -13,22 +13,24 @@
 #include "clang/Sema/Sema.h"
 
 using namespace clang;
+
 namespace cling {
 
 
   DeclExtractor::DeclExtractor() {
 
   }
+
   DeclExtractor::~DeclExtractor() {
 
   }
 
-  void DeclExtractor::TransformTopLevelDecl(clang::DeclGroupRef DGR) {
+  void DeclExtractor::TransformTopLevelDecl(DeclGroupRef DGR) {
     for (DeclGroupRef::iterator I = DGR.begin(), E = DGR.end(); I != E; ++I)
       ExtractDecl(*I);
   }
 
-  void DeclExtractor::ExtractDecl(clang::Decl* D) {
+  void DeclExtractor::ExtractDecl(Decl* D) {
     FunctionDecl* FD = dyn_cast<FunctionDecl>(D);
     llvm::SmallVector<NamedDecl*, 4> TouchedDecls;
     

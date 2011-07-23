@@ -6,6 +6,7 @@
 
 #include "cling/Interpreter/CIFactory.h"
 
+#include "ChainedConsumer.h"
 #include "cling/Interpreter/Diagnostics.h"
 
 #include "clang/AST/ASTContext.h"
@@ -14,12 +15,11 @@
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
 
+#include "llvm/LLVMContext.h"
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/LLVMContext.h"
 #include "llvm/Support/MemoryBuffer.h"
-
-#include "ChainedConsumer.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang;
 
@@ -165,12 +165,12 @@ namespace cling {
     return CI;
   }
 
-  void CIFactory::SetClingCustomLangOpts(clang::LangOptions& Opts) {
+  void CIFactory::SetClingCustomLangOpts(LangOptions& Opts) {
     Opts.EmitAllDecls = 1;
   }
 
-  void CIFactory::SetClingTargetLangOpts(clang::LangOptions& Opts,
-                                         const clang::TargetInfo& Target) {
+  void CIFactory::SetClingTargetLangOpts(LangOptions& Opts, 
+                                         const TargetInfo& Target) {
     if (Target.getTriple().getOS() == llvm::Triple::Win32) {
       Opts.Microsoft = 1;
       Opts.MSCVersion = 1300;
