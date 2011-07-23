@@ -37,14 +37,10 @@ int main( int argc, char **argv )
    if (interpreter.getOptions().Help) {
       return 0;
    }
-  
-   clang::CompilerInstance* CI = interpreter.getCI();
-   clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
 
-   const bool IsUserSupplied = false;
-   const bool IsFramework = false;
-   const bool IsSysRootRelative = true;
-   headerOpts.AddPath (".", clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
+   clang::CompilerInstance* CI = interpreter.getCI();
+  interpreter.AddIncludePath(".");
+
    interpreter.writeStartupPCH();
   
   for (size_t I = 0, N = interpreter.getOptions().LibsToLoad.size();
