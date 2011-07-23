@@ -6,24 +6,6 @@
 
 #include "IncrementalParser.h"
 
-#include "llvm/LLVMContext.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_os_ostream.h"
-
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclGroup.h"
-#include "clang/AST/Mangle.h"
-#include "clang/CodeGen/ModuleBuilder.h"
-#include "clang/Parse/Parser.h"
-#include "clang/Parse/ParseAST.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/Pragma.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Sema/SemaConsumer.h"
-#include "clang/Serialization/ASTWriter.h"
-
 #include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/Diagnostics.h"
 #include "cling/Interpreter/Interpreter.h"
@@ -31,8 +13,22 @@
 #include "ChainedConsumer.h"
 #include "DeclExtractor.h"
 #include "DynamicLookup.h"
-#include "ExecutionContext.h"
 #include "ValuePrinterSynthesizer.h"
+
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclGroup.h"
+#include "clang/CodeGen/ModuleBuilder.h"
+#include "clang/Parse/Parser.h"
+#include "clang/Parse/ParseAST.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Pragma.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Serialization/ASTWriter.h"
+
+#include "llvm/LLVMContext.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_os_ostream.h"
 
 #include <stdio.h>
 #include <sstream>

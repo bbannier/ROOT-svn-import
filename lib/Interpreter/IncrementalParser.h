@@ -7,12 +7,14 @@
 #ifndef CLING_INCREMENTAL_PARSER_H
 #define CLING_INCREMENTAL_PARSER_H
 
+#include "ChainedConsumer.h"
+
+#include "clang/Basic/SourceLocation.h"
+
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
 
-#include "clang/Basic/SourceLocation.h"
 #include <vector>
-#include "ChainedConsumer.h"
 
 namespace llvm {
   struct GenericValue;
