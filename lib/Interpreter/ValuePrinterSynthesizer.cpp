@@ -64,7 +64,8 @@ namespace cling {
             // if no body remove the wrapper
             DeclContext* DC = FD->getDeclContext();
             Scope* S = m_Sema->getScopeForContext(DC);
-            S->RemoveDecl(FD);
+            if (S)
+              S->RemoveDecl(FD);
             DC->removeDecl(FD); 
           }
         }
