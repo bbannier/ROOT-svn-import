@@ -52,8 +52,7 @@ namespace {
         return FullPath;
     }
     
-    std::vector<llvm::sys::Path> LibPaths(Opts.LibSearchPath.begin(),
-                                          Opts.LibSearchPath.end());
+    std::vector<llvm::sys::Path> LibPaths;
     std::vector<llvm::sys::Path> SysLibPaths;
     llvm::sys::Path::GetSystemLibraryPaths(SysLibPaths);
     LibPaths.insert(LibPaths.end(), SysLibPaths.begin(), SysLibPaths.end());
