@@ -59,11 +59,11 @@ getStmtRange(const clang::Stmt* S,
    const clang::LangOptions& LO)
 {
   // Get the source range of the specified Stmt.
-  clang::SourceLocation SLoc = SM.getInstantiationLoc(S->getLocStart());
-  clang::SourceLocation ELoc = SM.getInstantiationLoc(getStmtEndLoc(S));
+  clang::SourceLocation SLoc = SM.getExpansionLoc(S->getLocStart());
+  clang::SourceLocation ELoc = SM.getExpansionLoc(getStmtEndLoc(S));
   // This is necessary to get the correct range of function-like macros.
   if ((SLoc == ELoc) && S->getLocEnd().isMacroID()) {
-    ELoc = SM.getInstantiationRange(S->getLocEnd()).second;
+    ELoc = SM.getExpansionRange(S->getLocEnd()).second;
   }
   if (!SLoc.isValid() && !ELoc.isValid()) {
     return std::pair<unsigned, unsigned>(0, 0);
@@ -78,7 +78,7 @@ getStmtRange(const clang::Stmt* S,
       clang::Lexer::MeasureTokenLength(ELoc, SM, LO);
   }
   else if (SLoc.isValid()) {
-    clang::SourceLocation Loc = SM.getInstantiationLoc(SLoc);
+    clang::SourceLocation Loc = SM.getExpansionLoc(SLoc);
     std::pair<clang::FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
     std::pair<const char*, const char*> BD = std::make_pair(
        SM.getBuffer(LocInfo.first)->getBufferStart(),
@@ -97,8 +97,8 @@ getStmtRangeWithSemicolon(const clang::Stmt* S,
 {
   // Get the source range of the specified Stmt, ensuring that a semicolon is
   // included, if necessary - since the clang ranges do not guarantee this.
-  clang::SourceLocation SLoc = SM.getInstantiationLoc(S->getLocStart());
-  clang::SourceLocation ELoc = SM.getInstantiationLoc(getStmtEndLoc(S));
+  clang::SourceLocation SLoc = SM.getExpansionLoc(S->getLocStart());
+  clang::SourceLocation ELoc = SM.getExpansionLoc(getStmtEndLoc(S));
 
   return getRangeWithSemicolon(SLoc, ELoc, SM, LO);
 }
@@ -118,7 +118,7 @@ getRangeWithSemicolon(clang::SourceLocation SLoc,
     end = SM.getFileOffset(ELoc);
   }
   if (SLoc.isValid() && !ELoc.isValid()) {
-    clang::SourceLocation Loc = SM.getInstantiationLoc(SLoc);
+    clang::SourceLocation Loc = SM.getExpansionLoc(SLoc);
     std::pair<clang::FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
     std::pair<const char*, const char*> BD = std::make_pair(
        SM.getBuffer(LocInfo.first)->getBufferStart(),
@@ -126,7 +126,7 @@ getRangeWithSemicolon(clang::SourceLocation SLoc,
     end = BD.second - BD.first;
   }
   else if (ELoc.isValid()) {
-    clang::SourceLocation Loc = SM.getInstantiationLoc(ELoc);
+    clang::SourceLocation Loc = SM.getExpansionLoc(ELoc);
     std::pair<clang::FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
     std::pair<const char*, const char*> BD = std::make_pair(
        SM.getBuffer(LocInfo.first)->getBufferStart(),
