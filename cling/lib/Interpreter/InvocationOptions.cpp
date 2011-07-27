@@ -52,7 +52,9 @@ namespace {
   static void ParseLinkerOpts(cling::InvocationOptions& Opts,
                               InputArgList& Args /* , Diags */) {
     Opts.LibsToLoad = Args.getAllArgValues(OPT_l);
-    Opts.LibSearchPath = Args.getAllArgValues(OPT_L);
+    std::vector<std::string> LibPaths = Args.getAllArgValues(OPT_L);
+    for (size_t i = 0; i < LibPaths.size(); ++i)
+      Opts.LibSearchPath.push_back(llvm::sys::Path(LibPaths[i]));
   }
 
 }
