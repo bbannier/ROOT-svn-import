@@ -7,27 +7,28 @@
 #ifndef CLING_INVOCATIONOPTIONS_H
 #define CLING_INVOCATIONOPTIONS_H
 
-#include <string>
+#include "llvm/Support/Path.h"
+
 #include <vector>
 
 namespace cling {
-   class InvocationOptions {
-   public:
-      InvocationOptions(): NoLogo(false) {}
-      bool NoLogo;
-      bool ShowVersion;
-      bool Verbose;
-      bool Help;
+  class InvocationOptions {
+  public:
+    InvocationOptions(): NoLogo(false) {}
+    bool NoLogo;
+    bool ShowVersion;
+    bool Verbose;
+    bool Help;
 
-      std::vector<std::string> LibsToLoad;
-      std::vector<std::string> LibSearchPath;
+    std::vector<std::string> LibsToLoad;
+    std::vector<llvm::sys::Path> LibSearchPath;
 
-      static InvocationOptions CreateFromArgs(int argc, const char* const argv[],
-                                              std::vector<unsigned>& leftoverArgs
-                                              /* , Diagnostic &Diags */);
+    static InvocationOptions CreateFromArgs(int argc, const char* const argv[],
+                                            std::vector<unsigned>& leftoverArgs
+                                            /* , Diagnostic &Diags */);
 
-      void PrintHelp();
-   };
+    void PrintHelp();
+  };
 }
 
 #endif // INVOCATIONOPTIONS
