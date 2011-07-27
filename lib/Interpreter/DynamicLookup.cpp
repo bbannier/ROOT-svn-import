@@ -672,9 +672,11 @@ namespace cling {
                                                             ArraySize,
                                                             ArrayType::Normal,
                                                           /*IndexTypeQuals=*/0);
+
+    StringLiteral::StringKind Kind = StringLiteral::Ascii;
     Expr* Result = StringLiteral::Create(m_Context, 
                                          Value, 
-                                         /*Wide=*/ false,
+                                         Kind,
                                          /*Pascal=*/false,
                                          CCArray, 
                                          m_NoSLoc);
