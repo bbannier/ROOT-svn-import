@@ -10,6 +10,7 @@
 #include "ExecutionContext.h"
 #include "IncrementalParser.h"
 #include "InputValidator.h"
+
 #include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/Value.h"
 
@@ -25,6 +26,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/Linker.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
@@ -36,53 +38,58 @@
 
 using namespace clang;
 
-namespace {
-  static
-  llvm::sys::Path
-  findDynamicLibrary(const std::string& filename,
-                     const cling::InvocationOptions& Opts,
-                     bool addPrefix = true,
-                     bool addSuffix = true)
-  {
-    // Check wether filename is a dynamic library, either through absolute path
-    // or in one of the system library paths.
-    {
-      llvm::sys::Path FullPath(filename);
-      if (FullPath.isDynamicLibrary())
-        return FullPath;
-    }
-    
-    std::vector<llvm::sys::Path> LibPaths(Opts.LibSearchPath.begin(),
-                                          Opts.LibSearchPath.end());
-    std::vector<llvm::sys::Path> SysLibPaths;
-    llvm::sys::Path::GetSystemLibraryPaths(SysLibPaths);
-    LibPaths.insert(LibPaths.end(), SysLibPaths.begin(), SysLibPaths.end());
-    for (unsigned i = 0; i < LibPaths.size(); ++i) {
-      llvm::sys::Path FullPath(LibPaths[i]);
-      FullPath.appendComponent(filename);
-      if (FullPath.isDynamicLibrary())
-        return FullPath;
-    }
-    
-    if (addPrefix) {
-      static const char* prefix = "lib";
-      llvm::sys::Path found = findDynamicLibrary(std::string(prefix) + filename,
-                                                 Opts, false, addSuffix);
-      if (found.isDynamicLibrary())
-        return found;
-    }
-    
-    if (addSuffix && llvm::sys::Path::GetDLLSuffix().size()) {
-      llvm::sys::Path found
-      = findDynamicLibrary(filename + "." + llvm::sys::Path::GetDLLSuffix().str(),
-                           Opts, false, false);
-      if (found.isDynamicLibrary())
-        return found;
-    }
-    
-    return llvm::sys::Path();
+static bool tryLinker(const std::string& filename,
+                      const cling::InvocationOptions& Opts,
+                      llvm::Module* module) {
+  assert(module && "Module must exist for linking!");
+  llvm::Linker L("cling", module, llvm::Linker::QuietWarnings
+                 | llvm::Linker::QuietErrors);
+  for (std::vector<llvm::sys::Path>::const_iterator I
+         = Opts.LibSearchPath.begin(), E = Opts.LibSearchPath.end(); I != E;
+       ++I) {
+    L.addPath(*I);
   }
-  
+  L.addSystemPaths();
+  bool Native = true;
+  if (L.LinkInLibrary(filename, Native)) {
+    // that didn't work, try bitcode:
+    llvm::sys::Path FilePath(filename);
+    std::string Magic;
+    if (!FilePath.getMagicNumber(Magic, 64)) {
+      // filename doesn't exist...
+      L.releaseModule();
+      return false;
+    }
+    if (llvm::sys::IdentifyFileType(Magic.c_str(), 64)
+        == llvm::sys::Bitcode_FileType) {
+      // We are promised a bitcode file, complain if it fails
+      L.setFlags(0);
+      if (L.LinkInFile(llvm::sys::Path(filename), Native)) {
+        L.releaseModule();
+        return false;
+      }
+    } else {
+      // Nothing the linker can handle
+      L.releaseModule();
+      return false;
+    }
+  } else if (Native) {
+    // native shared library, load it!
+    llvm::sys::Path SoFile = L.FindLib(filename);
+    assert(!SoFile.isEmpty() && "We know the shared lib exists but can't find it back!");
+    std::string errMsg;
+    bool err =
+      llvm::sys::DynamicLibrary::LoadLibraryPermanently(SoFile.str().c_str(), &errMsg);
+    if (err) {
+      fprintf(stderr,
+              "Interpreter::loadFile: Could not load shared library!\n");
+      fprintf(stderr, "%s\n", errMsg.c_str());
+      L.releaseModule();
+      return false;
+    }
+  }
+  L.releaseModule();
+  return true;
 }
 
 namespace cling {
@@ -438,34 +445,26 @@ namespace cling {
     return 1;
 
   }
-
-  
-  static bool tryLoadSharedLib(const std::string& filename,
-                               const InvocationOptions& Opts) {
-    llvm::sys::Path DynLib = findDynamicLibrary(filename, Opts);
-    if (!DynLib.isDynamicLibrary())
-      return false;
-    
-    std::string errMsg;
-    bool err =
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently(DynLib.str().c_str(), &errMsg);
-    if (err) {
-      //llvm::errs() << "Could not load shared library: " << errMsg << '\n';
-      fprintf(stderr,
-              "Interpreter::loadFile: Could not load shared library!\n");
-      fprintf(stderr, "%s\n", errMsg.c_str());
-      return false;
-    }
-    return true;
-  }
   
   bool
   Interpreter::loadFile(const std::string& filename,
                         const std::string* trailcode /*=0*/,
                         bool allowSharedLib /*=true*/)
   {
-    if (allowSharedLib && tryLoadSharedLib(filename, getOptions()))
-      return 0;
+    if (allowSharedLib) {
+      llvm::Module* module = m_IncrParser->GetCodeGenerator()->GetModule();
+      if (module) {
+        if (tryLinker(filename, getOptions(), module))
+          return 0;
+        if (filename.compare(0, 3, "lib") == 0) {
+          // starts with "lib", try without (the llvm::Linker forces
+          // a "lib" in front, which makes it liblib...
+          if (tryLinker(filename.substr(3, std::string::npos),
+                        getOptions(), module))
+            return 0;
+        }
+      }
+    }
     
     std::string code;
     code += "#include \"" + filename + "\"\n";
