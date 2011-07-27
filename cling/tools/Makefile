@@ -8,6 +8,6 @@
 ##===----------------------------------------------------------------------===##
 
 LEVEL := ../../..
-DIRS := libcling driver test-library
+DIRS := libcling driver
 
 include $(LEVEL)/Makefile.common
