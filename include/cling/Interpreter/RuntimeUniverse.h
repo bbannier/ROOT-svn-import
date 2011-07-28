@@ -21,6 +21,8 @@
 #define __STDC_CONSTANT_MACROS // needed by System/DataTypes.h
 #endif
 
+#ifdef __cplusplus
+
 namespace cling {
 
   class Interpreter;
@@ -47,3 +49,5 @@ namespace cling {
 } // end namespace cling
 
 using namespace cling::runtime;
+
+#endif // __cplusplus
