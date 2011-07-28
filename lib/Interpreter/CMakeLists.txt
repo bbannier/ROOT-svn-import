@@ -24,7 +24,6 @@ add_cling_library(clingInterpreter
   ChainedConsumer.cpp
   CIFactory.cpp
   DeclExtractor.cpp
-  Diagnostics.cpp
   DynamicLookup.cpp
   ExecutionContext.cpp
   IncrementalParser.cpp
