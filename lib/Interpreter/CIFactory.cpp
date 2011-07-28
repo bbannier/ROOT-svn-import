@@ -7,11 +7,11 @@
 #include "cling/Interpreter/CIFactory.h"
 
 #include "ChainedConsumer.h"
-#include "cling/Interpreter/Diagnostics.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
 
@@ -92,14 +92,18 @@ namespace cling {
       //  Buffer the error messages while we process
       //  the compiler options.
       //
-      DiagnosticOptions DiagOpts;
-      DiagOpts.ShowColors = 1;
-      DiagnosticClient *Client = new cling::DiagnosticPrinter();
-      llvm::IntrusiveRefCntPtr<Diagnostic> Diags = CompilerInstance::createDiagnostics(DiagOpts, 0, 0, Client);
-      CI->setDiagnostics(Diags.getPtr());
-      
+
+      // Needed when we call CreateFromArgs
+      CI->createDiagnostics(0, 0);      
       CompilerInvocation::CreateFromArgs
-        (CI->getInvocation(), argv, argv + argc, *Diags);
+        (CI->getInvocation(), argv, argv + argc, CI->getDiagnostics());
+
+      // Reset the diagnostics options that came from CreateFromArgs
+      DiagnosticOptions& DiagOpts = CI->getDiagnosticOpts();
+      DiagOpts.ShowColors = 1;
+      DiagnosticClient* Client = new TextDiagnosticPrinter(llvm::errs(), DiagOpts);
+      CI->createDiagnostics(0, 0, Client);
+
       // Set the language options, which cling needs
       SetClingCustomLangOpts(CI->getLangOpts());
 
