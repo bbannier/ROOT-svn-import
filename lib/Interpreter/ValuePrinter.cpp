@@ -27,11 +27,15 @@ static void StreamCharPtr(llvm::raw_ostream& o, const char* const v) {
 }
 
 static void StreamRef(llvm::raw_ostream& o, const void* v) {
-  // TODO: Print the object members.
   o <<"&" << v << "\n";
 }
   
+static void StreamPtr(llvm::raw_ostream& o, const void* v) {
+  o << v << "\n";
+}
+  
 static void StreamObj(llvm::raw_ostream& o, const void* v) {
+  // TODO: Print the object members.
   o << "@" << v << "\n";
 }
 
@@ -41,6 +45,9 @@ static void StreamValue(llvm::raw_ostream& o, const void* const p, clang::QualTy
   else if (const clang::BuiltinType *BT
            = llvm::dyn_cast<clang::BuiltinType>(Ty.getCanonicalType())) {
     switch (BT->getKind()) {
+    case clang::BuiltinType::Bool:
+      if (*(bool*)p) o << "true\n";
+      else o << "false\n"; break;
     case clang::BuiltinType::Int:    o << *(int*)p << "\n"; break;
     case clang::BuiltinType::Float:  o << *(float*)p << "\n"; break;
     case clang::BuiltinType::Double: o << *(double*)p << "\n"; break;
@@ -53,6 +60,8 @@ static void StreamValue(llvm::raw_ostream& o, const void* const p, clang::QualTy
     clang::QualType PointeeTy = Ty->getPointeeType();
     if (PointeeTy->isCharType())
       StreamCharPtr(o, (const char*)p);
+    else 
+      StreamPtr(o, (const char*)p);
   }
   else
     StreamObj(o, p);
