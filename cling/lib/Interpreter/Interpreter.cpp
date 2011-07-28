@@ -202,11 +202,13 @@ namespace cling {
       processStartupPCH();
     }
 
-    // Set up the gCling variable - even if we use PCH ('this' is different)
-    processLine("#include \"cling/Interpreter/ValuePrinter.h\"\n");
-    std::stringstream initializer;
-    initializer << "gCling=(cling::Interpreter*)" << (long)this <<";";
-    processLine(initializer.str());
+    if (getCI()->getLangOpts().CPlusPlus) {
+       // Set up the gCling variable - even if we use PCH ('this' is different)
+       processLine("#include \"cling/Interpreter/ValuePrinter.h\"\n");
+       std::stringstream initializer;
+       initializer << "gCling=(cling::Interpreter*)" << (long)this <<";";
+       processLine(initializer.str());
+    }
 
     handleFrontendOptions();
   }
