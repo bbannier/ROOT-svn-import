@@ -4,6 +4,7 @@ set( LLVM_LINK_COMPONENTS
   bitreader
   bitwriter
   codegen
+  linker
   support
   mc
   executionengine
