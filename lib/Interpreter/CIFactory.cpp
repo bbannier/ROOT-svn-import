@@ -94,7 +94,7 @@ namespace cling {
       //
 
       // Needed when we call CreateFromArgs
-      CI->createDiagnostics(0, 0);      
+      CI->createDiagnostics(0, 0);
       CompilerInvocation::CreateFromArgs
         (CI->getInvocation(), argv, argv + argc, CI->getDiagnostics());
 

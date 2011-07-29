@@ -40,8 +40,8 @@ namespace cling {
 
       CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody());
       assert(CS && "Function body not a CompoundStmt?");
-      DeclContext* DC = FD->getDeclContext();
-      Scope* S = m_Sema->getScopeForContext(DC);     
+      DeclContext* DC = FD->getTranslationUnitDecl();
+      Scope* S = m_Sema->TUScope;     
       llvm::SmallVector<Stmt*, 4> Stmts;
 
       DC->removeDecl(FD);
@@ -100,11 +100,18 @@ namespace cling {
 
       // Insert the extracted declarations before the wrapper
         for (size_t i = 0; i < TouchedDecls.size(); ++i) {
-
-          DC->addDecl(TouchedDecls[i]);
-          S->AddDecl(TouchedDecls[i]);
-        
-          m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
+          if (TouchedDecls[i]->getDeclName()) {
+            DeclContext* PreviousDC = m_Sema->CurContext;
+            m_Sema->CurContext = DC;
+            m_Sema->PushOnScopeChains(TouchedDecls[i], m_Sema->TUScope,
+                                      /*AddToContext*/true);
+            m_Sema->CurContext = PreviousDC;
+            m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
+          }
+          else {
+            DC->makeDeclVisibleInContext(TouchedDecls[i], /*Recoverable*/ false);
+            S->AddDecl(TouchedDecls[i]);
+          }
         }
       }
 
