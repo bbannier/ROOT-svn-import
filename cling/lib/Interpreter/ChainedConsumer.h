@@ -29,6 +29,7 @@ namespace cling {
 
   public:
     enum EConsumerIndex {
+      kEvaluateTSynthesizer,
       kDeclExtractor,
       kValuePrinterSynthesizer,
       kASTDumper,
