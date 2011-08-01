@@ -7,7 +7,7 @@
 #ifndef CLING_VALUE_PRINTER_SYNTHESIZER_H
 #define CLING_VALUE_PRINTER_SYNTHESIZER_H
 
-#include "clang/Sema/SemaConsumer.h"
+#include "VerifyingSemaConsumer.h"
 
 namespace clang {
   class Expr;
@@ -17,20 +17,15 @@ namespace clang {
 namespace cling {
   class Interpreter;
 
-  class ValuePrinterSynthesizer : public clang::SemaConsumer {
+  class ValuePrinterSynthesizer : public VerifyingSemaConsumer {
 
   private:
-    clang::ASTContext* m_Context;
-    clang::Sema* m_Sema;
     Interpreter* m_Interpreter;
 
 public:
     ValuePrinterSynthesizer(Interpreter* Interp);
     virtual ~ValuePrinterSynthesizer();
-    void Initialize(clang::ASTContext& Ctx);
-    void InitializeSema(clang::Sema& S);
-    void HandleTopLevelDecl(clang::DeclGroupRef DGR);
-    void ForgetSema();
+    void TransformTopLevelDecl(clang::DeclGroupRef DGR);
 
   private:
     clang::Expr* SynthesizeVP(clang::Expr* E);

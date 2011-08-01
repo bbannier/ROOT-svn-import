@@ -23,20 +23,12 @@ namespace cling {
 
 
   ValuePrinterSynthesizer::ValuePrinterSynthesizer(Interpreter* Interp) 
-    : m_Context(0), m_Sema(0), m_Interpreter(Interp)
+    : m_Interpreter(Interp)
   { }
 
   ValuePrinterSynthesizer::~ValuePrinterSynthesizer() {}
 
-  void ValuePrinterSynthesizer::Initialize(ASTContext& Ctx) {
-    m_Context = &Ctx;
-  }
-
-  void ValuePrinterSynthesizer::InitializeSema(Sema& S) {
-    m_Sema = &S;
-  }
-
-  void ValuePrinterSynthesizer::HandleTopLevelDecl(DeclGroupRef DGR) {
+  void ValuePrinterSynthesizer::TransformTopLevelDecl(DeclGroupRef DGR) {
     for (DeclGroupRef::iterator I = DGR.begin(), E = DGR.end(); I != E; ++I)
       if (FunctionDecl* FD = dyn_cast<FunctionDecl>(*I)) {
         if (FD->getNameAsString().find("__cling_Un1Qu3"))
@@ -70,10 +62,6 @@ namespace cling {
           }
         }
       }
-  }
-
-  void ValuePrinterSynthesizer::ForgetSema() {
-    m_Sema = 0;
   }
 
   // We need to artificially create:
