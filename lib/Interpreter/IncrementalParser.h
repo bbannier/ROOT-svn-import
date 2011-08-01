@@ -39,7 +39,6 @@ namespace clang {
 namespace cling {
   class ChainedConsumer;
   class CIFactory;
-  class DynamicExprTransformer;
   class ExecutionContext;
   class Interpreter;
   
@@ -64,8 +63,6 @@ namespace cling {
     bool isDynamicLookupEnabled() { 
       return m_DynamicLookupEnabled; 
     }
-    DynamicExprTransformer* getTransformer() const { return m_Transformer.get(); }
-    DynamicExprTransformer* getOrCreateTransformer(Interpreter* interp);
     
     clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
     clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
@@ -83,7 +80,6 @@ namespace cling {
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
     llvm::OwningPtr<clang::Parser> m_Parser; // parser (incremental)
     bool m_DynamicLookupEnabled; // enable/disable dynamic scope
-    llvm::OwningPtr<DynamicExprTransformer> m_Transformer; // delayed id lookup
     std::vector<llvm::MemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
     clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedConsumer* m_Consumer; // CI owns it

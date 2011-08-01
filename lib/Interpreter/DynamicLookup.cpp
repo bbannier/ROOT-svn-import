@@ -5,6 +5,7 @@
 //------------------------------------------------------------------------------
 
 #include "DynamicLookup.h"
+
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/InterpreterCallbacks.h"
 
@@ -151,90 +152,31 @@ namespace {
 namespace cling {
   
   // Constructors
-  DynamicExprTransformer::DynamicExprTransformer(Interpreter* interp, Sema* Sema)
+  EvaluateTSynthesizer::EvaluateTSynthesizer(Interpreter* interp)
     : m_EvalDecl(0), 
       m_CurDeclContext(0),
-      m_Interpreter(interp),
-      m_Sema(Sema), 
-      m_Context(Sema->getASTContext()) 
+      m_Interpreter(interp)
   {
-  }
-  
-  void DynamicExprTransformer::Initialize() {
-    // include the DynamicLookup specific builtins
-    m_Interpreter->processLine("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
-    TemplateDecl* D 
-      = cast_or_null<TemplateDecl>(m_Interpreter->LookupDecl("cling").
-                                   LookupDecl("runtime").
-                                   LookupDecl("internal").
-                                   LookupDecl("EvaluateT").
-                                   getSingleDecl());
-    assert(D && "Cannot find EvaluateT TemplateDecl!\n");
-    
-    m_EvalDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl());
-
-    NamedDecl* ND = m_Interpreter->LookupDecl("cling").
-      LookupDecl("runtime").
-      LookupDecl("internal").
-      LookupDecl("InterpreterGeneratedCodeDiagnosticsMaybeIncorrect");
-
-    assert(ND && "InterpreterGeneratedCodeDiagnosticsMaybeIncorrect");
-
-    m_NoRange = ND->getSourceRange();
+    m_NoRange = SourceRange();
     m_NoSLoc = m_NoRange.getBegin();
     m_NoELoc =  m_NoRange.getEnd();
+  }
 
-    //m_DeclContextType = m_Interpreter->getQualType("DeclContext");
-  }
-    
-  // DeclVisitor
-  
-  void DynamicExprTransformer::Visit(Decl* D) {
-    //Decl* PrevDecl = DynamicExprTransformer::CurrentDecl;
-    //DynamicExprTransformer::CurrentDecl = D;
-    BaseDeclVisitor::Visit(D);
-    //DynamicExprTransformer::CurrentDecl = PrevDecl;     
-  }
-  
-  void DynamicExprTransformer::VisitFunctionDecl(FunctionDecl* D) {
-    // Handle the case: 
-    // function-definition: 
-    //   [decl-specifier-seq] declarator [ctor-initializer] function-body
-    //TODO:[decl-specifier-seq] declarator [ctor-initializer] function-try-block
-    //   function-body: compount-statement
-    if (!D->isDependentContext() && D->isThisDeclarationADefinition()) {
-      if (D->hasBody()) {
-        m_CurDeclContext = D->getParent();
-        // Here we expect CompoundStmt
-        ASTNodeInfo NewNode = Visit(D->getBody());
-        
-        D->setBody(NewNode.getAsSingleNode());
+  void EvaluateTSynthesizer::TransformTopLevelDecl(DeclGroupRef DGR) {
+    for (DeclGroupRef::iterator Di = DGR.begin(), E = DGR.end(); Di != E; ++Di)
+      if (ShouldVisit(*Di) && (*Di)->hasBody()) {
+        if (FunctionDecl* FD = dyn_cast<FunctionDecl>(*Di)) {
+          ASTNodeInfo NewBody = Visit((*Di)->getBody());
+          FD->setBody(NewBody.getAsSingleNode());
+        }
+        assert ((!isa<BlockDecl>(*Di) || !isa<ObjCMethodDecl>(*Di))
+                && "Not implemented yet!");
       }
-    }
   }
-    
-  void DynamicExprTransformer::VisitDecl(Decl* D) {
-    if (!ShouldVisit(D))
-      return;
-    
-    if (DeclContext* DC = dyn_cast<DeclContext>(D))
-      if (!(DC->isDependentContext()))
-        static_cast<DynamicExprTransformer*>(this)->VisitDeclContext(DC);
-  }
-  
-  void DynamicExprTransformer::VisitDeclContext(DeclContext* DC) {
-    m_CurDeclContext = DC;
-    for (DeclContext::decl_iterator
-           I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I)        
-         if (ShouldVisit(*I))
-           Visit(*I);
-  }
-  
-  // end DeclVisitor
   
   // StmtVisitor
 
-  ASTNodeInfo DynamicExprTransformer::VisitStmt(Stmt* Node) {
+  ASTNodeInfo EvaluateTSynthesizer::VisitStmt(Stmt* Node) {
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
       if (*I) {
@@ -245,7 +187,7 @@ namespace cling {
         if (NewNode.isForReplacement()) {
           if (Expr* E = NewNode.getAs<Expr>())
             // Assume void if still not escaped
-            *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
+            *I = SubstituteUnknownSymbol(m_Context->VoidTy, E);
         } 
         else {
           *I = NewNode.getAsSingleNode();
@@ -256,7 +198,7 @@ namespace cling {
     return ASTNodeInfo(Node, 0);
   }
   
-  ASTNodeInfo DynamicExprTransformer::VisitCompoundStmt(CompoundStmt* Node) {
+  ASTNodeInfo EvaluateTSynthesizer::VisitCompoundStmt(CompoundStmt* Node) {
     ASTNodes Children;
     ASTNodes NewChildren;
     if (GetChildren(Children, Node)) {
@@ -269,7 +211,7 @@ namespace cling {
           for(unsigned i = 0; i < NewStmts.size(); ++i)
             NewChildren.push_back(NewStmts[i]);
 
-          Node->setStmts(m_Context, NewChildren.data(), NewChildren.size());
+          Node->setStmts(*m_Context, NewChildren.data(), NewChildren.size());
           // Resolve all 1:n replacements
           Visit(Node);
         }
@@ -277,7 +219,7 @@ namespace cling {
           if (NewNode.isForReplacement()) {
             if (Expr* E = NewNode.getAs<Expr>())
               // Assume void if still not escaped
-              NewChildren.push_back(SubstituteUnknownSymbol(m_Context.VoidTy, E));
+              NewChildren.push_back(SubstituteUnknownSymbol(m_Context->VoidTy, E));
           }
           else
             NewChildren.push_back(*it);
@@ -285,13 +227,13 @@ namespace cling {
       }
     }
 
-    Node->setStmts(m_Context, NewChildren.data(), NewChildren.size());
+    Node->setStmts(*m_Context, NewChildren.data(), NewChildren.size());
 
     return ASTNodeInfo(Node, 0);
 
   }
 
-  ASTNodeInfo DynamicExprTransformer::VisitDeclStmt(DeclStmt* Node) {
+  ASTNodeInfo EvaluateTSynthesizer::VisitDeclStmt(DeclStmt* Node) {
     // Visit all the children, which are the contents of the DeclGroupRef
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
@@ -335,7 +277,7 @@ namespace cling {
           // 2.2 Get unique name for the LifetimeHandler instance and 
           // initialize it
           IdentifierInfo& II 
-            = m_Context.Idents.get(m_Interpreter->createUniqueName());
+            = m_Context->Idents.get(m_Interpreter->createUniqueName());
 
           // Prepare the initialization Exprs.
           // We want to call LifetimeHandler(DynamicExprInfo* ExprInfo, 
@@ -353,21 +295,21 @@ namespace cling {
                                                      LookupDecl("DeclContext").
                                                      getSingleDecl());
           assert(D && "DeclContext declaration not found!");
-          QualType DCTy = m_Context.getTypeDeclType(D);
+          QualType DCTy = m_Context->getTypeDeclType(D);
           Inits.push_back(ConstructCStyleCasePtrExpr(DCTy, 
                                                      (uint64_t)m_CurDeclContext)
                           );
           // Build Arg2 llvm::StringRef
           // Get the type of the type without specifiers 
-          PrintingPolicy Policy(m_Context.getLangOptions());
+          PrintingPolicy Policy(m_Context->getLangOptions());
           Policy.SuppressTagKeyword = 1;
           std::string Res;
           CuredDeclTy.getAsStringInternal(Res, Policy);
           Inits.push_back(ConstructllvmStringRefExpr(Res.c_str()));
 
           // 2.3 Create a variable from LifetimeHandler.
-          QualType HandlerTy = m_Context.getTypeDeclType(Handler);
-          VarDecl* HandlerInstance = VarDecl::Create(m_Context,
+          QualType HandlerTy = m_Context->getTypeDeclType(Handler);
+          VarDecl* HandlerInstance = VarDecl::Create(*m_Context,
                                                      CuredDecl->getDeclContext(),
                                                      m_NoSLoc,
                                                      m_NoSLoc,
@@ -430,7 +372,7 @@ namespace cling {
                                                 m_NoELoc).take();
           // Cast to the type LHS type
           TypeSourceInfo* CuredDeclTSI
-            = m_Context.CreateTypeSourceInfo(m_Context.getPointerType(CuredDeclTy));
+            = m_Context->CreateTypeSourceInfo(m_Context->getPointerType(CuredDeclTy));
           Expr* Result = m_Sema->BuildCStyleCastExpr(m_NoSLoc,
                                                      CuredDeclTSI,
                                                      m_NoELoc,
@@ -438,7 +380,7 @@ namespace cling {
           // Cast once more (dereference the cstyle cast)
           Result = m_Sema->BuildUnaryOp(S, m_NoSLoc, UO_Deref, Result).take();
           // 4.
-          CuredDecl->setType(m_Context.getLValueReferenceType(CuredDeclTy));
+          CuredDecl->setType(m_Context->getLValueReferenceType(CuredDeclTy));
           // 5.
           CuredDecl->setInit(Result);
 
@@ -450,7 +392,7 @@ namespace cling {
     return ASTNodeInfo(Node, 0);
   }
 
-  ASTNodeInfo DynamicExprTransformer::VisitExpr(Expr* Node) {
+  ASTNodeInfo EvaluateTSynthesizer::VisitExpr(Expr* Node) {
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
       if (*I) {
@@ -460,7 +402,7 @@ namespace cling {
         if (NewNode.isForReplacement()) {
           if (Expr *E = NewNode.getAs<Expr>())
             // Assume void if still not escaped
-            *I = SubstituteUnknownSymbol(m_Context.VoidTy, E);
+            *I = SubstituteUnknownSymbol(m_Context->VoidTy, E);
         } 
         else {
           *I = NewNode.getAsSingleNode();
@@ -470,7 +412,7 @@ namespace cling {
     return ASTNodeInfo(Node, 0);
   }
 
-  ASTNodeInfo DynamicExprTransformer::VisitBinaryOperator(BinaryOperator* Node) {
+  ASTNodeInfo EvaluateTSynthesizer::VisitBinaryOperator(BinaryOperator* Node) {
     ASTNodeInfo rhs = Visit(Node->getRHS());
     ASTNodeInfo lhs = Visit(Node->getLHS());
     assert((lhs.hasSingleNode() || rhs.hasSingleNode()) && 
@@ -495,17 +437,17 @@ namespace cling {
     return ASTNodeInfo(Node, IsArtificiallyDependent(Node));    
   }
 
-  ASTNodeInfo DynamicExprTransformer::VisitCallExpr(CallExpr* E) {
+  ASTNodeInfo EvaluateTSynthesizer::VisitCallExpr(CallExpr* E) {
     // FIXME: Maybe we need to handle the arguments
     // ASTNodeInfo NewNode = Visit(E->getCallee());
     return ASTNodeInfo (E, IsArtificiallyDependent(E));
   }
   
-  ASTNodeInfo DynamicExprTransformer::VisitDeclRefExpr(DeclRefExpr* DRE) {
+  ASTNodeInfo EvaluateTSynthesizer::VisitDeclRefExpr(DeclRefExpr* DRE) {
     return ASTNodeInfo(DRE, IsArtificiallyDependent(DRE));
   }
   
-  ASTNodeInfo DynamicExprTransformer::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr* Node) {
+  ASTNodeInfo EvaluateTSynthesizer::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr* Node) {
     return ASTNodeInfo(Node, IsArtificiallyDependent(Node));
   }
   
@@ -513,7 +455,7 @@ namespace cling {
   
   // EvalBuilder
   
-  Expr* DynamicExprTransformer::SubstituteUnknownSymbol(const QualType InstTy, Expr* SubTree) {
+  Expr* EvaluateTSynthesizer::SubstituteUnknownSymbol(const QualType InstTy, Expr* SubTree) {
     assert(SubTree && "No subtree specified!");
 
     //Build the arguments for the call
@@ -529,7 +471,7 @@ namespace cling {
                                                LookupDecl("DeclContext").
                                                getSingleDecl());
     assert(D && "DeclContext declaration not found!");
-    QualType DCTy = m_Context.getTypeDeclType(D);
+    QualType DCTy = m_Context->getTypeDeclType(D);
     Expr* Arg1 = ConstructCStyleCasePtrExpr(DCTy, (uint64_t)m_CurDeclContext);
     CallArgs.push_back(Arg1);
     
@@ -543,7 +485,7 @@ namespace cling {
     return EvalCall;
   }
   
-  Expr* DynamicExprTransformer::BuildDynamicExprInfo(Expr* SubTree) {
+  Expr* EvaluateTSynthesizer::BuildDynamicExprInfo(Expr* SubTree) {
     // 1. Find the DynamicExprInfo class
     CXXRecordDecl* ExprInfo 
       = cast_or_null<CXXRecordDecl>(m_Interpreter->LookupDecl("cling").
@@ -555,7 +497,7 @@ namespace cling {
     std::string Template;
     llvm::SmallVector<DeclRefExpr*, 4> Addresses;
     llvm::raw_string_ostream OS(Template);
-    const PrintingPolicy& Policy = m_Context.PrintingPolicy;
+    const PrintingPolicy& Policy = m_Context->PrintingPolicy;
 
     StmtPrinterHelper helper(Policy, Addresses);      
     SubTree->printPretty(OS, &helper, Policy);
@@ -565,7 +507,7 @@ namespace cling {
     Expr* ExprTemplate = ConstructConstCharPtrExpr(Template.c_str());
 
     // 4. Build the array of addresses
-    QualType VarAddrTy = m_Sema->BuildArrayType(m_Context.VoidPtrTy,
+    QualType VarAddrTy = m_Sema->BuildArrayType(m_Context->VoidPtrTy,
                                                 ArrayType::Normal,
                                                 /*ArraySize*/0,
                                                 Qualifiers(),
@@ -579,7 +521,7 @@ namespace cling {
       Expr* UnOp 
         = m_Sema->BuildUnaryOp(S, m_NoSLoc, UO_AddrOf, Addresses[i]).take();
       m_Sema->ImpCastExprToType(UnOp, 
-                                m_Context.getPointerType(m_Context.VoidPtrTy), 
+                                m_Context->getPointerType(m_Context->VoidPtrTy), 
                                 CK_BitCast);
       Inits.push_back(UnOp);
     }
@@ -589,11 +531,11 @@ namespace cling {
                                               move_arg(Inits),
                                               m_NoELoc).takeAs<InitListExpr>();
     Expr* ExprAddresses = m_Sema->BuildCompoundLiteralExpr(m_NoSLoc,
-                                      m_Context.CreateTypeSourceInfo(VarAddrTy),
+                                     m_Context->CreateTypeSourceInfo(VarAddrTy),
                                                            m_NoELoc,
                                                            ILE).take();
     m_Sema->ImpCastExprToType(ExprAddresses,
-                              m_Context.getPointerType(m_Context.VoidPtrTy),
+                              m_Context->getPointerType(m_Context->VoidPtrTy),
                               CK_ArrayToPointerDecay);
 
     ASTOwningVector<Expr*> ConstructorArgs(*m_Sema);
@@ -601,7 +543,7 @@ namespace cling {
     ConstructorArgs.push_back(ExprAddresses);
 
     // 5. Call the constructor
-    QualType ExprInfoTy = m_Context.getTypeDeclType(ExprInfo);
+    QualType ExprInfoTy = m_Context->getTypeDeclType(ExprInfo);
     Expr* Result = m_Sema->BuildCXXNew(m_NoSLoc,
                                        /*UseGlobal=*/false,
                                        m_NoSLoc,
@@ -609,7 +551,7 @@ namespace cling {
                                        m_NoELoc,
                                        m_NoRange,
                                        ExprInfoTy,
-                                     m_Context.CreateTypeSourceInfo(ExprInfoTy),
+                                    m_Context->CreateTypeSourceInfo(ExprInfoTy),
                                        /*ArraySize=*/0,
                                        //BuildCXXNew depends on the SLoc to be
                                        //valid!
@@ -622,16 +564,16 @@ namespace cling {
     return Result;
   }
 
-  Expr* DynamicExprTransformer::ConstructCStyleCasePtrExpr(QualType Ty, 
+  Expr* EvaluateTSynthesizer::ConstructCStyleCasePtrExpr(QualType Ty, 
                                                            uint64_t Ptr) {
     if (!Ty->isPointerType())
-      Ty = m_Context.getPointerType(Ty);
-    TypeSourceInfo* TSI = m_Context.CreateTypeSourceInfo(Ty);
+      Ty = m_Context->getPointerType(Ty);
+    TypeSourceInfo* TSI = m_Context->CreateTypeSourceInfo(Ty);
     const llvm::APInt Addr(8 * sizeof(void *), Ptr);
     
-    Expr* Result = IntegerLiteral::Create(m_Context,
+    Expr* Result = IntegerLiteral::Create(*m_Context,
                                           Addr, 
-                                          m_Context.UnsignedLongTy, 
+                                          m_Context->UnsignedLongTy, 
                                           m_NoSLoc);
     Result = m_Sema->BuildCStyleCastExpr(m_NoSLoc,
                                          TSI,
@@ -641,7 +583,7 @@ namespace cling {
   }
 
   // Construct initializer (llvm::StringRef(Str))
-  Expr* DynamicExprTransformer::ConstructllvmStringRefExpr(const char* Val) {
+  Expr* EvaluateTSynthesizer::ConstructllvmStringRefExpr(const char* Val) {
     // Try to find llvm::StringRef
     CXXRecordDecl* CXXRD = dyn_cast<CXXRecordDecl>(m_Interpreter->
                                                    LookupDecl("llvm").
@@ -649,8 +591,8 @@ namespace cling {
                                                    getSingleDecl());
     assert(CXXRD && "llvm::StringRef not found. Are you missing StringRef.h?");
 
-    QualType CXXRDTy = m_Context.getTypeDeclType(CXXRD);
-    TypeSourceInfo* TSI = m_Context.CreateTypeSourceInfo(CXXRDTy);
+    QualType CXXRDTy = m_Context->getTypeDeclType(CXXRD);
+    TypeSourceInfo* TSI = m_Context->CreateTypeSourceInfo(CXXRDTy);
     ParsedType PT = m_Sema->CreateParsedType(CXXRDTy, TSI);
 
     Expr* Result = ConstructConstCharPtrExpr(Val);
@@ -663,25 +605,25 @@ namespace cling {
     return Result;
   }
 
-  Expr* DynamicExprTransformer::ConstructConstCharPtrExpr(const char* Val) {
-    const QualType CChar = m_Context.CharTy.withConst();
+  Expr* EvaluateTSynthesizer::ConstructConstCharPtrExpr(const char* Val) {
+    const QualType CChar = m_Context->CharTy.withConst();
     llvm::StringRef Value(Val);
 
-    llvm::APInt ArraySize(m_Context.getTypeSize(CChar), Value.size());
-    const QualType CCArray = m_Context.getConstantArrayType(CChar,
+    llvm::APInt ArraySize(m_Context->getTypeSize(CChar), Value.size());
+    const QualType CCArray = m_Context->getConstantArrayType(CChar,
                                                             ArraySize,
                                                             ArrayType::Normal,
                                                           /*IndexTypeQuals=*/0);
 
     StringLiteral::StringKind Kind = StringLiteral::Ascii;
-    Expr* Result = StringLiteral::Create(m_Context, 
+    Expr* Result = StringLiteral::Create(*m_Context, 
                                          Value, 
                                          Kind,
                                          /*Pascal=*/false,
                                          CCArray, 
                                          m_NoSLoc);
     m_Sema->ImpCastExprToType(Result,
-                              m_Context.getPointerType(CChar),
+                              m_Context->getPointerType(CChar),
                               CK_ArrayToPointerDecay);
     
     return Result;
@@ -691,26 +633,38 @@ namespace cling {
   // Here is the test Eval function specialization. Here the CallExpr to the function
   // is created.
   CallExpr* 
-  DynamicExprTransformer::BuildEvalCallExpr(const QualType InstTy,
+  EvaluateTSynthesizer::BuildEvalCallExpr(const QualType InstTy,
                                             Expr* SubTree, 
                                             ASTOwningVector<Expr*>& CallArgs) {
     // Set up new context for the new FunctionDecl
     DeclContext* PrevContext = m_Sema->CurContext;
-    FunctionDecl* FDecl = getEvalDecl();
-    
-    assert(FDecl && "The Eval function not found!");
 
-    m_Sema->CurContext = FDecl->getDeclContext();
+    // include the DynamicLookup specific builtins
+    if (!m_EvalDecl) {
+      m_Interpreter->processLine("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
+      TemplateDecl* D 
+        = cast_or_null<TemplateDecl>(m_Interpreter->LookupDecl("cling").
+                                     LookupDecl("runtime").
+                                     LookupDecl("internal").
+                                     LookupDecl("EvaluateT").
+                                     getSingleDecl());
+      assert(D && "Cannot find EvaluateT TemplateDecl!\n");
+      
+      m_EvalDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl());
+      assert (m_EvalDecl && "The Eval function not found!");
+    }
+
+    m_Sema->CurContext = m_EvalDecl->getDeclContext();
 
     // Create template arguments
-    Sema::InstantiatingTemplate Inst(*m_Sema, m_NoSLoc, FDecl);
+    Sema::InstantiatingTemplate Inst(*m_Sema, m_NoSLoc, m_EvalDecl);
     TemplateArgument Arg(InstTy);
     TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, &Arg, 1U);
 
     // Substitute the declaration of the templated function, with the 
     // specified template argument
-    Decl* D = m_Sema->SubstDecl(FDecl, 
-                                FDecl->getDeclContext(), 
+    Decl* D = m_Sema->SubstDecl(m_EvalDecl, 
+                                m_EvalDecl->getDeclContext(), 
                                 MultiLevelTemplateArgumentList(TemplateArgs));
 
     FunctionDecl* Fn = dyn_cast<FunctionDecl>(D);
@@ -721,7 +675,7 @@ namespace cling {
 
     const FunctionProtoType* FPT = Fn->getType()->getAs<FunctionProtoType>();
     FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-    QualType FnTy = m_Context.getFunctionType(Fn->getResultType(),
+    QualType FnTy = m_Context->getFunctionType(Fn->getResultType(),
                                                FPT->arg_type_begin(),
                                                FPT->getNumArgs(),
                                                EPI);
@@ -751,7 +705,7 @@ namespace cling {
   
   // Helpers
     
-  bool DynamicExprTransformer::ShouldVisit(Decl* D) {
+  bool EvaluateTSynthesizer::ShouldVisit(Decl* D) {
     while (true) {
       if (isa<TemplateTemplateParmDecl>(D))
         return false;
@@ -781,7 +735,7 @@ namespace cling {
     return true;
   }
   
-  bool DynamicExprTransformer::IsArtificiallyDependent(Expr* Node) {
+  bool EvaluateTSynthesizer::IsArtificiallyDependent(Expr* Node) {
     if (!Node->isValueDependent() || !Node->isTypeDependent())
       return false;
     DeclContext* DC = m_CurDeclContext;
@@ -793,7 +747,7 @@ namespace cling {
     return true;
   }
 
-  bool DynamicExprTransformer::GetChildren(ASTNodes& Children, Stmt* Node) {
+  bool EvaluateTSynthesizer::GetChildren(ASTNodes& Children, Stmt* Node) {
     if (std::distance(Node->child_begin(), Node->child_end()) < 1)
       return false;
     for (Stmt::child_iterator
@@ -801,18 +755,6 @@ namespace cling {
       Children.push_back(*I);
     }
     return true;
-  }
-
-  void DynamicExprTransformer::AttachDynIDHandler() {
-    if (!m_DynIDHandler) {
-      m_DynIDHandler.reset(new DynamicIDHandler(m_Sema));
-    }
-
-    m_Sema->ExternalSource = m_DynIDHandler.get();
-  }
-
-  void DynamicExprTransformer::DetachDynIDHandler() {
-    m_Sema->ExternalSource = 0;
   }
 
   // end Helpers

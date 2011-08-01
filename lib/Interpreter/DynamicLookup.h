@@ -7,8 +7,9 @@
 #ifndef CLING_DYNAMIC_LOOKUP_H
 #define CLING_DYNAMIC_LOOKUP_H
 
+#include "VerifyingSemaConsumer.h"
+
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/DeclVisitor.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ExternalSemaSource.h"
 
@@ -156,8 +157,9 @@ namespace cling {
   /// does the delayed evaluation. It uses a callback function, which should be
   /// reimplemented in the subsystem that provides the runtime types and 
   /// addresses of the expressions.
-  class DynamicExprTransformer : public clang::DeclVisitor<DynamicExprTransformer>,
-                                 public clang::StmtVisitor<DynamicExprTransformer, ASTNodeInfo> {
+  class EvaluateTSynthesizer : public VerifyingSemaConsumer,
+                               public clang::StmtVisitor<EvaluateTSynthesizer,
+                                                         ASTNodeInfo> {
     
   private:
 
@@ -178,12 +180,6 @@ namespace cling {
     /// \brief Stores pointer to cling, mainly used for declaration lookup.
     Interpreter* m_Interpreter;
 
-    /// \brief Sema, which is in the core of all the transformations.
-    clang::Sema* m_Sema;
-
-    /// \brief The ASTContext.
-    clang::ASTContext& m_Context;
-
     /// \brief Use instead of clang::SourceRange().
     clang::SourceRange m_NoRange;
 
@@ -195,23 +191,18 @@ namespace cling {
     
   public:
 
-    typedef clang::DeclVisitor<DynamicExprTransformer> BaseDeclVisitor;
-    typedef clang::StmtVisitor<DynamicExprTransformer, ASTNodeInfo> BaseStmtVisitor;
+    typedef clang::StmtVisitor<EvaluateTSynthesizer, ASTNodeInfo> BaseStmtVisitor;
 
     using BaseStmtVisitor::Visit;
 
-    DynamicExprTransformer(Interpreter* interp, clang::Sema* Sema);
+    EvaluateTSynthesizer(Interpreter* interp);
     
-    ~DynamicExprTransformer() { }
-    
-    void Initialize();
+    ~EvaluateTSynthesizer() { }
+
     MapTy& getSubstSymbolMap() { return m_SubstSymbolMap; }
     
-    void Visit(clang::Decl* D);
-    void VisitFunctionDecl(clang::FunctionDecl* D);
-    void VisitDecl(clang::Decl* D);
-    void VisitDeclContext(clang::DeclContext* DC);
-    
+    void TransformTopLevelDecl(clang::DeclGroupRef DGR);
+
     ASTNodeInfo VisitStmt(clang::Stmt* Node);
     ASTNodeInfo VisitCompoundStmt(clang::CompoundStmt* Node);
     /// \brief Transforms a declaration with initializer of dependent type.
@@ -244,14 +235,6 @@ namespace cling {
     ASTNodeInfo VisitDeclRefExpr(clang::DeclRefExpr* DRE);
     ASTNodeInfo VisitDependentScopeDeclRefExpr(clang::DependentScopeDeclRefExpr* Node);
 
-    ///\brief [Creates] and attaches the DynamicIDHandler to Sema.
-    ///
-    void AttachDynIDHandler();
-
-    ///\brief Detaches the DynamicIDHandler from Sema.
-    ///
-    void DetachDynIDHandler();
-
     ///\brief Sets callbacks so that DynamicIDHandler can use them, when it sees
     /// the unknown symbol again at runtime. This time the implementation of the
     /// LookupObject callback should provide the actual definition of the object
@@ -266,11 +249,6 @@ namespace cling {
   protected:
     /// @{
     /// @name Helpers, which simplify node replacement
-
-    clang::FunctionDecl* getEvalDecl() { 
-      assert(m_EvalDecl && "EvaluateT not found!");
-      return m_EvalDecl; 
-    }
 
     ///\brief Replaces given dependent AST node with an instantiation of 
     /// EvaluateT with the deduced type.

@@ -67,9 +67,14 @@ namespace cling {
     m_Consumer = dyn_cast<ChainedConsumer>(&CI->getASTConsumer());
     assert(m_Consumer && "Expected ChainedConsumer!");
     // Add consumers to the ChainedConsumer, which owns them
+    EvaluateTSynthesizer* ES = new EvaluateTSynthesizer(interp);
+    ES->Attach(m_Consumer);
+    addConsumer(ChainedConsumer::kEvaluateTSynthesizer, ES);
+
     DeclExtractor* DE = new DeclExtractor();
     DE->Attach(m_Consumer);
     addConsumer(ChainedConsumer::kDeclExtractor, DE);
+
     addConsumer(ChainedConsumer::kValuePrinterSynthesizer,
                 new ValuePrinterSynthesizer(interp));
     addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
@@ -86,13 +91,6 @@ namespace cling {
     m_Parser.reset(new Parser(CI->getPreprocessor(), CI->getSema()));
     CI->getPreprocessor().EnterMainSourceFile();
     m_Parser->Initialize();
-
-    //if (SemaConsumer *SC = dyn_cast<SemaConsumer>(m_Consumer))
-    //  SC->InitializeSema(CI->getSema()); // do we really need this? We know 
-    // that we will have ChainedConsumer, which is initialized in createCI
-    
-    // Create the visitor that will transform all dependents that are left.
-    m_Transformer.reset(new DynamicExprTransformer(interp, &CI->getSema()));
   }
   
   IncrementalParser::~IncrementalParser() {
@@ -114,11 +112,8 @@ namespace cling {
     }
 
     // Attach the dynamic lookup
-    if (isDynamicLookupEnabled())
-      getTransformer()->Initialize();
-
-    m_Consumer->Initialize(m_CI->getASTContext());
-    m_Consumer->InitializeSema(m_CI->getSema());
+    // if (isDynamicLookupEnabled())
+    //  getTransformer()->Initialize();
   }
 
   void IncrementalParser::loadStartupPCH(const char* filename) {
@@ -241,8 +236,6 @@ namespace cling {
             m_FirstTopLevelDecl = *i;
           
           m_LastTopLevelDecl = *i;
-          if (isDynamicLookupEnabled())
-            getTransformer()->Visit(m_LastTopLevelDecl);
         } 
         m_Consumer->HandleTopLevelDecl(DGR);
       } // ADecl
@@ -275,20 +268,13 @@ namespace cling {
 
   void IncrementalParser::enableDynamicLookup(bool value) {
     m_DynamicLookupEnabled = value;
+    Sema& S = m_CI->getSema();
     if (isDynamicLookupEnabled())
-      getTransformer()->AttachDynIDHandler();
-    else
-      getTransformer()->DetachDynIDHandler();
-  }
-
-  DynamicExprTransformer* 
-  IncrementalParser::getOrCreateTransformer(Interpreter* interp) {
-    if (!m_Transformer) {
-      m_Transformer.reset(new DynamicExprTransformer(interp, 
-                                                     &getCI()->getSema()));
-      m_Transformer->Initialize();
-    }
-    return m_Transformer.get();
+      S.ExternalSource = new DynamicIDHandler(&S);
+    else {
+      delete S.ExternalSource;
+      S.ExternalSource = 0;
+    }      
   }
 
   void IncrementalParser::addConsumer(ChainedConsumer::EConsumerIndex I, ASTConsumer* consumer) {

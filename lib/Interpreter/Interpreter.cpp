@@ -612,9 +612,11 @@ namespace cling {
   }
 
   void Interpreter::setCallbacks(InterpreterCallbacks* C) {
-    m_IncrParser->getOrCreateTransformer(this)->AttachDynIDHandler();
-    m_IncrParser->getTransformer()->SetCallbacks(C);
+    Sema& S = getCI()->getSema();
+    assert(S.ExternalSource && "No ExternalSource set!");
+    static_cast<DynamicIDHandler*>(S.ExternalSource)->Callbacks = C;
   }
+      
 
   void Interpreter::enableDynamicLookup(bool value /*=true*/) {
     m_IncrParser->enableDynamicLookup(value);
