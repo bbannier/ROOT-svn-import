@@ -16,7 +16,10 @@
 #include "cling/Interpreter/ValuePrinter.h"
 #include "cling/Interpreter/Value.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 #include <stdio.h>
+
 namespace cling {
 
   /// \brief Used to stores the declarations, which are going to be 
