@@ -373,7 +373,8 @@ namespace cling {
         DeclContext* DC = (*D)->getDeclContext();
         DC->removeDecl(*D);
         Scope* S = m_Sema->getScopeForContext(DC);
-        S->RemoveDecl(*D);
+        if (S)
+          S->RemoveDecl(*D);
       }
     }
 
