@@ -95,10 +95,7 @@ namespace cling {
       }
 
       if (!CheckForClashingNames(TouchedDecls, DC, S)) {
-        
-      
-
-      // Insert the extracted declarations before the wrapper
+        // Insert the extracted declarations before the wrapper
         for (size_t i = 0; i < TouchedDecls.size(); ++i) {
           if (TouchedDecls[i]->getDeclName()) {
             DeclContext* PreviousDC = m_Sema->CurContext;
