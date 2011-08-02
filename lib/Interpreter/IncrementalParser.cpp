@@ -165,14 +165,17 @@ namespace cling {
     assert(input.str()[0] != '#' 
            && "Preprocessed line! Call CompilePreprocessed instead");
     
-    bool p, q;
+    bool p, q, r;
     p = m_Consumer->EnableConsumer(ChainedConsumer::kDeclExtractor);
     q = m_Consumer->EnableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
+    if (isDynamicLookupEnabled())
+      r = m_Consumer->EnableConsumer(ChainedConsumer::kEvaluateTSynthesizer);
     CompilerInstance* Result = Compile(input);
     m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
     m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
+    m_Consumer->RestorePreviousState(ChainedConsumer::kEvaluateTSynthesizer, r);
 
-    return Result;    
+    return Result;
 
   }
   
@@ -284,14 +287,6 @@ namespace cling {
     m_Consumer->Add(I, consumer);
     if (I == ChainedConsumer::kCodeGenerator)
       m_Consumer->EnableConsumer(I);
-
-    consumer->Initialize(getCI()->getSema().getASTContext());
-    if (getCI()->hasSema()) {
-      SemaConsumer* SC = dyn_cast<SemaConsumer>(consumer);
-      if (SC) {
-        SC->InitializeSema(getCI()->getSema());
-      }
-    }
   }
 
   CodeGenerator* IncrementalParser::GetCodeGenerator() { 
