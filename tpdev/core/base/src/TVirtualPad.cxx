@@ -91,3 +91,11 @@ void TVirtualPad::Streamer(TBuffer &R__b)
    }
 }
 
+
+#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+//______________________________________________________________________________
+void TVirtualPad::GetTextExtent(UInt_t & /*width*/, UInt_t & /*height*/, const char * /*text*/)
+{
+   //This method is required only on iOS.
+}
+#endif

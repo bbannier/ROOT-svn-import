@@ -13,6 +13,10 @@
 #include "TROOT.h"
 #include "TPluginManager.h"
 
+#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+#include "TView3D.h"
+#endif
+
 ClassImp(TView)
 
 //______________________________________________________________________________
@@ -32,7 +36,9 @@ TView::TView(const TView& tv) :
 TView *TView::CreateView(Int_t system, const Double_t *rmin, const Double_t *rmax) 
 {
    // Create a concrete default 3-d view via the plug-in manager
-   
+#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+   return new TView3D(system, rmin, rmax);
+#else
    TView *view = 0;
    TPluginHandler *h;
    if ((h = gROOT->GetPluginManager()->FindHandler("TView"))) {
@@ -41,4 +47,5 @@ TView *TView::CreateView(Int_t system, const Double_t *rmin, const Double_t *rma
       view = (TView*)h->ExecPlugin(3,system,rmin,rmax);
    }
    return view;
+#endif
 }
