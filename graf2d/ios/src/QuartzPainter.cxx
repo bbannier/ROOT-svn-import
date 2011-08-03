@@ -6,6 +6,7 @@
 #include <CoreText/CTLine.h>
 
 #include "TVirtualX.h"
+#include "TString.h"
 #include "TColor.h"
 #include "TMath.h"
 #include "TROOT.h"
@@ -13,7 +14,8 @@
 #include "TextOperations.h"
 #include "QuartzPainter.h"
 #include "GraphicUtils.h"
-#include "TVirtualX.h"
+#include "FillPatterns.h"
+#include "Markers.h"
 
 extern CFDataRef symbolFont;
 
@@ -96,7 +98,13 @@ Painter::Painter(FontManager &fontManager)
    using namespace GraphicUtils;
    
    for (UInt_t i = 0; i < kPredefinedFillPatterns; ++i) {
-      Pattern_t pattern(gPatternGenerators[i]());
+      CGPatternRef newPattern = gPatternGenerators[i]();
+      /*
+      if (!newPattern) {
+         throw std::runtime_error();
+      }
+      */
+      Pattern_t pattern(newPattern);
       fPolygonPatterns.push_back(pattern);
    }
 }
