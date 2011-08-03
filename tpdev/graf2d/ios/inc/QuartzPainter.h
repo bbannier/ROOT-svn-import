@@ -125,11 +125,12 @@ public:
    void     SaveImage(TVirtualPad *, const char *, Int_t) const{}
 
    enum EMode {
-      kPaintToSelectionBuffer,
-      kPaintToView,
-      kPaintSelected
+      kPaintToSelectionBuffer, //A pad draws the scene into the selection buffer.
+      kPaintToView,            //Normal painting (normal colors and styles).
+      kPaintSelected           //Only selected object is painted (special style and color).
    };
 
+   //Temporary solution for objecti picking in a pad.
    void     SetPainterMode(EMode mode)
    {
       fPainterMode = mode;
@@ -171,6 +172,7 @@ private:
 
    std::vector<TPoint>    fPolyMarker;//Buffer for converted poly-marker coordinates.
 
+   //Staff for picking.
    EMode fPainterMode;
    UInt_t fCurrentObjectID;
    GraphicUtils::IDEncoder fEncoder;
@@ -183,6 +185,6 @@ private:
    Painter &operator = (const Painter &rhs);
 };
 
-}//ROOT_iOS
+}//namespace ROOT_iOS
 
 #endif
