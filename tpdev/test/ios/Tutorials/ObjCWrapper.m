@@ -1,14 +1,6 @@
-//
-//  Empty.m
-//  Tutorials
-//
-//  Created by Timur Pocheptsov on 8/2/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #import <UIKit/UIKit.h>
 
-#import "Empty.h"
+#import "ObjCWrapper.h"
 
 //______________________________________________________________________________
 CGContextRef GetImageContext(CGRect rect)

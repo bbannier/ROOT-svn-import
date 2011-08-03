@@ -3,7 +3,7 @@
 #import <CoreGraphics/CoreGraphics.h>
 
 #import "SelectionView.h"
-#import "ObjCWrapper.h"
+#import "CppWrapper.h"
 #import "PadView.h"
 
 @implementation PadView
