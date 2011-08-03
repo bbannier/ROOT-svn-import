@@ -220,7 +220,7 @@ Bool_t Painter::PolygonHasStipple()const
    const Style_t fillStyle = gVirtualX->GetFillStyle() / 1000;
    const Style_t pattern = gVirtualX->GetFillStyle() % 1000;
    
-   return fillStyle == 3 && pattern >= 1 && pattern <= 10;
+   return fillStyle == 3 && pattern >= 1 && pattern <= GraphicUtils::kPredefinedFillPatterns;
 }
 
 //_________________________________________________________________

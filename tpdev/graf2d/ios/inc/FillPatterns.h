@@ -8,12 +8,12 @@ namespace GraphicUtils {
 
 //
 //Predefined fill styles (patterns).
-//Must be 25, now only 10. To be added.
+//Must be 25, now only 15. To be added.
 //
 
 //TODO: remaining patterns are required.
 enum {
-   kPredefinedFillPatterns = 10
+   kPredefinedFillPatterns = 15
 };
 
 typedef CGPatternRef (*PatternGenerator_t)();
