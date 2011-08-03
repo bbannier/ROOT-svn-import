@@ -36,7 +36,7 @@ PolarGraphDemo::PolarGraphDemo()
    fPolarAFL.reset(new TGraphPolar(kNPointsAFL, xAFL, yAFL));
    fPolarAFL->SetLineColor(2);
    fPolarAFL->SetLineWidth(0.2);
-   fPolarAFL->SetFillStyle(3015);
+   fPolarAFL->SetFillStyle(3012);
    fPolarAFL->SetFillColor(2);
    
    Double_t xCP[kNPointsCP];

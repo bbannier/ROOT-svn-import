@@ -481,6 +481,11 @@
          return view;
       
       CGRect padRect = CGRectMake(0.f, 0.f, 640.f, 640.f);
+
+      //I had to put this here. Or UIScrollView sends message setGestureDelegate to already deleted view.
+      //I have no idea how to fix such a crap.
+      [scroll setZoomScale:1.f];
+
       [view removeFromSuperview];
       view = [[PadView alloc] initWithFrame:padRect forPad:pad withFontManager:fontManager andPainter:painter];
       [scroll addSubview:view];
@@ -488,7 +493,7 @@
   
       scroll.minimumZoomScale = 1.f;
       scroll.maximumZoomScale = 2.f;
-      [scroll setZoomScale:1.f];
+//      [scroll setZoomScale:1.f];
       scroll.contentSize = padRect.size;
       scroll.contentOffset = CGPointMake(0.f, 0.f);
       
@@ -543,7 +548,6 @@
    if (appMode == kTASelect)// || !activeDemo)
       return;
 
-   
    appMode = kTASelect;
 
    //hide both scroll views, re-parent pad-views.
@@ -652,7 +656,6 @@
    oldSizes = oldRect.size;
    
    [padViews[activeView] removeFromSuperview];
-
    padViews[activeView] = [[PadView alloc] initWithFrame:oldRect forPad:pad withFontManager:fontManager andPainter:painter];
    [scrollView addSubview:padViews[activeView]];
    [padViews[activeView] release];
@@ -746,8 +749,6 @@
 
       const CGPoint tapXY = [tap locationInView : tap.view];  
       scrollViews[activeView].contentOffset = CGPointMake(tapXY.x, tapXY.y);    
-
-//      NSLog(@"%g %g", tapXY.x, tapXY.y);
    }
 }
 
