@@ -103,6 +103,16 @@ SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 endif
 endif
+
+ifeq ($(ARCH),ios)
+MODULES     += graf2d/ios
+SYSTEMO     += $(IOSO)
+endif
+ifeq ($(ARCH),iossim)
+MODULES     += graf2d/ios
+SYSTEMO     += $(IOSO)
+endif
+
 ifeq ($(BUILDX11),yes)
 MODULES      += graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 endif
