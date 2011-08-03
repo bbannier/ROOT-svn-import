@@ -16,7 +16,7 @@
 
 #include <CoreGraphics/CoreGraphics.h>
 
-#include "Empty.h"
+#include "ObjCWrapper.h"
 
 #include "TFrame.h"
 
@@ -24,7 +24,7 @@
 #include "QuartzPainter.h"
 #include "PadProxy.h"
 
-#include "ObjCWrapper.h"
+#include "CppWrapper.h"
 
 //______________________________________________________________________________
 FontManagerWrapper::FontManagerWrapper()

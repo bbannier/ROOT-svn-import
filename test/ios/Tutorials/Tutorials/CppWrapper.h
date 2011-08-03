@@ -1,5 +1,5 @@
-#ifndef ROOT_ObjCWrapper
-#define ROOT_ObjCWrapper
+#ifndef ROOT_CppWrapper
+#define ROOT_CppWrapper
 
 #include <vector>
 #include <memory>
@@ -10,6 +10,7 @@
 #include "ResourceManagement.h"
 
 //
+//Wrapper for C++ code to be used in Objective-C++.
 //ROOT classes use a macro with 'id' token, which is a keyword in Obj-C.
 //So in Objective-C++ code I can include and use only classes without
 //ClassDef macro. But classes, inheriting from core/base, have such

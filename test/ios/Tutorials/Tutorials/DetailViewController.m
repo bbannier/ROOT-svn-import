@@ -11,7 +11,7 @@
 #import "DetailViewController.h"
 #import "RootViewController.h"
 #import "SelectionView.h"
-#import "ObjCWrapper.h"
+#import "CppWrapper.h"
 #import "HintView.h"
 #import "PictView.h"
 #import "PadView.h"
