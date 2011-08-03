@@ -493,7 +493,7 @@
   
       scroll.minimumZoomScale = 1.f;
       scroll.maximumZoomScale = 2.f;
-//      [scroll setZoomScale:1.f];
+  //    [scroll setZoomScale:1.f];
       scroll.contentSize = padRect.size;
       scroll.contentOffset = CGPointMake(0.f, 0.f);
       
