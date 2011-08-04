@@ -8,6 +8,14 @@
 namespace ROOT_iOS {
 namespace GraphicUtils {
 
+//
+// Fill patterns, defined in RStipples.h.
+// Pattern in RStipple.h is 32x32.
+// Order is: say, the first two numbers are 1: 0x42 2: 0x42
+// NUMBER:      1        2     
+// BITS:   0100 0010  0100 0010 //bits from lower to higher.
+// IN HEX   2     4    2     4
+
 //______________________________________________________________________________
 void draw_pattern_1(void *, CGContextRef ctx)
 {
@@ -572,8 +580,72 @@ void draw_pattern_16(void *, CGContextRef ctx)
    Float_t red = 0.f, green = 0.f, blue = 0.f;
    GetColorForIndex(gVirtualX->GetFillColor(), red, green, blue);
    CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);
+   
+   CGContextFillRect(ctx, CGRectMake(0.f, 2.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(0.f, 6.f, 1.f, 1.f));
+
+   CGContextFillRect(ctx, CGRectMake(1.f, 3.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(1.f, 7.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(2.f, 3.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(2.f, 7.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(3.f, 3.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(3.f, 7.f, 1.f, 1.f));
+
+   CGContextFillRect(ctx, CGRectMake(4.f, 2.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(4.f, 6.f, 1.f, 1.f));
+
+   CGContextFillRect(ctx, CGRectMake(5.f, 1.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(5.f, 5.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(6.f, 1.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(6.f, 5.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(7.f, 1.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(7.f, 5.f, 1.f, 1.f));
 }
 
+//______________________________________________________________________________
+CGPatternRef create_pattern_16()
+{
+   CGPatternCallbacks patternCallbacks;
+   patternCallbacks.version = 0;
+   patternCallbacks.drawPattern = draw_pattern_16;
+   patternCallbacks.releaseInfo = 0;
+   
+   return CGPatternCreate(0, CGRectMake(0.f, 0.f, 8.f, 8.f), CGAffineTransformIdentity, 8.f, 8.f, kCGPatternTilingConstantSpacingMinimalDistortion, 1, &patternCallbacks);
+}
+
+//______________________________________________________________________________
+void draw_pattern_17(void *, CGContextRef ctx)
+{
+   Float_t red = 0.f, green = 0.f, blue = 0.f;
+   GetColorForIndex(gVirtualX->GetFillColor(), red, green, blue);
+   CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);
+   
+   CGContextFillRect(ctx, CGRectMake(0.f, 3.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(1.f, 2.f, 1.f, 1.f));
+   CGContextFillRect(ctx, CGRectMake(2.f, 1.f, 1.f, 1.f));
+}
+
+//______________________________________________________________________________
+CGPatternRef create_pattern_17()
+{
+   CGPatternCallbacks patternCallbacks;
+   patternCallbacks.version = 0;
+   patternCallbacks.drawPattern = draw_pattern_17;
+   patternCallbacks.releaseInfo = 0;
+   
+   return CGPatternCreate(0, CGRectMake(0.f, 0.f, 4.f, 4.f), CGAffineTransformIdentity, 4.f, 4.f, kCGPatternTilingConstantSpacingMinimalDistortion, 1, &patternCallbacks);
+}
+
+//______________________________________________________________________________
+CGPatternRef create_pattern_18()
+{
+   CGPatternCallbacks patternCallbacks;
+   patternCallbacks.version = 0;
+   patternCallbacks.drawPattern = draw_pattern_17;
+   patternCallbacks.releaseInfo = 0;
+   
+   return CGPatternCreate(0, CGRectMake(0.f, 0.f, 4.f, 4.f), CGAffineTransformMakeScale(-1.f, 1.f), 4.f, 4.f, kCGPatternTilingConstantSpacingMinimalDistortion, 1, &patternCallbacks);
+}
 
 PatternGenerator_t gPatternGenerators[kPredefinedFillPatterns] = {create_pattern_1,
                                                                   create_pattern_2,
@@ -589,7 +661,10 @@ PatternGenerator_t gPatternGenerators[kPredefinedFillPatterns] = {create_pattern
                                                                   create_pattern_12,
                                                                   create_pattern_13,
                                                                   create_pattern_14,
-                                                                  create_pattern_15};
+                                                                  create_pattern_15,
+                                                                  create_pattern_16,
+                                                                  create_pattern_17,
+                                                                  create_pattern_18};
 
 }
 }
