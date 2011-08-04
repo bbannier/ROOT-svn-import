@@ -471,37 +471,28 @@
 }
 
 //_________________________________________________________________
-- (PadView *) resizePadView:(PadView *)view
+- (void) resizePadView:(unsigned)view
 {
-   if (view) {
-      UIScrollView *scroll = (UIScrollView *)view.superview;
-      CGRect oldRect = view.frame;
+   UIScrollView *scroll = (UIScrollView *)padViews[view].superview;
+   CGRect oldRect = padViews[view].frame;
    
-      if (abs(640.f - oldRect.size.width) < 0.01 && (abs(640.f - oldRect.size.height) < 0.01))
-         return view;
+   if (abs(640.f - oldRect.size.width) < 0.01 && (abs(640.f - oldRect.size.height) < 0.01))
+      return;
       
-      CGRect padRect = CGRectMake(0.f, 0.f, 640.f, 640.f);
-
-      //I had to put this here. Or UIScrollView sends message setGestureDelegate to already deleted view.
-      //I have no idea how to fix such a crap.
-      [scroll setZoomScale:1.f];
-
-      [view removeFromSuperview];
-      view = [[PadView alloc] initWithFrame:padRect forPad:pad withFontManager:fontManager andPainter:painter];
-      [scroll addSubview:view];
-      [view release];
+   CGRect padRect = CGRectMake(0.f, 0.f, 640.f, 640.f);
+   [padViews[view] removeFromSuperview];
+   padViews[view] = [[PadView alloc] initWithFrame:padRect forPad:pad withFontManager:fontManager andPainter:painter];
+   [scroll addSubview:padViews[view]];
+   [padViews[view] release];
   
-      scroll.minimumZoomScale = 1.f;
-      scroll.maximumZoomScale = 2.f;
-  //    [scroll setZoomScale:1.f];
-      scroll.contentSize = padRect.size;
-      scroll.contentOffset = CGPointMake(0.f, 0.f);
+   scroll.minimumZoomScale = 1.f;
+   scroll.maximumZoomScale = 2.f;
+   [scroll setZoomScale:1.f];
+   scroll.contentSize = padRect.size;
+   scroll.contentOffset = CGPointMake(0.f, 0.f);
       
-      oldSizes.width = 640.f;
-      oldSizes.height = 640.f;
-   }
-   
-   return view;
+   oldSizes.width = 640.f;
+   oldSizes.height = 640.f;
 }
 
 //_________________________________________________________________
@@ -511,7 +502,7 @@
    //view itself to original size.
    if (appMode == kTAZoom) {
       unsigned inactiveView = activeView ? 0 : 1;
-      padViews[inactiveView] = [self resizePadView:padViews[inactiveView]];
+      [self resizePadView : inactiveView];
    }
 }
 
@@ -554,7 +545,7 @@
    for (unsigned i = 0; i < 2; ++i) { // < kTDNOfPads
       scrollViews[i].hidden = YES;
       //1. Check, if views must be resized (unscaled).
-      padViews[i] = [self resizePadView:padViews[i]];
+      [self resizePadView : i];
 
       [padViews[i] retain];
       [padViews[i] removeFromSuperview];
@@ -616,7 +607,9 @@
 //_________________________________________________________________
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
 {
-   return padViews[activeView];
+   if (scrollView == scrollViews[0])
+      return padViews[0];
+   return padViews[1];
 }
 
 //_________________________________________________________________
@@ -729,7 +722,7 @@
       return;
 
    if (oldSizes.width > 640.f)
-      padViews[activeView] = [self resizePadView: padViews[activeView]];
+      [self resizePadView: activeView];
    else {
       //Zoom to maximum.
       oldSizes = CGSizeMake(1280.f, 1280.f);

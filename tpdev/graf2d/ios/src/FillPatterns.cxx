@@ -566,6 +566,15 @@ CGPatternRef create_pattern_15()
    return CGPatternCreate(0, CGRectMake(0.f, 0.f, 8.f, 8.f), CGAffineTransformIdentity, 8.f, 8.f, kCGPatternTilingConstantSpacingMinimalDistortion, 1, &patternCallbacks);
 }
 
+//______________________________________________________________________________
+void draw_pattern_16(void *, CGContextRef ctx)
+{
+   Float_t red = 0.f, green = 0.f, blue = 0.f;
+   GetColorForIndex(gVirtualX->GetFillColor(), red, green, blue);
+   CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);
+}
+
+
 PatternGenerator_t gPatternGenerators[kPredefinedFillPatterns] = {create_pattern_1,
                                                                   create_pattern_2,
                                                                   create_pattern_3,
