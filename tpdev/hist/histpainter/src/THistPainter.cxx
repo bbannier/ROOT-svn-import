@@ -3597,7 +3597,6 @@ Int_t THistPainter::MakeCuts(char *choptin)
    return fNcuts;
 }
 
-
 //______________________________________________________________________________
 void THistPainter::Paint(Option_t *option)
 {
@@ -3606,6 +3605,10 @@ void THistPainter::Paint(Option_t *option)
    End_html */
 
    if (fH->GetBuffer()) fH->BufferEmpty(-1);
+
+   //
+   TPadPusherGuard topPush(fH);
+   //
 
    gPad->SetVertical(kTRUE);
 
@@ -3658,6 +3661,7 @@ void THistPainter::Paint(Option_t *option)
          gPad->SetView(0);
       }
    }
+   
    if (fH->GetDimension() > 1 || Hoption.Lego || Hoption.Surf) {
       // In case of 1D histogram, Z axis becomes Y axis.
       Int_t logysav=0, logzsav=0;
@@ -3689,7 +3693,8 @@ void THistPainter::Paint(Option_t *option)
       return;
    }
 
-   if (Hoption.Bar >= 20) {PaintBarH(option);
+   if (Hoption.Bar >= 20) {
+      PaintBarH(option);
       delete [] fXbuf; delete [] fYbuf;
       return;
    }
@@ -3702,24 +3707,35 @@ void THistPainter::Paint(Option_t *option)
 
    //          Picture surround (if new page) and page number (if requested).
    //          Histogram surround (if not option "Same").
-   PaintFrame();
+   PaintFrame();//TPMOD
 
    //          Paint histogram axis only
    Bool_t gridx = gPad->GetGridx();
    Bool_t gridy = gPad->GetGridy();
+   
    if (Hoption.Axis > 0) {
-      if (Hoption.Axis > 1) PaintAxis(kTRUE);  //axis with grid
-      else {
-         if (gridx) gPad->SetGridx(0);
-         if (gridy) gPad->SetGridy(0);
+      if (Hoption.Axis > 1) {
+         PaintAxis(kTRUE);  //axis with grid
+      } else {
+         if (gridx)
+            gPad->SetGridx(0);
+         if (gridy)
+            gPad->SetGridy(0);
+         
          PaintAxis(kFALSE);
-         if (gridx) gPad->SetGridx(1);
-         if (gridy) gPad->SetGridy(1);
+         
+         if (gridx)
+            gPad->SetGridx(1);
+         if (gridy)
+            gPad->SetGridy(1);
       }
       if (Hoption.Same ==1) Hoption.Same = 2;
       goto paintstat;
    }
-   if (gridx || gridy) PaintAxis(kTRUE); //    Draw the grid only
+   
+   if (gridx || gridy) {
+      PaintAxis(kTRUE); //    Draw the grid only
+   }
 
    //          test for options BAR or HBAR
    if (Hoption.Bar >= 10) {
@@ -3728,7 +3744,8 @@ void THistPainter::Paint(Option_t *option)
 
    //          do not draw histogram if error bars required
    if (!Hoption.Error) {
-      if (Hoption.Hist && Hoption.Bar<10) PaintHist(option);
+      if (Hoption.Hist && Hoption.Bar<10) 
+         PaintHist(option);//TPMOD
    }
 
    //         test for error bars or option E
@@ -3751,11 +3768,13 @@ void THistPainter::Paint(Option_t *option)
 
    if (gridx) gPad->SetGridx(0);
    if (gridy) gPad->SetGridy(0);
-   PaintAxis(kFALSE);
+   
+   PaintAxis(kFALSE);//TPMOD
+
    if (gridx) gPad->SetGridx(1);
    if (gridy) gPad->SetGridy(1);
 
-   PaintTitle();  // Draw histogram title
+ //  PaintTitle();  // Draw histogram title //TPMOD
 
    // Draw box with histogram statistics and/or fit parameters
 paintstat:
@@ -3766,7 +3785,9 @@ paintstat:
          if (obj->InheritsFrom(TF1::Class())) break;
          obj = 0;
       }
-      PaintStat(gStyle->GetOptStat(),(TF1*)obj);
+      
+      if (!gPad->PadInSelectionMode() && !gPad->PadInHighlightMode())
+         PaintStat(gStyle->GetOptStat(),(TF1*)obj); //TPMOD
    }
    fH->SetMinimum(minsav);
    gCurrentHist = oldhist;
@@ -3879,8 +3900,11 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    the axis tick marks in the foreground of the pad.
    End_html */
 
-   if (Hoption.Axis == -1) return;
-   if (Hoption.Same && Hoption.Axis <= 0) return;
+   if (Hoption.Axis == -1)
+      return;
+      
+   if (Hoption.Same && Hoption.Axis <= 0)
+      return;
 
    // Repainting alphanumeric labels axis on a plot done with
    // the option HBAR (horizontal) needs some adjustements.
@@ -3941,6 +3965,11 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    }
 
    // Paint X axis
+   if (gPad->PadInSelectionMode())
+      gPad->PushSelectableObject(fXaxis);
+
+   if (gPad->PadInSelectionMode() || !gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && gPad->Selected() == fXaxis)) {
+
    ndivx = fXaxis->GetNdivisions();
    if (ndivx > 1000) {
       nx2   = ndivx/100;
@@ -4041,6 +4070,13 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
                      uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
    }
 
+   }//pad mode
+
+   if (gPad->PadInSelectionMode())
+      gPad->PushSelectableObject(fYaxis);
+
+   if (gPad->PadInSelectionMode() || !gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && gPad->Selected() == fYaxis)) {
+
    // Paint Y axis
    ndivy = fYaxis->GetNdivisions();
    axis.ImportAxisAttributes(fYaxis);
@@ -4135,6 +4171,11 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
                      uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
    }
 
+
+   }//pad mode
+   
+   
+   
    // Reset the axis if they have been inverted in case of option HBAR
    if (xaxis) {
       fXaxis = xaxis;
@@ -5407,7 +5448,9 @@ void THistPainter::PaintFrame()
       if (frame) gPad->GetListOfPrimitives()->Remove(frame);
       return;
    }
-   gPad->PaintPadFrame(Hparam.xmin,Hparam.ymin,Hparam.xmax,Hparam.ymax);
+   
+   if (!gPad->PadInSelectionMode() && !gPad->PadInHighlightMode())
+      gPad->PaintPadFrame(Hparam.xmin,Hparam.ymin,Hparam.xmax,Hparam.ymax);
 }
 
 
@@ -5417,7 +5460,7 @@ void THistPainter::PaintFunction(Option_t *)
    /* Begin_html
    <a href="#HP28">Paint functions associated to an histogram.</a>
    End_html */
-
+return;
    TObjOptLink *lnk = (TObjOptLink*)fFunctions->FirstLink();
    TObject *obj;
 
@@ -5449,7 +5492,10 @@ void THistPainter::PaintHist(Option_t *)
    /* Begin_html
    <a href="#HP01b">Control routine to draw 1D histograms.</a>
    End_html */
-
+   if (gPad->PadInHighlightMode() && gPad->Selected() != fH) {
+      return;
+   }
+   
    static char chopth[17];
 
    Int_t htype, oldhtype;
@@ -6741,7 +6787,6 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    /* Begin_html
    <a href="#HP07">Draw the statistics box for 1D and profile histograms.</a>
    End_html */
-
    static char t[100];
    Int_t dofit;
    TPaveStats *stats  = 0;

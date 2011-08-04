@@ -251,6 +251,14 @@ public:
    
 #if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
    virtual void GetTextExtent(UInt_t & /*width*/, UInt_t & /*height*/, const char * /*text*/);
+   virtual Bool_t PadInSelectionMode() const;
+   virtual Bool_t PadInHighlightMode() const;
+   
+   virtual void PushTopLevelSelectable(TObject *top);
+   virtual void PushSelectableObject(TObject *obj);
+   virtual void PopTopLevelSelectable();
+   
+   virtual TObject *Selected()const;
 #endif
 
    static TVirtualPad *&Pad();
@@ -258,11 +266,23 @@ public:
    ClassDef(TVirtualPad,2)  //Abstract base class for Pads and Canvases
 };
 
+
 #ifndef __CINT__
 #define gPad (TVirtualPad::Pad())
 
 R__EXTERN void **(*gThreadTsd)(void*,Int_t);
 #endif
 R__EXTERN Int_t (*gThreadXAR)(const char *xact, Int_t nb, void **ar, Int_t *iret);
+
+
+class TPadPusherGuard {
+public:
+   TPadPusherGuard(TObject *obj);
+   ~TPadPusherGuard();
+   
+private:
+   TPadPusherGuard(const TPadPusherGuard &rhs);
+   TPadPusherGuard &operator = (const TPadPusherGuard &rhs);
+};
 
 #endif

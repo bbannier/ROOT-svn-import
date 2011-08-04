@@ -9,6 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#include <iostream>
+
 #include "TVirtualPad.h"
 #include "X3DBuffer.h"
 #include "TClass.h"
@@ -98,4 +100,51 @@ void TVirtualPad::GetTextExtent(UInt_t & /*width*/, UInt_t & /*height*/, const c
 {
    //This method is required only on iOS.
 }
+
+//______________________________________________________________________________
+Bool_t TVirtualPad::PadInSelectionMode() const
+{
+   //This method is required only on iOS.
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TVirtualPad::PadInHighlightMode() const
+{
+   //This method is required only on iOS.
+   return kFALSE;
+}
+
+
+//______________________________________________________________________________
+void TVirtualPad::PushTopLevelSelectable(TObject *)
+{
+   std::cout<<"HUILO"<<std::endl;
+}
+
+//______________________________________________________________________________
+void TVirtualPad::PushSelectableObject(TObject *)
+{
+}
+
+//______________________________________________________________________________
+void TVirtualPad::PopTopLevelSelectable()
+{
+}
+
+TObject *TVirtualPad::Selected()const{
+std::cout<<"HUI!\n";
+return 0;
+}
+
+TPadPusherGuard::TPadPusherGuard(TObject *obj)
+{
+   gPad->PushTopLevelSelectable(obj);
+}
+
+TPadPusherGuard::~TPadPusherGuard()
+{
+   gPad->PopTopLevelSelectable();
+}
+
 #endif
