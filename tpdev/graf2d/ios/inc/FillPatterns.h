@@ -13,7 +13,7 @@ namespace GraphicUtils {
 
 //TODO: remaining patterns are required.
 enum {
-   kPredefinedFillPatterns = 15
+   kPredefinedFillPatterns = 18
 };
 
 typedef CGPatternRef (*PatternGenerator_t)();
