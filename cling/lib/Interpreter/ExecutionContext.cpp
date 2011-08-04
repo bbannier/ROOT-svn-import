@@ -76,7 +76,8 @@ std::vector<ExecutionContext::LazyFunctionCreatorFunc_t> ExecutionContext::m_vec
 
 ExecutionContext::ExecutionContext():
   m_engine(0),
-  m_posInitGlobals(0)
+  m_posInitGlobals(0),
+  m_RunningStaticInits(false)
 {
 }
 
@@ -209,30 +210,38 @@ ExecutionContext::runStaticInitializersOnce(llvm::Module* m) {
     InitializeBuilder(m);
 
   assert(m_engine && "Code generation did not create an engine!");
-  llvm::GlobalVariable* gctors = m->getGlobalVariable("llvm.global_ctors", true);
-  if (gctors) {
-    m_engine->runStaticConstructorsDestructors(false);
-    //gctors->dump();
-    gctors->eraseFromParent();
-    llvm::Function* F = m->getFunction("_GLOBAL__I_a");
-    if (F) {
-      //m_engine->updateGlobalMapping(F, 0);
-      //m_engine->freeMachineCodeForFunction(F);
-      F->eraseFromParent();
+
+  if (!m_RunningStaticInits) {
+    m_RunningStaticInits = true;
+
+    llvm::GlobalVariable* gctors 
+      = m->getGlobalVariable("llvm.global_ctors", true);
+    if (gctors) {
+      m_engine->runStaticConstructorsDestructors(false);
+      //gctors->dump();
+      gctors->eraseFromParent();
+      llvm::Function* F = m->getFunction("_GLOBAL__I_a");
+      if (F) {
+        //m_engine->updateGlobalMapping(F, 0);
+        //m_engine->freeMachineCodeForFunction(F);
+        F->eraseFromParent();
+      }
+      F = m->getFunction("__cxx_global_var_init");
+      if (F) {
+        //m_engine->updateGlobalMapping(F, 0);
+        //m_engine->freeMachineCodeForFunction(F);
+        F->eraseFromParent();
+      }
+      F = m->getFunction("__cxx_global_var_init1");
+      if (F) {
+        //m_engine->updateGlobalMapping(F, 0);
+        //m_engine->freeMachineCodeForFunction(F);
+        F->eraseFromParent();
+      }
+      //m_engine->updateGlobalMapping(gctors, 0);
     }
-    F = m->getFunction("__cxx_global_var_init");
-    if (F) {
-      //m_engine->updateGlobalMapping(F, 0);
-      //m_engine->freeMachineCodeForFunction(F);
-      F->eraseFromParent();
-    }
-    F = m->getFunction("__cxx_global_var_init1");
-    if (F) {
-      //m_engine->updateGlobalMapping(F, 0);
-      //m_engine->freeMachineCodeForFunction(F);
-      F->eraseFromParent();
-    }
-    //m_engine->updateGlobalMapping(gctors, 0);
+
+    m_RunningStaticInits = false;
   }
 }
 

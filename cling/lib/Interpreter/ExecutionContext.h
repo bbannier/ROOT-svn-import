@@ -53,6 +53,7 @@ namespace cling {
     
     llvm::ExecutionEngine* m_engine; // Owned by JIT
     unsigned m_posInitGlobals; // position (global idx in out module) of next global to be initialized in m_ASTCI's AST
+    bool m_RunningStaticInits; // prevent the recursive run of the static inits
   };
 } // end cling
 #endif // CLING_EXECUTIONCONTEXT_H
