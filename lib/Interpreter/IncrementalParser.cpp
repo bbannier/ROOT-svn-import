@@ -181,12 +181,14 @@ namespace cling {
   
   CompilerInstance*
   IncrementalParser::CompileAsIs(llvm::StringRef input) {
-    bool p, q;
+    bool p, q, r;
     p = m_Consumer->DisableConsumer(ChainedConsumer::kDeclExtractor);
     q = m_Consumer->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
+    r = m_Consumer->DisableConsumer(ChainedConsumer::kEvaluateTSynthesizer);
     CompilerInstance* Result = Compile(input);
     m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
     m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
+    m_Consumer->RestorePreviousState(ChainedConsumer::kEvaluateTSynthesizer, r);
 
     return Result;
   }
