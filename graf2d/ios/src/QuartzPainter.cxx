@@ -135,8 +135,8 @@ void Painter::SetStrokeParameters()const
    }
    
    if (fPainterMode == kPaintSelected) {
-      SetLineColorHighlighted();
-      CGContextSetLineWidth(fCtx, 2.f);
+      CGContextSetRGBStrokeColor(fCtx, 0.f, 1.f, 0.2f, 0.4f);
+      CGContextSetLineWidth(fCtx, 4.f);
       return;
    }
 
@@ -201,9 +201,14 @@ void Painter::SetPolygonParameters()const
    //TODO: check, if stroke parameters also should
    //be specified for polygon.
    
-   //if (fPainterMode == kPaintToSelectionBuffer)
-   //   return SetPolygonColorForCurrentObjectID();
-   
+   if (fPainterMode == kPaintToSelectionBuffer)
+      return SetPolygonColorForCurrentObjectID();
+
+   if (fPainterMode == kPaintSelected) {
+      CGContextSetRGBFillColor(fCtx, 0.f, 1.f, 0.2f, 0.4f);
+      return;
+   }
+
    const Float_t alpha = fRootOpacity / 100.f;
    Float_t red = 1.f, green = 1.f, blue = 1.f;//White by default.
  
@@ -273,10 +278,13 @@ void Painter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMo
    const Double_t x2p = fConverter.XToView(x2);
    const Double_t y2p = fConverter.YToView(y2);
    
-   if (fPainterMode == kPaintToSelectionBuffer || fPainterMode == kPaintSelected)
+   if (/*fPainterMode == kPaintToSelectionBuffer ||*/ fPainterMode == kPaintSelected)
       return DrawBoxOutline(x1p, y1p, x2p, y2p);
       
-   if (mode == kFilled)
+   if (fPainterMode == kPaintToSelectionBuffer && PolygonHasStipple())
+      return DrawBoxOutline(x1p, y1p, x2p, y2p);
+      
+   if (mode == kFilled) 
       PolygonHasStipple() ? FillBoxWithPattern(x1p, y1p, x2p, y2p) : FillBox(x1p, y1p, x2p, y2p);
    else
       DrawBoxOutline(x1p, y1p, x2p, y2p);
@@ -349,9 +357,15 @@ void Painter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
 {
    //Check, may be, that's a hollow area, if so, call DrawPolyline instead.
    
-   if (!gVirtualX->GetFillStyle() || fPainterMode == kPaintToSelectionBuffer || fPainterMode == kPaintSelected)
+   if (!gVirtualX->GetFillStyle())
       return DrawPolyLine(n, x, y);
-   
+      
+   if (fPainterMode == kPaintSelected)
+      return FillArea(n, x, y);
+      
+   if (fPainterMode == kPaintToSelectionBuffer && PolygonHasStipple())
+      return DrawPolyLine(n, x, y);
+         
    if (PolygonHasStipple())
       return FillAreaWithPattern(n, x, y);
 

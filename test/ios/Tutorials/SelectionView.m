@@ -48,6 +48,9 @@
    CGContextRef ctx = UIGraphicsGetCurrentContext();
    CGContextClearRect(ctx, rect);
 
+   if (!showRotation)
+      CGContextTranslateCTM(ctx, -3.f, -3.f);
+
    CGContextTranslateCTM(ctx, 0.f, rect.size.height);
    CGContextScaleCTM(ctx, 1.f, -1.f);
    

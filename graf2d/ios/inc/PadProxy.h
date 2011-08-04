@@ -1,6 +1,7 @@
 #ifndef ROOT_PadProxy
 #define ROOT_PadProxy
 
+#include <utility>
 #include <vector>
 
 #ifndef ROOT_TLine
@@ -219,6 +220,16 @@ public:
    //
    TVirtualViewer3D *GetViewer3D(Option_t *opt);
    
+   Bool_t PadInSelectionMode() const
+   {
+      return fInSelectionMode;
+   }
+   
+   Bool_t PadInHighlightMode() const
+   {
+      return fInHighlightMode;
+   }
+   
    //This is a temporary hack, will be removed when selection
    //is done correctly.
    void ExecuteRotateView(Int_t evType, Int_t px, Int_t py);
@@ -227,8 +238,17 @@ public:
    void PaintForSelection();
    void SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff);
    void Pick(Int_t px, Int_t py);
-   Bool_t Selected() const {return fSelected != 0;}
+
+   TObject *Selected() const;
+
    void PaintSelected()const;
+   
+   void PushTopLevelSelectable(TObject *top);
+
+   void PushSelectableObject(TObject *obj);
+
+   void PopTopLevelSelectable();
+   
    
 private:
    Painter &fPainter;
@@ -310,10 +330,24 @@ private:
 
    //Selection trick now!
    Bool_t                     fSelectionIsValid;
-   UInt_t                     fSelectionW;
-   std::vector<unsigned char> fSelection;
-   std::vector<TObject*>      fSelectables;
+   UInt_t                     fSelectionAreaWidth;
+   std::vector<unsigned char> fSelectionBuffer;
+
    TObject                   *fSelected;
+   TObject                   *fParentOfSelected;
+   
+   mutable Bool_t             fInSelectionMode;
+   mutable Bool_t             fInHighlightMode;
+   
+   typedef std::pair<TObject *, UInt_t> Parent_t;
+   std::vector<Parent_t> fParentPainters;
+   
+//   std::vector<TObject*>      fParentPainters;
+   
+   typedef std::pair<TObject *, TObject *> ObjectPair_t;
+   std::vector<ObjectPair_t>  fSelectables;
+   
+   UInt_t fObjectID;
 
    //Non-overriders.
    TObject *FindObject(const char *name) const;

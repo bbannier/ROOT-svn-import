@@ -1,3 +1,4 @@
+#include <iostream>
 #include <algorithm>
 #include <stdexcept>
 #include <string.h>
@@ -58,8 +59,12 @@ PadProxy::PadProxy(UInt_t w, UInt_t h, Painter &painter, FontManager &manager)
             fFontManager(manager),
             fViewer3D(0),
             fSelectionIsValid(kFALSE),
-            fSelectionW(640),
-            fSelected(0)
+            fSelectionAreaWidth(640),
+            fSelected(0),
+            fParentOfSelected(0),
+            fInSelectionMode(kFALSE),
+            fObjectID(1),
+            fInHighlightMode(kFALSE)
 {
    fViewW = w;
    fViewH = h;
@@ -120,7 +125,11 @@ void PadProxy::Clear(Option_t *)
 {
    fSelectionIsValid = kFALSE;
    fSelected = 0;
+   fParentOfSelected = 0;
    fSelectables.clear();
+   fParentPainters.clear();
+   fSelectionBuffer.clear();
+   fObjectID = 1;
 
    fPrimitives.SetOwner(kFALSE);
    fPrimitives.Clear();
@@ -724,35 +733,38 @@ void PadProxy::Paint(Option_t *)
 //______________________________________________________________________________
 void PadProxy::PaintForSelection()
 {
+   fInSelectionMode = kTRUE;
    fPainter.SetPainterMode(Painter::kPaintToSelectionBuffer);
    //
-   UInt_t objID = 1;
+   fObjectID = 1;
+   fSelected = 0;
+   fParentOfSelected = 0;
+   fSelectables.clear();
+   fParentPainters.clear();
 
    TObjOptLink *lnk = (TObjOptLink*)GetListOfPrimitives()->FirstLink();
    TObject *obj;
    
-   fSelectables.resize(1 + GetListOfPrimitives()->GetEntries());
-   
    while (lnk) {
       obj = lnk->GetObject();
-      fSelectables[objID] = obj;
-      fPainter.SetCurrentObjectID(objID);
-      ++objID;
       obj->Paint(lnk->GetOption());
       lnk = (TObjOptLink*)lnk->Next();
    }
    //
    fPainter.SetPainterMode(Painter::kPaintToView);
+   fInSelectionMode = kFALSE;
 }
 
 //______________________________________________________________________________
 void PadProxy::PaintSelected() const
 {
-   if (fSelected) {
+   fInHighlightMode = kTRUE;
+   if (fParentOfSelected) {
       fPainter.SetPainterMode(Painter::kPaintSelected);
-      fSelected->Paint();
+      fParentOfSelected->Paint();
       fPainter.SetPainterMode(Painter::kPaintToView);
    }
+   fInHighlightMode = kFALSE;
 }
 
 //______________________________________________________________________________
@@ -1979,9 +1991,10 @@ Bool_t PadProxy::SelectionIsValid() const
 //______________________________________________________________________________
 void PadProxy::SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff)
 {
-   fSelectionW = w;
+   fSelectionAreaWidth = w;
    fSelectionIsValid = kTRUE;
-   fSelection.assign(buff, buff + w * h * 4);
+   fSelectionBuffer.assign(buff, buff + w * h * 4);
+   
 }
 
 //______________________________________________________________________________
@@ -1989,17 +2002,68 @@ void PadProxy::Pick(Int_t px, Int_t py)
 {
    fSelected = 0;
 
-   const UInt_t offset = (py * fSelectionW + px) * 4;
-   const unsigned red = fSelection[offset + 1];
-   const unsigned green = fSelection[offset + 2];
-   const unsigned blue = fSelection[offset + 3];
+   const UInt_t offset = (py * fSelectionAreaWidth + px) * 4;
+   const unsigned red = fSelectionBuffer[offset + 1];
+   const unsigned green = fSelectionBuffer[offset + 2];
+   const unsigned blue = fSelectionBuffer[offset + 3];
 
    GraphicUtils::IDEncoder enc(10, 255);
    const UInt_t id = enc.ColorToId(red, green, blue);
-   if (id > 0 && id < fSelectables.size())
-      fSelected = fSelectables[id];
-   else
+   if (id > 0 && id <= fSelectables.size()) {
+      const ObjectPair_t &found = fSelectables[id - 1];
+      //fSelected = fSelectables[id];
+      fSelected = found.first;
+      fParentOfSelected = found.second;
+   } else {
       fSelected = 0;
+      fParentOfSelected = 0;
+   }
+}
+
+//______________________________________________________________________________
+void PadProxy::PushTopLevelSelectable(TObject *top)
+{
+   if (!fInSelectionMode)
+      return;
+   Parent_t newTopLevel(top, fObjectID);
+   ObjectPair_t newPair(top, top);
+   fPainter.SetCurrentObjectID(fObjectID);
+   fObjectID++;
+   
+   fParentPainters.push_back(newTopLevel);
+   fSelectables.push_back(newPair);
+}
+
+//______________________________________________________________________________
+void PadProxy::PushSelectableObject(TObject *obj)
+{
+   if (!fInSelectionMode)
+      return;
+   
+   ObjectPair_t newPair(obj, 0);
+   if (fParentPainters.size())
+      newPair.second = fParentPainters.back().first;
+   fSelectables.push_back(newPair);
+   fPainter.SetCurrentObjectID(fObjectID);
+   fObjectID++;
+}
+
+//______________________________________________________________________________
+void PadProxy::PopTopLevelSelectable()
+{
+   if (!fInSelectionMode)
+      return;
+
+   if (fParentPainters.size())
+      fParentPainters.pop_back();
+   if (fParentPainters.size())
+      fPainter.SetCurrentObjectID(fParentPainters.back().second);
+}
+
+
+TObject *PadProxy::Selected()const
+{
+   return fSelected;
 }
 
 }

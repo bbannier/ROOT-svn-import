@@ -503,7 +503,7 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Tutorials/Tutorials-Prefix.pch";
-				"HEADER_SEARCH_PATHS[arch=*]" = /Users/tpochep/soft/root_device/include;
+				"HEADER_SEARCH_PATHS[arch=*]" = /Users/tpochep/tpdev/root/include;
 				INFOPLIST_FILE = "Tutorials/Tutorials-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -522,7 +522,7 @@
 				COPY_PHASE_STRIP = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Tutorials/Tutorials-Prefix.pch";
-				"HEADER_SEARCH_PATHS[arch=*]" = /Users/tpochep/soft/root_device/include;
+				"HEADER_SEARCH_PATHS[arch=*]" = /Users/tpochep/tpdev/root/include;
 				INFOPLIST_FILE = "Tutorials/Tutorials-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",

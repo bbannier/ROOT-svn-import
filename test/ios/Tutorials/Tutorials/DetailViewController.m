@@ -126,7 +126,7 @@
       selectionViews[i].opaque = NO;
       selectionViews[i].layer.shadowColor = [UIColor blackColor].CGColor;
       selectionViews[i].layer.shadowOpacity = 0.7f;
-      selectionViews[i].layer.shadowOffset = CGSizeMake(3.f, 3.f);
+      selectionViews[i].layer.shadowOffset = CGSizeMake(5.f, 5.f);
       
       [selectionViews[i] release];
    }
