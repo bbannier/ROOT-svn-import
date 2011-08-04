@@ -32,9 +32,12 @@ namespace cling {
     TestProxy* Tester = 0;
 
     class SymbolResolverCallback: public cling::InterpreterCallbacks {
+    private:
+      clang::NamedDecl* m_TesterDecl;
     public:
       SymbolResolverCallback(Interpreter* interp, bool enabled = false)
-        : InterpreterCallbacks(interp, enabled) {
+        : InterpreterCallbacks(interp, enabled), m_TesterDecl(0) {
+        printf("%s\n", "Constructor called");
         m_Interpreter->processLine("cling::test::Tester = new cling::test::TestProxy();");        
       }      
       ~SymbolResolverCallback(){}
@@ -42,9 +45,11 @@ namespace cling {
       bool LookupObject(clang::LookupResult& R, clang::Scope* S) {
         // Only for demo resolve all unknown objects to gCling
         if (m_Enabled) {
-          clang::NamedDecl* D = m_Interpreter->LookupDecl("cling").LookupDecl("test").LookupDecl("Tester");
-          assert (D && "Tester not found!");
-          R.addDecl(D);
+          if (!m_TesterDecl)
+            m_TesterDecl = m_Interpreter->LookupDecl("cling").LookupDecl("test").LookupDecl("Tester");
+
+          assert (m_TesterDecl && "Tester not found!");
+          R.addDecl(m_TesterDecl);
           return true;
         }
         return false;
