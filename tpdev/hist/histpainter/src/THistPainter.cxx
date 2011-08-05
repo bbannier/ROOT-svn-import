@@ -3774,7 +3774,7 @@ void THistPainter::Paint(Option_t *option)
    if (gridx) gPad->SetGridx(1);
    if (gridy) gPad->SetGridy(1);
 
- //  PaintTitle();  // Draw histogram title //TPMOD
+   PaintTitle();  // Draw histogram title //TPMOD
 
    // Draw box with histogram statistics and/or fit parameters
 paintstat:
@@ -5460,7 +5460,7 @@ void THistPainter::PaintFunction(Option_t *)
    /* Begin_html
    <a href="#HP28">Paint functions associated to an histogram.</a>
    End_html */
-return;
+//return;
    TObjOptLink *lnk = (TObjOptLink*)fFunctions->FirstLink();
    TObject *obj;
 
@@ -5478,7 +5478,10 @@ return;
       } else if (obj->InheritsFrom(TF1::Class())) {
          if (obj->TestBit(TF1::kNotDraw) == 0) obj->Paint("lsame");
       } else  {
-         obj->Paint(lnk->GetOption());
+         gPad->PushSelectableObject(obj);
+         
+         if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && obj == gPad->Selected())
+            obj->Paint(lnk->GetOption());
       }
       lnk = (TObjOptLink*)lnk->Next();
       padsave->cd();

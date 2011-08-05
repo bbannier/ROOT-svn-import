@@ -127,16 +127,20 @@ void Painter::SetStrokeParameters()const
    //line has to be very thick. All these staff must be done externally, but
    //unfortunately ROOT specifies line parameters everywhere via gVirtualX,
    //what makes my life hard.
+
+   //FIX: better algorithm to select line cap and line join.
+   CGContextSetLineCap(fCtx, kCGLineCapRound);
+   CGContextSetLineJoin(fCtx, kCGLineJoinMiter);
    
    if (fPainterMode == kPaintToSelectionBuffer) {
       SetLineColorForCurrentObjectID();
-      CGContextSetLineWidth(fCtx, 20.f);//Ohh yeahhh, really thiiick line!
+      CGContextSetLineWidth(fCtx, 40.f);//Ohh yeahhh, really thiiick line!
       return;
    }
    
    if (fPainterMode == kPaintSelected) {
-      CGContextSetRGBStrokeColor(fCtx, 0.f, 1.f, 0.2f, 0.4f);
-      CGContextSetLineWidth(fCtx, 4.f);
+      CGContextSetRGBStrokeColor(fCtx, 1.f, 0.f, 0.4f, 0.7f);
+      CGContextSetLineWidth(fCtx, 5.f);
       return;
    }
 
@@ -148,10 +152,6 @@ void Painter::SetStrokeParameters()const
    
    GraphicUtils::GetColorForIndex(gVirtualX->GetLineColor(), red, green, blue);
    CGContextSetRGBStrokeColor(fCtx, red, green, blue, alpha);
-
-   //FIX: better algorithm to select line cap and line join.
-   CGContextSetLineCap(fCtx, kCGLineCapButt);
-   CGContextSetLineJoin(fCtx, kCGLineJoinMiter);
    
    const Style_t lineStyle = gVirtualX->GetLineStyle();
    if (lineStyle > 1 && lineStyle <= 10)
@@ -205,7 +205,7 @@ void Painter::SetPolygonParameters()const
       return SetPolygonColorForCurrentObjectID();
 
    if (fPainterMode == kPaintSelected) {
-      CGContextSetRGBFillColor(fCtx, 0.f, 1.f, 0.2f, 0.4f);
+      CGContextSetRGBFillColor(fCtx, 1.f, 0.f, 0.4f, 0.3f);
       return;
    }
 
@@ -643,6 +643,7 @@ void Painter::SetLineColorForCurrentObjectID() const
 //_________________________________________________________________
 void Painter::SetPolygonColorForCurrentObjectID() const
 {
+   //std::cout<<"ID is "<<fCurrentObjectID<<std::endl;
    Float_t rgb[3] = {};
    fEncoder.IdToColor(fCurrentObjectID, rgb);
    CGContextSetRGBFillColor(fCtx, rgb[0], rgb[1], rgb[2], 1.f);
