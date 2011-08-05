@@ -946,6 +946,8 @@ void TMultiGraph::Paint(Option_t *option)
 {
    // paint all the graphs of this multigraph
 
+   TPadPusherGuard pushGuard(this);
+
    if (!fGraphs) return;
    if (fGraphs->GetSize() == 0) return;
 
@@ -1077,13 +1079,22 @@ void TMultiGraph::Paint(Option_t *option)
 
    TGraph *gfit = 0;
    if (fGraphs) {
+   
       TObjOptLink *lnk = (TObjOptLink*)fGraphs->FirstLink();
       TObject *obj = 0;
 
       while (lnk) {
+      
          obj = lnk->GetObject();
-         if (strlen(lnk->GetOption())) obj->Paint(lnk->GetOption());
-         else                          obj->Paint(chopt);
+         
+         gPad->PushSelectableObject(obj);
+         if (strlen(lnk->GetOption())) {
+            if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && obj == gPad->Selected())
+               obj->Paint(lnk->GetOption());
+         } else {
+            if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && obj == gPad->Selected())
+               obj->Paint(chopt);
+         }
          lnk = (TObjOptLink*)lnk->Next();
       }
       gfit = (TGraph*)obj; // pick one TGraph in the list to paint the fit parameters.
