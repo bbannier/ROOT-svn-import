@@ -113,8 +113,8 @@ CILIBS        = -lm $(EXTRA_LDFLAGS) $(FINK_LDFLAGS) -ldl
 # Fortran:
 F77ORG        = gfortran
 F77FLAGS      = -m64 -std=legacy
-F77LIBS      := $(shell $(F77) -m64 -print-file-name=libgfortran.dylib 2>&1 | grep /)
-F77LIBS      += $(shell $(F77) -m64 -print-file-name=libgfortranbegin.a 2>&1 | grep /)
+F77LIBS      := $(shell $(F77ORG) -m64 -print-file-name=libgfortran.dylib 2>&1 | grep /)
+F77LIBS      += $(shell $(F77ORG) -m64 -print-file-name=libgfortranbegin.a 2>&1 | grep /)
 
 # Override default in Makefile.config
 INSTALL      := /bin/cp -pPR
