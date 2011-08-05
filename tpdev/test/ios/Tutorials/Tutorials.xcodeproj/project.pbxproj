@@ -17,6 +17,7 @@
 		7032144913E689E700908306 /* Editor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144813E689E700908306 /* Editor.xib */; };
 		7032144C13E68F5E00908306 /* HelpView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144B13E68F5E00908306 /* HelpView.xib */; };
 		7032144E13E6963400908306 /* exclusion_icon_n.png in Resources */ = {isa = PBXBuildFile; fileRef = 7032144D13E6963400908306 /* exclusion_icon_n.png */; };
+		7042A62913EC5151005E5D43 /* color_wheel.png in Resources */ = {isa = PBXBuildFile; fileRef = 7042A62813EC5151005E5D43 /* color_wheel.png */; };
 		7059E24513CC394C0007E4E1 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7059E24413CC394C0007E4E1 /* libz.dylib */; };
 		705D185113D0CBB400C47E5F /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 705D185013D0CBB400C47E5F /* QuartzCore.framework */; };
 		707327D413DF126C00E5B12B /* Default-LandscapeRight.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D113DF126C00E5B12B /* Default-LandscapeRight.png */; };
@@ -51,7 +52,6 @@
 		70DF816313DDBA6400AD2F4D /* LegoDemo.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 70DF815D13DDBA6400AD2F4D /* LegoDemo.cxx */; };
 		70DF816413DDBA6400AD2F4D /* PolarGraphDemo.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 70DF815E13DDBA6400AD2F4D /* PolarGraphDemo.cxx */; };
 		70DF816513DDBA6400AD2F4D /* SurfaceDemo.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 70DF815F13DDBA6400AD2F4D /* SurfaceDemo.cxx */; };
-		70DF817513DDBB0D00AD2F4D /* bg_21.gif in Resources */ = {isa = PBXBuildFile; fileRef = 70DF816613DDBB0D00AD2F4D /* bg_21.gif */; };
 		70DF817613DDBB0D00AD2F4D /* double_tap_gesture_icon_small.png in Resources */ = {isa = PBXBuildFile; fileRef = 70DF816713DDBB0D00AD2F4D /* double_tap_gesture_icon_small.png */; };
 		70DF817713DDBB0D00AD2F4D /* double_tap_gesture_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 70DF816813DDBB0D00AD2F4D /* double_tap_gesture_icon.png */; };
 		70DF817813DDBB0D00AD2F4D /* hsimple_icon_n.png in Resources */ = {isa = PBXBuildFile; fileRef = 70DF816913DDBB0D00AD2F4D /* hsimple_icon_n.png */; };
@@ -81,6 +81,7 @@
 		7032144813E689E700908306 /* Editor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Editor.xib; sourceTree = "<group>"; };
 		7032144B13E68F5E00908306 /* HelpView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HelpView.xib; sourceTree = "<group>"; };
 		7032144D13E6963400908306 /* exclusion_icon_n.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = exclusion_icon_n.png; path = Pictures/exclusion_icon_n.png; sourceTree = "<group>"; };
+		7042A62813EC5151005E5D43 /* color_wheel.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = color_wheel.png; path = Pictures/color_wheel.png; sourceTree = "<group>"; };
 		7059E24413CC394C0007E4E1 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		705D185013D0CBB400C47E5F /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		707327D113DF126C00E5B12B /* Default-LandscapeRight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-LandscapeRight.png"; path = "Pictures/Default-LandscapeRight.png"; sourceTree = "<group>"; };
@@ -130,7 +131,6 @@
 		70DF815D13DDBA6400AD2F4D /* LegoDemo.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LegoDemo.cxx; sourceTree = "<group>"; };
 		70DF815E13DDBA6400AD2F4D /* PolarGraphDemo.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PolarGraphDemo.cxx; sourceTree = "<group>"; };
 		70DF815F13DDBA6400AD2F4D /* SurfaceDemo.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SurfaceDemo.cxx; sourceTree = "<group>"; };
-		70DF816613DDBB0D00AD2F4D /* bg_21.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; name = bg_21.gif; path = Pictures/bg_21.gif; sourceTree = "<group>"; };
 		70DF816713DDBB0D00AD2F4D /* double_tap_gesture_icon_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = double_tap_gesture_icon_small.png; path = Pictures/double_tap_gesture_icon_small.png; sourceTree = "<group>"; };
 		70DF816813DDBB0D00AD2F4D /* double_tap_gesture_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = double_tap_gesture_icon.png; path = Pictures/double_tap_gesture_icon.png; sourceTree = "<group>"; };
 		70DF816913DDBB0D00AD2F4D /* hsimple_icon_n.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = hsimple_icon_n.png; path = Pictures/hsimple_icon_n.png; sourceTree = "<group>"; };
@@ -212,6 +212,7 @@
 		70BA9B3413C5F89100102BC9 = {
 			isa = PBXGroup;
 			children = (
+				7042A62813EC5151005E5D43 /* color_wheel.png */,
 				7007CB3613E9365300312A7C /* libRoot.a */,
 				7007CB3713E9365300312A7C /* libfreetype.a */,
 				7007CB3813E9365300312A7C /* liblzma.a */,
@@ -236,7 +237,6 @@
 				70DF818813DDBC1800AD2F4D /* DarkBackground.png */,
 				70DF818913DDBC1800AD2F4D /* LightBackground.png */,
 				70DF818613DDBB5A00AD2F4D /* edit_icon.png */,
-				70DF816613DDBB0D00AD2F4D /* bg_21.gif */,
 				70DF816713DDBB0D00AD2F4D /* double_tap_gesture_icon_small.png */,
 				70DF816813DDBB0D00AD2F4D /* double_tap_gesture_icon.png */,
 				70DF816913DDBB0D00AD2F4D /* hsimple_icon_n.png */,
@@ -368,6 +368,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7042A62913EC5151005E5D43 /* color_wheel.png in Resources */,
 				70A3D4BE13E84F8200C39E40 /* select_mode.png in Resources */,
 				70D3FB5213E7F605005BADA3 /* single_tap_icon_small.png in Resources */,
 				70D3FB5313E7F605005BADA3 /* single_tap_icon.png in Resources */,
@@ -384,7 +385,6 @@
 				70DF818A13DDBC1800AD2F4D /* DarkBackground.png in Resources */,
 				70DF818B13DDBC1800AD2F4D /* LightBackground.png in Resources */,
 				70DF818713DDBB5A00AD2F4D /* edit_icon.png in Resources */,
-				70DF817513DDBB0D00AD2F4D /* bg_21.gif in Resources */,
 				70DF817613DDBB0D00AD2F4D /* double_tap_gesture_icon_small.png in Resources */,
 				70DF817713DDBB0D00AD2F4D /* double_tap_gesture_icon.png in Resources */,
 				70DF817813DDBB0D00AD2F4D /* hsimple_icon_n.png in Resources */,

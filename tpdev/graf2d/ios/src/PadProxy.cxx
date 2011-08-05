@@ -764,9 +764,9 @@ void PadProxy::PaintSelected() const
    fPainter.SetPainterMode(Painter::kPaintSelected);
    
    if (fParentOfSelected)
-      fParentOfSelected->Paint();
+      fParentOfSelected->Paint(fParentOfSelected->GetOption());
    else if (fSelected)
-      fSelected->Paint();
+      fSelected->Paint(fSelected->GetOption());
    
    fPainter.SetPainterMode(Painter::kPaintToView);
    fInHighlightMode = kFALSE;
