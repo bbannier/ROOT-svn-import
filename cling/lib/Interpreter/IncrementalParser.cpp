@@ -44,7 +44,6 @@ namespace cling {
     m_DynamicLookupEnabled(false),
     m_Consumer(0),
     m_LastTopLevelDecl(0),
-    m_FirstTopLevelDecl(0),
     m_UsingStartupPCH(false)
   {
     //m_CIFactory.reset(new CIFactory(0, 0, llvmdir));
@@ -160,20 +159,27 @@ namespace cling {
     m_StartupPCHGenerator.reset(); // deletes StartupPCHGenerator
   }
 
+  // void IncrementalParser::Parse(llvm::SmallVector<DeclGroupRef&, 8> &DGRs) {
+  //   bool p;
+  //   p = m_Consumer->DisableConsumer(ChainedConsumer::kCodeGenerator);
+    
+    
+  // }
+
   CompilerInstance*
   IncrementalParser::CompileLineFromPrompt(llvm::StringRef input) {
     assert(input.str()[0] != '#' 
            && "Preprocessed line! Call CompilePreprocessed instead");
     
-    bool p, q, r;
+    bool p, q;
+    m_Consumer->RestorePreviousState(ChainedConsumer::kEvaluateTSynthesizer,
+                                     isDynamicLookupEnabled());
+
     p = m_Consumer->EnableConsumer(ChainedConsumer::kDeclExtractor);
     q = m_Consumer->EnableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
-    if (isDynamicLookupEnabled())
-      r = m_Consumer->EnableConsumer(ChainedConsumer::kEvaluateTSynthesizer);
     CompilerInstance* Result = Compile(input);
     m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
     m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
-    m_Consumer->RestorePreviousState(ChainedConsumer::kEvaluateTSynthesizer, r);
 
     return Result;
 
@@ -181,14 +187,15 @@ namespace cling {
   
   CompilerInstance*
   IncrementalParser::CompileAsIs(llvm::StringRef input) {
-    bool p, q, r;
+    bool p, q;
+    m_Consumer->RestorePreviousState(ChainedConsumer::kEvaluateTSynthesizer,
+                                     isDynamicLookupEnabled());
+
     p = m_Consumer->DisableConsumer(ChainedConsumer::kDeclExtractor);
     q = m_Consumer->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
-    r = m_Consumer->DisableConsumer(ChainedConsumer::kEvaluateTSynthesizer);
     CompilerInstance* Result = Compile(input);
     m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
     m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
-    m_Consumer->RestorePreviousState(ChainedConsumer::kEvaluateTSynthesizer, r);
 
     return Result;
   }
@@ -237,9 +244,6 @@ namespace cling {
       if (ADecl) {
         DeclGroupRef DGR = ADecl.getAsVal<DeclGroupRef>();
         for (DeclGroupRef::iterator i=DGR.begin(); i< DGR.end(); ++i) {
-          if (!m_FirstTopLevelDecl)
-            m_FirstTopLevelDecl = *i;
-          
           m_LastTopLevelDecl = *i;
         } 
         m_Consumer->HandleTopLevelDecl(DGR);
