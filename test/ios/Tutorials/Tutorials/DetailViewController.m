@@ -387,6 +387,10 @@
    help.hidden = YES;
    
    if (demo != activeDemo) {
+   
+      selectionViews[0].hidden = YES;
+      selectionViews[1].hidden = YES;
+   
       parentView.hidden = NO;
       //Stop any animated demo (previously active).
       if (animationTimer) {
@@ -517,6 +521,7 @@
    //The mode was kTASelect previously.
    //Reparent pad views, now scrollview is a parent for a pad view.
    for (unsigned i = 0; i < 2; ++i) { // < kTDNOfPads.
+      selectionViews[i].hidden = YES;
       [padViews[i] removeGestureRecognizer:padPanGestures[i]];
       [padViews[i] removeGestureRecognizer:padTapGestures[i]];
       

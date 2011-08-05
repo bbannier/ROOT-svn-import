@@ -935,6 +935,9 @@ void TGraphPainter::PaintGraph(TGraph *theGraph, Int_t npoints, const Double_t *
    <a href="#GP01">Control function to draw a graph.</a>
    End_Html */
 
+   if (theGraph->InheritsFrom("TGraphPolar"))
+      gPad->PushSelectableObject(theGraph);
+
    Int_t optionLine , optionAxis , optionCurve, optionStar , optionMark;
    Int_t optionBar  , optionR    , optionOne  , optionE;
    Int_t optionFill , optionZ    , optionCurveFill;
@@ -3132,13 +3135,14 @@ void TGraphPainter::PaintGraphPolar(TGraph *theGraph, Option_t* options)
                   theXpol[j] = x2;
                   theYpol[j] = y2;
                }
-               PaintGraph(theGraphPolar, j+1, theXpol, theYpol, opt);
+               PaintGraph(theGraphPolar, j+1, theXpol, theYpol, opt);//TPMOD.
             }
             j=-1;
          }
       }
       if (j>=1) {
          // If the last point is in the circle, we draw the last serie of point.
+         //This is the code I need. TPMOD
          PaintGraph(theGraphPolar, j+1, theXpol, theYpol, opt);
       }
    } else {
