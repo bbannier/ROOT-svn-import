@@ -65,7 +65,6 @@ namespace cling {
     }
     
     clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
-    clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
     
     void addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer);
     clang::CodeGenerator* GetCodeGenerator();
@@ -84,7 +83,6 @@ namespace cling {
     clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedConsumer* m_Consumer; // CI owns it
     clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
-    clang::Decl* m_FirstTopLevelDecl; // first top level decl
     bool m_UsingStartupPCH; // Whether the interpreter is using a PCH file to accelerate its startup
     std::string m_StartupPCHFilename; // Set when writing the PCH
     llvm::OwningPtr<clang::PCHGenerator> m_StartupPCHGenerator; // Startup PCH generator
