@@ -164,9 +164,8 @@ void PadWrapper::CopySelectionBuffer(CGImageRef im)
 	if (!colorSpace)
       throw std::runtime_error("Error allocating color space");
 	
-	// Allocate memory for image data. This is the destination in memory
-	// where any drawing to the bitmap context will be rendered.
-   fBitmapData.resize(bitmapByteCount);	
+   fBitmapData.assign(bitmapByteCount, 0);
+
 	// Create the bitmap context. We want pre-multiplied ARGB, 8-bits 
 	// per component. Regardless of what the source image format is 
 	// (CMYK, Grayscale, and so on) it will be converted over to the format

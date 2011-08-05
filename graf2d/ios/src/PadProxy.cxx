@@ -123,6 +123,7 @@ const char *PadProxy::GetTitle() const
 //______________________________________________________________________________
 void PadProxy::Clear(Option_t *)
 {
+   //std::cout<<"clear\n";
    fSelectionIsValid = kFALSE;
    fSelected = 0;
    fParentOfSelected = 0;
@@ -747,6 +748,7 @@ void PadProxy::PaintForSelection()
    
    while (lnk) {
       obj = lnk->GetObject();
+      //std::cout<<"Selectable "<<obj->IsA()->GetName()<<std::endl;
       obj->Paint(lnk->GetOption());
       lnk = (TObjOptLink*)lnk->Next();
    }
@@ -759,11 +761,14 @@ void PadProxy::PaintForSelection()
 void PadProxy::PaintSelected() const
 {
    fInHighlightMode = kTRUE;
-   if (fParentOfSelected) {
-      fPainter.SetPainterMode(Painter::kPaintSelected);
+   fPainter.SetPainterMode(Painter::kPaintSelected);
+   
+   if (fParentOfSelected)
       fParentOfSelected->Paint();
-      fPainter.SetPainterMode(Painter::kPaintToView);
-   }
+   else if (fSelected)
+      fSelected->Paint();
+   
+   fPainter.SetPainterMode(Painter::kPaintToView);
    fInHighlightMode = kFALSE;
 }
 
@@ -2001,11 +2006,15 @@ void PadProxy::SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff)
 void PadProxy::Pick(Int_t px, Int_t py)
 {
    fSelected = 0;
+   fParentOfSelected = 0;
 
    const UInt_t offset = (py * fSelectionAreaWidth + px) * 4;
    const unsigned red = fSelectionBuffer[offset + 1];
    const unsigned green = fSelectionBuffer[offset + 2];
    const unsigned blue = fSelectionBuffer[offset + 3];
+
+   static unsigned k = 0;
+   //std::cout<<k++<<' '<<red<<' '<<green<<' '<<blue<<std::endl;
 
    GraphicUtils::IDEncoder enc(10, 255);
    const UInt_t id = enc.ColorToId(red, green, blue);
@@ -2014,9 +2023,13 @@ void PadProxy::Pick(Int_t px, Int_t py)
       //fSelected = fSelectables[id];
       fSelected = found.first;
       fParentOfSelected = found.second;
+      static unsigned i = 0;
+      //std::cout<<i++<<": Selected parent - "<<(fParentOfSelected ? fParentOfSelected->IsA()->GetName() : " 0 ")<<", object - "<<fSelected->IsA()->GetName()<<std::endl;
    } else {
       fSelected = 0;
       fParentOfSelected = 0;
+      static unsigned i = 0;
+      //std::cout<<i++<<":All deselected \n";
    }
 }
 

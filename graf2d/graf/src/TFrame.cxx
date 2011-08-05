@@ -121,9 +121,14 @@ void TFrame::Paint(Option_t *option)
 {
    // Paint this wbox with its current attributes.
 
-   TWbox::Paint(option);
-      
-   gPad->PaintBox(fX1,fY1,fX2,fY2,"s");
+   TPadPusherGuard(this);
+//   if (gPad->PadInSelectionMode())
+//      gPad->PushSelectableObject(this);
+
+   if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && this == gPad->Selected()) {
+      TWbox::Paint(option);
+      gPad->PaintBox(fX1,fY1,fX2,fY2,"s");
+   }
 }
 
 //______________________________________________________________________________
