@@ -10836,6 +10836,10 @@ Int_t TProof::AssertDataSet(TDSet *dset, TList *input,
                dsn2.Remove(ienl);
             }
             if ((fc = mgr->GetDataSet(dsn2.Data()))) {
+               // Save dataset name in TFileInfo's title to use it in TDset 
+               TIter nxfi(fc->GetList());
+               TFileInfo *fi = 0;
+               while ((fi = (TFileInfo *) nxfi())) { fi->SetTitle(dsn2.Data()); }
                dsnparse = dsn2;
                if (!dataset) {
                   // This is our dataset
