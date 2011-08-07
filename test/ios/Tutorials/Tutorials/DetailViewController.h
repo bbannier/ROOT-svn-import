@@ -22,6 +22,7 @@ class DemoBase;
 }
 }
 
+@class ColorPickerView;
 @class SelectionView;
 @class PictView;
 @class HintView;
@@ -93,6 +94,8 @@ enum ETutorialsDefaults {
    IBOutlet UITabBar *tb;
    IBOutlet UIView *editor;
    IBOutlet UIView *help;
+   
+   IBOutlet ColorPickerView *colorPicker;
    
    BOOL activeAnimation;
 }
