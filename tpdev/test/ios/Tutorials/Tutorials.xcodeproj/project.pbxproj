@@ -21,6 +21,8 @@
 		7042A63313EC69B7005E5D43 /* line_style_select.png in Resources */ = {isa = PBXBuildFile; fileRef = 7042A63213EC69B7005E5D43 /* line_style_select.png */; };
 		7059E24513CC394C0007E4E1 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7059E24413CC394C0007E4E1 /* libz.dylib */; };
 		705D185113D0CBB400C47E5F /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 705D185013D0CBB400C47E5F /* QuartzCore.framework */; };
+		706F0FC413EEBEF800220A89 /* color_selector.png in Resources */ = {isa = PBXBuildFile; fileRef = 706F0FC313EEBEF800220A89 /* color_selector.png */; };
+		706F0FC813EEC61C00220A89 /* SelectorArrowView.m in Sources */ = {isa = PBXBuildFile; fileRef = 706F0FC713EEC61C00220A89 /* SelectorArrowView.m */; };
 		707327D413DF126C00E5B12B /* Default-LandscapeRight.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D113DF126C00E5B12B /* Default-LandscapeRight.png */; };
 		707327D513DF126C00E5B12B /* Default-LandscapeLeft.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */; };
 		707327D613DF126C00E5B12B /* Default-Landscape.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D313DF126C00E5B12B /* Default-Landscape.png */; };
@@ -29,6 +31,7 @@
 		7074C90513DF0F99000CABF5 /* Default-Portrait.png in Resources */ = {isa = PBXBuildFile; fileRef = 7074C90313DF0F99000CABF5 /* Default-Portrait.png */; };
 		707EECB713DF3FC100873F81 /* no_gesture_icon_small.png in Resources */ = {isa = PBXBuildFile; fileRef = 707EECB513DF3FC100873F81 /* no_gesture_icon_small.png */; };
 		707EECB813DF3FC100873F81 /* no_gesture_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 707EECB613DF3FC100873F81 /* no_gesture_icon.png */; };
+		7080329513EE802A00FC1D11 /* ColorPickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7080329413EE802A00FC1D11 /* ColorPickerView.m */; };
 		7085572013C73AD900022713 /* PadView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7085571F13C73AD900022713 /* PadView.m */; };
 		709A0BEC13CAD311009E4B74 /* CppWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 709A0BEA13CAD311009E4B74 /* CppWrapper.cpp */; };
 		70A3D4BE13E84F8200C39E40 /* select_mode.png in Resources */ = {isa = PBXBuildFile; fileRef = 70A3D4BD13E84F8200C39E40 /* select_mode.png */; };
@@ -86,6 +89,9 @@
 		7042A63213EC69B7005E5D43 /* line_style_select.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = line_style_select.png; path = Pictures/line_style_select.png; sourceTree = "<group>"; };
 		7059E24413CC394C0007E4E1 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		705D185013D0CBB400C47E5F /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		706F0FC313EEBEF800220A89 /* color_selector.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = color_selector.png; path = Pictures/color_selector.png; sourceTree = "<group>"; };
+		706F0FC613EEC61C00220A89 /* SelectorArrowView.h */ = {isa = PBXFileReference; fileEncoding = 4; path = SelectorArrowView.h; sourceTree = "<group>"; };
+		706F0FC713EEC61C00220A89 /* SelectorArrowView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SelectorArrowView.m; sourceTree = "<group>"; };
 		707327D113DF126C00E5B12B /* Default-LandscapeRight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-LandscapeRight.png"; path = "Pictures/Default-LandscapeRight.png"; sourceTree = "<group>"; };
 		707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-LandscapeLeft.png"; path = "Pictures/Default-LandscapeLeft.png"; sourceTree = "<group>"; };
 		707327D313DF126C00E5B12B /* Default-Landscape.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-Landscape.png"; path = "Pictures/Default-Landscape.png"; sourceTree = "<group>"; };
@@ -95,6 +101,8 @@
 		7074C90313DF0F99000CABF5 /* Default-Portrait.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-Portrait.png"; path = "Pictures/Default-Portrait.png"; sourceTree = "<group>"; };
 		707EECB513DF3FC100873F81 /* no_gesture_icon_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = no_gesture_icon_small.png; path = Pictures/no_gesture_icon_small.png; sourceTree = "<group>"; };
 		707EECB613DF3FC100873F81 /* no_gesture_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = no_gesture_icon.png; path = Pictures/no_gesture_icon.png; sourceTree = "<group>"; };
+		7080329313EE802A00FC1D11 /* ColorPickerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorPickerView.h; sourceTree = "<group>"; };
+		7080329413EE802A00FC1D11 /* ColorPickerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorPickerView.m; sourceTree = "<group>"; };
 		7085571E13C73AD900022713 /* PadView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadView.h; sourceTree = "<group>"; };
 		7085571F13C73AD900022713 /* PadView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadView.m; sourceTree = "<group>"; };
 		7099E64B13CB332A00D31765 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
@@ -190,6 +198,8 @@
 		7099E64713CB2BF000D31765 /* Objective C code */ = {
 			isa = PBXGroup;
 			children = (
+				7080329313EE802A00FC1D11 /* ColorPickerView.h */,
+				7080329413EE802A00FC1D11 /* ColorPickerView.m */,
 				70D645FB13D3243A00CE9FB1 /* PictView.h */,
 				70D645FC13D3243A00CE9FB1 /* PictView.m */,
 				7085571F13C73AD900022713 /* PadView.m */,
@@ -207,6 +217,8 @@
 				70C8237B13CF790E00F884FF /* HintView.m */,
 				701EC32313D9762200FE395E /* SelectionView.h */,
 				701EC32413D9762200FE395E /* SelectionView.m */,
+				706F0FC613EEC61C00220A89 /* SelectorArrowView.h */,
+				706F0FC713EEC61C00220A89 /* SelectorArrowView.m */,
 			);
 			name = "Objective C code";
 			sourceTree = "<group>";
@@ -214,6 +226,7 @@
 		70BA9B3413C5F89100102BC9 = {
 			isa = PBXGroup;
 			children = (
+				706F0FC313EEBEF800220A89 /* color_selector.png */,
 				7042A63213EC69B7005E5D43 /* line_style_select.png */,
 				7042A62813EC5151005E5D43 /* color_wheel.png */,
 				7007CB3613E9365300312A7C /* libRoot.a */,
@@ -371,6 +384,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				706F0FC413EEBEF800220A89 /* color_selector.png in Resources */,
 				7042A63313EC69B7005E5D43 /* line_style_select.png in Resources */,
 				7042A62913EC5151005E5D43 /* color_wheel.png in Resources */,
 				70A3D4BE13E84F8200C39E40 /* select_mode.png in Resources */,
@@ -432,6 +446,8 @@
 				70DF816413DDBA6400AD2F4D /* PolarGraphDemo.cxx in Sources */,
 				70DF816513DDBA6400AD2F4D /* SurfaceDemo.cxx in Sources */,
 				7074577D13E80A8700416CF3 /* ObjCWrapper.m in Sources */,
+				7080329513EE802A00FC1D11 /* ColorPickerView.m in Sources */,
+				706F0FC813EEC61C00220A89 /* SelectorArrowView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
