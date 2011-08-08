@@ -52,6 +52,7 @@
 		70C8237C13CF790E00F884FF /* HintView.m in Sources */ = {isa = PBXBuildFile; fileRef = 70C8237B13CF790E00F884FF /* HintView.m */; };
 		70D3FB5213E7F605005BADA3 /* single_tap_icon_small.png in Resources */ = {isa = PBXBuildFile; fileRef = 70D3FB5013E7F605005BADA3 /* single_tap_icon_small.png */; };
 		70D3FB5313E7F605005BADA3 /* single_tap_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 70D3FB5113E7F605005BADA3 /* single_tap_icon.png */; };
+		70D4848013F057430043110B /* system.plugins-ios in Resources */ = {isa = PBXBuildFile; fileRef = 70D4847F13F057430043110B /* system.plugins-ios */; };
 		70D645FD13D3243A00CE9FB1 /* PictView.m in Sources */ = {isa = PBXBuildFile; fileRef = 70D645FC13D3243A00CE9FB1 /* PictView.m */; };
 		70DF816013DDBA6400AD2F4D /* DemoBase.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 70DF815A13DDBA6400AD2F4D /* DemoBase.cxx */; };
 		70DF816113DDBA6400AD2F4D /* ExclusionGraphDemo.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 70DF815B13DDBA6400AD2F4D /* ExclusionGraphDemo.cxx */; };
@@ -139,6 +140,7 @@
 		70C8237B13CF790E00F884FF /* HintView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HintView.m; sourceTree = "<group>"; };
 		70D3FB5013E7F605005BADA3 /* single_tap_icon_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = single_tap_icon_small.png; path = Pictures/single_tap_icon_small.png; sourceTree = "<group>"; };
 		70D3FB5113E7F605005BADA3 /* single_tap_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = single_tap_icon.png; path = Pictures/single_tap_icon.png; sourceTree = "<group>"; };
+		70D4847F13F057430043110B /* system.plugins-ios */ = {isa = PBXFileReference; lastKnownFileType = text; name = "system.plugins-ios"; path = "../../../etc/system.plugins-ios"; sourceTree = "<group>"; };
 		70D645FB13D3243A00CE9FB1 /* PictView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PictView.h; sourceTree = "<group>"; };
 		70D645FC13D3243A00CE9FB1 /* PictView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PictView.m; sourceTree = "<group>"; };
 		70DE417C13E81AEC0007BBEB /* libRoot.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libRoot.a; path = ../../../lib/libRoot.a; sourceTree = "<group>"; };
@@ -233,6 +235,7 @@
 		70BA9B3413C5F89100102BC9 = {
 			isa = PBXGroup;
 			children = (
+				70D4847F13F057430043110B /* system.plugins-ios */,
 				709A653213EFD53700612A38 /* system.rootrc */,
 				707644AC13EFC5C500C302F9 /* europe_icon.png */,
 				706F0FC313EEBEF800220A89 /* color_selector.png */,
@@ -395,6 +398,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70D4848013F057430043110B /* system.plugins-ios in Resources */,
 				709A653313EFD53700612A38 /* system.rootrc in Resources */,
 				707644AD13EFC5C500C302F9 /* europe_icon.png in Resources */,
 				706F0FC413EEBEF800220A89 /* color_selector.png in Resources */,
@@ -508,11 +512,8 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
-				OTHER_LDFLAGS = (
-					/Users/tpochep/tpdev/root/io/io/src/G__IO.o,
-					/Users/tpochep/tpdev/root/net/net/src/G__Net.o,
-					/Users/tpochep/tpdev/root/hist/hist/src/G__Hist.o,
-				);
+				LIBRARY_SEARCH_PATHS = /Users/tpochep/tpdev/root/lib;
+				OTHER_LDFLAGS = /Users/tpochep/tpdev/root/io/io/src/G__IO.o;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 2;
 			};
@@ -528,12 +529,9 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
+				LIBRARY_SEARCH_PATHS = /Users/tpochep/tpdev/root/lib;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
-				OTHER_LDFLAGS = (
-					/Users/tpochep/tpdev/root/io/io/src/G__IO.o,
-					/Users/tpochep/tpdev/root/net/net/src/G__Net.o,
-					/Users/tpochep/tpdev/root/hist/hist/src/G__Hist.o,
-				);
+				OTHER_LDFLAGS = /Users/tpochep/tpdev/root/io/io/src/G__IO.o;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 2;
 			};
@@ -549,10 +547,7 @@
 				GCC_PREFIX_HEADER = "Tutorials/Tutorials-Prefix.pch";
 				"HEADER_SEARCH_PATHS[arch=*]" = /Users/tpochep/tpdev/root/include;
 				INFOPLIST_FILE = "Tutorials/Tutorials-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../../../lib\"",
-				);
+				LIBRARY_SEARCH_PATHS = /Users/tpochep/tpdev/root/lib;
 				"LIBRARY_SEARCH_PATHS[arch=*]" = "$(inherited)";
 				OTHER_LDFLAGS = (
 					/Users/tpochep/tpdev/root/io/io/src/G__IO.o,
@@ -573,11 +568,7 @@
 				GCC_PREFIX_HEADER = "Tutorials/Tutorials-Prefix.pch";
 				"HEADER_SEARCH_PATHS[arch=*]" = /Users/tpochep/tpdev/root/include;
 				INFOPLIST_FILE = "Tutorials/Tutorials-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/DeviceSupport/4.2.1 (8C148)/Symbols/usr/lib\"",
-					"\"$(SRCROOT)/../../../lib\"",
-				);
+				LIBRARY_SEARCH_PATHS = /Users/tpochep/tpdev/root/lib;
 				"LIBRARY_SEARCH_PATHS[arch=*]" = "$(inherited)";
 				OTHER_LDFLAGS = (
 					/Users/tpochep/tpdev/root/io/io/src/G__IO.o,
