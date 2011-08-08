@@ -24,15 +24,17 @@ static double inline deg_to_rad(double angle)
 
 @synthesize colorWheelImage;
 @synthesize selectorView;
+@synthesize timer;
 
 - (void) onTimer 
 {
-//   NSLog(@"timer");
    if (nFrame + 1 < 50) {
       ++nFrame;
       rotationAngle += dAngle;
    } else {
+      activeAnimation = NO;
       [timer invalidate];
+      self.timer = nil;
       currentSector = nextSector;
    }
   
@@ -43,6 +45,9 @@ static double inline deg_to_rad(double angle)
 
 - (void) handleTap : (UITapGestureRecognizer *) tapGesture
 {
+   if (activeAnimation)
+      return;
+
    const CGPoint pt = [tapGesture locationInView : self];
    const double x = pt.x - wheelCenter.x;
    const double y = self.bounds.size.height - pt.y - wheelCenter.y;
@@ -64,7 +69,8 @@ static double inline deg_to_rad(double angle)
       }
       
       nFrame = 0;
-      timer = [NSTimer scheduledTimerWithTimeInterval:0.25 / 50 target : self selector:@selector(onTimer) userInfo:nil repeats:YES];
+      activeAnimation = YES;
+      self.timer = [NSTimer scheduledTimerWithTimeInterval:0.25 / 50 target : self selector:@selector(onTimer) userInfo:nil repeats:YES];
    }
 }
 
