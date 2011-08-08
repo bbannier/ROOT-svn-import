@@ -651,7 +651,7 @@ namespace cling {
     else if (last == 0) {
       m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl()->dump();
     } else {
-      Decl *FD = m_IncrParser->getFirstTopLevelDecl(); // First Decl to print
+      Decl *FD = m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl();
       Decl *LD = FD;
       
       // FD and LD are first
