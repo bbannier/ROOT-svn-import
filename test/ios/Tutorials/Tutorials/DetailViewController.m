@@ -318,11 +318,6 @@
    editor.hidden = YES;
    
    tb.selectedItem = [tb.items objectAtIndex:0];
-   
-   if (colorPicker)
-      NSLog(@"%@", colorPicker);
-   else
-      NSLog(@"HUI");
 
    [super viewDidLoad];
 }

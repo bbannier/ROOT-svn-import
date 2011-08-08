@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <iostream>
 
 #include "EuropeMapDemo.h"
 
@@ -18,7 +19,7 @@ namespace Demos {
 //______________________________________________________________________________
 EuropeMapDemo::EuropeMapDemo()
 {
- /*  std::auto_ptr<TFile> inputFile(TFile::Open("http://root.cern.ch/files/europe.root", "read"));
+   std::auto_ptr<TFile> inputFile(TFile::Open("http://root.cern.ch/files/europe.root", "read"));
    if (!inputFile.get())
       throw std::runtime_error("could not open network file");
 
@@ -53,7 +54,6 @@ EuropeMapDemo::EuropeMapDemo()
          fPoly->AddBin(obj);
    }
 
-
    fPoly->ChangePartition(100, 100);
 
    // Fill TH2Poly according to a Mercator projection.
@@ -76,7 +76,7 @@ EuropeMapDemo::EuropeMapDemo()
    // Normalize the TH2Poly bin contents to the real surfaces.
    const Double_t scale = surfaces[0] / maximum;
    for (UInt_t i = 0; i < fPoly->GetNumberOfBins(); ++i)
-      fPoly->SetBinContent(i + 1, scale * fPoly->GetBinContent(i+1));*/
+      fPoly->SetBinContent(i + 1, scale * fPoly->GetBinContent(i+1));
 }
 
 //______________________________________________________________________________
@@ -88,7 +88,7 @@ EuropeMapDemo::~EuropeMapDemo()
 //______________________________________________________________________________
 void EuropeMapDemo::PresentDemo()
 {
- //  fPoly->Draw("COLZ");
+   fPoly->Draw("COLZ");
 }
 
 
