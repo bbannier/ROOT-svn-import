@@ -37,7 +37,6 @@ namespace cling {
     public:
       SymbolResolverCallback(Interpreter* interp, bool enabled = false)
         : InterpreterCallbacks(interp, enabled), m_TesterDecl(0) {
-        printf("%s\n", "Constructor called");
         m_Interpreter->processLine("cling::test::Tester = new cling::test::TestProxy();");        
       }      
       ~SymbolResolverCallback(){}
