@@ -29,11 +29,13 @@
    
    NSTimer *timer;
    unsigned nFrame;
+   BOOL activeAnimation;
 }
 
 - (void) setupColorPicker;
 
 @property (nonatomic, retain) UIImage *colorWheelImage;
 @property (nonatomic, retain) SelectorArrowView *selectorView;
+@property (nonatomic, retain) NSTimer *timer;
 
 @end
