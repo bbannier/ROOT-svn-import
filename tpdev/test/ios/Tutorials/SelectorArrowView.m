@@ -13,6 +13,7 @@
 
 @synthesize arrowImage;
 
+//______________________________________________________________________________
 - (id)initWithFrame : (CGRect)frame
 {
    self = [super initWithFrame : frame];
@@ -25,6 +26,7 @@
    return self;
 }
 
+//______________________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
     // Drawing code
@@ -38,17 +40,20 @@
    [arrowImage drawAtPoint:CGPointZero];
 }
 
+//______________________________________________________________________________
 - (void)dealloc
 {
    self.arrowImage = nil;
    [super dealloc];
 }
 
+//______________________________________________________________________________
 - (void) setCenter : (CGPoint) c
 {
    center = c;
 }
 
+//______________________________________________________________________________
 - (void) setAngle : (double) a
 {
    angle = a;
