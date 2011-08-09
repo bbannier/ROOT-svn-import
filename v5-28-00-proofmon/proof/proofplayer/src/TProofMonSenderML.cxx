@@ -407,7 +407,7 @@ Int_t TProofMonSenderML::SendFileInfo(TDSet *dset, TList *missing,
       while ((fi = (TFileInfo *)nxfm())) {
          hmiss.Add(new TObjString(fi->GetCurrentUrl()->GetUrl()));
       }
-      hmiss.Print();
+      PDB(TProofDebug::kMonitoring,2) hmiss.Print();
    }
 
    // Prepare objects to be sent
