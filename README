@@ -41,7 +41,7 @@
 
    and run it by passing the directory path as argument:
 
-   root [] WriteTest("/data/iotest")
+   root [] WriteTests("/data/iotest")
 
    The macro will run 8 tests. Each test is labelled with a string formatted as
 
