@@ -1,0 +1,10 @@
+#!/bin/sh
+
+fileslist="$1"
+echo "Cleaning cache for files in $fileslist ..."
+
+while read -r ff ; do 
+  $KSDIR/bin/releaseFileCache $ff 
+done < $fileslist
+
+
