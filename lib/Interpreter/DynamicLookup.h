@@ -200,7 +200,7 @@ namespace cling {
     ~EvaluateTSynthesizer() { }
 
     MapTy& getSubstSymbolMap() { return m_SubstSymbolMap; }
-    
+
     void TransformTopLevelDecl(clang::DeclGroupRef DGR);
 
     ASTNodeInfo VisitStmt(clang::Stmt* Node);
