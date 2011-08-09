@@ -275,7 +275,7 @@ namespace cling {
 
     if (IsQueueing()) {
       // We don't want to chase our tail
-      if (IsInTransaction())
+      if (IsInTransaction() || !DeclsQueue.size())
         return;
 
       m_InTransaction = true;
