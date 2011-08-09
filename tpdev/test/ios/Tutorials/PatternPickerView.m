@@ -80,13 +80,21 @@
 - (void) handleTap : (UITapGestureRecognizer *) tapGesture
 {
    CGPoint location = [tapGesture locationInView : self];
+
+
+   
    if (location.x < 29 || location.x > 269)
       return;
-   if (location.y < 29 || location.y > 269)
+   if (location.y < 29 || location.y >= 263)
       return;
+   
+
+   NSLog(@"%g %g", location.x, location.y);
    
    location.x -= 29;
    location.y -= 29;
+   
+
    
    const unsigned newCol = location.x / 80;
    const unsigned newRow = location.y / 26;
