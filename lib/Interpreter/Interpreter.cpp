@@ -12,6 +12,7 @@
 #include "InputValidator.h"
 
 #include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/InterpreterCallbacks.h"
 #include "cling/Interpreter/Value.h"
 
 #include "clang/AST/ASTContext.h"
@@ -133,21 +134,19 @@ namespace cling {
   }
 
   const char* DynamicExprInfo::getExpr() {
-    if (!m_Cache) {
-      std::string exprStr(m_Template);
-      int i = 0;
-      size_t found;
-      while ((found = exprStr.find("@")) && (found != std::string::npos)) { 
-        std::stringstream address;
-        address << m_Addresses[i];
-        exprStr = exprStr.insert(found + 1, address.str());
-        exprStr = exprStr.erase(found, 1);
-        ++i;    
-      }
-      m_Cache = exprStr.c_str();
+    std::string exprStr(m_Template);
+    int i = 0;
+    size_t found;
+
+    while ((found = exprStr.find("@")) && (found != std::string::npos)) { 
+      std::stringstream address;
+      address << m_Addresses[i];
+      exprStr = exprStr.insert(found + 1, address.str());
+      exprStr = exprStr.erase(found, 1);
+      ++i;    
     }
 
-    return m_Cache;
+    return exprStr.c_str();
   }
   
 
@@ -218,6 +217,8 @@ namespace cling {
   //---------------------------------------------------------------------------
   Interpreter::~Interpreter()
   {
+    //llvm::Module* module = m_IncrParser->GetCodeGenerator()->GetModule();
+    //m_ExecutionContext->runStaticDestructorsOnce(module);
     //delete m_prev_module;
     //m_prev_module = 0; // Don't do this, the engine does it.
     //delete m_IncrASTParser;
@@ -553,6 +554,12 @@ namespace cling {
   }
   
   Value Interpreter::Evaluate(const char* expr, DeclContext* DC) {
+    assert(DC && "DeclContext cannot be null!");
+
+    Sema& S = getCI()->getSema();
+    assert(S.ExternalSource && "No ExternalSource set!");
+    static_cast<DynamicIDHandler*>(S.ExternalSource)->Callbacks->setEnabled();
+
     // Execute and get the result
     Value Result;
 
@@ -566,15 +573,15 @@ namespace cling {
     CurContext = m_IncrParser->getCI()->getSema().CurContext;
     m_IncrParser->getCI()->getSema().CurContext = DC;
 
-    CompilerInstance* CI = m_IncrParser->CompileAsIs(Wrapper);
-    if (!CI) {
-      fprintf(stderr, "Cannot compile string!\n");
-    }
+    llvm::SmallVector<clang::DeclGroupRef, 4> DGRs;
+    m_IncrParser->Parse(Wrapper, DGRs);
+
+    assert((DGRs.size() || DGRs.size() > 2) && "Only FunctionDecl expected!");
 
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
     // get the Type
     FunctionDecl* TopLevelFD 
-      = dyn_cast<FunctionDecl>(m_IncrParser->getLastTopLevelDecl());
+      = dyn_cast<FunctionDecl>(DGRs.front().getSingleDecl());
     CurContext = m_IncrParser->getCI()->getSema().CurContext;
     m_IncrParser->getCI()->getSema().CurContext = TopLevelFD;
     ASTContext& Context(getCI()->getASTContext());
@@ -595,14 +602,9 @@ namespace cling {
           CS->setStmts(Context, &RetS, 1);
         }
     m_IncrParser->getCI()->getSema().CurContext = CurContext;
-    // resume the code gen
-    //m_IncrParser->addConsumer(ChainedConsumer::kCodeGenerator,
-    //                          m_ExecutionContext->getCodeGenerator());
-    DeclGroupRef DGR(TopLevelFD);
-    // collect the references that are being used
-    //ExecutionContext->getCodeGenerator()->HandleTopLevelDecl(DGR);
-    // generate code for the delta
-    //ExecutionContext->getCodeGenerator()->HandleTranslationUnit(Context);
+
+    // FIXME: Finish the transaction in better way
+    m_IncrParser->CompileAsIs("");
  
     // get the result
     llvm::GenericValue val;
@@ -651,6 +653,7 @@ namespace cling {
     else if (last == 0) {
       m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl()->dump();
     } else {
+      // First Decl to print
       Decl *FD = m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl();
       Decl *LD = FD;
       
@@ -686,8 +689,7 @@ namespace cling {
     m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
   }
 
-  void Interpreter::runStaticInitializersOnce() const
-  {
+  void Interpreter::runStaticInitializersOnce() const {
     // Forward to ExecutionContext; should not be called by
     // anyone except for IncrementalParser.
     llvm::Module* module = m_IncrParser->GetCodeGenerator()->GetModule();

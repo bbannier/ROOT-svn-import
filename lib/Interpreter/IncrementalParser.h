@@ -9,6 +9,7 @@
 
 #include "ChainedConsumer.h"
 
+#include "clang/AST/DeclGroup.h"
 #include "clang/Basic/SourceLocation.h"
 
 #include "llvm/ADT/OwningPtr.h"
@@ -52,6 +53,8 @@ namespace cling {
     clang::Parser* getParser() const { return m_Parser.get(); }
     clang::CompilerInstance* CompileLineFromPrompt(llvm::StringRef input);
     clang::CompilerInstance* CompileAsIs(llvm::StringRef input);
+    void Parse(llvm::StringRef input, 
+               llvm::SmallVector<clang::DeclGroupRef, 4>& DGRs);
 
     llvm::MemoryBuffer* getCurBuffer() {
       return m_MemoryBuffer.back();
@@ -73,6 +76,7 @@ namespace cling {
     void writeStartupPCH();
   private:
     clang::CompilerInstance* Compile(llvm::StringRef input);
+    clang::CompilerInstance* Parse(llvm::StringRef input);
     void loadStartupPCH(const char* filename);
 
     Interpreter* m_Interpreter; // our interpreter context

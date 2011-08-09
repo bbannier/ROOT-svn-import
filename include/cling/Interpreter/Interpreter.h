@@ -67,7 +67,6 @@ namespace cling {
   ///
   class DynamicExprInfo {
   private:
-    const char* m_Cache;
 
     /// \brief The expression template.
     const char*  m_Template;
@@ -76,7 +75,7 @@ namespace cling {
     void** m_Addresses;
   public:
     DynamicExprInfo(const char* templ, void* addresses[]) : 
-      m_Cache(0), m_Template(templ), m_Addresses(addresses){}
+      m_Template(templ), m_Addresses(addresses){}
 
     ///\brief Performs the insertions of the context in the expression just
     /// before evaluation. To be used only at runtime.
