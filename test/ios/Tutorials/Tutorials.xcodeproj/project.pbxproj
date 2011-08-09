@@ -16,7 +16,9 @@
 		701EC32513D9762200FE395E /* SelectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = 701EC32413D9762200FE395E /* SelectionView.m */; };
 		7025F5DA13F12B3F00AEFD66 /* fill_pattern_select.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5D913F12B3F00AEFD66 /* fill_pattern_select.png */; };
 		7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */; };
-		7025F5E013F135CF00AEFD66 /* pattern_select_glass.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5DF13F135CF00AEFD66 /* pattern_select_glass.png */; };
+		7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */; };
+		7025F5E413F15DBF00AEFD66 /* fill_pattern_select_glass.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5E313F15DBF00AEFD66 /* fill_pattern_select_glass.png */; };
+		7025F5E713F15DEC00AEFD66 /* SelectorRectView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */; };
 		7032144913E689E700908306 /* Editor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144813E689E700908306 /* Editor.xib */; };
 		7032144C13E68F5E00908306 /* HelpView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144B13E68F5E00908306 /* HelpView.xib */; };
 		7032144E13E6963400908306 /* exclusion_icon_n.png in Resources */ = {isa = PBXBuildFile; fileRef = 7032144D13E6963400908306 /* exclusion_icon_n.png */; };
@@ -90,9 +92,13 @@
 		701EC32313D9762200FE395E /* SelectionView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.h; sourceTree = "<group>"; };
 		701EC32413D9762200FE395E /* SelectionView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.m; sourceTree = "<group>"; };
 		7025F5D913F12B3F00AEFD66 /* fill_pattern_select.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = fill_pattern_select.png; path = Pictures/fill_pattern_select.png; sourceTree = "<group>"; };
-		7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PatternPickerView.h; sourceTree = "<group>"; };
-		7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PatternPickerView.m; sourceTree = "<group>"; };
+		7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternPickerView.h; sourceTree = "<group>"; };
+		7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternPickerView.m; sourceTree = "<group>"; };
 		7025F5DF13F135CF00AEFD66 /* pattern_select_glass.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = pattern_select_glass.png; path = Pictures/pattern_select_glass.png; sourceTree = "<group>"; };
+		7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = pattern_selector_background.png; path = Pictures/pattern_selector_background.png; sourceTree = "<group>"; };
+		7025F5E313F15DBF00AEFD66 /* fill_pattern_select_glass.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = fill_pattern_select_glass.png; path = Pictures/fill_pattern_select_glass.png; sourceTree = "<group>"; };
+		7025F5E513F15DEC00AEFD66 /* SelectorRectView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SelectorRectView.h; sourceTree = "<group>"; };
+		7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SelectorRectView.m; sourceTree = "<group>"; };
 		7032144813E689E700908306 /* Editor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Editor.xib; sourceTree = "<group>"; };
 		7032144B13E68F5E00908306 /* HelpView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HelpView.xib; sourceTree = "<group>"; };
 		7032144D13E6963400908306 /* exclusion_icon_n.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = exclusion_icon_n.png; path = Pictures/exclusion_icon_n.png; sourceTree = "<group>"; };
@@ -237,6 +243,8 @@
 				706F0FC713EEC61C00220A89 /* SelectorArrowView.m */,
 				7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */,
 				7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */,
+				7025F5E513F15DEC00AEFD66 /* SelectorRectView.h */,
+				7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */,
 			);
 			name = "Objective C code";
 			sourceTree = "<group>";
@@ -244,6 +252,8 @@
 		70BA9B3413C5F89100102BC9 = {
 			isa = PBXGroup;
 			children = (
+				7025F5E313F15DBF00AEFD66 /* fill_pattern_select_glass.png */,
+				7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */,
 				7025F5DF13F135CF00AEFD66 /* pattern_select_glass.png */,
 				7025F5D913F12B3F00AEFD66 /* fill_pattern_select.png */,
 				70D4847F13F057430043110B /* system.plugins-ios */,
@@ -409,7 +419,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7025F5E013F135CF00AEFD66 /* pattern_select_glass.png in Resources */,
+				7025F5E413F15DBF00AEFD66 /* fill_pattern_select_glass.png in Resources */,
+				7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */,
 				7025F5DA13F12B3F00AEFD66 /* fill_pattern_select.png in Resources */,
 				70D4848013F057430043110B /* system.plugins-ios in Resources */,
 				709A653313EFD53700612A38 /* system.rootrc in Resources */,
@@ -480,6 +491,7 @@
 				706F0FC813EEC61C00220A89 /* SelectorArrowView.m in Sources */,
 				707644B113EFC6AA00C302F9 /* EuropeMapDemo.cxx in Sources */,
 				7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */,
+				7025F5E713F15DEC00AEFD66 /* SelectorRectView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

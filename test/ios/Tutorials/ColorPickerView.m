@@ -26,6 +26,7 @@ static double inline deg_to_rad(double angle)
 @synthesize selectorView;
 @synthesize timer;
 
+//______________________________________________________________________________
 - (void) onTimer 
 {
    if (nFrame + 1 < 50) {
@@ -39,10 +40,11 @@ static double inline deg_to_rad(double angle)
    }
   
    [selectorView setAngle : rotationAngle];
-     
+
    [selectorView setNeedsDisplay];
 }
 
+//______________________________________________________________________________
 - (void) handleTap : (UITapGestureRecognizer *) tapGesture
 {
    if (activeAnimation)
@@ -74,6 +76,7 @@ static double inline deg_to_rad(double angle)
    }
 }
 
+//______________________________________________________________________________
 - (id)initWithFrame:(CGRect)frame
 {
    self = [super initWithFrame:frame];
@@ -86,8 +89,7 @@ static double inline deg_to_rad(double angle)
    return self;
 }
 
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
+//______________________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
     // Drawing code
@@ -97,6 +99,7 @@ static double inline deg_to_rad(double angle)
    [colorWheelImage drawInRect:rect];
 }
 
+//______________________________________________________________________________
 - (void) setupColorPicker
 {
    //color wheel image is square (and view for this control is square).
@@ -130,6 +133,7 @@ static double inline deg_to_rad(double angle)
    [tapGesture release];
 }
 
+//______________________________________________________________________________
 - (void)dealloc
 {
    self.colorWheelImage = nil;

@@ -12,6 +12,7 @@
 
 @implementation SelectionView
 
+//______________________________________________________________________________
 - (id)initWithFrame:(CGRect)frame
 {
     self = [super initWithFrame:frame];
@@ -22,17 +23,20 @@
     return self;
 }
 
+//______________________________________________________________________________
 - (void)dealloc
 {
     [super dealloc];
 }
 
+//______________________________________________________________________________
 - (void) setPad : (PadWrapper *)newPad andPainter : (PainterWrapper *) newPainter
 {
    pad = newPad;
    painter = newPainter;
 }
 
+//______________________________________________________________________________
 - (void) setEvent : (int) e atX : (int) x andY : (int) y
 {
    ev = e;
@@ -40,6 +44,7 @@
    py = y;
 }
 
+//______________________________________________________________________________
 - (void) drawRect:(CGRect)rect
 {
    if (!pad || !painter)
@@ -62,11 +67,13 @@
       pad->PaintSelected();
 }
 
+//______________________________________________________________________________
 - (void) setShowRotation : (BOOL) show
 {
    showRotation = show;
 }
 
+//______________________________________________________________________________
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *) event 
 {
    //Thanks to gyim, 
