@@ -34,7 +34,6 @@ namespace cling {
     virtual ~InterpreterCallbacks() {}
 
     void setEnabled(bool e = true) { 
-      m_Interpreter->enableDynamicLookup(e);
       m_Enabled = e;
     }
 
