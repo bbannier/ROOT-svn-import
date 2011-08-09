@@ -3,6 +3,8 @@
 
 #include "SymbolResolverCallback.h"
 
+.dynamicExtensions
+
 gCling->setCallbacks(new cling::test::SymbolResolverCallback(gCling, /*Enabled=*/true));
 jksghdgsjdf->getVersion() // CHECK: {{.*Interpreter.*}}
 hsdghfjagsp->Draw() // CHECK: (int const) 12
