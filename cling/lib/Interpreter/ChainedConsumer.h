@@ -9,6 +9,7 @@
 
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/Sema/SemaConsumer.h"
@@ -83,7 +84,7 @@ namespace cling {
 
     bool DisableConsumer(EConsumerIndex I) {
       assert(Exists(I) && "Cannot disable. Consumer not set!");
-      assert(I != kCodeGenerator && "You shouldn't disable codegen!");
+      //assert(I != kCodeGenerator && "You shouldn't disable codegen!");
       bool PrevousState = Enabled[I];
       Enabled.reset(I);
       return PrevousState;
@@ -124,6 +125,8 @@ namespace cling {
     };
     llvm::SmallVector<DGRInfo, 64> DeclsQueue;
     bool m_Queueing;
+
+    friend class IncrementalParser;
   };
 } // namespace cling
 
