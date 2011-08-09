@@ -32,7 +32,7 @@
    [tutorialNames addObject:@"Polar graph"];
    [tutorialNames addObject:@"Lego"];
    [tutorialNames addObject:@"Exclusion graph"];
-   [tutorialNames addObject:@"TH2Poly"];
+//   [tutorialNames addObject:@"TH2Poly"];
    
    tutorialIcons = [[NSMutableArray alloc] init];
    [tutorialIcons addObject:@"hsimple_icon_n.png"];
@@ -40,7 +40,7 @@
    [tutorialIcons addObject:@"polar_icon_n.png"];
    [tutorialIcons addObject:@"lego_icon_n.png"];
    [tutorialIcons addObject:@"exclusion_icon_n.png"];
-   [tutorialIcons addObject:@"europe_icon.png"];
+//   [tutorialIcons addObject:@"europe_icon.png"];
 
    //Set table view's color, row height, separator's color
    //(I want separator to be invisible).
@@ -58,7 +58,7 @@
    demos[2] = new ROOT_iOS::Demos::PolarGraphDemo;
    demos[3] = new ROOT_iOS::Demos::LegoDemo;
    demos[4] = new ROOT_iOS::Demos::ExclusionGraphDemo;
-   demos[5] = new ROOT_iOS::Demos::EuropeMapDemo;
+//   demos[5] = new ROOT_iOS::Demos::EuropeMapDemo;
 }
 
 //_________________________________________________________________

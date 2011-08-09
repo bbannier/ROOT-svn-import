@@ -14,6 +14,9 @@
 		7007CB3C13E9365300312A7C /* liblzma.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3813E9365300312A7C /* liblzma.a */; };
 		7007CB3D13E9365300312A7C /* libpcre.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3913E9365300312A7C /* libpcre.a */; };
 		701EC32513D9762200FE395E /* SelectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = 701EC32413D9762200FE395E /* SelectionView.m */; };
+		7025F5DA13F12B3F00AEFD66 /* fill_pattern_select.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5D913F12B3F00AEFD66 /* fill_pattern_select.png */; };
+		7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */; };
+		7025F5E013F135CF00AEFD66 /* pattern_select_glass.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5DF13F135CF00AEFD66 /* pattern_select_glass.png */; };
 		7032144913E689E700908306 /* Editor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144813E689E700908306 /* Editor.xib */; };
 		7032144C13E68F5E00908306 /* HelpView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144B13E68F5E00908306 /* HelpView.xib */; };
 		7032144E13E6963400908306 /* exclusion_icon_n.png in Resources */ = {isa = PBXBuildFile; fileRef = 7032144D13E6963400908306 /* exclusion_icon_n.png */; };
@@ -86,6 +89,10 @@
 		7007CB3913E9365300312A7C /* libpcre.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpcre.a; path = ../../../lib/libpcre.a; sourceTree = "<group>"; };
 		701EC32313D9762200FE395E /* SelectionView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.h; sourceTree = "<group>"; };
 		701EC32413D9762200FE395E /* SelectionView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.m; sourceTree = "<group>"; };
+		7025F5D913F12B3F00AEFD66 /* fill_pattern_select.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = fill_pattern_select.png; path = Pictures/fill_pattern_select.png; sourceTree = "<group>"; };
+		7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PatternPickerView.h; sourceTree = "<group>"; };
+		7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PatternPickerView.m; sourceTree = "<group>"; };
+		7025F5DF13F135CF00AEFD66 /* pattern_select_glass.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = pattern_select_glass.png; path = Pictures/pattern_select_glass.png; sourceTree = "<group>"; };
 		7032144813E689E700908306 /* Editor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Editor.xib; sourceTree = "<group>"; };
 		7032144B13E68F5E00908306 /* HelpView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HelpView.xib; sourceTree = "<group>"; };
 		7032144D13E6963400908306 /* exclusion_icon_n.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = exclusion_icon_n.png; path = Pictures/exclusion_icon_n.png; sourceTree = "<group>"; };
@@ -228,6 +235,8 @@
 				701EC32413D9762200FE395E /* SelectionView.m */,
 				706F0FC613EEC61C00220A89 /* SelectorArrowView.h */,
 				706F0FC713EEC61C00220A89 /* SelectorArrowView.m */,
+				7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */,
+				7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */,
 			);
 			name = "Objective C code";
 			sourceTree = "<group>";
@@ -235,6 +244,8 @@
 		70BA9B3413C5F89100102BC9 = {
 			isa = PBXGroup;
 			children = (
+				7025F5DF13F135CF00AEFD66 /* pattern_select_glass.png */,
+				7025F5D913F12B3F00AEFD66 /* fill_pattern_select.png */,
 				70D4847F13F057430043110B /* system.plugins-ios */,
 				709A653213EFD53700612A38 /* system.rootrc */,
 				707644AC13EFC5C500C302F9 /* europe_icon.png */,
@@ -398,6 +409,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7025F5E013F135CF00AEFD66 /* pattern_select_glass.png in Resources */,
+				7025F5DA13F12B3F00AEFD66 /* fill_pattern_select.png in Resources */,
 				70D4848013F057430043110B /* system.plugins-ios in Resources */,
 				709A653313EFD53700612A38 /* system.rootrc in Resources */,
 				707644AD13EFC5C500C302F9 /* europe_icon.png in Resources */,
@@ -466,6 +479,7 @@
 				7080329513EE802A00FC1D11 /* ColorPickerView.m in Sources */,
 				706F0FC813EEC61C00220A89 /* SelectorArrowView.m in Sources */,
 				707644B113EFC6AA00C302F9 /* EuropeMapDemo.cxx in Sources */,
+				7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
