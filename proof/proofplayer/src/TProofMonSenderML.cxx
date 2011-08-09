@@ -154,6 +154,9 @@ Int_t TProofMonSenderML::SendSummary(TList *recs, const char *id)
    }
    TList *xrecs = recs;
 
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendSummary", "preparing (qid: '%s')", id);
+
    // Do not send duplicated information
    TObject *qtag = recs->FindObject("querytag");
    if (qtag) recs->Remove(qtag);
@@ -173,6 +176,9 @@ Int_t TProofMonSenderML::SendSummary(TList *recs, const char *id)
          xrecs->Add(o);
       }
    }
+
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendSummary", "sending (%d entries)", xrecs->GetSize());
 
    // Now we are ready to send
    Bool_t rc = fWriter->SendParameters(xrecs, id);
@@ -252,7 +258,8 @@ Int_t TProofMonSenderML::SendDataSetInfo(TDSet *dset, TList *missing,
       return -1;
    }
 
-   Info("SendDataSetInfo", "preparing (qid: '%s')", qid);
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendDataSetInfo", "preparing (qid: '%s')", qid);
 
    TList plets;
    // Extract the information and save it into the relevant multiplets
@@ -318,6 +325,9 @@ Int_t TProofMonSenderML::SendDataSetInfo(TDSet *dset, TList *missing,
    values.Add(pi_numfiles);
    TParameter<Int_t> *pi_missfiles = new TParameter<Int_t>("missfiles", -1);
    values.Add(pi_missfiles);
+
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendDataSetInfo", "sending (%d entries)", plets.GetSize());
 
    Bool_t rc = kTRUE;
    TString dsnh;
@@ -387,7 +397,9 @@ Int_t TProofMonSenderML::SendFileInfo(TDSet *dset, TList *missing,
       return -1;
    }
 
-   Info("SendFileInfo", "preparing (qid: '%s')", qid);
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendFileInfo", "preparing (qid: '%s')", qid);
+
    THashList hmiss;
    if (missing) {
       TIter nxfm(missing);
@@ -413,6 +425,10 @@ Int_t TProofMonSenderML::SendFileInfo(TDSet *dset, TList *missing,
    }
    TParameter<Int_t> *pi_status = new TParameter<Int_t>("status", -1);
    values.Add(pi_status);
+
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendFileInfo", "sending (%d entries)", dset->GetListOfElements()->GetSize());
+
    // Loop over files
    Bool_t rc = kTRUE;
    TDSetElement *e = 0;

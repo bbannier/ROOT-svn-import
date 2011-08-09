@@ -33,11 +33,14 @@ class TProofMonSenderSQL : public TProofMonSender {
 
 private:
    TVirtualMonitoringWriter *fWriter; // Writer instance connect to backend
+   TString                   fDSetSendOpts; // Opts for posting dataset table
+   TString                   fFilesSendOpts; // Opts for posting files table
 
 public:
 
-   TProofMonSenderSQL(const char *serv,
-                      const char *user, const char *pass, const char *table);
+   TProofMonSenderSQL(const char *serv, const char *user, const char *pass,
+                      const char *table,
+                      const char *dstab = 0, const char *filestab = 0);
    virtual ~TProofMonSenderSQL();
    
    // Summary record
@@ -46,7 +49,7 @@ public:
    // Information about the dataset(s) processed
    Int_t SendDataSetInfo(TDSet *, TList *, const char *, const char *);
 
-   // Detailed infoirmation about files
+   // Detailed information about files
    Int_t SendFileInfo(TDSet *, TList *, const char *, const char *);
    
    ClassDef(TProofMonSenderSQL, 0); // Interface for PROOF monitoring
