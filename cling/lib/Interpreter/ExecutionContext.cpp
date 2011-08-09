@@ -225,6 +225,19 @@ ExecutionContext::runStaticInitializersOnce(llvm::Module* m) {
   }
 }
 
+void
+ExecutionContext::runStaticDestructorsOnce(llvm::Module* m) {
+  assert(m && "Module must not be null");
+  assert(m_engine && "Code generation did not create an engine!");
+
+  llvm::GlobalVariable* gdtors 
+    = m->getGlobalVariable("llvm.global_dtors", true);
+  if (gdtors) {
+    m_engine->runStaticConstructorsDestructors(true);
+  }
+
+}
+
 int
 ExecutionContext::verifyModule(llvm::Module* m)
 {
