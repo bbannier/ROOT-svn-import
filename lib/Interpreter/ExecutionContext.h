@@ -36,6 +36,7 @@ namespace cling {
     void installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp);
     
     void runStaticInitializersOnce(llvm::Module* m);
+    void runStaticDestructorsOnce(llvm::Module* m);
     
     void executeFunction(llvm::StringRef function, 
                          llvm::GenericValue* returnValue = 0);
