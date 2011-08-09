@@ -32,8 +32,11 @@
 
 //________________________________________________________________________
 TProofMonSenderSQL::TProofMonSenderSQL(const char *serv, const char *user,
-                                       const char *pass, const char *table)
-                  : TProofMonSender(serv,"ProofMonSenderSQL")  
+                                       const char *pass, const char *table,
+                                       const char *dstab, const char *filestab)
+                  : TProofMonSender(serv,"ProofMonSenderSQL"),
+                    fDSetSendOpts("bulk,table=proofquerydsets"),
+                    fFilesSendOpts("bulk,table=proofqueryfiles") 
 {
    // Main constructor
 
@@ -60,6 +63,10 @@ TProofMonSenderSQL::TProofMonSenderSQL(const char *serv, const char *user,
    // Transfer verbosity requirements
    PDB(TProofDebug::kMonitoring,1)
       if (fWriter) fWriter->Verbose(kTRUE);
+
+   // Reformat the send options strings, if needed
+   if (dstab && strlen(dstab) > 0) fDSetSendOpts.Form("bulk,table=%s", dstab);
+   if (filestab && strlen(filestab) > 0) fFilesSendOpts.Form("bulk,table=%s", filestab);
 }
 
 //________________________________________________________________________
@@ -158,6 +165,9 @@ Int_t TProofMonSenderSQL::SendSummary(TList *recs, const char *dumid)
    // Are we requested to send this info?
    if (!TestBit(TProofMonSender::kSendSummary)) return 0;
 
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendSummary", "preparing (qid: '%s')", dumid);
+
    // Make sure we have something to send
    if (!recs || (recs && recs->GetSize() <= 0)) {
       Error("SendSummary", "records list undefined or empty!");
@@ -184,6 +194,9 @@ Int_t TProofMonSenderSQL::SendSummary(TList *recs, const char *dumid)
          xrecs->Add(o);
       }
    }
+
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendSummary", "sending (%d entries)", xrecs->GetSize());
 
    // Now we are ready to send
    Bool_t rc = fWriter->SendParameters(xrecs, dumid);
@@ -263,7 +276,8 @@ Int_t TProofMonSenderSQL::SendDataSetInfo(TDSet *dset, TList *missing,
       return -1;
    }
 
-   Info("SendDataSetInfo", "preparing (qid: '%s')", qid);
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendDataSetInfo", "preparing (qid: '%s')", qid);
 
    TList plets;
    // Extract the information and save it into the relevant multiplets
@@ -328,10 +342,11 @@ Int_t TProofMonSenderSQL::SendDataSetInfo(TDSet *dset, TList *missing,
       values.Add(new TObjString(ent.Data()));
    }
 
-   Info("SendDataSetInfo", "sending (%d entries)", values.GetSize());
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendDataSetInfo", "sending (%d entries)", values.GetSize());
    
    // Now we are ready to send
-   Bool_t rc = fWriter->SendParameters(&values, "bulk,table=proofquerydsets");
+   Bool_t rc = fWriter->SendParameters(&values, fDSetSendOpts);
    
    // Done
    return (rc ? 0 : -1);
@@ -398,7 +413,8 @@ Int_t TProofMonSenderSQL::SendFileInfo(TDSet *dset, TList *missing,
       return -1;
    }
 
-   Info("SendFileInfo", "preparing (qid: '%s')", qid);
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendFileInfo", "preparing (qid: '%s')", qid);
    THashList hmiss;
    if (missing) {
       TIter nxfm(missing);
@@ -432,10 +448,11 @@ Int_t TProofMonSenderSQL::SendFileInfo(TDSet *dset, TList *missing,
       values.Add(new TObjString(ent.Data()));
    }
 
-   Info("SendFileInfo", "sending (%d entries)", values.GetSize());
+   PDB(TProofDebug::kMonitoring,1)
+      Info("SendFileInfo", "sending (%d entries)", values.GetSize());
    
    // Now we are ready to send
-   Bool_t rc = fWriter->SendParameters(&values, "bulk,table=proofqueryfiles");
+   Bool_t rc = fWriter->SendParameters(&values, fFilesSendOpts);
    
    // Done
    return (rc ? 0 : -1);
