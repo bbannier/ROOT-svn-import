@@ -1,0 +1,74 @@
+
+   This repository contains the code to reproduce a la ROOT the I/O tests done by S. Khalatyan,
+   University of Chicago.
+
+   The directory structurres contains source code under 'src', 'macros' and 'packages'.
+   Executables, both scripts or binaries, are located under 'bin'. 
+
+   The basic classes making the events are in the PAR package packages/RTEvent.par; this is
+   to facilitate its usage in PROOF.
+
+   The 'macros' directory contains some utility macros to prepare and run the tests.
+
+   0. Setting the environment and the rest
+
+   Once checkout the code, make sure that ROOT is available (ROOTSYS and alike are defined).
+   Then setup the local environment by executing
+
+      $> source bin/setup.sh
+
+   Then build the binary executables:
+
+      $> make
+
+   Now you are ready to start running the tests.
+
+
+   1. Running the write tests 
+
+   Locate a directory path where you can create the test files; the test needs about 20 GB
+   of free space. In the following the directory path for the files is referred to as /data/iotest.
+
+   Start root and load the package:
+
+   $> root -l
+   root [] .L loadPackage.C+
+   root [] loadPackage("RTEvent")
+
+   Load the macro for the write test:
+
+   root [] .L WriteTest.C+
+
+   and run it by passing the directory path as argument:
+
+   root [] WriteTest("/data/iotest")
+
+   The macro will run 8 tests. Each test is labelled with a string formatted as
+
+            <test_tag> = data_<nf>_c<comp_level>_s<split_level>
+
+   where
+             <nf> is the number of files, either 20 or 200
+             <comp_level> is the compression level, either 0 or 1
+             <split_level> is the splitting level, either 1 or 99
+
+   The macro also creates two directories:
+
+        1. 'filelists' where it creates files '<test_tag>.txt' with the full paths
+                       to the files created by the test; the information is in the
+                       format which can be input to bin/releaseCache to clean the
+                       file system cache for these files durign the reading tests
+                       (see below).
+        2. 'results' where it creates a file 'writetest.txt' with the results of the
+                     test (which are also printed on the screen)
+
+
+   2. Running the read tests in a simple ROOT session
+
+
+   3. Running the read tests in PROOF-Lite
+
+
+ 
+
+
