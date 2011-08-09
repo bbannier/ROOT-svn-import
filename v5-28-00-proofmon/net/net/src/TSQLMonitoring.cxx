@@ -181,6 +181,7 @@ Bool_t TSQLMonitoringWriter::SendParameters(TList *values, const char *opt)
       // Continue preparing the string
       sql += TString::Format(" (%s) VALUES ", os->GetName());
       TString head = sql;
+      if (fVerbose) Info("SendParameters", "sending: '%s' (bulk of %d nplets)", head.Data(), values->GetSize() - 1);
       char c = ' ';
       while ((o = nxi())) {
          if ((os = dynamic_cast<TObjString *>(o))) {
