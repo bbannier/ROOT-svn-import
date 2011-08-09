@@ -22,6 +22,7 @@ class DemoBase;
 }
 }
 
+@class PatternPickerView;
 @class ColorPickerView;
 @class SelectionView;
 @class PictView;
@@ -96,6 +97,7 @@ enum ETutorialsDefaults {
    IBOutlet UIView *help;
    
    IBOutlet ColorPickerView *colorPicker;
+   IBOutlet PatternPickerView *fillPatternPicker;
    
    BOOL activeAnimation;
 }

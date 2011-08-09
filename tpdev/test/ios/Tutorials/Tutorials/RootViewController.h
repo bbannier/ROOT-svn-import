@@ -15,7 +15,7 @@
 @class NSTimer;
 
 enum {
-   nROOTDemos = 6
+   nROOTDemos = 5//6
 };
 
 @interface RootViewController : UITableViewController {

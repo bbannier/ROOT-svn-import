@@ -48,10 +48,15 @@ EuropeMapDemo::EuropeMapDemo()
    fPoly->SetContour(100);
 
    TIter nextKey(gDirectory->GetListOfKeys());
+   unsigned nCountries = 0;
    while (TKey *key = (TKey *)nextKey()) {
       TObject *obj = key->ReadObj();
-      if (obj->InheritsFrom("TMultiGraph"))
+      if (obj->InheritsFrom("TMultiGraph")) {
+         ++nCountries;
          fPoly->AddBin(obj);
+         if (nCountries == 15)
+            break;
+      }
    }
 
    fPoly->ChangePartition(100, 100);

@@ -289,7 +289,7 @@
    //Load the editor from xib file.
    [[NSBundle mainBundle] loadNibNamed:@"Editor" owner:self options:nil];
    CGRect editorFrame = editor.frame;
-   editorFrame.origin.x = 150;
+   editorFrame.origin.x = 50;
    editorFrame.origin.y = 100;
    editor.frame = editorFrame;
    
