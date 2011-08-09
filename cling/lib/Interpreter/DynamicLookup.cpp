@@ -6,6 +6,7 @@
 
 #include "DynamicLookup.h"
 
+#include "ASTUtils.h"
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/InterpreterCallbacks.h"
 
@@ -157,15 +158,47 @@ namespace cling {
       m_CurDeclContext(0),
       m_Interpreter(interp)
   {
-    m_NoRange = SourceRange();
-    m_NoSLoc = m_NoRange.getBegin();
-    m_NoELoc =  m_NoRange.getEnd();
   }
 
   void EvaluateTSynthesizer::TransformTopLevelDecl(DeclGroupRef DGR) {
+    // include the DynamicLookup specific builtins
+    if (!m_EvalDecl) {
+      m_Interpreter->processLine("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
+      TemplateDecl* D 
+        = cast_or_null<TemplateDecl>(m_Interpreter->LookupDecl("cling").
+                                     LookupDecl("runtime").
+                                     LookupDecl("internal").
+                                     LookupDecl("EvaluateT").
+                                     getSingleDecl());
+      assert(D && "Cannot find EvaluateT TemplateDecl!\n");
+      
+      m_EvalDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl());
+      assert (m_EvalDecl && "The Eval function not found!");
+    }
+
+    if (m_NoRange.isInvalid()) {
+
+      NamespaceDecl* NSD = Lookup::Namespace(m_Sema, "cling");
+      NSD = Lookup::Namespace(m_Sema, "runtime", NSD);
+      NSD = Lookup::Namespace(m_Sema, "internal", NSD);
+
+      DeclarationName Name = &m_Context->Idents.get("InterpreterGeneratedCodeDiagnosticsMaybeIncorrect");
+      LookupResult R(*m_Sema, Name, SourceLocation(), Sema::LookupOrdinaryName,
+                     Sema::ForRedeclaration);
+    
+      m_Sema->LookupQualifiedName(R, NSD);
+      assert(!R.empty() && "Cannot find PrintValue(...)");
+
+      NamedDecl* ND = R.getFoundDecl();
+      m_NoRange = ND->getSourceRange();
+      m_NoSLoc = m_NoRange.getBegin();
+      m_NoELoc =  m_NoRange.getEnd();
+    }
     for (DeclGroupRef::iterator Di = DGR.begin(), E = DGR.end(); Di != E; ++Di)
       if (ShouldVisit(*Di) && (*Di)->hasBody()) {
         if (FunctionDecl* FD = dyn_cast<FunctionDecl>(*Di)) {
+          // Set the decl context, which is needed by Evaluate.
+          m_CurDeclContext = FD->getDeclContext();
           ASTNodeInfo NewBody = Visit((*Di)->getBody());
           FD->setBody(NewBody.getAsSingleNode());
         }
@@ -592,7 +625,7 @@ namespace cling {
     assert(CXXRD && "llvm::StringRef not found. Are you missing StringRef.h?");
 
     QualType CXXRDTy = m_Context->getTypeDeclType(CXXRD);
-    TypeSourceInfo* TSI = m_Context->CreateTypeSourceInfo(CXXRDTy);
+    TypeSourceInfo* TSI = m_Context->getTrivialTypeSourceInfo(CXXRDTy, m_NoSLoc);
     ParsedType PT = m_Sema->CreateParsedType(CXXRDTy, TSI);
 
     Expr* Result = ConstructConstCharPtrExpr(Val);
@@ -609,7 +642,7 @@ namespace cling {
     const QualType CChar = m_Context->CharTy.withConst();
     llvm::StringRef Value(Val);
 
-    llvm::APInt ArraySize(m_Context->getTypeSize(CChar), Value.size());
+    llvm::APInt ArraySize(m_Context->getTypeSize(CChar), Value.size() + 1);
     const QualType CCArray = m_Context->getConstantArrayType(CChar,
                                                             ArraySize,
                                                             ArrayType::Normal,
@@ -638,21 +671,6 @@ namespace cling {
                                             ASTOwningVector<Expr*>& CallArgs) {
     // Set up new context for the new FunctionDecl
     DeclContext* PrevContext = m_Sema->CurContext;
-
-    // include the DynamicLookup specific builtins
-    if (!m_EvalDecl) {
-      m_Interpreter->processLine("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
-      TemplateDecl* D 
-        = cast_or_null<TemplateDecl>(m_Interpreter->LookupDecl("cling").
-                                     LookupDecl("runtime").
-                                     LookupDecl("internal").
-                                     LookupDecl("EvaluateT").
-                                     getSingleDecl());
-      assert(D && "Cannot find EvaluateT TemplateDecl!\n");
-      
-      m_EvalDecl = dyn_cast<FunctionDecl>(D->getTemplatedDecl());
-      assert (m_EvalDecl && "The Eval function not found!");
-    }
 
     m_Sema->CurContext = m_EvalDecl->getDeclContext();
 
