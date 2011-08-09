@@ -422,7 +422,7 @@ Int_t TProofMonSenderSQL::SendFileInfo(TDSet *dset, TList *missing,
       while ((fi = (TFileInfo *)nxfm())) {
          hmiss.Add(new TObjString(fi->GetCurrentUrl()->GetUrl()));
       }
-      hmiss.Print();
+      PDB(TProofDebug::kMonitoring,2) hmiss.Print();
    }
 
    TList values;
