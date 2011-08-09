@@ -39,7 +39,7 @@ private:
 public:
 
    TProofMonSenderSQL(const char *serv, const char *user, const char *pass,
-                      const char *table,
+                      const char *table = "proof.proofquerylog",
                       const char *dstab = 0, const char *filestab = 0);
    virtual ~TProofMonSenderSQL();
    
