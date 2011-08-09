@@ -47,9 +47,10 @@ namespace cling {
       /// evaluated at runtime.
       template<typename T>
       T EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
-        gCling->enableDynamicLookup();
         Value result(gCling->Evaluate(ExprInfo->getExpr(), DC));
-        gCling->enableDynamicLookup(false);
+        // Check whether the expected return type and the actual return type are
+        // compatible with Sema::CheckAssingmentConstraints or 
+        // ASTContext::typesAreCompatible.
         return result.getAs<T>();
       }
 
@@ -105,9 +106,7 @@ namespace cling {
           m_Type = type;
           std::string ctor("new ");
           ctor += type;
-          ctor += "(\"";
           ctor += ExprInfo->getExpr();
-          ctor += "\")";
           Value res = gCling->Evaluate(ctor.c_str(), DC);
           m_Memory = (void*)res.value.PointerVal;
         }
