@@ -42,6 +42,14 @@
    and run it by passing the directory path as argument:
 
    root [] WriteTests("/data/iotest")
+WriteTest: 'data_20_c0_s99'   rt: 44.877 s ct: 38.420 s (3012968942 bytes, 64.02 MB/s)1 to go    
+WriteTest: 'data_200_c0_s99'   rt: 41.589 s ct: 35.340 s (3028642568 bytes, 69.44 MB/s) 1 to go     
+WriteTest: 'data_20_c0_s1'   rt: 62.366 s ct: 55.020 s (3717142402 bytes, 56.83 MB/s)1 to go    
+WriteTest: 'data_200_c0_s1'   rt: 61.588 s ct: 53.850 s (3727247384 bytes, 57.71 MB/s) 1 to go     
+WriteTest: 'data_20_c1_s99'   rt: 141.346 s ct: 137.480 s (1612933987 bytes, 10.88 MB/s)to go    
+WriteTest: 'data_200_c1_s99'   rt: 126.097 s ct: 121.590 s (1633285269 bytes, 12.35 MB/s) to go     
+WriteTest: 'data_20_c1_s1'   rt: 154.563 s ct: 150.390 s (1712767680 bytes, 10.57 MB/s)to go    
+WriteTest: 'data_200_c1_s1'   rt: 136.832 s ct: 132.330 s (1724637810 bytes, 12.01 MB/s) to go
 
    The macro will run 8 tests. Each test is labelled with a string formatted as
 
