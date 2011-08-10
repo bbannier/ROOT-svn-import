@@ -227,6 +227,7 @@ namespace cling {
     DClient.BeginSourceFile(getCI()->getLangOpts(), &getCI()->getPreprocessor());
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
     DClient.EndSourceFile();
+    m_CI->getDiagnostics().Reset();
 
     m_Interpreter->runStaticInitializersOnce();
 
@@ -300,7 +301,6 @@ namespace cling {
     getCI()->getSema().PerformPendingInstantiations();
 
     DClient.EndSourceFile();
-    m_CI->getDiagnostics().Reset();
 
     return m_CI.get();
   }
