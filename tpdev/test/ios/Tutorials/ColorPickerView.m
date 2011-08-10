@@ -20,6 +20,26 @@ static double inline deg_to_rad(double angle)
    return angle * M_PI / 180.;
 }
 
+static const double predefinedFillColors[16][3] = 
+{
+{1., 1., 1.},
+{0., 0., 0.},
+{251 / 255., 0., 24 / 255.},
+{40 / 255., 253 / 255., 44 / 255.},
+{31 / 255., 29 / 255., 251 / 255.},
+{253 / 255., 254 / 255., 52 / 255.},
+{253 / 255., 29 / 255., 252 / 255.},
+{53 / 255., 1., 254 / 255.},
+{94 / 255., 211 / 255., 90 / 255.},
+{92 / 255., 87 / 255., 214 / 255.},
+{135 / 255., 194 / 255., 164 / 255.},
+{127 / 255., 154 / 255., 207 / 255.},
+{211 / 255., 206 / 255., 138 / 255.},
+{220 / 255., 185 / 255., 138 / 255.},
+{209 / 255., 89 / 255., 86 / 255.},
+{147 / 255., 29 / 255., 251 / 255.}
+};
+
 @implementation ColorPickerView
 
 @synthesize colorWheelImage;
@@ -37,6 +57,7 @@ static double inline deg_to_rad(double angle)
       [timer invalidate];
       self.timer = nil;
       currentSector = nextSector;
+      [selectorView setColor : predefinedFillColors[currentSector]];
    }
   
    [selectorView setAngle : rotationAngle];
@@ -106,14 +127,14 @@ static double inline deg_to_rad(double angle)
    self.colorWheelImage = [UIImage imageNamed:@"color_wheel.png"];
 
    const CGSize size = [colorWheelImage size];
-   
+
    wheelCenter.x = size.width / 2;
    wheelCenter.y = size.height / 2;
-   
+
    rotationAngle = 0.f;
    currentSector = 0;
    nextSector = 0;
-   
+
    //This is the ratio from my "color_wheel.png".
    radius = 0.84 * (size.width / 2);
 
@@ -121,13 +142,14 @@ static double inline deg_to_rad(double angle)
    [self addSubview : selectorView];
    selectorView.opaque = NO;
 
-   [selectorView setCenter : wheelCenter];
+   [selectorView setCenter : wheelCenter andRadius : radius];
    [selectorView setAngle : 0.f];
-   
+   [selectorView setColor : predefinedFillColors[currentSector]];
+
    selectorView.layer.shadowColor = [UIColor blackColor].CGColor;
    selectorView.layer.shadowOpacity = 0.9f;
    selectorView.layer.shadowOffset = CGSizeMake(10.f, 10.f);
-   
+
    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget: self action : @selector(handleTap:)];
    [self addGestureRecognizer : tapGesture];
    [tapGesture release];
