@@ -1187,14 +1187,9 @@ void PadProxy::PaintText(Double_t x, Double_t y, const char *text)
 void PadProxy::PaintTextNDC(Double_t u, Double_t v, const char *text)
 {
    // Paint text in CurrentPad NDC coordinates.
-   if (!gPad->IsBatch())
-      fPainter.DrawTextNDC(u, v, text, TVirtualPadPainter::kClear);
-
-   if (gVirtualPS) {
-      Double_t x = fX1 + u*(fX2 - fX1);
-      Double_t y = fY1 + v*(fY2 - fY1);
-      gVirtualPS->Text(x, y, text);
-   }
+   const Double_t xRange = GetX2() - GetX1();
+   const Double_t yRange = GetY2() - GetY1();
+   fPainter.DrawText(gPad->GetX1() + u * xRange, gPad->GetY1() + v * yRange, text, TVirtualPadPainter::kClear);
 }
 
 //______________________________________________________________________________
