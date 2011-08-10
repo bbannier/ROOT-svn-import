@@ -436,7 +436,7 @@ namespace cling {
                                llvm::StringRef FunctionName) {
     // if we are using the preprocessor
     if (input[0] == '#') {
-      return (m_IncrParser->CompileAsIs(input));
+      return m_IncrParser->CompileAsIs(input) != IncrementalParser::kFailed;
     }
 
     m_IncrParser->CompileLineFromPrompt(input);
@@ -445,7 +445,7 @@ namespace cling {
     //
     RunFunction(FunctionName);
 
-    return 1;
+    return true;
 
   }
   
@@ -472,7 +472,7 @@ namespace cling {
     std::string code;
     code += "#include \"" + filename + "\"\n";
     if (trailcode) code += *trailcode;
-    return (m_IncrParser->CompileAsIs(code));
+    return (m_IncrParser->CompileAsIs(code) != IncrementalParser::kFailed);
   }
   
   bool
@@ -505,41 +505,39 @@ namespace cling {
   }
 
   QualType Interpreter::getQualType(llvm::StringRef type) {
-     std::string className = createUniqueName();
-     QualType Result;
-     CompilerInstance* CI;
+    std::string className = createUniqueName();
+    QualType Result;
 
-     // template<typename T> class dummy{}; 
-     std::string templatedClass = "template<typename T> class " + className + "{};\n";
-     CI  = m_IncrParser->CompileAsIs(templatedClass);
-     Decl *templatedClassDecl = 0;
-     if (CI)
-        templatedClassDecl = m_IncrParser->getLastTopLevelDecl();
+    // template<typename T> class dummy{}; 
+    std::string templatedClass = "template<typename T> class " + className + "{};\n";
 
-     //template <> dummy<DeclContext*> {};
-     std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
-     CI = m_IncrParser->CompileAsIs(explicitSpecialization);
-     if (CI) {
-        if (ClassTemplateSpecializationDecl* D = dyn_cast<ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
-           Result = D->getTemplateArgs()[0].getAsType();
+    Decl *templatedClassDecl = 0;
+    if (m_IncrParser->CompileAsIs(templatedClass) != IncrementalParser::kFailed)
+      templatedClassDecl = m_IncrParser->getLastTopLevelDecl();
 
-           // TODO: Remove the fake Decls
-           // We couldn't remove the template specialization and leave only the
-           // template
-           /*Scope *S = CI->getSema().getScopeForContext(CI->getSema().getASTContext().getTranslationUnitDecl());
-           S->RemoveDecl(D);
-           //D->getDeclContext()->removeDecl(D);
-           if (templatedClassDecl) {
-              templatedClassDecl->getDeclContext()->removeDecl(templatedClassDecl);
-              S->RemoveDecl(templatedClassDecl);
-              }*/
+    //template <> dummy<DeclContext*> {};
+    std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
+    if (m_IncrParser->CompileAsIs(explicitSpecialization) != IncrementalParser::kFailed) {
+      if (ClassTemplateSpecializationDecl* D = dyn_cast<ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
+        Result = D->getTemplateArgs()[0].getAsType();
 
-           return Result;
-        }
-     }
+        // TODO: Remove the fake Decls
+        // We couldn't remove the template specialization and leave only the
+        // template
+        /*Scope *S = CI->getSema().getScopeForContext(CI->getSema().getASTContext().getTranslationUnitDecl());
+          S->RemoveDecl(D);
+          //D->getDeclContext()->removeDecl(D);
+          if (templatedClassDecl) {
+          templatedClassDecl->getDeclContext()->removeDecl(templatedClassDecl);
+          S->RemoveDecl(templatedClassDecl);
+          }*/
 
-     fprintf(stderr, "Cannot find the type:%s\n", type.data());
-     return Result;
+        return Result;
+      }
+    }
+
+    fprintf(stderr, "Cannot find the type:%s\n", type.data());
+    return Result;
   }
 
   Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl, 

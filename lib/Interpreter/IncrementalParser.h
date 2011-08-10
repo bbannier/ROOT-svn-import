@@ -45,14 +45,19 @@ namespace cling {
   
   class IncrementalParser {
   public:
+    enum EParseResult {
+      kSuccess,
+      kSuccessWithWarnings,
+      kFailed
+    };
     IncrementalParser(Interpreter* interp, clang::PragmaNamespace* Pragma,
                       int argc, const char* const *argv, const char* llvmdir);
     ~IncrementalParser();
     void Initialize(const char* startupPCH);
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
-    clang::CompilerInstance* CompileLineFromPrompt(llvm::StringRef input);
-    clang::CompilerInstance* CompileAsIs(llvm::StringRef input);
+    EParseResult CompileLineFromPrompt(llvm::StringRef input);
+    EParseResult CompileAsIs(llvm::StringRef input);
     void Parse(llvm::StringRef input, 
                llvm::SmallVector<clang::DeclGroupRef, 4>& DGRs);
 
@@ -73,8 +78,8 @@ namespace cling {
     bool usingStartupPCH() const { return m_UsingStartupPCH; }
     void writeStartupPCH();
   private:
-    clang::CompilerInstance* Compile(llvm::StringRef input);
-    clang::CompilerInstance* Parse(llvm::StringRef input);
+    EParseResult Compile(llvm::StringRef input);
+    EParseResult Parse(llvm::StringRef input);
     void loadStartupPCH(const char* filename);
 
     Interpreter* m_Interpreter; // our interpreter context

@@ -161,7 +161,7 @@ namespace cling {
     m_StartupPCHGenerator.reset(); // deletes StartupPCHGenerator
   }
 
-  CompilerInstance*
+  IncrementalParser::EParseResult 
   IncrementalParser::CompileLineFromPrompt(llvm::StringRef input) {
     assert(input.str()[0] != '#' 
            && "Preprocessed line! Call CompilePreprocessed instead");
@@ -172,15 +172,15 @@ namespace cling {
 
     p = m_Consumer->EnableConsumer(ChainedConsumer::kDeclExtractor);
     q = m_Consumer->EnableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
-    CompilerInstance* Result = Compile(input);
+    EParseResult Result = Compile(input);
     m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
     m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
 
     return Result;
 
   }
-  
-  CompilerInstance*
+
+  IncrementalParser::EParseResult 
   IncrementalParser::CompileAsIs(llvm::StringRef input) {
     bool p, q;
     m_Consumer->RestorePreviousState(ChainedConsumer::kEvaluateTSynthesizer,
@@ -188,7 +188,7 @@ namespace cling {
 
     p = m_Consumer->DisableConsumer(ChainedConsumer::kDeclExtractor);
     q = m_Consumer->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
-    CompilerInstance* Result = Compile(input);
+    EParseResult Result = Compile(input);
     m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
     m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
 
@@ -209,10 +209,8 @@ namespace cling {
     m_Consumer->EnableConsumer(ChainedConsumer::kCodeGenerator);
   }
 
-
-  CompilerInstance*
-  IncrementalParser::Compile(llvm::StringRef input)
-  {
+  IncrementalParser::EParseResult 
+  IncrementalParser::Compile(llvm::StringRef input) {
     // Just in case when Parse is called, we want to complete the transaction
     // coming from parse and then start new one.
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
@@ -220,21 +218,23 @@ namespace cling {
     // Reset the module builder to clean up global initializers, c'tors, d'tors:
     GetCodeGenerator()->Initialize(getCI()->getASTContext());
 
-    Parse(input);
+    EParseResult Result = Parse(input);
 
     // Check for errors coming from our custom consumers.
     DiagnosticClient& DClient = m_CI->getDiagnosticClient();
     DClient.BeginSourceFile(getCI()->getLangOpts(), &getCI()->getPreprocessor());
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
+
     DClient.EndSourceFile();
     m_CI->getDiagnostics().Reset();
 
     m_Interpreter->runStaticInitializersOnce();
 
-    return m_CI.get();
+    return Result;
   }
 
-  CompilerInstance* IncrementalParser::Parse(llvm::StringRef input) {
+  IncrementalParser::EParseResult 
+  IncrementalParser::Parse(llvm::StringRef input) {
 
     // Add src to the memory buffer, parse it, and add it to
     // the AST. Returns the CompilerInstance (and thus the AST).
@@ -302,10 +302,14 @@ namespace cling {
 
     DClient.EndSourceFile();
 
-    return m_CI.get();
+    Diagnostic& Diag = getCI()->getSema().getDiagnostics();
+    if (Diag.hasErrorOccurred())
+      return IncrementalParser::kFailed;
+    else if (Diag.getNumWarnings())
+      return IncrementalParser::kSuccessWithWarnings;
+
+    return IncrementalParser::kSuccess;
   }
-
-
 
   void IncrementalParser::enableDynamicLookup(bool value) {
     m_DynamicLookupEnabled = value;
