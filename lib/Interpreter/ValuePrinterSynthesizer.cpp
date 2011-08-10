@@ -69,7 +69,8 @@ namespace cling {
   //                                         (ASTContext)Ctx, (Expr*)E, &i);
   Expr* ValuePrinterSynthesizer::SynthesizeVP(Expr* E) {
     QualType QT = E->getType();
-    if (!QT.isNull() && QT->isVoidType())
+    // For now we skip void and function pointer types.
+    if (!QT.isNull() && (QT->isVoidType() || QT->isFunctionType()))
       return 0;
 
     // 1. Call gCling->getValuePrinterStream()
