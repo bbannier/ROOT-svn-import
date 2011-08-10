@@ -6,6 +6,9 @@
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
+#import <CoreGraphics/CGPattern.h>
+#import <CoreGraphics/CGPath.h>
+
 #import <UIKit/UIKit.h>
 
 //
@@ -16,11 +19,10 @@
    unsigned col;
    unsigned row;
 
-   UIImage *glassImage;
+   CGMutablePathRef path; //Shadow path and selection rectangle.
+   CGPatternRef fillPattern; //Current fill pattern.
 }
 
-@property (nonatomic, retain) UIImage *glassImage;
-
-- (void) setCol : (unsigned) col andRow : (unsigned) row;
+- (void) setCol : (unsigned) col andRow : (unsigned) row andPattern : (CGPatternRef) pattern;
 
 @end
