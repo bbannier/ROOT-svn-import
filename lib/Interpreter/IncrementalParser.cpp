@@ -74,8 +74,9 @@ namespace cling {
     DE->Attach(m_Consumer);
     addConsumer(ChainedConsumer::kDeclExtractor, DE);
 
-    addConsumer(ChainedConsumer::kValuePrinterSynthesizer,
-                new ValuePrinterSynthesizer(interp));
+    ValuePrinterSynthesizer* VPS = new ValuePrinterSynthesizer(interp);
+    VPS->Attach(m_Consumer);
+    addConsumer(ChainedConsumer::kValuePrinterSynthesizer, VPS);
     addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
     CodeGenerator* CG = CreateLLVMCodeGen(CI->getDiagnostics(), 
                                           "cling input",
