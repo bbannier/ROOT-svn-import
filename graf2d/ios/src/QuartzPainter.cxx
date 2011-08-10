@@ -144,6 +144,12 @@ void Painter::SetStrokeParameters()const
       return;
    }
 
+   if (fPainterMode == kPaintShadow) {
+      CGContextSetRGBStrokeColor(fCtx, 0.1f, 0.1f, 0.1f, 0.5f);
+      CGContextSetLineWidth(fCtx, 5.f);
+      return;
+   }
+
    if (gVirtualX->GetLineWidth() > 1.f)
       CGContextSetLineWidth(fCtx, gVirtualX->GetLineWidth());
 
@@ -184,7 +190,7 @@ void Painter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    
    //TODO: place stroke parameters in a guard object or save/restore graphics' state.
    //May be, Util::CGStateGuard?
-   if (fPainterMode == kPaintToSelectionBuffer || gVirtualX->GetLineWidth()  > 1.f)
+   if (fPainterMode != kPaintToView || gVirtualX->GetLineWidth()  > 1.f)
       CGContextSetLineWidth(fCtx, 1.f);
 }
 
@@ -206,6 +212,11 @@ void Painter::SetPolygonParameters()const
 
    if (fPainterMode == kPaintSelected) {
       CGContextSetRGBFillColor(fCtx, 1.f, 0.f, 0.4f, 0.3f);
+      return;
+   }
+
+   if (fPainterMode == kPaintShadow) {
+      CGContextSetRGBFillColor(fCtx, 0.1f, 0.1f, 0.1f, 0.5f);
       return;
    }
 
@@ -360,7 +371,7 @@ void Painter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
    if (!gVirtualX->GetFillStyle())
       return DrawPolyLine(n, x, y);
       
-   if (fPainterMode == kPaintSelected)
+   if (fPainterMode == kPaintSelected || fPainterMode == kPaintShadow)
       return FillArea(n, x, y);
       
    if (fPainterMode == kPaintToSelectionBuffer && PolygonHasStipple())
@@ -433,7 +444,7 @@ void Painter::DrawPolyMarker(Int_t, const Float_t *, const Float_t *)
 void Painter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
 {
    //TODO: mode parameter.
-   if (fPainterMode == kPaintToSelectionBuffer || fPainterMode == kPaintSelected)//TEXT is not selectable at the moment, after all, this is TOUGH for small thin letters and tap gesture.
+   if (fPainterMode != kPaintToView)//TEXT is not selectable at the moment, after all, this is TOUGH for small thin letters and tap gesture.
       return;
      
    CTFontRef currentFont = fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());

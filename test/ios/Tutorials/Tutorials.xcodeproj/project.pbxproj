@@ -15,7 +15,6 @@
 		701EC32513D9762200FE395E /* SelectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = 701EC32413D9762200FE395E /* SelectionView.m */; };
 		7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */; };
 		7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */; };
-		7025F5E413F15DBF00AEFD66 /* fill_pattern_select_glass.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5E313F15DBF00AEFD66 /* fill_pattern_select_glass.png */; };
 		7025F5E713F15DEC00AEFD66 /* SelectorRectView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */; };
 		7032144913E689E700908306 /* Editor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144813E689E700908306 /* Editor.xib */; };
 		7032144C13E68F5E00908306 /* HelpView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144B13E68F5E00908306 /* HelpView.xib */; };
@@ -23,7 +22,6 @@
 		7042A62913EC5151005E5D43 /* color_wheel.png in Resources */ = {isa = PBXBuildFile; fileRef = 7042A62813EC5151005E5D43 /* color_wheel.png */; };
 		7059E24513CC394C0007E4E1 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7059E24413CC394C0007E4E1 /* libz.dylib */; };
 		705D185113D0CBB400C47E5F /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 705D185013D0CBB400C47E5F /* QuartzCore.framework */; };
-		706F0FC413EEBEF800220A89 /* color_selector.png in Resources */ = {isa = PBXBuildFile; fileRef = 706F0FC313EEBEF800220A89 /* color_selector.png */; };
 		706F0FC813EEC61C00220A89 /* SelectorArrowView.m in Sources */ = {isa = PBXBuildFile; fileRef = 706F0FC713EEC61C00220A89 /* SelectorArrowView.m */; };
 		707327D413DF126C00E5B12B /* Default-LandscapeRight.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D113DF126C00E5B12B /* Default-LandscapeRight.png */; };
 		707327D513DF126C00E5B12B /* Default-LandscapeLeft.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */; };
@@ -88,9 +86,7 @@
 		701EC32413D9762200FE395E /* SelectionView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.m; sourceTree = "<group>"; };
 		7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternPickerView.h; sourceTree = "<group>"; };
 		7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternPickerView.m; sourceTree = "<group>"; };
-		7025F5DF13F135CF00AEFD66 /* pattern_select_glass.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = pattern_select_glass.png; path = Pictures/pattern_select_glass.png; sourceTree = "<group>"; };
 		7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = pattern_selector_background.png; path = Pictures/pattern_selector_background.png; sourceTree = "<group>"; };
-		7025F5E313F15DBF00AEFD66 /* fill_pattern_select_glass.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = fill_pattern_select_glass.png; path = Pictures/fill_pattern_select_glass.png; sourceTree = "<group>"; };
 		7025F5E513F15DEC00AEFD66 /* SelectorRectView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SelectorRectView.h; sourceTree = "<group>"; };
 		7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SelectorRectView.m; sourceTree = "<group>"; };
 		7032144813E689E700908306 /* Editor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Editor.xib; sourceTree = "<group>"; };
@@ -99,7 +95,6 @@
 		7042A62813EC5151005E5D43 /* color_wheel.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = color_wheel.png; path = Pictures/color_wheel.png; sourceTree = "<group>"; };
 		7059E24413CC394C0007E4E1 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		705D185013D0CBB400C47E5F /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		706F0FC313EEBEF800220A89 /* color_selector.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = color_selector.png; path = Pictures/color_selector.png; sourceTree = "<group>"; };
 		706F0FC613EEC61C00220A89 /* SelectorArrowView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SelectorArrowView.h; sourceTree = "<group>"; };
 		706F0FC713EEC61C00220A89 /* SelectorArrowView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SelectorArrowView.m; sourceTree = "<group>"; };
 		707327D113DF126C00E5B12B /* Default-LandscapeRight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-LandscapeRight.png"; path = "Pictures/Default-LandscapeRight.png"; sourceTree = "<group>"; };
@@ -244,13 +239,10 @@
 		70BA9B3413C5F89100102BC9 = {
 			isa = PBXGroup;
 			children = (
-				7025F5E313F15DBF00AEFD66 /* fill_pattern_select_glass.png */,
 				7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */,
-				7025F5DF13F135CF00AEFD66 /* pattern_select_glass.png */,
 				70D4847F13F057430043110B /* system.plugins-ios */,
 				709A653213EFD53700612A38 /* system.rootrc */,
 				707644AC13EFC5C500C302F9 /* europe_icon.png */,
-				706F0FC313EEBEF800220A89 /* color_selector.png */,
 				7042A62813EC5151005E5D43 /* color_wheel.png */,
 				7007CB3613E9365300312A7C /* libRoot.a */,
 				7007CB3713E9365300312A7C /* libfreetype.a */,
@@ -407,12 +399,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7025F5E413F15DBF00AEFD66 /* fill_pattern_select_glass.png in Resources */,
 				7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */,
 				70D4848013F057430043110B /* system.plugins-ios in Resources */,
 				709A653313EFD53700612A38 /* system.rootrc in Resources */,
 				707644AD13EFC5C500C302F9 /* europe_icon.png in Resources */,
-				706F0FC413EEBEF800220A89 /* color_selector.png in Resources */,
 				7042A62913EC5151005E5D43 /* color_wheel.png in Resources */,
 				70A3D4BE13E84F8200C39E40 /* select_mode.png in Resources */,
 				70D3FB5213E7F605005BADA3 /* single_tap_icon_small.png in Resources */,

@@ -63,8 +63,11 @@
    painter->SetContext(ctx);
    if (showRotation)
       pad->ExRot(ev, px, py);
-   else
+   else {
+      pad->PaintShadowForSelected();
+      CGContextTranslateCTM(ctx, -3.f, -3.f);
       pad->PaintSelected();
+   }
 }
 
 //______________________________________________________________________________

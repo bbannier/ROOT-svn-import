@@ -201,3 +201,9 @@ void PadWrapper::PaintSelected() const
 {
    fPad->PaintSelected();
 }
+
+//______________________________________________________________________________
+void PadWrapper::PaintShadowForSelected() const
+{
+   fPad->PaintShadowForSelected();
+}

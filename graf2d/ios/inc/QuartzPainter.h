@@ -127,6 +127,7 @@ public:
    enum EMode {
       kPaintToSelectionBuffer, //A pad draws the scene into the selection buffer.
       kPaintToView,            //Normal painting (normal colors and styles).
+      kPaintShadow,            //Paint the gray polygon/line under selected object (shadow).
       kPaintSelected           //Only selected object is painted (special style and color).
    };
 
