@@ -4,39 +4,69 @@
 #include "TSystem.h"
 #include "TROOT.h"
 
+// Definition of tests
+//
+//   #           Description
+//
+//   1           no compression, 20 files, 100000 evts/file, splitted
+//   2           no compression, 200 files, 10000 evts/file, splitted
+//   3           no compression, 20 files, 100000 evts/file, unsplitted
+//   4           no compression, 200 files, 10000 evts/file, unsplitted
+//   5           compression, 20 files, 100000 evts/file, splitted
+//   6           compression, 200 files, 10000 evts/file, splitted
+//   7           compression, 20 files, 100000 evts/file, unsplitted
+//   8           compression, 200 files, 10000 evts/file, unsplitted
+
 void WriteTest(const char *basedir = "", Int_t nf = 1, Long64_t ne = 1000,
                Int_t comp_level = 0, Int_t split_level = 99, FILE *fout = 0);
 
-void WriteTests(const char *basedir = "")
+void WriteTests(const char *basedir, Int_t testset = 0)
 {
    if (gSystem->AccessPathName("results")) gSystem->MakeDirectory("results");
-   FILE *fout = fopen("results/writetest.txt", "w");
+   TString fnout = TString::Format("results/writetest-%s.txt", gSystem->HostName());
+   FILE *fout = fopen(fnout.Data(), "a");
 
    TString dir;
-   // Write Test 1: no compression, 20 files, 100000 evts/file, splitted
-   dir.Form("%s/data_20_c0_s99", basedir);
-   WriteTest(dir, 20, 100000, 0, 99, fout);
-   // Write Test 2: no compression, 200 files, 10000 evts/file, splitted
-   dir.Form("%s/data_200_c0_s99", basedir);
-   WriteTest(dir, 200, 10000, 0, 99, fout);
-   // Write Test 3: no compression, 20 files, 100000 evts/file, unsplitted
-   dir.Form("%s/data_20_c0_s1", basedir);
-   WriteTest(dir, 20, 100000, 0, 1, fout);
-   // Write Test 4: no compression, 200 files, 10000 evts/file, unsplitted
-   dir.Form("%s/data_200_c0_s1", basedir);
-   WriteTest(dir, 200, 10000, 0, 1, fout);
-   // Write Test 5: compression, 20 files, 100000 evts/file, splitted
-   dir.Form("%s/data_20_c1_s99", basedir);
-   WriteTest(dir, 20, 100000, 1, 99, fout);
-   // Write Test 6: compression, 200 files, 10000 evts/file, splitted
-   dir.Form("%s/data_200_c1_s99", basedir);
-   WriteTest(dir, 200, 10000, 1, 99, fout);
-   // Write Test 7: compression, 20 files, 100000 evts/file, unsplitted
-   dir.Form("%s/data_20_c1_s1", basedir);
-   WriteTest(dir, 20, 100000, 1, 1, fout);
-   // Write Test 8: compression, 200 files, 10000 evts/file, unsplitted
-   dir.Form("%s/data_200_c1_s1", basedir);
-   WriteTest(dir, 200, 10000, 1, 1, fout);
+   if (testset == 1 || testset == 0) {
+      // Write Test 1: no compression, 20 files, 100000 evts/file, splitted
+      dir.Form("%s/data_20_c0_s99", basedir);
+      WriteTest(dir, 20, 100000, 0, 99, fout);
+   }
+   if (testset == 2 || testset == 0) {
+      // Write Test 2: no compression, 200 files, 10000 evts/file, splitted
+      dir.Form("%s/data_200_c0_s99", basedir);
+      WriteTest(dir, 200, 10000, 0, 99, fout);
+   }
+   if (testset == 3 || testset == 0) {
+      // Write Test 3: no compression, 20 files, 100000 evts/file, unsplitted
+      dir.Form("%s/data_20_c0_s0", basedir);
+      WriteTest(dir, 20, 100000, 0, 0, fout);
+   }
+   if (testset == 4 || testset == 0) {
+      // Write Test 4: no compression, 200 files, 10000 evts/file, unsplitted
+      dir.Form("%s/data_200_c0_s0", basedir);
+      WriteTest(dir, 200, 10000, 0, 0, fout);
+   }
+   if (testset == 5 || testset == 0) {
+      // Write Test 5: compression, 20 files, 100000 evts/file, splitted
+      dir.Form("%s/data_20_c1_s99", basedir);
+      WriteTest(dir, 20, 100000, 1, 99, fout);
+   }
+   if (testset == 6 || testset == 0) {
+      // Write Test 6: compression, 200 files, 10000 evts/file, splitted
+      dir.Form("%s/data_200_c1_s99", basedir);
+      WriteTest(dir, 200, 10000, 1, 99, fout);
+   }
+   if (testset == 7 || testset == 0) {
+      // Write Test 7: compression, 20 files, 100000 evts/file, unsplitted
+      dir.Form("%s/data_20_c1_s0", basedir);
+      WriteTest(dir, 20, 100000, 1, 0, fout);
+   }
+   if (testset == 8 || testset == 0) {
+      // Write Test 8: compression, 200 files, 10000 evts/file, unsplitted
+      dir.Form("%s/data_200_c1_s0", basedir);
+      WriteTest(dir, 200, 10000, 1, 0, fout);
+   }
 
    if (fout) fclose(fout);
 }
