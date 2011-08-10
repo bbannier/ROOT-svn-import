@@ -63,10 +63,8 @@ namespace cling {
       m_Consumer->RestorePreviousState(ChainedConsumer::kASTDumper, print);
     }
     void enableDynamicLookup(bool value = true);
-    bool isDynamicLookupEnabled() { 
-      return m_DynamicLookupEnabled; 
-    }
-    
+    bool isDynamicLookupEnabled() { return m_DynamicLookupEnabled; }
+    clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
     clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
     
     void addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer);
@@ -86,6 +84,7 @@ namespace cling {
     std::vector<llvm::MemoryBuffer*> m_MemoryBuffer; // One buffer for each command line, owner by the source file manager
     clang::FileID m_MBFileID; // file ID of the memory buffer
     ChainedConsumer* m_Consumer; // CI owns it
+    clang::Decl* m_FirstTopLevelDecl; // first top level decl
     clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
     bool m_UsingStartupPCH; // Whether the interpreter is using a PCH file to accelerate its startup
     std::string m_StartupPCHFilename; // Set when writing the PCH

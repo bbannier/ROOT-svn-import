@@ -43,6 +43,7 @@ namespace cling {
     m_Interpreter(interp),
     m_DynamicLookupEnabled(false),
     m_Consumer(0),
+    m_FirstTopLevelDecl(0),
     m_LastTopLevelDecl(0),
     m_UsingStartupPCH(false)
   {
@@ -281,6 +282,9 @@ namespace cling {
       if (ADecl) {
         DeclGroupRef DGR = ADecl.getAsVal<DeclGroupRef>();
         for (DeclGroupRef::iterator i=DGR.begin(); i< DGR.end(); ++i) {
+         if (!m_FirstTopLevelDecl) 	 
+           m_FirstTopLevelDecl = *i;
+
           m_LastTopLevelDecl = *i;
         } 
         m_Consumer->HandleTopLevelDecl(DGR);
