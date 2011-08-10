@@ -8,6 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
+@class PadView;
+
+class PadWrapper;
 
 @interface PadEditorController : UIViewController {
    IBOutlet UIView *colorSelector;
@@ -22,10 +25,17 @@
    IBOutlet UISwitch *logX;
    IBOutlet UISwitch *logY;
    IBOutlet UISwitch *logZ;
+   
+   //
+   PadView *padView;
+   PadWrapper *pad;
 }
 
-- (void) report;
+- (void) setView : (PadView *) view andPad : (PadWrapper *) pad;
 
-- (IBAction) switchActivated : (id) control;
+- (IBAction) tickActivated : (id) control;
+- (IBAction) gridActivated : (id) control;
+
+- (IBAction) hideEditor;
 
 @end

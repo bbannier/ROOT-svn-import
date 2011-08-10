@@ -49,6 +49,21 @@ private:
    std::auto_ptr<ROOT_iOS::Painter> fPainter;
 };
 
+struct PadParametersForEditor {
+   unsigned fillColor;
+   unsigned fillPattern;
+
+   bool tickX;
+   bool tickY;
+
+   bool gridX;
+   bool gridY;
+
+   bool logX;
+   bool logY;
+   bool logZ;
+};
+
 class PadWrapper : private ROOT_iOS::Util::NonCopyable {
 public:
    enum {
@@ -73,6 +88,9 @@ public:
    bool Selected() const;
    void PaintSelected() const;
    void PaintShadowForSelected() const;
+   
+   PadParametersForEditor GetPadParams() const;
+   void SetPadParams(PadParametersForEditor params);
    
 private:
    void InitSelectionBuffer();

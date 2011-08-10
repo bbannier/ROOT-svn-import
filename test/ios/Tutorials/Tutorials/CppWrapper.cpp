@@ -207,3 +207,34 @@ void PadWrapper::PaintShadowForSelected() const
 {
    fPad->PaintShadowForSelected();
 }
+
+//______________________________________________________________________________
+PadParametersForEditor PadWrapper::GetPadParams() const
+{
+   PadParametersForEditor params = {};
+   params.fillColor = fPad->GetFillColor();
+   params.fillPattern = fPad->GetFillStyle();
+   
+   params.tickX = fPad->GetTickx();
+   params.tickY = fPad->GetTicky();
+   
+   params.gridX = fPad->GetGridx();
+   params.gridY = fPad->GetGridy();
+   
+   return params;
+}
+
+//______________________________________________________________________________
+void PadWrapper::SetPadParams(PadParametersForEditor params)
+{
+   fPad->SetFillColor(params.fillColor);
+   fPad->SetFillStyle(params.fillPattern);
+   
+
+   fPad->SetTickx(params.tickX);
+   fPad->SetTicky(params.tickY);
+      
+
+   fPad->SetGridx(params.gridX);
+   fPad->SetGridy(params.gridY);
+}
