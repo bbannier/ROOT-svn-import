@@ -280,8 +280,7 @@ namespace cling {
 
       m_InTransaction = true;
 
-      // Check for errors...
-    
+      // Check for errors...    
       if (m_Sema->getDiagnostics().hasErrorOccurred()) {
         RecoverFromError();
         m_InTransaction = false;
@@ -369,12 +368,21 @@ namespace cling {
       DeclGroupRef& DGR = (*I).D;
 
       for (DeclGroupRef::iterator 
-             D = DGR.begin(), E = DGR.end(); D != E; ++D) {
-        DeclContext* DC = (*D)->getDeclContext();
-        DC->removeDecl(*D);
+             Di = DGR.begin(), E = DGR.end(); Di != E; ++Di) {
+        Decl* D = (*Di)->getCanonicalDecl();
+        DeclContext* DC = D->getDeclContext();
+        // Check if the declaration is template instantiation, which is not in
+        // any DeclContext yet, because it came from 
+        // Sema::PerformPendingInstantiations
+        if (FunctionDecl* FD = dyn_cast<FunctionDecl>(D)) {
+          if (!FD->getTemplateInstantiationPattern())
+            DC->removeDecl(FD);
+        }
+        else
+          DC->removeDecl(D);
         Scope* S = m_Sema->getScopeForContext(DC);
         if (S)
-          S->RemoveDecl(*D);
+          S->RemoveDecl(D);
       }
     }
 
