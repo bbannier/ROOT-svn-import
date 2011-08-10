@@ -43,6 +43,7 @@ static const double sectorAngle = 22.5 * M_PI / 180;
 
    CGContextSetRGBFillColor(ctx, sectorColor[0], sectorColor[1], sectorColor[2], 1.f);
    CGContextSetRGBStrokeColor(ctx, 0.f, 0.f, 0.f, 1.f);
+   CGContextSetLineWidth(ctx, 2.5f);
    
    CGContextBeginPath(ctx);
    CGContextAddPath(ctx, arrowPath);
@@ -87,7 +88,7 @@ static const double sectorAngle = 22.5 * M_PI / 180;
    CGPathMoveToPoint(arrowPath, &transform, 0.f, 0.f);
    CGPathAddLineToPoint(arrowPath, &transform, radius, 0.f);
    CGPathAddLineToPoint(arrowPath, &transform, radius * cos(sectorAngle), -radius * sin(sectorAngle));
-   
+   CGPathAddLineToPoint(arrowPath, &transform, 0.f, 0.f);   
    self.layer.shadowPath = arrowPath;
 }
 

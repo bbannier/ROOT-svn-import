@@ -53,7 +53,7 @@
          CGContextSetFillPattern(ctx, patterns[nCell], &alpha);
 
          //Draw a rect, filled with pattern.
-         const CGRect fillRect = CGRectMake(29.f + col * 80.f, 29.f + row * 26.f, 80.f, 26.f);
+         const CGRect fillRect = CGRectMake(29.f + col * 80.f, 29.f + row * 26.7f, 80.f, 26.7f);
          CGContextFillRect(ctx, fillRect);
       }
       
@@ -83,22 +83,19 @@
 
    if (location.x < 29 || location.x > 269)
       return;
-   if (location.y < 29 || location.y >= 263)
+   if (location.y < 29 || location.y > 269)
       return;
-   
-
-   NSLog(@"%g %g", location.x, location.y);
    
    location.x -= 29;
    location.y -= 29;
    
    const unsigned newCol = location.x / 80;
-   const unsigned newRow = location.y / 26;
+   const unsigned newRow = location.y / 26.7;
    
    if (newCol * 9 + newRow >= ROOT_iOS::GraphicUtils::kPredefinedFillPatterns)
       return;
    
-   [selectorView setCol : newCol andRow : newRow];
+   [selectorView setCol : newCol andRow : newRow andPattern:patterns[newCol * 9 + newRow]];
    [selectorView setNeedsDisplay];
 }
 
@@ -115,12 +112,13 @@
    
    selectorView = [[SelectorRectView alloc] initWithFrame : CGRectMake(0.f, 0.f, 300.f, 300.f)];
    selectorView.opaque = NO;
-   
+
    selectorView.layer.shadowColor = [UIColor blackColor].CGColor;
    selectorView.layer.shadowOpacity = 0.9f;
    selectorView.layer.shadowOffset = CGSizeMake(5.f, 5.f);
-
    
+   [selectorView setCol : 0 andRow : 0 andPattern : patterns[0]];
+
    [self addSubview : selectorView];
    
    UITapGestureRecognizer * tap = [[UITapGestureRecognizer alloc] initWithTarget : self action : @selector(handleTap:)];

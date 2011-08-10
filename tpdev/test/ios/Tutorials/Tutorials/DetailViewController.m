@@ -124,9 +124,9 @@
       [self.view addSubview:selectionViews[i]];
       selectionViews[i].hidden = YES;   
       selectionViews[i].opaque = NO;
-      selectionViews[i].layer.shadowColor = [UIColor blackColor].CGColor;
+   /*   selectionViews[i].layer.shadowColor = [UIColor blackColor].CGColor;
       selectionViews[i].layer.shadowOpacity = 0.9f;
-      selectionViews[i].layer.shadowOffset = CGSizeMake(10.f, 10.f);
+      selectionViews[i].layer.shadowOffset = CGSizeMake(10.f, 10.f);*/
       
       [selectionViews[i] release];
    }
