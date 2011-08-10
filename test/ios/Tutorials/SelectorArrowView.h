@@ -6,6 +6,8 @@
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
+#import <CoreGraphics/CGPath.h>
+
 #import <UIKit/UIKit.h>
 
 //
@@ -14,20 +16,23 @@
 //
 
 @interface SelectorArrowView : UIView {
-   UIImage *arrowImage;
-   
    CGPoint center;
    double angle;
+   double radius;
+   
+   double sectorColor[3];//rgb
+   
+   CGMutablePathRef arrowPath;
 }
-
-@property (nonatomic, retain) UIImage *arrowImage;
 
 - (id) initWithFrame : (CGRect)frame;
 - (void) dealloc;
 
 - (void) drawRect : (CGRect)rect;
 
-- (void) setCenter : (CGPoint) center;
+- (void) setCenter : (CGPoint) center andRadius : (double) radius;
 - (void) setAngle : (double) angle;
+- (void) setColor : (const double *)rgb;
+
 
 @end
