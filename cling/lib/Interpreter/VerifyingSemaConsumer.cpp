@@ -19,6 +19,9 @@ namespace cling {
 
   void VerifyingSemaConsumer::HandleTopLevelDecl(clang::DeclGroupRef DGR) {
     TransformTopLevelDecl(DGR);
+    // Pull all template instantiations in, coming from the consumers.
+    m_Sema->PerformPendingInstantiations();
+
     if (m_Sema->getDiagnostics().hasErrorOccurred()) {
       Notify();
     }
