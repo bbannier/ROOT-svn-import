@@ -22,6 +22,7 @@ class DemoBase;
 }
 }
 
+@class PadEditorController;
 @class PatternPickerView;
 @class ColorPickerView;
 @class SelectionView;
@@ -93,11 +94,16 @@ enum ETutorialsDefaults {
    ETutorialsMode appMode;
    
    IBOutlet UITabBar *tb;
-   IBOutlet UIView *editor;
+//   IBOutlet UIView *editor;
+
+
+
    IBOutlet UIView *help;
+
+   PadEditorController *padEditor;
    
-   IBOutlet ColorPickerView *colorPicker;
-   IBOutlet PatternPickerView *fillPatternPicker;
+//   IBOutlet ColorPickerView *colorPicker;
+//   IBOutlet PatternPickerView *fillPatternPicker;
    
    BOOL activeAnimation;
 }
@@ -106,7 +112,7 @@ enum ETutorialsDefaults {
 @property (nonatomic, retain) IBOutlet UIToolbar *toolbar;
 @property (nonatomic, retain) id detailItem;
 @property (nonatomic, retain) IBOutlet UILabel *detailDescriptionLabel;
-@property (nonatomic, retain) IBOutlet UIView *editor;
+@property (nonatomic, retain) IBOutlet PadEditorController *padEditor;
 @property (nonatomic, retain) IBOutlet UIView *help;
 
 - (void) setActiveDemo:(ROOT_iOS::Demos::DemoBase *)demo;

@@ -9,6 +9,7 @@
 #import <QuartzCore/QuartzCore.h>
 
 #import "DetailViewController.h"
+#import "PadEditorController.h"
 #import "RootViewController.h"
 #import "SelectionView.h"
 #import "CppWrapper.h"
@@ -31,7 +32,7 @@
 @synthesize detailItem=_detailItem;
 @synthesize detailDescriptionLabel=_detailDescriptionLabel;
 @synthesize popoverController=_myPopoverController;
-@synthesize editor;
+@synthesize padEditor;
 @synthesize help;
 
 #pragma mark - Managing the detail item
@@ -287,13 +288,14 @@
    [tapGesture release];
    
    //Load the editor from xib file.
-   [[NSBundle mainBundle] loadNibNamed:@"Editor" owner:self options:nil];
-   CGRect editorFrame = editor.frame;
+   padEditor = [[PadEditorController alloc] initWithNibName : @"PadEditor" bundle : nil];
+
+   CGRect editorFrame = padEditor.view.frame;
    editorFrame.origin.x = 50;
    editorFrame.origin.y = 100;
-   editor.frame = editorFrame;
+   padEditor.view.frame = editorFrame;
    
-   [self.view addSubview:editor];
+   [self.view addSubview : padEditor.view];
    
    //Load a help view from a nib file.
    [[NSBundle mainBundle] loadNibNamed:@"HelpView" owner:self options:nil];
@@ -305,17 +307,17 @@
    [self.view addSubview:help];
          
    //Editor view and help view (created in a IB) are on top.
-   [self.view bringSubviewToFront:editor];
+   [self.view bringSubviewToFront:padEditor.view];
    [self.view bringSubviewToFront:help];
    
    //Shadow for editor.
-   editor.layer.shadowColor = [UIColor blackColor].CGColor;
-   editor.layer.shadowOpacity = 0.7f;
-   UIBezierPath *path = [UIBezierPath bezierPathWithRect:editor.bounds];
-   editor.layer.shadowPath = path.CGPath;
-   editor.layer.shadowOffset = CGSizeMake(3.f, 3.f);
+   padEditor.view.layer.shadowColor = [UIColor blackColor].CGColor;
+   padEditor.view.layer.shadowOpacity = 0.7f;
+   UIBezierPath *path = [UIBezierPath bezierPathWithRect:padEditor.view.bounds];
+   padEditor.view.layer.shadowPath = path.CGPath;
+   padEditor.view.layer.shadowOffset = CGSizeMake(3.f, 3.f);
    
-   editor.hidden = YES;
+   padEditor.view.hidden = YES;
    
    tb.selectedItem = [tb.items objectAtIndex:0];
 
@@ -347,7 +349,7 @@
 - (void)dealloc
 {
    //
-   self.editor = nil;
+   self.padEditor = nil;
    self.help = nil;
    [_myPopoverController release];
    [_toolbar release];
@@ -589,7 +591,7 @@
    // using the ease in/out timing function
    transition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
    // Now to set the type of transition.
-   if (editor.hidden) {
+   if (padEditor.view.hidden) {
       transition.type = kCATransitionMoveIn; //kCATransitionReveal;
       transition.subtype = kCATransitionFromRight;
    } else {
@@ -597,13 +599,13 @@
       transition.subtype = kCATransitionFromLeft;
    }
 
-   editor.hidden = !editor.hidden;
+   padEditor.view.hidden = !padEditor.view.hidden;
    // Finally, to avoid overlapping transitions we assign ourselves as the delegate for the animation and wait for the
    // -animationDidStop:finished: message. When it comes in, we will flag that we are no longer transitioning.
    //transitioning = YES;
    //transition.delegate = self;
    // Next add it to the containerView's layer. This will perform the transition based on how we change its contents.
-   [editor.layer addAnimation:transition forKey:nil];
+   [padEditor.view.layer addAnimation:transition forKey:nil];
 }
 
 //DELEGATES:
