@@ -161,13 +161,6 @@ namespace cling {
     m_StartupPCHGenerator.reset(); // deletes StartupPCHGenerator
   }
 
-  // void IncrementalParser::Parse(llvm::SmallVector<DeclGroupRef&, 8> &DGRs) {
-  //   bool p;
-  //   p = m_Consumer->DisableConsumer(ChainedConsumer::kCodeGenerator);
-    
-    
-  // }
-
   CompilerInstance*
   IncrementalParser::CompileLineFromPrompt(llvm::StringRef input) {
     assert(input.str()[0] != '#' 
