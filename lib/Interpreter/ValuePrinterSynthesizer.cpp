@@ -133,7 +133,6 @@ namespace cling {
     Expr* Result = m_Sema->ActOnCallExpr(S, UnresolvedLookup, NoSLoc, 
                                          move_arg(CallArgs), NoSLoc).take();
     assert(Result && "Cannot create value printer!");
-    m_Sema->PerformPendingInstantiations();
 
     return Result;
   }
