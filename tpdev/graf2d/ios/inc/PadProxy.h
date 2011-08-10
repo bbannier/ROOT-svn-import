@@ -241,7 +241,8 @@ public:
 
    TObject *Selected() const;
 
-   void PaintSelected()const;
+   void PaintShadowForSelected() const;
+   void PaintSelected() const;
    
    void PushTopLevelSelectable(TObject *top);
 

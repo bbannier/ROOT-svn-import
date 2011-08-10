@@ -72,6 +72,7 @@ public:
    
    bool Selected() const;
    void PaintSelected() const;
+   void PaintShadowForSelected() const;
    
 private:
    void InitSelectionBuffer();

@@ -758,9 +758,26 @@ void PadProxy::PaintForSelection()
 }
 
 //______________________________________________________________________________
+void PadProxy::PaintShadowForSelected() const
+{
+   fInHighlightMode = kTRUE;
+
+   fPainter.SetPainterMode(Painter::kPaintShadow);
+
+   if (fParentOfSelected)
+      fParentOfSelected->Paint(fParentOfSelected->GetOption());
+   else if (fSelected)
+      fSelected->Paint(fSelected->GetOption());
+
+   fPainter.SetPainterMode(Painter::kPaintToView);
+   fInHighlightMode = kFALSE;
+}
+
+//______________________________________________________________________________
 void PadProxy::PaintSelected() const
 {
    fInHighlightMode = kTRUE;
+   
    fPainter.SetPainterMode(Painter::kPaintSelected);
    
    if (fParentOfSelected)
@@ -2013,9 +2030,6 @@ void PadProxy::Pick(Int_t px, Int_t py)
    const unsigned green = fSelectionBuffer[offset + 2];
    const unsigned blue = fSelectionBuffer[offset + 3];
 
-   static unsigned k = 0;
-   //std::cout<<k++<<' '<<red<<' '<<green<<' '<<blue<<std::endl;
-
    GraphicUtils::IDEncoder enc(10, 255);
    const UInt_t id = enc.ColorToId(red, green, blue);
    if (id > 0 && id <= fSelectables.size()) {
@@ -2023,13 +2037,9 @@ void PadProxy::Pick(Int_t px, Int_t py)
       //fSelected = fSelectables[id];
       fSelected = found.first;
       fParentOfSelected = found.second;
-      static unsigned i = 0;
-      //std::cout<<i++<<": Selected parent - "<<(fParentOfSelected ? fParentOfSelected->IsA()->GetName() : " 0 ")<<", object - "<<fSelected->IsA()->GetName()<<std::endl;
    } else {
       fSelected = 0;
       fParentOfSelected = 0;
-      static unsigned i = 0;
-      //std::cout<<i++<<":All deselected \n";
    }
 }
 
