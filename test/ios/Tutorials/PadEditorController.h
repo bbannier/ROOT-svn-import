@@ -35,6 +35,7 @@ class PadWrapper;
 
 - (IBAction) tickActivated : (id) control;
 - (IBAction) gridActivated : (id) control;
+- (IBAction) logActivated : (id) control;
 
 - (IBAction) hideEditor;
 

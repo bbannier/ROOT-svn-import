@@ -221,6 +221,10 @@ PadParametersForEditor PadWrapper::GetPadParams() const
    params.gridX = fPad->GetGridx();
    params.gridY = fPad->GetGridy();
    
+   params.logX = fPad->GetLogx();
+   params.logY = fPad->GetLogy();
+   params.logZ = fPad->GetLogz();
+   
    return params;
 }
 
@@ -230,11 +234,13 @@ void PadWrapper::SetPadParams(PadParametersForEditor params)
    fPad->SetFillColor(params.fillColor);
    fPad->SetFillStyle(params.fillPattern);
    
-
    fPad->SetTickx(params.tickX);
    fPad->SetTicky(params.tickY);
-      
 
    fPad->SetGridx(params.gridX);
    fPad->SetGridy(params.gridY);
+   
+   fPad->SetLogx(params.logX);
+   fPad->SetLogy(params.logY);
+   fPad->SetLogz(params.logZ);
 }

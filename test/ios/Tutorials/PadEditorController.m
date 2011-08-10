@@ -17,6 +17,17 @@
 
 - (void) tickActivated : (id) control
 {
+   PadParametersForEditor params = pad->GetPadParams();
+
+   const unsigned on = [control isOn];
+   if (control == tickX) {
+      params.tickX = on;
+   } else if (control == tickY) {
+      params.tickY = on;
+   }
+   
+   pad->SetPadParams(params);
+   [padView setNeedsDisplay];
 }
 
 - (void) gridActivated : (id) control
@@ -30,6 +41,24 @@
       params.gridY = on;
    }
    
+   pad->SetPadParams(params);
+   [padView setNeedsDisplay];
+}
+
+- (IBAction) logActivated : (id) control
+{
+   PadParametersForEditor params = pad->GetPadParams();
+   const unsigned on = [control isOn];
+   
+   if (control == logX)
+      params.logX = on;
+   
+   if (control == logY)
+      params.logY = on;
+      
+   if (control == logZ)
+      params.logZ = on;
+      
    pad->SetPadParams(params);
    [padView setNeedsDisplay];
 }
@@ -60,6 +89,10 @@
    gridY.on = params.gridY;
    tickX.on = params.tickX;
    tickY.on = params.tickY;
+   
+   logX.on = params.logX;
+   logY.on = params.logY;
+   logZ.on = params.logZ;
 }
 
 @end
