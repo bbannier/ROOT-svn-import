@@ -1,5 +1,5 @@
-#ifndef ROOT_EuropeMapDemo
-#define ROOT_EuropeMapDemo
+#ifndef ROOT_H2PolyDemo
+#define ROOT_H2PolyDemo
 
 #include <memory>
 
@@ -10,10 +10,10 @@ class TH2Poly;
 namespace ROOT_iOS {
 namespace Demos {
 
-class EuropeMapDemo : public DemoBase {
+class H2PolyDemo : public DemoBase {
 public:
-   EuropeMapDemo();
-   ~EuropeMapDemo();
+   H2PolyDemo(const char *fileName);
+   ~H2PolyDemo();
    
    //overriders.
    void ResetDemo() {}
@@ -33,8 +33,8 @@ public:
 private:
    std::auto_ptr<TH2Poly> fPoly;
    
-   EuropeMapDemo(const EuropeMapDemo &rhs);
-   EuropeMapDemo &operator = (const EuropeMapDemo &rhs);
+   H2PolyDemo(const H2PolyDemo &rhs);
+   H2PolyDemo &operator = (const H2PolyDemo &rhs);
 };
 
 }

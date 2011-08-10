@@ -53,19 +53,17 @@
    CGContextRef ctx = UIGraphicsGetCurrentContext();
    CGContextClearRect(ctx, rect);
 
-//   if (!showRotation)
-//      CGContextTranslateCTM(ctx, -3.f, -3.f);
-
    CGContextTranslateCTM(ctx, 0.f, rect.size.height);
    CGContextScaleCTM(ctx, 1.f, -1.f);
    
    pad->cd();
    painter->SetContext(ctx);
-   if (showRotation)
+   if (showRotation) {
       pad->ExRot(ev, px, py);
-   else {
+   } else {
+      CGContextTranslateCTM(ctx, 2.5f, 2.5f);
       pad->PaintShadowForSelected();
-      CGContextTranslateCTM(ctx, -3.f, -3.f);
+      CGContextTranslateCTM(ctx, -2.5f, -2.5f);
       pad->PaintSelected();
    }
 }
