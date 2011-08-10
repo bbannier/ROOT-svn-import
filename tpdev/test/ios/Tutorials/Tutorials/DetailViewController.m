@@ -606,6 +606,8 @@
    //transition.delegate = self;
    // Next add it to the containerView's layer. This will perform the transition based on how we change its contents.
    [padEditor.view.layer addAnimation:transition forKey:nil];
+   
+   [padEditor setView : padViews[activeView] andPad : pad];
 }
 
 //DELEGATES:
