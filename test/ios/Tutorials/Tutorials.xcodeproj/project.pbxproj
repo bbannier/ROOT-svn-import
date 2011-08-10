@@ -17,12 +17,13 @@
 		7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */; };
 		7025F5E713F15DEC00AEFD66 /* SelectorRectView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */; };
 		702C4FCA13F2BE2D00C645D8 /* h2poly.root in Resources */ = {isa = PBXBuildFile; fileRef = 702C4FC913F2BE2D00C645D8 /* h2poly.root */; };
-		7032144913E689E700908306 /* Editor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144813E689E700908306 /* Editor.xib */; };
 		7032144C13E68F5E00908306 /* HelpView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144B13E68F5E00908306 /* HelpView.xib */; };
 		7032144E13E6963400908306 /* exclusion_icon_n.png in Resources */ = {isa = PBXBuildFile; fileRef = 7032144D13E6963400908306 /* exclusion_icon_n.png */; };
 		7042A62913EC5151005E5D43 /* color_wheel.png in Resources */ = {isa = PBXBuildFile; fileRef = 7042A62813EC5151005E5D43 /* color_wheel.png */; };
 		7059E24513CC394C0007E4E1 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7059E24413CC394C0007E4E1 /* libz.dylib */; };
 		705D185113D0CBB400C47E5F /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 705D185013D0CBB400C47E5F /* QuartzCore.framework */; };
+		705D593213F2C8FF0014384B /* PadEditorController.m in Sources */ = {isa = PBXBuildFile; fileRef = 705D593113F2C8FF0014384B /* PadEditorController.m */; };
+		705D593613F2D2420014384B /* PadEditor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 705D593513F2D2420014384B /* PadEditor.xib */; };
 		706F0FC813EEC61C00220A89 /* SelectorArrowView.m in Sources */ = {isa = PBXBuildFile; fileRef = 706F0FC713EEC61C00220A89 /* SelectorArrowView.m */; };
 		707327D413DF126C00E5B12B /* Default-LandscapeRight.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D113DF126C00E5B12B /* Default-LandscapeRight.png */; };
 		707327D513DF126C00E5B12B /* Default-LandscapeLeft.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */; };
@@ -91,12 +92,14 @@
 		7025F5E513F15DEC00AEFD66 /* SelectorRectView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SelectorRectView.h; sourceTree = "<group>"; };
 		7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SelectorRectView.m; sourceTree = "<group>"; };
 		702C4FC913F2BE2D00C645D8 /* h2poly.root */ = {isa = PBXFileReference; lastKnownFileType = file; path = h2poly.root; sourceTree = "<group>"; };
-		7032144813E689E700908306 /* Editor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Editor.xib; sourceTree = "<group>"; };
 		7032144B13E68F5E00908306 /* HelpView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HelpView.xib; sourceTree = "<group>"; };
 		7032144D13E6963400908306 /* exclusion_icon_n.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = exclusion_icon_n.png; path = Pictures/exclusion_icon_n.png; sourceTree = "<group>"; };
 		7042A62813EC5151005E5D43 /* color_wheel.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = color_wheel.png; path = Pictures/color_wheel.png; sourceTree = "<group>"; };
 		7059E24413CC394C0007E4E1 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		705D185013D0CBB400C47E5F /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		705D593013F2C8FF0014384B /* PadEditorController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadEditorController.h; sourceTree = "<group>"; };
+		705D593113F2C8FF0014384B /* PadEditorController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PadEditorController.m; sourceTree = "<group>"; };
+		705D593513F2D2420014384B /* PadEditor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; name = PadEditor.xib; path = Tutorials.xcodeproj/PadEditor.xib; sourceTree = "<group>"; };
 		706F0FC613EEC61C00220A89 /* SelectorArrowView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SelectorArrowView.h; sourceTree = "<group>"; };
 		706F0FC713EEC61C00220A89 /* SelectorArrowView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SelectorArrowView.m; sourceTree = "<group>"; };
 		707327D113DF126C00E5B12B /* Default-LandscapeRight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-LandscapeRight.png"; path = "Pictures/Default-LandscapeRight.png"; sourceTree = "<group>"; };
@@ -242,6 +245,9 @@
 		70BA9B3413C5F89100102BC9 = {
 			isa = PBXGroup;
 			children = (
+				705D593513F2D2420014384B /* PadEditor.xib */,
+				705D593013F2C8FF0014384B /* PadEditorController.h */,
+				705D593113F2C8FF0014384B /* PadEditorController.m */,
 				702C4FC913F2BE2D00C645D8 /* h2poly.root */,
 				7098E93E13F2BA470032D660 /* h2poly_icon.png */,
 				7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */,
@@ -320,7 +326,6 @@
 				70BA9B5513C5F89100102BC9 /* MainWindow.xib */,
 				7032144B13E68F5E00908306 /* HelpView.xib */,
 				70BA9B5B13C5F89100102BC9 /* DetailView.xib */,
-				7032144813E689E700908306 /* Editor.xib */,
 				70BA9B4A13C5F89100102BC9 /* Supporting Files */,
 			);
 			path = Tutorials;
@@ -439,8 +444,8 @@
 				70BA9B4E13C5F89100102BC9 /* InfoPlist.strings in Resources */,
 				70BA9B5713C5F89100102BC9 /* MainWindow.xib in Resources */,
 				70BA9B5D13C5F89100102BC9 /* DetailView.xib in Resources */,
-				7032144913E689E700908306 /* Editor.xib in Resources */,
 				7032144C13E68F5E00908306 /* HelpView.xib in Resources */,
+				705D593613F2D2420014384B /* PadEditor.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -472,6 +477,7 @@
 				707644B113EFC6AA00C302F9 /* H2PolyDemo.cxx in Sources */,
 				7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */,
 				7025F5E713F15DEC00AEFD66 /* SelectorRectView.m in Sources */,
+				705D593213F2C8FF0014384B /* PadEditorController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
