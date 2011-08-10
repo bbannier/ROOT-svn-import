@@ -497,7 +497,6 @@ void Painter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mod
 //_________________________________________________________________
 void Painter::DrawTextNDC(Double_t, Double_t, const char *, ETextMode)
 {
- //  throw std::runtime_error("TQuartzPainter::DrawTextNDC is not implemented yet");
 }
 
 //_________________________________________________________________
