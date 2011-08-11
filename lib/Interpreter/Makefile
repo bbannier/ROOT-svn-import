@@ -11,7 +11,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-LEVEL = ../../../..
+CLING_LEVEL = ../..
 LIBRARYNAME := clingInterpreter
 BUILD_ARCHIVE = 1
 CXXFLAGS = -fno-rtti
@@ -24,5 +24,5 @@ CPPFLAGS += -I$(PROJ_SRC_DIR)/../../include -I$(PROJ_SRC_DIR)/../../../clang/inc
 '-DCLING_INSTDIR_INCL="$(DESTDIR)$(PROJ_includedir)"' \
 '-DCLING_SRCDIR_INCL="$(LLVM_SRC_ROOT)/tools/cling/include"'
 
-include $(LEVEL)/Makefile.common
+include $(CLING_LEVEL)/Makefile
 
