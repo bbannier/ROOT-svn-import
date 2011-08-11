@@ -11,6 +11,7 @@
    gROOT->ProcessLine(".L loadPackage.C+");
    gROOT->ProcessLine("loadPackage(\"RTEvent\")");
    gROOT->ProcessLine(".L releaseCache.C+");
+   gROOT->ProcessLine(".L makeDataSet.C+");
    gROOT->ProcessLine(".L WriteTest.C+");
    gROOT->ProcessLine(".L ReadTest.C+");
 }
