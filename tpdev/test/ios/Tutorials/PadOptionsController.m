@@ -8,6 +8,7 @@
 
 #import "PadOptionsController.h"
 #import "PatternCell.h"
+#import "CppWrapper.h"
 #import "ColorCell.h"
 
 static const double predefinedFillColors[16][3] = 
@@ -29,6 +30,13 @@ static const double predefinedFillColors[16][3] =
 {209 / 255., 89 / 255., 86 / 255.},
 {147 / 255., 29 / 255., 251 / 255.}
 };
+
+
+//Color indices in a standard ROOT's color selection control:
+static const unsigned colorIndices[16] = {0, 1, 2, 3,
+                                          4, 5, 6, 7,
+                                          8, 9, 30, 38,
+                                          41, 42, 50, 51};
 
 @implementation PadOptionsController
 
@@ -65,8 +73,6 @@ static const double predefinedFillColors[16][3] =
          fillPatterns[i] = ROOT_iOS::GraphicUtils::gPatternGenerators[i]();
          PatternCell * newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f)];
          [newCell setFillPattern : fillPatterns[i]];
-         if (!(i % 2))
-            [newCell setDarkBackground];
          [patterns_ addObject : newCell];
          [newCell release];
       }
@@ -129,6 +135,72 @@ static const double predefinedFillColors[16][3] =
 	return YES;
 }
 
+#pragma mark - editing.
+
+- (void) setView : (PadView *) view andPad : (PadWrapper *) newPad
+{
+   padView = view;
+   pad = newPad;
+   
+   const PadParametersForEditor params = pad->GetPadParams();
+   gridX_.on = params.gridX;
+   gridY_.on = params.gridY;
+   tickX_.on = params.tickX;
+   tickY_.on = params.tickY;
+   
+   logX_.on = params.logX;
+   logY_.on = params.logY;
+   logZ_.on = params.logZ;
+}
+
+- (IBAction) tickActivated : (id) control
+{
+   PadParametersForEditor params = pad->GetPadParams();
+
+   const unsigned on = [control isOn];
+   if (control == tickX_) {
+      params.tickX = on;
+   } else if (control == tickY_) {
+      params.tickY = on;
+   }
+   
+   pad->SetPadParams(params);
+   [padView setNeedsDisplay];
+}
+
+- (IBAction) gridActivated : (id) control
+{
+   PadParametersForEditor params = pad->GetPadParams();
+
+   const unsigned on = [control isOn];
+   if (control == gridX_) {
+      params.gridX = on;
+   } else if (control == gridY_) {
+      params.gridY = on;
+   }
+   
+   pad->SetPadParams(params);
+   [padView setNeedsDisplay];
+}
+
+- (IBAction) logActivated : (id) control
+{
+   PadParametersForEditor params = pad->GetPadParams();
+   const unsigned on = [control isOn];
+   
+   if (control == logX_)
+      params.logX = on;
+   
+   if (control == logY_)
+      params.logY = on;
+      
+   if (control == logZ_)
+      params.logZ = on;
+      
+   pad->SetPadParams(params);
+   [padView setNeedsDisplay];
+}
+
 #pragma mark - color/pattern picker dataSource.
 - (CGFloat)pickerView:(UIPickerView *)pickerView widthForComponent:(NSInteger)component
 {
@@ -146,7 +218,6 @@ static const double predefinedFillColors[16][3] =
       return [colors_ count];
    else if (pickerView == patternPicker_)
       return [patterns_ count];
-NSLog(@"hmm");
    return 0;
 }
 
@@ -172,7 +243,22 @@ NSLog(@"hmm");
 }
 
 - (void)pickerView:(UIPickerView *)thePickerView didSelectRow:(NSInteger)row inComponent:(NSInteger)component {
-   NSLog(@"Selected Color: %d.", row);
+   
+   PadParametersForEditor params = pad->GetPadParams();
+   
+   if (thePickerView == colorPicker_) {
+      if (row >= 0 && row < 16) {
+         params.fillColor = colorIndices[row];
+         pad->SetPadParams(params);
+         [padView setNeedsDisplay];
+      }
+   } else if (thePickerView == patternPicker_) {
+      if (row >= 0 && row < ROOT_iOS::GraphicUtils::kPredefinedFillPatterns) {
+         params.fillPattern = 3001 + row;
+         pad->SetPadParams(params);
+         [padView setNeedsDisplay];
+      }
+   }
 }
 
 @end

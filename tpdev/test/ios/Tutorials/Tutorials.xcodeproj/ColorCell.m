@@ -13,6 +13,7 @@
 
 @implementation ColorCell
 
+//______________________________________________________________________________
 - (id)initWithFrame:(CGRect)frame
 {
     self = [super initWithFrame:frame];
@@ -23,6 +24,7 @@
     return self;
 }
 
+//______________________________________________________________________________
 - (void) setRGB : (const double *) newRgb
 {
    rgb[0] = newRgb[0];
@@ -30,6 +32,7 @@
    rgb[2] = newRgb[2];
 }
 
+//______________________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();

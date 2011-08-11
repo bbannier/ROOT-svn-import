@@ -19,7 +19,6 @@
 - (void) dealloc;
 
 - (void) setFillPattern : (CGPatternRef) pattern;
-- (void) setDarkBackground;
 - (void) drawRect : (CGRect) rect;
 
 @end
