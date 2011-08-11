@@ -12,6 +12,8 @@
 		7007CB3B13E9365300312A7C /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3713E9365300312A7C /* libfreetype.a */; };
 		7007CB3C13E9365300312A7C /* liblzma.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3813E9365300312A7C /* liblzma.a */; };
 		7007CB3D13E9365300312A7C /* libpcre.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3913E9365300312A7C /* libpcre.a */; };
+		700B010F13F3D40A00F84650 /* PadOptionsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 700B010D13F3D40A00F84650 /* PadOptionsController.m */; };
+		700B011013F3D40A00F84650 /* PadOptionsController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 700B010E13F3D40A00F84650 /* PadOptionsController.xib */; };
 		701EC32513D9762200FE395E /* SelectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = 701EC32413D9762200FE395E /* SelectionView.m */; };
 		7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */; };
 		7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */; };
@@ -84,6 +86,9 @@
 		7007CB3713E9365300312A7C /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = ../../../lib/libfreetype.a; sourceTree = "<group>"; };
 		7007CB3813E9365300312A7C /* liblzma.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblzma.a; path = ../../../lib/liblzma.a; sourceTree = "<group>"; };
 		7007CB3913E9365300312A7C /* libpcre.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpcre.a; path = ../../../lib/libpcre.a; sourceTree = "<group>"; };
+		700B010C13F3D40A00F84650 /* PadOptionsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadOptionsController.h; sourceTree = "<group>"; };
+		700B010D13F3D40A00F84650 /* PadOptionsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PadOptionsController.m; sourceTree = "<group>"; };
+		700B010E13F3D40A00F84650 /* PadOptionsController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadOptionsController.xib; sourceTree = "<group>"; };
 		701EC32313D9762200FE395E /* SelectionView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.h; sourceTree = "<group>"; };
 		701EC32413D9762200FE395E /* SelectionView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.m; sourceTree = "<group>"; };
 		7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternPickerView.h; sourceTree = "<group>"; };
@@ -246,6 +251,9 @@
 			isa = PBXGroup;
 			children = (
 				705D593513F2D2420014384B /* PadEditor.xib */,
+				700B010C13F3D40A00F84650 /* PadOptionsController.h */,
+				700B010D13F3D40A00F84650 /* PadOptionsController.m */,
+				700B010E13F3D40A00F84650 /* PadOptionsController.xib */,
 				705D593013F2C8FF0014384B /* PadEditorController.h */,
 				705D593113F2C8FF0014384B /* PadEditorController.m */,
 				702C4FC913F2BE2D00C645D8 /* h2poly.root */,
@@ -446,6 +454,7 @@
 				70BA9B5D13C5F89100102BC9 /* DetailView.xib in Resources */,
 				7032144C13E68F5E00908306 /* HelpView.xib in Resources */,
 				705D593613F2D2420014384B /* PadEditor.xib in Resources */,
+				700B011013F3D40A00F84650 /* PadOptionsController.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -478,6 +487,7 @@
 				7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */,
 				7025F5E713F15DEC00AEFD66 /* SelectorRectView.m in Sources */,
 				705D593213F2C8FF0014384B /* PadEditorController.m in Sources */,
+				700B010F13F3D40A00F84650 /* PadOptionsController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
