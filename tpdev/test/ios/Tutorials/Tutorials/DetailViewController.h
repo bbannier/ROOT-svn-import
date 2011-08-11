@@ -22,6 +22,7 @@ class DemoBase;
 }
 }
 
+@class PadOptionsController;
 @class PadEditorController;
 @class PatternPickerView;
 @class ColorPickerView;
@@ -105,6 +106,10 @@ enum ETutorialsDefaults {
 //   IBOutlet ColorPickerView *colorPicker;
 //   IBOutlet PatternPickerView *fillPatternPicker;
    
+   PadOptionsController *padController_;
+   
+   UIPopoverController *editorPopover_;
+   
    BOOL activeAnimation;
 }
 
@@ -114,6 +119,8 @@ enum ETutorialsDefaults {
 @property (nonatomic, retain) IBOutlet UILabel *detailDescriptionLabel;
 @property (nonatomic, retain) IBOutlet PadEditorController *padEditor;
 @property (nonatomic, retain) IBOutlet UIView *help;
+@property (nonatomic, retain) PadOptionsController * padController;
+@property (nonatomic, retain) UIPopoverController *editorPopover;
 
 - (void) setActiveDemo:(ROOT_iOS::Demos::DemoBase *)demo;
 - (void) onTimer;
@@ -121,7 +128,7 @@ enum ETutorialsDefaults {
 - (void)animationDidStop:(CAAnimation *)theAnimation finished:(BOOL)flag;
 
 - (IBAction) zoomButtonPressed;
-- (IBAction) editButtonPressed;
+- (IBAction) editButtonPressed : (id) sender;
 - (IBAction) selectButtonPressed;
 
 - (void) showPanHint;

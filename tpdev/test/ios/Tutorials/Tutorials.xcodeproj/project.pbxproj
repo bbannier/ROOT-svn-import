@@ -14,6 +14,7 @@
 		7007CB3D13E9365300312A7C /* libpcre.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3913E9365300312A7C /* libpcre.a */; };
 		700B010F13F3D40A00F84650 /* PadOptionsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 700B010D13F3D40A00F84650 /* PadOptionsController.m */; };
 		700B011013F3D40A00F84650 /* PadOptionsController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 700B010E13F3D40A00F84650 /* PadOptionsController.xib */; };
+		700B013013F3FD6700F84650 /* ColorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 700B012F13F3FD6600F84650 /* ColorCell.m */; };
 		701EC32513D9762200FE395E /* SelectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = 701EC32413D9762200FE395E /* SelectionView.m */; };
 		7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */; };
 		7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */; };
@@ -89,6 +90,8 @@
 		700B010C13F3D40A00F84650 /* PadOptionsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadOptionsController.h; sourceTree = "<group>"; };
 		700B010D13F3D40A00F84650 /* PadOptionsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PadOptionsController.m; sourceTree = "<group>"; };
 		700B010E13F3D40A00F84650 /* PadOptionsController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadOptionsController.xib; sourceTree = "<group>"; };
+		700B012E13F3FD6600F84650 /* ColorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ColorCell.h; path = Tutorials.xcodeproj/ColorCell.h; sourceTree = "<group>"; };
+		700B012F13F3FD6600F84650 /* ColorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ColorCell.m; path = Tutorials.xcodeproj/ColorCell.m; sourceTree = "<group>"; };
 		701EC32313D9762200FE395E /* SelectionView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.h; sourceTree = "<group>"; };
 		701EC32413D9762200FE395E /* SelectionView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.m; sourceTree = "<group>"; };
 		7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternPickerView.h; sourceTree = "<group>"; };
@@ -250,6 +253,8 @@
 		70BA9B3413C5F89100102BC9 = {
 			isa = PBXGroup;
 			children = (
+				700B012E13F3FD6600F84650 /* ColorCell.h */,
+				700B012F13F3FD6600F84650 /* ColorCell.m */,
 				705D593513F2D2420014384B /* PadEditor.xib */,
 				700B010C13F3D40A00F84650 /* PadOptionsController.h */,
 				700B010D13F3D40A00F84650 /* PadOptionsController.m */,
@@ -488,6 +493,7 @@
 				7025F5E713F15DEC00AEFD66 /* SelectorRectView.m in Sources */,
 				705D593213F2C8FF0014384B /* PadEditorController.m in Sources */,
 				700B010F13F3D40A00F84650 /* PadOptionsController.m in Sources */,
+				700B013013F3FD6700F84650 /* ColorCell.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
