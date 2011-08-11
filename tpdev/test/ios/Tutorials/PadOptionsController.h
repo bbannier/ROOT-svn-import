@@ -6,7 +6,10 @@
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
+#import <CoreGraphics/CGPattern.h>
 #import <UIKit/UIKit.h>
+
+#import "FillPatterns.h"
 
 
 @interface PadOptionsController : UIViewController {
@@ -24,6 +27,9 @@
    IBOutlet UIPickerView *patternPicker_;
    
    NSMutableArray *colors_;
+   NSMutableArray *patterns_;
+   
+   CGPatternRef fillPatterns[ROOT_iOS::GraphicUtils::kPredefinedFillPatterns];
 }
 
 @property (nonatomic, retain) UISwitch *tickX;
@@ -36,5 +42,6 @@
 @property (nonatomic, retain) UIPickerView *colorPicker;
 @property (nonatomic, retain) UIPickerView *patternPicker;
 @property (nonatomic, retain) NSMutableArray *colors;
+@property (nonatomic, retain) NSMutableArray *patterns;
 
 @end

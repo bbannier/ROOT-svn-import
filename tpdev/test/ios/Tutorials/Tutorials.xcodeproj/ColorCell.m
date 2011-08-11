@@ -23,6 +23,13 @@
     return self;
 }
 
+- (void) setRGB : (const double *) newRgb
+{
+   rgb[0] = newRgb[0];
+   rgb[1] = newRgb[1];
+   rgb[2] = newRgb[2];
+}
+
 - (void)drawRect:(CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
@@ -33,14 +40,6 @@
 - (void)dealloc
 {
     [super dealloc];
-}
-
-- (void) setColorID : (unsigned) index andRGB : (const double *) newRgb
-{
-   colorIndex = index;
-   rgb[0] = newRgb[0];
-   rgb[1] = newRgb[1];
-   rgb[2] = newRgb[2];
 }
 
 @end

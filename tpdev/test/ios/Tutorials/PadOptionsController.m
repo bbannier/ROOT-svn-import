@@ -7,6 +7,7 @@
 //
 
 #import "PadOptionsController.h"
+#import "PatternCell.h"
 #import "ColorCell.h"
 
 static const double predefinedFillColors[16][3] = 
@@ -41,19 +42,36 @@ static const double predefinedFillColors[16][3] =
 @synthesize colorPicker = colorPicker_;
 @synthesize patternPicker = patternPicker_;
 @synthesize colors = colors_;
+@synthesize patterns = patterns_;
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
    if (self) {
       // Custom initialization
+      
+      //Color views.
       colors_ = [[NSMutableArray alloc] init];
       for (unsigned i = 0; i < 16; ++i) {
          ColorCell * newCell = [[ColorCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f)];
-         [newCell setColorID : i andRGB : predefinedFillColors[i]];
+         [newCell setRGB : predefinedFillColors[i]];
          [colors_ addObject : newCell];
          [newCell release];
       }
+      
+      //Patterns.
+      patterns_ = [[NSMutableArray alloc] init];
+      for (unsigned i = 0; i < ROOT_iOS::GraphicUtils::kPredefinedFillPatterns; ++i) {
+         fillPatterns[i] = ROOT_iOS::GraphicUtils::gPatternGenerators[i]();
+         PatternCell * newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f)];
+         [newCell setFillPattern : fillPatterns[i]];
+         if (!(i % 2))
+            [newCell setDarkBackground];
+         [patterns_ addObject : newCell];
+         [newCell release];
+      }
+      
+      //Pattern views.
    }
    
    return self;
@@ -74,7 +92,11 @@ static const double predefinedFillColors[16][3] =
    self.colorPicker = nil;
    self.patternPicker = nil;
    
+   for (unsigned i = 0; i < ROOT_iOS::GraphicUtils::kPredefinedFillPatterns; ++i)
+      CGPatternRelease(fillPatterns[i]);
+   
    [colors_ release];
+   [patterns_ release];
    
    [super dealloc];
 }
@@ -107,20 +129,14 @@ static const double predefinedFillColors[16][3] =
 	return YES;
 }
 
-#pragma mark - color picker delegate.
+#pragma mark - color/pattern picker dataSource.
 - (CGFloat)pickerView:(UIPickerView *)pickerView widthForComponent:(NSInteger)component
 {
-/*   if (pickerView == colorPicker_)
-      return 80;
-   }
-   
-	return [CustomView viewWidth];*/
    return 80.;
 }
 
 - (CGFloat)pickerView:(UIPickerView *)pickerView rowHeightForComponent:(NSInteger)component
 {
-	//return [CustomView viewHeight];
    return 44.;
 }
 
@@ -128,7 +144,9 @@ static const double predefinedFillColors[16][3] =
 {
    if (pickerView == colorPicker_)
       return [colors_ count];
-   
+   else if (pickerView == patternPicker_)
+      return [patterns_ count];
+NSLog(@"hmm");
    return 0;
 }
 
@@ -145,9 +163,10 @@ static const double predefinedFillColors[16][3] =
 - (UIView *)pickerView:(UIPickerView *)pickerView viewForRow:(NSInteger)row
 		  forComponent:(NSInteger)component reusingView:(UIView *)view
 {
-   if (pickerView == colorPicker_) {
+   if (pickerView == colorPicker_)
       return [colors_ objectAtIndex : row];
-   }
+   else if (pickerView == patternPicker_)
+      return [patterns_ objectAtIndex : row];
 
    return 0;
 }
