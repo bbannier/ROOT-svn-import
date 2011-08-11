@@ -23,14 +23,10 @@ class DemoBase;
 }
 
 @class PadOptionsController;
-@class PadEditorController;
-@class PatternPickerView;
-@class ColorPickerView;
 @class SelectionView;
 @class PictView;
 @class HintView;
 @class PadView;
-
 
 class FontManagerWrapper;
 class PainterWrapper;
@@ -100,11 +96,6 @@ enum ETutorialsDefaults {
 
 
    IBOutlet UIView *help;
-
-   PadEditorController *padEditor;
-   
-//   IBOutlet ColorPickerView *colorPicker;
-//   IBOutlet PatternPickerView *fillPatternPicker;
    
    PadOptionsController *padController_;
    
@@ -117,7 +108,6 @@ enum ETutorialsDefaults {
 @property (nonatomic, retain) IBOutlet UIToolbar *toolbar;
 @property (nonatomic, retain) id detailItem;
 @property (nonatomic, retain) IBOutlet UILabel *detailDescriptionLabel;
-@property (nonatomic, retain) IBOutlet PadEditorController *padEditor;
 @property (nonatomic, retain) IBOutlet UIView *help;
 @property (nonatomic, retain) PadOptionsController * padController;
 @property (nonatomic, retain) UIPopoverController *editorPopover;

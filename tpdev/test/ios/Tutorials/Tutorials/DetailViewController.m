@@ -10,7 +10,6 @@
 
 #import "PadOptionsController.h"
 #import "DetailViewController.h"
-#import "PadEditorController.h"
 #import "RootViewController.h"
 #import "SelectionView.h"
 #import "CppWrapper.h"
@@ -33,7 +32,6 @@
 @synthesize detailItem=_detailItem;
 @synthesize detailDescriptionLabel=_detailDescriptionLabel;
 @synthesize popoverController=_myPopoverController;
-@synthesize padEditor;
 @synthesize help;
 @synthesize padController = padController_;
 @synthesize editorPopover = editorPopover_;
@@ -289,17 +287,7 @@
    [parentView addGestureRecognizer:tapGesture];
    tapGesture.numberOfTapsRequired = 2;
    [tapGesture release];
-   
-   //Load the editor from xib file.
-   padEditor = [[PadEditorController alloc] initWithNibName : @"PadEditor" bundle : nil];
-
-   CGRect editorFrame = padEditor.view.frame;
-   editorFrame.origin.x = 50;
-   editorFrame.origin.y = 100;
-   padEditor.view.frame = editorFrame;
-   
-   [self.view addSubview : padEditor.view];
-   
+      
    //Load a help view from a nib file.
    [[NSBundle mainBundle] loadNibNamed:@"HelpView" owner:self options:nil];
    CGRect helpFrame = help.frame;
@@ -310,18 +298,9 @@
    [self.view addSubview:help];
          
    //Editor view and help view (created in a IB) are on top.
-   [self.view bringSubviewToFront:padEditor.view];
    [self.view bringSubviewToFront:help];
    
-   //Shadow for editor.
-   padEditor.view.layer.shadowColor = [UIColor blackColor].CGColor;
-   padEditor.view.layer.shadowOpacity = 0.7f;
-   UIBezierPath *path = [UIBezierPath bezierPathWithRect:padEditor.view.bounds];
-   padEditor.view.layer.shadowPath = path.CGPath;
-   padEditor.view.layer.shadowOffset = CGSizeMake(3.f, 3.f);
-   
-   padEditor.view.hidden = YES;
-   
+   //Shadow for editor.   
    tb.selectedItem = [tb.items objectAtIndex:0];
 
    [super viewDidLoad];
@@ -352,7 +331,6 @@
 - (void)dealloc
 {
    //
-   self.padEditor = nil;
    self.padController = nil;
    self.editorPopover = nil;
    self.help = nil;
