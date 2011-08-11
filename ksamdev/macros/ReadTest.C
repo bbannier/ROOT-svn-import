@@ -94,7 +94,7 @@ void ReadTests(const char *basedir, Bool_t dowarm = kFALSE, Bool_t rebuild = kFA
 
    // Basic ROOT cold read
    gROOT->ProcessLine(TString::Format("releaseCache(\"%s\")", basedir));
-   ReadTest(basedir, kFALSE, rebuild);
+   ReadTest(basedir, kFALSE, 0, rebuild);
    // Basic ROOT warm read
    if (dowarm) ReadTest(basedir, kTRUE);
    // Basic PROOF cold reads
