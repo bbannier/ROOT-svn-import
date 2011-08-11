@@ -22,6 +22,8 @@
    
    IBOutlet UIPickerView *colorPicker_;
    IBOutlet UIPickerView *patternPicker_;
+   
+   NSMutableArray *colors_;
 }
 
 @property (nonatomic, retain) UISwitch *tickX;
@@ -33,5 +35,6 @@
 @property (nonatomic, retain) UISwitch *logZ;
 @property (nonatomic, retain) UIPickerView *colorPicker;
 @property (nonatomic, retain) UIPickerView *patternPicker;
+@property (nonatomic, retain) NSMutableArray *colors;
 
 @end
