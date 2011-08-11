@@ -49,6 +49,7 @@
 #include "TVirtualPadPainter.h"
 
 #include "GraphicUtils.h"
+#include "FillPatterns.h"
 #include "PadProxy.h"
 
 namespace ROOT_iOS {
@@ -475,7 +476,7 @@ void PadProxy::SetFillStyle(Style_t fillStyle)
    // Overrride TAttFill::FillStyle for TPad because we want to handle style=0
    // as style 4000.
 
-   if (fillStyle)
+   if (!fillStyle)
       fillStyle = 4000;
 
    TAttFill::SetFillStyle(fillStyle);

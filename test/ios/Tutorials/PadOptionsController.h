@@ -11,6 +11,10 @@
 
 #import "FillPatterns.h"
 
+@class PadView;
+
+class PadWrapper;
+
 
 @interface PadOptionsController : UIViewController {
    IBOutlet UISwitch *tickX_;
@@ -30,6 +34,9 @@
    NSMutableArray *patterns_;
    
    CGPatternRef fillPatterns[ROOT_iOS::GraphicUtils::kPredefinedFillPatterns];
+   
+   PadWrapper *pad;
+   PadView *padView;
 }
 
 @property (nonatomic, retain) UISwitch *tickX;
@@ -43,5 +50,12 @@
 @property (nonatomic, retain) UIPickerView *patternPicker;
 @property (nonatomic, retain) NSMutableArray *colors;
 @property (nonatomic, retain) NSMutableArray *patterns;
+
+- (void) setView : (PadView *) view andPad : (PadWrapper *) pad;
+
+
+- (IBAction) tickActivated : (id) control;
+- (IBAction) gridActivated : (id) control;
+- (IBAction) logActivated : (id) control;
 
 @end

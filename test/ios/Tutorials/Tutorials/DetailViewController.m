@@ -589,41 +589,23 @@
 //_________________________________________________________________
 - (IBAction) editButtonPressed : (id) sender
 {
-   // First create a CATransition object to describe the transition
- /*  CATransition *transition = [CATransition animation];
-   // Animate over 3/4 of a second
-   transition.duration = 0.75;
-   // using the ease in/out timing function
-   transition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-   // Now to set the type of transition.
-   if (padEditor.view.hidden) {
-      transition.type = kCATransitionMoveIn; //kCATransitionReveal;
-      transition.subtype = kCATransitionFromRight;
+   if (editorPopover_ && editorPopover_.popoverVisible) {
+      [editorPopover_ dismissPopoverAnimated : YES];
+      return;
    } else {
-      transition.type = kCATransitionPush;
-      transition.subtype = kCATransitionFromLeft;
+      if (!padController_) {
+         self.padController = [[PadOptionsController alloc] initWithNibName:@"PadOptionsController" bundle : nil];
+         self.padController.contentSizeForViewInPopover = CGSizeMake(250.f, 650.f);
+      }
+
+      if (!editorPopover_) {
+         self.editorPopover = [[UIPopoverController alloc] initWithContentViewController : padController_];
+         self.editorPopover.popoverContentSize = CGSizeMake(250.f, 650.f);
+      }
+
+      [self.editorPopover presentPopoverFromBarButtonItem : sender permittedArrowDirections:UIPopoverArrowDirectionAny animated : YES];
+      [self.padController setView : padViews[activeView] andPad : pad];
    }
-
-   padEditor.view.hidden = !padEditor.view.hidden;
-   // Finally, to avoid overlapping transitions we assign ourselves as the delegate for the animation and wait for the
-   // -animationDidStop:finished: message. When it comes in, we will flag that we are no longer transitioning.
-   //transitioning = YES;
-   //transition.delegate = self;
-   // Next add it to the containerView's layer. This will perform the transition based on how we change its contents.
-   [padEditor.view.layer addAnimation:transition forKey:nil];
-   
-   [padEditor setView : padViews[activeView] andPad : pad];*/
-    if (!padController_) {
-      self.padController = [[PadOptionsController alloc] initWithNibName:@"PadOptionsController" bundle : nil];
-      self.padController.contentSizeForViewInPopover = CGSizeMake(250.f, 650.f);
-
-      
-
-   }
-
-   self.editorPopover = [[UIPopoverController alloc] initWithContentViewController : padController_];
-   self.editorPopover.popoverContentSize = CGSizeMake(250.f, 650.f);
-   [self.editorPopover presentPopoverFromBarButtonItem : sender permittedArrowDirections:UIPopoverArrowDirectionAny animated : YES];
 }
 
 //DELEGATES:
