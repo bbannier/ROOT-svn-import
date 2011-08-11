@@ -17,18 +17,13 @@
 		700B013013F3FD6700F84650 /* ColorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 700B012F13F3FD6600F84650 /* ColorCell.m */; };
 		700B013313F4051000F84650 /* PatternCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 700B013213F4051000F84650 /* PatternCell.m */; };
 		701EC32513D9762200FE395E /* SelectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = 701EC32413D9762200FE395E /* SelectionView.m */; };
-		7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */; };
 		7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */; };
-		7025F5E713F15DEC00AEFD66 /* SelectorRectView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */; };
 		702C4FCA13F2BE2D00C645D8 /* h2poly.root in Resources */ = {isa = PBXBuildFile; fileRef = 702C4FC913F2BE2D00C645D8 /* h2poly.root */; };
 		7032144C13E68F5E00908306 /* HelpView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144B13E68F5E00908306 /* HelpView.xib */; };
 		7032144E13E6963400908306 /* exclusion_icon_n.png in Resources */ = {isa = PBXBuildFile; fileRef = 7032144D13E6963400908306 /* exclusion_icon_n.png */; };
-		7042A62913EC5151005E5D43 /* color_wheel.png in Resources */ = {isa = PBXBuildFile; fileRef = 7042A62813EC5151005E5D43 /* color_wheel.png */; };
 		7059E24513CC394C0007E4E1 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7059E24413CC394C0007E4E1 /* libz.dylib */; };
 		705D185113D0CBB400C47E5F /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 705D185013D0CBB400C47E5F /* QuartzCore.framework */; };
-		705D593213F2C8FF0014384B /* PadEditorController.m in Sources */ = {isa = PBXBuildFile; fileRef = 705D593113F2C8FF0014384B /* PadEditorController.m */; };
 		705D593613F2D2420014384B /* PadEditor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 705D593513F2D2420014384B /* PadEditor.xib */; };
-		706F0FC813EEC61C00220A89 /* SelectorArrowView.m in Sources */ = {isa = PBXBuildFile; fileRef = 706F0FC713EEC61C00220A89 /* SelectorArrowView.m */; };
 		707327D413DF126C00E5B12B /* Default-LandscapeRight.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D113DF126C00E5B12B /* Default-LandscapeRight.png */; };
 		707327D513DF126C00E5B12B /* Default-LandscapeLeft.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */; };
 		707327D613DF126C00E5B12B /* Default-Landscape.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D313DF126C00E5B12B /* Default-Landscape.png */; };
@@ -38,7 +33,6 @@
 		707644B113EFC6AA00C302F9 /* H2PolyDemo.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 707644AF13EFC6AA00C302F9 /* H2PolyDemo.cxx */; };
 		707EECB713DF3FC100873F81 /* no_gesture_icon_small.png in Resources */ = {isa = PBXBuildFile; fileRef = 707EECB513DF3FC100873F81 /* no_gesture_icon_small.png */; };
 		707EECB813DF3FC100873F81 /* no_gesture_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 707EECB613DF3FC100873F81 /* no_gesture_icon.png */; };
-		7080329513EE802A00FC1D11 /* ColorPickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7080329413EE802A00FC1D11 /* ColorPickerView.m */; };
 		7085572013C73AD900022713 /* PadView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7085571F13C73AD900022713 /* PadView.m */; };
 		7098E93F13F2BA470032D660 /* h2poly_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 7098E93E13F2BA470032D660 /* h2poly_icon.png */; };
 		709A0BEC13CAD311009E4B74 /* CppWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 709A0BEA13CAD311009E4B74 /* CppWrapper.cpp */; };
@@ -97,22 +91,13 @@
 		700B013213F4051000F84650 /* PatternCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PatternCell.m; sourceTree = "<group>"; };
 		701EC32313D9762200FE395E /* SelectionView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.h; sourceTree = "<group>"; };
 		701EC32413D9762200FE395E /* SelectionView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.m; sourceTree = "<group>"; };
-		7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternPickerView.h; sourceTree = "<group>"; };
-		7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternPickerView.m; sourceTree = "<group>"; };
 		7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = pattern_selector_background.png; path = Pictures/pattern_selector_background.png; sourceTree = "<group>"; };
-		7025F5E513F15DEC00AEFD66 /* SelectorRectView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SelectorRectView.h; sourceTree = "<group>"; };
-		7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SelectorRectView.m; sourceTree = "<group>"; };
 		702C4FC913F2BE2D00C645D8 /* h2poly.root */ = {isa = PBXFileReference; lastKnownFileType = file; path = h2poly.root; sourceTree = "<group>"; };
 		7032144B13E68F5E00908306 /* HelpView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HelpView.xib; sourceTree = "<group>"; };
 		7032144D13E6963400908306 /* exclusion_icon_n.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = exclusion_icon_n.png; path = Pictures/exclusion_icon_n.png; sourceTree = "<group>"; };
-		7042A62813EC5151005E5D43 /* color_wheel.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = color_wheel.png; path = Pictures/color_wheel.png; sourceTree = "<group>"; };
 		7059E24413CC394C0007E4E1 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		705D185013D0CBB400C47E5F /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		705D593013F2C8FF0014384B /* PadEditorController.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadEditorController.h; sourceTree = "<group>"; };
-		705D593113F2C8FF0014384B /* PadEditorController.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadEditorController.m; sourceTree = "<group>"; };
 		705D593513F2D2420014384B /* PadEditor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; name = PadEditor.xib; path = Tutorials.xcodeproj/PadEditor.xib; sourceTree = "<group>"; };
-		706F0FC613EEC61C00220A89 /* SelectorArrowView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SelectorArrowView.h; sourceTree = "<group>"; };
-		706F0FC713EEC61C00220A89 /* SelectorArrowView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SelectorArrowView.m; sourceTree = "<group>"; };
 		707327D113DF126C00E5B12B /* Default-LandscapeRight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-LandscapeRight.png"; path = "Pictures/Default-LandscapeRight.png"; sourceTree = "<group>"; };
 		707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-LandscapeLeft.png"; path = "Pictures/Default-LandscapeLeft.png"; sourceTree = "<group>"; };
 		707327D313DF126C00E5B12B /* Default-Landscape.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-Landscape.png"; path = "Pictures/Default-Landscape.png"; sourceTree = "<group>"; };
@@ -120,13 +105,10 @@
 		7074577C13E80A8700416CF3 /* ObjCWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ObjCWrapper.m; sourceTree = "<group>"; };
 		7074C90213DF0F99000CABF5 /* Default-PortraitUpsideDown.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-PortraitUpsideDown.png"; path = "Pictures/Default-PortraitUpsideDown.png"; sourceTree = "<group>"; };
 		7074C90313DF0F99000CABF5 /* Default-Portrait.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-Portrait.png"; path = "Pictures/Default-Portrait.png"; sourceTree = "<group>"; };
-		707644AC13EFC5C500C302F9 /* europe_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = europe_icon.png; path = Pictures/europe_icon.png; sourceTree = "<group>"; };
 		707644AF13EFC6AA00C302F9 /* H2PolyDemo.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = H2PolyDemo.cxx; sourceTree = "<group>"; };
 		707644B013EFC6AA00C302F9 /* H2PolyDemo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = H2PolyDemo.h; sourceTree = "<group>"; };
 		707EECB513DF3FC100873F81 /* no_gesture_icon_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = no_gesture_icon_small.png; path = Pictures/no_gesture_icon_small.png; sourceTree = "<group>"; };
 		707EECB613DF3FC100873F81 /* no_gesture_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = no_gesture_icon.png; path = Pictures/no_gesture_icon.png; sourceTree = "<group>"; };
-		7080329313EE802A00FC1D11 /* ColorPickerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorPickerView.h; sourceTree = "<group>"; };
-		7080329413EE802A00FC1D11 /* ColorPickerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorPickerView.m; sourceTree = "<group>"; };
 		7085571E13C73AD900022713 /* PadView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadView.h; sourceTree = "<group>"; };
 		7085571F13C73AD900022713 /* PadView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadView.m; sourceTree = "<group>"; };
 		7098E93E13F2BA470032D660 /* h2poly_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = h2poly_icon.png; path = Pictures/h2poly_icon.png; sourceTree = "<group>"; };
@@ -224,8 +206,6 @@
 		7099E64713CB2BF000D31765 /* Objective C code */ = {
 			isa = PBXGroup;
 			children = (
-				7080329313EE802A00FC1D11 /* ColorPickerView.h */,
-				7080329413EE802A00FC1D11 /* ColorPickerView.m */,
 				70D645FB13D3243A00CE9FB1 /* PictView.h */,
 				70D645FC13D3243A00CE9FB1 /* PictView.m */,
 				7085571F13C73AD900022713 /* PadView.m */,
@@ -243,12 +223,6 @@
 				70C8237B13CF790E00F884FF /* HintView.m */,
 				701EC32313D9762200FE395E /* SelectionView.h */,
 				701EC32413D9762200FE395E /* SelectionView.m */,
-				706F0FC613EEC61C00220A89 /* SelectorArrowView.h */,
-				706F0FC713EEC61C00220A89 /* SelectorArrowView.m */,
-				7025F5DC13F12DAD00AEFD66 /* PatternPickerView.h */,
-				7025F5DD13F12DAD00AEFD66 /* PatternPickerView.m */,
-				7025F5E513F15DEC00AEFD66 /* SelectorRectView.h */,
-				7025F5E613F15DEC00AEFD66 /* SelectorRectView.m */,
 			);
 			name = "Objective C code";
 			sourceTree = "<group>";
@@ -264,15 +238,11 @@
 				700B010C13F3D40A00F84650 /* PadOptionsController.h */,
 				700B010D13F3D40A00F84650 /* PadOptionsController.m */,
 				700B010E13F3D40A00F84650 /* PadOptionsController.xib */,
-				705D593013F2C8FF0014384B /* PadEditorController.h */,
-				705D593113F2C8FF0014384B /* PadEditorController.m */,
 				702C4FC913F2BE2D00C645D8 /* h2poly.root */,
 				7098E93E13F2BA470032D660 /* h2poly_icon.png */,
 				7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */,
 				70D4847F13F057430043110B /* system.plugins-ios */,
 				709A653213EFD53700612A38 /* system.rootrc */,
-				707644AC13EFC5C500C302F9 /* europe_icon.png */,
-				7042A62813EC5151005E5D43 /* color_wheel.png */,
 				7007CB3613E9365300312A7C /* libRoot.a */,
 				7007CB3713E9365300312A7C /* libfreetype.a */,
 				7007CB3813E9365300312A7C /* liblzma.a */,
@@ -432,7 +402,6 @@
 				7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */,
 				70D4848013F057430043110B /* system.plugins-ios in Resources */,
 				709A653313EFD53700612A38 /* system.rootrc in Resources */,
-				7042A62913EC5151005E5D43 /* color_wheel.png in Resources */,
 				70A3D4BE13E84F8200C39E40 /* select_mode.png in Resources */,
 				70D3FB5213E7F605005BADA3 /* single_tap_icon_small.png in Resources */,
 				70D3FB5313E7F605005BADA3 /* single_tap_icon.png in Resources */,
@@ -491,12 +460,7 @@
 				70DF816413DDBA6400AD2F4D /* PolarGraphDemo.cxx in Sources */,
 				70DF816513DDBA6400AD2F4D /* SurfaceDemo.cxx in Sources */,
 				7074577D13E80A8700416CF3 /* ObjCWrapper.m in Sources */,
-				7080329513EE802A00FC1D11 /* ColorPickerView.m in Sources */,
-				706F0FC813EEC61C00220A89 /* SelectorArrowView.m in Sources */,
 				707644B113EFC6AA00C302F9 /* H2PolyDemo.cxx in Sources */,
-				7025F5DE13F12DAD00AEFD66 /* PatternPickerView.m in Sources */,
-				7025F5E713F15DEC00AEFD66 /* SelectorRectView.m in Sources */,
-				705D593213F2C8FF0014384B /* PadEditorController.m in Sources */,
 				700B010F13F3D40A00F84650 /* PadOptionsController.m in Sources */,
 				700B013013F3FD6700F84650 /* ColorCell.m in Sources */,
 				700B013313F4051000F84650 /* PatternCell.m in Sources */,
