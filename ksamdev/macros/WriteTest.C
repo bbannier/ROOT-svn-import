@@ -22,8 +22,12 @@ void WriteTest(const char *basedir = "", Int_t nf = 1, Long64_t ne = 1000,
 
 void WriteTests(const char *basedir, Int_t testset = 0)
 {
-   if (gSystem->AccessPathName("results")) gSystem->MakeDirectory("results");
-   TString fnout = TString::Format("results/writetest-%s.txt", gSystem->HostName());
+   TString resdir(gROOT->GetVersion());
+   resdir.ReplaceAll("/", "-"); resdir.ReplaceAll(".", "-");
+   if (TString(gSystem->GetMakeExe()).Contains(gSystem->GetFlagsDebug())) resdir += "_dbg"; 
+   resdir.Insert(0, "results/");
+   if (gSystem->AccessPathName(resdir)) gSystem->mkdir(resdir, kTRUE);
+   TString fnout = TString::Format("%s/writetest-%s.txt", resdir.Data(), gSystem->HostName());
    FILE *fout = fopen(fnout.Data(), "a");
 
    TString dir;
