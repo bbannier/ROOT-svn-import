@@ -11,7 +11,7 @@
 
 void ParseTag(const char *tag, Int_t &nf, Int_t &comp, Int_t &split, TString &fnlist);
 
-void ReadTest(const char *basedir, Bool_t cold = kTRUE, const char *proof = 0, Bool_t rebuild = kFALSE)
+void ReadTest(const char *basedir, Bool_t cold = kTRUE, const char *proof = 0, Bool_t rebuild = kFALSE, Int_t pchszmb = -1)
 {
 
    // Get test tag
@@ -66,6 +66,7 @@ void ReadTest(const char *basedir, Bool_t cold = kTRUE, const char *proof = 0, B
          if (sp.IsDigit()) p->SetParallel(sp.Atoi());
       }
       if (p && p->IsValid()) {
+         if (pchszmb > 0) p->SetParameter("PROOF_CacheSize", (Long64_t)(1024*1024*pchszmb));
          p->UploadPackage("packages/RTEvent.par");
          p->EnablePackage("RTEvent", kTRUE);
          p->Load(selload.Data());
@@ -89,7 +90,7 @@ void ReadTest(const char *basedir, Bool_t cold = kTRUE, const char *proof = 0, B
    if (fout) fclose(fout);
 }
 
-void ReadTests(const char *basedir, Bool_t dowarm = kFALSE, Bool_t rebuild = kFALSE)
+void ReadTests(const char *basedir, Bool_t dowarm = kFALSE, Bool_t rebuild = kFALSE, Int_t pchszmb = -1)
 {
 
    // Basic ROOT cold read
@@ -104,13 +105,13 @@ void ReadTests(const char *basedir, Bool_t dowarm = kFALSE, Bool_t rebuild = kFA
    Int_t i = 0;
    for (i = 2; i <= nw; i++) { 
       gROOT->ProcessLine(TString::Format("releaseCache(\"%s\")", basedir));
-      ReadTest(basedir, kFALSE, TString::Format("workers=%d",i), rebuild);
+      ReadTest(basedir, kFALSE, TString::Format("workers=%d",i), rebuild, pchszmb);
       rebuild = kFALSE;
    }
    // Basic PROOF warm reads
    if (dowarm) {
       for (i = 2; i <= nw; i++) { 
-         ReadTest(basedir, kTRUE, TString::Format("workers=%d",i));
+         ReadTest(basedir, kTRUE, TString::Format("workers=%d",i), pchszmb);
       }
    }   
 }
