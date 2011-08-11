@@ -47,7 +47,10 @@ public :
    // List of branches
    TBranch        *b_event;   //!
 
-   ReadSel(TTree * /*tree*/ =0) { }
+   ReadSel(TTree * /*tree*/ =0) : _jets(0), _jet_flavor(0), _jet_e(0), _jet_px(0),
+                                _jet_py(0), _jet_pz(0), _jet_x(0), _jet_y(0), _jet_z(0),
+                                _muons(0), _muon_e(0), _muon_px(0), _muon_py(0), _muon_pz(0),
+                                _muon_x(0), _muon_y(0), _muon_z(0) { }
    virtual ~ReadSel() { }
    virtual Int_t   Version() const { return 2; }
    virtual void    Begin(TTree *tree);
@@ -94,6 +97,7 @@ Bool_t ReadSel::Notify()
    // is started when using PROOF. It is normally not necessary to make changes
    // to the generated code, but the routine can be extended by the
    // user if needed. The return value is currently not used.
+   Info("Notify","processing file: %s", fChain->GetCurrentFile()->GetName());
 
    return kTRUE;
 }
