@@ -1680,13 +1680,13 @@ again:
 
    case kButton1Down:
 
-      GetPainter()->SetLineColor(-1);
+      gVirtualX->SetLineColor(-1);
       TAttLine::Modify();  //Change line attributes only if necessary
       if (GetFillColor())
-         GetPainter()->SetLineColor(GetFillColor());
+         gVirtualX->SetLineColor(GetFillColor());
       else
-         GetPainter()->SetLineColor(1);
-      GetPainter()->SetLineWidth(2);
+         gVirtualX->SetLineColor(1);
+      gVirtualX->SetLineWidth(2);
 
       // No break !!!
 
@@ -2930,8 +2930,8 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
       frameXs[5] = xl;           frameYs[5] = yt;
       frameXs[6] = xl;           frameYs[6] = yl;
 
-      if (fBorderMode == -1) GetPainter()->SetFillColor(dark);
-      else                   GetPainter()->SetFillColor(light);
+      if (fBorderMode == -1) gVirtualX->SetFillColor(dark);
+      else                   gVirtualX->SetFillColor(light);
       GetPainter()->DrawFillArea(7, frameXs, frameYs);
 
       // Draw bottom&right part of the box
@@ -2943,19 +2943,19 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
       frameXs[5] = xt;              frameYs[5] = yl;
       frameXs[6] = xl;              frameYs[6] = yl;
 
-      if (fBorderMode == -1) GetPainter()->SetFillColor(light);
-      else                   GetPainter()->SetFillColor(dark);
+      if (fBorderMode == -1) gVirtualX->SetFillColor(light);
+      else                   gVirtualX->SetFillColor(dark);
       GetPainter()->DrawFillArea(7, frameXs, frameYs);
 
       // If this pad is a button, highlight it
       if (InheritsFrom(TButton::Class()) && fBorderMode == -1) {
          if (TestBit(kFraming)) {  // bit set in TButton::SetFraming
-            if (GetFillColor() != 2) GetPainter()->SetLineColor(2);
-            else                     GetPainter()->SetLineColor(4);
+            if (GetFillColor() != 2) gVirtualX->SetLineColor(2);
+            else                     gVirtualX->SetLineColor(4);
             GetPainter()->DrawBox(xl + realBsX, yl + realBsY, xt - realBsX, yt - realBsY, TVirtualPadPainter::kHollow);
          }
       }
-      GetPainter()->SetFillColor(-1);
+      gVirtualX->SetFillColor(-1);
       SetFillColor(oldcolor);
    }
 
@@ -3122,10 +3122,10 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
    // if option[0] = 'l' the box contour is drawn
 
    if (!gPad->IsBatch()) {
-      Int_t style0 = GetPainter()->GetFillStyle();
+      Int_t style0 = gVirtualX->GetFillStyle();
       Int_t style  = style0;
       if (option[0] == 's') {
-         GetPainter()->SetFillStyle(0);
+         gVirtualX->SetFillStyle(0);
          style = 0;
       }
       if (style) {
@@ -3143,10 +3143,10 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
                return;
             }
             //special case for TAttFillCanvas
-            if (GetPainter()->GetFillColor() == 10) {
-               GetPainter()->SetFillColor(1);
+            if (gVirtualX->GetFillColor() == 10) {
+               gVirtualX->SetFillColor(1);
                GetPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
-               GetPainter()->SetFillColor(10);
+               gVirtualX->SetFillColor(10);
             }
          } else if (style >= 4000 && style <= 4100) {
             // For style >=4000 we make the window transparent.
@@ -3165,7 +3165,7 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
                   CopyBackgroundPixmaps(fMother, this, px, py);
                }
 
-               GetPainter()->SetOpacity(style - 4000);
+               gVirtualX->SetOpacity(style - 4000);
             }
          } else {
             GetPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
@@ -3173,7 +3173,7 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
          if (option[0] == 'l') GetPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
       } else {
          GetPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
-         if (option[0] == 's') GetPainter()->SetFillStyle(style0);
+         if (option[0] == 's') gVirtualX->SetFillStyle(style0);
       }
    }
 
@@ -3289,7 +3289,7 @@ void TPad::PaintFillArea(Int_t nn, Float_t *xx, Float_t *yy, Option_t *)
    }
 
    // Paint the fill area with hatches
-   Int_t fillstyle = GetPainter()->GetFillStyle();
+   Int_t fillstyle = gVirtualX->GetFillStyle();
    if (gPad->IsBatch() && gVirtualPS) fillstyle = gVirtualPS->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000) {
       PaintFillAreaHatches(nn, x, y, fillstyle);
@@ -3339,7 +3339,7 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
    }
 
    // Paint the fill area with hatches
-   Int_t fillstyle = GetPainter()->GetFillStyle();
+   Int_t fillstyle = gVirtualX->GetFillStyle();
    if (gPad->IsBatch() && gVirtualPS) fillstyle = gVirtualPS->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000) {
       PaintFillAreaHatches(nn, x, y, fillstyle);
@@ -3414,9 +3414,9 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Save the current line attributes
    if (!gPad->IsBatch()) {
-      lws = GetPainter()->GetLineWidth();
-      lss = GetPainter()->GetLineStyle();
-      lcs = GetPainter()->GetLineColor();
+      lws = gVirtualX->GetLineWidth();
+      lss = gVirtualX->GetLineStyle();
+      lcs = gVirtualX->GetLineColor();
    } else {
       if (gVirtualPS) {
          lws = gVirtualPS->GetLineWidth();
@@ -3427,9 +3427,9 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Change the current line attributes to draw the hatches
    if (!gPad->IsBatch()) {
-      GetPainter()->SetLineStyle(1);
-      GetPainter()->SetLineWidth(Short_t(lw));
-      GetPainter()->SetLineColor(GetPainter()->GetFillColor());
+      gVirtualX->SetLineStyle(1);
+      gVirtualX->SetLineWidth(Short_t(lw));
+      gVirtualX->SetLineColor(gVirtualX->GetFillColor());
    }
    if (gVirtualPS) {
       gVirtualPS->SetLineStyle(1);
@@ -3443,9 +3443,9 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Restore the line attributes
    if (!gPad->IsBatch()) {
-      GetPainter()->SetLineStyle(lss);
-      GetPainter()->SetLineWidth(lws);
-      GetPainter()->SetLineColor(lcs);
+      gVirtualX->SetLineStyle(lss);
+      gVirtualX->SetLineWidth(lws);
+      gVirtualX->SetLineColor(lcs);
    }
    if (gVirtualPS) {
       gVirtualPS->SetLineStyle(lss);
@@ -4801,8 +4801,8 @@ void TPad::ResizePad(Option_t *option)
    if (gPad->IsBatch())
       fPixmapID = 0;
    else {
-      GetPainter()->SetLineWidth(-1);
-      GetPainter()->SetTextSize(-1);
+      gVirtualX->SetLineWidth(-1);
+      gVirtualX->SetTextSize(-1);
 
       // create or re-create off-screen pixmap
       if (fPixmapID) {

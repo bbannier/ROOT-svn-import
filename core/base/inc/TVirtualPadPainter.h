@@ -22,39 +22,6 @@ public:
 
    virtual ~TVirtualPadPainter();
    
-   //Line attributes to be set up in TPad.
-   virtual Color_t  GetLineColor() const = 0;
-   virtual Style_t  GetLineStyle() const = 0;
-   virtual Width_t  GetLineWidth() const = 0;
-   
-   virtual void     SetLineColor(Color_t lcolor) = 0;
-   virtual void     SetLineStyle(Style_t lstyle) = 0;
-   virtual void     SetLineWidth(Width_t lwidth) = 0;
-   
-   //Fill attributes to be set up in TPad.
-   virtual Color_t  GetFillColor() const = 0;
-   virtual Style_t  GetFillStyle() const = 0;
-   virtual Bool_t   IsTransparent() const = 0;
-
-   virtual void     SetFillColor(Color_t fcolor) = 0;
-   virtual void     SetFillStyle(Style_t fstyle) = 0;
-   virtual void     SetOpacity(Int_t percent) = 0;
-   
-   //Text attributes.
-   virtual Short_t  GetTextAlign() const = 0;
-   virtual Float_t  GetTextAngle() const = 0;
-   virtual Color_t  GetTextColor() const = 0;
-   virtual Font_t   GetTextFont() const = 0;
-   virtual Float_t  GetTextSize() const = 0;
-   virtual Float_t  GetTextMagnitude() const = 0;
-   
-   virtual void     SetTextAlign(Short_t align=11) = 0;
-   virtual void     SetTextAngle(Float_t tangle=0) = 0;
-   virtual void     SetTextColor(Color_t tcolor=1) = 0;
-   virtual void     SetTextFont(Font_t tfont=62) = 0;
-   virtual void     SetTextSize(Float_t tsize=1) = 0;
-   virtual void     SetTextSizePixels(Int_t npixels) = 0;
-   
    //This part is an interface to X11 pixmap management and to save sub-pads off-screens for OpenGL.
    //Currently, must be implemented only for X11/GDI
    virtual Int_t    CreateDrawable(UInt_t w, UInt_t h) = 0;//gVirtualX->OpenPixmap
