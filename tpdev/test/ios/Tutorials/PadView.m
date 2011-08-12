@@ -37,8 +37,6 @@
    // Drawing code
    CGContextRef ctx = UIGraphicsGetCurrentContext();
 
-   CGContextClearRect(ctx, rect);
-
    CGContextTranslateCTM(ctx, 0.f, rect.size.height);
    CGContextScaleCTM(ctx, 1.f, -1.f);
 

@@ -5,9 +5,9 @@
 
 #include <CoreGraphics/CoreGraphics.h>
 
-#ifndef ROOT_ResourceManagement
-#include "ResourceManagement.h"
-#endif
+//#ifndef ROOT_ResourceManagement
+//#include "ResourceManagement.h"
+//#endif
 #ifndef ROOT_TVirtualPadPainter
 #include "TVirtualPadPainter.h"
 #endif
@@ -165,12 +165,8 @@ private:
 
    Int_t           fRootOpacity;
 
-   typedef Util::SmartRef<CGPatternRef, CGPatternRelease> Pattern_t;
-   
-   std::vector<Pattern_t> fPolygonPatterns;
    
    typedef std::vector<TPoint>::size_type size_type;
-
    std::vector<TPoint>    fPolyMarker;//Buffer for converted poly-marker coordinates.
 
    //Staff for picking.

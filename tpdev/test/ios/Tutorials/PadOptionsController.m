@@ -6,6 +6,8 @@
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
+#import "FillPatterns.h"
+
 #import "PadOptionsController.h"
 #import "PatternCell.h"
 #import "CppWrapper.h"
@@ -69,10 +71,15 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
       
       //Patterns.
       patterns_ = [[NSMutableArray alloc] init];
+      
+      //The first pattern - solid fill.
+      PatternCell *solidFill = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : 0];
+      [solidFill setAsSolid];
+      [patterns_ addObject : solidFill];
+      [solidFill release];
+      
       for (unsigned i = 0; i < ROOT_iOS::GraphicUtils::kPredefinedFillPatterns; ++i) {
-         fillPatterns[i] = ROOT_iOS::GraphicUtils::gPatternGenerators[i]();
-         PatternCell * newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f)];
-         [newCell setFillPattern : fillPatterns[i]];
+         PatternCell *newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : i];
          [patterns_ addObject : newCell];
          [newCell release];
       }
@@ -97,9 +104,6 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
    
    self.colorPicker = nil;
    self.patternPicker = nil;
-   
-   for (unsigned i = 0; i < ROOT_iOS::GraphicUtils::kPredefinedFillPatterns; ++i)
-      CGPatternRelease(fillPatterns[i]);
    
    [colors_ release];
    [patterns_ release];
@@ -226,8 +230,6 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
 	return 1;
 }
 
-
-#pragma mark -
 #pragma mark UIPickerViewDelegate
 
 // tell the picker which view to use for a given component and row, we have an array of views to show
@@ -253,8 +255,13 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
          [padView setNeedsDisplay];
       }
    } else if (thePickerView == patternPicker_) {
-      if (row >= 0 && row < ROOT_iOS::GraphicUtils::kPredefinedFillPatterns) {
-         params.fillPattern = 3001 + row;
+      //<= because of solid fill pattern.
+      if (row > 0 && row <= ROOT_iOS::GraphicUtils::kPredefinedFillPatterns) {
+         params.fillPattern = 3000 + row;
+         pad->SetPadParams(params);
+         [padView setNeedsDisplay];
+      } else if (!row) {
+         params.fillPattern = 1001;
          pad->SetPadParams(params);
          [padView setNeedsDisplay];
       }

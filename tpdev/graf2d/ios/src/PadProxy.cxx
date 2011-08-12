@@ -1,6 +1,6 @@
-#include <iostream>
 #include <algorithm>
 #include <stdexcept>
+#include <iostream>
 #include <string.h>
 #include <stdlib.h>
 
@@ -717,7 +717,14 @@ TObject *PadProxy::GetPrimitive(const char *name) const
 void PadProxy::Paint(Option_t *)
 {
    cd();
-
+   
+   //First, fill pad's area with white
+   //- it's required in case this pad
+   //has some fill pattern.
+   fPainter.SetFillStyle(1001);
+   fPainter.SetFillColor(0);
+   PaintBox(fX1,fY1,fX2,fY2);
+   //
    PaintBorder(GetFillColor(), kTRUE);
 
    TObjOptLink *lnk = (TObjOptLink*)GetListOfPrimitives()->FirstLink();

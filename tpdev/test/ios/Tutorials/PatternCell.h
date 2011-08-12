@@ -6,19 +6,18 @@
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
-#import <CoreGraphics/CGPattern.h>
 #import <UIKit/UIKit.h>
 
 
 @interface PatternCell : UIView {
-   CGPatternRef fillPattern;
-   BOOL darkBackground;
+   unsigned patternIndex;
+   BOOL solid;
 }
 
-- (id) initWithFrame : (CGRect) frame;
+- (id) initWithFrame : (CGRect) frame andPattern : (unsigned) index;
 - (void) dealloc;
 
-- (void) setFillPattern : (CGPatternRef) pattern;
+- (void) setAsSolid;
 - (void) drawRect : (CGRect) rect;
 
 @end
