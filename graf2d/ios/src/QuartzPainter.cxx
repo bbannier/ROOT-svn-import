@@ -11,6 +11,7 @@
 #include "TMath.h"
 #include "TROOT.h"
 
+#include "ResourceManagement.h"
 #include "TextOperations.h"
 #include "QuartzPainter.h"
 #include "GraphicUtils.h"
@@ -93,20 +94,6 @@ Painter::Painter(FontManager &fontManager)
               fEncoder(10, 255) //radix is 10, color channel value is 255.
 {
    //Default ctor.
-   
-   //Create patterns for predefined fill styles.
-   using namespace GraphicUtils;
-   
-   for (UInt_t i = 0; i < kPredefinedFillPatterns; ++i) {
-      CGPatternRef newPattern = gPatternGenerators[i]();
-      /*
-      if (!newPattern) {
-         throw std::runtime_error();
-      }
-      */
-      Pattern_t pattern(newPattern);
-      fPolygonPatterns.push_back(pattern);
-   }
 }
 
 //_________________________________________________________________
@@ -249,8 +236,10 @@ void Painter::FillBoxWithPattern(Double_t x1, Double_t y1, Double_t x2, Double_t
    
    //patternIndex < kPredefinedFillPatterns, this is assumed by previous call
    //to PolygonHasStipples.
+   Float_t rgb[3] = {};
+   GraphicUtils::GetColorForIndex(gVirtualX->GetFillColor(), rgb[0], rgb[1], rgb[2]);
    const Style_t patternIndex = gVirtualX->GetFillStyle() % 1000 - 1;
-   const Pattern_t &pattern = fPolygonPatterns[patternIndex];
+   const Util::SmartRef<CGPatternRef, CGPatternRelease> pattern(GraphicUtils::gPatternGenerators[patternIndex](rgb));
    
    const float alpha = 1.f;
    CGContextSetFillPattern(fCtx, pattern.Get(), &alpha);
@@ -346,9 +335,11 @@ void Painter::FillAreaWithPattern(Int_t n, const Double_t *x, const Double_t *y)
    Util::RefGuardGeneric<CGColorSpaceRef, CGColorSpaceRelease> patternColorSpace(CGColorSpaceCreatePattern(0));
    CGContextSetFillColorSpace(fCtx, patternColorSpace.Get());
    
+   Float_t rgb[3] = {};
+   GraphicUtils::GetColorForIndex(gVirtualX->GetFillColor(), rgb[0], rgb[1], rgb[2]);
    const Style_t patternIndex = gVirtualX->GetFillStyle() % 1000 - 1;
-   const Pattern_t &pattern = fPolygonPatterns[patternIndex];
-   
+   const Util::SmartRef<CGPatternRef, CGPatternRelease> pattern(GraphicUtils::gPatternGenerators[patternIndex](rgb));
+
    const float alpha = 1.f;
    CGContextSetFillPattern(fCtx, pattern.Get(), &alpha);
 

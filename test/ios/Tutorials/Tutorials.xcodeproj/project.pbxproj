@@ -87,8 +87,8 @@
 		700B010E13F3D40A00F84650 /* PadOptionsController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadOptionsController.xib; sourceTree = "<group>"; };
 		700B012E13F3FD6600F84650 /* ColorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ColorCell.h; path = Tutorials.xcodeproj/ColorCell.h; sourceTree = "<group>"; };
 		700B012F13F3FD6600F84650 /* ColorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ColorCell.m; path = Tutorials.xcodeproj/ColorCell.m; sourceTree = "<group>"; };
-		700B013113F4051000F84650 /* PatternCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PatternCell.h; sourceTree = "<group>"; };
-		700B013213F4051000F84650 /* PatternCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PatternCell.m; sourceTree = "<group>"; };
+		700B013113F4051000F84650 /* PatternCell.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternCell.h; sourceTree = "<group>"; };
+		700B013213F4051000F84650 /* PatternCell.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternCell.m; sourceTree = "<group>"; };
 		701EC32313D9762200FE395E /* SelectionView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.h; sourceTree = "<group>"; };
 		701EC32413D9762200FE395E /* SelectionView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.m; sourceTree = "<group>"; };
 		7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = pattern_selector_background.png; path = Pictures/pattern_selector_background.png; sourceTree = "<group>"; };

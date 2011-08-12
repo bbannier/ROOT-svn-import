@@ -9,8 +9,6 @@
 #import <CoreGraphics/CGPattern.h>
 #import <UIKit/UIKit.h>
 
-#import "FillPatterns.h"
-
 @class PadView;
 
 class PadWrapper;
@@ -32,8 +30,6 @@ class PadWrapper;
    
    NSMutableArray *colors_;
    NSMutableArray *patterns_;
-   
-   CGPatternRef fillPatterns[ROOT_iOS::GraphicUtils::kPredefinedFillPatterns];
    
    PadWrapper *pad;
    PadView *padView;

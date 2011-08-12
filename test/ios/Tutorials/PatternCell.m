@@ -8,18 +8,23 @@
 
 #import <CoreGraphics/CGContext.h>
 
+#import "FillPatterns.h"
+
 #import "PatternCell.h"
 
 
 @implementation PatternCell
 
 //______________________________________________________________________________
-- (id)initWithFrame:(CGRect)frame
+- (id)initWithFrame:(CGRect)frame andPattern : (unsigned) index
 {
-    self = [super initWithFrame:frame];
-    if (self) {
-        // Initialization code
-    }
+   self = [super initWithFrame:frame];
+    
+   if (self) {
+      // Initialization code
+      patternIndex = index;
+      solid = NO;
+   }
 
     return self;
 }
@@ -31,9 +36,9 @@
 }
 
 //______________________________________________________________________________
-- (void) setFillPattern : (CGPatternRef) pattern
+- (void) setAsSolid
 {
-   fillPattern = pattern;
+   solid = YES;
 }
 
 //______________________________________________________________________________
@@ -42,14 +47,23 @@
    CGContextRef ctx = UIGraphicsGetCurrentContext();
 
    //Fill view with pattern.
-   CGColorSpaceRef colorSpace = CGColorSpaceCreatePattern(0);
-   const float alpha = 1.f;
-   
-   CGContextSetFillColorSpace(ctx, colorSpace);
-   CGContextSetFillPattern(ctx, fillPattern, &alpha);
+   CGContextSetRGBFillColor(ctx, 1.f, 1.f, 1.f, 1.f);
    CGContextFillRect(ctx, rect);
 
-   CGColorSpaceRelease(colorSpace);
+   if (!solid) { //Solid fill - no pattern.
+      float rgb[] = {0.f, 0.f, 0.f};
+      CGPatternRef pattern = ROOT_iOS::GraphicUtils::gPatternGenerators[patternIndex](rgb);
+   
+      CGColorSpaceRef colorSpace = CGColorSpaceCreatePattern(0);
+      const float alpha = 1.f;
+   
+      CGContextSetFillColorSpace(ctx, colorSpace);
+      CGContextSetFillPattern(ctx, pattern, &alpha);
+      CGContextFillRect(ctx, rect);
+
+      CGColorSpaceRelease(colorSpace);
+      CGPatternRelease(pattern);
+   }
 }
 
 @end
