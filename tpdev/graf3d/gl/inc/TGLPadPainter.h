@@ -53,39 +53,7 @@ public:
    TGLPadPainter();
    
    //Final overriders for TVirtualPadPainter pure virtual functions.
-   //1. Part, which simply delegates to TVirtualX.
-   //Line attributes.
-   Color_t  GetLineColor() const;
-   Style_t  GetLineStyle() const;
-   Width_t  GetLineWidth() const;
-   
-   void     SetLineColor(Color_t lcolor);
-   void     SetLineStyle(Style_t lstyle);
-   void     SetLineWidth(Width_t lwidth);
-   //Fill attributes.
-   Color_t  GetFillColor() const;
-   Style_t  GetFillStyle() const;
-   Bool_t   IsTransparent() const;
-
-   void     SetFillColor(Color_t fcolor);
-   void     SetFillStyle(Style_t fstyle);
-   void     SetOpacity(Int_t percent);
-   //Text attributes.
-   Short_t  GetTextAlign() const;
-   Float_t  GetTextAngle() const;
-   Color_t  GetTextColor() const;
-   Font_t   GetTextFont()  const;
-   Float_t  GetTextSize()  const;
-   Float_t  GetTextMagnitude() const;
-   
-   void     SetTextAlign(Short_t align);
-   void     SetTextAngle(Float_t tangle);
-   void     SetTextColor(Color_t tcolor);
-   void     SetTextFont(Font_t tfont);
-   void     SetTextSize(Float_t tsize);
-   void     SetTextSizePixels(Int_t npixels);
-   
-   //2. "Off-screen management" part.
+   //"Off-screen management" part.
    Int_t    CreateDrawable(UInt_t w, UInt_t h);
    void     ClearDrawable();
    void     CopyDrawable(Int_t id, Int_t px, Int_t py);

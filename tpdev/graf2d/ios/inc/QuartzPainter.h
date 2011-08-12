@@ -81,38 +81,6 @@ public:
    void     DrawText(Double_t x, Double_t y, const char *text, ETextMode mode);
    void     DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode);
    
-   //
-   //Line attributes to be set up in TPad.
-   Color_t  GetLineColor() const;
-   Style_t  GetLineStyle() const;
-   Width_t  GetLineWidth() const;
-   
-   void     SetLineColor(Color_t lcolor);
-   void     SetLineStyle(Style_t lstyle);
-   void     SetLineWidth(Width_t lwidth);
-   
-   //Fill attributes to be set up in TPad.
-   Color_t  GetFillColor() const;
-   Style_t  GetFillStyle() const;
-
-   void     SetFillColor(Color_t fcolor);
-   void     SetFillStyle(Style_t fstyle);
-   
-   //Text attributes.
-   Short_t  GetTextAlign() const;
-   Float_t  GetTextAngle() const;
-   Color_t  GetTextColor() const;
-   Font_t   GetTextFont() const;
-   Float_t  GetTextSize() const;
-   Float_t  GetTextMagnitude() const;
-   
-   void     SetTextAlign(Short_t align);
-   void     SetTextAngle(Float_t tangle);
-   void     SetTextColor(Color_t tcolor);
-   void     SetTextFont(Font_t tfont);
-   void     SetTextSize(Float_t tsize);
-   void     SetTextSizePixels(Int_t npixels);
-   
    void     SetContext(CGContextRef ctx);
    void     SetTransform(UInt_t w, Double_t xMin, Double_t xMax, UInt_t h, Double_t yMin, Double_t yMax);
    
