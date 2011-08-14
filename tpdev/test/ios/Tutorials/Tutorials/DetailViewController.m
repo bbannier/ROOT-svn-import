@@ -12,12 +12,15 @@
 #import "DetailViewController.h"
 #import "RootViewController.h"
 #import "SelectionView.h"
-#import "CppWrapper.h"
 #import "HintView.h"
 #import "PictView.h"
 #import "PadView.h"
 
 //C++ code.
+#import "TextOperations.h"
+#import "QuartzPainter.h"
+#import "Pad.h"
+
 #import "DemoBase.h"
 
 @interface DetailViewController ()
@@ -64,11 +67,11 @@
 }
 
 //_________________________________________________________________
-- (void)initCPPWappers
+- (void)initCPPObjects
 {
-   fontManager = new FontManagerWrapper;
-   painter = new PainterWrapper(fontManager->GetFontManager());
-   pad = new PadWrapper(640, 640, painter->GetPainter(), fontManager->GetFontManager());
+   fontManager = new ROOT_iOS::FontManager;
+   painter = new ROOT_iOS::Painter(*fontManager);
+   pad = new ROOT_iOS::Pad(640, 640, *painter, *fontManager);
 }
 
 //_________________________________________________________________
@@ -102,7 +105,7 @@
       scrollViews[i] = [[UIScrollView alloc] initWithFrame:padRect];
       scrollViews[i].backgroundColor = [UIColor darkGrayColor];
       scrollViews[i].delegate = self;
-      padViews[i] = [[PadView alloc] initWithFrame:padRect forPad:pad withFontManager:fontManager andPainter:painter];
+      padViews[i] = [[PadView alloc] initWithFrame:padRect forPad:pad withFontManager : fontManager andPainter : painter];
       scrollViews[i].contentSize = padViews[i].frame.size;
       [scrollViews[i] addSubview:padViews[i]];
       [padViews[i] release];
@@ -277,7 +280,7 @@
 {
    self.view.backgroundColor = [UIColor lightGrayColor];
    
-   [self initCPPWappers];
+   [self initCPPObjects];
    [self initMainViews];
    [self initHints];
    
@@ -412,7 +415,7 @@
       //set pad's parameters (if required by demo)
       //reset demo (if required), add demo's primitives to pad.
       pad->Clear();
-      activeDemo->AdjustPad(pad->GetPad());
+      activeDemo->AdjustPad(pad);
       activeDemo->ResetDemo();
       activeDemo->PresentDemo();
       

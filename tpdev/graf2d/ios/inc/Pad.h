@@ -1,5 +1,5 @@
-#ifndef ROOT_PadProxy
-#define ROOT_PadProxy
+#ifndef ROOT_Pad
+#define ROOT_Pad
 
 #include <utility>
 #include <vector>
@@ -24,20 +24,19 @@ namespace ROOT_iOS {
 
 //////////////////////////////////////////////////////////////////////////
 //
-// This class is a proxy between ROOT's graphics and
-// Apple's APIs (Quartz, Core Text, Core Foundation, etc.)
-// I use this class instead of original TPad/TCanvas, to
-// keep it as simple and clean and controllable, as it's possible.
+// This class is a pad for iOS
+// I use this class instead of original TPad/TCanvas to
+// keep it as simple and clean as possible (look at original TPad to see what I mean).
 // Some parts from original TPad (coordinate conversions/painting algorithms)
-// were preserved.
+// were copy & pasted at the beginning, will be re-written and fixed.
 //
 //////////////////////////////////////////////////////////////////////////
 
 //TODO: class needs verification and clean-up.
 
-class PadProxy : public PadStub {
+class Pad : public PadStub {
 public:
-   // PadProxy status bits
+   // Pad status bits
    enum EStatusBits {
       kFraming      = BIT(6),
       kHori         = BIT(9),
@@ -49,7 +48,7 @@ public:
 
    void GetTextExtent(UInt_t &w, UInt_t &h, const char *text);
 
-   PadProxy(UInt_t w, UInt_t h, Painter &painter, FontManager &fontManager);
+   Pad(UInt_t w, UInt_t h, Painter &painter, FontManager &fontManager);
    
    //Final-overriders for TVirtualPad class.
    const char *GetName() const;
@@ -220,6 +219,8 @@ public:
    //
    TVirtualViewer3D *GetViewer3D(Option_t *opt);
    
+   
+   //
    Bool_t PadInSelectionMode() const
    {
       return fInSelectionMode;
@@ -363,8 +364,8 @@ private:
    void PaintFillAreaHatches(Int_t n, Double_t *x, Double_t *y, Int_t FillStyle);
    void PaintHatches(Double_t dy, Double_t angle, Int_t nn, Double_t *xx, Double_t *yy);
 
-   PadProxy(const PadProxy &pad);  // cannot copy pads, use TObject::Clone()
-   PadProxy &operator=(const PadProxy &rhs);  // idem
+   Pad(const Pad &pad);  // cannot copy pads, use TObject::Clone()
+   Pad &operator=(const Pad &rhs);  // idem
 };
 
 }

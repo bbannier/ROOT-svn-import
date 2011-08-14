@@ -11,7 +11,7 @@
 
 namespace ROOT_iOS {
 
-class PadProxy;
+class Pad;
 
 namespace Demos {
 
@@ -27,7 +27,7 @@ public:
    virtual void NextStep() = 0;
    virtual void StopAnimation() = 0;
 
-   virtual void AdjustPad(PadProxy *pad) = 0;
+   virtual void AdjustPad(Pad *pad) = 0;
    
    virtual void PresentDemo() = 0;
    

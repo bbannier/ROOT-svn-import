@@ -35,7 +35,7 @@ public:
    void NextStep();
    void StopAnimation();
 
-   void AdjustPad(PadProxy *pad);
+   void AdjustPad(Pad *pad);
 
    void PresentDemo();
    

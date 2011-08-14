@@ -11,7 +11,6 @@
 
 
 #include "H2PolyDemo.h"
-#include "PadProxy.h"
 
 namespace ROOT_iOS {
 namespace Demos {

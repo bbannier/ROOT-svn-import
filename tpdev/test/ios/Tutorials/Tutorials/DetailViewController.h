@@ -20,6 +20,11 @@ namespace Demos {
 class DemoBase;
 
 }
+
+class FontManager;
+class Painter;
+class Pad;
+
 }
 
 @class PadOptionsController;
@@ -45,9 +50,12 @@ enum ETutorialsDefaults {
    NSTimer *animationTimer;
    unsigned currentFrame;
 
-   FontManagerWrapper *fontManager;
-   PainterWrapper *painter;
-   PadWrapper *pad;
+   //FontManagerWrapper *fontManager;
+   ROOT_iOS::FontManager *fontManager;
+   ROOT_iOS::Painter *painter;
+   ROOT_iOS::Pad *pad;
+//   PainterWrapper *painter;
+//   PadWrapper *pad;
 
    //Depending on more, either parentView of
    //scrollViews is/are parent(s) of padViews.

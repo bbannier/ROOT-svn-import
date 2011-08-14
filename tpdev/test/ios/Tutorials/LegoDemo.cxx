@@ -1,8 +1,8 @@
 #include "TFrame.h"
 #include "TF2.h"
 
-#include "PadProxy.h"
 #include "LegoDemo.h"
+#include "Pad.h"
 
 namespace ROOT_iOS {
 namespace Demos {
@@ -22,9 +22,9 @@ LegoDemo::~LegoDemo()
 }
 
 //______________________________________________________________________________
-void LegoDemo::AdjustPad(PadProxy *pad)
+void LegoDemo::AdjustPad(Pad *pad)
 {
-  // pad->SetFillColor(0);
+   pad->SetFillColor(0);
 }
 
 //______________________________________________________________________________

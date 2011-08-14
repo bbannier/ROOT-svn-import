@@ -2,7 +2,7 @@
 #include "TF2.h"
 
 #include "SurfaceDemo.h"
-#include "PadProxy.h"
+#include "Pad.h"
 
 namespace ROOT_iOS {
 namespace Demos {
@@ -20,7 +20,7 @@ SurfaceDemo::~SurfaceDemo()
 }
 
 //______________________________________________________________________________
-void SurfaceDemo::AdjustPad(PadProxy *pad)
+void SurfaceDemo::AdjustPad(Pad *pad)
 {
    pad->SetFillColor(38);
 }
