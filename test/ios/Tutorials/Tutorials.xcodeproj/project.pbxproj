@@ -539,6 +539,8 @@
 					/Users/tpochep/tpdev/root/io/io/src/G__IO.o,
 					/Users/tpochep/tpdev/root/net/net/src/G__Net.o,
 					/Users/tpochep/tpdev/root/hist/hist/src/G__Hist.o,
+					/Users/tpochep/tpdev/root/hist/histpainter/src/G__HistPainter.o,
+					/Users/tpochep/tpdev/root/graf3d/g3d/src/G__G3D.o,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -560,6 +562,8 @@
 					/Users/tpochep/tpdev/root/io/io/src/G__IO.o,
 					/Users/tpochep/tpdev/root/net/net/src/G__Net.o,
 					/Users/tpochep/tpdev/root/hist/hist/src/G__Hist.o,
+					/Users/tpochep/tpdev/root/hist/histpainter/src/G__HistPainter.o,
+					/Users/tpochep/tpdev/root/graf3d/g3d/src/G__G3D.o,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALIDATE_PRODUCT = YES;

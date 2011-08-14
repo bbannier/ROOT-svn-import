@@ -43,10 +43,6 @@
 #include "Fit/DataRange.h"
 #include "Math/MinimizerOptions.h"
 
-#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
-#include "THistPainter.h"
-#endif
-
 //______________________________________________________________________________
 /* Begin_Html
 <center><h2>The Histogram classes</h2></center>
@@ -3751,11 +3747,7 @@ TVirtualHistPainter *TH1::GetPainter(Option_t *option)
 {
    // return pointer to painter
    // if painter does not exist, it is created
-#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
-   (void)option;
-   fPainter = new THistPainter;
-   fPainter->SetHistogram(this);
-#else
+
    if (!fPainter) {
       TString opt = option;
       opt.ToLower();
@@ -3769,7 +3761,6 @@ TVirtualHistPainter *TH1::GetPainter(Option_t *option)
    }
 
    if (!fPainter) fPainter = TVirtualHistPainter::HistPainter(this);
-#endif
 
    return fPainter;
 }
