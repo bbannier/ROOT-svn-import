@@ -278,7 +278,7 @@ public: \
    static const char *Class_Name(); \
    static Version_t Class_Version() { return id; } \
    static void Dictionary(); \
-   virtual TClass *IsA() const { return this->Class(); } \
+   virtual TClass *IsA() const { return name::Class(); } \
    virtual void ShowMembers(TMemberInspector &insp); \
    virtual void Streamer(TBuffer &b); \
    void StreamerNVirtual(TBuffer &b) { name::Streamer(b); } \
