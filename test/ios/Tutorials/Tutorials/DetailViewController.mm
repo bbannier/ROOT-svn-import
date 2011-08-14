@@ -23,6 +23,23 @@
 //Demos.
 #import "DemoBase.h"
 
+class A
+{
+public:
+   A()
+   {
+      i = A::Class();
+   }
+   
+   int Class()
+   {
+      return 0;
+   }
+private:
+   int i;
+};
+
+
 @interface DetailViewController ()
 @property (nonatomic, retain) UIPopoverController *popoverController;
 - (void)configureView;
