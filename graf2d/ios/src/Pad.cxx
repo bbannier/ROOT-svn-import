@@ -50,12 +50,12 @@
 
 #include "GraphicUtils.h"
 #include "FillPatterns.h"
-#include "PadProxy.h"
+#include "Pad.h"
 
 namespace ROOT_iOS {
 
 //______________________________________________________________________________
-PadProxy::PadProxy(UInt_t w, UInt_t h, Painter &painter, FontManager &manager)
+Pad::Pad(UInt_t w, UInt_t h, Painter &painter, FontManager &manager)
           : fPainter(painter),
             fFontManager(manager),
             fViewer3D(0),
@@ -110,19 +110,19 @@ PadProxy::PadProxy(UInt_t w, UInt_t h, Painter &painter, FontManager &manager)
 }
 
 //______________________________________________________________________________
-const char *PadProxy::GetName() const
+const char *Pad::GetName() const
 {
    return "iOSPad";
 }
 
 //______________________________________________________________________________
-const char *PadProxy::GetTitle() const 
+const char *Pad::GetTitle() const 
 {
    return "iOSPad";
 }
 
 //______________________________________________________________________________
-void PadProxy::Clear(Option_t *)
+void Pad::Clear(Option_t *)
 {
    //std::cout<<"clear\n";
    fSelectionIsValid = kFALSE;
@@ -138,19 +138,19 @@ void PadProxy::Clear(Option_t *)
 }
 
 //______________________________________________________________________________
-UInt_t PadProxy::GetWw() const
+UInt_t Pad::GetWw() const
 {
    return fViewW;
 }
 
 //______________________________________________________________________________
-UInt_t PadProxy::GetWh() const
+UInt_t Pad::GetWh() const
 {
    return fViewH;
 }
 
 //______________________________________________________________________________
-void PadProxy::SetFixedAspectRatio(Bool_t fixed)
+void Pad::SetFixedAspectRatio(Bool_t fixed)
 {
    // Fix pad aspect ratio to current value if fixed is true.
    if (fixed) {
@@ -170,7 +170,7 @@ void PadProxy::SetFixedAspectRatio(Bool_t fixed)
 }
 
 //______________________________________________________________________________
-Double_t PadProxy::PadtoX(Double_t x) const
+Double_t Pad::PadtoX(Double_t x) const
 {
    // Convert x from pad to X.
    if (fLogx && x < 50)
@@ -180,7 +180,7 @@ Double_t PadProxy::PadtoX(Double_t x) const
 }
 
 //______________________________________________________________________________
-Double_t PadProxy::PadtoY(Double_t y) const
+Double_t Pad::PadtoY(Double_t y) const
 {
    // Convert y from pad to Y.
    if (fLogy && y < 50)
@@ -190,7 +190,7 @@ Double_t PadProxy::PadtoY(Double_t y) const
 }
 
 //______________________________________________________________________________
-Double_t PadProxy::XtoPad(Double_t x) const
+Double_t Pad::XtoPad(Double_t x) const
 {
    // Convert x from X to pad.
    if (fLogx) {
@@ -204,7 +204,7 @@ Double_t PadProxy::XtoPad(Double_t x) const
 }
 
 //______________________________________________________________________________
-Double_t PadProxy::YtoPad(Double_t y) const
+Double_t Pad::YtoPad(Double_t y) const
 {
    // Convert y from Y to pad.
    if (fLogy) {
@@ -218,7 +218,7 @@ Double_t PadProxy::YtoPad(Double_t y) const
 }
 
 //______________________________________________________________________________
-Int_t PadProxy::UtoPixel(Double_t u) const
+Int_t Pad::UtoPixel(Double_t u) const
 {
    Double_t val;
    if (fAbsCoord) val = fUtoAbsPixelk + u*fUtoPixel;
@@ -229,7 +229,7 @@ Int_t PadProxy::UtoPixel(Double_t u) const
 }
 
 //______________________________________________________________________________
-Int_t PadProxy::VtoPixel(Double_t v) const
+Int_t Pad::VtoPixel(Double_t v) const
 {
    Double_t val;
    if (fAbsCoord) val = fVtoAbsPixelk + v*fVtoPixel;
@@ -240,7 +240,7 @@ Int_t PadProxy::VtoPixel(Double_t v) const
 }
 
 //______________________________________________________________________________
-Int_t PadProxy::XtoAbsPixel(Double_t x) const
+Int_t Pad::XtoAbsPixel(Double_t x) const
 {
    Double_t val = fXtoAbsPixelk + x*fXtoPixel;
    if (val < -kMaxPixel) return -kMaxPixel;
@@ -249,7 +249,7 @@ Int_t PadProxy::XtoAbsPixel(Double_t x) const
 }
 
 //______________________________________________________________________________
-Int_t PadProxy::YtoAbsPixel(Double_t y) const
+Int_t Pad::YtoAbsPixel(Double_t y) const
 {
    Double_t val = fYtoAbsPixelk + y*fYtoPixel;
    if (val < -kMaxPixel) return -kMaxPixel;
@@ -258,7 +258,7 @@ Int_t PadProxy::YtoAbsPixel(Double_t y) const
 }
 
 //______________________________________________________________________________
-Int_t PadProxy::XtoPixel(Double_t x) const
+Int_t Pad::XtoPixel(Double_t x) const
 {
    Double_t val;
    if (fAbsCoord) val = fXtoAbsPixelk + x*fXtoPixel;
@@ -269,7 +269,7 @@ Int_t PadProxy::XtoPixel(Double_t x) const
 }
 
 //______________________________________________________________________________
-Int_t PadProxy::YtoPixel(Double_t y) const
+Int_t Pad::YtoPixel(Double_t y) const
 {
    Double_t val;
    if (fAbsCoord) val = fYtoAbsPixelk + y*fYtoPixel;
@@ -280,21 +280,21 @@ Int_t PadProxy::YtoPixel(Double_t y) const
 }
 
 //______________________________________________________________________________
-Double_t PadProxy::PixeltoX(Int_t px)
+Double_t Pad::PixeltoX(Int_t px)
 {
    if (fAbsCoord) return fAbsPixeltoXk + px*fPixeltoX;
    else           return fPixeltoXk    + px*fPixeltoX;
 }
 
 //______________________________________________________________________________
-Double_t PadProxy::PixeltoY(Int_t py)
+Double_t Pad::PixeltoY(Int_t py)
 {
    if (fAbsCoord) return fAbsPixeltoYk + py*fPixeltoY;
    else           return fPixeltoYk    + py*fPixeltoY;
 }
 
 //______________________________________________________________________________
-void PadProxy::SetLogx(Int_t value)
+void Pad::SetLogx(Int_t value)
 {
    // Set Lin/Log scale for X
    //   value = 0 X scale will be linear
@@ -307,7 +307,7 @@ void PadProxy::SetLogx(Int_t value)
 
 
 //______________________________________________________________________________
-void PadProxy::SetLogy(Int_t value)
+void Pad::SetLogy(Int_t value)
 {
    // Set Lin/Log scale for Y
    //   value = 0 Y scale will be linear
@@ -320,7 +320,7 @@ void PadProxy::SetLogy(Int_t value)
 
 
 //______________________________________________________________________________
-void PadProxy::SetLogz(Int_t value)
+void Pad::SetLogz(Int_t value)
 {
    // Set Lin/Log scale for Z
 
@@ -329,7 +329,7 @@ void PadProxy::SetLogz(Int_t value)
 }
 
 //______________________________________________________________________________
-void PadProxy::SetPad(Double_t xlow, Double_t ylow, Double_t xup, Double_t yup)
+void Pad::SetPad(Double_t xlow, Double_t ylow, Double_t xup, Double_t yup)
 {
    // Set canvas range for pad and resize the pad. If the aspect ratio
    // was fixed before the call it will be un-fixed.
@@ -358,7 +358,7 @@ void PadProxy::SetPad(Double_t xlow, Double_t ylow, Double_t xup, Double_t yup)
 }
 
 //______________________________________________________________________________
-void PadProxy::SetPad(const char *, const char *,
+void Pad::SetPad(const char *, const char *,
                   Double_t xlow, Double_t ylow, Double_t xup, Double_t yup,
                   Color_t color, Short_t bordersize, Short_t bordermode)
 {
@@ -379,7 +379,7 @@ void PadProxy::SetPad(const char *, const char *,
 }
 
 //______________________________________________________________________________
-void PadProxy::SetVertical(Bool_t vert)
+void Pad::SetVertical(Bool_t vert)
 {
    // Set pad vertical (default) or horizontal
    if (vert)
@@ -389,7 +389,7 @@ void PadProxy::SetVertical(Bool_t vert)
 }
 
 //______________________________________________________________________________
-void PadProxy::GetRange(Double_t &x1, Double_t &y1, Double_t &x2, Double_t &y2)
+void Pad::GetRange(Double_t &x1, Double_t &y1, Double_t &x2, Double_t &y2)
 {
    // Return pad world coordinates range.
    x1 = fX1;
@@ -399,7 +399,7 @@ void PadProxy::GetRange(Double_t &x1, Double_t &y1, Double_t &x2, Double_t &y2)
 }
 
 //______________________________________________________________________________
-void PadProxy::Range(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
+void Pad::Range(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 {
    // Set world coordinate system for the pad.
    // Emits signal "RangeChanged()", in the slot get the range
@@ -429,7 +429,7 @@ void PadProxy::Range(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 }
 
 //______________________________________________________________________________
-void PadProxy::GetRangeAxis(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t &ymax)
+void Pad::GetRangeAxis(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t &ymax)
 {
    // Return pad axis coordinates range.
    xmin = fUxmin;
@@ -439,7 +439,7 @@ void PadProxy::GetRangeAxis(Double_t &xmin, Double_t &ymin, Double_t &xmax, Doub
 }
 
 //______________________________________________________________________________
-void PadProxy::RangeAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax)
+void Pad::RangeAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax)
 {
    // Set axis coordinate system for the pad.
    // The axis coordinate system is a subset of the world coordinate system
@@ -461,7 +461,7 @@ void PadProxy::RangeAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t y
 }
 
 //______________________________________________________________________________
-void PadProxy::GetPadPar(Double_t &xlow, Double_t &ylow, Double_t &xup, Double_t &yup)
+void Pad::GetPadPar(Double_t &xlow, Double_t &ylow, Double_t &xup, Double_t &yup)
 {
    // Return lower and upper bounds of the pad in NDC coordinates.
    xlow = fXlowNDC;
@@ -471,7 +471,7 @@ void PadProxy::GetPadPar(Double_t &xlow, Double_t &ylow, Double_t &xup, Double_t
 }
 
 //______________________________________________________________________________
-void PadProxy::SetFillStyle(Style_t fillStyle)
+void Pad::SetFillStyle(Style_t fillStyle)
 {
    // Overrride TAttFill::FillStyle for TPad because we want to handle style=0
    // as style 4000.
@@ -483,7 +483,7 @@ void PadProxy::SetFillStyle(Style_t fillStyle)
 }
 
 //______________________________________________________________________________
-void PadProxy::SetEditable(Bool_t mode)
+void Pad::SetEditable(Bool_t mode)
 {
    // Set pad editable yes/no
    // If a pad is not editable:
@@ -494,7 +494,7 @@ void PadProxy::SetEditable(Bool_t mode)
 }
 
 //______________________________________________________________________________
-TVirtualPad *PadProxy::cd(Int_t)
+TVirtualPad *Pad::cd(Int_t)
 {
    gPad = this;
    fPainter.SetTransform(GetWw(), GetX1(), GetX2(), GetWh(), GetY1(), GetY2());
@@ -503,7 +503,7 @@ TVirtualPad *PadProxy::cd(Int_t)
 }
 
 //______________________________________________________________________________
-void PadProxy::SetView(TView *view)
+void Pad::SetView(TView *view)
 {
    // Set the current TView. Delete previous view if view=0.
    // This code was taken from original TPad and it dies after
@@ -517,7 +517,7 @@ void PadProxy::SetView(TView *view)
 }
 
 //______________________________________________________________________________
-void PadProxy::ResizePad(Option_t *)
+void Pad::ResizePad(Option_t *)
 {
    // Compute pad conversion coefficients.
    //
@@ -662,7 +662,7 @@ void PadProxy::ResizePad(Option_t *)
 }
 
 //______________________________________________________________________________
-TFrame *PadProxy::GetFrame()
+TFrame *Pad::GetFrame()
 {
    // Get frame.
    TFrame *frame = (TFrame*)GetListOfPrimitives()->FindObject(fFrame);
@@ -694,7 +694,7 @@ TFrame *PadProxy::GetFrame()
 }
 
 //______________________________________________________________________________
-TObject *PadProxy::GetPrimitive(const char *name) const
+TObject *Pad::GetPrimitive(const char *name) const
 {
    // Final-overrider for TVirtualPad.
    
@@ -714,7 +714,7 @@ TObject *PadProxy::GetPrimitive(const char *name) const
 }
 
 //______________________________________________________________________________
-void PadProxy::Paint(Option_t *)
+void Pad::Paint(Option_t *)
 {
    cd();
    
@@ -740,7 +740,7 @@ void PadProxy::Paint(Option_t *)
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintForSelection()
+void Pad::PaintForSelection()
 {
    fInSelectionMode = kTRUE;
    fPainter.SetPainterMode(Painter::kPaintToSelectionBuffer);
@@ -766,7 +766,7 @@ void PadProxy::PaintForSelection()
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintShadowForSelected() const
+void Pad::PaintShadowForSelected() const
 {
    fInHighlightMode = kTRUE;
 
@@ -782,7 +782,7 @@ void PadProxy::PaintShadowForSelected() const
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintSelected() const
+void Pad::PaintSelected() const
 {
    fInHighlightMode = kTRUE;
    
@@ -798,7 +798,7 @@ void PadProxy::PaintSelected() const
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t *option)
+void Pad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t *option)
 {
    // Paint box in CurrentPad World coordinates.
    //
@@ -850,14 +850,14 @@ void PadProxy::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Opti
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintFillArea(Int_t, Float_t *, Float_t *, Option_t *)
+void Pad::PaintFillArea(Int_t, Float_t *, Float_t *, Option_t *)
 {
    // Paint fill area in CurrentPad World coordinates.
    throw std::runtime_error("Dummy version for floats");
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
+void Pad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
 {
    // Paint fill area in CurrentPad World coordinates.
 
@@ -900,7 +900,7 @@ void PadProxy::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintPadFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax)
+void Pad::PaintPadFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax)
 {
    // Paint histogram/graph frame.
    TList *glist = GetListOfPrimitives();
@@ -922,7 +922,7 @@ void PadProxy::PaintPadFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
+void Pad::PaintLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 {
    // Paint line in CurrentPad World coordinates.
 
@@ -940,7 +940,7 @@ void PadProxy::PaintLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintLineNDC(Double_t u1, Double_t v1,Double_t u2, Double_t v2)
+void Pad::PaintLineNDC(Double_t u1, Double_t v1,Double_t u2, Double_t v2)
 {
    const Double_t xRange = GetX2() - GetX1();
    const Double_t yRange = GetY2() - GetY1();
@@ -950,7 +950,7 @@ void PadProxy::PaintLineNDC(Double_t u1, Double_t v1,Double_t u2, Double_t v2)
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintLine3D(Float_t *p1, Float_t *p2)
+void Pad::PaintLine3D(Float_t *p1, Float_t *p2)
 {
    // Paint 3-D line in the CurrentPad.
 
@@ -968,7 +968,7 @@ void PadProxy::PaintLine3D(Float_t *p1, Float_t *p2)
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintLine3D(Double_t *p1, Double_t *p2)
+void Pad::PaintLine3D(Double_t *p1, Double_t *p2)
 {
    // Paint 3-D line in the CurrentPad.
 
@@ -987,7 +987,7 @@ void PadProxy::PaintLine3D(Double_t *p1, Double_t *p2)
 
 
 //______________________________________________________________________________
-void PadProxy::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
+void Pad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
 {
    // Paint polyline in CurrentPad World coordinates.
 
@@ -1026,7 +1026,7 @@ void PadProxy::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
+void Pad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
 {
    // Paint polyline in CurrentPad World coordinates.
    //
@@ -1074,7 +1074,7 @@ void PadProxy::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
+void Pad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
 {
    if (n <= 0) //Check from original TPad.
       return;
@@ -1083,7 +1083,7 @@ void PadProxy::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintPolyLine3D(Int_t n, Double_t *p)
+void Pad::PaintPolyLine3D(Int_t n, Double_t *p)
 {
    // Paint 3-D polyline in the CurrentPad.
    if (!fView) return;
@@ -1095,7 +1095,7 @@ void PadProxy::PaintPolyLine3D(Int_t n, Double_t *p)
 
 
 //______________________________________________________________________________
-void PadProxy::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
+void Pad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
 {
    // Paint polymarker in CurrentPad World coordinates.
 
@@ -1124,7 +1124,7 @@ void PadProxy::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
 
 
 //______________________________________________________________________________
-void PadProxy::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
+void Pad::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
 {
    // Paint polymarker in CurrentPad World coordinates.
 
@@ -1152,7 +1152,7 @@ void PadProxy::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintText(Double_t x, Double_t y, const char *text)
+void Pad::PaintText(Double_t x, Double_t y, const char *text)
 {
    // Paint text in CurrentPad World coordinates.
    fPainter.DrawText(x, y, text, TVirtualPadPainter::kClear);
@@ -1160,7 +1160,7 @@ void PadProxy::PaintText(Double_t x, Double_t y, const char *text)
 
 
 //______________________________________________________________________________
-void PadProxy::PaintTextNDC(Double_t u, Double_t v, const char *text)
+void Pad::PaintTextNDC(Double_t u, Double_t v, const char *text)
 {
    // Paint text in CurrentPad NDC coordinates.
    const Double_t xRange = GetX2() - GetX1();
@@ -1169,13 +1169,13 @@ void PadProxy::PaintTextNDC(Double_t u, Double_t v, const char *text)
 }
 
 //______________________________________________________________________________
-TH1F *PadProxy::DrawFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax, const char *title)
+TH1F *Pad::DrawFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax, const char *title)
 {
    //  Draw a pad frame
    //
    //  Compute real pad range taking into account all margins
    //  Use services of TH1F class
-   PadProxy *padsav = (PadProxy*)gPad;
+   Pad *padsav = (Pad*)gPad;
    if (this !=  padsav) {
       Warning("DrawFrame","Drawframe must be called for the current pad only");
       return padsav->DrawFrame(xmin,ymin,xmax,ymax,title);
@@ -1216,7 +1216,7 @@ TH1F *PadProxy::DrawFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t 
 }
 
 //______________________________________________________________________________
-void PadProxy::RedrawAxis(Option_t *option)
+void Pad::RedrawAxis(Option_t *option)
 {
    //  Redraw the frame axis
    //  Redrawing axis may be necessary in case of superimposed histograms
@@ -1267,27 +1267,27 @@ void PadProxy::RedrawAxis(Option_t *option)
 }
 
 //______________________________________________________________________________
-void PadProxy::GetTextExtent(UInt_t &w, UInt_t &h, const char *text)
+void Pad::GetTextExtent(UInt_t &w, UInt_t &h, const char *text)
 {
    fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
    fFontManager.GetTextBounds(w, h, text);
 }
 
 //______________________________________________________________________________
-TObject *PadProxy::FindObject(const char *name) const
+TObject *Pad::FindObject(const char *name) const
 {
    return fPrimitives.FindObject(name);
 }
 
 
 //______________________________________________________________________________
-TObject *PadProxy::FindObject(const TObject *obj) const
+TObject *Pad::FindObject(const TObject *obj) const
 {
    return fPrimitives.FindObject(obj);
 }
 
 //___________________________________________________________
-Int_t PadProxy::Clip(Float_t *x, Float_t *y, Float_t xclipl, Float_t yclipb, Float_t xclipr, Float_t yclipt)
+Int_t Pad::Clip(Float_t *x, Float_t *y, Float_t xclipl, Float_t yclipb, Float_t xclipr, Float_t yclipt)
 {
    // Clipping routine: Cohen Sutherland algorithm.
    //
@@ -1364,7 +1364,7 @@ Int_t PadProxy::Clip(Float_t *x, Float_t *y, Float_t xclipl, Float_t yclipb, Flo
 
 
 //___________________________________________________________
-Int_t PadProxy::Clip(Double_t *x, Double_t *y, Double_t xclipl, Double_t yclipb, Double_t xclipr, Double_t yclipt)
+Int_t Pad::Clip(Double_t *x, Double_t *y, Double_t xclipl, Double_t yclipb, Double_t xclipr, Double_t yclipt)
 {
    // Clipping routine: Cohen Sutherland algorithm.
    //
@@ -1449,7 +1449,7 @@ Int_t PadProxy::Clip(Double_t *x, Double_t *y, Double_t xclipl, Double_t yclipb,
 
 
 //___________________________________________________________
-Int_t PadProxy::ClippingCode(Double_t x, Double_t y, Double_t xcl1, Double_t ycl1, Double_t xcl2, Double_t ycl2)
+Int_t Pad::ClippingCode(Double_t x, Double_t y, Double_t xcl1, Double_t ycl1, Double_t xcl2, Double_t ycl2)
 {
    // Compute the endpoint codes for TPad::Clip.
 
@@ -1463,7 +1463,7 @@ Int_t PadProxy::ClippingCode(Double_t x, Double_t y, Double_t xcl1, Double_t ycl
 
 
 //___________________________________________________________
-Int_t PadProxy::ClipPolygon(Int_t n, Double_t *x, Double_t *y, Int_t nn, Double_t *xc, Double_t *yc, Double_t xclipl, Double_t yclipb, Double_t xclipr, Double_t yclipt)
+Int_t Pad::ClipPolygon(Int_t n, Double_t *x, Double_t *y, Int_t nn, Double_t *xc, Double_t *yc, Double_t xclipl, Double_t yclipb, Double_t xclipr, Double_t yclipt)
 {
    // Clip polygon using the Sutherland-Hodgman algorithm.
    //
@@ -1619,7 +1619,7 @@ Int_t PadProxy::ClipPolygon(Int_t n, Double_t *x, Double_t *y, Int_t nn, Double_
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintBorder(Color_t color, Bool_t tops)
+void Pad::PaintBorder(Color_t color, Bool_t tops)
 {
    // Paint the pad border.
    // Draw first  a box as a normal filled box
@@ -1713,7 +1713,7 @@ void PadProxy::PaintBorder(Color_t color, Bool_t tops)
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t FillStyle)
+void Pad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t FillStyle)
 {
    //   This function paints hatched fill area arcording to the FillStyle value
    // The convention for the Hatch is the following:
@@ -1785,7 +1785,7 @@ void PadProxy::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t 
 }
 
 //______________________________________________________________________________
-void PadProxy::PaintHatches(Double_t dy, Double_t angle,
+void Pad::PaintHatches(Double_t dy, Double_t angle,
                         Int_t nn, Double_t *xx, Double_t *yy)
 {
    // This routine draw hatches inclined with the
@@ -1939,7 +1939,7 @@ L50:
 }
 
 //______________________________________________________________________________
-TVirtualViewer3D *PadProxy::GetViewer3D(Option_t *)
+TVirtualViewer3D *Pad::GetViewer3D(Option_t *)
 {
    if (!fViewer3D)
       fViewer3D = new TViewer3DPad(*this);
@@ -1947,19 +1947,19 @@ TVirtualViewer3D *PadProxy::GetViewer3D(Option_t *)
 }
 
 //______________________________________________________________________________
-void PadProxy::ExecuteRotateView(Int_t evType, Int_t px, Int_t py)
+void Pad::ExecuteRotateView(Int_t evType, Int_t px, Int_t py)
 {
    fView->ExecuteRotateView(evType, px, py);
 }
 
 //______________________________________________________________________________
-Bool_t PadProxy::SelectionIsValid() const
+Bool_t Pad::SelectionIsValid() const
 {
    return fSelectionIsValid;
 }
 
 //______________________________________________________________________________
-void PadProxy::SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff)
+void Pad::SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff)
 {
    fSelectionAreaWidth = w;
    fSelectionIsValid = kTRUE;
@@ -1968,7 +1968,7 @@ void PadProxy::SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff)
 }
 
 //______________________________________________________________________________
-void PadProxy::Pick(Int_t px, Int_t py)
+void Pad::Pick(Int_t px, Int_t py)
 {
    fSelected = 0;
    fParentOfSelected = 0;
@@ -1992,7 +1992,7 @@ void PadProxy::Pick(Int_t px, Int_t py)
 }
 
 //______________________________________________________________________________
-void PadProxy::PushTopLevelSelectable(TObject *top)
+void Pad::PushTopLevelSelectable(TObject *top)
 {
    if (!fInSelectionMode)
       return;
@@ -2006,7 +2006,7 @@ void PadProxy::PushTopLevelSelectable(TObject *top)
 }
 
 //______________________________________________________________________________
-void PadProxy::PushSelectableObject(TObject *obj)
+void Pad::PushSelectableObject(TObject *obj)
 {
    if (!fInSelectionMode)
       return;
@@ -2020,7 +2020,7 @@ void PadProxy::PushSelectableObject(TObject *obj)
 }
 
 //______________________________________________________________________________
-void PadProxy::PopTopLevelSelectable()
+void Pad::PopTopLevelSelectable()
 {
    if (!fInSelectionMode)
       return;
@@ -2032,7 +2032,7 @@ void PadProxy::PopTopLevelSelectable()
 }
 
 
-TObject *PadProxy::Selected()const
+TObject *Pad::Selected()const
 {
    return fSelected;
 }

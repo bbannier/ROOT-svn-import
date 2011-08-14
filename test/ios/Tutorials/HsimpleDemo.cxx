@@ -14,7 +14,7 @@
 #include "TH1.h"
 
 #include "HsimpleDemo.h"
-#include "PadProxy.h"
+#include "Pad.h"
 
 namespace ROOT_iOS {
 namespace Demos {
@@ -86,7 +86,7 @@ void HsimpleDemo::StopAnimation()
 }
 
 //______________________________________________________________________________
-void HsimpleDemo::AdjustPad(ROOT_iOS::PadProxy *pad)
+void HsimpleDemo::AdjustPad(Pad *pad)
 {
    pad->SetFillColor(42);
    pad->GetFrame()->SetFillColor(21);

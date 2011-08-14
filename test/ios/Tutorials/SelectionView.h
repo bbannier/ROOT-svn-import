@@ -8,8 +8,12 @@
 
 #import <UIKit/UIKit.h>
 
-class PainterWrapper;
-class PadWrapper;
+namespace ROOT_iOS {
+
+class Painter;
+class Pad;
+
+}
 
 @class PadView;
 
@@ -18,13 +22,14 @@ class PadWrapper;
    int ev;
    int px;
    int py;
-   PadWrapper *pad;
-   PainterWrapper *painter;
+   ROOT_iOS::Painter *painter;
+   ROOT_iOS::Pad *pad;
+
    PadView *view;
 }
 
 - (void) setShowRotation : (BOOL) show;
 - (void) setEvent : (int) ev atX : (int) x andY : (int) y;
-- (void) setPad : (PadWrapper *)pad andPainter : (PainterWrapper *)painter;
+- (void) setPad : (ROOT_iOS::Pad *)pad andPainter : (ROOT_iOS::Painter *)painter;
 
 @end

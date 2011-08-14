@@ -11,7 +11,11 @@
 
 @class PadView;
 
-class PadWrapper;
+namespace ROOT_iOS {
+
+class Pad;
+
+}
 
 
 @interface PadOptionsController : UIViewController {
@@ -31,7 +35,7 @@ class PadWrapper;
    NSMutableArray *colors_;
    NSMutableArray *patterns_;
    
-   PadWrapper *pad;
+   ROOT_iOS::Pad *pad;
    PadView *padView;
 }
 
@@ -47,7 +51,7 @@ class PadWrapper;
 @property (nonatomic, retain) NSMutableArray *colors;
 @property (nonatomic, retain) NSMutableArray *patterns;
 
-- (void) setView : (PadView *) view andPad : (PadWrapper *) pad;
+- (void) setView : (PadView *) view andPad : (ROOT_iOS::Pad *) pad;
 
 
 - (IBAction) tickActivated : (id) control;

@@ -6,12 +6,13 @@
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
-#import "FillPatterns.h"
-
 #import "PadOptionsController.h"
 #import "PatternCell.h"
-#import "CppWrapper.h"
 #import "ColorCell.h"
+
+//C++ code (ROOT)
+#import "FillPatterns.h"
+#import "Pad.h"
 
 static const double predefinedFillColors[16][3] = 
 {
@@ -54,6 +55,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
 @synthesize colors = colors_;
 @synthesize patterns = patterns_;
 
+//_________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -90,6 +92,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
    return self;
 }
 
+//_________________________________________________________________
 - (void)dealloc
 {
    self.tickX = nil;
@@ -111,6 +114,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
    [super dealloc];
 }
 
+//_________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
@@ -120,12 +124,14 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
 
 #pragma mark - View lifecycle
 
+//_________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
+//_________________________________________________________________
 - (void)viewDidUnload
 {
    [super viewDidUnload];
@@ -133,6 +139,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
    // e.g. self.myOutlet = nil;
 }
 
+//_________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
@@ -141,81 +148,79 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
 
 #pragma mark - editing.
 
-- (void) setView : (PadView *) view andPad : (PadWrapper *) newPad
+//_________________________________________________________________
+- (void) setView : (PadView *) view andPad : (ROOT_iOS::Pad *) newPad
 {
    padView = view;
    pad = newPad;
    
-   const PadParametersForEditor params = pad->GetPadParams();
-   gridX_.on = params.gridX;
-   gridY_.on = params.gridY;
-   tickX_.on = params.tickX;
-   tickY_.on = params.tickY;
+   gridX_.on = pad->GetGridx();
+   gridY_.on = pad->GetGridy();
+   tickX_.on = pad->GetTickx();
+   tickY_.on = pad->GetTicky();
    
-   logX_.on = params.logX;
-   logY_.on = params.logY;
-   logZ_.on = params.logZ;
+   logX_.on = pad->GetLogx();
+   logY_.on = pad->GetLogy();
+   logZ_.on = pad->GetLogz();
 }
 
+//_________________________________________________________________
 - (IBAction) tickActivated : (id) control
 {
-   PadParametersForEditor params = pad->GetPadParams();
-
    const unsigned on = [control isOn];
    if (control == tickX_) {
-      params.tickX = on;
+      pad->SetTickx(on);
    } else if (control == tickY_) {
-      params.tickY = on;
+      pad->SetTicky(on);
    }
    
-   pad->SetPadParams(params);
    [padView setNeedsDisplay];
 }
 
+//_________________________________________________________________
 - (IBAction) gridActivated : (id) control
 {
-   PadParametersForEditor params = pad->GetPadParams();
-
    const unsigned on = [control isOn];
    if (control == gridX_) {
-      params.gridX = on;
+      pad->SetGridx(on);
    } else if (control == gridY_) {
-      params.gridY = on;
+      pad->SetGridy(on);
    }
    
-   pad->SetPadParams(params);
    [padView setNeedsDisplay];
 }
 
+//_________________________________________________________________
 - (IBAction) logActivated : (id) control
 {
-   PadParametersForEditor params = pad->GetPadParams();
    const unsigned on = [control isOn];
    
    if (control == logX_)
-      params.logX = on;
+      pad->SetLogx(on);
    
    if (control == logY_)
-      params.logY = on;
+      pad->SetLogy(on);
       
    if (control == logZ_)
-      params.logZ = on;
-      
-   pad->SetPadParams(params);
+      pad->SetLogz(on);
+
    [padView setNeedsDisplay];
 }
 
 #pragma mark - color/pattern picker dataSource.
+//_________________________________________________________________
 - (CGFloat)pickerView:(UIPickerView *)pickerView widthForComponent:(NSInteger)component
 {
    return 80.;
 }
 
+//_________________________________________________________________
 - (CGFloat)pickerView:(UIPickerView *)pickerView rowHeightForComponent:(NSInteger)component
 {
    return 44.;
 }
 
+//_________________________________________________________________
 - (NSInteger)pickerView:(UIPickerView *)pickerView numberOfRowsInComponent:(NSInteger)component
 {
    if (pickerView == colorPicker_)
@@ -225,6 +230,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
    return 0;
 }
 
+//_________________________________________________________________
 - (NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
 {
 	return 1;
@@ -233,6 +239,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
 #pragma mark UIPickerViewDelegate
 
 // tell the picker which view to use for a given component and row, we have an array of views to show
+//_________________________________________________________________
 - (UIView *)pickerView:(UIPickerView *)pickerView viewForRow:(NSInteger)row
 		  forComponent:(NSInteger)component reusingView:(UIView *)view
 {
@@ -244,25 +251,21 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
    return 0;
 }
 
+//_________________________________________________________________
 - (void)pickerView:(UIPickerView *)thePickerView didSelectRow:(NSInteger)row inComponent:(NSInteger)component {
-   
-   PadParametersForEditor params = pad->GetPadParams();
    
    if (thePickerView == colorPicker_) {
       if (row >= 0 && row < 16) {
-         params.fillColor = colorIndices[row];
-         pad->SetPadParams(params);
+         pad->SetFillColor(colorIndices[row]);
          [padView setNeedsDisplay];
       }
    } else if (thePickerView == patternPicker_) {
       //<= because of solid fill pattern.
       if (row > 0 && row <= ROOT_iOS::GraphicUtils::kPredefinedFillPatterns) {
-         params.fillPattern = 3000 + row;
-         pad->SetPadParams(params);
+         pad->SetFillStyle(3000 + row);
          [padView setNeedsDisplay];
       } else if (!row) {
-         params.fillPattern = 1001;
-         pad->SetPadParams(params);
+         pad->SetFillStyle(1001);
          [padView setNeedsDisplay];
       }
    }

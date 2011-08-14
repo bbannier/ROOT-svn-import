@@ -3,7 +3,7 @@
 #include "TMath.h"
 
 #include "ExclusionGraphDemo.h"
-#include "PadProxy.h"
+#include "Pad.h"
 
 namespace ROOT_iOS {
 namespace Demos {
@@ -60,7 +60,7 @@ ExclusionGraphDemo::~ExclusionGraphDemo()
 }
 
 //______________________________________________________________________________
-void ExclusionGraphDemo::AdjustPad(PadProxy *pad)
+void ExclusionGraphDemo::AdjustPad(Pad *pad)
 {
    pad->SetFillColor(0);
 }

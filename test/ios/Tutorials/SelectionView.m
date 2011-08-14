@@ -7,7 +7,10 @@
 //
 
 #import "SelectionView.h"
-#import "CppWrapper.h"
+
+//C++ (ROOT)
+#import "QuartzPainter.h"
+#import "Pad.h"
 
 
 @implementation SelectionView
@@ -30,7 +33,7 @@
 }
 
 //______________________________________________________________________________
-- (void) setPad : (PadWrapper *)newPad andPainter : (PainterWrapper *) newPainter
+- (void) setPad : (ROOT_iOS::Pad *)newPad andPainter : (ROOT_iOS::Painter *) newPainter
 {
    pad = newPad;
    painter = newPainter;
@@ -59,7 +62,7 @@
    pad->cd();
    painter->SetContext(ctx);
    if (showRotation) {
-      pad->ExRot(ev, px, py);
+      pad->ExecuteRotateView(ev, px, py);
    } else {
       CGContextTranslateCTM(ctx, 2.5f, 2.5f);
       pad->PaintShadowForSelected();

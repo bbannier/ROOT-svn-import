@@ -3,7 +3,7 @@
 #include "TMath.h"
 
 #include "PolarGraphDemo.h"
-#include "PadProxy.h"
+#include "Pad.h"
 
 namespace ROOT_iOS {
 namespace Demos {
@@ -61,7 +61,7 @@ PolarGraphDemo::~PolarGraphDemo()
 }
 
 //______________________________________________________________________________
-void PolarGraphDemo::AdjustPad(PadProxy *pad)
+void PolarGraphDemo::AdjustPad(Pad *pad)
 {
    pad->SetFillColor(0);
    pad->GetFrame()->SetFillColor(0);

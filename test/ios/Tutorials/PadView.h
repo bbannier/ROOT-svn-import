@@ -13,38 +13,43 @@
 //  Delegates all graphics to C++ code.
 ///////////////////////////////////////////////////////////
 
-class FontManagerWrapper;
-class PainterWrapper;
-class PadWrapper;
+namespace ROOT_iOS {
+
+class FontManager;
+class Painter;
+class Pad;
+
+}
 
 @class SelectionView;
 @class PictHintView;
 @class PictView;
 
 @interface PadView : UIView {
-   FontManagerWrapper *fontManager;
-   PainterWrapper *painter;
-   PadWrapper *pad;
-   
+   ROOT_iOS::FontManager *fontManager;
+   ROOT_iOS::Painter *painter;
+   ROOT_iOS::Pad *pad;
+
    float scaleFactor;
-   SelectionView * sv;
+   SelectionView *sv;
    
    BOOL processPan;
    BOOL processTap;
 }
 
-- (id) initWithFrame:(CGRect)frame forPad:(PadWrapper*)pad withFontManager:(FontManagerWrapper*)fm andPainter:(PainterWrapper*)painter;
+- (id) initWithFrame : (CGRect)frame forPad : (ROOT_iOS::Pad*)pad withFontManager : (ROOT_iOS::FontManager*)fm andPainter : (ROOT_iOS::Painter*)painter;
 - (void) dealloc;
 
 - (void) drawRect:(CGRect)rect;
 - (void) clearPad;
 
-- (void) handlePanGesture : (UIPanGestureRecognizer *) panGesture;
-- (void) handleTapGesture : (UITapGestureRecognizer *) tapGesture;
+- (void) handlePanGesture : (UIPanGestureRecognizer *)panGesture;
+- (void) handleTapGesture : (UITapGestureRecognizer *)tapGesture;
 
-- (void) setSelectionView : (SelectionView *) selView;
+- (void) setSelectionView : (SelectionView *)selView;
 
-- (void) setProcessPan : (BOOL) p;
-- (void) setProcessTap : (BOOL) t;
+- (void) setProcessPan : (BOOL)p;
+- (void) setProcessTap : (BOOL)t;
+
 
 @end
