@@ -27,7 +27,7 @@ class Pad;
    ROOT_iOS::Pad *pad;
 
    float scaleFactor;
-   SelectionView *sv;
+   SelectionView *selectionView;
    
    BOOL processPan;
    BOOL processTap;
@@ -42,7 +42,7 @@ class Pad;
 - (void) handlePanGesture : (UIPanGestureRecognizer *)panGesture;
 - (void) handleTapGesture : (UITapGestureRecognizer *)tapGesture;
 
-- (void) setSelectionView : (SelectionView *)selView;
+- (void) setSelectionView : (SelectionView *) sv;
 
 - (void) setProcessPan : (BOOL)p;
 - (void) setProcessTap : (BOOL)t;
