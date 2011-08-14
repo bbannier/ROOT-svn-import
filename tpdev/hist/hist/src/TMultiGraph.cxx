@@ -1089,10 +1089,10 @@ void TMultiGraph::Paint(Option_t *option)
          
          gPad->PushSelectableObject(obj);
          if (strlen(lnk->GetOption())) {
-            if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && obj == gPad->Selected())
+            if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && obj == gPad->GetSelected())
                obj->Paint(lnk->GetOption());
          } else {
-            if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && obj == gPad->Selected())
+            if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && obj == gPad->GetSelected())
                obj->Paint(chopt);
          }
          lnk = (TObjOptLink*)lnk->Next();

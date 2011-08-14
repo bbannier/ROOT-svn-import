@@ -22,7 +22,6 @@ class Pad;
    int ev;
    int px;
    int py;
-   ROOT_iOS::Painter *painter;
    ROOT_iOS::Pad *pad;
 
    PadView *view;
@@ -30,6 +29,6 @@ class Pad;
 
 - (void) setShowRotation : (BOOL) show;
 - (void) setEvent : (int) ev atX : (int) x andY : (int) y;
-- (void) setPad : (ROOT_iOS::Pad *)pad andPainter : (ROOT_iOS::Painter *)painter;
+- (void) setPad : (ROOT_iOS::Pad *)pad;
 
 @end

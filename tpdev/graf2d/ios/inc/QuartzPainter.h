@@ -11,6 +11,9 @@
 #ifndef ROOT_TVirtualPadPainter
 #include "TVirtualPadPainter.h"
 #endif
+#ifndef ROOT_TextOperations
+#include "TextOperations.h"
+#endif
 #ifndef ROOT_GraphicUtils
 #include "GraphicUtils.h"
 #endif
@@ -57,7 +60,7 @@ private:
 class Painter : public TVirtualPadPainter {
 public:
 
-   Painter(class FontManager &fontManager);
+   Painter();
  
    Bool_t   IsTransparent() const {return fRootOpacity < 100;}//+
    void     SetOpacity(Int_t percent);
@@ -109,7 +112,9 @@ public:
    {
       fCurrentObjectID = objId;
    }
-    
+   
+   void GetTextExtent(UInt_t &w, UInt_t &h, const char *text);
+   
 private:
 
    //Polygon parameters.
@@ -127,7 +132,7 @@ private:
    void     FillArea(Int_t n, const Double_t *x, const Double_t *y)const;
    
    //
-   FontManager    &fFontManager;
+   FontManager     fFontManager;
    CGContextRef    fCtx;//Quartz context.
    SpaceConverter  fConverter;   
 

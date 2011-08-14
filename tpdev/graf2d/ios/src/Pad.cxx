@@ -55,17 +55,15 @@
 namespace ROOT_iOS {
 
 //______________________________________________________________________________
-Pad::Pad(UInt_t w, UInt_t h, Painter &painter, FontManager &manager)
-          : fPainter(painter),
-            fFontManager(manager),
-            fViewer3D(0),
+Pad::Pad(UInt_t w, UInt_t h)
+          : fViewer3D(0),
             fSelectionIsValid(kFALSE),
-            fSelectionAreaWidth(640),
+            fSelectionAreaWidth(w),
             fSelected(0),
             fParentOfSelected(0),
             fInSelectionMode(kFALSE),
-            fObjectID(1),
-            fInHighlightMode(kFALSE)
+            fInHighlightMode(kFALSE),
+            fObjectID(1)
 {
    fViewW = w;
    fViewH = h;
@@ -1269,8 +1267,13 @@ void Pad::RedrawAxis(Option_t *option)
 //______________________________________________________________________________
 void Pad::GetTextExtent(UInt_t &w, UInt_t &h, const char *text)
 {
-   fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
-   fFontManager.GetTextBounds(w, h, text);
+   fPainter.GetTextExtent(w, h, text);
+}
+
+//______________________________________________________________________________
+void Pad::SetContext(CGContextRef ctx)
+{
+   fPainter.SetContext(ctx);
 }
 
 //______________________________________________________________________________
@@ -2031,8 +2034,8 @@ void Pad::PopTopLevelSelectable()
       fPainter.SetCurrentObjectID(fParentPainters.back().second);
 }
 
-
-TObject *Pad::Selected()const
+//______________________________________________________________________________
+TObject *Pad::GetSelected()const
 {
    return fSelected;
 }

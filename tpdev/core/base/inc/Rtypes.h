@@ -198,12 +198,12 @@ namespace ROOT {
 
    template <class RootClass> Short_t SetClassVersion(RootClass *);
 
-   extern TClass *CreateClass(const char *cname, Version_t id1,
+   extern TClass *CreateClass(const char *cname, Version_t id,
                               const type_info &info, TVirtualIsAProxy *isa,
                               ShowMembersFunc_t show,
                               const char *dfil, const char *ifil,
                               Int_t dl, Int_t il);
-   extern void AddClass(const char *cname, Version_t id1, const type_info &info,
+   extern void AddClass(const char *cname, Version_t id, const type_info &info,
                         VoidFuncPtr_t dict, Int_t pragmabits);
    extern void RemoveClass(const char *cname);
    extern void ResetClassVersion(TClass*, const char*, Short_t);
@@ -229,10 +229,10 @@ namespace ROOT {
       // See TQObject.h and table/inc/Ttypes.h for examples.
    public:
       virtual ~TInitBehavior() { }
-      virtual void Register(const char *cname, Version_t id1, const type_info &info,
+      virtual void Register(const char *cname, Version_t id, const type_info &info,
                             VoidFuncPtr_t dict, Int_t pragmabits) const = 0;
       virtual void Unregister(const char *classname) const = 0;
-      virtual TClass *CreateClass(const char *cname, Version_t id1,
+      virtual TClass *CreateClass(const char *cname, Version_t id,
                                   const type_info &info, TVirtualIsAProxy *isa,
                                   ShowMembersFunc_t show,
                                   const char *dfil, const char *ifil,
@@ -241,19 +241,19 @@ namespace ROOT {
 
    class TDefaultInitBehavior : public TInitBehavior {
    public:
-      virtual void Register(const char *cname, Version_t id1, const type_info &info,
+      virtual void Register(const char *cname, Version_t id, const type_info &info,
                             VoidFuncPtr_t dict, Int_t pragmabits) const {
-         ROOT::AddClass(cname, id1, info, dict, pragmabits);
+         ROOT::AddClass(cname, id, info, dict, pragmabits);
       }
       virtual void Unregister(const char *classname) const {
          ROOT::RemoveClass(classname);
       }
-      virtual TClass *CreateClass(const char *cname, Version_t id1,
+      virtual TClass *CreateClass(const char *cname, Version_t id,
                                   const type_info &info, TVirtualIsAProxy *isa,
                                   ShowMembersFunc_t show,
                                   const char *dfil, const char *ifil,
                                   Int_t dl, Int_t il) const {
-         return ROOT::CreateClass(cname, id1, info, isa, show, dfil, ifil, dl, il);
+         return ROOT::CreateClass(cname, id, info, isa, show, dfil, ifil, dl, il);
       }
    };
 

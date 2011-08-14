@@ -262,6 +262,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
    } else if (thePickerView == patternPicker_) {
       //<= because of solid fill pattern.
       if (row > 0 && row <= ROOT_iOS::GraphicUtils::kPredefinedFillPatterns) {
+       //  NSLog(@"%p", pad);
          pad->SetFillStyle(3000 + row);
          [padView setNeedsDisplay];
       } else if (!row) {

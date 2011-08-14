@@ -35,7 +35,6 @@ public:
    Int_t GetEventX() const;
    Int_t GetEventY() const;
    Int_t GetNumber() const;
-   TObject *GetSelected() const;
    TVirtualPad *GetPad(Int_t subpadnumber) const;
    TObject *GetPadPointer() const;
    TVirtualPad *GetPadSave() const;

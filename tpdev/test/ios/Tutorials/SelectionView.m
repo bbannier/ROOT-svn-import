@@ -18,11 +18,12 @@
 //______________________________________________________________________________
 - (id)initWithFrame:(CGRect)frame
 {
-    self = [super initWithFrame:frame];
+    self = [super initWithFrame : frame];
     if (self) {
         // Initialization code
         self.opaque = NO;
     }
+
     return self;
 }
 
@@ -33,10 +34,9 @@
 }
 
 //______________________________________________________________________________
-- (void) setPad : (ROOT_iOS::Pad *)newPad andPainter : (ROOT_iOS::Painter *) newPainter
+- (void) setPad : (ROOT_iOS::Pad *)newPad
 {
    pad = newPad;
-   painter = newPainter;
 }
 
 //______________________________________________________________________________
@@ -50,7 +50,7 @@
 //______________________________________________________________________________
 - (void) drawRect:(CGRect)rect
 {
-   if (!pad || !painter)
+   if (!pad)
       return;
 
    CGContextRef ctx = UIGraphicsGetCurrentContext();
@@ -60,7 +60,7 @@
    CGContextScaleCTM(ctx, 1.f, -1.f);
    
    pad->cd();
-   painter->SetContext(ctx);
+   pad->SetContext(ctx);
    if (showRotation) {
       pad->ExecuteRotateView(ev, px, py);
    } else {
