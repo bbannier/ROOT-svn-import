@@ -2,7 +2,7 @@
 #include "TF2.h"
 
 #include "LegoDemo.h"
-#include "Pad.h"
+#include "IOSPad.h"
 
 namespace ROOT_iOS {
 namespace Demos {

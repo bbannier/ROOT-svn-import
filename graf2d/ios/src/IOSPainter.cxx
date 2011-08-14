@@ -11,12 +11,12 @@
 #include "TMath.h"
 #include "TROOT.h"
 
-#include "ResourceManagement.h"
-#include "TextOperations.h"
-#include "QuartzPainter.h"
-#include "GraphicUtils.h"
-#include "FillPatterns.h"
-#include "Markers.h"
+#include "IOSResourceManagement.h"
+#include "IOSTextOperations.h"
+#include "IOSGraphicUtils.h"
+#include "IOSFillPatterns.h"
+#include "IOSPainter.h"
+#include "IOSMarkers.h"
 
 extern CFDataRef symbolFont;
 

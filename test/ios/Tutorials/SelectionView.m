@@ -9,8 +9,7 @@
 #import "SelectionView.h"
 
 //C++ (ROOT)
-#import "QuartzPainter.h"
-#import "Pad.h"
+#import "IOSPad.h"
 
 
 @implementation SelectionView

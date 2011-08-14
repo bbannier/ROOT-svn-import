@@ -1,5 +1,5 @@
-#ifndef ROOT_PadStub
-#define ROOT_PadStub
+#ifndef ROOT_IOSPadStub
+#define ROOT_IOSPadStub
 
 #ifndef ROOT_TVirtualPad
 #include "TVirtualPad.h"

@@ -1,5 +1,5 @@
-#ifndef ROOT_Markers
-#define ROOT_Markers
+#ifndef ROOT_IOSMarkers
+#define ROOT_IOSMarkers
 
 #include <vector>
 

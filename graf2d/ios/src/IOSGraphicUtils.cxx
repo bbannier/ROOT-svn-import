@@ -3,7 +3,7 @@
 #include "TColor.h"
 #include "TROOT.h"
 
-#include "GraphicUtils.h"
+#include "IOSGraphicUtils.h"
 
 namespace ROOT_iOS {
 namespace GraphicUtils {

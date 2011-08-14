@@ -9,9 +9,7 @@
 #import "PadView.h"
 
 //C++ code (ROOT's ios module)
-#import "TextOperations.h"
-#import "QuartzPainter.h"
-#import "Pad.h"
+#import "IOSPad.h"
 
 @implementation PadView
 

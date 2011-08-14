@@ -14,7 +14,7 @@
 #include "TH1.h"
 
 #include "HsimpleDemo.h"
-#include "Pad.h"
+#include "IOSPad.h"
 
 namespace ROOT_iOS {
 namespace Demos {

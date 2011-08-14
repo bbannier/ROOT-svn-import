@@ -1,5 +1,5 @@
-#ifndef ROOT_FillPatterns
-#define ROOT_FillPatterns
+#ifndef ROOT_IOSFillPatterns
+#define ROOT_IOSFillPatterns
 
 #include <CoreGraphics/CGPattern.h>
 

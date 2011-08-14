@@ -18,7 +18,7 @@
 
 //C++ code.
 //ROOT
-#import "Pad.h"
+#import "IOSPad.h"
 
 //Demos.
 #import "DemoBase.h"
