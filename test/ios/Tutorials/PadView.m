@@ -67,20 +67,20 @@
       return;
 
    const CGPoint p = [panGesture locationInView:self];
-   [sv setPad : pad];
-   [sv setShowRotation : YES];
+   [selectionView setPad : pad];
+   [selectionView setShowRotation : YES];
    
    if (panGesture.state == UIGestureRecognizerStateBegan) {
-      sv.hidden = NO;
-      [sv setEvent : kButton1Down atX : p.x andY : p.y];
-      [sv setNeedsDisplay];
+      selectionView.hidden = NO;
+      [selectionView setEvent : kButton1Down atX : p.x andY : p.y];
+      [selectionView setNeedsDisplay];
    } else if (panGesture.state == UIGestureRecognizerStateChanged) {
-      [sv setEvent : kButton1Motion atX : p.x andY : p.y];
-      [sv setNeedsDisplay];
+      [selectionView setEvent : kButton1Motion atX : p.x andY : p.y];
+      [selectionView setNeedsDisplay];
    } else if (panGesture.state == UIGestureRecognizerStateEnded) {
-      [sv setEvent : kButton1Up atX : p.x andY : p.y];
-      [sv setNeedsDisplay];
-      sv.hidden = YES;
+      [selectionView setEvent : kButton1Up atX : p.x andY : p.y];
+      [selectionView setNeedsDisplay];
+      selectionView.hidden = YES;
       [self setNeedsDisplay];
    }
 }
@@ -197,20 +197,20 @@
       pad->Pick(tapPt.x, tapPt.y);
       
       if (pad->GetSelected()) {
-         [sv setShowRotation : NO];
-         [sv setPad : pad];
-         [sv setNeedsDisplay];
-         sv.hidden = NO;
+         [selectionView setShowRotation : NO];
+         [selectionView setPad : pad];
+         [selectionView setNeedsDisplay];
+         selectionView.hidden = NO;
       } else {
-         sv.hidden = YES;
+         selectionView.hidden = YES;
       }
    }
 }
 
 //_________________________________________________________________
-- (void) setSelectionView:(SelectionView *)selView
+- (void) setSelectionView:(SelectionView *)sv
 {
-   sv = selView;
+   selectionView = sv;
 }
 
 //_________________________________________________________________

@@ -8,16 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		700542EE13E5B2F40093B598 /* zoom_mode_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 700542ED13E5B2F40093B598 /* zoom_mode_icon.png */; };
-		7007CB3A13E9365300312A7C /* libRoot.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3613E9365300312A7C /* libRoot.a */; };
-		7007CB3B13E9365300312A7C /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3713E9365300312A7C /* libfreetype.a */; };
-		7007CB3C13E9365300312A7C /* liblzma.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3813E9365300312A7C /* liblzma.a */; };
-		7007CB3D13E9365300312A7C /* libpcre.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7007CB3913E9365300312A7C /* libpcre.a */; };
 		700B010F13F3D40A00F84650 /* PadOptionsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 700B010D13F3D40A00F84650 /* PadOptionsController.m */; };
 		700B011013F3D40A00F84650 /* PadOptionsController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 700B010E13F3D40A00F84650 /* PadOptionsController.xib */; };
 		700B013013F3FD6700F84650 /* ColorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 700B012F13F3FD6600F84650 /* ColorCell.m */; };
 		700B013313F4051000F84650 /* PatternCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 700B013213F4051000F84650 /* PatternCell.m */; };
 		701EC32513D9762200FE395E /* SelectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = 701EC32413D9762200FE395E /* SelectionView.m */; };
-		7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */ = {isa = PBXBuildFile; fileRef = 7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */; };
 		702C4FCA13F2BE2D00C645D8 /* h2poly.root in Resources */ = {isa = PBXBuildFile; fileRef = 702C4FC913F2BE2D00C645D8 /* h2poly.root */; };
 		7032144C13E68F5E00908306 /* HelpView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144B13E68F5E00908306 /* HelpView.xib */; };
 		7032144E13E6963400908306 /* exclusion_icon_n.png in Resources */ = {isa = PBXBuildFile; fileRef = 7032144D13E6963400908306 /* exclusion_icon_n.png */; };
@@ -30,6 +25,10 @@
 		7074C90413DF0F99000CABF5 /* Default-PortraitUpsideDown.png in Resources */ = {isa = PBXBuildFile; fileRef = 7074C90213DF0F99000CABF5 /* Default-PortraitUpsideDown.png */; };
 		7074C90513DF0F99000CABF5 /* Default-Portrait.png in Resources */ = {isa = PBXBuildFile; fileRef = 7074C90313DF0F99000CABF5 /* Default-Portrait.png */; };
 		707644B113EFC6AA00C302F9 /* H2PolyDemo.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 707644AF13EFC6AA00C302F9 /* H2PolyDemo.cxx */; };
+		707CF11513F8128700829823 /* libRoot.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 707CF11113F8128600829823 /* libRoot.a */; };
+		707CF11613F8128700829823 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 707CF11213F8128600829823 /* libfreetype.a */; };
+		707CF11713F8128700829823 /* liblzma.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 707CF11313F8128600829823 /* liblzma.a */; };
+		707CF11813F8128700829823 /* libpcre.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 707CF11413F8128600829823 /* libpcre.a */; };
 		707EECB713DF3FC100873F81 /* no_gesture_icon_small.png in Resources */ = {isa = PBXBuildFile; fileRef = 707EECB513DF3FC100873F81 /* no_gesture_icon_small.png */; };
 		707EECB813DF3FC100873F81 /* no_gesture_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 707EECB613DF3FC100873F81 /* no_gesture_icon.png */; };
 		7085572013C73AD900022713 /* PadView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7085571F13C73AD900022713 /* PadView.m */; };
@@ -76,20 +75,15 @@
 
 /* Begin PBXFileReference section */
 		700542ED13E5B2F40093B598 /* zoom_mode_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = zoom_mode_icon.png; path = Pictures/zoom_mode_icon.png; sourceTree = "<group>"; };
-		7007CB3613E9365300312A7C /* libRoot.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libRoot.a; path = ../../../lib/libRoot.a; sourceTree = "<group>"; };
-		7007CB3713E9365300312A7C /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = ../../../lib/libfreetype.a; sourceTree = "<group>"; };
-		7007CB3813E9365300312A7C /* liblzma.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblzma.a; path = ../../../lib/liblzma.a; sourceTree = "<group>"; };
-		7007CB3913E9365300312A7C /* libpcre.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpcre.a; path = ../../../lib/libpcre.a; sourceTree = "<group>"; };
 		700B010C13F3D40A00F84650 /* PadOptionsController.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadOptionsController.h; sourceTree = "<group>"; };
 		700B010D13F3D40A00F84650 /* PadOptionsController.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadOptionsController.m; sourceTree = "<group>"; };
-		700B010E13F3D40A00F84650 /* PadOptionsController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadOptionsController.xib; sourceTree = "<group>"; };
+		700B010E13F3D40A00F84650 /* PadOptionsController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; name = PadOptionsController.xib; path = ../PadOptionsController.xib; sourceTree = "<group>"; };
 		700B012E13F3FD6600F84650 /* ColorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ColorCell.h; path = Tutorials.xcodeproj/ColorCell.h; sourceTree = "<group>"; };
 		700B012F13F3FD6600F84650 /* ColorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ColorCell.m; path = Tutorials.xcodeproj/ColorCell.m; sourceTree = "<group>"; };
 		700B013113F4051000F84650 /* PatternCell.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternCell.h; sourceTree = "<group>"; };
 		700B013213F4051000F84650 /* PatternCell.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PatternCell.m; sourceTree = "<group>"; };
 		701EC32313D9762200FE395E /* SelectionView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.h; sourceTree = "<group>"; };
 		701EC32413D9762200FE395E /* SelectionView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SelectionView.m; sourceTree = "<group>"; };
-		7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = pattern_selector_background.png; path = Pictures/pattern_selector_background.png; sourceTree = "<group>"; };
 		702C4FC913F2BE2D00C645D8 /* h2poly.root */ = {isa = PBXFileReference; lastKnownFileType = file; path = h2poly.root; sourceTree = "<group>"; };
 		7032144B13E68F5E00908306 /* HelpView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HelpView.xib; sourceTree = "<group>"; };
 		7032144D13E6963400908306 /* exclusion_icon_n.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = exclusion_icon_n.png; path = Pictures/exclusion_icon_n.png; sourceTree = "<group>"; };
@@ -103,12 +97,15 @@
 		7074C90313DF0F99000CABF5 /* Default-Portrait.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-Portrait.png"; path = "Pictures/Default-Portrait.png"; sourceTree = "<group>"; };
 		707644AF13EFC6AA00C302F9 /* H2PolyDemo.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = H2PolyDemo.cxx; sourceTree = "<group>"; };
 		707644B013EFC6AA00C302F9 /* H2PolyDemo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = H2PolyDemo.h; sourceTree = "<group>"; };
+		707CF11113F8128600829823 /* libRoot.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libRoot.a; path = ../../../../lib/libRoot.a; sourceTree = "<group>"; };
+		707CF11213F8128600829823 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = ../../../../lib/libfreetype.a; sourceTree = "<group>"; };
+		707CF11313F8128600829823 /* liblzma.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblzma.a; path = ../../../../lib/liblzma.a; sourceTree = "<group>"; };
+		707CF11413F8128600829823 /* libpcre.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpcre.a; path = ../../../../lib/libpcre.a; sourceTree = "<group>"; };
 		707EECB513DF3FC100873F81 /* no_gesture_icon_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = no_gesture_icon_small.png; path = Pictures/no_gesture_icon_small.png; sourceTree = "<group>"; };
 		707EECB613DF3FC100873F81 /* no_gesture_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = no_gesture_icon.png; path = Pictures/no_gesture_icon.png; sourceTree = "<group>"; };
 		7085571E13C73AD900022713 /* PadView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadView.h; sourceTree = "<group>"; };
 		7085571F13C73AD900022713 /* PadView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PadView.m; sourceTree = "<group>"; };
 		7098E93E13F2BA470032D660 /* h2poly_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = h2poly_icon.png; path = Pictures/h2poly_icon.png; sourceTree = "<group>"; };
-		7099E64B13CB332A00D31765 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		709A653213EFD53700612A38 /* system.rootrc */ = {isa = PBXFileReference; lastKnownFileType = text; name = system.rootrc; path = ../../../etc/system.rootrc; sourceTree = "<group>"; };
 		70A3D4BD13E84F8200C39E40 /* select_mode.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = select_mode.png; path = Pictures/select_mode.png; sourceTree = "<group>"; };
 		70B059C413C9927700583EDB /* DemoBase.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = DemoBase.h; sourceTree = "<group>"; };
@@ -137,7 +134,6 @@
 		70D4847F13F057430043110B /* system.plugins-ios */ = {isa = PBXFileReference; lastKnownFileType = text; name = "system.plugins-ios"; path = "../../../etc/system.plugins-ios"; sourceTree = "<group>"; };
 		70D645FB13D3243A00CE9FB1 /* PictView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = PictView.h; sourceTree = "<group>"; };
 		70D645FC13D3243A00CE9FB1 /* PictView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PictView.m; sourceTree = "<group>"; };
-		70DE417C13E81AEC0007BBEB /* libRoot.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libRoot.a; path = ../../../lib/libRoot.a; sourceTree = "<group>"; };
 		70DF815A13DDBA6400AD2F4D /* DemoBase.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DemoBase.cxx; sourceTree = "<group>"; };
 		70DF815B13DDBA6400AD2F4D /* ExclusionGraphDemo.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ExclusionGraphDemo.cxx; sourceTree = "<group>"; };
 		70DF815C13DDBA6400AD2F4D /* HsimpleDemo.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HsimpleDemo.cxx; sourceTree = "<group>"; };
@@ -158,9 +154,6 @@
 		70DF817313DDBB0D00AD2F4D /* surface_icon_n.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = surface_icon_n.png; path = Pictures/surface_icon_n.png; sourceTree = "<group>"; };
 		70DF818813DDBC1800AD2F4D /* DarkBackground.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = DarkBackground.png; path = Pictures/DarkBackground.png; sourceTree = "<group>"; };
 		70DF818913DDBC1800AD2F4D /* LightBackground.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = LightBackground.png; path = Pictures/LightBackground.png; sourceTree = "<group>"; };
-		70DF818C13DDBEF300AD2F4D /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = ../../../lib/libfreetype.a; sourceTree = "<group>"; };
-		70DF818D13DDBEF300AD2F4D /* liblzma.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblzma.a; path = ../../../lib/liblzma.a; sourceTree = "<group>"; };
-		70DF818E13DDBEF300AD2F4D /* libpcre.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpcre.a; path = ../../../lib/libpcre.a; sourceTree = "<group>"; };
 		70ED86D313CB46BA00919971 /* SurfaceDemo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SurfaceDemo.h; sourceTree = "<group>"; };
 		70ED86D713CB504A00919971 /* PolarGraphDemo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PolarGraphDemo.h; sourceTree = "<group>"; };
 		70ED86DB13CB76C400919971 /* LegoDemo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LegoDemo.h; sourceTree = "<group>"; };
@@ -172,10 +165,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7007CB3A13E9365300312A7C /* libRoot.a in Frameworks */,
-				7007CB3B13E9365300312A7C /* libfreetype.a in Frameworks */,
-				7007CB3C13E9365300312A7C /* liblzma.a in Frameworks */,
-				7007CB3D13E9365300312A7C /* libpcre.a in Frameworks */,
+				707CF11513F8128700829823 /* libRoot.a in Frameworks */,
+				707CF11613F8128700829823 /* libfreetype.a in Frameworks */,
+				707CF11713F8128700829823 /* liblzma.a in Frameworks */,
+				707CF11813F8128700829823 /* libpcre.a in Frameworks */,
 				705D185113D0CBB400C47E5F /* QuartzCore.framework in Frameworks */,
 				7059E24513CC394C0007E4E1 /* libz.dylib in Frameworks */,
 				70B05A0E13C99F4700583EDB /* CoreText.framework in Frameworks */,
@@ -188,16 +181,60 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		7099E64513CB2BBE00D31765 /* C++ code */ = {
+		707CF10C13F8118D00829823 /* ROOT files */ = {
 			isa = PBXGroup;
 			children = (
+				709A653213EFD53700612A38 /* system.rootrc */,
+				70D4847F13F057430043110B /* system.plugins-ios */,
+				702C4FC913F2BE2D00C645D8 /* h2poly.root */,
 			);
-			name = "C++ code";
+			name = "ROOT files";
 			sourceTree = "<group>";
 		};
-		7099E64713CB2BF000D31765 /* Objective C code */ = {
+		707CF10D13F811AD00829823 /* Images */ = {
 			isa = PBXGroup;
 			children = (
+				70DF818813DDBC1800AD2F4D /* DarkBackground.png */,
+				70DF818913DDBC1800AD2F4D /* LightBackground.png */,
+				70DF816713DDBB0D00AD2F4D /* double_tap_gesture_icon_small.png */,
+				70DF816813DDBB0D00AD2F4D /* double_tap_gesture_icon.png */,
+				70DF816913DDBB0D00AD2F4D /* hsimple_icon_n.png */,
+				70DF816A13DDBB0D00AD2F4D /* lego_icon_n.png */,
+				70DF816B13DDBB0D00AD2F4D /* pan_gesture_icon_small.png */,
+				70DF816C13DDBB0D00AD2F4D /* pan_gesture_icon.png */,
+				70DF816D13DDBB0D00AD2F4D /* pinch_gesture_icon_small.png */,
+				70DF816E13DDBB0D00AD2F4D /* pinch_gesture_icon.png */,
+				70DF816F13DDBB0D00AD2F4D /* polar_icon_n.png */,
+				70DF817013DDBB0D00AD2F4D /* rotate_icon_small.png */,
+				70DF817113DDBB0D00AD2F4D /* rotate_icon.png */,
+				70DF817313DDBB0D00AD2F4D /* surface_icon_n.png */,
+				70D3FB5013E7F605005BADA3 /* single_tap_icon_small.png */,
+				70D3FB5113E7F605005BADA3 /* single_tap_icon.png */,
+				7032144D13E6963400908306 /* exclusion_icon_n.png */,
+				700542ED13E5B2F40093B598 /* zoom_mode_icon.png */,
+				707EECB513DF3FC100873F81 /* no_gesture_icon_small.png */,
+				707EECB613DF3FC100873F81 /* no_gesture_icon.png */,
+				707327D113DF126C00E5B12B /* Default-LandscapeRight.png */,
+				707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */,
+				707327D313DF126C00E5B12B /* Default-Landscape.png */,
+				7074C90213DF0F99000CABF5 /* Default-PortraitUpsideDown.png */,
+				7074C90313DF0F99000CABF5 /* Default-Portrait.png */,
+				70A3D4BD13E84F8200C39E40 /* select_mode.png */,
+				7098E93E13F2BA470032D660 /* h2poly_icon.png */,
+			);
+			name = Images;
+			sourceTree = "<group>";
+		};
+		7099E64713CB2BF000D31765 /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				700B012E13F3FD6600F84650 /* ColorCell.h */,
+				700B012F13F3FD6600F84650 /* ColorCell.m */,
+				700B013113F4051000F84650 /* PatternCell.h */,
+				700B013213F4051000F84650 /* PatternCell.m */,
+				705D593513F2D2420014384B /* PadEditor.xib */,
+				700B010C13F3D40A00F84650 /* PadOptionsController.h */,
+				700B010D13F3D40A00F84650 /* PadOptionsController.m */,
 				70D645FB13D3243A00CE9FB1 /* PictView.h */,
 				70D645FC13D3243A00CE9FB1 /* PictView.m */,
 				7085571F13C73AD900022713 /* PadView.m */,
@@ -214,67 +251,19 @@
 				701EC32313D9762200FE395E /* SelectionView.h */,
 				701EC32413D9762200FE395E /* SelectionView.m */,
 			);
-			name = "Objective C code";
+			name = Classes;
 			sourceTree = "<group>";
 		};
 		70BA9B3413C5F89100102BC9 = {
 			isa = PBXGroup;
 			children = (
-				700B012E13F3FD6600F84650 /* ColorCell.h */,
-				700B012F13F3FD6600F84650 /* ColorCell.m */,
-				700B013113F4051000F84650 /* PatternCell.h */,
-				700B013213F4051000F84650 /* PatternCell.m */,
-				705D593513F2D2420014384B /* PadEditor.xib */,
-				700B010C13F3D40A00F84650 /* PadOptionsController.h */,
-				700B010D13F3D40A00F84650 /* PadOptionsController.m */,
-				700B010E13F3D40A00F84650 /* PadOptionsController.xib */,
-				702C4FC913F2BE2D00C645D8 /* h2poly.root */,
-				7098E93E13F2BA470032D660 /* h2poly_icon.png */,
-				7025F5E113F15B5B00AEFD66 /* pattern_selector_background.png */,
-				70D4847F13F057430043110B /* system.plugins-ios */,
-				709A653213EFD53700612A38 /* system.rootrc */,
-				7007CB3613E9365300312A7C /* libRoot.a */,
-				7007CB3713E9365300312A7C /* libfreetype.a */,
-				7007CB3813E9365300312A7C /* liblzma.a */,
-				7007CB3913E9365300312A7C /* libpcre.a */,
-				70A3D4BD13E84F8200C39E40 /* select_mode.png */,
-				70DE417C13E81AEC0007BBEB /* libRoot.a */,
-				70D3FB5013E7F605005BADA3 /* single_tap_icon_small.png */,
-				70D3FB5113E7F605005BADA3 /* single_tap_icon.png */,
-				7032144D13E6963400908306 /* exclusion_icon_n.png */,
-				700542ED13E5B2F40093B598 /* zoom_mode_icon.png */,
-				707EECB513DF3FC100873F81 /* no_gesture_icon_small.png */,
-				707EECB613DF3FC100873F81 /* no_gesture_icon.png */,
-				707327D113DF126C00E5B12B /* Default-LandscapeRight.png */,
-				707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */,
-				707327D313DF126C00E5B12B /* Default-Landscape.png */,
-				7074C90213DF0F99000CABF5 /* Default-PortraitUpsideDown.png */,
-				7074C90313DF0F99000CABF5 /* Default-Portrait.png */,
-				70DF818C13DDBEF300AD2F4D /* libfreetype.a */,
-				70DF818D13DDBEF300AD2F4D /* liblzma.a */,
-				70DF818E13DDBEF300AD2F4D /* libpcre.a */,
-				70DF818813DDBC1800AD2F4D /* DarkBackground.png */,
-				70DF818913DDBC1800AD2F4D /* LightBackground.png */,
-				70DF816713DDBB0D00AD2F4D /* double_tap_gesture_icon_small.png */,
-				70DF816813DDBB0D00AD2F4D /* double_tap_gesture_icon.png */,
-				70DF816913DDBB0D00AD2F4D /* hsimple_icon_n.png */,
-				70DF816A13DDBB0D00AD2F4D /* lego_icon_n.png */,
-				70DF816B13DDBB0D00AD2F4D /* pan_gesture_icon_small.png */,
-				70DF816C13DDBB0D00AD2F4D /* pan_gesture_icon.png */,
-				70DF816D13DDBB0D00AD2F4D /* pinch_gesture_icon_small.png */,
-				70DF816E13DDBB0D00AD2F4D /* pinch_gesture_icon.png */,
-				70DF816F13DDBB0D00AD2F4D /* polar_icon_n.png */,
-				70DF817013DDBB0D00AD2F4D /* rotate_icon_small.png */,
-				70DF817113DDBB0D00AD2F4D /* rotate_icon.png */,
-				70DF817313DDBB0D00AD2F4D /* surface_icon_n.png */,
+				707CF10D13F811AD00829823 /* Images */,
+				707CF10C13F8118D00829823 /* ROOT files */,
 				705D185013D0CBB400C47E5F /* QuartzCore.framework */,
-				7059E24413CC394C0007E4E1 /* libz.dylib */,
-				70ED86D913CB75FD00919971 /* Demos */,
-				7099E64B13CB332A00D31765 /* libz.dylib */,
-				7099E64713CB2BF000D31765 /* Objective C code */,
-				7099E64513CB2BBE00D31765 /* C++ code */,
+				70ED86D913CB75FD00919971 /* Demos (C++ code) */,
+				7099E64713CB2BF000D31765 /* Classes */,
 				70B05A0D13C99F4700583EDB /* CoreText.framework */,
-				70BA9B4913C5F89100102BC9 /* Tutorials */,
+				70BA9B4913C5F89100102BC9 /* Nibs and libs */,
 				70BA9B4213C5F89100102BC9 /* Frameworks */,
 				70BA9B4013C5F89100102BC9 /* Products */,
 			);
@@ -298,14 +287,21 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		70BA9B4913C5F89100102BC9 /* Tutorials */ = {
+		70BA9B4913C5F89100102BC9 /* Nibs and libs */ = {
 			isa = PBXGroup;
 			children = (
+				7059E24413CC394C0007E4E1 /* libz.dylib */,
+				707CF11113F8128600829823 /* libRoot.a */,
+				707CF11213F8128600829823 /* libfreetype.a */,
+				707CF11313F8128600829823 /* liblzma.a */,
+				707CF11413F8128600829823 /* libpcre.a */,
+				700B010E13F3D40A00F84650 /* PadOptionsController.xib */,
 				70BA9B5513C5F89100102BC9 /* MainWindow.xib */,
 				7032144B13E68F5E00908306 /* HelpView.xib */,
 				70BA9B5B13C5F89100102BC9 /* DetailView.xib */,
 				70BA9B4A13C5F89100102BC9 /* Supporting Files */,
 			);
+			name = "Nibs and libs";
 			path = Tutorials;
 			sourceTree = "<group>";
 		};
@@ -319,7 +315,7 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		70ED86D913CB75FD00919971 /* Demos */ = {
+		70ED86D913CB75FD00919971 /* Demos (C++ code) */ = {
 			isa = PBXGroup;
 			children = (
 				70DF815A13DDBA6400AD2F4D /* DemoBase.cxx */,
@@ -337,7 +333,7 @@
 				707644AF13EFC6AA00C302F9 /* H2PolyDemo.cxx */,
 				707644B013EFC6AA00C302F9 /* H2PolyDemo.h */,
 			);
-			name = Demos;
+			name = "Demos (C++ code)";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -389,7 +385,6 @@
 			files = (
 				702C4FCA13F2BE2D00C645D8 /* h2poly.root in Resources */,
 				7098E93F13F2BA470032D660 /* h2poly_icon.png in Resources */,
-				7025F5E213F15B5B00AEFD66 /* pattern_selector_background.png in Resources */,
 				70D4848013F057430043110B /* system.plugins-ios in Resources */,
 				709A653313EFD53700612A38 /* system.rootrc in Resources */,
 				70A3D4BE13E84F8200C39E40 /* select_mode.png in Resources */,
