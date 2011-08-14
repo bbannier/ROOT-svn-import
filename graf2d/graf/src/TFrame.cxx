@@ -125,7 +125,7 @@ void TFrame::Paint(Option_t *option)
 //   if (gPad->PadInSelectionMode())
 //      gPad->PushSelectableObject(this);
 
-   if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && this == gPad->Selected()) {
+   if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && this == gPad->GetSelected()) {
       TWbox::Paint(option);
       gPad->PaintBox(fX1,fY1,fX2,fY2,"s");
    }

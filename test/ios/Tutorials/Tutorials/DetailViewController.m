@@ -17,8 +17,8 @@
 #import "PadView.h"
 
 //C++ code.
-#import "TextOperations.h"
-#import "QuartzPainter.h"
+//#import "TextOperations.h"
+//#import "QuartzPainter.h"
 #import "Pad.h"
 
 #import "DemoBase.h"
@@ -69,9 +69,7 @@
 //_________________________________________________________________
 - (void)initCPPObjects
 {
-   fontManager = new ROOT_iOS::FontManager;
-   painter = new ROOT_iOS::Painter(*fontManager);
-   pad = new ROOT_iOS::Pad(640, 640, *painter, *fontManager);
+   pad = new ROOT_iOS::Pad(640, 640);
 }
 
 //_________________________________________________________________
@@ -105,7 +103,7 @@
       scrollViews[i] = [[UIScrollView alloc] initWithFrame:padRect];
       scrollViews[i].backgroundColor = [UIColor darkGrayColor];
       scrollViews[i].delegate = self;
-      padViews[i] = [[PadView alloc] initWithFrame:padRect forPad:pad withFontManager : fontManager andPainter : painter];
+      padViews[i] = [[PadView alloc] initWithFrame : padRect forPad : pad];
       scrollViews[i].contentSize = padViews[i].frame.size;
       [scrollViews[i] addSubview:padViews[i]];
       [padViews[i] release];
@@ -334,6 +332,8 @@
 - (void)dealloc
 {
    //
+   delete pad;
+   //
    self.padController = nil;
    self.editorPopover = nil;
    self.help = nil;
@@ -473,7 +473,7 @@
       
    CGRect padRect = CGRectMake(0.f, 0.f, 640.f, 640.f);
    [padViews[view] removeFromSuperview];
-   padViews[view] = [[PadView alloc] initWithFrame:padRect forPad:pad withFontManager:fontManager andPainter:painter];
+   padViews[view] = [[PadView alloc] initWithFrame : padRect forPad : pad];
    [scroll addSubview:padViews[view]];
    [padViews[view] release];
   
@@ -637,7 +637,7 @@
    oldSizes = oldRect.size;
    
    [padViews[activeView] removeFromSuperview];
-   padViews[activeView] = [[PadView alloc] initWithFrame:oldRect forPad:pad withFontManager:fontManager andPainter:painter];
+   padViews[activeView] = [[PadView alloc] initWithFrame : oldRect forPad : pad];
    [scrollView addSubview:padViews[activeView]];
    [padViews[activeView] release];
   
@@ -718,7 +718,7 @@
       
       [padViews[activeView] removeFromSuperview];
 
-      padViews[activeView] = [[PadView alloc] initWithFrame:newRect forPad:pad withFontManager:fontManager andPainter:painter];
+      padViews[activeView] = [[PadView alloc] initWithFrame : newRect forPad : pad];
       [scrollViews[activeView] addSubview:padViews[activeView]];
       [padViews[activeView] release];
   

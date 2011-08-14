@@ -15,8 +15,6 @@
 
 namespace ROOT_iOS {
 
-class FontManager;
-class Painter;
 class Pad;
 
 }
@@ -26,8 +24,6 @@ class Pad;
 @class PictView;
 
 @interface PadView : UIView {
-   ROOT_iOS::FontManager *fontManager;
-   ROOT_iOS::Painter *painter;
    ROOT_iOS::Pad *pad;
 
    float scaleFactor;
@@ -37,7 +33,7 @@ class Pad;
    BOOL processTap;
 }
 
-- (id) initWithFrame : (CGRect)frame forPad : (ROOT_iOS::Pad*)pad withFontManager : (ROOT_iOS::FontManager*)fm andPainter : (ROOT_iOS::Painter*)painter;
+- (id) initWithFrame : (CGRect)frame forPad : (ROOT_iOS::Pad*)pad;
 - (void) dealloc;
 
 - (void) drawRect:(CGRect)rect;

@@ -257,8 +257,7 @@ public:
    virtual void PushTopLevelSelectable(TObject *top);
    virtual void PushSelectableObject(TObject *obj);
    virtual void PopTopLevelSelectable();
-   
-   virtual TObject *Selected()const;
+
 #endif
 
    static TVirtualPad *&Pad();

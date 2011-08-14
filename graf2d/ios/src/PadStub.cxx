@@ -89,12 +89,6 @@ Int_t PadStub::GetNumber() const
 }
 
 //______________________________________________________________________________
-TObject *PadStub::GetSelected() const
-{
-   return 0;
-}
-
-//______________________________________________________________________________
 TVirtualPad *PadStub::GetPad(Int_t) const
 {
    return 0;

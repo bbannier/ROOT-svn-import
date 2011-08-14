@@ -3968,7 +3968,7 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    if (gPad->PadInSelectionMode())
       gPad->PushSelectableObject(fXaxis);
 
-   if (gPad->PadInSelectionMode() || !gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && gPad->Selected() == fXaxis)) {
+   if (gPad->PadInSelectionMode() || !gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && gPad->GetSelected() == fXaxis)) {
 
    ndivx = fXaxis->GetNdivisions();
    if (ndivx > 1000) {
@@ -4075,7 +4075,7 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    if (gPad->PadInSelectionMode())
       gPad->PushSelectableObject(fYaxis);
 
-   if (gPad->PadInSelectionMode() || !gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && gPad->Selected() == fYaxis)) {
+   if (gPad->PadInSelectionMode() || !gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && gPad->GetSelected() == fYaxis)) {
 
    // Paint Y axis
    ndivy = fYaxis->GetNdivisions();
@@ -5480,7 +5480,7 @@ void THistPainter::PaintFunction(Option_t *)
       } else  {
          gPad->PushSelectableObject(obj);
          
-         if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && obj == gPad->Selected())
+         if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && obj == gPad->GetSelected())
             obj->Paint(lnk->GetOption());
       }
       lnk = (TObjOptLink*)lnk->Next();
@@ -5495,7 +5495,7 @@ void THistPainter::PaintHist(Option_t *)
    /* Begin_html
    <a href="#HP01b">Control routine to draw 1D histograms.</a>
    End_html */
-   if (gPad->PadInHighlightMode() && gPad->Selected() != fH) {
+   if (gPad->PadInHighlightMode() && gPad->GetSelected() != fH) {
       return;
    }
    

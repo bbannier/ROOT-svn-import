@@ -119,7 +119,6 @@ Bool_t TVirtualPad::PadInHighlightMode() const
 //______________________________________________________________________________
 void TVirtualPad::PushTopLevelSelectable(TObject *)
 {
-   std::cout<<"HUILO"<<std::endl;
 }
 
 //______________________________________________________________________________
@@ -132,16 +131,13 @@ void TVirtualPad::PopTopLevelSelectable()
 {
 }
 
-TObject *TVirtualPad::Selected()const{
-std::cout<<"HUI!\n";
-return 0;
-}
-
+//______________________________________________________________________________
 TPadPusherGuard::TPadPusherGuard(TObject *obj)
 {
    gPad->PushTopLevelSelectable(obj);
 }
 
+//______________________________________________________________________________
 TPadPusherGuard::~TPadPusherGuard()
 {
    gPad->PopTopLevelSelectable();

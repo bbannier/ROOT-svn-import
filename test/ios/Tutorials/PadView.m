@@ -16,15 +16,13 @@
 @implementation PadView
 
 //_________________________________________________________________
-- (id) initWithFrame:(CGRect)frame forPad : (ROOT_iOS::Pad*)pd withFontManager : (ROOT_iOS::FontManager*)fm andPainter : (ROOT_iOS::Painter*)pt;
+- (id) initWithFrame:(CGRect)frame forPad : (ROOT_iOS::Pad*)pd
 {
    self = [super initWithFrame : frame];
 
    if (self) {
       //Initialize C++ objects here.
       pad = pd;
-      fontManager = fm;
-      painter = pt;
 
       scaleFactor = frame.size.width / 640.f;
    }
@@ -52,7 +50,7 @@
    CGContextScaleCTM(ctx, scaleFactor, scaleFactor);
 
    pad->cd();
-   painter->SetContext(ctx);
+   pad->SetContext(ctx);
    pad->Paint();
 }
 
@@ -69,7 +67,7 @@
       return;
 
    const CGPoint p = [panGesture locationInView:self];
-   [sv setPad : pad andPainter : painter];
+   [sv setPad : pad];
    [sv setShowRotation : YES];
    
    if (panGesture.state == UIGestureRecognizerStateBegan) {
@@ -106,7 +104,7 @@
    CGContextFillRect(ctx, rect);
    //Set context and paint pad's contents
    //with special colors (color == object's identity)
-   painter->SetContext(ctx);
+   pad->SetContext(ctx);
    pad->PaintForSelection();
    
    UIImage *uiImageForPicking = UIGraphicsGetImageFromCurrentImageContext();//autoreleased UIImage.
@@ -198,9 +196,9 @@
       
       pad->Pick(tapPt.x, tapPt.y);
       
-      if (pad->Selected()) {
+      if (pad->GetSelected()) {
          [sv setShowRotation : NO];
-         [sv setPad : pad andPainter : painter];
+         [sv setPad : pad];
          [sv setNeedsDisplay];
          sv.hidden = NO;
       } else {

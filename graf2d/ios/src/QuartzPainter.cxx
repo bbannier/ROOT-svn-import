@@ -85,9 +85,8 @@ inline Double_t SpaceConverter::YToView(Double_t y)const
 }
 
 //_________________________________________________________________
-Painter::Painter(FontManager &fontManager)
-            : fFontManager(fontManager),
-              fCtx(0),
+Painter::Painter()
+            : fCtx(0),
               fRootOpacity(100),
               fPainterMode(kPaintToView),
               fCurrentObjectID(0),
@@ -500,6 +499,13 @@ void Painter::SetContext(CGContextRef ctx)
 void Painter::SetTransform(UInt_t w, Double_t xMin, Double_t xMax, UInt_t h, Double_t yMin, Double_t yMax)
 {
    fConverter.SetConverter(w, xMin, xMax, h, yMin, yMax);
+}
+
+//_________________________________________________________________
+void Painter::GetTextExtent(UInt_t &w, UInt_t &h, const char *text)
+{
+   fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
+   fFontManager.GetTextBounds(w, h, text);
 }
 
 //_________________________________________________________________

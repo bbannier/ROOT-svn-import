@@ -4,6 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include <CoreGraphics/CGContext.h>
+
 #ifndef ROOT_TLine
 #include "TList.h"
 #endif
@@ -47,8 +49,9 @@ public:
    };
 
    void GetTextExtent(UInt_t &w, UInt_t &h, const char *text);
+   void SetContext(CGContextRef ctx);
 
-   Pad(UInt_t w, UInt_t h, Painter &painter, FontManager &fontManager);
+   Pad(UInt_t w, UInt_t h);
    
    //Final-overriders for TVirtualPad class.
    const char *GetName() const;
@@ -240,7 +243,7 @@ public:
    void SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff);
    void Pick(Int_t px, Int_t py);
 
-   TObject *Selected() const;
+   TObject *GetSelected() const;
 
    void PaintShadowForSelected() const;
    void PaintSelected() const;
@@ -253,8 +256,8 @@ public:
    
    
 private:
-   Painter &fPainter;
-   FontManager &fFontManager;
+   //Painter based on CoreGraphics.
+   mutable Painter fPainter;
 
    //View's width and height (from UIKit).
    UInt_t fViewW;
