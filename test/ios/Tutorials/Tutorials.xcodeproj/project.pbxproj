@@ -17,7 +17,6 @@
 		7032144C13E68F5E00908306 /* HelpView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7032144B13E68F5E00908306 /* HelpView.xib */; };
 		7032144E13E6963400908306 /* exclusion_icon_n.png in Resources */ = {isa = PBXBuildFile; fileRef = 7032144D13E6963400908306 /* exclusion_icon_n.png */; };
 		7059E24513CC394C0007E4E1 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7059E24413CC394C0007E4E1 /* libz.dylib */; };
-		705D593613F2D2420014384B /* PadEditor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 705D593513F2D2420014384B /* PadEditor.xib */; };
 		707327D413DF126C00E5B12B /* Default-LandscapeRight.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D113DF126C00E5B12B /* Default-LandscapeRight.png */; };
 		707327D513DF126C00E5B12B /* Default-LandscapeLeft.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */; };
 		707327D613DF126C00E5B12B /* Default-Landscape.png in Resources */ = {isa = PBXBuildFile; fileRef = 707327D313DF126C00E5B12B /* Default-Landscape.png */; };
@@ -88,7 +87,6 @@
 		7032144B13E68F5E00908306 /* HelpView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HelpView.xib; sourceTree = "<group>"; };
 		7032144D13E6963400908306 /* exclusion_icon_n.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = exclusion_icon_n.png; path = Pictures/exclusion_icon_n.png; sourceTree = "<group>"; };
 		7059E24413CC394C0007E4E1 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
-		705D593513F2D2420014384B /* PadEditor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; name = PadEditor.xib; path = Tutorials.xcodeproj/PadEditor.xib; sourceTree = "<group>"; };
 		707327D113DF126C00E5B12B /* Default-LandscapeRight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-LandscapeRight.png"; path = "Pictures/Default-LandscapeRight.png"; sourceTree = "<group>"; };
 		707327D213DF126C00E5B12B /* Default-LandscapeLeft.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-LandscapeLeft.png"; path = "Pictures/Default-LandscapeLeft.png"; sourceTree = "<group>"; };
 		707327D313DF126C00E5B12B /* Default-Landscape.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Default-Landscape.png"; path = "Pictures/Default-Landscape.png"; sourceTree = "<group>"; };
@@ -232,7 +230,6 @@
 				700B012F13F3FD6600F84650 /* ColorCell.m */,
 				700B013113F4051000F84650 /* PatternCell.h */,
 				700B013213F4051000F84650 /* PatternCell.m */,
-				705D593513F2D2420014384B /* PadEditor.xib */,
 				700B010C13F3D40A00F84650 /* PadOptionsController.h */,
 				700B010D13F3D40A00F84650 /* PadOptionsController.m */,
 				70D645FB13D3243A00CE9FB1 /* PictView.h */,
@@ -417,7 +414,6 @@
 				70BA9B5713C5F89100102BC9 /* MainWindow.xib in Resources */,
 				70BA9B5D13C5F89100102BC9 /* DetailView.xib in Resources */,
 				7032144C13E68F5E00908306 /* HelpView.xib in Resources */,
-				705D593613F2D2420014384B /* PadEditor.xib in Resources */,
 				700B011013F3D40A00F84650 /* PadOptionsController.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
