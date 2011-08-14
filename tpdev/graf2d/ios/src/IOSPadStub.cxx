@@ -1,4 +1,4 @@
-#include "PadStub.h"
+#include "IOSPadStub.h"
 
 namespace ROOT_iOS {
 

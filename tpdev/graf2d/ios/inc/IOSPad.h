@@ -1,5 +1,5 @@
-#ifndef ROOT_Pad
-#define ROOT_Pad
+#ifndef ROOT_IOSPad
+#define ROOT_IOSPad
 
 #include <utility>
 #include <vector>
@@ -10,16 +10,16 @@
 #include "TList.h"
 #endif
 
-#ifndef ROOT_QuartzPainter
-#include "QuartzPainter.h"
+#ifndef ROOT_IOSTextOperations
+#include "IOSTextOperations.h"
 #endif
 
-#ifndef ROOT_TextOperations
-#include "TextOperations.h"
+#ifndef ROOT_IOSPainter
+#include "IOSPainter.h"
 #endif
 
-#ifndef ROOT_PadStub
-#include "PadStub.h"
+#ifndef ROOT_IOSPadStub
+#include "IOSPadStub.h"
 #endif
 
 namespace ROOT_iOS {

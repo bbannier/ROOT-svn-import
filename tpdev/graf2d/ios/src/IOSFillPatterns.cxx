@@ -1,6 +1,6 @@
 #include <CoreGraphics/CGContext.h>
 
-#include "FillPatterns.h"
+#include "IOSFillPatterns.h"
 
 namespace ROOT_iOS {
 namespace GraphicUtils {

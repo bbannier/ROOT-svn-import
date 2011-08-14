@@ -11,8 +11,8 @@
 #import "ColorCell.h"
 
 //C++ code (ROOT)
-#import "FillPatterns.h"
-#import "Pad.h"
+#import "IOSFillPatterns.h"
+#import "IOSPad.h"
 
 static const double predefinedFillColors[16][3] = 
 {

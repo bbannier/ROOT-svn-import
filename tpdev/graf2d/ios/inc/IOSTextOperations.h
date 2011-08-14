@@ -6,8 +6,8 @@
 #include <CoreText/CTFont.h>
 #include <CoreText/CTLine.h>
 
-#ifndef ROOT_ResourceManagement
-#include "ResourceManagement.h"
+#ifndef ROOT_IOSResourceManagement
+#include "IOSResourceManagement.h"
 #endif
 
 #ifndef ROOT_Rtypes

@@ -1,9 +1,9 @@
 #include "TGraphPolar.h"
+#include "IOSPad.h"
 #include "TFrame.h"
 #include "TMath.h"
 
 #include "PolarGraphDemo.h"
-#include "Pad.h"
 
 namespace ROOT_iOS {
 namespace Demos {

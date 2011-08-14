@@ -1,11 +1,3 @@
-//
-//  FontManager.cpp
-//  test_static_test
-//
-//  Created by Timur Pocheptsov on 6/30/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #include <stdexcept>
 #include <utility>
 #include <string>
@@ -23,8 +15,8 @@
 #include "TColor.h"
 #include "TROOT.h"
 
-#include "TextOperations.h"
-#include "GraphicUtils.h"
+#include "IOSTextOperations.h"
+#include "IOSGraphicUtils.h"
 
 namespace ROOT_iOS
 {

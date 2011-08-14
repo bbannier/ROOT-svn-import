@@ -1,21 +1,19 @@
-#ifndef ROOT_QuartzPainter
-#define ROOT_QuartzPainter
+#ifndef ROOT_IOSPainter
+#define ROOT_IOSPainter
 
 #include <vector>
 
 #include <CoreGraphics/CoreGraphics.h>
 
-//#ifndef ROOT_ResourceManagement
-//#include "ResourceManagement.h"
-//#endif
+
 #ifndef ROOT_TVirtualPadPainter
 #include "TVirtualPadPainter.h"
 #endif
 #ifndef ROOT_TextOperations
-#include "TextOperations.h"
+#include "IOSTextOperations.h"
 #endif
 #ifndef ROOT_GraphicUtils
-#include "GraphicUtils.h"
+#include "IOSGraphicUtils.h"
 #endif
 #ifndef ROOT_TPoint
 #include "TPoint.h"

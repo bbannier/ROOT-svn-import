@@ -3,7 +3,7 @@
 #include "TMath.h"
 
 #include "ExclusionGraphDemo.h"
-#include "Pad.h"
+#include "IOSPad.h"
 
 namespace ROOT_iOS {
 namespace Demos {

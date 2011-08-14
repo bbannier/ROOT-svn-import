@@ -8,7 +8,7 @@
 
 #import <CoreGraphics/CGContext.h>
 
-#import "FillPatterns.h"
+#import "IOSFillPatterns.h"
 
 #import "PatternCell.h"
 

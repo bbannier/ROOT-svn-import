@@ -1,5 +1,5 @@
-#ifndef ROOT_GraphicUtils
-#define ROOT_GraphicUtils
+#ifndef ROOT_IOSGraphicUtils
+#define ROOT_IOSGraphicUtils
 
 #ifndef ROOT_Rtypes
 #include "Rtypes.h"

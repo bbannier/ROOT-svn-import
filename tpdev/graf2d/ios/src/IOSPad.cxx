@@ -48,9 +48,9 @@
 #include "TApplication.h"
 #include "TVirtualPadPainter.h"
 
-#include "GraphicUtils.h"
-#include "FillPatterns.h"
-#include "Pad.h"
+#include "IOSGraphicUtils.h"
+#include "IOSFillPatterns.h"
+#include "IOSPad.h"
 
 namespace ROOT_iOS {
 

@@ -1,15 +1,6 @@
-//
-//  ResourceManagement.cpp
-//  test_static_test
-//
-//  Created by Timur Pocheptsov on 6/30/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #include <stdexcept>
 
-
-#include "ResourceManagement.h"
+#include "IOSResourceManagement.h"
 
 namespace ROOT_iOS {
 namespace Util {

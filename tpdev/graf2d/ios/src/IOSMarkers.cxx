@@ -1,8 +1,8 @@
 #include "TAttMarker.h"
 #include "TVirtualX.h"
 
-#include "GraphicUtils.h"
-#include "Markers.h"
+#include "IOSGraphicUtils.h"
+#include "IOSMarkers.h"
 
 namespace ROOT_iOS {
 namespace GraphicUtils {
