@@ -14,10 +14,6 @@
 #include "TPluginManager.h"
 #include "TClass.h"
 
-#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
-#include "TGraphPainter.h"
-#endif
-
 TVirtualGraphPainter *TVirtualGraphPainter::fgPainter = 0;
 
 ClassImp(TVirtualGraphPainter)
@@ -35,9 +31,6 @@ TVirtualGraphPainter *TVirtualGraphPainter::GetPainter()
    // If the graph painter does not exist a default painter (singleton) is created.
 
    // if no painter set yet, create a default painter via the PluginManager
-#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
-   fgPainter = new TGraphPainter;
-#else
    if (!fgPainter) {
       TPluginHandler *h;
       if ((h = gROOT->GetPluginManager()->FindHandler("TVirtualGraphPainter"))) {
@@ -45,7 +38,6 @@ TVirtualGraphPainter *TVirtualGraphPainter::GetPainter()
          fgPainter = (TVirtualGraphPainter*)gROOT->GetClass("TGraphPainter")->New();
       }
    }
-#endif
    // Create an instance of the graph painter
    return fgPainter;
 }

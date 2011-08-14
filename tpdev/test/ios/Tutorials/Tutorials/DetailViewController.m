@@ -17,10 +17,10 @@
 #import "PadView.h"
 
 //C++ code.
-//#import "TextOperations.h"
-//#import "QuartzPainter.h"
+//ROOT
 #import "Pad.h"
 
+//Demos.
 #import "DemoBase.h"
 
 @interface DetailViewController ()
