@@ -8,33 +8,34 @@
 #define CLING_INPUT_VALIDATOR_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/OwningPtr.h"
+
+#include <stack>
 
 namespace clang {
-  class CompilerInstance;
-  class Preprocessor;
+  class LangOptions;
 }
 
 namespace cling {
   class InputValidator {
   public:
     enum Result {
-      kUnknown, // initialized
-      kMismatch, // e.g. { ( }
-      kParseError, // e.g. %$#
-      kUnbalanced, // e.g. { ( )
-      kValid, // e.g. { ( ) }
+      kIncomplete,
+      kComplete,
+      kMismatch,
       kNumResults
     };
     
-    InputValidator(clang::CompilerInstance* CI);
+    InputValidator();
     ~InputValidator();
     
-    Result validate(llvm::StringRef code);
-  
+    Result Validate(llvm::StringRef input_line, clang::LangOptions& LO);
+    std::string& TakeInput() {
+      return m_Input;
+    }
+    void Reset();
   private:
-    llvm::OwningPtr<clang::CompilerInstance> m_CI;
-    clang::Preprocessor* m_PP;
+    std::string m_Input;
+    std::stack<int> m_ParenStack;
   };
 }
 #endif // CLING_INPUT_VALIDATOR_H
