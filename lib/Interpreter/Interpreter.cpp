@@ -184,9 +184,7 @@ namespace cling {
                                              llvmdir));
     m_ExecutionContext.reset(new ExecutionContext());
 
-    m_InputValidator.reset(new InputValidator(CIFactory::createCI("//cling InputSanitizer",
-                                                                  LeftoverArgs.size(), &LeftoverArgs[0],
-                                                                  llvmdir)));
+    m_InputValidator.reset(new InputValidator());
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
@@ -364,20 +362,16 @@ namespace cling {
     //  and compile to produce a module.
     //
     
-    std::string wrapped = input_line;
-    std::string stmtFunc;
+    if (m_InputValidator->Validate(input_line, getCI()->getLangOpts()) 
+        == InputValidator::kIncomplete) {
+      return true;
+    }
+
+    std::string wrapped = m_InputValidator->TakeInput();
+    m_InputValidator->Reset();
     std::string functName;
     if (strncmp(input_line.c_str(),"#",strlen("#")) != 0 &&
         strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0) {
-      //
-      //  Wrap input into a function along with
-      //  the saved global declarations.
-      //
-      // InputValidator::Result ValidatorResult = m_InputValidator->validate(input_line);
-      // if (ValidatorResult != InputValidator::kValid) {
-      //     fprintf(stderr, "Bad input, dude! That's a code %d\n", ValidatorResult);
-      //   return 0;
-      // }
       WrapInput(wrapped, functName);
     }
 
