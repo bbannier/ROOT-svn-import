@@ -648,6 +648,6 @@ const std::vector<Float_t> &TMVA::MethodCategory::GetRegressionValues()
       return MethodBase::GetRegressionValues();
    }
    // get mva value from the suitable sub-classifier
-   return meth->GetRegressionValues();
+   return meth->GetRegressionValues(ev);
 }
 

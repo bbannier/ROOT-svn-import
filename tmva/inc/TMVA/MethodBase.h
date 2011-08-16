@@ -182,6 +182,13 @@ namespace TMVA {
 
    public:
       // regression response
+      const std::vector<Float_t>& GetRegressionValues(const TMVA::Event* const ev){
+         fTmpEvent = ev;
+         const std::vector<Float_t>* ptr = &GetRegressionValues();
+         fTmpEvent = 0;
+         return (*ptr);
+      }
+
       virtual const std::vector<Float_t>& GetRegressionValues() {
          std::vector<Float_t>* ptr = new std::vector<Float_t>(0);
          return (*ptr);
