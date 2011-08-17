@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise III</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?3.1" > </iframe>
+<div id="b">
+<h1>ROOT Exercise III</h1>
+<h3>My First TSelector (2/2)</h3>
+  <p>Modify and run the selector to create a histogram of the radius r = sqrt(x^2 + y^2).</p>
+
+<div class="help" id="help1">
+  <p>You will need to change the histogram's type (the radius needs only a one dimensional histogram),
+  and you need to change the value that gets filled into the histogram.
+  </p>
+</div>
+
+<div class="help" id="help2">
+  <p>RBefore we were filling a two-dimensional TH2F. The radius is one single value, so we need a one-dimensional histogram TH1F instead.
+  You will need to change both the declaration of the histogram (see the header file <a href="TPosCorr.h" class="source">TPosCorr.h</a>)
+  and the creation of the object (<tt>new TH2F(...)</tt>). You only need to pass the value of the radius to <tt>TH1F::Fill(...)</tt>.</p>
+</div>
+
+<div class="help" id="helps">
+<p>The header file <a href="TPosCorr.h" class="source">TPosCorr.h</a> should contain something like <tt>TH1* fHistRadius</tt>.
+In the source file, change <tt>TPosCorr::SlaveBegin(...)</tt> to </p>
+<pre>
+void TPosCorr::SlaveBegin(TTree * /*tree*/)
+{
+   // The SlaveBegin() function is called after the Begin() function.
+   // When running with PROOF SlaveBegin() is called on each slave server.
+   // The tree argument is deprecated (on PROOF 0 is passed).
+
+   Info("SlaveBegin()", "Starting analysis...");
+   fHistRadius = new TH1F("hRadius", "radius of XY position;radius;entries",
+                          100, -10., 10.);
+
+   GetOutputList()-&gt;Add(fHistCorrPos);
+}
+</pre>
+<p>You will also need to change the filled value; change <tt>TPosCorr::Process(...)</tt> to contain</p>
+<pre>
+Bool_t TPosCorr::Process(Long64_t entry)
+{
+   //...
+   b_electrons_-&gt;GetEntry(entry);
+   b_electrons_fVertex_fX-&gt;GetEntry(entry);
+   b_electrons_fVertex_fY-&gt;GetEntry(entry);
+
+   // simulate a complex analysis...
+   gSystem-&gt;Sleep(100);
+   //...phew, done!
+   for (Int_t i = 0; i &lt; electrons_; ++i) {
+      // calculate the radius
+      Double_t x = electrons_fVertex_fX[i] - 1.2;
+      Double_t y = electrons_fVertex_fY[i] - 0.9;
+      Double_t radius = sqrt(x*x + y*y);
+      // fill it
+      fHistRadius-&gt;Fill(radius);
+   }
+
+   return kTRUE;
+}
+</pre>
+<p>You can then run the selector with <tt>ch-&gt;Process("TPosCorr.C+");</tt></p>
+</div>
+
+<div id="nav" class="buttons">
+  <a href="1.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="3.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
+</body>
+</html>

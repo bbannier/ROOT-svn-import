@@ -1,4 +1,5 @@
 function showTOC() {
+   if (location.href.indexOf("?") == -1) return;
    var par=location.href.split("?")[1];
    var session=par.split(".")[0];
    var part=par.split(".")[1];
