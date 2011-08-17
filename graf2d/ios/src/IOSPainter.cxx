@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <iostream>
+#include <cstring>
 
 #include <CoreText/CTStringAttributes.h>
 #include <CoreText/CTFont.h>
@@ -361,7 +362,7 @@ void Painter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
    if (!gVirtualX->GetFillStyle())
       return DrawPolyLine(n, x, y);
       
-   if (fPainterMode == kPaintSelected || fPainterMode == kPaintShadow)
+   if (fPainterMode == kPaintSelected || fPainterMode == kPaintShadow || fPainterMode == kPaintThumbnail)
       return FillArea(n, x, y);
       
    if (fPainterMode == kPaintToSelectionBuffer && PolygonHasStipple())
@@ -434,7 +435,12 @@ void Painter::DrawPolyMarker(Int_t, const Float_t *, const Float_t *)
 void Painter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
 {
    //TODO: mode parameter.
-   if (fPainterMode != kPaintToView)//TEXT is not selectable at the moment, after all, this is TOUGH for small thin letters and tap gesture.
+   if (fPainterMode == kPaintThumbnail) {
+      CGContextSetRGBFillColor(fCtx, 0.f, 0.f, 0.f, 1.f);
+      CGContextFillRect(fCtx, CGRectMake(fConverter.XToView(x), fConverter.YToView(y), 5.f, 2.f));
+   }
+   
+   if (fPainterMode != kPaintToView)//TEXT is not selectable, no text in thumbnail either.
       return;
      
    CTFontRef currentFont = fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
@@ -504,6 +510,12 @@ void Painter::SetTransform(UInt_t w, Double_t xMin, Double_t xMax, UInt_t h, Dou
 //_________________________________________________________________
 void Painter::GetTextExtent(UInt_t &w, UInt_t &h, const char *text)
 {
+   if (fPainterMode == kPaintThumbnail) {
+      h = 1;
+      w = std::strlen(text);
+      return;
+   }
+   
    fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
    fFontManager.GetTextBounds(w, h, text);
 }

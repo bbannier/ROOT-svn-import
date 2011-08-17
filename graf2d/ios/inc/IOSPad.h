@@ -254,6 +254,8 @@ public:
 
    void PopTopLevelSelectable();
    
+   //New special function.
+   void PaintThumbnail();
    
 private:
    //Painter based on CoreGraphics.
