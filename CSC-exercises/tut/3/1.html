@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link href="../cscroot.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Molengo" />
+<script type="text/javascript" src="../cscroot.js"> </script>
+<title>ROOT Exercise III</title>
+</head>
+<body>
+<iframe class="toc" src="../toc.html?3.1" > </iframe>
+<div id="b">
+<h1>ROOT Exercise III</h1>
+<h3>My First TSelector (1/2)</h3>
+  <p>We have created a selector (starting from the output of <tt>TTree::MakeSelector()</tt>) for you;
+  see the files <a href="TPosCorr.h" class="source">TPosCorr.h</a> and <a href="TPosCorr.C" class="source">TPosCorr.C</a>.
+  Run it on the TTree MyTree spread over the files</p>
+  <pre>
+    http://server/ROOT/exercise3.root
+    http://server/ROOT/exercise3_1.root
+    http://server/ROOT/exercise3_2.root
+    http://server/ROOT/exercise3_3.root
+    http://server/ROOT/exercise3_4.root
+    http://server/ROOT/exercise3_5.root	  </pre>
+  <p>Run the selector in compiled mode on the whole tree.</p>
+
+<div class="help" id="help1">
+  <p>One TTree spread over many files - that calls for a TChain. Use
+  <a href="http://root.cern.ch/root/html/TChain.html#TChain:Add"><tt>TChain::Add(...)</tt></a> to add all the file names.
+  A <tt>TChain</tt> derives from <tt>TTree</tt>, and <tt>TTree</tt> implements a way to run a <tt>TSelector</tt>.
+  The exercise asks you to run it in compiled mode, so specify a <tt>+</tt> behind the selector source file name.</p>
+</div>
+
+<div class="help" id="help2">
+  <p>Remember that you must pass the TTree name when creating the TChain object!
+  Use <tt>TTree::Process("TPosCorr.C+")</tt> to run the selector.</p>
+</div>
+
+<div class="help" id="helps">
+<p>
+  You could write a macro <tt>makechain.C</tt> that sets up the chain and returns it:</p>
+  <pre>
+#include "TChain.h"
+#include "TString.h"
+TChain* makechain()
+{
+   TChain* ch = new TChain("MyTree");
+   ch-&gt;Add("http://server/ROOT/exercise3.root");
+   for (int i = 1; i &lt; 5; ++i) {
+       // Use TString::Format() to insert the file number (%d gets replaced by i)
+       ch-&gt;Add(TString::Format("http://server/ROOT/exercise3_%d.root", i));
+   }
+   return ch;
+}
+  </pre>
+  <p>You can now create the chain with</p>
+  <pre>
+    .L makechain.C
+    TChain* ch = makechain();
+  </pre>
+  <p>You can then run the selector with <tt>ch-&gt;Process("TPosCorr.C+");</tt>
+</p>
+</div>
+
+<div id="nav" class="buttons">
+  <a href="index.html">
+    <span>
+    <img src="../img/arrow_left.png" alt="" />
+    Back
+    </span>
+  </a>
+
+  <a href="#" onclick="javascript:help(); return false" id="btnhelp">
+    <span>
+    <img src="../img/help.png" alt="" />
+    Help
+    </span>
+  </a>
+
+  <a href="2.html">
+    <img src="../img/arrow_right.png" alt="" />
+    Next
+  </a>
+</div>
+
+</div>
+</body>
+</html>
