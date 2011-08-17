@@ -134,21 +134,19 @@ namespace cling {
   }
 
   const char* DynamicExprInfo::getExpr() {
-    std::string exprStr(m_Template);
     int i = 0;
     size_t found;
 
-    while ((found = exprStr.find("@")) && (found != std::string::npos)) { 
+    while ((found = m_Result.find("@")) && (found != std::string::npos)) { 
       std::stringstream address;
       address << m_Addresses[i];
-      exprStr = exprStr.insert(found + 1, address.str());
-      exprStr = exprStr.erase(found, 1);
-      ++i;    
+      m_Result = m_Result.insert(found + 1, address.str());
+      m_Result = m_Result.erase(found, 1);
+      ++i;
     }
 
-    return exprStr.c_str();
+    return m_Result.c_str();
   }
-  
 
   //
   //  Interpreter
@@ -548,10 +546,6 @@ namespace cling {
   Value Interpreter::Evaluate(const char* expr, DeclContext* DC) {
     assert(DC && "DeclContext cannot be null!");
 
-    Sema& S = getCI()->getSema();
-    assert(S.ExternalSource && "No ExternalSource set!");
-    static_cast<DynamicIDHandler*>(S.ExternalSource)->Callbacks->setEnabled();
-
     // Execute and get the result
     Value Result;
 
@@ -562,20 +556,28 @@ namespace cling {
     
     // Set up the declaration context
     DeclContext* CurContext;
-    CurContext = m_IncrParser->getCI()->getSema().CurContext;
-    m_IncrParser->getCI()->getSema().CurContext = DC;
+    Sema& TheSema = getCI()->getSema();
+
+    CurContext = TheSema.CurContext;
+    TheSema.CurContext = DC;
 
     llvm::SmallVector<clang::DeclGroupRef, 4> DGRs;
+    assert(TheSema.ExternalSource && "No ExternalSource set!");
+
+    DynamicIDHandler* DIDH = 
+      static_cast<DynamicIDHandler*>(TheSema.ExternalSource);
+    DIDH->Callbacks->setEnabled();
     m_IncrParser->Parse(Wrapper, DGRs);
+    DIDH->Callbacks->setEnabled(false);
 
     assert((DGRs.size() || DGRs.size() > 2) && "Only FunctionDecl expected!");
 
-    m_IncrParser->getCI()->getSema().CurContext = CurContext;
+    TheSema.CurContext = CurContext;
     // get the Type
     FunctionDecl* TopLevelFD 
       = dyn_cast<FunctionDecl>(DGRs.front().getSingleDecl());
-    CurContext = m_IncrParser->getCI()->getSema().CurContext;
-    m_IncrParser->getCI()->getSema().CurContext = TopLevelFD;
+    CurContext = TheSema.CurContext;
+    TheSema.CurContext = TopLevelFD;
     ASTContext& Context(getCI()->getASTContext());
     QualType RetTy;
     if (Stmt* S = TopLevelFD->getBody())
@@ -590,10 +592,10 @@ namespace cling {
                                                     EPI);
           TopLevelFD->setType(FuncTy);
           // add return stmt
-          Stmt* RetS = getCI()->getSema().ActOnReturnStmt(SourceLocation(), E).take();
+          Stmt* RetS = TheSema.ActOnReturnStmt(SourceLocation(), E).take();
           CS->setStmts(Context, &RetS, 1);
         }
-    m_IncrParser->getCI()->getSema().CurContext = CurContext;
+    TheSema.CurContext = CurContext;
 
     // FIXME: Finish the transaction in better way
     m_IncrParser->CompileAsIs("");

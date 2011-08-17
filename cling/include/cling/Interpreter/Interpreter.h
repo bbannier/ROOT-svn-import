@@ -71,11 +71,13 @@ namespace cling {
     /// \brief The expression template.
     const char*  m_Template;
 
+    std::string m_Result;
+
     /// \brief The variable list.
     void** m_Addresses;
   public:
     DynamicExprInfo(const char* templ, void* addresses[]) : 
-      m_Template(templ), m_Addresses(addresses){}
+      m_Template(templ), m_Result(templ), m_Addresses(addresses){}
 
     ///\brief Performs the insertions of the context in the expression just
     /// before evaluation. To be used only at runtime.
