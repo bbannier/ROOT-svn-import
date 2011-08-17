@@ -1,53 +1,26 @@
 #include <algorithm>
 #include <stdexcept>
-#include <iostream>
-#include <string.h>
-#include <stdlib.h>
 
+#include <CoreText/CTStringAttributes.h>
 #include <CoreText/CTFont.h>
 #include <CoreText/CTLine.h>
-#include <CoreText/CTStringAttributes.h>
 
-#include "TClass.h"
+#include "TViewer3DPad.h"
+#include "TMultiGraph.h"
+#include "TVirtualX.h"
+#include "TString.h"
+#include "THStack.h"
+#include "TFrame.h"
+#include "TPoint.h"
+#include "TColor.h"
+#include "TGraph.h"
+#include "TStyle.h"
+#include "TView.h"
 #include "TROOT.h"
 #include "TMath.h"
-#include "TStyle.h"
 #include "TH1.h"
-#include "TVirtualPS.h"
-#include "TVirtualX.h"
-#include "TVirtualViewer3D.h"
-#include "TView.h"
-#include "TPoint.h"
-#include "TGraph.h"
-#include "TMultiGraph.h"
-#include "THStack.h"
-#include "TPaveText.h"
-#include "TGroupButton.h"
-#include "TBrowser.h"
-#include "TVirtualGL.h"
-#include "TString.h"
-#include "TDataMember.h"
-#include "TMethod.h"
-#include "TDataType.h"
-#include "TRealData.h"
-#include "TFrame.h"
-#include "TExec.h"
-#include "TDatime.h"
-#include "TColor.h"
-#include "TCanvas.h"
-#include "TPluginManager.h"
-#include "TEnv.h"
-#include "TImage.h"
-#include "TViewer3DPad.h"
-#include "TBuffer3D.h"
-#include "TBuffer3DTypes.h"
-#include "TCreatePrimitives.h"
-#include "TLegend.h"
-#include "TAtt3D.h"
-#include "TObjString.h"
-#include "TApplication.h"
-#include "TVirtualPadPainter.h"
 
+//Internal (module) includes.
 #include "IOSGraphicUtils.h"
 #include "IOSFillPatterns.h"
 #include "IOSPad.h"
@@ -56,54 +29,59 @@ namespace ROOT_iOS {
 
 //______________________________________________________________________________
 Pad::Pad(UInt_t w, UInt_t h)
-          : fViewer3D(0),
-            fSelectionIsValid(kFALSE),
-            fSelectionAreaWidth(w),
-            fSelected(0),
-            fParentOfSelected(0),
-            fInSelectionMode(kFALSE),
-            fInHighlightMode(kFALSE),
-            fObjectID(1)
 {
    fViewW = w;
    fViewH = h;
 
-   const Double_t xlow = 0., xup = 1., ylow = 0., yup = 1.;
+   fX1 = 0.;
+   fX2 = 1.;
+   fY1 = 0.;
+   fY2 = 1.;
+   
+   fUxmin = 0.;
+   fUymin = 0.;
+   fUxmax = 0.;
+   fUymax = 0.;
 
-   fModified   = kTRUE;
-   fBorderSize = 0;//bordersize;
-   fBorderMode = 0;//bordermode;
+   fTheta = 30;
+   fPhi = 50;
 
-   fTheta      = 30;
-   fPhi        = 50;
-   fGridx      = gStyle->GetPadGridX();
-   fGridy      = gStyle->GetPadGridY();
-   fTickx      = gStyle->GetPadTickX();
-   fTicky      = gStyle->GetPadTickY();
-   fView       = 0;
-   fAbsCoord   = kFALSE;
-   fEditable   = kTRUE;
+   fAspectRatio = 0.;
 
-   fFrame = 0;
-
-   fFixedAspectRatio = kFALSE;
-   fAspectRatio      = 0.;
-
-   // Set default world coordinates to NDC [0,1]
-   fX1 = 0;
-   fX2 = 1;
-   fY1 = 0;
-   fY2 = 1;
+   fTickx = gStyle->GetPadTickX();
+   fTicky = gStyle->GetPadTickY();
 
    fLogx = gStyle->GetOptLogx();
    fLogy = gStyle->GetOptLogy();
    fLogz = gStyle->GetOptLogz();
 
-   fUxmin = fUymin = fUxmax = fUymax = 0;
+   fBorderSize = 0;
+   fBorderMode = 0;
+
+   fGridx = gStyle->GetPadGridX();
+   fGridy = gStyle->GetPadGridY();
+
+   fAbsCoord = kFALSE;
+   fEditable = kTRUE;
+   fFixedAspectRatio = kFALSE;
+
+   fFrame = 0;
+   fView = 0;
+   
+   fViewer3D = 0;
+   fSelectionIsValid = kFALSE;
+   fSelectionAreaWidth = w;
+   fSelected = 0;
+   fParentOfSelected = 0;
+   fInSelectionMode = kFALSE;
+   fInHighlightMode = kFALSE;
+   fObjectID = 1;
 
    cd();
+
    // Set pad parameters and Compute conversion coefficients
-   SetPad("Pad_on_iPad", "Pad_on_iPad", xlow, ylow, xup, yup, 0, 0, 0);
+   SetPad("", "", 0., 0., 1., 1., 0, 0, 0);
+
    Range(0., 0., 1., 1.);
 }
 
@@ -122,7 +100,6 @@ const char *Pad::GetTitle() const
 //______________________________________________________________________________
 void Pad::Clear(Option_t *)
 {
-   //std::cout<<"clear\n";
    fSelectionIsValid = kFALSE;
    fSelected = 0;
    fParentOfSelected = 0;
@@ -156,7 +133,7 @@ void Pad::SetFixedAspectRatio(Bool_t fixed)
          if (fHNDC != 0.)
             fAspectRatio = fWNDC / fHNDC;
          else {
-            //Error("SetAspectRatio", "cannot fix aspect ratio, height of pad is 0");
+            //cannot fix aspect ratio, height of pad is 0
             return;
          }
          fFixedAspectRatio = kTRUE;
@@ -172,7 +149,7 @@ Double_t Pad::PadtoX(Double_t x) const
 {
    // Convert x from pad to X.
    if (fLogx && x < 50)
-      return Double_t(TMath::Exp(2.302585092994*x));
+      return Double_t(TMath::Exp(2.302585092994 * x));
 
    return x;
 }
@@ -182,7 +159,7 @@ Double_t Pad::PadtoY(Double_t y) const
 {
    // Convert y from pad to Y.
    if (fLogy && y < 50)
-      return Double_t(TMath::Exp(2.302585092994*y));
+      return Double_t(TMath::Exp(2.302585092994 * y));
 
    return y;
 }
@@ -219,10 +196,17 @@ Double_t Pad::YtoPad(Double_t y) const
 Int_t Pad::UtoPixel(Double_t u) const
 {
    Double_t val;
-   if (fAbsCoord) val = fUtoAbsPixelk + u*fUtoPixel;
-   else           val = u*fUtoPixel;
-   if (val < -kMaxPixel) return -kMaxPixel;
-   if (val >  kMaxPixel) return  kMaxPixel;
+   if (fAbsCoord)
+      val = fUtoAbsPixelk + u * fUtoPixel;
+   else
+      val = u * fUtoPixel;
+
+   if (val < -kMaxPixel)
+      return -kMaxPixel;
+
+   if (val >  kMaxPixel)
+      return  kMaxPixel;
+
    return Int_t(val);
 }
 
@@ -230,28 +214,41 @@ Int_t Pad::UtoPixel(Double_t u) const
 Int_t Pad::VtoPixel(Double_t v) const
 {
    Double_t val;
-   if (fAbsCoord) val = fVtoAbsPixelk + v*fVtoPixel;
-   else           val = fVtoPixelk    + v*fVtoPixel;
-   if (val < -kMaxPixel) return -kMaxPixel;
-   if (val >  kMaxPixel) return  kMaxPixel;
+   if (fAbsCoord)
+      val = fVtoAbsPixelk + v * fVtoPixel;
+   else
+      val = fVtoPixelk + v * fVtoPixel;
+
+   if (val < -kMaxPixel)
+      return -kMaxPixel;
+      
+   if (val >  kMaxPixel)
+      return  kMaxPixel;
+
    return Int_t(val);
 }
 
 //______________________________________________________________________________
 Int_t Pad::XtoAbsPixel(Double_t x) const
 {
-   Double_t val = fXtoAbsPixelk + x*fXtoPixel;
-   if (val < -kMaxPixel) return -kMaxPixel;
-   if (val >  kMaxPixel) return  kMaxPixel;
+   const Double_t val = fXtoAbsPixelk + x * fXtoPixel;
+   if (val < -kMaxPixel)
+      return -kMaxPixel;
+   if (val >  kMaxPixel)
+      return kMaxPixel;
+
    return Int_t(val);
 }
 
 //______________________________________________________________________________
 Int_t Pad::YtoAbsPixel(Double_t y) const
 {
-   Double_t val = fYtoAbsPixelk + y*fYtoPixel;
-   if (val < -kMaxPixel) return -kMaxPixel;
-   if (val >  kMaxPixel) return  kMaxPixel;
+   const Double_t val = fYtoAbsPixelk + y*fYtoPixel;
+   if (val < -kMaxPixel)
+      return -kMaxPixel;
+   if (val >  kMaxPixel)
+      return kMaxPixel;
+
    return Int_t(val);
 }
 
@@ -259,10 +256,16 @@ Int_t Pad::YtoAbsPixel(Double_t y) const
 Int_t Pad::XtoPixel(Double_t x) const
 {
    Double_t val;
-   if (fAbsCoord) val = fXtoAbsPixelk + x*fXtoPixel;
-   else           val = fXtoPixelk    + x*fXtoPixel;
-   if (val < -kMaxPixel) return -kMaxPixel;
-   if (val >  kMaxPixel) return  kMaxPixel;
+   if (fAbsCoord)
+      val = fXtoAbsPixelk + x * fXtoPixel;
+   else 
+      val = fXtoPixelk + x * fXtoPixel;
+
+   if (val < -kMaxPixel)
+      return -kMaxPixel;
+   if (val >  kMaxPixel)
+      return  kMaxPixel;
+
    return Int_t(val);
 }
 
@@ -270,25 +273,35 @@ Int_t Pad::XtoPixel(Double_t x) const
 Int_t Pad::YtoPixel(Double_t y) const
 {
    Double_t val;
-   if (fAbsCoord) val = fYtoAbsPixelk + y*fYtoPixel;
-   else           val = fYtoPixelk    + y*fYtoPixel;
-   if (val < -kMaxPixel) return -kMaxPixel;
-   if (val >  kMaxPixel) return  kMaxPixel;
+   if (fAbsCoord)
+      val = fYtoAbsPixelk + y * fYtoPixel;
+   else
+      val = fYtoPixelk + y * fYtoPixel;
+      
+   if (val < -kMaxPixel)
+      return -kMaxPixel;
+   if (val > kMaxPixel)
+      return kMaxPixel;
+
    return Int_t(val);
 }
 
 //______________________________________________________________________________
 Double_t Pad::PixeltoX(Int_t px)
 {
-   if (fAbsCoord) return fAbsPixeltoXk + px*fPixeltoX;
-   else           return fPixeltoXk    + px*fPixeltoX;
+   if (fAbsCoord)
+      return fAbsPixeltoXk + px * fPixeltoX;
+   else
+      return fPixeltoXk + px * fPixeltoX;
 }
 
 //______________________________________________________________________________
 Double_t Pad::PixeltoY(Int_t py)
 {
-   if (fAbsCoord) return fAbsPixeltoYk + py*fPixeltoY;
-   else           return fPixeltoYk    + py*fPixeltoY;
+   if (fAbsCoord)
+      return fAbsPixeltoYk + py * fPixeltoY;
+   else
+      return fPixeltoYk + py * fPixeltoY;
 }
 
 //______________________________________________________________________________
@@ -298,9 +311,9 @@ void Pad::SetLogx(Int_t value)
    //   value = 0 X scale will be linear
    //   value = 1 X scale will be logarithmic (base 10)
    //   value > 1 reserved for possible support of base e or other
-
    fLogx = value;
-   delete fView; fView=0;
+   delete fView;
+   fView = 0;
 }
 
 
@@ -313,7 +326,8 @@ void Pad::SetLogy(Int_t value)
    //   value > 1 reserved for possible support of base e or other
 
    fLogy = value;
-   delete fView; fView=0;
+   delete fView;
+   fView=0;
 }
 
 
@@ -323,7 +337,8 @@ void Pad::SetLogz(Int_t value)
    // Set Lin/Log scale for Z
 
    fLogz = value;
-   delete fView; fView=0;
+   delete fView;
+   fView=0;
 }
 
 //______________________________________________________________________________
@@ -334,21 +349,16 @@ void Pad::SetPad(Double_t xlow, Double_t ylow, Double_t xup, Double_t yup)
 
    // Reorder points to make sure xlow,ylow is bottom left point and
    // xup,yup is top right point.
-   if (xup < xlow) {
-      Double_t x = xlow;
-      xlow = xup;
-      xup  = x;
-   }
-   if (yup < ylow) {
-      Double_t y = ylow;
-      ylow = yup;
-      yup  = y;
-   }
+   if (xup < xlow)
+      std::swap(xup, xlow);
+
+   if (yup < ylow)
+      std::swap(yup, ylow);
 
    fXlowNDC = xlow;
    fYlowNDC = ylow;
-   fWNDC    = xup - xlow;
-   fHNDC    = yup - ylow;
+   fWNDC = xup - xlow;
+   fHNDC = yup - ylow;
 
    SetFixedAspectRatio(kFALSE);
 
@@ -356,9 +366,8 @@ void Pad::SetPad(Double_t xlow, Double_t ylow, Double_t xup, Double_t yup)
 }
 
 //______________________________________________________________________________
-void Pad::SetPad(const char *, const char *,
-                  Double_t xlow, Double_t ylow, Double_t xup, Double_t yup,
-                  Color_t color, Short_t bordersize, Short_t bordermode)
+void Pad::SetPad(const char *, const char *, Double_t xlow, Double_t ylow, Double_t xup,
+                 Double_t yup, Color_t color, Short_t bordersize, Short_t bordermode)
 {
    // Set all pad parameters.
    SetFillStyle(1001);
@@ -366,12 +375,21 @@ void Pad::SetPad(const char *, const char *,
    SetTopMargin(gStyle->GetPadTopMargin());
    SetLeftMargin(gStyle->GetPadLeftMargin());
    SetRightMargin(gStyle->GetPadRightMargin());
-   if (color >= 0)   SetFillColor(color);
-   else              SetFillColor(gStyle->GetPadColor());
-   if (bordersize <  0) fBorderSize = gStyle->GetPadBorderSize();
-   else                 fBorderSize = bordersize;
-   if (bordermode < -1) fBorderMode = gStyle->GetPadBorderMode();
-   else                 fBorderMode = bordermode;
+   
+   if (color >= 0)
+      SetFillColor(color);
+   else
+      SetFillColor(gStyle->GetPadColor());
+
+   if (bordersize <  0)
+      fBorderSize = gStyle->GetPadBorderSize();
+   else
+      fBorderSize = bordersize;
+
+   if (bordermode < -1)
+      fBorderMode = gStyle->GetPadBorderMode();
+   else
+      fBorderMode = bordermode;
 
    SetPad(xlow, ylow, xup, yup);
 }
@@ -754,7 +772,6 @@ void Pad::PaintForSelection()
    
    while (lnk) {
       obj = lnk->GetObject();
-      //std::cout<<"Selectable "<<obj->IsA()->GetName()<<std::endl;
       obj->Paint(lnk->GetOption());
       lnk = (TObjOptLink*)lnk->Next();
    }
@@ -869,32 +886,23 @@ void Pad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
    }
 
    Int_t nc = 2*nn+1;
-   Double_t *x = new Double_t[nc];
-   Double_t *y = new Double_t[nc];
-   memset(x,0,8*nc);
-   memset(y,0,8*nc);
+   
+   std::vector<Double_t> x(nc);
+   std::vector<Double_t> y(nc);
 
-   n = ClipPolygon(nn, xx, yy, nc, x, y,xmin,ymin,xmax,ymax);
-   if (!n) {
-      delete [] x;
-      delete [] y;
+   n = ClipPolygon(nn, xx, yy, nc, &x[0], &y[0], xmin, ymin, xmax, ymax);
+   if (!n)
       return;
-   }
 
    // Paint the fill area with hatches
    Int_t fillstyle = gVirtualX->GetFillStyle();
 
    if (fillstyle >= 3100 && fillstyle < 4000) {
-      PaintFillAreaHatches(nn, x, y, fillstyle);
-      delete [] x;
-      delete [] y;
+      PaintFillAreaHatches(nn, &x[0], &y[0], fillstyle);
       return;
    }
 
-   fPainter.DrawFillArea(n, x, y);
-
-   delete [] x;
-   delete [] y;
+   fPainter.DrawFillArea(n, &x[0], &y[0]);
 }
 
 //______________________________________________________________________________
@@ -1232,7 +1240,7 @@ void Pad::RedrawAxis(Option_t *option)
    TString opt = option;
    opt.ToLower();
 
-   TPad *padsav = (TPad*)gPad;
+
    cd();
 
    TIter next(&fPrimitives);
@@ -1260,8 +1268,6 @@ void Pad::RedrawAxis(Option_t *option)
          return;
       }
    }
-
-   if (padsav) padsav->cd();
 }
 
 //______________________________________________________________________________
@@ -1510,8 +1516,8 @@ Int_t Pad::ClipPolygon(Int_t n, Double_t *x, Double_t *y, Int_t nn, Double_t *xc
    Int_t nc, nc2;
    Double_t x1, y1, x2, y2, slope; // Segment to be clipped
 
-   Double_t *xc2 = new Double_t[nn];
-   Double_t *yc2 = new Double_t[nn];
+   std::vector<Double_t> xc2(nn);
+   std::vector<Double_t> yc2(nn);
 
    // Clip against the left boundary
    x1 = x[n-1]; y1 = y[n-1];
@@ -1614,9 +1620,6 @@ Int_t Pad::ClipPolygon(Int_t n, Double_t *x, Double_t *y, Int_t nn, Double_t *xc
       x1 = x2; y1 = y2;
    }
 
-   delete [] xc2;
-   delete [] yc2;
-
    if (nc < 3) nc =0;
    return nc;
 }
@@ -1698,15 +1701,6 @@ void Pad::PaintBorder(Color_t color, Bool_t tops)
    if (fBorderMode == -1) gVirtualX->SetFillColor(light);
    else                   gVirtualX->SetFillColor(dark);
    fPainter.DrawFillArea(7, frameXs, frameYs);
-
-   // If this pad is a button, highlight it
-   if (InheritsFrom(TButton::Class()) && fBorderMode == -1) {
-      if (TestBit(kFraming)) {  // bit set in TButton::SetFraming
-         if (GetFillColor() != 2) gVirtualX->SetLineColor(2);
-         else                     gVirtualX->SetLineColor(4);
-         fPainter.DrawBox(xl + realBsX, yl + realBsY, xt - realBsX, yt - realBsY, TVirtualPadPainter::kHollow);
-      }
-   }
 
    gVirtualX->SetFillColor(-1);
    SetFillColor(oldcolor);

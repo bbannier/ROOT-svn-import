@@ -1,4 +1,3 @@
-#include <stdexcept>
 #include <iostream>
 #include <cstring>
 
@@ -390,7 +389,6 @@ void Painter::DrawPolyLineNDC(Int_t, const Double_t *, const Double_t *)
 //_________________________________________________________________
 void Painter::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y)
 {
-
    fPolyMarker.resize(n);
    for (Int_t i = 0; i < n; ++i) {
       TPoint &p = fPolyMarker[i];

@@ -170,7 +170,7 @@ public:
    Bool_t IsEditable() const {return fEditable;}
 
    Bool_t IsFolder() const {return kTRUE;}
-   Bool_t IsModified() const {return fModified;}
+   Bool_t IsModified() const {return kFALSE;}
    Bool_t IsRetained() const {return kTRUE;}
    Bool_t IsVertical() const {return !TestBit(kHori);}
 
@@ -319,7 +319,7 @@ private:
    Int_t         fLogz;            //  (=0 if Z linear scale, =1 if log scale)
    Short_t       fBorderSize;      //  pad bordersize in pixels
    Short_t       fBorderMode;      //  Bordermode (-1=down, 0 = no border, 1=up)
-   Bool_t        fModified;        //  Set to true when pad is modified
+   
    Bool_t        fGridx;           //  Set to true if grid along X
    Bool_t        fGridy;           //  Set to true if grid along Y
    Bool_t        fAbsCoord;        //  Use absolute coordinates
@@ -347,9 +347,7 @@ private:
    mutable Bool_t             fInHighlightMode;
    
    typedef std::pair<TObject *, UInt_t> Parent_t;
-   std::vector<Parent_t> fParentPainters;
-   
-//   std::vector<TObject*>      fParentPainters;
+   std::vector<Parent_t>      fParentPainters;
    
    typedef std::pair<TObject *, TObject *> ObjectPair_t;
    std::vector<ObjectPair_t>  fSelectables;
