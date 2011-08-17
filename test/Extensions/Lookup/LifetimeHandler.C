@@ -12,11 +12,12 @@
 cling::test::SymbolResolverCallback* SRC = new cling::test::SymbolResolverCallback(gCling, /*Enabled=*/ false);
 gCling->setCallbacks(SRC);
 
-class MyClass { private:  const char* Name; public:  MyClass(const char* n):Name(n){} const char* getName(){return Name;} };
+.x LifetimeHandler.h
+// CHECK: Alpha's single arg ctor called {{.*Interpreter.*}}
+// CHECK: After Alpha is Beta {{.*Interpreter.*}}
+// CHECK: Alpha dtor called {{.*Interpreter.*}}
 
-extern "C" int printf(const char* fmt, ...);
-
-MyClass my(sadasds->getVersion()); 
-printf("%s\n", my.getName()); // CHECK: {{.*Interpreter.*}}
+Alpha a(sadasds->getVersion()); 
+printf("%s\n", a.getVar()); // CHECK: {{.*Interpreter.*}}
 
 .q
