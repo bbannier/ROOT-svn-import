@@ -2040,4 +2040,26 @@ TObject *Pad::GetSelected()const
    return fSelected;
 }
 
+//______________________________________________________________________________
+void Pad::PaintThumbnail()
+{
+   cd();
+
+   fPainter.SetPainterMode(Painter::kPaintThumbnail);
+   
+   PaintBox(fX1,fY1,fX2,fY2);
+   PaintBorder(GetFillColor(), kTRUE);
+
+   TObjOptLink *lnk = (TObjOptLink*)GetListOfPrimitives()->FirstLink();
+   TObject *obj;
+
+   while (lnk) {
+      obj = lnk->GetObject();
+      obj->Paint(lnk->GetOption());
+      lnk = (TObjOptLink*)lnk->Next();
+   }
+
+   fPainter.SetPainterMode(Painter::kPaintToView);
+}
+
 }
