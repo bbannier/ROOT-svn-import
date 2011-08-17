@@ -7,41 +7,17 @@
 #include <CoreText/CTLine.h>
 
 #include "TVirtualX.h"
-#include "TString.h"
-#include "TColor.h"
 #include "TMath.h"
-#include "TROOT.h"
 
 #include "IOSResourceManagement.h"
 #include "IOSTextOperations.h"
 #include "IOSGraphicUtils.h"
 #include "IOSFillPatterns.h"
+#include "IOSLineStyles.h"
 #include "IOSPainter.h"
 #include "IOSMarkers.h"
 
-extern CFDataRef symbolFont;
-
 namespace ROOT_iOS {
-
-
-//For fixed line style, number of elements in a pattern is not bigger than 8.
-const unsigned linePatternLengths[] = {1, 2, 2, 4, 4, 8, 2, 6, 2, 4};
-
-//Line pattern specyfies length of painted and unpainted fragments, for example,
-//{2.f, 2.f} draw 2 pixels, skip to pixels (and repeat).
-const Float_t dashLinePatterns[10][8] = {
-                                         {1},                                     //Style 1: 1 element, solid line
-                                         {3.f, 3.f},                              //Style 2: 2 elements (paint one, skip the second).
-                                         {1.f, 2.f},                              //Style 3: 2 elements.
-                                         {3.f, 4.f, 1.f, 4.f},                    //Style 4: 4 elements.
-                                         {5.f, 3.f, 1.f, 3.f},                    //Style 5: 4 elements.
-                                         {5.f, 3.f, 1.f, 3.f, 1.f, 3.f, 1.f, 3.f},//Style 6: 8 elements
-                                         {5.f, 5.f},                              //Style 7: 2 elements.
-                                         {5.f, 3.f, 1.f, 3.f, 1.f, 3.f},          //Style 8: 6 elements.
-                                         {20.f, 5.f},                             //Style 9: 2 elements.
-                                         {20.f, 8.f, 1.f, 8.f}                    //Style 10: 4 elements.
-                                        };
-
 
 //_________________________________________________________________
 SpaceConverter::SpaceConverter()
@@ -148,7 +124,7 @@ void Painter::SetStrokeParameters()const
    
    const Style_t lineStyle = gVirtualX->GetLineStyle();
    if (lineStyle > 1 && lineStyle <= 10)
-      CGContextSetLineDash(fCtx, 0., dashLinePatterns[lineStyle - 1], linePatternLengths[lineStyle - 1]);
+      CGContextSetLineDash(fCtx, 0., GraphicUtils::dashLinePatterns[lineStyle - 1], GraphicUtils::linePatternLengths[lineStyle - 1]);
    else
       CGContextSetLineDash(fCtx, 0., 0, 0);
 }
