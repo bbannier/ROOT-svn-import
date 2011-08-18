@@ -23,6 +23,7 @@ enum {
    
    UIView *plates[evMaxComponents];
    UIView *views[evMaxComponents];
+   UIView *containers[evMaxComponents];
 
    unsigned nStates;
    unsigned nEditors;
