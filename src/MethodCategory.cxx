@@ -160,6 +160,7 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
    MethodBase *method = (dynamic_cast<MethodBase*>(addedMethod));
    if(method==0) return 0;
 
+   method->SetAnalysisType( fAnalysisType );
    method->SetupMethod();
    method->ParseOptions();
    method->GetTransformationHandler().AddTransformation( rearrangeTransformation, -1 );
