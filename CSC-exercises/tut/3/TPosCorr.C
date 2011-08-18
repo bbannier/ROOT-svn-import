@@ -98,6 +98,10 @@ void TPosCorr::Terminate()
    // the results graphically or save the results to file.
 
    //if (fHistCorrPos) delete fHistCorrPos;
+
+   // Extract the histogram frmo the output list:
+   fHistCorrPos = (TH2F*) GetOutputList()->FindObject("hPosCorr");
+
    Info("Terminate()", "Analysis done.");
    fHistCorrPos->Draw();
 }
