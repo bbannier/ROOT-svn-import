@@ -10,6 +10,7 @@
 
 #import <CoreGraphics/CGContext.h>
 
+#import "ScrollViewWithPickers.h"
 #import "EditorPlateView.h"
 #import "EditorView.h"
 
@@ -67,7 +68,7 @@
       //Scroll view is a container for all sub-editors.
       //It's completely transparent.
       const CGRect scrollFrame = CGRectMake(10.f, 10.f, [EditorView scrollWidth], [EditorView scrollHeight]);
-      scrollView = [[UIScrollView alloc] initWithFrame : scrollFrame];
+      scrollView = [[ScrollViewWithPickers alloc] initWithFrame : scrollFrame];
       scrollView.backgroundColor = [UIColor clearColor];
       scrollView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
       scrollView.bounces = NO;
