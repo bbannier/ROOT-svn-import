@@ -15,7 +15,7 @@
 {  
    UIView * v = [super hitTest : point withEvent : event];
    
-   if ([@"UIPickerTable" isEqualToString:[[v class] description]]) {
+   if ([v isKindOfClass : [UIPickerView class]] || [v.superview isKindOfClass : [UIPickerView class]]) {
       self.canCancelContentTouches = NO;
       self.delaysContentTouches = NO;
    } else {
