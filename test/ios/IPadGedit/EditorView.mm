@@ -64,13 +64,15 @@
    self = [super initWithFrame : frame];
 
    if (self) {
+      //Scroll view is a container for all sub-editors.
+      //It's completely transparent.
       const CGRect scrollFrame = CGRectMake(10.f, 10.f, [EditorView scrollWidth], [EditorView scrollHeight]);
-      scrollView = [[UIScrollView alloc] initWithFrame:scrollFrame];
+      scrollView = [[UIScrollView alloc] initWithFrame : scrollFrame];
       scrollView.backgroundColor = [UIColor clearColor];
       scrollView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+      scrollView.bounces = NO;
       [self addSubview : scrollView];
       [scrollView release];
-      
       self.opaque = NO;
    }
 
@@ -86,9 +88,12 @@
 //_________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
+   //Draw main editor's view as a semi-transparent
+   //gray view with rounded corners.
+
    CGContextRef ctx = UIGraphicsGetCurrentContext();
    if (!ctx) {
-      //Log error: ctx is nil.
+      NSLog(@"[EditorView drawRect:], ctx is nil");
       return;
    }
    
@@ -144,23 +149,6 @@
 }
 
 //_________________________________________________________________
-- (void) setViewsYs
-{
-   //These are new sub-views positions after animation.
-   for (unsigned i = 0; i < nEditors; ++i) {
-      CGRect frame = views[i].frame;
-      if (currentState & (1 << i)) {//View will become visible now.
-         frame.origin.y = viewYs[currentState * nEditors + i];
-         views[i].frame = frame;
-      } else if (!views[i].hidden) {//View will hide now.
-         const unsigned prevState = currentState | (1 << i);
-         frame.origin.y = viewYs[prevState * nEditors + i] - plates[i].frame.size.height;
-         views[i].frame = frame;
-      }
-   }
-}
-
-//_________________________________________________________________
 - (void) setPlatesYs
 {
    //Plates positions for the current state.
@@ -175,36 +163,52 @@
 - (void) addSubEditor:(UIView *)element withName : (NSString *)name
 {
    if (nEditors == evMaxComponents) {
-      //Log error: too many editors.
+      NSLog(@"Could not add more editors");
       return;
    }
 
-   //Save editor.
+   //Add this new editor.
    views[nEditors] = element;
-   
-   plates[nEditors] = [[EditorPlateView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView scrollWidth], [EditorPlateView plateHeight]) editorName : name topView : self];
+   //1. Plate with editor's name and triangle, showing the editor's state.
+   //topView is 'self' - the view, which will be informed, that user tapped on editor's plate.
+   plates[nEditors] = [[EditorPlateView alloc] initWithFrame : CGRectMake(0.f, 0.f, [EditorView scrollWidth], [EditorPlateView plateHeight]) editorName : name topView : self];
    [scrollView addSubview : plates[nEditors]];
-
    [plates[nEditors] release];
 
-   [scrollView addSubview : element];
+   //Create a container view for sub-editor.
+   CGRect elementFrame = element.frame;
+   elementFrame.origin = CGPointZero;
+   containers[nEditors] = [[UIView alloc] initWithFrame : elementFrame];
+   element.frame = elementFrame;
+   //Place sub-editor into the container view.
+   [containers[nEditors] addSubview : element];
+   //Clip to bounds: when we animate sub-editor (appear/disappera)
+   //it moves from/to negative coordinates and this negative part
+   //should not be visible.
+   containers[nEditors].clipsToBounds = YES;
+   //Initially, container with sub-editor is hidden.
+   containers[nEditors].hidden = YES;
+   //Add container.
+   [scrollView addSubview : containers[nEditors]];
+   [containers[nEditors] release];
 
    //New number of sub-editors and possible editor states.
    ++nEditors;
    nStates = 1 << nEditors;
-   
+
+   //Recalculate possible positions of all plates and containers.
    const CGFloat totalHeight = [self recalculateEditorGeometry];
+   //Set scrollView.contentSize to include all sub-editors in opened state.
    scrollView.contentSize = CGSizeMake([EditorView scrollWidth], totalHeight);
    scrollView.contentOffset = CGPointZero;
    
+   //No sub-editor is visible.
    currentState = 0;
-   element.hidden = YES; //Initially, the sub-editor is hidden.
-   
+   //Also, make new sub-editor transparent.
    element.alpha = 0.f;
-   
+
+   //Place all plates.
    [self setPlatesYs];
-   for (unsigned i = 0; i < nEditors; ++i)
-      [scrollView bringSubviewToFront : plates[i]];
 }
 
 //_________________________________________________________________
@@ -212,31 +216,57 @@
 {
    //These are sub-views positions before animation.
    for (unsigned i = 0; i < nEditors; ++i) {
-      CGRect frame = views[i].frame;
       //If view must appear now:
-      if (views[i].hidden && (currentState & (1 << i))) {
-         frame.origin.y = viewYs[currentState * nEditors + i] - plates[i].frame.size.height;
+      if (containers[i].hidden && (currentState & (1 << i))) {
+         CGRect frame = views[i].frame;
+         frame.origin.y = viewYs[currentState * nEditors + i];
+         //Place the container in a correct position.
+         containers[i].frame = frame;
+         //Contained view is shifted in a container (it will appear from nowhere).
+         frame.origin.y = -frame.size.height;
          views[i].frame = frame;
       }
    }
 }
 
 //_________________________________________________________________
-- (void) setViewsAlpha
+- (void) setViewsYs
 {
+   //These are new sub-views positions at the end of animation.
    for (unsigned i = 0; i < nEditors; ++i) {
-      EditorPlateView *p = (EditorPlateView*)plates[i];
+      CGRect frame = views[i].frame;
+      if (currentState & (1 << i)) {//View will become visible now (and could be visible before).
+         frame.origin.y = viewYs[currentState * nEditors + i];
+         containers[i].frame = frame;
+         frame.origin.y = 0.;
+         views[i].frame = frame;
+      } else if (!views[i].hidden) {//View will hide now - it moves outside of container.
+         frame.origin.y = -frame.size.height;
+         views[i].frame = frame;
+      }
+   }
+}
+
+//_________________________________________________________________
+- (void) setViewsAlphaAndVisibility
+{
+   //During animation, if view will appear it's alpha changes from 0 to 1,
+   //and if it's going to disappear - from 1 to 0.
+   //Also, I have to animate small triangle, which
+   //shows editor's state (hidden/visible).
+   for (unsigned i = 0; i < nEditors; ++i) {
+      EditorPlateView *p = (EditorPlateView *)plates[i];
       UIView *v = views[i];
       const BOOL nowVisible = currentState & (1 << i);
-      if (v.hidden) {
+      if (containers[i].hidden) {
          if (nowVisible) {
-            v.hidden = NO;
+            containers[i].hidden = NO;
             v.alpha = 1.f;
-            p.arrowImageView.transform = CGAffineTransformMakeRotation(M_PI / 2);//rotate the arrow.
+            p.arrowImageView.transform = CGAffineTransformMakeRotation(M_PI / 2);//rotate the triangle.
          }
       } else {
          if (!nowVisible) {
-            p.arrowImageView.transform = CGAffineTransformMakeRotation(0.f);
+            p.arrowImageView.transform = CGAffineTransformMakeRotation(0.f);//rotate the triangle.
             v.alpha = 0.f;
          }
       }
@@ -244,11 +274,11 @@
 }
 
 //_________________________________________________________________
-- (void) setViewsVisibility
+- (void) hideViews
 {
    for (unsigned i = 0; i < nEditors; ++i) {
       if (!(currentState & (1 << i)))
-         views[i].hidden = YES;
+         containers[i].hidden = YES;
    }
 }
 
@@ -263,16 +293,20 @@
  
    [self setPlatesYs];
    [self setViewsYs];
-   [self setViewsAlpha];
-   
+   [self setViewsAlphaAndVisibility];
+
    [UIView commitAnimations];
-   
-   [self setViewsVisibility];
+ 
+   //Do not hide the views immediately, so user can see animation.
+   [NSTimer scheduledTimerWithTimeInterval : 0.25 target : self selector:@selector(hideViews) userInfo:nil repeats:NO];
 }
 
 //_________________________________________________________________
 - (void) plateTapped : (EditorPlateView *) plate
 {
+   //User has tapped on editor's plate.
+   //Depending on the current editor's state,
+   //we open or close it with animation.
    for (unsigned i = 0; i < nEditors; ++i) {
       if (plate == plates[i]) {
          currentState ^= (1 << i);
