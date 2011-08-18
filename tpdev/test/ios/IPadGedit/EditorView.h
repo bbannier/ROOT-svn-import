@@ -8,6 +8,7 @@
 
 #import <UIKit/UIKit.h>
 
+@class ScrollViewWithPickers;
 @class EditorPlateView;
 
 enum {
@@ -16,8 +17,9 @@ enum {
 };
 
 @interface EditorView : UIView {
-   UIScrollView *scrollView;
-   
+   //UIScrollView *scrollView;
+   ScrollViewWithPickers *scrollView;
+
    CGFloat plateYs[evMaxStates * evMaxComponents];
    CGFloat viewYs[evMaxStates * evMaxComponents];
    

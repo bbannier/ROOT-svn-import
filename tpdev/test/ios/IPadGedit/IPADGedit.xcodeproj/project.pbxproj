@@ -22,6 +22,8 @@
 		709DD95E13FBA6DF003E6851 /* ColorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 709DD95013FBA6DF003E6851 /* ColorCell.m */; };
 		709DD95F13FBA6DF003E6851 /* ColorCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 709DD95113FBA6DF003E6851 /* ColorCell.h */; };
 		709DD96013FBA6DF003E6851 /* FillEditor.h in Headers */ = {isa = PBXBuildFile; fileRef = 709DD95213FBA6DF003E6851 /* FillEditor.h */; };
+		70F3845D13FD48DD00AA32D2 /* ScrollViewWithPickers.m in Sources */ = {isa = PBXBuildFile; fileRef = 70F3845B13FD48DD00AA32D2 /* ScrollViewWithPickers.m */; };
+		70F3845E13FD48DD00AA32D2 /* ScrollViewWithPickers.h in Headers */ = {isa = PBXBuildFile; fileRef = 70F3845C13FD48DD00AA32D2 /* ScrollViewWithPickers.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +47,8 @@
 		709DD95013FBA6DF003E6851 /* ColorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorCell.m; sourceTree = "<group>"; };
 		709DD95113FBA6DF003E6851 /* ColorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorCell.h; sourceTree = "<group>"; };
 		709DD95213FBA6DF003E6851 /* FillEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FillEditor.h; sourceTree = "<group>"; };
+		70F3845B13FD48DD00AA32D2 /* ScrollViewWithPickers.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ScrollViewWithPickers.m; path = ../../../../../obj_c/editors_1/ScrollViewWithPickers.m; sourceTree = "<group>"; };
+		70F3845C13FD48DD00AA32D2 /* ScrollViewWithPickers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ScrollViewWithPickers.h; path = ../../../../../obj_c/editors_1/ScrollViewWithPickers.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,6 +66,8 @@
 		709DD92A13FBA64A003E6851 = {
 			isa = PBXGroup;
 			children = (
+				70F3845B13FD48DD00AA32D2 /* ScrollViewWithPickers.m */,
+				70F3845C13FD48DD00AA32D2 /* ScrollViewWithPickers.h */,
 				709DD94213FBA6DF003E6851 /* PadLogEditor.xib */,
 				709DD94313FBA6DF003E6851 /* PadGridEditor.xib */,
 				709DD94413FBA6DF003E6851 /* PadLogEditor.m */,
@@ -131,6 +137,7 @@
 				709DD95D13FBA6DF003E6851 /* PatternCell.h in Headers */,
 				709DD95F13FBA6DF003E6851 /* ColorCell.h in Headers */,
 				709DD96013FBA6DF003E6851 /* FillEditor.h in Headers */,
+				70F3845E13FD48DD00AA32D2 /* ScrollViewWithPickers.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -188,6 +195,7 @@
 				709DD95B13FBA6DF003E6851 /* FillEditor.mm in Sources */,
 				709DD95C13FBA6DF003E6851 /* PatternCell.mm in Sources */,
 				709DD95E13FBA6DF003E6851 /* ColorCell.m in Sources */,
+				70F3845D13FD48DD00AA32D2 /* ScrollViewWithPickers.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -268,6 +276,7 @@
 				709DD94113FBA64B003E6851 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
