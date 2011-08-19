@@ -17,7 +17,7 @@ enum {
 };
 
 @interface EditorView : UIView {
-   //UIScrollView *scrollView;
+//   UIScrollView *scrollView;
    ScrollViewWithPickers *scrollView;
 
    CGFloat plateYs[evMaxStates * evMaxComponents];
@@ -25,11 +25,13 @@ enum {
    
    UIView *plates[evMaxComponents];
    UIView *views[evMaxComponents];
-   UIView *containers[evMaxComponents];
+   UIView *containers[evMaxComponents];   
 
    unsigned nStates;
    unsigned nEditors;
    unsigned currentState;
+   
+   BOOL animation;
 }
 
 + (CGFloat) editorAlpha;
