@@ -68,6 +68,7 @@
       //Scroll view is a container for all sub-editors.
       //It's completely transparent.
       const CGRect scrollFrame = CGRectMake(10.f, 10.f, [EditorView scrollWidth], [EditorView scrollHeight]);
+      //scrollView = [[UIScrollView alloc] initWithFrame : scrollFrame];
       scrollView = [[ScrollViewWithPickers alloc] initWithFrame : scrollFrame];
       scrollView.backgroundColor = [UIColor clearColor];
       scrollView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
@@ -75,6 +76,8 @@
       [self addSubview : scrollView];
       [scrollView release];
       self.opaque = NO;
+      
+//      scrollView.canCancelContentTouches = NO;
    }
 
    return self;
@@ -281,11 +284,15 @@
       if (!(currentState & (1 << i)))
          containers[i].hidden = YES;
    }
+   
+   animation = NO;
 }
 
 //_________________________________________________________________
 - (void) animateEditor
 {
+   animation = YES;
+
    [self presetViewsYs];
    
    [UIView beginAnimations : nil context : nil];
@@ -299,12 +306,14 @@
    [UIView commitAnimations];
  
    //Do not hide the views immediately, so user can see animation.
-   [NSTimer scheduledTimerWithTimeInterval : 0.25 target : self selector:@selector(hideViews) userInfo:nil repeats:NO];
+   [NSTimer scheduledTimerWithTimeInterval : 0.15 target : self selector:@selector(hideViews) userInfo:nil repeats:NO];
 }
 
 //_________________________________________________________________
 - (void) plateTapped : (EditorPlateView *) plate
 {
+   if (animation)
+      return;
    //User has tapped on editor's plate.
    //Depending on the current editor's state,
    //we open or close it with animation.
