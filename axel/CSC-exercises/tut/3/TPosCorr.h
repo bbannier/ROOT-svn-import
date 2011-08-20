@@ -8,13 +8,12 @@
 #ifndef TPosCorr_h
 #define TPosCorr_h
 
-#include <TROOT.h>
-#include <TChain.h>
-#include <TFile.h>
-#include <TSelector.h>
-#include <TH2.h>
+#include "TChain.h"
+#include "TFile.h"
+#include "TSelector.h"
+#include "TH2.h"
 
-   const Int_t kMaxelectrons = 3000;
+const Int_t kMaxelectrons = 3000;
 
 class TPosCorr : public TSelector {
 public :
@@ -52,38 +51,3 @@ public :
 };
 
 #endif
-
-#ifdef TPosCorr_cxx
-void TPosCorr::Init(TTree *tree)
-{
-   // The Init() function is called when the selector needs to initialize
-   // a new tree or chain. Typically here the branch addresses and branch
-   // pointers of the tree will be set.
-   // It is normally not necessary to make changes to the generated
-   // code, but the routine can be extended by the user if needed.
-   // Init() will be called many times when running on PROOF
-   // (once per file to be processed).
-
-   // Set object pointer
-   // Set branch addresses and branch pointers
-   if (!tree) return;
-   fChain = tree;
-   fChain->SetMakeClass(1);
-
-   fChain->SetBranchAddress("electrons", &electrons_, &b_electrons_);
-   fChain->SetBranchAddress("electrons.fVertex.fX", electrons_fVertex_fX, &b_electrons_fVertex_fX);
-   fChain->SetBranchAddress("electrons.fVertex.fY", electrons_fVertex_fY, &b_electrons_fVertex_fY);
-}
-
-Bool_t TPosCorr::Notify()
-{
-   // The Notify() function is called when a new file is opened. This
-   // can be either for a new TTree in a TChain or when when a new TTree
-   // is started when using PROOF. It is normally not necessary to make changes
-   // to the generated code, but the routine can be extended by the
-   // user if needed. The return value is currently not used.
-
-   return kTRUE;
-}
-
-#endif // #ifdef TPosCorr_cxx
