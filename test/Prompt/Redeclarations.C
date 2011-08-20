@@ -14,4 +14,7 @@ Diags.setClient(Client);
 std::string s;
 std::string s; // expected-error {{redefinition of 's'}} expected-note {{previous definition is here}}
 
+const char* a = "test";
+const char* a = ""; // expected-error {{redefinition of 'a'}} expected-note {{previous definition is here}}
+
 .q
