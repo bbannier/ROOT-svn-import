@@ -270,10 +270,6 @@ namespace cling {
     // Visit all the children, which are the contents of the DeclGroupRef
     for (Stmt::child_iterator
            I = Node->child_begin(), E = Node->child_end(); I != E; ++I) {
-      // TODO: figure out how to filter const char * a = dep->symbol()
-      // ASTNodeInfo NewNode = Visit(*I);
-      // assert (!einfo.isMultiStmt() && "Not implemented yet!");
-      // *I = einfo.Stmt();
       if (*I) {
         Expr* E = cast_or_null<Expr>(*I);
         if (!E || !IsArtificiallyDependent(E)) 
