@@ -528,8 +528,17 @@ namespace cling {
     llvm::raw_string_ostream OS(Template);
     const PrintingPolicy& Policy = m_Context->PrintingPolicy;
 
-    StmtPrinterHelper helper(Policy, Addresses);      
+    StmtPrinterHelper helper(Policy, Addresses);
+    // In case when we print non paren inits like int i = h->Draw();
+    // not int i(h->Draw()). This simplifies the LifetimeHandler's
+    // constructor, there we don't need to add parenthesis while
+    // wrapping the expression.
+    if (!isa<ParenListExpr>(SubTree))
+      OS << '(';
     SubTree->printPretty(OS, &helper, Policy);
+    if (!isa<ParenListExpr>(SubTree))
+      OS << ')';
+
     OS.flush();
 
     // 3. Build the template
