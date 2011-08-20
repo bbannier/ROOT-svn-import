@@ -1,4 +1,3 @@
-#define TPosCorr_cxx
 // The class definition in TPosCorr.h has been generated automatically
 // by the ROOT utility TTree::MakeSelector(). This class is derived
 // from the ROOT class TSelector. For more information on the TSelector
@@ -24,9 +23,38 @@
 //
 
 #include "TPosCorr.h"
-#include <TH2.h>
-#include <TSystem.h>
 
+void TPosCorr::Init(TTree *tree)
+{
+  // The Init() function is called when the selector needs to initialize
+  // a new tree or chain. Typically here the branch addresses and branch
+  // pointers of the tree will be set.
+  // It is normally not necessary to make changes to the generated
+  // code, but the routine can be extended by the user if needed.
+  // Init() will be called many times when running on PROOF
+  // (once per file to be processed).
+  
+  // Set object pointer
+  // Set branch addresses and branch pointers
+  if (!tree) return;
+  fChain = tree;
+  fChain->SetMakeClass(1);
+  
+  fChain->SetBranchAddress("electrons", &electrons_, &b_electrons_);
+  fChain->SetBranchAddress("electrons.fVertex.fX", electrons_fVertex_fX, &b_electrons_fVertex_fX);
+  fChain->SetBranchAddress("electrons.fVertex.fY", electrons_fVertex_fY, &b_electrons_fVertex_fY);
+}
+
+Bool_t TPosCorr::Notify()
+{
+  // The Notify() function is called when a new file is opened. This
+  // can be either for a new TTree in a TChain or when when a new TTree
+  // is started when using PROOF. It is normally not necessary to make changes
+  // to the generated code, but the routine can be extended by the
+  // user if needed. The return value is currently not used.
+  
+  return kTRUE;
+}
 
 void TPosCorr::Begin(TTree * /*tree*/)
 {
@@ -99,7 +127,7 @@ void TPosCorr::Terminate()
 
    //if (fHistCorrPos) delete fHistCorrPos;
 
-   // Extract the histogram frmo the output list:
+   // Extract the histogram from the output list:
    fHistCorrPos = (TH2F*) GetOutputList()->FindObject("hPosCorr");
 
    Info("Terminate()", "Analysis done.");
