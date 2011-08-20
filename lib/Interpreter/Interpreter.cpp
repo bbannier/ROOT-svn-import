@@ -582,7 +582,7 @@ namespace cling {
     QualType RetTy;
     if (Stmt* S = TopLevelFD->getBody())
       if (CompoundStmt* CS = dyn_cast<CompoundStmt>(S))
-        if (Expr* E = dyn_cast<Expr>(CS->body_back())) {
+        if (Expr* E = dyn_cast_or_null<Expr>(CS->body_back())) {
           RetTy = E->getType();
           // Change the void function's return type
           FunctionProtoType::ExtProtoInfo EPI;
