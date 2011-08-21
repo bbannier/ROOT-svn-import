@@ -18,7 +18,7 @@
 {
    // Override point for customization after application launch.
    rootController = [[RootFileController alloc] initWithNibName:@"RootFileController" bundle : nil];
-   [rootController addFiles];
+   [rootController addFileShortcuts];
    navigationController = [[UINavigationController alloc] initWithRootViewController : rootController];
    [rootController release];
    
