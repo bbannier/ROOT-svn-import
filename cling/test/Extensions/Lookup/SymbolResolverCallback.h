@@ -37,6 +37,16 @@ namespace cling {
 
         printf("%s", "\n");
       }
+
+      void PrintArray(int a[][4][5], size_t size) {
+        for (unsigned i = 0; i < size; ++i)
+          for (unsigned j = 0; j < 4; ++j)
+            for (unsigned k = 0; k < 5; ++k)
+              printf("%i", a[i][j][k]);
+
+        printf("%s", "\n");
+      }
+
     };
 
     TestProxy* Tester = 0;
