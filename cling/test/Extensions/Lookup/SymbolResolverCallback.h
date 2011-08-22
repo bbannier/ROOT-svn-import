@@ -26,6 +26,16 @@ namespace cling {
       void PrintArray(int a[], size_t size) {
         for (unsigned i = 0; i < size; ++i)
           printf("%i", a[i]);
+
+        printf("%s", "\n");
+      }
+
+      void PrintArray(float a[][5], size_t size) {
+        for (unsigned i = 0; i < size; ++i)
+          for (unsigned j = 0; j < 5; ++j)
+            printf("%i", (int)a[i][j]);
+
+        printf("%s", "\n");
       }
     };
 
