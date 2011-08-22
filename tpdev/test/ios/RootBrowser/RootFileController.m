@@ -73,18 +73,19 @@
 - (void) placeFileShortcuts
 {
    const CGRect scrollFrame = scrollView.frame;
-   const CGFloat shortcutWidth = [FileShortcut fileIconWidth] + 10;
+   const CGFloat addSpace = 25.f;
+   const CGFloat shortcutWidth = [FileShortcut fileIconWidth];
    const CGFloat shortcutHeight = [FileShortcut fileIconHeight];
-   const unsigned nPicksInRow = scrollFrame.size.width / shortcutWidth;
-   const CGFloat addXY = (scrollFrame.size.width - shortcutWidth * nPicksInRow) / 2;
+   const unsigned nPicksInRow = scrollFrame.size.width / (shortcutWidth + addSpace);
+   const CGFloat addXY = (scrollFrame.size.width - (shortcutWidth + addSpace) * nPicksInRow) / 2;
    
-   NSEnumerator * enumerator = [fileContainers objectEnumerator];
-   UIView * v = [enumerator nextObject];
+   NSEnumerator *enumerator = [fileContainers objectEnumerator];
+   UIView *v = [enumerator nextObject];
    for (unsigned n = 0; v; v = [enumerator nextObject], ++n) {
       const unsigned col = n % nPicksInRow;
       const unsigned row = n / nPicksInRow;
       
-      const CGFloat x = col * shortcutWidth + addXY;
+      const CGFloat x = addXY + addSpace / 2 + col * (shortcutWidth + addSpace);
       const CGFloat y = row * shortcutHeight + addXY;
 
       CGRect frame = v.frame;

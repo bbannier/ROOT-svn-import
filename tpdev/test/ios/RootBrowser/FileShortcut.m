@@ -33,11 +33,7 @@
    
       self.fileName = name;
 
-      if (n)
-         filePictogram = [UIImage imageNamed : @"basket_full.png"];
-      else
-         filePictogram = [UIImage imageNamed : @"basket_empty.png"];
-      
+      filePictogram = [UIImage imageNamed : @"file_icon.png"];
       [filePictogram retain];
       
       backgroundImage = [UIImage imageNamed:@"file_shortcut_background.png"];
