@@ -96,11 +96,13 @@ namespace {
   private:
     PrintingPolicy m_Policy;
     llvm::SmallVector<DeclRefExpr*, 4>& m_Addresses;
+    Sema* m_Sema;
   public:
     
     StmtPrinterHelper(const PrintingPolicy& Policy, 
-                      llvm::SmallVector<DeclRefExpr*, 4>& Addresses) : 
-      m_Policy(Policy), m_Addresses(Addresses) {}
+                      llvm::SmallVector<DeclRefExpr*, 4>& Addresses,
+                      Sema* S) : 
+      m_Policy(Policy), m_Addresses(Addresses), m_Sema(S) {}
     
     virtual ~StmtPrinterHelper() {}
     
@@ -118,25 +120,48 @@ namespace {
           if (NestedNameSpecifier* Qualifier = Node->getQualifier())
             Qualifier->print(OS, m_Policy);
           m_Addresses.push_back(Node);
-          OS << "*("; 
-          // Copy-paste from the StmtPrinter
+
           QualType T = Node->getType();
           SplitQualType T_split = T.split();
-          OS << QualType::getAsString(T_split);
-          
-          if (!T.isNull()) {
+          if (!T->isArrayType())
+            OS << '*';
+
+          OS << '(';
+
+          ASTContext &Ctx = m_Sema->getASTContext();
+
+          OS << Ctx.getBaseElementType(T).getAsString();
+
+          // We need to handle the arrays differently
+          if (const ArrayType* AT = dyn_cast<ArrayType>(T.getTypePtr())) {
+            OS << "(*)";
+            T = AT->getElementType();
+
+            while ((AT = dyn_cast<ArrayType>(T))) {
+              // TODO: Fix other types of arrays
+              if (const ConstantArrayType* CAT = dyn_cast<ConstantArrayType>(AT))
+                OS <<'[' << CAT->getSize().getZExtValue() << ']';
+
+
+              T = AT->getElementType();
+            }
+          }
+          else 
+            OS << '*';
+
+          if (!Node->getType().isNull()) {
             // If the type is sugared, also dump a (shallow) desugared type.
-            SplitQualType D_split = T.getSplitDesugaredType();
+            SplitQualType D_split = Node->getType().getSplitDesugaredType();
+            assert(T_split == D_split && "Trying to print shallow type!");
             if (T_split != D_split)
               OS << ":" << QualType::getAsString(D_split);
           }
           // end
-          
-          OS <<"*)@";
+
+          OS <<")@";
           
           if (Node->hasExplicitTemplateArgs())
-            OS << TemplateSpecializationType::PrintTemplateArgumentList(
-                                                                        Node->getTemplateArgs(),
+            OS << TemplateSpecializationType::PrintTemplateArgumentList(Node->getTemplateArgs(),
                                                                         Node->getNumTemplateArgs(),
                                                                         m_Policy);  
           if (Node->hasExplicitTemplateArgs())
@@ -528,7 +553,7 @@ namespace cling {
     llvm::raw_string_ostream OS(Template);
     const PrintingPolicy& Policy = m_Context->PrintingPolicy;
 
-    StmtPrinterHelper helper(Policy, Addresses);
+    StmtPrinterHelper helper(Policy, Addresses, m_Sema);
     // In case when we print non paren inits like int i = h->Draw();
     // not int i(h->Draw()). This simplifies the LifetimeHandler's
     // constructor, there we don't need to add parenthesis while
