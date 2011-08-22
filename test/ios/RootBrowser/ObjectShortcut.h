@@ -26,7 +26,7 @@
 + (CGRect) defaultRect;
 
 
-- (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c objectName : (NSString *)name;
+- (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c objectName : (NSString *)name thumbnail : (UIImage *) thumbnail;
 - (void) drawRect : (CGRect)rect;
 
 @end

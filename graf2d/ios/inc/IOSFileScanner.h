@@ -18,7 +18,7 @@ namespace ROOT_iOS {
 namespace FileUtils {
 
 //Find objects of "visible" types in a root file.
-void ScanFileForVisibleObjects(TFile *file, const std::set<std::string> &visibleTypes, std::vector<TObject *> &objects);
+void ScanFileForVisibleObjects(TFile *file, const std::set<std::string> &visibleTypes, std::vector<TObject *> &objects, std::vector<std::string> &options);
 
 }
 }

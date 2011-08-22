@@ -18,19 +18,18 @@
 {
    // Override point for customization after application launch.
    rootController = [[RootFileController alloc] initWithNibName:@"RootFileController" bundle : nil];
-   [rootController addFileShortcuts];
+   [rootController addFileShortcut : [[NSBundle mainBundle] pathForResource:@"demos" ofType:@"root"]];
+
+   
+
    navigationController = [[UINavigationController alloc] initWithRootViewController : rootController];
    [rootController release];
    
-//   navigationController.navigationBar.backgroundColor = [UIColor blueColor];
    navigationController.navigationBar.barStyle = UIBarStyleBlackTranslucent;
    navigationController.delegate = rootController;
 
    
    [self.window addSubview : navigationController.view];
-   
-//   NSLog(@"delegate is %@", navigationController.delegate);
-   
    [self.window makeKeyAndVisible];
    return YES;
 }

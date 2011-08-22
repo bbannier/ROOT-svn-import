@@ -8,11 +8,6 @@
 class TObject;
 class TFile;
 
-//
-//Objects of this class will be created from Obj-C code, so
-//its operations should not throw.
-//
-
 namespace ROOT_iOS {
 
 class FileContainer {
@@ -22,17 +17,26 @@ public:
    FileContainer(const std::string &fileName);
    ~FileContainer();
 
-   bool IsValid()const;
-
-   size_type NumberOfVisibleObjects()const;
+   size_type GetNumberOfObjects()const;
    TObject *GetObject(size_type ind)const;
+   const char *GetDrawOption(size_type ind)const;
+
+   const char *GetFileName()const;
 
 private:
-   bool fIsOk;
+   std::string fFileName;
 
    std::auto_ptr<TFile> fFileHandler;
    std::vector<TObject *> fFileContents;
+   std::vector<std::string> fOptions;
 };
+
+//This is the function to be called from Obj-C++ code.
+//Return: non-null pointer in case file was
+//opened and its content read.
+FileContainer *CreateFileContainer(const char *fileName);
+//Just for symmetry.
+void DeleteFileContainer(FileContainer *container);
 
 }
 

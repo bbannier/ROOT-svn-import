@@ -110,6 +110,8 @@ void Pad::Clear(Option_t *)
 
    fPrimitives.SetOwner(kFALSE);
    fPrimitives.Clear();
+   
+   Range(0., 0., 1., 1.);
 }
 
 //______________________________________________________________________________
