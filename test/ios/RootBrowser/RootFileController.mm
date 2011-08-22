@@ -17,6 +17,7 @@
 
 @synthesize scrollView;
 
+//____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
@@ -27,12 +28,15 @@
       self.navigationItem.title = @"ROOT files";
       UIBarButtonItem *backButton = [[UIBarButtonItem alloc] initWithTitle : @"Back to ROOT files" style:UIBarButtonItemStylePlain target : nil action : nil];
       self.navigationItem.backBarButtonItem = backButton;
+      UIBarButtonItem *leftButton = [[UIBarButtonItem alloc] initWithTitle : @"Open file" style:UIBarButtonItemStylePlain target : self action : @selector(openFile)];
+      self.navigationItem.leftBarButtonItem = leftButton;
       [backButton release];
    }
 
    return self;
 }
 
+//____________________________________________________________________________________________________
 - (void)dealloc
 {
 //   self.scrollView = nil;
@@ -40,6 +44,7 @@
    [super dealloc];
 }
 
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
@@ -49,6 +54,7 @@
 
 #pragma mark - View lifecycle
 
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
@@ -56,6 +62,7 @@
    // Do any additional setup after loading the view from its nib.
 }
 
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
     [super viewDidUnload];
@@ -63,42 +70,20 @@
     // e.g. self.myOutlet = nil;
 }
 
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
 	return YES;
 }
 
+//____________________________________________________________________________________________________
 - (void) placeFileShortcuts
 {
-/*   const CGRect scrollFrame = scrollView.frame;
-   const CGFloat addSpace = 25.f;
-   const CGFloat shortcutWidth = [FileShortcut iconWidth];
-   const CGFloat shortcutHeight = [FileShortcut iconHeight];
-   const unsigned nPicksInRow = scrollFrame.size.width / (shortcutWidth + addSpace);
-   const CGFloat addXY = (scrollFrame.size.width - (shortcutWidth + addSpace) * nPicksInRow) / 2;
-   
-   NSEnumerator *enumerator = [fileContainers objectEnumerator];
-   UIView *v = [enumerator nextObject];
-   for (unsigned n = 0; v; v = [enumerator nextObject], ++n) {
-      const unsigned col = n % nPicksInRow;
-      const unsigned row = n / nPicksInRow;
-      
-      const CGFloat x = addXY + addSpace / 2 + col * (shortcutWidth + addSpace);
-      const CGFloat y = row * shortcutHeight + addXY;
-
-      CGRect frame = v.frame;
-      frame.origin = CGPointMake(x, y);
-      v.frame = frame;
-   }
-   
-   scrollView.contentSize = CGSizeMake(scrollFrame.size.width, addXY + ([fileContainers count] + nPicksInRow - 1) / nPicksInRow * shortcutHeight);
-   
-  */ 
-//   PlaceShortcutsInAScrollView(fileContainers, scrollView, [FileShortcut iconWidth], [FileShortcut iconHeight], 25.f);
    [ShorcutUtil placeShortcuts : fileContainers inScrollView : scrollView withSize : CGSizeMake([FileShortcut iconWidth], [FileShortcut iconHeight]) andSpace : 25.f];
 }
 
+//____________________________________________________________________________________________________
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
    [self placeFileShortcuts];
@@ -106,7 +91,7 @@
 
 #pragma mark View management.
 
-//- (void) addFileShortcut : (ROOT_iOS::FileUtils::FileContainer*) file
+//____________________________________________________________________________________________________
 - (void) addFileShortcut : (NSString *) fileName
 {
    if (!fileContainers)
@@ -135,6 +120,7 @@
    [self placeFileShortcuts];
 }
 
+//____________________________________________________________________________________________________
 - (void) fileWasSelected : (FileShortcut*) shortcut
 {
    if (!contentController)
@@ -142,6 +128,12 @@
       
    [contentController activateForFile : [shortcut getFileContainer]];
    [self.navigationController pushViewController : contentController animated : YES];
+}
+
+//____________________________________________________________________________________________________
+- (void) openFile
+{
+   fileOpenView.hidden = !fileOpenView.hidden;
 }
 
 @end

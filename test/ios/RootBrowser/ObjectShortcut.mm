@@ -17,26 +17,31 @@
 @synthesize icon;
 @synthesize objectName;
 
+//____________________________________________________________________________________________________
 + (CGFloat) iconWidth
 {
    return 150.f;
 }
 
+//____________________________________________________________________________________________________
 + (CGFloat) iconHeight
 {
    return 150.f;
 }
 
+//____________________________________________________________________________________________________
 + (CGFloat) textHeight
 {
    return 100.f;
 }
 
+//____________________________________________________________________________________________________
 + (CGRect) defaultRect
 {
    return CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]);
 }
 
+//____________________________________________________________________________________________________
 - (id)initWithFrame:(CGRect)frame controller : (FileContentController *)c objectName : (NSString *)name thumbnail : (UIImage *)thumbnail
 {
    self = [super initWithFrame:frame];
@@ -63,6 +68,7 @@
    return self;
 }
 
+//____________________________________________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
    [icon drawAtPoint:CGPointZero];
@@ -74,6 +80,7 @@
    [objectName drawInRect : textRect withFont : [UIFont systemFontOfSize : 16] lineBreakMode : UILineBreakModeWordWrap alignment : UITextAlignmentCenter];
 }
 
+//____________________________________________________________________________________________________
 - (void)dealloc
 {
    self.icon = nil;
@@ -81,6 +88,7 @@
    [super dealloc];
 }
 
+//____________________________________________________________________________________________________
 - (void) handleTap
 {
   // [controller selectFromFile : self];
