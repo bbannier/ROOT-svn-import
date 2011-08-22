@@ -3,6 +3,7 @@
 
 #include "IOSFileContainer.h"
 #include "IOSFileScanner.h"
+#include "TSystem.h"
 #include "TFile.h"
 
 
@@ -29,28 +30,26 @@ void FillVisibleTypes(std::set<std::string> &types)
    types.insert("TH3F");
    types.insert("TH3I");
    types.insert("TH3S");
+   types.insert("TF2");
+   types.insert("TGraphPolar");
+   types.insert("TMultiGraph");
 }
 
 }
 
 //__________________________________________________________________________________________________________________________
 FileContainer::FileContainer(const std::string &fileName)
-                  : fIsOk(false)
 {
-   try {
-      fFileHandler.reset(TFile::Open(fileName.c_str(), "read"));
-      if (!fFileHandler.get())
-         return;
-         
-      std::set<std::string> visibleTypes;
-      FillVisibleTypes(visibleTypes);
+   fFileName = gSystem->BaseName(fileName.c_str());
+
+   fFileHandler.reset(TFile::Open(fileName.c_str(), "read"));
+   if (!fFileHandler.get())
+      throw std::runtime_error("File was not opened");
+
+   std::set<std::string> visibleTypes;
+   FillVisibleTypes(visibleTypes);
       
-      FileUtils::ScanFileForVisibleObjects(fFileHandler.get(), visibleTypes, fFileContents);
-   } catch (const std::exception &) {//Only std exceptions.
-      return;
-   }
-   
-   fIsOk = true;
+   FileUtils::ScanFileForVisibleObjects(fFileHandler.get(), visibleTypes, fFileContents, fOptions);
 }
 
 //__________________________________________________________________________________________________________________________
@@ -61,13 +60,7 @@ FileContainer::~FileContainer()
 }
 
 //__________________________________________________________________________________________________________________________
-bool FileContainer::IsValid()const
-{
-   return fIsOk;
-}
-
-//__________________________________________________________________________________________________________________________
-FileContainer::size_type FileContainer::NumberOfVisibleObjects()const
+FileContainer::size_type FileContainer::GetNumberOfObjects()const
 {
    return fFileContents.size();
 }
@@ -76,6 +69,35 @@ FileContainer::size_type FileContainer::NumberOfVisibleObjects()const
 TObject *FileContainer::GetObject(size_type ind)const
 {
    return fFileContents[ind];
+}
+
+//__________________________________________________________________________________________________________________________
+const char *FileContainer::GetDrawOption(size_type ind)const
+{
+   return fOptions[ind].c_str();
+}
+
+//__________________________________________________________________________________________________________________________
+const char *FileContainer::GetFileName()const
+{
+   return fFileName.c_str();
+}
+
+//__________________________________________________________________________________________________________________________
+FileContainer *CreateFileContainer(const char *fileName)
+{
+   try {
+      FileContainer *newContainer = new FileContainer(fileName);
+      return newContainer;
+   } catch (const std::exception &) {//Only std exceptions.
+      return 0;
+   }
+}
+
+//__________________________________________________________________________________________________________________________
+void DeleteFileContainer(FileContainer *container)
+{
+   delete container;
 }
 
 }

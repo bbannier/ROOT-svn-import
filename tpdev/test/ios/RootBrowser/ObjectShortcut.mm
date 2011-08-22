@@ -29,7 +29,7 @@
 
 + (CGFloat) textHeight
 {
-   return [ObjectShortcut iconHeight] + 100.f;
+   return 100.f;
 }
 
 + (CGRect) defaultRect
@@ -37,13 +37,13 @@
    return CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]);
 }
 
-- (id)initWithFrame:(CGRect)frame controller : (FileContentController *)c objectName : (NSString *)name
+- (id)initWithFrame:(CGRect)frame controller : (FileContentController *)c objectName : (NSString *)name thumbnail : (UIImage *)thumbnail
 {
    self = [super initWithFrame:frame];
    if (self) {
       controller = c;
    
-      self.icon = [UIImage imageNamed:@"lego_icon.png"];
+      self.icon = thumbnail;
       self.objectName = name;
       
       self.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -83,7 +83,7 @@
 
 - (void) handleTap
 {
-   [controller selectFromFile : self];
+  // [controller selectFromFile : self];
 }
 
 @end

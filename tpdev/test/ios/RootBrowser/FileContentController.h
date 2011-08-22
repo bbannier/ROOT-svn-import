@@ -8,19 +8,26 @@
 
 #import <UIKit/UIKit.h>
 
+namespace ROOT_iOS {
+
+class FileContainer;
+
+}
+
 @class ROOTObjectController;
 @class SlideshowController;
 @class ObjectShortcut;
 
 @interface FileContentController : UIViewController {
-   NSString *fileName;
    SlideshowController *slideshowController;
    ROOTObjectController *objectController;
+   
+   NSMutableArray *objectShortcuts;
+   
+   ROOT_iOS::FileContainer *fileContainer;
 }
 
-@property (nonatomic, retain) NSString *fileName;
-
-- (void) activateForFile : (NSString *)name;
-- (void) selectFromFile : (ObjectShortcut *)obj;
+- (void) activateForFile : (ROOT_iOS::FileContainer *)container;
+- (void) selectObjectFromFile : (ObjectShortcut *)obj;
 
 @end
