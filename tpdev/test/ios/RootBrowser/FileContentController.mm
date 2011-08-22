@@ -21,31 +21,24 @@
 
 @implementation FileContentController
 
+//____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
 
-   if (self) {
+   if (self)
       self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Slide show" style:UIBarButtonItemStyleBordered target:self action:@selector(startSlideshow)];
-   /*   
-      CGRect frame = [ObjectShortcut defaultRect];
-      frame.origin = CGPointMake(50.f, 50.f);
-      ObjectShortcut *sh = [[ObjectShortcut alloc] initWithFrame : frame controller : self objectName : @"sample_histo"];
-      [self.view addSubview : sh];
-      [sh release];
-      
-      UIScrollView *scroll = (UIScrollView *)self.view;
-      scroll.contentSize = CGSizeMake(1000.f, 1000.f);*/
-   }
 
    return self;
 }
 
+//____________________________________________________________________________________________________
 - (void)dealloc
 {
    [super dealloc];
 }
 
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
@@ -56,12 +49,14 @@
 
 #pragma mark - View lifecycle
 
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
    [super viewDidUnload];
@@ -69,12 +64,14 @@
    // e.g. self.myOutlet = nil;
 }
 
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
    // Return YES for supported orientations
 	return YES;
 }
 
+//____________________________________________________________________________________________________
 - (void) clearScrollview
 {
    NSArray *viewsToRemove = [self.view subviews];
@@ -83,6 +80,7 @@
 
 }
 
+//____________________________________________________________________________________________________
 - (void) initShortcuts
 {
    UIScrollView *scroll = (UIScrollView *)self.view;
@@ -96,9 +94,6 @@
 
    const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
    ROOT_iOS::Pad * pad = new ROOT_iOS::Pad(rect.size.width, rect.size.height);//
-//   const unsigned reqW = rect.size.width + 100;
-//   const unsigned reqH = rect.size.height + 100;
-//   const unsigned picInARow = scrollView.contentSize.width / reqW;
 
    for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i) {
       //Create bitmap context.
@@ -128,12 +123,6 @@
       [thumbnailImage retain];
       UIGraphicsEndImageContext();
        
-/*      const unsigned col = i % picInARow;
-      const unsigned row = i / picInARow;
-      const CGPoint topLeft = CGPointMake(col * reqW + 50, row * reqH + 50);
- */     
-      
-      //UIImageView *imView = [[UIImageView alloc] initWithImage : thumbnailImage];
       NSString *objName = [NSString stringWithFormat : @"%s", rootObject->GetName()];
       ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller:self objectName:objName thumbnail : thumbnailImage];
       
@@ -153,15 +142,16 @@
    }
       
    delete pad;
-   //
 }
 
+//____________________________________________________________________________________________________
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
     UIScrollView *scroll = (UIScrollView *)self.view;
    [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scroll withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
+//____________________________________________________________________________________________________
 - (void) activateForFile : (ROOT_iOS::FileContainer *)container
 {
 //   self.navigationItem.title = [NSString stringWithFormat :@"Contents of %@", name];
@@ -175,6 +165,7 @@
    [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scroll withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
+//____________________________________________________________________________________________________
 - (void) startSlideshow
 {
    if (!slideshowController)
@@ -183,6 +174,7 @@
    [self.navigationController pushViewController : slideshowController animated : YES];
 }
 
+//____________________________________________________________________________________________________
 - (void) selectObjectFromFile : (ObjectShortcut *) obj
 {
    if (!objectController)

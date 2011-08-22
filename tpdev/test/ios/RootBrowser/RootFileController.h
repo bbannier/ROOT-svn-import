@@ -15,6 +15,8 @@
    NSMutableArray *fileContainers;
    FileContentController *contentController;
    IBOutlet UIScrollView *scrollView;
+   
+   IBOutlet UIView *fileOpenView;
 }
 
 @property (nonatomic, retain) UIScrollView *scrollView;

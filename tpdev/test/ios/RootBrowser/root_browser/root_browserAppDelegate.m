@@ -20,8 +20,6 @@
    rootController = [[RootFileController alloc] initWithNibName:@"RootFileController" bundle : nil];
    [rootController addFileShortcut : [[NSBundle mainBundle] pathForResource:@"demos" ofType:@"root"]];
 
-   
-
    navigationController = [[UINavigationController alloc] initWithRootViewController : rootController];
    [rootController release];
    

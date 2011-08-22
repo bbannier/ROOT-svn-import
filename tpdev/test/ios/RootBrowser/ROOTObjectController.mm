@@ -17,6 +17,7 @@
 
 @implementation ROOTObjectController
 
+//____________________________________________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -42,11 +43,13 @@
    return self;
 }
 
+//____________________________________________________________________________________________________
 - (void)dealloc
 {
     [super dealloc];
 }
 
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
@@ -57,12 +60,14 @@
 
 #pragma mark - View lifecycle
 
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
     [super viewDidUnload];
@@ -70,12 +75,14 @@
     // e.g. self.myOutlet = nil;
 }
 
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
 	return YES;
 }
 
+//____________________________________________________________________________________________________
 - (void) showEditor
 {
    CGRect frame = editorView.frame;
