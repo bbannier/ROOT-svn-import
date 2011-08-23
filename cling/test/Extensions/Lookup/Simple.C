@@ -1,6 +1,15 @@
 // RUN: cat %s | %cling -I%p
 // RUN: cat %s | %cling -I%p | FileCheck %s
 
+// This test tests the hook that cling expects in clang and enables it
+// at compile time. However that is not actual dynamic lookup because
+// the compiler uses the hook at compile time, since we enable it on
+// creation. When a symbol lookup fails in compile time, clang asks its
+// externally attached sources whether they could provide the declaration
+// that is being lookedup. In the current test our external source is enabled
+// so it provides it on the fly, and no transformations to delay the lookup
+// are performed.
+
 #include "SymbolResolverCallback.h"
 
 .dynamicExtensions
