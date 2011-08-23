@@ -25,7 +25,7 @@ class Pad;
 //ROOT's object to draw.
 class TObject;
 
-@interface ROOTObjectController : UIViewController {
+@interface ROOTObjectController : UIViewController <UIScrollViewDelegate> {
    EditorView *editorView;
    
    PadGridEditor *grid;
