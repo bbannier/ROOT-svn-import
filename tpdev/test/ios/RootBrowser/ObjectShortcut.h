@@ -10,15 +10,16 @@
 
 @class FileContentController;
 
+class TObject;
+
 @interface ObjectShortcut : UIView {
    UIImage *icon;
-   NSString *objectName;
    
    FileContentController *controller;
+   TObject *rootObject;
 }
 
 @property (nonatomic, retain) UIImage *icon;
-@property (nonatomic, retain) NSString *objectName;
 
 + (CGFloat) iconWidth;
 + (CGFloat) iconHeight;
@@ -26,7 +27,7 @@
 + (CGRect) defaultRect;
 
 
-- (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c objectName : (NSString *)name thumbnail : (UIImage *) thumbnail;
+- (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c object : (TObject *)object thumbnail : (UIImage *) thumbnail;
 - (void) drawRect : (CGRect)rect;
 
 @end

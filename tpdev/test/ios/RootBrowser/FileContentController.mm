@@ -55,7 +55,7 @@
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
-- (void) correctFrame
+- (void) correctFrames
 {
    CGRect mainFrame;
    CGRect scrollFrame;
@@ -78,7 +78,7 @@
 - (void)viewDidLoad
 {
    [super viewDidLoad];
-   [self correctFrame];
+   [self correctFrames];
    // Do any additional setup after loading the view from its nib.
 }
 
@@ -107,71 +107,73 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) initShortcuts
+- (void) addShortcutForObject : (TObject *) object inPad : (ROOT_iOS::Pad *) pad drawOption : (const char *) option
 {
+   const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
+   UIGraphicsBeginImageContext(rect.size);
+   CGContextRef ctx = UIGraphicsGetCurrentContext();
+   if (!ctx) {
+      UIGraphicsEndImageContext();
+      return;
+   }
+      
+   //Now draw into this context.
+   CGContextTranslateCTM(ctx, 0.f, rect.size.height);
+   CGContextScaleCTM(ctx, 1.f, -1.f);
+      
+   //Fill bitmap with white first.
+   CGContextSetRGBFillColor(ctx, 0.f, 0.f, 0.f, 1.f);
+   CGContextFillRect(ctx, rect);
+   //Set context and paint pad's contents
+   //with special colors (color == object's identity)
+   pad->cd();
+   pad->SetContext(ctx);
+   pad->Clear();
+   object->Draw(option);
+   pad->PaintThumbnail();
+   
+   UIImage *thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();//autoreleased UIImage.
+   [thumbnailImage retain];
+   UIGraphicsEndImageContext();
+       
+   ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller : self object : object thumbnail : thumbnailImage];
+   shortcut.layer.shadowColor = [UIColor blackColor].CGColor;
+   shortcut.layer.shadowOffset = CGSizeMake(20.f, 20.f);
+   shortcut.layer.shadowOpacity = 0.3f;
+
+   [scrollView addSubview : shortcut];
+   [objectShortcuts addObject : shortcut];
+
+   UIBezierPath *path = [UIBezierPath bezierPathWithRect : rect];//shortcut.bounds];
+   shortcut.layer.shadowPath = path.CGPath;
+   [shortcut release];
+
+   [thumbnailImage release];
+}
+
+//____________________________________________________________________________________________________
+- (void) addObjectsIntoScrollview
+{
+   typedef ROOT_iOS::FileContainer::size_type size_type;
+
    [objectShortcuts release];
    [self clearScrollview];
 
    objectShortcuts = [[NSMutableArray alloc] init];
 
-   typedef ROOT_iOS::FileContainer::size_type size_type;
-
    const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
-   ROOT_iOS::Pad * pad = new ROOT_iOS::Pad(rect.size.width, rect.size.height);//
+   ROOT_iOS::Pad * pad = new ROOT_iOS::Pad(rect.size.width, rect.size.height);//Pad to draw object.
 
-   for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i) {
-      //Create bitmap context.
-      UIGraphicsBeginImageContext(rect.size);
-      CGContextRef ctx = UIGraphicsGetCurrentContext();
-      if (!ctx) {
-         //NSLog(@"error while trying to create graphical context for image, iteration %lu", i);
-         break;
-      }
-      //Now draw into this context.
-      CGContextTranslateCTM(ctx, 0.f, rect.size.height);
-      CGContextScaleCTM(ctx, 1.f, -1.f);
-      
-      //Fill bitmap with white first.
-      CGContextSetRGBFillColor(ctx, 0.f, 0.f, 0.f, 1.f);
-      CGContextFillRect(ctx, rect);
-      //Set context and paint pad's contents
-      //with special colors (color == object's identity)
-      pad->cd();
-      pad->SetContext(ctx);
-      pad->Clear();
-      TObject * rootObject = fileContainer->GetObject(i);
-      rootObject->Draw(fileContainer->GetDrawOption(i));
-      pad->PaintThumbnail();
-   
-      UIImage *thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();//autoreleased UIImage.
-      [thumbnailImage retain];
-      UIGraphicsEndImageContext();
-       
-      NSString *objName = [NSString stringWithFormat : @"%s", rootObject->GetName()];
-      ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller:self objectName:objName thumbnail : thumbnailImage];
-      
-      shortcut.layer.shadowColor = [UIColor blackColor].CGColor;
-      shortcut.layer.shadowOffset = CGSizeMake(20.f, 20.f);
-      shortcut.layer.shadowOpacity = 0.3f;
-      
+   for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i)
+      [self addShortcutForObject:fileContainer->GetObject(i) inPad:pad drawOption:fileContainer->GetDrawOption(i)];
 
-      [scrollView addSubview : shortcut];
-      [objectShortcuts addObject : shortcut];
-
-      UIBezierPath *path = [UIBezierPath bezierPathWithRect : rect];//shortcut.bounds];
-      shortcut.layer.shadowPath = path.CGPath;
-      [shortcut release];
-
-      [thumbnailImage release];
-   }
-      
    delete pad;
 }
 
 //____________________________________________________________________________________________________
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
-   [self correctFrame];
+   [self correctFrames];
    [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
@@ -182,8 +184,8 @@
    self.navigationItem.title = [NSString stringWithFormat : @"Contents of %s", container->GetFileName()];
    
    //Prepare objects' thymbnails.
-   [self initShortcuts];
-   [self correctFrame];
+   [self addObjectsIntoScrollview];
+   [self correctFrames];
    [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
@@ -197,12 +199,12 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) selectObjectFromFile : (ObjectShortcut *) obj
+- (void) selectObjectFromFile : (TObject *) obj
 {
    if (!objectController)
       objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
    
-   objectController.navigationItem.title = obj.objectName;
+   objectController.navigationItem.title = [NSString stringWithFormat : @"%s", obj->GetName()];
    [self.navigationController pushViewController : objectController animated : YES];
 }
 

@@ -59,6 +59,8 @@
    return 20.f;
 }
 
+
+
 //_________________________________________________________________
 - (id)initWithFrame : (CGRect)frame
 {
@@ -67,8 +69,7 @@
    if (self) {
       //Scroll view is a container for all sub-editors.
       //It's completely transparent.
-      const CGRect scrollFrame = CGRectMake(10.f, 10.f, [EditorView scrollWidth], [EditorView scrollHeight]);
-      //scrollView = [[UIScrollView alloc] initWithFrame : scrollFrame];
+      const CGRect scrollFrame = CGRectMake(10.f, 10.f, [EditorView scrollWidth], frame.size.height - 20.f);
       scrollView = [[ScrollViewWithPickers alloc] initWithFrame : scrollFrame];
       scrollView.backgroundColor = [UIColor clearColor];
       scrollView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
@@ -76,8 +77,6 @@
       [self addSubview : scrollView];
       [scrollView release];
       self.opaque = NO;
-      
-//      scrollView.canCancelContentTouches = NO;
    }
 
    return self;
@@ -101,11 +100,12 @@
       return;
    }
    
-   UIColor *background = [[UIColor darkGrayColor] colorWithAlphaComponent : [EditorView editorAlpha]];
+   UIColor *background = [[UIColor lightGrayColor] colorWithAlphaComponent : [EditorView editorAlpha]];
    CGContextSetFillColorWithColor(ctx, background.CGColor);
+
    //Draw the rect with rounded corners now.
-   CGContextFillRect(ctx, CGRectMake(0.f, [EditorView ncHeight] / 2, [EditorView ncWidth] / 2, [EditorView editorHeight] - [EditorView ncHeight]));
-   CGContextFillRect(ctx, CGRectMake([EditorView ncWidth] / 2, 0.f, [EditorView editorWidth] - [EditorView ncWidth] / 2, [EditorView editorHeight]));
+   CGContextFillRect(ctx, CGRectMake(0.f, [EditorView ncHeight] / 2, [EditorView ncWidth] / 2, rect.size.height - [EditorView ncHeight]));
+   CGContextFillRect(ctx, CGRectMake([EditorView ncWidth] / 2, 0.f, rect.size.width - [EditorView ncWidth] / 2, rect.size.height));
    
    //Draw arcs.
    CGContextBeginPath(ctx);
@@ -114,10 +114,9 @@
    CGContextFillPath(ctx);
    //
    CGContextBeginPath(ctx);
-   CGContextMoveToPoint(ctx, [EditorView ncWidth] / 2, [EditorView editorHeight] - [EditorView ncHeight] / 2);
-   CGContextAddArc(ctx, [EditorView ncWidth] / 2, [EditorView editorHeight] - [EditorView ncHeight] / 2, [EditorView ncWidth] / 2, M_PI / 2, M_PI, 0);
+   CGContextMoveToPoint(ctx, [EditorView ncWidth] / 2, rect.size.height - [EditorView ncHeight] / 2);
+   CGContextAddArc(ctx, [EditorView ncWidth] / 2, rect.size.height - [EditorView ncHeight] / 2, [EditorView ncWidth] / 2, M_PI / 2, M_PI, 0);
    CGContextFillPath(ctx);
-
 }
 
 //_________________________________________________________________
@@ -150,6 +149,21 @@
       totalHeight += plates[i].frame.size.height + dY + views[i].frame.size.height + dY;
 
    return totalHeight;
+}
+
+//_________________________________________________________________
+- (void) correctFrames
+{
+   CGRect frame = self.frame;
+   frame.origin.x = 10.f;
+   frame.origin.y = 10.f;
+   frame.size.height -= 20.f;
+   frame.size.width = 250.f;
+   scrollView.frame = frame;
+   
+   const CGFloat totalHeight = [self recalculateEditorGeometry];
+   scrollView.contentSize = CGSizeMake([EditorView scrollWidth], totalHeight);
+   scrollView.contentOffset = CGPointZero;
 }
 
 //_________________________________________________________________

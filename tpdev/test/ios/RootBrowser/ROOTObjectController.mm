@@ -17,12 +17,42 @@
 
 @implementation ROOTObjectController
 
+@synthesize scrollView;
+
+//____________________________________________________________________________________________________
+- (void) correctFrames
+{
+   CGRect mainFrame;
+   CGRect scrollFrame;
+
+   const UIInterfaceOrientation orientation = self.interfaceOrientation;
+   if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
+      mainFrame = CGRectMake(0.f, 0.f, 768.f, 1004.f);
+      scrollFrame = CGRectMake(0.f, 44.f, 768.f, 960.f);
+   } else {
+      mainFrame = CGRectMake(0.f, 0.f, 1024.f, 748.f);
+      scrollFrame = CGRectMake(0.f, 44.f, 1024.f, 704.f);
+   }
+   
+   self.view.frame = mainFrame;
+   self.scrollView.frame = scrollFrame;
+
+   const CGRect editorFrame = CGRectMake(mainFrame.size.width - [EditorView editorWidth], 100, [EditorView editorWidth], mainFrame.size.height - 200);
+   editorView.frame = editorFrame;
+   [editorView correctFrames];
+}
+
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+   
+   [self view];
+   
    if (self) {
       editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
+      NSLog(@"editor %@", editorView);
       grid = [[PadGridEditor alloc] initWithNibName:@"PadGridEditor" bundle:nil];
       log = [[PadLogEditor alloc] initWithNibName:@"PadLogEditor" bundle:nil];
       fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
@@ -38,6 +68,8 @@
       
       editorView.hidden = YES;
       [editorView release];
+      
+      [self correctFrames];
    }
    
    return self;
@@ -83,11 +115,23 @@
 }
 
 //____________________________________________________________________________________________________
+- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration
+{
+   //Cheap thay to hide and not check previos "hidden" state later.
+   editorView.alpha = 0.f;
+}
+
+//____________________________________________________________________________________________________
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+{
+   [self correctFrames];
+   //hidden or not, alpha was set to 0., now return back.
+   editorView.alpha = 1.f;
+}
+
+//____________________________________________________________________________________________________
 - (void) showEditor
 {
-   CGRect frame = editorView.frame;
-   frame.origin = CGPointMake(self.view.frame.size.width - [EditorView editorWidth], 50.f);
-   editorView.frame = frame;
    editorView.hidden = !editorView.hidden;
    
    // First create a CATransition object to describe the transition

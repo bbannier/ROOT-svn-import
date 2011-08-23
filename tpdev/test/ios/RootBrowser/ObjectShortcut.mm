@@ -12,10 +12,12 @@
 #import "FileContentController.h"
 #import "ObjectShortcut.h"
 
+//C++ (ROOT) imports.
+#import "TObject.h"
+
 @implementation ObjectShortcut
 
 @synthesize icon;
-@synthesize objectName;
 
 //____________________________________________________________________________________________________
 + (CGFloat) iconWidth
@@ -42,22 +44,21 @@
 }
 
 //____________________________________________________________________________________________________
-- (id)initWithFrame:(CGRect)frame controller : (FileContentController *)c objectName : (NSString *)name thumbnail : (UIImage *)thumbnail
+- (id)initWithFrame:(CGRect)frame controller : (FileContentController *)c object : (TObject *)object thumbnail : (UIImage *)thumbnail
 {
    self = [super initWithFrame:frame];
    if (self) {
       controller = c;
-   
       self.icon = thumbnail;
-      self.objectName = name;
-      
+      rootObject = object;
+
       self.layer.shadowColor = [UIColor blackColor].CGColor;
       self.layer.shadowOpacity = 0.3;
       self.layer.shadowOffset = CGSizeMake(10.f, 10.f);
       frame.origin = CGPointZero;
       frame.size.height = [ObjectShortcut iconHeight];
-      self.layer.shadowPath = [UIBezierPath bezierPathWithRect:frame].CGPath;
-
+      self.layer.shadowPath = [UIBezierPath bezierPathWithRect : frame].CGPath;
+      
       self.opaque = NO;
       
       UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap)];
@@ -76,6 +77,8 @@
    CGContextRef ctx = UIGraphicsGetCurrentContext();
    
    CGContextSetRGBFillColor(ctx, 1.f, 1.f, 1.f, 1.f);
+   
+   NSString * objectName = [NSString stringWithFormat:@"%s", rootObject->GetName()];
    const CGRect textRect = CGRectMake(0.f, [ObjectShortcut iconHeight], [ObjectShortcut iconWidth], [ObjectShortcut textHeight]);
    [objectName drawInRect : textRect withFont : [UIFont systemFontOfSize : 16] lineBreakMode : UILineBreakModeWordWrap alignment : UITextAlignmentCenter];
 }
@@ -84,14 +87,13 @@
 - (void)dealloc
 {
    self.icon = nil;
-   self.objectName = nil;
    [super dealloc];
 }
 
 //____________________________________________________________________________________________________
 - (void) handleTap
 {
-  // [controller selectFromFile : self];
+   [controller selectObjectFromFile : rootObject];
 }
 
 @end

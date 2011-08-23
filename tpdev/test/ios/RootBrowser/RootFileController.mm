@@ -55,7 +55,7 @@
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
-- (void) correctFrame
+- (void) correctFrames
 {
    CGRect mainFrame;
    CGRect scrollFrame;
@@ -77,7 +77,7 @@
 - (void)viewDidLoad
 {
    [super viewDidLoad];
-   [self correctFrame];
+   [self correctFrames];
    scrollView.bounces = NO;
 }
 
@@ -105,7 +105,7 @@
 //____________________________________________________________________________________________________
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
-   [self correctFrame];
+   [self correctFrames];
    [self placeFileShortcuts];
 }
 

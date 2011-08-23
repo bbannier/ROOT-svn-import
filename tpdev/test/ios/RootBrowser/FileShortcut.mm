@@ -36,8 +36,6 @@
 {
    //C++ part. Open the file and read its contents.
    fileContainer = ROOT_iOS::CreateFileContainer([path cStringUsingEncoding : [NSString defaultCStringEncoding]]);
-   if (fileContainer)
-      NSLog(@"number of object from file: %lu", fileContainer->GetNumberOfObjects());
 }
 
 //____________________________________________________________________________________________________

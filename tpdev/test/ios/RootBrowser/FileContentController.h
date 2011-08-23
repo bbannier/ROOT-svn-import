@@ -14,6 +14,8 @@ class FileContainer;
 
 }
 
+class TObject;
+
 @class ROOTObjectController;
 @class SlideshowController;
 @class ObjectShortcut;
@@ -32,6 +34,6 @@ class FileContainer;
 @property (nonatomic, retain) UIScrollView *scrollView;
 
 - (void) activateForFile : (ROOT_iOS::FileContainer *)container;
-- (void) selectObjectFromFile : (ObjectShortcut *)obj;
+- (void) selectObjectFromFile : (TObject *)obj;
 
 @end
