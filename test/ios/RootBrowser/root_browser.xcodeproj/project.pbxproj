@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		70249BDC1403D644006A19E6 /* PadView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70249BDA1403D644006A19E6 /* PadView.mm */; };
 		7077901E13FE50EB00C0FFA1 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077901D13FE50EB00C0FFA1 /* UIKit.framework */; };
 		7077902013FE50EB00C0FFA1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077901F13FE50EB00C0FFA1 /* Foundation.framework */; };
 		7077902213FE50EB00C0FFA1 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077902113FE50EB00C0FFA1 /* CoreGraphics.framework */; };
@@ -54,6 +55,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		70249BDA1403D644006A19E6 /* PadView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PadView.mm; sourceTree = "<group>"; };
+		70249BDB1403D644006A19E6 /* PadView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadView.h; sourceTree = "<group>"; };
 		7077901913FE50EB00C0FFA1 /* root_browser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = root_browser.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7077901D13FE50EB00C0FFA1 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		7077901F13FE50EB00C0FFA1 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -161,6 +164,8 @@
 				7077906813FE8D7500C0FFA1 /* lego.png */,
 				7077905013FE6B8F00C0FFA1 /* file_shortcut_background.png */,
 				7077904113FE554E00C0FFA1 /* FileShortcut.h */,
+				70249BDA1403D644006A19E6 /* PadView.mm */,
+				70249BDB1403D644006A19E6 /* PadView.h */,
 				7077904213FE554E00C0FFA1 /* FileShortcut.mm */,
 				7077903C13FE549300C0FFA1 /* FileContentController.h */,
 				7077903D13FE549300C0FFA1 /* FileContentController.mm */,
@@ -332,6 +337,7 @@
 				7077908713FE96C300C0FFA1 /* PatternCell.mm in Sources */,
 				7077908813FE96C300C0FFA1 /* ColorCell.m in Sources */,
 				709CD0981402768B005B2AF4 /* Shortcuts.m in Sources */,
+				70249BDC1403D644006A19E6 /* PadView.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
