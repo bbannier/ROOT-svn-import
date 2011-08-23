@@ -33,6 +33,7 @@
    }
    
    scrollView.contentSize = CGSizeMake(scrollFrame.size.width, addXY + ([shortcuts count] + nPicksInRow - 1) / nPicksInRow * shortcutHeight);
+   scrollView.contentOffset = CGPointZero;
 }
 
 @end

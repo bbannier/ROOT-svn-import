@@ -55,11 +55,30 @@
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
+- (void) correctFrame
+{
+   CGRect mainFrame;
+   CGRect scrollFrame;
+
+   const UIInterfaceOrientation orientation = self.interfaceOrientation;
+   if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
+      mainFrame = CGRectMake(0.f, 0.f, 768.f, 1004.f);
+      scrollFrame = CGRectMake(0.f, 44.f, 768.f, 960.f);
+   } else {
+      mainFrame = CGRectMake(0.f, 0.f, 1024.f, 748.f);
+      scrollFrame = CGRectMake(0.f, 44.f, 1024.f, 704.f);   
+   }
+   
+   self.view.frame = mainFrame;
+   self.scrollView.frame = scrollFrame;
+}
+
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
+   [self correctFrame];
    scrollView.bounces = NO;
-   // Do any additional setup after loading the view from its nib.
 }
 
 //____________________________________________________________________________________________________
@@ -86,6 +105,7 @@
 //____________________________________________________________________________________________________
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
+   [self correctFrame];
    [self placeFileShortcuts];
 }
 
