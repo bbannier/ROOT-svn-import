@@ -99,8 +99,8 @@
       NSLog(@"[EditorView drawRect:], ctx is nil");
       return;
    }
-   
-   UIColor *background = [[UIColor lightGrayColor] colorWithAlphaComponent : [EditorView editorAlpha]];
+
+   UIColor *background = [[UIColor scrollViewTexturedBackgroundColor] colorWithAlphaComponent : [EditorView editorAlpha]];
    CGContextSetFillColorWithColor(ctx, background.CGColor);
 
    //Draw the rect with rounded corners now.

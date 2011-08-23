@@ -42,6 +42,7 @@
    self.view.frame = mainFrame;
    self.scrollView.frame = scrollFrame;
 
+
    const CGRect editorFrame = CGRectMake(mainFrame.size.width - [EditorView editorWidth], 100, [EditorView editorWidth], mainFrame.size.height - 200);
    editorView.frame = editorFrame;
    [editorView correctFrames];
@@ -74,17 +75,23 @@
       UITapGestureRecognizer * tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(showEditor)];
       [self.view addGestureRecognizer:tap];
       [tap release];
-      
+   
+      //
+      scrollView.delegate = self;
+      [scrollView setMaximumZoomScale:3.];
+      scrollView.bounces = NO;
+      //
+            
       editorView.hidden = YES;
       [editorView release];
       
+
       //
       //Create padView, pad.
       //
       const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
       const CGRect padRect = CGRectMake(padCenter.x - 300.f, padCenter.y - 300.f, 600.f, 600.f);
       pad = new ROOT_iOS::Pad(600., 600.);
-      NSLog(@"create pad %p", pad); 
       padView = [[PadView alloc] initWithFrame : padRect forPad : pad];
       [scrollView addSubview : padView];
       [padView release];
@@ -98,7 +105,6 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-   NSLog(@"dealloc!!!");
    delete pad;
    [super dealloc];
 }
@@ -183,6 +189,13 @@
    pad->Clear();
    rootObject->Draw([shortcut.drawOption cStringUsingEncoding : [NSString defaultCStringEncoding]]);//Preserve option!!!
    [padView setNeedsDisplay];
+}
+
+#pragma mark - delegate for scroll-view.
+//_________________________________________________________________
+- (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
+{
+   return padView;
 }
 
 @end
