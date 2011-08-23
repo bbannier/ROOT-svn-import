@@ -1,4 +1,3 @@
-// RUN: cat %s | %cling -I%p
 // RUN: cat %s | %cling -I%p | FileCheck %s
 
 // This test tests the hook that cling expects in clang and enables it
