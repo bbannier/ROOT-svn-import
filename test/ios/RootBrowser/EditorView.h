@@ -42,9 +42,8 @@ enum {
 + (CGFloat) scrollHeight;
 
 - (void) propertyUpdated;
-
 - (void) addSubEditor : (UIView *)element withName : (NSString *)editorName;
-
+- (void) correctFrames;
 - (void) plateTapped : (EditorPlateView *) plate;
 
 @end

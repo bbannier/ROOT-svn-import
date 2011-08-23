@@ -19,6 +19,10 @@
    PadGridEditor *grid;
    PadLogEditor *log;
    FillEditor *fill;
+   
+   IBOutlet UIScrollView *scrollView;
 }
+
+@property (nonatomic, retain) UIScrollView *scrollView;
 
 @end

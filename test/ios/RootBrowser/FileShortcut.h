@@ -7,6 +7,8 @@ class FileContainer;
 
 }
 
+class TObject;
+
 @interface FileShortcut : UIView {
    UIViewController *controller;
 
