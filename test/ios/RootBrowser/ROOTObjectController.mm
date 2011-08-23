@@ -52,7 +52,6 @@
    
    if (self) {
       editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
-      NSLog(@"editor %@", editorView);
       grid = [[PadGridEditor alloc] initWithNibName:@"PadGridEditor" bundle:nil];
       log = [[PadLogEditor alloc] initWithNibName:@"PadLogEditor" bundle:nil];
       fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
