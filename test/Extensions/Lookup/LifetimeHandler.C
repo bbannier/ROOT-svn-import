@@ -20,4 +20,7 @@ gCling->setCallbacks(SRC);
 Alpha a(sadasds->getVersion()); 
 printf("%s\n", a.getVar()); // CHECK: {{.*Interpreter.*}}
 
+// TODO: in this case we should emit the LifetimeHandler at all.
+int res = h->Add10(h->Add10(h->Add10(0))) // CHECK: (int const) 30
+
 .q
