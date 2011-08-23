@@ -34,6 +34,6 @@ class TObject;
 @property (nonatomic, retain) UIScrollView *scrollView;
 
 - (void) activateForFile : (ROOT_iOS::FileContainer *)container;
-- (void) selectObjectFromFile : (TObject *)obj;
+- (void) selectObjectFromFile : (ObjectShortcut *)obj;
 
 @end

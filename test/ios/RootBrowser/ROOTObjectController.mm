@@ -9,11 +9,16 @@
 #import <QuartzCore/QuartzCore.h>
 
 #import "ROOTObjectController.h"
+#import "ObjectShortcut.h"
 #import "PadGridEditor.h"
 #import "PadLogEditor.h"
 #import "FillEditor.h"
 #import "EditorView.h"
+#import "PadView.h"
 
+//C++ (ROOT) imports.
+#import "TObject.h"
+#import "IOSPad.h"
 
 @implementation ROOTObjectController
 
@@ -40,6 +45,11 @@
    const CGRect editorFrame = CGRectMake(mainFrame.size.width - [EditorView editorWidth], 100, [EditorView editorWidth], mainFrame.size.height - 200);
    editorView.frame = editorFrame;
    [editorView correctFrames];
+   
+   //Now correct padView.
+   const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
+   const CGRect padRect = CGRectMake(padCenter.x - 300.f, padCenter.y - 300.f, 600.f, 600.f);
+   padView.frame = padRect;
 }
 
 
@@ -68,6 +78,17 @@
       editorView.hidden = YES;
       [editorView release];
       
+      //
+      //Create padView, pad.
+      //
+      const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
+      const CGRect padRect = CGRectMake(padCenter.x - 300.f, padCenter.y - 300.f, 600.f, 600.f);
+      pad = new ROOT_iOS::Pad(600., 600.);
+      NSLog(@"create pad %p", pad); 
+      padView = [[PadView alloc] initWithFrame : padRect forPad : pad];
+      [scrollView addSubview : padView];
+      [padView release];
+
       [self correctFrames];
    }
    
@@ -77,7 +98,9 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-    [super dealloc];
+   NSLog(@"dealloc!!!");
+   delete pad;
+   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
@@ -149,6 +172,17 @@
    transition.delegate = self;
    // Next add it to the containerView's layer. This will perform the transition based on how we change its contents.
    [editorView.layer addAnimation : transition forKey : nil];
+}
+
+//____________________________________________________________________________________________________
+- (void) setObject : (ObjectShortcut *)shortcut
+{
+   rootObject = shortcut.rootObject;
+
+   pad->cd();
+   pad->Clear();
+   rootObject->Draw([shortcut.drawOption cStringUsingEncoding : [NSString defaultCStringEncoding]]);//Preserve option!!!
+   [padView setNeedsDisplay];
 }
 
 @end
