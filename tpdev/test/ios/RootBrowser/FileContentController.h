@@ -25,7 +25,11 @@ class FileContainer;
    NSMutableArray *objectShortcuts;
    
    ROOT_iOS::FileContainer *fileContainer;
+   
+   IBOutlet UIScrollView *scrollView;
 }
+
+@property (nonatomic, retain) UIScrollView *scrollView;
 
 - (void) activateForFile : (ROOT_iOS::FileContainer *)container;
 - (void) selectObjectFromFile : (ObjectShortcut *)obj;

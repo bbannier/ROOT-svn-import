@@ -21,10 +21,14 @@
 
 @implementation FileContentController
 
+@synthesize scrollView;
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+
+   [self view];
 
    if (self)
       self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Slide show" style:UIBarButtonItemStyleBordered target:self action:@selector(startSlideshow)];
@@ -35,6 +39,7 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
+   self.scrollView = nil;
    [super dealloc];
 }
 
@@ -50,9 +55,30 @@
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
+- (void) correctFrame
+{
+   CGRect mainFrame;
+   CGRect scrollFrame;
+
+   const UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
+   if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
+      mainFrame = CGRectMake(0.f, 0.f, 768.f, 1004.f);
+      scrollFrame = CGRectMake(0.f, 44.f, 768.f, 960.f);
+   } else {
+      mainFrame = CGRectMake(0.f, 0.f, 1024.f, 748.f);
+      scrollFrame = CGRectMake(0.f, 44.f, 1024.f, 704.f);   
+   }
+   
+   self.view.frame = mainFrame;
+   self.scrollView.frame = scrollFrame;
+}
+
+
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
+   [self correctFrame];
    // Do any additional setup after loading the view from its nib.
 }
 
@@ -74,7 +100,7 @@
 //____________________________________________________________________________________________________
 - (void) clearScrollview
 {
-   NSArray *viewsToRemove = [self.view subviews];
+   NSArray *viewsToRemove = [self.scrollView subviews];
    for (UIView *v in viewsToRemove)
       [v removeFromSuperview];
 
@@ -83,8 +109,6 @@
 //____________________________________________________________________________________________________
 - (void) initShortcuts
 {
-   UIScrollView *scroll = (UIScrollView *)self.view;
-
    [objectShortcuts release];
    [self clearScrollview];
 
@@ -131,7 +155,7 @@
       shortcut.layer.shadowOpacity = 0.3f;
       
 
-      [scroll addSubview : shortcut];
+      [scrollView addSubview : shortcut];
       [objectShortcuts addObject : shortcut];
 
       UIBezierPath *path = [UIBezierPath bezierPathWithRect : rect];//shortcut.bounds];
@@ -147,22 +171,20 @@
 //____________________________________________________________________________________________________
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
-    UIScrollView *scroll = (UIScrollView *)self.view;
-   [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scroll withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
+   [self correctFrame];
+   [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
 //____________________________________________________________________________________________________
 - (void) activateForFile : (ROOT_iOS::FileContainer *)container
 {
-//   self.navigationItem.title = [NSString stringWithFormat :@"Contents of %@", name];
    fileContainer = container;
    self.navigationItem.title = [NSString stringWithFormat : @"Contents of %s", container->GetFileName()];
    
    //Prepare objects' thymbnails.
    [self initShortcuts];
-   
-   UIScrollView *scroll = (UIScrollView *)self.view;
-   [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scroll withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
+   [self correctFrame];
+   [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
 //____________________________________________________________________________________________________
