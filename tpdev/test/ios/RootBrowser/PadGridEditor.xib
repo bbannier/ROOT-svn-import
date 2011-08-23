@@ -100,6 +100,10 @@
 						<reference key="NSSuperview" ref="761628365"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="773294681"/>
+						<object class="NSColor" key="IBUIBackgroundColor" id="492284990">
+							<int key="NSColorSpace">3</int>
+							<bytes key="NSWhite">MC42NjY2NjY2NjY3AA</bytes>
+						</object>
 						<bool key="IBUIOpaque">NO</bool>
 						<bool key="IBUIClipsSubviews">YES</bool>
 						<int key="IBUIContentMode">7</int>
@@ -121,6 +125,7 @@
 						<reference key="NSSuperview" ref="761628365"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="939680026"/>
+						<reference key="IBUIBackgroundColor" ref="492284990"/>
 						<bool key="IBUIOpaque">NO</bool>
 						<bool key="IBUIClipsSubviews">YES</bool>
 						<int key="IBUIContentMode">7</int>
@@ -139,6 +144,7 @@
 						<reference key="NSSuperview" ref="761628365"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="13513070"/>
+						<reference key="IBUIBackgroundColor" ref="492284990"/>
 						<bool key="IBUIOpaque">NO</bool>
 						<bool key="IBUIClipsSubviews">YES</bool>
 						<int key="IBUIContentMode">7</int>
@@ -157,6 +163,7 @@
 						<reference key="NSSuperview" ref="761628365"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="867597373"/>
+						<reference key="IBUIBackgroundColor" ref="492284990"/>
 						<bool key="IBUIOpaque">NO</bool>
 						<bool key="IBUIClipsSubviews">YES</bool>
 						<int key="IBUIContentMode">7</int>
@@ -389,6 +396,38 @@
 				<object class="IBPartialClassDescription">
 					<string key="className">PadGridEditor</string>
 					<string key="superclassName">UIViewController</string>
+					<object class="NSMutableDictionary" key="actions">
+						<bool key="EncodedWithXMLCoder">YES</bool>
+						<object class="NSArray" key="dict.sortedKeys">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>gridActivated:</string>
+							<string>ticksActivated:</string>
+						</object>
+						<object class="NSMutableArray" key="dict.values">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>UISwitch</string>
+							<string>UISwitch</string>
+						</object>
+					</object>
+					<object class="NSMutableDictionary" key="actionInfosByName">
+						<bool key="EncodedWithXMLCoder">YES</bool>
+						<object class="NSArray" key="dict.sortedKeys">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>gridActivated:</string>
+							<string>ticksActivated:</string>
+						</object>
+						<object class="NSMutableArray" key="dict.values">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<object class="IBActionInfo">
+								<string key="name">gridActivated:</string>
+								<string key="candidateClassName">UISwitch</string>
+							</object>
+							<object class="IBActionInfo">
+								<string key="name">ticksActivated:</string>
+								<string key="candidateClassName">UISwitch</string>
+							</object>
+						</object>
+					</object>
 					<object class="NSMutableDictionary" key="outlets">
 						<bool key="EncodedWithXMLCoder">YES</bool>
 						<object class="NSArray" key="dict.sortedKeys">

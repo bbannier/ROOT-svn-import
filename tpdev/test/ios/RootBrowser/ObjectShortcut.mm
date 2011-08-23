@@ -18,6 +18,8 @@
 @implementation ObjectShortcut
 
 @synthesize icon;
+@synthesize drawOption;
+@synthesize rootObject;
 
 //____________________________________________________________________________________________________
 + (CGFloat) iconWidth
@@ -44,13 +46,15 @@
 }
 
 //____________________________________________________________________________________________________
-- (id)initWithFrame:(CGRect)frame controller : (FileContentController *)c object : (TObject *)object thumbnail : (UIImage *)thumbnail
+- (id)initWithFrame:(CGRect)frame controller : (FileContentController *)c object : (TObject *)object andOption : (const char *)option thumbnail : (UIImage *)thumbnail
 {
    self = [super initWithFrame:frame];
    if (self) {
       controller = c;
-      self.icon = thumbnail;
       rootObject = object;
+      self.icon = thumbnail;
+
+      self.drawOption = [NSString stringWithFormat:@"%s", option];
 
       self.layer.shadowColor = [UIColor blackColor].CGColor;
       self.layer.shadowOpacity = 0.3;
@@ -87,13 +91,14 @@
 - (void)dealloc
 {
    self.icon = nil;
+   self.drawOption = nil;
    [super dealloc];
 }
 
 //____________________________________________________________________________________________________
 - (void) handleTap
 {
-   [controller selectObjectFromFile : rootObject];
+   [controller selectObjectFromFile : self];
 }
 
 @end

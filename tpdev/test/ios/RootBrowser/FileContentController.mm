@@ -136,7 +136,7 @@
    [thumbnailImage retain];
    UIGraphicsEndImageContext();
        
-   ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller : self object : object thumbnail : thumbnailImage];
+   ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller : self object : object andOption : option thumbnail : thumbnailImage];
    shortcut.layer.shadowColor = [UIColor blackColor].CGColor;
    shortcut.layer.shadowOffset = CGSizeMake(20.f, 20.f);
    shortcut.layer.shadowOpacity = 0.3f;
@@ -199,12 +199,13 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) selectObjectFromFile : (TObject *) obj
+- (void) selectObjectFromFile : (ObjectShortcut *) shortcut
 {
    if (!objectController)
       objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
    
-   objectController.navigationItem.title = [NSString stringWithFormat : @"%s", obj->GetName()];
+   objectController.navigationItem.title = [NSString stringWithFormat : @"%s", shortcut.rootObject->GetName()];
+   [objectController setObject : shortcut];
    [self.navigationController pushViewController : objectController animated : YES];
 }
 

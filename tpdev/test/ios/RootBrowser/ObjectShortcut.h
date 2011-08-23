@@ -17,9 +17,12 @@ class TObject;
    
    FileContentController *controller;
    TObject *rootObject;
+   NSString *drawOption;
 }
 
 @property (nonatomic, retain) UIImage *icon;
+@property (nonatomic, retain) NSString *drawOption;
+@property (nonatomic, assign) TObject *rootObject;
 
 + (CGFloat) iconWidth;
 + (CGFloat) iconHeight;
@@ -27,7 +30,7 @@ class TObject;
 + (CGRect) defaultRect;
 
 
-- (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c object : (TObject *)object thumbnail : (UIImage *) thumbnail;
+- (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c object : (TObject *)object andOption : (const char*)option thumbnail : (UIImage *)thumbnail;
 - (void) drawRect : (CGRect)rect;
 
 @end
