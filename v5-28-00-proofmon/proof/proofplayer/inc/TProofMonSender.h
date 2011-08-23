@@ -46,8 +46,9 @@ protected:
    public:
       Int_t    fFiles;
       Int_t    fMissing;
-      TDSetPlet(const char *name) :
-         TNamed(name, ""), fFiles(0), fMissing(0) { }
+      TDSet   *fDSet;
+      TDSetPlet(const char *name, TDSet *ds = 0) :
+         TNamed(name, ""), fFiles(0), fMissing(0), fDSet(ds) { }
       virtual ~TDSetPlet() { }
    };
     

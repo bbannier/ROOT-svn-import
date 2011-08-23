@@ -265,27 +265,49 @@ Int_t TProofMonSenderML::SendDataSetInfo(TDSet *dset, TList *missing,
    // Extract the information and save it into the relevant multiplets
    TString dss(dset->GetName()), ds;
    Ssiz_t from = 0;
-   while ((dss.Tokenize(ds, from , ","))) {
+   while ((dss.Tokenize(ds, from , "[,| ]"))) {
       // Create a new TDSetPlet and add it to the list
       plets.Add(new TDSetPlet(ds.Data()));
    }
-   
    // Now try to count the files
    TDSetPlet *plet = 0;
    TIter nxpl(&plets);
-   TDSetElement *e = 0;
+   TObject *o = 0;
+   TDSetElement *e = 0, *ee = 0;
+   TDSet *dsete = 0;
    TIter nxe(dset->GetListOfElements());
    TString dse; 
-   while ((e = (TDSetElement *) nxe())) {
-      dse = e->GetDataSet();
-      if (!dse.IsNull()) {
-         nxpl.Reset();
-         while ((plet = (TDSetPlet *) nxpl())) {
-            if (dse == plet->GetName()) {
-               plet->fFiles += 1;
-               break;
+   while ((o = nxe())) {
+      if ((e = dynamic_cast<TDSetElement *>(o))) {
+         dse = e->GetDataSet();
+         if (!dse.IsNull()) {
+            nxpl.Reset();
+            while ((plet = (TDSetPlet *) nxpl())) {
+               if (dse == plet->GetName()) {
+                  plet->fFiles += 1;
+                  break;
+               }
             }
          }
+      } else if ((dsete = dynamic_cast<TDSet *>(o))) {
+         PDB(TProofDebug::kMonitoring,1)
+            Info("SendDataSetInfo", "dset '%s' (%d files)", o->GetName(), dsete->GetListOfElements()->GetSize());
+         TIter nxee(dsete->GetListOfElements());
+         while ((ee = (TDSetElement *) nxee())) {
+            dse = ee->GetDataSet();
+            if (!dse.IsNull()) {
+               nxpl.Reset();
+               while ((plet = (TDSetPlet *) nxpl())) {
+                  if (dse == plet->GetName()) {
+                     plet->fFiles += 1;
+                     plet->fDSet = dsete;
+                     break;
+                  }
+               }
+            }
+         }         
+      } else {
+         Warning("SendDataSetInfo", "ignoring unknown element type: '%s'", o->ClassName());
       }
    }
 
@@ -301,7 +323,8 @@ Int_t TProofMonSenderML::SendDataSetInfo(TDSet *dset, TList *missing,
             while ((plet = (TDSetPlet *) nxpl())) {
                if (dsfi == plet->GetName()) {
                   fn = fi->GetCurrentUrl()->GetUrl();
-                  if (!(dset->GetListOfElements()->FindObject(fn))) plet->fFiles += 1;
+                  if (plet->fDSet && plet->fDSet->GetListOfElements() &&
+                      !(plet->fDSet->GetListOfElements()->FindObject(fn))) plet->fFiles += 1;
                   plet->fMissing += 1;
                   break;
                }
@@ -407,7 +430,7 @@ Int_t TProofMonSenderML::SendFileInfo(TDSet *dset, TList *missing,
       while ((fi = (TFileInfo *)nxfm())) {
          hmiss.Add(new TObjString(fi->GetCurrentUrl()->GetUrl()));
       }
-      PDB(TProofDebug::kMonitoring,2) hmiss.Print();
+      hmiss.Print();
    }
 
    // Prepare objects to be sent
@@ -431,21 +454,43 @@ Int_t TProofMonSenderML::SendFileInfo(TDSet *dset, TList *missing,
 
    // Loop over files
    Bool_t rc = kTRUE;
-   TDSetElement *e = 0;
+   TObject *o = 0;
+   TDSetElement *e = 0, *ee = 0;
+   TDSet *dsete = 0;
    TIter nxe(dset->GetListOfElements());
    TString fne, fneh;
    Int_t status = -1;
-   while ((e = (TDSetElement *) nxe())) {
-      fne = e->GetName();
-      // Try to determine the status
-      status = 1;
-      if (hmiss.FindObject(fne)) status = 0;
-      // Prepare the parameters list
-      nm_lnf->SetTitle(gSystem->BaseName(fne));
-      nm_path->SetTitle(gSystem->DirName(fne));
-      pi_status->SetVal(status);
-      fneh.Form("file_%x", TString(TUrl(fne.Data()).GetFile()).Hash());
-      if (!(rc = fWriter->SendParameters(&values, fneh.Data()))) break;
+   while ((o = nxe())) {
+      if ((e = dynamic_cast<TDSetElement *>(o))) {
+         fne = e->GetName();
+         // Try to determine the status
+         status = 1;
+         if (hmiss.FindObject(fne)) status = 0;
+         // Prepare the parameters list
+         nm_lnf->SetTitle(gSystem->BaseName(fne));
+         nm_path->SetTitle(gSystem->DirName(fne));
+         pi_status->SetVal(status);
+         fneh.Form("file_%x", TString(TUrl(fne.Data()).GetFile()).Hash());
+         if (!(rc = fWriter->SendParameters(&values, fneh.Data()))) break;
+      } else if ((dsete = dynamic_cast<TDSet *>(o))) {
+         PDB(TProofDebug::kMonitoring,1)
+            Info("SendFileInfo", "dset '%s' (%d files)", o->GetName(), dsete->GetListOfElements()->GetSize());
+         TIter nxee(dsete->GetListOfElements());
+         while ((ee = (TDSetElement *) nxee())) {
+            fne = ee->GetName();
+            // Try to determine the status
+            status = 1;
+            if (hmiss.FindObject(fne)) status = 0;
+            // Prepare the parameters list
+            nm_lnf->SetTitle(gSystem->BaseName(fne));
+            nm_path->SetTitle(gSystem->DirName(fne));
+            pi_status->SetVal(status);
+            fneh.Form("file_%x", TString(TUrl(fne.Data()).GetFile()).Hash());
+            if (!(rc = fWriter->SendParameters(&values, fneh.Data()))) break;
+         }
+      } else {
+         Warning("SendFileInfo", "ignoring unknown element type: '%s'", o->ClassName());
+      }
    }
 
    // Done
