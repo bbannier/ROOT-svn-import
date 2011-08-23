@@ -543,7 +543,8 @@ namespace cling {
     m_ExecutionContext->installLazyFunctionCreator(fp);
   }
   
-  Value Interpreter::Evaluate(const char* expr, DeclContext* DC) {
+  Value Interpreter::Evaluate(const char* expr, DeclContext* DC,
+                              bool ValuePrinterReq) {
     assert(DC && "DeclContext cannot be null!");
 
     // Execute and get the result
@@ -599,7 +600,14 @@ namespace cling {
 
     // FIXME: Finish the transaction in better way
     m_IncrParser->CompileAsIs("");
- 
+
+    // Attach the value printer
+    if (ValuePrinterReq) {
+      std::string VPAttached = WrapperName + "()";
+      WrapInput(VPAttached, WrapperName);
+      m_IncrParser->CompileLineFromPrompt(VPAttached);
+    }
+
     // get the result
     llvm::GenericValue val;
     RunFunction(WrapperName, &val);

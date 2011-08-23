@@ -78,7 +78,7 @@ namespace cling {
     ASTNodes Nodes;
     bool forReplacement;
   public:
-    ASTNodeInfo() : forReplacement(0){}
+    ASTNodeInfo() : forReplacement(false){}
     ASTNodeInfo(clang::Stmt* S, bool needed) : forReplacement(needed) {
       Nodes.push_back(S);
     }
@@ -257,7 +257,8 @@ namespace cling {
     /// @param[in] SubTree The AST node or subtree, which is being replaced.
     ///
     clang::Expr* SubstituteUnknownSymbol(const clang::QualType InstTy, 
-                                         clang::Expr* SubTree);
+                                         clang::Expr* SubTree,
+                                         bool ValuePrinterReq = false);
 
     ///\brief Builds the actual call expression, which is put in the place of
     /// the dependent AST node.
@@ -272,7 +273,8 @@ namespace cling {
 
     ///\brief Builds the DynamicExprInfo class with proper info.
     ///
-    clang::Expr* BuildDynamicExprInfo(clang::Expr* SubTree);
+    clang::Expr* BuildDynamicExprInfo(clang::Expr* SubTree, 
+                                      bool ValuePrinterReq = false);
 
     ///\brief Creates cstyle casts a pointer expression to a given qualified
     /// type.

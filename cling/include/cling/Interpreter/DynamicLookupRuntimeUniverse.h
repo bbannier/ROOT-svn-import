@@ -47,7 +47,9 @@ namespace cling {
       /// evaluated at runtime.
       template<typename T>
       T EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
-        Value result(gCling->Evaluate(ExprInfo->getExpr(), DC));
+        Value result(gCling->Evaluate(ExprInfo->getExpr(), DC, 
+                                      ExprInfo->isValuePrinterRequested())
+                     );
         // Check whether the expected return type and the actual return type are
         // compatible with Sema::CheckAssingmentConstraints or 
         // ASTContext::typesAreCompatible.
@@ -58,7 +60,9 @@ namespace cling {
       /// void.
       template<>
       void EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
-        Value result(gCling->Evaluate(ExprInfo->getExpr(), DC));
+        Value result(gCling->Evaluate(ExprInfo->getExpr(), DC, 
+                                      ExprInfo->isValuePrinterRequested())
+                     );
       }
 
       /// \brief LifetimeHandler is used in case of initialization using address
@@ -105,7 +109,9 @@ namespace cling {
           std::string ctor("new ");
           ctor += type;
           ctor += ExprInfo->getExpr();
-          Value res = gCling->Evaluate(ctor.c_str(), DC);
+          Value res = gCling->Evaluate(ctor.c_str(), DC, 
+                                       ExprInfo->isValuePrinterRequested()
+                                       );
           m_Memory = (void*)res.value.PointerVal;
         }
 

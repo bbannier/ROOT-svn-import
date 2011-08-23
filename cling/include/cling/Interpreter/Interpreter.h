@@ -75,14 +75,20 @@ namespace cling {
 
     /// \brief The variable list.
     void** m_Addresses;
+
+    /// \brief The variable is set if it is required to print out the result of
+    /// the dynamic expression after evaluation
+    bool m_ValuePrinterReq;
   public:
-    DynamicExprInfo(const char* templ, void* addresses[]) : 
-      m_Template(templ), m_Result(templ), m_Addresses(addresses){}
+    DynamicExprInfo(const char* templ, void* addresses[], bool valuePrinterReq):
+      m_Template(templ), m_Result(templ), m_Addresses(addresses), 
+      m_ValuePrinterReq(valuePrinterReq){}
 
     ///\brief Performs the insertions of the context in the expression just
     /// before evaluation. To be used only at runtime.
     ///
     const char* getExpr();
+    bool isValuePrinterRequested() { return m_ValuePrinterReq; }
   };
 
   //---------------------------------------------------------------------------
@@ -187,7 +193,8 @@ namespace cling {
     /// @param[in] expr The expression.
     /// @param[in] DC The declaration context in which the expression is going
     /// to be evaluated.
-    Value Evaluate(const char* expr, clang::DeclContext* DC);
+    Value Evaluate(const char* expr, clang::DeclContext* DC, 
+                   bool ValuePrinterReq = false);
 
     ///\brief Looks up declaration within given declaration context. Does top
     /// down lookup.

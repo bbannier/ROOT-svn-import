@@ -275,9 +275,16 @@ namespace cling {
         }
         else {
           if (NewNode.isForReplacement()) {
-            if (Expr* E = NewNode.getAs<Expr>())
+            if (Expr* E = NewNode.getAs<Expr>()) {
+              // Check whether value printer has been requested
+              bool valuePrinterReq = false;
+              if ((it+1) == Children.end() && !isa<NullStmt>(*(it+1)))
+                valuePrinterReq = true;
+
               // Assume void if still not escaped
-              NewChildren.push_back(SubstituteUnknownSymbol(m_Context->VoidTy, E));
+              NewChildren.push_back(SubstituteUnknownSymbol(m_Context->VoidTy,E,
+                                                            valuePrinterReq));
+            }
           }
           else
             NewChildren.push_back(*it);
@@ -509,14 +516,16 @@ namespace cling {
   
   // EvalBuilder
   
-  Expr* EvaluateTSynthesizer::SubstituteUnknownSymbol(const QualType InstTy, Expr* SubTree) {
+  Expr* EvaluateTSynthesizer::SubstituteUnknownSymbol(const QualType InstTy,
+                                                      Expr* SubTree,
+                                                      bool ValuePrinterReq) {
     assert(SubTree && "No subtree specified!");
 
     //Build the arguments for the call
     ASTOwningVector<Expr*> CallArgs(*m_Sema);
 
     // Build Arg0
-    Expr* Arg0 = BuildDynamicExprInfo(SubTree);
+    Expr* Arg0 = BuildDynamicExprInfo(SubTree, ValuePrinterReq);
     CallArgs.push_back(Arg0);
 
     // Build Arg1
@@ -539,7 +548,8 @@ namespace cling {
     return EvalCall;
   }
   
-  Expr* EvaluateTSynthesizer::BuildDynamicExprInfo(Expr* SubTree) {
+  Expr* EvaluateTSynthesizer::BuildDynamicExprInfo(Expr* SubTree, 
+                                                   bool ValuePrinterReq) {
     // 1. Find the DynamicExprInfo class
     CXXRecordDecl* ExprInfo 
       = cast_or_null<CXXRecordDecl>(m_Interpreter->LookupDecl("cling").
@@ -601,9 +611,17 @@ namespace cling {
                               m_Context->getPointerType(m_Context->VoidPtrTy),
                               CK_ArrayToPointerDecay);
 
+    // Is the result of the expression to be printed or not
+    Expr* VPReq = 0;
+    if (ValuePrinterReq)
+      VPReq = m_Sema->ActOnCXXBoolLiteral(m_NoSLoc, tok::kw_true).take();
+    else
+      VPReq = m_Sema->ActOnCXXBoolLiteral(m_NoSLoc, tok::kw_false).take();
+
     ASTOwningVector<Expr*> ConstructorArgs(*m_Sema);
     ConstructorArgs.push_back(ExprTemplate);
     ConstructorArgs.push_back(ExprAddresses);
+    ConstructorArgs.push_back(VPReq);
 
     // 5. Call the constructor
     QualType ExprInfoTy = m_Context->getTypeDeclType(ExprInfo);
