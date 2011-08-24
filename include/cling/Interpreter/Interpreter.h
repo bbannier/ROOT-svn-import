@@ -45,7 +45,6 @@ namespace cling {
   }
   class ExecutionContext;
   class IncrementalParser;
-  class InputValidator;
   class InterpreterCallbacks;
   class Value;
 
@@ -119,6 +118,12 @@ namespace cling {
       friend class Interpreter;
     };
 
+    enum CompilationResult {
+      kSuccess,
+      kFailure,
+      kMoreInputExpected
+    };
+
     //---------------------------------------------------------------------
     //! Constructor
     //---------------------------------------------------------------------
@@ -137,7 +142,7 @@ namespace cling {
     std::string createUniqueName();
     void AddIncludePath(const char *incpath);
     void DumpIncludePath();
-    bool processLine(const std::string& input_line);
+    CompilationResult processLine(const std::string& input_line);
     
     bool loadFile(const std::string& filename,
                   const std::string* trailcode = 0,
@@ -171,7 +176,6 @@ namespace cling {
     InvocationOptions m_Opts; // Interpreter options
     llvm::OwningPtr<ExecutionContext> m_ExecutionContext;
     llvm::OwningPtr<IncrementalParser> m_IncrParser; // incremental AST and its parser
-    llvm::OwningPtr<InputValidator> m_InputValidator; // balanced paren etc
     clang::PragmaNamespace* m_PragmaHandler; // pragma cling ..., owned by Preprocessor
     unsigned long long m_UniqueCounter; // number of generated call wrappers
     bool m_printAST; // whether to print the AST to be processed
@@ -182,7 +186,8 @@ namespace cling {
   private:
     void handleFrontendOptions();
     void processStartupPCH();
-    bool handleLine(llvm::StringRef Input, llvm::StringRef FunctionName);
+    CompilationResult handleLine(llvm::StringRef Input,
+                                 llvm::StringRef FunctionName);
     void WrapInput(std::string& input, std::string& fname);
     bool RunFunction(llvm::StringRef fname, llvm::GenericValue* res = 0);
     friend class runtime::internal::LifetimeHandler;

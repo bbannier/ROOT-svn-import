@@ -4,9 +4,11 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
+#include "InputValidator.h"
 #include "cling/MetaProcessor/MetaProcessor.h"
-
 #include "cling/Interpreter/Interpreter.h"
+
+#include "clang/Frontend/CompilerInstance.h"
 
 #include <cstdio>
 
@@ -15,9 +17,9 @@
 //---------------------------------------------------------------------------
 cling::MetaProcessor::MetaProcessor(Interpreter& interp):
       m_Interp(interp),
-      m_contLevel(-1),
       m_QuitRequested(false)
 {
+  m_InputValidator.reset(new InputValidator());
 }
 
 
@@ -61,31 +63,24 @@ cling::MetaProcessor::process(const char* input_text)
       return 0;
    }
    //
-   //  Accumulate the input lines.
-   //
-   m_input.append(input_line);
-   //
    // Check if the current statement is now complete.
    // If not, return to prompt for more.
    //
-#if 0
-   std::string src = "";
-   int indentLevel = 0;
-   std::vector<clang::FunctionDecl*> fnDecls;
-   Interpreter::InputType kind_of_input =
-      m_Interp.analyzeInput(src, m_input, indentLevel, &fnDecls);
-   if (kind_of_input == Interpreter::Incomplete) {
-      return indentLevel + 1;
+   if (m_InputValidator->Validate(input_line, m_Interp.getCI()->getLangOpts()) 
+       == InputValidator::kIncomplete) {
+     return m_InputValidator->getExpectedIndent();
    }
-#endif // 0
+
    //
    //  We have a complete statement, compile and execute it.
    //
-   m_Interp.processLine(m_input);
+   std::string input = m_InputValidator->TakeInput();
+   m_InputValidator->Reset();
+   m_Interp.processLine(input);
    //
    //  All done.
    //
-   m_input.clear(); // reset pending statment
+
    return 0;
 }
 

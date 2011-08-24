@@ -32,6 +32,7 @@ namespace cling {
     std::string& TakeInput() {
       return m_Input;
     }
+    int getExpectedIndent() { return m_ParenStack.size(); }
     void Reset();
   private:
     std::string m_Input;
