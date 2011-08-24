@@ -25,14 +25,64 @@
 @synthesize scrollView;
 
 //____________________________________________________________________________________________________
+- (void) correctPadFrameNoEditor : (UIInterfaceOrientation) orientation
+{
+   CGRect padFrame = padView.frame;
+   
+   padFrame.size.width = 600.f;
+   padFrame.size.height = 600.f;
+   
+   if (UIInterfaceOrientationIsPortrait(orientation)) {
+      padFrame.origin.x = 384.f - padFrame.size.width / 2;
+      padFrame.origin.y = 480.f - padFrame.size.height / 2;
+   } else {
+      padFrame.origin.x = 512.f - padFrame.size.width / 2;
+      padFrame.origin.y = 352.f - padFrame.size.height / 2;
+   }
+   
+   padView.frame = padFrame;
+}
+
+//____________________________________________________________________________________________________
+- (void) correctPadFrameWithEditor : (UIInterfaceOrientation) orientation
+{
+   //The most tricky part, since this code can be called
+   //for animation.
+   CGRect padFrame = padView.frame;
+
+   if (UIInterfaceOrientationIsPortrait(orientation)) {
+      padFrame.size.width = 500;
+      padFrame.size.height = 500;
+      
+      padFrame.origin.x = 20.f;
+      padFrame.origin.y = 480.f - padFrame.size.height / 2;
+   } else {
+      padFrame.size.width = 600;
+      padFrame.size.height = 600;
+      
+      padFrame.origin.x = 100.f;
+      padFrame.origin.y = 352.f - padFrame.size.height / 2;
+   }
+   
+   padView.frame = padFrame;
+   [padView setNeedsDisplay];
+}
+
+//____________________________________________________________________________________________________
+- (void) correctPadFrameForOrientation : (UIInterfaceOrientation) orientation
+{
+   if (editorView.hidden)
+      [self correctPadFrameNoEditor : orientation];
+   else
+      [self correctPadFrameWithEditor : orientation];
+}
+
+//____________________________________________________________________________________________________
 - (void) correctFramesForOrientation : (UIInterfaceOrientation) orientation
 {
-//   self.view.alpha = 0.f;
-
    CGRect mainFrame;
    CGRect scrollFrame;
 
-//   const UIInterfaceOrientation orientation = self.interfaceOrientation;
    if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
       mainFrame = CGRectMake(0.f, 0.f, 768.f, 1004.f);
       scrollFrame = CGRectMake(0.f, 44.f, 768.f, 960.f);
@@ -50,11 +100,7 @@
    [editorView correctFrames];
    
    //Now correct padView.
-   const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
-   const CGRect padRect = CGRectMake(padCenter.x - 300.f, padCenter.y - 300.f, 600.f, 600.f);
-   padView.frame = padRect;
-   
- //  self.view.alpha = 1.f;
+   [self correctPadFrameForOrientation : orientation];
 }
 
 
@@ -167,6 +213,13 @@
       return;
 
    editorView.hidden = !editorView.hidden;
+
+   [self correctPadFrameForOrientation : self.interfaceOrientation];
+   
+   if (editorView.hidden && UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
+      //I'm afraid, view size changed and we have to redraw!
+      [padView setNeedsDisplay];
+
    
    // First create a CATransition object to describe the transition
    CATransition *transition = [CATransition animation];

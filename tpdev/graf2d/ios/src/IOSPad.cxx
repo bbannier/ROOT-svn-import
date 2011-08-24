@@ -115,6 +115,15 @@ void Pad::Clear(Option_t *)
 }
 
 //______________________________________________________________________________
+void Pad::SetViewWH(UInt_t viewW, UInt_t viewH)
+{
+   fViewW = viewW;
+   fViewH = viewH;
+   
+   fPainter.SetTransform(fViewW, GetX1(), GetX2(), fViewH, GetY1(), GetY2());
+}
+
+//______________________________________________________________________________
 UInt_t Pad::GetWw() const
 {
    return fViewW;

@@ -70,6 +70,9 @@ public:
    
    Double_t GetWNDC() const {return fWNDC;}
    Double_t GetHNDC() const {return fHNDC;}
+
+   void SetViewWH(UInt_t w, UInt_t h);
+
    
    UInt_t GetWw() const;
    UInt_t GetWh() const;

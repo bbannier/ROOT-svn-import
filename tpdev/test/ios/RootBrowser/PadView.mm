@@ -38,9 +38,12 @@
 - (void)drawRect : (CGRect)rect
 {
    // Drawing code
+   NSLog(@"drawRect called");
    CGContextRef ctx = UIGraphicsGetCurrentContext();
 
    CGContextClearRect(ctx, rect);
+   
+   pad->SetViewWH(rect.size.width, rect.size.height);
 
    CGContextTranslateCTM(ctx, 0.f, rect.size.height);
    CGContextScaleCTM(ctx, 1.f, -1.f);
