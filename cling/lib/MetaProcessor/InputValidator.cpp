@@ -46,7 +46,8 @@ namespace cling {
       }
     }
     while (Tok.isNot(tok::eof));
-    if (!m_ParenStack.empty()) return kIncomplete;
+    if (!m_ParenStack.empty()) 
+      return kIncomplete;
 
     return kComplete;
   }

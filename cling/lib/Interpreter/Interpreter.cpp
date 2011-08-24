@@ -9,7 +9,6 @@
 #include "DynamicLookup.h"
 #include "ExecutionContext.h"
 #include "IncrementalParser.h"
-#include "InputValidator.h"
 
 #include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/InterpreterCallbacks.h"
@@ -182,8 +181,6 @@ namespace cling {
                                              llvmdir));
     m_ExecutionContext.reset(new ExecutionContext());
 
-    m_InputValidator.reset(new InputValidator());
-
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
     // Allow the interpreter to find itself.
@@ -353,21 +350,16 @@ namespace cling {
     return m_IncrParser->getCI();
   }
   
-  bool Interpreter::processLine(const std::string& input_line) {
+  Interpreter::CompilationResult
+  Interpreter::processLine(const std::string& input_line) {
     //
     //  Transform the input line to implement cint
     //  command line semantics (declarations are global),
     //  and compile to produce a module.
     //
     
-    if (m_InputValidator->Validate(input_line, getCI()->getLangOpts()) 
-        == InputValidator::kIncomplete) {
-      return true;
-    }
-
-    std::string wrapped = m_InputValidator->TakeInput();
-    m_InputValidator->Reset();
     std::string functName;
+    std::string wrapped = input_line;
     if (strncmp(input_line.c_str(),"#",strlen("#")) != 0 &&
         strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0) {
       WrapInput(wrapped, functName);
@@ -380,8 +372,8 @@ namespace cling {
                               clang::diag::MAP_IGNORE, SourceLocation());
     Diag.setDiagnosticMapping(DiagnosticIDs::getIdFromName("warn_unused_call"),
                               clang::diag::MAP_IGNORE, SourceLocation());
-    bool result = handleLine(wrapped, functName);
-    return result;
+    CompilationResult Result = handleLine(wrapped, functName);
+    return Result;
   }
 
   void Interpreter::WrapInput(std::string& input, std::string& fname) {
@@ -424,21 +416,29 @@ namespace cling {
   }
   
   
-  bool Interpreter::handleLine(llvm::StringRef input, 
-                               llvm::StringRef FunctionName) {
+  Interpreter::CompilationResult
+  Interpreter::handleLine(llvm::StringRef input, llvm::StringRef FunctionName) {
     // if we are using the preprocessor
     if (input[0] == '#') {
-      return m_IncrParser->CompileAsIs(input) != IncrementalParser::kFailed;
+      if (m_IncrParser->CompileAsIs(input) != IncrementalParser::kFailed)
+        return Interpreter::kSuccess;
+      else
+        return Interpreter::kFailure;
     }
 
-    m_IncrParser->CompileLineFromPrompt(input);
+    if (m_IncrParser->CompileLineFromPrompt(input) 
+        == IncrementalParser::kFailed)
+        return Interpreter::kFailure;
     //
     //  Run it using the JIT.
     //
-    RunFunction(FunctionName);
+    // TODO: Handle the case when RunFunction wasn't able to run the function
+    bool RunRes = RunFunction(FunctionName);
 
-    return true;
+    if (RunRes)
+      return Interpreter::kSuccess;
 
+    return Interpreter::kFailure;
   }
   
   bool
