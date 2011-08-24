@@ -38,7 +38,6 @@
 - (void)drawRect : (CGRect)rect
 {
    // Drawing code
-   NSLog(@"drawRect called");
    CGContextRef ctx = UIGraphicsGetCurrentContext();
 
    CGContextClearRect(ctx, rect);
