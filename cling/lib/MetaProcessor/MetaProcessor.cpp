@@ -159,7 +159,7 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //
    //  .printAST [0|1]
    //
-   //  Toggle the printing pf the AST or if 1 or 0 is given
+   //  Toggle the printing of the AST or if 1 or 0 is given
    //  enable or disable it.
    //
    if (cmd == "printAST") {
@@ -174,6 +174,28 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
          m_Interp.enablePrintAST(false);
       } else {
          fprintf(stderr, ".printAST: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
+      }
+      return true;
+   }
+
+   //
+   //  .useWrappers [0|1]
+   //
+   //  Toggle the wrapping of stmts
+   //  or if 1 or 0 is given enable or disable it.
+   //
+   if (cmd == "rawInput") {
+      if (param.empty()) {
+         // toggle:
+        bool wrap = !m_Interp.isUsingWrappers();
+        m_Interp.enableUsingWrappers(wrap);
+        printf("%ssing raw input\n", wrap?"Not u":"U");
+      } else if (param == "1") {
+         m_Interp.enableUsingWrappers(false);
+      } else if (param == "0") {
+         m_Interp.enableUsingWrappers(true);
+      } else {
+         fprintf(stderr, ".rawInput: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
       }
       return true;
    }

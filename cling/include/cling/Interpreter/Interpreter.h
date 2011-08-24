@@ -68,7 +68,7 @@ namespace cling {
   private:
 
     /// \brief The expression template.
-    const char*  m_Template;
+    const char* m_Template;
 
     std::string m_Result;
 
@@ -154,8 +154,11 @@ namespace cling {
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled();
 
-    bool isPrintingAST() { return m_printAST; }
+    bool isPrintingAST() { return m_PrintAST; }
     void enablePrintAST(bool print = true);
+
+    bool isUsingWrappers() { return m_UseWrappers; }
+    void enableUsingWrappers(bool wrap = true);
     
     void dumpAST(bool showAST = true, int last = -1);
     
@@ -178,7 +181,8 @@ namespace cling {
     llvm::OwningPtr<IncrementalParser> m_IncrParser; // incremental AST and its parser
     clang::PragmaNamespace* m_PragmaHandler; // pragma cling ..., owned by Preprocessor
     unsigned long long m_UniqueCounter; // number of generated call wrappers
-    bool m_printAST; // whether to print the AST to be processed
+    bool m_PrintAST; // whether to print the AST to be processed
+    bool m_UseWrappers; // whether to wrap the typed statements
     bool m_ValuePrinterEnabled; // whether the value printer is loaded
     llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream; // stream to dump values into
     clang::Decl *m_LastDump; // last dump point
