@@ -37,6 +37,8 @@ class TObject;
    PadView *padView;//View for pad.
    ROOT_iOS::Pad *pad;
    TObject *rootObject;
+   
+   BOOL zoomed;
 }
 
 @property (nonatomic, retain) UIScrollView *scrollView;

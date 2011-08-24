@@ -13,6 +13,11 @@
 
 @implementation PadView
 
+- (void) handlePan : (UIPanGestureRecognizer *) tap
+{
+   NSLog(@"pan");
+}
+
 //_________________________________________________________________
 - (id) initWithFrame:(CGRect)frame forPad : (ROOT_iOS::Pad*)pd
 {
@@ -21,8 +26,7 @@
    if (self) {
       //Initialize C++ objects here.
       pad = pd;
-
-//      scaleFactor = frame.size.width / 640.f;
+      //ScaleFactor = frame.size.width / 640.f;
    }
 
    return self;
