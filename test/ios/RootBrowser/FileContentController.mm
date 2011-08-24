@@ -71,8 +71,15 @@
    
    self.view.frame = mainFrame;
    self.scrollView.frame = scrollFrame;
+   
+   if ([[scrollView subviews] count])
+      [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
+- (void) viewWillAppear:(BOOL)animated
+{
+   [self correctFrames];
+}
 
 //____________________________________________________________________________________________________
 - (void)viewDidLoad
@@ -174,7 +181,6 @@
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
    [self correctFrames];
-   [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
 //____________________________________________________________________________________________________
@@ -186,7 +192,7 @@
    //Prepare objects' thymbnails.
    [self addObjectsIntoScrollview];
    [self correctFrames];
-   [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
+   //[ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
 //____________________________________________________________________________________________________
