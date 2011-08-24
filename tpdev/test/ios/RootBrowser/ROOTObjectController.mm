@@ -25,14 +25,14 @@
 @synthesize scrollView;
 
 //____________________________________________________________________________________________________
-- (void) correctFrames
+- (void) correctFramesForOrientation : (UIInterfaceOrientation) orientation
 {
-   self.view.alpha = 0.f;
+//   self.view.alpha = 0.f;
 
    CGRect mainFrame;
    CGRect scrollFrame;
 
-   const UIInterfaceOrientation orientation = self.interfaceOrientation;
+//   const UIInterfaceOrientation orientation = self.interfaceOrientation;
    if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
       mainFrame = CGRectMake(0.f, 0.f, 768.f, 1004.f);
       scrollFrame = CGRectMake(0.f, 44.f, 768.f, 960.f);
@@ -54,7 +54,7 @@
    const CGRect padRect = CGRectMake(padCenter.x - 300.f, padCenter.y - 300.f, 600.f, 600.f);
    padView.frame = padRect;
    
-   self.view.alpha = 1.f;
+ //  self.view.alpha = 1.f;
 }
 
 
@@ -100,7 +100,7 @@
       [scrollView addSubview : padView];
       [padView release];
 
-      [self correctFrames];
+      [self correctFramesForOrientation : self.interfaceOrientation];
    }
    
    return self;
@@ -125,9 +125,15 @@
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
+- (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration : (NSTimeInterval) duration
+{
+   [self correctFramesForOrientation : interfaceOrientation];
+}
+
+//____________________________________________________________________________________________________
 - (void) viewWillAppear:(BOOL)animated
 {
-   [self correctFrames];
+   [self correctFramesForOrientation : self.interfaceOrientation];
 }
 
 //____________________________________________________________________________________________________
@@ -150,23 +156,6 @@
 {
     // Return YES for supported orientations
 	return YES;
-}
-
-//____________________________________________________________________________________________________
-- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration
-{
-   //Cheap thay to hide and not check previos "hidden" state later.
-   editorView.alpha = 0.f;
-   scrollView.alpha = 0.f;
-}
-
-//____________________________________________________________________________________________________
-- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
-{
-   [self correctFrames];
-   //hidden or not, alpha was set to 0., now return back.
-   editorView.alpha = 1.f;
-   scrollView.alpha = 1.f;
 }
 
 //____________________________________________________________________________________________________

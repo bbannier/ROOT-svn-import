@@ -31,6 +31,7 @@
       UIBarButtonItem *leftButton = [[UIBarButtonItem alloc] initWithTitle : @"Open file" style:UIBarButtonItemStylePlain target : self action : @selector(openFile)];
       self.navigationItem.leftBarButtonItem = leftButton;
       [backButton release];
+      scrollView.bounces = NO;
    }
 
    return self;
@@ -62,12 +63,12 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) correctFrames
+- (void) correctFramesForOrientation : (UIInterfaceOrientation) orientation
 {
    CGRect mainFrame;
    CGRect scrollFrame;
 
-   const UIInterfaceOrientation orientation = self.interfaceOrientation;
+//   const UIInterfaceOrientation orientation = self.interfaceOrientation;
    if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
       mainFrame = CGRectMake(0.f, 0.f, 768.f, 1004.f);
       scrollFrame = CGRectMake(0.f, 44.f, 768.f, 960.f);
@@ -83,11 +84,18 @@
 }
 
 //____________________________________________________________________________________________________
+- (void) viewWillAppear:(BOOL)animated
+{
+   [self correctFramesForOrientation : self.interfaceOrientation];
+   //Check if I have to call [super viewWillAppear];
+}
+
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
-   [self correctFrames];
-   scrollView.bounces = NO;
+ //  [self correctFrames];
+ //  scrollView.bounces = NO;
 }
 
 //____________________________________________________________________________________________________
@@ -105,18 +113,21 @@
 	return YES;
 }
 
+/*
 //____________________________________________________________________________________________________
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
    [self correctFrames];
 }
+*/
+
+//____________________________________________________________________________________________________
+- (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration : (NSTimeInterval) duration
+{
+   [self correctFramesForOrientation : interfaceOrientation];
+}
 
 #pragma mark View management.
-
-- (void) viewWillAppear:(BOOL)animated
-{
-   [self correctFrames];
-}
 
 //____________________________________________________________________________________________________
 - (void) addFileShortcut : (NSString *) fileName

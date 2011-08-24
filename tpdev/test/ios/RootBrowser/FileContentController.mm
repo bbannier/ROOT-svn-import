@@ -54,13 +54,13 @@
 
 #pragma mark - View lifecycle
 
+
 //____________________________________________________________________________________________________
-- (void) correctFrames
+- (void) correctFramesForOrientation : (UIInterfaceOrientation) orientation
 {
    CGRect mainFrame;
    CGRect scrollFrame;
 
-   const UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
    if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
       mainFrame = CGRectMake(0.f, 0.f, 768.f, 1004.f);
       scrollFrame = CGRectMake(0.f, 44.f, 768.f, 960.f);
@@ -76,16 +76,18 @@
       [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
+//____________________________________________________________________________________________________
 - (void) viewWillAppear:(BOOL)animated
 {
-   [self correctFrames];
+   //self.interfaceOrientation ?
+   [self correctFramesForOrientation : [UIApplication sharedApplication].statusBarOrientation];
 }
 
 //____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
-   [self correctFrames];
+//   [self correctFrames];
    // Do any additional setup after loading the view from its nib.
 }
 
@@ -102,6 +104,11 @@
 {
    // Return YES for supported orientations
 	return YES;
+}
+
+//____________________________________________________________________________________________________
+- (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration:(NSTimeInterval)duration {
+    [self correctFramesForOrientation : interfaceOrientation];
 }
 
 //____________________________________________________________________________________________________
@@ -177,12 +184,13 @@
    delete pad;
 }
 
+/*
 //____________________________________________________________________________________________________
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
    [self correctFrames];
 }
-
+*/
 //____________________________________________________________________________________________________
 - (void) activateForFile : (ROOT_iOS::FileContainer *)container
 {
@@ -191,7 +199,7 @@
    
    //Prepare objects' thymbnails.
    [self addObjectsIntoScrollview];
-   [self correctFrames];
+   [self correctFramesForOrientation : [UIApplication sharedApplication].statusBarOrientation];
    //[ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
