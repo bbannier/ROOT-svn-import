@@ -49,7 +49,7 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
   }
   static const char* histfile = ".cling_history";
   const static std::string defaultPrompt("[cling]$ ");
-  const static std::string defaultCont("[cling]> ");
+  const static std::string defaultCont("[cling]? ");
 
   using namespace textinput;
   StreamReader* R = StreamReader::Create();

@@ -158,7 +158,8 @@ namespace cling {
                             const char* startupPCH /*= 0*/,
                             const char* llvmdir /*= 0*/):
   m_UniqueCounter(0),
-  m_printAST(false),
+  m_PrintAST(false),
+  m_UseWrappers(true),
   m_ValuePrinterEnabled(false),
   m_LastDump(0)
   {
@@ -361,7 +362,8 @@ namespace cling {
     std::string functName;
     std::string wrapped = input_line;
     if (strncmp(input_line.c_str(),"#",strlen("#")) != 0 &&
-        strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0) {
+        strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0 &&
+        isUsingWrappers()) {
       WrapInput(wrapped, functName);
     }
 
@@ -632,7 +634,11 @@ namespace cling {
 
   void Interpreter::enablePrintAST(bool print /*=true*/) {
     m_IncrParser->enablePrintAST(print);
-    m_printAST = !m_printAST;
+    m_PrintAST = !m_PrintAST;
+  }
+
+  void Interpreter::enableUsingWrappers(bool wrap /*=true*/) {
+    m_UseWrappers = wrap;
   }
 
   void Interpreter::dumpAST(bool showAST, int last) {
