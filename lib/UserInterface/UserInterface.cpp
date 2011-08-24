@@ -49,7 +49,7 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
   }
   static const char* histfile = ".cling_history";
   const static std::string defaultPrompt("[cling]$ ");
-  const static std::string defaultCont("> ");
+  const static std::string defaultCont("[cling]> ");
 
   using namespace textinput;
   StreamReader* R = StreamReader::Create();
@@ -58,7 +58,6 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
   TI.SetPrompt(defaultPrompt.c_str());
   std::string line;
   
-  int promptIndent = 0;
   while (!m_MetaProcessor->isQuitRequested()) {
     TextInput::EReadResult RR = TI.ReadInput();
     TI.TakeInput(line);
@@ -66,16 +65,13 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
       m_MetaProcessor->requestQuit(true);
       continue;
     }
+
     int indent = m_MetaProcessor->process(line.c_str());
-    if (indent<=0) {
-      //if (promptIndent) {
-        TI.SetPrompt(defaultPrompt.c_str());
-        //}
-    } else {
-      if (promptIndent != indent) {
-        // Continuation requested.
-        TI.SetPrompt((defaultCont + std::string(indent * 3, ' ')).c_str());
-      }
-    }
+
+    if (indent<=0)
+      TI.SetPrompt(defaultPrompt.c_str());
+    else
+      // Continuation requested.
+      TI.SetPrompt((defaultCont + std::string(indent * 3, ' ')).c_str());
   }
 }
