@@ -16,8 +16,8 @@
 #include "clang/Lex/Preprocessor.h"
 
 #include "llvm/LLVMContext.h"
-#include "llvm/Target/TargetSelect.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
