@@ -75,10 +75,12 @@
 //____________________________________________________________________________________________________
 - (void) correctPadFrameForOrientation : (UIInterfaceOrientation) orientation
 {
-   if (editorView.hidden)
-      [self correctPadFrameNoEditor : orientation];
-   else
-      [self correctPadFrameWithEditor : orientation];
+   if (!zoomed) {
+      if (editorView.hidden)
+         [self correctPadFrameNoEditor : orientation];
+      else
+         [self correctPadFrameWithEditor : orientation];
+   }
 }
 
 //____________________________________________________________________________________________________
@@ -116,6 +118,9 @@
    [self view];
    
    if (self) {
+      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Edit" style:UIBarButtonItemStyleBordered target:self action:@selector(showEditor)];
+
+   
       editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
       grid = [[PadGridEditor alloc] initWithNibName:@"PadGridEditor" bundle:nil];
       log = [[PadLogEditor alloc] initWithNibName:@"PadLogEditor" bundle:nil];
@@ -126,13 +131,23 @@
       [editorView addSubEditor:log.view withName:@"Log scales"];
       [self.view addSubview : editorView];
       
-      UITapGestureRecognizer * tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(showEditor:)];
-      [self.view addGestureRecognizer:tap];
-      [tap release];
+//      UITapGestureRecognizer * singleTap = [[UITapGestureRecognizer alloc] initWithTarget : self action : @selector(showEditor:)];
+//      [singleTap setNumberOfTapsRequired : 1];
+      //
+      UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget : self action : @selector(doubleTap:)];
+      [doubleTap setNumberOfTapsRequired : 2];
+      
+//      [singleTap requireGestureRecognizerToFail : doubleTap];
+      //
+      
+ //     [self.view addGestureRecognizer : singleTap];
+      [self.view addGestureRecognizer : doubleTap];
+//      [singleTap release];
+      [doubleTap release];
    
       //
       scrollView.delegate = self;
-      [scrollView setMaximumZoomScale:3.];
+      [scrollView setMaximumZoomScale:2.];
       scrollView.bounces = NO;
       //
             
@@ -209,12 +224,12 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) showEditor : (UITapGestureRecognizer*) tap
+- (void) showEditor
 {
-   const CGPoint tapPoint = [tap locationInView : self.view];
+  /* const CGPoint tapPoint = [tap locationInView : self.view];
    const CGPoint convertedPoint = [self.view convertPoint : tapPoint toView : editorView];
    if ([editorView pointInside:convertedPoint withEvent:nil])
-      return;
+      return;*/
 
    editorView.hidden = !editorView.hidden;
 
@@ -244,6 +259,12 @@
 }
 
 //____________________________________________________________________________________________________
+- (void) doubleTap : (UITapGestureRecognizer *) tap
+{
+   NSLog(@"Double tap");
+}
+
+//____________________________________________________________________________________________________
 - (void) setObject : (ObjectShortcut *)shortcut
 {
    rootObject = shortcut.rootObject;
@@ -259,6 +280,55 @@
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
 {
    return padView;
+}
+
+//_________________________________________________________________
+- (CGRect)centeredFrameForScrollView:(UIScrollView *)scroll andUIView:(UIView *)rView 
+{
+   CGSize boundsSize = scroll.bounds.size;
+   CGRect frameToCenter = rView.frame;
+   // center horizontally
+   if (frameToCenter.size.width < boundsSize.width) {
+      frameToCenter.origin.x = (boundsSize.width - frameToCenter.size.width) / 2;
+   }
+   else {
+      frameToCenter.origin.x = 0;
+   }
+   // center vertically
+   if (frameToCenter.size.height < boundsSize.height) {
+      frameToCenter.origin.y = (boundsSize.height - frameToCenter.size.height) / 2;
+   }
+   else {
+      frameToCenter.origin.y = 0;
+   }
+   
+   return frameToCenter;
+}
+
+
+//_________________________________________________________________
+- (void)scrollViewDidZoom:(UIScrollView *)scroll
+{
+   zoomed = YES;
+   padView.frame = [self centeredFrameForScrollView : scroll andUIView:padView];
+}
+
+//_________________________________________________________________
+- (void)scrollViewDidEndZooming:(UIScrollView *)scroll withView:(UIView *)view atScale:(float)scale
+{
+   const CGPoint offset = [scroll contentOffset];
+   const CGRect newFrame = padView.frame;
+  
+   [scroll setZoomScale:1.f];
+   scroll.contentSize = newFrame.size;
+   scroll.contentOffset = offset;
+
+   scroll.minimumZoomScale = 600.f / newFrame.size.width;
+   scroll.maximumZoomScale = 1280.f / newFrame.size.width;
+
+   padView.frame = newFrame;
+
+   [padView setNeedsDisplay];
 }
 
 @end
