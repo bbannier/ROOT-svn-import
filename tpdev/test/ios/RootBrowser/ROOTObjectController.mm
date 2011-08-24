@@ -27,6 +27,8 @@
 //____________________________________________________________________________________________________
 - (void) correctFrames
 {
+   self.view.alpha = 0.f;
+
    CGRect mainFrame;
    CGRect scrollFrame;
 
@@ -51,6 +53,8 @@
    const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
    const CGRect padRect = CGRectMake(padCenter.x - 300.f, padCenter.y - 300.f, 600.f, 600.f);
    padView.frame = padRect;
+   
+   self.view.alpha = 1.f;
 }
 
 
@@ -121,6 +125,12 @@
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
+- (void) viewWillAppear:(BOOL)animated
+{
+   [self correctFrames];
+}
+
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
@@ -130,9 +140,9 @@
 //____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
-    [super viewDidUnload];
-    // Release any retained subviews of the main view.
-    // e.g. self.myOutlet = nil;
+   [super viewDidUnload];
+   // Release any retained subviews of the main view.
+   // e.g. self.myOutlet = nil;
 }
 
 //____________________________________________________________________________________________________
@@ -147,6 +157,7 @@
 {
    //Cheap thay to hide and not check previos "hidden" state later.
    editorView.alpha = 0.f;
+   scrollView.alpha = 0.f;
 }
 
 //____________________________________________________________________________________________________
@@ -155,6 +166,7 @@
    [self correctFrames];
    //hidden or not, alpha was set to 0., now return back.
    editorView.alpha = 1.f;
+   scrollView.alpha = 1.f;
 }
 
 //____________________________________________________________________________________________________

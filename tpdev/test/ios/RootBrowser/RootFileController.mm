@@ -55,6 +55,13 @@
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
+- (void) placeFileShortcuts
+{
+   if ([scrollView.subviews count])
+      [ShorcutUtil placeShortcuts : fileContainers inScrollView : scrollView withSize : CGSizeMake([FileShortcut iconWidth], [FileShortcut iconHeight]) andSpace : 25.f];
+}
+
+//____________________________________________________________________________________________________
 - (void) correctFrames
 {
    CGRect mainFrame;
@@ -71,6 +78,8 @@
    
    self.view.frame = mainFrame;
    self.scrollView.frame = scrollFrame;
+   
+   [self placeFileShortcuts];
 }
 
 //____________________________________________________________________________________________________
@@ -97,19 +106,17 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) placeFileShortcuts
-{
-   [ShorcutUtil placeShortcuts : fileContainers inScrollView : scrollView withSize : CGSizeMake([FileShortcut iconWidth], [FileShortcut iconHeight]) andSpace : 25.f];
-}
-
-//____________________________________________________________________________________________________
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
    [self correctFrames];
-   [self placeFileShortcuts];
 }
 
 #pragma mark View management.
+
+- (void) viewWillAppear:(BOOL)animated
+{
+   [self correctFrames];
+}
 
 //____________________________________________________________________________________________________
 - (void) addFileShortcut : (NSString *) fileName
@@ -153,7 +160,8 @@
 //____________________________________________________________________________________________________
 - (void) openFile
 {
-   fileOpenView.hidden = !fileOpenView.hidden;
+//   fileOpenView.hidden = !fileOpenView.hidden;
 }
+
 
 @end
