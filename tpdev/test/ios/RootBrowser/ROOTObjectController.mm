@@ -65,6 +65,10 @@
    }
    
    padView.frame = padFrame;
+   //pad sizes changed, to have correct picture,
+   //I have to redraw pad's contents.
+   //It seems to be fast even in case of animation,
+   //but may require changes in future.
    [padView setNeedsDisplay];
 }
 
