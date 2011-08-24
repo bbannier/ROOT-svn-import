@@ -76,7 +76,7 @@
       [editorView addSubEditor:log.view withName:@"Log scales"];
       [self.view addSubview : editorView];
       
-      UITapGestureRecognizer * tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(showEditor)];
+      UITapGestureRecognizer * tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(showEditor:)];
       [self.view addGestureRecognizer:tap];
       [tap release];
    
@@ -159,8 +159,13 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) showEditor
+- (void) showEditor : (UITapGestureRecognizer*) tap
 {
+   const CGPoint tapPoint = [tap locationInView : self.view];
+   const CGPoint convertedPoint = [self.view convertPoint : tapPoint toView : editorView];
+   if ([editorView pointInside:convertedPoint withEvent:nil])
+      return;
+
    editorView.hidden = !editorView.hidden;
    
    // First create a CATransition object to describe the transition
