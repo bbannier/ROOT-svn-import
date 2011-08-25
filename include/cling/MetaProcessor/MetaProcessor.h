@@ -45,7 +45,7 @@ namespace cling {
     MetaProcessor(Interpreter& interp);
     ~MetaProcessor();
     int process(const char* input_line);
-    MetaProcessorOpts& getMetaProcessorOpts() { return m_Options; }
+    MetaProcessorOpts& getMetaProcessorOpts();
   };
 } // end namespace cling
 
