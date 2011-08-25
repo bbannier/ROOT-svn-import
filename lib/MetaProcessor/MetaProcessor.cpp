@@ -16,8 +16,7 @@
 // Construct an interface for an interpreter
 //---------------------------------------------------------------------------
 cling::MetaProcessor::MetaProcessor(Interpreter& interp):
-      m_Interp(interp),
-      m_QuitRequested(false)
+      m_Interp(interp)
 {
   m_InputValidator.reset(new InputValidator());
 }
@@ -76,7 +75,7 @@ cling::MetaProcessor::process(const char* input_text)
    //
    std::string input = m_InputValidator->TakeInput();
    m_InputValidator->Reset();
-   m_Interp.processLine(input);
+   m_Interp.processLine(input, m_Options.UsingWrappers);
    //
    //  All done.
    //
@@ -101,7 +100,7 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //  Quit.
    //
    if (cmd_char == 'q') {
-      m_QuitRequested = true;
+      m_Options.Quitting = true;
       return true;
    }
 
@@ -164,7 +163,7 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //
    if (cmd == "printAST") {
       if (param.empty()) {
-         // toggle:
+        // toggle:
         bool print = !m_Interp.isPrintingAST();
         m_Interp.enablePrintAST(print);
         printf("%srinting AST\n", print?"P":"Not p");
@@ -175,25 +174,26 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
       } else {
          fprintf(stderr, ".printAST: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
       }
+
+      m_Options.PrintingAST = m_Interp.isPrintingAST();
       return true;
    }
 
    //
-   //  .useWrappers [0|1]
+   //  .rawInput [0|1]
    //
-   //  Toggle the wrapping of stmts
+   //  Toggle the raw input
    //  or if 1 or 0 is given enable or disable it.
    //
    if (cmd == "rawInput") {
       if (param.empty()) {
-         // toggle:
-        bool wrap = !m_Interp.isUsingWrappers();
-        m_Interp.enableUsingWrappers(wrap);
-        printf("%ssing raw input\n", wrap?"Not u":"U");
+        // toggle:
+        m_Options.UsingWrappers = !m_Options.UsingWrappers;
+        printf("%ssing raw input\n", m_Options.UsingWrappers?"Not u":"U");
       } else if (param == "1") {
-         m_Interp.enableUsingWrappers(false);
+        m_Options.UsingWrappers = false;
       } else if (param == "0") {
-         m_Interp.enableUsingWrappers(true);
+        m_Options.UsingWrappers = true;
       } else {
          fprintf(stderr, ".rawInput: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
       }
