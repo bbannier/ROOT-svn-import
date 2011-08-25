@@ -465,7 +465,8 @@ namespace cling {
     
     std::string code;
     code += "#include \"" + filename + "\"\n";
-    if (trailcode) code += *trailcode;
+    if (trailcode)
+      code += *trailcode;
     return (m_IncrParser->CompileAsIs(code) != IncrementalParser::kFailed);
   }
   

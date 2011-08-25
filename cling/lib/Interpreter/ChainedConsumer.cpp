@@ -363,8 +363,8 @@ namespace cling {
   }
 
   void ChainedConsumer::RecoverFromError() {
-    for (llvm::SmallVector<DGRInfo, 64>::iterator I = DeclsQueue.begin(),
-           E = DeclsQueue.end(); I != E; ++I) {
+    for (llvm::SmallVector<DGRInfo, 64>::iterator I = DeclsQueue.begin();
+           I != DeclsQueue.end(); ++I) {
       DeclGroupRef& DGR = (*I).D;
 
       for (DeclGroupRef::iterator 
@@ -383,6 +383,20 @@ namespace cling {
         Scope* S = m_Sema->getScopeForContext(DC);
         if (S)
           S->RemoveDecl(D);
+
+        // Pop if the same declaration has come trough other function
+        // For example CXXRecordDecl comes from HandleTopLevelDecl and
+        // HandleTagDecl
+        // Not terribly efficient but it happens only when there are errors
+        for (llvm::SmallVector<DGRInfo, 64>::iterator J = I + 1;
+               J != DeclsQueue.end(); ++J) {
+          DeclGroupRef& DGRJ = (*J).D;
+          for (DeclGroupRef::iterator 
+                 Dj = DGRJ.begin(), E = DGRJ.end(); Dj != E; ++Dj) {
+            if ((*Dj)->getCanonicalDecl() == D)
+              DeclsQueue.erase(J);
+          }
+        }
       }
     }
 
