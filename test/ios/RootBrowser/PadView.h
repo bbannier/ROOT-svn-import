@@ -24,11 +24,12 @@ class Pad;
 @interface PadView : UIView {
    ROOT_iOS::Pad *pad;
 
-//   float scaleFactor;
-//   SelectionView *selectionView;
-   
-//   BOOL processPan;
-//   BOOL processTap;
+   UIPanGestureRecognizer *pan;
+   UITapGestureRecognizer *singleTap;
+   UITapGestureRecognizer *doubleTap;
+   UILongPressGestureRecognizer *longPress;
+
+   BOOL panActive;
 }
 
 - (id) initWithFrame : (CGRect)frame forPad : (ROOT_iOS::Pad*)pad;
@@ -37,13 +38,18 @@ class Pad;
 - (void) drawRect : (CGRect)rect;
 - (void) clearPad;
 
-//- (void) handlePanGesture : (UIPanGestureRecognizer *)panGesture;
-//- (void) handleTapGesture : (UITapGestureRecognizer *)tapGesture;
+- (BOOL) pointOnSelectedObject : (CGPoint) pt;
+- (void) addPanRecognizer;
+- (void) removePanRecognizer;
+
+- (void) turnOnEditMode;
+- (void) turnOffEditoMode;
+
+- (void) handleSingleTap : (UITapGestureRecognizer*)tapGesture;
+- (void) handleDoubleTap : (UITapGestureRecognizer*)tapGesture;
+- (void) handlePan : (UIPanGestureRecognizer*)panGesture;
+- (void) handleLongPressGesture : (UILongPressGestureRecognizer *)longPress;
 
 //- (void) setSelectionView : (SelectionView *) sv;
-
-//- (void) setProcessPan : (BOOL)p;
-//- (void) setProcessTap : (BOOL)t;
-
 
 @end
