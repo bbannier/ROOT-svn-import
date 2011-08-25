@@ -68,7 +68,7 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
 
     int indent = m_MetaProcessor->process(line.c_str());
     Prompt = "[cling]";
-    if (!MPOpts.UsingWrappers)
+    if (MPOpts.RawInput)
       Prompt.append("! ");
     else
       Prompt.append("$ ");

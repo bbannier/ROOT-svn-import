@@ -75,7 +75,7 @@ cling::MetaProcessor::process(const char* input_text)
    //
    std::string input = m_InputValidator->TakeInput();
    m_InputValidator->Reset();
-   m_Interp.processLine(input, m_Options.UsingWrappers);
+   m_Interp.processLine(input, m_Options.RawInput);
    //
    //  All done.
    //
@@ -188,12 +188,12 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    if (cmd == "rawInput") {
       if (param.empty()) {
         // toggle:
-        m_Options.UsingWrappers = !m_Options.UsingWrappers;
-        printf("%ssing raw input\n", m_Options.UsingWrappers?"Not u":"U");
+        m_Options.RawInput = !m_Options.RawInput;
+        printf("%ssing raw input\n", m_Options.RawInput?"Not u":"U");
       } else if (param == "1") {
-        m_Options.UsingWrappers = false;
+        m_Options.RawInput = true;
       } else if (param == "0") {
-        m_Options.UsingWrappers = true;
+        m_Options.RawInput = false;
       } else {
          fprintf(stderr, ".rawInput: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
       }
