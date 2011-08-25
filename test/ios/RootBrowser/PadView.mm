@@ -76,7 +76,8 @@
 - (BOOL) pointOnSelectedObject : (CGPoint) pt
 {
    //check if there is any object under pt.
-   return NO;
+   //this is just a test expression, let's say, there is an object selected in the corner.
+   return pt.x < 200 && pt.y < 200;
 }
 
 //_________________________________________________________________
