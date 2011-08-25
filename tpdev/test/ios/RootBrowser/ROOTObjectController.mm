@@ -8,6 +8,7 @@
 
 #import <QuartzCore/QuartzCore.h>
 
+#import "ScrollViewWithPadView.h"
 #import "ROOTObjectController.h"
 #import "ObjectShortcut.h"
 #import "PadGridEditor.h"
@@ -130,31 +131,13 @@
       [editorView addSubEditor:grid.view withName:@"Ticks and grid"];
       [editorView addSubEditor:log.view withName:@"Log scales"];
       [self.view addSubview : editorView];
-      
-//      UITapGestureRecognizer * singleTap = [[UITapGestureRecognizer alloc] initWithTarget : self action : @selector(showEditor:)];
-//      [singleTap setNumberOfTapsRequired : 1];
-      //
-      UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget : self action : @selector(doubleTap:)];
-      [doubleTap setNumberOfTapsRequired : 2];
-      
-//      [singleTap requireGestureRecognizerToFail : doubleTap];
-      //
-      
- //     [self.view addGestureRecognizer : singleTap];
-      [self.view addGestureRecognizer : doubleTap];
-//      [singleTap release];
-      [doubleTap release];
-   
       //
       scrollView.delegate = self;
       [scrollView setMaximumZoomScale:2.];
       scrollView.bounces = NO;
       //
-            
       editorView.hidden = YES;
       [editorView release];
-      
-
       //
       //Create padView, pad.
       //
@@ -226,20 +209,24 @@
 //____________________________________________________________________________________________________
 - (void) showEditor
 {
-  /* const CGPoint tapPoint = [tap locationInView : self.view];
-   const CGPoint convertedPoint = [self.view convertPoint : tapPoint toView : editorView];
-   if ([editorView pointInside:convertedPoint withEvent:nil])
-      return;*/
-
    editorView.hidden = !editorView.hidden;
 
    [self correctPadFrameForOrientation : self.interfaceOrientation];
    
-   if (editorView.hidden && UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
-      //I'm afraid, view size changed and we have to redraw!
-      [padView setNeedsDisplay];
+   if (!editorView.hidden) {
+      [padView turnOnEditMode];
+      scrollView.editMode = YES;
+   } else {
+      [padView turnOffEditoMode];
+      scrollView.editMode = NO;
 
+      //If editor desappears and orientation is portrait, the
+      //padView sizes has changed, the picture must be updated.
+      if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
+         [padView setNeedsDisplay];
+   }
    
+   //Do animation.
    // First create a CATransition object to describe the transition
    CATransition *transition = [CATransition animation];
    // Animate over 3/4 of a second
@@ -256,12 +243,6 @@
    transition.delegate = self;
    // Next add it to the containerView's layer. This will perform the transition based on how we change its contents.
    [editorView.layer addAnimation : transition forKey : nil];
-}
-
-//____________________________________________________________________________________________________
-- (void) doubleTap : (UITapGestureRecognizer *) tap
-{
-   NSLog(@"Double tap");
 }
 
 //____________________________________________________________________________________________________

@@ -8,6 +8,7 @@
 
 #import <UIKit/UIKit.h>
 
+@class ScrollViewWithPadView;
 @class ObjectShortcut;
 @class PadGridEditor;
 @class PadLogEditor;
@@ -32,7 +33,7 @@ class TObject;
    PadLogEditor *log;
    FillEditor *fill;
    
-   IBOutlet UIScrollView *scrollView;
+   IBOutlet ScrollViewWithPadView *scrollView;
    
    PadView *padView;//View for pad.
    ROOT_iOS::Pad *pad;
