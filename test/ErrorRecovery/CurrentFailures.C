@@ -1,8 +1,6 @@
 // RUN: cat %s | %cling -I%p | FileCheck %s
 // XFAIL: *
 
-.x CurrentFailures.h
-
  // First one is okay and the redefinition errors are not handled properly
 .L CurrentFailures.h
 .L CurrentFailures.h
