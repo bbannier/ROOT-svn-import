@@ -16,22 +16,36 @@ namespace cling {
   class Interpreter;
   class InputValidator;
 
+  class MetaProcessorOpts {
+  public:
+    bool Quitting : 1; // is quit requested
+    bool PrintingAST : 1; // is printAST requested;
+    bool UsingWrappers : 1; // is using wrappers requested;
+    bool DynamicLookup : 1; // is using dynamic lookup
+    
+    MetaProcessorOpts() {
+      Quitting = 0;
+      PrintingAST = 0;
+      UsingWrappers = 1;
+      DynamicLookup = 0;
+    }
+  };
+
   //---------------------------------------------------------------------------
   // Class for the user interaction with the interpreter
   //---------------------------------------------------------------------------
   class MetaProcessor {
   private:
     Interpreter& m_Interp; // the interpreter
-    bool m_QuitRequested; // quitting?
     llvm::OwningPtr<InputValidator> m_InputValidator; // balanced paren etc
+    MetaProcessorOpts m_Options;
   private:
     bool ProcessMeta(const std::string& input_line);
   public:
     MetaProcessor(Interpreter& interp);
     ~MetaProcessor();
     int process(const char* input_line);
-    bool isQuitRequested() const { return m_QuitRequested; }
-    void requestQuit(bool req) { m_QuitRequested = req; }
+    MetaProcessorOpts& getMetaProcessorOpts() { return m_Options; }
   };
 } // end namespace cling
 

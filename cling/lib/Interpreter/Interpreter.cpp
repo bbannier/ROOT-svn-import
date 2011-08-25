@@ -159,7 +159,6 @@ namespace cling {
                             const char* llvmdir /*= 0*/):
   m_UniqueCounter(0),
   m_PrintAST(false),
-  m_UseWrappers(true),
   m_ValuePrinterEnabled(false),
   m_LastDump(0)
   {
@@ -352,7 +351,8 @@ namespace cling {
   }
   
   Interpreter::CompilationResult
-  Interpreter::processLine(const std::string& input_line) {
+  Interpreter::processLine(const std::string& input_line, 
+                           bool isUsingWrappers /*= true*/) {
     //
     //  Transform the input line to implement cint
     //  command line semantics (declarations are global),
@@ -363,7 +363,7 @@ namespace cling {
     std::string wrapped = input_line;
     if (strncmp(input_line.c_str(),"#",strlen("#")) != 0 &&
         strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0 &&
-        isUsingWrappers()) {
+        isUsingWrappers) {
       WrapInput(wrapped, functName);
     }
 
@@ -635,10 +635,6 @@ namespace cling {
   void Interpreter::enablePrintAST(bool print /*=true*/) {
     m_IncrParser->enablePrintAST(print);
     m_PrintAST = !m_PrintAST;
-  }
-
-  void Interpreter::enableUsingWrappers(bool wrap /*=true*/) {
-    m_UseWrappers = wrap;
   }
 
   void Interpreter::dumpAST(bool showAST, int last) {
