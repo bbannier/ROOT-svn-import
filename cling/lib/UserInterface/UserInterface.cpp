@@ -48,30 +48,36 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
     std::cerr << "*****************************************" << std::endl;
   }
   static const char* histfile = ".cling_history";
-  const static std::string defaultPrompt("[cling]$ ");
-  const static std::string defaultCont("[cling]? ");
+  std::string Prompt("[cling]$ ");
 
   using namespace textinput;
   StreamReader* R = StreamReader::Create();
   TerminalDisplay* D = TerminalDisplay::Create();
   TextInput TI(*R, *D, histfile);
-  TI.SetPrompt(defaultPrompt.c_str());
+  TI.SetPrompt(Prompt.c_str());
   std::string line;
+  MetaProcessorOpts& MPOpts = m_MetaProcessor->getMetaProcessorOpts();
   
-  while (!m_MetaProcessor->isQuitRequested()) {
+  while (!MPOpts.Quitting) {
     TextInput::EReadResult RR = TI.ReadInput();
     TI.TakeInput(line);
     if (RR == TextInput::kRREOF) {
-      m_MetaProcessor->requestQuit(true);
+      MPOpts.Quitting = true;
       continue;
     }
 
     int indent = m_MetaProcessor->process(line.c_str());
-
-    if (indent<=0)
-      TI.SetPrompt(defaultPrompt.c_str());
+    Prompt = "[cling]";
+    if (!MPOpts.UsingWrappers)
+      Prompt.append("! ");
     else
+      Prompt.append("$ ");
+
+    if (indent > 0)
       // Continuation requested.
-      TI.SetPrompt((defaultCont + std::string(indent * 3, ' ')).c_str());
+      Prompt.append('?' + std::string(indent * 3, ' '));
+
+    TI.SetPrompt(Prompt.c_str());
+
   }
 }
