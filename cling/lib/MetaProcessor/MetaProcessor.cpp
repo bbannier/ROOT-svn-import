@@ -83,6 +83,13 @@ cling::MetaProcessor::process(const char* input_text)
    return 0;
 }
 
+cling::MetaProcessorOpts& 
+cling::MetaProcessor::getMetaProcessorOpts() {
+  // Take interpreter's state
+  m_Options.PrintingAST = m_Interp.isPrintingAST();
+  return m_Options; 
+}
+
 
 //---------------------------------------------------------------------------
 // Process possible meta commands (.L,...)
