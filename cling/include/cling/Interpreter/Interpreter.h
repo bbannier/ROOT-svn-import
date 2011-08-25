@@ -143,7 +143,7 @@ namespace cling {
     void AddIncludePath(const char *incpath);
     void DumpIncludePath();
     CompilationResult processLine(const std::string& input_line, 
-                                  bool isUsingWrappers = true);
+                                  bool rawInput = false);
     
     bool loadFile(const std::string& filename,
                   const std::string* trailcode = 0,

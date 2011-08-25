@@ -20,13 +20,13 @@ namespace cling {
   public:
     bool Quitting : 1; // is quit requested
     bool PrintingAST : 1; // is printAST requested;
-    bool UsingWrappers : 1; // is using wrappers requested;
+    bool RawInput : 1; // is using wrappers requested;
     bool DynamicLookup : 1; // is using dynamic lookup
     
     MetaProcessorOpts() {
       Quitting = 0;
       PrintingAST = 0;
-      UsingWrappers = 1;
+      RawInput = 0;
       DynamicLookup = 0;
     }
   };

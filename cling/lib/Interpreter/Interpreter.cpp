@@ -352,7 +352,7 @@ namespace cling {
   
   Interpreter::CompilationResult
   Interpreter::processLine(const std::string& input_line, 
-                           bool isUsingWrappers /*= true*/) {
+                           bool rawInput /*= false*/) {
     //
     //  Transform the input line to implement cint
     //  command line semantics (declarations are global),
@@ -363,7 +363,7 @@ namespace cling {
     std::string wrapped = input_line;
     if (strncmp(input_line.c_str(),"#",strlen("#")) != 0 &&
         strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0 &&
-        isUsingWrappers) {
+        !rawInput) {
       WrapInput(wrapped, functName);
     }
 
