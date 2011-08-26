@@ -153,12 +153,10 @@ namespace cling {
     
     // Set up the ASTConsumers
     CI->setASTConsumer(new ChainedConsumer());
-    
-    
+
     // Set up Sema
-    bool CompleteTranslationUnit = false;
     CodeCompleteConsumer* CCC = 0;
-    CI->createSema(CompleteTranslationUnit, CCC);
+    CI->createSema(TU_Prefix, CCC);
 
     // Set CodeGen options
     // CI->getCodeGenOpts().CXAAtExit = 0; // don't use atexit() for d'tors - needs explicit call to runStaticInitializers(d'tors)
