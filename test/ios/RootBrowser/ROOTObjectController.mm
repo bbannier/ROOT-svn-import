@@ -132,7 +132,7 @@
       [editorView addSubEditor:log.view withName:@"Log scales"];
       [self.view addSubview : editorView];
       //
-      scrollView.delegate = self;
+      //scrollView.delegate = self;
       [scrollView setMaximumZoomScale:2.];
       scrollView.bounces = NO;
       //
