@@ -3,7 +3,8 @@
 
 
 add_cling_library(clingMetaProcessor
-  MetaProcessor.cpp)
+  MetaProcessor.cpp
+  InputValidator.cpp)
 
 #add_dependencies(clangDriver ClangAttrList ClangDiagnosticDriver
 #                 ClangDriverOptions ClangCC1Options ClangCC1AsOptions)

@@ -28,7 +28,6 @@ add_cling_library(clingInterpreter
   DynamicLookup.cpp
   ExecutionContext.cpp
   IncrementalParser.cpp
-  InputValidator.cpp
   Interpreter.cpp
   InvocationOptions.cpp
   ValuePrinter.cpp
