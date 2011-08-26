@@ -19,7 +19,6 @@
 #include "clang/AST/DeclGroup.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Parse/Parser.h"
-#include "clang/Parse/ParseAST.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Frontend/CompilerInstance.h"
