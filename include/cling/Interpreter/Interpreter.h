@@ -30,8 +30,6 @@ namespace clang {
   class Expr;
   class NamedDecl;
   class PragmaNamespace;
-  class SourceLocation;
-  class QualType;
 }
 
 namespace cling {
@@ -150,7 +148,6 @@ namespace cling {
                   bool allowSharedLib = true);
     
     bool executeFile(const std::string& fileWithArgs);
-    clang::QualType getQualType(llvm::StringRef type);
     
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled();
@@ -166,8 +163,6 @@ namespace cling {
     void installLazyFunctionCreator(void* (*fp)(const std::string&));
     
     llvm::raw_ostream& getValuePrinterStream() const { return *m_ValuePrintStream; }
-
-    void RequestContinuation(const clang::SourceLocation&);
 
     void writeStartupPCH();
 

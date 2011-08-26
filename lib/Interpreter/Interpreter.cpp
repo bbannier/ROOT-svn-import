@@ -15,7 +15,6 @@
 #include "cling/Interpreter/Value.h"
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/TargetInfo.h"
@@ -511,42 +510,6 @@ namespace cling {
       return RunFunction(func);
     }
     return false;
-  }
-
-  QualType Interpreter::getQualType(llvm::StringRef type) {
-    std::string className = createUniqueName();
-    QualType Result;
-
-    // template<typename T> class dummy{}; 
-    std::string templatedClass = "template<typename T> class " + className + "{};\n";
-
-    Decl *templatedClassDecl = 0;
-    if (m_IncrParser->CompileAsIs(templatedClass) != IncrementalParser::kFailed)
-      templatedClassDecl = m_IncrParser->getLastTopLevelDecl();
-
-    //template <> dummy<DeclContext*> {};
-    std::string explicitSpecialization = "template<> class " + className + "<" + type.str()  + "*>{};\n";
-    if (m_IncrParser->CompileAsIs(explicitSpecialization) != IncrementalParser::kFailed) {
-      if (ClassTemplateSpecializationDecl* D = dyn_cast<ClassTemplateSpecializationDecl>(m_IncrParser->getLastTopLevelDecl())) {
-        Result = D->getTemplateArgs()[0].getAsType();
-
-        // TODO: Remove the fake Decls
-        // We couldn't remove the template specialization and leave only the
-        // template
-        /*Scope *S = CI->getSema().getScopeForContext(CI->getSema().getASTContext().getTranslationUnitDecl());
-          S->RemoveDecl(D);
-          //D->getDeclContext()->removeDecl(D);
-          if (templatedClassDecl) {
-          templatedClassDecl->getDeclContext()->removeDecl(templatedClassDecl);
-          S->RemoveDecl(templatedClassDecl);
-          }*/
-
-        return Result;
-      }
-    }
-
-    fprintf(stderr, "Cannot find the type:%s\n", type.data());
-    return Result;
   }
 
   Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl, 
