@@ -19,4 +19,14 @@ Diags.setClient(Client);
 .x CannotDotX.h() // expected-error {{use of undeclared identifier 'CannotDotX'}} 
 .x CannotDotX.h() // expected-error {{use of undeclared identifier 'CannotDotX'}}
 
+ // Uses a bug in the implementation of .L, which must be fixed soon.
+ // Exposes another issue with the VerifyDiagnosticsClient in the context of 
+ // cling. The first .L shouldn't return errors and the expected-errors should
+ // fail passing. However when using the prorpocessor most probably we lose 
+ // track of the errors source locations and files.
+.L CannotDotX.h "// expected-error {{redefinition of 'MyClass'}} expected-error {{expected member name or ';' after declaration specifiers}} expected-node {{previous definition is here}}
+
+
+.L CannotDotX.h
+
 .q
