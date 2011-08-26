@@ -136,8 +136,6 @@ namespace cling {
        m_UsingStartupPCH = true;
     } else {
       // Valid file name but no (valid) PCH - recreate.
-      bool Chaining = m_CI->getInvocation().getFrontendOpts().ChainedPCH &&
-        !m_CI->getPreprocessorOpts().ImplicitPCHInclude.empty();
       // We use createOutputFile here because this is exposed via libclang, and we
       // must disable the RemoveFileOnSignal behavior.
       llvm::raw_ostream *OS = m_CI->createOutputFile(filename, /*Binary=*/true,
@@ -145,7 +143,6 @@ namespace cling {
                                                      filename);
       m_StartupPCHGenerator.reset(new PCHGenerator(m_CI->getPreprocessor(),
                                                    filename,
-                                                   Chaining,
                                                    "", /*isysroot*/
                                                    OS
                                                    )
