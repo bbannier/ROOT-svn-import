@@ -94,6 +94,20 @@ static bool tryLinker(const std::string& filename,
 
 namespace cling {
 
+  // "Declared" to the JIT in RuntimeUniverse.h
+  namespace runtime {
+    namespace internal {
+      int local_cxa_atexit(void (*func) (void*), void* arg,
+                           void* dso, Interpreter* interp) {
+        return interp->CXAAtExit(func, arg, dso);
+      }
+      struct __trigger__cxa_atexit {
+        ~__trigger__cxa_atexit(); // implemented in Interpreter.cpp
+      };
+      __trigger__cxa_atexit::~__trigger__cxa_atexit() {}
+    }
+  }
+
   Interpreter::NamedDeclResult::NamedDeclResult(llvm::StringRef Decl, 
                                                 Interpreter* interp, 
                                                 DeclContext* Within)
@@ -198,7 +212,7 @@ namespace cling {
        // Set up the gCling variable - even if we use PCH ('this' is different)
        processLine("#include \"cling/Interpreter/ValuePrinter.h\"\n");
        std::stringstream initializer;
-       initializer << "gCling=(cling::Interpreter*)" << (long)this <<";";
+       initializer << "gCling=(cling::Interpreter*)" << (long)this << ";";
        processLine(initializer.str());
     }
 
@@ -210,12 +224,12 @@ namespace cling {
   //---------------------------------------------------------------------------
   Interpreter::~Interpreter()
   {
-    //llvm::Module* module = m_IncrParser->GetCodeGenerator()->GetModule();
-    //m_ExecutionContext->runStaticDestructorsOnce(module);
-    //delete m_prev_module;
-    //m_prev_module = 0; // Don't do this, the engine does it.
-    //delete m_IncrASTParser;
-    //m_IncrASTParser = 0;
+    for (size_t I = 0, N = m_AtExitFuncs.size(); I < N; ++I) {
+      const CXAAtExitElement& AEE = m_AtExitFuncs[N - I - 1];
+      (*AEE.m_Func)(AEE.m_Arg);
+    }
+
+    //delete m_prev_module; // Don't do this, the engine does it.
   }
    
   const char* Interpreter::getVersion() const {
@@ -700,5 +714,13 @@ namespace cling {
     llvm::Module* module = m_IncrParser->GetCodeGenerator()->GetModule();
     m_ExecutionContext->runStaticInitializersOnce(module);
   }
+
+  int Interpreter::CXAAtExit(void (*func) (void*), void* arg, void* dso) {
+     // Register a CXAAtExit function
+     clang::Decl* LastTLD = m_IncrParser->getLastTopLevelDecl();
+     m_AtExitFuncs.push_back(CXAAtExitElement(func, arg, dso, LastTLD));
+     return 0; // happiness
+  }
+
   
 } // namespace cling

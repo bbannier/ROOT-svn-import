@@ -1,5 +1,4 @@
 // RUN: cat %s | %cling -I%p | FileCheck %s
-// XFAIL: *
 // We should revise the destruction of the LifetimeHandlers, because
 // its destructor uses gCling and the CompilerInstance, which are 
 // already gone
@@ -20,6 +19,6 @@ Alpha a(sadasds->getVersion());
 printf("%s\n", a.getVar()); // CHECK: {{.*Interpreter.*}}
 
 // TODO: in this case we should emit the LifetimeHandler at all.
-int res = h->Add10(h->Add10(h->Add10(0))) // CHECK: (int const) 30
+int res = h->Add10(h->Add10(h->Add10(0))) // CHECK: (int) 30
 
 .q

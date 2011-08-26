@@ -44,10 +44,25 @@ namespace cling {
       /// Use instead of SourceLocation() and SourceRange(). This might help,
       /// when clang emits diagnostics on artificially inserted AST node.
       int InterpreterGeneratedCodeDiagnosticsMaybeIncorrect;
+
+      // Implemented in Interpreter.cpp
+      int local_cxa_atexit(void (*func) (void*), void* arg,
+                           void* dso, cling::Interpreter* interp);
+
+      // Force the module to define __cxa_atexit, we need it.
+      struct __trigger__cxa_atexit {
+        ~__trigger__cxa_atexit(); // implemented in Interpreter.cpp
+      } S;
     } // end namespace internal
   } // end namespace runtime
 } // end namespace cling
 
 using namespace cling::runtime;
+
+// Global d'tors only for C++:
+extern "C"
+int cling_cxa_atexit(void (*func) (void*), void* arg, void* dso) {
+  return cling::runtime::internal::local_cxa_atexit(func, arg, dso, gCling);
+}
 
 #endif // __cplusplus
