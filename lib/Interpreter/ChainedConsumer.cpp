@@ -393,8 +393,10 @@ namespace cling {
           DeclGroupRef& DGRJ = (*J).D;
           for (DeclGroupRef::iterator 
                  Dj = DGRJ.begin(), E = DGRJ.end(); Dj != E; ++Dj) {
-            if ((*Dj)->getCanonicalDecl() == D)
-              DeclsQueue.erase(J);
+            if ((*Dj) && (*Dj)->getCanonicalDecl() == D)
+              // Set the declaration to 0, we don't want to call the dtor 
+              // of the DeclGroupRef
+              (*Dj) = 0;
           }
         }
       }
