@@ -172,6 +172,8 @@ namespace cling {
     void writeStartupPCH();
 
     void runStaticInitializersOnce() const;
+
+    int CXAAtExit(void (*func) (void*), void* arg, void* dso);
     
   private:
     InvocationOptions m_Opts; // Interpreter options
@@ -183,6 +185,18 @@ namespace cling {
     bool m_ValuePrinterEnabled; // whether the value printer is loaded
     llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream; // stream to dump values into
     clang::Decl *m_LastDump; // last dump point
+
+    struct CXAAtExitElement {
+      CXAAtExitElement(void (*func) (void*), void* arg, void* dso,
+                       clang::Decl* fromTLD):
+        m_Func(func), m_Arg(arg), m_DSO(dso), m_FromTLD(fromTLD) {}
+      void (*m_Func)(void*);
+      void* m_Arg;
+      void* m_DSO;
+      clang::Decl* m_FromTLD; // when unloading this top level decl, call this atexit func.
+    };
+
+    llvm::SmallVector<CXAAtExitElement, 20> m_AtExitFuncs;
 
   private:
     void handleFrontendOptions();

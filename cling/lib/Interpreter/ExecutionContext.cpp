@@ -148,6 +148,16 @@ ExecutionContext::executeFunction(llvm::StringRef funcname,
    // Call an extern C function without arguments
   //runCodeGen();
 
+  // Rewire atexit:
+  llvm::Function* atExit =  m_engine->FindFunctionNamed("__cxa_atexit");
+  llvm::Function* clingAtExit =  m_engine->FindFunctionNamed("cling_cxa_atexit");
+  if (atExit && clingAtExit) {
+    void* clingAtExitAddr = m_engine->getPointerToFunction(clingAtExit);
+    if (clingAtExitAddr) {
+      m_engine->updateGlobalMapping(atExit, clingAtExitAddr);
+    }
+  }
+
    llvm::Function* f = m_engine->FindFunctionNamed(funcname.data());
    if (!f) {
       fprintf(
