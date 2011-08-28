@@ -73,6 +73,42 @@
    [padView setNeedsDisplay];
 }
 
+//_________________________________________________________________
+- (CGRect)centeredFrameForScrollView:(UIScrollView *)scroll andUIView:(UIView *)rView 
+{
+   CGSize boundsSize = scroll.bounds.size;
+   CGRect frameToCenter = rView.frame;
+   // center horizontally
+   if (frameToCenter.size.width < boundsSize.width) {
+      frameToCenter.origin.x = (boundsSize.width - frameToCenter.size.width) / 2;
+   }
+   else {
+      frameToCenter.origin.x = 0;
+   }
+   // center vertically
+   if (frameToCenter.size.height < boundsSize.height) {
+      frameToCenter.origin.y = (boundsSize.height - frameToCenter.size.height) / 2;
+   }
+   else {
+      frameToCenter.origin.y = 0;
+   }
+   
+   return frameToCenter;
+}
+
+//____________________________________________________________________________________________________
+- (void) centerPadFrameNoEditor : (UIInterfaceOrientation) orientation
+{
+   //This method only centers the pad, but does not change it's sizes.
+   padView.frame = [self centeredFrameForScrollView : scrollView andUIView : padView]; 
+}
+
+//____________________________________________________________________________________________________
+- (void) centerPadFrameWithEditor : (UIInterfaceOrientation) orientation
+{
+   padView.frame = [self centeredFrameForScrollView : scrollView andUIView : padView]; 
+}
+
 //____________________________________________________________________________________________________
 - (void) correctPadFrameForOrientation : (UIInterfaceOrientation) orientation
 {
@@ -81,6 +117,11 @@
          [self correctPadFrameNoEditor : orientation];
       else
          [self correctPadFrameWithEditor : orientation];
+   } else {
+      if (editorView.hidden)
+         [self centerPadFrameNoEditor : orientation];
+      else
+         [self centerPadFrameWithEditor : orientation];
    }
 }
 
@@ -132,7 +173,7 @@
       [editorView addSubEditor:log.view withName:@"Log scales"];
       [self.view addSubview : editorView];
       //
-      //scrollView.delegate = self;
+      scrollView.delegate = self;
       [scrollView setMaximumZoomScale:2.];
       scrollView.bounces = NO;
       //
@@ -144,7 +185,7 @@
       const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
       const CGRect padRect = CGRectMake(padCenter.x - 300.f, padCenter.y - 300.f, 600.f, 600.f);
       pad = new ROOT_iOS::Pad(600., 600.);
-      padView = [[PadView alloc] initWithFrame : padRect forPad : pad];
+      padView = [[PadView alloc] initWithFrame : padRect controller : self forPad : pad];
       [scrollView addSubview : padView];
       [padView release];
 
@@ -264,33 +305,8 @@
 }
 
 //_________________________________________________________________
-- (CGRect)centeredFrameForScrollView:(UIScrollView *)scroll andUIView:(UIView *)rView 
-{
-   CGSize boundsSize = scroll.bounds.size;
-   CGRect frameToCenter = rView.frame;
-   // center horizontally
-   if (frameToCenter.size.width < boundsSize.width) {
-      frameToCenter.origin.x = (boundsSize.width - frameToCenter.size.width) / 2;
-   }
-   else {
-      frameToCenter.origin.x = 0;
-   }
-   // center vertically
-   if (frameToCenter.size.height < boundsSize.height) {
-      frameToCenter.origin.y = (boundsSize.height - frameToCenter.size.height) / 2;
-   }
-   else {
-      frameToCenter.origin.y = 0;
-   }
-   
-   return frameToCenter;
-}
-
-
-//_________________________________________________________________
 - (void)scrollViewDidZoom:(UIScrollView *)scroll
 {
-   zoomed = YES;
    padView.frame = [self centeredFrameForScrollView : scroll andUIView:padView];
 }
 
@@ -310,6 +326,33 @@
    padView.frame = newFrame;
 
    [padView setNeedsDisplay];
+   
+   zoomed = YES;
+}
+
+//_________________________________________________________________
+- (void) adjustPadView
+{
+   zoomed = !zoomed;
+
+   if (zoomed) {
+      //maximize
+   } else {
+
+      [padView retain];
+      [padView removeFromSuperview];
+      padView.frame = CGRectMake(0.f, 0.f, 600.f, 600.f);
+      [scrollView setZoomScale:1.f];
+      scrollView.maximumZoomScale = 2.f;
+      scrollView.minimumZoomScale = 1.f;
+      scrollView.contentOffset = CGPointZero;
+      [scrollView addSubview : padView];
+      [padView release];
+      [padView setNeedsDisplay];
+      [self correctFramesForOrientation : self.interfaceOrientation];
+   }
+   
+   
 }
 
 @end
