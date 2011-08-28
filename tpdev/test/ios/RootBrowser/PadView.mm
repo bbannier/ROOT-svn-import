@@ -6,6 +6,7 @@
 #import <CoreGraphics/CGContext.h>
 
 //#import "SelectionView.h"
+#import "ROOTObjectController.h"
 #import "PadView.h"
 
 //C++ code (ROOT's ios module)
@@ -14,12 +15,12 @@
 @implementation PadView
 
 //_________________________________________________________________
-- (id) initWithFrame:(CGRect)frame forPad : (ROOT_iOS::Pad*)pd
+- (id) initWithFrame : (CGRect)frame controller : (ROOTObjectController *)c forPad : (ROOT_iOS::Pad*)pd
 {
    self = [super initWithFrame : frame];
 
    if (self) {
-      //Initialize C++ objects here.
+      controller = c;
       pad = pd;
       
       //Create, but do not add.
@@ -128,7 +129,8 @@
 - (void) handleDoubleTap : (UITapGestureRecognizer*)tap
 {
    //This is zoom/unzoom action.
-   NSLog(@"double tap");
+   //NSLog(@"double tap");
+   [controller adjustPadView];
 }
 
 //_________________________________________________________________

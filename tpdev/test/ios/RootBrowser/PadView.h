@@ -20,6 +20,7 @@ class Pad;
 }
 
 //@class SelectionView;
+@class ROOTObjectController;
 
 @interface PadView : UIView {
    ROOT_iOS::Pad *pad;
@@ -28,11 +29,13 @@ class Pad;
    UITapGestureRecognizer *singleTap;
    UITapGestureRecognizer *doubleTap;
    UILongPressGestureRecognizer *longPress;
+   
+   ROOTObjectController *controller;
 
    BOOL panActive;
 }
 
-- (id) initWithFrame : (CGRect)frame forPad : (ROOT_iOS::Pad*)pad;
+- (id) initWithFrame : (CGRect)frame controller : (ROOTObjectController *)c forPad : (ROOT_iOS::Pad*)pad;
 - (void) dealloc;
 
 - (void) drawRect : (CGRect)rect;

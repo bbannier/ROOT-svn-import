@@ -45,5 +45,6 @@ class TObject;
 @property (nonatomic, retain) UIScrollView *scrollView;
 
 - (void) setObject : (ObjectShortcut *)object;
+- (void) adjustPadView;
 
 @end
