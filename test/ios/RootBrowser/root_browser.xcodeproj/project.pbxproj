@@ -45,6 +45,7 @@
 		7077908C13FE96DC00C0FFA1 /* editor_plate.png in Resources */ = {isa = PBXBuildFile; fileRef = 7077908A13FE96DC00C0FFA1 /* editor_plate.png */; };
 		7077908E13FE972D00C0FFA1 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077908D13FE972D00C0FFA1 /* QuartzCore.framework */; };
 		7077909013FE973A00C0FFA1 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077908F13FE973A00C0FFA1 /* CoreText.framework */; };
+		708C444C140BD54900FE433A /* root_browser_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 708C444B140BD54900FE433A /* root_browser_icon.png */; };
 		7095949C13FE978400B9E8B6 /* libRoot.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7095949813FE978400B9E8B6 /* libRoot.a */; };
 		7095949D13FE978400B9E8B6 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7095949913FE978400B9E8B6 /* libfreetype.a */; };
 		7095949E13FE978400B9E8B6 /* liblzma.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7095949A13FE978400B9E8B6 /* liblzma.a */; };
@@ -115,6 +116,7 @@
 		7077908A13FE96DC00C0FFA1 /* editor_plate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = editor_plate.png; sourceTree = "<group>"; };
 		7077908D13FE972D00C0FFA1 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		7077908F13FE973A00C0FFA1 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
+		708C444B140BD54900FE433A /* root_browser_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = root_browser_icon.png; sourceTree = "<group>"; };
 		7095949813FE978400B9E8B6 /* libRoot.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libRoot.a; path = ../../../lib/libRoot.a; sourceTree = "<group>"; };
 		7095949913FE978400B9E8B6 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = ../../../lib/libfreetype.a; sourceTree = "<group>"; };
 		7095949A13FE978400B9E8B6 /* liblzma.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblzma.a; path = ../../../lib/liblzma.a; sourceTree = "<group>"; };
@@ -151,6 +153,7 @@
 		7077900E13FE50EB00C0FFA1 = {
 			isa = PBXGroup;
 			children = (
+				708C444B140BD54900FE433A /* root_browser_icon.png */,
 				7023805D140514C8002A5331 /* file_icon.png */,
 				709CD0961402768B005B2AF4 /* Shortcuts.h */,
 				709CD0971402768B005B2AF4 /* Shortcuts.m */,
@@ -301,6 +304,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				708C444C140BD54900FE433A /* root_browser_icon.png in Resources */,
 				7023805E140514C8002A5331 /* file_icon.png in Resources */,
 				709CD05314025148005B2AF4 /* demos.root in Resources */,
 				709594A513FE97AF00B9E8B6 /* system.rootrc in Resources */,
