@@ -9,9 +9,6 @@
 #import <UIKit/UIKit.h>
 
 @interface ScrollViewWithPadView : UIScrollView {
-   BOOL editMode;
 }
-
-@property (nonatomic, assign) BOOL editMode;
 
 @end

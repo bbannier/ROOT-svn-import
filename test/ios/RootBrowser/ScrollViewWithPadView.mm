@@ -3,18 +3,13 @@
 
 @implementation ScrollViewWithPadView
 
-@synthesize editMode;
-
 - (UIView *) hitTest : (CGPoint)point withEvent : (UIEvent *)event
 {  
    UIView * v = [super hitTest : point withEvent : event];
    
-   if (!editMode)
-      return v;
-
    NSLog(@"special processing");
 
-   if ([v isKindOfClass:[PadView class]]) {
+   if ([v isKindOfClass : [PadView class]]) {
       PadView *padView = (PadView *)v;
 
       if ([padView pointOnSelectedObject : [self convertPoint : point toView : padView]]) {
