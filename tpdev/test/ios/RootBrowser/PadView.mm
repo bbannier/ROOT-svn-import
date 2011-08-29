@@ -33,6 +33,10 @@
       [singleTap requireGestureRecognizerToFail : doubleTap];
       
       longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPressGesture:)];
+      
+      [self addGestureRecognizer : singleTap];
+      [self addGestureRecognizer : doubleTap];
+      [self addGestureRecognizer : longPress];
       //
    }
 
@@ -98,7 +102,7 @@
       [self removeGestureRecognizer : pan];
    }
 }
-
+/*
 //_________________________________________________________________
 - (void) turnOnEditMode
 {
@@ -116,7 +120,7 @@
    
    if (panActive)
       [self removeGestureRecognizer : pan];
-}
+}*/
 
 //_________________________________________________________________
 - (void) handleSingleTap : (UITapGestureRecognizer*)tap
