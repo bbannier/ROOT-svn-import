@@ -45,8 +45,8 @@ class Pad;
 - (void) addPanRecognizer;
 - (void) removePanRecognizer;
 
-- (void) turnOnEditMode;
-- (void) turnOffEditoMode;
+//- (void) turnOnEditMode;
+//- (void) turnOffEditoMode;
 
 - (void) handleSingleTap : (UITapGestureRecognizer*)tapGesture;
 - (void) handleDoubleTap : (UITapGestureRecognizer*)tapGesture;

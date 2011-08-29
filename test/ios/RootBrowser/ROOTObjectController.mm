@@ -21,6 +21,63 @@
 #import "TObject.h"
 #import "IOSPad.h"
 
+//'L' postfix is for landscape, 'P' is for portrait.
+
+
+////Main view (self.view):
+
+//X and Y are the same for portrait and landscape orientation.
+static const CGFloat viewX = 0.f;
+static const CGFloat viewY = 0.f;
+
+//portrait - 768 x 1004 (20 Y pixels are taken by iOS).
+static const CGFloat viewWP = 768.f;
+static const CGFloat viewHP = 1004.f;
+
+//landscape - 1024 x 748 (20 Y pixels are taken by iOS).
+static const CGFloat viewWL = 1024.f;
+static const CGFloat viewHL = 748.f;
+
+////Scroll view:
+
+//X and Y are the same for landscape and portrait.
+static const CGFloat scrollX = 0.f;
+static const CGFloat scrollY = 44.f;//Navigation bar height.
+
+//portrait - 768 x 960 (44 Y pixels from parent are taken by navigation bar).
+static const CGFloat scrollWP = 768.f;
+static const CGFloat scrollHP = 960.f;
+
+//landscape - 1024 x 704 (44 Y pixels from parent are taken by navigation bar).
+static const CGFloat scrollWL = 1024.f;
+static const CGFloat scrollHL = 704.f;
+
+//Default pad's width and height,
+//when not zoomed, without editor
+//or with editor in landscape orientation.
+static const CGFloat padW = 600.f;
+static const CGFloat padH = 600.f;
+
+//This is pad's width and height, when
+//pad is not zoomed and editor is visible,
+//device orientation is portrait.
+static const CGFloat padWSmall = 500.f;
+static const CGFloat padHSmall = 500.f;
+
+static const CGFloat padXNoEditorP = scrollWP / 2 - padW / 2;
+static const CGFloat padYNoEditorP = scrollHP / 2 - padH / 2;
+static const CGFloat padXNoEditorL = scrollWL / 2 - padW / 2;
+static const CGFloat padYNoEditorL = scrollHL / 2 - padH / 2;
+
+//X and Y for pad (no zoom) with editor in portrait orientation:
+static const CGFloat padXWithEditorP = 20.f;
+static const CGFloat padYWithEditorP = scrollHP / 2 - padHSmall / 2;
+
+//X and Y for pad (no zoom) with editor in landscape orientation:
+static const CGFloat padXWithEditorL = 100.f;
+static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
+
+
 @implementation ROOTObjectController
 
 @synthesize scrollView;
@@ -28,17 +85,16 @@
 //____________________________________________________________________________________________________
 - (void) correctPadFrameNoEditor : (UIInterfaceOrientation) orientation
 {
-   CGRect padFrame = padView.frame;
-   
-   padFrame.size.width = 600.f;
-   padFrame.size.height = 600.f;
+   //Correct the sizes and coordinates of a pad's view in
+   //case no editor is visible and a pad was not scaled.
+   CGRect padFrame = CGRectMake(0.f, 0.f, padW, padH);
    
    if (UIInterfaceOrientationIsPortrait(orientation)) {
-      padFrame.origin.x = 384.f - padFrame.size.width / 2;
-      padFrame.origin.y = 480.f - padFrame.size.height / 2;
+      padFrame.origin.x = padXNoEditorP;
+      padFrame.origin.y = padYNoEditorP;
    } else {
-      padFrame.origin.x = 512.f - padFrame.size.width / 2;
-      padFrame.origin.y = 352.f - padFrame.size.height / 2;
+      padFrame.origin.x = padXNoEditorL;
+      padFrame.origin.y = padYNoEditorL;
    }
    
    padView.frame = padFrame;
@@ -49,20 +105,17 @@
 {
    //The most tricky part, since this code can be called
    //for animation.
-   CGRect padFrame = padView.frame;
+   CGRect padFrame = CGRectMake(0.f, 0.f, padW, padH);
 
    if (UIInterfaceOrientationIsPortrait(orientation)) {
-      padFrame.size.width = 500;
-      padFrame.size.height = 500;
+      padFrame.size.width = padWSmall;
+      padFrame.size.height = padHSmall;
       
-      padFrame.origin.x = 20.f;
-      padFrame.origin.y = 480.f - padFrame.size.height / 2;
+      padFrame.origin.x = padXWithEditorP;
+      padFrame.origin.y = padYWithEditorP;
    } else {
-      padFrame.size.width = 600;
-      padFrame.size.height = 600;
-      
-      padFrame.origin.x = 100.f;
-      padFrame.origin.y = 352.f - padFrame.size.height / 2;
+      padFrame.origin.x = padXWithEditorL;
+      padFrame.origin.y = padYWithEditorL;
    }
    
    padView.frame = padFrame;
@@ -112,6 +165,8 @@
 //____________________________________________________________________________________________________
 - (void) correctPadFrameForOrientation : (UIInterfaceOrientation) orientation
 {
+   //Change pad's x,y and (possibly) w and h for different orientation
+   //and editor hidden/visible.
    if (!zoomed) {
       if (editorView.hidden)
          [self correctPadFrameNoEditor : orientation];
@@ -131,19 +186,19 @@
    CGRect mainFrame;
    CGRect scrollFrame;
 
-   if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
-      mainFrame = CGRectMake(0.f, 0.f, 768.f, 1004.f);
-      scrollFrame = CGRectMake(0.f, 44.f, 768.f, 960.f);
+   if (UIInterfaceOrientationIsPortrait(orientation)) {
+      mainFrame = CGRectMake(viewX, viewY, viewWP, viewHP);
+      scrollFrame = CGRectMake(scrollX, scrollY, scrollWP, scrollHP);
    } else {
-      mainFrame = CGRectMake(0.f, 0.f, 1024.f, 748.f);
-      scrollFrame = CGRectMake(0.f, 44.f, 1024.f, 704.f);
+      mainFrame = CGRectMake(viewX, viewY, viewWL, viewHL);
+      scrollFrame = CGRectMake(scrollX, scrollY, scrollWL, scrollHL);
    }
    
    self.view.frame = mainFrame;
    self.scrollView.frame = scrollFrame;
 
-
-   const CGRect editorFrame = CGRectMake(mainFrame.size.width - [EditorView editorWidth], 100, [EditorView editorWidth], mainFrame.size.height - 200);
+   const CGFloat editorAddY = 100.f;
+   const CGRect editorFrame = CGRectMake(mainFrame.size.width - [EditorView editorWidth], editorAddY, [EditorView editorWidth], mainFrame.size.height - 2 * editorAddY);
    editorView.frame = editorFrame;
    [editorView correctFrames];
    
@@ -160,7 +215,7 @@
    [self view];
    
    if (self) {
-      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Edit" style:UIBarButtonItemStyleBordered target:self action:@selector(showEditor)];
+      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Show editor" style : UIBarButtonItemStyleBordered target : self action : @selector(showEditor)];
 
    
       editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
@@ -168,9 +223,9 @@
       log = [[PadLogEditor alloc] initWithNibName:@"PadLogEditor" bundle:nil];
       fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
 
-      [editorView addSubEditor:fill.view withName:@"Fill"];
-      [editorView addSubEditor:grid.view withName:@"Ticks and grid"];
-      [editorView addSubEditor:log.view withName:@"Log scales"];
+      [editorView addSubEditor : fill.view withName : @"Fill"];
+      [editorView addSubEditor : grid.view withName : @"Ticks and grid"];
+      [editorView addSubEditor : log.view withName : @"Log scales"];
       [self.view addSubview : editorView];
       //
       scrollView.delegate = self;
@@ -183,8 +238,8 @@
       //Create padView, pad.
       //
       const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
-      const CGRect padRect = CGRectMake(padCenter.x - 300.f, padCenter.y - 300.f, 600.f, 600.f);
-      pad = new ROOT_iOS::Pad(600., 600.);
+      const CGRect padRect = CGRectMake(padCenter.x - padW / 2, padCenter.y - padH / 2, padW, padH);
+      pad = new ROOT_iOS::Pad(padW, padH);
       padView = [[PadView alloc] initWithFrame : padRect controller : self forPad : pad];
       [scrollView addSubview : padView];
       [padView release];
@@ -255,11 +310,13 @@
    [self correctPadFrameForOrientation : self.interfaceOrientation];
    
    if (!editorView.hidden) {
-      [padView turnOnEditMode];
-      scrollView.editMode = YES;
+      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Hide editor" style:UIBarButtonItemStyleBordered target : self action : @selector(showEditor)];
+      //[padView turnOnEditMode];
+      //scrollView.editMode = YES;
    } else {
-      [padView turnOffEditoMode];
-      scrollView.editMode = NO;
+      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Show editor" style : UIBarButtonItemStyleBordered target : self action : @selector(showEditor)];
+      //[padView turnOffEditoMode];
+      //scrollView.editMode = NO;
 
       //If editor desappears and orientation is portrait, the
       //padView sizes has changed, the picture must be updated.
@@ -316,12 +373,12 @@
    const CGPoint offset = [scroll contentOffset];
    const CGRect newFrame = padView.frame;
   
-   [scroll setZoomScale:1.f];
+   [scroll setZoomScale : 1.f];
    scroll.contentSize = newFrame.size;
    scroll.contentOffset = offset;
 
-   scroll.minimumZoomScale = 600.f / newFrame.size.width;
-   scroll.maximumZoomScale = 1280.f / newFrame.size.width;
+   scroll.minimumZoomScale = padW / newFrame.size.width;
+   scroll.maximumZoomScale = 2 * padW / newFrame.size.width;
 
    padView.frame = newFrame;
 
@@ -337,22 +394,20 @@
 
    if (zoomed) {
       //maximize
+      [scrollView setZoomScale : 2.f];
+      [self scrollViewDidEndZooming : scrollView withView : padView atScale : 2.f];
    } else {
-
-      [padView retain];
-      [padView removeFromSuperview];
-      padView.frame = CGRectMake(0.f, 0.f, 600.f, 600.f);
-      [scrollView setZoomScale:1.f];
+      //[padView retain];
+      //[padView removeFromSuperview];
+      padView.frame = CGRectMake(0.f, 0.f, padW, padH);
       scrollView.maximumZoomScale = 2.f;
       scrollView.minimumZoomScale = 1.f;
       scrollView.contentOffset = CGPointZero;
-      [scrollView addSubview : padView];
-      [padView release];
+      //[scrollView addSubview : padView];
+      //[padView release];
       [padView setNeedsDisplay];
       [self correctFramesForOrientation : self.interfaceOrientation];
    }
-   
-   
 }
 
 @end
