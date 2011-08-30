@@ -184,13 +184,6 @@
    delete pad;
 }
 
-/*
-//____________________________________________________________________________________________________
-- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
-{
-   [self correctFrames];
-}
-*/
 //____________________________________________________________________________________________________
 - (void) activateForFile : (ROOT_iOS::FileContainer *)container
 {
