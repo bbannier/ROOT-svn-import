@@ -134,7 +134,7 @@
 {
    //This is zoom/unzoom action.
    //NSLog(@"double tap");
-   [controller adjustPadView];
+   [controller handleDoubleTapOnPad];
 }
 
 //_________________________________________________________________

@@ -219,7 +219,7 @@
       objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
    
    objectController.navigationItem.title = [NSString stringWithFormat : @"%s", shortcut.rootObject->GetName()];
-   [objectController setObject : shortcut];
+   [objectController setObjectFromShortcut : shortcut];
    [self.navigationController pushViewController : objectController animated : YES];
 }
 

@@ -215,7 +215,7 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
    [self view];
    
    if (self) {
-      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Show editor" style : UIBarButtonItemStyleBordered target : self action : @selector(showEditor)];
+      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Show editor" style : UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
 
    
       editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
@@ -303,25 +303,26 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 }
 
 //____________________________________________________________________________________________________
-- (void) showEditor
+- (void) resetEditorButton
+{
+   if (!editorView.hidden)
+      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Hide editor" style:UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
+   else
+      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Show editor" style : UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
+}
+
+//____________________________________________________________________________________________________
+- (void) toggleEditor
 {
    editorView.hidden = !editorView.hidden;
+   [self resetEditorButton];
 
    [self correctPadFrameForOrientation : self.interfaceOrientation];
-   
-   if (!editorView.hidden) {
-      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Hide editor" style:UIBarButtonItemStyleBordered target : self action : @selector(showEditor)];
-      //[padView turnOnEditMode];
-      //scrollView.editMode = YES;
-   } else {
-      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Show editor" style : UIBarButtonItemStyleBordered target : self action : @selector(showEditor)];
-      //[padView turnOffEditoMode];
-      //scrollView.editMode = NO;
 
-      //If editor desappears and orientation is portrait, the
-      //padView sizes has changed, the picture must be updated.
-      if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
-         [padView setNeedsDisplay];
+   
+   if (editorView.hidden && UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
+      //Editor is hidden, pad sizes were changed, need to redraw the picture.
+      [padView setNeedsDisplay];
    }
    
    //Do animation.
@@ -344,13 +345,30 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 }
 
 //____________________________________________________________________________________________________
-- (void) setObject : (ObjectShortcut *)shortcut
+- (void) resetPadAndScroll
 {
+   //Reset the pad sizes, reset the scroll, hide the editor.
+   zoomed = NO;
+   padView.transform = CGAffineTransformIdentity;
+   editorView.hidden = YES;
+   padView.frame = CGRectMake(0.f, 0.f, padW, padH);
+   scrollView.contentOffset = CGPointZero;
+   scrollView.maximumZoomScale = 2.f;
+   scrollView.minimumZoomScale = 1.f;
+}
+
+//____________________________________________________________________________________________________
+- (void) setObjectFromShortcut : (ObjectShortcut *)shortcut
+{
+   [self resetPadAndScroll];
+   [self resetEditorButton];
+
    rootObject = shortcut.rootObject;
 
    pad->cd();
    pad->Clear();
    rootObject->Draw([shortcut.drawOption cStringUsingEncoding : [NSString defaultCStringEncoding]]);//Preserve option!!!
+
    [padView setNeedsDisplay];
 }
 
@@ -388,7 +406,7 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 }
 
 //_________________________________________________________________
-- (void) adjustPadView
+- (void) handleDoubleTapOnPad
 {
    zoomed = !zoomed;
 
