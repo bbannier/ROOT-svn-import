@@ -17,11 +17,16 @@
    IBOutlet UIScrollView *scrollView;
    
    IBOutlet UIView *fileOpenView;
+   IBOutlet UITextField *fileNameField;
 }
 
 @property (nonatomic, retain) UIScrollView *scrollView;
 
 - (void) fileWasSelected : (FileShortcut*) shortcut;
 - (void) addFileShortcut : (NSString *) fileName;
+- (void) hideFileOpenView;
+
+- (IBAction) textFieldDidEndOnExit : (id) sender;
+- (IBAction) textFieldEditingDidEnd : (id) sender;
 
 @end
