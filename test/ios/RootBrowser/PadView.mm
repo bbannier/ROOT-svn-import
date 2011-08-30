@@ -163,7 +163,10 @@
    CGContextFillRect(ctx, rect);
    //Set context and paint pad's contents
    //with special colors (color == object's identity)
+   pad->SetViewWH(rect.size.width, rect.size.height);
+
    pad->cd();
+
    pad->SetContext(ctx);
    pad->PaintForSelection();
    
@@ -249,16 +252,24 @@
 - (void) handleSingleTap : (UITapGestureRecognizer*)tap
 {
    //Make a selection, fill the editor.
-   const CGPoint tapPt = [tap locationInView : self];
-      
+   CGPoint tapPt = [tap locationInView : self];
+   
+//   NSLog(@"point is %g %g", tapPt.x, tapPt.y);
+   //Scale point to picking buffer sizes.
+   const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
+   tapPt.x *= scale;
+   tapPt.y *= scale;
+
+//   NSLog(@"after re-scale point is %g %g", tapPt.x, tapPt.y);
+   
    if (!pad->SelectionIsValid() && ![self initPadPicking]) {
-      NSLog(@"Picking does not work");
+//      NSLog(@"Picking does not work");
       return;
    }
       
-   NSLog(@"try to pick");
+//   NSLog(@"try to pick");
    pad->Pick(tapPt.x, tapPt.y);
-   NSLog(@"results:");
+//   NSLog(@"results:");
 
    TObject * obj = pad->GetSelected();
       
