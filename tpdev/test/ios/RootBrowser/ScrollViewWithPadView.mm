@@ -7,7 +7,7 @@
 {  
    UIView * v = [super hitTest : point withEvent : event];
    
-   NSLog(@"special processing");
+//   NSLog(@"special processing");
 
    if ([v isKindOfClass : [PadView class]]) {
       PadView *padView = (PadView *)v;
