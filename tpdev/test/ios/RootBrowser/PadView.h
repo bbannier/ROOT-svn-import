@@ -30,6 +30,8 @@ class Pad;
    UILongPressGestureRecognizer *longPress;
    
    ROOTObjectController *controller;
+   
+   CGFloat currentScale;
 
    BOOL panActive;
 }

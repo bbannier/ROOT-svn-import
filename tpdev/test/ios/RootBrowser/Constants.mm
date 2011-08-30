@@ -41,8 +41,8 @@ const float padH = 600.f;
 //This is pad's width and height, when
 //pad is not zoomed and editor is visible,
 //device orientation is portrait.
-const float padWSmall = 500.f;
-const float padHSmall = 500.f;
+const float padWSmall = 600.f;//30.08 : I decided to make the sizes equal for all possible orientations and states.
+const float padHSmall = 600.f;
 
 const float padXNoEditorP = scrollWP / 2 - padW / 2;
 const float padYNoEditorP = scrollHP / 2 - padH / 2;
