@@ -15,68 +15,12 @@
 #import "PadLogEditor.h"
 #import "FillEditor.h"
 #import "EditorView.h"
+#import "Constants.h"
 #import "PadView.h"
 
 //C++ (ROOT) imports.
 #import "TObject.h"
 #import "IOSPad.h"
-
-//'L' postfix is for landscape, 'P' is for portrait.
-
-
-////Main view (self.view):
-
-//X and Y are the same for portrait and landscape orientation.
-static const CGFloat viewX = 0.f;
-static const CGFloat viewY = 0.f;
-
-//portrait - 768 x 1004 (20 Y pixels are taken by iOS).
-static const CGFloat viewWP = 768.f;
-static const CGFloat viewHP = 1004.f;
-
-//landscape - 1024 x 748 (20 Y pixels are taken by iOS).
-static const CGFloat viewWL = 1024.f;
-static const CGFloat viewHL = 748.f;
-
-////Scroll view:
-
-//X and Y are the same for landscape and portrait.
-static const CGFloat scrollX = 0.f;
-static const CGFloat scrollY = 44.f;//Navigation bar height.
-
-//portrait - 768 x 960 (44 Y pixels from parent are taken by navigation bar).
-static const CGFloat scrollWP = 768.f;
-static const CGFloat scrollHP = 960.f;
-
-//landscape - 1024 x 704 (44 Y pixels from parent are taken by navigation bar).
-static const CGFloat scrollWL = 1024.f;
-static const CGFloat scrollHL = 704.f;
-
-//Default pad's width and height,
-//when not zoomed, without editor
-//or with editor in landscape orientation.
-static const CGFloat padW = 600.f;
-static const CGFloat padH = 600.f;
-
-//This is pad's width and height, when
-//pad is not zoomed and editor is visible,
-//device orientation is portrait.
-static const CGFloat padWSmall = 500.f;
-static const CGFloat padHSmall = 500.f;
-
-static const CGFloat padXNoEditorP = scrollWP / 2 - padW / 2;
-static const CGFloat padYNoEditorP = scrollHP / 2 - padH / 2;
-static const CGFloat padXNoEditorL = scrollWL / 2 - padW / 2;
-static const CGFloat padYNoEditorL = scrollHL / 2 - padH / 2;
-
-//X and Y for pad (no zoom) with editor in portrait orientation:
-static const CGFloat padXWithEditorP = 20.f;
-static const CGFloat padYWithEditorP = scrollHP / 2 - padHSmall / 2;
-
-//X and Y for pad (no zoom) with editor in landscape orientation:
-static const CGFloat padXWithEditorL = 100.f;
-static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
-
 
 @implementation ROOTObjectController
 
@@ -87,6 +31,8 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 {
    //Correct the sizes and coordinates of a pad's view in
    //case no editor is visible and a pad was not scaled.
+   using namespace ROOT_IOSBrowser;
+   
    CGRect padFrame = CGRectMake(0.f, 0.f, padW, padH);
    
    if (UIInterfaceOrientationIsPortrait(orientation)) {
@@ -105,6 +51,8 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 {
    //The most tricky part, since this code can be called
    //for animation.
+   using namespace ROOT_IOSBrowser;
+   
    CGRect padFrame = CGRectMake(0.f, 0.f, padW, padH);
 
    if (UIInterfaceOrientationIsPortrait(orientation)) {
@@ -183,6 +131,8 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 //____________________________________________________________________________________________________
 - (void) correctFramesForOrientation : (UIInterfaceOrientation) orientation
 {
+   using namespace ROOT_IOSBrowser;
+
    CGRect mainFrame;
    CGRect scrollFrame;
 
@@ -210,6 +160,8 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 //____________________________________________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
+   using namespace ROOT_IOSBrowser;
+
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
    
    [self view];
@@ -348,6 +300,8 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 - (void) resetPadAndScroll
 {
    //Reset the pad sizes, reset the scroll, hide the editor.
+   using namespace ROOT_IOSBrowser;
+   
    zoomed = NO;
    padView.transform = CGAffineTransformIdentity;
    editorView.hidden = YES;
@@ -388,6 +342,8 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 //_________________________________________________________________
 - (void)scrollViewDidEndZooming:(UIScrollView *)scroll withView:(UIView *)view atScale:(float)scale
 {
+   using namespace ROOT_IOSBrowser;
+
    const CGPoint offset = [scroll contentOffset];
    const CGRect newFrame = padView.frame;
   
@@ -408,6 +364,8 @@ static const CGFloat padYWithEditorL = scrollHL / 2 - padH / 2;
 //_________________________________________________________________
 - (void) handleDoubleTapOnPad
 {
+   using namespace ROOT_IOSBrowser;
+
    zoomed = !zoomed;
 
    if (zoomed) {

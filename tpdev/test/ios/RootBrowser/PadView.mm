@@ -102,25 +102,6 @@
       [self removeGestureRecognizer : pan];
    }
 }
-/*
-//_________________________________________________________________
-- (void) turnOnEditMode
-{
-   [self addGestureRecognizer : singleTap];
-   [self addGestureRecognizer : doubleTap];
-   [self addGestureRecognizer : longPress];
-}
-
-//_________________________________________________________________
-- (void) turnOffEditoMode
-{
-   [self removeGestureRecognizer : singleTap];
-   [self removeGestureRecognizer:doubleTap];
-   [self removeGestureRecognizer:longPress];
-   
-   if (panActive)
-      [self removeGestureRecognizer : pan];
-}*/
 
 //_________________________________________________________________
 - (void) handleSingleTap : (UITapGestureRecognizer*)tap
