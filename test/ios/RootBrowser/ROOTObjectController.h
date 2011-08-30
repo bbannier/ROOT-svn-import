@@ -44,7 +44,7 @@ class TObject;
 
 @property (nonatomic, retain) UIScrollView *scrollView;
 
-- (void) setObject : (ObjectShortcut *)object;
-- (void) adjustPadView;
+- (void) setObjectFromShortcut : (ObjectShortcut *)object;
+- (void) handleDoubleTapOnPad;
 
 @end

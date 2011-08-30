@@ -19,7 +19,6 @@ class Pad;
 
 }
 
-//@class SelectionView;
 @class ROOTObjectController;
 
 @interface PadView : UIView {
@@ -45,14 +44,9 @@ class Pad;
 - (void) addPanRecognizer;
 - (void) removePanRecognizer;
 
-//- (void) turnOnEditMode;
-//- (void) turnOffEditoMode;
-
 - (void) handleSingleTap : (UITapGestureRecognizer*)tapGesture;
 - (void) handleDoubleTap : (UITapGestureRecognizer*)tapGesture;
 - (void) handlePan : (UIPanGestureRecognizer*)panGesture;
 - (void) handleLongPressGesture : (UILongPressGestureRecognizer *)longPress;
-
-//- (void) setSelectionView : (SelectionView *) sv;
 
 @end
