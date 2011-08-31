@@ -131,7 +131,6 @@
 {
    //const CGPoint panPoint = [panGesture locationInView : self];
    //Move (if can) the selected object.
-   NSLog(@"pan in pad view works");
 }
 
 //_________________________________________________________________
@@ -140,14 +139,11 @@
    //const CGPoint pressPoint = [longPress locationInView : self];
    //Select the object under press.
    if (press.state == UIGestureRecognizerStateBegan) {
-      NSLog(@"try to select");
       //Do selection.
    } else if (press.state == UIGestureRecognizerStateChanged) {
-      NSLog(@"move the selected object");
       //Move the selected object, if possible.
    } else if (press.state == UIGestureRecognizerStateEnded) {
       //
-      NSLog(@"stop the motion");
    }
    //Move it, if possible.
 }
@@ -275,16 +271,8 @@
       
    pad->Pick(tapPt.x, tapPt.y);
 
-   TObject * obj = pad->GetSelected();
-      
-   if (obj) {
-      //show the selected object in a selection view.
-      [selectionView setNeedsDisplay];
-      selectionView.hidden = NO;
-   } else {
-      selectionView.hidden = YES;
-   }
-   
+   [controller objectWasSelected : pad->GetSelected()];
+
    //Tell controller that selection has probably changed.
 }
 

@@ -1,8 +1,13 @@
+#import "ROOTObjectController.h"
 #import "LineStyleEditor.h"
 #import "LineWidthCell.h"
 #import "LineStyleCell.h"
 #import "Constants.h"
 #import "ColorCell.h"
+
+//C++ (ROOT) imports.
+#import "TAttLine.h"
+#import "TObject.h"
 
 //TODO: remove line related constants to IOSLineStyles.h/*.cxx
 
@@ -151,8 +156,39 @@ static const CGRect bigCellFrame = CGRectMake(0.f, 0.f, 180.f, 44.f);
       [self setNewColor : row];
    else if (thePickerView == patternPicker)
       [self setNewPattern : row];*/
-   NSLog(@"component %d row %d", component, row);
+//   NSLog(@"component %d row %d", component, row);
+   if (thePickerView == lineColorWidthPicker) {
+      if (!component) {
+         const unsigned colorIndex = ROOT_IOSBrowser::colorIndices[row];
+         object->SetLineColor(colorIndex);
+      } else {
+         const unsigned width = row + 1;
+         object->SetLineWidth(width);
+      }
+   } else {
+      const unsigned lineStyle = row + 1;
+      object->SetLineStyle(lineStyle);
+   }
+   
+   [controller objectWasModifiedByEditor];
 }
 
+//_________________________________________________________________
+- (void) setController : (ROOTObjectController *) c
+{
+   controller = c;
+}
+
+//_________________________________________________________________
+- (void) setObject : (TObject *) obj
+{
+   object = dynamic_cast<TAttLine *>(obj);
+
+//   const Color_t currentColor = object->GetLineColor();
+//   const Width_t currentWidth = object->GetLineWidth();
+//   const Style_t currentStyle = object->GetLineStyle();
+   
+//   if (currentWidth >= 0 && currentWidth <= 15)
+}
 
 @end

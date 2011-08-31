@@ -120,7 +120,7 @@
 }
 
 //_________________________________________________________________
-- (void) clearEditorView
+- (void) removeAllEditors
 {
    //Remove all sub-editors.
    for (unsigned i = 0; i < nEditors; ++i) {

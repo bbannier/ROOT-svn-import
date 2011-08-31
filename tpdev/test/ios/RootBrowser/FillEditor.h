@@ -8,9 +8,10 @@
 
 #import <UIKit/UIKit.h>
 
-@class NSMutableArray;
+@class ROOTObjectController;
 
 class TAttFill;
+class TObject;
 
 @interface FillEditor : UIViewController {
    IBOutlet UIPickerView *colorPicker;
@@ -21,11 +22,11 @@ class TAttFill;
    
    TAttFill *filledObject;
    
-   id parentController;
+   ROOTObjectController *parentController;
 }
 
-- (void) setParentController : (id) p;
-- (void) setObject : (TAttFill*) obj;
+- (void) setController : (ROOTObjectController *) p;
+- (void) setObject : (TObject*) obj;
 
 
 @end
