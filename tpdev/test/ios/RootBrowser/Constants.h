@@ -3,7 +3,8 @@
 
 namespace ROOT_IOSBrowser {
 
-//Geometry: sizes, positioins.
+///////////////////////////////////////////////////////////////////////
+//Pad's geometry: sizes, positioins.
 //'L' postfix is for landscape, 'P' is for portrait
 //device orientation.
 
@@ -59,6 +60,18 @@ extern const float padYWithEditorP;
 //X and Y for pad (no zoom) with editor in landscape orientation:
 extern const float padXWithEditorL;
 extern const float padYWithEditorL;
+
+///////////////////////////////////////////////////////////////////////
+//Editor's constants;
+enum {
+
+nROOTDefaultColors = 16
+
+};
+
+extern const double predefinedFillColors[nROOTDefaultColors][3];
+//Color indices in a standard ROOT's color selection control.
+extern const unsigned colorIndices[nROOTDefaultColors];
 
 }
 

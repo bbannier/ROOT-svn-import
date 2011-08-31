@@ -10,6 +10,7 @@
 
 #import "ScrollViewWithPadView.h"
 #import "ROOTObjectController.h"
+#import "LineStyleEditor.h"
 #import "ObjectShortcut.h"
 #import "PadGridEditor.h"
 #import "SelectionView.h"
@@ -172,13 +173,16 @@
 
    
       editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
-      grid = [[PadGridEditor alloc] initWithNibName:@"PadGridEditor" bundle:nil];
+  /*    grid = [[PadGridEditor alloc] initWithNibName:@"PadGridEditor" bundle:nil];
       log = [[PadLogEditor alloc] initWithNibName:@"PadLogEditor" bundle:nil];
       fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
 
       [editorView addSubEditor : fill.view withName : @"Fill"];
       [editorView addSubEditor : grid.view withName : @"Ticks and grid"];
-      [editorView addSubEditor : log.view withName : @"Log scales"];
+      [editorView addSubEditor : log.view withName : @"Log scales"];*/
+      lineEditor = [[LineStyleEditor alloc] initWithNibName : @"LineStyleEditor" bundle : nil];
+      [editorView addSubEditor: lineEditor.view withName : @"Line style"];
+      
       [self.view addSubview : editorView];
       //
       scrollView.delegate = self;
@@ -320,6 +324,7 @@
 {
    [self resetPadAndScroll];
    [self resetEditorButton];
+ //  [editorView clearEditorView];
 
    rootObject = shortcut.rootObject;
 
