@@ -5,8 +5,8 @@
 #import <CoreGraphics/CoreGraphics.h>
 #import <CoreGraphics/CGContext.h>
 
-//#import "SelectionView.h"
 #import "ROOTObjectController.h"
+#import "SelectionView.h"
 #import "Constants.h"
 #import "PadView.h"
 
@@ -17,6 +17,8 @@
 #import "TClass.h"
 
 @implementation PadView
+
+@synthesize selectionView;
 
 //_________________________________________________________________
 - (id) initWithFrame : (CGRect)frame controller : (ROOTObjectController *)c forPad : (ROOT_iOS::Pad*)pd
@@ -42,6 +44,12 @@
       [self addGestureRecognizer : doubleTap];
       [self addGestureRecognizer : longPress];
       //
+      frame.origin = CGPointZero;
+      selectionView = [[SelectionView alloc] initWithFrame : frame withPad : pad];
+      selectionView.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+      selectionView.hidden = YES;
+      [self addSubview : selectionView];
+      [selectionView release];
    }
 
    return self;
@@ -73,6 +81,9 @@
    pad->cd();
    pad->SetContext(ctx);
    pad->Paint();
+   
+   if (!selectionView.hidden)
+      [selectionView setNeedsDisplay];
 }
 
 //_________________________________________________________________
@@ -254,33 +265,27 @@
    //Make a selection, fill the editor.
    CGPoint tapPt = [tap locationInView : self];
    
-//   NSLog(@"point is %g %g", tapPt.x, tapPt.y);
    //Scale point to picking buffer sizes.
    const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
    tapPt.x *= scale;
    tapPt.y *= scale;
 
-//   NSLog(@"after re-scale point is %g %g", tapPt.x, tapPt.y);
-   
-   if (!pad->SelectionIsValid() && ![self initPadPicking]) {
-//      NSLog(@"Picking does not work");
+   if (!pad->SelectionIsValid() && ![self initPadPicking])
       return;
-   }
       
-//   NSLog(@"try to pick");
    pad->Pick(tapPt.x, tapPt.y);
-//   NSLog(@"results:");
 
    TObject * obj = pad->GetSelected();
       
    if (obj) {
       //show the selected object in a selection view.
-      NSLog(@"Object was selected - %s", obj->IsA()->GetName());
+      [selectionView setNeedsDisplay];
+      selectionView.hidden = NO;
    } else {
-      NSLog(@"No object was selected, pad itself selected");
+      selectionView.hidden = YES;
    }
+   
+   //Tell controller that selection has probably changed.
 }
-
-
 
 @end
