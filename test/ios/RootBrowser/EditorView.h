@@ -41,6 +41,7 @@ enum {
 + (CGFloat) scrollWidth;
 + (CGFloat) scrollHeight;
 
+- (void) clearEditorView;
 - (void) propertyUpdated;
 - (void) addSubEditor : (UIView *)element withName : (NSString *)editorName;
 - (void) correctFrames;

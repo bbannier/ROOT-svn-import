@@ -120,6 +120,21 @@
 }
 
 //_________________________________________________________________
+- (void) clearEditorView
+{
+   //Remove all sub-editors.
+   for (unsigned i = 0; i < nEditors; ++i) {
+      [plates[i] removeFromSuperview];
+      [containers[i] removeFromSuperview];
+   }
+   
+   nEditors = 0;
+   currentState = 0;
+   nStates = 0;
+   animation = NO;
+}
+
+//_________________________________________________________________
 - (void) propertyUpdated
 {
 }

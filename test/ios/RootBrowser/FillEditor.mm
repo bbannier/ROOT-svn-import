@@ -1,5 +1,6 @@
 #import "PatternCell.h"
 #import "FillEditor.h"
+#import "Constants.h"
 #import "ColorCell.h"
 
 //C++ (ROOT) imports:
@@ -8,38 +9,17 @@
 
 
 //Fill colors, visible in a ROOT's default color-picker (in editors).
-const unsigned nROOTDefaultColors = 16;
-const CGFloat defaultCellW = 80.f;
-const CGFloat defaultCellH = 44.f;
-
-static const double predefinedFillColors[nROOTDefaultColors][3] = 
-{
-{1., 1., 1.},
-{0., 0., 0.},
-{251 / 255., 0., 24 / 255.},
-{40 / 255., 253 / 255., 44 / 255.},
-{31 / 255., 29 / 255., 251 / 255.},
-{253 / 255., 254 / 255., 52 / 255.},
-{253 / 255., 29 / 255., 252 / 255.},
-{53 / 255., 1., 254 / 255.},
-{94 / 255., 211 / 255., 90 / 255.},
-{92 / 255., 87 / 255., 214 / 255.},
-{135 / 255., 194 / 255., 164 / 255.},
-{127 / 255., 154 / 255., 207 / 255.},
-{211 / 255., 206 / 255., 138 / 255.},
-{220 / 255., 185 / 255., 138 / 255.},
-{209 / 255., 89 / 255., 86 / 255.},
-{147 / 255., 29 / 255., 251 / 255.}
-};
-
-//Color indices in a standard ROOT's color selection control.
-static const unsigned colorIndices[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 38, 41, 42, 50, 51};
+//TODO: check, if in Obj-C++ constants have internal linkage.
+static const CGFloat defaultCellW = 80.f;
+static const CGFloat defaultCellH = 44.f;
 
 @implementation FillEditor
 
 //_________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
+   using namespace ROOT_IOSBrowser;
+
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
 
    if (self) {
@@ -101,6 +81,8 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 38, 
 //_________________________________________________________________
 - (void) setNewColor : (NSInteger) cellIndex
 {
+   using namespace ROOT_IOSBrowser;
+
    if (filledObject && parentController) {
       if (cellIndex >= 0 && cellIndex < nROOTDefaultColors) {
          filledObject->SetFillColor(colorIndices[cellIndex]);
