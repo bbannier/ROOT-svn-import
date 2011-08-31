@@ -12,6 +12,7 @@
 #import "ROOTObjectController.h"
 #import "ObjectShortcut.h"
 #import "PadGridEditor.h"
+#import "SelectionView.h"
 #import "PadLogEditor.h"
 #import "FillEditor.h"
 #import "EditorView.h"
@@ -304,8 +305,11 @@
    
    zoomed = NO;
    padView.transform = CGAffineTransformIdentity;
+   padView.selectionView.hidden = YES;
+   padView.selectionView.transform = CGAffineTransformIdentity;
    editorView.hidden = YES;
    padView.frame = CGRectMake(0.f, 0.f, padW, padH);
+   padView.selectionView.frame = CGRectMake(0.f, 0.f, padW, padH);
    scrollView.contentOffset = CGPointZero;
    scrollView.maximumZoomScale = 2.f;
    scrollView.minimumZoomScale = 1.f;
@@ -355,6 +359,7 @@
    scroll.maximumZoomScale = 2 * padW / newFrame.size.width;
 
    padView.frame = newFrame;
+   padView.selectionView.frame = CGRectMake(0.f, 0.f, newFrame.size.width, newFrame.size.height);
 
    [padView setNeedsDisplay];
    
@@ -376,6 +381,7 @@
       //[padView retain];
       //[padView removeFromSuperview];
       padView.frame = CGRectMake(0.f, 0.f, padW, padH);
+      padView.selectionView.frame = CGRectMake(0.f, 0.f, padW, padH);
       scrollView.maximumZoomScale = 2.f;
       scrollView.minimumZoomScale = 1.f;
       scrollView.contentOffset = CGPointZero;
