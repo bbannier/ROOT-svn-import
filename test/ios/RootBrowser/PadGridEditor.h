@@ -8,13 +8,24 @@
 
 #import <UIKit/UIKit.h>
 
+@class ROOTObjectController;
+
+class TVirtualPad;
+class TObject;
 
 @interface PadGridEditor : UIViewController {
    IBOutlet UISwitch *gridX;
    IBOutlet UISwitch *gridY;
    IBOutlet UISwitch *ticksX;
    IBOutlet UISwitch *ticksY;
+   
+   TVirtualPad *object;
+   
+   ROOTObjectController *controller;
 }
+
+- (void) setController : (ROOTObjectController *)c;
+- (void) setObject : (TObject*)o;
 
 - (IBAction) gridActivated : (UISwitch *) g;
 - (IBAction) ticksActivated : (UISwitch *) t;

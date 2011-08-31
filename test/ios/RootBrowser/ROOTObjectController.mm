@@ -15,6 +15,7 @@
 #import "PadGridEditor.h"
 #import "SelectionView.h"
 #import "PadLogEditor.h"
+#import "EditorRTTI.h"
 #import "FillEditor.h"
 #import "EditorView.h"
 #import "Constants.h"
@@ -173,15 +174,16 @@
 
    
       editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
-  /*    grid = [[PadGridEditor alloc] initWithNibName:@"PadGridEditor" bundle:nil];
+  
+      grid = [[PadGridEditor alloc] initWithNibName:@"PadGridEditor" bundle:nil];
+      [grid setController : self];
       log = [[PadLogEditor alloc] initWithNibName:@"PadLogEditor" bundle:nil];
+      [log setController : self];
       fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
-
-      [editorView addSubEditor : fill.view withName : @"Fill"];
-      [editorView addSubEditor : grid.view withName : @"Ticks and grid"];
-      [editorView addSubEditor : log.view withName : @"Log scales"];*/
+      [fill setController : self];
       lineEditor = [[LineStyleEditor alloc] initWithNibName : @"LineStyleEditor" bundle : nil];
-      [editorView addSubEditor: lineEditor.view withName : @"Line style"];
+      [lineEditor setController : self];
+
       
       [self.view addSubview : editorView];
       //
@@ -197,6 +199,13 @@
       const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
       const CGRect padRect = CGRectMake(padCenter.x - padW / 2, padCenter.y - padH / 2, padW, padH);
       pad = new ROOT_iOS::Pad(padW, padH);
+      selectedObject = pad;
+      
+      [self addObjectEditors];
+      [self setEditorValues];
+
+      currentEditors = ROOT_IOSBrowser::GetRequiredEditors(pad);
+      
       padView = [[PadView alloc] initWithFrame : padRect controller : self forPad : pad];
       [scrollView addSubview : padView];
       [padView release];
@@ -273,9 +282,7 @@
 {
    editorView.hidden = !editorView.hidden;
    [self resetEditorButton];
-
    [self correctPadFrameForOrientation : self.interfaceOrientation];
-
    
    if (editorView.hidden && UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
       //Editor is hidden, pad sizes were changed, need to redraw the picture.
@@ -395,6 +402,86 @@
       [padView setNeedsDisplay];
       [self correctFramesForOrientation : self.interfaceOrientation];
    }
+}
+
+#pragma mark - picking and editing.
+
+//_________________________________________________________________
+- (void) objectWasSelected : (TObject *)object
+{
+   if (object != selectedObject) {
+      //New object was selected.
+      if (object) {
+         selectedObject = object;
+         padView.selectionView.hidden = NO;
+         [padView.selectionView setNeedsDisplay];
+      } else {
+         selectedObject = pad;
+         padView.selectionView.hidden = YES;
+      }
+
+      const unsigned newEditors = ROOT_IOSBrowser::GetRequiredEditors(selectedObject);
+      if (newEditors != currentEditors) {
+         [self addObjectEditors];
+         currentEditors = newEditors;
+      }
+      
+      [self setEditorValues];
+   }
+}
+
+//_________________________________________________________________
+- (void) addObjectEditors
+{
+   using namespace ROOT_IOSBrowser;
+      
+   [editorView removeAllEditors];
+   
+   const unsigned editors = GetRequiredEditors(selectedObject);
+   
+   if (editors & kLineEditor) {
+      [editorView addSubEditor : lineEditor.view withName : @"Line style"];
+   }
+   
+   if (editors & kFillEditor) {
+      [editorView addSubEditor : fill.view withName : @"Fill"];
+   }
+
+   
+   if (editors & kPadEditor) {
+      [editorView addSubEditor : grid.view withName : @"Ticks and grid"];
+      [editorView addSubEditor : log.view withName : @"Log scales"];
+   }   
+}
+
+//_________________________________________________________________
+- (void) setEditorValues
+{
+   using namespace ROOT_IOSBrowser;
+
+   const unsigned editors = GetRequiredEditors(selectedObject);
+   
+   if (editors & kLineEditor) {
+      //[editorView addSubEditor : lineEditor.view withName : @"Line style"];
+      [lineEditor setObject : selectedObject];
+   }
+   
+   if (editors & kFillEditor) {
+      //[editorView addSubEditor : fill.view withName : @"Fill"];
+      [fill setObject : selectedObject];
+   }
+
+   
+   if (editors & kPadEditor) {
+      [grid setObject : selectedObject];
+      [log setObject : selectedObject];
+   }
+}
+
+//_________________________________________________________________
+- (void) objectWasModifiedByEditor
+{
+   [padView setNeedsDisplay];
 }
 
 @end

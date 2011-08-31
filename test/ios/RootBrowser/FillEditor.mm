@@ -1,3 +1,4 @@
+#import "ROOTObjectController.h"
 #import "PatternCell.h"
 #import "FillEditor.h"
 #import "Constants.h"
@@ -6,6 +7,7 @@
 //C++ (ROOT) imports:
 #import "IOSFillPatterns.h"
 #import "TAttFill.h"
+#import "TObject.h"
 
 
 //Fill colors, visible in a ROOT's default color-picker (in editors).
@@ -66,15 +68,15 @@ static const CGFloat defaultCellH = 44.f;
 }
 
 //_________________________________________________________________
-- (void) setParentController : (id) p
+- (void) setController : (ROOTObjectController *) p
 {
    parentController = p;
 }
 
 //_________________________________________________________________
-- (void) setObject : (TAttFill *)obj
+- (void) setObject : (TObject *)obj
 {
-   filledObject = obj;
+   filledObject = dynamic_cast<TAttFill *>(obj);
    //Here I have to extract fill color and pattern from TAttFill.
 }
 
@@ -86,7 +88,7 @@ static const CGFloat defaultCellH = 44.f;
    if (filledObject && parentController) {
       if (cellIndex >= 0 && cellIndex < nROOTDefaultColors) {
          filledObject->SetFillColor(colorIndices[cellIndex]);
-         [parentController propertyUpdated];
+         [parentController objectWasModifiedByEditor];
       }
    }
 }
@@ -97,11 +99,11 @@ static const CGFloat defaultCellH = 44.f;
    if (filledObject && parentController) {
       if (cellIndex > 0 && cellIndex <= ROOT_iOS::GraphicUtils::kPredefinedFillPatterns) {
          filledObject->SetFillStyle(3000 + cellIndex);
-         [parentController propertyUpdated];
       } else if (!cellIndex) {
          filledObject->SetFillStyle(1001);
-         [parentController propertyUpdated];
       }
+
+      [parentController objectWasModifiedByEditor];
    }
 }
 

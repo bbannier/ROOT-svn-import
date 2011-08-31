@@ -40,6 +40,9 @@ class TObject;
    PadView *padView;//View for pad.
    ROOT_iOS::Pad *pad;
    TObject *rootObject;
+   TObject *selectedObject;
+   
+   unsigned currentEditors;
    
    BOOL zoomed;
 }
@@ -48,5 +51,9 @@ class TObject;
 
 - (void) setObjectFromShortcut : (ObjectShortcut *)object;
 - (void) handleDoubleTapOnPad;
+- (void) objectWasSelected : (TObject *)object;
+- (void) objectWasModifiedByEditor;
+- (void) addObjectEditors;
+- (void) setEditorValues;
 
 @end
