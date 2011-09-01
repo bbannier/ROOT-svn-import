@@ -24,11 +24,6 @@ class Pad;
 
 @interface PadView : UIView {
    ROOT_iOS::Pad *pad;
-
-   UIPanGestureRecognizer *pan;
-   UITapGestureRecognizer *singleTap;
-   UITapGestureRecognizer *doubleTap;
-   UILongPressGestureRecognizer *longPress;
    
    ROOTObjectController *controller;
    
@@ -37,6 +32,11 @@ class Pad;
    BOOL panActive;
    
    SelectionView *selectionView;
+   
+   CGPoint tapPt;
+   BOOL processFirstTap;
+   BOOL processSecondTap;
+   BOOL processLongPress;
 }
 
 @property (nonatomic, assign) SelectionView *selectionView;
@@ -52,9 +52,7 @@ class Pad;
 - (void) removePanRecognizer;
 
 
-- (void) handleSingleTap : (UITapGestureRecognizer*)tapGesture;
-- (void) handleDoubleTap : (UITapGestureRecognizer*)tapGesture;
-- (void) handlePan : (UIPanGestureRecognizer*)panGesture;
-- (void) handleLongPressGesture : (UILongPressGestureRecognizer *)longPress;
+- (void) handleSingleTap;
+- (void) handleDoubleTap;
 
 @end

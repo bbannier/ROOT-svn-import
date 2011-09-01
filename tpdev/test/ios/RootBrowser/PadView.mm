@@ -12,9 +12,6 @@
 
 //C++ code (ROOT's ios module)
 #import "IOSPad.h"
-//FOR TEST PURPOSE ONLY:
-#import "TObject.h"
-#import "TClass.h"
 
 @implementation PadView
 
@@ -29,21 +26,6 @@
       controller = c;
       pad = pd;
       
-      //Create, but do not add.
-      pan = [[UIPanGestureRecognizer alloc] initWithTarget : self action : @selector(handlePan:)];
-      
-      singleTap = [[UITapGestureRecognizer alloc] initWithTarget : self action : @selector(handleSingleTap:)];
-      [singleTap setNumberOfTapsRequired : 1];
-      doubleTap = [[UITapGestureRecognizer alloc] initWithTarget : self action : @selector(handleDoubleTap:)];
-      [doubleTap setNumberOfTapsRequired : 2];
-      [singleTap requireGestureRecognizerToFail : doubleTap];
-      
-      longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPressGesture:)];
-      
-      [self addGestureRecognizer : singleTap];
-      [self addGestureRecognizer : doubleTap];
-      [self addGestureRecognizer : longPress];
-      //
       frame.origin = CGPointZero;
       selectionView = [[SelectionView alloc] initWithFrame : frame withPad : pad];
       selectionView.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
@@ -58,17 +40,13 @@
 //_________________________________________________________________
 - (void) dealloc
 {
-   [pan release];
-   [singleTap release];
-   [doubleTap release];
-   [longPress release];
    [super dealloc];
 }
 
 //_________________________________________________________________
 - (void)drawRect : (CGRect)rect
 {
-   // Drawing code
+   // Drawing code   
    CGContextRef ctx = UIGraphicsGetCurrentContext();
 
    CGContextClearRect(ctx, rect);
@@ -103,49 +81,21 @@
 //_________________________________________________________________
 - (void) addPanRecognizer
 {
-   if (!panActive) {
-      panActive = YES;
-      [self addGestureRecognizer : pan];
-   }
+   panActive = YES;
 }
 
 //_________________________________________________________________
 - (void) removePanRecognizer
 {
-   if (panActive) {
-      panActive = NO;
-      [self removeGestureRecognizer : pan];
-   }
+   panActive = NO;
 }
 
 //_________________________________________________________________
-- (void) handleDoubleTap : (UITapGestureRecognizer*)tap
+//- (void) handleDoubleTap : (UITapGestureRecognizer*)tap
+- (void) handleDoubleTap
 {
    //This is zoom/unzoom action.
-   //NSLog(@"double tap");
    [controller handleDoubleTapOnPad];
-}
-
-//_________________________________________________________________
-- (void) handlePan : (UIPanGestureRecognizer*)panGesture
-{
-   //const CGPoint panPoint = [panGesture locationInView : self];
-   //Move (if can) the selected object.
-}
-
-//_________________________________________________________________
-- (void) handleLongPressGesture : (UILongPressGestureRecognizer *)press
-{
-   //const CGPoint pressPoint = [longPress locationInView : self];
-   //Select the object under press.
-   if (press.state == UIGestureRecognizerStateBegan) {
-      //Do selection.
-   } else if (press.state == UIGestureRecognizerStateChanged) {
-      //Move the selected object, if possible.
-   } else if (press.state == UIGestureRecognizerStateEnded) {
-      //
-   }
-   //Move it, if possible.
 }
 
 #pragma mark - Picking related stuff here.
@@ -256,12 +206,9 @@
 }
 
 //_________________________________________________________________
-- (void) handleSingleTap : (UITapGestureRecognizer*)tap
+- (void) handleSingleTap
 {
    //Make a selection, fill the editor.
-   CGPoint tapPt = [tap locationInView : self];
-   
-   //Scale point to picking buffer sizes.
    const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
    tapPt.x *= scale;
    tapPt.y *= scale;
@@ -271,9 +218,77 @@
       
    pad->Pick(tapPt.x, tapPt.y);
 
+   //Tell controller that selection has probably changed.
    [controller objectWasSelected : pad->GetSelected()];
 
-   //Tell controller that selection has probably changed.
+   processSecondTap = NO;
+}
+
+//_________________________________________________________________
+- (void) longPress
+{
+   NSLog(@"long press");
+   processFirstTap = NO;
+   processSecondTap = NO;
+   processLongPress = YES;
+
+   //Select object here.
+   UIScrollView *parent = (UIScrollView *)[self superview];
+   parent.canCancelContentTouches = NO;
+   parent.delaysContentTouches = NO;
+}
+
+//_________________________________________________________________
+- (void) touchesBegan : (NSSet *)touches withEvent : (UIEvent *)event
+{
+   UITouch *touch = [touches anyObject];
+
+   if (touch.tapCount == 1) {
+      //Interaction has started.
+      tapPt = [touch locationInView : self];
+      //Gesture can be any of them:
+      processFirstTap = YES;
+      processSecondTap = YES;
+
+      //Long press only after 2 seconds.
+      processLongPress = NO;      
+      [self performSelector:@selector(longPress) withObject:nil afterDelay : 1.f];
+   } else if (touch.tapCount == 2) {
+      [NSObject cancelPreviousPerformRequestsWithTarget : self];
+   }
+}
+
+//_________________________________________________________________
+- (void) touchesMoved : (NSSet *)touches withEvent : (UIEvent *)event
+{
+   if (panActive || processLongPress) {
+      //Calculate the distance of move, cancel other gestures.
+      NSLog(@"process pan!!!");
+   }
+}
+
+//_________________________________________________________________
+- (void) touchesEnded : (NSSet *)touches withEvent : (UIEvent *)event
+{
+   UITouch *touch = [touches anyObject];
+   if (touch.tapCount == 1) {
+      if (processFirstTap) {
+         //Ok, longPress selector was not performed yet, let's cancell it.
+         [NSObject cancelPreviousPerformRequestsWithTarget : self];
+         NSLog(@"cancel long press");
+         //Still, we have to wait for a second tap.
+         processSecondTap = YES;
+         //tapPt = [touch locationInView : self];
+         [self performSelector : @selector(handleSingleTap) withObject:nil afterDelay : 0.15];
+      } else if (processLongPress) {
+         //Finish the long press action.
+         UIScrollView *parent = (UIScrollView *)[self superview];
+         parent.canCancelContentTouches = YES;
+         parent.delaysContentTouches = YES;
+      }//else impossible.
+   } else if (touch.tapCount == 2 && processSecondTap) {
+      [controller handleDoubleTapOnPad];
+   }
 }
 
 @end
