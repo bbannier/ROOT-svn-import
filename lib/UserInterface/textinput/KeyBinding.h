@@ -26,20 +26,20 @@ namespace textinput {
     ~KeyBinding();
 
     Editor::Command ToCommand(InputData In);
-    void SetAllowEscModifier(bool allow) {
+    void EnableEscCmd(bool enable) {
       // Whether "Esc" is allowed to mean something by itself.
       // Is can be misinterpreted as the start of a CSI terminal
       // sequence; use this to disambiguate.
-      fAllowEsc = allow; fEscPending = false; }
+      fEscCmdEnabled = enable; fEscPending = false; }
     bool IsEscPending() const { return fEscPending; }
 
   private:
-    Editor::Command ToCommandCtrl(char In);
+    Editor::Command ToCommandCtrl(char In, bool HadEscPending);
     Editor::Command ToCommandEsc(char In);
     Editor::Command ToCommandExtended(InputData::EExtendedInput EI,
                                       bool HadEscPending);
     bool fEscPending; // Dangling ESC is waiting to be processed
-    bool fAllowEsc; // Single ESC has a meaning
+    bool fEscCmdEnabled; // Single ESC has a meaning
   };
 }
 #endif // TEXTINPUT_KEYBINDING_H
