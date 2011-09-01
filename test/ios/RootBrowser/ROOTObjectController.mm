@@ -25,6 +25,11 @@
 #import "TObject.h"
 #import "IOSPad.h"
 
+//This constant is used to check, if pad was
+//scaled to possible maximum or still can be zoomed in.
+static const CGFloat scaledToMaxEpsilon = 5.f;
+static const CGFloat maximumZoom = 2.f;
+
 @implementation ROOTObjectController
 
 @synthesize scrollView;
@@ -190,6 +195,7 @@
       scrollView.delegate = self;
       [scrollView setMaximumZoomScale:2.];
       scrollView.bounces = NO;
+      scrollView.bouncesZoom = NO;
       //
       editorView.hidden = YES;
       [editorView release];
@@ -322,7 +328,7 @@
    padView.frame = CGRectMake(0.f, 0.f, padW, padH);
    padView.selectionView.frame = CGRectMake(0.f, 0.f, padW, padH);
    scrollView.contentOffset = CGPointZero;
-   scrollView.maximumZoomScale = 2.f;
+   scrollView.maximumZoomScale = maximumZoom;
    scrollView.minimumZoomScale = 1.f;
 }
 
@@ -370,6 +376,8 @@
    scroll.minimumZoomScale = padW / newFrame.size.width;
    scroll.maximumZoomScale = 2 * padW / newFrame.size.width;
 
+   padView.transform = CGAffineTransformIdentity;
+
    padView.frame = newFrame;
    padView.selectionView.frame = CGRectMake(0.f, 0.f, newFrame.size.width, newFrame.size.height);
 
@@ -383,20 +391,26 @@
 {
    using namespace ROOT_IOSBrowser;
 
-   zoomed = !zoomed;
+   BOOL scaleToMax = YES;
+   
+   if (fabs(padView.frame.size.width - padW * 2) < scaledToMaxEpsilon)
+      scaleToMax = NO;
 
-   if (zoomed) {
+   if (scaleToMax) {
       //maximize
-      [scrollView setZoomScale : 2.f];
-      [self scrollViewDidEndZooming : scrollView withView : padView atScale : 2.f];
+      zoomed = YES;
+      [scrollView setZoomScale : maximumZoom];
+      [self scrollViewDidEndZooming : scrollView withView : padView atScale : maximumZoom];
    } else {
+      zoomed = NO;
       //[padView retain];
       //[padView removeFromSuperview];
       padView.frame = CGRectMake(0.f, 0.f, padW, padH);
       padView.selectionView.frame = CGRectMake(0.f, 0.f, padW, padH);
-      scrollView.maximumZoomScale = 2.f;
+      scrollView.maximumZoomScale = maximumZoom;
       scrollView.minimumZoomScale = 1.f;
       scrollView.contentOffset = CGPointZero;
+      scrollView.contentSize = padView.frame.size;
       //[scrollView addSubview : padView];
       //[padView release];
       [padView setNeedsDisplay];
