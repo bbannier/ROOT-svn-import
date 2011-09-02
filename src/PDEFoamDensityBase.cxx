@@ -92,7 +92,7 @@ TMVA::PDEFoamDensityBase::PDEFoamDensityBase(std::vector<Double_t> box)
      fBst(new TMVA::BinarySearchTree()),
      fLogger(new MsgLogger("PDEFoamDensityBase"))
 {
-   if (box.size() == 0)
+   if (box.empty())
       Log() << kFATAL << "Dimension of PDEFoamDensityBase is zero" << Endl;
 
    // set periode (number of variables) of binary search tree
