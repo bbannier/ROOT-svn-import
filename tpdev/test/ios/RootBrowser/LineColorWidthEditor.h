@@ -1,8 +1,8 @@
 //
-//  LineStyleEditor.h
+//  LineColorWidthEditor.h
 //  root_browser
 //
-//  Created by Timur Pocheptsov on 8/31/11.
+//  Created by Timur Pocheptsov on 9/2/11.
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
@@ -11,22 +11,20 @@
 @class ROOTObjectController;
 
 class TAttLine;
-class TObject;
 
-@interface LineStyleEditor : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource> {
+@interface LineColorWidthEditor : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource> {
    IBOutlet UIPickerView *lineColorWidthPicker;
-   IBOutlet UIPickerView *lineStylePicker;
-   
+
    NSMutableArray *lineColors;
    NSMutableArray *lineWidths;
-   NSMutableArray *lineStyles;
 
    ROOTObjectController *controller;
-   
    TAttLine *object;
 }
 
+- (IBAction) goBack;
 - (void) setController : (ROOTObjectController *) c;
-- (void) setObject : (TObject *) obj;
+- (void) setObject : (TAttLine *) obj;
+
 
 @end
