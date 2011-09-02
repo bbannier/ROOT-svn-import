@@ -9,7 +9,7 @@
 #import <UIKit/UIKit.h>
 
 @class ScrollViewWithPadView;
-@class LineStyleEditor;
+@class LineAttribEditor;
 @class ObjectShortcut;
 @class PadGridEditor;
 @class PadLogEditor;
@@ -30,7 +30,9 @@ class TObject;
 @interface ROOTObjectController : UIViewController <UIScrollViewDelegate> {
    EditorView *editorView;
    
-   LineStyleEditor *lineEditor;
+   UINavigationController *lineEditorParent;
+   LineAttribEditor *lineEditor;
+
    PadGridEditor *grid;
    PadLogEditor *log;
    FillEditor *fill;

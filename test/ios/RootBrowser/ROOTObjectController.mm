@@ -10,7 +10,7 @@
 
 #import "ScrollViewWithPadView.h"
 #import "ROOTObjectController.h"
-#import "LineStyleEditor.h"
+#import "LineAttribEditor.h"
 #import "ObjectShortcut.h"
 #import "PadGridEditor.h"
 #import "SelectionView.h"
@@ -186,10 +186,19 @@ static const CGFloat maximumZoom = 2.f;
       [log setController : self];
       fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
       [fill setController : self];
-      lineEditor = [[LineStyleEditor alloc] initWithNibName : @"LineStyleEditor" bundle : nil];
-      [lineEditor setController : self];
+//      lineEditor = [[LineStyleEditor alloc] initWithNibName : @"LineStyleEditor" bundle : nil];
+//      [lineEditor setController : self];
+      lineEditor = [[LineAttribEditor alloc] initWithStyle : UITableViewStyleGrouped controller : self];
+      lineEditorParent = [[UINavigationController alloc] initWithRootViewController : lineEditor];
+      lineEditorParent.view.frame = CGRectMake(0.f, 0.f, 250.f, 350.f);
+      lineEditorParent.navigationBar.hidden = YES;
+      lineEditor.tableView.backgroundColor = [UIColor clearColor];
+      lineEditor.tableView.opaque = NO;
+      lineEditor.tableView.backgroundView = nil;
+      lineEditor.tableView.frame = CGRectMake(0.f, 0.f, 250.f, 350.f);
+      lineEditorParent.view.backgroundColor = [UIColor clearColor];
+      [lineEditor release];
 
-      
       [self.view addSubview : editorView];
       //
       scrollView.delegate = self;
@@ -229,7 +238,8 @@ static const CGFloat maximumZoom = 2.f;
    [grid release];
    [log release];
    [fill release];
-   [lineEditor release];
+//   [lineEditor release];
+   [lineEditorParent release];
    [super dealloc];
 }
 
@@ -458,7 +468,8 @@ static const CGFloat maximumZoom = 2.f;
    const unsigned editors = GetRequiredEditors(selectedObject);
    
    if (editors & kLineEditor) {
-      [editorView addSubEditor : lineEditor.view withName : @"Line style"];
+//      [editorView addSubEditor : lineEditor.view withName : @"Line style"];
+      [editorView addSubEditor : lineEditorParent.view withName : @"Line attributes"];
    }
    
    if (editors & kFillEditor) {
