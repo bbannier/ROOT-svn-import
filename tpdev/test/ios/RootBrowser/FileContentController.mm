@@ -208,8 +208,8 @@
 //____________________________________________________________________________________________________
 - (void) selectObjectFromFile : (ObjectShortcut *) shortcut
 {
-   if (!objectController)
-      objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
+   //if (!objectController)
+   objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
    
    objectController.navigationItem.title = [NSString stringWithFormat : @"%s", shortcut.rootObject->GetName()];
    [objectController setObjectFromShortcut : shortcut];
