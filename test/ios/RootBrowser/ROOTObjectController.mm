@@ -226,6 +226,10 @@ static const CGFloat maximumZoom = 2.f;
 - (void)dealloc
 {
    delete pad;
+   [grid release];
+   [log release];
+   [fill release];
+   [lineEditor release];
    [super dealloc];
 }
 
