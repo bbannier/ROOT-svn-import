@@ -20,6 +20,7 @@
 		7075A4851411194400296FBA /* LinePatternEditor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7075A4831411194400296FBA /* LinePatternEditor.mm */; };
 		7075A4861411194400296FBA /* LinePatternEditor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7075A4841411194400296FBA /* LinePatternEditor.xib */; };
 		7075A48914111C3500296FBA /* LineAttribEditor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7075A48814111C3500296FBA /* LineAttribEditor.mm */; };
+		7077853214139EBF00450A1B /* editor_plate.png in Resources */ = {isa = PBXBuildFile; fileRef = 7077853114139EBF00450A1B /* editor_plate.png */; };
 		7077901E13FE50EB00C0FFA1 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077901D13FE50EB00C0FFA1 /* UIKit.framework */; };
 		7077902013FE50EB00C0FFA1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077901F13FE50EB00C0FFA1 /* Foundation.framework */; };
 		7077902213FE50EB00C0FFA1 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077902113FE50EB00C0FFA1 /* CoreGraphics.framework */; };
@@ -52,7 +53,6 @@
 		7077908713FE96C300C0FFA1 /* PatternCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077907913FE96C300C0FFA1 /* PatternCell.mm */; };
 		7077908813FE96C300C0FFA1 /* ColorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 7077907B13FE96C300C0FFA1 /* ColorCell.m */; };
 		7077908B13FE96DC00C0FFA1 /* editor_state_arrow.png in Resources */ = {isa = PBXBuildFile; fileRef = 7077908913FE96DC00C0FFA1 /* editor_state_arrow.png */; };
-		7077908C13FE96DC00C0FFA1 /* editor_plate.png in Resources */ = {isa = PBXBuildFile; fileRef = 7077908A13FE96DC00C0FFA1 /* editor_plate.png */; };
 		7077908E13FE972D00C0FFA1 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077908D13FE972D00C0FFA1 /* QuartzCore.framework */; };
 		7077909013FE973A00C0FFA1 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077908F13FE973A00C0FFA1 /* CoreText.framework */; };
 		708C444C140BD54900FE433A /* root_browser_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 708C444B140BD54900FE433A /* root_browser_icon.png */; };
@@ -91,6 +91,7 @@
 		7075A4841411194400296FBA /* LinePatternEditor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LinePatternEditor.xib; sourceTree = "<group>"; };
 		7075A48714111C3500296FBA /* LineAttribEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineAttribEditor.h; sourceTree = "<group>"; };
 		7075A48814111C3500296FBA /* LineAttribEditor.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineAttribEditor.mm; sourceTree = "<group>"; };
+		7077853114139EBF00450A1B /* editor_plate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = editor_plate.png; sourceTree = "<group>"; };
 		7077901913FE50EB00C0FFA1 /* root_browser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = root_browser.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7077901D13FE50EB00C0FFA1 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		7077901F13FE50EB00C0FFA1 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -141,7 +142,6 @@
 		7077907C13FE96C300C0FFA1 /* ColorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorCell.h; sourceTree = "<group>"; };
 		7077907D13FE96C300C0FFA1 /* FillEditor.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = FillEditor.h; sourceTree = "<group>"; };
 		7077908913FE96DC00C0FFA1 /* editor_state_arrow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = editor_state_arrow.png; sourceTree = "<group>"; };
-		7077908A13FE96DC00C0FFA1 /* editor_plate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = editor_plate.png; sourceTree = "<group>"; };
 		7077908D13FE972D00C0FFA1 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		7077908F13FE973A00C0FFA1 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
 		708C444B140BD54900FE433A /* root_browser_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = root_browser_icon.png; sourceTree = "<group>"; };
@@ -183,6 +183,7 @@
 		7077900E13FE50EB00C0FFA1 = {
 			isa = PBXGroup;
 			children = (
+				7077853114139EBF00450A1B /* editor_plate.png */,
 				7075A4821411194400296FBA /* LinePatternEditor.h */,
 				7075A4831411194400296FBA /* LinePatternEditor.mm */,
 				7075A48714111C3500296FBA /* LineAttribEditor.h */,
@@ -211,7 +212,6 @@
 				7077908F13FE973A00C0FFA1 /* CoreText.framework */,
 				7077908D13FE972D00C0FFA1 /* QuartzCore.framework */,
 				7077908913FE96DC00C0FFA1 /* editor_state_arrow.png */,
-				7077908A13FE96DC00C0FFA1 /* editor_plate.png */,
 				7077906713FE8D7500C0FFA1 /* lego_icon.png */,
 				7077906813FE8D7500C0FFA1 /* lego.png */,
 				7077905013FE6B8F00C0FFA1 /* file_shortcut_background.png */,
@@ -353,6 +353,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7077853214139EBF00450A1B /* editor_plate.png in Resources */,
 				70144129140E553C0070459F /* line_cell.png in Resources */,
 				708C444C140BD54900FE433A /* root_browser_icon.png in Resources */,
 				7023805E140514C8002A5331 /* file_icon.png in Resources */,
@@ -360,7 +361,6 @@
 				709594A513FE97AF00B9E8B6 /* system.rootrc in Resources */,
 				709594A613FE97AF00B9E8B6 /* system.plugins-ios in Resources */,
 				7077908B13FE96DC00C0FFA1 /* editor_state_arrow.png in Resources */,
-				7077908C13FE96DC00C0FFA1 /* editor_plate.png in Resources */,
 				7077906913FE8D7500C0FFA1 /* lego_icon.png in Resources */,
 				7077906A13FE8D7500C0FFA1 /* lego.png in Resources */,
 				7077905113FE6B8F00C0FFA1 /* file_shortcut_background.png in Resources */,
