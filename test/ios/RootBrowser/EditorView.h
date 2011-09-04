@@ -31,6 +31,8 @@ enum {
    unsigned nEditors;
    unsigned currentState;
    
+   int newOpened;
+   
    BOOL animation;
 }
 

@@ -314,6 +314,21 @@
          containers[i].hidden = YES;
    }
    
+   if (newOpened == -1)
+      animation = NO;
+}
+
+//_________________________________________________________________
+- (void) showEditorFrame
+{
+//   [scrollView scrollRectToVisible : CGRectMake(0.f, 800.f, 250.f, 300.f) animated : YES];
+   
+   CGRect frameToShow = containers[newOpened].frame;
+   frameToShow.origin.y = viewYs[currentState * nEditors + newOpened] - 70.f;
+   frameToShow.size.height += 70.f;
+   
+   [scrollView scrollRectToVisible : frameToShow animated : YES];
+   
    animation = NO;
 }
 
@@ -335,7 +350,10 @@
    [UIView commitAnimations];
  
    //Do not hide the views immediately, so user can see animation.
-   [NSTimer scheduledTimerWithTimeInterval : 0.15 target : self selector:@selector(hideViews) userInfo:nil repeats:NO];
+   [NSTimer scheduledTimerWithTimeInterval : 0.15 target : self selector : @selector(hideViews) userInfo : nil repeats : NO];
+   if (newOpened != -1)
+      [NSTimer scheduledTimerWithTimeInterval : 0.3 target : self selector : @selector(showEditorFrame) userInfo : nil repeats : NO];
+
 }
 
 //_________________________________________________________________
@@ -346,10 +364,35 @@
    //User has tapped on editor's plate.
    //Depending on the current editor's state,
    //we open or close it with animation.
+   newOpened = -1;
+   
    for (unsigned i = 0; i < nEditors; ++i) {
       if (plate == plates[i]) {
          currentState ^= (1 << i);
+
+         if (currentState & (1 << i))
+            newOpened = i;
+         else if (currentState) {//Any editor opened?
+            //editor was closed, find the next which we can be made visible.
+            if (i) {
+               for (int j = i - 1; j >= 0; --j) {
+                  if (currentState && (1 << j)) {
+                     newOpened = j;
+                     break;
+                  }
+               }
+            } else {
+               for (unsigned j = 1; j < nEditors; ++j) {
+                  if (currentState && (1 << j)) {
+                     newOpened = j;
+                     break;
+                  }
+               }
+            }
+         }
+
          [self animateEditor];
+         break;
       }
    }
 }
