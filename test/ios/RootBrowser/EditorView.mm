@@ -313,22 +313,20 @@
       if (!(currentState & (1 << i)))
          containers[i].hidden = YES;
    }
-   
-   if (newOpened == -1)
-      animation = NO;
 }
 
 //_________________________________________________________________
 - (void) showEditorFrame
 {
-//   [scrollView scrollRectToVisible : CGRectMake(0.f, 800.f, 250.f, 300.f) animated : YES];
-   
-   CGRect frameToShow = containers[newOpened].frame;
-   frameToShow.origin.y = viewYs[currentState * nEditors + newOpened] - 70.f;
-   frameToShow.size.height += 70.f;
+   CGRect frameToShow = CGRectMake(0.f, 0.f, 250.f, 90.f);
+
+   if (newOpened != -1) {
+      frameToShow = containers[newOpened].frame;
+      frameToShow.origin.y = viewYs[currentState * nEditors + newOpened] - 70.f;
+      frameToShow.size.height += 70.f;
+   }
    
    [scrollView scrollRectToVisible : frameToShow animated : YES];
-   
    animation = NO;
 }
 
@@ -351,9 +349,7 @@
  
    //Do not hide the views immediately, so user can see animation.
    [NSTimer scheduledTimerWithTimeInterval : 0.15 target : self selector : @selector(hideViews) userInfo : nil repeats : NO];
-   if (newOpened != -1)
-      [NSTimer scheduledTimerWithTimeInterval : 0.3 target : self selector : @selector(showEditorFrame) userInfo : nil repeats : NO];
-
+   [NSTimer scheduledTimerWithTimeInterval : 0.3 target : self selector : @selector(showEditorFrame) userInfo : nil repeats : NO];
 }
 
 //_________________________________________________________________
