@@ -69,7 +69,15 @@
    if (self) {
       //Scroll view is a container for all sub-editors.
       //It's completely transparent.
-      const CGRect scrollFrame = CGRectMake(10.f, 10.f, [EditorView scrollWidth], frame.size.height - 20.f);
+      const CGRect titleRect = CGRectMake(10.f, 10.f, 250.f, 35.f);
+      editorTitle = [[UILabel alloc] initWithFrame : titleRect];
+      editorTitle.textAlignment = UITextAlignmentCenter;
+      editorTitle.textColor = [UIColor redColor];
+      editorTitle.backgroundColor = [UIColor clearColor];
+      [self addSubview : editorTitle];
+      [editorTitle release];
+      
+      const CGRect scrollFrame = CGRectMake(10.f, 45.f, [EditorView scrollWidth], frame.size.height - 55.f);
       scrollView = [[ScrollViewWithPickers alloc] initWithFrame : scrollFrame];
       scrollView.backgroundColor = [UIColor clearColor];
       scrollView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
@@ -171,8 +179,8 @@
 {
    CGRect frame = self.frame;
    frame.origin.x = 10.f;
-   frame.origin.y = 10.f;
-   frame.size.height -= 20.f;
+   frame.origin.y = 45.f;
+   frame.size.height -= 55.f;
    frame.size.width = 250.f;
    scrollView.frame = frame;
    
@@ -387,6 +395,12 @@
          break;
       }
    }
+}
+
+//_________________________________________________________________
+- (void) setEditorTitle : (const char*) title
+{
+   editorTitle.text = [NSString stringWithFormat : @"%s", title];
 }
 
 @end

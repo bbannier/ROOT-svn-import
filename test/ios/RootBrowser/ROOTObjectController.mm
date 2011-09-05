@@ -23,6 +23,7 @@
 
 //C++ (ROOT) imports.
 #import "TObject.h"
+#import "TClass.h"
 #import "IOSPad.h"
 
 //This constant is used to check, if pad was
@@ -207,6 +208,7 @@ static const CGFloat maximumZoom = 2.f;
       scrollView.bouncesZoom = NO;
       //
       editorView.hidden = YES;
+      [editorView setEditorTitle : "Pad"];
       [editorView release];
       //
       //Create padView, pad.
@@ -443,9 +445,11 @@ static const CGFloat maximumZoom = 2.f;
          selectedObject = object;
          padView.selectionView.hidden = NO;
          [padView.selectionView setNeedsDisplay];
+         [editorView setEditorTitle : selectedObject->IsA()->GetName()];
       } else {
          selectedObject = pad;
          padView.selectionView.hidden = YES;
+         [editorView setEditorTitle : "Pad"];
       }
 
       const unsigned newEditors = ROOT_IOSBrowser::GetRequiredEditors(selectedObject);
@@ -453,6 +457,8 @@ static const CGFloat maximumZoom = 2.f;
          [self addObjectEditors];
          currentEditors = newEditors;
       }
+
+
       
       [self setEditorValues];
    }
@@ -473,7 +479,7 @@ static const CGFloat maximumZoom = 2.f;
    }
    
    if (editors & kFillEditor) {
-      [editorView addSubEditor : fill.view withName : @"Fill"];
+      [editorView addSubEditor : fill.view withName : @"Fill attributes"];
    }
 
    
