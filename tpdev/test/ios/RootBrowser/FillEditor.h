@@ -14,8 +14,7 @@ class TAttFill;
 class TObject;
 
 @interface FillEditor : UIViewController {
-   IBOutlet UIPickerView *colorPicker;
-   IBOutlet UIPickerView *patternPicker;
+   IBOutlet UIPickerView *fillPicker;
    
    NSMutableArray *colorCells;
    NSMutableArray *patternCells;
