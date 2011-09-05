@@ -23,6 +23,8 @@ static const CGFloat defaultCellH = 44.f;
    using namespace ROOT_IOSBrowser;
 
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+   
+   [self view];
 
    if (self) {
       const CGRect cellRect = CGRectMake(0.f, 0.f, defaultCellW, defaultCellH);
@@ -88,6 +90,7 @@ static const CGFloat defaultCellH = 44.f;
    //to this row. If not - it's on zero.
    using namespace ROOT_IOSBrowser;
 
+   //I do not check the result of dynamic_cast here. This is done at upper level.
    filledObject = dynamic_cast<TAttFill *>(obj);
 
    //Set the row in color picker, using fill color from object.

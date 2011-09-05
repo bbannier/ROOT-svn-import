@@ -8,12 +8,15 @@
 
 #import <UIKit/UIKit.h>
 
+#import "ROOTObjectEditorProtocol.h"
+
 @class ROOTObjectController;
 
 class TAttLine;
+class TObject;
 
-@interface LineColorWidthEditor : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource> {
-   IBOutlet UIPickerView *lineColorWidthPicker;
+@interface LineColorWidthEditor : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ROOTObjectEditorProtocol> {
+   IBOutlet UIPickerView *linePicker;
 
    NSMutableArray *lineColors;
    NSMutableArray *lineWidths;
@@ -23,8 +26,8 @@ class TAttLine;
 }
 
 - (IBAction) goBack;
-- (void) setController : (ROOTObjectController *) c;
-- (void) setObject : (TAttLine *) obj;
+- (void) setROOTObjectController : (ROOTObjectController *) c;
+- (void) setROOTObject : (TObject *) obj;
 
 
 @end

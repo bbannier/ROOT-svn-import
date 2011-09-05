@@ -13,9 +13,12 @@
 
 @implementation PadGridEditor
 
+//_________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+
+   [self view];
 
    if (self) {
    }
@@ -23,21 +26,31 @@
    return self;
 }
 
+//_________________________________________________________________
 - (void)dealloc
 {
    [super dealloc];
 }
 
-- (void) setObject : (TObject *)o
+//_________________________________________________________________
+- (void) setROOTObject : (TObject *)o
 {
    object = static_cast<TVirtualPad *>(o);
+   
+   //I do not check the result of cast here, it's done on upper level.
+   gridX.on = object->GetGridx();
+   gridY.on = object->GetGridy();
+   ticksX.on = object->GetTickx();
+   ticksY.on = object->GetTicky();
 }
 
-- (void) setController : (ROOTObjectController *)c
+//_________________________________________________________________
+- (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
 }
 
+//_________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
@@ -47,12 +60,14 @@
 
 #pragma mark - View lifecycle
 
+//_________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
+//_________________________________________________________________
 - (void)viewDidUnload
 {
    [super viewDidUnload];
@@ -60,6 +75,7 @@
    // e.g. self.myOutlet = nil;
 }
 
+//_________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
    // Return YES for supported orientations
@@ -68,6 +84,7 @@
 
 #pragma mark - Editor's actions.
 
+//_________________________________________________________________
 - (IBAction) gridActivated : (UISwitch *) g
 {
    if (g == gridX)
@@ -78,6 +95,7 @@
    [controller objectWasModifiedByEditor];
 }
 
+//_________________________________________________________________
 - (IBAction) ticksActivated : (UISwitch *) t
 {
    if (t == ticksX)

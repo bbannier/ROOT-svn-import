@@ -12,7 +12,6 @@
 #import "LineAttribEditor.h"
 
 //C++ (ROOT) imports.
-#import "TAttLine.h"
 #import "TObject.h"
 
 @implementation LineAttribEditor
@@ -28,9 +27,15 @@
    return self;
 }
 
-- (void) setObject : (TObject *)obj
+
+- (void) setROOTObjectController : (ROOTObjectController *)c
 {
-   object = dynamic_cast<TAttLine *>(obj);
+   controller = c;
+}
+
+- (void) setROOTObject : (TObject *)obj
+{
+   object = obj;
 }
 
 - (void)didReceiveMemoryWarning
@@ -158,15 +163,15 @@
     // Navigation logic may go here. Create and push another view controller.
    if (!indexPath.section) {
       LineColorWidthEditor *editor = [[LineColorWidthEditor alloc] initWithNibName : @"LineColorWidthEditor" bundle : nil];
-      [editor setController : controller];
-      [editor setObject : object];
+      [editor setROOTObjectController : controller];
+      [editor setROOTObject : object];
       
       [self.navigationController pushViewController : editor animated : YES];
       [editor release];
    } else {
       LinePatternEditor *editor = [[LinePatternEditor alloc] initWithNibName : @"LinePatternEditor" bundle : nil];
-      [editor setController : controller];
-      [editor setObject : object];
+      [editor setROOTObjectController : controller];
+      [editor setROOTObject : object];
       
       [self.navigationController pushViewController : editor animated : YES];
       [editor release];

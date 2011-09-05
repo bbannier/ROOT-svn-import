@@ -14,10 +14,12 @@
 
 //C++ (ROOT) imports.
 #import "TAttLine.h"
+#import "TObject.h"
 
 static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
 @implementation LineColorWidthEditor
+
 
 //_________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
@@ -25,6 +27,9 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
    using namespace ROOT_IOSBrowser;
 
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+   
+   [self view];
+   
    if (self) {
       // Custom initialization
       //Two mutable arrays with views for "Line color and width" picker.
@@ -47,6 +52,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
    return self;
 }
 
+//_________________________________________________________________
 - (void) dealloc
 {
    [lineColors release];
@@ -94,15 +100,44 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 }
 
 //_________________________________________________________________
-- (void) setController : (ROOTObjectController *) c
+- (void) setROOTObjectController : (ROOTObjectController *) c
 {
    controller = c;
 }
 
 //_________________________________________________________________
-- (void) setObject : (TAttLine *) obj
+- (void) setROOTObject : (TObject *) obj
 {
-   object = obj;
+   using namespace ROOT_IOSBrowser;
+
+   //I do not check the result of dynamic_cast here. This is done at upper level.
+   object = dynamic_cast<TAttLine *>(obj);
+
+   //Extract line color.
+   //The same predefined 16 colors as with fill color.
+   unsigned pickerRow = 0;
+   const Color_t colorIndex = object->GetLineColor();
+   
+   for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
+      if (colorIndex == colorIndices[i]) {
+         pickerRow = i;
+         break;
+      }
+   }
+   
+   [linePicker selectRow : pickerRow inComponent : 0 animated : NO];
+
+   //Line width: in ROOT it can be 0, can be negative.
+   //Editor shows line widths in [1:15] range, so do I.
+   {
+      int pickerRow = (int)object->GetLineWidth();
+      if (pickerRow < 1 || pickerRow > 15)
+         pickerRow = 0;
+      else
+         pickerRow -= 1;
+      
+      [linePicker selectRow : pickerRow inComponent : 1 animated : NO];
+   }
 }
 
 #pragma mark - Color/Width/Style picker's dataSource.
