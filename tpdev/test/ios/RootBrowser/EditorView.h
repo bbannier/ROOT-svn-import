@@ -17,7 +17,8 @@ enum {
 };
 
 @interface EditorView : UIView {
-//   UIScrollView *scrollView;
+   UILabel *editorTitle;
+
    ScrollViewWithPickers *scrollView;
 
    CGFloat plateYs[evMaxStates * evMaxComponents];
@@ -48,5 +49,7 @@ enum {
 - (void) addSubEditor : (UIView *)element withName : (NSString *)editorName;
 - (void) correctFrames;
 - (void) plateTapped : (EditorPlateView *) plate;
+
+- (void) setEditorTitle : (const char*)title;
 
 @end
