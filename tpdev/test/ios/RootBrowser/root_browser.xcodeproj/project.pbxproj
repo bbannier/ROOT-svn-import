@@ -157,6 +157,7 @@
 		709CD0971402768B005B2AF4 /* Shortcuts.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Shortcuts.m; sourceTree = "<group>"; };
 		70B9B225140E5E28005D7A4C /* EditorRTTI.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EditorRTTI.mm; sourceTree = "<group>"; };
 		70B9B226140E5E28005D7A4C /* EditorRTTI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EditorRTTI.h; sourceTree = "<group>"; };
+		70E0B5D31414CE070077E4A8 /* ROOTObjectEditorProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ROOTObjectEditorProtocol.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -252,6 +253,7 @@
 				7077907613FE96C200C0FFA1 /* FillEditor.xib */,
 				7077907813FE96C300C0FFA1 /* FillEditor.mm */,
 				7077907D13FE96C300C0FFA1 /* FillEditor.h */,
+				70E0B5D31414CE070077E4A8 /* ROOTObjectEditorProtocol.h */,
 				7077907913FE96C300C0FFA1 /* PatternCell.mm */,
 				7077907A13FE96C300C0FFA1 /* PatternCell.h */,
 				7077907B13FE96C300C0FFA1 /* ColorCell.m */,

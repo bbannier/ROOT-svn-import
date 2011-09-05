@@ -24,6 +24,14 @@ typedef CGPatternRef (*PatternGenerator_t)(float *);
 //Array of pointers to functions, generating patterns.
 extern PatternGenerator_t gPatternGenerators[kPredefinedFillPatterns];
 
+
+//Due to some reason(s), ROOT likes to use hardcoded constants, never
+//defines named constants and you have to know, what does 3000 or 1001 means.
+//NIZKII POKLON za takoe. I have to fix it.
+
+extern const unsigned solidFillStyle; //1001
+extern const unsigned stippleBase; //3000
+
 }//namespace GraphicUtils
 }//namespace ROOT_iOS
 
