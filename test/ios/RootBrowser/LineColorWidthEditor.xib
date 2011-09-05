@@ -47,7 +47,7 @@
 					<object class="IBUIPickerView" id="721343703">
 						<reference key="NSNextResponder" ref="631482495"/>
 						<int key="NSvFlags">290</int>
-						<string key="NSFrame">{{10, 67}, {232, 216}}</string>
+						<string key="NSFrame">{{10, 49}, {232, 216}}</string>
 						<reference key="NSSuperview" ref="631482495"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="803675575"/>
@@ -62,7 +62,7 @@
 					<object class="IBUILabel" id="684460319">
 						<reference key="NSNextResponder" ref="631482495"/>
 						<int key="NSvFlags">292</int>
-						<string key="NSFrame">{{40, 38}, {171, 21}}</string>
+						<string key="NSFrame">{{36, 20}, {171, 21}}</string>
 						<reference key="NSSuperview" ref="631482495"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="721343703"/>
@@ -73,7 +73,7 @@
 						<bool key="IBUIUserInteractionEnabled">NO</bool>
 						<string key="targetRuntimeIdentifier">IBIPadFramework</string>
 						<string key="IBUIText">Line color and width</string>
-						<object class="NSColor" key="IBUITextColor">
+						<object class="NSColor" key="IBUITextColor" id="967993717">
 							<int key="NSColorSpace">1</int>
 							<bytes key="NSRGB">MCAwIDAAA</bytes>
 						</object>
@@ -85,9 +85,10 @@
 					<object class="IBUIButton" id="803675575">
 						<reference key="NSNextResponder" ref="631482495"/>
 						<int key="NSvFlags">292</int>
-						<string key="NSFrame">{{58, 300}, {136, 37}}</string>
+						<string key="NSFrame">{{35, 285}, {180, 50}}</string>
 						<reference key="NSSuperview" ref="631482495"/>
 						<reference key="NSWindow"/>
+						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:237</string>
 						<bool key="IBUIOpaque">NO</bool>
 						<string key="targetRuntimeIdentifier">IBIPadFramework</string>
@@ -101,13 +102,14 @@
 						<int key="IBUIButtonType">1</int>
 						<string key="IBUINormalTitle">Back</string>
 						<reference key="IBUIHighlightedTitleColor" ref="172552656"/>
-						<object class="NSColor" key="IBUINormalTitleColor">
-							<int key="NSColorSpace">1</int>
-							<bytes key="NSRGB">MC4xOTYwNzg0MzQ2IDAuMzA5ODAzOTMyOSAwLjUyMTU2ODY1NgA</bytes>
-						</object>
+						<reference key="IBUINormalTitleColor" ref="967993717"/>
 						<object class="NSColor" key="IBUINormalTitleShadowColor">
 							<int key="NSColorSpace">3</int>
 							<bytes key="NSWhite">MC41AA</bytes>
+						</object>
+						<object class="NSCustomResource" key="IBUINormalBackgroundImage">
+							<string key="NSClassName">NSImage</string>
+							<string key="NSResourceName">back_btn.png</string>
 						</object>
 					</object>
 				</object>
@@ -193,8 +195,8 @@
 						<reference key="object" ref="631482495"/>
 						<object class="NSMutableArray" key="children">
 							<bool key="EncodedWithXMLCoder">YES</bool>
-							<reference ref="721343703"/>
 							<reference ref="684460319"/>
+							<reference ref="721343703"/>
 							<reference ref="803675575"/>
 						</object>
 						<reference key="parent" ref="0"/>
@@ -298,6 +300,10 @@
 		</object>
 		<bool key="IBDocument.PluginDeclaredDependenciesTrackSystemTargetVersion">YES</bool>
 		<int key="IBDocument.defaultPropertyAccessControl">3</int>
+		<object class="NSMutableDictionary" key="IBDocument.LastKnownImageSizes">
+			<string key="NS.key.0">back_btn.png</string>
+			<string key="NS.object.0">{180, 50}</string>
+		</object>
 		<string key="IBCocoaTouchPluginVersion">534</string>
 	</data>
 </archive>

@@ -64,6 +64,8 @@
 		709CD05314025148005B2AF4 /* demos.root in Resources */ = {isa = PBXBuildFile; fileRef = 709CD05214025148005B2AF4 /* demos.root */; };
 		709CD0981402768B005B2AF4 /* Shortcuts.m in Sources */ = {isa = PBXBuildFile; fileRef = 709CD0971402768B005B2AF4 /* Shortcuts.m */; };
 		70B9B227140E5E28005D7A4C /* EditorRTTI.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70B9B225140E5E28005D7A4C /* EditorRTTI.mm */; };
+		70E0B62114150F630077E4A8 /* back_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 70E0B62014150F630077E4A8 /* back_btn.png */; };
+		70E0B624141510880077E4A8 /* forward_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 70E0B623141510880077E4A8 /* forward_btn.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -154,6 +156,8 @@
 		70B9B225140E5E28005D7A4C /* EditorRTTI.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EditorRTTI.mm; sourceTree = "<group>"; };
 		70B9B226140E5E28005D7A4C /* EditorRTTI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EditorRTTI.h; sourceTree = "<group>"; };
 		70E0B5D31414CE070077E4A8 /* ROOTObjectEditorProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ROOTObjectEditorProtocol.h; sourceTree = "<group>"; };
+		70E0B62014150F630077E4A8 /* back_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = back_btn.png; sourceTree = "<group>"; };
+		70E0B623141510880077E4A8 /* forward_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = forward_btn.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -245,6 +249,8 @@
 		70E0B5D51414E1110077E4A8 /* Icons and pictures */ = {
 			isa = PBXGroup;
 			children = (
+				70E0B623141510880077E4A8 /* forward_btn.png */,
+				70E0B62014150F630077E4A8 /* back_btn.png */,
 				7077908913FE96DC00C0FFA1 /* editor_state_arrow.png */,
 				70144128140E553C0070459F /* line_cell.png */,
 				7077853114139EBF00450A1B /* editor_plate.png */,
@@ -477,6 +483,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70E0B624141510880077E4A8 /* forward_btn.png in Resources */,
+				70E0B62114150F630077E4A8 /* back_btn.png in Resources */,
 				7077853214139EBF00450A1B /* editor_plate.png in Resources */,
 				70144129140E553C0070459F /* line_cell.png in Resources */,
 				708C444C140BD54900FE433A /* root_browser_icon.png in Resources */,
