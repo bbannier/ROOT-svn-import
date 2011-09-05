@@ -144,18 +144,16 @@ static const CGFloat defaultCellH = 44.f;
 //_________________________________________________________________
 - (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
 {
-   if (pickerView == colorPicker)
+   if (!component)
       return [colorCells count];
-   else if (pickerView == patternPicker)
+   else
       return [patternCells count];
-
-   return 0;
 }
 
 //_________________________________________________________________
 - (NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
 {
-	return 1;
+	return 2;
 }
 
 #pragma mark color/pattern picker's delegate.
@@ -164,20 +162,18 @@ static const CGFloat defaultCellH = 44.f;
 //_________________________________________________________________
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
-   if (pickerView == colorPicker)
+   if (!component)
       return [colorCells objectAtIndex : row];
-   else if (pickerView == patternPicker)
+   else
       return [patternCells objectAtIndex : row];
-
-   return 0;
 }
 
 //_________________________________________________________________
 - (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
-   if (thePickerView == colorPicker)
+   if (!component)
       [self setNewColor : row];
-   else if (thePickerView == patternPicker)
+   else
       [self setNewPattern : row];
 }
 
