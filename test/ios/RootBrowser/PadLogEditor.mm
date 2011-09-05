@@ -16,46 +16,59 @@
 
 @implementation PadLogEditor
 
+//_________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    
+    [self view];
+    
     if (self) {
         // Custom initialization
     }
     return self;
 }
 
+//_________________________________________________________________
 - (void)dealloc
 {
     [super dealloc];
 }
 
-- (void) setController : (ROOTObjectController *)c
+//_________________________________________________________________
+- (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
 }
 
-- (void) setObject : (TObject *)o
+//_________________________________________________________________
+- (void) setROOTObject : (TObject *)o
 {
    object = static_cast<TVirtualPad *>(o);
+   //Result of cast is not checked here, it's done at the upper level.
+   logX.on = object->GetLogx();
+   logY.on = object->GetLogy();
+   logZ.on = object->GetLogz();
 }
 
+//_________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
     [super didReceiveMemoryWarning];
-    
     // Release any cached data, images, etc that aren't in use.
 }
 
 #pragma mark - View lifecycle
 
+//_________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
+//_________________________________________________________________
 - (void)viewDidUnload
 {
    [super viewDidUnload];
@@ -63,12 +76,14 @@
    // e.g. self.myOutlet = nil;
 }
 
+//_________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
    // Return YES for supported orientations
    return YES;
 }
 
+//_________________________________________________________________
 - (IBAction) logActivated : (UISwitch *) log
 {
    if (log == logX)

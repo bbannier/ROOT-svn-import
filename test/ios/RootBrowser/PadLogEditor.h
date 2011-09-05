@@ -8,12 +8,14 @@
 
 #import <UIKit/UIKit.h>
 
+#import "ROOTObjectEditorProtocol.h"
+
 @class ROOTObjectController;
 
 class TVirtualPad;
 class TObject;
 
-@interface PadLogEditor : UIViewController {
+@interface PadLogEditor : UIViewController <ROOTObjectEditorProtocol> {
    IBOutlet UISwitch *logX;
    IBOutlet UISwitch *logY;
    IBOutlet UISwitch *logZ;
@@ -22,8 +24,8 @@ class TObject;
    TVirtualPad *object;
 }
 
-- (void) setController : (ROOTObjectController *)c;
-- (void) setObject : (TObject *)o;
+- (void) setROOTObjectController : (ROOTObjectController *)c;
+- (void) setROOTObject : (TObject *)o;
 
 - (IBAction) logActivated : (UISwitch *) log;
 

@@ -181,9 +181,9 @@ static const CGFloat maximumZoom = 2.f;
       editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
   
       grid = [[PadGridEditor alloc] initWithNibName:@"PadGridEditor" bundle:nil];
-      [grid setController : self];
+      [grid setROOTObjectController : self];
       log = [[PadLogEditor alloc] initWithNibName:@"PadLogEditor" bundle:nil];
-      [log setController : self];
+      [log setROOTObjectController : self];
       fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
       [fill setROOTObjectController : self];
 //      lineEditor = [[LineStyleEditor alloc] initWithNibName : @"LineStyleEditor" bundle : nil];
@@ -492,7 +492,7 @@ static const CGFloat maximumZoom = 2.f;
    
    if (editors & kLineEditor) {
       //[editorView addSubEditor : lineEditor.view withName : @"Line style"];
-      [lineEditor setObject : selectedObject];
+      [lineEditor setROOTObject : selectedObject];
    }
    
    if (editors & kFillEditor) {
@@ -502,8 +502,8 @@ static const CGFloat maximumZoom = 2.f;
 
    
    if (editors & kPadEditor) {
-      [grid setObject : selectedObject];
-      [log setObject : selectedObject];
+      [grid setROOTObject : selectedObject];
+      [log setROOTObject : selectedObject];
    }
 }
 

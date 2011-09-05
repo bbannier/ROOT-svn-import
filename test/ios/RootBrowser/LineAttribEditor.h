@@ -8,17 +8,20 @@
 
 #import <UIKit/UIKit.h>
 
+#import "ROOTObjectEditorProtocol.h"
 
 @class ROOTObjectController;
 
-class TAttLine;
+class TObject;
 
-@interface LineAttribEditor : UITableViewController {
+@interface LineAttribEditor : UITableViewController <ROOTObjectEditorProtocol> {
    ROOTObjectController *controller;
-   TAttLine *object;
+   TObject *object;
 }
 
 - (id)initWithStyle : (UITableViewStyle)style controller : (ROOTObjectController *)c;
-- (void) setObject : (TObject *) obj;
+
+- (void) setROOTObjectController : (ROOTObjectController *) c;
+- (void) setROOTObject : (TObject *) obj;
 
 @end
