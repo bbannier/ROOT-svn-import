@@ -68,16 +68,50 @@ static const CGFloat defaultCellH = 44.f;
 }
 
 //_________________________________________________________________
-- (void) setController : (ROOTObjectController *) p
+- (void) setROOTObjectController : (ROOTObjectController *) p
 {
    parentController = p;
 }
 
 //_________________________________________________________________
-- (void) setObject : (TObject *)obj
+- (void) setROOTObject : (TObject *)obj
 {
+   //ROOT's standard color pick has 16 colors,
+   //I have 16 rows in a color picker.
+   //Fill color is some integer index, not from [0 16),
+   //but some hardcoded constant (as usually :( ) - 
+   //see TGColorSelect or something like this.
+   //I hold this indices in colorIndices array of constants,
+   //since ROOT does not define them.
+   //If the object color is one of 16 standard colors,
+   //I find the correct row in a picker and rotate picker 
+   //to this row. If not - it's on zero.
+   using namespace ROOT_IOSBrowser;
+
    filledObject = dynamic_cast<TAttFill *>(obj);
-   //Here I have to extract fill color and pattern from TAttFill.
+
+   //Set the row in color picker, using fill color from object.
+   const Color_t colorIndex = filledObject->GetFillColor();
+   unsigned pickerRow = 0;
+   for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
+      if (colorIndex == colorIndices[i]) {
+         pickerRow = i;
+         break;
+      }
+   }
+
+   [fillPicker selectRow : pickerRow inComponent : 0 animated : NO];
+   
+   //Look for a fill pattern.
+   namespace Fill = ROOT_iOS::GraphicUtils;
+   
+   const Style_t fillStyle = filledObject->GetFillStyle();
+   if (fillStyle == Fill::solidFillStyle)//I'm sorry, again, hardcoded constant, ROOT does not define it :(.
+      pickerRow = 0;
+   else
+      pickerRow = filledObject->GetFillStyle() % Fill::stippleBase;
+
+   [fillPicker selectRow : pickerRow inComponent : 1 animated : NO];
 }
 
 //_________________________________________________________________
@@ -96,11 +130,13 @@ static const CGFloat defaultCellH = 44.f;
 //_________________________________________________________________
 - (void) setNewPattern : (NSInteger) cellIndex
 {
+   namespace Fill = ROOT_iOS::GraphicUtils;
+
    if (filledObject && parentController) {
-      if (cellIndex > 0 && cellIndex <= ROOT_iOS::GraphicUtils::kPredefinedFillPatterns) {
-         filledObject->SetFillStyle(3000 + cellIndex);
+      if (cellIndex > 0 && cellIndex <= Fill::kPredefinedFillPatterns) {
+         filledObject->SetFillStyle(Fill::stippleBase + cellIndex);
       } else if (!cellIndex) {
-         filledObject->SetFillStyle(1001);
+         filledObject->SetFillStyle(Fill::solidFillStyle);
       }
 
       [parentController objectWasModifiedByEditor];

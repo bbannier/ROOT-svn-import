@@ -185,7 +185,7 @@ static const CGFloat maximumZoom = 2.f;
       log = [[PadLogEditor alloc] initWithNibName:@"PadLogEditor" bundle:nil];
       [log setController : self];
       fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
-      [fill setController : self];
+      [fill setROOTObjectController : self];
 //      lineEditor = [[LineStyleEditor alloc] initWithNibName : @"LineStyleEditor" bundle : nil];
 //      [lineEditor setController : self];
       lineEditor = [[LineAttribEditor alloc] initWithStyle : UITableViewStyleGrouped controller : self];
@@ -497,7 +497,7 @@ static const CGFloat maximumZoom = 2.f;
    
    if (editors & kFillEditor) {
       //[editorView addSubEditor : fill.view withName : @"Fill"];
-      [fill setObject : selectedObject];
+      [fill setROOTObject : selectedObject];
    }
 
    

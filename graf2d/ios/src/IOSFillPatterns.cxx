@@ -5,6 +5,11 @@
 namespace ROOT_iOS {
 namespace GraphicUtils {
 
+const unsigned solidFillStyle = 1001;
+const unsigned stippleBase = 3000;
+
+//TODO. Remove all this nightmarish functions and use bitmaps.
+
 //
 // Fill patterns, defined in RStipples.h.
 // Pattern in RStipple.h is 32x32.

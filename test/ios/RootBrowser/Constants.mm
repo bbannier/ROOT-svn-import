@@ -79,4 +79,6 @@ const double predefinedFillColors[nROOTDefaultColors][3] =
 
 const unsigned colorIndices[nROOTDefaultColors] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 38, 41, 42, 50, 51};
 
+const unsigned stippleBase = 3000;
+
 }

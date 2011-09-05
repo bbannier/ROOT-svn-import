@@ -73,6 +73,10 @@ extern const double predefinedFillColors[nROOTDefaultColors][3];
 //Color indices in a standard ROOT's color selection control.
 extern const unsigned colorIndices[nROOTDefaultColors];
 
+
+//Constant for TAttFill, never defined in ROOT, I have to define it here.
+extern const unsigned stippleBase;
+
 }
 
 #endif
