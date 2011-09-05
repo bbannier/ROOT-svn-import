@@ -363,22 +363,18 @@
    newOpened = -1;
    
    for (unsigned i = 0; i < nEditors; ++i) {
-      if (plate == plates[i]) {
-         currentState ^= (1 << i);
-
+      if (plate != plates[i]) {
          if (currentState & (1 << i))
+            newOpened = i;//Remember the index of opened editor above our plate.
+      } else {
+         currentState ^= (1 << i);//reset the bit for the editor.
+
+         if (currentState & (1 << i))//plate's editor was opened.
             newOpened = i;
-         else if (currentState) {//Any editor opened?
-            //editor was closed, find the next which we can be made visible.
-            if (i) {
-               for (int j = i - 1; j >= 0; --j) {
-                  if (currentState && (1 << j)) {
-                     newOpened = j;
-                     break;
-                  }
-               }
-            } else {
-               for (unsigned j = 1; j < nEditors; ++j) {
+         else if (currentState) {//Is any editor opened at all?
+            //plate's editor was closed, find the next which we can be made visible.
+            if (newOpened == -1) {//we did not find any opened editor above the plate yet.
+               for (unsigned j = i + 1; j < nEditors; ++j) {
                   if (currentState && (1 << j)) {
                      newOpened = j;
                      break;
