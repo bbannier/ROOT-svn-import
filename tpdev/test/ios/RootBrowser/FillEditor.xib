@@ -48,7 +48,6 @@
 						<int key="NSvFlags">256</int>
 						<string key="NSFrame">{{20, 41}, {210, 216}}</string>
 						<reference key="NSSuperview" ref="733045998"/>
-						<reference key="NSNextKeyView"/>
 						<string key="targetRuntimeIdentifier">IBIPadFramework</string>
 						<bool key="IBUIShowsSelectionIndicator">YES</bool>
 					</object>
@@ -58,9 +57,9 @@
 						<string key="NSFrame">{{32, 12}, {186, 21}}</string>
 						<reference key="NSSuperview" ref="733045998"/>
 						<reference key="NSNextKeyView" ref="618193064"/>
-						<object class="NSColor" key="IBUIBackgroundColor">
+						<object class="NSColor" key="IBUIBackgroundColor" id="633752997">
 							<int key="NSColorSpace">3</int>
-							<bytes key="NSWhite">MC42NjY2NjY2NjY3AA</bytes>
+							<bytes key="NSWhite">MCAwAA</bytes>
 						</object>
 						<bool key="IBUIOpaque">NO</bool>
 						<bool key="IBUIClipsSubviews">YES</bool>
@@ -81,10 +80,7 @@
 				<string key="NSFrameSize">{250, 277}</string>
 				<reference key="NSSuperview"/>
 				<reference key="NSNextKeyView" ref="894779670"/>
-				<object class="NSColor" key="IBUIBackgroundColor">
-					<int key="NSColorSpace">3</int>
-					<bytes key="NSWhite">MCAwAA</bytes>
-				</object>
+				<reference key="IBUIBackgroundColor" ref="633752997"/>
 				<string key="targetRuntimeIdentifier">IBIPadFramework</string>
 			</object>
 		</object>

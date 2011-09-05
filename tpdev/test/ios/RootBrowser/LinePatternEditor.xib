@@ -67,7 +67,7 @@
 						<bool key="IBUIUserInteractionEnabled">NO</bool>
 						<string key="targetRuntimeIdentifier">IBIPadFramework</string>
 						<string key="IBUIText">Line style:</string>
-						<object class="NSColor" key="IBUITextColor">
+						<object class="NSColor" key="IBUITextColor" id="651102728">
 							<int key="NSColorSpace">1</int>
 							<bytes key="NSRGB">MCAwIDAAA</bytes>
 						</object>
@@ -79,8 +79,9 @@
 					<object class="IBUIButton" id="975968897">
 						<reference key="NSNextResponder" ref="10473026"/>
 						<int key="NSvFlags">292</int>
-						<string key="NSFrame">{{69, 298}, {112, 37}}</string>
+						<string key="NSFrame">{{35, 287}, {180, 50}}</string>
 						<reference key="NSSuperview" ref="10473026"/>
+						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:237</string>
 						<bool key="IBUIOpaque">NO</bool>
 						<string key="targetRuntimeIdentifier">IBIPadFramework</string>
@@ -97,13 +98,14 @@
 							<int key="NSColorSpace">3</int>
 							<bytes key="NSWhite">MQA</bytes>
 						</object>
-						<object class="NSColor" key="IBUINormalTitleColor">
-							<int key="NSColorSpace">1</int>
-							<bytes key="NSRGB">MC4xOTYwNzg0MzQ2IDAuMzA5ODAzOTMyOSAwLjUyMTU2ODY1NgA</bytes>
-						</object>
+						<reference key="IBUINormalTitleColor" ref="651102728"/>
 						<object class="NSColor" key="IBUINormalTitleShadowColor">
 							<int key="NSColorSpace">3</int>
 							<bytes key="NSWhite">MC41AA</bytes>
+						</object>
+						<object class="NSCustomResource" key="IBUINormalBackgroundImage">
+							<string key="NSClassName">NSImage</string>
+							<string key="NSResourceName">back_btn.png</string>
 						</object>
 					</object>
 				</object>
@@ -259,6 +261,10 @@
 		</object>
 		<bool key="IBDocument.PluginDeclaredDependenciesTrackSystemTargetVersion">YES</bool>
 		<int key="IBDocument.defaultPropertyAccessControl">3</int>
+		<object class="NSMutableDictionary" key="IBDocument.LastKnownImageSizes">
+			<string key="NS.key.0">back_btn.png</string>
+			<string key="NS.object.0">{180, 50}</string>
+		</object>
 		<string key="IBCocoaTouchPluginVersion">534</string>
 	</data>
 </archive>
