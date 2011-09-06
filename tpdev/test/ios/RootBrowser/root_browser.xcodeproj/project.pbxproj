@@ -14,12 +14,22 @@
 		7023805E140514C8002A5331 /* file_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 7023805D140514C8002A5331 /* file_icon.png */; };
 		70249BDC1403D644006A19E6 /* PadView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70249BDA1403D644006A19E6 /* PadView.mm */; };
 		70252F7C140CDD8D00F3660F /* Constants.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70252F7A140CDD8D00F3660F /* Constants.mm */; };
+		702DDD1B1415FEA1009FC6F3 /* LineInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD191415FEA1009FC6F3 /* LineInspector.mm */; };
+		702DDD1C1415FEA1009FC6F3 /* LineInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702DDD1A1415FEA1009FC6F3 /* LineInspector.xib */; };
+		702DDD2014160DB5009FC6F3 /* LineColorWidthInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD1E14160DB5009FC6F3 /* LineColorWidthInspector.mm */; };
+		702DDD2114160DB5009FC6F3 /* LineColorWidthInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702DDD1F14160DB5009FC6F3 /* LineColorWidthInspector.xib */; };
+		702DDD251416141A009FC6F3 /* LineStyleInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD231416141A009FC6F3 /* LineStyleInspector.mm */; };
+		702DDD261416141A009FC6F3 /* LineStyleInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702DDD241416141A009FC6F3 /* LineStyleInspector.xib */; };
+		702DDD2914161789009FC6F3 /* InspectorWithNavigation.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */; };
 		705A503614066421004C1C8B /* ScrollViewWithPadView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 705A503514066421004C1C8B /* ScrollViewWithPadView.mm */; };
-		7075A47F1411141E00296FBA /* LineColorWidthEditor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7075A47D1411141E00296FBA /* LineColorWidthEditor.mm */; };
-		7075A4801411141E00296FBA /* LineColorWidthEditor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7075A47E1411141E00296FBA /* LineColorWidthEditor.xib */; };
-		7075A4851411194400296FBA /* LinePatternEditor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7075A4831411194400296FBA /* LinePatternEditor.mm */; };
-		7075A4861411194400296FBA /* LinePatternEditor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7075A4841411194400296FBA /* LinePatternEditor.xib */; };
-		7075A48914111C3500296FBA /* LineAttribEditor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7075A48814111C3500296FBA /* LineAttribEditor.mm */; };
+		70681C0D1416365900F8338A /* PadInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70681C0B1416365900F8338A /* PadInspector.mm */; };
+		70681C0E1416365900F8338A /* PadInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70681C0C1416365900F8338A /* PadInspector.xib */; };
+		70681C1314163A2300F8338A /* PadTicksGridInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70681C1114163A2300F8338A /* PadTicksGridInspector.xib */; };
+		70681C1514163D3F00F8338A /* PadTicksGridInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70681C1414163D3F00F8338A /* PadTicksGridInspector.mm */; };
+		70681C1914163F0C00F8338A /* PadLogScaleInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70681C1714163F0C00F8338A /* PadLogScaleInspector.mm */; };
+		70681C1A14163F0C00F8338A /* PadLogScaleInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70681C1814163F0C00F8338A /* PadLogScaleInspector.xib */; };
+		70681C1E1416474000F8338A /* FilledAreaInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70681C1C1416474000F8338A /* FilledAreaInspector.mm */; };
+		70681C1F1416474000F8338A /* FilledAreaInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70681C1D1416474000F8338A /* FilledAreaInspector.xib */; };
 		7077853214139EBF00450A1B /* editor_plate.png in Resources */ = {isa = PBXBuildFile; fileRef = 7077853114139EBF00450A1B /* editor_plate.png */; };
 		7077901E13FE50EB00C0FFA1 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077901D13FE50EB00C0FFA1 /* UIKit.framework */; };
 		7077902013FE50EB00C0FFA1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077901F13FE50EB00C0FFA1 /* Foundation.framework */; };
@@ -40,14 +50,8 @@
 		7077906313FE847600C0FFA1 /* ROOTObjectController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7077906113FE847600C0FFA1 /* ROOTObjectController.xib */; };
 		7077906613FE87D000C0FFA1 /* ObjectShortcut.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077906513FE87D000C0FFA1 /* ObjectShortcut.mm */; };
 		7077907E13FE96C300C0FFA1 /* EditorView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077906B13FE96C200C0FFA1 /* EditorView.mm */; };
-		7077907F13FE96C300C0FFA1 /* PadGridEditor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7077906D13FE96C200C0FFA1 /* PadGridEditor.xib */; };
 		7077908013FE96C300C0FFA1 /* ScrollViewWithPickers.m in Sources */ = {isa = PBXBuildFile; fileRef = 7077906E13FE96C200C0FFA1 /* ScrollViewWithPickers.m */; };
 		7077908113FE96C300C0FFA1 /* EditorPlateView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7077906F13FE96C200C0FFA1 /* EditorPlateView.m */; };
-		7077908213FE96C300C0FFA1 /* PadLogEditor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7077907113FE96C200C0FFA1 /* PadLogEditor.xib */; };
-		7077908313FE96C300C0FFA1 /* PadLogEditor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077907213FE96C200C0FFA1 /* PadLogEditor.mm */; };
-		7077908413FE96C300C0FFA1 /* PadGridEditor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077907413FE96C200C0FFA1 /* PadGridEditor.mm */; };
-		7077908513FE96C300C0FFA1 /* FillEditor.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7077907613FE96C200C0FFA1 /* FillEditor.xib */; };
-		7077908613FE96C300C0FFA1 /* FillEditor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077907813FE96C300C0FFA1 /* FillEditor.mm */; };
 		7077908713FE96C300C0FFA1 /* PatternCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077907913FE96C300C0FFA1 /* PatternCell.mm */; };
 		7077908813FE96C300C0FFA1 /* ColorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 7077907B13FE96C300C0FFA1 /* ColorCell.m */; };
 		7077908B13FE96DC00C0FFA1 /* editor_state_arrow.png in Resources */ = {isa = PBXBuildFile; fileRef = 7077908913FE96DC00C0FFA1 /* editor_state_arrow.png */; };
@@ -81,16 +85,32 @@
 		70249BDB1403D644006A19E6 /* PadView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadView.h; sourceTree = "<group>"; };
 		70252F7A140CDD8D00F3660F /* Constants.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Constants.mm; sourceTree = "<group>"; };
 		70252F7B140CDD8D00F3660F /* Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constants.h; sourceTree = "<group>"; };
+		702DDD161415FDDB009FC6F3 /* ObjectInspectorComponent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjectInspectorComponent.h; sourceTree = "<group>"; };
+		702DDD181415FEA1009FC6F3 /* LineInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineInspector.h; sourceTree = "<group>"; };
+		702DDD191415FEA1009FC6F3 /* LineInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineInspector.mm; sourceTree = "<group>"; };
+		702DDD1A1415FEA1009FC6F3 /* LineInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LineInspector.xib; sourceTree = "<group>"; };
+		702DDD1D14160DB5009FC6F3 /* LineColorWidthInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineColorWidthInspector.h; sourceTree = "<group>"; };
+		702DDD1E14160DB5009FC6F3 /* LineColorWidthInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineColorWidthInspector.mm; sourceTree = "<group>"; };
+		702DDD1F14160DB5009FC6F3 /* LineColorWidthInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LineColorWidthInspector.xib; sourceTree = "<group>"; };
+		702DDD221416141A009FC6F3 /* LineStyleInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineStyleInspector.h; sourceTree = "<group>"; };
+		702DDD231416141A009FC6F3 /* LineStyleInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineStyleInspector.mm; sourceTree = "<group>"; };
+		702DDD241416141A009FC6F3 /* LineStyleInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LineStyleInspector.xib; sourceTree = "<group>"; };
+		702DDD2714161789009FC6F3 /* InspectorWithNavigation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorWithNavigation.h; sourceTree = "<group>"; };
+		702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = InspectorWithNavigation.mm; sourceTree = "<group>"; };
 		705A503414066421004C1C8B /* ScrollViewWithPadView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScrollViewWithPadView.h; sourceTree = "<group>"; };
 		705A503514066421004C1C8B /* ScrollViewWithPadView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ScrollViewWithPadView.mm; sourceTree = "<group>"; };
-		7075A47C1411141E00296FBA /* LineColorWidthEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineColorWidthEditor.h; sourceTree = "<group>"; };
-		7075A47D1411141E00296FBA /* LineColorWidthEditor.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineColorWidthEditor.mm; sourceTree = "<group>"; };
-		7075A47E1411141E00296FBA /* LineColorWidthEditor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LineColorWidthEditor.xib; sourceTree = "<group>"; };
-		7075A4821411194400296FBA /* LinePatternEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LinePatternEditor.h; sourceTree = "<group>"; };
-		7075A4831411194400296FBA /* LinePatternEditor.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LinePatternEditor.mm; sourceTree = "<group>"; };
-		7075A4841411194400296FBA /* LinePatternEditor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LinePatternEditor.xib; sourceTree = "<group>"; };
-		7075A48714111C3500296FBA /* LineAttribEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineAttribEditor.h; sourceTree = "<group>"; };
-		7075A48814111C3500296FBA /* LineAttribEditor.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineAttribEditor.mm; sourceTree = "<group>"; };
+		70681C0A1416365900F8338A /* PadInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadInspector.h; sourceTree = "<group>"; };
+		70681C0B1416365900F8338A /* PadInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PadInspector.mm; sourceTree = "<group>"; };
+		70681C0C1416365900F8338A /* PadInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadInspector.xib; sourceTree = "<group>"; };
+		70681C0F14163A2300F8338A /* PadTicksGridInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadTicksGridInspector.h; sourceTree = "<group>"; };
+		70681C1114163A2300F8338A /* PadTicksGridInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadTicksGridInspector.xib; sourceTree = "<group>"; };
+		70681C1414163D3F00F8338A /* PadTicksGridInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PadTicksGridInspector.mm; sourceTree = "<group>"; };
+		70681C1614163F0C00F8338A /* PadLogScaleInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadLogScaleInspector.h; sourceTree = "<group>"; };
+		70681C1714163F0C00F8338A /* PadLogScaleInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PadLogScaleInspector.mm; sourceTree = "<group>"; };
+		70681C1814163F0C00F8338A /* PadLogScaleInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadLogScaleInspector.xib; sourceTree = "<group>"; };
+		70681C1B1416474000F8338A /* FilledAreaInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FilledAreaInspector.h; sourceTree = "<group>"; };
+		70681C1C1416474000F8338A /* FilledAreaInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FilledAreaInspector.mm; sourceTree = "<group>"; };
+		70681C1D1416474000F8338A /* FilledAreaInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = FilledAreaInspector.xib; sourceTree = "<group>"; };
 		7077853114139EBF00450A1B /* editor_plate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = editor_plate.png; sourceTree = "<group>"; };
 		7077901913FE50EB00C0FFA1 /* root_browser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = root_browser.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7077901D13FE50EB00C0FFA1 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -122,23 +142,14 @@
 		7077906513FE87D000C0FFA1 /* ObjectShortcut.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ObjectShortcut.mm; sourceTree = "<group>"; };
 		7077906B13FE96C200C0FFA1 /* EditorView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EditorView.mm; sourceTree = "<group>"; };
 		7077906C13FE96C200C0FFA1 /* EditorView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EditorView.h; sourceTree = "<group>"; };
-		7077906D13FE96C200C0FFA1 /* PadGridEditor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadGridEditor.xib; sourceTree = "<group>"; };
 		7077906E13FE96C200C0FFA1 /* ScrollViewWithPickers.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ScrollViewWithPickers.m; sourceTree = "<group>"; };
 		7077906F13FE96C200C0FFA1 /* EditorPlateView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EditorPlateView.m; sourceTree = "<group>"; };
 		7077907013FE96C200C0FFA1 /* ScrollViewWithPickers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScrollViewWithPickers.h; sourceTree = "<group>"; };
-		7077907113FE96C200C0FFA1 /* PadLogEditor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadLogEditor.xib; sourceTree = "<group>"; };
-		7077907213FE96C200C0FFA1 /* PadLogEditor.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PadLogEditor.mm; sourceTree = "<group>"; };
-		7077907313FE96C200C0FFA1 /* PadLogEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadLogEditor.h; sourceTree = "<group>"; };
-		7077907413FE96C200C0FFA1 /* PadGridEditor.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PadGridEditor.mm; sourceTree = "<group>"; };
-		7077907513FE96C200C0FFA1 /* PadGridEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadGridEditor.h; sourceTree = "<group>"; };
-		7077907613FE96C200C0FFA1 /* FillEditor.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = FillEditor.xib; sourceTree = "<group>"; };
 		7077907713FE96C200C0FFA1 /* EditorPlateView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EditorPlateView.h; sourceTree = "<group>"; };
-		7077907813FE96C300C0FFA1 /* FillEditor.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FillEditor.mm; sourceTree = "<group>"; };
 		7077907913FE96C300C0FFA1 /* PatternCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PatternCell.mm; sourceTree = "<group>"; };
 		7077907A13FE96C300C0FFA1 /* PatternCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PatternCell.h; sourceTree = "<group>"; };
 		7077907B13FE96C300C0FFA1 /* ColorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorCell.m; sourceTree = "<group>"; };
 		7077907C13FE96C300C0FFA1 /* ColorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorCell.h; sourceTree = "<group>"; };
-		7077907D13FE96C300C0FFA1 /* FillEditor.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = FillEditor.h; sourceTree = "<group>"; };
 		7077908913FE96DC00C0FFA1 /* editor_state_arrow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = editor_state_arrow.png; sourceTree = "<group>"; };
 		7077908D13FE972D00C0FFA1 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		7077908F13FE973A00C0FFA1 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
@@ -186,7 +197,7 @@
 			children = (
 				70E0B5E31414E4B80077E4A8 /* General */,
 				70E0B5D81414E2B50077E4A8 /* Top level view controllers */,
-				70E0B5D41414E0F10077E4A8 /* ROOT object's editors */,
+				70E0B5D41414E0F10077E4A8 /* Object Inspector */,
 				7077902313FE50EB00C0FFA1 /* root_browser */,
 				7077901C13FE50EB00C0FFA1 /* Frameworks */,
 				7077901A13FE50EB00C0FFA1 /* Products */,
@@ -235,15 +246,15 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		70E0B5D41414E0F10077E4A8 /* ROOT object's editors */ = {
+		70E0B5D41414E0F10077E4A8 /* Object Inspector */ = {
 			isa = PBXGroup;
 			children = (
 				70E0B5E11414E4710077E4A8 /* Views */,
 				70E0B5D71414E1510077E4A8 /* xibs */,
-				70E0B5D61414E11C0077E4A8 /* Classes */,
+				70E0B5D61414E11C0077E4A8 /* Classes and protocols */,
 				70E0B5D51414E1110077E4A8 /* Icons and pictures */,
 			);
-			name = "ROOT object's editors";
+			name = "Object Inspector";
 			sourceTree = "<group>";
 		};
 		70E0B5D51414E1110077E4A8 /* Icons and pictures */ = {
@@ -258,9 +269,10 @@
 			name = "Icons and pictures";
 			sourceTree = "<group>";
 		};
-		70E0B5D61414E11C0077E4A8 /* Classes */ = {
+		70E0B5D61414E11C0077E4A8 /* Classes and protocols */ = {
 			isa = PBXGroup;
 			children = (
+				702DDD161415FDDB009FC6F3 /* ObjectInspectorComponent.h */,
 				7077906B13FE96C200C0FFA1 /* EditorView.mm */,
 				7077906C13FE96C200C0FFA1 /* EditorView.h */,
 				70144121140E3F320070459F /* LineWidthCell.h */,
@@ -269,37 +281,43 @@
 				7014411F140E3F1D0070459F /* LineStyleCell.mm */,
 				70B9B225140E5E28005D7A4C /* EditorRTTI.mm */,
 				70B9B226140E5E28005D7A4C /* EditorRTTI.h */,
-				7075A47C1411141E00296FBA /* LineColorWidthEditor.h */,
-				7075A47D1411141E00296FBA /* LineColorWidthEditor.mm */,
-				7075A4821411194400296FBA /* LinePatternEditor.h */,
-				7075A4831411194400296FBA /* LinePatternEditor.mm */,
-				7075A48714111C3500296FBA /* LineAttribEditor.h */,
-				7075A48814111C3500296FBA /* LineAttribEditor.mm */,
-				7077907813FE96C300C0FFA1 /* FillEditor.mm */,
-				7077907D13FE96C300C0FFA1 /* FillEditor.h */,
 				7077906F13FE96C200C0FFA1 /* EditorPlateView.m */,
 				7077907713FE96C200C0FFA1 /* EditorPlateView.h */,
-				7077907213FE96C200C0FFA1 /* PadLogEditor.mm */,
-				7077907313FE96C200C0FFA1 /* PadLogEditor.h */,
-				7077907413FE96C200C0FFA1 /* PadGridEditor.mm */,
-				7077907513FE96C200C0FFA1 /* PadGridEditor.h */,
 				70E0B5D31414CE070077E4A8 /* ROOTObjectEditorProtocol.h */,
 				7077907913FE96C300C0FFA1 /* PatternCell.mm */,
 				7077907A13FE96C300C0FFA1 /* PatternCell.h */,
 				7077907B13FE96C300C0FFA1 /* ColorCell.m */,
 				7077907C13FE96C300C0FFA1 /* ColorCell.h */,
+				702DDD181415FEA1009FC6F3 /* LineInspector.h */,
+				702DDD191415FEA1009FC6F3 /* LineInspector.mm */,
+				702DDD1D14160DB5009FC6F3 /* LineColorWidthInspector.h */,
+				702DDD1E14160DB5009FC6F3 /* LineColorWidthInspector.mm */,
+				702DDD221416141A009FC6F3 /* LineStyleInspector.h */,
+				702DDD231416141A009FC6F3 /* LineStyleInspector.mm */,
+				702DDD2714161789009FC6F3 /* InspectorWithNavigation.h */,
+				702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */,
+				70681C0A1416365900F8338A /* PadInspector.h */,
+				70681C0B1416365900F8338A /* PadInspector.mm */,
+				70681C0F14163A2300F8338A /* PadTicksGridInspector.h */,
+				70681C1414163D3F00F8338A /* PadTicksGridInspector.mm */,
+				70681C1114163A2300F8338A /* PadTicksGridInspector.xib */,
+				70681C1614163F0C00F8338A /* PadLogScaleInspector.h */,
+				70681C1714163F0C00F8338A /* PadLogScaleInspector.mm */,
+				70681C1B1416474000F8338A /* FilledAreaInspector.h */,
+				70681C1C1416474000F8338A /* FilledAreaInspector.mm */,
 			);
-			name = Classes;
+			name = "Classes and protocols";
 			sourceTree = "<group>";
 		};
 		70E0B5D71414E1510077E4A8 /* xibs */ = {
 			isa = PBXGroup;
 			children = (
-				7075A47E1411141E00296FBA /* LineColorWidthEditor.xib */,
-				7075A4841411194400296FBA /* LinePatternEditor.xib */,
-				7077907113FE96C200C0FFA1 /* PadLogEditor.xib */,
-				7077907613FE96C200C0FFA1 /* FillEditor.xib */,
-				7077906D13FE96C200C0FFA1 /* PadGridEditor.xib */,
+				702DDD1A1415FEA1009FC6F3 /* LineInspector.xib */,
+				702DDD1F14160DB5009FC6F3 /* LineColorWidthInspector.xib */,
+				702DDD241416141A009FC6F3 /* LineStyleInspector.xib */,
+				70681C0C1416365900F8338A /* PadInspector.xib */,
+				70681C1814163F0C00F8338A /* PadLogScaleInspector.xib */,
+				70681C1D1416474000F8338A /* FilledAreaInspector.xib */,
 			);
 			name = xibs;
 			sourceTree = "<group>";
@@ -500,11 +518,13 @@
 				7077904013FE549300C0FFA1 /* FileContentController.xib in Resources */,
 				7077905E13FE840000C0FFA1 /* SlideshowController.xib in Resources */,
 				7077906313FE847600C0FFA1 /* ROOTObjectController.xib in Resources */,
-				7077907F13FE96C300C0FFA1 /* PadGridEditor.xib in Resources */,
-				7077908213FE96C300C0FFA1 /* PadLogEditor.xib in Resources */,
-				7077908513FE96C300C0FFA1 /* FillEditor.xib in Resources */,
-				7075A4801411141E00296FBA /* LineColorWidthEditor.xib in Resources */,
-				7075A4861411194400296FBA /* LinePatternEditor.xib in Resources */,
+				702DDD1C1415FEA1009FC6F3 /* LineInspector.xib in Resources */,
+				702DDD2114160DB5009FC6F3 /* LineColorWidthInspector.xib in Resources */,
+				702DDD261416141A009FC6F3 /* LineStyleInspector.xib in Resources */,
+				70681C0E1416365900F8338A /* PadInspector.xib in Resources */,
+				70681C1314163A2300F8338A /* PadTicksGridInspector.xib in Resources */,
+				70681C1A14163F0C00F8338A /* PadLogScaleInspector.xib in Resources */,
+				70681C1F1416474000F8338A /* FilledAreaInspector.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -526,9 +546,6 @@
 				7077907E13FE96C300C0FFA1 /* EditorView.mm in Sources */,
 				7077908013FE96C300C0FFA1 /* ScrollViewWithPickers.m in Sources */,
 				7077908113FE96C300C0FFA1 /* EditorPlateView.m in Sources */,
-				7077908313FE96C300C0FFA1 /* PadLogEditor.mm in Sources */,
-				7077908413FE96C300C0FFA1 /* PadGridEditor.mm in Sources */,
-				7077908613FE96C300C0FFA1 /* FillEditor.mm in Sources */,
 				7077908713FE96C300C0FFA1 /* PatternCell.mm in Sources */,
 				7077908813FE96C300C0FFA1 /* ColorCell.m in Sources */,
 				709CD0981402768B005B2AF4 /* Shortcuts.m in Sources */,
@@ -539,9 +556,14 @@
 				70144120140E3F1D0070459F /* LineStyleCell.mm in Sources */,
 				70144123140E3F320070459F /* LineWidthCell.m in Sources */,
 				70B9B227140E5E28005D7A4C /* EditorRTTI.mm in Sources */,
-				7075A47F1411141E00296FBA /* LineColorWidthEditor.mm in Sources */,
-				7075A4851411194400296FBA /* LinePatternEditor.mm in Sources */,
-				7075A48914111C3500296FBA /* LineAttribEditor.mm in Sources */,
+				702DDD1B1415FEA1009FC6F3 /* LineInspector.mm in Sources */,
+				702DDD2014160DB5009FC6F3 /* LineColorWidthInspector.mm in Sources */,
+				702DDD251416141A009FC6F3 /* LineStyleInspector.mm in Sources */,
+				702DDD2914161789009FC6F3 /* InspectorWithNavigation.mm in Sources */,
+				70681C0D1416365900F8338A /* PadInspector.mm in Sources */,
+				70681C1514163D3F00F8338A /* PadTicksGridInspector.mm in Sources */,
+				70681C1914163F0C00F8338A /* PadLogScaleInspector.mm in Sources */,
+				70681C1E1416474000F8338A /* FilledAreaInspector.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

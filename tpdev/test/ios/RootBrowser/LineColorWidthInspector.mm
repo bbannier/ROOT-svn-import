@@ -1,12 +1,4 @@
-//
-//  LineColorWidthEditor.m
-//  root_browser
-//
-//  Created by Timur Pocheptsov on 9/2/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
-#import "LineColorWidthEditor.h"
+#import "LineColorWidthInspector.h"
 #import "ROOTObjectController.h"
 #import "LineWidthCell.h"
 #import "ColorCell.h"
@@ -18,15 +10,14 @@
 
 static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
-@implementation LineColorWidthEditor
-
+@implementation LineColorWidthInspector
 
 //_________________________________________________________________
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    using namespace ROOT_IOSBrowser;
 
-   self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
    
    [self view];
    
@@ -64,9 +55,10 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 //_________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
-   // Releases the view if it doesn't have a superview.
-   [super didReceiveMemoryWarning];
-   // Release any cached data, images, etc that aren't in use.
+    // Releases the view if it doesn't have a superview.
+    [super didReceiveMemoryWarning];
+    
+    // Release any cached data, images, etc that aren't in use.
 }
 
 #pragma mark - View lifecycle
@@ -74,30 +66,34 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 //_________________________________________________________________
 - (void)viewDidLoad
 {
-   [super viewDidLoad];
-   // Do any additional setup after loading the view from its nib.
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
 }
 
 //_________________________________________________________________
 - (void)viewDidUnload
 {
-   [super viewDidUnload];
-   // Release any retained subviews of the main view.
-   // e.g. self.myOutlet = nil;
+    [super viewDidUnload];
+    // Release any retained subviews of the main view.
+    // e.g. self.myOutlet = nil;
 }
 
 //_________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
-   // Return YES for supported orientations
+    // Return YES for supported orientations
 	return YES;
 }
 
+#pragma main - Navigation
+
 //_________________________________________________________________
-- (IBAction) goBack
+- (IBAction) back
 {
    [self.navigationController popViewControllerAnimated : YES];
 }
+
+#pragma mark - ObjectInspectorComponent protocol
 
 //_________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *) c
@@ -141,6 +137,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 }
 
 #pragma mark - Color/Width/Style picker's dataSource.
+
 //_________________________________________________________________
 - (CGFloat)pickerView : (UIPickerView *)pickerView widthForComponent : (NSInteger)component
 {
@@ -195,7 +192,5 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
    
    [controller objectWasModifiedByEditor];
 }
-
-
 
 @end

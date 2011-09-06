@@ -1,5 +1,5 @@
 #import "ROOTObjectController.h"
-#import "LinePatternEditor.h"
+#import "LineStyleInspector.h"
 #import "LineStyleCell.h"
 #import "Constants.h"
 
@@ -11,7 +11,7 @@
 
 static const CGRect cellFrame = CGRectMake(0.f, 0.f, 180.f, 44.f);
 
-@implementation LinePatternEditor
+@implementation LineStyleInspector
 
 - (id)initWithNibName : (NSString *) nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
@@ -137,7 +137,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 180.f, 44.f);
 }
 
 //_________________________________________________________________
-- (void) goBack
+- (void) back
 {
    [self.navigationController popViewControllerAnimated : YES];
 }

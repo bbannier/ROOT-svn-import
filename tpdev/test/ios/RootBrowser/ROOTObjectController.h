@@ -8,13 +8,11 @@
 
 #import <UIKit/UIKit.h>
 
+@class InspectorWithNavigation;
+@class FilledAreaInspector;
 @class ScrollViewWithPadView;
-@class LineAttribEditor;
 @class ObjectShortcut;
-@class PadGridEditor;
-@class PadLogEditor;
 @class EditorView;
-@class FillEditor;
 @class PadView;
 
 namespace ROOT_iOS {
@@ -30,12 +28,9 @@ class TObject;
 @interface ROOTObjectController : UIViewController <UIScrollViewDelegate> {
    EditorView *editorView;
    
-   UINavigationController *lineEditorParent;
-   LineAttribEditor *lineEditor;
-
-   PadGridEditor *grid;
-   PadLogEditor *log;
-   FillEditor *fill;
+   InspectorWithNavigation *lineInspector;
+   InspectorWithNavigation *padInspector;
+   FilledAreaInspector *fillInspector;
    
    IBOutlet ScrollViewWithPadView *scrollView;
    

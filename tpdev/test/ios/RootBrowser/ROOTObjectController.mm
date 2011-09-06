@@ -10,11 +10,14 @@
 
 #import "ScrollViewWithPadView.h"
 #import "ROOTObjectController.h"
-#import "LineAttribEditor.h"
+
+#import "InspectorWithNavigation.h"
+#import "FilledAreaInspector.h"
+#import "LineInspector.h"
+#import "PadInspector.h"
+
 #import "ObjectShortcut.h"
-#import "PadGridEditor.h"
 #import "SelectionView.h"
-#import "PadLogEditor.h"
 #import "EditorRTTI.h"
 #import "FillEditor.h"
 #import "EditorView.h"
@@ -181,15 +184,31 @@ static const CGFloat maximumZoom = 2.f;
    
       editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
   
-      grid = [[PadGridEditor alloc] initWithNibName:@"PadGridEditor" bundle:nil];
-      [grid setROOTObjectController : self];
-      log = [[PadLogEditor alloc] initWithNibName:@"PadLogEditor" bundle:nil];
-      [log setROOTObjectController : self];
-      fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
-      [fill setROOTObjectController : self];
+      fillInspector = [[FilledAreaInspector alloc] initWithNibName : @"FilledAreaInspector" bundle : nil];
+      [fillInspector setROOTObjectController : self];
+//      fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
+//      [fill setROOTObjectController : self];
 //      lineEditor = [[LineStyleEditor alloc] initWithNibName : @"LineStyleEditor" bundle : nil];
 //      [lineEditor setController : self];
-      lineEditor = [[LineAttribEditor alloc] initWithStyle : UITableViewStyleGrouped controller : self];
+
+      LineInspector *lineInspectorCompositor = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];
+      lineInspector = [[InspectorWithNavigation alloc] initWithRootViewController : lineInspectorCompositor];
+      [lineInspectorCompositor release];
+      lineInspector.view.frame = CGRectMake(0.f, 0.f, 250.f, 350.f);
+      lineInspector.navigationBar.hidden = YES;
+      lineInspector.view.backgroundColor = [UIColor clearColor];
+      [lineInspector setROOTObjectController : self];
+      
+      PadInspector *padInspectorCompositor = [[PadInspector alloc] initWithNibName : @"PadInspector" bundle : nil];
+      padInspector = [[InspectorWithNavigation alloc] initWithRootViewController : padInspectorCompositor];
+      [padInspectorCompositor release];
+      padInspector.view.frame = CGRectMake(0.f, 0.f, 250.f, 250.f);
+      padInspector.navigationBar.hidden = YES;
+      padInspector.view.backgroundColor = [UIColor clearColor];
+      [padInspector setROOTObjectController : self];
+      
+
+/*      lineEditor = [[LineAttribEditor alloc] initWithStyle : UITableViewStyleGrouped controller : self];
       lineEditorParent = [[UINavigationController alloc] initWithRootViewController : lineEditor];
       lineEditorParent.view.frame = CGRectMake(0.f, 0.f, 250.f, 350.f);
       lineEditorParent.navigationBar.hidden = YES;
@@ -199,6 +218,7 @@ static const CGFloat maximumZoom = 2.f;
       lineEditor.tableView.frame = CGRectMake(0.f, 0.f, 250.f, 350.f);
       lineEditorParent.view.backgroundColor = [UIColor clearColor];
       [lineEditor release];
+*/
 
       [self.view addSubview : editorView];
       //
@@ -237,11 +257,14 @@ static const CGFloat maximumZoom = 2.f;
 - (void)dealloc
 {
    delete pad;
-   [grid release];
-   [log release];
-   [fill release];
+ //  [grid release];
+ //  [log release];
+//   [fill release];
 //   [lineEditor release];
-   [lineEditorParent release];
+   [fillInspector release];
+   [lineInspector release];
+   [padInspector release];
+//   [lineEditorParent release];
    [super dealloc];
 }
 
@@ -475,17 +498,22 @@ static const CGFloat maximumZoom = 2.f;
    
    if (editors & kLineEditor) {
 //      [editorView addSubEditor : lineEditor.view withName : @"Line style"];
-      [editorView addSubEditor : lineEditorParent.view withName : @"Line attributes"];
+//      [editorView addSubEditor : lineEditorParent.view withName : @"Line attributes"];
+      [lineInspector resetInspector];
+      [editorView addSubEditor : lineInspector.view withName : [lineInspector getComponentName]];
    }
    
    if (editors & kFillEditor) {
-      [editorView addSubEditor : fill.view withName : @"Fill attributes"];
+//      [editorView addSubEditor : fill.view withName : @"Fill attributes"];
+      [editorView addSubEditor : fillInspector.view withName : [fillInspector getComponentName]];
    }
 
    
    if (editors & kPadEditor) {
-      [editorView addSubEditor : grid.view withName : @"Ticks and grid"];
-      [editorView addSubEditor : log.view withName : @"Log scales"];
+//      [editorView addSubEditor : grid.view withName : @"Ticks and grid"];
+//      [editorView addSubEditor : log.view withName : @"Log scales"];
+      [padInspector resetInspector];
+      [editorView addSubEditor : padInspector.view withName : [padInspector getComponentName]];
    }   
 }
 
@@ -498,18 +526,20 @@ static const CGFloat maximumZoom = 2.f;
    
    if (editors & kLineEditor) {
       //[editorView addSubEditor : lineEditor.view withName : @"Line style"];
-      [lineEditor setROOTObject : selectedObject];
+      [lineInspector setROOTObject : selectedObject];
    }
    
    if (editors & kFillEditor) {
       //[editorView addSubEditor : fill.view withName : @"Fill"];
-      [fill setROOTObject : selectedObject];
+//      [fill setROOTObject : selectedObject];
+      [fillInspector setROOTObject : selectedObject];
    }
 
    
    if (editors & kPadEditor) {
-      [grid setROOTObject : selectedObject];
-      [log setROOTObject : selectedObject];
+//      [grid setROOTObject : selectedObject];
+//      [log setROOTObject : selectedObject];
+      [padInspector setROOTObject : selectedObject];
    }
 }
 

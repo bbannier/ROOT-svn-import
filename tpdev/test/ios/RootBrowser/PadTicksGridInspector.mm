@@ -1,22 +1,15 @@
-//
-//  PadGridEditor.m
-//  editors
-//
-//  Created by Timur Pocheptsov on 8/16/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
 #import "ROOTObjectController.h"
-#import "PadGridEditor.h"
+#import "PadTicksGridInspector.h"
 
 #import "TVirtualPad.h"
 #import "TObject.h"
 
-@implementation PadGridEditor
+@implementation PadTicksGridInspector
 
 //_________________________________________________________________
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
-   self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
 
    [self view];
 
@@ -82,7 +75,7 @@
 	return YES;
 }
 
-#pragma mark - Editor's actions.
+#pragma mark - Inspector's actions.
 
 //_________________________________________________________________
 - (IBAction) gridActivated : (UISwitch *) g
@@ -106,5 +99,10 @@
    [controller objectWasModifiedByEditor];
 }
 
+//_________________________________________________________________
+- (IBAction) back
+{
+   [self.navigationController popViewControllerAnimated : YES];
+}
 
 @end
