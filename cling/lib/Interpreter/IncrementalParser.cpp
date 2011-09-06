@@ -142,6 +142,7 @@ namespace cling {
                                                      filename);
       m_StartupPCHGenerator.reset(new PCHGenerator(m_CI->getPreprocessor(),
                                                    filename,
+                                                   false, /*isModule*/
                                                    "", /*isysroot*/
                                                    OS
                                                    )

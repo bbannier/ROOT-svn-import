@@ -146,7 +146,7 @@ namespace cling {
     
     // Set up the ASTContext
     ASTContext *Ctx = new ASTContext(CI->getLangOpts(),
-                                     PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
+                                     PP.getSourceManager(), &CI->getTarget(), PP.getIdentifierTable(),
                                      PP.getSelectorTable(), PP.getBuiltinInfo(), 0);
     CI->setASTContext(Ctx);
     //CI->getSourceManager().clearIDTables(); //do we really need it?
