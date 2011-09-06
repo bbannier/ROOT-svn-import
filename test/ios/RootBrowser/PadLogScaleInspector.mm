@@ -1,38 +1,30 @@
-//
-//  PadLogEditor.m
-//  editors
-//
-//  Created by Timur Pocheptsov on 8/16/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #import "ROOTObjectController.h"
-#import "PadLogEditor.h"
+#import "PadLogScaleInspector.h"
 
 //C++ (ROOT) imports.
 #import "TVirtualPad.h"
 #import "TObject.h"
 
 
-@implementation PadLogEditor
+@implementation PadLogScaleInspector
 
 //_________________________________________________________________
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
-    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
     
-    [self view];
+   [self view];
     
-    if (self) {
-        // Custom initialization
-    }
-    return self;
+   if (self) {
+   }
+
+   return self;
 }
 
 //_________________________________________________________________
 - (void)dealloc
 {
-    [super dealloc];
+   [super dealloc];
 }
 
 //_________________________________________________________________
@@ -94,6 +86,12 @@
       object->SetLogz(log.on);
    
    [controller objectWasModifiedByEditor];
+}
+
+//_________________________________________________________________
+- (IBAction) back
+{
+   [self.navigationController popViewControllerAnimated : YES];
 }
 
 @end

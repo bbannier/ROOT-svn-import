@@ -1,34 +1,36 @@
 //
-//  PadGridEditor.h
-//  editors
+//  PadTicksGridInspector.h
+//  root_browser
 //
-//  Created by Timur Pocheptsov on 8/16/11.
+//  Created by Timur Pocheptsov on 9/6/11.
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
 
-#import "ROOTObjectEditorProtocol.h"
+#import "ObjectInspectorComponent.h"
 
 @class ROOTObjectController;
 
 class TVirtualPad;
 class TObject;
 
-@interface PadGridEditor : UIViewController <ROOTObjectEditorProtocol> {
+@interface PadTicksGridInspector : UIViewController <ObjectInspectorComponent> {
    IBOutlet UISwitch *gridX;
    IBOutlet UISwitch *gridY;
    IBOutlet UISwitch *ticksX;
    IBOutlet UISwitch *ticksY;
    
-   TVirtualPad *object;
    ROOTObjectController *controller;
+   TVirtualPad *object;
 }
 
-- (void) setROOTObjectController : (ROOTObjectController *)c;
-- (void) setROOTObject : (TObject*)o;
+- (void) setROOTObjectController : (ROOTObjectController *) c;
+- (void) setROOTObject : (TObject *) obj;
 
 - (IBAction) gridActivated : (UISwitch *) g;
 - (IBAction) ticksActivated : (UISwitch *) t;
+- (IBAction) back;
+
 
 @end

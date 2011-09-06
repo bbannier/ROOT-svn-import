@@ -1,21 +1,12 @@
-//
-//  PadLogEditor.h
-//  editors
-//
-//  Created by Timur Pocheptsov on 8/16/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #import <UIKit/UIKit.h>
 
-#import "ROOTObjectEditorProtocol.h"
+#import "ObjectInspectorComponent.h"
 
 @class ROOTObjectController;
-
 class TVirtualPad;
 class TObject;
 
-@interface PadLogEditor : UIViewController <ROOTObjectEditorProtocol> {
+@interface PadLogScaleInspector : UIViewController <ObjectInspectorComponent> {
    IBOutlet UISwitch *logX;
    IBOutlet UISwitch *logY;
    IBOutlet UISwitch *logZ;
@@ -28,5 +19,6 @@ class TObject;
 - (void) setROOTObject : (TObject *)o;
 
 - (IBAction) logActivated : (UISwitch *) log;
+- (IBAction) back;
 
 @end

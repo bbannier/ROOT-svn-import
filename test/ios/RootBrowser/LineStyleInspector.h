@@ -1,22 +1,15 @@
-//
-//  LinePatternEditor.h
-//  root_browser
-//
-//  Created by Timur Pocheptsov on 9/2/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #import <UIKit/UIKit.h>
 
-#import "ROOTObjectEditorProtocol.h"
+#import "ObjectInspectorComponent.h"
 
 @class ROOTObjectController;
 
 class TAttLine;
 class TObject;
 
+//Inspector with a picker for a line style.
 
-@interface LinePatternEditor : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ROOTObjectEditorProtocol> {
+@interface LineStyleInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
    IBOutlet UIPickerView *lineStylePicker;
    
    NSMutableArray *lineStyles;
@@ -28,6 +21,6 @@ class TObject;
 - (void) setROOTObjectController : (ROOTObjectController *) c;
 - (void) setROOTObject : (TObject *) obj;
 
-- (IBAction) goBack;
+- (IBAction) back;
 
 @end
