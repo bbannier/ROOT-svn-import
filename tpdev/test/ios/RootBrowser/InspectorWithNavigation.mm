@@ -3,6 +3,17 @@
 @implementation InspectorWithNavigation
 
 //_________________________________________________________________
+- (id) initWithRootViewController : (UIViewController<ObjectInspectorComponent> *) rootController
+{
+   self = [super initWithRootViewController : (UIViewController *)rootController];
+   if (self) {
+      self.navigationBar.hidden = YES;
+   }
+   
+   return self;
+}
+
+//_________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.

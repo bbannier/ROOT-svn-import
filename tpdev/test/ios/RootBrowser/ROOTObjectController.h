@@ -1,22 +1,12 @@
-//
-//  ROOTObjectController.h
-//  root_browser
-//
-//  Created by Timur Pocheptsov on 8/19/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #import <UIKit/UIKit.h>
 
-@class InspectorWithNavigation;
-@class FilledAreaInspector;
 @class ScrollViewWithPadView;
+@class ObjectInspector;
 @class ObjectShortcut;
 @class EditorView;
 @class PadView;
 
 namespace ROOT_iOS {
-
 //Pad to draw object.
 class Pad;
 
@@ -27,10 +17,7 @@ class TObject;
 
 @interface ROOTObjectController : UIViewController <UIScrollViewDelegate> {
    EditorView *editorView;
-   
-   InspectorWithNavigation *lineInspector;
-   InspectorWithNavigation *padInspector;
-   FilledAreaInspector *fillInspector;
+   ObjectInspector *objectInspector;
    
    IBOutlet ScrollViewWithPadView *scrollView;
    
@@ -50,7 +37,6 @@ class TObject;
 - (void) handleDoubleTapOnPad;
 - (void) objectWasSelected : (TObject *)object;
 - (void) objectWasModifiedByEditor;
-- (void) addObjectEditors;
-- (void) setEditorValues;
+- (void) setupObjectInspector;
 
 @end
