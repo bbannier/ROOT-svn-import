@@ -1,24 +1,10 @@
-//
-//  ROOTObjectController.m
-//  root_browser
-//
-//  Created by Timur Pocheptsov on 8/19/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #import <QuartzCore/QuartzCore.h>
 
 #import "ScrollViewWithPadView.h"
 #import "ROOTObjectController.h"
-
-#import "InspectorWithNavigation.h"
-#import "FilledAreaInspector.h"
-#import "LineInspector.h"
-#import "PadInspector.h"
-
+#import "ObjectInspector.h"
 #import "ObjectShortcut.h"
 #import "SelectionView.h"
-#import "EditorRTTI.h"
 #import "FillEditor.h"
 #import "EditorView.h"
 #import "Constants.h"
@@ -181,54 +167,26 @@ static const CGFloat maximumZoom = 2.f;
    if (self) {
       self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Show editor" style : UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
 
-   
-      editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
-  
-      fillInspector = [[FilledAreaInspector alloc] initWithNibName : @"FilledAreaInspector" bundle : nil];
-      [fillInspector setROOTObjectController : self];
-//      fill = [[FillEditor alloc] initWithNibName:@"FillEditor" bundle:nil];
-//      [fill setROOTObjectController : self];
-//      lineEditor = [[LineStyleEditor alloc] initWithNibName : @"LineStyleEditor" bundle : nil];
-//      [lineEditor setController : self];
-
-      LineInspector *lineInspectorCompositor = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];
-      lineInspector = [[InspectorWithNavigation alloc] initWithRootViewController : lineInspectorCompositor];
-      [lineInspectorCompositor release];
-      lineInspector.view.frame = [LineInspector inspectorFrame];//CGRectMake(0.f, 0.f, 250.f, 350.f);
-      lineInspector.navigationBar.hidden = YES;
-      lineInspector.view.backgroundColor = [UIColor clearColor];
-      [lineInspector setROOTObjectController : self];
-      
-      PadInspector *padInspectorCompositor = [[PadInspector alloc] initWithNibName : @"PadInspector" bundle : nil];
-      padInspector = [[InspectorWithNavigation alloc] initWithRootViewController : padInspectorCompositor];
-      [padInspectorCompositor release];
-      padInspector.view.frame = CGRectMake(0.f, 0.f, 250.f, 250.f);
-      padInspector.navigationBar.hidden = YES;
-      padInspector.view.backgroundColor = [UIColor clearColor];
-      [padInspector setROOTObjectController : self];
-
+      //Setup the object inspector.
+      objectInspector = [[ObjectInspector alloc] initWithNibName : nil bundle : nil];
+      editorView = (EditorView *)objectInspector.view;
       [self.view addSubview : editorView];
-      //
+      editorView.hidden = YES;
+      [editorView release];
+      
+      //Setup the scroll-view.
       scrollView.delegate = self;
       [scrollView setMaximumZoomScale:2.];
       scrollView.bounces = NO;
       scrollView.bouncesZoom = NO;
-      //
-      editorView.hidden = YES;
-      [editorView setEditorTitle : "Pad"];
-      [editorView release];
-      //
-      //Create padView, pad.
-      //
+
+      //Create pad, padView.
       const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
       const CGRect padRect = CGRectMake(padCenter.x - padW / 2, padCenter.y - padH / 2, padW, padH);
       pad = new ROOT_iOS::Pad(padW, padH);
       selectedObject = pad;
-      
-      [self addObjectEditors];
-      [self setEditorValues];
-
-      currentEditors = ROOT_IOSBrowser::GetRequiredEditors(pad);
+      //Init the inspector for the pad.
+      [self setupObjectInspector];
       
       padView = [[PadView alloc] initWithFrame : padRect controller : self forPad : pad];
       [scrollView addSubview : padView];
@@ -244,14 +202,8 @@ static const CGFloat maximumZoom = 2.f;
 - (void)dealloc
 {
    delete pad;
- //  [grid release];
- //  [log release];
-//   [fill release];
-//   [lineEditor release];
-   [fillInspector release];
-   [lineInspector release];
-   [padInspector release];
-//   [lineEditorParent release];
+   [objectInspector release];
+
    [super dealloc];
 }
 
@@ -363,7 +315,6 @@ static const CGFloat maximumZoom = 2.f;
 {
    [self resetPadAndScroll];
    [self resetEditorButton];
- //  [editorView clearEditorView];
 
    rootObject = shortcut.rootObject;
 
@@ -429,8 +380,6 @@ static const CGFloat maximumZoom = 2.f;
       [self scrollViewDidEndZooming : scrollView withView : padView atScale : maximumZoom];
    } else {
       zoomed = NO;
-      //[padView retain];
-      //[padView removeFromSuperview];
       padView.frame = CGRectMake(0.f, 0.f, padW, padH);
       padView.selectionView.frame = CGRectMake(0.f, 0.f, padW, padH);
       scrollView.maximumZoomScale = maximumZoom;
@@ -455,79 +404,21 @@ static const CGFloat maximumZoom = 2.f;
          selectedObject = object;
          padView.selectionView.hidden = NO;
          [padView.selectionView setNeedsDisplay];
-         [editorView setEditorTitle : selectedObject->IsA()->GetName()];
       } else {
          selectedObject = pad;
          padView.selectionView.hidden = YES;
-         [editorView setEditorTitle : "Pad"];
       }
 
-      const unsigned newEditors = ROOT_IOSBrowser::GetRequiredEditors(selectedObject);
-      if (newEditors != currentEditors) {
-         [self addObjectEditors];
-         currentEditors = newEditors;
-      }
-
-
-      
-      [self setEditorValues];
+      [self setupObjectInspector];
+      [objectInspector resetInspector];
    }
 }
 
 //_________________________________________________________________
-- (void) addObjectEditors
+- (void) setupObjectInspector
 {
-   using namespace ROOT_IOSBrowser;
-      
-   [editorView removeAllEditors];
-   
-   const unsigned editors = GetRequiredEditors(selectedObject);
-   
-   if (editors & kLineEditor) {
-//      [editorView addSubEditor : lineEditor.view withName : @"Line style"];
-//      [editorView addSubEditor : lineEditorParent.view withName : @"Line attributes"];
-      [lineInspector resetInspector];
-      [editorView addSubEditor : lineInspector.view withName : [lineInspector getComponentName]];
-   }
-   
-   if (editors & kFillEditor) {
-//      [editorView addSubEditor : fill.view withName : @"Fill attributes"];
-      [editorView addSubEditor : fillInspector.view withName : [fillInspector getComponentName]];
-   }
-
-   
-   if (editors & kPadEditor) {
-//      [editorView addSubEditor : grid.view withName : @"Ticks and grid"];
-//      [editorView addSubEditor : log.view withName : @"Log scales"];
-      [padInspector resetInspector];
-      [editorView addSubEditor : padInspector.view withName : [padInspector getComponentName]];
-   }   
-}
-
-//_________________________________________________________________
-- (void) setEditorValues
-{
-   using namespace ROOT_IOSBrowser;
-
-   const unsigned editors = GetRequiredEditors(selectedObject);
-   
-   if (editors & kLineEditor) {
-      //[editorView addSubEditor : lineEditor.view withName : @"Line style"];
-      [lineInspector setROOTObject : selectedObject];
-   }
-   
-   if (editors & kFillEditor) {
-      //[editorView addSubEditor : fill.view withName : @"Fill"];
-//      [fill setROOTObject : selectedObject];
-      [fillInspector setROOTObject : selectedObject];
-   }
-
-   
-   if (editors & kPadEditor) {
-//      [grid setROOTObject : selectedObject];
-//      [log setROOTObject : selectedObject];
-      [padInspector setROOTObject : selectedObject];
-   }
+   [objectInspector setROOTObject : selectedObject];
+   [objectInspector setROOTObjectController : self];
 }
 
 //_________________________________________________________________

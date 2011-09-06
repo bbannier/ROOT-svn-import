@@ -18,6 +18,7 @@
 #import "TAttFill.h"
 #import "TAttPad.h"
 #import "TObject.h"
+#import "TClass.h"
 
 @implementation ObjectInspector
 
@@ -122,19 +123,32 @@
 }
 
 //_________________________________________________________________
-- (void) setActiveEditorsForObject : (TObject *)o
+- (void) setTitle
+{
+   if (dynamic_cast<TAttPad *>(object)) {
+      //This is special case, as soon as ROOT::iOS::Pad does not have
+      //ClassDef, the IsA() will be for TVirtualPad, but I want to
+      //see simply "Pad" as a title.
+      [editorView setEditorTitle : "Pad"];
+   } else {
+      [editorView setEditorTitle : object->IsA()->GetName()];
+   }
+}
+
+//_________________________________________________________________
+- (void) setActiveEditors
 {
    using namespace ROOT_IOSObjectInspector;
 
    nActiveEditors = 0;
 
-   if (dynamic_cast<TAttLine *>(o))
+   if (dynamic_cast<TAttLine *>(object))
       activeEditors[nActiveEditors++] = cachedEditors[kAttLine];
    
-   if (dynamic_cast<TAttFill *>(o))
+   if (dynamic_cast<TAttFill *>(object))
       activeEditors[nActiveEditors++] = cachedEditors[kAttFill];
    
-   if (dynamic_cast<TAttPad *>(o))
+   if (dynamic_cast<TAttPad *>(object))
       activeEditors[nActiveEditors++] = cachedEditors[kAttPad];
 }
 
@@ -144,10 +158,17 @@
    if (o != object) {
       //Initialize.
       object = o;
-      [self setActiveEditorsForObject : object];
+      
+      [self setTitle];
+      [self setActiveEditors];
    
       for (unsigned i = 0; i < nActiveEditors; ++i)
          [activeEditors[i] setROOTObject : o];
+      
+      [editorView removeAllEditors];
+
+      for (unsigned i = 0; i < nActiveEditors; ++i)
+         [editorView addSubEditor : activeEditors[i].view withName : [activeEditors[i] getComponentName]];
    }
 }
 
