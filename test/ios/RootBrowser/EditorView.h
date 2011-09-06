@@ -11,22 +11,28 @@
 @class ScrollViewWithPickers;
 @class EditorPlateView;
 
+//Hoho! As soon as I use Objective-C++, I can use namespaces! "Yeaaahhh, that's good!" (c) Duke Nukem.
+
+namespace ROOT_IOSObjectInspector {
+
 enum {
    evMaxComponents = 5,
    evMaxStates = 1 << evMaxComponents
 };
+
+}
 
 @interface EditorView : UIView {
    UILabel *editorTitle;
 
    ScrollViewWithPickers *scrollView;
 
-   CGFloat plateYs[evMaxStates * evMaxComponents];
-   CGFloat viewYs[evMaxStates * evMaxComponents];
+   CGFloat plateYs[ROOT_IOSObjectInspector::evMaxStates * ROOT_IOSObjectInspector::evMaxComponents];
+   CGFloat viewYs[ROOT_IOSObjectInspector::evMaxStates * ROOT_IOSObjectInspector::evMaxComponents];
    
-   UIView *plates[evMaxComponents];
-   UIView *views[evMaxComponents];
-   UIView *containers[evMaxComponents];   
+   UIView *plates[ROOT_IOSObjectInspector::evMaxComponents];
+   UIView *views[ROOT_IOSObjectInspector::evMaxComponents];
+   UIView *containers[ROOT_IOSObjectInspector::evMaxComponents];   
 
    unsigned nStates;
    unsigned nEditors;

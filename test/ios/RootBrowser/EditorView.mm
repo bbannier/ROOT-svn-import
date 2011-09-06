@@ -15,6 +15,8 @@
 #import "EditorView.h"
 
 
+namespace ObjIns = ROOT_IOSObjectInspector;
+
 @implementation EditorView
 
 //_________________________________________________________________
@@ -203,7 +205,7 @@
 //_________________________________________________________________
 - (void) addSubEditor:(UIView *)element withName : (NSString *)name
 {
-   if (nEditors == evMaxComponents) {
+   if (nEditors == ROOT_IOSObjectInspector::evMaxComponents) {
       NSLog(@"Could not add more editors");
       return;
    }
