@@ -16,6 +16,8 @@ class TObject;
    TObject *object;
 }
 
++ (CGRect) inspectorFrame;
+
 - (void) setROOTObjectController : (ROOTObjectController *)c;
 - (void) setROOTObject : (TObject *)o;
 - (NSString *) getComponentName;

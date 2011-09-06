@@ -194,7 +194,7 @@ static const CGFloat maximumZoom = 2.f;
       LineInspector *lineInspectorCompositor = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];
       lineInspector = [[InspectorWithNavigation alloc] initWithRootViewController : lineInspectorCompositor];
       [lineInspectorCompositor release];
-      lineInspector.view.frame = CGRectMake(0.f, 0.f, 250.f, 350.f);
+      lineInspector.view.frame = [LineInspector inspectorFrame];//CGRectMake(0.f, 0.f, 250.f, 350.f);
       lineInspector.navigationBar.hidden = YES;
       lineInspector.view.backgroundColor = [UIColor clearColor];
       [lineInspector setROOTObjectController : self];
@@ -206,19 +206,6 @@ static const CGFloat maximumZoom = 2.f;
       padInspector.navigationBar.hidden = YES;
       padInspector.view.backgroundColor = [UIColor clearColor];
       [padInspector setROOTObjectController : self];
-      
-
-/*      lineEditor = [[LineAttribEditor alloc] initWithStyle : UITableViewStyleGrouped controller : self];
-      lineEditorParent = [[UINavigationController alloc] initWithRootViewController : lineEditor];
-      lineEditorParent.view.frame = CGRectMake(0.f, 0.f, 250.f, 350.f);
-      lineEditorParent.navigationBar.hidden = YES;
-      lineEditor.tableView.backgroundColor = [UIColor clearColor];
-      lineEditor.tableView.opaque = NO;
-      lineEditor.tableView.backgroundView = nil;
-      lineEditor.tableView.frame = CGRectMake(0.f, 0.f, 250.f, 350.f);
-      lineEditorParent.view.backgroundColor = [UIColor clearColor];
-      [lineEditor release];
-*/
 
       [self.view addSubview : editorView];
       //

@@ -7,6 +7,12 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 @implementation LineInspector
 
 //_________________________________________________________________
++ (CGRect) inspectorFrame
+{
+   return CGRectMake(0.f, 0.f, 250.f, 330.f);
+}
+
+//_________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];

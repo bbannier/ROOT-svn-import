@@ -47,7 +47,7 @@
 					<object class="IBUIPickerView" id="196548051">
 						<reference key="NSNextResponder" ref="531680565"/>
 						<int key="NSvFlags">290</int>
-						<string key="NSFrame">{{25, 57}, {200, 216}}</string>
+						<string key="NSFrame">{{25, 44}, {200, 216}}</string>
 						<reference key="NSSuperview" ref="531680565"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="914787149"/>
@@ -85,7 +85,7 @@
 					<object class="IBUIButton" id="914787149">
 						<reference key="NSNextResponder" ref="531680565"/>
 						<int key="NSvFlags">292</int>
-						<string key="NSFrame">{{35, 289}, {180, 50}}</string>
+						<string key="NSFrame">{{35, 268}, {180, 50}}</string>
 						<reference key="NSSuperview" ref="531680565"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView"/>
@@ -116,7 +116,7 @@
 						</object>
 					</object>
 				</object>
-				<string key="NSFrameSize">{250, 350}</string>
+				<string key="NSFrameSize">{250, 330}</string>
 				<reference key="NSSuperview"/>
 				<reference key="NSWindow"/>
 				<reference key="NSNextKeyView" ref="174591383"/>
