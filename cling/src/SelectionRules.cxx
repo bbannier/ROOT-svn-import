@@ -338,7 +338,7 @@ bool SelectionRules::isDeclSelected(clang::Decl *D)
 
 bool SelectionRules::getDeclName(clang::Decl* D, std::string& name, std::string& qual_name)
 {
-   clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
+   clang::NamedDecl* N = llvm::dyn_cast<clang::NamedDecl> (D);
 
    if (N) {
       // the identifier is NULL for some special methods like constructors, destructors and operators
@@ -380,7 +380,7 @@ bool SelectionRules::getFunctionPrototype(clang::Decl* D, std::string& prototype
       return false;
    }
 
-   clang::FunctionDecl* F = dyn_cast<clang::FunctionDecl> (D); // cast the Decl to FunctionDecl
+   clang::FunctionDecl* F = llvm::dyn_cast<clang::FunctionDecl> (D); // cast the Decl to FunctionDecl
  
    if (F) {
 
@@ -418,13 +418,13 @@ bool SelectionRules::isParentClass(clang::Decl* D)
    clang::DeclContext *ctx = D->getDeclContext();
 
    if (ctx->isRecord()){
-      clang::Decl *parent = dyn_cast<clang::Decl> (ctx);
+      clang::Decl *parent = llvm::dyn_cast<clang::Decl> (ctx);
       if (!parent) {
          return false;
       }
       else {
          //TagDecl has methods to understand of what kind is the Decl - class, struct or union
-         clang::TagDecl* T = dyn_cast<clang::TagDecl> (parent); 
+         clang::TagDecl* T = llvm::dyn_cast<clang::TagDecl> (parent); 
          
          if (T) {
             if (T->isClass()||T->isStruct()) { 
@@ -450,13 +450,13 @@ bool SelectionRules::isParentClass(clang::Decl* D, std::string& parent_name, std
    clang::DeclContext *ctx = D->getDeclContext();
 
    if (ctx->isRecord()){
-      clang::Decl *parent = dyn_cast<clang::Decl> (ctx);
+      clang::Decl *parent = llvm::dyn_cast<clang::Decl> (ctx);
       if (!parent) {
          return false;
       }
       else {
          //TagDecl has methods to understand of what kind is the Decl
-         clang::TagDecl* T = dyn_cast<clang::TagDecl> (parent); 
+         clang::TagDecl* T = llvm::dyn_cast<clang::TagDecl> (parent); 
          
          if (T) {
             if (T->isClass()|| T->isStruct()) { 
@@ -483,7 +483,7 @@ bool SelectionRules::getParentName(clang::Decl* D, std::string& parent_name, std
 
    if (ctx->isRecord()){
       //DEBUG std::cout<<"\n\tDeclContext is Record";
-      clang::Decl *parent = dyn_cast<clang::Decl> (ctx);
+      clang::Decl *parent = llvm::dyn_cast<clang::Decl> (ctx);
       if (!parent) {
          return false;
       }
@@ -504,7 +504,7 @@ bool SelectionRules::getParent(clang::Decl* D, clang::Decl* parent)
 
    if (ctx->isRecord()){
       //DEBUG std::cout<<"\n\tDeclContext is Record";
-      parent = dyn_cast<clang::Decl> (ctx);
+      parent = llvm::dyn_cast<clang::Decl> (ctx);
       if (!parent) {
          return false;
       }
@@ -539,7 +539,7 @@ bool SelectionRules::isClassSelected(clang::Decl* D, const std::string& qual_nam
 {
    clang::TagDecl* T;
    try {
-    T = dyn_cast<clang::TagDecl> (D); //TagDecl has methods to understand of what kind is the Decl
+    T = llvm::dyn_cast<clang::TagDecl> (D); //TagDecl has methods to understand of what kind is the Decl
    }
    catch (std::exception& e) {
       return false;

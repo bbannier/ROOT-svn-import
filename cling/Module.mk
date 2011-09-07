@@ -105,5 +105,5 @@ $(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS \
 # -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
 # -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
 # -lLLVMCore -lLLVMSupport -lLLVMSystem
-CORELIBEXTRA += -Llib -lRCling
+CORELIBEXTRA += -lReflex -lRCling -L$(LLVMDIR)/lib -lcling
 CORELIBDEP += $(CLINGLIB)
