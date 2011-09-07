@@ -31,6 +31,14 @@
 		70681C1E1416474000F8338A /* FilledAreaInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70681C1C1416474000F8338A /* FilledAreaInspector.mm */; };
 		70681C1F1416474000F8338A /* FilledAreaInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70681C1D1416474000F8338A /* FilledAreaInspector.xib */; };
 		70681C221416586D00F8338A /* ObjectInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70681C211416586D00F8338A /* ObjectInspector.mm */; };
+		7073A26B14174E74001A0FE2 /* AxisColorInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7073A26914174E74001A0FE2 /* AxisColorInspector.mm */; };
+		7073A26C14174E74001A0FE2 /* AxisColorInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7073A26A14174E74001A0FE2 /* AxisColorInspector.xib */; };
+		7073A275141757BC001A0FE2 /* AxisTicksInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7073A273141757BB001A0FE2 /* AxisTicksInspector.mm */; };
+		7073A276141757BC001A0FE2 /* AxisTicksInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7073A274141757BB001A0FE2 /* AxisTicksInspector.xib */; };
+		7073A27E14177A03001A0FE2 /* AxisInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7073A27C14177A03001A0FE2 /* AxisInspector.mm */; };
+		7073A27F14177A03001A0FE2 /* AxisInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7073A27D14177A03001A0FE2 /* AxisInspector.xib */; };
+		7073A28214179A6D001A0FE2 /* minus_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 7073A28014179A6C001A0FE2 /* minus_btn.png */; };
+		7073A28314179A6D001A0FE2 /* plus_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 7073A28114179A6D001A0FE2 /* plus_btn.png */; };
 		7077853214139EBF00450A1B /* editor_plate.png in Resources */ = {isa = PBXBuildFile; fileRef = 7077853114139EBF00450A1B /* editor_plate.png */; };
 		7077901E13FE50EB00C0FFA1 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077901D13FE50EB00C0FFA1 /* UIKit.framework */; };
 		7077902013FE50EB00C0FFA1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077901F13FE50EB00C0FFA1 /* Foundation.framework */; };
@@ -114,6 +122,17 @@
 		70681C1D1416474000F8338A /* FilledAreaInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = FilledAreaInspector.xib; sourceTree = "<group>"; };
 		70681C201416586D00F8338A /* ObjectInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjectInspector.h; sourceTree = "<group>"; };
 		70681C211416586D00F8338A /* ObjectInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ObjectInspector.mm; sourceTree = "<group>"; };
+		7073A26814174E74001A0FE2 /* AxisColorInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AxisColorInspector.h; sourceTree = "<group>"; };
+		7073A26914174E74001A0FE2 /* AxisColorInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AxisColorInspector.mm; sourceTree = "<group>"; };
+		7073A26A14174E74001A0FE2 /* AxisColorInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AxisColorInspector.xib; sourceTree = "<group>"; };
+		7073A272141757BB001A0FE2 /* AxisTicksInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AxisTicksInspector.h; sourceTree = "<group>"; };
+		7073A273141757BB001A0FE2 /* AxisTicksInspector.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = AxisTicksInspector.mm; sourceTree = "<group>"; };
+		7073A274141757BB001A0FE2 /* AxisTicksInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AxisTicksInspector.xib; sourceTree = "<group>"; };
+		7073A27B14177A03001A0FE2 /* AxisInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AxisInspector.h; sourceTree = "<group>"; };
+		7073A27C14177A03001A0FE2 /* AxisInspector.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = AxisInspector.mm; sourceTree = "<group>"; };
+		7073A27D14177A03001A0FE2 /* AxisInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AxisInspector.xib; sourceTree = "<group>"; };
+		7073A28014179A6C001A0FE2 /* minus_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = minus_btn.png; sourceTree = "<group>"; };
+		7073A28114179A6D001A0FE2 /* plus_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = plus_btn.png; sourceTree = "<group>"; };
 		7077853114139EBF00450A1B /* editor_plate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = editor_plate.png; sourceTree = "<group>"; };
 		7077901913FE50EB00C0FFA1 /* root_browser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = root_browser.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7077901D13FE50EB00C0FFA1 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -198,6 +217,8 @@
 		7077900E13FE50EB00C0FFA1 = {
 			isa = PBXGroup;
 			children = (
+				7073A28014179A6C001A0FE2 /* minus_btn.png */,
+				7073A28114179A6D001A0FE2 /* plus_btn.png */,
 				70E0B5E31414E4B80077E4A8 /* General */,
 				70E0B5D81414E2B50077E4A8 /* Top level view controllers */,
 				70E0B5D41414E0F10077E4A8 /* Object Inspector */,
@@ -310,6 +331,15 @@
 				70681C1C1416474000F8338A /* FilledAreaInspector.mm */,
 				70681C201416586D00F8338A /* ObjectInspector.h */,
 				70681C211416586D00F8338A /* ObjectInspector.mm */,
+				7073A26814174E74001A0FE2 /* AxisColorInspector.h */,
+				7073A26914174E74001A0FE2 /* AxisColorInspector.mm */,
+				7073A26A14174E74001A0FE2 /* AxisColorInspector.xib */,
+				7073A272141757BB001A0FE2 /* AxisTicksInspector.h */,
+				7073A273141757BB001A0FE2 /* AxisTicksInspector.mm */,
+				7073A274141757BB001A0FE2 /* AxisTicksInspector.xib */,
+				7073A27B14177A03001A0FE2 /* AxisInspector.h */,
+				7073A27C14177A03001A0FE2 /* AxisInspector.mm */,
+				7073A27D14177A03001A0FE2 /* AxisInspector.xib */,
 			);
 			name = "Classes and protocols";
 			sourceTree = "<group>";
@@ -506,6 +536,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7073A28214179A6D001A0FE2 /* minus_btn.png in Resources */,
+				7073A28314179A6D001A0FE2 /* plus_btn.png in Resources */,
 				70E0B624141510880077E4A8 /* forward_btn.png in Resources */,
 				70E0B62114150F630077E4A8 /* back_btn.png in Resources */,
 				7077853214139EBF00450A1B /* editor_plate.png in Resources */,
@@ -530,6 +562,9 @@
 				70681C1314163A2300F8338A /* PadTicksGridInspector.xib in Resources */,
 				70681C1A14163F0C00F8338A /* PadLogScaleInspector.xib in Resources */,
 				70681C1F1416474000F8338A /* FilledAreaInspector.xib in Resources */,
+				7073A26C14174E74001A0FE2 /* AxisColorInspector.xib in Resources */,
+				7073A276141757BC001A0FE2 /* AxisTicksInspector.xib in Resources */,
+				7073A27F14177A03001A0FE2 /* AxisInspector.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -570,6 +605,9 @@
 				70681C1914163F0C00F8338A /* PadLogScaleInspector.mm in Sources */,
 				70681C1E1416474000F8338A /* FilledAreaInspector.mm in Sources */,
 				70681C221416586D00F8338A /* ObjectInspector.mm in Sources */,
+				7073A26B14174E74001A0FE2 /* AxisColorInspector.mm in Sources */,
+				7073A275141757BC001A0FE2 /* AxisTicksInspector.mm in Sources */,
+				7073A27E14177A03001A0FE2 /* AxisInspector.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -637,7 +675,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "root_browser/root_browser-Prefix.pch";
 				HEADER_SEARCH_PATHS = /Users/tpochep/tpdev/root/include;
 				INFOPLIST_FILE = "root_browser/root_browser-Info.plist";
@@ -659,7 +697,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				COPY_PHASE_STRIP = YES;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "root_browser/root_browser-Prefix.pch";
 				HEADER_SEARCH_PATHS = /Users/tpochep/tpdev/root/include;
 				INFOPLIST_FILE = "root_browser/root_browser-Info.plist";
