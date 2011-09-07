@@ -1,50 +1,36 @@
 #import "ROOTObjectController.h"
-#import "FilledAreaInspector.h"
-#import "PatternCell.h"
+#import "AxisColorInspector.h"
 #import "Constants.h"
 #import "ColorCell.h"
 
 //C++ (ROOT) imports:
-#import "IOSFillPatterns.h"
-#import "TAttFill.h"
+#import "TAttAxis.h"
 #import "TObject.h"
 
 //TODO: check, if in Obj-C++ constants have internal linkage.
-static const CGFloat defaultCellW = 80.f;
+static const CGFloat defaultCellW = 180.f;
 static const CGFloat defaultCellH = 44.f;
 
-@implementation FilledAreaInspector
+@implementation AxisColorInspector
 
 //_________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    using namespace ROOT_IOSBrowser;
 
-   self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-   
+   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
+
    [self view];
 
    if (self) {
       const CGRect cellRect = CGRectMake(0.f, 0.f, defaultCellW, defaultCellH);
    
-      colorCells = [[NSMutableArray alloc] init];
-      
+      colors = [[NSMutableArray alloc] init];
+
       for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
          ColorCell * newCell = [[ColorCell alloc] initWithFrame : cellRect];
          [newCell setRGB : predefinedFillColors[i]];
-         [colorCells addObject : newCell];
-         [newCell release];
-      }
-
-      patternCells = [[NSMutableArray alloc] init];
-      PatternCell *solidFill = [[PatternCell alloc] initWithFrame : cellRect andPattern : 0];
-      [solidFill setAsSolid];
-      [patternCells addObject : solidFill];
-      [solidFill release];
-      
-      for (unsigned i = 0; i < ROOT_iOS::GraphicUtils::kPredefinedFillPatterns; ++i) {
-         PatternCell *newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : i];
-         [patternCells addObject : newCell];
+         [colors addObject : newCell];
          [newCell release];
       }
    }
@@ -55,8 +41,7 @@ static const CGFloat defaultCellH = 44.f;
 //_________________________________________________________________
 - (void)dealloc
 {
-   [colorCells release];
-   [patternCells release];
+   [colors release];
 
    [super dealloc];
 }
@@ -68,31 +53,21 @@ static const CGFloat defaultCellH = 44.f;
 }
 
 //_________________________________________________________________
-- (void) setROOTObjectController : (ROOTObjectController *) p
+- (void) setROOTObjectController : (ROOTObjectController *)c
 {
-   parentController = p;
+   controller = c;
 }
 
 //_________________________________________________________________
 - (void) setROOTObject : (TObject *)obj
 {
-   //ROOT's standard color pick has 16 colors,
-   //I have 16 rows in a color picker.
-   //Fill color is some integer index, not from [0 16),
-   //but some hardcoded constant (as usually :( ) - 
-   //see TGColorSelect or something like this.
-   //I hold this indices in colorIndices array of constants,
-   //since ROOT does not define them.
-   //If the object color is one of 16 standard colors,
-   //I find the correct row in a picker and rotate picker 
-   //to this row. If not - it's on zero.
    using namespace ROOT_IOSBrowser;
 
    //I do not check the result of dynamic_cast here. This is done at upper level.
-   filledObject = dynamic_cast<TAttFill *>(obj);
+   object = dynamic_cast<TAttAxis *>(obj);
 
    //Set the row in color picker, using fill color from object.
-   const Color_t colorIndex = filledObject->GetFillColor();
+   const Color_t colorIndex = object->GetAxisColor();
    unsigned pickerRow = 0;
    for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
       if (colorIndex == colorIndices[i]) {
@@ -101,46 +76,17 @@ static const CGFloat defaultCellH = 44.f;
       }
    }
 
-   [fillPicker selectRow : pickerRow inComponent : 0 animated : NO];
-   
-   //Look for a fill pattern.
-   namespace Fill = ROOT_iOS::GraphicUtils;
-   
-   const Style_t fillStyle = filledObject->GetFillStyle();
-   if (fillStyle == Fill::solidFillStyle)//I'm sorry, again, hardcoded constant, ROOT does not define it :(.
-      pickerRow = 0;
-   else
-      pickerRow = filledObject->GetFillStyle() % Fill::stippleBase;
-
-   [fillPicker selectRow : pickerRow inComponent : 1 animated : NO];
+   [colorPicker selectRow : pickerRow inComponent : 0 animated : NO];
 }
 
 //_________________________________________________________________
-- (void) setNewColor : (NSInteger) cellIndex
+- (void) setNewColor : (NSInteger) row
 {
    using namespace ROOT_IOSBrowser;
 
-   if (filledObject && parentController) {
-      if (cellIndex >= 0 && cellIndex < nROOTDefaultColors) {
-         filledObject->SetFillColor(colorIndices[cellIndex]);
-         [parentController objectWasModifiedByEditor];
-      }
-   }
-}
-
-//_________________________________________________________________
-- (void) setNewPattern : (NSInteger) cellIndex
-{
-   namespace Fill = ROOT_iOS::GraphicUtils;
-
-   if (filledObject && parentController) {
-      if (cellIndex > 0 && cellIndex <= Fill::kPredefinedFillPatterns) {
-         filledObject->SetFillStyle(Fill::stippleBase + cellIndex);
-      } else if (!cellIndex) {
-         filledObject->SetFillStyle(Fill::solidFillStyle);
-      }
-
-      [parentController objectWasModifiedByEditor];
+   if (object && controller) {
+      object->SetAxisColor(colorIndices[row]);
+      [controller objectWasModifiedByEditor];
    }
 }
 
@@ -181,16 +127,13 @@ static const CGFloat defaultCellH = 44.f;
 //_________________________________________________________________
 - (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
 {
-   if (!component)
-      return [colorCells count];
-   else
-      return [patternCells count];
+   return [colors count];
 }
 
 //_________________________________________________________________
 - (NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
 {
-	return 2;
+	return 1;
 }
 
 #pragma mark color/pattern picker's delegate.
@@ -199,24 +142,19 @@ static const CGFloat defaultCellH = 44.f;
 //_________________________________________________________________
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
-   if (!component)
-      return [colorCells objectAtIndex : row];
-   else
-      return [patternCells objectAtIndex : row];
+   return [colors objectAtIndex : row];
 }
 
 //_________________________________________________________________
 - (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
-   if (!component)
-      [self setNewColor : row];
-   else
-      [self setNewPattern : row];
+   [self setNewColor : row];
 }
 
-- (NSString *) getComponentName
+//_________________________________________________________________
+- (void) back
 {
-   return @"Fill attributes";
+   [self.navigationController popViewControllerAnimated : YES];
 }
 
 @end

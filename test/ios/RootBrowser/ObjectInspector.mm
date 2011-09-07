@@ -9,6 +9,7 @@
 #import "InspectorWithNavigation.h"
 #import "FilledAreaInspector.h"
 #import "ObjectInspector.h"
+#import "AxisInspector.h"
 #import "LineInspector.h"
 #import "PadInspector.h"
 #import "EditorView.h"
@@ -16,6 +17,7 @@
 //C++ (ROOT) imports.
 #import "TAttLine.h"
 #import "TAttFill.h"
+#import "TAttAxis.h"
 #import "TAttPad.h"
 #import "TObject.h"
 #import "TClass.h"
@@ -51,6 +53,13 @@
    [padInspectorCompositor release];
    padInspector.view.frame = [PadInspector inspectorFrame];
    cachedEditors[kAttPad] = padInspector;
+   
+   //TAttAxis.
+   AxisInspector *axisInspectorCompositor = [[AxisInspector alloc] initWithNibName : @"AxisInspector" bundle : nil];
+   InspectorWithNavigation *axisInspector = [[InspectorWithNavigation alloc] initWithRootViewController : axisInspectorCompositor];
+   [axisInspectorCompositor release];
+   axisInspector.view.frame = [AxisInspector inspectorFrame];
+   cachedEditors[kAttAxis] = axisInspector;
 }
 
 //_________________________________________________________________
@@ -150,6 +159,9 @@
    
    if (dynamic_cast<TAttPad *>(object))
       activeEditors[nActiveEditors++] = cachedEditors[kAttPad];
+      
+   if (dynamic_cast<TAttAxis *>(object))
+      activeEditors[nActiveEditors++] = cachedEditors[kAttAxis];
 }
 
 //_________________________________________________________________

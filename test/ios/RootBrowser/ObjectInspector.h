@@ -15,6 +15,7 @@ enum {
 kAttLine = 0,
 kAttFill = 1,
 kAttPad = 2,
+kAttAxis  = 3,
 //Add the new one here.
 kNOfInspectors //
 };
