@@ -32,6 +32,7 @@
 #include "RooRealVar.h"
 #include "RooRandom.h"
 #include "RooMath.h"
+#include "RooParallelEvaluator.h"
 
 ClassImp(RooGaussian)
 
@@ -61,12 +62,33 @@ RooGaussian::RooGaussian(const RooGaussian& other, const char* name) :
 //_____________________________________________________________________________
 Double_t RooGaussian::evaluate() const
 {
-  Double_t arg= x - mean;  
-  Double_t ret =exp(-0.5*arg*arg/(sigma*sigma)) ;
-  //cout << "gauss x = " << x << " mean = " << mean << " sigma = " << sigma << endl ;
-  return ret ;
+  return eval(x,mean,sigma);
+
 }
 
+//_____________________________________________________________________________
+Bool_t RooGaussian::evaluateAndNormalizeSIMD(RooAbsReal::ImplEval impl, Double_t invIntegral,
+					     const RooAbsPdf *mother /*, interval */) const 
+{
+  // Precalculate the values
+  Int_t size(0);
+  size = x.doValues(impl);
+  Int_t size2 = mean.doValues(impl);
+  if (size>0 && size2>0 && size!=size2)
+    // abort, running with different dimension
+    ;
+  if (size==0 && size2!=0) size = size2;
+  size2 = sigma.doValues(impl);
+  if (size>0 && size2>0 && size!=size2)
+    // abort, running with different dimension
+    ;
+  if (size==0 && size2!=0) size = size2;
+
+  // call the Parallel Evaluator
+  //  ParallelEvaluator(*this,data,
+
+  return kTRUE;
+}
 
 
 //_____________________________________________________________________________

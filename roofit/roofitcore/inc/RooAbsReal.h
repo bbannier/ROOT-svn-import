@@ -22,6 +22,7 @@
 #include "RooArgSet.h"
 #include "RooArgList.h"
 #include "RooGlobalFunc.h"
+#include "RooValues.h"
 
 class RooArgList ;
 class RooDataSet ;
@@ -354,6 +355,13 @@ protected:
   }
   virtual Double_t evaluate() const = 0 ;
 
+  // Define which implementation to use for the evaluation
+  enum ImplEval { kDefault=0, kOpenMP=1, kCUDA=2 } ;
+  // By default they return kFALSE, i.e. algorithm does not exist
+  // Must overloading these functions in the children classes
+  virtual Bool_t evaluateSIMD(RooAbsReal::ImplEval /*, interval */) const { return kFALSE; } 
+  virtual Bool_t evaluateAndNormalizeSIMD(RooAbsReal::ImplEval, Double_t, const RooAbsPdf* /*, interval */) const { return kFALSE; } 
+
   // Hooks for RooDataSet interface
   friend class RooRealIntegral ;
   virtual void syncCache(const RooArgSet* set=0) { getVal(set) ; }
@@ -366,6 +374,7 @@ protected:
   Double_t _plotMax ;       // Maximum of plot range
   Int_t    _plotBins ;      // Number of plot bins
   mutable Double_t _value ; // Cache for current value of object
+  mutable RooValues _vectValue ; // Cache for current vector values of object
   TString  _unit ;          // Unit for objects value
   TString  _label ;         // Plot label for objects value
   Bool_t   _forceNumInt ;   // Force numerical integration if flag set

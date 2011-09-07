@@ -62,7 +62,7 @@ ROOFITCOREH2   := RooDouble.h RooEffGenContext.h RooEllipse.h RooErrorHandler.h 
                   RooNumConvolution.h RooNumConvPdf.h RooNumIntConfig.h RooNumIntFactory.h \
                   RooPlotable.h RooPlot.h RooPolyVar.h RooPrintable.h \
                   RooProdGenContext.h RooProduct.h RooPullVar.h \
-                  RooQuasiRandomGenerator.h RooRandom.h
+                  RooParallelEvaluator.h RooQuasiRandomGenerator.h RooRandom.h
 
 ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic.h \
                   RooRealBinding.h RooRealConstant.h RooRealIntegral.h \
@@ -76,7 +76,8 @@ ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic
                   RooTObjWrap.h RooTrace.h RooUniformBinning.h \
                   RooSimultaneous.h RooRealSumPdf.h RooResolutionModel.h \
                   RooProdPdf.h RooMCStudy.h RooSimPdfBuilder.h RooTruthModel.h RooMsgService.h \
-                  RooProjectedPdf.h RooWorkspace.h RooProfileLL.h RooAbsCachedPdf.h RooAbsSelfCachedPdf.h \
+                  RooProjectedPdf.h RooValues.h \
+                  RooWorkspace.h RooProfileLL.h RooAbsCachedPdf.h RooAbsSelfCachedPdf.h \
                   RooHistPdf.h RooCachedPdf.h RooFFTConvPdf.h RooDataHistSliceIter.h RooCacheManager.h \
                   RooAbsCache.h RooAbsCacheElement.h RooObjCacheManager.h RooExtendedTerm.h RooSentinel.h \
                   RooParamBinning.h RooConstraintSum.h RooRecursiveFraction.h RooDataWeightedAverage.h \

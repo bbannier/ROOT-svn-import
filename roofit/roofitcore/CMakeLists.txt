@@ -21,7 +21,8 @@ set(headers2 RooDouble.h RooEffGenContext.h RooEllipse.h RooErrorHandler.h RooEr
              RooLinkedList.h RooLinkedListIter.h RooLinTransBinning.h RooList.h RooListProxy.h RooMapCatEntry.h RooMappedCategory.h RooMath.h
              RooMCIntegrator.h RooMinuit.h RooMPSentinel.h RooMultiCategory.h RooMultiCatIter.h RooNameReg.h
              RooNameSet.h RooNLLVar.h RooNormSetCache.h RooNumber.h RooNumConvolution.h RooNumConvPdf.h RooNumIntConfig.h RooNumIntFactory.h
-             RooPlotable.h RooPlot.h RooPolyVar.h RooPrintable.h RooProdGenContext.h RooProduct.h RooPullVar.h
+             RooPlotable.h RooPlot.h RooPolyVar.h RooPrintable.h
+             RooProdGenContext.h RooProduct.h RooPullVar.h RooParallelEvaluator.h
              RooQuasiRandomGenerator.h RooRandom.h)
 set(headers3 RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic.h RooRealBinding.h RooRealConstant.h RooRealIntegral.h 
              RooRealMPFE.h RooRealProxy.h RooRealVar.h RooRealVarSharedProperties.h RooRefCountList.h RooScaledFunc.h
@@ -29,7 +30,7 @@ set(headers3 RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic.h Ro
              RooSharedPropertiesList.h RooSimGenContext.h RooStreamParser.h RooStringVar.h RooSuperCategory.h
              RooTable.h RooThreshEntry.h RooThresholdCategory.h RooTObjWrap.h RooTrace.h RooUniformBinning.h
              RooSimultaneous.h RooRealSumPdf.h RooResolutionModel.h RooProdPdf.h RooMCStudy.h RooSimPdfBuilder.h RooTruthModel.h RooMsgService.h
-             RooProjectedPdf.h RooWorkspace.h RooProfileLL.h RooAbsCachedPdf.h RooAbsSelfCachedPdf.h
+             RooProjectedPdf.h RooValues.h RooWorkspace.h RooProfileLL.h RooAbsCachedPdf.h RooAbsSelfCachedPdf.h
              RooHistPdf.h RooCachedPdf.h RooFFTConvPdf.h RooDataHistSliceIter.h RooCacheManager.h
              RooAbsCache.h RooAbsCacheElement.h RooObjCacheManager.h RooExtendedTerm.h RooSentinel.h
              RooParamBinning.h RooConstraintSum.h RooRecursiveFraction.h RooDataWeightedAverage.h

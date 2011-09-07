@@ -35,6 +35,18 @@ public:
 
   // Accessors
   inline operator Double_t() const { return _isFund?((RooAbsReal*)_arg)->_value:((RooAbsReal*)_arg)->getVal(_nset) ; }
+  inline Double_t operator[](Int_t i) const { 
+    RooAbsReal* realArg = (RooAbsReal*)_arg;
+    return realArg->_vectValue.isEmpty() ? realArg->_value : realArg->_vectValue[i];
+  }
+  inline Int_t doValues(RooAbsReal::ImplEval impl) const {
+    RooAbsReal* realArg = (RooAbsReal*)_arg;
+    if (!_isFund)
+      realArg->getVal(_nset) ;
+    
+    return realArg->_vectValue.getSize();
+  }
+
   inline const RooAbsReal& arg() const { return (RooAbsReal&)*_arg ; }
 
   // Modifier
