@@ -322,7 +322,6 @@
 				70681C0B1416365900F8338A /* PadInspector.mm */,
 				70681C0F14163A2300F8338A /* PadTicksGridInspector.h */,
 				70681C1414163D3F00F8338A /* PadTicksGridInspector.mm */,
-				70681C1114163A2300F8338A /* PadTicksGridInspector.xib */,
 				70681C1614163F0C00F8338A /* PadLogScaleInspector.h */,
 				70681C1714163F0C00F8338A /* PadLogScaleInspector.mm */,
 				70681C1B1416474000F8338A /* FilledAreaInspector.h */,
@@ -354,6 +353,7 @@
 				7073A27D14177A03001A0FE2 /* AxisInspector.xib */,
 				7073A26A14174E74001A0FE2 /* AxisColorInspector.xib */,
 				7073A2861417AA10001A0FE2 /* AxisTitleInspector.xib */,
+				70681C1114163A2300F8338A /* PadTicksGridInspector.xib */,
 			);
 			name = xibs;
 			sourceTree = "<group>";
