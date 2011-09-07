@@ -5,7 +5,6 @@
 #import "ObjectInspector.h"
 #import "ObjectShortcut.h"
 #import "SelectionView.h"
-#import "FillEditor.h"
 #import "EditorView.h"
 #import "Constants.h"
 #import "PadView.h"

@@ -78,7 +78,6 @@
 		709594A613FE97AF00B9E8B6 /* system.plugins-ios in Resources */ = {isa = PBXBuildFile; fileRef = 709594A413FE97AF00B9E8B6 /* system.plugins-ios */; };
 		709CD05314025148005B2AF4 /* demos.root in Resources */ = {isa = PBXBuildFile; fileRef = 709CD05214025148005B2AF4 /* demos.root */; };
 		709CD0981402768B005B2AF4 /* Shortcuts.m in Sources */ = {isa = PBXBuildFile; fileRef = 709CD0971402768B005B2AF4 /* Shortcuts.m */; };
-		70B9B227140E5E28005D7A4C /* EditorRTTI.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70B9B225140E5E28005D7A4C /* EditorRTTI.mm */; };
 		70E0B62114150F630077E4A8 /* back_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 70E0B62014150F630077E4A8 /* back_btn.png */; };
 		70E0B624141510880077E4A8 /* forward_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 70E0B623141510880077E4A8 /* forward_btn.png */; };
 /* End PBXBuildFile section */
@@ -191,9 +190,6 @@
 		709CD05214025148005B2AF4 /* demos.root */ = {isa = PBXFileReference; lastKnownFileType = file; path = demos.root; sourceTree = "<group>"; };
 		709CD0961402768B005B2AF4 /* Shortcuts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Shortcuts.h; sourceTree = "<group>"; };
 		709CD0971402768B005B2AF4 /* Shortcuts.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Shortcuts.m; sourceTree = "<group>"; };
-		70B9B225140E5E28005D7A4C /* EditorRTTI.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EditorRTTI.mm; sourceTree = "<group>"; };
-		70B9B226140E5E28005D7A4C /* EditorRTTI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EditorRTTI.h; sourceTree = "<group>"; };
-		70E0B5D31414CE070077E4A8 /* ROOTObjectEditorProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ROOTObjectEditorProtocol.h; sourceTree = "<group>"; };
 		70E0B62014150F630077E4A8 /* back_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = back_btn.png; sourceTree = "<group>"; };
 		70E0B623141510880077E4A8 /* forward_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = forward_btn.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -308,11 +304,8 @@
 				70144122140E3F320070459F /* LineWidthCell.m */,
 				7014411E140E3F1D0070459F /* LineStyleCell.h */,
 				7014411F140E3F1D0070459F /* LineStyleCell.mm */,
-				70B9B225140E5E28005D7A4C /* EditorRTTI.mm */,
-				70B9B226140E5E28005D7A4C /* EditorRTTI.h */,
 				7077906F13FE96C200C0FFA1 /* EditorPlateView.mm */,
 				7077907713FE96C200C0FFA1 /* EditorPlateView.h */,
-				70E0B5D31414CE070077E4A8 /* ROOTObjectEditorProtocol.h */,
 				7077907913FE96C300C0FFA1 /* PatternCell.mm */,
 				7077907A13FE96C300C0FFA1 /* PatternCell.h */,
 				7077907B13FE96C300C0FFA1 /* ColorCell.m */,
@@ -344,7 +337,6 @@
 				7073A27C14177A03001A0FE2 /* AxisInspector.mm */,
 				7073A2841417AA0F001A0FE2 /* AxisTitleInspector.h */,
 				7073A2851417AA0F001A0FE2 /* AxisTitleInspector.mm */,
-				7073A2861417AA10001A0FE2 /* AxisTitleInspector.xib */,
 			);
 			name = "Classes and protocols";
 			sourceTree = "<group>";
@@ -361,6 +353,7 @@
 				7073A274141757BB001A0FE2 /* AxisTicksInspector.xib */,
 				7073A27D14177A03001A0FE2 /* AxisInspector.xib */,
 				7073A26A14174E74001A0FE2 /* AxisColorInspector.xib */,
+				7073A2861417AA10001A0FE2 /* AxisTitleInspector.xib */,
 			);
 			name = xibs;
 			sourceTree = "<group>";
@@ -604,7 +597,6 @@
 				7014410F140E18390070459F /* SelectionView.mm in Sources */,
 				70144120140E3F1D0070459F /* LineStyleCell.mm in Sources */,
 				70144123140E3F320070459F /* LineWidthCell.m in Sources */,
-				70B9B227140E5E28005D7A4C /* EditorRTTI.mm in Sources */,
 				702DDD1B1415FEA1009FC6F3 /* LineInspector.mm in Sources */,
 				702DDD2014160DB5009FC6F3 /* LineColorWidthInspector.mm in Sources */,
 				702DDD251416141A009FC6F3 /* LineStyleInspector.mm in Sources */,
