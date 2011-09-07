@@ -16,8 +16,6 @@
    
    [self view];
    
-   NSLog(@"%@", titleField);
-   
    if (self) {
       colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimTitleColor];
    }
