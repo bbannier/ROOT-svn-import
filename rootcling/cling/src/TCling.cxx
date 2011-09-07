@@ -246,7 +246,7 @@ TCint::TCint(const char *name, const char *title) :
    // Make sure that ALL macros are seen as C++.
    G__LockCpp();
 
-   fInterpreter = new cling::Interpreter(gSystem->ExpandPathName("$(LLVMDIR)"));
+   fInterpreter = new cling::Interpreter(0, 0, 0, gSystem->ExpandPathName("$(LLVMDIR)"));
    fInterpreter->installLazyFunctionCreator(autoloadCallback);
    clang::CompilerInstance * CI = fInterpreter->getCI ();
 
@@ -664,8 +664,8 @@ void TCint::PrintIntro()
 }
 
 //______________________________________________________________________________
-void TCint::SetGetline(char*(*getlineFunc)(const char* prompt),
-		       void (*histaddFunc)(char* line))
+void TCint::SetGetline(const char*(*getlineFunc)(const char* prompt),
+		       void (*histaddFunc)(const char* line))
 {
    // Set a getline function to call when input is needed.
    G__SetGetlineFunc(getlineFunc, histaddFunc);
@@ -720,6 +720,17 @@ void TCint::ResetGlobals()
    R__LOCKGUARD(gCINTMutex);
 
    G__scratch_globals_upto(&fDictPosGlobals);
+}
+
+//______________________________________________________________________________
+void TCint::ResetGlobalVar(void *obj)
+{
+   // Reset the CINT global object state to the state saved by the last
+   // call to TCint::SaveGlobalsContext().
+
+   R__LOCKGUARD(gCINTMutex);
+
+   G__resetglobalvar(obj);
 }
 
 //______________________________________________________________________________

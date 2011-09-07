@@ -173,7 +173,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
 
    // Create a compiler instance to handle the actual work.
    
-   clang::CompilerInstance * CI =  cling::CIFactory::createCI(0, 0, argc, argv, llvmdir, new llvm::LLVMContext());
+   clang::CompilerInstance * CI =  cling::CIFactory::createCI(0, 0, argc, argv, llvmdir);
 
    if (pch)
       OpenPCH (CI, fileName);
@@ -189,7 +189,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
       new clang::ASTContext
              (CI->getLangOpts (),
               PP.getSourceManager (),
-              CI->getTarget (),
+              &CI->getTarget (),
               PP.getIdentifierTable (),
               PP.getSelectorTable (),
               PP.getBuiltinInfo (),

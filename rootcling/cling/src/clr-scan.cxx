@@ -627,7 +627,7 @@ Reflex::Type TScanner::ExploreElaboratedType(const clang::ElaboratedType* T)
 //______________________________________________________________________________
 Reflex::Type TScanner::ExploreTypedefType(const clang::TypedefType* T)
 {
-   clang::TypedefDecl* D = T->getDecl();
+   clang::TypedefNameDecl* D = T->getDecl();
    std::string name = D->getQualifiedNameAsString();
 
    return Reflex::TypeBuilder(name.c_str ());
@@ -663,7 +663,7 @@ Reflex::Type TScanner::ExploreDependentNameType(const clang::DependentNameType* 
 //______________________________________________________________________________
 Reflex::Type TScanner::ExploreTemplateTypeParmType(const clang::TemplateTypeParmType* T)
 {
-   clang::IdentifierInfo* N = T->getName();
+   clang::IdentifierInfo* N = T->getIdentifier();
    const char* name = N->getNameStart();
 
    // ShowInfo ("TemplateTypeParmType " + TString (name));
@@ -673,7 +673,7 @@ Reflex::Type TScanner::ExploreTemplateTypeParmType(const clang::TemplateTypeParm
 //______________________________________________________________________________
 Reflex::Type TScanner::ExploreSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* T)
 {
-   clang::IdentifierInfo* N = T->getName();
+   const clang::IdentifierInfo* N = T->getReplacementType().getBaseTypeIdentifier();
    const char* name = N->getNameStart();
 
    // ShowInfo ("SubstTemplateTypeParmType " + TString (name));
