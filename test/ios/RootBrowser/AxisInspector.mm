@@ -1,3 +1,5 @@
+#import "InspectorWithNavigation.h"
+#import "AxisTitleInspector.h"
 #import "AxisColorInspector.h"
 #import "AxisTicksInspector.h"
 #import "AxisInspector.h"
@@ -13,8 +15,15 @@
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
    if (self) {
-      colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil];
+      colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimAxisColor];
       ticksInspector = [[AxisTicksInspector alloc] initWithNibName : @"AxisTicksInspector" bundle : nil];
+      
+      //titleInspector.
+      titleInspector = [[AxisTitleInspector alloc] initWithNibName : @"AxisTitleInspector" bundle : nil];
+//      titleInspector = [[InspectorWithNavigation alloc] initWithRootViewController : titleInspectorCompositor];
+//      [titleInspectorCompositor release];
+ //     titleInspector.view.frame = [AxisTitleInspector inspectorFrame];
+      //labelInspector.
    }
     
    return self;
@@ -23,6 +32,7 @@
 - (void) dealloc
 {
    [colorInspector release];
+   [titleInspector release];
    [ticksInspector release];
 }
 
@@ -75,6 +85,13 @@
 }
 
 //_________________________________________________________________
+- (void) resetInspector
+{
+//   [titleInspector resetInspector];
+//   [labelsInspector resetInspector];
+}
+
+//_________________________________________________________________
 - (IBAction) showColorInspector
 {
    [colorInspector setROOTObjectController : controller];
@@ -90,6 +107,21 @@
    [ticksInspector setROOTObject : object];
    
    [self.navigationController pushViewController : ticksInspector animated : YES];
+}
+
+//_________________________________________________________________
+- (IBAction) showAxisTitleInspector
+{
+   [titleInspector setROOTObjectController : controller];
+   [titleInspector setROOTObject : object];
+
+   [self.navigationController pushViewController : titleInspector animated : YES];
+}
+
+//_________________________________________________________________
+- (IBAction) showAxisLabelsInspector
+{
+
 }
 
 @end

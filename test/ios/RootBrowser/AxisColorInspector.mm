@@ -14,9 +14,10 @@ static const CGFloat defaultCellH = 44.f;
 @implementation AxisColorInspector
 
 //_________________________________________________________________
-- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
+- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil mode : (ROOT_IOSObjectInspector::AxisColorInspectorMode)m
 {
    using namespace ROOT_IOSBrowser;
+   using namespace ROOT_IOSObjectInspector;
 
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
 
@@ -24,6 +25,7 @@ static const CGFloat defaultCellH = 44.f;
 
    if (self) {
       const CGRect cellRect = CGRectMake(0.f, 0.f, defaultCellW, defaultCellH);
+      mode = m;
    
       colors = [[NSMutableArray alloc] init];
 
@@ -33,6 +35,13 @@ static const CGFloat defaultCellH = 44.f;
          [colors addObject : newCell];
          [newCell release];
       }
+      
+      if (mode == acimAxisColor)
+         titleLabel.text = @"Axis color:";
+      else if (mode == acimTitleColor)
+         titleLabel.text = @"Title color:";
+      else if (mode == acimLabelColor)
+         titleLabel.text = @"Label color:";
    }
 
    return self;
@@ -62,12 +71,19 @@ static const CGFloat defaultCellH = 44.f;
 - (void) setROOTObject : (TObject *)obj
 {
    using namespace ROOT_IOSBrowser;
-
+   using namespace ROOT_IOSObjectInspector;
    //I do not check the result of dynamic_cast here. This is done at upper level.
    object = dynamic_cast<TAttAxis *>(obj);
 
    //Set the row in color picker, using fill color from object.
-   const Color_t colorIndex = object->GetAxisColor();
+   Color_t colorIndex = 0;
+   if (mode == acimAxisColor)
+      colorIndex = object->GetAxisColor();
+   else if (mode == acimTitleColor)
+      colorIndex = object->GetTitleColor();
+   else if (mode == acimLabelColor)
+      colorIndex = object->GetLabelColor();
+   
    unsigned pickerRow = 0;
    for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
       if (colorIndex == colorIndices[i]) {
@@ -83,9 +99,15 @@ static const CGFloat defaultCellH = 44.f;
 - (void) setNewColor : (NSInteger) row
 {
    using namespace ROOT_IOSBrowser;
+   using namespace ROOT_IOSObjectInspector;
 
    if (object && controller) {
-      object->SetAxisColor(colorIndices[row]);
+      if (mode == acimAxisColor)
+         object->SetAxisColor(colorIndices[row]);
+      else if (mode == acimTitleColor)
+         object->SetTitleColor(colorIndices[row]);
+      else if (mode == acimLabelColor)
+         object->SetLabelColor(colorIndices[row]);
       [controller objectWasModifiedByEditor];
    }
 }

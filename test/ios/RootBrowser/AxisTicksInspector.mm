@@ -108,7 +108,7 @@
 //_________________________________________________________________
 - (void) back
 {
-   [self.navigationController popViewControllerAnimated : NO];
+   [self.navigationController popViewControllerAnimated : YES];
 }
 
 //_________________________________________________________________
