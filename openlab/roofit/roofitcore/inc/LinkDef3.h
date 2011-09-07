@@ -44,6 +44,7 @@
 #pragma link C++ class RooMsgService+ ;
 #pragma link C++ class RooMsgService::StreamConfig+ ;
 #pragma link C++ class RooProjectedPdf+ ;
+#pragma link C++ class RooValues+ ;
 #pragma link C++ class RooWorkspace- ;
 #pragma link C++ class RooWorkspace::CodeRepo- ;
 #pragma link C++ class RooWorkspace::WSDir+ ;

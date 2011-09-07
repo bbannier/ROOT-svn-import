@@ -18,6 +18,7 @@
 
 #include "RooAbsPdf.h"
 #include "RooRealProxy.h"
+#include "TMath.h"
 
 class RooRealVar;
 
@@ -36,13 +37,26 @@ public:
   Int_t getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK=kTRUE) const;
   void generateEvent(Int_t code);
 
+  // Used by the template evaluator
+  inline Double_t eval(Int_t i) const {
+    return eval(x[i],mean[i],sigma[i]) ;
+  }
+
+
 protected:
 
   RooRealProxy x ;
   RooRealProxy mean ;
   RooRealProxy sigma ;
+
+  inline Double_t eval(const Double_t xValue, const Double_t meanValue, const Double_t sigmaValue) const {
+    Double_t arg = xValue - meanValue;
+    return TMath::Exp(-0.5*arg*arg/(sigmaValue*sigmaValue)) ;
+  }
   
   Double_t evaluate() const ;
+  Bool_t evaluateAndNormalizeSIMD(RooAbsReal::ImplEval impl, Double_t invIntegral,
+				  const RooAbsPdf *mother=0 /*, interval */) const ;
 
 private:
 

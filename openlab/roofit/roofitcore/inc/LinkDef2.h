@@ -64,6 +64,7 @@
 #pragma link C++ class RooProdGenContext+ ;
 #pragma link C++ class RooProduct+ ;
 #pragma link C++ class RooPullVar+ ;
+#pragma link C++ class RooParallelEvaluator- ;
 #pragma link C++ class RooQuasiRandomGenerator+ ;
 #pragma link C++ class RooRandom+ ;
 #pragma link off class RooErrorHandler+ ;
