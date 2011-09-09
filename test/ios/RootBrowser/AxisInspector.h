@@ -12,6 +12,7 @@
 
 //@class InspectorWithNavigation;
 @class ROOTObjectController;
+@class AxisLabelsInspector;
 @class AxisTicksInspector;
 @class AxisTitleInspector;
 @class AxisColorInspector;
@@ -23,7 +24,7 @@ class TObject;
    AxisColorInspector *colorInspector;
    
    AxisTitleInspector *titleInspector;
-//   InspectorWithNavigation *labelsInspector;
+   AxisLabelsInspector *labelsInspector;
 
    ROOTObjectController *controller;
    TObject *object;
