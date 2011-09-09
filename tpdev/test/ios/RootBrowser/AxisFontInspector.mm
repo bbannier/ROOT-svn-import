@@ -121,8 +121,6 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
    if (fontIndex < 0 || fontIndex > nFixedFonts)
       fontIndex = 0;
    
-//   NSLog(@"selector row!");
-   NSLog(@"axis name %s title font %d and row %d", object->GetName(), object->GetTitleFont(), fontIndex);
    [fontPicker selectRow : fontIndex inComponent : 0 animated : NO];
 }
 

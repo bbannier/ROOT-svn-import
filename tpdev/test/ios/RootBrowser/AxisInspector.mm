@@ -1,4 +1,4 @@
-#import "InspectorWithNavigation.h"
+#import "AxisLabelsInspector.h"
 #import "AxisTitleInspector.h"
 #import "AxisColorInspector.h"
 #import "AxisTicksInspector.h"
@@ -20,10 +20,7 @@
       
       //titleInspector.
       titleInspector = [[AxisTitleInspector alloc] initWithNibName : @"AxisTitleInspector" bundle : nil];
-//      titleInspector = [[InspectorWithNavigation alloc] initWithRootViewController : titleInspectorCompositor];
-//      [titleInspectorCompositor release];
- //     titleInspector.view.frame = [AxisTitleInspector inspectorFrame];
-      //labelInspector.
+      labelsInspector = [[AxisLabelsInspector alloc] initWithNibName : @"AxisLabelsInspector" bundle : nil];
    }
     
    return self;
@@ -33,6 +30,7 @@
 {
    [colorInspector release];
    [titleInspector release];
+   [labelsInspector release];
    [ticksInspector release];
 }
 
@@ -121,7 +119,10 @@
 //_________________________________________________________________
 - (IBAction) showAxisLabelsInspector
 {
-
+   [labelsInspector setROOTObjectController : controller];
+   [labelsInspector setROOTObject : object];
+   
+   [self.navigationController pushViewController : labelsInspector animated : YES];
 }
 
 @end
