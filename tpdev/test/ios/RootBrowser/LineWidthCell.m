@@ -5,6 +5,7 @@
 
 @implementation LineWidthCell
 
+//_________________________________________________________________
 - (id)initWithFrame:(CGRect)frame width : (CGFloat)w
 {
    self = [super initWithFrame:frame];
@@ -19,6 +20,7 @@
    return self;
 }
 
+//_________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
@@ -39,7 +41,7 @@
    [label drawInRect:CGRectMake(rect.size.width / 2 - 10.f, rect.size.height / 2 - 15.f, 40.f, 60.f) withFont : [UIFont systemFontOfSize : 10]];
 }
 
-
+//_________________________________________________________________
 - (void)dealloc
 {
    [backgroundImage release];

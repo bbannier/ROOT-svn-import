@@ -1,11 +1,15 @@
 #import "ROOTObjectController.h"
 #import "AxisTitleInspector.h"
 #import "AxisColorInspector.h"
+#import "AxisFontInspector.h"
 
 //C++ (ROOT) imports.
 #import "TObject.h"
 #import "TAxis.h"
 
+static const float minTitleOffset = 0.1f;
+static const float maxTitleOffset = 10.f;
+static const float titleOffsetStep = 0.01f;
 
 @implementation AxisTitleInspector
 
@@ -24,6 +28,7 @@
    
    if (self) {
       colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimTitleColor];
+      fontInspector = [[AxisFontInspector alloc] initWithNibName : @"AxisFontInspector" mode : ROOT_IOSObjectInspector::afimTitleFont];
    }
 
    return self;
@@ -33,6 +38,7 @@
 - (void) dealloc
 {
    [colorInspector release];
+   [fontInspector release];
    
    [super release];
 }
@@ -89,6 +95,9 @@
       
    centered.on = object->GetCenterTitle();
    rotated.on = object->GetRotateTitle();
+   
+   offset = object->GetTitleOffset();
+   offsetLabel.text = [NSString stringWithFormat:@"%.2f", offset];
 }
 
 //_________________________________________________________________
@@ -100,6 +109,10 @@
 //_________________________________________________________________
 - (IBAction) showTitleFontInspector
 {
+   [fontInspector setROOTObjectController : controller];
+   [fontInspector setROOTObject : object];
+   
+   [self.navigationController pushViewController : fontInspector animated : YES];
 }
 
 //_________________________________________________________________
@@ -137,5 +150,32 @@
    object->RotateTitle(rotated.on);
    [controller objectWasModifiedByEditor];
 }
+
+//____________________________________________________________________________________________________
+- (IBAction) plusOffset
+{
+   if (offset + titleOffsetStep > maxTitleOffset)
+      return;
+   
+   offset += titleOffsetStep;
+   offsetLabel.text = [NSString stringWithFormat:@"%.2f", offset];
+   object->SetTitleOffset(offset);
+   
+   [controller objectWasModifiedByEditor];
+}
+
+//____________________________________________________________________________________________________
+- (IBAction) minusOffset
+{
+   if (offset - titleOffsetStep < minTitleOffset)
+      return;
+   
+   offset -= titleOffsetStep;
+   offsetLabel.text = [NSString stringWithFormat:@"%.2f", offset];
+   object->SetTitleOffset(offset);
+   
+   [controller objectWasModifiedByEditor];
+}
+
 
 @end
