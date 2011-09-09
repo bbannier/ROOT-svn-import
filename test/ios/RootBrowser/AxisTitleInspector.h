@@ -4,6 +4,7 @@
 
 @class ROOTObjectController;
 @class AxisColorInspector;
+@class AxisFontInspector;
 
 class TObject;
 class TAxis;
@@ -17,6 +18,12 @@ class TAxis;
    TAxis *object;
 
    AxisColorInspector *colorInspector;
+   AxisFontInspector *fontInspector;
+   
+   IBOutlet UILabel *offsetLabel;
+   IBOutlet UIButton *plusOffsetBtn;
+   IBOutlet UIButton *minusOffsetBtn;
+   float offset;
 }
 
 + (CGRect) inspectorFrame;
@@ -31,6 +38,8 @@ class TAxis;
 - (IBAction) textFieldEditingDidEnd : (id) sender;
 - (IBAction) centerTitle;
 - (IBAction) rotateTitle;
+- (IBAction) plusOffset;
+- (IBAction) minusOffset;
 
 - (IBAction) back;
 

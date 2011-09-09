@@ -78,7 +78,7 @@ static const float minTickLength = -1.f;
    terLabel.text = [NSString stringWithFormat : @"%u", tertiaryTicks];
    
    tickLength = object->GetTickLength();
-   tickLengthLabel.text = [NSString stringWithFormat : @"%.2g", object->GetTickLength()];
+   tickLengthLabel.text = [NSString stringWithFormat : @"%.2f", object->GetTickLength()];
 }
 
 //_________________________________________________________________
@@ -139,7 +139,7 @@ static const float minTickLength = -1.f;
    if (sender == plusLengthBtn) {
       if (tickLength + tickLengthStep < maxTickLength) {
          tickLength += tickLengthStep;
-         tickLengthLabel.text = [NSString stringWithFormat:@"%.2g", tickLength];
+         tickLengthLabel.text = [NSString stringWithFormat:@"%.2f", tickLength];
          object->SetTickLength(tickLength);
          [controller objectWasModifiedByEditor];
       }

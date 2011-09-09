@@ -15,6 +15,7 @@
 
 @implementation LineStyleCell
 
+//_________________________________________________________________
 - (id) initWithFrame : (CGRect)frame lineStyle : (unsigned) style
 {
    self = [super initWithFrame:frame];
@@ -28,6 +29,7 @@
    return self;
 }
 
+//_________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
@@ -47,7 +49,7 @@
    CGContextStrokePath(ctx);
 }
 
-
+//_________________________________________________________________
 - (void)dealloc
 {
    [backgroundImage release];
