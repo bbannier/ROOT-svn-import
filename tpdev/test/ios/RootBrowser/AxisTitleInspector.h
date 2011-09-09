@@ -5,8 +5,8 @@
 @class ROOTObjectController;
 @class AxisColorInspector;
 
-class TAttAxis;
 class TObject;
+class TAxis;
 
 @interface AxisTitleInspector : UIViewController <ObjectInspectorComponent> {
    IBOutlet UITextField *titleField;
@@ -14,8 +14,8 @@ class TObject;
    IBOutlet UISwitch *rotated;
 
    ROOTObjectController *controller;
-   TObject *object;
-   
+   TAxis *object;
+
    AxisColorInspector *colorInspector;
 }
 
@@ -26,6 +26,11 @@ class TObject;
 
 - (IBAction) showTitleFontInspector;
 - (IBAction) showTitleColorInspector;
+
+- (IBAction) textFieldDidEndOnExit : (id) sender;
+- (IBAction) textFieldEditingDidEnd : (id) sender;
+- (IBAction) centerTitle;
+- (IBAction) rotateTitle;
 
 - (IBAction) back;
 

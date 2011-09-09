@@ -1,5 +1,11 @@
+#import "ROOTObjectController.h"
 #import "AxisTitleInspector.h"
 #import "AxisColorInspector.h"
+
+//C++ (ROOT) imports.
+#import "TObject.h"
+#import "TAxis.h"
+
 
 @implementation AxisTitleInspector
 
@@ -73,7 +79,16 @@
 //_________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
-   object = o;
+   object = dynamic_cast<TAxis *>(o);
+
+   const char *axisTitle = object->GetTitle();
+   if (!axisTitle || !*axisTitle)
+      titleField.text = @"";
+   else
+      titleField.text = [NSString stringWithFormat : @"%s", axisTitle];
+      
+   centered.on = object->GetCenterTitle();
+   rotated.on = object->GetRotateTitle();
 }
 
 //_________________________________________________________________
@@ -94,6 +109,33 @@
    [colorInspector setROOTObject : object];
    
    [self.navigationController pushViewController : colorInspector animated : YES];   
+}
+
+//____________________________________________________________________________________________________
+- (IBAction) textFieldDidEndOnExit : (id) sender
+{
+   object->SetTitle([titleField.text cStringUsingEncoding : [NSString defaultCStringEncoding]]);
+   [controller objectWasModifiedByEditor];
+}
+
+//____________________________________________________________________________________________________
+- (IBAction) textFieldEditingDidEnd : (id) sender
+{
+   [sender resignFirstResponder];
+}
+
+//____________________________________________________________________________________________________
+- (IBAction) centerTitle
+{
+   object->CenterTitle(centered.on);
+   [controller objectWasModifiedByEditor];
+}
+
+//____________________________________________________________________________________________________
+- (IBAction) rotateTitle
+{
+   object->RotateTitle(rotated.on);
+   [controller objectWasModifiedByEditor];
 }
 
 @end
