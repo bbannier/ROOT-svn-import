@@ -6,6 +6,10 @@
 #import "TObject.h"
 #import "TAxis.h"
 
+static const float tickLengthStep = 0.01f;
+static const float maxTickLength = 1.f;
+static const float minTickLength = -1.f;
+
 @implementation AxisTicksInspector
 
 //_________________________________________________________________
@@ -72,6 +76,9 @@
    primLabel.text = [NSString stringWithFormat : @"%u", primaryTicks];
    secLabel.text = [NSString stringWithFormat : @"%u", secondaryTicks];
    terLabel.text = [NSString stringWithFormat : @"%u", tertiaryTicks];
+   
+   tickLength = object->GetTickLength();
+   tickLengthLabel.text = [NSString stringWithFormat : @"%.2g", object->GetTickLength()];
 }
 
 //_________________________________________________________________
@@ -83,8 +90,6 @@
       [ticksNegPos setSelectedSegmentIndex : 1];
    else 
       [ticksNegPos setSelectedSegmentIndex : 0];
-
-   [tickLength setValue : object->GetTickLength()];
 
    [self setTicksWidgets];
 }
@@ -112,20 +117,6 @@
 }
 
 //_________________________________________________________________
-- (void) setTickLength
-{
-   object->SetTickLength(tickLength.value);
-   [controller objectWasModifiedByEditor];
-}
-
-//_________________________________________________________________
-- (IBAction) valueChanged : (UISlider *)slider
-{
-   //
-   [self setTickLength];
-}
-
-//_________________________________________________________________
 - (IBAction) ticksNegPos
 {
    if (ticksNegPos.selectedSegmentIndex == 0)
@@ -140,12 +131,21 @@
 - (void) setTicks
 {
    object->SetNdivisions(primaryTicks, secondaryTicks, tertiaryTicks);
-   [controller objectWasModifiedByEditor];
 }
 
 //_________________________________________________________________
 - (IBAction) plusTick : (UIButton *)sender
 {
+   if (sender == plusLengthBtn) {
+      if (tickLength + tickLengthStep < maxTickLength) {
+         tickLength += tickLengthStep;
+         tickLengthLabel.text = [NSString stringWithFormat:@"%.2g", tickLength];
+         object->SetTickLength(tickLength);
+         [controller objectWasModifiedByEditor];
+      }
+      return;
+   }
+   
    UILabel *labelToModify = 0;
    unsigned n = 0;
 
@@ -171,11 +171,22 @@
    
    labelToModify.text = [NSString stringWithFormat : @"%u", n];
    [self setTicks];
+   [controller objectWasModifiedByEditor];
 }
 
 //_________________________________________________________________
 - (IBAction) minusTick :(UIButton *)sender
 {
+   if (sender == minusLengthBtn) {
+      if (tickLength - tickLengthStep > minTickLength) {
+         tickLength -= tickLengthStep;
+         tickLengthLabel.text = [NSString stringWithFormat:@"%.2g", tickLength];
+         object->SetTickLength(tickLength);
+         [controller objectWasModifiedByEditor];
+      }
+      return;
+   }
+
    UILabel *labelToModify = 0;
    unsigned n = 0;
 
@@ -201,6 +212,7 @@
    
    labelToModify.text = [NSString stringWithFormat : @"%u", n];
    [self setTicks];
+   [controller objectWasModifiedByEditor];
 }
 
 

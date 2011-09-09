@@ -17,7 +17,10 @@
 class TAxis;
 
 @interface AxisTicksInspector : UIViewController <ObjectInspectorComponent> {
-   IBOutlet UISlider *tickLength;
+   IBOutlet UILabel *tickLengthLabel;
+   IBOutlet UIButton *plusLengthBtn;
+   IBOutlet UIButton *minusLengthBtn;
+   float tickLength;
 
    IBOutlet UIButton *plusPrim;
    IBOutlet UIButton *minusPrim;
@@ -43,7 +46,6 @@ class TAxis;
 - (void) setROOTObject : (TObject *)object;
 - (void) setROOTObjectController : (ROOTObjectController *)c;
 
-- (IBAction) valueChanged : (UISlider *)slider;
 - (IBAction) plusTick : (UIButton *)sender;
 - (IBAction) minusTick :(UIButton *)sender;
 - (IBAction) ticksNegPos;
