@@ -62,7 +62,7 @@ namespace cling {
       ~SymbolResolverCallback(){}
 
       bool LookupObject(clang::LookupResult& R, clang::Scope* S) {
-        // Only for demo resolve all unknown objects to gCling
+        // Only for demo resolve all unknown objects to cling::test::Tester
         if (m_Enabled) {
           if (!m_TesterDecl)
             m_TesterDecl = m_Interpreter->LookupDecl("cling").LookupDecl("test").LookupDecl("Tester");
