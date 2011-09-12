@@ -16,7 +16,10 @@ void twrite() {
    std::vector<MyParticle>* vmuons = new std::vector<MyParticle>();
    TClonesArray* /*MyParticle* */ camuons = new TClonesArray("MyParticle");
    ParticleHolder *phmuons = new ParticleHolder();
-   tree->Branch("vp", &vpmuons, 32000, 250);
+
+   //tree->Branch("vp", &vpmuons, 32000, 250);
+   printf("WARNING: TBranchProxy does not support BranchSTL yet!\n");
+
    tree->Branch("v", &vmuons);
    tree->Branch("ca", &camuons);
    tree->Branch("ph", &phmuons);

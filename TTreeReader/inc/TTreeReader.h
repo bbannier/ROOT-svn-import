@@ -29,6 +29,7 @@
 class TDirectory;
 class TTree;
 class TTreeReaderValuePtrBase;
+class TBranchProxyDirector;
 
 class TTreeReader: public TObject {
 public:
@@ -74,6 +75,7 @@ private:
    Long64_t    fLocalEntryNumber; // entry number in the current tree
    EMakeClassMode fMakeClassMode; // whether makeclass mode is turned on
    EEntryStatus   fEntryStatus; // result of most recent GetEntry() entry is available
+   TBranchProxyDirector* fDirector; // proxying director
 
    friend class TTreeReaderValuePtrBase;
 
