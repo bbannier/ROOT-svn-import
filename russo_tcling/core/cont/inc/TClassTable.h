@@ -29,6 +29,10 @@
 #include "TString.h"
 #endif
 
+#include <map>
+#include <string>
+#include <vector>
+
 class TClassRec {
 public:
    char            *fName;
@@ -90,6 +94,24 @@ public:
 };
 
 R__EXTERN TClassTable *gClassTable;
+
+namespace clang {
+  class ASTContext;
+  class Decl;
+  class TranslationUnitDecl;
+}
+
+class tcling_Dict { // Singleton
+public:
+  static clang::ASTContext* GetASTContext(clang::ASTContext* ctx = 0);
+  static const clang::TranslationUnitDecl* GetTranslationUnitDecl(const clang::TranslationUnitDecl* = 0);
+  static std::multimap<const std::string, const clang::Decl*>* ClassNameToDecl();
+  static std::map<const clang::Decl*, int>* ClassDeclToIdx();
+  static std::vector<const clang::Decl*>* Classes();
+  static std::vector<const clang::Decl*>* GlobalVars();
+  static std::vector<const clang::Decl*>* GlobalFunctions();
+  static std::vector<const clang::Decl*>* Typedefs();
+};
 
 namespace ROOT {
    extern void AddClass(const char *cname, Version_t id, VoidFuncPtr_t dict,

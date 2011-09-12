@@ -3,6 +3,18 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
+# Make sure the all target is the default.
+all:
+
+ifneq (,$(strip $(V)))
+export VERBOSE := $(strip $(V))
+endif
+
+ifneq (,$(strip $(VERBOSE)))
+export CMDECHO :=
+else
+export CMDECHO := @
+endif
 
 ##### Check version of GNU make #####
 
@@ -520,6 +532,9 @@ STATICEXTRALIBS += $(LZMALIB)
 endif
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
+#CORELIBEXTRA += -L/local2/russo/llvm/lib -ludis86 -lclangFrontendTool -lclangFrontend -lclangDriver -lclangSerialization -lclangCodeGen -lclangParse -lclangSema -lclangAnalysis -lclangIndex -lclangRewrite -lclangAST -lclangLex -lclangBasic -lLLVMMCJIT -lLLVMRuntimeDyld -lLLVMObject -lLLVMMCDisassembler -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86Disassembler -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMX86Desc -lLLVMSelectionDAG -lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMX86Info -lLLVMAsmPrinter -lLLVMMCParser -lLLVMCodeGen -lLLVMScalarOpts -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC -lLLVMCore -lLLVMSupport
+
+CORELIBEXTRA += -L/local2/russo/llvm/lib -lpsrclang -lLLVM-3.0svn -ludis86 -ldl
 
 ifeq ($(EXPLICITLINK),yes)
 MAINLIBS     := $(CORELIB) $(CINTLIB)
@@ -545,85 +560,113 @@ INCLUDEFILES :=
 
 # special rules (need to be defined before generic ones)
 cint/cint/lib/dll_stl/G__%.o: cint/cint/lib/dll_stl/G__%.cxx
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
 	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(NOOPT) $(CXXFLAGS) -g -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/lib/dll_stl/G__c_%.o: cint/cint/lib/dll_stl/G__c_%.c
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
 	   $(CFLAGS) -I$(CINTDIRL)/prec_stl \
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CC) $(NOOPT) $(CFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CC) $(NOOPT) $(CFLAGS) -g -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/lib/G__%.o: cint/cint/lib/G__%.cxx
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
 	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(NOOPT) $(CXXFLAGS) -g -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/lib/G__c_%.o: cint/cint/lib/G__c_%.c
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
 	   $(CFLAGS) -I$(CINTDIRL)/prec_stl \
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CC) $(NOOPT) $(CFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CC) $(NOOPT) $(CFLAGS) -g -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/%.o: cint/cint/%.cxx
-	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(OPT) $(CINTCXXFLAGS) -g -I. $(CXXOUT)$@ -c $<
 
 cint/cint/%.o: $(ROOT_SRCDIR)/cint/cint/%.cxx
 	$(MAKEDIR)
-	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(OPT) $(CINTCXXFLAGS) -g -I. $(CXXOUT)$@ -c $<
 
 cint/cint/%.o: $(ROOT_SRCDIR)/cint/cint/%.c
 	$(MAKEDIR)
-	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
-	$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CC) $(OPT) $(CINTCFLAGS) -g -I. $(CXXOUT)$@ -c $<
 
 build/rmkdepend/%.o: $(ROOT_SRCDIR)/build/rmkdepend/%.cxx
 	$(MAKEDIR)
-	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
 build/rmkdepend/%.o: $(ROOT_SRCDIR)/build/rmkdepend/%.c
 	$(MAKEDIR)
-	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
 
 define SRCTOOBJ_template
 $(1)/%_tmp.o: $(1)/%_tmp.cxx
-	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
-	$$(CXX) $$(OPT) $$(CXXFLAGS) $$(CXXOUT)$$@ -c $$<
+	@echo "Depending $$(@:.o=.d)"
+	$$(CMDECHO)$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
+	@echo "Compiling $$<"
+	$$(CMDECHO)$$(CXX) $$(OPT) $$(CXXFLAGS) $$(CXXOUT)$$@ -c $$<
 
 $(1)/src/G__%.o: $(1)/src/G__%.cxx
-	$$(MAKEDEP) -R -f$$(patsubst %.o,%.d,$$@) -Y -w 1000 -- \
+	@echo "Depending $$(@:.o=.d)"
+	$$(CMDECHO)$$(MAKEDEP) -R -f$$(patsubst %.o,%.d,$$@) -Y -w 1000 -- \
 	  $$(CXXFLAGS) -D__cplusplus -I$$(CINTDIRL)/prec_stl \
 	  -I$$(CINTDIRSTL) -I$$(CINTDIR)/inc -- $$<
-	$$(CXX) $$(NOOPT) $$(CXXFLAGS) -I. -I$$(CINTDIR)/inc  $$(CXXOUT)$$@ -c $$<
+	@echo "Compiling $$<"
+	$$(CMDECHO)$$(CXX) $$(NOOPT) $$(CXXFLAGS) -g -I. -I$$(CINTDIR)/inc  $$(CXXOUT)$$@ -c $$<
 
 $(1)/src/G__c_%.o: $(1)/src/G__c_%.c
-	$$(MAKEDEP) -R -f$$(patsubst %.o,%.d,$$@) -Y -w 1000 -- \
+	@echo "Depending $$(@:.o=.d)"
+	$$(CMDECHO)$$(MAKEDEP) -R -f$$(patsubst %.o,%.d,$$@) -Y -w 1000 -- \
 	  $$(CFLAGS) -I$$(CINTDIRL)/prec_stl \
 	  -I$$(CINTDIRSTL) -I$$(CINTDIR)/inc -- $$<
-	$$(CC) $$(NOOPT) $$(CFLAGS) -I. -I$$(CINTDIR)/inc  $$(CXXOUT)$$@ -c $$<
+	@echo "Compiling $$<"
+	$$(CMDECHO)$$(CC) $$(NOOPT) $$(CFLAGS) -g -I. -I$$(CINTDIR)/inc  $$(CXXOUT)$$@ -c $$<
 
 $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.cxx
 	$$(MAKEDIR)
-	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
-	$$(CXX) $$(OPT) $$(CXXFLAGS) $$(CXXOUT)$$@ -c $$<
+	@echo "Depending $$(@:.o=.d)"
+	$$(CMDECHO)$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
+	@echo "Compiling $$<"
+	$$(CMDECHO)$$(CXX) $$(OPT) $$(CXXFLAGS) $$(CXXOUT)$$@ -c $$<
 
 $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.c
 	$$(MAKEDIR)
-	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CFLAGS) -- $$<
-	$$(CC) $$(OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$<
+	@echo "Depending $$(@:.o=.d)"
+	$$(CMDECHO)$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CFLAGS) -- $$<
+	@echo "Compiling $$<"
+	$$(CMDECHO)$$(CC) $$(OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$<
 
 $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.f
 	$$(MAKEDIR)
 ifeq ($$(F77),f2c)
-	f2c -a -A $$<
-	$$(CC) $$(F77OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$(@:.o=.c)
+	$$(CMDECHO)f2c -a -A $$<
+	@echo "Compiling $$(@:.o=.c)"
+	$$(CMDECHO)$$(CC) $$(F77OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$(@:.o=.c)
 else
-	$$(F77) $$(F77OPT) $$(F77FLAGS) $$(CXXOUT)$$@ -c $$<
+	@echo "Compiling $$<"
+	$$(CMDECHO)$$(F77) $$(F77OPT) $$(F77FLAGS) $$(CXXOUT)$$@ -c $$<
 endif
 endef
 
@@ -632,19 +675,25 @@ MODULESGENERIC := $(filter-out cint/cint,$(MODULES))
 $(foreach module,$(MODULESGENERIC),$(eval $(call SRCTOOBJ_template,$(module))))
 
 %.o: %.cxx
-	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
 %.o: %.c
-	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
-	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
 
 %.o: %.f
 ifeq ($(F77),f2c)
-	f2c -a -A $<
-	$(CC) $(F77OPT) $(CFLAGS) $(CXXOUT)$@ -c $*.c
+	$(CMDECHO)f2c -a -A $<
+	@echo "Compiling $*.c"
+	$(CMDECHO)$(CC) $(F77OPT) $(CFLAGS) $(CXXOUT)$@ -c $*.c
 else
-	$(F77) $(F77OPT) $(F77FLAGS) $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(F77) $(F77OPT) $(F77FLAGS) $(CXXOUT)$@ -c $<
 endif
 
 ##### TARGETS #####
@@ -777,7 +826,8 @@ else
 endif
 
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
-	$(RLIBMAP) -o $@ -l $(CORELIB) -d $(CORELIBDEPM) -c $(COREL)
+	@echo "Making core map"
+	$(CMDECHO)$(RLIBMAP) -o $@ -l $(CORELIB) -d $(CORELIBDEPM) -c $(COREL)
 
 map::   $(ALLMAPS)
 

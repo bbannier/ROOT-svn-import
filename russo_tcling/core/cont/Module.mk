@@ -41,6 +41,8 @@ $(CONTDS):      $(CONTH) $(CONTL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(CONTH) $(CONTL)
 
+$(CONTO): CXXFLAGS += -Wno-unused-parameter -Wno-shadow -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -I/local2/russo/llvm/include
+
 all-$(MODNAME): $(CONTO) $(CONTDO)
 
 clean-$(MODNAME):

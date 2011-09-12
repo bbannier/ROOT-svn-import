@@ -60,6 +60,8 @@ $(METACDS):     $(METACH) $(METACL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c -DG__API $(METACH) $(METACL)
 
+$(METAO): CXXFLAGS += -Wno-unused-parameter -Wno-shadow -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -I/local2/russo/llvm/include
+
 all-$(MODNAME): $(METAO) $(METADO) $(METACDO)
 
 clean-$(MODNAME):

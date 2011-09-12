@@ -4,9 +4,11 @@
 
 PLATFORM      = linux
 
-DEBUGFLAGS    = -g
+#DEBUGFLAGS    = -g
+DEBUGFLAGS    = -g -fstack-protector-all
 #DEBUGFLAGS    = -gstabs
-OPTFLAGS      = -O2
+#OPTFLAGS      = -O2
+OPTFLAGS      = -g -fstack-protector-all
 # Optional compiler options for gcc >= 3.4.0
 #OPTFLAGS      = -O3 -march=opteron
 ifeq (debug,$(findstring debug,$(ROOTBUILD)))
@@ -68,7 +70,7 @@ ifeq ($(F77),)
 F77           = g77
 endif
 F77FLAGS      = -fPIC -m64
-ifneq ($(shell $(F77) -print-file-name=libg2c.so),libg2c.so)
+ifneq ($(shell $(F77) -m64 -print-file-name=libg2c.so),libg2c.so)
 F77LIBS      := $(shell $(F77) -m64 -print-file-name=libg2c.so) -lnsl
 else
 F77LIBS      := $(shell $(F77) -m64 -print-file-name=libg2c.a) -lnsl

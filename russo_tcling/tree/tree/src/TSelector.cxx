@@ -168,7 +168,7 @@ TSelector *TSelector::GetSelector(const char *filename)
    if (!fromFile && gCint->AutoLoad(localname) != 1)
       autoloaderr = kTRUE;
 
-   ClassInfo_t *cl = gCint->ClassInfo_Factory();
+   ClassInfo_t *cl = gCint->ClassInfo_Factory(localname.Data());
    Bool_t ok = kFALSE;
    Bool_t nameFound = kFALSE;
    while (gCint->ClassInfo_Next(cl)) {
