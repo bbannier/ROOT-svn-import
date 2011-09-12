@@ -23,6 +23,7 @@
 #include <string>
 #include <map>
 #include <typeinfo>
+#include <vector>
 #include "Riostream.h"
 
 #include "TClassTable.h"
@@ -47,6 +48,592 @@ int          TClassTable::fgCursor;
 TClassTable::IdMap_t *TClassTable::fgIdMap;
 
 ClassImp(TClassTable)
+
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/LLVMContext.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetSelect.h"
+
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
+#include "clang/AST/DeclGroup.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/Version.h"
+#include "clang/Frontend/ASTConsumers.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/TextDiagnosticBuffer.h"
+#include "clang/Lex/Preprocessor.h"
+
+static const char* llvm_install_dir = "/local2/russo/llvm";
+static const char* fake_argv[] = { "clang", "-x", "c++", "-fexceptions", "-D__CLING__", 0 };
+static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
+static llvm::LLVMContext* m_llvm_context = 0; // We own, our types.
+static clang::CompilerInstance* m_CI = 0; // We own, our compiler instance.
+
+
+static clang::CompilerInstance* createCI();
+static clang::CompilerInstance* getCI();
+static void visit_linkage_spec_decl(const clang::LinkageSpecDecl* D, int level);
+static void visit_namespace_decl(const clang::NamespaceDecl* D, int level);
+static void visit_enum_decl(const clang::EnumDecl* D, int level);
+static void visit_record_decl(const clang::RecordDecl* D, int level);
+static void visit_cxxrecord_decl(const clang::CXXRecordDecl* D, int level);
+static void visit_class_template_specialization_decl(const clang::ClassTemplateSpecializationDecl* D, int level);
+static void visit_class_template_partial_specialization_decl(const clang::ClassTemplatePartialSpecializationDecl* D, int level);
+static void visit_typedef_decl(const clang::TypedefDecl* D, int level);
+static void visit_var_decl(const clang::VarDecl* D, int level);
+static void visit_translation_unit_decl(const clang::TranslationUnitDecl* D, int level);
+static void visit_decl(const clang::Decl* D, int level);
+static void visit_decl_context(const clang::DeclContext* DC, int level);
+static void init_class_map();
+static void shutdown_class_map();
+static std::string get_fully_qualified_name(const clang::NamedDecl* D);
+
+clang::ASTContext* tcling_Dict::GetASTContext(clang::ASTContext* ctx /*=0*/)
+{
+   static clang::ASTContext* Context = 0;
+   if (ctx) {
+      Context = ctx;
+   }
+   return ctx;
+}
+
+const clang::TranslationUnitDecl* tcling_Dict::GetTranslationUnitDecl(const clang::TranslationUnitDecl* tu /*=0*/)
+{
+   static const clang::TranslationUnitDecl* tu_decl = 0;
+   if (tu) {
+      tu_decl = tu;
+   }
+   return tu_decl;
+}
+
+std::multimap<const std::string, const clang::Decl*>* tcling_Dict::ClassNameToDecl()
+{
+   static std::multimap<const std::string, const clang::Decl*>* classNameToDecl =
+      new std::multimap<const std::string, const clang::Decl*>;
+   return classNameToDecl;
+}
+
+std::map<const clang::Decl*, int>* tcling_Dict::ClassDeclToIdx()
+{
+   static std::map<const clang::Decl*, int>* classDeclToIdx =
+      new std::map<const clang::Decl*, int>;
+   return classDeclToIdx;
+}
+
+std::vector<const clang::Decl*>* tcling_Dict::Classes()
+{
+   static std::vector<const clang::Decl*>* classes =
+      new std::vector<const clang::Decl*>;
+   return classes;
+}
+
+std::vector<const clang::Decl*>* tcling_Dict::GlobalVars()
+{
+   static std::vector<const clang::Decl*>* globalVars =
+      new std::vector<const clang::Decl*>;
+   return globalVars;
+}
+
+std::vector<const clang::Decl*>* tcling_Dict::GlobalFunctions()
+{
+   static std::vector<const clang::Decl*>* globalFunctions =
+      new std::vector<const clang::Decl*>;
+   return globalFunctions;
+}
+
+std::vector<const clang::Decl*>* tcling_Dict::Typedefs()
+{
+   static std::vector<const clang::Decl*>* typedefs =
+      new std::vector<const clang::Decl*>;
+   return typedefs;
+}
+
+static std::string get_fully_qualified_name(const clang::NamedDecl* D) {
+   clang::PrintingPolicy P(getCI()->getASTContext().PrintingPolicy);
+  const clang::DeclContext* Ctx = D->getDeclContext();
+  typedef llvm::SmallVector<const clang::DeclContext*, 8> ContextsTy;
+  ContextsTy Contexts;
+  while (Ctx && llvm::isa<clang::NamedDecl>(Ctx)) {
+    Contexts.push_back(Ctx);
+    Ctx = Ctx->getParent();
+  };
+  std::string QualName;
+  llvm::raw_string_ostream OS(QualName);
+  for (
+    ContextsTy::reverse_iterator I = Contexts.rbegin(), E = Contexts.rend();
+    I != E;
+    ++I
+  ) {
+    if (const clang::ClassTemplateSpecializationDecl* Spec =
+        llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(*I)
+    ) {
+      const clang::TemplateArgumentList& TemplateArgs = Spec->getTemplateArgs();
+      std::string TemplateArgsStr =
+        clang::TemplateSpecializationType::PrintTemplateArgumentList(
+          TemplateArgs.data(), TemplateArgs.size(), P);
+      OS << Spec->getName() << TemplateArgsStr;
+    } else if (const clang::NamespaceDecl* ND =
+               llvm::dyn_cast<clang::NamespaceDecl>(*I)
+    ) {
+      if (ND->isAnonymousNamespace()) {
+        OS << "<anonymous namespace>";
+      }
+      else {
+        OS << ND;
+      }
+    } else if (const clang::RecordDecl* RD =
+               llvm::dyn_cast<clang::RecordDecl>(*I)
+    ) {
+      if (!RD->getIdentifier()) {
+        OS << "<anonymous " << RD->getKindName() << '>';
+      }
+      else {
+        OS << RD;
+      }
+    }
+    else {
+      OS << llvm::cast<clang::NamedDecl>(*I);
+    }
+    OS << "::";
+  }
+  if (D->getDeclName()) {
+    OS << D;
+  }
+  else {
+    OS << "<anonymous>";
+  }
+  return OS.str();
+}
+
+static clang::CompilerInstance* createCI()
+{
+   //
+   //  Create and setup a compiler instance.
+   //
+   clang::CompilerInstance* CI = new clang::CompilerInstance();
+   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(new clang::DiagnosticIDs());
+   {
+      //
+      //  Buffer the error messages while we process
+      //  the compiler options.
+      //
+      clang::TextDiagnosticBuffer* DiagsBuffer = new clang::TextDiagnosticBuffer();
+      // Diags takes ownership of DiagsBuffer
+      clang::Diagnostic Diags(DiagID, DiagsBuffer);
+      clang::CompilerInvocation::CreateFromArgs(CI->getInvocation(),
+            fake_argv + 1, fake_argv + fake_argc, Diags);
+      if (
+         CI->getHeaderSearchOpts().UseBuiltinIncludes &&
+         CI->getHeaderSearchOpts().ResourceDir.empty()
+      ) {
+         llvm::sys::Path P(llvm_install_dir);
+         P.appendComponent("lib");
+         P.appendComponent("clang");
+         P.appendComponent(CLANG_VERSION_STRING);
+         CI->getHeaderSearchOpts().ResourceDir = P.str();
+      }
+      CI->createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
+      if (!CI->hasDiagnostics()) {
+         delete CI;
+         CI = 0;
+         return 0;
+      }
+      // Output the buffered error messages now.
+      DiagsBuffer->FlushDiagnostics(CI->getDiagnostics());
+      if (CI->getDiagnostics().getClient()->getNumErrors()) {
+         delete CI;
+         CI = 0;
+         return 0;
+      }
+   }
+   CI->setTarget(clang::TargetInfo::CreateTargetInfo(CI->getDiagnostics(),
+                 CI->getTargetOpts()));
+   if (!CI->hasTarget()) {
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   CI->getTarget().setForcedLangOptions(CI->getLangOpts());
+   CI->createFileManager();
+   CI->createSourceManager(CI->getFileManager());
+   return CI;
+}
+
+static clang::CompilerInstance* getCI()
+{
+   if (!m_CI) {
+      return 0;
+   }
+   m_CI->createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
+   if (!m_CI->hasDiagnostics()) {
+      delete m_CI;
+      m_CI = 0;
+      return 0;
+   }
+   return m_CI;
+}
+
+static void visit_linkage_spec_decl(const clang::LinkageSpecDecl* D, int level)
+{
+   if (D->getLanguage() == clang::LinkageSpecDecl::lang_c) {
+   }
+   else if (D->getLanguage() == clang::LinkageSpecDecl::lang_cxx) {
+   }
+   else {
+   }
+   if (D->hasBraces()) {
+      visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
+   }
+   else {
+      visit_decl(*D->decls_begin(), level);
+   }
+}
+
+static void visit_namespace_decl(const clang::NamespaceDecl* D, int level)
+{
+   //printf("namespace %s {\n", D->getNameAsString().c_str());
+   //printf("namespace %s\n", D->getNameAsString().c_str());
+   //printf("namespace %s\n", get_fully_qualified_name(D).c_str());
+   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
+   tcling_Dict::Classes()->push_back(D);
+   tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
+   visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
+}
+
+static void visit_enum_decl(const clang::EnumDecl* D, int level)
+{
+   //clang::ASTContext& Context = getCI()->getASTContext();
+   //clang::PrintingPolicy Policy(Context.PrintingPolicy);
+#if 0 // c++2011
+   if (D->isScoped()) {
+      if (D->isScopedUsingClassTag()) {
+         printf("class ");
+      }
+      else  {
+         printf("struct ");
+      }
+   }
+#endif // 0
+   //printf("%s", D->getNameAsString().c_str());
+   //printf("enum %s\n", D->getNameAsString().c_str());
+   //printf("enum %s\n", get_fully_qualified_name(D).c_str());
+   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
+   tcling_Dict::Classes()->push_back(D);
+   tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
+#if 0 // c++2011
+   if (D->isFixed()) {
+      std::string Underlying;
+      D->getIntegerType().getAsStringInternal(Underlying, Policy);
+      printf(" : %s", Underlying.c_str());
+   }
+#endif // 0
+   if (D->isDefinition()) {
+      visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
+   }
+}
+
+static void visit_record_decl(const clang::RecordDecl* D, int level)
+{
+   //printf("%s", D->getKindName());
+   if (D->getIdentifier()) {
+     //printf(" %s", D->getNameAsString().c_str());
+     tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
+     tcling_Dict::Classes()->push_back(D);
+     tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
+   }
+   //printf(" %s", get_fully_qualified_name(D).c_str());
+   //printf("\n");
+   if (D->isDefinition()) {
+      visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
+   }
+}
+
+static void visit_cxxrecord_decl(const clang::CXXRecordDecl* D, int level)
+{
+   //printf("%s", D->getKindName());
+   if (D->getIdentifier()) {
+     //printf(" %s", D->getNameAsString().c_str());
+     if (D->isDefinition()) {
+       std::string name = get_fully_qualified_name(D);
+       //if (name == "TObject") {
+         //fprintf(stderr, "inserting class: %s  Decl: 0x%016lx\n", get_fully_qualified_name(D).c_str(), (long) D);
+         //std::multimap<const std::string, const clang::Decl*>::iterator iter = 
+         //tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
+         //fprintf(stderr, "inserted  class: %s  Decl: 0x%016lx\n", iter->first.c_str(), (long) iter->second);
+         //tcling_Dict::Classes()->push_back(D);
+         //tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
+       //}
+       //else {
+         tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
+         tcling_Dict::Classes()->push_back(D);
+         tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
+       //}
+     }
+   }
+   //printf(" %s", get_fully_qualified_name(D).c_str());
+   //printf("\n");
+   if (D->isDefinition()) {
+      if (D->getNumBases()) {
+         for (clang::CXXRecordDecl::base_class_const_iterator Base = D->bases_begin(),
+               BaseEnd = D->bases_end(); Base != BaseEnd; ++Base) {
+            if (Base->isVirtual()) {
+            }
+            clang::AccessSpecifier AS = Base->getAccessSpecifierAsWritten();
+            if (AS != clang::AS_none) {
+            }
+            //printf(" %s", Base->getType().getAsString().c_str());
+#if 0 // c++2011
+            if (Base->isPackExpansion()) {
+               printf("...");
+            }
+#endif // 0
+            //--
+         }
+      }
+      visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
+   }
+}
+
+static void visit_class_template_specialization_decl(const clang::ClassTemplateSpecializationDecl* D, int level)
+{
+   visit_cxxrecord_decl(D, level);
+}
+
+static void visit_class_template_partial_specialization_decl(const clang::ClassTemplatePartialSpecializationDecl* D, int level)
+{
+   visit_cxxrecord_decl(D, level);
+}
+
+static void visit_typedef_decl(const clang::TypedefDecl* D, int level)
+{
+   //printf("typedef %s ", D->getUnderlyingType().getAsString().c_str());
+   //printf("%s", D->getNameAsString().c_str());
+   //printf("%s", get_fully_qualified_name(D).c_str());
+   //printf("\n");
+   tcling_Dict::Typedefs()->push_back(D);
+}
+
+static void visit_function_decl(const clang::FunctionDecl* D, int level)
+{
+   if (D->isGlobal()) {
+       tcling_Dict::GlobalFunctions()->push_back(D);
+   }
+}
+
+static void visit_var_decl(const clang::VarDecl* D, int level)
+{
+   //clang::AccessSpecifier AS = D->getAccess();
+   //clang::StorageClass SC = D->getStorageClass();
+   //const clang::ParmVarDecl* Parm = clang::dyn_cast<clang::ParmVarDecl>(D);
+   //clang::QualType QT = D->getType();
+   //if (Parm) {
+      //QT = Parm->getOriginalType();
+   //}
+   //{
+      // Actually print var.
+      //if (SC != clang::SC_None) {
+         //printf("%s ", clang::VarDecl::getStorageClassSpecifierString(SC));
+      //}
+      //if (D->isThreadSpecified()) {
+         //printf("__thread ");
+      //}
+      //printf("%s %s", QT.getAsString().c_str(), D->getNameAsString().c_str());
+   //}
+   if (D->hasGlobalStorage() && !D->isStaticDataMember()) {
+      tcling_Dict::GlobalVars()->push_back(D);
+   }
+}
+
+static void visit_translation_unit_decl(const clang::TranslationUnitDecl* D, int level)
+{
+  visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
+}
+
+static void visit_decl(const clang::Decl* D, int level)
+{
+   clang::ASTContext& Context = getCI()->getASTContext();
+   clang::PrintingPolicy Policy(Context.PrintingPolicy);
+   switch (D->getKind()) {
+      case clang::Decl::AccessSpec: // Decl
+      case clang::Decl::Block: // Decl
+      case clang::Decl::FileScopeAsm: // Decl
+      case clang::Decl::Friend: // Decl
+      case clang::Decl::FriendTemplate: // Decl
+      case clang::Decl::Label: // Named, Decl
+      case clang::Decl::NamespaceAlias: // Named, Decl
+      case clang::Decl::ClassTemplate: // RedeclarableTemplate, Template, Named, Decl
+      case clang::Decl::FunctionTemplate: // RedeclarableTemplate, Template, Named, Decl
+      case clang::Decl::TypeAliasTemplate: // RedeclarableTemplate, Template, Named, Decl
+      case clang::Decl::TemplateTemplateParm: // Template, Named, Decl
+      case clang::Decl::TemplateTypeParm: // Type, Named, Decl
+      case clang::Decl::TypeAlias: // TypedefName, Type, Named, Decl
+      case clang::Decl::UnresolvedUsingTypename: // Type, Named, Decl
+      case clang::Decl::Using: // Named, Decl
+      case clang::Decl::UsingDirective: // Named, Decl
+      case clang::Decl::UsingShadow: // Named, Decl
+      case clang::Decl::Field: // Declarator, Value, Named, Decl
+      case clang::Decl::CXXMethod: // Function, Declarator, Value, Named, Decl
+      case clang::Decl::CXXConstructor: // CXXMethod, Function, Declarator, Value, Named, Decl
+      case clang::Decl::CXXConversion: // CXXMethod, Function, Declarator, Value, Named, Decl
+      case clang::Decl::CXXDestructor: // CXXMethod, Function, Declarator, Value, Named, Decl
+      case clang::Decl::NonTypeTemplateParm: // Declarator, Value, Named, Decl
+      case clang::Decl::ImplicitParam: // Var, Declarator, Value, Named, Decl
+      case clang::Decl::ParmVar: // Var, Declarator, Value, Named, Decl
+      case clang::Decl::EnumConstant: // Value, Named, Decl
+      case clang::Decl::IndirectField: // Value, Named, Decl
+      case clang::Decl::UnresolvedUsingValue: // Value, Named, Decl
+      case clang::Decl::StaticAssert: // Decl
+      default: {
+         }
+         break;
+      case clang::Decl::LinkageSpec: { // Decl
+            const clang::LinkageSpecDecl* LSD = llvm::dyn_cast<clang::LinkageSpecDecl>(D);
+            visit_linkage_spec_decl(LSD, level);
+         }
+         break;
+      case clang::Decl::Namespace: { // Named, Decl
+            const clang::NamespaceDecl* ND = llvm::dyn_cast<clang::NamespaceDecl>(D);
+            visit_namespace_decl(ND, level);
+         }
+         break;
+      case clang::Decl::Enum: { // Tag, Type, Named, Decl
+            const clang::EnumDecl* ED = llvm::dyn_cast<clang::EnumDecl>(D);
+            visit_enum_decl(ED, level);
+         }
+         break;
+      case clang::Decl::Record: { // Tag, Type, Named, Decl
+            const clang::RecordDecl* RD = llvm::dyn_cast<clang::RecordDecl>(D);
+            visit_record_decl(RD, level);
+         }
+         break;
+      case clang::Decl::CXXRecord: { // Record, Tag, Type, Named, Decl
+            const clang::CXXRecordDecl* CXXRD = llvm::dyn_cast<clang::CXXRecordDecl>(D);
+            visit_cxxrecord_decl(CXXRD, level);
+         }
+         break;
+      case clang::Decl::ClassTemplateSpecialization: { // CXXRecord, Record, Tag, Type, Named, Decl
+            const clang::ClassTemplateSpecializationDecl* CTSD = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(D);
+            visit_class_template_specialization_decl(CTSD, level);
+         }
+         break;
+      case clang::Decl::ClassTemplatePartialSpecialization: { // ClassTemplateSpecialization, CXXRecord, Record, Tag, Type, Named, Decl
+            const clang::ClassTemplatePartialSpecializationDecl* CTPSD = llvm::dyn_cast<clang::ClassTemplatePartialSpecializationDecl>(D);
+            visit_class_template_partial_specialization_decl(CTPSD, level);
+         }
+         break;
+      case clang::Decl::Typedef: { // TypedefName, Type, Named, Decl
+            const clang::TypedefDecl* TDD = llvm::dyn_cast<clang::TypedefDecl>(D);
+            visit_typedef_decl(TDD, level);
+         }
+         break;
+      case clang::Decl::Function: { // Declarator, Value, Named, Decl
+            const clang::FunctionDecl* FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+            visit_function_decl(FD, level);
+         }
+         break;
+      case clang::Decl::Var: { // Declarator, Value, Named, Decl
+            const clang::VarDecl* VD = llvm::dyn_cast<clang::VarDecl>(D);
+            visit_var_decl(VD, level);
+         }
+         break;
+      case clang::Decl::TranslationUnit: { // Decl
+            const clang::TranslationUnitDecl* TUD = llvm::dyn_cast<clang::TranslationUnitDecl>(D);
+            visit_translation_unit_decl(TUD, level);
+         }
+         break;
+   }
+}
+
+static void visit_decl_context(const clang::DeclContext* DC, int level)
+{
+   clang::ASTContext& Context = getCI()->getASTContext();
+   clang::PrintingPolicy Policy(Context.PrintingPolicy);
+   for (
+      clang::DeclContext::decl_iterator D_Iter = DC->decls_begin(),
+      DEnd = DC->decls_end();
+      D_Iter != DEnd;
+      ++D_Iter
+   ) {
+      clang::Decl* D = *D_Iter;
+      if (D->isImplicit()) {
+         continue;
+      }
+      if (clang::NamedDecl* ND = llvm::dyn_cast<clang::NamedDecl>(D)) {
+         if (clang::IdentifierInfo* II = ND->getIdentifier()) {
+            if (
+               II->isStr("__builtin_va_list") ||
+               II->isStr("__va_list_tag") ||
+               II->isStr("__int128_t") ||
+               II->isStr("__uint128_t")
+            ) {
+               continue;
+            }
+         }
+      }
+      visit_decl(D, level);
+   }
+}
+
+static void init_class_map()
+{
+   llvm::InitializeAllTargets();
+   llvm::InitializeAllMCAsmInfos();
+   llvm::InitializeAllMCCodeGenInfos();
+   llvm::InitializeAllMCSubtargetInfos();
+   llvm::InitializeAllAsmPrinters();
+   llvm::InitializeAllAsmParsers();
+
+   m_llvm_context = new llvm::LLVMContext;
+   m_CI = createCI();
+   clang::CompilerInstance* CI = 0;
+   CI = getCI();
+   if (!CI) {
+      return;
+   }
+   CI->createPreprocessor();
+   clang::Preprocessor& PP = CI->getPreprocessor();
+   CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
+   CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
+                                           PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
+                                           PP.getSelectorTable(), PP.getBuiltinInfo(), 0));
+   CI->setASTConsumer(new clang::ASTConsumer());
+   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
+                                          PP.getLangOptions());
+   CI->createPCHExternalASTSource("/local2/russo/root_tcl/root.pch", true, false, 0);
+   clang::TranslationUnitDecl* tu =
+      CI->getASTContext().getTranslationUnitDecl();
+   if (!tu) {
+      fprintf(stderr, "init_class_map: No translation unit decl in root.pch!\n");
+      return;
+   }
+   //tu->dump();
+   //return;
+   tcling_Dict::GetASTContext(&CI->getASTContext());
+   tcling_Dict::GetTranslationUnitDecl(tu);
+   visit_decl(tu, -1);
+}
+
+static void shutdown_class_map()
+{
+   delete m_CI;
+   m_CI = 0;
+   delete m_llvm_context;
+   m_llvm_context = 0;
+   llvm::llvm_shutdown();
+}
 
 //______________________________________________________________________________
 namespace ROOT {
@@ -251,8 +838,10 @@ void TClassTable::Add(const char *cname, Version_t id,  const type_info &info,
 {
    // Add a class to the class table (this is a static function).
 
-   if (!gClassTable)
+   if (!gClassTable) {
       new TClassTable;
+      init_class_map();
+   }
 
    // Only register the name without the default STL template arguments ...
    TClassEdit::TSplitType splitname( cname, TClassEdit::kLong64 );
