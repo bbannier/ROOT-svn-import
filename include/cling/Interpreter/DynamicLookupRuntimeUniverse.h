@@ -60,9 +60,8 @@ namespace cling {
       /// void.
       template<>
       void EvaluateT(DynamicExprInfo* ExprInfo, clang::DeclContext* DC ) {
-        Value result(gCling->Evaluate(ExprInfo->getExpr(), DC, 
-                                      ExprInfo->isValuePrinterRequested())
-                     );
+        gCling->Evaluate(ExprInfo->getExpr(), DC, 
+                         ExprInfo->isValuePrinterRequested());
       }
 
       /// \brief LifetimeHandler is used in case of initialization using address
