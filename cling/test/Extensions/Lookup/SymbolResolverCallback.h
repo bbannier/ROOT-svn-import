@@ -30,6 +30,10 @@ namespace cling {
         printf("%s", "\n");
       }
 
+      int Add(int a, int b) {
+        return a + b;
+      }
+
       void PrintArray(float a[][5], size_t size) {
         for (unsigned i = 0; i < size; ++i)
           for (unsigned j = 0; j < 5; ++j)
