@@ -175,7 +175,7 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
    else if (mode == afimLabelFont)
       object->SetLabelFont(fontIndex);
 
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //_________________________________________________________________

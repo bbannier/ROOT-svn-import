@@ -85,7 +85,7 @@
    else if (g == gridY)
       object->SetGridy(g.on);
    
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //_________________________________________________________________
@@ -96,7 +96,7 @@
    else if (t == ticksY)
       object->SetTicky(t.on);
    
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //_________________________________________________________________

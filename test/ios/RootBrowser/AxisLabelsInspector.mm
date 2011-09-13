@@ -125,7 +125,7 @@ static const float maxOffset = 1.f;
       object->SetLabelOffset(object->GetLabelOffset() + offsetStep);
    }
    
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //_________________________________________________________________
@@ -145,14 +145,14 @@ static const float maxOffset = 1.f;
       object->SetLabelOffset(object->GetLabelOffset() - offsetStep);
    }
    
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //_________________________________________________________________
 - (IBAction) noExp
 {
    object->SetNoExponent(noExp.on);
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //_________________________________________________________________

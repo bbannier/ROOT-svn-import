@@ -108,7 +108,7 @@ static const CGFloat defaultCellH = 44.f;
          object->SetTitleColor(colorIndices[row]);
       else if (mode == acimLabelColor)
          object->SetLabelColor(colorIndices[row]);
-      [controller objectWasModifiedByEditor];
+      [controller objectWasModifiedUpdateSelection : NO];
    }
 }
 

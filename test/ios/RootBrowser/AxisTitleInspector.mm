@@ -128,7 +128,7 @@ static const float titleOffsetStep = 0.01f;
 - (IBAction) textFieldDidEndOnExit : (id) sender
 {
    object->SetTitle([titleField.text cStringUsingEncoding : [NSString defaultCStringEncoding]]);
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //____________________________________________________________________________________________________
@@ -141,14 +141,14 @@ static const float titleOffsetStep = 0.01f;
 - (IBAction) centerTitle
 {
    object->CenterTitle(centered.on);
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //____________________________________________________________________________________________________
 - (IBAction) rotateTitle
 {
    object->RotateTitle(rotated.on);
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //____________________________________________________________________________________________________
@@ -161,7 +161,7 @@ static const float titleOffsetStep = 0.01f;
    offsetLabel.text = [NSString stringWithFormat:@"%.2f", offset];
    object->SetTitleOffset(offset);
    
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //____________________________________________________________________________________________________
@@ -174,7 +174,7 @@ static const float titleOffsetStep = 0.01f;
    offsetLabel.text = [NSString stringWithFormat:@"%.2f", offset];
    object->SetTitleOffset(offset);
    
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 

@@ -10,6 +10,11 @@
 #import "SelectionView.h"
 #import "Constants.h"
 #import "PadView.h"
+
+//DEBUG
+#import "TClass.h"
+//
+
 #import "TAxis.h"
 
 //C++ code (ROOT's ios module)
@@ -73,25 +78,6 @@
 }
 
 //_________________________________________________________________
-- (BOOL) pointOnSelectedObject : (CGPoint) pt
-{
-   //check if there is any object under pt.
-   //this is just a test expression, let's say, there is an object selected in the corner.
-//   return pt.x < 200 && pt.y < 200;
-
-   const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
-   const CGPoint newPt = CGPointMake(pt.x * scale, pt.y * scale);
-
-   if (!pad->SelectionIsValid() && ![self initPadPicking])
-      return NO;
-      
-   if (pad->GetSelected() == pad->ObjectInPoint(newPt.x, newPt.y))
-      return YES;
-
-   return NO;
-}
-
-//_________________________________________________________________
 - (void) addPanRecognizer
 {
    panActive = YES;
@@ -112,6 +98,7 @@
    
       if (pad->ObjectInPoint(tapPt.x, tapPt.y) == axis) {
          axis->UnZoom();
+         pad->InvalidateSelection();
          [self setNeedsDisplay];
          return;
       }
@@ -227,17 +214,35 @@
 }
 
 //_________________________________________________________________
+- (BOOL) pointOnSelectedObject : (CGPoint) pt
+{
+   //check if there is any object under pt.
+   //this is just a test expression, let's say, there is an object selected in the corner.
+//   return pt.x < 200 && pt.y < 200;
+
+   const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
+   const CGPoint newPt = CGPointMake(pt.x * scale, pt.y * scale);
+
+   if (!pad->SelectionIsValid() && ![self initPadPicking])
+      return NO;
+      
+   if (pad->GetSelected() == pad->ObjectInPoint(newPt.x, newPt.y))
+      return YES;
+
+   return NO;
+}
+
+//_________________________________________________________________
 - (void) handleSingleTap
 {
    //Make a selection, fill the editor.
    const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
-   tapPt.x *= scale;
-   tapPt.y *= scale;
+   const CGPoint scaledTapPt = CGPointMake(tapPt.x * scale, tapPt.y * scale);
 
    if (!pad->SelectionIsValid() && ![self initPadPicking])
       return;
       
-   pad->Pick(tapPt.x, tapPt.y);
+   pad->Pick(scaledTapPt.x, scaledTapPt.y);
 
    //Tell controller that selection has probably changed.
    [controller objectWasSelected : pad->GetSelected()];
@@ -332,6 +337,7 @@
       selectionView.panActive = NO;
       const CGPoint pt = [touch locationInView : self];
       pad->ExecuteEventAxis(kButton1Up, pt.x, pt.y, (TAxis *)pad->GetSelected());
+      pad->InvalidateSelection();
       [self setNeedsDisplay];
       [selectionView setNeedsDisplay];
    }

@@ -124,7 +124,7 @@ static const float minTickLength = -1.f;
    else
       object->SetTicks("+-");
 
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //_________________________________________________________________
@@ -141,7 +141,7 @@ static const float minTickLength = -1.f;
          tickLength += tickLengthStep;
          tickLengthLabel.text = [NSString stringWithFormat:@"%.2f", tickLength];
          object->SetTickLength(tickLength);
-         [controller objectWasModifiedByEditor];
+         [controller objectWasModifiedUpdateSelection : NO];
       }
       return;
    }
@@ -171,7 +171,7 @@ static const float minTickLength = -1.f;
    
    labelToModify.text = [NSString stringWithFormat : @"%u", n];
    [self setTicks];
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //_________________________________________________________________
@@ -182,7 +182,7 @@ static const float minTickLength = -1.f;
          tickLength -= tickLengthStep;
          tickLengthLabel.text = [NSString stringWithFormat:@"%.2g", tickLength];
          object->SetTickLength(tickLength);
-         [controller objectWasModifiedByEditor];
+         [controller objectWasModifiedUpdateSelection : NO];
       }
       return;
    }
@@ -212,7 +212,7 @@ static const float minTickLength = -1.f;
    
    labelToModify.text = [NSString stringWithFormat : @"%u", n];
    [self setTicks];
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 
