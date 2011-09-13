@@ -19,7 +19,7 @@
 #include "cling/Interpreter/Interpreter.h"
 
 clang::Diagnostic& Diags = gCling->getCI()->getDiagnostics();
-clang::DiagnosticClient* Client = new clang::VerifyDiagnosticsClient(Diags, Diags.takeClient());
+clang::DiagnosticClient* Client = new clang::VerifyDiagnosticsClient(Diags);
 Diags.setClient(Client);
 
 class MyClass {
