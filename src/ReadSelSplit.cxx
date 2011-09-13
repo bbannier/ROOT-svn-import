@@ -29,6 +29,36 @@
 #include <TNamed.h>
 #include <TStyle.h>
 
+void ReadSelSplit::HFill(TH1 *h, Double_t x)
+{
+   // Optimized histogram filling function
+
+   if (!h) {
+      Warning("HFill", "histo undefined! Cannot fill for '%f'", x);
+      return;
+   }
+   if (fStdHFill) {
+      // Standard fill required
+      h->Fill(x);
+      return;
+   }
+
+   // Get the bin:  (x-xmi) * nbin / (xmx-xmi)
+   Double_t xmi = h->GetXaxis()->GetXmin();
+   Double_t xma = h->GetXaxis()->GetXmax();
+   if (xma <= xmi) {
+      // Axis still to be defined: standard fill (in the buffer) for now
+      h->Fill(x);
+      return;
+   }
+   Double_t nbi = h->GetXaxis()->GetNbins();
+   Int_t bin = Int_t(((x - xmi) * nbi) / (xma - xmi));
+   if (bin > -1) h->AddBinContent(bin);
+   
+   // Done
+   return;
+}
+
 TObject *ReadSelSplit::Find(const char *n)
 {
    // Find object in fInput or gDirectory
@@ -109,11 +139,15 @@ void ReadSelSplit::SlaveBegin(TTree * /*tree*/)
    /* TParameter<Int_t> *ropt = (TParameter<Int_t> *) Find("RTReadOpt");
     if (ropt && ropt->GetVal() == 0) fReadAll = kFALSE;
     Info("SlaveBegin", " readall: %d", fReadAll);
-	*/
-	
-	TNamed *nm = (TNamed *) Find("ReadOpt");
-	if (nm && !strcmp(nm->GetName(),"")) fReadAll = kFALSE;
-	Info("SlaveBegin", " readall: %d", fReadAll);
+   */
+
+    TNamed *nm = (TNamed *) Find("ReadOpt");
+    if (nm && !strcmp(nm->GetName(),"")) fReadAll = kFALSE;
+    Info("SlaveBegin", " readall: %d", fReadAll);
+
+    nm = (TNamed *) Find("StdHFill");
+    if (nm && !strcmp(nm->GetName(),"1")) fStdHFill = kTRUE;
+    Info("SlaveBegin", " stdHfill: %d", fStdHFill);
 }
 
 Bool_t ReadSelSplit::Process(Long64_t entry)
@@ -159,25 +193,25 @@ Bool_t ReadSelSplit::Process(Long64_t entry)
 
    _jets->Fill(_jets_);
    for (Int_t i=0;i < _jets_; i++) {
-      _jet_flavor->Fill(_jets__flavor[i]);
-      _jet_e->Fill(_jets__p4_fE[i]);
-      _jet_px->Fill(_jets__p4_fP_fX[i]);
-      _jet_py->Fill(_jets__p4_fP_fY[i]);
-      _jet_pz->Fill(_jets__p4_fP_fZ[i]);
-      _jet_x->Fill(_jets__vertex_fX[i]);
-      _jet_y->Fill(_jets__vertex_fY[i]);
-      _jet_z->Fill(_jets__vertex_fZ[i]);
+      HFill(_jet_flavor, _jets__flavor[i]);
+      HFill(_jet_e, _jets__p4_fE[i]);
+      HFill(_jet_px, _jets__p4_fP_fX[i]);
+      HFill(_jet_py, _jets__p4_fP_fY[i]);
+      HFill(_jet_pz, _jets__p4_fP_fZ[i]);
+      HFill(_jet_x, _jets__vertex_fX[i]);
+      HFill(_jet_y, _jets__vertex_fY[i]);
+      HFill(_jet_z, _jets__vertex_fZ[i]);
 
    }
    _muons->Fill(_muons_);
    for (Int_t i=0;i < _muons_; i++) {
-      _muon_e->Fill(_muons__p4_fE[i]);
-      _muon_px->Fill(_muons__p4_fP_fX[i]);
-      _muon_py->Fill(_muons__p4_fP_fY[i]);
-      _muon_pz->Fill(_muons__p4_fP_fZ[i]);
-      _muon_x->Fill(_muons__vertex_fX[i]);
-      _muon_y->Fill(_muons__vertex_fY[i]);
-      _muon_z->Fill(_muons__vertex_fZ[i]);
+      HFill(_muon_e, _muons__p4_fE[i]);
+      HFill(_muon_px, _muons__p4_fP_fX[i]);
+      HFill(_muon_py, _muons__p4_fP_fY[i]);
+      HFill(_muon_pz, _muons__p4_fP_fZ[i]);
+      HFill(_muon_x, _muons__vertex_fX[i]);
+      HFill(_muon_y, _muons__vertex_fY[i]);
+      HFill(_muon_z, _muons__vertex_fZ[i]);
    }
 
    return kTRUE;

@@ -40,6 +40,7 @@ public :
    TH1 *_muon_z;
    
    Bool_t          fReadAll;             // Switch for reading all or targetted
+   Bool_t          fStdHFill;            // Controls histogram filling
 
    TObject        *Find(const char *n);  // Find object in fInput or gDirectory
 
@@ -119,11 +120,13 @@ public :
    TBranch        *b__muons__vertex_fX;   //!
    TBranch        *b__muons__vertex_fY;   //!
    TBranch        *b__muons__vertex_fZ;   //!
+   
+   void  HFill(TH1 *h, Double_t x);
 
    ReadSelSplit(TTree * /*tree*/ =0) : _jets(0), _jet_flavor(0), _jet_e(0), _jet_px(0),
                                 _jet_py(0), _jet_pz(0), _jet_x(0), _jet_y(0), _jet_z(0),
                                 _muons(0), _muon_e(0), _muon_px(0), _muon_py(0), _muon_pz(0),
-                                _muon_x(0), _muon_y(0), _muon_z(0) { fReadAll = kTRUE; }
+                                _muon_x(0), _muon_y(0), _muon_z(0) { fReadAll = kTRUE; fStdHFill = kFALSE; }
    virtual ~ReadSelSplit() { }
    virtual Int_t   Version() const { return 2; }
    virtual void    Begin(TTree *tree);
