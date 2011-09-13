@@ -101,13 +101,13 @@ void Painter::SetStrokeParameters()const
    }
    
    if (fPainterMode == kPaintSelected) {
-      CGContextSetRGBStrokeColor(fCtx, 1.f, 0.f, 0.4f, 0.7f);
+      CGContextSetRGBStrokeColor(fCtx, 1.f, 0.f, 0.4f, 0.2f);
       CGContextSetLineWidth(fCtx, 5.f);
       return;
    }
 
    if (fPainterMode == kPaintShadow) {
-      CGContextSetRGBStrokeColor(fCtx, 0.1f, 0.1f, 0.1f, 0.5f);
+      CGContextSetRGBStrokeColor(fCtx, 0.1f, 0.1f, 0.1f, 0.2f);
       CGContextSetLineWidth(fCtx, 5.f);
       return;
    }
@@ -173,12 +173,12 @@ void Painter::SetPolygonParameters()const
       return SetPolygonColorForCurrentObjectID();
 
    if (fPainterMode == kPaintSelected) {
-      CGContextSetRGBFillColor(fCtx, 1.f, 0.f, 0.4f, 0.3f);
+      CGContextSetRGBFillColor(fCtx, 1.f, 0.f, 0.4f, 0.2f);
       return;
    }
 
    if (fPainterMode == kPaintShadow) {
-      CGContextSetRGBFillColor(fCtx, 0.1f, 0.1f, 0.1f, 0.5f);
+      CGContextSetRGBFillColor(fCtx, 0.1f, 0.1f, 0.1f, 0.2f);
       return;
    }
 

@@ -199,10 +199,9 @@
 //____________________________________________________________________________________________________
 - (void) startSlideshow
 {
-   if (!slideshowController)
-      slideshowController = [[SlideshowController alloc] initWithNibName : @"SlideshowController" bundle : nil];
-      
+   slideshowController = [[SlideshowController alloc] initWithNibName : @"SlideshowController" bundle : nil fileContainer : fileContainer];
    [self.navigationController pushViewController : slideshowController animated : YES];
+   [slideshowController release];
 }
 
 //____________________________________________________________________________________________________
