@@ -27,7 +27,6 @@ public:
    void Divide(Int_t, Int_t, Float_t, Float_t, Int_t);
    void Draw(Option_t *);
    void DrawClassObject(const TObject *, Option_t *);
-   void ExecuteEventAxis(Int_t, Int_t, Int_t, TAxis *);
    void SetBatch(Bool_t batch);
    Int_t GetCanvasID() const;
    TCanvasImp *GetCanvasImp() const;

@@ -43,11 +43,6 @@ void PadStub::DrawClassObject(const TObject *, Option_t *)
 }
 
 //______________________________________________________________________________
-void PadStub::ExecuteEventAxis(Int_t, Int_t, Int_t, TAxis *)
-{
-}
-
-//______________________________________________________________________________
 void PadStub::SetBatch(Bool_t)
 {
 }
