@@ -51,7 +51,7 @@ namespace cling {
                                       /*TypeSourceInfo*/0,
                                       SC_None,
                                       SC_None);
-    if (Result) {            
+    if (Result) {
       R.addDecl(Result);
       // Say that we can handle the situation. Clang should try to recover
       return true;
