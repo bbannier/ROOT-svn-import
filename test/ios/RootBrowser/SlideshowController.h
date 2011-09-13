@@ -27,4 +27,6 @@ class Pad;
    ROOT_iOS::FileContainer *fileContainer;
 }
 
+- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil fileContainer : (ROOT_iOS::FileContainer *)container;
+
 @end
