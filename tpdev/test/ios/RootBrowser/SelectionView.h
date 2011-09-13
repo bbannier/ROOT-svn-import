@@ -21,6 +21,9 @@ class Pad;
    CGPoint panStart;
    CGPoint currentPanPoint;
    BOOL verticalDirection;
+   
+   CGPoint hitPoint;
+   CGPoint offset;
 }
 
 @property (nonatomic, assign) BOOL panActive;

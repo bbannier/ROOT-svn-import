@@ -243,6 +243,8 @@ public:
    void ExecuteEventAxis(Int_t, Int_t, Int_t, TAxis *);
    
    Bool_t SelectionIsValid()const;
+   void InvalidateSelection();
+
    void PaintForSelection();
    void SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff);
    void Pick(Int_t px, Int_t py);

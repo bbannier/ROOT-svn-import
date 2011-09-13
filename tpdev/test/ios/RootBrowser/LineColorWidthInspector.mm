@@ -190,7 +190,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
       object->SetLineWidth(width);
    }
    
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 @end

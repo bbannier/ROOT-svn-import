@@ -15,6 +15,8 @@
 //C++ (ROOT) imports.
 #import "IOSPad.h"
 
+static const CGRect selectionHintFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
+
 @implementation SelectionView
 
 @synthesize panActive;
@@ -22,6 +24,7 @@
 @synthesize currentPanPoint;
 @synthesize verticalDirection;
 
+//_________________________________________________________________
 - (id)initWithFrame : (CGRect)frame withPad : (ROOT_iOS::Pad *) p
 {
    self = [super initWithFrame:frame];
@@ -38,6 +41,7 @@
    return self;
 }
 
+//_________________________________________________________________
 - (void)drawRect : (CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
@@ -68,12 +72,13 @@
    }
 }
 
-
+//_________________________________________________________________
 - (void)dealloc
 {
     [super dealloc];
 }
 
+//_________________________________________________________________
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *) event 
 {
    //Thanks to gyim, 

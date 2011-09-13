@@ -36,7 +36,7 @@ class TObject;
 - (void) setObjectFromShortcut : (ObjectShortcut *)object;
 - (void) handleDoubleTapOnPad;
 - (void) objectWasSelected : (TObject *)object;
-- (void) objectWasModifiedByEditor;
+- (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate;
 - (void) setupObjectInspector;
 
 @end

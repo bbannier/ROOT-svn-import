@@ -1964,7 +1964,7 @@ void Pad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
    static Int_t axisNumber;
    static Double_t ratio1, ratio2;
    static Int_t px1old, py1old, px2old, py2old;
-   Int_t bin1, bin2, first, last;
+   Int_t bin1, bin2;
    Double_t temp, xmin,xmax;
 
    switch (event) {
@@ -2072,6 +2072,12 @@ void Pad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
 Bool_t Pad::SelectionIsValid() const
 {
    return fSelectionIsValid;
+}
+
+//______________________________________________________________________________
+void Pad::InvalidateSelection()
+{
+   fSelectionIsValid = kFALSE;
 }
 
 //______________________________________________________________________________

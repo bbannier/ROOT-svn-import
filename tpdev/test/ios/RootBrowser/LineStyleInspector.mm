@@ -110,7 +110,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 180.f, 44.f);
 {
    object->SetLineStyle(row + 1);
    
-   [controller objectWasModifiedByEditor];
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //_________________________________________________________________

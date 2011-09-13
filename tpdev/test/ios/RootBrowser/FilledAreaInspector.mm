@@ -123,7 +123,7 @@ static const CGFloat defaultCellH = 44.f;
    if (filledObject && parentController) {
       if (cellIndex >= 0 && cellIndex < nROOTDefaultColors) {
          filledObject->SetFillColor(colorIndices[cellIndex]);
-         [parentController objectWasModifiedByEditor];
+         [parentController objectWasModifiedUpdateSelection : NO];
       }
    }
 }
@@ -140,7 +140,7 @@ static const CGFloat defaultCellH = 44.f;
          filledObject->SetFillStyle(Fill::solidFillStyle);
       }
 
-      [parentController objectWasModifiedByEditor];
+      [parentController objectWasModifiedUpdateSelection : NO];
    }
 }
 

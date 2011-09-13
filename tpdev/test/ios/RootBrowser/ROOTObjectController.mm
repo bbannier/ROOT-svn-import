@@ -397,20 +397,17 @@ static const CGFloat maximumZoom = 2.f;
 //_________________________________________________________________
 - (void) objectWasSelected : (TObject *)object
 {
-   if (object != selectedObject) {
-      //New object was selected.
-      if (object) {
-         selectedObject = object;
-         padView.selectionView.hidden = NO;
-         [padView.selectionView setNeedsDisplay];
-      } else {
-         selectedObject = pad;
-         padView.selectionView.hidden = YES;
-      }
-
+   if (object != selectedObject) {//New object was selected.
+      object ? selectedObject = object : (selectedObject = pad);
       [self setupObjectInspector];
       [objectInspector resetInspector];
    }
+
+   if (object) {
+      padView.selectionView.hidden = NO;
+      [padView.selectionView setNeedsDisplay];
+   } else
+      padView.selectionView.hidden = YES;   
 }
 
 //_________________________________________________________________
@@ -421,8 +418,11 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //_________________________________________________________________
-- (void) objectWasModifiedByEditor
+- (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate
 {
+   if (needUpdate)
+      pad->InvalidateSelection();
+   
    [padView setNeedsDisplay];
 }
 

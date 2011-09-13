@@ -3654,6 +3654,7 @@ void THistPainter::Paint(Option_t *option)
       delete [] fXbuf; delete [] fYbuf;
       return;
    }
+
    TView *view = gPad->GetView();
    if (view) {
       if (!Hoption.Lego && !Hoption.Surf && !Hoption.Tri) {
@@ -3661,7 +3662,7 @@ void THistPainter::Paint(Option_t *option)
          gPad->SetView(0);
       }
    }
-   
+
    if (fH->GetDimension() > 1 || Hoption.Lego || Hoption.Surf) {
       // In case of 1D histogram, Z axis becomes Y axis.
       Int_t logysav=0, logzsav=0;
@@ -3970,106 +3971,106 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
 
    if (gPad->PadInSelectionMode() || !gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && gPad->GetSelected() == fXaxis)) {
 
-   ndivx = fXaxis->GetNdivisions();
-   if (ndivx > 1000) {
-      nx2   = ndivx/100;
-      nx1   = TMath::Max(1, ndivx%100);
-      ndivx = 100*nx2 + Int_t(Float_t(nx1)*gPad->GetAbsWNDC());
-   }
-   axis.SetTextAngle(0);
-   axis.ImportAxisAttributes(fXaxis);
+      ndivx = fXaxis->GetNdivisions();
+      if (ndivx > 1000) {
+         nx2   = ndivx/100;
+         nx1   = TMath::Max(1, ndivx%100);
+         ndivx = 100*nx2 + Int_t(Float_t(nx1)*gPad->GetAbsWNDC());
+      }
+      axis.SetTextAngle(0);
+      axis.ImportAxisAttributes(fXaxis);
 
-   chopt[0] = 0;
-   // coverity [Calling risky function]
-   strlcat(chopt, "SDH",10);
-   // coverity [Calling risky function]
-   if (ndivx < 0) strlcat(chopt, "N",10);
-   if (gPad->GetGridx()) {
-      gridl = (aymax-aymin)/(gPad->GetY2() - gPad->GetY1());
+      chopt[0] = 0;
       // coverity [Calling risky function]
-      strlcat(chopt, "W",10);
-   }
+      strlcat(chopt, "SDH",10);
+      // coverity [Calling risky function]
+      if (ndivx < 0) strlcat(chopt, "N",10);
+      if (gPad->GetGridx()) {
+         gridl = (aymax-aymin)/(gPad->GetY2() - gPad->GetY1());
+         // coverity [Calling risky function]
+         strlcat(chopt, "W",10);
+      }
 
-   // Define X-Axis limits
-   if (Hoption.Logx) {
-      // coverity [Calling risky function]
-      strlcat(chopt, "G",10);
-      ndiv = TMath::Abs(ndivx);
-      if (useHparam) {
-         umin = TMath::Power(10,Hparam.xmin);
-         umax = TMath::Power(10,Hparam.xmax);
+      // Define X-Axis limits
+      if (Hoption.Logx) {
+         // coverity [Calling risky function]
+         strlcat(chopt, "G",10);
+         ndiv = TMath::Abs(ndivx);
+         if (useHparam) {
+            umin = TMath::Power(10,Hparam.xmin);
+            umax = TMath::Power(10,Hparam.xmax);
+         } else {
+            umin = TMath::Power(10,axmin);
+            umax = TMath::Power(10,axmax);
+         }
       } else {
-         umin = TMath::Power(10,axmin);
-         umax = TMath::Power(10,axmax);
+         ndiv = TMath::Abs(ndivx);
+         if (useHparam) {
+            umin = Hparam.xmin;
+            umax = Hparam.xmax;
+         } else {
+            umin = axmin;
+            umax = axmax;
+         }
       }
-   } else {
-      ndiv = TMath::Abs(ndivx);
-      if (useHparam) {
-         umin = Hparam.xmin;
-         umax = Hparam.xmax;
+
+      // Display axis as time
+      if (fXaxis->GetTimeDisplay()) {
+         // coverity [Calling risky function]
+         strlcat(chopt,"t",10);
+         if (strlen(fXaxis->GetTimeFormatOnly()) == 0) {
+            axis.SetTimeFormat(fXaxis->ChooseTimeFormat(Hparam.xmax-Hparam.xmin));
+         }
+      }
+
+      // The main X axis can be on the bottom or on the top of the pad
+      Double_t xAxisYPos1, xAxisYPos2;
+      if (xAxisPos == 1) {
+         // Main X axis top
+         xAxisYPos1 = aymax;
+         xAxisYPos2 = aymin;
       } else {
-         umin = axmin;
-         umax = axmax;
+         // Main X axis bottom
+         xAxisYPos1 = aymin;
+         xAxisYPos2 = aymax;
       }
-   }
 
-   // Display axis as time
-   if (fXaxis->GetTimeDisplay()) {
-      // coverity [Calling risky function]
-      strlcat(chopt,"t",10);
-      if (strlen(fXaxis->GetTimeFormatOnly()) == 0) {
-         axis.SetTimeFormat(fXaxis->ChooseTimeFormat(Hparam.xmax-Hparam.xmin));
-      }
-   }
-
-   // The main X axis can be on the bottom or on the top of the pad
-   Double_t xAxisYPos1, xAxisYPos2;
-   if (xAxisPos == 1) {
-      // Main X axis top
-      xAxisYPos1 = aymax;
-      xAxisYPos2 = aymin;
-   } else {
-      // Main X axis bottom
-      xAxisYPos1 = aymin;
-      xAxisYPos2 = aymax;
-   }
-
-   // Paint the main X axis (always)
-   uminsave = umin;
-   umaxsave = umax;
-   ndivsave = ndiv;
-   axis.SetOption(chopt);
-   if (xAxisPos) {
-      // coverity [Calling risky function]
-      strlcat(chopt, "-",10);
-      gridl = -gridl;
-   }
-   if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
-      axis.SetLabelSize(0.);
-      axis.SetTitle("");
-   }
-   axis.PaintAxis(axmin, xAxisYPos1,
-                  axmax, xAxisYPos1,
-                  umin, umax,  ndiv, chopt, gridl, drawGridOnly);
-
-   // Paint additional X axis (if needed)
-   if (gPad->GetTickx()) {
+      // Paint the main X axis (always)
+      uminsave = umin;
+      umaxsave = umax;
+      ndivsave = ndiv;
+      axis.SetOption(chopt);
       if (xAxisPos) {
-         cw=strstr(chopt,"-");
-         *cw='z';
-      } else {
          // coverity [Calling risky function]
          strlcat(chopt, "-",10);
+         gridl = -gridl;
       }
-      // coverity [Calling risky function]
-      if (gPad->GetTickx() < 2) strlcat(chopt, "U",10);
-      if ((cw=strstr(chopt,"W"))) *cw='z';
-      axis.SetTitle("");
-      axis.PaintAxis(axmin, xAxisYPos2,
-                     axmax, xAxisYPos2,
-                     uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
-   }
+      if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
+         axis.SetLabelSize(0.);
+         axis.SetTitle("");
+      }
+      axis.PaintAxis(axmin, xAxisYPos1,
+                     axmax, xAxisYPos1,
+                     umin, umax,  ndiv, chopt, gridl, drawGridOnly);
 
+      // Paint additional X axis (if needed)
+      if (gPad->GetTickx() && !gPad->PadInSelectionMode()) {
+         if (xAxisPos) {
+            cw=strstr(chopt,"-");
+            *cw='z';
+         } else {
+            // coverity [Calling risky function]
+            strlcat(chopt, "-",10);
+         }
+         // coverity [Calling risky function]
+         if (gPad->GetTickx() < 2) strlcat(chopt, "U",10);
+         if ((cw=strstr(chopt,"W"))) *cw='z';
+         axis.SetTitle("");
+         axis.PaintAxis(axmin, xAxisYPos2,
+                        axmax, xAxisYPos2,
+                        uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
+      }
+   
    }//pad mode
 
    if (gPad->PadInSelectionMode())
@@ -4077,101 +4078,99 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
 
    if (gPad->PadInSelectionMode() || !gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && gPad->GetSelected() == fYaxis)) {
 
-   // Paint Y axis
-   ndivy = fYaxis->GetNdivisions();
-   axis.ImportAxisAttributes(fYaxis);
+      // Paint Y axis
+      ndivy = fYaxis->GetNdivisions();
+      axis.ImportAxisAttributes(fYaxis);
 
-   chopt[0] = 0;
-   // coverity [Calling risky function]
-   strlcat(chopt, "SDH",10);
-   // coverity [Calling risky function]
-   if (ndivy < 0) strlcat(chopt, "N",10);
-   if (gPad->GetGridy()) {
-      gridl = (axmax-axmin)/(gPad->GetX2() - gPad->GetX1());
+      chopt[0] = 0;
       // coverity [Calling risky function]
-      strlcat(chopt, "W",10);
-   }
-
-   // Define Y-Axis limits
-   if (Hoption.Logy) {
+      strlcat(chopt, "SDH",10);
       // coverity [Calling risky function]
-      strlcat(chopt, "G",10);
-      ndiv = TMath::Abs(ndivy);
-      if (useHparam) {
-         umin = TMath::Power(10,Hparam.ymin);
-         umax = TMath::Power(10,Hparam.ymax);
-      } else {
-         umin = TMath::Power(10,aymin);
-         umax = TMath::Power(10,aymax);
-      }
-   } else {
-      ndiv = TMath::Abs(ndivy);
-      if (useHparam) {
-         umin = Hparam.ymin;
-         umax = Hparam.ymax;
-      } else {
-         umin = aymin;
-         umax = aymax;
-      }
-   }
-
-   // Display axis as time
-   if (fYaxis->GetTimeDisplay()) {
-      // coverity [Calling risky function]
-      strlcat(chopt,"t",10);
-      if (strlen(fYaxis->GetTimeFormatOnly()) == 0) {
-         axis.SetTimeFormat(fYaxis->ChooseTimeFormat(Hparam.ymax-Hparam.ymin));
-      }
-   }
-
-   // The main Y axis can be on the left or on the right of the pad
-   Double_t yAxisXPos1, yAxisXPos2;
-   if (yAxisPos == 1) {
-      // Main Y axis left
-      yAxisXPos1 = axmax;
-      yAxisXPos2 = axmin;
-   } else {
-      // Main Y axis right
-      yAxisXPos1 = axmin;
-      yAxisXPos2 = axmax;
-   }
-
-   // Paint the main Y axis (always)
-   uminsave = umin;
-   umaxsave = umax;
-   ndivsave = ndiv;
-   axis.SetOption(chopt);
-   if (yAxisPos) {
-      // coverity [Calling risky function]
-      strlcat(chopt, "+L",10);
-      gridl = -gridl;
-   }
-   if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
-      axis.SetLabelSize(0.);
-      axis.SetTitle("");
-   }
-   axis.PaintAxis(yAxisXPos1, aymin,
-                  yAxisXPos1, aymax,
-                  umin, umax,  ndiv, chopt, gridl, drawGridOnly);
-
-   // Paint the additional Y axis (if needed)
-   if (gPad->GetTicky()) {
-      if (gPad->GetTicky() < 2) {
+      if (ndivy < 0) strlcat(chopt, "N",10);
+      if (gPad->GetGridy()) {
+         gridl = (axmax-axmin)/(gPad->GetX2() - gPad->GetX1());
          // coverity [Calling risky function]
-         strlcat(chopt, "U",10);
-         axis.SetTickSize(-fYaxis->GetTickLength());
+         strlcat(chopt, "W",10);
+      }
+
+      // Define Y-Axis limits
+      if (Hoption.Logy) {
+         // coverity [Calling risky function]
+         strlcat(chopt, "G",10);
+         ndiv = TMath::Abs(ndivy);
+         if (useHparam) {
+            umin = TMath::Power(10,Hparam.ymin);
+            umax = TMath::Power(10,Hparam.ymax);
+         } else {
+            umin = TMath::Power(10,aymin);
+            umax = TMath::Power(10,aymax);
+         }
       } else {
+         ndiv = TMath::Abs(ndivy);
+         if (useHparam) {
+            umin = Hparam.ymin;
+            umax = Hparam.ymax;
+         } else {
+            umin = aymin;
+            umax = aymax;
+         }
+      }
+
+      // Display axis as time
+      if (fYaxis->GetTimeDisplay()) {
+         // coverity [Calling risky function]
+         strlcat(chopt,"t",10);
+         if (strlen(fYaxis->GetTimeFormatOnly()) == 0) {
+            axis.SetTimeFormat(fYaxis->ChooseTimeFormat(Hparam.ymax-Hparam.ymin));
+         }
+      }
+
+      // The main Y axis can be on the left or on the right of the pad
+      Double_t yAxisXPos1, yAxisXPos2;
+      if (yAxisPos == 1) {
+         // Main Y axis left
+         yAxisXPos1 = axmax;
+         yAxisXPos2 = axmin;
+      } else {
+         // Main Y axis right
+         yAxisXPos1 = axmin;
+         yAxisXPos2 = axmax;
+      }
+
+      // Paint the main Y axis (always)
+      uminsave = umin;
+      umaxsave = umax;
+      ndivsave = ndiv;
+      axis.SetOption(chopt);
+      if (yAxisPos) {
          // coverity [Calling risky function]
          strlcat(chopt, "+L",10);
+         gridl = -gridl;
       }
-      if ((cw=strstr(chopt,"W"))) *cw='z';
-      axis.SetTitle("");
-      axis.PaintAxis(yAxisXPos2, aymin,
-                     yAxisXPos2, aymax,
-                     uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
-   }
+      if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
+         axis.SetLabelSize(0.);
+         axis.SetTitle("");
+      }
+      axis.PaintAxis(yAxisXPos1, aymin,
+                     yAxisXPos1, aymax,
+                     umin, umax,  ndiv, chopt, gridl, drawGridOnly);
 
-
+      // Paint the additional Y axis (if needed)
+      if (gPad->GetTicky() && !gPad->PadInSelectionMode()) {
+         if (gPad->GetTicky() < 2) {
+            // coverity [Calling risky function]
+            strlcat(chopt, "U",10);
+            axis.SetTickSize(-fYaxis->GetTickLength());
+         } else {
+            // coverity [Calling risky function]
+            strlcat(chopt, "+L",10);
+         }
+         if ((cw=strstr(chopt,"W"))) *cw='z';
+         axis.SetTitle("");
+         axis.PaintAxis(yAxisXPos2, aymin,
+                        yAxisXPos2, aymax,
+                        uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
+      }
    }//pad mode
    
    
