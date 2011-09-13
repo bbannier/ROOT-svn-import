@@ -26,57 +26,6 @@ static const CGRect slideViewFrame = CGRectMake(0.f, 0.f, 700.f, 700.f);
 }
 
 //____________________________________________________________________________________________________
-- (void) animateSlides : (NSString *)direction
-{
-   SlideView *viewToHide = slides[visiblePad ? 0 : 1];
-   SlideView *viewToShow = slides[visiblePad ? 1 : 0];
-   viewToHide.hidden = YES;
-   viewToShow.hidden = NO;
-   [viewToShow setNeedsDisplay];
-   
-   // First create a CATransition object to describe the transition
-   CATransition *transition = [CATransition animation];
-   // Animate over 3/4 of a second
-   transition.duration = 0.5;
-   // using the ease in/out timing function
-   transition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-   // Now to set the type of transition.
-   transition.type = kCATransitionMoveIn;// kCATransitionReveal;
-   transition.subtype = direction;//kCATransitionFromRight;
-
-   // Finally, to avoid overlapping transitions we assign ourselves as the delegate for the animation and wait for the
-   // -animationDidStop:finished: message. When it comes in, we will flag that we are no longer transitioning.
-   //transitioning = YES;
-   transition.delegate = self;
-   // Next add it to the containerView's layer. This will perform the transition based on how we change its contents.
-   [self.view.layer addAnimation : transition forKey : nil];
-}
-
-//____________________________________________________________________________________________________
-- (void) handleSwipe : (UISwipeGestureRecognizer *)swipe
-{
-   if (swipe.direction == UISwipeGestureRecognizerDirectionLeft) {
-      if (nCurrentObject + 1 < fileContainer->GetNumberOfObjects()) {
-         visiblePad = visiblePad ? 0 : 1;
-         ++nCurrentObject;
-         pads[visiblePad]->Clear();
-         pads[visiblePad]->cd();
-         fileContainer->GetObject(nCurrentObject)->Draw(fileContainer->GetDrawOption(nCurrentObject));
-         [self animateSlides : kCATransitionFromRight];
-      }
-   } else if (swipe.direction == UISwipeGestureRecognizerDirectionRight) {
-      if (nCurrentObject) {
-         visiblePad = visiblePad ? 0 : 1;
-         --nCurrentObject;
-         pads[visiblePad]->Clear();
-         pads[visiblePad]->cd();
-         fileContainer->GetObject(nCurrentObject)->Draw(fileContainer->GetDrawOption(nCurrentObject));
-         [self animateSlides : kCATransitionFromLeft];
-      }
-   }
-}
-
-//____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil fileContainer : (ROOT_iOS::FileContainer *)container
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -158,6 +107,57 @@ static const CGRect slideViewFrame = CGRectMake(0.f, 0.f, 700.f, 700.f);
 //____________________________________________________________________________________________________
 - (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration : (NSTimeInterval)duration {
    [self correctFramesForOrientation : interfaceOrientation];
+}
+
+//____________________________________________________________________________________________________
+- (void) animateSlides : (NSString *)direction
+{
+   SlideView *viewToHide = slides[visiblePad ? 0 : 1];
+   SlideView *viewToShow = slides[visiblePad ? 1 : 0];
+   viewToHide.hidden = YES;
+   viewToShow.hidden = NO;
+   [viewToShow setNeedsDisplay];
+   
+   // First create a CATransition object to describe the transition
+   CATransition *transition = [CATransition animation];
+   // Animate over 3/4 of a second
+   transition.duration = 0.5;
+   // using the ease in/out timing function
+   transition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+   // Now to set the type of transition.
+   transition.type = kCATransitionMoveIn;// kCATransitionReveal;
+   transition.subtype = direction;//kCATransitionFromRight;
+
+   // Finally, to avoid overlapping transitions we assign ourselves as the delegate for the animation and wait for the
+   // -animationDidStop:finished: message. When it comes in, we will flag that we are no longer transitioning.
+   //transitioning = YES;
+   transition.delegate = self;
+   // Next add it to the containerView's layer. This will perform the transition based on how we change its contents.
+   [self.view.layer addAnimation : transition forKey : nil];
+}
+
+//____________________________________________________________________________________________________
+- (void) handleSwipe : (UISwipeGestureRecognizer *)swipe
+{
+   if (swipe.direction == UISwipeGestureRecognizerDirectionLeft) {
+      if (nCurrentObject + 1 < fileContainer->GetNumberOfObjects()) {
+         visiblePad = visiblePad ? 0 : 1;
+         ++nCurrentObject;
+         pads[visiblePad]->Clear();
+         pads[visiblePad]->cd();
+         fileContainer->GetObject(nCurrentObject)->Draw(fileContainer->GetDrawOption(nCurrentObject));
+         [self animateSlides : kCATransitionFromRight];
+      }
+   } else if (swipe.direction == UISwipeGestureRecognizerDirectionRight) {
+      if (nCurrentObject) {
+         visiblePad = visiblePad ? 0 : 1;
+         --nCurrentObject;
+         pads[visiblePad]->Clear();
+         pads[visiblePad]->cd();
+         fileContainer->GetObject(nCurrentObject)->Draw(fileContainer->GetDrawOption(nCurrentObject));
+         [self animateSlides : kCATransitionFromLeft];
+      }
+   }
 }
 
 @end
