@@ -55,6 +55,12 @@ namespace cling {
       return value.DoubleVal;
     }
   };
+  template<>
+  struct Value::TypedAccess<bool> {
+    double extract(const llvm::GenericValue& value) {
+      return value.IntVal.getBoolValue();
+    }
+  };
   template <typename T>
   T Value::getAs() const {
     TypedAccess<T> VI;
