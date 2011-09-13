@@ -240,11 +240,13 @@ public:
    //This is a temporary hack, will be removed when selection
    //is done correctly.
    void ExecuteRotateView(Int_t evType, Int_t px, Int_t py);
+   void ExecuteEventAxis(Int_t, Int_t, Int_t, TAxis *);
    
    Bool_t SelectionIsValid()const;
    void PaintForSelection();
    void SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff);
    void Pick(Int_t px, Int_t py);
+   TObject *ObjectInPoint(Int_t px, Int_t py);
 
    TObject *GetSelected() const;
 

@@ -1,4 +1,5 @@
 #import <stddef.h>
+#import <string.h>
 #import <stdlib.h>
 #import <math.h>
 
@@ -9,6 +10,7 @@
 #import "SelectionView.h"
 #import "Constants.h"
 #import "PadView.h"
+#import "TAxis.h"
 
 //C++ code (ROOT's ios module)
 #import "IOSPad.h"
@@ -75,7 +77,18 @@
 {
    //check if there is any object under pt.
    //this is just a test expression, let's say, there is an object selected in the corner.
-   return pt.x < 200 && pt.y < 200;
+//   return pt.x < 200 && pt.y < 200;
+
+   const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
+   const CGPoint newPt = CGPointMake(pt.x * scale, pt.y * scale);
+
+   if (!pad->SelectionIsValid() && ![self initPadPicking])
+      return NO;
+      
+   if (pad->GetSelected() == pad->ObjectInPoint(newPt.x, newPt.y))
+      return YES;
+
+   return NO;
 }
 
 //_________________________________________________________________
@@ -95,6 +108,14 @@
 - (void) handleDoubleTap
 {
    //This is zoom/unzoom action.
+   if (TAxis * axis = dynamic_cast<TAxis *>(pad->GetSelected())) {
+   
+      if (pad->ObjectInPoint(tapPt.x, tapPt.y) == axis) {
+         axis->UnZoom();
+         [self setNeedsDisplay];
+         return;
+      }
+   }
    [controller handleDoubleTapOnPad];
 }
 
@@ -227,7 +248,7 @@
 //_________________________________________________________________
 - (void) longPress
 {
-   NSLog(@"long press");
+  // NSLog(@"long press");
    processFirstTap = NO;
    processSecondTap = NO;
    processLongPress = YES;
@@ -262,8 +283,24 @@
 - (void) touchesMoved : (NSSet *)touches withEvent : (UIEvent *)event
 {
    if (panActive || processLongPress) {
-      //Calculate the distance of move, cancel other gestures.
-      NSLog(@"process pan!!!");
+      TObject *selected = pad->GetSelected();
+      if (TAxis *axis = dynamic_cast<TAxis *>(selected)) {
+         if (!selectionView.panActive) {
+            selectionView.panActive = YES;
+            if (!strcmp(axis->GetName(), "xaxis"))
+               selectionView.verticalDirection = NO;
+            else
+               selectionView.verticalDirection = YES;
+            selectionView.panStart = tapPt;
+            
+            pad->ExecuteEventAxis(kButton1Down, tapPt.x, tapPt.y, axis);
+         } else {
+            const CGPoint newPt = [[touches anyObject] locationInView : self];
+            selectionView.currentPanPoint = newPt;
+            pad->ExecuteEventAxis(kButton1Motion, newPt.x, newPt.y, axis);
+            [selectionView setNeedsDisplay];
+         }
+      }
    }
 }
 
@@ -275,7 +312,7 @@
       if (processFirstTap) {
          //Ok, longPress selector was not performed yet, let's cancell it.
          [NSObject cancelPreviousPerformRequestsWithTarget : self];
-         NSLog(@"cancel long press");
+         //NSLog(@"cancel long press");
          //Still, we have to wait for a second tap.
          processSecondTap = YES;
          //tapPt = [touch locationInView : self];
@@ -287,7 +324,16 @@
          parent.delaysContentTouches = YES;
       }//else impossible.
    } else if (touch.tapCount == 2 && processSecondTap) {
-      [controller handleDoubleTapOnPad];
+     // [controller handleDoubleTapOnPad];
+      [self handleDoubleTap];
+   }
+   
+   if (selectionView.panActive) {
+      selectionView.panActive = NO;
+      const CGPoint pt = [touch locationInView : self];
+      pad->ExecuteEventAxis(kButton1Up, pt.x, pt.y, (TAxis *)pad->GetSelected());
+      [self setNeedsDisplay];
+      [selectionView setNeedsDisplay];
    }
 }
 

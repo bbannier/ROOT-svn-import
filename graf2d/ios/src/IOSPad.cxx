@@ -1955,6 +1955,120 @@ void Pad::ExecuteRotateView(Int_t evType, Int_t px, Int_t py)
    fView->ExecuteRotateView(evType, px, py);
 }
 
+void Pad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
+{
+   //Have to copy a lot of ugliest code from TPad here.
+
+   static Int_t axisNumber;
+   static Double_t ratio1, ratio2;
+   static Int_t px1old, py1old, px2old, py2old;
+   Int_t bin1, bin2, first, last;
+   Double_t temp, xmin,xmax;
+
+   // The CONT4 option, used to paint TH2, is a special case; it uses a 3D
+   // drawing technique to paint a 2D plot.
+
+   switch (event) {
+
+   case kButton1Down:
+      axisNumber = 1;
+      if (!strcmp(axis->GetName(),"xaxis")) {
+         axisNumber = 1;
+         if (!IsVertical()) axisNumber = 2;
+      }
+      if (!strcmp(axis->GetName(),"yaxis")) {
+         axisNumber = 2;
+         if (!IsVertical()) axisNumber = 1;
+      }
+      if (!strcmp(axis->GetName(),"zaxis")) {
+         axisNumber = 3;
+      }
+         if (axisNumber == 1) {
+            ratio1 = (AbsPixeltoX(px) - GetUxmin())/(GetUxmax() - GetUxmin());
+            px1old = XtoAbsPixel(GetUxmin()+ratio1*(GetUxmax() - GetUxmin()));
+            py1old = YtoAbsPixel(GetUymin());
+            px2old = px1old;
+            py2old = YtoAbsPixel(GetUymax());
+         } else if (axisNumber == 2) {
+            ratio1 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
+            py1old = YtoAbsPixel(GetUymin()+ratio1*(GetUymax() - GetUymin()));
+            px1old = XtoAbsPixel(GetUxmin());
+            px2old = XtoAbsPixel(GetUxmax());
+            py2old = py1old;
+         } else {
+            ratio1 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
+            py1old = YtoAbsPixel(GetUymin()+ratio1*(GetUymax() - GetUymin()));
+            px1old = XtoAbsPixel(GetUxmax());
+            px2old = XtoAbsPixel(GetX2());
+            py2old = py1old;
+         }
+      // No break !!!
+
+   case kButton1Motion:
+         if (axisNumber == 1) {
+            ratio2 = (AbsPixeltoX(px) - GetUxmin())/(GetUxmax() - GetUxmin());
+            px2old = XtoAbsPixel(GetUxmin()+ratio2*(GetUxmax() - GetUxmin()));
+         } else {
+            ratio2 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
+            py2old = YtoAbsPixel(GetUymin()+ratio2*(GetUymax() - GetUymin()));
+         }
+   break;
+
+   case kButton1Up:
+
+      if (1) {
+         if (axisNumber == 1) {
+            ratio2 = (AbsPixeltoX(px) - GetUxmin())/(GetUxmax() - GetUxmin());
+            xmin = GetUxmin() +ratio1*(GetUxmax() - GetUxmin());
+            xmax = GetUxmin() +ratio2*(GetUxmax() - GetUxmin());
+         } else if (axisNumber == 2) {
+            ratio2 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
+            xmin = GetUymin() +ratio1*(GetUymax() - GetUymin());
+            xmax = GetUymin() +ratio2*(GetUymax() - GetUymin());
+         } else {
+            ratio2 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
+            xmin = ratio1;
+            xmax = ratio2;
+         }
+         if (xmin > xmax) {
+            temp   = xmin;
+            xmin   = xmax;
+            xmax   = temp;
+            temp   = ratio1;
+            ratio1 = ratio2;
+            ratio2 = temp;
+         }
+
+         // xmin and xmax need to be adjusted in case of CONT4.
+
+         if (!strcmp(axis->GetName(),"xaxis")) axisNumber = 1;
+         if (!strcmp(axis->GetName(),"yaxis")) axisNumber = 2;
+         if (ratio2 - ratio1 > 0.05) {
+            //update object owning this axis
+            TH1 *hobj1 = (TH1*)axis->GetParent();
+            bin1 = axis->FindFixBin(xmin);
+            bin2 = axis->FindFixBin(xmax);
+            if (axisNumber == 1) axis->SetRange(bin1,bin2);
+            if (axisNumber == 2 && hobj1) {
+               if (hobj1->GetDimension() == 1) {
+                  if (hobj1->GetNormFactor() != 0) {
+                     Double_t norm = hobj1->GetSumOfWeights()/hobj1->GetNormFactor();
+                     xmin *= norm;
+                     xmax *= norm;
+                  }
+                  hobj1->SetMinimum(xmin);
+                  hobj1->SetMaximum(xmax);
+                  hobj1->SetBit(TH1::kIsZoomed);
+               } else {
+                  axis->SetRange(bin1,bin2);
+               }
+            }
+         }
+      }
+      break;
+   }
+}
+
 //______________________________________________________________________________
 Bool_t Pad::SelectionIsValid() const
 {
@@ -1992,6 +2106,24 @@ void Pad::Pick(Int_t px, Int_t py)
       fSelected = 0;
       fParentOfSelected = 0;
    }
+}
+
+//______________________________________________________________________________
+TObject *Pad::ObjectInPoint(Int_t px, Int_t py)
+{
+   const UInt_t offset = (py * fSelectionAreaWidth + px) * 4;
+   const unsigned red = fSelectionBuffer[offset + 1];
+   const unsigned green = fSelectionBuffer[offset + 2];
+   const unsigned blue = fSelectionBuffer[offset + 3];
+
+   GraphicUtils::IDEncoder enc(10, 255);
+   const UInt_t id = enc.ColorToId(red, green, blue);
+   if (id > 0 && id <= fSelectables.size()) {
+      const ObjectPair_t &found = fSelectables[id - 1];
+      return found.first;
+   }
+
+   return 0;
 }
 
 //______________________________________________________________________________

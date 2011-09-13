@@ -24,7 +24,6 @@ static const float maxOffset = 1.f;
    [self view];
    
    if (self) {
-      // Custom initialization
       colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimLabelColor];
       fontInspector = [[AxisFontInspector alloc] initWithNibName : @"AxisFontInspector" mode : ROOT_IOSObjectInspector::afimLabelFont];
    }
@@ -153,7 +152,6 @@ static const float maxOffset = 1.f;
 - (IBAction) noExp
 {
    object->SetNoExponent(noExp.on);
-   NSLog(@"set no exp to %d", noExp.on);
    [controller objectWasModifiedByEditor];
 }
 
