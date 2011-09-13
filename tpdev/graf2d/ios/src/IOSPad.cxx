@@ -1955,18 +1955,17 @@ void Pad::ExecuteRotateView(Int_t evType, Int_t px, Int_t py)
    fView->ExecuteRotateView(evType, px, py);
 }
 
+//______________________________________________________________________________
 void Pad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
 {
-   //Have to copy a lot of ugliest code from TPad here.
+   //This copy is a copy&paste&cut_half_of_guts from original TPad.
+   //I do not understand at the moment, why this code is here and not in TAxis.
 
    static Int_t axisNumber;
    static Double_t ratio1, ratio2;
    static Int_t px1old, py1old, px2old, py2old;
    Int_t bin1, bin2, first, last;
    Double_t temp, xmin,xmax;
-
-   // The CONT4 option, used to paint TH2, is a special case; it uses a 3D
-   // drawing technique to paint a 2D plot.
 
    switch (event) {
 
