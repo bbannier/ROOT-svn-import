@@ -205,6 +205,7 @@ namespace cling {
 
     ASTNodeInfo VisitStmt(clang::Stmt* Node);
     ASTNodeInfo VisitCompoundStmt(clang::CompoundStmt* Node);
+    ASTNodeInfo VisitIfStmt(clang::IfStmt* Node);
     /// \brief Transforms a declaration with initializer of dependent type.
     /// If an object on the free store is being initialized we use the 
     /// EvaluateT

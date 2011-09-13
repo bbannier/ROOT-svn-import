@@ -23,11 +23,13 @@ namespace cling {
 
       int Add10(int num) { return num + 10;}
       void PrintString(std::string s) { printf("%s\n", s.c_str()); }
-      void PrintArray(int a[], size_t size) {
+      bool PrintArray(int a[], size_t size) {
         for (unsigned i = 0; i < size; ++i)
           printf("%i", a[i]);
 
         printf("%s", "\n");
+
+        return true;
       }
 
       int Add(int a, int b) {
