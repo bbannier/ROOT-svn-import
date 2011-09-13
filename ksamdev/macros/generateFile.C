@@ -32,6 +32,9 @@ Int_t generateFile(const char *fn, Long64_t nevts = 1000, Int_t comp_level = 1,
    
    tree->Branch("event", "RTEvent", &ep, 32000, split_level);
    tree->AutoSave();
+   // This forces at least one flush for files smaller than the default cache (30 MB).
+   // Otherwise the TTreeCache mechanism does not work well in reading
+   if (nevts < 20000) tree->SetAutoFlush(5000000);
    
    // Generate the events
    for (Long64_t i = 0 ; i < nevts; i++) {
