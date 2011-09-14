@@ -3,6 +3,7 @@
 
 @implementation ScrollViewWithPadView
 
+//____________________________________________________________________________________________________
 - (UIView *) hitTest : (CGPoint)point withEvent : (UIEvent *)event
 {  
    UIView * v = [super hitTest : point withEvent : event];

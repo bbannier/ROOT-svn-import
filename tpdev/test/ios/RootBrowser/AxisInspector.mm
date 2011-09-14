@@ -6,11 +6,13 @@
 
 @implementation AxisInspector
 
+//____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
 {
    return CGRectMake(0.f, 0.f, 250.f, 400.f);
 }
 
+//____________________________________________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -26,6 +28,7 @@
    return self;
 }
 
+//____________________________________________________________________________________________________
 - (void) dealloc
 {
    [colorInspector release];
@@ -34,6 +37,7 @@
    [ticksInspector release];
 }
 
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
@@ -44,12 +48,14 @@
 
 #pragma mark - View lifecycle
 
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     // Do any additional setup after loading the view from its nib.
 }
 
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
     [super viewDidUnload];
@@ -57,6 +63,7 @@
     // e.g. self.myOutlet = nil;
 }
 
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
@@ -64,32 +71,32 @@
 }
 
 #pragma mark - ObjectInspectorComponent's protocol.
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
    object = o;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (NSString *) getComponentName
 {
    return @"Axis attributes";
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) resetInspector
 {
 //   [titleInspector resetInspector];
 //   [labelsInspector resetInspector];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) showColorInspector
 {
    [colorInspector setROOTObjectController : controller];
@@ -98,7 +105,7 @@
    [self.navigationController pushViewController : colorInspector animated : YES];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) showTicksInspector
 {
    [ticksInspector setROOTObjectController : controller];
@@ -107,7 +114,7 @@
    [self.navigationController pushViewController : ticksInspector animated : YES];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) showAxisTitleInspector
 {
    [titleInspector setROOTObjectController : controller];
@@ -116,7 +123,7 @@
    [self.navigationController pushViewController : titleInspector animated : YES];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) showAxisLabelsInspector
 {
    [labelsInspector setROOTObjectController : controller];

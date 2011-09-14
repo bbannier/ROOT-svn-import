@@ -13,13 +13,13 @@ static const float titleOffsetStep = 0.01f;
 
 @implementation AxisTitleInspector
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
 {
    return CGRectMake(0.f, 0.f, 250.f, 400.f);
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
@@ -34,7 +34,7 @@ static const float titleOffsetStep = 0.01f;
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) dealloc
 {
    [colorInspector release];
@@ -43,7 +43,7 @@ static const float titleOffsetStep = 0.01f;
    [super release];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
@@ -54,14 +54,14 @@ static const float titleOffsetStep = 0.01f;
 
 #pragma mark - View lifecycle
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     // Do any additional setup after loading the view from its nib.
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
     [super viewDidUnload];
@@ -69,20 +69,20 @@ static const float titleOffsetStep = 0.01f;
     // e.g. self.myOutlet = nil;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
 	return YES;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
    object = dynamic_cast<TAxis *>(o);
@@ -100,13 +100,13 @@ static const float titleOffsetStep = 0.01f;
    offsetLabel.text = [NSString stringWithFormat:@"%.2f", offset];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) back
 {
    [self.navigationController popViewControllerAnimated : YES];   
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) showTitleFontInspector
 {
    [fontInspector setROOTObjectController : controller];
@@ -115,7 +115,7 @@ static const float titleOffsetStep = 0.01f;
    [self.navigationController pushViewController : fontInspector animated : YES];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) showTitleColorInspector
 {
    [colorInspector setROOTObjectController : controller];

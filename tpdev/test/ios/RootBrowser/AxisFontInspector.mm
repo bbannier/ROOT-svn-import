@@ -125,25 +125,25 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
 }
 
 #pragma mark - color/pattern picker's dataSource.
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (CGFloat)pickerView : (UIPickerView *)pickerView widthForComponent : (NSInteger)component
 {
    return defaultCellW;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (CGFloat)pickerView : (UIPickerView *)pickerView rowHeightForComponent : (NSInteger)component
 {
    return defaultCellH;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
 {
    return nFixedFonts;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
 {
 	return 1;
@@ -151,8 +151,7 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
 
 #pragma mark color/pattern picker's delegate.
 
-// tell the picker which view to use for a given component and row, we have an array of views to show
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
    UILabel *label = [[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)];
@@ -164,7 +163,7 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
    return label;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
    using namespace ROOT_IOSObjectInspector;
@@ -178,7 +177,7 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) back
 {
    [self.navigationController popViewControllerAnimated : YES];

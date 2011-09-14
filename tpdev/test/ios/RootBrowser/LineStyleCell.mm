@@ -1,11 +1,3 @@
-//
-//  LineStyleCell.m
-//  root_browser
-//
-//  Created by Timur Pocheptsov on 8/31/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #import <CoreGraphics/CGContext.h>
 
 #import "LineStyleCell.h"
@@ -15,7 +7,7 @@
 
 @implementation LineStyleCell
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id) initWithFrame : (CGRect)frame lineStyle : (unsigned) style
 {
    self = [super initWithFrame:frame];
@@ -29,7 +21,7 @@
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
@@ -49,7 +41,7 @@
    CGContextStrokePath(ctx);
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)dealloc
 {
    [backgroundImage release];

@@ -13,7 +13,7 @@ static const CGFloat defaultCellH = 44.f;
 
 @implementation AxisColorInspector
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil mode : (ROOT_IOSObjectInspector::AxisColorInspectorMode)m
 {
    using namespace ROOT_IOSBrowser;
@@ -47,7 +47,7 @@ static const CGFloat defaultCellH = 44.f;
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)dealloc
 {
    [colors release];
@@ -55,19 +55,19 @@ static const CGFloat defaultCellH = 44.f;
    [super dealloc];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    [super didReceiveMemoryWarning];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)obj
 {
    using namespace ROOT_IOSBrowser;
@@ -95,7 +95,7 @@ static const CGFloat defaultCellH = 44.f;
    [colorPicker selectRow : pickerRow inComponent : 0 animated : NO];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setNewColor : (NSInteger) row
 {
    using namespace ROOT_IOSBrowser;
@@ -114,19 +114,19 @@ static const CGFloat defaultCellH = 44.f;
 
 #pragma mark - View lifecycle
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
    [super viewDidUnload];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation
 {
    // Return YES for supported orientations
@@ -134,25 +134,25 @@ static const CGFloat defaultCellH = 44.f;
 }
 
 #pragma mark - color/pattern picker's dataSource.
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (CGFloat)pickerView : (UIPickerView *)pickerView widthForComponent : (NSInteger)component
 {
    return defaultCellW;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (CGFloat)pickerView : (UIPickerView *)pickerView rowHeightForComponent : (NSInteger)component
 {
    return defaultCellH;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
 {
    return [colors count];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
 {
 	return 1;
@@ -160,20 +160,19 @@ static const CGFloat defaultCellH = 44.f;
 
 #pragma mark color/pattern picker's delegate.
 
-// tell the picker which view to use for a given component and row, we have an array of views to show
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
    return [colors objectAtIndex : row];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
    [self setNewColor : row];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) back
 {
    [self.navigationController popViewControllerAnimated : YES];

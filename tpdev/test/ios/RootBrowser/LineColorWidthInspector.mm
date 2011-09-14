@@ -12,7 +12,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
 @implementation LineColorWidthInspector
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    using namespace ROOT_IOSBrowser;
@@ -43,7 +43,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) dealloc
 {
    [lineColors release];
@@ -52,7 +52,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
    [super dealloc];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
@@ -63,14 +63,14 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
 #pragma mark - View lifecycle
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     // Do any additional setup after loading the view from its nib.
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
     [super viewDidUnload];
@@ -78,7 +78,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
     // e.g. self.myOutlet = nil;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
@@ -87,7 +87,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
 #pragma main - Navigation
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) back
 {
    [self.navigationController popViewControllerAnimated : YES];
@@ -95,13 +95,13 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
 #pragma mark - ObjectInspectorComponent protocol
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *) c
 {
    controller = c;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *) obj
 {
    using namespace ROOT_IOSBrowser;
@@ -138,19 +138,19 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
 #pragma mark - Color/Width/Style picker's dataSource.
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (CGFloat)pickerView : (UIPickerView *)pickerView widthForComponent : (NSInteger)component
 {
    return cellFrame.size.width;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (CGFloat)pickerView : (UIPickerView *)pickerView rowHeightForComponent : (NSInteger)component
 {
    return cellFrame.size.height;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
 {
    if (!component) {
@@ -160,7 +160,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
    }
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (NSInteger)numberOfComponentsInPickerView : (UIPickerView *)pickerView
 {
    return 2;
@@ -168,8 +168,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
 #pragma mark color/pattern picker's delegate.
 
-// tell the picker which view to use for a given component and row, we have an array of views to show
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
    if (component == 0) {
@@ -179,7 +178,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
    }
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
    if (!component) {

@@ -2,7 +2,7 @@
 
 @implementation InspectorWithNavigation
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id) initWithRootViewController : (UIViewController<ObjectInspectorComponent> *) rootController
 {
    self = [super initWithRootViewController : (UIViewController *)rootController];
@@ -13,7 +13,7 @@
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
@@ -38,7 +38,7 @@
 }
 */
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
    [super viewDidUnload];
@@ -46,35 +46,35 @@
    // e.g. self.myOutlet = nil;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
    // Return YES for supported orientations
 	return YES;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    UIViewController<ObjectInspectorComponent> *rootController = (UIViewController<ObjectInspectorComponent> *)[self.viewControllers objectAtIndex : 0];
    [rootController setROOTObjectController : c];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)obj
 {
    UIViewController<ObjectInspectorComponent> *rootController = (UIViewController<ObjectInspectorComponent> *)[self.viewControllers objectAtIndex : 0];
    [rootController setROOTObject : obj];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (NSString *) getComponentName
 {
    UIViewController<ObjectInspectorComponent> *rootController = (UIViewController<ObjectInspectorComponent> *)[self.viewControllers objectAtIndex : 0];
    return [rootController getComponentName];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) resetInspector
 {
    //Pop all controllers from a stack except a top level root controller.

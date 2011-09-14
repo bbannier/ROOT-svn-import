@@ -1,11 +1,3 @@
-//
-//  ObjectInspector.m
-//  root_browser
-//
-//  Created by Timur Pocheptsov on 9/6/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #import "InspectorWithNavigation.h"
 #import "FilledAreaInspector.h"
 #import "ObjectInspector.h"
@@ -24,7 +16,7 @@
 
 @implementation ObjectInspector
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) initObjectInspectorView
 {
    editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
@@ -32,7 +24,7 @@
    [editorView release];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) cacheEditors
 {
    using namespace ROOT_IOSObjectInspector;
@@ -62,7 +54,7 @@
    cachedEditors[kAttAxis] = axisInspector;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -73,7 +65,7 @@
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) dealloc
 {
    using ROOT_IOSObjectInspector::kNOfInspectors;
@@ -84,7 +76,7 @@
    [super dealloc];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
@@ -109,7 +101,7 @@
 }
 */
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
     [super viewDidUnload];
@@ -117,21 +109,21 @@
     // e.g. self.myOutlet = nil;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
 	return YES;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    for (unsigned i = 0; i < nActiveEditors; ++i)
       [activeEditors[i] setROOTObjectController : c];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setTitle
 {
    if (dynamic_cast<TAttPad *>(object)) {
@@ -144,7 +136,7 @@
    }
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setActiveEditors
 {
    using namespace ROOT_IOSObjectInspector;
@@ -164,7 +156,7 @@
       activeEditors[nActiveEditors++] = cachedEditors[kAttAxis];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
    if (o != object) {
@@ -184,7 +176,7 @@
    }
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) resetInspector
 {
    for (unsigned i = 0; i < nActiveEditors; ++i)
