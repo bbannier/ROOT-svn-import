@@ -84,7 +84,6 @@
 		709594A613FE97AF00B9E8B6 /* system.plugins-ios in Resources */ = {isa = PBXBuildFile; fileRef = 709594A413FE97AF00B9E8B6 /* system.plugins-ios */; };
 		709CD05314025148005B2AF4 /* demos.root in Resources */ = {isa = PBXBuildFile; fileRef = 709CD05214025148005B2AF4 /* demos.root */; };
 		709CD0981402768B005B2AF4 /* Shortcuts.m in Sources */ = {isa = PBXBuildFile; fileRef = 709CD0971402768B005B2AF4 /* Shortcuts.m */; };
-		70CA0999141F8DB2006D42ED /* SlideView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70CA0998141F8DB2006D42ED /* SlideView.mm */; };
 		70E0B62114150F630077E4A8 /* back_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 70E0B62014150F630077E4A8 /* back_btn.png */; };
 		70E0B624141510880077E4A8 /* forward_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 70E0B623141510880077E4A8 /* forward_btn.png */; };
 /* End PBXBuildFile section */
@@ -205,8 +204,6 @@
 		709CD05214025148005B2AF4 /* demos.root */ = {isa = PBXFileReference; lastKnownFileType = file; path = demos.root; sourceTree = "<group>"; };
 		709CD0961402768B005B2AF4 /* Shortcuts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Shortcuts.h; sourceTree = "<group>"; };
 		709CD0971402768B005B2AF4 /* Shortcuts.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Shortcuts.m; sourceTree = "<group>"; };
-		70CA0997141F8DB2006D42ED /* SlideView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SlideView.h; sourceTree = "<group>"; };
-		70CA0998141F8DB2006D42ED /* SlideView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SlideView.mm; sourceTree = "<group>"; };
 		70E0B62014150F630077E4A8 /* back_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = back_btn.png; sourceTree = "<group>"; };
 		70E0B623141510880077E4A8 /* forward_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = forward_btn.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -439,8 +436,6 @@
 				70249BDB1403D644006A19E6 /* PadView.h */,
 				705A503414066421004C1C8B /* ScrollViewWithPadView.h */,
 				705A503514066421004C1C8B /* ScrollViewWithPadView.mm */,
-				70CA0997141F8DB2006D42ED /* SlideView.h */,
-				70CA0998141F8DB2006D42ED /* SlideView.mm */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -643,7 +638,6 @@
 				7073A2871417AA10001A0FE2 /* AxisTitleInspector.mm in Sources */,
 				7068FF24141A0EAF003560A1 /* AxisFontInspector.mm in Sources */,
 				7068FF31141A3944003560A1 /* AxisLabelsInspector.mm in Sources */,
-				70CA0999141F8DB2006D42ED /* SlideView.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
