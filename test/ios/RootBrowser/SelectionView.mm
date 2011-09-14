@@ -1,11 +1,3 @@
-//
-//  SelectionView.m
-//  root_browser
-//
-//  Created by Timur Pocheptsov on 8/31/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
-
 #import <CoreGraphics/CGContext.h>
 #import <QuartzCore/QuartzCore.h>
 
@@ -24,7 +16,7 @@ static const CGRect selectionHintFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 @synthesize currentPanPoint;
 @synthesize verticalDirection;
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithFrame : (CGRect)frame withPad : (ROOT_iOS::Pad *) p
 {
    self = [super initWithFrame:frame];
@@ -32,16 +24,12 @@ static const CGRect selectionHintFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
    if (self) {
       pad = p;
       self.opaque = NO;
-/*      self.layer.shadowColor = [UIColor blueColor].CGColor;
-      self.layer.shadowOpacity = 0.4f;
-      self.layer.shadowOffset = CGSizeMake(5.f, 5.f);
-*/
    }
 
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)drawRect : (CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
@@ -72,13 +60,13 @@ static const CGRect selectionHintFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
    }
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)dealloc
 {
     [super dealloc];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *) event 
 {
    //Thanks to gyim, 

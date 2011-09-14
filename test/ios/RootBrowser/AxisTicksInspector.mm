@@ -12,7 +12,7 @@ static const float minTickLength = -1.f;
 
 @implementation AxisTicksInspector
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -26,7 +26,7 @@ static const float minTickLength = -1.f;
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
@@ -36,14 +36,14 @@ static const float minTickLength = -1.f;
 
 #pragma mark - View lifecycle
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
    [super viewDidUnload];
@@ -51,7 +51,7 @@ static const float minTickLength = -1.f;
    // e.g. self.myOutlet = nil;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
    // Return YES for supported orientations
@@ -60,7 +60,7 @@ static const float minTickLength = -1.f;
 
 #pragma mark - Inspector's protocol.
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setTicksWidgets
 {
 //   object->SetNdivisions(int(primaryTicks.value), int(secondaryTicks.value), int(tertiaryTicks.value), 1);
@@ -81,7 +81,7 @@ static const float minTickLength = -1.f;
    tickLengthLabel.text = [NSString stringWithFormat : @"%.2f", object->GetTickLength()];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setupInspector
 {
    const char *option = object->GetTicks();
@@ -95,7 +95,7 @@ static const float minTickLength = -1.f;
 }
 
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
    //The result of a cast is not checked here, it's done on top level.
@@ -104,19 +104,19 @@ static const float minTickLength = -1.f;
    [self setupInspector];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController:(ROOTObjectController *)c
 {
    controller = c;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) back
 {
    [self.navigationController popViewControllerAnimated : YES];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) ticksNegPos
 {
    if (ticksNegPos.selectedSegmentIndex == 0)
@@ -127,13 +127,13 @@ static const float minTickLength = -1.f;
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setTicks
 {
    object->SetNdivisions(primaryTicks, secondaryTicks, tertiaryTicks);
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) plusTick : (UIButton *)sender
 {
    if (sender == plusLengthBtn) {
@@ -174,7 +174,7 @@ static const float minTickLength = -1.f;
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) minusTick :(UIButton *)sender
 {
    if (sender == minusLengthBtn) {

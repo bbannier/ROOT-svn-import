@@ -16,7 +16,7 @@ static const float maxOffset = 1.f;
 
 @implementation AxisLabelsInspector
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -31,7 +31,7 @@ static const float maxOffset = 1.f;
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) dealloc
 {
    [colorInspector release];
@@ -40,7 +40,7 @@ static const float maxOffset = 1.f;
    [super release];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
@@ -51,14 +51,14 @@ static const float maxOffset = 1.f;
 
 #pragma mark - View lifecycle
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     // Do any additional setup after loading the view from its nib.
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
     [super viewDidUnload];
@@ -66,20 +66,20 @@ static const float maxOffset = 1.f;
     // e.g. self.myOutlet = nil;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
 	return YES;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
    object = dynamic_cast<TAxis *>(o);
@@ -90,7 +90,7 @@ static const float maxOffset = 1.f;
    noExp.on = object->GetNoExponent();
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) showLabelFontInspector
 {
    [fontInspector setROOTObjectController : controller];
@@ -99,7 +99,7 @@ static const float maxOffset = 1.f;
    [self.navigationController pushViewController : fontInspector animated : YES];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) showLabelColorInspector
 {
    [colorInspector setROOTObjectController : controller];
@@ -108,7 +108,7 @@ static const float maxOffset = 1.f;
    [self.navigationController pushViewController : colorInspector animated : YES];   
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) plusBtn : (UIButton *)sender
 {
    if (sender == plusSize) {
@@ -128,7 +128,7 @@ static const float maxOffset = 1.f;
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) minusBtn : (UIButton *)sender
 {
    if (sender == minusSize) {
@@ -148,14 +148,14 @@ static const float maxOffset = 1.f;
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) noExp
 {
    object->SetNoExponent(noExp.on);
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) back
 {
    [self.navigationController popViewControllerAnimated : YES];

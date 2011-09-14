@@ -1,10 +1,3 @@
-//
-//  EditorPlateView.m
-//  editors
-//
-//  Created by Timur Pocheptsov on 8/16/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
 #import <math.h>
 
 #import <QuartzCore/QuartzCore.h>
@@ -18,13 +11,13 @@
 @synthesize editorName = editorName_;
 @synthesize arrowImageView;
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 + (CGFloat) plateHeight
 {
    return 50.f;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithFrame:(CGRect)frame editorName : (NSString *)name topView : (EditorView *) tv
 {
    self = [super initWithFrame:frame];
@@ -56,22 +49,19 @@
       [tap release];
       self.editorName = name;
       self.opaque = NO;
-
-
-//      arrowImageView.transform = CGAffineTransformMakeRotation(M_PI / 2);
    }
 
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)drawRect : (CGRect)rect
 {
    [plateImage drawAtPoint : CGPointZero];
    //Draw the triangle.
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)dealloc
 {
    [arrowImage release];
@@ -80,7 +70,7 @@
    [super dealloc];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) handleTap : (UITapGestureRecognizer *) tap
 {
    [topView plateTapped : self];

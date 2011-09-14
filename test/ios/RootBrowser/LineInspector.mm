@@ -6,13 +6,13 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 
 @implementation LineInspector
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
 {
    return CGRectMake(0.f, 0.f, 250.f, 330.f);
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -30,7 +30,7 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) dealloc
 {
    [colorWidthInspector release];
@@ -39,7 +39,7 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
    [super dealloc];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
@@ -50,14 +50,14 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 
 #pragma mark - View lifecycle
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
    [super viewDidUnload];
@@ -65,32 +65,32 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
    // e.g. self.myOutlet = nil;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
    // Return YES for supported orientations
 	return YES;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
    object = o;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (NSString *) getComponentName
 {
-   return @"Line's attributes";
+   return @"Line attributes";
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) showColorWidthComponent
 {
    [colorWidthInspector setROOTObjectController : controller];
@@ -99,7 +99,7 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
    [self.navigationController pushViewController : colorWidthInspector animated : YES];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) showStyleComponent
 {
    [styleInspector setROOTObjectController : controller];

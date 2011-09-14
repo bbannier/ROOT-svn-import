@@ -8,7 +8,7 @@
 
 @implementation PadLogScaleInspector
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
@@ -21,19 +21,19 @@
    return self;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)dealloc
 {
    [super dealloc];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
    object = static_cast<TVirtualPad *>(o);
@@ -43,7 +43,7 @@
    logZ.on = object->GetLogz();
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
@@ -53,14 +53,14 @@
 
 #pragma mark - View lifecycle
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)viewDidUnload
 {
    [super viewDidUnload];
@@ -68,14 +68,14 @@
    // e.g. self.myOutlet = nil;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
    // Return YES for supported orientations
    return YES;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) logActivated : (UISwitch *) log
 {
    if (log == logX)
@@ -88,7 +88,7 @@
    [controller objectWasModifiedUpdateSelection : YES];//Now picture changed, so picking buffer is invalid.
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (IBAction) back
 {
    [self.navigationController popViewControllerAnimated : YES];
