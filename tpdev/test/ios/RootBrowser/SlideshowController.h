@@ -15,16 +15,24 @@ class Pad;
 
 }
 
-@class SlideView;
+@interface SlideshowController : UIViewController <UIScrollViewDelegate> {
+   ROOT_iOS::Pad *pad;
 
-@interface SlideshowController : UIViewController {
-   ROOT_iOS::Pad *pads[2];
-   SlideView *slides[2];
+   UIImageView *padImageViews[3];
+   UIImage *padImages[3];
 
    unsigned visiblePad;
    unsigned nCurrentObject;
    
    ROOT_iOS::FileContainer *fileContainer;
+   
+   IBOutlet UIView *parentView;
+   IBOutlet UIView *shadowCaster;
+   IBOutlet UIScrollView *scrollView;
+	
+	int prevIndex;
+	int currIndex;
+	int nextIndex;
 }
 
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil fileContainer : (ROOT_iOS::FileContainer *)container;
