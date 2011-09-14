@@ -274,7 +274,7 @@ TCint::TCint(const char *name, const char *title) :
 #ifndef ROOTINCDIR
    TString include = gSystem->Getenv("ROOTSYS");
    include.Append("/include");
-   TCint::AddIncludePath(include);
+   // TCint::AddIncludePath(include);
 #else
    TCint::AddIncludePath(ROOTINCDIR);
 #endif
@@ -286,7 +286,7 @@ TCint::TCint(const char *name, const char *title) :
    fMetaProcessor = new cling::MetaProcessor(*fInterpreter);
 
    // to pull in gPluginManager
-   fMetaProcessor->process("#include \"TPluginManager.h\"");
+   //fMetaProcessor->process("#include \"TPluginManager.h\"");
 }
 
 //______________________________________________________________________________

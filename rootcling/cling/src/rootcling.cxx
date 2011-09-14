@@ -72,12 +72,12 @@ bool IsPCH (std::string fileName)
 
 void info (const std::string msg)
 {
-   Info("rootcling", msg.c_str());
+   Info("rootcling", "%s", msg.c_str());
 }
 
 void error (const std::string msg)
 {
-   Error("rootcling", msg.c_str());
+   Error("rootcling", "%s", msg.c_str());
    throw new std::runtime_error ("error: " + msg);
 }
 
