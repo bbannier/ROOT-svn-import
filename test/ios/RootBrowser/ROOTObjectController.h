@@ -23,15 +23,13 @@ class TObject;
    
    IBOutlet ScrollViewWithPadView *scrollView;
    
-   PadView *padView;//View for pad.
+   PadView *padView;
    ROOT_iOS::Pad *pad;
 
    ROOT_iOS::FileContainer *fileContainer;
 
    TObject *rootObject;
    TObject *selectedObject;
-   
-   unsigned currentEditors;
    
    BOOL zoomed;
 }
