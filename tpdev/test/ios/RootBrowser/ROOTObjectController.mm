@@ -10,6 +10,7 @@
 #import "PadView.h"
 
 //C++ (ROOT) imports.
+#import "IOSFileContainer.h"
 #import "TObject.h"
 #import "TClass.h"
 #import "IOSPad.h"
@@ -155,7 +156,7 @@ static const CGFloat maximumZoom = 2.f;
 
 
 //____________________________________________________________________________________________________
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    using namespace ROOT_IOSBrowser;
 
@@ -310,16 +311,18 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) setObjectFromShortcut : (ObjectShortcut *)shortcut
+- (void) setObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)container;
 {
    [self resetPadAndScroll];
    [self resetEditorButton];
 
-   rootObject = shortcut.rootObject;
+   fileContainer = container;
+
+   rootObject = fileContainer->GetObject(index);
 
    pad->cd();
    pad->Clear();
-   rootObject->Draw([shortcut.drawOption cStringUsingEncoding : [NSString defaultCStringEncoding]]);//Preserve option!!!
+   rootObject->Draw(fileContainer->GetDrawOption(index));
 
    [padView setNeedsDisplay];
 }

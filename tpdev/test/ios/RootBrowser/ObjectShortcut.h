@@ -6,15 +6,15 @@ class TObject;
 
 @interface ObjectShortcut : UIView {
    UIImage *icon;
-   
+
    FileContentController *controller;
-   TObject *rootObject;
-   NSString *drawOption;
+   unsigned objectIndex;
+   NSString *objectName;
 }
 
 @property (nonatomic, retain) UIImage *icon;
-@property (nonatomic, retain) NSString *drawOption;
-@property (nonatomic, assign) TObject *rootObject;
+@property (nonatomic, readonly) unsigned objectIndex;
+@property (nonatomic, retain) NSString *objectName;
 
 + (CGFloat) iconWidth;
 + (CGFloat) iconHeight;
@@ -22,7 +22,7 @@ class TObject;
 + (CGRect) defaultRect;
 
 
-- (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c object : (TObject *)object andOption : (const char*)option thumbnail : (UIImage *)thumbnail;
+- (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c forObjectAtIndex : (unsigned)objIndex withThumbnail : (UIImage *)thumbnail;
 - (void) drawRect : (CGRect)rect;
 
 @end

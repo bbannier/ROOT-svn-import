@@ -5,13 +5,14 @@
 #import "ObjectShortcut.h"
 
 //C++ (ROOT) imports.
+#import "IOSFileContainer.h"
 #import "TObject.h"
 
 @implementation ObjectShortcut
 
 @synthesize icon;
-@synthesize drawOption;
-@synthesize rootObject;
+@synthesize objectIndex;
+@synthesize objectName;
 
 //____________________________________________________________________________________________________
 + (CGFloat) iconWidth
@@ -38,16 +39,21 @@
 }
 
 //____________________________________________________________________________________________________
-- (id)initWithFrame:(CGRect)frame controller : (FileContentController *)c object : (TObject *)object andOption : (const char *)option thumbnail : (UIImage *)thumbnail
+- (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c forObjectAtIndex : (unsigned)objIndex withThumbnail : (UIImage *)thumbnail;
 {
    self = [super initWithFrame:frame];
+
    if (self) {
+      //ROOT's staff.
       controller = c;
-      rootObject = object;
+      objectIndex = objIndex;
+      
+      const TObject *obj = controller.fileContainer->GetObject(objIndex);
+      self.objectName = [NSString stringWithFormat : @"%s", obj->GetName()];
+      
       self.icon = thumbnail;
-
-      self.drawOption = [NSString stringWithFormat:@"%s", option];
-
+   
+      //Geometry and a shadow.
       self.layer.shadowColor = [UIColor blackColor].CGColor;
       self.layer.shadowOpacity = 0.3;
       self.layer.shadowOffset = CGSizeMake(10.f, 10.f);
@@ -57,6 +63,7 @@
       
       self.opaque = NO;
       
+      //Tap gesture to select an object.
       UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap)];
       [self addGestureRecognizer : tap];
       [tap release];
@@ -71,10 +78,7 @@
    [icon drawAtPoint:CGPointZero];
    
    CGContextRef ctx = UIGraphicsGetCurrentContext();
-   
    CGContextSetRGBFillColor(ctx, 1.f, 1.f, 1.f, 1.f);
-   
-   NSString * objectName = [NSString stringWithFormat:@"%s", rootObject->GetName()];
    const CGRect textRect = CGRectMake(0.f, [ObjectShortcut iconHeight], [ObjectShortcut iconWidth], [ObjectShortcut textHeight]);
    [objectName drawInRect : textRect withFont : [UIFont systemFontOfSize : 16] lineBreakMode : UILineBreakModeWordWrap alignment : UITextAlignmentCenter];
 }
@@ -83,7 +87,7 @@
 - (void)dealloc
 {
    self.icon = nil;
-   self.drawOption = nil;
+   self.objectName = nil;
    [super dealloc];
 }
 
