@@ -23,10 +23,17 @@
 gCling->setCallbacks(new cling::test::SymbolResolverCallback(gCling, /*Enabled=*/false));
 
 int a[5] = {1,2,3,4,5};
-// Note that in case of functuon not returning bool we need an ImplicitCast
-// which is tricky because we don't know the type of the function
-if (h->PrintArray(a, 5)) {
+if (h->PrintArray(a, 5)) { // runtime result type bool
   printf("\n%s\n", "Array Printed Successfully!");
 }
 // CHECK: 12345
-// CHECK: Array Printed Successfully
+// CHECK: Array Printed Successfully!
+
+int b, c = 1;
+// Note that in case of function not returning bool we need an ImplicitCast
+// which is tricky because we don't know the type of the function
+if (h->Add(b, c)) { // runtime result type int
+  printf("\n%s\n", "Sum more than 0!");
+}
+// CHECK: Sum more than 0!
+
