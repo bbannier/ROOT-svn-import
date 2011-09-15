@@ -188,7 +188,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
       new clang::ASTContext
              (CI->getLangOpts (),
               PP.getSourceManager (),
-              CI->getTarget (),
+              &CI->getTarget (),
               PP.getIdentifierTable (),
               PP.getSelectorTable (),
               PP.getBuiltinInfo (),
