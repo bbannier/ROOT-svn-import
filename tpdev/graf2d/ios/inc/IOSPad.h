@@ -248,6 +248,7 @@ public:
    void PaintForSelection();
    void SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff);
    void Pick(Int_t px, Int_t py);
+   void Unpick();
    TObject *ObjectInPoint(Int_t px, Int_t py);
 
    TObject *GetSelected() const;

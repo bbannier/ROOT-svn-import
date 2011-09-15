@@ -37,8 +37,11 @@ class Pad;
    BOOL processFirstTap;
    BOOL processSecondTap;
    BOOL processLongPress;
+   
+   BOOL padIsEditable;
 }
 
+@property (nonatomic, assign) BOOL padIsEditable;
 @property (nonatomic, assign) SelectionView *selectionView;
 
 - (id) initWithFrame : (CGRect)frame controller : (ROOTObjectController *)c forPad : (ROOT_iOS::Pad*)pad;
@@ -51,8 +54,10 @@ class Pad;
 - (void) addPanRecognizer;
 - (void) removePanRecognizer;
 
-
 - (void) handleSingleTap;
 - (void) handleDoubleTap;
+
+- (BOOL) padIsEditable;
+- (void) setPadIsEditable : (BOOL)padIsEditable;
 
 @end

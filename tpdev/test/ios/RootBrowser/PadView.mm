@@ -266,8 +266,10 @@
 //____________________________________________________________________________________________________
 - (void) touchesBegan : (NSSet *)touches withEvent : (UIEvent *)event
 {
-   UITouch *touch = [touches anyObject];
+   if (!padIsEditable)
+      return;
 
+   UITouch *touch = [touches anyObject];
    if (touch.tapCount == 1) {
       //Interaction has started.
       tapPt = [touch locationInView : self];
@@ -286,6 +288,9 @@
 //____________________________________________________________________________________________________
 - (void) touchesMoved : (NSSet *)touches withEvent : (UIEvent *)event
 {
+   if (!padIsEditable)
+      return;
+
    if (panActive || processLongPress) {
       TObject *selected = pad->GetSelected();
       if (TAxis *axis = dynamic_cast<TAxis *>(selected)) {
@@ -311,6 +316,9 @@
 //____________________________________________________________________________________________________
 - (void) touchesEnded : (NSSet *)touches withEvent : (UIEvent *)event
 {
+   if (!padIsEditable)
+      return;
+
    UITouch *touch = [touches anyObject];
    if (touch.tapCount == 1) {
       if (processFirstTap) {
@@ -340,6 +348,20 @@
       [self setNeedsDisplay];
       [selectionView setNeedsDisplay];
    }
+}
+
+//____________________________________________________________________________________________________
+- (BOOL) padIsEditable
+{
+   return padIsEditable;
+}
+
+//____________________________________________________________________________________________________
+- (void) setPadIsEditable : (BOOL)ed
+{
+   padIsEditable = ed;
+   if (!padIsEditable)
+      selectionView.hidden = YES;
 }
 
 @end

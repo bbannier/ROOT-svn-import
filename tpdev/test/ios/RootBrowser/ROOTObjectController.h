@@ -14,14 +14,26 @@ class Pad;
 
 }
 
+namespace ROOT_IOSObjectController {
+
+enum Mode {
+   ocmNavigation,
+   ocmEdit
+};
+
+}
+
 //ROOT's object to draw.
 class TObject;
 
 @interface ROOTObjectController : UIViewController <UIScrollViewDelegate> {
+   ROOT_IOSObjectController::Mode mode;
+
    EditorView *editorView;
    ObjectInspector *objectInspector;
    
    IBOutlet ScrollViewWithPadView *scrollView;
+   UITapGestureRecognizer *doubleTap;
    
    PadView *padView;
    ROOT_iOS::Pad *pad;

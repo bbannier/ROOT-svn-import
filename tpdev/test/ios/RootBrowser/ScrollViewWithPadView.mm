@@ -3,12 +3,14 @@
 
 @implementation ScrollViewWithPadView
 
+@synthesize  padIsEditable;
+
 //____________________________________________________________________________________________________
 - (UIView *) hitTest : (CGPoint)point withEvent : (UIEvent *)event
 {  
    UIView * v = [super hitTest : point withEvent : event];
    
-   if ([v isKindOfClass : [PadView class]]) {
+   if ([v isKindOfClass : [PadView class]] && padIsEditable) {
       PadView *padView = (PadView *)v;
 
       if ([padView pointOnSelectedObject : [self convertPoint : point toView : padView]]) {

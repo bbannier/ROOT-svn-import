@@ -9,6 +9,9 @@
 #import <UIKit/UIKit.h>
 
 @interface ScrollViewWithPadView : UIScrollView {
+   BOOL padIsEditable;
 }
+
+@property (nonatomic, assign) BOOL padIsEditable;
 
 @end
