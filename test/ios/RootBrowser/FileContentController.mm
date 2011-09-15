@@ -14,6 +14,7 @@
 @implementation FileContentController
 
 @synthesize scrollView;
+@synthesize fileContainer;
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
@@ -113,7 +114,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) addShortcutForObject : (TObject *) object inPad : (ROOT_iOS::Pad *) pad drawOption : (const char *) option
+- (void) addShortcutForObjectAtIndex : (unsigned) objIndex inPad : (ROOT_iOS::Pad *) pad
 {
    const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
    UIGraphicsBeginImageContext(rect.size);
@@ -135,14 +136,14 @@
    pad->cd();
    pad->SetContext(ctx);
    pad->Clear();
-   object->Draw(option);
+   fileContainer->GetObject(objIndex)->Draw(fileContainer->GetDrawOption(objIndex));
    pad->PaintThumbnail();
    
    UIImage *thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();//autoreleased UIImage.
    [thumbnailImage retain];
    UIGraphicsEndImageContext();
        
-   ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller : self object : object andOption : option thumbnail : thumbnailImage];
+   ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller : self forObjectAtIndex:objIndex withThumbnail:thumbnailImage];
    shortcut.layer.shadowColor = [UIColor blackColor].CGColor;
    shortcut.layer.shadowOffset = CGSizeMake(20.f, 20.f);
    shortcut.layer.shadowOpacity = 0.3f;
@@ -150,7 +151,7 @@
    [scrollView addSubview : shortcut];
    [objectShortcuts addObject : shortcut];
 
-   UIBezierPath *path = [UIBezierPath bezierPathWithRect : rect];//shortcut.bounds];
+   UIBezierPath *path = [UIBezierPath bezierPathWithRect : rect];
    shortcut.layer.shadowPath = path.CGPath;
    [shortcut release];
 
@@ -171,7 +172,7 @@
    ROOT_iOS::Pad * pad = new ROOT_iOS::Pad(rect.size.width, rect.size.height);//Pad to draw object.
 
    for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i)
-      [self addShortcutForObject:fileContainer->GetObject(i) inPad:pad drawOption:fileContainer->GetDrawOption(i)];
+      [self addShortcutForObjectAtIndex : i inPad : pad];
 
    delete pad;
 }
@@ -199,11 +200,9 @@
 //____________________________________________________________________________________________________
 - (void) selectObjectFromFile : (ObjectShortcut *) shortcut
 {
-   //if (!objectController)
    objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
-   
-   objectController.navigationItem.title = [NSString stringWithFormat : @"%s", shortcut.rootObject->GetName()];
-   [objectController setObjectFromShortcut : shortcut];
+//   objectController.navigationItem.title = [NSString stringWithFormat : @"%s", shortcut.objectName];
+   [objectController setObjectWithIndex : shortcut.objectIndex fromContainer : fileContainer];
    [self.navigationController pushViewController : objectController animated : YES];
 }
 

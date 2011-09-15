@@ -7,6 +7,8 @@
 @class PadView;
 
 namespace ROOT_iOS {
+
+class FileContainer;
 //Pad to draw object.
 class Pad;
 
@@ -23,6 +25,9 @@ class TObject;
    
    PadView *padView;//View for pad.
    ROOT_iOS::Pad *pad;
+
+   ROOT_iOS::FileContainer *fileContainer;
+
    TObject *rootObject;
    TObject *selectedObject;
    
@@ -33,7 +38,7 @@ class TObject;
 
 @property (nonatomic, retain) UIScrollView *scrollView;
 
-- (void) setObjectFromShortcut : (ObjectShortcut *)object;
+- (void) setObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
 - (void) handleDoubleTapOnPad;
 - (void) objectWasSelected : (TObject *)object;
 - (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate;
