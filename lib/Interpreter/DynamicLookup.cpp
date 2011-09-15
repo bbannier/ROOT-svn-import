@@ -256,25 +256,32 @@ namespace cling {
     return ASTNodeInfo(Node, 0);
   }
 
-  ASTNodeInfo EvaluateTSynthesizer::VisitIfStmt(clang::IfStmt* Node) {
-    // If the dynamic expression is in the conditional clause of the if
-    // assume that the return type is bool, because we know that 
-    // everything in the condition of IfStmt is implicitly converted into bool
+  // If the dynamic expression is in the conditional clause of the if
+  // assume that the return type is bool, because we know that 
+  // everything in the condition of IfStmt is implicitly converted into bool
+  ASTNodeInfo EvaluateTSynthesizer::VisitIfStmt(IfStmt* Node) {
+
+    // See whether there is var defined. Eg: if (int i = f->call())
+    // It will fall into DeclStmt.
+    if (Node->getConditionVariableDeclStmt()) {
+      // Removing the const, which shouldn't be dangerous
+      Visit(const_cast<DeclStmt*>(Node->getConditionVariableDeclStmt()));
+    }
+
+    // Handle the case where the dynamic expression is in the condition of the 
+    // stmt.
     ASTNodeInfo IfCondInfo = Visit(Node->getCond());
-
-    // Visit the other parts - they fill fall naturally into Stmt or CompoundStmt
-    // where we know what to do.
-    Visit(Node->getThen());
-    if (Stmt* ElseExpr = Node->getElse())
-      Visit(ElseExpr);
-
-    if (IfCondInfo.isForReplacement()){
+    if (IfCondInfo.isForReplacement())
       if (Expr* IfCondExpr = IfCondInfo.getAs<Expr>()) {
           Node->setCond(SubstituteUnknownSymbol(m_Context->BoolTy, IfCondExpr));
           return ASTNodeInfo(Node, /*needs eval*/false);
       }
-      
-    }
+
+    // Visit the other parts - they will fall naturally into Stmt or CompoundStmt
+    // where we know what to do.
+    Visit(Node->getThen());
+    if (Stmt* ElseExpr = Node->getElse())
+      Visit(ElseExpr);
 
     return ASTNodeInfo(Node, false);
   }
