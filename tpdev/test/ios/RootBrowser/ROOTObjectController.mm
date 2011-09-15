@@ -315,10 +315,10 @@ static const CGFloat maximumZoom = 2.f;
 {
    [self resetPadAndScroll];
    [self resetEditorButton];
-
+   
    fileContainer = container;
-
    rootObject = fileContainer->GetObject(index);
+   self.navigationItem.title = [NSString stringWithFormat:@"%s", rootObject->GetName()];
 
    pad->cd();
    pad->Clear();
@@ -328,19 +328,19 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 #pragma mark - delegate for scroll-view.
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
 {
    return padView;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)scrollViewDidZoom:(UIScrollView *)scroll
 {
    padView.frame = [self centeredFrameForScrollView : scroll andUIView:padView];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void)scrollViewDidEndZooming:(UIScrollView *)scroll withView:(UIView *)view atScale:(float)scale
 {
    using namespace ROOT_IOSBrowser;
@@ -365,7 +365,7 @@ static const CGFloat maximumZoom = 2.f;
    zoomed = YES;
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) handleDoubleTapOnPad
 {
    using namespace ROOT_IOSBrowser;
@@ -397,7 +397,7 @@ static const CGFloat maximumZoom = 2.f;
 
 #pragma mark - picking and editing.
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) objectWasSelected : (TObject *)object
 {
    if (object != selectedObject) {//New object was selected.
@@ -413,14 +413,14 @@ static const CGFloat maximumZoom = 2.f;
       padView.selectionView.hidden = YES;   
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) setupObjectInspector
 {
    [objectInspector setROOTObject : selectedObject];
    [objectInspector setROOTObjectController : self];
 }
 
-//_________________________________________________________________
+//____________________________________________________________________________________________________
 - (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate
 {
    if (needUpdate)
