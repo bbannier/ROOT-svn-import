@@ -25,6 +25,60 @@ static const CGFloat maximumZoom = 2.f;
 @synthesize scrollView;
 
 //____________________________________________________________________________________________________
+- (void) resetEditorButton
+{
+   NSString *title = mode == ROOT_IOSObjectController::ocmEdit ? @"Hide editor" : @"Edit";
+   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : title style:UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
+}
+
+#pragma mark - Initialization code, called from initWithNib
+
+//____________________________________________________________________________________________________
+- (void) loadObjectInspector
+{
+   objectInspector = [[ObjectInspector alloc] initWithNibName : nil bundle : nil];
+   editorView = (EditorView *)objectInspector.view;
+   [self.view addSubview : editorView];
+   editorView.hidden = YES;
+   [editorView release];
+   [self resetEditorButton];
+}
+
+//____________________________________________________________________________________________________
+- (void) setupScrollView 
+{
+   scrollView.delegate = self;
+   [scrollView setMaximumZoomScale:2.];
+   scrollView.bounces = NO;
+   scrollView.bouncesZoom = NO;
+   scrollView.padIsEditable = NO;
+      
+   doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTapOnPad)];
+   doubleTap.numberOfTapsRequired = 2;
+   [scrollView addGestureRecognizer : doubleTap];
+}
+
+//____________________________________________________________________________________________________
+- (void) createPad
+{
+   using namespace ROOT_IOSBrowser;
+   
+   const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
+   const CGRect padRect = CGRectMake(padCenter.x - padW / 2, padCenter.y - padH / 2, padW, padH);
+   pad = new ROOT_iOS::Pad(padW, padH);
+   selectedObject = pad;
+   //Init the inspector for the pad.
+   [self setupObjectInspector];
+      
+   padView = [[PadView alloc] initWithFrame : padRect controller : self forPad : pad];
+   [scrollView addSubview : padView];
+   [padView release];
+   padView.padIsEditable = NO;
+}
+
+#pragma mark - Geometry code.
+
+//____________________________________________________________________________________________________
 - (void) correctPadFrameNoEditor : (UIInterfaceOrientation) orientation
 {
    //Correct the sizes and coordinates of a pad's view in
@@ -154,43 +208,21 @@ static const CGFloat maximumZoom = 2.f;
    [self correctPadFrameForOrientation : orientation];
 }
 
+#pragma mark - Controller's lifecycle.
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
-   using namespace ROOT_IOSBrowser;
-
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
    
    [self view];
    
    if (self) {
-      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Show editor" style : UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
+      mode = ROOT_IOSObjectController::ocmNavigation;
 
-      //Setup the object inspector.
-      objectInspector = [[ObjectInspector alloc] initWithNibName : nil bundle : nil];
-      editorView = (EditorView *)objectInspector.view;
-      [self.view addSubview : editorView];
-      editorView.hidden = YES;
-      [editorView release];
-      
-      //Setup the scroll-view.
-      scrollView.delegate = self;
-      [scrollView setMaximumZoomScale:2.];
-      scrollView.bounces = NO;
-      scrollView.bouncesZoom = NO;
-
-      //Create pad, padView.
-      const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
-      const CGRect padRect = CGRectMake(padCenter.x - padW / 2, padCenter.y - padH / 2, padW, padH);
-      pad = new ROOT_iOS::Pad(padW, padH);
-      selectedObject = pad;
-      //Init the inspector for the pad.
-      [self setupObjectInspector];
-      
-      padView = [[PadView alloc] initWithFrame : padRect controller : self forPad : pad];
-      [scrollView addSubview : padView];
-      [padView release];
+      [self loadObjectInspector];
+      [self setupScrollView];
+      [self createPad];
 
       [self correctFramesForOrientation : self.interfaceOrientation];
    }
@@ -203,6 +235,7 @@ static const CGFloat maximumZoom = 2.f;
 {
    delete pad;
    [objectInspector release];
+   [doubleTap release];
 
    [super dealloc];
 }
@@ -225,7 +258,7 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) viewWillAppear:(BOOL)animated
+- (void) viewWillAppear : (BOOL)animated
 {
    [self correctFramesForOrientation : self.interfaceOrientation];
 }
@@ -246,28 +279,35 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
+- (BOOL)shouldAutorotateToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
 	return YES;
 }
 
 //____________________________________________________________________________________________________
-- (void) resetEditorButton
-{
-   if (!editorView.hidden)
-      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Hide editor" style:UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
-   else
-      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Show editor" style : UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
-}
-
-//____________________________________________________________________________________________________
 - (void) toggleEditor
 {
+   using namespace ROOT_IOSObjectController;
+   
+   mode = mode == ocmEdit ? ocmNavigation : ocmEdit;
+   if (mode == ocmEdit) {
+      scrollView.padIsEditable = YES;
+      padView.padIsEditable = YES;
+      [scrollView removeGestureRecognizer : doubleTap];
+   } else {
+      pad->Unpick();
+      selectedObject = pad;
+      scrollView.padIsEditable = NO;
+      padView.padIsEditable = NO;
+      padView.selectionView.hidden = YES;
+      [scrollView addGestureRecognizer : doubleTap];
+   }
+
    editorView.hidden = !editorView.hidden;
    [self resetEditorButton];
    [self correctPadFrameForOrientation : self.interfaceOrientation];
-   
+
    if (editorView.hidden && UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
       //Editor is hidden, pad sizes were changed, need to redraw the picture.
       [padView setNeedsDisplay];
@@ -308,11 +348,16 @@ static const CGFloat maximumZoom = 2.f;
    scrollView.contentOffset = CGPointZero;
    scrollView.maximumZoomScale = maximumZoom;
    scrollView.minimumZoomScale = 1.f;
+   
+   scrollView.padIsEditable = NO;
+   padView.padIsEditable = NO;
 }
 
 //____________________________________________________________________________________________________
 - (void) setObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)container;
 {
+   mode = ROOT_IOSObjectController::ocmNavigation;
+
    [self resetPadAndScroll];
    [self resetEditorButton];
    

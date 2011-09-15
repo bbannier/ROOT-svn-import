@@ -2114,6 +2114,13 @@ void Pad::Pick(Int_t px, Int_t py)
 }
 
 //______________________________________________________________________________
+void Pad::Unpick()
+{
+   fSelected = 0;
+   fParentOfSelected = 0;
+}
+
+//______________________________________________________________________________
 TObject *Pad::ObjectInPoint(Int_t px, Int_t py)
 {
    const UInt_t offset = (py * fSelectionAreaWidth + px) * 4;
