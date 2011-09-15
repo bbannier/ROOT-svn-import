@@ -565,16 +565,18 @@ namespace cling {
       if (CompoundStmt* CS = dyn_cast<CompoundStmt>(S))
         if (Expr* E = dyn_cast_or_null<Expr>(CS->body_back())) {
           RetTy = E->getType();
-          // Change the void function's return type
-          FunctionProtoType::ExtProtoInfo EPI;
-          QualType FuncTy = Context.getFunctionType(RetTy,
-                                                    /*ArgArray*/0,
-                                                    /*NumArgs*/0,
-                                                    EPI);
-          TopLevelFD->setType(FuncTy);
-          // add return stmt
-          Stmt* RetS = TheSema.ActOnReturnStmt(SourceLocation(), E).take();
-          CS->setStmts(Context, &RetS, 1);
+          if (!RetTy->isVoidType()) {
+            // Change the void function's return type
+            FunctionProtoType::ExtProtoInfo EPI;
+            QualType FuncTy = Context.getFunctionType(RetTy,
+                                                      /*ArgArray*/0,
+                                                      /*NumArgs*/0,
+                                                      EPI);
+            TopLevelFD->setType(FuncTy);
+            // add return stmt
+            Stmt* RetS = TheSema.ActOnReturnStmt(SourceLocation(), E).take();
+            CS->setStmts(Context, &RetS, 1);
+          }
         }
     TheSema.CurContext = CurContext;
 
