@@ -34,7 +34,6 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Target/TargetSelect.h"
 
 #include "cling/Interpreter/CIFactory.h"
 
