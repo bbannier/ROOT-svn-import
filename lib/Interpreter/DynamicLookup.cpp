@@ -265,7 +265,7 @@ namespace cling {
     // It will fall into DeclStmt.
     if (Node->getConditionVariableDeclStmt()) {
       // Removing the const, which shouldn't be dangerous
-      Visit(const_cast<DeclStmt*>(Node->getConditionVariableDeclStmt()));
+      VisitDeclStmt(const_cast<DeclStmt*>(Node->getConditionVariableDeclStmt()));
     }
 
     // Handle the case where the dynamic expression is in the condition of the 
