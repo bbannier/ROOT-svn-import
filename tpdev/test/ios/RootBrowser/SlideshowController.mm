@@ -45,9 +45,8 @@
    for (unsigned i = 0; i < nObjects; ++i) {
       pads[i] = new ROOT_iOS::Pad(padFrame.size.width, padFrame.size.height);
       padViews[i] = [[SlideView alloc] initWithFrame : padFrame andPad : pads[i]];
+      [padParentView addSubview : padViews[i]];
    }
-   
-   [padParentView addSubview : padViews[0]];
 }
 
 //____________________________________________________________________________________________________
@@ -80,7 +79,6 @@
          if (fileContainer->GetNumberOfObjects() > 1) {
             [self drawObject : fileContainer->GetObject(1) inAPad : pads[1] option:fileContainer->GetDrawOption(1)];
             [padParentView addSubview : padViews[1]];
-            [padViews[1] setNeedsDisplay];
          }
 
          //Ready for show now.
@@ -185,8 +183,6 @@
 
    padViews[viewToHide].hidden = YES;
    padViews[viewToShow].hidden = NO;
-//   [padViews[viewToHide] removeFromSuperview];
-//   [padParentView addSubview : padViews[viewToShow]];
    
    [UIView commitAnimations];
 
