@@ -24,14 +24,8 @@ CLINGO       := $(call stripsrc,$(CLINGS:.cxx=.o))
 
 CLINGDEP     := $(CLINGO:.o=.d) $(CLINGDO:.o=.d) $(ROOTCLINGO:.o=.d)
 
-### TODO: rename cling-based TCint to TCling, move into libRCling
-CLINGLIB     := $(LPATH)/libRCling.$(SOEXT)
-CLINGMAP     := $(CLINGLIB:.$(SOEXT)=.rootmap)
-
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(CLINGH))
-ALLLIBS      += $(CLINGLIB)
-ALLMAPS      += $(CLINGMAP)
 
 # include all dependency files
 INCLUDEFILES += $(CLINGDEP)
@@ -50,32 +44,21 @@ PRINTME:=$(shell echo 'ERROR: you forgot to define LLVMDIR!' >&2)
 EXITING-BECAUSE-OF-ERROR
 endif
 
-CLINGLIBEXTRA += -Llib -lReflex
-CLINGLIBDEP   += $(REFLEXLIB)
-
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) check-cling-header
 
 include/%.h:    $(CLINGDIRI)/%.h
 		cp $< $@
 
-$(CLINGLIB):    $(CLINGO) $(CLINGDO) $(CLINGLIBDEP)
-		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libRCling.$(SOEXT) $@ "$(CLINGO) $(CLINGDO)" \
-		   "$(CLINGLIBEXTRA) -L$(LLVMDIR)/lib -lcling"
-
 $(CLINGDS):     $(CLINGH) $(CLINGL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c $(CLINGH) $(CLINGL)
 
-$(CLINGMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(CLINGL)
-		$(RLIBMAP) -o $@ -l $(CLINGLIB) -d $(CLINGLIBDEPM) -c $(CLINGL)
-
-$(ROOTCLING):   $(ROOTCLINGO) $(BOOTLIBSDEP) $(CLINGLIBDEP)
+$(ROOTCLING):   $(ROOTCLINGO) $(BOOTLIBSDEP)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) $(BOOTULIBS) \
-		   $(CLINGLIBEXTRA) $(RPATH) $(BOOTLIBS) $(SYSLIBS) \
+		   $(RPATH) $(BOOTLIBS) $(SYSLIBS) \
 		   -L$(LLVMDIR)/lib -lcling 
 
-all-$(MODNAME): $(CLINGLIB) $(CLINGMAP) $(ROOTCLING)
+all-$(MODNAME): $(ROOTCLING)
 
 clean-$(MODNAME):
 		@rm -f $(CLINGO) $(CLINGDO)
@@ -83,7 +66,7 @@ clean-$(MODNAME):
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
-		@rm -f $(CLINGDEP) $(CLINGDS) $(CLINGDH) $(CLINGLIB) $(CLINGMAP)
+		@rm -f $(CLINGDEP) $(CLINGDS) $(CLINGDH)
 
 distclean::     distclean-$(MODNAME)
 		@(find . -name "*_dicthdr.h" -exec rm -f {} \; >/dev/null 2>&1;true)
@@ -94,16 +77,9 @@ $(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS \
    -D__STDC_CONSTANT_MACROS \
    -I$(LLVMDIR)/include -I. -Wno-unused-parameter -Wno-shadow
 
-#CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
-# -lclingInterpreter -lclingMetaProcessor -lclingEditLine -lclangFrontend \
-# -lclangSerialization -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
-# -lclangBasic -lclangDriver -lclangAST -Llib -lReflex -lLLVMMCDisassembler \
-# -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
-# -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86Disassembler \
-# -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86AsmPrinter \
-# -lLLVMX86Info -lLLVMAsmPrinter -lLLVMMCParser -lLLVMCodeGen -lLLVMScalarOpts \
-# -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
-# -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
-# -lLLVMCore -lLLVMSupport -lLLVMSystem
-CORELIBEXTRA += -lReflex -lRCling -L$(LLVMDIR)/lib -lcling
-CORELIBDEP += $(CLINGLIB)
+CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
+ -lclingInterpreter -lclingMetaProcessor -lclingUITextInput \
+ -lclangFrontend -lclangDriver \
+ -lclangSerialization -lclangParse -lclangSema -lclangCodeGen -lclangAnalysis \
+ -lclangAST -lclangLex -lclangBasic -Llib -lReflex \
+ $(shell $(LLVMDIR)/bin/llvm-config --libs) -pthread
