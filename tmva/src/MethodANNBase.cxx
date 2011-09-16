@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Peter Speckmayer, Matt Jachowski
+// Author: Andreas Hoecker, Peter Speckmayer, Matt Jachowski, Jan Therhaag, Jiahang Zhong
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -19,10 +19,12 @@
  *      Maciej Kruk           <mkruk@cern.ch>          - IFJ & AGH, Poland        *
  *      Peter Speckmayer      <peter.speckmayer@cern.ch> - CERN, Switzerland      *
  *      Joerg Stelzer         <stelzer@cern.ch>        - DESY, Germany            *
+ *      Jan Therhaag       <Jan.Therhaag@cern.ch>     - U of Bonn, Germany        *
  *      Jiahang Zhong         <Jiahang.Zhong@cern.ch>  - Academia Sinica, Taipei  *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -65,17 +67,18 @@ ClassImp(TMVA::MethodANNBase)
 TMVA::MethodANNBase::MethodANNBase( const TString& jobName,
                                     Types::EMVA methodType,
                                     const TString& methodTitle,
-                                    DataSetInfo& theData, 
+                                    DataSetInfo& theData,
                                     const TString& theOption,
                                     TDirectory* theTargetDir )
    : TMVA::MethodBase( jobName, methodType, methodTitle, theData, theOption, theTargetDir )
    , fEstimator(kMSE)
    , fUseRegulator(kFALSE)
+   , fRandomSeed(0)
 {
    // standard constructor
    // Note: Right now it is an option to choose the neuron input function,
    // but only the input function "sum" leads to weight convergence --
-   // otherwise the weights go to nan and lead to an ABORT.   
+   // otherwise the weights go to nan and lead to an ABORT.
    InitANNBase();
 
    DeclareOptions();
@@ -83,14 +86,15 @@ TMVA::MethodANNBase::MethodANNBase( const TString& jobName,
 
 //______________________________________________________________________________
 TMVA::MethodANNBase::MethodANNBase( Types::EMVA methodType,
-                                    DataSetInfo& theData, 
+                                    DataSetInfo& theData,
                                     const TString& theWeightFile,
                                     TDirectory* theTargetDir )
-   : TMVA::MethodBase( methodType, theData, theWeightFile, theTargetDir ) 
+   : TMVA::MethodBase( methodType, theData, theWeightFile, theTargetDir )
    , fEstimator(kMSE)
    , fUseRegulator(kFALSE)
+   , fRandomSeed(0)
 {
-   // construct the Method from the weight file 
+   // construct the Method from the weight file
    InitANNBase();
 
    DeclareOptions();
@@ -99,14 +103,14 @@ TMVA::MethodANNBase::MethodANNBase( Types::EMVA methodType,
 //______________________________________________________________________________
 void TMVA::MethodANNBase::DeclareOptions()
 {
-   // define the options (their key words) that can be set in the option string 
+   // define the options (their key words) that can be set in the option string
    // here the options valid for ALL MVA methods are declared.
    // know options: NCycles=xx              :the number of training cycles
    //               Normalize=kTRUE,kFALSe  :if normalised in put variables should be used
    //               HiddenLayser="N-1,N-2"  :the specification of the hidden layers
    //               NeuronType=sigmoid,tanh,radial,linar  : the type of activation function
    //                                                       used at the neuronn
-   //                
+   //
 
    DeclareOptionRef( fNcycles    = 500,       "NCycles",         "Number of training cycles" );
    DeclareOptionRef( fLayerSpec  = "N,N-1",   "HiddenLayers",    "Specification of hidden layer architecture" );
@@ -139,12 +143,12 @@ void TMVA::MethodANNBase::DeclareOptions()
 void TMVA::MethodANNBase::ProcessOptions()
 {
    // do nothing specific at this moment
-  if      ( DoRegression() || DoMulticlass())  fEstimatorS = "MSE";    //zjh
-  if      (fEstimatorS == "MSE" )  fEstimator = kMSE;    //zjh  (to test all others)
-  else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
-  vector<Int_t>* layout = ParseLayoutString(fLayerSpec);
-  BuildNetwork(layout);
-  delete layout;
+   if      ( DoRegression() || DoMulticlass())  fEstimatorS = "MSE";    //zjh
+   if      (fEstimatorS == "MSE" )  fEstimator = kMSE;   
+   else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
+   vector<Int_t>* layout = ParseLayoutString(fLayerSpec);
+   BuildNetwork(layout);
+   delete layout;
 }
 
 //______________________________________________________________________________
@@ -230,7 +234,6 @@ void TMVA::MethodANNBase::DeleteNetwork()
          layer = (TObjArray*)fNetwork->At(i);
          DeleteNetworkLayer(layer);
       }
-    
       delete fNetwork;
    }
 
@@ -270,13 +273,10 @@ void TMVA::MethodANNBase::BuildNetwork( vector<Int_t>* layout, vector<Double_t>*
    // build network given a layout (number of neurons in each layer)
    // and optional weights array
 
-   if (fEstimator!=kMSE && fEstimator!=kCE) {
-      if (fEstimatorS == "MSE")  fEstimator = kMSE;    //zjh
-      else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
-   }
+   if (fEstimatorS == "MSE")  fEstimator = kMSE;    //zjh
+   else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
+   else Log()<<kWARNING<<"fEstimator="<<fEstimator<<"\tfEstimatorS="<<fEstimatorS<<Endl;
    if (fEstimator!=kMSE && fEstimator!=kCE) Log()<<kWARNING<<"Estimator type unspecified \t"<<Endl; //zjh
-
-
 
    Log() << kINFO << "Building Network" << Endl;
 
@@ -420,7 +420,7 @@ void TMVA::MethodANNBase::AddPreLinks(TNeuron* neuron, TObjArray* prevLayer)
 void TMVA::MethodANNBase::InitWeights()
 {
    // initialize the synapse weights randomly
-   PrintMessage("initializing weights");
+   PrintMessage("Initializing weights");
    
    // init synapse weights
    Int_t numSynapses = fSynapses->GetEntriesFast();
@@ -435,7 +435,7 @@ void TMVA::MethodANNBase::InitWeights()
 void TMVA::MethodANNBase::ForceWeights(vector<Double_t>* weights)
 {
    // force the synapse weights
-   PrintMessage("forcing weights");
+   PrintMessage("Forcing weights");
 
    Int_t numSynapses = fSynapses->GetEntriesFast();
    TSynapse* synapse;
@@ -515,7 +515,7 @@ void TMVA::MethodANNBase::PrintNetwork() const
    if (!Debug()) return;
 
    Log() << kINFO << Endl;
-   PrintMessage( "printing network " );
+   PrintMessage( "Printing network " );
    Log() << kINFO << "-------------------------------------------------------------------" << Endl;
 
    TObjArray* curLayer;
@@ -564,7 +564,7 @@ void TMVA::MethodANNBase::PrintNeuron(TNeuron* neuron) const
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodANNBase::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodANNBase::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // get the mva value generated by the NN
    TNeuron* neuron;
@@ -584,7 +584,7 @@ Double_t TMVA::MethodANNBase::GetMvaValue( Double_t* err )
    neuron = (TNeuron*)outputLayer->At(0);
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return neuron->GetActivationValue();
 }
@@ -644,15 +644,25 @@ const std::vector<Float_t> &TMVA::MethodANNBase::GetMulticlassValues()
    ForceNetworkCalculations();
 
    // check the output of the network
-   TObjArray* outputLayer = (TObjArray*)fNetwork->At( fNetwork->GetEntriesFast()-1 );
-
+ 
    if (fMulticlassReturnVal == NULL) fMulticlassReturnVal = new std::vector<Float_t>();
    fMulticlassReturnVal->clear();
+   std::vector<Float_t> temp;
 
-   for (UInt_t itgt = 0, itgtEnd = DataInfo().GetNClasses(); itgt < itgtEnd; itgt++) {
-      fMulticlassReturnVal->push_back( ((TNeuron*)outputLayer->At(itgt))->GetActivationValue() );
+   UInt_t nClasses = DataInfo().GetNClasses();
+   for (UInt_t icls = 0; icls < nClasses; icls++) {
+      temp.push_back(GetOutputNeuron( icls )->GetActivationValue() );
    }
-
+   
+   for(UInt_t iClass=0; iClass<nClasses; iClass++){
+      Double_t norm = 0.0;
+      for(UInt_t j=0;j<nClasses;j++){
+         if(iClass!=j)
+            norm+=exp(temp[j]-temp[iClass]);
+         }
+      (*fMulticlassReturnVal).push_back(1.0/(1.0+norm));
+   }
+   
    return *fMulticlassReturnVal;
 }
 
@@ -939,7 +949,7 @@ void TMVA::MethodANNBase::CreateWeightMonitoringHists( const TString& bulkname,
 void TMVA::MethodANNBase::WriteMonitoringHistosToFile() const
 {
    // write histograms to file
-   PrintMessage(Form("write special histos to file: %s", BaseDir()->GetPath()), kTRUE);
+   PrintMessage(Form("Write special histos to file: %s", BaseDir()->GetPath()), kTRUE);
 
    if (fEstimatorHistTrain) fEstimatorHistTrain->Write();
    if (fEstimatorHistTest ) fEstimatorHistTest ->Write();

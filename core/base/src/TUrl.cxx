@@ -35,6 +35,24 @@ THashList *TUrl::fgHostFQDNs = 0;
 
 TVirtualMutex *gURLMutex = 0; // local mutex
 
+#ifdef R__COMPLETE_MEM_TERMINATION
+namespace {
+   class TUrlCleanup {
+      TObjArray **fSpecialProtocols;
+      THashList **fHostFQDNs;
+   public:
+      TUrlCleanup(TObjArray **protocols, THashList **hosts) : fSpecialProtocols(protocols),fHostFQDNs(hosts) {}
+      ~TUrlCleanup() {
+         if (*fSpecialProtocols) (*fSpecialProtocols)->Delete();
+         delete *fSpecialProtocols;
+         *fSpecialProtocols = 0;
+         if (*fHostFQDNs) (*fHostFQDNs)->Delete();
+         delete *fHostFQDNs;
+         *fHostFQDNs = 0;
+      }
+   };
+}
+#endif
 
 ClassImp(TUrl)
 
@@ -58,6 +76,10 @@ TUrl::TUrl(const char *url, Bool_t defaultIsFile)
    // Port #1094 has been assigned by IANA (www.iana.org) to rootd.
 
    SetUrl(url, defaultIsFile);
+
+#ifdef R__COMPLETE_MEM_TERMINATION
+   static TUrlCleanup cleanup(&fgSpecialProtocols,&fgHostFQDNs);
+#endif
 }
 
 //______________________________________________________________________________
@@ -167,11 +189,7 @@ tryfile:
       SetProtocol(u, kTRUE);
       *s = sav;
       s += 3;
-      if (!*s) {
-         // error if we are at end of string
-         fPort = -1;
-         goto cleanup;
-      }
+      // allow url of form: "proto://"
    } else {
       if (defaultIsFile) {
          char *newu = new char [strlen("file:") + strlen(u0) + 1];

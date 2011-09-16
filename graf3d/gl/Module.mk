@@ -65,15 +65,17 @@ INCLUDEFILES += $(GLDEP)
 include/%.h:    $(GLDIRI)/%.h
 		cp $< $@
 
-$(GLLIB):       $(GLO) $(GLDO) $(ORDER_) $(MAINLIBS) $(GLLIBDEP) $(FTGLLIB) $(GLEWLIB)
+$(GLLIB):       $(GLO) $(GLDO) $(ORDER_) $(MAINLIBS) $(GLLIBDEP) $(FTGLLIB) \
+                $(GLEWLIB)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libRGL.$(SOEXT) $@ "$(GLO) $(GLO1) $(GLDO)" \
-		   "$(GLLIBEXTRA) $(FTGLLIBDIR) $(FTGLLIBS) $(GLEWLIBDIR) $(GLEWLIBS) $(GLLIBS)"
+		   "$(GLLIBEXTRA) $(FTGLLIBDIR) $(FTGLLIBS) \
+		    $(GLEWLIBDIR) $(GLEWLIBS) $(GLLIBS)"
 
 $(GLDS):	$(GLH2) $(GLL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(GLH2) $(GLL)
+		$(ROOTCINTTMP) -f $@ -c $(CINTFLAGS) $(GLH2) $(GLL)
 
 $(GLMAP):       $(RLIBMAP) $(MAKEFILEDEP) $(GLL)
 		$(RLIBMAP) -o $@ -l $(GLLIB) \
@@ -95,8 +97,11 @@ distclean::     distclean-$(MODNAME)
 ifeq ($(ARCH),win32)
 $(GLO) $(GLDO): CXXFLAGS += $(OPENGLINCDIR:%=-I%) -I$(WIN32GDKDIR)/gdk/src \
                             $(GDKDIRI:%=-I%) $(GLIBDIRI:%=-I%)
+$(GLDS):        CINTFLAGS += $(OPENGLINCDIR:%=-I%) -I$(WIN32GDKDIR)/gdk/src \
+                             $(GDKDIRI:%=-I%) $(GLIBDIRI:%=-I%)
 else
 $(GLO) $(GLDO): CXXFLAGS += $(OPENGLINCDIR:%=-I%)
+$(GLDS):        CINTFLAGS += $(OPENGLINCDIR:%=-I%)
 endif
 
 $(call stripsrc,$(GLDIRS)/TGLText.o): $(FREETYPEDEP)
@@ -104,6 +109,7 @@ $(call stripsrc,$(GLDIRS)/TGLText.o): CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=
 
 $(call stripsrc,$(GLDIRS)/TGLFontManager.o): $(FREETYPEDEP)
 $(call stripsrc,$(GLDIRS)/TGLFontManager.o): CXXFLAGS += $(FREETYPEINC) $(FTGLINCDIR:%=-I%) $(FTGLCPPFLAGS)
+$(GLO): CXXFLAGS += $(GLEWINCDIR:%=-I%) $(GLEWCPPFLAGS)
 
 # Optimize dictionary with stl containers.
 $(GLDO): NOOPT = $(OPT)

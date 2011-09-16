@@ -26,6 +26,11 @@
 #include "Minuit2/MnLineSearch.h"
 #include "Minuit2/MnParabolaPoint.h"
 
+#if defined(DEBUG) || defined(WARNINGMSG)
+#include "Minuit2/MnPrint.h" 
+#endif
+
+
 namespace ROOT {
 
    namespace Minuit2 {
@@ -141,10 +146,23 @@ FunctionMinimum ModularFunctionMinimizer::Minimize(const MnFcn& mfcn, const Grad
    
    const MinimumBuilder & mb = Builder();
    //std::cout << typeid(&mb).Name() << std::endl;
-   double effective_toler = toler * mfcn.Up(); 
+   double effective_toler = toler * mfcn.Up();   // scale tolerance with Up()
    // avoid tolerance too smalls (than limits)
    double eps = MnMachinePrecision().Eps2(); 
    if (effective_toler < eps) effective_toler = eps; 
+
+   // check if maxfcn is already exhausted 
+   // case already reached call limit
+   if(mfcn.NumOfCalls() >= maxfcn) {
+#ifdef WARNINGMSG
+      MN_INFO_MSG("ModularFunctionMinimizer: Stop before iterating - call limit already exceeded");
+#endif
+      return FunctionMinimum(seed, std::vector<MinimumState>(1, seed.State()), mfcn.Up(), FunctionMinimum::MnReachedCallLimit());
+   }
+
+   
+
+
    return mb.Minimum(mfcn, gc, seed, strategy, maxfcn, effective_toler);
 }
 

@@ -801,6 +801,8 @@ void TGTileLayout::Layout()
       fModified = fModified || (ptr->fFrame->GetX() != xw) || 
                  (ptr->fFrame->GetY() != yw);
       ptr->fFrame->Move(xw, yw);
+      if (hints & kLHintsExpandX)
+         ptr->fFrame->Resize(max_osize.fWidth, ptr->fFrame->GetDefaultHeight());
       x += (Int_t)max_osize.fWidth + fSep;
 
       if (x + max_osize.fWidth > max_width) {
@@ -831,6 +833,7 @@ TGDimension TGTileLayout::GetDefaultSize() const
    x = fSep; y = fSep << 1;
 
    next.Reset();
+   // coverity[returned_pointer]
    while ((ptr = (TGFrameElement *) next())) {
       x += max_osize.fWidth + fSep;
       if (x + max_osize.fWidth > max_size.fWidth) {
@@ -857,6 +860,7 @@ void TGListLayout::Layout()
    fModified = kFALSE;
 
    TIter next(fList);
+   // coverity[returned_pointer]
    while ((ptr = (TGFrameElement *) next())) {
       csize = ptr->fFrame->GetDefaultSize();
       max_osize.fWidth  = TMath::Max(max_osize.fWidth, csize.fWidth);
@@ -890,6 +894,8 @@ void TGListLayout::Layout()
       fModified = fModified || (ptr->fFrame->GetX() != xw) || 
                  (ptr->fFrame->GetY() != yw);
       ptr->fFrame->Move(xw, yw);
+      if (hints & kLHintsExpandX)
+         ptr->fFrame->Resize(max_osize.fWidth, ptr->fFrame->GetDefaultHeight());
       y += (Int_t)max_osize.fHeight + fSep + (fSep >> 1);
 
       if (y + max_osize.fHeight > max_height) {

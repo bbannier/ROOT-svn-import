@@ -20,6 +20,7 @@
 
 // Standard
 #include <utility>
+#include <sstream>
 #include <Riostream.h>
 
 
@@ -290,7 +291,7 @@ PyROOT::TExecutor* PyROOT::CreateExecutor( const std::string& fullType )
 {
 // The matching of the fulltype to an executor factory goes through up to 4 levels:
 //   1) full, qualified match
-//   2) drop '&' as as by ref/full type is often pretty much the same python-wise
+//   2) drop '&' as by ref/full type is often pretty much the same python-wise
 //   3) ROOT classes, either by ref/ptr or by value
 //   4) additional special case for enums
 //
@@ -310,8 +311,8 @@ PyROOT::TExecutor* PyROOT::CreateExecutor( const std::string& fullType )
       return (h->second)();
 
 // accept ref as by value
-   if ( cpd == "&" ) {
-      h = gExecFactories.find( realType );
+   if ( ! cpd.empty() && cpd[ cpd.size() - 1 ] == '&' ) {
+      h = gExecFactories.find( realType + cpd.substr( 0, cpd.size() - 1 ) );
       if ( h != gExecFactories.end() )
          return (h->second)();
    }
@@ -330,7 +331,9 @@ PyROOT::TExecutor* PyROOT::CreateExecutor( const std::string& fullType )
       if ( ti.Property() & G__BIT_ISENUM )
          h = gExecFactories.find( "UInt_t" );
       else {
-         std::cerr << "return type not handled (using void): " << fullType << std::endl;
+         std::stringstream s;
+         s << "return type not handled (using void): " << fullType << std::ends;
+         PyErr_Warn( PyExc_RuntimeWarning, (char*)s.str().c_str() );
          h = gExecFactories.find( "void" );
       }
    }
@@ -437,7 +440,8 @@ namespace {
       NFp_t( "TGlobal*",           &CreateTGlobalExecutor             ),
       NFp_t( "__init__",           &CreateConstructorExecutor         ),
       NFp_t( "PyObject*",          &CreatePyObjectExecutor            ),
-      NFp_t( "_object*",           &CreatePyObjectExecutor            )
+      NFp_t( "_object*",           &CreatePyObjectExecutor            ),
+      NFp_t( "FILE*",              &CreateVoidArrayExecutor           )
    };
 
    struct InitExecFactories_t {

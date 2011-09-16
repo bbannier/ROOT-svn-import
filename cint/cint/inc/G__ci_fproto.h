@@ -78,6 +78,7 @@ G__DECL_API(25, int, G__defined_tagname, (G__CONST char* tagname,int noerror))
 G__DECL_API(26, struct G__Definedtemplateclass *,G__defined_templateclass, (G__CONST char *name))
 
 G__DECL_API(27, int, G__deleteglobal, (void* p))
+G__DECL_API(269, int, G__resetglobalvar, (void* p))
 G__DECL_API(28, int, G__deletevariable, (G__CONST char* varname))
 G__DECL_API(29, int, G__optimizemode, (int optimizemode))
 G__DECL_API(30, int, G__getoptimizemode, (void))
@@ -158,7 +159,7 @@ G__DECL_API(71, int, G__main, (int argc,char **argv))
 G__DECL_API(72, void, G__setothermain, (int othermain))
 G__DECL_API(73, void, G__exit, (int rtn))
 G__DECL_API(74, int, G__getnumbaseclass, (int tagnum))
-G__DECL_API(75, void, G__setnewtype, (int globalcomp,G__CONST char* comment,int nindex))
+G__DECL_API(75, void, G__setnewtype, (char globalcomp,G__CONST char* comment,int nindex))
 G__DECL_API(76, void, G__setnewtypeindex, (int j,int type_index))
 G__DECL_API(77, void, G__resetplocal, (void))
 G__DECL_API(78, long, G__getgvp, (void))
@@ -357,7 +358,7 @@ G__DECL_API(232, int, G__usermemfunc_setup, (char *funcname,int hash,int (*funcp
 #endif
 G__DECL_API(233, char, *G__fulltagname, (int tagnum,int mask_dollar))
 G__DECL_API(234, void, G__loadlonglong, (int* ptag,int* ptype,int which))
-G__DECL_API(235, int, G__isanybase, (int basetagnum,int derivedtagnum,long pobject))
+G__DECL_API(235, long, G__isanybase, (int basetagnum,int derivedtagnum,long pobject))
 G__DECL_API(236, int, G__pop_tempobject, (void))
 G__DECL_API(263, int, G__pop_tempobject_nodel, (void))
 G__DECL_API(237, const char*, G__stripfilename, (const char* filename))
@@ -404,5 +405,5 @@ G__DECL_API(267, int, G__memfunc_para_setup, (int ifn,int type,int tagnum,int ty
 
 G__DECL_API(268, struct G__ifunc_table_internal*, G__get_ifunc_internal, (struct G__ifunc_table* iref))
 
-#define G__NUMBER_OF_API_FUNCTIONS 269
+#define G__NUMBER_OF_API_FUNCTIONS 270
 G__DUMMYTOCHECKFORDUPLICATES(G__NUMBER_OF_API_FUNCTIONS)

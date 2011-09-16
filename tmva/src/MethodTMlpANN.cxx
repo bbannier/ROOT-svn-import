@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Eckhard von Toerne
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
@@ -125,7 +125,8 @@ void TMVA::MethodTMlpANN::Init( void )
 //_______________________________________________________________________
 TMVA::MethodTMlpANN::~MethodTMlpANN( void )
 {
-   // destructor
+   // destructor 
+   if (fMLP) delete fMLP;
 }
 
 //_______________________________________________________________________
@@ -214,7 +215,7 @@ void TMVA::MethodTMlpANN::ProcessOptions()
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodTMlpANN::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodTMlpANN::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // calculate the value of the neural net for the current event
    const Event* ev = GetEvent();
@@ -225,7 +226,7 @@ Double_t TMVA::MethodTMlpANN::GetMvaValue( Double_t* err )
    Double_t mvaVal = fMLP->Evaluate(0,d);
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return mvaVal;
 }
@@ -249,7 +250,7 @@ void TMVA::MethodTMlpANN::Train( void )
    Int_t type;
    Float_t weight;
    const Long_t basketsize = 128000;
-   Float_t* vArr = new Float_t[GetNvar()];
+   Float_t* vArr = new Float_t[GetNvar()]; 
 
    TTree *localTrainingTree = new TTree( "TMLPtrain", "Local training tree for TMlpANN" );
    localTrainingTree->Branch( "type",       &type,        "type/I",        basketsize );
@@ -324,7 +325,7 @@ void TMVA::MethodTMlpANN::Train( void )
    // write weights to File;
    // this is not nice, but fMLP gets deleted at the end of Train()
    delete localTrainingTree;
-
+   delete [] vArr;
 }
 
 
@@ -346,7 +347,7 @@ void TMVA::MethodTMlpANN::AddWeightsXMLTo( void* parent ) const
    void *ch=NULL;
    while (inf.getline(temp,256)) {
       TString dummy(temp);
-      std::cout << dummy << std::endl;
+      //std::cout << dummy << std::endl; // remove annoying debug printout with std::cout
       if (dummy.BeginsWith('#')) {
          if (ch!=0) gTools().AddRawLine( ch, data.Data() );
          dummy = dummy.Strip(TString::kLeading, '#');
@@ -436,7 +437,7 @@ void  TMVA::MethodTMlpANN::ReadWeightsFromStream( istream& istr )
    // the MLP is already build
    Log() << kINFO << "Load TMLP weights into " << fMLP << Endl;
 
-   Double_t* d = new Double_t[Data()->GetNVariables()] ;
+   Double_t* d = new Double_t[Data()->GetNVariables()] ; 
    static Int_t type;
    gROOT->cd();
    TTree * dummyTree = new TTree("dummy","Empty dummy tree", 1);
@@ -452,6 +453,7 @@ void  TMVA::MethodTMlpANN::ReadWeightsFromStream( istream& istr )
    fMLP->LoadWeights( "./TMlp.nn.weights.temp" );
    // here we can delete the temporary file
    // how?
+   delete [] d;
 }
 
 //_______________________________________________________________________
@@ -467,7 +469,8 @@ void TMVA::MethodTMlpANN::MakeClass( const TString& theClassFileName ) const
    else
       classFileName = theClassFileName;
 
-   Log() << kINFO << "Creating specific (TMultiLayerPerceptron) standalone response class: " << Endl;
+   classFileName.ReplaceAll(".class","");
+   Log() << kINFO << "Creating specific (TMultiLayerPerceptron) standalone response class: " << classFileName << Endl;
    fMLP->Export( classFileName.Data() );
 }
 

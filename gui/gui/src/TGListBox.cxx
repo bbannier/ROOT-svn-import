@@ -45,6 +45,7 @@
 #include "TGResourcePool.h"
 #include "TSystem.h"
 #include "Riostream.h"
+#include "TMath.h"
 #include <stdlib.h>
 
 
@@ -917,7 +918,7 @@ Bool_t TGLBContainer::HandleButton(Event_t *event)
 }
 
 //______________________________________________________________________________
-Bool_t TGLBContainer::HandleDoubleClick(Event_t *)
+Bool_t TGLBContainer::HandleDoubleClick(Event_t *ev)
 {
    // Handle double click mouse event in the listbox container.
 
@@ -926,6 +927,8 @@ Bool_t TGLBContainer::HandleDoubleClick(Event_t *)
          TGLBEntry *f = fLastActive;
          SendMessage(fMsgWindow, MK_MSG(kC_CONTAINER, kCT_ITEMDBLCLICK),
                      f->EntryId(), 0);
+         DoubleClicked(f, ev->fCode);
+         DoubleClicked(f, ev->fCode, ev->fXRoot, ev->fYRoot);
       }
    }
    return kTRUE;
@@ -999,6 +1002,7 @@ Bool_t TGLBContainer::HandleMotion(Event_t *event)
          if (activate)  {
             f->Activate(kTRUE);
             fLastActive = f;
+            fLastActiveEl = el;
          } else {
             f->Activate(kFALSE);
          }
@@ -1492,7 +1496,8 @@ void TGListBox::Layout()
       fVScrollbar->SetPosition(0);
    }
 
-   fVScrollbar->SetRange(container->GetHeight()/fItemVsize, fVport->GetHeight()/fItemVsize);
+   fVScrollbar->SetRange((Int_t)TMath::Ceil((Double_t)container->GetHeight()/(Double_t)fItemVsize),
+                         fVport->GetHeight()/fItemVsize);
    //fClient->NeedRedraw(container);
    ((TGContainer *)container)->ClearViewPort();
 }

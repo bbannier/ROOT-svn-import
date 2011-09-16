@@ -281,7 +281,7 @@ Int_t TProfile3D::BufferEmpty(Int_t action)
       if (action == 0) return 0;
       nbentries  = -nbentries;
       fBuffer=0;
-      Reset();
+      Reset("ICES"); // reset without deleting the functions
       fBuffer = buffer;
    }
    if (TestBit(kCanRebin) || fXaxis.GetXmax() <= fXaxis.GetXmin() || fYaxis.GetXmax() <= fYaxis.GetXmin()) {
@@ -351,7 +351,7 @@ Int_t TProfile3D::BufferFill(Double_t x, Double_t y, Double_t z, Double_t t, Dou
       fBuffer[0] =  nbentries;
       if (fEntries > 0) {
          Double_t *buffer = fBuffer; fBuffer=0;
-         Reset();
+         Reset("ICES"); // reset without deleting the functions
          fBuffer = buffer;
       }
    }
@@ -417,6 +417,9 @@ void TProfile3D::Divide(const TH1 *h1)
       return;
    }
    TProfile3D *p1 = (TProfile3D*)h1;
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
 //*-*- Check profile compatibility
    Int_t nx = GetNbinsX();
@@ -626,7 +629,7 @@ Int_t TProfile3D::Fill(Double_t x, Double_t y, Double_t z, Double_t t)
    Int_t bin,binx,biny,binz;
 
    if (fTmin != fTmax) {
-      if (t <fTmin || t> fTmax) return -1;
+      if (t <fTmin || t> fTmax || TMath::IsNaN(t) ) return -1;
    }
 
    fEntries++;
@@ -676,10 +679,10 @@ Int_t TProfile3D::Fill(Double_t x, Double_t y, Double_t z, Double_t t, Double_t 
    Int_t bin,binx,biny,binz;
 
    if (fTmin != fTmax) {
-      if (t <fTmin || z> fTmax) return -1;
+      if (t <fTmin || z> fTmax || TMath::IsNaN(t) ) return -1;
    }
 
-   Double_t u= (w > 0 ? w : -w);
+   Double_t u= w; // (w > 0 ? w : -w);
    fEntries++;
    binx =fXaxis.FindBin(x);
    biny =fYaxis.FindBin(y);
@@ -831,7 +834,7 @@ void TProfile3D::GetStats(Double_t *stats) const
             for (binx=fXaxis.GetFirst();binx<=fXaxis.GetLast();binx++) {
                bin = GetBin(binx,biny,binz);
                w         = fBinEntries.fArray[bin];
-               w2        = (fBinSumw2.fN ? fBinSumw2.fArray[bin] : w*w );
+               w2        = (fBinSumw2.fN ? fBinSumw2.fArray[bin] : w );
                x         = fXaxis.GetBinCenter(binx);
                stats[0]  += w;
                stats[1]  += w2;
@@ -1158,7 +1161,7 @@ void TProfile3D::Reset(Option_t *option)
    fBinEntries.Reset();
    TString opt = option;
    opt.ToUpper();
-   if (opt.Contains("ICE")) return;
+   if (opt.Contains("ICE") && !opt.Contains("S")) return;
    fTsumwt = fTsumwt2 = 0;
 }
 

@@ -32,6 +32,7 @@
 
 #include "TError.h"
 #include <algorithm>
+#include <limits>
 
 namespace TMath {
 
@@ -165,6 +166,17 @@ namespace TMath {
           Int_t    Nint(Double_t x);
    inline Int_t    Finite(Double_t x);
    inline Int_t    IsNaN(Double_t x);
+
+   inline Double_t QuietNaN(); 
+   inline Double_t SignalingNaN(); 
+   inline Double_t Infinity(); 
+
+   template <typename T> 
+   struct Limits { 
+      inline static T Min(); 
+      inline static T Max(); 
+      inline static T Epsilon(); 
+   };
 
    // Some integer math
    Long_t   Hypot(Long_t x, Long_t y);     // sqrt(px*px + py*py)
@@ -491,6 +503,45 @@ inline Int_t TMath::IsNaN(Double_t x)
 #else
    { return isnan(x); }
 #endif
+
+//--------wrapper to numeric_limits
+//____________________________________________________________________________
+inline Double_t TMath::QuietNaN() { 
+   // returns a quiet NaN as defined by IEEE 754 
+   // see http://en.wikipedia.org/wiki/NaN#Quiet_NaN
+   return std::numeric_limits<Double_t>::quiet_NaN(); 
+}
+
+//____________________________________________________________________________
+inline Double_t TMath::SignalingNaN() { 
+   // returns a signaling NaN as defined by IEEE 754 
+   // see http://en.wikipedia.org/wiki/NaN#Signaling_NaN
+   return std::numeric_limits<Double_t>::signaling_NaN(); 
+}
+
+inline Double_t TMath::Infinity() { 
+   // returns an infinity as defined by the IEEE standard
+   return std::numeric_limits<Double_t>::infinity(); 
+}
+
+template<typename T> 
+inline T TMath::Limits<T>::Min() { 
+   // returns maximum representation for type T
+   return (std::numeric_limits<T>::min)();    //N.B. use this signature to avoid class with macro min() on Windows 
+}
+
+template<typename T> 
+inline T TMath::Limits<T>::Max() { 
+   // returns minimum double representation
+   return (std::numeric_limits<T>::max)();  //N.B. use this signature to avoid class with macro max() on Windows 
+}
+
+template<typename T> 
+inline T TMath::Limits<T>::Epsilon() { 
+   // returns minimum double representation
+   return std::numeric_limits<T>::epsilon(); 
+}
+
 
 //-------- Advanced -------------
 
@@ -968,6 +1019,10 @@ Element TMath::KOrdStat(Size n, const Element *a, Size k, Size *work)
    // If work is supplied, it is used to store the sorting index and
    // assumed to be >= n. If work=0, local storage is used, either on
    // the stack if n < kWorkMax or on the heap for n >= kWorkMax.
+   // Note that the work index array will not contain the sorted indices but 
+   // all indeces of the smaller element in arbitrary order in work[0,...,k-1] and 
+   // all indeces of the larger element in arbitrary order in work[k+1,..,n-1]
+   // work[k] will contain instead the index of the returned element.
    //
    // Taken from "Numerical Recipes in C++" without the index array
    // implemented by Anna Khreshuk.

@@ -47,6 +47,10 @@
 #include <set>
 #include <string>
 
+#ifdef __APPLE__
+#include <dlfcn.h>
+#endif
+
 using namespace std;
 
 R__EXTERN int optind;
@@ -152,10 +156,11 @@ int TCint_GenerateDictionary(const std::vector<std::string> &classes,
          if (cl && cl->GetDeclFileName()) {
             TString header(gSystem->BaseName(cl->GetDeclFileName()));
             TString dir(gSystem->DirName(cl->GetDeclFileName()));
-            while (dir.Length() && dir != "."
-                   && !dir.EndsWith("/include") && !dir.EndsWith("\\include")
-                   && !dir.EndsWith("/inc") && !dir.EndsWith("\\inc")) {
-               gSystem->PrependPathName(gSystem->BaseName(dir), header);
+            TString dirbase(gSystem->BaseName(dir));
+            while (dirbase.Length() && dirbase != "."
+                   && dirbase != "include" && dirbase != "inc"
+                   && dirbase != "prec_stl") {
+               gSystem->PrependPathName(dirbase, header);
                dir = gSystem->DirName(dir);
             }
             fileContent += TString("#include \"") + header + "\"\n";
@@ -263,7 +268,7 @@ void* TCint::fgSetOfSpecials = 0;
 ClassImp(TCint)
 
 //______________________________________________________________________________
-TCint::TCint(const char *name, const char *title) : TInterpreter(name, title), fSharedLibs(""), fSharedLibsSerial(-1)
+TCint::TCint(const char *name, const char *title) : TInterpreter(name, title), fSharedLibs(""),fSharedLibsSerial(-1),fGlobalsListSerial(-1)
 {
    // Initialize the CINT interpreter interface.
 
@@ -337,6 +342,9 @@ TCint::~TCint()
    delete fMapfile;
    delete fRootmapFiles;
    gCint = 0;
+#ifdef R__COMPLETE_MEM_TERMINATION
+   G__scratch_all();
+#endif
 }
 
 //______________________________________________________________________________
@@ -643,8 +651,8 @@ void TCint::PrintIntro()
 }
 
 //______________________________________________________________________________
-void TCint::SetGetline(char*(*getlineFunc)(const char* prompt),
-		       void (*histaddFunc)(char* line))
+void TCint::SetGetline(const char*(*getlineFunc)(const char* prompt),
+                       void (*histaddFunc)(const char* line))
 {
    // Set a getline function to call when input is needed.
    G__SetGetlineFunc(getlineFunc, histaddFunc);
@@ -702,6 +710,17 @@ void TCint::ResetGlobals()
 }
 
 //______________________________________________________________________________
+void TCint::ResetGlobalVar(void *obj)
+{
+   // Reset the CINT global object state to the state saved by the last
+   // call to TCint::SaveGlobalsContext().
+
+   R__LOCKGUARD(gCINTMutex);
+
+   G__resetglobalvar(obj);
+}
+
+//______________________________________________________________________________
 void TCint::RewindDictionary()
 {
    // Rewind CINT dictionary to the point where it was before executing
@@ -755,6 +774,11 @@ void TCint::UpdateListOfGlobals()
       // It already called us again.
       return;
    }
+
+   if (fGlobalsListSerial == G__DataMemberInfo::SerialNumber()) {
+      return;
+   }
+   fGlobalsListSerial = G__DataMemberInfo::SerialNumber();
 
    R__LOCKGUARD2(gCINTMutex);
 
@@ -988,8 +1012,10 @@ Bool_t TCint::CheckClassInfo(const char *name, Bool_t autoload /*= kTRUE*/)
    if (tagnum >= 0) {
       G__ClassInfo info(tagnum);
       // If autoloading is off then Property() == 0 for autoload entries.
-      if (!autoload && !info.Property())
-         return kTRUE;
+      if (!autoload && !info.Property()) {
+          delete [] classname;
+          return kTRUE;
+      }
       if (info.Property() & (G__BIT_ISENUM | G__BIT_ISCLASS | G__BIT_ISSTRUCT | G__BIT_ISUNION | G__BIT_ISNAMESPACE)) {
          // We are now sure that the entry is not in fact an autoload entry.
          delete [] classname;
@@ -1817,6 +1843,16 @@ Int_t TCint::UnloadLibraryMap(const char *library)
       }
    }
 
+   if (ret >= 0) {
+      TString library_rootmap(library);
+      library_rootmap.Append(".rootmap");
+      TNamed *mfile = 0;
+      while( (mfile = (TNamed*)fRootmapFiles->FindObject(library_rootmap)) ) {
+         fRootmapFiles->Remove(mfile);
+         delete mfile;
+      }
+      fRootmapFiles->Compress();
+   }
    return ret;
 }
 
@@ -1830,13 +1866,13 @@ Int_t TCint::AutoLoad(const char *cls)
 
    Int_t status = 0;
 
-   if (!gROOT || !gInterpreter) return status;
+   if (!gROOT || !gInterpreter || gROOT->TestBit(TObject::kInvalidObject)) return status;
 
    // Prevent the recursion when the library dictionary are loaded.
    Int_t oldvalue = G__set_class_autoloading(0);
 
    // lookup class to find list of dependent libraries
-   TString deplibs = gInterpreter->GetClassSharedLibs(cls);
+   TString deplibs = GetClassSharedLibs(cls);
    if (!deplibs.IsNull()) {
       TString delim(" ");
       TObjArray *tokens = deplibs.Tokenize(delim);
@@ -2091,11 +2127,16 @@ const char* TCint::GetSharedLibs()
             needToSkip = (!strncmp(basename, excludelist[i], excludelen[i]));
       }
       if (!needToSkip &&
-           ((len>3 && strcmp(end-2,".a") == 0)    ||
-            (len>4 && (strcmp(end-3,".sl") == 0   ||
+           (
+#if defined(R__MACOSX) && defined(MAC_OS_X_VERSION_10_5)
+            (dlopen_preflight(filename)) || 
+#endif            
+            (len>2 && strcmp(end-2,".a") == 0)    ||
+            (len>3 && (strcmp(end-3,".sl") == 0   ||
                        strcmp(end-3,".dl") == 0   ||
                        strcmp(end-3,".so") == 0)) ||
-            (len>5 && (strcasecmp(end-4,".dll") == 0)))) {
+            (len>4 && (strcasecmp(end-4,".dll") == 0)) ||
+            (len>6 && (strcasecmp(end-6,".dylib") == 0)))) {
          if (!fSharedLibs.IsNull())
             fSharedLibs.Append(" ");
          fSharedLibs.Append(filename);
@@ -2127,8 +2168,14 @@ const char *TCint::GetClassSharedLibs(const char *cls)
       // convert "-" to " ", since class names may have
       // blanks and TEnv considers a blank a terminator
       c.ReplaceAll(" ", "-");
-      const char *libs = fMapfile->GetValue(c, "");
-      return (*libs) ? libs : 0;
+      // Use TEnv::Lookup here as the rootmap file must start with Library.
+      // and do not support using any stars (so we do not need to waste time
+      // with the search made by TEnv::GetValue).
+      TEnvRec *libs_record = fMapfile->Lookup(c);
+      if (libs_record) {
+         const char *libs = libs_record->GetValue();
+         return (*libs) ? libs : 0;
+      }
    }
    return 0;
 }

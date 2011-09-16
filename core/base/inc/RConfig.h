@@ -138,6 +138,9 @@
 #   if __SUNPRO_CC >= 0x420
 #      define R__SUNCCBUG        /* to work around a compiler bug */
 #   endif
+#   if __SUNPRO_CC >= 0x5110
+#      define R__THROWNEWDELETE
+#   endif
 #   if __GNUC__ >= 3 || __GNUC_MINOR__ >= 90   /* modern egcs/gcc */
 #      define R__SUNGCC3
 #   endif
@@ -370,6 +373,9 @@
 
 #if defined(__APPLE__)       /* MacOS X support, initially following FreeBSD */
 #   include <AvailabilityMacros.h>
+#   ifndef __CINT__
+#   include <TargetConditionals.h>
+#   endif
 #   define R__MACOSX
 #   define R__UNIX
 #   if defined(__xlC__) || defined(__xlc__)

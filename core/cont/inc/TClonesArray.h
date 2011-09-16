@@ -18,7 +18,7 @@
 // TClonesArray                                                         //
 //                                                                      //
 // An array of clone TObjects. The array expands automatically when     //
-// adding elements (shrinking can be done by hand).                     //
+// adding elements (shrinking can be done explicitly).                  //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -45,9 +45,9 @@ public:
    TClonesArray();
    TClonesArray(const char *classname, Int_t size = 1000, Bool_t call_dtor = kFALSE);
    TClonesArray(const TClass *cl, Int_t size = 1000, Bool_t call_dtor = kFALSE);
-   TClonesArray(const TClonesArray& tc);          
+   TClonesArray(const TClonesArray& tc);
    virtual         ~TClonesArray();
-   TClonesArray& operator=(const TClonesArray& tc);  
+   TClonesArray& operator=(const TClonesArray& tc);
    virtual void     Compress();
    virtual void     Clear(Option_t *option="");
    virtual void     Delete(Option_t *option="");
@@ -66,10 +66,13 @@ public:
    void             AddBefore(const TObject *, TObject *) { MayNotUse("AddBefore"); }
    void             BypassStreamer(Bool_t bypass=kTRUE);
    Bool_t           CanBypassStreamer() const { return TestBit(kBypassStreamer); }
+   TObject         *ConstructedAt(Int_t idx);
+   TObject         *ConstructedAt(Int_t idx, Option_t *clear_options);
    void             SetClass(const char *classname,Int_t size=1000);
    void             SetClass(const TClass *cl,Int_t size=1000);
-   
-   void             AbsorbObjects(TClonesArray* tc); 
+
+   void             AbsorbObjects(TClonesArray *tc);
+   void             AbsorbObjects(TClonesArray *tc, Int_t idx1, Int_t idx2);
    void             MultiSort(Int_t nTCs, TClonesArray** tcs, Int_t upto = kMaxInt);
    virtual TObject *RemoveAt(Int_t idx);
    virtual TObject *Remove(TObject *obj);

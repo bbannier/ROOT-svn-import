@@ -16,9 +16,10 @@
  *      Maciej Kruk             <mkruk@cern.ch>         - IFJ PAN & AGH, Poland   *
  *      Jan Therhaag            <therhaag@physik.uni-bonn.de> - Uni Bonn, Germany *
  *                                                                                *
- * Copyright (c) 2008:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
  *      PAN, Poland                                                               *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -78,7 +79,7 @@ void TMVA::MethodLD::Init( void )
 {
    // default initialization called by all constructors
 
-   if (DoRegression()) fNRegOut = DataInfo().GetNTargets();
+   if(DataInfo().GetNTargets()!=0) fNRegOut = DataInfo().GetNTargets();
    else                fNRegOut = 1;
 
    fLDCoeff = new vector< vector< Double_t >* >(fNRegOut);
@@ -132,7 +133,7 @@ void TMVA::MethodLD::Train( void )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodLD::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodLD::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    //Returns the MVA classification output
    const Event* ev = GetEvent();
@@ -150,7 +151,7 @@ Double_t TMVA::MethodLD::GetMvaValue( Double_t* err )
    }
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return (*fRegressionReturnVal)[0];
 }

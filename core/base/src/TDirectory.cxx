@@ -94,6 +94,7 @@ TDirectory::~TDirectory()
    // -- Destructor.
 
    if (!gROOT) {
+      delete fList;
       return; //when called by TROOT destructor
    }
 
@@ -887,10 +888,10 @@ TDirectory *TDirectory::mkdir(const char *name, const char *title)
       strncpy(workname, name, size);
       workname[size] = 0;
       TDirectory *tmpdir = mkdir(workname,title);
+      delete[] workname;
       if (!tmpdir) return 0;
       if (!newdir) newdir = tmpdir;
       tmpdir->mkdir(slash+1);
-      delete[] workname;
       return newdir;
    }
 
@@ -921,10 +922,8 @@ void TDirectory::ls(Option_t *option) const
    TString opta = option;
    TString opt  = opta.Strip(TString::kBoth);
    Bool_t memobj  = kTRUE;
-   Bool_t diskobj = kTRUE;
    TString reg = "*";
    if (opt.BeginsWith("-m")) {
-      diskobj = kFALSE;
       if (opt.Length() > 2)
          reg = opt(2,opt.Length());
    } else if (opt.BeginsWith("-d")) {

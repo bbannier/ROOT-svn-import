@@ -352,7 +352,7 @@ void TMVA::MethodPDERS::Train( void )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodPDERS::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodPDERS::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // init the size of a volume element using a defined fraction of the
    // volume containing the entire events
@@ -367,7 +367,7 @@ Double_t TMVA::MethodPDERS::GetMvaValue( Double_t* err )
    }
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return this->CRScalc( *GetEvent() );
 }
@@ -831,7 +831,7 @@ Double_t TMVA::MethodPDERS::CKernelEstimate( const Event & event,
    // note that rejection ratio goes to 1 as nvar goes to infinity
    if (normalized_distance > 1 && fKernelEstimator != kBox) continue;
 
-   if ( (*iev)->IsSignal() )
+   if ( (*iev)->GetClass()==fSignalClass )
       pdfSumS += ApplyKernelFunction (normalized_distance) * (*iev)->GetWeight();
    else
       pdfSumB += ApplyKernelFunction (normalized_distance) * (*iev)->GetWeight();
@@ -1085,7 +1085,9 @@ void TMVA::MethodPDERS::ReadWeightsFromXML( void* wghtnode)
 {
    if (NULL != fBinaryTree) delete fBinaryTree;
    void* treenode = gTools().GetChild(wghtnode);
-   fBinaryTree = dynamic_cast<BinarySearchTree*>(TMVA::BinaryTree::CreateFromXML(treenode));
+   fBinaryTree = TMVA::BinarySearchTree::CreateFromXML(treenode);
+   if(!fBinaryTree)
+      Log() << kFATAL << "Could not create BinarySearchTree from XML" << Endl;
    if(!fBinaryTree)
       Log() << kFATAL << "Could not create BinarySearchTree from XML" << Endl;
    fBinaryTree->SetPeriode( GetNvar() );

@@ -729,7 +729,7 @@ static void FindGoodLimits(Int_t nbins, Int_t &newbins, Float_t &xmin, Float_t &
 //*-*  This mathod is a straight copy of void TTree::FindGoodLimits method
 //*-*
 
-   Double_t binlow,binhigh,binwidth=0;
+   Double_t binlow=0,binhigh=0,binwidth=0;
    Int_t n;
    Double_t dx = 0.1*(xmax-xmin);
    Double_t umin = xmin - dx;
@@ -1783,9 +1783,6 @@ void TTable::Project(const char *hname, const char *varexp, const char *selectio
    opt += "goff";
 
    Draw(var,selection,opt,nentries,firstentry);
-
-   delete [] var;
-   delete [] opt;
 }
 
 //______________________________________________________________________________

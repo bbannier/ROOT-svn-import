@@ -8,8 +8,7 @@
 #include <stdlib.h>
 
 //ROOT headers
-#include "Math/ProbFunc.h"
-#include "Math/QuantFunc.h"
+#include "Math/DistFuncMathCore.h"
 #include "TBinomialEfficiencyFitter.h"
 #include "TDirectory.h"
 #include "TF1.h"
@@ -288,7 +287,7 @@ ClassImp(TEfficiency)
 //    </td>
 //    </tr>
 //    <tr>
-//    <td>Feldman-Cousins</td><td>kFAC</td>
+//    <td>Feldman-Cousins</td><td>kFFC</td>
 //    <td>
 //     <a href="http://root.cern.ch/root/html/TEfficiency.html#TEfficiency:FeldmanCousins">FeldmanCousins</a>
 //    </td>
@@ -693,6 +692,10 @@ TEfficiency::TEfficiency():
    //should not be used explicitly
    
    SetStatisticOption(kDefStatOpt);
+
+   // create 2 dummy histograms
+   fPassedHistogram = new TH1F("h_passed","passed",10,0,10);
+   fTotalHistogram = new TH1F("h_total","total",10,0,10);
 }
 
 //______________________________________________________________________________
@@ -711,7 +714,7 @@ TEfficiency::TEfficiency(const TH1& passed,const TH1& total):
    //Input: passed - contains the events fullfilling some criteria
    //       total  - contains all investigated events
    //
-   //Notes: - both histograms have to fullfill the conditions of CheckConsistency
+   //Notes: - both histograms have to fullfill the conditions of CheckConsistency (with option 'w')
    //       - dimension of the resulating efficiency object depends
    //         on the dimension of the given histograms
    //       - Clones of both histograms are stored internally
@@ -725,7 +728,7 @@ TEfficiency::TEfficiency(const TH1& passed,const TH1& total):
    //         explicitly to disk by calling Write().
 
    //check consistency of histograms
-   if(CheckConsistency(passed,total)) {
+  if(CheckConsistency(passed,total,"w")) {
        Bool_t bStatus = TH1::AddDirectoryStatus();
        TH1::AddDirectory(kFALSE);
        fTotalHistogram = (TH1*)total.Clone();
@@ -735,6 +738,13 @@ TEfficiency::TEfficiency(const TH1& passed,const TH1& total):
        TString newName = total.GetName();
        newName += TString("_clone");
        SetName(newName);
+
+       // are the histograms filled with weights?
+       if(!CheckEntries(passed,total))
+       {
+	 Info("TEfficiency","given histograms are filled with weights");
+	 SetUseWeightedEvents();
+       }
    }
    else {
       Error("TEfficiency(const TH1&,const TH1&)","histograms are not consistent -> results are useless");
@@ -746,6 +756,9 @@ TEfficiency::TEfficiency(const TH1& passed,const TH1& total):
       fPassedHistogram = new TH1D("h1_passed","h1 (passed)",10,0,10);
       TH1::AddDirectory(bStatus);
    }   
+
+   SetBit(kPosteriorMode,false);
+   SetBit(kShortestInterval,false);
 
    SetStatisticOption(kDefStatOpt);
    SetDirectory(0);
@@ -1005,6 +1018,7 @@ TEfficiency::TEfficiency(const TEfficiency& rEff):
    TAttMarker(),
    fBeta_alpha(rEff.fBeta_alpha),
    fBeta_beta(rEff.fBeta_beta),
+   fBeta_bin_params(rEff.fBeta_bin_params),
    fConfLevel(rEff.fConfLevel),
    fDirectory(0),
    fFunctions(0),
@@ -1043,6 +1057,10 @@ TEfficiency::TEfficiency(const TEfficiency& rEff):
 
    SetDirectory(0);
 
+   SetBit(kPosteriorMode,TestBit(rEff.kPosteriorMode));
+   SetBit(kShortestInterval,TestBit(rEff.kShortestInterval));
+   SetBit(kUseWeights,TestBit(rEff.kUseWeights));
+   
    //copy style
    rEff.TAttLine::Copy(*this);
    rEff.TAttFill::Copy(*this);
@@ -1055,21 +1073,26 @@ TEfficiency::~TEfficiency()
    //default destructor
 
    //delete all function in fFunctions
+   // use same logic as in TH1 destructor 
+   // (see TH1::~TH1 code in TH1.cxx)
    if(fFunctions) {
-      
-      TIter next(fFunctions);
+      fFunctions->SetBit(kInvalidObject);
       TObject* obj = 0;
-      while((obj = next())) {
-	 delete obj;
+      while ((obj  = fFunctions->First())) {
+         while(fFunctions->Remove(obj)) { }
+         if (!obj->TestBit(kNotDeleted)) {
+            break;
+         }
+         delete obj;
+         obj = 0;
       }
-
-      fFunctions->Delete();
+      delete fFunctions;
+      fFunctions = 0;
    }
 
    if(fDirectory)
       fDirectory->Remove(this);
    
-   delete fFunctions;
    delete fTotalHistogram;
    delete fPassedHistogram;
    delete fPaintGraph;
@@ -1122,12 +1145,12 @@ Double_t TEfficiency::FeldmanCousins(Int_t total,Int_t passed,Double_t level,Boo
    //
    Double_t lower = 0; 
    Double_t upper = 1;
-   if (!FeldmanCousinsInterval(total,passed,level, upper,lower)) { 
+   if (!FeldmanCousinsInterval(total,passed,level, lower, upper)) { 
       ::Error("FeldmanCousins","Error running FC method - return 0 or 1");
    }
    return (bUpper) ? upper : lower; 
 }
-Bool_t TEfficiency::FeldmanCousinsInterval(Int_t total,Int_t passed,Double_t level,Double_t & upper, Double_t & lower)
+Bool_t TEfficiency::FeldmanCousinsInterval(Int_t total,Int_t passed,Double_t level,Double_t & lower, Double_t & upper)
 {
    //calculates the interval boundaries using the frequentist methods of Feldman-Cousins
    //
@@ -1303,7 +1326,7 @@ Bool_t TEfficiency::BetaShortestInterval(Double_t level,Double_t a,Double_t b, D
    // special case when the shortest interval is undefined  return the central interval
    // can happen for a posterior when passed=total=0
    //
-   if ( a==b && a<1.0) { 
+   if ( a==b && a<=1.0) { 
       lower = BetaCentralInterval(level,a,b,kFALSE);
       upper = BetaCentralInterval(level,a,b,kTRUE);
       return kTRUE;
@@ -1389,6 +1412,10 @@ void TEfficiency::Build(const char* name,const char* title)
    SetStatisticOption(kDefStatOpt);
    SetDirectory(gDirectory);
 
+   SetBit(kPosteriorMode,false);
+   SetBit(kShortestInterval,false);
+   SetBit(kUseWeights,false);
+   
    //set normalisation factors to 0, otherwise the += may not work properly
    fPassedHistogram->SetNormFactor(0);
    fTotalHistogram->SetNormFactor(0);
@@ -1421,15 +1448,21 @@ Bool_t TEfficiency::CheckBinning(const TH1& pass,const TH1& total)
 	 break;
       }
       
-      if(ax1->GetNbins() != ax2->GetNbins())
+      if(ax1->GetNbins() != ax2->GetNbins()) {
+         gROOT->Info("TEfficiency::CheckBinning","Histograms are not consistent: they have different number of bins");
 	 return false;
+      }
 
       for(Int_t i = 1; i <= ax1->GetNbins() + 1; ++i)
-         if(!TMath::AreEqualRel(ax1->GetBinLowEdge(i), ax2->GetBinLowEdge(i), 1.E-15))
+         if(!TMath::AreEqualRel(ax1->GetBinLowEdge(i), ax2->GetBinLowEdge(i), 1.E-15)) {
+            gROOT->Info("TEfficiency::CheckBinning","Histograms are not consistent: they have different bin edges");
 	    return false;
+         }
 
-      if(!TMath::AreEqualRel(ax1->GetXmax(), ax2->GetXmax(), 1.E-15))
+      if(!TMath::AreEqualRel(ax1->GetXmax(), ax2->GetXmax(), 1.E-15)) {
+         gROOT->Info("TEfficiency::CheckBinning","Histograms are not consistent: they have different axis max value");
          return false;
+      }
 
 
    }
@@ -1497,8 +1530,10 @@ Bool_t TEfficiency::CheckEntries(const TH1& pass,const TH1& total,Option_t* opt)
 
       //require: sum of weights == sum of weights^2
       if((TMath::Abs(statpass[0]-statpass[1]) > 1e-5) ||
-	 (TMath::Abs(stattotal[0]-stattotal[1]) > 1e-5))
+	 (TMath::Abs(stattotal[0]-stattotal[1]) > 1e-5)) {
+         gROOT->Info("TEfficiency::CheckEntries","Histograms are filled with weights");
 	 return false;
+      }
    }
    
    //check: pass <= total
@@ -1516,8 +1551,10 @@ Bool_t TEfficiency::CheckEntries(const TH1& pass,const TH1& total,Option_t* opt)
    }
    
    for(Int_t i = 0; i < nbins; ++i) {
-      if(pass.GetBinContent(i) > total.GetBinContent(i))
+      if(pass.GetBinContent(i) > total.GetBinContent(i)) {
+         gROOT->Info("TEfficiency::CheckEntries","Histograms are not consistent: passed bin content > total bin content");
 	 return false;
+      }
    }
 
    return true;
@@ -1936,7 +1973,23 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
 }
 
 //______________________________________________________________________________
-void TEfficiency::Draw(const Option_t* opt)
+Int_t TEfficiency::DistancetoPrimitive(Int_t px, Int_t py)
+{
+   // Compute distance from point px,py to a graph.
+   //
+   //  Compute the closest distance of approach from point px,py to this line.
+   //  The distance is computed in pixels units.
+   //
+   // Forward the call to the painted graph
+   
+   if (fPaintGraph) return fPaintGraph->DistancetoPrimitive(px,py);
+   if (fPaintHisto) return fPaintHisto->DistancetoPrimitive(px,py);
+   return 0;
+}
+
+
+//______________________________________________________________________________
+void TEfficiency::Draw(Option_t* opt)
 {
    //draws the current TEfficiency object
    //
@@ -1953,11 +2006,29 @@ void TEfficiency::Draw(const Option_t* opt)
    //check options
    TString option = opt;
    option.ToLower();
+   // use by default "AP"
+   if (option.IsNull() ) option = "ap"; 
 
    if(gPad && !option.Contains("same"))
       gPad->Clear();
 
    AppendPad(option.Data());
+}
+
+//______________________________________________________________________________
+void TEfficiency::ExecuteEvent(Int_t event, Int_t px, Int_t py)
+{
+   // Execute action corresponding to one event.
+   //
+   //  This member function is called when the drawn class is clicked with the locator
+   //  If Left button clicked on one of the line end points, this point
+   //     follows the cursor until button is released.
+   //
+   //  if Middle button clicked, the line is moved parallel to itself
+   //     until the button is released.
+   // Forward the call to the underlying graph
+   if (fPaintGraph) fPaintGraph->ExecuteEvent(event,px,py);
+   else if (fPaintHisto) fPaintHisto->ExecuteEvent(event,px,py);
 }
 
 //______________________________________________________________________________
@@ -1974,19 +2045,59 @@ void TEfficiency::Fill(Bool_t bPassed,Double_t x,Double_t y,Double_t z)
 
    switch(GetDimension()) {
    case 1:
-      fTotalHistogram->Fill(x);
+     fTotalHistogram->Fill(x);
       if(bPassed)
-	 fPassedHistogram->Fill(x);
+	fPassedHistogram->Fill(x);
       break;
    case 2:
       ((TH2*)(fTotalHistogram))->Fill(x,y);
       if(bPassed)
-	 ((TH2*)(fPassedHistogram))->Fill(x,y);
+	((TH2*)(fPassedHistogram))->Fill(x,y);
       break;
    case 3:
       ((TH3*)(fTotalHistogram))->Fill(x,y,z);
       if(bPassed)
-	 ((TH3*)(fPassedHistogram))->Fill(x,y,z);
+	((TH3*)(fPassedHistogram))->Fill(x,y,z);
+      break;
+   }
+}
+
+//______________________________________________________________________________
+void TEfficiency::FillWeighted(Bool_t bPassed,Double_t weight,Double_t x,Double_t y,Double_t z)
+{
+   //This function is used for filling the two histograms with a weight.
+   //
+   //Input: bPassed - flag whether the current event passed the selection
+   //                 true: both histograms are filled
+   //                 false: only the total histogram is filled
+   //       weight  - weight for the event
+   //       x       - x value
+   //       y       - y value (use default=0 for 1-D efficiencies)
+   //       z       - z value (use default=0 for 2-D or 1-D efficiencies)
+   //
+   //Note: - this function will call SetUseWeightedEvents if it was not called by the user before
+
+  if(!TestBit(kUseWeights))
+  {
+    Info("FillWeighted","call SetUseWeightedEvents() manually to ensure correct storage of sum of weights squared");
+    SetUseWeightedEvents();
+  }
+  
+  switch(GetDimension()) {
+   case 1:
+     fTotalHistogram->Fill(x,weight);
+      if(bPassed)
+	fPassedHistogram->Fill(x,weight);
+      break;
+   case 2:
+     ((TH2*)(fTotalHistogram))->Fill(x,y,weight);
+      if(bPassed)
+	((TH2*)(fPassedHistogram))->Fill(x,y,weight);
+      break;
+   case 3:
+     ((TH3*)(fTotalHistogram))->Fill(x,y,z,weight);
+      if(bPassed)
+	((TH3*)(fPassedHistogram))->Fill(x,y,z,weight);
       break;
    }
 }
@@ -2053,6 +2164,10 @@ Int_t TEfficiency::Fit(TF1* f1,Option_t* opt)
 	 }
       }      
    }
+
+   // create list if necessary
+   if(!fFunctions)
+     fFunctions = new TList();
    
    fFunctions->Add(pFunc);
    
@@ -2150,8 +2265,8 @@ Double_t TEfficiency::GetEfficiency(Int_t bin) const
    //      - When  Begin_Latex passed + #alpha < 1 End_Latex or Begin_Latex total - passed + #beta < 1 End_latex the above 
    //        formula for the mode is not valid. In these cases values the estimated efficiency is 0 or 1.  
 
-   Int_t total = (Int_t)fTotalHistogram->GetBinContent(bin);
-   Int_t passed = (Int_t)fPassedHistogram->GetBinContent(bin);
+   Double_t total = fTotalHistogram->GetBinContent(bin);
+   Double_t passed = fPassedHistogram->GetBinContent(bin);
       
    if(TestBit(kIsBayesian)) { 
 
@@ -2159,10 +2274,28 @@ Double_t TEfficiency::GetEfficiency(Int_t bin) const
       Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
       Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
 
+      Double_t aa,bb;
+      if(TestBit(kUseWeights))
+      {
+	Double_t tw =  fTotalHistogram->GetBinContent(bin);
+	Double_t tw2 = fTotalHistogram->GetSumw2()->At(bin);
+	Double_t pw =  fPassedHistogram->GetBinContent(bin);
+
+	// tw/tw2 renormalize the weights
+	double norm = (tw2 > 0) ? tw/tw2 : 0.;
+	aa =  pw * norm + alpha;
+	bb =  (tw - pw) * norm + beta;	
+      }
+      else
+      {
+	aa = passed + alpha;
+	bb = total - passed + beta;
+      }
+      
       if (!TestBit(kPosteriorMode) ) 
-         return BetaMean(double(passed) + alpha , double(total-passed) + beta);
+         return BetaMean(aa,bb);
       else  
-         return BetaMode(double(passed) + alpha , double(total-passed) + beta);
+         return BetaMode(aa,bb);
 
    } 
    else
@@ -2177,19 +2310,73 @@ Double_t TEfficiency::GetEfficiencyErrorLow(Int_t bin) const
    //The result depends on the current confidence level fConfLevel and the
    //chosen statistic option fStatisticOption. See SetStatisticOption(Int_t) for
    //more details.
+   //
+   //Note: If the histograms are filled with weights, only bayesian methods and the
+   //      normal approximation are supported.
 
    Int_t total = (Int_t)fTotalHistogram->GetBinContent(bin);
    Int_t passed = (Int_t)fPassedHistogram->GetBinContent(bin);
 
    Double_t eff = GetEfficiency(bin);
-   // parameters for the beta prior distribution
-   Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
-   Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
 
-   if(TestBit(kIsBayesian))
-      return (eff - Bayesian(total,passed,fConfLevel,alpha,beta,false,TestBit(kShortestInterval)));
+   // check whether weights have been used
+   if(TestBit(kUseWeights))
+   {
+     Double_t tw =  fTotalHistogram->GetBinContent(bin);
+     Double_t tw2 = fTotalHistogram->GetSumw2()->At(bin);
+     Double_t pw =  fPassedHistogram->GetBinContent(bin);
+     Double_t pw2 = fPassedHistogram->GetSumw2()->At(bin);
+     
+     if(TestBit(kIsBayesian))
+     {
+       Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
+       Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
+
+       // tw/tw2 renormalize the weights
+       Double_t norm = (tw2 > 0) ? tw/tw2 : 0.;
+       Double_t aa =  pw * norm + alpha;
+       Double_t bb =  (tw - pw) * norm + beta;
+       Double_t low = 0;
+       Double_t upper = 1;
+       if(TestBit(kShortestInterval)) {
+	 TEfficiency::BetaShortestInterval(fConfLevel,aa,bb,low,upper);
+       }
+       else {
+	 low = TEfficiency::BetaCentralInterval(fConfLevel,aa,bb,false);
+       }
+       
+       return eff - low;
+     }
+     else
+     {
+       if(fStatisticOption != kFNormal)
+       {
+	 Warning("GetEfficiencyErrorLow","frequentist confidence intervals for weights are only supported by the normal approximation");
+	 Info("GetEfficiencyErrorLow","setting statistic option to kFNormal");
+	 const_cast<TEfficiency*>(this)->SetStatisticOption(kFNormal);	 
+       }
+
+       Double_t variance = ( pw2 * (1. - 2 * eff) + tw2 * eff *eff ) / ( tw * tw) ;
+       Double_t sigma = sqrt(variance);
+
+       Double_t prob = 0.5 * (1.- fConfLevel);
+       Double_t delta = ROOT::Math::normal_quantile_c(prob, sigma);
+
+       return (eff - delta > 0) ? delta : 0;
+     }
+   }
    else
-      return (eff - fBoundary(total,passed,fConfLevel,false));
+   {
+     if(TestBit(kIsBayesian))
+     {
+       // parameters for the beta prior distribution
+       Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
+       Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
+       return (eff - Bayesian(total,passed,fConfLevel,alpha,beta,false,TestBit(kShortestInterval)));
+     }
+     else
+       return (eff - fBoundary(total,passed,fConfLevel,false));
+   }
 }
 
 //______________________________________________________________________________
@@ -2200,19 +2387,73 @@ Double_t TEfficiency::GetEfficiencyErrorUp(Int_t bin) const
    //The result depends on the current confidence level fConfLevel and the
    //chosen statistic option fStatisticOption. See SetStatisticOption(Int_t) for
    //more details.
+   //
+   //Note: If the histograms are filled with weights, only bayesian methods and the
+   //      normal approximation are supported.
    
    Int_t total = (Int_t)fTotalHistogram->GetBinContent(bin);
    Int_t passed = (Int_t)fPassedHistogram->GetBinContent(bin);
 
    Double_t eff = GetEfficiency(bin);
-   // parameters for the beta prior distribution
-   Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
-   Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
 
-   if(TestBit(kIsBayesian))
-      return (Bayesian(total,passed,fConfLevel,alpha,beta,true,TestBit(kShortestInterval)) - eff);
+   // check whether weights have been used
+   if(TestBit(kUseWeights))
+   {
+     Double_t tw =  fTotalHistogram->GetBinContent(bin);
+     Double_t tw2 = fTotalHistogram->GetSumw2()->At(bin);
+     Double_t pw =  fPassedHistogram->GetBinContent(bin);
+     Double_t pw2 = fPassedHistogram->GetSumw2()->At(bin);     
+     
+     if(TestBit(kIsBayesian))
+     {
+       Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
+       Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
+
+       // tw/tw2 renormalize the weights
+       Double_t norm = (tw2 > 0) ? tw/tw2 : 0.;
+       Double_t aa =  pw * norm + alpha;
+       Double_t bb =  (tw - pw) * norm + beta;
+       Double_t low = 0;
+       Double_t upper = 1;
+       if(TestBit(kShortestInterval)) {
+	 TEfficiency::BetaShortestInterval(fConfLevel,aa,bb,low,upper);
+       }
+       else {
+	 upper = TEfficiency::BetaCentralInterval(fConfLevel,aa,bb,true);
+       }
+       
+       return upper - eff;
+     }
+     else
+     {
+       if(fStatisticOption != kFNormal)
+       {
+	 Warning("GetEfficiencyErrorUp","frequentist confidence intervals for weights are only supported by the normal approximation");
+	 Info("GetEfficiencyErrorUp","setting statistic option to kFNormal");
+	 const_cast<TEfficiency*>(this)->SetStatisticOption(kFNormal);	 
+       }
+       
+       Double_t variance = ( pw2 * (1. - 2 * eff) + tw2 * eff *eff ) / ( tw * tw) ;
+       Double_t sigma = sqrt(variance);
+
+       Double_t prob = 0.5 * (1.- fConfLevel);
+       Double_t delta = ROOT::Math::normal_quantile_c(prob, sigma);
+
+       return (eff + delta < 1) ? delta : 1;
+     }
+   }
    else
-      return fBoundary(total,passed,fConfLevel,true) - eff;
+   {
+     if(TestBit(kIsBayesian))
+     {
+       // parameters for the beta prior distribution
+       Double_t alpha = TestBit(kUseBinPrior) ? GetBetaAlpha(bin) : GetBetaAlpha(); 
+       Double_t beta  = TestBit(kUseBinPrior) ? GetBetaBeta(bin)  : GetBetaBeta();
+       return (Bayesian(total,passed,fConfLevel,alpha,beta,true,TestBit(kShortestInterval)) - eff);
+     }
+     else
+       return fBoundary(total,passed,fConfLevel,true) - eff;
+   }
 }
 
 //______________________________________________________________________________
@@ -2231,7 +2472,13 @@ Int_t TEfficiency::GetGlobalBin(Int_t binx,Int_t biny,Int_t binz) const
 }
 
 //______________________________________________________________________________
-void TEfficiency::Merge(TCollection* pList)
+TList* TEfficiency::GetListOfFunctions()
+{
+   return (fFunctions) ? fFunctions : fFunctions = new TList();
+}
+
+//______________________________________________________________________________
+Long64_t TEfficiency::Merge(TCollection* pList)
 {
    //merges the TEfficiency objects in the given list to the given
    //TEfficiency object using the operator+=(TEfficiency&)
@@ -2245,17 +2492,18 @@ void TEfficiency::Merge(TCollection* pList)
    //The new weight is set according to:
    //Begin_Latex #frac{1}{w_{new}} = #sum_{i} \frac{1}{w_{i}}End_Latex 
    
-   if(pList->IsEmpty())
-      return;
-   
-   TIter next(pList);
-   TObject* obj = 0;
-   TEfficiency* pEff = 0;
-   while((obj = next())) {
-      pEff = dynamic_cast<TEfficiency*>(obj);
-      if(pEff)
-	 *this += *pEff;
+   if(!pList->IsEmpty()) {   
+      TIter next(pList);
+      TObject* obj = 0;
+      TEfficiency* pEff = 0;
+      while((obj = next())) {
+         pEff = dynamic_cast<TEfficiency*>(obj);
+         if(pEff) {
+            *this += *pEff;
+         }
+      }
    }
+   return (Long64_t)fTotalHistogram->GetEntries();
 }
 
 //______________________________________________________________________________
@@ -2390,6 +2638,18 @@ void TEfficiency::Paint(const Option_t* opt)
    //paints this TEfficiency object
    //
    //For details on the possible option see Draw(Option_t*)
+   //
+   // Note for 1D classes
+   // In 1D the TEfficiency uses a TGraphAsymmErrors for drawing
+   // The TGraph is created only the first time Paint is used. The user can manipulate the 
+   // TGraph via the method TEfficiency::GetPaintedGraph()
+   // The TGraph creates behing an histogram for the axis. The histogram is created also only the first time.
+   // If the axis needs to be updated because in the meantime the class changed use this trick  
+   // which will trigger a re-calculation of the axis of the graph
+   // TEfficiency::GetPaintedGraph()->Set(0)
+   //
+
+
    
    if(!gPad)
       return;
@@ -2407,32 +2667,61 @@ void TEfficiency::Paint(const Option_t* opt)
 	 fPaintGraph = new TGraphAsymmErrors(npoints);
 	 fPaintGraph->SetName("eff_graph");
       }
-      //refresh title before painting
-      fPaintGraph->SetTitle(GetTitle());
 
       //errors for points
-      Double_t xlow,xup,ylow,yup;
+             Double_t x,y,xlow,xup,ylow,yup;
       //point i corresponds to bin i+1 in histogram   
       // point j is point graph index
+      // LM: cannot use TGraph::SetPoint because it deletes the underlying
+      // histogram  each time (see TGraph::SetPoint)  
+      // so use it only when extra points are added to the graph
       Int_t j = 0;
+      double * px = fPaintGraph->GetX();
+      double * py = fPaintGraph->GetY(); 
+      double * exl = fPaintGraph->GetEXlow();
+      double * exh = fPaintGraph->GetEXhigh();
+      double * eyl = fPaintGraph->GetEYlow();
+      double * eyh = fPaintGraph->GetEYhigh();
       for (Int_t i = 0; i < npoints; ++i) {
-         if (!plot0Bins && fTotalHistogram->GetBinContent(i+1) == 0 ) continue;
-	 fPaintGraph->SetPoint(j,fTotalHistogram->GetBinCenter(i+1),GetEfficiency(i+1));
+         if (!plot0Bins && fTotalHistogram->GetBinContent(i+1) == 0 )    continue;
+         x = fTotalHistogram->GetBinCenter(i+1);
+         y = GetEfficiency(i+1);
 	 xlow = fTotalHistogram->GetBinCenter(i+1) - fTotalHistogram->GetBinLowEdge(i+1);
 	 xup = fTotalHistogram->GetBinWidth(i+1) - xlow;
 	 ylow = GetEfficiencyErrorLow(i+1);
 	 yup = GetEfficiencyErrorUp(i+1);
-	 fPaintGraph->SetPointError(j,xlow,xup,ylow,yup);
+         // in the case the graph already existed and extra points have been added 
+         if (j >= fPaintGraph->GetN() ) { 
+            fPaintGraph->SetPoint(j,x,y);
+            fPaintGraph->SetPointError(j,xlow,xup,ylow,yup);
+         }
+         else { 
+            px[j] = x;
+            py[j] = y;
+            exl[j] = xlow;
+            exh[j] = xup; 
+            eyl[j] = ylow; 
+            eyh[j] = yup;
+         }
          j++;
       }
+
       // tell the graph the effective number of points 
       fPaintGraph->Set(j);
-      fPaintGraph->SetMaximum(1);
+      //refresh title before painting if changed 
+      TString oldTitle = fPaintGraph->GetTitle(); 
+      TString newTitle = GetTitle();
+      if (oldTitle != newTitle )
+         fPaintGraph->SetTitle(newTitle);
 
       //copying style information
       TAttLine::Copy(*fPaintGraph);
       TAttFill::Copy(*fPaintGraph);
       TAttMarker::Copy(*fPaintGraph);
+
+      // this method forces the graph to compute correctly the axis
+      // according to the given points
+      fPaintGraph->GetHistogram();
       
       //paint graph      
       fPaintGraph->Paint(option.Data());
@@ -2458,9 +2747,24 @@ void TEfficiency::Paint(const Option_t* opt)
    if(GetDimension() == 2) {
       Int_t nbinsx = fTotalHistogram->GetNbinsX();
       Int_t nbinsy = fTotalHistogram->GetNbinsY();
+      TAxis * xaxis = fTotalHistogram->GetXaxis();
+      TAxis * yaxis = fTotalHistogram->GetYaxis();
       if(!fPaintHisto) {
-	 fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,fTotalHistogram->GetXaxis()->GetXbins()->GetArray(),
-				nbinsy,fTotalHistogram->GetYaxis()->GetXbins()->GetArray());
+         if (xaxis->IsVariableBinSize() && yaxis->IsVariableBinSize() ) 
+            fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,xaxis->GetXbins()->GetArray(),
+                                   nbinsy,yaxis->GetXbins()->GetArray());
+         else if (xaxis->IsVariableBinSize() && ! yaxis->IsVariableBinSize() )
+            fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,xaxis->GetXbins()->GetArray(),
+                                   nbinsy,yaxis->GetXmin(), yaxis->GetXmax());
+         else if (!xaxis->IsVariableBinSize() &&  yaxis->IsVariableBinSize() )
+            fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,xaxis->GetXmin(), xaxis->GetXmax(),
+                                   nbinsy,yaxis->GetXbins()->GetArray());
+         else 
+            fPaintHisto = new TH2F("eff_histo",GetTitle(),nbinsx,xaxis->GetXmin(), xaxis->GetXmax(),
+                                   nbinsy,yaxis->GetXmin(), yaxis->GetXmax());
+         
+
+
 	 fPaintHisto->SetDirectory(0);
       }
       //refresh title before each painting
@@ -2601,6 +2905,17 @@ void TEfficiency::SavePrimitive(ostream& out,Option_t* opt)
    out << indent << name << "->SetWeight(" << fWeight << ");" << std::endl;
    out << indent << name << "->SetStatisticOption(" << fStatisticOption << ");"
        << std::endl;
+   out << indent << name << "->SetPosteriorMode(" << TestBit(kPosteriorMode) << ");" << std::endl;
+   out << indent << name << "->SetShortestInterval(" << TestBit(kShortestInterval) << ");" << std::endl;
+   if(TestBit(kUseWeights))
+     out << indent << name << "->SetUseWeightedEvents();" << std::endl;
+
+   // save bin-by-bin prior parameters
+   for(unsigned int i = 0; i < fBeta_bin_params.size(); ++i)
+   {
+     out << indent << name << "->SetBetaBinParameters(" << i << "," << fBeta_bin_params.at(i).first
+	 << "," << fBeta_bin_params.at(i).second << ");" << std::endl;
+   }
 
    //set bin contents
    Int_t nbins = fTotalHistogram->GetNbinsX() + 2;
@@ -2689,6 +3004,7 @@ void TEfficiency::SetBetaBinParameters(Int_t bin, Double_t alpha, Double_t beta)
    //End_Latex
    //
    //Note: - both shape parameters have to be positive (i.e. > 0)
+   //      - bin gives the global bin number (cf. GetGlobalBin)
 
    if (!fPassedHistogram || !fTotalHistogram) return;
    TH1 * h1 = fTotalHistogram;
@@ -2744,7 +3060,7 @@ void TEfficiency::SetName(const char* name)
 {
    //sets the name
    //
-   //Note: The names of the internal histograms are set to "name + _total" or
+   //Note: The names of the internal histograms are set to "name + _total" and
    //      "name + _passed" respectively.
    
    TNamed::SetName(name);
@@ -2802,7 +3118,7 @@ Bool_t TEfficiency::SetPassedHistogram(const TH1& rPassed,Option_t* opt)
    Bool_t bReplace = option.Contains("f");
 
    if(!bReplace)
-      bReplace = CheckConsistency(rPassed,*fTotalHistogram);
+     bReplace = CheckConsistency(rPassed,*fTotalHistogram,"w");
 
    if(bReplace) {
       delete fPassedHistogram;
@@ -2814,6 +3130,13 @@ Bool_t TEfficiency::SetPassedHistogram(const TH1& rPassed,Option_t* opt)
 
       if(fFunctions)
 	 fFunctions->Delete();
+
+      //check whether histogram is filled with weights
+      Double_t statpass[10];
+      rPassed.GetStats(statpass);
+      //require: sum of weights == sum of weights^2
+      if(TMath::Abs(statpass[0]-statpass[1]) > 1e-5)
+	SetUseWeightedEvents();
 
       return true;
    }
@@ -2980,7 +3303,7 @@ Bool_t TEfficiency::SetTotalHistogram(const TH1& rTotal,Option_t* opt)
    Bool_t bReplace = option.Contains("f");
 
    if(!bReplace)
-      bReplace = CheckConsistency(*fPassedHistogram,rTotal);
+     bReplace = CheckConsistency(*fPassedHistogram,rTotal,"w");
 
    if(bReplace) {
       delete fTotalHistogram;
@@ -2993,10 +3316,25 @@ Bool_t TEfficiency::SetTotalHistogram(const TH1& rTotal,Option_t* opt)
       if(fFunctions)
 	 fFunctions->Delete();
 
+      //check whether histogram is filled with weights
+      Double_t stattotal[10];
+      rTotal.GetStats(stattotal);
+      //require: sum of weights == sum of weights^2
+      if(TMath::Abs(stattotal[0]-stattotal[1]) > 1e-5)
+	SetUseWeightedEvents();
+
       return true;
    }
    else
       return false;
+}
+
+//______________________________________________________________________________
+void TEfficiency::SetUseWeightedEvents()
+{
+  SetBit(kUseWeights,true);
+  fTotalHistogram->Sumw2();
+  fPassedHistogram->Sumw2();
 }
 
 //______________________________________________________________________________

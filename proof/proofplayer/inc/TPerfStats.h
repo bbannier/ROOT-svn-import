@@ -25,6 +25,9 @@
 #ifndef ROOT_TObject
 #include "TObject.h"
 #endif
+#ifndef ROOT_TObjArray
+#include "TObjArray.h"
+#endif
 #ifndef ROOT_TTimeStamp
 #include "TTimeStamp.h"
 #endif
@@ -36,12 +39,11 @@
 #endif
 
 
-class TTree;
+class TDSet;
 class TH1D;
 class TH2D;
 class TList;
-class TVirtualMonitoringWriter;
-
+class TTree;
 
 class TPerfEvent : public TObject {
 
@@ -76,6 +78,8 @@ public:
 
 class TPerfStats : public TVirtualPerfStats {
 
+friend class TProofMonSender;
+   
 private:
    TTree         *fTrace;        //!TTree with trace events
    TTimeStamp     fTzero;        //!start time of this run
@@ -98,14 +102,25 @@ private:
    Bool_t         fDoTraceRate;  //!Trace processing rate in master
    Bool_t         fDoSlaveTrace; //!Full tracing in workers
    Bool_t         fDoQuota;      //!Save stats on SQL server for quota management
+   
+   Bool_t         fMonitorPerPacket; //!Whether to send the full entry per each packet 
 
-   TVirtualMonitoringWriter *fMonitoringWriter; //!Monitoring engine
+   TObjArray      fMonSenders;   //!Monitoring engines
+
+   TString        fDataSet;      //!Dataset string
+   Int_t          fDataSetLen;   //!Maximum size of the dataset string fDataSet 
+   Int_t          fDataSetSize;  //!# of files in the dataset 
+   TDSet         *fDSet;         //!Saved pointer to the TDSet object
+   TList         *fOutput;       //!Saved pointer to the output list 
+
+   static Long_t  fgVirtMemMax;   //! Max virtual memory used by this process
+   static Long_t  fgResMemMax;    //! Max resident memory used by this process
 
    TPerfStats(TList *input, TList *output);
    void WriteQueryLog();
 
 public:
-   virtual ~TPerfStats() {}
+   virtual ~TPerfStats();
 
    void SimpleEvent(EEventType type);
    void PacketEvent(const char *slave, const char *slavename, const char *filename,
@@ -116,6 +131,7 @@ public:
 
    void FileOpenEvent(TFile *file, const char *filename, Double_t start);
    void FileReadEvent(TFile *file, Int_t len, Double_t start);
+   void FileUnzipEvent(TFile *file, Long64_t pos, Double_t start, Int_t complen, Int_t objlen);
    void RateEvent(Double_t proctime, Double_t deltatime,
                   Long64_t eventsprocessed, Long64_t bytesRead);
    void SetBytesRead(Long64_t num);
@@ -126,6 +142,8 @@ public:
    static void Start(TList *input, TList *output);
    static void Stop();
    static void Setup(TList *input);
+   static void SetMemValues();
+   static void GetMemValues(Long_t &vmax, Long_t &rmax);
 
    ClassDef(TPerfStats,0)  // Class for collecting PROOF statistics
 };

@@ -45,16 +45,23 @@ public:
   virtual void findConstantNodes(const RooArgSet& /*obs*/, RooArgSet& /*cacheList*/, RooLinkedList& /*processedNodes*/) ;
 
   virtual void insertObjectHook(RooAbsCacheElement&) ;
+
+  void sterilize() ;
+
+  static void doClearObsList(Bool_t flag) { _clearObsList = flag ; }
+  static Bool_t clearObsList() { return _clearObsList ; }
  
 protected:
 
   Bool_t _clearOnRedirect ;
-  Bool_t _optCacheModeSeen  ;
+  Bool_t _optCacheModeSeen  ;              //! 
 
   std::list<RooArgSet*> _optCacheObsList ; //! list of all optCacheObservables owned
   RooArgSet* _optCacheObservables ;        //! current optCacheObservables 
+
+  static Bool_t _clearObsList ; // Clear obslist on sterilize?
   
-  ClassDef(RooObjCacheManager,1) // Cache manager for generic caches that contain RooAbsArg objects
+  ClassDef(RooObjCacheManager,2) // Cache manager for generic caches that contain RooAbsArg objects
 } ;
 
 

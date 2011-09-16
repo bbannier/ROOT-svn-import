@@ -335,7 +335,8 @@ struct CmsPrepAddRequest
 enum  {kYR_stage   = 0x0001, // Stage   the data
        kYR_write   = 0x0002, // Prepare for writing
        kYR_coloc   = 0x0004, // Prepare for co-location
-       kYR_fresh   = 0x0008  // Prepare by  time refresh
+       kYR_fresh   = 0x0008, // Prepare by  time refresh
+       kYR_metaman = 0x0010  // Prepare via meta-manager
       };
 //     kXR_string    Ident;
 //     kXR_string    reqid;
@@ -397,6 +398,7 @@ struct CmsRmdirRequest
 // kYR_delete  d - file will be created or truncated
 // kYR_metaop  m - inod will only be modified
 // kYR_read    r - file will only be read
+// kYR_replica   - file will replicated
 // kYR_write   w - file will be read and writen
 // kYR_stats   s - only stat information will be obtained
 // kYR_online  x - consider only online files
@@ -416,7 +418,8 @@ enum  {kYR_refresh = 0x0001,
        kYR_trunc   = 0x0010, // -> write
        kYR_write   = 0x0020,
        kYR_stat    = 0x0040, // Exclsuive
-       kYR_metaop  = 0x0080
+       kYR_metaop  = 0x0080,
+       kYR_replica = 0x0100  // Only in combination with create
       };
 //     kXR_string    Path;
 //     kXR_string    Opaque; // Optional
@@ -446,7 +449,8 @@ struct CmsStateRequest
 //     kXR_string    Path;
 
 enum  {kYR_refresh = 0x01,   // Modifier
-       kYR_noresp  = 0x02
+       kYR_noresp  = 0x02,
+       kYR_metaman = 0x08
       };
 };
   

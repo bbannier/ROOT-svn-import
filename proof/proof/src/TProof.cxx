@@ -107,7 +107,7 @@ Bool_t TProofInterruptHandler::Notify()
 
    } else {
       // Real stop or request to switch to asynchronous?
-      char *a = 0;
+      const char *a = 0;
       if (fProof->GetRemoteProtocol() < 22) {
          a = Getline("\nSwith to asynchronous mode not supported remotely:"
                      "\nEnter S/s to stop, Q/q to quit, any other key to continue: ");
@@ -244,34 +244,6 @@ void TSlaveInfo::SetSysInfo(SysInfo_t si)
    fSysInfo.fPhysRam  = si.fPhysRam;     // Physical RAM
 }
 
-//------------------------------------------------------------------------------
-
-//______________________________________________________________________________
-static char *CollapseSlashesInPath(const char *path)
-{
-   // Get rid of spare slashes in a path. Returned path must be deleted[]
-   // by the user.
-
-   if (path) {
-      Int_t i = 1; // current index as we go along the string
-      Int_t j = 0; // current end of new path in newPath
-      char *newPath = new char [strlen(path) + 1];
-      newPath[0] = path[0];
-      while (path[i]) {
-         if (path[i] != '/' || newPath[j] != '/') {
-            j++;
-            newPath[j] = path[i];
-         }
-         i++;
-      }
-      if (newPath[j] != '/')
-         j++;
-      newPath[j] = 0; // We have to terminate the new path.
-      return newPath;
-   }
-   return 0;
-}
-
 ClassImp(TProof)
 
 TSemaphore    *TProof::fgSemaphore = 0;
@@ -333,6 +305,42 @@ Bool_t TMergerInfo::AreAllWorkersAssigned()
       return (fWorkers->GetSize() == fWorkersToMerge);
 }
 
+//______________________________________________________________________________
+static Int_t PoDCheckUrl(TString *_cluster)
+{
+   // This a private API function.
+   // It checks whether the connection string contains a PoD cluster protocol. 
+   // If it does, then the connection string will be changed to reflect
+   // a real PROOF connection string for a PROOF cluster managed by PoD.
+   // PoD: http://pod.gsi.de .
+   // Return -1 if the PoD request failed; return 0 otherwise.
+
+   if ( !_cluster )
+      return 0;
+
+   // trim spaces from both sides of the string
+   *_cluster = _cluster->Strip( TString::kBoth );
+   // PoD protocol string
+   const TString pod_prot("pod");
+
+   // URL test
+   // TODO: The URL test is to support remote PoD servers (not managed by pod-remote)
+   TUrl url( _cluster->Data() );
+   if( pod_prot.CompareTo(url.GetProtocol(), TString::kIgnoreCase) )
+      return 0;
+
+   // PoD cluster is used
+   // call pod-info in a batch mode (-b).
+   // pod-info will find either a local PoD cluster or
+   // a remote one, manged by pod-remote.
+   *_cluster = gSystem->GetFromPipe("pod-info -c -b");
+   if( 0 == _cluster->Length() ) {
+      Error("PoDCheckUrl", "PoD server is not running");
+      return -1;
+   }
+   return 0;
+}
+
 //------------------------------------------------------------------------------
 TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
                Int_t loglevel, const char *alias, TProofMgr *mgr)
@@ -373,7 +381,6 @@ TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
    } else if (!(strstr(masterurl, "://"))) {
       fUrl.SetProtocol("proof");
    }
-
    // Port
    if (fUrl.GetPort() == TUrl(" ").GetPort())
       fUrl.SetPort(TUrl("proof:// ").GetPort());
@@ -423,6 +430,9 @@ TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
       fMasterServ = kTRUE;
       SetBit(TProof::kIsMaster);
    }
+   // Flag that we are a client
+   if (TestBit(TProof::kIsClient))
+      if (!gSystem->Getenv("ROOTPROOFCLIENT")) gSystem->Setenv("ROOTPROOFCLIENT","");
 
    Init(masterurl, conffile, confdir, loglevel, alias);
 
@@ -659,6 +669,7 @@ TProof::~TProof()
 
    // For those interested in our destruction ...
    Emit("~TProof()");
+   Emit("CloseWindow()");
 }
 
 //______________________________________________________________________________
@@ -822,13 +833,9 @@ Int_t TProof::Init(const char *, const char *conffile,
       fPackageDir = gProofServ->GetPackageDir();
    } else {
 
-      TString sandbox = gEnv->GetValue("Proof.Sandbox", "");
-      if (sandbox.IsNull()) {
-         sandbox.Form("~/%s", kPROOF_WorkDir);
-      }
-      gSystem->ExpandPathName(sandbox);
-      if (AssertPath(sandbox, kTRUE) != 0) {
-         Error("Init", "failure asserting directory %s", sandbox.Data());
+      TString sandbox;
+      if (GetSandbox(sandbox, kTRUE) != 0) {
+         Error("Init", "failure asserting sandbox directory %s", sandbox.Data());
          return 0;
       }
 
@@ -855,7 +862,7 @@ Int_t TProof::Init(const char *, const char *conffile,
                                " exist or is not readable", ldir.Data());
             } else {
                // Add to the list, key will be "G<ng>", i.e. "G0", "G1", ...
-               TString key = Form("G%d", ng++);
+               TString key = TString::Format("G%d", ng++);
                if (!fGlobalPackageDirList) {
                   fGlobalPackageDirList = new THashList();
                   fGlobalPackageDirList->SetOwner();
@@ -867,7 +874,8 @@ Int_t TProof::Init(const char *, const char *conffile,
 
       TString lockpath(fPackageDir);
       lockpath.ReplaceAll("/", "%");
-      lockpath.Insert(0, Form("%s/%s", gSystem->TempDirectory(), kPROOF_PackageLockFile));
+      lockpath.Insert(0, TString::Format("%s/%s",
+                         gSystem->TempDirectory(), kPROOF_PackageLockFile));
       fPackageLock = new TProofLockPath(lockpath.Data());
 
       fEnabledPackagesOnClient = new TList;
@@ -927,6 +935,34 @@ Int_t TProof::Init(const char *, const char *conffile,
       gROOT->GetListOfSockets()->Add(this);
    }
    return fActiveSlaves->GetSize();
+}
+
+//______________________________________________________________________________
+Int_t TProof::GetSandbox(TString &sb, Bool_t assert, const char *rc)
+{
+   // Set the sandbox path from ' Proof.Sandbox' or the alternative var 'rc'.
+   // Use the existing setting or the default if nothing is found.
+   // If 'assert' is kTRUE, make also sure that the path exists.
+   // Return 0 on success, -1 on failure
+
+   // Get it from 'rc', if defined
+   if (rc && strlen(rc)) sb = gEnv->GetValue(rc, sb);
+   // Or use the default 'rc'
+   if (sb.IsNull()) sb = gEnv->GetValue("Proof.Sandbox", "");
+   // If nothing found , use the default
+   if (sb.IsNull()) sb.Form("~/%s", kPROOF_WorkDir);
+   // Expand special settings
+   if (sb == ".") {
+      sb = gSystem->pwd();
+   } else if (sb == "..") {
+      sb = gSystem->DirName(gSystem->pwd());
+   }
+   gSystem->ExpandPathName(sb);
+   
+   // Assert the path, if required
+   if (assert && AssertPath(sb, kTRUE) != 0) return -1;
+   // Done
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -1150,7 +1186,7 @@ Int_t TProof::AddWorkers(TList *workerList)
       if (sport == -1)
          sport = fUrl.GetPort();
 
-      // create slave server
+      // Create worker server
       TString fullord;
       if (worker->GetOrdinal().Length() > 0) {
          fullord.Form("%s.%s", gProofServ->GetOrdinal(), worker->GetOrdinal().Data());
@@ -1158,8 +1194,10 @@ Int_t TProof::AddWorkers(TList *workerList)
          fullord.Form("%s.%d", gProofServ->GetOrdinal(), ord);
       }
 
-      // create slave server
-      TUrl u(Form("%s:%d",worker->GetNodeName().Data(), sport));
+      // Create worker server
+      TString wn(worker->GetNodeName());
+      if (wn == "localhost" || wn.BeginsWith("localhost.")) wn = gSystem->HostName();
+      TUrl u(TString::Format("%s:%d", wn.Data(), sport));
       // Add group info in the password firdl, if any
       if (strlen(gProofServ->GetGroup()) > 0) {
          // Set also the user, otherwise the password is not exported
@@ -1179,10 +1217,11 @@ Int_t TProof::AddWorkers(TList *workerList)
       } else {
          slaveOk = kFALSE;
          fBadSlaves->Add(slave);
+         Warning("AddWorkers", "worker '%s' is invalid", slave->GetOrdinal());
       }
 
       PDB(kGlobal,3)
-         Info("StartSlaves", "worker on host %s created"
+         Info("AddWorkers", "worker on host %s created"
               " and added to list", worker->GetNodeName().Data());
 
       // Notify opening of connection
@@ -1509,6 +1548,14 @@ void TProof::Close(Option_t *opt)
    {
       R__LOCKGUARD2(gROOTMutex);
       gROOT->GetListOfSockets()->Remove(this);
+
+      if (fChains) {
+         while (TChain *chain = dynamic_cast<TChain*> (fChains->First()) ) {
+            // remove "chain" from list
+            chain->SetProof(0);
+            RemoveChain(chain);
+         }
+      }
 
       if (IsProofd()) {
 
@@ -2800,8 +2847,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
             // Set image
             if (img.IsNull()) {
                if (sl->fImage.IsNull())
-                  sl->fImage = Form("%s:%s", TUrl(sl->fName).GetHostFQDN(),
-                                             sl->fProofWorkDir.Data());
+                  sl->fImage.Form("%s:%s", TUrl(sl->fName).GetHostFQDN(),
+                                           sl->fProofWorkDir.Data());
             } else {
                sl->fImage = img;
             }
@@ -2905,8 +2952,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
                            fPlayer->GetOutputList()->Clear();
                         // Add the unique query tag as TNamed object to the input list
                         // so that it is available in TSelectors for monitoring
-                        fPlayer->AddInput(new TNamed("PROOF_QueryTag",
-                                          Form("%s:%s",pq->GetTitle(),pq->GetName())));
+                        TString qid = TString::Format("%s:%s",pq->GetTitle(),pq->GetName());
+                        fPlayer->AddInput(new TNamed("PROOF_QueryTag", qid.Data()));
                      } else {
                         Warning("HandleInputMessage","kPROOF_OUTPUTOBJECT: query result missing");
                      }
@@ -2932,10 +2979,19 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
                         if (TestBit(TProof::kIsClient) && !IsLite()) {
                            // In PROOFLite this has to be done once only in TProofLite::Process
                            TQueryResult *pq = fPlayer->GetCurrentQuery();
-                           pq->SetOutputList(fPlayer->GetOutputList(), kFALSE);
-                           pq->SetInputList(fPlayer->GetInputList(), kFALSE);
-                           // If the last object, notify the GUI that the result arrived
-                           QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
+                           if (pq) {
+                              pq->SetOutputList(fPlayer->GetOutputList(), kFALSE);
+                              // Add input objects (do not override remote settings, if any)
+                              TObject *xo = 0;
+                              TIter nxin(fPlayer->GetInputList());
+                              // Servers prior to 5.28/00 do not create the input list in the TQueryResult
+                              if (!pq->GetInputList()) pq->SetInputList(new TList());
+                              while ((xo = nxin()))
+                                 if (!pq->GetInputList()->FindObject(xo->GetName()))
+                                    pq->AddInput(xo->Clone());                             
+                              // If the last object, notify the GUI that the result arrived
+                              QueryResultReady(TString::Format("%s:%s", pq->GetTitle(), pq->GetName()));
+                           }
                            // Processing is over
                            UpdateDialog();
                         }
@@ -2969,7 +3025,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
                      CleanGDirectory(out);
                      out = (TList *) out->Clone();
                      // Notify the GUI that the result arrived
-                     QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
+                     QueryResultReady(TString::Format("%s:%s", pq->GetTitle(), pq->GetName()));
                   } else {
                      PDB(kGlobal,2)
                         Info("HandleInputMessage",
@@ -3016,10 +3072,11 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
             if (pq && fPlayer) {
                fPlayer->AddQueryResult(pq);
                // Notify the GUI that the result arrived
-               QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
+               QueryResultReady(TString::Format("%s:%s", pq->GetTitle(), pq->GetName()));
             } else {
                PDB(kGlobal,2)
-                  Info("HandleInputMessage","kPROOF_RETRIEVE: query result missing or player undefined");
+                  Info("HandleInputMessage",
+                       "kPROOF_RETRIEVE: query result missing or player undefined");
             }
          }
          break;
@@ -3218,6 +3275,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
             TString stag;
             (*mess) >> stag;
             SetName(stag);
+            // In the TSlave object
+            sl->SetSessionTag(stag);
             // New servers send also the group
             if ((mess->BufferSize() > mess->Length()))
                (*mess) >> fGroup;
@@ -3305,7 +3364,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
             } else {
                (*mess) >> events;
             }
-            if (!abort && fPlayer) {
+            if (fPlayer) {
                if (fProtocol > 18) {
                   TList *listOfMissingFiles = 0;
                   if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
@@ -3322,6 +3381,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
                      // This object is now owned by the packetizer
                      status = 0;
                   }
+                  if (status) fPlayer->AddEventsProcessed(status->GetEntries());
                } else {
                   fPlayer->AddEventsProcessed(events);
                }
@@ -3938,10 +3998,10 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
    if (thisurl.IsNull()) {
       if (IsMaster()) {
          Int_t port = gEnv->GetValue("ProofServ.XpdPort",-1);
-         thisurl = (port > 0) ? Form("%s:%d", TUrl(gSystem->HostName()).GetHostFQDN(), port)
-                              : TUrl(gSystem->HostName()).GetHostFQDN();
+         thisurl = TUrl(gSystem->HostName()).GetHostFQDN();
+         if (port > 0) thisurl += TString::Format(":%d", port);
       } else {
-         thisurl = Form("%s@%s:%d", fUrl.GetUser(), fUrl.GetHost(), fUrl.GetPort());
+         thisurl.Form("%s@%s:%d", fUrl.GetUser(), fUrl.GetHost(), fUrl.GetPort());
       }
    }
 
@@ -3949,29 +4009,29 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       // Message for notification
       const char *mastertype = (gProofServ && gProofServ->IsTopMaster()) ? "top master" : "master";
       TString src = IsMaster() ? Form("%s at %s", mastertype, thisurl.Data()) : "local session";
-      TString msg(Form("\n +++ Message from %s : ", src.Data()));
-      msg += Form("marking %s:%d (%s) as bad\n +++ Reason: %s",
-                  wrk->GetName(), wrk->GetPort(), wrk->GetOrdinal(),
-                  (reason && strlen(reason)) ? reason : "unknown");
+      TString msg;
+      msg.Form("\n +++ Message from %s : marking %s:%d (%s) as bad\n +++ Reason: %s",
+               src.Data(), wrk->GetName(), wrk->GetPort(), wrk->GetOrdinal(),
+               (reason && strlen(reason)) ? reason : "unknown");
       Info("MarkBad", "%s", msg.Data());
       // Notify one level up, if the case
       // Add some hint for diagnostics
       if (gProofServ) {
-         msg += Form("\n\n +++ Most likely your code crashed on worker %s at %s:%d.\n",
+         msg += TString::Format("\n\n +++ Most likely your code crashed on worker %s at %s:%d.\n",
                      wrk->GetOrdinal(), wrk->GetName(), wrk->GetPort());
       } else {
-         msg = Form("\n\n +++ Most likely your code crashed\n");
+         msg += TString::Format("\n\n +++ Most likely your code crashed\n");
       }
-      msg += Form(" +++ Please check the session logs for error messages either using\n");
-      msg += Form(" +++ the 'Show logs' button or executing\n");
-      msg += Form(" +++\n");
+      msg += TString::Format(" +++ Please check the session logs for error messages either using\n");
+      msg += TString::Format(" +++ the 'Show logs' button or executing\n");
+      msg += TString::Format(" +++\n");
       if (gProofServ) {
-         msg += Form(" +++ root [] TProof::Mgr(\"%s\")->GetSessionLogs()->Display(\"%s\",0)\n\n",
-                     thisurl.Data(), wrk->GetOrdinal());
+         msg += TString::Format(" +++ root [] TProof::Mgr(\"%s\")->GetSessionLogs()->"
+                                "Display(\"%s\",0)\n\n", thisurl.Data(), wrk->GetOrdinal());
          gProofServ->SendAsynMessage(msg, kTRUE);
       } else {
-         msg += Form(" +++ root [] TProof::Mgr(\"%s\")->GetSessionLogs()->Display(\"*\")\n\n",
-                     thisurl.Data());
+         msg += TString::Format(" +++ root [] TProof::Mgr(\"%s\")->GetSessionLogs()->"
+                                "Display(\"*\")\n\n", thisurl.Data());
          Printf("%s", msg.Data());
       }
    } else if (reason) {
@@ -4242,11 +4302,11 @@ void TProof::Print(Option_t *option) const
       } else {
          Printf("User:                       %s", GetUser());
       }
-      TString ver(gROOT->GetVersion());
+      TString ver;
       if (gROOT->GetSvnRevision() > 0)
-         ver += Form("|r%d", gROOT->GetSvnRevision());
+         ver.Form("%s|r%d", gROOT->GetVersion(), gROOT->GetSvnRevision());
       if (gSystem->Getenv("ROOTVERSIONTAG"))
-         ver += Form("|%s", gSystem->Getenv("ROOTVERSIONTAG"));
+         ver.Form("%s|%s", gROOT->GetVersion(), gSystem->Getenv("ROOTVERSIONTAG"));
       Printf("ROOT version|rev|tag:       %s", ver.Data());
       Printf("Architecture-Compiler:      %s-%s", gSystem->GetBuildArch(),
                                                   gSystem->GetBuildCompilerVersion());
@@ -4362,7 +4422,7 @@ Long64_t TProof::Process(TFileCollection *fc, const char *selector,
 
    // We include the TFileCollection to the input list and we create a
    // fake TDSet with infor about it
-   TDSet *dset = new TDSet(Form("TFileCollection:%s", fc->GetName()), 0, 0, "");
+   TDSet *dset = new TDSet(TString::Format("TFileCollection:%s", fc->GetName()), 0, 0, "");
    fPlayer->AddInput(fc);
    Long64_t retval = Process(dset, selector, option, nentries, first);
    fPlayer->GetInputList()->Remove(fc); // To avoid problems in future
@@ -4677,7 +4737,7 @@ Int_t TProof::GetQueryReference(Int_t qry, TString &ref)
          TQueryResult *qr = 0;
          while ((qr = (TQueryResult *) nxq()))
             if (qr->GetSeqNum() == qry) {
-               ref = Form("%s:%s", qr->GetTitle(), qr->GetName());
+               ref.Form("%s:%s", qr->GetTitle(), qr->GetName());
                return 0;
             }
       }
@@ -5596,7 +5656,7 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
    TSlave *sl;
    TString fnam(rfile);
    if (fnam == "cache") {
-      fnam += Form(":%s", gSystem->BaseName(file));
+      fnam += TString::Format(":%s", gSystem->BaseName(file));
    } else if (fnam.IsNull()) {
       fnam = gSystem->BaseName(file);
    }
@@ -5951,8 +6011,10 @@ void TProof::ClearData(UInt_t what, const char *dsname)
          return;
       }
       // Prompt, if requested
-      if (doask && !Prompt(TString::Format("Do you really want to remove all data files"
-                                           " of dataset '%s'", dsname))) return;
+      TString pmpt = TString::Format("Do you really want to remove all data files"
+                                     " of dataset '%s'", dsname);
+      if (doask && !Prompt(pmpt.Data())) return;
+
       // Loop through the files
       Bool_t rmds = kTRUE;
       TIter nxf(fc->GetList());
@@ -6091,7 +6153,8 @@ void TProof::ClearData(UInt_t what, const char *dsname)
                                  nfiles--;
                               } else {
                                  Warning("ClearData",
-                                       "registered file '%s' not found in the full list!", file.Data());
+                                         "registered file '%s' not found in the full list!",
+                                         file.Data());
                               }
                            }
                            break;
@@ -6109,8 +6172,10 @@ void TProof::ClearData(UInt_t what, const char *dsname)
       Info("ClearData", "%d unregistered files to be removed:", nfiles);
       afmap->Print();
       // Prompt, if requested
-      if (doask && !Prompt(TString::Format("Do you really want to remove all %d"
-                                           " unregistered data files", nfiles))) return;
+      TString pmpt = TString::Format("Do you really want to remove all %d"
+                                     " unregistered data files", nfiles);
+      if (doask && !Prompt(pmpt.Data())) return;
+
       // Remove one by one; we may implement a bloc remove in the future
       Int_t rfiles = 0;
       TIter nxls(afmap);
@@ -6122,7 +6187,8 @@ void TProof::ClearData(UInt_t what, const char *dsname)
             while ((fn = (TObjString *) nxf())) {
                // Issue a remove request now
                if (fManager->Rm(fn->GetName(), "-f", os->GetName()) != 0) {
-                  Error("ClearData", "problems removing '%s' on host '%s'", fn->GetName(), os->GetName());
+                  Error("ClearData", "problems removing '%s' on host '%s'",
+                                     fn->GetName(), os->GetName());
                }
                rfiles++;
                ClearDataProgress(rfiles, nfiles);
@@ -6286,14 +6352,14 @@ void TProof::ShowPackages(Bool_t all, Bool_t redirlog)
             fprintf(fout, "*** Global Package cache %s client:%s ***\n",
                            nm->GetName(), nm->GetTitle());
             fflush(fout);
-            SystemCmd(Form("%s %s", kLS, nm->GetTitle()), fileno(fout));
+            SystemCmd(TString::Format("%s %s", kLS, nm->GetTitle()), fileno(fout));
             fprintf(fout, "\n");
             fflush(fout);
          }
       }
       fprintf(fout, "*** Package cache client:%s ***\n", fPackageDir.Data());
       fflush(fout);
-      SystemCmd(Form("%s %s", kLS, fPackageDir.Data()), fileno(fout));
+      SystemCmd(TString::Format("%s %s", kLS, fPackageDir.Data()), fileno(fout));
       fprintf(fout, "\n");
    }
 
@@ -6448,24 +6514,35 @@ Int_t TProof::DisablePackage(const char *package)
 }
 
 //______________________________________________________________________________
-Int_t TProof::DisablePackageOnClient(const char *package)
+Int_t TProof::DisablePackageOnClient(const char *pack)
 {
-   // Remove a specific package from the client.
+   // Remove a specific package 'pack' from the client.
    // Returns 0 in case of success and -1 in case of error.
 
+   TString s; 
    if (TestBit(TProof::kIsClient)) {
       // Remove the package directory and the par file locally
       fPackageLock->Lock();
-      gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(), package));
-      gSystem->Exec(Form("%s %s/%s.par", kRM, fPackageDir.Data(), package));
-      gSystem->Exec(Form("%s %s/%s/%s.par", kRM, fPackageDir.Data(), kPROOF_PackDownloadDir, package));
+      s.Form("%s %s/%s", kRM, fPackageDir.Data(), pack);
+      gSystem->Exec(s.Data());
+      s.Form("%s %s/%s.par", kRM, fPackageDir.Data(), pack);
+      gSystem->Exec(s.Data());
+      s.Form("%s %s/%s/%s.par", kRM, fPackageDir.Data(), kPROOF_PackDownloadDir, pack);
+      gSystem->Exec(s.Data());
       fPackageLock->Unlock();
-      if (!gSystem->AccessPathName(Form("%s/%s/%s.par", fPackageDir.Data(), kPROOF_PackDownloadDir, package)))
-         Warning("DisablePackageOnClient", "unable to remove cached package PAR file for %s", package);
-      if (!gSystem->AccessPathName(Form("%s/%s.par", fPackageDir.Data(), package)))
-         Warning("DisablePackageOnClient", "unable to remove package PAR file for %s", package);
-      if (!gSystem->AccessPathName(Form("%s/%s", fPackageDir.Data(), package)))
-         Warning("DisablePackageOnClient", "unable to remove package directory for %s", package);
+      // Check the result
+      s.Form("%s/%s/%s.par", fPackageDir.Data(), kPROOF_PackDownloadDir, pack);
+      if (!gSystem->AccessPathName(s.Data()))
+         Warning("DisablePackageOnClient",
+                 "unable to remove cached package PAR file for %s (%s)", pack, s.Data());
+      s.Form("%s/%s.par", fPackageDir.Data(), pack);
+      if (!gSystem->AccessPathName(s.Data()))
+         Warning("DisablePackageOnClient",
+                 "unable to remove package PAR file for %s (%s)", pack, s.Data());
+      s.Form("%s/%s", fPackageDir.Data(), pack);
+      if (!gSystem->AccessPathName(s.Data()))
+         Warning("DisablePackageOnClient",
+                 "unable to remove package directory for %s (%s)", pack, s.Data());
    }
 
    return 0;
@@ -6482,24 +6559,38 @@ Int_t TProof::DisablePackages()
    // remove all packages on client
    if (TestBit(TProof::kIsClient)) {
       fPackageLock->Lock();
-      gSystem->Exec(Form("%s %s/*", kRM, fPackageDir.Data()));
+      gSystem->Exec(TString::Format("%s %s/*", kRM, fPackageDir.Data()));
       fPackageLock->Unlock();
    }
 
    // Nothing more to do if we are a Lite-session
    if (IsLite()) return 0;
 
-   TMessage mess(kPROOF_CACHE);
-   mess << Int_t(kDisablePackages);
-   Broadcast(mess, kUnique);
+   Int_t st = -1;
+   Bool_t done = kFALSE;
+   if (fManager) {
+      // Try to do it via XROOTD (new way)
+      if (fManager->Rm("~/packages/*", "-rf", "all") != -1) {
+         done = kTRUE;
+         st = 0;
+      }
+   }
+   if (!done) {
 
-   TMessage mess2(kPROOF_CACHE);
-   mess2 << Int_t(kDisableSubPackages);
-   Broadcast(mess2, fNonUniqueMasters);
+      TMessage mess(kPROOF_CACHE);
+      mess << Int_t(kDisablePackages);
+      Broadcast(mess, kUnique);
 
-   Collect(kAllUnique);
+      TMessage mess2(kPROOF_CACHE);
+      mess2 << Int_t(kDisableSubPackages);
+      Broadcast(mess2, fNonUniqueMasters);
 
-   return fStatus;
+      Collect(kAllUnique);
+      st = fStatus;
+   }
+
+   // Done
+   return st;
 }
 
 //______________________________________________________________________________
@@ -6543,7 +6634,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
       }
    }
 
-   if (opt <= kBuildAll && !IsLite()) {
+   if (opt <= kBuildAll && (!IsLite() || !buildOnClient)) {
       TMessage mess(kPROOF_CACHE);
       mess << Int_t(kBuildPackage) << pac;
       Broadcast(mess, kUnique);
@@ -6562,7 +6653,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
       }
 
       fStatus = 0;
-      if (!IsLite())
+      if (!IsLite() || !buildOnClient)
          Collect(kAllUnique);
 
       if (fStatus < 0 || st < 0)
@@ -6642,9 +6733,9 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
             // Cleanup, if bad
             if (badPAR) {
                // Remove package directory
-               gSystem->Exec(Form("%s %s", kRM, pdir.Data()));
+               gSystem->Exec(TString::Format("%s %s", kRM, pdir.Data()));
                // Remove link or bad file
-               gSystem->Exec(Form("%s %s", kRM, tpar.Data()));
+               gSystem->Exec(TString::Format("%s %s", kRM, tpar.Data()));
                // Reset variable
                pdir = "";
             }
@@ -6720,13 +6811,13 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
                // Hard cleanup: go up the dir tree
                gSystem->ChangeDirectory(fPackageDir);
                // remove package directory
-               gSystem->Exec(Form("%s %s", kRM, pdir.Data()));
+               gSystem->Exec(TString::Format("%s %s", kRM, pdir.Data()));
                // find gunzip...
                char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP, kExecutePermission);
                if (gunzip) {
-                  TString par = Form("%s.par", pdir.Data());
+                  TString par = TString::Format("%s.par", pdir.Data());
                   // untar package
-                  TString cmd(Form(kUNTAR3, gunzip, par.Data()));
+                  TString cmd(TString::Format(kUNTAR3, gunzip, par.Data()));
                   status = gSystem->Exec(cmd);
                   if ((status = gSystem->Exec(cmd))) {
                      Error("BuildPackageOnClient", "failure executing: %s", cmd.Data());
@@ -6741,7 +6832,7 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
                }
             }
 
-            if (gSystem->Exec("PROOF-INF/BUILD.sh")) {
+            if (gSystem->Exec("export ROOTPROOFCLIENT=\"1\" ; PROOF-INF/BUILD.sh")) {
                Error("BuildPackageOnClient", "building package %s on the client failed", pack);
                status = -1;
             }
@@ -6750,7 +6841,7 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
                f = fopen("PROOF-INF/proofvers.txt", "w");
                if (f) {
                   fputs(gROOT->GetVersion(), f);
-                  fputs(Form("\n%d",gROOT->GetSvnRevision()), f);
+                  fputs(TString::Format("\n%d",gROOT->GetSvnRevision()), f);
                   fclose(f);
                }
             }
@@ -6838,7 +6929,7 @@ Int_t TProof::LoadPackageOnClient(const char *pack, TList *loadopts)
             TIter nxd(fGlobalPackageDirList);
             TNamed *nm = 0;
             while ((nm = (TNamed *)nxd())) {
-               pdir = Form("%s/%s", nm->GetTitle(), pack);
+               pdir.Form("%s/%s", nm->GetTitle(), pack);
                if (!gSystem->AccessPathName(pdir, kReadPermission)) {
                   // Package found, stop searching
                   break;
@@ -7311,7 +7402,7 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
    if (gSystem->AccessPathName(par, kReadPermission)) {
       TString tried = par;
       // Try the package dir
-      par = Form("%s/%s", fPackageDir.Data(), gSystem->BaseName(par));
+      par.Form("%s/%s", fPackageDir.Data(), gSystem->BaseName(par));
       if (gSystem->AccessPathName(par, kReadPermission)) {
          // Is the package a global one
          if (fGlobalPackageDirList && fGlobalPackageDirList->GetSize() > 0) {
@@ -7320,7 +7411,7 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
             TNamed *nm = 0;
             TString pdir;
             while ((nm = (TNamed *)nxd())) {
-               pdir = Form("%s/%s", nm->GetTitle(), pack);
+               pdir.Form("%s/%s", nm->GetTitle(), pack);
                if (!gSystem->AccessPathName(pdir, kReadPermission)) {
                   // Package found, stop searching
                   break;
@@ -7494,7 +7585,8 @@ Int_t TProof::UploadPackageOnClient(const char *parpack, EUploadPackageOpt opt, 
       // the client has its own version of the package and should not check
       // the master repository anymore for updates
       TString downloadpath;
-      downloadpath.Form("%s/%s/%s", fPackageDir.Data(), kPROOF_PackDownloadDir, gSystem->BaseName(par));
+      downloadpath.Form("%s/%s/%s", fPackageDir.Data(),
+                        kPROOF_PackDownloadDir, gSystem->BaseName(par));
       if (!gSystem->AccessPathName(downloadpath, kFileExists) && downloadpath != par) {
          if (gSystem->Unlink(downloadpath) != 0) {
             Warning("UploadPackageOnClient",
@@ -7526,7 +7618,8 @@ Int_t TProof::UploadPackageOnClient(const char *parpack, EUploadPackageOpt opt, 
          gSystem->Symlink(par, lpar);
       // TODO: On Windows need to copy instead of symlink
 
-      // compare md5
+      TString cmd;
+      // Compare md5
       TString packnam = par(0, par.Length() - 4);  // strip off ".par"
       packnam = gSystem->BaseName(packnam);        // strip off path
       TString md5f = fPackageDir + "/" + packnam + "/PROOF-INF/md5.txt";
@@ -7535,19 +7628,18 @@ Int_t TProof::UploadPackageOnClient(const char *parpack, EUploadPackageOpt opt, 
          // if not, unzip and untar package in package directory
          if ((opt & TProof::kRemoveOld)) {
             // remove any previous package directory with same name
-            if (gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(),
-                                   packnam.Data())))
-               Error("UploadPackageOnClient", "failure executing: %s %s/%s",
-                     kRM, fPackageDir.Data(), packnam.Data());
+            cmd.Form("%s %s/%s", kRM, fPackageDir.Data(), packnam.Data());
+            if (gSystem->Exec(cmd.Data()))
+               Error("UploadPackageOnClient", "failure executing: %s", cmd.Data());
          }
          // find gunzip
          char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP,
                                        kExecutePermission);
          if (gunzip) {
             // untar package
-            if (gSystem->Exec(Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data())))
-               Error("Uploadpackage", "failure executing: %s",
-                     Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data()));
+            cmd.Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data());
+            if (gSystem->Exec(cmd.Data()))
+               Error("Uploadpackage", "failure executing: %s", cmd.Data());
             delete [] gunzip;
          } else
             Error("UploadPackageOnClient", "%s not found", kGUNZIP);
@@ -7576,8 +7668,12 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
 {
    // Load the specified macro on master, workers and, if notOnClient is
    // kFALSE, on the client. The macro file is uploaded if new or updated.
-   // If existing, the corresponding header basename(macro).h or .hh, is also
-   // uploaded. The default is to load the macro also on the client.
+   // Additional files to be uploaded (or updated, if needed) can be specified
+   // after a comma, e.g. "mymacro.C+,thisheader.h,thatheader.h".
+   // If existing in the same directory, a header basename(macro).h or .hh, is also
+   // uploaded.
+   // The default is to load the macro also on the client; notOnClient can be used
+   // to avoid loading on the client.
    // On masters, if uniqueWorkers is kTRUE, the macro is loaded on unique workers
    // only, and collection is not done; if uniqueWorkers is kFALSE, collection
    // from the previous request is done, and broadcasting + collection from the
@@ -7599,7 +7695,13 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
       }
 
       // Extract the file implementation name first
-      TString implname = macro;
+      TString addsname, implname = macro;
+      Ssiz_t icom = implname.Index(",");
+      if (icom != kNPOS) {
+         addsname = implname(icom + 1, implname.Length());
+         implname.Remove(icom);
+      }
+      TString basemacro = gSystem->BaseName(implname), mainmacro(implname);
       TString acmode, args, io;
       implname = gSystem->SplitAclicMode(implname, acmode, args, io);
 
@@ -7626,30 +7728,73 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
                             h.Data(), headname.Data());
          }
       }
+      
+      // Is there any additional file ?
+      TString addincs;
+      TList addfiles;
+      if (!addsname.IsNull()) {
+         TString fn;
+         Int_t from = 0;
+         while (addsname.Tokenize(fn, from, ",")) {
+            if (gSystem->AccessPathName(fn, kReadPermission)) {
+               Error("Load", "additional file '%s' not found", fn.Data());
+               return -1;
+            }
+            // Create the additional include statement
+            if (!notOnClient) {
+               TString dirn(gSystem->DirName(fn));
+               if (addincs.IsNull()) {
+                  addincs.Form("-I%s", dirn.Data());
+               } else if (!addincs.Contains(dirn)) {
+                  addincs += TString::Format(" -I%s", dirn.Data());
+               }
+            }
+            // Remember these files ...
+            addfiles.Add(new TObjString(fn));
+         }
+      }
 
       // Send files now; the md5 check is run here; see SendFile for more
       // details.
       if (SendFile(implname, kAscii | kForward , "cache") == -1) {
-         Info("Load", "problems sending implementation file %s", implname.Data());
+         Error("Load", "problems sending implementation file %s", implname.Data());
          return -1;
       }
       if (hasHeader)
          if (SendFile(headname, kAscii | kForward , "cache") == -1) {
-            Info("Load", "problems sending header file %s", headname.Data());
+            Error("Load", "problems sending header file %s", headname.Data());
             return -1;
          }
-
+      // Additional files
+      if (addfiles.GetSize() > 0) {
+         TIter nxfn(&addfiles);
+         TObjString *os = 0;
+         while ((os = (TObjString *) nxfn())) {
+            if (SendFile(os->GetName(), kAscii | kForward , "cache") == -1) {
+               Error("Load", "problems sending additional file %s", os->GetName());
+               return -1;
+            }
+         }
+         addfiles.SetOwner(kTRUE);
+      }
+         
       // The files are now on the workers: now we send the loading request
-      TString basemacro = gSystem->BaseName(macro);
       TMessage mess(kPROOF_CACHE);
       mess << Int_t(kLoadMacro) << basemacro;
       Broadcast(mess, kActive);
 
       // Load locally, if required
       if (!notOnClient) {
-         // by first forwarding the load command to the master and workers
+         // Mofify the include path
+         TString oldincs = gSystem->GetIncludePath();
+         if (!addincs.IsNull()) gSystem->AddIncludePath(addincs);
+         
+         // By first forwarding the load command to the master and workers
          // and only then loading locally we load/build in parallel
-         gROOT->ProcessLine(Form(".L %s", macro));
+         gROOT->ProcessLine(TString::Format(".L %s", mainmacro.Data()));
+         
+         // Restore include path
+         if (!addincs.IsNull()) gSystem->SetIncludePath(oldincs);
 
          // Update the macro path
          TString mp(TROOT::GetMacroPath());
@@ -7909,7 +8054,7 @@ void TProof::HandleLibIncPath(const char *what, Bool_t add, const char *dirs)
                if (newlibpath.BeginsWith(".:"))
                   pos = 2;
                if (newlibpath.Index(xlib) == kNPOS) {
-                  newlibpath.Insert(pos,Form("%s:", xlib.Data()));
+                  newlibpath.Insert(pos,TString::Format("%s:", xlib.Data()));
                   gSystem->SetDynamicPath(newlibpath);
                }
             } else {
@@ -7932,7 +8077,7 @@ void TProof::HandleLibIncPath(const char *what, Bool_t add, const char *dirs)
             if (!gSystem->AccessPathName(xinc, kReadPermission)) {
                TString curincpath = gSystem->GetIncludePath();
                if (curincpath.Index(xinc) == kNPOS)
-                  gSystem->AddIncludePath(Form("-I%s", xinc.Data()));
+                  gSystem->AddIncludePath(TString::Format("-I%s", xinc.Data()));
             } else
                if (gDebug > 0)
                    Info("HandleLibIncPath",
@@ -7954,7 +8099,7 @@ void TProof::HandleLibIncPath(const char *what, Bool_t add, const char *dirs)
             gSystem->ExpandPathName(xlib);
             // Remove from the dynamic lib search path
             TString newlibpath = gSystem->GetDynamicPath();
-            newlibpath.ReplaceAll(Form("%s:", xlib.Data()),"");
+            newlibpath.ReplaceAll(TString::Format("%s:", xlib.Data()),"");
             gSystem->SetDynamicPath(newlibpath);
          }
 
@@ -7965,7 +8110,7 @@ void TProof::HandleLibIncPath(const char *what, Bool_t add, const char *dirs)
          TObjString *inc = 0;
          while ((inc = (TObjString *) nxi())) {
             TString newincpath = gSystem->GetIncludePath();
-            newincpath.ReplaceAll(Form("-I%s", inc->GetName()),"");
+            newincpath.ReplaceAll(TString::Format("-I%s", inc->GetName()),"");
             // Remove the interpreter path (added anyhow internally)
             newincpath.ReplaceAll(gInterpreter->GetIncludePath(),"");
             gSystem->SetIncludePath(newincpath);
@@ -8492,7 +8637,8 @@ void TProof::SendInputDataFile()
       BroadcastFile(dataFile.Data(), kBinary, "cache", kActive);
 
       // Set the name in the input list
-      AddInput(new TNamed("PROOF_InputDataFile", Form("cache:%s", gSystem->BaseName(dataFile))));
+      TString t = TString::Format("cache:%s", gSystem->BaseName(dataFile));
+      AddInput(new TNamed("PROOF_InputDataFile", t.Data()));
    }
 }
 
@@ -8639,7 +8785,11 @@ TList *TProof::GetOutputList()
 {
    // Get list with all object created during processing (see Process()).
 
-   return (fPlayer ? fPlayer->GetOutputList() : (TList *)0);
+   if (fPlayer) {
+      fOutputList.AttachList(fPlayer->GetOutputList());
+      return &fOutputList;
+   }
+   return (TList *)0;
 }
 
 //______________________________________________________________________________
@@ -9288,7 +9438,7 @@ void TProof::ShowLog(Int_t qry)
 
          // Ask if more is wanted
          if (!(np%10)) {
-            char *opt = Getline("More (y/n)? [y]");
+            const char *opt = Getline("More (y/n)? [y]");
             if (opt[0] == 'n')
                break;
          }
@@ -9547,16 +9697,13 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       }
    } // if (goodName == -1)
    if (goodName == 1) {  //must be == 1 as -1 was used for a bad name!
-      //Code for enforcing writing in user "home dir" only
-      char *relativeDestDir = Form("%s/%s/",
-                                   gSystem->GetUserInfo()->fUser.Data(),
-                                   desiredDest?desiredDest:"");
-                                   //Consider adding dataSetName to the path
 
-      relativeDestDir = CollapseSlashesInPath(relativeDestDir);
-      TString dest = Form("%s/%s", GetDataPoolUrl(), relativeDestDir);
-
-      delete[] relativeDestDir;
+      TString dest;
+      dest.Form("%s/%s/%s",  GetDataPoolUrl(), 
+                             gSystem->GetUserInfo()->fUser.Data(),
+                             desiredDest ? desiredDest : "");
+      dest.ReplaceAll("//", "/");
+      dest.Remove(TString::kTrailing, '/');
 
       // Now we will actually copy files and create the TList object
       TFileCollection *fileList = new TFileCollection();
@@ -9570,11 +9717,11 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
 
             Int_t goodFileName = 1;
             if (!overwriteAll &&
-               gSystem->AccessPathName(Form("%s/%s", dest.Data(), ent), kFileExists)
+               gSystem->AccessPathName(TString::Format("%s/%s", dest.Data(), ent), kFileExists)
                   == kFALSE) {  //Destination file exists
                goodFileName = -1;
                while (goodFileName == -1 && !overwriteAll && !overwriteNone) {
-                  Info("UploadDataSet", "file %s already exists. ", Form("%s/%s", dest.Data(), ent));
+                  Info("UploadDataSet", "file %s/%s already exists. ", dest.Data(), ent);
                   Info("UploadDataSet", "do you want to overwrite it [Yes/No/all/none]?");
                   TString answer;
                   answer.ReadToken(cin);
@@ -9594,12 +9741,12 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
                //must be == 1 as -1 was meant for bad name!
                Info("UploadDataSet", "Uploading %s to %s/%s",
                       fileUrl->GetUrl(), dest.Data(), ent);
-               if (TFile::Cp(fileUrl->GetUrl(), Form("%s/%s", dest.Data(), ent))) {
-                  fileList->GetList()->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
+               if (TFile::Cp(fileUrl->GetUrl(), TString::Format("%s/%s", dest.Data(), ent))) {
+                  fileList->GetList()->Add(new TFileInfo(TString::Format("%s/%s", dest.Data(), ent)));
                } else
                   Error("UploadDataSet", "file %s was not copied", fileUrl->GetUrl());
             } else {  // don't overwrite, but file exist and must be included
-               fileList->GetList()->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
+               fileList->GetList()->Add(new TFileInfo(TString::Format("%s/%s", dest.Data(), ent)));
                if (skippedFiles) {
                   // user specified the TList *skippedFiles argument so we create
                   // the list of skipped files
@@ -9662,19 +9809,25 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    TList fileList;
    fileList.SetOwner();
    void *dataSetDir = gSystem->OpenDirectory(gSystem->DirName(files));
-   const char* ent;
-   TString filesExp(gSystem->BaseName(files));
-   filesExp.ReplaceAll("*",".*");
-   TRegexp rg(filesExp);
-   while ((ent = gSystem->GetDirEntry(dataSetDir))) {
-      TString entryString(ent);
-      if (entryString.Index(rg) != kNPOS) {
-         // Matching dir entry: add to the list
-         TString u(Form("file://%s/%s", gSystem->DirName(files), ent));
-         if (gSystem->AccessPathName(u, kReadPermission) == kFALSE)
-            fileList.Add(new TFileInfo(u));
-      } //if matching dir entry
-   } //while
+   if (dataSetDir) {
+      const char* ent;
+      TString filesExp(gSystem->BaseName(files));
+      filesExp.ReplaceAll("*",".*");
+      TRegexp rg(filesExp);
+      while ((ent = gSystem->GetDirEntry(dataSetDir))) {
+         TString entryString(ent);
+         if (entryString.Index(rg) != kNPOS) {
+            // Matching dir entry: add to the list
+            TString u = TString::Format("file://%s/%s", gSystem->DirName(files), ent);
+            if (gSystem->AccessPathName(u, kReadPermission) == kFALSE)
+               fileList.Add(new TFileInfo(u));
+         } //if matching dir entry
+      } //while
+      // Close the directory
+      gSystem->FreeDirectory(dataSetDir);
+   } else {
+      Warning("UploadDataSet", "cannot open: directory '%s'", gSystem->DirName(files));
+   }
    Int_t fileCount;
    if ((fileCount = fileList.GetSize()) == 0)
       Printf("No files match your selection. The dataset will not be saved");
@@ -9815,20 +9968,26 @@ Int_t TProof::SetDataSetTreeName(const char *dataset, const char *treename)
 }
 
 //______________________________________________________________________________
-TMap *TProof::GetDataSets(const char *uri, const char* optStr)
+TMap *TProof::GetDataSets(const char *uri, const char *optStr)
 {
    // Lists all datasets that match given uri.
-
+   // The 'optStr' can contain a comma-separated list of servers for which the
+   // information is wanted. If ':lite:' (case insensitive) is specified in 'optStr'
+   // only the global information in the TFileCollection is retrieved; useful to only
+   // get the list of available datasets.
+   
    if (fProtocol < 15) {
       Info("GetDataSets",
            "functionality not available: the server does not have dataset support");
       return 0;
    }
+   if (fProtocol < 31 && strstr(optStr, ":lite:"))
+      Warning("GetDataSets", "'lite' option not supported by the server");
 
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kGetDataSets);
-   mess << TString(uri?uri:"");
-   mess << TString(optStr?optStr:"");
+   mess << TString(uri ? uri : "");
+   mess << TString(optStr ? optStr : "");
    Broadcast(mess);
    Collect(kActive, fCollectTimeout);
 
@@ -10119,7 +10278,7 @@ void TProof::InterruptCurrentMonitor()
 }
 
 //_____________________________________________________________________________
-void TProof::ActivateWorker(const char *ord)
+Int_t TProof::ActivateWorker(const char *ord)
 {
    // Make sure that the worker identified by the ordinal number 'ord' is
    // in the active list. The request will be forwarded to the master
@@ -10127,12 +10286,16 @@ void TProof::ActivateWorker(const char *ord)
    // the worker from the inactive to the active list and rebuild the list
    // of unique workers.
    // Use ord = "*" to activate all inactive workers.
+   // The string 'ord' can also be a comma-separated list of ordinal numbers the
+   // status of which will be modified at once.
+   // Return <0 if something went wrong (-2 if at least one worker was not found)
+   // or the number of workers with status change (on master; 0 on client).
 
-   ModifyWorkerLists(ord, kTRUE);
+   return ModifyWorkerLists(ord, kTRUE);
 }
 
 //_____________________________________________________________________________
-void TProof::DeactivateWorker(const char *ord)
+Int_t TProof::DeactivateWorker(const char *ord)
 {
    // Remove the worker identified by the ordinal number 'ord' from the
    // the active list. The request will be forwarded to the master
@@ -10140,25 +10303,44 @@ void TProof::DeactivateWorker(const char *ord)
    // the worker from the active to the inactive list and rebuild the list
    // of unique workers.
    // Use ord = "*" to deactivate all active workers.
+   // The string 'ord' can also be a comma-separated list of ordinal numbers the
+   // status of which will be modified at once.
+   // Return <0 if something went wrong (-2 if at least one worker was not found)
+   // or the number of workers with status change (on master; 0 on client).
 
-   ModifyWorkerLists(ord, kFALSE);
+   return ModifyWorkerLists(ord, kFALSE);
 }
 
 //_____________________________________________________________________________
-void TProof::ModifyWorkerLists(const char *ord, Bool_t add)
+Int_t TProof::ModifyWorkerLists(const char *ord, Bool_t add)
 {
    // Modify the worker active/inactive list by making the worker identified by
    // the ordinal number 'ord' active (add == TRUE) or inactive (add == FALSE).
+   // The string 'ord' can also be a comma-separated list of ordinal numbers the
+   // status of which will be modified at once.
    // If needed, the request will be forwarded to the master in direct contact
    // with the worker. The end-master will move the worker from one list to the
    // other active and rebuild the list of unique active workers.
    // Use ord = "*" to deactivate all active workers.
+   // Return <0 if something went wrong (-2 if at least one worker was not found)
+   // or the number of workers with status change (on master; 0 on client).
 
    // Make sure the input make sense
    if (!ord || strlen(ord) <= 0) {
       Info("ModifyWorkerLists",
-           "An ordinal number - e.g. \"0.4\" or \"*\" for all - is required as input");
-      return;
+           "an ordinal number - e.g. \"0.4\" or \"*\" for all - is required as input");
+      return -1;
+   }
+   Bool_t allord = strcmp(ord, "*") ? kFALSE : kTRUE;
+
+   // Create the hash list of ordinal numbers
+   THashList *ords = 0;
+   if (!allord) {
+      ords = new THashList();
+      TString oo(ord), o;
+      Int_t from = 0;
+      while(oo.Tokenize(o, from, ","))
+         ords->Add(new TObjString(o));
    }
 
    Bool_t fw = kTRUE;    // Whether to forward one step down
@@ -10168,37 +10350,67 @@ void TProof::ModifyWorkerLists(const char *ord, Bool_t add)
    TList *in = (add) ? fInactiveSlaves : fActiveSlaves;
    TList *out = (add) ? fActiveSlaves : fInactiveSlaves;
 
+   Int_t nwc = 0;
    if (TestBit(TProof::kIsMaster)) {
       fw = IsEndMaster() ? kFALSE : kTRUE;
-      // Look for the worker in the inactive list
+      // Look for the worker in the initial list
+      TObject *os = 0;
+      TSlave *wrk = 0;
       if (in->GetSize() > 0) {
          TIter nxw(in);
-         TSlave *wrk = 0;
          while ((wrk = (TSlave *) nxw())) {
-            if (ord[0] == '*' || !strncmp(wrk->GetOrdinal(), ord, strlen(ord))) {
-               // Add it to the inactive list
+            os = 0;
+            if (allord || (ords && (os = ords->FindObject(wrk->GetOrdinal())))) {
+               // Add it to the final list
                if (!out->FindObject(wrk)) {
                   out->Add(wrk);
                   if (add)
                      fActiveMonitor->Add(wrk->GetSocket());
                }
-               // Remove it from the active list
+               // Remove it from the initial list
                in->Remove(wrk);
                if (!add) {
                   fActiveMonitor->Remove(wrk->GetSocket());
                   wrk->SetStatus(TSlave::kInactive);
                } else
                   wrk->SetStatus(TSlave::kActive);
-
+               // Count
+               nwc++;
                // Nothing to forward (ord is unique)
                fw = kFALSE;
                // Rescan for unique workers (active list modified)
                rs = kTRUE;
-               // We are done, if not option 'all'
-               if (ord[0] != '*')
-                  break;
+               // We may be done, if not option 'all'
+               if (!allord && ords) {
+                  if (os) ords->Remove(os);
+                  if (ords->GetSize() == 0) break;
+                  SafeDelete(os);
+               }
             }
          }
+      }
+      // If some worker not found, notify it
+      if (ords && ords->GetSize() > 0) {
+         TString oo;
+         TIter nxo(ords);
+         while ((os = nxo())) {
+            TIter nxw(out);
+            while ((wrk = (TSlave *) nxw()))
+               if (!strcmp(os->GetName(), wrk->GetOrdinal())) break;
+            if (!wrk) {
+               if (!oo.IsNull()) oo += ",";
+               oo += os->GetName();
+            }
+         }
+         if (!oo.IsNull()) {
+            Warning("ModifyWorkerLists", "worker(s) '%s' not found!", oo.Data());
+            nwc = -2;
+         }
+      }
+      // Cleanup hash list
+      if (ords) {
+         ords->Delete();
+         SafeDelete(ords);
       }
    }
 
@@ -10209,11 +10421,34 @@ void TProof::ModifyWorkerLists(const char *ord, Bool_t add)
    // Forward the request one step down, if needed
    Int_t action = (add) ? (Int_t) kActivateWorker : (Int_t) kDeactivateWorker;
    if (fw) {
-      TMessage mess(kPROOF_WORKERLISTS);
-      mess << action << TString(ord);
-      Broadcast(mess);
-      Collect(kActive, fCollectTimeout);
+      if (fProtocol > 32) {
+         TMessage mess(kPROOF_WORKERLISTS);
+         mess << action << TString(ord);
+         Broadcast(mess);
+         Collect(kActive, fCollectTimeout);
+         if (fStatus != 0) {
+            nwc = (fStatus < nwc) ? fStatus : nwc;
+            if (fStatus == -2) {
+               if (gDebug > 0) Warning("ModifyWorkerLists", "request not completely full filled");
+            } else {
+               Error("ModifyWorkerLists", "request failed");
+            }
+         }
+      } else {
+         TString oo(ord), o;
+         if (oo.Contains(","))
+            Warning("ModifyWorkerLists", "block request not supported by server: splitting into pieces ...");
+         Int_t from = 0;
+         while(oo.Tokenize(o, from, ",")) {
+            TMessage mess(kPROOF_WORKERLISTS);
+            mess << action << o;
+            Broadcast(mess);
+            Collect(kActive, fCollectTimeout);
+         }
+      }
    }
+   // Done
+   return nwc;
 }
 
 //_____________________________________________________________________________
@@ -10222,9 +10457,12 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
 {
    // Start a PROOF session on a specific cluster. If cluster is 0 (the
    // default) then the PROOF Session Viewer GUI pops up and 0 is returned.
-   // If cluster is "" (empty string) then we connect to a PROOF session
-   // on the localhost ("proof://localhost"). Via conffile a specific
-   // PROOF config file in the confir directory can be specified.
+   // If cluster is "lite://" we start a PROOF-lite session.
+   // If cluster is "" (empty string) then we connect to the cluster specified
+   // by 'Proof.LocalDefault', defaulting to "lite://".
+   // If cluster is "pod://" (case insensitive), then we connect to a PROOF cluster
+   // managed by PROOF on Demand (PoD, http://pod.gsi.de ).
+   // Via conffile a specific PROOF config file in the confir directory can be specified.
    // Use loglevel to set the default loging level for debugging.
    // The appropriate instance of TProofMgr is created, if not
    // yet existing. The instantiated TProof object is returned.
@@ -10263,12 +10501,19 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
    } else {
 
       TString clst(cluster);
-      if (clst.BeginsWith("workers=") || clst.BeginsWith("tunnel="))
-         clst.Insert(0, "/?");
+
+      // Check for PoD cluster
+      if (PoDCheckUrl( &clst ) < 0) return 0;
+
+      if (clst.BeginsWith("workers=")) clst.Insert(0, "lite:///?");
+      if (clst.BeginsWith("tunnel=")) clst.Insert(0, "/?");
 
       // Parse input URL
       TUrl u(clst);
 
+      // *** GG, 060711: this does not seem to work any more (at XrdClient level)
+      // *** to be investigated (it is not really needed; static tunnels work).
+      // Dynamic tunnel:
       // Parse any tunning info ("<cluster>/?tunnel=[<tunnel_host>:]tunnel_port)
       TString opts(u.GetOptions());
       if (!opts.IsNull()) {
@@ -10465,8 +10710,8 @@ void TProof::SaveWorkerInfo()
    }
 
    // Create or truncate the file first
-   TString fnwrk = Form("%s/.workers",
-                        gSystem->DirName(gProofServ->GetSessionDir()));
+   TString fnwrk = TString::Format("%s/.workers",
+                                   gSystem->DirName(gProofServ->GetSessionDir()));
    FILE *fwrk = fopen(fnwrk.Data(),"w");
    if (!fwrk) {
       Error("SaveWorkerInfo",
@@ -10496,6 +10741,18 @@ void TProof::SaveWorkerInfo()
          fprintf(fwrk,"%s@%s:%d %d %s %s.%s\n",
                      wrk->GetUser(), wrk->GetName(), wrk->GetPort(), status,
                      wrk->GetOrdinal(), wrk->GetWorkDir(), addlogext.Data());
+      }
+   }
+   
+   // Loop also over the list of bad workers (if they failed to startup they are not in
+   // the overall list)
+   TIter nxb(fBadSlaves);
+   while ((wrk = (TSlave *) nxb())) {
+      if (!fSlaves->FindObject(wrk)) {
+         // Write out record for this worker
+         fprintf(fwrk,"%s@%s:%d 0 %s %s.log\n",
+                     wrk->GetUser(), wrk->GetName(), wrk->GetPort(),
+                     wrk->GetOrdinal(), wrk->GetWorkDir());
       }
    }
 
@@ -10662,6 +10919,10 @@ Int_t TProof::AssertDataSet(TDSet *dset, TList *input,
                dsn2.Remove(ienl);
             }
             if ((fc = mgr->GetDataSet(dsn2.Data()))) {
+               // Save dataset name in TFileInfo's title to use it in TDset 
+               TIter nxfi(fc->GetList());
+               TFileInfo *fi = 0;
+               while ((fi = (TFileInfo *) nxfi())) { fi->SetTitle(dsn2.Data()); }
                dsnparse = dsn2;
                if (!dataset) {
                   // This is our dataset
@@ -11041,4 +11302,108 @@ void TProof::SetProgressDialog(Bool_t on)
       SetBit(kUseProgressDialog);
    else
       ResetBit(kUseProgressDialog);
+}
+
+//______________________________________________________________________________
+void TProof::ShowMissingFiles(TQueryResult *qr)
+{
+   // Show information about missing files during query described by 'qr' or the
+   // last query if qr is null (default).
+   // A short summary is printed in the end.
+
+   TQueryResult *xqr = (qr) ? qr : GetQueryResult();
+   if (!xqr) {
+      Warning("ShowMissingFiles", "no (last) query found: do nothing");
+      return;
+   }
+   
+   // Get the list, if any
+   TList *missing = (xqr->GetOutputList()) ? (TList *) xqr->GetOutputList()->FindObject("MissingFiles") : 0;
+   if (!missing) {
+      Info("ShowMissingFiles", "no files missing in query %s:%s", xqr->GetTitle(), xqr->GetName());
+      return;
+   }
+
+   Int_t nmf = 0, ncf = 0;
+   Long64_t msz = 0, mszzip = 0, mev = 0;
+   // Scan the list
+   TFileInfo *fi = 0;
+   TIter nxf(missing);
+   while ((fi = (TFileInfo *) nxf())) {
+      char status = 'M';
+      if (fi->TestBit(TFileInfo::kCorrupted)) {
+         ncf++;
+         status = 'C';
+      } else {
+         nmf++;
+      }
+      TFileInfoMeta *im = fi->GetMetaData();
+      if (im) {
+         if (im->GetTotBytes() > 0) msz += im->GetTotBytes(); 
+         if (im->GetZipBytes() > 0) mszzip += im->GetZipBytes(); 
+         mev += im->GetEntries();
+         Printf(" %d. (%c) %s %s %lld", ncf+nmf, status, fi->GetCurrentUrl()->GetUrl(), im->GetName(), im->GetEntries()); 
+      } else {
+         Printf(" %d. (%c) %s '' -1", ncf+nmf, status, fi->GetCurrentUrl()->GetUrl());
+      }
+   }
+
+   // Final notification
+   if (msz <= 0) msz = -1;
+   if (mszzip <= 0) mszzip = -1;
+   Double_t xf = (Double_t)mev / (mev + xqr->GetEntries()) ; 
+   if (msz > 0. || mszzip > 0.) {
+      Printf(" +++ %d file(s) missing, %d corrupted, i.e. %lld unprocessed events -->"
+             " about %.2f%% of the total (%lld bytes, %lld zipped)",
+             nmf, ncf, mev, xf * 100., msz, mszzip);
+   } else {
+      Printf(" +++ %d file(s) missing, %d corrupted, i.e. %lld unprocessed events -->"
+             " about %.2f%% of the total", nmf, ncf, mev, xf * 100.);
+   }
+}
+
+//______________________________________________________________________________
+TFileCollection *TProof::GetMissingFiles(TQueryResult *qr)
+{
+   // Get a TFileCollection with the files missing in the query described by 'qr'
+   // or the last query if qr is null (default).
+   // Return a null pointer if none were found, for whatever reason.
+   // The caller is responsible for the returned object.
+
+   TFileCollection *fc = 0;
+
+   TQueryResult *xqr = (qr) ? qr : GetQueryResult();
+   if (!xqr) {
+      Warning("GetMissingFiles", "no (last) query found: do nothing");
+      return fc;
+   }
+   
+   // Get the list, if any
+   TList *missing = (xqr->GetOutputList()) ? (TList *) xqr->GetOutputList()->FindObject("MissingFiles") : 0;
+   if (!missing) {
+      if (gDebug > 0)
+         Info("ShowMissingFiles", "no files missing in query %s:%s", xqr->GetTitle(), xqr->GetName());
+      return fc;
+   }
+
+   // Create collection: name is <dsname>.m<j>, where 'j' is the first giving a non existing name
+   TString fcname("unknown");
+   TDSet *ds = (TDSet *) xqr->GetInputObject("TDSet");
+   if (ds) {
+      fcname.Form("%s.m0", ds->GetName());
+      Int_t j = 1;
+      while (gDirectory->FindObject(fcname) && j < 1000)
+         fcname.Form("%s.m%d", ds->GetName(), j++);
+   }
+   fc = new TFileCollection(fcname, "Missing Files");
+   if (ds) fc->SetDefaultTreeName(ds->GetObjName());
+   // Scan the list
+   TFileInfo *fi = 0;
+   TIter nxf(missing);
+   while ((fi = (TFileInfo *) nxf())) {
+      fc->Add((TFileInfo *) fi->Clone());
+   }
+   fc->Update();
+   // Done
+   return fc;
 }

@@ -26,17 +26,14 @@ class TEveBoxSet: public TEveDigitSet
    TEveBoxSet& operator=(const TEveBoxSet&); // Not implemented
 
 public:
-   enum EBoxType_e
-      {
-         kBT_Undef,           // unknown-ignored
-         kBT_FreeBox,         // arbitrary box: specify 8*(x,y,z) box corners
-         kBT_AABox,           // axis-aligned box: specify (x,y,z) and (w, h, d)
-         kBT_AABoxFixedDim,   // axis-aligned box w/ fixed dimensions: specify (x,y,z)
-         kBT_Cone,
-         kBT_EllipticCone
-      };
-
-protected:
+   enum EBoxType_e {
+      kBT_Undef,           // unknown-ignored
+      kBT_FreeBox,         // arbitrary box: specify 8*(x,y,z) box corners
+      kBT_AABox,           // axis-aligned box: specify (x,y,z) and (w, h, d)
+      kBT_AABoxFixedDim,   // axis-aligned box w/ fixed dimensions: specify (x,y,z)
+      kBT_Cone,
+      kBT_EllipticCone
+   };
 
    struct BFreeBox_t       : public DigitBase_t { Float_t fVertices[8][3]; };
 
@@ -56,6 +53,8 @@ protected:
    Float_t           fDefWidth;     // Breadth assigned to first coordinate  (A).
    Float_t           fDefHeight;    // Breadth assigned to second coordinate (B).
    Float_t           fDefDepth;     // Breadth assigned to third coordinate  (C).
+
+   Int_t             fBoxSkip;      // Number of boxes to skip for each drawn box during scene rotation.
 
    Bool_t            fDrawConeCap;
 
@@ -89,6 +88,9 @@ public:
    void SetDefHeight(Float_t v) { fDefHeight = v ; }
    void SetDefDepth(Float_t v)  { fDefDepth  = v ; }
    void SetDrawConeCap(Bool_t x) { fDrawConeCap=x; StampObjProps(); }
+
+   Int_t GetBoxSkip()   const { return fBoxSkip; }
+   void  SetBoxSkip(Int_t bs) { fBoxSkip = bs; }
 
    ClassDef(TEveBoxSet, 0); // Collection of 3D primitives (fixed-size boxes, boxes of different sizes, or arbitrary sexto-epipeds); each primitive can be assigned a signal value and a TRef.
 };

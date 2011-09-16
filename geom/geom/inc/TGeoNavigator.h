@@ -84,6 +84,7 @@ private :
    TGeoCacheState       *fBackupState;      //! backup state
    TGeoHMatrix          *fCurrentMatrix;    //! current stored global matrix
    TGeoHMatrix          *fGlobalMatrix;     //! current pointer to cached global matrix
+   TGeoHMatrix          *fDivMatrix;        //! current local matrix of the selected division cell
    TString               fPath;             //! path to current node
     
 public :
@@ -149,6 +150,7 @@ public :
    void                   DoBackupState();
    void                   DoRestoreState();
    Int_t                  GetNodeId() const           {return fCache->GetNodeId();}
+   Int_t                  GetNextDaughterIndex() const {return fNextDaughterIndex;}
    TGeoNode              *GetNextNode() const         {return fNextNode;}
    TGeoNode              *GetMother(Int_t up=1) const {return fCache->GetMother(up);}
    TGeoHMatrix           *GetMotherMatrix(Int_t up=1) const {return fCache->GetMotherMatrix(up);}
@@ -161,6 +163,7 @@ public :
    TGeoVolume            *GetCurrentVolume() const {return fCurrentNode->GetVolume();}
    const Double_t        *GetCldirChecked() const  {return fCldirChecked;}
    const Double_t        *GetCldir() const         {return fCldir;}
+   TGeoHMatrix           *GetDivMatrix() const     {return fDivMatrix;}
 //   Double_t               GetNormalChecked() const {return fNormalChecked;}
    const Double_t        *GetNormal() const        {return fNormal;}
    Int_t                  GetLevel() const         {return fLevel;}
@@ -176,7 +179,8 @@ public :
                                     fDirection[0]=nx; fDirection[1]=ny; fDirection[2]=nz;}
 //   void                   SetNormalChecked(Double_t norm) {fNormalChecked=norm;}
    void                   SetCldirChecked(Double_t *dir) {memcpy(fCldirChecked, dir, 3*sizeof(Double_t));}
-
+   void                   SetLastSafetyForPoint(Double_t safe, const Double_t *point) {fLastSafety=safe; memcpy(fLastPoint,point,3*sizeof(Double_t));}
+   
    //--- point/vector reference frame conversion
    void                   LocalToMaster(const Double_t *local, Double_t *master) const {fCache->LocalToMaster(local, master);}
    void                   LocalToMasterVect(const Double_t *local, Double_t *master) const {fCache->LocalToMasterVect(local, master);}
@@ -200,5 +204,36 @@ public :
    ClassDef(TGeoNavigator, 0)          // geometry navigator class
 };
 
+#ifndef ROOT_TObjArray
+#include "TObjArray.h"
+#endif
+
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoNavigatorArray - Class representing an array of navigators working //
+//   in a single thread.                                                  //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
+
+class TGeoNavigatorArray : public TObjArray
+{
+private:
+   TGeoNavigator         *fCurrentNavigator; // Current navigator
+   TGeoManager           *fGeoManager;       // Manager to which it applies
+   
+   TGeoNavigatorArray(const TGeoNavigatorArray&);
+   TGeoNavigatorArray& operator=(const TGeoNavigatorArray&);
+
+public:
+   TGeoNavigatorArray() : TObjArray(), fCurrentNavigator(0), fGeoManager(0) {}
+   TGeoNavigatorArray(TGeoManager *mgr) : TObjArray(), fCurrentNavigator(0), fGeoManager(mgr) {SetOwner();}
+   virtual ~TGeoNavigatorArray() {}
+   
+   TGeoNavigator         *AddNavigator();
+   inline TGeoNavigator  *GetCurrentNavigator() const {return fCurrentNavigator;}   
+   TGeoNavigator         *SetCurrentNavigator(Int_t inav) {return (fCurrentNavigator=(TGeoNavigator*)At(inav));}
+
+   ClassDef(TGeoNavigatorArray, 0)       // An array of navigators
+};   
 #endif
    

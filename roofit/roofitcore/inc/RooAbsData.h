@@ -128,8 +128,11 @@ public:
 	
   // Split a dataset by a category
   virtual TList* split(const RooAbsCategory& splitCat, Bool_t createEmptyDataSets=kFALSE) const ;
- 
 
+  // Fast splitting for SimMaster setData
+  Bool_t canSplitFast() const ; 
+  RooAbsData* getSimData(const char* idxstate) ;
+			
   // Create 1,2, and 3D histograms from and fill it
   TH1 *createHistogram(const char *name, const RooAbsRealLValue& xvar,
                        const RooCmdArg& arg1=RooCmdArg::none(), const RooCmdArg& arg2=RooCmdArg::none(), 
@@ -194,6 +197,9 @@ public:
 
   Bool_t hasFilledCache() const ; 
 
+  void addOwnedComponent(const char* idxlabel, RooAbsData& data) ;
+  static void claimVars(RooAbsData*) ;
+  static Bool_t releaseVars(RooAbsData*) ;
 
 protected:
 
@@ -236,9 +242,11 @@ protected:
 
   RooAbsDataStore* _dstore ; // Data storage implementation
 
+  std::map<std::string,RooAbsData*> _ownedComponents ; // Owned external components
+
 private:
 
-  ClassDef(RooAbsData,2) // Abstract data collection
+  ClassDef(RooAbsData,4) // Abstract data collection
 };
 
 #endif

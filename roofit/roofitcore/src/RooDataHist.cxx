@@ -69,7 +69,10 @@ RooDataHist::RooDataHist() : _pbinvCacheMgr(0,10)
   _curIndex = -1 ;
   _realIter = _realVars.createIterator() ;
   _binValid = 0 ;
-
+  _curSumW2 = 0 ;
+  _curVolume = 1 ;
+  _curWgtErrHi = 0 ;
+  _curWgtErrLo = 0 ;
 }
 
 
@@ -251,6 +254,7 @@ RooDataHist::RooDataHist(const char *name, const char *title, const RooArgList& 
   //                              specified in Index(). If the given state name is not yet defined in the index
   //                              category it will be added on the fly. The import command can be specified
   //                              multiple times. 
+  // Import(map<string,TH1*>&) -- As above, but allows specification of many imports in a single operation
   //                              
 
   // Initialize datastore
@@ -266,6 +270,8 @@ RooDataHist::RooDataHist(const char *name, const char *title, const RooArgList& 
   pc.defineObject("impSliceDHist","ImportDataHistSlice",0,0,kTRUE) ; // array
   pc.defineString("impSliceDState","ImportDataHistSlice",0,"",kTRUE) ; // array
   pc.defineDouble("weight","Weight",0,1) ; 
+  pc.defineObject("dummy1","ImportDataHistSliceMany",0) ;
+  pc.defineObject("dummy2","ImportHistoSliceMany",0) ;
   pc.defineMutex("ImportHisto","ImportHistoSlice","ImportDataHistSlice") ;
   pc.defineDependency("ImportHistoSlice","IndexCat") ;
   pc.defineDependency("ImportDataHistSlice","IndexCat") ;
@@ -1096,7 +1102,7 @@ RooPlot *RooDataHist::plotOn(RooPlot *frame, PlotOpt o) const
 
 
 //_____________________________________________________________________________
-Double_t RooDataHist::weight(const RooArgSet& bin, Int_t intOrder, Bool_t correctForBinSize, Bool_t cdfBoundaries) 
+Double_t RooDataHist::weight(const RooArgSet& bin, Int_t intOrder, Bool_t correctForBinSize, Bool_t cdfBoundaries, Bool_t oneSafe) 
 {
   // Return the weight at given coordinates with optional
   // interpolation. If intOrder is zero, the weight
@@ -1114,8 +1120,8 @@ Double_t RooDataHist::weight(const RooArgSet& bin, Int_t intOrder, Bool_t correc
   }
 
   // Handle no-interpolation case
-  if (intOrder==0) {
-    _vars.assignValueOnly(bin) ;
+  if (intOrder==0) {    
+    _vars.assignValueOnly(bin,oneSafe) ;
     Int_t idx = calcTreeIndex() ;
     //cout << "intOrder 0, idx = " << idx << endl ;
     if (correctForBinSize) {

@@ -2,6 +2,36 @@
 <hr/>
 <a name="core"></a> 
 <h3>Core</h3>
+<h4>Build system and Platform support</h4>
+<ul>
+<li>The build system has been extended to support out-of-source builds.
+This means you can build different sets of binaries from one source tree, like:
+<pre>
+      mkdir root-debug
+      cd root-debug
+      ../root/configure --build=debug
+</pre>
+</li>
+<li>
+The build system now supports cross compilation, where typically you need tools
+like rootcint, rootmap, etc, to be compiled on the build platform to be able
+to generate dictionaries for the target platform.
+</li>
+<li>ROOT has been ported to iOS. This port required the above mentioned
+changes in the build system. To build ROOT for the iPhone/iPad sumilator do:
+<pre>
+    ./configure iossim
+    make
+</pre>
+To build a native iOS armv7 version do:
+<pre>
+    ./configure ios
+    make
+</pre>
+Both builds create a libRoot.a that can be used to create ROOT based iOS apps
+(iOS does not allow apps to load non-system dynamic libraries at run time).
+Some sample Xcode projects using ROOT will soon be made available.
+</ul>
 <h4>Base</h4>
 <ul>
 <li>Change TTime data member from Long_t to Long64_t. On 32-bit systems the
@@ -20,8 +50,8 @@ The default is to trap the signal and continue with the event loop,
 using this method one can specify to exit with the signal number to the
 shell, or to abort() which in addition generates a core dump.
 </li>
-<li>New command line argument -x which forces ROOT to exit on an exception.
-</li>
+<li>New command line argument -x which forces ROOT to exit on an exception.</li>
+<li>Add TSystem::AddDynamicPath.</li>
 </ul>
 <h4>Build</h4>
 <ul>
@@ -61,25 +91,36 @@ the object and hence run the proper emulated destructor.</li>
 <li>Add a new function GenerateDictionary to TInterpreter which allows for the quick and easy creation of a dictionary
 given one (or more) class name(s) and the name(s) of its header files.
 <pre style="border:gray 1px solid;padding:0.5em 2em;background:#ffe">
-   gInterpreter->GenerateDictionary("vector<vector<float> >;list<vector<float> >","list;vector");
+   gInterpreter->GenerateDictionary("vector&lt;vector&lt;float&gt; &gt;;list&lt;vector&lt;float&gt; &gt;","list;vector");
    gInterpreter->GenerateDictionary("myclass","myclass.h;myhelper.h");
-</pre>This replaces the recommandation of creating a small 'loader.C' script to create the dictionaries.
+</pre>This replaces the recommendation of creating a small 'loader.C' script to create the dictionaries.
+</li>
+<li>Implement a ShowMembers function for interpreted classes, by querying the interpreter for the data member 
+information.</li>
+<li>In order to fix possible buffer overflow of parent string buffer in TMemberInspector,
+the signature of ShowMember() was changed to no longer require (nor request) the 
+caller to provide a buffer (of length unknown to the callee.)</li>
+<li>Improve the uniqueness of globally visible symbols to allow for the mixing of
+dictionaries with very similar layout.</li>
 </ul>
 
 <h4>Cont</h4>
 <ul>
 <li>New functions for TClonesArray:
-
+<ul>
+<li>
 AbsorbObjects(TClonesArray* otherTCA):
 Allows one to directly move the object pointers from otherTCA to the calling
 TCA without cloning (copying). The calling TCA takes over ownership of all of
 the moved objects. otherTCA is left empty upon return.
-
+</li>
+<li>
 MultiSort(Int_t nTCs, TClonesArray** tcs):
 Sorts multiple TClonesArrays simultaneously using the calling TCA's objects
 as the sorting key.
 </li>
-
+</ul>
+</li>
 
 <li>New function for TSeqCollection:
 
@@ -89,6 +130,10 @@ be sorted just like a (a determines the sort; nBs is the number of TObject**
 arrays in b). Uses ObjCompare() to compare objects. This function is used by
 the new function TClonesArray::MultiSort().
 </li>
+<li>Add a new option "+" in TClonesArray::Clear.   When the option starts with "C+", 
+eg "C+xyz" the objects in the array are in turn cleared with the option "xyz".</li>
+<li>Since the Collection objects do have a name and the Clone method does allow 
+for the name to change, TCollection::Clone was added to implement the name change properly.</li>
 </ul>
 <h4>Thread</h4>
 <ul>

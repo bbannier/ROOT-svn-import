@@ -164,26 +164,31 @@ TGHtmlBrowser::TGHtmlBrowser(const char *filename, const TGWindow *p, UInt_t w, 
    fHorizontalFrame = new TGHorizontalFrame(fVerticalFrame,727,600);
 
    fBack = new TGPictureButton(fHorizontalFrame,gClient->GetPicture("GoBack.gif"));
+   fBack->SetStyle(gClient->GetStyle());
    fBack->SetToolTipText("Go Back");
    fHorizontalFrame->AddFrame(fBack, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsCenterY,2,2,2,2));
    fBack->Connect("Clicked()", "TGHtmlBrowser", this, "Back()");
 
    fForward = new TGPictureButton(fHorizontalFrame,gClient->GetPicture("GoForward.gif"));
+   fForward->SetStyle(gClient->GetStyle());
    fForward->SetToolTipText("Go Forward");
    fHorizontalFrame->AddFrame(fForward, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsCenterY,2,2,2,2));
    fForward->Connect("Clicked()", "TGHtmlBrowser", this, "Forward()");
 
    fReload = new TGPictureButton(fHorizontalFrame,gClient->GetPicture("ReloadPage.gif"));
+   fReload->SetStyle(gClient->GetStyle());
    fReload->SetToolTipText("Reload Page");
    fHorizontalFrame->AddFrame(fReload, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsCenterY,2,2,2,2));
    fReload->Connect("Clicked()", "TGHtmlBrowser", this, "Reload()");
 
    fStop = new TGPictureButton(fHorizontalFrame,gClient->GetPicture("StopLoading.gif"));
+   fStop->SetStyle(gClient->GetStyle());
    fStop->SetToolTipText("Stop Loading");
    fHorizontalFrame->AddFrame(fStop, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsCenterY,2,2,2,2));
    fStop->Connect("Clicked()", "TGHtmlBrowser", this, "Stop()");
 
    fHome = new TGPictureButton(fHorizontalFrame,gClient->GetPicture("GoHome.gif"));
+   fHome->SetStyle(gClient->GetStyle());
    fHome->SetToolTipText("Go to ROOT HomePage\n  (http://root.cern.ch)");
    fHorizontalFrame->AddFrame(fHome, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsCenterY,2,2,2,2));
    fHome->Connect("Clicked()", "TGHtmlBrowser", this, "Selected(=\"http://root.cern.ch\")");
@@ -196,9 +201,10 @@ TGHtmlBrowser::TGHtmlBrowser(const char *filename, const TGWindow *p, UInt_t w, 
    fComboBox->Resize(200, fURL->GetDefaultHeight());
    fURL->Connect("ReturnPressed()", "TGHtmlBrowser", this, "URLChanged()");
 
-   fComboBox->AddEntry(filename,1);
-   fURL->SetText(filename);
-
+   if (filename) {
+      fComboBox->AddEntry(filename, 1);
+      fURL->SetText(filename);
+   }
    fComboBox->Select(0);
    fComboBox->Connect("Selected(char *)", "TGHtmlBrowser", this, "Selected(char *)");
 
@@ -635,7 +641,7 @@ Bool_t TGHtmlBrowser::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                         new TWin32SplashThread(kTRUE);
 #else
                         char str[32];
-                        sprintf(str, "About ROOT %s...", gROOT->GetVersion());
+                        snprintf(str, 32, "About ROOT %s...", gROOT->GetVersion());
                         TRootHelpDialog *hd = new TRootHelpDialog(this, str,
                                                                   600, 400);
                         hd->SetText(gHelpAbout);

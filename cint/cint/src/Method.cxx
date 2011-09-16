@@ -68,7 +68,7 @@ void Cint::G__MethodInfo::Init(long handlein,long indexin
     if(belongingclassin && belongingclassin->IsValid()) 
       belongingclass = belongingclassin;
     else {
-      belongingclass=(G__ClassInfo*)NULL;
+      belongingclass = (G__ClassInfo*)NULL;
     }
 
     /* Set return type */
@@ -84,7 +84,7 @@ void Cint::G__MethodInfo::Init(long handlein,long indexin
   else { /* initialize if handlein==0 */
     handle=0;
     index=-1;
-    belongingclass=(G__ClassInfo*)NULL;
+    belongingclass = (G__ClassInfo*)NULL;
   }
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -107,7 +107,7 @@ void Cint::G__MethodInfo::Init(G__ClassInfo *belongingclassin
 
   // reach to desired page
   for(i=0;i<funcpage&&ifunc2;i++) ifunc2=ifunc2->next;
-  G__ASSERT(ifunc2->page == funcpage);
+  G__ASSERT(!ifunc || ifunc2->page == funcpage);
 
   if(ifunc2) {
     handle = (long)G__get_ifunc_ref(ifunc2);
@@ -175,6 +175,20 @@ const char* Cint::G__MethodInfo::Title()
     return((char*)NULL);
   }
 }
+///////////////////////////////////////////////////////////////////////////
+G__ClassInfo *Cint::G__MethodInfo::MemberOf()
+{
+   if (!memberOf && IsValid()) {
+      long tagnum = ((struct G__ifunc_table*)handle)->tagnum;
+      if (belongingclass && tagnum == belongingclass->Tagnum() ) {
+         memberOf = belongingclass;
+      } else {
+         memberOf = new G__ClassInfo(tagnum);
+      }
+   }
+   return memberOf;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 long Cint::G__MethodInfo::Property()
 {

@@ -38,6 +38,8 @@
 #include "TGIcon.h"
 #include "TGMsgBox.h"
 #include "TGComboBox.h"
+#include "TSystem.h"
+#include "TObjArray.h"
 
 #include <stdlib.h>
 
@@ -92,15 +94,15 @@ TGSearchDialog::TGSearchDialog(const TGWindow *p, const TGWindow *main,
 
    fLSearch = new TGLabel(fF3, new TGHotString("Search &for:"));
 
-   fBSearch = new TGTextBuffer(100);
-   if (!gLastSearchString.IsNull())
-      fBSearch->AddText(0, gLastSearchString.Data());
-   else
-      fSearchButton->SetState(kButtonDisabled);
-
    fCombo = new TGComboBox(fF3, "");
    fSearch = fCombo->GetTextEntry();
    fBSearch = fSearch->GetBuffer();
+   if (sstruct && sstruct->fBuffer)
+      fBSearch->AddText(0, sstruct->fBuffer);
+   else if (!gLastSearchString.IsNull())
+      fBSearch->AddText(0, gLastSearchString.Data());
+   else
+      fSearchButton->SetState(kButtonDisabled);
    fSearch->Associate(this);
    fCombo->Resize(220, fSearch->GetDefaultHeight());
    fSearch->SelectAll();
@@ -339,7 +341,7 @@ TGPrintDialog::TGPrintDialog(const TGWindow *p, const TGWindow *main,
                            2, 5, 0, 2);
    fL3 = new TGLayoutHints(kLHintsTop | kLHintsRight, 2, 2, 4, 4);
    fL5 = new TGLayoutHints(kLHintsLeft | kLHintsCenterY, 3, 5, 0, 0);
-   fL6 = new TGLayoutHints(kLHintsRight | kLHintsCenterY, 0, 2, 0, 0);
+   fL6 = new TGLayoutHints(kLHintsExpandX | kLHintsCenterY, 0, 2, 0, 0);
    fL7 = new TGLayoutHints(kLHintsLeft, 10, 10, 10, 10);
 
    fL21 = new TGLayoutHints(kLHintsTop | kLHintsRight, 2, 5, 10, 0);
@@ -354,17 +356,15 @@ TGPrintDialog::TGPrintDialog(const TGWindow *p, const TGWindow *main,
    fBPrintCommand->AddText(0, *printProg);
    fPrintCommandEntry = new TGTextEntry(fF3, fBPrintCommand);
    fPrintCommandEntry->Associate(this);
-   fPrintCommandEntry->Resize(100, fPrintCommandEntry->GetDefaultHeight());
+   fPrintCommandEntry->Resize(150, fPrintCommandEntry->GetDefaultHeight());
 
    fF3->AddFrame(fLPrintCommand, fL5);
    fF3->AddFrame(fPrintCommandEntry, fL6);
 
    fLPrinter = new TGLabel(fF4, new TGHotString("Printer:"));
-   fBPrinter = new TGTextBuffer(20);
-   fBPrinter->AddText(0, *printerName);
-   fPrinterEntry = new TGTextEntry(fF4, fBPrinter);
-   fPrinterEntry->Associate(this);
-   fPrinterEntry->Resize(100, fPrinterEntry->GetDefaultHeight());
+   fPrinterEntry = new TGComboBox(fF4, *printerName);
+   fBPrinter = fPrinterEntry->GetTextEntry()->GetBuffer();
+   fPrinterEntry->Resize(150, fPrinterEntry->GetTextEntry()->GetDefaultHeight());
    fF4->AddFrame(fLPrinter, fL5);
    fF4->AddFrame(fPrinterEntry, fL6);
 
@@ -385,6 +385,7 @@ TGPrintDialog::TGPrintDialog(const TGWindow *p, const TGWindow *main,
    MapSubwindows();
    Resize(GetDefaultSize());
 
+   GetPrinters();
    CenterOnParent();
 
    SetWindowName("Print");
@@ -423,6 +424,59 @@ void TGPrintDialog::CloseWindow()
    // re-used.
 
    DeleteWindow();
+}
+
+//______________________________________________________________________________
+void TGPrintDialog::GetPrinters()
+{
+   // Ask the system fo the list of available printers and populate the combo
+   // box. If there is a default printer, select it in the list.
+
+   TObject *obj;
+   Int_t idx = 1, dflt =1;
+
+   if (gVirtualX->InheritsFrom("TGX11")) {
+      char *lpstat = gSystem->Which(gSystem->Getenv("PATH"), "lpstat", 
+                                    kExecutePermission);
+      if (lpstat == 0) return;
+      TString defaultprinter = gSystem->GetFromPipe("lpstat -d");
+      TString printerlist = gSystem->GetFromPipe("lpstat -v");
+      TObjArray *tokens = printerlist.Tokenize("\n");
+      TIter iter(tokens);
+      while((obj = iter())) {
+         TString line = obj->GetName();
+         TObjArray *tk = line.Tokenize(" ");
+         TString pname = ((TObject*)tk->At(2))->GetName();
+         if (pname.EndsWith(":")) pname.Remove(pname.Last(':'));
+         //if (pname.Contains(":")) pname.Remove(pname.Last(':'));
+         if (defaultprinter.Contains(pname)) {
+            dflt = idx;
+            fPrinterEntry->GetTextEntry()->SetText(pname.Data(), kFALSE);
+         }
+         fPrinterEntry->AddEntry(pname.Data(), idx++);
+      }
+      delete [] lpstat;
+   }
+   else {
+      TString defaultprinter = gSystem->GetFromPipe("WMIC Path Win32_Printer where Default=TRUE Get DeviceID");
+      TString printerlist = gSystem->GetFromPipe("WMIC Path Win32_Printer Get DeviceID");
+      defaultprinter.Remove(0, defaultprinter.First('\n')); // remove "Default"
+      printerlist.Remove(0, printerlist.First('\n')); // remove "DeviceID"
+      printerlist.ReplaceAll("\r", "");
+      TObjArray *tokens = printerlist.Tokenize("\n");
+      TIter iter(tokens);
+      while((obj = iter())) {
+         TString pname = obj->GetName();
+         pname.Remove(TString::kTrailing, ' ');
+         if (defaultprinter.Contains(pname)) {
+            dflt = idx;
+            fPrinterEntry->GetTextEntry()->SetText(pname.Data(), kFALSE);
+         }
+         fPrinterEntry->AddEntry(pname.Data(), idx++);
+      }
+   }
+   fPrinterEntry->Select(dflt, kFALSE);
+   fPrinterEntry->Layout();
 }
 
 //______________________________________________________________________________
@@ -504,8 +558,8 @@ TGGotoDialog::TGGotoDialog(const TGWindow *p, const TGWindow *main,
    fGotoButton->Associate(this);
    fCancelButton->Associate(this);
 
-   fL1 = new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 2, 3, 0);
-   fL21 = new TGLayoutHints(kLHintsTop | kLHintsRight, 2, 5, 10, 0);
+   fL1 = new TGLayoutHints(kLHintsCenterY | kLHintsExpandX, 2, 2, 3, 0);
+   fL21 = new TGLayoutHints(kLHintsCenterY | kLHintsRight, 2, 5, 10, 0);
 
    fF1->AddFrame(fGotoButton, fL1);
    fF1->AddFrame(fCancelButton, fL1);

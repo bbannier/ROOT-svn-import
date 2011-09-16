@@ -41,57 +41,83 @@
 //         ...                                                          //
 //      }                                                               //
 //      ...                                                             //
-//      a.Delete();                                                     //
+//      a.Delete(); // or a.Clear() or a.Clear("C")                     //
+//   }                                                                  //
+//                                                                      //
+// To reduce the number of call to the constructor (especially useful   //
+// if the user class requires memory allocation), the object can be     //
+// added (and constructed when needed) using ConstructedAt which only   //
+// calls the constructor once per slot.                                 //
+//                                                                      //
+//   TClonesArray a("TTrack", 10000);                                   //
+//   while (TEvent *ev = (TEvent *)next()) {      // O(100000) events   //
+//      for (int i = 0; i < ev->Ntracks; i++) {   // O(10000) tracks    //
+//         TTrack *track = (TTrack*)a.ConstructedAt(i);                 //
+//         track->Set(x,y,z,....);                                      //
+//         ...                                                          //
+//         ...                                                          //
+//      }                                                               //
+//      ...                                                             //
+//      a.Clear(); // or a.Clear("C");                                  //
 //   }                                                                  //
 //                                                                      //
 // Note: the only supported way to add objects to a TClonesArray is     //
-// via the new with placement method. The diffrent Add() methods of     //
-// TObjArray and its base classes are not allowed.                      //
+// via the new with placement method or the ConstructedAt method.       //
+// The other Add() methods ofTObjArray and its base classes are not     //
+// allowed.                                                             //
 //                                                                      //
 // Considering that a new/delete costs about 70 mus on a 300 MHz HP,    //
 // O(10^9) new/deletes will save about 19 hours.                        //
 //                                                                      //
 //  NOTE 1
 //  ======
-// C/C++ offer the possibility to allocate and delete memory. 
-// Forgetting to delete allocated memory is a programming error that originate "leaks", 
-// i.e. the memory of your process grows and eventually your program crashes. 
-// Even if you *always* delete the allocated memory, the recovered space may not be
-// efficiently reused. The process knows that there are portions of free memory, 
-// but when you allocate it again, a fresh piece of memory is grabbed. 
-// Your program is free from semantic errors, but the total memory of your process 
-// still grows. Moreover your program's memory is full of "holes" which reduce the 
-// efficiency of memory access, this is called "memory fragmentation". 
-// Moreover new / delete are expensive operations in terms of CPU time.
+// C/C++ offers the possibility of allocating and deleting memory.
+// Forgetting to delete allocated memory is a programming error called a
+// "memory leak", i.e. the memory of your process grows and eventually
+// your program crashes. Even if you *always* delete the allocated
+// memory, the recovered space may not be efficiently reused. The
+// process knows that there are portions of free memory, but when you
+// allocate it again, a fresh piece of memory is grabbed. Your program
+// is free from semantic errors, but the total memory of your process
+// still grows, because your program's memory is full of "holes" which
+// reduce the efficiency of memory access; this is called "memory
+// fragmentation". Moreover new / delete are expensive operations in
+// terms of CPU time.
 //
-// Without entering into technical details, the TClonesArray allow to "reuse" the 
-// same portion of memory for new/delete avoiding memory fragmentation and memory 
-// growth and improving by orders of magnitude the performance. Every time the 
-// memory of the TClonesArray has to be reused, the Clear() method is employed. 
-// To provide its benefits, each TClonesArray must be allocated *once* per process 
-// and disposed of (deleted) *only when not needed any more*.
-// So a job should see *only one* deletion for each TClonesArray, which should be 
-// "Cleared()" in between several times. Keep deleting a TClonesArray is a double 
-// waste. Not only you do not avoid memory fragmentation, but you worsen it because
-// the TClonesArray itself is a rather heavy structure, and there is quite some 
-// code in the destructor, so you have more memory fragmentation and slower code.
+// Without entering into technical details, TClonesArray allows you to
+// "reuse" the same portion of memory for new/delete avoiding memory
+// fragmentation and memory growth and improving the performance by
+// orders of magnitude. Every time the memory of the TClonesArray has
+// to be reused, the Clear() method is used. To provide its benefits,
+// each TClonesArray must be allocated *once* per process and disposed
+// of (deleted) *only when not needed any more*.
+//
+// So a job should see *only one* deletion for each TClonesArray,
+// which should be Clear()ed during the job several times. Deleting a
+// TClonesArray is a double waste. Not only you do not avoid memory
+// fragmentation, but you worsen it because the TClonesArray itself
+// is a rather heavy structure, and there is quite some code in the
+// destructor, so you have more memory fragmentation and slower code.
 //
 //  NOTE 2
 //  ======
 //
 // When investigating misuse of TClonesArray, please make sure of the following:
 //
-//    * Use Clear() or Clear("C") instead of Delete(). This will improve program 
-//      execution time.
-//    * TClonesArray object classes containing pointers allocate memory. 
-//      To avoid causing memory leaks, special Clear("C") must be used for 
-//      clearing TClonesArray. When option "C" is specified, ROOT automatically 
-//      executes the Clear() method (by default it is empty contained in TObject).
-//      This method must be overridden in the relevant TClonesArray object class, 
-//      implementing the reset procedure for pointer objects.
-//    * To reduce memory fragmentation, please make sure that the TClonesArrays 
-//      are not destroyed and created on every event. 
-//      They must only be constructed/destructed at the beginning/end of the run. 
+//    * Use Clear() or Clear("C") instead of Delete(). This will improve
+//      program execution time.
+//    * TClonesArray object classes containing pointers allocate memory.
+//      To avoid causing memory leaks, special Clear("C") must be used
+//      for clearing TClonesArray. When option "C" is specified, ROOT
+//      automatically executes the Clear() method (by default it is
+//      empty contained in TObject). This method must be overridden in
+//      the relevant TClonesArray object class, implementing the reset
+//      procedure for pointer objects.
+//    * To reduce memory fragmentation, please make sure that the
+//      TClonesArrays are not destroyed and created on every event. They
+//      must only be constructed/destructed at the beginning/end of the
+//      run.
+//
 //////////////////////////////////////////////////////////////////////////
 
 #include <stdlib.h>
@@ -214,7 +240,7 @@ TClonesArray& TClonesArray::operator=(const TClonesArray& tc)
       fCont[i] = fKeep->fCont[i];
    }
 
-   fLast = tc.fSize - 1;
+   fLast = tc.fLast;
    Changed();
    return *this;
 }
@@ -318,6 +344,52 @@ void TClonesArray::Compress()
 }
 
 //______________________________________________________________________________
+TObject *TClonesArray::ConstructedAt(Int_t idx)
+{
+   // Get an object at index 'idx' that is guaranteed to have been constructed.
+   // It might be either a freshly allocated object or one that had already been
+   // allocated (and assumingly used).  In the later case, it is the callers 
+   // responsability to insure that the object is returned to a known state,
+   // usually by calling the Clear method on the TClonesArray.
+   //
+   // Tests to see if the destructor has been called on the object.  
+   // If so, or if the object has never been constructed the class constructor is called using
+   // New().  If not, return a pointer to the correct memory location.
+   // This explicitly to deal with TObject classes that allocate memory
+   // which will be reset (but not deallocated) in their Clear()
+   // functions.
+   
+   TObject *obj = (*this)[idx];
+   if ( obj && obj->TestBit(TObject::kNotDeleted) ) {
+      return obj;
+   }
+   return (fClass) ? static_cast<TObject*>(fClass->New(obj)) : 0;
+}
+   
+//______________________________________________________________________________
+TObject *TClonesArray::ConstructedAt(Int_t idx, Option_t *clear_options)
+{
+   // Get an object at index 'idx' that is guaranteed to have been constructed.
+   // It might be either a freshly allocated object or one that had already been
+   // allocated (and assumingly used).  In the later case, the function Clear
+   // will be called and passed the value of 'clear_options'
+   //
+   // Tests to see if the destructor has been called on the object.  
+   // If so, or if the object has never been constructed the class constructor is called using
+   // New().  If not, return a pointer to the correct memory location.
+   // This explicitly to deal with TObject classes that allocate memory
+   // which will be reset (but not deallocated) in their Clear()
+   // functions.
+   
+   TObject *obj = (*this)[idx];
+   if ( obj && obj->TestBit(TObject::kNotDeleted) ) {
+      obj->Clear(clear_options);
+      return obj;
+   }
+   return (fClass) ? static_cast<TObject*>(fClass->New(obj)) : 0;
+}
+
+//______________________________________________________________________________
 void TClonesArray::Clear(Option_t *option)
 {
    // Clear the clones array. Only use this routine when your objects don't
@@ -332,12 +404,19 @@ void TClonesArray::Clear(Option_t *option)
 
    if (option && option[0] == 'C') {
       const char *cplus = strstr(option,"+");
+      if (cplus) {
+         cplus = cplus + 1;
+      } else {
+         cplus = "";
+      }
       Int_t n = GetEntriesFast();
       for (Int_t i = 0; i < n; i++) {
          TObject *obj = UncheckedAt(i);
          if (obj) {
-            if (cplus) obj->Clear(cplus+1);
-            else obj->Clear();
+            obj->Clear(cplus);
+            obj->ResetBit( kHasUUID ); 
+            obj->ResetBit( kIsReferenced ); 
+            obj->SetUniqueID( 0 );
          }
       }
    }
@@ -406,7 +485,7 @@ void TClonesArray::ExpandCreate(Int_t n)
 {
    // Expand or shrink the array to n elements and create the clone
    // objects by calling their default ctor. If n is less than the current size
-   // the array is shrinked and the allocated space is freed.
+   // the array is shrunk and the allocated space is freed.
    // This routine is typically used to create a clonesarray into which
    // one can directly copy object data without going via the
    // "new (arr[i]) MyObj()" (i.e. the vtbl is already set correctly).
@@ -423,7 +502,7 @@ void TClonesArray::ExpandCreate(Int_t n)
       if (!fKeep->fCont[i]) {
          fKeep->fCont[i] = (TObject*)fClass->New();
       } else if (!fKeep->fCont[i]->TestBit(kNotDeleted)) {
-         // The object has been delete (or never initilized)
+         // The object has been deleted (or never initialized)
          fClass->New(fKeep->fCont[i]);
       }
       fCont[i] = fKeep->fCont[i];
@@ -461,10 +540,13 @@ void TClonesArray::ExpandCreateFast(Int_t n)
       if (!fKeep->fCont[i]) {
          fKeep->fCont[i] = (TObject*)fClass->New();
       } else if (!fKeep->fCont[i]->TestBit(kNotDeleted)) {
-         // The object has been delete (or never initilized)
+         // The object has been deleted (or never initialized)
          fClass->New(fKeep->fCont[i]);
       }
       fCont[i] = fKeep->fCont[i];
+   }
+   if (fLast > n) {
+      memset(fCont+fLast,0,(fSize-fLast)*sizeof(TObject*));
    }
    fLast = n - 1;
    Changed();
@@ -602,6 +684,11 @@ void TClonesArray::SetClass(const TClass *cl, Int_t s)
       Error("SetClass", "%s does not inherit from TObject", classname);
       return;
    }
+   if (!fClass->GetBaseClassOffset(TObject::Class())==0) {
+      MakeZombie();
+      Error("SetClass", "%s must inherit from TObject as the left most base class.", classname);
+      return;      
+   }
    Int_t nch = strlen(classname)+2;
    char *name = new char[nch];
    snprintf(name,nch, "%ss", classname);
@@ -727,7 +814,7 @@ void TClonesArray::Streamer(TBuffer &b)
             if (!fKeep->fCont[i]) {
                fKeep->fCont[i] = (TObject*)fClass->New();
             } else if (!fKeep->fCont[i]->TestBit(kNotDeleted)) {
-               // The object has been delete (or never initialized)
+               // The object has been deleted (or never initialized)
                fClass->New(fKeep->fCont[i]);
             }
 
@@ -824,9 +911,21 @@ TObject *&TClonesArray::operator[](Int_t idx)
    if (idx >= fSize)
       Expand(TMath::Max(idx+1, GrowBy(fSize)));
 
-   if (!fKeep->fCont[idx])
+   if (!fKeep->fCont[idx]) {
       fKeep->fCont[idx] = (TObject*) TStorage::ObjectAlloc(fClass->Size());
-
+      // Reset the bit so that:
+      //    obj = myClonesArray[i];
+      //    obj->TestBit(TObject::kNotDeleted)
+      // will behave correctly.
+      // TObject::kNotDeleted is one of the higher bit that is not settable via the public
+      // interface.
+      static size_t fbitsOffset = 0;
+      if (fbitsOffset == 0) {
+         fbitsOffset = TObject::Class()->GetDataMemberOffset("fBits");
+      }
+      char *fbitsAddress = ((char*)fKeep->fCont[idx]) + fbitsOffset;
+      *(UInt_t*)fbitsAddress = 0;
+   }
    fCont[idx] = fKeep->fCont[idx];
 
    fLast = TMath::Max(idx, GetAbsLast());
@@ -872,54 +971,105 @@ TObject *TClonesArray::New(Int_t idx)
 // (jadetwiler@lbl.gov)
 //
 //______________________________________________________________________________
-void TClonesArray::AbsorbObjects(TClonesArray* tc) 
+void TClonesArray::AbsorbObjects(TClonesArray *tc)
 {
-   // Directly move the object pointers from tc to this without cloning
-   // (copying).
-   // "this" takes over ownership of all of tc's object pointers. tc is left 
-   // empty upon return
+   // Directly move the object pointers from tc without cloning (copying).
+   // This TClonesArray takes over ownership of all of tc's object
+   // pointers. The tc array is left empty upon return.
 
    // tests
-   if(tc == NULL || tc == this || tc->GetEntriesFast() == 0) return;
+   if (tc == 0 || tc == this || tc->GetEntriesFast() == 0) return;
    if (fClass != tc->fClass) {
       Error("AbsorbObjects", "cannot absorb objects when classes are different");
       return;
    }
 
    // cache the sorted status
-   bool wasSorted = IsSorted() && tc->IsSorted() && 
-                    (Last() == NULL || Last()->Compare(tc->First()) == -1);
+   Bool_t wasSorted = IsSorted() && tc->IsSorted() &&
+                      (Last() == 0 || Last()->Compare(tc->First()) == -1);
 
    // expand this
    Int_t oldSize = GetEntriesFast();
    Int_t newSize = oldSize + tc->GetEntriesFast();
-   if(newSize > fSize) Expand(newSize);
+   if(newSize > fSize)
+      Expand(newSize);
 
    // move
-   for(Int_t i = 0; i <= tc->GetEntriesFast(); i++) {
+   for (Int_t i = 0; i <= tc->GetEntriesFast(); i++) {
       fCont[oldSize+i] = tc->fCont[i];
       (*fKeep)[oldSize+i] = (*(tc->fKeep))[i];
-      tc->fCont[i] = NULL;
-      (*(tc->fKeep))[i] = NULL;
+      tc->fCont[i] = 0;
+      (*(tc->fKeep))[i] = 0;
    }
 
    // cleanup
    fLast = newSize-1;
    tc->fLast = -1;
-   if(!wasSorted) Changed();
+   if (!wasSorted)
+      Changed();
 }
 
+//______________________________________________________________________________
+void TClonesArray::AbsorbObjects(TClonesArray *tc, Int_t idx1, Int_t idx2)
+{
+   // Directly move the rang of object pointers from tc without cloning
+   // (copying).
+   // This TClonesArray takes over ownership of all of tc's object pointers
+   // from idx1 to idx2. The tc array is re-arranged by return.
+
+   // tests
+   if (tc == 0 || tc == this || tc->GetEntriesFast() == 0) return;
+   if (fClass != tc->fClass) {
+      Error("AbsorbObjects", "cannot absorb objects when classes are different");
+      return;
+   }
+
+   if (idx1 > idx2) {
+      Error("AbsorbObjects", "range is not valid: idx1>idx2");
+      return;
+   }
+
+   // cache the sorted status
+   Bool_t wasSorted = IsSorted() && tc->IsSorted() &&
+                      (Last() == 0 || Last()->Compare(tc->First()) == -1);
+
+   // expand this
+   Int_t oldSize = GetEntriesFast();
+   Int_t newSize = oldSize + (idx2-idx1+1);
+   if(newSize > fSize)
+      Expand(newSize);
+
+   // move
+   for (Int_t i = idx1; i <= idx2; i++) {
+      fCont[oldSize+i -idx1] = tc->fCont[i];
+      (*fKeep)[oldSize+i-idx1] = (*(tc->fKeep))[i];
+      tc->fCont[i] = 0;
+      (*(tc->fKeep))[i] = 0;
+   }
+
+   // cleanup
+   for (Int_t i = idx2+1; i < tc->GetEntriesFast(); i++) {
+      tc->fCont[i-(idx2-idx1+1)] = tc->fCont[i];
+      (*(tc->fKeep))[i-(idx2-idx1+1)] = (*(tc->fKeep))[i];
+      tc->fCont[i] = 0;
+      (*(tc->fKeep))[i] = 0;
+   }
+   tc->fLast = tc->GetEntriesFast() - 2 - (idx2 - idx1);
+   fLast = newSize-1;
+   if (!wasSorted)
+      Changed();
+}
 
 //______________________________________________________________________________
 void TClonesArray::MultiSort(Int_t nTCs, TClonesArray** tcs, Int_t upto)
 {
-   // Sort multiple TClonesArrays simultaneously with this.
+   // Sort multiple TClonesArrays simultaneously with this array.
    // If objects in array are sortable (i.e. IsSortable() returns true
    // for all objects) then sort array.
 
    Int_t nentries = GetAbsLast()+1;
    if (nentries <= 1 || fSorted) return;
-   bool sortedCheck = true;
+   Bool_t sortedCheck = kTRUE;
    for (Int_t i = 0; i < fSize; i++) {
       if (fCont[i]) {
          if (!fCont[i]->IsSortable()) {
@@ -927,45 +1077,37 @@ void TClonesArray::MultiSort(Int_t nTCs, TClonesArray** tcs, Int_t upto)
             return;
          }
       }
-      if(sortedCheck && i > 1) {
-         if(fCont[i]->Compare(fCont[i-1]) < 0) sortedCheck = false;
+      if (sortedCheck && i > 1) {
+         if (ObjCompare(fCont[i], fCont[i-1]) < 0) sortedCheck = kFALSE;
       }
    }
-   if(sortedCheck) {
-      fSorted = true;
+   if (sortedCheck) {
+      fSorted = kTRUE;
       return;
    }
- 
-   for(int i=0; i<nTCs; i++) {
-      if(tcs[i] == this) {
+
+   for (int i = 0; i < nTCs; i++) {
+      if (tcs[i] == this) {
          Error("MultiSort", "tcs[%d] = \"this\"", i);
          return;
       }
-      if(tcs[i]->GetEntriesFast() != GetEntriesFast()) {
+      if (tcs[i]->GetEntriesFast() != GetEntriesFast()) {
          Error("MultiSort", "tcs[%d] has length %d != length of this (%d)",
-         i, tcs[i]->GetEntriesFast(), this->GetEntriesFast());
+               i, tcs[i]->GetEntriesFast(), this->GetEntriesFast());
          return;
       }
    }
- 
+
    int nBs = nTCs*2+1;
    TObject*** b = new TObject**[nBs];
-   for(int i=0; i<nTCs; i++) {
-      b[2*i] = tcs[i]->fCont;
+   for (int i = 0; i < nTCs; i++) {
+      b[2*i]   = tcs[i]->fCont;
       b[2*i+1] = tcs[i]->fKeep->fCont;
    }
    b[nBs-1] = fKeep->fCont;
    QSort(fCont, nBs, b, 0, TMath::Min(nentries, upto-fLowerBound));
    delete [] b;
- 
+
    fLast = -2;
    fSorted = kTRUE;
-} 
-
-
-
-
-
-
-
-
+}

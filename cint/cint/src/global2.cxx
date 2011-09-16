@@ -55,6 +55,7 @@ struct G__filetable G__srcfile[G__MAXFILE];
 #endif
 int G__nfile;
 int G__srcfile_serial;
+int G__globals_serial;
 int G__nobreak;
 char G__breakline[G__MAXNAME];
 char G__breakfile[G__MAXFILENAME];
@@ -117,6 +118,7 @@ short G__longjump;
 short G__coredump;
 short G__definemacro;
 short G__noerr_defined;
+short G__using_alloc;
 short G__static_alloc;
 int G__func_now;
 int G__func_page;
@@ -161,8 +163,9 @@ char G__def_parameter[G__MAXNAME];
 //
 //  Temporary object buffer
 //
-struct G__tempobject_list *G__p_tempbuf, G__tempbuf;
-int G__templevel;
+struct G__tempobject_list G__tempbuf; // temp list anchor
+struct G__tempobject_list* G__p_tempbuf; // temp list head
+int G__templevel; // current temp nesting level
 //
 //  Reference type buffer.
 //

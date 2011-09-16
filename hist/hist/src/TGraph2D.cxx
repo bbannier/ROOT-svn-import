@@ -371,12 +371,17 @@ TGraph2D::TGraph2D(const char *name,const char *title,
 //______________________________________________________________________________
 TGraph2D::TGraph2D(Int_t n)
          : TNamed("Graph2D","Graph2D"), TAttLine(1,1,1), TAttFill(0,1001),
-           TAttMarker(), fNpoints(0)
+           TAttMarker(), fNpoints(n)
 {
    // Graph2D constructor. The arrays fX, fY and fZ should be filled via
    // calls to SetPoint
 
    Build(n);
+   for (Int_t i=0; i<fNpoints; i++) {
+      fX[i] = 0.;
+      fY[i] = 0.;
+      fZ[i] = 0.;
+   }   
 }
 
 
@@ -499,7 +504,10 @@ void TGraph2D::Clear(Option_t * /*option = "" */)
    delete [] fX; fX = 0;
    delete [] fY; fY = 0;
    delete [] fZ; fZ = 0;
-   delete fHistogram; fHistogram = 0;
+   if (fFunctions) {
+      delete fHistogram;
+      fHistogram = 0;
+   }
    if (fFunctions) {
       fFunctions->SetBit(kInvalidObject);
       fFunctions->Delete();
@@ -510,8 +518,6 @@ void TGraph2D::Clear(Option_t * /*option = "" */)
       fDirectory->Remove(this);
       fDirectory = 0;
    }
-   delete fPainter;
-   fPainter   = 0;
 }
 
 

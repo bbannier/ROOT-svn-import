@@ -32,6 +32,7 @@
 #include "RooMsgService.h"
 #include "RooRealVar.h"
 #include "RooCategory.h"
+#include "RooWorkspace.h"
 
 
 
@@ -186,7 +187,7 @@ Double_t RooHistPdf::evaluate() const
   // Return the current value: The value of the bin enclosing the current coordinates
   // of the observables, normalized by the histograms contents. Interpolation
   // is applied if the RooHistPdf is configured to do that
-  
+
   // Transfer values from   
   if (_pdfObsList.getSize()>0) {
     _histObsIter->Reset() ;
@@ -206,7 +207,7 @@ Double_t RooHistPdf::evaluate() const
     ret=0 ;
   }
   
-//   cout << "RooHistPdf::evaluate(" << GetName() << ") ret = " << ret << " at " << ((RooAbsReal*)_histObsList.first())->getVal() << endl ;
+  //cout << "RooHistPdf::evaluate(" << GetName() << ") ret = " << ret << " at " << ((RooAbsReal*)_histObsList.first())->getVal() << endl ;
   return ret ;
 }
 
@@ -436,4 +437,59 @@ Double_t RooHistPdf::maxVal(Int_t code) const
   return max*1.05 ;
 }
 
+
+//_____________________________________________________________________________
+Bool_t RooHistPdf::importWorkspaceHook(RooWorkspace& ws) 
+{  
+  // Check if our datahist is already in the workspace
+  std::list<RooAbsData*> allData = ws.allData() ;
+  std::list<RooAbsData*>::const_iterator iter ;
+  for (iter = allData.begin() ; iter != allData.end() ; ++iter) {
+    // If your dataset is already in this workspace nothing needs to be done
+    if (*iter == _dataHist) {
+      return kFALSE ;
+    }
+  }
+
+  // Check if dataset with given name already exists
+  RooAbsData* wsdata = ws.data(_dataHist->GetName()) ;
+  if (wsdata) {
+    if (wsdata->InheritsFrom(RooDataHist::Class())) {
+      // Exists and is of correct type -- adjust internal pointer
+      _dataHist = (RooDataHist*) wsdata ;
+      return kFALSE ;
+    } else {
+      // Exists and is NOT of correct type -- abort
+      
+    }
+  }
+
+  // We need to import our datahist into the workspace
+  Bool_t flag = ws.import(*_dataHist) ;
+  if (flag) {
+    coutE(ObjectHandling) << "RooHistPdf::importWorkspaceHook(" << GetName() 
+			  << ") error importing RooDataHist into workspace: dataset of different type with same name already exists." << endl ;
+    return kTRUE ;
+  }
+
+  // Redirect our internal pointer to the copy in the workspace
+  _dataHist = (RooDataHist*) ws.data(_dataHist->GetName()) ;
+  return kFALSE ;
+}
+
+
+//______________________________________________________________________________
+void RooHistPdf::Streamer(TBuffer &R__b)
+{
+   // Stream an object of class RooHistPdf.
+
+   if (R__b.IsReading()) {
+      R__b.ReadClassBuffer(RooHistPdf::Class(),this);
+      // WVE - interim solution - fix proxies here
+      _proxyList.Clear() ;
+      registerProxy(_pdfObsList) ;
+   } else {
+      R__b.WriteClassBuffer(RooHistPdf::Class(),this);
+   }
+}
 

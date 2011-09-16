@@ -46,17 +46,21 @@ DICTH2       := TSpline2.h TSpline1.h PDF.h BinaryTree.h BinarySearchTreeNode.h 
 		GiniIndexWithLaplace.h SimulatedAnnealing.h
 DICTH3       := Config.h KDEKernel.h Interval.h FitterBase.h MCFitter.h GeneticFitter.h SimulatedAnnealingFitter.h \
 		MinuitFitter.h MinuitWrapper.h IFitterTarget.h \
-		PDEFoam.h PDEFoamDistr.h PDEFoamVect.h PDEFoamCell.h BDTEventWrapper.h CCTreeWrapper.h \
-		CCPruner.h CostComplexityPruneTool.h SVEvent.h
+		PDEFoam.h PDEFoamDecisionTree.h PDEFoamDensityBase.h PDEFoamDiscriminantDensity.h \
+		PDEFoamEventDensity.h PDEFoamTargetDensity.h PDEFoamDecisionTreeDensity.h PDEFoamMultiTarget.h \
+		PDEFoamVect.h PDEFoamCell.h PDEFoamDiscriminant.h PDEFoamEvent.h PDEFoamTarget.h \
+		PDEFoamKernelBase.h PDEFoamKernelTrivial.h PDEFoamKernelLinN.h PDEFoamKernelGauss.h \
+		BDTEventWrapper.h CCTreeWrapper.h \
+		CCPruner.h CostComplexityPruneTool.h SVEvent.h OptimizeConfigParameters.h
 DICTH4       := TNeuron.h TSynapse.h TActivationChooser.h TActivation.h TActivationSigmoid.h TActivationIdentity.h \
 		TActivationTanh.h TActivationRadial.h TNeuronInputChooser.h TNeuronInput.h TNeuronInputSum.h \
 		TNeuronInputSqSum.h TNeuronInputAbs.h Types.h Ranking.h RuleFit.h RuleFitAPI.h IMethod.h MsgLogger.h \
 		VariableTransformBase.h VariableIdentityTransform.h VariableDecorrTransform.h VariablePCATransform.h \
-		VariableGaussTransform.h VariableNormalizeTransform.h
-DICTH1       := $(patsubst %,inc/%,$(DICTH1))
-DICTH2       := $(patsubst %,inc/%,$(DICTH2))
-DICTH3       := $(patsubst %,inc/%,$(DICTH3))
-DICTH4       := $(patsubst %,inc/%,$(DICTH4))
+		VariableGaussTransform.h VariableNormalizeTransform.h VariableRearrangeTransform.h
+DICTH1       := $(patsubst %,inc/TMVA/%,$(DICTH1))
+DICTH2       := $(patsubst %,inc/TMVA/%,$(DICTH2))
+DICTH3       := $(patsubst %,inc/TMVA/%,$(DICTH3))
+DICTH4       := $(patsubst %,inc/TMVA/%,$(DICTH4))
 DICTH        := $(DICTH1) $(DICTH2) $(DICTH3) $(DICTH4)
 
 
@@ -72,7 +76,7 @@ UNAME = $(shell uname)
 default: shlib linklib
 
 # List of all source files to build
-HLIST   = $(filter-out $(SKIPHLIST),$(wildcard inc/*.h))
+HLIST   = $(filter-out $(SKIPHLIST),$(wildcard inc/TMVA/*.h))
 CPPLIST = $(filter-out $(SKIPCPPLIST),$(patsubst src/%,%,$(wildcard src/*.$(SrcSuf))))
 
 # List of all object files to build
@@ -83,12 +87,12 @@ DEPLIST=$(foreach var,$(CPPLIST:.$(SrcSuf)=.d),$(DEPDIR)/$(var))
 # Implicit rule to compile all classes
 sl:
 	if [[ ( ! -e TMVA ) ]]; then \
-		ln -sf inc TMVA; \
+		ln -sf inc/TMVA TMVA; \
 	fi
 
 $(OBJDIR)/%.o : src/%.cxx 
 	if [[ ( ! -e TMVA ) ]]; then \
-		ln -sf inc TMVA; \
+		ln -sf inc/TMVA TMVA; \
 	fi
 	@printf "Compiling $< ... "
 	@mkdir -p $(OBJDIR)
@@ -163,7 +167,7 @@ endif
 $(DEPDIR)/%.d: src/%.$(SrcSuf)
 	@mkdir -p $(DEPDIR)
 	if [[ ( ! -e TMVA ) ]]; then \
-		ln -sf inc TMVA; \
+		ln -sf inc/TMVA TMVA; \
 	fi
 	if test -f $< ; then \
 		printf "Building $(@F) ... "; \

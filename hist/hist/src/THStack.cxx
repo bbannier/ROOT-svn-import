@@ -562,6 +562,26 @@ void THStack::ls(Option_t *option) const
    if (fHists) fHists->ls(option);
    TROOT::DecreaseDirLevel();
 }
+//______________________________________________________________________________
+Long64_t THStack::Merge(TCollection* li, TFileMergeInfo * /* info */)
+{
+   // Merge the THStack in the TList into this stack.
+   // Returns the total number of histograms in the result or -1 in case of an error.
+   
+   TIter next(li);
+   TList histLists;
+   while (TObject* o = next()) {
+      THStack *stack = dynamic_cast<THStack*> (o);
+      if (!stack) {
+         Error("Merge",
+               "Cannot merge - an object which doesn't inherit from THStack found in the list");
+         return -1;
+      }
+      histLists.Add(stack->GetHists());
+   }
+   fHists->Merge(&histLists);
+   return fHists->GetEntries();
+}
 
 //______________________________________________________________________________
 void THStack::Modified()
@@ -773,7 +793,7 @@ void THStack::Paint(Option_t *option)
             // Erase before drawing the histogram
             h1col  = h1->GetFillColor();
             h1fill = h1->GetFillStyle();
-            h1->SetFillColor(0);
+            h1->SetFillColor(10);
             h1->SetFillStyle(1001);
             h1->Paint(loption);
             static TClassRef clTFrame = TClass::GetClass("TFrame",kFALSE);
@@ -842,6 +862,7 @@ void THStack::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    if (fHistogram) {
       frameNumber++;
       TString hname = fHistogram->GetName();
+      hname += "_stack_";
       hname += frameNumber;
       fHistogram->SetName(hname.Data());
       fHistogram->SavePrimitive(out,"nodraw");

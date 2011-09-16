@@ -110,6 +110,7 @@ RooMinuit::RooMinuit(RooAbsReal& function)
   RooSentinel::activate() ;
 
   // Store function reference
+  _evalCounter = 0 ;
   _extV = 0 ;
   _func = &function ;
   _logfile = 0 ;
@@ -120,6 +121,7 @@ RooMinuit::RooMinuit(RooAbsReal& function)
   _printLevel = 1 ;
   _printEvalErrors = 10 ;
   _warnLevel = -999 ;
+  _maxEvalMult = 500 ;
   _doEvalErrorWall = kTRUE ;
 
   // Examine parameter list
@@ -157,7 +159,7 @@ RooMinuit::RooMinuit(RooAbsReal& function)
   _initConstParamList = (RooArgList*) _constParamList->snapshot(kFALSE) ;
 
   // Initialize MINUIT
-  Int_t nPar= _floatParamList->getSize();
+  Int_t nPar= _floatParamList->getSize() + _constParamList->getSize() ;
   if (_theFitter) delete _theFitter ;
   _theFitter = new TFitter(nPar*2+1) ; //WVE Kludge, nPar*2 works around TMinuit memory allocation bug
   _theFitter->SetObjectFit(this) ;
@@ -299,7 +301,7 @@ Int_t RooMinuit::migrad()
   _theFitter->SetObjectFit(this) ;
 
   Double_t arglist[2];
-  arglist[0]= 500*_nPar; // maximum iterations
+  arglist[0]= _maxEvalMult*_nPar; // maximum iterations
   arglist[1]= 1.0;       // tolerance
 
   synchronize(_verbose) ;
@@ -330,7 +332,7 @@ Int_t RooMinuit::hesse()
   _theFitter->SetObjectFit(this) ;
 
   Double_t arglist[2];
-  arglist[0]= 500*_nPar; // maximum iterations
+  arglist[0]= _maxEvalMult*_nPar; // maximum iterations
 
   synchronize(_verbose) ;
   profileStart() ;
@@ -360,7 +362,7 @@ Int_t RooMinuit::minos()
   _theFitter->SetObjectFit(this) ;
 
   Double_t arglist[2];
-  arglist[0]= 500*_nPar; // maximum iterations
+  arglist[0]= _maxEvalMult*_nPar; // maximum iterations
 
   synchronize(_verbose) ;
   profileStart() ;
@@ -406,7 +408,7 @@ Int_t RooMinuit::minos(const RooArgSet& minosParamList)
     }
     delete aIter ;
   }
-  arglist[0]= 500*_nPar; // maximum iterations
+  arglist[0]= _maxEvalMult*_nPar; // maximum iterations
 
   synchronize(_verbose) ;
   profileStart() ;
@@ -438,7 +440,7 @@ Int_t RooMinuit::seek()
   _theFitter->SetObjectFit(this) ;
 
   Double_t arglist[2];
-  arglist[0]= 500*_nPar; // maximum iterations
+  arglist[0]= _maxEvalMult*_nPar; // maximum iterations
 
   synchronize(_verbose) ;
   profileStart() ;
@@ -468,7 +470,7 @@ Int_t RooMinuit::simplex()
   _theFitter->SetObjectFit(this) ;
 
   Double_t arglist[2];
-  arglist[0]= 500*_nPar; // maximum iterations
+  arglist[0]= _maxEvalMult*_nPar; // maximum iterations
   arglist[1]= 1.0;       // tolerance
 
   synchronize(_verbose) ;
@@ -499,7 +501,7 @@ Int_t RooMinuit::improve()
   _theFitter->SetObjectFit(this) ;
 
   Double_t arglist[2];
-  arglist[0]= 500*_nPar; // maximum iterations
+  arglist[0]= _maxEvalMult*_nPar; // maximum iterations
 
   synchronize(_verbose) ;
   profileStart() ;
@@ -1145,6 +1147,7 @@ void RooMinuitGlue(Int_t& /*np*/, Double_t* /*gin*/,
 
   // Calculate the function for these parameters
   f= context->_func->getVal() ;
+  context->_evalCounter++ ;
   if ( RooAbsPdf::evalError() || RooAbsReal::numEvalErrors()>0 ) {
 
     if (context->_printEvalErrors>=0) {

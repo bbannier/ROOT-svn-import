@@ -67,6 +67,7 @@
 #pragma link C++ function Error;
 #pragma link C++ function SysError;
 #pragma link C++ function Fatal;
+#pragma link C++ function Obsolete;
 #pragma link C++ function Form;
 #pragma link C++ function Printf;
 #pragma link C++ function Strip;
@@ -91,9 +92,26 @@
 #pragma link C++ function operator==(const TString&,const TString&);
 #pragma link C++ function operator==(const TString&,const char*);
 #pragma link C++ function operator==(const char*,const TString&);
-#pragma link C++ function operator!=(const TString&,const TString&)
-#pragma link C++ function operator!=(const TString&,const char*)
+#pragma link C++ function operator!=(const TString&,const TString&);
+#pragma link C++ function operator!=(const TString&,const char*);
 #pragma link C++ function operator!=(const char*,const TString&);
+#pragma link C++ function operator!=(const TSubString&,const char*);
+#pragma link C++ function operator!=(const TSubString&,const TString&);
+#pragma link C++ function operator!=(const TSubString&,const TSubString&);
+#pragma link C++ function operator!=(const TString&,const TSubString&);
+#pragma link C++ function operator!=(const char*,const TSubString&);
+#pragma link C++ function operator<(const TString&,const TString&);
+#pragma link C++ function operator>(const TString&,const TString&);
+#pragma link C++ function operator<=(const TString&,const TString&);
+#pragma link C++ function operator>=(const TString&,const TString&);
+#pragma link C++ function operator<(const TString&,const char*);
+#pragma link C++ function operator>(const TString&,const char*);
+#pragma link C++ function operator<=(const TString&,const char*);
+#pragma link C++ function operator>=(const TString&,const char*);
+#pragma link C++ function operator<(const char*,const TString&);
+#pragma link C++ function operator>(const char*,const TString&);
+#pragma link C++ function operator<=(const char*,const TString&);
+#pragma link C++ function operator>=(const char*,const TString&);
 #pragma link C++ function operator>>(istream&,TString&);
 #pragma link C++ function operator<<(ostream&,const TString&);
 //#pragma link C++ function operator>>(TBuffer&,TString&);

@@ -306,7 +306,7 @@ namespace {
    // retrieve object address
       void* address = 0;
       if ( ObjectProxy_Check( pyobject ) ) address = ((ObjectProxy*)pyobject)->GetObject();
-      else if ( PyInt_Check( pyobject ) ) address = (void*)PyInt_AS_LONG( pyobject );
+      else if ( PyInt_Check( pyobject ) || PyLong_Check( pyobject ) ) address = (void*)PyLong_AsLong( pyobject );
       else Utility::GetBuffer( pyobject, '*', 1, address, kFALSE );
 
       if ( ! address ) {
@@ -345,17 +345,20 @@ namespace {
 
    // perform actual cast
       PyObject* meth = PyObject_GetAttr( (PyObject*)self, PyStrings::gTClassDynCast );
-      PyObject* ptr = meth ? PyObject_Call(
-         meth, PyTuple_GetSlice( args, 1, PyTuple_GET_SIZE( args ) ), 0 ) : 0;
+      PyObject* ptr = meth ? PyObject_Call( meth, args, 0 ) : 0;
       Py_XDECREF( meth );
 
    // simply forward in case of call failure
       if ( ! ptr )
          return ptr;
 
-   // supposed to be an int or long ...
-      long address = PyLong_AsLong( ptr );
-      if ( address == -1 && PyErr_Occurred() ) {
+   // retrieve object address
+      void* address = 0;
+      if ( ObjectProxy_Check( pyobject ) ) address = ((ObjectProxy*)pyobject)->GetObject();
+      else if ( PyInt_Check( pyobject ) || PyLong_Check( pyobject ) ) address = (void*)PyLong_AsLong( pyobject );
+      else Utility::GetBuffer( pyobject, '*', 1, address, kFALSE );
+
+      if ( PyErr_Occurred() ) {
          PyErr_Clear();
          return ptr;
       }
@@ -370,6 +373,7 @@ namespace {
 
       PyObject* result = BindRootObjectNoCast( (void*)address, klass );
       Py_DECREF( ptr );
+
       return result;
    }
 
@@ -512,7 +516,8 @@ namespace {
          TSeqCollection* nseq = (TSeqCollection*)clSeq->New();
 
          Py_ssize_t start, stop, step;
-         PySlice_GetIndices( index, oseq->GetSize(), &start, &stop, &step );
+         PySlice_GetIndices( (PyROOT_PySliceCast)index, oseq->GetSize(), &start, &stop, &step );
+
          for ( Py_ssize_t i = start; i < stop; i += step ) {
             nseq->Add( oseq->At( (Int_t)i ) );
          }
@@ -541,7 +546,7 @@ namespace {
             TSeqCollection::Class(), self->GetObject() );
 
          Py_ssize_t start, stop, step;
-         PySlice_GetIndices( (PySliceObject*) index, oseq->GetSize(), &start, &stop, &step );
+         PySlice_GetIndices( (PyROOT_PySliceCast)index, oseq->GetSize(), &start, &stop, &step );
          for ( Py_ssize_t i = stop - step; i >= start; i -= step ) {
             oseq->RemoveAt( (Int_t)i );
          }
@@ -586,7 +591,7 @@ namespace {
             TSeqCollection::Class(), self->GetObject() );
 
          Py_ssize_t start, stop, step;
-         PySlice_GetIndices( index, oseq->GetSize(), &start, &stop, &step );
+         PySlice_GetIndices( (PyROOT_PySliceCast)index, oseq->GetSize(), &start, &stop, &step );
          for ( Py_ssize_t i = stop - step; i >= start; i -= step ) {
             oseq->RemoveAt( (Int_t)i );
          }
@@ -776,7 +781,7 @@ namespace {
          Py_DECREF( pyclass );
  
          Py_ssize_t start, stop, step;
-         PySlice_GetIndices( index, PyObject_Length( (PyObject*)self ), &start, &stop, &step );
+         PySlice_GetIndices( (PyROOT_PySliceCast)index, PyObject_Length( (PyObject*)self ), &start, &stop, &step );
          for ( Py_ssize_t i = start; i < stop; i += step ) {
             PyObject* pyidx = PyInt_FromSsize_t( i );
             CallPyObjMethod( nseq, "push_back", CallPyObjMethod( (PyObject*)self, "_vector__at", pyidx ) );
@@ -880,55 +885,76 @@ static int PyObject_Compare( PyObject* one, PyObject* other ) {
    return ! PyObject_RichCompareBool( one, other, Py_EQ );
 }
 #endif
-#define PYROOT_IMPLEMENT_STRING_PYTHONIZATION( name, func )                   \
+#define PYROOT_IMPLEMENT_STRING_PYTHONIZATION( type, name, func )             \
+   inline PyObject* name##GetData( PyObject* self ) {                         \
+      if ( PyROOT::ObjectProxy_Check( self ) ) {                              \
+         type* obj = ((type*)((ObjectProxy*)self)->GetObject());              \
+         if ( obj ) {                                                         \
+            return PyROOT_PyUnicode_FromString( obj->func() );                \
+         } else {                                                             \
+            return ObjectProxy_Type.tp_str( self );                           \
+         }                                                                    \
+      }                                                                       \
+      PyErr_Format( PyExc_TypeError, "object mismatch (%s expected)", #type );\
+      return 0;                                                               \
+   }                                                                          \
+                                                                              \
    PyObject* name##StringRepr( PyObject* self )                               \
    {                                                                          \
-      PyObject* data = CallPyObjMethod( self, #func );                        \
-      PyObject* repr = PyROOT_PyUnicode_FromFormat( "\'%s\'", PyROOT_PyUnicode_AsString( data ) ); \
-      Py_DECREF( data );                                                      \
-      return repr;                                                            \
+      PyObject* data = name##GetData( self );                                 \
+      if ( data ) {                                                           \
+         PyObject* repr = PyROOT_PyUnicode_FromFormat( "\'%s\'", PyROOT_PyUnicode_AsString( data ) ); \
+         Py_DECREF( data );                                                   \
+         return repr;                                                         \
+      }                                                                       \
+      return 0;                                                               \
    }                                                                          \
                                                                               \
    PyObject* name##StringIsEqual( PyObject* self, PyObject* obj )             \
    {                                                                          \
-      PyObject* data = CallPyObjMethod( self, #func );                        \
-      PyObject* result = PyObject_RichCompare( data, obj, Py_EQ );            \
-      Py_DECREF( data );                                                      \
-      if ( ! result )                                                         \
-         return 0;                                                            \
-      return result;                                                          \
+      PyObject* data = name##GetData( self );                                 \
+      if ( data ) {                                                           \
+         PyObject* result = PyObject_RichCompare( data, obj, Py_EQ );         \
+         Py_DECREF( data );                                                   \
+         return result;                                                       \
+      }                                                                       \
+      return 0;                                                               \
    }                                                                          \
                                                                               \
    PyObject* name##StringIsNotEqual( PyObject* self, PyObject* obj )          \
    {                                                                          \
-      PyObject* data = CallPyObjMethod( self, #func );                        \
-      PyObject* result = PyObject_RichCompare( data, obj, Py_NE );            \
-      Py_DECREF( data );                                                      \
-      if ( ! result )                                                         \
-         return 0;                                                            \
-      return result;                                                          \
+      PyObject* data = name##GetData( self );                                 \
+      if ( data ) {                                                           \
+         PyObject* result = PyObject_RichCompare( data, obj, Py_NE );         \
+         Py_DECREF( data );                                                   \
+         return result;                                                       \
+      }                                                                       \
+      return 0;                                                               \
    }
 
    // Only define StlStringCompare:
    // TStringCompare is unused and generates a warning;
-#define PYROOT_IMPLEMENT_STRING_PYTHONIZATION_CMP( name, func )               \
+#define PYROOT_IMPLEMENT_STRING_PYTHONIZATION_CMP( type, name, func )         \
+   PYROOT_IMPLEMENT_STRING_PYTHONIZATION( type, name, func )                  \
    PyObject* name##StringCompare( PyObject* self, PyObject* obj )             \
    {                                                                          \
-      PyObject* data = CallPyObjMethod( self, #func );                        \
-      int result = PyObject_Compare( data, obj );                             \
-      Py_DECREF( data );                                                      \
+      PyObject* data = name##GetData( self );                                 \
+      int result = 0;                                                         \
+      if ( data ) {                                                           \
+         result = PyObject_Compare( data, obj );                              \
+         Py_DECREF( data );                                                   \
+      }                                                                       \
       if ( PyErr_Occurred() )                                                 \
          return 0;                                                            \
       return PyInt_FromLong( result );                                        \
-   }                                                                          \
-                                                                              \
-   PYROOT_IMPLEMENT_STRING_PYTHONIZATION( name, func )
-   PYROOT_IMPLEMENT_STRING_PYTHONIZATION_CMP( Stl, c_str )
-   PYROOT_IMPLEMENT_STRING_PYTHONIZATION(   T, Data )
+   }
+
+   PYROOT_IMPLEMENT_STRING_PYTHONIZATION_CMP( std::string, Stl, c_str )
+   PYROOT_IMPLEMENT_STRING_PYTHONIZATION( TString,  T, Data )
 
 
 //- TObjString behavior --------------------------------------------------------
-   PYROOT_IMPLEMENT_STRING_PYTHONIZATION_CMP( TObj, GetName )
+   PYROOT_IMPLEMENT_STRING_PYTHONIZATION_CMP( TObjString, TObj, GetName )
 
 //____________________________________________________________________________
    PyObject* TObjStringLength( PyObject* self )
@@ -1051,9 +1077,10 @@ static int PyObject_Compare( PyObject* one, PyObject* other ) {
    PyObject* TDirectoryWriteObject( ObjectProxy* self, PyObject* args )
    {
       ObjectProxy *wrt = 0; PyObject *name = 0, *option = 0;
-      if ( ! PyArg_ParseTuple( args, const_cast< char* >( "O!OO!|O!:TDirectory::WriteObject" ),
+      Int_t bufsize = 0;
+      if ( ! PyArg_ParseTuple( args, const_cast< char* >( "O!O!|O!i:TDirectory::WriteObject" ),
                &ObjectProxy_Type, &wrt, &PyROOT_PyUnicode_Type, &name,
-               &PyROOT_PyUnicode_Type, &option ) )
+               &PyROOT_PyUnicode_Type, &option, &bufsize ) )
          return 0;
 
       TDirectory* dir =
@@ -1068,7 +1095,7 @@ static int PyObject_Compare( PyObject* one, PyObject* other ) {
       Int_t result = 0;
       if ( option != 0 ) {
          result = dir->WriteObjectAny( wrt->GetObject(), wrt->ObjectIsA(),
-            PyROOT_PyUnicode_AsString( name ), PyROOT_PyUnicode_AsString( option ) );
+            PyROOT_PyUnicode_AsString( name ), PyROOT_PyUnicode_AsString( option ), bufsize );
       } else {
          result = dir->WriteObjectAny(
             wrt->GetObject(), wrt->ObjectIsA(), PyROOT_PyUnicode_AsString( name ) );
@@ -1473,23 +1500,21 @@ namespace {
 
    // prepare arguments
       PyObject* arg1 = BufFac_t::Instance()->PyBuffer_FromMemory(
-         (Int_t*)G__int(libp->para[0]), 1 );
-      int npar = G__int(libp->para[0]);
+         G__Intref(&libp->para[0]), 1 );
+      int npar = *G__Intref(&libp->para[0]);
  
       PyObject* arg2 = BufFac_t::Instance()->PyBuffer_FromMemory(
          (Double_t*)G__int(libp->para[1]), npar );
 
-      PyObject* arg3 = PyList_New( 1 );
-      PyList_SetItem( arg3, 0, PyFloat_FromDouble( G__double(libp->para[2]) ) );
+      PyObject* arg3 = BufFac_t::Instance()->PyBuffer_FromMemory(
+         G__Doubleref(&libp->para[2]), 1 );
 
       PyObject* arg4 = BufFac_t::Instance()->PyBuffer_FromMemory(
-         (Double_t*)G__int(libp->para[3]), npar );
+         (Double_t*)G__int(libp->para[3]), -1 /* size unknown */ );
 
    // perform actual call
       result = PyObject_CallFunction( pyfunc, (char*)"OOOOi",
          arg1, arg2, arg3, arg4, (int)G__int(libp->para[4]) );
-      *(Double_t*)G__Doubleref(&libp->para[2]) = PyFloat_AsDouble( PyList_GetItem( arg3, 0 ) );
-
       Py_DECREF( arg4 ); Py_DECREF( arg3 ); Py_DECREF( arg2 ); Py_DECREF( arg1 );
 
       if ( ! result ) {
@@ -1573,7 +1598,7 @@ namespace {
          if ( argc == reqNArgs+1 )
             npar = PyInt_AsLong( PyTuple_GET_ITEM( args, reqNArgs ) );
 
-      // registration with CINT (note: CINT style signature for free functions)
+      // registration with CINT
          Long_t fid = Utility::InstallMethod(
             0, pyfunc, name, 0, "D - - 0 - - D - - 0 - -", (void*)TFNPyCallback, 2, npar );
 
@@ -1590,7 +1615,7 @@ namespace {
                Py_INCREF( item );
                PyTuple_SET_ITEM( newArgs, iarg, item );
             } else {
-               PyTuple_SET_ITEM( newArgs, iarg, PyCObject_FromVoidPtr( (void*)fid, NULL ) );
+               PyTuple_SET_ITEM( newArgs, iarg, PyROOT_PyCapsule_New( (void*)fid, NULL, NULL ) );
             }
          }
 
@@ -1652,7 +1677,7 @@ namespace {
 //- TMinuit behavior -----------------------------------------------------------
    class TMinuitSetFCN : public TPretendInterpreted {
    public:
-      TMinuitSetFCN() : TPretendInterpreted( 1 ) {}
+      TMinuitSetFCN( int nArgs = 1 ) : TPretendInterpreted( nArgs ) {}
 
    public:
       virtual PyObject* GetSignature() { return PyROOT_PyUnicode_FromString( "(PyObject* callable)" ); }
@@ -1682,15 +1707,14 @@ namespace {
       // use callable name (if available) as identifier
          PyObject* pyname = PyObject_GetAttr( pyfunc, PyStrings::gName );
          const char* name = "dummy";
-         if ( pyname != 0 ) {
+         if ( pyname != 0 )
             name = PyROOT_PyUnicode_AsString( pyname );
-            Py_DECREF( pyname );
-         }
 
-      // registration with CINT (note: CINT style signature for free functions)
+      // registration with CINT
          Long_t fid = Utility::InstallMethod( 0, pyfunc, name, 0,
             "i - - 1 - - D - - 0 - - d - - 1 - - D - - 0 - - i - - 0 - -",
             (void*)TMinuitPyCallback, 5 );
+         Py_XDECREF( pyname );
 
       // get function
          MethodProxy* method =
@@ -1698,7 +1722,131 @@ namespace {
 
       // build new argument array
          PyObject* newArgs = PyTuple_New( 1 );
-         PyTuple_SET_ITEM( newArgs, 0, PyCObject_FromVoidPtr( (void*)fid, NULL ) );
+         PyTuple_SET_ITEM( newArgs, 0, PyROOT_PyCapsule_New( (void*)fid, NULL, NULL ) );
+
+      // re-run
+         PyObject* result = PyObject_CallObject( (PyObject*)method, newArgs );
+
+      // done, may have worked, if not: 0 is returned
+         Py_DECREF( newArgs );
+         Py_DECREF( method );
+         return result;
+      }
+   };
+
+   class TMinuitFitterSetFCN : public TMinuitSetFCN {
+   public:
+      TMinuitFitterSetFCN() : TMinuitSetFCN( 1 ) {}
+
+   public:
+      virtual PyObject* GetPrototype()
+      {
+         return PyROOT_PyUnicode_FromString(
+            "TMinuitFitter::SetFCN(PyObject* callable)" );
+      }
+
+      virtual PyCallable* Clone() { return new TMinuitFitterSetFCN( *this ); }
+
+      virtual PyObject* operator()( ObjectProxy* self, PyObject* args, PyObject*, Long_t )
+      {
+      // expected signature: ( pyfunc )
+         int argc = PyTuple_GET_SIZE( args );
+         if ( argc != 1 ) {
+            PyErr_Format( PyExc_TypeError,
+               "TMinuitFitter::SetFCN(PyObject* callable, ...) =>\n"
+               "    takes exactly 1 argument (%d given)", argc );
+            return 0;              // reported as an overload failure
+         }
+
+         return TMinuitSetFCN::operator()( self, args, 0, 0 );
+      }
+   };
+
+
+//- Fit::TFitter behavior ------------------------------------------------------
+   PyObject* gFitterPyCallback = 0;
+
+   void FitterPyCallback( int& npar, double* gin, double& f, double* u, int flag )
+   {
+      PyObject* result = 0;
+
+   // prepare arguments
+      PyObject* arg1 = BufFac_t::Instance()->PyBuffer_FromMemory( &npar );
+
+      PyObject* arg2 = BufFac_t::Instance()->PyBuffer_FromMemory( gin );
+
+      PyObject* arg3 = PyList_New( 1 );
+      PyList_SetItem( arg3, 0, PyFloat_FromDouble( f ) );
+
+      PyObject* arg4 = BufFac_t::Instance()->PyBuffer_FromMemory( u, npar );
+
+   // perform actual call
+      result = PyObject_CallFunction(
+         gFitterPyCallback, (char*)"OOOOi", arg1, arg2, arg3, arg4, flag );
+      f = PyFloat_AsDouble( PyList_GetItem( arg3, 0 ) );
+
+      Py_DECREF( arg4 ); Py_DECREF( arg3 ); Py_DECREF( arg2 ); Py_DECREF( arg1 );
+
+      if ( ! result ) {
+         PyErr_Print();
+         throw std::runtime_error( "TMinuit python fit function call failed" );
+      }
+
+      Py_XDECREF( result );
+   }
+
+
+   class TFitterFitFCN : public TPretendInterpreted {
+   public:
+      TFitterFitFCN() : TPretendInterpreted( 2 ) {}
+
+   public:
+      virtual PyObject* GetSignature()
+      {
+         return PyROOT_PyUnicode_FromString(
+            "(PyObject* callable, int npar = 0, const double* params = 0, unsigned int dataSize = 0, bool chi2fit = false)" );
+      }
+
+      virtual PyObject* GetPrototype()
+      {
+         return PyROOT_PyUnicode_FromString(
+            "TFitter::FitFCN(PyObject* callable, int npar = 0, const double* params = 0, unsigned int dataSize = 0, bool chi2fit = false)" );
+      }
+
+      virtual PyCallable* Clone() { return new TFitterFitFCN( *this ); }
+
+      virtual PyObject* operator()( ObjectProxy* self, PyObject* args, PyObject*, Long_t )
+      {
+      // expected signature: ( self, pyfunc, int npar = 0, const double* params = 0, unsigned int dataSize = 0, bool chi2fit = false )
+         int argc = PyTuple_GET_SIZE( args );
+         if ( argc < 1 ) {
+            PyErr_Format( PyExc_TypeError,
+               "TFitter::FitFCN(PyObject* callable, ...) =>\n"
+               "    takes at least 1 argument (%d given)", argc );
+            return 0;              // reported as an overload failure
+         }
+
+         PyObject* pyfunc = PyTuple_GET_ITEM( args, 0 );
+         if ( ! IsCallable( pyfunc ) )
+            return 0;
+
+      // global registration
+         Py_XDECREF( gFitterPyCallback );
+         Py_INCREF( pyfunc );
+         gFitterPyCallback = pyfunc;
+
+      // get function
+         MethodProxy* method =
+            (MethodProxy*)PyObject_GetAttr( (PyObject*)self, PyStrings::gFitFCN );
+
+      // build new argument array
+         PyObject* newArgs = PyTuple_New( argc );
+         PyTuple_SET_ITEM( newArgs, 0, PyROOT_PyCapsule_New( (void*)FitterPyCallback, NULL, NULL ) );
+         for ( int iarg = 1; iarg < argc; ++iarg ) {
+            PyObject* pyarg = PyTuple_GET_ITEM( args, iarg );
+            Py_INCREF( pyarg );
+            PyTuple_SET_ITEM( newArgs, iarg, pyarg );
+         }
 
       // re-run
          PyObject* result = PyObject_CallObject( (PyObject*)method, newArgs );
@@ -2021,6 +2169,12 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
 
    if ( name == "TMinuit" )   // allow call with python callable
       return Utility::AddToClass( pyclass, "SetFCN", new TMinuitSetFCN );
+
+   if ( name == "TFitter" )   // allow call with python callable (this is not correct)
+      return Utility::AddToClass( pyclass, "SetFCN", new TMinuitFitterSetFCN );
+
+   if ( name == "Fitter" )    // really Fit::Fitter, allow call with python callable
+      return Utility::AddToClass( pyclass, "FitFCN", new TFitterFitFCN );
 
    if ( name == "TFile" )     // allow member-style access to entries in file
       return Utility::AddToClass( pyclass, "__getattr__", "Get" );

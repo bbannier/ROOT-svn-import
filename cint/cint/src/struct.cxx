@@ -309,7 +309,16 @@ int G__using_namespace()
             avar->p_tagtable[aig15] = var->p_tagtable[ig15];
             avar->p_typetable[aig15] = var->p_typetable[ig15];
             // Prevent double deletion during exit.
-            avar->statictype[aig15] = G__COMPILEDGLOBAL;
+            switch (var->statictype[ig15]) {
+               case G__LOCALSTATIC:
+               case G__LOCALSTATICBODY:
+               case G__COMPILEDGLOBAL:
+                  avar->statictype[aig15] = G__USING_STATIC_VARIABLE;
+                  break;
+               default:
+                  avar->statictype[aig15] = G__USING_VARIABLE;
+                  break;
+            }
             avar->reftype[aig15] = var->reftype[ig15];
             avar->globalcomp[aig15] = var->globalcomp[ig15];
             avar->comment[aig15] = var->comment[ig15];
@@ -1067,7 +1076,7 @@ void G__define_struct(char type)
             do {
                int store_decl = 0;
                G__FastAllocString memname(G__ONELINE);
-               c = G__fgetstream(memname, 0, "=,}");
+               c = G__fgetstream_new(memname, 0, "=,}");
                if (c == '=') {
                   char store_var_typeX = G__var_type;
                   int store_tagnumX = G__tagnum;
@@ -1078,7 +1087,7 @@ void G__define_struct(char type)
                   G__def_tagnum = store_tagnum;
                   G__tagdefining = store_tagnum;
                   G__FastAllocString val(G__ONELINE);
-                  c = G__fgetstream(val, 0, ",}");
+                  c = G__fgetstream_new(val, 0, ",}");
                   int store_prerun = G__prerun;
                   G__prerun = 0;
                   enumval = G__getexpr(val);
@@ -1960,7 +1969,8 @@ int G__search_tagname(const char* tagname, int type)
       if (G__struct.type[i] != 'a'
           && G__struct.type[i] != 0
           && G__UserSpecificUpdateClassInfo) {
-         (*G__UserSpecificUpdateClassInfo)(G__struct.name[i],i);
+         G__FastAllocString fullname(G__fulltagname(i,0));
+         (*G__UserSpecificUpdateClassInfo)(fullname,i);
       }
    }
    else if (G__struct.type[i]==0 || (G__struct.type[i] == 'a')) {
@@ -1969,7 +1979,8 @@ int G__search_tagname(const char* tagname, int type)
          if (G__struct.type[i] != 'a'
              && G__struct.type[i] != 0
              && G__UserSpecificUpdateClassInfo) {
-            (*G__UserSpecificUpdateClassInfo)(G__struct.name[i],i);
+            G__FastAllocString fullname(G__fulltagname(i,0));
+            (*G__UserSpecificUpdateClassInfo)(fullname,i);
          }
       }
       ++G__struct.nactives;

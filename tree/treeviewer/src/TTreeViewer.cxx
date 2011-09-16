@@ -748,13 +748,19 @@ void TTreeViewer::BuildInterface()
    //--- label for Histogram text entry
    fBarLbl3 = new TGLabel(fToolBar,"Histogram");
    fToolBar->AddFrame(fBarLbl3, lo);
+
    //--- histogram name text entry
+   lo = new TGLayoutHints(kLHintsCenterY | kLHintsExpandX, 4,4,0,0);
+   fWidgets->Add(lo);
    fBarHist = new TGTextEntry(fToolBar, new TGTextBuffer(100));
-   fBarHist->SetWidth(50);
+   fBarHist->Resize(50, fBarHist->GetDefaultHeight());
+   fBarHist->SetDefaultSize(50, fBarHist->GetDefaultHeight());
    fBarHist->SetText("htemp");
-   fBarHist->SetToolTipText("Name of the histogram created by <Draw> command.");
    fToolBar->AddFrame(fBarHist, lo);
+
    //--- Hist check button
+   lo = new TGLayoutHints(kLHintsLeft | kLHintsCenterY, 4,4,0,0);
+   fWidgets->Add(lo);
    fBarH = new TGCheckButton(fToolBar, "Hist");
    fBarH->SetToolTipText("Checked : redraw only current histogram");
    fBarH->SetState(kButtonUp);
@@ -1733,11 +1739,11 @@ Bool_t TTreeViewer::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
          switch (GET_SUBMSG(msg)) {
          // handle enter posted by the Command text entry
             case kTE_ENTER:
-               if ((Int_t)parm1 == kBarCommand) {
+               if ((ERootTreeViewerCommands)parm1 == kBarCommand) {
                   ExecuteCommand(fBarCommand->GetText());
                   fBarCommand->Clear();
                }
-               if ((Int_t)parm1 == kBarOption) {
+               if ((ERootTreeViewerCommands)parm1 == kBarOption) {
                   fVarDraw = kFALSE;
                   fBarH->SetState(kButtonDown);
                   ExecuteDraw();
@@ -1752,7 +1758,12 @@ Bool_t TTreeViewer::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
          switch (GET_SUBMSG(msg)) {
          // handle mouse messages in the list-tree (left panel)
             case kCT_ITEMCLICK :
-               if ((parm1==kButton1) || (parm1==kButton3)) {
+               // tell coverity that parm1 is a Long_t, and not an enum (even
+               // if we compare it with an enum value) and the meaning of 
+               // parm1 depends on GET_MSG(msg) and GET_SUBMSG(msg)
+               // coverity[mixed_enums]
+               if (((EMouseButton)parm1==kButton1) || 
+                   ((EMouseButton)parm1==kButton3)) {
                   TGListTreeItem *ltItem = 0;
                   // get item that sent this
                   if ((ltItem = fLt->GetSelected()) != 0) {

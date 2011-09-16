@@ -101,6 +101,7 @@
 #include <stdlib.h>
 
 #include "Getline.h"
+#include "TApplication.h"
 #include "TChain.h"
 #include "TFile.h"
 #include "TFileCollection.h"
@@ -171,7 +172,7 @@ int main(int argc,const char *argv[])
       printf(" \n");
       printf(" Usage:\n");
       printf(" \n");
-      printf(" $ ./stressProof [-h] [-n <wrks>] [-v[v[v]]] [-l logfile] [-dyn] [-ds] [-t testnum] [-h1 h1src] [master]\n");
+      printf(" $ ./stressProof [-h] [-n <wrks>] [-v[v[v]]] [-l logfile] [-dyn] [-ds] [-t testnum] [-h1 h1src] [-g] [master]\n");
       printf(" \n");
       printf(" Optional arguments:\n");
       printf("   -h            prints this menu\n");
@@ -190,6 +191,7 @@ int main(int argc,const char *argv[])
       printf("                 to a temporary location; by default the files are read directly from the\n");
       printf("                 ROOT http server; however this may give failures if the connection is slow\n");
       printf("   -punzip       use parallel unzipping for data-driven processing.\n");
+      printf("   -g            enable graphics; default is to run in text mode.\n");
       printf(" \n");
       gSystem->Exit(0);
    }
@@ -199,6 +201,7 @@ int main(int argc,const char *argv[])
    Int_t nWrks = -1;
    Int_t verbose = 1;
    Int_t test = -1;
+   Bool_t enablegraphics = kFALSE;
    const char *logfile = 0;
    const char *h1src = 0;
    Int_t i = 1;
@@ -260,6 +263,9 @@ int main(int argc,const char *argv[])
             h1src = argv[i+1];
             i += 2;
          }
+      } else if (!strncmp(argv[i],"-g",2)) {
+         enablegraphics = kTRUE;
+         i++;
       } else {
          url = argv[i];
          i++;
@@ -267,6 +273,10 @@ int main(int argc,const char *argv[])
    }
    // Use defaults where required
    if (!url) url = urldef;
+
+   // Enable graphics if required
+   if (enablegraphics)
+      new TApplication("stressProof", 0, 0);
 
    stressProof(url, nWrks, verbose, logfile, gDynamicStartup, gSkipDataSetTest, test, h1src);
 
@@ -493,15 +503,15 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
    printf("******************************************************************\n");
 
    // Set dynamic mode
-   gDynamicStartup = (!strcmp(url,"lite")) ? kFALSE : dyn;
+   gDynamicStartup = (!strcmp(url,"lite://")) ? kFALSE : dyn;
 
    // Set verbosity
    gverbose = verbose;
 
    // Notify/warn about the dynamic startup option, if any
    TUrl uu(url), udef(urldef);
-   Bool_t extcluster = (strcmp(uu.GetHost(), udef.GetHost()) ||
-                       (uu.GetPort() != udef.GetPort())) ? kTRUE : kFALSE;
+   Bool_t extcluster = ((strcmp(uu.GetHost(), udef.GetHost()) ||
+                        (uu.GetPort() != udef.GetPort())) && strcmp(url,"lite://"))? kTRUE : kFALSE;
    if (gDynamicStartup && gverbose > 0) {
       // Check url
       if (extcluster) {
@@ -520,7 +530,7 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
    if (!skipds) {
       gSkipDataSetTest = kFALSE;
    } else {
-      gSkipDataSetTest = (!extcluster || !strcmp(url, "lite")) ? kFALSE : kTRUE;
+     gSkipDataSetTest = (!extcluster || !strcmp(url, "lite://")) ? kFALSE : kTRUE;
    }
 
    // Log file path
@@ -565,12 +575,12 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
       printf("*  Using parallel unzip where relevant                          **\n");
       printf("******************************************************************\n");
    }
-   if (!strcmp(url,"lite") && gverbose > 0) {
-      printf("*  PROOF-Lite session (tests #13 and #14 skipped)               **\n");
+   if (!strcmp(url,"lite://") && gverbose > 0) {
+      printf("*  PROOF-Lite session (tests #15 and #16 skipped)               **\n");
       printf("******************************************************************\n");
    }
    if (test > 0 && gverbose > 0) {
-      if (test < 16) {
+      if (test < 18) {
          printf("*  Running only test %2d (and related tests)                     **\n", test);
          printf("******************************************************************\n");
       } else {
@@ -719,7 +729,7 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
    if (failed) {
       Bool_t kept = kTRUE;
       if (usedeflog && !gROOT->IsBatch()) {
-         char *answer = Getline(" Some tests failed: would you like to keep the log file (N,Y)? [Y] ");
+         const char *answer = Getline(" Some tests failed: would you like to keep the log file (N,Y)? [Y] ");
          if (answer && (answer[0] == 'N' || answer[0] == 'n')) {
             // Remove log file
             gSystem->Unlink(glogfile);
@@ -749,9 +759,13 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
 
    // If not PROOF-Lite, stop the daemon used for the test
    if (gProof && !gProof->IsLite() && !extcluster) {
+      // Get the manager
+      TProofMgr *mgr = gProof->GetManager();
       // Close the instance
       gProof->Close("S");
       delete gProof;
+      // Delete the manager
+      SafeDelete(mgr);
       // The daemon runs on a port shifted by 1
       if (killXrootdAt(uu.GetPort()+1, "xpdtut") != 0) {
          printf("+++ Warning: test daemon probably still running!\n");
@@ -2185,9 +2199,15 @@ Int_t PT_AdminFunc(void *)
    gSystem->RedirectOutput(glogfile, "a", &gRH);
    TMacro macroLs(testLs);
    TString testLsLine = TString::Format("%s/testMacro.C", gsandbox.Data());
-   testLsLine.Remove(0, testLsLine.Index(".proof-tutorial")); // the first part of <tmp> maybe sligthly different
+   if (testLsLine.Index(".proof-tutorial") != kNPOS)
+      // The first part of <tmp> maybe sligthly different
+      testLsLine.Remove(0, testLsLine.Index(".proof-tutorial"));
    if (!macroLs.GetLineWith(testLsLine)) {
       printf("\n >>> Test failure: Ls: output not consistent (line: '%s')\n", testLsLine.Data());
+      printf(" >>> Log file: '%s'\n", testLs.Data());
+      printf("+++ BOF +++\n");
+      macroLs.Print();
+      printf("+++ EOF +++\n");
       return -1;
    }
    PutPoint();

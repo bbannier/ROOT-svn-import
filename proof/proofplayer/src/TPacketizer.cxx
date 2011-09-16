@@ -348,10 +348,19 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
       TString host;
       if ( !url.IsValid() ||
           (strncmp(url.GetProtocol(),"root", 4) &&
-           strncmp(url.GetProtocol(),"rfio", 4)) ) {
+           strncmp(url.GetProtocol(),"rfio", 4) &&
+           strncmp(url.GetProtocol(),"file", 4)) ) {
          host = "no-host";
+      } else if ( url.IsValid() && !strncmp(url.GetProtocol(),"file", 4)) {
+         host = "localhost";
+         url.SetProtocol("root");
       } else {
          host = url.GetHost();
+      }
+      // Get full name for local hosts
+      if (host.Contains("localhost") || host == "127.0.0.1") {
+         url.SetHost(gSystem->HostName());
+         host = url.GetHostFQDN();
       }
 
       TFileNode *node = (TFileNode*) fFileNodes->FindObject( host );
@@ -378,10 +387,13 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
    // Setup file & filenode structure
    Reset();
    // Optimize the number of files to be open when running on subsample
-   Bool_t byfile = kFALSE;
    Int_t validateMode = 0;
-   if (TProof::GetParameter(input, "PROOF_ValidateByFile", validateMode) == 0)
-      byfile = (validateMode > 0 && num > -1) ? kTRUE : kFALSE;
+   Int_t gprc = TProof::GetParameter(input, "PROOF_ValidateByFile", validateMode);
+   Bool_t byfile = (gprc == 0 && validateMode > 0 && num > -1) ? kTRUE : kFALSE;
+   if (num > -1)
+      PDB(kPacketizer,2)
+         Info("TPacketizerAdaptive",
+              "processing subset of entries: validating by file? %s", byfile ? "yes": "no");
    ValidateFiles(dset, slaves, num, byfile);
 
    if (!fValid) return;
@@ -394,7 +406,7 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
    fUnAllocated->Clear();  // avoid dangling pointers
    fActive->Clear();
    fFileNodes->Clear();    // then delete all objects
-   PDB(kPacketizer,2) Info("TPacketizer","Processing Range: First %lld, Num %lld", first, num);
+   PDB(kPacketizer,2) Info("TPacketizer", "processing range: first %lld, num %lld", first, num);
 
    dset->Reset();
    Long64_t cur = 0;
@@ -412,14 +424,16 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
       Long64_t eFirst = e->GetFirst();
       Long64_t eNum = e->GetNum();
       PDB(kPacketizer,2)
-         Info("TPacketizer","Processing element: First %lld, Num %lld (cur %lld)", eFirst, eNum, cur);
+         Info("TPacketizer", " --> '%s'", e->GetFileName());
+      PDB(kPacketizer,2)
+         Info("TPacketizer", " --> first %lld, num %lld (cur %lld)", eFirst, eNum, cur);
 
       if (!e->GetEntryList()){
          // this element is before the start of the global range, skip it
          if (cur + eNum < first) {
             cur += eNum;
             PDB(kPacketizer,2)
-               Info("TPacketizer","Processing element: skip element cur %lld", cur);
+               Info("TPacketizer", " --> skip element cur %lld", cur);
             continue;
          }
 
@@ -427,31 +441,37 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
          if (num != -1 && (first+num <= cur)) {
             cur += eNum;
             PDB(kPacketizer,2)
-               Info("TPacketizer","Processing element: drop element cur %lld", cur);
+               Info("TPacketizer", " --> drop element cur %lld", cur);
             continue; // break ??
          }
 
-         // If this element contains the end of the global range
-         // adjust its number of entries
-         if (num != -1 && (first+num < cur+eNum)) {
-            e->SetNum(first + num - cur);
-            eNum = e->GetNum();
+         if (cur <= first) {
+            // If this element contains the start of the global range
+            // adjust its start and number of entries
+            e->SetFirst( eFirst + (first - cur) );
+            e->SetNum( e->GetNum() - (first - cur) );
             PDB(kPacketizer,2)
-               Info("TPacketizer","Processing element: Adjust end %lld", first + num - cur);
+               Info("TPacketizer", " --> adjust start %lld and end %lld",
+                    eFirst + (first - cur), first + num - cur);
+            cur += eNum;
+            eNum = e->GetNum();
+
+         } else  if (num != -1 && (first+num <= cur+eNum)) {
+            // If this element contains the end of the global range
+            // adjust its number of entries
+            e->SetNum( first + num - cur );
+            PDB(kPacketizer,2)
+               Info("TPacketizer", " --> adjust end %lld", first + num - cur);
+            cur += eNum;
+            eNum = e->GetNum();
+
+         } else {
+            // Increment the counter ...
+            PDB(kPacketizer,2)
+               Info("TPacketizer", " --> increment 'cur' by %lld", eNum);
+            cur += eNum;
          }
 
-         // If this element contains the start of the global range
-         // adjust its start and number of entries
-         if (cur < first) {
-            e->SetFirst(eFirst + (first - cur));
-            e->SetNum(e->GetNum() - (first - cur));
-            eNum = e->GetNum();
-            PDB(kPacketizer,2)
-               Info("TPacketizer","Processing element: Adjust start %lld and end %lld",
-                                  eFirst + (first - cur), first + num - cur);
-         }
-
-         cur += eNum;
       } else {
          TEntryList *enl = dynamic_cast<TEntryList *>(e->GetEntryList());
          if (enl) {
@@ -464,15 +484,24 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
             continue;
       }
       PDB(kPacketizer,2)
-         Info("TPacketizer","Processing element: next cur %lld", cur);
+         Info("TPacketizer", " --> next cur %lld", cur);
 
       // Map non URL filenames to dummy host
       TString host;
       if ( !url.IsValid() ||
           (strncmp(url.GetProtocol(),"root", 4) &&
-           strncmp(url.GetProtocol(),"rfio", 4)) ) {
+           strncmp(url.GetProtocol(),"rfio", 4) &&
+           strncmp(url.GetProtocol(),"file", 4)) ) {
          host = "no-host";
+      } else if ( url.IsValid() && !strncmp(url.GetProtocol(),"file", 4)) {
+         host = "localhost";
+         url.SetProtocol("root");
       } else {
+         host = url.GetHostFQDN();
+      }
+      // Get full name for local hosts
+      if (host.Contains("localhost") || host == "127.0.0.1") {
+         url.SetHost(gSystem->HostName());
          host = url.GetHostFQDN();
       }
 
@@ -489,8 +518,8 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
       PDB(kPacketizer,2) e->Print("a");
    }
 
-   PDB(kGlobal,1)
-      Info("TPacketizer","Processing %lld entries in %d files on %d hosts",
+   PDB(kPacketizer,1)
+      Info("TPacketizer", "processing %lld entries in %d files on %d hosts",
                          fTotalEntries, files, fFileNodes->GetSize());
 
    // Set the total number for monitoring

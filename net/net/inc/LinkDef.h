@@ -27,6 +27,7 @@
 #pragma link C++ class TMessage;
 #pragma link C++ class TMonitor;
 #pragma link C++ class TNetFile;
+#pragma link C++ class TNetFileStager;
 #pragma link C++ class TNetSystem;
 #pragma link C++ class TWebFile;
 #pragma link C++ class TWebSystem;
@@ -50,5 +51,10 @@
 #pragma link C++ class TFileStager;
 #pragma link C++ class TApplicationRemote;
 #pragma link C++ class TApplicationServer;
+#ifndef R__NO_CRYPTO
+#pragma link C++ class THTTPMessage+;
+#pragma link C++ class TAS3File+;
+#pragma link C++ class TGSFile+;
+#endif
 
 #endif

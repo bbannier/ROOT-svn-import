@@ -88,6 +88,7 @@ public:
    virtual TBranch  *GetBranch(const char* name);
    virtual Bool_t    GetBranchStatus(const char* branchname) const;
    virtual Long64_t  GetChainEntryNumber(Long64_t entry) const;
+   virtual TClusterIterator GetClusterIterator(Long64_t firstentry);
            Int_t     GetNtrees() const { return fNtrees; }
    virtual Long64_t  GetEntries() const;
    virtual Long64_t  GetEntries(const char *sel) { return TTree::GetEntries(sel); }
@@ -119,14 +120,20 @@ public:
    virtual void      ls(Option_t *option="") const;
    virtual Long64_t  Merge(const char *name, Option_t *option = "");
    virtual Long64_t  Merge(TCollection *list, Option_t *option = "");
+   virtual Long64_t  Merge(TCollection *list, TFileMergeInfo *info);
    virtual Long64_t  Merge(TFile *file, Int_t basketsize, Option_t *option="");
    virtual void      Print(Option_t *option="") const;
    virtual Long64_t  Process(const char *filename, Option_t *option="", Long64_t nentries=kBigNumber, Long64_t firstentry=0); // *MENU*
-#ifndef __CINT__
-   virtual Long64_t  Process(TSelector *selector, Option_t *option="",  Long64_t nentries=kBigNumber, Long64_t firstentry=0);
+#if defined(__CINT__)
+#if defined(R__MANUAL_DICT)
+   virtual Long64_t  Process(void* selector, Option_t* option = "", Long64_t nentries = kBigNumber, Long64_t firstentry = 0);
+#endif
+#else
+   virtual Long64_t  Process(TSelector* selector, Option_t* option = "", Long64_t nentries = kBigNumber, Long64_t firstentry = 0);
 #endif
    virtual void      RecursiveRemove(TObject *obj);
    virtual void      Reset(Option_t *option="");
+   virtual void      ResetAfterMerge(TFileMergeInfo *);
    virtual void      ResetBranchAddress(TBranch *);
    virtual void      ResetBranchAddresses();
    virtual Long64_t  Scan(const char *varexp="", const char *selection="", Option_t *option="", Long64_t nentries=1000000000, Long64_t firstentry=0); // *MENU*

@@ -44,7 +44,6 @@ public:
    typedef void (*Callback_foo)(TEveDigitSet*, Int_t, TObject*);
    typedef TString (*TooltipCB_foo)(TEveDigitSet*, Int_t);
 
-protected:
    struct DigitBase_t
    {
       // Base-class for digit representation classes.
@@ -55,6 +54,7 @@ protected:
       DigitBase_t(Int_t v=0) : fValue(v), fUserData(0) {}
    };
 
+protected:
    TRefArray        *fDigitIds;       //  Array holding references to external objects.
 
    Int_t             fDefaultValue;   //  Default signal value.
@@ -70,7 +70,9 @@ protected:
    TEveFrameBox*     fFrame;          //  Pointer to frame structure.
    TEveRGBAPalette*  fPalette;        //  Pointer to signal-color palette.
    ERenderMode_e     fRenderMode;     //  Render mode: as-is / line / filled.
-   Bool_t            fDisableLigting; //  Disable lighting for rendering.
+   Bool_t            fSelectViaFrame; //  Allow selection via frame.
+   Bool_t            fHighlightFrame; //  Highlight frame when object is selected.
+   Bool_t            fDisableLighting;//  Disable lighting for rendering.
    Bool_t            fHistoButtons;   //  Show histogram buttons in object editor.
 
    Bool_t            fEmitSignals;    //  Emit signals on secondary-select.
@@ -146,6 +148,12 @@ public:
    TEveFrameBox* GetFrame() const { return fFrame; }
    void          SetFrame(TEveFrameBox* b);
 
+   Bool_t GetSelectViaFrame() const    { return fSelectViaFrame; }
+   void   SetSelectViaFrame(Bool_t sf) { fSelectViaFrame = sf; }
+
+   Bool_t GetHighlightFrame() const    { return fHighlightFrame; }
+   void   SetHighlightFrame(Bool_t hf) { fHighlightFrame = hf; }
+
    Bool_t GetValueIsColor()  const { return fValueIsColor; }
 
    TEveRGBAPalette* GetPalette() const { return fPalette; }
@@ -154,6 +162,9 @@ public:
 
    ERenderMode_e  GetRenderMode()           const { return fRenderMode; }
    void           SetRenderMode(ERenderMode_e rm) { fRenderMode = rm; }
+
+   Bool_t GetDisableLighting() const   { return fDisableLighting; }
+   void   SetDisableLighting(Bool_t l) { fDisableLighting = l; }
 
    Bool_t GetHistoButtons() const   { return fHistoButtons; }
    void   SetHistoButtons(Bool_t f) { fHistoButtons = f; }

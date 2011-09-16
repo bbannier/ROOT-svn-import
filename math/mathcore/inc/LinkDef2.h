@@ -50,7 +50,7 @@
 #pragma link C++ class TKDTree<Int_t, Float_t>+;
 #pragma link C++ typedef TKDTreeID;
 #pragma link C++ class TKDTreeBinning+;
-
+#pragma link C++ class TKDTreeBinning+;
 
 // ROOT::Math namespace
 #pragma link C++ typedef ROOT::Math::IGenFunction;
@@ -124,7 +124,9 @@
 #pragma link C++ class ROOT::Math::BrentMinimizer1D+;
 
 #pragma link C++ class ROOT::Math::DistSampler+;
+#pragma link C++ class ROOT::Math::DistSamplerOptions+;
 #pragma link C++ class ROOT::Math::GoFTest+;
+#pragma link C++ class vector<vector<double> >+;
 
 #include "LinkDef_Func.h"
 

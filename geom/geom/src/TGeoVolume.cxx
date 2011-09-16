@@ -563,6 +563,13 @@ void TGeoVolume::CheckOverlaps(Double_t ovlp, Option_t *option) const
 }
 
 //_____________________________________________________________________________
+void TGeoVolume::CheckShape(Int_t testNo, Int_t nsamples, Option_t *option)
+{
+// Tests for checking the shape navigation algorithms. See TGeoShape::CheckShape()
+   fShape->CheckShape(testNo,nsamples,option);
+}   
+
+//_____________________________________________________________________________
 void TGeoVolume::CleanAll()
 {
 // Clean data of the volume.
@@ -1526,6 +1533,13 @@ void TGeoVolume::GrabFocus()
 }   
 
 //_____________________________________________________________________________
+Bool_t TGeoVolume::IsAssembly() const
+{
+// Returns true if the volume is an assembly or a scaled assembly.
+  return fShape->IsAssembly();
+}
+
+//_____________________________________________________________________________
 TGeoVolume *TGeoVolume::CloneVolume() const
 {
 // Clone this volume.
@@ -1810,9 +1824,10 @@ void TGeoVolume::Streamer(TBuffer &R__b)
 }
 
 //_____________________________________________________________________________
-void TGeoVolume::SetOption(const char * /*option*/)
+void TGeoVolume::SetOption(const char *option)
 {
 // Set the current options (none implemented)
+   fOption = option;
 }
 
 //_____________________________________________________________________________
@@ -1968,10 +1983,6 @@ void TGeoVolume::SelectVolume(Bool_t clear)
 void TGeoVolume::SetVisibility(Bool_t vis)
 {
 // set visibility of this volume
-   if (IsAssembly()) {
-      Info("SetVisibility", "Volume %s: assemblies do not have visibility", GetName());
-      return;
-   }   
    TGeoAtt::SetVisibility(vis);
    if (fGeoManager->IsClosed()) SetVisTouched(kTRUE);
    fGeoManager->SetVisOption(4);
@@ -2532,6 +2543,40 @@ TGeoVolume *TGeoVolumeAssembly::Divide(const char *, Int_t, Int_t, Double_t, Dou
 // Division makes no sense for assemblies.
    Error("Divide","Assemblies cannot be divided");
    return 0;
+}
+
+//_____________________________________________________________________________
+TGeoVolume *TGeoVolumeAssembly::Divide(TGeoVolume *cell, TGeoPatternFinder *pattern, Option_t *option)
+{
+// Assign to the assembly a collection of identical volumes positioned according
+// a predefined pattern. The option can be spacedout or touching depending on the empty
+// space between volumes.
+   if (fNodes) {
+      Error("Divide", "Cannot divide assembly %s since it has nodes", GetName());
+      return NULL;
+   }
+   if (fFinder) {
+      Error("Divide", "Assembly %s already divided", GetName());
+      return NULL; 
+   }
+   Int_t ncells = pattern->GetNdiv();
+   if (!ncells || pattern->GetStep()<=0) {
+      Error("Divide", "Pattern finder for dividing assembly %s not initialized. Use SetRange() method.", GetName());
+      return NULL;
+   }
+   fFinder = pattern;
+   TString opt(option);
+   opt.ToLower();
+   if (opt.Contains("spacedout")) fFinder->SetSpacedOut(kTRUE);
+   else fFinder->SetSpacedOut(kFALSE);
+   // Position volumes
+   for (Int_t i=0; i<ncells; i++) {
+      fFinder->cd(i);
+      TGeoNodeOffset *node = new TGeoNodeOffset(cell, i, 0.);
+      node->SetFinder(fFinder);
+      fNodes->Add(node);
+   }
+   return cell;   
 }
 
 //_____________________________________________________________________________

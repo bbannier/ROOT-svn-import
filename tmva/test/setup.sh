@@ -1,10 +1,6 @@
 #!/bin/sh
 
-#cd ..
-#mkdir -p include; 
-#cd include;
-#if [ ! -h TMVA ]; then ln -s ../inc TMVA; fi;
-#cd ..
+export HERE=$PWD
 
 # set symbolic links to data file and to rootmaps
 #cd test;
@@ -26,6 +22,9 @@ if [ ! $ROOTSYS ]; then
     echo "directory of your root installation or to ROOT on CERN-afs (see http://root.cern.ch)! "
     return 1
 fi
+
+export TMVASYS=$PWD
+
 
 # On MacOS X $DYLD_LIBRARY_PATH has to be modified, so:
 if [[ `root-config --platform` == "macosx" ]]; then
@@ -59,4 +58,4 @@ fi
 # prepare for PyROOT
 export PYTHONPATH=$PWD/lib:`root-config --libdir`:$PYTHONPATH
 
-cd test
+cd $HERE

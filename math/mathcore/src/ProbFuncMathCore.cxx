@@ -8,7 +8,6 @@
 
 #include <limits>
 
-
 namespace ROOT {
 namespace Math {
 
@@ -279,6 +278,25 @@ namespace Math {
       double b = (double) n - k; 
       return ROOT::Math::beta_cdf_c(p, a, b);
    }
+
+   double negative_binomial_cdf(unsigned int k, double p, double n) {
+      // use relation with in beta distribution
+      // p must be 0 <=p <= 1
+      if ( n < 0) return 0; 
+      if ( p < 0 || p > 1) return 0; 
+
+      return ROOT::Math::beta_cdf(p, n, k+1.0);
+   }
+
+   double negative_binomial_cdf_c(unsigned int k, double p, double n) {
+      // use relation with in beta distribution
+      // p must be 0 <=p <= 1
+      if ( n < 0) return 0; 
+      if ( p < 0 || p > 1) return 0; 
+
+      return ROOT::Math::beta_cdf_c(p, n, k+1.0);
+   }
+
 
 
    double landau_cdf(double x, double xi, double x0) { 

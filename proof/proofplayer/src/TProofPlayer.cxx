@@ -331,8 +331,8 @@ void TProofPlayer::AddQueryResult(TQueryResult *q)
                delete qr;
                break;
             }
-            // Record position according to end time
-            if (qr->GetStartTime().Convert() < q->GetStartTime().Convert())
+            // Record position according to start time
+            if (qr->GetStartTime().Convert() <= q->GetStartTime().Convert())
                qp = qr;
          }
 
@@ -800,6 +800,12 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          if (useParallelUnzip > -1 && useParallelUnzip < 2)
             gEnv->SetValue("ProofPlayer.UseParallelUnzip", useParallelUnzip);
       }
+      // OS file caching (Mac Os X only)
+      Int_t dontCacheFiles = 0;
+      if (TProof::GetParameter(fInput, "PROOF_DontCacheFiles", dontCacheFiles) == 0) {
+         if (dontCacheFiles == 1)
+            gEnv->SetValue("ProofPlayer.DontCacheFiles", 1);
+      }
       fEvIter = TEventIter::Create(dset, fSelector, first, nentries);
 
       if (version == 0) {
@@ -854,13 +860,29 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
       // Get the frequency for checking memory consumption and logging information
       TParameter<Long64_t> *par = (TParameter<Long64_t>*)fInput->FindObject("PROOF_MemLogFreq");
-      Long64_t memlogfreq = (par) ? par->GetVal() : 100;
+      Long64_t singleshot = 1, memlogfreq = (par) ? par->GetVal() : 100;
       Bool_t warnHWMres = kTRUE, warnHWMvir = kTRUE;
-      TString lastMsg;
+      TString lastMsg, wmsg;
+
+      // Initial memory footprint
+      if (!CheckMemUsage(singleshot, warnHWMres, warnHWMvir, wmsg)) {
+         Error("Process", "%s", wmsg.Data());
+         wmsg.Insert(0, TString::Format("ERROR:%s, after SlaveBegin(), ", gProofServ->GetOrdinal()));
+         fSelStatus->Add(wmsg.Data());
+         if (gProofServ) {
+            gProofServ->SendAsynMessage(wmsg.Data());
+            gProofServ->SetBit(TProofServ::kHighMemory);
+         }
+         fExitStatus = kStopped;
+         SetProcessing(kFALSE);
+      } else if (!wmsg.IsNull()) {
+         Warning("Process", "%s", wmsg.Data());
+      }
 
       TPair *currentElem = 0;
       // The event loop on the worker
-      while ((entry = fEvIter->GetNextEvent()) >= 0 && fSelStatus->IsOk()) {
+      while ((entry = fEvIter->GetNextEvent()) >= 0 && fSelStatus->IsOk() &&
+              fSelector->GetAbort() == TSelector::kContinue) {
 
          // This is needed by the inflate infrastructure to calculate
          // sleeping times
@@ -907,6 +929,11 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
             if (fSelector->GetAbort() == TSelector::kAbortProcess) {
                SetProcessing(kFALSE);
                break;
+            } else if (fSelector->GetAbort() == TSelector::kAbortFile) {
+               Info("Process", "packet processing aborted following the selector settings:\n%s",
+                               lastMsg.Data());
+               fEvIter->InvalidatePacket();
+               fProgressStatus->SetBit(TProofProgressStatus::kFileCorrupted);
             }
          }
 
@@ -919,7 +946,6 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
                        TFile::GetFileBytesRead()-readbytesatstart, kFALSE);
          }
          // Check the memory footprint, if required
-         TString wmsg;
          if (!CheckMemUsage(memlogfreq, warnHWMres, warnHWMvir, wmsg)) {
             Error("Process", "%s", wmsg.Data());
             if (gProofServ) {
@@ -946,6 +972,10 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          }
          SetProcessing(kFALSE);
          if (!fSelStatus->IsOk() || gROOT->IsInterrupted()) break;
+
+         // Make sure that the selector abort status is reset
+         if (fSelector->GetAbort() == TSelector::kAbortFile)
+            fSelector->Abort("status reset", TSelector::kContinue);
       }
 
    } CATCH(excode) {
@@ -973,11 +1003,19 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       delete currentElem;
    }
 
+   // Final memory footprint
+   Long64_t singleshot = 1;
+   Bool_t warnHWMres = kTRUE, warnHWMvir = kTRUE;
+   TString wmsg;
+   Bool_t shrc = CheckMemUsage(singleshot, warnHWMres, warnHWMvir, wmsg);
+   if (!wmsg.IsNull()) Warning("Process", "%s (%s)", wmsg.Data(), shrc ? "warn" : "hwm");
+
    PDB(kGlobal,2)
       Info("Process","%lld events processed", fProgressStatus->GetEntries());
 
    if (gMonitoringWriter) {
-      gMonitoringWriter->SendProcessingProgress(fProgressStatus->GetEntries(), TFile::GetFileBytesRead()-readbytesatstart, kFALSE);
+      gMonitoringWriter->SendProcessingProgress(fProgressStatus->GetEntries(),
+                                                TFile::GetFileBytesRead()-readbytesatstart, kFALSE);
       gMonitoringWriter->SendProcessingStatus("DONE");
    }
 
@@ -1047,9 +1085,11 @@ Bool_t TProofPlayer::CheckMemUsage(Long64_t &mfreq, Bool_t &w80r,
       // Record the memory information
       ProcInfo_t pi;
       if (!gSystem->GetProcInfo(&pi)){
+         wmsg = "";
          Info("CheckMemUsage|Svc", "Memory %ld virtual %ld resident event %lld",
                                    pi.fMemVirtual, pi.fMemResident, GetEventsProcessed());
-         wmsg = "";
+         // Save info in TStatus
+         fSelStatus->SetMemValues(pi.fMemVirtual, pi.fMemResident);
          // Apply limit on virtual memory, if any: warn if above 80%, stop if above 95% of max
          if (TProofServ::GetVirtMemMax() > 0) {
             if (pi.fMemVirtual > TProofServ::GetMemStop() * TProofServ::GetVirtMemMax()) {
@@ -1340,7 +1380,6 @@ ClassImp(TProofPlayerLocal)
 
 ClassImp(TProofPlayerRemote)
 
-
 //______________________________________________________________________________
 TProofPlayerRemote::~TProofPlayerRemote()
 {
@@ -1366,6 +1405,12 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
    PDB(kGlobal,1) Info("Process","Enter");
    fDSet = dset;
    fExitStatus = kFinished;
+
+   // This is done here to pickup on the fly changes
+   Int_t usemerge = 0;
+   if (TProof::GetParameter(fInput, "PROOF_UseTH1Merge", usemerge) != 0)
+      usemerge = gEnv->GetValue("ProofPlayer.UseTH1Merge", 0);
+   fUseTH1Merge = (usemerge == 1) ? kTRUE : kFALSE;
 
    Bool_t noData = dset->TestBit(TDSet::kEmpty) ? kTRUE : kFALSE;
 
@@ -1786,6 +1831,20 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          fProof->Collect();
 
          HandleTimer(0); // force an update of final result
+         // This forces a last call to TPacketizer::HandleTimer via the second argument
+         // (the first is ignored). This is needed when some events were skipped so that
+         // the total number of entries is not the one requested. The packetizer has no
+         // way in such a case to understand that processing is finished: it must be told.
+         if (fPacketizer) {
+            fPacketizer->StopProcess(kFALSE, kTRUE);
+            // The progress timer will now stop itself at the next call
+            fPacketizer->SetBit(TVirtualPacketizer::kIsDone);
+            // Store process info
+            if (fQuery)
+               fQuery->SetProcessInfo(0, 0., fPacketizer->GetBytesRead(),
+                                             fPacketizer->GetInitTime(),
+                                             fPacketizer->GetProcTime());
+         }
          StopFeedback();
 
          return Finalize(kFALSE,sync);
@@ -1806,12 +1865,22 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          fProof->fRedirLog = kFALSE;
 
       if (!IsClient()) {
-         HandleTimer(0); // force an update of final result
-         // Store process info
-         if (fPacketizer && fQuery)
-            fQuery->SetProcessInfo(0, 0., fPacketizer->GetBytesRead(),
-                                          fPacketizer->GetInitTime(),
-                                          fPacketizer->GetProcTime());
+         // Force an update of final result
+         HandleTimer(0);
+         // This forces a last call to TPacketizer::HandleTimer via the second argument
+         // (the first is ignored). This is needed when some events were skipped so that
+         // the total number of entries is not the one requested. The packetizer has no
+         // way in such a case to understand that processing is finished: it must be told.
+         if (fPacketizer) {
+            fPacketizer->StopProcess(kFALSE, kTRUE);
+            // The progress timer will now stop itself at the next call
+            fPacketizer->SetBit(TVirtualPacketizer::kIsDone);
+            // Store process info
+            if (fQuery)
+               fQuery->SetProcessInfo(0, 0., fPacketizer->GetBytesRead(),
+                                             fPacketizer->GetInitTime(),
+                                             fPacketizer->GetProcTime());
+         }
       }
       StopFeedback();
 
@@ -1827,6 +1896,9 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
 {
    // Merge output in files
 
+   PDB(kSubmerger,1) Info("MergeOutputFiles", "enter: fOutput size: %d", fOutput->GetSize());
+   PDB(kSubmerger,1) fOutput->ls();
+
    TList *rmList = 0;
    if (fMergeFiles) {
       TIter nxo(fOutput);
@@ -1834,6 +1906,8 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
       TProofOutputFile *pf = 0;
       while ((o = nxo())) {
          if ((pf = dynamic_cast<TProofOutputFile*>(o))) {
+
+            PDB(kSubmerger,2) pf->Print();
 
             if (pf->IsMerge()) {
 
@@ -1855,6 +1929,7 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
                   filemerger->AddFile(fileLoc);
                }
                // Merge
+               PDB(kSubmerger,2) filemerger->PrintFiles("");
                if (!filemerger->Merge()) {
                   Error("MergeOutputFiles", "cannot merge the output files");
                   continue;
@@ -1914,6 +1989,8 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
       rmList->SetOwner(kTRUE);
       delete rmList;
    }
+   
+   PDB(kSubmerger,1) Info("MergeOutputFiles", "done!");
 
    // Done
    return kTRUE;
@@ -1958,15 +2035,22 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
 
    Long64_t rv = 0;
    if (fProof->IsMaster()) {
-      TPerfStats::Stop();
+
+      // Fill information for monitoring and stop it
+      TStatus *status = (TStatus *) fOutput->FindObject("PROOF_Status");
+      if (!status) {
+         // The query was aborted: let's add some info in the output list
+         status = new TStatus();
+         fOutput->Add(status);
+         TString emsg = TString::Format("Query aborted after %lld entries", GetEventsProcessed());
+         status->Add(emsg);        
+      }
+      status->SetExitStatus((Int_t) GetExitStatus());
 
       PDB(kOutput,1) Info("Finalize","Calling Merge Output");
       // Some objects (e.g. histos in autobin) may not have been merged yet
       // do it now
       MergeOutput();
-
-      // Merge the output files created on workers, if any
-      MergeOutputFiles();
 
       fOutput->SetOwner();
 
@@ -1980,7 +2064,29 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
             TObject *o = 0;
             while ((o = nxo())) fOutput->Add(o);
          }
+         
+         // If other invalid elements were found during processing, add them to the
+         // list of missing elements
+         TDSetElement *elem = 0;
+         if (fPacketizer->GetFailedPackets()) {
+            TString type = (fPacketizer->TestBit(TVirtualPacketizer::kIsTree)) ? "TTree" : "";
+            TList *listOfMissingFiles = (TList *) fOutput->FindObject("MissingFiles");
+            if (!listOfMissingFiles) {
+               listOfMissingFiles = new TList;
+               listOfMissingFiles->SetName("MissingFiles");
+            }
+            TIter nxe(fPacketizer->GetFailedPackets());
+            while ((elem = (TDSetElement *)nxe()))
+               listOfMissingFiles->Add(elem->GetFileInfo(type));
+            if (!fOutput->FindObject(listOfMissingFiles)) fOutput->Add(listOfMissingFiles);
+         }
       }
+
+      TPerfStats::Stop();
+      // Save memory usage on master
+      Long_t vmaxmst, rmaxmst;
+      TPerfStats::GetMemValues(vmaxmst, rmaxmst);
+      status->SetMemValues(vmaxmst, rmaxmst, kTRUE);
 
       SafeDelete(fSelector);
    } else {
@@ -2218,44 +2324,111 @@ void TProofPlayerRemote::MergeOutput()
 
    PDB(kOutput,1) Info("MergeOutput","Enter");
 
-   if (fOutputLists == 0) {
-      PDB(kOutput,1) Info("MergeOutput","Leave (no output)");
-      return;
-   }
+   TObject *obj = 0;
+   if (fOutputLists) {
 
-   TIter next(fOutputLists);
+      TIter next(fOutputLists);
 
-   TList *list;
-   while ( (list = (TList *) next()) ) {
+      TList *list;
+      while ( (list = (TList *) next()) ) {
 
-      TObject *obj = fOutput->FindObject(list->GetName());
-
-      if (obj == 0) {
-         obj = list->First();
-         list->Remove(obj);
-         fOutput->Add(obj);
-      }
-
-      if ( list->IsEmpty() ) continue;
-
-      TMethodCall callEnv;
-      if (obj->IsA())
-         callEnv.InitWithPrototype(obj->IsA(), "Merge", "TCollection*");
-      if (callEnv.IsValid()) {
-         callEnv.SetParam((Long_t) list);
-         callEnv.Execute(obj);
-      } else {
-         // No Merge interface, return individual objects
-         while ( (obj = list->First()) ) {
-            fOutput->Add(obj);
+         if (!(obj = fOutput->FindObject(list->GetName()))) {
+            obj = list->First();
             list->Remove(obj);
+            fOutput->Add(obj);
+         }
+
+         if ( list->IsEmpty() ) continue;
+
+         TMethodCall callEnv;
+         if (obj->IsA())
+            callEnv.InitWithPrototype(obj->IsA(), "Merge", "TCollection*");
+         if (callEnv.IsValid()) {
+            callEnv.SetParam((Long_t) list);
+            callEnv.Execute(obj);
+         } else {
+            // No Merge interface, return individual objects
+            while ( (obj = list->First()) ) {
+               fOutput->Add(obj);
+               list->Remove(obj);
+            }
          }
       }
+      SafeDelete(fOutputLists);
+      
+   } else {      
+
+      PDB(kOutput,1) Info("MergeOutput","fOutputLists empty");
    }
 
-   SafeDelete(fOutputLists);
+   if (!IsClient() || fProof->IsLite()) {
+      // Merge the output files created on workers, if any
+      MergeOutputFiles();
+   }
 
-   PDB(kOutput,1) Info("MergeOutput","Leave (%d object(s))", fOutput->GetSize());
+   // If there are TProofOutputFile objects we have to make sure that the internal
+   // information is consistent for the cases where this object is going to be merged
+   // again (e.g. when using submergers or in a multi-master setup). This may not be
+   // the case because the first coming in is taken as reference and it has the
+   // internal dir and raw dir of the originating worker.
+   TString key;
+   TNamed *nm = 0;
+   TList rmlist;
+   TIter nxo(fOutput);
+   while ((obj = nxo())) {
+      TProofOutputFile *pf = dynamic_cast<TProofOutputFile *>(obj);
+      if (pf) {
+         PDB(kOutput,2) Info("MergeOutput","found TProofOutputFile '%s'", obj->GetName());
+         TString dir(pf->GetOutputFileName());
+         PDB(kOutput,2) Info("MergeOutput","outputfilename: '%s'", dir.Data());
+         // The dir
+         if (dir.Last('/') != kNPOS) dir.Remove(dir.Last('/')+1);
+         PDB(kOutput,2) Info("MergeOutput","dir: '%s'", dir.Data());
+         pf->SetDir(dir);
+         // The raw dir; for xrootd based system we include teh 'localroot', if any 
+         TUrl u(dir);
+         dir = u.GetFile();
+         TString pfx  = gEnv->GetValue("Path.Localroot","");
+         if (!pfx.IsNull() &&
+            (!strcmp(u.GetProtocol(), "root") || !strcmp(u.GetProtocol(), "xrd")))
+            dir.Insert(0, pfx);
+         PDB(kOutput,2) Info("MergeOutput","rawdir: '%s'", dir.Data());
+         pf->SetDir(dir, kTRUE);
+         // The worker ordinal
+         pf->SetWorkerOrdinal(gProofServ ? gProofServ->GetOrdinal() : "0");
+         // The saved output file name, if any
+         key.Form("PROOF_OutputFileName_%s", pf->GetFileName());
+         if ((nm = (TNamed *) fOutput->FindObject(key.Data()))) {
+            pf->SetOutputFileName(nm->GetTitle());
+            rmlist.Add(nm);
+         } else if (TestBit(TVirtualProofPlayer::kIsSubmerger)) {
+            pf->SetOutputFileName(0);
+            pf->ResetBit(TProofOutputFile::kOutputFileNameSet);
+         }
+         // The filename (order is important to exclude '.merger' from the key)
+         dir = pf->GetFileName();
+         if (TestBit(TVirtualProofPlayer::kIsSubmerger)) {
+            dir += ".merger";
+            pf->SetMerged(kFALSE);
+         } else {
+            if (dir.EndsWith(".merger")) dir.Remove(dir.Last('.'));
+         }
+         pf->SetFileName(dir);
+       } else {
+         PDB(kOutput,2) Info("MergeOutput","output object '%s' is not a TProofOutputFile", obj->GetName());
+      }
+   }
+
+   // Remove temporary objects from fOutput
+   if (rmlist.GetSize() > 0) {
+      TIter nxrm(&rmlist);
+      while ((obj = nxrm()))
+         fOutput->Remove(obj);
+      rmlist.SetOwner(kTRUE);
+   }
+
+   PDB(kOutput,1) fOutput->Print();
+   PDB(kOutput,1) Info("MergeOutput","leave (%d object(s))", fOutput->GetSize());
 }
 
 //______________________________________________________________________________
@@ -2337,7 +2510,7 @@ void TProofPlayerRemote::StopProcess(Bool_t abort, Int_t)
    // Stop process after this event.
 
    if (fPacketizer != 0)
-      fPacketizer->StopProcess(abort);
+      fPacketizer->StopProcess(abort, kFALSE);
    if (abort == kTRUE)
       fExitStatus = kAborted;
    else
@@ -2430,25 +2603,46 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
       fMergeFiles = kTRUE;
       if (!IsClient()) {
          if (pf->IsMerge()) {
-            // Fill the output file name, if not done by the client
-            if (strlen(pf->GetOutputFileName()) <= 0) {
-               TString of(Form("root://%s", gSystem->HostName()));
-               if (gSystem->Getenv("XRDPORT")) {
-                  TString sp(gSystem->Getenv("XRDPORT"));
-                  if (sp.IsDigit())
-                     of += Form(":%s", sp.Data());
+            Bool_t hasfout = (pf->GetOutputFileName() &&
+                              strlen(pf->GetOutputFileName()) > 0 &&
+                              pf->TestBit(TProofOutputFile::kOutputFileNameSet)) ? kTRUE : kFALSE;
+            Bool_t setfout = (!hasfout || TestBit(TVirtualProofPlayer::kIsSubmerger)) ? kTRUE : kFALSE;
+            if (setfout) {
+               // If submerger, save first the existing filename, if any
+               if (TestBit(TVirtualProofPlayer::kIsSubmerger) && hasfout) {
+                  TString key = TString::Format("PROOF_OutputFileName_%s", pf->GetFileName());
+                  if (!fOutput->FindObject(key.Data()))
+                     fOutput->Add(new TNamed(key.Data(), pf->GetOutputFileName()));
+               }
+               TString of;
+               if (gSystem->Getenv("LOCALDATASERVER")) {
+                  of = gSystem->Getenv("LOCALDATASERVER");
+               } else {
+                  // Assume an xroot server running on the machine
+                  of.Form("root://%s", gSystem->HostName());
+                  if (gSystem->Getenv("XRDPORT")) {
+                     TString sp(gSystem->Getenv("XRDPORT"));
+                     if (sp.IsDigit())
+                        of += Form(":%s", sp.Data());
+                  }
                }
                TString sessionPath(gProofServ->GetSessionDir());
-               // Take into account a prefix, if any
+               // Take into account a prefix, if included and if xrootd
+               TString sproto = TUrl(sessionPath).GetProtocol();
                TString pfx  = gEnv->GetValue("Path.Localroot","");
-               if (!pfx.IsNull())
+               if (!pfx.IsNull() && sessionPath.BeginsWith(pfx) &&
+                  (sproto == "root" || sproto == "xrd"))
                   sessionPath.Remove(0, pfx.Length());
-               of += Form("/%s/%s", sessionPath.Data(), pf->GetFileName());
+               of += TString::Format("/%s/%s", sessionPath.Data(), pf->GetFileName());
+               if (TestBit(TVirtualProofPlayer::kIsSubmerger)) {
+                  if (!of.EndsWith(".merger")) of += ".merger";
+               } else {
+                  if (of.EndsWith(".merger")) of.Remove(of.Last('.'));
+               }
                pf->SetOutputFileName(of);
             }
-            // Notify, if required
-            if (gDebug > 0)
-               pf->Print();
+            // Notify
+            PDB(kOutput, 1) pf->Print();
          }
       } else {
          // On clients notify the output path
@@ -2585,6 +2779,8 @@ void TProofPlayerRemote::NotifyMemory(TObject *obj)
                                   pi.fMemVirtual, pi.fMemResident, obj->GetName());
          RedirectOutput(0);
       }
+      // Record also values for monitoring
+      TPerfStats::SetMemValues();
    }
 }
 
@@ -2625,10 +2821,13 @@ Int_t TProofPlayerRemote::Incorporate(TObject *newobj, TList *outlist, Bool_t &m
    Bool_t specialH =
       (!fProof || !fProof->TestBit(TProof::kIsClient) || fProof->IsLite()) ? kTRUE : kFALSE;
    if (specialH && newobj->InheritsFrom(TH1::Class())) {
-      if (!HandleHistogram(newobj)) {
-         PDB(kOutput,1) Info("Incorporate", "histogram object '%s' added to the"
-                             " appropriate list for delayed merging", newobj->GetName());
-         merged = kFALSE;
+      if (!HandleHistogram(newobj, merged)) {
+         if (merged) {
+            PDB(kOutput,1) Info("Incorporate", "histogram object '%s' merged", newobj->GetName());
+         } else {
+            PDB(kOutput,1) Info("Incorporate", "histogram object '%s' added to the"
+                                " appropriate list for delayed merging", newobj->GetName());
+         }
          return 0;
       }
    }
@@ -2668,7 +2867,7 @@ Int_t TProofPlayerRemote::Incorporate(TObject *newobj, TList *outlist, Bool_t &m
 }
 
 //______________________________________________________________________________
-TObject *TProofPlayerRemote::HandleHistogram(TObject *obj)
+TObject *TProofPlayerRemote::HandleHistogram(TObject *obj, Bool_t &merged)
 {
    // Low statistic histograms need a special treatment when using autobin
 
@@ -2677,6 +2876,10 @@ TObject *TProofPlayerRemote::HandleHistogram(TObject *obj)
       // Not an histo
       return obj;
    }
+
+   // This is only used if we return (TObject *)0 and there is only one case
+   // when we set this to kTRUE
+   merged = kFALSE;
 
    // Does is still needs binning ?
    Bool_t tobebinned = (h->GetBuffer()) ? kTRUE : kFALSE;
@@ -2741,25 +2944,116 @@ TObject *TProofPlayerRemote::HandleHistogram(TObject *obj)
          return (TObject *)0;
 
       } else {
-         // Histogram has already been projected
-         Int_t hsz = h->GetNbinsX() * h->GetNbinsY() * h->GetNbinsZ();
-         if (gProofServ && hsz > gProofServ->GetMsgSizeHWM()) {
-            // Large histo: merge one-by-one
-            return obj;
+
+         if (!fUseTH1Merge) {
+            // Check if we can 'Add' the histogram to an existing one; this is more efficient
+            // then using Merge
+            TH1 *hout = (TH1*) fOutput->FindObject(h->GetName());
+            if (hout) {
+               // Do they have the same binning and ranges?
+               Bool_t samebin = HistoSameAxis(hout, h);
+               if (samebin) {
+                  hout->Add(h);
+                  PDB(kOutput,2)
+                     Info("HandleHistogram", "histogram '%s' just added", h->GetName());
+                  merged = kTRUE; // So it will be deleted
+                  return (TObject *)0;
+               } else {
+                  // Remove the existing histo from the output list ...
+                  fOutput->Remove(hout);
+                  // ... and create either the list to merge in one-go at the end
+                  // (more efficient than merging one by one) or, if too big, merge
+                  // these two and start the 'one-by-one' technology
+                  Int_t hsz = h->GetNbinsX() * h->GetNbinsY() * h->GetNbinsZ();
+                  if (gProofServ && hsz > gProofServ->GetMsgSizeHWM()) {
+                     list = new TList;
+                     list->Add(hout);
+                     h->Merge(list);
+                     list->SetOwner();
+                     delete list;
+                     return h;
+                  } else {
+                     list = new TList;
+                     list->SetName(h->GetName());
+                     list->SetOwner();
+                     fOutputLists->Add(list);
+                     // Add the existing and the incoming histos
+                     list->Add(hout);
+                     list->Add(h);
+                     // Done
+                     return (TObject *)0;
+                  }
+               }
+            } else {
+               // This is the first one; add it to the output list
+               fOutput->Add(h);
+               return (TObject *)0;
+            }
+
          } else {
-            // Create the list to merge in one-go at the end (more efficient
-            // than merging one by one)
-            list = new TList;
-            list->SetName(h->GetName());
-            list->SetOwner();
-            fOutputLists->Add(list);
-            list->Add(h);
-            // Done
-            return (TObject *)0;
+
+            // Histogram has already been projected
+            Int_t hsz = h->GetNbinsX() * h->GetNbinsY() * h->GetNbinsZ();
+            if (gProofServ && hsz > gProofServ->GetMsgSizeHWM()) {
+               // Large histo: merge one-by-one
+               return obj;
+            } else {
+               // Create the list to merge in one-go at the end (more efficient
+               // than merging one by one)
+               list = new TList;
+               list->SetName(h->GetName());
+               list->SetOwner();
+               fOutputLists->Add(list);
+               list->Add(h);
+               // Done
+               return (TObject *)0;
+            }
          }
       }
    }
    PDB(kOutput,1) Info("HandleHistogram", "leaving");
+}
+
+//______________________________________________________________________________
+Bool_t TProofPlayerRemote::HistoSameAxis(TH1 *h0, TH1 *h1)
+{
+   // Return kTRUE is the histograms 'h0' and 'h1' have the same binning and ranges
+   // on the axis (i.e. if they can be just Add-ed for merging).
+
+   Bool_t rc = kFALSE;
+   if (!h0 || !h1) return rc;
+
+   TAxis *a0 = 0, *a1 = 0;
+
+   // Check X
+   a0 = h0->GetXaxis();
+   a1 = h1->GetXaxis();
+   if (a0->GetNbins() == a1->GetNbins())
+      if (TMath::Abs(a0->GetXmax() - a1->GetXmax()) < 1.e-9)
+         if (TMath::Abs(a0->GetXmin() - a1->GetXmin()) < 1.e-9) rc = kTRUE;
+
+   // Check Y, if needed
+   if (h0->GetDimension() > 1) {
+      rc = kFALSE;
+      a0 = h0->GetYaxis();
+      a1 = h1->GetYaxis();
+      if (a0->GetNbins() == a1->GetNbins())
+         if (TMath::Abs(a0->GetXmax() - a1->GetXmax()) < 1.e-9)
+            if (TMath::Abs(a0->GetXmin() - a1->GetXmin()) < 1.e-9) rc = kTRUE;
+   }
+
+   // Check Z, if needed
+   if (h0->GetDimension() > 2) {
+      rc = kFALSE;
+      a0 = h0->GetZaxis();
+      a1 = h1->GetZaxis();
+      if (a0->GetNbins() == a1->GetNbins())
+         if (TMath::Abs(a0->GetXmax() - a1->GetXmax()) < 1.e-9)
+            if (TMath::Abs(a0->GetXmin() - a1->GetXmin()) < 1.e-9) rc = kTRUE;
+   }
+
+   // Done
+   return rc;
 }
 
 //______________________________________________________________________________
@@ -3141,6 +3435,7 @@ Long64_t TProofPlayerRemote::DrawSelect(TDSet *set, const char *varexp,
    if (!fgDrawInputPars) {
       fgDrawInputPars = new THashList;
       fgDrawInputPars->Add(new TObjString("FeedbackList"));
+      fgDrawInputPars->Add(new TObjString("PROOF_ChainWeight"));
       fgDrawInputPars->Add(new TObjString("PROOF_LineColor"));
       fgDrawInputPars->Add(new TObjString("PROOF_LineStyle"));
       fgDrawInputPars->Add(new TObjString("PROOF_LineWidth"));

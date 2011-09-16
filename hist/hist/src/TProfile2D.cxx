@@ -315,7 +315,7 @@ Int_t TProfile2D::BufferEmpty(Int_t action)
       if (action == 0) return 0;
       nbentries  = -nbentries;
       fBuffer=0;
-      Reset();
+      Reset("ICES"); // reset without deleting the functions
       fBuffer = buffer;
    }
    if (TestBit(kCanRebin) || fXaxis.GetXmax() <= fXaxis.GetXmin() || fYaxis.GetXmax() <= fYaxis.GetXmin()) {
@@ -377,7 +377,7 @@ Int_t TProfile2D::BufferFill(Double_t x, Double_t y, Double_t z, Double_t w)
       fBuffer[0] =  nbentries;
       if (fEntries > 0) {
          Double_t *buffer = fBuffer; fBuffer=0;
-         Reset();
+         Reset("ICES"); // reset without deleting the functions
          fBuffer = buffer;
       }
    }
@@ -442,6 +442,9 @@ void TProfile2D::Divide(const TH1 *h1)
       return;
    }
    TProfile2D *p1 = (TProfile2D*)h1;
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
 //*-*- Check profile compatibility
    Int_t nx = GetNbinsX();
@@ -530,6 +533,9 @@ void TProfile2D::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, 
       return;
    }
    TProfile2D *p2 = (TProfile2D*)h2;
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
 //*-*- Check histogram compatibility
    Int_t nx = GetNbinsX();
@@ -626,7 +632,7 @@ Int_t TProfile2D::Fill(Double_t x, Double_t y, Double_t z)
    Int_t bin,binx,biny;
 
    if (fZmin != fZmax) {
-      if (z <fZmin || z> fZmax) return -1;
+      if (z <fZmin || z> fZmax || TMath::IsNaN(z) ) return -1;
    }
 
    fEntries++;
@@ -664,7 +670,7 @@ Int_t TProfile2D::Fill(Double_t x, const char *namey, Double_t z)
    Int_t bin,binx,biny;
 
    if (fZmin != fZmax) {
-      if (z <fZmin || z> fZmax) return -1;
+      if (z <fZmin || z> fZmax || TMath::IsNaN(z)) return -1;
    }
 
    fEntries++;
@@ -701,7 +707,7 @@ Int_t TProfile2D::Fill(const char *namex, const char *namey, Double_t z)
    Int_t bin,binx,biny;
 
    if (fZmin != fZmax) {
-      if (z <fZmin || z> fZmax) return -1;
+      if (z <fZmin || z> fZmax || TMath::IsNaN(z) ) return -1;
    }
 
    fEntries++;
@@ -737,7 +743,7 @@ Int_t TProfile2D::Fill(const char *namex, Double_t y, Double_t z)
    Int_t bin,binx,biny;
 
    if (fZmin != fZmax) {
-      if (z <fZmin || z> fZmax) return -1;
+      if (z <fZmin || z> fZmax || TMath::IsNaN(z)) return -1;
    }
 
    fEntries++;
@@ -777,10 +783,10 @@ Int_t TProfile2D::Fill(Double_t x, Double_t y, Double_t z, Double_t w)
    Int_t bin,binx,biny;
 
    if (fZmin != fZmax) {
-      if (z <fZmin || z> fZmax) return -1;
+      if (z <fZmin || z> fZmax || TMath::IsNaN(z)) return -1;
    }
 
-   Double_t u= (w > 0 ? w : -w);
+   Double_t u= w; //(w > 0 ? w : -w);
    fEntries++;
    binx =fXaxis.FindBin(x);
    biny =fYaxis.FindBin(y);
@@ -933,7 +939,7 @@ void TProfile2D::GetStats(Double_t *stats) const
          for (binx = firstBinX; binx <= lastBinX; binx++) {
             bin = GetBin(binx,biny);
             w         = fBinEntries.fArray[bin];
-            w2        = (fBinSumw2.fN ? fBinSumw2.fArray[bin] : w*w );  
+            w2        = (fBinSumw2.fN ? fBinSumw2.fArray[bin] : w );  
             x         = fXaxis.GetBinCenter(binx);
             stats[0] += w;
             stats[1] += w2;
@@ -1222,8 +1228,6 @@ TH2D *TProfile2D::ProjectionXY(const char *name, Option_t *option) const
    opt.ToLower();
    
 
-   Int_t nx = fXaxis.GetNbins();
-   Int_t ny = fYaxis.GetNbins();
 
    // Create the projection histogram
    char *pname = (char*)name;
@@ -1232,7 +1236,20 @@ TH2D *TProfile2D::ProjectionXY(const char *name, Option_t *option) const
       pname = new char[nch];
       snprintf(pname,nch,"%s%s",GetName(),name);
    }
-   TH2D *h1 = new TH2D(pname,GetTitle(),nx,fXaxis.GetXmin(),fXaxis.GetXmax(),ny,fYaxis.GetXmin(),fYaxis.GetXmax());
+   Int_t nx = fXaxis.GetNbins();
+   Int_t ny = fYaxis.GetNbins();
+   const TArrayD *xbins = fXaxis.GetXbins();
+   const TArrayD *ybins = fYaxis.GetXbins();
+   TH2D * h1 = 0;
+   if (xbins->fN == 0 && ybins->fN == 0) {
+      h1 = new TH2D(pname,GetTitle(),nx,fXaxis.GetXmin(),fXaxis.GetXmax(),ny,fYaxis.GetXmin(),fYaxis.GetXmax());
+   } else if (xbins->fN == 0) {
+      h1 = new TH2D(pname,GetTitle(),nx,fXaxis.GetXmin(),fXaxis.GetXmax(),ny, ybins->GetArray() );
+   } else if (ybins->fN == 0) {
+      h1 = new TH2D(pname,GetTitle(),nx,xbins->GetArray(),ny,fYaxis.GetXmin(),fYaxis.GetXmax());
+   } else {
+      h1 = new TH2D(pname,GetTitle(),nx,xbins->GetArray(),ny,ybins->GetArray() );
+   }
    Bool_t computeErrors = kFALSE;
    Bool_t cequalErrors  = kFALSE;
    Bool_t binEntries    = kFALSE;
@@ -1304,7 +1321,7 @@ void TProfile2D::Reset(Option_t *option)
    fBinSumw2.Reset();
    TString opt = option;
    opt.ToUpper();
-   if (opt.Contains("ICE")) return;
+   if (opt.Contains("ICE") && !opt.Contains("S")) return;
    fTsumwz = fTsumwz2 = 0;
 }
 

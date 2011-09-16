@@ -308,13 +308,14 @@ TLatex::TLatex()
 
    fFactorSize  = 1.5;
    fFactorPos   = 0.6;
-   fLimitFactorSize = 3;
    fError       = 0;
    fShow        = kFALSE;
-   fPos=fTabMax = 0;
+   fPos         = 0;
+   fTabMax      = 0;
    fOriginSize  = 0.04;
    fTabSize     = 0;
    fItalic      = kFALSE;
+   fLimitFactorSize = 3;
    SetLineWidth(2);
 }
 
@@ -353,10 +354,12 @@ TLatex::TLatex(const TLatex &text) : TText(text), TAttLine(text)
 
    fFactorSize  = 1.5;
    fFactorPos   = 0.6;
+   fError       = 0;
    fShow        = kFALSE;
    fPos         = 0;
    fTabMax      = 0;
    fOriginSize  = 0.04;
+   fTabSize     = 0;
    fItalic      = kFALSE;
    fLimitFactorSize = 3;
    ((TLatex&)text).Copy(*this);
@@ -1455,7 +1458,7 @@ TLatexFormSize TLatex::Analyse(Double_t x, Double_t y, TextSpec_t spec, const Ch
             Short_t lineW = GetLineWidth();
             Double_t dx = (y2-y3)/8;
             SetLineWidth(TMath::Max(2,(Int_t)(dx/2)));
-            DrawLine(x-dx,y1,x1-dx,y2,spec);
+            DrawLine(x1-2*dx,y1,x1-dx,y2,spec);
             SetLineWidth((Int_t)(dx/4));
             DrawLine(x1-dx,y2,x1,y3,spec);
             DrawLine(x1,y3,x2,y3,spec);

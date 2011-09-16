@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "TH1.h"
+#include "TGraph.h"
 
 #include "TMVA/Results.h"
 #include "TMVA/MsgLogger.h"
@@ -94,4 +95,20 @@ TObject* TMVA::Results::GetObject(const TString & alias) const
 TH1* TMVA::Results::GetHist(const TString & alias) const 
 {
    return (TH1*)GetObject(alias);
+}
+
+//_______________________________________________________________________
+TGraph* TMVA::Results::GetGraph(const TString & alias) const 
+{
+   return (TGraph*)GetObject(alias);
+}
+
+
+//_______________________________________________________________________
+void TMVA::Results::Delete()
+{
+   // delete all stored histograms
+
+   fStorage->Delete();
+   fHistAlias->clear();
 }

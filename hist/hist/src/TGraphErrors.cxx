@@ -295,6 +295,10 @@ void TGraphErrors::Apply(TF1 *f)
 
    Double_t x,y,ex,ey;
 
+   if (fHistogram) {
+      delete fHistogram;
+      fHistogram = 0;
+   }
    for (Int_t i=0;i<GetN();i++) {
       GetPoint(i,x,y);
       ex=GetErrorX(i);
@@ -303,6 +307,7 @@ void TGraphErrors::Apply(TF1 *f)
       SetPoint(i,x,f->Eval(x,y));
       SetPointError(i,ex,TMath::Abs(f->Eval(x,y+ey) - f->Eval(x,y-ey))/2.);
    }
+   if (gPad) gPad->Modified();
 }
 
 
@@ -554,7 +559,7 @@ void TGraphErrors::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       frameNumber++;
       TString hname = fHistogram->GetName();
       hname += frameNumber;
-      fHistogram->SetName(hname.Data());
+      fHistogram->SetName(Form("Graph_%s",hname.Data()));
       fHistogram->SavePrimitive(out,"nodraw");
       out<<"   gre->SetHistogram("<<fHistogram->GetName()<<");"<<endl;
       out<<"   "<<endl;

@@ -125,19 +125,27 @@ namespace {
          PyROOT::BindRootObject( obj, klass ) );
    }
 
-   std::set< std::string > gSTLTypes, gLoadedSTLTypes;
+   std::set< std::string > gSTLTypes, gSTLExceptions;
    struct InitSTLTypes_t {
       InitSTLTypes_t()
       {
+         std::string nss = "std::";
+
          const char* stlTypes[] = { "complex", "exception",
             "deque", "list", "queue", "stack", "vector",
             "map", "multimap", "set", "multiset" };
-         std::string nss = "std::";
          for ( int i = 0; i < int(sizeof(stlTypes)/sizeof(stlTypes[0])); ++i ) {
             gSTLTypes.insert( stlTypes[ i ] );
             gSTLTypes.insert( nss + stlTypes[ i ] );
          }
-         gLoadedSTLTypes.insert( "vector" );
+
+         const char* stlExceptions[] = { "logic_error", "domain_error",
+            "invalid_argument", "length_error", "out_of_range", "runtime_error",
+            "range_error", "overflow_error", "underflow_error" };
+         for ( int i = 0; i < int(sizeof(stlExceptions)/sizeof(stlExceptions[0])); ++i ) {
+            gSTLExceptions.insert( stlExceptions[ i ] );
+            gSTLExceptions.insert( nss + stlExceptions[ i ] );
+         }
       }
    } initSTLTypes_;
 
@@ -151,20 +159,33 @@ namespace {
          if ( klass != 0 )
             TClass::RemoveClass( (TClass*)klass );
 
-      // make sure to only load once
-         if ( gLoadedSTLTypes.find( sub ) == gLoadedSTLTypes.end() ) {
+      // strip std:: part as needed to form proper file name
+         if ( sub.substr( 0, 5 ) == "std::" )
+            sub = sub.substr( 5, std::string::npos );
 
-         // strip std:: part as needed to form proper file name
-            if ( sub.substr( 0, 5 ) == "std::" )
-               sub = sub.substr( 5, std::string::npos );
+      // tell CINT to go for it
+         gROOT->ProcessLine( (std::string( "#include <" ) + sub + ">").c_str() );
 
-         // tell CINT to go for it
-            gROOT->ProcessLine( (std::string( "#include <" ) + sub + ">").c_str() );
+      // prevent second attempt to load by erasing name
+         gSTLTypes.erase( gSTLTypes.find( sub ) );
+         gSTLTypes.erase( gSTLTypes.find( "std::" + sub ) );
 
-         // prevent second attempt to load by erasing name
-            gLoadedSTLTypes.insert( sub );
-            gLoadedSTLTypes.insert( "std::" + sub );
+         return kTRUE;
 
+      } else if ( gSTLExceptions.find( sub ) != gSTLExceptions.end() ) {
+      // removal is required or the dictionary can't be updated properly
+         if ( klass != 0 )
+            TClass::RemoveClass( (TClass*)klass );
+
+      // load stdexcept, which contains all std exceptions
+         gROOT->ProcessLine( "#include <stdexcept>" );
+         gSTLExceptions.clear();   // completely done with std exceptions
+
+      // <stdexcept> will load <exception> for the std::exception base class
+         std::set< std::string >::iterator excpos = gSTLTypes.find( "exception" );
+         if ( excpos != gSTLTypes.end() ) {
+            gSTLTypes.erase( excpos );
+            gSTLTypes.erase( gSTLTypes.find( "std::exception" ) );
          }
 
          return kTRUE;
@@ -236,7 +257,7 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
    // operator[]/() returning a reference type will be used for __setitem__
       if ( mtName == "__call__" || mtName == "__getitem__" ) {
          std::string cpd = Utility::Compound(
-            method.TypeOf().ReturnType().Name( ROOT::Reflex::Q | ROOT::Reflex::S ) );
+            method.TypeOf().ReturnType().Name( ROOT::Reflex::Q | ROOT::Reflex::S | ROOT::Reflex::F ) );
          if ( ! cpd.empty() && cpd[ cpd.size() - 1 ] == '&' )
             setupSetItem = kTRUE;
       }
@@ -468,7 +489,7 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
 // retrieve ROOT class (this verifies name)
    const std::string& lookup = scope ? (scName+"::"+name) : name;
    T klass = T::ByName( lookup );
-   if ( ! (bool)klass || ( (bool)klass && klass.FunctionMemberSize() == 0 ) ) {
+   if ( ! (bool)klass || klass.FunctionMemberSize() == 0 ) {
    // special action for STL classes to enforce loading dict lib
       LoadDictionaryForSTLType( name, klass.Id() );
 

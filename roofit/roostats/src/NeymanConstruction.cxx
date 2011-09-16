@@ -105,13 +105,14 @@ NeymanConstruction::~NeymanConstruction() {
 }
 
 //_______________________________________________________
-ConfInterval* NeymanConstruction::GetInterval() const {
+PointSetInterval* NeymanConstruction::GetInterval() const {
   // Main interface to get a RooStats::ConfInterval.  
   // It constructs a RooStats::SetInterval.
 
 
   TFile* f=0;
   if(fSaveBeltToFile){
+    //coverity[FORWARD_NULL]
     oocoutI(f,Contents) << "NeymanConstruction saving ConfidenceBelt to file SamplingDistributions.root" << endl;
     f = new TFile("SamplingDistributions.root","recreate");
   }
@@ -256,8 +257,8 @@ ConfInterval* NeymanConstruction::GetInterval() const {
     TIter      itr = point->createIterator();
     RooRealVar* myarg;
     ooccoutP(samplingDist,Eval) << "NeymanConstruction: Prog: "<< i+1<<"/"<<fPointsToTest->numEntries()
-		      << " total MC = " << totalMC 
-		      << " this test stat = " << thisTestStatistic << endl;
+				<< " total MC = " << samplingDist->GetSize()
+				<< " this test stat = " << thisTestStatistic << endl;
     ooccoutP(samplingDist,Eval) << " ";
     while ((myarg = (RooRealVar *)itr.Next())) { 
       ooccoutP(samplingDist,Eval) << myarg->GetName() << "=" << myarg->getVal() << " ";

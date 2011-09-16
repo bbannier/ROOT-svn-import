@@ -17,8 +17,8 @@
  
 class RooPoisson : public RooAbsPdf {
 public:
-  RooPoisson() {} ;
-  RooPoisson(const char *name, const char *title, RooAbsReal& _x, RooAbsReal& _mean);
+  RooPoisson() { _noRounding = kFALSE ; } ;
+  RooPoisson(const char *name, const char *title, RooAbsReal& _x, RooAbsReal& _mean, Bool_t noRounding=kFALSE);
   RooPoisson(const RooPoisson& other, const char* name=0) ;
   virtual TObject* clone(const char* newname) const { return new RooPoisson(*this,newname); }
   inline virtual ~RooPoisson() { }
@@ -28,19 +28,24 @@ public:
 
   Int_t getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK=kTRUE) const;
   void generateEvent(Int_t code);
+  
+  void setNoRounding(bool flag = kTRUE){_noRounding = flag;}
+  void protectNegativeMean(bool flag = kTRUE){_protectNegative = flag;}
 
 protected:
 
   RooRealProxy x ;
   RooRealProxy mean ;
+  Bool_t  _noRounding ;
+  Bool_t  _protectNegative ;
   
   Double_t evaluate() const ;
   Double_t evaluate(Double_t k) const;
-
+  
 
 private:
 
-  ClassDef(RooPoisson,1) // A Poisson PDF
+  ClassDef(RooPoisson,3) // A Poisson PDF
 };
  
 #endif

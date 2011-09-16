@@ -139,7 +139,8 @@ static char *strtok_r(char *s1, const char *s2, char **lasts)
 
 
 //_____________________________________________________________________________
-RooFactoryWSTool::RooFactoryWSTool(RooWorkspace& inws) : _ws(&inws), _errorCount(0)
+RooFactoryWSTool::RooFactoryWSTool(RooWorkspace& inws) : _ws(&inws), _errorCount(0), _autoClassPostFix("")
+
 {
   // Default constructor  
 }
@@ -183,8 +184,6 @@ RooCategory* RooFactoryWSTool::createCategory(const char* name, const char* stat
 {
   // Low-level factory interface for creating a RooCategory with a given list of state names. The State name list
   // can be of the form 'name1,name2,name3' or of the form 'name1=id1,name2=id2,name3=id3'
-
-
 
   // Create variable
   RooCategory cat(name,name) ;
@@ -304,6 +303,7 @@ RooAbsArg* RooFactoryWSTool::createArg(const char* className, const char* objNam
 
   // Install argument in static data member to be accessed below through static CINT interface functions  
   _of = this ;
+
   
   try {
     Int_t i(0) ;
@@ -354,7 +354,7 @@ RooAbsArg* RooFactoryWSTool::createArg(const char* className, const char* objNam
       } else if ((*ti)=="const char*") {
 	RooFactoryWSTool::as_STRING(i) ;
 	cintExpr += Form(",RooFactoryWSTool::as_STRING(%d)",i) ;	
-      } else if ((*ti)=="Int_t") {
+      } else if ((*ti)=="Int_t" || (*ti)=="int" || (*ti)=="Bool_t" || (*ti)=="bool") {
 	RooFactoryWSTool::as_INT(i) ;
 	cintExpr += Form(",RooFactoryWSTool::as_INT(%d)",i) ;	
       } else if ((*ti)=="Double_t") {
@@ -390,8 +390,6 @@ RooAbsArg* RooFactoryWSTool::createArg(const char* className, const char* objNam
 	// If btype if a typedef, substitute it by the true type name
 	btype = RooCintUtils::trueName(btype.c_str()) ;
 
-	cout << "btype = " << btype << endl ;
-	
 	if (obj.InheritsFrom(btype.c_str())) {
 	  cintExpr += Form(",(%s&)RooFactoryWSTool::as_OBJ(%d)",ti->c_str(),i) ;
 	} else {
@@ -787,6 +785,8 @@ RooAbsArg* RooFactoryWSTool::process(const char* expr)
   // Interface to RooCustomizer
   //
   // EDIT::name( orig, substNode=origNode), ... ]                             -- Create a clone of input object orig, with the specified replacements operations executed
+  // EDIT::name( orig, origNode=$REMOVE(), ... ]                              -- Create clone of input removing term origNode from all PROD() terms that contained it
+  // EDIT::name( orig, origNode=$REMOVE(prodname,...), ... ]                  -- As above, but restrict removal of origNode to PROD term(s) prodname,...
   //
   //
   // Interface to RooClassFactory
@@ -2119,3 +2119,10 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
   }
   return string(instName) ;    
 }
+
+
+RooFactoryWSTool* RooFactoryWSTool::of() 
+{
+  return _of ;
+}
+

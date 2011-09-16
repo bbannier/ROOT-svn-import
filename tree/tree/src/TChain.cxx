@@ -47,7 +47,6 @@
 #include "TSelector.h"
 #include "TSystem.h"
 #include "TTree.h"
-#include "TTreeCloner.h"
 #include "TTreeCache.h"
 #include "TUrl.h"
 #include "TVirtualIndex.h"
@@ -290,7 +289,18 @@ Int_t TChain::Add(const char* name, Long64_t nentries /* = kBigNumber */)
    //            ... do something with f ...
    //         }
    //
-   // The function returns the total number of files connected.
+   // Return value:
+   //
+   // If nentries>0 (including the default of kBigNumber) and no
+   // wildcarding is used, ALWAYS returns 1 without regard to whether
+   // the file exists or contains the correct tree.
+   //
+   // If wildcarding is used, regardless of the value of nentries,
+   // returns the number of files matching the name without regard to
+   // whether they contain the correct tree.
+   //
+   // If nentries<=0 and wildcarding is not used, return 1 if the file
+   // exists and contains the correct tree and 0 otherwise.
 
    // case with one single file
    if (!TString(name).MaybeWildcard()) {
@@ -308,7 +318,7 @@ Int_t TChain::Add(const char* name, Long64_t nentries /* = kBigNumber */)
          dotslashpos = next_dot;
          next_dot = basename.Index(".root",dotslashpos+1);
       }
-      if (basename[dotslashpos+5]!='/') {
+      if (dotslashpos>=0 && basename[dotslashpos+5]!='/') {
          // We found the 'last' .root in the name and it is not followed by
          // a '/', so the tree name is _not_ specified in the name.
          dotslashpos = -1;
@@ -413,6 +423,10 @@ Int_t TChain::AddFile(const char* name, Long64_t nentries /* = kBigNumber */, co
    //
    // The function returns 1 if the file is successfully connected, 0 otherwise.
 
+   if(name==0 || name[0]=='\0') {
+      Error("AddFile", "No file name; no files connected");
+      return 0;
+   }
 
    const char *treename = GetName();
    if (tname && strlen(tname) > 0) treename = tname;
@@ -873,6 +887,18 @@ Bool_t TChain::GetBranchStatus(const char* branchname) const
       return fProofChain->GetBranchStatus(branchname);
    }
    return TTree::GetBranchStatus(branchname);
+}
+
+//______________________________________________________________________________
+TTree::TClusterIterator TChain::GetClusterIterator(Long64_t /* firstentry */)
+{
+   // Return an iterator over the cluster of baskets starting at firstentry.
+   // 
+   // This iterator is not yet supported for TChain object.
+   //
+   
+   Fatal("GetClusterIterator","Not support for TChain object");
+   return TTree::GetClusterIterator(-1);
 }
 
 //______________________________________________________________________________
@@ -1662,11 +1688,14 @@ void TChain::Loop(Option_t* option, Long64_t nentries, Long64_t firstentry)
 void TChain::ls(Option_t* option) const
 {
    // -- List the chain.
+   TObject::ls(option);
    TIter next(fFiles);
    TChainElement* file = 0;
+   TROOT::IncreaseDirLevel();
    while ((file = (TChainElement*)next())) {
       file->ls(option);
    }
+   TROOT::DecreaseDirLevel();
 }
 
 //______________________________________________________________________________
@@ -1701,6 +1730,15 @@ Long64_t TChain::Merge(TCollection* /* list */, Option_t* /* option */ )
 {
    // Merge all chains in the collection.  (NOT IMPLEMENTED)
 
+   Error("Merge", "not implemented");
+   return -1;
+}
+
+//______________________________________________________________________________
+Long64_t TChain::Merge(TCollection* /* list */, TFileMergeInfo *)
+{
+   // Merge all chains in the collection.  (NOT IMPLEMENTED)
+   
    Error("Merge", "not implemented");
    return -1;
 }
@@ -1866,7 +1904,7 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
       TBranch* branch = 0;
       TIter nextb(newTree->GetListOfBranches());
       while ((branch = (TBranch*) nextb())) {
-         branch->SetCompressionLevel(file->GetCompressionLevel());
+         branch->SetCompressionSettings(file->GetCompressionSettings());
       }
    }
 
@@ -1912,6 +1950,9 @@ void TChain::Print(Option_t *option) const
    TIter next(fFiles);
    TChainElement *element;
    while ((element = (TChainElement*)next())) {
+      Printf("******************************************************************************");
+      Printf("*Chain   :%-10s: %-54s *", GetName(), element->GetTitle());
+      Printf("******************************************************************************");
       TFile *file = TFile::Open(element->GetTitle());
       if (file && !file->IsZombie()) {
          TTree *tree = (TTree*)file->Get(element->GetName());
@@ -1986,7 +2027,7 @@ void TChain::RecursiveRemove(TObject *obj)
 //______________________________________________________________________________
 void TChain::Reset(Option_t*)
 {
-   // -- Resets the state of this chain.
+   // Resets the state of this chain.
 
    delete fFile;
    fFile = 0;
@@ -2002,6 +2043,22 @@ void TChain::Reset(Option_t*)
    fDirectory = 0;
 
    TTree::Reset();
+}
+
+//______________________________________________________________________________
+void TChain::ResetAfterMerge(TFileMergeInfo *info)
+{
+   // Resets the state of this chain after a merge (keep the customization but
+   // forget the data).
+   
+   fNtrees         = 0;
+   fTreeNumber     = -1;
+   fTree           = 0;
+   fFile           = 0;
+   fFiles->Delete();
+   fTreeOffset[0]  = 0;
+   
+   TTree::ResetAfterMerge(info);
 }
 
 //_______________________________________________________________________
@@ -2040,6 +2097,10 @@ void TChain::ResetBranchAddress(TBranch *branch)
 {
    // -- Reset the addresses of the branch.
 
+   TChainElement* element = (TChainElement*) fStatus->FindObject(branch->GetName());
+   if (element) {
+      element->SetBaddress(0);
+   }   
    if (fTree) {
       fTree->ResetBranchAddress(branch);
    }
@@ -2511,24 +2572,29 @@ void TChain::Streamer(TBuffer& b)
    // -- Stream a class object.
 
    if (b.IsReading()) {
+      // Remove using the 'old' name.
+      gROOT->GetListOfCleanups()->Remove(this);
+
       UInt_t R__s, R__c;
       Version_t R__v = b.ReadVersion(&R__s, &R__c);
       if (R__v > 2) {
          b.ReadClassBuffer(TChain::Class(), this, R__v, R__s, R__c);
-         return;
+      } else {
+         //====process old versions before automatic schema evolution
+         TTree::Streamer(b);
+         b >> fTreeOffsetLen;
+         b >> fNtrees;
+         fFiles->Streamer(b);
+         if (R__v > 1) {
+            fStatus->Streamer(b);
+            fTreeOffset = new Long64_t[fTreeOffsetLen];
+            b.ReadFastArray(fTreeOffset,fTreeOffsetLen);
+         }
+         b.CheckByteCount(R__s, R__c, TChain::IsA());
+         //====end of old versions
       }
-      //====process old versions before automatic schema evolution
-      TTree::Streamer(b);
-      b >> fTreeOffsetLen;
-      b >> fNtrees;
-      fFiles->Streamer(b);
-      if (R__v > 1) {
-         fStatus->Streamer(b);
-         fTreeOffset = new Long64_t[fTreeOffsetLen];
-         b.ReadFastArray(fTreeOffset,fTreeOffsetLen);
-      }
-      b.CheckByteCount(R__s, R__c, TChain::IsA());
-      //====end of old versions
+      // Re-add using the new name.
+      gROOT->GetListOfCleanups()->Add(this);
 
    } else {
       b.WriteClassBuffer(TChain::Class(),this);

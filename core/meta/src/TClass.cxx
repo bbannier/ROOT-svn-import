@@ -187,6 +187,15 @@ namespace ROOT {
       TMap fMap;
 
    public:
+#ifdef R__COMPLETE_MEM_TERMINATION
+      TMapTypeToTClass() {
+         TIter next(&fMap);
+         TObjString *key;
+         while((key = (TObjString*)next())) {
+            delete key;
+         }         
+      }
+#endif
       void Add(const char *key, TClass *&obj) {
          TObjString *realkey = new TObjString(key);
          fMap.Add(realkey, obj);
@@ -204,7 +213,17 @@ namespace ROOT {
 #endif
    };
 }
-IdMap_t *TClass::fgIdMap = new IdMap_t;
+
+IdMap_t *TClass::GetIdMap() {
+   
+#ifdef R__COMPLETE_MEM_TERMINATION
+   static IdMap_t gIdMapObject;
+   return &gIdMap;
+#else
+   static IdMap_t *gIdMap = new IdMap_t;
+   return gIdMap;
+#endif
+}
 
 //______________________________________________________________________________
 void TClass::AddClass(TClass *cl)
@@ -214,7 +233,7 @@ void TClass::AddClass(TClass *cl)
    if (!cl) return;
    gROOT->GetListOfClasses()->Add(cl);
    if (cl->GetTypeInfo()) {
-      fgIdMap->Add(cl->GetTypeInfo()->name(),cl);
+      GetIdMap()->Add(cl->GetTypeInfo()->name(),cl);
    }
 }
 
@@ -227,7 +246,7 @@ void TClass::RemoveClass(TClass *oldcl)
    if (!oldcl) return;
    gROOT->GetListOfClasses()->Remove(oldcl);
    if (oldcl->GetTypeInfo()) {
-      fgIdMap->Remove(oldcl->GetTypeInfo()->name());
+      GetIdMap()->Remove(oldcl->GetTypeInfo()->name());
    }
 }
 
@@ -321,7 +340,11 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
    if (strcmp(memberName,"fBits") == 0 && strcmp(memberTypeName,"UInt_t") == 0) {
       isbits = kTRUE;
    }
-
+   TClass * dataClass = TClass::GetClass(memberFullTypeName);
+   Bool_t isTString = (dataClass == TString::Class());
+   static TClassRef stdClass("std::string");
+   Bool_t isStdString = (dataClass == stdClass);
+   
    Int_t i;
    for (i = 0;i < kline; i++) line[i] = ' ';
    line[kline-1] = 0;
@@ -378,7 +401,7 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
       } else {
          snprintf(&line[kvalue],kline-kvalue,"->%lx ", (Long_t)p3pointer);
       }
-   } else if (membertype)
+   } else if (membertype) {
       if (isdate) {
          cdatime = (UInt_t*)pointer;
          TDatime::GetDateTime(cdatime[0],cdate,ctime);
@@ -388,9 +411,17 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
       } else {
          strncpy(&line[kvalue], membertype->AsString(pointer), TMath::Min(kline-1-kvalue,(int)strlen(membertype->AsString(pointer))));
       }
-   else
-      snprintf(&line[kvalue],kline-kvalue,"->%lx ", (Long_t)pointer);
-
+   } else {
+      if (isStdString) {
+         std::string *str = (std::string*)pointer;
+         snprintf(&line[kvalue],kline-kvalue,"%s",str->c_str());
+      } else if (isTString) {
+         TString *str = (TString*)pointer;
+         snprintf(&line[kvalue],kline-kvalue,"%s",str->Data());
+      } else {
+         snprintf(&line[kvalue],kline-kvalue,"->%lx ", (Long_t)pointer);
+      }
+   }
    // Encode data member title
    if (isdate == kFALSE && strcmp(memberFullTypeName, "char*") && strcmp(memberFullTypeName, "const char*")) {
       i = strlen(&line[0]); line[i] = ' ';
@@ -711,10 +742,10 @@ TClass::TClass() :
    fCheckSum(0), fCollectionProxy(0), fClassVersion(0), fClassInfo(0),
    fTypeInfo(0), fShowMembers(0), fInterShowMembers(0),
    fStreamer(0), fIsA(0), fGlobalIsA(0), fIsAMethod(0),
-   fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
+   fMerge(0), fResetAfterMerge(0), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
    fDestructor(0), fDirAutoAdd(0), fStreamerFunc(0), fSizeof(-1),
-   fVersionUsed(kFALSE), fProperty(0),
-   fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
+   fCanSplit(-1), fProperty(0),fVersionUsed(kFALSE), 
+   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
    fSchemaRules(0), fStreamerImpl(&TClass::StreamerDefault)
 {
@@ -735,10 +766,10 @@ TClass::TClass(const char *name, Bool_t silent) :
    fCheckSum(0), fCollectionProxy(0), fClassVersion(0), fClassInfo(0),
    fTypeInfo(0), fShowMembers(0), fInterShowMembers(0),
    fStreamer(0), fIsA(0), fGlobalIsA(0), fIsAMethod(0),
-   fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
+   fMerge(0), fResetAfterMerge(0), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
    fDestructor(0), fDirAutoAdd(0), fStreamerFunc(0), fSizeof(-1),
-   fVersionUsed(kFALSE), fProperty(0),
-   fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
+   fCanSplit(-1), fProperty(0),fVersionUsed(kFALSE), 
+   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
    fSchemaRules(0), fStreamerImpl(&TClass::StreamerDefault)
 {
@@ -785,10 +816,10 @@ TClass::TClass(const char *name, Version_t cversion,
    fCheckSum(0), fCollectionProxy(0), fClassVersion(0), fClassInfo(0),
    fTypeInfo(0), fShowMembers(0), fInterShowMembers(0),
    fStreamer(0), fIsA(0), fGlobalIsA(0), fIsAMethod(0),
-   fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
+   fMerge(0), fResetAfterMerge(0), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
    fDestructor(0), fDirAutoAdd(0), fStreamerFunc(0), fSizeof(-1),
-   fVersionUsed(kFALSE), fProperty(0),
-   fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
+   fCanSplit(-1), fProperty(0),fVersionUsed(kFALSE), 
+   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
    fSchemaRules(0), fStreamerImpl(&TClass::StreamerDefault)
 {
@@ -814,10 +845,10 @@ TClass::TClass(const char *name, Version_t cversion,
    fCheckSum(0), fCollectionProxy(0), fClassVersion(0), fClassInfo(0),
    fTypeInfo(0), fShowMembers(0), fInterShowMembers(0),
    fStreamer(0), fIsA(0), fGlobalIsA(0), fIsAMethod(0),
-   fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
-   fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
-   fVersionUsed(kFALSE), fProperty(0),
-   fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
+   fMerge(0), fResetAfterMerge(0), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
+   fDestructor(0), fDirAutoAdd(0), fStreamerFunc(0), fSizeof(-1),
+   fCanSplit(-1), fProperty(0),fVersionUsed(kFALSE), 
+   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
    fSchemaRules(0), fStreamerImpl(&TClass::StreamerDefault)
 {
@@ -1065,6 +1096,8 @@ TClass::TClass(const TClass& cl) :
   fIsA(cl.fIsA),
   fGlobalIsA(cl.fGlobalIsA),
   fIsAMethod(cl.fIsAMethod),
+  fMerge(cl.fMerge),
+  fResetAfterMerge(cl.fResetAfterMerge),
   fNew(cl.fNew),
   fNewArray(cl.fNewArray),
   fDelete(cl.fDelete),
@@ -1073,9 +1106,10 @@ TClass::TClass(const TClass& cl) :
   fDirAutoAdd(cl.fDirAutoAdd),
   fStreamerFunc(cl.fStreamerFunc),
   fSizeof(cl.fSizeof),
-  fVersionUsed(cl.fVersionUsed),
+  fCanSplit(cl.fCanSplit),
   fProperty(cl.fProperty),
-  fInterStreamer(cl.fInterStreamer),
+  fVersionUsed(cl.fVersionUsed),
+  fIsOffsetStreamerSet(cl.fIsOffsetStreamerSet),
   fOffsetStreamer(cl.fOffsetStreamer),
   fStreamerType(cl.fStreamerType),
   fCurrentInfo(cl.fCurrentInfo),
@@ -1098,6 +1132,7 @@ TClass& TClass::operator=(const TClass& cl)
    }
    return *this;
 }
+
 
 //______________________________________________________________________________
 TClass::~TClass()
@@ -1177,8 +1212,7 @@ TClass::~TClass()
       fClassMenuList->Delete();
    delete fClassMenuList; fClassMenuList=0;
 
-   if ( fInterStreamer ) gCint->CallFunc_Delete((CallFunc_t*)fInterStreamer);
-   fInterStreamer=0;
+   fIsOffsetStreamerSet=kFALSE;
 
    if (fInterShowMembers) gCint->CallFunc_Delete(fInterShowMembers);
 
@@ -1454,7 +1488,7 @@ Int_t TClass::Browse(void *obj, TBrowser *b) const
    if (IsTObject()) {
       // Call TObject::Browse.
 
-      if (!fInterStreamer) {
+      if (!fIsOffsetStreamerSet) {
          CalculateStreamerOffset();
       }
       TObject* realTObject = (TObject*)((size_t)obj + fOffsetStreamer);
@@ -1510,6 +1544,10 @@ void TClass::BuildRealData(void* pointer, Bool_t isTransient)
       return;
    }
 
+   if (fClassVersion == 0) {
+      isTransient = kTRUE;
+   }
+
    // When called via TMapFile (e.g. Update()) make sure that the dictionary
    // gets allocated on the heap and not in the mapped file.
    TMmallocDescTemp setreset;
@@ -1541,6 +1579,25 @@ void TClass::BuildRealData(void* pointer, Bool_t isTransient)
          realDataObject = gVirtualX;
       } else {
          realDataObject = New();
+         // The creation of the object might recursively end up calling BuildRealData
+         // with a pointer and thus we do not have an infinite recursion but the 
+         // inner call, set everything up correctly, so let's test again.
+         // This happens for example with $ROOTSYS/test/Event.cxx where the call
+         // to ' fWebHistogram.SetAction(this); ' requires the RealData for Event
+         // to set correctly.
+         if (fRealData) {
+            Int_t delta = GetBaseClassOffset(TObject::Class());
+            if (delta >= 0) {
+               TObject* tobj = (TObject*) (((char*) realDataObject) + delta);
+               tobj->SetBit(kZombie); //this info useful in object destructor
+               delete tobj;
+               tobj = 0;
+            } else {
+               Destructor(realDataObject);
+               realDataObject = 0;
+            }
+            return;
+         }
       }
    }
 
@@ -1548,7 +1605,6 @@ void TClass::BuildRealData(void* pointer, Bool_t isTransient)
    // all the subclasses of this class.
    if (realDataObject) {
       fRealData = new TList;
-
       TBuildRealData brd(realDataObject, this);
 
       // CallShowMember will force a call to InheritsFrom, which indirectly
@@ -1666,13 +1722,11 @@ void TClass::CalculateStreamerOffset() const
    // that offset to access any virtual method of TObject like
    // Streamer() and ShowMembers().
    R__LOCKGUARD(gCINTMutex);
-   if (!fInterStreamer && fClassInfo) {
+   if (!fIsOffsetStreamerSet && fClassInfo) {
       // When called via TMapFile (e.g. Update()) make sure that the dictionary
       // gets allocated on the heap and not in the mapped file.
       TMmallocDescTemp setreset;
-      CallFunc_t *f  = gCint->CallFunc_Factory();
-      gCint->CallFunc_SetFuncProto(f,fClassInfo,"Streamer","TBuffer&",&fOffsetStreamer);
-      fInterStreamer = f;
+      fIsOffsetStreamerSet = kTRUE;
       fOffsetStreamer = const_cast<TClass*>(this)->GetBaseClassOffset(TObject::Class());
       if (fStreamerType == kTObject) {
          fStreamerImpl = &TClass::StreamerTObjectInitialized;
@@ -1705,7 +1759,7 @@ Bool_t TClass::CallShowMembers(void* obj, TMemberInspector &insp,
 
       if (isATObject == 1) {
          // We have access to the TObject interface, so let's use it.
-         if (!fInterStreamer) {
+         if (!fIsOffsetStreamerSet) {
             CalculateStreamerOffset();
          }
          TObject* realTObject = (TObject*)((size_t)obj + fOffsetStreamer);
@@ -1728,7 +1782,7 @@ Bool_t TClass::CallShowMembers(void* obj, TMemberInspector &insp,
             
             R__LOCKGUARD2(gCINTMutex);
             gCint->CallFunc_SetFuncProto(ism,fClassInfo,"ShowMembers", "TMemberInspector&", &offset);
-            if (fInterStreamer && offset != fOffsetStreamer) {
+            if (fIsOffsetStreamerSet && offset != fOffsetStreamer) {
                Error("CallShowMembers", "Logic Error: offset for Streamer() and ShowMembers() differ!");
                fInterShowMembers = 0;
                return kFALSE;
@@ -1838,6 +1892,12 @@ Bool_t TClass::CanSplit() const
    // Note: add the possibility to set it for the class and the derived class.
    // save the info in TVirtualStreamerInfo
    // deal with the info in MakeProject
+   if (fCanSplit >= 0) {
+      // The user explicitly set the value
+      return fCanSplit != 0;
+   }
+   if (this == TObject::Class())  return kTRUE;
+   if (fName == "TClonesArray")   return kTRUE;
    if (fRefProxy)                 return kFALSE;
    if (InheritsFrom("TRef"))      return kFALSE;
    if (InheritsFrom("TRefArray")) return kFALSE;
@@ -1845,6 +1905,13 @@ Bool_t TClass::CanSplit() const
    if (fName.BeginsWith("TVectorT<")) return kFALSE;
    if (fName.BeginsWith("TMatrixT<")) return kFALSE;
    if (InheritsFrom("TCollection") && !InheritsFrom("TClonesArray")) return kFALSE;
+   if (InheritsFrom("TTree"))     return kFALSE;
+
+//   Uncommenting this would change the default bahavior and disallow the splitting by
+//   default.
+//   if (!GetCollectionProxy() && (GetStreamer()!=0 || (GetClassInfo() && gCint->ClassInfo_RootFlag(GetClassInfo()) & 1))) {
+//      return kFALSE;
+//   }
 
    // If we do not have a showMembers and we have a streamer,
    // we are in the case of class that can never be split since it is
@@ -1860,9 +1927,7 @@ Bool_t TClass::CanSplit() const
 
          // However we do not split collections of collections
          // nor collections of strings
-         // nor collections of pointers
-         // (actually we __could__ split collection of pointers to non-virtual class,
-         //  but we dont for now).
+         // nor collections of pointers (unless explicit request (see TBranchSTL)).
 
          if (GetCollectionProxy()->HasPointers()) return kFALSE;
 
@@ -2537,7 +2602,7 @@ TClass *TClass::GetClass(const type_info& typeinfo, Bool_t load, Bool_t /* silen
    if (!gROOT->GetListOfClasses())    return 0;
 
 //printf("TClass::GetClass called, typeinfo.name=%s\n",typeinfo.name());
-   TClass* cl = fgIdMap->Find(typeinfo.name());
+   TClass* cl = GetIdMap()->Find(typeinfo.name());
 
    if (cl) {
       if (cl->IsLoaded()) return cl;
@@ -3491,12 +3556,14 @@ void TClass::IgnoreTObjectStreamer(Bool_t ignore)
    //  This option saves the TObject space overhead on the file.
    //  However, the information (fBits, fUniqueID) of TObject is lost.
    //
-   //  Note that this function must be called for the class deriving
-   //  directly from TObject, eg, assuming that BigTrack derives from Track
-   //  and Track derives from TObject, one must do:
+   //  Note that to be effective for objects streamed object-wise this function 
+   //  must be called for the class deriving directly from TObject, eg, assuming
+   //  that BigTrack derives from Track and Track derives from TObject, one must do:
    //     Track::Class()->IgnoreTObjectStreamer();
    //  and not:
    //     BigTrack::Class()->IgnoreTObjectStreamer();
+   //  To be effective for object streamed member-wise or split in a TTree,
+   //  this function must be called for the most derived class (i.e. BigTrack).
 
    if ( ignore &&  TestBit(kIgnoreTObjectStreamer)) return;
    if (!ignore && !TestBit(kIgnoreTObjectStreamer)) return;
@@ -4178,6 +4245,17 @@ void TClass::DeleteArray(void *ary, Bool_t dtorOnly)
    } else {
       Error("DeleteArray", "This cannot happen! (class '%s')", GetName());
    }
+}
+
+//______________________________________________________________________________
+void TClass::SetCanSplit(Int_t splitmode)
+{ 
+   // Set the splitability of this class:
+   //   -1: Use the default calculation
+   //    0: Disallow splitting
+   //    1: Always allow splitting.
+   
+   fCanSplit = splitmode;
 }
 
 //______________________________________________________________________________
@@ -4917,7 +4995,7 @@ void TClass::StreamerTObject(void *object, TBuffer &b, const TClass * /* onfile_
 
    // case kTObject:
 
-   if (!fInterStreamer) {
+   if (!fIsOffsetStreamerSet) {
       CalculateStreamerOffset();
    }
    TObject *tobj = (TObject*)((Long_t)object + fOffsetStreamer);
@@ -4927,10 +5005,8 @@ void TClass::StreamerTObject(void *object, TBuffer &b, const TClass * /* onfile_
 //______________________________________________________________________________
 void TClass::StreamerTObjectInitialized(void *object, TBuffer &b, const TClass * /* onfile_class */) const
 {
-   // Case of TObjects when fInterStreamer is known to have been set.
+   // Case of TObjects when fIsOffsetStreamerSet is known to have been set.
 
-   //     case kTObject: if (fInterStreamer)
-   
    TObject *tobj = (TObject*)((Long_t)object + fOffsetStreamer);
    tobj->Streamer(b);   
 }
@@ -5040,10 +5116,26 @@ void TClass::SetStreamerFunc(ClassStreamerFunc_t strm)
 }
 
 //______________________________________________________________________________
+void TClass::SetMerge(ROOT::MergeFunc_t newMerge)
+{
+   // Install a new wrapper around 'Merge'.
+   
+   fMerge = newMerge;
+}
+
+//______________________________________________________________________________
+void TClass::SetResetAfterMerge(ROOT::ResetAfterMergeFunc_t newReset)
+{
+   // Install a new wrapper around 'ResetAfterMerge'.
+   
+   fResetAfterMerge = newReset;
+}
+
+//______________________________________________________________________________
 void TClass::SetNew(ROOT::NewFunc_t newFunc)
 {
    // Install a new wrapper around 'new'.
-
+   
    fNew = newFunc;
 }
 
@@ -5331,10 +5423,26 @@ Bool_t TClass::HasDefaultConstructor() const
 }
 
 //______________________________________________________________________________
+ROOT::MergeFunc_t TClass::GetMerge() const
+{
+   // Return the wrapper around Merge.
+   
+   return fMerge;
+}
+
+//______________________________________________________________________________
+ROOT::ResetAfterMergeFunc_t TClass::GetResetAfterMerge() const
+{
+   // Return the wrapper around Merge.
+   
+   return fResetAfterMerge;
+}
+
+//______________________________________________________________________________
 ROOT::NewFunc_t TClass::GetNew() const
 {
    // Return the wrapper around new ThisClass().
-
+   
    return fNew;
 }
 

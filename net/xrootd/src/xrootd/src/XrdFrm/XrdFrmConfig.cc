@@ -7,10 +7,6 @@
 /*   Produced by Andrew Hanushevsky for Stanford University under contract    */
 /*                DE-AC02-76-SFO0515 with the Deprtment of Energy             */
 /******************************************************************************/
-
-//         $Id$
-
-const char *XrdFrmConfigCVSID = "$Id$";
   
 #include <unistd.h>
 #include <ctype.h>
@@ -137,7 +133,6 @@ XrdFrmConfig::XrdFrmConfig(SubSys ss, const char *vopts, const char *uinfo)
    uInfo    = uinfo;
    ssID     = ss;
    AdminPath= 0;
-   APath    = 0;
    QPath    = 0;
    AdminMode= 0740;
    xfrMax   = 2;
@@ -168,6 +163,9 @@ XrdFrmConfig::XrdFrmConfig(SubSys ss, const char *vopts, const char *uinfo)
    pProg    = 0;
    Fix      = 0;
    dirHold  = 40*60*60;
+   runOld   = 0;
+   runNew   = 1;
+   nonXA    = 0;
 
    myUid    = geteuid();
    myGid    = getegid();
@@ -214,6 +212,7 @@ XrdFrmConfig::XrdFrmConfig(SubSys ss, const char *vopts, const char *uinfo)
 int XrdFrmConfig::Configure(int argc, char **argv, int (*ppf)())
 {
    extern XrdOss *XrdOssGetSS(XrdSysLogger *, const char *, const char *);
+   extern int *XrdOssRunMode;
    XrdFrmConfigSE theSE;
    int n, retc, isMum = 0, myXfrMax = -1, NoGo = 0, optBG = 0;
    const char *temp;
@@ -221,6 +220,8 @@ int XrdFrmConfig::Configure(int argc, char **argv, int (*ppf)())
    long long logkeep = 0;
    extern char *optarg;
    extern int opterr, optopt;
+   int pipeFD[2] = {-1, -1};
+   const char *pidFN = 0;
 
 // Obtain the program name (used for logging)
 //
@@ -232,8 +233,8 @@ int XrdFrmConfig::Configure(int argc, char **argv, int (*ppf)())
 // Process the options
 //
    opterr = 0; nextArg = 1;
-   if (argc > 1 && '-' == *argv[1]) 
-      while ((c = getopt(argc,argv,vOpts)) && ((unsigned char)c != 0xff))
+   while(nextArg < argc && '-' == *argv[nextArg]
+         && (c=getopt(argc,argv,vOpts)) && (c != -1))
      { switch(c)
        {
        case 'b': optBG = 1;
@@ -260,7 +261,8 @@ int XrdFrmConfig::Configure(int argc, char **argv, int (*ppf)())
        case 'm': if (XrdOuca2x::a2i(Say,"max number",optarg,&myXfrMax))
                     Usage(1);
                  break;
-       case 'n': myInst = optarg;
+       case 'n': myInst = (!strcmp(optarg,"anon")||!strcmp(optarg,"default")
+                          ? 0 : optarg);
                  break;
        case 'O': isOTO = 1;
                  if (!ConfigOTO(optarg)) Usage(1);
@@ -271,6 +273,8 @@ int XrdFrmConfig::Configure(int argc, char **argv, int (*ppf)())
                  break;
        case 'w': if (XrdOuca2x::a2tm(Say,"wait time",optarg,&WaitPurge))
                     Usage(1);
+                 break;
+       case 's': pidFN = optarg;
                  break;
        default:  sprintf(buff,"'%c'", optopt);
                  if (c == ':') Say.Emsg("Config", buff, "value not specified.");
@@ -293,7 +297,16 @@ int XrdFrmConfig::Configure(int argc, char **argv, int (*ppf)())
 
    // If undercover desired and we are not an agent, do so
    //
-       if (optBG && !isAgent) XrdOucUtils::Undercover(Say, !logfn);
+       if (optBG && !isAgent)
+       {
+#ifdef WIN32
+          XrdOucUtils::Undercover( Say, !logfn );
+#else
+          if (pipe( pipeFD ) == -1)
+             {Say.Emsg("Config", errno, "create a pipe"); exit(17);}
+          XrdOucUtils::Undercover( Say, !logfn, pipeFD );
+#endif
+       }
 
    // Bind the log file if we have one
    //
@@ -349,7 +362,10 @@ int XrdFrmConfig::Configure(int argc, char **argv, int (*ppf)())
       {XrdOucEnv::Export("XRDREDIRECT", "Q");
        XrdOucEnv::Export("XRDOSSTYPE",  myFrmID);
        if (ssID == ssPurg) XrdOucEnv::Export("XRDOSSCSCAN", "off");
-       if (!NoGo && !(ossFS=XrdOssGetSS(Say.logger(),ConfigFN,ossLib))) NoGo=1;
+       if (!NoGo)
+          {if (!(ossFS=XrdOssGetSS(Say.logger(),ConfigFN,ossLib))) NoGo=1;
+              else runNew = !(runOld = XrdOssRunMode ? *XrdOssRunMode : 0);
+          }
       }
 
 // Now we can create a home directory for core files and do a cwd to it
@@ -382,6 +398,20 @@ int XrdFrmConfig::Configure(int argc, char **argv, int (*ppf)())
                                      XRDSYSTHREAD_BIND, "midnight runner")))
           {Say.Emsg("Config", retc, "create logger thread"); NoGo = 1;}
       }
+
+   // if we call this it means that the daemon has forked and we are
+   // in the child process
+#ifndef WIN32
+   if (optBG && !isAgent)
+   {
+      if (pidFN && !XrdOucUtils::PidFile( Say, pidFN ) )
+         NoGo = 1;
+
+      int status = NoGo ? 1 : 0;
+      if(write( pipeFD[1], &status, sizeof( status ) )) {};
+      close( pipeFD[1]);
+   }
+#endif
 
 // Print ending message
 //
@@ -775,10 +805,9 @@ int XrdFrmConfig::ConfigPaths()
 // Set the directory where the meta information is to go
 // XRDADMINPATH already contains the instance name
 
-   if ( (!AdminPath) && (xPath = getenv("XRDADMINPATH"))) insName = 0;
-      else {if (!(xPath = AdminPath)) xPath = (char *)"/tmp/";
-            insName = myInst;
-           }
+        if ((xPath = AdminPath))              insName = myInst;
+   else if ((xPath = getenv("XRDADMINPATH"))) insName = 0;
+   else     {xPath = (char *)"/tmp/";         insName = myInst;}
    
 // Establish the cmsd notification object. We need to do this using an
 // unqualified admin path that we determined above.
@@ -786,15 +815,11 @@ int XrdFrmConfig::ConfigPaths()
    if (haveCMS)
       cmsPath = new XrdNetCmsNotify(&Say,xPath,insName,XrdNetCmsNotify::isServ);
 
-// If there is no QPath then make it the unqualified admin path
-//
-   APath = strdup(xPath);
-   if (!QPath) QPath = APath;
-
-// Create the admin directory if it does not exists
+// Create the admin directory if it does not exists and set QPath
 //
    if (!(xPath = XrdFrmUtils::makePath(insName, xPath, AdminMode))) return 1;
    if (AdminPath) free(AdminPath); AdminPath = xPath;
+   if (!QPath) QPath = AdminPath;
 
 // Create the purge stop file name
 //
@@ -891,7 +916,9 @@ int XrdFrmConfig::ConfigXeq(char *var, int mbok)
       {
        if (!strcmp(var, "frm.xfr.qcheck")) return xqchk();
        if (!strcmp(var, "ofs.osslib"    )) return Grab(var, &ossLib,    0);
-       if (!strcmp(var, "oss.cache"     )) return xspace(0,0);
+       if (!strcmp(var, "oss.cache"     )){hasCache = 1; // runOld
+                                           return xspace(0,0);
+                                          }
        if (!strcmp(var, "oss.localroot" )) return Grab(var, &LocalRoot, 0);
        if (!strcmp(var, "oss.namelib"   )) return xnml();
        if (!strcmp(var, "oss.remoteroot")) return Grab(var, &RemoteRoot, 0);
@@ -1833,6 +1860,8 @@ void XrdFrmConfig::xspaceBuild(char *grp, char *fn, int isxa)
    tP = nP->Dir;
    while(tP && strcmp(tP->text, fn)) tP = tP->next;
    if (!tP) nP->Dir = new XrdOucTList(fn, isxa, nP->Dir);
+
+   if (!isxa) nonXA = 1;
 }
 
 /******************************************************************************/

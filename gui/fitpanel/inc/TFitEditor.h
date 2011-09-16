@@ -116,6 +116,7 @@ protected:
    TGHorizontalFrame   *fSliderXParent;    // parent of fSliderX
    TGHorizontalFrame   *fSliderYParent;    // parent of fSliderY
    TGHorizontalFrame   *fSliderZParent;    // parent of fSliderZ
+   TGCheckButton       *fEnableRobust;     // switch on/off robust option
    TGNumberEntry       *fRobustValue;      // contains robust value for linear fit
    TGRadioButton       *fOptDefault;       // set default printing mode
    TGRadioButton       *fOptVerbose;       // set printing mode to 'Verbose'
@@ -233,6 +234,7 @@ public:
    virtual void   DoNoSelection();
    virtual void   DoNoStoreDrawing();
    virtual void   DoReset();
+   virtual void   DoRobustFit();
    virtual void   DoSetParameters();
    virtual void   DoSliderXMoved();
    virtual void   DoNumericSliderXChanged();

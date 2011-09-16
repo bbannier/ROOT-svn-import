@@ -19,6 +19,7 @@
 #include <assert.h>
 #include "TNamed.h"
 #include "THashList.h"
+#include "TRefArray.h"
 #include "RooPrintable.h"
 #include "RooRefCountList.h"
 #include "RooAbsCache.h"
@@ -38,6 +39,7 @@ class RooArgProxy ;
 class RooSetProxy ;
 class RooListProxy ;
 class RooExpensiveObjectCache ;
+class RooWorkspace ;
 /* class TGraphStruct ; */
 
 class RooAbsArg : public TNamed, public RooPrintable {
@@ -57,7 +59,7 @@ public:
   // Accessors to client-server relation information 
   virtual Bool_t isDerived() const { 
     // Does value or shape of this arg depend on any other arg?
-    return _serverList.GetSize()?kTRUE:kFALSE; 
+    return (_serverList.GetSize()>0 || _proxyList.GetSize()>0)?kTRUE:kFALSE; 
   }
   Bool_t isCloneOf(const RooAbsArg& other) const ; 
   Bool_t dependsOnValue(const RooAbsCollection& serverList, const RooAbsArg* ignoreArg=0) const { 
@@ -172,7 +174,7 @@ public:
     // Return the observables of _this_ pdf given the observables defined by 'data'
     return getObservables(&data) ; 
   }
-  virtual RooArgSet* getObservables(const RooArgSet* depList, Bool_t valueOnly=kTRUE) const ;
+  RooArgSet* getObservables(const RooArgSet* depList, Bool_t valueOnly=kTRUE) const ;
   Bool_t observableOverlaps(const RooAbsData* dset, const RooAbsArg& testArg) const ;
   Bool_t observableOverlaps(const RooArgSet* depList, const RooAbsArg& testArg) const ;
   virtual Bool_t checkObservables(const RooArgSet* nset) const ;
@@ -396,6 +398,8 @@ public:
   RooExpensiveObjectCache& expensiveObjectCache() const ;
   void setExpensiveObjectCache(RooExpensiveObjectCache& cache) { _eocache = &cache ; }  
 
+  virtual Bool_t importWorkspaceHook(RooWorkspace&) { return kFALSE ; } ;
+
  protected:
 
   // Proxy management
@@ -404,6 +408,8 @@ public:
   friend class RooSetProxy ;
   friend class RooListProxy ;
   friend class RooObjectFactory ;
+  friend class RooHistPdf ;
+  friend class RooHistFunc ;
   void registerProxy(RooArgProxy& proxy) ;
   void registerProxy(RooSetProxy& proxy) ;
   void registerProxy(RooListProxy& proxy) ;
@@ -427,7 +433,6 @@ public:
   friend class RooTreeData ;
   friend class RooDataSet ;
   friend class RooRealMPFE ;
-  friend class RooHistPdf ;
   virtual void syncCache(const RooArgSet* nset=0) = 0 ;
   virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) = 0 ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) = 0 ;

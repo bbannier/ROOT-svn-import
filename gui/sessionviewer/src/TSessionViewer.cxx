@@ -580,13 +580,16 @@ void TSessionServerFrame::OnBtnConnectClicked()
       fViewer->GetActDesc()->fProof->Connect("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
                  "TSessionQueryFrame", fViewer->GetQueryFrame(),
                  "Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)");
+      fViewer->GetActDesc()->fProof->Connect("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t,Int_t,Int_t,Float_t)",
+                 "TSessionQueryFrame", fViewer->GetQueryFrame(),
+                 "Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t,Int_t,Int_t,Float_t)");
       fViewer->GetActDesc()->fProof->Connect("StopProcess(Bool_t)",
                  "TSessionQueryFrame", fViewer->GetQueryFrame(),
                  "IndicateStop(Bool_t)");
       fViewer->GetActDesc()->fProof->Connect(
-                  "ResetProgressDialog(const char*,Int_t,Long64_t,Long64_t)",
-                  "TSessionQueryFrame", fViewer->GetQueryFrame(),
-                  "ResetProgressDialog(const char*,Int_t,Long64_t,Long64_t)");
+                 "ResetProgressDialog(const char*,Int_t,Long64_t,Long64_t)",
+                 "TSessionQueryFrame", fViewer->GetQueryFrame(),
+                 "ResetProgressDialog(const char*,Int_t,Long64_t,Long64_t)");
       // enable timer used for status bar icon's animation
       fViewer->EnableTimer();
       // change status bar right icon to connected pixmap
@@ -1320,7 +1323,8 @@ void TSessionFrame::UpdateListOfDataSets()
 
       // TODO: is now returning a TMap; viewer has to be adapted
       TList *dsetlist = 0; //fViewer->GetActDesc()->fProof->GetDataSets();
-      if(dsetlist) {
+      // coverity[dead_error_condition]: to be changed for TMap usage
+      if (dsetlist) {
          TGListTreeItem *dsetitem;
          fDataSetTree->OpenItem(fDataSetTree->GetFirstItem());
          TIter nextdset(dsetlist);
@@ -2118,6 +2122,7 @@ void TEditQueryFrame::Build(TSessionViewer *gui)
          TGNumberFormat::kNESInteger, TGNumberFormat::kNEAAnyNumber,
          TGNumberFormat::kNELNoLimits), new TGTableLayoutHints(1, 2, 1, 2,
          0, 17, 0, 0, 8));
+   // coverity[negative_returns]: no problem with -1, the format is kNESInteger
    fNumEntries->SetIntNumber(-1);
    // add "First Entry" label and number entry
    fFrmMore->AddFrame(new TGLabel(fFrmMore, "First entry :"),
@@ -2688,9 +2693,10 @@ void TSessionQueryFrame::Progress(Long64_t total, Long64_t processed)
 
 //______________________________________________________________________________
 void TSessionQueryFrame::Progress(Long64_t total, Long64_t processed,
-                                  Long64_t /*bytesread*/ , Float_t /*initTime*/,
+                                  Long64_t /*bytesread*/, Float_t /*initTime*/,
                                   Float_t /*procTime*/, Float_t /*evtrti*/,
-                                  Float_t /*mbrti*/)
+                                  Float_t /*mbrti*/, Int_t /*actw*/,
+                                  Int_t /*tses*/, Float_t /*eses*/)
 {
    // New version of Progress (just forward to the old version
    // for the time being).
@@ -2851,6 +2857,8 @@ void TSessionQueryFrame::IndicateStop(Bool_t aborted)
                this, "Progress(Long64_t,Long64_t)");
       fViewer->GetActDesc()->fProof->Disconnect("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
                this, "Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)");
+      fViewer->GetActDesc()->fProof->Disconnect("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t,Int_t,Int_t,Float_t)",
+               this, "Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t,Int_t,Int_t,Float_t)");
       fViewer->GetActDesc()->fProof->Disconnect("StopProcess(Bool_t)", this,
                "IndicateStop(Bool_t)");
    }
@@ -3587,6 +3595,7 @@ TSessionViewer::TSessionViewer(const char *name, UInt_t w, UInt_t h) :
 
    // only one session viewer allowed
    if (gSessionViewer)
+      // coverity[uninit_member]: already done
       return;
    Build();
    SetWindowName(name);
@@ -3603,6 +3612,7 @@ TSessionViewer::TSessionViewer(const char *name, Int_t x, Int_t y, UInt_t w,
 
    // only one session viewer allowed
    if (gSessionViewer)
+      // coverity[uninit_member]: already done
       return;
    Build();
    SetWindowName(name);

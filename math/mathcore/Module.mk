@@ -63,6 +63,7 @@ MATHCOREDH2  := $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/Math/BrentMinimizer1D.h \
                 $(MODDIRI)/Math/BrentRootFinder.h \
                 $(MODDIRI)/Math/DistSampler.h \
+                $(MODDIRI)/Math/DistSamplerOptions.h \
                 $(MODDIRI)/Math/GoFTest.h \
                 $(MODDIRI)/Math/SpecFuncMathCore.h \
                 $(MODDIRI)/Math/DistFuncMathCore.h
@@ -149,8 +150,8 @@ distclean-$(MODNAME): clean-$(MODNAME)
 ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
 		@rm -rf $(MATHCOREDIRT)
 else
-		@cd $(MATHCOREDIRT); $(MAKE) distclean ROOTCONFIG=../../../bin/root-config
-		@cd $(MATHCOREDIRT)/fit; $(MAKE) distclean ROOTCONFIG=../../../../bin/root-config
+		@cd $(MATHCOREDIRT) && $(MAKE) distclean ROOTCONFIG=../../../bin/root-config
+		@cd $(MATHCOREDIRT)/fit && $(MAKE) distclean ROOTCONFIG=../../../../bin/root-config
 endif
 
 distclean::     distclean-$(MODNAME)

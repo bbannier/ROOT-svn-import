@@ -108,11 +108,10 @@ TGInputDialog::TGInputDialog(const TGWindow *p, const TGWindow *main,
    SetWMSize(width, height);
    SetWMSizeHints(width, height, width, height, 0, 0);
 
-   SetMWMHints(kMWMDecorAll | kMWMDecorResizeH  | kMWMDecorMaximize |
-                                       kMWMDecorMinimize | kMWMDecorMenu,
-                        kMWMFuncAll  | kMWMFuncResize    | kMWMFuncMaximize |
-                                       kMWMFuncMinimize,
-                        kMWMInputModeless);
+   SetMWMHints(kMWMDecorAll | kMWMDecorResizeH | kMWMDecorMaximize |
+               kMWMDecorMinimize | kMWMDecorMenu, kMWMFuncAll | 
+               kMWMFuncResize | kMWMFuncMaximize | kMWMFuncMinimize,
+               kMWMInputModeless);
 
    // popup dialog and wait till user replies
    MapWindow();
@@ -146,11 +145,20 @@ Bool_t TGInputDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                switch (parm1) {
                   case 1:
                      // here copy the string from text buffer to return variable
+                     // coverity[secure_coding]
                      strcpy(fRetStr, fTE->GetBuffer()->GetString());
+                     // if user selected an empty string, set the second 
+                     // char to 1,in order to distinguish between empty string 
+                     // selected with OK and Cancel button pressed
+                     if (!strcmp(fRetStr, ""))
+                        fRetStr[1] = 1;
                      delete this;
                      break;
                   case 2:
+                     // hack to detect the case where the user pressed the 
+                     // Cancel button
                      fRetStr[0] = 0;
+                     fRetStr[1] = 0;
                      delete this;
                      break;
                }
@@ -163,7 +171,13 @@ Bool_t TGInputDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
          switch (GET_SUBMSG(msg)) {
             case kTE_ENTER:
                // here copy the string from text buffer to return variable
+               // coverity[secure_coding]
                strcpy(fRetStr, fTE->GetBuffer()->GetString());
+               // if user selected an empty string, set the second 
+               // char to 1,in order to distinguish between empty string 
+               // selected with OK and Cancel button pressed
+               if (!strcmp(fRetStr, ""))
+                  fRetStr[1] = 1;
                delete this;
                break;
             default:

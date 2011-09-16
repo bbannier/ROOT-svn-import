@@ -154,6 +154,11 @@ TGFileDialog::TGFileDialog(const TGWindow *p, const TGWindow *main,
    fList    = new TGPictureButton(fHtop, fPlist, kIDF_LIST);
    fDetails = new TGPictureButton(fHtop, fPdetails, kIDF_DETAILS);
 
+   fCdup->SetStyle(gClient->GetStyle());
+   fNewf->SetStyle(gClient->GetStyle());
+   fList->SetStyle(gClient->GetStyle());
+   fDetails->SetStyle(gClient->GetStyle());
+
    fCdup->SetToolTipText("Up One Level");
    fNewf->SetToolTipText("Create New Folder");
    fList->SetToolTipText("List");
@@ -268,6 +273,7 @@ TGFileDialog::TGFileDialog(const TGWindow *p, const TGWindow *main,
    else
       fTbfname->Clear();
 
+   fTypes->GetListBox()->Resize(230, 120);
    fHftype->AddFrame(fLftypes, new TGLayoutHints(kLHintsLeft | kLHintsCenterY, 2, 5, 2, 2));
    fHftype->AddFrame(fTypes, new TGLayoutHints(kLHintsRight | kLHintsCenterY, 0, 20, 2, 2));
 
@@ -411,7 +417,7 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                         else
                            fFileInfo->fFilename = gSystem->ConcatFileName(fFc->GetDirectory(),
                                                                           fTbfname->GetString());
-                        fFileInfo->fFilename = StrDup(gSystem->UnixPathName(fFileInfo->fFilename));
+                        fFileInfo->fFilename = StrDup(gSystem->UnixPathName(gSystem->ExpandPathName(fFileInfo->fFilename)));
                      }
                      if (fCheckB && (fCheckB->GetState() == kButtonDown))
                         fFileInfo->fOverwrite = kTRUE;
@@ -592,7 +598,7 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                         else
                            fFileInfo->fFilename = gSystem->ConcatFileName(fFc->GetDirectory(),
                                                                           fTbfname->GetString());
-                        fFileInfo->fFilename = StrDup(gSystem->UnixPathName(fFileInfo->fFilename));
+                        fFileInfo->fFilename = StrDup(gSystem->UnixPathName(gSystem->ExpandPathName(fFileInfo->fFilename)));
                         if (fCheckB && (fCheckB->GetState() == kButtonDown))
                            fFileInfo->fOverwrite = kTRUE;
                         else
@@ -649,7 +655,7 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                   delete [] fFileInfo->fFilename;
                fFileInfo->fFilename = gSystem->ConcatFileName(fFc->GetDirectory(),
                                                               fTbfname->GetString());
-               fFileInfo->fFilename = StrDup(gSystem->UnixPathName(fFileInfo->fFilename));
+               fFileInfo->fFilename = StrDup(gSystem->UnixPathName(gSystem->ExpandPathName(fFileInfo->fFilename)));
                if (fCheckB && (fCheckB->GetState() == kButtonDown))
                   fFileInfo->fOverwrite = kTRUE;
                else

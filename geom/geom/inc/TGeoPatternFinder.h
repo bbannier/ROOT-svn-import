@@ -34,7 +34,8 @@ class TGeoPatternFinder : public TObject
 {
 protected :
    enum EGeoPatternFlags {
-      kPatternReflected = BIT(14)
+      kPatternReflected = BIT(14),
+      kPatternSpacedOut = BIT(15)
    };   
    Double_t            fStep;           // division step length
    Double_t            fStart;          // starting point on divided axis
@@ -73,12 +74,16 @@ public:
    TGeoVolume         *GetVolume() const {return fVolume;}
    virtual Bool_t      IsOnBoundary(const Double_t * /*point*/) const {return kFALSE;}
    Bool_t              IsReflected() const {return TObject::TestBit(kPatternReflected);}
+   Bool_t              IsSpacedOut() const {return TObject::TestBit(kPatternSpacedOut);}
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    void                Reflect(Bool_t flag=kTRUE) {TObject::SetBit(kPatternReflected,flag);}
    void                SetDivIndex(Int_t index) {fDivIndex = index;}
    void                SetNext(Int_t index)     {fNextIndex = index;}
+   void                SetRange(Double_t start, Double_t step, Int_t ndivisions);
+   void                SetSpacedOut(Bool_t flag) {TObject::SetBit(kPatternSpacedOut,flag);}
    void                SetVolume(TGeoVolume *vol) {fVolume = vol;}
+   virtual void        UpdateMatrix(Int_t , TGeoHMatrix &) const {}
 
    ClassDef(TGeoPatternFinder, 3)              // patterns to divide volumes
 };
@@ -111,6 +116,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternX, 1)              // X division pattern
 };
@@ -140,6 +146,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternY, 1)              // Y division pattern
 };
@@ -169,6 +176,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternZ, 1)              // Z division pattern
 };
@@ -198,6 +206,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternParaX, 1)              // Para X division pattern
 };
@@ -230,6 +239,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternParaY, 1)              // Para Y division pattern
 };
@@ -263,6 +273,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternParaZ, 1)              // Para Z division pattern
 };
@@ -298,6 +309,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternTrapZ, 1)              // Trap od Gtra Z division pattern
 };
@@ -327,6 +339,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternCylR, 1)              // Cylindrical R division pattern
 };
@@ -366,6 +379,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternCylPhi, 1)              // Cylindrical phi division pattern
 };
@@ -393,6 +407,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternSphR, 1)              // spherical R division pattern
 };
@@ -420,6 +435,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternSphTheta, 1)              // spherical theta division pattern
 };
@@ -447,6 +463,7 @@ public:
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
    virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternSphPhi, 1)              // Spherical phi division pattern
 };
@@ -479,6 +496,7 @@ public:
    // methods
    virtual void        cd(Int_t idiv) {fCurrent=idiv;}
    virtual TGeoNode   *FindNode(Double_t *point, const Double_t *dir=0); 
+   virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternHoneycomb, 1)             // pattern for honeycomb divisions
 };

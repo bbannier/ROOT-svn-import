@@ -5,7 +5,7 @@
 #include <string.h>
 
 #ifdef WIN32
-#define __STDC__
+#define __STDC__ 1
 #endif
 #ifdef __MWERKS__
 #define __STDC__
@@ -18,6 +18,9 @@
 static const int qflag = 0;
 
 #include "zlib.h"
+#include "RConfigure.h"
+#include "ZipLZMA.h"
+
 
 /* inflate.c -- put in the public domain by Mark Adler
    version c14o, 23 August 1994 */
@@ -1116,6 +1119,28 @@ int R__Inflate_free()
  ***********************************************************************/
 #define HDRSIZE 9
 
+int R__unzip_header(int *srcsize, uch *src, int *tgtsize)
+{ 
+  // Reads header envelope, and determines target size.
+  // Returns 0 in case of success.
+
+  *srcsize = 0;
+  *tgtsize = 0;
+
+  /*   C H E C K   H E A D E R   */
+  if (!(src[0] == 'Z' && src[1] == 'L' && src[2] == Z_DEFLATED) &&
+      !(src[0] == 'C' && src[1] == 'S' && src[2] == Z_DEFLATED) &&
+      !(src[0] == 'X' && src[1] == 'Z' && src[2] == 0)) {
+    fprintf(stderr, "Error R__unzip_header: error in header\n");
+    return 1;
+  }
+
+  *srcsize = HDRSIZE + ((long)src[3] | ((long)src[4] << 8) | ((long)src[5] << 16));
+  *tgtsize = (long)src[6] | ((long)src[7] << 8) | ((long)src[8] << 16);
+
+  return 0;
+}
+
 void R__unzip(int *srcsize, uch *src, int *tgtsize, uch *tgt, int *irep)
 {
   long isize;
@@ -1131,10 +1156,11 @@ void R__unzip(int *srcsize, uch *src, int *tgtsize, uch *tgt, int *irep)
     return;
   }
 
-  if ((src[0] != 'C' && src[0] != 'Z') ||
-      (src[1] != 'S' && src[1] != 'L') ||
-      src[2] != Z_DEFLATED) {
-    fprintf(stderr,"R__unzip: error in header\n");
+  /*   C H E C K   H E A D E R   */
+  if (!(src[0] == 'Z' && src[1] == 'L' && src[2] == Z_DEFLATED) &&
+      !(src[0] == 'C' && src[1] == 'S' && src[2] == Z_DEFLATED) &&
+      !(src[0] == 'X' && src[1] == 'Z' && src[2] == 0)) {
+    fprintf(stderr,"Error R__unzip: error in header\n");
     return;
   }
 
@@ -1185,6 +1211,10 @@ void R__unzip(int *srcsize, uch *src, int *tgtsize, uch *tgt, int *irep)
     inflateEnd(&stream);
 
     *irep = stream.total_out;
+    return;
+  }
+  else if (src[0] == 'X' && src[1] == 'Z') {
+    R__unzipLZMA(srcsize, src, tgtsize, tgt, irep);
     return;
   }
 

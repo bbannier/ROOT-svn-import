@@ -79,6 +79,7 @@ public:
    virtual Long64_t  GetCacheSize() = 0;
    virtual Int_t     GetLearnEntries() = 0;
    virtual Long64_t  GetNextEvent() = 0;
+   virtual void      InvalidatePacket();
    virtual void      StopProcess(Bool_t abort);
 
    static TEventIter *Create(TDSet *dset, TSelector *sel, Long64_t first, Long64_t num);
@@ -143,6 +144,7 @@ private:
    Bool_t      fUseTreeCache; // Control usage of the tree cache
    Long64_t    fCacheSize;    // Cache size
    Bool_t      fUseParallelUnzip; // Control usage of parallel unzip
+   Bool_t      fDontCacheFiles; // Control OS caching of read files (Mac Os X only)
    TList      *fFileTrees;    // Files && Trees currently open
 
    // Auxilliary class to keep track open files and loaded trees

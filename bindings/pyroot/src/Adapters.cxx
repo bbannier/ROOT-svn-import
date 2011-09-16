@@ -1,11 +1,13 @@
 // Bindings
 #include "PyROOT.h"
 #include "Adapters.h"
+#include "Utility.h"
 
 // ROOT
 #include "TBaseClass.h"
 #include "TClass.h"
 #include "TClassEdit.h"
+#include "TDataType.h"
 #include "TDataMember.h"
 #include "TMethod.h"
 #include "TFunction.h"
@@ -27,7 +29,7 @@ std::string PyROOT::TReturnTypeAdapter::Name( unsigned int mod ) const
       name = TClassEdit::CleanType( fName.c_str(), 1 );
 
    if ( mod & ( ROOT::Reflex::FINAL | ROOT::Reflex::F ) )
-      return TClassEdit::ResolveTypedef( name.c_str(), true );
+      name = Utility::ResolveTypedef( name );
 
    return name;
 }
@@ -98,12 +100,12 @@ std::string PyROOT::TMemberAdapter::Name( unsigned int mod ) const
          name = arg->GetFullTypeName();
 
       if ( mod & ( ROOT::Reflex::FINAL | ROOT::Reflex::F ) )
-         return TClassEdit::ResolveTypedef( name.c_str(), true );
+         name = Utility::ResolveTypedef( name );
 
       return name;
 
    } else if ( mod & ( ROOT::Reflex::FINAL | ROOT::Reflex::F ) )
-      return TClassEdit::ResolveTypedef( fMember->GetName(), true );
+      return Utility::ResolveTypedef( fMember->GetName() );
 
    return fMember->GetName();
 }
@@ -173,7 +175,7 @@ std::string PyROOT::TMemberAdapter::FunctionParameterDefaultAt( size_t nth ) con
       return "";
 
 // special case for strings: "some value" -> ""some value"
-   if ( strstr( TClassEdit::ResolveTypedef( arg->GetTypeName(), true ).c_str(), "char*" ) ) {
+   if ( strstr( Utility::ResolveTypedef( arg->GetTypeName() ).c_str(), "char*" ) ) {
       std::string sdef = "\"";
       sdef += def;
       sdef += "\"";
@@ -234,10 +236,16 @@ PyROOT::TScopeAdapter::TScopeAdapter( const TMemberAdapter& mb ) :
 }
 
 //____________________________________________________________________________
-PyROOT::TScopeAdapter PyROOT::TScopeAdapter::ByName( const std::string & name )
+PyROOT::TScopeAdapter PyROOT::TScopeAdapter::ByName( const std::string & name, bool quiet )
 {
 // lookup a scope (class) by name
-   return TClass::GetClass( name.c_str() );
+   Int_t oldEIL = gErrorIgnoreLevel;
+   if ( quiet )
+      gErrorIgnoreLevel = 3000;
+   TClass* klass = TClass::GetClass( name.c_str() );
+   gErrorIgnoreLevel = oldEIL;
+
+   return klass;
 }
 
 //____________________________________________________________________________
@@ -252,7 +260,7 @@ std::string PyROOT::TScopeAdapter::Name( unsigned int mod ) const
          name = TClassEdit::CleanType( fName.c_str(), 1 );
 
       if ( mod & ( ROOT::Reflex::FINAL | ROOT::Reflex::F ) )
-         return TClassEdit::ResolveTypedef( name.c_str(), true );
+         name = Utility::ResolveTypedef( name );
 
       return name;
    }
@@ -366,7 +374,10 @@ Bool_t PyROOT::TScopeAdapter::IsClass() const
       return (fClass->Property() & kIsClass) || ! (fClass->Property() & kIsFundamental);
    }
 
-   return kFALSE;
+// no class can mean either is no class (i.e. builtin), or no dict but coming in
+// through PyCintex/Reflex ... as a workaround, use TDataTypes that has a full
+// enumeration of builtin types
+   return TDataType( Name( ROOT::Reflex::F | ROOT::Reflex::S ).c_str() ).GetType() == kOther_t;
 }
 
 //____________________________________________________________________________
@@ -378,7 +389,8 @@ Bool_t PyROOT::TScopeAdapter::IsStruct() const
       return (fClass->Property() & kIsStruct) || ! (fClass->Property() & kIsFundamental);
    }
 
-   return kFALSE;
+// same logic as for IsClass() above ...
+   return TDataType( Name( ROOT::Reflex::F | ROOT::Reflex::S ).c_str() ).GetType() == kOther_t;
 }
 
 //____________________________________________________________________________

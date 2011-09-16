@@ -113,9 +113,7 @@ Double_t TLeafL::GetValue(Int_t i) const
 // if leaf is a simple type, i must be set to 0
 // if leaf is an array, i is the array element number to be returned
 
-   //unlikely to have unsigned long64.
-   //cannot cast from ULong64 to Double with VC++6
-   //if (fIsUnsigned) return (Double_t)((ULong64_t)fValue[i]);
+   if (fIsUnsigned) return (Double_t)((ULong64_t)fValue[i]);
    return fValue[i];
 }
 
@@ -159,7 +157,7 @@ void TLeafL::ReadBasket(TBuffer &b)
 //*-*                  ===========================================
 
    if (!fLeafCount && fNdata == 1) {
-      b >> fValue[0];
+      b.ReadLong64(fValue[0]);
    } else {
       if (fLeafCount) {
          Long64_t entry = fBranch->GetReadEntry();

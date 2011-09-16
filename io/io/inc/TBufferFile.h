@@ -111,6 +111,7 @@ public:
 
    virtual void       SkipVersion(const TClass *cl = 0);
    virtual Version_t  ReadVersion(UInt_t *start = 0, UInt_t *bcnt = 0, const TClass *cl = 0);
+   virtual Version_t  ReadVersionForMemberWise(const TClass *cl = 0);
    virtual UInt_t     WriteVersion(const TClass *cl, Bool_t useBcnt = kFALSE);
    virtual UInt_t     WriteVersionMemberWise(const TClass *cl, Bool_t useBcnt = kFALSE);
 
@@ -302,9 +303,9 @@ public:
    virtual   Int_t  WriteClassBuffer(const TClass *cl, void *pointer);
    
    // Utilites to streamer using sequences.
-   Int_t ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *object);      
-   Int_t ReadSequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection);      
-   Int_t ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection);
+   Int_t ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *object);      
+   Int_t ApplySequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection);      
+   Int_t ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection);
 
    static void    SetGlobalReadParam(Int_t mapsize);
    static void    SetGlobalWriteParam(Int_t mapsize);
@@ -320,91 +321,91 @@ public:
 //______________________________________________________________________________
 inline void TBufferFile::WriteBool(Bool_t b)
 {
-   if (fBufCur + sizeof(UChar_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(UChar_t) > fBufMax) AutoExpand(fBufSize+sizeof(UChar_t));
    tobuf(fBufCur, b);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteChar(Char_t c)
 {
-   if (fBufCur + sizeof(Char_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(Char_t) > fBufMax) AutoExpand(fBufSize+sizeof(Char_t));
    tobuf(fBufCur, c);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteUChar(UChar_t c)
 {
-   if (fBufCur + sizeof(UChar_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(UChar_t) > fBufMax) AutoExpand(fBufSize+sizeof(UChar_t));
    tobuf(fBufCur, (Char_t)c);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteShort(Short_t h)
 {
-   if (fBufCur + sizeof(Short_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(Short_t) > fBufMax) AutoExpand(fBufSize+sizeof(Short_t));
    tobuf(fBufCur, h);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteUShort(UShort_t h)
 {
-   if (fBufCur + sizeof(UShort_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(UShort_t) > fBufMax) AutoExpand(fBufSize+sizeof(UShort_t));
    tobuf(fBufCur, (Short_t)h);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteInt(Int_t i)
 {
-   if (fBufCur + sizeof(Int_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(Int_t) > fBufMax) AutoExpand(fBufSize+sizeof(Int_t));
    tobuf(fBufCur, i);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteUInt(UInt_t i)
 {
-   if (fBufCur + sizeof(UInt_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(UInt_t) > fBufMax) AutoExpand(fBufSize+sizeof(UInt_t));
    tobuf(fBufCur, (Int_t)i);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteLong(Long_t l)
 {
-   if (fBufCur + sizeof(Long_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(Long_t) > fBufMax) AutoExpand(fBufSize+sizeof(Long_t));
    tobuf(fBufCur, l);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteULong(ULong_t l)
 {
-   if (fBufCur + sizeof(ULong_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(ULong_t) > fBufMax) AutoExpand(fBufSize+sizeof(ULong_t));
    tobuf(fBufCur, (Long_t)l);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteLong64(Long64_t ll)
 {
-   if (fBufCur + sizeof(Long64_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(Long64_t) > fBufMax) AutoExpand(fBufSize+sizeof(Long64_t));
    tobuf(fBufCur, ll);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteULong64(ULong64_t ll)
 {
-   if (fBufCur + sizeof(ULong64_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(ULong64_t) > fBufMax) AutoExpand(fBufSize+sizeof(ULong64_t));
    tobuf(fBufCur, (Long64_t)ll);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteFloat(Float_t f)
 {
-   if (fBufCur + sizeof(Float_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(Float_t) > fBufMax) AutoExpand(fBufSize+sizeof(Float_t));
    tobuf(fBufCur, f);
 }
 
 //______________________________________________________________________________
 inline void TBufferFile::WriteDouble(Double_t d)
 {
-   if (fBufCur + sizeof(Double_t) > fBufMax) Expand(2*fBufSize);
+   if (fBufCur + sizeof(Double_t) > fBufMax) AutoExpand(fBufSize+sizeof(Double_t));
    tobuf(fBufCur, d);
 }
 

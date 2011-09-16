@@ -110,7 +110,7 @@ ClassImpQ(TPad)
 //  An example of pads hierarchy is shown below:
 //Begin_Html
 /*
-<img src="examples/gif/canvas.gif">
+<img src="gif/canvas.gif">
 */
 //End_Html
 //
@@ -523,7 +523,10 @@ void TPad::Clear(Option_t *option)
    if (!fPadPaint) {
       SafeDelete(fView);
       if (fPrimitives) fPrimitives->Clear(option);
-      delete fFrame; fFrame = 0;
+      if (fFrame) {
+         if (fFrame->TestBit(kNotDeleted)) delete fFrame;
+         fFrame = 0;
+      }
    }
    if (fCanvas) fCanvas->Cleared(this);
 
@@ -1677,9 +1680,6 @@ again:
 
    case kButton1Down:
 
-#ifdef WIN32
-      Pop(); //this should be for cases where mouse has only two buttons
-#endif
       GetPainter()->SetLineColor(-1);
       TAttLine::Modify();  //Change line attributes only if necessary
       if (GetFillColor())
@@ -2329,7 +2329,9 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
                      hobj->SetMaximum(xxmax);
                      hobj->SetBit(TH1::kIsZoomed);
                   } else {
-                     hobj->GetXaxis()->SetRange(bin1,bin2);
+                     bin1 = hobj->GetYaxis()->FindFixBin(xmin);
+                     bin2 = hobj->GetYaxis()->FindFixBin(xmax);
+                     hobj->GetYaxis()->SetRange(bin1,bin2);
                   }
                }
             }
@@ -2407,7 +2409,7 @@ Int_t TPad::GetEvent() const
 {
    // Get Event.
 
-   return fCanvas->GetEvent();
+   return  fCanvas ? fCanvas->GetEvent() : 0;
 }
 
 
@@ -2416,7 +2418,7 @@ Int_t TPad::GetEventX() const
 {
    // Get X event.
 
-   return fCanvas->GetEventX();
+   return  fCanvas ? fCanvas->GetEventX() : 0;
 }
 
 
@@ -2425,7 +2427,7 @@ Int_t TPad::GetEventY() const
 {
    // Get Y event.
 
-   return fCanvas->GetEventY();
+   return  fCanvas ? fCanvas->GetEventY() : 0;
 }
 
 
@@ -2434,7 +2436,7 @@ TVirtualPad *TPad::GetVirtCanvas() const
 {
    // Get virtual canvas.
 
-   return (TVirtualPad*) fCanvas;
+   return  fCanvas ? (TVirtualPad*) fCanvas : 0;
 }
 
 
@@ -2443,7 +2445,7 @@ Color_t TPad::GetHighLightColor() const
 {
    // Get highlight color.
 
-   return fCanvas->GetHighLightColor();
+   return  fCanvas ? fCanvas->GetHighLightColor() : 0;
 }
 
 
@@ -2461,7 +2463,8 @@ TObject *TPad::GetSelected() const
 {
    // Get selected.
 
-   return fCanvas->GetSelected();
+   if (fCanvas == this) return 0;
+   return  fCanvas ? fCanvas->GetSelected() : 0;
 }
 
 
@@ -2470,7 +2473,8 @@ TVirtualPad *TPad::GetSelectedPad() const
 {
    // Get selected pad.
 
-   return fCanvas->GetSelectedPad();
+   if (fCanvas == this) return 0;
+   return  fCanvas ? fCanvas->GetSelectedPad() : 0;
 }
 
 
@@ -2479,7 +2483,8 @@ TVirtualPad *TPad::GetPadSave() const
 {
    // Get save pad.
 
-   return fCanvas->GetPadSave();
+   if (fCanvas == this) return 0;
+   return  fCanvas ? fCanvas->GetPadSave() : 0;
 }
 
 
@@ -2488,7 +2493,7 @@ UInt_t TPad::GetWh() const
 {
    // Get Wh.
 
-   return fCanvas->GetWh();
+   return  fCanvas ? fCanvas->GetWh() : 0;
 }
 
 
@@ -2497,7 +2502,7 @@ UInt_t TPad::GetWw() const
 {
    // Get Ww.
 
-   return fCanvas->GetWw();
+   return  fCanvas ? fCanvas->GetWw() : 0;
 }
 
 
@@ -2518,7 +2523,7 @@ Bool_t TPad::IsBatch() const
 {
    // Is pad in batch mode ?
 
-   return fCanvas->IsBatch();
+   return  fCanvas ? fCanvas->IsBatch() : 0;
 }
 
 
@@ -2527,7 +2532,7 @@ Bool_t TPad::IsRetained() const
 {
    // Is pad retained ?
 
-   return fCanvas->IsRetained();
+   return  fCanvas ? fCanvas->IsRetained() : 0;
 }
 
 
@@ -2536,7 +2541,7 @@ Bool_t TPad::OpaqueMoving() const
 {
    // Is pad moving in opaque mode ?
 
-   return fCanvas->OpaqueMoving();
+   return  fCanvas ? fCanvas->OpaqueMoving() : 0;
 }
 
 
@@ -2545,7 +2550,7 @@ Bool_t TPad::OpaqueResizing() const
 {
    // Is pad resizing in opaque mode ?
 
-   return fCanvas->OpaqueResizing();
+   return  fCanvas ? fCanvas->OpaqueResizing() : 0;
 }
 
 
@@ -2554,7 +2559,7 @@ void TPad::SetBatch(Bool_t batch)
 {
    // Set pad in batch mode.
 
-   fCanvas->SetBatch(batch);
+   if (fCanvas) fCanvas->SetBatch(batch);
 }
 
 
@@ -2563,7 +2568,7 @@ void TPad::SetCanvasSize(UInt_t ww, UInt_t wh)
 {
    // Set canvas size.
 
-   fCanvas->SetCanvasSize(ww,wh);
+   if (fCanvas) fCanvas->SetCanvasSize(ww,wh);
 }
 
 
@@ -2572,7 +2577,7 @@ void TPad::SetCursor(ECursor cursor)
 {
    // Set cursor type.
 
-   fCanvas->SetCursor(cursor);
+   if (fCanvas) fCanvas->SetCursor(cursor);
 }
 
 
@@ -2581,7 +2586,7 @@ void TPad::SetDoubleBuffer(Int_t mode)
 {
    // Set double buffer mode ON or OFF.
 
-   fCanvas->SetDoubleBuffer(mode);
+   if (fCanvas) fCanvas->SetDoubleBuffer(mode);
 }
 
 
@@ -2590,7 +2595,7 @@ void TPad::SetSelected(TObject *obj)
 {
    // Set selected.
 
-   fCanvas->SetSelected(obj);
+   if (fCanvas) fCanvas->SetSelected(obj);
 }
 
 
@@ -2599,7 +2604,7 @@ void TPad::Update()
 {
    // Update pad.
 
-   fCanvas->Update();
+   if (fCanvas) fCanvas->Update();
 }
 
 
@@ -5418,7 +5423,7 @@ void TPad::Streamer(TBuffer &b)
 
          b.ReadClassBuffer(TPad::Class(), this, v, R__s, R__c);
 
-         //Set the kCanDelete bit in all objects in the pad such that when the pad 
+         //Set the kCanDelete bit in all objects in the pad such that when the pad
          //is deleted all objects in the pad are deleted too.
          TIter next(fPrimitives);
          while ((obj = next())) {
@@ -5936,6 +5941,8 @@ void TPad::RecordLatex(const TObject *obj)
 //______________________________________________________________________________
 TVirtualPadPainter *TPad::GetPainter()
 {
-   //Get pad painter from TCanvas.
+   // Get pad painter from TCanvas.
+
+   if (!fCanvas) return 0;
    return fCanvas->GetCanvasPainter();
 }

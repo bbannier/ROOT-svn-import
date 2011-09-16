@@ -72,7 +72,7 @@ XrdSecsssKT::XrdSecsssKT(XrdOucErrInfo *eInfo, const char *kPath,
 // Prepare /dev/random if we have it
 //
    if (stat(devRand, &sbuf)) devRand = "/dev/random";
-   if ((randFD = open("/dev/random", O_RDONLY)) < 0
+   if ((randFD = open(devRand, O_RDONLY)) < 0
    && oMode != isClient && errno != ENOENT)
       eMsg("sssKT",errno,"Unable to generate random key"," opening ",devRand);
 
@@ -605,7 +605,7 @@ while((tp = kTab.GetToken()) && !Prob)
                 {Dest = (char *)&(ktNew->Data) + ktDesc[i].Offset;
                  Have |= ktDesc[i].What; What = ktDesc[i].Name;
                  if (ktDesc[i].Ctl)
-                    {if ((int)strlen(tp) >= ktDesc[i].Ctl) Prob=" is too long";
+                    {if ((int)strlen(tp) > ktDesc[i].Ctl) Prob=" is too long";
                         else if (Tag == 'k') keyX2B(ktNew, tp);
                                 else strcpy(Dest, tp);
                     } else {

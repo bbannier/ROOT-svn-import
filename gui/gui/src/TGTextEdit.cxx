@@ -486,6 +486,7 @@ void TGTextEdit::Print(Option_t *) const
                ULong_t j = i+1;
                while (buf2[j] == 16)
                   j++;
+               // coverity[secure_coding]
                strcpy(buf2+i+1, buf2+j);
             }
             i++;
@@ -1061,7 +1062,7 @@ Bool_t TGTextEdit::HandleButton(Event_t *event)
             return kTRUE;
          }
          SetMenuState();
-         fMenu->PlaceMenu(event->fXRoot, event->fYRoot, kFALSE, kTRUE);
+         fMenu->PlaceMenu(event->fXRoot, event->fYRoot, kTRUE, kTRUE);
       }
       gDbl_clk = kFALSE;
       gTrpl_clk = kFALSE;

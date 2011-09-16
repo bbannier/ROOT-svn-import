@@ -495,20 +495,23 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
       if (j < ndim) { 
          // need an adapter from a multi-dim function to a one-dimensional
          ROOT::Math::OneDimMultiFunctionAdapter<const IModelFunction &> f1D(func,x,0,p);
-         // select optimal step size  (use 10--3 by default as was done in TF1:
-         double kEps = 0.001;
+         // select optimal step size  (use 10--2 by default as was done in TF1:
+         double kEps = 0.01;
          double kPrecision = 1.E-8;
          for (unsigned int icoord = 0; icoord < ndim; ++icoord) { 
             // calculate derivative for each coordinate 
             if (ex[icoord] > 0) {               
                //gradCalc.Gradient(x, p, fval, &grad[0]);
                f1D.SetCoord(icoord);
-               // optimal spep size (maybe should take average or  range in points) 
+               // optimal spep size (take ex[] as scale for the points and 1% of it 
                double x0= x[icoord];
-               double h = std::max( kEps* std::abs(x0), 8.0*kPrecision*(std::abs(x0) + kPrecision) );
+               double h = std::max( kEps* std::abs(ex[icoord]), 8.0*kPrecision*(std::abs(x0) + kPrecision) );
                double deriv = derivator.Derivative1(f1D, x[icoord], h);  
                double edx = ex[icoord] * deriv; 
                e2 += edx * edx;  
+#ifdef DEBUG
+               std::cout << "error for coord " << icoord << " = " << ex[icoord] << " deriv " << deriv << std::endl;
+#endif
             }
          } 
       }
@@ -516,7 +519,7 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
       double resval = w2 * ( y - fval ) *  ( y - fval); 
 
 #ifdef DEBUG      
-      std::cout << x[0] << "  " << y << " ex " << e2 << " ey  " << ey << " params : "; 
+      std::cout << x[0] << "  " << y << " ex " << ex[0] << " ey  " << ey << " params : "; 
       for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) 
          std::cout << p[ipar] << "\t";
       std::cout << "\tfval = " << fval << "\tresval = " << resval << std::endl; 
@@ -537,7 +540,7 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    //if (nRejected != 0)  nPoints = n - nRejected;   
 
 #ifdef DEBUG
-   std::cout << "chi2 = " << chi2 << " n = " << nPoints << /* " rejected = " << nRejected */ << std::endl;
+   std::cout << "chi2 = " << chi2 << " n = " << nPoints  << std::endl;
 #endif
 
    return chi2;
@@ -1025,10 +1028,18 @@ double FitUtil::EvaluatePoissonBinPdf(const IModelFunction & func, const BinData
    return logPdf;
 }
 
-double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData & data, const double * p, unsigned int &   nPoints ) {  
+double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData & data, 
+                                    const double * p, int iWeight, unsigned int &   nPoints ) {  
    // evaluate the Poisson Log Likelihood
    // for binned likelihood fits
    // this is Sum ( f(x_i)  -  y_i * log( f (x_i) ) )
+   //
+   // if use Weight use a weighted dataset 
+   // iWeight = 1 ==> logL = Sum( w f(x_i) )
+   // case of iWeight==1 is actually identical to weight==0
+   // iWeight = 2 ==> logL = Sum( w*w * f(x_i) )
+         
+         
 
    unsigned int n = data.Size();
 #ifdef DEBUG
@@ -1044,6 +1055,7 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
    const DataOptions & fitOpt = data.Opt();
    bool useBinIntegral = fitOpt.fIntegral && data.HasBinEdges(); 
    bool useBinVolume = (fitOpt.fBinVolume && data.HasBinEdges());
+   bool useW2 = (iWeight == 2);
 
    double wrefVolume = 1.0; 
    std::vector<double> xc; 
@@ -1057,7 +1069,7 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
    for (unsigned int i = 0; i < n; ++ i) { 
       const double * x1 = data.Coords(i);
       double y = data.Value(i);
-
+      
       double fval = 0;   
       double binVolume = 1.0; 
 
@@ -1104,8 +1116,25 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
       // EvalLog protects against 0 values of fval but don't want to add in the -log sum 
       // negative values of fval 
       fval = std::max(fval, 0.0);
-      loglike +=  fval - y * ROOT::Math::Util::EvalLog( fval);  
 
+      double tmp = 0; 
+      if (useW2) { 
+         // apply weight correction . Effective weight is error^2/ y
+         // and expected events in bins is fval/weight
+         // can apply correction only when y is not zero otherwise weight is undefined
+         if (y != 0) { 
+            double error = data.Error(i);
+            double weight = (error*error)/y; 
+            tmp =  fval*weight - weight * y * ROOT::Math::Util::EvalLog( fval);
+         }
+      }
+      else {
+         // standard case no weights or iWeight=1 
+         tmp = fval - y *  ROOT::Math::Util::EvalLog( fval);  
+      }
+
+      loglike +=  tmp;  
+      
    }
    
    // reset the number of fitting data points

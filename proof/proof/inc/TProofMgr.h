@@ -77,6 +77,7 @@ public:
    virtual Bool_t      IsProofd() const { return (fServType == kProofd); }
    virtual Bool_t      IsValid() const { return kTRUE; }
    virtual void        SetInvalid() { }
+           void        Close() { SetInvalid(); }
 
    virtual TProof     *AttachSession(Int_t, Bool_t = kFALSE);
    virtual TProof     *AttachSession(TProofDesc *, Bool_t = kFALSE);
@@ -87,8 +88,9 @@ public:
    virtual TProofDesc *GetProofDesc(Int_t id);
    virtual TProofDesc *GetProofDesc(TProof *p);
    virtual Int_t       GetRemoteProtocol() const { return fRemoteProtocol; }
-   virtual TProofLog  *GetSessionLogs(Int_t = 0, const char * = 0, const char * = "-v \"| SvcMsg\"")
-                                                      { return (TProofLog *)0; }
+   virtual TProofLog  *GetSessionLogs(Int_t = 0, const char * = 0,
+                                      const char * = "-v \"| SvcMsg\"", Bool_t = kFALSE)
+                                      { return (TProofLog *)0; }
    virtual const char *GetUrl() { return fUrl.GetUrl(); }
    virtual Bool_t      MatchUrl(const char *url);
    virtual TList      *QuerySessions(Option_t *opt = "S");
@@ -123,8 +125,9 @@ public:
 
    static void         SetTXProofMgrHook(TProofMgr_t pmh);
 
-   static TProofMgr *Create(const char *url, Int_t loglevel = -1,
-                                   const char *alias = 0, Bool_t xpd = kTRUE);
+   static TProofMgr   *Create(const char *url, Int_t loglevel = -1,
+                              const char *alias = 0, Bool_t xpd = kTRUE);
+   static Int_t        Ping(const char *url);
 
    ClassDef(TProofMgr,0)  // Abstract PROOF manager interface
 };

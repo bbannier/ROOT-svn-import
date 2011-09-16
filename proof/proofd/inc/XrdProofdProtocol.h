@@ -57,7 +57,7 @@ class XrdSrvBuffer;
 class XrdProofdProtocol : XrdProtocol {
 
 public:
-   XrdProofdProtocol();
+   XrdProofdProtocol(XrdProtocol_Config *pi = 0);
    virtual ~XrdProofdProtocol() {} // Never gets destroyed
 
    void          DoIt() {}
@@ -123,6 +123,7 @@ public:
    int           SendDataN(XrdProofdProofServ *xps, XrdSrvBuffer **buf = 0, bool sb = 0);
    int           SendMsg();
    int           CtrlC();
+   int           StartRootd(XrdLink *lp, XrdOucString &emsg);
    void          TouchAdminPath();
    int           Urgent();
 
@@ -159,6 +160,8 @@ public:
    XrdSysRecMutex                fCtrlcMutex;      // CtrlC mutex
 
    bool                          fIsCtrlC;         // True is CtrlC was raised;
+
+   int                           fStdErrFD;
 
    //
    // These depend on the logical connection

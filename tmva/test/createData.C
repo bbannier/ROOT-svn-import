@@ -43,7 +43,7 @@ void plot( TString fname = "data.root", TString var0="var0", TString var1="var1"
    TMVAStyle->SetTitleX(.5);
    TMVAStyle->SetTitleY(.9);
    TMVAStyle->SetMarkerStyle(20);
-   TMVAStyle->SetMarkerSize(.4);
+   TMVAStyle->SetMarkerSize(1.6);
    TMVAStyle->cd();
 
 
@@ -57,14 +57,15 @@ void plot( TString fname = "data.root", TString var0="var0", TString var1="var1"
    TH2F* frameB = new TH2F( "DataB", "DataB", nbin, xmin, xmax, nbin, ymin, ymax );
 
    // project trees
-   treeS->Draw( "var1:var0>>DataS", "", "0" );
-   treeB->Draw( "var1:var0>>DataB", "", "0" );
+   treeS->Draw( Form("%s:%s>>DataS",var1.Data(),var0.Data()), "", "0" );
+   treeB->Draw( Form("%s:%s>>DataB",var1.Data(),var0.Data()
+), "", "0" );
 
    // set style
-   frameS->SetMarkerSize( 1.6 );
+   frameS->SetMarkerSize( 0.1 );
    frameS->SetMarkerColor( 4 );
 
-   frameB->SetMarkerSize( 1.6 );
+   frameB->SetMarkerSize( 0.1 );
    frameB->SetMarkerColor( 2 );
 
    // legend
@@ -142,7 +143,7 @@ void getGaussRnd( TArrayD& v, const TMatrixD& sqrtMat, TRandom& R )
       for (Int_t j=0; j<=i; j++) v[i] += sqrtMat(i,j) * tmpVec[j];
    }
 
-   delete tmpVec;
+   delete[] tmpVec;
 }
 
 // create the data
@@ -198,6 +199,7 @@ void create_lin_Nvar_withFriend(Int_t N = 2000)
          (*covMatB)(jvar,ivar) = (*covMatB)(ivar,jvar);
       }
    }
+
    cout << "signal covariance matrix: " << endl;
    covMatS->Print();
    cout << "background covariance matrix: " << endl;
@@ -247,6 +249,156 @@ void create_lin_Nvar_withFriend(Int_t N = 2000)
 
 
 }
+
+
+// create the tree
+TTree* makeTree_lin_Nvar( TString treeName, TString treeTitle, Float_t* x, Float_t* dx, const Int_t nvar, Int_t N )
+{
+   Float_t xvar[nvar];
+
+   // create tree
+   TTree* tree = new TTree(treeName, treeTitle, 1);
+
+   for (Int_t ivar=0; ivar<nvar; ivar++) {
+      tree->Branch( TString(Form( "var%i", ivar+1 )).Data(), &xvar[ivar], TString(Form( "var%i/F", ivar+1 )).Data() );
+   }
+      
+   TRandom R( 100 );
+   TArrayD* v = new TArrayD( nvar );
+   Float_t rho[20];
+   rho[1*2] = 0.4;
+   rho[1*3] = 0.6;
+   rho[1*4] = 0.9;
+   rho[2*3] = 0.7;
+   rho[2*4] = 0.8;
+   rho[3*4] = 0.93;
+
+   // create covariance matrix
+   TMatrixD* covMat = new TMatrixD( nvar, nvar );
+   for (Int_t ivar=0; ivar<nvar; ivar++) {
+      (*covMat)(ivar,ivar) = dx[ivar]*dx[ivar];
+      for (Int_t jvar=ivar+1; jvar<nvar; jvar++) {
+         (*covMat)(ivar,jvar) = rho[(ivar+1)*(jvar+1)]*dx[ivar]*dx[jvar];
+         (*covMat)(jvar,ivar) = (*covMat)(ivar,jvar);
+      }
+   }
+   //cout << "covariance matrix: " << endl;
+   //covMat->Print();
+
+   // produce the square-root matrix
+   TMatrixD* sqrtMat = produceSqrtMat( *covMat );
+
+   // event loop
+   for (Int_t i=0; i<N; i++) {
+
+      if (i%1000 == 0) cout << "... event: " << i << " (" << N << ")" << endl;
+      getGaussRnd( *v, *sqrtMat, R );
+
+      for (Int_t ivar=0; ivar<nvar; ivar++) xvar[ivar] = (*v)[ivar] + x[ivar];
+         
+      tree->Fill();
+   }
+
+   // write trees
+//   tree->Write();
+
+   tree->Show(0);
+
+   cout << "created tree: " << tree->GetName() << endl;
+   return tree;
+}
+
+
+// create the data
+TTree* makeTree_circ(TString treeName, TString treeTitle, Int_t nvar = 2, Int_t N  = 6000, Float_t radius = 1.0, Bool_t distort = false)
+{
+   Int_t Nn = 0;
+   Float_t xvar[nvar]; //variable array size does not work in interactive mode
+ 
+   // create signal and background trees
+   TTree* tree = new TTree( treeName, treeTitle, 1 );   
+   for (Int_t ivar=0; ivar<nvar; ivar++) {
+      tree->Branch( TString(Form( "var%i", ivar+1 )).Data(), &xvar[ivar], TString(Form( "var%i/F", ivar+1 )).Data() );
+   }
+      
+   TRandom R( 100 );
+   //Float_t phimin = -30, phimax = 130;
+   Float_t phimin = -70, phimax = 130;
+   Float_t phisig = 5;
+   Float_t rsig = 0.1;
+   Float_t fnmin = -(radius+4.0*rsig);
+   Float_t fnmax = +(radius+4.0*rsig);
+   Float_t dfn = fnmax-fnmin;
+
+   // event loop
+   for (Int_t i=0; i<N; i++) {
+      Double_t r1=R.Rndm(),r2=R.Rndm(), r3; 
+      r3= r1>r2? r1 :r2;
+      Float_t phi;
+      if (distort) phi = r3*(phimax - phimin) + phimin;
+      else  phi = R.Rndm()*(phimax - phimin) + phimin;
+      phi += R.Gaus()*phisig;
+      
+      Float_t r = radius;
+      r += R.Gaus()*rsig;
+
+      xvar[0] = r*cos(TMath::DegToRad()*phi);
+      xvar[1] = r*sin(TMath::DegToRad()*phi);
+
+      for( Int_t j = 2; j<nvar; ++j )
+	 xvar[j] = dfn*R.Rndm()+fnmin;
+         
+      tree->Fill();
+   }
+
+   for (Int_t i=0; i<Nn; i++) {
+
+      xvar[0] = dfn*R.Rndm()+fnmin;
+      xvar[1] = dfn*R.Rndm()+fnmin;
+
+      for( Int_t j = 2; j<nvar; ++j )
+	 xvar[j] = dfn*R.Rndm()+fnmin;
+         
+         
+      tree->Fill();
+   }
+
+   tree->Show(0);
+   // write trees
+   cout << "created tree: " << tree->GetName() << endl;
+   return tree;
+}
+
+
+
+// create the data
+void create_lin_Nvar_2(Int_t N = 50000)
+{
+   const int nvar = 4;
+   
+   // output flie
+   TFile* dataFile = TFile::Open( "data.root", "RECREATE" );
+
+
+   Float_t xS[nvar] = {  0.2,  0.3,  0.5,  0.9 };
+   Float_t xB[nvar] = { -0.2, -0.3, -0.5, -0.6 };
+   Float_t dx[nvar] = {  1.0,  1.0, 1.0, 1.0 };
+
+   // create signal and background trees
+   TTree* treeS = makeTree_lin_Nvar( "TreeS", "Signal tree", xS, dx, nvar, N );
+   TTree* treeB = makeTree_lin_Nvar( "TreeB", "Background tree", xB, dx, nvar, N );
+
+   treeS->Write();
+   treeB->Write();
+
+   treeS->Show(0);
+   treeB->Show(0);
+
+   dataFile->Close();
+   cout << "created data file: " << dataFile->GetName() << endl;
+}
+
+	
 
 
 // create the data
@@ -439,7 +591,7 @@ void create_lin_Nvar_categories(Int_t N = 10000, Int_t type = 2)
 
 
 // create the data
-void create_lin_Nvar_weighted(Int_t N = 10000, int WeightedSignal=0, int WeightedBkg=1)
+void create_lin_Nvar_weighted(Int_t N = 10000, int WeightedSignal=0, int WeightedBkg=1, Float_t BackgroundContamination=0, Int_t seed=100)
 {
    const Int_t nvar = 4;
    Float_t xvar[nvar];
@@ -453,7 +605,11 @@ void create_lin_Nvar_weighted(Int_t N = 10000, int WeightedSignal=0, int Weighte
 
 
    // output flie
-   TFile* dataFile = TFile::Open( "data.root", "RECREATE" );
+   TString fileName;
+   if (BackgroundContamination) fileName = Form("linCorGauss%d_weighted+background.root",seed);
+   else                         fileName = Form("linCorGauss%d_weighted.root",seed);
+   
+   TFile* dataFile = TFile::Open( fileName.Data(), "RECREATE" );
 
    // create signal and background trees
    TTree* treeS = new TTree( "TreeS", "TreeS", 1 );   
@@ -462,10 +618,10 @@ void create_lin_Nvar_weighted(Int_t N = 10000, int WeightedSignal=0, int Weighte
       treeS->Branch( TString(Form( "var%i", ivar+1 )).Data(), &xvar[ivar], TString(Form( "var%i/F", ivar+1 )).Data() );
       treeB->Branch( TString(Form( "var%i", ivar+1 )).Data(), &xvar[ivar], TString(Form( "var%i/F", ivar+1 )).Data() );
    }
-   if (WeightedSignal) treeS->Branch( "weight", &weight,"weight/F" );
+   if (WeightedSignal||BackgroundContamination>0||1) treeS->Branch( "weight", &weight,"weight/F" );
    if (WeightedBkg)    treeB->Branch( "weight", &weight,"weight/F" );
       
-   TRandom R( 100 );
+   TRandom R( seed );
    Float_t xS[nvar] = {  0.2,  0.3,  0.4,  0.8 };
    Float_t xB[nvar] = { -0.2, -0.3, -0.4, -0.5 };
    Float_t dx[nvar] = {  1.0,  1.0, 1.0, 1.0 };
@@ -541,6 +697,27 @@ void create_lin_Nvar_weighted(Int_t N = 10000, int WeightedSignal=0, int Weighte
          }
       } while (i<N);
    }
+
+
+   if (BackgroundContamination > 0){  // add "background contamination" in the Signal (which later is again "subtracted" with 
+            // using (statistically indepentent) background events with negative weight)
+      Float_t*  x=xB;
+      TMatrixD* m = sqrtMatB;
+      TTree* tree = treeS;
+      for (Int_t i=0; i<N*BackgroundContamination*2; i++) {
+         if (i%1000 == 0) cout << "... event: " << i << " (" << N << ")" << endl;
+         getGaussRnd( *v, *m, R );
+         for (Int_t ivar=0; ivar<nvar; ivar++) xvar[ivar] = (*v)[ivar] + x[ivar];
+
+         // add weights
+         if (i%2) weight = 1;
+         else weight = -1;
+         
+         tree->Fill();
+      }
+   }
+
+
 
    // write trees
    treeS->Write();
@@ -658,10 +835,10 @@ void create_lin_Nvar_Arr(Int_t N = 1000)
             xvar[ivar]->reserve(aSize);
          }
          for(Int_t iA = 0; iA<aSize; iA++) {
-            for (Int_t ivar=0; ivar<nvar; ivar++) {
+            //for (Int_t ivar=0; ivar<nvar; ivar++) {
                getGaussRnd( *v, *m, R );
                for (Int_t ivar=0; ivar<nvar; ivar++) xvar[ivar]->push_back((*v)[ivar] + x[ivar]);
-            }
+               //}
          }
          tree->Fill();
       }
@@ -919,7 +1096,7 @@ void create_ManyVars()
    xS[3] =   0.8 ;
    xB[3] =  -0.5 ;
    dx[3] =   1.0 ;
-   TArrayD* v = new TArrayD( nvar );
+//   TArrayD* v = new TArrayD( nvar );
    Float_t rho[20];
    rho[1*2] = 0.4;
    rho[1*3] = 0.6;
@@ -1811,3 +1988,39 @@ void create_array_with_different_lengths(Int_t N = 100)
    cout << "created data file: " << dataFile->GetName() << endl;
 }
 
+
+
+// create the data
+void create_MultipleBackground(Int_t N = 50000)
+{
+   const int nvar = 4;
+   
+   // output flie
+   TFile* dataFile = TFile::Open( "tmva_example_multiple_background.root", "RECREATE" );
+
+
+   Float_t xS[nvar] = {  0.2,  0.3,  0.5,  0.9 };
+   Float_t xB0[nvar] = { -0.2, -0.3, -0.5, -0.6 };
+   Float_t xB1[nvar] = { -0.2, 0.3, 0.5, -0.6 };
+   Float_t dx0[nvar] = {  1.0,  1.0, 1.0, 1.0 };
+   Float_t dx1[nvar] = {  -1.0,  -1.0, -1.0, -1.0 };
+
+   // create signal and background trees
+   TTree* treeS = makeTree_lin_Nvar( "TreeS", "Signal tree", xS, dx0, nvar, N );
+   TTree* treeB0 = makeTree_lin_Nvar( "TreeB0", "Background 0", xB0, dx0, nvar, N );
+   TTree* treeB1 = makeTree_lin_Nvar( "TreeB1", "Background 1", xB1, dx1, nvar, N );
+   TTree* treeB2 = makeTree_circ( "TreeB2", "Background 2", nvar, N, 1.5, true);
+
+   treeS->Write();
+   treeB0->Write();
+   treeB1->Write();
+   treeB2->Write();
+
+   //treeS->Show(0);
+   //treeB0->Show(0);
+   //treeB1->Show(0);
+   //treeB2->Show(0);
+
+   dataFile->Close();
+   cout << "created data file: " << dataFile->GetName() << endl;
+}

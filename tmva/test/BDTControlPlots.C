@@ -46,22 +46,39 @@ void bdtcontrolplots( TDirectory *bdtdir ) {
 
    const TString titName = bdtdir->GetName();
 
-   TString hname[nPlots]={"BoostWeight","BoostWeightVsTree","ErrFractHist","NodesBeforePruning","NodesAfterPruning","alpha"}
+   TString hname[nPlots]={"BoostMonitor","BoostWeight","BoostWeightVsTree","ErrFractHist","NodesBeforePruning",titName+"_FOMvsIterFrame"}
 
    for (Int_t i=0; i<nPlots; i++){
       Int_t color = 4; 
       TPad * cPad = (TPad*)c->cd(i+1);
       TH1 *h = (TH1*) bdtdir->Get(hname[i]);
-      TString plotname = h->GetName();
-      h->SetMaximum(h->GetMaximum()*1.3);
-      h->SetMinimum( 0 );
-      h->SetMarkerColor(color);
-      h->SetMarkerSize( 0.7 );
-      h->SetMarkerStyle( 24 );
-      h->SetLineWidth(1);
-      h->SetLineColor(color);
-      h->Draw();
-      c->Update();
+      
+      if (h){
+         h->SetMaximum(h->GetMaximum()*1.3);
+         h->SetMinimum( 0 );
+         h->SetMarkerColor(color);
+         h->SetMarkerSize( 0.7 );
+         h->SetMarkerStyle( 24 );
+         h->SetLineWidth(1);
+         h->SetLineColor(color);
+         if(hname[i]=="NodesBeforePruning")h->SetTitle("Nodes before/after pruning");
+         h->Draw();
+         if(hname[i]=="NodesBeforePruning"){
+            TH1 *h2 = (TH1*) bdtdir->Get("NodesAfterPruning");
+            h2->SetLineWidth(1);
+            h2->SetLineColor(2);
+            h2->Draw("same");
+         }
+         if(hname[i]=="BoostMonitor"){ // a plot only available in case of automatic parameter option tuning
+            TGraph *g = (TGraph*) bdtdir->Get("BoostMonitorGraph");
+            g->Draw("LP*");
+         }
+         if(hname[i]==titName+"_FOMvsIterFrame"){ // a plot only available in case of automatic parameter option tuning
+            TGraph *g = (TGraph*) bdtdir->Get(titName+"_FOMvsIter");
+            g->Draw();
+         }
+         c->Update();
+      }
    }
 
    // write to file

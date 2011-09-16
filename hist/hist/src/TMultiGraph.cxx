@@ -36,11 +36,21 @@ ClassImp(TMultiGraph)
 //______________________________________________________________________________
 /* Begin_Html
 <center><h2>TMultiGraph class</h2></center>
-A TMultiGraph is a collection of TGraph (or derived) objects
-Use <tt>TMultiGraph::Add</tt> to add a new graph to the list.
-The TMultiGraph owns the objects in the list.
-Drawing options are the same as for TGraph.
+
+A TMultiGraph is a collection of TGraph (or derived) objects. It allows to
+manipulate a set of graphs as a single entity. In particular, when drawn,
+the X and Y axis ranges are automatically computed such as all the graphs
+will be visible.
 <p>
+<tt>TMultiGraph::Add</tt> should be used to add a new graph to the list.
+<p>
+The TMultiGraph owns the objects in the list.
+<p>
+The drawing options are the same as for TGraph.
+Like for TGraph, the painting is performed thanks to the
+<a href="http://root.cern.ch/root/html/TGraphPainter.html">TGraphPainter</a>
+class. All details about the various painting options are given in
+<a href="http://root.cern.ch/root/html/TGraphPainter.html">this class</a>.
 Example:
 <pre>
      TGraph *gr1 = new TGraph(...
@@ -50,11 +60,178 @@ Example:
      mg->Add(gr2,"cp");
      mg->Draw("a");
 </pre>
+<p>
+The number of graphs in a multigraph can be retrieve with:
+<pre>
+mg->GetListOfGraphs()->GetSize();
+</pre>
+<p>
 The drawing option for each TGraph may be specified as an optional
-second argument of the Add function.
+second argument of the <tt>Add</tt> function.
+<p>
 If a draw option is specified, it will be used to draw the graph,
 otherwise the graph will be drawn with the option specified in
 <tt>TMultiGraph::Draw</tt>.
+<p>
+The following example shows how to fit a TMultiGraph.
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *c1 = new TCanvas("c1","c1",600,400);
+
+   Double_t x1[2]  = {2.,4.};
+   Double_t dx1[2] = {0.1,0.1};
+   Double_t y1[2]  = {2.1,4.0};
+   Double_t dy1[2] = {0.3,0.2};
+
+   Double_t x2[2]  = {3.,5.};
+   Double_t dx2[2] = {0.1,0.1};
+   Double_t y2[2]  = {3.2,4.8};
+   Double_t dy2[2] = {0.3,0.2};
+
+   gStyle->SetOptFit(0001);
+
+   TGraphErrors *g1 = new TGraphErrors(2,x1,y1,dx1,dy1);
+   g1->SetMarkerStyle(21);
+   g1->SetMarkerColor(2);
+
+   TGraphErrors *g2 = new TGraphErrors(2,x2,y2,dx2,dy2);
+   g2->SetMarkerStyle(22);
+   g2->SetMarkerColor(3);
+
+   TMultiGraph *g = new TMultiGraph();
+   g->Add(g1);
+   g->Add(g2);
+
+   g->Draw("AP");
+
+   g->Fit("pol1","FQ");
+   return c1;
+}
+End_Macro
+Begin_Html
+<p>
+The axis titles can be modified the following way:
+<p>
+<pre>
+   [...]
+   TMultiGraph *mg = new TMultiGraph;
+   mg->SetTitle("title;xaxis title; yaxis title");
+   mg->Add(g1);
+   mg->Add(g2);
+   mg->Draw("apl");
+</pre>
+<p>
+When the graphs in a TMultiGraph are fitted, the fit parameters boxes
+overlap. The following example shows how to make them all visible.
+
+End_Html
+Begin_Macro(source)
+../../../tutorials/graphs/multigraph.C
+End_Macro
+Begin_Html
+
+<p>
+The axis limits can be changed the like for TGraph. The same methods apply on
+the multigraph.
+Note the two differents ways to change limits on X and Y axis.
+
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *c2 = new TCanvas("c2","c2",600,400);
+
+   TGraph *g[3];
+   Double_t x[10] = {0,1,2,3,4,5,6,7,8,9};
+   Double_t y[10] = {1,2,3,4,5,5,4,3,2,1};
+   TMultiGraph *mg = new TMultiGraph();
+   for (int i=0; i<3; i++) {
+      g[i] = new TGraph(10, x, y);
+      g[i]->SetMarkerStyle(20);
+      g[i]->SetMarkerColor(i+2);
+      for (int j=0; j<10; j++) y[j] = y[j]-1;
+      mg->Add(g[i]);
+   }
+   mg->Draw("APL");
+   mg->GetXaxis()->SetTitle("E_{#gamma} (GeV)");
+   mg->GetYaxis()->SetTitle("Coefficients");
+
+   // Change the axis limits
+   gPad->Modified();
+   mg->GetXaxis()->SetLimits(1.5,7.5);
+   mg->SetMinimum(0.);
+   mg->SetMaximum(10.);
+
+   return c2;
+}
+End_Macro
+Begin_Html
+<p>
+The method <a href="http://root.cern.ch/root/html/TPad.html#TPad:BuildLegend">
+<tt>TPad::BuildLegend</tt></a> is able to extract the graphs inside a
+multigraph. The following example demonstrate this.
+
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *c3 = new TCanvas("c3","c3",600, 400);
+
+   TMultiGraph * mg = new TMultiGraph("mg","mg");
+
+   const Int_t size = 10;
+
+   double x[size];
+   double y1[size];
+   double y2[size];
+   double y3[size];
+
+   for ( int i = 0; i <  size ; ++i ) {
+      x[i] = i;
+      y1[i] = size - i;
+      y2[i] = size - 0.5 * i;
+      y3[i] = size - 0.6 * i;
+   }
+
+   TGraph * gr1 = new TGraph( size, x, y1 );
+   gr1->SetName("gr1");
+   gr1->SetTitle("graph 1");
+   gr1->SetMarkerStyle(21);
+   gr1->SetDrawOption("AP");
+   gr1->SetLineColor(2);
+   gr1->SetLineWidth(4);
+   gr1->SetFillStyle(0);
+
+   TGraph * gr2 = new TGraph( size, x, y2 );
+   gr2->SetName("gr2");
+   gr2->SetTitle("graph 2");
+   gr2->SetMarkerStyle(22);
+   gr2->SetMarkerColor(2);
+   gr2->SetDrawOption("P");
+   gr2->SetLineColor(3);
+   gr2->SetLineWidth(4);
+   gr2->SetFillStyle(0);
+
+   TGraph * gr3 = new TGraph( size, x, y3 );
+   gr3->SetName("gr3");
+   gr3->SetTitle("graph 3");
+   gr3->SetMarkerStyle(23);
+   gr3->SetLineColor(4);
+   gr3->SetLineWidth(4);
+   gr3->SetFillStyle(0);
+
+   mg->Add( gr1 );
+   mg->Add( gr2 );
+
+   gr3->Draw("ALP");
+   mg->Draw("LP");
+   c3->BuildLegend();
+
+   return c3;
+}
+End_Macro
+Begin_Html
+
+
 End_Html */
 
 
@@ -221,7 +398,7 @@ void TMultiGraph::Draw(Option_t *option)
 {
    // Draw this multigraph with its current attributes.
    //
-   //   Options to draw a graph are described in TGraph::PainGraph
+   //   Options to draw a graph are described in TGraph::PaintGraph
    //
    //  The drawing option for each TGraph may be specified as an optional
    //  second argument of the Add function. You can use GetGraphDrawOption
@@ -229,7 +406,7 @@ void TMultiGraph::Draw(Option_t *option)
    //  If a draw option is specified, it will be used to draw the graph,
    //  otherwise the graph will be drawn with the option specified in
    //  TMultiGraph::Draw. Use GetDrawOption to return the option specified
-   //  when drawin the TMultiGraph.
+   //  when drawing the TMultiGraph.
 
    AppendPad(option);
 }
@@ -336,8 +513,8 @@ TFitResultPtr TMultiGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axi
    //  =============================
    //   By default a chi2 fitting function is used for fitting the TGraphs's.
    //   The function is implemented in FitUtil::EvaluateChi2.
-   //   In case of TGraphErrors an effective chi2 is used 
-   //   (see TGraphErrors fit in TGraph::Fit) and is implemented in 
+   //   In case of TGraphErrors an effective chi2 is used
+   //   (see TGraphErrors fit in TGraph::Fit) and is implemented in
    //   FitUtil::EvaluateChi2Effective
    //   To specify a User defined fitting function, specify option "U" and
    //   call the following functions:
@@ -401,10 +578,10 @@ TFitResultPtr TMultiGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axi
    Foption_t fitOption;
    ROOT::Fit::FitOptionsMake(option,fitOption);
 
-   // create range and minimizer options with default values 
-   ROOT::Fit::DataRange range(rxmin,rxmax); 
-   ROOT::Math::MinimizerOptions minOption; 
-   return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range); 
+   // create range and minimizer options with default values
+   ROOT::Fit::DataRange range(rxmin,rxmax);
+   ROOT::Math::MinimizerOptions minOption;
+   return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range);
 
 }
 

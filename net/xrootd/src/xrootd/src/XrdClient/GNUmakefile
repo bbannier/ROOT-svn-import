@@ -1,11 +1,11 @@
-#              $Id: GNUmakefile,v 1.69 2010/07/30 03:18:38 abh Exp $
+#              $Id$
 
 #-----------------------------------------------------------------------------#
 #                            E n v i r o n m e n t                            #
 #-----------------------------------------------------------------------------#
 include ../GNUmake.env
 
-LIBLIBS = -L$(LIBDIR) -lXrdNet -lXrdOuc -lXrdNetUtil -lXrdSys
+LIBLIBS = -L$(LIBDIR) -lXrdNet -lXrdOuc -lXrdNetUtil -lXrdSys -lpthread
 
 ifneq ($(CFHASXRDCRYPTO),)
 BINLIBS = $(LIBDIR)/libXrdClient.a \

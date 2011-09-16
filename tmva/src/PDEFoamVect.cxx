@@ -1,3 +1,5 @@
+// @(#)root/tmva $Id$
+// Author: S. Jadach, Tancredi Carli, Dominik Dannheim, Alexander Voigt
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -13,7 +15,7 @@
  *      S. Jadach        - Institute of Nuclear Physics, Cracow, Poland           *
  *      Tancredi Carli   - CERN, Switzerland                                      *
  *      Dominik Dannheim - CERN, Switzerland                                      *
- *      Alexander Voigt  - CERN, Switzerland                                      *
+ *      Alexander Voigt  - TU Dresden, Germany                                    *
  *                                                                                *
  * Copyright (c) 2008:                                                            *
  *      CERN, Switzerland                                                         *
@@ -24,17 +26,18 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
+#include <iostream>
 #include <iomanip>
 
 #ifndef ROOT_TMVA_PDEFoamVect
 #include "TMVA/PDEFoamVect.h"
 #endif
 
-#define SW2 std::setprecision(7) << std::setw(12)
+using namespace std;
+
+//#define SW2 std::setw(12)
 
 ClassImp(TMVA::PDEFoamVect)
-
-TMVA::MsgLogger* TMVA::PDEFoamVect::fgLogger = 0;
 
 //_____________________________________________________________________
 TMVA::PDEFoamVect::PDEFoamVect()
@@ -43,7 +46,6 @@ TMVA::PDEFoamVect::PDEFoamVect()
      fCoords(0)
 {
    // Default constructor for streamer
-   if (!fgLogger) fgLogger = new MsgLogger("PDEFoamVect");
 }
 
 //_____________________________________________________________________
@@ -59,9 +61,6 @@ TMVA::PDEFoamVect::PDEFoamVect(Int_t n)
       fCoords = new Double_t[fDim];
       for (Int_t i=0; i<n; i++) *(fCoords+i)=0.0;
    }
-
-   if (!fgLogger) fgLogger = new MsgLogger("PDEFoamVect");
-
 }
 
 //_____________________________________________________________________
@@ -201,10 +200,13 @@ TMVA::PDEFoamVect& TMVA::PDEFoamVect::operator =(Double_t x)
 //_____________________________________________________________________
 void TMVA::PDEFoamVect::Print(Option_t *option) const
 {
-   // Printout of all vector components on "Log()"
+   // Printout of all vector components
+   streamsize wid = cout.width(); // saving current field width
    if(!option) Error( "Print ", "No option set \n");
-   Log() << "(";
-   for(Int_t i=0; i<fDim-1; i++) Log() << SW2 << *(fCoords+i) << ",";
-   Log() << SW2 << *(fCoords+fDim-1);
-   Log() << ")";
+   cout << "(";
+   for(Int_t i=0; i<fDim-1; i++) 
+      cout << std::setw(12) << *(fCoords+i) << ",";
+   cout << std::setw(12) << *(fCoords+fDim-1);
+   cout << ")";
+   cout.width(wid);
 }

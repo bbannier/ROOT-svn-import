@@ -36,6 +36,7 @@
 
 #include "TClass.h"
 #include "TObjString.h"
+#include "TVirtualStreamerInfo.h"
 // #include "TGraphStruct.h"
 
 #include "RooMsgService.h"
@@ -486,9 +487,9 @@ void RooAbsArg::treeNodeServerList(RooAbsCollection* list, const RooAbsArg* arg,
   // starting with ourself as top node.
 
   if (!arg) {
-    if (list->getHashTableSize()==0) {
-      list->setHashTableSize(1000) ;
-    }
+//     if (list->getHashTableSize()==0) {
+//       list->setHashTableSize(1000) ;
+//     }
     arg=this ;
   }
 
@@ -624,34 +625,34 @@ RooArgSet* RooAbsArg::getObservables(const RooArgSet* dataList, Bool_t valueOnly
   RooArgSet leafList("leafNodeServerList") ;
   treeNodeServerList(&leafList,0,kFALSE,kTRUE,valueOnly) ;
   //leafNodeServerList(&leafList) ;
-  TIterator *sIter = leafList.createIterator() ;
+  RooLinkedListIter sIter = leafList.iterator() ;
 
   RooAbsArg* arg ;
   if (valueOnly) {
-    while ((arg=(RooAbsArg*)sIter->Next())) {
+    while ((arg=(RooAbsArg*)sIter.Next())) {
       if (arg->dependsOnValue(*dataList) && arg->isLValue()) {
 	depList->add(*arg) ;
       }
     }
   } else {
-    while ((arg=(RooAbsArg*)sIter->Next())) {
+    while ((arg=(RooAbsArg*)sIter.Next())) {
       if (arg->dependsOn(*dataList) && arg->isLValue()) {
 	depList->add(*arg) ;
       }
     }
   }
-  delete sIter ;
+  //delete sIter ;
 
-  // Call hook function for all branch nodes
-  RooArgSet branchList ;
-  branchNodeServerList(&branchList) ;
-  RooAbsArg* branch ;
-  TIterator* bIter = branchList.createIterator() ;
-  while((branch=(RooAbsArg*)bIter->Next())) {
-    branch->getObservablesHook(dataList, depList) ;
-  }
-  delete bIter ;
-
+//   // Call hook function for all branch nodes
+//   RooArgSet branchList ;
+//   branchNodeServerList(&branchList) ;
+//   RooAbsArg* branch ;
+//   RooLinkedListIter bIter = branchList.iterator() ;
+//   while((branch=(RooAbsArg*)bIter.Next())) {
+//     branch->getObservablesHook(dataList, depList) ;
+//   }
+//   //delete bIter ;
+  
   return depList ;
 }
 
@@ -891,7 +892,7 @@ void RooAbsArg::setShapeDirty(const RooAbsArg* source) const
 
 
 //_____________________________________________________________________________
-Bool_t RooAbsArg::redirectServers(const RooAbsCollection& newSet, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t isRecursionStep)
+Bool_t RooAbsArg::redirectServers(const RooAbsCollection& newSetOrig, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t isRecursionStep)
 {
   // Substitute our servers with those listed in newSet. If nameChange is false, servers and
   // and substitutes are matched by name. If nameChange is true, servers are matched to args
@@ -901,7 +902,37 @@ Bool_t RooAbsArg::redirectServers(const RooAbsCollection& newSet, Bool_t mustRep
 
   // Trivial case, no servers
   if (!_serverList.First()) return kFALSE ;
-  if (newSet.getSize()==0) return kFALSE ;
+  if (newSetOrig.getSize()==0) return kFALSE ;
+
+  // Strip any non-matchin removal nodes from newSetOrig
+  RooAbsCollection* newSet ;
+
+  if (nameChange) {
+
+    newSet = new RooArgSet ;
+    TIterator* iter = newSetOrig.createIterator() ;
+    RooAbsArg* arg ;
+    while((arg=(RooAbsArg*)iter->Next())) {
+
+      if (string("REMOVAL_DUMMY")==arg->GetName()) {
+	
+	if (arg->getAttribute("REMOVE_ALL")) {
+// 	  cout << "RooAbsArg::redir including remove_all node " << arg->GetName() << endl ;
+	  newSet->add(*arg) ;
+	} else if (arg->getAttribute(Form("REMOVE_FROM_%s",getStringAttribute("ORIGNAME")))) {
+// 	  cout << "RooAbsArg::redir including remove_from_" << GetName() << " node " << arg->GetName() << endl ;
+	  newSet->add(*arg) ;
+	}
+      } else {
+	newSet->add(*arg) ;
+      }
+    }
+
+//     cout << "RooAbsArg::redirect with name change(" << GetName() << ") newSet = " << newSet << " origSet = " << newSetOrig << endl ;
+
+  } else {
+    newSet = (RooAbsCollection*) &newSetOrig ;
+  }
 
   // Replace current servers with new servers with the same name from the given list
   Bool_t ret(kFALSE) ;
@@ -928,13 +959,13 @@ Bool_t RooAbsArg::redirectServers(const RooAbsCollection& newSet, Bool_t mustRep
   Bool_t propValue, propShape ;
   while ((oldServer=(RooAbsArg*)sIter->Next())) {
 
-    newServer= oldServer->findNewServer(newSet, nameChange);
+    newServer= oldServer->findNewServer(*newSet, nameChange);
 
     if (newServer && _verboseDirty) {
       cxcoutD(LinkStateMgmt) << "RooAbsArg::redirectServers(" << (void*)this << "," << GetName() << "): server " << oldServer->GetName()
 			     << " redirected from " << oldServer << " to " << newServer << endl ;
     }
-
+    
     if (!newServer) {
       if (mustReplaceAll) {
 	cxcoutD(LinkStateMgmt) << "RooAbsArg::redirectServers(" << (void*)this << "," << GetName() << "): server " << oldServer->GetName()
@@ -943,7 +974,7 @@ Bool_t RooAbsArg::redirectServers(const RooAbsCollection& newSet, Bool_t mustRep
       }
       continue ;
     }
-
+    
     propValue=origServerValue.FindObject(oldServer)?kTRUE:kFALSE ;
     propShape=origServerShape.FindObject(oldServer)?kTRUE:kFALSE ;
     // cout << "replaceServer with name " << oldServer->GetName() << " old=" << oldServer << " new=" << newServer << endl ;
@@ -958,7 +989,7 @@ Bool_t RooAbsArg::redirectServers(const RooAbsCollection& newSet, Bool_t mustRep
   setShapeDirty() ;
 
   // Take self out of newset disallowing cyclical dependencies
-  RooAbsCollection* newSet2 = (RooAbsCollection*) newSet.clone("newSet2") ;
+  RooAbsCollection* newSet2 = (RooAbsCollection*) newSet->clone("newSet2") ;
   newSet2->remove(*this,kTRUE,kTRUE) ;
 
   // Process the proxies
@@ -979,9 +1010,13 @@ Bool_t RooAbsArg::redirectServers(const RooAbsCollection& newSet, Bool_t mustRep
 
   // Optional subclass post-processing
   for (Int_t i=0 ;i<numCaches() ; i++) {
-    ret |= getCache(i)->redirectServersHook(newSet,mustReplaceAll,nameChange,isRecursionStep) ;
+    ret |= getCache(i)->redirectServersHook(*newSet,mustReplaceAll,nameChange,isRecursionStep) ;
   }
-  ret |= redirectServersHook(newSet,mustReplaceAll,nameChange,isRecursionStep) ;
+  ret |= redirectServersHook(*newSet,mustReplaceAll,nameChange,isRecursionStep) ;
+
+  if (nameChange) {
+    delete newSet ;
+  }
 
   return ret ;
 }
@@ -1201,7 +1236,7 @@ Int_t RooAbsArg::numProxies() const
 {
   // Return the number of registered proxies.
 
-  return _proxyList.GetSize() ;
+  return _proxyList.GetEntries() ;
 }
 
 
@@ -2225,3 +2260,5 @@ const char* RooAbsArg::aggregateCacheUniqueSuffix() const
   delete iter ;
   return Form("%s",suffix.c_str()) ;
 }
+
+

@@ -38,11 +38,13 @@
 
 #pragma link C++ class TPerfStats;
 #pragma link C++ class TPerfEvent+;
+#pragma link C++ class TProofMonSender+;
+#pragma link C++ class TProofMonSenderML+;
+#pragma link C++ class TProofMonSenderSQL+;
 
 #pragma link C++ class TProofLimitsFinder;
 #pragma link C++ class TDrawFeedback+;
 #pragma link C++ class TStatus+;
-#pragma link C++ class TFileMerger+;
 #pragma link C++ class TProofOutputFile+;
 
 #pragma link C++ class TOutputListSelectorDataMap+;

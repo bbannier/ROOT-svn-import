@@ -287,6 +287,7 @@ extern struct G__filetable G__srcfile[G__MAXFILE];
 #endif
 extern int G__nfile;
 extern int G__srcfile_serial; /* Serial/Unique number for the state of G__srcfile, increased anytime a file is added or removed */
+extern int G__globals_serial; /* Serial/Unique number for the state of G__global, increased anytime a variable is added or removed */
 
 extern int G__nobreak;
 extern char G__breakline[G__MAXNAME];
@@ -348,6 +349,7 @@ extern short G__definemacro;
 
 extern short G__noerr_defined;
 
+extern short G__using_alloc;
 extern short G__static_alloc;
 extern int G__func_now ;
 extern int G__func_page;

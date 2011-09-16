@@ -43,6 +43,9 @@
 
 #include "TError.h"
 
+#if defined(R__MACOSX)
+#include "fcntl.h"
+#endif
 
 ClassImp(TEventIter)
 
@@ -99,6 +102,14 @@ TEventIter::~TEventIter()
    // Destructor
 
    delete fFile;
+}
+
+//______________________________________________________________________________
+void TEventIter::InvalidatePacket()
+{
+   // Invalidated the current packet (if any) by setting the TDSetElement::kCorrupted bit
+
+   if (fElem) fElem->SetBit(TDSetElement::kCorrupted);
 }
 
 //______________________________________________________________________________
@@ -436,6 +447,7 @@ TEventIterTree::TEventIterTree()
    fCacheSize = -1;
    fTreeCacheIsLearning = kTRUE;
    fUseParallelUnzip = 0;
+   fDontCacheFiles = kFALSE;
 }
 
 //______________________________________________________________________________
@@ -458,6 +470,7 @@ TEventIterTree::TEventIterTree(TDSet *dset, TSelector *sel, Long64_t first, Long
    } else {
       TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kDisable);
    }
+   fDontCacheFiles = gEnv->GetValue("ProofPlayer.DontCacheFiles", 0);
 }
 
 //______________________________________________________________________________
@@ -516,9 +529,11 @@ TTree* TEventIterTree::GetTrees(TDSetElement *elem)
             curfile->SetCacheRead(fTreeCache);
             fTreeCache->UpdateBranches(main, kTRUE);
          }
-         fTreeCacheIsLearning = fTreeCache->IsLearning();
-         if (fTreeCacheIsLearning)
-            Info("GetTrees","the tree cache is in learning phase");
+         if (fTreeCache) {
+            fTreeCacheIsLearning = fTreeCache->IsLearning();
+            if (fTreeCacheIsLearning)
+               Info("GetTrees","the tree cache is in learning phase");
+         }
       } else {
          // Disable the cache
          main->SetCacheSize(0);
@@ -633,6 +648,13 @@ TTree* TEventIterTree::Load(TDSetElement *e, Bool_t &localfile)
          return (TTree *)0;
       }
 
+#if defined(R__MACOSX)
+      // If requested set the no cache mode
+      if (fDontCacheFiles && localfile) {
+         fcntl(f->GetFd(), F_NOCACHE, 1);
+      }
+#endif
+
       // Create TFileTree instance in the list
       ft = new TFileTree(TUrl(f->GetName()).GetFileAndOptions(), f, localfile);
       fFileTrees->Add(ft);
@@ -724,9 +746,13 @@ Long64_t TEventIterTree::GetNextEvent()
 
    Bool_t attach = kFALSE;
 
+   // When files are aborted during processing (via TSelector::kAbortFile) the player
+   // invalidates the element by settign this bit. We need to ask for a new packet
+   Bool_t corrupted = (fElem && fElem->TestBit(TDSetElement::kCorrupted)) ? kTRUE : kFALSE;
+      
    if (fElem) fElem->ResetBit(TDSetElement::kNewPacket);
 
-   while ( fElem == 0 || fElemNum == 0 || fCur < fFirst-1 ) {
+   while ( fElem == 0 || fElemNum == 0 || fCur < fFirst-1 || corrupted) {
 
       if (gPerfStats && fTree) {
          Long64_t totBytesRead = fTree->GetCurrentFile()->GetBytesRead();
@@ -735,9 +761,19 @@ Long64_t TEventIterTree::GetNextEvent()
          fOldBytesRead = totBytesRead;
       }
 
+      Long64_t rest = -1;
+      if (fElem) {
+         rest = fElem->GetNum();
+         if (fElemCur >= 0) rest -= (fElemCur + 1 - fElemFirst);
+      }
+      
       SafeDelete(fElem);
       while (!fElem) {
-         if (fTree) {
+         // For a corrupted/invalid file the request for a new packet is with totalEntries = -1
+         // (the default) so that the packetizer invalidates the element
+         if (corrupted) {
+            fElem = fDSet->Next(rest);
+         } else if (fTree) {
             fElem = fDSet->Next(fTree->GetEntries());
          } else {
             fElem = fDSet->Next();
@@ -748,12 +784,14 @@ Long64_t TEventIterTree::GetNextEvent()
             fNum = 0;
             return -1;
          }
+         corrupted = kFALSE;
          fElem->SetBit(TDSetElement::kNewPacket);
-
+         fElem->ResetBit(TDSetElement::kCorrupted);
+         
          TTree *newTree = GetTrees(fElem);
          if (newTree) {
             if (newTree != fTree) {
-               // The old tree is wonwd by TFileTree and will be deleted there
+               // The old tree is owned by TFileTree and will be deleted there
                fTree = newTree;
                attach = kTRUE;
                fOldBytesRead = fTree->GetCurrentFile()->GetBytesRead();
@@ -811,7 +849,7 @@ Long64_t TEventIterTree::GetNextEvent()
    }
 
    if ( attach ) {
-      PDB(kLoop,1) Info("GetNextEvent","Call Init(%p) and Notify()",fTree);
+      PDB(kLoop,1) Info("GetNextEvent", "call Init(%p) and Notify()",fTree);
       fSel->Init(fTree);
       fSel->Notify();
       TIter next(fSel->GetOutputList());

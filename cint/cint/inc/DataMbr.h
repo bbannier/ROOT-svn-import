@@ -53,9 +53,9 @@ G__DataMemberInfo {
   long Offset() ;
   int Bitfield();
   int ArrayDim() ;
-  int MaxIndex(int dim) ;
+  long MaxIndex(int dim) ;
   G__ClassInfo* MemberOf();
-  void SetGlobalcomp(int globalcomp);
+  void SetGlobalcomp(G__SIGNEDCHAR_T globalcomp);
   int IsValid();
   int SetFilePos(const char* fname);
   int Next();
@@ -66,6 +66,8 @@ G__DataMemberInfo {
 
   const char *FileName();
   int LineNumber();
+
+  static int SerialNumber();
 
  private:
   long handle;

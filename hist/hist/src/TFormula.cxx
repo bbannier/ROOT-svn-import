@@ -37,8 +37,8 @@ ClassImp(TFormula)
 //*-*-*-*-*-*-*-*-*-*-*The  F O R M U L A  class*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                  =========================
 //*-*
-//*-*   This class has been implemented by begin_html <a href="http://pcbrun.cern.ch/nicolas/index.html">Nicolas Brun</a> end_html(age 18).
-//*-*   ========================================================
+//*-*   This class has been implemented by Nicolas Brun (age 18).
+//*-*   =========================================================
 //Begin_Html
 /*
 <img src="gif/tformula_classtree.gif">
@@ -287,7 +287,7 @@ TFormula::~TFormula()
 //*-*-*-*-*-*-*-*-*-*-*Formula default destructor*-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                  ===========================
 
-   gROOT->GetListOfFunctions()->Remove(this);
+   if (gROOT) gROOT->GetListOfFunctions()->Remove(this);
 
    ClearFormula();
 }
@@ -2635,6 +2635,7 @@ Double_t TFormula::EvalParOld(const Double_t *x, const Double_t *uparams)
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    Int_t i,j;
+   // coverity[uninit] the tab value of tab is guaranteed to be set properly by the control flow. 
    Double_t tab[kMAXFOUND];
    const char *stringStack[gMAXSTRINGFOUND];
    Double_t param_calc[kMAXFOUND];
@@ -3096,14 +3097,21 @@ TString TFormula::GetExpFormula(Option_t *option) const
             Ssiz_t ind = funcname.First('(');
             funcname.Remove(ind);
          }
-         if (offset<=0 && (spos+offset>=0)) {
+         if (offset > 0) {
+            Error("GetExpFormula","Internal error, number of argument found is %d",-offset);
+         } else if (offset == 0) {
+            tab[spos]=funcname+"()";
+            ismulti[spos]=kFALSE;
+            spos += 1;
+            continue;            
+         } else if (offset<=0 && (spos+offset>=0)) {
             tab[spos+offset]=funcname+("("+tab[spos+offset]);
             for (j=offset+1; j<0; j++){
                tab[spos+offset]+=","+tab[spos+j];
             }
             tab[spos+offset]+=")";
             ismulti[spos+offset]=kFALSE;
-            spos+=offset+1;
+            spos += offset+1;
             continue;
          }
       }
@@ -3289,9 +3297,12 @@ void TFormula::ProcessLinear(TString &formula)
    TString replaceformula;
    formula2 = formula2.ReplaceAll("++", 2, "|", 1);
    TObjArray *oa = formula2.Tokenize("|");
+   TString replaceformula_name;
    for (Int_t i=0; i<nf; i++) {
       replaceformula = ((TObjString *)oa->UncheckedAt(i))->GetString();
-      TFormula *f = new TFormula(replaceformula.Data(), replaceformula.Data());
+      replaceformula_name = "f_linear_";
+      replaceformula_name.Append(replaceformula);
+      TFormula *f = new TFormula(replaceformula_name.Data(), replaceformula.Data());
       if (!f) {
          Error("TFormula", "f_linear not allocated");
          return;

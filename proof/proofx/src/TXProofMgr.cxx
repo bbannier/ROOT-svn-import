@@ -518,8 +518,8 @@ Int_t TXProofMgr::Reset(Bool_t hard, const char *usr)
 }
 
 //_____________________________________________________________________________
-TProofLog *TXProofMgr::GetSessionLogs(Int_t isess,
-                                      const char *stag, const char *pattern)
+TProofLog *TXProofMgr::GetSessionLogs(Int_t isess, const char *stag,
+                                      const char *pattern, Bool_t rescan)
 {
    // Get logs or log tails from last session associated with this manager
    // instance.
@@ -535,6 +535,9 @@ TProofLog *TXProofMgr::GetSessionLogs(Int_t isess,
    // If 'pattern' is specified only the lines containing it are retrieved
    // (remote grep functionality); to filter out a pattern 'pat' use
    // pattern = "-v pat".
+   // If 'rescan' is TRUE, masters will rescan the worker sandboxes for the exact
+   // paths, instead of using the save information; may be useful when the 
+   // ssave information looks wrong or incomplete. 
    // Returns a TProofLog object (to be deleted by the caller) on success,
    // 0 if something wrong happened.
 
@@ -558,7 +561,8 @@ TProofLog *TXProofMgr::GetSessionLogs(Int_t isess,
    }
 
    // Get the list of paths
-   TObjString *os = fSocket->SendCoordinator(kQueryLogPaths, sesstag.Data(), isess);
+   Int_t xrs = (rescan) ? 1 : 0;
+   TObjString *os = fSocket->SendCoordinator(kQueryLogPaths, sesstag.Data(), isess, -1, xrs);
 
    // Analyse it now
    Int_t ii = 0;
@@ -606,8 +610,9 @@ TProofLog *TXProofMgr::GetSessionLogs(Int_t isess,
       SafeDelete(os);
       // Retrieve the default part if required
       if (pl && retrieve) {
-         if (pattern && strlen(pattern) > 0)
-            pl->Retrieve("*", TProofLog::kGrep, 0, pattern);
+         const char *pat = pattern ? pattern : "-v \"| SvcMsg\"";
+         if (pat && strlen(pat) > 0)
+            pl->Retrieve("*", TProofLog::kGrep, 0, pat);
          else
             pl->Retrieve();
       }
@@ -1291,7 +1296,7 @@ Int_t TXProofMgr::GetFile(const char *remote, const char *local, const char *opt
 
       // If a different file with the same name exists already, ask what to do
       if (!same) {
-         char *a = Getline("Local file exists already: would you like to overwrite it? [N/y]");
+         const char *a = Getline("Local file exists already: would you like to overwrite it? [N/y]");
          if (a[0] == 'n' || a[0] == 'N' || a[0] == '\0') return 0;
       } else {
          return 0;
@@ -1505,7 +1510,7 @@ Int_t TXProofMgr::PutFile(const char *local, const char *remote, const char *opt
       if (!force) {
          // If a different file with the same name exists already, ask what to do
          if (!same) {
-            char *a = Getline("Remote file exists already: would you like to overwrite it? [N/y]");
+            const char *a = Getline("Remote file exists already: would you like to overwrite it? [N/y]");
             if (a[0] == 'n' || a[0] == 'N' || a[0] == '\0') return 0;
             force = kTRUE;
          } else {

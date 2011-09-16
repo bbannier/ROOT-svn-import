@@ -45,7 +45,8 @@ ClassImp(RooProfileLL)
    _startFromMin(kTRUE), 
    _minuit(0), 
    _absMinValid(kFALSE), 
-   _absMin(0) 
+   _absMin(0),
+   _neval(0)
 { 
   // Default constructor 
   // Should only be used by proof. 
@@ -64,7 +65,8 @@ RooProfileLL::RooProfileLL(const char *name, const char *title,
   _startFromMin(kTRUE),
   _minuit(0),
   _absMinValid(kFALSE),
-  _absMin(0)
+  _absMin(0),
+  _neval(0)
 { 
   // Constructor of profile likelihood given input likelihood nll w.r.t
   // the given set of variables. The input log likelihood is minimized w.r.t
@@ -97,7 +99,8 @@ RooProfileLL::RooProfileLL(const RooProfileLL& other, const char* name) :
   _minuit(0),
   _absMinValid(kFALSE),
   _absMin(0),
-  _paramFixed(other._paramFixed)
+  _paramFixed(other._paramFixed),
+  _neval(0)
 { 
   // Copy constructor
 
@@ -195,8 +198,10 @@ Double_t RooProfileLL::evaluate() const
     const_cast<RooProfileLL&>(*this)._par = _paramAbsMin ;
   }
 
+  _minuit->zeroEvalCount() ;
   _minuit->migrad() ;
-  
+  _neval = _minuit->evalCounter() ;
+
   // Restore original values and constant status of observables
   TIterator* iter = obsSetOrig->createIterator() ;
   RooRealVar* var ;
@@ -238,7 +243,7 @@ void RooProfileLL::validateAbsMin() const
 
   // If we don't have the absolute minimum w.r.t all observables, calculate that first
   if (!_absMinValid) {
-    
+
     cxcoutI(Minimization) << "RooProfileLL::evaluate(" << GetName() << ") determining minimum likelihood for current configurations w.r.t all observable" << endl ;
 
 
@@ -263,7 +268,12 @@ void RooProfileLL::validateAbsMin() const
 
     // Save parameter values at abs minimum as well
     _paramAbsMin.removeAll() ;
-    _paramAbsMin.addClone(_par) ;
+
+    // Only store non-constant parameters here!
+    RooArgSet* tmp = (RooArgSet*) _par.selectByAttrib("Constant",kFALSE) ;
+    _paramAbsMin.addClone(*tmp) ;
+    delete tmp ;
+
     _obsAbsMin.addClone(_obs) ;
 
     // Save constant status of all parameters

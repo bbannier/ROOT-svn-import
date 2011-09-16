@@ -207,6 +207,10 @@ void TGraphBentErrors::Apply(TF1 *f)
 
    Double_t x,y,exl,exh,eyl,eyh,eyl_new,eyh_new,fxy;
 
+   if (fHistogram) {
+      delete fHistogram;
+      fHistogram = 0;
+   }
    for (Int_t i=0;i<GetN();i++) {
       GetPoint(i,x,y);
       exl=GetErrorXlow(i);
@@ -231,6 +235,7 @@ void TGraphBentErrors::Apply(TF1 *f)
       //error on x doesn't change
       SetPointError(i,exl,exh,eyl_new,eyh_new);
    }
+   if (gPad) gPad->Modified();
 }
 
 
@@ -495,7 +500,7 @@ void TGraphBentErrors::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       frameNumber++;
       TString hname = fHistogram->GetName();
       hname += frameNumber;
-      fHistogram->SetName(hname.Data());
+      fHistogram->SetName(Form("Graph_%s",hname.Data()));
       fHistogram->SavePrimitive(out,"nodraw");
       out<<"   grbe->SetHistogram("<<fHistogram->GetName()<<");"<<endl;
       out<<"   "<<endl;

@@ -363,6 +363,7 @@ void TGuiBldMenuDialog::Build()
             // Find out whether we have options ...
 
             TList *opt;
+            // coverity[returned_pointer]: keep for later use
             if ((opt = m->GetOptions())) {
                Warning("Dialog", "option menu not yet implemented");
 
@@ -2837,6 +2838,7 @@ void TGuiBldDragManager::HandleAlignment(Int_t to, Bool_t lineup)
                case kKey_Left:
                   fr->Move(x0, fr->GetY());
                   if (lineup) {
+                     // coverity[dead_error_line]
                      if (prev) fr->Move(fr->GetX(), prev->GetY() + prev->GetHeight());
                      else fr->Move(x0, y0);
                   }

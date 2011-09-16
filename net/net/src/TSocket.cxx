@@ -21,6 +21,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "Bytes.h"
+#include "Compression.h"
 #include "NetErrors.h"
 #include "TEnv.h"
 #include "TError.h"
@@ -95,6 +96,7 @@ TSocket::TSocket(TInetAddress addr, const char *service, Int_t tcpwindowsize)
    fTcpWindowSize = tcpwindowsize;
    fUUIDs = 0;
    fLastUsageMtx = 0;
+   ResetBit(TSocket::kBrokenConn);
 
    if (fAddress.GetPort() != -1) {
       fSocket = gSystem->OpenConnection(addr.GetHostName(), fAddress.GetPort(),
@@ -142,6 +144,7 @@ TSocket::TSocket(TInetAddress addr, Int_t port, Int_t tcpwindowsize)
    fTcpWindowSize = tcpwindowsize;
    fUUIDs = 0;
    fLastUsageMtx = 0;
+   ResetBit(TSocket::kBrokenConn);
 
    fSocket = gSystem->OpenConnection(addr.GetHostName(), fAddress.GetPort(),
                                      tcpwindowsize);
@@ -186,6 +189,7 @@ TSocket::TSocket(const char *host, const char *service, Int_t tcpwindowsize)
    fTcpWindowSize = tcpwindowsize;
    fUUIDs = 0;
    fLastUsageMtx = 0;
+   ResetBit(TSocket::kBrokenConn);
 
    if (fAddress.GetPort() != -1) {
       fSocket = gSystem->OpenConnection(host, fAddress.GetPort(), tcpwindowsize);
@@ -236,6 +240,7 @@ TSocket::TSocket(const char *url, Int_t port, Int_t tcpwindowsize)
    fTcpWindowSize = tcpwindowsize;
    fUUIDs = 0;
    fLastUsageMtx = 0;
+   ResetBit(TSocket::kBrokenConn);
 
    fSocket = gSystem->OpenConnection(host, fAddress.GetPort(), tcpwindowsize);
    if (fSocket == -1) {
@@ -273,6 +278,7 @@ TSocket::TSocket(const char *sockpath) : TNamed(sockpath, "")
    fTcpWindowSize = -1;
    fUUIDs = 0;
    fLastUsageMtx  = 0;
+   ResetBit(TSocket::kBrokenConn);
 
    fSocket = gSystem->OpenConnection(sockpath, -1, -1);
    if (fSocket > 0) {
@@ -298,6 +304,7 @@ TSocket::TSocket(Int_t desc) : TNamed("", "")
    fCompress       = 0;
    fUUIDs          = 0;
    fLastUsageMtx   = 0;
+   ResetBit(TSocket::kBrokenConn);
 
    if (desc >= 0) {
       fSocket  = desc;
@@ -333,6 +340,7 @@ TSocket::TSocket(Int_t desc, const char *sockpath) : TNamed(sockpath, "")
    fTcpWindowSize = -1;
    fUUIDs = 0;
    fLastUsageMtx  = 0;
+   ResetBit(TSocket::kBrokenConn);
 
    if (desc >= 0) {
       fSocket  = desc;
@@ -358,8 +366,10 @@ TSocket::TSocket(const TSocket &s) : TNamed(s)
    fSecContext     = s.fSecContext;
    fRemoteProtocol = s.fRemoteProtocol;
    fServType       = s.fServType;
+   fTcpWindowSize  = s.fTcpWindowSize;
    fUUIDs          = 0;
    fLastUsageMtx   = 0;
+   ResetBit(TSocket::kBrokenConn);
 
    if (fSocket != -1) {
       R__LOCKGUARD2(gROOTMutex);
@@ -524,8 +534,8 @@ Int_t TSocket::Send(const TMessage &mess)
 
    mess.SetLength();   //write length in first word of buffer
 
-   if (fCompress > 0 && mess.GetCompressionLevel() == 0)
-      const_cast<TMessage&>(mess).SetCompressionLevel(fCompress);
+   if (GetCompressionLevel() > 0 && mess.GetCompressionLevel() == 0)
+      const_cast<TMessage&>(mess).SetCompressionSettings(fCompress);
 
    if (mess.GetCompressionLevel() > 0)
       const_cast<TMessage&>(mess).Compress();
@@ -537,10 +547,12 @@ Int_t TSocket::Send(const TMessage &mess)
       mlen = mess.CompLength();
    }
 
+   ResetBit(TSocket::kBrokenConn);
    Int_t nsent;
    if ((nsent = gSystem->SendRaw(fSocket, mbuf, mlen, 0)) <= 0) {
       if (nsent == -5) {
          // Connection reset by peer or broken
+         SetBit(TSocket::kBrokenConn);
          Close();
       }
       return nsent;
@@ -552,11 +564,13 @@ Int_t TSocket::Send(const TMessage &mess)
    // If acknowledgement is desired, wait for it
    if (mess.What() & kMESS_ACK) {
       TSystem::ResetErrno();
+      ResetBit(TSocket::kBrokenConn);
       char buf[2];
       Int_t n = 0;
       if ((n = gSystem->RecvRaw(fSocket, buf, sizeof(buf), 0)) < 0) {
          if (n == -5) {
             // Connection reset by peer or broken
+            SetBit(TSocket::kBrokenConn);
             Close();
          } else
             n = -1;
@@ -607,11 +621,12 @@ Int_t TSocket::SendRaw(const void *buffer, Int_t length, ESendRecvOptions opt)
 
    if (fSocket == -1) return -1;
 
+   ResetBit(TSocket::kBrokenConn);
    Int_t nsent;
-
    if ((nsent = gSystem->SendRaw(fSocket, buffer, length, (int) opt)) <= 0) {
       if (nsent == -5) {
          // Connection reset or broken: close
+         SetBit(TSocket::kBrokenConn);
          Close();
       }
       return nsent;
@@ -654,7 +669,8 @@ void TSocket::SendStreamerInfos(const TMessage &mess)
          delete minilist;
          if (messinfo.fInfos)
             messinfo.fInfos->Clear();
-         Send(messinfo);
+         if (Send(messinfo) < 0)
+            Warning("SendStreamerInfos", "problems sending TStreamerInfo's ...");
       }
    }
 }
@@ -694,7 +710,8 @@ void TSocket::SendProcessIDs(const TMessage &mess)
          TMessage messpid(kMESS_PROCESSID);
          messpid.WriteObject(minilist);
          delete minilist;
-         Send(messpid);
+         if (Send(messpid) < 0)
+            Warning("SendProcessIDs", "problems sending TProcessID's ...");
       }
    }
 }
@@ -710,9 +727,12 @@ Int_t TSocket::Recv(char *str, Int_t max)
 
    Int_t n, kind;
 
+   ResetBit(TSocket::kBrokenConn);
    if ((n = Recv(str, max, kind)) <= 0) {
-      if (n == -5)
+      if (n == -5) {
+         SetBit(TSocket::kBrokenConn);
          n = -1;
+      }
       return n;
    }
 
@@ -736,9 +756,12 @@ Int_t TSocket::Recv(char *str, Int_t max, Int_t &kind)
    Int_t     n;
    TMessage *mess;
 
+   ResetBit(TSocket::kBrokenConn);
    if ((n = Recv(mess)) <= 0) {
-      if (n == -5)
+      if (n == -5) {
+         SetBit(TSocket::kBrokenConn);
          n = -1;
+      }
       return n;
    }
 
@@ -766,9 +789,12 @@ Int_t TSocket::Recv(Int_t &status, Int_t &kind)
    Int_t     n;
    TMessage *mess;
 
+   ResetBit(TSocket::kBrokenConn);
    if ((n = Recv(mess)) <= 0) {
-      if (n == -5)
+      if (n == -5) {
+         SetBit(TSocket::kBrokenConn);
          n = -1;
+      }
       return n;
    }
 
@@ -797,11 +823,13 @@ Int_t TSocket::Recv(TMessage *&mess)
    }
 
 oncemore:
+   ResetBit(TSocket::kBrokenConn);
    Int_t  n;
    UInt_t len;
    if ((n = gSystem->RecvRaw(fSocket, &len, sizeof(UInt_t), 0)) <= 0) {
       if (n == 0 || n == -5) {
          // Connection closed, reset or broken
+         SetBit(TSocket::kBrokenConn);
          Close();
       }
       mess = 0;
@@ -809,10 +837,12 @@ oncemore:
    }
    len = net2host(len);  //from network to host byte order
 
+   ResetBit(TSocket::kBrokenConn);
    char *buf = new char[len+sizeof(UInt_t)];
    if ((n = gSystem->RecvRaw(fSocket, buf+sizeof(UInt_t), len, 0)) <= 0) {
       if (n == 0 || n == -5) {
          // Connection closed, reset or broken
+         SetBit(TSocket::kBrokenConn);
          Close();
       }
       delete [] buf;
@@ -834,11 +864,13 @@ oncemore:
       goto oncemore;
 
    if (mess->What() & kMESS_ACK) {
+      ResetBit(TSocket::kBrokenConn);
       char ok[2] = { 'o', 'k' };
       Int_t n2 = 0;
       if ((n2 = gSystem->SendRaw(fSocket, ok, sizeof(ok), 0)) < 0) {
          if (n2 == -5) {
             // Connection reset or broken
+            SetBit(TSocket::kBrokenConn);
             Close();
          }
          delete mess;
@@ -871,11 +903,12 @@ Int_t TSocket::RecvRaw(void *buffer, Int_t length, ESendRecvOptions opt)
    if (fSocket == -1) return -1;
    if (length == 0) return 0;
 
+   ResetBit(TSocket::kBrokenConn);
    Int_t n;
-
    if ((n = gSystem->RecvRaw(fSocket, buffer, length, (int) opt)) <= 0) {
       if (n == 0 || n == -5) {
          // Connection closed, reset or broken
+         SetBit(TSocket::kBrokenConn);
          Close();
       }
       return n;
@@ -1010,17 +1043,61 @@ Int_t TSocket::GetErrorCode() const
 }
 
 //______________________________________________________________________________
+void TSocket::SetCompressionAlgorithm(Int_t algorithm)
+{
+   // See comments for function SetCompressionSettings
+   if (algorithm < 0 || algorithm >= ROOT::kUndefinedCompressionAlgorithm) algorithm = 0;
+   if (fCompress < 0) {
+      // if the level is not defined yet use 1 as a default
+      fCompress = 100 * algorithm + 1;
+   } else {
+      int level = fCompress % 100;
+      fCompress = 100 * algorithm + level;
+   }
+}
+
+//______________________________________________________________________________
 void TSocket::SetCompressionLevel(Int_t level)
 {
-   // Set the message compression level. Can be between 0 and 9 with 0
-   // being no compression and 9 maximum compression. In general the default
-   // level of 1 is the best compromise between achieved compression and
-   // cpu time. Compression will only happen when the message is > 256 bytes.
-
+   // See comments for function SetCompressionSettings
    if (level < 0) level = 0;
-   if (level > 9) level = 9;
+   if (level > 99) level = 99;
+   if (fCompress < 0) {
+      // if the algorithm is not defined yet use 0 as a default
+      fCompress = level;
+   } else {
+      int algorithm = fCompress / 100;
+      if (algorithm >= ROOT::kUndefinedCompressionAlgorithm) algorithm = 0;
+      fCompress = 100 * algorithm + level;
+   }
+}
 
-   fCompress = level;
+//______________________________________________________________________________
+void TSocket::SetCompressionSettings(Int_t settings)
+{
+   // Used to specify the compression level and algorithm:
+   //  settings = 100 * algorithm + level
+   //
+   //  level = 0, objects written to this file will not be compressed.
+   //  level = 1, minimal compression level but fast.
+   //  ....
+   //  level = 9, maximal compression level but slower and might use more memory.
+   // (For the currently supported algorithms, the maximum level is 9)
+   // If compress is negative it indicates the compression level is not set yet.
+   //
+   // The enumeration ROOT::ECompressionAlgorithm associates each
+   // algorithm with a number. There is a utility function to help
+   // to set the value of the argument. For example,
+   //   ROOT::CompressionSettings(ROOT::kLZMA, 1)
+   // will build an integer which will set the compression to use
+   // the LZMA algorithm and compression level 1.  These are defined
+   // in the header file Compression.h.
+   //
+   // Note that the compression settings may be changed at any time.
+   // The new compression settings will only apply to branches created
+   // or attached after the setting is changed and other objects written
+   // after the setting is changed.
+   fCompress = settings;
 }
 
 //______________________________________________________________________________
@@ -1042,14 +1119,14 @@ Bool_t TSocket::Authenticate(const char *user)
       TString opt(TUrl(fUrl).GetOptions());
       //First letter in Opt describes type of proofserv to invoke
       if (!strncasecmp(opt, "S", 1)) {
-         Send("slave");
+         if (Send("slave") < 0) return rc;
       } else if (!strncasecmp(opt, "M", 1)) {
-         Send("master");
+         if (Send("master") < 0) return rc;
       } else {
          Warning("Authenticate",
                  "called by TSlave: unknown option '%c' %s",
                  opt[0], " - assuming Slave");
-         Send("slave");
+         if (Send("slave") < 0) return rc;
       }
    }
    if (gDebug > 2)
@@ -1061,8 +1138,12 @@ Bool_t TSocket::Authenticate(const char *user)
    // send exactly 4 bytes: for fgClientClientProtocol > 99
    // the space in the format must be dropped
    if (fRemoteProtocol == -1) {
-      Send(Form(" %d", fgClientProtocol), kROOTD_PROTOCOL);
-      Recv(fRemoteProtocol, kind);
+      if (Send(Form(" %d", fgClientProtocol), kROOTD_PROTOCOL) < 0) {
+         return rc;
+      }
+      if (Recv(fRemoteProtocol, kind) < 0) {
+         return rc;
+      }
       //
       // If we are talking to an old rootd server we get a fatal
       // error here and we need to reopen the connection,
@@ -1123,10 +1204,12 @@ Bool_t TSocket::Authenticate(const char *user)
       // Communicate who we are and our target user
       UserGroup_t *u = gSystem->GetUserInfo();
       if (u) {
-         Send(Form("%s %s", u->fUser.Data(), user), kROOTD_USER);
+         if (Send(Form("%s %s", u->fUser.Data(), user), kROOTD_USER) < 0)
+            Warning("Authenticate", "problem sending kROOTD_USER (%s,%s)", u->fUser.Data(), user);
          delete u;
       } else
-         Send(Form("-1 %s", user), kROOTD_USER);
+         if (Send(Form("-1 %s", user), kROOTD_USER) < 0)
+            Warning("Authenticate", "problem sending kROOTD_USER (-1,%s)", user);
 
       rc = kFALSE;
 
@@ -1163,8 +1246,8 @@ Bool_t TSocket::Authenticate(const char *user)
 }
 
 //______________________________________________________________________________
-TSocket *TSocket::CreateAuthSocket(const char *url, Int_t size,
-                                   Int_t tcpwindowsize, TSocket *opensock)
+TSocket *TSocket::CreateAuthSocket(const char *url, Int_t size, Int_t tcpwindowsize,
+                                   TSocket *opensock, Int_t *err)
 {
    // Creates a socket or a parallel socket and authenticates to the
    // remote server.
@@ -1189,6 +1272,9 @@ TSocket *TSocket::CreateAuthSocket(const char *url, Int_t size,
    //
    // An already opened connection can be used by passing its socket
    // in opensock.
+   //
+   // If 'err' is defined, '*err' on return from a failed call contains an error
+   // code (see NetErrors.h).
    //
    // Example:
    //
@@ -1271,6 +1357,11 @@ TSocket *TSocket::CreateAuthSocket(const char *url, Int_t size,
       // Authenticate now
       if (sock && sock->IsValid()) {
          if (!sock->Authenticate(TUrl(url).GetUser())) {
+            // Nothing to do except setting the error code (if required) and sock to NULL
+            if (err) {
+               *err = (Int_t)kErrAuthNotOK;
+               if (sock->TestBit(TSocket::kBrokenConn)) *err = (Int_t)kErrConnectionRefused;
+            }
             sock->Close();
             delete sock;
             sock = 0;
@@ -1294,7 +1385,11 @@ TSocket *TSocket::CreateAuthSocket(const char *url, Int_t size,
 
       // Cleanup if failure ...
       if (sock && !sock->IsAuthenticated()) {
-         // Nothing to do except setting sock to NULL
+         // Nothing to do except setting the error code (if required) and sock to NULL
+         if (err) {
+            *err = (Int_t)kErrAuthNotOK;
+            if (sock->TestBit(TSocket::kBrokenConn)) *err = (Int_t)kErrConnectionRefused;
+         }
          if (sock->IsValid())
             // And except when the sock is valid; this typically
             // happens when talking to a old server, because the
@@ -1310,7 +1405,7 @@ TSocket *TSocket::CreateAuthSocket(const char *url, Int_t size,
 //______________________________________________________________________________
 TSocket *TSocket::CreateAuthSocket(const char *user, const char *url,
                                    Int_t port, Int_t size, Int_t tcpwindowsize,
-                                   TSocket *opensock)
+                                   TSocket *opensock, Int_t *err)
 {
    // Creates a socket or a parallel socket and authenticates to the
    // remote server specified in 'url' on remote 'port' as 'user'.
@@ -1330,6 +1425,9 @@ TSocket *TSocket::CreateAuthSocket(const char *user, const char *url,
    //
    // An already opened connection can be used by passing its socket
    // in opensock.
+   //
+   // If 'err' is defined, '*err' on return from a failed call contains an error
+   // code (see NetErrors.h).
    //
    // Example:
    //
@@ -1382,7 +1480,7 @@ TSocket *TSocket::CreateAuthSocket(const char *user, const char *url,
    }
 
    // Create the socket and return it
-   return TSocket::CreateAuthSocket(eurl,size,tcpwindowsize,opensock);
+   return TSocket::CreateAuthSocket(eurl,size,tcpwindowsize,opensock,err);
 }
 
 //______________________________________________________________________________

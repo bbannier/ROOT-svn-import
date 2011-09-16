@@ -31,11 +31,14 @@
 class TTree;
 
 class TBranchRef : public TBranch {
+private:
+   Long64_t   fRequestedEntry;  //! Cursor indicating which entry is being requested.
 
 protected:
-   TRefTable       *fRefTable;        // pointer to the TRefTable
+   TRefTable *fRefTable;        // pointer to the TRefTable
 
    void    ReadLeavesImpl(TBuffer &b);
+   void    FillLeavesImpl(TBuffer &b);
 
 public:
    TBranchRef();
@@ -43,13 +46,13 @@ public:
    virtual ~TBranchRef();
    virtual void    Clear(Option_t *option="");
    virtual Int_t   Fill();
-   virtual void    FillLeaves(TBuffer &b);
    TRefTable      *GetRefTable() const {return fRefTable;}
    virtual Bool_t  Notify();
    virtual void    Print(Option_t *option="") const;
    virtual void    Reset(Option_t *option="");
-   virtual Int_t   SetParent(const TObject* obj, const Int_t branchID);
-   virtual void    SetReadEntry(Long64_t entry) {fReadEntry = entry;}
+   virtual void    ResetAfterMerge(TFileMergeInfo *);
+   virtual Int_t   SetParent(const TObject* obj, Int_t branchID);
+   virtual void    SetRequestedEntry(Long64_t entry) {fRequestedEntry = entry;}
    
    ClassDef(TBranchRef,1);  //to support referenced objects on other branches
 };

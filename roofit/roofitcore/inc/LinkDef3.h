@@ -3,6 +3,8 @@
 #pragma link off all classes;
 #pragma link off all functions;
 #pragma link C++ class RooCacheManager<vector<double> >+ ;
+#pragma link C++ class list<RooAbsData*>+ ;
+#pragma link C++ class map<string,RooAbsData*>+ ;
 #pragma link C++ class RooCacheManager<RooAbsCacheElement>+ ;
 #pragma link C++ class RooRandomizeParamMCSModule+ ;
 #pragma link C++ class RooRangeBinning+ ;
@@ -50,7 +52,7 @@
 #pragma link C++ class RooProfileLL+ ;
 #pragma link C++ class RooAbsCachedPdf+ ;
 #pragma link C++ class RooAbsSelfCachedPdf+ ;
-#pragma link C++ class RooHistPdf+ ;
+#pragma link C++ class RooHistPdf- ;
 #pragma link C++ class RooCachedPdf+ ;
 #pragma link C++ class RooFFTConvPdf+ ;
 #pragma link C++ class RooDataHistSliceIter+ ;
@@ -76,12 +78,14 @@
 #pragma link C++ class RooNumCdf+ ;
 #pragma link C++ class RooChangeTracker+ ;
 #pragma link C++ class RooNumRunningInt+ ;
-#pragma link C++ class RooHistFunc+ ;
+#pragma link C++ class RooHistFunc- ;
 #pragma link C++ class RooExpensiveObjectCache+ ;
 #pragma link C++ class RooExpensiveObjectCache::ExpensiveObject+ ;
 #pragma link C++ class std::map<std::string,RooAbsPdf*>+ ;
 #pragma link C++ class std::map<std::string,TH1*>+ ;
 #pragma link C++ class std::map<std::string,RooAbsDataStore*>+ ;
+#pragma link C++ class std::list<RooAbsData*>+ ;
+#pragma link C++ class std::list<TObject*>+ ;
 #pragma link C++ class RooFactoryWSTool+ ;
 #pragma link C++ class RooBinningCategory+ ;
 #pragma link C++ class RooDerivative+ ;
@@ -114,6 +118,9 @@
 #pragma link C++ class RooGenFitStudy+ ;
 #pragma link C++ class RooProofDriverSelector+ ;
 #pragma link C++ class list<RooAbsStudy*>+ ;
+#pragma link C++ class map<string,RooDataSet*>+ ;
+#pragma link C++ class map<string,RooDataHist*>+ ;
+#pragma link C++ class map<string,TH1*>+ ;
 #pragma link C++ namespace RooCintUtils+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;

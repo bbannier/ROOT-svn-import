@@ -46,6 +46,7 @@ ClassImp(TGLPlotPainter)
 TGLPlotPainter::TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord,
                                Bool_t xoy, Bool_t xoz, Bool_t yoz)
                   : fPadColor(0),
+                    fPhysicalShapeColor(0),
                     fPadPhi(45.),
                     fPadTheta(0.),
                     fHist(hist),
@@ -64,7 +65,8 @@ TGLPlotPainter::TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordina
                     fBoxCut(&fBackBox),
                     fHighColor(kFALSE),
                     fSelectionBase(kTrueColorSelectionBase),
-                    fDrawPalette(kFALSE)
+                    fDrawPalette(kFALSE),
+                    fDrawAxes(kTRUE)
 {
    //TGLPlotPainter's ctor.
    if (gPad) {
@@ -76,6 +78,7 @@ TGLPlotPainter::TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordina
 //______________________________________________________________________________
 TGLPlotPainter::TGLPlotPainter(TGL5DDataSet *data, TGLPlotCamera *camera, TGLPlotCoordinates *coord)
                   : fPadColor(0),
+                    fPhysicalShapeColor(0),
                     fPadPhi(45.),
                     fPadTheta(0.),
                     fHist(0),
@@ -94,7 +97,8 @@ TGLPlotPainter::TGLPlotPainter(TGL5DDataSet *data, TGLPlotCamera *camera, TGLPlo
                     fBoxCut(&fBackBox),
                     fHighColor(kFALSE),
                     fSelectionBase(kTrueColorSelectionBase),
-                    fDrawPalette(kFALSE)
+                    fDrawPalette(kFALSE),
+                    fDrawAxes(kTRUE)
 {
    //TGLPlotPainter's ctor.
    if (gPad) {
@@ -106,6 +110,7 @@ TGLPlotPainter::TGLPlotPainter(TGL5DDataSet *data, TGLPlotCamera *camera, TGLPlo
 //______________________________________________________________________________
 TGLPlotPainter::TGLPlotPainter(TGLPlotCamera *camera)
                   : fPadColor(0),
+                    fPhysicalShapeColor(0),
                     fPadPhi(45.),
                     fPadTheta(0.),
                     fHist(0),
@@ -124,7 +129,8 @@ TGLPlotPainter::TGLPlotPainter(TGLPlotCamera *camera)
                     fBoxCut(&fBackBox),
                     fHighColor(kFALSE),
                     fSelectionBase(kTrueColorSelectionBase),
-                    fDrawPalette(kFALSE)
+                    fDrawPalette(kFALSE),
+                    fDrawAxes(kTRUE)
 {
    //TGLPlotPainter's ctor.
    if (gPad) {
@@ -142,7 +148,7 @@ void TGLPlotPainter::Paint()
 
    int vp[4] = {};
    glGetIntegerv(GL_VIEWPORT, vp);
-      
+
    //GL pad painter does not use depth test,
    //so, switch it on now.
    glDepthMask(GL_TRUE);//[0
@@ -154,23 +160,18 @@ void TGLPlotPainter::Paint()
    //Save projection and modelview matrix, used by glpad.
    SaveProjectionMatrix();
    SaveModelviewMatrix();
-      
+
    //glOrtho etc.
    fCamera->SetCamera();
    //
    glClear(GL_DEPTH_BUFFER_BIT);
-   //
-/*   if (fCamera->ViewportChanged()) {
-      std::cout<<"Set need update\n";
-      fUpdateSelection = kTRUE;
-   }*/
    //Set light.
    const Float_t pos[] = {0.f, 0.f, 0.f, 1.f};
    glLightfv(GL_LIGHT0, GL_POSITION, pos);
    //Set transformation - shift and rotate the scene.
    fCamera->Apply(fPadPhi, fPadTheta);
    fBackBox.FindFrontPoint();
-   
+
    if (gVirtualPS)
       PrintPlot();
 
@@ -190,9 +191,9 @@ void TGLPlotPainter::Paint()
    //GL pad painter does not use depth test, so,
    //switch it off now.
    glDepthMask(GL_FALSE);//0]
-   
-   if (fCoord && fCoord->GetCoordType() == kGLCartesian) {
-   
+
+   if (fCoord && fCoord->GetCoordType() == kGLCartesian && fDrawAxes) {
+
       Bool_t old = gPad->TestBit(TGraph::kClipFrame);
       if (!old)
          gPad->SetBit(TGraph::kClipFrame);
@@ -200,7 +201,7 @@ void TGLPlotPainter::Paint()
       Rgl::DrawAxes(fBackBox.GetFrontPoint(), viewport, fBackBox.Get2DBox(), fCoord, fXAxis, fYAxis, fZAxis);
       if (fDrawPalette)
          DrawPaletteAxis();
-         
+
       if (!old)
          gPad->ResetBit(TGraph::kClipFrame);
    } else if(fDrawPalette)
@@ -213,14 +214,22 @@ void TGLPlotPainter::PrintPlot()const
 {
    // Generate PS using gl2ps
    using namespace std;
-   
+
    TGLOutput::StartEmbeddedPS();
+
    FILE *output = fopen(gVirtualPS->GetName(), "a");
+   if (!output) {
+      Error("TGLPlotPainter::PrintPlot", "Could not (re)open ps file for GL output");
+      //As soon as we started embedded ps, we have to close it before exiting.
+      TGLOutput::CloseEmbeddedPS();
+      return;
+   }
+
    Int_t gl2psFormat = GL2PS_EPS;
    Int_t gl2psSort   = GL2PS_BSP_SORT;
    Int_t buffsize    = 0;
    Int_t state       = GL2PS_OVERFLOW;
-   GLint gl2psoption = GL2PS_USE_CURRENT_VIEWPORT | 
+   GLint gl2psoption = GL2PS_USE_CURRENT_VIEWPORT |
                        GL2PS_SILENT               |
                        GL2PS_BEST_ROOT            |
                        GL2PS_OCCLUSION_CULL       |
@@ -251,33 +260,33 @@ Bool_t TGLPlotPainter::PlotSelected(Int_t px, Int_t py)
       glPushMatrix();
       glMatrixMode(GL_MODELVIEW);//[2
       glPushMatrix();
-   
+
       fSelectionPass = kTRUE;
       fCamera->SetCamera();
-      
+
       glDepthMask(GL_TRUE);
       glClearColor(0.f, 0.f, 0.f, 0.f);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      
+
       fCamera->Apply(fPadPhi, fPadTheta);
       DrawPlot();
-      
+
       glFinish();
       //fSelection.ReadColorBuffer(fCamera->GetWidth(), fCamera->GetHeight());
       fSelection.ReadColorBuffer(fCamera->GetX(), fCamera->GetY(), fCamera->GetWidth(), fCamera->GetHeight());
       fSelectionPass   = kFALSE;
       fUpdateSelection = kFALSE;
-      
+
       glDepthMask(GL_FALSE);
       glDisable(GL_DEPTH_TEST);
-      
+
       //Restore projection and modelview matrices.
       glMatrixMode(GL_PROJECTION);//1]
       glPopMatrix();
       glMatrixMode(GL_MODELVIEW);//2]
       glPopMatrix();
    }
-   
+
    //Convert from window top-bottom into gl bottom-top.
    px -= Int_t(gPad->GetXlowNDC() * gPad->GetWw());
    py -= Int_t(gPad->GetWh() - gPad->YtoAbsPixel(gPad->GetY1()));
@@ -2061,6 +2070,63 @@ void DrawPalette(const TGLPlotCamera * camera, const TGLLevelPalette & palette)
       glVertex2d(rightX, margin + i * h);
       glVertex2d(rightX, margin + (i + 1) * h);
       glVertex2d(leftX, margin + (i + 1) * h);
+      glEnd();
+   }
+
+}
+
+//______________________________________________________________________________
+void DrawPalette(const TGLPlotCamera * camera, const TGLLevelPalette & palette,
+                 const std::vector<Double_t> & levels)
+{
+   //Draw. Palette.
+   const TGLDisableGuard light(GL_LIGHTING);
+   const TGLDisableGuard depth(GL_DEPTH_TEST);
+   const TGLEnableGuard blend(GL_BLEND);
+
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+   glMatrixMode(GL_PROJECTION);
+   glLoadIdentity();
+   glOrtho(0, camera->GetWidth(), 0, camera->GetHeight(), -1., 1.);
+
+   glMatrixMode(GL_MODELVIEW);
+   glLoadIdentity();
+
+   const Double_t leftX = camera->GetWidth() * lr;
+   const Double_t rightX = camera->GetWidth() * rr;
+   const Double_t margin = 0.1 * camera->GetHeight();
+   const Double_t h = (camera->GetHeight() * 0.8);
+   const Double_t range = levels.back() - levels.front();
+
+   const UChar_t opacity = 200;
+
+   for (Int_t i = 0, e = palette.GetPaletteSize(); i < e; ++i) {
+      const Double_t yMin = margin + (levels[i] - levels.front()) / range * h;
+      const Double_t yMax = margin + (levels[i + 1] - levels.front()) / range * h;
+      glBegin(GL_POLYGON);
+      const UChar_t * color = palette.GetColour(i);
+      glColor4ub(color[0], color[1], color[2], opacity);
+      glVertex2d(leftX, yMin);
+      glVertex2d(rightX, yMin);
+      glVertex2d(rightX, yMax);
+      glVertex2d(leftX, yMax);
+      glEnd();
+   }
+
+   const TGLEnableGuard  smoothGuard(GL_LINE_SMOOTH);
+   glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+   glColor4d(0., 0., 0., 0.5);
+
+   for (Int_t i = 0, e = palette.GetPaletteSize(); i < e; ++i) {
+      const Double_t yMin = (levels[i] - levels.front()) / range * h;
+      const Double_t yMax = (levels[i + 1] - levels.front()) / range * h;
+
+      glBegin(GL_LINE_LOOP);
+      glVertex2d(leftX, margin + yMin);
+      glVertex2d(rightX, margin + yMin);
+      glVertex2d(rightX, margin + yMax);
+      glVertex2d(leftX, margin + yMax);
       glEnd();
    }
 

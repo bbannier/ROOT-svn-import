@@ -174,7 +174,7 @@ void TRootBrowser::CreateBrowser(const char *name)
 
    fLH0 = new TGLayoutHints(kLHintsNormal);
    fLH1 = new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0);
-   fLH2 = new TGLayoutHints(kLHintsTop | kLHintsExpandX, 1, 1, 1, 3);
+   fLH2 = new TGLayoutHints(kLHintsTop | kLHintsExpandX, 0, 0, 1, 1);
    fLH3 = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX);
    fLH4 = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX | kLHintsExpandY,2,2,2,2);
    fLH5 = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX | kLHintsExpandY);
@@ -299,7 +299,7 @@ void TRootBrowser::CreateBrowser(const char *name)
    SetClassHints("Browser", "Browser");
 
    if (!strcmp(gROOT->GetDefCanvasName(), "c1"))
-      gROOT->SetDefCanvasName("Canvas 1");
+      gROOT->SetDefCanvasName("Canvas_1");
 
    SetWMSizeHints(600, 350, 10000, 10000, 2, 2);
    MapSubwindows();
@@ -397,14 +397,15 @@ void TRootBrowser::CloseTab(Int_t id)
 }
 
 //______________________________________________________________________________
-void TRootBrowser::CloseWindow()
+void TRootBrowser::CloseTabs()
 {
-   // Called when window is closed via the window manager.
+   // Properly close the mainframes embedded in the different tabs
 
    TGFrameElement *el;
    Int_t i;
    Disconnect(fMenuFile, "Activated(Int_t)", this, "HandleMenu(Int_t)");
    Disconnect(fTabRight, "Selected(Int_t)", this, "DoTab(Int_t)");
+   if (fPlugins.IsEmpty()) return;
    fActBrowser = 0;
    for (i=0;i<fTabLeft->GetNumberOfTabs();i++) {
       el = (TGFrameElement *)fTabLeft->GetTabContainer(i)->GetList()->First();
@@ -477,6 +478,14 @@ void TRootBrowser::CloseWindow()
    }
    fPlugins.Delete();
    Emit("CloseWindow()");
+}
+
+//______________________________________________________________________________
+void TRootBrowser::CloseWindow()
+{
+   // Called when window is closed via the window manager.
+
+   CloseTabs();
    DeleteWindow();
 }
 
@@ -772,6 +781,7 @@ void TRootBrowser::HandleMenu(Int_t id)
          CloseWindow();
          break;
       case kQuitRoot:
+         CloseWindow();
          gApplication->Terminate(0);
          break;
       default:
@@ -1119,6 +1129,7 @@ void TRootBrowser::SwitchMenus(TGCompositeFrame  *from)
                }
             }
             ((TGCompositeFrame *)menu->GetParent())->HideFrame(menu);
+            ((TGCompositeFrame *)menu->GetParent())->SetCleanup(kNoCleanup);
             menu->ReparentWindow(fMenuFrame);
             fMenuFrame->AddFrame(menu, fLH2);
             TGFrameElement *mel;

@@ -36,6 +36,10 @@
 #include "TAttFill.h"
 #endif
 
+#ifndef ROOT_TDataType
+#include "TDataType.h"
+#endif
+
 class TTree;
 class TBasket;
 class TLeaf;
@@ -43,6 +47,7 @@ class TBrowser;
 class TDirectory;
 class TFile;
 class TClonesArray;
+class TTreeCloner;
 
    const Int_t kDoNotProcess = BIT(10); // Active bit for branches
    const Int_t kIsClone      = BIT(11); // to indicate a TBranchClones
@@ -53,11 +58,15 @@ class TClonesArray;
 class TBranch : public TNamed , public TAttFill {
 
 protected:
+   friend class TTreeCloner;
    // TBranch status bits
-   enum { kAutoDelete = BIT(15) };
+   enum EStatusBits {
+      kAutoDelete = BIT(15),
+      kDoNotUseBufferMap = BIT(22) // If set, at least one of the entry in the branch will use the buffer's map of classname and objects.
+   };
 
    static Int_t fgCount;          //! branch counter
-   Int_t       fCompress;        //  (=1 branch is compressed, 0 otherwise)
+   Int_t       fCompress;        //  Compression level and algorithm
    Int_t       fBasketSize;      //  Initial Size of  Basket Buffer
    Int_t       fEntryOffsetLen;  //  Initial Length of fEntryOffset table in the basket buffers
    Int_t       fWriteBasket;     //  Last basket number written
@@ -69,6 +78,9 @@ protected:
    Int_t       fNleaves;         //! Number of leaves
    Int_t       fReadBasket;      //! Current basket number when reading
    Long64_t    fReadEntry;       //! Current entry number when reading
+   Long64_t    fFirstBasketEntry;//! First entry in the current basket.
+   Long64_t    fNextBasketEntry; //! Next entry that will requires us to go to the next basket
+   TBasket    *fCurrentBasket;   //! Pointer to the current basket.
    Long64_t    fEntries;         //  Number of entries
    Long64_t    fFirstEntry;      //  Number of the first entry in this branch
    Long64_t    fTotBytes;        //  Total number of bytes in all leaves before compression
@@ -92,8 +104,14 @@ protected:
 
    typedef void (TBranch::*ReadLeaves_t)(TBuffer &b); 
    ReadLeaves_t fReadLeaves;     //! Pointer to the ReadLeaves implementation to use. 
+   typedef void (TBranch::*FillLeaves_t)(TBuffer &b); 
+   FillLeaves_t fFillLeaves;     //! Pointer to the FillLeaves implementation to use. 
    void     ReadLeavesImpl(TBuffer &b);
-
+   void     ReadLeaves0Impl(TBuffer &b);
+   void     ReadLeaves1Impl(TBuffer &b);
+   void     ReadLeaves2Impl(TBuffer &b);
+   void     FillLeavesImpl(TBuffer &b);
+   
    void     SetSkipZip(Bool_t skip = kTRUE) { fSkipZip = skip; }
    void     Init(const char *name, const char *leaflist, Int_t compress);
 
@@ -103,6 +121,7 @@ protected:
    TString  GetRealFileName() const;
 
 private:
+   Int_t FillEntryBuffer(TBasket* basket,TBuffer* buf, Int_t& lnew);
    TBranch(const TBranch&);             // not implemented
    TBranch& operator=(const TBranch&);  // not implemented
 
@@ -119,7 +138,6 @@ public:
    virtual void      DropBaskets(Option_t *option = "");
            void      ExpandBasketArrays();
    virtual Int_t     Fill();
-   virtual void      FillLeaves(TBuffer &b);
    virtual TBranch  *FindBranch(const char *name);
    virtual TLeaf    *FindLeaf(const char *name);
            Int_t     FlushBaskets();
@@ -133,13 +151,16 @@ public:
    virtual Int_t     GetBasketSize() const {return fBasketSize;}
    virtual TList    *GetBrowsables();
    virtual const char* GetClassName() const;
-   virtual Int_t     GetCompressionLevel() const {return fCompress;}
+           Int_t     GetCompressionAlgorithm() const;
+           Int_t     GetCompressionLevel() const;
+           Int_t     GetCompressionSettings() const;
    TDirectory       *GetDirectory() const {return fDirectory;}
    virtual Int_t     GetEntry(Long64_t entry=0, Int_t getall = 0);
    virtual Int_t     GetEntryExport(Long64_t entry, Int_t getall, TClonesArray *list, Int_t n);
            Int_t     GetEntryOffsetLen() const { return fEntryOffsetLen; }
            Int_t     GetEvent(Long64_t entry=0) {return GetEntry(entry);}
    const char       *GetIconName() const;
+   virtual Int_t     GetExpectedType(TClass *&clptr,EDataType &type);
    virtual TLeaf    *GetLeaf(const char *name) const;
    virtual TFile    *GetFile(Int_t mode=0);
    const char       *GetFileName()    const {return fFileName.Data();}
@@ -172,6 +193,7 @@ public:
    virtual void      ReadBasket(TBuffer &b);
    virtual void      Refresh(TBranch *b);
    virtual void      Reset(Option_t *option="");
+   virtual void      ResetAfterMerge(TFileMergeInfo *);
    virtual void      ResetAddress();
    virtual void      ResetReadEntry() {fReadEntry = -1;}
    virtual void      SetAddress(void *add);
@@ -179,7 +201,9 @@ public:
    virtual void      SetAutoDelete(Bool_t autodel=kTRUE);
    virtual void      SetBasketSize(Int_t buffsize);
    virtual void      SetBufferAddress(TBuffer *entryBuffer);
-   virtual void      SetCompressionLevel(Int_t level=1);
+   void              SetCompressionAlgorithm(Int_t algorithm=0);
+   void              SetCompressionLevel(Int_t level=1);
+   void              SetCompressionSettings(Int_t settings=1);
    virtual void      SetEntries(Long64_t entries);
    virtual void      SetEntryOffsetLen(Int_t len, Bool_t updateSubBranches = kFALSE);
    virtual void      SetFirstEntry( Long64_t entry );
@@ -189,6 +213,7 @@ public:
    virtual void      SetOffset(Int_t offset=0) {fOffset=offset;}
    virtual void      SetStatus(Bool_t status=1);
    virtual void      SetTree(TTree *tree) { fTree = tree;}
+   virtual void      SetupAddresses();
    virtual void      UpdateAddress() {;}
    virtual void      UpdateFile();
 
@@ -196,5 +221,23 @@ public:
 
    ClassDef(TBranch,12);  //Branch descriptor
 };
+
+//______________________________________________________________________________
+inline Int_t TBranch::GetCompressionAlgorithm() const
+{
+   return (fCompress < 0) ? -1 : fCompress / 100;
+}
+
+//______________________________________________________________________________
+inline Int_t TBranch::GetCompressionLevel() const
+{
+   return (fCompress < 0) ? -1 : fCompress % 100;
+}
+
+//______________________________________________________________________________
+inline Int_t TBranch::GetCompressionSettings() const
+{
+   return (fCompress < 0) ? -1 : fCompress;
+}
 
 #endif

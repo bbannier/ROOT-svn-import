@@ -25,6 +25,7 @@
 #include "TVector.h"
 #include "TVectorD.h"
 #include "TClass.h"
+#include "Math/QuantFuncMathCore.h"
 
 ClassImp(TGraphAsymmErrors)
 
@@ -252,7 +253,7 @@ TGraphAsymmErrors::TGraphAsymmErrors(const TH1* pass, const TH1* total, Option_t
    // Creates a TGraphAsymmErrors by dividing two input TH1 histograms:
    // pass/total. (see TGraphAsymmErrors::Divide)
 
-   if (!pass || !total) { 
+   if (!pass || !total) {
       Error("TGraphAsymmErrors","Invalid histogram pointers");
       return;
    }
@@ -262,12 +263,12 @@ TGraphAsymmErrors::TGraphAsymmErrors(const TH1* pass, const TH1* total, Option_t
       std::string(total->GetName());
    SetName(sname.c_str());
    SetTitle(pass->GetTitle());
-   
+
    //copy style from pass
    pass->TAttLine::Copy(*this);
    pass->TAttFill::Copy(*this);
    pass->TAttMarker::Copy(*this);
-   
+
    Divide(pass, total, option);
 }
 
@@ -299,6 +300,10 @@ void TGraphAsymmErrors::Apply(TF1 *f)
 
    Double_t x,y,exl,exh,eyl,eyh,eyl_new,eyh_new,fxy;
 
+   if (fHistogram) {
+      delete fHistogram;
+      fHistogram = 0;
+   }
    for (Int_t i=0;i<GetN();i++) {
       GetPoint(i,x,y);
       exl=GetErrorXlow(i);
@@ -323,6 +328,7 @@ void TGraphAsymmErrors::Apply(TF1 *f)
       //error on x doesn't change
       SetPointError(i,exl,exh,eyl_new,eyh_new);
    }
+   if (gPad) gPad->Modified();
 }
 
 //______________________________________________________________________________
@@ -341,26 +347,42 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
 {
    // Fill this TGraphAsymmErrors by dividing two 1-dimensional histograms pass/total
    //
+   // This method serves two purposes:
+   //
+   // 1) calculating efficiencies:
+   // ----------------------------
+   //
    // The assumption is that the entries in "pass" are a subset of those in
    // "total". That is, we create an "efficiency" graph, where each entry is
    // between 0 and 1, inclusive.
    //
    // If the histograms are not filled with unit weights, the number of effective
-   // entries is used which might lead to wrong results.
+   // entries is used to normalise the bin contents which might lead to wrong results.
    // Begin_Latex effective entries = #frac{(#sum w_{i})^{2}}{#sum w_{i}^{2}}End_Latex
    //
    // The points are assigned a x value at the center of each histogram bin.
-   // The y values are Begin_Latex eff = #frac{pass}{total} End_Latex for all options except for the 
-   // bayesian one where the estimated efficiency is given by
-   // Begin_Latex eff = #frac{pass + a}{total + a + b} End_Latex.
+   // The y values are Begin_Latex eff = #frac{pass}{total} End_Latex for all options except for the
+   // bayesian methods where the result depends on the chosen option.
    //
    // If the denominator becomes 0 or pass >  total, the corresponding bin is
    // skipped.
    //
+   // 2) calculating ratios of two Poisson means (option 'pois'):
+   // --------------------------------------------------------------
+   //
+   // The two histograms are interpreted as independent Poisson processes and the ratio
+   // Begin_Latex #tau = #frac{n_{1}}{n_{2}} = #frac{#varepsilon}{1 - #varepsilon} with #varepsilon = #frac{n_{1}}{n_{1} + n_{2}} End_Latex
+   // The histogram 'pass' is interpreted as n_{1} and the total histogram
+   // is used for n_{2}
+   //
+   // The (asymmetric) uncertainties of the Poisson ratio are linked to the uncertainties
+   // of efficiency by a parameter transformation:
+   // Begin_Latex #Delta #tau_{low/up} = #frac{1}{(1 - #varepsilon)^{2}} #Delta #varepsilon_{low/up} End_Latex
+   //
    // The x errors span each histogram bin (lowedge ... lowedge+width)
    // The y errors depend on the chosen statistic methode which can be determined
    // by the options given below. For a detailed description of the used statistic
-   // calculations please have a look at the corresponding functions! 
+   // calculations please have a look at the corresponding functions!
    //
    // Options:
    // - v     : verbose mode: prints information about the number of used bins
@@ -374,9 +396,10 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    // - b(a,b): bayesian interval using a prior probability ~Beta(a,b); a,b > 0
    //           (see TEfficiency::Bayesian)
    // - mode  : use mode of posterior for Bayesian interval (default is mean)
-   // - shortest: use shortest interval (done by default if mode is set) 
+   // - shortest: use shortest interval (done by default if mode is set)
    // - central: use central interval (done by default if mode is NOT set)
-   // - e0    : plot (in Bayesian case) efficiency and interval for bins where total=0 
+   // - pois: interpret histograms as poisson ratio instead of efficiency
+   // - e0    : plot (in Bayesian case) efficiency and interval for bins where total=0
    //           (default is to skip them)
    //
    // Note:
@@ -395,16 +418,10 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
       Error("Divide","one of the passed pointers is zero");
       return;
    }
-   
+
    //check dimension of histograms; only 1-dimensional ones are accepted
    if((pass->GetDimension() > 1) || (total->GetDimension() > 1)) {
       Error("Divide","passed histograms are not one-dimensional");
-      return;
-   }
-   
-   //check consistency of histograms, allowing weights
-   if(!TEfficiency::CheckConsistency(*pass,*total,"w")) {
-      Error("Divide","passed histograms are not consistent");
       return;
    }
 
@@ -420,6 +437,11 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    if (TMath::Abs(stats[0] -stats[1]) > 1e-6)
       bEffective = true;
 
+   if (bEffective && (pass->GetSumw2()->fN == 0 || total->GetSumw2()->fN == 0) ) {
+      Warning("Divide","histogram have been computed with weights but the sum of weight squares are not stored in the histogram. Error calculation is performed ignoring the weights");
+      bEffective = false;
+   }
+
    //parse option
    TString option = opt;
    option.ToLower();
@@ -429,7 +451,7 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    //(is only used in the frequentist cases.)
    Double_t (*pBound)(Int_t,Int_t,Double_t,Bool_t) = &TEfficiency::ClopperPearson; // default method
    //confidence level
-   Double_t conf = 0.683;
+   Double_t conf = 0.682689492137;
    //values for bayesian statistics
    Bool_t bIsBayesian = false;
    Double_t alpha = 1;
@@ -444,11 +466,12 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    //confidence level
    if(option.Contains("cl=")) {
       Double_t level = -1;
+      // coverity [secure_coding : FALSE]
       sscanf(strstr(option.Data(),"cl="),"cl=%lf",&level);
       if((level > 0) && (level < 1))
-	 conf = level;
+         conf = level;
       else
-	 Warning("Divide","given confidence level %.3lf is invalid",level);
+         Warning("Divide","given confidence level %.3lf is invalid",level);
       option.ReplaceAll("cl=","");
    }
 
@@ -487,35 +510,68 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
       Double_t b = 0;
       sscanf(strstr(option.Data(),"b("),"b(%lf,%lf)",&a,&b);
       if(a > 0)
-	 alpha = a;
+         alpha = a;
       else
-	 Warning("Divide","given shape parameter for alpha %.2lf is invalid",a);
+         Warning("Divide","given shape parameter for alpha %.2lf is invalid",a);
       if(b > 0)
-	 beta = b;
+         beta = b;
       else
-	 Warning("Divide","given shape parameter for beta %.2lf is invalid",b);
+         Warning("Divide","given shape parameter for beta %.2lf is invalid",b);
       option.ReplaceAll("b(","");
       bIsBayesian = true;
    }
 
    // use posterior mode
-   Bool_t usePosteriorMode = false; 
-   if(bIsBayesian && option.Contains("mode") ) { 
-      usePosteriorMode = true; 
+   Bool_t usePosteriorMode = false;
+   if(bIsBayesian && option.Contains("mode") ) {
+      usePosteriorMode = true;
       option.ReplaceAll("mode","");
    }
 
-   Bool_t plot0Bins = false; 
-   if(option.Contains("e0") ) { 
-      plot0Bins = true; 
+   Bool_t plot0Bins = false;
+   if(option.Contains("e0") ) {
+      plot0Bins = true;
       option.ReplaceAll("e0","");
    }
 
-   Bool_t useShortestInterval = false; 
+   Bool_t useShortestInterval = false;
    if (bIsBayesian && ( option.Contains("sh") || (usePosteriorMode && !option.Contains("cen") ) ) ) {
-      useShortestInterval = true; 
+      useShortestInterval = true;
    }
 
+   // interpret as Poisson ratio
+   Bool_t bPoissonRatio = false;
+   if(option.Contains("pois") ) {
+      bPoissonRatio = true;
+      option.ReplaceAll("pois","");
+   }
+
+   // weights works only in case of Normal approximation or Bayesian
+   if (bEffective && !bIsBayesian && pBound != &TEfficiency::Normal ) {
+      Warning("Divide","Histograms have weights: only Normal or Bayesian error calculation is supported");
+      Info("Divide","Using now the Normal approximation for weighted histograms");
+   }
+
+   if(bPoissonRatio)
+   {
+     if(pass->GetDimension() != total->GetDimension()) {
+       Error("Divide","passed histograms are not of the same dimension");
+       return;
+     }
+     
+     if(!TEfficiency::CheckBinning(*pass,*total)) {
+       Error("Divide","passed histograms are not consistent");
+       return;
+     }
+   }
+   else
+   {
+     //check consistency of histograms, allowing weights
+     if(!TEfficiency::CheckConsistency(*pass,*total,"w")) {
+       Error("Divide","passed histograms are not consistent");
+       return;
+     }
+   }
    
    //Set the graph to have a number of points equal to the number of histogram
    //bins
@@ -531,53 +587,114 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    //this keeps track of the number of points added to the graph
    int npoint=0;
    //number of total and passed events
-   Int_t t,p;
+   Int_t t = 0 , p = 0;
+   Double_t tw = 0, tw2 = 0, pw = 0, pw2 = 0; // for the case of weights
    //loop over all bins and fill the graph
    for (Int_t b=1; b<=nbins; ++b) {
 
-      //shall we use number of effective entries = (sum weights)^2 / sum (weights^2)
-      //" + 0.5" ensures correct rounding
-      if(bEffective) {
-	 t =(Int_t)( total->GetBinContent(b) * total->GetBinContent(b) / total->GetSumw2()->At(b-1) + 0.5);
-	 p =(Int_t)(pass->GetBinContent(b) * pass->GetBinContent(b) / pass->GetSumw2()->At(b-1) + 0.5);
-	 if (p>t) {
-	    Warning("Divide","histogram bin %d in pass has more effective entries than corresponding bin in total! (%d>%d)",b,p,t);
-	    continue; //we may as well go on...
-	 }
-      }
-      //use bin contents
-      else {
-	 t = int( total->GetBinContent(b) + 0.5);
-	 p = int(pass->GetBinContent(b) + 0.5);
-      }
+      // default value when total =0;
+      eff = 0;
+      low = 0;
+      upper = 0;
 
-      if (!t && !plot0Bins) continue; // skip bins with total = 0
-      eff = 0; // default value when total =0;
+      // special case in case of weights we have to consider the sum of weights and the sum of weight squares
+       if(bEffective) {
+          tw =  total->GetBinContent(b);
+          tw2 = total->GetSumw2()->At(b);
+          pw =  pass->GetBinContent(b);
+          pw2 = pass->GetSumw2()->At(b);
+
+	  if(bPoissonRatio)
+	  {
+	    tw += pw;
+	    tw2 += pw2;
+	  }
+
+          if (tw <= 0 && !plot0Bins) continue; // skip bins with total <= 0
+
+          // in the case of weights have the formula only for
+          // the normal and  bayesian statistics (see below)
+
+       }
+
+       //use bin contents
+       else {
+          t = int( total->GetBinContent(b) + 0.5);
+          p = int(pass->GetBinContent(b) + 0.5);
+
+	  if(bPoissonRatio)
+	    t += p;
+	  
+          if (!t && !plot0Bins) continue; // skip bins with total = 0
+       }
+
 
       //using bayesian statistics
       if(bIsBayesian) {
-         double aa = double(p) + alpha; 
-         double bb = double(t-p) + beta; 
-         if (usePosteriorMode) 
+         double aa,bb;
+         if (bEffective) {
+            // tw/tw2 renormalize the weights
+            double norm = (tw2 > 0) ? tw/tw2 : 0.;
+            aa =  pw * norm + alpha;
+            bb =  (tw - pw) * norm + beta;
+         }
+         else {
+            aa = double(p) + alpha;
+            bb = double(t-p) + beta;
+         }
+         if (usePosteriorMode)
             eff = TEfficiency::BetaMode(aa,bb);
-         else 
+         else
             eff = TEfficiency::BetaMean(aa,bb);
-         
-         if (useShortestInterval) { 
+
+         if (useShortestInterval) {
             TEfficiency::BetaShortestInterval(conf,aa,bb,low,upper);
          }
-         else { 
+         else {
             low = TEfficiency::BetaCentralInterval(conf,aa,bb,false);
             upper = TEfficiency::BetaCentralInterval(conf,aa,bb,true);
          }
       }
       // case of non-bayesian statistics
       else {
-	 if(t)
-	    eff = ((Double_t)p)/t;
-	 
-	 low = pBound(t,p,conf,false);
-	 upper = pBound(t,p,conf,true);
+         if (bEffective) {
+
+            if (tw > 0) {
+
+               eff = pw/tw;
+
+               // use normal error calculation using variance of MLE with weights (F.James 8.5.2)
+               // this is the same formula used in ROOT for TH1::Divide("B")
+
+               double variance = ( pw2 * (1. - 2 * eff) + tw2 * eff *eff ) / ( tw * tw) ;
+               double sigma = sqrt(variance);
+
+               double prob = 0.5 * (1.-conf);
+               double delta = ROOT::Math::normal_quantile_c(prob, sigma);
+               low = eff - delta;
+               upper = eff + delta;
+               if (low < 0) low = 0;
+               if (upper > 1) upper = 1.;
+            }
+         }
+
+         else {
+            // when not using weights
+            if(t)
+               eff = ((Double_t)p)/t;
+
+            low = pBound(t,p,conf,false);
+            upper = pBound(t,p,conf,true);
+         }
+      }
+      // treat as Poisson ratio
+      if(bPoissonRatio && eff != 1)
+      {
+	Double_t cor = 1./pow(1 - eff,2);
+	Double_t ratio = eff/(1 - eff);
+	low = ratio - cor * (eff - low);
+	upper = ratio + cor * (upper - eff);
+	eff = ratio;
       }
       //Set the point center and its errors
       SetPoint(npoint,pass->GetBinCenter(b),eff);
@@ -594,7 +711,7 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
       Info("Divide","made a graph with %d points from %d bins",npoint,nbins);
       Info("Divide","used confidence level: %.2lf\n",conf);
       if(bIsBayesian)
-	 Info("Divide","used prior probability ~ beta(%.2lf,%.2lf)",alpha,beta);
+         Info("Divide","used prior probability ~ beta(%.2lf,%.2lf)",alpha,beta);
       Print();
    }
 }
@@ -830,7 +947,7 @@ void TGraphAsymmErrors::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       frameNumber++;
       TString hname = fHistogram->GetName();
       hname += frameNumber;
-      fHistogram->SetName(hname.Data());
+      fHistogram->SetName(Form("Graph_%s",hname.Data()));
       fHistogram->SavePrimitive(out,"nodraw");
       out<<"   grae->SetHistogram("<<fHistogram->GetName()<<");"<<endl;
       out<<"   "<<endl;

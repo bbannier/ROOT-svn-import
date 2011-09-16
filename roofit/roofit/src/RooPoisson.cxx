@@ -31,12 +31,15 @@ ClassImp(RooPoisson)
 //_____________________________________________________________________________
 RooPoisson::RooPoisson(const char *name, const char *title, 
 		       RooAbsReal& _x,
-		       RooAbsReal& _mean) :
+		       RooAbsReal& _mean,
+		       Bool_t noRounding) :
   RooAbsPdf(name,title), 
   x("x","x",this,_x),
-  mean("mean","mean",this,_mean)
+  mean("mean","mean",this,_mean),
+  _noRounding(noRounding),
+  _protectNegative(false)
 { 
-  // Constructor
+  // Constructor  
 } 
 
 
@@ -45,7 +48,9 @@ RooPoisson::RooPoisson(const char *name, const char *title,
  RooPoisson::RooPoisson(const RooPoisson& other, const char* name) :  
    RooAbsPdf(other,name), 
    x("x",this,other.x),
-   mean("mean",this,other.mean)
+   mean("mean",this,other.mean),
+   _noRounding(other._noRounding),
+   _protectNegative(other._protectNegative)
 { 
    // Copy constructor
 } 
@@ -58,7 +63,9 @@ Double_t RooPoisson::evaluate() const
 { 
   // Implementation in terms of the TMath Poisson function
 
-  Double_t k = floor(x);  
+  Double_t k = _noRounding ? x : floor(x);  
+  if(_protectNegative && mean<0) 
+    return 1e-3;
   return TMath::Poisson(k,mean) ;
 } 
 
@@ -79,6 +86,9 @@ Int_t RooPoisson::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars,
 Double_t RooPoisson::analyticalIntegral(Int_t code, const char* rangeName) const 
 {
   assert(code==1) ;
+
+  if(_protectNegative && mean<0) 
+    return exp(-2*mean); // make it fall quickly
 
   // Implement integral over x as summation. Add special handling in case
   // range boundaries are not on integer values of x
@@ -115,13 +125,17 @@ Double_t RooPoisson::analyticalIntegral(Int_t code, const char* rangeName) const
   if(ixmin == ixmax-1){ // first bin
     return TMath::Poisson(ixmin, mean)*(xmax-xmin);
   }  
+
   Double_t sum(0) ;
   sum += TMath::Poisson(ixmin,mean)*fracLoBin ;
-  sum+= ROOT::Math::poisson_cdf(ixmax-2, mean) - ROOT::Math::poisson_cdf(ixmin,mean) ;
-  sum += TMath::Poisson(ixmax-1,mean)*fracHiBin ;
+  if (RooNumber::isInfinite(xmax)){
+    sum+= 1.-ROOT::Math::poisson_cdf(ixmin,mean) ;
+  }  else {
+    sum+= ROOT::Math::poisson_cdf(ixmax-2, mean) - ROOT::Math::poisson_cdf(ixmin,mean) ;
+    sum += TMath::Poisson(ixmax-1,mean)*fracHiBin ;
+  }
   
   return sum ;
-  
 
 }
 

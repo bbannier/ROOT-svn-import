@@ -107,6 +107,7 @@
 #include "TFunction.h"
 #include "TMethodArg.h"
 #include "TMethodCall.h"
+#include "TProofOutputFile.h"
 
 // global proofserv handle
 TProofServ *gProofServ = 0;
@@ -681,6 +682,33 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    if (gProofDebugLevel > 0)
       Info("TProofServ", "DebugLevel %d Mask 0x%x", gProofDebugLevel, gProofDebugMask);
 
+   // Max log file size
+   fLogFileMaxSize = -1;
+   TString logmx = gEnv->GetValue("ProofServ.LogFileMaxSize", "");
+   if (!logmx.IsNull()) {
+      Long64_t xf = 1;
+      if (!logmx.IsDigit()) {
+         if (logmx.EndsWith("K")) {
+            xf = 1024;
+            logmx.Remove(TString::kTrailing, 'K');
+         } else if (logmx.EndsWith("M")) {
+            xf = 1024*1024;
+            logmx.Remove(TString::kTrailing, 'M');
+         } if (logmx.EndsWith("G")) {
+            xf = 1024*1024*1024;
+            logmx.Remove(TString::kTrailing, 'G');
+         }
+      }
+      if (logmx.IsDigit()) {
+         fLogFileMaxSize = logmx.Atoi() * xf;
+         if (fLogFileMaxSize > 0)
+            Info("TProofServ", "keeping the log file size within %lld bytes", fLogFileMaxSize);
+      } else {
+         logmx = gEnv->GetValue("ProofServ.LogFileMaxSize", "");
+         Warning("TProofServ", "bad formatted log file size limit ignored: '%s'", logmx.Data());
+      }
+   }
+   
    // Parse options
    GetOptions(argc, argv);
 
@@ -746,7 +774,7 @@ Int_t TProofServ::CreateServer()
    fSocket = new TSocket(sock);
 
    // Set compression level, if any
-   fSocket->SetCompressionLevel(fCompressMsg);
+   fSocket->SetCompressionSettings(fCompressMsg);
 
    // debug hooks
    if (IsMaster()) {
@@ -1119,7 +1147,7 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
       if (fPlayer)
          status = fPlayer->GetProgressStatus();
       else {
-         Error("GetNextPacket", "No progress status object");
+         Error("GetNextPacket", "no progress status object");
          return 0;
       }
       // the CPU and wallclock proc times are kept in the TProofServ and here
@@ -1129,16 +1157,27 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
          status->IncProcTime(realtime);
          status->IncCPUTime(cputime);
       }
+      // Flag cases with problems in opening files
+      if (totalEntries < 0) status->SetBit(TProofProgressStatus::kFileNotOpen);
+      // Add to the message
       req << status;
       // Send tree cache information
       Long64_t cacheSize = (fPlayer) ? fPlayer->GetCacheSize() : -1;
       Int_t learnent = (fPlayer) ? fPlayer->GetLearnEntries() : -1;
       req << cacheSize << learnent;
 
+      // Sent over the number of entries in the file, used by packetizer do not relying
+      // on initial validation. Also, -1 means that the file could not be open, which is
+      // used to flag files as missing
+      req << totalEntries;
+
       PDB(kLoop, 1) {
          PDB(kLoop, 2) status->Print();
          Info("GetNextPacket","cacheSize: %lld, learnent: %d", cacheSize, learnent);
       }
+      // Reset the status bits
+      status->ResetBit(TProofProgressStatus::kFileNotOpen);
+      status->ResetBit(TProofProgressStatus::kFileCorrupted);
       status = 0; // status is owned by the player.
    } else {
       req << fLatency.RealTime() << realtime << cputime
@@ -1259,6 +1298,10 @@ void TProofServ::HandleSocketInput()
    Int_t rc = 0;
    TString exmsg;
 
+   // Check log file lenght (before the action, so we have the chance to keep the
+   // latest logs)
+   TruncateLogFile();
+
    try {
    
       // Get message
@@ -1362,8 +1405,9 @@ void TProofServ::HandleSocketInput()
       // If something wrong went on during processing and we do not have
       // any worker anymore, we shutdown this session
       Bool_t masterOnly = gEnv->GetValue("Proof.MasterOnly", kFALSE);
+      Bool_t dynamicStartup = gEnv->GetValue("Proof.DynamicStartup", kFALSE);
       Int_t ngwrks = fProof->GetListOfActiveSlaves()->GetSize() + fProof->GetListOfInactiveSlaves()->GetSize();
-      if (rc == 0 && ngwrks == 0 && !masterOnly) {
+      if (rc == 0 && ngwrks == 0 && !masterOnly && !dynamicStartup) {
          SendAsynMessage(" *** No workers left: cannot continue! Terminating ... *** ");
          Terminate(0);
       }
@@ -1745,17 +1789,19 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_WORKERLISTS:
-         if (all) {
-            if (IsMaster())
-               HandleWorkerLists(mess);
-            else
-               Warning("HandleSocketInput:kPROOF_WORKERLISTS",
-                       "Action meaning-less on worker nodes: protocol error?");
-         } else {
-            rc = -1;
+         {  Int_t xrc = -1;
+            if (all) {
+               if (IsMaster())
+                  xrc = HandleWorkerLists(mess);
+               else
+                  Warning("HandleSocketInput:kPROOF_WORKERLISTS",
+                        "Action meaning-less on worker nodes: protocol error?");
+            } else {
+               rc = -1;
+            }
+            // Notify
+            SendLogFile(xrc);
          }
-         // Notify
-         SendLogFile();
          break;
 
       case kPROOF_GETSLAVEINFO:
@@ -2892,14 +2938,14 @@ Int_t TProofServ::SetupCommon()
       if (gSystem->AccessPathName(fSessionDir))
          gSystem->mkdir(fSessionDir, kTRUE);
       if (!gSystem->ChangeDirectory(fSessionDir)) {
-         Error("SetupCommon", "can not change to working directory %s",
+         Error("SetupCommon", "can not change to working directory '%s'",
                               fSessionDir.Data());
          return -1;
       }
    }
    gSystem->Setenv("PROOF_SANDBOX", fSessionDir);
    if (gProofDebugLevel > 0)
-      Info("SetupCommon", "session dir is %s", fSessionDir.Data());
+      Info("SetupCommon", "session dir is '%s'", fSessionDir.Data());
 
    // On masters, check and make sure that "queries" and "datasets"
    // directories exist
@@ -3188,6 +3234,8 @@ Bool_t TProofServ::UnlinkDataDir(const char *path)
             dorm = kFALSE;
          }
       }
+      // Close the directory
+      gSystem->FreeDirectory(dirp);
    } else {
       // Cannot open the directory
       dorm = kFALSE;
@@ -3824,8 +3872,8 @@ Int_t TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
                     mbuf.Length(), fMsgSizeHWM);
             // Compress the message, if required; for these messages we do it already
             // here so we get the size; TXSocket does not do it twice.
-            if (fCompressMsg > 0) {
-               mbuf.SetCompressionLevel(fCompressMsg);
+            if (GetCompressionLevel() > 0) {
+               mbuf.SetCompressionSettings(fCompressMsg);
                mbuf.Compress();
                objsz = mbuf.CompLength();
             } else {
@@ -3850,8 +3898,8 @@ Int_t TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
       if (np > 0) {
          // Compress the message, if required; for these messages we do it already
          // here so we get the size; TXSocket does not do it twice.
-         if (fCompressMsg > 0) {
-            mbuf.SetCompressionLevel(fCompressMsg);
+         if (GetCompressionLevel() > 0) {
+            mbuf.SetCompressionSettings(fCompressMsg);
             mbuf.Compress();
             objsz = mbuf.CompLength();
          } else {
@@ -3867,7 +3915,7 @@ Int_t TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
       }
       if (IsTopMaster()) {
          // Send total size
-         msg.Form("%s: grand total: sent %d objects, size: %d bytes       ",
+         msg.Form("%s: grand total: sent %d objects, size: %d bytes                            ",
                                         fPrefix.Data(), olsz, totsz);
          SendAsynMessage(msg.Data());
       }
@@ -3903,8 +3951,8 @@ Int_t TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
          mbuf.WriteObject(o);
          // Compress the message, if required; for these messages we do it already
          // here so we get the size; TXSocket does not do it twice.
-         if (fCompressMsg > 0) {
-            mbuf.SetCompressionLevel(fCompressMsg);
+         if (GetCompressionLevel() > 0) {
+            mbuf.SetCompressionSettings(fCompressMsg);
             mbuf.Compress();
             objsz = mbuf.CompLength();
          } else {
@@ -4121,6 +4169,12 @@ void TProofServ::ProcessNext(TString *slb)
 
    // Send back the results
    TQueryResult *pqr = pq->CloneInfo();
+   // At least the TDSet name in the light object
+   Info("ProcessNext", "adding info about dataset '%s' in the light query result", dset->GetName());
+   TList rin;
+   TDSet *ds = new TDSet(dset->GetName(), dset->GetObjName());
+   rin.Add(ds);
+   pqr->SetInputList(&rin, kTRUE);
    if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
       PDB(kGlobal, 2)
          Info("ProcessNext", "sending results");
@@ -4132,20 +4186,20 @@ void TProofServ::ProcessNext(TString *slb)
    } else {
       if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted)
          Warning("ProcessNext","the output list is empty!");
-      if (SendResults(fSocket) != 0)
+      if (SendResults(fSocket, fPlayer->GetOutputList()) != 0)
          Warning("ProcessNext", "problems sending output list");
       if (slb) slb->Form("%d -1 -1 %.3f", fPlayer->GetExitStatus(), pq->GetUsedCPU());
    }
 
    // Remove aborted queries from the list
    if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
+      delete pqr;
       if (fQMgr) fQMgr->RemoveQuery(pq);
    } else {
       // Keep in memory only light infor about a query
       if (!(pq->IsDraw())) {
          if (fQMgr && fQMgr->Queries()) {
-            if (pqr)
-               fQMgr->Queries()->Add(pqr);
+            fQMgr->Queries()->Add(pqr);
             // Remove from the fQueries list
             fQMgr->Queries()->Remove(pq);
          }
@@ -5368,14 +5422,14 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
 }
 
 //______________________________________________________________________________
-void TProofServ::HandleWorkerLists(TMessage *mess)
+Int_t TProofServ::HandleWorkerLists(TMessage *mess)
 {
    // Handle here all requests to modify worker lists
 
    PDB(kGlobal, 1)
       Info("HandleWorkerLists", "Enter");
 
-   Int_t type = 0;
+   Int_t type = 0, rc = 0;
    TString ord;
 
    (*mess) >> type;
@@ -5388,20 +5442,24 @@ void TProofServ::HandleWorkerLists(TMessage *mess)
             Int_t nactmax = fProof->GetListOfSlaves()->GetSize() -
                             fProof->GetListOfBadSlaves()->GetSize();
             if (nact < nactmax) {
-               fProof->ActivateWorker(ord);
+               Int_t nwc = fProof->ActivateWorker(ord);
                Int_t nactnew = fProof->GetListOfActiveSlaves()->GetSize();
                if (ord == "*") {
                   if (nactnew == nactmax) {
-                     Info("HandleWorkerList","all workers (re-)activated");
+                     Info("HandleWorkerList", "all workers (re-)activated");
                   } else {
-                     Info("HandleWorkerList","%d workers could not be (re-)activated", nactmax - nactnew);
+                     Info("HandleWorkerList", "%d workers could not be (re-)activated", nactmax - nactnew);
                   }
                } else {
-                  if (nactnew == (nact + 1)) {
-                     Info("HandleWorkerList","worker %s (re-)activated", ord.Data());
+                  if (nactnew == (nact + nwc)) {
+                     Info("HandleWorkerList","worker(s) %s (re-)activated", ord.Data());
                   } else {
-                     Info("HandleWorkerList","worker %s could not be (re-)activated:"
-                                             " check the ordinal number", ord.Data());
+                     if (nwc != -2) {
+                        Error("HandleWorkerList", "some worker(s) could not be (re-)activated;"
+                                                  " # of actives: %d --> %d (nwc: %d)",
+                                                  nact, nactnew, nwc);
+                     }
+                     rc = (nwc < 0) ? nwc : -1;
                   }
                }
             } else {
@@ -5416,7 +5474,7 @@ void TProofServ::HandleWorkerLists(TMessage *mess)
          if (fProof) {
             Int_t nact = fProof->GetListOfActiveSlaves()->GetSize();
             if (nact > 0) {
-               fProof->DeactivateWorker(ord);
+               Int_t nwc = fProof->DeactivateWorker(ord);
                Int_t nactnew = fProof->GetListOfActiveSlaves()->GetSize();
                if (ord == "*") {
                   if (nactnew == 0) {
@@ -5425,11 +5483,15 @@ void TProofServ::HandleWorkerLists(TMessage *mess)
                      Info("HandleWorkerList","%d workers could not be deactivated", nactnew);
                   }
                } else {
-                  if (nactnew == (nact - 1)) {
-                     Info("HandleWorkerList","worker %s deactivated", ord.Data());
+                  if (nactnew == (nact - nwc)) {
+                     Info("HandleWorkerList","worker(s) %s deactivated", ord.Data());
                   } else {
-                     Info("HandleWorkerList","worker %s could not be deactivated:"
-                                             " check the ordinal number", ord.Data());
+                     if (nwc != -2) {
+                        Error("HandleWorkerList", "some worker(s) could not be deactivated:"
+                                                  " # of actives: %d --> %d (nwc: %d)",
+                                                  nact, nactnew, nwc);
+                     }
+                     rc = (nwc < 0) ? nwc : -1;
                   }
                }
             } else {
@@ -5441,7 +5503,10 @@ void TProofServ::HandleWorkerLists(TMessage *mess)
          break;
       default:
          Warning("HandleWorkerList","unknown action type (%d)", type);
+         rc = -1;
    }
+   // Done
+   return rc;
 }
 
 //______________________________________________________________________________
@@ -5609,10 +5674,10 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
          buf.Form("%s: %s:<%.*s>: %s", fgSysLogEntity.Data(), type, ipos, location, msg);
    }
    fflush(fgErrorHandlerFile);
-
+   
    if (tosyslog)
       gSystem->Syslog(loglevel, buf);
-
+   
    if (abort) {
 
       static Bool_t recursive = kFALSE;
@@ -6033,6 +6098,53 @@ void TProofServ::FlushLogFile()
 }
 
 //______________________________________________________________________________
+void TProofServ::TruncateLogFile()
+{
+   // Truncate the log file to the 80% of the required max size if this
+   // is set.
+#ifndef WIN32
+   TString emsg;
+   if (fLogFileMaxSize > 0 && fLogFileDes > 0) {
+      fflush(stdout);
+      struct stat st;
+      if (fstat(fLogFileDes, &st) == 0) {
+         if (st.st_size >= fLogFileMaxSize) {
+            off_t truncsz = (off_t) (( fLogFileMaxSize * 80 ) / 100 );
+            if (truncsz < 100) {
+               emsg.Form("+++ WARNING +++: %s: requested truncate size too small"
+                         " (%lld,%lld) - ignore ", fPrefix.Data(), (Long64_t) truncsz, fLogFileMaxSize);
+               SendAsynMessage(emsg.Data());
+               return;
+            }
+            TSystem::ResetErrno();
+            while (ftruncate(fileno(stdout), truncsz) != 0 &&
+                   (TSystem::GetErrno() == EINTR)) {
+               TSystem::ResetErrno();
+            }
+            if (TSystem::GetErrno() > 0) {
+               Error("TruncateLogFile", "truncating to %lld bytes; file size is %lld bytes (errno: %d)",
+                                        (Long64_t)truncsz, (Long64_t)st.st_size, TSystem::GetErrno());
+               emsg.Form("+++ WARNING +++: %s: problems truncating log file to %lld bytes; file size is %lld bytes"
+                         " (errno: %d)", fPrefix.Data(), (Long64_t)truncsz, (Long64_t)st.st_size, TSystem::GetErrno());
+               SendAsynMessage(emsg.Data());
+            } else {
+               Info("TruncateLogFile", "file truncated to %lld bytes (80%% of %lld); file size was %lld bytes ",
+                                       (Long64_t)truncsz, fLogFileMaxSize, (Long64_t)st.st_size);
+               emsg.Form("+++ WARNING +++: %s: log file truncated to %lld bytes (80%% of %lld)",
+                                       fPrefix.Data(), (Long64_t)truncsz, fLogFileMaxSize);
+               SendAsynMessage(emsg.Data());
+            }
+         }
+      } else {
+         emsg.Form("+++ WARNING +++: %s: could not stat log file descriptor"
+                   " for truncation (errno: %d)", fPrefix.Data(), TSystem::GetErrno());
+         SendAsynMessage(emsg.Data());
+      }
+   }
+#endif
+}
+
+//______________________________________________________________________________
 void TProofServ::HandleException(Int_t sig)
 {
    // Exception handler: we do not try to recover here, just exit.
@@ -6123,7 +6235,13 @@ Int_t TProofServ::HandleDataSets(TMessage *mess, TString *slb)
             (*mess) >> uri >> opt;
             if (slb) slb->Form("%d %s %s", type, uri.Data(), opt.Data());
             // Get the datasets and fill a map
-            TMap *returnMap = fDataSetManager->GetDataSets(uri, (UInt_t)TDataSetManager::kExport);
+            UInt_t omsk = (UInt_t)TDataSetManager::kExport;
+            Ssiz_t kLite = opt.Index(":lite:", 0, TString::kIgnoreCase);
+            if (kLite != kNPOS) {
+               omsk |= (UInt_t)TDataSetManager::kReadShort;
+               opt.Remove(kLite, strlen(":lite:"));
+            }
+            TMap *returnMap = fDataSetManager->GetDataSets(uri, omsk);
             // If defines, option gives the name of a server for which to extract the information
             if (returnMap && !opt.IsNull()) {
                // The return map will be in the form   </group/user/datasetname> --> <dataset>
@@ -6397,6 +6515,9 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                PDB(kSubmerger, 2) Info("HandleSubmerger",
                                        "kBeMerger: mergerPlayer created (%p) ", mergerPlayer);
 
+               // This may be used internally
+               mergerPlayer->SetBit(TVirtualProofPlayer::kIsSubmerger);
+
                // Accept results from assigned workers
                if (AcceptResults(connections, mergerPlayer)) {
                   PDB(kSubmerger, 2)
@@ -6425,6 +6546,8 @@ void TProofServ::HandleSubmerger(TMessage *mess)
 
                   // Delayed merging if neccessary
                   mergerPlayer->MergeOutput();
+                 
+                  PDB(kSubmerger, 2) mergerPlayer->GetOutputList()->Print();
 
                   PDB(kSubmerger, 2) Info("HandleSubmerger", "delayed merging on %s finished ", fOrdinal.Data());
                   PDB(kSubmerger, 2) Info("HandleSubmerger", "%s sending results to master ", fOrdinal.Data());
@@ -6432,7 +6555,6 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   if (SendResults(fSocket, mergerPlayer->GetOutputList()) != 0)
                      Warning("HandleSubmerger","kBeMerger: problems sending output list");
                   mergerPlayer->GetOutputList()->SetOwner(kTRUE);
-                  delete mergerPlayer;
 
                   PDB(kSubmerger, 2) Info("HandleSubmerger","kBeMerger: results sent to master");
                   // Signal the master that we are idle
@@ -6447,6 +6569,8 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   fSocket->Send(answ);
                   deleteplayer = kFALSE;
                }
+               // Reset
+               SafeDelete(mergerPlayer);
             } else {
                Error("HandleSubmerger","kSendOutput: received not on worker");
             }

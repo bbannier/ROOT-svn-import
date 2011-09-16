@@ -57,6 +57,7 @@ private:
    G__dictposition fDictPosGlobals;  //CINT dictionary context after ResetGlobals()
    TString         fSharedLibs;      //list of shared libraries loaded by G__loadfile
    Int_t           fSharedLibsSerial;//Indicator of the last time we set fSharedLibs
+   Int_t           fGlobalsListSerial;//Indicator of the last time we refresh the ROOT list of globals.
    TString         fIncludePath;     //list of CINT include paths
    TString         fRootmapLoadPath; //dynamic load path used for loading rootmap files
    TEnv           *fMapfile;         //map of classes and libraries
@@ -107,11 +108,12 @@ public:
    Long_t  ProcessLineAsynch(const char *line, EErrorCode *error = 0);
    Long_t  ProcessLineSynch(const char *line, EErrorCode *error = 0);
    void    PrintIntro();
-   void    SetGetline(char*(*getlineFunc)(const char* prompt),
-		      void (*histaddFunc)(char* line));
+   void    SetGetline(const char*(*getlineFunc)(const char* prompt),
+                      void (*histaddFunc)(const char* line));
    void    Reset();
    void    ResetAll();
    void    ResetGlobals();
+   void    ResetGlobalVar(void *obj);
    void    RewindDictionary();
    Int_t   DeleteGlobal(void *obj);
    void    SaveContext();

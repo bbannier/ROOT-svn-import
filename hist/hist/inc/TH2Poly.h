@@ -36,7 +36,6 @@ public:
    void      ClearContent(){fContent = 0;}
    void      Fill(Double_t w) {fContent = fContent+w; SetChanged(true);}
    Double_t  GetArea();
-   Double_t  GetAreaPolygon(Int_t n, Double_t *x, Double_t *y);
    Double_t  GetContent() const{return fContent;}
    Bool_t    GetChanged() const{return fChanged;}
    Int_t     GetBinNumber() const {return fNumber;}
@@ -76,58 +75,62 @@ public:
    TH2Poly(const char *name,const char *title, Int_t nX, Double_t xlow, Double_t xup,  Int_t nY, Double_t ylow, Double_t yup);
    virtual ~TH2Poly();
 
-   Int_t       AddBin(TObject *poly);
-   Int_t       AddBin(Int_t n, Double_t *x, Double_t *y);
-   Int_t       AddBin(Double_t x1, Double_t y1, Double_t x2, Double_t  y2);
-   void        ClearBinContents();                 // Clears the content of all bins
-   void        ChangePartition(Int_t n, Int_t m);  // Sets the number of partition cells to another value
-   void        Draw(Option_t *option="");
-   Int_t       Fill(Double_t x,Double_t y);
-   Int_t       Fill(Double_t x,Double_t y, Double_t w);
-   void        FillN(Int_t ntimes, const Double_t* x, const Double_t* y, const Double_t* w, Int_t stride = 1);
-   Int_t       FindBin(Double_t x, Double_t y, Double_t z = 0);
-   Int_t       Fill(Double_t){return -1;}                              //MayNotUse
-   Int_t       Fill(const char*, Double_t){return -1;}                 //MayNotUse
-   Int_t       Fill(Double_t , const char *, Double_t){return -1;}     //MayNotUse
-   Int_t       Fill(const char *, Double_t , Double_t ){return -1;}    //MayNotUse
-   Int_t       Fill(const char *, const char *, Double_t ){return -1;} //MayNotUse
-   void        FillN(Int_t, const Double_t*, const Double_t*, Int_t){return;}  //MayNotUse
-   TList      *GetBins(){return fBins;}                                // Returns the TList of all bins in the histogram
-   Double_t    GetBinContent(Int_t bin) const;
-   Double_t    GetBinContent(Int_t, Int_t) const {return 0;}           //MayNotUse
-   Double_t    GetBinContent(Int_t, Int_t, Int_t) const {return 0;}    //MayNotUse
-   Bool_t      GetBinContentChanged() const{return fBinContentChanged;}
-   Double_t    GetBinError(Int_t bin) const;
-   Double_t    GetBinError(Int_t , Int_t) const {return 0;}            //MayNotUse
-   Double_t    GetBinError(Int_t , Int_t , Int_t) const {return 0;}    //MayNotUse
-   const char *GetBinName(Int_t bin) const;
-   const char *GetBinTitle(Int_t bin) const;
-   Bool_t      GetFloat(){return fFloat;}
-   Double_t    GetMaximum() const;
-   Double_t    GetMaximum(Double_t maxval) const;
-   Double_t    GetMinimum() const;
-   Double_t    GetMinimum(Double_t minval) const;
-   Bool_t      GetNewBinAdded() const{return fNewBinAdded;}
-   Int_t       GetNumberOfBins() const{return fNcells;}
-   void        Honeycomb(Double_t xstart, Double_t ystart, Double_t a, Int_t k, Int_t s);   // Bins the histogram using a honeycomb structure
-   Double_t    Integral(Option_t* option = "") const;
-   Double_t    Integral(Int_t, Int_t, const Option_t*) const{return 0;}                             //MayNotUse
-   Double_t    Integral(Int_t, Int_t, Int_t, Int_t, const Option_t*) const{return 0;}               //MayNotUse
-   Double_t    Integral(Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, const Option_t*) const{return 0;} //MayNotUse
-   void        SavePrimitive(ostream& out, Option_t* option = "");
-   void        SetBinContent(Int_t bin, Double_t content);
-   void        SetBinContent(Int_t, Int_t, Double_t){return;}           //MayNotUse
-   void        SetBinContent(Int_t, Int_t, Int_t, Double_t){return;}    //MayNotUse
-   void        SetBinContentChanged(Bool_t flag){fBinContentChanged = flag;}
-   void        SetFloat(Bool_t flag = true);
-   void        SetNewBinAdded(Bool_t flag){fNewBinAdded = flag;}
+   Int_t        AddBin(TObject *poly);
+   Int_t        AddBin(Int_t n, const Double_t *x, const Double_t *y);
+   Int_t        AddBin(Double_t x1, Double_t y1, Double_t x2, Double_t  y2);
+   virtual void Add(const TH1 *h1, Double_t c1);
+   virtual void Add(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1);
+   virtual void Add(TF1 *h1, Double_t c1=1, Option_t *option="");
+   void         ClearBinContents();                 // Clears the content of all bins
+   void         ChangePartition(Int_t n, Int_t m);  // Sets the number of partition cells to another value
+   virtual TH1 *DrawCopy(Option_t *option="") const;
+   Int_t        Fill(Double_t x,Double_t y);
+   Int_t        Fill(Double_t x,Double_t y, Double_t w);
+   Int_t        Fill(const char* name, Double_t w);
+   void         FillN(Int_t ntimes, const Double_t* x, const Double_t* y, const Double_t* w, Int_t stride = 1);
+   Int_t        Fill(Double_t){return -1;}                              //MayNotUse
+   Int_t        Fill(Double_t , const char *, Double_t){return -1;}     //MayNotUse
+   Int_t        Fill(const char *, Double_t , Double_t ){return -1;}    //MayNotUse
+   Int_t        Fill(const char *, const char *, Double_t ){return -1;} //MayNotUse
+   void         FillN(Int_t, const Double_t*, const Double_t*, Int_t){return;}  //MayNotUse
+   Int_t        FindBin(Double_t x, Double_t y, Double_t z = 0);
+   TList       *GetBins(){return fBins;}                                // Returns the TList of all bins in the histogram
+   Double_t     GetBinContent(Int_t bin) const;
+   Double_t     GetBinContent(Int_t, Int_t) const {return 0;}           //MayNotUse
+   Double_t     GetBinContent(Int_t, Int_t, Int_t) const {return 0;}    //MayNotUse
+   Bool_t       GetBinContentChanged() const{return fBinContentChanged;}
+   Double_t     GetBinError(Int_t bin) const;
+   Double_t     GetBinError(Int_t , Int_t) const {return 0;}            //MayNotUse
+   Double_t     GetBinError(Int_t , Int_t , Int_t) const {return 0;}    //MayNotUse
+   const char  *GetBinName(Int_t bin) const;
+   const char  *GetBinTitle(Int_t bin) const;
+   Bool_t       GetFloat(){return fFloat;}
+   Double_t     GetMaximum() const;
+   Double_t     GetMaximum(Double_t maxval) const;
+   Double_t     GetMinimum() const;
+   Double_t     GetMinimum(Double_t minval) const;
+   Bool_t       GetNewBinAdded() const{return fNewBinAdded;}
+   Int_t        GetNumberOfBins() const{return fNcells;}
+   void         Honeycomb(Double_t xstart, Double_t ystart, Double_t a, Int_t k, Int_t s);   // Bins the histogram using a honeycomb structure
+   Double_t     Integral(Option_t* option = "") const;
+   Double_t     Integral(Int_t, Int_t, const Option_t*) const{return 0;}                             //MayNotUse
+   Double_t     Integral(Int_t, Int_t, Int_t, Int_t, const Option_t*) const{return 0;}               //MayNotUse
+   Double_t     Integral(Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, const Option_t*) const{return 0;} //MayNotUse
+   void         Reset(Option_t *option);
+   void         SavePrimitive(ostream& out, Option_t* option = "");
+   void         SetBinContent(Int_t bin, Double_t content);
+   void         SetBinContent(Int_t, Int_t, Double_t){return;}           //MayNotUse
+   void         SetBinContent(Int_t, Int_t, Int_t, Double_t){return;}    //MayNotUse
+   void         SetBinContentChanged(Bool_t flag){fBinContentChanged = flag;}
+   void         SetFloat(Bool_t flag = true);
+   void         SetNewBinAdded(Bool_t flag){fNewBinAdded = flag;}
 
 protected:
    TList   *fBins;              //List of bins.
    Double_t fOverflow[9];       //Overflow bins
    Int_t    fCellX;             //Number of partition cells in the x-direction of the histogram
    Int_t    fCellY;             //Number of partition cells in the y-direction of the histogram
-   Int_t    fNCells;            //Number of partition cells: fCellX*fCellY 
+   Int_t    fNCells;            //Number of partition cells: fCellX*fCellY
    TList   *fCells;             //[fNCells] The array of TLists that store the bins that intersect with each cell
    Double_t fStepX, fStepY;     //Dimensions of a partition cell
    Bool_t  *fIsEmpty;           //[fNCells] The array that returns true if the cell at the given coordinate is empty

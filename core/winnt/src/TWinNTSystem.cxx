@@ -37,6 +37,7 @@
 #include "TInterpreter.h"
 #include "TObjString.h"
 #include "TVirtualX.h"
+#include "TUrl.h"
 
 #include <sys/utime.h>
 #include <sys/timeb.h>
@@ -57,6 +58,45 @@
 #include <list>
 #include <shlobj.h>
 #include <conio.h>
+
+#if defined (_MSC_VER) && (_MSC_VER >= 1400)
+   #include <intrin.h>
+#elif defined (_M_IX86)
+   static void __cpuid(int* cpuid_data, int info_type)
+   {
+      __asm {
+         push ebx
+         push edi
+         mov edi, cpuid_data
+         mov eax, info_type
+         cpuid
+         mov [edi], eax
+         mov [edi + 4], ebx
+         mov [edi + 8], ecx
+         mov [edi + 12], edx
+         pop edi
+         pop ebx
+      }
+   }
+   __int64 __rdtsc()
+   {
+      LARGE_INTEGER li;
+      __asm {
+         rdtsc
+         mov li.LowPart, eax
+         mov li.HighPart, edx
+      }
+      return li.QuadPart;
+   }
+#else
+   static void __cpuid(int* cpuid_data, int) {
+      cpuid_data[0] = 0x00000000;
+      cpuid_data[1] = 0x00000000;
+      cpuid_data[2] = 0x00000000;
+      cpuid_data[3] = 0x00000000;
+   }
+   __int64 __rdtsc() { return (__int64)0; }
+#endif
 
 extern "C" {
    extern void Gl_setwidth(int width);
@@ -396,12 +436,17 @@ namespace {
 
       switch (sig) {
          case CTRL_C_EVENT:
-            if (!G__get_security_error()) {
-               G__genericerror("\n *** Break *** keyboard interrupt");
-            } else {
-               Break("TInterruptHandler::Notify", "keyboard interrupt");
-               if (TROOT::Initialized()) {
-                  gInterpreter->RewindDictionary();
+            if (gSystem) {
+               ((TWinNTSystem*)gSystem)->DispatchSignals(kSigInterrupt);
+            }
+            else {
+               if (!G__get_security_error()) {
+                  G__genericerror("\n *** Break *** keyboard interrupt");
+               } else {
+                  Break("TInterruptHandler::Notify", "keyboard interrupt");
+                  if (TROOT::Initialized()) {
+                     gInterpreter->RewindDictionary();
+                  }
                }
             }
             return kTRUE;
@@ -420,13 +465,8 @@ namespace {
    //______________________________________________________________________________
    static void SigHandler(ESignals sig)
    {
-      if (gSystem) {
-         gSystem->StackTrace();
-         if (TROOT::Initialized()) {
-            ::Throw(sig);
-         }
-         gSystem->Abort(-1);
-      }
+      if (gSystem)
+         ((TWinNTSystem*)gSystem)->DispatchSignals(sig);
    }
 
    //______________________________________________________________________________
@@ -457,8 +497,8 @@ namespace {
       // thread for processing windows messages (aka Main/Server thread).
       // We need to start the thread outside the TGWin32 / GUI related
       // dll, because starting threads at DLL init time does not work.
-      // Indead, we start an ideling thread at binary startup, and only
-      // call the "real" message provcessing function
+      // Instead, we start an ideling thread at binary startup, and only
+      // call the "real" message processing function
       // TGWin32::GUIThreadMessageFunc() once gVirtualX comes up.
 
       MSG msg;
@@ -987,7 +1027,7 @@ fGUIThreadHandle(0), fGUIThreadId(0)
       if (pLibName) {
          --pLibName; // skip trailing \\ or /
          while (--pLibName >= buf && *pLibName != '\\' && *pLibName != '/');
-         *pLibName = 0;
+         *pLibName = 0; // replace trailing \\ or / with 0
          if (buf[0])
             Setenv("ROOTSYS", buf);
       }
@@ -1327,14 +1367,26 @@ void TWinNTSystem::AddSignalHandler(TSignalHandler *h)
    // Add a signal handler to list of system signal handlers. Only adds
    // the handler if it is not already in the list of signal handlers.
 
-   TSystem::AddSignalHandler(h);
+   Bool_t set_console = kFALSE;
    ESignals  sig = h->GetSignal();
 
-   // Add a new handler to the list of the console handlers
    if (sig == kSigInterrupt) {
+      set_console = kTRUE;
+      TSignalHandler *hs;
+      TIter next(fSignalHandler);
+
+      while ((hs = (TSignalHandler*) next())) {
+         if (hs->GetSignal() == kSigInterrupt)
+            set_console = kFALSE;
+      }
+   }
+   TSystem::AddSignalHandler(h);
+
+   // Add our handler to the list of the console handlers
+   if (set_console)
       ::SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleSigHandler, TRUE);
-   } else
-   WinNTSignal(h->GetSignal(), SigHandler);
+   else
+      WinNTSignal(h->GetSignal(), SigHandler);
 }
 
 //______________________________________________________________________________
@@ -1348,8 +1400,17 @@ TSignalHandler *TWinNTSystem::RemoveSignalHandler(TSignalHandler *h)
    int sig = h->GetSignal();
 
    if (sig = kSigInterrupt) {
-      // Remove a  handler to the list of the console handlers
-      ::SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleSigHandler, FALSE);
+      Bool_t last = kTRUE;
+      TSignalHandler *hs;
+      TIter next(fSignalHandler);
+
+      while ((hs = (TSignalHandler*) next())) {
+         if (hs->GetSignal() == kSigInterrupt)
+            last = kFALSE;
+      }
+      // Remove our handler from the list of the console handlers
+      if (last)
+         ::SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleSigHandler, FALSE);
    }
    return TSystem::RemoveSignalHandler(h);
 }
@@ -1617,7 +1678,7 @@ void TWinNTSystem::DispatchOneEvent(Bool_t pendingOnly)
          if (DispatchTimers(kTRUE)) {
             // prevent timers from blocking the rest types of events
             nextto = NextTimeOut(kTRUE);
-            if (nextto > kItimerResolution || nextto == -1) {
+            if (nextto > (kItimerResolution>>1) || nextto == -1) {
                return;
             }
          }
@@ -1692,6 +1753,28 @@ void TWinNTSystem::ExitLoop()
 }
 
 //---- handling of system events -----------------------------------------------
+//______________________________________________________________________________
+void TWinNTSystem::DispatchSignals(ESignals sig)
+{
+   // Handle and dispatch signals.
+
+   if (sig == kSigInterrupt) {
+      fSignals->Set(sig);
+      fSigcnt++;
+   }
+   else {
+      StackTrace();
+      if (TROOT::Initialized()) {
+         ::Throw(sig);
+      }
+      Abort(-1);
+   }
+
+   // check a-synchronous signals
+   if (fSigcnt > 0 && fSignalHandler->GetSize() > 0)
+      CheckSignals(kFALSE);
+}
+
 //______________________________________________________________________________
 Bool_t TWinNTSystem::CheckSignals(Bool_t sync)
 {
@@ -2142,6 +2225,8 @@ TList *TWinNTSystem::GetVolumes(Option_t *opt) const
       return 0;
    }
 
+   // prevent the system dialog box to pop-up if a drive is empty
+   UINT nOldErrorMode = ::SetErrorMode(SEM_FAILCRITICALERRORS);
    TList *drives = new TList();
    drives->SetOwner();
    // Save current drive
@@ -2176,7 +2261,6 @@ TList *TWinNTSystem::GetVolumes(Option_t *opt) const
       drives->Add(new TNamed(sDrive.Data(), sType.Data()));
    }
    else if (strstr(opt, "all")) {
-      UINT nOldErrorMode = ::SetErrorMode(SEM_FAILCRITICALERRORS);
       TCHAR szTemp[512];
       szTemp[0] = '\0';
       if (::GetLogicalDriveStrings(511, szTemp)) {
@@ -2221,8 +2305,9 @@ TList *TWinNTSystem::GetVolumes(Option_t *opt) const
             while (*p++);
          } while (*p); // end of string
       }
-      ::SetErrorMode(nOldErrorMode);
    }
+   // restore previous error mode
+   ::SetErrorMode(nOldErrorMode);
    return drives;
 }
 
@@ -2369,13 +2454,20 @@ Bool_t TWinNTSystem::AccessPathName(const char *path, EAccessMode mode)
    if (helper)
       return helper->AccessPathName(path, mode);
 
+   // prevent the system dialog box to pop-up if a drive is empty
+   UINT nOldErrorMode = ::SetErrorMode(SEM_FAILCRITICALERRORS);
    if (mode==kExecutePermission)
       // cannot test on exe - use read instead
       mode=kReadPermission;
    const char *proto = (strstr(path, "file:///")) ? "file://" : "file:";
-   if (::_access(StripOffProto(path, proto), mode) == 0)
+   if (::_access(StripOffProto(path, proto), mode) == 0) {
+      // restore previous error mode
+      ::SetErrorMode(nOldErrorMode);
       return kFALSE;
+   }
    fLastErrorString = GetError();
+   // restore previous error mode
+   ::SetErrorMode(nOldErrorMode);
    return kTRUE;
 }
 
@@ -2471,7 +2563,7 @@ int TWinNTSystem::GetPathInfo(const char *path, FileStat_t &buf)
       buf.fSize   = sbuf.st_size;
       buf.fMtime  = sbuf.st_mtime;
       buf.fIsLink = IsShortcut(newpath); // kFALSE;
-/*
+
       char *lpath = new char[MAX_PATH];
       if (IsShortcut(newpath)) {
          struct _stati64 sbuf2;
@@ -2481,7 +2573,8 @@ int TWinNTSystem::GetPathInfo(const char *path, FileStat_t &buf)
             }
          }
       }
-*/
+      delete [] lpath;
+
       delete [] newpath;
       return 0;
    }
@@ -2518,12 +2611,16 @@ int TWinNTSystem::GetFsInfo(const char *path, Long_t *id, Long_t *bsize,
    char  fileSystemNameBuffer[512];
    DWORD nFileSystemNameSize = sizeof(fileSystemNameBuffer);
 
+   // prevent the system dialog box to pop-up if the drive is empty
+   UINT nOldErrorMode = ::SetErrorMode(SEM_FAILCRITICALERRORS);
    if (!::GetVolumeInformation(lpRootPathName,
                                lpVolumeNameBuffer, nVolumeNameSize,
                                &volumeSerialNumber,
                                &maximumComponentLength,
                                &fileSystemFlags,
                                fileSystemNameBuffer, nFileSystemNameSize)) {
+      // restore previous error mode
+      ::SetErrorMode(nOldErrorMode);
       return 1;
    }
 
@@ -2545,8 +2642,12 @@ int TWinNTSystem::GetFsInfo(const char *path, Long_t *id, Long_t *bsize,
                            &bytesPerSector,
                            &numberOfFreeClusters,
                            &totalNumberOfClusters)) {
+      // restore previous error mode
+      ::SetErrorMode(nOldErrorMode);
       return 1;
    }
+   // restore previous error mode
+   ::SetErrorMode(nOldErrorMode);
 
    *bsize  = sectorsPerCluster * bytesPerSector;
    *blocks = totalNumberOfClusters;
@@ -2734,6 +2835,14 @@ Bool_t TWinNTSystem::ExpandPathName(TString &patbuf0)
    char   *cmd = 0;
    char  *q;
 
+   Int_t old_level = gErrorIgnoreLevel;
+   gErrorIgnoreLevel = kFatal; // Explicitly remove all messages
+   TUrl urlpath(patbuf0, kTRUE);
+   TString proto = urlpath.GetProtocol();
+   gErrorIgnoreLevel = old_level;
+   if (!proto.EqualTo("file")) // don't expand urls!!!
+      return kFALSE;
+
    // skip leading blanks
    while (*patbuf == ' ') {
       patbuf++;
@@ -2824,10 +2933,10 @@ char *TWinNTSystem::ExpandPathName(const char *path)
    char newpath[MAX_PATH];
    if (IsShortcut(path)) {
       if (!ResolveShortCut(path, newpath, MAX_PATH))
-         strlcpy(newpath, path,MAX_PATH);
+         strlcpy(newpath, path, MAX_PATH);
    }
    else
-      strlcpy(newpath, path,MAX_PATH);
+      strlcpy(newpath, path, MAX_PATH);
    TString patbuf = newpath;
    if (ExpandPathName(patbuf)) return 0;
 
@@ -3676,12 +3785,23 @@ void TWinNTSystem::Exit(int code, Bool_t mode)
 {
    // Exit the application.
 
-   // Insures that the files and sockets are closed before any library is unloaded!
+   // Insures that the files and sockets are closed before any library is unloaded
+   // and before emptying CINT.
    if (gROOT) {
-      if (gROOT->GetListOfFiles()) gROOT->GetListOfFiles()->Delete("slow");
-      if (gROOT->GetListOfSockets()) gROOT->GetListOfSockets()->Delete();
-      if (gROOT->GetListOfMappedFiles()) gROOT->GetListOfMappedFiles()->Delete("slow");
-      if (gROOT->GetListOfBrowsers()) gROOT->GetListOfBrowsers()->Delete();
+      gROOT->CloseFiles();
+      if (gROOT->GetListOfBrowsers()) {
+         // GetListOfBrowsers()->Delete() creates problems when a browser is 
+         // created on the stack, calling CloseWindow() solves the problem
+         //gROOT->GetListOfBrowsers()->Delete();
+         TBrowser *b;
+         TIter next(gROOT->GetListOfBrowsers());
+         while ((b = (TBrowser*) next()))
+            gROOT->ProcessLine(Form("((TBrowser*)0x%lx)->GetBrowserImp()->GetMainFrame()->CloseWindow();",
+                                    (ULong_t)b));
+      }
+   }
+   if (gInterpreter) {
+      gInterpreter->ResetGlobals();
    }
    gVirtualX->CloseDisplay();
 
@@ -3717,6 +3837,9 @@ Int_t TWinNTSystem::RedirectOutput(const char *file, const char *mode,
    // included ShowOutput, to display the redirected output.
    // Returns 0 on success, -1 in case of error.
 
+   FILE *fout, *ferr;
+   static int fd1=0, fd2=0;
+   static fpos_t pos1=0, pos2=0;
    // Instance to be used if the caller does not passes 'h'
    static RedirectHandle_t loch;
    Int_t rc = 0;
@@ -3738,28 +3861,75 @@ Int_t TWinNTSystem::RedirectOutput(const char *file, const char *mode,
       }
       xh->fFile = file;
 
+      fflush(stdout);
+      fgetpos(stdout, &pos1);
+      fd1 = _dup(fileno(stdout));
       // redirect stdout & stderr
-      if (freopen(file, m, stdout) == 0) {
+      if ((fout = freopen(file, m, stdout)) == 0) {
          SysError("RedirectOutput", "could not freopen stdout");
+         if (fd1 > 0) {
+            _dup2(fd1, fileno(stdout));
+            close(fd1);
+         }
+         clearerr(stdout);
+         fsetpos(stdout, &pos1);
+         fd1 = fd2 = 0;
          return -1;
       }
-      if (freopen(file, m, stderr) == 0) {
+      fflush(stderr);
+      fgetpos(stderr, &pos2);
+      fd2 = _dup(fileno(stderr));
+      if ((ferr = freopen(file, m, stderr)) == 0) {
          SysError("RedirectOutput", "could not freopen stderr");
-         freopen("CONOUT$", "a", stdout);
+         if (fd1 > 0) {
+            _dup2(fd1, fileno(stdout));
+            close(fd1);
+         }
+         clearerr(stdout);
+         fsetpos(stdout, &pos1);
+         if (fd2 > 0) {
+            _dup2(fd2, fileno(stderr));
+            close(fd2);
+         }
+         clearerr(stderr);
+         fsetpos(stderr, &pos2);
+         fd1 = fd2 = 0;
          return -1;
+      }
+      if (m[0] == 'a') {
+         fseek(fout, 0, SEEK_END);
+         fseek(ferr, 0, SEEK_END);
       }
    } else {
       // Restore stdout & stderr
       fflush(stdout);
-      if (freopen("CONOUT$", "a", stdout) == 0) {
-         SysError("RedirectOutput", "could not restore stdout");
-         rc = -1;
+      if (fd1) {
+         if (fd1 > 0) {
+            if (_dup2(fd1, fileno(stdout))) {
+               SysError("RedirectOutput", "could not restore stdout");
+               rc = -1;
+            }
+            close(fd1);
+         }
+         clearerr(stdout);
+         fsetpos(stdout, &pos1);
+         fd1 = 0;
       }
+
       fflush(stderr);
-      if (freopen("CONOUT$", "a", stderr) == 0) {
-         SysError("RedirectOutput", "could not restore stderr");
-         rc = -1;
+      if (fd2) {
+         if (fd2 > 0) {
+            if (_dup2(fd2, fileno(stderr))) {
+               SysError("RedirectOutput", "could not restore stderr");
+               rc = -1;
+            }
+            close(fd2);
+         }
+         clearerr(stderr);
+         fsetpos(stderr, &pos2);
+         fd2 = 0;
       }
+
       // Reset the static instance, if using that
       if (xh == &loch)
          xh->Reset();
@@ -3768,6 +3938,19 @@ Int_t TWinNTSystem::RedirectOutput(const char *file, const char *mode,
 }
 
 //---- dynamic loading and linking ---------------------------------------------
+
+//______________________________________________________________________________
+void TWinNTSystem::AddDynamicPath(const char *dir)
+{
+   // Add a new directory to the dynamic path.
+   
+   if (dir) {
+      TString oldpath = DynamicPath(0, kFALSE);
+      oldpath.Append(";");
+      oldpath.Append(dir);
+      DynamicPath(oldpath);
+   }
+}
 
 //______________________________________________________________________________
 const char* TWinNTSystem::GetDynamicPath()
@@ -5099,7 +5282,7 @@ static DWORD GetCPUSpeed()
    // Calculate the CPU clock speed using the 'rdtsc' instruction.
    // RDTSC: Read Time Stamp Counter.
 
-   LARGE_INTEGER ulFreq, ulTicks, ulValue, ulStartCounter, ulEAX_EDX;
+   LARGE_INTEGER ulFreq, ulTicks, ulValue, ulStartCounter;
 
    // Query for high-resolution counter frequency
    // (this is not the CPU frequency):
@@ -5109,28 +5292,18 @@ static DWORD GetCPUSpeed()
       // Calculate end value (one second interval);
       // this is (current + frequency)
       ulValue.QuadPart = ulTicks.QuadPart + ulFreq.QuadPart/10;
-      // Read CPU time-stamp counter:
-      __asm RDTSC
-      // And save in ulEAX_EDX:
-      __asm mov ulEAX_EDX.LowPart, EAX
-      __asm mov ulEAX_EDX.HighPart, EDX
-      // Store starting counter value:
-      ulStartCounter.QuadPart = ulEAX_EDX.QuadPart;
+      ulStartCounter.QuadPart = __rdtsc();
+
       // Loop for one second (measured with the high-resolution counter):
       do {
- 	      QueryPerformanceCounter(&ulTicks);
+         QueryPerformanceCounter(&ulTicks);
       } while (ulTicks.QuadPart <= ulValue.QuadPart);
       // Now again read CPU time-stamp counter:
-      __asm RDTSC
-      // And save:
-      __asm mov ulEAX_EDX.LowPart, EAX
-      __asm mov ulEAX_EDX.HighPart, EDX
-      // Calculate number of cycles done in interval; 1000000 Hz = 1 MHz
-      return (DWORD)((ulEAX_EDX.QuadPart - ulStartCounter.QuadPart)/100000);
-	} else {
+      return (DWORD)((__rdtsc() - ulStartCounter.QuadPart)/100000);
+   } else {
       // No high-resolution counter present:
       return 0;
-	}
+   }
 }
 
 #define BUFSIZE 80
@@ -5365,32 +5538,17 @@ static int GetL2CacheSize()
 {
    // Use assembly to retrieve the L2 cache information ...
 
-   unsigned long eaxreg, ebxreg, ecxreg, edxreg;;
+   unsigned nHighestFeatureEx;
+   int nBuff[4];
 
-   __try {
-      _asm {
-         push eax
-         push ebx
-         push ecx
-         push edx
-         ; eax = 0x80000006 --> eax: L2 cache information.
-         mov eax, 0x80000006
-         cpuid
-         mov eaxreg, eax
-         mov ebxreg, ebx
-         mov ecxreg, ecx
-         mov edxreg, edx
-         pop edx
-         pop ecx
-         pop ebx
-         pop eax
-      }
+   __cpuid(nBuff, 0x80000000);
+   nHighestFeatureEx = (unsigned)nBuff[0];
+   // Get cache size
+   if (nHighestFeatureEx >= 0x80000006) {
+      __cpuid(nBuff, 0x80000006);
+      return (((unsigned)nBuff[2])>>16);
    }
-   __except (1) {
-      return 0;
-   }
-   // Return the L2 cache size (in KB) from ecxreg
-   return ((ecxreg & 0xFFFF0000) >> 16);
+   else return 0;
 }
 
 //______________________________________________________________________________

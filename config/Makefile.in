@@ -73,6 +73,11 @@ ZLIBLIBDIR     := @zliblibdir@
 ZLIBCLILIB     := @zliblib@
 ZLIBINCDIR     := $(filter-out /usr/include, @zlibincdir@)
 
+BUILTINLZMA    := @builtinlzma@
+LZMALIBDIR     := @lzmalibdir@
+LZMACLILIB     := @lzmalib@
+LZMAINCDIR     := $(filter-out /usr/include, @lzmaincdir@)
+
 BUILDGL        := @buildgl@
 OPENGLLIBDIR   := @opengllibdir@
 OPENGLULIB     := @openglulib@
@@ -166,6 +171,7 @@ BUILDBONJOUR   := @buildbonjour@
 DNSSDLIBDIR    := @dnssdlibdir@
 DNSSDLIB       := @dnssdlib@
 DNSSDINCDIR    := $(filter-out /usr/include, @dnssdincdir@)
+BONJOURCPPFLAGS := @bonjourcppflags@
 
 BUILDCHIRP     := @buildchirp@
 CHIRPLIBDIR    := @chirplibdir@
@@ -239,6 +245,7 @@ XMLLIBDIR      := @xmllibdir@
 XMLCLILIB      := @xmllib@
 XMLINCDIR      := $(filter-out /usr/include, @xmlincdir@)
 
+HASXRD         := @hasxrd@
 BUILDXRD       := @buildxrd@
 XRDINCDIR      := @xrdincdir@
 XRDLIBDIR      := @xrdlibdir@
@@ -294,6 +301,11 @@ SSLLIBDIR      := @ssllibdir@
 SSLINCDIR      := $(filter-out /usr/include, @sslincdir@)
 SSLSHARED      := @sslshared@
 
+BUILTINLZMA    := @builtinlzma@
+LZMALIBDIR     := @lzmalibdir@
+LZMACLILIB     := @lzmalib@
+LZMAINCDIR     := $(filter-out /usr/include, @lzmaincdir@)
+
 SHADOWFLAGS    := @shadowpw@
 SHADOWLIB      :=
 SHADOWLIBDIR   :=
@@ -330,11 +342,8 @@ CLARENSLIBS    := @clarenslibs@
 
 BUILDPEAC      := @buildpeac@
 
-CURSESINCDIR   := $(filter-out -I/usr/include, -I@cursesincdir@)
-CURSESLIBDIR   := @curseslibdir@
-CURSESHDR      := @curseshdr@
-CURSESLIB      := @curseslib@
-BUILDEDITLINE  := @buildeditline@
+BUILDAFDSMGRD  := @buildafdsmgrd@
+AFDSMGRDAPMON  := @afdsmgrdapmon@
 
 CPPUNIT        := @cppunit@
 GCCXML         := @gccxml@

@@ -117,7 +117,7 @@ TXNetFile::TXNetFile(const char *url, Option_t *option, const char* ftitle,
    // (multiple options can be set concurrently)
    TUrl urlnoanchor(url);
    // Set debug level
-   EnvPutInt(NAME_DEBUG, gEnv->GetValue("XNet.Debug", -1));
+   EnvPutInt(NAME_DEBUG, gEnv->GetValue("XNet.Debug", 0));
 
    // Set environment, if needed
    if (!fgInitDone || strstr(urlnoanchor.GetOptions(),"checkenv")) {
@@ -615,6 +615,16 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
    //  0 it looks like the block has not been prefetched
    // But we don't want it to return the buffer, to avoid recursion
    Int_t st = 0;
+
+   //using the new method to read
+   if (GetCacheRead() && GetCacheRead()->IsEnablePrefetching()) {
+      st = ReadBufferViaCache(buffer, bufferLength);   //modify to "buffer" so that it work with the ne version!!!
+      if (st == 1){
+         fOffset -= bufferLength;
+         return kFALSE;
+      }
+   }
+   else{ //using the old method to read
    if (GetCacheRead() && GetCacheRead()->IsAsyncReading()) {
       st = ReadBufferViaCache(0, bufferLength);
       if (st == 1)
@@ -625,6 +635,7 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
          if (st == 1)
             return kFALSE;
       }
+   }
    }
 
    Double_t start = 0;
@@ -642,8 +653,6 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
 
    fOffset += bufferLength;
 
-   if (!st) {
-     // Update the counters only if the block has not been prefetched
      fBytesRead += nr;
      fReadCalls++;
 #ifdef WIN32
@@ -656,8 +665,6 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
 
      if (gPerfStats)
         gPerfStats->FileReadEvent(this, bufferLength, start);
-
-   }
 
    if (gMonitoringWriter)
       gMonitoringWriter->SendFileReadProgress(this);
@@ -794,7 +801,7 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
          Info("ReadBuffers", "%lld bytes of data read from a list of %d buffers",
               nr, nbuf);
 
-      if (GetCacheRead()->GetBufferSize() < nr)
+      if (GetCacheRead() && GetCacheRead()->GetBufferSize() < nr)
          Info("ReadBuffers", "%lld bytes of data read with a smaller (%d) TFileCacheRead buffer size?",
               nr, GetCacheRead()->GetBufferSize());
 

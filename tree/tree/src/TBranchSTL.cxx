@@ -41,6 +41,7 @@ TBranchSTL::TBranchSTL():
    fBranchVector.reserve( 25 );
    fNleaves = 0;
    fReadLeaves = (ReadLeaves_t)&TBranchSTL::ReadLeavesImpl;
+   fFillLeaves = (FillLeaves_t)&TBranchSTL::FillLeavesImpl;
 }
 
 //------------------------------------------------------------------------------
@@ -68,6 +69,7 @@ TBranchSTL::TBranchSTL( TTree *tree, const char *name,
    fBranchVector.reserve( 25 );
    fNleaves = 0;
    fReadLeaves = (ReadLeaves_t)&TBranchSTL::ReadLeavesImpl;
+   fFillLeaves = (FillLeaves_t)&TBranchSTL::FillLeavesImpl;
 
    //---------------------------------------------------------------------------
    // Allocate and initialize the basket control arrays
@@ -108,6 +110,7 @@ TBranchSTL::TBranchSTL( TBranch* parent, const char* name,
    fFileName = "";
    fNleaves = 0;
    fReadLeaves = (ReadLeaves_t)&TBranchSTL::ReadLeavesImpl;
+   fFillLeaves = (ReadLeaves_t)&TBranchSTL::FillLeavesImpl;
 
    SetName( name );
    fIndArrayCl = TClass::GetClass( "TIndArray" );
@@ -268,7 +271,12 @@ Int_t TBranchSTL::Fill()
          // for it
          //---------------------------------------------------------------------
          elPointers = new std::vector<void*>();//vectClass->GetCollectionProxy()->New();
-         brName.Form( "%s.%s", GetName(), actClass->GetName() );
+         if (fName.Length() && fName[fName.Length()-1]=='.') {
+            // The top level branch already has a trailing dot.
+            brName.Form( "%s%s", GetName(), actClass->GetName() );
+         } else {
+            brName.Form( "%s.%s", GetName(), actClass->GetName() );
+         }
          elBranch   = new TBranchElement( this, brName,
                                           vectClass->GetCollectionProxy(),
                                           fBasketSize, fSplitLevel-1  );
@@ -497,6 +505,39 @@ Int_t TBranchSTL::GetEntry( Long64_t entry, Int_t getall )
    return totalBytes;
 }
 
+
+//______________________________________________________________________________
+Int_t TBranchSTL::GetExpectedType(TClass *&expectedClass,EDataType &expectedType)
+{
+   // Fill expectedClass and expectedType with information on the data type of the
+   // object/values contained in this branch (and thus the type of pointers
+   // expected to be passed to Set[Branch]Address
+   // return 0 in case of success and > 0 in case of failure.
+   
+   expectedClass = 0;
+   expectedType = kOther_t;
+   
+   if (fID < 0) {
+      expectedClass = TClass::GetClass( fContName );
+   } else {
+      // Case of an object data member.  Here we allow for the
+      // variable name to be ommitted.  Eg, for Event.root with split
+      // level 1 or above  Draw("GetXaxis") is the same as Draw("fH.GetXaxis()")
+      TStreamerElement* element = (TStreamerElement*) GetInfo()->GetElems()[fID];
+      if (element) {
+         expectedClass = element->GetClassPointer();
+         if (!expectedClass) {
+            Error("GetExpectedType", "TBranchSTL did not find the TClass for %s", element->GetTypeNameBasic());
+            return 1;
+         }
+      } else {
+         Error("GetExpectedType", "Did not find the type for %s",GetName());
+         return 2;
+      }
+   }
+   return 0;
+}
+
 //------------------------------------------------------------------------------
 TStreamerInfo* TBranchSTL::GetInfo() const
 {
@@ -553,14 +594,6 @@ Bool_t TBranchSTL::IsFolder() const
 }
 
 //------------------------------------------------------------------------------
-void TBranchSTL::FillLeaves( TBuffer& b )
-{
-   //TO BE DOCUMENTED
-
-   b.WriteClassBuffer( fIndArrayCl, &fInd );
-}
-
-//------------------------------------------------------------------------------
 void TBranchSTL::Print(const char *option) const
 {
    // Print the branch parameters.
@@ -609,6 +642,14 @@ void TBranchSTL::ReadLeavesImpl( TBuffer& b )
    //TO BE DOCUMENTED
 
    b.ReadClassBuffer( fIndArrayCl, &fInd );
+}
+
+//------------------------------------------------------------------------------
+void TBranchSTL::FillLeavesImpl( TBuffer& b )
+{
+   //TO BE DOCUMENTED
+
+   b.WriteClassBuffer( fIndArrayCl, &fInd );
 }
 
 //------------------------------------------------------------------------------

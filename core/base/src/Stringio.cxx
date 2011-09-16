@@ -27,11 +27,22 @@ istream& TString::ReadFile(istream& strm)
 {
    // Replace string with the contents of strm, stopping at an EOF.
 
-   Clobber(GetInitialCapacity());
+   // get file size
+   Ssiz_t end, cur = strm.tellg();
+   strm.seekg(0, ios::end);
+   end = strm.tellg();
+   strm.seekg(cur);
+
+   // any positive number of reasonable size for a file
+   const Ssiz_t incr = 256;
+   
+   Clobber(end-cur);
 
    while(1) {
-      strm.read(fData+Length(), Capacity()-Length());
-      Pref()->fNchars += strm.gcount();
+      Ssiz_t len = Length();
+      Ssiz_t cap = Capacity();
+      strm.read(GetPointer()+len, cap-len);
+      SetSize(len + strm.gcount());
 
       if (!strm.good())
          break;                    // EOF encountered
@@ -39,13 +50,11 @@ istream& TString::ReadFile(istream& strm)
       // If we got here, the read must have stopped because
       // the buffer was going to overflow. Resize and keep
       // going.
-      Capacity(Length() + GetResizeIncrement());
+      cap = AdjustCapacity(cap, cap+incr);
+      Capacity(cap);
    }
 
-   fData[Length()] = '\0';         // Add null terminator
-
-   if (Capacity()-Length() > GetMaxWaste())
-      Capacity(AdjustCapacity(Capacity()));
+   GetPointer()[Length()] = '\0';         // Add null terminator
 
    return strm;
 }
@@ -79,16 +88,22 @@ istream& TString::ReadToDelim(istream& strm, char delim)
    // as much as we can and then, if the EOF or null hasn't been
    // encountered, do a resize and keep reading.
 
-   Clobber(GetInitialCapacity());
+   // any positive number of reasonable size for a string
+   const Ssiz_t incr = 32;
+   
+   Clobber(incr);
+
    int p = strm.peek();             // Check if we are already at delim
    if (p == delim) {
       strm.get();                    // eat the delimiter, and return \0.
    } else {
       while (1) {
-         strm.get(fData+Length(),            // Address of next byte
-                  Capacity()-Length()+1,     // Space available (+1 for terminator)
+         Ssiz_t len = Length();
+         Ssiz_t cap = Capacity();
+         strm.get(GetPointer()+len,          // Address of next byte
+                  cap-len+1,                 // Space available (+1 for terminator)
                   delim);                    // Delimiter
-         Pref()->fNchars += strm.gcount();
+         SetSize(len + strm.gcount());
          if (!strm.good()) break;            // Check for EOF or stream failure
          p = strm.peek();
          if (p == delim) {                   // Check for delimiter
@@ -96,14 +111,12 @@ istream& TString::ReadToDelim(istream& strm, char delim)
             break;
          }
          // Delimiter not seen.  Resize and keep going:
-         Capacity(Length() + GetResizeIncrement());
+         cap = AdjustCapacity(cap, cap+incr);
+         Capacity(cap);
       }
    }
 
-   fData[Length()] = '\0';                // Add null terminator
-
-   if (Capacity()-Length() > GetMaxWaste())
-      Capacity(AdjustCapacity(Capacity()));
+   GetPointer()[Length()] = '\0';                // Add null terminator
 
    return strm;
 }
@@ -113,28 +126,33 @@ istream& TString::ReadToken(istream& strm)
 {
    // Read a token, delimited by whitespace, from the input stream.
 
-   Clobber(GetInitialCapacity());
+   // any positive number of reasonable size for a token
+   const Ssiz_t incr = 16;
+
+   Clobber(incr);
 
    strm >> ws;                                   // Eat whitespace
 
    UInt_t wid = strm.width(0);
    char c;
    Int_t hitSpace = 0;
-   while ((wid == 0 || Pref()->fNchars < (Int_t)wid) &&
+   while ((wid == 0 || Length() < (Int_t)wid) &&
           strm.get(c).good() && (hitSpace = isspace((Int_t)c)) == 0) {
       // Check for overflow:
-      if (Length() == Capacity())
-         Capacity(Length() + GetResizeIncrement());
-
-      fData[Pref()->fNchars++] = c;
+      Ssiz_t len = Length();
+      Ssiz_t cap = Capacity();
+      if (len == cap) {
+         cap = AdjustCapacity(cap, cap+incr);
+         Capacity(cap);
+      }
+      GetPointer()[len] = c;
+      len++;
+      SetSize(len);
    }
    if (hitSpace)
       strm.putback(c);
 
-   fData[Length()] = '\0';                       // Add null terminator
-
-   if (Capacity()-Length() > GetMaxWaste())
-      Capacity(AdjustCapacity(Capacity()));
+   GetPointer()[Length()] = '\0';                       // Add null terminator
 
    return strm;
 }
@@ -182,7 +200,7 @@ Bool_t TString::Gets(FILE *fp, Bool_t chop)
    char buf[256];
    Bool_t r = kFALSE;
 
-   Clobber(GetInitialCapacity());
+   Clobber(256);
 
    do {
       if (fgets(buf, sizeof(buf), fp) == 0) break;
@@ -200,5 +218,5 @@ void TString::Puts(FILE *fp)
 {
    // Write string to the stream.
 
-   fputs(Data(), fp);
+   fputs(GetPointer(), fp);
 }
