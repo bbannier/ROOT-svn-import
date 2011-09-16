@@ -36,8 +36,11 @@ else
 ASTEPLIBA    := $(ASTEPDIRS)/libAfterImage.a
 ASTEPLIB     := $(LPATH)/libAfterImage.a
 endif
-ifeq ($(MACOSX_MINOR),3)
+ifeq ($(ASPNGINCDIR),)
+ifneq ($(PLATFORM),win32)
+# needed for the afterimage built-in libpng
 ASEXTRALIB   += -lz
+endif
 endif
 ASTEPDEP     := $(ASTEPLIB)
 ##### To trigger the debug printouts for libafterimage when ROOTBUILD=debug
@@ -114,7 +117,7 @@ ifeq ($(PLATFORM),win32)
 		@touch $(ASTEPMAKE)
 else
 		@(cd $(ASTEPDIRS); \
-		ACC=$(CC); \
+		ACC="$(CC)"; \
 		ACFLAGS="-O"; \
 		if [ "$(CC)" = "icc" ]; then \
 			ACC="icc"; \
@@ -124,37 +127,36 @@ else
 			ACFLAGS="$$ACFLAGS -erroff=E_WHITE_SPACE_IN_DIRECTIVE"; \
 		fi; \
 		if [ "$(ARCH)" = "solaris64CC5" ]; then \
-			ACC="cc -m64"; \
+			ACC="$$ACC -m64"; \
 			ACFLAGS="$$ACFLAGS -KPIC -erroff=E_WHITE_SPACE_IN_DIRECTIVE"; \
 		fi; \
 		if [ "$(ARCH)" = "sgicc64" ]; then \
-			ACC="gcc -mabi=64"; \
+			ACC="$$ACC -mabi=64"; \
 		fi; \
 		if [ "$(ARCH)" = "hpuxia64acc" ]; then \
-			ACC="cc +DD64 -Ae +W863"; \
-			ACCALT="gcc -mlp64"; \
+			ACC="$$ACC +DD64 -Ae +W863"; \
 		fi; \
 		if [ "$(ARCH)" = "macosx" ]; then \
-			ACC="gcc -m32"; \
+			ACC="$$ACC -m32"; \
 		fi; \
 		if [ "$(ARCH)" = "macosx64" ]; then \
-			ACC="gcc -m64"; \
+			ACC="$$ACC -m64"; \
 		fi; \
 		if [ "$(ARCH)" = "linuxppc64gcc" ]; then \
-			ACC="gcc -m64"; \
+			ACC="$$ACC -m64"; \
 		fi; \
 		if [ "$(ARCH)" = "linux" ]; then \
-			ACC="gcc -m32"; \
+			ACC="$$ACC -m32"; \
 		fi; \
 		if [ "$(ARCH)" = "linuxx8664gcc" ]; then \
-			ACC="gcc -m64"; \
+			ACC="$$ACC -m64"; \
 			MMX="--enable-mmx-optimization=no"; \
 		fi; \
 		if [ "$(ARCH)" = "linuxicc" ]; then \
-			ACC="icc -m32"; \
+			ACC="$$ACC -m32"; \
 		fi; \
 		if [ "$(ARCH)" = "linuxx8664icc" ]; then \
-			ACC="icc -m64"; \
+			ACC="$$ACC -m64"; \
 		fi; \
 		if [ "$(ASJPEGINCDIR)" != "" ]; then \
 			JPEGINCDIR="--with-jpeg-includes=$(ASJPEGINCDIR)"; \
@@ -197,7 +199,7 @@ ifeq ($(PLATFORM),win32)
 		unset MAKEFLAGS; \
 		nmake FREETYPEDIRI=-I../../../../$(FREETYPEDIRI) \
                 -nologo -f libAfterImage.mak \
-		CFG=$(ASTEPBLD) NMAKECXXFLAGS="$(BLDCXXFLAGS) -I../../../../build/win -FIw32pragma.h /wd4244")
+		CFG=$(ASTEPBLD) NMAKECXXFLAGS="$(BLDCXXFLAGS) -I$(shell cygpath -w $(ROOT_SRCDIR))/build/win -FIw32pragma.h /wd4244")
 else
 		@(cd $(ASTEPDIRS); \
 		echo "*** Building libAfterImage ..." ; \
@@ -294,8 +296,8 @@ endif
 distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
-$(ASIMAGEO): $(ASTEPLIB) $(FREETYPEDEP)
+$(ASIMAGEO): $(ASTEPDEP) $(FREETYPEDEP)
 $(ASIMAGEO): CXXFLAGS += $(FREETYPEINC) $(ASTEPDIRI)
 
-$(ASIMAGEGUIO) $(ASIMAGEGUIDO) $(ASIMAGEDO): $(ASTEPLIB)
+$(ASIMAGEGUIO) $(ASIMAGEGUIDO) $(ASIMAGEDO): $(ASTEPDEP)
 $(ASIMAGEGUIO) $(ASIMAGEGUIDO) $(ASIMAGEDO): CXXFLAGS += $(ASTEPDIRI)

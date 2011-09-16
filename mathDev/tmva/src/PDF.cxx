@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Asen Christov, Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
+// Author: Asen Christov, Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Jan Therhaag, Eckhard von Toerne
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -13,14 +13,17 @@
  * Authors (alphabetical):                                                        *
  *      Asen Christov   <christov@physik.uni-freiburg.de> - Freiburg U., Germany  *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Jan Therhaag       <Jan.Therhaag@cern.ch>     - U of Bonn, Germany        *
+ *      Eckhard von Toerne <evt@physik.uni-bonn.de>   - U of Bonn, Germany        *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
  *      U. of Victoria, Canada                                                    *
  *      MPI-K Heidelberg, Germany                                                 *
  *      Freiburg U., Germany                                                      *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -34,6 +37,7 @@
 #include "TF1.h"
 #include "TH1F.h"
 #include "TVectorD.h"
+#include "Riostream.h"
 
 #include "TMVA/Tools.h"
 #include "TMVA/PDF.h"
@@ -143,7 +147,7 @@ TMVA::PDF::PDF( const TString& name,
    fMinNsmooth    (-1 ),
    fMaxNsmooth    (-1 ),
    fNSmoothHist   ( 0 ),
-   fInterpolMethod( PDF::kSpline0 ),
+   fInterpolMethod( PDF::kKDE ),
    fSpline        ( 0 ),
    fPDFHist       ( 0 ),
    fHist          ( 0 ),
@@ -247,7 +251,7 @@ void TMVA::PDF::BuildPDF( const TH1* hist )
 
    // histogram should be non empty
    if (hist->GetEntries() <= 0)
-      Log() << kFATAL << "Number of entries <= 0 in histogram: " << hist->GetTitle() << Endl;
+      Log() << kFATAL << "Number of entries <= 0 (" << hist->GetEntries() << " in histogram: " << hist->GetTitle() << Endl;
 
    if (fInterpolMethod == PDF::kKDE) {
       Log() << "Create "
@@ -580,7 +584,7 @@ void TMVA::PDF::ValidatePDF( TH1* originalHist ) const
       Double_t ey = originalHist->GetBinError( bin );
 
       Int_t binPdfHist = fPDFHist->FindBin( x );
-      if(binPdfHist<0) continue; // happens only if hist-dim>3
+      if (binPdfHist<0) continue; // happens only if hist-dim>3
 
       Double_t yref = GetVal( x );
       Double_t rref = ( originalHist->GetSumOfWeights()/fPDFHist->GetSumOfWeights() *
@@ -589,6 +593,8 @@ void TMVA::PDF::ValidatePDF( TH1* originalHist ) const
       if (y > 0) {
          ndof++;
          Double_t d = TMath::Abs( (y - yref*rref)/ey );
+         //         cout << "bin: " << bin << "  val: " << x << "  data(err): " << y << "(" << ey << ")   pdf: " 
+         //              << yref << "  dev(chi2): " << d << "(" << chi2 << ")  rref: " << rref << endl;
          chi2 += d*d;
          if (d > 1) { nc1++; if (d > 2) { nc2++; if (d > 3) { nc3++; if (d > 6) nc6++; } } }
       }
@@ -704,6 +710,77 @@ Double_t TMVA::PDF::GetVal( Double_t x ) const
 
    return TMath::Max( retval, fgEpsilon );
 }
+
+//_____________________________________________________________________
+Double_t TMVA::PDF::GetValInverse( Double_t y, Bool_t isMonotonouslyIncreasingFunction ) const
+{
+   // returns value PDF^{-1}(y)
+
+   Int_t    lowerBin=0,      higherBin=0;
+   Double_t lowerBinValue=0, higherBinValue=0;
+   FindBinInverse(fPDFHist,lowerBin,higherBin,lowerBinValue,higherBinValue,y,isMonotonouslyIncreasingFunction);
+   
+   Double_t xValueLowerBin =fPDFHist->GetBinCenter (lowerBin);
+   Double_t xValueHigherBin=fPDFHist->GetBinCenter (higherBin);
+
+   Double_t length  =(higherBinValue-lowerBinValue);
+   Double_t fraction=lowerBinValue;
+   if (length>1.0e-10)
+      fraction=(y-lowerBinValue)/length;
+
+   Double_t lengthX =xValueHigherBin-xValueLowerBin;
+   Double_t x       =xValueLowerBin+lengthX*fraction;
+
+   // comparison for test purposes
+//   std::cout << "lb " << lowerBin << "  hb " << higherBin << "  lbv " << lowerBinValue << "  hbv " << higherBinValue << "  frac " << fraction << std::endl;
+//   std::cout << "y " << y << "  inv x " << x << "  straight y " << GetVal(x) << std::endl;
+
+   return x;
+}
+
+//_____________________________________________________________________
+void TMVA::PDF::FindBinInverse( const TH1* histogram, Int_t& lowerBin, Int_t& higherBin, Double_t& lowerBinValue, Double_t& higherBinValue, 
+				Double_t y, Bool_t isMonotonouslyIncreasingFunction ) const
+{
+   // find bin from value on ordinate
+   if (isMonotonouslyIncreasingFunction) {
+      higherBin=histogram->GetNbinsX();
+      lowerBin =0;
+
+      Int_t bin=higherBin/2;
+      
+      while (bin>lowerBin && bin<higherBin) {
+	 Double_t binContent=histogram->GetBinContent(bin);
+
+	 if (y<binContent) {
+	    higherBin     =bin;
+	    higherBinValue=binContent;
+	 }
+	 else if (y>=binContent){
+	    lowerBin      =bin;
+	    lowerBinValue =binContent;
+	 }
+         bin=lowerBin+(higherBin-lowerBin)/2;
+      }
+      return;
+   }
+   // search sequentially
+   for (Int_t bin=0, binEnd=histogram->GetNbinsX(); bin<binEnd; ++bin) {
+      Double_t binContent=histogram->GetBinContent(bin);
+      if (binContent<y) {
+	 lowerBin =bin;
+	 higherBin=bin;
+	 lowerBinValue =binContent;
+	 higherBinValue=binContent;
+      }
+      else {
+	 higherBin=bin;
+	 higherBinValue=binContent;
+	 break;
+      }
+   }
+}
+
 
 //_______________________________________________________________________
 void TMVA::PDF::DeclareOptions()
@@ -896,7 +973,7 @@ void TMVA::PDF::ReadXML( void* pdfnode )
          newhist->SetBinContent(i+1,val);
       }
    }
-   else{
+   else {
       const char* content = gTools().GetContent(histch);
       std::stringstream s(content);
       Double_t val;
@@ -927,10 +1004,8 @@ void TMVA::PDF::ReadXML( void* pdfnode )
    fHist->SetTitle( hnameSmooth );
    fHist->SetDirectory(0);
 
-   if (fMinNsmooth > 0) BuildSplinePDF();
-   else if (fMinNsmooth == 0 &&  fKDEtype == KDEKernel::kNone) BuildSplinePDF();
-   else if (fMinNsmooth == 0 &&  fKDEtype != KDEKernel::kNone) BuildKDEPDF();
-   else                 BuildKDEPDF();
+   if (fInterpolMethod == PDF::kKDE) BuildKDEPDF();
+   else                              BuildSplinePDF();
 }
 
 //_______________________________________________________________________
@@ -976,8 +1051,8 @@ istream& TMVA::operator>> ( istream& istr, PDF& pdf )
    // read the tree from an istream
    TString devnullS;
    Int_t   valI;
-   Int_t   nbins;
-   Float_t xmin, xmax;
+   Int_t   nbins=-1; // default binning will cause an exit
+   Float_t xmin=-1., xmax=-1.;
    TString hname="_original";
    Bool_t doneReading = kFALSE;
    while (!doneReading) {
@@ -1007,6 +1082,10 @@ istream& TMVA::operator>> ( istream& istr, PDF& pdf )
    hnameSmooth.ReplaceAll( "_original", "_smoothed" );
 
    // recreate the original hist
+   if (nbins==-1) {
+      std::cout << "PDF, trying to create a histogram without defined binning"<< std::endl;
+      std::exit(1);
+   }
    TH1* newhist = new TH1F( hname,hname, nbins, xmin, xmax );
    newhist->SetDirectory(0);
    Float_t val;

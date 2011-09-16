@@ -153,7 +153,7 @@ TObject::~TObject()
 
    fBits &= ~kNotDeleted;
 
-   if (fgObjectStat && gObjectTable) gObjectTable->Remove(this);
+   if (fgObjectStat && gObjectTable) gObjectTable->RemoveQuietly(this);
 }
 
 //______________________________________________________________________________
@@ -533,14 +533,18 @@ Bool_t TObject::IsEqual(const TObject *obj) const
 }
 
 //______________________________________________________________________________
-void TObject::ls(Option_t *) const
+void TObject::ls(Option_t *option) const
 {
    // The ls function lists the contents of a class on stdout. Ls output
    // is typically much less verbose then Dump().
 
    TROOT::IndentLevel();
-   cout <<"OBJ: " << IsA()->GetName() << "\t" << GetName() << "\t" << GetTitle() << " : "
-        << Int_t(TestBit(kCanDelete))  <<" at: "<<this<< endl;
+   cout <<"OBJ: " << IsA()->GetName() << "\t" << GetName() << "\t" << GetTitle() << " : ";
+   cout << Int_t(TestBit(kCanDelete));  
+   if (strstr(option,"noaddr")==0) {
+      cout <<" at: "<< this ;
+   }
+   cout << endl;
 }
 
 //______________________________________________________________________________
@@ -944,6 +948,20 @@ void TObject::MayNotUse(const char *method) const
 
    Warning(method, "may not use this method");
 }
+
+//______________________________________________________________________________
+void TObject::Obsolete(const char *method, const char *asOfVers, const char *removedFromVers) const
+{
+   // Use this method to declare a method obsolete. Specify as of which version
+   // the method is obsolete and as from which version it will be removed.
+   
+   const char *classname = "UnknownClass";
+   if (TROOT::Initialized())
+      classname = ClassName();
+   
+   ::Obsolete(Form("%s::%s", classname, method), asOfVers, removedFromVers);
+}
+
 
 
 //----------------- Static data members access ---------------------------------

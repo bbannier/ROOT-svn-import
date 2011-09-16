@@ -79,6 +79,7 @@ enum EGLPlotType {
    kGLIsoPlot,
    kGL5D,
    kGLTH3Composition,
+   kGLVoxel,
    kGLDefaultPlot
 };
 
@@ -1004,14 +1005,24 @@ public:
                                  Int_t pick_radius=0, Bool_t selection=kFALSE,
                                  Bool_t sec_selection=kFALSE);
 
+   static void RenderPolyMarkers(const TAttMarker &marker, const std::vector<Double_t> &points,
+                                 Double_t dX, Double_t dY, Double_t dZ);
+
    static void RenderPoints(const TAttMarker& marker,
                             Float_t* p, Int_t n,
                             Int_t pick_radius=0, Bool_t selection=kFALSE,
                             Bool_t sec_selection=kFALSE);
 
+   static void RenderPoints(const TAttMarker& marker,
+                            const std::vector<Double_t> &points);
+
    static void RenderCrosses(const TAttMarker& marker,
                              Float_t* p, Int_t n,
                              Bool_t sec_selection=kFALSE);
+
+   static void RenderCrosses(const TAttMarker& marker,
+                             const std::vector<Double_t> &points,
+                             Double_t dX, Double_t dY, Double_t dZ);
 
    static void RenderPolyLine(const TAttLine& aline, Char_t transp,
                               Float_t* p, Int_t n,
@@ -1206,6 +1217,10 @@ void DrawSmoothFace(const TGLVertex3 &v1, const TGLVertex3 &v2,
                      const TGLVector3 &norm2, const TGLVector3 &norm3);
 void DrawBoxFront(Double_t xMin, Double_t xMax, Double_t yMin, Double_t yMax,
                   Double_t zMin, Double_t zMax, Int_t fp);
+
+void DrawTransparentBox(Double_t xMin, Double_t xMax, Double_t yMin, Double_t yMax,
+                        Double_t zMin, Double_t zMax, Int_t fp);
+
 
 void DrawBoxFrontTextured(Double_t xMin, Double_t xMax, Double_t yMin,
                           Double_t yMax, Double_t zMin, Double_t zMax,

@@ -43,6 +43,10 @@
 #include <windows.h>
 #endif
 
+#ifdef __APPLE__
+#include <dlfcn.h>
+#endif
+
 #define G__OLDIMPLEMENTATION1849
 
 #ifdef G__SHAREDLIB
@@ -175,7 +179,7 @@ static int G__ispreprocessfilekey(char *filename)
 int G__include_file()
 {
   int result;
-  int c;
+  char c;
   G__FastAllocString filename(G__MAXFILENAME);
   int i=0;
   int storeit=0;
@@ -825,7 +829,7 @@ static int G__isbinaryfile(char *filename)
 #endif
   int unnamedmacro = 0;
   int alphaflag=0;
-  int store_lang = G__lang;
+  short store_lang = G__lang;
 
   if(G__ONEBYTE!=G__lang) G__lang = G__UNKNOWNCODING;
 
@@ -908,8 +912,10 @@ static void G__checkIfOnlyFunction(int fentry)
   struct G__Definedtemplateclass *definedtemplateclass;
   struct G__Definetemplatefunc *definedtemplatefunc;
   struct G__dictposition* dictpos = G__srcfile[fentry].dictpos;
+  if (!dictpos) return;
+
   int varflag = 1;
-  int tagflag ;
+  int tagflag;
 
   // Sum the number of G__struct slot used by any of the file
   // we enclosed:
@@ -974,7 +980,8 @@ int G__loadfile_tmpfile(FILE *fp)
 {
   int store_prerun;
   struct G__var_array *store_p_local;
-  int store_var_type,store_tagnum,store_typenum;
+  char store_var_type;
+  int store_tagnum,store_typenum;
   int fentry;
   int store_nobreak;
   int store_step;
@@ -983,7 +990,7 @@ int G__loadfile_tmpfile(FILE *fp)
   short store_iscpp;
   G__UINT32 store_security;
   int store_func_now;
-  int pragmacompile_iscpp;
+  short pragmacompile_iscpp;
   int pragmacompile_filenum;
   int store_asm_noverflow;
   int store_no_exec_compile;
@@ -1191,7 +1198,7 @@ int G__statfilename(const char *filenamein, struct stat *statBuf)
    /*************************************************
     * delete space chars at the end of filename
     *************************************************/
-   int len = strlen(filename);
+   size_t len = strlen(filename);
    while(len>1&&isspace(filename[len-1])) {
       filename[--len]='\0';
    }
@@ -1213,6 +1220,10 @@ int G__statfilename(const char *filenamein, struct stat *statBuf)
          else if((len>4&& (strcmp(filename+len-4,".dll")==0 ||
                            strcmp(filename+len-4,".DLL")==0))) {
             filename[len - 4] = 0;
+            filename += G__getmakeinfo1("DLLPOST");
+         }
+         else if((len>6&& (strcmp(filename+len-6,".dylib")==0))) {
+            filename[len - 6] = 0;
             filename += G__getmakeinfo1("DLLPOST");
          }
          else if((len>2&& (strcmp(filename+len-2,".a")==0 ||
@@ -1405,7 +1416,7 @@ int G__statfilename(const char *filenamein, struct stat *statBuf)
 /******************************************************************
 * G__loadfile(filename)
 *
-*  0) If .sl .dl .so .dll .DLL call G__shl_load()
+*  0) If .sl .dl .so .dylib .dll .DLL call G__shl_load()
 *  1) check G__MAXFILE                       return -2 if fail(fatal)
 *  2) check if file is already loaded        return 1 if already loaded
 *  3) Open filename
@@ -1423,10 +1434,11 @@ int G__loadfile(const char *filenamein)
   int external_compiler = 0;
   const char* compiler_option = "";
   int store_prerun;
-  int i1=0;
+  short i1=0;
   struct G__var_array *store_p_local;
-  int store_var_type,store_tagnum,store_typenum;
-  int fentry;
+  char store_var_type;
+  int store_tagnum,store_typenum;
+  short fentry;
   struct G__includepath *ipath;
   int store_nobreak;
 #ifdef G__TMPFILE
@@ -1435,14 +1447,13 @@ int G__loadfile(const char *filenamein)
   G__FastAllocString prepname(L_tmpnam+10);
 #endif
   int store_step;
-  int null_entry = -1;
+  short null_entry = -1;
   struct G__input_file store_file;
   int hash;
   int temp;
   int store_macroORtemplateINfile;
-  int len;
 #ifdef G__SHAREDLIB
-  int len1;
+  size_t len1;
   const char *dllpost;
 #endif //G__SHAREDLIB
   short store_iscpp;
@@ -1450,7 +1461,7 @@ int G__loadfile(const char *filenamein)
   char addpost[3][8];
   int i2;
   int store_func_now;
-  int pragmacompile_iscpp;
+  short pragmacompile_iscpp;
   int pragmacompile_filenum;
   int store_asm_noverflow;
   int store_no_exec_compile;
@@ -1465,7 +1476,7 @@ int G__loadfile(const char *filenamein)
   /*************************************************
   * delete space chars at the end of filename
   *************************************************/
-  len = strlen(filename);
+  size_t len = strlen(filename);
   while(len>1&&isspace(filename[len-1])) {
     filename[--len]='\0';
   }
@@ -1586,10 +1597,10 @@ int G__loadfile(const char *filenamein)
             static int excludelen[excludelistsize] = {-1};
             if (excludelen[0] == -1) {
                for (unsigned int i = 0; i < excludelistsize; ++i)
-                  excludelen[i] = strlen(excludelist[i]);
+                  excludelen[i] = (int)strlen(excludelist[i]);
             }
             bool cintdlls = false;
-            int filelen = strlen(filename);
+            long filelen = strlen(filename);
             for (unsigned int i = 0; !cintdlls && i < excludelistsize; ++i) {
                if (filelen>=excludelen[i]) {
                   cintdlls = (!strncmp(filename+filelen-excludelen[i], excludelist[i], excludelen[i]));
@@ -1692,6 +1703,10 @@ int G__loadfile(const char *filenamein)
            filename[len - 4] = 0;
            filename += G__getmakeinfo1("DLLPOST");
         }
+        else if((len>6&& (strcmp(filename+len-6,".dylib")==0))) {
+           filename[len - 6] = 0;
+           filename += G__getmakeinfo1("DLLPOST");
+        }
         else if((len>2&& (strcmp(filename+len-2,".a")==0 ||
                           strcmp(filename+len-2,".A")==0))) {
            filename[len - 2] = 0;
@@ -1746,8 +1761,8 @@ int G__loadfile(const char *filenamein)
       /**********************************************
        * try ./filename
        **********************************************/
-      if(G__USERHEADER==G__kindofheader) {
-         G__snprintf(G__ifile.name,G__MAXFILENAME,"./%s%s",filename(),addpost[i2]);
+      if(G__USERHEADER==G__kindofheader && filename()[0]!='/' && filename()[0]!='\\') {
+        G__snprintf(G__ifile.name,G__MAXFILENAME,"./%s%s",filename(),addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else
@@ -2187,14 +2202,20 @@ int G__loadfile(const char *filenamein)
   G__no_exec_compile = 0;
   G__asm_exec = 0;
 
+  bool failed_shl_load = false;
 #ifdef G__SHAREDLIB
   len = strlen(filename);
   dllpost = G__getmakeinfo1("DLLPOST");
-  if((len>3&& (strcmp(filename+len-3,".sl")==0 ||
+  if(
+#if defined(__APPLE__) && defined(MAC_OS_X_VERSION_10_5)
+     (dlopen_preflight(filename)) || 
+#endif
+     (len>3&& (strcmp(filename+len-3,".sl")==0 ||
                strcmp(filename+len-3,".dl")==0 ||
                strcmp(filename+len-3,".so")==0)) ||
      (len>4&& (strcmp(filename+len-4,".dll")==0 ||
                strcmp(filename+len-4,".DLL")==0)) ||
+     (len>6&& (strcmp(filename+len-6,".dylib")==0)) ||
 #if defined(R__FBSD) || defined(R__OBSD)
      (len>strlen(soext) && strcmp(filename+len-strlen(soext), soext)==0) ||
 #endif
@@ -2226,6 +2247,10 @@ int G__loadfile(const char *filenamein)
       int allsl = G__shl_load(G__ifile.name);
       if (allsl != -1) {
          G__srcfile[fentry].slindex = allsl;
+      } else {
+         G__scratch_upto(G__srcfile[fentry].dictpos);
+         failed_shl_load = true;
+         goto G__loadfile_cleanup;
       }
 #else
       // don't load any shared libs
@@ -2319,7 +2344,10 @@ int G__loadfile(const char *filenamein)
   }
 
 
-  /******************************************************
+#if !defined(ROOTBUILD) && !defined(G__BUILDING_CINTTMP)
+G__loadfile_cleanup:
+#endif
+   /******************************************************
    * restore parser parameters
    ******************************************************/
   pragmacompile_filenum = G__ifile.filenum;
@@ -2352,8 +2380,13 @@ int G__loadfile(const char *filenamein)
   G__security = store_security;
 #endif
   if(G__return>G__RETURN_NORMAL) {
-    G__UnlockCriticalSection();
-    return(G__LOADFILE_FAILURE);
+     if (failed_shl_load) {
+        // Since the shl_load fail not declared an interpreter
+        // error, we need to clear G__return, right here.
+        G__return=G__RETURN_NORMAL;
+     }
+     G__UnlockCriticalSection();
+     return(G__LOADFILE_FAILURE);
   }
 
 
@@ -2392,10 +2425,10 @@ int  G__setfilecontext(const char* filename, G__input_file* ifile)
 {
    if (!filename) return 0;
    
-   int null_entry = -1;
-   int found_entry = -1;
+   short null_entry = -1;
+   short found_entry = -1;
    // find G__srcfile index matching filename
-   for (int i = 0; (found_entry == -1) && i < G__nfile; ++i)
+   for (short i = 0; (found_entry == -1) && i < G__nfile; ++i)
       if (G__srcfile[i].filename) {
           if (!strcmp(G__srcfile[i].filename, filename))
              found_entry = i;
@@ -2404,7 +2437,7 @@ int  G__setfilecontext(const char* filename, G__input_file* ifile)
          null_entry = i;
 
    if (found_entry == -1) {
-      int fentry = null_entry;
+      short fentry = null_entry;
       if (fentry == -1)
          fentry = G__nfile;
 
@@ -2466,13 +2499,12 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
 {
   /* char *envcpp; */
   G__FastAllocString tmpfile(G__MAXFILENAME);
-  int tmplen;
+  size_t tmplen;
   FILE *fp;
   int flag=0;
-  int inlen;
   char *post;
 
-  inlen = strlen(inname);
+  size_t inlen = strlen(inname);
   post = (char*)strrchr(inname,'.');
 
   if(post && inlen>2) {
@@ -3012,10 +3044,10 @@ int G__register_sharedlib(const char *libname)
                static int excludelen[excludelistsize] = {-1};
                if (excludelen[0] == -1) {
                   for (unsigned int i = 0; i < excludelistsize; ++i)
-                     excludelen[i] = strlen(excludelist[i]);
+                     excludelen[i] = (int)strlen(excludelist[i]);
                }
                bool cintdlls = false;
-               int len = strlen(libname);
+               long len = strlen(libname);
                for (unsigned int i = 0; !cintdlls && i < excludelistsize; ++i) {
                   if (len>=excludelen[i]) {
                      cintdlls = (!strncmp(libname+len-excludelen[i], excludelist[i], excludelen[i]));
@@ -3115,7 +3147,7 @@ int G__unregister_sharedlib(const char *libname)
       if (G__srcfile[ifn].filename) {
          // --
 #ifndef G__OLDIMPLEMENTATION1546
-         unsigned int len = strlen(G__srcfile[ifn].filename);
+         size_t len = strlen(G__srcfile[ifn].filename);
          if (
              (len > strlen(G__NAMEDMACROEXT2)) &&
              !strcmp(G__srcfile[ifn].filename + len - strlen(G__NAMEDMACROEXT2), G__NAMEDMACROEXT2)

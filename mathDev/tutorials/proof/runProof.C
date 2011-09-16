@@ -22,10 +22,13 @@
 //      This will create a local PROOF session and run an analysis filling
 //      100 histos with 100000 gaussian random numbers, and displaying them
 //      in a canvas with 100 pads (10x10).
-//      The number of histograms can be passed as 'arguments' to 'simple',
+//      The number of histograms can be passed as argument 'nhist' to 'simple',
 //      e.g. to fill 16 histos with 1000000 entries use
 //
 //      root[] runProof("simple(nevt=1000000,nhist=16)")
+//
+//      The argument nhist3 controls the creation of 3d histos to simulate
+//      merging load. By default, no 3D hitogram is created.
 //
 //   2. "h1"
 //
@@ -141,6 +144,24 @@
 //      how to use the TPacketizerFile to steer creation of files.
 //
 //      root[] runProof("friends")
+//
+//   9. "simplefile"
+//
+//      Selector: ProofSimpleFile.h.C
+//
+//      root[] runProof("simplefile")
+//
+//      This will create a local PROOF session and run an analysis filling
+//      16+16 histos with 100000 gaussian random numbers. The merging of
+//      these histos goes via file; 16 histos are saved in the top directory,
+//      the other 16 into a subdirectory called 'blue'. The final display
+//      is done in two canvanses, one for each set of histograms and with
+//      16 pads each (4x4).
+//      The number of histograms in each set can be passed as argument
+//      'nhist' to 'simplefile', e.g. to fill 25 histos with 1000000 entries use
+//
+//      root[] runProof("simplefile(nevt=1000000,nhist=25)")
+//
 //
 //   General arguments
 //   -----------------
@@ -570,7 +591,7 @@ void runProof(const char *what = "simple",
       // Default 10000 events
       nevt = (nevt < 0) ? 100000 : nevt;
       // Find out the number of histograms
-      TString aNhist;
+      TString aNhist, aNhist3;
       while (args.Tokenize(tok, from, " ")) {
          // Number of histos
          if (tok.BeginsWith("nhist=")) {
@@ -580,13 +601,23 @@ void runProof(const char *what = "simple",
                Printf("runProof: error parsing the 'nhist=' option (%s) - ignoring", tok.Data());
                aNhist = "";
             }
+         } else if (tok.BeginsWith("nhist3=")) {
+            aNhist3 = tok;
+            aNhist3.ReplaceAll("nhist3=","");
+            if (!aNhist3.IsDigit()) {
+               Printf("runProof: error parsing the 'nhist3=' option (%s) - ignoring", tok.Data());
+               aNhist3 = "";
+            }
          }
       }
       Int_t nhist = (aNhist.IsNull()) ? 100 : aNhist.Atoi();
-      Printf("\nrunProof: running \"simple\" with nhist= %d and nevt= %lld\n", nhist, nevt);
+      Int_t nhist3 = (aNhist3.IsNull()) ? -1 : aNhist3.Atoi();
+      Printf("\nrunProof: running \"simple\" with nhist= %d, nhist3=%d and nevt= %lld\n", nhist, nhist3, nevt);
 
       // The number of histograms is added as parameter in the input list
       proof->SetParameter("ProofSimple_NHist", (Long_t)nhist);
+      // The number of histograms is added as parameter in the input list
+      if (nhist3 > 0) proof->SetParameter("ProofSimple_NHist3", (Long_t)nhist3);
       // The selector string
       sel.Form("%s/proof/ProofSimple.C%s", tutorials.Data(), aMode.Data());
       //
@@ -974,6 +1005,67 @@ void runProof(const char *what = "simple",
       dset->Process(sel);
       // Clear the files created by this run
       proof->ClearData(TProof::kUnregistered | TProof::kForceClear);
+
+   } else if (act == "simplefile") {
+      
+      // ProofSimpleFile is an example of non-data driven analysis with merging
+      // via file and objcets saved in different directories; it creates and
+      // fills with random numbers two sets of a given number of histos
+
+      // Default 100000 events
+      nevt = (nevt < 0) ? 1000000 : nevt;
+      // Find out the number of histograms
+      TString aNhist;
+      while (args.Tokenize(tok, from, " ")) {
+         // Number of histos
+         if (tok.BeginsWith("nhist=")) {
+            aNhist = tok;
+            aNhist.ReplaceAll("nhist=","");
+            if (!aNhist.IsDigit()) {
+               Printf("runProof: error parsing the 'nhist=' option (%s) - ignoring", tok.Data());
+               aNhist = "";
+            }
+         }
+      }
+      Int_t nhist = (aNhist.IsNull()) ? 16 : aNhist.Atoi();
+      Printf("\nrunProof: running \"simplefile\" with nhist= %d and nevt= %lld\n", nhist, nevt);
+
+      // The number of histograms is added as parameter in the input list
+      proof->SetParameter("ProofSimple_NHist", (Long_t)nhist);
+      
+      // Output file
+      TString fout = TString::Format("%s/SimpleFile.root", gSystem->WorkingDirectory());
+      // Cleanup any existing instance of the output file
+      gSystem->Unlink(fout);
+
+      if (!isProofLocal) {
+         // Setup a local basic xrootd to receive the file
+         Bool_t xrdok = kFALSE;
+         Int_t port = 9000;
+         while (port < 9010) {
+            if (checkXrootdAt(port) != 1) {
+               if (startXrootdAt(port, gSystem->WorkingDirectory(), kTRUE) == 0) {
+                  xrdok = kTRUE;
+                  break;
+               }
+            }
+            port++;
+         }
+         if (!xrdok) {
+            Printf("runProof: could not start basic xrootd on ports 9000-9009 - cannot continue");
+            return;
+         }
+         fout.Insert(0, TString::Format("root://%s:%d/", TUrl(gSystem->HostName()).GetHostFQDN(), port));
+         // Make a copy of the files on the master before merging
+         proof->AddInput(new TNamed("PROOF_OUTPUTFILE_LOCATION", "LOCAL"));
+      }
+      proof->AddInput(new TNamed("PROOF_OUTPUTFILE", fout.Data()));
+      
+      // The selector string
+      sel.Form("%s/proof/ProofSimpleFile.C%s", tutorials.Data(), aMode.Data());
+      //
+      // Run it for nevt times
+      proof->Process(sel.Data(), nevt, opt);
 
    } else {
       // Do not know what to run

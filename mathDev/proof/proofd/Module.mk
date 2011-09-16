@@ -46,10 +46,10 @@ XPDDEP       := $(XPCONNO:.o=.d)
 XPDLIB       := $(LPATH)/libXrdProofd.$(SOEXT)
 
 # Extra include paths and libs
-XPDINCEXTRA    := $(XROOTDDIRI:%=-I%)
-XPDINCEXTRA    += $(PROOFDDIRI:%=-I%)
+XPDINCEXTRA  := $(XROOTDDIRI:%=-I%)
+XPDINCEXTRA  += $(PROOFDDIRI:%=-I%)
 
-XPDLIBEXTRA  += $(XROOTDDIRL)/libXrdClient.lib
+XPDLIBEXTRA  := $(XROOTDDIRL)/libXrdClient.lib
 
 # used in the main Makefile
 PROOFDEXEH   := $(MODDIRI)/proofdp.h
@@ -103,26 +103,37 @@ XPDDEP       := $(XPDO:.o=.d)
 
 XPDLIB       := $(LPATH)/libXrdProofd.$(SOEXT)
 
+##### proofexecv #####
+PROOFEXECVS   := $(MODDIRS)/proofexecv.cxx
+PROOFEXECVO   := $(call stripsrc,$(PROOFEXECVS:.cxx=.o))
+PROOFEXECVDEP := $(PROOFEXECVO:.o=.d)
+PROOFEXECVEXE := bin/proofexecv
+ifeq ($(PLATFORM),win32)
+PROOFEXECVEXE :=
+endif
+ifeq ($(PROOFLIB),)
+PROOFEXECVEXE :=
+endif
+
 ##### Object files used by libProofx #####
 XPCONNO      := $(call stripsrc,$(MODDIRS)/XrdProofConn.o \
                 $(MODDIRS)/XrdProofPhyConn.o \
                 $(MODDIRS)/XProofProtUtils.o)
 
-# Extra definitions
-# CXXFLAGS += $(BONJOURCPPFLAGS)
 # Extra include paths and libs
 XPROOFDEXELIBS :=
-XPROOFDEXESYSLIBS := $(DNSSDLIB)
+XPROOFDEXESYSLIBS :=
 XPROOFDEXE     :=
-ifeq ($(BUILDXRD),yes)
+ifeq ($(HASXRD),yes)
 XPDINCEXTRA    := $(XROOTDDIRI:%=-I%)
 XPDINCEXTRA    += $(PROOFDDIRI:%=-I%)
-XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdOuc -lXrdNet -lXrdSys \
-                  -lXrdClient -lXrdSut
+XPDLIBEXTRA    := -L$(XROOTDDIRL) -lXrdClient -lXrdNet -lXrdOuc \
+                  -lXrdSys -lXrdSut
 XPROOFDEXELIBS := $(XROOTDDIRL)/libXrd.a $(XROOTDDIRL)/libXrdClient.a \
                   $(XROOTDDIRL)/libXrdNet.a $(XROOTDDIRL)/libXrdOuc.a \
                   $(XROOTDDIRL)/libXrdSys.a $(XROOTDDIRL)/libXrdSut.a
-# Starting from Jul 2010 XrdNet has been split in two libs: XrdNet and XrdNetUtil;
+# Starting from Jul 2010 XrdNet has been split in two libs:
+#    XrdNet and XrdNetUtil
 # both are needed
 XRDNETUTIL     :=
 ifneq ($(XRDVERSION),)
@@ -135,6 +146,7 @@ XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdNetUtil
 XPROOFDEXELIBS += $(XROOTDDIRL)/libXrdNetUtil.a
 endif
 XPDLIBEXTRA    +=  $(DNSSDLIB)
+XPROOFDEXELIBS +=  $(DNSSDLIB)
 
 ifeq ($(PLATFORM),solaris)
 XPROOFDEXESYSLIBS := -lsendfile
@@ -145,14 +157,14 @@ endif
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(PROOFDEXEH))
 ALLEXECS     += $(PROOFDEXE)
-ifeq ($(BUILDXRD),yes)
+ifeq ($(HASXRD),yes)
 ALLLIBS      += $(XPDLIB)
-ALLEXECS     += $(XPROOFDEXE)
+ALLEXECS     += $(XPROOFDEXE) $(PROOFEXECVEXE)
 endif
 
 # include all dependency files
-ifeq ($(BUILDXRD),yes)
-INCLUDEFILES += $(PROOFDDEP) $(XPDDEP)
+ifeq ($(HASXRD),yes)
+INCLUDEFILES += $(PROOFDDEP) $(XPDDEP) $(PROOFEXECVDEP)
 else
 INCLUDEFILES += $(PROOFDDEP)
 endif
@@ -163,48 +175,64 @@ endif
 include/%.h:    $(PROOFDDIRI)/%.h
 		cp $< $@
 
-$(PROOFDEXE):   $(PROOFDEXEO) $(RSAO) $(SNPRINTFO) $(GLBPATCHO) $(RPDUTILO) $(STRLCPYO)
+$(PROOFDEXE):   $(PROOFDEXEO) $(RSAO) $(SNPRINTFO) $(GLBPATCHO) $(RPDUTILO) \
+                $(STRLCPYO)
 		$(LD) $(LDFLAGS) -o $@ $(PROOFDEXEO) $(RPDUTILO) $(GLBPATCHO) \
-		   $(RSAO) $(SNPRINTFO) $(CRYPTLIBS) $(AUTHLIBS) $(STRLCPYO) $(SYSLIBS)
+		   $(RSAO) $(SNPRINTFO) $(CRYPTLIBS) $(AUTHLIBS) $(STRLCPYO) \
+		   $(SYSLIBS)
 
-$(XPROOFDEXE):  $(XPDO) $(XPROOFDEXELIBS) $(XRDPROOFXD)
-		$(LD) $(LDFLAGS) -o $@ $(XPDO) $(XPROOFDEXELIBS) $(SYSLIBS) $(XPROOFDEXESYSLIBS)
+$(XPROOFDEXE):  $(XPDO) $(XPROOFDEXELIBS) $(XRDPROOFXD) $(RPDCONNO)
+		$(LD) $(LDFLAGS) -o $@ $(XPDO) $(RPDCONNO) $(XPROOFDEXELIBS) \
+		   $(SYSLIBS) $(XPROOFDEXESYSLIBS)
 
-$(XPDLIB):      $(XPDO) $(XPDH) $(ORDER_) $(MAINLIBS) $(XRDPROOFXD)
+$(XPDLIB):      $(XPDO) $(XPDH) $(XPROOFDEXELIBS) $(ORDER_) $(MAINLIBS) \
+                $(XRDPROOFXD) $(RPDCONNO)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libXrdProofd.$(SOEXT) $@ "$(XPDO)" \
+		   "$(SOFLAGS)" libXrdProofd.$(SOEXT) $@ "$(XPDO) $(RPDCONNO)" \
 		   "$(XPDLIBEXTRA)"
 
-all-$(MODNAME): $(PROOFDEXE) $(XPROOFDEXE) $(XPDLIB)
+$(PROOFEXECVEXE): $(PROOFEXECVO) $(RPDCONNO) $(RPDPRIVO)
+		  $(LD) $(LDFLAGS) -o $@ $(PROOFEXECVO) $(RPDCONNO) \
+		    $(RPDPRIVO) $(SYSLIBS)
+
+all-$(MODNAME): $(PROOFDEXE) $(XPROOFDEXE) $(PROOFEXECVEXE) $(XPDLIB)
 
 clean-$(MODNAME):
-		@rm -f $(PROOFDEXEO) $(XPDO)
+		@rm -f $(PROOFDEXEO) $(PROOFEXECVO) $(XPDO)
 
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
-		@rm -f $(PROOFDDEP) $(PROOFDEXE) $(XPROOFDEXE) $(XPDDEP) $(XPDLIB)
+		@rm -f $(PROOFDDEP) $(PROOFDEXE) $(XPROOFDEXE) $(XPDDEP) \
+		  $(PROOFEXECVEXE) $(PROOFEXECVDEP) $(XPDLIB)
 
 distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
 $(PROOFDEXEO): CXXFLAGS += $(AUTHFLAGS)
 
-$(XPDO): $(XRDHDRS)
+$(XPDO): $(XROOTDMAKE) $(XRDHDRS)
+$(XPDO): CXXFLAGS += $(XPDINCEXTRA) $(EXTRA_XRDFLAGS) $(BONJOURCPPFLAGS)
+
 ifneq ($(ICC_GE_9),)
 # remove when xrootd has moved from strstream.h -> sstream.
-$(XPDO): CXXFLAGS += -Wno-deprecated $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
+$(XPDO): CXXFLAGS += -Wno-deprecated
+
 else
-CXXFLAGS += $(BONJOURCPPFLAGS)
+
 ifneq ($(GCC_MAJOR),)
 ifneq ($(GCC_MAJOR),2)
 # remove when xrootd has moved from strstream.h -> sstream.
-$(XPDO): CXXFLAGS += -Wno-deprecated $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
-else
-$(XPDO): CXXFLAGS += $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
-endif
-else
-$(XPDO): CXXFLAGS += $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
+$(XPDO): CXXFLAGS += -Wno-deprecated
 endif
 endif
+
+endif
+
+ifeq ($(PLATFORM),macosx)
+$(XPDLIB): SOFLAGS := -undefined dynamic_lookup $(SOFLAGS)
+endif
+
+$(PROOFEXECVO): $(RPDCONNO) $(RPDPRIVO)
+
 endif

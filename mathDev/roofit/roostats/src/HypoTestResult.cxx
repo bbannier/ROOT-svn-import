@@ -51,13 +51,15 @@ ClassImp(RooStats::HypoTestResult) ;
 
 using namespace RooStats;
 
+
 //____________________________________________________________________
 HypoTestResult::HypoTestResult(const char* name) : 
    TNamed(name,name),
    fNullPValue(NaN), fAlternatePValue(NaN),
    fTestStatisticData(NaN),
    fNullDistr(NULL), fAltDistr(NULL),
-   fPValueIsRightTail(kTRUE)
+   fPValueIsRightTail(kTRUE),
+   fBackgroundIsAlt(kFALSE)
 {
    // Default constructor
 }
@@ -69,7 +71,8 @@ HypoTestResult::HypoTestResult(const char* name, Double_t nullp, Double_t altp) 
    fNullPValue(nullp), fAlternatePValue(altp),
    fTestStatisticData(NaN),
    fNullDistr(NULL), fAltDistr(NULL),
-   fPValueIsRightTail(kTRUE)
+   fPValueIsRightTail(kTRUE),
+   fBackgroundIsAlt(kFALSE)
 {
    // Alternate constructor
 }
@@ -101,34 +104,34 @@ void HypoTestResult::Append(const HypoTestResult* other) {
    // if no data is present use the other HypoTestResult's data
    if(IsNaN(fTestStatisticData)) fTestStatisticData = other->GetTestStatisticData();
 
-   UpdatePValue(fNullDistr, &fNullPValue, fPValueIsRightTail);
-   UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
+   UpdatePValue(fNullDistr, fNullPValue, fNullPValueError, kTRUE);
+   UpdatePValue(fAltDistr, fAlternatePValue, fAlternatePValueError, kFALSE);
 }
 
 
 //____________________________________________________________________
 void HypoTestResult::SetAltDistribution(SamplingDistribution *alt) {
    fAltDistr = alt;
-   UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
+   UpdatePValue(fAltDistr, fAlternatePValue, fAlternatePValueError, kFALSE);
 }
 //____________________________________________________________________
 void HypoTestResult::SetNullDistribution(SamplingDistribution *null) {
    fNullDistr = null;
-   UpdatePValue(fNullDistr, &fNullPValue, fPValueIsRightTail);
+   UpdatePValue(fNullDistr, fNullPValue, fNullPValueError, kTRUE);
 }
 //____________________________________________________________________
 void HypoTestResult::SetTestStatisticData(const Double_t tsd) {
    fTestStatisticData = tsd;
 
-   UpdatePValue(fNullDistr, &fNullPValue, fPValueIsRightTail);
-   UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
+   UpdatePValue(fNullDistr, fNullPValue, fNullPValueError, kTRUE);
+   UpdatePValue(fAltDistr, fAlternatePValue, fAlternatePValueError, kFALSE);
 }
 //____________________________________________________________________
 void HypoTestResult::SetPValueIsRightTail(Bool_t pr) {
    fPValueIsRightTail = pr;
 
-   UpdatePValue(fNullDistr, &fNullPValue, fPValueIsRightTail);
-   UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
+   UpdatePValue(fNullDistr, fNullPValue, fNullPValueError, kTRUE);
+   UpdatePValue(fAltDistr, fAlternatePValue, fAlternatePValueError, kFALSE);
 }
 
 //____________________________________________________________________
@@ -137,74 +140,21 @@ Bool_t HypoTestResult::HasTestStatisticData(void) const {
 }
 
 Double_t HypoTestResult::NullPValueError() const {
-   if(!fNullDistr  ||  !HasTestStatisticData()) return 0.0;
-
-   double squares = 0.0;
-   vector<Double_t> values = fNullDistr->GetSamplingDistribution();
-   vector<Double_t> weights = fNullDistr->GetSampleWeights();
-   size_t entries = values.size();
-
-
-   // weights
-   for(size_t i=0; i < entries; i++) {
-      if( (GetPValueIsRightTail()  &&  values[i] > fTestStatisticData) ||
-          (!GetPValueIsRightTail()  &&  values[i] < fTestStatisticData)
-      ) {
-         squares += pow(weights[i], 2);
-      }
-   }
-   squares /= entries;
-
-   //cout << "NullPValue Binomial error: " << TMath::Sqrt(NullPValue() * (1. - NullPValue()) / entries) << endl;
-   return sqrt( (squares - pow(NullPValue(),2)) / entries );
+   // compute error on Null pvalue 
+   return fNullPValueError; 
 }
 
 //____________________________________________________________________
 Double_t HypoTestResult::CLbError() const {
-   if(!fNullDistr  ||  !HasTestStatisticData()) return 0.0;
-
-   double squares = 0.0;
-   vector<Double_t> values = fNullDistr->GetSamplingDistribution();
-   vector<Double_t> weights = fNullDistr->GetSampleWeights();
-   size_t entries = values.size();
-
-
-   // weights
-   for(size_t i=0; i < entries; i++) {
-      if( (GetPValueIsRightTail()  &&  values[i] < fTestStatisticData) ||
-          (!GetPValueIsRightTail()  &&  values[i] > fTestStatisticData)
-      ) {
-         squares += pow(weights[i], 2);
-      }
-   }
-   squares /= entries;
-
-   //cout << "CLb Binomial error: " << TMath::Sqrt(CLb() * (1. - CLb()) / entries) << endl;
-   return sqrt( (squares - pow(CLb(),2)) / entries );
+   // compute CLb error
+   // Clb =  1 - NullPValue() 
+   // must use opposite condition that routine above
+   return fBackgroundIsAlt ? fAlternatePValueError : fNullPValueError;
 }
 
 //____________________________________________________________________
 Double_t HypoTestResult::CLsplusbError() const {
-   if(!fAltDistr  ||  !HasTestStatisticData()) return 0.0;
-
-   double squares = 0.0;
-   vector<Double_t> values = fAltDistr->GetSamplingDistribution();
-   vector<Double_t> weights = fAltDistr->GetSampleWeights();
-   size_t entries = values.size();
-
-
-   // weights
-   for(size_t i=0; i < entries; i++) {
-      if( (GetPValueIsRightTail()  &&  values[i] < fTestStatisticData) ||
-          (!GetPValueIsRightTail()  &&  values[i] > fTestStatisticData)
-      ) {
-         squares += pow(weights[i], 2);
-      }
-   }
-   squares /= entries;
-
-   //cout << "CLs+b Binomial error: " << TMath::Sqrt(CLsplusb() * (1. - CLsplusb()) / entries) << endl;
-   return sqrt( (squares - pow(CLsplusb(),2)) / entries );
+   return fBackgroundIsAlt ? fNullPValueError : fAlternatePValueError;
 }
 
 
@@ -219,31 +169,39 @@ Double_t HypoTestResult::CLsError() const {
 
    if(!fAltDistr || !fNullDistr) return 0.0;
 
-   unsigned const int n_b = fNullDistr->GetSamplingDistribution().size();
-   unsigned const int n_sb = fAltDistr->GetSamplingDistribution().size();
+   // unsigned const int n_b = fNullDistr->GetSamplingDistribution().size();
+   // unsigned const int n_sb = fAltDistr->GetSamplingDistribution().size();
 
-   if (CLb() == 0 || CLsplusb() == 0) return 0.0;
+   // if CLb() == 0 CLs = -1 so return a -1 error
+   if (CLb() == 0 ) return -1;
 
-   double cl_b_err = (1. - CLb()) / (n_b * CLb());
-   double cl_sb_err = (1. - CLsplusb()) / (n_sb * CLsplusb());
+   double cl_b_err2 = pow(CLbError(),2);
+   double cl_sb_err2 = pow(CLsplusbError(),2);
 
-   return CLs() * TMath::Sqrt(cl_b_err + cl_sb_err);
+   return TMath::Sqrt(cl_sb_err2 + cl_b_err2 * pow(CLs(),2))/CLb();
 }
 
 
 
 // private
 //____________________________________________________________________
-void HypoTestResult::UpdatePValue(const SamplingDistribution* distr, Double_t *pvalue, Bool_t pIsRightTail) {
+void HypoTestResult::UpdatePValue(const SamplingDistribution* distr, Double_t &pvalue, Double_t &perror, Bool_t /*isNull*/) {
    // updates the pvalue if sufficient data is available
 
    if(IsNaN(fTestStatisticData)) return;
+   if(!distr) return;
 
-   if(distr) {
-      if(pIsRightTail)
-         *pvalue = distr->Integral(fTestStatisticData, RooNumber::infinity());
-      else
-         *pvalue = distr->Integral(-RooNumber::infinity(), fTestStatisticData);
+   /* Got to be careful for discrete distributions:
+    * To get the right behaviour for limits, the p-value must 
+    * include the value of fTestStatistic both for Alt and Null cases
+    */
+   if(fPValueIsRightTail) {
+      pvalue = distr->IntegralAndError(perror, fTestStatisticData, RooNumber::infinity(), kTRUE,
+                                       kTRUE , kTRUE );   // always closed interval [ fTestStatistic, inf ] 
+
+   }else{
+      pvalue = distr->IntegralAndError(perror, -RooNumber::infinity(), fTestStatisticData, kTRUE,
+                                       kTRUE,  kTRUE  ); // // always closed  [ -inf, fTestStatistic ]
    }
 }
 

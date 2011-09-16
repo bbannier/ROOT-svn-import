@@ -94,6 +94,7 @@
 #include <TSystem.h>
 #include <TApplication.h>
 #include <TClassTable.h>
+#include <Compression.h>
 #include "Event.h"
 
 void stress(Int_t nevent, Int_t style, Int_t printSubBenchmark, UInt_t portion );
@@ -229,6 +230,8 @@ void stress(Int_t nevent, Int_t style = 1,
    printf("******************************************************************\n");
    printf("*  ROOTMARKS =%6.1f   *  Root%-8s  %d/%d\n",rootmarks,gROOT->GetVersion(),gROOT->GetVersionDate(),gROOT->GetVersionTime());
    printf("******************************************************************\n");
+   
+   delete gBenchmark;
 }
 
 //_______________________________________________________________
@@ -250,7 +253,7 @@ void Bprint(Int_t id, const char *title)
   // Print test program number and its title
    const Int_t kMAX = 65;
    char header[80];
-   sprintf(header,"Test %2d : %s",id,title);
+   snprintf(header,80,"Test %2d : %s",id,title);
    Int_t nch = strlen(header);
    for (Int_t i=nch;i<kMAX;i++) header[i] = '.';
    header[kMAX] = 0;
@@ -328,6 +331,9 @@ void stress1()
    h1int->Write();
    ntotout += local.GetBytesWritten();
    //do not close the file. should be done by the destructor automatically
+   delete h1int;
+   delete h1form;
+   delete h1diff;
 }
 
 //_______________________________________________________________
@@ -481,13 +487,15 @@ void stress5()
    ntotin  += f.GetBytesRead();
    ntotout += f.GetBytesWritten();
    Bool_t OK = kTRUE;
-   if (nlines < nlinesGood-40 || nlines > nlinesGood+40) OK = kFALSE;
+   if (nlines < nlinesGood-110 || nlines > nlinesGood+110) OK = kFALSE;
    if (OK) printf("OK\n");
    else    {
       printf("failed\n");
       printf("%-8s nlines in stress.ps file = %d\n"," ",nlines);
    }
+   delete c1;
    if (gPrintSubBench) { printf("Test  5 : "); gBenchmark->Show("stress");gBenchmark->Start("stress"); }
+   
 }
 
 //_______________________________________________________________
@@ -512,17 +520,17 @@ void stress6()
    TH1F *hsumPlanes = new TH1F("hsumPlanes","Sum of all planes",100,0,100);
    //Create a subdirectory per detector plane
    for (i=0;i<nplanes;i++) {
-      sprintf(dirname,"plane%d",i);
+      snprintf(dirname,50,"plane%d",i);
       TDirectory *cdplane = f.mkdir(dirname);
       if (cdplane == 0) continue;
       cdplane->cd();
       // create counter histograms
       for (j=0;j<ncounters;j++) {
-         sprintf(hname,"h%d_%dN",i,j);
-         sprintf(htitle,"hist for counter:%d in plane:%d North",j,i);
+         snprintf(hname,20,"h%d_%dN",i,j);
+         snprintf(htitle,80,"hist for counter:%d in plane:%d North",j,i);
          hn[j] = new TH1S(hname,htitle,100,0,100);
-         sprintf(hname,"h%d_%dS",i,j);
-         sprintf(htitle,"hist for counter:%d in plane:%d South",j,i);
+         snprintf(hname,20,"h%d_%dS",i,j);
+         snprintf(htitle,80,"hist for counter:%d in plane:%d South",j,i);
          hs[j] = new TH1S(hname,htitle,100,0,100);
       }
       // fill counter histograms randomly
@@ -540,12 +548,12 @@ void stress6()
    // Now read back all objects from all subdirectories
    // Add North and south histograms in hsumPlanes
    for (i=0;i<nplanes;i++) {
-      sprintf(dirname,"plane%d",i);
+      snprintf(dirname,50,"plane%d",i);
       f.cd(dirname);
       for (j=0;j<ncounters;j++) {
-         sprintf(hname,"h%d_%dN",i,j);
+         snprintf(hname,20,"h%d_%dN",i,j);
          TH1S *hnorth; gDirectory->GetObject(hname,hnorth);
-         sprintf(hname,"h%d_%dS",i,j);
+         snprintf(hname,20,"h%d_%dS",i,j);
          TH1S *hsouth; gDirectory->GetObject(hname,hsouth);
          if (hnorth == 0 || hsouth == 0) continue;
          hsumPlanes->Add(hnorth);
@@ -620,6 +628,7 @@ void stress7()
    Int_t npxpyGood = 27918;
    hpxpy->Write();
    cutg->Write();
+   delete cutg;
 
    // Fill a TEventList using the standard cut
    ntuple->Draw(">>elist","py<0 && pz>4 && random<0.5","goff");
@@ -671,8 +680,8 @@ void stress7()
    TEventList *el[10];
    TEventList *elistall = new TEventList("elistall","Sum of all cuts");
    for (i=0;i<10;i++) {
-      sprintf(elistname,">>elist%d",i);
-      sprintf(cutname,"i 10 == %d",i); cutname[1] ='%';
+      snprintf(elistname,20,">>elist%d",i);
+      snprintf(cutname,20,"i 10 == %d",i); cutname[1] ='%';
       ntuple->Draw(elistname,cutname,"goff");
       gDirectory->GetObject(&elistname[2],el[i]);
       el[i]->Write();
@@ -796,12 +805,17 @@ void stress8(Int_t nevent)
   // First step: make sure the Event shared library exists
   // This test dynamic linking when running in interpreted mode
    if (!TClassTable::GetDict("Event")) {
-      Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
-      Int_t st1 = gSystem->Load("$(ROOTSYS)/test/libEvent");
+      Int_t st1 = -1;
+      if (gSystem->DynamicPathName("$ROOTSYS/test/libEvent",kTRUE)) {
+         st1 = gSystem->Load("$(ROOTSYS)/test/libEvent");
+      }
       if (st1 == -1) {
-         st1 = gSystem->Load("test/libEvent");
+         if (gSystem->DynamicPathName("test/libEvent",kTRUE)) {
+            st1 = gSystem->Load("test/libEvent");
+         }
          if (st1 == -1) {
             printf("===>stress8 will try to build the libEvent library\n");
+            Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
             if (UNIX) gSystem->Exec("(cd $ROOTSYS/test; make Event)");
             else      gSystem->Exec("(cd %ROOTSYS%\\test && nmake libEvent.dll)");
             st1 = gSystem->Load("$(ROOTSYS)/test/libEvent");
@@ -865,7 +879,7 @@ void stress9tree(TTree *tree, Int_t realTestNum)
 {
 // Test selections via TreeFormula
 // tree is a TTree when called by stress9
-// tree is a TChain when called from stres11
+// tree is a TChain when called from stress11
 // This is a quite complex test checking the results of TTree::Draw
 // or TChain::Draw with an explicit loop on events.
 // Also a good test for the interpreter
@@ -1167,6 +1181,11 @@ void stress10()
    Bprint(10,"Create 10 files starting from Event.root");
 
    TFile *hfile = new TFile("Event.root");
+   if (hfile==0 || hfile->IsZombie()) {
+      delete hfile;
+      printf("failed\n");
+      return;
+   }
    TTree *tree; hfile->GetObject("T",tree);
 
    Event *event = 0;
@@ -1178,10 +1197,12 @@ void stress10()
    TFile *chfile[10];
    Int_t file;
    for (file=0;file<10;file++) {
-      sprintf(filename,"Event_%d.root",file);
+      snprintf(filename,20,"Event_%d.root",file);
       chfile[file] = new TFile(filename,"recreate");
+      if (file>=5) {
+         chfile[file]->SetCompressionAlgorithm(ROOT::kLZMA);
+      }
       chTree[file] = (TTree*)tree->CloneTree(0);
-      chTree[file]->SetBranchAddress("event",&event);
    }
 
    // Fill the small trees
@@ -1189,7 +1210,7 @@ void stress10()
    Int_t evmod, nbin=0, nbout=0;
    EventHeader *head;
    for (Int_t ev=0;ev<nev;ev++) {
-      nbin +=tree->GetEntry(ev);
+      nbin += tree->GetEntry(ev);
       head = event->GetHeader();
       evmod = head->GetEvtNum()%10;
       nbout += chTree[evmod]->Fill();
@@ -1202,7 +1223,6 @@ void stress10()
       chfile[file]->Write();
       delete chfile[file];
    }
-   event->ResetHistogramPointer(); // fH was deleted above!!
    delete event;
    delete hfile;
    Event::Reset();
@@ -1238,7 +1258,7 @@ void stress11()
    char filename[20];
    Int_t file;
    for (file=0;file<10;file++) {
-      sprintf(filename,"Event_%d.root",file);
+      snprintf(filename,20,"Event_%d.root",file);
       chain->Add(filename);
    }
 
@@ -1304,7 +1324,7 @@ void stress13()
    char filename[20];
    Int_t file;
    for (file=0;file<10;file++) {
-      sprintf(filename,"Event_%d.root",file);
+      snprintf(filename,20,"Event_%d.root",file);
       chain->Add(filename);
    }
 
@@ -1350,6 +1370,10 @@ void stress15()
    //Get old file, old tree and set top branch address
    //We want to copy only a few branches.
    TFile *oldfile = new TFile("Event.root");
+   if (oldfile->IsZombie()) {
+      printf("failed\n");
+      return;
+   }   
    TTree *oldtree; oldfile->GetObject("T",oldtree);
    Event *event   = 0;
    oldtree->SetBranchAddress("event",&event);
@@ -1388,12 +1412,17 @@ void stress15()
 
    // Open old reference file of stress9
    oldfile = new TFile("stress_test9.root");
+   if (oldfile->IsZombie()) {
+      printf("failed\n");
+      return;
+   }
    TH1F *bNtrack; oldfile->GetObject("bNtrack",bNtrack);
    TH1F *bHmean;  oldfile->GetObject("bHmean",bHmean);
    Int_t cNtrack = HistCompare(hNtrack,bNtrack);
    Int_t cHmean  = HistCompare(hHmean, bHmean);
    delete newfile;
    delete oldfile;
+   Event::Reset();
    gROOT->GetList()->Delete();
 
    Bool_t OK = kTRUE;
@@ -1441,7 +1470,7 @@ void stress16()
    TProfile::Approximate();
    for (i = 0; i <= nlev; i++) {
       char s[64];
-      sprintf(s, "buf%d", i);
+      snprintf(s,64, "buf%d", i);
       hp[i] = new TProfile(s, "in buffers", 1000, 0,nstep, -1., 1000.);
       hp[i]->SetLineColor(2);
    }

@@ -16,6 +16,7 @@
 #include "TUnuranMultiContDist.h"
 #include "TUnuran.h"
 #include "Math/OneDimFunctionAdapter.h"
+#include "Math/DistSamplerOptions.h"
 #include "Fit/DataRange.h"
 //#include "Math/WrappedTF1.h"
 
@@ -35,7 +36,9 @@ TUnuranSampler::TUnuranSampler() : ROOT::Math::DistSampler(),
    fMode(0), fArea(0),
    fFunc1D(0),
    fUnuran(new TUnuran()  )
-{}
+{
+   fLevel = ROOT::Math::DistSamplerOptions::DefaultPrintLevel();
+}
 
 TUnuranSampler::~TUnuranSampler() {
    assert(fUnuran != 0);
@@ -49,17 +52,50 @@ bool TUnuranSampler::Init(const char * algo) {
       Error("TUnuranSampler::Init","Distribution function has not been set ! Need to call SetFunction first.");
       return false;
    }
+
+   if (fLevel < 0) fLevel =  ROOT::Math::DistSamplerOptions::DefaultPrintLevel();
+
    TString method(algo); 
+   if (method.IsNull() ) { 
+      if (NDim() == 1) method = ROOT::Math::DistSamplerOptions::DefaultAlgorithm1D();
+      else  method = ROOT::Math::DistSamplerOptions::DefaultAlgorithmND();
+   }
    method.ToUpper();
 
+   bool ret = false; 
    if (NDim() == 1) { 
-      // check if distribution is discrete by 
+       // check if distribution is discrete by 
       // using first string in the method name is "D"
-      if (method.First("D") == 0) return DoInitDiscrete1D(algo);
-      return DoInit1D(algo); 
+      if (method.First("D") == 0) { 
+         if (fLevel>1) Info("TUnuranSampler::Init","Initialize one-dim discrete distribution with method %s",method.Data());
+         ret =  DoInitDiscrete1D(method);
+      }
+      else {
+         if (fLevel>1) Info("TUnuranSampler::Init","Initialize one-dim continous distribution with method %s",method.Data());
+         ret =  DoInit1D(method); 
+      }
    }
-   else return DoInitND(algo); 
+   else { 
+      if (fLevel>1) Info("TUnuranSampler::Init","Initialize multi-dim continous distribution with method %s",method.Data());
+      ret = DoInitND(method); 
+   }
+   // set print level in UNURAN (must be done after having initialized) -
+   if (fLevel>0) { 
+      //fUnuran->SetLogLevel(fLevel); ( seems not to work  disable for the time being) 
+      if (ret) Info("TUnuranSampler::Init","Successfully initailized Unuran with method %s",method.Data() );
+      else Error("TUnuranSampler::Init","Failed to  initailize Unuran with method %s",method.Data() );
+      // seems not to work in UNURAN (cll only when level > 0 )
+   }
+   return ret; 
 }
+
+
+bool TUnuranSampler::Init(const ROOT::Math::DistSamplerOptions & opt ) { 
+   // default initialization with algorithm name
+   SetPrintLevel(opt.PrintLevel() );
+   return Init(opt.Algorithm().c_str() );
+}
+
 
 bool TUnuranSampler::DoInit1D(const char * method) { 
    // initilize for 1D sampling
@@ -135,7 +171,12 @@ bool TUnuranSampler::DoInitND(const char * method) {
       std::vector<double> xmin(range.NDim() ); 
       std::vector<double> xmax(range.NDim() ); 
       range.GetRange(&xmin[0],&xmax[0]); 
-      dist.SetDomain(&xmin.front(),&xmax.front()); 
+      dist.SetDomain(&xmin.front(),&xmax.front());
+//       std::cout << " range is min = "; 
+//       for (int j = 0; j < NDim(); ++j) std::cout << xmin[j] << "   "; 
+//       std::cout << " max = "; 
+//       for (int j = 0; j < NDim(); ++j) std::cout << xmax[j] << "   "; 
+//       std::cout << std::endl;
    }
    fOneDim = false; 
    if (method) return fUnuran->Init(dist, method); 

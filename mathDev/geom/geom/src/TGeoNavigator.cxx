@@ -76,6 +76,7 @@ TGeoNavigator::TGeoNavigator()
                fBackupState(0),
                fCurrentMatrix(0),
                fGlobalMatrix(0),
+               fDivMatrix(0),
                fPath()
                 
 {
@@ -123,6 +124,7 @@ TGeoNavigator::TGeoNavigator(TGeoManager* geom)
                fBackupState(0),
                fCurrentMatrix(0),
                fGlobalMatrix(0),
+               fDivMatrix(0),
                fPath()
                 
 {
@@ -137,6 +139,8 @@ TGeoNavigator::TGeoNavigator(TGeoManager* geom)
    }
    fCurrentMatrix = new TGeoHMatrix();
    fCurrentMatrix->RegisterYourself();
+   fDivMatrix = new TGeoHMatrix();
+   fDivMatrix->RegisterYourself();
    fOverlapClusters = new Int_t[fOverlapSize];
 }      
 
@@ -185,6 +189,8 @@ TGeoNavigator::TGeoNavigator(const TGeoNavigator& gm)
       fDirection[i] = gm.fDirection[i];
       fLastPoint[i] = gm.fLastPoint[i];
    }
+   fDivMatrix = new TGeoHMatrix();
+   fDivMatrix->RegisterYourself();
 }      
 
 //_____________________________________________________________________________
@@ -233,6 +239,8 @@ TGeoNavigator& TGeoNavigator::operator=(const TGeoNavigator& gm)
          fDirection[i] = gm.fDirection[i];
          fLastPoint[i] = gm.fLastPoint[i];
       }
+      fDivMatrix = new TGeoHMatrix();
+      fDivMatrix->RegisterYourself();
    }
    return *this;   
 }
@@ -2154,7 +2162,17 @@ Bool_t TGeoNavigator::IsSameLocation(Double_t x, Double_t y, Double_t z, Bool_t 
       Double_t dy = (y-fLastPoint[1]);
       Double_t dz = (z-fLastPoint[2]);
       Double_t dsq = dx*dx+dy*dy+dz*dz;
-      if (dsq<fLastSafety*fLastSafety) return kTRUE;
+      if (dsq<fLastSafety*fLastSafety) {
+         if (change) {
+            fPoint[0] = x;
+            fPoint[1] = y;
+            fPoint[2] = z;
+            memcpy(fLastPoint, fPoint, 3*sizeof(Double_t));
+            fLastSafety -= TMath::Sqrt(dsq);
+         }
+         return kTRUE;
+      }  
+      if (change) fLastSafety = 0;
    }
    if (fCurrentOverlapping) {
 //      TGeoNode *current = fCurrentNode;
@@ -2379,4 +2397,17 @@ void TGeoNavigator::ResetAll()
       fCache = 0;
       BuildCache(dummy,nodeid);
    }
+}
+
+ClassImp(TGeoNavigatorArray)
+
+//______________________________________________________________________________
+TGeoNavigator *TGeoNavigatorArray::AddNavigator()
+{
+// Add a new navigator to the array.
+   TGeoNavigator *nav = new TGeoNavigator(fGeoManager);
+   nav->BuildCache(kTRUE, kFALSE);
+   Add(nav);
+   SetCurrentNavigator(GetEntriesFast()-1);
+   return nav;
 }

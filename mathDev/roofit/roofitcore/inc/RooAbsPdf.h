@@ -63,7 +63,8 @@ public:
 
   class GenSpec {
   public:
-    ~GenSpec() ;
+    virtual ~GenSpec() ;
+    GenSpec() { _genContext = 0 ; _protoData = 0 ; }
   private:
     GenSpec(RooAbsGenContext* context, const RooArgSet& whatVars, RooDataSet* protoData, Int_t nGen, Bool_t extended, 
 	    Bool_t randProto, Bool_t resampleProto, TString dsetName) ;
@@ -78,6 +79,7 @@ public:
     Bool_t _randProto ;
     Bool_t _resampleProto ;
     TString _dsetName ;    
+    ClassDef(GenSpec,0) // Generation specification
   } ;
 
   GenSpec* prepareMultiGen(const RooArgSet &whatVars,  
@@ -95,6 +97,9 @@ public:
 			      const RooCmdArg& arg3=RooCmdArg::none(),const RooCmdArg& arg4=RooCmdArg::none(),
 			      const RooCmdArg& arg5=RooCmdArg::none(),const RooCmdArg& arg6=RooCmdArg::none()) ;
   RooDataHist *generateBinned(const RooArgSet &whatVars, Double_t nEvents, Bool_t expectedData=kFALSE, Bool_t extended=kFALSE) const;
+
+
+  virtual RooDataSet* generateSimGlobal(const RooArgSet& whatVars, Int_t nEvents) ;
 
   virtual RooPlot* plotOn(RooPlot* frame, 
 			  const RooCmdArg& arg1=RooCmdArg::none(), const RooCmdArg& arg2=RooCmdArg::none(),
@@ -232,7 +237,7 @@ public:
   static void verboseEval(Int_t stat) ;
   static int verboseEval() ;
 
-  virtual Double_t extendedTerm(UInt_t observedEvents, const RooArgSet* nset=0) const ;
+  virtual Double_t extendedTerm(Double_t observedEvents, const RooArgSet* nset=0) const ;
 
   static void clearEvalError() ;
   static Bool_t evalError() ;

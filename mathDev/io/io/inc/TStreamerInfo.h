@@ -28,7 +28,7 @@
 #include "TVirtualCollectionProxy.h"
 
 #if (defined(_MSC_VER) && (_MSC_VER < 1300)) || defined(R__ALPHA) || \
-    (defined(R__MACOSX) && defined(R__GNU) && __GNUC__==3 && __GNUC_MINOR<=3) || \
+    (defined(R__MACOSX) && defined(R__GNU) && __GNUC__==3 && __GNUC_MINOR__<=3) || \
     (defined(R__MACOSX) && defined(__xlC__))
 #define R__BROKEN_FUNCTION_TEMPLATES
 #endif
@@ -106,9 +106,11 @@ private:
    ULong_t          *fVirtualInfoLoc;    //![fNVirtualInfoLoc] Location of the pointer to the TStreamerInfo inside the object (when emulated)
    ULong_t           fLiveCount;         //! Number of outstanding pointer to this StreamerInfo.
 
-   TStreamerInfoActions::TActionSequence *fReadObjectWise;      //! List of action resulting from the compilation.
-   TStreamerInfoActions::TActionSequence *fReadMemberWise;      //! List of action resulting from the compilation for use in member wise streaming.
-   
+   TStreamerInfoActions::TActionSequence *fReadObjectWise;      //! List of read action resulting from the compilation.
+   TStreamerInfoActions::TActionSequence *fReadMemberWise;      //! List of read action resulting from the compilation for use in member wise streaming.
+   TStreamerInfoActions::TActionSequence *fWriteObjectWise;     //! List of write action resulting from the compilation.
+   TStreamerInfoActions::TActionSequence *fWriteMemberWise;     //! List of write action resulting from the compilation for use in member wise streaming.
+
    static  Int_t     fgCount;            //Number of TStreamerInfo instances
    static TStreamerElement *fgElement;   //Pointer to current TStreamerElement
    static Double_t   GetValueAux(Int_t type, void *ladd, int k, Int_t len);
@@ -122,7 +124,8 @@ private:
 private:
    TStreamerInfo(const TStreamerInfo&);            // TStreamerInfo are copiable.  Not Implemented.
    TStreamerInfo& operator=(const TStreamerInfo&); // TStreamerInfo are copiable.  Not Implemented.
-
+   void AddReadAction(Int_t index, TStreamerElement* element);
+   void AddWriteAction(Int_t index, TStreamerElement* element);
 public:
 
    //status bits
@@ -137,6 +140,7 @@ public:
       kBase        =  0,  kOffsetL = 20,  kOffsetP = 40,  kCounter =  6,  kCharStar = 7,
       kChar        =  1,  kShort   =  2,  kInt     =  3,  kLong    =  4,  kFloat    = 5,
       kDouble      =  8,  kDouble32=  9,
+      kLegacyChar  = 10,  // Equal to TDataType's kchar
       kUChar       = 11,  kUShort  = 12,  kUInt    = 13,  kULong   = 14,  kBits     = 15,
       kLong64      = 16,  kULong64 = 17,  kBool    = 18,  kFloat16 = 19,
       kObject      = 61,  kAny     = 62,  kObjectp = 63,  kObjectP = 64,  kTString  = 65,
@@ -147,7 +151,7 @@ public:
       kSTL         = 300, kSTLstring = 365,
       kStreamer    = 500, kStreamLoop = 501,
       kCache       = 600,  // Cache the value in memory than is not part of the object but is accessible via a SchemaRule
-      kArtificial  = 1000, 
+      kArtificial  = 1000,
       kCacheNew    = 1001,
       kCacheDelete = 1002,
       kMissing     = 99999
@@ -200,6 +204,8 @@ public:
    ULong_t            *GetElems()   const {return fElem;}
    TStreamerInfoActions::TActionSequence *GetReadMemberWiseActions(Bool_t forCollection) { return forCollection ? fReadMemberWise : fReadObjectWise; }
    TStreamerInfoActions::TActionSequence *GetReadObjectWiseActions() { return fReadObjectWise; }
+   TStreamerInfoActions::TActionSequence *GetWriteMemberWiseActions(Bool_t forCollection) { return forCollection ? fWriteMemberWise : fWriteObjectWise; }
+   TStreamerInfoActions::TActionSequence *GetWriteObjectWiseActions() { return fWriteObjectWise; }
    Int_t               GetNdata()   const {return fNdata;}
    Int_t               GetNumber()  const {return fNumber;}
    Int_t              *GetLengths() const {return fLength;}

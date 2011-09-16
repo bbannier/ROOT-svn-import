@@ -39,6 +39,8 @@ namespace ROOT {
 
    namespace Fit { 
 
+      class FitResult;
+
 //___________________________________________________________________________________
 /** 
    Class describing the configuration of the fit, options and parameter settings
@@ -92,6 +94,10 @@ public:
    */
    std::vector<ROOT::Fit::ParameterSettings> & ParamsSettings() { return fSettings; }
 
+   /**
+      number of parameters settings 
+    */
+   unsigned int NPar() const { return fSettings.size(); }
 
    /**
       set the parameter settings from a model function. 
@@ -103,6 +109,12 @@ public:
       set the parameter settings from number of parameters and a vector of values and optionally step values. If there are not existing or number of parameters does not match existing one, create a new parameter setting list. 
    */
    void SetParamsSettings(unsigned int npar, const double * params, const double * vstep = 0); 
+
+   /*
+     Set the parameter setting from a fit Result
+   */
+   void SetFromFitResult (const FitResult & rhs);
+
 
 
    /**
@@ -156,6 +168,10 @@ public:
    ///do minos errros analysis on the  parameters
    bool MinosErrors() const { return fMinosErrors; }
 
+   ///Update configuration after a fit using the FitResult
+   bool UpdateAfterFit() const { return fUpdateAfterFit; } 
+
+
    /// return vector of parameter indeces for which the Minos Error will be computed
    const std::vector<unsigned int> & MinosParams() const { return fMinosParams; }
 
@@ -178,6 +194,8 @@ public:
       fMinosParams = paramInd; 
    }
 
+   ///Update configuration after a fit using the FitResult
+   void SetUpdateAfterFit(bool on = true) { fUpdateAfterFit = on; } 
 
 
    /**
@@ -191,9 +209,10 @@ protected:
 
 private: 
 
-   bool fNormErrors;    // flag for error normalization
-   bool fParabErrors;   // get correct parabolic errors estimate (call Hesse after minimizing)  
-   bool fMinosErrors;   // do full error analysis using Minos
+   bool fNormErrors;       // flag for error normalization
+   bool fParabErrors;      // get correct parabolic errors estimate (call Hesse after minimizing)  
+   bool fMinosErrors;      // do full error analysis using Minos
+   bool fUpdateAfterFit;   // update the configuration after a fit using the result
 
 
    std::vector<ROOT::Fit::ParameterSettings> fSettings;  // vector with the parameter settings

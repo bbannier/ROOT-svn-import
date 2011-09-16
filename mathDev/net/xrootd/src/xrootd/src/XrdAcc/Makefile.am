@@ -4,8 +4,8 @@
 ##
 ## Initial version: 1.8.2005
 ##
-## Version info: $Id: Makefile.am,v 1.7 2010/08/05 15:25:01 feichtinger Exp $
-## Checked in by $Author: feichtinger $
+## Version info: $Id$
+## Checked in by $Author$
 #######################################################################
 
 AM_CPPFLAGS = -I$(top_srcdir)/src
@@ -20,7 +20,7 @@ xrootdaccincdir = $(includedir)/xrootd/XrdAcc
 
 lib_LTLIBRARIES = libXrdAcc.la
 
-bin_PROGRAMS = XrdAccTest
+noinst_PROGRAMS = XrdAccTest
 
 
 xrootdaccinc_HEADERS = \

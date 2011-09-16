@@ -32,6 +32,9 @@
 #include "TLeafB.h"
 #include "TLeafI.h"
 #include "TLeafL.h"
+#include "TLeafS.h"
+#include "TLeafO.h"
+#include "TLeafC.h"
 
 #include <algorithm>
 
@@ -128,6 +131,41 @@ TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method, UInt_t option
       fCloneMethod = TTreeCloner::kSortBasketsByOffset;
    }
    if (fToTree) fToStartEntries = fToTree->GetEntries();
+   
+   if (fToTree == 0) {
+      fWarningMsg.Form("An output TTree is required (cloning %s).",
+                       from->GetName());
+      if (!(fOptions & kNoWarnings)) {
+         Warning("TTreeCloner::TTreeCloner", "%s", fWarningMsg.Data());
+      }
+      fIsValid = kFALSE;
+   } else if (fToTree->GetDirectory() == 0) {
+      fWarningMsg.Form("The output TTree (%s) must be associated with a directory.",
+                       fToTree->GetName());
+      if (!(fOptions & kNoWarnings)) {
+         Warning("TTreeCloner::TTreeCloner", "%s", fWarningMsg.Data());
+      }
+      fIsValid = kFALSE;      
+   } else if (fToTree->GetCurrentFile() == 0) {
+      fWarningMsg.Form("The output TTree (%s) must be associated with a directory (%s) that is in a file.",
+                       fToTree->GetName(),fToTree->GetDirectory()->GetName());
+      if (!(fOptions & kNoWarnings)) {
+         Warning("TTreeCloner::TTreeCloner", "%s", fWarningMsg.Data());
+      }
+      fIsValid = kFALSE;
+   } else if (! fToTree->GetDirectory()->IsWritable()) {
+      if (fToTree->GetDirectory()==fToTree->GetCurrentFile()) {
+         fWarningMsg.Form("The output TTree (%s) must be associated with a writeable file (%s).",
+                          fToTree->GetName(),fToTree->GetCurrentFile()->GetName());         
+      } else {
+         fWarningMsg.Form("The output TTree (%s) must be associated with a writeable directory (%s in %s).",
+                          fToTree->GetName(),fToTree->GetDirectory()->GetName(),fToTree->GetCurrentFile()->GetName());
+      }
+      if (!(fOptions & kNoWarnings)) {
+         Warning("TTreeCloner::TTreeCloner", "%s", fWarningMsg.Data());
+      }
+      fIsValid = kFALSE;
+   }
 }
 
 //______________________________________________________________________________
@@ -135,6 +173,10 @@ Bool_t TTreeCloner::Exec()
 {
    // Execute the cloning.
 
+   if (!IsValid()) {
+      return kFALSE;
+   }
+   ImportClusterRanges();
    CopyStreamerInfos();
    CopyProcessIds();
    CloseOutWriteBaskets();
@@ -261,12 +303,39 @@ UInt_t TTreeCloner::CollectBranches(TBranch *from, TBranch *to) {
                toleaf->SetMaximum( fromleaf->GetMaximum() );
             if (fromleaf->GetMinimum() < toleaf->GetMinimum())
                toleaf->SetMinimum( fromleaf->GetMinimum() );
+         } else if (fromleaf_gen->IsA()==TLeafS::Class()) {
+            TLeafS *fromleaf = (TLeafS*)fromleaf_gen;
+            TLeafS *toleaf   = (TLeafS*)toleaf_gen;
+            if (fromleaf->GetMaximum() > toleaf->GetMaximum())
+               toleaf->SetMaximum( fromleaf->GetMaximum() );
+            if (fromleaf->GetMinimum() < toleaf->GetMinimum())
+               toleaf->SetMinimum( fromleaf->GetMinimum() );
+         } else if (fromleaf_gen->IsA()==TLeafO::Class()) {
+            TLeafO *fromleaf = (TLeafO*)fromleaf_gen;
+            TLeafO *toleaf   = (TLeafO*)toleaf_gen;
+            if (fromleaf->GetMaximum() > toleaf->GetMaximum())
+               toleaf->SetMaximum( fromleaf->GetMaximum() );
+            if (fromleaf->GetMinimum() < toleaf->GetMinimum())
+               toleaf->SetMinimum( fromleaf->GetMinimum() );
+         } else if (fromleaf_gen->IsA()==TLeafC::Class()) {
+            TLeafC *fromleaf = (TLeafC*)fromleaf_gen;
+            TLeafC *toleaf   = (TLeafC*)toleaf_gen;
+            if (fromleaf->GetMaximum() > toleaf->GetMaximum())
+               toleaf->SetMaximum( fromleaf->GetMaximum() );
+            if (fromleaf->GetMinimum() < toleaf->GetMinimum())
+               toleaf->SetMinimum( fromleaf->GetMinimum() );
+            if (fromleaf->GetLenStatic() > toleaf->GetLenStatic())
+               toleaf->SetLen(fromleaf->GetLenStatic());
          }
       }
 
    }
 
    fFromBranches.AddLast(from);
+   if (!from->TestBit(TBranch::kDoNotUseBufferMap)) {
+      // Make sure that we reset the Buffer's map if needed.
+      to->ResetBit(TBranch::kDoNotUseBufferMap);
+   }
    fToBranches.AddLast(to);
 
    numBaskets += from->GetWriteBasket();
@@ -316,12 +385,24 @@ UInt_t TTreeCloner::CollectBranches(TObjArray *from, TObjArray *to)
            fi = 0;
          }
       } else {
-         fWarningMsg.Form("One of the export branches (%s) is not present in the import TTree.",
-                          tb->GetName());
-         if (!(fOptions & kNoWarnings)) {
-            Error("TTreeCloner::CollectBranches", "%s", fWarningMsg.Data());
+         if (tb->GetMother()==tb) {
+            // Top level branch.
+            if (!(fOptions & kIgnoreMissingTopLevel)) {
+               fWarningMsg.Form("One of the export top level branches (%s) is not present in the import TTree.",
+                                tb->GetName());
+               if (!(fOptions & kNoWarnings)) {
+                  Error("TTreeCloner::CollectBranches", "%s", fWarningMsg.Data());
+               }
+               fIsValid = kFALSE;
+            }
+         } else {
+            fWarningMsg.Form("One of the export sub-branches (%s) is not present in the import TTree.",
+                             tb->GetName());
+            if (!(fOptions & kNoWarnings)) {
+               Error("TTreeCloner::CollectBranches", "%s", fWarningMsg.Data());
+            }
+            fIsValid = kFALSE;
          }
-         fIsValid = kFALSE;
       }
       ++ti;
    }
@@ -490,6 +571,21 @@ void TTreeCloner::CopyProcessIds()
          }
       }
    }
+}
+
+//______________________________________________________________________________
+void TTreeCloner::ImportClusterRanges()
+{
+   // Set the entries and import the cluster range of the 
+   
+   // First undo, the external call to SetEntries
+   // We could improve the interface to optional tell the TTreeCloner that the
+   // SetEntries was not done.
+   fToTree->SetEntries(fToTree->GetEntries() - fFromTree->GetTree()->GetEntries());
+   
+   fToTree->ImportClusterRanges( fFromTree->GetTree() );
+   
+   fToTree->SetEntries(fToTree->GetEntries() + fFromTree->GetTree()->GetEntries());
 }
 
 //______________________________________________________________________________

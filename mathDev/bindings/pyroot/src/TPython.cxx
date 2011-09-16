@@ -57,14 +57,15 @@
 //  root [5] i
 //  (int)2
 //
-//  // Load a python module with a class definition, and use it.
+//  // Load a python module with a class definition, and use it. Casts are
+//  // necessary as the type information can not be otherwise derived.
 //  root [6] TPython::LoadMacro( "MyPyClass.py" );
 //  creating class MyPyClass ...
 //  root [7] MyPyClass m;
 //  in MyPyClass.__init__
-//  root [8] char* s = m.gime( "aap" );
+//  root [8] std::string s = (char*)m.gime( "aap" );
 //  root [9] s
-//  (char* 0x41ee7754)"aap"
+//  (class TString)"aap"
 //
 // It is possible to switch between interpreters by calling "TPython::Prompt()"
 // on the CINT side, while returning with ^D (EOF). State is preserved between
@@ -97,7 +98,7 @@ Bool_t TPython::Initialize()
       PyEval_InitThreads();
       Py_Initialize();
 
-   // try again to initialize the interpreter
+   // try again to see if the interpreter is initialized
       if ( ! Py_IsInitialized() ) {
       // give up ...
          std::cerr << "Error: python has not been intialized; returning." << std::endl;           

@@ -25,9 +25,9 @@
 #ifndef ROOT_Math_DistFuncMathMore
 #define ROOT_Math_DistFuncMathMore
 
-// #ifndef ROOT_Math_PdfFuncMathMore
-// #include "Math/PdfFuncMathMore.h"
-// #endif
+#ifndef ROOT_Math_PdfFuncMathMore
+#include "Math/PdfFuncMathMore.h"
+#endif
 
 
 // #ifndef ROOT_Math_ProbFuncMathMore

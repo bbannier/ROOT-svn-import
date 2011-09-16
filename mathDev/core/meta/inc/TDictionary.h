@@ -74,6 +74,7 @@ enum EProperty {
    kIsPointer      = G__BIT_ISPOINTER,
    kIsArray        = G__BIT_ISARRAY,
    kIsStatic       = G__BIT_ISSTATIC,
+   kIsUsingVariable= G__BIT_ISUSINGVARIABLE,
    kIsDefault      = G__BIT_ISDEFAULT,
    kIsReference    = G__BIT_ISREFERENCE,
    kIsConstant     = G__BIT_ISCONSTANT,
@@ -90,6 +91,7 @@ public:
    virtual ~TDictionary() { }
 
    virtual Long_t      Property() const = 0;
+   static TDictionary* GetDictionary(const char* name);
 
    // Type of STL container (returned by IsSTLContainer).
    enum ESTLType {kNone=0, kVector=1, kList, kDeque, kMap, kMultimap, kSet, kMultiset};

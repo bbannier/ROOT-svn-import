@@ -237,20 +237,24 @@ void StatDialogBDT::DrawNode( TMVA::DecisionTreeNode *n,
 {
    // recursively puts an entries in the histogram for the node and its daughters
    //
+   Float_t xsize=xscale*1.5;
+   Float_t ysize=yscale/3;
+   if (xsize>0.15) xsize=0.1; //xscale/2;
    if (n->GetLeft() != NULL){
-      TLine *a1 = new TLine(x-xscale/2,y,x-xscale,y-yscale/2);
+      TLine *a1 = new TLine(x-xscale/4,y-ysize,x-xscale,y-ysize*2);
       a1->SetLineWidth(2);
       a1->Draw();
       DrawNode((TMVA::DecisionTreeNode*) n->GetLeft(), x-xscale, y-yscale, xscale/2, yscale, vars);
    }
    if (n->GetRight() != NULL){
-      TLine *a1 = new TLine(x+xscale/2,y,x+xscale,y-yscale/2);
+      TLine *a1 = new TLine(x+xscale/4,y-ysize,x+xscale,y-ysize*2);
       a1->SetLineWidth(2);
       a1->Draw();
       DrawNode((TMVA::DecisionTreeNode*) n->GetRight(), x+xscale, y-yscale, xscale/2, yscale, vars  );
    }
 
-   TPaveText *t = new TPaveText(x-xscale/2,y-yscale/2,x+xscale/2,y+yscale/2, "NDC");
+   //   TPaveText *t = new TPaveText(x-xscale/2,y-yscale/2,x+xscale/2,y+yscale/2, "NDC");
+   TPaveText *t = new TPaveText(x-xsize,y-ysize,x+xsize,y+ysize, "NDC");
 
    t->SetBorderSize(1);
 
@@ -261,7 +265,7 @@ void StatDialogBDT::DrawNode( TMVA::DecisionTreeNode *n,
 
    char buffer[25];
    sprintf( buffer, "N=%f", n->GetNEvents() );
-   t->AddText(buffer);
+   if (n->GetNEvents()>0) t->AddText(buffer);
    sprintf( buffer, "S/(S+B)=%4.3f", n->GetPurity() );
    t->AddText(buffer);
 
@@ -273,15 +277,10 @@ void StatDialogBDT::DrawNode( TMVA::DecisionTreeNode *n,
       }
    }
 
-   if      (n->GetNodeType() ==  1) { t->SetFillColor( kSigColorF ); t->SetTextColor( kSigColorT ); }
-   else if (n->GetNodeType() == -1) { t->SetFillColor( kBkgColorF ); t->SetTextColor( kBkgColorT ); }
-   else if (n->GetNodeType() ==  0) { t->SetFillColor( kIntColorF ); t->SetTextColor( kIntColorT ); }
-
    t->Draw();
 
    return;
 }
-
 TMVA::DecisionTree* StatDialogBDT::ReadTree( TString* &vars, Int_t itree )
 {
    cout << "--- Reading Tree " << itree << " from weight file: " << fWfile << endl;
@@ -310,9 +309,10 @@ TMVA::DecisionTree* StatDialogBDT::ReadTree( TString* &vars, Int_t itree )
       fin >> dummy >> nVars;
       
       // variable mins and maxes
-      vars = new TString[nVars];
+      vars = new TString[nVars+1]; // last one is if "fisher cut criterium"
       for (Int_t i = 0; i < nVars; i++) fin >> vars[i] >> dummy >> dummy >> dummy >> dummy;
-      
+      vars[nVars]="FisherCrit";
+
       char buffer[20];
       char line[256];
       sprintf(buffer,"Tree %d",itree);
@@ -340,12 +340,13 @@ TMVA::DecisionTree* StatDialogBDT::ReadTree( TString* &vars, Int_t itree )
          TString nodeName = TString( TMVA::gTools().xmlengine().GetNodeName(ch) );
          if(nodeName=="Variables"){
             TMVA::gTools().ReadAttr( ch, "NVar", nVars);
-            vars = new TString[nVars]; 
+            vars = new TString[nVars+1]; 
             void* varnode =  TMVA::gTools().xmlengine().GetChild(ch);
             for (Int_t i = 0; i < nVars; i++){
                TMVA::gTools().ReadAttr( varnode, "Expression", vars[i]);
                varnode =  TMVA::gTools().xmlengine().GetNext(varnode);
             }
+            vars[nVars]="FisherCrit";
          }
          if(nodeName=="Weights") break;
          ch = TMVA::gTools().xmlengine().GetNext(ch);

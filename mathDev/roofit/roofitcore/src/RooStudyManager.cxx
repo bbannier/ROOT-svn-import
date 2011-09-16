@@ -94,11 +94,16 @@ void RooStudyManager::run(Int_t nExperiments)
 
 
 //_____________________________________________________________________________
-void RooStudyManager::runProof(Int_t nExperiments, const char* proofHost) 
+void RooStudyManager::runProof(Int_t nExperiments, const char* proofHost, Bool_t showGui) 
 {
   // Open PROOF-Lite session
   coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") opening PROOF session" << endl ;
   void* p = (void*) gROOT->ProcessLineFast(Form("TProof::Open(\"%s\")",proofHost)) ;
+
+  // Suppress GUI if so requested
+  if (!showGui) {
+    gROOT->ProcessLineFast(Form("((TProof*)%p)->SetProgressDialog(0) ;",p)) ;
+  }
 
   // Propagate workspace to proof nodes
   coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") sending work package to PROOF servers" << endl ;
@@ -113,8 +118,37 @@ void RooStudyManager::runProof(Int_t nExperiments, const char* proofHost)
   coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") aggregating results data" << endl ;
   TList* olist = (TList*) gROOT->ProcessLineFast(Form("((TProof*)%p)->GetOutputList()",p)) ;
   aggregateData(olist) ;
+
+  // cleaning up                                                                                                                                           
+  coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") cleaning up input list" << endl ;                                                   
+  gROOT->ProcessLineFast(Form("((TProof*)%p)->GetInputList()->Remove((TObject*)%p) ;",p,(void*)_pkg) ) ;                                                   
+  
 }
 
+
+//_____________________________________________________________________________
+void RooStudyManager::closeProof(Option_t *option)
+{
+  // "Option_t *option" takes the parameters forwarded to gProof->Close(option).
+  //
+  // This function is intended for scripts that run in loops
+  // where it is essential to properly close all connections and delete
+  // the TProof instance (frees ports).
+
+  if (gROOT->GetListOfProofs()->LastIndex() != -1  &&  gROOT->ProcessLineFast("TProof::gProof;"))
+  {
+    gROOT->ProcessLineFast(Form("TProof::gProof->Close(\"%s\") ;",option)) ;
+    gROOT->ProcessLineFast("TProof::gProof->CloseProgressDialog() ;") ;
+
+    // CloseProgressDialog does not do anything when run without GUI. This detects
+    // whether the proof instance is still there and deletes it if that is the case.
+    if (gROOT->GetListOfProofs()->LastIndex() != -1  &&  gROOT->ProcessLineFast("TProof::gProof;")) {
+      gROOT->ProcessLineFast("delete TProof::gProof ;") ;
+    }
+  } else {
+    ooccoutI((TObject*)NULL,Generation) << "RooStudyManager: No global Proof objects. No connections closed." << endl ;
+  }
+}
 
 
 

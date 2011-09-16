@@ -7,7 +7,7 @@
 #include "TRandom.h"
 #include "TCanvas.h"
 
-// This example is the same as tree2.C, but uses a class instead of a C-struct.
+//+ This example is the same as tree2.C, but uses a class instead of a C-struct.
 // In this example, we are mapping a class to one of the Geant3
 // common blocks /gctrak/. In the real life, this common will be filled
 // by Geant3 at each step and only the Tree Fill function should be called.
@@ -172,8 +172,8 @@ void tree2ar()
    TH1F *hdestep   = new TH1F("hdestep","destep in Mev",100,1e-5,3e-5);
    
    //read only the destep branch for all entries
-   Int_t nentries = (Int_t)t2->GetEntries();
-   for (Int_t i=0;i<nentries;i++) {
+   Long64_t nentries = t2->GetEntries();
+   for (Long64_t i=0;i<nentries;i++) {
       b_destep->GetEntry(i); 
       hdestep->Fill(gstep->destep);
    }

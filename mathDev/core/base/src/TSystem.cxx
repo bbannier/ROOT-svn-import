@@ -414,8 +414,9 @@ Bool_t TSystem::ProcessEvents()
    // interrupt flag.
 
    gROOT->SetInterrupt(kFALSE);
-
-   DispatchOneEvent(kTRUE);
+   
+   if (!gROOT->TestBit(TObject::kInvalidObject))
+      DispatchOneEvent(kTRUE);
 
    return gROOT->IsInterrupted();
 }
@@ -736,7 +737,13 @@ TSystem *TSystem::FindHelper(const char *path, void *dirptr)
 
    TPluginHandler *h;
    TSystem *helper = 0;
-   TUrl url(path, kTRUE);
+   if (path) {
+      if (!GetDirPtr()) {
+         TUrl url(path, kTRUE);
+         if (!strcmp(url.GetProtocol(), "file"))
+            return 0;
+      }
+   }
 
    // look for existing helpers
    TIter next(fHelpers);
@@ -1046,26 +1053,38 @@ again:
    iter++; c = inp; ier = 0;
    x = out; x[0] = 0;
 
+   p = 0; e = 0;
+   if (c[0] == '~' && c[1] == '/') { // ~/ case
+      p = HomeDirectory(); 
+      e = c + 1; 
+      if (p) {                         // we have smth to copy
+         strlcpy(x, p, kBufSize); 
+         x += strlen(p); 
+         c = e;
+      } else {
+         ++ier;
+         ++c;
+      }
+   } else if (c[0] == '~' && c[1] != '/') { // ~user case
+      n = strcspn(c+1, "/ ");
+      buff[0] = 0; 
+      strncat(buff, c+1, n);
+      p = HomeDirectory(buff); 
+      e = c+1+n; 
+      if (p) {                          // we have smth to copy
+         strlcpy(x, p, kBufSize); 
+         x += strlen(p); 
+         c = e;
+      } else {
+         ++ier;
+         ++c;
+      }
+   }
+
    for ( ; c[0]; c++) {
 
       p = 0; e = 0;
-      if (c[0] == '~' && c[1] == '/') { // ~/ case
-         p = HomeDirectory(); e = c + 1; if (!p) ier++;
-      }
-      if (p) {                         // we have smth to copy
-         strlcpy(x, p, kBufSize); x += strlen(p); c = e-1; continue;
-      }
 
-      p = 0;
-      if (c[0] == '~' && c[1] != '/') { // ~user case
-         n = strcspn(c+1, "/ "); buff[0] = 0; strncat(buff, c+1, n);
-         p = HomeDirectory(buff); e = c+1+n; if (!p) ier++;
-      }
-      if (p) {                          // we have smth to copy
-         strlcpy(x, p, kBufSize); x += strlen(p); c = e-1; continue;
-      }
-
-      p = 0;
       if (c[0] == '.' && c[1] == '/' && c[-1] == ' ') { // $cwd
          strlcpy(buff, WorkingDirectory(), kBufSize);
          p = buff;
@@ -1648,6 +1667,14 @@ void TSystem::ShowOutput(RedirectHandle_t *h)
 //---- Dynamic Loading ---------------------------------------------------------
 
 //______________________________________________________________________________
+void TSystem::AddDynamicPath(const char *)
+{
+   // Add a new directory to the dynamic path.
+   
+   AbstractMethod("AddDynamicPath");
+}
+
+//______________________________________________________________________________
 const char* TSystem::GetDynamicPath()
 {
    // Return the dynamic path (used to find shared libraries).
@@ -1770,44 +1797,42 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
 
    char *path = DynamicPathName(module);
 
-   // load any dependent libraries
-   int ret;
-   TString deplibs = gInterpreter->GetSharedLibDeps(moduleBasename);
-   if (deplibs.IsNull()) {
-      TString libmapfilename;
-      if (path) {
+   int ret = -1;
+   if (path) {
+      // load any dependent libraries
+      TString deplibs = gInterpreter->GetSharedLibDeps(moduleBasename);
+      if (deplibs.IsNull()) {
+         TString libmapfilename;
          libmapfilename = path;
          idx = libmapfilename.Last('.');
          if (idx != kNPOS) {
             libmapfilename.Remove(idx);
          }
          libmapfilename += ".rootmap";
-      }
-      if (gSystem->GetPathInfo(libmapfilename, 0, (Long_t*)0, 0, 0) == 0) {
-         if (gDebug > 0) Info("Load", "loading %s", libmapfilename.Data());
-         gInterpreter->LoadLibraryMap(libmapfilename);
-         deplibs = gInterpreter->GetSharedLibDeps(moduleBasename);
-      }
-   }
-   if (!deplibs.IsNull()) {
-      TString delim(" ");
-      TObjArray *tokens = deplibs.Tokenize(delim);
-      for (Int_t i = tokens->GetEntriesFast()-1; i > 0; i--) {
-         const char *deplib = ((TObjString*)tokens->At(i))->GetName();
-         if (gDebug > 0)
-            Info("Load", "loading dependent library %s for library %s",
-                 deplib, ((TObjString*)tokens->At(0))->GetName());
-         if ((ret = Load(deplib, "", system)) < 0) {
-            delete tokens;
-            recCall--;
-            return ret;
+         if (gSystem->GetPathInfo(libmapfilename, 0, (Long_t*)0, 0, 0) == 0) {
+            if (gDebug > 0) Info("Load", "loading %s", libmapfilename.Data());
+            gInterpreter->LoadLibraryMap(libmapfilename);
+            deplibs = gInterpreter->GetSharedLibDeps(moduleBasename);
          }
+      } else {
+         TString delim(" ");
+         TObjArray *tokens = deplibs.Tokenize(delim);
+         for (Int_t i = tokens->GetEntriesFast()-1; i > 0; i--) {
+            const char *deplib = ((TObjString*)tokens->At(i))->GetName();
+            if (strcmp(module,deplib)==0) {
+               continue;
+            }
+            if (gDebug > 0)
+               Info("Load", "loading dependent library %s for library %s",
+                    deplib, ((TObjString*)tokens->At(0))->GetName());
+            if ((ret = Load(deplib, "", system)) < 0) {
+               delete tokens;
+               recCall--;
+               return ret;
+            }
+         }
+         delete tokens;
       }
-      delete tokens;
-   }
-
-   ret = -1;
-   if (path) {
       if (!system) {
          // Mark the library in $ROOTSYS/lib as system.
          const char *dirname = DirName(path);
@@ -2536,6 +2561,9 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 {
    // This method compiles and loads a shared library containing
    // the code from the file "filename".
+   //
+   // The return value is true (1) in case of success and false (0)
+   // in case of error.
    //
    // The possible options are:
    //     k : keep the shared library after the session end.
@@ -3278,7 +3306,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    rcint += "rootcint \"--lib-list-prefix=";
    rcint += mapfile;
    rcint += "\" -f \"";
-   rcint.Append(dict).Append("\" -c -p ").Append(GetIncludePath()).Append(" ");
+   rcint.Append(dict).Append("\" -c -p ").Append(GetIncludePath()).Append(" -D__ACLIC__ ");
    if (produceRootmap) {
       rcint.Append("-DR__ACLIC_ROOTMAP ");
    }
@@ -3318,9 +3346,21 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
       while ( liblist >> libtoload ) {
          // Load the needed library except for the library we are currently building!
+         if (libtoload == "#") {
+            // The comment terminates the list of libraries.
+            std::string toskipcomment;
+            std::getline(liblist,toskipcomment);
+            break;
+         }
          if (libtoload != library && libtoload != libname && libtoload != libname_ext) {
             if (produceRootmap) {
-               if (loadLib || linkDepLibraries /* For GetLibraries to Work */) gROOT->LoadClass("", libtoload);
+               if (loadLib || linkDepLibraries /* For GetLibraries to Work */) {
+                  result = gROOT->LoadClass("", libtoload) >= 0;
+                  if (!result) {
+                     // We failed to load one of the dependency.
+                     break;
+                  }
+               }
                if (!linkedlibs.Contains(libtoload)) {
                   libmapfile << " " << libtoload;
                   all_libtoload.Append(" ").Append(libtoload);
@@ -3343,6 +3383,10 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
          std::string clname;
          while ( std::getline(liblist,clname) ) {
+            if (clname[0] == '#') {
+               // Skip comments.
+               continue;
+            }
             std::replace(clname.begin(), clname.end(), ':', '@');
             std::replace(clname.begin(), clname.end(), ' ', '_');
             libmapfile << endl;
@@ -3372,7 +3416,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    TString cmd = fMakeSharedLib;
    // we do not add filename because it is already included via the dictionary(in dicth) !
    // dict.Append(" ").Append(filename);
-   cmd.ReplaceAll("$SourceFiles","\"$SourceFiles\"");
+   cmd.ReplaceAll("$SourceFiles","-D__ACLIC__ \"$SourceFiles\"");
    cmd.ReplaceAll("$SourceFiles",dict);
    cmd.ReplaceAll("$ObjectFiles","\"$ObjectFiles\"");
    cmd.ReplaceAll("$ObjectFiles",dictObj);
@@ -3421,7 +3465,9 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    TString exec;
    AssignAndDelete( exec, ConcatFileName( build_loc, libname ) );
    exec += "_ACLiC_exec";
+   testcmd.ReplaceAll("$SourceFiles","-D__ACLIC__ \"$SourceFiles\"");
    testcmd.ReplaceAll("$SourceFiles",dict);
+   testcmd.ReplaceAll("$ObjectFiles","\"$ObjectFiles\"");
    testcmd.ReplaceAll("$ObjectFiles",dictObj);
    testcmd.ReplaceAll("$IncludePath",includes);
    testcmd.ReplaceAll("$ExeName",exec);
@@ -3523,7 +3569,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          if (!compilationResult) {
             ::Info("ACLiC","The compiler has not found any problem with your macro.\n"
             "\tProbably your macro uses something rootcint can't parse.\n"
-            "\tCheck http://root.cern.ch/root/Cint.phtml?limitations for Cint's limitations.");
+            "\tCheck http://root.cern.ch/viewvc/trunk/cint/doc/limitati.txt for Cint's limitations.");
             TString objfile=expFileName;
             Ssiz_t len=objfile.Length();
             objfile.Replace(len-extension.Length(), len, GetObjExt());

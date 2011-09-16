@@ -79,40 +79,6 @@ void TEveTrackProjected::UpdateProjection()
 }
 
 //______________________________________________________________________________
-void TEveTrackProjected::GetBreakPoint(Int_t idx, Bool_t back,
-                                       Float_t& x, Float_t& y, Float_t& z)
-{
-   // With bisection calculate break-point vertex.
-
-   TEveProjection *projection = fManager->GetProjection();
-
-   TEveVector vL = fOrigPnts[idx];
-   TEveVector vR = fOrigPnts[idx+1];
-   TEveVector vM, vLP, vMP;
-   while ((vL-vR).Mag2() > 1e-10f)
-   {
-      vM.Mult(vL+vR, 0.5f);
-      vLP.Set(vL); projection->ProjectPoint(vLP.fX, vLP.fY, vLP.fZ, 0);
-      vMP.Set(vM); projection->ProjectPoint(vMP.fX, vMP.fY, vMP.fZ, 0);
-      if (projection->AcceptSegment(vLP, vMP, 0.0f))
-      {
-         vL.Set(vM);
-      }
-      else
-      {
-         vR.Set(vM);
-      }
-   }
-
-   if (back) {
-      x = vL.fX; y = vL.fY; z = vL.fZ;
-   } else {
-      x = vR.fX; y = vR.fY; z = vR.fZ;
-   }
-   projection->ProjectPoint(x, y, z, fDepth);
-}
-
-//______________________________________________________________________________
 Int_t TEveTrackProjected::GetBreakPointIdx(Int_t start)
 {
    // Findex index of the last point that lies within the same
@@ -124,20 +90,23 @@ Int_t TEveTrackProjected::GetBreakPointIdx(Int_t start)
 
    Int_t val = fLastPoint;
 
-   TEveVector v1, v2;
-   if (Size() > 1)
+   if (projection->HasSeveralSubSpaces())
    {
-      Int_t i = start;
-      while(i < fLastPoint)
+      TEveVector v1, v2;
+      if (Size() > 1)
       {
-         GetPoint(i,   v1.fX, v1.fY, v1.fZ);
-         GetPoint(i+1, v2.fX, v2.fY, v2.fZ);
-         if(projection->AcceptSegment(v1, v2, fPropagator->GetDelta()) == kFALSE)
+         Int_t i = start;
+         while(i < fLastPoint)
          {
-            val = i;
-            break;
+            GetPoint(i,   v1.fX, v1.fY, v1.fZ);
+            GetPoint(i+1, v2.fX, v2.fY, v2.fZ);
+            if(projection->AcceptSegment(v1, v2, fPropagator->GetDelta()) == kFALSE)
+            {
+               val = i;
+               break;
+            }
+            i++;
          }
-         i++;
       }
    }
    return val;
@@ -197,9 +166,12 @@ void TEveTrackProjected::MakeTrack(Bool_t recurse)
       if (bR == fLastPoint)
          break;
 
-      GetBreakPoint(bR, kTRUE,  x, y, z); vvec.push_back(TEveVector(x, y, z));
+      TEveVector vL = fOrigPnts[bR];
+      TEveVector vR = fOrigPnts[bR + 1];
+      projection->BisectBreakPoint(vL, vR, kTRUE, fDepth);
+      vvec.push_back(vL);
       fBreakPoints.push_back((Int_t)vvec.size());
-      GetBreakPoint(bR, kFALSE, x, y, z); vvec.push_back(TEveVector(x, y, z));
+      vvec.push_back(vR);
 
       bL = bR + 1;
       bR = GetBreakPointIdx(bL);
@@ -238,12 +210,12 @@ void TEveTrackProjected::MakeTrack(Bool_t recurse)
       else
          SetNextPoint((*i).fX, (*i).fY, (*i).fZ);
    }
-   delete [] fOrigPnts;
+   delete [] fOrigPnts; fOrigPnts = 0;
 
    // Project path-marks
    for (vPathMark_i pm = fPathMarks.begin(); pm != fPathMarks.end(); ++pm)
    {
-      projection->ProjectVector(trans, pm->fV, fDepth);
+      projection->ProjectPointdv(trans, pm->fV.Arr(), pm->fV.Arr(), fDepth);
    }
 }
 

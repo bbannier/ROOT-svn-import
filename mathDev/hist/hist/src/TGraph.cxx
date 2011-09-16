@@ -51,7 +51,7 @@ ClassImp(TGraph)
 <center><h2>Graph class</h2></center>
 A Graph is a graphics object made of two arrays X and Y with npoints each.
 <p>
-The TGraph painting is permofed thanks to the
+The TGraph painting is performed thanks to the
 <a href="http://root.cern.ch/root/html/TGraphPainter.html">TGraphPainter</a>
 class. All details about the various painting options are given in
 <a href="http://root.cern.ch/root/html/TGraphPainter.html">this class</a>.
@@ -438,9 +438,14 @@ void TGraph::Apply(TF1 *f)
    // The Y values of the graph are replaced by the new values computed
    // using the function
 
+   if (fHistogram) {
+      delete fHistogram;
+      fHistogram = 0;
+   }
    for (Int_t i=0;i<fNpoints;i++) {
       fY[i] = f->Eval(fX[i],fY[i]);
    }
+   if (gPad) gPad->Modified();
 }
 
 
@@ -452,6 +457,7 @@ void TGraph::Browse(TBrowser *b)
    TString opt = gEnv->GetValue("TGraph.BrowseOption","");
    if (opt.IsNull()) {
       opt = b ? b->GetDrawOption() : "alp";
+      opt = (opt == "") ? "alp" : opt;
    }
    Draw(opt.Data());
    gPad->Update();
@@ -1915,10 +1921,15 @@ void TGraph::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    SaveLineAttributes(out,"graph",1,1,1);
    SaveMarkerAttributes(out,"graph",1,1,1);
 
-   for (Int_t i=0;i<fNpoints;i++) {
-      out<<"   graph->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<endl;
+   if (fNpoints >=1) {
+      streamsize prec = out.precision();
+      out.precision(10);
+      for (Int_t i=0;i<fNpoints;i++) {
+         out<<"   graph->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<endl;
+      }
+      out.precision(prec);
    }
-
+   
    static Int_t frameNumber = 0;
    if (fHistogram) {
       frameNumber++;

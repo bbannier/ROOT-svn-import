@@ -254,11 +254,11 @@ public:
   static void logEvalError(const RooAbsReal* originator, const char* origName, const char* message, const char* serverValueString=0) ;
   static void printEvalErrors(ostream&os=std::cout, Int_t maxPerNode=10000000) ;
   static Int_t numEvalErrors() ;
-  static Int_t numEvalErrorItems() { return _evalErrorList.size() ; }
+  static Int_t numEvalErrorItems() ;
 
    
   typedef std::map<const RooAbsArg*,std::pair<std::string,std::list<EvalError> > >::const_iterator EvalErrorIter ; 
-  static EvalErrorIter evalErrorIter() { return _evalErrorList.begin() ; } 
+  static EvalErrorIter evalErrorIter() ;
 
   static void clearEvalErrorLog() ;
 
@@ -287,6 +287,8 @@ public:
 
   Double_t findRoot(RooRealVar& x, Double_t xmin, Double_t xmax, Double_t yval) ;
 
+
+  virtual Bool_t setData(RooAbsData& /*data*/, Bool_t /*cloneData*/=kTRUE) { return kTRUE ; }
 
 protected:
 
@@ -372,6 +374,7 @@ protected:
   mutable Float_t _floatValue ; //! Transient cache for floating point values from tree branches 
   mutable Int_t   _intValue   ; //! Transient cache for integer values from tree branches 
   mutable UChar_t _byteValue  ; //! Transient cache for byte values from tree branches 
+  mutable Char_t  _sbyteValue ; //! Transient cache for signed byte values from tree branches 
   mutable UInt_t  _uintValue  ; //! Transient cache for unsigned integer values from tree branches 
 
   friend class RooAbsPdf ;

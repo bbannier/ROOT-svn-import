@@ -41,18 +41,18 @@
 ClassImp(TBranchRef)
 
 //______________________________________________________________________________
-TBranchRef::TBranchRef(): TBranch()
+TBranchRef::TBranchRef(): TBranch(), fRequestedEntry(-1), fRefTable(0)
 {
    // Default constructor.
 
-   fRefTable   = 0;
    fReadLeaves = (ReadLeaves_t)&TBranchRef::ReadLeavesImpl;
+   fFillLeaves = (FillLeaves_t)&TBranchRef::FillLeavesImpl;
 }
 
 
 //______________________________________________________________________________
 TBranchRef::TBranchRef(TTree *tree)
-    :TBranch()
+    : TBranch(), fRequestedEntry(-1), fRefTable(0)
 {
    // Main constructor called by TTree::BranchRef.
 
@@ -79,6 +79,7 @@ TBranchRef::TBranchRef(TTree *tree)
    fDirectory  = fTree->GetDirectory();
    fFileName   = "";
    fReadLeaves = (ReadLeaves_t)&TBranchRef::ReadLeavesImpl;
+   fFillLeaves = (FillLeaves_t)&TBranchRef::FillLeavesImpl;
 }
 
 
@@ -108,15 +109,6 @@ Int_t TBranchRef::Fill()
 }
 
 //______________________________________________________________________________
-void TBranchRef::FillLeaves(TBuffer &b)
-{
-   // This function called by TBranch::Fill overloads TBranch::FillLeaves.
-
-   if (!fRefTable) fRefTable = new TRefTable(this,100);
-   fRefTable->FillBuffer(b);
-}
-
-//______________________________________________________________________________
 Bool_t TBranchRef::Notify()
 {
    // This function is called by TRefTable::Notify, itself called by
@@ -127,12 +119,15 @@ Bool_t TBranchRef::Notify()
    if (!fRefTable) fRefTable = new TRefTable(this,100);
    UInt_t uid = fRefTable->GetUID();
    TProcessID* context = fRefTable->GetUIDContext();
-   GetEntry(fReadEntry);
+   if (fReadEntry != fRequestedEntry) {
+      // Load the RefTable if we need to.
+      GetEntry(fRequestedEntry);
+   }
    TBranch *branch = (TBranch*)fRefTable->GetParent(uid, context);
    if (branch) {
       // don't re-read, the user might have changed some object
-      if (branch->GetReadEntry() != fReadEntry)
-         branch->GetEntry(fReadEntry);
+      if (branch->GetReadEntry() != fRequestedEntry)
+         branch->GetEntry(fRequestedEntry);
    } else {
       //scan the TRefTable of possible friend Trees
       TList *friends = fTree->GetListOfFriends();
@@ -143,12 +138,14 @@ Bool_t TBranchRef::Notify()
          TTree *tree = elem->GetTree();
          TBranchRef *bref = tree->GetBranchRef();
          if (bref) {
-            bref->GetEntry(fReadEntry);
+            if (bref->GetReadEntry() != fRequestedEntry) {
+               bref->GetEntry(fRequestedEntry);
+            }
             branch = (TBranch*)bref->GetRefTable()->GetParent(uid, context);
             if (branch) {
                // don't re-read, the user might have changed some object
-               if (branch->GetReadEntry() != fReadEntry)
-                  branch->GetEntry(fReadEntry);
+               if (branch->GetReadEntry() != fRequestedEntry)
+                  branch->GetEntry(fRequestedEntry);
                return kTRUE;
             }
          }
@@ -176,6 +173,16 @@ void TBranchRef::ReadLeavesImpl(TBuffer &b)
 }
 
 //______________________________________________________________________________
+void TBranchRef::FillLeavesImpl(TBuffer &b)
+{
+   // This function called by TBranch::Fill overloads TBranch::FillLeaves.
+
+   if (!fRefTable) fRefTable = new TRefTable(this,100);
+   fRefTable->FillBuffer(b);
+}
+
+
+//______________________________________________________________________________
 void TBranchRef::Reset(Option_t *option)
 {
   //    Existing buffers are deleted
@@ -188,7 +195,18 @@ void TBranchRef::Reset(Option_t *option)
 }
 
 //______________________________________________________________________________
-Int_t TBranchRef::SetParent(const TObject* object, const Int_t branchID)
+void TBranchRef::ResetAfterMerge(TFileMergeInfo *info)
+{
+   // Reset a Branch after a Merge operation (drop data but keep customizations)
+   // TRefTable is cleared.
+   
+   TBranch::ResetAfterMerge(info);
+   if (!fRefTable) fRefTable = new TRefTable(this,100);
+   fRefTable->Reset();
+}
+
+//______________________________________________________________________________
+Int_t TBranchRef::SetParent(const TObject* object, Int_t branchID)
 {
    // -- Set the current parent branch.
    //

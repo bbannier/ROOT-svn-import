@@ -11,6 +11,7 @@
 #ifndef ROOT_CygPath
 #include <stdio.h>
 #include <stdlib.h>
+#include <direct.h>
 #include <string>
 
 static const char *GetCygwinRootDir() {
@@ -18,6 +19,13 @@ static const char *GetCygwinRootDir() {
    static char buf[512] = {0};
 
    if (!buf[0]) {
+      char pathbuffer[_MAX_PATH] = {0};
+      // Search for cygpath in PATH environment variable
+      _searchenv( "cygpath.exe", "PATH", pathbuffer );
+      if( *pathbuffer == '\0' ) {
+         sprintf(buf, "%c:", _getdrive());
+         return buf;
+      }
       FILE *pipe = _popen( "cygpath -m /", "rt" );
 
       if (!pipe) return 0;

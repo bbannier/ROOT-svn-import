@@ -10,11 +10,9 @@
  *************************************************************************/
 
 #include "TEveBoxSet.h"
+#include "TEveShape.h"
+
 #include "TRandom.h"
-#include "TBuffer3D.h"
-#include "TBuffer3DTypes.h"
-#include "TVirtualPad.h"
-#include "TVirtualViewer3D.h"
 
 //==============================================================================
 // TEveBoxSet
@@ -55,12 +53,14 @@ TEveBoxSet::TEveBoxSet(const char* n, const char* t) :
    fDefHeight    (1),
    fDefDepth     (1),
 
+   fBoxSkip      (0),
+
    fDrawConeCap  (kFALSE)
 {
    // Constructor.
 
    // Override from TEveDigitSet.
-   fDisableLigting = kFALSE;
+   fDisableLighting = kFALSE;
 }
 
 /******************************************************************************/
@@ -126,6 +126,7 @@ void TEveBoxSet::AddBox(const Float_t* verts)
 
    BFreeBox_t* b = (BFreeBox_t*) NewDigit();
    memcpy(b->fVertices, verts, sizeof(b->fVertices));
+   TEveShape::CheckAndFixBoxOrientationFv(b->fVertices);
 }
 
 //______________________________________________________________________________

@@ -5,7 +5,7 @@
 ## Initial version: 17.5.2008
 ##
 ## Version info: $Id$
-## Checked in by $Author: feichtinger $
+## Checked in by $Author$
 #######################################################################
 
 #
@@ -16,7 +16,7 @@
 #
 
 
-AM_CPPFLAGS = -I$(top_srcdir)/src $(READLINE_INCDIR)
+AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src $(READLINE_INCDIR)
 
 #############################################################################
 ## extra directory definitions
@@ -26,6 +26,8 @@ xrootdfrmincdir = $(includedir)/xrootd/XrdFrm
 ## deliverables
 
 bin_PROGRAMS = frm_admin frm_purged frm_xfragent frm_xfrd
+man8_MANS = ../../docs/man/frm_admin.8  ../../docs/man/frm_purged.8 \
+            ../../docs/man/frm_xfragent.8 ../../docs/man/frm_xfrd.8
 
 xrootdfrminc_HEADERS = XrdFrmAdmin.hh   \
                        XrdFrmCID.hh     \
@@ -43,10 +45,12 @@ xrootdfrminc_HEADERS = XrdFrmAdmin.hh   \
                        XrdFrmTSort.hh   \
                        XrdFrmTransfer.hh\
                        XrdFrmUtils.hh   \
+                       XrdFrmXAttr.hh \
                        XrdFrmXfrAgent.hh\
                        XrdFrmXfrDaemon.hh\
                        XrdFrmXfrJob.hh  \
-                       XrdFrmXfrQueue.hh
+                       XrdFrmXfrQueue.hh \
+                       XrdFrmXLock.hh
 
 
 lib_LTLIBRARIES = libXrdFrm.la
@@ -96,6 +100,7 @@ frm_admin_SOURCES = \
                   XrdFrmAdminMain.cc \
                   XrdFrmAdmin.cc \
                   XrdFrmAdminAudit.cc \
+                  XrdFrmAdminConvert.cc \
                   XrdFrmAdminFiles.cc \
                   XrdFrmAdminFind.cc \
                   XrdFrmAdminQuery.cc \

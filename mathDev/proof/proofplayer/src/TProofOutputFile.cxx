@@ -19,6 +19,7 @@
 
 #include "TProofOutputFile.h"
 #include <TEnv.h>
+#include <TError.h>
 #include <TFileCollection.h>
 #include <TFileInfo.h>
 #include <TFileMerger.h>
@@ -27,6 +28,7 @@
 #include <TObjArray.h>
 #include <TObject.h>
 #include <TObjString.h>
+#include <TProofDebug.h>
 #include <TProofServ.h>
 #include <TSystem.h>
 #include <TUUID.h>
@@ -101,7 +103,10 @@ void TProofOutputFile::Init(const char *path, const char *dsname)
       fLocalHost += port;
    }
 
-   TUrl u(path, kTRUE);
+   TString xpath(path);
+   // Resolve the relevant placeholders in fFileName (e.g. root://a.ser.ver//data/dir/<group>/<user>/file)
+   TProofServ::ResolveKeywords(xpath, 0);
+   TUrl u(xpath, kTRUE);
    // File name
    fFileName = u.GetFile();
    // The name is used to identify this entity
@@ -125,15 +130,18 @@ void TProofOutputFile::Init(const char *path, const char *dsname)
    if (pos != kNPOS) fDir.Remove(pos);
    fRawDir = fDir;
 
-   if (fDir == "file:") {
+   if (fDir.BeginsWith("file:")) {
       fIsLocal = kTRUE;
-      // For local files, the user is allowed to create files under the assigned directories
+      // For local files, the user is allowed to create files under the specified directory.
       // If this is not the case, the file is rooted automatically to the assigned dir which
       // is the datadir for dataset creation runs, and the working dir for merging runs
       TString dirPath = gSystem->DirName(fFileName);
+      fFileName = gSystem->BaseName(fFileName);
+      if (AssertDir(dirPath) != 0)
+         Error("Init", "problems asserting path '%s'", dirPath.Data());
       TString dirData = (!IsMerge() && gProofServ) ? gProofServ->GetDataDir()
                                                    : gSystem->WorkingDirectory();
-      if ((dirPath[0] == '/') && !dirPath.BeginsWith(dirData)) {
+      if ((dirPath[0] == '/') && gSystem->AccessPathName(dirPath, kWritePermission)) {
          Warning("Init", "not allowed to create files under '%s' - chrooting to '%s'",
                          dirPath.Data(), dirData.Data());
          dirPath.Insert(0, dirData);
@@ -150,71 +158,49 @@ void TProofOutputFile::Init(const char *path, const char *dsname)
       }
       // Make sure that session-tag, ordinal and query sequential number are present otherwise
       // we may override outputs from other workers
-      if (!IsMerge() && gProofServ) {
-         if (!dirPath.Contains(gProofServ->GetOrdinal())) {
-            if (!dirPath.EndsWith("/")) dirPath += "/";
-            dirPath += gProofServ->GetOrdinal();
+      if (gProofServ) {
+         if (!IsMerge() || (!dirPath.BeginsWith(gProofServ->GetDataDir()) &&
+                            !dirPath.BeginsWith(gSystem->WorkingDirectory()))) {
+            if (!dirPath.Contains(gProofServ->GetOrdinal())) {
+               if (!dirPath.EndsWith("/")) dirPath += "/";
+               dirPath += gProofServ->GetOrdinal();
+            }
          }
-         if (!dirPath.Contains(gProofServ->GetSessionTag())) {
-            if (!dirPath.EndsWith("/")) dirPath += "/";
-            dirPath += gProofServ->GetSessionTag();
-         }
-         if (!dirPath.Contains("<qnum>")) {
-            if (!dirPath.EndsWith("/")) dirPath += "/";
-            dirPath += "<qnum>";
+         if (!IsMerge()) {
+            if (!dirPath.Contains(gProofServ->GetSessionTag())) {
+               if (!dirPath.EndsWith("/")) dirPath += "/";
+               dirPath += gProofServ->GetSessionTag();
+            }
+            if (!dirPath.Contains("<qnum>")) {
+               if (!dirPath.EndsWith("/")) dirPath += "/";
+               dirPath += "<qnum>";
+            }
+            // Resolve the relevant placeholders
+            TProofServ::ResolveKeywords(dirPath, 0);
          }
       }
-      // Resolve the relevant placeholders
-      TProofServ::ResolveKeywords(dirPath, 0);
       // Save the raw directory
       fRawDir = dirPath;
       // Make sure the the path exists
-      // Locate the portion of path already existing and get its mode: we make sure that this
-      // mode applies to all new subpaths created
-      TString existsPath(dirPath);
-      TList subPaths;
-      while (existsPath != "/" && existsPath != "." && gSystem->AccessPathName(existsPath)) {
-         subPaths.AddFirst(new TObjString(gSystem->BaseName(existsPath)));
-         existsPath = gSystem->DirName(existsPath);
-      }
-      subPaths.SetOwner(kTRUE);
-      FileStat_t st;
-      if (gSystem->GetPathInfo(existsPath, st) == 0) {
-         TString xpath = existsPath;
-         TIter nxp(&subPaths);
-         TObjString *os = 0;
-         while ((os = (TObjString *) nxp())) {
-            xpath += TString::Format("/%s", os->GetName());
-            if (gSystem->mkdir(xpath, kTRUE) == 0) {
-               if (gSystem->Chmod(xpath, (UInt_t) st.fMode) != 0)
-                  Warning("Init", "problems setting mode on '%s'", xpath.Data());
-            } else {
-               Error("Init", "problems creating path '%s'", xpath.Data());
-            }
-         }
-      } else {
-         Warning("Init", "could not get info for path '%s': will only try to create"
-                         " the full path w/o trying to set the mode", existsPath.Data());
-         if (gSystem->mkdir(existsPath, kTRUE) != 0)
-            Error("Init", "problems creating path '%s'", existsPath.Data());
-      }
-      // Remove prefix, if any
-      TString pfx  = gEnv->GetValue("Path.Localroot","");
-      if (!pfx.IsNull()) dirPath.Remove(0, pfx.Length());
+      if (AssertDir(dirPath) != 0)
+         Error("Init", "problems asserting path '%s'", dirPath.Data());
       // Check if a local data server has been specified
       if (gSystem->Getenv("LOCALDATASERVER")) {
          fDir = gSystem->Getenv("LOCALDATASERVER");
          if (!fDir.EndsWith("/")) fDir += "/";
       }
+      TString dirProto = TUrl(fDir).GetProtocol();
+      // Remove prefix, if any, if included and if Xrootd
+      TString pfx  = gEnv->GetValue("Path.Localroot","");
+      if (!pfx.IsNull() && dirPath.BeginsWith(pfx) &&
+          (dirProto == "root" || dirProto == "xrd")) dirPath.Remove(0, pfx.Length());
       fDir += dirPath;
-   } else {
-      // Allow for place holders in fFileName (e.g. root://a.ser.ver//data/dir/<group>/<user>/file)
-      TProofServ::ResolveKeywords(fFileName, 0);
    }
    // Notify
    Info("Init", "dir: %s (raw: %s)", fDir.Data(), fRawDir.Data());
 
    // Default output file name
+   ResetBit(TProofOutputFile::kOutputFileNameSet);
    fOutputFileName = gEnv->GetValue("Proof.OutputFile", "<file>");
    // Add default file name
    TString fileName = path;
@@ -243,14 +229,6 @@ TProofOutputFile::~TProofOutputFile()
 }
 
 //______________________________________________________________________________
-void TProofOutputFile::SetFileName(const char* name)
-{
-   // Set the file name
-
-   fFileName = name;
-}
-
-//______________________________________________________________________________
 void TProofOutputFile::SetOutputFileName(const char *name)
 {
    // Set the name of the output file; in the form of an Url.
@@ -258,10 +236,11 @@ void TProofOutputFile::SetOutputFileName(const char *name)
    if (name && strlen(name) > 0) {
       fOutputFileName = name;
       TProofServ::ResolveKeywords(fOutputFileName);
-      Info("SetOutputFileName", "output file url: %s", fOutputFileName.Data());
+      PDB(kOutput,1) Info("SetOutputFileName", "output file url: %s", fOutputFileName.Data());
    } else {
       fOutputFileName = "";
    }
+   SetBit(TProofOutputFile::kOutputFileNameSet);
 }
 
 //______________________________________________________________________________
@@ -323,7 +302,7 @@ Long64_t TProofOutputFile::Merge(TCollection* list)
 
    // Needs somethign to merge
    if(!list || list->IsEmpty()) return 0;
-
+   
    if (IsMerge()) {
       // Build-up the merger
       TString fileLoc;
@@ -348,7 +327,7 @@ Long64_t TProofOutputFile::Merge(TCollection* list)
       while((o = next())) {
          TProofOutputFile *pFile = dynamic_cast<TProofOutputFile *>(o);
          if (pFile) {
-            fileLoc = Form("%s/%s", pFile->GetDir(), pFile->GetFileName());
+            fileLoc.Form("%s/%s", pFile->GetDir(), pFile->GetFileName());
             AddFile(merger, fileLoc);
          }
       }
@@ -508,4 +487,45 @@ TFileMerger *TProofOutputFile::GetFileMerger(Bool_t local)
    if (!fMerger)
       fMerger = new TFileMerger(local);
    return fMerger;
+}
+
+//________________________________________________________________________________
+Int_t TProofOutputFile::AssertDir(const char *dirpath)
+{
+   // Assert directory path 'dirpath', with the ownership of the last already
+   // existing subpath.
+   // Return 0 on success, -1 on error
+   
+   TString existsPath(dirpath);
+   TList subPaths;
+   while (existsPath != "/" && existsPath != "." && gSystem->AccessPathName(existsPath)) {
+      subPaths.AddFirst(new TObjString(gSystem->BaseName(existsPath)));
+      existsPath = gSystem->DirName(existsPath);
+   }
+   subPaths.SetOwner(kTRUE);
+   FileStat_t st;
+   if (gSystem->GetPathInfo(existsPath, st) == 0) {
+      TString xpath = existsPath;
+      TIter nxp(&subPaths);
+      TObjString *os = 0;
+      while ((os = (TObjString *) nxp())) {
+         xpath += TString::Format("/%s", os->GetName());
+         if (gSystem->mkdir(xpath, kTRUE) == 0) {
+            if (gSystem->Chmod(xpath, (UInt_t) st.fMode) != 0)
+               ::Warning("TProofOutputFile::AssertDir", "problems setting mode on '%s'", xpath.Data());
+         } else {
+            ::Error("TProofOutputFile::AssertDir", "problems creating path '%s'", xpath.Data());
+            return -1;
+         }
+      }
+   } else {
+      ::Warning("TProofOutputFile::AssertDir", "could not get info for path '%s': will only try to create"
+                           " the full path w/o trying to set the mode", existsPath.Data());
+      if (gSystem->mkdir(existsPath, kTRUE) != 0) {
+         ::Error("TProofOutputFile::AssertDir", "problems creating path '%s'", existsPath.Data());
+         return -1;
+      }
+   }
+   // Done
+   return 0;
 }

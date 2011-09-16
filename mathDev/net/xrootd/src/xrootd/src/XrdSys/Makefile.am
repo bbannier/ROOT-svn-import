@@ -4,8 +4,8 @@
 ##
 ## Initial version: 1.8.2005
 ##
-## Version info: $Id: Makefile.am,v 1.11 2010/08/05 15:21:06 feichtinger Exp $
-## Checked in by $Author: feichtinger $
+## Version info: $Id$
+## Checked in by $Author$
 #######################################################################
 
 AM_CPPFLAGS = -I$(top_srcdir)/src
@@ -24,10 +24,12 @@ lib_LTLIBRARIES = libXrdSys.la
 noinst_LTLIBRARIES = libXrdSysErrLog.la
 
 xrootdsysinc_HEADERS = \
-     XrdSysDir.hh    XrdSysLogger.hh    XrdSysPlugin.hh \
-     XrdSysPthread.hh  XrdSysTimer.hh   XrdWin32.hh \
-     XrdSysError.hh  XrdSysPlatform.hh  XrdSysPriv.hh \
-     XrdSysSemWait.hh  XrdSysXSLock.hh  XrdSysHeaders.hh
+     XrdSysDir.hh       XrdSysFAttr.hh     XrdSysFAttrBsd.icc \
+     XrdSysFAttrLnx.icc XrdSysFAttrMac.icc XrdSysFAttrSun.icc \
+     XrdSysLogger.hh    XrdSysPlugin.hh \
+     XrdSysPthread.hh   XrdSysTimer.hh     XrdWin32.hh \
+     XrdSysError.hh     XrdSysPlatform.hh  XrdSysPriv.hh \
+     XrdSysSemWait.hh   XrdSysXSLock.hh    XrdSysHeaders.hh
 
 
 #############################################################################
@@ -39,6 +41,7 @@ libXrdSysErrLog_la_SOURCES = \
 
 libXrdSys_la_SOURCES = \
         XrdSysDir.cc XrdSysDir.hh \
+        XrdSysFAttr.cc XrdSysFAttr.hh \
         XrdSysPlugin.cc XrdSysPlugin.hh \
         XrdSysPriv.cc XrdSysPriv.hh \
         XrdSysPlatform.cc \

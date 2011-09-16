@@ -45,6 +45,7 @@
 ClassImp(TMVA::SeparationBase)
 
 #include <limits>
+#include <iostream>
 #include "TMath.h"
 
 
@@ -53,7 +54,6 @@ TMVA::SeparationBase::SeparationBase() :
    fPrecisionCut(TMath::Sqrt(std::numeric_limits<double>::epsilon()))
 {
    // default constructor
-
 }
 
 //copy constructor
@@ -63,7 +63,6 @@ TMVA::SeparationBase::SeparationBase( const SeparationBase& s ) :
 {
    // copy constructor
 }
-
 
 //_______________________________________________________________________
 Double_t TMVA::SeparationBase::GetSeparationGain(const Double_t &nSelS, const Double_t& nSelB,
@@ -79,13 +78,20 @@ Double_t TMVA::SeparationBase::GetSeparationGain(const Double_t &nSelS, const Do
    if ( (nTotS-nSelS)==nSelS && (nTotB-nSelB)==nSelB) return 0.;
 
    Double_t parentIndex = (nTotS+nTotB) *this->GetSeparationIndex(nTotS,nTotB);
+
    Double_t leftIndex   = ( ((nTotS - nSelS) + (nTotB - nSelB))
                             * this->GetSeparationIndex(nTotS-nSelS,nTotB-nSelB) );
    Double_t rightIndex  = (nSelS+nSelB) * this->GetSeparationIndex(nSelS,nSelB);
-   
-   Double_t diff = parentIndex - leftIndex - rightIndex;
 
-   if(diff/parentIndex<fPrecisionCut ) return 0;
+   //Double_t diff = parentIndex - leftIndex - rightIndex;
+   Double_t diff = (parentIndex - leftIndex - rightIndex)/(nTotS+nTotB);
+
+   if(diff<fPrecisionCut ) {
+      // std::cout << " Warning value in GetSeparation is below numerical presicion " 
+      //           << diff/parentIndex 
+      //           << std::endl;
+      return 0;
+   }
 
    return diff;
 }

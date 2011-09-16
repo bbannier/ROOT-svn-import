@@ -58,11 +58,23 @@ ClassImp(RooAbsTestStatistic)
 RooAbsTestStatistic::RooAbsTestStatistic()
 {
   // Default constructor
-
+  _func = 0 ;
+  _data = 0 ;
+  _projDeps = 0 ;
   _init = kFALSE ;
   _gofArray = 0 ;
   _mpfeArray = 0 ;
   _projDeps = 0 ;
+  _gofOpMode = Slave ;
+  _mpinterl = kFALSE ;
+  _nCPU = 1 ;
+  _nEvents = 0 ; 
+  _nGof = 0 ;
+  _numSets = 0 ;
+  _setNum = 0 ;
+  _simCount = 0 ;
+  _splitRange = 0 ;
+  _verbose = kFALSE ;
 }
 
 
@@ -436,7 +448,7 @@ void RooAbsTestStatistic::initSimMode(RooSimultaneous* simpdf, RooAbsData* data,
   if (!dsetList) {
     coutE(Fitting) << "RooAbsTestStatistic::initSimMode(" << GetName() << ") ERROR: index category of simultaneous pdf is missing in dataset, aborting" << endl ;
     throw std::string("RooAbsTestStatistic::initSimMode() ERROR, index category of simultaneous pdf is missing in dataset, aborting") ;
-    RooErrorHandler::softAbort() ;
+    //RooErrorHandler::softAbort() ;
   }
 
   // Count number of used states
@@ -497,6 +509,60 @@ void RooAbsTestStatistic::initSimMode(RooSimultaneous* simpdf, RooAbsData* data,
   delete catIter ;
 }
 
+
+//_____________________________________________________________________________
+Bool_t RooAbsTestStatistic::setData(RooAbsData& indata, Bool_t cloneData) 
+{ 
+  // Change dataset that is used to given one. If cloneData is kTRUE, a clone of
+  // in the input dataset is made.  If the test statistic was constructed with
+  // a range specification on the data, the cloneData argument is ignore and
+  // the data is always cloned.
+
+  switch(operMode()) {
+
+  case Slave:
+    // Delegate to implementation
+    return setDataSlave(indata,cloneData) ;
+
+  case SimMaster:
+    // Forward to slaves
+    //     cout << "RATS::setData(" << GetName() << ") SimMaster, calling setDataSlave() on slave nodes" << endl ;
+    if (indata.canSplitFast()) {
+      for (Int_t i=0 ; i<_nGof ; i++) {
+	RooAbsData* compData = indata.getSimData(_gofArray[i]->GetName()) ;	
+	_gofArray[i]->setDataSlave(*compData,cloneData) ;
+      }
+    } else if (indata.numEntries()==0) {
+      // For an unsplit empty dataset, simply assign empty dataset to each component
+      for (Int_t i=0 ; i<_nGof ; i++) {
+	_gofArray[i]->setDataSlave(indata,cloneData) ;
+      }
+    } else {
+      //cout << "NONEMPTY DATASET WITHOUT FAST SPLIT SUPPORT! "<< indata.GetName() << endl ;   
+      const RooAbsCategoryLValue* indexCat = & ((RooSimultaneous*)_func)->indexCat() ;
+      TList* dlist = indata.split(*indexCat,kTRUE) ;
+      for (Int_t i=0 ; i<_nGof ; i++) {
+	RooAbsData* compData = (RooAbsData*) dlist->FindObject(_gofArray[i]->GetName()) ;
+	// 	cout << "component data for index " << _gofArray[i]->GetName() << " is " << compData << endl ;
+	if (compData) {
+	  _gofArray[i]->setDataSlave(*compData,kFALSE) ;
+	} else {
+	  coutE(DataHandling) << "RooAbsTestStatistic::setData(" << GetName() << ") ERROR: Cannot find component data for state " << _gofArray[i]->GetName() << endl ;
+	}	
+      }
+      
+    }
+    break ;
+    
+  case MPMaster:
+    // Not supported
+    coutF(DataHandling) << "RooAbsTestStatistic::setData(" << GetName() << ") FATAL: setData() is not supported in multi-processor mode" << endl ;
+    throw string("RooAbsTestStatistic::setData is not supported in MPMaster mode") ;
+    break ;
+  }
+
+  return kTRUE ;
+}
 
 
 

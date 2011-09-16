@@ -895,11 +895,8 @@ void TGaxis::PaintAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t yma
    Int_t maxDigits = 5;
    if (fAxis) maxDigits = fgMaxDigits;
 
-   TLine *lineaxis = new TLine();
    TLatex *textaxis = new TLatex();
-   lineaxis->SetLineColor(GetLineColor());
-   lineaxis->SetLineStyle(1);
-   lineaxis->SetLineWidth(GetLineWidth());
+   SetLineStyle(1); // axis line style
    textaxis->SetTextColor(GetTextColor());
    textaxis->SetTextFont(GetTextFont());
 
@@ -1001,7 +998,7 @@ void TGaxis::PaintAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t yma
       xpl2 = x1;
       ypl1 = y0;
       ypl2 = y1;
-      lineaxis->PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
+      PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
    }
 
 //*-*-              Draw axis title if it exists
@@ -1232,7 +1229,7 @@ void TGaxis::PaintAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t yma
                   }
                }
             }
-            if (!drawGridOnly) lineaxis->PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
+            if (!drawGridOnly) PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
 
             if (optionGrid) {
                if (ltick == 0) {
@@ -1282,7 +1279,7 @@ void TGaxis::PaintAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t yma
                      }
                   }
                }
-               if (!drawGridOnly) lineaxis->PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
+               if (!drawGridOnly) PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
 
                if (optionGrid) {
                   if (ltick == 0) {
@@ -1326,7 +1323,7 @@ void TGaxis::PaintAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t yma
                      }
                   }
                }
-               if (!drawGridOnly) lineaxis->PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
+               if (!drawGridOnly) PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
                if (optionGrid) {
                   if (ltick == 0) {
                      Rotate(xtick1,0,cosphi,sinphi,xx0,yy0 ,xpl2,ypl2);
@@ -1642,7 +1639,7 @@ L110:
 //*-*-              Log axis
 
    if (optionLog && ndiv) {
-      UInt_t xi1=0,xi2,wi,yi1=0,yi2,hi;
+      UInt_t xi1=0,xi2,wi,yi1=0,yi2,hi,xl,xh;
       Bool_t firstintlab = kTRUE, overlap = kFALSE;
       if ((wmin == wmax) || (ndiv == 0))  {
          Error(where, "wmin (%f) == wmax (%f), or ndiv == 0", wmin, wmax);
@@ -1706,7 +1703,7 @@ L110:
                }
             }
          }
-         if (!drawGridOnly) lineaxis->PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
+         if (!drawGridOnly) PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
 
          if (optionGrid) {
             Rotate(xone,0,cosphi,sinphi,x0,y0,xpl2,ypl2);
@@ -1799,7 +1796,7 @@ L160:
             }
             idn = n1a*2;
             if ((nbinin <= idn) || ((nbinin > idn) && (k == 5))) {
-               if (!drawGridOnly) lineaxis->PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
+               if (!drawGridOnly) PaintLineNDC(xpl1, ypl1, xpl2, ypl2);
 
 //*-*- Draw the intermediate LOG labels if requested
 
@@ -1852,7 +1849,9 @@ L160:
                   } else {
                      xi2 = gPad->XtoAbsPixel(u);
                      yi2 = gPad->YtoAbsPixel(v);
-                     if ((x0 == x1 && yi1-hi <= yi2) || (y0 == y1 && xi1+wi >= xi2)){
+                     xl = TMath::Min(xi1,xi2);
+                     xh = TMath::Max(xi1,xi2);
+                     if ((x0 == x1 && yi1-hi <= yi2) || (y0 == y1 && xl+wi >= xh)){
                         overlap = kTRUE;
                      } else {
                         xi1 = xi2;
@@ -1878,8 +1877,7 @@ L200:
 
 
 L210:
-   delete lineaxis;
-   delete linegrid;
+   if (optionGrid) delete linegrid;
    delete textaxis;
 }
 
@@ -2054,8 +2052,7 @@ void TGaxis::SetFunction(const char *funcname)
 //______________________________________________________________________________
 void TGaxis::SetMaxDigits(Int_t maxd)
 {
-   // Static function to set fgMaxDigits for axis with the bin content
-   // (y axis for 1-d histogram, z axis for 2-d histogram)
+   // Static function to set fgMaxDigits for axis.
    // fgMaxDigits is the maximum number of digits permitted for the axis
    // labels above which the notation with 10^N is used.
    // For example, to accept 6 digits number like 900000 on an axis

@@ -141,7 +141,7 @@ Bool_t TMethodHolder< ROOT::Reflex::Scope, ROOT::Reflex::Member >::InitCallFunc_
 // setup the dispatch cache
    for ( size_t iarg = 0; iarg < nArgs; ++iarg ) {
       std::string fullType =
-         fMethod.TypeOf().FunctionParameterAt( iarg ).Name( ROOT::Reflex::QUALIFIED );
+         fMethod.TypeOf().FunctionParameterAt( iarg ).Name( ROOT::Reflex::QUALIFIED | ROOT::Reflex::SCOPED );
       fConverters[ iarg ] = CreateConverter( fullType );
 
       if ( ! fConverters[ iarg ] ) {
@@ -170,7 +170,7 @@ Bool_t PyROOT::TMethodHolder< T, M >::InitCallFunc_()
    std::string callString = "";
    for ( size_t iarg = 0; iarg < nArgs; ++iarg ) {
       std::string fullType =
-         fMethod.TypeOf().FunctionParameterAt( iarg ).Name( ROOT::Reflex::QUALIFIED );
+         fMethod.TypeOf().FunctionParameterAt( iarg ).Name( ROOT::Reflex::QUALIFIED | ROOT::Reflex::SCOPED );
       fConverters[ iarg ] = CreateConverter( fullType );
 
       if ( ! fConverters[ iarg ] ) {
@@ -188,16 +188,23 @@ Bool_t PyROOT::TMethodHolder< T, M >::InitCallFunc_()
 // setup call func
    assert( fMethodCall == 0 );
 
-   fMethodCall = new G__CallFunc();
-   fMethodCall->Init();
-
    G__ClassInfo* gcl = (G__ClassInfo*)((TClass*)fClass.Id())->GetClassInfo();
    if ( ! gcl )
       gcl = GetGlobalNamespaceInfo();
 
-   fMethodCall->SetFunc( gcl->GetMethod(
+   G__MethodInfo gmi = gcl->GetMethod(
       (bool)fMethod == true ? fMethod.Name().c_str() : fClass.Name().c_str(), callString.c_str(),
-      &fOffset, G__ClassInfo::ExactMatch ) );
+      &fOffset, G__ClassInfo::ExactMatch );
+
+   if ( ! gmi.IsValid() && (bool)fMethod == true ) {
+      PyErr_Format( PyExc_RuntimeError, "could not resolve %s::%s(%s)",
+         fClass.Name().c_str(), fMethod.Name().c_str(), callString.c_str() );
+      return kFALSE;
+   }
+
+   fMethodCall = new G__CallFunc();
+   fMethodCall->Init();
+   fMethodCall->SetFunc( gmi );
 
    return kTRUE;
 }
@@ -397,6 +404,12 @@ Int_t PyROOT::TMethodHolder< T, M >::GetPriority()
             priority -= 30;   // double preferred over float (no float in python)
          else if ( aname == "double" )
             priority -= 10;   // char, int, long preferred over double
+
+      // resolve a few special cases
+         else if ( aname == "IBaseFunctionMultiDim")
+            priority -= 1;
+         else if ( aname == "RooAbsReal" )
+            priority -= 1;
       }
 
    }

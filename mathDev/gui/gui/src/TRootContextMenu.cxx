@@ -116,7 +116,7 @@ void TRootContextMenu::DisplayPopup(Int_t x, Int_t y)
    xx = topx + x + 1;
    yy = topy + y + 1;
 
-   PlaceMenu(xx, yy, kFALSE, kTRUE);
+   PlaceMenu(xx, yy, kTRUE, kTRUE);
    // add some space for the right-side '?' (help)
    fMenuWidth += 5;
    Resize(GetDefaultWidth()+5, GetDefaultHeight());
@@ -390,7 +390,7 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
 
    Int_t selfobjpos;
 
-   if (!function || !object) return;
+   if (!function) return;
 
    // Position, if it exists, of the argument that correspond to the object itself
    if (fContextMenu->GetSelectedMenuItem())
@@ -453,7 +453,7 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
          }
 
          TDataMember *m = argument->GetDataMember();
-         if (m && m->GetterMethod(object->IsA())) {
+         if (m && object && m->GetterMethod(object->IsA())) {
 
             // Get the current value and form it as a text:
 
@@ -481,6 +481,7 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
             // Find out whether we have options ...
 
             TList *opt;
+            // coverity[returned_pointer]: keep for later use
             if ((opt = m->GetOptions())) {
                Warning("Dialog", "option menu not yet implemented");
 #if 0

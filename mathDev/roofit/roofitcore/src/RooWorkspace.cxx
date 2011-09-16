@@ -52,6 +52,7 @@
 #include "RooFactoryWSTool.h"
 #include "RooAbsStudy.h"
 #include "RooTObjWrap.h"
+#include "RooAbsOptTestStatistic.h"
 #include "TROOT.h"
 #include "TFile.h"
 #include "TH1.h"
@@ -563,7 +564,18 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
     
   // Print a message for each imported node
   iter = cloneSet2->createIterator() ;
+  
+  // Perform any auxiliary imports at this point
   RooAbsArg* node ;
+  while((node=(RooAbsArg*)iter->Next())) {
+    if (node->importWorkspaceHook(*this)) {
+      coutE(ObjectHandling) << "RooWorkSpace::import(" << GetName() << ") ERROR object named " << node->GetName() 
+			    << " has an error in importing in one or more of its auxiliary objects, aborting" << endl ;
+      return kTRUE ;
+    }
+  }
+  iter->Reset() ;
+
   RooArgSet recycledNodes ;
   RooArgSet nodesToBeDeleted ;
   while((node=(RooAbsArg*)iter->Next())) {
@@ -873,6 +885,58 @@ const RooArgSet* RooWorkspace::set(const char* name)
 
 
 //_____________________________________________________________________________
+Bool_t RooWorkspace::renameSet(const char* name, const char* newName) 
+{
+  // Rename set to a new name
+
+  // First check if set exists
+  if (!set(name)) {
+    coutE(InputArguments) << "RooWorkspace::renameSet(" << GetName() << ") ERROR a set with name " << name
+			  << " does not exist" << endl ;
+    return kTRUE ;
+  }
+
+  // Check if no set exists with new name
+  if (set(newName)) {
+    coutE(InputArguments) << "RooWorkspace::renameSet(" << GetName() << ") ERROR a set with name " << newName
+			  << " already exists" << endl ;
+    return kTRUE ;
+  }
+
+  // Copy entry under 'name' to 'newName'
+  _namedSets[newName].add(_namedSets[name]) ;
+
+  // Remove entry under old name
+  _namedSets.erase(name) ;
+
+  return kFALSE ;
+}
+
+
+
+
+//_____________________________________________________________________________
+Bool_t RooWorkspace::removeSet(const char* name) 
+{
+  // Remove a named set from the workspace
+
+  // First check if set exists
+  if (!set(name)) {
+    coutE(InputArguments) << "RooWorkspace::removeSet(" << GetName() << ") ERROR a set with name " << name
+			  << " does not exist" << endl ;
+    return kTRUE ;
+  }
+
+  // Remove set with given name
+  _namedSets.erase(name) ;
+
+  return kFALSE ;
+}
+
+
+
+
+//_____________________________________________________________________________
 Bool_t RooWorkspace::startTransaction() 
 {
   // Open an import transaction operations. Returns kTRUE if successful, kFALSE
@@ -888,6 +952,10 @@ Bool_t RooWorkspace::startTransaction()
   return kTRUE ;
 }
 
+
+
+
+//_____________________________________________________________________________
 Bool_t RooWorkspace::cancelTransaction() 
 {
   // Cancel an ongoing import transaction. All objects imported since startTransaction()
@@ -1372,6 +1440,13 @@ Bool_t RooWorkspace::CodeRepo::autoImportClass(TClass* tc, Bool_t doReplace)
     return kTRUE ;
   }
 
+  // Check if class is listed in a ROOTMAP file - if so we can skip it because it is in the root distribtion
+  const char* mapEntry = gInterpreter->GetClassSharedLibs(tc->GetName()) ;
+  if (mapEntry && strlen(mapEntry)>0) {
+    oocxcoutD(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo(" << _wspace->GetName() << ") code of class " << tc->GetName() << " is in ROOT distribution, skipping " << endl ;
+    return kTRUE ;
+  }
+
   // Retrieve file names through ROOT TClass interface
   string implfile = tc->GetImplFileName() ;
   string declfile = tc->GetDeclFileName() ;
@@ -1385,14 +1460,11 @@ Bool_t RooWorkspace::CodeRepo::autoImportClass(TClass* tc, Bool_t doReplace)
 
   // Check if header filename is found in ROOT distribution, if so, do not import class
   TString rootsys = gSystem->Getenv("ROOTSYS") ;
-  char* implpath = gSystem->ConcatFileName(rootsys.Data(),implfile.c_str()) ;
-  if (!gSystem->AccessPathName(implpath)) {
+  if (TString(implfile.c_str()).Index(rootsys)>=0) {
     oocxcoutD(_wspace,ObjectHandling) << "RooWorkspace::CodeRepo(" << _wspace->GetName() << ") code of class " << tc->GetName() << " is in ROOT distribution, skipping " << endl ;
-    delete[] implpath ;
     return kTRUE ;
   }
-  delete[] implpath ;
-  implpath=0 ;
+  const char* implpath=0 ;
 
   // Require that class meets technical criteria to be persistable (i.e it has a default ctor)
   // (We also need a default ctor of abstract classes, but cannot check that through is interface
@@ -1798,6 +1870,9 @@ TObject* RooWorkspace::genobj(const char* name)  const
 
   // Find object by name
   TObject* gobj = _genObjects.FindObject(name) ;
+
+  // Exit here if not found
+  if (!gobj) return 0 ;
 
   // If found object is wrapper, return payload
   if (gobj->IsA()==RooTObjWrap::Class()) return ((RooTObjWrap*)gobj)->obj() ;
@@ -2222,6 +2297,12 @@ void RooWorkspace::Streamer(TBuffer &R__b)
       RooAbsArg* node ;
       while((node=(RooAbsArg*)iter->Next())) {
 	node->setExpensiveObjectCache(_eocache) ;
+	if (node->IsA()->InheritsFrom(RooAbsOptTestStatistic::Class())) {
+	  RooAbsOptTestStatistic* tmp = (RooAbsOptTestStatistic*) node ;
+	  if (tmp->isSealed() && tmp->sealNotice() && strlen(tmp->sealNotice())>0) {
+	    cout << "RooWorkspace::Streamer(" << GetName() << ") " << node->IsA()->GetName() << "::" << node->GetName() << " : " << tmp->sealNotice() << endl ;
+	  }
+	}
       }
       delete iter ;
 

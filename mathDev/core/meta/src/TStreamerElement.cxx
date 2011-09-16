@@ -226,7 +226,7 @@ Bool_t TStreamerElement::CannotSplit() const
    // the special characters "||" as the first characters in the
    // comment field.
 
-   if (strspn(GetTitle(),"||") == 2) return kTRUE;
+   if (GetTitle()[0] != 0 && strspn(GetTitle(),"||") == 2) return kTRUE;
    TClass *cl = GetClassPointer();
    if (!cl) return kFALSE;  //basic type
 
@@ -887,8 +887,8 @@ Int_t TStreamerLoop::GetSize() const
 {
    // Returns size of counter in bytes.
 
-   if (fArrayLength) return fArrayLength*sizeof(Int_t);
-   return sizeof(Int_t);
+   if (fArrayLength) return fArrayLength*sizeof(void*);
+   return sizeof(void*);
 }
 
 //______________________________________________________________________________
@@ -1001,26 +1001,30 @@ void TStreamerBasicType::Streamer(TBuffer &R__b)
          TStreamerElement::Streamer(R__b);
          R__b.CheckByteCount(R__s, R__c, TStreamerBasicType::IsA());
       }
-      switch(fType) {
+      Int_t type = fType;
+      if (TVirtualStreamerInfo::kOffsetL < type && type < TVirtualStreamerInfo::kOffsetP) {
+         type -= TVirtualStreamerInfo::kOffsetL;
+      }
+      switch(type) {
          // basic types
-         case kBool_t:     fSize = sizeof(bool);      break;
-         case kShort_t:    fSize = sizeof(Short_t);   break;
-         case kInt_t:      fSize = sizeof(Int_t);     break;
-         case kLong_t:     fSize = sizeof(Long_t);    break; 
-         case kLong64_t:   fSize = sizeof(Long64_t);  break;
-         case kFloat_t:    fSize = sizeof(Float_t);   break;
-         case kFloat16_t:  fSize = sizeof(Float_t);   break;
-         case kDouble_t:   fSize = sizeof(Double_t);  break;
-         case kDouble32_t: fSize = sizeof(Double_t);  break;
-         case kUChar_t:    fSize = sizeof(UChar_t);   break;
-         case kUShort_t:   fSize = sizeof(UShort_t);  break;
-         case kUInt_t:     fSize = sizeof(UInt_t);    break;
-         case kULong_t:    fSize = sizeof(ULong_t);   break;
-         case kULong64_t:  fSize = sizeof(ULong64_t); break;
-         case kBits:       fSize = sizeof(UInt_t);    break;
-         case kCounter:    fSize = sizeof(Int_t);     break;
-         case kChar_t:     fSize = sizeof(Char_t);    break;
-         case kCharStar:   fSize = sizeof(Char_t*);   break;
+         case TVirtualStreamerInfo::kBool:     fSize = sizeof(bool);      break;
+         case TVirtualStreamerInfo::kShort:    fSize = sizeof(Short_t);   break;
+         case TVirtualStreamerInfo::kInt:      fSize = sizeof(Int_t);     break;
+         case TVirtualStreamerInfo::kLong:     fSize = sizeof(Long_t);    break; 
+         case TVirtualStreamerInfo::kLong64:   fSize = sizeof(Long64_t);  break;
+         case TVirtualStreamerInfo::kFloat:    fSize = sizeof(Float_t);   break;
+         case TVirtualStreamerInfo::kFloat16:  fSize = sizeof(Float_t);   break;
+         case TVirtualStreamerInfo::kDouble:   fSize = sizeof(Double_t);  break;
+         case TVirtualStreamerInfo::kDouble32: fSize = sizeof(Double_t);  break;
+         case TVirtualStreamerInfo::kUChar:    fSize = sizeof(UChar_t);   break;
+         case TVirtualStreamerInfo::kUShort:   fSize = sizeof(UShort_t);  break;
+         case TVirtualStreamerInfo::kUInt:     fSize = sizeof(UInt_t);    break;
+         case TVirtualStreamerInfo::kULong:    fSize = sizeof(ULong_t);   break;
+         case TVirtualStreamerInfo::kULong64:  fSize = sizeof(ULong64_t); break;
+         case TVirtualStreamerInfo::kBits:     fSize = sizeof(UInt_t);    break;
+         case TVirtualStreamerInfo::kCounter:  fSize = sizeof(Int_t);     break;
+         case TVirtualStreamerInfo::kChar:     fSize = sizeof(Char_t);    break;
+         case TVirtualStreamerInfo::kCharStar: fSize = sizeof(Char_t*);   break;
          default:          return; // If we don't change the size let's not remultiply it.
       }
       if (fArrayLength) fSize *= GetArrayLength();
@@ -1745,6 +1749,9 @@ void TStreamerSTL::Streamer(TBuffer &R__b)
       }
       if (IsaPointer()) fType = TVirtualStreamerInfo::kSTLp;
       else fType = TVirtualStreamerInfo::kSTL;
+      if (GetArrayLength() > 0) {
+         fType += TVirtualStreamerInfo::kOffsetL;
+      }
       if (R__b.GetParent()) { // Avoid resetting during a cloning.
          if (fCtype==TVirtualStreamerInfo::kObjectp || fCtype==TVirtualStreamerInfo::kAnyp || fCtype==TVirtualStreamerInfo::kObjectP || fCtype==TVirtualStreamerInfo::kAnyP) {
             SetBit(kDoNotDelete); // For backward compatibility

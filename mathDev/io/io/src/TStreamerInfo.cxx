@@ -53,6 +53,7 @@
 #include "TError.h"
 #include "TRef.h"
 #include "TProcessID.h"
+#include "TSystem.h"
 
 #include "TStreamer.h"
 #include "TContainerConverters.h"
@@ -145,6 +146,8 @@ TStreamerInfo::TStreamerInfo()
    
    fReadObjectWise = 0;
    fReadMemberWise = 0;
+   fWriteObjectWise = 0;
+   fWriteMemberWise = 0;
 }
 
 //______________________________________________________________________________
@@ -176,6 +179,8 @@ TStreamerInfo::TStreamerInfo(TClass *cl)
    
    fReadObjectWise = 0;
    fReadMemberWise = 0;
+   fWriteObjectWise = 0;
+   fWriteMemberWise = 0;
 }
 
 //______________________________________________________________________________
@@ -192,12 +197,14 @@ TStreamerInfo::~TStreamerInfo()
    delete [] fComp;    fComp   =0;
    delete [] fVirtualInfoLoc; fVirtualInfoLoc =0;
 
+   delete fReadObjectWise;
+   delete fReadMemberWise;
+   delete fWriteObjectWise;
+   delete fWriteMemberWise;
+
    if (!fElements) return;
    fElements->Delete();
    delete fElements; fElements=0;
-   
-   delete fReadObjectWise;
-   delete fReadMemberWise;
 }
 
 //______________________________________________________________________________
@@ -714,6 +721,15 @@ void TStreamerInfo::BuildCheck()
                   e2->SetTitle(e1->GetTitle());
                }
             }
+            
+            if (TestBit(kCannotOptimize)) {
+               info->SetBit(TVirtualStreamerInfo::kCannotOptimize);
+               if (info->IsOptimized()) 
+               {
+                  // Optimizing does not work with splitting.
+                  info->Compile();
+               }
+            } 
             done = kTRUE;
          } else {
             array->RemoveAt(fClassVersion);
@@ -809,6 +825,9 @@ void TStreamerInfo::BuildCheck()
          if (fCheckSum != fClass->GetCheckSum(1) && fCheckSum != fClass->GetCheckSum(2)) {
 
             Bool_t warn = !fClass->TestBit(TClass::kWarned);
+            if (warn) {
+               warn = !CompareContent(fClass,0,kFALSE,kFALSE);
+            }
             if (warn && (fOldVersion <= 2)) {
                // Names of STL base classes was modified in vers==3. Allocators removed
                //
@@ -836,6 +855,7 @@ void TStreamerInfo::BuildCheck()
    Do not try to write objects with the current class definition,\n\
    the files will not be readable.\n", GetName(), fClassVersion, GetName(), fClassVersion + 1);
                }
+               CompareContent(fClass,0,kTRUE,kTRUE);
                fClass->SetBit(TClass::kWarned);
             }
          } else {
@@ -1439,7 +1459,7 @@ void TStreamerInfo::BuildOld()
       }
 
       // Now let's deal with Schema evolution
-      Int_t newType = kNoType_t;
+      Int_t newType = -1;
       TClassRef newClass;
 
       if (dm && dm->IsPersistent()) {
@@ -1447,16 +1467,23 @@ void TStreamerInfo::BuildOld()
             Bool_t isPointer = dm->IsaPointer();
             Bool_t isArray = element->GetArrayLength() >= 1;
             Bool_t hasCount = element->HasCounter();
-            newType = dm->GetDataType()->GetType();
-            if ((newType == kChar) && isPointer && !isArray && !hasCount) {
-               newType = kCharStar;
+            // data member is a basic type
+            if ((fClass == TObject::Class()) && !strcmp(dm->GetName(), "fBits")) {
+               //printf("found fBits, changing dtype from %d to 15\n", dtype);
+               newType = kBits;
+            } else {            
+               // All the values of EDataType have the same semantic in EReadWrite 
+               newType = (EReadWrite)dm->GetDataType()->GetType();
+            }
+            if ((newType == ::kChar_t) && isPointer && !isArray && !hasCount) {
+               newType = ::kCharStar;
             } else if (isPointer) {
                newType += kOffsetP;
             } else if (isArray) {
                newType += kOffsetL;
             }
          }
-         if (newType == 0) {
+         if (newType == -1) {
             newClass = TClass::GetClass(dm->GetTypeName());
          }
       } else {
@@ -1467,10 +1494,10 @@ void TStreamerInfo::BuildOld()
                TStreamerElement* newElems = (TStreamerElement*) newInfo->GetElements()->FindObject(element->GetName());
                newClass = newElems ?  newElems->GetClassPointer() : 0;
                if (newClass == 0) {
-                  newType = newElems ? newElems->GetType() : kNoType_t;
+                  newType = newElems ? newElems->GetType() : -1;
                   if (!(newType < kObject)) {
                      // sanity check.
-                     newType = kNoType_t;
+                     newType = -1;
                   }
                }
             } else {
@@ -1479,18 +1506,19 @@ void TStreamerInfo::BuildOld()
                   newType = element->GetType();
                   if (!(newType < kObject)) {
                      // sanity check.
-                     newType = kNoType_t;
+                     newType = -1;
                   }
                }
             }
          }
       }
 
-      if (newType) {
+      if (newType > 0) {
          // Case of a numerical type
          if (element->GetType() != newType) {
             element->SetNewType(newType);
             if (gDebug > 0) {
+               // coverity[mixed_enums] - All the values of EDataType have the same semantic in EReadWrite 
                Info("BuildOld", "element: %s %s::%s has new type: %s/%d", element->GetTypeName(), GetName(), element->GetName(), dm ? dm->GetFullTypeName() : TDataType::GetTypeName((EDataType)newType), newType);
             }
          }
@@ -1600,6 +1628,117 @@ void TStreamerInfo::BuildOld()
             element->SetNewClass( newClass );               
          } else {
             element->SetNewType(-2);
+         }
+         // Humm we still need to make sure we have the same 'type' (pointer, embedded object, array, etc..)
+         Bool_t cannotConvert = kFALSE;
+         if (element->GetNewType() != -2) {
+            if (dm) {
+               if (dm->IsaPointer()) {
+                  if (strncmp(dm->GetTitle(),"->",2)==0) {
+                     // We are fine, nothing to do.
+                     if (newClass->InheritsFrom(TObject::Class())) {
+                        newType = kObjectp;
+                     } else if (newClass->GetCollectionProxy()) {
+                        newType = kSTLp;
+                     } else {
+                        newType = kAnyp;
+                     }
+                  } else {
+                     if (TClass::GetClass(dm->GetTypeName())->InheritsFrom(TObject::Class())) {
+                        newType = kObjectP;
+                     } else if (newClass->GetCollectionProxy()) {
+                        newType = kSTLp;
+                     } else {
+                        newType = kAnyP;
+                     }
+                  }
+               } else {
+                  if (newClass->GetCollectionProxy()) {
+                     newType = kSTL;
+                  } else if (newClass == TString::Class()) {
+                     newType = kTString;
+                  } else if (newClass == TObject::Class()) {
+                     newType = kTObject;
+                  } else if (newClass == TNamed::Class()) {
+                     newType = kTNamed;
+                  } else if (newClass->InheritsFrom(TObject::Class())) {
+                     newType = kObject;
+                  } else {
+                     newType = kAny;                           
+                  }
+               }
+               if ((!dm->IsaPointer() || newType==kSTLp) && dm->GetArrayDim() > 0) {
+                  newType += kOffsetL;
+               }               
+            } else if (!fClass->IsLoaded()) {
+               TStreamerInfo* newInfo = (TStreamerInfo*) fClass->GetStreamerInfos()->At(fClass->GetClassVersion());
+               if (newInfo && (newInfo != this)) {
+                  TStreamerElement* newElems = (TStreamerElement*) newInfo->GetElements()->FindObject(element->GetName());
+                  if (newElems) {
+                     newType = newElems->GetType();
+                  }
+               } else {
+                  newType = element->GetType();
+               }
+            }
+            if (element->GetType() == kSTL 
+                || ((element->GetType() == kObject || element->GetType() == kAny || element->GetType() == kObjectp || element->GetType() == kAnyp) 
+                    && oldClass == TClonesArray::Class())) 
+            {
+               cannotConvert = (newType != kSTL && newType != kObject && newType != kAny && newType != kSTLp && newType != kObjectp && newType != kAnyp);
+               
+            } else if (element->GetType() == kSTLp  || ((element->GetType() == kObjectP || element->GetType() == kAnyP) && oldClass == TClonesArray::Class()) ) 
+            {
+               cannotConvert = (newType != kSTL && newType != kObject && newType != kAny && newType != kSTLp && newType != kObjectP && newType != kAnyP);               
+
+            } else if (element->GetType() == kSTL + kOffsetL
+                || ((element->GetType() == kObject + kOffsetL|| element->GetType() == kAny + kOffsetL|| element->GetType() == kObjectp+ kOffsetL || element->GetType() == kAnyp+ kOffsetL) 
+                    && oldClass == TClonesArray::Class())) 
+            {
+               cannotConvert = (newType != kSTL + kOffsetL && newType != kObject+ kOffsetL && newType != kAny+ kOffsetL && newType != kSTLp+ kOffsetL && newType != kObjectp+ kOffsetL && newType != kAnyp+ kOffsetL);
+               
+            } else if (element->GetType() == kSTLp + kOffsetL || ((element->GetType() == kObjectP+ kOffsetL || element->GetType() == kAnyP+ kOffsetL) && oldClass == TClonesArray::Class()) ) 
+            {
+               cannotConvert = (newType != kSTL+ kOffsetL && newType != kObject+ kOffsetL && newType != kAny+ kOffsetL && newType != kSTLp + kOffsetL&& newType != kObjectP+ kOffsetL && newType != kAnyP+ kOffsetL);               
+
+            } else if ((element->GetType() == kObjectp || element->GetType() == kAnyp 
+                 || element->GetType() == kObject || element->GetType() == kAny 
+                 || element->GetType() == kTObject || element->GetType() == kTNamed || element->GetType() == kTString )) {
+               // We had Type* ... ; //-> or Type ...;
+               // this is completely compatible with the same and with a embedded object.
+               if (newType != -1) {
+                  if (newType == kObjectp || newType == kAnyp
+                      || newType == kObject || newType == kAny
+                      || newType == kTObject || newType == kTNamed || newType == kTString) {
+                     // We are fine, no transformation to make
+                     element->SetNewType(newType);
+                  } else {
+                     // We do not support this yet.
+                     cannotConvert = kTRUE;
+                  }
+               } else {
+                  // We have no clue 
+                  cannotConvert = kTRUE;
+               }
+            } else if (element->GetType() == kObjectP || element->GetType() == kAnyP) {
+               if (newType != -1) {
+                  if (newType == kObjectP || newType == kAnyP ) {
+                     // nothing to do}
+                  } else {
+                     cannotConvert = kTRUE;
+                  }
+               } else {
+                  // We have no clue 
+                  cannotConvert = kTRUE;
+               }
+            }
+         }
+         if (cannotConvert) {
+            element->SetNewType(-2);
+            if (gDebug > 0) {
+               // coverity[mixed_enums] - All the values of EDataType have the same semantic in EReadWrite 
+               Info("BuildOld", "element: %s %s::%s has new type: %s/%d", element->GetTypeName(), GetName(), element->GetName(), dm ? dm->GetFullTypeName() : TDataType::GetTypeName((EDataType)newType), newType);
+            }
          }
       } else {
          element->SetNewType(-1);
@@ -1721,6 +1860,8 @@ void TStreamerInfo::Clear(Option_t *option)
       
       if (fReadObjectWise) fReadObjectWise->fActions.clear();
       if (fReadMemberWise) fReadMemberWise->fActions.clear();
+      if (fWriteObjectWise) fWriteObjectWise->fActions.clear();
+      if (fWriteMemberWise) fWriteMemberWise->fActions.clear();
    }
 }
 
@@ -1737,7 +1878,7 @@ namespace {
          fName = name;
       }
       void SetClassName(const char *name) {
-         fClassName = TClassEdit::ShortType( name, TClassEdit::kDropStlDefault );
+         fClassName = TClassEdit::ShortType( name, TClassEdit::kDropStlDefault | TClassEdit::kDropStd );
       }
       void SetComment(const char *title) {
          const char *left = strstr(title,"[");
@@ -2253,7 +2394,8 @@ static void R__WriteConstructorBody(FILE *file, TIter &next)
    while ((element = (TStreamerElement*)next())) {
       if (element->GetType() == TVirtualStreamerInfo::kObjectp || element->GetType() == TVirtualStreamerInfo::kObjectP ||
           element->GetType() == TVirtualStreamerInfo::kAnyp || element->GetType() == TVirtualStreamerInfo::kAnyP || 
-          element->GetType() == TVirtualStreamerInfo::kCharStar || element->GetType() == TVirtualStreamerInfo::kSTLp) {
+          element->GetType() == TVirtualStreamerInfo::kCharStar || element->GetType() == TVirtualStreamerInfo::kSTLp || 
+          element->GetType() == TVirtualStreamerInfo::kStreamLoop) {
          if(element->GetArrayLength() <= 1) {
             fprintf(file,"   %s = 0;\n",element->GetName());
          } else {
@@ -2662,7 +2804,12 @@ void TStreamerInfo::GenerateDeclaration(FILE *fp, FILE *sfp, const TList *subCla
    TClass *cl = gROOT->GetClass(GetName());
    if (fClassVersion > 1 || (cl && cl->InheritsFrom(TObject::Class())) ) {
       // add 1 to class version in case we didn't manage reproduce the class layout to 100%.
-      fprintf(fp,"   ClassDef(%s,%d); // Generated by MakeProject.\n",protoname.Data(),fClassVersion + 1);
+      if (fClassVersion == 0) {
+         // If the class was declared 'transient', keep it that way.
+         fprintf(fp,"   ClassDef(%s,%d); // Generated by MakeProject.\n",protoname.Data(),0);         
+      } else {
+         fprintf(fp,"   ClassDef(%s,%d); // Generated by MakeProject.\n",protoname.Data(),fClassVersion + 1);
+      }
    }
    fprintf(fp,"};\n");
 
@@ -2811,7 +2958,7 @@ Int_t TStreamerInfo::GenerateHeaderFile(const char *dirname, const TList *subCla
       return 0;
    }
 
-   filename.Form("%s/%sProjectHeaders.h",dirname,dirname);
+   filename.Form("%s/%sProjectHeaders.h",dirname,gSystem->BaseName(dirname));
    FILE *allfp = fopen(filename.Data(),"a");
    if (!allfp) {
       Error("MakeProject","Cannot open output file:%s\n",filename.Data());
@@ -2849,7 +2996,7 @@ Int_t TStreamerInfo::GenerateHeaderFile(const char *dirname, const TList *subCla
    }   
    fprintf(fp,"\n");
 
-   TString sourcename; sourcename.Form( "%s/%sProjectSource.cxx", dirname, dirname );
+   TString sourcename; sourcename.Form( "%s/%sProjectSource.cxx", dirname, gSystem->BaseName(dirname) );
    FILE *sfp = fopen( sourcename.Data(), "a" );
    GenerateDeclaration(fp, sfp, subClasses);
    
@@ -3189,7 +3336,8 @@ Double_t TStreamerInfo::GetValue(char *pointer, Int_t i, Int_t j, Int_t len) con
             return 0; // We don't know which member of the class we would want.
          } else {
             TVirtualCollectionProxy *proxy = newClass->GetCollectionProxy();
-            atype = proxy->GetType();
+            // EDataType is a subset of TStreamerInfo::EReadWrite
+            atype = (TStreamerInfo::EReadWrite)proxy->GetType();
             TVirtualCollectionProxy::TPushPop pop(proxy,ladd);
             Int_t nc = proxy->Size();
             if (j >= nc) return 0;

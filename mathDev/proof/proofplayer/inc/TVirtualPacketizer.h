@@ -118,7 +118,7 @@ protected:
    virtual Bool_t HandleTimer(TTimer *timer);
 
 public:
-   enum EStatusBits { kIsInitializing = BIT(16), kIsDone = BIT(17) };
+   enum EStatusBits { kIsInitializing = BIT(16), kIsDone = BIT(17), kIsTree = BIT(18) };
    virtual ~TVirtualPacketizer();
 
    Bool_t                  IsValid() const { return fValid; }
@@ -129,7 +129,7 @@ public:
    Long64_t                GetTotalEntries() const { return fTotalEntries; }
    virtual TDSetElement   *GetNextPacket(TSlave *sl, TMessage *r);
    virtual void            SetInitTime();
-   virtual void            StopProcess(Bool_t abort);
+   virtual void            StopProcess(Bool_t abort, Bool_t stoptimer = kFALSE);
    TList                  *GetFailedPackets() { return fFailedPackets; }
    void                    SetFailedPackets(TList *list) { fFailedPackets = list; }
 

@@ -289,6 +289,8 @@ void THtml::TFileDefinition::NormalizePath(TString& filename) const
       TPRegexp reg(TString::Format("%s[^%s]+%s\\.\\.%s", d, d, d, d));
       while (reg.Substitute(filename, TString(d[0]), "", 0, 1)) {}
    }
+   if (filename.BeginsWith("./") || filename.BeginsWith(".\\"))
+      filename.Remove(0,2);
 }
 
 
@@ -437,6 +439,8 @@ bool THtml::TFileDefinition::GetFileName(const TClass* cl, bool decl,
             // TComplex and TRandom, TRandom1,...
             if (strcmp(cl->GetName(), "TComplex")
                 && strcmp(cl->GetName(), "TMath")
+                && strncmp(cl->GetName(), "TKDTree", 7)
+                && strcmp(cl->GetName(), "TVirtualFitter")
                 && strncmp(cl->GetName(), "TRandom", 7)) {
                out_filename = "";
                return false;
@@ -529,8 +533,15 @@ bool THtml::TPathDefinition::GetDocDir(const TString& module, TString& doc_dir) 
    // If your software cannot be mapped into this scheme then derive your
    // own class from TPathDefinition and pass it to THtml::SetPathDefinition().
 
+   doc_dir = "";
+   if (GetOwner()->GetProductName() == "ROOT") {
+      doc_dir = "$ROOTSYS";
+      gSystem->ExpandPathName(doc_dir);
+      doc_dir += "/";
+   }
+
    if (module.Length())
-      doc_dir = module + "/";
+      doc_dir += module + "/";
    doc_dir += GetOwner()->GetPathInfo().fDocPath;
    return true;
 }
@@ -547,8 +558,7 @@ bool THtml::TPathDefinition::GetIncludeAs(TClass* cl, TString& out_dir) const
    //
    // Any leading directory part that is part of fIncludePath (see SetIncludePath)
    // will be removed. For ROOT, leading "include/" is removed; everything after
-   // is the include path. Only classes from TMVA are different; they are included
-   // as TMVA/ClassName.h.
+   // is the include path.
    //
    // If your software cannot be mapped into this scheme then derive your
    // own class from TPathDefinition and pass it to THtml::SetPathDefinition().
@@ -556,7 +566,6 @@ bool THtml::TPathDefinition::GetIncludeAs(TClass* cl, TString& out_dir) const
    out_dir = "";
    if (!cl || !GetOwner()) return false;
 
-   const char* clname = cl->GetName();
    TString hdr;
    if (!GetOwner()->GetDeclFileName(cl, kFALSE, hdr))
       return false;
@@ -585,14 +594,6 @@ bool THtml::TPathDefinition::GetIncludeAs(TClass* cl, TString& out_dir) const
       if (posInc == kNPOS) return true;
       hdr.Remove(0, posInc + 5);
       out_dir = hdr;
-
-      // TMVA and RooStats special treatment:
-      // TMVA::Whatever claims to be in in math/tmva/inc/Whatever.h
-      // but it needs to get included as TMVA/Whatever.h
-      if (strstr(clname, "TMVA::"))
-         out_dir.Prepend("TMVA/");
-      if (strstr(clname, "RooStats::"))
-         out_dir.Prepend("RooStats/");
    }
 
    return (out_dir.Length());
@@ -614,18 +615,6 @@ bool THtml::TPathDefinition::GetFileNameFromInclude(const char* included, TStrin
    if (!included) return false;
 
    out_fsname = included;
-
-   if (!strncmp(included, "TMVA/", 5)) {
-      out_fsname.Remove(0, 4);
-      out_fsname.Prepend("tmva/inc");
-      return true;
-   }
-   // special treatment for roostats (same as in TMVA)
-   if (!strncmp(included, "RooStats/", 9)) {
-      out_fsname.Remove(0, 8);
-      out_fsname.Prepend("roofit/roostats/inc");
-      return true;
-   }
 
    TString incBase(gSystem->BaseName(included));
    TList* bucket = GetOwner()->GetLocalFiles()->GetEntries().GetListForObject(incBase);
@@ -714,6 +703,7 @@ void THtml::TFileSysDB::Fill()
    TString dir;
    Ssiz_t posPath = 0;
    while (fName.Tokenize(dir, posPath, THtml::GetDirDelimiter())) {
+      gSystem->ExpandPathName(dir);
       if (gSystem->AccessPathName(dir, kReadPermission)) {
          Warning("Fill", "Cannot read InputPath \"%s\"!", dir.Data());
          continue;
@@ -1135,12 +1125,8 @@ and types, all modules, and the product which you can set by
 <a href="#THtml:SetProductName">THtml::SetProductName()</a>.
 THtml will make use of external documentation in the module and product index,
 either by linking it or by including it.
-For the product THtml will include files found in the directory defined by
-<a href="#THtml:SetProductDocDir">THtml::SetProductDocDir()</a>.
 The files for modules are searched based on the source file directory of the
-module's classes; the (possibly relative) path set by
-<a href="#THtml:SetModuleDocPath">THtml::SetModuleDocPath()</a> will guide THtml
-to the files.</p>
+module's classes.</p>
 
 <p>A filename starting with "index." will be included in the index page;
 all other files will be linked.
@@ -1466,9 +1452,9 @@ void THtml::Convert(const char *filename, const char *title,
 //        includeOutput - if != kNoOutput, run the script passed as filename and
 //                   store all created canvases in PNG files that are
 //                   shown next to the converted source. Bitwise-ORing with
-//                   re-runs the script even if output PNGs exist that are newer
-//                   than the script. If kCompiledOutput is passed, the script is
-//                   run through ACLiC (.x filename+)
+//                   kForceOutput re-runs the script even if output PNGs exist
+//                   that are newer than the script. If kCompiledOutput is
+//                   passed, the script is run through ACLiC (.x filename+)
 //        context  - line shown verbatim at the top of the page; e.g. for links.
 //                   If context is non-empty it is expected to also print the
 //                   title.

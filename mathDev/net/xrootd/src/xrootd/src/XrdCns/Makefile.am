@@ -5,7 +5,7 @@
 ## Initial version: 17.5.2008
 ##
 ## Version info: $Id$
-## Checked in by $Author: dfeich $
+## Checked in by $Author$
 #######################################################################
 
 #############################################################################
@@ -15,8 +15,9 @@ xrootdcnsincdir = $(includedir)/xrootd/XrdCns
 #############################################################################
 ## deliverables
 bin_PROGRAMS = XrdCnsd cns_ssi
+man8_MANS = ../../docs/man/XrdCnsd.8 ../../docs/man/cns_ssi.8
 
-INCLUDES = -I$(top_srcdir)/src
+INCLUDES = -I$(top_srcdir)/src -I$(top_builddir)/src
 
 xrootdcnsinc_HEADERS = XrdCnsConfig.hh \
                        XrdCnsDaemon.hh \

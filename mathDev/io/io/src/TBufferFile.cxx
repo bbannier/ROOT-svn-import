@@ -1558,7 +1558,7 @@ void TBufferFile::WriteArray(const Bool_t *b, Int_t n)
    R__ASSERT(b);
 
    Int_t l = sizeof(UChar_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    if (sizeof(Bool_t) > 1) {
       for (int i = 0; i < n; i++)
@@ -1583,7 +1583,7 @@ void TBufferFile::WriteArray(const Char_t *c, Int_t n)
    R__ASSERT(c);
 
    Int_t l = sizeof(Char_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    memcpy(fBufCur, c, l);
    fBufCur += l;
@@ -1603,7 +1603,7 @@ void TBufferFile::WriteArray(const Short_t *h, Int_t n)
    R__ASSERT(h);
 
    Int_t l = sizeof(Short_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
 # ifdef USE_BSWAPCPY
@@ -1633,7 +1633,7 @@ void TBufferFile::WriteArray(const Int_t *ii, Int_t n)
    R__ASSERT(ii);
 
    Int_t l = sizeof(Int_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
 # ifdef USE_BSWAPCPY
@@ -1663,7 +1663,7 @@ void TBufferFile::WriteArray(const Long_t *ll, Int_t n)
    R__ASSERT(ll);
 
    Int_t l = 8*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
    for (int i = 0; i < n; i++) tobuf(fBufCur, ll[i]);
 }
 
@@ -1683,7 +1683,7 @@ void TBufferFile::WriteArray(const ULong_t *ll, Int_t n)
    R__ASSERT(ll);
 
    Int_t l = 8*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
    for (int i = 0; i < n; i++) tobuf(fBufCur, ll[i]);
 }
 
@@ -1701,7 +1701,7 @@ void TBufferFile::WriteArray(const Long64_t *ll, Int_t n)
    R__ASSERT(ll);
 
    Int_t l = sizeof(Long64_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
    for (int i = 0; i < n; i++)
@@ -1726,7 +1726,7 @@ void TBufferFile::WriteArray(const Float_t *f, Int_t n)
    R__ASSERT(f);
 
    Int_t l = sizeof(Float_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
 # ifdef USE_BSWAPCPY
@@ -1756,7 +1756,7 @@ void TBufferFile::WriteArray(const Double_t *d, Int_t n)
    R__ASSERT(d);
 
    Int_t l = sizeof(Double_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
    for (int i = 0; i < n; i++)
@@ -1782,7 +1782,7 @@ void TBufferFile::WriteArrayFloat16(const Float_t *f, Int_t n, TStreamerElement 
    R__ASSERT(f);
 
    Int_t l = sizeof(Float_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    WriteFastArrayFloat16(f,n,ele);
 }
@@ -1802,7 +1802,7 @@ void TBufferFile::WriteArrayDouble32(const Double_t *d, Int_t n, TStreamerElemen
    R__ASSERT(d);
 
    Int_t l = sizeof(Float_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    WriteFastArrayDouble32(d,n,ele);
 }
@@ -1815,7 +1815,7 @@ void TBufferFile::WriteFastArray(const Bool_t *b, Int_t n)
    if (n <= 0) return;
 
    Int_t l = sizeof(UChar_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    if (sizeof(Bool_t) > 1) {
       for (int i = 0; i < n; i++)
@@ -1834,7 +1834,7 @@ void TBufferFile::WriteFastArray(const Char_t *c, Int_t n)
    if (n <= 0) return;
 
    Int_t l = sizeof(Char_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    memcpy(fBufCur, c, l);
    fBufCur += l;
@@ -1855,7 +1855,7 @@ void TBufferFile::WriteFastArrayString(const Char_t *c, Int_t n)
    if (n <= 0) return;
 
    Int_t l = sizeof(Char_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    memcpy(fBufCur, c, l);
    fBufCur += l;
@@ -1869,7 +1869,7 @@ void TBufferFile::WriteFastArray(const Short_t *h, Int_t n)
    if (n <= 0) return;
 
    Int_t l = sizeof(Short_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
 # ifdef USE_BSWAPCPY
@@ -1893,7 +1893,7 @@ void TBufferFile::WriteFastArray(const Int_t *ii, Int_t n)
    if (n <= 0) return;
 
    Int_t l = sizeof(Int_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
 # ifdef USE_BSWAPCPY
@@ -1917,7 +1917,7 @@ void TBufferFile::WriteFastArray(const Long_t *ll, Int_t n)
    if (n <= 0) return;
 
    Int_t l = 8*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    for (int i = 0; i < n; i++) tobuf(fBufCur, ll[i]);
 }
@@ -1932,7 +1932,7 @@ void TBufferFile::WriteFastArray(const ULong_t *ll, Int_t n)
    if (n <= 0) return;
 
    Int_t l = 8*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    for (int i = 0; i < n; i++) tobuf(fBufCur, ll[i]);
 }
@@ -1945,7 +1945,7 @@ void TBufferFile::WriteFastArray(const Long64_t *ll, Int_t n)
    if (n <= 0) return;
 
    Int_t l = sizeof(Long64_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
    for (int i = 0; i < n; i++)
@@ -1964,7 +1964,7 @@ void TBufferFile::WriteFastArray(const Float_t *f, Int_t n)
    if (n <= 0) return;
 
    Int_t l = sizeof(Float_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
 # ifdef USE_BSWAPCPY
@@ -1988,7 +1988,7 @@ void TBufferFile::WriteFastArray(const Double_t *d, Int_t n)
    if (n <= 0) return;
 
    Int_t l = sizeof(Double_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
 #ifdef R__BYTESWAP
    for (int i = 0; i < n; i++)
@@ -2008,7 +2008,7 @@ void TBufferFile::WriteFastArrayFloat16(const Float_t *f, Int_t n, TStreamerElem
    if (n <= 0) return;
 
    Int_t l = sizeof(Float_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    if (ele && ele->GetFactor()) {
       //A range is specified. We normalize the float to the range and
@@ -2059,7 +2059,7 @@ void TBufferFile::WriteFastArrayDouble32(const Double_t *d, Int_t n, TStreamerEl
    if (n <= 0) return;
 
    Int_t l = sizeof(Float_t)*n;
-   if (fBufCur + l > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+l));
+   if (fBufCur + l > fBufMax) AutoExpand(fBufSize+l);
 
    if (ele && ele->GetFactor()) {
       //A range is specified. We normalize the double to the range and
@@ -2636,7 +2636,7 @@ void TBufferFile::SkipVersion(const TClass *cl)
                   Error("ReadVersion", "Could not find the StreamerInfo with a checksum of %d for the class \"%s\" in %s.",
                         checksum, cl->GetName(), ((TFile*)fParent)->GetName());
                } else {
-                  Error("ReadVersion", "Could not find the StreamerInfo with a checksum of %d for the class \"%s\"( buffer with no parent)",
+                  Error("ReadVersion", "Could not find the StreamerInfo with a checksum of %d for the class \"%s\" (buffer with no parent)",
                         checksum, cl->GetName());
                }
                return;
@@ -2717,33 +2717,41 @@ Version_t TBufferFile::ReadVersion(UInt_t *startpos, UInt_t *bcnt, const TClass 
          frombuf(this->fBufCur,&version);
       }
    }
-   if (version<=1 && cl && cl->GetClassVersion() != 0) {
+   if (version<=1) {
       if (version <= 0)  {
-         UInt_t checksum = 0;
-         //*this >> checksum;
-         frombuf(this->fBufCur,&checksum);
-         TStreamerInfo *vinfo = (TStreamerInfo*)cl->FindStreamerInfo(checksum);
-         if (vinfo) {
-            return vinfo->TStreamerInfo::GetClassVersion(); // Try to get inlining.
-         } else {
-            // There are some cases (for example when the buffer was stored outside of
-            // a ROOT file) where we do not have a TStreamerInfo.  If the checksum is
-            // the one from the current class, we can still assume that we can read
-            // the data so let use it.
-            if (checksum==cl->GetCheckSum() || checksum==cl->GetCheckSum(1)) {
-               version = cl->GetClassVersion();
-            } else {
-               if (fParent) {
-                  Error("ReadVersion", "Could not find the StreamerInfo with a checksum of %d for the class \"%s\" in %s.",
-                  checksum, cl->GetName(), ((TFile*)fParent)->GetName());
+         if (cl) {
+            if (cl->GetClassVersion() != 0) {
+               UInt_t checksum = 0;
+               //*this >> checksum;
+               frombuf(this->fBufCur,&checksum);
+               TStreamerInfo *vinfo = (TStreamerInfo*)cl->FindStreamerInfo(checksum);
+               if (vinfo) {
+                  return vinfo->TStreamerInfo::GetClassVersion(); // Try to get inlining.
                } else {
-                  Error("ReadVersion", "Could not find the StreamerInfo with a checksum of %d for the class \"%s\"( buffer with no parent)",
-                  checksum, cl->GetName());
+                  // There are some cases (for example when the buffer was stored outside of
+                  // a ROOT file) where we do not have a TStreamerInfo.  If the checksum is
+                  // the one from the current class, we can still assume that we can read
+                  // the data so let use it.
+                  if (checksum==cl->GetCheckSum() || checksum==cl->GetCheckSum(1)) {
+                     version = cl->GetClassVersion();
+                  } else {
+                     if (fParent) {
+                        Error("ReadVersion", "Could not find the StreamerInfo with a checksum of 0x%x for the class \"%s\" in %s.",
+                              checksum, cl->GetName(), ((TFile*)fParent)->GetName());
+                     } else {
+                        Error("ReadVersion", "Could not find the StreamerInfo with a checksum of 0x%x for the class \"%s\" (buffer with no parent)",
+                              checksum, cl->GetName());
+                     }
+                     return 0;
+                  }
                }
-               return 0;
             }
+         } else { // of if (cl) {
+            UInt_t checksum = 0;
+            //*this >> checksum;
+            frombuf(this->fBufCur,&checksum);            
          }
-      }  else if (version == 1 && fParent && ((TFile*)fParent)->GetVersion()<40000 ) {
+      }  else if (version == 1 && fParent && ((TFile*)fParent)->GetVersion()<40000 && cl && cl->GetClassVersion() != 0) {
          // We could have a file created using a Foreign class before
          // the introduction of the CheckSum.  We need to check
          if ((!cl->IsLoaded() || cl->IsForeign()) &&
@@ -2757,8 +2765,80 @@ Version_t TBufferFile::ReadVersion(UInt_t *startpos, UInt_t *bcnt, const TClass 
                if (vinfo) {
                   version = vinfo->GetClassVersion();
                } else {
-                  Error("ReadVersion", "Could not find the StreamerInfo with a checksum of %d for the class \"%s\" in %s.",
+                  Error("ReadVersion", "Could not find the StreamerInfo with a checksum of 0x%x for the class \"%s\" in %s.",
                         checksum, cl->GetName(), ((TFile*)fParent)->GetName());
+                  return 0;
+               }
+            }
+            else  {
+               Error("ReadVersion", "Class %s not known to file %s.",
+                 cl->GetName(), ((TFile*)fParent)->GetName());
+               version = 0;
+            }
+         }
+      }
+   }
+   return version;
+}
+
+//______________________________________________________________________________
+Version_t TBufferFile::ReadVersionForMemberWise(const TClass *cl)
+{
+   // Read class version from I/O buffer ; to be used when streaming out
+   // memberwise streamed collection where we do not care (not save) about
+   // the byte count and can safely ignore missing streamerInfo (since they
+   // usually indicate empty collections).
+
+   Version_t version;
+
+   // not interested in byte count
+   frombuf(this->fBufCur,&version);
+
+   if (version<=1) {
+      if (version <= 0)  {
+         if (cl) {
+            if (cl->GetClassVersion() != 0) {
+               UInt_t checksum = 0;
+               frombuf(this->fBufCur,&checksum);
+               TStreamerInfo *vinfo = (TStreamerInfo*)cl->FindStreamerInfo(checksum);
+               if (vinfo) {
+                  return vinfo->TStreamerInfo::GetClassVersion(); // Try to get inlining.
+               } else {
+                  // There are some cases (for example when the buffer was stored outside of
+                  // a ROOT file) where we do not have a TStreamerInfo.  If the checksum is
+                  // the one from the current class, we can still assume that we can read
+                  // the data so let use it.
+                  if (checksum==cl->GetCheckSum() || checksum==cl->GetCheckSum(1)) {
+                     version = cl->GetClassVersion();
+                  } else {
+                     // If we can not find the streamerInfo this means that 
+                     // we do not actully need it (the collection is always empty
+                     // in this file), so no need to issue a warning.
+                     return 0;
+                  }
+               }
+            }
+         } else { // of if (cl) {
+            UInt_t checksum = 0;
+            frombuf(this->fBufCur,&checksum);            
+         }
+      }  else if (version == 1 && fParent && ((TFile*)fParent)->GetVersion()<40000 && cl && cl->GetClassVersion() != 0) {
+         // We could have a file created using a Foreign class before
+         // the introduction of the CheckSum.  We need to check
+         if ((!cl->IsLoaded() || cl->IsForeign()) &&
+            cl->GetStreamerInfos()->GetLast()>1 ) {
+
+            const TList *list = ((TFile*)fParent)->GetStreamerInfoCache();
+            const TStreamerInfo *local = (TStreamerInfo*)list->FindObject(cl->GetName());
+            if ( local )  {
+               UInt_t checksum = local->GetCheckSum();
+               TStreamerInfo *vinfo = (TStreamerInfo*)cl->FindStreamerInfo(checksum);
+               if (vinfo) {
+                  version = vinfo->GetClassVersion();
+               } else {
+                  // If we can not find the streamerInfo this means that 
+                  // we do not actully need it (the collection is always empty
+                  // in this file), so no need to issue a warning.
                   return 0;
                }
             }
@@ -3193,7 +3273,7 @@ void TBufferFile::WriteBuf(const void *buf, Int_t max)
 
    if (max == 0) return;
 
-   if (fBufCur + max > fBufMax) Expand(TMath::Max(2*fBufSize, fBufSize+max));
+   if (fBufCur + max > fBufMax) AutoExpand(fBufSize+max); // a more precise request would be: fBufSize + max - (fBufMax - fBufCur)
 
    memcpy(fBufCur, buf, max);
    fBufCur += max;
@@ -3333,7 +3413,7 @@ Int_t TBufferFile::ReadClones(TClonesArray *a, Int_t nobjects, Version_t objvers
    //a->GetClass()->GetStreamerInfo()->ReadBufferClones(*this,a,nobjects,-1,0);
    TStreamerInfo *info = (TStreamerInfo*)a->GetClass()->GetStreamerInfo(objvers);
    //return info->ReadBuffer(*this,arr,-1,nobjects,0,1);
-   return ReadSequenceVecPtr(*(info->GetReadMemberWiseActions(kTRUE)),arr,end);
+   return ApplySequenceVecPtr(*(info->GetReadMemberWiseActions(kTRUE)),arr,end);
 }
 
 //______________________________________________________________________________
@@ -3344,7 +3424,10 @@ Int_t TBufferFile::WriteClones(TClonesArray *a, Int_t nobjects)
    char **arr = reinterpret_cast<char**>(a->GetObjectRef(0));
    //a->GetClass()->GetStreamerInfo()->WriteBufferClones(*this,(TClonesArray*)a,nobjects,-1,0);
    TStreamerInfo *info = (TStreamerInfo*)a->GetClass()->GetStreamerInfo();
-   return info->WriteBufferAux(*this,arr,-1,nobjects,0,1);
+   //return info->WriteBufferAux(*this,arr,-1,nobjects,0,1);
+   char **end = arr + nobjects;
+   // No need to tell call ForceWriteInfo as it by ForceWriteInfoClones.
+   return ApplySequenceVecPtr(*(info->GetWriteMemberWiseActions(kTRUE)),arr,end);   
 }
 
 //______________________________________________________________________________
@@ -3446,7 +3529,7 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, Int_t versio
    }
 
    // Deserialize the object.
-   ReadSequence(*(sinfo->GetReadObjectWiseActions()), (char*)pointer);
+   ApplySequence(*(sinfo->GetReadObjectWiseActions()), (char*)pointer);
    if (sinfo->IsRecovered()) count=0;
 
    // Check that the buffer position corresponds to the byte count.
@@ -3542,7 +3625,7 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, const TClass
    }
 
    //deserialize the object
-   ReadSequence(*(sinfo->GetReadObjectWiseActions()), (char*)pointer );
+   ApplySequence(*(sinfo->GetReadObjectWiseActions()), (char*)pointer );
    if (sinfo->TStreamerInfo::IsRecovered()) R__c=0; // 'TStreamerInfo::' avoids going via a virtual function.
 
    // Check that the buffer position corresponds to the byte count.
@@ -3579,9 +3662,10 @@ Int_t TBufferFile::WriteClassBuffer(const TClass *cl, void *pointer)
    //write the class version number and reserve space for the byte count
    UInt_t R__c = WriteVersion(cl, kTRUE);
 
-   //serialize the object
-   void *ptr = &pointer;
-   sinfo->WriteBufferAux(*this,(char**)ptr,-1,1,0,0); // NOTE: expanded
+   //NOTE: In the future Philippe wants this to happen via a custom action
+   TagStreamerInfo(sinfo);
+   ApplySequence(*(sinfo->GetWriteObjectWiseActions()), (char*)pointer);
+
 
    //write the byte count at the start of the buffer
    SetByteCount(R__c, kTRUE);
@@ -3591,7 +3675,7 @@ Int_t TBufferFile::WriteClassBuffer(const TClass *cl, void *pointer)
 }
 
 //______________________________________________________________________________
-Int_t TBufferFile::ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *obj) 
+Int_t TBufferFile::ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *obj) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    // The collection needs to be a split TClonesArray or a split vector of pointers.
@@ -3620,7 +3704,7 @@ Int_t TBufferFile::ReadSequence(const TStreamerInfoActions::TActionSequence &seq
 }
 
 //______________________________________________________________________________
-Int_t TBufferFile::ReadSequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
+Int_t TBufferFile::ApplySequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    // The collection needs to be a split TClonesArray or a split vector of pointers.
@@ -3649,7 +3733,7 @@ Int_t TBufferFile::ReadSequenceVecPtr(const TStreamerInfoActions::TActionSequenc
 }
 
 //______________________________________________________________________________
-Int_t TBufferFile::ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
+Int_t TBufferFile::ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    

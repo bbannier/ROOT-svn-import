@@ -41,7 +41,7 @@ INCLUDEFILES += $(IODEP)
 include/%.h:    $(IODIRI)/%.h
 		cp $< $@
 
-$(IOLIB):       $(IOO) $(IODO) $(ORDER_) $(MAINLIBS)
+$(IOLIB):       $(IOO) $(IODO) $(ORDER_) $(MAINLIBS) $(IOLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libRIO.$(SOEXT) $@ "$(IOO) $(IODO)" \
 		   "$(IOLIBEXTRA)"
@@ -73,3 +73,9 @@ ifneq ($(filter -O%,$(OPT)),)
    $(call stripsrc,$(IODIRS)/TStreamerInfoReadBuffer.o): CXXFLAGS += -DR__EXPLICIT_FUNCTION_INSTANTIATION
 endif
 endif
+ifeq ($(GCC_VERS),gcc-4.5)
+ifneq ($(filter -O%,$(OPT)),)
+   $(call stripsrc,$(IODIRS)/TStreamerInfoReadBuffer.o): CXXFLAGS += -DR__EXPLICIT_FUNCTION_INSTANTIATION
+endif
+endif
+

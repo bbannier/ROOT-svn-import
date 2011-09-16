@@ -2,15 +2,11 @@
 /*                                                                            */
 /*                    X r d X r o o t d C o n f i g . c c                     */
 /*                                                                            */
-/* (c) 2004 by the Board of Trustees of the Leland Stanford, Jr., University  */
+/* (c) 2010 by the Board of Trustees of the Leland Stanford, Jr., University  */
 /*       All Rights Reserved. See XrdInfo.cc for complete License Terms       */
 /*   Produced by Andrew Hanushevsky for Stanford University under contract    */
 /*                DE-AC03-76-SFO0515 with the Deprtment of Energy             */
 /******************************************************************************/
-
-//       $Id$
-
-const char *XrdXrootdConfigCVSID = "$Id$";
  
 #include <unistd.h>
 #include <ctype.h>
@@ -107,6 +103,10 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
 
   Output:   0 upon success or !0 otherwise.
 */
+   extern XrdSfsFileSystem *XrdSfsGetDefaultFileSystem
+                            (XrdSfsFileSystem *nativeFS,
+                             XrdSysLogger     *Logger,
+                             const char       *configFn);
    extern XrdSecService    *XrdXrootdloadSecurity(XrdSysError *, char *, char *);
    extern XrdSfsFileSystem *XrdXrootdloadFileSystem(XrdSysError *, char *, 
                                                     const char *);
@@ -157,12 +157,12 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
      { switch(c)
        {
        case 'r': deper = 1;
-       case 'm': putenv((char *)"XRDREDIRECT=R"); // XrdOucEnv::Export()
+       case 'm': XrdOucEnv::Export("XRDREDIRECT", "R");
                  break;
        case 't': deper = 1;
-       case 's': putenv((char *)"XRDRETARGET=1"); // XrdOucEnv::Export()
+       case 's': XrdOucEnv::Export("XRDRETARGET", "1");
                  break;
-       case 'y': putenv((char *)"XRDREDPROXY=1"); // XrdOucEnv::Export()
+       case 'y': XrdOucEnv::Export("XRDREDPROXY", "1");
                  break;
        default:  eDest.Say("Config warning: ignoring invalid option '",pi->argv[optind-1],"'.");
        }
@@ -208,11 +208,6 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    *(bP-1) = '\0';
    XrdOucEnv::Export("XRDEXPORTS", tmp); free(tmp);
 
-// Initialiaze for AIO
-//
-   if (!as_noaio) XrdXrootdAioReq::Init(as_segsize, as_maxperreq, as_maxpersrv);
-      else eDest.Say("Config warning: asynchronous I/O has been disabled!");
-
 // Initialize the security system if this is wanted
 //
    if (!SecLib) eDest.Say("Config warning: 'xrootd.seclib' not specified;"
@@ -229,7 +224,7 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    if (FSLib)
       {TRACE(DEBUG, "Loading filesystem library " <<FSLib);
        osFS = XrdXrootdloadFileSystem(&eDest, FSLib, pi->ConfigFN);
-      } else osFS = XrdSfsGetFileSystem(0, eDest.logger(), pi->ConfigFN);
+      } else osFS = XrdSfsGetDefaultFileSystem(0, eDest.logger(), pi->ConfigFN);
    if (!osFS)
       {eDest.Emsg("Config", "Unable to load file system.");
        return 0;
@@ -243,6 +238,12 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
           eDest.Emsg("Config", "Warning! xrootd build version " XrdVERSION
                                "differs from file system version ", fsver);
       }
+
+// Initialiaze for AIO
+//
+        if (getenv("XRDXROOTD_NOAIO")) as_noaio = 1;
+   else if (!as_noaio) XrdXrootdAioReq::Init(as_segsize, as_maxperreq, as_maxpersrv);
+   else eDest.Say("Config warning: asynchronous I/O has been disabled!");
 
 // Create the file lock manager
 //
@@ -280,7 +281,8 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
 
 // Set the redirect flag if we are a pure redirector
 //
-   isRedir = ((rdf = getenv("XRDREDIRECT")) && !strcmp(rdf, "R"));
+   if ((rdf = getenv("XRDREDIRECT"))
+   && (!strcmp(rdf, "R") || !strcmp(rdf, "M"))) isRedir = *rdf;
 
 // Check if monitoring should be enabled
 //

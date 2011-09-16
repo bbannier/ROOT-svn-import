@@ -51,6 +51,9 @@
 #ifndef ROOT_TUrl
 #include "TUrl.h"
 #endif
+#ifndef ROOT_TProofOutputList
+#include "TProofOutputList.h"
+#endif
 
 #include <map>
 
@@ -125,9 +128,12 @@ class TMacro;
 //           package download, dataset caching
 // 28 -> 29: Support for config parameters in EnablePackage, idle-timeout
 // 29 -> 30: Add information about data dir in TSlaveInfo
+// 30 -> 31: Development cycle 5.29
+// 31 -> 32: New log path trasmission
+// 32 -> 33: Development cycle 5.29/04 (fixed worker activation, new startup technology, ...)
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 30;            // protocol version number
+const Int_t       kPROOF_Protocol        = 33;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -144,6 +150,7 @@ const char* const kPROOF_QueryLockFile   = "proof-query-lock-";   // query lock 
 const char* const kPROOF_TerminateWorker = "+++ terminating +++"; // signal worker termination in MarkBad
 const char* const kPROOF_WorkerIdleTO    = "+++ idle-timeout +++"; // signal worker idle timeout in MarkBad
 const char* const kPROOF_InputDataFile   = "inputdata.root";      // Default input data file name
+const char* const kPROOF_MissingFiles    = "MissingFiles";  // Missingfile list name
 
 #ifndef R__WIN32
 const char* const kCP     = "/bin/cp -fp";
@@ -534,6 +541,8 @@ private:
    TList          *fInputData;       //Input data objects sent over via file
    TString         fInputDataFile;   //File with input data objects
 
+   TProofOutputList fOutputList;     // TList implementation filtering ls(...) and Print(...)
+
    PrintProgress_t fPrintProgress;   //Function function to display progress info in batch mode
 
    TVirtualMutex  *fCloseMutex;      // Avoid crashes in MarkBad or alike while closing
@@ -639,7 +648,7 @@ private:
 
    void     ReleaseMonitor(TMonitor *mon);
 
-   void     FindUniqueSlaves();
+   virtual  void FindUniqueSlaves();
    TSlave  *FindSlave(TSocket *s) const;
    TList   *GetListOfSlaves() const { return fSlaves; }
    TList   *GetListOfInactiveSlaves() const { return fInactiveSlaves; }
@@ -652,7 +661,7 @@ private:
    Int_t    GetNumberOfBadSlaves() const;
 
    Bool_t   IsEndMaster() const { return fEndMaster; }
-   void     ModifyWorkerLists(const char *ord, Bool_t add);
+   Int_t    ModifyWorkerLists(const char *ord, Bool_t add);
 
    Bool_t   IsSync() const { return fSync; }
    void     InterruptCurrentMonitor();
@@ -724,6 +733,7 @@ protected:
    TPluginHandler *GetProgressDialog() const { return fProgressDialog; }
 
    Int_t AssertPath(const char *path, Bool_t writable);
+   Int_t GetSandbox(TString &sb, Bool_t assert = kFALSE, const char *rc = 0);
 
    void PrepareInputDataFile(TString &dataFile);
    virtual void  SendInputDataFile();
@@ -919,6 +929,9 @@ public:
    TObject    *GetOutput(const char *name);
    TList      *GetOutputList();
 
+   void        ShowMissingFiles(TQueryResult *qr = 0);
+   TFileCollection *GetMissingFiles(TQueryResult *qr = 0);
+
    void        AddInputData(TObject *obj, Bool_t push = kFALSE);
    void        SetInputDataFile(const char *datafile);
    void        ClearInputData(TObject *obj = 0);
@@ -991,8 +1004,8 @@ public:
    TProofMgr  *GetManager() { return fManager; }
    void        SetManager(TProofMgr *mgr);
 
-   void        ActivateWorker(const char *ord);
-   void        DeactivateWorker(const char *ord);
+   Int_t       ActivateWorker(const char *ord);
+   Int_t       DeactivateWorker(const char *ord);
 
    const char *GetDataPoolUrl() const { return fDataPoolUrl; }
    void        SetDataPoolUrl(const char *url) { fDataPoolUrl = url; }

@@ -54,7 +54,7 @@ protected:
 
    // Default ctor
    TBuffer() : TObject(), fMode(0), fVersion(0), fBufSize(0), fBuffer(0),
-     fBufCur(0), fBufMax(0), fParent(0), fReAllocFunc(0) {}
+     fBufCur(0), fBufMax(0), fParent(0), fReAllocFunc(0), fCacheStack(0,(TVirtualArray*)0) {}
 
    // TBuffer objects cannot be copied or assigned
    TBuffer(const TBuffer &);           // not implemented
@@ -92,7 +92,8 @@ public:
    Int_t    BufferSize() const { return fBufSize; }
    void     DetachBuffer() { fBuffer = 0; }
    Int_t    Length()     const { return (Int_t)(fBufCur - fBuffer); }
-   void     Expand(Int_t newsize);  // expand buffer to newsize
+   void     Expand(Int_t newsize, Bool_t copy = kTRUE);  // expand buffer to newsize
+   void     AutoExpand(Int_t size_needed);  // expand buffer to newsize
 
    virtual Bool_t     CheckObject(const TObject *obj) = 0;
    virtual Bool_t     CheckObject(const void *obj, const TClass *ptrClass) = 0;
@@ -120,6 +121,7 @@ public:
 
    virtual void       SkipVersion(const TClass *cl = 0) = 0;
    virtual Version_t  ReadVersion(UInt_t *start = 0, UInt_t *bcnt = 0, const TClass *cl = 0) = 0;
+   virtual Version_t  ReadVersionForMemberWise(const TClass *cl = 0) = 0;
    virtual UInt_t     WriteVersion(const TClass *cl, Bool_t useBcnt = kFALSE) = 0;
    virtual UInt_t     WriteVersionMemberWise(const TClass *cl, Bool_t useBcnt = kFALSE) = 0;
 
@@ -139,7 +141,7 @@ public:
    virtual TVirtualArray *PeekDataCache() const;
    virtual TVirtualArray *PopDataCache();
    virtual void           PushDataCache(TVirtualArray *);
-   
+
    virtual TClass    *ReadClass(const TClass *cl = 0, UInt_t *objTag = 0) = 0;
    virtual void       WriteClass(const TClass *cl) = 0;
 
@@ -306,10 +308,10 @@ public:
    virtual   Int_t    WriteClassBuffer(const TClass *cl, void *pointer) = 0;
 
    // Utilites to streamer using sequences.
-   virtual Int_t ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *object) = 0;      
-   virtual Int_t ReadSequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) = 0;      
-   virtual Int_t ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) = 0;
-   
+   virtual Int_t ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *object) = 0;
+   virtual Int_t ApplySequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) = 0;
+   virtual Int_t ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) = 0;
+
    static TClass *GetClass(const type_info &typeinfo);
    static TClass *GetClass(const char *className);
 

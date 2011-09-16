@@ -106,6 +106,7 @@ private:
    TVirtualProofPlayer *fPlayer;    //actual player
    FILE         *fLogFile;          //log file
    Int_t         fLogFileDes;       //log file descriptor
+   Long64_t      fLogFileMaxSize;   //max size for log files (enabled if > 0)
    TList        *fEnabledPackages;  //list of enabled packages
    Int_t         fProtocol;         //protocol version number
    TString       fOrdinal;          //slave ordinal number
@@ -180,6 +181,8 @@ private:
    static TString fgSysLogService;   // name of the syslog service (eg: proofm-0, proofw-0.67)
    static TString fgSysLogEntity;   // logging entity (<user>:<group>)
 
+   Int_t         GetCompressionLevel() const;
+
    void          RedirectOutput(const char *dir = 0, const char *mode = "w");
    Int_t         CatMotd();
    Int_t         UnloadPackage(const char *package);
@@ -219,7 +222,7 @@ protected:
    virtual void  HandleQueryList(TMessage *mess);
    virtual void  HandleRemove(TMessage *mess, TString *slb = 0);
    virtual void  HandleRetrieve(TMessage *mess, TString *slb = 0);
-   virtual void  HandleWorkerLists(TMessage *mess);
+   virtual Int_t HandleWorkerLists(TMessage *mess);
 
    virtual void  ProcessNext(TString *slb = 0);
    virtual Int_t Setup();
@@ -281,6 +284,7 @@ public:
    const char    *GetPrefix()     const { return fPrefix; }
 
    void           FlushLogFile();
+   void           TruncateLogFile();  // Called also by TDSetProxy::Next()
 
    TProofLockPath *GetCacheLock() { return fCacheLock; }      //cache dir locker; used by TProofPlayer
    Int_t          CopyFromCache(const char *name, Bool_t cpbin);
@@ -456,5 +460,10 @@ public:
    virtual ~TIdleTOTimerGuard() { if (fIdleTOTimer) fIdleTOTimer->Start(-1, kTRUE); }
 };
 
+//______________________________________________________________________________
+inline Int_t TProofServ::GetCompressionLevel() const
+{
+   return (fCompressMsg < 0) ? -1 : fCompressMsg % 100;
+}
 
 #endif

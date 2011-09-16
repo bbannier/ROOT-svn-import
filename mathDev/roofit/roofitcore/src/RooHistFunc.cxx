@@ -40,7 +40,12 @@ ClassImp(RooHistFunc)
 
 
 //_____________________________________________________________________________
-RooHistFunc::RooHistFunc() : _dataHist(0), _totVolume(0)
+RooHistFunc::RooHistFunc() :
+  _dataHist(0),
+  _intOrder(0),
+  _cdfBoundaries(kFALSE),
+  _totVolume(0),
+  _unitNorm(kFALSE)
 {
   // Default constructor
 }
@@ -161,7 +166,8 @@ Int_t RooHistFunc::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars
 
   // Simplest scenario, integrate over all dependents
   RooAbsCollection *allVarsCommon = allVars.selectCommon(_depList) ;  
-  Bool_t intAllObs = (allVarsCommon->getSize()==_depList.getSize()) ;
+  Bool_t intAllObs = (allVarsCommon->getSize()==_depList.getSize()) ;  
+  delete allVarsCommon ;
   if (intAllObs && matchArgs(allVars,analVars,_depList)) {
     return 1000 ;
   }
@@ -272,4 +278,19 @@ list<Double_t>* RooHistFunc::plotSamplingHint(RooAbsRealLValue& obs, Double_t xl
   return hint ;
 }
 
+
+//______________________________________________________________________________
+void RooHistFunc::Streamer(TBuffer &R__b)
+{
+   // Stream an object of class RooHistFunc.
+
+   if (R__b.IsReading()) {
+      R__b.ReadClassBuffer(RooHistFunc::Class(),this);
+      // WVE - interim solution - fix proxies here
+      _proxyList.Clear() ;
+      registerProxy(_depList) ;
+   } else {
+      R__b.WriteClassBuffer(RooHistFunc::Class(),this);
+   }
+}
 

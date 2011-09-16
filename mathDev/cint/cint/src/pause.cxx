@@ -567,7 +567,7 @@ void G__rewinddictionary()
    
 static void G__define_limit_var(G__DataMemberHandle &member, const char *name, double up, double down)
 {
-   int store_var_type = G__var_type;
+   char store_var_type = G__var_type;
    G__var_type = 'd';
    G__value value = G__null;
    value.type = 'd';
@@ -1540,7 +1540,7 @@ void G__debugvariable(FILE *fp,G__var_array *var,char *name)
                 );
         i=0;
         while(var->varlabel[ig15][i]) {
-          fprintf(fp,"[%d]",var->varlabel[ig15][i++]);
+           fprintf(fp,"[%lu]",(unsigned long)var->varlabel[ig15][i++]);
         }
         fprintf(fp,"\n");
       }
@@ -1585,7 +1585,7 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
    G__FastAllocString command(G__LONGLINE);
    G__FastAllocString syscom(G__LONGLINE);
    G__FastAllocString editor(64);
-   int temp, temp1 = 0, temp2;
+   size_t temp, temp1 = 0, temp2;
    int index = -1;
    int ignore = G__PAUSE_NORMAL;
    short double_quote, single_quote;
@@ -1610,7 +1610,8 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
    G__value buf;
    FILE *G__temp;
    char *evalbase;
-   int base = 0 /* ,digit */ , num;
+   int base = 0 /* ,digit */;
+   unsigned int num;
    G__FastAllocString evalresult(G__ONELINE);
    FILE* store_stderr = NULL;
    FILE* store_stdout = NULL;
@@ -1681,8 +1682,10 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
             }
 #endif /* 1774 */
             G__redirectoutput(command, &store_stdout, &store_stderr, &store_stdin, 1, keyword, pipefile);
-            temp = strlen(command) - 1;
-            while (isspace(command[temp])) --temp;
+            if (strlen(command) > 0) {
+               temp = strlen(command) - 1;
+               while (temp && isspace(command[temp])) --temp;
+            } else temp = 0;
             if (command[temp] == ';') {
                syscom.Format("{%s}", command());
 #ifndef G__OLDIMPLEMENTATION1774
@@ -2859,10 +2862,10 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
       /*******************************************************
        * Set view file
        *******************************************************/
-      for (temp = 0;temp < G__nfile;temp++) {
+      for (temp = 0;(long)temp < G__nfile;temp++) {
          if (G__matchfilename(temp, string)) break;
       }
-      if (temp >= G__nfile) {
+      if (temp >= (size_t)G__nfile) {
          G__fprinterr(G__serr, "filename %s not loaded\n", string);
       }
       else {

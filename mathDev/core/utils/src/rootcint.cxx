@@ -524,7 +524,7 @@ const char *GetExePath()
    while ((p = strchr(p, '\\')))
       *(p++) = '/';
    exepath = buf;
-   delete buf;
+   delete[] buf;
 #endif
    }
    return exepath.c_str();
@@ -577,6 +577,25 @@ void SetRootSys()
    }
 }
 
+//______________________________________________________________________________
+bool ParsePragmaLine(const std::string& line, const char* expectedTokens[],
+                     size_t* end = 0) {
+   // Check whether the #pragma line contains expectedTokens (0-terminated array).
+   if (end) *end = 0;
+   if (line[0] != '#') return false;
+   size_t pos = 1;
+   for (const char** iToken = expectedTokens; *iToken; ++iToken) {
+      while (isspace(line[pos])) ++pos;
+      size_t lenToken = strlen(*iToken);
+      if (line.compare(pos, lenToken, *iToken)) {
+         if (end) *end = pos;
+         return false;
+      }
+      pos += lenToken;
+   }
+   if (end) *end = pos;
+   return true;
+}
 
 namespace {
    class R__tmpnamElement {
@@ -994,10 +1013,12 @@ bool CheckClassDef(G__ClassInfo &cl)
    int autoloadEnable = G__set_class_autoloading(0);
    bool inheritsFromTObject = cl.IsBase("TObject");
    bool inheritsFromTSelector = cl.IsBase("TSelector");
+   bool isAbstract = cl.Property() & G__BIT_ISABSTRACT;
    G__set_class_autoloading(autoloadEnable);
 
    bool result = true;
-   if (!inheritsFromTSelector && inheritsFromTObject && !hasClassDef) {
+   if (!inheritsFromTSelector && inheritsFromTObject && !isAbstract
+       && !hasClassDef) {
       Error(cl.Name(),"%s inherits from TObject but does not have its own ClassDef\n",cl.Name());
       // We do want to always output the message (hence the Error level)
       // but still want rootcint to succeed.
@@ -1014,7 +1035,6 @@ bool HasDirectoryAutoAdd(G__ClassInfo &cl)
    // Return true if the class has a method DirectoryAutoAdd(TDirectory *)
 
    // Detect if the class has a DirectoryAutoAdd
-   // bool hasMethod = cl.HasMethod("DirectoryAutoAdd");
 
    // Detect if the class or one of its parent has a DirectoryAutoAdd
    long offset;
@@ -1024,6 +1044,80 @@ bool HasDirectoryAutoAdd(G__ClassInfo &cl)
    G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
    bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
 
+   return hasMethodWithSignature;
+}
+
+//______________________________________________________________________________
+bool HasNewMerge(G__ClassInfo &cl)
+{
+   // Return true if the class has a method Merge(TCollection*,TFileMergeInfo*)
+   
+   // Detect if the class has a 'new' Merge function.
+   
+   // Detect if the class or one of its parent has a DirectoryAutoAdd
+   long offset;
+   const char *proto = "TCollection*,TFileMergeInfo*";
+   const char *name = "Merge";
+   
+   G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
+   bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
+   
+   return hasMethodWithSignature;
+}
+
+//______________________________________________________________________________
+bool HasOldMerge(G__ClassInfo &cl)
+{
+   // Return true if the class has a method Merge(TCollection*)
+   
+   // Detect if the class has an old fashion Merge function.
+   
+   // Detect if the class or one of its parent has a DirectoryAutoAdd
+   long offset;
+   const char *proto = "TCollection*";
+   const char *name = "Merge";
+   
+   G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset,G__ClassInfo::ExactMatch);
+   bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
+   
+   return hasMethodWithSignature;
+}
+
+//______________________________________________________________________________
+bool HasReset(G__ClassInfo &cl)
+{
+   // Return true if the class has a method ResetAfterMerge(TFileMergeInfo *)
+   
+   // Detect if the class has a 'new' Merge function.
+   // bool hasMethod = cl.HasMethod("DirectoryAutoAdd");
+   
+   // Detect if the class or one of its parent has a DirectoryAutoAdd
+   long offset;
+   const char *proto = "Option_t*";
+   const char *name = "Reset";
+   
+   G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
+   bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
+   
+   return hasMethodWithSignature;
+}
+
+//______________________________________________________________________________
+bool HasResetAfterMerge(G__ClassInfo &cl)
+{
+   // Return true if the class has a method ResetAfterMerge(TFileMergeInfo *)
+   
+   // Detect if the class has a 'new' Merge function.
+   // bool hasMethod = cl.HasMethod("DirectoryAutoAdd");
+   
+   // Detect if the class or one of its parent has a DirectoryAutoAdd
+   long offset;
+   const char *proto = "TFileMergeInfo*";
+   const char *name = "MergeAfterReset";
+   
+   G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
+   bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
+   
    return hasMethodWithSignature;
 }
 
@@ -1453,7 +1547,8 @@ bool HasCustomStreamerMemberFunction(G__ClassInfo &cl)
 
    long offset;
    static const char *proto = "TBuffer&";
-   return (cl.GetMethod("Streamer",proto,&offset).IsValid() && ( (cl.RootFlag() & G__NOSTREAMER) || (!(cl.RootFlag() & G__USEBYTECOUNT)) ) );
+   G__MethodInfo info(cl.GetMethod("Streamer",proto,&offset));
+   return (info.IsValid() && info.MemberOf()->Tagnum() == cl.Tagnum() && ( (cl.RootFlag() & G__NOSTREAMER) || (!(cl.RootFlag() & G__USEBYTECOUNT)) ) );
 }
 
 //______________________________________________________________________________
@@ -1828,6 +1923,29 @@ void WriteAuxFunctions(G__ClassInfo &cl)
       << "   }" << std::endl;
    }
 
+   if (HasNewMerge(cl)) {
+      (*dictSrcOut) << "   // Wrapper around the merge function." << std::endl
+      << "   static Long64_t merge_" << mappedname.c_str() << "(void *obj,TCollection *coll,TFileMergeInfo *info) {" << std::endl
+      << "      return ((" << classname.c_str() << "*)obj)->Merge(coll,info);" << std::endl
+      << "   }" << std::endl;
+   } else if (HasOldMerge(cl)) {
+      (*dictSrcOut) << "   // Wrapper around the merge function." << std::endl
+      << "   static Long64_t  merge_" << mappedname.c_str() << "(void *obj,TCollection *coll,TFileMergeInfo *) {" << std::endl
+      << "      return ((" << classname.c_str() << "*)obj)->Merge(coll);" << std::endl
+      << "   }" << std::endl;
+   }
+
+   if (HasResetAfterMerge(cl)) {
+      (*dictSrcOut) << "   // Wrapper around the Reset function." << std::endl
+      << "   static void reset_" << mappedname.c_str() << "(void *obj,TFileMergeInfo *info) {" << std::endl
+      << "      ((" << classname.c_str() << "*)obj)->ResetAfterMerge(info);" << std::endl
+      << "   }" << std::endl;
+   } else if (HasReset(cl)) {
+      (*dictSrcOut) << "   // Wrapper around the Reset function." << std::endl
+      << "   static void reset_" << mappedname.c_str() << "(void *obj,TFileMergeInfo *info) {" << std::endl
+      << "      ((" << classname.c_str() << "*)obj)->Reset(info ? info->fOptions.Data() : \"\");" << std::endl
+      << "   }" << std::endl;
+   }
    (*dictSrcOut) << "} // end of namespace ROOT for class " << classname.c_str() << std::endl << std::endl;
 }
 
@@ -2446,10 +2564,16 @@ void WriteClassInit(G__ClassInfo &cl)
                     << "   static void destruct_" << mappedname.c_str() << "(void *p);" << std::endl;
    }
    if (HasDirectoryAutoAdd(cl)) {
-      (*dictSrcOut)<< "   static void directoryAutoAdd_" << mappedname.c_str() << "(void *p, TDirectory *dir);" << std::endl;
+      (*dictSrcOut)<< "   static void directoryAutoAdd_" << mappedname.c_str() << "(void *obj, TDirectory *dir);" << std::endl;
    }
    if (HasCustomStreamerMemberFunction(cl)) {
       (*dictSrcOut)<< "   static void streamer_" << mappedname.c_str() << "(TBuffer &buf, void *obj);" << std::endl;
+   }
+   if (HasNewMerge(cl) || HasOldMerge(cl)) {
+      (*dictSrcOut)<< "   static Long64_t merge_" << mappedname.c_str() << "(void *obj, TCollection *coll,TFileMergeInfo *info);" << std::endl;
+   }
+   if (HasResetAfterMerge(cl) || HasReset(cl)) {
+      (*dictSrcOut)<< "   static void reset_" << mappedname.c_str() << "(void *obj, TFileMergeInfo *info);" << std::endl;
    }
    //--------------------------------------------------------------------------
    // Check if we have any schema evolution rules for this class
@@ -2642,6 +2766,12 @@ void WriteClassInit(G__ClassInfo &cl)
    if (HasCustomStreamerMemberFunction(cl)) {
       // We have a custom member function streamer or an older (not StreamerInfo based) automatic streamer.
       (*dictSrcOut) << "      instance.SetStreamerFunc(&streamer_" << mappedname.c_str() << ");" << std::endl;
+   }
+   if (HasNewMerge(cl) || HasOldMerge(cl)) {
+      (*dictSrcOut) << "      instance.SetMerge(&merge_" << mappedname.c_str() << ");" << std::endl;
+   }
+   if (HasResetAfterMerge(cl) || HasReset(cl)) {
+      (*dictSrcOut) << "      instance.SetResetAfterMerge(&reset_" << mappedname.c_str() << ");" << std::endl;      
    }
    if (bset) {
       (*dictSrcOut) << "      instance.AdoptCollectionProxyInfo(TCollectionProxyInfo::Generate(TCollectionProxyInfo::"
@@ -3520,7 +3650,7 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
                cvar = '*';
                cvar += m.Name();
                for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  snprintf(cdim,1024, "[%d]", m.MaxIndex(dim));
+                  snprintf(cdim,1024, "[%ld]", m.MaxIndex(dim));
                   cvar += cdim;
                }
                (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", &"
@@ -3561,7 +3691,7 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
                cvar = '*';
                cvar += m.Name();
                for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  snprintf(cdim,1024, "[%d]", m.MaxIndex(dim));
+                  snprintf(cdim,1024, "[%ld]", m.MaxIndex(dim));
                   cvar += cdim;
                }
                (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", &"
@@ -3577,7 +3707,7 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
             } else if (m.Property() & G__BIT_ISARRAY) {
                cvar = m.Name();
                for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  snprintf(cdim,1024, "[%d]", m.MaxIndex(dim));
+                  snprintf(cdim,1024, "[%ld]", m.MaxIndex(dim));
                   cvar += cdim;
                }
                (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", "
@@ -3938,8 +4068,7 @@ void StrcpyWithEsc(string& escaped, const char *original)
    // Copy original into escaped BUT make sure that the \ characters
    // are properly escaped (on Windows temp files have \'s).
 
-   int j, k;
-   j = 0; k = 0;
+   int j = 0;
    escaped = "";
    while (original[j] != '\0') {
       if (original[j] == '\\')
@@ -4186,6 +4315,21 @@ void CleanupOnExit(int code)
    }
 }
 
+// cross-compiling for iOS and iOS simulator (assumes host is Intel Mac OS X)
+#if defined(R__IOSSIM) || defined(R__IOS)
+#ifdef __x86_64__
+#undef __x86_64__
+#endif
+#ifdef __i386__
+#undef __i386__
+#endif
+#ifdef R__IOSSIM
+#define __i386__ 1
+#endif
+#ifdef R__IOS
+#define __arm__ 1
+#endif
+#endif
 
 //______________________________________________________________________________
 int main(int argc, char **argv)
@@ -4240,15 +4384,17 @@ int main(int argc, char **argv)
       gErrorIgnoreLevel = kInfo; // Display all information (same as -v)
       ic++;
    }
-   if (!strcmp(argv[ic], "-cint")) {
-      dict_type = kDictTypeCint;
-      ic++;
-   } else if (!strcmp(argv[ic], "-reflex")) {
-      dict_type = kDictTypeReflex;
-      ic++;
-   } else if (!strcmp(argv[ic], "-gccxml")) {
-      dict_type = kDictTypeGCCXML;
-      ic++;
+   if (ic < argc) {
+      if (!strcmp(argv[ic], "-cint")) {
+         dict_type = kDictTypeCint;
+         ic++;
+      } else if (!strcmp(argv[ic], "-reflex")) {
+         dict_type = kDictTypeReflex;
+         ic++;
+      } else if (!strcmp(argv[ic], "-gccxml")) {
+         dict_type = kDictTypeGCCXML;
+         ic++;
+      }
    }
 
    if (dict_type==kDictTypeGCCXML) {
@@ -4259,7 +4405,7 @@ int main(int argc, char **argv)
    const char* libprefix = "--lib-list-prefix=";
 
    ifl = 0;
-   while (strncmp(argv[ic], "-",1)==0
+   while (ic < argc && strncmp(argv[ic], "-",1)==0
           && strcmp(argv[ic], "-f")!=0 ) {
       if (!strcmp(argv[ic], "-l")) {
 
@@ -4283,13 +4429,13 @@ int main(int argc, char **argv)
       }
    }
 
-   if (!strcmp(argv[ic], "-f")) {
+   if (ic < argc && !strcmp(argv[ic], "-f")) {
       force = 1;
       ic++;
-   } else if (!strcmp(argv[1], "-?") || !strcmp(argv[1], "-h")) {
+   } else if (argc > 1 && (!strcmp(argv[1], "-?") || !strcmp(argv[1], "-h"))) {
       fprintf(stderr, "%s\n", help);
       return 1;
-   } else if (!strncmp(argv[ic], "-",1)) {
+   } else if (ic < argc && !strncmp(argv[ic], "-",1)) {
       fprintf(stderr,"Usage: %s [-v][-v0-4] [-reflex] [-l] [-f] [out.cxx] [-c] file1.h[+][-][!] file2.h[+][-][!]...[LinkDef.h]\n",
               argv[0]);
       fprintf(stderr,"Only one verbose flag is authorized (one of -v, -v0, -v1, -v2, -v3, -v4)\n"
@@ -4316,9 +4462,9 @@ int main(int argc, char **argv)
 #endif
 
    string header("");
-   if (strstr(argv[ic],".C")  || strstr(argv[ic],".cpp") ||
+   if (ic < argc && (strstr(argv[ic],".C")  || strstr(argv[ic],".cpp") ||
        strstr(argv[ic],".cp") || strstr(argv[ic],".cxx") ||
-       strstr(argv[ic],".cc") || strstr(argv[ic],".c++")) {
+       strstr(argv[ic],".cc") || strstr(argv[ic],".c++"))) {
       FILE *fp;
       if ((fp = fopen(argv[ic], "r")) != 0) {
          fclose(fp);
@@ -4428,14 +4574,14 @@ int main(int argc, char **argv)
    argvv[0] = argv[0];
    argcc = 1;
 
-   if (!strcmp(argv[ic], "-c")) {
+   if (ic < argc && !strcmp(argv[ic], "-c")) {
       icc++;
       if (ifl) {
          char *s;
          ic++;
          argvv[argcc++] = (char *)"-q0";
          argvv[argcc++] = (char *)"-n";
-	 int ncha = strlen(argv[ifl])+1;
+         int ncha = strlen(argv[ifl])+1;
          argvv[argcc] = (char *)calloc(ncha, 1);
          strlcpy(argvv[argcc], argv[ifl],ncha); argcc++;
          argvv[argcc++] = (char *)"-N";
@@ -4557,6 +4703,14 @@ int main(int argc, char **argv)
             argvv[argcc] = (char *)calloc(64, 1);
             snprintf(argvv[argcc],64, "-D__x86_64__=%ld", (long)__x86_64__); argcc++;
 #endif
+#ifdef __i386__
+            argvv[argcc] = (char *)calloc(64, 1);
+            snprintf(argvv[argcc],64, "-D__i386__=%ld", (long)__i386__); argcc++;
+#endif
+#ifdef __arm__
+            argvv[argcc] = (char *)calloc(64, 1);
+            snprintf(argvv[argcc],64, "-D__arm__=%ld", (long)__arm__); argcc++;
+#endif
 #ifdef R__B64
             argvv[argcc] = (char *)calloc(64, 1);
             snprintf(argvv[argcc],64, "-DR__B64"); argcc++;
@@ -4613,7 +4767,7 @@ int main(int argc, char **argv)
       //
       // If we see the parameter -S then we want the ShowMembers
       // part, if not we only want the dict (without ShowMembers)
-      if (!strcmp(argv[ic], "-.")) {
+      if (ic < argc && !strcmp(argv[ic], "-.")) {
          ++ic;
          argvv[argcc++] = (char*)"-.";
          dicttype = atoi(argv[ic]);
@@ -4624,7 +4778,7 @@ int main(int argc, char **argv)
       // 03-07-07
       // We need the library path in the dictionary generation
       // the easiest way is to get it as a parameter
-      if (!strcmp(argv[ic], "-L") || !strcmp(argv[ic], "--symbols-file")) {
+      if (ic < argc && (!strcmp(argv[ic], "-L") || !strcmp(argv[ic], "--symbols-file"))) {
 
          FILE *fpsym = fopen(argv[ic],"r");
          if (fpsym) // File exists
@@ -4679,11 +4833,17 @@ int main(int argc, char **argv)
          il = i;
          if (i != argc-1) {
             Error(0, "%s: %s must be last file on command line\n", argv[0], argv[i]);
+            if (use_preprocessor) {
+               fclose(bundle);
+            }
             return 1;
          }
       }
       if (!strcmp(argv[i], "-c")) {
          Error(0, "%s: option -c must come directly after the output file\n", argv[0]);
+         if (use_preprocessor) {
+            fclose(bundle);
+         }
          return 1;
       }
       if (use_preprocessor && *argv[i] != '-' && *argv[i] != '+') {
@@ -4699,12 +4859,12 @@ int main(int argc, char **argv)
          if (strcmp("-pipe", argv[ic])!=0) {
             // filter out undesirable options
             string argkeep;
-            // [coverity: tainted_data] The OS should already limit the argument size, so we are safe here
+            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
             StrcpyArg(argkeep, argv[i]);
 	    int ncha = argkeep.length()+1;
-            // [coverity: tainted_data] The OS should already limit the argument size, so we are safe here
+            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
             argvv[argcc++] = (char*)calloc(ncha,1);
-            // [coverity: tainted_data] The OS should already limit the argument size, so we are safe here
+            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
             strlcpy(argvv[argcc-1],argkeep.c_str(),ncha);
          }
       }
@@ -4889,7 +5049,8 @@ int main(int argc, char **argv)
                  << "#define G__ROOT" << std::endl
                  << "#endif" << std::endl << std::endl
                  << "#include \"RtypesImp.h\"" << std::endl
-                 << "#include \"TIsAProxy.h\"" << std::endl;
+                 << "#include \"TIsAProxy.h\"" << std::endl
+                 << "#include \"TFileMergeInfo.h\"" << std::endl;
    (*dictSrcOut) << std::endl;
 #ifdef R__SOLARIS
    (*dictSrcOut) << "// Since CINT ignores the std namespace, we need to do so in this file." << std::endl
@@ -5038,18 +5199,12 @@ int main(int argc, char **argv)
       // Read LinkDef file and process the #pragma link C++ ioctortype
       char consline[256];
       while (fgets(consline, 256, fpld)) {
-         bool constype = false;
-         if ((strcmp(strtok(consline, " "), "#pragma") == 0) &&
-             (strcmp(strtok(0, " "), "link") == 0) &&
-             (strcmp(strtok(0, " "), "C++") == 0) &&
-             (strcmp(strtok(0, " " ), "ioctortype") == 0)) {
-
-            constype = true;
-         }
+         static const char* ioctorTokens[] = {"pragma", "link", "C++", "ioctortype", 0};
+         size_t tokpos = 0;
+         bool constype = ParsePragmaLine(consline, ioctorTokens, &tokpos);
 
          if (constype) {
-
-            char *request = strtok(0, "-!+;");
+            char *request = strtok(consline + tokpos, "-!+;");
             // just in case remove trailing space and tab
             while (*request == ' ') request++;
             int len = strlen(request)-1;
@@ -5127,41 +5282,27 @@ int main(int argc, char **argv)
 
       // Read LinkDef file and process valid entries (STK)
       char line[256];
-      char cline[256];
-      char nline[256];
       while (fgets(line, 256, fpld)) {
 
          bool skip = true;
          bool forceLink = false;
-         strlcpy(cline,line,256);
-         strlcpy(nline,line,256);
          int len = strlen(line);
 
          // Check if the line contains a "#pragma link C++ class" specification,
          // if so, process the class (STK)
-         if ((strcmp(strtok(line, " "), "#pragma") == 0) &&
-             (strcmp(strtok(0, " "), "link") == 0) &&
-             (strcmp(strtok(0, " "), "C++") == 0) &&
-             (strcmp(strtok(0, " " ), "class") == 0)) {
-
+         static const char* linkClassTokens[] = {"pragma", "link", "C++", "class", 0};
+         static const char* createTClassTokens[] = {"pragma", "create", "TClass", 0};
+         static const char* linkNamespaceTokens[] = {"pragma", "link", "C++", "namespace", 0};
+         size_t tokpos = 0;
+         if (ParsePragmaLine(line, linkClassTokens, &tokpos)) {
             skip = false;
             forceLink = false;
-
-         } else if ((strcmp(strtok(cline, " "), "#pragma") == 0) &&
-                    (strcmp(strtok(0, " "), "create") == 0) &&
-                    (strcmp(strtok(0, " "), "TClass") == 0)) {
-
+         } else if (ParsePragmaLine(line, createTClassTokens, &tokpos)) {
             skip = false;
             forceLink = true;
-
-         } else if ((strcmp(strtok(nline, " "), "#pragma") == 0) &&
-                    (strcmp(strtok(0, " "), "link") == 0) &&
-                    (strcmp(strtok(0, " "), "C++") == 0) &&
-                    (strcmp(strtok(0, " " ), "namespace") == 0)) {
-
+         } else if (ParsePragmaLine(line, linkNamespaceTokens, &tokpos)) {
             skip = false;
             forceLink = false;
-
          }
 
          if (!skip) {
@@ -5193,11 +5334,12 @@ int main(int argc, char **argv)
                }
             }
 
-            char *request = strtok(0, "-!+;");
+            while (isspace(line[tokpos])) ++tokpos;
+            char* request = strtok(line + tokpos, "-!+;");
             // just in case remove trailing space and tab
-            while (*request == ' ') request++;
+            while (isspace(*request)) ++request;
             int reqlen = strlen(request)-1;
-            while (request[reqlen]==' ' || request[reqlen]=='\t') request[reqlen--] = '\0';
+            while (isspace(request[reqlen])) request[reqlen--] = '\0';
             request = Compress(request); //no space between tmpl arguments allowed
 
             // In some case, G__ClassInfo will induce template instantiation,
@@ -5379,6 +5521,8 @@ int main(int argc, char **argv)
       } else {
          const size_t endStr = gLibsNeeded.find_last_not_of(" \t");
          outputfile << gLibsNeeded.substr(0, endStr+1) << endl;
+         // Add explicit delimiter
+         outputfile << "# Now the list of classes\n";
          G__ClassInfo clFile;
          clFile.Init();
          while (clFile.Next()) {

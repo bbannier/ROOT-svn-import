@@ -240,7 +240,7 @@ void TProfile::BuildOptions(Double_t ymin, Double_t ymax, Option_t *option)
    fTsumwy = fTsumwy2 = 0;
 
 }
-
+ 
 //______________________________________________________________________________
 TProfile::TProfile(const TProfile &profile) : TH1D()
 {
@@ -339,7 +339,7 @@ Int_t TProfile::BufferEmpty(Int_t action)
       if (action == 0) return 0;
       nbentries  = -nbentries;
       fBuffer=0;
-      Reset();
+      Reset("ICES"); // reset without deleting the functions
       fBuffer = buffer;
    }
    if (TestBit(kCanRebin) || fXaxis.GetXmax() <= fXaxis.GetXmin()) {
@@ -394,7 +394,7 @@ Int_t TProfile::BufferFill(Double_t x, Double_t y, Double_t w)
       fBuffer[0] =  nbentries;
       if (fEntries > 0) {
          Double_t *buffer = fBuffer; fBuffer=0;
-         Reset();
+         Reset("ICES");  // reset without deleting the functions
          fBuffer = buffer;
       }
    }
@@ -460,6 +460,10 @@ void TProfile::Divide(const TH1 *h1)
       return;
    }
    TProfile *p1 = (TProfile*)h1;
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
+
 
    Int_t nbinsx = GetNbinsX();
 //*-*- Check profile compatibility
@@ -544,6 +548,9 @@ void TProfile::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Op
       return;
    }
    TProfile *p2 = (TProfile*)h2;
+
+   // delete buffer if it is there since it will become invalid
+   if (fBuffer) BufferEmpty(1);
 
    Int_t nbinsx = GetNbinsX();
 //*-*- Check histogram compatibility
@@ -645,7 +652,7 @@ Int_t TProfile::Fill(Double_t x, Double_t y)
 
    Int_t bin;
    if (fYmin != fYmax) {
-      if (y <fYmin || y> fYmax) return -1;
+      if (y <fYmin || y> fYmax || TMath::IsNaN(y) ) return -1;
    }
 
    fEntries++;
@@ -673,7 +680,7 @@ Int_t TProfile::Fill(const char *namex, Double_t y)
 //
    Int_t bin;
    if (fYmin != fYmax) {
-      if (y <fYmin || y> fYmax) return -1;
+      if (y <fYmin || y> fYmax || TMath::IsNaN(y) ) return -1;
    }
 
    fEntries++;
@@ -705,10 +712,10 @@ Int_t TProfile::Fill(Double_t x, Double_t y, Double_t w)
 
    Int_t bin;
    if (fYmin != fYmax) {
-      if (y <fYmin || y> fYmax) return -1;
+      if (y <fYmin || y> fYmax || TMath::IsNaN(y) ) return -1;
    }
 
-   Double_t u= (w > 0 ? w : -w);
+   Double_t u= w; // (w > 0 ? w : -w);
    fEntries++;
    bin =fXaxis.FindBin(x);
    AddBinContent(bin, u*y);
@@ -735,10 +742,10 @@ Int_t TProfile::Fill(const char *namex, Double_t y, Double_t w)
    Int_t bin;
 
    if (fYmin != fYmax) {
-      if (y <fYmin || y> fYmax) return -1;
+      if (y <fYmin || y> fYmax || TMath::IsNaN(y) ) return -1;
    }
 
-   Double_t u= (w > 0 ? w : -w);
+   Double_t u= w; // (w > 0 ? w : -w);
    fEntries++;
    bin =fXaxis.FindBin(namex);
    AddBinContent(bin, u*y);
@@ -768,10 +775,10 @@ void TProfile::FillN(Int_t ntimes, const Double_t *x, const Double_t *y, const D
    ntimes *= stride;
    for (i=0;i<ntimes;i+=stride) {
       if (fYmin != fYmax) {
-         if (y[i] <fYmin || y[i]> fYmax) continue;
+         if (y[i] <fYmin || y[i]> fYmax || TMath::IsNaN(y[i])) continue;
       }
 
-      Double_t u= (w[i] > 0 ? w[i] : -w[i]);
+      Double_t u = (w) ? w[i] : 1; // (w[i] > 0 ? w[i] : -w[i]);
       fEntries++;
       bin =fXaxis.FindBin(x[i]);
       AddBinContent(bin, u*y[i]);
@@ -927,7 +934,7 @@ void TProfile::GetStats(Double_t *stats) const
       }
       for (binx = firstBinX; binx <= lastBinX; binx++) {
          Double_t w   = fBinEntries.fArray[binx];
-         Double_t w2  = (fBinSumw2.fN ? fBinSumw2.fArray[binx] : w*w );  
+         Double_t w2  = (fBinSumw2.fN ? fBinSumw2.fArray[binx] : w);  
          Double_t x   = fXaxis.GetBinCenter(binx);
          stats[0] += w;
          stats[1] += w2;
@@ -1527,7 +1534,7 @@ void TProfile::Reset(Option_t *option)
    fBinSumw2.Reset();
    TString opt = option;
    opt.ToUpper();
-   if (opt.Contains("ICE")) return;
+   if (opt.Contains("ICE") && !opt.Contains("S")) return;
    fTsumwy  = 0;
    fTsumwy2 = 0;
 }

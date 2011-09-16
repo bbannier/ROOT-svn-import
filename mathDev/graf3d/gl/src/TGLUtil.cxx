@@ -1804,6 +1804,21 @@ void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Char_t transp,
 }
 
 //______________________________________________________________________________
+void TGLUtil::RenderPolyMarkers(const TAttMarker &marker, const std::vector<Double_t> &points,
+                                Double_t dX, Double_t dY, Double_t dZ)
+{
+   // Render polymarkers at points specified by p-array.
+   // Supports point and cross-like styles.
+   // Color is set externally. Lighting is disabled externally.
+
+   const Int_t s = marker.GetMarkerStyle();
+   if (s == 2 || s == 3 || s == 5 || s == 28)
+      RenderCrosses(marker, points, dX, dY, dZ);
+   else
+      RenderPoints(marker, points);
+}
+
+//______________________________________________________________________________
 void TGLUtil::RenderPoints(const TAttMarker& marker,
                            Float_t* op, Int_t n,
                            Int_t pick_radius, Bool_t selection,
@@ -1872,6 +1887,54 @@ void TGLUtil::RenderPoints(const TAttMarker& marker,
 
    if (changePM)
       EndExtendPickRegion();
+}
+
+//______________________________________________________________________________
+void TGLUtil::RenderPoints(const TAttMarker& marker, const std::vector<Double_t> &points)
+{
+   // Render markers as circular or square points.
+   // Color is never changed.
+   const Int_t style = marker.GetMarkerStyle();
+   Float_t size = 5 * marker.GetMarkerSize();
+
+   if (style == 4 || style == 20 || style == 24)
+   {
+      glEnable(GL_POINT_SMOOTH);
+      if (style == 4 || style == 24) {
+         glEnable(GL_BLEND);
+         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+         glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+      }
+   }
+   else
+   {
+      glDisable(GL_POINT_SMOOTH);
+      if      (style == 1) size = 1;
+      else if (style == 6) size = 2;
+      else if (style == 7) size = 3;
+   }
+
+   glPointSize(size);
+
+   glVertexPointer(3, GL_DOUBLE, 0, &points[0]);
+   glEnableClientState(GL_VERTEX_ARRAY);
+
+   // Circumvent bug in ATI's linux drivers.
+   Int_t nleft = points.size() / 3;
+   Int_t ndone = 0;
+   const Int_t maxChunk = 8192;
+   while (nleft > maxChunk)
+   {
+      glDrawArrays(GL_POINTS, ndone, maxChunk);
+      nleft -= maxChunk;
+      ndone += maxChunk;
+   }
+
+   if (nleft > 0)
+      glDrawArrays(GL_POINTS, ndone, nleft);
+
+   glDisableClientState(GL_VERTEX_ARRAY);
+   glPointSize(1.f);
 }
 
 //______________________________________________________________________________
@@ -1945,6 +2008,44 @@ void TGLUtil::RenderCrosses(const TAttMarker& marker,
          glDrawArrays(GL_POINTS, ndone, nleft);
       }
       glPopClientAttrib();
+   }
+}
+
+//______________________________________________________________________________
+void TGLUtil::RenderCrosses(const TAttMarker& marker, const std::vector<Double_t> &points,
+                            Double_t dX, Double_t dY, Double_t dZ)
+{
+   // Render markers as crosses.
+   // Color is never changed.
+   if (marker.GetMarkerStyle() == 28)
+   {
+      glEnable(GL_BLEND);
+      glEnable(GL_LINE_SMOOTH);
+      glLineWidth(2.f);
+   }
+   else
+   {
+      glDisable(GL_LINE_SMOOTH);
+      glLineWidth(1.f);
+   }
+
+   typedef std::vector<Double_t>::size_type size_type;
+
+   glBegin(GL_LINES);
+
+   for (size_type i = 0; i < points.size(); i += 3) {
+      const Double_t *p = &points[i];
+      glVertex3f(p[0] - dX, p[1], p[2]); glVertex3f(p[0] + dX, p[1], p[2]);
+      glVertex3f(p[0], p[1] - dY, p[2]); glVertex3f(p[0], p[1] + dY, p[2]);
+      glVertex3f(p[0], p[1], p[2] - dZ); glVertex3f(p[0], p[1], p[2] + dZ);
+   }
+
+   glEnd();
+
+   if (marker.GetMarkerStyle() == 28) {
+      glDisable(GL_LINE_SMOOTH);
+      glDisable(GL_BLEND);
+      glLineWidth(1.f);
    }
 }
 
@@ -2679,6 +2780,10 @@ const Int_t    gBoxFrontQuads[][4] = {{0, 1, 2, 3}, {4, 0, 3, 5}, {4, 5, 6, 7}, 
 const Double_t gBoxFrontNormals[][3] = {{-1., 0., 0.}, {0., -1., 0.}, {1., 0., 0.}, {0., 1., 0.}};
 const Int_t    gBoxFrontPlanes[][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
 
+const Int_t    gBoxBackQuads[][4] = {{7, 1, 2, 6}, {4, 7, 6, 5}, {0, 4, 5, 3}, {0, 3, 2, 1}};
+const Double_t gBoxBackNormals[][3] = {{0., -1., 0.}, {-1., 0., 0.}, {0., 1., 0.}, {1., 0., 0.}};
+const Int_t    gBoxBackPlanes[][2] = {{0, 1}, {3, 0}, {2, 3}, {1, 2}};
+
 //______________________________________________________________________________
 void DrawBoxFront(Double_t xMin, Double_t xMax, Double_t yMin, Double_t yMax,
                   Double_t zMin, Double_t zMax, Int_t fp)
@@ -2699,6 +2804,81 @@ void DrawBoxFront(Double_t xMin, Double_t xMax, Double_t yMin, Double_t yMax,
    const Double_t box[][3] = {{xMin, yMin, zMax}, {xMin, yMax, zMax}, {xMin, yMax, zMin}, {xMin, yMin, zMin},
                               {xMax, yMin, zMax}, {xMax, yMin, zMin}, {xMax, yMax, zMin}, {xMax, yMax, zMax}};
    const Int_t *verts = gBoxFrontQuads[gBoxFrontPlanes[fp][0]];
+
+   glBegin(GL_POLYGON);
+   glNormal3dv(gBoxFrontNormals[gBoxFrontPlanes[fp][0]]);
+   glVertex3dv(box[verts[0]]);
+   glVertex3dv(box[verts[1]]);
+   glVertex3dv(box[verts[2]]);
+   glVertex3dv(box[verts[3]]);
+   glEnd();
+
+   verts = gBoxFrontQuads[gBoxFrontPlanes[fp][1]];
+
+   glBegin(GL_POLYGON);
+   glNormal3dv(gBoxFrontNormals[gBoxFrontPlanes[fp][1]]);
+   glVertex3dv(box[verts[0]]);
+   glVertex3dv(box[verts[1]]);
+   glVertex3dv(box[verts[2]]);
+   glVertex3dv(box[verts[3]]);
+   glEnd();
+
+   //Top is always drawn.
+   glBegin(GL_POLYGON);
+   glNormal3d(0., 0., 1.);
+   glVertex3d(xMax, yMin, zMax);
+   glVertex3d(xMax, yMax, zMax);
+   glVertex3d(xMin, yMax, zMax);
+   glVertex3d(xMin, yMin, zMax);
+   glEnd();
+}
+
+//______________________________________________________________________________
+void DrawTransparentBox(Double_t xMin, Double_t xMax, Double_t yMin, Double_t yMax,
+                        Double_t zMin, Double_t zMax, Int_t fp)
+{
+   //Draws lego's bar as a 3d box
+   if (zMax < zMin)
+      std::swap(zMax, zMin);
+
+   //The order is: 1) two back planes, 2) bottom plane, 3) two front planes,
+   //4) top.
+
+   //Bottom is always drawn.
+   glBegin(GL_POLYGON);
+   glNormal3d(0., 0., -1.);
+   glVertex3d(xMax, yMin, zMin);
+   glVertex3d(xMin, yMin, zMin);
+   glVertex3d(xMin, yMax, zMin);
+   glVertex3d(xMax, yMax, zMin);
+   glEnd();
+
+   const Double_t box[][3] = {{xMin, yMin, zMax}, {xMin, yMax, zMax}, {xMin, yMax, zMin}, {xMin, yMin, zMin},
+                              {xMax, yMin, zMax}, {xMax, yMin, zMin}, {xMax, yMax, zMin}, {xMax, yMax, zMax}};
+
+   //Draw two back planes.
+   const Int_t *verts = gBoxBackQuads[gBoxBackPlanes[fp][0]];
+
+   glBegin(GL_POLYGON);
+   glNormal3dv(gBoxBackNormals[gBoxBackPlanes[fp][0]]);
+   glVertex3dv(box[verts[0]]);
+   glVertex3dv(box[verts[1]]);
+   glVertex3dv(box[verts[2]]);
+   glVertex3dv(box[verts[3]]);
+   glEnd();
+
+   verts = gBoxBackQuads[gBoxBackPlanes[fp][1]];
+
+   glBegin(GL_POLYGON);
+   glNormal3dv(gBoxBackNormals[gBoxBackPlanes[fp][1]]);
+   glVertex3dv(box[verts[0]]);
+   glVertex3dv(box[verts[1]]);
+   glVertex3dv(box[verts[2]]);
+   glVertex3dv(box[verts[3]]);
+   glEnd();
+
+   //Draw two visible front planes.
+   verts = gBoxFrontQuads[gBoxFrontPlanes[fp][0]];
 
    glBegin(GL_POLYGON);
    glNormal3dv(gBoxFrontNormals[gBoxFrontPlanes[fp][0]]);

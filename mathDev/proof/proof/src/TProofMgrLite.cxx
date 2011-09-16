@@ -56,19 +56,25 @@ TProof *TProofMgrLite::CreateSession(const char *cfg,
    if (nwrk == 0) return (TProof *)0;
 
    // Check if we have already a running session
-   if (gProof && gProof->IsValid() && gProof->IsLite()) {
-      if (nwrk > 0 && gProof->GetParallel() != nwrk) {
+   if (gProof && gProof->IsLite()) {
+      if (gProof->IsValid()) {
+         if (nwrk > 0 && gProof->GetParallel() != nwrk) {
+            delete gProof;
+            gProof = 0;
+         } else {
+            // We have already a running session
+            return gProof;
+         }
+      } else {
+         // Remove existing instance
          delete gProof;
          gProof = 0;
-      } else {
-         // We have already a running session
-         return gProof;
       }
    }
 
    // Create the instance
-   TString u = (strlen(fUrl.GetOptions()) > 0) ? Form("lite/?%s", fUrl.GetOptions())
-                                               : "lite";
+   TString u("lite");
+   if (strlen(fUrl.GetOptions()) > 0) u.Form("lite/?%s", fUrl.GetOptions());
    TProof *p = new TProofLite(u, cfg, 0, loglevel, 0, this);
 
    if (p && p->IsValid()) {
@@ -102,8 +108,8 @@ TProof *TProofMgrLite::CreateSession(const char *cfg,
 }
 
 //_____________________________________________________________________________
-TProofLog *TProofMgrLite::GetSessionLogs(Int_t isess,
-                                         const char *stag, const char *pattern)
+TProofLog *TProofMgrLite::GetSessionLogs(Int_t isess, const char *stag,
+                                         const char *pattern, Bool_t)
 {
    // Get logs or log tails from last session associated with this manager
    // instance.
@@ -264,8 +270,9 @@ TProofLog *TProofMgrLite::GetSessionLogs(Int_t isess,
 
    // Retrieve the default part
    if (pl && retrieve) {
-      if (pattern && strlen(pattern) > 0)
-         pl->Retrieve("*", TProofLog::kGrep, 0, pattern);
+      const char *pat = pattern ? pattern : "-v \"| SvcMsg\"";
+      if (pat && strlen(pat) > 0)
+         pl->Retrieve("*", TProofLog::kGrep, 0, pat);
       else
          pl->Retrieve();
    }

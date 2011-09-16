@@ -110,6 +110,7 @@ map<const RooAbsArg*,pair<string,list<RooAbsReal::EvalError> > > RooAbsReal::_ev
 //_____________________________________________________________________________
 RooAbsReal::RooAbsReal() : _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
+  // coverity[UNINIT_CTOR]
   // Default constructor
 }
 
@@ -148,6 +149,7 @@ RooAbsReal::RooAbsReal(const RooAbsReal& other, const char* name) :
   _plotBins(other._plotBins), _value(other._value), _unit(other._unit), _forceNumInt(other._forceNumInt), 
   _treeVar(other._treeVar), _selectComp(other._selectComp), _lastNSet(0)
 {
+  // coverity[UNINIT_CTOR]
   // Copy constructor
 
   if (other._specIntegratorConfig) {
@@ -245,6 +247,19 @@ Double_t RooAbsReal::getVal(const RooArgSet* nset) const
   return _value ;
 }
 
+
+//_____________________________________________________________________________
+Int_t RooAbsReal::numEvalErrorItems() 
+{ 
+  return _evalErrorList.size() ; 
+}
+
+
+//_____________________________________________________________________________
+RooAbsReal::EvalErrorIter RooAbsReal::evalErrorIter() 
+{ 
+  return _evalErrorList.begin() ; 
+} 
 
 
 //_____________________________________________________________________________
@@ -1137,7 +1152,7 @@ RooDataHist* RooAbsReal::fillDataHist(RooDataHist *hist, const RooArgSet* normSe
   //RooArgSet* cloneSet = (RooArgSet*) RooArgSet(*this).snapshot(kTRUE) ;
   //RooAbsReal* theClone = (RooAbsReal*) cloneSet->find(GetName()) ;
   const_cast<RooAbsReal*>(this)->recursiveRedirectServers(*hist->get()) ;
-  
+
   // Iterator over all bins of RooDataHist and fill weights
   Int_t onePct = hist->numEntries()/100 ;
   if (onePct==0) {
@@ -2239,7 +2254,7 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
     
     // If data set contains more rows than needed, make reduced copy first
     RooAbsData* projDataSel = (RooAbsData*)o.projData;
-    if (projDataNeededVars->getSize()<o.projData->get()->getSize()) {
+    if (projDataNeededVars && projDataNeededVars->getSize()<o.projData->get()->getSize()) {
       
       // Determine if there are any slice variables in the projection set
       RooArgSet* sliceDataSet = (RooArgSet*) sliceSet.selectCommon(*o.projData->get()) ;
@@ -2848,6 +2863,8 @@ void RooAbsReal::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/)
       _value = other->_intValue ;
     } else if (source->getAttribute("BYTE_TREE_BRANCH")) {
       _value = other->_byteValue ;
+    } else if (source->getAttribute("SIGNEDBYTE_TREE_BRANCH")) {
+      _value = other->_sbyteValue ;
     } else if (source->getAttribute("UNSIGNED_INTEGER_TREE_BRANCH")) {
       _value = other->_uintValue ;
     } 
@@ -2908,14 +2925,22 @@ void RooAbsReal::attachToTree(TTree& t, Int_t bufSize)
       setAttribute("BYTE_TREE_BRANCH",kTRUE) ;
       _treeVar = kTRUE ;
       t.SetBranchAddress(cleanName,&_byteValue) ;
+    } else if (!typeName.CompareTo("Char_t")) {
+      coutI(Eval) << "RooAbsReal::attachToTree(" << GetName() << ") TTree Char_t branch " << GetName() 
+		  << " will be converted to double precision" << endl ;
+      setAttribute("SIGNEDBYTE_TREE_BRANCH",kTRUE) ;
+      _treeVar = kTRUE ;
+      t.SetBranchAddress(cleanName,&_sbyteValue) ;
     }  else if (!typeName.CompareTo("UInt_t")) { 
       coutI(Eval) << "RooAbsReal::attachToTree(" << GetName() << ") TTree UInt_t branch " << GetName() 
 		  << " will be converted to double precision" << endl ;
       setAttribute("UNSIGNED_INTEGER_TREE_BRANCH",kTRUE) ;
       _treeVar = kTRUE ;
       t.SetBranchAddress(cleanName,&_uintValue) ;
-    } else {
+    } else if (!typeName.CompareTo("Double_t")) {
       t.SetBranchAddress(cleanName,&_value) ;
+    } else {
+      coutE(InputArguments) << "RooAbsReal::attachToTree(" << GetName() << ") data type " << typeName << " is not supported" << endl ;
     }   
     
     if (branch->GetCompressionLevel()<0) {

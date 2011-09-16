@@ -117,8 +117,9 @@ enum kgsiErrors {
 #define SafeDelArray(x) { if (x) delete [] x ; x = 0; }
 #define SafeFree(x) { if (x) free(x) ; x = 0; }
 
-// External function for DN-username mapping
+// External functions for generic mapping
 typedef char *(*XrdSecgsiGMAP_t)(const char *, int);
+typedef char *(*XrdSecgsiAuthz_t)(const char *, int);
 
 //
 // This a small class to set the relevant options in one go
@@ -147,19 +148,24 @@ public:
    int    gmapto; // [s] validity in secs of grid-map cache entries [-1 => unlimited]
    char  *gmapfun;// [s] file with the function to map DN to usernames [0]
    char  *gmapfunparms;// [s] parameters for the function to map DN to usernames [0]
+   char  *authzfun;// [s] file with the function to map DN to usernames [0]
+   char  *authzfunparms;// [s] parameters for the function to map DN to usernames [0]
    int    ogmap;  // [s] gridmap file checking option 
    int    dlgpxy; // [c] explicitely ask the creation of a delegated proxy 
                   // [s] ask client for proxies
    int    sigpxy; // [c] accept delegated proxy requests 
    char  *srvnames;// [c] '|' separated list of allowed server names
    char  *exppxy; // [s] template for the exported file with proxies (dlgpxy == 3)
+   int    authzpxy; // [s] if 1 make proxy available in exported form in the 'endorsement'
+                    //     field of the XrdSecEntity object for use in XrdAcc
 
    gsiOptions() { debug = -1; mode = 's'; clist = 0; 
                   certdir = 0; crldir = 0; crlext = 0; cert = 0; key = 0;
                   cipher = 0; md = 0; ca = 1 ; crl = 1;
                   proxy = 0; valid = 0; deplen = 0; bits = 512;
-                  gridmap = 0; gmapto = -1; gmapfun = 0; gmapfunparms = 0; ogmap = 1;
-                  dlgpxy = 0; sigpxy = 1; srvnames = 0; exppxy = 0;}
+                  gridmap = 0; gmapto = -1;
+                  gmapfun = 0; gmapfunparms = 0; authzfun = 0; authzfunparms = 0;
+                  ogmap = 1; dlgpxy = 0; sigpxy = 1; srvnames = 0; exppxy = 0; authzpxy = 0;}
    virtual ~gsiOptions() { } // Cleanup inside XrdSecProtocolgsiInit
 };
 
@@ -283,10 +289,15 @@ private:
    static String           DefError;
    static String           GMAPFile;
    static int              GMAPOpt;
+   static bool             GMAPuseDNname;
    static int              GMAPCacheTimeOut;
    static XrdSysPlugin    *GMAPPlugin;
    static XrdSecgsiGMAP_t  GMAPFun;
+   static XrdSysPlugin    *AuthzPlugin;
+   static XrdSecgsiAuthz_t AuthzFun; 
    static int              PxyReqOpts;
+   static int              AuthzPxyWhat;
+   static int              AuthzPxyWhere;
    static String           SrvAllowedNames;
    //
    // Crypto related info
@@ -397,5 +408,7 @@ private:
    static int     LoadGMAP(int now); // Init or refresh the cache
    static XrdSecgsiGMAP_t            // Load alternative function for mapping
                   LoadGMAPFun(const char *plugin, const char *parms);
-   static void    QueryGMAP(const char *dn, int now, String &name); //Lookup info for DN
+   static XrdSecgsiAuthz_t           // Load alternative function for mapping based on the PEM string
+                  LoadAuthzFun(const char *plugin, const char *parms);
+   static void    QueryGMAP(XrdCryptoX509Chain* chain, int now, String &name); //Lookup info for DN
 };

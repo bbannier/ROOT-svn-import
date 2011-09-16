@@ -47,7 +47,7 @@ namespace ROOT {
         fImplFileName(0), fImplFileLine(0),
         fIsA(isa), fShowMembers(showmembers),
         fVersion(1),
-        fNew(0),fNewArray(0),fDelete(0),fDeleteArray(0),fDestructor(0), fDirAutoAdd(0), fStreamer(0),
+        fMerge(0),fResetAfterMerge(0),fNew(0),fNewArray(0),fDelete(0),fDeleteArray(0),fDestructor(0), fDirAutoAdd(0), fStreamer(0),
         fStreamerFunc(0), fCollectionProxy(0), fSizeof(sizof),
         fCollectionProxyInfo(0), fCollectionStreamerInfo(0)
    {
@@ -67,7 +67,7 @@ namespace ROOT {
         fImplFileName(0), fImplFileLine(0),
         fIsA(isa), fShowMembers(showmembers),
         fVersion(version),
-        fNew(0),fNewArray(0),fDelete(0),fDeleteArray(0),fDestructor(0), fDirAutoAdd(0), fStreamer(0),
+        fMerge(0),fResetAfterMerge(0),fNew(0),fNewArray(0),fDelete(0),fDeleteArray(0),fDestructor(0), fDirAutoAdd(0), fStreamer(0),
         fStreamerFunc(0), fCollectionProxy(0), fSizeof(sizof),
         fCollectionProxyInfo(0), fCollectionStreamerInfo(0)
    {
@@ -87,7 +87,7 @@ namespace ROOT {
         fImplFileName(0), fImplFileLine(0),
         fIsA(isa), fShowMembers(0),
         fVersion(version),
-        fNew(0),fNewArray(0),fDelete(0),fDeleteArray(0),fDestructor(0), fDirAutoAdd(0), fStreamer(0),
+        fMerge(0),fResetAfterMerge(0),fNew(0),fNewArray(0),fDelete(0),fDeleteArray(0),fDestructor(0), fDirAutoAdd(0), fStreamer(0),
         fStreamerFunc(0), fCollectionProxy(0), fSizeof(sizof),
         fCollectionProxyInfo(0), fCollectionStreamerInfo(0)
 
@@ -109,7 +109,7 @@ namespace ROOT {
         fImplFileName(0), fImplFileLine(0),
         fIsA(0), fShowMembers(0),
         fVersion(version),
-        fNew(0),fNewArray(0),fDelete(0),fDeleteArray(0),fDestructor(0), fDirAutoAdd(0), fStreamer(0),
+        fMerge(0),fResetAfterMerge(0),fNew(0),fNewArray(0),fDelete(0),fDeleteArray(0),fDestructor(0), fDirAutoAdd(0), fStreamer(0),
         fStreamerFunc(0), fCollectionProxy(0), fSizeof(0),
         fCollectionProxyInfo(0), fCollectionStreamerInfo(0)
 
@@ -192,7 +192,7 @@ namespace ROOT {
       delete fStreamer;
       if (!fClass) delete fIsA; // fIsA is adopted by the class if any.
       fIsA = 0;
-      if (!gROOT) return;
+      if (!gROOT || !gROOT->GetListOfClasses()) return;
       if (fAction) GetAction().Unregister(GetClassName());
    }
 
@@ -206,8 +206,8 @@ namespace ROOT {
    TClass *TGenericClassInfo::GetClass()
    {
       // Generate and return the TClass object.
-      R__LOCKGUARD2(gCINTMutex);
       if (!fClass && fAction) {
+         R__LOCKGUARD2(gCINTMutex);
          fClass = GetAction().CreateClass(GetClassName(),
                                           GetVersion(),
                                           GetInfo(),
@@ -224,6 +224,8 @@ namespace ROOT {
          fClass->SetDestructor(fDestructor);
          fClass->SetDirectoryAutoAdd(fDirAutoAdd);
          fClass->SetStreamerFunc(fStreamerFunc);
+         fClass->SetMerge(fMerge);
+         fClass->SetResetAfterMerge(fResetAfterMerge);
          fClass->AdoptStreamer(fStreamer); fStreamer = 0;
          // If IsZombie is true, something went wront and we will not be
          // able to properly copy the collection proxy
@@ -253,7 +255,7 @@ namespace ROOT {
       if ( vect.empty() ) {
          return;
       }
-      
+
       //------------------------------------------------------------------------
       // Get the rules set
       //------------------------------------------------------------------------
@@ -263,6 +265,7 @@ namespace ROOT {
       // Process the rules
       //------------------------------------------------------------------------
       TSchemaRule* rule;
+      TString errmsg;
       std::vector<TSchemaHelper>::iterator it;
       for( it = vect.begin(); it != vect.end(); ++it ) {
          rule = new TSchemaRule();
@@ -285,9 +288,9 @@ namespace ROOT {
             rule->SetRuleType( TSchemaRule::kReadRawRule );
             rule->SetReadRawFunctionPointer( (TSchemaRule::ReadRawFuncPtr_t)it->fFunctionPtr );
          }
-         if( !rset->AddRule( rule ) ) {
-            ::Warning( "TGenericClassInfo", "The rule for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because it conflicts with one of the other rules.",
-                        GetClassName(), it->fVersion.c_str(), it->fTarget.c_str() );
+         if( !rset->AddRule( rule, TSchemaRuleSet::kCheckAll, &errmsg ) ) {
+            ::Warning( "TGenericClassInfo", "The rule for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because %s.",
+                        GetClassName(), it->fVersion.c_str(), it->fTarget.c_str(), errmsg.Data() );
             delete rule;
          }
       }
@@ -325,7 +328,7 @@ namespace ROOT {
    const std::vector<TSchemaHelper>& TGenericClassInfo::GetReadRawRules() const
    {
       // Return the list of rule give raw access to the TBuffer.
-      
+
       return fReadRawRules;
    }
 
@@ -449,14 +452,14 @@ namespace ROOT {
       }
       return 0;
    }
-   
+
    void TGenericClassInfo::SetStreamerFunc(ClassStreamerFunc_t streamer)
    {
       // Set a wrapper around the Streamer memger function.
-      
+
       fStreamerFunc = streamer;
       if (fClass) fClass->SetStreamerFunc(streamer);
-   }      
+   }
 
    const char *TGenericClassInfo::GetDeclFileName() const
    {
@@ -557,6 +560,22 @@ namespace ROOT {
       if (fClass) fClass->SetDirectoryAutoAdd(fDirAutoAdd);
    }
 
+   void TGenericClassInfo::SetMerge(MergeFunc_t func)
+   {
+      // Install a new wrapper around the Merge function.
+      
+      fMerge = func;
+      if (fClass) fClass->SetMerge(fMerge);
+   }
+   
+   void TGenericClassInfo::SetResetAfterMerge(ResetAfterMergeFunc_t func)
+   {
+      // Install a new wrapper around the Merge function.
+      
+      fResetAfterMerge = func;
+      if (fClass) fClass->SetResetAfterMerge(fResetAfterMerge);
+   }
+   
    NewFunc_t TGenericClassInfo::GetNew() const
    {
       // Get the wrapper around 'new'.

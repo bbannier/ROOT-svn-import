@@ -524,6 +524,7 @@ TGenCollectionProxy::TGenCollectionProxy(const TGenCollectionProxy& copy)
    fOnFileClass    = copy.fOnFileClass;
    fReadMemberWise = new TObjArray(TCollection::kInitCapacity,-1);
    fConversionReadMemberWise = 0;
+   fWriteMemberWise = 0;
    fProperties     = copy.fProperties;
    fFunctionCreateIterators    = copy.fFunctionCreateIterators;
    fFunctionDeleteTwoIterators = copy.fFunctionDeleteTwoIterators;
@@ -565,6 +566,7 @@ TGenCollectionProxy::TGenCollectionProxy(Info_t info, size_t iter_size)
    }
    fReadMemberWise = new TObjArray(TCollection::kInitCapacity,-1);
    fConversionReadMemberWise   = 0;
+   fWriteMemberWise            = 0;
    fFunctionCreateIterators    = 0;
    fFunctionDeleteTwoIterators = 0;
 }
@@ -611,6 +613,7 @@ TGenCollectionProxy::TGenCollectionProxy(const ROOT::TCollectionProxyInfo &info,
    }
    fReadMemberWise = new TObjArray(TCollection::kInitCapacity,-1);
    fConversionReadMemberWise   = 0;
+   fWriteMemberWise            = 0;
    fFunctionCreateIterators    = 0;
    fFunctionDeleteTwoIterators = 0;
 }
@@ -652,6 +655,7 @@ TGenCollectionProxy::~TGenCollectionProxy()
       delete fConversionReadMemberWise;
       fConversionReadMemberWise = 0;
    }
+   delete fWriteMemberWise;
 }
 
 //______________________________________________________________________________
@@ -1007,7 +1011,9 @@ void* TGenCollectionProxy::Allocate(UInt_t n, Bool_t /* forceDelete */ )
                Clear("force");
             else
                fClear.invoke(fEnv);
-            ++fEnv->fRefCount;
+            // Commit no longer use the environment and thus no longer decrease
+            // the count.  Consequently we no longer should increase it here.
+            // ++fEnv->fRefCount;
             fEnv->fSize  = n;
 
             TStaging *s;
@@ -1430,7 +1436,10 @@ TStreamerInfoActions::TActionSequence *TGenCollectionProxy::GetConversionReadMem
 {
    // Return the set of action necessary to stream in this collection member-wise coming from
    // the old value class layout refered to by 'version'.
-   
+
+   if (oldClass == 0) { 
+      return 0;
+   }   
    TObjArray* arr = 0;
    TStreamerInfoActions::TActionSequence *result = 0;
    if (fConversionReadMemberWise) {
@@ -1480,18 +1489,15 @@ TStreamerInfoActions::TActionSequence *TGenCollectionProxy::GetReadMemberWiseAct
    // the old value class layout refered to by 'version'.
    
    TStreamerInfoActions::TActionSequence *result = 0;
-   if (version <= fReadMemberWise->GetSize()) {
+   if (version < (fReadMemberWise->GetSize()-1)) { // -1 because the 'index' starts at -1
       result = (TStreamerInfoActions::TActionSequence *)fReadMemberWise->At(version);
    }
    if (result == 0) {
       // Need to create it.
       TClass *valueClass = GetValueClass();
-      if (valueClass == 0) {
-         return 0;
-      }
-      TVirtualStreamerInfo *info = valueClass->GetStreamerInfo(version);
-      if (info == 0) {
-         return 0;
+      TVirtualStreamerInfo *info = 0;
+      if (valueClass) {
+         info = valueClass->GetStreamerInfo(version);
       }
       result = TStreamerInfoActions::TActionSequence::CreateReadMemberWiseActions(info,*this);
       fReadMemberWise->AddAtAndExpand(result,version);
@@ -1504,7 +1510,17 @@ TStreamerInfoActions::TActionSequence *TGenCollectionProxy::GetWriteMemberWiseAc
 {
    // Return the set of action necessary to stream out this collection member-wise.
  
-   R__ASSERT(0 /* Not Implemented yet */);
-   return 0;
+  TStreamerInfoActions::TActionSequence *result = fWriteMemberWise;
+  if (result == 0) {
+     // Need to create it.
+     TClass *valueClass = GetValueClass();
+     TVirtualStreamerInfo *info = 0;
+     if (valueClass) {
+        info = valueClass->GetStreamerInfo();
+     }
+     result = TStreamerInfoActions::TActionSequence::CreateWriteMemberWiseActions(info,*this);
+     fWriteMemberWise=result;
+  }
+  return result;
 }
 

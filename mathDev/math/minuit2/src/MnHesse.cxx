@@ -61,7 +61,7 @@ MnUserParameterState MnHesse::operator()(const FCNBase& fcn, const MnUserParamet
    // interface from MnUserParameterState 
    // create a new Minimum state and use that interface
    unsigned int n = state.VariableParameters();
-   MnUserFcn mfcn(fcn, state.Trafo());
+   MnUserFcn mfcn(fcn, state.Trafo(),state.NFcn());
    MnAlgebraicVector x(n);
    for(unsigned int i = 0; i < n; i++) x(i) = state.IntParameters()[i];
    double amin = mfcn(x);
@@ -76,7 +76,8 @@ MnUserParameterState MnHesse::operator()(const FCNBase& fcn, const MnUserParamet
 void MnHesse::operator()(const FCNBase& fcn, FunctionMinimum& min, unsigned int maxcalls) const {
    // interface from FunctionMinimum to be used after minimization 
    // use last state from the minimization without the need to re-create a new state
-   MnUserFcn mfcn(fcn, min.UserState().Trafo());
+   // do not reset function calls and keep updating them
+   MnUserFcn mfcn(fcn, min.UserState().Trafo(),min.NFcn());
    MinimumState st = (*this)( mfcn, min.State(), min.UserState().Trafo(), maxcalls); 
    min.Add(st); 
 }
@@ -166,8 +167,14 @@ MinimumState MnHesse::operator()(const MnFcn& mfcn, const MinimumState& st, cons
          
 L26:  
 #ifdef WARNINGMSG
-         MN_INFO_VAL2("MnHesse: 2nd derivative zero for Parameter ",i);
-         MN_INFO_MSG("MnHesse fails and will return diagonal matrix ");
+
+         // get parameter name for i
+         // (need separate scope for avoiding compl error when declaring name)
+         {  
+            const char * name = trafo.Name( trafo.ExtOfInt(i));
+            MN_INFO_VAL2("MnHesse: 2nd derivative zero for Parameter ", name);
+            MN_INFO_MSG("MnHesse fails and will return diagonal matrix ");
+         }
 #endif
          
          for(unsigned int j = 0; j < n; j++) {

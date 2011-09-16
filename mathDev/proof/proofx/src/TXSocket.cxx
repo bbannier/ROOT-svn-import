@@ -202,6 +202,11 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
          return;
       }
 
+      // Fill some info
+      fUser = fConn->fUser.c_str();
+      fHost = fConn->fHost.c_str();
+      fPort = fConn->fPort;
+
       // Create new proofserv if not client manager or administrator or internal mode
       if (fMode == 'm' || fMode == 's' || fMode == 'M' || fMode == 'A') {
          // We attach or create
@@ -214,10 +219,7 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
          }
       }
 
-      // Fill some info
-      fUser = fConn->fUser.c_str();
-      fHost = fConn->fHost.c_str();
-      fPort = fConn->fPort;
+      // Fill some other info available if Create is successful
       if (fMode == 'C') {
          fXrdProofdVersion = fConn->fRemoteProtocol;
          fRemoteProtocol = fConn->fRemoteProtocol;
@@ -737,9 +739,10 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
       case kXPD_errmsg:
          //
          // Error condition with message
-         Printf(" ");
+         Printf("\n\n");
          Printf("| Error condition occured: message from server:");
-         Printf("| %.*s", len, (char *)pdata);
+         Printf("|    %.*s", len, (char *)pdata);
+         Printf("\n");
          // Handle error
          if (fHandler)
             fHandler->HandleError();
@@ -1067,7 +1070,7 @@ Bool_t TXSocket::Create(Bool_t attach)
                                               &answData, "TXSocket::Create", 0);
       struct ServerResponseBody_Protocol *srvresp = (struct ServerResponseBody_Protocol *)answData;
 
-      // In any, the URL the data pool entry point will be stored here
+      // If any, the URL the data pool entry point will be stored here
       fBuffer = "";
       if (xrsp) {
 
@@ -1085,6 +1088,8 @@ Bool_t TXSocket::Create(Bool_t attach)
             len -= sizeof(kXR_int32);
          } else {
             Error("Create","session ID is undefined!");
+            fSessionID = -1;
+            return kFALSE;
          }
 
          if (len >= (Int_t)sizeof(kXR_int16)) {
@@ -1136,15 +1141,24 @@ Bool_t TXSocket::Create(Bool_t attach)
          // Notify
          return kTRUE;
       } else {
+         // Extract log file path, if any
+         Ssiz_t ilog = kNPOS;
+         if (retriesleft <= 0 && fConn->GetLastErr()) {
+            fBuffer = fConn->GetLastErr();
+            if ((ilog = fBuffer.Index("|log:")) != kNPOS) fBuffer.Remove(0, ilog);
+         }
          // If not free resources now, just give up
          if (fConn->GetOpenError() == kXP_TooManySess) {
             // Avoid to contact the server any more
             fSessionID = -1;
             return kFALSE;
          } else {
-            // Print error mag, if any
-            if ((retriesleft <= 0 || gDebug > 0) && fConn->GetLastErr())
-               Printf("%s: %s", fHost.Data(), fConn->GetLastErr());
+            // Print error msg, if any
+            if ((retriesleft <= 0 || gDebug > 0) && fConn->GetLastErr()) {
+               TString emsg(fConn->GetLastErr());
+               if ((ilog = emsg.Index("|log:")) != kNPOS) emsg.Remove(ilog);
+               Printf("%s: %s", fHost.Data(), emsg.Data());
+            }
          }
       }
 
@@ -1155,6 +1169,10 @@ Bool_t TXSocket::Create(Bool_t attach)
                          gEnv->GetValue("XProof.CreationRetries", 4));
 
    } // Creation retries
+   
+   // The session is invalid: reset the sessionID to invalid state (it was our protocol
+   // number during creation
+   fSessionID = -1;
 
    // Notify failure
    Error("Create:",
@@ -1384,7 +1402,9 @@ Int_t TXSocket::PickUpReady()
       static Int_t timeout = gEnv->GetValue("XProof.ReadTimeout", 300) * 1000;
       static Int_t dt = 2000;
       Int_t to = timeout;
-      while (to && !fRDInterrupt) {
+      SetInterrupt(kFALSE);
+      while (to && !IsInterrupt()) {
+         SetAWait(kTRUE);
          if (fASem.Wait(dt) != 0) {
             to -= dt;
             if (to <= 0) {
@@ -1397,19 +1417,25 @@ Int_t TXSocket::PickUpReady()
             }
          } else
             break;
+         SetAWait(kFALSE);
       }
       // We wait forever
-      if (fRDInterrupt) {
-         Error("PickUpReady","interrupted");
-         fRDInterrupt = kFALSE;
+      if (IsInterrupt()) {
+         if (gDebug > 2)
+            Info("PickUpReady","interrupted");
+         SetInterrupt(kFALSE);
+         SetAWait(kFALSE);
          return -1;
       }
    } else {
       // We wait forever
+      SetAWait(kTRUE);
       if (fASem.Wait() != 0) {
          Error("PickUpReady","error waiting at semaphore");
+         SetAWait(kFALSE);
          return -1;
       }
+      SetAWait(kFALSE);
    }
    if (gDebug > 2)
       Info("PickUpReady", "%p: %s: waken up", this, GetTitle());
@@ -1637,8 +1663,8 @@ Int_t TXSocket::Send(const TMessage &mess)
 
    mess.SetLength();   //write length in first word of buffer
 
-   if (fCompress > 0 && mess.GetCompressionLevel() == 0)
-      const_cast<TMessage&>(mess).SetCompressionLevel(fCompress);
+   if (GetCompressionLevel() > 0 && mess.GetCompressionLevel() == 0)
+      const_cast<TMessage&>(mess).SetCompressionSettings(fCompress);
 
    if (mess.GetCompressionLevel() > 0)
       const_cast<TMessage&>(mess).Compress();
@@ -1798,6 +1824,7 @@ TObjString *TXSocket::SendCoordinator(Int_t kind, const char *msg, Int_t int2,
          break;
       case kQueryLogPaths:
          vout = (char **)&bout;
+         reqhdr.proof.int3 = int3;
       case kReleaseWorker:
       case kSendMsgToUser:
       case kGroupProperties:
@@ -2064,9 +2091,13 @@ Int_t TXSocket::Reconnect()
                         fUrl.Data(), fConn->GetLogConnID());
    }
 
-   if (fXrdProofdVersion < 1005) {
-      Info("Reconnect","%p: server does not support reconnections (protocol: %d < 1005)",
-                       this, fXrdProofdVersion);
+   Int_t tryreconnect = gEnv->GetValue("TXSocket.Reconnect", 1);
+   if (tryreconnect == 0 || fXrdProofdVersion < 1005) {
+      if (tryreconnect == 0)
+         Info("Reconnect","%p: reconnection attempts explicitely disabled!", this);
+      else
+         Info("Reconnect","%p: server does not support reconnections (protocol: %d < 1005)",
+                          this, fXrdProofdVersion);
       return -1;
    }
 
@@ -2216,8 +2247,8 @@ Int_t TXSockPipe::Post(TSocket *s)
    }
 
    if (gDebug > 2)
-      Printf("TXSockPipe::Post: %s: %p: pipe posted (pending %d)",
-                               fLoc.Data(), s, sz);
+      Printf("TXSockPipe::Post: %s: %p: pipe posted (pending %d) (descriptor: %d)",
+                               fLoc.Data(), s, sz, fPipe[1]);
    // We are done
    return 0;
 }
@@ -2245,8 +2276,8 @@ Int_t TXSockPipe::Clean(TSocket *s)
    }
 
    if (gDebug > 2)
-      Printf("TXSockPipe::Clean: %s: %p: pipe cleaned (pending %d)",
-                               fLoc.Data(), s, sz);
+      Printf("TXSockPipe::Clean: %s: %p: pipe cleaned (pending %d) (descriptor: %d)",
+                               fLoc.Data(), s, sz, fPipe[0]);
 
    // We are done
    return 0;

@@ -1,5 +1,3 @@
-#              $Id: GNUmakefile,v 1.32 2010/07/30 03:18:29 abh Exp $
-
 #-----------------------------------------------------------------------------#
 #                            E n v i r o n m e n t                            #
 #-----------------------------------------------------------------------------#
@@ -101,6 +99,7 @@ $(OBJDIR)/XrdInfo.o: XrdInfo.hh XrdInfo.cc ../XrdVersion.hh ../../LICENSE
 
 $(OBJDIR)/XrdLink.o:   XrdBuffer.hh     XrdJob.hh          XrdLink.hh      \
                        XrdProtocol.hh   XrdScheduler.hh    XrdTrace.hh  \
+                       XrdSysAtomics.hh \
                        XrdSysError.hh   XrdSysPlatform.hh  XrdSysPthread.hh \
                        XrdOucTrace.hh   XrdLinkMatch.hh    XrdLink.cc \
                        XrdNetDNS.hh     XrdNetPeer.hh

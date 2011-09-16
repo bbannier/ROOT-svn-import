@@ -23,9 +23,17 @@ class RooDataHist ;
 #include "RooAbsData.h"
 #include "RooDirItem.h"
 
+#define USEMEMPOOL
+
 
 class RooDataSet : public RooAbsData, public RooDirItem {
 public:
+
+#ifdef USEMEMPOOL
+  void* operator new (size_t bytes);
+  void operator delete (void *ptr);
+#endif
+ 
 
   // Constructors, factory methods etc.
   RooDataSet() ; 
@@ -140,6 +148,11 @@ protected:
   RooArgSet _varsNoWgt ;   // Vars without weight variable 
   RooRealVar* _wgtVar ;    // Pointer to weight variable (if set) 
   static bool _gUseFitDataStore;     // use alternative stores based one FitData
+
+  static void cleanup() ;
+  static char* _poolBegin ; //! Start of memory pool
+  static char* _poolCur ;   //! Next free slot in memory pool
+  static char* _poolEnd ;   //! End of memory pool  
 
   ClassDef(RooDataSet,2) // Unbinned data set
 };

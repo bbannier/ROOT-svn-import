@@ -168,6 +168,10 @@ Limitation of CINT
         int scanf(char *format ...);               //         "
         int sscanf(char *string,char *format ...); //         "
 
+   Note that null characters can not be inserted in a file or string using
+   the scanf/printf routine from the interpreter for example with
+        fprintf(f, "%c%c%c%c", 44, 0, 44, 0);
+   the resulting file will only containg the comma characters.
 
 # switch statement and default: label
    Cint requires default: label to appear at the end of switch statement.
@@ -329,6 +333,10 @@ Limitation of CINT
       static const float a4[n]={1,2,3,4,5};  // not recommended
     }
 
+ + array versus pointer
+   In C++, f(T* p) and f(T p[]) are equivalent. CINT prefers the first
+   form; the second can cause problems for compound types T.
+
 # Preprocessor statements:
 
    Cint has limitations in handling define macros in default mode. Following
@@ -388,9 +396,7 @@ Limitation of CINT
 
 # Templates
 
-   Template works probably better than most of UNIX based C++ compilers, 
-  but not as good as Windows based ones. Cint can run simple STL programs.
-   Following limitations applies.
+   Cint can run simple STL programs. Following limitations apply.
 
  + Explicit type conversion
    Explicit type conversion for template class can not be used because of 
@@ -462,6 +468,12 @@ Limitation of CINT
   But this is not recommended. It is very slow and has many troubles.
   Interpreted STL implementation is based on old 1994 HP reference 
   implementation.
+
+ + Qualified template paremeters and default arguments
+   Cint is unable to handle template parameters of STL types that have
+   "std::" prepended. I.e. MyTemplate<complex<double> > works, but
+   MyTemplate<std::complex<double> > doesn't.
+
 
 
 # Reference member

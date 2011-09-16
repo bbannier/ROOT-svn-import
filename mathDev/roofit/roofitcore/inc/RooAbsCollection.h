@@ -21,6 +21,7 @@
 #include "RooPrintable.h"
 #include "RooLinkedList.h"
 #include "RooCmdArg.h"
+#include "RooLinkedListIter.h"
 #include <string>
 
 class RooAbsCollection : public TObject, public RooPrintable {
@@ -41,7 +42,7 @@ public:
   // of the original variables.
   RooAbsCollection(const RooAbsCollection& other, const char *name="");
   RooAbsCollection& operator=(const RooAbsCollection& other);
-  RooAbsCollection& assignValueOnly(const RooAbsCollection& other) ;
+  RooAbsCollection& assignValueOnly(const RooAbsCollection& other, Bool_t oneSafe=kFALSE) ;
   RooAbsCollection& assignFast(const RooAbsCollection& other) ;
 
   // Copy list and contents (and optionally 'deep' servers)
@@ -96,6 +97,9 @@ public:
     // Create and return an iterator over the elements in this collection
     return _list.MakeIterator(dir); 
   }
+
+  RooLinkedListIter iterator(Bool_t dir = kIterForward) const ;
+
   inline Int_t getSize() const { 
     // Return the number of elements in the collection
     return _list.GetSize(); 
@@ -146,6 +150,7 @@ public:
   void dump() const ;
 
   void releaseOwnership() { _ownCont = kFALSE ; }
+  void takeOwnership() { _ownCont = kTRUE ; }
 
   void sort(Bool_t ascend=kTRUE) { _list.Sort(ascend) ; }
 

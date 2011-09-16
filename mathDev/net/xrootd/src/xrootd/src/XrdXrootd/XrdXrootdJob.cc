@@ -8,10 +8,6 @@
 /*              DE-AC02-76-SFO0515 with the Department of Energy              */
 /******************************************************************************/
 
-//         $Id$
-
-const char *XrdXrootdJobCVSID = "$Id$";
-
 #include <stdio.h>
 #include <string.h>
 #include <netinet/in.h>
@@ -103,7 +99,7 @@ XrdXrootdJob2Do::XrdXrootdJob2Do(XrdXrootdJob      *job,
 {
    int i;
    for (i = 0; i < 5 && args[i]; i++) theArgs[i] = strdup(args[i]);
-   for (i = i; i < 5; i++)            theArgs[i] = (char *)0;
+   for (; i < 5; i++)                 theArgs[i] = (char *)0;
    theJob     = job;
    JobNum     = jnum;
    JobMark    = 0;
@@ -353,7 +349,7 @@ void XrdXrootdJob2Do::sendResult(char *lp, int caned)
    XResponseType  jobStat;
    const char    *trc, *tre;
    kXR_int32      erc;
-   int            j, i, ovhd = 0, dlen = 0, n = 1;
+   int            j, i, dlen = 0, n = 1;
 
 // Format the message to be sent
 //
@@ -371,10 +367,9 @@ void XrdXrootdJob2Do::sendResult(char *lp, int caned)
           else    {erc = Xbad; lp = (char *)"Program failed.";}
                    jobVec[n].iov_base = (char *)&erc;
            dlen  = jobVec[n].iov_len  = sizeof(erc);        n++;    // 3
-           ovhd = 1;
       }
                    jobVec[n].iov_base = lp;                         // 4
-           dlen += jobVec[n].iov_len  = strlen(lp)+ovhd;    n++;
+           dlen += jobVec[n].iov_len  = strlen(lp)+1;       n++;
 
 // Send the response to each client waiting for it
 //

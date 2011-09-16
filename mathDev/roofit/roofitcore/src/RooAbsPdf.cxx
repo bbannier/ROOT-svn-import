@@ -155,7 +155,8 @@
 
 ClassImp(RooAbsPdf) 
 ;
-
+ClassImp(RooAbsPdf::GenSpec)
+;
 
 Int_t RooAbsPdf::_verboseEval = 0;
 Bool_t RooAbsPdf::_evalError = kFALSE ;
@@ -165,6 +166,11 @@ TString RooAbsPdf::_normRangeOverride ;
 RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0), _minDimNormValueCache(999), _valueCacheIntOrder(2), _specGeneratorConfig(0)
 {
   // Default constructor
+  _errorCount = 0 ;
+  _negCount = 0 ;
+  _rawValue = 0 ;
+  _selectComp = kFALSE ;
+  _traceCount = 0 ;
 }
 
 
@@ -234,7 +240,10 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
   // done in integration calls, there is no performance hit.
 
   if (!nset) {
+    RooArgSet* tmp = _normSet ;
+    _normSet = 0 ;
     Double_t val = evaluate() ;
+    _normSet = tmp ;
     Bool_t error = traceEvalPdf(val) ;
     cxcoutD(Tracing) << IsA()->GetName() << "::getVal(" << GetName() 
 		     << "): value = " << val << " (unnormalized)" << endl ;
@@ -359,7 +368,6 @@ Double_t RooAbsPdf::getNorm(const RooArgSet* nset) const
   if (_verboseEval>1) cxcoutD(Tracing) << IsA()->GetName() << "::getNorm(" << GetName() << "): norm(" << _norm << ") = " << _norm->getVal() << endl ;
 
   Double_t ret = _norm->getVal() ;
-//   cout << "RooAbsPdf::getNorm(" << GetName() << ") norm obj = " << _norm->GetName() << endl ;
   if (ret==0.) {
     if(++_errorCount <= 10) {
       coutW(Eval) << "RooAbsPdf::getNorm(" << GetName() << ":: WARNING normalization is zero, nset = " ;  nset->Print("1") ;
@@ -620,7 +628,7 @@ Double_t RooAbsPdf::getLogVal(const RooArgSet* nset) const
 
 
 //_____________________________________________________________________________
-Double_t RooAbsPdf::extendedTerm(UInt_t observed, const RooArgSet* nset) const 
+Double_t RooAbsPdf::extendedTerm(Double_t observed, const RooArgSet* nset) const 
 {
   // Returned the extended likelihood term (Nexpect - Nobserved*log(NExpected)
   // of this PDF for the given number of observed events
@@ -834,16 +842,17 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   if (allConstraints.getSize()>0 && cPars) {   
 
     coutI(Minimization) << " Including the following contraint terms in minimization: " << allConstraints << endl ;
-
+    
     nllCons = new RooConstraintSum(Form("%s_constr",baseName.c_str()),"nllCons",allConstraints,*cPars) ;
+    nllCons->setOperMode(ADirty) ;
     RooAbsReal* orignll = nll ;
 
     nll = new RooAddition(Form("%s_with_constr",baseName.c_str()),"nllWithCons",RooArgSet(*nll,*nllCons)) ;
     nll->addOwnedComponents(RooArgSet(*orignll,*nllCons)) ;
   }
 
+  
   if (optConst) {
-
     nll->constOptimizeTestStatistic(RooAbsArg::Activate) ;
   }
 
@@ -1690,7 +1699,9 @@ RooDataSet *RooAbsPdf::generate(RooAbsPdf::GenSpec& spec) const
   // combination than calling the standard generate() multiple times as 
   // initialization overhead is only incurred once.
 
-  Int_t nEvt = spec._extended ? RooRandom::randomGenerator()->Poisson(spec._nGen) : spec._nGen ;
+  //Int_t nEvt = spec._extended ? RooRandom::randomGenerator()->Poisson(spec._nGen) : spec._nGen ;
+  Int_t nEvt = spec._extended ? RooRandom::randomGenerator()->Poisson(spec._nGen==0?expectedEvents(spec._whatVars):spec._nGen) : spec._nGen ;
+
 
   return generate(*spec._genContext,spec._whatVars,spec._protoData,
 		  nEvt,kFALSE,spec._randProto,spec._resampleProto) ;
@@ -1846,7 +1857,6 @@ Int_t RooAbsPdf::getGenerator(const RooArgSet &/*directVars*/, RooArgSet &/*gene
   // implementation, but otherwise its value is arbitrary. The default implemetation of
   // this method returns zero. Subclasses will usually implement this method using the
   // matchArgs() methods to advertise the algorithms they provide.
-
 
   return 0 ;
 }
@@ -2116,6 +2126,16 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Double_t nEven
   }
 
   return hist;
+}
+
+
+
+//_____________________________________________________________________________
+RooDataSet* RooAbsPdf::generateSimGlobal(const RooArgSet& whatVars, Int_t nEvents) 
+{
+  // Special generator interface for generation of 'global observables' -- for RooStats tools
+
+  return generate(whatVars,nEvents) ;
 }
 
 

@@ -27,8 +27,8 @@ endif
 
 ##### libCint #####
 CINTCONF     := $(call stripsrc,$(CINTDIRI)/configcint.h)
-CINTH        := $(wildcard $(CINTDIRI)/*.h)
-CINTHT       := $(sort $(patsubst $(CINTDIRI)/%.h,include/%.h,$(CINTH) $(CINTCONF)))
+CINTH        := $(filter-out $(CINTDIRI)/configcint.h,$(wildcard $(CINTDIRI)/*.h))
+CINTHT       := $(patsubst $(CINTDIRI)/%.h,include/%.h,$(CINTH))
 CINTS1       := $(wildcard $(MODDIRS)/*.c) \
                 $(MODDIRS)/config/strlcpy.c $(MODDIRS)/config/strlcat.c \
                 $(MODDIRS)/config/snprintf.c
@@ -157,6 +157,10 @@ ifeq ($(CLANG_MAJOR),2)
 CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))
 CINTS2       += $(MODDIRSD)/gcc4strm.cxx
 endif
+ifeq ($(CLANG_MAJOR),3)
+CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))
+CINTS2       += $(MODDIRSD)/gcc4strm.cxx
+endif
 ifeq ($(CXXCMD),xlC)
 ifeq ($(PLATFORM),macosx)
 CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))
@@ -188,6 +192,9 @@ MAKECINT     := bin/makecint$(EXEEXT)
 ##### iosenum.h #####
 IOSENUM      := $(call stripsrc,$(MODDIR)/include/iosenum.h)
 IOSENUMC     := $(CINTDIRIOSEN)/iosenum.cxx
+ifeq ($(CLANG_MAJOR),3)
+IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
+else
 ifeq ($(CLANG_MAJOR),2)
 IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
 else
@@ -198,6 +205,7 @@ ifeq ($(GCC_MAJOR),3)
 IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
 else
 IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)
+endif
 endif
 endif
 endif
@@ -237,15 +245,18 @@ INCLUDEFILES += $(CINTDEP) $(CINTEXEDEP)
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
+include/%.h: $(call stripsrc,$(CINTDIRI))/%.h
+		cp $< $@
+
 include/%.h: $(CINTDIRI)/%.h
 		cp $< $@
 
 ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
 $(CINTDIRL):
-		@$(RSYNC) --exclude '.svn' --exclude '*.o' --exclude '*.d' --exclude 'rootcint_*' --exclude 'G__cpp_*' --exclude 'G__c_*' $(CINTDIR)/lib $(dir $@)
+		@$(RSYNC) --exclude '.svn' --exclude '*.o' --exclude '*.d' --exclude 'rootcint_*' --exclude 'G__cpp_*' --exclude 'G__c_*' --exclude 'mktypes' --exclude '*.dSYM' $(CINTDIR)/lib $(dir $@)
 		@touch $(CINTDIRL)
 $(CINTDIRDLLS):
-		@$(RSYNC) --exclude '.svn' --exclude '*.o' --exclude '*.d' --exclude '*.dll' $(CINTDIR)/include $(dir $@)
+		@$(RSYNC) --exclude '.svn' --exclude '*.o' --exclude '*.d' --exclude '*.dll' --exclude 'systypes.h' --exclude 'types.h' $(CINTDIR)/include $(dir $@)
 		@touch $(CINTDIRDLLS)
 $(CINTDIRSTL):
 		@$(RSYNC) --exclude '.svn' --exclude '*.o' --exclude '*.d' --exclude '*.dll' $(CINTDIR)/stl $(dir $@)
@@ -316,15 +327,15 @@ endif
 $(MAKECINTO) $(CINTO): $(CINTCONF) $(ORDER_) $(CINTINCLUDES)
 
 $(MAKECINTO): CXXFLAGS := $(CINTCXXFLAGS)
-$(call stripsrc,$(CINTDIRSD)/stdstrct.o):    CINTCXXFLAGS += -I$(CINTDIRL)/stdstrct
-$(call stripsrc,$(CINTDIRS)/loadfile_tmp.o): CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
 
 $(call stripsrc,$(CINTDIRS)/loadfile_tmp.cxx): $(CINTDIRS)/loadfile.cxx
 	$(MAKEDIR)
 	cp -f $< $@
-
+$(call stripsrc,$(CINTDIRS)/loadfile_tmp.o): CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
 $(call stripsrc,$(CINTDIRS)/loadfile_tmp.o) $(CINTO): OPT := $(filter-out -Wshadow,$(OPT))
 $(call stripsrc,$(CINTDIRS)/loadfile_tmp.o) $(CINTO): CXXFLAGS:=$(filter-out -Wshadow,$(CXXFLAGS))
+
+$(call stripsrc,$(CINTDIRSD)/stdstrct.o):    CINTCXXFLAGS += -I$(CINTDIRL)/stdstrct
 
 ifeq ($(ICC_MAJOR),12)
 ifeq ($(ICC_MINOR),0)

@@ -128,7 +128,7 @@ TPSocket::TPSocket(const char *host, Int_t port, Int_t size,
    if (authreq) {
       if (valid) {
          if (!Authenticate(TUrl(host).GetUser())) {
-            if (rootdSrv && fRemoteProtocol < 10) {
+            if (rootdSrv && (fRemoteProtocol > 0 && fRemoteProtocol < 10)) {
                // We failed because we are talking to an old
                // server: we need to re-open the connection
                // and communicate the size first
@@ -201,7 +201,7 @@ TPSocket::TPSocket(const char *host, Int_t port, Int_t size, TSocket *sock)
    fLocalAddress   = sock->GetLocalInetAddress();
    fBytesSent      = sock->GetBytesSent();
    fBytesRecv      = sock->GetBytesRecv();
-   fCompress       = sock->GetCompressionLevel();
+   fCompress       = sock->GetCompressionSettings();
    fSecContext     = sock->GetSecContext();
    fRemoteProtocol = sock->GetRemoteProtocol();
    fServType       = (TSocket::EServiceType)sock->GetServType();
@@ -224,7 +224,7 @@ TPSocket::TPSocket(const char *host, Int_t port, Int_t size, TSocket *sock)
    if (authreq) {
       if (valid) {
          if (!Authenticate(TUrl(host).GetUser())) {
-            if (rootdSrv && fRemoteProtocol < 10) {
+            if (rootdSrv && (fRemoteProtocol > 0 && fRemoteProtocol < 10)) {
                // We failed because we are talking to an old
                // server: we need to re-open the connection
                // and communicate the size first
@@ -389,10 +389,13 @@ void TPSocket::Init(Int_t tcpwindowsize, TSocket *sock)
 
       // if yes, communicate this to server
       // (size = 0 for backward compatibility)
-      if (sock)
-         sock->Send((Int_t)0, (Int_t)0);
-      else
-         TSocket::Send((Int_t)0, (Int_t)0);
+      if (sock) {
+         if (sock->Send((Int_t)0, (Int_t)0) < 0)
+            Warning("Init", "%p: problems sending (0,0)", sock);
+      } else {
+         if (TSocket::Send((Int_t)0, (Int_t)0) < 0)
+            Warning("Init", "problems sending (0,0)");
+      }
 
       // needs to fill additional private members
       fSockets = new TSocket*[1];
@@ -406,10 +409,13 @@ void TPSocket::Init(Int_t tcpwindowsize, TSocket *sock)
 
       // send the local port number of the just created server socket and the
       // number of desired parallel sockets
-      if (sock)
-         sock->Send(ss.GetLocalPort(), fSize);
-      else
-         TSocket::Send(ss.GetLocalPort(), fSize);
+      if (sock) {
+         if (sock->Send(ss.GetLocalPort(), fSize) < 0)
+            Warning("Init", "%p: problems sending size", sock);
+      } else {
+         if (TSocket::Send(ss.GetLocalPort(), fSize) < 0)
+            Warning("Init", "problems sending size");
+      }
 
       fSockets = new TSocket*[fSize];
 
@@ -505,8 +511,8 @@ Int_t TPSocket::Send(const TMessage &mess)
 
    mess.SetLength();   //write length in first word of buffer
 
-   if (fCompress > 0 && mess.GetCompressionLevel() == 0)
-      const_cast<TMessage&>(mess).SetCompressionLevel(fCompress);
+   if (GetCompressionLevel() > 0 && mess.GetCompressionLevel() == 0)
+      const_cast<TMessage&>(mess).SetCompressionSettings(fCompress);
 
    if (mess.GetCompressionLevel() > 0)
       const_cast<TMessage&>(mess).Compress();
@@ -588,6 +594,7 @@ Int_t TPSocket::SendRaw(const void *buffer, Int_t length, ESendRecvOptions opt)
             if (fWriteBytesLeft[is] > 0) {
                Int_t nsent;
 again:
+               ResetBit(TSocket::kBrokenConn);
                if ((nsent = fSockets[is]->SendRaw(fWritePtr[is],
                                                   fWriteBytesLeft[is],
                                                   sendopt)) <= 0) {
@@ -598,6 +605,7 @@ again:
                   fWriteMonitor->DeActivateAll();
                   if (nsent == -5) {
                      // connection reset by peer or broken ...
+                     SetBit(TSocket::kBrokenConn);
                      Close();
                   }
                   return -1;
@@ -721,12 +729,14 @@ Int_t TPSocket::RecvRaw(void *buffer, Int_t length, ESendRecvOptions opt)
          if (s == fSockets[is]) {
             if (fReadBytesLeft[is] > 0) {
                Int_t nrecv;
+               ResetBit(TSocket::kBrokenConn);
                if ((nrecv = fSockets[is]->RecvRaw(fReadPtr[is],
                                                   fReadBytesLeft[is],
                                                   recvopt)) <= 0) {
                   fReadMonitor->DeActivateAll();
                   if (nrecv == -5) {
                      // connection reset by peer or broken ...
+                     SetBit(TSocket::kBrokenConn);
                      Close();
                   }
                   return -1;

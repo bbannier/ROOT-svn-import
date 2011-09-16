@@ -10,8 +10,6 @@
 /*              DE-AC03-76-SFO0515 with the Department of Energy              */
 /******************************************************************************/
 
-//       $Id$
-
 // This structure is returned during authentication. This is most relevant
 // for client authentication unless mutual authentication has been implemented
 // in which case the client can also authenticate the server. It is embeded
@@ -37,10 +35,15 @@ public:
          char   *role;                    // Entity's role
          char   *grps;                    // Entity's group names
          char   *endorsements;            // Protocol specific endorsements
+         char   *creds;                   // Raw client credentials or certificate
+         int     credslen;                // Length of the 'cert' field
          char   *tident;                  // Trace identifier (do not touch)
 
-         XrdSecEntity() {prot[0] = '\0';
-                         name=host=vorg=role=grps=endorsements=tident = 0;
+         XrdSecEntity(const char *pName = "")
+                        {strncpy(prot, pName, XrdSecPROTOIDSIZE-1);
+                         prot[XrdSecPROTOIDSIZE-1] = '\0';
+                         name=host=vorg=role=grps=endorsements=creds=tident = 0;
+                         credslen = 0;
                         }
         ~XrdSecEntity() {}
 };

@@ -799,7 +799,9 @@ TGWin32::TGWin32(const char *name, const char *title) : TVirtualX(name,title), f
       TGWin32ProxyBase::fgMainThreadId = ::GetCurrentThreadId(); // gMainThread->fId;
       TGWin32VirtualXProxy::fgRealObject = this;
       gPtr2VirtualX = &TGWin32VirtualXProxy::ProxyObject;
+#ifdef OLD_THREAD_IMPLEMENTATION
       gPtr2Interpreter = &TGWin32InterpreterProxy::ProxyObject;
+#endif
    }
 }
 
@@ -878,8 +880,12 @@ Bool_t TGWin32::IsCmdThread() const
 {
    // returns kTRUE if we are inside cmd/server thread
 
+#ifdef OLD_THREAD_IMPLEMENTATION
    return ((::GetCurrentThreadId() == TGWin32ProxyBase::fgMainThreadId) ||
            (::GetCurrentThreadId() == TGWin32ProxyBase::fgUserThreadId));
+#else
+   return kTRUE;
+#endif
 }
 
 //______________________________________________________________________________
@@ -2493,7 +2499,7 @@ Int_t TGWin32::RequestString(int x, int y, char *text)
          stmp[pt] = '\0';
          TTF::GetTextExtent(ddx, h, stmp);
          dx = ddx;
-         delete stmp;
+         delete[] stmp;
       }
 
       if (pt < len_text) {
@@ -4389,6 +4395,9 @@ void TGWin32::DestroyWindow(Window_t id)
 
    if (!id) return;
 
+   // we need to unmap the window before to destroy it, in order to properly 
+   // receive kUnmapNotify needed by gClient->WaitForUnmap()...
+   gdk_window_hide((GdkWindow *) id);
    gdk_window_destroy((GdkDrawable *) id, kTRUE);
 }
 

@@ -149,6 +149,7 @@ TMVA::MethodCuts::MethodCuts( const TString& jobName,
    fMeanB      ( 0 ),
    fRmsS       ( 0 ),
    fRmsB       ( 0 ),
+   fEffBvsSLocal( 0 ),
    fVarHistS   ( 0 ),
    fVarHistB   ( 0 ),
    fVarHistS_smooth( 0 ),
@@ -187,6 +188,7 @@ TMVA::MethodCuts::MethodCuts( DataSetInfo& theData,
    fMeanB      ( 0 ),
    fRmsS       ( 0 ),
    fRmsB       ( 0 ),
+   fEffBvsSLocal( 0 ),
    fVarHistS   ( 0 ),
    fVarHistB   ( 0 ),
    fVarHistS_smooth( 0 ),
@@ -214,7 +216,6 @@ void TMVA::MethodCuts::Init( void )
    fVarHistS_smooth   = fVarHistB_smooth = 0;
    fVarPdfS           = fVarPdfB = 0; 
    fFitParams         = 0;
-   fEffBvsSLocal      = 0;
    fBinaryTreeS       = fBinaryTreeB = 0;
    fEffSMin           = 0;
    fEffSMax           = 0; 
@@ -266,6 +267,7 @@ TMVA::MethodCuts::~MethodCuts( void )
    delete fRmsS;
    delete fRmsB;
    delete fFitParams;
+   delete fEffBvsSLocal;
 
    if (NULL != fCutRangeMin) delete [] fCutRangeMin;
    if (NULL != fCutRangeMax) delete [] fCutRangeMax;
@@ -414,12 +416,12 @@ void TMVA::MethodCuts::ProcessOptions()
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodCuts::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodCuts::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // cut evaluation: returns 1.0 if event passed, 0.0 otherwise
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    // sanity check
    if (fCutMin == NULL || fCutMax == NULL || fNbins == 0) {
@@ -607,6 +609,7 @@ void  TMVA::MethodCuts::Train( void )
    vector<TH1F*> signalDist, bkgDist;
 
    // this is important: reset the branch addresses of the training tree to the current event
+   delete fEffBvsSLocal;
    fEffBvsSLocal = new TH1F( GetTestvarName() + "_effBvsSLocal", 
                              TString(GetName()) + " efficiency of B vs S", fNbins, 0.0, 1.0 );
    fEffBvsSLocal->SetDirectory(0); // it's local
@@ -677,6 +680,8 @@ void  TMVA::MethodCuts::Train( void )
 
       // clean up
       for (UInt_t ivar=0; ivar<ranges.size(); ivar++) delete ranges[ivar];
+      delete fitter;
+      
    }
    // --------------------------------------------------------------------------
    else if (fFitMethod == kUseEventScan) {
@@ -786,8 +791,8 @@ void  TMVA::MethodCuts::Train( void )
    }
 
    // some output
-   // the efficiency which is asked for has to be slightly higher than the bin-borders. 
-   // if not, then the wrong bin is taken in some cases. 
+   // the efficiency which is asked for has to be slightly higher than the bin-borders.
+   // if not, then the wrong bin is taken in some cases.
    Double_t epsilon = 0.0001;
    for (Double_t eff=0.1; eff<0.95; eff += 0.1) PrintCuts( eff+epsilon );
 }
@@ -804,6 +809,7 @@ Double_t TMVA::MethodCuts::EstimatorFunction( Int_t ievt1, Int_t ievt2 )
    // for full event scan
    const Event *ev1 = GetEvent(ievt1);
    if (!DataInfo().IsSignal(ev1)) return -1;
+
    const Event *ev2 = GetEvent(ievt2);
    if (!DataInfo().IsSignal(ev2)) return -1;
 
@@ -867,13 +873,13 @@ Double_t TMVA::MethodCuts::ComputeEstimator( std::vector<Double_t>& pars )
    // retrieve signal and background efficiencies for given cut
    switch (fEffMethod) {
    case kUsePDFs:
-      this->GetEffsfromPDFs( &fTmpCutMin[0], &fTmpCutMax[0], effS, effB );
+      this->GetEffsfromPDFs      (&fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
       break;
    case kUseEventSelection:
-      this->GetEffsfromSelection( &fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
+      this->GetEffsfromSelection (&fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
       break;
    default:
-      this->GetEffsfromSelection( &fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
+      this->GetEffsfromSelection (&fTmpCutMin[0], &fTmpCutMax[0], effS, effB);
    }
 
    Double_t eta = 0;      
@@ -926,7 +932,7 @@ Double_t TMVA::MethodCuts::ComputeEstimator( std::vector<Double_t>& pars )
          diff=(fCutRange[ivar]->GetMin()-fTmpCutMin[ivar])/(fCutRange[ivar]->GetMax()-fCutRange[ivar]->GetMin());
          penalty+=4.*diff*diff;
       }
-      //Log() << kINFO<<"special treatment of "<<ibinS<<" bin penalty="<< penalty<<" effS="<<effS<<Endl;
+
       if (effS<1.e-4) return 10.0+penalty;
       else return 10.*(1.-10.*effS);
    }
@@ -1224,6 +1230,7 @@ void  TMVA::MethodCuts::ReadWeightsFromStream( istream& istr )
    if (fEffBvsSLocal != 0) delete fEffBvsSLocal;
    fEffBvsSLocal = new TH1F( GetTestvarName() + "_effBvsSLocal", 
                              TString(GetName()) + " efficiency of B vs S", fNbins, 0.0, 1.0 );
+   fEffBvsSLocal->SetDirectory(0); // it's local
 
    for (Int_t ibin=0; ibin<fNbins; ibin++) {
       istr >> tmpbin >> tmpeffS >> tmpeffB;
@@ -1321,9 +1328,10 @@ void TMVA::MethodCuts::ReadWeightsFromXML( void* wghtnode )
    }
    Log() << kINFO << "Reading " << fNbins << " signal efficiency bins for " << GetNvar() << " variables" << Endl;
 
-   if (fEffBvsSLocal != 0) delete fEffBvsSLocal;
+   delete fEffBvsSLocal;
    fEffBvsSLocal = new TH1F( GetTestvarName() + "_effBvsSLocal", 
                              TString(GetName()) + " efficiency of B vs S", fNbins, 0.0, 1.0 );
+   fEffBvsSLocal->SetDirectory(0); // it's local
    for (Int_t ibin=1; ibin<=fNbins; ibin++) fEffBvsSLocal->SetBinContent( ibin, -0.1 ); // Init
 
    fCutMin = new Double_t*[GetNvar()];
@@ -1759,7 +1767,7 @@ void TMVA::MethodCuts::GetHelpMessage() const
    Log() << "  - Sqrt: InitialTemperature / Sqrt(StepNumber+2) * TemperatureScale" << brk << Endl;
    Log() << "  - Log:  InitialTemperature / Log(StepNumber+2) * TemperatureScale" << brk << Endl;
    Log() << "  - Homo: InitialTemperature / (StepNumber+2) * TemperatureScale" << brk << Endl;
-   Log() << "  - Sin:  ( Sin( StepNumber / TemperatureScale ) + 1 ) / (StepNumber + 1) * InitialTemperature + Eps" << brk << Endl;
+   Log() << "  - Sin:  (Sin(StepNumber / TemperatureScale) + 1) / (StepNumber + 1)*InitialTemperature + Eps" << brk << Endl;
    Log() << "  - Geo:  CurrentTemperature * TemperatureScale" << Endl;
    Log() << "" << Endl;
    Log() << "Their performance can be improved by adjusting initial temperature" << Endl;

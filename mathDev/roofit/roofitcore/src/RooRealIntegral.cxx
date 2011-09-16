@@ -60,8 +60,15 @@ Int_t RooRealIntegral::_cacheAllNDim(2) ;
 //_____________________________________________________________________________
 RooRealIntegral::RooRealIntegral() : 
   _valid(kFALSE),
+  _funcNormSet(0),
+  _iconfig(0),
+  _sumCatIter(0),
+  _mode(0),
+  _intOperMode(Hybrid),
+  _restartNumIntEngine(kFALSE),
   _numIntEngine(0),
   _numIntegrand(0),
+  _rangeName(0),
   _params(0),
   _cacheNum(kFALSE)
 {
@@ -1113,5 +1120,20 @@ void RooRealIntegral::printMultiline(ostream& os, Int_t contents, Bool_t verbose
   os << endl ;
 } 
 
+
+
+//_____________________________________________________________________________
+void RooRealIntegral::setCacheAllNumeric(Int_t ndim) {
+  // Global switch to cache all integral values that integrate at least ndim dimensions numerically 
+  _cacheAllNDim = ndim ;
+}
+
+
+//_____________________________________________________________________________
+Int_t RooRealIntegral::getCacheAllNumeric() 
+{
+  // Return minimum dimensions of numeric integration for which values are cached. 
+  return _cacheAllNDim ;
+}
 
 

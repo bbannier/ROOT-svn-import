@@ -29,12 +29,14 @@
 #include "GSLMultiMinimizer.h"
 
 #include "Math/MultiNumGradFunction.h"
+#include "Math/FitMethodFunction.h"
 
 #include "Math/MinimTransformFunction.h"
 
 #include <cassert>
 
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <algorithm>
 #include <functional>
@@ -59,9 +61,11 @@ GSLMinimizer::GSLMinimizer( ROOT::Math::EGSLMinimizerType type) :
    fNames.reserve(10); 
    fSteps.reserve(10); 
 
-   fLSTolerance = 0.1; // use 10**-4 
-   SetMaxIterations(1000);
-   SetPrintLevel(0);
+   fLSTolerance = 0.1; // line search tolerance (use fixed)
+   int niter = ROOT::Math::MinimizerOptions::DefaultMaxIterations();
+   if (niter <=0 ) niter = 1000; 
+   SetMaxIterations(niter);
+   SetPrintLevel(ROOT::Math::MinimizerOptions::DefaultPrintLevel());
 }
 
 GSLMinimizer::GSLMinimizer( const char *  type) : 
@@ -90,8 +94,10 @@ GSLMinimizer::GSLMinimizer( const char *  type) :
    fSteps.reserve(10); 
 
    fLSTolerance = 0.1; // use 10**-4 
-   SetMaxIterations(1000);
-   SetPrintLevel(0);
+   int niter = ROOT::Math::MinimizerOptions::DefaultMaxIterations();
+   if (niter <=0 ) niter = 1000; 
+   SetMaxIterations(niter);
+   SetPrintLevel(ROOT::Math::MinimizerOptions::DefaultPrintLevel());
 }
 
 
@@ -179,7 +185,7 @@ bool GSLMinimizer::SetVariableValues( const double * x) {
 
 void GSLMinimizer::SetFunction(const ROOT::Math::IMultiGenFunction & func) { 
    // set the function to minimizer 
-   // need to calculate numerical the derivatives since are not supported
+   // need to calculate numerically the derivatives: do via class MultiNumGradFunction
    fObjFunc = new MultiNumGradFunction( func); 
    fDim = fObjFunc->NDim(); 
 }
@@ -189,6 +195,17 @@ void GSLMinimizer::SetFunction(const ROOT::Math::IMultiGradFunction & func) {
    fObjFunc = dynamic_cast<const ROOT::Math::IMultiGradFunction *>( func.Clone()); 
    assert(fObjFunc != 0);
    fDim = fObjFunc->NDim(); 
+}
+
+unsigned int GSLMinimizer::NCalls() const {
+   // return numbr of function calls 
+   // if method support 
+   const ROOT::Math::MultiNumGradFunction * fnumgrad = dynamic_cast<const ROOT::Math::MultiNumGradFunction *>(fObjFunc);
+   if (fnumgrad) return fnumgrad->NCalls();
+   const ROOT::Math::FitMethodGradFunction * ffitmethod = dynamic_cast<const ROOT::Math::FitMethodGradFunction *>(fObjFunc);
+   if (ffitmethod) return ffitmethod->NCalls();   
+   // not supported in the other case
+   return 0; 
 }
 
 bool GSLMinimizer::Minimize() { 
@@ -276,23 +293,25 @@ bool GSLMinimizer::Minimize() {
          minFound = true; 
       }
 
-      if (debugLevel >=3) { 
-         std::cout << "----------> Iteration " << iter << std::endl; 
+      if (debugLevel >=2) { 
+         std::cout << "----------> Iteration " << std::setw(4) << iter; 
          int pr = std::cout.precision(18);
          std::cout << "            FVAL = " << fGSLMultiMin->Minimum() << std::endl; 
          std::cout.precision(pr);
-         std::cout << "            X Values : "; 
-         const double * xtmp = fGSLMultiMin->X();
-         std::cout << std::endl; 
-         if (trFunc != 0 ) { 
-            xtmp  = trFunc->Transformation(xtmp);  
-         }
-         for (unsigned int i = 0; i < NDim(); ++i) {
-            std::cout << " " << fNames[i] << " = " << xtmp[i];
-         // avoid nan
-         // if (std::isnan(xtmp[i])) status = -11;
-         }
-         std::cout << std::endl; 
+         if (debugLevel >=3) { 
+            std::cout << "            Parameter Values : "; 
+            const double * xtmp = fGSLMultiMin->X();
+            std::cout << std::endl; 
+            if (trFunc != 0 ) { 
+               xtmp  = trFunc->Transformation(xtmp);  
+            }
+            for (unsigned int i = 0; i < NDim(); ++i) {
+               std::cout << " " << fNames[i] << " = " << xtmp[i];
+               // avoid nan
+               // if (std::isnan(xtmp[i])) status = -11;
+            }
+            std::cout << std::endl;
+         } 
       }
 
 
@@ -332,6 +351,8 @@ bool GSLMinimizer::Minimize() {
          std::cout.precision(pr);
 //      std::cout << "Edm   = " << fState.Edm() << std::endl;
          std::cout << "Niterations  = " << iter << std::endl;
+         unsigned int ncalls = NCalls(); 
+         if (ncalls) std::cout << "NCalls     = " << ncalls << std::endl;
          for (unsigned int i = 0; i < fDim; ++i) 
             std::cout << fNames[i] << "\t  = " << fValues[i] << std::endl; 
       }

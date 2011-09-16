@@ -18,6 +18,7 @@
 #include "Fit/UnBinData.h"
 #include "HFitInterface.h"
 #include "Math/MinimizerOptions.h"
+#include "Math/Minimizer.h"
 
 #include "Math/WrappedTF1.h"
 #include "Math/WrappedMultiTF1.h"
@@ -132,7 +133,7 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
    Int_t special = f1->GetNumber();
    Bool_t linear = f1->IsLinear();
    Int_t npar = f1->GetNpar();
-   if (special==299+npar)  linear = kTRUE;
+   if (special==299+npar)  linear = kTRUE; // for polynomial functions 
    // do not use linear fitter in these case
    if (fitOption.Bound || fitOption.Like || fitOption.Errors || fitOption.Gradient || fitOption.More || fitOption.User|| fitOption.Integral || fitOption.Minuit)
       linear = kFALSE;
@@ -147,9 +148,9 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
    opt.fIntegral = fitOption.Integral; 
    opt.fUseRange = fitOption.Range; 
    if (fitOption.Like) opt.fUseEmpty = true;  // use empty bins in log-likelihood fits 
-   if (linear) opt.fCoordErrors = false; // cannot use coordinate errors in a linear fit
+   if (special==300) opt.fCoordErrors = false; // no need to use coordinate errors in a pol0 fit
    if (fitOption.NoErrX) opt.fCoordErrors = false;  // do not use coordinate errors when requested
-   if (fitOption.W1) opt.fErrors1 = true;
+   if (fitOption.W1 ) opt.fErrors1 = true;
    if (fitOption.W1 > 1) opt.fUseEmpty = true; // use empty bins with weight=1
 
    //opt.fBinVolume = 1; // for testing
@@ -189,6 +190,9 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
    }
 #endif   
 
+   // switch off linear fitting in case data has  coordinate errors 
+   if (fitdata->GetErrorType() == ROOT::Fit::BinData::kCoordError ) linear = false;
+
    // this functions use the TVirtualFitter
    if (special != 0 && !fitOption.Bound && !linear) { 
       if      (special == 100)      ROOT::Fit::InitGaus  (*fitdata,f1); // gaussian
@@ -210,6 +214,8 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
 
    // error normalization in case of zero error in the data
    if (fitdata->GetErrorType() == ROOT::Fit::BinData::kNoError) fitConfig.SetNormErrors(true);
+   // normalize errors also in case you are fitting a Ndim histo with a N-1 function
+   if (int(fitdata->NDim())  == hdim -1 ) fitConfig.SetNormErrors(true);
 
    
    // here need to get some static extra information (like max iterations, error def, etc...)
@@ -313,8 +319,10 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
 
    if (fitOption.User && userFcn) // user provided fit objective function
       fitok = fitter->FitFCN( userFcn );
-   else if (fitOption.Like) // likelihood fit 
-      fitok = fitter->LikelihoodFit(*fitdata);
+   else if (fitOption.Like)  {// likelihood fit 
+      bool weight = (fitOption.Like > 1);
+      fitok = fitter->LikelihoodFit(*fitdata,weight);
+   }
    else // standard least square fit
       fitok = fitter->Fit(*fitdata); 
 
@@ -345,6 +353,22 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
          HFit::StoreAndDrawFitFunction(h1, f1, range, !fitOption.Plus, !fitOption.Nograph, goption); 
       }
 
+      // print the result 
+      // if using Fitter class must be done here 
+      // use old style Minuit for TMinuit and if no corrections have been applied 
+      if (!fitOption.Quiet) { 
+         if (fitter->GetMinimizer() && fitConfig.MinimizerType() == "Minuit" && 
+             !fitConfig.NormalizeErrors() && fitOption.Like <= 1) { 
+            fitter->GetMinimizer()->PrintResults(); // use old style Minuit
+         }
+         else { 
+            // print using FitResult class
+            if (fitOption.Verbose) fitResult.PrintCovMatrix(std::cout); 
+            fitResult.Print(std::cout);
+         }
+      }
+
+
       // store result in the backward compatible VirtualFitter
       TVirtualFitter * lastFitter = TVirtualFitter::GetFitter(); 
       // pass ownership of Fitter and Fitdata to TBackCompFitter (fitter pointer cannot be used afterwards)
@@ -370,13 +394,9 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
       //N.B=  this might create a memory leak if user does not delete the fitter he creates
       TVirtualFitter::SetFitter( bcfitter ); 
 
-      // print results
-//       if (!fitOption.Quiet) fitResult.Print(std::cout);
-//       if (fitOption.Verbose) fitResult.PrintCovMatrix(std::cout); 
-
       // use old-style for printing the results
-      if (fitOption.Verbose) bcfitter->PrintResults(2,0.);
-      else if (!fitOption.Quiet) bcfitter->PrintResults(1,0.);
+      // if (fitOption.Verbose) bcfitter->PrintResults(2,0.);
+      // else if (!fitOption.Quiet) bcfitter->PrintResults(1,0.);
 
       if (fitOption.StoreResult) 
       {
@@ -598,8 +618,8 @@ void ROOT::Fit::FitOptionsMake(const char *option, Foption_t &fitOption) {
    if (opt.Contains("L")) fitOption.Like    = 1;
    if (opt.Contains("X")) fitOption.Chi2    = 1;
    if (opt.Contains("I")) fitOption.Integral= 1;
-   if (opt.Contains("LL")) fitOption.Like   = 2;
    if (opt.Contains("W")) fitOption.W1      = 1;
+   if (opt.Contains("WL")) { fitOption.Like   = 2; fitOption.W1=0; }
    if (opt.Contains("E")) fitOption.Errors  = 1;
    if (opt.Contains("R")) fitOption.Range   = 1;
    if (opt.Contains("G")) fitOption.Gradient= 1;
@@ -764,7 +784,14 @@ TFitResultPtr ROOT::Fit::UnBinFit(ROOT::Fit::UnBinData * fitdata, TF1 * fitfunc,
 
 // implementations of ROOT::Fit::FitObject functions (defined in HFitInterface) in terms of the template HFit::Fit
 
-TFitResultPtr ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+TFitResultPtr ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions &
+moption, const char *goption, ROOT::Fit::DataRange & range) { 
+   // check fit options
+   // check if have weights in case of weighted likelihood
+   if (foption.Like > 1 && h1->GetSumw2N() == 0) { 
+      Warning("HFit::FitObject","A weighted likelihood fit is requested but histogram is not weighted - do a standard Likelihood fit");
+      foption.Like = 1;
+   }
    // histogram fitting
    return HFit::Fit(h1,f1,foption,moption,goption,range); 
 }

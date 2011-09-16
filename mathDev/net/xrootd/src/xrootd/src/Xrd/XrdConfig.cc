@@ -8,10 +8,6 @@
 /*                DE-AC03-76-SFO0515 with the Deprtment of Energy             */
 /******************************************************************************/
 
-//         $Id$
-
-const char *XrdConfigCVSID = "$Id$";
-
 /*
    The default port number comes from:
    1) The command line option,
@@ -159,7 +155,6 @@ XrdConfig::XrdConfig(void)
    Net_Opts = 0;
    Wan_Blen = 1024*1024; // Default window size 1M
    Wan_Opts = 0;
-   setSched = 1;
    repDest[0] = 0;
    repDest[1] = 0;
    repInt     = 600;
@@ -207,7 +202,7 @@ int XrdConfig::Configure(int argc, char **argv)
    const char *xrdInst="XRDINSTANCE=";
 
    static sockaddr myIPAddr;
-   int n, retc, dotrim = 1, NoGo = 0, aP = 1, clPort = -1, optbg = 0;
+   int n, retc, NoGo = 0, aP = 1, clPort = -1, optbg = 0;
    const char *temp;
    char c, buff[512], *dfltProt, *logfn = 0;
    long long logkeep = 0;
@@ -215,6 +210,8 @@ int XrdConfig::Configure(int argc, char **argv)
    gid_t myGid = 0;
    extern char *optarg;
    extern int optind, opterr;
+   int pipeFD[2] = {-1, -1};
+   const char *pidFN = 0;
 
 // Obtain the protocol name we will be using
 //
@@ -222,11 +219,22 @@ int XrdConfig::Configure(int argc, char **argv)
     while(retc--) if (argv[0][retc] == '/') break;
     myProg = dfltProt = &argv[0][retc+1];
 
+// Setup the initial required protocol. The program name matches the protocol
+// name but may be arbitrarily suffixed. We need to ignore this suffix. So we
+// look for it here and it it exists we duplicate argv[0] (yes, loosing some
+// bytes - sorry valgrind) without the suffix.
+//
+   if (*dfltProt != '.' )
+      {char *p = dfltProt;
+       while (*p && *p != '.') p++;
+       if (*p == '.') {*p = '\0'; dfltProt = strdup(dfltProt); *p = '.';}
+      }
+
 // Process the options
 //
    opterr = 0;
    if (argc > 1 && '-' == *argv[1]) 
-      while ((c = getopt(argc,argv,"bc:dhHk:l:n:p:P:R:"))
+      while ((c = getopt(argc,argv,"bc:dhHk:l:n:p:P:R:s:"))
              && ((unsigned char)c != 0xff))
      { switch(c)
        {
@@ -253,14 +261,18 @@ int XrdConfig::Configure(int argc, char **argv)
        case 'l': if (logfn) free(logfn);
                  logfn = strdup(optarg);
                  break;
-       case 'n': myInsName = optarg;
+       case 'n': myInsName = (!strcmp(optarg,"anon")||!strcmp(optarg,"default")
+                           ? 0 : optarg);
                  break;
        case 'p': if ((clPort = yport(&XrdLog, "tcp", optarg)) < 0) Usage(1);
                  break;
-       case 'P': dfltProt = optarg; dotrim = 0;
+       case 'P': dfltProt = optarg;
                  break;
        case 'R': if (!(getUG(optarg, myUid, myGid))) Usage(1);
                  break;
+       case 's': pidFN = optarg;
+                 break;
+
        default:  if (index("clpP", (int)(*(argv[optind-1]+1))))
                     {XrdLog.Emsg("Config", argv[optind-1],
                                  "parameter not specified.");
@@ -290,7 +302,16 @@ int XrdConfig::Configure(int argc, char **argv)
 
 // Resolve background/foreground issues
 //
-   if (optbg) XrdOucUtils::Undercover(XrdLog, !logfn);
+   if (optbg)
+   {
+#ifdef WIN32
+      XrdOucUtils::Undercover(XrdLog, !logfn);
+#else
+      if (pipe( pipeFD ) == -1)
+         {XrdLog.Emsg("Config", errno, "create a pipe"); exit(17);}
+      XrdOucUtils::Undercover(XrdLog, !logfn, pipeFD);
+#endif
+   }
 
 // Bind the log file if we have one
 //
@@ -352,13 +373,8 @@ int XrdConfig::Configure(int argc, char **argv)
    XrdLog.Say(0, "Scalla is starting. . .");
    XrdLog.Say(XrdBANNER);
 
-// Setup the initial required protocol
+// Setup the initial required protocol.
 //
-   if (dotrim && *dfltProt != '.' )
-      {char *p = dfltProt;
-       while (*p && *p != '.') p++;
-       if (*p == '.') *p = '\0';
-      }
    Firstcp = Lastcp = new XrdConfigProt(strdup(dfltProt), 0, 0);
 
 // Process the configuration file, if one is present
@@ -382,12 +398,27 @@ int XrdConfig::Configure(int argc, char **argv)
 //
    if (myInsName) XrdOucUtils::makeHome(XrdLog, myInsName);
 
+   // if we call this it means that the daemon has forked and we are
+   // in the child process
+#ifndef WIN32
+   if (optbg)
+   {
+      if (pidFN && !XrdOucUtils::PidFile( XrdLog, pidFN ) )
+         NoGo = 1;
+
+      int status = NoGo ? 1 : 0;
+      if(write( pipeFD[1], &status, sizeof( status ) )) {};
+      close( pipeFD[1]);
+   }
+#endif
+
 // All done, close the stream and return the return code.
 //
    temp = (NoGo ? " initialization failed." : " initialization completed.");
    sprintf(buff, "%s:%d", myInstance, PortTCP);
    XrdLog.Say("------ ", buff, temp);
    if (logfn) new XrdLogWorker(buff);
+
    return NoGo;
 }
 
@@ -749,7 +780,7 @@ void XrdConfig::Usage(int rc)
   if (rc < 0) cerr <<XrdLicense;
      else
      cerr <<"\nUsage: " <<myProg <<" [-b] [-c <cfn>] [-d] [-k {n|sz}] [-l <fn>] "
-            "[-L] [-n name] [-p <port>] [-P <prot>] [<prot_options>]" <<endl;
+            "[-L] [-n name] [-p <port>] [-P <prot>] [-s pidfile] [<prot_options>]" <<endl;
      _exit(rc > 0 ? rc : 0);
 }
 
@@ -894,7 +925,7 @@ int XrdConfig::xbuf(XrdSysError *eDest, XrdOucStream &Config)
 int XrdConfig::xnet(XrdSysError *eDest, XrdOucStream &Config)
 {
     char *val;
-    int  i, V_keep = 0, V_nodnr = 1, V_iswan = 0, V_blen = -1;
+    int  i, V_keep = 0, V_nodnr = 0, V_iswan = 0, V_blen = -1;
     long long llp;
     static struct netopts {const char *opname; int hasarg; int opval;
                            int  *oploc;  const char *etxt;}
@@ -1278,7 +1309,6 @@ int XrdConfig::xsched(XrdSysError *eDest, XrdOucStream &Config)
 
 // Establish scheduler options
 //
-   if (V_mint > 0 || V_maxt > 0 || V_avlt > 0) setSched = 0;
    XrdSched.setParms(V_mint, V_maxt, V_avlt, V_idle);
    return 0;
 }

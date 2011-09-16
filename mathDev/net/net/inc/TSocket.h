@@ -80,7 +80,9 @@ friend class TProofServ;   // to be able to call SetDescriptor(), RecvHostAuth()
 friend class TSlave;       // to be able to call SendHostAuth()
 
 public:
-   enum EStatusBits { kIsUnix = BIT(16) };   // set if unix socket
+   enum EStatusBits { kIsUnix = BIT(16),    // set if unix socket
+                      kBrokenConn = BIT(17) // set if conn reset by peer or broken 
+                    };
    enum EInterest { kRead = 1, kWrite = 2 };
    enum EServiceType { kSOCKD, kROOTD, kPROOFD };
 
@@ -88,8 +90,7 @@ protected:
    TInetAddress  fAddress;        // remote internet address and port #
    UInt_t        fBytesRecv;      // total bytes received over this socket
    UInt_t        fBytesSent;      // total bytes sent using this socket
-   Int_t         fCompress;       // compression level from 0 (not compressed)
-                                  // to 9 (max compression)
+   Int_t         fCompress;       // Compression level and algorithm
    TInetAddress  fLocalAddress;   // local internet address and port #
    Int_t         fRemoteProtocol; // protocol of remote daemon
    TSecContext  *fSecContext;     // after a successful Authenticate call
@@ -113,7 +114,7 @@ protected:
    TSocket() : fAddress(), fBytesRecv(0), fBytesSent(0), fCompress(0),
                fLocalAddress(), fRemoteProtocol(), fSecContext(0), fService(),
                fServType(kSOCKD), fSocket(-1), fTcpWindowSize(0), fUrl(),
-     fBitsInfo(), fUUIDs(0), fLastUsageMtx(0), fLastUsage() { }
+               fBitsInfo(), fUUIDs(0), fLastUsageMtx(0), fLastUsage() { }
 
    Bool_t       Authenticate(const char *user);
    void         SetDescriptor(Int_t desc) { fSocket = desc; }
@@ -147,7 +148,9 @@ public:
    virtual Int_t         GetLocalPort();
    UInt_t                GetBytesSent() const { return fBytesSent; }
    UInt_t                GetBytesRecv() const { return fBytesRecv; }
-   Int_t                 GetCompressionLevel() const { return fCompress; }
+   Int_t                 GetCompressionAlgorithm() const;
+   Int_t                 GetCompressionLevel() const;
+   Int_t                 GetCompressionSettings() const;
    Int_t                 GetErrorCode() const;
    virtual Int_t         GetOption(ESockOptions opt, Int_t &val);
    Int_t                 GetRemoteProtocol() const { return fRemoteProtocol; }
@@ -171,7 +174,9 @@ public:
    virtual Int_t         SendObject(const TObject *obj, Int_t kind = kMESS_OBJECT);
    virtual Int_t         SendRaw(const void *buffer, Int_t length,
                                  ESendRecvOptions opt = kDefault);
-   void                  SetCompressionLevel(Int_t level = 1);
+   void                  SetCompressionAlgorithm(Int_t algorithm=0);
+   void                  SetCompressionLevel(Int_t level=1);
+   void                  SetCompressionSettings(Int_t settings=1);
    virtual Int_t         SetOption(ESockOptions opt, Int_t val);
    void                  SetRemoteProtocol(Int_t rproto) { fRemoteProtocol = rproto; }
    void                  SetSecContext(TSecContext *ctx) { fSecContext = ctx; }
@@ -188,12 +193,30 @@ public:
 
    static TSocket       *CreateAuthSocket(const char *user, const char *host,
                                           Int_t port, Int_t size = 0,
-                                          Int_t tcpwindowsize = -1, TSocket *s = 0);
+                                          Int_t tcpwindowsize = -1, TSocket *s = 0, Int_t *err = 0);
    static TSocket       *CreateAuthSocket(const char *url, Int_t size = 0,
-                                          Int_t tcpwindowsize = -1, TSocket *s = 0);
+                                          Int_t tcpwindowsize = -1, TSocket *s = 0, Int_t *err = 0);
    static void           NetError(const char *where, Int_t error);
 
    ClassDef(TSocket,0)  //This class implements client sockets
 };
+
+//______________________________________________________________________________
+inline Int_t TSocket::GetCompressionAlgorithm() const
+{
+   return (fCompress < 0) ? -1 : fCompress / 100;
+}
+
+//______________________________________________________________________________
+inline Int_t TSocket::GetCompressionLevel() const
+{
+   return (fCompress < 0) ? -1 : fCompress % 100;
+}
+
+//______________________________________________________________________________
+inline Int_t TSocket::GetCompressionSettings() const
+{
+   return (fCompress < 0) ? -1 : fCompress;
+}
 
 #endif

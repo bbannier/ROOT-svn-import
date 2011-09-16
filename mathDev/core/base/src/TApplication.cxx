@@ -70,31 +70,24 @@ Bool_t TIdleTimer::Notify()
 ClassImp(TApplication)
 
 //______________________________________________________________________________
-TApplication::TApplication()
+TApplication::TApplication() :
+   fArgc(0), fArgv(0), fAppImp(0), fIsRunning(kFALSE), fReturnFromRun(kFALSE),
+   fNoLog(kFALSE), fNoLogo(kFALSE), fQuit(kFALSE), fUseMemstat(kFALSE),
+   fFiles(0), fIdleTimer(0), fSigHandler(0), fExitOnException(kDontExit),
+   fAppRemote(0)
 {
    // Default ctor. Can be used by classes deriving from TApplication.
 
-   fArgc            = 0;
-   fArgv            = 0;
-   fAppImp          = 0;
-   fAppRemote       = 0;
-   fIsRunning       = kFALSE;
-   fReturnFromRun   = kFALSE;
-   fNoLog           = kFALSE;
-   fNoLogo          = kFALSE;
-   fQuit            = kFALSE;
-   fUseMemstat      = kFALSE;
-   fFiles           = 0;
-   fIdleTimer       = 0;
-   fSigHandler      = 0;
-   fExitOnException = kDontExit;
    ResetBit(kProcessRemotely);
 }
 
 //______________________________________________________________________________
-TApplication::TApplication(const char *appClassName,
-                           Int_t *argc, char **argv, void *options,
-                           Int_t numOptions)
+TApplication::TApplication(const char *appClassName, Int_t *argc, char **argv,
+                           void * /*options*/, Int_t numOptions) :
+   fArgc(0), fArgv(0), fAppImp(0), fIsRunning(kFALSE), fReturnFromRun(kFALSE),
+   fNoLog(kFALSE), fNoLogo(kFALSE), fQuit(kFALSE), fUseMemstat(kFALSE),
+   fFiles(0), fIdleTimer(0), fSigHandler(0), fExitOnException(kDontExit),
+   fAppRemote(0)
 {
    // Create an application environment. The application environment
    // provides an interface to the graphics system and eventloop
@@ -137,26 +130,14 @@ TApplication::TApplication(const char *appClassName,
       fgApplications = new TList;
    fgApplications->Add(this);
 
-   if (options) { }  // use unused argument
-
    // copy command line arguments, can be later accessed via Argc() and Argv()
    if (argc && *argc > 0) {
       fArgc = *argc;
       fArgv = (char **)new char*[fArgc];
-   } else {
-      fArgc = 0;
-      fArgv = 0;
    }
 
    for (int i = 0; i < fArgc; i++)
       fArgv[i] = StrDup(argv[i]);
-
-   fNoLog           = kFALSE;
-   fNoLogo          = kFALSE;
-   fQuit            = kFALSE;
-   fUseMemstat      = kFALSE;
-   fExitOnException = kDontExit;
-   fAppImp          = 0;
 
    if (numOptions >= 0)
       GetOptions(argc, argv);
@@ -167,13 +148,13 @@ TApplication::TApplication(const char *appClassName,
    // Tell TSystem the TApplication has been created
    gSystem->NotifyApplicationCreated();
 
-   fIdleTimer     = 0;
-   fSigHandler    = 0;
-   fIsRunning     = kFALSE;
-   fReturnFromRun = kFALSE;
-   fAppImp        = gGuiFactory->CreateApplicationImp(appClassName, argc, argv);
-   fAppRemote     = 0;
+   fAppImp = gGuiFactory->CreateApplicationImp(appClassName, argc, argv);
    ResetBit(kProcessRemotely);
+
+   // Make sure all registered dictionaries have been initialized
+   // and that all types have been loaded
+   gInterpreter->InitializeDictionaries();
+   gInterpreter->UpdateListOfTypes();
 
    // Enable autoloading
    gInterpreter->EnableAutoLoading();
@@ -183,11 +164,6 @@ TApplication::TApplication(const char *appClassName,
       fgGraphNeeded = kTRUE;
       InitializeGraphics();
    }
-
-   // Make sure all registered dictionaries have been initialized
-   // and that all types have been loaded
-   gInterpreter->InitializeDictionaries();
-   gInterpreter->UpdateListOfTypes();
 
    // Save current interpreter context
    gInterpreter->SaveContext();
@@ -802,7 +778,6 @@ Long_t TApplication::ProcessLine(const char *line, Bool_t sync, Int_t *err)
       Info("ProcessLine", "Bye... (try '.qqqqqqq' if still running)");
       gSystem->Exit(1);
    } else if (!strncasecmp(line, ".exit", 4) || !strncasecmp(line, ".quit", 2)) {
-      gInterpreter->ResetGlobals();
       Terminate(0);
       return 0;
    }
@@ -862,7 +837,7 @@ Long_t TApplication::ProcessLine(const char *line, Bool_t sync, Int_t *err)
          Ssiz_t posSpace = cmd.Index(' ');
          if (posSpace == -1) cmd.Remove(1);
          else cmd.Remove(posSpace);
-         static TString tempbuf;
+         TString tempbuf;
          if (sync) {
             tempbuf.Form(".%s %s%s%s", cmd.Data(), mac, aclicMode.Data(),io.Data());
             retval = gInterpreter->ProcessLineSynch(tempbuf,
@@ -1027,7 +1002,7 @@ again:
       exname += arguments;
       exname += io;
 
-      static TString tempbuf;
+      TString tempbuf;
       if (tempfile) {
          tempbuf.Form(".x %s", exname.Data());
       } else {
@@ -1097,23 +1072,33 @@ void TApplication::StopIdleing()
 }
 
 //______________________________________________________________________________
+Int_t TApplication::TabCompletionHook(char* /*buf*/, int* /*pLoc*/, ostream& /*out*/)
+{
+   // What to do when tab is pressed. Re-implemented by TRint.
+   // See TTabCom::Hook() for meaning of return values.
+   return -1;
+}
+
+
+//______________________________________________________________________________
 void TApplication::Terminate(Int_t status)
 {
    // Terminate the application by call TSystem::Exit() unless application has
    // been told to return from Run(), by a call to SetReturnFromRun().
 
-   //close TMemStat
-   if (fUseMemstat) {
-      ProcessLine("TMemStat::Close()");
-      fUseMemstat = kFALSE;
-   }
-
    Emit("Terminate(Int_t)", status);
 
    if (fReturnFromRun)
       gSystem->ExitLoop();
-   else
+   else {
+      //close TMemStat
+      if (fUseMemstat) {
+         ProcessLine("TMemStat::Close()");
+         fUseMemstat = kFALSE;
+      }
+   
       gSystem->Exit(status);
+   }
 }
 
 //______________________________________________________________________________

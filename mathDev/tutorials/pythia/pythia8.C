@@ -5,15 +5,28 @@
 //  root > .x pythia8.C
 //
 // Note that before executing this script, 
-//   -the env variable PYTHIA8 must point to the pythia8100 (or newer) directoryDATA
+//   -the env variable PYTHIA8 must point to the pythia8100 (or newer) directory
 //   -the env variable PYTHIA8DATA must be defined and it must point to $PYTHIA8/xmldoc
 //
-void pythia8(Int_t nev  = 100, Int_t ndeb = 1) {
-    
+void pythia8(Int_t nev  = 100, Int_t ndeb = 1)
+{
+   char *p8dataenv = gSystem->Getenv("PYTHIA8DATA"); 
+   if (!p8dataenv) {
+      char *p8env = gSystem->Getenv("PYTHIA8"); 
+      if (!p8env) {
+         Error("pythia8.C", 
+               "Environment variable PYTHIA8 must contain path to pythia directory!");
+         return;
+      }
+      TString p8d = p8env;
+      p8d += "/xmldoc";
+      gSystem->Setenv("PYTHIA8DATA", p8d);
+   }
+      
    char* path = gSystem->ExpandPathName("$PYTHIA8DATA");
    if (gSystem->AccessPathName(path)) {
-      Warning("pythia8.C", 
-              "Environment variable PYTHIA8DATA must contain path to pythi8100/xmldoc directory !");
+         Error("pythia8.C", 
+               "Environment variable PYTHIA8DATA must contain path to $PYTHIA8/xmldoc directory !");
       return;
    }
     

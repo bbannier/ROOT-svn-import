@@ -96,6 +96,26 @@ namespace RooFit {
   RooCmdArg Import(const char* state, TH1& histo)         { return RooCmdArg("ImportHistoSlice",0,0,0,0,state,0,&histo,0) ; }
   RooCmdArg Import(const char* state, RooDataHist& dhist) { return RooCmdArg("ImportDataHistSlice",0,0,0,0,state,0,&dhist,0) ; }
   RooCmdArg Import(TH1& histo, Bool_t importDensity)      { return RooCmdArg("ImportHisto",importDensity,0,0,0,0,0,&histo,0) ; }
+
+  RooCmdArg Import(const std::map<std::string,RooDataHist*>& arg) {
+    RooCmdArg container("ImportDataHistSliceMany",0,0,0,0,0,0,0,0) ; 
+    std::map<std::string,RooDataHist*>::const_iterator iter ;
+    for (iter = arg.begin() ; iter!=arg.end() ; ++iter) {
+      container.addArg(Import(iter->first.c_str(),*(iter->second))) ;
+    }
+    container.setProcessRecArgs(kTRUE,kFALSE) ;
+    return container ;
+  }
+  RooCmdArg Import(const std::map<std::string,TH1*>& arg) {
+    RooCmdArg container("ImportHistoSliceMany",0,0,0,0,0,0,0,0) ; 
+    std::map<std::string,TH1*>::const_iterator iter ;
+    for (iter = arg.begin() ; iter!=arg.end() ; ++iter) {
+      container.addArg(Import(iter->first.c_str(),*(iter->second))) ;
+    }
+    container.setProcessRecArgs(kTRUE,kFALSE) ;
+    return container ;
+  }
+
   
   // RooDataSet::ctor arguments
   RooCmdArg WeightVar(const char* name)                 { return RooCmdArg("WeightVarName",0,0,0,0,name,0,0,0) ; }
@@ -107,6 +127,26 @@ namespace RooFit {
   RooCmdArg ImportFromFile(const char* fname, const char* tname){ return RooCmdArg("ImportFromFile",0,0,0,0,fname,tname,0,0) ; }
   RooCmdArg StoreError(const RooArgSet& aset)           { return RooCmdArg("StoreError",0,0,0,0,0,0,0,0,0,0,&aset) ; }
   RooCmdArg StoreAsymError(const RooArgSet& aset)       { return RooCmdArg("StoreAsymError",0,0,0,0,0,0,0,0,0,0,&aset) ; }
+  RooCmdArg OwnLinked()                                 { return RooCmdArg("OwnLinked",1,0,0,0,0,0,0,0,0,0,0) ; }
+
+  RooCmdArg Import(const std::map<std::string,RooDataSet*>& arg) {
+    RooCmdArg container("ImportDataSliceMany",0,0,0,0,0,0,0,0) ; 
+    std::map<std::string,RooDataSet*>::const_iterator iter ;
+    for (iter = arg.begin() ; iter!=arg.end() ; ++iter) {
+      container.addArg(Import(iter->first.c_str(),*(iter->second))) ;
+    }
+    container.setProcessRecArgs(kTRUE,kFALSE) ;
+    return container ;
+  }
+  RooCmdArg Link(const std::map<std::string,RooAbsData*>& arg) {
+    RooCmdArg container("LinkDataSliceMany",0,0,0,0,0,0,0,0) ; 
+    std::map<std::string,RooAbsData*>::const_iterator iter ;
+    for (iter = arg.begin() ; iter!=arg.end() ; ++iter) {
+      container.addArg(Link(iter->first.c_str(),*(iter->second))) ;
+    }
+    container.setProcessRecArgs(kTRUE,kFALSE) ;
+    return container ;
+  }
  
 
   // RooChi2Var::ctor arguments
@@ -245,7 +285,7 @@ namespace RooFit {
   RooCmdArg ClassName(const char* name)     { return RooCmdArg("ClassName",0,0,0,0,name,0,0,0) ; }
   RooCmdArg BaseClassName(const char* name) { return RooCmdArg("BaseClassName",0,0,0,0,name,0,0,0) ; }
   RooCmdArg TagName(const char* name)     { return RooCmdArg("LabelName",0,0,0,0,name,0,0,0) ; }
-  RooCmdArg OutputStream(ostream& os)    { return RooCmdArg("FitModel",0,0,0,0,0,0,reinterpret_cast<TObject*>(&os),0) ; }
+  RooCmdArg OutputStream(ostream& os)    { return RooCmdArg("OutputStream",0,0,0,0,0,0,reinterpret_cast<TObject*>(&os),0) ; }
   RooCmdArg Prefix(Bool_t flag)          { return RooCmdArg("Prefix",flag,0,0,0,0,0,0,0) ; }
   RooCmdArg Color(Color_t color)         { return RooCmdArg("Color",color,0,0,0,0,0,0,0) ; }
 

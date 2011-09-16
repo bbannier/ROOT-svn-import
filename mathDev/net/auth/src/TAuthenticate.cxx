@@ -278,7 +278,8 @@ TAuthenticate::TAuthenticate(TSocket *sock, const char *remote,
    TInetAddress addr = gSystem->GetHostByName(fRemote);
    if (addr.IsValid())
       fqdn = addr.GetHostName();
-   TString fqdnsrv(Form("%s:%d",fqdn.Data(),servtype));
+   TString fqdnsrv;
+   fqdnsrv.Form("%s:%d",fqdn.Data(),servtype);
 
    // Read directives from files; re-read if files have changed
    TAuthenticate::ReadRootAuthrc();
@@ -1350,10 +1351,11 @@ char *TAuthenticate::PromptUser(const char *remote)
          return StrDup("None");
    }
 
-   char *usr = Getline(Form("Name (%s:%s): ", remote, user));
-   if (usr[0]) {
-      usr[strlen(usr) - 1] = 0; // get rid of \n
-      if (strlen(usr))
+   const char *usrIn = Getline(Form("Name (%s:%s): ", remote, user));
+   if (usrIn[0]) {
+      TString usr(usrIn);
+      usr.Remove(usr.Length() - 1); // get rid of \n
+      if (!usr.IsNull())
          return StrDup(usr);
       else
          return StrDup(user);
@@ -1377,7 +1379,7 @@ char *TAuthenticate::PromptPasswd(const char *prompt)
    }
 
    char buf[128];
-   char *pw = buf;
+   const char *pw = buf;
    // Get the plugin for the passwd dialog box, if needed
    if (!gROOT->IsBatch() && (fgPasswdDialog == (TPluginHandler *)(-1)) &&
        gEnv->GetValue("Auth.UsePasswdDialogBox", 1) == 1) {
@@ -1401,16 +1403,16 @@ char *TAuthenticate::PromptPasswd(const char *prompt)
 
    } else {
       Gl_config("noecho", 1);
-      pw = Getline((char *) prompt);
+      pw = Getline(prompt);
       Gl_config("noecho", 0);
    }
 
    // Final checks
    if (pw[0]) {
-      if (pw[strlen(pw)-1] == '\n')
-         pw[strlen(pw) - 1] = 0;   // get rid of \n
-      char *rpw = StrDup(pw);
-      memset(pw, 0, strlen(pw));
+      TString spw(pw);
+      if (spw.EndsWith("\n"))
+         spw.Remove(spw.Length() - 1);   // get rid of \n
+      char *rpw = StrDup(spw);
       return rpw;
    }
    return 0;
@@ -1719,7 +1721,7 @@ Int_t TAuthenticate::SshAuth(TString &user)
    // Find out which command we should be using
    char cmdref[2][5] = {"ssh", "scp"};
    char scmd[5] = "";
-   char *gSshExe = 0;
+   TString sshExe;
    Bool_t notfound = kTRUE;
 
    while (notfound && sshproto > -1) {
@@ -1727,9 +1729,11 @@ Int_t TAuthenticate::SshAuth(TString &user)
       strlcpy(scmd,cmdref[sshproto],5);
 
       // Check First if a 'scmd' executable exists ...
-      gSshExe = gSystem->Which(gSystem->Getenv("PATH"),
+      char *sSshExe = gSystem->Which(gSystem->Getenv("PATH"),
                                scmd, kExecutePermission);
-      if (!gSshExe) {
+      sshExe = sSshExe;
+      delete [] sSshExe;
+      if (!sshExe) {
          if (gDebug > 2)
             Info("SshAuth", "%s not found in $PATH", scmd);
 
@@ -1737,11 +1741,10 @@ Int_t TAuthenticate::SshAuth(TString &user)
          if (strcmp(gEnv->GetValue("SSH.ExecDir", "-1"), "-1")) {
             if (gDebug > 2)
                Info("SshAuth", "searching user defined path ...");
-            gSshExe = StrDup(Form("%s/%s",
-                                  (char *)gEnv->GetValue("SSH.ExecDir", ""), scmd));
-            if (gSystem->AccessPathName(gSshExe, kExecutePermission)) {
+            sshExe.Form("%s/%s", (char *)gEnv->GetValue("SSH.ExecDir", ""), scmd);
+            if (gSystem->AccessPathName(sshExe, kExecutePermission)) {
                if (gDebug > 2)
-                  Info("SshAuth", "%s not executable", gSshExe);
+                  Info("SshAuth", "%s not executable", sshExe.Data());
             } else
                notfound = kFALSE;
          }
@@ -1751,12 +1754,11 @@ Int_t TAuthenticate::SshAuth(TString &user)
    }
 
    // Check if the command was found
-   if (notfound) {
-      if (gSshExe) delete [] gSshExe;
+   if (notfound)
       return -1;
-   }
+
    if (gDebug > 2)
-      Info("SshAuth", "%s is %s (sshproto: %d)", scmd, gSshExe, sshproto);
+      Info("SshAuth", "%s is %s (sshproto: %d)", scmd, sshExe.Data(), sshproto);
 
    // SSH-like authentication code.
    // Returns 0 in case authentication failed
@@ -1773,13 +1775,14 @@ Int_t TAuthenticate::SshAuth(TString &user)
 
    // Check ReUse
    Int_t reuse = (int)fgAuthReUse;
-   fDetails = TString(Form("pt:%d ru:%d us:",(int)fgPromptUser,(int)fgAuthReUse))
+   fDetails = TString::Format("pt:%d ru:%d us:",(int)fgPromptUser,(int)fgAuthReUse)
       + user;
 
    // Create options string
    int opt = reuse * kAUTH_REUSE_MSK + fRSAKey * kAUTH_RSATY_MSK;
-   TString options(Form("%d none %ld %s %d", opt,
-                        (Long_t)user.Length(),user.Data(),sshproto));
+   TString options;
+   options.Form("%d none %ld %s %d", opt,
+                (Long_t)user.Length(),user.Data(),sshproto);
 
    // Check established authentications
    Int_t kind = kROOTD_SSH;
@@ -1797,23 +1800,29 @@ Int_t TAuthenticate::SshAuth(TString &user)
       return 0;
    }
    // Check return flags
-   if (kind != kROOTD_SSH)
+   if (kind != kROOTD_SSH) {
       return 0;                 // something went wrong
-   if (retval == 0)
+   }
+   if (retval == 0) {
       return 0;                 // no remote support for SSH
-   if (retval == -2)
+   }
+   if (retval == -2) {
       return 0;                 // user unkmown to remote host
+   }
 
    // Wait for the server to communicate remote pid and location
    // of command to execute
    char cmdinfo[kMAXPATHLEN] = { 0 };
    Int_t reclen = (retval+1 > kMAXPATHLEN) ? kMAXPATHLEN : retval+1 ;
-   if (fSocket->Recv(cmdinfo, reclen, kind) < 0)
+   if (fSocket->Recv(cmdinfo, reclen, kind) < 0) {
       return 0;
-   if (kind != kROOTD_SSH)
+   }
+   if (kind != kROOTD_SSH) {
       return 0;                 // something went wrong
-   if (gDebug > 3)
+   }
+   if (gDebug > 3) {
       Info("SshAuth", "received from server command info: %s", cmdinfo);
+   }
 
    int rport = -1;
    TString ci(cmdinfo), tkn;
@@ -1860,12 +1869,12 @@ Int_t TAuthenticate::SshAuth(TString &user)
             fclose(floc);
       }
       fileErr.Append(".error");
-      TString sshcmd(Form("%s -x -l %s %s",
-                          gSshExe, user.Data(), noPrompt.Data()));
+      TString sshcmd;
+      sshcmd.Form("%s -x -l %s %s", sshExe.Data(), user.Data(), noPrompt.Data());
       if (rport != -1)
-         sshcmd += TString(Form(" -p %d",rport));
-      sshcmd += TString(Form(" %s %s",fRemote.Data(), cmdinfo));
-      sshcmd += TString(Form(" 1> /dev/null 2> %s",fileErr.Data()));
+         sshcmd += TString::Format(" -p %d",rport);
+      sshcmd += TString::Format(" %s %s",fRemote.Data(), cmdinfo);
+      sshcmd += TString::Format(" 1> /dev/null 2> %s",fileErr.Data());
 
       // Execute command
       Int_t again = 1;
@@ -1922,17 +1931,18 @@ Int_t TAuthenticate::SshAuth(TString &user)
          }
          if (!ssh_rc) {
             fileErr = TString(fileLoc).Append(".error");
-            TString sshcmd(Form("%s -p %s", gSshExe, noPrompt.Data()));
+            TString sshcmd;
+            sshcmd.Form("%s -p %s", sshExe.Data(), noPrompt.Data());
             if (rport != -1)
-               sshcmd += TString(Form(" -P %d",rport));
-            sshcmd += TString(Form(" %s",fileLoc.Data()));
+               sshcmd += TString::Format(" -P %d",rport);
+            sshcmd += TString::Format(" %s",fileLoc.Data());
             if (addhost) {
-               sshcmd += TString(Form(" %s@%s:%s 1> /dev/null",
-                                        user.Data(),fRemote.Data(),cmdinfo));
+               sshcmd += TString::Format(" %s@%s:%s 1> /dev/null",
+                                         user.Data(),fRemote.Data(),cmdinfo);
             } else {
-               sshcmd += TString(Form("%s 1> /dev/null", cmdinfo));
+               sshcmd += TString::Format("%s 1> /dev/null", cmdinfo);
             }
-            sshcmd += TString(Form(" 2> %s",fileErr.Data()));
+            sshcmd += TString::Format(" 2> %s",fileErr.Data());
             // Execute command
             ssh_rc = 1;
             Int_t again = 1;
@@ -1980,7 +1990,8 @@ Int_t TAuthenticate::SshAuth(TString &user)
       if (level) {
          Int_t port = fSocket->GetPort();
          TSocket *newsock = 0;
-         TString url(Form("sockd://%s",fRemote.Data()));
+         TString url;
+         url.Form("sockd://%s",fRemote.Data());
          if (srvtyp == TSocket::kROOTD) {
             // Parallel socket requested by 'rootd'
             url.ReplaceAll("sockd",5,"rootd",5);
@@ -2026,8 +2037,7 @@ Int_t TAuthenticate::SshAuth(TString &user)
                      }
                   }
                }
-               if (buf)
-                  delete [] buf;
+               delete [] buf;
             }
          }
          SafeDelete(newsock);
@@ -2270,7 +2280,7 @@ Int_t TAuthenticate::RfioAuth(TString &username)
          delete grp;
 
          // Send request ....
-         TString sstr = TString(Form("%d %d", uid, gid));
+         TString sstr = TString::Format("%d %d", uid, gid);
          if (gDebug > 3)
             Info("RfioAuth", "sending ... %s", sstr.Data());
          Int_t ns = 0;
@@ -2352,8 +2362,8 @@ Int_t TAuthenticate::ClearAuth(TString &user, TString &passwd, Bool_t &pwdhash)
    Int_t needsalt = 1;
    if (pwdhash)
       needsalt = 0;
-   fDetails = TString(Form("pt:%d ru:%d cp:%d us:",
-                           fgPromptUser, fgAuthReUse, fgUsrPwdCrypt)) + user;
+   fDetails = TString::Format("pt:%d ru:%d cp:%d us:",
+                              fgPromptUser, fgAuthReUse, fgUsrPwdCrypt) + user;
    if (gDebug > 2)
       Info("ClearAuth", "ru:%d pt:%d cp:%d ns:%d rk:%d",
            fgAuthReUse,fgPromptUser,fgUsrPwdCrypt,needsalt,fgRSAKey);
@@ -2383,9 +2393,10 @@ Int_t TAuthenticate::ClearAuth(TString &user, TString &passwd, Bool_t &pwdhash)
       // Create options string
       int opt = (reuse * kAUTH_REUSE_MSK) + (cryptopt * kAUTH_CRYPT_MSK) +
          (needsalt * kAUTH_SSALT_MSK) + (fRSAKey * kAUTH_RSATY_MSK);
-      TString options(Form("%d %ld %s %ld %s", opt,
-                           (Long_t)user.Length(), user.Data(),
-                           (Long_t)effUser.Length(), effUser.Data()));
+      TString options;
+      options.Form("%d %ld %s %ld %s", opt,
+                   (Long_t)user.Length(), user.Data(),
+                   (Long_t)effUser.Length(), effUser.Data());
 
       // Check established authentications
       kind = kROOTD_USER;
@@ -2513,7 +2524,7 @@ Int_t TAuthenticate::ClearAuth(TString &user, TString &passwd, Bool_t &pwdhash)
                if (addr.IsValid())
                   localFQDN = addr.GetHostName();
             }
-            passwd = Form("%s@%s", localuser.Data(), localFQDN.Data());
+            passwd.Form("%s@%s", localuser.Data(), localFQDN.Data());
             if (gDebug > 2)
                Info("ClearAuth",
                     "automatically generated anonymous passwd: %s",
@@ -2525,7 +2536,8 @@ Int_t TAuthenticate::ClearAuth(TString &user, TString &passwd, Bool_t &pwdhash)
          if (prompt == 1 || pashash.Length() == 0) {
 
             if (passwd == "") {
-               TString xp(Form("%s@%s password: ", user.Data(),fRemote.Data()));
+               TString xp;
+               xp.Form("%s@%s password: ", user.Data(),fRemote.Data());
                char *pwd = PromptPasswd(xp);
                passwd = TString(pwd);
                delete [] pwd;
@@ -2741,7 +2753,8 @@ Int_t TAuthenticate::ClearAuth(TString &user, TString &passwd, Bool_t &pwdhash)
       // Prepare passwd to send
    badpass1:
       if (passwd == "") {
-         TString xp(Form("%s@%s password: ", user.Data(),fRemote.Data()));
+         TString xp;
+         xp.Form("%s@%s password: ", user.Data(),fRemote.Data());
          char *p = PromptPasswd(xp);
          passwd = p;
          delete [] p;
@@ -3192,7 +3205,8 @@ Int_t TAuthenticate::AuthExists(TString username, Int_t method, const char *opti
    }
 
    // Prepare string to be sent to the server
-   TString sstr(Form("%d %d %s", fgProcessID, offset, options));
+   TString sstr;
+   sstr.Form("%d %d %s", fgProcessID, offset, options);
 
    // Send message
    if (fSocket->Send(sstr, *message) < 0)
@@ -4431,13 +4445,13 @@ Bool_t TAuthenticate::CheckProofAuth(Int_t cSec, TString &out)
             rc = kTRUE;
       }
       if (rc)
-         out = Form("pt:0 ru:1 us:%s",user.Data());
+         out.Form("pt:0 ru:1 us:%s",user.Data());
    }
 
    // SRP
    if (cSec == (Int_t) TAuthenticate::kSRP) {
 #ifdef R__SRP
-      out = Form("pt:0 ru:1 us:%s",user.Data());
+      out.Form("pt:0 ru:1 us:%s",user.Data());
       rc = kTRUE;
 #endif
    }
@@ -4445,7 +4459,7 @@ Bool_t TAuthenticate::CheckProofAuth(Int_t cSec, TString &out)
    // Kerberos
    if (cSec == (Int_t) TAuthenticate::kKrb5) {
 #ifdef R__KRB5
-      out = Form("pt:0 ru:0 us:%s",user.Data());
+      out.Form("pt:0 ru:0 us:%s",user.Data());
       rc = kTRUE;
 #endif
    }
@@ -4477,8 +4491,8 @@ Bool_t TAuthenticate::CheckProofAuth(Int_t cSec, TString &out)
                TString Cdir = Ucer;
                Cdir.Resize(Cdir.Last('/')+1);
                // Create output
-               out = Form("pt=0 ru:0 cd:%s cf:%s kf:%s ad:%s",
-                          Cdir.Data(),Ucer.Data(),Ukey.Data(),Adir.Data());
+               out.Form("pt=0 ru:0 cd:%s cf:%s kf:%s ad:%s",
+                        Cdir.Data(),Ucer.Data(),Ukey.Data(),Adir.Data());
             }
          }
       }
@@ -4494,12 +4508,12 @@ Bool_t TAuthenticate::CheckProofAuth(Int_t cSec, TString &out)
             rc = kTRUE;
       }
       if (rc)
-         out = Form("pt:0 ru:1 us:%s",user.Data());
+         out.Form("pt:0 ru:1 us:%s",user.Data());
    }
 
    // Rfio
    if (cSec == (Int_t) TAuthenticate::kRfio) {
-      out = Form("pt:0 ru:0 us:%s",user.Data());
+      out.Form("pt:0 ru:0 us:%s",user.Data());
       rc = kTRUE;
    }
 
@@ -4560,7 +4574,8 @@ void TAuthenticate::MergeHostAuthList(TList *std, TList *nin, Option_t *opt)
    THostAuth *hanew;
    while ((hanew = (THostAuth *)nxnew())) {
       if (hanew->NumMethods()) {
-         TString hostsrv(Form("%s:%d",hanew->GetHost(),hanew->GetServer()));
+         TString hostsrv;
+         hostsrv.Form("%s:%d",hanew->GetHost(),hanew->GetServer());
          THostAuth *hastd =
             TAuthenticate::HasHostAuth(hostsrv,hanew->GetUser(),opt);
          if (hastd) {

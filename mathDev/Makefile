@@ -4,20 +4,7 @@
 # Author: Fons Rademakers, 29/2/2000
 
 
-##### Include path/location macros (result of ./configure) #####
-##### However, if we are building packages or cleaning,    #####
-##### config/Makefile.config isn't made yet - the package  #####
-##### scripts want's to make it them selves - so we don't  #####
-
-ifeq ($(findstring $(MAKECMDGOALS), debian redhat),)
-include config/Makefile.config
-endif
-ifeq ($(MAKECMDGOALS),maintainer-clean)
--include config/Makefile.config
-endif
-ifeq ($(MAKECMDGOALS),clean)
-include config/Makefile.config
-endif
+##### Check version of GNU make #####
 
 MAKE_VERSION_MAJOR := $(word 1,$(subst ., ,$(MAKE_VERSION)))
 MAKE_VERSION_MINOR := $(shell echo $(word 2,$(subst ., ,$(MAKE_VERSION))) | \
@@ -27,6 +14,10 @@ MAKE_VERSION_MINOR ?= 0
 ORDER_ := $(shell test $(MAKE_VERSION_MAJOR) -gt 3 || \
                   test $(MAKE_VERSION_MAJOR) -eq 3 && \
                   test $(MAKE_VERSION_MINOR) -ge 80 && echo '|')
+
+##### Include path/location macros (result of ./configure) #####
+
+include config/Makefile.config
 
 ##### Include compiler overrides specified via ./configure #####
 ##### However, if we are building packages or cleaning, we #####
@@ -46,7 +37,7 @@ endif
 ##### don't include this file since it may screw up things #####
 
 ifndef ROOT_SRCDIR
-$(error Please run ./configure again, the build system has been updated)
+$(error Please run ./configure first)
 endif
 
 ifeq ($(findstring $(MAKECMDGOALS), maintainer-clean debian redhat),)
@@ -79,9 +70,10 @@ include $(MAKEFILEDEP)
 ##### Modules to build #####
 
 MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
-                core/base core/cont core/meta io/io math/mathcore net/net \
-                core/zip core/thread math/matrix core/newdelete hist/hist \
-                tree/tree graf2d/freetype graf2d/graf graf2d/gpad graf3d/g3d \
+                core/textinput core/base core/cont core/meta core/thread \
+                io/io math/mathcore net/net core/zip core/lzma math/matrix \
+                core/newdelete hist/hist tree/tree graf2d/freetype \
+                graf2d/graf graf2d/gpad graf3d/g3d \
                 gui/gui math/minuit hist/histpainter tree/treeplayer \
                 gui/ged tree/treeviewer math/physics graf2d/postscript \
                 core/rint html montecarlo/eg \
@@ -223,6 +215,9 @@ MODULES      += cint/cling
 endif
 ifeq ($(BUILDROOFIT),yes)
 MODULES      += roofit/roofitcore roofit/roofit roofit/roostats
+ifeq ($(BUILDXML),yes)
+MODULES      += roofit/histfactory
+endif
 endif
 ifeq ($(BUILDGDML),yes)
 MODULES      += geom/gdml
@@ -249,14 +244,13 @@ ifneq ($(F77),)
 MODULES      += misc/minicern hist/hbook
 endif
 ifeq ($(BUILDXRD),yes)
-ifneq ($(XRDLIBDIR),)
+MODULES      += net/xrootd
+endif
+ifeq ($(HASXRD),yes)
 MODULES      += net/netx
-else
-MODULES      += net/xrootd net/netx
-endif
-endif
 ifeq ($(BUILDALIEN),yes)
 MODULES      += net/alien
+endif
 endif
 ifeq ($(BUILDCLARENS),yes)
 MODULES      += proof/clarens
@@ -265,25 +259,25 @@ ifeq ($(BUILDPEAC),yes)
 MODULES      += proof/peac
 endif
 ifneq ($(ARCH),win32)
-MODULES      += net/rpdutils net/rootd proof/proofd proof/pq2
-endif
-ifeq ($(BUILDEDITLINE),yes)
-MODULES      += core/editline
+MODULES      += net/rpdutils net/rootd proof/proofd proof/pq2 proof/proofbench
 endif
 ifeq ($(BUILDTMVA),yes)
 MODULES      += tmva math/genetic
 endif
-ifeq ($(BUILDXRD),yes)
+ifeq ($(HASXRD),yes)
 ifeq ($(ARCH),win32)
 MODULES      += proof/proofd
 endif
 MODULES      += proof/proofx
 endif
+ifeq ($(BUILDAFDSMGRD),yes)
+MODULES      += proof/afdsmgrd
+endif
 
 -include MyModules.mk   # allow local modules
 
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
-MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
+MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 graf3d/gl graf3d/ftgl graf3d/glew io/rfio io/castor \
                 montecarlo/pythia6 montecarlo/pythia8 misc/table \
                 sql/mysql sql/pgsql sql/sapdb net/srputils graf3d/x3d \
@@ -293,11 +287,12 @@ MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
                 graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
                 proof/proofd proof/proofx proof/clarens proof/peac proof/pq2 \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
-                tmva math/genetic io/hdfs graf2d/fitsio \
-                roofit/roofitcore roofit/roofit roofit/roostats \
+                tmva math/genetic io/hdfs graf2d/fitsio roofit/roofitcore \
+                roofit/roofit roofit/roostats roofit/histfactory \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
-                math/genvector net/bonjour graf3d/gviz3d graf2d/gviz
+                math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
+                proof/proofbench proof/afdsmgrd
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -340,6 +335,8 @@ RINTLIBS     := $(LPATH)/libRint.lib
 endif
 
 ROOTALIB     := $(LPATH)/libRoot.a
+ROOTA        := bin/roota
+PROOFSERVA   := bin/proofserva
 
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
 BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(MATHCORELIB)
@@ -397,6 +394,11 @@ CXXOUT ?= -o # keep whitespace after "-o"
 ifneq ($(findstring clang,$(CXX)),)
 CLANG_MAJOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$3}' | cut -d'.' -f1)
 CLANG_MINOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$3}' | cut -d'.' -f2)
+ifeq ($(CLANG_MAJOR),version)
+   # Apple version of clang has different -v layout
+   CLANG_MAJOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$4}' | cut -d'.' -f1)
+   CLANG_MINOR  := $(shell $(CXX) -v 2>&1 | awk '{if (NR==1) print $$4}' | cut -d'.' -f2)
+endif
 else
 ifneq ($(findstring gnu,$(COMPILER)),)
 GCC_MAJOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f1)
@@ -449,12 +451,15 @@ endif
 ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
    MAKEDIR      = +@[ -d $(dir $@) ] || mkdir -p $(dir $@)
    RUNTIMEDIRS := etc macros icons fonts README tutorials test man
-   POSTBIN     += $(RUNTIMEDIRS)
+   POSTBIN     += runtimedirs
 endif
 
 ifneq ($(HOST),)
    BUILDTOOLSDIR := buildtools
-   POSTBIN       += static
+endif
+
+ifeq ($(PLATFORM),ios)
+   POSTBIN       += staticlib
 endif
 
 MAKEDEP        = $(RMKDEP)
@@ -467,7 +472,10 @@ MAKECINTDLL   := $(ROOT_SRCDIR)/build/unix/makecintdll.sh
 MAKECHANGELOG := $(ROOT_SRCDIR)/build/unix/makechangelog.sh
 MAKEHTML      := $(ROOT_SRCDIR)/build/unix/makehtml.sh
 MAKELOGHTML   := $(ROOT_SRCDIR)/build/unix/makeloghtml.sh
+MAKEPLUGINS   := $(ROOT_SRCDIR)/build/unix/makeplugins-ios.sh
 MAKERELNOTES  := $(ROOT_SRCDIR)/build/unix/makereleasenotes.sh
+STATICOBJLIST := $(ROOT_SRCDIR)/build/unix/staticobjectlist.sh
+MAKESTATICLIB := $(ROOT_SRCDIR)/build/unix/makestaticlib.sh
 MAKESTATIC    := $(ROOT_SRCDIR)/build/unix/makestatic.sh
 RECONFIGURE   := $(ROOT_SRCDIR)/build/unix/reconfigure.sh
 ifeq ($(PLATFORM),win32)
@@ -488,22 +496,27 @@ STATICEXTRALIBS = $(PCRELDFLAGS) $(PCRELIB) \
 
 ##### libCore #####
 
-COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) \
-                $(SYSTEML) $(CLIBL) $(METAUTILSL) $(EDITLINEL)
-COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(CLIBO) \
-                $(METAUTILSO) $(EDITLINEO) $(CLINGO)
-COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(METACDO) $(SYSTEMDO) \
-                $(CLIBDO) $(METAUTILSDO) $(EDITLINEDO) $(CLINGDO)
+COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) $(ZIPL) \
+                $(SYSTEML) $(CLIBL) $(METAUTILSL) $(TEXTINPUTL)
+COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(LZMAO) \
+                $(CLIBO) $(METAUTILSO) $(TEXTINPUTO) $(CLINGO)
+COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(METACDO) $(SYSTEMDO) $(ZIPDO) \
+                $(CLIBDO) $(METAUTILSDO) $(TEXTINPUTDO) $(CLINGDO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
+
 ifneq ($(BUILTINZLIB),yes)
-CORELIBEXTRA += $(ZLIBLIBDIR) $(ZLIBCLILIB)
+CORELIBEXTRA    += $(ZLIBLIBDIR) $(ZLIBCLILIB)
 STATICEXTRALIBS += $(ZLIBLIBDIR) $(ZLIBCLILIB)
 endif
-ifeq ($(BUILDEDITLINE),yes)
-CORELIBEXTRA += $(CURSESLIBDIR) $(CURSESLIB)
-STATICEXTRALIBS += $(CURSESLIBDIR) $(CURSESLIB)
+
+ifneq ($(BUILTINLZMA),yes)
+CORELIBEXTRA    += $(LZMALIBDIR) $(LZMACLILIB)
+STATICEXTRALIBS += $(LZMALIBDIR) $(LZMACLILIB)
+else
+CORELIBEXTRA    += $(LZMALIB)
+STATICEXTRALIBS += $(LZMALIB)
 endif
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
@@ -533,39 +546,31 @@ INCLUDEFILES :=
 # special rules (need to be defined before generic ones)
 cint/cint/lib/dll_stl/G__%.o: cint/cint/lib/dll_stl/G__%.cxx
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
+	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CXX) $(NOOPT) $(CXXFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/lib/dll_stl/G__c_%.o: cint/cint/lib/dll_stl/G__c_%.c
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIRL)/prec_stl \
+	   $(CFLAGS) -I$(CINTDIRL)/prec_stl \
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	$(CC) $(NOOPT) $(CFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/lib/G__%.o: cint/cint/lib/G__%.cxx
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
+	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CXX) $(NOOPT) $(CXXFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 cint/cint/lib/G__c_%.o: cint/cint/lib/G__c_%.c
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIRL)/prec_stl \
+	   $(CFLAGS) -I$(CINTDIRL)/prec_stl \
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	$(CC) $(NOOPT) $(CFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
-G__%.o: G__%.cxx
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
-	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CXX) $(NOOPT) $(CXXFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
-
-G__c_%.o: G__c_%.c
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIRL)/prec_stl \
-	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+cint/cint/%.o: cint/cint/%.cxx
+	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
+	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
 
 cint/cint/%.o: $(ROOT_SRCDIR)/cint/cint/%.cxx
 	$(MAKEDIR)
@@ -577,10 +582,6 @@ cint/cint/%.o: $(ROOT_SRCDIR)/cint/cint/%.c
 	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
 	$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
 
-cint/cint/%.o: cint/cint/%.cxx
-	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
-
 build/rmkdepend/%.o: $(ROOT_SRCDIR)/build/rmkdepend/%.cxx
 	$(MAKEDIR)
 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
@@ -591,9 +592,20 @@ build/rmkdepend/%.o: $(ROOT_SRCDIR)/build/rmkdepend/%.c
 
 define SRCTOOBJ_template
 $(1)/%_tmp.o: $(1)/%_tmp.cxx
-	$$(MAKEDIR)
 	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
 	$$(CXX) $$(OPT) $$(CXXFLAGS) $$(CXXOUT)$$@ -c $$<
+
+$(1)/src/G__%.o: $(1)/src/G__%.cxx
+	$$(MAKEDEP) -R -f$$(patsubst %.o,%.d,$$@) -Y -w 1000 -- \
+	  $$(CXXFLAGS) -D__cplusplus -I$$(CINTDIRL)/prec_stl \
+	  -I$$(CINTDIRSTL) -I$$(CINTDIR)/inc -- $$<
+	$$(CXX) $$(NOOPT) $$(CXXFLAGS) -I. -I$$(CINTDIR)/inc  $$(CXXOUT)$$@ -c $$<
+
+$(1)/src/G__c_%.o: $(1)/src/G__c_%.c
+	$$(MAKEDEP) -R -f$$(patsubst %.o,%.d,$$@) -Y -w 1000 -- \
+	  $$(CFLAGS) -I$$(CINTDIRL)/prec_stl \
+	  -I$$(CINTDIRSTL) -I$$(CINTDIR)/inc -- $$<
+	$$(CC) $$(NOOPT) $$(CFLAGS) -I. -I$$(CINTDIR)/inc  $$(CXXOUT)$$@ -c $$<
 
 $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.cxx
 	$$(MAKEDIR)
@@ -639,8 +651,8 @@ endif
 .PHONY:         all fast config rootcint rootlibs rootexecs dist distsrc \
                 clean distclean maintainer-clean compiledata \
                 version html changelog install uninstall showbuild \
-                releasenotes static map debian redhat skip postbin \
-                showit help
+                releasenotes staticlib static map debian redhat skip postbin \
+                showit help runtimedirs plugins-ios
 
 ifneq ($(findstring map, $(MAKECMDGOALS)),)
 .NOTPARALLEL:
@@ -678,20 +690,19 @@ rootexecs:      rootlibs $(ALLEXECS)
 ifneq ($(HOST),)
 .PHONY:         buildtools
 
-buildtools:     $(BUILDTOOLSDIR)/bin/rootcint
-
-$(BUILDTOOLSDIR)/bin/rootcint:
-		@echo ""; \
-		echo "*** Building build tools in $(BUILDTOOLSDIR)..."; \
-		echo ""; \
-		if [ ! -f $(BUILDTOOLSDIR)/Makefile ]; then \
+buildtools:
+		@if [ ! -f $(BUILDTOOLSDIR)/Makefile ]; then \
+		   echo "*** Building build tools in $(BUILDTOOLSDIR)..."; \
 		   mkdir -p $(BUILDTOOLSDIR); \
 		   cd $(BUILDTOOLSDIR); \
 		   $(ROOT_SRCDIR)/configure $(HOST) --minimal; \
+		else \
+		   echo "*** Running make in $(BUILDTOOLSDIR)..."; \
+		   cd $(BUILDTOOLSDIR); \
 		fi; \
 		($(MAKE) BUILDTOOLS=yes \
 		   TARGETFLAGS=-DR__$(shell echo $(ARCH) | tr 'a-z' 'A-Z') \
-		   rootcint \
+		   rootcint cint/cint/lib/posix/mktypes \
 		) || exit 1;
 
 distclean::
@@ -731,7 +742,7 @@ Makefile: $(addprefix $(ROOT_SRCDIR)/,configure config/rootrc.in \
   config/Makefile-comp.in config/root-config.in config/rootauthrc.in \
   config/rootdaemonrc.in config/mimes.unix.in config/mimes.win32.in \
   config/proofserv.in config/roots.in) config.status
-	@( $(RECONFIGURE) "$?" "$(ROOT_SRCDIR)" || ( \
+	+@( $(RECONFIGURE) "$?" "$(ROOT_SRCDIR)" || ( \
 	   echo ""; echo "Please, run $(ROOT_SRCDIR)/configure again as config option files ($?) have changed."; \
 	   echo ""; exit 1; \
 	 ) )
@@ -742,7 +753,8 @@ $(COMPILEDATA): $(ROOT_SRCDIR)/config/Makefile.$(ARCH) config/Makefile.comp \
 	@$(MAKECOMPDATA) $(COMPILEDATA) "$(CXX)" "$(OPTFLAGS)" "$(DEBUGFLAGS)" \
 	   "$(CXXFLAGS)" "$(SOFLAGS)" "$(LDFLAGS)" "$(SOEXT)" "$(SYSLIBS)" \
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \
-	   "$(MAKESHAREDLIB)" "$(MAKEEXE)" "$(ARCH)" "$(ROOTBUILD)" "$(EXPLICITLINK)"
+	   "$(MAKESHAREDLIB)" "$(MAKEEXE)" "$(ARCH)" "$(ROOTBUILD)" \
+	   "$(EXPLICITLINK)"
 
 ifeq ($(HOST),)
 build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP)
@@ -951,6 +963,7 @@ distclean:: clean
 ifeq ($(PLATFORM),macosx)
 	@rm -f lib/*.dylib
 	@rm -f lib/*.so
+	@(find . -name "*.dSYM" -exec rm -rf {} \; >/dev/null 2>&1;true)
 endif
 	-@(mv -f tutorials/gallery.root tutorials/gallery.root- >/dev/null 2>&1;true)
 	-@(mv -f tutorials/mlp/mlpHiggs.root tutorials/mlp/mlpHiggs.root- >/dev/null 2>&1;true)
@@ -968,7 +981,7 @@ endif
 	-@(mv -f tutorials/gallery.root- tutorials/gallery.root >/dev/null 2>&1;true)
 	-@(mv -f tutorials/mlp/mlpHiggs.root- tutorials/mlp/mlpHiggs.root >/dev/null 2>&1;true)
 	-@(mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root >/dev/null 2>&1;true)
-	@rm -f bin/roota bin/proofserva lib/libRoot.a
+	@rm -f $(ROOTA) $(PROOFSERVA) $(ROOTALIB)
 	@rm -f $(CINTDIR)/include/*.dll $(CINTDIR)/include/*.so*
 	@rm -f $(CINTDIR)/stl/*.dll $(CINTDIR)/stl/*.so*
 	@rm -f $(CINTDIR)/include/sys/*.dll $(CINTDIR)/include/sys/*.so.*
@@ -994,11 +1007,19 @@ maintainer-clean:: distclean
 version: $(CINTTMP)
 	@$(MAKEVERSION)
 
-static: $(ROOTALIB)
+staticlib: $(ROOTALIB)
 
-$(ROOTALIB): $(ALLLIBS)
+static: $(ROOTA)
+
+$(ROOTA) $(PROOFSERVA): $(ROOTALIB) $(MAKESTATIC) $(STATICOBJLIST)
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
-	   "$(XLIBS)" "$(SYSLIBS)" "$(STATICEXTRALIBS)"
+	   "$(XLIBS)" "$(SYSLIBS)" "$(STATICEXTRALIBS)" $(STATICOBJLIST)
+
+$(ROOTALIB): $(ALLLIBS) $(MAKESTATICLIB) $(STATICOBJLIST)
+	@$(MAKESTATICLIB) $(STATICOBJLIST)
+
+plugins-ios: $(ROOTEXE)
+	@$(MAKEPLUGINS)
 
 changelog:
 	@$(MAKECHANGELOG)
@@ -1219,7 +1240,7 @@ uninstall:
 
 ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
 # install directrories needed at run-time
-$(RUNTIMEDIRS):
+runtimedirs:
 	@echo "Rsync'ing $(ROOT_SRCDIR)/etc..."; \
 	$(RSYNC) \
 		--exclude '.svn' \

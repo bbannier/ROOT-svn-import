@@ -455,6 +455,7 @@ Bool_t TGTextView::LoadFile(const char *filename, Long_t startpos, Long_t length
       return kFALSE;
    fclose(fp);
 
+   ShowTop();
    Clear();
    fText->Load(filename, startpos, length);
    Update();
@@ -1020,6 +1021,7 @@ Bool_t TGTextView::HandleSelectionRequest(Event_t *event)
          while (buffer[j] == 16 && buffer[j]) {
             j++;
          }
+         // coverity[secure_coding]
          strcpy(buffer+i+1, buffer+j);
          len -= j - i - 1;
       }

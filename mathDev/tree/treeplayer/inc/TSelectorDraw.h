@@ -28,6 +28,7 @@
 class TTreeFormula;
 class TTreeFormulaManager;
 class TH1;
+class TEntryListArray;
 
 class TSelectorDraw : public TSelector {
 
@@ -39,6 +40,7 @@ protected:
    TTreeFormula  *fSelect;         //  Pointer to selection formula
    TTreeFormulaManager *fManager;  //  Pointer to the formula manager
    TObject       *fTreeElist;      //  pointer to Tree Event list
+   TEntryListArray *fTreeElistArray;   //!  pointer to Tree Event list array
    TH1           *fOldHistogram;   //! Pointer to previously used histogram
    Int_t          fAction;         //! Action type
    Long64_t       fDraw;           //! Last entry loop number when object was drawn
@@ -59,7 +61,8 @@ protected:
    Bool_t         fSelectMultiple; //  true if selection has a variable index
    Bool_t         fCleanElist;     //  true if original Tree elist must be saved
    Bool_t         fObjEval;        //  true if fVar1 returns an object (or pointer to).
-
+   Long64_t       fCurrentSubEntry; // Current subentry when fSelectMultiple is true. Used to fill TEntryListArray
+   
 protected:
    virtual void      ClearFormula();
    virtual Bool_t    CompileVariables(const char *varexp="", const char *selection="");
@@ -86,14 +89,22 @@ public:
    virtual Long64_t  GetSelectedRows() const {return fSelectedRows;}
    TTree            *GetTree() const {return fTree;}
    TTreeFormula     *GetVar(Int_t i) const;
+   // See TSelectorDraw::GetVar
    TTreeFormula     *GetVar1() const {return GetVar(0);}
+   // See TSelectorDraw::GetVar
    TTreeFormula     *GetVar2() const {return GetVar(1);}
+   // See TSelectorDraw::GetVar
    TTreeFormula     *GetVar3() const {return GetVar(2);}
+   // See TSelectorDraw::GetVar
    TTreeFormula     *GetVar4() const {return GetVar(3);}
    virtual Double_t *GetVal(Int_t i) const;
+   // See TSelectorDraw::GetVal
    virtual Double_t *GetV1() const   {return GetVal(0);}
+   // See TSelectorDraw::GetVal
    virtual Double_t *GetV2() const   {return GetVal(1);}
+   // See TSelectorDraw::GetVal
    virtual Double_t *GetV3() const   {return GetVal(2);}
+   // See TSelectorDraw::GetVal
    virtual Double_t *GetV4() const   {return GetVal(3);}
    virtual Double_t *GetW() const    {return fW;}
    virtual Bool_t    Notify();

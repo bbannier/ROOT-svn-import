@@ -544,7 +544,7 @@ Double_t RooProdPdf::calculate(const RooArgList* partIntList, const RooLinkedLis
     partInt = ((RooAbsReal*)partIntList->at(i)) ;
     normSet = ((RooArgSet*)normSetList->At(i)) ;    
     Double_t piVal = partInt->getVal(normSet->getSize()>0 ? normSet : 0) ;
-//     cout << "partInt(" << partInt->GetName() << ") = " << piVal << " normSet = " << normSet << " " << (normSet->getSize()>0 ? *normSet : RooArgSet()) << endl ;
+    //cout << "partInt(" << partInt->GetName() << ") = " << piVal << " normSet = " << normSet << " " << (normSet->getSize()>0 ? *normSet : RooArgSet()) << endl ;
     value *= piVal ;
     if (value<_cutOff) {
       break ;
@@ -587,16 +587,19 @@ Double_t RooProdPdf::calculate(const RooProdPdf::CacheElem& cache, Bool_t /*verb
     Int_t n = cache._partList.getSize() ;
     
     Int_t i ;
+    RooLinkedListIter plIter = cache._partList.iterator() ;
+    RooLinkedListIter nlIter = cache._normList.iterator() ;
+
     for (i=0 ; i<n ; i++) {
-      partInt = ((RooAbsReal*)cache._partList.at(i)) ;
-      normSet = ((RooArgSet*)cache._normList.At(i)) ;    
+      partInt = (RooAbsReal*) plIter.Next() ; //((RooAbsReal*)cache._partList.at(i)) ;
+      normSet = (RooArgSet*) nlIter.Next() ; // ((RooArgSet*)cache._normList.At(i)) ;    
       Double_t piVal = partInt->getVal(normSet->getSize()>0 ? normSet : 0) ;
       //cout << "partInt " << partInt->GetName() << " is of type " << partInt->IsA()->GetName() << endl ;
       if (dynamic_cast<RooAbsPdf*>(partInt)) {
 	cxcoutD(Eval) << "product term " << partInt->GetName() << " normalized over " << (normSet?*normSet:RooArgSet())  
 		      << " = " << partInt->getVal() << " / " << ((RooAbsPdf*)partInt)->getNorm(normSet) << " = " << piVal << endl ;
       } else {
-	cxcoutD(Eval) << "product term " << partInt->GetName() << " normalized over " << (normSet?*normSet:RooArgSet()) << " = " << piVal << endl ;
+	//cout << "product term " << partInt->GetName() << " normalized over " << (normSet?*normSet:RooArgSet()) << " = " << piVal << endl ;
       }
       value *= piVal ;
       if (value<_cutOff) {
@@ -906,6 +909,7 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
 // 	  cout << "PREPARING RATIO HERE (SINGLE TERM)" << endl ;	  
 	  RooAbsReal* ratio = makeCondPdfRatioCorr(*(RooAbsReal*)term->first(),termNSet,termImpSet,normRange(),RooNameReg::str(_refRangeName)) ;	  
 	  ostringstream str ; termImpSet.printValue(str) ;
+// 	  cout << GetName() << "inserting ratio term" << endl ;
 	  ratioTerms[str.str()].add(*ratio) ;
 	}	
       }
@@ -1667,8 +1671,8 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
   if (termNSet.getSize()>0 && termNSet.getSize()==termISet.getSize() && isetRangeName==0) {
 
     
-//     cout << "processProductTerm(" << GetName() << ") case I " << endl ;
-
+    //cout << "processProductTerm(" << GetName() << ") case I " << endl ;
+     
     // Term factorizes    
     return ret ;
   }
@@ -1677,7 +1681,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
   // ------------------------------------------------------------------------------
   if (nset && termNSet.getSize()==0) {
 
-//     cout << "processProductTerm(" << GetName() << ") case II " << endl ;
+    //cout << "processProductTerm(" << GetName() << ") case II " << endl ;
     
     // Drop terms that are not asked to be normalized  
     return ret ;
@@ -1699,7 +1703,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
 
       isOwned=kTRUE ;
 
-//       cout << "processProductTerm(" << GetName() << ") case IIIa func = " << partInt->GetName() << endl ;
+      //cout << "processProductTerm(" << GetName() << ") case IIIa func = " << partInt->GetName() << endl ;
 
       ret[0] = partInt ;
 
@@ -1721,7 +1725,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
       partInt->setStringAttribute("PROD_TERM_TYPE","IIIb") ;
       //partInt->setOperMode(operMode()) ;
 
-//       cout << "processProductTerm(" << GetName() << ") case IIIb func = " << partInt->GetName() << endl ;
+      //cout << "processProductTerm(" << GetName() << ") case IIIb func = " << partInt->GetName() << endl ;
       
       isOwned=kTRUE ;
       ret[0] = partInt ;
@@ -1748,7 +1752,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
     partInt->setStringAttribute("PROD_TERM_TYPE","IVa") ;
     //partInt->setOperMode(operMode()) ;
 
-//     cout << "processProductTerm(" << GetName() << ") case IVa func = " << partInt->GetName() << endl ;
+    //cout << "processProductTerm(" << GetName() << ") case IVa func = " << partInt->GetName() << endl ;
 
     isOwned=kTRUE ;
     ret[0] = partInt ;
@@ -1793,12 +1797,11 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
       name.Append("]") ;
       delete nIter ;
 
-      
       RooAbsReal* partInt = new RooRealIntegral(name.Data(),name.Data(),*pdf,RooArgSet(),&termNSet) ;
       partInt->setStringAttribute("PROD_TERM_TYPE","IVb") ;
       isOwned=kTRUE ;      
 
-//       cout << "processProductTerm(" << GetName() << ") case IVb func = " << partInt->GetName() << endl ;
+      //cout << "processProductTerm(" << GetName() << ") case IVb func = " << partInt->GetName() << endl ;
 
       delete pIter ;
       ret[0] = partInt ;
@@ -1813,7 +1816,9 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
       isOwned=kFALSE ;
 
       delete pIter ;
-//       cout << "processProductTerm(" << GetName() << ") case IVb func = " << pdf->GetName() << endl ;
+      //cout << "processProductTerm(" << GetName() << ") case IVb func = " << pdf->GetName() << endl ;
+
+
       pdf->setStringAttribute("PROD_TERM_TYPE","IVb") ;
       ret[0] = pdf ;
 
@@ -2103,7 +2108,7 @@ void RooProdPdf::generateEvent(Int_t code)
 RooProdPdf::CacheElem::~CacheElem() 
 {
   // Destructor
-  //_normList.Delete() ; //WVE THIS IS AN INTENTIAL LEAK -- MUST FIX LATER
+  _normList.Delete() ; //WVE THIS IS AN INTENTIAL LEAK -- MUST FIX LATER
   if (_rearrangedNum) delete _rearrangedNum ;
   if (_rearrangedDen) delete _rearrangedDen ;
 //   cout << "RooProdPdf::CacheElem dtor, this = " << this << endl ;
@@ -2364,4 +2369,28 @@ void RooProdPdf::printMetaArgs(ostream& os) const
   }
   os << " " ;    
   delete niter ;
+}
+
+
+
+//_____________________________________________________________________________
+Bool_t RooProdPdf::redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t nameChange, Bool_t /*isRecursive*/) 
+{
+  // Implement support for node removal
+
+  if (nameChange && _pdfList.find("REMOVAL_DUMMY")) {
+
+    cxcoutD(LinkStateMgmt) << "RooProdPdf::redirectServersHook(" << GetName() << "): removing REMOVAL_DUMMY" << endl ;
+
+    // Remove node from _pdfList proxy and remove corresponding entry from normset list
+    RooAbsArg* pdfDel = _pdfList.find("REMOVAL_DUMMY") ;
+    
+    TObject* setDel = _pdfNSetList.At(_pdfList.index("REMOVAL_DUMMY")) ;
+    _pdfList.remove(*pdfDel) ;
+    _pdfNSetList.Remove(setDel) ;
+    
+    // Clear caches
+    _cacheMgr.reset() ;
+  }
+  return kFALSE ;
 }

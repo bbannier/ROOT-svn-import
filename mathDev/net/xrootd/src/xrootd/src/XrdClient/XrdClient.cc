@@ -80,7 +80,7 @@ XrdClient::XrdClient(const char *url,
    if (!ConnectionManager)
       Info(XrdClientDebug::kUSERDEBUG,
            "Create",
-           "(C) 2004-2010 by the Xrootd group. XrdClient $Revision: 1.157 $ - Xrootd version: " << XrdVSTRING);
+           "(C) 2004-2010 by the Xrootd group. XrdClient $Revision$ - Xrootd version: " << XrdVSTRING);
    
 #ifndef WIN32
    signal(SIGPIPE, SIG_IGN);
@@ -239,6 +239,9 @@ bool XrdClient::Open(kXR_unt16 mode, kXR_unt16 options, bool doitparallel) {
     for (int connectTry = 0;
 	 (connectTry < connectMaxTry) && (!fConnModule->IsConnected()); 
 	 connectTry++) {
+
+        XrdClientUrlSet urlArray(fInitialUrl);
+        urlArray.Rewind();
 
 	XrdClientUrlInfo *thisUrl = 0;
 	urlstried = (urlstried == urlArray.Size()) ? 0 : urlstried;
@@ -769,6 +772,7 @@ kXR_int64 XrdClient::ReadV(char *buf, kXR_int64 *offsets, int *lens, int nbuf)
             fCounters.ReadVAsyncSubChunks++;
             fCounters.ReadVAsyncBytes += reqvect[startitem].len;
             Read_Async(reqvect[startitem].offset, reqvect[startitem].len, false);
+            res = reqvect[startitem].len;
          }
       } else {
          if (buf) {
@@ -1221,17 +1225,20 @@ bool XrdClient::Close() {
 
     // Use the sync one only if the file was opened for writing
     // To enforce the server side correct data flushing
+    bool status = true;
     if (IsOpenedForWrite())
-      fConnModule->DoWriteHardCheckPoint();
+      if( !fConnModule->DoWriteHardCheckPoint() )
+        status = false;
 
     fConnModule->SendGenCommand(&closeFileRequest,
 				0,
 				0, 0 , FALSE, (char *)"Close");
-  
+
     // No file is opened for now
     fOpenPars.opened = FALSE;
+    fConnModule->Disconnect( false );
 
-    return TRUE;
+    return status;
 }
 
 

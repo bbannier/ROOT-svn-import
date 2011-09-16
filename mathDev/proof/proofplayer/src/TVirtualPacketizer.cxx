@@ -81,6 +81,7 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input, TProofProgressStatus *st)
            maxPacketTime);
       fMaxPacketTime = (Int_t) maxPacketTime;
    }
+   ResetBit(TVirtualPacketizer::kIsTree);
 
    // Create the list to save them in the query result (each derived packetizer is
    // responsible to update this coherently)
@@ -234,11 +235,12 @@ TDSetElement *TVirtualPacketizer::GetNextPacket(TSlave *, TMessage *)
 }
 
 //______________________________________________________________________________
-void TVirtualPacketizer::StopProcess(Bool_t /*abort*/)
+void TVirtualPacketizer::StopProcess(Bool_t /*abort*/, Bool_t stoptimer)
 {
    // Stop process.
 
    fStop = kTRUE;
+   if (stoptimer) HandleTimer(0);
 }
 
 //______________________________________________________________________________
@@ -278,8 +280,11 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
       Info("HandleTimer", "fProgress: %p, isDone: %d",
                           fProgress, TestBit(TVirtualPacketizer::kIsDone));
 
-   if (fProgress == 0 || TestBit(TVirtualPacketizer::kIsDone))
-      return kFALSE; // timer stopped already or reports completed
+   if (fProgress == 0 || TestBit(TVirtualPacketizer::kIsDone)) {
+      // Make sure that the timer is stopped
+      if (fProgress) fProgress->Stop();
+      return kFALSE;
+   }
 
    // Prepare progress info
    TTime tnow = gSystem->Now();

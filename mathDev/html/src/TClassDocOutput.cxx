@@ -1482,15 +1482,13 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
       classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
                 << ".h.html\">header file</a>" << endl;
    else
-      classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
-                << ".h.html\"></a>" << endl;
+      classFile << "<a class=\"descrheadentry\"> </a>" << endl;
 
    if (sourceFileName.Length())
       classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
                 << ".cxx.html\">source file</a>" << endl;
    else
-      classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
-                << ".cxx.html\"></a>" << endl;
+      classFile << "<a class=\"descrheadentry\"> </a>" << endl;
 
    if (!fHtml->IsNamespace(fCurrentClass) && !fHtml->HaveDot()) {
       // make a link to the inheritance tree (postscript)
@@ -1504,9 +1502,19 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
       if (headerFileName.Length()) {
          TString link(viewCVSLink);
          TString sHeader(headerFileName);
-         if (GetHtml()->GetProductName() && !strcmp(GetHtml()->GetProductName(), "ROOT")
-             && sHeader.BeginsWith("include")) {
-            sHeader.Remove(0,7);
+         if (GetHtml()->GetProductName() && !strcmp(GetHtml()->GetProductName(), "ROOT")) {
+            Ssiz_t posInclude = sHeader.Index("/include/");
+            if (posInclude != kNPOS) {
+               // Cut off ".../include", i.e. keep leading '/'
+               sHeader.Remove(0, posInclude + 8);
+            } else {
+               // no /include/; maybe /inc?
+               posInclude = sHeader.Index("/inc/");
+               if (posInclude != kNPOS) {
+                  sHeader = "/";
+                  sHeader += sInclude;
+               }
+            }
             if (sourceFileName && strstr(sourceFileName, "src")) {
                TString src(sourceFileName);
                src.Remove(src.Index("src"), src.Length());

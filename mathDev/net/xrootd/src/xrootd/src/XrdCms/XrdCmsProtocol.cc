@@ -7,13 +7,6 @@
 /*   Produced by Andrew Hanushevsky for Stanford University under contract    */
 /*              DE-AC02-76-SFO0515 with the Department of Energy              */
 /******************************************************************************/
-
-//       $Id$
-
-// Original Version: 1.7 2007/07/31 02:25:15 abh
-
-const char *XrdCmsProtocolCVSID = "$Id$";
- 
   
 #include <unistd.h>
 #include <ctype.h>
@@ -277,7 +270,8 @@ void XrdCmsProtocol::Pander(const char *manager, int mport)
 
 // Establish request routing based on who we are
 //
-   Routing = (Config.asManager() || Config.asPeer() ? &supVOps : &srvVOps);
+   if (Config.asManager()) Routing = (Config.asServer() ? &supVOps : &manVOps);
+      else                 Routing = (Config.asPeer()   ? &supVOps : &srvVOps);
 
 // Compute the Manager's status (this never changes for managers/supervisors)
 //
@@ -524,17 +518,12 @@ XrdCmsRouting *XrdCmsProtocol::Admit()
 // Make sure that our role is compatible with the incomming role
 //
    Reason = 0;
-   if (Config.asServer())       // We are a supervisor
-      {if (Config.asProxy() && (!isProxy || isPeer))
-          Reason = "configuration only allows proxies";
-          else if (!isServ)
-          Reason = "configuration disallows peers and proxies";
-      } else {                  // We are a manager
-       if (Config.asProxy() &&   isServ)
-          Reason = "configuration only allows peers or proxies";
-          else if (isProxy)
-          Reason = "configuration disallows proxies";
-      }
+        if (Config.asProxy()) {if (!isProxy || isPeer)
+                                  Reason = "configuration only allows proxies";
+                              }
+   else if (isProxy)              Reason = "configuration disallows proxies";
+   else if (Config.asServer() && isPeer)
+                                  Reason = "configuration disallows peers";
    if (Reason) return Login_Failed(Reason);
 
 // The server may specify nostage and suspend

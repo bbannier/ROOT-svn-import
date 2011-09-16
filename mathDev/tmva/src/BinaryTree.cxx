@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Eckhard von Toerne
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -15,12 +15,13 @@
  *      Joerg Stelzer   <stelzer@cern.ch>        - DESY, Germany                  *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
+ *      Eckhard v. Toerne  <evt@uni-bonn.de>          - U of Bonn, Germany        *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2005-2011:                                                       *
  *      CERN, Switzerland                                                         *
- *      DESY, Germany                                                             *
  *      U. of Victoria, Canada                                                    *
  *      MPI-K Heidelberg, Germany                                                 *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -42,8 +43,6 @@
 #include "TMVA/MsgLogger.h"
 #include "TMVA/Event.h"
 #include "TMVA/Tools.h"
-#include "TMVA/DecisionTree.h"
-#include "TMVA/BinarySearchTree.h"
 
 ClassImp(TMVA::BinaryTree)
 
@@ -136,29 +135,16 @@ void* TMVA::BinaryTree::AddXMLTo(void* parent) const {
 //_______________________________________________________________________
 void TMVA::BinaryTree::ReadXML(void* node, UInt_t tmva_Version_Code ) {
    // read attributes from XML
+
    this->DeleteNode( fRoot );
    fRoot= CreateNode();
+
    void* trnode = gTools().GetChild(node);
    fRoot->ReadXML(trnode, tmva_Version_Code);
+
    this->SetTotalTreeDepth();
 }
 
-//_______________________________________________________________________
-TMVA::BinaryTree* TMVA::BinaryTree::CreateFromXML(void* node, UInt_t tmva_Version_Code ) {
-   // re-create a new tree (decision tree or search tree) from XML
-   std::string type("");
-   gTools().ReadAttr(node,"type", type);
-   BinaryTree* bt = 0;
-   if(type == "DecisionTree") {
-      bt = new DecisionTree();
-   } else if(type == "BinarySearchTree") {
-      bt = new BinarySearchTree();
-   } else {
-      gTools().Log() << kFATAL << "Can't read binary tree of type '" << type << "'" << Endl;
-   }
-   bt->ReadXML( node, tmva_Version_Code );
-   return bt;
-}
 
 //_______________________________________________________________________
 ostream& TMVA::operator<< (ostream& os, const TMVA::BinaryTree& tree)

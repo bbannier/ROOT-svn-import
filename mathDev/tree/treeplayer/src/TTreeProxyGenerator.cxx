@@ -1255,7 +1255,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                } else {
                   type = Form("TStlSimpleProxy<%s >", cl->GetName());
                   AddHeader(cl);
-                  if (!cl->IsLoaded()) AddPragma(Form("#pragma link6 C++ class %s;\n", cl->GetName()));
+                  if (!cl->IsLoaded()) AddPragma(Form("#pragma link C++ class %s;\n", cl->GetName()));
                   AddDescriptor( new TBranchProxyDescriptor( branchname, type, branchname ) );
                   continue;
                }
@@ -1311,10 +1311,11 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                AnalyzeBranches(1,desc,dynamic_cast<TBranchElement*>(branch),info);
             }
             desc = AddClass(desc);
-            type = desc->GetName();
-            TString dataMemberName = branchname;
-            AddDescriptor( new TBranchProxyDescriptor( dataMemberName, type, branchname ) );
-
+            if (desc) {
+               type = desc->GetName();
+               TString dataMemberName = branchname;
+               AddDescriptor( new TBranchProxyDescriptor( dataMemberName, type, branchname ) );
+            }
             if ( branchname[strlen(branchname)-1] != '.' ) {
                // If there is no dot also include the data member directly
 
@@ -1673,7 +1674,15 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       }
 
       fHeaderFileName = fPrefix;
-      fHeaderFileName.Append(".h");
+      TString classname = gSystem->BaseName(fPrefix);
+      
+      // Check if there is already an extension and extract it.
+      Ssiz_t pos = classname.Last('.');
+      if (pos != kNPOS) {
+         classname.Remove(pos);
+      } else {
+         fHeaderFileName.Append(".h");
+      }
 
       // Check to see if the target file exist.
       // If they do we will generate the proxy in temporary file and modify the original
@@ -1685,7 +1694,6 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
          updating = kTRUE;
       }
 
-      TString classname = gSystem->BaseName(fPrefix);
 
       TString treefile;
       Bool_t ischain = fTree->InheritsFrom(TChain::Class());
@@ -1755,6 +1763,8 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       }
       if (hf == 0) {
          Error("WriteProxy","Unable to open the file %s for writing.",fHeaderFileName.Data());
+         delete [] filename;
+         delete [] cutfilename;
          return;
       }
 

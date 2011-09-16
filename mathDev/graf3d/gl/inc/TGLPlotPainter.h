@@ -194,6 +194,8 @@ private:
    const TColor         *fPadColor;
 
 protected:
+   const Float_t        *fPhysicalShapeColor;
+
    Double_t              fPadPhi;
    Double_t              fPadTheta;
    TH1                  *fHist;
@@ -223,8 +225,9 @@ protected:
       kTrueColorSelectionBase = 10
    };
 
-   ESelectionBase        fSelectionBase;
+   Int_t                 fSelectionBase;
    mutable Bool_t        fDrawPalette;
+   Bool_t                fDrawAxes;
 
 public:
 /*   TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord, Int_t context,
@@ -236,6 +239,10 @@ public:
    TGLPlotPainter(TGLPlotCamera *camera);
 
    const TGLPlotBox& RefBackBox() const { return fBackBox; }
+   void              SetPhysicalShapeColor(const Float_t *rgba)
+   {
+      fPhysicalShapeColor = rgba;
+   }
 
    virtual void     InitGL()const = 0;
    virtual void     DeInitGL()const = 0;
@@ -270,6 +277,11 @@ public:
 
    Bool_t           CutAxisSelected()const{return !fHighColor && fSelectedPart <= kZAxis && fSelectedPart >= kXAxis;}
    
+   void SetDrawFrontBox(Bool_t b) {fBackBox.SetDrawFront(b);}
+   void SetDrawBackBox(Bool_t b) {fBackBox.SetDrawBack(b);}
+   void SetDrawAxes(Bool_t s) {fDrawAxes = s;}
+   Bool_t GetDrawAxes() {return fDrawAxes;}
+
 protected:
    const TColor    *GetPadColor()const;
    //
@@ -406,8 +418,10 @@ class TGLLevelPalette;
 
 namespace Rgl {
 
-void DrawPalette(const TGLPlotCamera * camera, const TGLLevelPalette & palette);
-void DrawPaletteAxis(const TGLPlotCamera * camera, const Range_t & minMax, Bool_t logZ);
+void DrawPalette(const TGLPlotCamera *camera, const TGLLevelPalette &palette);
+void DrawPalette(const TGLPlotCamera *camera, const TGLLevelPalette &palette,
+                 const std::vector<Double_t> &levels);
+void DrawPaletteAxis(const TGLPlotCamera *camera, const Range_t &minMax, Bool_t logZ);
 
 //Polygonal histogram (TH2Poly) is slightly stretched along x and y.
 extern const Double_t gH2PolyScaleXY;

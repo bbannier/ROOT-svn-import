@@ -5,7 +5,7 @@
 ## Initial version: 10.6.2008
 ##
 ## Version info: $Id$
-## Checked in by $Author: feichtinger $
+## Checked in by $Author$
 #######################################################################
 
 # preprocessor flags
@@ -20,6 +20,7 @@ Secsssincdir = $(includedir)/xrootd/XrdSecsss
 lib_LTLIBRARIES = libXrdSecsss.la
 
 bin_PROGRAMS = xrdsssadmin
+man8_MANS = ../../docs/man/xrdsssadmin.8
 
 Secsssinc_HEADERS = XrdSecProtocolsss.hh  XrdSecsssID.hh  XrdSecsssKT.hh  XrdSecsssRR.hh
 
@@ -34,9 +35,9 @@ libXrdSecsss_la_LIBADD = ../XrdCrypto/libXrdCryptoLite.la \
                       ../XrdOuc/libXrdOuc.la \
                       ../XrdNet/libXrdNet.la \
                       ../XrdSys/libXrdSys.la \
-                     ../XrdNet/libXrdNetUtil.la
+                      ../XrdNet/libXrdNetUtil.la
 
-libXrdSecsss_la_LDFLAGS = -module $(CRYPTLIB) $(OPENSSL_LIBDIR) -lcrypto
+libXrdSecsss_la_LDFLAGS = -module $(CRYPTLIB) $(OPENSSL_LIBDIR)
 
 xrdsssadmin_SOURCES = XrdSecsssAdmin.cc
 xrdsssadmin_LDFLAGS = -static

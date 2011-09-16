@@ -52,8 +52,6 @@ TFileInfo::TFileInfo(const char *in, Long64_t size, const char *uuid,
    if (md5) {
       SafeDelete(fMD5);
       fMD5 = new TMD5((const UChar_t*)md5);
-   } else if (!fMD5) {
-      fMD5 = new TMD5;
    }
    // The meta information
    if (meta) {
@@ -427,11 +425,13 @@ void TFileInfo::Print(Option_t *option) const
    // the default tree name is passed via the option ("T:<default_tree>") by the
    // owning TFileCollection.
 
-   GetMD5()->Final();
+   if (GetMD5()) GetMD5()->Final();
    TString opt(option);
    if (opt.Contains("L", TString::kIgnoreCase)) {
 
-      Printf("UUID: %s\nMD5:  %s\nSize: %lld", GetUUID()->AsString(), GetMD5()->AsString(), GetSize());
+      Printf("UUID: %s\nMD5:  %s\nSize: %lld", GetUUID() ? GetUUID()->AsString() : "undef",
+                                               GetMD5() ? GetMD5()->AsString() : "undef",
+                                               GetSize());
 
       TIter next(fUrlList);
       TUrl *u;

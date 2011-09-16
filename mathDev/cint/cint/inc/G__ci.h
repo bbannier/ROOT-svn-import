@@ -829,6 +829,8 @@ typedef int (*G__IgnoreInclude)();
 #define G__LOCALSTATICBODY (-3)
 #define G__COMPILEDGLOBAL  (-4)
 #define G__AUTOARYDISCRETEOBJ (-5)
+#define G__USING_VARIABLE (-6)
+#define G__USING_STATIC_VARIABLE (-7)
 
 #define G__LOCAL    0
 #ifdef G__MEMBERFUNC
@@ -1741,7 +1743,7 @@ public:
       return _tmp._read;
    }
 };
-#elif !__CINT__
+#elif !defined(__CINT__)
 typedef union {
    void *_read;
    void (*_write)();
