@@ -55,7 +55,7 @@ $(CLINGDS):     $(CLINGH) $(CLINGL) $(ROOTCINTTMPDEP)
 
 $(ROOTCLING):   $(ROOTCLINGO) $(BOOTLIBSDEP)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) $(BOOTULIBS) \
-		   $(RPATH) $(BOOTLIBS) $(SYSLIBS) \
+		   $(RPATH) $(BOOTLIBS) $(SYSLIBS) -lReflex \
 		   -L$(LLVMDIR)/lib -lcling 
 
 all-$(MODNAME): $(ROOTCLING)
