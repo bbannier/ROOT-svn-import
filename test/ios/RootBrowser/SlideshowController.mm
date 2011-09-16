@@ -79,6 +79,7 @@
 
          if (fileContainer->GetNumberOfObjects() > 1) {
             [self drawObject : fileContainer->GetObject(1) inAPad : pads[1] option:fileContainer->GetDrawOption(1)];
+            [padParentView addSubview : padViews[1]];
             [padViews[1] setNeedsDisplay];
          }
 
@@ -182,8 +183,10 @@
    [UIView setAnimationCurve : UIViewAnimationCurveEaseInOut];
    [UIView setAnimationTransition : currentAnimation forView : padParentView cache : YES];
 
-   [padViews[viewToHide] removeFromSuperview];
-   [padParentView addSubview : padViews[viewToShow]];
+   padViews[viewToHide].hidden = YES;
+   padViews[viewToShow].hidden = NO;
+//   [padViews[viewToHide] removeFromSuperview];
+//   [padParentView addSubview : padViews[viewToShow]];
    
    [UIView commitAnimations];
 
