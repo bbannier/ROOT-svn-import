@@ -1267,11 +1267,11 @@
 		<string>PrimaryDocumentVisibleCharacterRange</string>
 		<string>HideAllIssues</string>
 		<string>PrimaryDocumentSelectedCharacterRange</string>
-		<real>337870755.59517998</real>
-		<string>{3737, 3008}</string>
+		<real>337870905.18269098</real>
+		<string>{3690, 2906}</string>
 		<false/>
-		<string>{2715, 0}</string>
-		<string>-initWithNibName:bundle:fileContainer:</string>
+		<string>{6146, 0}</string>
+		<string>-changeViews</string>
 		<string>Xcode.IDEKit.EditorDocument.SourceCode</string>
 		<dict>
 			<key>$class</key>
@@ -19982,9 +19982,9 @@
 				</dict>
 			</array>
 		</dict>
-		<real>337870755.59461802</real>
-		<string>{3737, 3008}</string>
-		<string>{2715, 0}</string>
+		<real>337870905.182051</real>
+		<string>{3690, 2906}</string>
+		<string>{6146, 0}</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -30457,7 +30457,7 @@
 				<integer>2114</integer>
 			</dict>
 			<key>NS.time</key>
-			<real>337870754.63836497</real>
+			<real>337870900.181315</real>
 		</dict>
 		<dict>
 			<key>$classes</key>
@@ -30468,7 +30468,7 @@
 			<key>$classname</key>
 			<string>NSDate</string>
 		</dict>
-		<string>Today at 2:59 PM</string>
+		<string>Today at 3:01 PM</string>
 		<integer>234</integer>
 		<dict>
 			<key>$class</key>
