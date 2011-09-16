@@ -22,6 +22,7 @@
 		702DDD261416141A009FC6F3 /* LineStyleInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702DDD241416141A009FC6F3 /* LineStyleInspector.xib */; };
 		702DDD2914161789009FC6F3 /* InspectorWithNavigation.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */; };
 		705A503614066421004C1C8B /* ScrollViewWithPadView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 705A503514066421004C1C8B /* ScrollViewWithPadView.mm */; };
+		705F1A68142347CA003045D9 /* SlideView.m in Sources */ = {isa = PBXBuildFile; fileRef = 705F1A67142347CA003045D9 /* SlideView.m */; };
 		70681C0D1416365900F8338A /* PadInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70681C0B1416365900F8338A /* PadInspector.mm */; };
 		70681C0E1416365900F8338A /* PadInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70681C0C1416365900F8338A /* PadInspector.xib */; };
 		70681C1314163A2300F8338A /* PadTicksGridInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70681C1114163A2300F8338A /* PadTicksGridInspector.xib */; };
@@ -115,6 +116,8 @@
 		702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = InspectorWithNavigation.mm; sourceTree = "<group>"; };
 		705A503414066421004C1C8B /* ScrollViewWithPadView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScrollViewWithPadView.h; sourceTree = "<group>"; };
 		705A503514066421004C1C8B /* ScrollViewWithPadView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ScrollViewWithPadView.mm; sourceTree = "<group>"; };
+		705F1A66142347CA003045D9 /* SlideView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SlideView.h; sourceTree = "<group>"; };
+		705F1A67142347CA003045D9 /* SlideView.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = SlideView.m; sourceTree = "<group>"; };
 		70681C0A1416365900F8338A /* PadInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadInspector.h; sourceTree = "<group>"; };
 		70681C0B1416365900F8338A /* PadInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PadInspector.mm; sourceTree = "<group>"; };
 		70681C0C1416365900F8338A /* PadInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PadInspector.xib; sourceTree = "<group>"; };
@@ -436,6 +439,8 @@
 				70249BDB1403D644006A19E6 /* PadView.h */,
 				705A503414066421004C1C8B /* ScrollViewWithPadView.h */,
 				705A503514066421004C1C8B /* ScrollViewWithPadView.mm */,
+				705F1A66142347CA003045D9 /* SlideView.h */,
+				705F1A67142347CA003045D9 /* SlideView.m */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -638,6 +643,7 @@
 				7073A2871417AA10001A0FE2 /* AxisTitleInspector.mm in Sources */,
 				7068FF24141A0EAF003560A1 /* AxisFontInspector.mm in Sources */,
 				7068FF31141A3944003560A1 /* AxisLabelsInspector.mm in Sources */,
+				705F1A68142347CA003045D9 /* SlideView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
