@@ -46,6 +46,7 @@
       pads[i] = new ROOT_iOS::Pad(padFrame.size.width, padFrame.size.height);
       padViews[i] = [[SlideView alloc] initWithFrame : padFrame andPad : pads[i]];
       [padParentView addSubview : padViews[i]];
+      padViews[i].hidden = YES;
    }
 }
 
@@ -91,6 +92,7 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
+   NSLog(@"dealloc");
    for (unsigned i = 0; i < 2; ++i) {
       //Delete for null and message to nil means nothing.
       delete pads[i];
@@ -133,6 +135,7 @@
 - (void) viewWillAppear : (BOOL)animated
 {
    [self correctFramesForOrientation : self.interfaceOrientation];
+   padViews[0].hidden = NO;
 }
 
 //____________________________________________________________________________________________________
