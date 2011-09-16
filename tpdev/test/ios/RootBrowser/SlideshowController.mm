@@ -1,18 +1,13 @@
+#import <stdlib.h>
+
 #import <QuartzCore/QuartzCore.h>
 
 #import "SlideshowController.h"
+#import "SlideView.h"
 
 //C++ (ROOT) imports.
 #import "IOSFileContainer.h"
 #import "IOSPad.h"
-
-static const CGRect slideViewFrame = CGRectMake(0.f, 0.f, 650.f, 650.f);
-
-namespace {
-
-typedef ROOT_iOS::FileContainer::size_type size_type;
-
-}
 
 @implementation SlideshowController
 
@@ -22,212 +17,89 @@ typedef ROOT_iOS::FileContainer::size_type size_type;
    CGRect mainFrame;
    UIInterfaceOrientationIsPortrait(orientation) ? mainFrame = CGRectMake(0.f, 44.f, 768.f, 960.f)
                                                  : (mainFrame = CGRectMake(0.f, 44.f, 1024.f, 704.f));
+
+   
    parentView.frame = mainFrame;
-   CGRect scrollFrame = slideViewFrame;
-   scrollFrame.origin.x = mainFrame.size.width / 2 - scrollFrame.size.width / 2;
-   scrollFrame.origin.y = mainFrame.size.height / 2 - scrollFrame.size.height / 2;
-   scrollView.frame = scrollFrame;
    
-   shadowCaster.frame = scrollFrame;
+   CGRect padFrame = [SlideView slideFrame];
+   padFrame.origin = CGPointMake(mainFrame.size.width / 2 - padFrame.size.width / 2, mainFrame.size.height / 2 - padFrame.size.height / 2);
+   
+   padParentView.frame = padFrame;
+
+   if (padViews[0]) {
+      padFrame.origin = CGPointZero;
+      padViews[0].frame = padFrame;
+      padViews[1].frame = padFrame;
+   }
 }
 
 //____________________________________________________________________________________________________
-- (UIImage *) createImageForObjectAtIndex : (unsigned) objIndex
+- (void) initPadViews
 {
-   const CGRect rect = slideViewFrame;
-   UIGraphicsBeginImageContext(rect.size);
-   CGContextRef ctx = UIGraphicsGetCurrentContext();
+   const CGRect padFrame = [SlideView slideFrame];
 
-   if (!ctx) {
-      UIGraphicsEndImageContext();
-      return nil;
+   unsigned nObjects = fileContainer->GetNumberOfObjects();
+   if (nObjects > 2)
+      nObjects = 2;
+
+   for (unsigned i = 0; i < nObjects; ++i) {
+      pads[i] = new ROOT_iOS::Pad(padFrame.size.width, padFrame.size.height);
+      padViews[i] = [[SlideView alloc] initWithFrame : padFrame andPad : pads[i]];
    }
-      
-   //Now draw into this context.
-   CGContextTranslateCTM(ctx, 0.f, rect.size.height);
-   CGContextScaleCTM(ctx, 1.f, -1.f);
-      
-   //Fill bitmap with white first.
-   CGContextSetRGBFillColor(ctx, 1.f, 0.f, 0.f, 1.f);
-   CGContextFillRect(ctx, rect);
-   //Set context and paint pad's contents
-   //with special colors (color == object's identity)
+   
+   [padParentView addSubview : padViews[0]];
+}
+
+//____________________________________________________________________________________________________
+- (void) drawObject : (TObject *)obj inAPad : (ROOT_iOS::Pad *)pad option : (const char *)opt
+{
    pad->cd();
-   pad->SetContext(ctx);
-   pad->SetViewWH(rect.size.width, rect.size.height);
    pad->Clear();
-   fileContainer->GetObject(objIndex)->Draw(fileContainer->GetDrawOption(objIndex));
-   pad->Paint();
-   
-   UIImage *image = UIGraphicsGetImageFromCurrentImageContext();//autoreleased UIImage.
-   [image retain];
-   UIGraphicsEndImageContext();
-       
-   return image;
-}
-
-//____________________________________________________________________________________________________
-- (void) setAdjacentIndices
-{
-   //Pre-condition: fileContainer has at least one object inside.
-   currIndex > 0 ? prevIndex = currIndex - 1 : prevIndex = fileContainer->GetNumberOfObjects() - 1;
-   currIndex + 1 == fileContainer->GetNumberOfObjects() ? nextIndex = 0 : nextIndex = currIndex + 1;
-}
-
-//____________________________________________________________________________________________________
-- (void) initPadViewsAndScroll
-{
-   CGRect padFrame = slideViewFrame;
-
-   if (fileContainer->GetNumberOfObjects() == 1) {
-      //This is the only special case.
-      pad = new ROOT_iOS::Pad(slideViewFrame.size.width, slideViewFrame.size.height);
-      padImageViews[0] = [[UIImageView alloc] initWithFrame : padFrame];
-      [scrollView addSubview : padImageViews[0]];
-      [padImageViews[0] release];
-      scrollView.contentSize = padFrame.size;
-   } else {
-      pad = new ROOT_iOS::Pad(slideViewFrame.size.width, slideViewFrame.size.height);
-
-      for (unsigned i = 0; i < 3; ++i) {
-         padFrame.origin.x = i * padFrame.size.width;
-
-         padImageViews[i] = [[UIImageView alloc] initWithFrame : padFrame];
-         [scrollView addSubview : padImageViews[i]];
-         [padImageViews[i] release];
-      }
-      
-      scrollView.contentSize = CGSizeMake(3 * padFrame.size.width, padFrame.size.height);
-      [scrollView scrollRectToVisible:padImageViews[1].frame animated : NO];
-
-   }
-}
-
-//____________________________________________________________________________________________________
-- (void) loadPagesForCurrentIndex
-{
-   //Pre-conditions: file container must have at least one object;
-   //pad(s) and view(s) must be initialized already.
-   
-   if (fileContainer->GetNumberOfObjects() == 1) {
-      UIImage *image = [self createImageForObjectAtIndex : 0];
-      padImageViews[0].image = image;
-      [image release];
-   } else {
-      UIImage *image = [self createImageForObjectAtIndex : prevIndex];
-      padImageViews[0].image = image;
-      [image release];
-      
-      image = [self createImageForObjectAtIndex : currIndex];
-      padImageViews[1].image = image;
-      [image release];
-      
-      image = [self createImageForObjectAtIndex : nextIndex];
-      padImageViews[2].image = image;
-      [image release];
-   }
+   obj->Draw(opt);
 }
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil fileContainer : (ROOT_iOS::FileContainer *)container
 {
-   self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
 
    [self view];
 
    if (self) {
       fileContainer = container;
-
+      
       if (fileContainer->GetNumberOfObjects()) {
-         [self initPadViewsAndScroll];
+         [self initPadViews];
 
-         prevIndex = currIndex = nextIndex = 0;//This is done by runtime already.
-         [self setAdjacentIndices];
-         [self loadPagesForCurrentIndex];
-         
-         scrollView.canCancelContentTouches = YES;
-         scrollView.delaysContentTouches = YES;
-         
+         nCurrentObject = 0;
+         visiblePad = 0;
+
+         [self drawObject : fileContainer->GetObject(0) inAPad : pads[0] option:fileContainer->GetDrawOption(0)];
+         [padViews[0] setNeedsDisplay];
+
+         if (fileContainer->GetNumberOfObjects() > 1) {
+            [self drawObject : fileContainer->GetObject(1) inAPad : pads[1] option:fileContainer->GetDrawOption(1)];
+            [padViews[1] setNeedsDisplay];
+         }
+
+         //Ready for show now.
       }
-
-      [parentView bringSubviewToFront : scrollView];
-
-      [self correctFramesForOrientation : self.interfaceOrientation];
-
-      //Many thanks to Apple - I need this stupid view, because 
-      //UIScrollView does not cast shadow. Why? May be Jobs "think different" knows?
-      shadowCaster.layer.shadowColor = [UIColor blackColor].CGColor;
-      shadowCaster.layer.shadowOpacity = 0.3f;
-      shadowCaster.layer.shadowOffset = CGSizeMake(10.f, 10.f);
-      shadowCaster.layer.shadowPath = [UIBezierPath bezierPathWithRect : slideViewFrame].CGPath;
    }
 
    return self;
 }
 
 //____________________________________________________________________________________________________
-- (void) scrollPagesLeft
-{
-   //Shift 'current' and 'next' image to the left (making them 'prev' and 'current')
-   //and load a new image into the 'next'.
-   UIImage *prevImage = padImageViews[1].image;
-   [prevImage retain];
-   UIImage *currImage = padImageViews[2].image;
-   [currImage retain];
-   
-   padImageViews[0].image = prevImage; //And delete old 'previous' image.
-   padImageViews[1].image = currImage;
-   
-   [prevImage release];
-   [currImage release];
-   
-   //Draw only one new object.
-   UIImage *nextImage = [self createImageForObjectAtIndex : nextIndex];
-   padImageViews[2].image = nextImage;
-   [nextImage release];
-}
-
-//____________________________________________________________________________________________________
-- (void) scrollPagesRight
-{
-   //Shift 'previous' and 'current' image to right (making them 'current' and 'next')
-   //and load a new image into 'previous'.
-   UIImage *currImage = padImageViews[0].image;
-   [currImage retain];
-   UIImage *nextImage = padImageViews[1].image;
-   [nextImage retain];
-   
-   padImageViews[1].image = currImage;
-   padImageViews[2].image = nextImage;//And delete old 'next' image.
-   
-   [currImage release];
-   [nextImage release];
-   
-   UIImage *prevImage = [self createImageForObjectAtIndex : prevIndex];
-   padImageViews[0].image = prevImage;
-   [prevImage release];
-}
-
-//____________________________________________________________________________________________________
-- (void) scrollViewDidEndDecelerating : (UIScrollView *) sender 
-{
-   if (scrollView.contentOffset.x > scrollView.frame.size.width) {
-      currIndex + 1 == fileContainer->GetNumberOfObjects() ? currIndex = 0 : ++currIndex;
-      [self setAdjacentIndices];
-      [self scrollPagesLeft];
-   } else if (scrollView.contentOffset.x < scrollView.frame.size.width) {
-      currIndex > 0 ? --currIndex : currIndex = fileContainer->GetNumberOfObjects() - 1;
-      [self setAdjacentIndices];
-      [self scrollPagesRight];
-   }
-   
-   [scrollView scrollRectToVisible:CGRectMake(slideViewFrame.size.width, 0.f, slideViewFrame.size.width, slideViewFrame.size.height) animated : NO];
-}
-
-//____________________________________________________________________________________________________
 - (void)dealloc
 {
-   delete pad;
+   for (unsigned i = 0; i < 2; ++i) {
+      //Delete for null and message to nil means nothing.
+      delete pads[i];
+      [padViews[i] release];
+   }
+
+   if (timer)
+      [timer invalidate];
 
    [super dealloc];
 }
@@ -246,7 +118,8 @@ typedef ROOT_iOS::FileContainer::size_type size_type;
 - (void)viewDidLoad
 {
    [super viewDidLoad];
-   // Do any additional setup after loading the view from its nib.
+   
+   [self correctFramesForOrientation : self.interfaceOrientation];
 }
 
 //____________________________________________________________________________________________________
@@ -255,6 +128,29 @@ typedef ROOT_iOS::FileContainer::size_type size_type;
    [super viewDidUnload];
    // Release any retained subviews of the main view.
    // e.g. self.myOutlet = nil;
+}
+
+//____________________________________________________________________________________________________
+- (void) viewWillAppear : (BOOL)animated
+{
+   [self correctFramesForOrientation : self.interfaceOrientation];
+}
+
+//____________________________________________________________________________________________________
+- (void) viewDidAppear : (BOOL)animated
+{
+   timer = [NSTimer scheduledTimerWithTimeInterval : 2.f target : self selector : @selector(changeViews) userInfo : nil repeats : YES];
+}
+
+
+//____________________________________________________________________________________________________
+- (void) viewDidDisappear:(BOOL)animated
+{
+   if (timer) {
+      [timer invalidate];
+      timer = 0;
+      NSLog(@"timer invalidated");
+   }
 }
 
 //____________________________________________________________________________________________________
@@ -268,6 +164,34 @@ typedef ROOT_iOS::FileContainer::size_type size_type;
 //____________________________________________________________________________________________________
 - (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration : (NSTimeInterval)duration {
    [self correctFramesForOrientation : interfaceOrientation];
+}
+
+#pragma mark - Animation.
+//____________________________________________________________________________________________________
+- (void) changeViews
+{
+   const UIViewAnimationTransition animations[] = {UIViewAnimationTransitionFlipFromLeft, UIViewAnimationTransitionFlipFromRight, 
+                                                   UIViewAnimationTransitionCurlUp, UIViewAnimationTransitionCurlDown};
+   const UIViewAnimationTransition currentAnimation = animations[rand() % 4];
+
+   const unsigned viewToHide = visiblePad;
+   const unsigned viewToShow = !visiblePad;
+
+   [UIView beginAnimations : @"hide view" context : nil];
+   [UIView setAnimationDuration : 0.5];
+   [UIView setAnimationCurve : UIViewAnimationCurveEaseInOut];
+   [UIView setAnimationTransition : currentAnimation forView : padParentView cache : YES];
+
+   [padViews[viewToHide] removeFromSuperview];
+   [padParentView addSubview : padViews[viewToShow]];
+   
+   [UIView commitAnimations];
+
+   nCurrentObject + 1 == fileContainer->GetNumberOfObjects() ? nCurrentObject = 0 : ++nCurrentObject;
+   visiblePad = viewToShow;
+   const unsigned next = nCurrentObject + 1 == fileContainer->GetNumberOfObjects() ? 0 : nCurrentObject + 1;
+   [self drawObject : fileContainer->GetObject(next) inAPad : pads[viewToHide] option : fileContainer->GetDrawOption(next)];
+   [padViews[viewToHide] setNeedsDisplay];
 }
 
 @end

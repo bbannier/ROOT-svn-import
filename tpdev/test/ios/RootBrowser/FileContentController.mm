@@ -201,7 +201,6 @@
 - (void) selectObjectFromFile : (ObjectShortcut *) shortcut
 {
    objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
-//   objectController.navigationItem.title = [NSString stringWithFormat : @"%s", shortcut.objectName];
    [objectController setObjectWithIndex : shortcut.objectIndex fromContainer : fileContainer];
    [self.navigationController pushViewController : objectController animated : YES];
 }
