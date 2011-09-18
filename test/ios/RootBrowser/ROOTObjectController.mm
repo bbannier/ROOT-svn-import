@@ -404,6 +404,10 @@ static const CGFloat maximumZoom = 2.f;
 
    padView.frame = newFrame;
    padView.selectionView.frame = CGRectMake(0.f, 0.f, newFrame.size.width, newFrame.size.height);
+   
+   //
+   pad->SetViewWH(newFrame.size.width, newFrame.size.height);
+   //
 
    [padView setNeedsDisplay];
    
@@ -429,6 +433,9 @@ static const CGFloat maximumZoom = 2.f;
       zoomed = NO;
       padView.frame = CGRectMake(0.f, 0.f, padW, padH);
       padView.selectionView.frame = CGRectMake(0.f, 0.f, padW, padH);
+      //
+      pad->SetViewWH(padW, padH);
+      //
       scrollView.maximumZoomScale = maximumZoom;
       scrollView.minimumZoomScale = 1.f;
       scrollView.contentOffset = CGPointZero;
