@@ -99,7 +99,7 @@ void CTLineGuard::GetBounds(UInt_t &w, UInt_t &h)const
 {
    CGFloat ascent = 0.f, descent = 0.f, leading = 0.f;
    w = UInt_t(CTLineGetTypographicBounds(fCTLine, &ascent, &descent, &leading));
-   h = UInt_t(ascent + descent + leading);
+   h = UInt_t(ascent);// + descent + leading);
 }
 
 //_________________________________________________________________
