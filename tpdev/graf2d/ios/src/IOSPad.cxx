@@ -120,6 +120,8 @@ void Pad::SetViewWH(UInt_t viewW, UInt_t viewH)
    fViewW = viewW;
    fViewH = viewH;
    
+   ResizePad();
+   
    fPainter.SetTransform(fViewW, GetX1(), GetX2(), fViewH, GetY1(), GetY2());
 }
 
