@@ -101,13 +101,22 @@ static void init_class_map();
 static void shutdown_class_map();
 static std::string get_fully_qualified_name(const clang::NamedDecl* D);
 
+clang::CompilerInstance* tcling_Dict::GetCI(clang::CompilerInstance* ci /*= 0*/)
+{
+   static clang::CompilerInstance* CI = 0;
+   if (ci) {
+      CI = ci;
+   }
+   return CI;
+}
+
 clang::ASTContext* tcling_Dict::GetASTContext(clang::ASTContext* ctx /*=0*/)
 {
    static clang::ASTContext* Context = 0;
    if (ctx) {
       Context = ctx;
    }
-   return ctx;
+   return Context;
 }
 
 const clang::TranslationUnitDecl* tcling_Dict::GetTranslationUnitDecl(const clang::TranslationUnitDecl* tu /*=0*/)
@@ -598,6 +607,7 @@ static void init_class_map()
 
    m_llvm_context = new llvm::LLVMContext;
    m_CI = createCI();
+   tcling_Dict::GetCI(m_CI);
    clang::CompilerInstance* CI = 0;
    CI = getCI();
    if (!CI) {

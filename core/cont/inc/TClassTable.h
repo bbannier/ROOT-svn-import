@@ -97,12 +97,14 @@ R__EXTERN TClassTable *gClassTable;
 
 namespace clang {
   class ASTContext;
+  class CompilerInstance;
   class Decl;
   class TranslationUnitDecl;
 }
 
 class tcling_Dict { // Singleton
 public:
+  static clang::CompilerInstance* GetCI(clang::CompilerInstance* ci = 0);
   static clang::ASTContext* GetASTContext(clang::ASTContext* ctx = 0);
   static const clang::TranslationUnitDecl* GetTranslationUnitDecl(const clang::TranslationUnitDecl* = 0);
   static std::multimap<const std::string, const clang::Decl*>* ClassNameToDecl();
