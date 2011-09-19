@@ -20,7 +20,9 @@
 
 class RooValues {
  public:
-  RooValues() {} ;
+  RooValues(Double_t& value) ;
+  RooValues(const RooValues& other) ;
+  virtual ~RooValues() {} 
   inline Bool_t isEmpty() const { return _valuesCPU.empty(); }
   inline Int_t getSize() const { return _valuesCPU.size(); }
 
@@ -33,7 +35,8 @@ class RooValues {
  private:
   std::vector<Double_t> _valuesCPU; // CPU data
   //  std::vector<Double_t> _valuesGPU;
-  
+  Double_t& _value;
+
   ClassDef(RooValues,1)
 };
 

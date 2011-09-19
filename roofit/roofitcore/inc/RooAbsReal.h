@@ -68,6 +68,18 @@ public:
     return getVal(&set) ; 
   }
 
+  // Define which implementation to use for the SIMD evaluation
+  enum ImplSIMD { kNone=0, kOpenMP=1, kCUDA=2, kMIC=3 } ;
+  struct DeviceSIMD {
+    DeviceSIMD() : Impl(RooAbsReal::kNone), Device(0) { }
+    RooAbsReal::ImplSIMD Impl;
+    Int_t Device;
+  } ;
+
+  // Return the results in case of SIMD evaluation
+  virtual const RooValues* getValSIMD(Int_t start=0, Int_t end=0, 
+				      const RooArgSet* set=0,
+				      const RooAbsReal* mother=0) const ;
 
   Double_t getPropagatedError(const RooFitResult& fr) ;
 
@@ -355,12 +367,10 @@ protected:
   }
   virtual Double_t evaluate() const = 0 ;
 
-  // Define which implementation to use for the evaluation
-  enum ImplEval { kDefault=0, kOpenMP=1, kCUDA=2 } ;
   // By default they return kFALSE, i.e. algorithm does not exist
   // Must overloading these functions in the children classes
-  virtual Bool_t evaluateSIMD(RooAbsReal::ImplEval /*, interval */) const { return kFALSE; } 
-  virtual Bool_t evaluateAndNormalizeSIMD(RooAbsReal::ImplEval, Double_t, const RooAbsPdf* /*, interval */) const { return kFALSE; } 
+  virtual Bool_t evaluateAndNormalizeSIMD(RooAbsReal::DeviceSIMD /*deviceSIMD*/, Int_t /*start*/, Int_t /*end*/, 
+					  const RooAbsReal* /*mother*/, Double_t /*integral*/) const { return kFALSE; } 
 
   // Hooks for RooDataSet interface
   friend class RooRealIntegral ;
@@ -374,7 +384,8 @@ protected:
   Double_t _plotMax ;       // Maximum of plot range
   Int_t    _plotBins ;      // Number of plot bins
   mutable Double_t _value ; // Cache for current value of object
-  mutable RooValues _vectValue ; // Cache for current vector values of object
+  mutable RooValues _values ; // Cache for current SIMD values of object
+  DeviceSIMD _deviceSIMD ;    // set which implementation and device to run on
   TString  _unit ;          // Unit for objects value
   TString  _label ;         // Plot label for objects value
   Bool_t   _forceNumInt ;   // Force numerical integration if flag set

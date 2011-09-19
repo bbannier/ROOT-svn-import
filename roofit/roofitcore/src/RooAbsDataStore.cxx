@@ -43,6 +43,7 @@ RooAbsDataStore::RooAbsDataStore()
   _iterator = _vars.createIterator() ;
   _cacheIter = _cachedVars.createIterator() ;
   _doDirtyProp = kTRUE ;
+  _dataStoreType = RooAbsDataStore::kScalar ;
 }
 
 
@@ -60,6 +61,7 @@ RooAbsDataStore::RooAbsDataStore(const char* name, const char* title, const RooA
   _iterator = _vars.createIterator() ;
   _cacheIter = _cachedVars.createIterator() ;
   _doDirtyProp = kTRUE ;
+  _dataStoreType = RooAbsDataStore::kScalar ;
 }
 
 
@@ -75,6 +77,7 @@ RooAbsDataStore::RooAbsDataStore(const RooAbsDataStore& other, const char* newna
   _iterator = _vars.createIterator() ;
   _cacheIter = _cachedVars.createIterator() ;
   _doDirtyProp = other._doDirtyProp ;
+  _dataStoreType = RooAbsDataStore::kScalar ;
 }
 
 

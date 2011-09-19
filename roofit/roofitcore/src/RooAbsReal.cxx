@@ -108,7 +108,7 @@ map<const RooAbsArg*,pair<string,list<RooAbsReal::EvalError> > > RooAbsReal::_ev
 
 
 //_____________________________________________________________________________
-RooAbsReal::RooAbsReal() : _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
+RooAbsReal::RooAbsReal() : _values(_value), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
   // coverity[UNINIT_CTOR]
   // Default constructor
@@ -119,7 +119,7 @@ RooAbsReal::RooAbsReal() : _specIntegratorConfig(0), _treeVar(kFALSE), _selectCo
 //_____________________________________________________________________________
 RooAbsReal::RooAbsReal(const char *name, const char *title, const char *unit) : 
   RooAbsArg(name,title), _plotMin(0), _plotMax(0), _plotBins(100), 
-  _value(0),  _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
+  _value(0), _values(_value), _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
   // Constructor with unit label
   setValueDirty() ;
@@ -133,7 +133,7 @@ RooAbsReal::RooAbsReal(const char *name, const char *title, const char *unit) :
 RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t inMinVal,
 		       Double_t inMaxVal, const char *unit) :
   RooAbsArg(name,title), _plotMin(inMinVal), _plotMax(inMaxVal), _plotBins(100),
-  _value(0), _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
+  _value(0), _values(_value), _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
   // Constructor with plot range and unit label
   setValueDirty() ;
@@ -146,7 +146,7 @@ RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t inMinVal,
 //_____________________________________________________________________________
 RooAbsReal::RooAbsReal(const RooAbsReal& other, const char* name) : 
   RooAbsArg(other,name), _plotMin(other._plotMin), _plotMax(other._plotMax), 
-  _plotBins(other._plotBins), _value(other._value), _unit(other._unit), _forceNumInt(other._forceNumInt), 
+  _plotBins(other._plotBins), _value(other._value), _values(other._values), _unit(other._unit), _forceNumInt(other._forceNumInt), 
   _treeVar(other._treeVar), _selectComp(other._selectComp), _lastNSet(0)
 {
   // coverity[UNINIT_CTOR]
@@ -245,6 +245,65 @@ Double_t RooAbsReal::getVal(const RooArgSet* nset) const
   }
 
   return _value ;
+}
+
+
+//_____________________________________________________________________________
+const RooValues* RooAbsReal::getValSIMD(Int_t start, Int_t end, 
+					const RooArgSet* nset,
+					const RooAbsReal* mother) const
+{
+  // Return value of object. If the cache is clean, return the
+  // cached value, otherwise recalculate on the fly and refill
+  // the cache
+
+  // Check if InitSIMD was executed
+  if (_deviceSIMD.Impl==RooAbsReal::kNone) {
+    coutF(Eval) << "RooAbsReal::getValSIMD(" << GetName() << "): InitSIMD not executed" << endl ;
+    return 0;
+  }
+    
+
+  if (nset && nset!=_lastNSet) {
+    ((RooAbsReal*) this)->setProxyNormSet(nset) ;    
+    _lastNSet = (RooArgSet*) nset ;
+  }
+
+  if (evaluateAndNormalizeSIMD(_deviceSIMD,start,end,mother,1)) {
+    return &_values;
+  }
+
+  return 0;
+
+  /*
+
+  if (isValueDirty() || isShapeDirty()) {
+
+    _value = traceEval(nset) ;
+
+    clearValueDirty() ; 
+    clearShapeDirty() ; 
+
+  } else if (_cacheCheck) {
+    
+    // Check if cache contains value that evaluate() gives now
+    Double_t checkValue = traceEval(nset);
+
+    if (checkValue != _value) {
+      // If not, print warning
+      coutW(Eval) << "RooAbsReal::getVal(" << GetName() << ") WARNING: cache contains " << _value 
+		  << " but evaluate() returns " << checkValue << endl ;
+
+      // And update cache (so that we see the difference)
+      _value = checkValue ;
+    }                                                                                                
+    
+  }
+
+  return _value ;
+
+  */
+
 }
 
 

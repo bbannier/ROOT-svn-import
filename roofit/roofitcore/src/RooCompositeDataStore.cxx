@@ -342,6 +342,21 @@ void RooCompositeDataStore::resetCache()
   return ;
 }
 
+//_____________________________________________________________________________
+Bool_t RooCompositeDataStore::makeVectors() 
+{
+  coutW(InputArguments) << "RooCompositeDataStore::makeVectors(" << GetName()
+			<< ") Composite datastore based on vectors is not supported. Option ignored..."
+			<< endl ;
+  return kFALSE;
+}
 
-
+//_____________________________________________________________________________
+Bool_t RooCompositeDataStore::useVectors() const
+{ 
+  coutW(InputArguments) << "RooCompositeDataStore::makeVectors(" << GetName()
+			<< ") Composite datastore based on vectors is not supported. Option ignored..."
+			<< endl ;
+  return kFALSE;
+}
 

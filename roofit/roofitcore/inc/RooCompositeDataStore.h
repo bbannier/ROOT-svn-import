@@ -79,6 +79,9 @@ public:
   virtual const RooAbsArg* cacheOwner() { return 0 ; }
   virtual void setArgStatus(const RooArgSet& set, Bool_t active) ;
   virtual void resetCache() ;
+
+  virtual Bool_t makeVectors() ;
+  virtual Bool_t useVectors() const ;
   
  protected:
 

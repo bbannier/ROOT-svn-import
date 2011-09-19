@@ -104,12 +104,22 @@ public:
 
   virtual const TTree* tree() const { return 0 ; }
 
+  // Dataset can be based on scalar value or vector variables
+  // kScalar is the default value everywhere
+  enum DataType { kScalar=0, kVector=1 } ;
+
+  // make vectors out of data in the datastore
+  virtual Bool_t makeVectors() = 0 ;
+  // Check if the dataset is based on scalars or vectors
+  virtual Bool_t useVectors() const { return _dataStoreType==RooAbsDataStore::kVector ; }
+
  protected:
 
   RooArgSet _vars ;
   RooArgSet _cachedVars ;
   TIterator *_iterator;    //! Iterator over dimension variables
   TIterator *_cacheIter ;  //! Iterator over cached variables
+  RooAbsDataStore::DataType _dataStoreType ; //! Store the type of the datastore
 
   Bool_t _doDirtyProp ;    // Switch do (de)activate dirty state propagation when loading a data point
 
