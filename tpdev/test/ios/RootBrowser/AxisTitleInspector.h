@@ -19,6 +19,11 @@ class TAxis;
    IBOutlet UIButton *plusOffsetBtn;
    IBOutlet UIButton *minusOffsetBtn;
    float offset;
+   
+   IBOutlet UILabel *sizeLabel;
+   IBOutlet UIButton *plusSizeBtn;
+   IBOutlet UIButton *minusSizeBtn;
+   float titleSize;
 }
 
 @property (nonatomic, retain) UITextField *titleField;
@@ -27,6 +32,10 @@ class TAxis;
 @property (nonatomic, retain) UILabel *offsetLabel;
 @property (nonatomic, retain) UIButton *plusOffsetBtn;
 @property (nonatomic, retain) UIButton *minusOffsetBtn;
+
+@property (nonatomic, retain) UILabel *sizeLabel;
+@property (nonatomic, retain) UIButton *plusSizeBtn;
+@property (nonatomic, retain) UIButton *minusSizeBtn;
 
 + (CGRect) inspectorFrame;
 
@@ -42,6 +51,8 @@ class TAxis;
 - (IBAction) rotateTitle;
 - (IBAction) plusOffset;
 - (IBAction) minusOffset;
+- (IBAction) plusSize;
+- (IBAction) minusSize;
 
 - (IBAction) back;
 
