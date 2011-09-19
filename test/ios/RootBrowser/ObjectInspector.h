@@ -29,12 +29,15 @@ kNOfInspectors //
 
    unsigned nActiveEditors;
    
-   EditorView *editorView;
    TObject *object;
+   
+   EditorView *editorView;
 }
 
 - (void) setROOTObjectController : (ROOTObjectController *)c;
 - (void) setROOTObject : (TObject *)o;
 - (void) resetInspector;
+
+- (EditorView *) getEditorView;
 
 @end

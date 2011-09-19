@@ -11,6 +11,9 @@
 
 @implementation SlideshowController
 
+@synthesize parentView;
+@synthesize padParentView;
+
 //____________________________________________________________________________________________________
 - (void) correctFramesForOrientation : (UIInterfaceOrientation) orientation
 {
@@ -92,7 +95,6 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-   NSLog(@"dealloc");
    for (unsigned i = 0; i < 2; ++i) {
       //Delete for null and message to nil means nothing.
       delete pads[i];
@@ -101,6 +103,9 @@
 
    if (timer)
       [timer invalidate];
+
+   self.parentView = nil;
+   self.padParentView = nil;
 
    [super dealloc];
 }
@@ -151,7 +156,6 @@
    if (timer) {
       [timer invalidate];
       timer = 0;
-      NSLog(@"timer invalidated");
    }
 }
 

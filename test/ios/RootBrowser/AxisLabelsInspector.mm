@@ -16,6 +16,14 @@ static const float maxOffset = 1.f;
 
 @implementation AxisLabelsInspector
 
+@synthesize plusSize;
+@synthesize minusSize;
+@synthesize sizeLabel;
+@synthesize plusOffset;
+@synthesize minusOffset;
+@synthesize offsetLabel;
+@synthesize noExp;
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
@@ -23,10 +31,8 @@ static const float maxOffset = 1.f;
    
    [self view];
    
-   if (self) {
-      colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimLabelColor];
-      fontInspector = [[AxisFontInspector alloc] initWithNibName : @"AxisFontInspector" mode : ROOT_IOSObjectInspector::afimLabelFont];
-   }
+   if (self)
+      [self view];
 
    return self;
 }
@@ -34,10 +40,15 @@ static const float maxOffset = 1.f;
 //____________________________________________________________________________________________________
 - (void) dealloc
 {
-   [colorInspector release];
-   [fontInspector release];
+   self.plusSize = nil;
+   self.minusSize = nil;
+   self.sizeLabel = nil;
+   self.plusOffset = nil;
+   self.minusOffset = nil;
+   self.offsetLabel = nil;
+   self.noExp = nil;
    
-   [super release];
+   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
@@ -93,6 +104,8 @@ static const float maxOffset = 1.f;
 //____________________________________________________________________________________________________
 - (void) showLabelFontInspector
 {
+   AxisFontInspector *fontInspector = [[AxisFontInspector alloc] initWithNibName : @"AxisFontInspector" mode : ROOT_IOSObjectInspector::afimLabelFont];
+
    [fontInspector setROOTObjectController : controller];
    [fontInspector setROOTObject : object];
    
@@ -102,6 +115,8 @@ static const float maxOffset = 1.f;
 //____________________________________________________________________________________________________
 - (void) showLabelColorInspector
 {
+   AxisColorInspector *colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimLabelColor];
+
    [colorInspector setROOTObjectController : controller];
    [colorInspector setROOTObject : object];
    
@@ -149,7 +164,7 @@ static const float maxOffset = 1.f;
 }
 
 //____________________________________________________________________________________________________
-- (IBAction) noExp
+- (IBAction) noExpPressed
 {
    object->SetNoExponent(noExp.on);
    [controller objectWasModifiedUpdateSelection : NO];

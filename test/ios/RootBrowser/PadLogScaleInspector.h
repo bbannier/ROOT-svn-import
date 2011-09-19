@@ -15,6 +15,10 @@ class TObject;
    TVirtualPad *object;
 }
 
+@property (nonatomic, retain) UISwitch *logX;
+@property (nonatomic, retain) UISwitch *logY;
+@property (nonatomic, retain) UISwitch *logZ;
+
 - (void) setROOTObjectController : (ROOTObjectController *)c;
 - (void) setROOTObject : (TObject *)o;
 

@@ -1,8 +1,6 @@
 #import "ObjectInspectorComponent.h"
 
 @class ROOTObjectController;
-@class AxisColorInspector;
-@class AxisFontInspector;
 
 
 class TObject;
@@ -22,10 +20,15 @@ class TAxis;
    
    ROOTObjectController *controller;
    TAxis *object;
-   
-   AxisColorInspector *colorInspector;
-   AxisFontInspector *fontInspector;
 }
+
+@property (nonatomic, retain) UIButton *plusSize;
+@property (nonatomic, retain) UIButton *minusSize;
+@property (nonatomic, retain) UILabel *sizeLabel;
+@property (nonatomic, retain) UIButton *plusOffset;
+@property (nonatomic, retain) UIButton *minusOffset;
+@property (nonatomic, retain) UILabel *offsetLabel;
+@property (nonatomic, retain) UISwitch *noExp;
 
 - (void) setROOTObjectController : (ROOTObjectController *)c;
 - (void) setROOTObject : (TObject *)o;
@@ -35,7 +38,7 @@ class TAxis;
 
 - (IBAction) plusBtn : (UIButton *)sender;
 - (IBAction) minusBtn : (UIButton *)sender;
-- (IBAction) noExp;
+- (IBAction) noExpPressed;
 - (IBAction) back;
 
 @end

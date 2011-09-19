@@ -24,6 +24,10 @@ afimLabelFont
    TAxis *object;
 }
 
+@property (nonatomic, retain) UILabel *titleLabel;
+@property (nonatomic, retain) UIPickerView *fontPicker;
+
+
 - (id)initWithNibName : (NSString *)nibName mode : (ROOT_IOSObjectInspector::AxisFontInspectorMode)m;
 
 - (void) setROOTObjectController : (ROOTObjectController *)c;

@@ -3,8 +3,6 @@
 #import "ObjectInspectorComponent.h"
 
 @class ROOTObjectController;
-@class AxisColorInspector;
-@class AxisFontInspector;
 
 class TObject;
 class TAxis;
@@ -17,14 +15,18 @@ class TAxis;
    ROOTObjectController *controller;
    TAxis *object;
 
-   AxisColorInspector *colorInspector;
-   AxisFontInspector *fontInspector;
-   
    IBOutlet UILabel *offsetLabel;
    IBOutlet UIButton *plusOffsetBtn;
    IBOutlet UIButton *minusOffsetBtn;
    float offset;
 }
+
+@property (nonatomic, retain) UITextField *titleField;
+@property (nonatomic, retain) UISwitch *centered;
+@property (nonatomic, retain) UISwitch *rotated;
+@property (nonatomic, retain) UILabel *offsetLabel;
+@property (nonatomic, retain) UIButton *plusOffsetBtn;
+@property (nonatomic, retain) UIButton *minusOffsetBtn;
 
 + (CGRect) inspectorFrame;
 

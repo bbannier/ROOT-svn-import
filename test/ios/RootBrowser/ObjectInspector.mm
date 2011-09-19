@@ -20,8 +20,11 @@
 - (void) initObjectInspectorView
 {
    editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
+ //  NSLog(@"count -3 %d", [editorView retainCount]);
    self.view = editorView;
+ //  NSLog(@"count -2 %d", [editorView retainCount]);
    [editorView release];
+ //  NSLog(@"count -1 %d", [editorView retainCount]);
 }
 
 //____________________________________________________________________________________________________
@@ -69,7 +72,6 @@
 - (void) dealloc
 {
    using ROOT_IOSObjectInspector::kNOfInspectors;
-
    for (unsigned i = 0; i < kNOfInspectors; ++i)
       [cachedEditors[i] release];
 
@@ -182,6 +184,12 @@
    for (unsigned i = 0; i < nActiveEditors; ++i)
       if ([activeEditors[i] respondsToSelector : @selector(resetInspector)])
          [activeEditors[i] resetInspector];
+}
+
+//____________________________________________________________________________________________________
+- (EditorView *) getEditorView
+{
+   return editorView;
 }
 
 @end

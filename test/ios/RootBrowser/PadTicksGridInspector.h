@@ -17,6 +17,11 @@ class TObject;
    TVirtualPad *object;
 }
 
+@property (nonatomic, retain) UISwitch *gridX;
+@property (nonatomic, retain) UISwitch *gridY;
+@property (nonatomic, retain) UISwitch *ticksX;
+@property (nonatomic, retain) UISwitch *ticksY;
+
 - (void) setROOTObjectController : (ROOTObjectController *) c;
 - (void) setROOTObject : (TObject *) obj;
 

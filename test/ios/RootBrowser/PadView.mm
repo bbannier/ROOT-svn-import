@@ -11,13 +11,10 @@
 #import "Constants.h"
 #import "PadView.h"
 
-//DEBUG
-#import "TClass.h"
-//
-
 #import "TAxis.h"
 
 //C++ code (ROOT's ios module)
+#import "TStyle.h"
 #import "IOSPad.h"
 
 @implementation PadView
@@ -62,7 +59,7 @@
 
    CGContextTranslateCTM(ctx, 0.f, rect.size.height);
    CGContextScaleCTM(ctx, 1.f, -1.f);
-
+gStyle->SetLabelSize(0.01, "y");
    pad->cd();
    pad->SetContext(ctx);
    pad->Paint();

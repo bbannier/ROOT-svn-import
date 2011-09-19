@@ -27,6 +27,9 @@ enum AxisColorInspectorMode {
    TAttAxis *object;
 }
 
+@property (nonatomic, retain) UIPickerView *colorPicker;
+@property (nonatomic, retain) UILabel *titleLabel;
+
 - (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil mode : (ROOT_IOSObjectInspector::AxisColorInspectorMode)mode;
 
 - (void) setROOTObjectController : (ROOTObjectController *)contoller;

@@ -21,10 +21,10 @@
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
 
-   [self view];
-
-   if (self)
+   if (self) {
+      [self view];
       self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Slide show" style:UIBarButtonItemStyleBordered target:self action:@selector(startSlideshow)];
+   }
 
    return self;
 }
@@ -192,7 +192,7 @@
 //____________________________________________________________________________________________________
 - (void) startSlideshow
 {
-   slideshowController = [[SlideshowController alloc] initWithNibName : @"SlideshowController" bundle : nil fileContainer : fileContainer];
+   SlideshowController *slideshowController = [[SlideshowController alloc] initWithNibName : @"SlideshowController" bundle : nil fileContainer : fileContainer];
    [self.navigationController pushViewController : slideshowController animated : YES];
    [slideshowController release];
 }
@@ -200,9 +200,10 @@
 //____________________________________________________________________________________________________
 - (void) selectObjectFromFile : (ObjectShortcut *) shortcut
 {
-   objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
+   ROOTObjectController *objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
    [objectController setObjectWithIndex : shortcut.objectIndex fromContainer : fileContainer];
    [self.navigationController pushViewController : objectController animated : YES];
+   [objectController release];   
 }
 
 @end

@@ -12,6 +12,24 @@ static const float minTickLength = -1.f;
 
 @implementation AxisTicksInspector
 
+@synthesize tickLengthLabel;
+@synthesize plusLengthBtn;
+@synthesize minusLengthBtn;
+
+@synthesize plusPrim;
+@synthesize minusPrim;
+@synthesize primLabel;
+
+@synthesize plusSec;
+@synthesize minusSec;
+@synthesize secLabel;
+
+@synthesize plusTer;
+@synthesize minusTer;
+@synthesize terLabel;
+
+@synthesize ticksNegPos;
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
@@ -24,6 +42,33 @@ static const float minTickLength = -1.f;
    }
 
    return self;
+}
+
+//____________________________________________________________________________________________________
+- (void) dealloc
+{
+   //So, reference counting + outlets + interface builder are useless crap
+   //and bullshit. Endless ugliness.
+
+   self.tickLengthLabel = nil;
+   self.plusLengthBtn = nil;
+   self.minusLengthBtn = nil;
+
+   self.plusPrim = nil;
+   self.minusPrim = nil;
+   self.primLabel = nil;
+
+   self.plusSec = nil;
+   self.minusSec = nil;
+   self.secLabel = nil;
+
+   self.plusTer = nil;
+   self.minusTer = nil;
+   self.terLabel = nil;
+
+   self.ticksNegPos = nil;
+   
+   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
@@ -117,7 +162,7 @@ static const float minTickLength = -1.f;
 }
 
 //____________________________________________________________________________________________________
-- (IBAction) ticksNegPos
+- (IBAction) ticksNegPosPressed
 {
    if (ticksNegPos.selectedSegmentIndex == 0)
       object->SetTicks("");

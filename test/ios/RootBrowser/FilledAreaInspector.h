@@ -17,6 +17,8 @@ class TObject;
    ROOTObjectController *parentController;
 }
 
+@property (nonatomic, retain) UIPickerView *fillPicker;
+
 - (void) setROOTObjectController : (ROOTObjectController *) p;
 - (void) setROOTObject : (TObject*) obj;
 - (NSString *) getComponentName;

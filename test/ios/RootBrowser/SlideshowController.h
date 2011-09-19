@@ -23,6 +23,9 @@ class Pad;
    IBOutlet UIView *padParentView;
 }
 
+@property (nonatomic, retain) UIView *parentView;
+@property (nonatomic, retain) UIView *padParentView;
+
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil fileContainer : (ROOT_iOS::FileContainer *)container;
 
 @end
