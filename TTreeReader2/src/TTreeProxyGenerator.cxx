@@ -1196,13 +1196,9 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
 
    }
 
-   void TTreeProxyGenerator::AnalyzeTree(TTree *tree)
+   void TTreeProxyGenerator::AnalyzeTopBranch(TBranch *branch)
    {
-      // Analyze a TTree and its (potential) friends.
-
-      TIter next( tree->GetListOfBranches() );
-      TBranch *branch;
-      while ( (branch = (TBranch*)next()) ) {
+      // Analyze a branch.
          TVirtualStreamerInfo *info = 0;
          const char *branchname = branch->GetName();
          const char *classname = branch->GetClassName();
@@ -1257,7 +1253,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                   AddHeader(cl);
                   if (!cl->IsLoaded()) AddPragma(Form("#pragma link C++ class %s;\n", cl->GetName()));
                   AddDescriptor( new TBranchProxyDescriptor( branchname, type, branchname ) );
-                  continue;
+                  return;
                }
             }
             if (cl) {
@@ -1325,6 +1321,16 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
             }
 
          } // if split or non split
+   }
+
+   void TTreeProxyGenerator::AnalyzeTree(TTree *tree)
+   {
+      // Analyze a TTree and its (potential) friends.
+
+      TIter next( tree->GetListOfBranches() );
+      TBranch *branch;
+      while ( (branch = (TBranch*)next()) ) {
+         AnalyzeTopBranch(branch);
       }
 
       // Now let's add the TTreeFriend (if any)
