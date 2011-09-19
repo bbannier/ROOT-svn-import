@@ -32,7 +32,7 @@ namespace cling {
     virtual void TypeRead(serialization::TypeIdx Idx, QualType T);
     virtual void DeclRead(serialization::DeclID ID, const Decl* D);
     virtual void SelectorRead(serialization::SelectorID iD, Selector Sel);
-    virtual void MacroDefinitionRead(serialization::MacroID, 
+    virtual void MacroDefinitionRead(serialization::PreprocessedEntityID, 
                                      MacroDefinition* MD);
     void AddListener(ChainedConsumer::EConsumerIndex I,
                      ASTDeserializationListener* M) {
@@ -87,7 +87,7 @@ namespace cling {
         Listeners[i]->SelectorRead(ID, Sel);
   }
   
-  void ChainedDeserializationListener::MacroDefinitionRead(serialization::MacroID ID,
+  void ChainedDeserializationListener::MacroDefinitionRead(serialization::PreprocessedEntityID ID,
                                                               MacroDefinition* MD) {
     for (size_t i = 0; i < ChainedConsumer::kConsumersCount; ++i)
       if (Enabled[i])
