@@ -115,6 +115,8 @@ public:
   
   const RooArgSet& row() { return _varsww ; }
 
+  virtual Bool_t makeVectors() { return kFALSE; }
+
  protected:
 
   RooArgSet varsNoWeight(const RooArgSet& allVars, const char* wgtName=0) ;

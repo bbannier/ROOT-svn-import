@@ -3,8 +3,9 @@
  * Package: RooFitCore                                                       *
  * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
- *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
- *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
+ *   WV, Wouter Verkerke, UC Santa Barbara,  verkerke@slac.stanford.edu      *
+ *   DK, David Kirkby,    UC Irvine,          dkirkby@uci.edu                *
+ *   AL, Alfio Lazzaro,   CERN openlab, alfio.lazzaro@cern.ch                *
  *                                                                           *
  * Copyright (c) 2000-2005, Regents of the University of California          *
  *                          and Stanford University. All rights reserved.    *
@@ -31,7 +32,6 @@
 #include "TClass.h"
 #include "TMath.h"
 
-#include "RooAbsData.h"
 #include "RooAbsData.h"
 #include "RooFormulaVar.h"
 #include "RooCmdConfig.h"
@@ -2300,7 +2300,14 @@ RooAbsData* RooAbsData::getSimData(const char* name)
 
 //_____________________________________________________________________________
 void RooAbsData::addOwnedComponent(const char* idxlabel, RooAbsData& data) 
-{ 
+{
+  if (data.useVectors()!=useVectors()) {
+    coutE(InputArguments) << "RooAbsData::addOwnedComponent(" << GetName() 
+			  << ") ERROR: datastore type mismatch for dataset " 
+			  << data.GetName() << ". Ignore operation!" << endl ;
+    return;
+  }
+
   _ownedComponents[idxlabel]= &data ;
 }
 
@@ -2333,4 +2340,16 @@ Bool_t RooAbsData::hasFilledCache() const
 const TTree* RooAbsData::tree() const 
 { 
   return _dstore->tree() ; 
+}
+
+//______________________________________________________________________________
+Bool_t RooAbsData::makeVectors() 
+{
+  return _dstore->makeVectors() ;
+}
+
+//______________________________________________________________________________
+Bool_t RooAbsData::useVectors() const
+{
+  return _dstore->useVectors() ;
 }

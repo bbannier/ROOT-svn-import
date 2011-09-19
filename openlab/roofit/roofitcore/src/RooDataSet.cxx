@@ -1,4 +1,3 @@
-
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
@@ -230,6 +229,7 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
   // StoreError(const RooArgSet&)     -- Store symmetric error along with value for given subset of observables
   // StoreAsymError(const RooArgSet&) -- Store asymmetric error along with value for given subset of observables
   //
+  // MakeVectors(Bool_t flag)    -- Make vectors for the datastore, otherwise use scalars by default
 
   // Define configuration for this method
   RooCmdConfig pc(Form("RooDataSet::ctor(%s)",GetName())) ;
@@ -258,7 +258,7 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
   pc.defineDependency("ImportDataSlice","IndexCat") ;
   pc.defineDependency("LinkDataSlice","IndexCat") ;
   pc.defineDependency("OwnLinked","LinkDataSlice") ;
-
+  pc.defineInt("vectors","MakeVectors",0,0) ;
   
   RooLinkedList l ;
   l.Add((TObject*)&arg1) ;  l.Add((TObject*)&arg2) ;  
@@ -290,11 +290,19 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
   RooArgSet* asymErrorSet = pc.getSet("asymErrSet") ;
   const char* fname = pc.getString("fname") ;
   const char* tname = pc.getString("tname") ;
-  Int_t ownLinked = pc.getInt("ownLinked") ;
+  Int_t ownLinked = pc.getInt("ownLinked") ;  
+  Int_t vectors = pc.getInt("vectors") ;
 
   // Case 1 --- Link multiple dataset as slices
   if (lnkSliceNames) {
 
+    if (vectors) {
+      coutE(InputArguments) << "RooDataSet::ctor(" << GetName()
+			    << ") ERROR Composite datastore based on vectors is not supported. Option ignored..."
+			    << endl ;
+      vectors = kFALSE;
+    }
+    
     // Make import mapping if index category is specified
     map<string,RooAbsData*> hmap ;  
     if (indexCat) {
@@ -352,10 +360,9 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
       wgtVarName = wgtVar->GetName() ;
     }
 
-    // Create empty datastore 
+    // Create empty datastore
     RooTreeDataStore* tstore = new RooTreeDataStore(name,title,_vars,wgtVarName) ;
     _dstore = tstore ;
-    
     
     // Make import mapping if index category is specified
     map<string,RooDataSet*> hmap ;  
@@ -365,7 +372,7 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
       char* token = strtok(tmp,",") ;
       TIterator* hiter = impSliceData.MakeIterator() ;
       while(token) {
-	hmap[token] = (RooDataSet*) hiter->Next() ;
+	hmap[token] = (RooDataSet*) hiter->Next() ;	
 	token = strtok(0,",") ;
       }
       delete hiter ;
@@ -565,6 +572,8 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
       }
     }
     
+    if (vectors)
+      tstore->makeVectors();
   }
 }
 
@@ -774,6 +783,9 @@ RooAbsData* RooDataSet::cacheClone(const RooAbsArg* newCacheOwner, const RooArgS
   dset->attachCache(newCacheOwner, *selCacheVars) ;
   delete selCacheVars ;
 
+  if (useVectors())
+    dset->makeVectors();
+
   return dset ;
 }
 
@@ -797,6 +809,8 @@ RooAbsData* RooDataSet::emptyClone(const char* newName, const char* newTitle, co
   }
 
   RooDataSet* dset = new RooDataSet(newName?newName:GetName(),newTitle?newTitle:GetTitle(),vars2,_wgtVar?_wgtVar->GetName():0) ; 
+  if (useVectors())
+    dset->makeVectors();
   //if (_wgtVar) dset->setWeightVar(_wgtVar->GetName()) ;
   return dset ;
 }
@@ -841,6 +855,8 @@ RooAbsData* RooDataSet::reduceEng(const RooArgSet& varSubset, const RooFormulaVa
     tmp.add(*_wgtVar) ;
   }
   RooDataSet* ret =  new RooDataSet(GetName(), GetTitle(), this, tmp, cutVar, cutRange, nStart, nStop, copyCache,_wgtVar?_wgtVar->GetName():0) ;
+  if (useVectors())
+    ret->makeVectors();
   
   // WVE - propagate optional weight variable
   //       check behaviour in plotting.
@@ -1090,6 +1106,7 @@ Bool_t RooDataSet::merge(list<RooDataSet*>dsetList)
       coutE(InputArguments) << "RooDataSet::merge(" << GetName() << ") ERROR: datasets have different size" << endl ;
       return kTRUE ;    
     }
+
   }
 
   // Extend vars with elements of other dataset
@@ -1120,6 +1137,7 @@ void RooDataSet::append(RooDataSet& data)
   // Observable in 'data' that are not in this dataset
   // with not be transferred
   checkInit() ;
+
   _dstore->append(*data._dstore) ;
 }
 
@@ -1753,7 +1771,6 @@ void RooDataSet::SetNameTitle(const char *name, const char* title)
   TNamed::SetNameTitle(name,title) ;
   if (_dir) _dir->GetList()->Add(this);
 }
-
 
 //______________________________________________________________________________
 void RooDataSet::Streamer(TBuffer &R__b)

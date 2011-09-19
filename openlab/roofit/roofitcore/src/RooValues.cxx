@@ -21,4 +21,15 @@
 ClassImp(RooValues)
 ;
 
+RooValues::RooValues(Double_t& value) :
+  _value(value)
+{
+}
+
+RooValues::RooValues(const RooValues& other) :
+  _valuesCPU(other._valuesCPU),
+  _value(other._value)
+{
+
+}
 

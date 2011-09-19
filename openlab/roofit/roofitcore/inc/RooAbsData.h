@@ -3,8 +3,9 @@
  * Package: RooFitCore                                                       *
  *    File: $Id: RooAbsData.h,v 1.33 2007/07/16 21:04:28 wouter Exp $
  * Authors:                                                                  *
- *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
- *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
+ *   WV, Wouter Verkerke, UC Santa Barbara,  verkerke@slac.stanford.edu      *
+ *   DK, David Kirkby,    UC Irvine,          dkirkby@uci.edu                *
+ *   AL, Alfio Lazzaro,   CERN openlab,  alfio.lazzaro@cern.ch               *
  *                                                                           *
  * Copyright (c) 2000-2005, Regents of the University of California          *
  *                          and Stanford University. All rights reserved.    *
@@ -200,6 +201,11 @@ public:
   void addOwnedComponent(const char* idxlabel, RooAbsData& data) ;
   static void claimVars(RooAbsData*) ;
   static Bool_t releaseVars(RooAbsData*) ;
+
+  // make vectors out of data in the datastore
+  virtual Bool_t makeVectors() ;
+  // Check if the dataset is based on scalars or vectors
+  virtual Bool_t useVectors() const ;
 
 protected:
 

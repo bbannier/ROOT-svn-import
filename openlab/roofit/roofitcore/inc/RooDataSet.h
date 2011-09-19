@@ -3,8 +3,9 @@
  * Package: RooFitCore                                                       *
  *    File: $Id: RooDataSet.h,v 1.59 2007/05/11 09:11:30 verkerke Exp $
  * Authors:                                                                  *
- *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
- *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
+ *   WV, Wouter Verkerke, UC Santa Barbara,  verkerke@slac.stanford.edu      *
+ *   DK, David Kirkby,    UC Irvine,          dkirkby@uci.edu                *
+ *   AL, Alfio Lazzaro,   CERN openlab, alfio.lazzaro@cern.ch                *
  *                                                                           *
  * Copyright (c) 2000-2005, Regents of the University of California          *
  *                          and Stanford University. All rights reserved.    *
@@ -46,7 +47,7 @@ public:
 	     const RooCmdArg& arg3=RooCmdArg(), const RooCmdArg& arg4=RooCmdArg(),const RooCmdArg& arg5=RooCmdArg(),
 	     const RooCmdArg& arg6=RooCmdArg(),const RooCmdArg& arg7=RooCmdArg(),const RooCmdArg& arg8=RooCmdArg()) ; 
 
-    // Constructor for subset of existing dataset
+    // Constructor for subset of existing dataset (used also for datastore conversion)
   RooDataSet(const char *name, const char *title, RooDataSet *data, const RooArgSet& vars, 
              const char *cuts=0, const char* wgtVarName=0);
   RooDataSet(const char *name, const char *title, RooDataSet *data, const RooArgSet& vars,  
