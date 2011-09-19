@@ -8,6 +8,10 @@
 
 @implementation PadLogScaleInspector
 
+@synthesize logX;
+@synthesize logY;
+@synthesize logZ;
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
@@ -24,6 +28,10 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
+   self.logX = nil;
+   self.logY = nil;
+   self.logZ = nil;
+
    [super dealloc];
 }
 

@@ -10,7 +10,10 @@
 
 static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
+
 @implementation LineColorWidthInspector
+
+@synthesize linePicker;
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
@@ -48,6 +51,8 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 {
    [lineColors release];
    [lineWidths release];
+
+   self.linePicker = nil;
 
    [super dealloc];
 }

@@ -18,6 +18,8 @@ class TObject;
    TAttLine *object;
 }
 
+@property (nonatomic, retain) UIPickerView *lineStylePicker;
+
 - (void) setROOTObjectController : (ROOTObjectController *) c;
 - (void) setROOTObject : (TObject *) obj;
 

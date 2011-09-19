@@ -6,6 +6,11 @@
 
 @implementation PadTicksGridInspector
 
+@synthesize gridX;
+@synthesize gridY;
+@synthesize ticksX;
+@synthesize ticksY;
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
@@ -22,6 +27,11 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
+   self.gridX = nil;
+   self.gridY = nil;
+   self.ticksX = nil;
+   self.ticksY = nil;
+
    [super dealloc];
 }
 

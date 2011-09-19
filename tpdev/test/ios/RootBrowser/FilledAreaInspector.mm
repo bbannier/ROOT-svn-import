@@ -15,6 +15,8 @@ static const CGFloat defaultCellH = 44.f;
 
 @implementation FilledAreaInspector
 
+@synthesize fillPicker;
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
@@ -57,6 +59,8 @@ static const CGFloat defaultCellH = 44.f;
 {
    [colorCells release];
    [patternCells release];
+
+   self.fillPicker = nil;
 
    [super dealloc];
 }

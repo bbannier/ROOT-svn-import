@@ -13,6 +13,13 @@ static const float titleOffsetStep = 0.01f;
 
 @implementation AxisTitleInspector
 
+@synthesize titleField;
+@synthesize centered;
+@synthesize rotated;
+@synthesize offsetLabel;
+@synthesize plusOffsetBtn;
+@synthesize minusOffsetBtn;
+
 //____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
 {
@@ -22,14 +29,12 @@ static const float titleOffsetStep = 0.01f;
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
+
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
-   
-   [self view];
-   
-   if (self) {
-      colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimTitleColor];
-      fontInspector = [[AxisFontInspector alloc] initWithNibName : @"AxisFontInspector" mode : ROOT_IOSObjectInspector::afimTitleFont];
-   }
+
+
+   if (self)
+      [self view];
 
    return self;
 }
@@ -37,10 +42,16 @@ static const float titleOffsetStep = 0.01f;
 //____________________________________________________________________________________________________
 - (void) dealloc
 {
-   [colorInspector release];
-   [fontInspector release];
+   self.titleField = nil;
+   self.centered = nil;
+   self.rotated = nil;
+   self.offsetLabel = nil;
+   self.plusOffsetBtn = nil;
+   self.minusOffsetBtn = nil;
    
-   [super release];
+//   NSLog(<#NSString *format, ...#>)
+
+   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
@@ -109,19 +120,25 @@ static const float titleOffsetStep = 0.01f;
 //____________________________________________________________________________________________________
 - (IBAction) showTitleFontInspector
 {
+   AxisFontInspector *fontInspector = [[AxisFontInspector alloc] initWithNibName : @"AxisFontInspector" mode : ROOT_IOSObjectInspector::afimTitleFont];
+
    [fontInspector setROOTObjectController : controller];
    [fontInspector setROOTObject : object];
    
    [self.navigationController pushViewController : fontInspector animated : YES];
+   [fontInspector release];
 }
 
 //____________________________________________________________________________________________________
 - (IBAction) showTitleColorInspector
 {
+   AxisColorInspector *colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimTitleColor];
+
    [colorInspector setROOTObjectController : controller];
    [colorInspector setROOTObject : object];
    
-   [self.navigationController pushViewController : colorInspector animated : YES];   
+   [self.navigationController pushViewController : colorInspector animated : YES];
+   [colorInspector release];
 }
 
 //____________________________________________________________________________________________________

@@ -8,18 +8,11 @@ class FileContainer;
 
 class TObject;
 
-@class ROOTObjectController;
-@class SlideshowController;
 @class ObjectShortcut;
 
-@interface FileContentController : UIViewController {
-   SlideshowController *slideshowController;
-   ROOTObjectController *objectController;
-   
+@interface FileContentController : UIViewController {   
    NSMutableArray *objectShortcuts;
-   
    ROOT_iOS::FileContainer *fileContainer;
-   
    IBOutlet UIScrollView *scrollView;
 }
 

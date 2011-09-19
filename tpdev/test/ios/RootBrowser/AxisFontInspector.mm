@@ -46,6 +46,10 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
 
 @implementation AxisFontInspector
 
+@synthesize titleLabel;
+@synthesize fontPicker;
+
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibName mode : (ROOT_IOSObjectInspector::AxisFontInspectorMode)m
 {
@@ -65,6 +69,15 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
    }
 
    return self;
+}
+
+//____________________________________________________________________________________________________
+- (void)dealloc
+{
+   self.titleLabel = nil;
+   self.fontPicker = nil;
+   
+   [super dealloc];
 }
 
 //____________________________________________________________________________________________________

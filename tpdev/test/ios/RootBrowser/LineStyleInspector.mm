@@ -13,6 +13,8 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 180.f, 44.f);
 
 @implementation LineStyleInspector
 
+@synthesize lineStylePicker;
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *) nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
@@ -39,6 +41,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 180.f, 44.f);
 - (void)dealloc
 {
    [lineStyles release];
+   self.lineStylePicker = nil;
 
    [super dealloc];
 }

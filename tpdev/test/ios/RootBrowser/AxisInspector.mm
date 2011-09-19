@@ -17,12 +17,6 @@
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
    if (self) {
-      colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimAxisColor];
-      ticksInspector = [[AxisTicksInspector alloc] initWithNibName : @"AxisTicksInspector" bundle : nil];
-      
-      //titleInspector.
-      titleInspector = [[AxisTitleInspector alloc] initWithNibName : @"AxisTitleInspector" bundle : nil];
-      labelsInspector = [[AxisLabelsInspector alloc] initWithNibName : @"AxisLabelsInspector" bundle : nil];
    }
     
    return self;
@@ -31,10 +25,7 @@
 //____________________________________________________________________________________________________
 - (void) dealloc
 {
-   [colorInspector release];
-   [titleInspector release];
-   [labelsInspector release];
-   [ticksInspector release];
+   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
@@ -92,44 +83,55 @@
 //____________________________________________________________________________________________________
 - (void) resetInspector
 {
-//   [titleInspector resetInspector];
-//   [labelsInspector resetInspector];
 }
 
 //____________________________________________________________________________________________________
 - (IBAction) showColorInspector
 {
+   AxisColorInspector *colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimAxisColor];
+
    [colorInspector setROOTObjectController : controller];
    [colorInspector setROOTObject : object];
    
    [self.navigationController pushViewController : colorInspector animated : YES];
+   
+   [colorInspector release];
 }
 
 //____________________________________________________________________________________________________
 - (IBAction) showTicksInspector
 {
+   AxisTicksInspector *ticksInspector = [[AxisTicksInspector alloc] initWithNibName : @"AxisTicksInspector" bundle : nil];
+
    [ticksInspector setROOTObjectController : controller];
    [ticksInspector setROOTObject : object];
    
    [self.navigationController pushViewController : ticksInspector animated : YES];
+   [ticksInspector release];
 }
 
 //____________________________________________________________________________________________________
 - (IBAction) showAxisTitleInspector
 {
+   AxisTitleInspector *titleInspector = [[AxisTitleInspector alloc] initWithNibName : @"AxisTitleInspector" bundle : nil];
+
    [titleInspector setROOTObjectController : controller];
    [titleInspector setROOTObject : object];
 
    [self.navigationController pushViewController : titleInspector animated : YES];
+   [titleInspector release];
 }
 
 //____________________________________________________________________________________________________
 - (IBAction) showAxisLabelsInspector
 {
+   AxisLabelsInspector *labelsInspector = [[AxisLabelsInspector alloc] initWithNibName : @"AxisLabelsInspector" bundle : nil];
+
    [labelsInspector setROOTObjectController : controller];
    [labelsInspector setROOTObject : object];
    
    [self.navigationController pushViewController : labelsInspector animated : YES];
+   [labelsInspector release];
 }
 
 @end

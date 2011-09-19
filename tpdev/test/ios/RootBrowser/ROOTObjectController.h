@@ -46,7 +46,7 @@ class TObject;
    BOOL zoomed;
 }
 
-@property (nonatomic, retain) UIScrollView *scrollView;
+@property (nonatomic, retain) ScrollViewWithPadView *scrollView;
 
 - (void) setObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
 - (void) handleDoubleTapOnPad;

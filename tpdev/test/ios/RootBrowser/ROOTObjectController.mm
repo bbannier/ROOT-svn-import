@@ -37,10 +37,9 @@ static const CGFloat maximumZoom = 2.f;
 - (void) loadObjectInspector
 {
    objectInspector = [[ObjectInspector alloc] initWithNibName : nil bundle : nil];
-   editorView = (EditorView *)objectInspector.view;
+   editorView = [objectInspector getEditorView];
    [self.view addSubview : editorView];
    editorView.hidden = YES;
-   [editorView release];
    [self resetEditorButton];
 }
 
@@ -233,11 +232,11 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-   delete pad;
-   [objectInspector release];
    [doubleTap release];
-
+   self.scrollView = nil;
+   [objectInspector release];
    [super dealloc];
+   delete pad;
 }
 
 //____________________________________________________________________________________________________

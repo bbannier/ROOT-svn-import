@@ -13,6 +13,9 @@ static const CGFloat defaultCellH = 44.f;
 
 @implementation AxisColorInspector
 
+@synthesize colorPicker;
+@synthesize titleLabel;
+
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil mode : (ROOT_IOSObjectInspector::AxisColorInspectorMode)m
 {
@@ -50,6 +53,9 @@ static const CGFloat defaultCellH = 44.f;
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
+   self.colorPicker = nil;
+   self.titleLabel = nil;
+
    [colors release];
 
    [super dealloc];
