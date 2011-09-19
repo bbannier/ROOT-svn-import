@@ -173,7 +173,7 @@ namespace cling {
   void CIFactory::SetClingTargetLangOpts(LangOptions& Opts, 
                                          const TargetInfo& Target) {
     if (Target.getTriple().getOS() == llvm::Triple::Win32) {
-      Opts.Microsoft = 1;
+      Opts.MicrosoftExt = 1;
       Opts.MSCVersion = 1300;
       // Should fix http://llvm.org/bugs/show_bug.cgi?id=10528
       Opts.DelayedTemplateParsing = 1;
