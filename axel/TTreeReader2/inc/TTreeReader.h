@@ -28,8 +28,11 @@
 
 class TDirectory;
 class TTree;
-class TTreeReaderValuePtrBase;
-class TBranchProxyDirector;
+
+namespace ROOT {
+   class TBranchProxyDirector;
+   class TTreeReaderValuePtrBase;
+}
 
 class TTreeReader: public TObject {
 public:
@@ -63,8 +66,8 @@ protected:
 
    EMakeClassMode GetMakeClassMode() const { return fMakeClassMode; }
    void UpdateAddresses();
-   void RegisterReader(TTreeReaderValuePtrBase& reader);
-   void UnregisterReader(TTreeReaderValuePtrBase& reader);
+   void RegisterReader(ROOT::TTreeReaderValuePtrBase& reader);
+   void UnregisterReader(ROOT::TTreeReaderValuePtrBase& reader);
    void InitializeMakeClassMode();
    Long64_t GetLocalEntryNumber() const { return fLocalEntryNumber; }
 
@@ -75,9 +78,9 @@ private:
    Long64_t    fLocalEntryNumber; // entry number in the current tree
    EMakeClassMode fMakeClassMode; // whether makeclass mode is turned on
    EEntryStatus   fEntryStatus; // result of most recent GetEntry() entry is available
-   TBranchProxyDirector* fDirector; // proxying director
+   ROOT::TBranchProxyDirector* fDirector; // proxying director
 
-   friend class TTreeReaderValuePtrBase;
+   friend class ROOT::TTreeReaderValuePtrBase;
 
    ClassDef(TTreeReader, 0); // A simple interface to read trees
 };
