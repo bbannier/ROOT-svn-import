@@ -11,6 +11,10 @@ static const float minTitleOffset = 0.1f;
 static const float maxTitleOffset = 10.f;
 static const float titleOffsetStep = 0.01f;
 
+static const float minTitleSize = 0.01f;
+static const float maxTitleSize = 1.f;
+static const float titleSizeStep = 0.01f;
+
 @implementation AxisTitleInspector
 
 @synthesize titleField;
@@ -19,6 +23,10 @@ static const float titleOffsetStep = 0.01f;
 @synthesize offsetLabel;
 @synthesize plusOffsetBtn;
 @synthesize minusOffsetBtn;
+@synthesize sizeLabel;
+@synthesize plusSizeBtn;
+@synthesize minusSizeBtn;
+
 
 //____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
@@ -49,7 +57,9 @@ static const float titleOffsetStep = 0.01f;
    self.plusOffsetBtn = nil;
    self.minusOffsetBtn = nil;
    
-//   NSLog(<#NSString *format, ...#>)
+   self.sizeLabel = nil;
+   self.plusSizeBtn = nil;
+   self.minusSizeBtn = nil;
 
    [super dealloc];
 }
@@ -109,6 +119,15 @@ static const float titleOffsetStep = 0.01f;
    
    offset = object->GetTitleOffset();
    offsetLabel.text = [NSString stringWithFormat:@"%.2f", offset];
+   
+   titleSize = object->GetTitleSize();
+   if (titleSize > maxTitleSize || titleSize < minTitleSize) {//this is baaad
+      titleSize = minTitleSize;
+      object->SetTitleSize(titleSize);
+      [controller objectWasModifiedUpdateSelection : NO];
+   }
+
+   sizeLabel.text = [NSString stringWithFormat:@"%.2f", titleSize];
 }
 
 //____________________________________________________________________________________________________
@@ -190,6 +209,32 @@ static const float titleOffsetStep = 0.01f;
    offset -= titleOffsetStep;
    offsetLabel.text = [NSString stringWithFormat:@"%.2f", offset];
    object->SetTitleOffset(offset);
+   
+   [controller objectWasModifiedUpdateSelection : NO];
+}
+
+//____________________________________________________________________________________________________
+- (IBAction) plusSize
+{
+   if (titleSize + titleSizeStep > maxTitleSize)
+      return;
+   
+   titleSize += titleSizeStep;
+   sizeLabel.text = [NSString stringWithFormat:@"%.2f", titleSize];
+   object->SetTitleSize(titleSize);
+   
+   [controller objectWasModifiedUpdateSelection : NO];
+}
+
+//____________________________________________________________________________________________________
+- (IBAction) minusSize
+{
+   if (titleSize - titleSizeStep < minTitleSize)
+      return;
+   
+   titleSize -= titleSizeStep;
+   sizeLabel.text = [NSString stringWithFormat:@"%.2f", titleSize];
+   object->SetTitleSize(titleSize);
    
    [controller objectWasModifiedUpdateSelection : NO];
 }
