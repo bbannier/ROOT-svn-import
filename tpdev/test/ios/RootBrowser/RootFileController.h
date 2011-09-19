@@ -5,14 +5,15 @@
 
 @interface RootFileController : UIViewController <UINavigationControllerDelegate, UINavigationBarDelegate> {
    NSMutableArray *fileContainers;
-   FileContentController *contentController;
+
    IBOutlet UIScrollView *scrollView;
-   
    IBOutlet UIView *fileOpenView;
    IBOutlet UITextField *fileNameField;
 }
 
 @property (nonatomic, retain) UIScrollView *scrollView;
+@property (nonatomic, retain) UIView *fileOpenView;
+@property (nonatomic, retain) UITextField *fileNameField;
 
 - (void) fileWasSelected : (FileShortcut*) shortcut;
 - (void) addFileShortcut : (NSString *) fileName;

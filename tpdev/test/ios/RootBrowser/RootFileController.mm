@@ -8,15 +8,19 @@
 @implementation RootFileController
 
 @synthesize scrollView;
+@synthesize fileOpenView;
+@synthesize fileNameField;
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
    
-   [self view]; //Nib is lazy loading, many thanks to brilliant apple's developers.
-   
    if (self) {
+      [self view];
+      
+      fileContainers = [[NSMutableArray alloc] init];
+   
       self.navigationItem.title = @"ROOT files";
       UIBarButtonItem *backButton = [[UIBarButtonItem alloc] initWithTitle : @"Back to ROOT files" style:UIBarButtonItemStylePlain target : nil action : nil];
       self.navigationItem.backBarButtonItem = backButton;
@@ -40,8 +44,11 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-//   self.scrollView = nil;
-   [contentController release];
+   self.scrollView = nil;
+   self.fileOpenView = nil;
+   self.fileNameField = nil;
+
+   [fileContainers release];
    [super dealloc];
 }
 
@@ -88,7 +95,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) viewWillAppear:(BOOL)animated
+- (void) viewWillAppear : (BOOL)animated
 {
    [self correctFramesForOrientation : self.interfaceOrientation];
    [fileNameField resignFirstResponder];
@@ -137,9 +144,6 @@
 //____________________________________________________________________________________________________
 - (void) addFileShortcut : (NSString *) fileName
 {
-   if (!fileContainers)
-      fileContainers = [[NSMutableArray alloc] init];
-   
    const CGRect shortcutFrame = CGRectMake(0.f, 0.f, [FileShortcut iconWidth], [FileShortcut iconHeight]);
    FileShortcut *newShortcut = [[FileShortcut alloc] initWithFrame : shortcutFrame controller : self filePath : fileName];
 
@@ -152,7 +156,6 @@
       [alert show];
       [alert release];
       [newShortcut release];
-
       return;
    }
 
@@ -167,11 +170,10 @@
 //____________________________________________________________________________________________________
 - (void) fileWasSelected : (FileShortcut*) shortcut
 {
-   if (!contentController)
-      contentController = [[FileContentController alloc] initWithNibName : @"FileContentController" bundle : nil];
-      
+   FileContentController *contentController = [[FileContentController alloc] initWithNibName : @"FileContentController" bundle : nil];
    [contentController activateForFile : [shortcut getFileContainer]];
    [self.navigationController pushViewController : contentController animated : YES];
+   [contentController release];
 }
 
 //____________________________________________________________________________________________________

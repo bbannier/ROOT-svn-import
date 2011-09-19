@@ -24,6 +24,17 @@ static const CGFloat maximumZoom = 2.f;
 
 @synthesize scrollView;
 
+/*
+//____________________________________________________________________________________________________
+- (void) viewDidAppear:(BOOL)animated
+{
+   //TEST.
+   static unsigned nCall = 1;
+   NSLog(@"pop controller n %u", nCall++);
+   [self.navigationController popViewControllerAnimated : YES];
+}
+*/
+
 //____________________________________________________________________________________________________
 - (void) resetEditorButton
 {
