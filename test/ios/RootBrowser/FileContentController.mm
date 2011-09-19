@@ -23,6 +23,8 @@
 
    if (self) {
       [self view];
+      
+      objectShortcuts = [[NSMutableArray alloc] init];
       self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Slide show" style:UIBarButtonItemStyleBordered target:self action:@selector(startSlideshow)];
    }
 
@@ -33,6 +35,9 @@
 - (void)dealloc
 {
    self.scrollView = nil;
+   
+   [objectShortcuts release];
+   
    [super dealloc];
 }
 
@@ -168,13 +173,15 @@
 
    objectShortcuts = [[NSMutableArray alloc] init];
 
-   const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
-   ROOT_iOS::Pad * pad = new ROOT_iOS::Pad(rect.size.width, rect.size.height);//Pad to draw object.
+   if (fileContainer->GetNumberOfObjects()) {
+      const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
+      ROOT_iOS::Pad * pad = new ROOT_iOS::Pad(rect.size.width, rect.size.height);//Pad to draw object, check if I can use stack object.
 
-   for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i)
-      [self addShortcutForObjectAtIndex : i inPad : pad];
+      for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i)
+         [self addShortcutForObjectAtIndex : i inPad : pad];
 
-   delete pad;
+      delete pad;
+   }
 }
 
 //____________________________________________________________________________________________________
@@ -186,7 +193,6 @@
    //Prepare objects' thymbnails.
    [self addObjectsIntoScrollview];
    [self correctFramesForOrientation : [UIApplication sharedApplication].statusBarOrientation];
-   //[ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
 }
 
 //____________________________________________________________________________________________________
@@ -198,12 +204,23 @@
 }
 
 //____________________________________________________________________________________________________
+- (void) doTest
+{
+   const unsigned testIndex = 1 + rand() % (fileContainer->GetNumberOfObjects() - 1);
+   ROOTObjectController *objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
+   [objectController setObjectWithIndex : testIndex fromContainer : fileContainer];
+   [self.navigationController pushViewController : objectController animated : YES];
+   [objectController release];
+}
+
+//____________________________________________________________________________________________________
 - (void) selectObjectFromFile : (ObjectShortcut *) shortcut
 {
    ROOTObjectController *objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
    [objectController setObjectWithIndex : shortcut.objectIndex fromContainer : fileContainer];
    [self.navigationController pushViewController : objectController animated : YES];
-   [objectController release];   
+   [objectController release];
+//   [NSTimer scheduledTimerWithTimeInterval : 3. target : self selector : @selector(doTest) userInfo : nil repeats : YES];
 }
 
 @end
