@@ -743,30 +743,6 @@ const char* tcling_DataMemberInfo::Name() const
 const char* tcling_DataMemberInfo::Title() const
 {
    return fDataMemberInfo->Title();
-   static std::string buf;
-   if (!IsValid()) {
-      return 0;
-   }
-   if (fTClingClassInfo) {
-      // We are a data member iterator.
-      // FIXME:  Need to get this from the comment string.
-      if (clang::dyn_cast<clang::FieldDecl>(*fIter)) {
-         buf = clang::cast<clang::FieldDecl>(*fIter)->getNameAsString();
-      }
-      else {
-         buf = "";
-      }
-      return buf.c_str();
-   }
-   // We are a global variable iterator.
-   // FIXME:  Need to get this from the comment string.
-   if (clang::dyn_cast<clang::VarDecl>(*fIter)) {
-      buf = clang::cast<clang::VarDecl>(*fIter)->getNameAsString();
-   }
-   else {
-      buf = "";
-   }
-   return buf.c_str();
 }
 
 const char* tcling_DataMemberInfo::ValidArrayIndex() const
@@ -3776,7 +3752,7 @@ int TCint::DataMemberInfo_ArrayDim(DataMemberInfo_t* dminfo) const
 //______________________________________________________________________________
 void TCint::DataMemberInfo_Delete(DataMemberInfo_t* dminfo) const
 {
-   delete(tcling_DataMemberInfo*) dminfo;
+   delete (tcling_DataMemberInfo*) dminfo;
 }
 
 //______________________________________________________________________________
