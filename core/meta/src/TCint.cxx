@@ -60,6 +60,7 @@
 #include <utility>
 #include <vector>
 
+#include <limits.h>
 #include <stdint.h>
 
 #ifdef __APPLE__
@@ -396,7 +397,72 @@ bool tcling_DataMemberInfo::IsValid() const
 
 int tcling_DataMemberInfo::MaxIndex(int dim) const
 {
-   return fDataMemberInfo->MaxIndex(dim);
+   //return fDataMemberInfo->MaxIndex(dim);
+   if (!IsValid()) {
+      return -1;
+   }
+   // Sanity check the current data member.
+   clang::Decl::Kind DK = fIter->getKind();
+   if (
+      (DK != clang::Decl::Field) &&
+      (DK != clang::Decl::Var) &&
+      (DK != clang::Decl::EnumConstant)
+   ) {
+      // Error, was not a data member, variable, or enumerator.
+      return -1L;
+   }
+   if (DK == clang::Decl::EnumConstant) {
+      // We know that an enumerator value does not have array type.
+      return 0;
+   }
+   // To get this information we must count the number
+   // of arry type nodes in the canonical type chain.
+   clang::ValueDecl* VD = llvm::cast<clang::ValueDecl>(*fIter);
+   clang::QualType QT = VD->getType().getCanonicalType();
+   int paran = ArrayDim();
+   if ((dim < 0) || (dim >= paran)) {
+      // Passed dimension is out of bounds.
+      return -1;
+   }
+   int cnt = dim;
+   int max = 0;
+   while (1) {
+      if (QT->isArrayType()) {
+         if (cnt == 0) {
+            if (const clang::ConstantArrayType* CAT =
+                  llvm::dyn_cast<clang::ConstantArrayType>(QT)
+            ) {
+               max = static_cast<int>(CAT->getSize().getZExtValue());
+            }
+            else if (const clang::IncompleteArrayType* IAT =
+                  llvm::dyn_cast<clang::IncompleteArrayType>(QT)
+            ) {
+               max = INT_MAX;
+            }
+            else {
+               max = -1;
+            }
+            break;
+         }
+         --cnt;
+         QT = llvm::cast<clang::ArrayType>(QT)->getElementType();
+         continue;
+      }
+      else if (QT->isReferenceType()) {
+         QT = llvm::cast<clang::ReferenceType>(QT)->getPointeeType();
+         continue;
+      }
+      else if (QT->isPointerType()) {
+         QT = llvm::cast<clang::PointerType>(QT)->getPointeeType();
+         continue;
+      }
+      else if (QT->isMemberPointerType()) {
+         QT = llvm::cast<clang::MemberPointerType>(QT)->getPointeeType();
+         continue;
+      }
+      break;
+   }
+   return max;
 }
 
 void tcling_DataMemberInfo::InternalNextValidMember()
