@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 
 @class ScrollViewWithPadView;
+@class PadImageScrollView;
 @class ObjectInspector;
 @class ObjectShortcut;
 @class EditorView;
@@ -33,6 +34,7 @@ class TObject;
    ObjectInspector *objectInspector;
    
    IBOutlet ScrollViewWithPadView *scrollView;
+   IBOutlet UIScrollView *navigationScrollView;
    UITapGestureRecognizer *doubleTap;
    
    PadView *padView;
@@ -44,9 +46,16 @@ class TObject;
    TObject *selectedObject;
    
    BOOL zoomed;
+   
+   PadImageScrollView *navScrolls[3];
+   ROOT_iOS::Pad *navPad;
+   unsigned currentObject;
+   unsigned nextObject;
+   unsigned prevObject;
 }
 
 @property (nonatomic, retain) ScrollViewWithPadView *scrollView;
+@property (nonatomic, retain) UIScrollView *navigationScrollView;
 
 - (void) setObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
 - (void) handleDoubleTapOnPad;
