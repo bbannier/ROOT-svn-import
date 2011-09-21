@@ -42,7 +42,7 @@
 				<int key="NSvFlags">256</int>
 				<object class="NSMutableArray" key="NSSubviews">
 					<bool key="EncodedWithXMLCoder">YES</bool>
-					<object class="IBUIScrollView" id="590740328">
+					<object class="IBUIScrollView" id="245540603">
 						<reference key="NSNextResponder" ref="766721923"/>
 						<int key="NSvFlags">274</int>
 						<string key="NSFrameSize">{1024, 748}</string>
@@ -69,11 +69,12 @@
 						<string key="NSFrame">{{0, 31}, {1024, 687}}</string>
 						<reference key="NSSuperview" ref="766721923"/>
 						<reference key="NSWindow"/>
-						<reference key="NSNextKeyView" ref="590740328"/>
+						<reference key="NSNextKeyView" ref="245540603"/>
 						<reference key="IBUIBackgroundColor" ref="285997021"/>
 						<bool key="IBUIClipsSubviews">YES</bool>
 						<bool key="IBUIMultipleTouchEnabled">YES</bool>
 						<string key="targetRuntimeIdentifier">IBIPadFramework</string>
+						<bool key="IBUIBounces">NO</bool>
 					</object>
 				</object>
 				<string key="NSFrame">{{0, 20}, {1024, 748}}</string>
@@ -116,7 +117,7 @@
 					<object class="IBCocoaTouchOutletConnection" key="connection">
 						<string key="label">navigationScrollView</string>
 						<reference key="source" ref="841351856"/>
-						<reference key="destination" ref="590740328"/>
+						<reference key="destination" ref="245540603"/>
 					</object>
 					<int key="connectionID">14</int>
 				</object>
@@ -147,7 +148,7 @@
 						<object class="NSMutableArray" key="children">
 							<bool key="EncodedWithXMLCoder">YES</bool>
 							<reference ref="839725682"/>
-							<reference ref="590740328"/>
+							<reference ref="245540603"/>
 						</object>
 						<reference key="parent" ref="0"/>
 					</object>
@@ -161,7 +162,7 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">13</int>
-						<reference key="object" ref="590740328"/>
+						<reference key="object" ref="245540603"/>
 						<reference key="parent" ref="766721923"/>
 					</object>
 				</object>

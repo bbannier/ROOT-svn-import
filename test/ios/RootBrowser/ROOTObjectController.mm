@@ -607,6 +607,7 @@ static const CGFloat maximumZoom = 2.f;
    [navScrolls[2] setObject : fileContainer->GetObject(nextObject) drawOption : fileContainer->GetDrawOption(nextObject)];
 
    [navigationScrollView scrollRectToVisible:navScrolls[1].frame animated : NO];
+   self.navigationItem.title = [NSString stringWithFormat:@"%s", fileContainer->GetObject(currentObject)->GetName()];
 }
 
 //____________________________________________________________________________________________________
@@ -627,6 +628,7 @@ static const CGFloat maximumZoom = 2.f;
    [currImage release];
    
    [navigationScrollView scrollRectToVisible:navScrolls[1].frame animated : NO];
+   self.navigationItem.title = [NSString stringWithFormat:@"%s", fileContainer->GetObject(currentObject)->GetName()];
 }
 
 //____________________________________________________________________________________________________
