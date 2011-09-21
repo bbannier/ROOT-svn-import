@@ -2,6 +2,7 @@
 
 #import "ScrollViewWithPadView.h"
 #import "ROOTObjectController.h"
+#import "PadImageScrollView.h"
 #import "ObjectInspector.h"
 #import "ObjectShortcut.h"
 #import "SelectionView.h"
@@ -22,6 +23,7 @@ static const CGFloat maximumZoom = 2.f;
 
 @implementation ROOTObjectController
 
+@synthesize navigationScrollView;
 @synthesize scrollView;
 
 /*
@@ -59,7 +61,7 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (void) setupScrollView 
 {
-   scrollView.delegate = self;
+  // scrollView.delegate = self;//DDD
    [scrollView setMaximumZoomScale:2.];
    scrollView.bounces = NO;
    scrollView.bouncesZoom = NO;
@@ -68,6 +70,26 @@ static const CGFloat maximumZoom = 2.f;
    doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTapOnPad)];
    doubleTap.numberOfTapsRequired = 2;
    [scrollView addGestureRecognizer : doubleTap];
+   
+   scrollView.hidden = YES;
+}
+
+//____________________________________________________________________________________________________
+- (void) setupNavigationScrollView 
+{
+   navigationScrollView.delegate = self;
+   navigationScrollView.canCancelContentTouches = NO;
+   navigationScrollView.delaysContentTouches = NO;
+   navigationScrollView.bounces = NO;
+   navigationScrollView.bouncesZoom = NO;
+   navigationScrollView.pagingEnabled = YES;
+   navigationScrollView.showsVerticalScrollIndicator = NO;
+   navigationScrollView.showsHorizontalScrollIndicator = NO;
+
+   navigationScrollView.hidden = NO;
+   ///
+   
+   ///
 }
 
 //____________________________________________________________________________________________________
@@ -139,7 +161,7 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //_________________________________________________________________
-- (CGRect)centeredFrameForScrollView:(UIScrollView *)scroll andUIView:(UIView *)rView 
+- (CGRect) centeredFrameForScrollView:(UIScrollView *)scroll andUIView:(UIView *)rView 
 {
    CGSize boundsSize = scroll.bounds.size;
    CGRect frameToCenter = rView.frame;
@@ -179,6 +201,9 @@ static const CGFloat maximumZoom = 2.f;
 {
    //Change pad's x,y and (possibly) w and h for different orientation
    //and editor hidden/visible.
+   if (mode == ROOT_IOSObjectController::ocmNavigation)
+      return;
+   
    if (!zoomed) {
       if (editorView.hidden)
          [self correctPadFrameNoEditor : orientation];
@@ -210,6 +235,21 @@ static const CGFloat maximumZoom = 2.f;
    
    self.view.frame = mainFrame;
    self.scrollView.frame = scrollFrame;
+   self.navigationScrollView.frame = scrollFrame;
+   
+   scrollFrame.origin = CGPointZero;
+   for (unsigned i = 0; i < 3; ++i) {
+      scrollFrame.origin.x = i * scrollFrame.size.width;
+      [navScrolls[i] resetToFrame : scrollFrame];
+   }
+   scrollFrame.origin = CGPointZero;
+   
+   if (fileContainer && fileContainer->GetNumberOfObjects() > 1) {
+      navigationScrollView.contentSize = CGSizeMake(3 * scrollFrame.size.width, scrollFrame.size.height);
+      [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];
+   } else {
+      navigationScrollView.contentSize = scrollFrame.size;
+   }
 
    const CGFloat editorAddY = 100.f;
    const CGRect editorFrame = CGRectMake(mainFrame.size.width - [EditorView editorWidth], editorAddY, [EditorView editorWidth], mainFrame.size.height - 2 * editorAddY);
@@ -234,6 +274,7 @@ static const CGFloat maximumZoom = 2.f;
 
       [self loadObjectInspector];
       [self setupScrollView];
+      [self setupNavigationScrollView];
       [self createPad];
 
       [self correctFramesForOrientation : self.interfaceOrientation];
@@ -247,6 +288,7 @@ static const CGFloat maximumZoom = 2.f;
 {
    [doubleTap release];
    self.scrollView = nil;
+   self.navigationScrollView = nil;
    [objectInspector release];
    [super dealloc];
    delete pad;
@@ -264,9 +306,18 @@ static const CGFloat maximumZoom = 2.f;
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
+
 - (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration : (NSTimeInterval) duration
 {
-   [self correctFramesForOrientation : interfaceOrientation];
+//   if (mode == ROOT_IOSObjectController::ocmEdit)
+      [self correctFramesForOrientation : interfaceOrientation];
+}
+
+//____________________________________________________________________________________________________
+- (void) didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+{
+   //if (mode == ROOT_IOSObjectController::ocmNavigation)
+     // [self correctFramesForOrientation : self.interfaceOrientation];
 }
 
 //____________________________________________________________________________________________________
@@ -366,6 +417,13 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
+- (void) adjustPrevNextIndices
+{
+   nextObject = currentObject + 1 < fileContainer->GetNumberOfObjects() ? currentObject + 1 : 0;
+   prevObject = currentObject ? currentObject - 1 : fileContainer->GetNumberOfObjects() - 1;
+}
+
+//____________________________________________________________________________________________________
 - (void) setObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)container;
 {
    mode = ROOT_IOSObjectController::ocmNavigation;
@@ -382,6 +440,42 @@ static const CGFloat maximumZoom = 2.f;
    rootObject->Draw(fileContainer->GetDrawOption(index));
 
    [padView setNeedsDisplay];
+   
+   ////////////////////////////////////////////////
+   
+   //Now, init navigation.
+   const CGSize sz = [PadImageScrollView defaultImageFrame].size;
+   navPad = new ROOT_iOS::Pad(sz.width, sz.height);
+   
+   currentObject = index;
+   [self adjustPrevNextIndices];
+   
+   CGRect nestedFrame = navigationScrollView.frame;
+   nestedFrame.origin = CGPointZero;
+   navScrolls[0] = [[PadImageScrollView alloc] initWithFrame : nestedFrame andPad : navPad];
+   if (fileContainer->GetNumberOfObjects() == 1)
+      [navScrolls[0] setObject:fileContainer->GetObject(currentObject) drawOption:fileContainer->GetDrawOption(currentObject)];
+   else
+      [navScrolls[0] setObject:fileContainer->GetObject(prevObject) drawOption:fileContainer->GetDrawOption(prevObject)];
+   [navigationScrollView addSubview : navScrolls[0]];
+   [navScrolls[0] release];
+
+   if (fileContainer->GetNumberOfObjects() > 1) {
+      nestedFrame.origin.x = nestedFrame.size.width;
+      navScrolls[1] = [[PadImageScrollView alloc] initWithFrame : nestedFrame andPad : navPad];
+      [navScrolls[1] setObject:fileContainer->GetObject(currentObject) drawOption:fileContainer->GetDrawOption(currentObject)];
+      [navigationScrollView addSubview : navScrolls[1]];
+      [navScrolls[1] release];
+      nestedFrame.origin.x = nestedFrame.size.width * 2;
+      navScrolls[2] = [[PadImageScrollView alloc] initWithFrame : nestedFrame andPad : navPad];
+      [navScrolls[2] setObject:fileContainer->GetObject(nextObject) drawOption:fileContainer->GetDrawOption(nextObject)];
+      [navigationScrollView addSubview : navScrolls[2]];
+      [navScrolls[2] release];
+      
+      navigationScrollView.contentSize = CGSizeMake(nestedFrame.size.width * 3, nestedFrame.size.height);
+      [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];
+   } else
+      navigationScrollView.contentSize = nestedFrame.size;
 }
 
 #pragma mark - delegate for scroll-view.
@@ -492,6 +586,58 @@ static const CGFloat maximumZoom = 2.f;
       pad->InvalidateSelection();
    
    [padView setNeedsDisplay];
+}
+
+//____________________________________________________________________________________________________
+- (void) scrollToLeft
+{
+   currentObject + 1 < fileContainer->GetNumberOfObjects() ? ++currentObject : currentObject = 0;
+   [self adjustPrevNextIndices];
+   //Current is becoming prev, next is becoming current, load new next.
+   UIImage *prevImage = navScrolls[1].padImage;
+   [prevImage retain];
+   UIImage *currentImage = navScrolls[2].padImage;
+   [currentImage retain];
+   
+   [navScrolls[0] setObject : fileContainer->GetObject(prevObject) drawOption : fileContainer->GetDrawOption(prevObject) andImage : prevImage];
+   [navScrolls[1] setObject : fileContainer->GetObject(currentObject) drawOption : fileContainer->GetDrawOption(currentObject) andImage : currentImage];
+   [prevImage release];
+   [currentImage release];
+   
+   [navScrolls[2] setObject : fileContainer->GetObject(nextObject) drawOption : fileContainer->GetDrawOption(nextObject)];
+
+   [navigationScrollView scrollRectToVisible:navScrolls[1].frame animated : NO];
+}
+
+//____________________________________________________________________________________________________
+- (void) scrollToRight
+{
+   currentObject ? --currentObject : currentObject = fileContainer->GetNumberOfObjects() - 1;
+   [self adjustPrevNextIndices];
+   //Current is becoming next, prev - current, prev must be loaded.
+   UIImage *nextImage = navScrolls[1].padImage;
+   [nextImage retain];
+   UIImage *currImage = navScrolls[0].padImage;
+   [currImage retain];
+   
+   [navScrolls[1] setObject : fileContainer->GetObject(currentObject) drawOption : fileContainer->GetDrawOption(currentObject) andImage : currImage];
+   [navScrolls[2] setObject : fileContainer->GetObject(nextObject) drawOption : fileContainer->GetDrawOption(nextObject) andImage : nextImage];
+   [navScrolls[0] setObject : fileContainer->GetObject(prevObject) drawOption : fileContainer->GetDrawOption(prevObject)];
+   [nextImage release];
+   [currImage release];
+   
+   [navigationScrollView scrollRectToVisible:navScrolls[1].frame animated : NO];
+}
+
+//____________________________________________________________________________________________________
+- (void) scrollViewDidEndDecelerating : (UIScrollView *) sender
+{
+   if (sender == navigationScrollView) {
+      if (sender.contentOffset.x > navigationScrollView.frame.size.width)
+         [self scrollToLeft];
+      else if (sender.contentOffset.x < navigationScrollView.frame.size.width)
+         [self scrollToRight];
+   }
 }
 
 @end
