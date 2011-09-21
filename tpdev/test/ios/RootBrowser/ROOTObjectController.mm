@@ -61,7 +61,7 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (void) setupScrollView 
 {
-  // scrollView.delegate = self;//DDD
+   scrollView.delegate = self;//DDD
    [scrollView setMaximumZoomScale:2.];
    scrollView.bounces = NO;
    scrollView.bouncesZoom = NO;
@@ -71,7 +71,7 @@ static const CGFloat maximumZoom = 2.f;
    doubleTap.numberOfTapsRequired = 2;
    [scrollView addGestureRecognizer : doubleTap];
    
-   scrollView.hidden = YES;
+ //  scrollView.hidden = YES;
 }
 
 //____________________________________________________________________________________________________
@@ -86,7 +86,8 @@ static const CGFloat maximumZoom = 2.f;
    navigationScrollView.showsVerticalScrollIndicator = NO;
    navigationScrollView.showsHorizontalScrollIndicator = NO;
 
-   navigationScrollView.hidden = NO;
+//   navigationScrollView.hidden = NO;
+   navigationScrollView.hidden = YES;
    ///
    
    ///
@@ -201,8 +202,8 @@ static const CGFloat maximumZoom = 2.f;
 {
    //Change pad's x,y and (possibly) w and h for different orientation
    //and editor hidden/visible.
-   if (mode == ROOT_IOSObjectController::ocmNavigation)
-      return;
+  // if (mode == ROOT_IOSObjectController::ocmNavigation)
+    //  return;
    
    if (!zoomed) {
       if (editorView.hidden)
