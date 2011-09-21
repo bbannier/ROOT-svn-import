@@ -14,7 +14,6 @@
 #import "TAxis.h"
 
 //C++ code (ROOT's ios module)
-#import "TStyle.h"
 #import "IOSPad.h"
 
 @implementation PadView
@@ -54,12 +53,9 @@
    CGContextRef ctx = UIGraphicsGetCurrentContext();
 
    CGContextClearRect(ctx, rect);
-   
    pad->SetViewWH(rect.size.width, rect.size.height);
-
    CGContextTranslateCTM(ctx, 0.f, rect.size.height);
    CGContextScaleCTM(ctx, 1.f, -1.f);
-gStyle->SetLabelSize(0.01, "y");
    pad->cd();
    pad->SetContext(ctx);
    pad->Paint();
