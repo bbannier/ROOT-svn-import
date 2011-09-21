@@ -39,7 +39,9 @@ static const CGFloat maximumZoom = 2.f;
 - (void) resetEditorButton
 {
    NSString *title = mode == ROOT_IOSObjectController::ocmEdit ? @"Hide editor" : @"Edit";
-   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : title style:UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
+   UIBarButtonItem *btn = [[UIBarButtonItem alloc] initWithTitle : title style:UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
+   self.navigationItem.rightBarButtonItem = btn;
+   [btn release];
 }
 
 #pragma mark - Initialization code, called from initWithNib
@@ -383,6 +385,7 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 #pragma mark - delegate for scroll-view.
+
 //____________________________________________________________________________________________________
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
 {

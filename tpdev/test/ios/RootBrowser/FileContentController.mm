@@ -25,7 +25,9 @@
       [self view];
       
       objectShortcuts = [[NSMutableArray alloc] init];
-      self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Slide show" style:UIBarButtonItemStyleBordered target:self action:@selector(startSlideshow)];
+      UIBarButtonItem *btn = [[UIBarButtonItem alloc] initWithTitle:@"Slide show" style:UIBarButtonItemStyleBordered target:self action:@selector(startSlideshow)];
+      self.navigationItem.rightBarButtonItem = btn;
+      [btn release];
    }
 
    return self;

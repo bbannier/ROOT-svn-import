@@ -27,6 +27,8 @@
       UIBarButtonItem *leftButton = [[UIBarButtonItem alloc] initWithTitle : @"Open file" style:UIBarButtonItemStylePlain target : self action : @selector(showFileOpenView)];
       self.navigationItem.leftBarButtonItem = leftButton;
       [backButton release];
+      [leftButton release];
+
       scrollView.bounces = NO;
       
       [self.view bringSubviewToFront : fileOpenView];
