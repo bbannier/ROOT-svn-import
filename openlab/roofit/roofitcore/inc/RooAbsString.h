@@ -52,6 +52,14 @@ protected:
   virtual Bool_t traceEvalHook(const char* value) const ;
   virtual TString evaluate() const { return "" ; }
 
+  virtual Bool_t resizeVector(Int_t /*size*/=0) { return kFALSE ; }
+  virtual Bool_t reserveVector(Int_t /*size*/) { return kFALSE ; }
+  virtual Bool_t isVector() const { return kFALSE ; }
+  virtual Bool_t clearVector() { return kFALSE ; }
+  virtual void setValueVector(Int_t /*i*/) { }
+  virtual void getValueVector(Int_t /*i*/) { }
+  virtual void pushBackValueVector() { }
+
   // Internal consistency checking (needed by RooDataSet)
   virtual Bool_t isValid() const ;
   virtual Bool_t isValidString(const char*, Bool_t printError=kFALSE) const ;

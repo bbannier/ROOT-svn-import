@@ -436,6 +436,21 @@ public:
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) = 0 ;
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) = 0 ;
   virtual void fillTreeBranch(TTree& t) = 0 ;
+
+  // Hook for vectors containers
+  virtual Bool_t isVector() const = 0 ;
+  virtual Bool_t resizeVector(Int_t size=0) = 0 ;
+  virtual Bool_t reserveVector(Int_t size) = 0 ;
+  virtual Bool_t clearVector() = 0 ;
+
+  // Copy scalar cached value --> cached vector. Doesn't check for dirty value
+  virtual void setValueVector(Int_t i) = 0 ;
+  // Copy cached vector value --> scalar cached value. Doesn't check for dirty value
+  virtual void getValueVector(Int_t i) = 0 ;
+  // Copy scalar cached value --> cached vector, last position. Doesn't check for dirty value
+  virtual void pushBackValueVector() = 0 ;
+  
+
   TString cleanBranchName() const ;
 
   // Global   

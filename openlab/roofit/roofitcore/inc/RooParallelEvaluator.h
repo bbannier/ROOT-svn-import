@@ -25,7 +25,7 @@
 #include "RooArgList.h"
 #include "RooValues.h"
 
-template<class Pdf> void ParallelEvaluator(const Pdf& pdf, RooValues& results)
+template<class Pdf> void ParallelEvaluator(const Pdf& pdf, RooAbsReal::RooValuesDouble& results)
 {
 
   /*

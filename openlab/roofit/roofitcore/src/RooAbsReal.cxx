@@ -247,11 +247,58 @@ Double_t RooAbsReal::getVal(const RooArgSet* nset) const
   return _value ;
 }
 
+//_____________________________________________________________________________
+Bool_t RooAbsReal::resizeVector(Int_t size)
+{
+  _values.resizeCPU(size) ;
+  return kTRUE ;
+}
 
 //_____________________________________________________________________________
-const RooValues* RooAbsReal::getValSIMD(Int_t start, Int_t end, 
-					const RooArgSet* nset,
-					const RooAbsReal* mother) const
+Bool_t RooAbsReal::reserveVector(Int_t size)
+{
+  _values.reserveCPU(size) ;
+  return kTRUE ;
+}
+
+
+//_____________________________________________________________________________
+Bool_t RooAbsReal::isVector() const
+{
+  return _values.isVector() ;
+}
+
+//_____________________________________________________________________________
+Bool_t RooAbsReal::clearVector()
+{
+  _values.clearCPU() ;
+  return kTRUE ;
+}
+
+
+//_____________________________________________________________________________
+void RooAbsReal::setValueVector(Int_t i)
+{
+  _values[i] = _value ;
+}
+
+//_____________________________________________________________________________
+void RooAbsReal::getValueVector(Int_t i)
+{
+  _value = _values[i] ;  
+}
+
+//_____________________________________________________________________________
+void RooAbsReal::pushBackValueVector()
+{
+  _values.push_backCPU(_value) ;
+}
+
+
+//_____________________________________________________________________________
+const RooAbsReal::RooValuesDouble* RooAbsReal::getValSIMD(Int_t start, Int_t end, 
+							  const RooArgSet* nset,
+							  const RooAbsReal* mother) const
 {
   // Return value of object. If the cache is clean, return the
   // cached value, otherwise recalculate on the fly and refill
@@ -2946,6 +2993,17 @@ void RooAbsReal::attachToTree(TTree& t, Int_t bufSize)
   // RooRealVar.  A flag is set that will cause copyCache to copy the
   // object value from the appropriate conversion buffer instead of
   // the _value buffer.
+
+  // check if this is already a vector
+  // if so, it will rise an errror
+  // (it is not possible to have a variable attached to multiple trees)
+  if (isVector()) {
+    coutW(InputArguments) << "RooAbsReal::attachToTree(" << GetName()
+			  << ") It is not possible to have a vector variable attached to multiple trees."
+			  << " Resetting the variable to scalar."
+			  << endl ;
+    _values.clearCPU();
+  }
 
   // First determine if branch is taken
   TString cleanName(cleanBranchName()) ;

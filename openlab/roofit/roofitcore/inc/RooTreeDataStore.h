@@ -115,7 +115,7 @@ public:
   
   const RooArgSet& row() { return _varsww ; }
 
-  virtual Bool_t makeVectors() { return kFALSE; }
+  virtual Bool_t makeVectors() ;
 
  protected:
 
