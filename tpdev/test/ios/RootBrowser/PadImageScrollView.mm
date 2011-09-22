@@ -58,6 +58,7 @@ static const CGFloat minZoom = 1.f;
       pad = p;
       self.delegate = self; //hehehehe
       self.bouncesZoom = NO;
+      self.bounces = NO;
       self.backgroundColor = [UIColor clearColor];
 
       [self setContentSize : frame.size contentOffset : CGPointZero minScale : minZoom maxScale : maxZoom scale : 1];
@@ -247,8 +248,6 @@ static const CGFloat minZoom = 1.f;
 {
    return nestedView;
 }
-
-#pragma mark Utility methods
 
 //____________________________________________________________________________________________________
 - (CGRect)zoomRectForScale:(float)scale withCenter:(CGPoint)center {

@@ -3390,7 +3390,7 @@
 		<string>IDEWorkspaceTabControllerDesignAreaSplitView</string>
 		<string>IDEShowUtilities</string>
 		<string>AssistantEditorsLayout</string>
-		<string>ROOTObjectController.mm</string>
+		<string>PadImageScrollView.mm</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -4038,7 +4038,7 @@
 				<integer>326</integer>
 			</dict>
 		</dict>
-		<string>ROOTObjectController.mm</string>
+		<string>PadImageScrollView.mm</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -4051,7 +4051,7 @@
 				<integer>328</integer>
 			</dict>
 		</dict>
-		<string>Classes</string>
+		<string>Views</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -4102,7 +4102,7 @@
 				<integer>94</integer>
 			</dict>
 			<key>NS.string</key>
-			<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/ROOTObjectController.mm</string>
+			<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/PadImageScrollView.mm</string>
 		</dict>
 		<dict>
 			<key>$class</key>
@@ -4153,10 +4153,10 @@
 		<string>PrimaryDocumentVisibleCharacterRange</string>
 		<string>HideAllIssues</string>
 		<string>PrimaryDocumentSelectedCharacterRange</string>
-		<real>338382735.84902</real>
-		<string>{18554, 3336}</string>
-		<string>{20094, 0}</string>
-		<string>-scrollToLeft</string>
+		<real>338384168.51396799</real>
+		<string>{719, 2845}</string>
+		<string>{2164, 0}</string>
+		<string>-initWithFrame:andPad:</string>
 		<string>Xcode.IDEKit.EditorDocument.SourceCode</string>
 		<dict>
 			<key>$class</key>
@@ -4175,7 +4175,7 @@
 				<integer>346</integer>
 			</dict>
 		</dict>
-		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/ROOTObjectController.mm</string>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/PadImageScrollView.mm</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -4190,7 +4190,7 @@
 				</dict>
 			</array>
 		</dict>
-		<string>{{0, 0}, {2040, 1229}}</string>
+		<string>{{0, 0}, {2040, 1207}}</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -4803,15 +4803,15 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>402</integer>
+					<integer>401</integer>
+				</dict>
+				<dict>
+					<key>CF$UID</key>
+					<integer>403</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
 					<integer>404</integer>
-				</dict>
-				<dict>
-					<key>CF$UID</key>
-					<integer>405</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
@@ -4905,11 +4905,10 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>401</integer>
+					<integer>328</integer>
 				</dict>
 			</array>
 		</dict>
-		<string>Views</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -4924,7 +4923,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>403</integer>
+					<integer>402</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4947,7 +4946,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>401</integer>
+					<integer>328</integer>
 				</dict>
 			</array>
 		</dict>
@@ -4969,10 +4968,11 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>328</integer>
+					<integer>405</integer>
 				</dict>
 			</array>
 		</dict>
+		<string>Classes</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -4987,7 +4987,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>403</integer>
+					<integer>402</integer>
 				</dict>
 				<dict>
 					<key>CF$UID</key>
@@ -19287,9 +19287,9 @@
 				</dict>
 			</array>
 		</dict>
-		<real>338382735.84848499</real>
-		<string>{18554, 3336}</string>
-		<string>{20094, 0}</string>
+		<real>338383880.18470401</real>
+		<string>{19591, 3336}</string>
+		<string>{16938, 0}</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -21149,9 +21149,9 @@
 				</dict>
 			</array>
 		</dict>
-		<real>338382439.619335</real>
-		<string>{7653, 1896}</string>
-		<string>{9549, 0}</string>
+		<real>338384168.50807703</real>
+		<string>{719, 2845}</string>
+		<string>{2164, 0}</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -22083,9 +22083,9 @@
 				</dict>
 			</array>
 		</dict>
-		<real>338381354.98764598</real>
-		<string>{1623, 2274}</string>
-		<string>{2107, 0}</string>
+		<real>338383776.75047201</real>
+		<string>{2476, 2590}</string>
+		<string>{2978, 0}</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -23133,7 +23133,7 @@
 				</dict>
 			</array>
 		</dict>
-		<real>338374876.96394002</real>
+		<real>338383409.59322602</real>
 		<string>{0, 811}</string>
 		<dict>
 			<key>$class</key>
@@ -23752,9 +23752,9 @@
 				</dict>
 			</array>
 		</dict>
-		<real>338370290.307621</real>
-		<string>{0, 1371}</string>
-		<string>{1084, 31}</string>
+		<real>338383609.48624498</real>
+		<string>{0, 1388}</string>
+		<string>{1234, 0}</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -34128,7 +34128,7 @@
 				<integer>2400</integer>
 			</dict>
 			<key>NS.time</key>
-			<real>338382601.46046603</real>
+			<real>338384163.49631399</real>
 		</dict>
 		<dict>
 			<key>$classes</key>
@@ -34139,7 +34139,7 @@
 			<key>$classname</key>
 			<string>NSDate</string>
 		</dict>
-		<string>Today at 1:10 PM</string>
+		<string>Today at 1:36 PM</string>
 		<integer>234</integer>
 		<string>root_browser</string>
 		<dict>
@@ -34274,7 +34274,7 @@
 				</dict>
 				<dict>
 					<key>CF$UID</key>
-					<integer>2431</integer>
+					<integer>2432</integer>
 				</dict>
 			</array>
 		</dict>
@@ -34295,7 +34295,7 @@
 				<integer>2415</integer>
 			</dict>
 		</dict>
-		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/ROOTObjectController.mm</string>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/PadImageScrollView.mm</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -34313,7 +34313,7 @@
 				<integer>2417</integer>
 			</dict>
 		</dict>
-		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/PadImageScrollView.mm</string>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/ROOTObjectController.mm</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -34331,7 +34331,7 @@
 				<integer>2419</integer>
 			</dict>
 		</dict>
-		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/PadImageScrollView.h</string>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/PadView.mm</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -34349,7 +34349,7 @@
 				<integer>2421</integer>
 			</dict>
 		</dict>
-		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/PadView.mm</string>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/ROOTObjectController.h</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -34367,7 +34367,7 @@
 				<integer>2423</integer>
 			</dict>
 		</dict>
-		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/SelectionView.mm</string>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/ScrollViewWithPadView.mm</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -34385,7 +34385,7 @@
 				<integer>2425</integer>
 			</dict>
 		</dict>
-		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/SelectionView.h</string>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/PadImageScrollView.h</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -34403,7 +34403,7 @@
 				<integer>2427</integer>
 			</dict>
 		</dict>
-		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/ROOTObjectController.xib</string>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/SelectionView.mm</string>
 		<dict>
 			<key>$class</key>
 			<dict>
@@ -34421,42 +34421,43 @@
 				<integer>2429</integer>
 			</dict>
 		</dict>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/SelectionView.h</string>
+		<dict>
+			<key>$class</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>236</integer>
+			</dict>
+			<key>NS.base</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>0</integer>
+			</dict>
+			<key>NS.relative</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>2431</integer>
+			</dict>
+		</dict>
+		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/ROOTObjectController.xib</string>
+		<dict>
+			<key>$class</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>236</integer>
+			</dict>
+			<key>NS.base</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>0</integer>
+			</dict>
+			<key>NS.relative</key>
+			<dict>
+				<key>CF$UID</key>
+				<integer>2433</integer>
+			</dict>
+		</dict>
 		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/PadView.h</string>
-		<dict>
-			<key>$class</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>236</integer>
-			</dict>
-			<key>NS.base</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>0</integer>
-			</dict>
-			<key>NS.relative</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>678</integer>
-			</dict>
-		</dict>
-		<dict>
-			<key>$class</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>236</integer>
-			</dict>
-			<key>NS.base</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>0</integer>
-			</dict>
-			<key>NS.relative</key>
-			<dict>
-				<key>CF$UID</key>
-				<integer>2432</integer>
-			</dict>
-		</dict>
-		<string>file://localhost/Users/tpochep/tpdev/root/test/ios/RootBrowser/ScrollViewWithPadView.mm</string>
 	</array>
 	<key>$top</key>
 	<dict>
