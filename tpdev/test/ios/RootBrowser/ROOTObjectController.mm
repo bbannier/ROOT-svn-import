@@ -26,27 +26,16 @@ static const CGFloat maximumZoom = 2.f;
 @synthesize navigationScrollView;
 @synthesize scrollView;
 
-/*
-//____________________________________________________________________________________________________
-- (void) viewDidAppear:(BOOL)animated
-{
-   //TEST.
-   static unsigned nCall = 1;
-   NSLog(@"pop controller n %u", nCall++);
-   [self.navigationController popViewControllerAnimated : YES];
-}
-*/
-
 //____________________________________________________________________________________________________
 - (void) resetEditorButton
 {
-   NSString *title = mode == ROOT_IOSObjectController::ocmEdit ? @"Hide editor" : @"Edit";
+   NSString *title = mode == ROOT_IOSObjectController::ocmEdit ? @"Done" : @"Edit";
    UIBarButtonItem *btn = [[UIBarButtonItem alloc] initWithTitle : title style:UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
    self.navigationItem.rightBarButtonItem = btn;
    [btn release];
 }
 
-#pragma mark - Initialization code, called from initWithNib
+#pragma mark - Initialization code, called from initWithNibname
 
 //____________________________________________________________________________________________________
 - (void) loadObjectInspector
@@ -59,25 +48,21 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) setupScrollView 
+- (void) setupEditablePadView 
 {
-   scrollView.delegate = self;//DDD
-   [scrollView setMaximumZoomScale:2.];
+   scrollView.delegate = self;
+   [scrollView setMaximumZoomScale : 2.];
    scrollView.bounces = NO;
    scrollView.bouncesZoom = NO;
-   scrollView.padIsEditable = NO;
-      
-   doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTapOnPad)];
-   doubleTap.numberOfTapsRequired = 2;
-   [scrollView addGestureRecognizer : doubleTap];
-   
- //  scrollView.hidden = YES;
+   //By default, this view is hidden (mode != ocmEdit).
+   scrollView.hidden = YES;
 }
 
 //____________________________________________________________________________________________________
 - (void) setupNavigationScrollView 
 {
    navigationScrollView.delegate = self;
+   
    navigationScrollView.canCancelContentTouches = NO;
    navigationScrollView.delaysContentTouches = NO;
    navigationScrollView.bounces = NO;
@@ -85,16 +70,12 @@ static const CGFloat maximumZoom = 2.f;
    navigationScrollView.pagingEnabled = YES;
    navigationScrollView.showsVerticalScrollIndicator = NO;
    navigationScrollView.showsHorizontalScrollIndicator = NO;
-
-//   navigationScrollView.hidden = NO;
-   navigationScrollView.hidden = YES;
-   ///
-   
-   ///
+   //By default, this view is visible (mode == ocmNavigation).
+   navigationScrollView.hidden = NO;
 }
 
 //____________________________________________________________________________________________________
-- (void) createPad
+- (void) createEditablePad
 {
    using namespace ROOT_IOSBrowser;
    
@@ -102,39 +83,18 @@ static const CGFloat maximumZoom = 2.f;
    const CGRect padRect = CGRectMake(padCenter.x - padW / 2, padCenter.y - padH / 2, padW, padH);
    pad = new ROOT_iOS::Pad(padW, padH);
    selectedObject = pad;
-   //Init the inspector for the pad.
+   //Init the inspector for the IOSPad.
    [self setupObjectInspector];
       
    padView = [[PadView alloc] initWithFrame : padRect controller : self forPad : pad];
    [scrollView addSubview : padView];
    [padView release];
-   padView.padIsEditable = NO;
 }
 
 #pragma mark - Geometry code.
 
 //____________________________________________________________________________________________________
-- (void) correctPadFrameNoEditor : (UIInterfaceOrientation) orientation
-{
-   //Correct the sizes and coordinates of a pad's view in
-   //case no editor is visible and a pad was not scaled.
-   using namespace ROOT_IOSBrowser;
-   
-   CGRect padFrame = CGRectMake(0.f, 0.f, padW, padH);
-   
-   if (UIInterfaceOrientationIsPortrait(orientation)) {
-      padFrame.origin.x = padXNoEditorP;
-      padFrame.origin.y = padYNoEditorP;
-   } else {
-      padFrame.origin.x = padXNoEditorL;
-      padFrame.origin.y = padYNoEditorL;
-   }
-   
-   padView.frame = padFrame;
-}
-
-//____________________________________________________________________________________________________
-- (void) correctPadFrameWithEditor : (UIInterfaceOrientation) orientation
+- (void) correctEditablePadFrame : (UIInterfaceOrientation) orientation
 {
    //The most tricky part, since this code can be called
    //for animation.
@@ -162,7 +122,7 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //_________________________________________________________________
-- (CGRect) centeredFrameForScrollView:(UIScrollView *)scroll andUIView:(UIView *)rView 
+- (CGRect) centeredFrameForScrollView : (UIScrollView *)scroll andUIView : (UIView *)rView 
 {
    CGSize boundsSize = scroll.bounds.size;
    CGRect frameToCenter = rView.frame;
@@ -185,36 +145,12 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) centerPadFrameNoEditor : (UIInterfaceOrientation) orientation
+- (void) correctEditablePadFrameForOrientation : (UIInterfaceOrientation) orientation
 {
-   //This method only centers the pad, but does not change it's sizes.
-   padView.frame = [self centeredFrameForScrollView : scrollView andUIView : padView]; 
-}
-
-//____________________________________________________________________________________________________
-- (void) centerPadFrameWithEditor : (UIInterfaceOrientation) orientation
-{
-   padView.frame = [self centeredFrameForScrollView : scrollView andUIView : padView]; 
-}
-
-//____________________________________________________________________________________________________
-- (void) correctPadFrameForOrientation : (UIInterfaceOrientation) orientation
-{
-   //Change pad's x,y and (possibly) w and h for different orientation
-   //and editor hidden/visible.
-  // if (mode == ROOT_IOSObjectController::ocmNavigation)
-    //  return;
-   
    if (!zoomed) {
-      if (editorView.hidden)
-         [self correctPadFrameNoEditor : orientation];
-      else
-         [self correctPadFrameWithEditor : orientation];
+      [self correctEditablePadFrame : orientation];
    } else {
-      if (editorView.hidden)
-         [self centerPadFrameNoEditor : orientation];
-      else
-         [self centerPadFrameWithEditor : orientation];
+      padView.frame = [self centeredFrameForScrollView : scrollView andUIView : padView]; 
    }
 }
 
@@ -257,8 +193,7 @@ static const CGFloat maximumZoom = 2.f;
    editorView.frame = editorFrame;
    [editorView correctFrames];
    
-   //Now correct padView.
-   [self correctPadFrameForOrientation : orientation];
+   [self correctEditablePadFrameForOrientation : orientation];
 }
 
 #pragma mark - Controller's lifecycle.
@@ -266,19 +201,17 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
-   self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-   
-   [self view];
+   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
    
    if (self) {
+      [self view];//force view loading.
+      
       mode = ROOT_IOSObjectController::ocmNavigation;
 
       [self loadObjectInspector];
-      [self setupScrollView];
+      [self setupEditablePadView];
       [self setupNavigationScrollView];
-      [self createPad];
-
-      [self correctFramesForOrientation : self.interfaceOrientation];
+      [self createEditablePad];
    }
    
    return self;
@@ -287,11 +220,12 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-   [doubleTap release];
    self.scrollView = nil;
    self.navigationScrollView = nil;
    [objectInspector release];
+ 
    [super dealloc];
+   
    delete pad;
 }
 
@@ -300,7 +234,6 @@ static const CGFloat maximumZoom = 2.f;
 {
     // Releases the view if it doesn't have a superview.
     [super didReceiveMemoryWarning];
-    
     // Release any cached data, images, etc that aren't in use.
 }
 
@@ -310,16 +243,17 @@ static const CGFloat maximumZoom = 2.f;
 
 - (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration : (NSTimeInterval) duration
 {
-//   if (mode == ROOT_IOSObjectController::ocmEdit)
-      [self correctFramesForOrientation : interfaceOrientation];
+   [self correctFramesForOrientation : interfaceOrientation];
 }
 
 //____________________________________________________________________________________________________
+/*
 - (void) didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
    //if (mode == ROOT_IOSObjectController::ocmNavigation)
      // [self correctFramesForOrientation : self.interfaceOrientation];
 }
+*/
 
 //____________________________________________________________________________________________________
 - (void) viewWillAppear : (BOOL)animated
@@ -350,33 +284,8 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) toggleEditor
+- (void) animateEditor
 {
-   using namespace ROOT_IOSObjectController;
-   
-   mode = mode == ocmEdit ? ocmNavigation : ocmEdit;
-   if (mode == ocmEdit) {
-      scrollView.padIsEditable = YES;
-      padView.padIsEditable = YES;
-      [scrollView removeGestureRecognizer : doubleTap];
-   } else {
-      pad->Unpick();
-      selectedObject = pad;
-      scrollView.padIsEditable = NO;
-      padView.padIsEditable = NO;
-      padView.selectionView.hidden = YES;
-      [scrollView addGestureRecognizer : doubleTap];
-   }
-
-   editorView.hidden = !editorView.hidden;
-   [self resetEditorButton];
-   [self correctPadFrameForOrientation : self.interfaceOrientation];
-
-   if (editorView.hidden && UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
-      //Editor is hidden, pad sizes were changed, need to redraw the picture.
-      [padView setNeedsDisplay];
-   }
-   
    //Do animation.
    // First create a CATransition object to describe the transition
    CATransition *transition = [CATransition animation];
@@ -397,105 +306,150 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) resetPadAndScroll
+- (void) resetEditablePad
 {
    //Reset the pad sizes, reset the scroll, hide the editor.
    using namespace ROOT_IOSBrowser;
    
    zoomed = NO;
    padView.transform = CGAffineTransformIdentity;
-   padView.selectionView.hidden = YES;
-   padView.selectionView.transform = CGAffineTransformIdentity;
-   editorView.hidden = YES;
    padView.frame = CGRectMake(0.f, 0.f, padW, padH);
-   padView.selectionView.frame = CGRectMake(0.f, 0.f, padW, padH);
+
    scrollView.contentOffset = CGPointZero;
    scrollView.maximumZoomScale = maximumZoom;
    scrollView.minimumZoomScale = 1.f;
    
-   scrollView.padIsEditable = NO;
-   padView.padIsEditable = NO;
+   delete pad;
+   pad = new ROOT_iOS::Pad(ROOT_IOSBrowser::padW, ROOT_IOSBrowser::padH);
+   [padView setPad : pad];
+}
+
+//____________________________________________________________________________________________________
+- (void) resetSelectionView
+{
+   using namespace ROOT_IOSBrowser;
+   
+   padView.selectionView.hidden = YES;
+   padView.selectionView.transform = CGAffineTransformIdentity;
+   padView.selectionView.frame = CGRectMake(0.f, 0.f, padW, padH);
+}
+
+//____________________________________________________________________________________________________
+- (void) toggleEditor
+{
+   using namespace ROOT_IOSObjectController;
+   
+   mode = mode == ocmEdit ? ocmNavigation : ocmEdit;
+   [self resetEditorButton];
+
+   if (mode == ocmEdit) {
+      //Hide
+      [self resetEditorButton];
+      [self resetEditablePad];
+      [self resetSelectionView];
+      
+      selectedObject = pad;
+      [self setupObjectInspector];
+
+      pad->cd();
+      pad->Clear();
+      fileContainer->GetObject(currentObject)->Draw(fileContainer->GetDrawOption(currentObject));
+      [padView setNeedsDisplay];
+
+      editorView.hidden = NO;      
+      navigationScrollView.hidden = YES;
+      scrollView.hidden = NO;
+   } else {
+      pad->Unpick();
+      selectedObject = pad;
+      scrollView.hidden = YES;
+      editorView.hidden = YES;
+      navigationScrollView.hidden = NO;
+   }
+
+   [self correctFramesForOrientation : self.interfaceOrientation];
+
+   [self animateEditor];
 }
 
 //____________________________________________________________________________________________________
 - (void) adjustPrevNextIndices
 {
    nextObject = currentObject + 1 < fileContainer->GetNumberOfObjects() ? currentObject + 1 : 0;
-   prevObject = currentObject ? currentObject - 1 : fileContainer->GetNumberOfObjects() - 1;
+   previousObject = currentObject ? currentObject - 1 : fileContainer->GetNumberOfObjects() - 1;
 }
 
 //____________________________________________________________________________________________________
-- (void) setObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)container;
+- (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)container;
 {
+   //This method is called after initWithNibName was called, so it's the second step
+   //of controller's construction. The default mode is ocmNavigation, so setup navigation
+   //views/pad etc.
    mode = ROOT_IOSObjectController::ocmNavigation;
 
-   [self resetPadAndScroll];
-   [self resetEditorButton];
    
    fileContainer = container;
-   rootObject = fileContainer->GetObject(index);
-   self.navigationItem.title = [NSString stringWithFormat:@"%s", rootObject->GetName()];
+   self.navigationItem.title = [NSString stringWithFormat:@"%s", fileContainer->GetObject(index)];
 
-   pad->cd();
-   pad->Clear();
-   rootObject->Draw(fileContainer->GetDrawOption(index));
-
-   [padView setNeedsDisplay];
-   
-   ////////////////////////////////////////////////
-   
-   //Now, init navigation.
-   const CGSize sz = [PadImageScrollView defaultImageFrame].size;
-   navPad = new ROOT_iOS::Pad(sz.width, sz.height);
+   const CGSize padSize = [PadImageScrollView defaultImageFrame].size;
+   navPad = new ROOT_iOS::Pad(padSize.width, padSize.height);
    
    currentObject = index;
    [self adjustPrevNextIndices];
    
-   CGRect nestedFrame = navigationScrollView.frame;
-   nestedFrame.origin = CGPointZero;
-   navScrolls[0] = [[PadImageScrollView alloc] initWithFrame : nestedFrame andPad : navPad];
+   CGRect scrollFrame = navigationScrollView.frame;
+   scrollFrame.origin = CGPointZero;
+   navScrolls[0] = [[PadImageScrollView alloc] initWithFrame : scrollFrame andPad : navPad];
    if (fileContainer->GetNumberOfObjects() == 1)
-      [navScrolls[0] setObject:fileContainer->GetObject(currentObject) drawOption:fileContainer->GetDrawOption(currentObject)];
+      [navScrolls[0] setObject : fileContainer->GetObject(currentObject) drawOption : fileContainer->GetDrawOption(currentObject)];
    else
-      [navScrolls[0] setObject:fileContainer->GetObject(prevObject) drawOption:fileContainer->GetDrawOption(prevObject)];
+      [navScrolls[0] setObject:fileContainer->GetObject(previousObject) drawOption:fileContainer->GetDrawOption(previousObject)];
+
    [navigationScrollView addSubview : navScrolls[0]];
    [navScrolls[0] release];
 
    if (fileContainer->GetNumberOfObjects() > 1) {
-      nestedFrame.origin.x = nestedFrame.size.width;
-      navScrolls[1] = [[PadImageScrollView alloc] initWithFrame : nestedFrame andPad : navPad];
+      //The [1] contains the current object.
+      scrollFrame.origin.x = scrollFrame.size.width;
+      navScrolls[1] = [[PadImageScrollView alloc] initWithFrame : scrollFrame andPad : navPad];
       [navScrolls[1] setObject:fileContainer->GetObject(currentObject) drawOption:fileContainer->GetDrawOption(currentObject)];
       [navigationScrollView addSubview : navScrolls[1]];
       [navScrolls[1] release];
-      nestedFrame.origin.x = nestedFrame.size.width * 2;
-      navScrolls[2] = [[PadImageScrollView alloc] initWithFrame : nestedFrame andPad : navPad];
+      
+      //The [2] contains the next object (can be the same as previous).
+      scrollFrame.origin.x = scrollFrame.size.width * 2;
+      navScrolls[2] = [[PadImageScrollView alloc] initWithFrame : scrollFrame andPad : navPad];
       [navScrolls[2] setObject:fileContainer->GetObject(nextObject) drawOption:fileContainer->GetDrawOption(nextObject)];
       [navigationScrollView addSubview : navScrolls[2]];
       [navScrolls[2] release];
       
-      navigationScrollView.contentSize = CGSizeMake(nestedFrame.size.width * 3, nestedFrame.size.height);
+      navigationScrollView.contentSize = CGSizeMake(scrollFrame.size.width * 3, scrollFrame.size.height);
+      //Visible rect is always middle scroll-view ([1]).
       [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];
    } else
-      navigationScrollView.contentSize = nestedFrame.size;
+      navigationScrollView.contentSize = scrollFrame.size;
 }
 
 #pragma mark - delegate for scroll-view.
 
 //____________________________________________________________________________________________________
-- (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
+- (UIView *)viewForZoomingInScrollView : (UIScrollView *)scrollView
 {
+   //For ocmEdit mode.
    return padView;
 }
 
 //____________________________________________________________________________________________________
 - (void)scrollViewDidZoom:(UIScrollView *)scroll
 {
-   padView.frame = [self centeredFrameForScrollView : scroll andUIView:padView];
+   //For ocmEdit mode.
+   padView.frame = [self centeredFrameForScrollView : scroll andUIView : padView];
 }
 
 //____________________________________________________________________________________________________
 - (void)scrollViewDidEndZooming:(UIScrollView *)scroll withView:(UIView *)view atScale:(float)scale
 {
+   //For ocmEdit mode.
    using namespace ROOT_IOSBrowser;
 
    const CGPoint offset = [scroll contentOffset];
@@ -525,6 +479,7 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (void) handleDoubleTapOnPad
 {
+   //For ocmEdit mode.
    using namespace ROOT_IOSBrowser;
 
    BOOL scaleToMax = YES;
@@ -589,6 +544,8 @@ static const CGFloat maximumZoom = 2.f;
    [padView setNeedsDisplay];
 }
 
+#pragma mark - File contents navigation: scrolling through objects.
+
 //____________________________________________________________________________________________________
 - (void) scrollToLeft
 {
@@ -600,15 +557,15 @@ static const CGFloat maximumZoom = 2.f;
    UIImage *currentImage = navScrolls[2].padImage;
    [currentImage retain];
    
-   [navScrolls[0] setObject : fileContainer->GetObject(prevObject) drawOption : fileContainer->GetDrawOption(prevObject) andImage : prevImage];
+   [navScrolls[0] setObject : fileContainer->GetObject(previousObject) drawOption : fileContainer->GetDrawOption(previousObject) andImage : prevImage];
    [navScrolls[1] setObject : fileContainer->GetObject(currentObject) drawOption : fileContainer->GetDrawOption(currentObject) andImage : currentImage];
    [prevImage release];
    [currentImage release];
    
    [navScrolls[2] setObject : fileContainer->GetObject(nextObject) drawOption : fileContainer->GetDrawOption(nextObject)];
 
-   [navigationScrollView scrollRectToVisible:navScrolls[1].frame animated : NO];
-   self.navigationItem.title = [NSString stringWithFormat:@"%s", fileContainer->GetObject(currentObject)->GetName()];
+   [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];
+   self.navigationItem.title = [NSString stringWithFormat : @"%s", fileContainer->GetObject(currentObject)->GetName()];
 }
 
 //____________________________________________________________________________________________________
@@ -624,12 +581,12 @@ static const CGFloat maximumZoom = 2.f;
    
    [navScrolls[1] setObject : fileContainer->GetObject(currentObject) drawOption : fileContainer->GetDrawOption(currentObject) andImage : currImage];
    [navScrolls[2] setObject : fileContainer->GetObject(nextObject) drawOption : fileContainer->GetDrawOption(nextObject) andImage : nextImage];
-   [navScrolls[0] setObject : fileContainer->GetObject(prevObject) drawOption : fileContainer->GetDrawOption(prevObject)];
+   [navScrolls[0] setObject : fileContainer->GetObject(previousObject) drawOption : fileContainer->GetDrawOption(previousObject)];
    [nextImage release];
    [currImage release];
    
-   [navigationScrollView scrollRectToVisible:navScrolls[1].frame animated : NO];
-   self.navigationItem.title = [NSString stringWithFormat:@"%s", fileContainer->GetObject(currentObject)->GetName()];
+   [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];
+   self.navigationItem.title = [NSString stringWithFormat : @"%s", fileContainer->GetObject(currentObject)->GetName()];
 }
 
 //____________________________________________________________________________________________________

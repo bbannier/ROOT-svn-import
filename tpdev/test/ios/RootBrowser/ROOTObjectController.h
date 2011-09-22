@@ -35,14 +35,12 @@ class TObject;
    
    IBOutlet ScrollViewWithPadView *scrollView;
    IBOutlet UIScrollView *navigationScrollView;
-   UITapGestureRecognizer *doubleTap;
    
    PadView *padView;
    ROOT_iOS::Pad *pad;
 
    ROOT_iOS::FileContainer *fileContainer;
 
-   TObject *rootObject;
    TObject *selectedObject;
    
    BOOL zoomed;
@@ -51,13 +49,13 @@ class TObject;
    ROOT_iOS::Pad *navPad;
    unsigned currentObject;
    unsigned nextObject;
-   unsigned prevObject;
+   unsigned previousObject;
 }
 
 @property (nonatomic, retain) ScrollViewWithPadView *scrollView;
 @property (nonatomic, retain) UIScrollView *navigationScrollView;
 
-- (void) setObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
+- (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
 - (void) handleDoubleTapOnPad;
 - (void) objectWasSelected : (TObject *)object;
 - (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate;

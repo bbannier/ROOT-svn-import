@@ -47,6 +47,12 @@
 }
 
 //____________________________________________________________________________________________________
+- (void) setPad : (ROOT_iOS::Pad *)newPad
+{
+   pad = newPad;
+}
+
+//____________________________________________________________________________________________________
 - (void)drawRect : (CGRect)rect
 {
    // Drawing code   
@@ -208,10 +214,7 @@
 //____________________________________________________________________________________________________
 - (BOOL) pointOnSelectedObject : (CGPoint) pt
 {
-   //check if there is any object under pt.
-   //this is just a test expression, let's say, there is an object selected in the corner.
-//   return pt.x < 200 && pt.y < 200;
-
+   //check if there is any object in pt.
    const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
    const CGPoint newPt = CGPointMake(pt.x * scale, pt.y * scale);
 
@@ -259,9 +262,6 @@
 //____________________________________________________________________________________________________
 - (void) touchesBegan : (NSSet *)touches withEvent : (UIEvent *)event
 {
-   if (!padIsEditable)
-      return;
-
    UITouch *touch = [touches anyObject];
    if (touch.tapCount == 1) {
       //Interaction has started.
@@ -281,9 +281,6 @@
 //____________________________________________________________________________________________________
 - (void) touchesMoved : (NSSet *)touches withEvent : (UIEvent *)event
 {
-   if (!padIsEditable)
-      return;
-
    if (panActive || processLongPress) {
       TObject *selected = pad->GetSelected();
       if (TAxis *axis = dynamic_cast<TAxis *>(selected)) {
@@ -309,9 +306,6 @@
 //____________________________________________________________________________________________________
 - (void) touchesEnded : (NSSet *)touches withEvent : (UIEvent *)event
 {
-   if (!padIsEditable)
-      return;
-
    UITouch *touch = [touches anyObject];
    if (touch.tapCount == 1) {
       if (processFirstTap) {
@@ -341,20 +335,6 @@
       [self setNeedsDisplay];
       [selectionView setNeedsDisplay];
    }
-}
-
-//____________________________________________________________________________________________________
-- (BOOL) padIsEditable
-{
-   return padIsEditable;
-}
-
-//____________________________________________________________________________________________________
-- (void) setPadIsEditable : (BOOL)ed
-{
-   padIsEditable = ed;
-   if (!padIsEditable)
-      selectionView.hidden = YES;
 }
 
 @end

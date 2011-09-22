@@ -210,7 +210,7 @@
 {
    const unsigned testIndex = 1 + rand() % (fileContainer->GetNumberOfObjects() - 1);
    ROOTObjectController *objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
-   [objectController setObjectWithIndex : testIndex fromContainer : fileContainer];
+   [objectController setNavigationForObjectWithIndex : testIndex fromContainer : fileContainer];
    [self.navigationController pushViewController : objectController animated : YES];
    [objectController release];
 }
@@ -219,7 +219,7 @@
 - (void) selectObjectFromFile : (ObjectShortcut *) shortcut
 {
    ROOTObjectController *objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
-   [objectController setObjectWithIndex : shortcut.objectIndex fromContainer : fileContainer];
+   [objectController setNavigationForObjectWithIndex : shortcut.objectIndex fromContainer : fileContainer];
    [self.navigationController pushViewController : objectController animated : YES];
    [objectController release];
 //   [NSTimer scheduledTimerWithTimeInterval : 3. target : self selector : @selector(doTest) userInfo : nil repeats : YES];
