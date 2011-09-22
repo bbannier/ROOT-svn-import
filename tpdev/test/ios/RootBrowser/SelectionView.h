@@ -23,6 +23,7 @@ class Pad;
 @property (nonatomic, assign) CGPoint currentPanPoint;
 @property (nonatomic, assign) BOOL verticalDirection;
 
-- (id)initWithFrame : (CGRect)frame withPad : (ROOT_iOS::Pad *) p;
+- (id)initWithFrame : (CGRect)frame withPad : (ROOT_iOS::Pad *)p;
+- (void) setPad : (ROOT_iOS::Pad *)p;
 
 @end
