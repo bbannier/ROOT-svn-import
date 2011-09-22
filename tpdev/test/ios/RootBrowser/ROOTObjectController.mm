@@ -346,7 +346,6 @@ static const CGFloat maximumZoom = 2.f;
    [self resetEditorButton];
 
    if (mode == ocmEdit) {
-      //Hide
       [self resetEditorButton];
       [self resetEditablePad];
       [self resetSelectionView];
@@ -367,6 +366,9 @@ static const CGFloat maximumZoom = 2.f;
       selectedObject = pad;
       scrollView.hidden = YES;
       editorView.hidden = YES;
+      
+      [navScrolls[1] setObject : fileContainer->GetObject(currentObject) drawOption : fileContainer->GetDrawOption(currentObject)];
+      
       navigationScrollView.hidden = NO;
    }
 
