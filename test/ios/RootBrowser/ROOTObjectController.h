@@ -56,7 +56,7 @@ class TObject;
 @property (nonatomic, retain) UIScrollView *navigationScrollView;
 
 - (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
-- (void) handleDoubleTapOnPad;
+- (void) handleDoubleTapOnPad : (CGPoint)tapPt;
 - (void) objectWasSelected : (TObject *)object;
 - (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate;
 - (void) setupObjectInspector;

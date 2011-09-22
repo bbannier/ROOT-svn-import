@@ -95,16 +95,19 @@ static const CGFloat tapInterval = 0.15f;
 - (void) handleDoubleTap
 {
    //This is zoom/unzoom action.
-   if (TAxis * axis = dynamic_cast<TAxis *>(pad->GetSelected())) {
-   
-      if (pad->ObjectInPoint(tapPt.x, tapPt.y) == axis) {
+   if (TAxis *axis = dynamic_cast<TAxis *>(pad->GetSelected())) {
+      const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
+      const CGPoint scaledTapPt = CGPointMake(tapPt.x * scale, tapPt.y * scale);
+
+      if (pad->ObjectInPoint(scaledTapPt.x, scaledTapPt.y) == axis) {
          axis->UnZoom();
          pad->InvalidateSelection();
          [self setNeedsDisplay];
          return;
       }
    }
-   [controller handleDoubleTapOnPad];
+
+   [controller handleDoubleTapOnPad : tapPt];
 }
 
 #pragma mark - Picking related stuff here.
@@ -235,7 +238,6 @@ static const CGFloat tapInterval = 0.15f;
 {
    //Make a selection, fill the editor, disable double tap.
    const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
-
    const CGPoint scaledTapPt = CGPointMake(tapPt.x * scale, tapPt.y * scale);
    if (!pad->SelectionIsValid() && ![self initPadPicking])
       return;

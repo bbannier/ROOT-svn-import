@@ -1,3 +1,5 @@
+#import <stdlib.h>
+
 #import <QuartzCore/QuartzCore.h>
 
 #import "ScrollViewWithPadView.h"
@@ -430,7 +432,7 @@ static const CGFloat maximumZoom = 2.f;
       navigationScrollView.contentSize = scrollFrame.size;
 }
 
-#pragma mark - delegate for scroll-view.
+#pragma mark - delegate for editable pad's scroll-view.
 
 //____________________________________________________________________________________________________
 - (UIView *)viewForZoomingInScrollView : (UIScrollView *)scrollView
@@ -477,21 +479,41 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) handleDoubleTapOnPad
+- (CGRect)zoomRectForScale:(float)scale withCenter:(CGPoint)center {
+    
+    CGRect zoomRect;
+    
+    // the zoom rect is in the content view's coordinates. 
+    //    At a zoom scale of 1.0, it would be the size of the imageScrollView's bounds.
+    //    As the zoom scale decreases, so more content is visible, the size of the rect grows.
+    zoomRect.size.height = [scrollView frame].size.height / scale;
+    zoomRect.size.width  = [scrollView frame].size.width  / scale;
+    
+    // choose an origin so as to get the right center.
+    zoomRect.origin.x    = center.x - (zoomRect.size.width  / 2.0);
+    zoomRect.origin.y    = center.y - (zoomRect.size.height / 2.0);
+    
+    return zoomRect;
+}
+
+//____________________________________________________________________________________________________
+- (void) handleDoubleTapOnPad : (CGPoint) tapPt
 {
    //For ocmEdit mode.
    using namespace ROOT_IOSBrowser;
 
    BOOL scaleToMax = YES;
    
-   if (fabs(padView.frame.size.width - padW * 2) < scaledToMaxEpsilon)
+   if (fabs(padView.frame.size.width - padW * maximumZoom) < scaledToMaxEpsilon)
       scaleToMax = NO;
 
    if (scaleToMax) {
       //maximize
       zoomed = YES;
-      [scrollView setZoomScale : maximumZoom];
-      [self scrollViewDidEndZooming : scrollView withView : padView atScale : maximumZoom];
+      const CGFloat newScale = padW * maximumZoom / padView.frame.size.width;
+      CGRect zoomRect = [self zoomRectForScale : newScale withCenter : tapPt];
+      [scrollView zoomToRect : zoomRect animated : YES];
+//      [self scrollViewDidEndZooming : scrollView withView : padView atScale : maximumZoom];
    } else {
       zoomed = NO;
       padView.frame = CGRectMake(0.f, 0.f, padW, padH);
