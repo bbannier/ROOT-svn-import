@@ -37,7 +37,7 @@ public:
   inline operator Double_t() const { return _isFund?((RooAbsReal*)_arg)->_value:((RooAbsReal*)_arg)->getVal(_nset) ; }
   inline Double_t operator[](Int_t i) const { 
     RooAbsReal* realArg = (RooAbsReal*)_arg;
-    return realArg->_values.isEmpty() ? realArg->_value : realArg->_values[i];
+    return realArg->_values.isVector() ? realArg->_value : realArg->_values[i];
   }
   /*
   inline Int_t doValues(RooAbsReal::ImplSIMD impl) const {

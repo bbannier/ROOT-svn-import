@@ -103,6 +103,14 @@ protected:
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) ;
   virtual void fillTreeBranch(TTree& t) ;
 
+  virtual Bool_t resizeVector(Int_t /*size*/=0) { return kFALSE ; }
+  virtual Bool_t reserveVector(Int_t /*size*/) { return kFALSE ; }
+  virtual Bool_t isVector() const { return kFALSE ; }
+  virtual Bool_t clearVector() { return kFALSE ; }
+  virtual void setValueVector(Int_t /*i*/) { }
+  virtual void getValueVector(Int_t /*i*/) { }
+  virtual void pushBackValueVector() { }
+
   mutable UChar_t    _byteValue ; //! Transient cache for byte values from tree branches
   mutable RooCatType _value ; // Current value
   TObjArray  _types ;         // Array of allowed values

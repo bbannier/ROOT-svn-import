@@ -18,26 +18,41 @@
 #include "Rtypes.h"
 #include "Riostream.h"
 
+template<class T>
 class RooValues {
  public:
-  RooValues(Double_t& value) ;
+  RooValues(T& valueCPU) ;
   RooValues(const RooValues& other) ;
-  virtual ~RooValues() {} 
-  inline Bool_t isEmpty() const { return _valuesCPU.empty(); }
-  inline Int_t getSize() const { return _valuesCPU.size(); }
+  ~RooValues() { } 
+  inline Bool_t isVector() const { return _valuesCPU.size()>0; }
 
-  inline void resize(Int_t n) { _valuesCPU.resize(n); } // Use CPU
-  // inline void resize(Int_t n, Int_t gpuID) { _valuesGPU.resize(); }
+  inline Int_t getSizeCPU() const { return _valuesCPU.size(); }
+  inline void resizeCPU(Int_t n) { _valuesCPU.resize(n); }
+  inline void reserveCPU(Int_t n) { _valuesCPU.reserve(n); }
+  inline void push_backCPU(T& value) { _valuesCPU.push_back(value); }
+  inline void clearCPU() { _valuesCPU.clear(); }
 
-  inline Double_t operator[](Int_t i) const { return _valuesCPU[i]; }
-  //  __device inline Double_t operator[](Int_t i, Int_t gpuID) { return _values.size()==1 ? _values[0] : _values[i]; }
+  inline T operator[](Int_t i) const { return _valuesCPU[i]; }
+  inline T& operator[](Int_t i) { return _valuesCPU[i]; }
 
  private:
-  std::vector<Double_t> _valuesCPU; // CPU data
-  //  std::vector<Double_t> _valuesGPU;
-  Double_t& _value;
+  std::vector<T> _valuesCPU ;
+  T& _valueCPU ;
 
-  ClassDef(RooValues,1)
-};
+  //  ClassDef(RooValues,0) ;
+} ;
+
+template<class T>
+RooValues<T>::RooValues(T& valueCPU) : _valueCPU(valueCPU)
+{
+}
+
+template<class T>
+RooValues<T>::RooValues(const RooValues& other) : _valueCPU(other._valueCPU) 
+{
+  _valuesCPU = other._valuesCPU ;
+}
+
+
 
 #endif

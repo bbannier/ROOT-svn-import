@@ -50,7 +50,6 @@ class TH3F;
 #include <string>
 #include <iostream>
 
-
 class RooAbsReal : public RooAbsArg {
 public:
   // Constructors, assignment etc
@@ -68,6 +67,8 @@ public:
     return getVal(&set) ; 
   }
 
+  typedef RooValues<Double_t> RooValuesDouble ;
+
   // Define which implementation to use for the SIMD evaluation
   enum ImplSIMD { kNone=0, kOpenMP=1, kCUDA=2, kMIC=3 } ;
   struct DeviceSIMD {
@@ -77,9 +78,9 @@ public:
   } ;
 
   // Return the results in case of SIMD evaluation
-  virtual const RooValues* getValSIMD(Int_t start=0, Int_t end=0, 
-				      const RooArgSet* set=0,
-				      const RooAbsReal* mother=0) const ;
+  virtual const RooValuesDouble* getValSIMD(Int_t start=0, Int_t end=0, 
+						const RooArgSet* set=0,
+						const RooAbsReal* mother=0) const ;
 
   Double_t getPropagatedError(const RooFitResult& fr) ;
 
@@ -380,11 +381,19 @@ protected:
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) ;
   virtual void fillTreeBranch(TTree& t) ;
 
+  virtual Bool_t resizeVector(Int_t size=0) ;
+  virtual Bool_t reserveVector(Int_t size) ;
+  virtual Bool_t isVector() const ;
+  virtual Bool_t clearVector() ;
+  virtual void setValueVector(Int_t i) ;
+  virtual void getValueVector(Int_t i) ;
+  virtual void pushBackValueVector() ;
+
   Double_t _plotMin ;       // Minimum of plot range
   Double_t _plotMax ;       // Maximum of plot range
   Int_t    _plotBins ;      // Number of plot bins
-  mutable Double_t _value ; // Cache for current value of object
-  mutable RooValues _values ; // Cache for current SIMD values of object
+  mutable Double_t _value         ; // Cache for current value of object
+  mutable RooValuesDouble _values ; //! Cache for current SIMD values of object (transient values)
   DeviceSIMD _deviceSIMD ;    // set which implementation and device to run on
   TString  _unit ;          // Unit for objects value
   TString  _label ;         // Plot label for objects value

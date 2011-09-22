@@ -55,8 +55,9 @@ protected:
   }
   
   Double_t evaluate() const ;
-  Bool_t evaluateAndNormalizeSIMD(RooAbsReal::ImplEval impl, Double_t invIntegral,
-				  const RooAbsPdf *mother=0 /*, interval */) const ;
+  Bool_t evaluateAndNormalizeSIMD(RooAbsReal::DeviceSIMD deviceSIMD, Int_t start, Int_t end, 
+				  const RooAbsReal* mother, Double_t integral) const ;
+
 
 private:
 

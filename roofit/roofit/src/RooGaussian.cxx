@@ -66,11 +66,14 @@ Double_t RooGaussian::evaluate() const
 
 }
 
-//_____________________________________________________________________________
-Bool_t RooGaussian::evaluateAndNormalizeSIMD(RooAbsReal::ImplEval impl, Double_t invIntegral,
-					     const RooAbsPdf *mother /*, interval */) const 
+Bool_t RooGaussian::evaluateAndNormalizeSIMD(RooAbsReal::DeviceSIMD deviceSIMD, Int_t start, Int_t end, 
+					     const RooAbsReal* mother, Double_t integral) const
 {
+  /*
   // Precalculate the values
+  if (mother==0)
+    InitSIMD();
+
   Int_t size(0);
   size = x.doValues(impl);
   Int_t size2 = mean.doValues(impl);
@@ -86,7 +89,7 @@ Bool_t RooGaussian::evaluateAndNormalizeSIMD(RooAbsReal::ImplEval impl, Double_t
 
   // call the Parallel Evaluator
   //  ParallelEvaluator(*this,data,
-
+  */
   return kTRUE;
 }
 
