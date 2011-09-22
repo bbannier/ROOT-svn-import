@@ -39,9 +39,9 @@ static const CGRect selectionHintFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
    CGContextClearRect(ctx, rect);
    CGContextTranslateCTM(ctx, 0.f, rect.size.height);
    CGContextScaleCTM(ctx, 1.f, -1.f);
-   
+
+   pad->cd();   
    pad->SetViewWH(rect.size.width, rect.size.height);
-   pad->cd();
    pad->SetContext(ctx);
 
    CGContextTranslateCTM(ctx, 2.5f, 2.5f);
@@ -72,6 +72,12 @@ static const CGRect selectionHintFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
    //Thanks to gyim, 
    //http://stackoverflow.com/questions/1694529/allowing-interaction-with-a-uiview-under-another-uiview
    return NO;
+}
+
+//____________________________________________________________________________________________________
+- (void) setPad : (ROOT_iOS::Pad *)p
+{
+   pad = p;
 }
  
 

@@ -389,7 +389,7 @@ static const CGFloat maximumZoom = 2.f;
 
    
    fileContainer = container;
-   self.navigationItem.title = [NSString stringWithFormat:@"%s", fileContainer->GetObject(index)];
+   self.navigationItem.title = [NSString stringWithFormat:@"%s", fileContainer->GetObject(index)->GetName()];
 
    const CGSize padSize = [PadImageScrollView defaultImageFrame].size;
    navPad = new ROOT_iOS::Pad(padSize.width, padSize.height);
@@ -556,7 +556,7 @@ static const CGFloat maximumZoom = 2.f;
    [prevImage retain];
    UIImage *currentImage = navScrolls[2].padImage;
    [currentImage retain];
-   
+      
    [navScrolls[0] setObject : fileContainer->GetObject(previousObject) drawOption : fileContainer->GetDrawOption(previousObject) andImage : prevImage];
    [navScrolls[1] setObject : fileContainer->GetObject(currentObject) drawOption : fileContainer->GetDrawOption(currentObject) andImage : currentImage];
    [prevImage release];

@@ -16,6 +16,8 @@
 //C++ code (ROOT's ios module)
 #import "IOSPad.h"
 
+static const CGFloat tapInterval = 0.15f;
+
 @implementation PadView
 
 @synthesize selectionView;
@@ -50,6 +52,7 @@
 - (void) setPad : (ROOT_iOS::Pad *)newPad
 {
    pad = newPad;
+   [selectionView setPad : newPad];
 }
 
 //____________________________________________________________________________________________________
@@ -230,10 +233,10 @@
 //____________________________________________________________________________________________________
 - (void) handleSingleTap
 {
-   //Make a selection, fill the editor.
+   //Make a selection, fill the editor, disable double tap.
    const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
-   const CGPoint scaledTapPt = CGPointMake(tapPt.x * scale, tapPt.y * scale);
 
+   const CGPoint scaledTapPt = CGPointMake(tapPt.x * scale, tapPt.y * scale);
    if (!pad->SelectionIsValid() && ![self initPadPicking])
       return;
       
@@ -246,7 +249,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) longPress
+- (void) initLongPress
 {
   // NSLog(@"long press");
    processFirstTap = NO;
@@ -269,10 +272,9 @@
       //Gesture can be any of them:
       processFirstTap = YES;
       processSecondTap = YES;
-
-      //Long press only after 2 seconds.
+      //Long press only after 1 second.
       processLongPress = NO;      
-      [self performSelector:@selector(longPress) withObject:nil afterDelay : 1.f];
+      [self performSelector : @selector(initLongPress) withObject : nil afterDelay : 1.f];
    } else if (touch.tapCount == 2) {
       [NSObject cancelPreviousPerformRequestsWithTarget : self];
    }
@@ -309,21 +311,19 @@
    UITouch *touch = [touches anyObject];
    if (touch.tapCount == 1) {
       if (processFirstTap) {
-         //Ok, longPress selector was not performed yet, let's cancell it.
+         //longPress' selector was not performed yet, cancell it.
          [NSObject cancelPreviousPerformRequestsWithTarget : self];
-         //NSLog(@"cancel long press");
          //Still, we have to wait for a second tap.
          processSecondTap = YES;
-         //tapPt = [touch locationInView : self];
-         [self performSelector : @selector(handleSingleTap) withObject:nil afterDelay : 0.15];
+         //If with the tapInterval the second tap will not follow, process the single tap.
+         [self performSelector : @selector(handleSingleTap) withObject : nil afterDelay : tapInterval];
       } else if (processLongPress) {
-         //Finish the long press action.
+         //initLongPress selector was performed.
          UIScrollView *parent = (UIScrollView *)[self superview];
          parent.canCancelContentTouches = YES;
          parent.delaysContentTouches = YES;
       }//else impossible.
    } else if (touch.tapCount == 2 && processSecondTap) {
-     // [controller handleDoubleTapOnPad];
       [self handleDoubleTap];
    }
    
