@@ -11,6 +11,8 @@
 ///////////////////////////////////////////////////////////
 //  Custom view, subview for a detail view.
 //  Delegates all graphics to C++ code.
+//  This is view for pad in "editable state".
+//  TODO: find better class name.
 ///////////////////////////////////////////////////////////
 
 namespace ROOT_iOS {
@@ -37,16 +39,14 @@ class Pad;
    BOOL processFirstTap;
    BOOL processSecondTap;
    BOOL processLongPress;
-   
-   BOOL padIsEditable;
 }
 
-@property (nonatomic, assign) BOOL padIsEditable;
 @property (nonatomic, assign) SelectionView *selectionView;
 
 - (id) initWithFrame : (CGRect)frame controller : (ROOTObjectController *)c forPad : (ROOT_iOS::Pad*)pad;
 - (void) dealloc;
 
+- (void) setPad : (ROOT_iOS::Pad *)newPad;
 - (void) drawRect : (CGRect)rect;
 - (void) clearPad;
 
@@ -56,8 +56,5 @@ class Pad;
 
 - (void) handleSingleTap;
 - (void) handleDoubleTap;
-
-- (BOOL) padIsEditable;
-- (void) setPadIsEditable : (BOOL)padIsEditable;
 
 @end
