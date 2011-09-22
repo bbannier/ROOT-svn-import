@@ -91,25 +91,6 @@ static const CGFloat tapInterval = 0.15f;
    panActive = NO;
 }
 
-//____________________________________________________________________________________________________
-- (void) handleDoubleTap
-{
-   //This is zoom/unzoom action.
-   if (TAxis *axis = dynamic_cast<TAxis *>(pad->GetSelected())) {
-      const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
-      const CGPoint scaledTapPt = CGPointMake(tapPt.x * scale, tapPt.y * scale);
-
-      if (pad->ObjectInPoint(scaledTapPt.x, scaledTapPt.y) == axis) {
-         axis->UnZoom();
-         pad->InvalidateSelection();
-         [self setNeedsDisplay];
-         return;
-      }
-   }
-
-   [controller handleDoubleTapOnPad : tapPt];
-}
-
 #pragma mark - Picking related stuff here.
 
 //____________________________________________________________________________________________________
@@ -218,15 +199,21 @@ static const CGFloat tapInterval = 0.15f;
 }
 
 //____________________________________________________________________________________________________
+- (CGPoint) scaledPoint : (CGPoint)pt
+{
+   const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
+   return CGPointMake(pt.x * scale, pt.y * scale);
+}
+
+//____________________________________________________________________________________________________
 - (BOOL) pointOnSelectedObject : (CGPoint) pt
 {
    //check if there is any object in pt.
-   const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
-   const CGPoint newPt = CGPointMake(pt.x * scale, pt.y * scale);
 
    if (!pad->SelectionIsValid() && ![self initPadPicking])
       return NO;
-      
+
+   const CGPoint newPt = [self scaledPoint : pt];
    if (pad->GetSelected() == pad->ObjectInPoint(newPt.x, newPt.y))
       return YES;
 
@@ -237,31 +224,14 @@ static const CGFloat tapInterval = 0.15f;
 - (void) handleSingleTap
 {
    //Make a selection, fill the editor, disable double tap.
-   const CGFloat scale = ROOT_IOSBrowser::padW / self.frame.size.width;
-   const CGPoint scaledTapPt = CGPointMake(tapPt.x * scale, tapPt.y * scale);
+   const CGPoint scaledTapPt = [self scaledPoint : tapPt];
    if (!pad->SelectionIsValid() && ![self initPadPicking])
       return;
       
    pad->Pick(scaledTapPt.x, scaledTapPt.y);
-
    //Tell controller that selection has probably changed.
    [controller objectWasSelected : pad->GetSelected()];
-
    processSecondTap = NO;
-}
-
-//____________________________________________________________________________________________________
-- (void) initLongPress
-{
-  // NSLog(@"long press");
-   processFirstTap = NO;
-   processSecondTap = NO;
-   processLongPress = YES;
-
-   //Select object here.
-   UIScrollView *parent = (UIScrollView *)[self superview];
-   parent.canCancelContentTouches = NO;
-   parent.delaysContentTouches = NO;
 }
 
 //____________________________________________________________________________________________________
@@ -272,20 +242,15 @@ static const CGFloat tapInterval = 0.15f;
       //Interaction has started.
       tapPt = [touch locationInView : self];
       //Gesture can be any of them:
-      processFirstTap = YES;
       processSecondTap = YES;
-      //Long press only after 1 second.
-      processLongPress = NO;      
-      [self performSelector : @selector(initLongPress) withObject : nil afterDelay : 1.f];
-   } else if (touch.tapCount == 2) {
-      [NSObject cancelPreviousPerformRequestsWithTarget : self];
-   }
+   } 
 }
 
 //____________________________________________________________________________________________________
 - (void) touchesMoved : (NSSet *)touches withEvent : (UIEvent *)event
 {
-   if (panActive || processLongPress) {
+   if (panActive) {
+      processSecondTap = NO;
       TObject *selected = pad->GetSelected();
       if (TAxis *axis = dynamic_cast<TAxis *>(selected)) {
          if (!selectionView.panActive) {
@@ -303,6 +268,8 @@ static const CGFloat tapInterval = 0.15f;
             pad->ExecuteEventAxis(kButton1Motion, newPt.x, newPt.y, axis);
             [selectionView setNeedsDisplay];
          }
+      } else {
+         //We move object in a canvas now.
       }
    }
 }
@@ -311,32 +278,48 @@ static const CGFloat tapInterval = 0.15f;
 - (void) touchesEnded : (NSSet *)touches withEvent : (UIEvent *)event
 {
    UITouch *touch = [touches anyObject];
-   if (touch.tapCount == 1) {
-      if (processFirstTap) {
-         //longPress' selector was not performed yet, cancell it.
-         [NSObject cancelPreviousPerformRequestsWithTarget : self];
-         //Still, we have to wait for a second tap.
-         processSecondTap = YES;
-         //If with the tapInterval the second tap will not follow, process the single tap.
-         [self performSelector : @selector(handleSingleTap) withObject : nil afterDelay : tapInterval];
-      } else if (processLongPress) {
-         //initLongPress selector was performed.
-         UIScrollView *parent = (UIScrollView *)[self superview];
-         parent.canCancelContentTouches = YES;
-         parent.delaysContentTouches = YES;
-      }//else impossible.
+   if (touch.tapCount == 1 && !panActive) {
+      [self performSelector : @selector(handleSingleTap) withObject : nil afterDelay : tapInterval];
    } else if (touch.tapCount == 2 && processSecondTap) {
+      [NSObject cancelPreviousPerformRequestsWithTarget : self];
       [self handleDoubleTap];
    }
    
    if (selectionView.panActive) {
+      panActive = NO;
       selectionView.panActive = NO;
       const CGPoint pt = [touch locationInView : self];
       pad->ExecuteEventAxis(kButton1Up, pt.x, pt.y, (TAxis *)pad->GetSelected());
-      pad->InvalidateSelection();
+      pad->InvalidateSelection(kTRUE);
       [self setNeedsDisplay];
-      [selectionView setNeedsDisplay];
+
+      UIScrollView *parent = (UIScrollView *)[self superview];
+      parent.canCancelContentTouches = YES;
+      parent.delaysContentTouches = YES;
    }
+}
+
+//____________________________________________________________________________________________________
+- (void) handleDoubleTap
+{
+   //This is zoom/unzoom action.
+   const CGPoint scaledTapPt = [self scaledPoint : tapPt];
+   TAxis *axis = dynamic_cast<TAxis *>(pad->GetSelected());
+
+   if (!pad->SelectionIsValid())
+      [self initPadPicking];
+
+   if (axis && pad->ObjectInPoint(scaledTapPt.x, scaledTapPt.y) == axis) {
+      axis->UnZoom();
+      pad->InvalidateSelection(kTRUE);
+      [self setNeedsDisplay];
+   } else {
+      [controller handleDoubleTapOnPad : tapPt];
+   }
+   
+   UIScrollView *parent = (UIScrollView *)[self superview];
+   parent.canCancelContentTouches = YES;
+   parent.delaysContentTouches = YES;
 }
 
 @end

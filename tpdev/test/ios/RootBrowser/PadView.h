@@ -36,9 +36,7 @@ class Pad;
    SelectionView *selectionView;
    
    CGPoint tapPt;
-   BOOL processFirstTap;
    BOOL processSecondTap;
-   BOOL processLongPress;
 }
 
 @property (nonatomic, assign) SelectionView *selectionView;
