@@ -243,7 +243,7 @@ public:
    void ExecuteEventAxis(Int_t, Int_t, Int_t, TAxis *);
    
    Bool_t SelectionIsValid()const;
-   void InvalidateSelection();
+   void InvalidateSelection(Bool_t invalidateBufferOnly = kFALSE);
 
    void PaintForSelection();
    void SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff);

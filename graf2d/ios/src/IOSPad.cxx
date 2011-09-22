@@ -770,8 +770,6 @@ void Pad::PaintForSelection()
    fPainter.SetPainterMode(Painter::kPaintToSelectionBuffer);
    //
    fObjectID = 1;
-   fSelected = 0;
-   fParentOfSelected = 0;
    fSelectables.clear();
    fParentPainters.clear();
 
@@ -2077,9 +2075,13 @@ Bool_t Pad::SelectionIsValid() const
 }
 
 //______________________________________________________________________________
-void Pad::InvalidateSelection()
+void Pad::InvalidateSelection(Bool_t invalidateBufferOnly)
 {
    fSelectionIsValid = kFALSE;
+   if (!invalidateBufferOnly) {
+      fSelected = 0;
+      fParentOfSelected = 0;
+   }
 }
 
 //______________________________________________________________________________
@@ -2088,7 +2090,6 @@ void Pad::SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff)
    fSelectionAreaWidth = w;
    fSelectionIsValid = kTRUE;
    fSelectionBuffer.assign(buff, buff + w * h * 4);
-   
 }
 
 //______________________________________________________________________________
@@ -2129,7 +2130,7 @@ TObject *Pad::ObjectInPoint(Int_t px, Int_t py)
    const unsigned red = fSelectionBuffer[offset + 1];
    const unsigned green = fSelectionBuffer[offset + 2];
    const unsigned blue = fSelectionBuffer[offset + 3];
-
+   
    GraphicUtils::IDEncoder enc(10, 255);
    const UInt_t id = enc.ColorToId(red, green, blue);
    if (id > 0 && id <= fSelectables.size()) {

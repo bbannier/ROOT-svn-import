@@ -32,7 +32,8 @@ static const CGFloat maximumZoom = 2.f;
 - (void) resetEditorButton
 {
    NSString *title = mode == ROOT_IOSObjectController::ocmEdit ? @"Done" : @"Edit";
-   UIBarButtonItem *btn = [[UIBarButtonItem alloc] initWithTitle : title style:UIBarButtonItemStyleBordered target : self action : @selector(toggleEditor)];
+   UIBarButtonItemStyle style = mode == ROOT_IOSObjectController::ocmEdit ? UIBarButtonItemStyleDone : UIBarButtonItemStyleBordered;
+   UIBarButtonItem *btn = [[UIBarButtonItem alloc] initWithTitle : title style : style target : self action : @selector(toggleEditor)];
    self.navigationItem.rightBarButtonItem = btn;
    [btn release];
 }
