@@ -984,8 +984,6 @@ RooAbsArg* RooTreeDataStore::addColumn(RooAbsArg& newVar, Bool_t adjustRange)
 
   checkInit() ;
 
-  assert(0);
-
   // Create a fundamental object of the right type to hold newVar values
   RooAbsArg* valHolder= newVar.createFundamental();
   // Sanity check that the holder really is fundamental
@@ -1004,6 +1002,9 @@ RooAbsArg* RooTreeDataStore::addColumn(RooAbsArg& newVar, Bool_t adjustRange)
   _vars.add(*valHolder) ;
   _varsww.add(*valHolder) ;
 
+  if (useVectors())
+    valHolder->resizeVector(GetEntries());
+
   // Fill values of of placeholder
   for (int i=0 ; i<GetEntries() ; i++) {
     get(i) ;
@@ -1011,6 +1012,10 @@ RooAbsArg* RooTreeDataStore::addColumn(RooAbsArg& newVar, Bool_t adjustRange)
     newVarClone->syncCache(&_vars) ;
     valHolder->copyCache(newVarClone) ;
     valHolder->fillTreeBranch(*_tree) ;
+
+    if (useVectors())
+      valHolder->setValueVector(i);
+
   }
 
 
@@ -1036,8 +1041,6 @@ RooArgSet* RooTreeDataStore::addColumns(const RooArgList& varList)
   // Utility function to add multiple columns in one call
   // See addColumn() for details
 
-  assert(0);
-
   TIterator* vIter = varList.createIterator() ;
   RooAbsArg* var ;
 
@@ -1046,6 +1049,8 @@ RooArgSet* RooTreeDataStore::addColumns(const RooArgList& varList)
   TList cloneSetList ;
   RooArgSet cloneSet ;
   RooArgSet* holderSet = new RooArgSet ;
+
+  Int_t nentries = GetEntries() ;
 
   while((var=(RooAbsArg*)vIter->Next())) {
     // Create a fundamental object of the right type to hold newVar values
@@ -1076,6 +1081,10 @@ RooArgSet* RooTreeDataStore::addColumns(const RooArgList& varList)
     // Attach value place holder to this tree
     ((RooAbsArg*)valHolder)->attachToTree(*_tree,_defTreeBufSize) ;
     _vars.addOwned(*valHolder) ;
+
+    if (useVectors())
+      valHolder->resizeVector(nentries);
+
   }
   delete vIter ;
 
@@ -1095,6 +1104,10 @@ RooArgSet* RooTreeDataStore::addColumns(const RooArgList& varList)
       cloneArg->syncCache(&_vars) ;
       holder->copyCache(cloneArg) ;
       holder->fillTreeBranch(*_tree) ;
+
+      if (useVectors())
+	holder->setValueVector(i);
+
     }
   }
   
@@ -1116,8 +1129,6 @@ RooAbsDataStore* RooTreeDataStore::merge(const RooArgSet& allVars, list<RooAbsDa
   // duplicate columns the column of the last dataset in the list
   // prevails
     
-  assert(0);
-
   RooTreeDataStore* mergedStore = new RooTreeDataStore("merged","merged",allVars) ;
 
   Int_t nevt = dstoreList.front()->numEntries() ;
@@ -1134,6 +1145,10 @@ RooAbsDataStore* RooTreeDataStore::merge(const RooArgSet& allVars, list<RooAbsDa
 
     mergedStore->fill() ;
   }
+
+  if (useVectors())
+    mergedStore->makeVectors() ;
+
   return mergedStore ;
 }
 
@@ -1144,9 +1159,20 @@ RooAbsDataStore* RooTreeDataStore::merge(const RooArgSet& allVars, list<RooAbsDa
 //_____________________________________________________________________________
 void RooTreeDataStore::append(RooAbsDataStore& other) 
 {
-  assert(0);
-
   Int_t nevt = other.numEntries() ;
+  
+  if (useVectors()) {
+    _iterator->Reset() ;
+    RooAbsArg* var = 0;
+    while ((var = (RooAbsArg*)_iterator->Next())) {
+      var->reserveVector(GetEntries()+nevt);
+    }
+
+    if (_wgtVar)
+      ((RooAbsArg*)_wgtVar)->reserveVector(GetEntries()+nevt);
+  }
+
+
   for (int i=0 ; i<nevt ; i++) {  
     _vars = *other.get(i) ;
     if (_wgtVar) {
