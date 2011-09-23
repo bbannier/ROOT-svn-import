@@ -1,3 +1,4 @@
+#import <MessageUI/MessageUI.h>
 #import <UIKit/UIKit.h>
 
 @class ScrollViewWithPadView;
@@ -27,7 +28,7 @@ enum Mode {
 //ROOT's object to draw.
 class TObject;
 
-@interface ROOTObjectController : UIViewController <UIScrollViewDelegate> {
+@interface ROOTObjectController : UIViewController <UIScrollViewDelegate, MFMailComposeViewControllerDelegate> {
    ROOT_IOSObjectController::Mode mode;
 
    EditorView *editorView;
@@ -50,6 +51,8 @@ class TObject;
    unsigned currentObject;
    unsigned nextObject;
    unsigned previousObject;
+   
+   UIBarButtonItem *editBtn;
 }
 
 @property (nonatomic, retain) ScrollViewWithPadView *scrollView;

@@ -34,7 +34,7 @@ const CFStringRef fixedFontNames[FontManager::fmdNOfFonts] =
                                       CFSTR("Courier-Oblique"),
                                       CFSTR("Courier-Bold"),
                                       CFSTR("Courier-BoldOblique"),
-                                      CFSTR("symbol"),//No custom fonts yet.
+                                      CFSTR("Helvetica"),//CFSTR("symbol"),//No custom fonts yet.
                                       CFSTR("TimesNewRomanPSMT")
                                      };
 

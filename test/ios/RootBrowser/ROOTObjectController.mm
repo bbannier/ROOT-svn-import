@@ -17,6 +17,7 @@
 #import "TObject.h"
 #import "TClass.h"
 #import "IOSPad.h"
+//#import "TFile.h"
 
 //This constant is used to check, if pad was
 //scaled to possible maximum or still can be zoomed in.
@@ -29,13 +30,44 @@ static const CGFloat maximumZoom = 2.f;
 @synthesize scrollView;
 
 //____________________________________________________________________________________________________
+- (void) initToolbarItems
+{
+   UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame : CGRectMake(0.f, 0.f, 180.f, 44.f)];
+   toolbar.barStyle = UIBarStyleBlackTranslucent;
+
+
+   NSMutableArray *buttons = [[NSMutableArray alloc] initWithCapacity : 2];
+   
+   UIBarButtonItem *saveBtn = [[UIBarButtonItem alloc] initWithTitle:@"Save and send" style : UIBarButtonItemStyleBordered target : self action : @selector(sendEmail)];
+   [buttons addObject : saveBtn];
+   [saveBtn release];
+   
+   editBtn = [[UIBarButtonItem alloc] initWithTitle:@"Edit" style : UIBarButtonItemStyleBordered target:self action:@selector(toggleEditor)];
+   [buttons addObject : editBtn];
+   [editBtn release];
+   
+   [toolbar setItems : buttons animated : NO];
+   [buttons release];
+   
+   UIBarButtonItem *rightItem = [[UIBarButtonItem alloc] initWithCustomView : toolbar];
+   rightItem.style = UIBarButtonItemStylePlain;
+   self.navigationItem.rightBarButtonItem = rightItem;
+   [rightItem release];
+   [toolbar release];
+}
+
+//____________________________________________________________________________________________________
+- (void) viewDidLoad 
+{
+   [self initToolbarItems];
+   [super viewDidLoad];
+}
+
+//____________________________________________________________________________________________________
 - (void) resetEditorButton
 {
-   NSString *title = mode == ROOT_IOSObjectController::ocmEdit ? @"Done" : @"Edit";
-   UIBarButtonItemStyle style = mode == ROOT_IOSObjectController::ocmEdit ? UIBarButtonItemStyleDone : UIBarButtonItemStyleBordered;
-   UIBarButtonItem *btn = [[UIBarButtonItem alloc] initWithTitle : title style : style target : self action : @selector(toggleEditor)];
-   self.navigationItem.rightBarButtonItem = btn;
-   [btn release];
+   editBtn.style = mode == ROOT_IOSObjectController::ocmEdit ? UIBarButtonItemStyleDone : UIBarButtonItemStyleBordered;
+   editBtn.title = mode == ROOT_IOSObjectController::ocmEdit ? @"Done" : @"Edit";
 }
 
 #pragma mark - Initialization code, called from initWithNibname
@@ -47,7 +79,6 @@ static const CGFloat maximumZoom = 2.f;
    editorView = [objectInspector getEditorView];
    [self.view addSubview : editorView];
    editorView.hidden = YES;
-   [self resetEditorButton];
 }
 
 //____________________________________________________________________________________________________
@@ -265,11 +296,13 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
+/*
 - (void)viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
+*/
 
 //____________________________________________________________________________________________________
 - (void)viewDidUnload
@@ -346,7 +379,6 @@ static const CGFloat maximumZoom = 2.f;
    [self resetEditorButton];
 
    if (mode == ocmEdit) {
-      [self resetEditorButton];
       [self resetEditablePad];
       [self resetSelectionView];
       
@@ -623,6 +655,95 @@ static const CGFloat maximumZoom = 2.f;
       else if (sender.contentOffset.x < navigationScrollView.frame.size.width)
          [self scrollToRight];
    }
+}
+
+#pragma mark - Save modified object as pdf and root files.
+
+//___________________________________________________________
+- (void) createPDFFileWithPage :(CGRect)pageRect fileName : (const char*)filename
+{	
+	CFStringRef path = CFStringCreateWithCString (NULL, filename, kCFStringEncodingUTF8);
+	CFURLRef url = CFURLCreateWithFileSystemPath (NULL, path, kCFURLPOSIXPathStyle, 0);
+	CFRelease(path);
+	// This dictionary contains extra options mostly for 'signing' the PDF
+	CFMutableDictionaryRef myDictionary = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+
+	CFDictionarySetValue(myDictionary, kCGPDFContextTitle, CFSTR("PDF File"));
+	CFDictionarySetValue(myDictionary, kCGPDFContextCreator, CFSTR("Timur Pocheptsov"));
+	// Create our PDF Context with the CFURL, the CGRect we provide, and the above defined dictionary
+	CGContextRef ctx = CGPDFContextCreateWithURL (url, &pageRect, myDictionary);
+	// Cleanup our mess
+	CFRelease(myDictionary);
+	CFRelease(url);
+	// Done creating our PDF Context, now it's time to draw to it
+	
+	// Starts our first page
+	CGContextBeginPage (ctx, &pageRect);	
+	// Draws a black rectangle around the page inset by 50 on all sides
+   CGContextSetRGBFillColor(ctx, 1.f, 0.4f, 0.f, 1.f);
+   CGContextFillRect(ctx, pageRect);
+
+   ROOT_iOS::Pad *padToSave = mode == ROOT_IOSObjectController::ocmEdit ? pad : navPad;
+   padToSave->cd();
+   
+   if (mode == ROOT_IOSObjectController::ocmNavigation) {
+      padToSave->Clear();
+      fileContainer->GetObject(currentObject)->Draw(fileContainer->GetDrawOption(currentObject));
+   }
+   
+   padToSave->cd();
+   padToSave->SetContext(ctx);
+   padToSave->SetViewWH(pageRect.size.width, pageRect.size.height);
+   padToSave->Paint();
+
+   CGContextEndPage(ctx);
+	// We are done with our context now, so we release it
+	CGContextRelease (ctx);
+}
+
+#pragma mark - MFMailComposeViewController delegate
+
+//___________________________________________________________
+- (void) sendEmail
+{
+	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+	NSString *saveDirectory = [paths objectAtIndex : 0];
+   NSString *saveFileName = [NSString stringWithFormat:@"%s.pdf", fileContainer->GetObject(currentObject)->GetName()];
+	NSString *newFilePath = [saveDirectory stringByAppendingPathComponent : saveFileName];
+	const char *filename = [newFilePath UTF8String];
+   
+   [self createPDFFileWithPage: CGRectMake(0, 0, 600, 600) fileName : filename];
+//
+/*
+   NSString *rootFileName = [NSString stringWithFormat:@"%s.root", fileContainer->GetObject(currentObject)->GetName()];
+	NSString *rootFilePath = [saveDirectory stringByAppendingPathComponent : rootFileName];
+   const char *cFileName = [rootFilePath UTF8String];
+   TFile f(cFileName, "recreate");
+   f.cd();
+   fileContainer->GetObject(currentObject)->Write();
+*/
+//
+
+   MFMailComposeViewController * mailComposer = [[MFMailComposeViewController alloc] init];
+   [mailComposer setSubject:@"E-mail from ROOT's iPad"];
+   [mailComposer setMessageBody : @"This is a test message sent to you by ROOT browser for iPad" isHTML : NO];
+   mailComposer.mailComposeDelegate = self;
+
+   NSString *path = [NSString stringWithFormat : @"%s", filename];
+   if ([[NSFileManager defaultManager] fileExistsAtPath : path]) {
+      NSData *myData = [NSData dataWithContentsOfFile : path];
+      [mailComposer addAttachmentData : myData mimeType : @"application/octet-stream" fileName : saveFileName];
+   }
+
+   [self presentModalViewController : mailComposer animated : YES];
+   [mailComposer release];
+}
+
+//___________________________________________________________
+- (void) mailComposeController : (MFMailComposeViewController *)controller didFinishWithResult : (MFMailComposeResult)result error : (NSError *)error
+{
+   [self becomeFirstResponder];
+   [self dismissModalViewControllerAnimated : YES];
 }
 
 @end
