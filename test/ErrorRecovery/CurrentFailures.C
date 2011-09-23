@@ -1,7 +1,17 @@
 // RUN: cat %s | %cling -I%p | FileCheck %s
 // XFAIL: *
 
-// the issue is that when we don't have semicolon in the end of the input
+.rawInput 1
+
+#define BEGIN_NAMESPACE namespace test_namespace {
+#define END_NAMESPACE }
+
+BEGIN_NAMESPACE int i; END_NAMESPACE
+BEGIN_NAMESPACE int i; END_NAMESPACE
+
+.rawInput 0
+
+// The issue is that when we don't have semicolon in the end of the input
 // in the case of cling where we have incremental compilation the parser 
 // encounters an error and tries to recover by looking for so called safe tokens
 // or anchors (e.g ';' or EOF). The input doesn't have semicolon and we play 
