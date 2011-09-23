@@ -637,6 +637,7 @@ namespace cling {
                                      m_Context->CreateTypeSourceInfo(VarAddrTy),
                                                            m_NoELoc,
                                                            ILE).take();
+    assert (ExprAddresses && "Could not build the void* array");
     m_Sema->ImpCastExprToType(ExprAddresses,
                               m_Context->getPointerType(m_Context->VoidPtrTy),
                               CK_ArrayToPointerDecay);
