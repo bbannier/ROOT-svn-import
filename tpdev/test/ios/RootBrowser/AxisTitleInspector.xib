@@ -380,7 +380,7 @@
 						<int key="IBUIContentMode">7</int>
 						<bool key="IBUIUserInteractionEnabled">NO</bool>
 						<string key="targetRuntimeIdentifier">IBIPadFramework</string>
-						<string key="IBUIText">Label size:</string>
+						<string key="IBUIText">Title size:</string>
 						<reference key="IBUIFont" ref="44746621"/>
 						<reference key="IBUITextColor" ref="17098849"/>
 						<nil key="IBUIHighlightedColor"/>

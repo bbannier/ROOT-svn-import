@@ -21,6 +21,7 @@
 		702DDD251416141A009FC6F3 /* LineStyleInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD231416141A009FC6F3 /* LineStyleInspector.mm */; };
 		702DDD261416141A009FC6F3 /* LineStyleInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702DDD241416141A009FC6F3 /* LineStyleInspector.xib */; };
 		702DDD2914161789009FC6F3 /* InspectorWithNavigation.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */; };
+		70360B1A142C7AC6001F77E1 /* MessageUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70360B19142C7AC6001F77E1 /* MessageUI.framework */; };
 		704498091429D0A000E83799 /* PadImageView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 704498081429D0A000E83799 /* PadImageView.mm */; };
 		7044980D1429D13D00E83799 /* PadImageScrollView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7044980C1429D13D00E83799 /* PadImageScrollView.mm */; };
 		705A503614066421004C1C8B /* ScrollViewWithPadView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 705A503514066421004C1C8B /* ScrollViewWithPadView.mm */; };
@@ -121,6 +122,7 @@
 		702DDD241416141A009FC6F3 /* LineStyleInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LineStyleInspector.xib; sourceTree = "<group>"; };
 		702DDD2714161789009FC6F3 /* InspectorWithNavigation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorWithNavigation.h; sourceTree = "<group>"; };
 		702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = InspectorWithNavigation.mm; sourceTree = "<group>"; };
+		70360B19142C7AC6001F77E1 /* MessageUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MessageUI.framework; path = System/Library/Frameworks/MessageUI.framework; sourceTree = SDKROOT; };
 		704498071429D0A000E83799 /* PadImageView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadImageView.h; sourceTree = "<group>"; };
 		704498081429D0A000E83799 /* PadImageView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PadImageView.mm; sourceTree = "<group>"; };
 		7044980B1429D13D00E83799 /* PadImageScrollView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadImageScrollView.h; sourceTree = "<group>"; };
@@ -232,6 +234,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70360B1A142C7AC6001F77E1 /* MessageUI.framework in Frameworks */,
 				709594A213FE978C00B9E8B6 /* libz.dylib in Frameworks */,
 				7095949C13FE978400B9E8B6 /* libRoot.a in Frameworks */,
 				7095949D13FE978400B9E8B6 /* libfreetype.a in Frameworks */,
@@ -251,6 +254,7 @@
 		7077900E13FE50EB00C0FFA1 = {
 			isa = PBXGroup;
 			children = (
+				70360B19142C7AC6001F77E1 /* MessageUI.framework */,
 				7073A9A914277D16006F6D67 /* Default-Portrait.png */,
 				7073A9AA14277D17006F6D67 /* Default-PortraitUpsideDown.png */,
 				7073A9AB14277D18006F6D67 /* Default-Landscape.png */,
