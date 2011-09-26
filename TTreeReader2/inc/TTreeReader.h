@@ -31,6 +31,7 @@ class TTree;
 
 namespace ROOT {
    class TBranchProxyDirector;
+   class TTreeProxyGenerator;
    class TTreeReaderValuePtrBase;
 }
 
@@ -40,16 +41,18 @@ public:
    enum EEntryStatus {
       kEntryValid = 0, // data read okay
       kEntryNotLoaded, // no entry has been loaded yet
+      kEntryNoTree, // the tree does not exist
       kEntryNotFound, // the tree entry number does not exist
       kEntryChainSetupError, // problem in accessing a chain element, e.g. file without the tree
       kEntryChainFileError // problem in opening a chain's file
    };
 
-   TTreeReader(TTree* tree);
    TTreeReader(const char* keyname, TDirectory* dir = NULL);
+   TTreeReader(TTree* tree);
+   TTreeReader(TFileCollection* files);
 
-   EEntryStatus GetEntry(Long64_t entry);
    Bool_t GetNextEntry() { return GetEntry(GetCurrentEntry() + 1) == kEntryValid; }
+   void GetEntry(Long64_t entry);
 
    EEntryStatus GetEntryStatus() const { return fEntryStatus; }
 
@@ -57,27 +60,23 @@ public:
    Long64_t GetEntries(Bool_t force) const;
    Long64_t GetCurrentEntry() const;
 
-protected:
-   enum EMakeClassMode {
-      kMakeClassUndefined,
-      kMakeClassOff,
-      kMakeClassOn
-   };
+   // Internal
+   Bool_t Notify(); 
 
-   EMakeClassMode GetMakeClassMode() const { return fMakeClassMode; }
+protected:
+   void InitializeProxyGenerator();
    void UpdateAddresses();
    void RegisterReader(ROOT::TTreeReaderValuePtrBase& reader);
    void UnregisterReader(ROOT::TTreeReaderValuePtrBase& reader);
    void InitializeMakeClassMode();
-   Long64_t GetLocalEntryNumber() const { return fLocalEntryNumber; }
 
 private:
    TTree*      fTree;
    TDirectory* fDirectory; // directory (or current file for chains)
    THashTable  fReaders; // readers
-   Long64_t    fLocalEntryNumber; // entry number in the current tree
+   EEntryStatus fEntryStatus; // status of most recent read request
    EMakeClassMode fMakeClassMode; // whether makeclass mode is turned on
-   EEntryStatus   fEntryStatus; // result of most recent GetEntry() entry is available
+   ROOT::TTreeProxyGenerator* fProxyGenerator; // generator for proxy objects
    ROOT::TBranchProxyDirector* fDirector; // proxying director
 
    friend class ROOT::TTreeReaderValuePtrBase;
