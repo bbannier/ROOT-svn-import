@@ -80,6 +80,7 @@ public:
    void     DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y);
    
    void     DrawText(Double_t x, Double_t y, const char *text, ETextMode mode);
+   void     DrawText(Double_t x, Double_t y, const CTLineGuard &ctLine);
    void     DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode);
    
    void     SetContext(CGContextRef ctx);
