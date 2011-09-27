@@ -406,20 +406,8 @@ void Painter::DrawPolyMarker(Int_t, const Float_t *, const Float_t *)
 }
 
 //_________________________________________________________________
-void Painter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
+void Painter::DrawText(Double_t x, Double_t y, const CTLineGuard &ctLine)
 {
-   //TODO: mode parameter.
-   if (fPainterMode == kPaintThumbnail) {
-      CGContextSetRGBFillColor(fCtx, 0.f, 0.f, 0.f, 1.f);
-      CGContextFillRect(fCtx, CGRectMake(fConverter.XToView(x), fConverter.YToView(y), 5.f, 2.f));
-   }
-   
-   if (fPainterMode != kPaintToView)//TEXT is not selectable, no text in thumbnail either.
-      return;
-     
-   CTFontRef currentFont = fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
-   CTLineGuard ctLine(text, currentFont, gVirtualX->GetTextColor());
-
    UInt_t w = 0, h = 0;
    ctLine.GetBounds(w, h);
    
@@ -462,6 +450,28 @@ void Painter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mod
 
    CTLineDraw(ctLine.fCTLine, fCtx);
    CGContextRestoreGState(fCtx);
+}
+
+//_________________________________________________________________
+void Painter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
+{
+   //TODO: mode parameter.
+   if (fPainterMode == kPaintThumbnail) {
+      CGContextSetRGBFillColor(fCtx, 0.f, 0.f, 0.f, 1.f);
+      CGContextFillRect(fCtx, CGRectMake(fConverter.XToView(x), fConverter.YToView(y), 5.f, 2.f));
+   }
+   
+   if (fPainterMode != kPaintToView)//TEXT is not selectable, no text in thumbnail either.
+      return;
+     
+   CTFontRef currentFont = fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
+   if (gVirtualX->GetTextFont() / 10 - 1 == 11) {
+      CTLineGuard ctLine(text, currentFont, fFontManager.GetSymbolMap());
+      DrawText(x, y, ctLine);
+   } else {
+      CTLineGuard ctLine(text, currentFont, gVirtualX->GetTextColor());
+      DrawText(x, y, ctLine);
+   }
 }
 
 //_________________________________________________________________

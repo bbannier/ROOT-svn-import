@@ -1,6 +1,7 @@
 #ifndef ROOT_TextOperations
 #define ROOT_TextOperations
 
+#include <vector>
 #include <map>
 
 #include <CoreText/CTFont.h>
@@ -22,6 +23,7 @@ class CTLineGuard : public Util::NonCopyable {
 public:
    CTLineGuard(const char *textLine, CTFontRef font);
    CTLineGuard(const char *textLine, CTFontRef font, Color_t color);
+   CTLineGuard(const char *textLine, CTFontRef font, const std::vector<UniChar> &symbolMap);
    ~CTLineGuard();
    
    void GetBounds(UInt_t &w, UInt_t &h)const;
@@ -29,6 +31,7 @@ public:
 private:
 
    void Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values);
+   void Init(const std::vector<UniChar> &textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values);
 
    CTLineRef fCTLine; //Core Text line, created from Attributed string.
 };
@@ -59,6 +62,11 @@ public:
    double GetAscent()const;
    double GetDescent()const;
    double GetLeading()const;
+   
+   const std::vector<UniChar> &GetSymbolMap()const
+   {
+      return fSymbolMap;
+   }
 
 private:
    typedef std::map<UInt_t, CTFontRef> FontMap_t;
@@ -67,6 +75,10 @@ private:
 
    FontMap_t fFonts[fmdNOfFonts];
    CTFontRef fSelectedFont;
+   
+   std::vector<UniChar> fSymbolMap;
+   
+   void InitSymbolMap();
 };
 
 }
