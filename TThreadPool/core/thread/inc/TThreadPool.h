@@ -29,15 +29,6 @@
 #ifndef ROOT_TCondition
 #include "TCondition.h"
 #endif
-#ifndef ROOT_TSystem
-#include "TSystem.h"
-#endif
-#ifndef ROOT_TTimer
-#include "TTimer.h"
-#endif
-#ifndef ROOT_Varargs
-#include "Varargs.h"
-#endif
 // STD
 #include <queue>
 #include <vector>
@@ -53,7 +44,6 @@
 // Class which makes child to be non-copyable object.                   //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-
 class TNonCopyable
 {
     protected:
@@ -70,7 +60,6 @@ class TNonCopyable
 // TThreadPoolTaskImp                                                   //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-
 template <class _T, class _P>
 class TThreadPoolTaskImp
 {
@@ -107,8 +96,6 @@ class TThreadPoolTask
         task_t &m_task;
         _P m_taskParam;
 };
-
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TThreadPool                                                          //
@@ -216,10 +203,12 @@ class TThreadPool : public TNonCopyable
             for( ; iter != iter_end; ++iter )
                 ( *iter )->Join();
         }
+
         size_t TasksCount() const
         {
             return m_tasksCount;
         }
+
         size_t SuccessfulTasks() const
         {
             return m_successfulTasks;
@@ -236,6 +225,5 @@ class TThreadPool : public TNonCopyable
         size_t m_successfulTasks;
         size_t m_tasksCount;
 };
-
 
 #endif
