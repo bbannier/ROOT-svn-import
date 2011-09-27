@@ -145,16 +145,16 @@ class TThreadPool : public TNonCopyable
             stop();
         }
 
-        /*     void pushTask( typename TThreadPoolTask<_T, _P>::task_t &_task, _P _param )
+             void pushTask( typename TThreadPoolTask<_T, _P>::task_t &_task, _P _param )
              {
-                 boost::mutex::scoped_lock lock( m_mutex );
+                 TLockGuard lock( &m_mutex );
                  task_t *task = new task_t( _task, _param );
                  m_tasks.push( task );
-                 m_threadNeeded.notify_all();
+                 m_threadNeeded->Notify();
                  ++m_tasksCount;
              }
 
-             void execute()
+           /*  void execute()
              {
                  do
                  {
