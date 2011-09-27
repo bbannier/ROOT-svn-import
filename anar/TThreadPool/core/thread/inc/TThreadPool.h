@@ -131,11 +131,11 @@ class TThreadPool : public TNonCopyable
 
             for( size_t i = 0; i < _threadsCount; ++i )
             {
-                TThread *pThread = new TThread( std::tr1::bind( &TThreadPool::execute, this ) );
+                TThread *pThread = new TThread( std::tr1::bind( &TThreadPool::Execute, this ) );
                 m_threads.push_back( pThread );
             }
         }
-        void execute()
+        void Execute()
         {}
 
         ~TThreadPool()
@@ -145,50 +145,50 @@ class TThreadPool : public TNonCopyable
             stop();
         }
 
-             void pushTask( typename TThreadPoolTask<_T, _P>::task_t &_task, _P _param )
-             {
-                 TLockGuard lock( &m_mutex );
-                 task_t *task = new task_t( _task, _param );
-                 m_tasks.push( task );
-                 m_threadNeeded->Notify();
-                 ++m_tasksCount;
-             }
+        void PushTask( typename TThreadPoolTask<_T, _P>::task_t &_task, _P _param )
+        {
+            TLockGuard lock( &m_mutex );
+            task_t *task = new task_t( _task, _param );
+            m_tasks.push( task );
+            m_threadNeeded->Notify();
+            ++m_tasksCount;
+        }
 
-           /*  void execute()
-             {
-                 do
-                 {
-                     task_t* task = NULL;
+        /*  void Execute()
+          {
+              do
+              {
+                  task_t* task = NULL;
 
-                     {
-                         // Find a job to perform
-                         boost::mutex::scoped_lock lock( m_mutex );
-                         if( m_tasks.empty() && !m_stopped )
-                         {
-                             m_threadNeeded.wait( lock );
-                         }
-                         if( !m_stopped && !m_tasks.empty() )
-                         {
-                             task = m_tasks.front();
-                             m_tasks.pop();
-                         }
-                     }
-                     //Execute job
-                     if( task )
-                     {
-                         if( task->run() )
-                         {
-                             boost::mutex::scoped_lock lock( m_mutex );
-                             ++m_successfulTasks;
-                         }
-                         delete task;
-                         task = NULL;
-                     }
-                     m_threadAvailable.notify_all();
-                 }
-                 while( !m_stopped );
-             }*/
-        void stop( bool processRemainingJobs = false )
+                  {
+                      // Find a job to perform
+                      boost::mutex::scoped_lock lock( m_mutex );
+                      if( m_tasks.empty() && !m_stopped )
+                      {
+                          m_threadNeeded.wait( lock );
+                      }
+                      if( !m_stopped && !m_tasks.empty() )
+                      {
+                          task = m_tasks.front();
+                          m_tasks.pop();
+                      }
+                  }
+                  //Execute job
+                  if( task )
+                  {
+                      if( task->run() )
+                      {
+                          boost::mutex::scoped_lock lock( m_mutex );
+                          ++m_successfulTasks;
+                      }
+                      delete task;
+                      task = NULL;
+                  }
+                  m_threadAvailable.notify_all();
+              }
+              while( !m_stopped );
+          }*/
+        void Stop( bool processRemainingJobs = false )
         {
             {
                 //prevent more jobs from being added to the queue
@@ -217,15 +217,15 @@ class TThreadPool : public TNonCopyable
             for( ; iter != iter_end; ++iter )
                 ( *iter )->Join();
         }
-        size_t tasksCount() const
+        size_t TasksCount() const
         {
             return m_tasksCount;
         }
-        size_t successfulTasks() const
+        size_t SuccessfulTasks() const
         {
             return m_successfulTasks;
         }
-    
+
     private:
         taskqueue_t m_tasks;
         TMutex m_mutex;
