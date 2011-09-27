@@ -80,7 +80,6 @@ public:
    void     DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y);
    
    void     DrawText(Double_t x, Double_t y, const char *text, ETextMode mode);
-   void     DrawText(Double_t x, Double_t y, const CTLineGuard &ctLine);
    void     DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode);
    
    void     SetContext(CGContextRef ctx);
@@ -130,6 +129,8 @@ private:
 
    void     FillAreaWithPattern(Int_t n, const Double_t *x, const Double_t *y)const;   
    void     FillArea(Int_t n, const Double_t *x, const Double_t *y)const;
+   
+   void     DrawText(Double_t x, Double_t y, const CTLineGuard &ctLine);
    
    //
    FontManager     fFontManager;
