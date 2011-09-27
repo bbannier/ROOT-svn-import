@@ -60,6 +60,7 @@ static const CGFloat minZoom = 1.f;
       self.bouncesZoom = NO;
       self.bounces = NO;
       self.backgroundColor = [UIColor clearColor];
+      self.decelerationRate = UIScrollViewDecelerationRateFast;
 
       [self setContentSize : frame.size contentOffset : CGPointZero minScale : minZoom maxScale : maxZoom scale : 1];
       

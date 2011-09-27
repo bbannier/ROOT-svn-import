@@ -97,8 +97,8 @@ static const CGFloat maximumZoom = 2.f;
 {
    navigationScrollView.delegate = self;
    
-   navigationScrollView.canCancelContentTouches = NO;
-   navigationScrollView.delaysContentTouches = NO;
+//   navigationScrollView.canCancelContentTouches = NO;
+//   navigationScrollView.delaysContentTouches = NO;
    navigationScrollView.bounces = NO;
    navigationScrollView.bouncesZoom = NO;
    navigationScrollView.pagingEnabled = YES;
@@ -616,12 +616,12 @@ static const CGFloat maximumZoom = 2.f;
       
    [navScrolls[0] setObject : fileContainer->GetObject(previousObject) drawOption : fileContainer->GetDrawOption(previousObject) andImage : prevImage];
    [navScrolls[1] setObject : fileContainer->GetObject(currentObject) drawOption : fileContainer->GetDrawOption(currentObject) andImage : currentImage];
+   [navScrolls[2] setObject : fileContainer->GetObject(nextObject) drawOption : fileContainer->GetDrawOption(nextObject)];
    [prevImage release];
    [currentImage release];
    
-   [navScrolls[2] setObject : fileContainer->GetObject(nextObject) drawOption : fileContainer->GetDrawOption(nextObject)];
-
-   [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];
+   [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];   
+   
    self.navigationItem.title = [NSString stringWithFormat : @"%s", fileContainer->GetObject(currentObject)->GetName()];
 }
 
