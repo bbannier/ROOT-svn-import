@@ -369,20 +369,19 @@ namespace cling {
 
       for (DeclGroupRef::iterator 
              Di = DGR.begin(), E = DGR.end(); Di != E; ++Di) {
-        Decl* D = (*Di)->getCanonicalDecl();
-        DeclContext* DC = D->getDeclContext();
+        DeclContext* DC = (*Di)->getDeclContext();
         // Check if the declaration is template instantiation, which is not in
         // any DeclContext yet, because it came from 
         // Sema::PerformPendingInstantiations
-        if (FunctionDecl* FD = dyn_cast<FunctionDecl>(D)) {
+        if (FunctionDecl* FD = dyn_cast<FunctionDecl>(*Di)) {
           if (!FD->getTemplateInstantiationPattern())
             DC->removeDecl(FD);
         }
         else
-          DC->removeDecl(D);
+          DC->removeDecl(*Di);
         Scope* S = m_Sema->getScopeForContext(DC);
         if (S)
-          S->RemoveDecl(D);
+          S->RemoveDecl(*Di);
 
         // Pop if the same declaration has come trough other function
         // For example CXXRecordDecl comes from HandleTopLevelDecl and
@@ -393,7 +392,7 @@ namespace cling {
           DeclGroupRef& DGRJ = (*J).D;
           for (DeclGroupRef::iterator 
                  Dj = DGRJ.begin(), E = DGRJ.end(); Dj != E; ++Dj) {
-            if ((*Dj) && (*Dj)->getCanonicalDecl() == D)
+            if ((*Dj) && (*Dj) == *Di)
               // Set the declaration to 0, we don't want to call the dtor 
               // of the DeclGroupRef
               (*Dj) = 0;
