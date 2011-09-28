@@ -33,11 +33,6 @@
 #include <queue>
 #include <vector>
 
-#ifndef __CINT__
-// using the new version of std::bind
-#include <tr1/functional>
-#endif
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TNonCopyable                                                         //
@@ -119,21 +114,23 @@ class TThreadPool : public TNonCopyable
 
             for( size_t i = 0; i < _threadsCount; ++i )
             {
-                std::tr1::function<void( void* )> *callback;
-                callback = new std::tr1::function<void( void* )>( std::tr1::bind( &TThreadPool::Execute, this, static_cast<void*>( NULL ) ) );
-
-                TThread *pThread = new TThread( reinterpret_cast<TThread::VoidRtnFunc_t>( callback ) );
-                pThread->Run();
+                TThread *pThread = new TThread( &TThreadPool::Execute, this );
                 m_threads.push_back( pThread );
+                pThread->Run();
             }
         }
 
         ~TThreadPool()
         {
+            Stop();
             delete m_threadNeeded;
             delete m_threadAvailable;
             delete m_mutex;
-            Stop();
+            // delete threads
+            threads_array_t::const_iterator iter = m_threads.begin();
+            threads_array_t::const_iterator iter_end = m_threads.end();
+            for( ; iter != iter_end; ++iter )
+                delete( *iter );
         }
 
         void PushTask( typename TThreadPoolTask<_T, _P>::task_t &_task, _P _param )
@@ -150,7 +147,8 @@ class TThreadPool : public TNonCopyable
             {
                 //prevent more jobs from being added to the queue
                 TLockGuard lock( m_mutex );
-                if( m_stopped ) return;
+                if( m_stopped ) 
+                    return;
                 m_stopping = true;
             }
             if( processRemainingJobs )
@@ -186,23 +184,24 @@ class TThreadPool : public TNonCopyable
         }
 
     private:
-        void Execute( void */*_arg*/ )
+        static void* Execute( void *_arg )
         {
+            TThreadPool *pThis = reinterpret_cast<TThreadPool*>(_arg);
             do
             {
                 task_t* task = NULL;
 
                 {
                     // Find a job to perform
-                    TLockGuard lock( m_mutex );
-                    if( m_tasks.empty() && !m_stopped )
+                    TLockGuard lock( pThis->m_mutex );
+                    if( pThis->m_tasks.empty() && !pThis->m_stopped )
                     {
-                        m_threadNeeded->Wait();
+                        pThis->m_threadNeeded->Wait();
                     }
-                    if( !m_stopped && !m_tasks.empty() )
+                    if( !pThis->m_stopped && !pThis->m_tasks.empty() )
                     {
-                        task = m_tasks.front();
-                        m_tasks.pop();
+                        task = pThis->m_tasks.front();
+                        pThis->m_tasks.pop();
                     }
                 }
                 //Execute job
@@ -210,15 +209,17 @@ class TThreadPool : public TNonCopyable
                 {
                     if( task->run() )
                     {
-                        TLockGuard lock( m_mutex );
-                        ++m_successfulTasks;
+                        TLockGuard lock( pThis->m_mutex );
+                        ++pThis->m_successfulTasks;
                     }
                     delete task;
                     task = NULL;
                 }
-                m_threadAvailable->Notify();
+                pThis->m_threadAvailable->Notify();
             }
-            while( !m_stopped );
+            while( !pThis->m_stopped );
+            
+            return NULL;
         }
 
     private:

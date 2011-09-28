@@ -44,7 +44,7 @@ ostream &operator<< ( ostream &_stream, const TTestTask &_task )
 //=============================================================================
 void threadPool()
 {
-    TThreadPool<TTestTask, EProc> threadPool( 1 );
+    TThreadPool<TTestTask, EProc> threadPool( 4 );
     vector <TTestTask> tasksList( g_numTasks );
     for( size_t i = 0; i < g_numTasks; ++i )
     {
