@@ -10,6 +10,10 @@ static const float tickLengthStep = 0.01f;
 static const float maxTickLength = 1.f;
 static const float minTickLength = -1.f;
 
+static const CGFloat tabBarHeight = 49.f;
+static const CGFloat totalHeight = 400.f;
+static const CGRect componentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHeight - tabBarHeight);
+
 @implementation AxisTicksInspector
 
 @synthesize tickLengthLabel;
@@ -39,6 +43,7 @@ static const float minTickLength = -1.f;
    
    if (self) {
       // Custom initialization
+      self.view.frame = componentFrame;
    }
 
    return self;

@@ -14,6 +14,10 @@ static const float offsetStep = 0.001f;
 static const float minOffset = -1.f;
 static const float maxOffset = 1.f;
 
+static const float totalHeight = 400.f;
+static const float tabBarHeight = 49.f;
+static const CGRect componentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHeight - tabBarHeight);
+
 @implementation AxisLabelsInspector
 
 @synthesize plusSize;
@@ -23,6 +27,12 @@ static const float maxOffset = 1.f;
 @synthesize minusOffset;
 @synthesize offsetLabel;
 @synthesize noExp;
+
+//____________________________________________________________________________________________________
++ (CGRect) inspectorFrame
+{
+   return componentFrame;
+}
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
