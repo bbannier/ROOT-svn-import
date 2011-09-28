@@ -101,7 +101,7 @@ namespace cling {
       // Reset the diagnostics options that came from CreateFromArgs
       DiagnosticOptions& DiagOpts = CI->getDiagnosticOpts();
       DiagOpts.ShowColors = 1;
-      DiagnosticClient* Client = new TextDiagnosticPrinter(llvm::errs(), DiagOpts);
+      DiagnosticConsumer* Client = new TextDiagnosticPrinter(llvm::errs(), DiagOpts);
       CI->createDiagnostics(0, 0, Client);
 
       // Set the language options, which cling needs

@@ -22,7 +22,7 @@ namespace cling {
     }
     
   void ASTDumper::HandleTopLevelSingleDecl(Decl* D) {
-    PrintingPolicy Policy = D->getASTContext().PrintingPolicy;
+    PrintingPolicy Policy = D->getASTContext().getPrintingPolicy();
     Policy.Dump = Dump;
 
     if (D) {
