@@ -37,7 +37,7 @@ TTreeReader::TTreeReader(TTree* tree):
    fTree(tree),
    fDirectory(0),
    fLocalEntryNumber(0),
-//fEntryStatus(kEntryNotLoaded),
+   fEntryStatus(kEntryNotLoaded),
    fProxyGenerator(0),
    fDirector(0)
 {
@@ -76,10 +76,23 @@ void TTreeReader::InitializeProxyGenerator()
 }
 
 //______________________________________________________________________________
-void TTreeReader::GetEntry(Long64_t entry)
+EEntryStatus TTreeReader::SetEntry(Long64_t entry)
 {
    // Load an entry into the tree, return the status of the read.
-   if (!fTree) return fEntryStatus;
+   if (!fTree) return kEntryNoTree;
+   if (fNumEntries == TChain::kBigNumber) {
+     // We can't use Notify() for being told when the next tree is accessed
+     // (and thus when the last tree is accessed and thus when the actual
+     // number of entries is known) - Notify might be registered by the user
+     // and a TTree supports only one.
+     // Instead we need to probe for each entry whether the actual, total number
+     // of entries is now known.
+     fNumEntries = fTree->GetNentries();
+   }
+   if (fNumEntries != TChain::kBigNumber && fNumEntries <= entry) {
+      fEntryStatus = kEntryNotFound;
+      return fEntryStatus;
+   }
    fDirector->SetReadEntry(entry);
 }
 
