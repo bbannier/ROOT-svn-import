@@ -9,6 +9,8 @@
 #include <unistd.h>
 // ThreadPool
 #include "TThreadPool.h"
+// ROOT
+#include "TThread.h"
 //=============================================================================
 using namespace std;
 //=============================================================================
@@ -16,34 +18,13 @@ const size_t g_sleeptime = 1; // in secs.
 const size_t g_numTasks = 32;
 const size_t g_numThreads = 4;
 //=============================================================================
-/**
- * @brief A system helper, which helps to get a Thread ID of the current thread.
- * @return Current thread ID.
- **/
-inline unsigned long gettid()
-{
-#ifdef __APPLE__
-    union
-    {
-        pthread_t th;
-        unsigned long int i;
-    } v = { };
-    v.th = pthread_self();
-    return v.i;
-#elif __linux
-    return syscall( __NR_gettid );
-#else
-    return 0;
-#endif
-}
-//=============================================================================
 enum EProc {start, clean};
 class TTestTask: public TThreadPoolTaskImp<TTestTask, EProc>
 {
 public:
     bool runTask( EProc /*_param*/ )
     {
-        m_tid = gettid();
+        m_tid = TThread::SelfId();
         sleep( g_sleeptime );
         return true;
     }
@@ -63,7 +44,7 @@ ostream &operator<< ( ostream &_stream, const TTestTask &_task )
 //=============================================================================
 void threadPool()
 {
-    TThreadPool<TTestTask, EProc> threadPool( 4 );
+    TThreadPool<TTestTask, EProc> threadPool( 1 );
     vector <TTestTask> tasksList( g_numTasks );
     for( size_t i = 0; i < g_numTasks; ++i )
     {
