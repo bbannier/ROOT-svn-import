@@ -27,7 +27,5 @@ class TObject;
 
 - (IBAction) gridActivated : (UISwitch *) g;
 - (IBAction) ticksActivated : (UISwitch *) t;
-- (IBAction) back;
-
 
 @end

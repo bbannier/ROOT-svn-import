@@ -23,6 +23,4 @@ class TObject;
 - (void) setROOTObjectController : (ROOTObjectController *) c;
 - (void) setROOTObject : (TObject *) obj;
 
-- (IBAction) back;
-
 @end

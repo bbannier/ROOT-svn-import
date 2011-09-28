@@ -2,30 +2,42 @@
 #import "LineStyleInspector.h"
 #import "LineInspector.h"
 
-static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
+
+static const CGFloat totalHeight = 330.f;
+static const CGFloat tabBarHeight = 49.f;
+static const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHeight - tabBarHeight);
 
 @implementation LineInspector
+
+@synthesize tabBar;
 
 //____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
 {
-   return CGRectMake(0.f, 0.f, 250.f, 330.f);
+   return CGRectMake(0.f, 0.f, 250.f, totalHeight);
 }
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
-   self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
     
    [self view];
     
    if (self) {
       //Load inspectors from nib files.
       colorWidthInspector = [[LineColorWidthInspector alloc] initWithNibName : @"LineColorWidthInspector" bundle : nil];
-      colorWidthInspector.view.frame = inspectorFrame;
+      colorWidthInspector.view.frame = nestedComponentFrame;
+      colorWidthInspector.view.hidden = NO;
       
       styleInspector = [[LineStyleInspector alloc] initWithNibName : @"LineStyleInspector" bundle : nil];
-      styleInspector.view.frame = inspectorFrame;
+      styleInspector.view.frame = nestedComponentFrame;
+      styleInspector.view.hidden = YES;
+
+      [self.view addSubview : colorWidthInspector.view];
+      [self.view addSubview : styleInspector.view];
+      
+      tabBar.selectedItem = [[tabBar items] objectAtIndex : 0];
    }
    return self;
 }
@@ -35,6 +47,7 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 {
    [colorWidthInspector release];
    [styleInspector release];
+   self.tabBar = nil;
 
    [super dealloc];
 }
@@ -43,8 +56,7 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
-   [super didReceiveMemoryWarning];
-    
+   [super didReceiveMemoryWarning];    
    // Release any cached data, images, etc that aren't in use.
 }
 
@@ -76,12 +88,16 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
+   [colorWidthInspector setROOTObjectController : c];
+   [styleInspector setROOTObjectController : c];
 }
 
 //____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
    object = o;
+   [colorWidthInspector setROOTObject : o];   
+   [styleInspector setROOTObject : o];
 }
 
 //____________________________________________________________________________________________________
@@ -91,21 +107,35 @@ static const CGRect inspectorFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 }
 
 //____________________________________________________________________________________________________
+- (void) resetInspector
+{
+   tabBar.selectedItem = [[tabBar items] objectAtIndex : 0];
+   [self showColorWidthComponent];
+}
+
+//____________________________________________________________________________________________________
 - (IBAction) showColorWidthComponent
 {
-   [colorWidthInspector setROOTObjectController : controller];
-   [colorWidthInspector setROOTObject : object];
-   
-   [self.navigationController pushViewController : colorWidthInspector animated : YES];
+   colorWidthInspector.view.hidden = NO;
+   styleInspector.view.hidden = YES;
 }
 
 //____________________________________________________________________________________________________
 - (IBAction) showStyleComponent
 {
-   [styleInspector setROOTObjectController : controller];
-   [styleInspector setROOTObject : object];
-   
-   [self.navigationController pushViewController : styleInspector animated : YES];
+   styleInspector.view.hidden = NO;
+   colorWidthInspector.view.hidden = YES;
+}
+
+#pragma mark - UITabBar delegate.
+
+//____________________________________________________________________________________________________
+- (void) tabBar : (UITabBar *) tb didSelectItem : (UITabBarItem *)item
+{
+   if (item.tag == 1)
+      [self showColorWidthComponent];
+   else if (item.tag == 2)
+      [self showStyleComponent];
 }
 
 @end

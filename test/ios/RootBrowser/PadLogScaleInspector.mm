@@ -96,10 +96,4 @@
    [controller objectWasModifiedUpdateSelection : YES];//Now picture changed, so picking buffer is invalid.
 }
 
-//____________________________________________________________________________________________________
-- (IBAction) back
-{
-   [self.navigationController popViewControllerAnimated : YES];
-}
-
 @end

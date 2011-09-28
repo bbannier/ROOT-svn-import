@@ -64,7 +64,7 @@ namespace ObjIns = ROOT_IOSObjectInspector;
       const CGRect titleRect = CGRectMake(10.f, 10.f, 250.f, 35.f);
       editorTitle = [[UILabel alloc] initWithFrame : titleRect];
       editorTitle.textAlignment = UITextAlignmentCenter;
-      editorTitle.textColor = [UIColor redColor];
+      editorTitle.textColor = [UIColor blackColor];
       editorTitle.backgroundColor = [UIColor clearColor];
       [self addSubview : editorTitle];
       [editorTitle release];

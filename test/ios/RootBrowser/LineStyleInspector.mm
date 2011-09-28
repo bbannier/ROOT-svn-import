@@ -9,7 +9,7 @@
 
 //TODO: remove line related constants to IOSLineStyles.h/*.cxx
 
-static const CGRect cellFrame = CGRectMake(0.f, 0.f, 180.f, 44.f);
+static const CGRect cellFrame = CGRectMake(0.f, 0.f, 160.f, 44.f);
 
 @implementation LineStyleInspector
 
@@ -142,12 +142,6 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 180.f, 44.f);
       pickerRow = lineStyle - 1;
 
    [lineStylePicker selectRow : pickerRow inComponent : 0 animated : NO];
-}
-
-//____________________________________________________________________________________________________
-- (void) back
-{
-   [self.navigationController popViewControllerAnimated : YES];
 }
 
 @end

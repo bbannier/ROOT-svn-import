@@ -109,10 +109,4 @@
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
-//____________________________________________________________________________________________________
-- (IBAction) back
-{
-   [self.navigationController popViewControllerAnimated : YES];
-}
-
 @end
