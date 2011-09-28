@@ -30,24 +30,13 @@
    using namespace ROOT_IOSObjectInspector;
 
    //TAttLine.
-//   LineInspector *lineInspector = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];
-//   lineInspector.view.frame = [LineInspector inspectorFrame];
-   cachedEditors[kAttLine] = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];//lineInspector;
-   
+   cachedEditors[kAttLine] = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];//lineInspector;   
    //TAttFill.
    cachedEditors[kAttFill] = [[FilledAreaInspector alloc] initWithNibName : @"FilledAreaInspector" bundle : nil];
-
    //TAttPad.
-//   PadInspector *padInspector = [[PadInspector alloc] initWithNibName : @"PadInspector" bundle : nil];
-//   padInspector.view.frame = [PadInspector inspectorFrame];
-   cachedEditors[kAttPad] = [[PadInspector alloc] initWithNibName : @"PadInspector" bundle : nil];//padInspector;
-   
+   cachedEditors[kAttPad] = [[PadInspector alloc] initWithNibName : @"PadInspector" bundle : nil];//padInspector;   
    //TAttAxis.
-   AxisInspector *axisInspectorCompositor = [[AxisInspector alloc] initWithNibName : @"AxisInspector" bundle : nil];
-   InspectorWithNavigation *axisInspector = [[InspectorWithNavigation alloc] initWithRootViewController : axisInspectorCompositor];
-   [axisInspectorCompositor release];
-   axisInspector.view.frame = [AxisInspector inspectorFrame];
-   cachedEditors[kAttAxis] = axisInspector;
+   cachedEditors[kAttAxis] = [[AxisInspector alloc] initWithNibName : @"AxisInspector" bundle : nil];
 }
 
 //____________________________________________________________________________________________________

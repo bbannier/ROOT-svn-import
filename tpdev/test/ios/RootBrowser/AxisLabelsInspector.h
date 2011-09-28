@@ -30,6 +30,8 @@ class TAxis;
 @property (nonatomic, retain) UILabel *offsetLabel;
 @property (nonatomic, retain) UISwitch *noExp;
 
++ (CGRect) inspectorFrame;
+
 - (void) setROOTObjectController : (ROOTObjectController *)c;
 - (void) setROOTObject : (TObject *)o;
 

@@ -15,6 +15,9 @@ static const float minTitleSize = 0.01f;
 static const float maxTitleSize = 1.f;
 static const float titleSizeStep = 0.01f;
 
+static const float totalHeight = 400.f;
+static const float tabBarHeight = 49.f;
+
 @implementation AxisTitleInspector
 
 @synthesize titleField;
@@ -31,7 +34,7 @@ static const float titleSizeStep = 0.01f;
 //____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
 {
-   return CGRectMake(0.f, 0.f, 250.f, 400.f);
+   return CGRectMake(0.f, tabBarHeight, 250.f, totalHeight - tabBarHeight);
 }
 
 //____________________________________________________________________________________________________
@@ -39,7 +42,6 @@ static const float titleSizeStep = 0.01f;
 {
 
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
-
 
    if (self)
       [self view];
