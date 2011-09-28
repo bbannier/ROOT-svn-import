@@ -104,21 +104,26 @@ class TThreadPoolTask
 template <class _T, class _P>
 class TThreadPool : public TNonCopyable
 {
-
         typedef TThreadPoolTask<_T, _P> task_t;
         typedef std::queue<task_t*> taskqueue_t;
         typedef std::vector<TThread*> threads_array_t;
+
     public:
         TThreadPool( size_t _threadsCount ):
             m_stopped( false ),
             m_stopping( false )
         {
-            m_threadNeeded = new TCondition( &m_mutex );
-            m_threadAvailable = new TCondition( &m_mutex );
+            m_mutex = new TMutex();
+            m_threadNeeded = new TCondition( m_mutex );
+            m_threadAvailable = new TCondition( m_mutex );
 
             for( size_t i = 0; i < _threadsCount; ++i )
             {
-                TThread *pThread = new TThread( std::tr1::bind( &TThreadPool::Execute, this ) );
+                std::tr1::function<void( void* )> *callback;
+                callback = new std::tr1::function<void( void* )>( std::tr1::bind( &TThreadPool::Execute, this, static_cast<void*>( NULL ) ) );
+
+                TThread *pThread = new TThread( reinterpret_cast<TThread::VoidRtnFunc_t>( callback ) );
+                pThread->Run();
                 m_threads.push_back( pThread );
             }
         }
@@ -127,64 +132,30 @@ class TThreadPool : public TNonCopyable
         {
             delete m_threadNeeded;
             delete m_threadAvailable;
+            delete m_mutex;
             Stop();
         }
 
         void PushTask( typename TThreadPoolTask<_T, _P>::task_t &_task, _P _param )
         {
-            TLockGuard lock( &m_mutex );
+            TLockGuard lock( m_mutex );
             task_t *task = new task_t( _task, _param );
             m_tasks.push( task );
             m_threadNeeded->Notify();
             ++m_tasksCount;
         }
 
-        void Execute()
-        {
-            do
-            {
-                task_t* task = NULL;
-
-                {
-                    // Find a job to perform
-                    TLockGuard lock( &m_mutex );
-                    if( m_tasks.empty() && !m_stopped )
-                    {
-                        m_threadNeeded->Wait();
-                    }
-                    if( !m_stopped && !m_tasks.empty() )
-                    {
-                        task = m_tasks.front();
-                        m_tasks.pop();
-                    }
-                }
-                //Execute job
-                if( task )
-                {
-                    if( task->run() )
-                    {
-                        TLockGuard lock( &m_mutex );
-                        ++m_successfulTasks;
-                    }
-                    delete task;
-                    task = NULL;
-                }
-                m_threadAvailable->Notify();
-            }
-            while( !m_stopped );
-        }
-
         void Stop( bool processRemainingJobs = false )
         {
             {
                 //prevent more jobs from being added to the queue
-                TLockGuard lock( &m_mutex );
+                TLockGuard lock( m_mutex );
                 if( m_stopped ) return;
                 m_stopping = true;
             }
             if( processRemainingJobs )
             {
-                TLockGuard lock( &m_mutex );
+                TLockGuard lock( m_mutex );
                 //wait for queue to drain.
                 while( !m_tasks.empty() && !m_stopped )
                 {
@@ -193,7 +164,7 @@ class TThreadPool : public TNonCopyable
             }
             //tell all threads to stop
             {
-                TLockGuard lock( &m_mutex );
+                TLockGuard lock( m_mutex );
                 m_stopped = true;
             }
             m_threadNeeded->Notify();
@@ -215,8 +186,44 @@ class TThreadPool : public TNonCopyable
         }
 
     private:
+        void Execute( void */*_arg*/ )
+        {
+            do
+            {
+                task_t* task = NULL;
+
+                {
+                    // Find a job to perform
+                    TLockGuard lock( m_mutex );
+                    if( m_tasks.empty() && !m_stopped )
+                    {
+                        m_threadNeeded->Wait();
+                    }
+                    if( !m_stopped && !m_tasks.empty() )
+                    {
+                        task = m_tasks.front();
+                        m_tasks.pop();
+                    }
+                }
+                //Execute job
+                if( task )
+                {
+                    if( task->run() )
+                    {
+                        TLockGuard lock( m_mutex );
+                        ++m_successfulTasks;
+                    }
+                    delete task;
+                    task = NULL;
+                }
+                m_threadAvailable->Notify();
+            }
+            while( !m_stopped );
+        }
+
+    private:
         taskqueue_t m_tasks;
-        TMutex m_mutex;
+        TMutex *m_mutex;
         TCondition *m_threadNeeded;
         TCondition *m_threadAvailable;
         threads_array_t m_threads;

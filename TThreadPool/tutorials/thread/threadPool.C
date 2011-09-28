@@ -1,0 +1,109 @@
+// Usage:
+// root [0] .L threadPool.C++
+// root [1] threadPool()
+
+// STD
+#include <iostream>
+#include <iterator>
+#include <vector>
+#include <unistd.h>
+// ThreadPool
+#include "TThreadPool.h"
+//=============================================================================
+using namespace std;
+//=============================================================================
+const size_t g_sleeptime = 1; // in secs.
+const size_t g_numTasks = 32;
+const size_t g_numThreads = 4;
+//=============================================================================
+/**
+ * @brief A system helper, which helps to get a Thread ID of the current thread.
+ * @return Current thread ID.
+ **/
+inline unsigned long gettid()
+{
+#ifdef __APPLE__
+    union
+    {
+        pthread_t th;
+        unsigned long int i;
+    } v = { };
+    v.th = pthread_self();
+    return v.i;
+#elif __linux
+    return syscall( __NR_gettid );
+#else
+    return 0;
+#endif
+}
+//=============================================================================
+enum EProc {start, clean};
+class TTestTask: public TThreadPoolTaskImp<TTestTask, EProc>
+{
+public:
+    bool runTask( EProc /*_param*/ )
+    {
+        m_tid = gettid();
+        sleep( g_sleeptime );
+        return true;
+    }
+    unsigned long threadID() const
+    {
+        return m_tid;
+    }
+    
+private:
+    unsigned long m_tid;
+};
+ostream &operator<< ( ostream &_stream, const TTestTask &_task )
+{
+    _stream << _task.threadID();
+    return _stream;
+}
+//=============================================================================
+void threadPool()
+{
+    TThreadPool<TTestTask, EProc> threadPool( 4 );
+    vector <TTestTask> tasksList( g_numTasks );
+    for( size_t i = 0; i < g_numTasks; ++i )
+    {
+        threadPool.PushTask( tasksList[i], start );
+    }
+    threadPool.Stop( true );
+    
+    //    ostream_iterator<CTestTask> out_it( cout, "\n" );
+    //    copy( tasksList.begin(), tasksList.end(),
+    //          out_it );
+    
+    typedef map<unsigned long, size_t> counter_t;
+    counter_t counter;
+    {
+        vector <TTestTask>::const_iterator iter = tasksList.begin();
+        vector <TTestTask>::const_iterator iter_end = tasksList.end();
+        for( ; iter != iter_end; ++iter )
+        {
+            counter_t::iterator found = counter.find( iter->threadID() );
+            if( found == counter.end() )
+                counter.insert( counter_t::value_type( iter->threadID(), 1 ) );
+            else
+            {
+                found->second = found->second + 1;
+            }
+        }
+    }
+    
+    counter_t::const_iterator iter = counter.begin();
+    counter_t::const_iterator iter_end = counter.end();
+    for( ; iter != iter_end; ++iter )
+    {
+        cout << iter->first << " was used " << iter->second << " times\n";
+        // each thread suppose to be used equal amount of time,
+        // exactly (g_numTasks/g_numThreads) times
+        if( iter->second != ( g_numTasks / g_numThreads ) )
+        {
+            cerr << "ThreadPool: simple test - Failed" << endl;
+            return;
+        }
+    }
+    cout << "ThreadPool: simple test - OK" << endl;
+}
