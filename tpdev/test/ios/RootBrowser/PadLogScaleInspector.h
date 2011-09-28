@@ -23,6 +23,5 @@ class TObject;
 - (void) setROOTObject : (TObject *)o;
 
 - (IBAction) logActivated : (UISwitch *) log;
-- (IBAction) back;
 
 @end

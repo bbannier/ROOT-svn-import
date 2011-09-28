@@ -26,8 +26,8 @@
       editorLabel = [[UILabel alloc] initWithFrame:CGRectMake(frame.size.width / 2 - 60.f, 10.f, 120.f, 30.f)];
       editorLabel.backgroundColor = [UIColor clearColor];
       editorLabel.textAlignment = UITextAlignmentCenter;
-      editorLabel.textColor = [UIColor darkTextColor];
-      [self addSubview:editorLabel];
+      editorLabel.textColor = [UIColor whiteColor];
+      [self addSubview : editorLabel];
       [editorLabel release];
       editorLabel.text = name;
       topView = tv;

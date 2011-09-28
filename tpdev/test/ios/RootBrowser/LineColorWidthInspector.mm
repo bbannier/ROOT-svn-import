@@ -90,14 +90,6 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 	return YES;
 }
 
-#pragma main - Navigation
-
-//____________________________________________________________________________________________________
-- (IBAction) back
-{
-   [self.navigationController popViewControllerAnimated : YES];
-}
-
 #pragma mark - ObjectInspectorComponent protocol
 
 //____________________________________________________________________________________________________
@@ -116,7 +108,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 80.f, 44.f);
 
    //Extract line color.
    //The same predefined 16 colors as with fill color.
-   unsigned pickerRow = 0;
+   unsigned pickerRow = 1;//?
    const Color_t colorIndex = object->GetLineColor();
    
    for (unsigned i = 0; i < nROOTDefaultColors; ++i) {

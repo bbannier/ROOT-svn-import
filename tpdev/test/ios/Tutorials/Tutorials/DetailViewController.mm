@@ -412,10 +412,10 @@ private:
       UIView * showView = 0;
       UIView * hideView = 0;
       
-      unsigned hide = activeView == 1 ? 1 : 0;
-      unsigned show = hide == 1 ? 0 : 1;
+      const unsigned hide = activeView;
+      const unsigned show = !hide;
       activeView = show;
-      
+   
       if (appMode == kTAZoom) {
          showView = scrollViews[show];
          hideView = scrollViews[hide];

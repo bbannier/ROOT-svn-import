@@ -6,6 +6,8 @@
 
 @implementation AxisInspector
 
+@synthesize tabBar;
+
 //____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
 {
@@ -16,7 +18,12 @@
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+
+   [self view];
+
    if (self) {
+      tabBar.selectedItem = [[tabBar items] objectAtIndex : 0];
+   
    }
     
    return self;
@@ -25,6 +32,7 @@
 //____________________________________________________________________________________________________
 - (void) dealloc
 {
+   self.tabBar = nil;
    [super dealloc];
 }
 
@@ -133,5 +141,17 @@
    [self.navigationController pushViewController : labelsInspector animated : YES];
    [labelsInspector release];
 }
+
+#pragma mark - Tabbar delegate.
+
+//____________________________________________________________________________________________________
+- (void) tabBar : (UITabBar *) tb didSelectItem : (UITabBarItem *)item
+{
+/*   if (item.tag == 1)
+      [self showTicksAndGridInspector];
+   else if (item.tag == 2)
+      [self showLogScaleInspector];*/
+}
+
 
 @end

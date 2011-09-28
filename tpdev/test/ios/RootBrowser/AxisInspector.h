@@ -8,9 +8,13 @@
 class TObject;
 
 @interface AxisInspector : UIViewController <ObjectInspectorComponent> {
+   IBOutlet UITabBar *tabBar;
+
    ROOTObjectController *controller;
    TObject *object;
 }
+
+@property (nonatomic, retain) UITabBar *tabBar;
 
 + (CGRect) inspectorFrame;
 

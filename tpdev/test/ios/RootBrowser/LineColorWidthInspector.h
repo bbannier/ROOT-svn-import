@@ -24,8 +24,6 @@ class TObject;
 
 @property (nonatomic, retain) UIPickerView *linePicker;
 
-- (IBAction) back;
-
 - (void) setROOTObjectController : (ROOTObjectController *) c;
 - (void) setROOTObject : (TObject *) obj;
 

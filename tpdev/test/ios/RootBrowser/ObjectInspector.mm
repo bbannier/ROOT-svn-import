@@ -20,11 +20,8 @@
 - (void) initObjectInspectorView
 {
    editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
- //  NSLog(@"count -3 %d", [editorView retainCount]);
    self.view = editorView;
- //  NSLog(@"count -2 %d", [editorView retainCount]);
    [editorView release];
- //  NSLog(@"count -1 %d", [editorView retainCount]);
 }
 
 //____________________________________________________________________________________________________
@@ -33,21 +30,17 @@
    using namespace ROOT_IOSObjectInspector;
 
    //TAttLine.
-   LineInspector *lineInspectorCompositor = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];
-   InspectorWithNavigation *lineInspector = [[InspectorWithNavigation alloc] initWithRootViewController : lineInspectorCompositor];
-   [lineInspectorCompositor release];
-   lineInspector.view.frame = [LineInspector inspectorFrame];
-   cachedEditors[kAttLine] = lineInspector;
+//   LineInspector *lineInspector = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];
+//   lineInspector.view.frame = [LineInspector inspectorFrame];
+   cachedEditors[kAttLine] = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];//lineInspector;
    
    //TAttFill.
    cachedEditors[kAttFill] = [[FilledAreaInspector alloc] initWithNibName : @"FilledAreaInspector" bundle : nil];
 
    //TAttPad.
-   PadInspector *padInspectorCompositor = [[PadInspector alloc] initWithNibName : @"PadInspector" bundle : nil];
-   InspectorWithNavigation *padInspector = [[InspectorWithNavigation alloc] initWithRootViewController : padInspectorCompositor];
-   [padInspectorCompositor release];
-   padInspector.view.frame = [PadInspector inspectorFrame];
-   cachedEditors[kAttPad] = padInspector;
+//   PadInspector *padInspector = [[PadInspector alloc] initWithNibName : @"PadInspector" bundle : nil];
+//   padInspector.view.frame = [PadInspector inspectorFrame];
+   cachedEditors[kAttPad] = [[PadInspector alloc] initWithNibName : @"PadInspector" bundle : nil];//padInspector;
    
    //TAttAxis.
    AxisInspector *axisInspectorCompositor = [[AxisInspector alloc] initWithNibName : @"AxisInspector" bundle : nil];
