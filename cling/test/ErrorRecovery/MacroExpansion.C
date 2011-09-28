@@ -2,12 +2,12 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/VerifyDiagnosticsClient.h"
+#include "clang/Frontend/VerifyDiagnosticConsumer.h"
 
 #include "cling/Interpreter/Interpreter.h"
 
-clang::Diagnostic& Diags = gCling->getCI()->getDiagnostics();
-clang::DiagnosticClient* Client = new clang::VerifyDiagnosticsClient(Diags);
+clang::DiagnosticsEngine& Diags = gCling->getCI()->getDiagnostics();
+clang::DiagnosticConsumer* Client = new clang::VerifyDiagnosticConsumer(Diags);
 Diags.setClient(Client);
 
 #define BEGIN_NAMESPACE namespace test_namespace {

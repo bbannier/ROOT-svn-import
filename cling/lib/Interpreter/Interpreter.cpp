@@ -286,6 +286,7 @@ namespace cling {
                                     PP.getTargetInfo().getTriple());      
   }
 
+  // Copied from clang/lib/Frontend/CompilerInvocation.cpp
   void Interpreter::DumpIncludePath() {
     const HeaderSearchOptions Opts(getCI()->getHeaderSearchOpts());
     std::vector<std::string> Res;
@@ -293,24 +294,50 @@ namespace cling {
       Res.push_back("-isysroot");
       Res.push_back(Opts.Sysroot);
     }
-    
+
     /// User specified include entries.
     for (unsigned i = 0, e = Opts.UserEntries.size(); i != e; ++i) {
       const HeaderSearchOptions::Entry &E = Opts.UserEntries[i];
       if (E.IsFramework && (E.Group != frontend::Angled || !E.IsUserSupplied))
         llvm::report_fatal_error("Invalid option set!");
       if (E.IsUserSupplied) {
-        if (E.Group == frontend::After) {
+        switch (E.Group) {
+        case frontend::After:
           Res.push_back("-idirafter");
-        } else if (E.Group == frontend::Quoted) {
+          break;
+        
+        case frontend::Quoted:
           Res.push_back("-iquote");
-        } else if (E.Group == frontend::System) {
+          break;
+        
+        case frontend::System:
           Res.push_back("-isystem");
-        } else if (E.Group == frontend::CXXSystem) {
+          break;
+        
+        case frontend::IndexHeaderMap:
+          Res.push_back("-index-header-map");
+          Res.push_back(E.IsFramework? "-F" : "-I");
+          break;
+        
+        case frontend::CSystem:
+          Res.push_back("-c-isystem");
+          break;
+
+        case frontend::CXXSystem:
           Res.push_back("-cxx-isystem");
-        } else {
-          assert(E.Group == frontend::Angled && "Invalid group!");
+          break;
+
+        case frontend::ObjCSystem:
+          Res.push_back("-objc-isystem");
+          break;
+
+        case frontend::ObjCXXSystem:
+          Res.push_back("-objcxx-isystem");
+          break;
+        
+        case frontend::Angled:
           Res.push_back(E.IsFramework ? "-F" : "-I");
+          break;
         }
       } else {
         if (E.Group != frontend::Angled && E.Group != frontend::System)
@@ -320,35 +347,21 @@ namespace cling {
       }
       Res.push_back(E.Path);
     }
-    
-    if (!Opts.EnvIncPath.empty()) {
-      // FIXME: Provide an option for this, and move env detection to driver.
-      llvm::report_fatal_error("Not yet implemented!");
-    }
-    if (!Opts.CEnvIncPath.empty()) {
-      // FIXME: Provide an option for this, and move env detection to driver.
-      llvm::report_fatal_error("Not yet implemented!");
-    }
-    if (!Opts.ObjCEnvIncPath.empty()) {
-      // FIXME: Provide an option for this, and move env detection to driver.
-      llvm::report_fatal_error("Not yet implemented!");
-    }
-    if (!Opts.CXXEnvIncPath.empty()) {
-      // FIXME: Provide an option for this, and move env detection to driver.
-      llvm::report_fatal_error("Not yet implemented!");
-    }
-    if (!Opts.ObjCXXEnvIncPath.empty()) {
-      // FIXME: Provide an option for this, and move env detection to driver.
-      llvm::report_fatal_error("Not yet implemented!");
-    }
+
     if (!Opts.ResourceDir.empty()) {
       Res.push_back("-resource-dir");
       Res.push_back(Opts.ResourceDir);
+    }
+    if (!Opts.ModuleCachePath.empty()) {
+      Res.push_back("-fmodule-cache-path");
+      Res.push_back(Opts.ModuleCachePath);
     }
     if (!Opts.UseStandardIncludes)
       Res.push_back("-nostdinc");
     if (!Opts.UseStandardCXXIncludes)
       Res.push_back("-nostdinc++");
+    if (Opts.UseLibcxx)
+      Res.push_back("-stdlib=libc++");
     if (Opts.Verbose)
       Res.push_back("-v");
 
@@ -356,7 +369,6 @@ namespace cling {
     for (unsigned i = 0; i < Res.size(); ++i) {
       llvm::errs() << Res[i] <<"\n";
     }
-
   }
   
   CompilerInstance* Interpreter::getCI() const {
@@ -380,7 +392,7 @@ namespace cling {
       WrapInput(wrapped, functName);
     }
 
-    Diagnostic& Diag = getCI()->getDiagnostics();
+    DiagnosticsEngine& Diag = getCI()->getDiagnostics();
     // Disable warnings which doesn't make sense when using the prompt
     // This gets reset with the clang::Diagnostics().Reset()
     Diag.setDiagnosticMapping(DiagnosticIDs::getIdFromName("warn_unused_expr"),
@@ -619,7 +631,7 @@ namespace cling {
 
   void Interpreter::dumpAST(bool showAST, int last) {
     Decl* D = m_LastDump;
-    int oldPolicy = m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump;
+    PrintingPolicy Policy = m_IncrParser->getCI()->getASTContext().getPrintingPolicy();
     
     if (!D && last == -1 ) {
       fprintf(stderr, "No last dump found! Assuming ALL \n");
@@ -627,15 +639,15 @@ namespace cling {
       showAST = false;        
     }
     
-    m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = showAST;
+    Policy.Dump = showAST;
     
     if (last == -1) {
       while ((D = D->getNextDeclInContext())) {
-        D->dump();
+        D->print(llvm::errs(), Policy);
       }
     }
     else if (last == 0) {
-      m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl()->dump();
+      m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl()->print(llvm::errs(), Policy);
     } else {
       // First Decl to print
       Decl *FD = m_IncrParser->getFirstTopLevelDecl();
@@ -663,14 +675,13 @@ namespace cling {
       // LD is last Decls after FD: [x y z a FD b c LD]
       
       while (FD) {
-        FD->dump();
+        FD->print(llvm::errs(), Policy);
         fprintf(stderr, "\n"); // New line for every decl
         FD = FD->getNextDeclInContext();
       }        
     }
     
     m_LastDump = m_IncrParser->getLastTopLevelDecl();     
-    m_IncrParser->getCI()->getASTContext().PrintingPolicy.Dump = oldPolicy;
   }
 
   void Interpreter::runStaticInitializersOnce() const {

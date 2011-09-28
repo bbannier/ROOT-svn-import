@@ -218,7 +218,7 @@ namespace cling {
     EParseResult Result = Parse(input);
 
     // Check for errors coming from our custom consumers.
-    DiagnosticClient& DClient = m_CI->getDiagnosticClient();
+    DiagnosticConsumer& DClient = m_CI->getDiagnosticClient();
     DClient.BeginSourceFile(getCI()->getLangOpts(), &getCI()->getPreprocessor());
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
@@ -239,7 +239,7 @@ namespace cling {
     // src.
 
     Preprocessor& PP = m_CI->getPreprocessor();
-    DiagnosticClient& DClient = m_CI->getDiagnosticClient();
+    DiagnosticConsumer& DClient = m_CI->getDiagnosticClient();
     DClient.BeginSourceFile(m_CI->getLangOpts(), &PP);
 
     if (input.size()) {
@@ -299,7 +299,7 @@ namespace cling {
 
     DClient.EndSourceFile();
 
-    Diagnostic& Diag = getCI()->getSema().getDiagnostics();
+    DiagnosticsEngine& Diag = getCI()->getSema().getDiagnostics();
     if (Diag.hasErrorOccurred())
       return IncrementalParser::kFailed;
     else if (Diag.getNumWarnings())

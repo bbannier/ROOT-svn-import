@@ -591,7 +591,7 @@ namespace cling {
     std::string Template;
     llvm::SmallVector<DeclRefExpr*, 4> Addresses;
     llvm::raw_string_ostream OS(Template);
-    const PrintingPolicy& Policy = m_Context->PrintingPolicy;
+    const PrintingPolicy& Policy = m_Context->getPrintingPolicy();
 
     StmtPrinterHelper helper(Policy, Addresses, m_Sema);
     // In case when we print non paren inits like int i = h->Draw();
