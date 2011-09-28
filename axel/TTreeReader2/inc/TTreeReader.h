@@ -51,8 +51,8 @@ public:
    TTreeReader(TTree* tree);
    TTreeReader(TFileCollection* files);
 
-   Bool_t GetNextEntry() { return GetEntry(GetCurrentEntry() + 1) == kEntryValid; }
-   void GetEntry(Long64_t entry);
+   Bool_t SetNextEntry() { return SetEntry(GetCurrentEntry() + 1) == kEntryValid; }
+   void SetEntry(Long64_t entry);
 
    EEntryStatus GetEntryStatus() const { return fEntryStatus; }
 
