@@ -146,17 +146,18 @@ class TThreadPool : public TNonCopyable
 
         void Stop( bool processRemainingJobs = false )
         {
+            // prevent more jobs from being added to the queue
+            if( m_stopped )
+                return;
+
             {
-                // prevent more jobs from being added to the queue
-                if( m_stopped )
-                    return;
-                
                 TLockGuard lock( m_mutex );
                 m_stopping = true;
             }
+
             if( processRemainingJobs )
             {
-               // TLockGuard lock( m_mutex );
+                // TLockGuard lock( m_mutex );
                 // wait for queue to drain
                 while( !m_tasks.empty() && !m_stopped )
                 {
@@ -189,18 +190,20 @@ class TThreadPool : public TNonCopyable
     private:
         static void* Execute( void *_arg )
         {
-            TThreadPool *pThis = reinterpret_cast<TThreadPool*>(_arg);
+            TThreadPool *pThis = reinterpret_cast<TThreadPool*>( _arg );
             do
             {
-                task_t* task = NULL;
+                task_t *task( NULL );
+
+                // Find a task to perform
+                if( pThis->m_tasks.empty() && !pThis->m_stopped )
+                {
+                    // No tasks, we wait for a task to come
+                    pThis->m_threadNeeded->Wait();
+                }
 
                 {
-                    // Find a job to perform
-                    if( pThis->m_tasks.empty() && !pThis->m_stopped )
-                    {
-                        pThis->m_threadNeeded->Wait();
-                    }
-                    
+                    // There is a task, let's take it
                     TLockGuard lock( pThis->m_mutex );
                     if( !pThis->m_tasks.empty() && !pThis->m_stopped )
                     {
@@ -208,8 +211,8 @@ class TThreadPool : public TNonCopyable
                         pThis->m_tasks.pop();
                     }
                 }
-                
-                // Execute job
+
+                // Execute the task
                 if( task )
                 {
                     if( task->run() )
@@ -220,10 +223,11 @@ class TThreadPool : public TNonCopyable
                     delete task;
                     task = NULL;
                 }
+                // Task is done, report that the thread is free
                 pThis->m_threadAvailable->Signal();
             }
             while( !pThis->m_stopped );
-            
+
             return NULL;
         }
 
