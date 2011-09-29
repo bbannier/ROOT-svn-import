@@ -33,6 +33,8 @@
 #include <queue>
 #include <vector>
 
+//#include <iostream>
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TNonCopyable                                                         //
@@ -138,34 +140,35 @@ class TThreadPool : public TNonCopyable
             TLockGuard lock( m_mutex );
             task_t *task = new task_t( _task, _param );
             m_tasks.push( task );
-            m_threadNeeded->Notify();
+            m_threadNeeded->Signal();
             ++m_tasksCount;
         }
 
         void Stop( bool processRemainingJobs = false )
         {
             {
-                //prevent more jobs from being added to the queue
-                TLockGuard lock( m_mutex );
-                if( m_stopped ) 
+                // prevent more jobs from being added to the queue
+                if( m_stopped )
                     return;
+                
+                TLockGuard lock( m_mutex );
                 m_stopping = true;
             }
             if( processRemainingJobs )
             {
-                TLockGuard lock( m_mutex );
-                //wait for queue to drain.
+               // TLockGuard lock( m_mutex );
+                // wait for queue to drain
                 while( !m_tasks.empty() && !m_stopped )
                 {
                     m_threadAvailable->Wait();
                 }
             }
-            //tell all threads to stop
+            // tell all threads to stop
             {
                 TLockGuard lock( m_mutex );
                 m_stopped = true;
             }
-            m_threadNeeded->Notify();
+            m_threadNeeded->Signal();
 
             threads_array_t::const_iterator iter = m_threads.begin();
             threads_array_t::const_iterator iter_end = m_threads.end();
@@ -193,18 +196,20 @@ class TThreadPool : public TNonCopyable
 
                 {
                     // Find a job to perform
-                    TLockGuard lock( pThis->m_mutex );
                     if( pThis->m_tasks.empty() && !pThis->m_stopped )
                     {
                         pThis->m_threadNeeded->Wait();
                     }
-                    if( !pThis->m_stopped && !pThis->m_tasks.empty() )
+                    
+                    TLockGuard lock( pThis->m_mutex );
+                    if( !pThis->m_tasks.empty() && !pThis->m_stopped )
                     {
                         task = pThis->m_tasks.front();
                         pThis->m_tasks.pop();
                     }
                 }
-                //Execute job
+                
+                // Execute job
                 if( task )
                 {
                     if( task->run() )
@@ -215,7 +220,7 @@ class TThreadPool : public TNonCopyable
                     delete task;
                     task = NULL;
                 }
-                pThis->m_threadAvailable->Notify();
+                pThis->m_threadAvailable->Signal();
             }
             while( !pThis->m_stopped );
             
@@ -228,8 +233,8 @@ class TThreadPool : public TNonCopyable
         TCondition *m_threadNeeded;
         TCondition *m_threadAvailable;
         threads_array_t m_threads;
-        bool m_stopped;
-        bool m_stopping;
+        volatile bool m_stopped;
+        volatile bool m_stopping;
         size_t m_successfulTasks;
         size_t m_tasksCount;
 };

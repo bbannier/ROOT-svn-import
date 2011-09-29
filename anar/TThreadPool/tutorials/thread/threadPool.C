@@ -52,7 +52,7 @@ void threadPool()
     }
     threadPool.Stop( true );
     
-    //    ostream_iterator<CTestTask> out_it( cout, "\n" );
+    //    ostream_iterator<TTestTask> out_it( cout, "\n" );
     //    copy( tasksList.begin(), tasksList.end(),
     //          out_it );
     
