@@ -375,7 +375,7 @@ namespace ObjIns = ROOT_IOSObjectInspector;
             //plate's editor was closed, find the next which we can be made visible.
             if (newOpened == -1) {//we did not find any opened editor above the plate yet.
                for (unsigned j = i + 1; j < nEditors; ++j) {
-                  if (currentState && (1 << j)) {
+                  if (currentState & (1 << j)) {
                      newOpened = j;
                      break;
                   }

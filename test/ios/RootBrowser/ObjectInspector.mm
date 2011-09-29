@@ -1,18 +1,22 @@
 #import "InspectorWithNavigation.h"
 #import "FilledAreaInspector.h"
 #import "ObjectInspector.h"
+#import "MarkerInspector.h"
 #import "AxisInspector.h"
 #import "LineInspector.h"
 #import "PadInspector.h"
+#import "H1Inspector.h"
 #import "EditorView.h"
 
 //C++ (ROOT) imports.
+#import "TAttMarker.h"
 #import "TAttLine.h"
 #import "TAttFill.h"
 #import "TAttAxis.h"
 #import "TAttPad.h"
 #import "TObject.h"
 #import "TClass.h"
+#import "TH1.h"
 
 @implementation ObjectInspector
 
@@ -37,6 +41,11 @@
    cachedEditors[kAttPad] = [[PadInspector alloc] initWithNibName : @"PadInspector" bundle : nil];//padInspector;   
    //TAttAxis.
    cachedEditors[kAttAxis] = [[AxisInspector alloc] initWithNibName : @"AxisInspector" bundle : nil];
+   //TAttMarker.
+   cachedEditors[kAttMarker] = [[MarkerInspector alloc] initWithNibName: @"MarkerInspector" bundle : nil];
+   //
+   //H1's inspector.
+   cachedEditors[kAttH1] = [[H1Inspector alloc] initWithNibName : @"H1Inspector" bundle : nil];
 }
 
 //____________________________________________________________________________________________________
@@ -138,6 +147,12 @@
       
    if (dynamic_cast<TAttAxis *>(object))
       activeEditors[nActiveEditors++] = cachedEditors[kAttAxis];
+   
+   if (dynamic_cast<TAttMarker *>(object))
+      activeEditors[nActiveEditors++] = cachedEditors[kAttMarker];
+   
+   if (dynamic_cast<TH1 *>(object))
+      activeEditors[nActiveEditors++] = cachedEditors[kAttH1];
 }
 
 //____________________________________________________________________________________________________

@@ -29,6 +29,7 @@ enum Mode {
 class TObject;
 
 @interface ROOTObjectController : UIViewController <UIScrollViewDelegate, MFMailComposeViewControllerDelegate> {
+@private
    ROOT_IOSObjectController::Mode mode;
 
    EditorView *editorView;
@@ -53,15 +54,22 @@ class TObject;
    unsigned previousObject;
    
    UIBarButtonItem *editBtn;
+   
+   NSString *drawOption;
 }
 
 @property (nonatomic, retain) ScrollViewWithPadView *scrollView;
 @property (nonatomic, retain) UIScrollView *navigationScrollView;
+
 
 - (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
 - (void) handleDoubleTapOnPad : (CGPoint)tapPt;
 - (void) objectWasSelected : (TObject *)object;
 - (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate;
 - (void) setupObjectInspector;
+
+//Draw option for the controlled object.
+- (void) setDrawOption : (NSString *)option;
+- (NSString *) getDrawOption;
 
 @end
