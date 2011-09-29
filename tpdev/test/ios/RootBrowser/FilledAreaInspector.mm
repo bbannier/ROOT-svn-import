@@ -170,6 +170,7 @@ static const CGFloat defaultCellH = 44.f;
 }
 
 #pragma mark - color/pattern picker's dataSource.
+
 //____________________________________________________________________________________________________
 - (CGFloat)pickerView : (UIPickerView *)pickerView widthForComponent : (NSInteger)component
 {

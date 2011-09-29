@@ -30,6 +30,19 @@ static const CGFloat maximumZoom = 2.f;
 @synthesize scrollView;
 
 //____________________________________________________________________________________________________
+- (void) setDrawOption : (NSString *) option
+{
+   [drawOption release];
+   drawOption = [option retain];
+}
+
+//____________________________________________________________________________________________________
+- (NSString *)getDrawOption
+{
+   return drawOption;
+}
+
+//____________________________________________________________________________________________________
 - (void) initToolbarItems
 {
    UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame : CGRectMake(0.f, 0.f, 180.f, 44.f)];
@@ -257,6 +270,7 @@ static const CGFloat maximumZoom = 2.f;
    self.scrollView = nil;
    self.navigationScrollView = nil;
    [objectInspector release];
+   [drawOption release];
  
    [super dealloc];
    
@@ -465,6 +479,8 @@ static const CGFloat maximumZoom = 2.f;
       [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];
    } else
       navigationScrollView.contentSize = scrollFrame.size;
+      
+   drawOption = [[NSString stringWithFormat : @"%s", fileContainer->GetDrawOption(currentObject)] retain];
 }
 
 #pragma mark - delegate for editable pad's scroll-view.
@@ -596,7 +612,7 @@ static const CGFloat maximumZoom = 2.f;
 - (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate
 {
    if (needUpdate)
-      pad->InvalidateSelection();
+      pad->InvalidateSelection(kTRUE);//invalidate selection buffer only. the selected object is the same.
    
    [padView setNeedsDisplay];
 }

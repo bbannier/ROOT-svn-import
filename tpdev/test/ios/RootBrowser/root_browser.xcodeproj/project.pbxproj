@@ -11,6 +11,16 @@
 		70144120140E3F1D0070459F /* LineStyleCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7014411F140E3F1D0070459F /* LineStyleCell.mm */; };
 		70144123140E3F320070459F /* LineWidthCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 70144122140E3F320070459F /* LineWidthCell.m */; };
 		70144129140E553C0070459F /* line_cell.png in Resources */ = {isa = PBXBuildFile; fileRef = 70144128140E553C0070459F /* line_cell.png */; };
+		702357DB14345C0A00A95000 /* H1ErrorsInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702357D914345C0A00A95000 /* H1ErrorsInspector.mm */; };
+		702357DC14345C0A00A95000 /* H1ErrorsInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702357DA14345C0A00A95000 /* H1ErrorsInspector.xib */; };
+		702357E11434658900A95000 /* H1Inspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702357DF1434658900A95000 /* H1Inspector.mm */; };
+		702357E21434658900A95000 /* H1Inspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702357E01434658900A95000 /* H1Inspector.xib */; };
+		70235803143494F400A95000 /* MarkerInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70235801143494F400A95000 /* MarkerInspector.mm */; };
+		70235804143494F400A95000 /* MarkerInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70235802143494F400A95000 /* MarkerInspector.xib */; };
+		702358081434A93C00A95000 /* H1BinsInspector.m in Sources */ = {isa = PBXBuildFile; fileRef = 702358061434A93B00A95000 /* H1BinsInspector.m */; };
+		702358091434A93C00A95000 /* H1BinsInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702358071434A93C00A95000 /* H1BinsInspector.xib */; };
+		7023580B1434ACC700A95000 /* h1_errors_tab.png in Resources */ = {isa = PBXBuildFile; fileRef = 7023580A1434ACC700A95000 /* h1_errors_tab.png */; };
+		7023580D1434B48C00A95000 /* h1_tab.png in Resources */ = {isa = PBXBuildFile; fileRef = 7023580C1434B48C00A95000 /* h1_tab.png */; };
 		7023805E140514C8002A5331 /* file_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 7023805D140514C8002A5331 /* file_icon.png */; };
 		70249BDC1403D644006A19E6 /* PadView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70249BDA1403D644006A19E6 /* PadView.mm */; };
 		70252F7C140CDD8D00F3660F /* Constants.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70252F7A140CDD8D00F3660F /* Constants.mm */; };
@@ -111,6 +121,20 @@
 		70144121140E3F320070459F /* LineWidthCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineWidthCell.h; sourceTree = "<group>"; };
 		70144122140E3F320070459F /* LineWidthCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LineWidthCell.m; sourceTree = "<group>"; };
 		70144128140E553C0070459F /* line_cell.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = line_cell.png; sourceTree = "<group>"; };
+		702357D814345C0A00A95000 /* H1ErrorsInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = H1ErrorsInspector.h; sourceTree = "<group>"; };
+		702357D914345C0A00A95000 /* H1ErrorsInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = H1ErrorsInspector.mm; sourceTree = "<group>"; };
+		702357DA14345C0A00A95000 /* H1ErrorsInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = H1ErrorsInspector.xib; sourceTree = "<group>"; };
+		702357DE1434658900A95000 /* H1Inspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = H1Inspector.h; sourceTree = "<group>"; };
+		702357DF1434658900A95000 /* H1Inspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = H1Inspector.mm; sourceTree = "<group>"; };
+		702357E01434658900A95000 /* H1Inspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = H1Inspector.xib; sourceTree = "<group>"; };
+		70235800143494F400A95000 /* MarkerInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MarkerInspector.h; sourceTree = "<group>"; };
+		70235801143494F400A95000 /* MarkerInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MarkerInspector.mm; sourceTree = "<group>"; };
+		70235802143494F400A95000 /* MarkerInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = MarkerInspector.xib; sourceTree = "<group>"; };
+		702358051434A93B00A95000 /* H1BinsInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = H1BinsInspector.h; sourceTree = "<group>"; };
+		702358061434A93B00A95000 /* H1BinsInspector.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = H1BinsInspector.m; sourceTree = "<group>"; };
+		702358071434A93C00A95000 /* H1BinsInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = H1BinsInspector.xib; sourceTree = "<group>"; };
+		7023580A1434ACC700A95000 /* h1_errors_tab.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = h1_errors_tab.png; sourceTree = "<group>"; };
+		7023580C1434B48C00A95000 /* h1_tab.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = h1_tab.png; sourceTree = "<group>"; };
 		7023805D140514C8002A5331 /* file_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = file_icon.png; sourceTree = "<group>"; };
 		70249BDA1403D644006A19E6 /* PadView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PadView.mm; sourceTree = "<group>"; };
 		70249BDB1403D644006A19E6 /* PadView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PadView.h; sourceTree = "<group>"; };
@@ -266,6 +290,8 @@
 		7077900E13FE50EB00C0FFA1 = {
 			isa = PBXGroup;
 			children = (
+				7023580C1434B48C00A95000 /* h1_tab.png */,
+				7023580A1434ACC700A95000 /* h1_errors_tab.png */,
 				7066FB3B1433470F00F88A2C /* label_tab.png */,
 				7066FB391433459200F88A2C /* title_tab.png */,
 				7066FB37143342C700F88A2C /* lg_tab.png */,
@@ -402,6 +428,14 @@
 				7068FF22141A0EAF003560A1 /* AxisFontInspector.mm */,
 				7068FF2E141A3943003560A1 /* AxisLabelsInspector.h */,
 				7068FF2F141A3943003560A1 /* AxisLabelsInspector.mm */,
+				702357DE1434658900A95000 /* H1Inspector.h */,
+				702357DF1434658900A95000 /* H1Inspector.mm */,
+				702357D814345C0A00A95000 /* H1ErrorsInspector.h */,
+				702357D914345C0A00A95000 /* H1ErrorsInspector.mm */,
+				70235800143494F400A95000 /* MarkerInspector.h */,
+				70235801143494F400A95000 /* MarkerInspector.mm */,
+				702358051434A93B00A95000 /* H1BinsInspector.h */,
+				702358061434A93B00A95000 /* H1BinsInspector.m */,
 			);
 			name = "Classes and protocols";
 			sourceTree = "<group>";
@@ -412,16 +446,20 @@
 				702DDD1A1415FEA1009FC6F3 /* LineInspector.xib */,
 				702DDD1F14160DB5009FC6F3 /* LineColorWidthInspector.xib */,
 				702DDD241416141A009FC6F3 /* LineStyleInspector.xib */,
+				70681C1D1416474000F8338A /* FilledAreaInspector.xib */,
 				70681C0C1416365900F8338A /* PadInspector.xib */,
 				70681C1814163F0C00F8338A /* PadLogScaleInspector.xib */,
-				70681C1D1416474000F8338A /* FilledAreaInspector.xib */,
+				70681C1114163A2300F8338A /* PadTicksGridInspector.xib */,
 				7073A274141757BB001A0FE2 /* AxisTicksInspector.xib */,
 				7073A27D14177A03001A0FE2 /* AxisInspector.xib */,
 				7073A26A14174E74001A0FE2 /* AxisColorInspector.xib */,
 				7073A2861417AA10001A0FE2 /* AxisTitleInspector.xib */,
 				7068FF23141A0EAF003560A1 /* AxisFontInspector.xib */,
 				7068FF30141A3944003560A1 /* AxisLabelsInspector.xib */,
-				70681C1114163A2300F8338A /* PadTicksGridInspector.xib */,
+				702357DA14345C0A00A95000 /* H1ErrorsInspector.xib */,
+				702357E01434658900A95000 /* H1Inspector.xib */,
+				702358071434A93C00A95000 /* H1BinsInspector.xib */,
+				70235802143494F400A95000 /* MarkerInspector.xib */,
 			);
 			name = xibs;
 			sourceTree = "<group>";
@@ -611,6 +649,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7023580D1434B48C00A95000 /* h1_tab.png in Resources */,
+				7023580B1434ACC700A95000 /* h1_errors_tab.png in Resources */,
 				7066FB3C1433470F00F88A2C /* label_tab.png in Resources */,
 				7066FB3A1433459200F88A2C /* title_tab.png in Resources */,
 				7066FB38143342C700F88A2C /* lg_tab.png in Resources */,
@@ -656,6 +696,10 @@
 				7073A2881417AA10001A0FE2 /* AxisTitleInspector.xib in Resources */,
 				7068FF25141A0EAF003560A1 /* AxisFontInspector.xib in Resources */,
 				7068FF32141A3944003560A1 /* AxisLabelsInspector.xib in Resources */,
+				702357DC14345C0A00A95000 /* H1ErrorsInspector.xib in Resources */,
+				702357E21434658900A95000 /* H1Inspector.xib in Resources */,
+				70235804143494F400A95000 /* MarkerInspector.xib in Resources */,
+				702358091434A93C00A95000 /* H1BinsInspector.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -704,6 +748,10 @@
 				705F1A68142347CA003045D9 /* SlideView.m in Sources */,
 				704498091429D0A000E83799 /* PadImageView.mm in Sources */,
 				7044980D1429D13D00E83799 /* PadImageScrollView.mm in Sources */,
+				702357DB14345C0A00A95000 /* H1ErrorsInspector.mm in Sources */,
+				702357E11434658900A95000 /* H1Inspector.mm in Sources */,
+				70235803143494F400A95000 /* MarkerInspector.mm in Sources */,
+				702358081434A93C00A95000 /* H1BinsInspector.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
