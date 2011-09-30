@@ -9,7 +9,7 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_TTreeReaderArray
+#ifdef ROOT_TTreeReaderArray
 #define ROOT_TTreeReaderArray
 
 
@@ -50,7 +50,7 @@ template <typename T>
 class TTreeReaderArray: public ROOT::TTreeReaderArrayBase {
 public:
    TTreeReaderArray(TTreeReader& tr, const char* branchname):
-      TTreeReaderArrayBase(tr, branchname, TDictionary::GetType(typeid(T*)))
+      TTreeReaderArrayBase(tr, branchname, TDictionary::GetDictionary(typeid(T*)))
    {
       // Create an array reader of branch "branchname" for TTreeReader "tr".
    }

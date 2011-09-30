@@ -28,6 +28,9 @@
 #ifndef ROOT_TDictionary
 #include "TDictionary.h"
 #endif
+#ifndef ROOT_TBranchProxy
+#include "TBranchProxy.h"
+#endif
 
 class TBranch;
 class TBranchElement;
@@ -61,54 +64,40 @@ namespace ROOT {
       };
       enum EReadStatus {
          kReadSuccess = 0, // data read okay
-         kReadNothingYet, // data read okay
-         kReadEntryNotFound, // the tree entry number does not exist
-         kReadIOError // problem reading data
+         kReadNothingYet, // data now yet accessed
+         kReadError // problem reading data
       };
 
-      Bool_t IsValid() const { return fValueAddress && 0 == (int)fSetupStatus && 0 == (int)fReadStatus; }
+      EReadStatus ProxyRead();
+
+      Bool_t IsValid() const { return fProxy && 0 == (int)fSetupStatus && 0 == (int)fReadStatus; }
       ESetupStatus GetSetupStatus() const { return fSetupStatus; }
       EReadStatus GetReadStatus() const { return fReadStatus; }
 
    protected:
-      // Constructor used internally by TTreeReader; use
-      // TTreeReader::GetArrayOfMember() instead.
-      //
-      // Constructs a member data array accessor from the address of the array
-      // and the pointer to the Int_t that defined the  number of entries in
-      // the array.
-      TTreeReaderValuePtrBase():
-         fTreeReader(0), fBranch(0), fValueAddress(0), fSetupStatus(kSetupNotSetup),
-         fReadStatus(kReadNothingYet)
-      {}
+      TTreeReaderValuePtrBase(TTreeReader* reader = 0, const char* branchname = 0, TDictionary* dict = 0);
+
       virtual ~TTreeReaderValuePtrBase();
 
-      const char* GetName() const { return fBranchName; }
+      void CreateProxy();
 
-      TTreeReaderValuePtrBase(TTreeReader& tr, const char* branchname, TDictionary* dict);
+      void* GetAddress() {
+         return fProxy ? fProxy->GetWhere() : 0;
+      }
 
-      void Init(TTreeReader& tr, TLeaf* leaf, TDictionary* dict);
-      void Init(TTreeReader& tr, TBranch* branch, TDictionary* dict);
-
-      void UpdateAddresses();
-      EReadStatus LoadEntry();
-      TLeaf* GetCounterLeaf(TBranch* branch);
-      void* GetAddress();
-      TDictionary* GetValueType() const;
-
-      void SetBranchName();
+      void MarkTreeReaderUnavailable() { fTreeReader = 0; }
 
    private:
-      TString      fBranchName; // name of branch
       TTreeReader* fTreeReader; // tree reader we belong to
-      TBranch*     fBranch; // branch of this value or of its leaf
-      void*        fValueAddress; // address of value
+      TString      fBranchName; // name of the branch to read data from.
+      TDictionary* fDict; // type that the branch should contain
+      ROOT::TBranchProxy* fProxy; // proxy for this branch
       ESetupStatus fSetupStatus; // setup status of this data access
       EReadStatus  fReadStatus; // read status of this data access
 
-      friend class TTreeReader;
-
       ClassDef(TTreeReaderValuePtrBase, 0);//Base class for accessors to data via TTreeReader
+
+      friend class ::TTreeReader;
    };
 
 } // namespace ROOT
@@ -119,7 +108,7 @@ class TTreeReaderValuePtr: public ROOT::TTreeReaderValuePtrBase {
 public:
    TTreeReaderValuePtr() {}
    TTreeReaderValuePtr(TTreeReader& tr, const char* branchname):
-      TTreeReaderValuePtrBase(tr, branchname, TDictionary::GetType(typeid(T))) {}
+      TTreeReaderValuePtrBase(&tr, branchname, TDictionary::GetDictionary(typeid(T))) {}
 
    T* Get() { return *(T**)GetAddress(); }
    T* operator->() { return Get(); }

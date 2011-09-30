@@ -22,15 +22,23 @@
 //                                                                        //
 ////////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_THashTable
-#include "THashTable.h"
+#ifndef ROOT_TBranchProxyDirector
+#include "TBranchProxyDirector.h"
+#endif
+#ifndef ROOT_TObjArray
+#include "TObjArray.h"
+#endif
+#ifndef ROOT_TTree
+#include "TTree.h"
 #endif
 
+class TDictionary;
 class TDirectory;
+class TFileCollection;
 class TTree;
 
 namespace ROOT {
-   class TBranchProxyDirector;
+   class TBranchProxy;
    class TTreeProxyGenerator;
    class TTreeReaderValuePtrBase;
 }
@@ -47,37 +55,52 @@ public:
       kEntryChainFileError // problem in opening a chain's file
    };
 
-   TTreeReader(const char* keyname, TDirectory* dir = NULL);
+   TTreeReader():
+      fDirectory(0),
+      fEntryStatus(kEntryNoTree),
+      fProxyGenerator(0)
+   {}
+
    TTreeReader(TTree* tree);
-   TTreeReader(TFileCollection* files);
+   TTreeReader(const char* keyname, TDirectory* dir = NULL);
+   TTreeReader(const char* keyname, TFileCollection* files);
+
+   ~TTreeReader();
+
+   void SetTree(TTree* tree);
+   void SetTree(const char* keyname, TDirectory* dir = NULL);
+   void SetChain(const char* keyname, TFileCollection* files);
+
+   Bool_t IsChain() const { return TestBit(kBitIsChain); }
 
    Bool_t SetNextEntry() { return SetEntry(GetCurrentEntry() + 1) == kEntryValid; }
-   void SetEntry(Long64_t entry);
+   EEntryStatus SetEntry(Long64_t entry);
 
    EEntryStatus GetEntryStatus() const { return fEntryStatus; }
 
    TTree* GetTree() const { return fTree; }
-   Long64_t GetEntries(Bool_t force) const;
-   Long64_t GetCurrentEntry() const;
-
-   // Internal
-   Bool_t Notify(); 
+   Long64_t GetEntries(Bool_t force) const { return fTree ? (force ? fTree->GetEntries() : fTree->GetEntriesFast() ) : -1; }
+   Long64_t GetCurrentEntry() const { return fDirector ? fDirector->GetReadEntry() : 0; }
 
 protected:
    void InitializeProxyGenerator();
-   void UpdateAddresses();
-   void RegisterReader(ROOT::TTreeReaderValuePtrBase& reader);
-   void UnregisterReader(ROOT::TTreeReaderValuePtrBase& reader);
-   void InitializeMakeClassMode();
+   ROOT::TBranchProxy* CreateProxy(const char* branchname,
+                                   TDictionary* dict);
+   void RegisterValueReader(ROOT::TTreeReaderValuePtrBase* reader);
+   void DeregisterValueReader(ROOT::TTreeReaderValuePtrBase* reader);
 
 private:
-   TTree*      fTree;
+
+   enum EPropertyBits {
+      kBitIsChain = BIT(14) // our tree is a chain
+   };
+
+   TTree* fTree; // tree that's read
    TDirectory* fDirectory; // directory (or current file for chains)
-   THashTable  fReaders; // readers
    EEntryStatus fEntryStatus; // status of most recent read request
-   EMakeClassMode fMakeClassMode; // whether makeclass mode is turned on
    ROOT::TTreeProxyGenerator* fProxyGenerator; // generator for proxy objects
    ROOT::TBranchProxyDirector* fDirector; // proxying director
+   TObjArray    fValues; // TTreeReaderValuePtrBase objects that use our director
 
    friend class ROOT::TTreeReaderValuePtrBase;
 

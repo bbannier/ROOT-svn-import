@@ -16,22 +16,31 @@
 #include "TNamed.h"
 #endif
 
+class TDictionary;
+class TVirtualCollectionProxy;
 
 namespace ROOT {
 
    class TBranchProxyDescriptor : public TNamed {
       TString fDataName;
       TString fBranchName;
+      TDictionary* fDataType; // type of data contained in branch; NULL if CollectionProxy
+      TVirtualCollectionProxy* fDataCollProxy; // collection proxy for data contained in branch; NULL if no collection
       Bool_t  fIsSplit;
       Bool_t  fBranchIsSkipped;
       Bool_t  fIsLeafList;      // true if the branch was constructed from a leaf list.
 
    public:
-      TBranchProxyDescriptor(const char *dataname, const char *type,
-                             const char *branchname, Bool_t split = true, Bool_t skipped = false, Bool_t isleaflist = false);
-      const char *GetDataName();
-      const char *GetTypeName();
-      const char *GetBranchName();
+      TBranchProxyDescriptor(const char *dataname, const char *proxyType,
+                             const char *branchname, TDictionary* dataType,
+                             TVirtualCollectionProxy* collProxy,
+                             Bool_t split = true, Bool_t skipped = false, Bool_t isleaflist = false);
+      const char  *GetDataName() const { return fDataName; }
+      // Get the name of the type of the data proxy
+      const char  *GetProxyTypeName() const { return GetTitle(); }
+      const char  *GetBranchName() const { return fBranchName; }
+      TDictionary *GetDataType() const { return fDataType; }
+      TVirtualCollectionProxy *GetDataCollProxy() const { return fDataCollProxy; }
 
       Bool_t IsEquivalent(const TBranchProxyDescriptor *other, Bool_t inClass = kFALSE);
       Bool_t IsSplit() const;
