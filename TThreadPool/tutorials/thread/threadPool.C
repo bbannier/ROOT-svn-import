@@ -15,8 +15,8 @@
 using namespace std;
 //=============================================================================
 const size_t g_sleeptime = 1; // in secs.
-const size_t g_numTasks = 32;
-const size_t g_numThreads = 4;
+const size_t g_numTasks = 30;
+const size_t g_numThreads = 6;
 //=============================================================================
 enum EProc {start, clean};
 class TTestTask: public TThreadPoolTaskImp<TTestTask, EProc>
@@ -44,7 +44,7 @@ ostream &operator<< ( ostream &_stream, const TTestTask &_task )
 //=============================================================================
 void threadPool()
 {
-    TThreadPool<TTestTask, EProc> threadPool( 4 );
+    TThreadPool<TTestTask, EProc> threadPool( g_numThreads );
     vector <TTestTask> tasksList( g_numTasks );
     for( size_t i = 0; i < g_numTasks; ++i )
     {
