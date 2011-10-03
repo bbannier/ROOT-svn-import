@@ -11,23 +11,23 @@
 @synthesize minimumValue, maximumValue, minimumRange, selectedMinimumValue, selectedMaximumValue;
 
 //____________________________________________________________________________________________________
-- (id) initWithFrame : (CGRect)frame min : (float) min max : (float) max selectedMin : (float)sMin selectedMax : (float) sMax
+- (id) initWithFrame : (CGRect)frame
 {
    self = [super initWithFrame : frame];
 
    if (self) {
       // Set the initial state
-      minimumValue = min;
-      maximumValue = max;
-      selectedMinimumValue = sMin;
-      selectedMaximumValue = sMax;
-      
+      minimumValue = 0.f;
+      maximumValue = 1.f;
+      selectedMinimumValue = 0.f;
+      selectedMaximumValue = 1.f;
+
       minThumbOn = NO;
       maxThumbOn = NO;
-      
+
       minimumRange = 4.f;//FIXME
       padding = 20;
-        
+
       UIImageView *trackBackground = [[[UIImageView alloc] initWithImage : [UIImage imageNamed : @"bar-background.png"]] autorelease];
       trackBackground.frame = CGRectMake(0.f, self.frame.size.height / 2 - trackBackground.frame.size.height / 2, self.frame.size.width - padding * 2, trackBackground.frame.size.height);
       trackBackground.center = CGPointMake(self.frame.size.width / 2, self.frame.size.height / 2);
@@ -57,13 +57,28 @@
 }
 
 //____________________________________________________________________________________________________
-- (CGFloat) minThumbX
+- (void) setSliderMin : (float)min max : (float)max selectedMin : (float)sMin selectedMax : (float)sMax
+{
+   minimumValue = min;
+   maximumValue = max;
+   selectedMinimumValue = sMin;
+   selectedMaximumValue = sMax;
+   
+   minThumb.center = CGPointMake([self xForValue : selectedMinimumValue], self.frame.size.height / 2);
+   maxThumb.center = CGPointMake([self xForValue : selectedMaximumValue], self.frame.size.height / 2);
+   
+   [self updateTrackHighlight];
+}
+
+
+//____________________________________________________________________________________________________
+- (CGFloat) getMinThumbX
 {
    return minThumb.center.x;
 }
 
 //____________________________________________________________________________________________________
-- (CGFloat) maxThumbX
+- (CGFloat) getMaxThumbX
 {
    return maxThumb.center.x;
 }

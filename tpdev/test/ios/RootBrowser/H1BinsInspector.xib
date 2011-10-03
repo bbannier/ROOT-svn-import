@@ -88,16 +88,19 @@
 								<int key="NSID">2</int>
 							</object>
 						</object>
+						<int key="IBUITextAlignment">1</int>
 						<bool key="IBUIAdjustsFontSizeToFit">YES</bool>
 						<float key="IBUIMinimumFontSize">17</float>
 						<object class="IBUITextInputTraits" key="IBUITextInputTraits">
+							<int key="IBUIReturnKeyType">1</int>
 							<string key="targetRuntimeIdentifier">IBCocoaTouchFramework</string>
 						</object>
+						<int key="IBUIClearButtonMode">1</int>
 					</object>
 					<object class="IBUILabel" id="827836205">
 						<reference key="NSNextResponder" ref="2058747"/>
 						<int key="NSvFlags">292</int>
-						<string key="NSFrame">{{20, 118}, {210, 21}}</string>
+						<string key="NSFrame">{{20, 97}, {210, 21}}</string>
 						<reference key="NSSuperview" ref="2058747"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="531161278"/>
@@ -117,7 +120,7 @@
 					<object class="IBUISlider" id="531161278">
 						<reference key="NSNextResponder" ref="2058747"/>
 						<int key="NSvFlags">292</int>
-						<string key="NSFrame">{{18, 147}, {214, 23}}</string>
+						<string key="NSFrame">{{18, 126}, {214, 23}}</string>
 						<reference key="NSSuperview" ref="2058747"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="517849831"/>
@@ -178,7 +181,6 @@
 						<string key="NSFrame">{{188, 257}, {42, 21}}</string>
 						<reference key="NSSuperview" ref="2058747"/>
 						<reference key="NSWindow"/>
-						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:327</string>
 						<reference key="IBUIBackgroundColor" ref="919672312"/>
 						<bool key="IBUIOpaque">NO</bool>
@@ -187,6 +189,26 @@
 						<bool key="IBUIUserInteractionEnabled">NO</bool>
 						<string key="targetRuntimeIdentifier">IBIPadFramework</string>
 						<string key="IBUIText">Max</string>
+						<reference key="IBUITextColor" ref="1016706839"/>
+						<nil key="IBUIHighlightedColor"/>
+						<int key="IBUIBaselineAdjustment">1</int>
+						<float key="IBUIMinimumFontSize">10</float>
+						<int key="IBUITextAlignment">1</int>
+					</object>
+					<object class="IBUILabel" id="836186606">
+						<reference key="NSNextResponder" ref="2058747"/>
+						<int key="NSvFlags">292</int>
+						<string key="NSFrame">{{104, 156}, {42, 21}}</string>
+						<reference key="NSSuperview" ref="2058747"/>
+						<reference key="NSWindow"/>
+						<string key="NSReuseIdentifierKey">_NS:327</string>
+						<reference key="IBUIBackgroundColor" ref="919672312"/>
+						<bool key="IBUIOpaque">NO</bool>
+						<bool key="IBUIClipsSubviews">YES</bool>
+						<int key="IBUIContentMode">7</int>
+						<bool key="IBUIUserInteractionEnabled">NO</bool>
+						<string key="targetRuntimeIdentifier">IBIPadFramework</string>
+						<string key="IBUIText">Label</string>
 						<reference key="IBUITextColor" ref="1016706839"/>
 						<nil key="IBUIHighlightedColor"/>
 						<int key="IBUIBaselineAdjustment">1</int>
@@ -233,6 +255,57 @@
 					</object>
 					<int key="connectionID">15</int>
 				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBCocoaTouchOutletConnection" key="connection">
+						<string key="label">titleField</string>
+						<reference key="source" ref="841351856"/>
+						<reference key="destination" ref="641685966"/>
+					</object>
+					<int key="connectionID">16</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBCocoaTouchOutletConnection" key="connection">
+						<string key="label">binSlider</string>
+						<reference key="source" ref="841351856"/>
+						<reference key="destination" ref="531161278"/>
+					</object>
+					<int key="connectionID">18</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBCocoaTouchOutletConnection" key="connection">
+						<string key="label">binLabel</string>
+						<reference key="source" ref="841351856"/>
+						<reference key="destination" ref="836186606"/>
+					</object>
+					<int key="connectionID">19</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBCocoaTouchEventConnection" key="connection">
+						<string key="label">updateNumberOfBins</string>
+						<reference key="source" ref="531161278"/>
+						<reference key="destination" ref="841351856"/>
+						<int key="IBEventType">13</int>
+					</object>
+					<int key="connectionID">20</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBCocoaTouchEventConnection" key="connection">
+						<string key="label">textFieldDidEndOnExit:</string>
+						<reference key="source" ref="641685966"/>
+						<reference key="destination" ref="841351856"/>
+						<int key="IBEventType">20</int>
+					</object>
+					<int key="connectionID">21</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBCocoaTouchEventConnection" key="connection">
+						<string key="label">textFieldEditingDidEnd:</string>
+						<reference key="source" ref="641685966"/>
+						<reference key="destination" ref="841351856"/>
+						<int key="IBEventType">19</int>
+					</object>
+					<int key="connectionID">22</int>
+				</object>
 			</object>
 			<object class="IBMutableOrderedSet" key="objectRecords">
 				<object class="NSArray" key="orderedObjects">
@@ -264,8 +337,9 @@
 							<reference ref="573953530"/>
 							<reference ref="112623289"/>
 							<reference ref="308698445"/>
-							<reference ref="531161278"/>
 							<reference ref="827836205"/>
+							<reference ref="531161278"/>
+							<reference ref="836186606"/>
 						</object>
 						<reference key="parent" ref="0"/>
 					</object>
@@ -304,6 +378,11 @@
 						<reference key="object" ref="112623289"/>
 						<reference key="parent" ref="2058747"/>
 					</object>
+					<object class="IBObjectRecord">
+						<int key="objectID">17</int>
+						<reference key="object" ref="836186606"/>
+						<reference key="parent" ref="2058747"/>
+					</object>
 				</object>
 			</object>
 			<object class="NSMutableDictionary" key="flattenedProperties">
@@ -316,6 +395,7 @@
 					<string>-2.IBPluginDependency</string>
 					<string>12.IBPluginDependency</string>
 					<string>13.IBPluginDependency</string>
+					<string>17.IBPluginDependency</string>
 					<string>4.IBPluginDependency</string>
 					<string>5.IBPluginDependency</string>
 					<string>6.IBPluginDependency</string>
@@ -328,6 +408,7 @@
 					<string>H1BinsInspector</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>UIResponder</string>
+					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
@@ -351,7 +432,7 @@
 				<reference key="dict.values" ref="0"/>
 			</object>
 			<nil key="sourceID"/>
-			<int key="maxID">15</int>
+			<int key="maxID">22</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<object class="NSMutableArray" key="referencedPartialClassDescriptions">
@@ -359,28 +440,84 @@
 				<object class="IBPartialClassDescription">
 					<string key="className">H1BinsInspector</string>
 					<string key="superclassName">UIViewController</string>
+					<object class="NSMutableDictionary" key="actions">
+						<bool key="EncodedWithXMLCoder">YES</bool>
+						<object class="NSArray" key="dict.sortedKeys">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>textFieldDidEndOnExit:</string>
+							<string>textFieldEditingDidEnd:</string>
+							<string>updateNumberOfBins</string>
+						</object>
+						<object class="NSMutableArray" key="dict.values">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>id</string>
+							<string>id</string>
+							<string>id</string>
+						</object>
+					</object>
+					<object class="NSMutableDictionary" key="actionInfosByName">
+						<bool key="EncodedWithXMLCoder">YES</bool>
+						<object class="NSArray" key="dict.sortedKeys">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>textFieldDidEndOnExit:</string>
+							<string>textFieldEditingDidEnd:</string>
+							<string>updateNumberOfBins</string>
+						</object>
+						<object class="NSMutableArray" key="dict.values">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<object class="IBActionInfo">
+								<string key="name">textFieldDidEndOnExit:</string>
+								<string key="candidateClassName">id</string>
+							</object>
+							<object class="IBActionInfo">
+								<string key="name">textFieldEditingDidEnd:</string>
+								<string key="candidateClassName">id</string>
+							</object>
+							<object class="IBActionInfo">
+								<string key="name">updateNumberOfBins</string>
+								<string key="candidateClassName">id</string>
+							</object>
+						</object>
+					</object>
 					<object class="NSMutableDictionary" key="outlets">
 						<bool key="EncodedWithXMLCoder">YES</bool>
 						<object class="NSArray" key="dict.sortedKeys">
 							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>binLabel</string>
+							<string>binSlider</string>
 							<string>maxLabel</string>
 							<string>minLabel</string>
+							<string>titleField</string>
 						</object>
 						<object class="NSMutableArray" key="dict.values">
 							<bool key="EncodedWithXMLCoder">YES</bool>
 							<string>UILabel</string>
+							<string>UISlider</string>
 							<string>UILabel</string>
+							<string>UILabel</string>
+							<string>UITextField</string>
 						</object>
 					</object>
 					<object class="NSMutableDictionary" key="toOneOutletInfosByName">
 						<bool key="EncodedWithXMLCoder">YES</bool>
 						<object class="NSArray" key="dict.sortedKeys">
 							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>binLabel</string>
+							<string>binSlider</string>
 							<string>maxLabel</string>
 							<string>minLabel</string>
+							<string>titleField</string>
 						</object>
 						<object class="NSMutableArray" key="dict.values">
 							<bool key="EncodedWithXMLCoder">YES</bool>
+							<object class="IBToOneOutletInfo">
+								<string key="name">binLabel</string>
+								<string key="candidateClassName">UILabel</string>
+							</object>
+							<object class="IBToOneOutletInfo">
+								<string key="name">binSlider</string>
+								<string key="candidateClassName">UISlider</string>
+							</object>
 							<object class="IBToOneOutletInfo">
 								<string key="name">maxLabel</string>
 								<string key="candidateClassName">UILabel</string>
@@ -388,6 +525,10 @@
 							<object class="IBToOneOutletInfo">
 								<string key="name">minLabel</string>
 								<string key="candidateClassName">UILabel</string>
+							</object>
+							<object class="IBToOneOutletInfo">
+								<string key="name">titleField</string>
+								<string key="candidateClassName">UITextField</string>
 							</object>
 						</object>
 					</object>

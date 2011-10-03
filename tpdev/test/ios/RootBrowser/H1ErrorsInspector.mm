@@ -154,7 +154,7 @@ NSString *errorTypes[] = {@"No error", @"Simple", @"Edges", @"Rectangles", @"Fil
 //____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
-   object = dynamic_cast<TH1*>(o);
+   object = static_cast<TH1*>(o);
    //Read error type from hist.
 }
 

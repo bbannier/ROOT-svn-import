@@ -17,7 +17,7 @@
 		702357E21434658900A95000 /* H1Inspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702357E01434658900A95000 /* H1Inspector.xib */; };
 		70235803143494F400A95000 /* MarkerInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70235801143494F400A95000 /* MarkerInspector.mm */; };
 		70235804143494F400A95000 /* MarkerInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 70235802143494F400A95000 /* MarkerInspector.xib */; };
-		702358081434A93C00A95000 /* H1BinsInspector.m in Sources */ = {isa = PBXBuildFile; fileRef = 702358061434A93B00A95000 /* H1BinsInspector.m */; };
+		702358081434A93C00A95000 /* H1BinsInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702358061434A93B00A95000 /* H1BinsInspector.mm */; };
 		702358091434A93C00A95000 /* H1BinsInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702358071434A93C00A95000 /* H1BinsInspector.xib */; };
 		7023580B1434ACC700A95000 /* h1_errors_tab.png in Resources */ = {isa = PBXBuildFile; fileRef = 7023580A1434ACC700A95000 /* h1_errors_tab.png */; };
 		7023580D1434B48C00A95000 /* h1_tab.png in Resources */ = {isa = PBXBuildFile; fileRef = 7023580C1434B48C00A95000 /* h1_tab.png */; };
@@ -136,7 +136,7 @@
 		70235801143494F400A95000 /* MarkerInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MarkerInspector.mm; sourceTree = "<group>"; };
 		70235802143494F400A95000 /* MarkerInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = MarkerInspector.xib; sourceTree = "<group>"; };
 		702358051434A93B00A95000 /* H1BinsInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = H1BinsInspector.h; sourceTree = "<group>"; };
-		702358061434A93B00A95000 /* H1BinsInspector.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = H1BinsInspector.m; sourceTree = "<group>"; };
+		702358061434A93B00A95000 /* H1BinsInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = H1BinsInspector.mm; sourceTree = "<group>"; };
 		702358071434A93C00A95000 /* H1BinsInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = H1BinsInspector.xib; sourceTree = "<group>"; };
 		7023580A1434ACC700A95000 /* h1_errors_tab.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = h1_errors_tab.png; sourceTree = "<group>"; };
 		7023580C1434B48C00A95000 /* h1_tab.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = h1_tab.png; sourceTree = "<group>"; };
@@ -460,7 +460,7 @@
 				70235800143494F400A95000 /* MarkerInspector.h */,
 				70235801143494F400A95000 /* MarkerInspector.mm */,
 				702358051434A93B00A95000 /* H1BinsInspector.h */,
-				702358061434A93B00A95000 /* H1BinsInspector.m */,
+				702358061434A93B00A95000 /* H1BinsInspector.mm */,
 			);
 			name = "Classes and protocols";
 			sourceTree = "<group>";
@@ -780,7 +780,7 @@
 				702357DB14345C0A00A95000 /* H1ErrorsInspector.mm in Sources */,
 				702357E11434658900A95000 /* H1Inspector.mm in Sources */,
 				70235803143494F400A95000 /* MarkerInspector.mm in Sources */,
-				702358081434A93C00A95000 /* H1BinsInspector.m in Sources */,
+				702358081434A93C00A95000 /* H1BinsInspector.mm in Sources */,
 				706241D01435F86700202121 /* RangeSlider.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
