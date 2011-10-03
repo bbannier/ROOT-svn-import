@@ -81,7 +81,7 @@ const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHe
 {
    object = o;
    [errorInspector setROOTObject : o];
-//   [binsInspector setROOTObject : o];
+   [binsInspector setROOTObject : o];
 }
 
 //____________________________________________________________________________________________________
@@ -89,7 +89,7 @@ const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHe
 {
    controller = c;
    [errorInspector setROOTObjectController : c];
-//   [binsInspector setROOTObjectController : c];
+   [binsInspector setROOTObjectController : c];
 }
 
 //____________________________________________________________________________________________________
@@ -112,8 +112,6 @@ const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHe
 {
    binsInspector.view.hidden = NO;
    errorInspector.view.hidden = YES;
-   //markersInspector.view.hidden = YES;
-   //binsInspector.view.hidden = YES;
 }
 
 
@@ -122,8 +120,6 @@ const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHe
 {
    binsInspector.view.hidden = YES;
    errorInspector.view.hidden = NO;
-   //markersInspector.view.hidden = YES;
-   //binsInspector.view.hidden = YES;
 }
 
 #pragma mark - UITabBar's delegate.

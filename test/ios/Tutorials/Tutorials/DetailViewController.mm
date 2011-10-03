@@ -183,7 +183,6 @@ private:
    [panTap release];
    panPic.hidden = YES;
    [panPic release];
-
    
    pictRect.origin.y = 590;
    doubleTapPic = [[PictView alloc] initWithFrame:pictRect andIcon:@"double_tap_gesture_icon_small.png"];
@@ -195,7 +194,6 @@ private:
    doubleTapPic.hidden = YES;
    [doubleTapPic release];
 
-   
    rotatePic = [[PictView alloc] initWithFrame:pictRect andIcon:@"rotate_icon_small.png"];
    rotatePic.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
    [self.view addSubview:rotatePic];
