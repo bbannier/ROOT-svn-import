@@ -342,7 +342,9 @@ namespace cling {
         assert(CuredDecl && "Not a variable declaration!");
         QualType CuredDeclTy = CuredDecl->getType();
         // check if the case is sometype * somevar = init;
-        if (CuredDecl->hasInit() && CuredDeclTy->isAnyPointerType()) {
+        // or some_builtin_type somevar = init;
+        if (CuredDecl->hasInit() && (CuredDeclTy->isAnyPointerType()
+                                     || !CuredDeclTy->isRecordType())) {
           *I = SubstituteUnknownSymbol(CuredDeclTy, CuredDecl->getInit());
           continue;
         }
