@@ -32,8 +32,8 @@
 // STD
 #include <queue>
 #include <vector>
-
 #include <iostream>
+#include <sstream>
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
@@ -109,11 +109,10 @@ class TThreadPool : public TNonCopyable
         TThreadPool( size_t _threadsCount ):
             m_stopped( false )
         {
-            m_mutex = new TMutex();
-            m_conditionMutex = new TMutex();
-            m_threadNeeded = new TCondition( m_conditionMutex );
-            m_threadAvailable = new TCondition( m_conditionMutex );
-            m_threadFinished = new TCondition( m_conditionMutex );
+            m_threadNeeded = new TCondition( &m_mutex );
+            m_threadAvailable = new TCondition( &m_mutex );
+
+            m_threadFinished = new TCondition( &m_mutex );
 
             for( size_t i = 0; i < _threadsCount; ++i )
             {
@@ -137,20 +136,21 @@ class TThreadPool : public TNonCopyable
 
             delete m_threadJoinHelper;
 
-//            delete m_threadNeeded;
-//            delete m_threadAvailable;
-//            delete m_mutex;
-//            delete m_conditionMutex;
+            delete m_threadNeeded;
+            delete m_threadAvailable;
         }
 
         void PushTask( typename TThreadPoolTask<_T, _P>::task_t &_task, _P _param )
         {
             {
-                TLockGuard lock( m_mutex );
+                DbgLog( "Main thread. Try to push a task" );
+
+                TLockGuard lock( &m_mutex );
                 task_t *task = new task_t( _task, _param );
                 m_tasks.push( task );
                 ++m_tasksCount;
-                // std::cout << "Push task" << std::endl;
+
+                DbgLog( "Main thread. the task is pushed" );
             }
             m_threadNeeded->Broadcast();
 
@@ -164,20 +164,20 @@ class TThreadPool : public TNonCopyable
 
             if( processRemainingJobs )
             {
-                // TLockGuard lock( m_mutex );
+                TLockGuard lock( &m_mutex );
                 // wait for queue to drain
                 while( !m_tasks.empty() && !m_stopped )
                 {
-                    // std::cout << "Main thread is waiting" << std::endl;
+                    DbgLog( "Main thread is waiting" );
                     m_threadAvailable->Wait();
-                    // std::cout << "Main thread is DONE waiting" << std::endl;
+                    DbgLog( "Main thread is DONE waiting" );
                 }
             }
             // tell all threads to stop
             {
-                //   TLockGuard lock( m_mutex );
+                TLockGuard lock( &m_mutex );
                 m_stopped = true;
-                // std::cout << "STOP: " << m_stopped << std::endl;
+                DbgLog( "Main threads requests to STOP" );
             }
             m_threadNeeded->Broadcast();
 
@@ -200,50 +200,77 @@ class TThreadPool : public TNonCopyable
         static void* Execute( void *_arg )
         {
             TThreadPool *pThis = reinterpret_cast<TThreadPool*>( _arg );
+
             while( !pThis->m_stopped )
             {
                 task_t *task( NULL );
 
-                {
-                    // std::cout << "(" << TThread::SelfId() << ") check for a task: " << pThis->m_stopped << std::endl;
-                    // There is a task, let's take it
+                std::stringstream ss;
+                ss
+                        << "(" << TThread::SelfId() << ") check for a task: " << pThis->m_stopped
+                        << " Number of Tasks: " << pThis->m_tasks.size();
+                pThis->DbgLog( ss.str() );
 
+                // There is a task, let's take it
+                {
+                    TLockGuard lock( &pThis->m_mutex );
                     // Find a task to perform
                     if( pThis->m_tasks.empty() && !pThis->m_stopped )
                     {
-                        // std::cout << "(" << TThread::SelfId() << ") waiting for a task" << std::endl;
+                        ss.str( "" );
+                        ss << "(" << TThread::SelfId() << ") waiting for a task: " << pThis->m_stopped;
+                        pThis->DbgLog( ss.str() );
+
                         // No tasks, we wait for a task to come
                         pThis->m_threadNeeded->Wait();
-                        //   std::cout << "(" << TThread::SelfId() << ") done  waiting for a task: " << pThis->m_stopped << std::endl;
+
+                        ss.str( "" );
+                        ss << "(" << TThread::SelfId() << ") done waiting for a task: " << pThis->m_stopped;
+                        pThis->DbgLog( ss.str() );
                     }
-                    TLockGuard lock( pThis->m_mutex );
-                    if( !pThis->m_tasks.empty() && !pThis->m_stopped )
+
                     {
-                        task = pThis->m_tasks.front();
-                        pThis->m_tasks.pop();
-                        // std::cout << "(" << TThread::SelfId() << ") getting a task" << std::endl;
+                        if( !pThis->m_tasks.empty() )
+                        {
+                            task = pThis->m_tasks.front();
+                            pThis->m_tasks.pop();
+
+                            ss.str( "" );
+                            ss << "(" << TThread::SelfId() << ") getting a task: " << pThis->m_stopped;
+                            pThis->DbgLog( ss.str() );
+                        }
+                        ss.str( "" );
+                        ss << "(" << TThread::SelfId() << ") done check for a task: " << pThis->m_stopped;
+                        pThis->DbgLog( ss.str() );
                     }
-                    std::cout << "(" << TThread::SelfId() << ") done check for a task: " << pThis->m_stopped << std::endl;
                 }
 
                 // Execute the task
                 if( task )
                 {
-                    // std::cout << "(" << TThread::SelfId() << ") run a task" << std::endl;
+                    ss.str( "" );
+                    ss << "(" << TThread::SelfId() << ") run a task: " << pThis->m_stopped;
+                    pThis->DbgLog( ss.str() );
+
                     if( task->run() )
                     {
-                        TLockGuard lock( pThis->m_mutex );
+                        TLockGuard lock( &pThis->m_mutex );
                         ++pThis->m_successfulTasks;
                     }
                     delete task;
                     task = NULL;
-                    // std::cout << "(" << TThread::SelfId() << ") done running a task" << std::endl;
+
+                    ss.str( "" );
+                    ss << "(" << TThread::SelfId() << ") done running a task: " << pThis->m_stopped;
+                    pThis->DbgLog( ss.str() );
                 }
                 // Task is done, report that the thread is free
                 pThis->m_threadAvailable->Broadcast();
             }
-            std::cout << "(" << TThread::SelfId() << ") **** DONE ***" << std::endl;
-            pThis->m_threadFinished->Broadcast();
+
+            std::stringstream ss;
+            ss << "(" << TThread::SelfId() << ") **** DONE *** ";
+            pThis->DbgLog( ss.str() );
             return NULL;
         }
 
@@ -254,7 +281,10 @@ class TThreadPool : public TNonCopyable
             bool bAllDone( false );
             while( !bAllDone )
             {
-                pThis->m_threadFinished->Wait();
+                pThis->m_threadNeeded->Broadcast();
+
+                TLockGuard lock( &pThis->m_mutex );
+                pThis->m_threadAvailable->TimedWaitRelative( 100 );
                 threads_array_t::const_iterator iter = pThis->m_threads.begin();
                 threads_array_t::const_iterator iter_end = pThis->m_threads.end();
                 bAllDone = true;
@@ -270,10 +300,15 @@ class TThreadPool : public TNonCopyable
             return NULL;
         }
 
+        void DbgLog( const std::string &_msg )
+        {
+            TLockGuard lock( &m_dbgOutputMutex );
+            std::cout << _msg << std::endl;
+        }
+
     private:
         taskqueue_t m_tasks;
-        TMutex *m_mutex;
-        TMutex *m_conditionMutex;
+        TMutex m_mutex;
         TCondition *m_threadNeeded;
         TCondition *m_threadAvailable;
         TCondition *m_threadFinished;
@@ -282,6 +317,7 @@ class TThreadPool : public TNonCopyable
         volatile bool m_stopped;
         size_t m_successfulTasks;
         size_t m_tasksCount;
+        TMutex m_dbgOutputMutex;
 };
 
 #endif
