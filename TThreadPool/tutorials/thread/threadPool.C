@@ -15,8 +15,7 @@
 using namespace std;
 //=============================================================================
 const size_t g_sleeptime = 1; // in secs.
-const size_t g_numTasks = 1000;
-const size_t g_numThreads = 10;
+const size_t g_multTasks = 50;
 //=============================================================================
 enum EProc {start, clean};
 class TTestTask: public TThreadPoolTaskImp<TTestTask, EProc>
@@ -42,11 +41,12 @@ ostream &operator<< ( ostream &_stream, const TTestTask &_task )
     return _stream;
 }
 //=============================================================================
-void threadPool()
+void threadPool( size_t _numThreads )
 {
-    TThreadPool<TTestTask, EProc> threadPool( g_numThreads );
-    vector <TTestTask> tasksList( g_numTasks );
-    for( size_t i = 0; i < g_numTasks; ++i )
+    size_t numTasks(_numThreads * g_multTasks);
+    TThreadPool<TTestTask, EProc> threadPool( _numThreads );
+    vector <TTestTask> tasksList( numTasks );
+    for( size_t i = 0; i < numTasks; ++i )
     {
         threadPool.PushTask( tasksList[i], start );
     }
@@ -82,7 +82,7 @@ void threadPool()
         cout << iter->first << " was used " << iter->second << " times\n";
         // each thread suppose to be used equal amount of time,
         // exactly (g_numTasks/g_numThreads) times
-        if( iter->second != ( g_numTasks / g_numThreads ) )
+        if( iter->second != g_multTasks )
         {
             cerr << "ThreadPool: simple test - Failed" << endl;
             return;
