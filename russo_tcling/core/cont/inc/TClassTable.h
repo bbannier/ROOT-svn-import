@@ -99,6 +99,7 @@ namespace clang {
   class ASTContext;
   class CompilerInstance;
   class Decl;
+  class NamedDecl;
   class TranslationUnitDecl;
 }
 
@@ -113,6 +114,7 @@ public:
   static std::vector<const clang::Decl*>* GlobalVars();
   static std::vector<const clang::Decl*>* GlobalFunctions();
   static std::vector<const clang::Decl*>* Typedefs();
+  static std::string get_fully_qualified_name(const clang::NamedDecl* D);
 };
 
 namespace ROOT {
