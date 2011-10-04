@@ -48,7 +48,8 @@ PolarGraphDemo::PolarGraphDemo()
    }
 
    fPolarCP.reset(new TGraphPolar(kNPointsCP, xCP, yCP));
-   fPolarCP->SetMarkerStyle(29);
+   fPolarCP->SetMarkerStyle(kFullStar);
+
    fPolarCP->SetMarkerSize(2);
    fPolarCP->SetMarkerColor(4);
    fPolarCP->SetLineColor(4);

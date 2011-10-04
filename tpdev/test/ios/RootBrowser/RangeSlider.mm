@@ -104,8 +104,7 @@
    CGPoint touchPoint = [touch locationInView:self];
    if(minThumbOn) {
       minThumb.center = CGPointMake(MAX([self xForValue : minimumValue], MIN(touchPoint.x, [self xForValue : selectedMaximumValue - minimumRange])), minThumb.center.y);
-      selectedMinimumValue = [self valueForX : minThumb.center.x];
-        
+      selectedMinimumValue = [self valueForX : minThumb.center.x];     
    }
     
    if (maxThumbOn) {
