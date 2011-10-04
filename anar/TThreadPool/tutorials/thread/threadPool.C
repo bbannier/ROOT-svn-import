@@ -15,8 +15,8 @@
 using namespace std;
 //=============================================================================
 const size_t g_sleeptime = 1; // in secs.
-const size_t g_numTasks = 30;
-const size_t g_numThreads = 6;
+const size_t g_numTasks = 1000;
+const size_t g_numThreads = 10;
 //=============================================================================
 enum EProc {start, clean};
 class TTestTask: public TThreadPoolTaskImp<TTestTask, EProc>
@@ -72,6 +72,8 @@ void threadPool()
             }
         }
     }
+    
+    cout << "\n************* RESULT ****************" << endl;
     
     counter_t::const_iterator iter = counter.begin();
     counter_t::const_iterator iter_end = counter.end();
