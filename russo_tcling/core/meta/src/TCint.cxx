@@ -82,15 +82,44 @@ public:
    ~tcling_ClassInfo();
    explicit tcling_ClassInfo();
    explicit tcling_ClassInfo(const char*);
+   explicit tcling_ClassInfo(const clang::Decl*);
    tcling_ClassInfo(const tcling_ClassInfo&);
    tcling_ClassInfo& operator=(const tcling_ClassInfo&);
    G__ClassInfo* GetClassInfo() const;
-   clang::Decl* GetDecl() const;
+   const clang::Decl* GetDecl() const;
    int GetIdx() const;
+   long ClassProperty() const;
+   void Delete(void* arena) const;
+   void DeleteArray(void* arena, bool dtorOnly) const;
+   void Destruct(void* arena) const;
+   int GetMethodNArg(const char* method, const char* proto) const;
+   bool HasDefaultConstructor() const;
+   bool HasMethod(const char* name) const;
+   void Init(const char* funcname) const;
+   void Init(int tagnum) const;
+   bool IsBase(const char* name) const;
+   static bool IsEnum(const char* name);
+   bool IsLoaded() const;
    bool IsValid() const;
+   bool IsValidMethod(const char* method, const char* proto,
+      long* offset) const;
+   int Next() const;
+   void* New() const;
+   void* New(int n) const;
+   void* New(int n, void* arena) const;
+   void* New(void* arena) const;
+   long Property() const;
+   int RootFlag() const;
+   int Size() const;
+   long Tagnum() const;
+   const char* FileName() const;
+   const char* FullName() const;
+   const char* Name() const;
+   const char* Title() const;
+   const char* TmpltName() const;
 private:
    G__ClassInfo* fClassInfo; // CINT class info for this class, we own.
-   clang::Decl* fDecl; // Clang AST Node for this class, we do *not* own.
+   const clang::Decl* fDecl; // Clang AST Node for this class, we do *not* own.
    int fIdx; // Index into tcling class table.
 };
 
@@ -141,12 +170,28 @@ tcling_ClassInfo::tcling_ClassInfo(const char* name)
    }
 }
 
+tcling_ClassInfo::tcling_ClassInfo(const clang::Decl* decl)
+   : fClassInfo(0), fDecl(decl), fIdx(-1)
+{
+   std::map<const clang::Decl*, int>::iterator iter_idx =
+      tcling_Dict::ClassDeclToIdx()->find(fDecl);
+   if (iter_idx != tcling_Dict::ClassDeclToIdx()->end()) {
+      fIdx = iter_idx->second;
+   }
+   else {
+      fprintf(stderr, "tcling_ClassInfo(decl): could not find index for decl: "
+         "0x%lx\n", (long) fDecl);
+   }
+   std::string buf = llvm::dyn_cast<clang::NamedDecl>(fDecl)->getNameAsString();
+   fClassInfo = new G__ClassInfo(buf.c_str());
+}
+
 G__ClassInfo* tcling_ClassInfo::GetClassInfo() const
 {
    return fClassInfo;
 }
 
-clang::Decl* tcling_ClassInfo::GetDecl() const
+const clang::Decl* tcling_ClassInfo::GetDecl() const
 {
    return fDecl;
 }
@@ -156,9 +201,202 @@ int tcling_ClassInfo::GetIdx() const
    return fIdx;
 }
 
+long tcling_ClassInfo::ClassProperty() const
+{
+   return fClassInfo->ClassProperty();
+   if (!IsValid()) {
+      return 0L;
+   }
+   const clang::RecordDecl* RD = llvm::dyn_cast<clang::RecordDecl>(fDecl);
+   if (!RD) {
+      return 0L;
+   }
+   if (RD->isUnion()) {
+      return 0L;
+   }
+   // We now have a class or a struct.
+   long property = 0L;
+   if (RD->isClass()) {
+      const clang::CXXRecordDecl* CRD =
+         llvm::dyn_cast<clang::CXXRecordDecl>(fDecl);
+      if (CRD->isAbstract()) {
+         property |= G__CLS_ISABSTRACT;
+      }
+      if (CRD->hasUserDeclaredConstructor()) {
+         property |= G__CLS_HASEXPLICITCTOR;
+      }
+      if (CRD->hasUserProvidedDefaultConstructor()) {
+         property |= G__CLS_HASDEFAULTCTOR;
+      }
+      if (CRD->hasUserDeclaredDestructor()) {
+         property |= G__CLS_HASEXPLICITDTOR;
+      }
+      if (CRD->hasUserDeclaredCopyAssignment()) {
+         property |= G__CLS_HASASSIGNOPR;
+      }
+      if (CRD->isPolymorphic()) {
+         property |= G__CLS_HASVIRTUAL;
+         if (!(property & G__CLS_HASEXPLICITCTOR)) {
+            property |= G__CLS_HASIMPLICITCTOR;
+         }
+      }
+   }
+}
+
+void tcling_ClassInfo::Delete(void* arena) const
+{
+   return fClassInfo->Delete(arena);
+}
+
+void tcling_ClassInfo::DeleteArray(void* arena, bool dtorOnly) const
+{
+   return fClassInfo->DeleteArray(arena, dtorOnly);
+}
+
+void tcling_ClassInfo::Destruct(void* arena) const
+{
+   return fClassInfo->Destruct(arena);
+}
+
+int tcling_ClassInfo::GetMethodNArg(const char* method, const char* proto) const
+{
+   G__MethodInfo meth;
+   if (fClassInfo) {
+      long offset = 0L;
+      meth = fClassInfo->GetMethod(method, proto, &offset);
+   }
+   if (meth.IsValid()) {
+      return meth.NArg();
+   }
+   return -1;
+}
+
+bool tcling_ClassInfo::HasDefaultConstructor() const
+{
+   return fClassInfo->HasDefaultConstructor();
+}
+
+bool tcling_ClassInfo::HasMethod(const char* name) const
+{
+   return fClassInfo->HasMethod(name);
+}
+
+void tcling_ClassInfo::Init(const char* funcname) const
+{
+   fClassInfo->Init(funcname);
+}
+
+void tcling_ClassInfo::Init(int tagnum) const
+{
+   fClassInfo->Init(tagnum);
+}
+
+bool tcling_ClassInfo::IsBase(const char* name) const
+{
+   return fClassInfo->IsBase(name);
+}
+
+bool tcling_ClassInfo::IsEnum(const char* name)
+{
+   G__ClassInfo info(name);
+   if (info.IsValid() && (info.Property() & G__BIT_ISENUM)) {
+      return true;
+   }
+   return false;
+}
+
+bool tcling_ClassInfo::IsLoaded() const
+{
+   return fClassInfo->IsLoaded();
+}
+
 bool tcling_ClassInfo::IsValid() const
 {
-   return fClassInfo && fDecl && (fIdx > -1) && (fIdx < (int) tcling_Dict::Classes()->size());
+   return fClassInfo && fDecl && (fIdx > -1) &&
+      (fIdx < (int) tcling_Dict::Classes()->size());
+}
+
+bool tcling_ClassInfo::IsValidMethod(const char* method, const char* proto,
+      long* offset) const
+{
+   return fClassInfo->GetMethod(method, proto, offset).IsValid();
+}
+
+int tcling_ClassInfo::Next() const
+{
+   return fClassInfo->Next();
+}
+
+void* tcling_ClassInfo::New() const
+{
+   return fClassInfo->New();
+}
+
+void* tcling_ClassInfo::New(int n) const
+{
+   return fClassInfo->New(n);
+}
+
+void* tcling_ClassInfo::New(int n, void* arena) const
+{
+   return fClassInfo->New(n, arena);
+}
+
+void* tcling_ClassInfo::New(void* arena) const
+{
+   return fClassInfo->New(arena);
+}
+
+long tcling_ClassInfo::Property() const
+{
+   return fClassInfo->Property();
+}
+
+int tcling_ClassInfo::RootFlag() const
+{
+   return fClassInfo->RootFlag();
+}
+
+int tcling_ClassInfo::Size() const
+{
+   return fClassInfo->Size();
+}
+
+long tcling_ClassInfo::Tagnum() const
+{
+   return fClassInfo->Tagnum();
+}
+
+const char* tcling_ClassInfo::FileName() const
+{
+   return fClassInfo->FileName();
+}
+
+const char* tcling_ClassInfo::FullName() const
+{
+   //return fClassInfo->Fullname();
+   static std::string buf;
+   buf = tcling_Dict::get_fully_qualified_name(
+      llvm::dyn_cast<clang::NamedDecl>(fDecl));
+   return buf.c_str();
+}
+
+const char* tcling_ClassInfo::Name() const
+{
+   //return fClassInfo->Name();
+   static std::string buf;
+   buf = llvm::dyn_cast<clang::NamedDecl>(fDecl)->getNameAsString();
+   return buf.c_str();
+}
+
+const char* tcling_ClassInfo::Title() const
+{
+   return fClassInfo->Title();
+}
+
+const char* tcling_ClassInfo::TmpltName() const
+{
+   return fClassInfo->TmpltName();
 }
 
 //______________________________________________________________________________
@@ -171,35 +409,287 @@ public:
    ~tcling_BaseClassInfo();
    explicit tcling_BaseClassInfo(); // NOT IMPLEMENTED.
    explicit tcling_BaseClassInfo(tcling_ClassInfo*);
-   tcling_BaseClassInfo(const tcling_BaseClassInfo&); // NOT IMPLEMENTED.
-   tcling_BaseClassInfo& operator=(const tcling_BaseClassInfo&); // NOT IMPLEMENTED.
-   G__BaseClassInfo* GetBaseClassInfo();
-   clang::Decl* GetDecl();
+   tcling_BaseClassInfo(const tcling_BaseClassInfo&);
+   tcling_BaseClassInfo& operator=(const tcling_BaseClassInfo&);
+   G__BaseClassInfo* GetBaseClassInfo() const;
+   tcling_ClassInfo* GetClassInfo() const;
+   int InternalNext(int onlyDirect);
+   int Next();
+   int Next(int onlyDirect);
+   long Offset() const;
+   long Property() const;
+   long Tagnum() const;
+   const char* FullName() const;
+   const char* Name() const;
+   const char* TmpltName() const;
+   bool IsValid() const;
 private:
-   G__BaseClassInfo* fBaseClassInfo; // CINT base class info, we own.
-   clang::Decl* fDecl; // Current Clang AST Node for iterator, we do *not* own.
+   //
+   // CINT material.
+   //
+   /// CINT base class info, we own.
+   G__BaseClassInfo* fBaseClassInfo;
+   //
+   // Cling material.
+   //
+   /// Cling class we are a base of, we own.
+   tcling_ClassInfo* fClassInfo;
+   /// Flag to provide Cint semantics for iterator advancement (not first time)
+   bool fFirstTime;
+   /// Flag for signaling the need to descend on this advancement.
+   bool fDescend;
+   /// Current class whose bases we are iterating through, we do *not* own.
+   const clang::Decl* fDecl;
+   /// Current iterator.
+   clang::CXXRecordDecl::base_class_const_iterator fIter;
+   /// Iterator stack.
+   std::vector<std::pair<const clang::Decl*,
+      clang::CXXRecordDecl::base_class_const_iterator> > fIterStack;
 };
 
 tcling_BaseClassInfo::~tcling_BaseClassInfo()
 {
    delete fBaseClassInfo;
    fBaseClassInfo = 0;
+   delete fClassInfo;
+   fClassInfo = 0;
    fDecl = 0;
 }
 
 tcling_BaseClassInfo::tcling_BaseClassInfo(tcling_ClassInfo* tcling_class_info)
-   : fBaseClassInfo(new G__BaseClassInfo(*tcling_class_info->GetClassInfo())), fDecl(0)
+   : fBaseClassInfo(0)
+   , fClassInfo(0)
+   , fFirstTime(true)
+   , fDescend(false)
+   , fDecl(0)
 {
+   if (!tcling_class_info || !tcling_class_info->IsValid()) {
+      return;
+   }
+   fBaseClassInfo = new G__BaseClassInfo(*tcling_class_info->GetClassInfo());
+   fClassInfo = new tcling_ClassInfo(*tcling_class_info);
+   fDecl = fClassInfo->GetDecl();
+   fIter = llvm::dyn_cast<clang::CXXRecordDecl>(fDecl)->bases_begin();
 }
 
-G__BaseClassInfo* tcling_BaseClassInfo::GetBaseClassInfo()
+tcling_BaseClassInfo::tcling_BaseClassInfo(const tcling_BaseClassInfo& rhs)
+   : fBaseClassInfo(0)
+   , fClassInfo(0)
+   , fFirstTime(true)
+   , fDescend(false)
+   , fDecl(0)
+{
+   if (!rhs.IsValid()) {
+      return;
+   }
+   fBaseClassInfo = new G__BaseClassInfo(*rhs.fBaseClassInfo);
+   fClassInfo = new tcling_ClassInfo(*rhs.fClassInfo);
+   fFirstTime = rhs.fFirstTime;
+   fDescend = rhs.fDescend;
+   fDecl = rhs.fDecl;
+   fIter = rhs.fIter;
+   fIterStack = rhs.fIterStack;
+}
+
+tcling_BaseClassInfo& tcling_BaseClassInfo::operator=(
+   const tcling_BaseClassInfo& rhs)
+{
+   if (this == &rhs) {
+      return *this;
+   }
+   if (!rhs.IsValid()) {
+      delete fBaseClassInfo;
+      fBaseClassInfo = 0;
+      delete fClassInfo;
+      fClassInfo = 0;
+      fFirstTime = true;
+      fDescend = false;
+      fDecl = 0;
+      fIter = 0;
+      fIterStack.clear();
+   }
+   else {
+      delete fBaseClassInfo;
+      fBaseClassInfo = new G__BaseClassInfo(*rhs.fBaseClassInfo);
+      delete fClassInfo;
+      fClassInfo = new tcling_ClassInfo(*rhs.fClassInfo);
+      fFirstTime = rhs.fFirstTime;
+      fDescend = rhs.fDescend;
+      fDecl = rhs.fDecl;
+      fIter = rhs.fIter;
+      fIterStack = rhs.fIterStack;
+   }
+   return *this;
+}
+
+G__BaseClassInfo* tcling_BaseClassInfo::GetBaseClassInfo() const
 {
    return fBaseClassInfo;
 }
 
-clang::Decl* tcling_BaseClassInfo::GetDecl()
+tcling_ClassInfo* tcling_BaseClassInfo::GetClassInfo() const
 {
-   return fDecl;
+   return fClassInfo;
+}
+
+int tcling_BaseClassInfo::InternalNext(int onlyDirect)
+{
+   // Exit early if the iterator is already invalid.
+   if (fIter == llvm::dyn_cast<clang::CXXRecordDecl>(fDecl)->bases_end()) {
+      return 0;
+   }
+   // Advance the iterator.
+   if (fFirstTime) {
+      // The cint semantics are strange.
+      fFirstTime = false;
+   }
+   else if (!onlyDirect && fDescend) {
+      // We previous processed a base class which itself has bases,
+      // now we process the bases of that base class.
+      fDescend = false;
+      fIterStack.push_back(std::make_pair(fDecl, fIter));
+      const clang::RecordType* Ty =
+         fIter->getType()->getAs<clang::RecordType>();
+      clang::CXXRecordDecl* Base =
+         llvm::cast_or_null<clang::CXXRecordDecl>(Ty->getDecl()->
+            getDefinition());
+      fDecl = Base;
+      fIter = Base->bases_begin();
+   }
+   else {
+      // Simple case, move on to the next base class specifier.
+      ++fIter;
+   }
+   // Fix it if we went past the end.
+   while (
+      (fIter == llvm::dyn_cast<clang::CXXRecordDecl>(fDecl)->bases_end()) &&
+      fIterStack.size()
+   ) {
+      // All done with this base class.
+      fDecl = fIterStack.back().first;
+      fIter = fIterStack.back().second;
+      fIterStack.pop_back();
+      ++fIter;
+   }
+   // Check for final termination.
+   if (fIter == llvm::dyn_cast<clang::CXXRecordDecl>(fDecl)->bases_end()) {
+      // We have reached the end of the direct bases, all done.
+      return 0;
+   }
+   return 1;
+}
+
+int tcling_BaseClassInfo::Next()
+{
+   if (!IsValid()) {
+      return 0;
+   }
+   (void) fBaseClassInfo->Next();
+   return Next(1);
+}
+
+int tcling_BaseClassInfo::Next(int onlyDirect)
+{
+   if (!IsValid()) {
+      return 0;
+   }
+   (void) fBaseClassInfo->Next(onlyDirect);
+   while (1) {
+      // Advance the iterator.
+      int valid_flag = InternalNext(onlyDirect);
+      // Check if we have reached the end of the direct bases.
+      if (!valid_flag) {
+         // We have, all done.
+         return 0;
+      }
+      // Check if current base class is a dependent type, that is, an
+      // uninstantiated template class.
+      const clang::RecordType* Ty =
+         fIter->getType()->getAs<clang::RecordType>();
+      if (!Ty) {
+         // A dependent type (uninstantiated template), skip it.
+         continue;
+      }
+      // Check if current base class has a definition.
+      clang::CXXRecordDecl* Base =
+         llvm::cast_or_null<clang::CXXRecordDecl>(Ty->getDecl()->
+            getDefinition());
+      if (!Base) {
+         // No definition yet (just forward declared), skip it.
+         continue;
+      }
+      // Now that we are going to return this base, check to see if
+      // we need to examine its bases next call.
+      if (!onlyDirect && Base->getNumBases()) {
+         fDescend = true;
+      }
+      // Update info for this base class.
+      fClassInfo = new tcling_ClassInfo(Base);
+      return 1;
+   }
+}
+
+long tcling_BaseClassInfo::Offset() const
+{
+   return fBaseClassInfo->Offset();
+   if (!IsValid()) {
+      return -1;
+   }
+}
+
+long tcling_BaseClassInfo::Property() const
+{
+   return fBaseClassInfo->Property();
+   if (!IsValid()) {
+      return 0;
+   }
+}
+
+long tcling_BaseClassInfo::Tagnum() const
+{
+   return fBaseClassInfo->Tagnum();
+   if (!IsValid()) {
+      return -1;
+   }
+}
+
+const char* tcling_BaseClassInfo::FullName() const
+{
+   //return fBaseClassInfo->Fullname();
+   if (!IsValid()) {
+      return 0;
+   }
+   return fClassInfo->FullName();
+}
+
+const char* tcling_BaseClassInfo::Name() const
+{
+   //return fBaseClassInfo->Name();
+   if (!IsValid()) {
+      return 0;
+   }
+   return fClassInfo->Name();
+}
+
+const char* tcling_BaseClassInfo::TmpltName() const
+{
+   return fBaseClassInfo->TmpltName();
+   if (!IsValid()) {
+      return 0;
+   }
+}
+
+bool tcling_BaseClassInfo::IsValid() const
+{
+   if (
+      fClassInfo && // We have a tcling_ClassInfo, and
+      fDecl && // the base we are currently traversing is valid, and
+      // our internal iterator is currently valid.
+      (fIter != llvm::dyn_cast<clang::CXXRecordDecl>(fDecl)->bases_end())
+   ) {
+      return true;
+   }
+   return false;
 }
 
 //______________________________________________________________________________
@@ -290,7 +780,7 @@ tcling_DataMemberInfo::tcling_DataMemberInfo(tcling_ClassInfo* tcling_class_info
    fDataMemberInfo = new G__DataMemberInfo(*tcling_class_info->GetClassInfo());
    fClassInfo  = new G__ClassInfo(tcling_class_info->GetClassInfo()->Tagnum());
    fTClingClassInfo = new tcling_ClassInfo(*tcling_class_info);
-   fIter = llvm::cast<clang::DeclContext>(tcling_class_info->GetDecl())->
+   fIter = llvm::dyn_cast<clang::DeclContext>(tcling_class_info->GetDecl())->
       decls_begin();
    // Move to first data member.
    InternalNextValidMember();
@@ -364,7 +854,7 @@ int tcling_DataMemberInfo::ArrayDim() const
    }
    // To get this information we must count the number
    // of arry type nodes in the canonical type chain.
-   clang::ValueDecl* VD = llvm::cast<clang::ValueDecl>(*fIter);
+   const clang::ValueDecl* VD = llvm::dyn_cast<clang::ValueDecl>(*fIter);
    clang::QualType QT = VD->getType().getCanonicalType();
    int cnt = 0;
    while (1) {
@@ -417,7 +907,7 @@ int tcling_DataMemberInfo::MaxIndex(int dim) const
    }
    // To get this information we must count the number
    // of arry type nodes in the canonical type chain.
-   clang::ValueDecl* VD = llvm::cast<clang::ValueDecl>(*fIter);
+   const clang::ValueDecl* VD = llvm::dyn_cast<clang::ValueDecl>(*fIter);
    clang::QualType QT = VD->getType().getCanonicalType();
    int paran = ArrayDim();
    if ((dim < 0) || (dim >= paran)) {
@@ -434,9 +924,7 @@ int tcling_DataMemberInfo::MaxIndex(int dim) const
             ) {
                max = static_cast<int>(CAT->getSize().getZExtValue());
             }
-            else if (const clang::IncompleteArrayType* IAT =
-                  llvm::dyn_cast<clang::IncompleteArrayType>(QT)
-            ) {
+            else if (llvm::dyn_cast<clang::IncompleteArrayType>(QT)) {
                max = INT_MAX;
             }
             else {
@@ -491,7 +979,7 @@ void tcling_DataMemberInfo::InternalNextValidMember()
             //}
             //fprintf(stderr, "%s\n", buf.c_str());
             fIterStack.push_back(fIter);
-            fIter = llvm::cast<clang::DeclContext>(*fIter)->decls_begin();
+            fIter = llvm::dyn_cast<clang::DeclContext>(*fIter)->decls_begin();
             continue;
          }
          else if (
@@ -636,7 +1124,7 @@ int tcling_DataMemberInfo::TypeSize() const
       // Error, was not a data member, variable, or enumerator.
       return -1L;
    }
-   clang::ValueDecl* VD = llvm::dyn_cast<clang::ValueDecl>(*fIter);
+   const clang::ValueDecl* VD = llvm::dyn_cast<clang::ValueDecl>(*fIter);
    clang::QualType QT = VD->getType();
    if (QT->isIncompleteType()) {
       // We cannot determine the size of forward-declared types.
@@ -656,8 +1144,8 @@ const char* tcling_DataMemberInfo::TypeName() const
    clang::PrintingPolicy P(fIter->getASTContext().PrintingPolicy);
    P.AnonymousTagLocations = false;
    if (llvm::dyn_cast<clang::ValueDecl>(*fIter)) {
-      buf = llvm::cast<clang::ValueDecl>(*fIter)->getType().getAsString(P);
-      //llvm::cast<clang::ValueDecl>(*fIter)->getType().dump();
+      buf = llvm::dyn_cast<clang::ValueDecl>(*fIter)->getType().getAsString(P);
+      //llvm::dyn_cast<clang::ValueDecl>(*fIter)->getType().dump();
    }
    else {
       buf = "";
@@ -675,9 +1163,9 @@ const char* tcling_DataMemberInfo::TypeTrueName() const
    clang::PrintingPolicy P(fIter->getASTContext().PrintingPolicy);
    P.AnonymousTagLocations = false;
    if (clang::dyn_cast<clang::ValueDecl>(*fIter)) {
-      buf = clang::cast<clang::ValueDecl>(*fIter)->
+      buf = clang::dyn_cast<clang::ValueDecl>(*fIter)->
          getType().getCanonicalType().getAsString(P);
-      //llvm::cast<clang::ValueDecl>(*fIter)->getType().
+      //llvm::dyn_cast<clang::ValueDecl>(*fIter)->getType().
       //   getCanonicalType().dump();
    }
    else {
@@ -695,7 +1183,7 @@ const char* tcling_DataMemberInfo::Name() const
    }
    //buf = fIter->getDeclKindName();
    if (llvm::dyn_cast<clang::NamedDecl>(*fIter)) {
-      buf = llvm::cast<clang::NamedDecl>(*fIter)->getNameAsString();
+      buf = llvm::dyn_cast<clang::NamedDecl>(*fIter)->getNameAsString();
    }
    else {
       buf = "";
@@ -731,7 +1219,7 @@ const char* tcling_DataMemberInfo::Name() const
    }
 #endif // 0
    //if (llvm::dyn_cast<clang::DeclContext>(*fIter)) {
-   //   if (llvm::cast<clang::DeclContext>(*fIter)->
+   //   if (llvm::dyn_cast<clang::DeclContext>(*fIter)->
    //          isTransparentContext()
    //   ) {
    //      buf += " transparent";
@@ -1768,67 +2256,68 @@ void TCint::SetClassInfo(TClass* cl, Bool_t reload)
 {
    // Set pointer to CINT's G__ClassInfo in TClass.
    R__LOCKGUARD2(gCINTMutex);
-   if (!cl->fClassInfo || reload) {
-      delete(G__ClassInfo*)cl->fClassInfo;
-      cl->fClassInfo = 0;
-      cl->fDecl = 0;
-      std::string name(cl->GetName());
-      if (!CheckClassInfo(name.c_str())) {
-         // Try resolving all the typedefs (even Float_t and Long64_t)
-         name =  TClassEdit::ResolveTypedef(name.c_str(), kTRUE);
-         if (name == cl->GetName() || !CheckClassInfo(name.c_str())) {
-            // Nothing found, nothing to do.
-            return;
-         }
+   if (cl->fClassInfo && !reload) {
+      return;
+   }
+   delete (G__ClassInfo*) cl->fClassInfo;
+   cl->fClassInfo = 0;
+   cl->fDecl = 0;
+   std::string name(cl->GetName());
+   if (!CheckClassInfo(name.c_str())) {
+      // Try resolving all the typedefs (even Float_t and Long64_t)
+      name =  TClassEdit::ResolveTypedef(name.c_str(), kTRUE);
+      if (name == cl->GetName() || !CheckClassInfo(name.c_str())) {
+         // Nothing found, nothing to do.
+         return;
       }
-      G__ClassInfo* info = new G__ClassInfo(name.c_str());
-      cl->fClassInfo = info;
-      //{
-      //std::multimap<const std::string, const clang::Decl*>::iterator B =
-      //tcling_Dict::ClassNameToDecl()->begin();
-      //std::multimap<const std::string, const clang::Decl*>::iterator E =
-      //tcling_Dict::ClassNameToDecl()->end();
-      //std::multimap<const std::string, const clang::Decl*>::iterator I = B;
-      //if (tcling_Dict::ClassNameToDecl()->empty()) {
-      //fprintf(stderr, "tcling_Dict::ClassNameToDecl() is empty!\n");
-      //}
-      //for (; I != E; ++I) {
-      //fprintf(stderr, "table class: %s  decl: 0x%016lx\n", I->first.c_str(), (long) I->second);
-      //}
-      //}
-      //fprintf(stderr, "looking up class: %s\n", name.c_str());
-      std::multimap<const std::string, const clang::Decl*>::iterator iter =
-         tcling_Dict::ClassNameToDecl()->find(name);
-      if (iter != tcling_Dict::ClassNameToDecl()->end()) {
-         cl->fDecl = (clang::Decl*) iter->second;
-         //fprintf(stderr, "found class: %s  Decl: 0x%016lx\n", name.c_str(), (long) cl->fDecl);
-      }
-      Bool_t zombieCandidate = kFALSE;
-      // In case a class contains an external enum, the enum will be seen as a
-      // class. We must detect this special case and make the class a Zombie.
-      // Here we assume that a class has at least one method.
-      // We can NOT call TClass::Property from here, because this method
-      // assumes that the TClass is well formed to do a lot of information
-      // caching. The method SetClassInfo (i.e. here) is usually called during
-      // the building phase of the TClass, hence it is NOT well formed yet.
-      if (info->IsValid() &&
-            !(info->Property() & (kIsClass | kIsStruct | kIsNamespace))) {
+   }
+   G__ClassInfo* info = new G__ClassInfo(name.c_str());
+   cl->fClassInfo = info;
+   //{
+   //std::multimap<const std::string, const clang::Decl*>::iterator B =
+   //tcling_Dict::ClassNameToDecl()->begin();
+   //std::multimap<const std::string, const clang::Decl*>::iterator E =
+   //tcling_Dict::ClassNameToDecl()->end();
+   //std::multimap<const std::string, const clang::Decl*>::iterator I = B;
+   //if (tcling_Dict::ClassNameToDecl()->empty()) {
+   //fprintf(stderr, "tcling_Dict::ClassNameToDecl() is empty!\n");
+   //}
+   //for (; I != E; ++I) {
+   //fprintf(stderr, "table class: %s  decl: 0x%016lx\n", I->first.c_str(), (long) I->second);
+   //}
+   //}
+   //fprintf(stderr, "looking up class: %s\n", name.c_str());
+   std::multimap<const std::string, const clang::Decl*>::iterator iter =
+      tcling_Dict::ClassNameToDecl()->find(name);
+   if (iter != tcling_Dict::ClassNameToDecl()->end()) {
+      cl->fDecl = (clang::Decl*) iter->second;
+      //fprintf(stderr, "found class: %s  Decl: 0x%016lx\n", name.c_str(), (long) cl->fDecl);
+   }
+   Bool_t zombieCandidate = kFALSE;
+   // In case a class contains an external enum, the enum will be seen as a
+   // class. We must detect this special case and make the class a Zombie.
+   // Here we assume that a class has at least one method.
+   // We can NOT call TClass::Property from here, because this method
+   // assumes that the TClass is well formed to do a lot of information
+   // caching. The method SetClassInfo (i.e. here) is usually called during
+   // the building phase of the TClass, hence it is NOT well formed yet.
+   if (info->IsValid() &&
+         !(info->Property() & (kIsClass | kIsStruct | kIsNamespace))) {
+      zombieCandidate = kTRUE; // cl->MakeZombie();
+   }
+   if (!info->IsLoaded()) {
+      if (info->Property() & (kIsNamespace)) {
+         // Namespaces can have info but no corresponding CINT dictionary
+         // because they are auto-created if one of their contained
+         // classes has a dictionary.
          zombieCandidate = kTRUE; // cl->MakeZombie();
       }
-      if (!info->IsLoaded()) {
-         if (info->Property() & (kIsNamespace)) {
-            // Namespaces can have info but no corresponding CINT dictionary
-            // because they are auto-created if one of their contained
-            // classes has a dictionary.
-            zombieCandidate = kTRUE; // cl->MakeZombie();
-         }
-         // this happens when no CINT dictionary is available
-         delete info;
-         cl->fClassInfo = 0;
-      }
-      if (zombieCandidate && !TClassEdit::IsSTLCont(cl->GetName())) {
-         cl->MakeZombie();
-      }
+      // this happens when no CINT dictionary is available
+      delete info;
+      cl->fClassInfo = 0;
+   }
+   if (zombieCandidate && !TClassEdit::IsSTLCont(cl->GetName())) {
+      cl->MakeZombie();
    }
 }
 
@@ -1916,15 +2405,16 @@ void TCint::CreateListOfBaseClasses(TClass* cl)
 {
    // Create list of pointers to base class(es) for TClass cl.
    R__LOCKGUARD2(gCINTMutex);
-   if (!cl->fBase) {
-      cl->fBase = new TList;
-      G__BaseClassInfo t(*(G__ClassInfo*)cl->GetClassInfo()), *a;
-      while (t.Next()) {
-         // if name cannot be obtained no use to put in list
-         if (t.IsValid() && t.Name()) {
-            a = new G__BaseClassInfo(t);
-            cl->fBase->Add(new TBaseClass(a, cl));
-         }
+   if (cl->fBase) {
+      return;
+   }
+   cl->fBase = new TList;
+   tcling_BaseClassInfo t(&tcling_ClassInfo(cl->GetName()));
+   while (t.Next()) {
+      // if name cannot be obtained no use to put in list
+      if (t.IsValid() && t.Name()) {
+         tcling_BaseClassInfo* a = new tcling_BaseClassInfo(t);
+         cl->fBase->Add(new TBaseClass(a, cl));
       }
    }
 }
@@ -1934,15 +2424,16 @@ void TCint::CreateListOfDataMembers(TClass* cl)
 {
    // Create list of pointers to data members for TClass cl.
    R__LOCKGUARD2(gCINTMutex);
-   if (!cl->fData) {
-      cl->fData = new TList;
-      G__DataMemberInfo t(*(G__ClassInfo*)cl->GetClassInfo()), *a;
-      while (t.Next()) {
-         // if name cannot be obtained no use to put in list
-         if (t.IsValid() && t.Name() && strcmp(t.Name(), "G__virtualinfo")) {
-            a = new G__DataMemberInfo(t);
-            cl->fData->Add(new TDataMember(a, cl));
-         }
+   if (cl->fData) {
+      return;
+   }
+   cl->fData = new TList;
+   G__DataMemberInfo t(*(G__ClassInfo*)cl->GetClassInfo());
+   while (t.Next()) {
+      // if name cannot be obtained no use to put in list
+      if (t.IsValid() && t.Name() && strcmp(t.Name(), "G__virtualinfo")) {
+         G__DataMemberInfo* a = new G__DataMemberInfo(t);
+         cl->fData->Add(new TDataMember(a, cl));
       }
    }
 }
@@ -1952,16 +2443,17 @@ void TCint::CreateListOfMethods(TClass* cl)
 {
    // Create list of pointers to methods for TClass cl.
    R__LOCKGUARD2(gCINTMutex);
-   if (!cl->fMethod) {
-      cl->fMethod = new THashList;
-      G__MethodInfo* a;
-      G__MethodInfo t(*(G__ClassInfo*)cl->GetClassInfo());
-      while (t.Next()) {
-         // if name cannot be obtained no use to put in list
-         if (t.IsValid() && t.Name()) {
-            a = new G__MethodInfo(t);
-            cl->fMethod->Add(new TMethod(a, cl));
-         }
+   if (cl->fMethod) {
+      return;
+   }
+   cl->fMethod = new THashList;
+   G__MethodInfo* a;
+   G__MethodInfo t(*(G__ClassInfo*)cl->GetClassInfo());
+   while (t.Next()) {
+      // if name cannot be obtained no use to put in list
+      if (t.IsValid() && t.Name()) {
+         a = new G__MethodInfo(t);
+         cl->fMethod->Add(new TMethod(a, cl));
       }
    }
 }
@@ -1987,15 +2479,16 @@ void TCint::CreateListOfMethodArgs(TFunction* m)
 {
    // Create list of pointers to method arguments for TMethod m.
    R__LOCKGUARD2(gCINTMutex);
-   if (!m->fMethodArgs) {
-      m->fMethodArgs = new TList;
-      G__MethodArgInfo t(*(G__MethodInfo*)m->fInfo), *a;
-      while (t.Next()) {
-         // if type cannot be obtained no use to put in list
-         if (t.IsValid() && t.Type()) {
-            a = new G__MethodArgInfo(t);
-            m->fMethodArgs->Add(new TMethodArg(a, m));
-         }
+   if (m->fMethodArgs) {
+      return;
+   }
+   m->fMethodArgs = new TList;
+   G__MethodArgInfo t(*(G__MethodInfo*)m->fInfo);
+   while (t.Next()) {
+      // if type cannot be obtained no use to put in list
+      if (t.IsValid() && t.Type()) {
+         G__MethodArgInfo* a = new G__MethodArgInfo(t);
+         m->fMethodArgs->Add(new TMethodArg(a, m));
       }
    }
 }
@@ -3395,38 +3888,34 @@ void  TCint::CallFunc_SetFuncProto(CallFunc_t* func, ClassInfo_t* info, const ch
 Long_t TCint::ClassInfo_ClassProperty(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->ClassProperty();
+   return tcling_info->ClassProperty();
 }
 
 //______________________________________________________________________________
 void TCint::ClassInfo_Delete(ClassInfo_t* cinfo) const
 {
-   delete(tcling_ClassInfo*) cinfo;
+   delete (tcling_ClassInfo*) cinfo;
 }
 
 //______________________________________________________________________________
 void TCint::ClassInfo_Delete(ClassInfo_t* cinfo, void* arena) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   info->Delete(arena);
+   tcling_info->Delete(arena);
 }
 
 //______________________________________________________________________________
 void TCint::ClassInfo_DeleteArray(ClassInfo_t* cinfo, void* arena, bool dtorOnly) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   info->DeleteArray(arena, dtorOnly);
+   tcling_info->DeleteArray(arena, dtorOnly);
 }
 
 //______________________________________________________________________________
 void TCint::ClassInfo_Destruct(ClassInfo_t* cinfo, void* arena) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   info->Destruct(arena);
+   tcling_info->Destruct(arena);
 }
 
 //______________________________________________________________________________
@@ -3451,202 +3940,167 @@ ClassInfo_t* TCint::ClassInfo_Factory(const char* name) const
 int TCint::ClassInfo_GetMethodNArg(ClassInfo_t* cinfo, const char* method, const char* proto) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   G__MethodInfo meth;
-   if (info) {
-      Long_t offset = 0L;
-      meth = info->GetMethod(method, proto, &offset);
-   }
-   if (meth.IsValid()) {
-      return meth.NArg();
-   }
-   return -1;
+   return tcling_info->GetMethodNArg(method, proto);
 }
 
 //______________________________________________________________________________
 bool TCint::ClassInfo_HasDefaultConstructor(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->HasDefaultConstructor();
+   return tcling_info->HasDefaultConstructor();
 }
 
 //______________________________________________________________________________
 bool TCint::ClassInfo_HasMethod(ClassInfo_t* cinfo, const char* name) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->HasMethod(name);
+   return tcling_info->HasMethod(name);
 }
 
 //______________________________________________________________________________
 void TCint::ClassInfo_Init(ClassInfo_t* cinfo, const char* funcname) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   info->Init(funcname);
+   tcling_info->Init(funcname);
 }
 
 //______________________________________________________________________________
 void TCint::ClassInfo_Init(ClassInfo_t* cinfo, int tagnum) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   info->Init(tagnum);
+   tcling_info->Init(tagnum);
 }
 
 //______________________________________________________________________________
 bool TCint::ClassInfo_IsBase(ClassInfo_t* cinfo, const char* name) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->IsBase(name);
+   return tcling_info->IsBase(name);
 }
 
 //______________________________________________________________________________
 bool TCint::ClassInfo_IsEnum(const char* name) const
 {
-   G__ClassInfo info(name);
-   if (info.IsValid() && (info.Property() & G__BIT_ISENUM)) {
-      return kTRUE;
-   }
-   return kFALSE;
+   return tcling_ClassInfo::IsEnum(name);
 }
 
 //______________________________________________________________________________
 bool TCint::ClassInfo_IsLoaded(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->IsLoaded();
+   return tcling_info->IsLoaded();
 }
 
 //______________________________________________________________________________
 bool TCint::ClassInfo_IsValid(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->IsValid();
+   return tcling_info->IsValid();
 }
 
 //______________________________________________________________________________
 bool TCint::ClassInfo_IsValidMethod(ClassInfo_t* cinfo, const char* method, const char* proto, Long_t* offset) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->GetMethod(method, proto, offset).IsValid();
+   return tcling_info->IsValidMethod(method, proto, offset);
 }
 
 //______________________________________________________________________________
 int TCint::ClassInfo_Next(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->Next();
+   return tcling_info->Next();
 }
 
 //______________________________________________________________________________
 void* TCint::ClassInfo_New(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->New();
+   return tcling_info->New();
 }
 
 //______________________________________________________________________________
 void* TCint::ClassInfo_New(ClassInfo_t* cinfo, int n) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->New(n);
+   return tcling_info->New(n);
 }
 
 //______________________________________________________________________________
 void* TCint::ClassInfo_New(ClassInfo_t* cinfo, int n, void* arena) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->New(n, arena);
+   return tcling_info->New(n, arena);
 }
 
 //______________________________________________________________________________
 void* TCint::ClassInfo_New(ClassInfo_t* cinfo, void* arena) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->New(arena);
+   return tcling_info->New(arena);
 }
 
 //______________________________________________________________________________
 Long_t TCint::ClassInfo_Property(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->Property();
+   return tcling_info->Property();
 }
 
 //______________________________________________________________________________
 int TCint::ClassInfo_RootFlag(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->RootFlag();
+   return tcling_info->RootFlag();
 }
 
 //______________________________________________________________________________
 int TCint::ClassInfo_Size(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->Size();
+   return tcling_info->Size();
 }
 
 //______________________________________________________________________________
 Long_t TCint::ClassInfo_Tagnum(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->Tagnum();
+   return tcling_info->Tagnum();
 }
 
 //______________________________________________________________________________
 const char* TCint::ClassInfo_FileName(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->FileName();
+   return tcling_info->FileName();
 }
 
 //______________________________________________________________________________
 const char* TCint::ClassInfo_FullName(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->Fullname();
+   return tcling_info->FullName();
 }
 
 //______________________________________________________________________________
 const char* TCint::ClassInfo_Name(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->Name();
+   return tcling_info->Name();
 }
 
 //______________________________________________________________________________
 const char* TCint::ClassInfo_Title(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->Title();
+   return tcling_info->Title();
 }
 
 //______________________________________________________________________________
 const char* TCint::ClassInfo_TmpltName(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* info = tcling_info->GetClassInfo();
-   return info->TmpltName();
+   return tcling_info->TmpltName();
 }
 
 
@@ -3659,82 +4113,70 @@ const char* TCint::ClassInfo_TmpltName(ClassInfo_t* cinfo) const
 //______________________________________________________________________________
 void TCint::BaseClassInfo_Delete(BaseClassInfo_t* bcinfo) const
 {
-   tcling_BaseClassInfo* tcling_info = (tcling_BaseClassInfo*) bcinfo;
-   G__BaseClassInfo* info = tcling_info->GetBaseClassInfo();
-   delete info;
+   delete (tcling_BaseClassInfo*) bcinfo;
 }
 
 //______________________________________________________________________________
 BaseClassInfo_t* TCint::BaseClassInfo_Factory(ClassInfo_t* cinfo) const
 {
    tcling_ClassInfo* tcling_info = (tcling_ClassInfo*) cinfo;
-   G__ClassInfo* cinfo1 = tcling_info->GetClassInfo();
-   G__BaseClassInfo* info = new G__BaseClassInfo(*cinfo1);
-   return info;
+   return (BaseClassInfo_t*) new tcling_BaseClassInfo(tcling_info);
 }
 
 //______________________________________________________________________________
 int TCint::BaseClassInfo_Next(BaseClassInfo_t* bcinfo) const
 {
    tcling_BaseClassInfo* tcling_info = (tcling_BaseClassInfo*) bcinfo;
-   G__BaseClassInfo* info = tcling_info->GetBaseClassInfo();
-   return info->Next();
+   return tcling_info->Next();
 }
 
 //______________________________________________________________________________
 int TCint::BaseClassInfo_Next(BaseClassInfo_t* bcinfo, int onlyDirect) const
 {
    tcling_BaseClassInfo* tcling_info = (tcling_BaseClassInfo*) bcinfo;
-   G__BaseClassInfo* info = tcling_info->GetBaseClassInfo();
-   return info->Next(onlyDirect);
+   return tcling_info->Next(onlyDirect);
 }
 
 //______________________________________________________________________________
 Long_t TCint::BaseClassInfo_Offset(BaseClassInfo_t* bcinfo) const
 {
    tcling_BaseClassInfo* tcling_info = (tcling_BaseClassInfo*) bcinfo;
-   G__BaseClassInfo* info = tcling_info->GetBaseClassInfo();
-   return info->Offset();
+   return tcling_info->Offset();
 }
 
 //______________________________________________________________________________
 Long_t TCint::BaseClassInfo_Property(BaseClassInfo_t* bcinfo) const
 {
    tcling_BaseClassInfo* tcling_info = (tcling_BaseClassInfo*) bcinfo;
-   G__BaseClassInfo* info = tcling_info->GetBaseClassInfo();
-   return info->Property();
+   return tcling_info->Property();
 }
 
 //______________________________________________________________________________
 Long_t TCint::BaseClassInfo_Tagnum(BaseClassInfo_t* bcinfo) const
 {
    tcling_BaseClassInfo* tcling_info = (tcling_BaseClassInfo*) bcinfo;
-   G__BaseClassInfo* info = tcling_info->GetBaseClassInfo();
-   return info->Tagnum();
+   return tcling_info->Tagnum();
 }
 
 //______________________________________________________________________________
 const char* TCint::BaseClassInfo_FullName(BaseClassInfo_t* bcinfo) const
 {
    tcling_BaseClassInfo* tcling_info = (tcling_BaseClassInfo*) bcinfo;
-   G__BaseClassInfo* info = tcling_info->GetBaseClassInfo();
-   return info->Fullname();
+   return tcling_info->FullName();
 }
 
 //______________________________________________________________________________
 const char* TCint::BaseClassInfo_Name(BaseClassInfo_t* bcinfo) const
 {
    tcling_BaseClassInfo* tcling_info = (tcling_BaseClassInfo*) bcinfo;
-   G__BaseClassInfo* info = tcling_info->GetBaseClassInfo();
-   return info->Name();
+   return tcling_info->Name();
 }
 
 //______________________________________________________________________________
 const char* TCint::BaseClassInfo_TmpltName(BaseClassInfo_t* bcinfo) const
 {
    tcling_BaseClassInfo* tcling_info = (tcling_BaseClassInfo*) bcinfo;
-   G__BaseClassInfo* info = tcling_info->GetBaseClassInfo();
-   return info->TmpltName();
+   return tcling_info->TmpltName();
 }
 
 //______________________________________________________________________________
