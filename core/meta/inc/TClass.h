@@ -51,6 +51,10 @@ class TVirtualIsAProxy;
 class TVirtualRefProxy;
 class THashTable;
 
+namespace clang {
+   class Decl;
+}
+
 namespace ROOT {
    class TGenericClassInfo;
    class TCollectionProxyInfo;
@@ -101,7 +105,7 @@ private:
    TVirtualCollectionProxy *fCollectionProxy; //Collection interface
    Version_t          fClassVersion;    //Class version Identifier
    ClassInfo_t       *fClassInfo;       //pointer to CINT class info class
-   void              *fDecl;            //pointer to clang Decl for class
+   clang::Decl       *fDecl;            //pointer to clang Decl for class
    TString            fContextMenuTitle;//context menu title
    const type_info   *fTypeInfo;        //pointer to the C++ type information.
    ShowMembersFunc_t  fShowMembers;     //pointer to the class's ShowMembers function
@@ -253,6 +257,7 @@ public:
    Version_t          GetClassVersion() const { fVersionUsed = kTRUE; return fClassVersion; }
    TDataMember       *GetDataMember(const char *datamember) const;
    Long_t              GetDataMemberOffset(const char *membername) const;
+   clang::Decl       *GetDecl() const { return fDecl; }
    const char        *GetDeclFileName() const { return fDeclFileName; }
    Short_t            GetDeclFileLine() const { return fDeclFileLine; }
    ROOT::DelFunc_t    GetDelete() const;
