@@ -395,8 +395,8 @@ void Painter::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y)
       p.SetX(fConverter.XToView(x[i]));
       p.SetY(fConverter.YToView(y[i]));
    }
-   
-   GraphicUtils::DrawPolyMarker(fCtx, fPolyMarker);
+
+   GraphicUtils::DrawPolyMarker(fCtx, fPolyMarker, gVirtualX->GetMarkerColor(), gVirtualX->GetMarkerSize(), gVirtualX->GetMarkerStyle());
 }
 
 //_________________________________________________________________
