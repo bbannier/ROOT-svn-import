@@ -9,32 +9,27 @@ class TH1;
    RangeSlider *axisRangeSlider;
       
    IBOutlet UITextField *titleField;
-   IBOutlet UISlider *binSlider;
-   IBOutlet UILabel *binLabel;
-   unsigned maxBins;
 
    IBOutlet UILabel *minLabel;
    IBOutlet UILabel *maxLabel;
    
+   IBOutlet UISwitch *showMarkers;
+   
    ROOTObjectController *controller;
    TH1 *object;
-   TH1 *histClone;
 }
 
+@property (nonatomic, retain) UISwitch *showMarkers;
 @property (nonatomic, retain) UITextField *titleField;
-@property (nonatomic, retain) UISlider *binSlider;
-@property (nonatomic, retain) UILabel *binLabel;
 @property (nonatomic, retain) UILabel *minLabel;
 @property (nonatomic, retain) UILabel *maxLabel;
 
 - (void) setROOTObjectController : (ROOTObjectController *)c;
 - (void) setROOTObject : (TObject *)o;
 
-- (IBAction) updateNumberOfBins;
-//
-
 - (IBAction) textFieldDidEndOnExit : (id) sender;
 - (IBAction) textFieldEditingDidEnd : (id) sender;
+- (IBAction) toggleMarkers;
 
 
 @end

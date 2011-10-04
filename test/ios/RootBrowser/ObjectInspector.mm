@@ -43,7 +43,6 @@
    cachedEditors[kAttAxis] = [[AxisInspector alloc] initWithNibName : @"AxisInspector" bundle : nil];
    //TAttMarker.
    cachedEditors[kAttMarker] = [[MarkerInspector alloc] initWithNibName: @"MarkerInspector" bundle : nil];
-   //
    //H1's inspector.
    cachedEditors[kAttH1] = [[H1Inspector alloc] initWithNibName : @"H1Inspector" bundle : nil];
 }
@@ -150,7 +149,7 @@
    
    if (dynamic_cast<TAttMarker *>(object))
       activeEditors[nActiveEditors++] = cachedEditors[kAttMarker];
-   
+
    if (dynamic_cast<TH1 *>(object))
       activeEditors[nActiveEditors++] = cachedEditors[kAttH1];
 }

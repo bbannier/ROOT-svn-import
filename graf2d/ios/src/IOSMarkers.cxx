@@ -60,7 +60,6 @@ void DrawMarkerPlus(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t marke
 //______________________________________________________________________________
 void DrawMarkerStar(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
 {
-//* - marker.
    Double_t im = 4 * markerSize + 0.5;
    
    TPoint star[8];
@@ -236,6 +235,23 @@ void DrawMarkerOpenTriangleUp(CGContextRef ctx, unsigned n, const TPoint *xy, Si
 }
 
 //______________________________________________________________________________
+void DrawMarkerOpenTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+{
+   const Int_t im = Int_t(4 * markerSize + 0.5);   
+   for (unsigned i = 0; i < n; ++i) {
+      const Double_t x = xy[i].fX;
+      const Double_t y = xy[i].fY;
+
+      CGContextBeginPath(ctx);
+      CGContextMoveToPoint(ctx, x - im, y + im);
+      CGContextAddLineToPoint(ctx, x, y - im);
+      CGContextAddLineToPoint(ctx, im + x, y + im);
+      CGContextAddLineToPoint(ctx, x - im, y + im);
+      CGContextStrokePath(ctx);
+   }
+}
+
+//______________________________________________________________________________
 void DrawMarkerFullTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
 {
    const Int_t im = Int_t(4 * markerSize + 0.5);   
@@ -252,7 +268,7 @@ void DrawMarkerFullTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, 
 }
 
 //______________________________________________________________________________
-void DrawMarkerDiamond(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerFullDiamond(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
 {
    const Int_t im  = Int_t(4 * markerSize + 0.5);
    const Int_t imx = Int_t(2.66 * markerSize + 0.5);
@@ -291,7 +307,36 @@ void DrawMarkerOpenDiamond(CGContextRef ctx, unsigned n, const TPoint *xy, Size_
 }
 
 //______________________________________________________________________________
-void DrawMarkerCross(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerFullCross(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+{
+   const Int_t im  = Int_t(4 * markerSize + 0.5);
+   const Int_t imx = Int_t(1.33 * markerSize + 0.5);
+
+   for (unsigned i = 0; i < n; ++i) {
+      const Double_t x = xy[i].fX;
+      const Double_t y = xy[i].fY;
+   
+      CGContextBeginPath(ctx);
+      CGContextMoveToPoint(ctx, x - im, y - imx);
+      CGContextAddLineToPoint(ctx, x - imx, y - imx);
+      CGContextAddLineToPoint(ctx, x - imx, y - im);
+      CGContextAddLineToPoint(ctx, x + imx, y - im);
+      CGContextAddLineToPoint(ctx, x + imx, y - imx);
+      CGContextAddLineToPoint(ctx, x + im, y - imx);
+      CGContextAddLineToPoint(ctx, x + im, y + imx);
+      CGContextAddLineToPoint(ctx, x + imx, y + imx);
+      CGContextAddLineToPoint(ctx, x + imx, y + im);
+      CGContextAddLineToPoint(ctx, x - imx, y + im);
+      CGContextAddLineToPoint(ctx, x - imx, y + imx);
+      CGContextAddLineToPoint(ctx, x - im, y + imx);
+      CGContextAddLineToPoint(ctx, x - im, y - imx);
+      CGContextFillPath(ctx);
+   }
+}
+
+
+//______________________________________________________________________________
+void DrawMarkerOpenCross(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
 {
    const Int_t im  = Int_t(4 * markerSize + 0.5);
    const Int_t imx = Int_t(1.33 * markerSize + 0.5);
@@ -461,11 +506,20 @@ void DrawPolyMarker(CGContextRef ctx, unsigned nPoints, const TPoint *xy, Color_
    case kOpenTriangleUp:
       DrawMarkerOpenTriangleUp(ctx, nPoints, xy, markerSize);
       break;
+   case kOpenTriangleDown:
+      DrawMarkerOpenTriangleDown(ctx, nPoints, xy, markerSize);
+      break;
    case kOpenDiamond:
       DrawMarkerOpenDiamond(ctx, nPoints, xy, markerSize);
       break;
+   case kFullDiamond:
+      DrawMarkerFullDiamond(ctx, nPoints, xy, markerSize);
+      break;
    case kOpenCross:
-      DrawMarkerCross(ctx, nPoints, xy, markerSize);
+      DrawMarkerOpenCross(ctx, nPoints, xy, markerSize);
+      break;
+   case kFullCross:
+      DrawMarkerFullCross(ctx, nPoints, xy, markerSize);
       break;
    case kFullStar:
       DrawMarkerFullStar(ctx, nPoints, xy, markerSize);

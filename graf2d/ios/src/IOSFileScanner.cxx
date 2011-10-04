@@ -27,7 +27,7 @@ TObject *ReadObjectForKey(TFile *inputFile, const TKey *key, std::string &option
    //their processing later more uniform.
    if (TH1 *hist = dynamic_cast<TH1 *>(objPtr))
       hist->SetDirectory(0);
-      
+
    //The code below can throw, so I use auto_ptr.
    std::auto_ptr<TObject> obj(objPtr);
 
