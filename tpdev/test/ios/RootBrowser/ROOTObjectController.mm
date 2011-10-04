@@ -28,18 +28,17 @@ static const CGFloat maximumZoom = 2.f;
 
 @synthesize navigationScrollView;
 @synthesize scrollView;
-
-//____________________________________________________________________________________________________
-- (void) setDrawOption : (NSString *) option
-{
-   [drawOption release];
-   drawOption = [option retain];
-}
+@synthesize basicDrawOption;
+@synthesize errorsDrawOption;
+@synthesize markerDrawOption;
 
 //____________________________________________________________________________________________________
 - (NSString *)getDrawOption
 {
-   return drawOption;
+//   return drawOption;
+//   basicDrawOption = [NSString stringWithFormat:@"%@%@%@"]
+   NSLog(@"option %@", [NSString stringWithFormat:@"%@%@%@", basicDrawOption, errorsDrawOption, markerDrawOption]);
+   return [NSString stringWithFormat:@"%@%@%@", basicDrawOption, errorsDrawOption, markerDrawOption];
 }
 
 //____________________________________________________________________________________________________
@@ -270,7 +269,9 @@ static const CGFloat maximumZoom = 2.f;
    self.scrollView = nil;
    self.navigationScrollView = nil;
    [objectInspector release];
-   [drawOption release];
+   self.basicDrawOption = nil;
+   self.errorsDrawOption = nil;
+   self.markerDrawOption = nil;
  
    [super dealloc];
    
@@ -402,6 +403,11 @@ static const CGFloat maximumZoom = 2.f;
       pad->cd();
       pad->Clear();
       fileContainer->GetObject(currentObject)->Draw(fileContainer->GetDrawOption(currentObject));
+      
+      self.basicDrawOption = [NSString stringWithFormat : @"%s", fileContainer->GetDrawOption(currentObject)];
+      self.errorsDrawOption = @"";
+      self.markerDrawOption = @"";
+//      fileContainer->GetObject(currentObject)->Draw([[self getDrawOption] cStringUsingEncoding : NSASCIIStringEncoding]);
       [padView setNeedsDisplay];
 
       editorView.hidden = NO;      
@@ -414,6 +420,7 @@ static const CGFloat maximumZoom = 2.f;
       editorView.hidden = YES;
       
       [navScrolls[1] setObject : fileContainer->GetObject(currentObject) drawOption : fileContainer->GetDrawOption(currentObject)];
+//      [navScrolls[1] setObject : fileContainer->GetObject(currentObject) drawOption : [[self getDrawOption] cStringUsingEncoding : NSASCIIStringEncoding]];
       
       navigationScrollView.hidden = NO;
    }
@@ -479,8 +486,6 @@ static const CGFloat maximumZoom = 2.f;
       [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];
    } else
       navigationScrollView.contentSize = scrollFrame.size;
-      
-   drawOption = [[NSString stringWithFormat : @"%s", fileContainer->GetDrawOption(currentObject)] retain];
 }
 
 #pragma mark - delegate for editable pad's scroll-view.
@@ -613,7 +618,12 @@ static const CGFloat maximumZoom = 2.f;
 {
    if (needUpdate)
       pad->InvalidateSelection(kTRUE);//invalidate selection buffer only. the selected object is the same.
-   
+      
+   //
+//   fileContainer->GetObject(currentObject)->Draw([[self getDrawOption] cStringUsingEncoding : NSASCIIStringEncoding]);
+   pad->SetPaintOption(fileContainer->GetObject(currentObject), [[self getDrawOption] cStringUsingEncoding : NSASCIIStringEncoding]);
+   //
+
    [padView setNeedsDisplay];
 }
 
@@ -704,7 +714,8 @@ static const CGFloat maximumZoom = 2.f;
    
    if (mode == ROOT_IOSObjectController::ocmNavigation) {
       padToSave->Clear();
-      fileContainer->GetObject(currentObject)->Draw(fileContainer->GetDrawOption(currentObject));
+//      fileContainer->GetObject(currentObject)->Draw(fileContainer->GetDrawOption(currentObject));
+      fileContainer->GetObject(currentObject)->Draw([[self getDrawOption] cStringUsingEncoding : NSASCIIStringEncoding]);
    }
    
    padToSave->cd();

@@ -5,10 +5,16 @@
 #include <memory>
 #include <string>
 
+//
+//TODO: These classes should be removed from graf2d/ios as an application-specific
+//code which can be placed where it's used - in a RootBrowser application for iPad.
+//
+
 class TObject;
 class TFile;
 
 namespace ROOT_iOS {
+
 
 class FileContainer {
 public:

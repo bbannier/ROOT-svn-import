@@ -2209,4 +2209,19 @@ void Pad::PaintThumbnail()
    fPainter.SetPainterMode(Painter::kPaintToView);
 }
 
+//______________________________________________________________________________
+void Pad::SetPaintOption(const TObject *obj, const char *option)
+{
+   TObjOptLink *lnk = (TObjOptLink*)GetListOfPrimitives()->FirstLink();
+
+   while (lnk) {
+      TObject *nestedObj = lnk->GetObject();
+      if (obj == nestedObj) {
+         lnk->SetOption(option);
+         break;
+      }
+      lnk = (TObjOptLink*)lnk->Next();
+   }
+}
+
 }

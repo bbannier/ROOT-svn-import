@@ -5,7 +5,7 @@
 #include "IOSFileScanner.h"
 #include "TSystem.h"
 #include "TFile.h"
-
+#include "TH1.h"
 
 namespace ROOT_iOS {
 namespace {
@@ -48,7 +48,7 @@ FileContainer::FileContainer(const std::string &fileName)
 
    std::set<std::string> visibleTypes;
    FillVisibleTypes(visibleTypes);
-      
+
    FileUtils::ScanFileForVisibleObjects(fFileHandler.get(), visibleTypes, fFileContents, fOptions);
 }
 

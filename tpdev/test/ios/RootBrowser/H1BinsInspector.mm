@@ -2,16 +2,16 @@
 #import "H1BinsInspector.h"
 #import "RangeSlider.h"
 
+#import "IOSFileScanner.h"
 #import "TAxis.h"
 #import "TH1.h"
 
 @implementation H1BinsInspector
 
 @synthesize titleField;
-@synthesize binSlider;
-@synthesize binLabel;
 @synthesize minLabel;
 @synthesize maxLabel;
+@synthesize showMarkers;
 
 //____________________________________________________________________________________________________
 - (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
@@ -31,10 +31,9 @@
 - (void) dealloc
 {
    self.titleField = nil;
-   self.binSlider = nil;
-   self.binLabel = nil;
    self.minLabel = nil;
    self.maxLabel = nil;
+   self.showMarkers = nil;
 }
 
 //____________________________________________________________________________________________________
@@ -97,7 +96,7 @@
 //____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
-   object = static_cast<TH1*>(o);
+   object = static_cast<TH1 *>(o);
    //
    const char *histTitle = object->GetTitle();
    if (!histTitle || !*histTitle)
@@ -107,14 +106,6 @@
 
    const TAxis *xAxis = object->GetXaxis();
    const unsigned nBins = xAxis->GetNbins();
-
-   binSlider.minimumValue = 1;
-   binSlider.maximumValue = nBins;
-   binSlider.value = nBins;
-   const CGPoint newLabelCenter = CGPointMake(binSlider.frame.origin.x + binSlider.frame.size.width, binLabel.center.y);
-   binLabel.center = newLabelCenter;
-   binLabel.text = [NSString stringWithFormat:@"%u", nBins];
-   maxBins = nBins;
 
    const double xMin = xAxis->GetBinLowEdge(1);
    minLabel.text = [NSString stringWithFormat : @"%.3g", xMin];
@@ -127,13 +118,6 @@
 }
 
 #pragma mark - GUI actions.
-//____________________________________________________________________________________________________
-- (IBAction) updateNumberOfBins
-{
-   const unsigned nBins = binSlider.value;
-   binLabel.center = CGPointMake(binSlider.frame.origin.x + binSlider.frame.size.width * (nBins/(double)maxBins), binLabel.center.y);
-   binLabel.text = [NSString stringWithFormat:@"%u", nBins];
-}
 
 //____________________________________________________________________________________________________
 - (IBAction) textFieldDidEndOnExit : (id) sender
@@ -146,6 +130,13 @@
 - (IBAction) textFieldEditingDidEnd : (id) sender
 {
    [sender resignFirstResponder];
+}
+
+//____________________________________________________________________________________________________
+- (IBAction) toggleMarkers
+{
+   showMarkers.on ? controller.markerDrawOption = @"P" : controller.markerDrawOption = @"";
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 

@@ -55,11 +55,20 @@ class TObject;
    
    UIBarButtonItem *editBtn;
    
-   NSString *drawOption;
+   //Option like lego, surf, etc.
+   NSString *basicDrawOption;
+   //E-E5 options.
+   NSString *errorsDrawOption;
+   //P option.
+   NSString *markerDrawOption;
+   //May be option like CYL, POL, SPH, etc.
 }
 
 @property (nonatomic, retain) ScrollViewWithPadView *scrollView;
 @property (nonatomic, retain) UIScrollView *navigationScrollView;
+@property (nonatomic, retain) NSString *basicDrawOption;
+@property (nonatomic, retain) NSString *errorsDrawOption;
+@property (nonatomic, retain) NSString *markerDrawOption;
 
 
 - (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
@@ -69,7 +78,6 @@ class TObject;
 - (void) setupObjectInspector;
 
 //Draw option for the controlled object.
-- (void) setDrawOption : (NSString *)option;
 - (NSString *) getDrawOption;
 
 @end

@@ -265,6 +265,8 @@ public:
    //New special function.
    void PaintThumbnail();
    
+   void SetPaintOption(const TObject *obj, const char *option);
+   
 private:
    //Painter based on CoreGraphics.
    mutable Painter fPainter;

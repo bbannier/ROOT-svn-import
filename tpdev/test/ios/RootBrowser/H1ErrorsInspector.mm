@@ -114,40 +114,27 @@ NSString *errorTypes[] = {@"No error", @"Simple", @"Edges", @"Rectangles", @"Fil
 //____________________________________________________________________________________________________
 - (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
- /*  NSString *drawOption = [controller getDrawOption];
-   
-   
-   
-   NSString *newDrawOption = nil;
-   
    switch (row) {
    case 0:
-      newDrawOption = @"";
+      controller.errorsDrawOption = @"";
       break;
    case 1:
-      newDrawOption = @"E";
+      controller.errorsDrawOption = @"E";
       break;
    case 2:
-      newDrawOption = @"E1";
+      controller.errorsDrawOption = @"E1";
       break;
    case 3:
-      newDrawOption = @"E2";
+      controller.errorsDrawOption = @"E2";
       break;
    case 4:
+      controller.errorsDrawOption = @"E3";
       break;
    case 5:
+      controller.errorsDrawOption = @"E4";
       break;
    }
-   */
-/*   using namespace ROOT_IOSObjectInspector;
-
-   const Font_t fontIndex = (row + 1) * 10;
-   if (mode == afimTitleFont)
-      object->SetTitleFont(fontIndex);
-   else if (mode == afimLabelFont)
-      object->SetLabelFont(fontIndex);
-
-   [controller objectWasModifiedUpdateSelection : NO];*/
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 #pragma mark ObjectInspectorComponent protocol.
