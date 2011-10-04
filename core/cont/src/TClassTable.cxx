@@ -99,7 +99,6 @@ static void visit_decl(const clang::Decl* D, int level);
 static void visit_decl_context(const clang::DeclContext* DC, int level);
 static void init_class_map();
 static void shutdown_class_map();
-static std::string get_fully_qualified_name(const clang::NamedDecl* D);
 
 clang::CompilerInstance* tcling_Dict::GetCI(clang::CompilerInstance* ci /*= 0*/)
 {
@@ -170,7 +169,8 @@ std::vector<const clang::Decl*>* tcling_Dict::Typedefs()
    return typedefs;
 }
 
-static std::string get_fully_qualified_name(const clang::NamedDecl* D) {
+std::string tcling_Dict::get_fully_qualified_name(const clang::NamedDecl* D)
+{
    clang::PrintingPolicy P(getCI()->getASTContext().PrintingPolicy);
   const clang::DeclContext* Ctx = D->getDeclContext();
   typedef llvm::SmallVector<const clang::DeclContext*, 8> ContextsTy;
@@ -315,8 +315,14 @@ static void visit_namespace_decl(const clang::NamespaceDecl* D, int level)
 {
    //printf("namespace %s {\n", D->getNameAsString().c_str());
    //printf("namespace %s\n", D->getNameAsString().c_str());
-   //printf("namespace %s\n", get_fully_qualified_name(D).c_str());
-   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
+   //printf("namespace %s\n", tcling_Dict::get_fully_qualified_name(D).c_str());
+   std::string fullname(tcling_Dict::get_fully_qualified_name(D));
+   std::string shortname(fullname);
+   if (fullname.substr(0, 5) == "std::") {
+      shortname.erase(0, 5);
+   }
+   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(fullname, D));
+   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
    tcling_Dict::Classes()->push_back(D);
    tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
    visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
@@ -338,8 +344,14 @@ static void visit_enum_decl(const clang::EnumDecl* D, int level)
 #endif // 0
    //printf("%s", D->getNameAsString().c_str());
    //printf("enum %s\n", D->getNameAsString().c_str());
-   //printf("enum %s\n", get_fully_qualified_name(D).c_str());
-   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
+   //printf("enum %s\n", tcling_Dict::get_fully_qualified_name(D).c_str());
+   std::string fullname(tcling_Dict::get_fully_qualified_name(D));
+   std::string shortname(fullname);
+   if (fullname.substr(0, 5) == "std::") {
+      shortname.erase(0, 5);
+   }
+   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(fullname, D));
+   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
    tcling_Dict::Classes()->push_back(D);
    tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
 #if 0 // c++2011
@@ -358,12 +370,18 @@ static void visit_record_decl(const clang::RecordDecl* D, int level)
 {
    //printf("%s", D->getKindName());
    if (D->getIdentifier()) {
-     //printf(" %s", D->getNameAsString().c_str());
-     tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
-     tcling_Dict::Classes()->push_back(D);
-     tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
+      //printf(" %s", D->getNameAsString().c_str());
+      std::string fullname(tcling_Dict::get_fully_qualified_name(D));
+      std::string shortname(fullname);
+      if (fullname.substr(0, 5) == "std::") {
+         shortname.erase(0, 5);
+      }
+      tcling_Dict::ClassNameToDecl()->insert(std::make_pair(fullname, D));
+      tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
+      tcling_Dict::Classes()->push_back(D);
+      tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
    }
-   //printf(" %s", get_fully_qualified_name(D).c_str());
+   //printf(" %s", tcling_Dict::get_fully_qualified_name(D).c_str());
    //printf("\n");
    if (D->isDefinition()) {
       visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
@@ -376,23 +394,29 @@ static void visit_cxxrecord_decl(const clang::CXXRecordDecl* D, int level)
    if (D->getIdentifier()) {
      //printf(" %s", D->getNameAsString().c_str());
      if (D->isDefinition()) {
-       std::string name = get_fully_qualified_name(D);
+       std::string name = tcling_Dict::get_fully_qualified_name(D);
        //if (name == "TObject") {
-         //fprintf(stderr, "inserting class: %s  Decl: 0x%016lx\n", get_fully_qualified_name(D).c_str(), (long) D);
+         //fprintf(stderr, "inserting class: %s  Decl: 0x%016lx\n", tcling_Dict::get_fully_qualified_name(D).c_str(), (long) D);
          //std::multimap<const std::string, const clang::Decl*>::iterator iter = 
-         //tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
+         //tcling_Dict::ClassNameToDecl()->insert(std::make_pair(tcling_Dict::get_fully_qualified_name(D), D));
          //fprintf(stderr, "inserted  class: %s  Decl: 0x%016lx\n", iter->first.c_str(), (long) iter->second);
          //tcling_Dict::Classes()->push_back(D);
          //tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
        //}
        //else {
-         tcling_Dict::ClassNameToDecl()->insert(std::make_pair(get_fully_qualified_name(D), D));
+         std::string fullname(tcling_Dict::get_fully_qualified_name(D));
+         std::string shortname(fullname);
+         if (fullname.substr(0, 5) == "std::") {
+            shortname.erase(0, 5);
+         }
+         tcling_Dict::ClassNameToDecl()->insert(std::make_pair(fullname, D));
+         tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
          tcling_Dict::Classes()->push_back(D);
          tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
        //}
      }
    }
-   //printf(" %s", get_fully_qualified_name(D).c_str());
+   //printf(" %s", tcling_Dict::get_fully_qualified_name(D).c_str());
    //printf("\n");
    if (D->isDefinition()) {
       if (D->getNumBases()) {
@@ -430,7 +454,7 @@ static void visit_typedef_decl(const clang::TypedefDecl* D, int level)
 {
    //printf("typedef %s ", D->getUnderlyingType().getAsString().c_str());
    //printf("%s", D->getNameAsString().c_str());
-   //printf("%s", get_fully_qualified_name(D).c_str());
+   //printf("%s", tcling_Dict::get_fully_qualified_name(D).c_str());
    //printf("\n");
    tcling_Dict::Typedefs()->push_back(D);
 }
