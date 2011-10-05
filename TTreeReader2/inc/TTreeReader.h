@@ -25,8 +25,14 @@
 #ifndef ROOT_TBranchProxyDirector
 #include "TBranchProxyDirector.h"
 #endif
+#ifndef ROOT_TBranchProxy
+#include "TBranchProxy.h"
+#endif
 #ifndef ROOT_TObjArray
 #include "TObjArray.h"
+#endif
+#ifndef ROOT_THashTable
+#include "THashTable.h"
 #endif
 #ifndef ROOT_TTree
 #include "TTree.h"
@@ -39,8 +45,25 @@ class TTree;
 
 namespace ROOT {
    class TBranchProxy;
-   class TTreeProxyGenerator;
    class TTreeReaderValuePtrBase;
+
+   class TNamedBranchProxy: public TObject {
+   public:
+      TNamedBranchProxy(): fDict(0) {}
+      TNamedBranchProxy(TBranchProxyDirector* boss, TBranch* branch, const char* membername):
+         fProxy(boss, branch, membername), fDict(0) {}
+
+      const char* GetName() const { return fProxy.GetBranchName(); }
+      const ROOT::TBranchProxy* GetProxy() const { return &fProxy; }
+      ROOT::TBranchProxy* GetProxy() { return &fProxy; }
+      TDictionary* GetDict() const { return fDict; }
+      void SetDict(TDictionary* dict) { fDict = dict; }
+
+   private:
+      ROOT::TBranchProxy fProxy;
+      TDictionary*       fDict;
+      ClassDef(TNamedBranchProxy, 0); // branch proxy with a name
+   };
 }
 
 class TTreeReader: public TObject {
@@ -57,8 +80,7 @@ public:
 
    TTreeReader():
       fDirectory(0),
-      fEntryStatus(kEntryNoTree),
-      fProxyGenerator(0)
+      fEntryStatus(kEntryNoTree)
    {}
 
    TTreeReader(TTree* tree);
@@ -83,9 +105,13 @@ public:
    Long64_t GetCurrentEntry() const { return fDirector ? fDirector->GetReadEntry() : 0; }
 
 protected:
-   void InitializeProxyGenerator();
+   void Initialize();
    ROOT::TBranchProxy* CreateProxy(const char* branchname,
                                    TDictionary* dict);
+   ROOT::TBranchProxy* CreateProxy(TBranch* branch);
+   const char* GetBranchDataType(TBranch* branch,
+                                 TDictionary* &dict) const;
+   TVirtualCollectionProxy* GetBranchCollProxy(const char* branchname);
    void RegisterValueReader(ROOT::TTreeReaderValuePtrBase* reader);
    void DeregisterValueReader(ROOT::TTreeReaderValuePtrBase* reader);
 
@@ -98,9 +124,9 @@ private:
    TTree* fTree; // tree that's read
    TDirectory* fDirectory; // directory (or current file for chains)
    EEntryStatus fEntryStatus; // status of most recent read request
-   ROOT::TTreeProxyGenerator* fProxyGenerator; // generator for proxy objects
-   ROOT::TBranchProxyDirector* fDirector; // proxying director
+   ROOT::TBranchProxyDirector* fDirector; // proxying director, owned
    TObjArray    fValues; // TTreeReaderValuePtrBase objects that use our director
+   THashTable   fProxies; //attached ROOT::TNamedBranchProxies; owned
 
    friend class ROOT::TTreeReaderValuePtrBase;
 

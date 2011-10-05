@@ -52,7 +52,6 @@ ROOT::TTreeReaderValuePtrBase::TTreeReaderValuePtrBase(TTreeReader* reader /*= 0
 ROOT::TTreeReaderValuePtrBase::~TTreeReaderValuePtrBase()
 {
    // Unregister from tree reader, cleanup.
-   delete fProxy;
    if (fTreeReader) fTreeReader->DeregisterValueReader(this);
 }
 
@@ -81,5 +80,17 @@ void ROOT::TTreeReaderValuePtrBase::CreateProxy() {
             fBranchName.Data());
       return;
    }
+   if (!fDict) {
+      TBranch* br = fTreeReader->GetTree()->GetBranch(fBranchName);
+      const char* brDataType = "{UNDETERMINED}";
+      if (br) {
+         TDictionary* dict = 0;
+         brDataType = fTreeReader->GetBranchDataType(br, dict);
+      }
+      Error("CreateProxy()", "The template argument type T of %s accessing branch %s (which contains data of type %s) is not known to ROOT. You will need to create a dictionary for it.",
+            IsA()->GetName(), fBranchName.Data(), brDataType);
+      return;
+   }
+
    fProxy = fTreeReader->CreateProxy(fBranchName, fDict);
 }

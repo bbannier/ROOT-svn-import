@@ -9,13 +9,13 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_TTreeReaderValuePtr
-#define ROOT_TTreeReaderValuePtr
+#ifndef ROOT_TTreeReaderValue
+#define ROOT_TTreeReaderValue
 
 
 ////////////////////////////////////////////////////////////////////////////
 //                                                                        //
-// TTreeReaderValuePtr                                                    //
+// TTreeReaderValue                                                    //
 //                                                                        //
 // A simple interface for reading data from trees or chains.              //
 //                                                                        //
@@ -39,7 +39,7 @@ class TTreeReader;
 
 namespace ROOT {
 
-   class TTreeReaderValuePtrBase: public TObject {
+   class TTreeReaderValueBase: public TObject {
    public:
 
       // Status flags, 0 is good
@@ -75,13 +75,14 @@ namespace ROOT {
       EReadStatus GetReadStatus() const { return fReadStatus; }
 
    protected:
-      TTreeReaderValuePtrBase(TTreeReader* reader = 0, const char* branchname = 0, TDictionary* dict = 0);
+      TTreeReaderValueBase(TTreeReader* reader = 0, const char* branchname = 0, TDictionary* dict = 0);
 
-      virtual ~TTreeReaderValuePtrBase();
+      virtual ~TTreeReaderValueBase();
 
       void CreateProxy();
 
       void* GetAddress() {
+         if (ProxyRead() != kReadSuccess) return 0;
          return fProxy ? fProxy->GetWhere() : 0;
       }
 
@@ -91,11 +92,11 @@ namespace ROOT {
       TTreeReader* fTreeReader; // tree reader we belong to
       TString      fBranchName; // name of the branch to read data from.
       TDictionary* fDict; // type that the branch should contain
-      ROOT::TBranchProxy* fProxy; // proxy for this branch
+      ROOT::TBranchProxy* fProxy; // proxy for this branch, owned by TTreeReader
       ESetupStatus fSetupStatus; // setup status of this data access
       EReadStatus  fReadStatus; // read status of this data access
 
-      ClassDef(TTreeReaderValuePtrBase, 0);//Base class for accessors to data via TTreeReader
+      ClassDef(TTreeReaderValueBase, 0);//Base class for accessors to data via TTreeReader
 
       friend class ::TTreeReader;
    };
@@ -104,17 +105,17 @@ namespace ROOT {
 
 
 template <typename T>
-class TTreeReaderValuePtr: public ROOT::TTreeReaderValuePtrBase {
+class TTreeReaderValue: public ROOT::TTreeReaderValueBase {
 public:
-   TTreeReaderValuePtr() {}
-   TTreeReaderValuePtr(TTreeReader& tr, const char* branchname):
-      TTreeReaderValuePtrBase(&tr, branchname, TDictionary::GetDictionary(typeid(T))) {}
+   TTreeReaderValue() {}
+   TTreeReaderValue(TTreeReader& tr, const char* branchname):
+      TTreeReaderValueBase(&tr, branchname, TDictionary::GetDictionary(typeid(T))) {}
 
-   T* Get() { return *(T**)GetAddress(); }
+   T* Get() { return (T*)GetAddress(); }
    T* operator->() { return Get(); }
    T& operator*() { return *Get(); }
 
-   ClassDefT(TTreeReaderValuePtr, 0);//Accessor to data via TTreeReader
+   ClassDefT(TTreeReaderValue, 0);//Accessor to data via TTreeReader
 };
 
-#endif // ROOT_TTreeReaderValuePtr
+#endif // ROOT_TTreeReaderValue

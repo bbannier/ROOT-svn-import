@@ -98,6 +98,7 @@
 #endif
 
 #pragma link C++ class ROOT::TTreeReaderValuePtrBase+;
+#pragma link C++ class ROOT::TNamedBranchProxy+;
 
 #endif
 

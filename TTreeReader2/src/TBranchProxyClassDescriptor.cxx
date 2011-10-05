@@ -200,7 +200,7 @@ namespace ROOT {
             fListOfBaseProxies.Add(desc);
          } else {
             fListOfSubProxies.Add(desc);
-            UInt_t len = strlen(desc->GetProxyTypeName());
+            UInt_t len = strlen(desc->GetTypeName());
             if ((len+2)>fMaxDatamemberType) fMaxDatamemberType = len+2;
          }
       }
@@ -265,10 +265,10 @@ namespace ROOT {
          TIter next(&fListOfBaseProxies);
 
          desc = (TBranchProxyDescriptor*)next();
-         fprintf(hf,"public %s", desc->GetProxyTypeName());
+         fprintf(hf,"public %s", desc->GetTypeName());
 
          while ( (desc = (TBranchProxyDescriptor*)next()) ) {
-            fprintf(hf,",\n%-*spublic %s", offset+5," ", desc->GetProxyTypeName());
+            fprintf(hf,",\n%-*spublic %s", offset+5," ", desc->GetTypeName());
          }
 
          fprintf(hf,"\n");
@@ -287,11 +287,11 @@ namespace ROOT {
          TIter next(&fListOfBaseProxies);
 
          desc = (TBranchProxyDescriptor*)next();
-         fprintf(hf,"\n%-*s%-*s(director, top, mid)",  offset+6, " ", fMaxDatamemberType,desc->GetProxyTypeName());
+         fprintf(hf,"\n%-*s%-*s(director, top, mid)",  offset+6, " ", fMaxDatamemberType,desc->GetTypeName());
          wroteFirst = true;
 
          while ( (desc = (TBranchProxyDescriptor*)next()) ) {
-            fprintf(hf,",\n%-*s%-*s(director, top, mid)",  offset+6, " ", fMaxDatamemberType,desc->GetProxyTypeName());
+            fprintf(hf,",\n%-*s%-*s(director, top, mid)",  offset+6, " ", fMaxDatamemberType,desc->GetTypeName());
          }
 
       }
@@ -345,11 +345,11 @@ namespace ROOT {
 
          // This is guarantee to return a non zero value due to the if (fListOfBaseProxies.GetSize())
          desc = (TBranchProxyDescriptor*)nextbase();
-         fprintf(hf,"\n%-*s%-*s(director, parent, membername)",  offset+6, " ", fMaxDatamemberType,desc->GetProxyTypeName());
+         fprintf(hf,"\n%-*s%-*s(director, parent, membername)",  offset+6, " ", fMaxDatamemberType,desc->GetTypeName());
          wroteFirst = true;
 
          while ( (desc = (TBranchProxyDescriptor*)nextbase()) ) {
-            fprintf(hf,",\n%-*s%-*s(director, parent, membername)",  offset+6, " ", fMaxDatamemberType,desc->GetProxyTypeName());
+            fprintf(hf,",\n%-*s%-*s(director, parent, membername)",  offset+6, " ", fMaxDatamemberType,desc->GetTypeName());
          }
 
       }
