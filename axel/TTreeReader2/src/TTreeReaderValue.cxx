@@ -9,15 +9,15 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#include "TTreeReaderValuePtr.h"
+#include "TTreeReaderValue.h"
 #include "TTreeReader.h"
 #include "TBranchProxyDirector.h"
 #include "TTreeProxyGenerator.h"
-#include "TTreeReaderValuePtr.h"
+#include "TTreeReaderValue.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-// TTreeReaderValuePtr                                                        //
+// TTreeReaderValue                                                        //
 //                                                                            //
 // Extracts data from a TTree.                                                //
 //                                                                            //
@@ -31,10 +31,10 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-ClassImp(TTreeReaderValuePtrBase)
+ClassImp(TTreeReaderValueBase)
 
 //______________________________________________________________________________
-ROOT::TTreeReaderValuePtrBase::TTreeReaderValuePtrBase(TTreeReader* reader /*= 0*/,
+ROOT::TTreeReaderValueBase::TTreeReaderValueBase(TTreeReader* reader /*= 0*/,
                                                        const char* branchname /*= 0*/,
                                                        TDictionary* dict /*= 0*/):
    fTreeReader(reader),
@@ -49,15 +49,15 @@ ROOT::TTreeReaderValuePtrBase::TTreeReaderValuePtrBase(TTreeReader* reader /*= 0
 }
 
 //______________________________________________________________________________
-ROOT::TTreeReaderValuePtrBase::~TTreeReaderValuePtrBase()
+ROOT::TTreeReaderValueBase::~TTreeReaderValueBase()
 {
    // Unregister from tree reader, cleanup.
    if (fTreeReader) fTreeReader->DeregisterValueReader(this);
 }
 
 //______________________________________________________________________________
-ROOT::TTreeReaderValuePtrBase::EReadStatus
-ROOT::TTreeReaderValuePtrBase::ProxyRead() {
+ROOT::TTreeReaderValueBase::EReadStatus
+ROOT::TTreeReaderValueBase::ProxyRead() {
    if (!fProxy) return kReadNothingYet;
    if (fProxy->Read()) {
       fReadStatus = kReadSuccess;
@@ -68,7 +68,7 @@ ROOT::TTreeReaderValuePtrBase::ProxyRead() {
 }
 
 //______________________________________________________________________________
-void ROOT::TTreeReaderValuePtrBase::CreateProxy() {
+void ROOT::TTreeReaderValueBase::CreateProxy() {
    // Create the proxy object for our branch.
    if (fProxy) {
       Error("CreateProxy()", "Proxy object for branch %s already exists!",
