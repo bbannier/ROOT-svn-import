@@ -35,9 +35,6 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (NSString *)getDrawOption
 {
-//   return drawOption;
-//   basicDrawOption = [NSString stringWithFormat:@"%@%@%@"]
-   NSLog(@"option %@", [NSString stringWithFormat:@"%@%@%@", basicDrawOption, errorsDrawOption, markerDrawOption]);
    return [NSString stringWithFormat:@"%@%@%@", basicDrawOption, errorsDrawOption, markerDrawOption];
 }
 

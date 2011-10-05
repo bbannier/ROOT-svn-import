@@ -921,16 +921,15 @@ void Pad::PaintPadFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ym
    frame->SetX2(xmax);
    frame->SetY1(ymin);
    frame->SetY2(ymax);
+
+   if (gROOT->GetForceStyle())
+      frame->UseCurrentStyle();
    
    if (!glist->FindObject(fFrame)) {
       glist->AddFirst(frame);
       fFrame->SetBit(kMustCleanup);
+      frame->Paint();
    }
-   
-   if (gROOT->GetForceStyle())
-      frame->UseCurrentStyle();
-
-   frame->Paint();
 }
 
 //______________________________________________________________________________

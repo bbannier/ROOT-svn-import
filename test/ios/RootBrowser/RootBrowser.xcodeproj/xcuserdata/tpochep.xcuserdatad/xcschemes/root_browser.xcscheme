@@ -14,9 +14,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "7077901813FE50EB00C0FFA1"
-               BuildableName = "root_browser.app"
-               BlueprintName = "root_browser"
-               ReferencedContainer = "container:root_browser.xcodeproj">
+               BuildableName = "RootBrowser.app"
+               BlueprintName = "RootBrowser"
+               ReferencedContainer = "container:RootBrowser.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -41,9 +41,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7077901813FE50EB00C0FFA1"
-            BuildableName = "root_browser.app"
-            BlueprintName = "root_browser"
-            ReferencedContainer = "container:root_browser.xcodeproj">
+            BuildableName = "RootBrowser.app"
+            BlueprintName = "RootBrowser"
+            ReferencedContainer = "container:RootBrowser.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <EnvironmentVariables>
@@ -67,9 +67,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7077901813FE50EB00C0FFA1"
-            BuildableName = "root_browser.app"
-            BlueprintName = "root_browser"
-            ReferencedContainer = "container:root_browser.xcodeproj">
+            BuildableName = "RootBrowser.app"
+            BlueprintName = "RootBrowser"
+            ReferencedContainer = "container:RootBrowser.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

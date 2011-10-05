@@ -225,13 +225,13 @@
 		7073A9AC14277D19006F6D67 /* Default-LandscapeLeft.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-LandscapeLeft.png"; sourceTree = "<group>"; };
 		7073A9AD14277D1A006F6D67 /* Default-LandscapeRight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-LandscapeRight.png"; sourceTree = "<group>"; };
 		7077853114139EBF00450A1B /* editor_plate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = editor_plate.png; sourceTree = "<group>"; };
-		7077901913FE50EB00C0FFA1 /* root_browser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = root_browser.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7077901913FE50EB00C0FFA1 /* RootBrowser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RootBrowser.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7077901D13FE50EB00C0FFA1 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		7077901F13FE50EB00C0FFA1 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		7077902113FE50EB00C0FFA1 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		7077902513FE50EB00C0FFA1 /* root_browser-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "root_browser-Info.plist"; sourceTree = "<group>"; };
 		7077902713FE50EB00C0FFA1 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		7077902913FE50EB00C0FFA1 /* root_browser-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "root_browser-Prefix.pch"; sourceTree = "<group>"; };
+		7077902913FE50EB00C0FFA1 /* RootBrowser-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "RootBrowser-Prefix.pch"; sourceTree = "<group>"; };
 		7077902A13FE50EB00C0FFA1 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		7077902C13FE50EB00C0FFA1 /* root_browserAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = root_browserAppDelegate.h; sourceTree = "<group>"; };
 		7077902D13FE50EB00C0FFA1 /* root_browserAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = root_browserAppDelegate.m; sourceTree = "<group>"; };
@@ -351,7 +351,7 @@
 		7077901A13FE50EB00C0FFA1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				7077901913FE50EB00C0FFA1 /* root_browser.app */,
+				7077901913FE50EB00C0FFA1 /* RootBrowser.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -384,7 +384,7 @@
 			children = (
 				7077902513FE50EB00C0FFA1 /* root_browser-Info.plist */,
 				7077902613FE50EB00C0FFA1 /* InfoPlist.strings */,
-				7077902913FE50EB00C0FFA1 /* root_browser-Prefix.pch */,
+				7077902913FE50EB00C0FFA1 /* RootBrowser-Prefix.pch */,
 				7077902A13FE50EB00C0FFA1 /* main.m */,
 			);
 			name = "Supporting Files";
@@ -638,9 +638,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		7077901813FE50EB00C0FFA1 /* root_browser */ = {
+		7077901813FE50EB00C0FFA1 /* RootBrowser */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7077903413FE50EB00C0FFA1 /* Build configuration list for PBXNativeTarget "root_browser" */;
+			buildConfigurationList = 7077903413FE50EB00C0FFA1 /* Build configuration list for PBXNativeTarget "RootBrowser" */;
 			buildPhases = (
 				7077901513FE50EB00C0FFA1 /* Sources */,
 				7077901613FE50EB00C0FFA1 /* Frameworks */,
@@ -650,9 +650,9 @@
 			);
 			dependencies = (
 			);
-			name = root_browser;
+			name = RootBrowser;
 			productName = root_browser;
-			productReference = 7077901913FE50EB00C0FFA1 /* root_browser.app */;
+			productReference = 7077901913FE50EB00C0FFA1 /* RootBrowser.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -660,7 +660,7 @@
 /* Begin PBXProject section */
 		7077901013FE50EB00C0FFA1 /* Project object */ = {
 			isa = PBXProject;
-			buildConfigurationList = 7077901313FE50EB00C0FFA1 /* Build configuration list for PBXProject "root_browser" */;
+			buildConfigurationList = 7077901313FE50EB00C0FFA1 /* Build configuration list for PBXProject "RootBrowser" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -672,7 +672,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				7077901813FE50EB00C0FFA1 /* root_browser */,
+				7077901813FE50EB00C0FFA1 /* RootBrowser */,
 			);
 		};
 /* End PBXProject section */
@@ -860,7 +860,7 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
-				GCC_PREFIX_HEADER = "root_browser/root_browser-Prefix.pch";
+				GCC_PREFIX_HEADER = "root_browser/RootBrowser-Prefix.pch";
 				HEADER_SEARCH_PATHS = /Users/tpochep/tpdev/root/include;
 				INFOPLIST_FILE = "root_browser/root_browser-Info.plist";
 				LIBRARY_SEARCH_PATHS = /Users/tpochep/tpdev/root/lib;
@@ -871,7 +871,7 @@
 					/Users/tpochep/tpdev/root/net/net/src/G__Net.o,
 					/Users/tpochep/tpdev/root/io/io/src/G__IO.o,
 				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = RootBrowser;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -882,7 +882,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				COPY_PHASE_STRIP = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
-				GCC_PREFIX_HEADER = "root_browser/root_browser-Prefix.pch";
+				GCC_PREFIX_HEADER = "root_browser/RootBrowser-Prefix.pch";
 				HEADER_SEARCH_PATHS = /Users/tpochep/tpdev/root/include;
 				INFOPLIST_FILE = "root_browser/root_browser-Info.plist";
 				LIBRARY_SEARCH_PATHS = /Users/tpochep/tpdev/root/lib;
@@ -893,7 +893,7 @@
 					/Users/tpochep/tpdev/root/net/net/src/G__Net.o,
 					/Users/tpochep/tpdev/root/io/io/src/G__IO.o,
 				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = RootBrowser;
 				VALIDATE_PRODUCT = YES;
 				WRAPPER_EXTENSION = app;
 			};
@@ -902,7 +902,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7077901313FE50EB00C0FFA1 /* Build configuration list for PBXProject "root_browser" */ = {
+		7077901313FE50EB00C0FFA1 /* Build configuration list for PBXProject "RootBrowser" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7077903213FE50EB00C0FFA1 /* Debug */,
@@ -911,7 +911,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7077903413FE50EB00C0FFA1 /* Build configuration list for PBXNativeTarget "root_browser" */ = {
+		7077903413FE50EB00C0FFA1 /* Build configuration list for PBXNativeTarget "RootBrowser" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7077903513FE50EB00C0FFA1 /* Debug */,
