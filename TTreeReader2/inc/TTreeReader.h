@@ -45,7 +45,7 @@ class TTree;
 
 namespace ROOT {
    class TBranchProxy;
-   class TTreeReaderValuePtrBase;
+   class TTreeReaderValueBase;
 
    class TNamedBranchProxy: public TObject {
    public:
@@ -111,9 +111,15 @@ protected:
    ROOT::TBranchProxy* CreateProxy(TBranch* branch);
    const char* GetBranchDataType(TBranch* branch,
                                  TDictionary* &dict) const;
-   TVirtualCollectionProxy* GetBranchCollProxy(const char* branchname);
-   void RegisterValueReader(ROOT::TTreeReaderValuePtrBase* reader);
-   void DeregisterValueReader(ROOT::TTreeReaderValuePtrBase* reader);
+
+   ROOT::TBranchProxy* CreateContentProxy(const char* branchname,
+                                          TDictionary* dict);
+   ROOT::TBranchProxy* CreateContentProxy(TBranch* branch);
+   const char* GetBranchContentDataType(TBranch* branch,
+                                        TDictionary* &dict) const;
+
+   void RegisterValueReader(ROOT::TTreeReaderValueBase* reader);
+   void DeregisterValueReader(ROOT::TTreeReaderValueBase* reader);
 
 private:
 
@@ -125,10 +131,10 @@ private:
    TDirectory* fDirectory; // directory (or current file for chains)
    EEntryStatus fEntryStatus; // status of most recent read request
    ROOT::TBranchProxyDirector* fDirector; // proxying director, owned
-   TObjArray    fValues; // TTreeReaderValuePtrBase objects that use our director
+   TObjArray    fValues; // TTreeReaderValueBase objects that use our director
    THashTable   fProxies; //attached ROOT::TNamedBranchProxies; owned
 
-   friend class ROOT::TTreeReaderValuePtrBase;
+   friend class ROOT::TTreeReaderValueBase;
 
    ClassDef(TTreeReader, 0); // A simple interface to read trees
 };
