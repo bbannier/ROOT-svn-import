@@ -56,7 +56,6 @@ namespace ROOT {
                           const char *option, UInt_t maxUnrolling);
       TTreeProxyGenerator(TTree* tree, const char *script, const char *cutscript, 
                           const char *fileprefix, const char *option, UInt_t maxUnrolling);
-      TTreeProxyGenerator(TTree* tree);
 
       TBranchProxyClassDescriptor* AddClass(TBranchProxyClassDescriptor *desc);
       void AddDescriptor(TBranchProxyDescriptor *desc);
@@ -76,7 +75,6 @@ namespace ROOT {
       UInt_t AnalyzeOldBranch(TBranch *branch, UInt_t level, TBranchProxyClassDescriptor *desc);
       UInt_t AnalyzeOldLeaf(TLeaf *leaf, UInt_t level, TBranchProxyClassDescriptor *topdesc);
       void   AnalyzeElement(TBranch *branch, TStreamerElement *element, UInt_t level, TBranchProxyClassDescriptor *desc, const char* path);
-      void   AnalyzeTopBranch(TBranch* branch);
       void   AnalyzeTree(TTree *tree);
       void   WriteProxy();
 

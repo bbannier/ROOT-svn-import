@@ -35,16 +35,12 @@ ClassImp(ROOT::TBranchProxyDescriptor);
 namespace ROOT {
 
    TBranchProxyDescriptor::TBranchProxyDescriptor(const char *dataname, 
-                                                  const char *proxyType, 
-                                                  const char *branchname,
-                                                  TDictionary*dataType,
-                                                  TVirtualCollectionProxy* collProxy,
+                                                  const char *type, 
+                                                  const char *branchname, 
                                                   Bool_t split,
                                                   Bool_t skipped,
                                                   Bool_t isleaflist) :
-      TNamed(dataname,proxyType),fBranchName(branchname),
-      fDataType(dataType), fDataCollProxy(collProxy),
-      fIsSplit(split),fBranchIsSkipped(skipped),fIsLeafList(isleaflist)
+      TNamed(dataname,type),fBranchName(branchname),fIsSplit(split),fBranchIsSkipped(skipped),fIsLeafList(isleaflist)
    {
       // Constructor.
 
@@ -62,6 +58,24 @@ namespace ROOT {
 
    }
    
+   const char *TBranchProxyDescriptor::GetDataName() 
+   { 
+      // Get the name of the data member.
+      return fDataName; 
+   }
+
+   const char *TBranchProxyDescriptor::GetTypeName() 
+   { 
+      // Get the name of the type of the data member
+      return GetTitle(); 
+   }
+   
+   const char *TBranchProxyDescriptor::GetBranchName() 
+   { 
+      // Get the branch name.
+      return fBranchName.Data(); 
+   }
+
    Bool_t TBranchProxyDescriptor::IsEquivalent(const TBranchProxyDescriptor *other,
                                                Bool_t inClass) 
    {
@@ -92,7 +106,7 @@ namespace ROOT {
    void TBranchProxyDescriptor::OutputDecl(FILE *hf, int offset, UInt_t maxVarname)
    {
       // Output the declaration corresponding to this proxy
-      fprintf(hf,"%-*s%-*s %s;\n",  offset," ",  maxVarname, GetProxyTypeName(), GetDataName()); // might want to add a comment
+      fprintf(hf,"%-*s%-*s %s;\n",  offset," ",  maxVarname, GetTypeName(), GetDataName()); // might want to add a comment
    }
 
    void TBranchProxyDescriptor::OutputInit(FILE *hf, int offset, 

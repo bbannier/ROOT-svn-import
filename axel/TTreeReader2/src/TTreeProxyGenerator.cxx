@@ -252,17 +252,6 @@ namespace ROOT {
       WriteProxy();
    }
 
-   TTreeProxyGenerator::TTreeProxyGenerator(TTree* tree) :
-      fMaxDatamemberType(0),
-      fOptions(0),
-      fMaxUnrolling(0),
-      fTree(tree),
-      fCurrentListOfTopProxies(&fListOfTopProxies)
-   {
-      // Constructor used by TTreeReader.
-      // Requires explicit calls to member functions to drive proxy creation.
-   }
-
    Bool_t TTreeProxyGenerator::NeedToEmulate(TClass *cl, UInt_t /* level */)
    {
       // Return true if we should create a nested class representing this class
@@ -499,7 +488,7 @@ namespace ROOT {
                "\t(including the name of their mother branche's name).",desc->GetName());
          } else {
             fCurrentListOfTopProxies->Add(desc);
-            UInt_t len = strlen(desc->GetProxyTypeName());
+            UInt_t len = strlen(desc->GetTypeName());
             if ((len+2)>fMaxDatamemberType) fMaxDatamemberType = len+2;
          }
       }
@@ -632,8 +621,6 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       EContainer container = kNone;
       TString middle;
       TString proxyTypeName;
-      TDictionary* dataType = 0;
-      TVirtualCollectionProxy* dataCollProxy = 0;
       TBranchProxyClassDescriptor::ELocation outer_isclones = TBranchProxyClassDescriptor::kOut;
       TString containerName;
       TString subBranchPrefix;
@@ -1015,13 +1002,12 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
 
          TString dataMemberName = element->GetName();
          if (topdesc) {
-            topdesc->AddDescriptor(  new TBranchProxyDescriptor(
-               dataMemberName.Data(),
-               proxyTypeName, branchname, dataType, dataCollProxy, true, skipped ), isBase );
+            topdesc->AddDescriptor(  new TBranchProxyDescriptor( dataMemberName.Data(),
+               proxyTypeName, branchname, true, skipped ), isBase );
          } else {
             dataMemberName.Prepend(prefix);
             AddDescriptor( new TBranchProxyDescriptor( dataMemberName.Data(),
-               proxyTypeName, branchname, dataType, dataCollProxy, true, skipped ) );
+               proxyTypeName, branchname, true, skipped ) );
          }
 
          if (usedBranch) {
@@ -1042,9 +1028,6 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
          Error("AnalyzeOldLeaf","TLeafObject not supported yet");
          return 0;
       }
-
-      TDictionary* dataType = 0;
-      TVirtualCollectionProxy* dataCollProxy = 0;
 
       TString leafTypeName = leaf->GetTypeName();
       Int_t pos = leafTypeName.Last('_');
@@ -1143,14 +1126,12 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
          topdesc->AddDescriptor( new TBranchProxyDescriptor( dataMemberName.Data(),
                                                              type,
                                                              branchName.Data(),
-                                                             dataType, dataCollProxy,
                                                              true, false, true ),
                                  0 );
       } else {
          AddDescriptor( new TBranchProxyDescriptor( dataMemberName.Data(),
                                                     type,
                                                     branchName.Data(),
-                                                    dataType, dataCollProxy,
                                                     true, false, true ) );
       }
 
@@ -1194,15 +1175,13 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
          if (topdesc) {
             topdesc->AddDescriptor(  new TBranchProxyDescriptor( dataMemberName.Data(),
                                                                  type,
-                                                                 branchName.Data()
-                                                                 dataType, dataCollProxy),
+                                                                 branchName.Data() ),
                                     0 );
          } else {
             // leafname.Prepend(prefix);
             AddDescriptor( new TBranchProxyDescriptor( dataMemberName.Data(),
                                                        type,
-                                                       branchName.Data(),
-                                                       dataType, dataCollProxy ) );
+                                                       branchName.Data() ) );
          }
 
       } else {
@@ -1217,9 +1196,13 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
 
    }
 
-   void TTreeProxyGenerator::AnalyzeTopBranch(TBranch *branch)
+   void TTreeProxyGenerator::AnalyzeTree(TTree *tree)
    {
-      // Analyze a branch.
+      // Analyze a TTree and its (potential) friends.
+
+      TIter next( tree->GetListOfBranches() );
+      TBranch *branch;
+      while ( (branch = (TBranch*)next()) ) {
          TVirtualStreamerInfo *info = 0;
          const char *branchname = branch->GetName();
          const char *classname = branch->GetClassName();
@@ -1273,8 +1256,8 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                   type = Form("TStlSimpleProxy<%s >", cl->GetName());
                   AddHeader(cl);
                   if (!cl->IsLoaded()) AddPragma(Form("#pragma link C++ class %s;\n", cl->GetName()));
-                  AddDescriptor( new TBranchProxyDescriptor( branchname, type, branchname, dataType, dataCollProxy ) );
-                  return;
+                  AddDescriptor( new TBranchProxyDescriptor( branchname, type, branchname ) );
+                  continue;
                }
             }
             if (cl) {
@@ -1310,7 +1293,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
 
                      TString dataMemberName = branchname;
 
-                     AddDescriptor( new TBranchProxyDescriptor( dataMemberName, type, branchname, dataType, dataCollProxy ) );
+                     AddDescriptor( new TBranchProxyDescriptor( dataMemberName, type, branchname ) );
                   }
                }
             } else {
@@ -1331,7 +1314,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
             if (desc) {
                type = desc->GetName();
                TString dataMemberName = branchname;
-               AddDescriptor( new TBranchProxyDescriptor( dataMemberName, type, branchname, dataType, dataCollProxy ) );
+               AddDescriptor( new TBranchProxyDescriptor( dataMemberName, type, branchname ) );
             }
             if ( branchname[strlen(branchname)-1] != '.' ) {
                // If there is no dot also include the data member directly
@@ -1342,16 +1325,6 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
             }
 
          } // if split or non split
-   }
-
-   void TTreeProxyGenerator::AnalyzeTree(TTree *tree)
-   {
-      // Analyze a TTree and its (potential) friends.
-
-      TIter next( tree->GetListOfBranches() );
-      TBranch *branch;
-      while ( (branch = (TBranch*)next()) ) {
-         AnalyzeTopBranch(branch);
       }
 
       // Now let's add the TTreeFriend (if any)
@@ -1606,7 +1579,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       pxDataMemberName = /* prefix + */ dataMemberName;
       if (topdesc) {
          topdesc->AddDescriptor( new TBranchProxyDescriptor( pxDataMemberName.Data(), type,
-                                                             dataMemberName.Data(), dataType, dataCollProxy, false),
+                                                             dataMemberName.Data(), false),
                                  isBase );
       } else {
          Error("AnalyzeTree","topdesc should not be null in TTreeProxyGenerator::AnalyzeElement.");
