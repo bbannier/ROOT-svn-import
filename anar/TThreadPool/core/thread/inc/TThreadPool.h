@@ -134,7 +134,7 @@ class TThreadPool : public TNonCopyable
                 delete( *iter );
 
             delete m_threadJoinHelper;
-            
+
             delete m_threadNeeded;
             delete m_threadAvailable;
             delete m_threadFinished;
@@ -152,8 +152,8 @@ class TThreadPool : public TNonCopyable
 
                 DbgLog( "Main thread. the task is pushed" );
             }
+            TLockGuard lock( &m_mutex );
             m_threadNeeded->Broadcast();
-
         }
 
         void Stop( bool processRemainingJobs = false )
@@ -177,9 +177,9 @@ class TThreadPool : public TNonCopyable
             {
                 TLockGuard lock( &m_mutex );
                 m_stopped = true;
+                m_threadNeeded->Broadcast();
                 DbgLog( "Main threads requests to STOP" );
             }
-            m_threadNeeded->Broadcast();
 
             // Waiting for all threads to complete
             m_threadJoinHelper->Run();
@@ -265,12 +265,14 @@ class TThreadPool : public TNonCopyable
                     pThis->DbgLog( ss.str() );
                 }
                 // Task is done, report that the thread is free
+                TLockGuard lock( &pThis->m_mutex );
                 pThis->m_threadAvailable->Broadcast();
             }
 
             std::stringstream ss;
             ss << "(" << TThread::SelfId() << ") **** DONE *** ";
             pThis->DbgLog( ss.str() );
+            TLockGuard lock( &pThis->m_mutex );
             pThis->m_threadFinished->Signal();
             return NULL;
         }
@@ -287,12 +289,16 @@ class TThreadPool : public TNonCopyable
                 // no active threads left
                 if( pThis->m_threads.end() == found_active )
                     break;
-                
+
                 // clean waiting threads if any
-                pThis->m_threadNeeded->Broadcast();
-                
-                TLockGuard lock( &pThis->m_mutex );
-                pThis->m_threadFinished->Wait();//TimedWaitRelative( 100 );
+//                {
+//                    TLockGuard lock( &pThis->m_mutex );
+//                    pThis->m_threadNeeded->Broadcast();
+//                }
+                {
+                    TLockGuard lock( &pThis->m_mutex );
+                    pThis->m_threadFinished->TimedWaitRelative( 100 );
+                }
             }
             return NULL;
         }
