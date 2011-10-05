@@ -15,7 +15,7 @@
    self = [super initWithFrame : frame];
    if (self) {
       markerStyle = style;
-      self.backgroundImage = [UIImage imageNamed : @"marker_cell_bkn.png"];
+      self.backgroundImage = [UIImage imageNamed : @"line_cell.png"];
    }
 
    return self;
