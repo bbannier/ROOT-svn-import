@@ -97,7 +97,8 @@
 #pragma link C++ class ROOT::TClaArrayProxy<ROOT::TArrayType<Long64_t> >+;
 #endif
 
-#pragma link C++ class ROOT::TTreeReaderValuePtrBase+;
+#pragma link C++ class ROOT::TTreeReaderValueBase+;
+#pragma link C++ class ROOT::TTreeReaderArrayBase+;
 #pragma link C++ class ROOT::TNamedBranchProxy+;
 
 #endif

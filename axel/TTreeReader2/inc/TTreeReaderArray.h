@@ -9,7 +9,7 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifdef ROOT_TTreeReaderArray
+#ifndef ROOT_TTreeReaderArray
 #define ROOT_TTreeReaderArray
 
 
@@ -22,24 +22,24 @@
 //                                                                        //
 ////////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TTreeReaderValuePtr
-#include "TTreeReaderValuePtr.h"
+#ifndef ROOT_TTreeReaderValue
+#include "TTreeReaderValue.h"
 #endif
 
 namespace ROOT {
-   class TTreeReaderArrayBase: public TTreeReaderValuePtrBase {
+   class TTreeReaderArrayBase: public TTreeReaderValueBase {
    public:
-      TTreeReaderArrayBase(TTreeReader& tr, const char* branchname,
-                           TDictionary* dict);
+      TTreeReaderArrayBase(TTreeReader* reader, const char* branchname,
+                           TDictionary* dict):
+         TTreeReaderValueBase(reader, branchname, dict) {}
 
-      Int_t GetSize();
+      size_t GetSize();
       Bool_t IsEmpty() { return !GetSize(); }
 
    protected:
-      void* Get();
+      void* UntypedAt(size_t idx) const;
 
-   private:
-      TTreeReaderValuePtrBase fSizeValue; // value reader accessing the size
+      virtual void CreateProxy();
 
       ClassDefT(TTreeReaderArrayBase, 0);//Accessor to member of an object stored in a collection
    };
@@ -50,13 +50,13 @@ template <typename T>
 class TTreeReaderArray: public ROOT::TTreeReaderArrayBase {
 public:
    TTreeReaderArray(TTreeReader& tr, const char* branchname):
-      TTreeReaderArrayBase(tr, branchname, TDictionary::GetDictionary(typeid(T*)))
+      TTreeReaderArrayBase(&tr, branchname, TDictionary::GetDictionary(typeid(T*)))
    {
       // Create an array reader of branch "branchname" for TTreeReader "tr".
    }
 
-   T& At(Int_t idx) { return ((T*)Get())[idx]; }
-   T& operator[](Int_t idx) { return At(idx); }
+   T& At(size_t idx) { return ((T*)UntypedAt())[idx]; }
+   T& operator[](size_t idx) { return At(idx); }
 
    ClassDefT(TTreeReaderArray, 0);//Accessor to member of an object stored in a collection
 };

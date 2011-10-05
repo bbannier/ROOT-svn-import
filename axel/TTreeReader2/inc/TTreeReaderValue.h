@@ -79,7 +79,7 @@ namespace ROOT {
 
       virtual ~TTreeReaderValueBase();
 
-      void CreateProxy();
+      virtual void CreateProxy();
 
       void* GetAddress() {
          if (ProxyRead() != kReadSuccess) return 0;
