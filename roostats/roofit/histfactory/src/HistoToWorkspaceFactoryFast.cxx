@@ -93,7 +93,12 @@ ClassImp(RooStats::HistFactory::HistoToWorkspaceFactoryFast)
 namespace RooStats{
 namespace HistFactory{
 
-  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(){}
+  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast() : 
+     fNomLumi(0), fLumiError(0), 
+     fLowBin(0), fHighBin(0), 
+     fOut_f(0), pFile(0)
+  {}
+
   HistoToWorkspaceFactoryFast::~HistoToWorkspaceFactoryFast(){
     fclose(pFile);
   }
@@ -132,8 +137,11 @@ namespace HistFactory{
                                                          /*high*/, int /*lowBin*/, int /*highBin*/ ){
     if(hist)
       cout << "processing hist " << hist->GetName() << endl;
-    else
+    else {
       cout << "hist is empty" << endl;
+      R__ASSERT(hist != 0);
+      return;
+    }
 
 
     if(!proto->var(fObsName.c_str())){
@@ -231,7 +239,7 @@ namespace HistFactory{
       lowHist.at(j);
       highHist.at(j);
       RooDataHist* lowDHist = new RooDataHist((prefix+str.str()+"lowDHist").c_str(),"",*proto->var(fObsName.c_str()),lowHist.at(j));
-      RooDataHist* highDHist = new RooDataHist((prefix+str.str()+"lowDHist").c_str(),"",*proto->var(fObsName.c_str()),highHist.at(j));
+      RooDataHist* highDHist = new RooDataHist((prefix+str.str()+"highDHist").c_str(),"",*proto->var(fObsName.c_str()),highHist.at(j));
       RooHistFunc* lowFunc = new RooHistFunc((prefix+str.str()+"low").c_str(),"",*proto->var(fObsName.c_str()),*lowDHist,0) ;
       RooHistFunc* highFunc = new RooHistFunc((prefix+str.str()+"high").c_str(),"",*proto->var(fObsName.c_str()),*highDHist,0) ;
       lowSet.add(*lowFunc);
@@ -262,7 +270,6 @@ namespace HistFactory{
         // remove "doRatio" and name can be changed when ws gets imported to the combined model.
         std::stringstream range;
         range<<"["<<itr->val<<","<<itr->low<<","<<itr->high<<"]";
-        RooRealVar* var = 0;
 
         string varname;
         if(!prodNames.empty()) prodNames+=",";
@@ -272,7 +279,7 @@ namespace HistFactory{
         else {
           varname=itr->name;
         }
-        var = (RooRealVar*) proto->factory((varname+range.str()).c_str());
+        proto->factory((varname+range.str()).c_str());
         prodNames+=varname;
       }
       overallNorm_times_sigmaEpsilon = es.name+"_"+channel+"_overallNorm_x_sigma_epsilon";
@@ -1061,7 +1068,7 @@ namespace HistFactory{
       }
     }
     
-    combined->import(*simData,Rename("asimovData"));
+    if (simData) combined->import(*simData,Rename("asimovData"));
 
     // now obs
     if(chs[0]->data("obsData")){
@@ -1079,7 +1086,7 @@ namespace HistFactory{
 	}
       }
       
-      combined->import(*simData,Rename("obsData"));
+      if (simData) combined->import(*simData,Rename("obsData"));
     }
     
 
