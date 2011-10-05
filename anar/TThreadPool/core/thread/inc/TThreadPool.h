@@ -122,7 +122,6 @@ class TThreadPool : public TNonCopyable
             }
 
             m_threadJoinHelper =  new TThread( &TThreadPool::JoinHelper, this );
-            //m_threadJoinHelper->Run();
         }
 
         ~TThreadPool()
@@ -135,9 +134,10 @@ class TThreadPool : public TNonCopyable
                 delete( *iter );
 
             delete m_threadJoinHelper;
-
+            
             delete m_threadNeeded;
             delete m_threadAvailable;
+            delete m_threadFinished;
         }
 
         void PushTask( typename TThreadPoolTask<_T, _P>::task_t &_task, _P _param )
@@ -271,6 +271,7 @@ class TThreadPool : public TNonCopyable
             std::stringstream ss;
             ss << "(" << TThread::SelfId() << ") **** DONE *** ";
             pThis->DbgLog( ss.str() );
+            pThis->m_threadFinished->Signal();
             return NULL;
         }
 
@@ -278,26 +279,28 @@ class TThreadPool : public TNonCopyable
         {
             TThreadPool *pThis = reinterpret_cast<TThreadPool*>( _arg );
 
-            bool bAllDone( false );
-            while( !bAllDone )
+            while( true )
             {
+                threads_array_t::const_iterator found_active =
+                    find_if( pThis->m_threads.begin(), pThis->m_threads.end(),
+                             &TThreadPool::IsThreadActive );
+                // no active threads left
+                if( pThis->m_threads.end() == found_active )
+                    break;
+                
+                // clean waiting threads if any
                 pThis->m_threadNeeded->Broadcast();
-
+                
                 TLockGuard lock( &pThis->m_mutex );
-                pThis->m_threadAvailable->TimedWaitRelative( 100 );
-                threads_array_t::const_iterator iter = pThis->m_threads.begin();
-                threads_array_t::const_iterator iter_end = pThis->m_threads.end();
-                bAllDone = true;
-                for( ; iter != iter_end; ++iter )
-                {
-                    if(( *iter )->GetState() == TThread::kRunningState )
-                    {
-                        bAllDone = false;
-                        break;
-                    }
-                }
+                pThis->m_threadFinished->Wait();//TimedWaitRelative( 100 );
             }
             return NULL;
+        }
+
+        static bool IsThreadActive( TThread *_pThread )
+        {
+            // so far we consider only kRunningState as activity
+            return ( _pThread->GetState() == TThread::kRunningState );
         }
 
         void DbgLog( const std::string &_msg )
