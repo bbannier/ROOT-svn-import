@@ -134,7 +134,7 @@ NSString *errorTypes[] = {@"No error", @"Simple", @"Edges", @"Rectangles", @"Fil
       controller.errorsDrawOption = @"E4";
       break;
    }
-   [controller objectWasModifiedUpdateSelection : NO];
+   [controller objectWasModifiedUpdateSelection : YES];
 }
 
 #pragma mark ObjectInspectorComponent protocol.
