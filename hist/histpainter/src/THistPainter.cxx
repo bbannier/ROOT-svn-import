@@ -3900,6 +3900,9 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    feature is used to make sure that the grid is drawn in the background and
    the axis tick marks in the foreground of the pad.
    End_html */
+   
+   if (drawGridOnly && (gPad->PadInHighlightMode() || gPad->PadInSelectionMode()))
+      return;
 
    if (Hoption.Axis == -1)
       return;
@@ -4054,7 +4057,7 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
                      umin, umax,  ndiv, chopt, gridl, drawGridOnly);
 
       // Paint additional X axis (if needed)
-      if (gPad->GetTickx() && !gPad->PadInSelectionMode()) {
+      if (gPad->GetTickx() && !gPad->PadInSelectionMode() && !gPad->PadInHighlightMode()) {
          if (xAxisPos) {
             cw=strstr(chopt,"-");
             *cw='z';
@@ -4156,7 +4159,7 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
                      umin, umax,  ndiv, chopt, gridl, drawGridOnly);
 
       // Paint the additional Y axis (if needed)
-      if (gPad->GetTicky() && !gPad->PadInSelectionMode()) {
+      if (gPad->GetTicky() && !gPad->PadInSelectionMode() && !gPad->PadInHighlightMode()) {
          if (gPad->GetTicky() < 2) {
             // coverity [Calling risky function]
             strlcat(chopt, "U",10);
