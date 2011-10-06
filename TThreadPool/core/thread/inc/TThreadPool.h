@@ -115,8 +115,6 @@ class TThreadPool : public TNonCopyable
             m_threadNeeded = new TCondition( &m_mutex );
             m_threadAvailable = new TCondition( &m_mutex );
 
-            m_threadFinished = new TCondition( &m_mutex );
-
             for( size_t i = 0; i < _threadsCount; ++i )
             {
                 TThread *pThread = new TThread( &TThreadPool::Executor, this );
@@ -140,7 +138,6 @@ class TThreadPool : public TNonCopyable
 
             delete m_threadNeeded;
             delete m_threadAvailable;
-            delete m_threadFinished;
         }
 
         void PushTask( typename TThreadPoolTask<_T, _P>::task_t &_task, _P _param )
@@ -261,34 +258,17 @@ class TThreadPool : public TNonCopyable
             }
 
             pThis->DbgLog( "**** DONE ***" );
-            TLockGuard lock( &pThis->m_mutex );
-            pThis->m_threadFinished->Signal();
             return NULL;
         }
 
         static void *JoinHelper( void *_arg )
         {
             TThreadPool *pThis = reinterpret_cast<TThreadPool*>( _arg );
-
-            while( true )
-            {
-                threads_array_t::const_iterator found_active =
-                    find_if( pThis->m_threads.begin(), pThis->m_threads.end(),
-                             &TThreadPool::IsThreadActive );
-                // no active threads left
-                if( pThis->m_threads.end() == found_active )
-                    break;
-
-                // clean waiting threads if any
-//                {
-//                    TLockGuard lock( &pThis->m_mutex );
-//                    pThis->m_threadNeeded->Broadcast();
-//                }
-                {
-                    TLockGuard lock( &pThis->m_mutex );
-                    pThis->m_threadFinished->TimedWaitRelative( 100 );
-                }
-            }
+            threads_array_t::const_iterator iter = pThis->m_threads.begin();
+            threads_array_t::const_iterator iter_end = pThis->m_threads.end();
+            for( ; iter != iter_end; ++iter )
+                (*iter)->Join();
+            
             return NULL;
         }
 
@@ -311,7 +291,6 @@ class TThreadPool : public TNonCopyable
         TMutex m_mutex;
         TCondition *m_threadNeeded;
         TCondition *m_threadAvailable;
-        TCondition *m_threadFinished;
         threads_array_t m_threads;
         TThread *m_threadJoinHelper;
         volatile bool m_stopped;
