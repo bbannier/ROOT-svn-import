@@ -7,7 +7,8 @@ class TAttMarker;
 @interface MarkerInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
    IBOutlet UIPickerView *markerPicker;
    
-   NSMutableArray *cells;
+   NSMutableArray *styleCells;
+   NSMutableArray *colorCells;
    
    IBOutlet UIButton *plusBtn;
    IBOutlet UIButton *minusBtn;

@@ -1,6 +1,8 @@
 #import "ROOTObjectController.h"
 #import "MarkerInspector.h"
 #import "MarkerStyleCell.h"
+#import "ColorCell.h"
+#import "Constants.h"
 
 #import "TAttMarker.h"
 #import "TObject.h"
@@ -39,6 +41,8 @@ static BOOL canScaleMarker(Style_t style)
 //____________________________________________________________________________________________________
 - (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
+   using namespace ROOT_IOSBrowser;
+
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
    
    if (self) {
@@ -46,10 +50,18 @@ static BOOL canScaleMarker(Style_t style)
       
       const CGRect cellFrame = CGRectMake(0.f, 0.f, defaultCellW, defaultCellH);
       
-      cells = [[NSMutableArray alloc] init];//]WithCapacity : nMarkers];
+      styleCells = [[NSMutableArray alloc] init];//]WithCapacity : nMarkers];
       for (unsigned i = 0; i < nMarkers; ++i) {
          MarkerStyleCell *newCell = [[MarkerStyleCell alloc] initWithFrame : cellFrame andMarkerStyle : markerStyles[i]];
-         [cells addObject : newCell];
+         [styleCells addObject : newCell];
+         [newCell release];
+      }
+      
+      colorCells = [[NSMutableArray alloc] init];
+      for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
+         ColorCell *newCell = [[ColorCell alloc] initWithFrame : cellFrame];
+         [newCell setRGB : predefinedFillColors[i]];
+         [colorCells addObject : newCell];
          [newCell release];
       }
    }
@@ -64,7 +76,9 @@ static BOOL canScaleMarker(Style_t style)
    self.plusBtn = nil;
    self.minusBtn = nil;
    self.sizeLabel = nil;
-   [cells release];
+   
+   [styleCells release];
+   [colorCells release];
 
    [super dealloc];
 }
@@ -118,39 +132,50 @@ static BOOL canScaleMarker(Style_t style)
 //____________________________________________________________________________________________________
 - (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
 {
-   return [cells count];
+   if (!component)
+      return [styleCells count];
+
+   return [colorCells count];
 }
 
 //____________________________________________________________________________________________________
 - (NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
 {
-	return 1;
+	return 2;
 }
 
 //____________________________________________________________________________________________________
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
-   return [cells objectAtIndex : row];
+   if (!component)
+      return [styleCells objectAtIndex : row];
+   return [colorCells objectAtIndex : row];
 }
 
 //____________________________________________________________________________________________________
 - (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
-   if (row >= 0 && row < nMarkers) {
-      EMarkerStyle style = markerStyles[row];
-      if (canScaleMarker(style)) {
-         plusBtn.enabled = YES;
-         minusBtn.enabled = YES;
-         sizeLabel.text = [NSString stringWithFormat : @"%.2g", object->GetMarkerSize()];
-      } else {
-         plusBtn.enabled = NO;
-         minusBtn.enabled = NO;
-         sizeLabel.text = @"1";
+   if (!component) {
+      if (row >= 0 && row < nMarkers) {
+         EMarkerStyle style = markerStyles[row];
+         if (canScaleMarker(style)) {
+            plusBtn.enabled = YES;
+            minusBtn.enabled = YES;
+            sizeLabel.text = [NSString stringWithFormat : @"%.2g", object->GetMarkerSize()];
+         } else {
+            plusBtn.enabled = NO;
+            minusBtn.enabled = NO;
+            sizeLabel.text = @"1";
+         }
+         
+         object->SetMarkerStyle(style);
       }
-      
-      object->SetMarkerStyle(style);
-      [controller objectWasModifiedUpdateSelection : NO];
+   } else {
+      const unsigned colorIndex = ROOT_IOSBrowser::colorIndices[row];
+      object->SetMarkerColor(colorIndex);
    }
+
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 #pragma mark ObjectInspectorComponent protocol.
@@ -164,10 +189,10 @@ static BOOL canScaleMarker(Style_t style)
 //____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
+   using namespace ROOT_IOSBrowser;
+
    object = dynamic_cast<TAttMarker *>(o);
 
-   //Ah! Terrible! Linear search! Oh God, forgive me!!!
-   //Or, may be it's ok? Screw it!
    unsigned row = 0;
    const EMarkerStyle style = EMarkerStyle(object->GetMarkerStyle());//Mess with all these styles and EMarkerStyles.
    for (unsigned i = 0; i < nMarkers; ++i) {
@@ -177,7 +202,21 @@ static BOOL canScaleMarker(Style_t style)
       }
    }
    
-   [self.markerPicker selectRow : NSInteger(row) inComponent : 0 animated : NO];
+   [markerPicker selectRow : NSInteger(row) inComponent : 0 animated : NO];
+
+   //Extract marker color.
+   //The same predefined 16 colors as with fill color.
+   row = 1;//?
+   const Color_t colorIndex = object->GetMarkerColor();
+   
+   for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
+      if (colorIndex == colorIndices[i]) {
+         row = i;
+         break;
+      }
+   }
+   
+   [markerPicker selectRow : NSInteger(row) inComponent : 1 animated : NO];
 
    if (!canScaleMarker(object->GetMarkerStyle())) {
       plusBtn.enabled = NO;
