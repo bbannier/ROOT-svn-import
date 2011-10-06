@@ -618,7 +618,8 @@ static const CGFloat maximumZoom = 2.f;
       
    //
 //   fileContainer->GetObject(currentObject)->Draw([[self getDrawOption] cStringUsingEncoding : NSASCIIStringEncoding]);
-   pad->SetPaintOption(fileContainer->GetObject(currentObject), [[self getDrawOption] cStringUsingEncoding : NSASCIIStringEncoding]);
+//   pad->SetPaintOption(fileContainer->GetObject(currentObject), [[self getDrawOption] cStringUsingEncoding : NSASCIIStringEncoding]);
+   fileContainer->GetObject(currentObject)->SetDrawOption([[self getDrawOption] cStringUsingEncoding : NSASCIIStringEncoding]);
    //
 
    [padView setNeedsDisplay];

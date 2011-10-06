@@ -3,6 +3,7 @@
 
 #include <utility>
 #include <vector>
+#include <string>
 
 #include <CoreGraphics/CGContext.h>
 
@@ -363,6 +364,9 @@ private:
    std::vector<ObjectPair_t>  fSelectables;
    
    UInt_t fObjectID;
+   
+   const char *GetSelectedParentDrawOption()const;
+   const char *GetSelectedDrawOption()const;
 
    //Non-overriders.
    TObject *FindObject(const char *name) const;
