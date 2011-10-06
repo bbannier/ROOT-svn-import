@@ -12,7 +12,6 @@
 #ifndef ROOT_TThreadPool
 #define ROOT_TThreadPool
 
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TThreadPool                                                          //
@@ -59,7 +58,7 @@ class TNonCopyable
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
-class TThreadPoolTaskImp: public TObject
+class TThreadPoolTaskImp
 {
     public:
         bool run( _P &_param )
@@ -67,8 +66,6 @@ class TThreadPoolTaskImp: public TObject
             _T *pThis = reinterpret_cast<_T *>( this );
             return pThis->runTask( _param );
         }
-    
-    ClassDefT( TThreadPoolTaskImp, 0 );
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -77,7 +74,7 @@ class TThreadPoolTaskImp: public TObject
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
-class TThreadPoolTask: public TObject
+class TThreadPoolTask
 {
     public:
         typedef TThreadPoolTaskImp<_T, _P> task_t;
@@ -96,8 +93,6 @@ class TThreadPoolTask: public TObject
     private:
         task_t &m_task;
         _P m_taskParam;
-    
-    ClassDefT( TThreadPoolTask, 0 )
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -106,15 +101,16 @@ class TThreadPoolTask: public TObject
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
-class TThreadPool : public TNonCopyable, public TNamed
+class TThreadPool : public TNonCopyable
 {
         typedef TThreadPoolTask<_T, _P> task_t;
         typedef std::queue<task_t*> taskqueue_t;
         typedef std::vector<TThread*> threads_array_t;
 
     public:
-        TThreadPool( size_t _threadsCount ):
-            m_stopped( false )
+        TThreadPool( size_t _threadsCount, bool _needDbg = false ):
+            m_stopped( false ),
+            m_bSilent( !_needDbg )
         {
             m_threadNeeded = new TCondition( &m_mutex );
             m_threadAvailable = new TCondition( &m_mutex );
@@ -304,6 +300,8 @@ class TThreadPool : public TNonCopyable, public TNamed
 
         void DbgLog( const std::string &_msg )
         {
+            if( m_bSilent )
+                return;
             TLockGuard lock( &m_dbgOutputMutex );
             std::cout << "[" << TThread::SelfId() << "] " << _msg << std::endl;
         }
@@ -320,8 +318,7 @@ class TThreadPool : public TNonCopyable, public TNamed
         size_t m_successfulTasks;
         size_t m_tasksCount;
         TMutex m_dbgOutputMutex;
-
-        ClassDefT( TThreadPool, 0 )
+        bool m_bSilent; // No DBG messages
 };
 
 #endif

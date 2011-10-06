@@ -20,21 +20,6 @@ const size_t g_multTasks = 50;
 //=============================================================================
 
 enum EProc {start, clean};
-class TTestTask;
-
-#ifdef __CINT__
-#pragma link off all globals;
-#pragma link off all classes;
-#pragma link off all functions;
-
-#pragma link C++ nestedtypedefs;
-
-#pragma link C++ class TThreadPoolTaskImp<TTestTask, EProc>+;
-#pragma link C++ class TTestTask+;
-#pragma link C++ enum EProc+;
-#pragma link C++ class TThreadPoolTask<TTestTask, EProc>+;
-#pragma link C++ class TThreadPool<TTestTask, EProc>+;
-#endif
 
 class TTestTask: public TThreadPoolTaskImp<TTestTask, EProc>
 {
@@ -62,10 +47,10 @@ ostream &operator<< ( ostream &_stream, const TTestTask &_task )
 }
 
 //=============================================================================
-void threadPool( size_t _numThreads )
+void threadPool( size_t _numThreads, bool _needDbg = false )
 {
     size_t numTasks(_numThreads * g_multTasks);
-    TThreadPool<TTestTask, EProc> threadPool( _numThreads );
+    TThreadPool<TTestTask, EProc> threadPool( _numThreads, _needDbg );
     vector <TTestTask> tasksList( numTasks );
     for( size_t i = 0; i < numTasks; ++i )
     {
