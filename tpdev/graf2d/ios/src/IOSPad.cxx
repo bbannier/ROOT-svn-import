@@ -786,17 +786,20 @@ void Pad::PaintForSelection()
    fInSelectionMode = kFALSE;
 }
 
+
+
 //______________________________________________________________________________
 void Pad::PaintShadowForSelected() const
 {
    fInHighlightMode = kTRUE;
-
+   
    fPainter.SetPainterMode(Painter::kPaintShadow);
 
-   if (fParentOfSelected)
-      fParentOfSelected->Paint(fParentOfSelected->GetOption());
-   else if (fSelected)
-      fSelected->Paint(fSelected->GetOption());
+   if (fParentOfSelected) {
+      fParentOfSelected->Paint(GetSelectedParentDrawOption());
+   } else if (fSelected) {
+      fSelected->Paint(GetSelectedDrawOption());
+   }
 
    fPainter.SetPainterMode(Painter::kPaintToView);
    fInHighlightMode = kFALSE;
@@ -810,9 +813,9 @@ void Pad::PaintSelected() const
    fPainter.SetPainterMode(Painter::kPaintSelected);
    
    if (fParentOfSelected)
-      fParentOfSelected->Paint(fParentOfSelected->GetOption());
+      fParentOfSelected->Paint(GetSelectedParentDrawOption());
    else if (fSelected)
-      fSelected->Paint(fSelected->GetOption());
+      fSelected->Paint(GetSelectedDrawOption());
    
    fPainter.SetPainterMode(Painter::kPaintToView);
    fInHighlightMode = kFALSE;
@@ -928,8 +931,9 @@ void Pad::PaintPadFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ym
    if (!glist->FindObject(fFrame)) {
       glist->AddFirst(frame);
       fFrame->SetBit(kMustCleanup);
-      frame->Paint();
    }
+   
+   frame->Paint();
 }
 
 //______________________________________________________________________________
@@ -1285,6 +1289,36 @@ void Pad::GetTextExtent(UInt_t &w, UInt_t &h, const char *text)
 void Pad::SetContext(CGContextRef ctx)
 {
    fPainter.SetContext(ctx);
+}
+
+//______________________________________________________________________________
+const char *Pad::GetSelectedParentDrawOption()const
+{
+   //Linear search :) But list is very short.
+   TObjOptLink *lnk = (TObjOptLink*)GetListOfPrimitives()->FirstLink();
+   while (lnk) {
+      TObject *obj = lnk->GetObject();
+      if (obj == fParentOfSelected)
+         return lnk->GetOption();
+      lnk = (TObjOptLink*)lnk->Next();
+   }
+
+   return "";
+}
+
+//______________________________________________________________________________
+const char *Pad::GetSelectedDrawOption()const
+{
+   //Linear search :) But list is very short.
+   TObjOptLink *lnk = (TObjOptLink*)GetListOfPrimitives()->FirstLink();
+   while (lnk) {
+      TObject *obj = lnk->GetObject();
+      if (obj == fSelected)
+         return lnk->GetOption();
+      lnk = (TObjOptLink*)lnk->Next();
+   }
+
+   return "";
 }
 
 //______________________________________________________________________________
