@@ -85,7 +85,7 @@ void threadPool( size_t _numThreads, bool _needDbg = false )
     counter_t::const_iterator iter_end = counter.end();
     for( ; iter != iter_end; ++iter )
     {
-        cout << iter->first << " was used " << iter->second << " times\n";
+        cout << "Thread " << iter->first << " was used " << iter->second << " times\n";
         // each thread suppose to be used equal amount of time,
         // exactly (g_numTasks/g_numThreads) times
         if( iter->second != g_multTasks )
