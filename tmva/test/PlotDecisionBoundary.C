@@ -84,7 +84,7 @@ void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_BDT.
    // create a set of variables and declare them to the reader
    // - the variable names must corresponds in name and type to 
    // those given in the weight file(s) that you use
-   Float_t var0, var1;
+   Double_t var0, var1;
    reader->AddVariable( v0,                &var0 );
    reader->AddVariable( v1,                &var1 );
 
@@ -136,6 +136,10 @@ void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_BDT.
 
 
    TH2F * hist = new TH2F( "MVA",    "MVA",    nbin,xmin,xmax,nbin,ymin,ymax);
+
+   // Prepare input tree (this must be replaced by your data source)
+   // in this example, there is a toy tree with signal and one with background events
+   // we'll later on use only the "signal" events for the test in this example.
 
    Float_t MinMVA=10000, MaxMVA=-100000;
    for (UInt_t ibin=1; ibin<nbin+1; ibin++){
@@ -197,7 +201,7 @@ void PlotDecisionBoundary( TString weightFile = "weights/TMVAClassification_BDT.
    Double_t separationGain=sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
    Double_t mvaCut=mvaSC->GetBinCenter(1);
    Double_t mvaCutOrientation=1; // 1 if mva > mvaCut --> Signal and -1 if mva < mvaCut (i.e. mva*-1 > mvaCut*-1) --> Signal
-   for (Int_t ibin=2;ibin<nValBins;ibin++){ 
+   for (UInt_t ibin=2;ibin<nValBins;ibin++){ 
       mvaSC->SetBinContent(ibin,mvaS->GetBinContent(ibin)+mvaSC->GetBinContent(ibin-1));
       mvaBC->SetBinContent(ibin,mvaB->GetBinContent(ibin)+mvaBC->GetBinContent(ibin-1));
     
