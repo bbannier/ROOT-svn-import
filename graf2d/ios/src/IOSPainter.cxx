@@ -18,6 +18,46 @@
 
 namespace ROOT_iOS {
 
+namespace {
+
+//______________________________________________________________________________
+void SetMarkerFillColor(CGContextRef ctx, Color_t colorIndex)
+{
+   Float_t r = 0.f, g = 0.f, b = 0.f, a = 1.f;
+   GraphicUtils::GetColorForIndex(colorIndex, r, g, b);
+   CGContextSetRGBFillColor(ctx, r, g, b, a);
+}
+
+//______________________________________________________________________________
+void SetMarkerStrokeColor(CGContextRef ctx, Color_t colorIndex)
+{
+   Float_t r = 0.f, g = 0.f, b = 0.f, a = 1.f;
+   GraphicUtils::GetColorForIndex(colorIndex, r, g, b);
+   CGContextSetRGBStrokeColor(ctx, r, g, b, a);
+}
+
+//_________________________________________________________________
+bool MarkerIsFilledPolygon(Style_t markerStyle) 
+{
+   switch (markerStyle) {
+   case kDot:
+   case kFullDotMedium:
+   case kFullDotLarge:
+   case kFullCircle:
+   case kFullSquare:
+   case kFullTriangleUp:
+   case kFullTriangleDown:
+   case kFullStar:
+   case kFullDiamond:
+   case kFullCross:
+      return true;
+   default:
+      return false;
+   }
+}
+
+}
+
 //_________________________________________________________________
 SpaceConverter::SpaceConverter()
                   : fXMin(0.),
@@ -387,8 +427,55 @@ void Painter::DrawPolyLineNDC(Int_t, const Double_t *, const Double_t *)
 }
 
 //_________________________________________________________________
+void Painter::SetMarkerColor()const
+{
+   if (MarkerIsFilledPolygon(gVirtualX->GetMarkerStyle())) {
+      if (fPainterMode == kPaintToView) {
+         SetMarkerFillColor(fCtx, gVirtualX->GetMarkerColor());
+      } else if (fPainterMode == kPaintToSelectionBuffer) {
+         SetPolygonColorForCurrentObjectID();
+      } else if (fPainterMode == kPaintShadow) {
+         CGContextSetRGBFillColor(fCtx, 0.1f, 0.1f, 0.1f, 0.2f);      
+      } else if (fPainterMode == kPaintSelected) {
+         CGContextSetRGBFillColor(fCtx, 1.f, 0.f, 0.4f, 0.8f);
+      }
+   } else {
+      if (fPainterMode == kPaintToView) {
+         SetMarkerStrokeColor(fCtx, gVirtualX->GetMarkerColor());
+      } else if (fPainterMode == kPaintToSelectionBuffer) {
+         SetLineColorForCurrentObjectID();
+         CGContextSetLineWidth(fCtx, 40.f);//Ohh yeahhh, really thiiick line!
+      } else if (fPainterMode == kPaintShadow) {
+         CGContextSetRGBStrokeColor(fCtx, 0.1f, 0.1f, 0.1f, 0.2f);
+         CGContextSetLineWidth(fCtx, 5.f);
+      } else if (fPainterMode == kPaintSelected) {
+         CGContextSetRGBStrokeColor(fCtx, 1.f, 0.f, 0.4f, 0.2f);
+         CGContextSetLineWidth(fCtx, 5.f);
+      }   
+   }
+}
+
+//_________________________________________________________________
 void Painter::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y)
 {
+   //Check the current painter's mode.
+   //Skip polymarker if draw thumbnails.
+   if (fPainterMode == kPaintThumbnail)
+      return;
+
+   SetMarkerColor();
+   
+   Style_t markerStyle = gVirtualX->GetMarkerStyle();
+   if (markerStyle == kDot || markerStyle == kFullDotMedium) {
+      if (fPainterMode == kPaintToSelectionBuffer) {
+         //Too tiny objects to be selected by touch. Make them bigger.
+         markerStyle = kFullDotLarge;
+      } else if (fPainterMode == kPaintSelected || fPainterMode == kPaintShadow) {
+         //To tiny, highlight and shadow are almost invisible. Make them bigger.
+         markerStyle = kFullDotMedium;
+      }
+   }
+
    fPolyMarker.resize(n);
    for (Int_t i = 0; i < n; ++i) {
       TPoint &p = fPolyMarker[i];
@@ -396,7 +483,7 @@ void Painter::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y)
       p.SetY(fConverter.YToView(y[i]));
    }
 
-   GraphicUtils::DrawPolyMarker(fCtx, fPolyMarker, gVirtualX->GetMarkerColor(), gVirtualX->GetMarkerSize(), gVirtualX->GetMarkerStyle());
+   GraphicUtils::DrawPolyMarker(fCtx, fPolyMarker, gVirtualX->GetMarkerSize(), markerStyle);
 }
 
 //_________________________________________________________________

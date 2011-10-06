@@ -1,33 +1,10 @@
 #include "TAttMarker.h"
-#include "TVirtualX.h"
 
 #include "IOSGraphicUtils.h"
 #include "IOSMarkers.h"
 
 namespace ROOT_iOS {
 namespace GraphicUtils {
-
-namespace {
-
-typedef std::vector<TPoint>::size_type size_type;
-
-//______________________________________________________________________________
-void SetMarkerFillColor(CGContextRef ctx, Color_t colorIndex)
-{
-   Float_t r = 0.f, g = 0.f, b = 0.f, a = 1.f;
-   GetColorForIndex(colorIndex, r, g, b);
-   CGContextSetRGBFillColor(ctx, r, g, b, a);
-}
-
-//______________________________________________________________________________
-void SetMarkerStrokeColor(CGContextRef ctx, Color_t colorIndex)
-{
-   Float_t r = 0.f, g = 0.f, b = 0.f, a = 1.f;
-   GetColorForIndex(colorIndex, r, g, b);
-   CGContextSetRGBStrokeColor(ctx, r, g, b, a);
-}
-
-}
 
 //______________________________________________________________________________
 void DrawMarkerDot(CGContextRef ctx, unsigned n, const TPoint *xy)
@@ -457,13 +434,8 @@ void DrawMarkerOpenStar(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t m
 }
 
 //______________________________________________________________________________
-void DrawPolyMarker(CGContextRef ctx, unsigned nPoints, const TPoint *xy, Color_t markerColor, Size_t markerSize, Style_t markerStyle)
+void DrawPolyMarker(CGContextRef ctx, unsigned nPoints, const TPoint *xy, Size_t markerSize, Style_t markerStyle)
 {
-   CGContextSaveGState(ctx);
-   
-   SetMarkerStrokeColor(ctx, markerColor);
-   SetMarkerFillColor(ctx, markerColor);
-  
    switch (markerStyle) {
    case kDot:
       DrawMarkerDot(ctx, nPoints, xy);
@@ -528,14 +500,12 @@ void DrawPolyMarker(CGContextRef ctx, unsigned nPoints, const TPoint *xy, Color_
       DrawMarkerOpenStar(ctx, nPoints, xy, markerSize);
       break;
    }
-   
-   CGContextRestoreGState(ctx);
 }
 
 //______________________________________________________________________________
-void DrawPolyMarker(CGContextRef ctx, const std::vector<TPoint> &xy, Color_t markerColor, Size_t markerSize, Style_t markerStyle)
+void DrawPolyMarker(CGContextRef ctx, const std::vector<TPoint> &xy, Size_t markerSize, Style_t markerStyle)
 {
-   DrawPolyMarker(ctx, xy.size(), &xy[0], markerColor, markerSize, markerStyle);
+   DrawPolyMarker(ctx, xy.size(), &xy[0], markerSize, markerStyle);
 }
 
 }//namespace GraphicUtils
