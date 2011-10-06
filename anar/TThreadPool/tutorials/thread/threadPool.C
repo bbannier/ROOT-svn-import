@@ -11,13 +11,31 @@
 #include "TThreadPool.h"
 // ROOT
 #include "TThread.h"
+
 //=============================================================================
 using namespace std;
 //=============================================================================
 const size_t g_sleeptime = 1; // in secs.
 const size_t g_multTasks = 50;
 //=============================================================================
+
 enum EProc {start, clean};
+class TTestTask;
+
+#ifdef __CINT__
+#pragma link off all globals;
+#pragma link off all classes;
+#pragma link off all functions;
+
+#pragma link C++ nestedtypedefs;
+
+#pragma link C++ class TThreadPoolTaskImp<TTestTask, EProc>+;
+#pragma link C++ class TTestTask+;
+#pragma link C++ enum EProc+;
+#pragma link C++ class TThreadPoolTask<TTestTask, EProc>+;
+#pragma link C++ class TThreadPool<TTestTask, EProc>+;
+#endif
+
 class TTestTask: public TThreadPoolTaskImp<TTestTask, EProc>
 {
 public:
@@ -34,12 +52,15 @@ public:
     
 private:
     unsigned long m_tid;
+    
+    ClassDef( TTestTask, 0 )
 };
 ostream &operator<< ( ostream &_stream, const TTestTask &_task )
 {
     _stream << _task.threadID();
     return _stream;
 }
+
 //=============================================================================
 void threadPool( size_t _numThreads )
 {

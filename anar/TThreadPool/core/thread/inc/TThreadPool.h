@@ -35,6 +35,7 @@
 #include <iostream>
 #include <sstream>
 
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TNonCopyable                                                         //
@@ -58,7 +59,7 @@ class TNonCopyable
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
-class TThreadPoolTaskImp
+class TThreadPoolTaskImp: public TObject
 {
     public:
         bool run( _P &_param )
@@ -66,14 +67,17 @@ class TThreadPoolTaskImp
             _T *pThis = reinterpret_cast<_T *>( this );
             return pThis->runTask( _param );
         }
+    
+    ClassDefT( TThreadPoolTaskImp, 0 );
 };
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TThreadPoolTask                                                      //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
-class TThreadPoolTask
+class TThreadPoolTask: public TObject
 {
     public:
         typedef TThreadPoolTaskImp<_T, _P> task_t;
@@ -92,14 +96,17 @@ class TThreadPoolTask
     private:
         task_t &m_task;
         _P m_taskParam;
+    
+    ClassDefT( TThreadPoolTask, 0 )
 };
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TThreadPool                                                          //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
-class TThreadPool : public TNonCopyable
+class TThreadPool : public TNonCopyable, public TNamed
 {
         typedef TThreadPoolTask<_T, _P> task_t;
         typedef std::queue<task_t*> taskqueue_t;
@@ -116,7 +123,7 @@ class TThreadPool : public TNonCopyable
 
             for( size_t i = 0; i < _threadsCount; ++i )
             {
-                TThread *pThread = new TThread( &TThreadPool::Execute, this );
+                TThread *pThread = new TThread( &TThreadPool::Executor, this );
                 m_threads.push_back( pThread );
                 pThread->Run();
             }
@@ -197,7 +204,7 @@ class TThreadPool : public TNonCopyable
         }
 
     private:
-        static void* Execute( void *_arg )
+        static void* Executor( void *_arg )
         {
             TThreadPool *pThis = reinterpret_cast<TThreadPool*>( _arg );
 
@@ -207,7 +214,7 @@ class TThreadPool : public TNonCopyable
 
                 std::stringstream ss;
                 ss
-                        << "(" << TThread::SelfId() << ") check for a task: " << pThis->m_stopped
+                        << ">>>> Check for tasks."
                         << " Number of Tasks: " << pThis->m_tasks.size();
                 pThis->DbgLog( ss.str() );
 
@@ -217,16 +224,12 @@ class TThreadPool : public TNonCopyable
                     // Find a task to perform
                     if( pThis->m_tasks.empty() && !pThis->m_stopped )
                     {
-                        ss.str( "" );
-                        ss << "(" << TThread::SelfId() << ") waiting for a task: " << pThis->m_stopped;
-                        pThis->DbgLog( ss.str() );
+                        pThis->DbgLog( "waiting for a task" );
 
                         // No tasks, we wait for a task to come
                         pThis->m_threadNeeded->Wait();
 
-                        ss.str( "" );
-                        ss << "(" << TThread::SelfId() << ") done waiting for a task: " << pThis->m_stopped;
-                        pThis->DbgLog( ss.str() );
+                        pThis->DbgLog( "done waiting for tasks" );
                     }
 
                     {
@@ -235,22 +238,16 @@ class TThreadPool : public TNonCopyable
                             task = pThis->m_tasks.front();
                             pThis->m_tasks.pop();
 
-                            ss.str( "" );
-                            ss << "(" << TThread::SelfId() << ") getting a task: " << pThis->m_stopped;
-                            pThis->DbgLog( ss.str() );
+                            pThis->DbgLog( "get the task" );
                         }
-                        ss.str( "" );
-                        ss << "(" << TThread::SelfId() << ") done check for a task: " << pThis->m_stopped;
-                        pThis->DbgLog( ss.str() );
+                        pThis->DbgLog( "done Check <<<<" );
                     }
                 }
 
                 // Execute the task
                 if( task )
                 {
-                    ss.str( "" );
-                    ss << "(" << TThread::SelfId() << ") run a task: " << pThis->m_stopped;
-                    pThis->DbgLog( ss.str() );
+                    pThis->DbgLog( "Run the task" );
 
                     if( task->run() )
                     {
@@ -260,18 +257,14 @@ class TThreadPool : public TNonCopyable
                     delete task;
                     task = NULL;
 
-                    ss.str( "" );
-                    ss << "(" << TThread::SelfId() << ") done running a task: " << pThis->m_stopped;
-                    pThis->DbgLog( ss.str() );
+                    pThis->DbgLog( "Done Running the task" );
                 }
                 // Task is done, report that the thread is free
                 TLockGuard lock( &pThis->m_mutex );
                 pThis->m_threadAvailable->Broadcast();
             }
 
-            std::stringstream ss;
-            ss << "(" << TThread::SelfId() << ") **** DONE *** ";
-            pThis->DbgLog( ss.str() );
+            pThis->DbgLog( "**** DONE ***" );
             TLockGuard lock( &pThis->m_mutex );
             pThis->m_threadFinished->Signal();
             return NULL;
@@ -312,7 +305,7 @@ class TThreadPool : public TNonCopyable
         void DbgLog( const std::string &_msg )
         {
             TLockGuard lock( &m_dbgOutputMutex );
-            std::cout << _msg << std::endl;
+            std::cout << "[" << TThread::SelfId() << "] " << _msg << std::endl;
         }
 
     private:
@@ -327,6 +320,8 @@ class TThreadPool : public TNonCopyable
         size_t m_successfulTasks;
         size_t m_tasksCount;
         TMutex m_dbgOutputMutex;
+
+        ClassDefT( TThreadPool, 0 )
 };
 
 #endif
