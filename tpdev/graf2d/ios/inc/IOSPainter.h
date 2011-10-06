@@ -120,6 +120,7 @@ private:
    //Polygon stipple here.
    void     SetStrokeParameters()const;
    void     SetPolygonParameters()const;
+   void     SetMarkerColor()const;
    Bool_t   PolygonHasStipple()const;
    
    //
