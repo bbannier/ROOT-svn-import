@@ -2,8 +2,11 @@
 #define ROOT_IOSFileScanner
 
 #include <vector>
-#include <string>
 #include <set>
+
+#ifndef ROOT_TString
+#include "TString.h"
+#endif
 
 //
 //scan_file looks through file's contents, 
@@ -19,7 +22,7 @@ namespace ROOT_iOS {
 namespace FileUtils {
 
 //Find objects of "visible" types in a root file.
-void ScanFileForVisibleObjects(TFile *file, const std::set<std::string> &visibleTypes, std::vector<TObject *> &objects, std::vector<std::string> &options);
+void ScanFileForVisibleObjects(TFile *file, const std::set<TString> &visibleTypes, std::vector<TObject *> &objects, std::vector<TString> &options);
 
 }
 }
