@@ -243,7 +243,14 @@ namespace RooStats {
           }
 
           ret=condML-uncondML;
+
+//           if (ret < 0) { 
+//              std::cout << " mu hat = " << fit_favored_mu << " cond ML = " << condML << " uncond ML = " << uncondML << std::endl;
+//           }
        }
+
+       std::cout << " mu hat = " << fit_favored_mu <<  " uncond ML = " << uncondML << " cond ML = " << ret+uncondML 
+                 << " pll =  " << ret << std::endl;
 
        // need to restore the values ?
        *attachedSet = *origAttachedSet;

@@ -470,7 +470,7 @@ public:
          if (!vars->find( fNuisParams[i].GetName() ) ) { 
             ooccoutW((TObject*)0,InputArguments) << "Nuisance parameter " << fNuisParams[i].GetName() 
                                                  << " is not part of sampling pdf. " 
-                                                 << " A uniform distribution will be generated " << std::endl;
+                                                 << "they will be trated as constant " << std::endl;
          }
       }
       delete vars;
@@ -878,6 +878,10 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
       if ( fIntegrationType.Contains("1") || fIntegrationType.Contains("ONE")  ) doToysEveryIteration = false;
 
       RooAbsPdf * samplingPdf = (fNuisancePdf) ? fNuisancePdf : fPdf;
+      if (!fNuisancePdf) { 
+         ccoutI(Eval) << "BayesianCalculator::GetPosteriorFunction : no nuisance pdf is provided, try using global pdf (this will be slower)"
+                      << std::endl;         
+      }
       fPosteriorFunction = new PosteriorFunctionFromToyMC(*fLogLike, *fPriorPOI, *samplingPdf, *poi, nuisParams, fNLLMin,
                                                           fNumIterations, doToysEveryIteration ); 
 
