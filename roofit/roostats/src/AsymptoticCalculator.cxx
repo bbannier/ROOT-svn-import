@@ -31,6 +31,7 @@
 #include "RooNLLVar.h"
 #include "Math/MinimizerOptions.h"
 #include "RooPoisson.h"
+#include "RooUniform.h"
 #include <cmath>
 
 
@@ -54,55 +55,6 @@ namespace Utils {
     }
 
 
-/**
-   void FactorizePdf(const RooArgSet &observables, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints, bool debug = false) {
-      // utility function to factorize constraint terms from a pdf 
-      // (from G. Petrucciani)
-      const std::type_info & id = typeid(pdf);
-      if (id == typeid(RooProdPdf)) {
-         RooProdPdf *prod = dynamic_cast<RooProdPdf *>(&pdf);
-         RooArgList list(prod->pdfList());
-         for (int i = 0, n = list.getSize(); i < n; ++i) {
-            RooAbsPdf *pdfi = (RooAbsPdf *) list.at(i);
-            FactorizePdf(observables, *pdfi, obsTerms, constraints);
-         }
-      } else if (id == typeid(RooSimultaneous) ) {    //|| id == typeid(RooSimultaneousOpt)) {
-         RooSimultaneous *sim  = dynamic_cast<RooSimultaneous *>(&pdf);
-         RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().Clone();
-         for (int ic = 0, nc = cat->numBins((const char *)0); ic < nc; ++ic) {
-            cat->setBin(ic);
-            FactorizePdf(observables, *sim->getPdf(cat->getLabel()), obsTerms, constraints);
-         }
-         delete cat;
-      } else if (pdf.dependsOn(observables)) {
-         if (!obsTerms.contains(pdf)) obsTerms.add(pdf);
-      } else {
-         if (!constraints.contains(pdf)) constraints.add(pdf);
-      }
-   }
-
-   void FactorizePdf(RooStats::ModelConfig &model, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints, bool debug) {
-      // utility function to factorize constraint terms from a pdf 
-      // (from G. Petrucciani)
-      return FactorizePdf(*model.GetObservables(), pdf, obsTerms, constraints, debug);
-   }
-
-
-
-   RooAbsPdf * MakeNuisancePdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name) { 
-      // make a nuisance pdf by factorizing out all constraint terms in a common pdf 
-      RooArgList obsTerms, constraints;
-      FactorizePdf(observables, pdf, obsTerms, constraints);
-      return new RooProdPdf(name,"", constraints);
-   }
-
-   RooAbsPdf * MakeNuisancePdf(const RooStats::ModelConfig &model, const char *name) { 
-      // make a nuisance pdf by factorizing out all constraint terms in a common pdf 
-      return Utils::MakeNuisancePdf(*model.GetPdf(), *model.GetObservables(), name);
-   }
-
-#endif
-**/
 
 }
 
@@ -621,7 +573,7 @@ RooAbsData * AsymptoticCalculator::MakeAsimovData(const RooArgSet & paramValues,
 
    // get the model
 
-   int verbose = 0;
+   int verbose = 2;
 
    const RooStats::ModelConfig *mc = GetNullModel() ;
    RooAbsData * realData = const_cast<RooAbsData*> (GetData() ); 
@@ -668,56 +620,91 @@ RooAbsData * AsymptoticCalculator::MakeAsimovData(const RooArgSet & paramValues,
 
     // Now need to have in ASIMOV the data sets also the global observables
    // Their values must be the one satisfying the constraint. 
-   // TO find value fit them in the model using them as parameter, while the nuisance parameters becomes the observables
+   // to do it make a nuisance pdf with all product of constraints and then 
+   // assign to each constraint a glob observable value = to the current fitted nuisance parameter value
+
    if (mc->GetGlobalObservables() && mc->GetGlobalObservables()->getSize() > 0) {
       RooArgSet gobs(*mc->GetGlobalObservables());
-      
+
       // snapshot data global observables
       RooArgSet snapGlobalObsData;
       Utils::SetAllConstant(gobs, true);
       gobs.snapshot(snapGlobalObsData);
 
-      // now get the ones for the asimov dataset.
-      // we do this by fitting the nuisance pdf with floating global observables but fixed nuisances (which we call observables)
+      RooArgSet nuis(*mc->GetNuisanceParameters());
       // part 1: create the nuisance pdf
       std::auto_ptr<RooAbsPdf> nuispdf(RooStats::MakeNuisancePdf(*mc,"TempNuisPdf") );
-      // part 2: create the dataset containing the nuisances
-      RooArgSet nuis(*mc->GetNuisanceParameters());
-      RooDataSet nuisdata("nuisData","nuisData", nuis);
-      nuisdata.add(nuis);
-      // part 3: make everything constant except the global observables which have to be floating
-      //         remember what done, to be able to undo it afterwards
-      RooArgSet paramsSetToConstants;
-      std::auto_ptr<RooArgSet> nuispdfparams(nuispdf->getParameters(nuisdata)); 
-      std::auto_ptr<TIterator> iter(nuispdfparams->createIterator());
-      // iterate on all parameters of the nuis pdf (these are all except the nuisance parameters)
+      // unfold the nuisance pdf 
+      RooProdPdf *prod = dynamic_cast<RooProdPdf *>(nuispdf.get());
+      if (prod == 0) { 
+         oocoutF((TObject*)0,Generation) << "AsymptoticCalculator::MakeAsimovData: the nuisance pdf is not a RooProdPdf!" << std::endl;
+      }
+      std::auto_ptr<TIterator> iter(prod->pdfList().createIterator());
       for (RooAbsArg *a = (RooAbsArg *) iter->Next(); a != 0; a = (RooAbsArg *) iter->Next()) {
-         RooRealVar *rrv = dynamic_cast<RooRealVar *>(a);
-         if (rrv) {
-            // set global observales not constants
-            if (gobs.find(rrv->GetName())) {
-               rrv->setConstant(false);
-            } else {
-               // set other parameters to constant   
-               if (!rrv->isConstant()) paramsSetToConstants.add(*rrv);
-               rrv->setConstant(true);
+         RooAbsPdf *cterm = dynamic_cast<RooAbsPdf *>(a); 
+         assert(cterm && "AsimovUtils: a factor of the nuisance pdf is not a Pdf!");
+         if (!cterm->dependsOn(nuis)) continue; // dummy constraints
+         // skip also the case of uniform components
+         if (typeid(*cterm) == typeid(RooUniform)) continue;
+
+         std::auto_ptr<RooArgSet> cpars(cterm->getParameters(&gobs));
+         std::auto_ptr<RooArgSet> cgobs(cterm->getObservables(&gobs));
+         if (cgobs->getSize() != 1) {
+            oocoutE((TObject*)0,Generation) << "AsymptoticCalculator::MakeAsimovData: constraint term  " <<  cterm->GetName() 
+                                            << " has multiple global observables -cannot generate - skip it" << std::endl;
+            continue;
+         }
+         RooRealVar &rrv = dynamic_cast<RooRealVar &>(*cgobs->first());
+
+         RooAbsReal *match = 0;
+         if (cpars->getSize() == 1) {
+            match = dynamic_cast<RooAbsReal *>(cpars->first());
+         } else {
+            std::auto_ptr<TIterator> iter2(cpars->createIterator());
+            for (RooAbsArg *a2 = (RooAbsArg *) iter2->Next(); a2 != 0; a2 = (RooAbsArg *) iter2->Next()) {
+               RooRealVar *rrv2 = dynamic_cast<RooRealVar *>(a2); 
+               if (rrv2 != 0 && !rrv2->isConstant()) {
+                  if (match != 0) {
+                     oocoutF((TObject*)0,Generation) << "AsymptoticCalculator::MakeAsimovData:constraint term " 
+                                                     << cterm->GetName() << " has multiple floating params" << std::endl;
+                     return 0; 
+                  }
+                  match = rrv2;
+               }
             }
          }
+         if (match == 0) {  
+            oocoutF((TObject*)0,Generation) << "AsymptoticCalculator::MakeAsimovData - can't find nuisance for constraint term " << cterm->GetName() << std::endl;
+            std::cerr << "Parameters: " << std::endl;
+            cpars->Print("V");
+            std::cerr << "Observables: " << std::endl;
+            cgobs->Print("V");
+            return 0;
+         }
+         rrv.setVal(match->getVal());
       }
-      // fit the nuisance pdf 
-      nuispdf->fitTo(nuisdata, RooFit::Minimizer("Minuit2","minimize"), RooFit::Strategy(1));
-      //}
 
-   // make a snapshot of global observables 
-   // needed this ?? (LM) 
+      // make a snapshot of global observables 
+      // needed this ?? (LM) 
 
       asimovGlobObs.removeAll();
       Utils::SetAllConstant(gobs, true);
       gobs.snapshot(asimovGlobObs);
 
-      // revert global observables to teh data value
+      // revert global observables to the data value
       gobs = snapGlobalObsData;
-      Utils::SetAllConstant(paramsSetToConstants, false);
+      //Utils::SetAllConstant(paramsSetToConstants, false);
+
+    
+      if (verbose > 1) {
+         std::cout << "Global observables for data: " << std::endl;
+         gobs.Print("V");
+         std::cout << "Global observables for asimov: " << std::endl;
+         asimovGlobObs.Print("V");
+      }
+
+
+
    }
 
    return asimov;
