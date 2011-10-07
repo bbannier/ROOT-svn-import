@@ -52,6 +52,7 @@ private:
    TNonCopyable(const TNonCopyable&);
    const TNonCopyable& operator=(const TNonCopyable&);
 };
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TThreadPoolTaskImp                                                   //
@@ -97,6 +98,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
 class TThreadPool : public TNonCopyable {
+    
    typedef TThreadPoolTask<_T, _P> task_t;
    typedef std::queue<task_t*> taskqueue_t;
    typedef std::vector<TThread*> threads_array_t;
