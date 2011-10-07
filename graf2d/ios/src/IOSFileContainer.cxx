@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <cstring>
 #include <set>
 
 #include "IOSFileContainer.h"
@@ -11,7 +12,7 @@ namespace ROOT_iOS {
 namespace {
 
 //__________________________________________________________________________________________________________________________
-void FillVisibleTypes(std::set<std::string> &types)
+void FillVisibleTypes(std::set<TString> &types)
 {
    types.insert("TH1C");
    types.insert("TH1D");
@@ -35,6 +36,33 @@ void FillVisibleTypes(std::set<std::string> &types)
    types.insert("TMultiGraph");
 }
 
+const char *errorOptionToString[] = {"", "E", "E1", "E2", "E3", "E4"};
+
+//__________________________________________________________________________________________________________________________
+void RemoveErrorDrawOption(TString &options)
+{
+   const Ssiz_t pos = options.Index("E");
+   if (pos != kNPOS) {
+
+      Ssiz_t n = 1;
+      if (pos + 1 < options.Length()) {
+         const char nextChar = options[pos + 1];
+         if (std::isdigit(nextChar) && (nextChar - '0' >= 1 && nextChar - '0' <= 4))
+            n = 2;
+      }
+   
+      options.Remove(pos, n);
+   }
+}
+
+//__________________________________________________________________________________________________________________________
+void RemoveMarkerDrawOption(TString &options)
+{
+   const Ssiz_t pos = options.Index("P");
+   if (pos != kNPOS)
+      options.Remove(pos, 1);
+}
+
 }
 
 //__________________________________________________________________________________________________________________________
@@ -46,7 +74,7 @@ FileContainer::FileContainer(const std::string &fileName)
    if (!fFileHandler.get())
       throw std::runtime_error("File was not opened");
 
-   std::set<std::string> visibleTypes;
+   std::set<TString> visibleTypes;
    FillVisibleTypes(visibleTypes);
 
    FileUtils::ScanFileForVisibleObjects(fFileHandler.get(), visibleTypes, fFileContents, fOptions);
@@ -74,7 +102,61 @@ TObject *FileContainer::GetObject(size_type ind)const
 //__________________________________________________________________________________________________________________________
 const char *FileContainer::GetDrawOption(size_type ind)const
 {
-   return fOptions[ind].c_str();
+   return fOptions[ind].Data();
+}
+
+//__________________________________________________________________________________________________________________________
+void FileContainer::SetErrorDrawOption(size_type ind, EHistogramErrorOption opt)
+{
+   //Nothing to change.
+   if (GetErrorDrawOption(ind) == opt)
+      return;
+
+   //1. Remove previous error options (if any).
+   RemoveErrorDrawOption(fOptions[ind]);
+   //2. Add new option.
+   fOptions[ind] += errorOptionToString[opt];
+}
+
+//__________________________________________________________________________________________________________________________
+EHistogramErrorOption FileContainer::GetErrorDrawOption(size_type ind)const
+{
+   const TString &options = fOptions[ind];
+   const Ssiz_t pos = options.Index("E");
+   if (pos == kNPOS)
+      return hetNoError;
+   
+   if (pos + 1 < options.Length()) {
+      const char nextChar = options[pos + 1];
+      if (nextChar == '1')
+         return hetE1;
+      if (nextChar == '2')
+         return hetE2;
+      if (nextChar == '3')
+         return hetE3;
+      if (nextChar == '4')
+         return hetE4;
+   }
+   
+   return hetE;
+}
+
+//__________________________________________________________________________________________________________________________
+void FileContainer::SetMarkerDrawOption(size_type ind, bool on)
+{
+   if (GetMarkerDrawOption(ind) == on)
+      return;
+
+   RemoveMarkerDrawOption(fOptions[ind]);
+
+   if (on)
+      fOptions[ind] += "P";
+}
+
+//__________________________________________________________________________________________________________________________
+bool FileContainer::GetMarkerDrawOption(size_type ind)const
+{
+   return fOptions[ind].Index("P") != kNPOS;
 }
 
 //__________________________________________________________________________________________________________________________

@@ -15,7 +15,7 @@ namespace ROOT_iOS {
 namespace FileUtils {
 
 //__________________________________________________________________________________________________________________________
-TObject *ReadObjectForKey(TFile *inputFile, const TKey *key, std::string &option)
+TObject *ReadObjectForKey(TFile *inputFile, const TKey *key, TString &option)
 {
    option = "";
 
@@ -36,21 +36,21 @@ TObject *ReadObjectForKey(TFile *inputFile, const TKey *key, std::string &option
    if (dynamic_cast<TF2 *>(obj.get()))
       option = "surf1";
    if (dynamic_cast<TMultiGraph *>(obj.get()))
-      option = "AC";
+      option = "ac";
 
    return obj.release();
 }
 
 
 //__________________________________________________________________________________________________________________________
-void ScanFileForVisibleObjects(TFile *inputFile, const std::set<std::string> &visibleTypes, std::vector<TObject *> &objects, std::vector<std::string> &options)
+void ScanFileForVisibleObjects(TFile *inputFile, const std::set<TString> &visibleTypes, std::vector<TObject *> &objects, std::vector<TString> &options)
 {
    //Find objects of visible types in a root file.
    const TList *keys = inputFile->GetListOfKeys();
    TIter next(keys);
    std::vector<TObject *>tmp;
-   std::vector<std::string> opts;
-   std::string option;
+   std::vector<TString> opts;
+   TString option;
    
    try {
       std::auto_ptr<TObject> newObject;
