@@ -518,9 +518,11 @@ namespace HistFactory{
   }
 
   //_____________________________________________________________
-  void HistoToWorkspaceFactoryFast::EditSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst, map<string,double> uniformSyst,map<string,double> logNormSyst) {
-    //    cout << "in edit, gammamap.size = " << gammaSyst.size() << ", unimap.size = " << uniformSyst.size() << endl;
+  void HistoToWorkspaceFactoryFast::EditSyst(RooWorkspace* proto, const char* pdfNameChar, 
+					     map<string,double> gammaSyst, map<string,double> uniformSyst, map<string,double> logNormSyst, map<string,double> noSyst) {
     string pdfName(pdfNameChar);
+
+    //cout << "HistoToWorkspaceFactoryFast::EditSyst() : gamma = " << gammaSyst.size() << ", uniform = " << uniformSyst.size() << ", noconst = " << noSyst.size() << endl;
 
     ModelConfig * combined_config = (ModelConfig *) proto->obj("ModelConfig");
     //    const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
@@ -727,9 +729,42 @@ namespace HistFactory{
       }
     }
 
+    /////////////////////////////////////////
+
+    // MB: remove a systematic constraint
+    for(it=noSyst.begin(); it!=noSyst.end(); ++it) {
+
+      cout << "remove constraint for parameter" << it->first << endl;
+      if(! proto->var(("alpha_"+it->first).c_str()) || ! proto->pdf(("alpha_"+it->first+"Constraint").c_str()) ) {
+	cout << "systematic not there" << endl;
+	nskipped++; 
+	continue;
+      }
+      numReplacements++;      
+
+      // dummy replacement pdf
+      if ( !proto->var("one") ) { proto->factory("one[1.0]"); }
+      proto->var("one")->setConstant();
+
+      // replace constraints
+      cout << "alpha_"+it->first+"Constraint=one" << endl;
+      editList+=preceed + "alpha_"+it->first+"Constraint=one";
+      preceed=",";
+
+      // EDIT seems to die if the list of edits is too long.  So chunck them up.
+      if(numReplacements%10 == 0 && numReplacements+nskipped!=gammaSyst.size()){
+	edit="EDIT::"+lastPdf+"_("+lastPdf+","+editList+")";
+	lastPdf+="_"; // append an underscore for the edit
+	editList=""; // reset edit list
+	preceed="";
+	cout << edit << endl;
+	proto->factory( edit.c_str() );
+	RooAbsPdf* newOne = proto->pdf(lastPdf.c_str());
+	if(!newOne) { cout << "\n\n ---------------------\n WARNING: failed to make EDIT\n\n" << endl; }
+      }
+    }
 
     /////////////////////////////////////////
-    ////////////////////////////////////
 
     // commit last bunch of edits
     edit="EDIT::newSimPdf("+lastPdf+","+editList+")";

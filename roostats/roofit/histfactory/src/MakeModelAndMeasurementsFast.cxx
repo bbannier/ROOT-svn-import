@@ -102,6 +102,7 @@ void processMeasurementXML(TXMLNode* node,
 			   map<string,double>& gammaSyst,
 			   map<string,double>& uniformSyst,
 			   map<string,double>& logNormSyst,
+			   map<string,double>& noSyst,
 			   bool& exportOnly
 			   );
 
@@ -161,9 +162,7 @@ void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, T
   Int_t lowBin=0, highBin=0;
   string rowTitle, POI, mode;
   vector<string> systToFix;
-  map<string,double> gammaSyst;
-  map<string,double> uniformSyst;
-  map<string,double> logNormSyst;
+  map<string,double> gammaSyst, uniformSyst, logNormSyst, noSyst;
   bool exportOnly = false;
   
   cout << "Now processing measurement " << endl;
@@ -178,6 +177,7 @@ void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, T
 			gammaSyst,
 			uniformSyst,
 			logNormSyst,
+			noSyst,
 			exportOnly
 			);
   
@@ -235,9 +235,9 @@ void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, T
     
     
     // Gamma/Uniform Constraints:
-    // turn some Gaussian constraints into Gamma/Uniform/LogNorm constraints, rename model newSimPdf
-    if(gammaSyst.size()>0 || uniformSyst.size()>0 || logNormSyst.size()>0) {
-      factory.EditSyst(ws,("model_"+oneChannel[0].channel).c_str(),gammaSyst,uniformSyst,logNormSyst);
+    // turn some Gaussian constraints into Gamma/Uniform/LogNorm/NoConstraint constraints, rename model newSimPdf
+    if(gammaSyst.size()>0 || uniformSyst.size()>0 || logNormSyst.size()>0 || noSyst.size()>0) {
+      factory.EditSyst(ws,("model_"+oneChannel[0].channel).c_str(),gammaSyst,uniformSyst,logNormSyst,noSyst);
       proto_config->SetPdf(*ws->pdf("newSimPdf"));
     }
     
@@ -268,9 +268,9 @@ void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, T
 
     RooWorkspace* ws=factory.MakeCombinedModel(ch_names,chs);
     // Gamma/Uniform Constraints:
-    // turn some Gaussian constraints into Gamma/Uniform/logNormal constraints, rename model newSimPdf
-    if(gammaSyst.size()>0 || uniformSyst.size()>0 || logNormSyst.size()>0) 
-      factory.EditSyst(ws,"simPdf",gammaSyst,uniformSyst,logNormSyst);
+    // turn some Gaussian constraints into Gamma/Uniform/logNormal/noConstraint constraints, rename model newSimPdf
+    if(gammaSyst.size()>0 || uniformSyst.size()>0 || logNormSyst.size()>0 || noSyst.size()) 
+      factory.EditSyst(ws,"simPdf",gammaSyst,uniformSyst,logNormSyst,noSyst);
     //
     // set parameter of interest according to the configuration
     //
@@ -320,6 +320,7 @@ void processMeasurementXML(TXMLNode* node,
 			   map<string,double>& gammaSyst,
 			   map<string,double>& uniformSyst,
 			   map<string,double>& logNormSyst,
+			   map<string,double>& noSyst,
 			   bool& exportOnly
 			  )
 {
@@ -399,9 +400,14 @@ void processMeasurementXML(TXMLNode* node,
       if (type=="LogNormal" && rel!=0) {
 	for (vector<string>::const_iterator it=syst.begin(); it!=syst.end(); it++) logNormSyst[(*it).c_str()] = rel;
       }
+      if (type=="NoConstraint") {
+	for (vector<string>::const_iterator it=syst.begin(); it!=syst.end(); it++) noSyst[(*it).c_str()] = 1.0; // MB : dummy value
+      }
     }
     mnode = mnode->GetNextNode();
   } 
+
+  //cout << "processMeasurementXML() : " << gammaSyst.size() << " " << uniformSyst.size() << " " << logNormSyst.size() << " " << noSyst.size() << endl;
   
   // end of xml processing
 }
