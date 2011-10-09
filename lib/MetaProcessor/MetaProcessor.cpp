@@ -4,8 +4,9 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
-#include "InputValidator.h"
 #include "cling/MetaProcessor/MetaProcessor.h"
+
+#include "InputValidator.h"
 #include "cling/Interpreter/Interpreter.h"
 
 #include "clang/Frontend/CompilerInstance.h"
