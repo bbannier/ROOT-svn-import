@@ -46,7 +46,7 @@ cling::MetaProcessor::process(const char* input_text)
       return 0;
    }
    if (!input_text[0]) { // empty string, nothing to do.
-      return 0;
+      return m_InputValidator->getExpectedIndent();
    }
    std::string input_line(input_text);
    if (input_line == "\n") { // just a blank line, nothing to do.
