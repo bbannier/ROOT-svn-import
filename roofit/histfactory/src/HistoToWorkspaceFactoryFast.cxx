@@ -274,11 +274,8 @@ namespace HistFactory{
         constraintTermNames.push_back(  proto->factory( command.c_str() )->GetName() );
 	proto->var(("nom_alpha_"+sourceName.at(j)).c_str())->setConstant();
 	const_cast<RooArgSet*>(proto->set("globalObservables"))->add(*proto->var(("nom_"+sourceName.at(j)).c_str()));
-
       } 
-
       params.add(* temp );
-
     }
 
     // now make function that linearly interpolates expectation between variations
@@ -301,6 +298,7 @@ namespace HistFactory{
     // this is sigma(params), a piece-wise linear interpolation
     PiecewiseInterpolation interp(prefix.c_str(),"",*nominalFunc,lowSet,highSet,params);
     interp.setPositiveDefinite();
+    interp.setAllInterpCodes(0); // MB : change default to 1? = piece-wise log interpolation from pice-wise linear (=0)
     
     //    cout << "check: " << interp.getVal() << endl;
     proto->import(interp); // individual params have already been imported in first loop of this function
@@ -366,8 +364,7 @@ namespace HistFactory{
         cout << command << endl;
         constraintTermNames.push_back(  proto->factory( command.c_str() )->GetName() );
 	proto->var(("nom_"+prefix+it->first).c_str())->setConstant();
-	const_cast<RooArgSet*>(proto->set("globalObservables"))->add(*proto->var(("nom_"+prefix+it->first).c_str()));
-	
+	const_cast<RooArgSet*>(proto->set("globalObservables"))->add(*proto->var(("nom_"+prefix+it->first).c_str()));	
       } 
       params.add(*temp);
 
@@ -880,9 +877,9 @@ namespace HistFactory{
       string overallSystName = it->name+"_"+it->channel+"_epsilon"; 
       string systSourcePrefix = "alpha_";
       AddEfficiencyTerms(proto,systSourcePrefix, overallSystName,
-             it->overallSyst, constraintTermNames /*likelihoodTermNames*/, totSystTermNames);    
+			 it->overallSyst, constraintTermNames /*likelihoodTermNames*/, totSystTermNames);    
 
-      overallSystName=AddNormFactor(proto, channel, overallSystName, *it, doRatio); 
+      overallSystName = AddNormFactor(proto, channel, overallSystName, *it, doRatio); 
 
       // MB : HACK no option to have both non-hist variations and hist variations ?
       // get histogram
@@ -895,7 +892,7 @@ namespace HistFactory{
         syst_x_expectedPrefixNames.push_back(syst_x_expectedPrefix);
       } else if(it->lowHists.size() != it->highHists.size()){
         cout << "problem in "+it->name+"_"+it->channel 
-       << " number of low & high variation histograms don't match" << endl;
+	     << " number of low & high variation histograms don't match" << endl;
         return 0;
       } else {
         string constraintPrefix = it->name+"_"+it->channel+"_Hist_alpha"; // name of source for variation

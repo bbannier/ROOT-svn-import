@@ -111,6 +111,7 @@ PiecewiseInterpolation::PiecewiseInterpolation(const char* name, const char* tit
     if (takeOwnership) {
       _ownedList.addOwned(*comp) ;
     }
+    _interpCode.push_back(0); // default code: linear interpolation
   }
   delete inputIter3 ;
 }
@@ -124,7 +125,8 @@ PiecewiseInterpolation::PiecewiseInterpolation(const PiecewiseInterpolation& oth
   _lowSet("!lowSet",this,other._lowSet),
   _highSet("!highSet",this,other._highSet),
   _paramSet("!paramSet",this,other._paramSet),
-  _positiveDefinite(other._positiveDefinite)
+  _positiveDefinite(other._positiveDefinite),
+  _interpCode(other._interpCode)
 {
   // Copy constructor
 
@@ -173,11 +175,54 @@ Double_t PiecewiseInterpolation::evaluate() const
     low = (RooAbsReal*)_lowIter->Next() ;
     high = (RooAbsReal*)_highIter->Next() ;
 
-    
+    /* // MB : old bit of interpolation code
     if(param->getVal()>0)
       sum += param->getVal()*(high->getVal() - nominal );
     else
       sum += param->getVal()*(nominal - low->getVal());
+    */
+
+    if(_interpCode.at(i)==0){
+      // piece-wise linear
+      if(param->getVal()>0)
+	sum +=  param->getVal()*(high->getVal() - nominal );
+      else
+	sum += param->getVal()*(nominal - low->getVal());
+    } else if(_interpCode.at(i)==1){
+      // pice-wise log
+      if(param->getVal()>=0)
+	sum *= pow(high->getVal()/nominal, +param->getVal());
+      else
+	sum *= pow(low->getVal()/nominal,  -param->getVal());
+    } else if(_interpCode.at(i)==2){
+      // parabolic with linear
+      double a = 0.5*(high->getVal()+low->getVal())-nominal;
+      double b = 0.5*(high->getVal()-low->getVal());
+      double c = 0;
+      if(param->getVal()>1 ){
+	sum += (2*a+b)*(param->getVal()-1)+high->getVal()-nominal;
+      } else if(param->getVal()<-1 ) {
+	sum += -1*(2*a-b)*(param->getVal()+1)+low->getVal()-nominal;
+      } else {
+	sum +=  a*pow(param->getVal(),2) + b*param->getVal()+c;
+      }
+    } else if(_interpCode.at(i)==3){
+      //parabolic version of log-normal
+      double a = 0.5*(high->getVal()+low->getVal())-nominal;
+      double b = 0.5*(high->getVal()-low->getVal());
+      double c = 0;
+      if(param->getVal()>1 ){
+	sum += (2*a+b)*(param->getVal()-1)+high->getVal()-nominal;
+      } else if(param->getVal()<-1 ) {
+	sum += -1*(2*a-b)*(param->getVal()+1)+low->getVal()-nominal;
+      } else {
+	sum +=  a*pow(param->getVal(),2) + b*param->getVal()+c;
+      }
+	
+    } else {
+      coutE(InputArguments) << "PiecewiseInterpolation::evaluate ERROR:  " << param->GetName() 
+			    << " with unknown interpolation code" << endl ;
+    }
 
     ++i;
   }
@@ -243,6 +288,7 @@ Int_t PiecewiseInterpolation::getAnalyticalIntegralWN(RooArgSet& allVars, RooArg
   _lowIter->Reset() ;
   _highIter->Reset() ;
   _paramIter->Reset() ;
+
   int i=0;
   while(_paramIter->Next() ) {
     func = (RooAbsReal*)_lowIter->Next() ;
@@ -252,7 +298,6 @@ Int_t PiecewiseInterpolation::getAnalyticalIntegralWN(RooArgSet& allVars, RooArg
     func = (RooAbsReal*)_highIter->Next() ;
     funcInt = func->createIntegral(analVars) ;
     cache->_highIntList.addOwned(*funcInt) ;
-
     ++i;
   }
 
@@ -287,22 +332,71 @@ Double_t PiecewiseInterpolation::analyticalIntegralWN(Int_t code, const RooArgSe
     nominal = value;
     i++;
   }
-  if(i==0 || i>1)
-    cout << "problem, wrong number of nominal functions"<<endl;
+  if(i==0 || i>1) { cout << "problem, wrong number of nominal functions"<<endl; }
 
   // now get low/high variations
   i = 0;
   _paramIter->Reset() ;
-  while((param=(RooAbsReal*)_paramIter->Next())) {
+
+  /* // MB : old bit of interpolation code
+  while( (param=(RooAbsReal*)_paramIter->Next()) ) {
+    low = (RooAbsReal*)lowIntIter->Next() ;
+    high = (RooAbsReal*)highIntIter->Next() ;
+    
+    if(param->getVal()>0) {
+      value += param->getVal()*(high->getVal() - nominal );
+    } else {
+      value += param->getVal()*(nominal - low->getVal());
+    }
+    ++i;
+  }
+  */
+
+  while( (param=(RooAbsReal*)_paramIter->Next()) ) {
     low = (RooAbsReal*)lowIntIter->Next() ;
     high = (RooAbsReal*)highIntIter->Next() ;
 
-    
-    if(param->getVal()>0)
-      value += param->getVal()*(high->getVal() - nominal );
-    else
-      value += param->getVal()*(nominal - low->getVal());
-
+    if(_interpCode.at(i)==0){
+      // piece-wise linear
+      if(param->getVal()>0)
+	value +=  param->getVal()*(high->getVal() - nominal );
+      else
+	value += param->getVal()*(nominal - low->getVal());
+    } else if(_interpCode.at(i)==1){
+      // pice-wise log
+      if(param->getVal()>=0)
+	value *= pow(high->getVal()/nominal, +param->getVal());
+      else
+	value *= pow(low->getVal()/nominal,  -param->getVal());
+    } else if(_interpCode.at(i)==2){
+      // parabolic with linear
+      double a = 0.5*(high->getVal()+low->getVal())-nominal;
+      double b = 0.5*(high->getVal()-low->getVal());
+      double c = 0;
+      if(param->getVal()>1 ){
+	value += (2*a+b)*(param->getVal()-1)+high->getVal()-nominal;
+      } else if(param->getVal()<-1 ) {
+	value += -1*(2*a-b)*(param->getVal()+1)+low->getVal()-nominal;
+      } else {
+	value +=  a*pow(param->getVal(),2) + b*param->getVal()+c;
+      }
+    } else if(_interpCode.at(i)==3){
+      //parabolic version of log-normal
+      double a = 0.5*(high->getVal()+low->getVal())-nominal;
+      double b = 0.5*(high->getVal()-low->getVal());
+      double c = 0;
+      if(param->getVal()>1 ){
+	value += (2*a+b)*(param->getVal()-1)+high->getVal()-nominal;
+      } else if(param->getVal()<-1 ) {
+	value += -1*(2*a-b)*(param->getVal()+1)+low->getVal()-nominal;
+      } else {
+	value +=  a*pow(param->getVal(),2) + b*param->getVal()+c;
+      }
+	
+    } else {
+      coutE(InputArguments) << "PiecewiseInterpolation::analyticalIntegralWN ERROR:  " << param->GetName() 
+			    << " with unknown interpolation code" << endl ;
+    }
     ++i;
   }
 
@@ -311,7 +405,39 @@ Double_t PiecewiseInterpolation::analyticalIntegralWN(Int_t code, const RooArgSe
   delete highIntIter; 
 
   return value;
+}
 
+
+//_____________________________________________________________________________
+void PiecewiseInterpolation::setInterpCode(RooAbsReal& param, int code){
+
+  int index = _paramSet.index(&param);
+  if(index<0){
+      coutE(InputArguments) << "PiecewiseInterpolation::setInterpCode ERROR:  " << param.GetName() 
+			    << " is not in list" << endl ;
+  } else {
+      coutW(InputArguments) << "PiecewiseInterpolation::setInterpCode :  " << param.GetName() 
+			    << " is now " << code << endl ;
+    _interpCode.at(index) = code;
+  }
+}
+
+
+//_____________________________________________________________________________
+void PiecewiseInterpolation::setAllInterpCodes(int code){
+
+  for(unsigned int i=0; i<_interpCode.size(); ++i){
+    _interpCode.at(i) = code;
+  }
+}
+
+
+//_____________________________________________________________________________
+void PiecewiseInterpolation::printAllInterpCodes(){
+
+  for(unsigned int i=0; i<_interpCode.size(); ++i){
+    coutI(InputArguments) <<"interp code for " << _paramSet.at(i)->GetName() << " = " << _interpCode.at(i) <<endl;
+  }
 }
 
 
