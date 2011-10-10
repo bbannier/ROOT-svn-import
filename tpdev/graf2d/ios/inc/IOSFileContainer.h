@@ -17,7 +17,8 @@
 class TObject;
 class TFile;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class Pad;
 
@@ -68,6 +69,7 @@ FileContainer *CreateFileContainer(const char *fileName);
 //Just for symmetry.
 void DeleteFileContainer(FileContainer *container);
 
-}
+}//namespace iOS
+}//namespace ROOT
 
 #endif

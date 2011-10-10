@@ -43,7 +43,7 @@
 
    if (!solid) { //Solid fill - no pattern.
       float rgb[] = {0.f, 0.f, 0.f};
-      CGPatternRef pattern = ROOT_iOS::GraphicUtils::gPatternGenerators[patternIndex](rgb);
+      CGPatternRef pattern = ROOT::iOS::GraphicUtils::gPatternGenerators[patternIndex](rgb);
    
       CGColorSpaceRef colorSpace = CGColorSpaceCreatePattern(0);
       const float alpha = 1.f;

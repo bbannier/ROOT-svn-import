@@ -2,7 +2,8 @@
 
 #include "IOSResourceManagement.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Util {
 
 //_________________________________________________________________
@@ -40,5 +41,6 @@ CGStateGuard::~CGStateGuard()
 }
 
 
-}
-}
+}//namespace Util
+}//namespace iOS
+}//namespace ROOT

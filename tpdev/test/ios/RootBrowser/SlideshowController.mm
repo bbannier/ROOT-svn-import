@@ -46,7 +46,7 @@
       nObjects = 2;
 
    for (unsigned i = 0; i < nObjects; ++i) {
-      pads[i] = new ROOT_iOS::Pad(padFrame.size.width, padFrame.size.height);
+      pads[i] = new ROOT::iOS::Pad(padFrame.size.width, padFrame.size.height);
       padViews[i] = [[SlideView alloc] initWithFrame : padFrame andPad : pads[i]];
       [padParentView addSubview : padViews[i]];
       padViews[i].hidden = YES;
@@ -54,7 +54,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) drawObject : (TObject *)obj inAPad : (ROOT_iOS::Pad *)pad option : (const char *)opt
+- (void) drawObject : (TObject *)obj inAPad : (ROOT::iOS::Pad *)pad option : (const char *)opt
 {
    pad->cd();
    pad->Clear();
@@ -62,7 +62,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil fileContainer : (ROOT_iOS::FileContainer *)container
+- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil fileContainer : (ROOT::iOS::FileContainer *)container
 {
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
 

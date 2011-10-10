@@ -2,7 +2,8 @@
 
 #include "IOSFillPatterns.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace GraphicUtils {
 
 const unsigned solidFillStyle = 1001;
@@ -668,5 +669,6 @@ PatternGenerator_t gPatternGenerators[kPredefinedFillPatterns] = {create_pattern
                                                                   create_pattern_17,
                                                                   create_pattern_18};
 
-}
-}
+}//namespace GraphicUtils
+}//namespace iOS
+}//namespace ROOT

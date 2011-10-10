@@ -7,17 +7,19 @@
 //  TODO: find better class name.
 ///////////////////////////////////////////////////////////
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class Pad;
 
+}
 }
 
 @class ROOTObjectController;
 @class SelectionView;
 
 @interface PadView : UIView {
-   ROOT_iOS::Pad *pad;
+   ROOT::iOS::Pad *pad;
    
    ROOTObjectController *controller;
    
@@ -33,10 +35,10 @@ class Pad;
 
 @property (nonatomic, assign) SelectionView *selectionView;
 
-- (id) initWithFrame : (CGRect)frame controller : (ROOTObjectController *)c forPad : (ROOT_iOS::Pad*)pad;
+- (id) initWithFrame : (CGRect)frame controller : (ROOTObjectController *)c forPad : (ROOT::iOS::Pad*)pad;
 - (void) dealloc;
 
-- (void) setPad : (ROOT_iOS::Pad *)newPad;
+- (void) setPad : (ROOT::iOS::Pad *)newPad;
 - (void) drawRect : (CGRect)rect;
 - (void) clearPad;
 

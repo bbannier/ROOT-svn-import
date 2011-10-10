@@ -15,6 +15,7 @@ afimLabelFont
 }
 
 @interface AxisFontInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
+@private
    IBOutlet UILabel *titleLabel;
    IBOutlet UIPickerView *fontPicker;
    

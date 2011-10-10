@@ -26,18 +26,18 @@ static const CGFloat maximumZoom = 2.f;
 @implementation ROOTObjectController
 
 @synthesize navigationScrollView;
-@synthesize scrollView;
+@synthesize padScrollView;
 
 #pragma mark - Special methods to manage drawing options.
 
 //____________________________________________________________________________________________________
-- (ROOT_iOS::EHistogramErrorOption) getErrorOption
+- (ROOT::iOS::EHistogramErrorOption) getErrorOption
 {
    return fileContainer->GetErrorDrawOption(currentObject);
 }
 
 //____________________________________________________________________________________________________
-- (void) setErrorOption : (ROOT_iOS::EHistogramErrorOption) errorOption
+- (void) setErrorOption : (ROOT::iOS::EHistogramErrorOption) errorOption
 {
    fileContainer->SetErrorDrawOption(currentObject, errorOption);
    //Ugly as hell :(( But ROOT holds draw options inside TObjLink in a pad.
@@ -115,12 +115,12 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (void) setupScrollForEditablePadView 
 {
-   scrollView.delegate = self;
-   [scrollView setMaximumZoomScale : 2.];
-   scrollView.bounces = NO;
-   scrollView.bouncesZoom = NO;
+   padScrollView.delegate = self;
+   [padScrollView setMaximumZoomScale : 2.];
+   padScrollView.bounces = NO;
+   padScrollView.bouncesZoom = NO;
    //By default, this view is hidden (mode != ocmEdit).
-   scrollView.hidden = YES;
+   padScrollView.hidden = YES;
 }
 
 //____________________________________________________________________________________________________
@@ -144,7 +144,7 @@ static const CGFloat maximumZoom = 2.f;
 {
    using namespace ROOT_IOSBrowser;
    
-   const CGPoint padCenter = CGPointMake(scrollView.frame.size.width / 2, scrollView.frame.size.height / 2);
+   const CGPoint padCenter = CGPointMake(padScrollView.frame.size.width / 2, padScrollView.frame.size.height / 2);
    const CGRect padRect = CGRectMake(padCenter.x - padW / 2, padCenter.y - padH / 2, padW, padH);
    selectedObject = fileContainer->GetPadAttached(currentObject);
    //Init the inspector for the IOSPad.
@@ -152,7 +152,7 @@ static const CGFloat maximumZoom = 2.f;
 
    fileContainer->GetPadAttached(currentObject)->SetViewWH(padRect.size.width, padRect.size.height);      
    editablePadView = [[PadView alloc] initWithFrame : padRect controller : self forPad : fileContainer->GetPadAttached(currentObject)];
-   [scrollView addSubview : editablePadView];
+   [padScrollView addSubview : editablePadView];
    [editablePadView release];
 }
 
@@ -215,7 +215,7 @@ static const CGFloat maximumZoom = 2.f;
    if (!zoomed) {
       [self correctEditablePadFrame : orientation];
    } else {
-      editablePadView.frame = [self centeredFrameForScrollView : scrollView andUIView : editablePadView]; 
+      editablePadView.frame = [self centeredFrameForScrollView : padScrollView andUIView : editablePadView]; 
    }
 }
 
@@ -236,7 +236,7 @@ static const CGFloat maximumZoom = 2.f;
    }
    
    self.view.frame = mainFrame;
-   self.scrollView.frame = scrollFrame;
+   self.padScrollView.frame = scrollFrame;
    self.navigationScrollView.frame = scrollFrame;
    
    scrollFrame.origin = CGPointZero;
@@ -286,7 +286,7 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-   self.scrollView = nil;
+   self.padScrollView = nil;
    self.navigationScrollView = nil;
    [objectInspector release];
  
@@ -361,9 +361,9 @@ static const CGFloat maximumZoom = 2.f;
    editablePadView.transform = CGAffineTransformIdentity;
    editablePadView.frame = CGRectMake(0.f, 0.f, padW, padH);
 
-   scrollView.contentOffset = CGPointZero;
-   scrollView.maximumZoomScale = maximumZoom;
-   scrollView.minimumZoomScale = 1.f;
+   padScrollView.contentOffset = CGPointZero;
+   padScrollView.maximumZoomScale = maximumZoom;
+   padScrollView.minimumZoomScale = 1.f;
 }
 
 //____________________________________________________________________________________________________
@@ -388,7 +388,7 @@ static const CGFloat maximumZoom = 2.f;
       [self resetEditablePad];
       [self resetSelectionView];
 
-      ROOT_iOS::Pad *pad = fileContainer->GetPadAttached(currentObject);
+      ROOT::iOS::Pad *pad = fileContainer->GetPadAttached(currentObject);
       //pad->SetViewWH(editablePadView.frame.size.width, editablePadView.frame.size.height);
       selectedObject = pad;
       [editablePadView setPad : pad];
@@ -398,13 +398,13 @@ static const CGFloat maximumZoom = 2.f;
 
       editorView.hidden = NO;      
       navigationScrollView.hidden = YES;
-      scrollView.hidden = NO;
+      padScrollView.hidden = NO;
    } else {
-      ROOT_iOS::Pad *pad = fileContainer->GetPadAttached(currentObject);
+      ROOT::iOS::Pad *pad = fileContainer->GetPadAttached(currentObject);
       pad->Unpick();
       selectedObject = pad;
 
-      scrollView.hidden = YES;
+      padScrollView.hidden = YES;
       editorView.hidden = YES;
       
 //      pad->SetViewWH(navScrolls, <#UInt_t h#>)
@@ -424,7 +424,7 @@ static const CGFloat maximumZoom = 2.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)container;
+- (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT::iOS::FileContainer *)container;
 {
    //This method is called after initWithNibName was called, so it's the second step
    //of controller's construction. The default mode is ocmNavigation, so setup navigation
@@ -528,8 +528,8 @@ static const CGFloat maximumZoom = 2.f;
     // the zoom rect is in the content view's coordinates. 
     //    At a zoom scale of 1.0, it would be the size of the imageScrollView's bounds.
     //    As the zoom scale decreases, so more content is visible, the size of the rect grows.
-    zoomRect.size.height = [scrollView frame].size.height / scale;
-    zoomRect.size.width  = [scrollView frame].size.width  / scale;
+    zoomRect.size.height = [padScrollView frame].size.height / scale;
+    zoomRect.size.width  = [padScrollView frame].size.width  / scale;
     
     // choose an origin so as to get the right center.
     zoomRect.origin.x    = center.x - (zoomRect.size.width  / 2.0);
@@ -554,7 +554,7 @@ static const CGFloat maximumZoom = 2.f;
       zoomed = YES;
       const CGFloat newScale = padW * maximumZoom / editablePadView.frame.size.width;
       CGRect zoomRect = [self zoomRectForScale : newScale withCenter : tapPt];
-      [scrollView zoomToRect : zoomRect animated : YES];
+      [padScrollView zoomToRect : zoomRect animated : YES];
 //      [self scrollViewDidEndZooming : scrollView withView : padView atScale : maximumZoom];
    } else {
       zoomed = NO;
@@ -564,10 +564,10 @@ static const CGFloat maximumZoom = 2.f;
       fileContainer->GetPadAttached(currentObject)->SetViewWH(padW, padH);
       //      pad->SetViewWH(padW, padH);
       //
-      scrollView.maximumZoomScale = maximumZoom;
-      scrollView.minimumZoomScale = 1.f;
-      scrollView.contentOffset = CGPointZero;
-      scrollView.contentSize = editablePadView.frame.size;
+      padScrollView.maximumZoomScale = maximumZoom;
+      padScrollView.minimumZoomScale = 1.f;
+      padScrollView.contentOffset = CGPointZero;
+      padScrollView.contentSize = editablePadView.frame.size;
       //[scrollView addSubview : padView];
       //[padView release];
       [editablePadView setNeedsDisplay];
@@ -705,7 +705,7 @@ static const CGFloat maximumZoom = 2.f;
    CGContextSetRGBFillColor(ctx, 1.f, 0.4f, 0.f, 1.f);
    CGContextFillRect(ctx, pageRect);
 
-   ROOT_iOS::Pad *padToSave = fileContainer->GetPadAttached(currentObject);//mode == ROOT_IOSObjectController::ocmEdit ? pad : navPad;
+   ROOT::iOS::Pad *padToSave = fileContainer->GetPadAttached(currentObject);//mode == ROOT_IOSObjectController::ocmEdit ? pad : navPad;
 //   padToSave->cd();
    
 //   if (mode == ROOT_IOSObjectController::ocmNavigation) {

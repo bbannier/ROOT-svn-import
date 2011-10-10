@@ -123,7 +123,7 @@
 
 
 //____________________________________________________________________________________________________
-- (void) addShortcutForObjectAtIndex : (unsigned) objIndex inPad : (ROOT_iOS::Pad *) pad
+- (void) addShortcutForObjectAtIndex : (unsigned) objIndex inPad : (ROOT::iOS::Pad *) pad
 {
    const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
    UIGraphicsBeginImageContext(rect.size);
@@ -170,7 +170,7 @@
 //____________________________________________________________________________________________________
 - (void) addObjectsIntoScrollview
 {
-   typedef ROOT_iOS::FileContainer::size_type size_type;
+   typedef ROOT::iOS::FileContainer::size_type size_type;
 
    [objectShortcuts release];
    [self clearScrollview];
@@ -179,7 +179,7 @@
 
    if (fileContainer->GetNumberOfObjects()) {
       const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
-      ROOT_iOS::Pad * pad = new ROOT_iOS::Pad(rect.size.width, rect.size.height);//Pad to draw object, check if I can use stack object.
+      ROOT::iOS::Pad * pad = new ROOT::iOS::Pad(rect.size.width, rect.size.height);//Pad to draw object, check if I can use stack object.
 
       for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i)
          [self addShortcutForObjectAtIndex : i inPad : pad];
@@ -189,7 +189,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) activateForFile : (ROOT_iOS::FileContainer *)container
+- (void) activateForFile : (ROOT::iOS::FileContainer *)container
 {
    fileContainer = container;
    self.navigationItem.title = [NSString stringWithFormat : @"Contents of %s", container->GetFileName()];

@@ -15,7 +15,8 @@
 #include "Rtypes.h"
 #endif
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class CTLineGuard : public Util::NonCopyable {
    friend class Painter;
@@ -81,7 +82,8 @@ private:
    void InitSymbolMap();
 };
 
-}
+}//namespace iOS
+}//namespace ROOT
 
 
 #endif

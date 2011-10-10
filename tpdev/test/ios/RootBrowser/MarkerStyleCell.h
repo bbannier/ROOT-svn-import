@@ -3,6 +3,7 @@
 #import "TAttMarker.h"
 
 @interface MarkerStyleCell : UIView {
+@private
    UIImage *backgroundImage;
    EMarkerStyle markerStyle;
 }

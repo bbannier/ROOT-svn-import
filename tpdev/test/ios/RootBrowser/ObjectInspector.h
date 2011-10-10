@@ -26,6 +26,7 @@ kNOfInspectors //
 
 
 @interface ObjectInspector : UIViewController <ObjectInspectorComponent> {
+@private
    UIViewController <ObjectInspectorComponent> *activeEditors[ROOT_IOSObjectInspector::kNOfInspectors];
    UIViewController <ObjectInspectorComponent> *cachedEditors[ROOT_IOSObjectInspector::kNOfInspectors];
 

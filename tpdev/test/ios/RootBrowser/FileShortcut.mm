@@ -35,7 +35,7 @@
 - (void) initFileContainer : (NSString *) path
 {
    //C++ part. Open the file and read its contents.
-   fileContainer = ROOT_iOS::CreateFileContainer([path cStringUsingEncoding : [NSString defaultCStringEncoding]]);
+   fileContainer = ROOT::iOS::CreateFileContainer([path cStringUsingEncoding : [NSString defaultCStringEncoding]]);
 }
 
 //____________________________________________________________________________________________________
@@ -106,7 +106,7 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-   ROOT_iOS::DeleteFileContainer(fileContainer);
+   ROOT::iOS::DeleteFileContainer(fileContainer);
 
    self.fileName = nil;
    self.filePath = nil;
@@ -124,7 +124,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (ROOT_iOS::FileContainer *) getFileContainer
+- (ROOT::iOS::FileContainer *) getFileContainer
 {
    return fileContainer;
 }

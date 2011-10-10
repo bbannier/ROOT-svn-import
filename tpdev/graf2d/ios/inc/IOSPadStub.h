@@ -5,7 +5,8 @@
 #include "TVirtualPad.h"
 #endif
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 /////////////////////////////////////////////////////////////////////////
 //
@@ -84,6 +85,7 @@ public:
    Bool_t HasViewer3D() const;
 };
 
-}
+}//namespace iOS
+}//namespace ROOT
 
 #endif

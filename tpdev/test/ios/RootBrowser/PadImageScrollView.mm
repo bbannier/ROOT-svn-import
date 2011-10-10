@@ -123,7 +123,7 @@ static const CGFloat minZoom = 1.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) setPad : (ROOT_iOS::Pad *)p
+- (void) setPad : (ROOT::iOS::Pad *)p
 {
    pad = p;
    //Generate new image.
@@ -144,7 +144,7 @@ static const CGFloat minZoom = 1.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) setPad : (ROOT_iOS::Pad *)p andImage : (UIImage *)image
+- (void) setPad : (ROOT::iOS::Pad *)p andImage : (UIImage *)image
 {
    pad = p;
    

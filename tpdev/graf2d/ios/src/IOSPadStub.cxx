@@ -1,6 +1,7 @@
 #include "IOSPadStub.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 //______________________________________________________________________________
 void PadStub::Close(Option_t *)
@@ -341,4 +342,5 @@ Bool_t PadStub::HasViewer3D() const
    return kFALSE;
 }
 
+}
 }

@@ -1,13 +1,15 @@
 #import <UIKit/UIKit.h>
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class Pad;
 
 }
+}
 
 @interface SelectionView : UIView {
-   ROOT_iOS::Pad *pad;
+   ROOT::iOS::Pad *pad;
    
    BOOL panActive;
    CGPoint panStart;
@@ -23,7 +25,7 @@ class Pad;
 @property (nonatomic, assign) CGPoint currentPanPoint;
 @property (nonatomic, assign) BOOL verticalDirection;
 
-- (id)initWithFrame : (CGRect)frame withPad : (ROOT_iOS::Pad *)p;
-- (void) setPad : (ROOT_iOS::Pad *)p;
+- (id)initWithFrame : (CGRect)frame withPad : (ROOT::iOS::Pad *)p;
+- (void) setPad : (ROOT::iOS::Pad *)p;
 
 @end

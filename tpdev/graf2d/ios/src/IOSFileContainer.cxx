@@ -10,7 +10,9 @@
 #include "TFile.h"
 #include "TH1.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
+
 namespace {
 
 //__________________________________________________________________________________________________________________________
@@ -206,4 +208,5 @@ void DeleteFileContainer(FileContainer *container)
    delete container;
 }
 
-}
+}//namespace iOS
+}//namespace ROOT

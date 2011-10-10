@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 
 @interface PatternCell : UIView {
+@private
    unsigned patternIndex;
    BOOL solid;
 }

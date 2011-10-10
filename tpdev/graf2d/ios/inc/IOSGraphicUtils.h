@@ -5,7 +5,8 @@
 #include "Rtypes.h"
 #endif
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace GraphicUtils {
 
 //Generic graphic utils.
@@ -31,6 +32,7 @@ private:
 };
 
 } //namespace GraphicUtils
-} //namespace ROOT_iOS
+} //namespace iOS
+} //namespace ROOT
 
 #endif

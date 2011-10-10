@@ -22,7 +22,7 @@ enum H1ErrorType {
 };
 
 NSString *errorTypesStrings[] = {@"No error", @"Simple", @"Edges", @"Rectangles", @"Fill", @"Contour"};
-ROOT_iOS::EHistogramErrorOption histErrorTypes[] = {ROOT_iOS::hetNoError, ROOT_iOS::hetE, ROOT_iOS::hetE1, ROOT_iOS::hetE2, ROOT_iOS::hetE3, ROOT_iOS::hetE4};
+ROOT::iOS::EHistogramErrorOption histErrorTypes[] = {ROOT::iOS::hetNoError, ROOT::iOS::hetE, ROOT::iOS::hetE1, ROOT::iOS::hetE2, ROOT::iOS::hetE3, ROOT::iOS::hetE4};
 
 //____________________________________________________________________________________________________
 - (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil

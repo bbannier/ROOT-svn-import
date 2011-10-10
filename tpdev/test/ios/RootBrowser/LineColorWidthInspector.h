@@ -13,6 +13,7 @@ class TObject;
 //Component 1 - line width picker.
 
 @interface LineColorWidthInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
+@private
    IBOutlet UIPickerView *linePicker;
 
    NSMutableArray *lineColors;

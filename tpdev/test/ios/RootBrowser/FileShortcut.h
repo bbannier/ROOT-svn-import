@@ -1,15 +1,18 @@
 #import <UIKit/UIKit.h>
 
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class FileContainer;
 
+}
 }
 
 class TObject;
 
 @interface FileShortcut : UIView {
+@private
    UIViewController *controller;
 
    NSString *fileName;
@@ -18,7 +21,7 @@ class TObject;
    UIImage *filePictogram;
    UIImage *backgroundImage;
    
-   ROOT_iOS::FileContainer *fileContainer;
+   ROOT::iOS::FileContainer *fileContainer;
 }
 
 @property (nonatomic, retain) NSString *fileName;
@@ -30,6 +33,6 @@ class TObject;
 
 - (id) initWithFrame : (CGRect)frame controller : (UIViewController *)c filePath : (NSString *) path;
 
-- (ROOT_iOS::FileContainer *) getFileContainer;
+- (ROOT::iOS::FileContainer *) getFileContainer;
 
 @end

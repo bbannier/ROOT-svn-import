@@ -8,6 +8,7 @@ class TObject;
 class TAxis;
 
 @interface AxisTitleInspector : UIViewController <ObjectInspectorComponent> {
+@private
    IBOutlet UITextField *titleField;
    IBOutlet UISwitch *centered;
    IBOutlet UISwitch *rotated;

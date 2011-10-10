@@ -12,7 +12,8 @@
 #include "TH1.h"
 #include "TF2.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace FileUtils {
 
 //__________________________________________________________________________________________________________________________
@@ -75,6 +76,6 @@ void ScanFileForVisibleObjects(TFile *inputFile, const std::set<TString> &visibl
    options.swap(opts);
 }
 
-}
-}
-
+}//namespace FileUtils
+}//namespace iOS
+}//namespace ROOT

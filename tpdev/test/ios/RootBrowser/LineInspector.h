@@ -17,6 +17,7 @@ class TObject;
 //line style inspector.
 
 @interface LineInspector : UIViewController <ObjectInspectorComponent> {
+@private
    IBOutlet UITabBar *tabBar;
 
    LineColorWidthInspector *colorWidthInspector;

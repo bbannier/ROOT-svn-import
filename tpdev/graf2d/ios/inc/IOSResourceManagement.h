@@ -10,7 +10,8 @@
 #include "Rtypes.h"
 #endif
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Util {
 
 //Set of classes to simplify and automate resource and memory management with Core Foundation, Core Text, Core Graphics etc.
@@ -162,6 +163,7 @@ private:
 };
 
 }//namespace Util
-}//namespace ROOT_iOS
+}//namespace iOS
+}//namespace ROOT
 
 #endif

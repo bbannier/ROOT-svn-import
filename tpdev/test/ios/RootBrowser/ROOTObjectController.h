@@ -10,15 +10,14 @@
 @class EditorView;
 @class PadView;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 //Pad to draw object.
 class Pad;
 
 }
-
-
-////////////
+}
 
 namespace ROOT_IOSObjectController {
 
@@ -29,7 +28,6 @@ enum Mode {
 
 }
 
-//ROOT's object to draw.
 class TObject;
 
 @interface ROOTObjectController : UIViewController <UIScrollViewDelegate, MFMailComposeViewControllerDelegate> {
@@ -39,12 +37,12 @@ class TObject;
    EditorView *editorView;
    ObjectInspector *objectInspector;
    
-   IBOutlet ScrollViewWithPadView *scrollView;
+   IBOutlet ScrollViewWithPadView *padScrollView;
    IBOutlet UIScrollView *navigationScrollView;
    
    PadView *editablePadView;
 
-   ROOT_iOS::FileContainer *fileContainer;
+   ROOT::iOS::FileContainer *fileContainer;
 
    TObject *selectedObject;
    
@@ -56,22 +54,21 @@ class TObject;
    unsigned nextObject;
    unsigned previousObject;
    
-   UIBarButtonItem *editBtn;
-   
+   UIBarButtonItem *editBtn;   
 }
 
-@property (nonatomic, retain) ScrollViewWithPadView *scrollView;
+@property (nonatomic, retain) ScrollViewWithPadView *padScrollView;
 @property (nonatomic, retain) UIScrollView *navigationScrollView;
 
 
-- (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
+- (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT::iOS::FileContainer *)fileContainer;
 - (void) handleDoubleTapOnPad : (CGPoint)tapPt;
 - (void) objectWasSelected : (TObject *)object;
 - (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate;
 - (void) setupObjectInspector;
 
-- (ROOT_iOS::EHistogramErrorOption) getErrorOption;
-- (void) setErrorOption : (ROOT_iOS::EHistogramErrorOption) errorOption;
+- (ROOT::iOS::EHistogramErrorOption) getErrorOption;
+- (void) setErrorOption : (ROOT::iOS::EHistogramErrorOption) errorOption;
 
 - (BOOL) markerIsOn;
 - (void) setMarker : (BOOL)on;

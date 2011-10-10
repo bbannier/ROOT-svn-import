@@ -19,7 +19,8 @@
 #include "TPoint.h"
 #endif
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 //
 //SpaceConverter converts coordinates from pad's user space into UIView's userspace.
@@ -157,6 +158,7 @@ private:
    Painter &operator = (const Painter &rhs);
 };
 
-}//namespace ROOT_iOS
+}//iOS
+}//namespace ROOT
 
 #endif

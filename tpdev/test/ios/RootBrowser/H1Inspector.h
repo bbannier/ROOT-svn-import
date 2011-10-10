@@ -4,6 +4,7 @@
 @class H1BinsInspector;
 
 @interface H1Inspector : UIViewController <ObjectInspectorComponent> {
+@private
    IBOutlet UITabBar *tabBar;
    
    H1ErrorsInspector *errorInspector;

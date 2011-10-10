@@ -44,7 +44,7 @@ static const CGFloat defaultCellH = 44.f;
       [patternCells addObject : solidFill];
       [solidFill release];
       
-      for (unsigned i = 0; i < ROOT_iOS::GraphicUtils::kPredefinedFillPatterns; ++i) {
+      for (unsigned i = 0; i < ROOT::iOS::GraphicUtils::kPredefinedFillPatterns; ++i) {
          PatternCell *newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : i];
          [patternCells addObject : newCell];
          [newCell release];
@@ -108,7 +108,7 @@ static const CGFloat defaultCellH = 44.f;
    [fillPicker selectRow : pickerRow inComponent : 0 animated : NO];
    
    //Look for a fill pattern.
-   namespace Fill = ROOT_iOS::GraphicUtils;
+   namespace Fill = ROOT::iOS::GraphicUtils;
    
    const Style_t fillStyle = filledObject->GetFillStyle();
    if (fillStyle == Fill::solidFillStyle)//I'm sorry, again, hardcoded constant, ROOT does not define it :(.
@@ -135,7 +135,7 @@ static const CGFloat defaultCellH = 44.f;
 //____________________________________________________________________________________________________
 - (void) setNewPattern : (NSInteger) cellIndex
 {
-   namespace Fill = ROOT_iOS::GraphicUtils;
+   namespace Fill = ROOT::iOS::GraphicUtils;
 
    if (filledObject && parentController) {
       if (cellIndex > 0 && cellIndex <= Fill::kPredefinedFillPatterns) {

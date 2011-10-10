@@ -3,7 +3,8 @@
 #include "IOSGraphicUtils.h"
 #include "IOSMarkers.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace GraphicUtils {
 
 //______________________________________________________________________________
@@ -509,4 +510,5 @@ void DrawPolyMarker(CGContextRef ctx, const std::vector<TPoint> &xy, Size_t mark
 }
 
 }//namespace GraphicUtils
-}//namespace ROOT_iOS
+}//namespace iOS
+}//namespace ROOT

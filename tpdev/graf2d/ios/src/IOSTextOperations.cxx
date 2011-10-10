@@ -20,8 +20,8 @@
 #include "IOSTextOperations.h"
 #include "IOSGraphicUtils.h"
 
-namespace ROOT_iOS
-{
+namespace ROOT {
+namespace iOS {
 
 const CFStringRef fixedFontNames[FontManager::fmdNOfFonts] = 
                                      {
@@ -416,5 +416,5 @@ void FontManager::InitSymbolMap()
    fSymbolMap[36] = 0x2203;
 }
 
-}
-
+}//namespace iOS
+}//namespace ROOT

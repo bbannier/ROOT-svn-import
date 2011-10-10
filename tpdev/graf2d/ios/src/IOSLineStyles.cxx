@@ -1,6 +1,7 @@
 #include "IOSLineStyles.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace GraphicUtils {
 //For fixed line style, number of elements in a pattern is not bigger than 8.
 const unsigned linePatternLengths[] = {1, 2, 2, 4, 4, 8, 2, 6, 2, 4};
@@ -21,4 +22,5 @@ const float dashLinePatterns[10][8] = {
                                       };
 
 }//namespace GraphicUtils
-}//namespace ROOT_iOS
+}//namespace iOS
+}//namespace ROOT

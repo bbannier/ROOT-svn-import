@@ -9,6 +9,7 @@
 class TObject;
 
 @interface AxisInspector : UIViewController <ObjectInspectorComponent> {
+@private
    IBOutlet UITabBar *tabBar;
 
    AxisTicksInspector *ticksInspector;

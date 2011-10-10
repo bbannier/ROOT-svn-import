@@ -15,6 +15,7 @@ enum {
 }
 
 @interface EditorView : UIView {
+@private
    UILabel *editorTitle;
 
    ScrollViewWithPickers *scrollView;

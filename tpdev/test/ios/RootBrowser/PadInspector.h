@@ -9,6 +9,7 @@
 class TObject;
 
 @interface PadInspector : UIViewController <ObjectInspectorComponent> {
+@private
    IBOutlet UITabBar *tabBar;
 
    PadTicksGridInspector *gridInspector;
