@@ -1,10 +1,12 @@
 #include <stdexcept>
 #include <cstring>
+#include <memory>
 #include <set>
 
 #include "IOSFileContainer.h"
 #include "IOSFileScanner.h"
 #include "TSystem.h"
+#include "IOSPad.h"
 #include "TFile.h"
 #include "TH1.h"
 
@@ -78,6 +80,22 @@ FileContainer::FileContainer(const std::string &fileName)
    FillVisibleTypes(visibleTypes);
 
    FileUtils::ScanFileForVisibleObjects(fFileHandler.get(), visibleTypes, fFileContents, fOptions);
+   
+   try {
+      fAttachedPads.resize(fFileContents.size());
+      for (size_type i = 0; i < fAttachedPads.size(); ++i) {
+         std::auto_ptr<Pad> newPad(new Pad(400, 400));//400 - size is NOT important here, it'll be reset later anyway.
+         newPad->cd();
+         fFileContents[i]->Draw(fOptions[i].Data());
+         fAttachedPads[i] = newPad.release();
+      }
+   } catch (const std::exception &e) {
+      for (size_type i = 0; i < fAttachedPads.size(); ++i)
+         delete fAttachedPads[i];
+      for (size_type i = 0; i < fFileContents.size(); ++i)
+         delete fFileContents[i];
+      throw;
+   }
 }
 
 //__________________________________________________________________________________________________________________________
@@ -103,6 +121,12 @@ TObject *FileContainer::GetObject(size_type ind)const
 const char *FileContainer::GetDrawOption(size_type ind)const
 {
    return fOptions[ind].Data();
+}
+
+//__________________________________________________________________________________________________________________________
+Pad *FileContainer::GetPadAttached(size_type ind)const
+{
+   return fAttachedPads[ind];
 }
 
 //__________________________________________________________________________________________________________________________

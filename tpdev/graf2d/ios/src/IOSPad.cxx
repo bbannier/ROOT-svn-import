@@ -648,12 +648,12 @@ void Pad::ResizePad(Option_t *)
    fAbsYlowNDC  = fYlowNDC;
    fAbsWNDC     = fWNDC;
    fAbsHNDC     = fHNDC;
-   Double_t ww = (Double_t)gPad->GetWw();
-   Double_t wh = (Double_t)gPad->GetWh();
-   Double_t pxlow   = fAbsXlowNDC*ww;
-   Double_t pylow   = (1-fAbsYlowNDC)*wh;
-   Double_t pxrange = fAbsWNDC*ww;
-   Double_t pyrange = -fAbsHNDC*wh;
+   Double_t ww = fViewW;
+   Double_t wh = fViewH;
+   Double_t pxlow   = fAbsXlowNDC * ww;
+   Double_t pylow   = (1-fAbsYlowNDC) * wh;
+   Double_t pxrange = fAbsWNDC * ww;
+   Double_t pyrange = -fAbsHNDC * wh;
    // Linear X axis
    Double_t rounding = 0.00005;
    Double_t xrange  = fX2 - fX1;

@@ -5187,7 +5187,9 @@ void THistPainter::PaintErrors(Option_t *)
       if (!symbolsize || !errormarker) drawmarker = kFALSE;
 
       //  draw the error rectangles
-      if (option2) gPad->PaintBox(xi1,yi3,xi2,yi4);
+      if (option2) {
+         gPad->PaintBox(xi1,yi3,xi2,yi4);
+      }
 
       //  keep points for fill area drawing
       if (option3) {

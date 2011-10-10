@@ -404,6 +404,7 @@ void TText::GetBoundingBox(UInt_t &w, UInt_t &h, Bool_t angle)
       if ((gVirtualX->HasTTFonts() && TTF::IsInitialized()) || gPad->IsBatch()) {
          TTF::GetTextExtent(w, h, (char*)GetTitle());
       } else {
+//         std::cout<<"GetTextExtent";
          gVirtualX->GetTextExtent(w, h, (char*)GetTitle());
       }
    }
@@ -419,6 +420,7 @@ void TText::GetTextAscentDescent(UInt_t &a, UInt_t &d, const char *text) const
 
    Double_t     wh = (Double_t)gPad->XtoPixel(gPad->GetX2());
    Double_t     hh = (Double_t)gPad->YtoPixel(gPad->GetY1());
+
    Double_t tsize;
    if (wh < hh)  tsize = fTextSize*wh;
    else          tsize = fTextSize*hh;
