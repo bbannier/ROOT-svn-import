@@ -37,7 +37,7 @@ namespace ROOT {
       Bool_t IsEmpty() { return !GetSize(); }
 
    protected:
-      void* UntypedAt(size_t idx) const;
+      void* UntypedAt(size_t idx);
 
       virtual void CreateProxy();
 
@@ -50,12 +50,12 @@ template <typename T>
 class TTreeReaderArray: public ROOT::TTreeReaderArrayBase {
 public:
    TTreeReaderArray(TTreeReader& tr, const char* branchname):
-      TTreeReaderArrayBase(&tr, branchname, TDictionary::GetDictionary(typeid(T*)))
+      TTreeReaderArrayBase(&tr, branchname, TDictionary::GetDictionary(typeid(T)))
    {
       // Create an array reader of branch "branchname" for TTreeReader "tr".
    }
 
-   T& At(size_t idx) { return ((T*)UntypedAt())[idx]; }
+   T& At(size_t idx) { return *(T*)UntypedAt(idx); }
    T& operator[](size_t idx) { return At(idx); }
 
    ClassDefT(TTreeReaderArray, 0);//Accessor to member of an object stored in a collection

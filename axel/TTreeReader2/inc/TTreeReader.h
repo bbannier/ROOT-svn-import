@@ -46,6 +46,7 @@ class TTree;
 namespace ROOT {
    class TBranchProxy;
    class TTreeReaderValueBase;
+   class TTreeReaderArrayBase;
 
    class TNamedBranchProxy: public TObject {
    public:
@@ -58,10 +59,13 @@ namespace ROOT {
       ROOT::TBranchProxy* GetProxy() { return &fProxy; }
       TDictionary* GetDict() const { return fDict; }
       void SetDict(TDictionary* dict) { fDict = dict; }
+      TDictionary* GetContentDict() const { return fContentDict; }
+      void SetContentDict(TDictionary* dict) { fContentDict = dict; }
 
    private:
       ROOT::TBranchProxy fProxy;
       TDictionary*       fDict;
+      TDictionary*       fContentDict; // type of content, if a collection
       ClassDef(TNamedBranchProxy, 0); // branch proxy with a name
    };
 }
@@ -116,6 +120,7 @@ protected:
                                           TDictionary* dict);
    ROOT::TBranchProxy* CreateContentProxy(TBranch* branch);
    const char* GetBranchContentDataType(TBranch* branch,
+                                        TString& contentTypeName,
                                         TDictionary* &dict) const;
 
    void RegisterValueReader(ROOT::TTreeReaderValueBase* reader);
@@ -135,6 +140,7 @@ private:
    THashTable   fProxies; //attached ROOT::TNamedBranchProxies; owned
 
    friend class ROOT::TTreeReaderValueBase;
+   friend class ROOT::TTreeReaderArrayBase;
 
    ClassDef(TTreeReader, 0); // A simple interface to read trees
 };
