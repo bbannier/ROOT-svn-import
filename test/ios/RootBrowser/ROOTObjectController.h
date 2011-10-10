@@ -1,6 +1,8 @@
 #import <MessageUI/MessageUI.h>
 #import <UIKit/UIKit.h>
 
+#import "IOSFileContainer.h"
+
 @class ScrollViewWithPadView;
 @class PadImageScrollView;
 @class ObjectInspector;
@@ -10,11 +12,13 @@
 
 namespace ROOT_iOS {
 
-class FileContainer;
 //Pad to draw object.
 class Pad;
 
 }
+
+
+////////////
 
 namespace ROOT_IOSObjectController {
 
@@ -38,8 +42,7 @@ class TObject;
    IBOutlet ScrollViewWithPadView *scrollView;
    IBOutlet UIScrollView *navigationScrollView;
    
-   PadView *padView;
-   ROOT_iOS::Pad *pad;
+   PadView *editablePadView;
 
    ROOT_iOS::FileContainer *fileContainer;
 
@@ -48,27 +51,17 @@ class TObject;
    BOOL zoomed;
    
    PadImageScrollView *navScrolls[3];
-   ROOT_iOS::Pad *navPad;
+
    unsigned currentObject;
    unsigned nextObject;
    unsigned previousObject;
    
    UIBarButtonItem *editBtn;
    
-   //Option like lego, surf, etc.
-   NSString *basicDrawOption;
-   //E-E5 options.
-   NSString *errorsDrawOption;
-   //P option.
-   NSString *markerDrawOption;
-   //May be option like CYL, POL, SPH, etc.
 }
 
 @property (nonatomic, retain) ScrollViewWithPadView *scrollView;
 @property (nonatomic, retain) UIScrollView *navigationScrollView;
-@property (nonatomic, retain) NSString *basicDrawOption;
-@property (nonatomic, retain) NSString *errorsDrawOption;
-@property (nonatomic, retain) NSString *markerDrawOption;
 
 
 - (void) setNavigationForObjectWithIndex : (unsigned) index fromContainer : (ROOT_iOS::FileContainer *)fileContainer;
@@ -77,7 +70,10 @@ class TObject;
 - (void) objectWasModifiedUpdateSelection : (BOOL)needUpdate;
 - (void) setupObjectInspector;
 
-//Draw option for the controlled object.
-- (NSString *) getDrawOption;
+- (ROOT_iOS::EHistogramErrorOption) getErrorOption;
+- (void) setErrorOption : (ROOT_iOS::EHistogramErrorOption) errorOption;
+
+- (BOOL) markerIsOn;
+- (void) setMarker : (BOOL)on;
 
 @end

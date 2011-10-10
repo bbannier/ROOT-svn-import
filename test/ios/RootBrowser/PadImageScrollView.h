@@ -13,11 +13,7 @@ class TObject;
 @interface PadImageScrollView : UIScrollView <UIScrollViewDelegate> {
 @private
    UIImage *padImage;
-   
    ROOT_iOS::Pad *pad;
-   
-   TObject *object;
-   const char *drawOption;
    
    PadImageView *nestedView;
 }
@@ -26,9 +22,9 @@ class TObject;
 
 + (CGRect) defaultImageFrame;
 
-- (id) initWithFrame : (CGRect)frame andPad : (ROOT_iOS::Pad*)pad;
-- (void) setObject : (TObject *)obj drawOption : (const char*)option;
-- (void) setObject : (TObject *)obj drawOption : (const char *) opt andImage : (UIImage *)image;
+- (id) initWithFrame : (CGRect)frame;
+- (void) setPad : (ROOT_iOS::Pad *)pad;
+- (void) setPad : (ROOT_iOS::Pad *)pad andImage : (UIImage *)image;
 - (void) resetToFrame : (CGRect)frame;
 
 @end

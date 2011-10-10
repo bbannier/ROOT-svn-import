@@ -59,8 +59,8 @@ static const CGFloat tapInterval = 0.15f;
 - (void)drawRect : (CGRect)rect
 {
    // Drawing code   
+   
    CGContextRef ctx = UIGraphicsGetCurrentContext();
-
 //   CGContextClearRect(ctx, rect);
 
    CGContextSetRGBFillColor(ctx, 1.f, 1.f, 1.f, 1.f);

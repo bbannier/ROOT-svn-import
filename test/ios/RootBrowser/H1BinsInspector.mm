@@ -135,7 +135,8 @@
 //____________________________________________________________________________________________________
 - (IBAction) toggleMarkers
 {
-   showMarkers.on ? controller.markerDrawOption = @"P" : controller.markerDrawOption = @"";
+//   showMarkers.on ? controller.markerDrawOption = @"P" : controller.markerDrawOption = @"";
+   [controller setMarker : showMarkers.on];
    [controller objectWasModifiedUpdateSelection : NO];
 }
 

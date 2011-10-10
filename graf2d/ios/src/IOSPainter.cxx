@@ -602,7 +602,6 @@ void Painter::SetLineColorForCurrentObjectID() const
 //_________________________________________________________________
 void Painter::SetPolygonColorForCurrentObjectID() const
 {
-   //std::cout<<"ID is "<<fCurrentObjectID<<std::endl;
    Float_t rgb[3] = {};
    fEncoder.IdToColor(fCurrentObjectID, rgb);
    CGContextSetRGBFillColor(fCtx, rgb[0], rgb[1], rgb[2], 1.f);

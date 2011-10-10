@@ -4,6 +4,7 @@
 
 #include "IOSFileScanner.h"
 #include "TMultiGraph.h"
+#include "TGraphPolar.h"
 #include "TIterator.h"
 #include "TFile.h"
 #include "TList.h"
@@ -36,7 +37,7 @@ TObject *ReadObjectForKey(TFile *inputFile, const TKey *key, TString &option)
    if (dynamic_cast<TF2 *>(obj.get()))
       option = "surf1";
    if (dynamic_cast<TMultiGraph *>(obj.get()))
-      option = "ac";
+      option = "acp";
 
    return obj.release();
 }

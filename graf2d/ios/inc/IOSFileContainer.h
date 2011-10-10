@@ -19,6 +19,8 @@ class TFile;
 
 namespace ROOT_iOS {
 
+class Pad;
+
 enum EHistogramErrorOption {
    hetNoError,
    hetE,
@@ -39,6 +41,7 @@ public:
    size_type GetNumberOfObjects()const;
    TObject *GetObject(size_type ind)const;
    const char *GetDrawOption(size_type ind)const;
+   Pad *GetPadAttached(size_type ind)const;
 
    void SetErrorDrawOption(size_type ind, EHistogramErrorOption opt);
    EHistogramErrorOption GetErrorDrawOption(size_type ind)const;
@@ -54,6 +57,8 @@ private:
    std::auto_ptr<TFile> fFileHandler;
    std::vector<TObject *> fFileContents;
    std::vector<TString> fOptions;
+   
+   std::vector<Pad *> fAttachedPads;
 };
 
 //This is the function to be called from Obj-C++ code.

@@ -21,7 +21,8 @@ enum H1ErrorType {
    kTotalNumOfTypes
 };
 
-NSString *errorTypes[] = {@"No error", @"Simple", @"Edges", @"Rectangles", @"Fill", @"Contour"};
+NSString *errorTypesStrings[] = {@"No error", @"Simple", @"Edges", @"Rectangles", @"Fill", @"Contour"};
+ROOT_iOS::EHistogramErrorOption histErrorTypes[] = {ROOT_iOS::hetNoError, ROOT_iOS::hetE, ROOT_iOS::hetE1, ROOT_iOS::hetE2, ROOT_iOS::hetE3, ROOT_iOS::hetE4};
 
 //____________________________________________________________________________________________________
 - (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
@@ -104,7 +105,7 @@ NSString *errorTypes[] = {@"No error", @"Simple", @"Edges", @"Rectangles", @"Fil
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
    UILabel *label = [[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)];
-   label.text = errorTypes[row];
+   label.text = errorTypesStrings[row];
    label.font = [UIFont fontWithName : @"TimesNewRomanPS-BoldMT" size : 14.f];
    label.textAlignment = UITextAlignmentCenter;
    label.backgroundColor = [UIColor colorWithPatternImage : [UIImage imageNamed : @"text_cell_bkn.png"]];
@@ -114,27 +115,10 @@ NSString *errorTypes[] = {@"No error", @"Simple", @"Edges", @"Rectangles", @"Fil
 //____________________________________________________________________________________________________
 - (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
-   switch (row) {
-   case 0:
-      controller.errorsDrawOption = @"";
-      break;
-   case 1:
-      controller.errorsDrawOption = @"E";
-      break;
-   case 2:
-      controller.errorsDrawOption = @"E1";
-      break;
-   case 3:
-      controller.errorsDrawOption = @"E2";
-      break;
-   case 4:
-      controller.errorsDrawOption = @"E3";
-      break;
-   case 5:
-      controller.errorsDrawOption = @"E4";
-      break;
+   if (row >= 0) {
+      [controller setErrorOption : histErrorTypes[row]];
+      [controller objectWasModifiedUpdateSelection : YES];
    }
-   [controller objectWasModifiedUpdateSelection : YES];
 }
 
 #pragma mark ObjectInspectorComponent protocol.
