@@ -3,7 +3,8 @@
 
 #include <CoreGraphics/CGPattern.h>
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace GraphicUtils {
 
 //
@@ -32,7 +33,8 @@ extern PatternGenerator_t gPatternGenerators[kPredefinedFillPatterns];
 extern const unsigned solidFillStyle; //1001
 extern const unsigned stippleBase; //3000
 
-}//namespace GraphicUtils
-}//namespace ROOT_iOS
+}//GraphicUtils
+}//namespace iOS
+}//namespace ROOT
 
 #endif

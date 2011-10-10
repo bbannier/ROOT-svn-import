@@ -16,6 +16,7 @@ enum AxisColorInspectorMode {
 
 }
 @interface AxisColorInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
+@private
    ROOT_IOSObjectInspector::AxisColorInspectorMode mode;
 
    IBOutlet UIPickerView *colorPicker;

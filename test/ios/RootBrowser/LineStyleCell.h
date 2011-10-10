@@ -2,6 +2,7 @@
 
 
 @interface LineStyleCell : UIView {
+@private
    unsigned lineStyle;
    
    UIImage *backgroundImage;

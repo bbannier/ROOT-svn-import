@@ -9,6 +9,7 @@
 class TAxis;
 
 @interface AxisTicksInspector : UIViewController <ObjectInspectorComponent> {
+@private
    IBOutlet UILabel *tickLengthLabel;
    IBOutlet UIButton *plusLengthBtn;
    IBOutlet UIButton *minusLengthBtn;

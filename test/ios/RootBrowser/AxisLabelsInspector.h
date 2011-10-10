@@ -7,7 +7,7 @@ class TObject;
 class TAxis;
 
 @interface AxisLabelsInspector : UIViewController <ObjectInspectorComponent> {
-
+@private
    IBOutlet UIButton *plusSize;
    IBOutlet UIButton *minusSize;
    IBOutlet UILabel *sizeLabel;

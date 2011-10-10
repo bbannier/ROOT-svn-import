@@ -3,6 +3,7 @@
 @class EditorView;
 
 @interface EditorPlateView : UIView {
+@private
    UIImage *plateImage;
    NSString *editorName_;
    UILabel *editorLabel;

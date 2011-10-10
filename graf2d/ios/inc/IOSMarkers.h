@@ -13,13 +13,15 @@
 #include "TPoint.h"
 #endif
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace GraphicUtils {
 
 void DrawPolyMarker(CGContextRef ctx, const std::vector<TPoint> &marker, Size_t markerSize, Style_t markerStyle);
 void DrawPolyMarker(CGContextRef ctx, unsigned nPoints, const TPoint *marker, Size_t markerSize, Style_t markerStyle);
 
-}//namespace GraphicUtils
-}//namespace ROOT_iOS
+}
+}
+}
 
 #endif

@@ -29,7 +29,7 @@
    [backgroundImage drawInRect : rect];
 
    if (lineStyle > 1 && lineStyle <= 10)
-      CGContextSetLineDash(ctx, 0., ROOT_iOS::GraphicUtils::dashLinePatterns[lineStyle - 1], ROOT_iOS::GraphicUtils::linePatternLengths[lineStyle - 1]);
+      CGContextSetLineDash(ctx, 0., ROOT::iOS::GraphicUtils::dashLinePatterns[lineStyle - 1], ROOT::iOS::GraphicUtils::linePatternLengths[lineStyle - 1]);
    else
       CGContextSetLineDash(ctx, 0., 0, 0);
    

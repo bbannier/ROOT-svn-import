@@ -23,7 +23,7 @@ static const CGFloat tapInterval = 0.15f;
 @synthesize selectionView;
 
 //____________________________________________________________________________________________________
-- (id) initWithFrame : (CGRect)frame controller : (ROOTObjectController *)c forPad : (ROOT_iOS::Pad*)pd
+- (id) initWithFrame : (CGRect)frame controller : (ROOTObjectController *)c forPad : (ROOT::iOS::Pad*)pd
 {
    self = [super initWithFrame : frame];
 
@@ -49,7 +49,7 @@ static const CGFloat tapInterval = 0.15f;
 }
 
 //____________________________________________________________________________________________________
-- (void) setPad : (ROOT_iOS::Pad *)newPad
+- (void) setPad : (ROOT::iOS::Pad *)newPad
 {
    pad = newPad;
    [selectionView setPad : newPad];

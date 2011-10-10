@@ -16,7 +16,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 160.f, 44.f);
 @synthesize lineStylePicker;
 
 //____________________________________________________________________________________________________
-- (id)initWithNibName : (NSString *) nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
+- (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    using namespace ROOT_IOSBrowser;
 
@@ -38,7 +38,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 160.f, 44.f);
 }
 
 //____________________________________________________________________________________________________
-- (void)dealloc
+- (void) dealloc
 {
    [lineStyles release];
    self.lineStylePicker = nil;
@@ -47,7 +47,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 160.f, 44.f);
 }
 
 //____________________________________________________________________________________________________
-- (void)didReceiveMemoryWarning
+- (void) didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
    [super didReceiveMemoryWarning];
@@ -57,14 +57,14 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 160.f, 44.f);
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
-- (void)viewDidLoad
+- (void) viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
 //____________________________________________________________________________________________________
-- (void)viewDidUnload
+- (void) viewDidUnload
 {
    [super viewDidUnload];
    // Release any retained subviews of the main view.
@@ -72,7 +72,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 160.f, 44.f);
 }
 
 //____________________________________________________________________________________________________
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
+- (BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
    // Return YES for supported orientations
 	return YES;
@@ -80,19 +80,19 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 160.f, 44.f);
 
 #pragma mark - Color/Width/Style picker's dataSource.
 //____________________________________________________________________________________________________
-- (CGFloat)pickerView : (UIPickerView *)pickerView widthForComponent : (NSInteger)component
+- (CGFloat) pickerView : (UIPickerView *)pickerView widthForComponent : (NSInteger)component
 {
    return cellFrame.size.width;
 }
 
 //____________________________________________________________________________________________________
-- (CGFloat)pickerView : (UIPickerView *)pickerView rowHeightForComponent : (NSInteger)component
+- (CGFloat) pickerView : (UIPickerView *)pickerView rowHeightForComponent : (NSInteger)component
 {
    return cellFrame.size.height;
 }
 
 //____________________________________________________________________________________________________
-- (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
+- (NSInteger) pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
 {
    return [lineStyles count];
 
@@ -100,7 +100,7 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 160.f, 44.f);
 }
 
 //____________________________________________________________________________________________________
-- (NSInteger)numberOfComponentsInPickerView : (UIPickerView *)pickerView
+- (NSInteger) numberOfComponentsInPickerView : (UIPickerView *)pickerView
 {
 	return 1;
 }
@@ -108,13 +108,13 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 160.f, 44.f);
 #pragma mark color/pattern picker's delegate.
 
 //____________________________________________________________________________________________________
-- (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
+- (UIView *) pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
    return [lineStyles objectAtIndex : row];
 }
 
 //____________________________________________________________________________________________________
-- (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
+- (void) pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
    object->SetLineStyle(row + 1);
    

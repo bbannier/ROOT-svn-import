@@ -10,6 +10,7 @@ class TObject;
 //Inspector with a picker for a line style.
 
 @interface LineStyleInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
+@private
    IBOutlet UIPickerView *lineStylePicker;
    
    NSMutableArray *lineStyles;

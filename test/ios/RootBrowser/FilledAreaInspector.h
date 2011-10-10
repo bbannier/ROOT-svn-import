@@ -8,6 +8,7 @@ class TAttFill;
 class TObject;
 
 @interface FilledAreaInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
+@private
    IBOutlet UIPickerView *fillPicker;
    
    NSMutableArray *colorCells;

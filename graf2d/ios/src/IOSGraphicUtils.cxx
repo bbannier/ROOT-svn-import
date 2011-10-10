@@ -5,7 +5,8 @@
 
 #include "IOSGraphicUtils.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace GraphicUtils {
 
 //______________________________________________________________________________
@@ -70,5 +71,6 @@ UInt_t IDEncoder::FixValue(UInt_t val) const
       return orig;
 }
 
-}
-}
+}//namespace GraphicUtils
+}//namespace iOS
+}//namespace ROOT

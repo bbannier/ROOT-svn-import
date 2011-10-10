@@ -3,6 +3,7 @@
 class TH1;
 
 @interface H1ErrorsInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
+@private
    IBOutlet UIPickerView *errorTypePicker;
 
    ROOTObjectController *controller;

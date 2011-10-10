@@ -8,6 +8,7 @@ class TVirtualPad;
 class TObject;
 
 @interface PadTicksGridInspector : UIViewController <ObjectInspectorComponent> {
+@private
    IBOutlet UISwitch *gridX;
    IBOutlet UISwitch *gridY;
    IBOutlet UISwitch *ticksX;

@@ -1,8 +1,6 @@
 #import <UIKit/UIKit.h>
 
 
-@interface ScrollViewWithPickers : UIScrollView {
-    
-}
+@interface ScrollViewWithPickers : UIScrollView
 
 @end

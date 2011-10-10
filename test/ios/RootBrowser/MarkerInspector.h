@@ -5,6 +5,7 @@
 class TAttMarker;
 
 @interface MarkerInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
+@private
    IBOutlet UIPickerView *markerPicker;
    
    NSMutableArray *styleCells;

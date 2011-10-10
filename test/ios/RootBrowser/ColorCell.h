@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 
 @interface ColorCell : UIView {
+@private
    float rgb[3];
 }
 

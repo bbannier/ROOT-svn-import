@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 
 @interface LineWidthCell : UIView {
+@private
    CGFloat lineWidth;
    
    UIImage *backgroundImage;

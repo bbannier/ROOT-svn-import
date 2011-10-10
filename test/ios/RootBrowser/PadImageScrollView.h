@@ -2,10 +2,12 @@
 
 @class PadImageView;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class Pad;
 
+}
 }
 
 class TObject;
@@ -13,7 +15,7 @@ class TObject;
 @interface PadImageScrollView : UIScrollView <UIScrollViewDelegate> {
 @private
    UIImage *padImage;
-   ROOT_iOS::Pad *pad;
+   ROOT::iOS::Pad *pad;
    
    PadImageView *nestedView;
 }
@@ -23,8 +25,8 @@ class TObject;
 + (CGRect) defaultImageFrame;
 
 - (id) initWithFrame : (CGRect)frame;
-- (void) setPad : (ROOT_iOS::Pad *)pad;
-- (void) setPad : (ROOT_iOS::Pad *)pad andImage : (UIImage *)image;
+- (void) setPad : (ROOT::iOS::Pad *)pad;
+- (void) setPad : (ROOT::iOS::Pad *)pad andImage : (UIImage *)image;
 - (void) resetToFrame : (CGRect)frame;
 
 @end

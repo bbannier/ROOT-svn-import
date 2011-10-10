@@ -7,6 +7,7 @@ class TVirtualPad;
 class TObject;
 
 @interface PadLogScaleInspector : UIViewController <ObjectInspectorComponent> {
+@private
    IBOutlet UISwitch *logX;
    IBOutlet UISwitch *logY;
    IBOutlet UISwitch *logZ;

@@ -23,7 +23,8 @@
 #include "IOSPadStub.h"
 #endif
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -385,6 +386,7 @@ private:
    Pad &operator=(const Pad &rhs);  // idem
 };
 
-}
+}//namespace iOS
+}//namespace ROOT
 
 #endif

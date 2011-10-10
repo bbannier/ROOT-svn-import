@@ -16,7 +16,8 @@
 #include "IOSPainter.h"
 #include "IOSMarkers.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 namespace {
 
@@ -613,4 +614,5 @@ void Painter::SetLineColorHighlighted() const
    CGContextSetRGBStrokeColor(fCtx, 1.f, 0.f, 0.5f, 0.5f);
 }
 
-}
+}//namespace iOS
+}//namespace ROOT

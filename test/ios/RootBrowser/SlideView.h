@@ -1,18 +1,20 @@
 #import <UIKit/UIKit.h>
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class Pad;
 
 }
+}
 
 @interface SlideView : UIView {
-   ROOT_iOS::Pad *pad;
+   ROOT::iOS::Pad *pad;
 }
 
 + (CGSize) slideSize;
 + (CGRect) slideFrame;
 
-- (id) initWithFrame : (CGRect)rect andPad : (ROOT_iOS::Pad *)pad;
+- (id) initWithFrame : (CGRect)rect andPad : (ROOT::iOS::Pad *)pad;
 
 @end

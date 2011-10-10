@@ -25,7 +25,8 @@
 #include "IOSFillPatterns.h"
 #include "IOSPad.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 //______________________________________________________________________________
 Pad::Pad(UInt_t w, UInt_t h)
@@ -2257,4 +2258,5 @@ void Pad::SetPaintOption(const TObject *obj, const char *option)
    }
 }
 
+}
 }

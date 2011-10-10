@@ -99,10 +99,10 @@
 		7077906313FE847600C0FFA1 /* ROOTObjectController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7077906113FE847600C0FFA1 /* ROOTObjectController.xib */; };
 		7077906613FE87D000C0FFA1 /* ObjectShortcut.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077906513FE87D000C0FFA1 /* ObjectShortcut.mm */; };
 		7077907E13FE96C300C0FFA1 /* EditorView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077906B13FE96C200C0FFA1 /* EditorView.mm */; };
-		7077908013FE96C300C0FFA1 /* ScrollViewWithPickers.m in Sources */ = {isa = PBXBuildFile; fileRef = 7077906E13FE96C200C0FFA1 /* ScrollViewWithPickers.m */; };
+		7077908013FE96C300C0FFA1 /* ScrollViewWithPickers.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077906E13FE96C200C0FFA1 /* ScrollViewWithPickers.mm */; };
 		7077908113FE96C300C0FFA1 /* EditorPlateView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077906F13FE96C200C0FFA1 /* EditorPlateView.mm */; };
 		7077908713FE96C300C0FFA1 /* PatternCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077907913FE96C300C0FFA1 /* PatternCell.mm */; };
-		7077908813FE96C300C0FFA1 /* ColorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 7077907B13FE96C300C0FFA1 /* ColorCell.m */; };
+		7077908813FE96C300C0FFA1 /* ColorCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077907B13FE96C300C0FFA1 /* ColorCell.mm */; };
 		7077908B13FE96DC00C0FFA1 /* editor_state_arrow.png in Resources */ = {isa = PBXBuildFile; fileRef = 7077908913FE96DC00C0FFA1 /* editor_state_arrow.png */; };
 		7077908E13FE972D00C0FFA1 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077908D13FE972D00C0FFA1 /* QuartzCore.framework */; };
 		7077909013FE973A00C0FFA1 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077908F13FE973A00C0FFA1 /* CoreText.framework */; };
@@ -115,7 +115,7 @@
 		709594A513FE97AF00B9E8B6 /* system.rootrc in Resources */ = {isa = PBXBuildFile; fileRef = 709594A313FE97AF00B9E8B6 /* system.rootrc */; };
 		709594A613FE97AF00B9E8B6 /* system.plugins-ios in Resources */ = {isa = PBXBuildFile; fileRef = 709594A413FE97AF00B9E8B6 /* system.plugins-ios */; };
 		709CD05314025148005B2AF4 /* demos.root in Resources */ = {isa = PBXBuildFile; fileRef = 709CD05214025148005B2AF4 /* demos.root */; };
-		709CD0981402768B005B2AF4 /* Shortcuts.m in Sources */ = {isa = PBXBuildFile; fileRef = 709CD0971402768B005B2AF4 /* Shortcuts.m */; };
+		709CD0981402768B005B2AF4 /* Shortcuts.mm in Sources */ = {isa = PBXBuildFile; fileRef = 709CD0971402768B005B2AF4 /* Shortcuts.mm */; };
 		70E0B62114150F630077E4A8 /* back_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 70E0B62014150F630077E4A8 /* back_btn.png */; };
 		70E0B624141510880077E4A8 /* forward_btn.png in Resources */ = {isa = PBXBuildFile; fileRef = 70E0B623141510880077E4A8 /* forward_btn.png */; };
 /* End PBXBuildFile section */
@@ -255,13 +255,13 @@
 		7077906513FE87D000C0FFA1 /* ObjectShortcut.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ObjectShortcut.mm; sourceTree = "<group>"; };
 		7077906B13FE96C200C0FFA1 /* EditorView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EditorView.mm; sourceTree = "<group>"; };
 		7077906C13FE96C200C0FFA1 /* EditorView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EditorView.h; sourceTree = "<group>"; };
-		7077906E13FE96C200C0FFA1 /* ScrollViewWithPickers.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ScrollViewWithPickers.m; sourceTree = "<group>"; };
+		7077906E13FE96C200C0FFA1 /* ScrollViewWithPickers.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ScrollViewWithPickers.mm; sourceTree = "<group>"; };
 		7077906F13FE96C200C0FFA1 /* EditorPlateView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = EditorPlateView.mm; sourceTree = "<group>"; };
 		7077907013FE96C200C0FFA1 /* ScrollViewWithPickers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScrollViewWithPickers.h; sourceTree = "<group>"; };
 		7077907713FE96C200C0FFA1 /* EditorPlateView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EditorPlateView.h; sourceTree = "<group>"; };
 		7077907913FE96C300C0FFA1 /* PatternCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PatternCell.mm; sourceTree = "<group>"; };
 		7077907A13FE96C300C0FFA1 /* PatternCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PatternCell.h; sourceTree = "<group>"; };
-		7077907B13FE96C300C0FFA1 /* ColorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorCell.m; sourceTree = "<group>"; };
+		7077907B13FE96C300C0FFA1 /* ColorCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ColorCell.mm; sourceTree = "<group>"; };
 		7077907C13FE96C300C0FFA1 /* ColorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorCell.h; sourceTree = "<group>"; };
 		7077908913FE96DC00C0FFA1 /* editor_state_arrow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = editor_state_arrow.png; sourceTree = "<group>"; };
 		7077908D13FE972D00C0FFA1 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
@@ -276,7 +276,7 @@
 		709594A413FE97AF00B9E8B6 /* system.plugins-ios */ = {isa = PBXFileReference; lastKnownFileType = text; name = "system.plugins-ios"; path = "../../../etc/system.plugins-ios"; sourceTree = "<group>"; };
 		709CD05214025148005B2AF4 /* demos.root */ = {isa = PBXFileReference; lastKnownFileType = file; path = demos.root; sourceTree = "<group>"; };
 		709CD0961402768B005B2AF4 /* Shortcuts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Shortcuts.h; sourceTree = "<group>"; };
-		709CD0971402768B005B2AF4 /* Shortcuts.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Shortcuts.m; sourceTree = "<group>"; };
+		709CD0971402768B005B2AF4 /* Shortcuts.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Shortcuts.mm; sourceTree = "<group>"; };
 		70E0B62014150F630077E4A8 /* back_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = back_btn.png; sourceTree = "<group>"; };
 		70E0B623141510880077E4A8 /* forward_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = forward_btn.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -427,7 +427,7 @@
 				7077907713FE96C200C0FFA1 /* EditorPlateView.h */,
 				7077907913FE96C300C0FFA1 /* PatternCell.mm */,
 				7077907A13FE96C300C0FFA1 /* PatternCell.h */,
-				7077907B13FE96C300C0FFA1 /* ColorCell.m */,
+				7077907B13FE96C300C0FFA1 /* ColorCell.mm */,
 				7077907C13FE96C300C0FFA1 /* ColorCell.h */,
 				702DDD181415FEA1009FC6F3 /* LineInspector.h */,
 				702DDD191415FEA1009FC6F3 /* LineInspector.mm */,
@@ -577,7 +577,7 @@
 		70E0B5E11414E4710077E4A8 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				7077906E13FE96C200C0FFA1 /* ScrollViewWithPickers.m */,
+				7077906E13FE96C200C0FFA1 /* ScrollViewWithPickers.mm */,
 				7077907013FE96C200C0FFA1 /* ScrollViewWithPickers.h */,
 			);
 			name = Views;
@@ -600,7 +600,7 @@
 				70252F7A140CDD8D00F3660F /* Constants.mm */,
 				70252F7B140CDD8D00F3660F /* Constants.h */,
 				709CD0961402768B005B2AF4 /* Shortcuts.h */,
-				709CD0971402768B005B2AF4 /* Shortcuts.m */,
+				709CD0971402768B005B2AF4 /* Shortcuts.mm */,
 			);
 			name = Code;
 			sourceTree = "<group>";
@@ -660,6 +660,9 @@
 /* Begin PBXProject section */
 		7077901013FE50EB00C0FFA1 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0420;
+			};
 			buildConfigurationList = 7077901313FE50EB00C0FFA1 /* Build configuration list for PBXProject "RootBrowser" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
@@ -757,11 +760,11 @@
 				7077906213FE847600C0FFA1 /* ROOTObjectController.mm in Sources */,
 				7077906613FE87D000C0FFA1 /* ObjectShortcut.mm in Sources */,
 				7077907E13FE96C300C0FFA1 /* EditorView.mm in Sources */,
-				7077908013FE96C300C0FFA1 /* ScrollViewWithPickers.m in Sources */,
+				7077908013FE96C300C0FFA1 /* ScrollViewWithPickers.mm in Sources */,
 				7077908113FE96C300C0FFA1 /* EditorPlateView.mm in Sources */,
 				7077908713FE96C300C0FFA1 /* PatternCell.mm in Sources */,
-				7077908813FE96C300C0FFA1 /* ColorCell.m in Sources */,
-				709CD0981402768B005B2AF4 /* Shortcuts.m in Sources */,
+				7077908813FE96C300C0FFA1 /* ColorCell.mm in Sources */,
+				709CD0981402768B005B2AF4 /* Shortcuts.mm in Sources */,
 				70249BDC1403D644006A19E6 /* PadView.mm in Sources */,
 				705A503614066421004C1C8B /* ScrollViewWithPadView.mm in Sources */,
 				70252F7C140CDD8D00F3660F /* Constants.mm in Sources */,

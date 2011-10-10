@@ -4,6 +4,7 @@
 @class FileShortcut;
 
 @interface RootFileController : UIViewController <UINavigationControllerDelegate, UINavigationBarDelegate> {
+@private
    NSMutableArray *fileContainers;
 
    IBOutlet UIScrollView *scrollView;
