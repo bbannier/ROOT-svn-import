@@ -779,7 +779,8 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
                 << " priorPOI value " << fPriorPOI->getVal() << std::endl;
 
    // check that likelihood evaluation is not inifinity 
-   if ( fLogLike->getVal() > std::numeric_limits<double>::max() ) {
+   double nllVal =  fLogLike->getVal();   
+   if ( nllVal > std::numeric_limits<double>::max() ) {
       coutE(Eval) <<  "BayesianCalculator::GetPosteriorFunction : " 
                   << " Negative log likelihood evaluates to infinity " << std::endl 
                   << " Non-const Parameter values : ";
@@ -795,11 +796,6 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
       return 0;
    }
 
-   // if pdf evaluates to zero, should be fixed, but this will
-   // stop error messages.
-   fLogLike->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
-
-
 
    // need do find minimum of log-likelihood in the range to shift function 
    // to avoid numerical errors when we compute the likelihood (overflows in the exponent)
@@ -809,13 +805,20 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
    RooRealVar* poi = dynamic_cast<RooRealVar*>( fPOI.first() ); 
    assert(poi);
 
+   coutI(Eval) <<  "BayesianCalculator::GetPosteriorFunction : " 
+               << " nll value " <<  nllVal << " poi value = " << poi->getVal() << std::endl;
+
+   // if pdf evaluates to zero, should be fixed, but this will
+   // stop error messages.
+   fLogLike->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
+
    ROOT::Math::BrentMinimizer1D minim; 
    minim.SetFunction(wnllFunc,poi->getMin(),poi->getMax() );
    bool ret  = minim.Minimize(100,1.E-3,1.E-3);
    fNLLMin = 0; 
    if (ret) fNLLMin = minim.FValMinimum();
 
-   ccoutD(Eval) << "BayesianCalculator::GetPosteriorFunction : minimum of NLL vs POI for POI =  " 
+   coutI(Eval) << "BayesianCalculator::GetPosteriorFunction : minimum of NLL vs POI for POI =  " 
           << poi->getVal() << " min NLL = " << fNLLMin << std::endl;
 
    delete nllFunc;

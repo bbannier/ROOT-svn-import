@@ -290,10 +290,27 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    // create an HypoTest result but where the sampling distributions are set to zero
    string resultname = "HypoTestAsymptotic_result";
    HypoTestResult* res = new HypoTestResult(resultname.c_str(), pnull, palt);
+
    res->SetBackgroundAsAlt(true);
 
    return res; 
 }
+
+double AsymptoticCalculator::GetExpectedPValues(double pnull, double palt, double nsigma, bool useCls ) { 
+   // function given the null and the alt p value - return the expected one given the N - sigma value
+   double sqrtqmu =  ROOT::Math::normal_quantile_c( pnull,1.);
+   double sqrtqmu_A =  ROOT::Math::normal_quantile( palt,1.) + sqrtqmu;
+   double clsplusb = ROOT::Math::normal_cdf_c( sqrtqmu_A - nsigma, 1.);
+   if (!useCls) return clsplusb; 
+   double clb = ROOT::Math::normal_cdf( nsigma, 1.);
+   return (clb == 0) ? -1 : clsplusb / clb;  
+}   
+
+// void GetExpectedLimit(double nsigma, double alpha, double &clsblimit, double &clslimit) { 
+//    // get expected limit 
+//    double 
+// }
+
 
 void AsymptoticCalculator::FillBins(const RooAbsPdf & pdf, const RooArgList &obs, RooAbsData & data, int &index,  double &binVolume, int &ibin) { 
    /// fill bins by looping recursivly on observables 

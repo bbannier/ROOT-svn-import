@@ -59,6 +59,12 @@ namespace RooStats {
 
       static RooAbsData * GenerateAsimovData(const RooAbsPdf & pdf, const RooArgSet & observables ); 
 
+      // function given the null and the alt p value - return the expected one given the N - sigma value
+      static double GetExpectedPValues(double pnull, double palt, double nsigma, bool usecls ); 
+
+      // get expected limit 
+//      static void GetExpectedLimit(double nsigma, double alpha, double &clsblimit, double &clslimit);
+
       void SetOneSided(bool on) { fOneSided = on; }
 
       void SetQTilde(bool on) { fUseQTilde = on; }
