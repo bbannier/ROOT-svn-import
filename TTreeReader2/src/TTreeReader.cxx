@@ -16,9 +16,12 @@
 #include "TBranchRef.h"
 #include "TBranchSTL.h"
 #include "TChain.h"
+#include "TClassEdit.h"
 #include "TDirectory.h"
 #include "TLeaf.h"
 #include "TROOT.h"
+#include "TStreamerElement.h"
+#include "TStreamerInfo.h"
 #include "TTreeReaderValue.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -282,27 +285,37 @@ ROOT::TBranchProxy* TTreeReader::CreateContentProxy(const char* branchname,
 
    ROOT::TNamedBranchProxy* namedProxy
       = (ROOT::TNamedBranchProxy*)fProxies.FindObject(branchname);
-   if (namedProxy && namedProxy->GetDict() == dict) {
+   if (namedProxy && namedProxy->GetContentDict() == dict) {
       return namedProxy->GetProxy();
    }
 
    TBranch* branch = fTree->GetBranch(branchname);
    if (!branch) {
-      Error("CreateProxy()", "The tree does not have a branch called %s. You could check with TTree::Print() for available branches.", branchname);
+      Error("CreateContentProxy()", "The tree does not have a branch called %s. You could check with TTree::Print() for available branches.", branchname);
       return 0;
    }
 
    TDictionary* branchActualType = 0;
-   const char* branchActualTypeName = GetBranchDataType(branch, branchActualType);
-
+   TString branchActualTypeName;
+   const char* nonCollTypeName = GetBranchContentDataType(branch, branchActualTypeName, branchActualType);
+   if (nonCollTypeName) {
+      Error("CreateContentProxy()", "The branch %s contains data of type %s, which should be accessed through a TTreeReaderValue< %s >.",
+            branchname, nonCollTypeName, nonCollTypeName);
+      return 0;
+   }
    if (!branchActualType) {
-      Error("CreateProxy()", "The branch %s contains data of type %s, which does not have a dictionary.",
-            branchname, branchActualTypeName ? branchActualTypeName : "{UNDETERMINED TYPE}");
+      if (branchActualTypeName.IsNull()) {
+         Error("CreateContentProxy()", "Cannot determine the type contained in the collection of branch %s. That's weird - please report!",
+               branchname);
+      } else {
+         Error("CreateContentProxy()", "The branch %s contains data of type %s, which does not have a dictionary.",
+               branchname, branchActualTypeName.Data());
+      }
       return 0;
    }
 
    if (dict != branchActualType) {
-      Error("CreateProxy()", "The branch %s contains data of type %s. It cannot be accessed by a TTreeReaderValue<%s>",
+      Error("CreateContentProxy()", "The branch %s contains data of type %s. It cannot be accessed by a TTreeReaderValue<%s>",
             branchname, branchActualType->GetName(), dict->GetName());
    }
 
@@ -350,27 +363,90 @@ ROOT::TBranchProxy* TTreeReader::CreateContentProxy(TBranch* branch)
 
 //______________________________________________________________________________
 const char* TTreeReader::GetBranchContentDataType(TBranch* branch,
+                                                  TString& contentTypeName,
                                                   TDictionary* &dict) const
 {
    // Access a branch's collection content (not the collection itself)
    // through a proxy.
    // Retrieve the type of data contained in the collection stored by branch;
-   // put its dictionary into dict, return its type name. If no dictionary is
-   // available, at least its type name should be returned.
+   // put its dictionary into dict, If there is no dictionary, put its type
+   // name into contentTypeName.
+   // The contentTypeName is set to NULL if the branch does not
+   // contain a collection; in that case, the type of the branch is returned.
+   // In all other cases, NULL is returned.
 
    dict = 0;
+   contentTypeName = "";
    if (branch->IsA() == TBranchElement::Class()) {
       TBranchElement* brElement = (TBranchElement*)branch;
-      if (brElement->GetType() == 4) {
-         dict = brElement->GetClass();
-         return brElement->GetClassName();
-      } else if (brElement->GetType() == 3) {
-         dict = TClonesArray::Class();
-         return "TClonesArray";
+      if (brElement->GetType() == 4
+          || brElement->GetType() == 3) {
+         TVirtualCollectionProxy* collProxy = brElement->GetCollectionProxy();
+         dict = collProxy->GetValueClass();
+         if (!dict) dict = TDataType::GetDataType(collProxy->GetType());
+         if (!dict) {
+            // We don't know the dictionary, thus we need the content's type name.
+            // Determine it.
+            if (brElement->GetType() == 3) {
+               contentTypeName = brElement->GetClonesName();
+               return 0;
+            }
+            // STL:
+            TClassEdit::TSplitType splitType(brElement->GetClassName());
+            int isSTLCont = splitType.IsSTLCont();
+            if (!isSTLCont) {
+               Error("GetBranchContentDataType()", "Cannot determine STL collection type of %s stored in branch %s", brElement->GetClassName(), branch->GetName());
+               return brElement->GetClassName();
+            }
+            bool isMap = isSTLCont == TClassEdit::kMap
+               || isSTLCont == TClassEdit::kMultiMap;
+            if (isMap) contentTypeName = "std::pair< ";
+            contentTypeName += splitType.fElements[1];
+            if (isMap) {
+               contentTypeName += splitType.fElements[2];
+               contentTypeName += " >";
+            }
+            return 0;
+         }
+         return 0;
       } else if (brElement->GetType() == 31
                  || brElement->GetType() == 41) {
          // it's a member, extract from GetClass()'s streamer info
-         Error("GetBranchDataType()", "Must use TTreeReaderValueArray to access a member of an object that is stored in a collection.");
+         TClass* clData = 0;
+         EDataType dtData = kOther_t;
+         int ExpectedTypeRet = brElement->GetExpectedType(clData, dtData);
+         if (ExpectedTypeRet == 0) {
+            dict = clData;
+            if (!dict) {
+               dict = TDataType::GetDataType(dtData);
+            }
+            if (!dict) {
+               Error("GetBranchContentDataType()", "The branch %s contains a data type %d for which the dictionary cannot be retrieved.",
+                     branch->GetName(), (int)dtData);
+               contentTypeName = TDataType::GetTypeName(dtData);
+               return 0;
+            }
+            return 0;
+         } else if (ExpectedTypeRet == 1) {
+            int brID = brElement->GetID();
+            if (brID == -1) {
+               // top
+               Error("GetBranchContentDataType()", "The branch %s contains data of type %s for which the dictionary does not exist. It's needed.",
+                     branch->GetName(), brElement->GetClassName());
+               contentTypeName = brElement->GetClassName();
+               return 0;
+            }
+            // Either the data type name doesn't have an EDataType entry
+            // or the streamer info doesn't have a TClass* attached.
+            TStreamerElement* element =
+               (TStreamerElement*) brElement->GetInfo()->GetElems()[brID];
+            contentTypeName = element->GetTypeName();
+            return 0;
+         }
+         /* else (ExpectedTypeRet == 2)*/
+         // The streamer info entry cannot be found.
+         // TBranchElement::GetExpectedType() has already complained.
+         return "{CANNOT DETERMINE TBranchElement DATA TYPE}";
       }
       return 0;
    } else if (branch->IsA() == TBranch::Class()
@@ -380,11 +456,11 @@ const char* TTreeReader::GetBranchContentDataType(TBranch* branch,
       if ((!dataTypeName || !dataTypeName[0])
           && branch->IsA() == TBranch::Class()) {
          // leaflist. Can't represent.
-         Error("GetBranchDataType()", "The branch %s was created using a leaf list and cannot be represented as a C++ type. Please access one of its siblings using a TTreeReaderValueArray:", branch->GetName());
+         Error("GetBranchContentDataType()", "The branch %s was created using a leaf list and cannot be represented as a C++ type. Please access one of its siblings using a TTreeReaderValueArray:", branch->GetName());
          TIter iLeaves(branch->GetListOfLeaves());
          TLeaf* leaf = 0;
          while ((leaf = (TLeaf*) iLeaves())) {
-            Error("GetBranchDataType()", "   %s.%s", branch->GetName(), leaf->GetName());
+            Error("GetBranchContentDataType()", "   %s.%s", branch->GetName(), leaf->GetName());
          }
          return 0;
       }
@@ -395,10 +471,10 @@ const char* TTreeReader::GetBranchContentDataType(TBranch* branch,
       return "TClonesArray";
    } else if (branch->IsA() == TBranchRef::Class()) {
       // Can't represent.
-      Error("GetBranchDataType()", "The branch %s is a TBranchRef and cannot be represented as a C++ type.", branch->GetName());
+      Error("GetBranchContentDataType()", "The branch %s is a TBranchRef and cannot be represented as a C++ type.", branch->GetName());
       return 0;
    } else {
-      Error("GetBranchDataType()", "The branch %s is of type %s - something that is not handled yet.", branch->GetName(), branch->IsA()->GetName());
+      Error("GetBranchContentDataType()", "The branch %s is of type %s - something that is not handled yet.", branch->GetName(), branch->IsA()->GetName());
       return 0;
    }
 

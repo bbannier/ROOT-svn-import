@@ -10,7 +10,7 @@
  *************************************************************************/
 
 #include "TTreeReaderArray.h"
-#include "TTreeReaderValue.h"
+#include "TTreeReader.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -34,12 +34,22 @@ ClassImp(TTreeReaderArrayBase)
 size_t ROOT::TTreeReaderArrayBase::GetSize()
 {
    // Get the size of the collection.
+   ProxyRead();
+   if (fProxy->GetCollection())
+      return fProxy->GetCollection()->Size();
+   Error("GetSize()", "Not yet supported");
+   return 0;
 }
 
 //______________________________________________________________________________
 void* ROOT::TTreeReaderArrayBase::UntypedAt(size_t idx)
 {
    // Retrieve pointer to element number idx.
+   ProxyRead();
+   if (fProxy->GetCollection())
+      return fProxy->GetCollection()->At(idx);
+   Error("UntypedAt()", "Not yet supported");
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -68,5 +78,5 @@ void ROOT::TTreeReaderArrayBase::CreateProxy()
       return;
    }
 
-   fProxy = fTreeReader->CreateProxy(fBranchName, fDict);
+   fProxy = fTreeReader->CreateContentProxy(fBranchName, fDict);
 }

@@ -88,7 +88,7 @@ namespace ROOT {
 
       void MarkTreeReaderUnavailable() { fTreeReader = 0; }
 
-   private:
+   protected:
       TTreeReader* fTreeReader; // tree reader we belong to
       TString      fBranchName; // name of the branch to read data from.
       TDictionary* fDict; // type that the branch should contain
