@@ -210,15 +210,20 @@ void Painter::SetPolygonParameters()const
    //TODO: check, if stroke parameters also should
    //be specified for polygon.
    
-   if (fPainterMode == kPaintToSelectionBuffer)
-      return SetPolygonColorForCurrentObjectID();
+   if (fPainterMode == kPaintToSelectionBuffer) {
+      SetStrokeParameters();
+      SetPolygonColorForCurrentObjectID();
+      return;
+   }
 
    if (fPainterMode == kPaintSelected) {
+      SetStrokeParameters();
       CGContextSetRGBFillColor(fCtx, 1.f, 0.f, 0.4f, 0.2f);
       return;
    }
 
    if (fPainterMode == kPaintShadow) {
+      SetStrokeParameters();
       CGContextSetRGBFillColor(fCtx, 0.1f, 0.1f, 0.1f, 0.2f);
       return;
    }
