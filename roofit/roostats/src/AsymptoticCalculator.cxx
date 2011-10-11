@@ -102,15 +102,23 @@ AsymptoticCalculator::AsymptoticCalculator(
    if (!fAsimovData) return;
 
    // set global observables to their Asimov values 
+   RooArgSet globObs;
+   RooArgSet globObsSnapshot;
    if (GetNullModel()->GetGlobalObservables()  ) {
-      RooArgSet globObs(*GetNullModel()->GetGlobalObservables());
+      globObs.add(*GetNullModel()->GetGlobalObservables());
       assert(globObs.getSize() == fAsimovGlobObs.getSize() );
+      // store previous snapshot value
+      globObs.snapshot(globObsSnapshot);
       globObs = fAsimovGlobObs; 
    }
 
 
    // evaluate  the likelihood. Since we use on Asimov data , conditional and unconditional values should be the same
    fNLLAsimov =  EvaluateNLL( *nullPdf, *fAsimovData, &poi);
+   
+   // restore previous value 
+   globObs = globObsSnapshot;
+
 
 }
 
@@ -131,6 +139,7 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
 
 
     // if poi are specified - do a conditional fit 
+    RooArgList paramsSetConstant;
     if (poiSet) { 
        RooArgSet* attachedSet = nll->getVariables();
        
@@ -139,7 +148,10 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
        while((tmpPar = (RooRealVar*)it.Next())){
           tmpParA =  ((RooRealVar*)attachedSet->find(tmpPar->GetName()));
           tmpParA->setVal( tmpPar->getVal() );
-          tmpParA->setConstant();
+          if (!tmpParA->isConstant() ) { 
+             tmpParA->setConstant();
+             paramsSetConstant.add(*tmpParA);
+          }
        }
        delete attachedSet;
     }
@@ -171,6 +183,8 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
     }
     std::cout << "BEST FIT values " << std::endl;
     allParams->Print("V");
+    std::cout << "ALL PDF variables " << std::endl;
+    pdf.getVariables()->Print("V");
     
     RooMsgService::instance().setGlobalKillBelow(msglevel);
 
@@ -180,6 +194,9 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
     double muHat = 0; 
     if (poiSet) muHat = ( (RooRealVar*) poiSet->first() )->getVal();
     std::cout << "BEST NLL  value " << val << " and poi = " << std::endl;
+
+    // reset the parameter free which where set as constant
+    SetAllConstant(paramsSetConstant,false);
 
     delete allParams;
     delete nll;
@@ -241,7 +258,7 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    // profileLL.SetOneSided(true);
    // profileLL.SetReuseNLL(false);
 
-   std::cout << " qmu on data = " << qmu << std::endl;
+   std::cout << " qmu on data = " << qmu << " condNLL = " << condNLL << " uncond " << fNLLObs << std::endl;
 
    double sqrtqmu = (qmu > 0) ? std::sqrt(qmu) : 0; 
 
@@ -254,12 +271,20 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    // RooArgSet asimovGlobObs;
    // RooAbsData * asimovData = (const_cast<AsymptoticCalculator*>(this))->MakeAsimovData( poi, asimovGlobObs);
    // set global observables to their Asimov values 
+   RooArgSet globObs;
+   RooArgSet globObsSnapshot;
    if (GetNullModel()->GetGlobalObservables()  ) {
-      RooArgSet globObs(*GetNullModel()->GetGlobalObservables());
+      globObs.add(*GetNullModel()->GetGlobalObservables());
+      // store previous snapshot value
+      globObs.snapshot(globObsSnapshot);
       globObs = fAsimovGlobObs; 
    }
 
    double condNLL_A = EvaluateNLL( *nullPdf, *fAsimovData, &poi);
+
+   // restore previous value 
+   globObs = globObsSnapshot;
+
 
    double qmu_A = 2.*(condNLL_A - fNLLAsimov  );
 
@@ -274,7 +299,7 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
 
 
 
-   std::cout << " qmu on Asimov = " << qmu_A << std::endl;
+   std::cout << " qmu on Asimov = " << qmu_A << " condNLL = " << condNLL_A << " uncond " << fNLLAsimov << std::endl;
 
    double sqrtqmu_A = (qmu_A > 0) ? std::sqrt(qmu_A) : 0; 
 
@@ -285,13 +310,19 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
       palt = ROOT::Math::normal_cdf( (qmu - qmu_A)/(2 * sqrtqmu_A), 1.);
    }
 
+   
 
 
    // create an HypoTest result but where the sampling distributions are set to zero
    string resultname = "HypoTestAsymptotic_result";
    HypoTestResult* res = new HypoTestResult(resultname.c_str(), pnull, palt);
-
    res->SetBackgroundAsAlt(true);
+
+   double mu = 0;
+   RooRealVar * muVar = dynamic_cast<RooRealVar*>(poi.first() );
+   if (muVar) mu = muVar->getVal();
+   oocoutI((TObject*)0,Eval) << "poi = " << mu << " qmu = " << qmu << " qmu_A = " << qmu_A 
+                             << "  CLsplusb = " << pnull << " CLb = " << palt << " CLs = " <<  res->CLs() << std::endl; 
 
    return res; 
 }

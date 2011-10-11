@@ -605,7 +605,7 @@ SamplingDistribution *  HypoTestInverterResult::GetLimitDistribution(bool lower 
 
   if (ArraySize()<2) {
      oocoutE(this,Eval) << "HypoTestInverterResult::GetLimitDistribution" 
-                        << " not  enought points -  return a NULL pointer " << std::endl; 
+                        << " not  enought points -  return 0 " << std::endl; 
      return 0; 
   }
 
@@ -688,7 +688,9 @@ double  HypoTestInverterResult::GetExpectedLimit(double nsig, bool lower ) const
       // we are in the asymptotic case 
       // get the limits obtained at the different sigma values 
       SamplingDistribution * limitDist = GetLimitDistribution(lower); 
+      if (!limitDist) return 0;
       const std::vector<double> & values = limitDist->GetSamplingDistribution();
+      if (values.size() <= 1) return 0; 
       double dsig = 2* fgAsymptoticMaxSigma/ (values.size() -1) ;
       int  i = TMath::Floor ( (nsig +  fgAsymptoticMaxSigma)/dsig + 0.5);
       return values[i];
@@ -733,6 +735,7 @@ double  HypoTestInverterResult::GetExpectedLimit(double nsig, bool lower ) const
    }
    // for CLS need to use the limit distribution 
    SamplingDistribution * limitDist = GetLimitDistribution(lower); 
+   if (!limitDist) return 0;
    const std::vector<double> & values = limitDist->GetSamplingDistribution();
    double * x = const_cast<double *>(&values[0]); // need to change TMath::Quantiles
    TMath::Quantiles(values.size(), 1, x,q,p,false);
