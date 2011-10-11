@@ -41,6 +41,10 @@ using namespace RooStats;
 using namespace RooFit;
 
 
+// initialize static value 
+double HypoTestInverterResult::fgAsymptoticMaxSigma      = 5; 
+
+
 HypoTestInverterResult::HypoTestInverterResult(const char * name ) :
    SimpleInterval(name),
    fUseCLs(false),
@@ -577,13 +581,16 @@ SamplingDistribution *  HypoTestInverterResult::GetExpectedPValueDist(int index)
       return new SamplingDistribution("expected values","expected values",values);
    }  
    // in case b abs sbDistribution are null assume is coming from the asymptotic calculator 
-   std::vector<double> values;
-   const double smax = 5; 
-   const double dsig = 1;
-   values.reserve( 2* smax + 1);
-   for (double  n = -smax; n <= smax; n+=dsig) { 
-      double pval = AsymptoticCalculator::GetExpectedPValues( result->NullPValue(), result->AlternatePValue(), n, fUseCLs);
-      values.push_back(pval);
+   // hard -coded this value (no really needed to be used by user)
+   fgAsymptoticMaxSigma = 5; 
+   const int npoints = 11;
+   const double smax = fgAsymptoticMaxSigma;
+   const double dsig = 2* smax/ (npoints-1) ;
+   std::vector<double> values(npoints);
+   for (int i = 0; i < npoints; ++i) { 
+      double nsig = -smax + dsig*i; 
+      double pval = AsymptoticCalculator::GetExpectedPValues( result->NullPValue(), result->AlternatePValue(), nsig, fUseCLs);
+      values[i] = pval;
    }
    return new SamplingDistribution("Asymptotic expected values","Asymptotic expected values",values);
    
@@ -674,6 +681,19 @@ double  HypoTestInverterResult::GetExpectedUpperLimit(double nsig ) const {
 double  HypoTestInverterResult::GetExpectedLimit(double nsig, bool lower ) const {
    // get expected limit (lower/upper) depending on the flag 
 
+   // for asymptotic is a special case (the distribution is generated an step in sigma values)
+   // distringuish asymptotic looking at the hypotest results
+   HypoTestResult * r = dynamic_cast<HypoTestResult *> (fYObjects.First() );
+   if (!r->GetNullDistribution() && !r->GetAltDistribution() ) { 
+      // we are in the asymptotic case 
+      // get the limits obtained at the different sigma values 
+      SamplingDistribution * limitDist = GetLimitDistribution(lower); 
+      const std::vector<double> & values = limitDist->GetSamplingDistribution();
+      double dsig = 2* fgAsymptoticMaxSigma/ (values.size() -1) ;
+      int  i = TMath::Floor ( (nsig +  fgAsymptoticMaxSigma)/dsig + 0.5);
+      return values[i];
+   }
+
    double p[1];
    double q[1];
    p[0] = ROOT::Math::normal_cdf(nsig,1);
@@ -711,7 +731,6 @@ double  HypoTestInverterResult::GetExpectedLimit(double nsig, bool lower ) const
       return GetGraphX(g, target, lower);
 
    }
-   
    // for CLS need to use the limit distribution 
    SamplingDistribution * limitDist = GetLimitDistribution(lower); 
    const std::vector<double> & values = limitDist->GetSamplingDistribution();
