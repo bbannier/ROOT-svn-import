@@ -37,38 +37,13 @@
 #ifndef ROOT_TTree
 #include "TTree.h"
 #endif
+#ifndef ROOT_TTreeReaderUtils
+#include "TTreeReaderUtils.h"
+#endif
 
 class TDictionary;
 class TDirectory;
 class TFileCollection;
-class TTree;
-
-namespace ROOT {
-   class TBranchProxy;
-   class TTreeReaderValueBase;
-   class TTreeReaderArrayBase;
-
-   class TNamedBranchProxy: public TObject {
-   public:
-      TNamedBranchProxy(): fDict(0) {}
-      TNamedBranchProxy(TBranchProxyDirector* boss, TBranch* branch, const char* membername):
-         fProxy(boss, branch, membername), fDict(0) {}
-
-      const char* GetName() const { return fProxy.GetBranchName(); }
-      const ROOT::TBranchProxy* GetProxy() const { return &fProxy; }
-      ROOT::TBranchProxy* GetProxy() { return &fProxy; }
-      TDictionary* GetDict() const { return fDict; }
-      void SetDict(TDictionary* dict) { fDict = dict; }
-      TDictionary* GetContentDict() const { return fContentDict; }
-      void SetContentDict(TDictionary* dict) { fContentDict = dict; }
-
-   private:
-      ROOT::TBranchProxy fProxy;
-      TDictionary*       fDict;
-      TDictionary*       fContentDict; // type of content, if a collection
-      ClassDef(TNamedBranchProxy, 0); // branch proxy with a name
-   };
-}
 
 class TTreeReader: public TObject {
 public:
@@ -110,18 +85,9 @@ public:
 
 protected:
    void Initialize();
-   ROOT::TBranchProxy* CreateProxy(const char* branchname,
-                                   TDictionary* dict);
-   ROOT::TBranchProxy* CreateProxy(TBranch* branch);
-   const char* GetBranchDataType(TBranch* branch,
-                                 TDictionary* &dict) const;
-
-   ROOT::TBranchProxy* CreateContentProxy(const char* branchname,
-                                          TDictionary* dict);
-   ROOT::TBranchProxy* CreateContentProxy(TBranch* branch);
-   const char* GetBranchContentDataType(TBranch* branch,
-                                        TString& contentTypeName,
-                                        TDictionary* &dict) const;
+   ROOT::TNamedBranchProxy* FindProxy(const char* branchname) const {
+      return (ROOT::TNamedBranchProxy*) fProxies.FindObject(branchname); }
+   TCollection* GetProxies() { return &fProxies; }
 
    void RegisterValueReader(ROOT::TTreeReaderValueBase* reader);
    void DeregisterValueReader(ROOT::TTreeReaderValueBase* reader);
