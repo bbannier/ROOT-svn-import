@@ -131,8 +131,7 @@ namespace cling {
                                 );
           m_Sema->LookupName(Previous, S);
 
-          bool Redeclaration = false;
-          m_Sema->CheckVariableDeclaration(VD, Previous, Redeclaration);
+          m_Sema->CheckVariableDeclaration(VD, Previous);
           if (VD->isInvalidDecl()) {
             return true;
           }
