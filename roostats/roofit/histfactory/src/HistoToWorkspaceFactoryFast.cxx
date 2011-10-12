@@ -818,7 +818,10 @@ namespace HistFactory{
     t.Start();
     string channel=summary[0].channel;
 
-    /// MB: assume observable names are either set externally, or, if not, label them x,y,z, depending on histogram dimensionality
+    /// MB: reset observable names for each new channel.
+    fObsNameVec.clear();
+
+    /// MB: label observables x,y,z, depending on histogram dimensionality
     if (fObsNameVec.empty()) { GuessObsNameVec( summary.at(0).nominal ); }
 
     for ( unsigned int idx=0; idx<fObsNameVec.size(); ++idx ) {
