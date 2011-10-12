@@ -5018,6 +5018,9 @@ void THistPainter::PaintErrors(Option_t *)
    /* Begin_html
    <a href="#HP09">Draw 1D histograms error bars.</a>
    End_html */
+   if (gPad->PadInHighlightMode() && gPad->GetSelected() != fH)
+      return;
+
 
    const Int_t kBASEMARKER=8;
    Double_t xp, yp, ex1, ex2, ey1, ey2;

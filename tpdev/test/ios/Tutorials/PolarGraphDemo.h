@@ -7,7 +7,8 @@
 
 class TGraphPolar;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 class PolarGraphDemo : public DemoBase {
@@ -43,6 +44,7 @@ private:
    PolarGraphDemo &operator = (const PolarGraphDemo &rhs);
 };
 
+}
 }
 }
 

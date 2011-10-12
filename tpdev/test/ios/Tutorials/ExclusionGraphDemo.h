@@ -7,7 +7,8 @@
 
 class TMultiGraph;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 class ExclusionGraphDemo : public DemoBase {
@@ -41,6 +42,7 @@ private:
    ExclusionGraphDemo &operator = (const ExclusionGraphDemo &rhs);
 };
 
+}
 }
 }
 

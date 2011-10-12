@@ -16,7 +16,8 @@
 #include "HsimpleDemo.h"
 #include "IOSPad.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 //______________________________________________________________________________
@@ -100,5 +101,6 @@ void HsimpleDemo::PresentDemo()
    fHist->Draw();
 }
 
+}
 }
 }

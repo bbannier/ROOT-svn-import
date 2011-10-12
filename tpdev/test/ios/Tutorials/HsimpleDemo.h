@@ -16,7 +16,8 @@
 
 class TH1F;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 class HsimpleDemo : public DemoBase {
@@ -48,6 +49,7 @@ private:
    HsimpleDemo &operator = (const HsimpleDemo &rhs);
 };
 
+}
 }
 }
 

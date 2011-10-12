@@ -14,17 +14,16 @@
 
 @class NSTimer;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 class DemoBase;
 
 }
 
-class FontManager;
-class Painter;
 class Pad;
-
+}
 }
 
 @class PadOptionsController;
@@ -50,12 +49,7 @@ enum ETutorialsDefaults {
    NSTimer *animationTimer;
    unsigned currentFrame;
 
-   //FontManagerWrapper *fontManager;
-   ROOT_iOS::FontManager *fontManager;
-   ROOT_iOS::Painter *painter;
-   ROOT_iOS::Pad *pad;
-//   PainterWrapper *painter;
-//   PadWrapper *pad;
+   ROOT::iOS::Pad *pad;
 
    //Depending on more, either parentView of
    //scrollViews is/are parent(s) of padViews.
@@ -73,7 +67,7 @@ enum ETutorialsDefaults {
    
    CGSize oldSizes;
 
-   ROOT_iOS::Demos::DemoBase *activeDemo;
+   ROOT::iOS::Demos::DemoBase *activeDemo;
 
    //Transparent view with a text
    //and a pictogram for a hint.
@@ -120,7 +114,7 @@ enum ETutorialsDefaults {
 @property (nonatomic, retain) PadOptionsController * padController;
 @property (nonatomic, retain) UIPopoverController *editorPopover;
 
-- (void) setActiveDemo:(ROOT_iOS::Demos::DemoBase *)demo;
+- (void) setActiveDemo : (ROOT::iOS::Demos::DemoBase *)demo;
 - (void) onTimer;
 
 - (void)animationDidStop:(CAAnimation *)theAnimation finished:(BOOL)flag;

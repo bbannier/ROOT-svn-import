@@ -33,7 +33,7 @@
 }
 
 //______________________________________________________________________________
-- (void) setPad : (ROOT_iOS::Pad *)newPad
+- (void) setPad : (ROOT::iOS::Pad *)newPad
 {
    pad = newPad;
 }

@@ -5,7 +5,8 @@
 #include "ExclusionGraphDemo.h"
 #include "IOSPad.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 //______________________________________________________________________________
@@ -71,5 +72,6 @@ void ExclusionGraphDemo::PresentDemo()
    fMultiGraph->Draw("AC");
 }
 
+}
 }
 }

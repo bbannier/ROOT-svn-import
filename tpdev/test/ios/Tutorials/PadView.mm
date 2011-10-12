@@ -14,7 +14,7 @@
 @implementation PadView
 
 //_________________________________________________________________
-- (id) initWithFrame:(CGRect)frame forPad : (ROOT_iOS::Pad*)pd
+- (id) initWithFrame:(CGRect)frame forPad : (ROOT::iOS::Pad*)pd
 {
    self = [super initWithFrame : frame];
 

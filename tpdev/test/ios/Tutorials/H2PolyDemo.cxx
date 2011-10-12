@@ -12,7 +12,8 @@
 
 #include "H2PolyDemo.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 //______________________________________________________________________________
@@ -40,5 +41,6 @@ void H2PolyDemo::PresentDemo()
 }
 
 
+}
 }
 }

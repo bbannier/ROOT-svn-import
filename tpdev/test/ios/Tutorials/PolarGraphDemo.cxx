@@ -5,7 +5,8 @@
 
 #include "PolarGraphDemo.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 namespace {
@@ -77,5 +78,6 @@ void PolarGraphDemo::PresentDemo()
    fPolarCP->Draw("CP");
 }
 
+}
 }
 }

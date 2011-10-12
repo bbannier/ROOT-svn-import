@@ -7,7 +7,8 @@
 
 class TF2;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 class SurfaceDemo : public DemoBase {
@@ -37,6 +38,7 @@ private:
    SurfaceDemo &operator = (const SurfaceDemo &rhs);
 };
 
+}
 }
 }
 

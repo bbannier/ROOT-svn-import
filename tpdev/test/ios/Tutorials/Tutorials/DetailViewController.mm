@@ -23,23 +23,6 @@
 //Demos.
 #import "DemoBase.h"
 
-class A
-{
-public:
-   A()
-   {
-      i = A::Class();
-   }
-   
-   int Class()
-   {
-      return 0;
-   }
-private:
-   int i;
-};
-
-
 @interface DetailViewController ()
 @property (nonatomic, retain) UIPopoverController *popoverController;
 - (void)configureView;
@@ -86,7 +69,7 @@ private:
 //_________________________________________________________________
 - (void)initCPPObjects
 {
-   pad = new ROOT_iOS::Pad(640, 640);
+   pad = new ROOT::iOS::Pad(640, 640);
 }
 
 //_________________________________________________________________
@@ -385,7 +368,7 @@ private:
 }
 
 //_________________________________________________________________
-- (void) setActiveDemo:(ROOT_iOS::Demos::DemoBase *)demo
+- (void) setActiveDemo:(ROOT::iOS::Demos::DemoBase *)demo
 {
    help.hidden = YES;
    

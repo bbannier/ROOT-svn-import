@@ -4,7 +4,8 @@
 #include "LegoDemo.h"
 #include "IOSPad.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 //______________________________________________________________________________
@@ -34,5 +35,6 @@ void LegoDemo::PresentDemo()
    fLego->Draw("lego");
 }
 
+}
 }
 }
