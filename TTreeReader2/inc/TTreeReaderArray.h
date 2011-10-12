@@ -25,6 +25,9 @@
 #ifndef ROOT_TTreeReaderValue
 #include "TTreeReaderValue.h"
 #endif
+#ifndef ROOT_TTreeReaderUtils
+#include "TTreeReaderUtils.h"
+#endif
 
 namespace ROOT {
    class TTreeReaderArrayBase: public TTreeReaderValueBase {
@@ -33,13 +36,17 @@ namespace ROOT {
                            TDictionary* dict):
          TTreeReaderValueBase(reader, branchname, dict) {}
 
-      size_t GetSize();
-      Bool_t IsEmpty() { return !GetSize(); }
+      size_t GetSize() const { return fImpl->GetSize(GetProxy()); }
+      Bool_t IsEmpty() const { return !GetSize(); }
 
    protected:
-      void* UntypedAt(size_t idx);
-
+      void* UntypedAt(size_t idx) const { return fImpl->At(GetProxy(), idx); }
       virtual void CreateProxy();
+      const char* GetBranchContentDataType(TBranch* branch,
+                                           TString& contentTypeName,
+                                           TDictionary* &dict) const;
+
+      TCollectionReaderABC* fImpl; // Common interface to collections
 
       ClassDefT(TTreeReaderArrayBase, 0);//Accessor to member of an object stored in a collection
    };

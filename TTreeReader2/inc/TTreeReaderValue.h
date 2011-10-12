@@ -80,13 +80,17 @@ namespace ROOT {
       virtual ~TTreeReaderValueBase();
 
       virtual void CreateProxy();
+      const char* GetBranchDataType(TBranch* branch,
+                                    TDictionary* &dict) const;
 
       void* GetAddress() {
          if (ProxyRead() != kReadSuccess) return 0;
          return fProxy ? fProxy->GetWhere() : 0;
       }
+      ROOT::TBranchProxy* GetProxy() const { return fProxy; }
 
       void MarkTreeReaderUnavailable() { fTreeReader = 0; }
+
 
    protected:
       TTreeReader* fTreeReader; // tree reader we belong to
