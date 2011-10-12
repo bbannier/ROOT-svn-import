@@ -80,7 +80,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
       [patterns_ addObject : solidFill];
       [solidFill release];
       
-      for (unsigned i = 0; i < ROOT_iOS::GraphicUtils::kPredefinedFillPatterns; ++i) {
+      for (unsigned i = 0; i < ROOT::iOS::GraphicUtils::kPredefinedFillPatterns; ++i) {
          PatternCell *newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : i];
          [patterns_ addObject : newCell];
          [newCell release];
@@ -149,7 +149,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
 #pragma mark - editing.
 
 //_________________________________________________________________
-- (void) setView : (PadView *) view andPad : (ROOT_iOS::Pad *) newPad
+- (void) setView : (PadView *) view andPad : (ROOT::iOS::Pad *) newPad
 {
    padView = view;
    pad = newPad;
@@ -261,7 +261,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
       }
    } else if (thePickerView == patternPicker_) {
       //<= because of solid fill pattern.
-      if (row > 0 && row <= ROOT_iOS::GraphicUtils::kPredefinedFillPatterns) {
+      if (row > 0 && row <= ROOT::iOS::GraphicUtils::kPredefinedFillPatterns) {
        //  NSLog(@"%p", pad);
          pad->SetFillStyle(3000 + row);
          [padView setNeedsDisplay];

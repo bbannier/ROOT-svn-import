@@ -7,7 +7,8 @@
 
 class TF2;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 class LegoDemo : public DemoBase {
@@ -38,6 +39,7 @@ private:
 
 };
 
+}
 }
 }
 

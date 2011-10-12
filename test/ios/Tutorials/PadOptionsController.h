@@ -11,10 +11,12 @@
 
 @class PadView;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class Pad;
 
+}
 }
 
 
@@ -35,7 +37,7 @@ class Pad;
    NSMutableArray *colors_;
    NSMutableArray *patterns_;
    
-   ROOT_iOS::Pad *pad;
+   ROOT::iOS::Pad *pad;
    PadView *padView;
 }
 
@@ -51,7 +53,7 @@ class Pad;
 @property (nonatomic, retain) NSMutableArray *colors;
 @property (nonatomic, retain) NSMutableArray *patterns;
 
-- (void) setView : (PadView *) view andPad : (ROOT_iOS::Pad *) pad;
+- (void) setView : (PadView *) view andPad : (ROOT::iOS::Pad *) pad;
 
 
 - (IBAction) tickActivated : (id) control;

@@ -36,7 +36,7 @@
 - (void)drawRect:(CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
-
+   
    //Fill view with pattern.
    CGContextSetRGBFillColor(ctx, 1.f, 1.f, 1.f, 1.f);
    CGContextFillRect(ctx, rect);

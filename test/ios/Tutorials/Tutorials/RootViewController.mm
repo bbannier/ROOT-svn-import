@@ -53,14 +53,14 @@
    self.clearsSelectionOnViewWillAppear = NO;
    self.contentSizeForViewInPopover = CGSizeMake(320.0, 500.0);//Default height was 600., I've changed it to 500.
    
-   demos[0] = new ROOT_iOS::Demos::HsimpleDemo;
-   demos[1] = new ROOT_iOS::Demos::SurfaceDemo;
-   demos[2] = new ROOT_iOS::Demos::PolarGraphDemo;
-   demos[3] = new ROOT_iOS::Demos::LegoDemo;
-   demos[4] = new ROOT_iOS::Demos::ExclusionGraphDemo;
+   demos[0] = new ROOT::iOS::Demos::HsimpleDemo;
+   demos[1] = new ROOT::iOS::Demos::SurfaceDemo;
+   demos[2] = new ROOT::iOS::Demos::PolarGraphDemo;
+   demos[3] = new ROOT::iOS::Demos::LegoDemo;
+   demos[4] = new ROOT::iOS::Demos::ExclusionGraphDemo;
    
    NSString *filePath = [[NSBundle mainBundle] pathForResource:@"h2poly" ofType:@"root"];
-   demos[5] = new ROOT_iOS::Demos::H2PolyDemo([filePath cStringUsingEncoding : [NSString defaultCStringEncoding]]);
+   demos[5] = new ROOT::iOS::Demos::H2PolyDemo([filePath cStringUsingEncoding : [NSString defaultCStringEncoding]]);
 }
 
 //_________________________________________________________________

@@ -8,11 +8,13 @@
 
 #import <UIKit/UIKit.h>
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class Painter;
 class Pad;
 
+}
 }
 
 @class PadView;
@@ -22,13 +24,13 @@ class Pad;
    int ev;
    int px;
    int py;
-   ROOT_iOS::Pad *pad;
+   ROOT::iOS::Pad *pad;
 
    PadView *view;
 }
 
 - (void) setShowRotation : (BOOL) show;
 - (void) setEvent : (int) ev atX : (int) x andY : (int) y;
-- (void) setPad : (ROOT_iOS::Pad *)pad;
+- (void) setPad : (ROOT::iOS::Pad *)pad;
 
 @end

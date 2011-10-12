@@ -13,10 +13,12 @@
 //  Delegates all graphics to C++ code.
 ///////////////////////////////////////////////////////////
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class Pad;
 
+}
 }
 
 @class SelectionView;
@@ -24,7 +26,7 @@ class Pad;
 @class PictView;
 
 @interface PadView : UIView {
-   ROOT_iOS::Pad *pad;
+   ROOT::iOS::Pad *pad;
 
    float scaleFactor;
    SelectionView *selectionView;
@@ -33,7 +35,7 @@ class Pad;
    BOOL processTap;
 }
 
-- (id) initWithFrame : (CGRect)frame forPad : (ROOT_iOS::Pad*)pad;
+- (id) initWithFrame : (CGRect)frame forPad : (ROOT::iOS::Pad*)pad;
 - (void) dealloc;
 
 - (void) drawRect:(CGRect)rect;

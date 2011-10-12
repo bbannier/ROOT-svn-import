@@ -7,7 +7,8 @@
 
 class TH2Poly;
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 class H2PolyDemo : public DemoBase {
@@ -37,6 +38,7 @@ private:
    H2PolyDemo &operator = (const H2PolyDemo &rhs);
 };
 
+}
 }
 }
 

@@ -8,7 +8,8 @@
 
 #include "DemoBase.h"
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 namespace Demos {
 
 //_________________________________________________________________
@@ -16,5 +17,6 @@ DemoBase::~DemoBase()
 {
 }
 
+}
 }
 }

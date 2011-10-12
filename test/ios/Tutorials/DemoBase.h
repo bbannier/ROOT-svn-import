@@ -9,7 +9,8 @@
 #ifndef ROOT_DemoBase
 #define ROOT_DemoBase
 
-namespace ROOT_iOS {
+namespace ROOT {
+namespace iOS {
 
 class Pad;
 
@@ -34,6 +35,7 @@ public:
    virtual bool Supports3DRotation() const = 0;
 };
 
+}
 }
 }
 

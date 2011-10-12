@@ -24,7 +24,7 @@ enum {
    
    NSTimer *animationTimer;
    
-   ROOT_iOS::Demos::DemoBase *demos[nROOTDemos];
+   ROOT::iOS::Demos::DemoBase *demos[nROOTDemos];
 }
 		
 @property (nonatomic, retain) IBOutlet DetailViewController *detailViewController;

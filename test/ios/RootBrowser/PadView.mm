@@ -61,10 +61,7 @@ static const CGFloat tapInterval = 0.15f;
    // Drawing code   
    
    CGContextRef ctx = UIGraphicsGetCurrentContext();
-//   CGContextClearRect(ctx, rect);
-
-   CGContextSetRGBFillColor(ctx, 1.f, 1.f, 1.f, 1.f);
-   CGContextFillRect(ctx, rect);
+   CGContextClearRect(ctx, rect);
 
    pad->SetViewWH(rect.size.width, rect.size.height);
    CGContextTranslateCTM(ctx, 0.f, rect.size.height);
