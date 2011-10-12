@@ -356,7 +356,7 @@ namespace cling {
       Res.push_back("-fmodule-cache-path");
       Res.push_back(Opts.ModuleCachePath);
     }
-    if (!Opts.UseStandardIncludes)
+    if (!Opts.UseStandardSystemIncludes)
       Res.push_back("-nostdinc");
     if (!Opts.UseStandardCXXIncludes)
       Res.push_back("-nostdinc++");
