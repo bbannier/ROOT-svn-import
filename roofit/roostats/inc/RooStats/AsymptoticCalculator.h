@@ -69,6 +69,8 @@ namespace RooStats {
 
       void SetQTilde(bool on) { fUseQTilde = on; }
 
+      static void SetPrintLevel(int level);
+
    protected:
       // // configure TestStatSampler for the Null run
       // int PreNullHook(RooArgSet *parameterPoint, double obsTestStat) const;
@@ -99,12 +101,13 @@ namespace RooStats {
 
       bool fOneSided;
       bool fUseQTilde;
-      double fNLLObs; 
-      double fNLLAsimov; 
+      static int fgPrintLevel;     // control print level  (0 minimal, 1 normal, 2 debug)
+      mutable double fNLLObs; 
+      mutable double fNLLAsimov; 
 
       mutable RooAbsData * fAsimovData;   // asimov data set 
       RooArgSet  fAsimovGlobObs;  // snapshot of Asimov global observables 
-
+      mutable RooArgSet  fBestFitPoi;       // snapshot of best fitted POI values
       
       
    };
