@@ -47,7 +47,6 @@ class RooNDKeysPdf : public RooAbsPdf {
 
 public:
 
-
   enum Mirror {NoMirror, MirrorLeft, MirrorRight, MirrorBoth,
                MirrorAsymLeft, MirrorAsymLeftRight,
                MirrorAsymRight, MirrorLeftAsymRight,
@@ -56,6 +55,10 @@ public:
   RooNDKeysPdf(const char *name, const char *title,
                const RooArgList& varList, RooDataSet& data, 
 	       TString options="a", Double_t rho=1, Double_t nSigma=3, Bool_t rotate=kTRUE) ; 
+
+  RooNDKeysPdf(const char *name, const char *title,
+               const RooArgList& varList, RooDataSet& data, const TVectorD& rho, 
+	       TString options="a", Double_t nSigma=3, Bool_t rotate=kTRUE) ; 
 
   RooNDKeysPdf(const char *name, const char *title,
                RooAbsReal& x, RooDataSet& data, 
