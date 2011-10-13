@@ -60,29 +60,50 @@ namespace Utils {
 
 
 
-ClassImp(RooStats::AsymptoticCalculator)
+ClassImp(RooStats::AsymptoticCalculator);
+
+int AsymptoticCalculator::fgPrintLevel = 1;
+
+void AsymptoticCalculator::SetPrintLevel(int level) { 
+   // set print level (static function)
+   // 0 minimal, 1 normal,  2 debug
+   fgPrintLevel = level;
+}
 
 AsymptoticCalculator::AsymptoticCalculator(
    const RooAbsData &data,
    const ModelConfig &altModel,
    const ModelConfig &nullModel) :
       HypoTestCalculatorGeneric(data, altModel, nullModel, 0), 
-   fOneSided(false), fUseQTilde(false), 
-   fNLLObs(0), fNLLAsimov(0), 
-   fAsimovData(0)   
+      fOneSided(false), fUseQTilde(false), 
+      fNLLObs(0), fNLLAsimov(0), 
+      fAsimovData(0)   
 {
    // constructor for asymptotic calculator 
 
    RooAbsPdf * nullPdf = GetNullModel()->GetPdf();
    assert(nullPdf); 
 
-
+   int verbose = fgPrintLevel; 
 
    // evaluate the unconditional nll for alt snapshot and observed data  
    RooAbsData * obsData = const_cast<RooAbsData *>(GetData() );
    assert( obsData );
 
+   
+   oocoutI((TObject*)0,Minimization) << "AsymptoticCalculator: Find  best unconditional NLL on observed data" << endl;
    fNLLObs = EvaluateNLL( *nullPdf, *obsData);
+   // fill also snapshot of best poi
+   const RooArgSet * poi = GetNullModel()->GetParametersOfInterest(); 
+   if (!poi) { 
+      oocoutE((TObject*)0,InputArguments) << "AsymptoticCalculator: ModelConfig has not POI defined." << endl;
+      return;
+   }
+   poi->snapshot(fBestFitPoi);
+   if (verbose > 0) {
+      std::cout << "Best fitted POI\n";
+      fBestFitPoi.Print("v");
+   }
    
    // compute Asimov data set for the background (alt poi ) value
    const RooArgSet * altSnapshot = GetAlternateModel()->GetSnapshot();
@@ -96,9 +117,9 @@ AsymptoticCalculator::AsymptoticCalculator(
       return;
    }
 
-   RooArgSet poi(*altSnapshot);  // this is the poi snapshot of B (i.e. for mu=0)
+   RooArgSet poiAlt(*altSnapshot);  // this is the poi snapshot of B (i.e. for mu=0)
 
-   fAsimovData = MakeAsimovData( poi, fAsimovGlobObs);
+   fAsimovData = MakeAsimovData( poiAlt, fAsimovGlobObs);
    if (!fAsimovData) return;
 
    // set global observables to their Asimov values 
@@ -114,7 +135,13 @@ AsymptoticCalculator::AsymptoticCalculator(
 
 
    // evaluate  the likelihood. Since we use on Asimov data , conditional and unconditional values should be the same
-   fNLLAsimov =  EvaluateNLL( *nullPdf, *fAsimovData, &poi);
+
+   oocoutI((TObject*)0,Minimization) << "AsymptoticCalculator: Find  best unconditional NLL on ASIMOV data set" << endl;
+   fNLLAsimov =  EvaluateNLL( *nullPdf, *fAsimovData );
+   if (verbose > 0) {
+      std::cout << "Best Fit POI on Asimov data set " << std::endl;
+      poi->Print("v");
+   }
    
    // restore previous value 
    globObs = globObsSnapshot;
@@ -128,6 +155,8 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
     
     RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
     RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+
+    int verbose = fgPrintLevel;
 
 
     RooArgSet* allParams = pdf.getParameters(data);
@@ -181,22 +210,30 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
           }
        }
     }
-    std::cout << "BEST FIT values " << std::endl;
-    allParams->Print("V");
-    std::cout << "ALL PDF variables " << std::endl;
-    pdf.getVariables()->Print("V");
-    
+    // std::cout << "ALL PDF variables " << std::endl;
+    // pdf.getVariables()->Print("V");
+
+//     std::cout << "BEST FIT values " << std::endl;
+//     allParams->Print("V");
+
+
     RooMsgService::instance().setGlobalKillBelow(msglevel);
 
     // return max value of nll
     
     double val =  nll->getVal(); 
-    double muHat = 0; 
-    if (poiSet) muHat = ( (RooRealVar*) poiSet->first() )->getVal();
-    std::cout << "BEST NLL  value " << val << " and poi = " << std::endl;
+    double muTest = 0; 
+    if (verbose > 0) { 
+       std::cout << "AsymptoticCalculator::EvaluateNLL -  value = " << val;
+       if (poiSet) { 
+          muTest = ( (RooRealVar*) poiSet->first() )->getVal();
+          std::cout << " for poi fixed at = " << muTest; 
+       }
+       std::cout << std::endl;
+    }
 
     // reset the parameter free which where set as constant
-    SetAllConstant(paramsSetConstant,false);
+    if (poiSet && paramsSetConstant.getSize() > 0) SetAllConstant(paramsSetConstant,false);
 
     delete allParams;
     delete nll;
@@ -214,6 +251,8 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    // It performs an hypothesis tests using the likelihood function
    // computes the profile likelihood test statistic value 
 
+   int verbose = fgPrintLevel;
+
    if (!fAsimovData) { 
        oocoutE((TObject*)0,InputArguments) << "AsymptoticCalculator::GetHypoTest - Asimov data set has not been generated - return NULL result " << endl;
        return 0;
@@ -230,35 +269,80 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    const RooArgSet * nullSnapshot = GetNullModel()->GetSnapshot();
    assert(nullSnapshot);
 
-   RooArgSet poi(*nullSnapshot);
+   RooArgSet poiTest(*nullSnapshot);
 
    // evaluate the conditional NLL on the observed data  
-   double condNLL = EvaluateNLL( *nullPdf, const_cast<RooAbsData&>(*GetData()), &poi);
+   double condNLL = EvaluateNLL( *nullPdf, const_cast<RooAbsData&>(*GetData()), &poiTest);
 
    double qmu = 2.*(condNLL - fNLLObs); 
    
    // set the one-side condition
    // (only when we have only one params of interest 
-   if (fOneSided) { 
-      const RooArgSet * paramsOfInterest = GetNullModel()->GetParametersOfInterest();
-      if (paramsOfInterest && paramsOfInterest->getSize() == 1) { 
-         RooRealVar * mu = dynamic_cast<RooRealVar*> (  paramsOfInterest->first() );
-         RooRealVar * muTest = dynamic_cast<RooRealVar*> ( nullSnapshot->find(mu->GetName() ) );
-         if ( mu->getVal() > muTest->getVal() ) qmu = 0;
-      }
-      else { 
-         if (!paramsOfInterest)
-            oocoutE((TObject*)0,InputArguments) << "Cannot use one-sided test because no POI is defined in ModelConfig " << std::endl;         
-         else
-            oocoutE((TObject*)0,InputArguments) << "Cannot use one-sided test because model has more than one POI " << std::endl;         
+   RooRealVar * muHat =  dynamic_cast<RooRealVar*> (  fBestFitPoi.first() );
+   RooRealVar * muTest = dynamic_cast<RooRealVar*> ( nullSnapshot->find(muHat->GetName() ) );
+   assert(muHat && "no best fit parameter defined"); 
+   assert(muTest && "poi snapshot is not existing"); 
+   
+
+   if (verbose > 0) 
+      std::cout << " qmu on data = " << qmu << " condNLL = " << condNLL << " uncond " << fNLLObs << std::endl;
+
+
+
+   if (qmu < 0) {
+
+      oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a negative value of the qmu - retry to do the unconditional fit " 
+                                        << std::endl;         
+      
+      
+      double nll = EvaluateNLL( *nullPdf, const_cast<RooAbsData&>(*GetData()));
+      
+      if (nll < fNLLObs) { 
+         oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a better unconditional minimum "
+                                           << " old NLL = " << fNLLObs << " old muHat " << muHat->getVal() << std::endl;            
+
+         // update values
+         fNLLObs = nll; 
+         const RooArgSet * poi = GetNullModel()->GetParametersOfInterest(); 
+         assert(poi);
+         fBestFitPoi.removeAll();
+         poi->snapshot(fBestFitPoi);
+         // restore also muHad since previous pointr has been deleted
+         muHat =  dynamic_cast<RooRealVar*> (  fBestFitPoi.first() );
+         assert(muHat);
+
+        oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  New minimum  found for                       "
+                                          << "    NLL = " << fNLLObs << "    muHat  " << muHat->getVal() << std::endl;            
+
+
+        qmu = 2.*(condNLL - fNLLObs); 
+
+        std::cout << " New qmu value is " << qmu << std::endl;
+
       }
    }
 
-   // ProfileLikelihoodTestStat profileLL( *nullPdf );
-   // profileLL.SetOneSided(true);
-   // profileLL.SetReuseNLL(false);
+   if (qmu < 0) {       
+      oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  qmu is still < 0  for mu = " 
+                                        <<  muTest << " resulting p-value will not be meaningful "  
+                                        << std::endl;         
+   }
 
-   std::cout << " qmu on data = " << qmu << " condNLL = " << condNLL << " uncond " << fNLLObs << std::endl;
+   //check for one side condition
+   if (fOneSided ) { 
+      if (fBestFitPoi.getSize() == 1) {
+         if ( muHat->getVal() > muTest->getVal() ) { 
+            oocoutI((TObject*)0,Eval) << "Using one-sided qmu - setting qmu to zero  muHat = " << muHat->getVal() 
+                                     << " muTest = " << muTest->getVal() << std::endl;
+            qmu = 0;
+         }
+      }
+      else { 
+         oocoutE((TObject*)0,InputArguments) << "Cannot use one-sided test because model has more than one POI " << std::endl;         
+      }
+   }
+
+
 
    double sqrtqmu = (qmu > 0) ? std::sqrt(qmu) : 0; 
 
@@ -280,26 +364,56 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
       globObs = fAsimovGlobObs; 
    }
 
-   double condNLL_A = EvaluateNLL( *nullPdf, *fAsimovData, &poi);
-
-   // restore previous value 
-   globObs = globObsSnapshot;
+   double condNLL_A = EvaluateNLL( *nullPdf, *fAsimovData, &poiTest);
 
 
    double qmu_A = 2.*(condNLL_A - fNLLAsimov  );
 
-   if (fOneSided) { 
-      const RooArgSet * paramsOfInterest = GetNullModel()->GetParametersOfInterest();
-      if (paramsOfInterest && paramsOfInterest->getSize() == 1) { 
-         RooRealVar * mu = dynamic_cast<RooRealVar*> (  paramsOfInterest->first() );
-         RooRealVar * muTest = dynamic_cast<RooRealVar*> ( nullSnapshot->find(mu->GetName() ) );
-         if ( mu->getVal() > muTest->getVal() ) qmu_A = 0;
+   if (verbose > 0) 
+      std::cout << " qmu on Asimov = " << qmu_A << " condNLL = " << condNLL_A << " uncond " << fNLLAsimov << std::endl;
+
+   if (qmu_A < 0) {
+
+      oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a negative value of the qmu Asimov- retry to do the unconditional fit " 
+                                        << std::endl;         
+      
+      
+      double nll = EvaluateNLL( *nullPdf, *fAsimovData );
+      
+      if (nll < fNLLAsimov) { 
+         oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a better unconditional minimum for Asimov data set"
+                                           << " old NLL = " << fNLLAsimov << std::endl;            
+
+         // update values
+         fNLLAsimov = nll; 
+         
+         oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  New minimum  found for                       "
+                                           << "    NLL = " << fNLLAsimov << std::endl;            
+         qmu_A = 2.*(condNLL_A - fNLLAsimov); 
+
+         std::cout << " New qmu value is " << qmu_A << std::endl;
+
       }
    }
 
+   if (qmu_A < 0) {       
+      oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  qmu_A is still < 0  for mu = " 
+                                        <<  muTest << " resulting p-value will not be meaningful "  
+                                        << std::endl;         
+   }
 
 
-   std::cout << " qmu on Asimov = " << qmu_A << " condNLL = " << condNLL_A << " uncond " << fNLLAsimov << std::endl;
+   // restore previous value of global observables
+   globObs = globObsSnapshot;
+
+
+   // do I need to do something for Asimov on the one-sided case ???
+//    if (fOneSided) { 
+//          if ( muHat->getVal() > muTest->getVal() ) qmu_A = 0;
+//       }
+//    }
+
+
 
    double sqrtqmu_A = (qmu_A > 0) ? std::sqrt(qmu_A) : 0; 
 
@@ -318,13 +432,11 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    HypoTestResult* res = new HypoTestResult(resultname.c_str(), pnull, palt);
    res->SetBackgroundAsAlt(true);
 
-   double mu = 0;
-   RooRealVar * muVar = dynamic_cast<RooRealVar*>(poi.first() );
-   if (muVar) mu = muVar->getVal();
-   oocoutI((TObject*)0,Eval) << "poi = " << mu << " qmu = " << qmu << " qmu_A = " << qmu_A 
+   oocoutP((TObject*)0,Eval) << "poi = " << muTest->getVal() << " qmu = " << qmu << " qmu_A = " << qmu_A 
                              << "  CLsplusb = " << pnull << " CLb = " << palt << " CLs = " <<  res->CLs() << std::endl; 
 
    return res; 
+
 }
 
 double AsymptoticCalculator::GetExpectedPValues(double pnull, double palt, double nsigma, bool useCls ) { 
@@ -346,7 +458,8 @@ double AsymptoticCalculator::GetExpectedPValues(double pnull, double palt, doubl
 void AsymptoticCalculator::FillBins(const RooAbsPdf & pdf, const RooArgList &obs, RooAbsData & data, int &index,  double &binVolume, int &ibin) { 
    /// fill bins by looping recursivly on observables 
 
-   bool debug = false; 
+   bool debug = (fgPrintLevel == 2);  
+
    RooRealVar * v = dynamic_cast<RooRealVar*>( &(obs[index]) );
    if (!v) return;
 
@@ -472,7 +585,7 @@ RooAbsData * AsymptoticCalculator::GenerateAsimovDataSinglePdf(const RooAbsPdf &
    // to do :  (possibility to change number of bins)
    // impelment integration over bin content
 
-   int _printLevel = 1;
+   int printLevel = fgPrintLevel;
 
    // Get observables defined by the pdf associated with this state
    RooArgSet* obs = pdf.getObservables(allobs) ;
@@ -499,15 +612,18 @@ RooAbsData * AsymptoticCalculator::GenerateAsimovDataSinglePdf(const RooAbsPdf &
     RooArgList obsList(*obs);
 
     // loop on observables and on the bins 
-    cout << "Generating Asimov data for pdf " << pdf.GetName() << endl;
-    cout << "list of observables  " << endl;
-    obsList.Print();
+    if (printLevel >= 2) { 
+       cout << "Generating Asimov data for pdf " << pdf.GetName() << endl;
+       cout << "list of observables  " << endl;
+       obsList.Print();
+    }
 
     int obsIndex = 0; 
     double binVolume = 1; 
     int nbins = 0; 
     FillBins(pdf, obsList, *asimovData, obsIndex, binVolume, nbins);
-    cout << "filled from " << pdf.GetName() << "   " << nbins << " nbins " << " volume is " << binVolume << endl;
+    if (printLevel >= 2) 
+       cout << "filled from " << pdf.GetName() << "   " << nbins << " nbins " << " volume is " << binVolume << endl;
 
     // for (int iobs = 0; iobs < obsList.getSize(); ++iobs) { 
     //    RooRealVar * thisObs = dynamic_cast<RooRealVar*> &obsList[i];
@@ -525,10 +641,10 @@ RooAbsData * AsymptoticCalculator::GenerateAsimovDataSinglePdf(const RooAbsPdf &
     //   obsDataUnbinned->add(*mc->GetObservables(), thisNorm*expectedEvents);
     // }
     
-    if (_printLevel >= 1)
+    if (printLevel >= 1)
     {
       asimovData->Print();
-      cout <<"sum entries "<< asimovData->sumEntries()<<endl;
+      //cout <<"sum entries "<< asimovData->sumEntries()<<endl;
     }
     if( TMath::IsNaN(asimovData->sumEntries()) ){
       cout << "sum entries is nan"<<endl;
@@ -546,11 +662,11 @@ RooAbsData * AsymptoticCalculator::GenerateAsimovData(const RooAbsPdf & pdf, con
    // generate the asimov data for the observables (not the global ones) 
    // need to deal with the case of a sim pdf 
 
-   int _printLevel = 0;
+   int printLevel = fgPrintLevel;
 
    RooRealVar * weightVar = new RooRealVar("binWeightAsimov", "binWeightAsimov", 1, 0, 1.E30 );
 
-   if (_printLevel >= 1) cout <<" check expectedData by category"<<endl;
+   if (printLevel >= 1) cout <<" check expectedData by category"<<endl;
   //RooDataSet* simData=NULL;
    const RooSimultaneous* simPdf = dynamic_cast<const RooSimultaneous*>(&pdf);
    if (!simPdf) { 
@@ -575,7 +691,7 @@ RooAbsData * AsymptoticCalculator::GenerateAsimovData(const RooAbsPdf & pdf, con
     // Get pdf associated with state from simpdf
     RooAbsPdf* pdftmp = simPdf->getPdf(channelCat.getLabel()) ;
 	
-    if (_printLevel >= 1)
+    if (printLevel >= 1)
     {
       cout << "on type " << channelCat.getLabel() << " " << channelCat.getIndex() << endl;
     }
@@ -591,7 +707,7 @@ RooAbsData * AsymptoticCalculator::GenerateAsimovData(const RooAbsPdf & pdf, con
 
     asimovDataMap[string(channelCat.getLabel())] = (RooDataSet*) dataSinglePdf;
 
-    if (_printLevel >= 1)
+    if (printLevel >= 1)
     {
       cout << "channel: " << channelCat.getLabel() << ", data: ";
       dataSinglePdf->Print();
@@ -621,7 +737,7 @@ RooAbsData * AsymptoticCalculator::MakeAsimovData(const RooArgSet & paramValues,
 
    // get the model
 
-   int verbose = 2;
+   int verbose = fgPrintLevel;
 
    const RooStats::ModelConfig *mc = GetNullModel() ;
    RooAbsData * realData = const_cast<RooAbsData*> (GetData() ); 
