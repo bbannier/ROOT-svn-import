@@ -134,10 +134,10 @@ void PrintInfo (clang::CompilerInstance * CI)
    int size = hsOpts.UserEntries.size();
    for (int i = 0; i < size; i++)
       info ("User entry " + hsOpts.UserEntries[i].Path);
-   info ("EnvIncPath " + hsOpts.EnvIncPath);
-   info ("CEnvIncPath " + hsOpts.CEnvIncPath);
-   info ("CXXEnvIncPath " + hsOpts.CXXEnvIncPath);
-   info ("ResourceDir " + hsOpts.ResourceDir);
+   // info ("EnvIncPath " + hsOpts.EnvIncPath);
+   // info ("CEnvIncPath " + hsOpts.CEnvIncPath);
+   // info ("CXXEnvIncPath " + hsOpts.CXXEnvIncPath);
+   // info ("ResourceDir " + hsOpts.ResourceDir);
 }
 
 /* -------------------------------------------------------------------------- */
