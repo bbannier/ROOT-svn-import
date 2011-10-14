@@ -89,7 +89,7 @@ namespace ObjIns = ROOT_IOSObjectInspector;
 }
 
 //____________________________________________________________________________________________________
-- (void)drawRect:(CGRect)rect
+- (void) drawRect : (CGRect)rect
 {
    //Draw main editor's view as a semi-transparent
    //gray view with rounded corners.
@@ -101,8 +101,10 @@ namespace ObjIns = ROOT_IOSObjectInspector;
    }
 
    UIColor *background = [[UIColor scrollViewTexturedBackgroundColor] colorWithAlphaComponent : [EditorView editorAlpha]];
+//   UIColor *background = [[UIColor colorWithPatternImage:[UIImage imageNamed:@"inspector_bkn.png"]] colorWithAlphaComponent : [EditorView editorAlpha]];
    CGContextSetFillColorWithColor(ctx, background.CGColor);
-
+   CGContextSetPatternPhase(ctx, CGSizeMake(-8.f, 0.f));
+   
    //Draw the rect with rounded corners now.
    CGContextFillRect(ctx, CGRectMake(0.f, [EditorView ncHeight] / 2, [EditorView ncWidth] / 2, rect.size.height - [EditorView ncHeight]));
    CGContextFillRect(ctx, CGRectMake([EditorView ncWidth] / 2, 0.f, rect.size.width - [EditorView ncWidth] / 2, rect.size.height));
@@ -142,7 +144,7 @@ namespace ObjIns = ROOT_IOSObjectInspector;
 //____________________________________________________________________________________________________
 - (CGFloat) recalculateEditorGeometry
 {
-   const CGFloat dY = 10.f;//space between controls.
+   const CGFloat dY = 3.f;//space between controls.
    for (unsigned i = 0; i < nStates; ++i) {
       CGFloat currentY = 0.f;
       for (unsigned j = 0; j < nEditors; ++j) {

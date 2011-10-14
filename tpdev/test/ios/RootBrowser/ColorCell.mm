@@ -1,3 +1,5 @@
+#import <QuartzCore/QuartzCore.h>
+
 #import "ColorCell.h"
 
 @implementation ColorCell
@@ -13,8 +15,13 @@
 {
    self = [super initWithFrame:frame];
    
-   if (self)
+   if (self) {
       self.backgroundColor = [UIColor clearColor];
+      self.layer.shadowColor = [UIColor darkGrayColor].CGColor;
+      self.layer.shadowOffset = CGSizeMake(4.f, 4.f);
+      self.layer.shadowOpacity = 0.4f;
+      self.opaque = NO;
+   }
 
    return self;
 }
@@ -43,7 +50,9 @@
    }
 
    CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], [ColorCell cellAlpha]);
-   CGContextFillRect(ctx, rect);
+   
+   const CGRect colorCellRect = CGRectMake(10.f, 10.f, rect.size.width - 20.f, rect.size.height - 20.f);
+   CGContextFillRect(ctx, colorCellRect);
 }
 
 @end

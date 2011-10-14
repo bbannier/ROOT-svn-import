@@ -1,4 +1,5 @@
 #import <CoreGraphics/CGContext.h>
+#import <QuartzCore/QuartzCore.h>
 
 #import "LineWidthCell.h"
 
@@ -13,8 +14,10 @@
    if (self) {
       lineWidth = w;
       
-      backgroundImage = [UIImage imageNamed : @"line_cell.png"];
-      [backgroundImage retain];
+      self.layer.shadowOpacity = 0.4f;
+      self.layer.shadowColor = [UIColor darkGrayColor].CGColor;
+      self.layer.shadowOffset = CGSizeMake(4.f, 4.f);
+      self.opaque = NO;
    }
 
    return self;
@@ -25,8 +28,6 @@
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
 
-   //Fill the background.   
-   [backgroundImage drawInRect : rect];
    //Draw the line.
    CGContextSetLineCap(ctx, kCGLineCapRound);
    CGContextSetLineWidth(ctx, lineWidth);
@@ -44,8 +45,13 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-   [backgroundImage release];
    [super dealloc];
+}
+
+//____________________________________________________________________________________________________
+- (void) setLineWidth : (CGFloat)width
+{
+   lineWidth = width;
 }
 
 @end

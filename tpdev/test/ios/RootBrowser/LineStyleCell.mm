@@ -1,3 +1,4 @@
+#import <QuartzCore/QuartzCore.h>
 #import <CoreGraphics/CGContext.h>
 
 #import "LineStyleCell.h"
@@ -14,8 +15,12 @@
 
    if (self) {
       lineStyle = style;
-      backgroundImage = [UIImage imageNamed : @"line_cell.png"];
-      [backgroundImage retain];
+      
+      self.layer.shadowOffset = CGSizeMake(4.f, 4.f);
+      self.layer.shadowOpacity = 0.7f;
+      self.layer.shadowColor = [UIColor darkGrayColor].CGColor;
+      
+      self.opaque = NO;
    }
 
    return self;
@@ -26,7 +31,10 @@
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
    
-   [backgroundImage drawInRect : rect];
+   CGContextSetRGBStrokeColor(ctx, 0.3f, 0.3f, 0.3f, 0.4f);
+   CGContextStrokeRect(ctx, rect);
+
+   CGContextSetRGBStrokeColor(ctx, 0.f, 0.f, 0.f, 1.f);
 
    if (lineStyle > 1 && lineStyle <= 10)
       CGContextSetLineDash(ctx, 0., ROOT::iOS::GraphicUtils::dashLinePatterns[lineStyle - 1], ROOT::iOS::GraphicUtils::linePatternLengths[lineStyle - 1]);
@@ -36,15 +44,15 @@
    CGContextSetLineWidth(ctx, 2.f);
    
    CGContextBeginPath(ctx);
-   CGContextMoveToPoint(ctx, 10.f, rect.size.height / 2);
-   CGContextAddLineToPoint(ctx, rect.size.width - 10, rect.size.height / 2);
+   CGContextMoveToPoint(ctx, 10.f, rect.size.height  - 10.f);
+   CGContextAddLineToPoint(ctx, rect.size.width - 10, 10.f);
+
    CGContextStrokePath(ctx);
 }
 
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-   [backgroundImage release];
    [super dealloc];
 }
 
