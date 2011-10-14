@@ -91,7 +91,7 @@ AsymptoticCalculator::AsymptoticCalculator(
    assert( obsData );
 
    
-   oocoutI((TObject*)0,Minimization) << "AsymptoticCalculator: Find  best unconditional NLL on observed data" << endl;
+   oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best unconditional NLL on observed data" << endl;
    fNLLObs = EvaluateNLL( *nullPdf, *obsData);
    // fill also snapshot of best poi
    const RooArgSet * poi = GetNullModel()->GetParametersOfInterest(); 
@@ -119,6 +119,9 @@ AsymptoticCalculator::AsymptoticCalculator(
 
    RooArgSet poiAlt(*altSnapshot);  // this is the poi snapshot of B (i.e. for mu=0)
 
+   oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Building Asimov data Set" << endl;
+
+
    fAsimovData = MakeAsimovData( poiAlt, fAsimovGlobObs);
    if (!fAsimovData) return;
 
@@ -136,7 +139,7 @@ AsymptoticCalculator::AsymptoticCalculator(
 
    // evaluate  the likelihood. Since we use on Asimov data , conditional and unconditional values should be the same
 
-   oocoutI((TObject*)0,Minimization) << "AsymptoticCalculator: Find  best unconditional NLL on ASIMOV data set" << endl;
+   oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best unconditional NLL on ASIMOV data set" << endl;
    fNLLAsimov =  EvaluateNLL( *nullPdf, *fAsimovData );
    if (verbose > 0) {
       std::cout << "Best Fit POI on Asimov data set " << std::endl;
@@ -419,9 +422,12 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
 
    double palt = ROOT::Math::normal_cdf( sqrtqmu_A - sqrtqmu, 1.);
 
+   // formula for Qtilde (need to distinguish case when qmu > qmuA
+   // (see Cowan et al, Eur.Phys.J. C(2011) 71:1554 paper equations 64 and 65
+   // (remember qmu_A = mu^2/sigma^2 )
    if (fUseQTilde && qmu > qmu_A) { 
       pnull = ROOT::Math::normal_cdf_c( (qmu + qmu_A)/(2 * sqrtqmu_A), 1.);
-      palt = ROOT::Math::normal_cdf( (qmu - qmu_A)/(2 * sqrtqmu_A), 1.);
+      palt = ROOT::Math::normal_cdf_c( (qmu - qmu_A)/(2 * sqrtqmu_A), 1.);
    }
 
    
@@ -755,7 +761,11 @@ RooAbsData * AsymptoticCalculator::MakeAsimovData(const RooArgSet & paramValues,
    }
    if (mc->GetNuisanceParameters()) {
       RooAbsPdf * pdf = mc->GetPdf();
-      pdf->fitTo(*realData, RooFit::Minimizer("Minuit2","minimize"), RooFit::Strategy(1), RooFit::Constrain(*mc->GetNuisanceParameters()));
+      RooArgSet  constrainParams(*mc->GetNuisanceParameters());
+      RooStats::RemoveConstantParameters(&constrainParams);
+      pdf->fitTo(*realData, RooFit::Minimizer("Minuit2","minimize"), RooFit::Strategy(ROOT::Math::MinimizerOptions::DefaultStrategy()),
+                 RooFit::PrintLevel(ROOT::Math::MinimizerOptions::DefaultPrintLevel()-1),
+                 RooFit::Constrain(constrainParams));
    } else {
       // Do we have free parameters anyway that need fitting?
       bool hasFloatParams = false;
