@@ -13,9 +13,11 @@
 #include "TGraphAsymmErrors.h"
 #include "TCanvas.h"
 #include "TLine.h"
+#include "TStopwatch.h"
 
 #include "RooStats/HybridCalculator.h"
 #include "RooStats/FrequentistCalculator.h"
+#include "RooStats/AsymptoticCalculator.h"
 #include "RooStats/ToyMCSampler.h"
 #include "RooStats/HypoTestPlot.h"
 
@@ -37,8 +39,12 @@ bool plotHypoTestResult = true;
 bool useProof = true;
 bool optimize = false;
 bool writeResult = false;
-int nworkers = 2;
-
+int nworkers = 4;
+bool rebuild = false;
+int nToyToRebuild = 100;
+double nToysRatio = 2; // ratio Ntoys S+b/ntoysB
+double maxPOI = -1;
+const char * massValue = 0;
 
 // internal routine to run the inverter
 HypoTestInverterResult * RunInverter(RooWorkspace * w, const char * modelSBName, const char * modelBName, const char * dataName,
@@ -69,7 +75,8 @@ void StandardHypoTestInvDemo(const char * fileName =0,
    apart from standard for filename, ws, modelconfig and data
 
     type = 0 Freq calculator 
-    type = 1 Hybrid 
+    type = 1 Hybrid calculator
+    type = 2 Asymptotic calculator  
 
     testStatType = 0 LEP
                  = 1 Tevatron 
@@ -141,38 +148,55 @@ void StandardHypoTestInvDemo(const char * fileName =0,
    const int nEntries = r->ArraySize();
 
 
-   const char *  typeName = (calculatorType == 0) ? "Frequentist" : "Hybrid";
+   std::string typeName = "Frequentist"; 
+   if (calculatorType ==1 )
+      typeName = "Hybrid";
+   else if (calculatorType ==2 ) { 
+      typeName = "Asymptotic";
+      plotHypoTestResult = false; 
+   }
    const char * resultName = (w) ? w->GetName() : r->GetName();
-   TString plotTitle = TString::Format("%s CL Scan for workspace %s",typeName,resultName);
+   TString plotTitle = TString::Format("%s CL Scan for workspace %s",typeName.c_str(),resultName);
    HypoTestInverterPlot *plot = new HypoTestInverterPlot("HTI_Result_Plot",plotTitle,r);
    plot->Draw("CLb 2CL");  // plot all and Clb
+   
 
    if (plotHypoTestResult) { 
       TCanvas * c2 = new TCanvas();
-      c2->Divide( 2, TMath::Ceil(nEntries/2));
+      if (nEntries > 1) c2->Divide( 2, TMath::Ceil(double(nEntries)/2));
       for (int i=0; i<nEntries; i++) {
-         c2->cd(i+1);
+         if (nEntries > 1) c2->cd(i+1);
          SamplingDistPlot * pl = plot->MakeTestStatPlot(i);
          pl->SetLogYaxis(true);
          pl->Draw();
       }
    }
 
-
    std::cout << " expected limit (median) " <<  r->GetExpectedUpperLimit(0) << std::endl;
    std::cout << " expected limit (-1 sig) " << r->GetExpectedUpperLimit(-1) << std::endl;
    std::cout << " expected limit (+1 sig) " << r->GetExpectedUpperLimit(1) << std::endl;
+   std::cout << " expected limit (-2 sig) " << r->GetExpectedUpperLimit(-2) << std::endl;
+   std::cout << " expected limit (+2 sig) " << r->GetExpectedUpperLimit(2) << std::endl;
 
 
    if (w != NULL && writeResult) {
 
       // write to a file the results
-      const char *  calcType = (calculatorType == 0) ? "Freq" : "Hybr";
+      const char *  calcType = (calculatorType == 0) ? "Freq" : (calculatorType == 1) ? "Hybr" : "Asym";
       const char *  limitType = (useCls) ? "CLs" : "Cls+b";
       const char * scanType = (npoints < 0) ? "auto" : "grid";
       TString resultFileName = TString::Format("%s_%s_%s_ts%d_",calcType,limitType,scanType,testStatType);      
-      resultFileName += fileName;
-      
+      //strip the / from the filename
+      if (massValue) {
+         resultFileName += massValue;
+         resultFileName += "_";
+      }
+
+      TString name = fileName; 
+      name.Replace(0, name.Last('/')+1, "");
+      resultFileName += name;
+         
+
       TFile * fileOut = new TFile(resultFileName,"RECREATE");
       r->Write();
       fileOut->Close();                                                                     
@@ -260,6 +284,35 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
    }
 
 
+   // run first a data fit 
+
+   const RooArgSet * poiSet = sbModel->GetParametersOfInterest();
+   RooRealVar *poi = (RooRealVar*)poiSet->first();
+
+   // fit the data first (need to use constraint )
+   Info( "StandardHypoTestInvDemo"," Doing a first fit to the observed data ");
+   RooArgSet constrainParams;
+   if (sbModel->GetNuisanceParameters() ) constrainParams.add(*sbModel->GetNuisanceParameters());
+   RooStats::RemoveConstantParameters(&constrainParams);
+   TStopwatch tw; 
+   tw.Start(); 
+   RooFitResult * fitres = sbModel->GetPdf()->fitTo(*data,InitialHesse(false), Hesse(false),Minimizer("Minuit2","Migrad"), Strategy(0), PrintLevel(1), Constrain(constrainParams), Save(true) );
+   if (fitres->status() != 0) { 
+      Warning("StandardHypoTestInvDemo","Fit to the model failed - try with strategy 1 and perform first an Hesse computation");
+      fitres = sbModel->GetPdf()->fitTo(*data,InitialHesse(true), Hesse(false),Minimizer("Minuit2","Migrad"), Strategy(1), PrintLevel(1), Constrain(constrainParams), Save(true) );
+   }
+   if (fitres->status() != 0) 
+      Warning("StandardHypoTestInvDemo"," Fit still failed - continue anyway.....");
+
+
+   double poihat  = poi->getVal();
+   std::cout << "StandardHypoTestInvDemo - Best Fit POI = " << poihat << " +/- " << poi->getError() << std::endl;
+   std::cout << "Time for fitting : "; tw.Print(); 
+
+
+   // build test statistics and hypotest calculators for running the inverter 
+
+
    SimpleLikelihoodRatioTestStat slrts(*sbModel->GetPdf(),*bModel->GetPdf());
    if (sbModel->GetSnapshot()) slrts.SetNullParameters(*sbModel->GetSnapshot());
    if (bModel->GetSnapshot()) slrts.SetAltParameters(*bModel->GetSnapshot());
@@ -271,26 +324,48 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
    
    ProfileLikelihoodTestStat profll(*sbModel->GetPdf());
    if (testStatType == 3) profll.SetOneSided(1);
-   if (optimize) profll.SetReuseNLL(true);
+   profll.SetMinimizer("Minuit2");
+   if (optimize) { 
+      profll.SetReuseNLL(true);
+      slrts.setReuseNLL(true);
+      profll.SetStrategy(0);
+   }
+
+   RooRealVar * mu = dynamic_cast<RooRealVar*>(sbModel->GetParametersOfInterest()->first());
+   if (maxPOI > 0) mu->setMax(maxPOI);  // increase limit
+   assert(mu != 0);
+   MaxLikelihoodEstimateTestStat maxll(*sbModel->GetPdf(),*mu); 
+
 
    TestStatistic * testStat = &slrts;
    if (testStatType == 1) testStat = &ropl;
    if (testStatType == 2 || testStatType == 3) testStat = &profll;
+   if (testStatType == 4) testStat = &maxll;
   
    
    HypoTestCalculatorGeneric *  hc = 0;
-   if (type == 0) hc = new FrequentistCalculator(*data, *bModel, *sbModel);
-   else hc = new HybridCalculator(*data, *bModel, *sbModel);
+   if (type == 1) hc = new HybridCalculator(*data, *bModel, *sbModel);
+   if (type == 2) hc = new AsymptoticCalculator(*data, *bModel, *sbModel);
+   else hc = new FrequentistCalculator(*data, *bModel, *sbModel);
+
 
    ToyMCSampler *toymcs = (ToyMCSampler*)hc->GetTestStatSampler();
    if (useNumberCounting) toymcs->SetNEventsPerToy(1);
    toymcs->SetTestStatistic(testStat);
-   if (optimize) toymcs->SetUseMultiGen(true);
+   if (optimize) { 
+      // work only of b pdf and s+b pdf are the same
+      if (bModel->GetPdf() == sbModel->GetPdf() ) 
+         toymcs->SetUseMultiGen(true);
+   }
 
 
    if (type == 1) { 
       HybridCalculator *hhc = (HybridCalculator*) hc;
-      hhc->SetToys(ntoys,ntoys); 
+      hhc->SetToys(ntoys,ntoys/nToysRatio); // can use less ntoys for b hypothesis 
+
+      // remove global observables from ModelConfig
+      bModel->SetGlobalObservables(RooArgSet() );
+      sbModel->SetGlobalObservables(RooArgSet() );
 
       // check for nuisance prior pdf in case of nuisance parameters 
       if (bModel->GetNuisanceParameters() || sbModel->GetNuisanceParameters() ) {
@@ -315,20 +390,16 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
          hhc->ForcePriorNuisanceNull(*nuisPdf);
       }
    } 
-   else 
-      ((FrequentistCalculator*) hc)->SetToys(ntoys,ntoys); 
+   else if (type == 2) { 
+      ((AsymptoticCalculator*) hc)->SetOneSided(true); 
+      ((AsymptoticCalculator*) hc)->SetQTilde(true); 
+   }
+   else if (type != 2) 
+      ((FrequentistCalculator*) hc)->SetToys(ntoys,ntoys/nToysRatio); 
 
    // Get the result
    RooMsgService::instance().getStream(1).removeTopic(RooFit::NumIntegration);
 
-
-   TStopwatch tw; tw.Start(); 
-   const RooArgSet * poiSet = sbModel->GetParametersOfInterest();
-   RooRealVar *poi = (RooRealVar*)poiSet->first();
-
-   // fit the data first
-   sbModel->GetPdf()->fitTo(*data);
-   double poihat  = poi->getVal();
 
 
    HypoTestInverter calc(*hc);
@@ -358,8 +429,29 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
       std::cout << "Doing an  automatic scan  in interval : " << poi->getMin() << " , " << poi->getMax() << std::endl;
    }
 
+   tw.Start();
    HypoTestInverterResult * r = calc.GetInterval();
+   std::cout << "Time to perform limit scan \n";
+   tw.Print();
 
+   if (rebuild) {
+      calc.SetCloseProof(1);
+      tw.Start();
+      SamplingDistribution * limDist = calc.GetUpperLimitDistribution(true,nToyToRebuild);
+      std::cout << "Time to rebuild distributions " << std::endl;
+      tw.Print();
+      
+      if (limDist) { 
+         std::cout << "expected up limit " << limDist->InverseCDF(0.5) << " +/- " 
+                   << limDist->InverseCDF(0.16) << "  " 
+                   << limDist->InverseCDF(0.84) << "\n"; 
+      }
+      else 
+         std::cout << "ERROR : failed to re-build distributions " << std::endl; 
+   }
+
+   //update r to a new re-freshed copied
+   r = calc.GetInterval();
 
    return r; 
 }
@@ -370,6 +462,6 @@ void ReadResult(const char * fileName, const char * resultName="", bool useCLs=t
    StandardHypoTestInvDemo(fileName, resultName,"","","",0,0,useCLs);
 }
 
-int main() {
-   StandardHypoTestInvDemo();
-}
+// int main() {
+//    StandardHypoTestInvDemo();
+// }
