@@ -186,10 +186,12 @@ static const CGFloat defaultCellH = 44.f;
 //____________________________________________________________________________________________________
 - (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
 {
-   if (!component)
+   if (component == 0)
       return [colorCells count];
-   else
+   else if (component == 1)
       return [patternCells count];
+
+   return 0;
 }
 
 //____________________________________________________________________________________________________
@@ -203,10 +205,16 @@ static const CGFloat defaultCellH = 44.f;
 //____________________________________________________________________________________________________
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
-   if (!component)
-      return [colorCells objectAtIndex : row];
-   else
-      return [patternCells objectAtIndex : row];
+   if (component == 0) {
+      if (row >= 0 && row < [colorCells count])
+         return [colorCells objectAtIndex : row];
+   } else if (component == 1) {
+      if (row >= 0 && row < [patternCells count])
+         return [patternCells objectAtIndex : row];
+   }
+   
+   NSLog(@"fucking fuck, returning nil!!!");
+   return  nil;
 }
 
 //____________________________________________________________________________________________________
