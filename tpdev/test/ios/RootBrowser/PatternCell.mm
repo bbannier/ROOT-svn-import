@@ -1,4 +1,5 @@
 #import <CoreGraphics/CGContext.h>
+#import <QuartzCore/QuartzCore.h>
 
 //C++ (ROOT) imports.
 #import "IOSFillPatterns.h"
@@ -15,6 +16,11 @@
    if (self) {
       patternIndex = index;
       solid = NO;
+      
+      self.opaque = NO;
+      self.layer.shadowColor = [UIColor darkGrayColor].CGColor;
+      self.layer.shadowOpacity = 0.4f;
+      self.layer.shadowOffset = CGSizeMake(4.f, 4.f);
    }
 
    return self;
@@ -35,6 +41,11 @@
 //____________________________________________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
+   rect.origin.x = 10.f;
+   rect.origin.y = 10.f;
+   rect.size.width -= 20.f;
+   rect.size.height -= 20.f;
+
    CGContextRef ctx = UIGraphicsGetCurrentContext();
    
    //Fill view with pattern.
