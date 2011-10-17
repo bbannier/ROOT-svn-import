@@ -49,7 +49,7 @@ static const CGFloat defaultCellH = 50.f;
       [solidFill release];
       
       for (unsigned i = 0; i < ROOT::iOS::GraphicUtils::kPredefinedFillPatterns; ++i) {
-         PatternCell *newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : i];
+         PatternCell *newCell = [[PatternCell alloc] initWithFrame : cellRect andPattern : i];
          [patternCells addObject : newCell];
          [newCell release];
       }

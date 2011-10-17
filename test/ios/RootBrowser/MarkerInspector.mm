@@ -1,3 +1,4 @@
+#import "HorizontalPickerView.h"
 #import "ROOTObjectController.h"
 #import "MarkerInspector.h"
 #import "MarkerStyleCell.h"
@@ -9,24 +10,22 @@
 
 @implementation MarkerInspector
 
-@synthesize markerPicker;
 @synthesize plusBtn;
 @synthesize minusBtn;
 @synthesize sizeLabel;
 
-const CGFloat defaultCellW = 80.f;
-const CGFloat defaultCellH = 44.f;
+const CGRect cellRect = CGRectMake(0.f, 0.f, 50.f, 50.f);
 
 const CGFloat maxMarkerSize = 5.f;
 const CGFloat sizeStep = 0.1f;
 
 EMarkerStyle markerStyles[] = {kDot, kPlus, kStar, kCircle, kMultiply,
-                          kFullDotSmall, kFullDotMedium, kFullDotLarge,
-                          kFullCircle, kFullSquare, kFullTriangleUp,
-                          kFullTriangleDown, kOpenCircle, kOpenSquare,
-                          kOpenTriangleUp, kOpenDiamond, kOpenCross,
-                          kFullStar, kOpenStar, kOpenTriangleDown,
-                          kFullDiamond, kFullCross};
+                               kFullDotSmall, kFullDotMedium, kFullDotLarge,
+                               kFullCircle, kFullSquare, kFullTriangleUp,
+                               kFullTriangleDown, kOpenCircle, kOpenSquare,
+                               kOpenTriangleUp, kOpenDiamond, kOpenCross,
+                               kFullStar, kOpenStar, kOpenTriangleDown,
+                               kFullDiamond, kFullCross};
 
 const unsigned nMarkers = sizeof markerStyles / sizeof markerStyles[0];
 
@@ -48,22 +47,32 @@ static BOOL canScaleMarker(Style_t style)
    if (self) {
       [self view];
       
-      const CGRect cellFrame = CGRectMake(0.f, 0.f, defaultCellW, defaultCellH);
-      
       styleCells = [[NSMutableArray alloc] init];//]WithCapacity : nMarkers];
       for (unsigned i = 0; i < nMarkers; ++i) {
-         MarkerStyleCell *newCell = [[MarkerStyleCell alloc] initWithFrame : cellFrame andMarkerStyle : markerStyles[i]];
+         MarkerStyleCell *newCell = [[MarkerStyleCell alloc] initWithFrame : cellRect andMarkerStyle : markerStyles[i]];
          [styleCells addObject : newCell];
          [newCell release];
       }
       
+      markerStylePicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 15.f, 220.f, 70.f)];
+      [markerStylePicker addItems : styleCells];
+      [self.view addSubview : markerStylePicker];
+      [markerStylePicker release];
+      markerStylePicker.pickerDelegate = self;
+      
       colorCells = [[NSMutableArray alloc] init];
       for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
-         ColorCell *newCell = [[ColorCell alloc] initWithFrame : cellFrame];
+         ColorCell *newCell = [[ColorCell alloc] initWithFrame : cellRect];
          [newCell setRGB : predefinedFillColors[i]];
          [colorCells addObject : newCell];
          [newCell release];
       }
+      
+      markerColorPicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 110.f, 220.f, 70.f)];
+      [markerColorPicker addItems : colorCells];
+      [self.view addSubview : markerColorPicker];
+      [markerColorPicker release];
+      markerColorPicker.pickerDelegate = self;
    }
 
    return self;
@@ -72,7 +81,6 @@ static BOOL canScaleMarker(Style_t style)
 //____________________________________________________________________________________________________
 - (void) dealloc 
 {
-   self.markerPicker = nil;
    self.plusBtn = nil;
    self.minusBtn = nil;
    self.sizeLabel = nil;
@@ -84,7 +92,7 @@ static BOOL canScaleMarker(Style_t style)
 }
 
 //____________________________________________________________________________________________________
-- (void)didReceiveMemoryWarning
+- (void) didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
    [super didReceiveMemoryWarning];
@@ -94,14 +102,14 @@ static BOOL canScaleMarker(Style_t style)
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
-- (void)viewDidLoad
+- (void) viewDidLoad
 {
    [super viewDidLoad];
    // Do any additional setup after loading the view from its nib.
 }
 
 //____________________________________________________________________________________________________
-- (void)viewDidUnload
+- (void) viewDidUnload
 {
     [super viewDidUnload];
     // Release any retained subviews of the main view.
@@ -109,55 +117,22 @@ static BOOL canScaleMarker(Style_t style)
 }
 
 //____________________________________________________________________________________________________
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
+- (BOOL) shouldAutorotateToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
 	return YES;
 }
 
-#pragma mark - Pickerview delegate/data source.
-
 //____________________________________________________________________________________________________
-- (CGFloat)pickerView : (UIPickerView *)pickerView widthForComponent : (NSInteger)component
+- (void) item : (unsigned int)item wasSelectedInPicker : (HorizontalPickerView *)picker
 {
-   return defaultCellW;
-}
-
-//____________________________________________________________________________________________________
-- (CGFloat)pickerView : (UIPickerView *)pickerView rowHeightForComponent : (NSInteger)component
-{
-   return defaultCellH;
-}
-
-//____________________________________________________________________________________________________
-- (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
-{
-   if (!component)
-      return [styleCells count];
-
-   return [colorCells count];
-}
-
-//____________________________________________________________________________________________________
-- (NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
-{
-	return 2;
-}
-
-//____________________________________________________________________________________________________
-- (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
-{
-   if (!component)
-      return [styleCells objectAtIndex : row];
-   return [colorCells objectAtIndex : row];
-}
-
-//____________________________________________________________________________________________________
-- (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
-{
-   if (!component) {
-      if (row >= 0 && row < nMarkers) {
-         EMarkerStyle style = markerStyles[row];
+   if (picker == markerColorPicker) {
+      const unsigned colorIndex = ROOT_IOSBrowser::colorIndices[item];
+      object->SetMarkerColor(colorIndex);
+      [controller objectWasModifiedUpdateSelection : NO];
+   } else if (picker == markerStylePicker) {
+      if (item < nMarkers) {
+         EMarkerStyle style = markerStyles[item];
          if (canScaleMarker(style)) {
             plusBtn.enabled = YES;
             minusBtn.enabled = YES;
@@ -167,15 +142,14 @@ static BOOL canScaleMarker(Style_t style)
             minusBtn.enabled = NO;
             sizeLabel.text = @"1";
          }
-         
-         object->SetMarkerStyle(style);
-      }
-   } else {
-      const unsigned colorIndex = ROOT_IOSBrowser::colorIndices[row];
-      object->SetMarkerColor(colorIndex);
-   }
 
-   [controller objectWasModifiedUpdateSelection : NO];
+         object->SetMarkerStyle(style);
+      } else {
+         NSLog(@"check horizontal picker code, got item index %u, must be < %u", item, nMarkers);
+      }
+
+      [controller objectWasModifiedUpdateSelection : NO];
+   }
 }
 
 #pragma mark ObjectInspectorComponent protocol.
@@ -193,30 +167,30 @@ static BOOL canScaleMarker(Style_t style)
 
    object = dynamic_cast<TAttMarker *>(o);
 
-   unsigned row = 0;
+   unsigned item = 0;
    const EMarkerStyle style = EMarkerStyle(object->GetMarkerStyle());//Mess with all these styles and EMarkerStyles.
    for (unsigned i = 0; i < nMarkers; ++i) {
       if (style == markerStyles[i]) {
-         row = i;
+         item = i;
          break;
       }
    }
    
-   [markerPicker selectRow : NSInteger(row) inComponent : 0 animated : NO];
+   [markerStylePicker setSelectedItem : item];
 
    //Extract marker color.
    //The same predefined 16 colors as with fill color.
-   row = 1;//?
+   item = 1;//?
    const Color_t colorIndex = object->GetMarkerColor();
    
    for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
       if (colorIndex == colorIndices[i]) {
-         row = i;
+         item = i;
          break;
       }
    }
    
-   [markerPicker selectRow : NSInteger(row) inComponent : 1 animated : NO];
+   [markerColorPicker setSelectedItem : item];
 
    if (!canScaleMarker(object->GetMarkerStyle())) {
       plusBtn.enabled = NO;
