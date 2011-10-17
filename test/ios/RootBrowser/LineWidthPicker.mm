@@ -10,8 +10,6 @@
    lineWidthView = [[LineWidthCell alloc] initWithFrame : CGRectMake(10.f, 10.f, 120.f, 50.f) width : 1.f];
    [self addSubview : lineWidthView];
    [lineWidthView release];
-   
-   lineWidth = 1.f;
       
    backgroundImage = [UIImage imageNamed:@"line_width_bkn.png"];
    [backgroundImage retain];
@@ -44,30 +42,10 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) incLineWidth
+- (void) setLineWidth : (float)width
 {
-   if (lineWidth + 1.f > 16.f)
-      return;
-   
-   lineWidth += 1.f;
-   [lineWidthView setLineWidth : lineWidth];
+   [lineWidthView setLineWidth : width];
    [lineWidthView setNeedsDisplay];
-}
-
-//____________________________________________________________________________________________________
-- (void) decLineWidth
-{
-   if (lineWidth - 1.f < 1.f)
-      return;
-   lineWidth -= 1.f;
-   [lineWidthView setLineWidth : lineWidth];
-   [lineWidthView setNeedsDisplay];
-}
-
-//____________________________________________________________________________________________________
-- (float) getLineWidth
-{
-   return lineWidth;
 }
 
 @end

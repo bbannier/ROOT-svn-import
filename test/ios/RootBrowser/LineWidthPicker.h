@@ -4,13 +4,10 @@
 
 @interface LineWidthPicker : UIView {
 @private
-   float lineWidth;
    LineWidthCell *lineWidthView;
    UIImage *backgroundImage;
 }
 
-- (void) incLineWidth;
-- (void) decLineWidth;
-- (float) getLineWidth;
+- (void) setLineWidth : (float)width;
 
 @end

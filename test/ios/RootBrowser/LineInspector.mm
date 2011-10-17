@@ -1,54 +1,74 @@
-#import "LineColorWidthInspector.h"
-#import "LineStyleInspector.h"
+#import "HorizontalPickerView.h"
+#import "ROOTObjectController.h"
+#import "LineWidthPicker.h"
 #import "LineInspector.h"
+#import "LineStyleCell.h"
+#import "ColorCell.h"
+#import "Constants.h"
 
-
-static const CGFloat totalHeight = 330.f;
-static const CGFloat tabBarHeight = 49.f;
-static const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHeight - tabBarHeight);
+//C++ (ROOT) imports.
+#import "TAttLine.h"
+#import "TObject.h"
 
 @implementation LineInspector
 
-@synthesize tabBar;
+//These constants are from ROOT's TAttLine's editor.
+const int minLineWidth = 1;
+const int maxLineWidth = 15;
 
-//____________________________________________________________________________________________________
-+ (CGRect) inspectorFrame
-{
-   return CGRectMake(0.f, 0.f, 250.f, totalHeight);
-}
+@synthesize lineWidthPicker;
+
+static const CGRect cellFrame = CGRectMake(0.f, 0.f, 50.f, 50.f);
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
-   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
-    
-   [self view];
-    
-   if (self) {
-      //Load inspectors from nib files.
-      colorWidthInspector = [[LineColorWidthInspector alloc] initWithNibName : @"LineColorWidthInspector" bundle : nil];
-      colorWidthInspector.view.frame = nestedComponentFrame;
-      colorWidthInspector.view.hidden = NO;
-      
-      styleInspector = [[LineStyleInspector alloc] initWithNibName : @"LineStyleInspector" bundle : nil];
-      styleInspector.view.frame = nestedComponentFrame;
-      styleInspector.view.hidden = YES;
+   using namespace ROOT_IOSBrowser;
 
-      [self.view addSubview : colorWidthInspector.view];
-      [self.view addSubview : styleInspector.view];
+   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
+
+   if (self) {
+      [self view];
+      //Array with cells for "Line style" picker.
+      lineStyles = [[NSMutableArray alloc] init];
+      for (unsigned i = 0; i < 10; ++i) {
+         LineStyleCell *newCell = [[LineStyleCell alloc] initWithFrame : cellFrame lineStyle : i + 1];
+         [lineStyles addObject : newCell];
+         [newCell release];
+      }
       
-      tabBar.selectedItem = [[tabBar items] objectAtIndex : 0];
+      lineStylePicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 20.f, 220.f, 70.f)];
+      [lineStylePicker addItems : lineStyles];
+      [self.view addSubview : lineStylePicker];
+      [lineStylePicker release];
+      
+      lineStylePicker.pickerDelegate = self;
+      
+      lineColors = [[NSMutableArray alloc] init];
+      for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
+         ColorCell *newCell = [[ColorCell alloc] initWithFrame : cellFrame];
+         [newCell setRGB : predefinedFillColors[i]];
+         [lineColors addObject : newCell];
+         [newCell release];
+      }
+
+      lineColorPicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 105, 220.f, 70.f)];
+      [lineColorPicker addItems : lineColors];
+      [self.view addSubview : lineColorPicker];
+      [lineColorPicker release];
+      
+      lineColorPicker.pickerDelegate = self;
    }
+
    return self;
 }
 
 //____________________________________________________________________________________________________
 - (void) dealloc
 {
-   [colorWidthInspector release];
-   [styleInspector release];
-   self.tabBar = nil;
-
+   [lineStyles release];
+   [lineColors release];
+   self.lineWidthPicker = nil;
    [super dealloc];
 }
 
@@ -88,16 +108,39 @@ static const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, 
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;
-   [colorWidthInspector setROOTObjectController : c];
-   [styleInspector setROOTObjectController : c];
 }
 
 //____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
-   object = o;
-   [colorWidthInspector setROOTObject : o];   
-   [styleInspector setROOTObject : o];
+   using namespace ROOT_IOSBrowser;
+
+   object = dynamic_cast<TAttLine *>(o);
+   
+   unsigned item = 0;
+   const Style_t lineStyle = object->GetLineStyle();
+   if (lineStyle >= 1 && lineStyle <= 10)
+      item = lineStyle - 1;
+
+   [lineStylePicker setSelectedItem : item];
+
+   item = 1;//black.
+   const Color_t colorIndex = object->GetLineColor();
+   for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
+      if (colorIndex == colorIndices[i]) {
+         item = i;
+         break;
+      }
+   }
+   
+   [lineColorPicker setSelectedItem : item];
+   
+   //Line width: in ROOT it can be 0, can be negative.
+   //Editor shows line widths in [1:15] range, so do I.
+   lineWidth = object->GetLineWidth();
+   if (lineWidth < minLineWidth || lineWidth > maxLineWidth)
+      lineWidth = minLineWidth;
+   [lineWidthPicker setLineWidth : lineWidth];
 }
 
 //____________________________________________________________________________________________________
@@ -106,36 +149,51 @@ static const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, 
    return @"Line attributes";
 }
 
+#pragma mark - Horizontal picker delegate.
+
 //____________________________________________________________________________________________________
-- (void) resetInspector
+- (void) item : (unsigned int)item wasSelectedInPicker : (HorizontalPickerView *)picker
 {
-   tabBar.selectedItem = [[tabBar items] objectAtIndex : 0];
-   [self showColorWidthComponent];
+   if (picker == lineColorPicker) {
+      if (item < ROOT_IOSBrowser::nROOTDefaultColors) {
+         const unsigned colorIndex = ROOT_IOSBrowser::colorIndices[item];
+         object->SetLineColor(colorIndex);
+      } else
+         NSLog(@"check the code, bad item index from horizontal picker: %u, must be < %u", item, ROOT_IOSBrowser::nROOTDefaultColors);
+   } else {
+      if (item < 10)
+         object->SetLineStyle(item + 1);
+      else
+         NSLog(@"check the code, bad item index from horizontal picker: %u must be < 11", item);
+   }
+   
+   [controller objectWasModifiedUpdateSelection : NO];
+}
+
+#pragma mark - Button's handlers.
+
+//____________________________________________________________________________________________________
+- (IBAction) decLineWidth
+{
+   if (lineWidth == minLineWidth)
+      return;
+
+   --lineWidth;
+   [lineWidthPicker setLineWidth : lineWidth];
+   object->SetLineWidth(lineWidth);
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 //____________________________________________________________________________________________________
-- (IBAction) showColorWidthComponent
+- (IBAction) incLineWidth
 {
-   colorWidthInspector.view.hidden = NO;
-   styleInspector.view.hidden = YES;
-}
-
-//____________________________________________________________________________________________________
-- (IBAction) showStyleComponent
-{
-   styleInspector.view.hidden = NO;
-   colorWidthInspector.view.hidden = YES;
-}
-
-#pragma mark - UITabBar delegate.
-
-//____________________________________________________________________________________________________
-- (void) tabBar : (UITabBar *) tb didSelectItem : (UITabBarItem *)item
-{
-   if (item.tag == 1)
-      [self showColorWidthComponent];
-   else if (item.tag == 2)
-      [self showStyleComponent];
+   if (lineWidth == maxLineWidth)
+      return;
+      
+   ++lineWidth;
+   [lineWidthPicker setLineWidth : lineWidth];
+   object->SetLineWidth(lineWidth);
+   [controller objectWasModifiedUpdateSelection : NO];
 }
 
 @end

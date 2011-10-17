@@ -33,10 +33,6 @@
 		702BB9E71448680200D3842F /* LineWidthPicker.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702BB9E61448680200D3842F /* LineWidthPicker.mm */; };
 		702DDD1B1415FEA1009FC6F3 /* LineInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD191415FEA1009FC6F3 /* LineInspector.mm */; };
 		702DDD1C1415FEA1009FC6F3 /* LineInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702DDD1A1415FEA1009FC6F3 /* LineInspector.xib */; };
-		702DDD2014160DB5009FC6F3 /* LineColorWidthInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD1E14160DB5009FC6F3 /* LineColorWidthInspector.mm */; };
-		702DDD2114160DB5009FC6F3 /* LineColorWidthInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702DDD1F14160DB5009FC6F3 /* LineColorWidthInspector.xib */; };
-		702DDD251416141A009FC6F3 /* LineStyleInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD231416141A009FC6F3 /* LineStyleInspector.mm */; };
-		702DDD261416141A009FC6F3 /* LineStyleInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702DDD241416141A009FC6F3 /* LineStyleInspector.xib */; };
 		702DDD2914161789009FC6F3 /* InspectorWithNavigation.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */; };
 		70360B1A142C7AC6001F77E1 /* MessageUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70360B19142C7AC6001F77E1 /* MessageUI.framework */; };
 		704498091429D0A000E83799 /* PadImageView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 704498081429D0A000E83799 /* PadImageView.mm */; };
@@ -168,12 +164,6 @@
 		702DDD181415FEA1009FC6F3 /* LineInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineInspector.h; sourceTree = "<group>"; };
 		702DDD191415FEA1009FC6F3 /* LineInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineInspector.mm; sourceTree = "<group>"; };
 		702DDD1A1415FEA1009FC6F3 /* LineInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LineInspector.xib; sourceTree = "<group>"; };
-		702DDD1D14160DB5009FC6F3 /* LineColorWidthInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineColorWidthInspector.h; sourceTree = "<group>"; };
-		702DDD1E14160DB5009FC6F3 /* LineColorWidthInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineColorWidthInspector.mm; sourceTree = "<group>"; };
-		702DDD1F14160DB5009FC6F3 /* LineColorWidthInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LineColorWidthInspector.xib; sourceTree = "<group>"; };
-		702DDD221416141A009FC6F3 /* LineStyleInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineStyleInspector.h; sourceTree = "<group>"; };
-		702DDD231416141A009FC6F3 /* LineStyleInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineStyleInspector.mm; sourceTree = "<group>"; };
-		702DDD241416141A009FC6F3 /* LineStyleInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LineStyleInspector.xib; sourceTree = "<group>"; };
 		702DDD2714161789009FC6F3 /* InspectorWithNavigation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorWithNavigation.h; sourceTree = "<group>"; };
 		702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = InspectorWithNavigation.mm; sourceTree = "<group>"; };
 		70360B19142C7AC6001F77E1 /* MessageUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MessageUI.framework; path = System/Library/Frameworks/MessageUI.framework; sourceTree = SDKROOT; };
@@ -295,6 +285,7 @@
 		709CD05214025148005B2AF4 /* demos.root */ = {isa = PBXFileReference; lastKnownFileType = file; path = demos.root; sourceTree = "<group>"; };
 		709CD0961402768B005B2AF4 /* Shortcuts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Shortcuts.h; sourceTree = "<group>"; };
 		709CD0971402768B005B2AF4 /* Shortcuts.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Shortcuts.mm; sourceTree = "<group>"; };
+		70B2B408144C274800FAE3DD /* HorizontalPickerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HorizontalPickerDelegate.h; sourceTree = "<group>"; };
 		70E0B62014150F630077E4A8 /* back_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = back_btn.png; sourceTree = "<group>"; };
 		70E0B623141510880077E4A8 /* forward_btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = forward_btn.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -443,10 +434,6 @@
 				702DDD161415FDDB009FC6F3 /* ObjectInspectorComponent.h */,
 				702DDD181415FEA1009FC6F3 /* LineInspector.h */,
 				702DDD191415FEA1009FC6F3 /* LineInspector.mm */,
-				702DDD1D14160DB5009FC6F3 /* LineColorWidthInspector.h */,
-				702DDD1E14160DB5009FC6F3 /* LineColorWidthInspector.mm */,
-				702DDD221416141A009FC6F3 /* LineStyleInspector.h */,
-				702DDD231416141A009FC6F3 /* LineStyleInspector.mm */,
 				702DDD2714161789009FC6F3 /* InspectorWithNavigation.h */,
 				702DDD2814161789009FC6F3 /* InspectorWithNavigation.mm */,
 				70681C0A1416365900F8338A /* PadInspector.h */,
@@ -481,6 +468,7 @@
 				702358061434A93B00A95000 /* H1BinsInspector.mm */,
 				7053E8B4143B076F001C364D /* MarkerStyleCell.h */,
 				7053E8B5143B076F001C364D /* MarkerStyleCell.mm */,
+				70B2B408144C274800FAE3DD /* HorizontalPickerDelegate.h */,
 			);
 			name = "Classes and protocols";
 			sourceTree = "<group>";
@@ -489,8 +477,6 @@
 			isa = PBXGroup;
 			children = (
 				702DDD1A1415FEA1009FC6F3 /* LineInspector.xib */,
-				702DDD1F14160DB5009FC6F3 /* LineColorWidthInspector.xib */,
-				702DDD241416141A009FC6F3 /* LineStyleInspector.xib */,
 				70681C1D1416474000F8338A /* FilledAreaInspector.xib */,
 				70681C0C1416365900F8338A /* PadInspector.xib */,
 				70681C1814163F0C00F8338A /* PadLogScaleInspector.xib */,
@@ -759,8 +745,6 @@
 				7077905E13FE840000C0FFA1 /* SlideshowController.xib in Resources */,
 				7077906313FE847600C0FFA1 /* ROOTObjectController.xib in Resources */,
 				702DDD1C1415FEA1009FC6F3 /* LineInspector.xib in Resources */,
-				702DDD2114160DB5009FC6F3 /* LineColorWidthInspector.xib in Resources */,
-				702DDD261416141A009FC6F3 /* LineStyleInspector.xib in Resources */,
 				70681C0E1416365900F8338A /* PadInspector.xib in Resources */,
 				70681C1314163A2300F8338A /* PadTicksGridInspector.xib in Resources */,
 				70681C1A14163F0C00F8338A /* PadLogScaleInspector.xib in Resources */,
@@ -806,8 +790,6 @@
 				70144120140E3F1D0070459F /* LineStyleCell.mm in Sources */,
 				70144123140E3F320070459F /* LineWidthCell.m in Sources */,
 				702DDD1B1415FEA1009FC6F3 /* LineInspector.mm in Sources */,
-				702DDD2014160DB5009FC6F3 /* LineColorWidthInspector.mm in Sources */,
-				702DDD251416141A009FC6F3 /* LineStyleInspector.mm in Sources */,
 				702DDD2914161789009FC6F3 /* InspectorWithNavigation.mm in Sources */,
 				70681C0D1416365900F8338A /* PadInspector.mm in Sources */,
 				70681C1514163D3F00F8338A /* PadTicksGridInspector.mm in Sources */,

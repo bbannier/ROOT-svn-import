@@ -10,11 +10,12 @@ const CGFloat cellHeight = 50.f;
 const CGFloat xPad = 1.5 * cellWidth;
 const CGFloat markerPos = 100.f;
 
+@synthesize pickerDelegate;
+
 //____________________________________________________________________________________________________
 - (id) initWithFrame : (CGRect)frame
 {
    self = [super initWithFrame : frame];
-
    if (self) {
       self.backgroundColor = [UIColor clearColor];
    
@@ -112,21 +113,40 @@ const CGFloat markerPos = 100.f;
 {
    CGPoint offset = contentScroll.contentOffset;
    const CGFloat currentPos = markerPos + offset.x - xPad;
-   const CGFloat newPos = unsigned(currentPos / cellWidth) * cellWidth + 0.5 * cellWidth;
+   selectedItem = unsigned(currentPos / cellWidth);
+   const CGFloat newPos = selectedItem * cellWidth + 0.5 * cellWidth;
    const CGFloat add = newPos - currentPos;
    offset.x += add;
    [contentScroll setContentOffset : offset animated : YES];
 }
 
 //____________________________________________________________________________________________________
+- (void) setSelectedItem:(unsigned int)item
+{
+   selectedItem = item;
+   const CGFloat x = xPad + selectedItem * cellWidth + 0.5f * cellWidth - markerPos;
+   contentScroll.contentOffset = CGPointMake(x, 0.f);
+}
+
+//____________________________________________________________________________________________________
+- (void) notify
+{
+   [pickerDelegate item : selectedItem wasSelectedInPicker : self];
+}
+
+//____________________________________________________________________________________________________
 - (void) scrollViewDidEndDecelerating : (UIScrollView *) sender
 {
    [self adjustScroll];
+   [self notify];
 }
 
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
 {
-   [self adjustScroll];
+   if (!decelerate) {
+      [self adjustScroll];
+      [self notify];
+   }
 }
 
 #pragma mark - Picker's content management.
