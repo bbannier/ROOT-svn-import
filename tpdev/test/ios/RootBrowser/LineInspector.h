@@ -1,42 +1,43 @@
 #import <UIKit/UIKit.h>
 
 #import "ObjectInspectorComponent.h"
+#import "HorizontalPickerDelegate.h"
 
-
-//Forward declarations for ROOTObjectController and TObject are here, 
-//for the case ObjectInspectorComponent protocol
-//changes and forward declarations there will be removed.
 
 @class ROOTObjectController;
-@class LineColorWidthInspector;
-@class LineStyleInspector;
+@class HorizontalPickerView;
+@class LineWidthPicker;
 
+class TAttLine;
 class TObject;
 
 //Line inspector is a composition of two sub-inspectors: line color and width inspector + 
 //line style inspector.
 
-@interface LineInspector : UIViewController <ObjectInspectorComponent> {
+@interface LineInspector : UIViewController <ObjectInspectorComponent, HorizontalPickerDelegate> {
 @private
-   IBOutlet UITabBar *tabBar;
+   NSMutableArray *lineStyles;
+   NSMutableArray *lineColors;
 
-   LineColorWidthInspector *colorWidthInspector;
-   LineStyleInspector *styleInspector;
-   
+   HorizontalPickerView *lineColorPicker;
+   HorizontalPickerView *lineStylePicker;
+
+   IBOutlet LineWidthPicker *lineWidthPicker;
+   int lineWidth;
+
    ROOTObjectController *controller;
-   TObject *object;
+   TAttLine *object;
 }
 
-@property (nonatomic, retain) UITabBar *tabBar;
-
-+ (CGRect) inspectorFrame;
+@property (nonatomic, retain) LineWidthPicker *lineWidthPicker;
 
 - (void) setROOTObjectController : (ROOTObjectController *)c;
 - (void) setROOTObject : (TObject *)o;
 - (NSString *) getComponentName;
-- (void) resetInspector;
 
-- (IBAction) showColorWidthComponent;
-- (IBAction) showStyleComponent;
+- (void) item : (unsigned int)item wasSelectedInPicker : (HorizontalPickerView *)picker;
+
+- (IBAction) decLineWidth;
+- (IBAction) incLineWidth;
 
 @end
