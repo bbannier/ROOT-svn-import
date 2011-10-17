@@ -34,6 +34,7 @@
 #include "RooUniform.h"
 #include <cmath>
 
+#include "TStopwatch.h"
 
 using namespace RooStats;
 
@@ -79,26 +80,49 @@ AsymptoticCalculator::AsymptoticCalculator(
       fNLLObs(0), fNLLAsimov(0), 
       fAsimovData(0)   
 {
-   // constructor for asymptotic calculator 
+   // constructor for asymptotic calculator from Data set  and ModelConfig
+   // The constructor will perform a global fit of the model to the data 
+   // and build an Asimov data set. 
+   // It will then also fit the model to the Asimov data set to find the likelihood value  
+   // of the Asimov data set
+   // NOTE: If a fit has been done before, one for speeding up could set all the initial prameters 
+   // to the fit value and in addition set the null snapshot to the best fit
+   
 
    RooAbsPdf * nullPdf = GetNullModel()->GetPdf();
    assert(nullPdf); 
 
    int verbose = fgPrintLevel; 
 
-   // evaluate the unconditional nll for alt snapshot and observed data  
    RooAbsData * obsData = const_cast<RooAbsData *>(GetData() );
    assert( obsData );
 
-   
-   oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best unconditional NLL on observed data" << endl;
-   fNLLObs = EvaluateNLL( *nullPdf, *obsData);
-   // fill also snapshot of best poi
    const RooArgSet * poi = GetNullModel()->GetParametersOfInterest(); 
-   if (!poi) { 
+   if (!poi || poi->getSize() == 0) { 
       oocoutE((TObject*)0,InputArguments) << "AsymptoticCalculator: ModelConfig has not POI defined." << endl;
       return;
    }
+   if (poi->getSize() > 1) { 
+      oocoutW((TObject*)0,InputArguments) << "AsymptoticCalculator: ModelConfig has more than one POI defined \n\t" 
+                                          << "The asymptotic calculator works for only one POI - consider as POI only the first parameter" 
+                                          << std::endl;
+   }
+ 
+
+   // This will set the poi value to the null snapshot value in the ModelConfig
+   const RooArgSet * nullSnapshot = GetNullModel()->GetSnapshot();
+   if(nullSnapshot == NULL || nullSnapshot->getSize() == 0) {
+      oocoutE((TObject*)0,InputArguments) << "Null model needs a snapshot. Set using modelconfig->SetSnapshot(poi)." << endl;
+      return;
+   }
+   
+   // evaluate the unconditional nll for the full model on the  observed data  
+   oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best unconditional NLL on observed data" << endl;
+   int oldVerboseLevel = fgPrintLevel;
+   if (fgPrintLevel > 0) fgPrintLevel = 2; 
+   fNLLObs = EvaluateNLL( *nullPdf, *obsData);
+   // fill also snapshot of best poi
+   fgPrintLevel = oldVerboseLevel;
    poi->snapshot(fBestFitPoi);
    if (verbose > 0) {
       std::cout << "Best fitted POI\n";
@@ -107,13 +131,8 @@ AsymptoticCalculator::AsymptoticCalculator(
    
    // compute Asimov data set for the background (alt poi ) value
    const RooArgSet * altSnapshot = GetAlternateModel()->GetSnapshot();
-   const RooArgSet * nullSnapshot = GetNullModel()->GetSnapshot();
-   if(altSnapshot == NULL) {
+   if(altSnapshot == NULL || altSnapshot->getSize() == 0) {
       oocoutE((TObject*)0,InputArguments) << "Alt (Background)  model needs a snapshot. Set using modelconfig->SetSnapshot(poi)." << endl;
-      return;
-   }
-   if(nullSnapshot == NULL) {
-      oocoutE((TObject*)0,InputArguments) << "Null model needs a snapshot. Set using modelconfig->SetSnapshot(poi)." << endl;
       return;
    }
 
@@ -140,11 +159,15 @@ AsymptoticCalculator::AsymptoticCalculator(
    // evaluate  the likelihood. Since we use on Asimov data , conditional and unconditional values should be the same
 
    oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best unconditional NLL on ASIMOV data set" << endl;
+   oldVerboseLevel = fgPrintLevel;
+   if (fgPrintLevel > 0) fgPrintLevel = 2; 
    fNLLAsimov =  EvaluateNLL( *nullPdf, *fAsimovData );
    if (verbose > 0) {
       std::cout << "Best Fit POI on Asimov data set " << std::endl;
       poi->Print("v");
    }
+   fgPrintLevel = oldVerboseLevel;
+
    
    // restore previous value 
    globObs = globObsSnapshot;
@@ -171,29 +194,46 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
 
 
     // if poi are specified - do a conditional fit 
-    RooArgList paramsSetConstant;
-    if (poiSet) { 
+    RooArgSet paramsSetConstant;
+    // support now only one POI 
+    if (poiSet && poiSet->getSize() > 0) { 
        RooArgSet* attachedSet = nll->getVariables();
-       
-       RooLinkedListIter it = poiSet->iterator();
-       RooRealVar* tmpPar = NULL, *tmpParA=NULL;
-       while((tmpPar = (RooRealVar*)it.Next())){
-          tmpParA =  ((RooRealVar*)attachedSet->find(tmpPar->GetName()));
-          tmpParA->setVal( tmpPar->getVal() );
-          if (!tmpParA->isConstant() ) { 
-             tmpParA->setConstant();
-             paramsSetConstant.add(*tmpParA);
-          }
+
+       RooRealVar * poiVar = dynamic_cast<RooRealVar*>( attachedSet->find( (poiSet->first())->GetName() ) );
+       if (poiVar && !poiVar->isConstant() ) {
+          poiVar->setConstant(); 
+          paramsSetConstant.add(*poiVar);
        }
+
+       // This for more than one POI (not yet supported)
+       //
+       // RooLinkedListIter it = poiSet->iterator();
+       // RooRealVar* tmpPar = NULL, *tmpParA=NULL;
+       // while((tmpPar = (RooRealVar*)it.Next())){
+       //    tmpParA =  ((RooRealVar*)attachedSet->find(tmpPar->GetName()));
+       //    tmpParA->setVal( tmpPar->getVal() );
+       //    if (!tmpParA->isConstant() ) { 
+       //       tmpParA->setConstant();
+       //       paramsSetConstant.add(*tmpParA);
+       //    }
+       // }
+       
        delete attachedSet;
     }
 
+    TStopwatch tw; 
+    tw.Start();
 
+    if (verbose > 0 )
+       std::cout << "Doing NLL minimization....." << std::endl;
+
+    int minimPrintLevel = ROOT::Math::MinimizerOptions::DefaultPrintLevel();
+    if (verbose > 1) minimPrintLevel = verbose; 
     
     RooMinimizer minim(*nll);
     minim.setStrategy(ROOT::Math::MinimizerOptions::DefaultStrategy());
     //LM: RooMinimizer.setPrintLevel has +1 offset - so subtruct  here -1
-    minim.setPrintLevel(ROOT::Math::MinimizerOptions::DefaultPrintLevel()-1);
+    minim.setPrintLevel(minimPrintLevel-1);
     int status = -1;
     //	minim.optimizeConst(true);
     for (int tries = 0, maxtries = 4; tries <= maxtries; ++tries) {
@@ -213,12 +253,6 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
           }
        }
     }
-    // std::cout << "ALL PDF variables " << std::endl;
-    // pdf.getVariables()->Print("V");
-
-//     std::cout << "BEST FIT values " << std::endl;
-//     allParams->Print("V");
-
 
     RooMsgService::instance().setGlobalKillBelow(msglevel);
 
@@ -232,6 +266,8 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
           muTest = ( (RooRealVar*) poiSet->first() )->getVal();
           std::cout << " for poi fixed at = " << muTest; 
        }
+       std::cout << "\tfit time : ";  
+       tw.Print();
        std::cout << std::endl;
     }
 
@@ -252,7 +288,12 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
 //____________________________________________________
 HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    // It performs an hypothesis tests using the likelihood function
-   // computes the profile likelihood test statistic value 
+   // and computes the p values for the null and the alternate using the asymptotic 
+   // formulae for the profile likelihood ratio.
+   // See G. Cowan, K. Cranmer, E. Gross and O. Vitells.
+   // Asymptotic formulae for likelihood- based tests of new physics. Eur. Phys. J., C71:1–19, 2011.
+   // The formulae are valid only for one POI. If more than one POI exists consider as POI only the 
+   // first one
 
    int verbose = fgPrintLevel;
 
@@ -270,17 +311,24 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    // make conditional fit on null snapshot of poi
 
    const RooArgSet * nullSnapshot = GetNullModel()->GetSnapshot();
-   assert(nullSnapshot);
+   assert(nullSnapshot && nullSnapshot->getSize() > 0);
 
+   // use as POI the nullSnapshot
+   // if more than one POI exists, consider only the first one
    RooArgSet poiTest(*nullSnapshot);
 
-   // evaluate the conditional NLL on the observed data  
+   if (poiTest.getSize() > 1)  { 
+      oocoutW((TObject*)0,InputArguments) << "AsymptoticCalculator::GetHypoTest: snapshot has more than one POI - assume as POI first parameter " << std::endl;         
+   }
+
+
+   // evaluate the conditional NLL on the observed data for the snapshot value
    double condNLL = EvaluateNLL( *nullPdf, const_cast<RooAbsData&>(*GetData()), &poiTest);
 
    double qmu = 2.*(condNLL - fNLLObs); 
    
    // set the one-side condition
-   // (only when we have only one params of interest 
+   // (this works when we have only one params of interest 
    RooRealVar * muHat =  dynamic_cast<RooRealVar*> (  fBestFitPoi.first() );
    RooRealVar * muTest = dynamic_cast<RooRealVar*> ( nullSnapshot->find(muHat->GetName() ) );
    assert(muHat && "no best fit parameter defined"); 
@@ -331,21 +379,18 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
                                         << std::endl;         
    }
 
-   //check for one side condition
+   //check for one side condition (remember this is valid only for one poi)
    if (fOneSided ) { 
-      if (fBestFitPoi.getSize() == 1) {
-         if ( muHat->getVal() > muTest->getVal() ) { 
-            oocoutI((TObject*)0,Eval) << "Using one-sided qmu - setting qmu to zero  muHat = " << muHat->getVal() 
-                                     << " muTest = " << muTest->getVal() << std::endl;
-            qmu = 0;
-         }
-      }
-      else { 
-         oocoutE((TObject*)0,InputArguments) << "Cannot use one-sided test because model has more than one POI " << std::endl;         
+      if ( muHat->getVal() > muTest->getVal() ) { 
+         oocoutI((TObject*)0,Eval) << "Using one-sided qmu - setting qmu to zero  muHat = " << muHat->getVal() 
+                                   << " muTest = " << muTest->getVal() << std::endl;
+         qmu = 0;
       }
    }
 
 
+   // asymptotic formula for pnull (for only one POI) 
+   // From fact that qmu is a chi2 with ndf=1
 
    double sqrtqmu = (qmu > 0) ? std::sqrt(qmu) : 0; 
 
@@ -418,6 +463,9 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
 
 
 
+   // asymptotic formula for palt based on Asimov data set 
+   // See Eur.Phys.J C(2011( 71:1554
+   
    double sqrtqmu_A = (qmu_A > 0) ? std::sqrt(qmu_A) : 0; 
 
    double palt = ROOT::Math::normal_cdf( sqrtqmu_A - sqrtqmu, 1.);
@@ -763,9 +811,17 @@ RooAbsData * AsymptoticCalculator::MakeAsimovData(const RooArgSet & paramValues,
       RooAbsPdf * pdf = mc->GetPdf();
       RooArgSet  constrainParams(*mc->GetNuisanceParameters());
       RooStats::RemoveConstantParameters(&constrainParams);
+      TStopwatch tw2; tw2.Start(); 
+      int minimPrintLevel = ROOT::Math::MinimizerOptions::DefaultPrintLevel();
+      if (verbose>0) { 
+         std::cout << "MakeAsimov: doing a conditional fit for finding best nuisance values " << std::endl;
+         minimPrintLevel += 1;
+      }
+         
       pdf->fitTo(*realData, RooFit::Minimizer("Minuit2","minimize"), RooFit::Strategy(ROOT::Math::MinimizerOptions::DefaultStrategy()),
-                 RooFit::PrintLevel(ROOT::Math::MinimizerOptions::DefaultPrintLevel()-1),
+                 RooFit::PrintLevel(minimPrintLevel-1), RooFit::Hesse(false), RooFit::InitialHesse(false),
                  RooFit::Constrain(constrainParams));
+      if (verbose>0) { std::cout << "fit time "; tw2.Print();}
    } else {
       // Do we have free parameters anyway that need fitting?
       bool hasFloatParams = false;
@@ -788,8 +844,14 @@ RooAbsData * AsymptoticCalculator::MakeAsimovData(const RooArgSet & paramValues,
  
    // toymcoptutils::SimPdfGenInfo newToyMC(*mc->GetPdf(), *mc->GetObservables(), false); 
 
+   TStopwatch tw; 
+   tw.Start();
 
    RooAbsData * asimov = GenerateAsimovData(*mc->GetPdf() , *mc->GetObservables() );
+   
+   if (verbose>0) {
+      std::cout << "Generated Asimov data with time : ";  tw.Print(); 
+   }
 
 
     // Now need to have in ASIMOV the data sets also the global observables
