@@ -27,6 +27,12 @@
 }
 
 //____________________________________________________________________________________________________
+- (void) dealloc
+{
+   [super dealloc];
+}
+
+//____________________________________________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
@@ -48,12 +54,6 @@
    CGContextAddLineToPoint(ctx, rect.size.width - 10, 10.f);
 
    CGContextStrokePath(ctx);
-}
-
-//____________________________________________________________________________________________________
-- (void)dealloc
-{
-   [super dealloc];
 }
 
 @end
