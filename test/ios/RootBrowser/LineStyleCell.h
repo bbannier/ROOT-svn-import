@@ -1,6 +1,5 @@
 #import <UIKit/UIKit.h>
 
-
 @interface LineStyleCell : UIView {
 @private
    unsigned lineStyle;

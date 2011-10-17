@@ -17,6 +17,7 @@
       self.layer.shadowOpacity = 0.4f;
       self.layer.shadowColor = [UIColor darkGrayColor].CGColor;
       self.layer.shadowOffset = CGSizeMake(4.f, 4.f);
+
       self.opaque = NO;
    }
 

@@ -20,6 +20,11 @@
       self.layer.shadowColor = [UIColor darkGrayColor].CGColor;
       self.layer.shadowOffset = CGSizeMake(4.f, 4.f);
       self.layer.shadowOpacity = 0.4f;
+      
+      //Here important optimization.
+      self.layer.shadowPath = [UIBezierPath bezierPathWithRect:CGRectMake(10.f, 10.f, frame.size.width - 20.f, frame.size.height - 20)].CGPath;
+      //
+      
       self.opaque = NO;
    }
 
