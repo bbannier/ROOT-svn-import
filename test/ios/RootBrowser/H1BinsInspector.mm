@@ -137,7 +137,7 @@
 {
 //   showMarkers.on ? controller.markerDrawOption = @"P" : controller.markerDrawOption = @"";
    [controller setMarker : showMarkers.on];
-   [controller objectWasModifiedUpdateSelection : NO];
+   [controller objectWasModifiedUpdateSelection : YES];
 }
 
 
