@@ -1,4 +1,5 @@
 #import "ROOTObjectController.h"
+#import "HorizontalPickerView.h"
 #import "FilledAreaInspector.h"
 #import "PatternCell.h"
 #import "Constants.h"
@@ -10,12 +11,10 @@
 #import "TObject.h"
 
 //TODO: check, if in Obj-C++ constants have internal linkage.
-static const CGFloat defaultCellW = 80.f;
-static const CGFloat defaultCellH = 44.f;
+static const CGFloat defaultCellW = 50.f;
+static const CGFloat defaultCellH = 50.f;
 
 @implementation FilledAreaInspector
-
-@synthesize fillPicker;
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
@@ -30,13 +29,18 @@ static const CGFloat defaultCellH = 44.f;
       const CGRect cellRect = CGRectMake(0.f, 0.f, defaultCellW, defaultCellH);
    
       colorCells = [[NSMutableArray alloc] init];
-      
       for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
          ColorCell * newCell = [[ColorCell alloc] initWithFrame : cellRect];
          [newCell setRGB : predefinedFillColors[i]];
          [colorCells addObject : newCell];
          [newCell release];
       }
+      
+      colorPicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 15.f, 220.f, 70.f)];
+      [colorPicker addItems : colorCells];
+      [self.view addSubview : colorPicker];
+      [colorPicker release];
+      colorPicker.pickerDelegate = self;
 
       patternCells = [[NSMutableArray alloc] init];
       PatternCell *solidFill = [[PatternCell alloc] initWithFrame : cellRect andPattern : 0];
@@ -49,6 +53,12 @@ static const CGFloat defaultCellH = 44.f;
          [patternCells addObject : newCell];
          [newCell release];
       }
+      
+      patternPicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 90.f, 220.f, 70.f)];
+      [patternPicker addItems : patternCells];
+      [self.view addSubview : patternPicker];
+      [patternPicker release];
+      patternPicker.pickerDelegate = self;
    }
 
    return self;
@@ -59,8 +69,6 @@ static const CGFloat defaultCellH = 44.f;
 {
    [colorCells release];
    [patternCells release];
-
-   self.fillPicker = nil;
 
    [super dealloc];
 }
@@ -97,26 +105,32 @@ static const CGFloat defaultCellH = 44.f;
 
    //Set the row in color picker, using fill color from object.
    const Color_t colorIndex = filledObject->GetFillColor();
-   unsigned pickerRow = 0;
+   unsigned pickerItem = 0;
    for (unsigned i = 0; i < nROOTDefaultColors; ++i) {
       if (colorIndex == colorIndices[i]) {
-         pickerRow = i;
+         pickerItem = i;
          break;
       }
    }
 
-   [fillPicker selectRow : pickerRow inComponent : 0 animated : NO];
+   [colorPicker setSelectedItem : pickerItem];
    
    //Look for a fill pattern.
    namespace Fill = ROOT::iOS::GraphicUtils;
    
    const Style_t fillStyle = filledObject->GetFillStyle();
    if (fillStyle == Fill::solidFillStyle)//I'm sorry, again, hardcoded constant, ROOT does not define it :(.
-      pickerRow = 0;
+      pickerItem = 0;
    else
-      pickerRow = filledObject->GetFillStyle() % Fill::stippleBase;
+      pickerItem = filledObject->GetFillStyle() % Fill::stippleBase;
 
-   [fillPicker selectRow : pickerRow inComponent : 1 animated : NO];
+   [patternPicker setSelectedItem : pickerItem];
+}
+
+//____________________________________________________________________________________________________
+- (NSString *) getComponentName
+{
+   return @"Fill attributes";
 }
 
 //____________________________________________________________________________________________________
@@ -169,67 +183,16 @@ static const CGFloat defaultCellH = 44.f;
 	return YES;
 }
 
-#pragma mark - color/pattern picker's dataSource.
+#pragma mark - Color/pattern picker's delegate.
 
 //____________________________________________________________________________________________________
-- (CGFloat)pickerView : (UIPickerView *)pickerView widthForComponent : (NSInteger)component
+- (void) item : (unsigned int)item wasSelectedInPicker : (HorizontalPickerView *)picker
 {
-   return defaultCellW;
-}
-
-//____________________________________________________________________________________________________
-- (CGFloat)pickerView : (UIPickerView *)pickerView rowHeightForComponent : (NSInteger)component
-{
-   return defaultCellH;
-}
-
-//____________________________________________________________________________________________________
-- (NSInteger)pickerView : (UIPickerView *)pickerView numberOfRowsInComponent : (NSInteger)component
-{
-   if (component == 0)
-      return [colorCells count];
-   else if (component == 1)
-      return [patternCells count];
-
-   return 0;
-}
-
-//____________________________________________________________________________________________________
-- (NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
-{
-	return 2;
-}
-
-#pragma mark color/pattern picker's delegate.
-
-//____________________________________________________________________________________________________
-- (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
-{
-   if (component == 0) {
-      if (row >= 0 && row < [colorCells count])
-         return [colorCells objectAtIndex : row];
-   } else if (component == 1) {
-      if (row >= 0 && row < [patternCells count])
-         return [patternCells objectAtIndex : row];
+   if (picker == colorPicker) {
+      [self setNewColor : item];
+   } else {
+      [self setNewPattern : item];
    }
-   
-   NSLog(@"fucking fuck, returning nil!!!");
-   return  nil;
-}
-
-//____________________________________________________________________________________________________
-- (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
-{
-   if (!component)
-      [self setNewColor : row];
-   else
-      [self setNewPattern : row];
-}
-
-//____________________________________________________________________________________________________
-- (NSString *) getComponentName
-{
-   return @"Fill attributes";
 }
 
 @end

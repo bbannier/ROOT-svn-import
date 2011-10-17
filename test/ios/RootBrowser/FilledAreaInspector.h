@@ -1,15 +1,18 @@
 #import <UIKit/UIKit.h>
 
 #import "ObjectInspectorComponent.h"
+#import "HorizontalPickerDelegate.h"
 
 @class ROOTObjectController;
+@class HorizontalPickerView;
 
 class TAttFill;
 class TObject;
 
-@interface FilledAreaInspector : UIViewController <UIPickerViewDelegate, UIPickerViewDataSource, ObjectInspectorComponent> {
+@interface FilledAreaInspector : UIViewController <HorizontalPickerDelegate, ObjectInspectorComponent> {
 @private
-   IBOutlet UIPickerView *fillPicker;
+   HorizontalPickerView *colorPicker;
+   HorizontalPickerView *patternPicker;
    
    NSMutableArray *colorCells;
    NSMutableArray *patternCells;
@@ -18,7 +21,6 @@ class TObject;
    ROOTObjectController *parentController;
 }
 
-@property (nonatomic, retain) UIPickerView *fillPicker;
 
 - (void) setROOTObjectController : (ROOTObjectController *) p;
 - (void) setROOTObject : (TObject*) obj;
