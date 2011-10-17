@@ -36,8 +36,6 @@ const CGFloat markerPos = 100.f;
       frameImage = [UIImage imageNamed:@"picker_frame_bkn.png"];
       [frameImage retain];
       
-      
-      //
       CAGradientLayer *dropshadowLayer = [CAGradientLayer layer];
       dropshadowLayer.startPoint = CGPointMake(0.0f, 0.0f);
       dropshadowLayer.endPoint = CGPointMake(0.0f, 1.0f);
@@ -81,7 +79,7 @@ const CGFloat markerPos = 100.f;
                              (id)[[UIColor colorWithRed:0.25f green:0.25f blue:0.25f alpha:0.8] CGColor],
                              (id)[[UIColor colorWithRed:0.05f green:0.05f blue:0.05f alpha:0.95] CGColor], nil];
       [self.layer insertSublayer:gradientLayer above:dropshadowLayer];
-      //
+
       arrowView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"picker_arrow.png"]];
       arrowView.center = CGPointMake(frame.size.width / 2, 60 - arrowView.frame.size.height / 2);
       [self addSubview : arrowView];
