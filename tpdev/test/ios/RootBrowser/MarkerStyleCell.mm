@@ -7,15 +7,13 @@
 
 @implementation MarkerStyleCell
 
-@synthesize backgroundImage;
-
 //____________________________________________________________________________________________________
 - (id) initWithFrame : (CGRect)frame andMarkerStyle : (EMarkerStyle)style
 {
    self = [super initWithFrame : frame];
    if (self) {
       markerStyle = style;
-      self.backgroundImage = [UIImage imageNamed : @"line_cell.png"];
+      self.opaque = NO;
    }
 
    return self;
@@ -24,16 +22,12 @@
 //____________________________________________________________________________________________________
 - (void) dealloc
 {
-   self.backgroundImage = nil;
    [super dealloc];
 }
 
 //____________________________________________________________________________________________________
 - (void)drawRect : (CGRect)rect
 {
-   //Drawing code.
-   [backgroundImage drawInRect : rect];
-   //
    CGContextRef ctx = UIGraphicsGetCurrentContext();
    
    CGContextTranslateCTM(ctx, 0.f, rect.size.height);

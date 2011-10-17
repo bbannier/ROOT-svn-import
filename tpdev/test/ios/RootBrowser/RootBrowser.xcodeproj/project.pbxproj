@@ -466,8 +466,6 @@
 				70235801143494F400A95000 /* MarkerInspector.mm */,
 				702358051434A93B00A95000 /* H1BinsInspector.h */,
 				702358061434A93B00A95000 /* H1BinsInspector.mm */,
-				7053E8B4143B076F001C364D /* MarkerStyleCell.h */,
-				7053E8B5143B076F001C364D /* MarkerStyleCell.mm */,
 				70B2B408144C274800FAE3DD /* HorizontalPickerDelegate.h */,
 			);
 			name = "Classes and protocols";
@@ -593,6 +591,8 @@
 				7077907C13FE96C300C0FFA1 /* ColorCell.h */,
 				702BB9E51448680100D3842F /* LineWidthPicker.h */,
 				702BB9E61448680200D3842F /* LineWidthPicker.mm */,
+				7053E8B4143B076F001C364D /* MarkerStyleCell.h */,
+				7053E8B5143B076F001C364D /* MarkerStyleCell.mm */,
 			);
 			name = Views;
 			sourceTree = "<group>";

@@ -192,7 +192,8 @@ void DrawMarkerFullTriangleUp(CGContextRef ctx, unsigned n, const TPoint *xy, Si
       CGContextMoveToPoint(ctx, x - im, y - im);
       CGContextAddLineToPoint(ctx, x + im, y - im);
       CGContextAddLineToPoint(ctx, x, im + y);
-      CGContextDrawPath(ctx, kCGPathFillStroke);
+    //  CGContextDrawPath(ctx, kCGPathFillStroke);
+      CGContextFillPath(ctx);
    }
 }
 
@@ -241,7 +242,8 @@ void DrawMarkerFullTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, 
       CGContextMoveToPoint(ctx, x - im, y + im);
       CGContextAddLineToPoint(ctx, x, y - im);
       CGContextAddLineToPoint(ctx, im + x, y + im);
-      CGContextDrawPath(ctx, kCGPathFillStroke);
+      CGContextFillPath(ctx);
+      //CGContextDrawPath(ctx, kCGPathFillStroke);
    }
 }
 
@@ -359,49 +361,57 @@ void DrawMarkerFullStar(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t m
       CGContextMoveToPoint(ctx, x - im, y - im4);
       CGContextAddLineToPoint(ctx, x - im2, y + im1);
       CGContextAddLineToPoint(ctx, x - im4, y - im4);
-      CGContextDrawPath(ctx, kCGPathFillStroke);
+//      CGContextDrawPath(ctx, kCGPathFillStroke);
+      CGContextFillPath(ctx);
  
       CGContextBeginPath(ctx);
       CGContextMoveToPoint(ctx, x - im2, y + im1);//1
       CGContextAddLineToPoint(ctx, x - im3, y + im);//2
       CGContextAddLineToPoint(ctx, x, y + im2);//3
-      CGContextDrawPath(ctx, kCGPathFillStroke);
+//      CGContextDrawPath(ctx, kCGPathFillStroke);
+      CGContextFillPath(ctx);
       
       CGContextBeginPath(ctx);
       CGContextMoveToPoint(ctx, x, y + im2);//3
       CGContextAddLineToPoint(ctx, x + im3, y + im);//4
       CGContextAddLineToPoint(ctx, x + im2, y + im1);//5
-      CGContextDrawPath(ctx, kCGPathFillStroke);
-      
+//      CGContextDrawPath(ctx, kCGPathFillStroke);
+       CGContextFillPath(ctx);
+           
       CGContextBeginPath(ctx);
       CGContextMoveToPoint(ctx, x + im2, y + im1);//5
       CGContextAddLineToPoint(ctx, x + im, y - im4);//6
       CGContextAddLineToPoint(ctx,x + im4, y - im4);//7
-      CGContextDrawPath(ctx, kCGPathFillStroke);
+//      CGContextDrawPath(ctx, kCGPathFillStroke);
+      CGContextFillPath(ctx);
       
       CGContextBeginPath(ctx);
       CGContextMoveToPoint(ctx, x + im4, y - im4);//7
       CGContextAddLineToPoint(ctx, x, y - im);//8
       CGContextAddLineToPoint(ctx, x - im4, y - im4);//9
-      CGContextDrawPath(ctx, kCGPathFillStroke);
+//      CGContextDrawPath(ctx, kCGPathFillStroke);
+      CGContextFillPath(ctx);
             
       CGContextBeginPath(ctx);
       CGContextMoveToPoint(ctx, x - im4, y - im4);//9
       CGContextAddLineToPoint(ctx, x - im2, y + im1);//1
       CGContextAddLineToPoint(ctx, x, y + im2);//3
-      CGContextDrawPath(ctx, kCGPathFillStroke);
+//      CGContextDrawPath(ctx, kCGPathFillStroke);
+      CGContextFillPath(ctx);
             
       CGContextBeginPath(ctx);
       CGContextMoveToPoint(ctx, x - im4, y - im4);//9
       CGContextAddLineToPoint(ctx, x, y + im2);//3
       CGContextAddLineToPoint(ctx, x + im2, y + im1);//5
-      CGContextDrawPath(ctx, kCGPathFillStroke);
+//      CGContextDrawPath(ctx, kCGPathFillStroke);
+      CGContextFillPath(ctx);
             
       CGContextBeginPath(ctx);
       CGContextMoveToPoint(ctx, x - im4, y - im4);//9
       CGContextAddLineToPoint(ctx, x + im2, y + im1);//5
       CGContextAddLineToPoint(ctx, x + im4, y - im4);//7
-      CGContextDrawPath(ctx, kCGPathFillStroke);   
+//      CGContextDrawPath(ctx, kCGPathFillStroke);   
+      CGContextFillPath(ctx);
    }
 }
 
