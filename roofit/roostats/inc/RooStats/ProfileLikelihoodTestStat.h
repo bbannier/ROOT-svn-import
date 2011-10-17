@@ -46,6 +46,7 @@ END_HTML
 #include "RooRealVar.h"
 #include "RooProfileLL.h"
 #include "RooNLLVar.h"
+#include "RooMsgService.h"
 
 #include "RooMinuit.h"
 #include "RooMinimizer.h"
@@ -249,8 +250,9 @@ namespace RooStats {
 //           }
        }
 
-       std::cout << " mu hat = " << fit_favored_mu <<  " uncond ML = " << uncondML << " cond ML = " << ret+uncondML 
-                 << " pll =  " << ret << std::endl;
+       ooccoutD((TObject*)0,Eval) << "ProfileLikelihoodTestStat:Evaluate - mu hat = " << fit_favored_mu 
+                                          <<  " uncond ML = " << uncondML << " cond ML = " << ret+uncondML 
+                                          << " pll =  " << ret << std::endl;
 
        // need to restore the values ?
        *attachedSet = *origAttachedSet;

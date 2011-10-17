@@ -283,11 +283,12 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
       }
    }
 
-
    // run first a data fit 
 
    const RooArgSet * poiSet = sbModel->GetParametersOfInterest();
    RooRealVar *poi = (RooRealVar*)poiSet->first();
+
+   std::cout << "StandardHypoTestInvDemo : POI initial value:   " << poi->GetName() << " = " << poi->getVal()   << std::endl;  
 
    // fit the data first (need to use constraint )
    Info( "StandardHypoTestInvDemo"," Doing a first fit to the observed data ");
@@ -306,14 +307,19 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
 
 
    double poihat  = poi->getVal();
-   std::cout << "StandardHypoTestInvDemo - Best Fit POI = " << poihat << " +/- " << poi->getError() << std::endl;
+   std::cout << "StandardHypoTestInvDemo - Best Fit value : " << poi->GetName() << " = "  
+             << poihat << " +/- " << poi->getError() << std::endl;
    std::cout << "Time for fitting : "; tw.Print(); 
 
+   //save best fit value in the poi snapshot 
+   sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
+   std::cout << "StandardHypoTestInvo: snapshot of S+B Model " << sbModel->GetName() 
+             << " is set to the best fit value" << std::endl;
 
    // build test statistics and hypotest calculators for running the inverter 
 
-
    SimpleLikelihoodRatioTestStat slrts(*sbModel->GetPdf(),*bModel->GetPdf());
+
    if (sbModel->GetSnapshot()) slrts.SetNullParameters(*sbModel->GetSnapshot());
    if (bModel->GetSnapshot()) slrts.SetAltParameters(*bModel->GetSnapshot());
 
@@ -321,6 +327,7 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
    RatioOfProfiledLikelihoodsTestStat 
       ropl(*sbModel->GetPdf(), *bModel->GetPdf(), bModel->GetSnapshot());
    ropl.SetSubtractMLE(false);
+
    
    ProfileLikelihoodTestStat profll(*sbModel->GetPdf());
    if (testStatType == 3) profll.SetOneSided(1);
@@ -331,41 +338,50 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
       profll.SetStrategy(0);
    }
 
-   RooRealVar * mu = dynamic_cast<RooRealVar*>(sbModel->GetParametersOfInterest()->first());
-   if (maxPOI > 0) mu->setMax(maxPOI);  // increase limit
-   assert(mu != 0);
-   MaxLikelihoodEstimateTestStat maxll(*sbModel->GetPdf(),*mu); 
+   if (maxPOI > 0) poi->setMax(maxPOI);  // increase limit
+
+   MaxLikelihoodEstimateTestStat maxll(*sbModel->GetPdf(),*poi); 
 
 
    TestStatistic * testStat = &slrts;
    if (testStatType == 1) testStat = &ropl;
    if (testStatType == 2 || testStatType == 3) testStat = &profll;
    if (testStatType == 4) testStat = &maxll;
-  
+
    
    HypoTestCalculatorGeneric *  hc = 0;
-   if (type == 1) hc = new HybridCalculator(*data, *bModel, *sbModel);
-   if (type == 2) hc = new AsymptoticCalculator(*data, *bModel, *sbModel);
-   else hc = new FrequentistCalculator(*data, *bModel, *sbModel);
-
+   if (type == 0) hc = new FrequentistCalculator(*data, *bModel, *sbModel);
+   else if (type == 1) hc = new HybridCalculator(*data, *bModel, *sbModel);
+   else if (type == 2) hc = new AsymptoticCalculator(*data, *bModel, *sbModel);
+   else {
+      std::cerr << "invalid - type = " << type << " supported values are only :\n\t\t\t" 
+                << " 0 (Frequentist) , 1 (Hybrid) , 2 (Asymptotic) " << std::endl;  
+      return 0;
+   }
 
    ToyMCSampler *toymcs = (ToyMCSampler*)hc->GetTestStatSampler();
-   if (useNumberCounting) toymcs->SetNEventsPerToy(1);
-   toymcs->SetTestStatistic(testStat);
-   if (optimize) { 
-      // work only of b pdf and s+b pdf are the same
-      if (bModel->GetPdf() == sbModel->GetPdf() ) 
-         toymcs->SetUseMultiGen(true);
+   if (toymcs) { 
+      if (useNumberCounting) toymcs->SetNEventsPerToy(1);
+      toymcs->SetTestStatistic(testStat);
+      if (optimize) { 
+         // work only of b pdf and s+b pdf are the same
+         if (bModel->GetPdf() == sbModel->GetPdf() ) 
+            toymcs->SetUseMultiGen(true);
+      }
+
    }
 
 
    if (type == 1) { 
-      HybridCalculator *hhc = (HybridCalculator*) hc;
+      HybridCalculator *hhc = dynamic_cast<HybridCalculator*> (hc);
+      assert(hhc);
+
       hhc->SetToys(ntoys,ntoys/nToysRatio); // can use less ntoys for b hypothesis 
 
       // remove global observables from ModelConfig
       bModel->SetGlobalObservables(RooArgSet() );
       sbModel->SetGlobalObservables(RooArgSet() );
+
 
       // check for nuisance prior pdf in case of nuisance parameters 
       if (bModel->GetNuisanceParameters() || sbModel->GetNuisanceParameters() ) {
@@ -386,8 +402,11 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
             Warning("StandardHypoTestInvDemo","Prior nuisance does not depend on nuisance parameters. They will be smeared in their full range");
          }
          delete np;
+
          hhc->ForcePriorNuisanceAlt(*nuisPdf);
          hhc->ForcePriorNuisanceNull(*nuisPdf);
+
+
       }
    } 
    else if (type == 2) { 
@@ -404,6 +423,7 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
 
    HypoTestInverter calc(*hc);
    calc.SetConfidenceLevel(0.95);
+
 
    calc.UseCLs(useCls);
    calc.SetVerbose(true);
