@@ -34,8 +34,8 @@ typedef Plane3D::Vector XYZVector;
 
 
 // constructor from 4 scalars numbers (a,b,c,d)
-Plane3D::Plane3D(const Scalar & a, const Scalar & b, const Scalar & c, const Scalar & d) : 
-   fA(a), fB(b), fC(c), fD(d) 
+Plane3D::Plane3D(const Scalar & aa, const Scalar & bb, const Scalar & cc, const Scalar & dd) : 
+   fA(aa), fB(bb), fC(cc), fD(dd) 
 {
    //renormalize a,b,c to unit 
    Normalize();
@@ -85,8 +85,8 @@ void Plane3D::Normalize() {
 
 // projection of a point onto the plane
 XYZPoint Plane3D::ProjectOntoPlane(const XYZPoint & p) const { 
-   Scalar d = Distance(p); 
-   return XYZPoint( p.X() - fA*d, p.Y() - fB*d, p.Z() - fC*d); 
+   Scalar dist = Distance(p); 
+   return XYZPoint( p.X() - fA*dist, p.Y() - fB*dist, p.Z() - fC*dist); 
 }
 
 

@@ -525,9 +525,20 @@ namespace ROOT {
       Scalar phi()   const { return fCoordinates.Phi();   }
       Scalar eta()   const { return fCoordinates.Eta();   }
       Scalar rho()   const { return fCoordinates.Rho();   }
+      Scalar mag()   const { return fCoordinates.R();     }
+      Scalar perp()  const { return fCoordinates.Rho();   }
       Scalar mag2()  const { return fCoordinates.Mag2();  }
       Scalar perp2() const { return fCoordinates.Perp2(); }
       DisplacementVector3D unit() const {return Unit();}
+
+       DisplacementVector3D & setX(Scalar xx) { return SetX(xx); }
+       DisplacementVector3D & setY(Scalar yy) { return SetY(yy); }
+       DisplacementVector3D & setZ(Scalar zz) { return SetZ(zz); }
+       DisplacementVector3D & set(Scalar a, Scalar b, Scalar c) { return SetCoordinates(a,b,c); }
+       
+       Scalar dot(const DisplacementVector3D & v) { return Dot(v); }
+       //no need to do this templated 
+       DisplacementVector3D cross(const DisplacementVector3D & v) { return Cross(v); }
 
 
     private:

@@ -147,11 +147,11 @@ public:
    /**
       Raw constructor from nine Scalar components (without any checking)
    */
-   Rotation3D(Scalar  xx, Scalar  xy, Scalar  xz,
-              Scalar  yx, Scalar  yy, Scalar  yz,
-              Scalar  zx, Scalar  zy, Scalar  zz)
+   Rotation3D(Scalar  sxx, Scalar  sxy, Scalar  sxz,
+              Scalar  syx, Scalar  syy, Scalar  syz,
+              Scalar  szx, Scalar  szy, Scalar  szz)
    {
-      SetComponents (xx, xy, xz, yx, yy, yz, zx, zy, zz);
+      SetComponents (sxx, sxy, sxz, syx, syy, syz, szx, szy, szz);
    }
 
    // need to implement assignment operator to avoid using the templated one
@@ -320,24 +320,24 @@ public:
       Set the components from nine scalars -- UNCHECKED for orthonormaility
    */
    void
-   SetComponents (Scalar  xx, Scalar  xy, Scalar  xz,
-                  Scalar  yx, Scalar  yy, Scalar  yz,
-                  Scalar  zx, Scalar  zy, Scalar  zz) {
-      fM[kXX]=xx;  fM[kXY]=xy;  fM[kXZ]=xz;
-      fM[kYX]=yx;  fM[kYY]=yy;  fM[kYZ]=yz;
-      fM[kZX]=zx;  fM[kZY]=zy;  fM[kZZ]=zz;
+   SetComponents (Scalar  sxx, Scalar  sxy, Scalar  sxz,
+                  Scalar  syx, Scalar  syy, Scalar  syz,
+                  Scalar  szx, Scalar  szy, Scalar  szz) {
+      fM[kXX]=sxx;  fM[kXY]=sxy;  fM[kXZ]=sxz;
+      fM[kYX]=syx;  fM[kYY]=syy;  fM[kYZ]=syz;
+      fM[kZX]=szx;  fM[kZY]=szy;  fM[kZZ]=szz;
    }
 
    /**
       Get the nine components into nine scalars
    */
    void
-   GetComponents (Scalar &xx, Scalar &xy, Scalar &xz,
-                  Scalar &yx, Scalar &yy, Scalar &yz,
-                  Scalar &zx, Scalar &zy, Scalar &zz) const {
-      xx=fM[kXX];  xy=fM[kXY];  xz=fM[kXZ];
-      yx=fM[kYX];  yy=fM[kYY];  yz=fM[kYZ];
-      zx=fM[kZX];  zy=fM[kZY];  zz=fM[kZZ];
+   GetComponents (Scalar &sxx, Scalar &sxy, Scalar &sxz,
+                  Scalar &syx, Scalar &syy, Scalar &syz,
+                  Scalar &szx, Scalar &szy, Scalar &szz) const {
+      sxx=fM[kXX];  sxy=fM[kXY];  sxz=fM[kXZ];
+      syx=fM[kYX];  syy=fM[kYY];  syz=fM[kYZ];
+      szx=fM[kZX];  szy=fM[kZY];  szz=fM[kZZ];
    }
 
    // =========== operations ==============
@@ -471,6 +471,18 @@ public:
    bool operator != (const Rotation3D & rhs) const {
       return ! operator==(rhs);
    }
+
+   // clhep compatibility
+   Rotation3D inverse() const { return Inverse(); }
+   Scalar xx() const { return fM[kXX]; }
+   Scalar xy() const { return fM[kXY]; }
+   Scalar xz() const { return fM[kXZ]; }
+   Scalar yx() const { return fM[kYX]; }
+   Scalar yy() const { return fM[kYY]; }
+   Scalar yz() const { return fM[kYZ]; }
+   Scalar zx() const { return fM[kZX]; }
+   Scalar zy() const { return fM[kZY]; }
+   Scalar zz() const { return fM[kZZ]; }
 
 private:
 
