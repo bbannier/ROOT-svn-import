@@ -121,7 +121,7 @@
 }
 
 
-
+/*
 //____________________________________________________________________________________________________
 - (void) addShortcutForObjectAtIndex : (unsigned) objIndex inPad : (ROOT::iOS::Pad *) pad
 {
@@ -166,6 +166,51 @@
 
    [thumbnailImage release];
 }
+*/
+//____________________________________________________________________________________________________
+- (void) addShortcutForObjectAtIndex : (unsigned) objIndex
+{
+   const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
+   UIGraphicsBeginImageContext(rect.size);
+   CGContextRef ctx = UIGraphicsGetCurrentContext();
+   if (!ctx) {
+      UIGraphicsEndImageContext();
+      return;
+   }
+      
+   //Now draw into this context.
+   CGContextTranslateCTM(ctx, 0.f, rect.size.height);
+   CGContextScaleCTM(ctx, 1.f, -1.f);
+      
+   //Fill bitmap with white first.
+   CGContextSetRGBFillColor(ctx, 0.f, 0.f, 0.f, 1.f);
+   CGContextFillRect(ctx, rect);
+   //Set context and paint pad's contents
+   //with special colors (color == object's identity)
+   ROOT::iOS::Pad *pad = fileContainer->GetPadAttached(objIndex);
+   pad->cd();
+   pad->SetViewWH(rect.size.width, rect.size.height);
+   pad->SetContext(ctx);
+   pad->PaintThumbnail();
+   
+   UIImage *thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();//autoreleased UIImage.
+   [thumbnailImage retain];
+   UIGraphicsEndImageContext();
+       
+   ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller : self forObjectAtIndex:objIndex withThumbnail : thumbnailImage];
+   shortcut.layer.shadowColor = [UIColor blackColor].CGColor;
+   shortcut.layer.shadowOffset = CGSizeMake(20.f, 20.f);
+   shortcut.layer.shadowOpacity = 0.3f;
+
+   [scrollView addSubview : shortcut];
+   [objectShortcuts addObject : shortcut];
+
+   UIBezierPath *path = [UIBezierPath bezierPathWithRect : rect];
+   shortcut.layer.shadowPath = path.CGPath;
+   [shortcut release];
+
+   [thumbnailImage release];
+}
 
 //____________________________________________________________________________________________________
 - (void) addObjectsIntoScrollview
@@ -178,13 +223,8 @@
    objectShortcuts = [[NSMutableArray alloc] init];
 
    if (fileContainer->GetNumberOfObjects()) {
-      const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
-      ROOT::iOS::Pad * pad = new ROOT::iOS::Pad(rect.size.width, rect.size.height);//Pad to draw object, check if I can use stack object.
-
       for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i)
-         [self addShortcutForObjectAtIndex : i inPad : pad];
-
-      delete pad;
+         [self addShortcutForObjectAtIndex : i];
    }
 }
 
@@ -224,7 +264,6 @@
    [objectController setNavigationForObjectWithIndex : shortcut.objectIndex fromContainer : fileContainer];
    [self.navigationController pushViewController : objectController animated : YES];
    [objectController release];
-//   [NSTimer scheduledTimerWithTimeInterval : 3. target : self selector : @selector(doTest) userInfo : nil repeats : YES];
 }
 
 @end
