@@ -39,6 +39,10 @@ TObject *ReadObjectForKey(TFile *inputFile, const TKey *key, TString &option)
       option = "surf1";
    if (dynamic_cast<TMultiGraph *>(obj.get()))
       option = "acp";
+   
+   //All this "home-made memory management" is an ugly and broken thing.
+   obj->SetBit(kCanDelete, kFALSE);
+   obj->SetBit(kMustCleanup, kFALSE);
 
    return obj.release();
 }

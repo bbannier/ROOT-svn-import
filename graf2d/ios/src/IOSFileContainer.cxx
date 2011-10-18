@@ -105,6 +105,8 @@ FileContainer::~FileContainer()
 {
    for (size_type i = 0; i < fFileContents.size(); ++i)
       delete  fFileContents[i];
+   for (size_type i = 0; i < fAttachedPads.size(); ++i)
+      delete fAttachedPads[i];
 }
 
 //__________________________________________________________________________________________________________________________

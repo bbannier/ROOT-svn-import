@@ -233,6 +233,21 @@
 //____________________________________________________________________________________________________
 - (void) hideFileOpenView
 {
+   /*
+   UIAlertView *a = [[UIAlertView alloc] initWithTitle:@"aaa" message:@"bbb" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles: nil];
+   [a show];
+   [a release];
+
+   NSEnumerator *enumerator = [fileContainers objectEnumerator];
+
+   while (UIView *v = [enumerator nextObject]) {
+      [v removeFromSuperview];
+   }
+
+   [fileContainers release];
+   fileContainers = nil;
+   */
+
    [fileNameField resignFirstResponder];
    fileOpenView.hidden = YES;
    [self animateFileOpenView];
