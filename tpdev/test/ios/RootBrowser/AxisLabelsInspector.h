@@ -36,7 +36,6 @@ class TAxis;
 - (void) setROOTObject : (TObject *)o;
 
 - (IBAction) showLabelFontInspector;
-- (IBAction) showLabelColorInspector;
 
 - (IBAction) plusBtn : (UIButton *)sender;
 - (IBAction) minusBtn : (UIButton *)sender;
