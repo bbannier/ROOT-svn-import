@@ -44,7 +44,7 @@
    self.filePath = path;
    //extract file name substring.
    if (fileContainer)
-      self.fileName = [NSString stringWithFormat:@"%s", fileContainer->GetFileName()];
+      self.fileName = [NSString stringWithFormat : @"%s", fileContainer->GetFileName()];
 }
 
 //____________________________________________________________________________________________________
