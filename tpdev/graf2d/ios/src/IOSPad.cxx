@@ -91,9 +91,8 @@ Pad::~Pad()
 {
    delete fFrame;
    delete fViewer3D;
-   
    //Absolutely not clear, if pad owns view or not,
-   //because I've seen code wich delete's and creates view
+   //because I've seen code wich delete's and creates view outside pad
    //and ignores pad.
    //At the same time, there is a code in a pad, which can delete fView.
    //What a mess!
@@ -704,16 +703,9 @@ void Pad::ResizePad(Option_t *)
 TFrame *Pad::GetFrame()
 {
    // Get frame.
-   TFrame *frame = (TFrame*)GetListOfPrimitives()->FindObject(fFrame);
-
-   if (!frame)
-      frame = (TFrame*)GetListOfPrimitives()->FindObject("TFrame");
-
-   fFrame = frame;
-
+   //Original TPad has a COMPLETE MESS here. I'm trying to fix this.
    if (!fFrame) {
-      if (!frame)
-         fFrame = new TFrame(0,0,1,1);
+      fFrame = new TFrame(0., 0., 1., 1.);
       
       Int_t framecolor = GetFrameFillColor();
       
@@ -932,23 +924,27 @@ void Pad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
 //______________________________________________________________________________
 void Pad::PaintPadFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax)
 {
-   // Paint histogram/graph frame.
-   TList *glist = GetListOfPrimitives();
-   TFrame *frame = GetFrame();
-   frame->SetX1(xmin);
-   frame->SetX2(xmax);
-   frame->SetY1(ymin);
-   frame->SetY2(ymax);
+   //Paint histogram/graph frame.
+   //Original TPad has a COMPLETE MESS here, I can
+   //not understand, how it was possible to write.
+   //Trying to fix it at least to something sane.
+   if (!fFrame)
+      GetFrame();
+
+   fFrame->SetX1(xmin);
+   fFrame->SetX2(xmax);
+   fFrame->SetY1(ymin);
+   fFrame->SetY2(ymax);
 
    if (gROOT->GetForceStyle())
-      frame->UseCurrentStyle();
+      fFrame->UseCurrentStyle();
    
-   if (!glist->FindObject(fFrame)) {
-      glist->AddFirst(frame);
-      fFrame->SetBit(kMustCleanup);
+   if (!GetListOfPrimitives()->FindObject(fFrame)) {
+      GetListOfPrimitives()->AddFirst(fFrame);
+      //fFrame->SetBit(kMustCleanup);
    }
    
-   frame->Paint();
+   fFrame->Paint();
 }
 
 //______________________________________________________________________________

@@ -549,10 +549,13 @@ void Painter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mod
    //TODO: mode parameter.
    const Util::CGStateGuard contextGuard(fCtx);
    
+   /*
    if (fPainterMode == kPaintThumbnail) {
       CGContextSetRGBFillColor(fCtx, 0.f, 0.f, 0.f, 1.f);
       CGContextFillRect(fCtx, CGRectMake(fConverter.XToView(x), fConverter.YToView(y), 5.f, 2.f));
-   } else if (fPainterMode == kPaintToView) {   
+   } else */
+   
+   if (fPainterMode == kPaintToView || fPainterMode == kPaintThumbnail) {   
       CTFontRef currentFont = fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
       if (gVirtualX->GetTextFont() / 10 - 1 == 11) {
          CTLineGuard ctLine(text, currentFont, fFontManager.GetSymbolMap());
@@ -584,11 +587,11 @@ void Painter::SetTransform(UInt_t w, Double_t xMin, Double_t xMax, UInt_t h, Dou
 //_________________________________________________________________
 void Painter::GetTextExtent(UInt_t &w, UInt_t &h, const char *text)
 {
-   if (fPainterMode == kPaintThumbnail) {
+  /* if (fPainterMode == kPaintThumbnail) {
       h = 1;
       w = std::strlen(text);
       return;
-   }
+   }*/
    
    fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
    fFontManager.GetTextBounds(w, h, text);

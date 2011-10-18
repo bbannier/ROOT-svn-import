@@ -8409,8 +8409,11 @@ void THistPainter::PaintTitle()
    }
    Double_t ht = gStyle->GetTitleH();
    Double_t wt = gStyle->GetTitleW();
+   
    if (ht <= 0) ht = 1.1*gStyle->GetTitleFontSize();
    if (ht <= 0) ht = 0.05;
+   
+
    if (wt <= 0) {
       TLatex l;
       l.SetTextSize(ht);
