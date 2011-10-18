@@ -9,6 +9,7 @@
 //C++ (ROOT) imports.
 #import "TAttLine.h"
 #import "TObject.h"
+#import "TGraph.h"
 
 @implementation LineInspector
 
@@ -135,11 +136,23 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 50.f, 50.f);
    
    [lineColorPicker setSelectedItem : item];
    
-   //Line width: in ROOT it can be 0, can be negative.
-   //Editor shows line widths in [1:15] range, so do I.
+   //Line width is expected to be line width in pixels,
+   //but it can hold additional information in case of
+   //TGraph and have value like -2014.
    lineWidth = object->GetLineWidth();
-   if (lineWidth < minLineWidth || lineWidth > maxLineWidth)
-      lineWidth = minLineWidth;
+   if (lineWidth < minLineWidth || lineWidth > maxLineWidth) {
+      if (dynamic_cast<TGraph *>(o)) {
+         //"Formula" from ROOT.
+         lineWidth = TMath::Abs(lineWidth) % 100;
+         //Still, line width can be out of [1,15] range!
+         if (!lineWidth)
+            lineWidth = 1;
+         else if (lineWidth > maxLineWidth)
+            lineWidth = maxLineWidth;
+      } else
+         lineWidth = minLineWidth;
+   }
+
    [lineWidthPicker setLineWidth : lineWidth];
 }
 
@@ -170,7 +183,24 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 50.f, 50.f);
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
+#pragma mark - Code to deal with line width's insanity
+
+//____________________________________________________________________________________________________
+- (void) updateROOTLineWidth
+{
+   if (dynamic_cast<TGraph *>(object)) {
+      const int fakeLineWidth = int(object->GetLineWidth()) / 100 * 100;
+      if (fakeLineWidth >= 0)
+         object->SetLineWidth(fakeLineWidth + lineWidth);
+      else
+         object->SetLineWidth(-(TMath::Abs(fakeLineWidth) + lineWidth));
+   } else
+      object->SetLineWidth(lineWidth);
+}
+
 #pragma mark - Button's handlers.
+
+
 
 //____________________________________________________________________________________________________
 - (IBAction) decLineWidth
@@ -180,7 +210,9 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 50.f, 50.f);
 
    --lineWidth;
    [lineWidthPicker setLineWidth : lineWidth];
-   object->SetLineWidth(lineWidth);
+   
+   [self updateROOTLineWidth];
+
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
@@ -192,7 +224,9 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 50.f, 50.f);
       
    ++lineWidth;
    [lineWidthPicker setLineWidth : lineWidth];
-   object->SetLineWidth(lineWidth);
+   
+   [self updateROOTLineWidth];
+
    [controller objectWasModifiedUpdateSelection : NO];
 }
 
