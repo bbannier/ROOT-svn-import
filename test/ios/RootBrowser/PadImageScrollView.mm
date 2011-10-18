@@ -90,7 +90,7 @@ static const CGFloat minZoom = 1.f;
 
 #pragma mark - Image/pad/geometry management.
 //____________________________________________________________________________________________________
-- (UIImage *) generatePadImage : (CGSize) imageSize
+- (UIImage *) initPadImage : (CGSize) imageSize
 {
    UIGraphicsBeginImageContext(imageSize);
    CGContextRef ctx = UIGraphicsGetCurrentContext();
@@ -129,7 +129,7 @@ static const CGFloat minZoom = 1.f;
    pad = p;
    //Generate new image.
    [padImage release];
-   padImage = [self generatePadImage : [PadImageScrollView defaultImageFrame].size];
+   padImage = [self initPadImage : [PadImageScrollView defaultImageFrame].size];
    
    pad->SetViewWH(defaultImageW, defaultImageH);
 
@@ -228,7 +228,7 @@ static const CGFloat minZoom = 1.f;
 
    nestedView = [[PadImageView alloc] initWithFrame : newFrame];
 
-   UIImage *image = [self generatePadImage : newFrame.size];
+   UIImage *image = [self initPadImage : newFrame.size];
    nestedView.padImage = image;
    [image release];
    [scroll addSubview : nestedView];
@@ -264,7 +264,6 @@ static const CGFloat minZoom = 1.f;
     
     return zoomRect;
 }
-
 
 //____________________________________________________________________________________________________
 - (void) handleDoubleTap : (UITapGestureRecognizer *)tap
