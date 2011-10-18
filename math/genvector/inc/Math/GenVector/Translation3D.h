@@ -119,6 +119,9 @@ class Translation3D {
    */
    const Vector & Vect() const { return fVect; }
 
+   // for CLHEP compatibility
+   const Vector & getTranslation() const { return fVect; }
+
    /**
       Set the 3  components given an iterator to the start of
       the desired data, and another to the end (3 past start).

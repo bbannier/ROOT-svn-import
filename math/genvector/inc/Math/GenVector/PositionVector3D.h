@@ -368,6 +368,28 @@ namespace ROOT {
       // ------ Operations combining two vectors ------
       // need to specialize to exclude those with a different tags 
 
+
+     /**
+          Return the distance square of  two points vector in 
+	  any coordinate system, but with the same tag
+      */
+      template< class OtherCoords >
+      Scalar Distance2( const  PositionVector3D<OtherCoords,Tag> & v) const {
+         Scalar dx =  (X() - v.X());
+         Scalar dy =  (Y() - v.Y());
+         Scalar dz =  (Z() - v.Z());
+         return dx*dx+dy*dy+dz*dz;
+      }
+
+     /**
+          Return the distance  of  two points vector in 
+	  any coordinate system, but with the same tag
+      */
+      template< class OtherCoords >
+      Scalar Distance( const  PositionVector3D<OtherCoords,Tag> & v) const {
+         return std::sqrt(Distance(v) );
+      }
+
      /**
           Return the scalar (Dot) product of this with a displacement vector in 
 	  any coordinate system, but with the same tag
@@ -464,8 +486,21 @@ namespace ROOT {
       Scalar phi()   const { return fCoordinates.Phi();   }
       Scalar eta()   const { return fCoordinates.Eta();   }
       Scalar rho()   const { return fCoordinates.Rho();   }
+      Scalar mag()   const { return fCoordinates.R();     }
+      Scalar perp()  const { return fCoordinates.Rho();   }
       Scalar mag2()  const { return fCoordinates.Mag2();  }
       Scalar perp2() const { return fCoordinates.Perp2(); }
+      Scalar distance() const { return r(); } 
+      Scalar distance2() const { return mag2(); } 
+
+      Scalar distance(PositionVector3D & v) const { return Distance(v); }
+      Scalar distance2(PositionVector3D & v) const { return Distance2(v); }
+
+      PositionVector3D & setX(Scalar xx) { return SetX(xx); }
+      PositionVector3D & setY(Scalar yy) { return SetY(yy); }
+      PositionVector3D & setZ(Scalar zz) { return SetZ(zz); }
+      PositionVector3D & set(Scalar a, Scalar b, Scalar c) { return SetCoordinates(a,b,c); }
+
 
     private:
 

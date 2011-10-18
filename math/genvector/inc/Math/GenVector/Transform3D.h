@@ -601,6 +601,17 @@ public:
    }
 
 
+   // for CLHEP compatibility 
+   Transform3D inverse() const { return Inverse(); } 
+
+   // but CLHEP interface has scale too 
+   void getDecomposition(Rotation3D &r, Vector &v) const { GetDecomposition(r,v); }
+   
+   Translation3D::Vector getTranslation() const { return Translation().Vect(); }
+
+   Rotation3D getRotation() const { return Rotation(); }
+   
+
 protected: 
 
    /**

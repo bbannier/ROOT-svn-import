@@ -390,7 +390,7 @@ namespace ROOT {
         Scalar phi()   const { return fCoordinates.Phi();   }
         Scalar mag2()  const { return fCoordinates.Mag2();  }
         DisplacementVector2D unit() const {return Unit();}
-
+        Scalar dot(const DisplacementVector2D & v) { return Dot(v); }
 
      private:
 

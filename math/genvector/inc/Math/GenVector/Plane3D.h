@@ -226,6 +226,14 @@ namespace Math {
          return !(operator==(rhs));
       }
 
+      // Methods providing limited backward name compatibility with CLHEP
+
+      Scalar a() { return fA; }
+      Scalar b() { return fB; }
+      Scalar c() { return fC; }
+      Scalar d() { return fD; }
+
+
    protected: 
 
       /**
