@@ -54,6 +54,7 @@ public:
    void SetContext(CGContextRef ctx);
 
    Pad(UInt_t w, UInt_t h);
+   ~Pad();
    
    //Final-overriders for TVirtualPad class.
    const char *GetName() const;
@@ -382,8 +383,8 @@ private:
    void PaintFillAreaHatches(Int_t n, Double_t *x, Double_t *y, Int_t FillStyle);
    void PaintHatches(Double_t dy, Double_t angle, Int_t nn, Double_t *xx, Double_t *yy);
 
-   Pad(const Pad &pad);  // cannot copy pads, use TObject::Clone()
-   Pad &operator=(const Pad &rhs);  // idem
+   Pad(const Pad &pad);
+   Pad &operator=(const Pad &rhs);
 };
 
 }//namespace iOS

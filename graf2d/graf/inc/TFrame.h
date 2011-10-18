@@ -28,7 +28,6 @@
 
 class TFrame : public TWbox {
 
-
 public:
    TFrame();
    TFrame(Double_t x1, Double_t y1,Double_t x2 ,Double_t y2);

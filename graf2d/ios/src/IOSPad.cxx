@@ -87,6 +87,20 @@ Pad::Pad(UInt_t w, UInt_t h)
 }
 
 //______________________________________________________________________________
+Pad::~Pad()
+{
+   delete fFrame;
+   delete fViewer3D;
+   
+   //Absolutely not clear, if pad owns view or not,
+   //because I've seen code wich delete's and creates view
+   //and ignores pad.
+   //At the same time, there is a code in a pad, which can delete fView.
+   //What a mess!
+   delete fView;
+}
+
+//______________________________________________________________________________
 const char *Pad::GetName() const
 {
    return "iOSPad";
