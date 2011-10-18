@@ -244,9 +244,9 @@
       [v removeFromSuperview];
    }
 
-   [fileContainers release];
-   fileContainers = nil;
+   [fileContainers removeAllObjects];
    */
+   
 
    [fileNameField resignFirstResponder];
    fileOpenView.hidden = YES;

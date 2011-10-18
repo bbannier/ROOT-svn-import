@@ -139,9 +139,15 @@ static const CGFloat defaultCellH = 50.f;
    using namespace ROOT_IOSBrowser;
 
    if (filledObject && parentController) {
+      const bool wasHollow = filledObject->GetFillColor() == 0;
       if (cellIndex >= 0 && cellIndex < nROOTDefaultColors) {
+         const bool isHollow = colorIndices[cellIndex] == 0;
          filledObject->SetFillColor(colorIndices[cellIndex]);
-         [parentController objectWasModifiedUpdateSelection : NO];
+         
+         if (wasHollow != isHollow)
+            [parentController objectWasModifiedUpdateSelection : YES];
+         else
+            [parentController objectWasModifiedUpdateSelection : NO];
       }
    }
 }
