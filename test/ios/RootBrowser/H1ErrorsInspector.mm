@@ -104,11 +104,12 @@ ROOT::iOS::EHistogramErrorOption histErrorTypes[] = {ROOT::iOS::hetNoError, ROOT
 //____________________________________________________________________________________________________
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
-   UILabel *label = [[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)];
+   UILabel *label = [[[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)] autorelease];
    label.text = errorTypesStrings[row];
    label.font = [UIFont fontWithName : @"TimesNewRomanPS-BoldMT" size : 14.f];
    label.textAlignment = UITextAlignmentCenter;
    label.backgroundColor = [UIColor colorWithPatternImage : [UIImage imageNamed : @"text_cell_bkn.png"]];
+
    return label;
 }
 

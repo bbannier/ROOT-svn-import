@@ -165,9 +165,9 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
 #pragma mark color/pattern picker's delegate.
 
 //____________________________________________________________________________________________________
-- (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
+- (UIView *) pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
-   UILabel *label = [[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)];
+   UILabel *label = [[[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)] autorelease];
    label.text = fixedFontNames[row];
    label.font = [UIFont fontWithName : fixedFonts[row] size : 14.f];
    label.textAlignment = UITextAlignmentCenter;
@@ -177,7 +177,7 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
 }
 
 //____________________________________________________________________________________________________
-- (void)pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
+- (void) pickerView : (UIPickerView *)thePickerView didSelectRow : (NSInteger)row inComponent : (NSInteger)component
 {
    using namespace ROOT_IOSObjectInspector;
 
@@ -195,6 +195,5 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
 {
    [self.navigationController popViewControllerAnimated : YES];
 }
-
 
 @end

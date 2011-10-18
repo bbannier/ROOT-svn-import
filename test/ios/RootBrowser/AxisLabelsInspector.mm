@@ -120,17 +120,7 @@ static const CGRect componentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalH
    [fontInspector setROOTObject : object];
    
    [self.navigationController pushViewController : fontInspector animated : YES];
-}
-
-//____________________________________________________________________________________________________
-- (void) showLabelColorInspector
-{
-   AxisColorInspector *colorInspector = [[AxisColorInspector alloc] initWithNibName : @"AxisColorInspector" bundle : nil mode : ROOT_IOSObjectInspector::acimLabelColor];
-
-   [colorInspector setROOTObjectController : controller];
-   [colorInspector setROOTObject : object];
-   
-   [self.navigationController pushViewController : colorInspector animated : YES];   
+   [fontInspector release];
 }
 
 //____________________________________________________________________________________________________
