@@ -120,53 +120,6 @@
 
 }
 
-
-/*
-//____________________________________________________________________________________________________
-- (void) addShortcutForObjectAtIndex : (unsigned) objIndex inPad : (ROOT::iOS::Pad *) pad
-{
-   const CGRect rect = CGRectMake(0.f, 0.f, [ObjectShortcut iconWidth], [ObjectShortcut iconHeight]);
-   UIGraphicsBeginImageContext(rect.size);
-   CGContextRef ctx = UIGraphicsGetCurrentContext();
-   if (!ctx) {
-      UIGraphicsEndImageContext();
-      return;
-   }
-      
-   //Now draw into this context.
-   CGContextTranslateCTM(ctx, 0.f, rect.size.height);
-   CGContextScaleCTM(ctx, 1.f, -1.f);
-      
-   //Fill bitmap with white first.
-   CGContextSetRGBFillColor(ctx, 0.f, 0.f, 0.f, 1.f);
-   CGContextFillRect(ctx, rect);
-   //Set context and paint pad's contents
-   //with special colors (color == object's identity)
-   pad->cd();
-   pad->SetContext(ctx);
-   pad->Clear();
-   fileContainer->GetObject(objIndex)->Draw(fileContainer->GetDrawOption(objIndex));
-   pad->PaintThumbnail();
-   
-   UIImage *thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();//autoreleased UIImage.
-   [thumbnailImage retain];
-   UIGraphicsEndImageContext();
-       
-   ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller : self forObjectAtIndex:objIndex withThumbnail:thumbnailImage];
-   shortcut.layer.shadowColor = [UIColor blackColor].CGColor;
-   shortcut.layer.shadowOffset = CGSizeMake(20.f, 20.f);
-   shortcut.layer.shadowOpacity = 0.3f;
-
-   [scrollView addSubview : shortcut];
-   [objectShortcuts addObject : shortcut];
-
-   UIBezierPath *path = [UIBezierPath bezierPathWithRect : rect];
-   shortcut.layer.shadowPath = path.CGPath;
-   [shortcut release];
-
-   [thumbnailImage release];
-}
-*/
 //____________________________________________________________________________________________________
 - (void) addShortcutForObjectAtIndex : (unsigned) objIndex
 {
@@ -222,10 +175,8 @@
 
    objectShortcuts = [[NSMutableArray alloc] init];
 
-   if (fileContainer->GetNumberOfObjects()) {
-      for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i)
-         [self addShortcutForObjectAtIndex : i];
-   }
+   for (size_type i = 0; i < fileContainer->GetNumberOfObjects(); ++i)
+      [self addShortcutForObjectAtIndex : i];
 }
 
 //____________________________________________________________________________________________________

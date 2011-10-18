@@ -66,6 +66,7 @@ static const CGFloat minZoom = 1.f;
       UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget : self action : @selector(handleDoubleTap:)];
       doubleTap.numberOfTapsRequired = 2;
       [self addGestureRecognizer : doubleTap];
+      [doubleTap release];
    }
     
    return self;

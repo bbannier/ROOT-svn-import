@@ -44,6 +44,7 @@
       arrowFrame.origin.y = frame.size.height / 2 - arrowFrame.size.height / 2;
       arrowImageView.frame = arrowFrame;
       [self addSubview : arrowImageView];
+      [arrowImageView release];
       
       UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget : self action : @selector(handleTap:)];
       [self addGestureRecognizer:tap];
