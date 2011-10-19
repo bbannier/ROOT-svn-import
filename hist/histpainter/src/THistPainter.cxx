@@ -7891,7 +7891,8 @@ void THistPainter::PaintTable(Option_t *option)
    }
    if (Hoption.Same != 1) {
       if (!fH->TestBit(TH1::kNoStats)) {  // bit set via TH1::SetStats
-         PaintStat2(gStyle->GetOptStat(),fit);
+         if (!gPad->PadInSelectionMode() && !gPad->PadInHighlightMode())
+            PaintStat2(gStyle->GetOptStat(),fit);
       }
    }
 }
@@ -7906,6 +7907,8 @@ void THistPainter::PaintTH2PolyBins(Option_t *option)
     option = "L" draw the bins as line.
     option = "P" draw the bins as markers.
     End_html */
+   if (gPad->PadInHighlightMode() && gPad->GetSelected() != this)
+      return;
 
    TString opt = option;
    opt.ToLower();
@@ -7962,6 +7965,9 @@ void THistPainter::PaintTH2PolyColorLevels(Option_t *)
    /* Begin_html
     <a href="#HP20a">Control function to draw a TH2Poly as a color plot.</a>
     End_html */
+    
+   if (gPad->PadInHighlightMode() && gPad->GetSelected() != fH)
+      return;
 
    Int_t ncolors, color, theColor;
    Double_t z, zc;
@@ -8056,6 +8062,8 @@ void THistPainter::PaintTH2PolyScatterPlot(Option_t *)
    /* Begin_html
     <a href="#HP20a">Control function to draw a TH2Poly as a scatter plot.</a>
     End_html */
+   if (gPad->PadInHighlightMode() && gPad->GetSelected() != this)
+      return;
 
    Int_t k, loop, marker=0;
    Double_t z, xk,xstep, yk, ystep, xp, yp;
