@@ -89,7 +89,7 @@
 		7077902213FE50EB00C0FFA1 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7077902113FE50EB00C0FFA1 /* CoreGraphics.framework */; };
 		7077902813FE50EB00C0FFA1 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 7077902613FE50EB00C0FFA1 /* InfoPlist.strings */; };
 		7077902B13FE50EB00C0FFA1 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 7077902A13FE50EB00C0FFA1 /* main.m */; };
-		7077902E13FE50EB00C0FFA1 /* root_browserAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 7077902D13FE50EB00C0FFA1 /* root_browserAppDelegate.m */; };
+		7077902E13FE50EB00C0FFA1 /* root_browserAppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077902D13FE50EB00C0FFA1 /* root_browserAppDelegate.mm */; };
 		7077903113FE50EB00C0FFA1 /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7077902F13FE50EB00C0FFA1 /* MainWindow.xib */; };
 		7077903A13FE51B400C0FFA1 /* RootFileController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7077903813FE51B400C0FFA1 /* RootFileController.mm */; };
 		7077903B13FE51B400C0FFA1 /* RootFileController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7077903913FE51B400C0FFA1 /* RootFileController.xib */; };
@@ -242,7 +242,7 @@
 		7077902913FE50EB00C0FFA1 /* RootBrowser-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "RootBrowser-Prefix.pch"; sourceTree = "<group>"; };
 		7077902A13FE50EB00C0FFA1 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		7077902C13FE50EB00C0FFA1 /* root_browserAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = root_browserAppDelegate.h; sourceTree = "<group>"; };
-		7077902D13FE50EB00C0FFA1 /* root_browserAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = root_browserAppDelegate.m; sourceTree = "<group>"; };
+		7077902D13FE50EB00C0FFA1 /* root_browserAppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = root_browserAppDelegate.mm; sourceTree = "<group>"; };
 		7077903013FE50EB00C0FFA1 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainWindow.xib; sourceTree = "<group>"; };
 		7077903713FE51B400C0FFA1 /* RootFileController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RootFileController.h; sourceTree = "<group>"; };
 		7077903813FE51B400C0FFA1 /* RootFileController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RootFileController.mm; sourceTree = "<group>"; };
@@ -387,7 +387,7 @@
 			isa = PBXGroup;
 			children = (
 				7077902C13FE50EB00C0FFA1 /* root_browserAppDelegate.h */,
-				7077902D13FE50EB00C0FFA1 /* root_browserAppDelegate.m */,
+				7077902D13FE50EB00C0FFA1 /* root_browserAppDelegate.mm */,
 				7077902F13FE50EB00C0FFA1 /* MainWindow.xib */,
 				7077902413FE50EB00C0FFA1 /* Supporting Files */,
 			);
@@ -770,7 +770,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7077902B13FE50EB00C0FFA1 /* main.m in Sources */,
-				7077902E13FE50EB00C0FFA1 /* root_browserAppDelegate.m in Sources */,
+				7077902E13FE50EB00C0FFA1 /* root_browserAppDelegate.mm in Sources */,
 				7077903A13FE51B400C0FFA1 /* RootFileController.mm in Sources */,
 				7077903F13FE549300C0FFA1 /* FileContentController.mm in Sources */,
 				7077904313FE554E00C0FFA1 /* FileShortcut.mm in Sources */,

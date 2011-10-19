@@ -639,113 +639,6 @@ void TVirtualX::SetDrawMode(EDrawMode /*mode*/)
    // mode = 4 set the suitable mode for cursor echo according to the vendor
 }
 
-#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
-
-//TAttLine.
-//______________________________________________________________________________
-void TVirtualX::SetLineColor(Color_t cindex)
-{
-   // Sets color index "cindex" for drawing lines.
-   TAttLine::SetLineColor(cindex);
-}
-
-//______________________________________________________________________________
-void TVirtualX::SetLineStyle(Style_t linestyle)
-{
-   // Sets the line style.
-   //
-   // linestyle <= 1 solid
-   // linestyle  = 2 dashed
-   // linestyle  = 3 dotted
-   // linestyle  = 4 dashed-dotted
-   TAttLine::SetLineStyle(linestyle);
-}
-
-//______________________________________________________________________________
-void TVirtualX::SetLineWidth(Width_t width)
-{
-   // Sets the line width.
-   //
-   // width - the line width in pixels
-   TAttLine::SetLineWidth(width);
-}
-
-//TAttFill.
-//______________________________________________________________________________
-void TVirtualX::SetFillColor(Color_t cindex)
-{
-   // Sets color index "cindex" for fill areas.
-   TAttFill::SetFillColor(cindex);
-}
-
-//______________________________________________________________________________
-void TVirtualX::SetFillStyle(Style_t style)
-{
-   // Sets fill area style.
-   //
-   // style - compound fill area interior style
-   //         style = 1000 * interiorstyle + styleindex
-   TAttFill::SetFillStyle(style);
-}
-
-//TAttMarker.
-//______________________________________________________________________________
-void TVirtualX::SetMarkerColor(Color_t cindex)
-{
-   // Sets color index "cindex" for markers.
-   TAttMarker::SetMarkerColor(cindex);
-}
-
-//______________________________________________________________________________
-void TVirtualX::SetMarkerSize(Float_t markersize)
-{
-   // Sets marker size index.
-   //
-   // markersize - the marker scale factor
-   TAttMarker::SetMarkerSize(markersize);
-}
-
-//______________________________________________________________________________
-void TVirtualX::SetMarkerStyle(Style_t markerstyle)
-{
-   // Sets marker style.
-   TAttMarker::SetMarkerStyle(markerstyle);
-}
-
-//TAttText.
-//______________________________________________________________________________
-void TVirtualX::SetTextAlign(Short_t talign)
-{
-   // Sets the text alignment.
-   //
-   // talign = txalh horizontal text alignment
-   // talign = txalv vertical text alignment
-   TAttText::SetTextAlign(talign);
-}
-
-//______________________________________________________________________________
-void TVirtualX::SetTextColor(Color_t cindex)
-{
-   // Sets the color index "cindex" for text.
-   TAttText::SetTextColor(cindex);
-}
-
-//______________________________________________________________________________
-void TVirtualX::SetTextFont(Font_t fontnumber)
-{
-   // Sets the current text font number.
-   TAttText::SetTextFont(fontnumber);
-}
-
-//______________________________________________________________________________
-void TVirtualX::SetTextSize(Float_t textsize)
-{
-   // Sets the current text size to "textsize"
-   TAttText::SetTextSize(textsize);
-}
-
-#else
-
 //TAttLine.
 //______________________________________________________________________________
 void TVirtualX::SetLineColor(Color_t /*cindex*/)
@@ -837,8 +730,6 @@ void TVirtualX::SetTextSize(Float_t /*textsize*/)
 {
    // Sets the current text size to "textsize"
 }
-
-#endif
 
 //______________________________________________________________________________
 void TVirtualX::SetTextMagnitude(Float_t /*mgn*/)

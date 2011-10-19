@@ -71,6 +71,10 @@
 #include <io.h>
 #endif
 
+#if defined(R__MACOSX) &&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+#include "TGIOS.h"
+#endif
+
 #include "Riostream.h"
 #include "Gtypes.h"
 #include "TROOT.h"
@@ -419,7 +423,12 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    gBatchGuiFactory = new TGuiFactory;
    gGuiFactory      = gBatchGuiFactory;
    gGXBatch         = new TVirtualX("Batch", "ROOT Interface to batch graphics");
+
+#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+   gVirtualX        = new ROOT::iOS::TGIOS("TGIOS", "iOS version of TVirtualX");
+#else
    gVirtualX        = gGXBatch;
+#endif
 
 #ifdef R__WIN32
    fBatch = kFALSE;
