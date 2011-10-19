@@ -77,6 +77,8 @@ Pad::Pad(UInt_t w, UInt_t h)
    fInSelectionMode = kFALSE;
    fInHighlightMode = kFALSE;
    fObjectID = 1;
+   
+   fContains3DObject = kFALSE;
 
    cd();
 
@@ -124,6 +126,8 @@ void Pad::Clear(Option_t *)
 
    fPrimitives.SetOwner(kFALSE);
    fPrimitives.Clear();
+   
+   fContains3DObject = kFALSE;
    
    Range(0., 0., 1., 1.);
 }
@@ -765,6 +769,11 @@ void Pad::Paint(Option_t *)
       obj = lnk->GetObject();
       obj->Paint(lnk->GetOption());
       lnk = (TObjOptLink*)lnk->Next();
+      
+      //This is the special case, which can not
+      //be processed in a generic way at the moment.
+      if (obj->InheritsFrom("TF2"))
+         fContains3DObject = kTRUE;
    }
 
    Modified(kFALSE);
@@ -2139,8 +2148,27 @@ void Pad::SetSelectionBuffer(UInt_t w, UInt_t h, unsigned char *buff)
 //______________________________________________________________________________
 void Pad::Pick(Int_t px, Int_t py)
 {
-   fSelected = 0;
-   fParentOfSelected = 0;
+   if (fContains3DObject) {/* && fView) {
+      const Double_t dx = 0.05 * (fUxmax - fUxmin);
+      if ((AbsPixeltoX(px) > fUxmin + dx) && (AbsPixeltoX(px) < fUxmax - dx)) {
+         TObjOptLink *lnk = (TObjOptLink*)GetListOfPrimitives()->FirstLink();
+         while (lnk) {
+            TObject *obj = lnk->GetObject();
+            if (obj->InheritsFrom("TF2")) {//The only 3D object we can have now.
+               fSelected = obj;
+               fParentOfSelected = obj;
+               return;
+            }
+         }
+      } else {
+         fSelected = 0;
+         fParentOfSelected = 0;
+         return;
+      }*/
+      fSelected = 0;
+      fParentOfSelected = 0;
+      return;
+   }
 
    const UInt_t offset = (py * fSelectionAreaWidth + px) * 4;
    const unsigned red = fSelectionBuffer[offset + 1];

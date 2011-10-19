@@ -366,6 +366,8 @@ private:
    std::vector<ObjectPair_t>  fSelectables;
    
    UInt_t fObjectID;
+   //This requires special processing at the moment.
+   Bool_t fContains3DObject;
    
    const char *GetSelectedParentDrawOption()const;
    const char *GetSelectedDrawOption()const;
