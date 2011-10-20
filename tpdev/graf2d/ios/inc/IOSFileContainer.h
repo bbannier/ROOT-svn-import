@@ -1,5 +1,5 @@
-// @(#)root/graf2d:$Id: TObject.h 38832 2011-04-13 17:54:49Z rdm $
-// Author: Timur Pocheptsov   17/7/2011
+// @(#)root/graf2d:$Id$
+// Author: Timur Pocheptsov, 17/8/2011
 
 /*************************************************************************
  * Copyright (C) 1995-2011, Rene Brun and Fons Rademakers.               *
