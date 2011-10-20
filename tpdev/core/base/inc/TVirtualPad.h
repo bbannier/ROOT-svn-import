@@ -250,7 +250,6 @@ public:
    virtual void     SetCopyGLDevice(Bool_t copy) = 0;
    
 #if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
-   virtual void GetTextExtent(UInt_t & /*width*/, UInt_t & /*height*/, const char * /*text*/);
    virtual Bool_t PadInSelectionMode() const;
    virtual Bool_t PadInHighlightMode() const;
    
