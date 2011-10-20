@@ -1,3 +1,14 @@
+// @(#)root/graf2d:$Id$
+// Author: Timur Pocheptsov, 14/8/2011
+
+/*************************************************************************
+ * Copyright (C) 1995-2011, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+ 
 #include "TAttMarker.h"
 #include "TVirtualX.h"
 #include "TColor.h"
