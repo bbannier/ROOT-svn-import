@@ -435,11 +435,7 @@ void TText::GetTextAscentDescent(UInt_t &a, UInt_t &d, const char *text) const
       a = gVirtualX->GetFontAscent();
       if (!a) {
          UInt_t w;
-#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
-         gPad->GetTextExtent(w, a, text);
-#else
          gVirtualX->GetTextExtent(w, a, (char*)text);
-#endif
       }
       d = gVirtualX->GetFontDescent();
    }
@@ -465,11 +461,7 @@ void TText::GetTextExtent(UInt_t &w, UInt_t &h, const char *text) const
       TTF::GetTextExtent(w, h, (char*)text);
    } else {
       gVirtualX->SetTextSize((int)tsize);
-#if defined(R__MACOSX)&&  (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
-      gPad->GetTextExtent(w, h, text);
-#else
       gVirtualX->GetTextExtent(w, h, (char*)text);
-#endif
    }
 }
 

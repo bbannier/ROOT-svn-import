@@ -1,6 +1,6 @@
 #include <iostream>
 
-
+#include "IOSPad.h"
 #include "TGIOS.h"
 
 
@@ -121,6 +121,14 @@ void TGIOS::SetTextSize(Float_t textsize)
 {
    // Sets the current text size to "textsize"
    TAttText::SetTextSize(textsize);
+}
+
+//______________________________________________________________________________
+void TGIOS::GetTextExtent(UInt_t &w, UInt_t &h, char *textLine)
+{
+   //With all these global variables like gVirtualX and gPad, I have to use this trick.
+   Pad *p = static_cast<Pad *>(gPad);
+   p->GetTextExtent(w, h, textLine);
 }
 
 }

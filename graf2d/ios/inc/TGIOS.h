@@ -35,6 +35,8 @@ public:
    void SetTextColor(Color_t cindex);
    void SetTextFont(Font_t fontnumber);
    void SetTextSize(Float_t textsize);
+   
+   void GetTextExtent(UInt_t &w, UInt_t &h, char *mess);
 private:
    TGIOS(const TGIOS &rhs);
    TGIOS &operator = (const TGIOS &rhs);
