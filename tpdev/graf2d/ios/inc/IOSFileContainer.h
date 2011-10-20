@@ -1,3 +1,14 @@
+// @(#)root/graf2d:$Id$
+// Author: Timur Pocheptsov 17/7/2011
+
+/*************************************************************************
+ * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #ifndef ROOT_IOSFileContainer
 #define ROOT_IOSFileContainer
 
