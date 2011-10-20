@@ -12,6 +12,15 @@
 #ifndef ROOT_TextOperations
 #define ROOT_TextOperations
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// IOSTextOperations                                                    //
+//                                                                      //
+// Font management for iOS and Core Text.                               //
+// To be extended or completely changed in a future.                    //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #include <vector>
 #include <map>
 
@@ -47,13 +56,6 @@ private:
 
    CTLineRef fCTLine; //Core Text line, created from Attributed string.
 };
-
-//////////////////////////////////////////////////////////////////////
-//
-// Initial, very naive font management for iOS and Core Text.
-// To be extended or completely changed in a future.
-//
-//////////////////////////////////////////////////////////////////////
 
 class FontManager : public Util::NonCopyable {
 public:

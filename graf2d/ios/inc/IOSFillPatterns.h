@@ -12,6 +12,15 @@
 #ifndef ROOT_IOSFillPatterns
 #define ROOT_IOSFillPatterns
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// FillPatterns                                                         //
+//                                                                      //
+// Predefined fill styles (patterns).                                   //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
+
 #include <CoreGraphics/CGPattern.h>
 
 namespace ROOT {
@@ -19,8 +28,7 @@ namespace iOS {
 namespace GraphicUtils {
 
 //
-//Predefined fill styles (patterns).
-//Must be 25, now only 15. To be added.
+//Must be 25, now only 18. To be added.
 //
 
 //TODO: remaining patterns are required.
@@ -35,11 +43,6 @@ enum {
 typedef CGPatternRef (*PatternGenerator_t)(float *);
 //Array of pointers to functions, generating patterns.
 extern PatternGenerator_t gPatternGenerators[kPredefinedFillPatterns];
-
-
-//Due to some reason(s), ROOT likes to use hardcoded constants, never
-//defines named constants and you have to know, what does 3000 or 1001 means.
-//NIZKII POKLON za takoe. I have to fix it.
 
 extern const unsigned solidFillStyle; //1001
 extern const unsigned stippleBase; //3000

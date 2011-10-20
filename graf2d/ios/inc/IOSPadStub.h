@@ -12,22 +12,24 @@
 #ifndef ROOT_IOSPadStub
 #define ROOT_IOSPadStub
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// IOSPadStub                                                           //
+//                                                                      //
+// TVirtualPad interface is huge: ~150 public virtual member functions, //
+// mixture of different interfaces in fact.                             //
+// We do not need these 68 functions, but I have to implement them      //
+// (they are pure virtual), so, we have a "stub" class with             //
+// empty virtual functions.                                             //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #ifndef ROOT_TVirtualPad
 #include "TVirtualPad.h"
 #endif
 
 namespace ROOT {
 namespace iOS {
-
-/////////////////////////////////////////////////////////////////////////
-//
-// TVirtualPad interface is huge: ~150 public virtual member functions,
-// fat interface, mixture of different interfaces in fact.
-// I do not need these 68 functions, but I have to implement them
-// (they are pure virtual), so, I have a "stub" class with
-// empty virtual functions.
-//
-/////////////////////////////////////////////////////////////////////////
 
 class PadStub : public TVirtualPad {
 public:

@@ -12,6 +12,15 @@
 #ifndef ROOT_IOSPainter
 #define ROOT_IOSPainter
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// IOSPainter                                                           //
+//                                                                      //
+// Graphics operations required by IOSPad are implemented in            //
+// IOSPainter. Uses CoreGraphics and CoreText.                          //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #include <vector>
 
 #include <CoreGraphics/CoreGraphics.h>
@@ -56,16 +65,6 @@ private:
    Double_t fYMin;
    Double_t fYConv;
 };
-
-/////////////////////////////////////////////////////////////////////////////////
-//
-//In ROOT graphics is done mainly via gPad. In gPad, most of operations were
-//replaced from TVirtualX calls to TVirtualPadPainter calls. This let us to
-//draw everything using OpenGL/X11. It's also possible to implement
-//this painter to use Quartz 2D API. This way ROOT's graphics will also work with iOS.
-//The first and very naive implementation.
-//
-/////////////////////////////////////////////////////////////////////////////////
 
 class Painter : public TVirtualPadPainter {
 public:

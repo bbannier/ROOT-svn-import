@@ -12,6 +12,14 @@
 #ifndef ROOT_IOSFileContainer
 #define ROOT_IOSFileContainer
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// FileContainer                                                        //
+//                                                                      //
+// Class which owns objects read from root file.                        //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #include <vector>
 #include <memory>
 #include <string>
