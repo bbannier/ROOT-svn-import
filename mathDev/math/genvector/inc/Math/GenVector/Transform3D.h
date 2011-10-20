@@ -866,6 +866,99 @@ inline Transform3D operator * (const Quaternion & r, const Transform3D & t) {
 std::ostream & operator<< (std::ostream & os, const Transform3D & t);
 
 
+// extra classes for CLHEP compatibility 
+
+class Scale3D { 
+public: 
+   explicit Scale3D( double s = 1) : fReflection(s<0), fSX(s), fSY(s), fSZ(s) { }
+   Scale3D( double sx, double sy, double sz) : fSX(sx), fSY(sy), fSZ(sz) {
+      fReflection = (sx*sy*sz < 0);
+   }
+   double X() const {return fSX; }
+   double Y() const {return fSY; }
+   double Z() const {return fSZ; }
+
+   // test if scale is a reflection transformation
+   bool IsReflection() const { return fReflection; }
+
+private: 
+
+   bool fReflection;  // cache reflection flag
+   double fSX; // scaling factor in X
+   double fSY; // scaling vactor in Y
+   double fSZ; // scaling factor in Z
+};
+
+// do this as derived class 
+// although not optimal 
+struct ScaleX3D : public Scale3D { 
+   ScaleX3D(double sx) : Scale3D(sx,1,1) {}
+};
+struct ScaleY3D : public Scale3D { 
+   ScaleY3D(double sy) : Scale3D(1,sy,1) {}
+};
+struct ScaleZ3D : public Scale3D { 
+   ScaleZ3D(double sz) : Scale3D(1,1,sz) {}
+};
+
+// scaled transform3D ( a 3D transform + a scale)
+class ScaleTransform3D : public Transform3D { 
+
+public: 
+
+   typedef Transform3D::Vector Vector;
+   typedef Transform3D::Point Point;
+
+   ScaleTransform3D() : 
+      Transform3D() ,
+      fScale(1)
+   {}
+
+   ScaleTransform3D( const Rotation3D & r, const Vector & v) : 
+      Transform3D(r,v), 
+      fScale(1) 
+   {}
+
+   //use default copy constructor and assigment
+
+   /**
+      Get the decomposition 
+   */    
+   void GetDecomposition(Scale3D & s, Rotation3D &r, Vector &v) const { 
+      s = fScale;
+      Transform3D::GetDecomposition(r,v);
+   }
+   void getDecomposition(Scale3D & s, Rotation3D&r, Vector &v) const { 
+      GetDecomposition(s,r,v);
+   }
+
+
+private:
+   
+   Scale3D fScale; 
+   //Transform3D fTransform;
+   
+};
+
+// reflection class they can be view as a simple reflection + a translation and eventually also a rotation
+// they need to be implemented 
+// these are a transformation with a scaling factor which is -1
+// to be implemented
+// struct Reflect3D : public ScaleTransform3D { 
+
+// };
+
+// struct ReflectX3D : public Scale3D { 
+//    ReflectX3D() : Scale3D(-1,1,1) {}
+// };
+// struct ReflectY3D : public Scale3D { 
+//    ReflectY3D() : Scale3D(1,-1,1) {}
+// };
+// struct ReflectZ3D : public Scale3D { 
+//    ReflectZ3D() : Scale3D(1,1,-1) {}
+// };
+
+
    } // end namespace Math
 
 } // end namespace ROOT

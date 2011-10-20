@@ -514,6 +514,7 @@ namespace ROOT {
         return tmp;
       }
 
+      enum { Dimension = 3, SIZE=Dimension };
 
       // Methods providing limited backward name compatibility with CLHEP
 
