@@ -381,6 +381,7 @@ namespace ROOT {
            return fCoordinates.Rotate(angle);
         }
 
+        enum { Dimension = 2, SIZE = Dimension };
 
         // Methods providing  Limited backward name compatibility with CLHEP
 

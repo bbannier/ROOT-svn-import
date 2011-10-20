@@ -328,6 +328,8 @@ namespace ROOT {
           return fCoordinates.Rotate(angle);
        }
 
+       enum { Dimension = 2, SIZE = Dimension };
+
        // Limited backward name compatibility with CLHEP
 
        Scalar x()     const { return fCoordinates.X();     }

@@ -619,6 +619,7 @@ namespace ROOT {
           return 1./std::sqrt(1. - v2/t2 );
        } /* gamma */
 
+       enum { Dimension = 4, SIZE = Dimension };
 
        // Method providing limited backward name compatibility with CLHEP ----
 

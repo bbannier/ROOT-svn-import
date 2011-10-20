@@ -472,6 +472,13 @@ public:
       return ! operator==(rhs);
    }
 
+   // return true if is the identity matrix
+   bool IsIdentity() const { 
+      return  (fM[kXX] == 1.0 && fM[kXY] == 0.0 && fM[kXZ] == 0.0 &&
+               fM[kYX] == 0.0 && fM[kYY] == 1.0 && fM[kYZ] == 0.0 &&
+               fM[kZX] == 0.0 && fM[kZY] == 0.0 && fM[kZZ] == 1.0  ) ? true : false;
+   }
+
    // clhep compatibility
    Rotation3D inverse() const { return Inverse(); }
    Scalar xx() const { return fM[kXX]; }
@@ -483,6 +490,7 @@ public:
    Scalar zx() const { return fM[kZX]; }
    Scalar zy() const { return fM[kZY]; }
    Scalar zz() const { return fM[kZZ]; }
+   bool isIdentity() const { return IsIdentity(); }
 
 private:
 

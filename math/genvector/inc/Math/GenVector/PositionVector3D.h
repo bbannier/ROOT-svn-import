@@ -476,6 +476,8 @@ namespace ROOT {
         return tmp;
       }
 
+      enum { Dimension = 3, SIZE = Dimension };
+
       // Limited backward name compatibility with CLHEP
 
       Scalar x()     const { return fCoordinates.X();     }
