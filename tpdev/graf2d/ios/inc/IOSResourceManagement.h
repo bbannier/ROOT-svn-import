@@ -12,6 +12,17 @@
 #ifndef ROOT_ResourceManagement
 #define ROOT_ResourceManagement
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// Resource management                                                  //
+//                                                                      //
+// Set of classes to simplify and automate resource and memory          //
+// management with Core Foundation, Core Text, Core Graphics etc.       //
+// Apple has reference counting system, but it's a good old C,          //
+// and you have to remember to release counters yourself.               //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #include <CoreFoundation/CFString.h>
 #include <CoreFoundation/CFBase.h>
 
@@ -25,8 +36,6 @@ namespace ROOT {
 namespace iOS {
 namespace Util {
 
-//Set of classes to simplify and automate resource and memory management with Core Foundation, Core Text, Core Graphics etc.
-//Apple has reference counting system, but it's a good old C, and you have to remember to release counters yourself.
 
 class NonCopyable {
 protected:
@@ -36,7 +45,7 @@ private:
    NonCopyable &operator = (const NonCopyable &rhs);
 };
 
-//Class to call user specified function to release.
+//Class calls user's function to release resource.
 template<class RefType, void (*release)(RefType)>
 class RefGuardGeneric : NonCopyable {
 public:

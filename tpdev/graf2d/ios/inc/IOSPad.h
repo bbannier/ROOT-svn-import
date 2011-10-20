@@ -12,6 +12,17 @@
 #ifndef ROOT_IOSPad
 #define ROOT_IOSPad
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// IOSPad                                                               //
+//                                                                      //
+// This class is a pad for iOS.                                         //
+// I use this class instead of original TPad/TCanvas to                 //
+// keep it as simple and clean as possible, and to be able              //
+// to extend this class for iOS only.                                   //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #include <utility>
 #include <vector>
 #include <string>
@@ -37,17 +48,9 @@
 namespace ROOT {
 namespace iOS {
 
-//////////////////////////////////////////////////////////////////////////
-//
-// This class is a pad for iOS
-// I use this class instead of original TPad/TCanvas to
-// keep it as simple and clean as possible (look at original TPad to see what I mean).
+// TODO: class needs verification and clean-up.
 // Some parts from original TPad (coordinate conversions/painting algorithms)
 // were copy & pasted at the beginning, will be re-written and fixed.
-//
-//////////////////////////////////////////////////////////////////////////
-
-//TODO: class needs verification and clean-up.
 
 class Pad : public PadStub {
 public:

@@ -12,6 +12,14 @@
 #ifndef ROOT_IOSMarkers
 #define ROOT_IOSMarkers
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// IOSMarkers                                                           //
+//                                                                      //
+// Aux. functions to draw poly-markers.                                 //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #include <vector>
 
 #include <CoreGraphics/CGContext.h>

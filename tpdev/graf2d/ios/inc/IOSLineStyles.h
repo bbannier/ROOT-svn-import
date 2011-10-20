@@ -12,9 +12,23 @@
 #ifndef ROOT_IOSLineStyles
 #define ROOT_IOSLineStyles
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// Line styles.                                                         //
+//                                                                      //
+// Predefined line styles.                                              //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 namespace ROOT {
 namespace iOS {
 namespace GraphicUtils {
+
+/*
+enum {
+   kFixedLineStyles = 10
+};
+*/
 
 extern const unsigned linePatternLengths[10];
 extern const float dashLinePatterns[10][8];

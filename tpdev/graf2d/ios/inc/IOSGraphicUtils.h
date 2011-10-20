@@ -12,6 +12,14 @@
 #ifndef ROOT_IOSGraphicUtils
 #define ROOT_IOSGraphicUtils
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// GraphicUtils                                                         //
+//                                                                      //
+// Aux. functions and classes.                                          //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 #ifndef ROOT_Rtypes
 #include "Rtypes.h"
 #endif

@@ -16,15 +16,19 @@
 #include "TVirtualX.h"
 #endif
 
-//
-//TVirtualX for iOS. No window management, no graphics, just have
-//to implement correctly functions from TAttXXX base classes 
-//(TVirtualX intentionally overrides some of them and has
-//empty implementations). But on iOS I do not have TGWin32 or
-//TGX11 and graphic primitives try to use gVirtualX to pass
-//different attributes like color, line width, etc. to the 
-//painting code.
-//
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TGIOS.                                                               //
+//                                                                      //
+// TVirtualX for iOS. No window management, no graphics, just have      //
+// to implement correctly functions from TAttXXX base classes           //
+// (TVirtualX intentionally overrides some of them and has              //
+// empty implementations). But on iOS I do not have TGWin32 or          //
+// TGX11 and graphic primitives try to use gVirtualX to pass            //
+// different attributes like color, line width, etc. to the             //
+// painting code.                                                       //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 namespace ROOT {
 namespace iOS {
