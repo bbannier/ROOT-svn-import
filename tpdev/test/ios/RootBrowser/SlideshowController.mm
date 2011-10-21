@@ -11,6 +11,7 @@
 
 @implementation SlideshowController
 
+
 @synthesize parentView;
 @synthesize padParentView;
 
