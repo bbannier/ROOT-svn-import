@@ -87,7 +87,7 @@ protected:
 
   Double_t evaluate() const;
 
-  ClassDef(PiecewiseInterpolation,2) // Sum of RooAbsReal objects
+  ClassDef(PiecewiseInterpolation,3) // Sum of RooAbsReal objects
 };
 
 #endif

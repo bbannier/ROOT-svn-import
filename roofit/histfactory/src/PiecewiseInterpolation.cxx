@@ -182,7 +182,7 @@ Double_t PiecewiseInterpolation::evaluate() const
       sum += param->getVal()*(nominal - low->getVal());
     */
 
-    if(_interpCode.at(i)==0){
+    if(_interpCode.empty() || _interpCode.at(i)==0){
       // piece-wise linear
       if(param->getVal()>0)
 	sum +=  param->getVal()*(high->getVal() - nominal );
@@ -356,7 +356,7 @@ Double_t PiecewiseInterpolation::analyticalIntegralWN(Int_t code, const RooArgSe
     low = (RooAbsReal*)lowIntIter->Next() ;
     high = (RooAbsReal*)highIntIter->Next() ;
 
-    if(_interpCode.at(i)==0){
+    if(_interpCode.empty() || _interpCode.at(i)==0){
       // piece-wise linear
       if(param->getVal()>0)
 	value +=  param->getVal()*(high->getVal() - nominal );
