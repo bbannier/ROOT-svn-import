@@ -121,9 +121,7 @@ void TFrame::Paint(Option_t *option)
 {
    // Paint this wbox with its current attributes.
 
-   TPadPusherGuard(this);
-//   if (gPad->PadInSelectionMode())
-//      gPad->PushSelectableObject(this);
+   TPadPusherGuard push(this);
 
    if (!gPad->PadInHighlightMode() || gPad->PadInHighlightMode() && this == gPad->GetSelected()) {
       TWbox::Paint(option);

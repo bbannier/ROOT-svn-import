@@ -408,7 +408,11 @@ static const CGFloat maximumZoom = 2.f;
       editorView.hidden = YES;
       
 //      pad->SetViewWH(navScrolls, <#UInt_t h#>)
-      [navScrolls[1] setPad : fileContainer->GetPadAttached(currentObject)];
+      if (fileContainer->GetNumberOfObjects() > 1)
+         [navScrolls[1] setPad : fileContainer->GetPadAttached(currentObject)];
+      else
+         [navScrolls[0] setPad : fileContainer->GetPadAttached(currentObject)];
+
       navigationScrollView.hidden = NO;
    }
 
