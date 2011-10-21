@@ -184,6 +184,7 @@
 {
    fileContainer = container;
    self.navigationItem.title = [NSString stringWithFormat : @"Contents of %s", container->GetFileName()];
+   self.navigationItem.rightBarButtonItem.enabled = fileContainer->GetNumberOfObjects() > 1 ? YES : NO;
    
    //Prepare objects' thymbnails.
    [self addObjectsIntoScrollview];
