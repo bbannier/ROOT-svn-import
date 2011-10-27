@@ -9,7 +9,6 @@
 }
 
 - (id) initWithFrame : (CGRect) frame;
-- (void) dealloc;
 
 - (void) setRGB : (const double *) rgb;
 - (void) drawRect : (CGRect) rect;

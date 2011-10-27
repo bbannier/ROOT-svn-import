@@ -9,7 +9,6 @@
 }
 
 - (id)initWithFrame:(CGRect)frame andIcon:(NSString *)iconName;
-- (void) dealloc;
 
 - (void) drawRect:(CGRect)rect;
 

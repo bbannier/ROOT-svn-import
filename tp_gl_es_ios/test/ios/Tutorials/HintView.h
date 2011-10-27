@@ -6,11 +6,10 @@
    NSString *hintText;
 }
 
-- (id) initWithFrame:(CGRect)frame;
-- (void) dealloc;
+- (id) initWithFrame : (CGRect)frame;
 
-- (void) setHintIcon: (NSString*) iconName hintText:(NSString*)text;
-- (void) drawRect:(CGRect)rect;
+- (void) setHintIcon : (NSString*) iconName hintText : (NSString*)text;
+- (void) drawRect : (CGRect)rect;
 - (void) handleTap : (UITapGestureRecognizer *)tap;
 
 @property (nonatomic, retain) UIImage * iconImage;

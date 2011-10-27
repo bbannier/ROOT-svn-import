@@ -32,9 +32,4 @@
    CGContextFillRect(ctx, rect);
 }
 
-- (void)dealloc
-{
-   [super dealloc];
-}
-
 @end

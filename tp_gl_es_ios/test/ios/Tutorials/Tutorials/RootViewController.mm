@@ -100,14 +100,14 @@
    
    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier : CellIdentifier];
    if (cell == nil)
-      cell = [[[UITableViewCell alloc] initWithStyle : UITableViewCellStyleDefault reuseIdentifier : CellIdentifier] autorelease];
+      cell = [[UITableViewCell alloc] initWithStyle : UITableViewCellStyleDefault reuseIdentifier : CellIdentifier];
 
    // Configure the cell.
    const BOOL useDarkBackground = indexPath.row % 2;
    NSString *backgroundImagePath = [[NSBundle mainBundle] pathForResource : useDarkBackground ? @"DarkBackground" : @"LightBackground" ofType : @"png"];
 
    UIImage *backgroundImage = [[UIImage imageWithContentsOfFile : backgroundImagePath] stretchableImageWithLeftCapWidth : 0.f topCapHeight : 1.f];   
-   cell.backgroundView = [[[UIImageView alloc] initWithImage : backgroundImage] autorelease];
+   cell.backgroundView = [[UIImageView alloc] initWithImage : backgroundImage];
    cell.backgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
    cell.backgroundView.frame = cell.bounds;
   
@@ -143,14 +143,8 @@
 //_________________________________________________________________
 - (void) dealloc
 {
-   self.detailViewController = nil;
-   [tutorialNames release];
-   [tutorialIcons release];
-   
    for (unsigned i = 0; i < nROOTDemos; ++i)
       delete demos[i];
-
-   [super dealloc];
 }
 
 //_________________________________________________________________
