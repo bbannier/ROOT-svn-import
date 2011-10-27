@@ -20,7 +20,7 @@ class TObject;
    PadImageView *nestedView;
 }
 
-@property (assign) UIImage *padImage;
+@property (nonatomic, retain) UIImage *padImage;
 
 + (CGRect) defaultImageFrame;
 

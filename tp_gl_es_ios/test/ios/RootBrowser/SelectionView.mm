@@ -61,12 +61,6 @@ static const CGRect selectionHintFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 }
 
 //____________________________________________________________________________________________________
-- (void)dealloc
-{
-    [super dealloc];
-}
-
-//____________________________________________________________________________________________________
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *) event 
 {
    //Thanks to gyim, 

@@ -51,10 +51,7 @@
 - (void) initImages
 {
    filePictogram = [UIImage imageNamed : @"file_icon.png"];
-   [filePictogram retain];
-      
    backgroundImage = [UIImage imageNamed:@"file_shortcut_background.png"];
-   [backgroundImage retain];
 }
 
 //____________________________________________________________________________________________________
@@ -62,7 +59,6 @@
 {
    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap)];
    [self addGestureRecognizer:tap];
-   [tap release];
 }
 
 //____________________________________________________________________________________________________
@@ -107,13 +103,6 @@
 - (void)dealloc
 {
    ROOT::iOS::DeleteFileContainer(fileContainer);
-
-   self.fileName = nil;
-   self.filePath = nil;
-   
-   [filePictogram release];
-   [backgroundImage release];
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________

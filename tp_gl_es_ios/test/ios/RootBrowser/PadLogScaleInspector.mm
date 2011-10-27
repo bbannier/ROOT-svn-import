@@ -26,16 +26,6 @@
 }
 
 //____________________________________________________________________________________________________
-- (void)dealloc
-{
-   self.logX = nil;
-   self.logY = nil;
-   self.logZ = nil;
-
-   [super dealloc];
-}
-
-//____________________________________________________________________________________________________
 - (void) setROOTObjectController : (ROOTObjectController *)c
 {
    controller = c;

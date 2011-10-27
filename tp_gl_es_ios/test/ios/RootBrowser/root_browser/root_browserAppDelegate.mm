@@ -14,7 +14,6 @@
    [rootController addFileShortcut : [[NSBundle mainBundle] pathForResource:@"demos" ofType:@"root"]];
 
    navigationController = [[UINavigationController alloc] initWithRootViewController : rootController];
-   [rootController release];
    
    navigationController.navigationBar.barStyle = UIBarStyleBlackTranslucent;
    navigationController.delegate = rootController;
@@ -28,7 +27,6 @@
 {
    [navigationController.view removeFromSuperview];
    navigationController.delegate = nil;
-   [navigationController release];
 }
 
 //____________________________________________________________________________________________________
@@ -93,8 +91,6 @@
 //____________________________________________________________________________________________________
 - (void)dealloc
 {
-   [_window release];
-   [super dealloc];
    delete rootApp;
 }
 

@@ -48,20 +48,6 @@ static const CGRect componentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalH
 }
 
 //____________________________________________________________________________________________________
-- (void) dealloc
-{
-   self.plusSize = nil;
-   self.minusSize = nil;
-   self.sizeLabel = nil;
-   self.plusOffset = nil;
-   self.minusOffset = nil;
-   self.offsetLabel = nil;
-   self.noExp = nil;
-   
-   [super dealloc];
-}
-
-//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
@@ -120,7 +106,6 @@ static const CGRect componentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalH
    [fontInspector setROOTObject : object];
    
    [self.navigationController pushViewController : fontInspector animated : YES];
-   [fontInspector release];
 }
 
 //____________________________________________________________________________________________________

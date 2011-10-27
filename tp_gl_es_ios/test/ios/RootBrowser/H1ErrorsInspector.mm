@@ -36,12 +36,6 @@ ROOT::iOS::EHistogramErrorOption histErrorTypes[] = {ROOT::iOS::hetNoError, ROOT
    return self;
 }
 
-- (void) dealloc 
-{
-   self.errorTypePicker = nil;
-   [super dealloc];
-}
-
 //____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
@@ -104,7 +98,7 @@ ROOT::iOS::EHistogramErrorOption histErrorTypes[] = {ROOT::iOS::hetNoError, ROOT
 //____________________________________________________________________________________________________
 - (UIView *)pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
-   UILabel *label = [[[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)] autorelease];
+   UILabel *label = [[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)];
    label.text = errorTypesStrings[row];
    label.font = [UIFont fontWithName : @"TimesNewRomanPS-BoldMT" size : 14.f];
    label.textAlignment = UITextAlignmentCenter;

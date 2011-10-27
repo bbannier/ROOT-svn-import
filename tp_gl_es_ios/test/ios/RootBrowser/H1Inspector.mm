@@ -35,13 +35,6 @@ const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHe
 }
 
 //____________________________________________________________________________________________________
-- (void) dealloc
-{
-   [errorInspector release];
-   self.tabBar = nil;
-}
-
-//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.

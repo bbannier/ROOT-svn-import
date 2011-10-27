@@ -72,15 +72,6 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
 }
 
 //____________________________________________________________________________________________________
-- (void)dealloc
-{
-   self.titleLabel = nil;
-   self.fontPicker = nil;
-   
-   [super dealloc];
-}
-
-//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.
@@ -167,7 +158,7 @@ static const unsigned nFixedFonts = sizeof fixedFonts / sizeof fixedFonts[0];
 //____________________________________________________________________________________________________
 - (UIView *) pickerView : (UIPickerView *)pickerView viewForRow : (NSInteger)row forComponent : (NSInteger)component reusingView : (UIView *)view
 {
-   UILabel *label = [[[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)] autorelease];
+   UILabel *label = [[UILabel alloc] initWithFrame : CGRectMake(0.f, 0.f, defaultCellW, defaultCellH)];
    label.text = fixedFontNames[row];
    label.font = [UIFont fontWithName : fixedFonts[row] size : 14.f];
    label.textAlignment = UITextAlignmentCenter;

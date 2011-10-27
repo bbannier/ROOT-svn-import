@@ -9,7 +9,4 @@
 @property (assign) BOOL zoomed;
 @property (nonatomic, retain) UIImage *padImage;
 
-- (void) setPadImage : (UIImage *)image;
-- (UIImage *) padImage;
-
 @end

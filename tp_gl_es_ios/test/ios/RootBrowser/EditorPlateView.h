@@ -5,17 +5,15 @@
 @interface EditorPlateView : UIView {
 @private
    UIImage *plateImage;
-   NSString *editorName_;
    UILabel *editorLabel;
    
    UIImage *arrowImage;
-   UIImageView *arrowImageView;
    
    EditorView *topView;
 }
 
 @property (nonatomic, retain) NSString *editorName;
-@property (assign) UIImageView *arrowImageView;
+@property (nonatomic, retain) UIImageView *arrowImageView;
 
 + (CGFloat) plateHeight;
 

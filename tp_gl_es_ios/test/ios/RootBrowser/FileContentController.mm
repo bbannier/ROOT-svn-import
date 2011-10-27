@@ -27,20 +27,9 @@
       objectShortcuts = [[NSMutableArray alloc] init];
       UIBarButtonItem *btn = [[UIBarButtonItem alloc] initWithTitle:@"Slide show" style:UIBarButtonItemStyleBordered target:self action:@selector(startSlideshow)];
       self.navigationItem.rightBarButtonItem = btn;
-      [btn release];
    }
 
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void)dealloc
-{
-   self.scrollView = nil;
-   
-   [objectShortcuts release];
-   
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
@@ -147,7 +136,6 @@
    pad->PaintThumbnail();
    
    UIImage *thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();//autoreleased UIImage.
-   [thumbnailImage retain];
    UIGraphicsEndImageContext();
        
    ObjectShortcut *shortcut = [[ObjectShortcut alloc] initWithFrame : [ObjectShortcut defaultRect] controller : self forObjectAtIndex:objIndex withThumbnail : thumbnailImage];
@@ -160,9 +148,6 @@
 
    UIBezierPath *path = [UIBezierPath bezierPathWithRect : rect];
    shortcut.layer.shadowPath = path.CGPath;
-   [shortcut release];
-
-   [thumbnailImage release];
 }
 
 //____________________________________________________________________________________________________
@@ -170,7 +155,6 @@
 {
    typedef ROOT::iOS::FileContainer::size_type size_type;
 
-   [objectShortcuts release];
    [self clearScrollview];
 
    objectShortcuts = [[NSMutableArray alloc] init];
@@ -196,7 +180,6 @@
 {
    SlideshowController *slideshowController = [[SlideshowController alloc] initWithNibName : @"SlideshowController" bundle : nil fileContainer : fileContainer];
    [self.navigationController pushViewController : slideshowController animated : YES];
-   [slideshowController release];
 }
 
 //____________________________________________________________________________________________________
@@ -206,7 +189,6 @@
    ROOTObjectController *objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
    [objectController setNavigationForObjectWithIndex : testIndex fromContainer : fileContainer];
    [self.navigationController pushViewController : objectController animated : YES];
-   [objectController release];
 }
 
 //____________________________________________________________________________________________________
@@ -215,7 +197,6 @@
    ROOTObjectController *objectController = [[ROOTObjectController alloc] initWithNibName:@"ROOTObjectController" bundle : nil];
    [objectController setNavigationForObjectWithIndex : shortcut.objectIndex fromContainer : fileContainer];
    [self.navigationController pushViewController : objectController animated : YES];
-   [objectController release];
 }
 
 @end

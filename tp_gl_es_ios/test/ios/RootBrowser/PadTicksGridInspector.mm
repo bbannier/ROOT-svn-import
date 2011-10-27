@@ -25,17 +25,6 @@
 }
 
 //____________________________________________________________________________________________________
-- (void)dealloc
-{
-   self.gridX = nil;
-   self.gridY = nil;
-   self.ticksX = nil;
-   self.ticksY = nil;
-
-   [super dealloc];
-}
-
-//____________________________________________________________________________________________________
 - (void) setROOTObject : (TObject *)o
 {
    object = static_cast<TVirtualPad *>(o);

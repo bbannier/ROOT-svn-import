@@ -36,16 +36,9 @@ static const CGFloat tapInterval = 0.15f;
       selectionView.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
       selectionView.hidden = YES;
       [self addSubview : selectionView];
-      [selectionView release];
    }
 
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void) dealloc
-{
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
@@ -303,12 +296,12 @@ static const CGFloat tapInterval = 0.15f;
 //____________________________________________________________________________________________________
 - (void) handleDoubleTap
 {
-   //This is zoom/unzoom action.
+   //This is zoom/unzoom action or axis unzoom.
    const CGPoint scaledTapPt = [self scaledPoint : tapPt];
    TAxis *axis = dynamic_cast<TAxis *>(pad->GetSelected());
 
-   if (!pad->SelectionIsValid())
-      [self initPadPicking];
+   if (!pad->SelectionIsValid() && ![self initPadPicking])
+      return;
 
    if (axis && pad->ObjectInPoint(scaledTapPt.x, scaledTapPt.y) == axis) {
       axis->UnZoom();

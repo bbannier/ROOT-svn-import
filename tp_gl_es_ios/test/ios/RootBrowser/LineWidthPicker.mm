@@ -9,10 +9,8 @@
    // Initialization code
    lineWidthView = [[LineWidthCell alloc] initWithFrame : CGRectMake(10.f, 10.f, 120.f, 50.f) width : 1.f];
    [self addSubview : lineWidthView];
-   [lineWidthView release];
       
    backgroundImage = [UIImage imageNamed:@"line_width_bkn.png"];
-   [backgroundImage retain];
 }
 
 //____________________________________________________________________________________________________
@@ -23,13 +21,6 @@
       [self lateInit];
    }
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void) dealloc
-{
-   [backgroundImage release];
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
