@@ -2,33 +2,33 @@
 
 #import "HintView.h"
 
-
-@implementation HintView
-
-@synthesize iconImage;
-
-//_________________________________________________________________
-- (id)initWithFrame:(CGRect)frame
-{
-    self = [super initWithFrame:frame];
-    
-    if (self) {
-        // Initialization code
-        self.opaque = NO;
-    }
-    
-    return self;
+@implementation HintView {
+   UIImage *iconImage;
+   NSString *hintText;
 }
 
 //_________________________________________________________________
-- (void)setHintIcon:(NSString *)iconName hintText:(NSString *)text
+- (id) initWithFrame : (CGRect)frame
 {
-   self.iconImage = [UIImage imageNamed:iconName];
+   self = [super initWithFrame : frame];
+    
+   if (self) {
+      // Initialization code
+      self.opaque = NO;
+   }
+    
+   return self;
+}
+
+//_________________________________________________________________
+- (void) setHintIcon : (NSString *)iconName hintText : (NSString *)text
+{
+   iconImage = [UIImage imageNamed : iconName];
    hintText = text;
 }
 
 //_________________________________________________________________
-- (void)drawRect:(CGRect)rect
+- (void) drawRect : (CGRect)rect
 {
    CGContextRef ctx = UIGraphicsGetCurrentContext();
    CGContextSetRGBFillColor(ctx, 0.3f, 0.3f, 0.3f, 0.7f);
@@ -46,7 +46,7 @@
 }
 
 //_________________________________________________________________
-- (void) handleTap:(UITapGestureRecognizer *)tap
+- (void) handleTap : (UITapGestureRecognizer *)tap
 {
    self.hidden = YES;
 }

@@ -11,7 +11,20 @@
 //C++ code (ROOT's ios module)
 #import "IOSPad.h"
 
-@implementation PadView
+@interface PadView ()
+- (void) handlePanGesture : (UIPanGestureRecognizer *)panGesture;
+- (void) handleTapGesture : (UITapGestureRecognizer *)tapGesture;
+@end
+
+@implementation PadView {
+   ROOT::iOS::Pad *pad;
+
+   float scaleFactor;
+   SelectionView *selectionView;
+   
+   BOOL processPan;
+   BOOL processTap;
+}
 
 //_________________________________________________________________
 - (id) initWithFrame:(CGRect)frame forPad : (ROOT::iOS::Pad*)pd

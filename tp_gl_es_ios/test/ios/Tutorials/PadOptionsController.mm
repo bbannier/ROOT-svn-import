@@ -7,8 +7,9 @@
 #import "IOSFillPatterns.h"
 #import "IOSPad.h"
 
-static const double predefinedFillColors[16][3] = 
-{
+@implementation PadOptionsController
+
+const double predefinedFillColors[16][3] = {
 {1., 1., 1.},
 {0., 0., 0.},
 {251 / 255., 0., 24 / 255.},
@@ -29,12 +30,11 @@ static const double predefinedFillColors[16][3] =
 
 
 //Color indices in a standard ROOT's color selection control:
-static const unsigned colorIndices[16] = {0, 1, 2, 3,
-                                          4, 5, 6, 7,
-                                          8, 9, 30, 38,
-                                          41, 42, 50, 51};
-
-@implementation PadOptionsController
+const unsigned colorIndices[16] = {
+0, 1, 2, 3,
+4, 5, 6, 7,
+8, 9, 30, 38,
+41, 42, 50, 51};
 
 @synthesize tickX = tickX_;
 @synthesize tickY = tickY_;
@@ -49,23 +49,21 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
 @synthesize patterns = patterns_;
 
 //_________________________________________________________________
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+- (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
-   self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+   self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
+
    if (self) {
-      // Custom initialization
-      
       //Color views.
       colors_ = [[NSMutableArray alloc] init];
       for (unsigned i = 0; i < 16; ++i) {
-         ColorCell * newCell = [[ColorCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f)];
+         ColorCell *newCell = [[ColorCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f)];
          [newCell setRGB : predefinedFillColors[i]];
          [colors_ addObject : newCell];
       }
       
       //Patterns.
       patterns_ = [[NSMutableArray alloc] init];
-      
       //The first pattern - solid fill.
       PatternCell *solidFill = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : 0];
       [solidFill setAsSolid];
@@ -75,7 +73,7 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
          PatternCell *newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : i];
          [patterns_ addObject : newCell];
       }
-      
+
       //Pattern views.
    }
    

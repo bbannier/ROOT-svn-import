@@ -1,13 +1,25 @@
 #import <stdlib.h>
 
-#import <Foundation/NSTimer.h>
-
 #import "DetailViewController.h"
 #import "RootViewController.h"
 
 #import "DemoHelper.h"
+#import "DemoBase.h"
 
-@implementation RootViewController
+namespace  {
+
+enum {
+   nROOTDemos = 6
+};
+
+}
+
+@implementation RootViewController {
+   NSMutableArray *tutorialNames;
+   NSMutableArray *tutorialIcons;
+   
+   ROOT::iOS::Demos::DemoBase *demos[nROOTDemos];
+}
 
 @synthesize detailViewController;
 
@@ -120,8 +132,7 @@
 //_________________________________________________________________
 - (void) tableView : (UITableView *)tableView didSelectRowAtIndexPath : (NSIndexPath *)indexPath
 {
-   // Navigation logic may go here -- for example, create and push another view controller.
-   self.detailViewController.detailItem = 0;//This will call setDetailItem and "dissolve" popover.
+   [self.detailViewController dismissPopover];
    [self.detailViewController setActiveDemo : demos[indexPath.row]];
 }
 
