@@ -21,13 +21,6 @@
 }
 
 //_________________________________________________________________
-- (void)dealloc
-{
-   self.iconImage = nil;
-   [super dealloc];
-}
-
-//_________________________________________________________________
 - (void)setHintIcon:(NSString *)iconName hintText:(NSString *)text
 {
    self.iconImage = [UIImage imageNamed:iconName];

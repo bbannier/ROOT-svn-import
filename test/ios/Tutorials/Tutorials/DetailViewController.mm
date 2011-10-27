@@ -54,8 +54,7 @@ modify this code.
    //When setting the detail item, update the view and dismiss the popover controller if it's showing.
    
    if (_detailItem != newDetailItem) {
-      [_detailItem release];
-      _detailItem = [newDetailItem retain];
+      _detailItem = newDetailItem;
       // Update the view.
       [self configureView];
    }
@@ -100,9 +99,6 @@ modify this code.
    parentView.layer.shadowOffset = CGSizeMake(10.f, 10.f);
    UIBezierPath *path = [UIBezierPath bezierPathWithRect:parentView.bounds];
    parentView.layer.shadowPath = path.CGPath;
-   
-   [parentView release];
-
    ///
    padRect.origin.x = 0.f, padRect.origin.y = 0.f;
    for (unsigned i = 0; i < 2; ++i) {// < kTDNOfPads
@@ -112,13 +108,11 @@ modify this code.
       padViews[i] = [[PadView alloc] initWithFrame : padRect forPad : pad];
       scrollViews[i].contentSize = padViews[i].frame.size;
       [scrollViews[i] addSubview:padViews[i]];
-      [padViews[i] release];
       //
       scrollViews[i].minimumZoomScale = 1.f;
       scrollViews[i].maximumZoomScale = 1280.f / 640.f;
       [scrollViews[i] setZoomScale:1.f];
       [parentView addSubview:scrollViews[i]];
-      [scrollViews[i] release];
    }
 
    parentView.hidden = YES;
@@ -133,7 +127,6 @@ modify this code.
       [self.view addSubview:selectionViews[i]];
       selectionViews[i].hidden = YES;   
       selectionViews[i].opaque = NO;
-      [selectionViews[i] release];
    }
 }
 
@@ -155,9 +148,7 @@ modify this code.
    [self.view addSubview:pinchPic];
    UITapGestureRecognizer *pinchTap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(showPinchHint)];
    [pinchPic addGestureRecognizer:pinchTap];
-   [pinchTap release];
    pinchPic.hidden = YES;
-   [pinchPic release];
 
    pictRect.origin.y = 520;
    panPic = [[PictView alloc] initWithFrame:pictRect andIcon:@"pan_gesture_icon_small.png"];
@@ -165,9 +156,7 @@ modify this code.
    [self.view addSubview:panPic];
    UITapGestureRecognizer *panTap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(showPanHint)];
    [panPic addGestureRecognizer:panTap];
-   [panTap release];
    panPic.hidden = YES;
-   [panPic release];
    
    pictRect.origin.y = 590;
    doubleTapPic = [[PictView alloc] initWithFrame:pictRect andIcon:@"double_tap_gesture_icon_small.png"];
@@ -175,27 +164,21 @@ modify this code.
    [self.view addSubview:doubleTapPic];
    UITapGestureRecognizer *dtapTap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(showDoubleTapHint)];
    [doubleTapPic addGestureRecognizer:dtapTap];
-   [dtapTap release];
    doubleTapPic.hidden = YES;
-   [doubleTapPic release];
 
    rotatePic = [[PictView alloc] initWithFrame:pictRect andIcon:@"rotate_icon_small.png"];
    rotatePic.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
    [self.view addSubview:rotatePic];
    UITapGestureRecognizer *rotTap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(showRotationHint)];
    [rotatePic addGestureRecognizer:rotTap];
-   [rotTap release];
    rotatePic.hidden = YES;
-   [rotatePic release];
    
    singleTapPic = [[PictView alloc] initWithFrame:pictRect andIcon:@"single_tap_icon_small.png"];
    singleTapPic.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
    [self.view addSubview:singleTapPic];
    UITapGestureRecognizer *singleTapTap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(showSingleTapHint)];
    [singleTapPic addGestureRecognizer:singleTapTap];
-   [singleTapTap release];
    singleTapPic.hidden = YES;
-   [singleTapPic release];
 
    const CGPoint center = self.view.center;
    CGRect rect = CGRectMake(center.x - 300.f, center.y - 290.f, 600.f, 600.f);
@@ -204,9 +187,7 @@ modify this code.
    [self.view addSubview:hintView];
    UITapGestureRecognizer *hintTap = [[UITapGestureRecognizer alloc] initWithTarget:hintView action:@selector(handleTap:)];
    [hintView addGestureRecognizer:hintTap];
-   [hintTap release];
    hintView.hidden = YES;
-   [hintView release];
 }
 
 //_________________________________________________________________
@@ -248,7 +229,6 @@ modify this code.
    NSMutableArray *items = [[self.toolbar items] mutableCopy];
    [items insertObject:barButtonItem atIndex:0];
    [self.toolbar setItems:items animated:YES];
-   [items release];
    self.popoverController = pc;
 }
 
@@ -259,7 +239,6 @@ modify this code.
    NSMutableArray *items = [[self.toolbar items] mutableCopy];
    [items removeObjectAtIndex:0];
    [self.toolbar setItems:items animated:YES];
-   [items release];
    self.popoverController = nil;
 }
 
@@ -277,7 +256,6 @@ modify this code.
    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTapPad:)];
    [parentView addGestureRecognizer:tapGesture];
    tapGesture.numberOfTapsRequired = 2;
-   [tapGesture release];
       
    //Load a help view from a nib file.
    [[NSBundle mainBundle] loadNibNamed:@"HelpView" owner:self options:nil];
@@ -324,14 +302,6 @@ modify this code.
    //
    delete pad;
    //
-   self.padController = nil;
-   self.editorPopover = nil;
-   self.help = nil;
-   [_myPopoverController release];
-   [_toolbar release];
-   [_detailItem release];
-   [_detailDescriptionLabel release];
-   [super dealloc];
 }
 
 //_________________________________________________________________
@@ -465,7 +435,6 @@ modify this code.
    [padViews[view] removeFromSuperview];
    padViews[view] = [[PadView alloc] initWithFrame : padRect forPad : pad];
    [scroll addSubview:padViews[view]];
-   [padViews[view] release];
   
    scroll.minimumZoomScale = 1.f;
    scroll.maximumZoomScale = 2.f;
@@ -503,11 +472,9 @@ modify this code.
       [padViews[i] removeGestureRecognizer:padPanGestures[i]];
       [padViews[i] removeGestureRecognizer:padTapGestures[i]];
       
-      [padViews[i] retain];
       padViews[i].hidden = NO;
       [padViews[i] removeFromSuperview];
       [scrollViews[i] addSubview:padViews[i]];
-      [padViews[i] release];
    }
    
    if (activeDemo) {
@@ -530,21 +497,17 @@ modify this code.
       //1. Check, if views must be resized (unscaled).
       [self resizePadView : i];
 
-      [padViews[i] retain];
       [padViews[i] removeFromSuperview];
       
       padPanGestures[i] = [[UIPanGestureRecognizer alloc] initWithTarget:padViews[i] action:@selector(handlePanGesture:)];
       [padViews[i] addGestureRecognizer:padPanGestures[i]];
-      [padPanGestures[i] release];
       
       padTapGestures[i] = [[UITapGestureRecognizer alloc] initWithTarget:padViews[i] action:@selector(handleTapGesture:)];
       [padViews[i] addGestureRecognizer:padTapGestures[i]];
-      [padTapGestures[i] release];
 
       [padViews[i] setSelectionView:selectionViews[i]];
    
       [parentView addSubview:padViews[i]];
-      [padViews[i] release];
  
       if (activeDemo) //In case no demo was selected - nothing to show yet.
          padViews[i].hidden = i == activeView ? NO : YES;
@@ -568,14 +531,12 @@ modify this code.
          PadOptionsController *padInspector = [[PadOptionsController alloc] initWithNibName:@"PadOptionsController" bundle : nil];
          self.padController = padInspector;
          self.padController.contentSizeForViewInPopover = CGSizeMake(250.f, 650.f);
-         [padInspector release];
       }
 
       if (!editorPopover_) {
          UIPopoverController *editorPopover = [[UIPopoverController alloc] initWithContentViewController : padController_];
          self.editorPopover = editorPopover;
          self.editorPopover.popoverContentSize = CGSizeMake(250.f, 650.f);
-         [editorPopover release];
       }
 
       [self.editorPopover presentPopoverFromBarButtonItem : sender permittedArrowDirections:UIPopoverArrowDirectionAny animated : YES];
@@ -633,7 +594,6 @@ modify this code.
    [padViews[activeView] removeFromSuperview];
    padViews[activeView] = [[PadView alloc] initWithFrame : oldRect forPad : pad];
    [scrollView addSubview:padViews[activeView]];
-   [padViews[activeView] release];
   
    [scrollView setZoomScale:1.f];
    scrollView.contentSize = oldRect.size;   
@@ -714,7 +674,6 @@ modify this code.
 
       padViews[activeView] = [[PadView alloc] initWithFrame : newRect forPad : pad];
       [scrollViews[activeView] addSubview:padViews[activeView]];
-      [padViews[activeView] release];
   
       [scrollViews[activeView] setZoomScale:1.f];
       scrollViews[activeView].contentSize = newRect.size;

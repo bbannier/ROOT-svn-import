@@ -28,7 +28,6 @@ class Pad;
 }
 
 - (id) initWithFrame : (CGRect)frame forPad : (ROOT::iOS::Pad*)pad;
-- (void) dealloc;
 
 - (void) drawRect:(CGRect)rect;
 - (void) clearPad;

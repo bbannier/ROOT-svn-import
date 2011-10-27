@@ -26,13 +26,6 @@
 }
 
 //_________________________________________________________________
-- (void)dealloc
-{
-   self.image = nil;
-   [super dealloc];
-}
-
-//_________________________________________________________________
 - (void)drawRect:(CGRect)rect
 {
    [image drawInRect : rect blendMode:kCGBlendModeOverlay alpha : 0.3f];

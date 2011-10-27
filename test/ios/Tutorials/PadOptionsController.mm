@@ -1,6 +1,7 @@
 #import "PadOptionsController.h"
 #import "PatternCell.h"
 #import "ColorCell.h"
+#import "PadView.h"
 
 //C++ code (ROOT)
 #import "IOSFillPatterns.h"
@@ -60,7 +61,6 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
          ColorCell * newCell = [[ColorCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f)];
          [newCell setRGB : predefinedFillColors[i]];
          [colors_ addObject : newCell];
-         [newCell release];
       }
       
       //Patterns.
@@ -70,40 +70,16 @@ static const unsigned colorIndices[16] = {0, 1, 2, 3,
       PatternCell *solidFill = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : 0];
       [solidFill setAsSolid];
       [patterns_ addObject : solidFill];
-      [solidFill release];
       
       for (unsigned i = 0; i < ROOT::iOS::GraphicUtils::kPredefinedFillPatterns; ++i) {
          PatternCell *newCell = [[PatternCell alloc] initWithFrame : CGRectMake(0.f, 0.f, 80.f, 44.f) andPattern : i];
          [patterns_ addObject : newCell];
-         [newCell release];
       }
       
       //Pattern views.
    }
    
    return self;
-}
-
-//_________________________________________________________________
-- (void)dealloc
-{
-   self.tickX = nil;
-   self.tickY = nil;
-   
-   self.gridX = nil;
-   self.gridY = nil;
-   
-   self.logX = nil;
-   self.logY = nil;
-   self.logZ = nil;
-   
-   self.colorPicker = nil;
-   self.patternPicker = nil;
-   
-   [colors_ release];
-   [patterns_ release];
-   
-   [super dealloc];
 }
 
 //_________________________________________________________________

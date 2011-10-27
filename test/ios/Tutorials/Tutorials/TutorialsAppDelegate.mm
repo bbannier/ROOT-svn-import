@@ -67,13 +67,6 @@
 - (void)dealloc
 {
    delete rootApp;
-
-   [_window release];
-   [_splitViewController release];
-   [_rootViewController release];
-   [_detailViewController release];
-
-   [super dealloc];
 }
 
 @end
