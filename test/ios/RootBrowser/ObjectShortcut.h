@@ -23,6 +23,5 @@ class TObject;
 
 
 - (id) initWithFrame : (CGRect)frame controller : (FileContentController*) c forObjectAtIndex : (unsigned)objIndex withThumbnail : (UIImage *)thumbnail;
-- (void) drawRect : (CGRect)rect;
 
 @end

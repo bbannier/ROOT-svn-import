@@ -50,23 +50,6 @@ static const float tabBarHeight = 49.f;
 }
 
 //____________________________________________________________________________________________________
-- (void) dealloc
-{
-   self.titleField = nil;
-   self.centered = nil;
-   self.rotated = nil;
-   self.offsetLabel = nil;
-   self.plusOffsetBtn = nil;
-   self.minusOffsetBtn = nil;
-   
-   self.sizeLabel = nil;
-   self.plusSizeBtn = nil;
-   self.minusSizeBtn = nil;
-
-   [super dealloc];
-}
-
-//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
@@ -147,7 +130,6 @@ static const float tabBarHeight = 49.f;
    [fontInspector setROOTObject : object];
    
    [self.navigationController pushViewController : fontInspector animated : YES];
-   [fontInspector release];
 }
 
 //____________________________________________________________________________________________________
@@ -159,7 +141,6 @@ static const float tabBarHeight = 49.f;
    [colorInspector setROOTObject : object];
    
    [self.navigationController pushViewController : colorInspector animated : YES];
-   [colorInspector release];
 }
 
 //____________________________________________________________________________________________________

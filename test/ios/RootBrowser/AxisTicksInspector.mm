@@ -50,33 +50,6 @@ static const CGRect componentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalH
 }
 
 //____________________________________________________________________________________________________
-- (void) dealloc
-{
-   //So, reference counting + outlets + interface builder are useless crap
-   //and bullshit. Endless ugliness.
-
-   self.tickLengthLabel = nil;
-   self.plusLengthBtn = nil;
-   self.minusLengthBtn = nil;
-
-   self.plusPrim = nil;
-   self.minusPrim = nil;
-   self.primLabel = nil;
-
-   self.plusSec = nil;
-   self.minusSec = nil;
-   self.secLabel = nil;
-
-   self.plusTer = nil;
-   self.minusTer = nil;
-   self.terLabel = nil;
-
-   self.ticksNegPos = nil;
-   
-   [super dealloc];
-}
-
-//____________________________________________________________________________________________________
 - (void)didReceiveMemoryWarning
 {
    // Releases the view if it doesn't have a superview.

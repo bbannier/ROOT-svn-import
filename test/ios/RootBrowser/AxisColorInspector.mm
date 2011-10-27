@@ -36,7 +36,6 @@ static const CGFloat defaultCellH = 44.f;
          ColorCell * newCell = [[ColorCell alloc] initWithFrame : cellRect];
          [newCell setRGB : predefinedFillColors[i]];
          [colors addObject : newCell];
-         [newCell release];
       }
       
       if (mode == acimAxisColor)
@@ -48,17 +47,6 @@ static const CGFloat defaultCellH = 44.f;
    }
 
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void)dealloc
-{
-   self.colorPicker = nil;
-   self.titleLabel = nil;
-
-   [colors release];
-
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________

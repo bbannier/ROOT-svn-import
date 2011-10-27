@@ -9,11 +9,9 @@
    UIImage *backgroundImage;
    
    unsigned selectedItem;
-   
-   id<HorizontalPickerDelegate> pickerDelegate;
 }
 
-@property (nonatomic, assign) id<HorizontalPickerDelegate> pickerDelegate;
+@property (nonatomic, weak) id<HorizontalPickerDelegate> pickerDelegate;
 
 - (void) addItems : (NSMutableArray *)items;
 - (void) setSelectedItem : (unsigned) item;

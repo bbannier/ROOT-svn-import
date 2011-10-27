@@ -7,9 +7,6 @@
 }
 
 - (id) initWithFrame : (CGRect) frame andPattern : (unsigned) index;
-- (void) dealloc;
-
 - (void) setAsSolid;
-- (void) drawRect : (CGRect) rect;
 
 @end

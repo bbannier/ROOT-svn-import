@@ -19,9 +19,6 @@
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
    if (self) {
       [self view];
-      
-      //
-           //
    }
 
    return self;
@@ -53,7 +50,6 @@
 
    axisRangeSlider = [[RangeSlider alloc] initWithFrame : CGRectMake(0.f, 210.f, 250.f, 60.f)];
    [self.view addSubview : axisRangeSlider];
-   [axisRangeSlider release];
    
    [axisRangeSlider addTarget:self action:@selector(axisRangeChanged) forControlEvents : UIControlEventValueChanged];
 }

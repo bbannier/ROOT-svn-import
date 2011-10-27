@@ -35,13 +35,11 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 50.f, 50.f);
       for (unsigned i = 0; i < 10; ++i) {
          LineStyleCell *newCell = [[LineStyleCell alloc] initWithFrame : cellFrame lineStyle : i + 1];
          [lineStyles addObject : newCell];
-         [newCell release];
       }
       
       lineStylePicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 20.f, 220.f, 70.f)];
       [lineStylePicker addItems : lineStyles];
       [self.view addSubview : lineStylePicker];
-      [lineStylePicker release];
       
       lineStylePicker.pickerDelegate = self;
       
@@ -50,27 +48,16 @@ static const CGRect cellFrame = CGRectMake(0.f, 0.f, 50.f, 50.f);
          ColorCell *newCell = [[ColorCell alloc] initWithFrame : cellFrame];
          [newCell setRGB : predefinedFillColors[i]];
          [lineColors addObject : newCell];
-         [newCell release];
       }
 
       lineColorPicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 105, 220.f, 70.f)];
       [lineColorPicker addItems : lineColors];
       [self.view addSubview : lineColorPicker];
-      [lineColorPicker release];
       
       lineColorPicker.pickerDelegate = self;
    }
 
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void) dealloc
-{
-   [lineStyles release];
-   [lineColors release];
-   self.lineWidthPicker = nil;
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________

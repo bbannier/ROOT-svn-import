@@ -51,13 +51,11 @@ static BOOL canScaleMarker(Style_t style)
       for (unsigned i = 0; i < nMarkers; ++i) {
          MarkerStyleCell *newCell = [[MarkerStyleCell alloc] initWithFrame : cellRect andMarkerStyle : markerStyles[i]];
          [styleCells addObject : newCell];
-         [newCell release];
       }
       
       markerStylePicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 15.f, 220.f, 70.f)];
       [markerStylePicker addItems : styleCells];
       [self.view addSubview : markerStylePicker];
-      [markerStylePicker release];
       markerStylePicker.pickerDelegate = self;
       
       colorCells = [[NSMutableArray alloc] init];
@@ -65,30 +63,15 @@ static BOOL canScaleMarker(Style_t style)
          ColorCell *newCell = [[ColorCell alloc] initWithFrame : cellRect];
          [newCell setRGB : predefinedFillColors[i]];
          [colorCells addObject : newCell];
-         [newCell release];
       }
       
       markerColorPicker = [[HorizontalPickerView alloc] initWithFrame:CGRectMake(15.f, 110.f, 220.f, 70.f)];
       [markerColorPicker addItems : colorCells];
       [self.view addSubview : markerColorPicker];
-      [markerColorPicker release];
       markerColorPicker.pickerDelegate = self;
    }
 
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void) dealloc 
-{
-   self.plusBtn = nil;
-   self.minusBtn = nil;
-   self.sizeLabel = nil;
-   
-   [styleCells release];
-   [colorCells release];
-
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________

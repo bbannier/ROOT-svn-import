@@ -29,7 +29,6 @@
       //
       AxisTitleInspector *titleInspectorCompositor = [[AxisTitleInspector alloc] initWithNibName : @"AxisTitleInspector" bundle : nil];
       titleInspector = [[InspectorWithNavigation alloc] initWithRootViewController : titleInspectorCompositor];
-      [titleInspectorCompositor release];
       titleInspector.view.frame = [AxisTitleInspector inspectorFrame];
       [self.view addSubview : titleInspector.view];
       titleInspector.view.hidden = YES;
@@ -37,7 +36,6 @@
       
       AxisLabelsInspector *labelInspectorCompositor = [[AxisLabelsInspector alloc] initWithNibName : @"AxisLabelsInspector" bundle : nil];
       labelInspector = [[InspectorWithNavigation alloc] initWithRootViewController : labelInspectorCompositor];
-      [labelInspectorCompositor release];
       labelInspector.view.frame = [AxisLabelsInspector inspectorFrame];
       [self.view addSubview : labelInspector.view];
       labelInspector.view.hidden = YES;
@@ -46,18 +44,6 @@
    }
     
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void) dealloc
-{
-   self.tabBar = nil;
-
-   [ticksInspector release];
-   [titleInspector release];
-   [labelInspector release];
-
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________

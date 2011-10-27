@@ -25,7 +25,6 @@
 {
    editorView = [[EditorView alloc] initWithFrame:CGRectMake(0.f, 0.f, [EditorView editorWidth], [EditorView editorHeight])];
    self.view = editorView;
-   [editorView release];
 }
 
 //____________________________________________________________________________________________________
@@ -56,16 +55,6 @@
       [self cacheEditors];
    }
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void) dealloc
-{
-   using ROOT_IOSObjectInspector::kNOfInspectors;
-   for (unsigned i = 0; i < kNOfInspectors; ++i)
-      [cachedEditors[i] release];
-
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________

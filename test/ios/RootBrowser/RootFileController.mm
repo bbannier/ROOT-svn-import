@@ -26,8 +26,6 @@
       self.navigationItem.backBarButtonItem = backButton;
       UIBarButtonItem *leftButton = [[UIBarButtonItem alloc] initWithTitle : @"Open file" style:UIBarButtonItemStylePlain target : self action : @selector(showFileOpenView)];
       self.navigationItem.leftBarButtonItem = leftButton;
-      [backButton release];
-      [leftButton release];
 
       scrollView.bounces = NO;
       
@@ -37,21 +35,9 @@
       
       UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hideFileOpenView)];
       [self.view addGestureRecognizer : tap];
-      [tap release];
    }
 
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void)dealloc
-{
-   self.scrollView = nil;
-   self.fileOpenView = nil;
-   self.fileNameField = nil;
-
-   [fileContainers release];
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
@@ -156,16 +142,11 @@
                                                 cancelButtonTitle : @"Close"
                                                 otherButtonTitles : nil];
       [alert show];
-      [alert release];
-      [newShortcut release];
       return;
    }
 
    [fileContainers addObject : newShortcut];
-   [scrollView addSubview : newShortcut];
-        
-   [newShortcut release];
-   
+   [scrollView addSubview : newShortcut];   
    [self placeFileShortcuts];
 }
 
@@ -175,7 +156,6 @@
    FileContentController *contentController = [[FileContentController alloc] initWithNibName : @"FileContentController" bundle : nil];
    [contentController activateForFile : [shortcut getFileContainer]];
    [self.navigationController pushViewController : contentController animated : YES];
-   [contentController release];
 }
 
 //____________________________________________________________________________________________________

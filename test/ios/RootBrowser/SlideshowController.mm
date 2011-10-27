@@ -50,7 +50,6 @@
       padViews[i] = [[SlideView alloc] initWithFrame : padFrame];
       [padParentView addSubview : padViews[i]];
       padViews[i].hidden = YES;
-      [padViews[i] release];
    }
 }
 
@@ -90,11 +89,6 @@
 {
    if (timer)
       [timer invalidate];
-
-   self.parentView = nil;
-   self.padParentView = nil;
-
-   [super dealloc];
 }
 
 //____________________________________________________________________________________________________
