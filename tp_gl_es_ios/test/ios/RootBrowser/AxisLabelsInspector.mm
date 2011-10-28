@@ -1,32 +1,27 @@
 #import "ROOTObjectController.h"
 #import "AxisLabelsInspector.h"
-#import "AxisColorInspector.h"
 #import "AxisFontInspector.h"
 
 #import "TObject.h"
 #import "TAxis.h"
 
-static const float sizeStep = 0.01f;
-static const float minSize = 0.f;
-static const float maxSize = 1.f;
+//It's mm file == C++, consts have internal linkage.
+const float sizeStep = 0.01f;
+const float minSize = 0.f;
+const float maxSize = 1.f;
 
-static const float offsetStep = 0.001f;
-static const float minOffset = -1.f;
-static const float maxOffset = 1.f;
+const float offsetStep = 0.001f;
+const float minOffset = -1.f;
+const float maxOffset = 1.f;
 
-static const float totalHeight = 400.f;
-static const float tabBarHeight = 49.f;
-static const CGRect componentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHeight - tabBarHeight);
+const float totalHeight = 400.f;
+const float tabBarHeight = 49.f;
+const CGRect componentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHeight - tabBarHeight);
 
-@implementation AxisLabelsInspector
-
-@synthesize plusSize;
-@synthesize minusSize;
-@synthesize sizeLabel;
-@synthesize plusOffset;
-@synthesize minusOffset;
-@synthesize offsetLabel;
-@synthesize noExp;
+@implementation AxisLabelsInspector {
+   __weak ROOTObjectController *controller;
+   TAxis *object;
+}
 
 //____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
@@ -153,12 +148,6 @@ static const CGRect componentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalH
 {
    object->SetNoExponent(noExp.on);
    [controller objectWasModifiedUpdateSelection : NO];
-}
-
-//____________________________________________________________________________________________________
-- (IBAction) back
-{
-   [self.navigationController popViewControllerAnimated : YES];
 }
 
 @end

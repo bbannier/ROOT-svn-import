@@ -6,12 +6,11 @@
 #import "TAxis.h"
 #import "TH1.h"
 
-@implementation H1BinsInspector
-
-@synthesize titleField;
-@synthesize minLabel;
-@synthesize maxLabel;
-@synthesize showMarkers;
+@implementation H1BinsInspector {
+   RangeSlider *axisRangeSlider;
+   __weak ROOTObjectController *controller;
+   TH1 *object;
+}
 
 //____________________________________________________________________________________________________
 - (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
@@ -22,15 +21,6 @@
    }
 
    return self;
-}
-
-//____________________________________________________________________________________________________
-- (void) dealloc
-{
-   self.titleField = nil;
-   self.minLabel = nil;
-   self.maxLabel = nil;
-   self.showMarkers = nil;
 }
 
 //____________________________________________________________________________________________________

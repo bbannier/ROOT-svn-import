@@ -18,7 +18,31 @@
 #import "TClass.h"
 #import "TH1.h"
 
-@implementation ObjectInspector
+namespace {
+   enum {
+      //Just indices.
+      kAttLine = 0,
+      kAttFill = 1,
+      kAttPad = 2,
+      kAttAxis  = 3,
+      //Add the new one here.
+      kAttMarker = 4,
+      kAttH1 = 5,
+      kNOfInspectors //
+   };
+}
+
+@implementation ObjectInspector {
+   UIViewController <ObjectInspectorComponent> *activeEditors[kNOfInspectors];
+   UIViewController <ObjectInspectorComponent> *cachedEditors[kNOfInspectors];
+
+   unsigned nActiveEditors;
+   
+   TObject *object;
+   
+   EditorView *editorView;
+}
+
 
 //____________________________________________________________________________________________________
 - (void) initObjectInspectorView
@@ -30,8 +54,6 @@
 //____________________________________________________________________________________________________
 - (void) cacheEditors
 {
-   using namespace ROOT_IOSObjectInspector;
-
    //TAttLine.
    cachedEditors[kAttLine] = [[LineInspector alloc] initWithNibName : @"LineInspector" bundle : nil];//lineInspector;   
    //TAttFill.
@@ -120,8 +142,6 @@
 //____________________________________________________________________________________________________
 - (void) setActiveEditors
 {
-   using namespace ROOT_IOSObjectInspector;
-
    nActiveEditors = 0;
 
    if (dynamic_cast<TAttLine *>(object))

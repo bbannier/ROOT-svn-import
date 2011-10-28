@@ -11,15 +11,27 @@
 #import "TObject.h"
 #import "TGraph.h"
 
-@implementation LineInspector
-
-//These constants are from ROOT's TAttLine's editor.
+//It's mm file == C++, consts have internal linkage.
 const int minLineWidth = 1;
 const int maxLineWidth = 15;
+const CGRect cellFrame = CGRectMake(0.f, 0.f, 50.f, 50.f);
 
-@synthesize lineWidthPicker;
+@interface LineInspector () {
+   NSMutableArray *lineStyles;
+   NSMutableArray *lineColors;
 
-static const CGRect cellFrame = CGRectMake(0.f, 0.f, 50.f, 50.f);
+   HorizontalPickerView *lineColorPicker;
+   HorizontalPickerView *lineStylePicker;
+
+   int lineWidth;
+
+   __weak ROOTObjectController *controller;
+   TAttLine *object;
+}
+
+@end
+
+@implementation LineInspector
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil

@@ -18,15 +18,44 @@
 #import "IOSPad.h"
 //#import "TFile.h"
 
+namespace {
+//Ugly Obj-C, implementation block is not a scope, so either static or unnamed namespace :(
+
 //This constant is used to check, if pad was
 //scaled to possible maximum or still can be zoomed in.
-static const CGFloat scaledToMaxEpsilon = 5.f;
-static const CGFloat maximumZoom = 2.f;
+const CGFloat scaledToMaxEpsilon = 5.f;
+const CGFloat maximumZoom = 2.f;
 
-@implementation ROOTObjectController
+enum Mode {
+   ocmNavigation,
+   ocmEdit
+};
 
-@synthesize navigationScrollView;
-@synthesize padScrollView;
+}
+
+@implementation ROOTObjectController {
+   Mode mode;
+
+   EditorView *editorView;
+   ObjectInspector *objectInspector;
+   
+   PadView *editablePadView;
+
+   ROOT::iOS::FileContainer *fileContainer;
+
+   TObject *selectedObject;
+   
+   BOOL zoomed;
+   
+   PadImageScrollView *navScrolls[3];
+
+   unsigned currentObject;
+   unsigned nextObject;
+   unsigned previousObject;
+   
+   UIBarButtonItem *editBtn;   
+}
+
 
 #pragma mark - Special methods to manage drawing options.
 
@@ -92,8 +121,8 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (void) resetEditorButton
 {
-   editBtn.style = mode == ROOT_IOSObjectController::ocmEdit ? UIBarButtonItemStyleDone : UIBarButtonItemStyleBordered;
-   editBtn.title = mode == ROOT_IOSObjectController::ocmEdit ? @"Done" : @"Edit";
+   editBtn.style = mode == ocmEdit ? UIBarButtonItemStyleDone : UIBarButtonItemStyleBordered;
+   editBtn.title = mode == ocmEdit ? @"Done" : @"Edit";
 }
 
 #pragma mark - Initialization code, called from initWithNibname
@@ -230,8 +259,8 @@ static const CGFloat maximumZoom = 2.f;
    }
    
    self.view.frame = mainFrame;
-   self.padScrollView.frame = scrollFrame;
-   self.navigationScrollView.frame = scrollFrame;
+   padScrollView.frame = scrollFrame;
+   navigationScrollView.frame = scrollFrame;
    
    scrollFrame.origin = CGPointZero;
    for (unsigned i = 0; i < 3; ++i) {
@@ -266,7 +295,7 @@ static const CGFloat maximumZoom = 2.f;
    if (self) {
       [self view];//force view loading.
       
-      mode = ROOT_IOSObjectController::ocmNavigation;
+      mode = ocmNavigation;
 
       [self loadObjectInspector];
       [self setupScrollForEditablePadView];
@@ -363,8 +392,6 @@ static const CGFloat maximumZoom = 2.f;
 //____________________________________________________________________________________________________
 - (void) toggleEditor
 {
-   using namespace ROOT_IOSObjectController;
-   
    mode = mode == ocmEdit ? ocmNavigation : ocmEdit;
    [self resetEditorButton];
 
@@ -379,7 +406,11 @@ static const CGFloat maximumZoom = 2.f;
       [editablePadView setNeedsDisplay];
 
       [self setupObjectInspector];
-
+      
+      //Check this.
+      [objectInspector resetInspector];
+      //
+      
       editorView.hidden = NO;      
       navigationScrollView.hidden = YES;
       padScrollView.hidden = NO;
@@ -417,7 +448,7 @@ static const CGFloat maximumZoom = 2.f;
    //This method is called after initWithNibName was called, so it's the second step
    //of controller's construction. The default mode is ocmNavigation, so setup navigation
    //views/pad etc.
-   mode = ROOT_IOSObjectController::ocmNavigation;
+   mode = ocmNavigation;
 
    
    fileContainer = container;

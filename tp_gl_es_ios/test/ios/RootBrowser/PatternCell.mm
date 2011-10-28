@@ -6,7 +6,10 @@
 
 #import "PatternCell.h"
 
-@implementation PatternCell
+@implementation PatternCell {
+   unsigned patternIndex;
+   BOOL solid;
+}
 
 //____________________________________________________________________________________________________
 - (id) initWithFrame : (CGRect)frame andPattern : (unsigned) index

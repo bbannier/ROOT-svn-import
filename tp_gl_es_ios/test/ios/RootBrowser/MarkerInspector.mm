@@ -5,14 +5,11 @@
 #import "ColorCell.h"
 #import "Constants.h"
 
+//C++ (ROOT) imports.
 #import "TAttMarker.h"
 #import "TObject.h"
 
-@implementation MarkerInspector
-
-@synthesize plusBtn;
-@synthesize minusBtn;
-@synthesize sizeLabel;
+namespace {
 
 const CGRect cellRect = CGRectMake(0.f, 0.f, 50.f, 50.f);
 
@@ -30,11 +27,24 @@ EMarkerStyle markerStyles[] = {kDot, kPlus, kStar, kCircle, kMultiply,
 const unsigned nMarkers = sizeof markerStyles / sizeof markerStyles[0];
 
 //____________________________________________________________________________________________________
-static BOOL canScaleMarker(Style_t style)
+BOOL canScaleMarker(Style_t style)
 {
    if (style == kDot || style == kFullDotSmall || style == kFullDotMedium)
       return NO;
    return YES;
+}
+
+}
+
+@implementation MarkerInspector {
+   HorizontalPickerView *markerStylePicker;
+   HorizontalPickerView *markerColorPicker;
+
+   NSMutableArray *styleCells;
+   NSMutableArray *colorCells;
+   
+   __weak ROOTObjectController *controller;
+   TAttMarker *object;
 }
 
 //____________________________________________________________________________________________________
