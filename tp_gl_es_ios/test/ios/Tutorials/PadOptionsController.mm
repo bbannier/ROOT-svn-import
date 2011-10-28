@@ -7,8 +7,6 @@
 #import "IOSFillPatterns.h"
 #import "IOSPad.h"
 
-@implementation PadOptionsController
-
 const double predefinedFillColors[16][3] = {
 {1., 1., 1.},
 {0., 0., 0.},
@@ -36,17 +34,14 @@ const unsigned colorIndices[16] = {
 8, 9, 30, 38,
 41, 42, 50, 51};
 
-@synthesize tickX = tickX_;
-@synthesize tickY = tickY_;
-@synthesize gridX = gridX_;
-@synthesize gridY = gridY_;
-@synthesize logX = logX_;
-@synthesize logY = logY_;
-@synthesize logZ = logZ_;
-@synthesize colorPicker = colorPicker_;
-@synthesize patternPicker = patternPicker_;
-@synthesize colors = colors_;
-@synthesize patterns = patterns_;
+
+@implementation PadOptionsController {
+   NSMutableArray *colors_;
+   NSMutableArray *patterns_;
+   
+   ROOT::iOS::Pad *pad;
+   PadView *padView;
+}
 
 //_________________________________________________________________
 - (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
