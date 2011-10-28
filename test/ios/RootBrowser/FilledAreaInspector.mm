@@ -10,11 +10,21 @@
 #import "TAttFill.h"
 #import "TObject.h"
 
-//TODO: check, if in Obj-C++ constants have internal linkage.
-static const CGFloat defaultCellW = 50.f;
-static const CGFloat defaultCellH = 50.f;
+//It's mm file == C++, consts have internal linkage.
+const CGFloat defaultCellW = 50.f;
+const CGFloat defaultCellH = 50.f;
 
-@implementation FilledAreaInspector
+@implementation FilledAreaInspector  {
+   HorizontalPickerView *colorPicker;
+   HorizontalPickerView *patternPicker;
+   
+   NSMutableArray *colorCells;
+   NSMutableArray *patternCells;
+   
+   TAttFill *filledObject;
+   
+   __weak ROOTObjectController *parentController;
+}
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil

@@ -2,13 +2,25 @@
 
 #import "HorizontalPickerView.h"
 
-@implementation HorizontalPickerView
-
+namespace {
+//Obj-C class is not a scope :((( UGLY LANGUAGE!
 const CGFloat pickerWidth = 200.f;
 const CGFloat cellWidth = 50.f;
 const CGFloat cellHeight = 50.f;
 const CGFloat xPad = 1.5 * cellWidth;
 const CGFloat markerPos = 100.f;
+
+}
+
+@implementation HorizontalPickerView {
+   UIScrollView *contentScroll;
+   UIImageView *arrowView;
+   UIImage *frameImage;
+   UIImage *backgroundImage;
+   
+   unsigned selectedItem;
+}
+
 
 @synthesize pickerDelegate;
 

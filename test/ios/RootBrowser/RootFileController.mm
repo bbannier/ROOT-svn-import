@@ -5,11 +5,9 @@
 #import "FileShortcut.h"
 #import "Shortcuts.h"
 
-@implementation RootFileController
-
-@synthesize scrollView;
-@synthesize fileOpenView;
-@synthesize fileNameField;
+@implementation RootFileController {
+   NSMutableArray *fileContainers;
+}
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
@@ -75,7 +73,7 @@
    }
    
    self.view.frame = mainFrame;
-   self.scrollView.frame = scrollFrame;
+   scrollView.frame = scrollFrame;
    
    fileOpenView.frame = fileViewFrame;
    

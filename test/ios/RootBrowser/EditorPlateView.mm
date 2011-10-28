@@ -6,7 +6,14 @@
 #import "EditorView.h"
 
 
-@implementation EditorPlateView
+@implementation EditorPlateView {
+   UIImage *plateImage;
+   UILabel *editorLabel;
+   
+   UIImage *arrowImage;
+   
+   EditorView *topView;
+}
 
 @synthesize editorName;
 @synthesize arrowImageView;
@@ -23,7 +30,7 @@
    self = [super initWithFrame:frame];
 
    if (self) {
-      editorLabel = [[UILabel alloc] initWithFrame:CGRectMake(frame.size.width / 2 - 60.f, 10.f, 120.f, 30.f)];
+      editorLabel = [[UILabel alloc] initWithFrame : CGRectMake(frame.size.width / 2 - 60.f, 10.f, 120.f, 30.f)];
       editorLabel.backgroundColor = [UIColor clearColor];
       editorLabel.font = [UIFont systemFontOfSize : 14];
       editorLabel.textAlignment = UITextAlignmentCenter;

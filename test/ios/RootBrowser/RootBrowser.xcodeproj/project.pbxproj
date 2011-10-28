@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		7014410F140E18390070459F /* SelectionView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7014410E140E18390070459F /* SelectionView.mm */; };
 		70144120140E3F1D0070459F /* LineStyleCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7014411F140E3F1D0070459F /* LineStyleCell.mm */; };
-		70144123140E3F320070459F /* LineWidthCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 70144122140E3F320070459F /* LineWidthCell.m */; };
+		70144123140E3F320070459F /* LineWidthCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70144122140E3F320070459F /* LineWidthCell.mm */; };
 		70144129140E553C0070459F /* line_cell.png in Resources */ = {isa = PBXBuildFile; fileRef = 70144128140E553C0070459F /* line_cell.png */; };
 		702357DB14345C0A00A95000 /* H1ErrorsInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 702357D914345C0A00A95000 /* H1ErrorsInspector.mm */; };
 		702357DC14345C0A00A95000 /* H1ErrorsInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 702357DA14345C0A00A95000 /* H1ErrorsInspector.xib */; };
@@ -67,7 +67,6 @@
 		7068FF2B141A2F6A003560A1 /* text_cell_bkn.png in Resources */ = {isa = PBXBuildFile; fileRef = 7068FF2A141A2F6A003560A1 /* text_cell_bkn.png */; };
 		7068FF31141A3944003560A1 /* AxisLabelsInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7068FF2F141A3943003560A1 /* AxisLabelsInspector.mm */; };
 		7068FF32141A3944003560A1 /* AxisLabelsInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7068FF30141A3944003560A1 /* AxisLabelsInspector.xib */; };
-		7073A26B14174E74001A0FE2 /* AxisColorInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7073A26914174E74001A0FE2 /* AxisColorInspector.mm */; };
 		7073A26C14174E74001A0FE2 /* AxisColorInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7073A26A14174E74001A0FE2 /* AxisColorInspector.xib */; };
 		7073A275141757BC001A0FE2 /* AxisTicksInspector.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7073A273141757BB001A0FE2 /* AxisTicksInspector.mm */; };
 		7073A276141757BC001A0FE2 /* AxisTicksInspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7073A274141757BB001A0FE2 /* AxisTicksInspector.xib */; };
@@ -129,7 +128,7 @@
 		7014411E140E3F1D0070459F /* LineStyleCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineStyleCell.h; sourceTree = "<group>"; };
 		7014411F140E3F1D0070459F /* LineStyleCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineStyleCell.mm; sourceTree = "<group>"; };
 		70144121140E3F320070459F /* LineWidthCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineWidthCell.h; sourceTree = "<group>"; };
-		70144122140E3F320070459F /* LineWidthCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LineWidthCell.m; sourceTree = "<group>"; };
+		70144122140E3F320070459F /* LineWidthCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LineWidthCell.mm; sourceTree = "<group>"; };
 		70144128140E553C0070459F /* line_cell.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = line_cell.png; sourceTree = "<group>"; };
 		702357D814345C0A00A95000 /* H1ErrorsInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = H1ErrorsInspector.h; sourceTree = "<group>"; };
 		702357D914345C0A00A95000 /* H1ErrorsInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = H1ErrorsInspector.mm; sourceTree = "<group>"; };
@@ -211,8 +210,6 @@
 		7068FF2E141A3943003560A1 /* AxisLabelsInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AxisLabelsInspector.h; sourceTree = "<group>"; };
 		7068FF2F141A3943003560A1 /* AxisLabelsInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AxisLabelsInspector.mm; sourceTree = "<group>"; };
 		7068FF30141A3944003560A1 /* AxisLabelsInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AxisLabelsInspector.xib; sourceTree = "<group>"; };
-		7073A26814174E74001A0FE2 /* AxisColorInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AxisColorInspector.h; sourceTree = "<group>"; };
-		7073A26914174E74001A0FE2 /* AxisColorInspector.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AxisColorInspector.mm; sourceTree = "<group>"; };
 		7073A26A14174E74001A0FE2 /* AxisColorInspector.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AxisColorInspector.xib; sourceTree = "<group>"; };
 		7073A272141757BB001A0FE2 /* AxisTicksInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AxisTicksInspector.h; sourceTree = "<group>"; };
 		7073A273141757BB001A0FE2 /* AxisTicksInspector.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = AxisTicksInspector.mm; sourceTree = "<group>"; };
@@ -438,8 +435,6 @@
 				70681C1C1416474000F8338A /* FilledAreaInspector.mm */,
 				70681C201416586D00F8338A /* ObjectInspector.h */,
 				70681C211416586D00F8338A /* ObjectInspector.mm */,
-				7073A26814174E74001A0FE2 /* AxisColorInspector.h */,
-				7073A26914174E74001A0FE2 /* AxisColorInspector.mm */,
 				7073A272141757BB001A0FE2 /* AxisTicksInspector.h */,
 				7073A273141757BB001A0FE2 /* AxisTicksInspector.mm */,
 				7073A27B14177A03001A0FE2 /* AxisInspector.h */,
@@ -564,7 +559,7 @@
 				7077906B13FE96C200C0FFA1 /* EditorView.mm */,
 				7077906C13FE96C200C0FFA1 /* EditorView.h */,
 				70144121140E3F320070459F /* LineWidthCell.h */,
-				70144122140E3F320070459F /* LineWidthCell.m */,
+				70144122140E3F320070459F /* LineWidthCell.mm */,
 				7014411E140E3F1D0070459F /* LineStyleCell.h */,
 				7014411F140E3F1D0070459F /* LineStyleCell.mm */,
 				7077906F13FE96C200C0FFA1 /* EditorPlateView.mm */,
@@ -776,7 +771,7 @@
 				70252F7C140CDD8D00F3660F /* Constants.mm in Sources */,
 				7014410F140E18390070459F /* SelectionView.mm in Sources */,
 				70144120140E3F1D0070459F /* LineStyleCell.mm in Sources */,
-				70144123140E3F320070459F /* LineWidthCell.m in Sources */,
+				70144123140E3F320070459F /* LineWidthCell.mm in Sources */,
 				702DDD1B1415FEA1009FC6F3 /* LineInspector.mm in Sources */,
 				702DDD2914161789009FC6F3 /* InspectorWithNavigation.mm in Sources */,
 				70681C0D1416365900F8338A /* PadInspector.mm in Sources */,
@@ -784,7 +779,6 @@
 				70681C1914163F0C00F8338A /* PadLogScaleInspector.mm in Sources */,
 				70681C1E1416474000F8338A /* FilledAreaInspector.mm in Sources */,
 				70681C221416586D00F8338A /* ObjectInspector.mm in Sources */,
-				7073A26B14174E74001A0FE2 /* AxisColorInspector.mm in Sources */,
 				7073A275141757BC001A0FE2 /* AxisTicksInspector.mm in Sources */,
 				7073A27E14177A03001A0FE2 /* AxisInspector.mm in Sources */,
 				7073A2871417AA10001A0FE2 /* AxisTitleInspector.mm in Sources */,

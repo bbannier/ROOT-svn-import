@@ -11,9 +11,10 @@
 #import "IOSFileContainer.h"
 #import "IOSPad.h"
 
-@implementation FileContentController
+@implementation FileContentController {
+   NSMutableArray *objectShortcuts;
+}
 
-@synthesize scrollView;
 @synthesize fileContainer;
 
 //____________________________________________________________________________________________________
@@ -59,7 +60,7 @@
    }
    
    self.view.frame = mainFrame;
-   self.scrollView.frame = scrollFrame;
+   scrollView.frame = scrollFrame;
    
    if ([[scrollView subviews] count])
       [ShorcutUtil placeShortcuts : objectShortcuts inScrollView : scrollView withSize : CGSizeMake([ObjectShortcut iconWidth], [ObjectShortcut iconHeight] + [ObjectShortcut textHeight]) andSpace : 100.f];
@@ -103,7 +104,7 @@
 //____________________________________________________________________________________________________
 - (void) clearScrollview
 {
-   NSArray *viewsToRemove = [self.scrollView subviews];
+   NSArray *viewsToRemove = [scrollView subviews];
    for (UIView *v in viewsToRemove)
       [v removeFromSuperview];
 

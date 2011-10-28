@@ -1,13 +1,27 @@
 #import "InspectorWithNavigation.h"
 #import "AxisLabelsInspector.h"
 #import "AxisTitleInspector.h"
-#import "AxisColorInspector.h"
 #import "AxisTicksInspector.h"
 #import "AxisInspector.h"
 
-@implementation AxisInspector
+@interface AxisInspector () {
+   AxisTicksInspector *ticksInspector;
 
-@synthesize tabBar;
+   InspectorWithNavigation *titleInspector;
+   InspectorWithNavigation *labelInspector;
+
+   __weak ROOTObjectController *controller;
+   TObject *object;
+}
+
+- (void) showTicksInspector;
+- (void) showAxisTitleInspector;
+- (void) showAxisLabelsInspector;
+
+@end
+
+
+@implementation AxisInspector
 
 //____________________________________________________________________________________________________
 + (CGRect) inspectorFrame
@@ -114,7 +128,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (IBAction) showTicksInspector
+- (void) showTicksInspector
 {
    ticksInspector.view.hidden = NO;
    titleInspector.view.hidden = YES;
@@ -122,7 +136,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (IBAction) showAxisTitleInspector
+- (void) showAxisTitleInspector
 {
    ticksInspector.view.hidden = YES;
    titleInspector.view.hidden = NO;
@@ -130,7 +144,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (IBAction) showAxisLabelsInspector
+- (void) showAxisLabelsInspector
 {
    ticksInspector.view.hidden = YES;
    titleInspector.view.hidden = YES;

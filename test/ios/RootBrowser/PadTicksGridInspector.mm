@@ -1,15 +1,13 @@
-#import "ROOTObjectController.h"
 #import "PadTicksGridInspector.h"
+#import "ROOTObjectController.h"
 
 #import "TVirtualPad.h"
 #import "TObject.h"
 
-@implementation PadTicksGridInspector
-
-@synthesize gridX;
-@synthesize gridY;
-@synthesize ticksX;
-@synthesize ticksY;
+@implementation PadTicksGridInspector {
+   __weak ROOTObjectController *controller;
+   TVirtualPad *object;
+}
 
 //____________________________________________________________________________________________________
 - (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil

@@ -5,7 +5,9 @@
 #import "IOSMarkers.h"
 #import "TPoint.h"
 
-@implementation MarkerStyleCell
+@implementation MarkerStyleCell {
+   EMarkerStyle markerStyle;
+}
 
 //____________________________________________________________________________________________________
 - (id) initWithFrame : (CGRect)frame andMarkerStyle : (EMarkerStyle)style

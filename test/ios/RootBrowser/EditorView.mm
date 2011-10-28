@@ -7,9 +7,37 @@
 #import "EditorView.h"
 
 
-namespace ObjIns = ROOT_IOSObjectInspector;
+//Hoho! As soon as I use Objective-C++, I can use namespaces! "Yeaaahhh, that's good!" (c) Duke Nukem.
 
-@implementation EditorView
+namespace {
+
+enum {
+   evMaxComponents = 5,
+   evMaxStates = 1 << evMaxComponents
+};
+
+}
+
+@implementation EditorView {
+   UILabel *editorTitle;
+
+   ScrollViewWithPickers *scrollView;
+
+   CGFloat plateYs[evMaxStates * evMaxComponents];
+   CGFloat viewYs[evMaxStates * evMaxComponents];
+   
+   UIView *plates[evMaxComponents];
+   UIView *views[evMaxComponents];
+   UIView *containers[evMaxComponents];   
+
+   unsigned nStates;
+   unsigned nEditors;
+   unsigned currentState;
+   
+   int newOpened;
+   
+   BOOL animation;
+}
 
 //____________________________________________________________________________________________________
 + (CGFloat) editorAlpha
@@ -189,7 +217,7 @@ namespace ObjIns = ROOT_IOSObjectInspector;
 //____________________________________________________________________________________________________
 - (void) addSubEditor:(UIView *)element withName : (NSString *)name
 {
-   if (nEditors == ROOT_IOSObjectInspector::evMaxComponents) {
+   if (nEditors == evMaxComponents) {
       NSLog(@"Could not add more editors");
       return;
    }

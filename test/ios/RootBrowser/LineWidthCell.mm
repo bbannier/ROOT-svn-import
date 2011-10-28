@@ -4,7 +4,9 @@
 #import "LineWidthCell.h"
 
 
-@implementation LineWidthCell
+@implementation LineWidthCell {
+   CGFloat lineWidth;
+}
 
 //____________________________________________________________________________________________________
 - (id)initWithFrame:(CGRect)frame width : (CGFloat)w

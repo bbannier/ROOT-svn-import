@@ -1,7 +1,10 @@
 #import "LineWidthPicker.h"
 #import "LineWidthCell.h"
 
-@implementation LineWidthPicker
+@implementation LineWidthPicker {
+   LineWidthCell *lineWidthView;
+   UIImage *backgroundImage;
+}
 
 //____________________________________________________________________________________________________
 - (void) lateInit

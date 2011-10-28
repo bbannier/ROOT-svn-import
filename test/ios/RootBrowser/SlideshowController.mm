@@ -9,11 +9,16 @@
 #import "IOSFileContainer.h"
 #import "IOSPad.h"
 
-@implementation SlideshowController
+@implementation SlideshowController {
+   SlideView *padViews[2];//The current and the next in a slide show.
 
-
-@synthesize parentView;
-@synthesize padParentView;
+   unsigned visiblePad;
+   unsigned nCurrentObject;
+   
+   ROOT::iOS::FileContainer *fileContainer;
+   
+   NSTimer *timer;
+}
 
 //____________________________________________________________________________________________________
 - (void) correctFramesForOrientation : (UIInterfaceOrientation) orientation

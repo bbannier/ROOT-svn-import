@@ -6,7 +6,9 @@
 //C++ (ROOT) imports.
 #import "IOSLineStyles.h"
 
-@implementation LineStyleCell
+@implementation LineStyleCell {
+   unsigned lineStyle;
+}
 
 //____________________________________________________________________________________________________
 - (id) initWithFrame : (CGRect)frame lineStyle : (unsigned) style
