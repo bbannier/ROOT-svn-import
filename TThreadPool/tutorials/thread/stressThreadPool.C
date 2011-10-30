@@ -1,6 +1,6 @@
 // Usage:
-// root [0] .L threadPool.C++
-// root [1] threadPool()
+// root [0] .L stressThreadPool.C++
+// root [1] stressThreadPool()
 
 // STD
 #include <iostream>
@@ -34,8 +34,6 @@ public:
 
 private:
    unsigned long m_tid;
-
-   ClassDef(TTestTask, 0)
 };
 ostream &operator<< (ostream &_stream, const TTestTask &_task)
 {
@@ -44,7 +42,7 @@ ostream &operator<< (ostream &_stream, const TTestTask &_task)
 }
 
 //=============================================================================
-void threadPool(size_t _numThreads, bool _needDbg = false)
+void stressThreadPool(size_t _numThreads, bool _needDbg = false)
 {
    size_t numTasks(_numThreads * g_multTasks);
    TThreadPool<TTestTask, EProc> threadPool(_numThreads, _needDbg);
@@ -77,14 +75,14 @@ void threadPool(size_t _numThreads, bool _needDbg = false)
 
    counter_t::const_iterator iter = counter.begin();
    counter_t::const_iterator iter_end = counter.end();
+   bool testOK=true;
    for (; iter != iter_end; ++iter) {
       cout << "Thread " << iter->first << " was used " << iter->second << " times\n";
       // each thread suppose to be used equal amount of time,
       // exactly (g_numTasks/g_numThreads) times
-      if (iter->second != g_multTasks) {
-         cerr << "ThreadPool: simple test - Failed" << endl;
-         return;
-      }
+      if (iter->second != g_multTasks) 
+         testOK = false;
    }
-   cout << "ThreadPool: simple test - OK" << endl;
+
+   cout << "ThreadPool: simple test - "<< (testOK? "OK": "Failed") << endl;
 }
