@@ -56,6 +56,18 @@ private:
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TThreadPoolTaskImp                                                   //
+// A base class for thread pool tasks. Users must inherit their         //
+// tasks classes from it.                                               //
+// Example:                                                             //
+//        class TTestTask: public TThreadPoolTaskImp<TTestTask, int>    //
+//                                                                      //
+//        in this example,                                              //
+//           TTestTask - is a user class, which implements              //
+//                       thread pool task object.                       //
+//           int - is a type of argument to TTestTask::run method.      //
+//                                                                      //
+// Please see the tutorial "tutorials/thread/threadPool.C" for    //
+// more details on how to use TThreadPool.                              //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
@@ -70,6 +82,9 @@ public:
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TThreadPoolTask                                                      //
+// This is a supporting class for TThreadPool.                          //
+// It wraps users task objects in order to pass tasks arguments in      // 
+// type-safe way.                                                       //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
@@ -94,6 +109,11 @@ private:
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TThreadPool                                                          //
+// This class implement a simple Thread Pool pattern.                   //
+// So far it supports only one type of queue - FIFO                     //
+//                                                                      //
+// Please see the tutorial "tutorials/thread/threadPool.C" for    //
+// more details on how to use TThreadPool.                              //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 template <class _T, class _P>
