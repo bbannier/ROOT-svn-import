@@ -386,6 +386,7 @@ void RooDataHist::importTH1(const RooArgList& vars, TH1& histo, Double_t wgt, Bo
     volume *= (zvar->getMax()-zvar->getMin()) ;
   }
   Double_t avgBV = volume / numEntries() ;
+//   cout << "average bin volume = " << avgBV << endl ;
 
   Int_t ix(0),iy(0),iz(0) ;
   for (ix=0 ; ix < xvar->getBins() ; ix++) {
@@ -405,7 +406,9 @@ void RooDataHist::importTH1(const RooArgList& vars, TH1& histo, Double_t wgt, Bo
 	}
       }
     } else {
-      Double_t bv = doDensityCorrection ? binVolume(vset)/avgBV : 1;
+      Double_t bv = doDensityCorrection ? binVolume(vset)/avgBV : 1 ;
+//       cout << " RooDataHist(" << GetName() << ") ix = " << ix << " binVolume = " << bv << " binContent = " << histo.GetBinContent(ix+1+xmin) 
+// 	   << " wgt = " << wgt << " value in RDH = " << bv*histo.GetBinContent(ix+1+xmin)*wgt << endl ;
       add(vset,bv*histo.GetBinContent(ix+1+xmin)*wgt,bv*TMath::Power(histo.GetBinError(ix+1+xmin)*wgt,2)) ;	    
     }
   }  
@@ -826,6 +829,7 @@ void RooDataHist::initialize(const char* binningName, Bool_t fillTree)
       RooAbsLValue* arglv = dynamic_cast<RooAbsLValue*>(arg2) ;
       arglv->setBin(idx) ;
       theBinVolume *= arglv->getBinWidth(idx) ;
+//       cout << "init: binv[" << idx << "] = " << theBinVolume << endl ;
     }
     _binv[ibin] = theBinVolume ;
     fill() ;
@@ -1506,7 +1510,7 @@ Double_t RooDataHist::sum(const RooArgSet& sumSet, const RooArgSet& sliceSet, Bo
   sliceOnlySet->remove(sumSet,kTRUE,kTRUE) ;
 
   _vars = *sliceOnlySet ;
-  calculatePartialBinVolume(*sliceOnlySet) ;
+  calculatePartialBinVolume(sumSet) ;
   delete sliceOnlySet ;
 
   TIterator* ssIter = sumSet.createIterator() ;
@@ -1549,8 +1553,8 @@ Double_t RooDataHist::sum(const RooArgSet& sumSet, const RooArgSet& sliceSet, Bo
     
     if (!skip) {
       Double_t theBinVolume = correctForBinSize ? (*_pbinv)[ibin] : 1.0 ;
-      //cout << "adding bin[" << ibin << "] to sum wgt = " << _wgt[ibin] << " binv = " << theBinVolume << endl ;
-      total += _wgt[ibin]/theBinVolume ;
+//       cout << "adding bin[" << ibin << "] to sum wgt = " << _wgt[ibin] << " binv = " << theBinVolume << endl ;
+      total += _wgt[ibin]*theBinVolume ;
     }
   }
   delete ssIter ;
@@ -1629,12 +1633,28 @@ Int_t RooDataHist::numEntries() const
 
 
 //_____________________________________________________________________________
+Double_t RooDataHist::sumEntries() const 
+{
+  Int_t i ;
+  Double_t n(0) ;
+  for (i=0 ; i<_arrSize ; i++) {
+    if (!_binValid || _binValid[i]) {
+      n+= _wgt[i] ;
+    }
+  }
+  return n ;
+}
+
+
+
+//_____________________________________________________________________________
 Double_t RooDataHist::sumEntries(const char* cutSpec, const char* cutRange) const
 {
   // Return the sum of weights in all entries matching cutSpec (if specified)
   // and in named range cutRange (if specified)
   // Return the
   checkInit() ;
+
   if (cutSpec==0 && cutRange==0) {
     Int_t i ;
     Double_t n(0) ;

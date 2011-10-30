@@ -105,9 +105,13 @@ options="                    \
    enable_xrootd             \
 "
 
+ENABLEALL="no"
 DEFAULTENABLE="yes"
 for flag in "$@"; do
     case $flag in
+    --all)
+       ENABLEALL="yes"
+       break ;;
     --gminimal)
        DEFAULTENABLE="no"
        MINIMALENABLE="enable_x11"
@@ -132,7 +136,7 @@ for c in $options $deprecated_options; do
 done
 for c in $options ; do eval ${c}_explicit="" ; done
 
-enable_cling=
+enable_cling=no
 enable_afs=no
 enable_alloc=no
 enable_gdml=no
@@ -151,7 +155,6 @@ enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
 enable_unuran=no
 enable_winrtdebug=
-enable_xrootd=           # must be set explicitely via --enable-xrootd
 enable_builtin_freetype=no
 enable_builtin_ftgl=no
 enable_builtin_glew=no
@@ -159,6 +162,17 @@ enable_builtin_pcre=no
 enable_builtin_zlib=no
 enable_builtin_lzma=no
 enable_afdsmgrd=no
+
+if test "x$ENABLEALL" = "xyes"; then
+    enable_gdml=yes
+    enable_qt=yes
+    enable_qtgsi=yes
+    enable_roofit=yes
+    enable_minuit2=yes
+    enable_ruby=yes
+    enable_table=yes
+    enable_unuran=yes
+fi
 
 # Remove old log file
 rm -f $logfile
@@ -355,34 +369,20 @@ check_libcompat() {
     chklibcompat=$1
     logmsg "Checking if $chklibcompat contains compatible code"
 
-    chkfilecompat=
-    if [ "x`basename $chklibcompat .a`" != "x`basename $chklibcompat`" ]; then
-        # we have an archive .a file
-        chkfilecompat=`ar t $chklibcompat | awk '{if (NR == 2) print $1}'`
-        logmsg " ar x $chklibcompat $chkfilecompat"
-        ar x $chklibcompat $chkfilecompat
-        chklibcompat=$chkfilecompat
-    fi
-
     case $arch in
     macosx)
-        logmsg " file -L $chklibcompat | grep 'i386'"
-        if file -L $chklibcompat | grep 'i386' > /dev/null 2>& 1 ; then
+        logmsg " lipo -info $chklibcompat | grep ' i386'"
+        if lipo -info $chklibcompat | grep ' i386' > /dev/null 2>& 1 ; then
             ret=1
         fi
         ;;
     macosx64)
-        logmsg " file -L $chklibcompat | grep 'x86_64'"
-        if file -L $chklibcompat | grep 'x86_64' > /dev/null 2>& 1 ; then
+        logmsg " lipo -info $chklibcompat | grep ' x86_64'"
+        if lipo -info $chklibcompat | grep ' x86_64' > /dev/null 2>& 1 ; then
             ret=1
         fi
         ;;
     esac
-
-    if test "x$chkfilecompat" != "x" && test -f $chkfilecompat ; then
-        logmsg " rm -f $chkfilecompat"
-        rm -f $chkfilecompat
-    fi
 
     logmsg " result: $ret"
     if test $ret -eq 1 ; then
@@ -1324,12 +1324,6 @@ PROOFDXINETDIN=${ac_srcdir}/config/proofd.xinetd.in
 PROOFDXINETDOUT=etc/daemons/proofd.xinetd
 PROOFSERVIN=${ac_srcdir}/config/proofserv.in
 PROOFSERVOUT=main/src/proofserv.sh
-XROOTDIN=${ac_srcdir}/config/xrootd.in
-XROOTDOUT=etc/daemons/xrootd.rc.d
-CMSDIN=${ac_srcdir}/config/cmsd.in
-CMSDOUT=etc/daemons/cmsd.rc.d
-OLBDIN=${ac_srcdir}/config/olbd.in
-OLBDOUT=etc/daemons/olbd.rc.d
 ROOTHELPIN=${ac_srcdir}/config/root-help.el.in
 ROOTHELPOUT=build/misc/root-help.el
 ROOTSIN=${ac_srcdir}/config/roots.in
@@ -1350,6 +1344,10 @@ GENREFLEXROOTCINTSHIN=${ac_srcdir}/config/genreflex-rootcint.in
 GENREFLEXROOTCINTSHOUT=bin/genreflex-rootcint
 GENREFLEXROOTCINTBATIN=${ac_srcdir}/config/genreflex-rootcint.bat.in
 GENREFLEXROOTCINTBATOUT=bin/genreflex-rootcint.bat
+SETXRDSHIN=${ac_srcdir}/config/setxrd.sh
+SETXRDSHOUT=bin/setxrd.sh
+SETXRDCSHIN=${ac_srcdir}/config/setxrd.csh
+SETXRDCSHOUT=bin/setxrd.csh
 
 # unset global command options that can cause havoc
 unset GREP_OPTIONS
@@ -1416,6 +1414,7 @@ enable/disable options, prefix with either --enable- or --disable-
   chirp              Chirp filesystem support, requires cctools >= 3.2.2
   cintex             Build the libCintex Reflex interface library
   clarens            Clarens RPC support, optionally used by PROOF
+  cling              Use cling as interpreter backend (experimental!), needs --with-llvm-config
   dcache             dCache support, requires libdcap from DESY
   exceptions         Turn on compiler exception handling capability
   explicitlink       Explicitly link with all dependent libraries
@@ -1471,6 +1470,10 @@ minimal set of libraries, can be combined with above --enable-... options
   --minimal          Do not automatically search for support libraries
   --gminimal         Do not automatically search for support libraries, but include X11
 
+maximal set of libraries, enables all optional packages
+
+  --all              Do try to enable all optional support libraries
+
 with options, prefix with --with-, enables corresponding support
 
   afs                AFS support, location of AFS distribution
@@ -1520,6 +1523,7 @@ with options, prefix with --with-, enables corresponding support
   krb5-libdir        Kerberos5 support, location of libkrb5
   ldap-incdir        LDAP support, location of ldap.h
   ldap-libdir        LDAP support, location of libldap
+  llvm-config        LLVM/clang for cling, location of llvm-config script
   monalisa-incdir    Monalisa support, location of ApMon.h
   monalisa-libdir    Monalisa support, location of libapmoncpp
   mysql-incdir       MySQL support, location of mysql.h
@@ -1563,7 +1567,6 @@ with options, prefix with --with-, enables corresponding support
   xrootd             XROOTD support, path to external XROOTD distribution
   xrootd-incdir      XROOTD support, path to external XROOTD header files (XrdVersion.hh, ...)
   xrootd-libdir      XROOTD support, path to external XROOTD libraries
-  xrootd-opts        XROOTD support, additional options to be passed to XROOTD-configure
 
 with compiler options, prefix with --with-, overrides default value
 
@@ -1744,7 +1747,7 @@ trapcmd="rm -f Makefile.tmp RConfigure.tmp RConfigure-out.tmp \
          Makefile-comp.tmp root-config.tmp rootrc.tmp \
          rootauthrc.tmp rootdaemonrc.tmp memprobe.tmp rootd.tmp \
          proofd.tmp rootd.xinetd.tmp proofd.xinetd.tmp conftest.mk \
-         conftest.c conftest xrootd.tmp olbd.tmp"
+         conftest.c conftest "
 trap "$trapcmd; exit 1" 1 2 3 15
 trap "$trapcmd" 0
 
@@ -1768,6 +1771,7 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
+      --all)                   ;;
       --minimal)               ;;
       --gminimal)              ;;
       --host)                  savearch=$arch
@@ -1825,6 +1829,7 @@ if test $# -gt 0 ; then
       --with-krb5-libdir=*)    krb5libdir=$optarg    ; enable_krb5="yes"    ;;
       --with-ldap-incdir=*)    ldapincdir=$optarg    ; enable_ldap="yes"    ;;
       --with-ldap-libdir=*)    ldaplibdir=$optarg    ; enable_ldap="yes"    ;;
+      --with-llvm-config=*)    llvmconfig=$optarg    ;; # require explicit --enable-cling
       --with-mysql-incdir=*)   mysqlincdir=$optarg   ; enable_mysql="yes"   ;;
       --with-mysql-libdir=*)   mysqllibdir=$optarg   ; enable_mysql="yes"   ;;
       --with-monalisa-incdir=*)monalisaincdir=$optarg; enable_monalisa="yes";;
@@ -1867,7 +1872,6 @@ if test $# -gt 0 ; then
       --with-xft-libdir=*)     xftlibdir=$optarg     ;;
       --with-xext-libdir=*)    xextlibdir=$optarg    ;;
       --with-xrootd=*)         xrootddir=$optarg     ; enable_xrootd="yes"  ;;
-      --with-xrootd-opts=*)    xrdaddopts=$optarg    ; enable_xrootd="yes"  ;;
       --with-xrootd-incdir=*)  xrdincdir=$optarg     ; enable_xrootd="yes"  ;;
       --with-xrootd-libdir=*)  xrdlibdir=$optarg     ; enable_xrootd="yes"  ;;
       --with-cc=*)             altcc=$optarg         ;;
@@ -1986,9 +1990,6 @@ if test "x$noact" = "xno"; then
     cp -f $PROOFDXINETDIN proofd.xinetd.tmp
     cp -f $PROOFSERVIN proofserv.tmp
     cp -f $ROOTSIN roots.tmp
-    cp -f $XROOTDIN xrootd.tmp
-    cp -f $OLBDIN olbd.tmp
-    cp -f $CMSDIN cmsd.tmp
 fi
 
 ######################################################################
@@ -2258,6 +2259,11 @@ if test ! "x$enable_x11" = "xno" ; then
         result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
+    if test ! "x$x11libdir" = "x$found_dir" ; then
+        result "`basename $0`: libXft not in same directory as libX11"
+        result "For consistency they should be in the same directory"
+        exit 1
+    fi
 
     check_library "libXext" "$enable_shared" "$xextlibdir" \
         ${finkdir:+$finkdir/lib} \
@@ -2268,6 +2274,11 @@ if test ! "x$enable_x11" = "xno" ; then
     if test "x$found_lib" = "x" ; then
         result "`basename $0`: libXext MUST be installed"
         result "See http://root.cern.ch/drupal/content/build-prerequisites"
+        exit 1
+    fi
+    if test ! "x$x11libdir" = "x$found_dir" ; then
+        result "`basename $0`: libXext not in same directory as libX11"
+        result "For consistency they should be in the same directory"
         exit 1
     fi
 fi
@@ -3153,6 +3164,21 @@ if test ! "x$enable_rfio" = "xno" ; then
                         break ;
                     fi
                 done
+                # Explicit linking: which libraries are needed to satisfy symbols
+                # from libshift?
+                # 2.1.8:
+                shiftlibdep="-lcastorrfio -lcastorClient -lcastorns"
+                check_link "$shiftlib $shiftlibdep" "$shiftlibdir" rfio_fchmod
+                if test $link_result -eq 1 ; then
+                    shiftlib="$shiftlib $shiftlibdep"
+                else
+                    # 2.1.9 has new library layout
+                    shiftlibdep="-lcastorrfio -lcastorclient -lcastorcommon"
+                    check_link "$shiftlib $shiftlibdep" "$shiftlibdir" rfio_fchmod
+                    if test $link_result -eq 1 ; then
+                        shiftlib="$shiftlib $shiftlibdep"
+                    fi
+                fi
                 ;;
            solaris)    shiftlib="$shiftlib -lposix4" ;;
            win32)      shiftincdir="$shiftincdir $shiftincdir/../win32"
@@ -3233,12 +3259,27 @@ if test ! "x$enable_castor" = "xno" ; then
         case $platform in
            linux)      castorlib="$castorlib -lnsl"
                 for i in "" -ladns ; do
-                    check_link "$shiftlib $i" "$shiftlibdir" rfio_fchmod
+                    check_link "$castorlib $i" "$castorlibdir" rfio_fchmod
                     if test $link_result -eq 1 ; then
                         castorlib="$castorlib $i" ;
                         break ;
                     fi
                 done
+                # Explicit linking: which libraries are needed to satisfy symbols
+                # from libshift?
+                # 2.1.8:
+                castorlibdep="-lcastorrfio -lcastorClient -lcastorns"
+                check_link "$castorlib $castorlibdep" "$castorlibdir" rfio_fchmod
+                if test $link_result -eq 1 ; then
+                    castorlib="$castorlib $castorlibdep"
+                else
+                    # 2.1.9 has new library layout
+                    castorlibdep="-lcastorrfio -lcastorclient -lcastorns -lcastorcommon"
+                    check_link "$castorlib $castorlibdep" "$castorlibdir" rfio_fchmod
+                    if test $link_result -eq 1 ; then
+                        castorlib="$castorlib $castorlibdep"
+                    fi
+                fi
                 ;;
            solaris)    castorlib="$castorlib -lposix4" ;;
            win32)      castorincdir="$castorincdir $castorincdir/../win32"
@@ -3376,6 +3417,10 @@ if test ! "x$enable_fitsio" = "xno"; then
 
     if test "x$cfitsioincdir" = "x" || test "x$cfitsiolib" = "x"; then
         enable_fitsio="no"
+    else
+        case $platform in
+            linux)     cfitsiolib="$cfitsiolib -lpthread -lz"    ;;
+        esac
     fi
 fi
 check_explicit "$enable_fitsio" "$enable_fitsio_explicit" \
@@ -3493,10 +3538,6 @@ if test ! "x$enable_pythia6" = "xno" ; then
         pythia6cppflags=-DPYTHIA6_${pythia6uscore}_UNDERSCORE
         pythia6lib=
         pythia6dir=
-        case $platform in
-            macosx) pythia6lib="-undefined dynamic_lookup" ;;
-            linux) 
-        esac
         result "Using custom pythia6 library with $pythia6uscore underscore"
     else
         check_library "libPythia6" "$enable_shared" "$pythia6libdir" \
@@ -4110,7 +4151,8 @@ if test ! "x$enable_ruby" = "xno" ; then
     fi
     check_header "ruby.h" "$rubyincdir" \
         $RUBYDIR ${RUBYDIR:+$RUBYDIR/include} \
-        $rubysysincdir $rubysysincdir2
+        $rubysysincdir $rubysysincdir2 \
+        /usr/local/include/ruby /usr/include/ruby
     rubyinc=$found_hdr
     rubyincdir=$found_dir
 
@@ -4123,7 +4165,8 @@ if test ! "x$enable_ruby" = "xno" ; then
     check_library "$check_library_options" \
         "$enable_shared" "$rubylibdir" \
         $RUBYDIR ${RUBYDIR:+$RUBYDIR/lib} \
-        $rubysyslibdir
+        $rubysyslibdir \
+        /usr/local/lib /usr/lib
     rubylib=$found_lib
     rubylibdir=$found_dir
 
@@ -4233,91 +4276,97 @@ check_explicit "$enable_xml" "$enable_xml_explicit" \
 #
 ### echo %%% Check for xrootd support
 #
-message "Checking whether to build xrootd"
-xrdcomm=""
-vercomm=
-
-# If we are required to use an external XROOTD distribution
-# we just define the pointers
-extraxrdflags="-DUSENEWHDRS"
-
-# Check if we are asked to use an external XROOTD; priority to specific
-# inc and lib settings
-externalxrd="no"
-if test ! "x$xrdlibdir" = "x" && test ! "x$xrdincdir" = "x"; then
-   externalxrd="yes"
-   xrdcomm="no, using xrootd at $xrdlibdir, $xrdincdir"
-   if test ! -f "$xrdincdir/XrdVersion.hh" ; then
+if test "x$enable_xrootd" = "xyes" ; then
+   xrdcomm=""
+   vercomm=""
+   extraxrdflags=""
+   
+   # Localize the version header; priority to specific inc and lib settings,
+   # followed by global dir setting and standard paths
+   xrdincone=""
+   xrdinctwoa=""
+   xrdinctwob=""
+   xrdinctmp=""
+   if test ! "x$xrdlibdir" = "x" && test ! "x$xrdincdir" = "x"; then
+      xrdincone="$xrdincdir/XrdVersion.hh"
+      xrdlibone="$xrdlibdir"
+      xrdinctmp="$xrdincdir $xrdinctmp"
+   elif test ! "x$xrootddir" = "x"; then
+      xrdlibtwo="$xrootddir"
+      xrdinctwoa="$xrootddir/include/xrootd/XrdVersion.hh"
+      xrdinctwob="$xrootddir/src/XrdVersion.hh"
+      xrdinctmp="$xrootddir/include/xrootd $xrootddir/src $xrdinctmp"
+   else
+      # Standard paths
+      xrdpaths="$XRDSYS /opt/xrootd /usr/local /usr"
+      for stdp in $xrdpaths ; do
+         if test -d "$stdp/lib" ; then
+            xrdlibthree="$xrdlibthree $stdp/lib"
+            xrdinctmp="$xrdinctmp $stdp/include/xrootd $stdp/include"
+         fi
+      done
+   fi
+   # Run the search now
+   check_header "XrdVersion.hh" "" "$xrdinctmp"
+   if test ! "x$found_hdr" = "x" ; then
+      xrdinc="$found_dir/$found_hdr"
+      # Find out which path was the good one
+      if test "x$xrdinc" = "x$xrdincone" ; then 
+         xrdincdir="$found_dir"
+         xrdlibdir="$xrdlibone"
+      elif test "x$xrdinc" = "x$xrdinctwoa" ; then 
+         xrdincdir="$xrdlibtwo/include/xrootd"
+         xrdlibdir="$xrdlibtwo/lib"
+      elif test "x$xrdinc" = "x$xrdinctwob" ; then 
+         xrdincdir="$xrdlibtwo/src"
+         xrdlibdir="$xrdlibtwo/lib"
+      else
+         for ll in $xrdlibthree ; do
+            rdir=`dirname $ll`
+            xinca="$rdir/include/xrootd/XrdVersion.hh"
+            xincb="$rdir/include/XrdVersion.hh"
+            if test "x$xrdinc" = "x$xinca" ; then 
+               xrdincdir="$rdir/include/xrootd"
+               xrdlibdir="$ll"
+            elif test "x$xrdinc" = "x$xincb" ; then 
+               xrdincdir="$rdir/include"
+               xrdlibdir="$ll"
+            fi
+            if test ! "x$xrdincdir" = "x" ; then
+               break
+            fi
+         done
+         # Only here if something inconsistent was found
+         if test "x$xrdincdir" = "x" ; then
+            enable_xrootd="no"
+            xrdincdir=""
+            xrdlibdir=""
+         fi
+      fi
+   else
       enable_xrootd="no"
-      xrdcomm="no, asked to use installation at $xrdincdir, but version file missing: disabling"
       xrdincdir=""
       xrdlibdir=""
-   fi
-elif test ! "x$xrootddir" = "x"; then
-   externalxrd="yes"
-   if test ! "x$xrdlibdir" = "x" && test ! "x$xrdincdir" = "x"; then
-      xrdcomm="no, using xrootd at $xrdlibdir, $xrdincdir"
-      if test ! -f "$xrdincdir/XrdVersion.hh" ; then
-         enable_xrootd="no"
-         xrdcomm="no, asked to use installation at $xrdincdir, but version file missing: disabling"
-         xrdincdir=""
-         xrdlibdir=""
-      fi
-   elif test ! "x$xrootddir" = "x"; then
-      xrdlibdir="$xrootddir/lib"
-      xrdcomm="no, using xrootd at $xrootddir"
-      if test -f "$xrootddir/include/xrootd/XrdVersion.hh" ; then
-         xrdincdir="$xrootddir/include/xrootd"
-      elif test -f "$xrootddir/src/XrdVersion.hh" ; then
-         xrdincdir="$xrootddir/src"
-      else
-         enable_xrootd="no"
-         xrdcomm="no, asked to use installation at $xrootddir, but version file missing: disabling"
-         xrdincdir=""
-         xrdlibdir=""
-      fi
    fi
 fi
 
 # Decode version
 xrdver=
 decver=0
-if test ! "x$enable_xrootd" = "xno" ; then
+if test "x$enable_xrootd" = "xyes" ; then
 
-   newver="no"
-   if test "x$externalxrd" = "xyes"; then
-      verh=$xrdincdir/XrdVersion.hh
+   message "Checking for xrootd version"
+
+   verh=$xrdincdir/XrdVersion.hh
+
+   xrdver=`grep XrdVERSION $verh`
+   if test $? -eq 0 ; then
+      set $xrdver
+      xrdver=$3
    else
-      newver="yes"
-      verh=$top_srcdir/net/xrootd/src/xrootd/VERSION_INFO
-      if test ! -f $verh ; then
-         newver="no"
-         verh=$top_srcdir/net/xrootd/src/xrootd/src/XrdVersion.hh
-      fi
+      xrdver="unknown"
    fi
-   xrdver="unknown"
-   if test "x$newver" = "xyes" ; then
-      xrdtag=`grep RefNames $verh | grep tag:`
-      if ! test $? -eq 0 ; then
-         xrdver=`grep Date $verh`
-         if test $? -eq 0 ; then
-            set $xrdver
-            xrdver=`echo $2 | sed -e 's|-||g'`
-         fi
-      else
-         xrdver=`grep RefNames $verh`
-         if test $? -eq 0 ; then
-            set $xrdver
-           xrdver=`echo $4 | sed -e 's|,||'`
-         fi
-      fi
-   else
-      xrdver=`grep XrdVERSION $verh`
-      if test $? -eq 0 ; then
-         set $xrdver
-         xrdver=$3
-      fi
-   fi
+
    if test ! "x$xrdver" = "xunknown"; then
       tmpver=`echo $xrdver | sed -e 's|"\(.*\)"|\1|' -e 's|^v||' -e 's|-.*||'`
       if test "x$tmpver" = "xuntagged" ; then
@@ -4346,121 +4395,56 @@ if test ! "x$enable_xrootd" = "xno" ; then
 	 fi
       fi
    fi
+   echo "$xrdver"
 fi
-bjrcomm=
-if test "x$enable_xrootd" = "xyes" && test "x$externalxrd" = "xyes"; then
 
-   if test "x$enable_xrootd" = "xyes" ; then
+if test "x$enable_xrootd" = "xyes" ; then
 
-      # Check version
-      decrefone=20070628
-      decreftwo=20070723
-      decrefthree=20071004
-      decreffour=300000002
-      if [ $decver -gt $decrefone ] ; then
-         if [ $decver -gt $decreffour ] ; then
-            xrdcomm="$xrdcomm"
-            extraxrdflags="$extraxrdflags"
-         elif [ $decver -gt $decrefthree ] ; then
-            vercomm=" (>$decrefthree, <=$decreffour: setting -DXRCPHYCNOREUSE)"
-            extraxrdflags="-DXRCPHYCNOREUSE $extraxrdflags"
-         elif [ $decver -gt $decreftwo ] ; then
-            vercomm=" (>$decreftwo, <=$decrefthree: setting -DOLDXRDLOCATE -DXRCPHYCNOREUSE)"
-            extraxrdflags="-DOLDXRDLOCATE -DXRCPHYCNOREUSE $extraxrdflags"
-         else
-            vercomm=" (>$decrefone, <=$decreftwo: setting -DOLDXRDLOCATE -DOLDXRDOUC -DXRCPHYCNOREUSE)"
-            extraxrdflags="-DOLDXRDOUC -DOLDXRDLOCATE -DXRCPHYCNOREUSE $extraxrdflags"
-         fi
+   extraxrdflags="-DROOTXRDVERS=$decver"
+   vercomm="setting $extraxrdflags"
+
+   #
+   # Check libraries now
+   hasxrdutils="no"
+   libxrdoucbjr=""
+   decrefutils=300010000
+   decrefnetut=20100729
+   if [ $decver -ge $decrefutils ] ; then
+      xrdlibs="libXrdMain libXrdUtils libXrdClient" 
+      hasxrdutils="yes"
+   elif [ $decver -ge $decrefnetut ] ; then
+      xrdlibs="libXrdNet libXrdNetUtil libXrdOuc libXrdSys libXrdClient libXrd" 
+   else
+      xrdlibs="libXrdNet libXrdOuc libXrdSys libXrdClient libXrd" 
+   fi
+   for ll in $xrdlibs ; do 
+      #
+      # Check if packaging has libXrdUtils or the old libXrdOuc, libXrdSys, ...
+      check_library $ll "$enable_shared" "$xrdlibdir" "$xrdlibdir"
+      if test "x$found_lib" = "x" ; then
+         enable_xrootd="no"
+         xrdincdir=""
+         xrdlibdir=""
+         break
       else
-         vercomm=" (<= $decrefone: setting -DOLDXRDLOCATE -DOLDXRDOUC -DOLDXRCPHYCONN -DXRCPHYCNOREUSE)"
-         extraxrdflags="-DOLDXRCPHYCONN -DOLDXRDOUC -DOLDXRDLOCATE -DXRCPHYCNOREUSE $extraxrdflags"
+         if test "x$ll" = "xlibXrdUtils" || test "x$ll" = "xlibXrdOuc"; then
+            libxrdoucbjr="$found_lib"
+         fi
+      fi
+   done
+
+   #
+   # Check if bonjour is available for code potentially using it ...
+   if test "x$enable_xrootd" = "xyes"; then
+      if test "x$enable_bonjour" = "xyes"; then
+         check_symbol XrdOucBonjour "$libxrdoucbjr" "$xrdlibdir"
+         if test  $found_symbol -eq 0 ; then
+            bonjourcppflags=
+         fi
       fi
    fi
-
-else
-   if test "x$enable_xrootd" = "x" && test "x$DEFAULTENABLE" = "xno"; then
-       enable_xrootd="no"
-       xrdincdir=""
-       xrdlibdir=""
-   else
-       # Xrootd and its client need thread support
-       if test "x$enable_thread" = "xyes"; then
-           # Ok, now check the architecture
-           case $arch in
-           # xrootd does not build on all platforms yet
-           linux*)
-               if test "x$enable_xrootd" = "x"; then
-                   enable_xrootd="yes"
-               fi
-               ;;
-           macos*)
-               if test "x$enable_xrootd" = "x"; then
-                   enable_xrootd="yes"
-               fi
-               ;;
-           solaris*)
-               if test "x$enable_xrootd" = "x"; then
-                   enable_xrootd="yes"
-               fi
-               ;;
-           win32)
-               if test "x$enable_xrootd" = "x"; then
-                   enable_xrootd="yes"
-               fi
-               ;;
-           *)
-               if test "x$enable_xrootd" = "xyes"; then
-                   enable_xrootd="yes"
-                   xrdcomm=", but not officially supported"
-               else
-                   enable_xrootd="no"
-               fi
-               xrdincdir=""
-               xrdlibdir=""
-               ;;
-           esac
-       else
-           if test "x$enable_xrootd" = "xyes"; then
-               enable_xrootd="no"
-               xrdcomm=", needs thread support (make sure pthread lib is found)"
-           else
-               enable_xrootd="no"
-           fi
-           xrdincdir=""
-           xrdlibdir=""
-       fi
-   fi
-
-   xrdcomm="$enable_xrootd$xrdcomm"
 fi
 
-xrdcomm="$xrdcomm"
-result $xrdcomm
-if test "x$enable_xrootd" = "xyes"; then
-    hasxrd=""
-    hasnotxrd="#"
-    message "Checking for xrootd version"
-    result "$xrdver $vercomm"
-    buildxrd="yes"
-    if test "x$externalxrd" = "xyes"; then
-       buildxrd="no"
-       # Check if bonjour is available for code potentially using it ...
-       if test "x$enable_bonjour" = "xyes"; then
-          check_symbol XrdOucBonjour "libXrdOuc.a" "$xrdlibdir"
-          if test  $found_symbol -eq 0 ; then
-             bjrcomm="External xrootd has no bonjour support: disabling bonjour in XrdProofd"
-             bonjourcppflags=
-          fi
-       fi
-    fi
-else
-    buildxrd="no"
-    hasxrd="#"
-    hasnotxrd=""
-fi
-if test ! "x$bjrcomm" = "x"; then
-   echo "$bjrcomm"
-fi
 check_explicit "$enable_xrootd" "$enable_xrootd_explicit" \
      "Explicitly required Xrootd dependencies not fulfilled"
 
@@ -4472,11 +4456,6 @@ check_explicit "$enable_xrootd" "$enable_xrootd_explicit" \
 #
 # If the user has set the flags "--disable-globus", we don't check for
 # Globus at all.
-#
-# By default, always try to build the XRD GSI plug-in; this can be
-# disabled with
-#                  --with-xrootd-opts="--disable-gsi"
-buildxrdgsi="yes"
 #
 glbextracflags=""
 glbpatchcflags=""
@@ -4901,11 +4880,12 @@ if test "x$enable_ssl" = "xyes" ; then
          #
          # libcrypto, in the same dir
          #
-         libcrypto="libcrypto"
-         check_library "$libcrypto" "$sslshared" "$tmpssllibdir" \
+         check_library "libcrypto" "$sslshared" "$tmpssllibdir" \
              $SSL ${SSL:+$SSL/lib} \
              ${finkdir:+$finkdir/lib} \
              /usr/lib /opt/lib /usr/local/lib
+         cryptolib=$found_lib
+         cryptolibdir=$found_dir
          if test "x$found_lib" != "x" ; then
              ssllib="$ssllib $found_lib"
              ssllibdir="$found_dir"
@@ -5670,25 +5650,6 @@ check_explicit "$enable_genvector" "$enable_genvector_explicit" \
 
 ######################################################################
 #
-### echo %%% Cling - LLVM/clang based interpreter prototype
-#
-if test ! "x$enable_cling" = "xno"; then
-    if test -d cint/cling; then
-        message "Checking whether to build cling"
-        enable_cling="yes"
-        hascling="define"
-        result "yes"
-    else
-        enable_cling="no"
-        hascling="undef"
-    fi
-else
-    enable_cling="no"
-    hascling="undef"
-fi
-
-######################################################################
-#
 ### echo %%% Cintex Library - Contributed library
 #
 message "Checking whether to build libCintex"
@@ -5937,13 +5898,47 @@ result "$enable_afdsmgrd$afdsmgrdapmonmsg"
 
 ######################################################################
 #
+### echo %%% Cling - LLVM/clang based interpreter prototype
+#
+message "Checking whether to integrate experimental cling"
+hascling="undef"
+clingextrares=""
+if test ! "x$enable_cling" = "xno"; then
+    # allow LLVMDIR instead of --with-llvm-config
+    if test "x$llvmconfig" = "x" ; then
+        if test ! "x$LLVMDIR" = "x" ; then
+            llvmconfig="$LLVMDIR/bin"
+        else
+            clingextrares="(needs --with-llvm-config or \$LLVMDIR)"
+        fi
+        result "no"
+    fi
+    if test ! "x$llvmconfig" = "x"; then
+        if test -d "$llvmconfig"; then
+            llvmconfig=$llvmconfig/llvm-config
+        fi
+        if test -f $llvmconfig && test -x $llvmconfig; then
+            hascling="define"
+        fi
+    fi
+fi
+if test "x$hascling" = "xundef"; then
+    enable_cling="no"
+    result "no $clingextrares"
+else
+    enable_cling="yes"
+    result "yes"
+fi
+
+######################################################################
+#
 ### echo %%% What dictionaries to build
 #
 # Can be either CINT (default), reflex, or gccxml.
 # Option will be passed to rootcint(_tmp),
 # and root-config --libs will have -lReflex if needed.
 #
-
+message "Checking what type of dictionaries to build"
 # --with-dicttype overrides env var ROOTDICTTYPE
 if test "x$dicttype" = "x" ; then
     dicttype="$ROOTDICTTYPE"
@@ -5971,10 +5966,7 @@ case "$dicttype" in
 esac
 
 # Print info if dicttype!=cint, or --with-dict overrides $ROOTDICTTYPE
-if test ! "x$dicttype" = "xcint" \
-     -o ! "x$dicttype" = "x$ROOTDICTTYPE"; then
-    result "Generating $dicttype dictionaries."
-fi
+result "$dicttype"
 
 ######################################################################
 #
@@ -6106,8 +6098,9 @@ esac
 ### echo %%% Explicitlink - explicitly link with all dependent libraries
 #
 case $arch in
-macosx*|freebsd*|openbsd|aix*|win32*)
+macosx*|freebsd*|openbsd|aix*|win32*|linux*)
     enable_explicitlink="yes"
+    issue_explicitlink_warning="no"
     ;;
 esac
 if test "x$enable_explicitlink" = "xyes" && test ! "x$platform" = "xwin32"; then
@@ -6194,6 +6187,12 @@ fi
 if test -d core/editline ; then
    rm -rf core/editline
 fi
+if test -d net/xrootd ; then
+   rm -rf net/xrootd
+fi
+if test -d build/unix/drop_from_path ; then
+   rm -rf build/unix/drop_from_path
+fi
 if test ! "x$macosx106" = "x"; then
    rm -f bin/python64 bin/ruby64
 fi
@@ -6209,7 +6208,11 @@ rm -f lib/libRXML* bin/libRXML* etc/system.rootmap \
  core/utils/src/rootcint7.cxx core/utils/src/RStl7.cxx \
  core/metautils/src/TClassEdit7.cxx \
  core/metautils/src/RConversionRuleParser7.cxx \
- core/thread/src/TLockFile.* proof/proofplayer/src/TFileMerger.*
+ core/thread/src/TLockFile.* proof/proofplayer/src/TFileMerger.* \
+ etc/daemons/olbd.rc.d etc/daemons/cmsd.rc.d etc/daemons/xrootd.rc.d \
+ bin/cmsd bin/xprep bin/xrd bin/xrdcp bin/xrdgsiproxy bin/xrdpwdadmin \
+ bin/xrdsssadmin bin/xrdstagetool bin/xrootd lib/libXrd* \
+ bin/drop_from_path
 
 ######################################################################
 #
@@ -6387,7 +6390,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildglew@|$enable_builtin_glew|"    \
     -e "s|@builtinfreetype@|$enable_builtin_freetype|"      \
     -e "s|@builtinpcre@|$enable_builtin_pcre|"  \
-    -e "s|@buildxrd@|$buildxrd|"                \
     -e "s|@hasxrd@|$enable_xrootd|"             \
     -e "s|@castorincdir@|$castorincdir|"        \
     -e "s|@castorlib@|$castorlib|"              \
@@ -6480,6 +6482,7 @@ sed -e "s|@globusincdir@|$globusincdir|"        \
     -e "s|@ldaplibdir@|$ldaplibdir|"            \
     -e "s|@ldflags@||"                          \
     -e "s|@libdir@|$libdir|"                    \
+    -e "s|@llvmconfig@|$llvmconfig|"            \
     -e "s|@macrodir@|$macrodir|"                \
     -e "s|@mandir@|$mandir|"                    \
     -e "s|@mkliboption@|$mkliboption|"          \
@@ -6573,10 +6576,10 @@ sed -e "s|@srcdir@|$ac_srcdir|"                 \
     -e "s|@x11libdir@|$x11libdir|"              \
     -e "s|@xpmlib@|$xpmlib|"                    \
     -e "s|@xpmlibdir@|$xpmlibdir|"              \
-    -e "s|@xrdaddopts@|$xrdaddopts|"            \
     -e "s|@xrdlibdir@|$xrdlibdir|"              \
     -e "s|@xrdincdir@|$xrdincdir|"              \
     -e "s|@xrdversion@|$decver|"                \
+    -e "s|@hasxrdutils@|$hasxrdutils|"          \
     -e "s|@cfitsioincdir@|$cfitsioincdir|"      \
     -e "s|@cfitsiolib@|$cfitsiolib|"            \
     -e "s|@cfitsiolibdir@|$cfitsiolibdir|"      \
@@ -6610,7 +6613,6 @@ sed -e "s|@srcdir@|$ac_srcdir|"                 \
     -e "s|@buildsrputil@|$enable_srputil|"      \
     -e "s|@buildkrb5@|$enable_krb5|"            \
     -e "s|@buildglobus@|$enable_globus|"        \
-    -e "s|@buildxrdgsi@|$buildxrdgsi|"          \
     -e "s|@buildclarens@|$enable_clarens|"      \
     -e "s|@buildpeac@|$buildpeac|"              \
     -e "s|@buildafdsmgrd@|$enable_afdsmgrd|"    \
@@ -6905,36 +6907,6 @@ rm -f roots.tmp
 result "done"
 
 #---------------------------------------------------------------------
-# etc/daemons/xrootd.rc.d
-#
-message "Writing $XROOTDOUT"
-sed -e "s|@bindir@|$bindir2|" \
-    < xrootd.tmp > $XROOTDOUT
-chmod a+x $XROOTDOUT
-rm -f xrootd.tmp
-result "done"
-
-#---------------------------------------------------------------------
-# etc/daemons/olbd.rc.d
-#
-message "Writing $OLBDOUT"
-sed -e "s|@bindir@|$bindir2|" \
-    < olbd.tmp > $OLBDOUT
-chmod a+x $OLBDOUT
-rm -f olbd.tmp
-result "done"
-
-#---------------------------------------------------------------------
-# etc/daemons/cmsd.rc.d
-#
-message "Writing $CMSDOUT"
-sed -e "s|@bindir@|$bindir2|" \
-    < cmsd.tmp > $CMSDOUT
-chmod a+x $CMSDOUT
-rm -f cmsd.tmp
-result "done"
-
-#---------------------------------------------------------------------
 # bin/memprobe
 #
 message "Writing $MEMPROBEOUT"
@@ -6993,6 +6965,14 @@ result "done"
 if test "x$platform" = "xwin32"; then
     message "Writing $THISROOTBATOUT"
     cp -f $THISROOTBATIN $THISROOTBATOUT
+    result "done"
+else
+    # bin/setxrd.sh and bin/setxrd.csh
+    message "Writing $SETXRDSHOUT"
+    cp -f $SETXRDSHIN $SETXRDSHOUT
+    result "done"
+    message "Writing $SETXRDCSHOUT"
+    cp -f $SETXRDCSHIN $SETXRDCSHOUT
     result "done"
 fi
 
@@ -7102,7 +7082,7 @@ if test ! "x$haveconfig" = "x" ; then
 fi
 result ""
 if test "x$issue_explicitlink_warning" = "xyes"; then
-    result "*** Explicit linking is required ror Ruby support."
+    result "*** Explicit linking is required for Ruby support."
     result "*** If lib/*.so's exist created without explicit linking,"
     result "*** please remove them first using: rm -f lib/*.so."
     result ""

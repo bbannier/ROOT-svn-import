@@ -327,6 +327,10 @@ void TGLabel::SetTextFont(TGFont *font, Bool_t global)
 
    TGFont *oldfont = fFont;
    fFont = fClient->GetFont(font);  // increase usage count
+   if (!fFont) {
+      fFont = oldfont;
+      return;
+   }
 
    TGGCPool *pool = fClient->GetResourcePool()->GetGCPool();
    TGGC *gc = pool->FindGC(fNormGC);
@@ -337,14 +341,13 @@ void TGLabel::SetTextFont(TGFont *font, Bool_t global)
       }
       fHasOwnFont = kTRUE;
    }
-
    if (oldfont != fgDefaultFont) {
       fClient->FreeFont(oldfont);
    }
-
-   gc->SetFont(fFont->GetFontHandle());
-   fNormGC = gc->GetGC();
-
+   if (gc) {
+      gc->SetFont(fFont->GetFontHandle());
+      fNormGC = gc->GetGC();
+   }
    fTextChanged = kTRUE;
    Layout();
 }
@@ -364,10 +367,10 @@ void TGLabel::SetTextColor(Pixel_t color, Bool_t global)
       }
       fHasOwnFont = kTRUE;
    }
-
-   gc->SetForeground(color);
-   fNormGC = gc->GetGC();
-
+   if (gc) {
+      gc->SetForeground(color);
+      fNormGC = gc->GetGC();
+   }
    fClient->NeedRedraw(this);
 }
 

@@ -76,8 +76,11 @@ namespace {
       TBufferFile &fBuffer;
       TVirtualArray *fOnfileObject;
 
-      R__PushCache(TBufferFile &b, TVirtualArray *in) : fBuffer(b), fOnfileObject(in) {
-         if (fOnfileObject) fBuffer.PushDataCache( fOnfileObject );
+      R__PushCache(TBufferFile &b, TVirtualArray *in, UInt_t size) : fBuffer(b), fOnfileObject(in) {
+         if (fOnfileObject) {
+            fOnfileObject->SetSize(size);
+            fBuffer.PushDataCache( fOnfileObject );
+         }
       }
       ~R__PushCache() {
          if (fOnfileObject) fBuffer.PopDataCache();
@@ -1344,6 +1347,7 @@ void TBranchElement::FillLeavesMakeClass(TBuffer& b)
         case TVirtualStreamerInfo::kDouble   /*  8 */: { b.WriteFastArray((Double_t*)  fAddress, n); break; }
         case TVirtualStreamerInfo::kDouble32 /*  9 */: {
            TVirtualStreamerInfo* si = GetInfoImp();
+           // coverity[returned_null] structurally si->GetElems() can not be null. 
            TStreamerElement* se = (TStreamerElement*) si->GetElems()[fID];
            Double_t* xx = (Double_t*) fAddress;
            for (Int_t ii = 0; ii < n; ++ii) {
@@ -1353,6 +1357,7 @@ void TBranchElement::FillLeavesMakeClass(TBuffer& b)
         }
         case TVirtualStreamerInfo::kFloat16 /*  19 */: {
            TVirtualStreamerInfo* si = GetInfoImp();
+           // coverity[dereference] structurally si can not be null. 
            TStreamerElement* se = (TStreamerElement*) si->GetElems()[fID];
            Float_t* xx = (Float_t*) fAddress;
            for (Int_t ii = 0; ii < n; ++ii) {
@@ -1428,9 +1433,7 @@ void TBranchElement::FillLeavesCollectionSplitVectorPtrMember(TBuffer& b)
   }
   
   // FIXME: This wont work if a pointer to vector is split!
-  Int_t n = 0;
   TVirtualCollectionProxy::TPushPop helper(GetCollectionProxy(), fObject);
-  n = GetCollectionProxy()->Size();
   // Note: We cannot pop the proxy here because we need it for the i/o.
   TStreamerInfo* si = (TStreamerInfo*)GetInfoImp();
   if (!si) {
@@ -1441,8 +1444,6 @@ void TBranchElement::FillLeavesCollectionSplitVectorPtrMember(TBuffer& b)
   TVirtualCollectionIterators *iter = fBranchCount->fIterators;
   R__ASSERT(0!=iter);
   b.ApplySequenceVecPtr(*fFillActionSequence,iter->fBegin,iter->fEnd);
-  
-  
 }
 
 //______________________________________________________________________________
@@ -1493,9 +1494,7 @@ void TBranchElement::FillLeavesCollectionMember(TBuffer& b)
   }
   
   // FIXME: This wont work if a pointer to vector is split!
-  Int_t n = 0;
   TVirtualCollectionProxy::TPushPop helper(GetCollectionProxy(), fObject);
-  n = GetCollectionProxy()->Size();
   // Note: We cannot pop the proxy here because we need it for the i/o.
   TStreamerInfo* si = (TStreamerInfo*)GetInfoImp();
   if (!si) {
@@ -2204,6 +2203,7 @@ Int_t TBranchElement::GetEntry(Long64_t entry, Int_t getall)
          case TClassEdit::kMultiMap:
             break;
          default:
+            ValidateAddress(); // There is no ReadLeave for this node, so we need to do the validation here.
             for (Int_t i = 0; i < nbranches; ++i) {
                TBranch* branch = (TBranch*) fBranches.UncheckedAt(i);
                Int_t nb = branch->GetEntry(entry, getall);
@@ -2533,7 +2533,7 @@ void* TBranchElement::GetValuePointer() const
    } else {
       //return GetInfoImp()->GetValue(object,fID,j,-1);
       if (!GetInfoImp() || !object) return 0;
-      char **val = (char**)(object+GetInfoImp()->GetOffsets()[fID]);
+      char **val = (char**)(object+GetInfoImp()->GetOffsets()[prID]);
       return *val;
    }
 }
@@ -3516,8 +3516,6 @@ void TBranchElement::ReadLeavesCollection(TBuffer& b)
       return;
    }
 
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
-
    // STL container master branch (has only the number of elements).
    Int_t n;
    b >> n;
@@ -3531,9 +3529,9 @@ void TBranchElement::ReadLeavesCollection(TBuffer& b)
       }
    }
    fNdata = n;
-   if (!fObject) {
-      return;
-   }
+
+   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject,n);   
+
    // Note: Proxy-helper needs to "embrace" the entire
    //       streaming of this STL container if the container
    //       is a set/multiset/map/multimap (what we do not
@@ -3581,6 +3579,7 @@ void TBranchElement::ReadLeavesCollection(TBuffer& b)
       // is being called many times by TTreeFormula!!!
       //--------------------------------------------------------------------
       Int_t i = 0;
+      // coverity[returned_null] the fNdata is check enough to prevent the use of null value of At(0)
       if( !fNdata || *(void**)proxy->At( 0 ) != 0 )
          i = fNdata;
 
@@ -3609,13 +3608,14 @@ void TBranchElement::ReadLeavesCollectionSplitPtrMember(TBuffer& b)
       return;
    }
 
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
-
    // STL container sub-branch (contains the elements).
    fNdata = fBranchCount->GetNdata();
-   if (!fNdata || !fObject) {
+   if (!fNdata) {
       return;
    }
+
+   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject,fNdata);
+
    TStreamerInfo *info = GetInfoImp();
    if (info == 0) return;
 
@@ -3650,13 +3650,13 @@ void TBranchElement::ReadLeavesCollectionSplitVectorPtrMember(TBuffer& b)
       return;
    }
 
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
-
    // STL container sub-branch (contains the elements).
    fNdata = fBranchCount->GetNdata();
-   if (!fNdata || !fObject) {
+   if (!fNdata) {
       return;
    }
+   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject,fNdata);
+   
    TStreamerInfo *info = GetInfoImp();
    if (info == 0) return;
 
@@ -3681,13 +3681,13 @@ void TBranchElement::ReadLeavesCollectionMember(TBuffer& b)
       return;
    }
 
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
-
    // STL container sub-branch (contains the elements).
    fNdata = fBranchCount->GetNdata();
-   if (!fNdata || !fObject) {
+   if (!fNdata) {
       return;
    }
+   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject,fNdata);
+   
    TStreamerInfo *info = GetInfoImp();
    if (info == 0) return;
    // Since info is not null, fReadActionSequence is not null either.
@@ -3713,8 +3713,6 @@ void TBranchElement::ReadLeavesClones(TBuffer& b)
       // 'dropped' from the current schema) so let's no copy it in a random place.
       return;
    }
-
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
 
    // TClonesArray master branch (has only the number of elements).
    Int_t n;
@@ -3756,10 +3754,6 @@ void TBranchElement::ReadLeavesClonesMember(TBuffer& b)
       return;
    }
 
-   // Note, we could (possibly) save some more, by configuring the action
-   // based on the value of fOnfileObject rather than pushing in on a stack.
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
-
    // TClonesArray sub-branch (contains the elements).
    fNdata = fBranchCount->GetNdata();
    TClonesArray* clones = (TClonesArray*) fObject;
@@ -3769,6 +3763,10 @@ void TBranchElement::ReadLeavesClonesMember(TBuffer& b)
    TStreamerInfo *info = GetInfoImp();
    if (info==0) return;
    // Since info is not null, fReadActionSequence is not null either.
+
+   // Note, we could (possibly) save some more, by configuring the action
+   // based on the value of fOnfileObject rather than pushing in on a stack.
+   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject,fNdata);
 
    char **arr = (char **)clones->GetObjectRef();
    char **end = arr + fNdata;
@@ -3793,7 +3791,7 @@ void TBranchElement::ReadLeavesMember(TBuffer& b)
       return;
    }
 
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
+   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject,1);
    // If not a TClonesArray or STL container master branch
    // or sub-branch and branch inherits from tobject,
    // then register with the buffer so that pointers are
@@ -3830,7 +3828,6 @@ void TBranchElement::ReadLeavesMemberBranchCount(TBuffer& b)
       return;
    }
 
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
    // If not a TClonesArray or STL container master branch
    // or sub-branch and branch inherits from tobject,
    // then register with the buffer so that pointers are
@@ -3846,6 +3843,7 @@ void TBranchElement::ReadLeavesMemberBranchCount(TBuffer& b)
    if (!info) {
       return;
    }
+   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject,1); // Here we have a single object that contains a variable size C-style array.
    // Since info is not null, fReadActionSequence is not null either.
    b.ApplySequence(*fReadActionSequence, fObject);
 }
@@ -3865,8 +3863,6 @@ void TBranchElement::ReadLeavesMemberCounter(TBuffer& b)
       return;
    }
 
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
-
    // If not a TClonesArray or STL container master branch
    // or sub-branch and branch inherits from tobject,
    // then register with the buffer so that pointers are
@@ -3881,6 +3877,9 @@ void TBranchElement::ReadLeavesMemberCounter(TBuffer& b)
    if (!info) {
       return;
    }
+
+   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject,1);
+   
    // Since info is not null, fReadActionSequence is not null either.
    b.ApplySequence(*fReadActionSequence, fObject);
    fNdata = (Int_t) GetValue(0, 0);
@@ -3900,7 +3899,7 @@ void TBranchElement::ReadLeavesCustomStreamer(TBuffer& b)
       return;
    }
 
-   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
+   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject,1);
    fBranchClass->Streamer(fObject,b);
 }
 
@@ -3935,10 +3934,21 @@ void TBranchElement::ReleaseObject()
       } else if (fType == 4) {
          // -- We are an STL container master branch.
          TVirtualCollectionProxy* proxy = GetCollectionProxy();
+         
          if (!proxy) {
             Warning("ReleaseObject", "Cannot delete allocated STL container because I do not have a proxy!  branch: %s", GetName());
             fObject = 0;
          } else {
+            Bool_t needDelete = proxy->GetProperties()&TVirtualCollectionProxy::kNeedDelete;
+            if (needDelete && fID >= 0) {
+               TVirtualStreamerInfo* si = GetInfoImp();
+               TStreamerElement* se = (TStreamerElement*) si->GetElems()[fID];
+               needDelete = !se->TestBit(TStreamerElement::kDoNotDelete);
+            }
+            if (needDelete) {
+               TVirtualCollectionProxy::TPushPop helper(proxy,fObject);
+               proxy->Clear("force");
+            }
             proxy->Destructor(fObject);
             fObject = 0;
          }
@@ -3954,6 +3964,22 @@ void TBranchElement::ReleaseObject()
             Warning("ReleaseObject", "Cannot delete allocated object because I cannot instantiate a TClass object for its class!  branch: '%s' class: '%s'", GetName(), fBranchClass.GetClassName());
             fObject = 0;
          } else {
+            TVirtualCollectionProxy* proxy = cl->GetCollectionProxy();
+            
+            if (proxy) {
+               if (fID >= 0) {
+                  TVirtualStreamerInfo* si = GetInfoImp();
+                  TStreamerElement* se = (TStreamerElement*) si->GetElems()[fID];
+                  if (!se->TestBit(TStreamerElement::kDoNotDelete) && proxy->GetProperties()&TVirtualCollectionProxy::kNeedDelete) {
+                     TVirtualCollectionProxy::TPushPop helper(proxy,fObject);
+                     proxy->Clear("force");
+                  }
+               } else if (proxy->GetProperties()&TVirtualCollectionProxy::kNeedDelete) {
+                  TVirtualCollectionProxy::TPushPop helper(proxy,fObject);
+                  proxy->Clear("force");
+               }
+               
+            }
             cl->Destructor(fObject);
             fObject = 0;
          }

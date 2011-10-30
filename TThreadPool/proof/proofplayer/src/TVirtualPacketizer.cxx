@@ -150,8 +150,8 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input, TProofProgressStatus *st)
 
    // Whether to send estimated values for the progress info
    TString estopt;
-   TProof::GetParameter(input, "PROOF_RateEstimation", estopt);
-   if (estopt.IsNull()) {
+   if (TProof::GetParameter(input, "PROOF_RateEstimation", estopt) != 0 || 
+       estopt.IsNull()) {
       // Parse option from the env
       estopt = gEnv->GetValue("Proof.RateEstimation", "");
    }
@@ -183,7 +183,7 @@ Long64_t TVirtualPacketizer::GetEntries(Bool_t tree, TDSetElement *e)
    Long64_t entries;
    TFile *file = TFile::Open(e->GetFileName());
 
-   if ( file->IsZombie() ) {
+   if (!file || (file && file->IsZombie())) {
       Error("GetEntries","Cannot open file: %s (%s)",
             e->GetFileName(), strerror(file->GetErrno()) );
       return -1;
