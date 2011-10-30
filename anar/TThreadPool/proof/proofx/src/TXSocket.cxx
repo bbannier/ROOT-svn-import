@@ -46,15 +46,11 @@
 #include <Winsock2.h>
 #endif
 
+
+#include "XpdSysError.h"
+#include "XpdSysLogger.h"
+
 // ---- Tracing utils ----------------------------------------------------------
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucError.hh"
-#  include "XrdOuc/XrdOucLogger.hh"
-#else
-#  include "XrdSys/XrdSysError.hh"
-#  include "XrdSys/XrdSysLogger.hh"
-#endif
 #include "XrdProofdTrace.h"
 XrdOucTrace *XrdProofdTrace = 0;
 static XrdSysLogger eLogger;
@@ -438,8 +434,9 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
       return kUNSOL_CONTINUE;
    }
 
-   // From now on make sure is for us
-   if (!fConn || !m->MatchStreamid(fConn->fStreamid)) {
+   // From now on make sure is for us (but only if not during setup, i.e. fConn == 0; otherwise
+   // we may miss some important server message)
+   if (fConn && !m->MatchStreamid(fConn->fStreamid)) {
       if (gDebug > 1)
          Info("ProcessUnsolicitedMsg", "%p: IDs do not match: {%d, %d}", this, fConn->fStreamid, m->HeaderSID());
       return kUNSOL_CONTINUE;

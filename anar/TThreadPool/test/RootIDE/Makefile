@@ -6,7 +6,13 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-include ../Makefile.arch
+RC := root-config
+ifeq ($(shell which $(RC) 2>&1 | sed -ne "s@.*/$(RC)@$(RC)@p"),$(RC))
+include $(shell $(RC) --etcdir)/Makefile.arch
+else
+ROOTSYS = ../..
+include $(ROOTSYS)/etc/Makefile.arch
+endif
 
 #------------------------------------------------------------------------------
 

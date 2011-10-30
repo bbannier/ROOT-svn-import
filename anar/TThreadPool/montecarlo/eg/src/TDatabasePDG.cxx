@@ -60,7 +60,7 @@ TDatabasePDG::TDatabasePDG(): TNamed("PDGDB","The PDG particle data base")
    fParticleList  = 0;
    fPdgMap        = 0;
    fListOfClasses = 0;
-      if (fgInstance) {
+   if (fgInstance) {
       Warning("TDatabasePDG", "object already instantiated");
    } else {
       fgInstance = this;
@@ -672,9 +672,11 @@ void TDatabasePDG::ReadPDGTable(const char *FileName)
       // define decay channels for antiparticles
       if (p->PdgCode() < 0) {
          ap = GetParticle(-p->PdgCode());
+         if (!ap) continue;
          nch = ap->NDecayChannels();
          for (ich=0; ich<nch; ich++) {
             dc = ap->DecayChannel(ich);
+            if (!dc) continue;
             ndau = dc->NDaughters();
             for (int i=0; i<ndau; i++) {
                // conserve CPT
@@ -774,7 +776,7 @@ Int_t TDatabasePDG::WritePDGTable(const char *filename)
       fprintf(file,"#----------------------------------------------------------------------\n");
       for(Int_t j=0;j<nch;++j) {
          TDecayChannel *dc=p->DecayChannel(j);
-
+         if (!dc) continue;
          fprintf(file,"%9i   ",dc->Number()+1);
          fprintf(file,"%3i   ",dc->MatrixElementCode());
          fprintf(file,"%.5le  ",dc->BranchingRatio());

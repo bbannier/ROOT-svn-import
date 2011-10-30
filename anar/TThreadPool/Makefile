@@ -103,6 +103,9 @@ SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 endif
 endif
+ifeq ($(PLATFORM),ios)
+MODULES      += graf2d/ios
+endif
 ifeq ($(BUILDX11),yes)
 MODULES      += graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 endif
@@ -210,7 +213,6 @@ ifeq ($(BUILDCINTEX),yes)
 MODULES      += cint/cintex
 endif
 ifeq ($(BUILDCLING),yes)
-# to be added to the unconditional MODULES list above once cling is in trunk
 MODULES      += cint/cling
 endif
 ifeq ($(BUILDROOFIT),yes)
@@ -242,9 +244,6 @@ MODULES      += net/globusauth
 endif
 ifneq ($(F77),)
 MODULES      += misc/minicern hist/hbook
-endif
-ifeq ($(BUILDXRD),yes)
-MODULES      += net/xrootd
 endif
 ifeq ($(HASXRD),yes)
 MODULES      += net/netx
@@ -284,7 +283,7 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 rootx net/rootd io/dcache io/chirp hist/hbook graf2d/asimage \
                 net/ldap net/krb5auth net/rpdutils net/globusauth \
                 bindings/pyroot bindings/ruby io/gfal misc/minicern \
-                graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
+                graf2d/qt gui/qtroot gui/qtgsi net/netx net/alien \
                 proof/proofd proof/proofx proof/clarens proof/peac proof/pq2 \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
                 tmva math/genetic io/hdfs graf2d/fitsio roofit/roofitcore \
@@ -292,7 +291,7 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
                 math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
-                proof/proofbench proof/afdsmgrd
+                proof/proofbench proof/afdsmgrd cint/cling graf2d/ios
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -315,6 +314,9 @@ BOOTLIBS     := -lCore -lCint -lMathCore
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += -lCintex -lReflex
 endif
+ifeq ($(BUILDCLING),yes)
+BOOTLIBS     += -lCling
+endif
 ROOTLIBS     := -lRIO -lHist -lGraf -lGraf3d -lGpad \
                 -lTree -lMatrix -lNet -lThread $(BOOTLIBS)
 RINTLIBS     := -lRint
@@ -325,6 +327,9 @@ BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libMathcore.lib
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
+endif
+ifeq ($(BUILDCLING),yes)
+BOOTLIBS     += $(LPATH)/libCling.lib
 endif
 ROOTLIBS     := $(LPATH)/libRIO.lib $(LPATH)/libHist.lib \
                 $(LPATH)/libGraf.lib $(LPATH)/libGraf3d.lib \
@@ -499,9 +504,9 @@ STATICEXTRALIBS = $(PCRELDFLAGS) $(PCRELIB) \
 COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) $(ZIPL) \
                 $(SYSTEML) $(CLIBL) $(METAUTILSL) $(TEXTINPUTL)
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(LZMAO) \
-                $(CLIBO) $(METAUTILSO) $(TEXTINPUTO) $(CLINGO)
+                $(CLIBO) $(METAUTILSO) $(TEXTINPUTO)
 COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(METACDO) $(SYSTEMDO) $(ZIPDO) \
-                $(CLIBDO) $(METAUTILSDO) $(TEXTINPUTDO) $(CLINGDO)
+                $(CLIBDO) $(METAUTILSDO) $(TEXTINPUTDO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
@@ -525,6 +530,9 @@ ifeq ($(EXPLICITLINK),yes)
 MAINLIBS     := $(CORELIB) $(CINTLIB)
 ifneq ($(ROOTDICTTYPE),cint)
 MAINLIBS     += $(CINTEXLIB) $(REFLEXLIB)
+endif
+ifeq ($(BUILDCLING),yes)
+MAINLIBS     += $(CLINGLIB)
 endif
 else
 MAINLIBS      =
@@ -765,15 +773,15 @@ endif
 	   touch $@; \
 	fi)
 
-$(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(PCREDEP) $(CORELIBDEP)
+$(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(CLINGDEP) $(PCREDEP) $(CORELIBDEP)
 ifneq ($(ARCH),alphacxx6)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 else
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
 	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 endif
 
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
@@ -999,8 +1007,7 @@ maintainer-clean:: distclean
 	   etc/system.rootdaemonrc etc/root.mimes etc/daemons/rootd.rc.d \
 	   etc/daemons/rootd.xinetd etc/daemons/proofd.rc.d \
 	   etc/daemons/proofd.xinetd main/src/proofserv.sh main/src/roots.sh \
-	   etc/daemons/olbd.rc.d etc/daemons/xrootd.rc.d \
-	   etc/daemons/cmsd.rc.d macros/html.C \
+	   macros/html.C \
 	   build/misc/root-help.el build-arch-stamp build-indep-stamp \
 	   configure-stamp build-arch-cint-stamp config.status config.log
 
@@ -1015,7 +1022,7 @@ $(ROOTA) $(PROOFSERVA): $(ROOTALIB) $(MAKESTATIC) $(STATICOBJLIST)
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
 	   "$(XLIBS)" "$(SYSLIBS)" "$(STATICEXTRALIBS)" $(STATICOBJLIST)
 
-$(ROOTALIB): $(ALLLIBS) $(MAKESTATICLIB) $(STATICOBJLIST)
+$(ROOTALIB): $(ALLLIBS) $(MAKESTATICLIB) $(STATICOBJLIST) $(IOSO)
 	@$(MAKESTATICLIB) $(STATICOBJLIST)
 
 plugins-ios: $(ROOTEXE)
@@ -1248,13 +1255,10 @@ runtimedirs:
 		--exclude system.rootauthrc \
 		--exclude system.rootdaemonrc \
 		--exclude system.rootrc \
-		--exclude cmsd.rc.d \
-		--exclude olbd.rc.d \
 		--exclude proofd.rc.d \
 		--exclude proofd.xinetd \
 		--exclude rootd.rc.d \
 		--exclude rootd.xinetd \
-		--exclude xrootd.rc.d \
 		--exclude svninfo.txt \
 		$(ROOT_SRCDIR)/etc . ; \
 	echo "Rsync'ing $(ROOT_SRCDIR)/macros..."; \

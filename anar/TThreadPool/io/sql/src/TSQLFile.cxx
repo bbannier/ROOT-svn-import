@@ -687,22 +687,10 @@ void TSQLFile::Close(Option_t *option)
       fClassIndex = 0;
    }
 
-   TDirectory *cursav = gDirectory;
-   cd();
-
-   if (cursav == this || cursav->GetFile() == this) {
-      cursav = 0;
-   }
-
-   // Delete all supported directories structures from memory
-   TDirectoryFile::Close();
-   cd();      // Close() sets gFile = 0
-
-   if (cursav)
-      cursav->cd();
-   else {
-      gFile      = 0;
-      gDirectory = gROOT;
+   {
+      TDirectory::TContext ctxt(this);
+      // Delete all supported directories structures from memory
+      TDirectoryFile::Close();
    }
 
    //delete the TProcessIDs
@@ -1091,7 +1079,7 @@ Bool_t TSQLFile::ReadConfigurations()
    // should be found, otherwise will be error
    fSQLIOversion = 0;
 
-   Int_t lock = 0;
+   // Int_t lock = 0;
 
    #define ReadIntCfg(name, target)                        \
      if ((field.CompareTo(name, TString::kIgnoreCase)==0)) \
@@ -1121,7 +1109,7 @@ Bool_t TSQLFile::ReadConfigurations()
       ReadIntCfg(sqlio::cfg_UseTransactions, fUseTransactions)
       ReadIntCfg(sqlio::cfg_UseIndexes, fUseIndexes)
       ReadIntCfg(sqlio::cfg_ModifyCounter, fModifyCounter)
-      ReadIntCfg(sqlio::cfg_LockingMode, lock)
+      // ReadIntCfg(sqlio::cfg_LockingMode, lock)
       {
          Error("ReadConfigurations","Invalid configuration field %s", field.Data());
          fSQLIOversion = 0;

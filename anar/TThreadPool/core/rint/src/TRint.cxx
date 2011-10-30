@@ -391,6 +391,9 @@ void TRint::Run(Bool_t retrn)
                }
             }
             if (rootfile) {
+               // special trick to be able to open files using UNC path names
+               if (file->String().BeginsWith("\\\\"))
+                  file->String().Prepend("\\\\");
                file->String().ReplaceAll("\\","/");
                const char *rfile = (const char*)file->String();
                Printf("Attaching file %s as _file%d...", rfile, nfile);
@@ -554,7 +557,9 @@ Bool_t TRint::HandleTermInput()
 
       if (gROOT->Timer()) timer.Start();
 
+#ifdef R__EH
       Bool_t added = kFALSE;
+#endif
 
       // This is needed when working with remote sessions
       SetBit(kProcessRemotely);
@@ -569,7 +574,9 @@ Bool_t TRint::HandleTermInput()
          } CATCH(excode) {
             // enable again input handler
             fInputHandler->Activate();
+#ifdef R__EH
             added = kTRUE;
+#endif
             Throw(excode);
          } ENDTRY;
 #ifdef R__EH
