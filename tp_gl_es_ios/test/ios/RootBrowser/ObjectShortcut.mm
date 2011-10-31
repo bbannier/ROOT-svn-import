@@ -8,7 +8,12 @@
 #import "IOSFileContainer.h"
 #import "TObject.h"
 
-@implementation ObjectShortcut
+@implementation ObjectShortcut  {
+   __weak FileContentController *controller;
+
+   unsigned objectIndex;
+   NSString *objectName;
+}
 
 @synthesize icon;
 @synthesize objectIndex;

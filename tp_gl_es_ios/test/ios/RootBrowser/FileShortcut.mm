@@ -8,7 +8,7 @@
 #import "IOSFileContainer.h"
 
 @implementation FileShortcut {
-   UIViewController *controller;
+   __weak UIViewController *controller;
 
    UIImage *filePictogram;
    UIImage *backgroundImage;

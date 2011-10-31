@@ -16,7 +16,25 @@
 //C++ code (ROOT's ios module)
 #import "IOSPad.h"
 
-static const CGFloat tapInterval = 0.15f;
+const CGFloat tapInterval = 0.15f;
+
+@interface PadView () {
+   ROOT::iOS::Pad *pad;
+   
+   __weak ROOTObjectController *controller;
+   
+   CGFloat currentScale;
+
+   BOOL panActive;
+   
+   CGPoint tapPt;
+   BOOL processSecondTap;
+}
+
+- (void) handleSingleTap;
+- (void) handleDoubleTap;
+
+@end
 
 @implementation PadView
 

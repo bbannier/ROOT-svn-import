@@ -18,18 +18,7 @@ class Pad;
 @class ROOTObjectController;
 @class SelectionView;
 
-@interface PadView : UIView {
-   ROOT::iOS::Pad *pad;
-   
-   ROOTObjectController *controller;
-   
-   CGFloat currentScale;
-
-   BOOL panActive;
-   
-   CGPoint tapPt;
-   BOOL processSecondTap;
-}
+@interface PadView : UIView
 
 @property (nonatomic, retain) SelectionView *selectionView;
 
@@ -42,8 +31,5 @@ class Pad;
 - (BOOL) pointOnSelectedObject : (CGPoint) pt;
 - (void) addPanRecognizer;
 - (void) removePanRecognizer;
-
-- (void) handleSingleTap;
-- (void) handleDoubleTap;
 
 @end

@@ -9,8 +9,6 @@ class FileContainer;
 }
 }
 
-class TObject;
-
 @interface FileShortcut : UIView
 
 @property (nonatomic, retain) NSString *fileName;
