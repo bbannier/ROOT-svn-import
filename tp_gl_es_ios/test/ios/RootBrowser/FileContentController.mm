@@ -98,7 +98,7 @@
 
 //____________________________________________________________________________________________________
 - (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration:(NSTimeInterval)duration {
-    [self correctFramesForOrientation : interfaceOrientation];
+   [self correctFramesForOrientation : interfaceOrientation];
 }
 
 //____________________________________________________________________________________________________
