@@ -1033,8 +1033,8 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       Int_t pos = leafTypeName.Last('_');
       if (pos!=-1) leafTypeName.Remove(pos);
 
-      Int_t len = leaf->GetLen();
-      TLeaf *leafcount = leaf->GetLeafCount();
+      // Int_t len = leaf->GetLen();
+      // TLeaf *leafcount = leaf->GetLeafCount();
 
       UInt_t dim = 0;
       std::vector<Int_t> maxDim;
@@ -1080,9 +1080,9 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       }
       //char *twodim = (char*)strstr(leaf->GetTitle(),"][");
 
-      if (leafcount) {
-         len = leafcount->GetMaximum();
-      }
+      //if (leafcount) {
+      //   len = leafcount->GetMaximum();
+      //}
 
 
       TString type;
@@ -1311,10 +1311,11 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                AnalyzeBranches(1,desc,dynamic_cast<TBranchElement*>(branch),info);
             }
             desc = AddClass(desc);
-            type = desc->GetName();
-            TString dataMemberName = branchname;
-            AddDescriptor( new TBranchProxyDescriptor( dataMemberName, type, branchname ) );
-
+            if (desc) {
+               type = desc->GetName();
+               TString dataMemberName = branchname;
+               AddDescriptor( new TBranchProxyDescriptor( dataMemberName, type, branchname ) );
+            }
             if ( branchname[strlen(branchname)-1] != '.' ) {
                // If there is no dot also include the data member directly
 
@@ -1393,7 +1394,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       }
 
 
-      Bool_t ispointer = false;
+      // Bool_t ispointer = false;
       switch(element->GetType()) {
 
          case TVirtualStreamerInfo::kBool:    { type = "T" + middle + "BoolProxy"; break; }
@@ -1464,7 +1465,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
          case TVirtualStreamerInfo::kSTL + TVirtualStreamerInfo::kObjectp:
          case TVirtualStreamerInfo::kSTL + TVirtualStreamerInfo::kObjectP:
             // set as pointers and fall through to the next switches
-            ispointer = true;
+            // ispointer = true;
          case TVirtualStreamerInfo::kOffsetL + TVirtualStreamerInfo::kObject:
          case TVirtualStreamerInfo::kObject:
          case TVirtualStreamerInfo::kTString:

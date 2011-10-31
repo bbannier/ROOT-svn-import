@@ -91,6 +91,8 @@ public:
    virtual ~TDictionary() { }
 
    virtual Long_t      Property() const = 0;
+   static TDictionary* GetDictionary(const char* name);
+   static TDictionary* GetDictionary(const type_info &typeinfo);
 
    // Type of STL container (returned by IsSTLContainer).
    enum ESTLType {kNone=0, kVector=1, kList, kDeque, kMap, kMultimap, kSet, kMultiset};

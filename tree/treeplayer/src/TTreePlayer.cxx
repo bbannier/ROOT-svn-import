@@ -753,8 +753,29 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
    if (isHbook) fprintf(fp,"#include <THbookFile.h>\n");
    if (opt.Contains("selector")) fprintf(fp,"#include <TSelector.h>\n");
 
-// First loop on all leaves to generate dimension declarations
-   Int_t len, lenb,l;
+   // See if we can add any #include about the user data.
+   Int_t l;
+   fprintf(fp,"\n// Header file for the classes stored in the TTree if any.\n");
+   for (l=0;l<nleaves;l++) {
+      TLeaf *leaf = (TLeaf*)leaves->UncheckedAt(l);
+      TBranch *branch = leaf->GetBranch();
+      TClass *cl = TClass::GetClass(branch->GetClassName());
+      if (cl && cl->IsLoaded()) {
+         const char *declfile = cl->GetDeclFileName();
+         if (declfile && declfile[0]) {
+            static const char *precstl = "prec_stl/";
+            static const unsigned int precstl_len = strlen(precstl);
+            if (strncmp(declfile,precstl,precstl_len) == 0) {
+               fprintf(fp,"#include <%s>\n",declfile+precstl_len);              
+            } else {
+               fprintf(fp,"#include \"%s\"\n",declfile);
+            }
+         }
+      }
+   }
+   
+   // First loop on all leaves to generate dimension declarations
+   Int_t len, lenb;
    char blen[1024];
    char *bname;
    Int_t *leaflen = new Int_t[nleaves];
@@ -1534,11 +1555,13 @@ Int_t TTreePlayer::MakeCode(const char *filename)
    fprintf(fp,"   TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(\"%s\");\n",treefile.Data());
    fprintf(fp,"   if (!f) {\n");
    fprintf(fp,"      f = new TFile(\"%s\");\n",treefile.Data());
-   if (gDirectory != gFile) {
-      fprintf(fp,"      f->cd(\"%s\");\n",gDirectory->GetPath());
-   }
    fprintf(fp,"   }\n");
-   fprintf(fp,"   TTree *%s = (TTree*)gDirectory->Get(\"%s\");\n\n",fTree->GetName(),fTree->GetName());
+   if (fTree->GetDirectory() != fTree->GetCurrentFile()) {
+      fprintf(fp,"    TDirectory * dir = (TDirectory*)f->Get(\"%s\");\n",fTree->GetDirectory()->GetPath());
+      fprintf(fp,"    dir->GetObject(\"%s\",tree);\n\n",fTree->GetName());
+   } else {
+      fprintf(fp,"    f->GetObject(\"%s\",tree);\n\n",fTree->GetName());
+   }
    if (ischain) {
       fprintf(fp,"#else // SINGLE_TREE\n\n");
       fprintf(fp,"   // The following code should be used if you want this code to access a chain\n");
@@ -1578,7 +1601,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
          if (leafcount) {
             // remove any dimension in title
             char *dim =  (char*)strstr(branchname,"[");
-            dim[0] = 0;
+            if (dim) dim[0] = 0;
          }
       } else {
          if (leafcount) strlcpy(branchname,branch->GetName(),sizeof(branchname));
@@ -1642,7 +1665,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
          if (leafcount) {
             // remove any dimension in title
             char *dim =  (char*)strstr(branchname,"[");
-            dim[0] = 0;
+            if (dim) dim[0] = 0;
          }
       } else {
          if (leafcount) strlcpy(branchname,branch->GetName(),sizeof(branchname));

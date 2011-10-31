@@ -8,7 +8,7 @@ MODDIR       := $(ROOT_SRCDIR)/proof/$(MODNAME)
 
 AFDSMGRDDIR  := $(MODDIR)
 AFDSMGRDBIN  := bin/afdsmgrd
-AFDSMGRDTAR  := $(shell cd $(AFDSMGRDDIR) && ls -1 afdsmgrd-v*.tar.gz | tail -n1)
+AFDSMGRDTAR  := $(shell cd $(AFDSMGRDDIR) && ls -1 afdsmgrd-v*.tar.gz | tail -1)
 
 # This one triggers the build from ROOT
 ALLEXECS     += $(AFDSMGRDBIN)
@@ -56,9 +56,9 @@ clean:: clean-$(MODNAME)
 
 # Deep cleanup of afdsmgrd. If the unpack directory exists, it is removed and a
 # message is printed out. If the directory does not exist (afdsmgrd was never
-# built before) it does nothing without printing a single message
-#
-# TODO: add make uninstall to CMake
+# built before) it does nothing without printing a single message. Every file
+# copied during afdsmgrd's "make install" is removed by means of the uninstall
+# feature ("make uninstall")
 distclean-$(MODNAME):
 	@( cd "$(AFDSMGRDDIR)" ; \
 	   if [ -d afdsmgrd ]; then \

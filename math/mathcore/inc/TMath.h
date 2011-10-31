@@ -33,6 +33,7 @@
 #include "TError.h"
 #include <algorithm>
 #include <limits>
+#include <cmath>
 
 namespace TMath {
 
@@ -159,6 +160,7 @@ namespace TMath {
    inline Double_t Ldexp(Double_t x, Int_t exp);
           Double_t Factorial(Int_t i);
    inline Double_t Power(Double_t x, Double_t y);
+   inline Double_t Power(Double_t x, Int_t y);
    inline Double_t Log(Double_t x);
           Double_t Log2(Double_t x);
    inline Double_t Log10(Double_t x);
@@ -282,7 +284,7 @@ namespace TMath {
    Double_t StudentQuantile(Double_t p, Double_t ndf, Bool_t lower_tail=kTRUE);
    Double_t Vavilov(Double_t x, Double_t kappa, Double_t beta2);
    Double_t VavilovI(Double_t x, Double_t kappa, Double_t beta2);
-   Double_t Voigt(Double_t x, Double_t sigma, Double_t lg, Int_t R = 4);
+   Double_t Voigt(Double_t x, Double_t sigma, Double_t lg, Int_t r = 4);
 
    /* ************************** */
    /* * Statistics over arrays * */
@@ -362,14 +364,14 @@ namespace TMath {
 #   ifdef R__SOLARIS_CC50
        extern "C" { int finite(double); }
 #   endif
-#   if defined(R__GLIBC) && defined(__STRICT_ANSI__)
-#      ifndef finite
-#         define finite __finite
-#      endif
-#      ifndef isnan
-#         define isnan  __isnan
-#      endif
-#   endif
+// #   if defined(R__GLIBC) && defined(__STRICT_ANSI__)
+// #      ifndef finite
+// #         define finite __finite
+// #      endif
+// #      ifndef isnan
+// #         define isnan  __isnan
+// #      endif
+// #   endif
 #else
 // don't want to include complete <math.h>
 extern "C" {
@@ -470,6 +472,14 @@ inline Double_t TMath::Ldexp(Double_t x, Int_t exp)
 inline Double_t TMath::Power(Double_t x, Double_t y)
    { return pow(x, y); }
 
+inline Double_t TMath::Power(Double_t x, Int_t y) {
+#ifdef R__ANSISTREAM
+   return std::pow(x, y); 
+#else
+   return pow(x, (Double_t) y); 
+#endif
+}
+
 inline Double_t TMath::Log(Double_t x)
    { return log(x); }
 
@@ -492,10 +502,10 @@ inline Int_t TMath::Finite(Double_t x)
 #endif
 
 inline Int_t TMath::IsNaN(Double_t x)
-#if defined(R__MACOSX) && defined(__arm__)
+#if defined(R__ANSISTREAM) || (defined(R__MACOSX) && defined(__arm__) )
 #ifdef isnan
    // from math.h
-   { return isnan(x); }
+  { return ::isnan(x); }
 #else
    // from cmath
    { return std::isnan(x); }
@@ -1019,6 +1029,10 @@ Element TMath::KOrdStat(Size n, const Element *a, Size k, Size *work)
    // If work is supplied, it is used to store the sorting index and
    // assumed to be >= n. If work=0, local storage is used, either on
    // the stack if n < kWorkMax or on the heap for n >= kWorkMax.
+   // Note that the work index array will not contain the sorted indices but 
+   // all indeces of the smaller element in arbitrary order in work[0,...,k-1] and 
+   // all indeces of the larger element in arbitrary order in work[k+1,..,n-1]
+   // work[k] will contain instead the index of the returned element.
    //
    // Taken from "Numerical Recipes in C++" without the index array
    // implemented by Anna Khreshuk.

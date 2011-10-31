@@ -1164,10 +1164,13 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                maininfo = previnfo = new TFormLeafInfoReference(cl, element, 0);
                numberOfVarDim += RegisterDimensions(code,maininfo,maininfo,kFALSE);
             }
-            cl = 0;
-            for(int i=0; i<leaf->GetBranch()->GetEntries()-readentry; ++i)  {
+            TVirtualRefProxy *refproxy = cl->GetReferenceProxy();
+            for(Long64_t i=0; i<leaf->GetBranch()->GetEntries()-readentry; ++i)  {
                R__LoadBranch(leaf->GetBranch(), readentry+i, fQuickLoad);
-               cl = ((TFormLeafInfoReference*)maininfo)->GetValueClass(leaf);
+               void *refobj = maininfo->GetValuePointer(leaf,0);
+               if (refobj) {
+                  cl = refproxy->GetValueClass(refobj);
+               }               
                if ( cl ) break;
             }
             if ( !cl )  {
@@ -1521,6 +1524,19 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                      numberOfVarDim += RegisterDimensions(code,-1);
                   }
                   prevUseReferenceObject = kFALSE;
+               } else {
+                  previnfo->fNext = new TFormLeafInfoReference(cl, element, offset);
+                  previnfo = previnfo->fNext;
+               }
+               TVirtualRefProxy *refproxy = cl->GetReferenceProxy();
+               cl = 0;
+               for(Long64_t entry=0; entry<leaf->GetBranch()->GetEntries()-readentry; ++entry)  {
+                  R__LoadBranch(leaf->GetBranch(), readentry+i, fQuickLoad);
+                  void *refobj = maininfo->GetValuePointer(leaf,0);
+                  if (refobj) {
+                     cl = refproxy->GetValueClass(refobj);
+                  }
+                  if ( cl ) break;
                }
                needClass = kFALSE;
                mustderef = kTRUE;
@@ -1643,7 +1659,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                TStreamerElement * curelem;
                while ((curelem = (TStreamerElement*)next())) {
                   if (curelem->GetClassPointer() ==  TClonesArray::Class()) {
-                     Int_t clones_offset;
+                     Int_t clones_offset = 0;
                      ((TStreamerInfo*)cl->GetStreamerInfo())->GetStreamerElement(curelem->GetName(),clones_offset);
                      TFormLeafInfo* clonesinfo =
                         new TFormLeafInfo(cl, clones_offset, curelem);
@@ -1677,7 +1693,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                      }
                   } else if (curelem->GetClassPointer() && curelem->GetClassPointer()->GetCollectionProxy()) {
 
-                     Int_t coll_offset;
+                     Int_t coll_offset = 0;
                      ((TStreamerInfo*)cl->GetStreamerInfo())->GetStreamerElement(curelem->GetName(),coll_offset);
 
                      TClass *sub_cl =
@@ -3119,7 +3135,7 @@ TLeaf* TTreeFormula::GetLeafWithDatamember(const char* topchoice, const char* ne
                      leafinfo = new TFormLeafInfoClones(mother_cl, 0, bel_element, kTRUE);
                   }
 
-                  Int_t clones_offset;
+                  Int_t clones_offset = 0;
                   ((TStreamerInfo*)cl->GetStreamerInfo())->GetStreamerElement(curelem->GetName(),clones_offset);
                   TFormLeafInfo* sub_clonesinfo = new TFormLeafInfo(cl, clones_offset, curelem);
                   if (leafinfo)
@@ -4082,7 +4098,7 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
                   }
                }
                pos++;
-               Double_t ret;
+               Double_t ret = 0;
                method->Execute(ret);
                tab[pos-1] = ret; // check for the correct conversion!
 
@@ -4364,13 +4380,13 @@ Double_t TTreeFormula::GetValueFromMethod(Int_t i, TLeaf* leaf) const
    TMethodCall::EReturnType r = m->ReturnType();
 
    if (r == TMethodCall::kLong) {
-      Long_t l;
+      Long_t l = 0;
       m->Execute(thisobj, l);
       return (Double_t) l;
    }
 
    if (r == TMethodCall::kDouble) {
-      Double_t d;
+      Double_t d = 0.0;
       m->Execute(thisobj, d);
       return d;
    }
@@ -4424,19 +4440,19 @@ void* TTreeFormula::GetValuePointerFromMethod(Int_t i, TLeaf* leaf) const
    TMethodCall::EReturnType r = m->ReturnType();
 
    if (r == TMethodCall::kLong) {
-      Long_t l;
+      Long_t l = 0;
       m->Execute(thisobj, l);
       return 0;
    }
 
    if (r == TMethodCall::kDouble) {
-      Double_t d;
+      Double_t d = 0.0;
       m->Execute(thisobj, d);
       return 0;
    }
 
    if (r == TMethodCall::kOther) {
-      char* c;
+      char* c = 0;
       m->Execute(thisobj, &c);
       return c;
    }
@@ -4915,17 +4931,16 @@ void TTreeFormula::UpdateFormulaLeaves()
    // A safer alternative would be to recompile the whole thing .... However
    // currently compile HAS TO be called from the constructor!
 
-   TString names(kMaxLen);
    Int_t nleaves = fLeafNames.GetEntriesFast();
    ResetBit( kMissingLeaf );
    for (Int_t i=0;i<nleaves;i++) {
       if (!fTree) break;
       if (!fLeafNames[i]) continue;
-      names.Form("%s/%s",fLeafNames[i]->GetTitle(),fLeafNames[i]->GetName());
-      TLeaf *leaf = fTree->GetLeaf(names);
+      
+      TLeaf *leaf = fTree->GetLeaf(fLeafNames[i]->GetTitle(),fLeafNames[i]->GetName());
       fLeaves[i] = leaf;
       if (fBranches[i] && leaf) {
-         fBranches[i]=leaf->GetBranch();
+         fBranches[i] = leaf->GetBranch();
          // Since sometimes we might no read all the branches for all the entries, we 
          // might sometimes only read the branch count and thus reset the colleciton
          // but might not read the data branches, to insure that a subsequent read 

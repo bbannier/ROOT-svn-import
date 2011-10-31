@@ -2286,7 +2286,7 @@ int RpdSshAuth(const char *sstr)
    
    user[lenU] = '\0';
    gReUseRequired = (opt & kAUTH_REUSE_MSK);
-#if R__SSL
+#ifdef R__SSL
    if (gRSASSLKey) {
       // Determine type of RSA key required
       gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -2808,7 +2808,7 @@ int RpdKrb5Auth(const char *sstr)
       // Decode subject string
       sscanf(sstr, "%d %d %d %d %255s", &gRemPid, &ofs, &opt, &lenU, dumm);
       gReUseRequired = (opt & kAUTH_REUSE_MSK);
-#if R__SSL
+#ifdef R__SSL
       if (gRSASSLKey) {
          // Determine type of RSA key required
          gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -3210,7 +3210,7 @@ int RpdSRPUser(const char *sstr)
       lenU = (lenU > kMAXUSERLEN) ? kMAXUSERLEN-1 : lenU;
       user[lenU] = '\0';
       gReUseRequired = (opt & kAUTH_REUSE_MSK);
-#if R__SSL
+#ifdef R__SSL
       if (gRSASSLKey) {
          // Determine type of RSA key required
          gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -3951,7 +3951,7 @@ int RpdGlobusAuth(const char *sstr)
 
    Subj[lSubj] = '\0';
    gReUseRequired = (opt & kAUTH_REUSE_MSK);
-#if R__SSL
+#ifdef R__SSL
    if (gRSASSLKey) {
       // Determine type of RSA key required
       gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -4567,7 +4567,7 @@ int RpdUser(const char *sstr)
       gCryptRequired = (opt & kAUTH_CRYPT_MSK);
       gSaltRequired  = (opt & kAUTH_SSALT_MSK);
       gOffSet = ofs;
-#if R__SSL
+#ifdef R__SSL
       if (gRSASSLKey) {
          // Determine type of RSA key required
          gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -5371,8 +5371,9 @@ int RpdGenRSAKeys(int setrndinit)
    // works as expected
    bool notOK = 1;
    rsa_NUMBER p1, p2, rsa_n, rsa_e, rsa_d;
-   int l_n = 0, l_e = 0, l_d = 0;
+   int l_n = 0, l_d = 0;
 #if R__RSADEB
+   Int_t l_e = 0;
    char buf[rsa_STRLEN];
 #endif
    char buf_n[rsa_STRLEN], buf_e[rsa_STRLEN], buf_d[rsa_STRLEN];
@@ -5424,7 +5425,9 @@ int RpdGenRSAKeys(int setrndinit)
       rsa_num_sput(&rsa_n, buf_n, rsa_STRLEN);
       l_n = strlen(buf_n);
       rsa_num_sput(&rsa_e, buf_e, rsa_STRLEN);
+#if R__RSADEB
       l_e = strlen(buf_e);
+#endif
       rsa_num_sput(&rsa_d, buf_d, rsa_STRLEN);
       l_d = strlen(buf_d);
 

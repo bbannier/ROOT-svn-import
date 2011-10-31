@@ -1858,7 +1858,7 @@ int XrdProofdProofServMgr::CreateFork(XrdProofdProtocol *p)
       }
       // Set the path w/o asserting the related files
       path = xmsg.Buf();
-      xps->SetAdminPath(path.c_str(), 0);
+      xps->SetAdminPath(path.c_str(), 0, fMgr->ChangeOwn());
       TRACE(FORK, "admin path: "<<path);
 
       xmsg.Reset();
@@ -1964,12 +1964,12 @@ int XrdProofdProofServMgr::CreateFork(XrdProofdProtocol *p)
       fcp.Close();
 
       TRACE(FORK, (int)getpid()<<": user: "<<p->Client()->User()<<
-                  ", uid: "<<getuid()<<", euid:"<<geteuid());
+                  ", uid: "<<getuid()<<", euid:"<<geteuid()<<", psrv: "<<xps->ROOT()->PrgmSrv());
       // Run the program
       execv(xps->ROOT()->PrgmSrv(), argvv);
 
       // We should not be here!!!
-      TRACE(XERR, "returned from execv: bad, bad sign !!!");
+      TRACE(XERR, "returned from execv: bad, bad sign !!! errno:" << (int)errno);
       exit(1);
    }
 
@@ -2018,7 +2018,7 @@ int XrdProofdProofServMgr::CreateFork(XrdProofdProtocol *p)
       TRACEP(p, XERR, emsg.c_str());
    }
    int pathrc = 0;
-   if (!pathrc && !(pathrc = xps->SetAdminPath(path.c_str(), 1))) {
+   if (!pathrc && !(pathrc = xps->SetAdminPath(path.c_str(), 1, fMgr->ChangeOwn()))) {
       // Communicate the path to child
       if ((pathrc = fpc.Post(0, path.c_str())) != 0) {
          emsg = "failed to communicating path to child";
@@ -2261,7 +2261,7 @@ int XrdProofdProofServMgr::CreateAdminPath(XrdProofdProofServ *xps,
    XPDFORM(path, "%s/%s.%s.", fActiAdminPath.c_str(),
                               p->Client()->User(), p->Client()->Group());
    if (pid > 0) path += pid;
-   if (xps->SetAdminPath(path.c_str(), assert) != 0) {
+   if (xps->SetAdminPath(path.c_str(), assert, fMgr->ChangeOwn()) != 0) {
       XPDFORM(emsg, "failure setting admin path '%s'", path.c_str());
       return -1;
    }
@@ -4427,7 +4427,8 @@ int XrdProofdProofServMgr::SetUserOwnerships(XrdProofdProtocol *p,
 
    // If applicable, make sure that the private data dir for this user exists 
    // and has the right permissions
-   if (fMgr->DataDir() && strlen(fMgr->DataDir()) > 0 && ord && stag) {
+   if (fMgr->DataDir() && strlen(fMgr->DataDir()) > 0 &&
+       fMgr->DataDirOpts() && strlen(fMgr->DataDirOpts()) > 0 && ord && stag) {
       XrdProofUI ui;
       XrdProofdAux::GetUserInfo(XrdProofdProtocol::EUidAtStartup(), ui);
       XrdOucString dgr, dus[3];
@@ -4893,7 +4894,7 @@ void XrdProofSessionInfo::FillProofServ(XrdProofdProofServ &s, XrdROOTMgr *rmgr)
       }
    }
    s.SetUserEnvs(fUserEnvs.c_str());
-   s.SetAdminPath(fAdminPath.c_str(), 0);
+   s.SetAdminPath(fAdminPath.c_str(), 0, 0);
    s.SetUNIXSockPath(fUnixPath.c_str());
 }
 

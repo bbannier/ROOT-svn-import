@@ -670,6 +670,7 @@ void TAxis::Set(Int_t nbins, Double_t xlow, Double_t xup)
    fXmin    = xlow;
    fXmax    = xup;
    if (!fParent) SetDefaults();
+   if (fXbins.fN > 0) fXbins.Set(0);
 }
 
 //______________________________________________________________________________
@@ -1060,8 +1061,8 @@ void TAxis::UnZoom()
             hobj1->SetMinimum();
             hobj1->SetMaximum();
             hobj1->ResetBit(TH1::kIsZoomed);
+            return;
          }
-         return;
       }
       if (strcmp(hobj1->GetName(),"hframe") == 0 ) {
          hobj1->SetMinimum(fXmin);
@@ -1085,6 +1086,8 @@ void TAxis::UnZoom()
                hobj->SetMinimum();
                hobj->SetMaximum();
                hobj->ResetBit(TH1::kIsZoomed);
+            } else {
+               hobj->GetYaxis()->SetRange(0,0);
             }
             return;
          }

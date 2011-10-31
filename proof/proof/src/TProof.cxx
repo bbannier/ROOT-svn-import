@@ -1549,6 +1549,14 @@ void TProof::Close(Option_t *opt)
       R__LOCKGUARD2(gROOTMutex);
       gROOT->GetListOfSockets()->Remove(this);
 
+      if (fChains) {
+         while (TChain *chain = dynamic_cast<TChain*> (fChains->First()) ) {
+            // remove "chain" from list
+            chain->SetProof(0);
+            RemoveChain(chain);
+         }
+      }
+
       if (IsProofd()) {
 
          gROOT->GetListOfProofs()->Remove(this);
@@ -10497,12 +10505,15 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
       // Check for PoD cluster
       if (PoDCheckUrl( &clst ) < 0) return 0;
 
-      if (clst.BeginsWith("workers=") || clst.BeginsWith("tunnel="))
-         clst.Insert(0, "/?");
+      if (clst.BeginsWith("workers=")) clst.Insert(0, "lite:///?");
+      if (clst.BeginsWith("tunnel=")) clst.Insert(0, "/?");
 
       // Parse input URL
       TUrl u(clst);
 
+      // *** GG, 060711: this does not seem to work any more (at XrdClient level)
+      // *** to be investigated (it is not really needed; static tunnels work).
+      // Dynamic tunnel:
       // Parse any tunning info ("<cluster>/?tunnel=[<tunnel_host>:]tunnel_port)
       TString opts(u.GetOptions());
       if (!opts.IsNull()) {
@@ -10733,12 +10744,11 @@ void TProof::SaveWorkerInfo()
       }
    }
    
-   // Loop also over the list of bad workers (if they dfailed to startup they are not in
+   // Loop also over the list of bad workers (if they failed to startup they are not in
    // the overall list)
    TIter nxb(fBadSlaves);
    while ((wrk = (TSlave *) nxb())) {
       if (!fSlaves->FindObject(wrk)) {
-         wrk->Print();
          // Write out record for this worker
          fprintf(fwrk,"%s@%s:%d 0 %s %s.log\n",
                      wrk->GetUser(), wrk->GetName(), wrk->GetPort(),
@@ -10909,6 +10919,10 @@ Int_t TProof::AssertDataSet(TDSet *dset, TList *input,
                dsn2.Remove(ienl);
             }
             if ((fc = mgr->GetDataSet(dsn2.Data()))) {
+               // Save dataset name in TFileInfo's title to use it in TDset 
+               TIter nxfi(fc->GetList());
+               TFileInfo *fi = 0;
+               while ((fi = (TFileInfo *) nxfi())) { fi->SetTitle(dsn2.Data()); }
                dsnparse = dsn2;
                if (!dataset) {
                   // This is our dataset

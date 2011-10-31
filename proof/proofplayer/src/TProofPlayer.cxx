@@ -2046,7 +2046,6 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
          status->Add(emsg);        
       }
       status->SetExitStatus((Int_t) GetExitStatus());
-      TPerfStats::Stop();
 
       PDB(kOutput,1) Info("Finalize","Calling Merge Output");
       // Some objects (e.g. histos in autobin) may not have been merged yet
@@ -2082,6 +2081,12 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
             if (!fOutput->FindObject(listOfMissingFiles)) fOutput->Add(listOfMissingFiles);
          }
       }
+
+      TPerfStats::Stop();
+      // Save memory usage on master
+      Long_t vmaxmst, rmaxmst;
+      TPerfStats::GetMemValues(vmaxmst, rmaxmst);
+      status->SetMemValues(vmaxmst, rmaxmst, kTRUE);
 
       SafeDelete(fSelector);
    } else {
@@ -2390,7 +2395,7 @@ void TProofPlayerRemote::MergeOutput()
          PDB(kOutput,2) Info("MergeOutput","rawdir: '%s'", dir.Data());
          pf->SetDir(dir, kTRUE);
          // The worker ordinal
-         pf->SetWorkerOrdinal(gProofServ->GetOrdinal());
+         pf->SetWorkerOrdinal(gProofServ ? gProofServ->GetOrdinal() : "0");
          // The saved output file name, if any
          key.Form("PROOF_OutputFileName_%s", pf->GetFileName());
          if ((nm = (TNamed *) fOutput->FindObject(key.Data()))) {
@@ -2816,10 +2821,13 @@ Int_t TProofPlayerRemote::Incorporate(TObject *newobj, TList *outlist, Bool_t &m
    Bool_t specialH =
       (!fProof || !fProof->TestBit(TProof::kIsClient) || fProof->IsLite()) ? kTRUE : kFALSE;
    if (specialH && newobj->InheritsFrom(TH1::Class())) {
-      if (!HandleHistogram(newobj)) {
-         PDB(kOutput,1) Info("Incorporate", "histogram object '%s' added to the"
-                             " appropriate list for delayed merging", newobj->GetName());
-         merged = kFALSE;
+      if (!HandleHistogram(newobj, merged)) {
+         if (merged) {
+            PDB(kOutput,1) Info("Incorporate", "histogram object '%s' merged", newobj->GetName());
+         } else {
+            PDB(kOutput,1) Info("Incorporate", "histogram object '%s' added to the"
+                                " appropriate list for delayed merging", newobj->GetName());
+         }
          return 0;
       }
    }
@@ -2859,7 +2867,7 @@ Int_t TProofPlayerRemote::Incorporate(TObject *newobj, TList *outlist, Bool_t &m
 }
 
 //______________________________________________________________________________
-TObject *TProofPlayerRemote::HandleHistogram(TObject *obj)
+TObject *TProofPlayerRemote::HandleHistogram(TObject *obj, Bool_t &merged)
 {
    // Low statistic histograms need a special treatment when using autobin
 
@@ -2868,6 +2876,10 @@ TObject *TProofPlayerRemote::HandleHistogram(TObject *obj)
       // Not an histo
       return obj;
    }
+
+   // This is only used if we return (TObject *)0 and there is only one case
+   // when we set this to kTRUE
+   merged = kFALSE;
 
    // Does is still needs binning ?
    Bool_t tobebinned = (h->GetBuffer()) ? kTRUE : kFALSE;
@@ -2944,7 +2956,7 @@ TObject *TProofPlayerRemote::HandleHistogram(TObject *obj)
                   hout->Add(h);
                   PDB(kOutput,2)
                      Info("HandleHistogram", "histogram '%s' just added", h->GetName());
-                  
+                  merged = kTRUE; // So it will be deleted
                   return (TObject *)0;
                } else {
                   // Remove the existing histo from the output list ...

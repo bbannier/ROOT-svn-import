@@ -101,7 +101,7 @@ include/%.h:    $(RPDUTILDIRI)/%.h
 $(SRVAUTHLIB):  $(SRVAUTHO) $(RSAO) $(DAEMONUTILSO) $(STRLCPYO) $(ORDER_) $(MAINLIBS) $(SRVAUTHLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libSrvAuth.$(SOEXT) $@ "$(SRVAUTHO) $(RSAO)" \
-		   "$(SRVAUTHLIBEXTRA) $(DAEMONUTILSO) $(STRLCPYO) $(CRYPTLIBS) $(AUTHLIBS)"
+		   "$(DAEMONUTILSO) $(SRVAUTHLIBEXTRA) $(STRLCPYO) $(CRYPTLIBS) $(AUTHLIBS)"
 
 all-$(MODNAME): $(RPDUTILO) $(RPDCONNO) $(RPDPRIVO) $(SRVAUTHLIB)
 
@@ -117,3 +117,6 @@ distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
 $(RPDUTILO): CXXFLAGS += $(AUTHFLAGS)
+ifeq ($(MACOSX_MINOR),7)
+$(call stripsrc,$(RPDUTILDIRS)/rpdutils.o): CXXFLAGS += -Wno-deprecated-declarations
+endif

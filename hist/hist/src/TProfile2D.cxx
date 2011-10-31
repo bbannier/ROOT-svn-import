@@ -1228,8 +1228,6 @@ TH2D *TProfile2D::ProjectionXY(const char *name, Option_t *option) const
    opt.ToLower();
    
 
-   Int_t nx = fXaxis.GetNbins();
-   Int_t ny = fYaxis.GetNbins();
 
    // Create the projection histogram
    char *pname = (char*)name;
@@ -1238,7 +1236,20 @@ TH2D *TProfile2D::ProjectionXY(const char *name, Option_t *option) const
       pname = new char[nch];
       snprintf(pname,nch,"%s%s",GetName(),name);
    }
-   TH2D *h1 = new TH2D(pname,GetTitle(),nx,fXaxis.GetXmin(),fXaxis.GetXmax(),ny,fYaxis.GetXmin(),fYaxis.GetXmax());
+   Int_t nx = fXaxis.GetNbins();
+   Int_t ny = fYaxis.GetNbins();
+   const TArrayD *xbins = fXaxis.GetXbins();
+   const TArrayD *ybins = fYaxis.GetXbins();
+   TH2D * h1 = 0;
+   if (xbins->fN == 0 && ybins->fN == 0) {
+      h1 = new TH2D(pname,GetTitle(),nx,fXaxis.GetXmin(),fXaxis.GetXmax(),ny,fYaxis.GetXmin(),fYaxis.GetXmax());
+   } else if (xbins->fN == 0) {
+      h1 = new TH2D(pname,GetTitle(),nx,fXaxis.GetXmin(),fXaxis.GetXmax(),ny, ybins->GetArray() );
+   } else if (ybins->fN == 0) {
+      h1 = new TH2D(pname,GetTitle(),nx,xbins->GetArray(),ny,fYaxis.GetXmin(),fYaxis.GetXmax());
+   } else {
+      h1 = new TH2D(pname,GetTitle(),nx,xbins->GetArray(),ny,ybins->GetArray() );
+   }
    Bool_t computeErrors = kFALSE;
    Bool_t cequalErrors  = kFALSE;
    Bool_t binEntries    = kFALSE;
@@ -1740,15 +1751,21 @@ void TProfile2D::SetBinEntries(Int_t bin, Double_t w)
 //______________________________________________________________________________
 void TProfile2D::SetBins(Int_t nx, Double_t xmin, Double_t xmax, Int_t ny, Double_t ymin, Double_t ymax)
 {
-//*-*-*-*-*-*-*-*-*Redefine  x axis parameters*-*-*-*-*-*-*-*-*-*-*-*
+//*-*-*-*-*-*-*-*-*Redefine  x and y axis parameters*-*-*-*-*-*-*-*-*-*-*-*
 //*-*              ===========================
 
-   fXaxis.Set(nx,xmin,xmax);
-   fYaxis.Set(ny,ymin,ymax);
-   fNcells = (nx+2)*(ny+2);
-   SetBinsLength(fNcells);
+   TH1::SetBins(nx,xmin, xmax,ny, ymin,ymax);
    fBinEntries.Set(fNcells);
-   fSumw2.Set(fNcells);
+   if (fBinSumw2.fN) fBinSumw2.Set(fNcells);
+}
+
+//______________________________________________________________________________
+void TProfile2D::SetBins(Int_t nx,  const Double_t *xbins, Int_t ny, const Double_t *ybins)
+{
+//*-*-*-*-*-*-*-*-*Redefine  x and y axis parameters for variable bin sizes -*-*-*-*-*-*-*
+//*-*              ===========================
+   TH1::SetBins(nx,xbins,ny,ybins);
+   fBinEntries.Set(fNcells);
    if (fBinSumw2.fN) fBinSumw2.Set(fNcells);
 }
 

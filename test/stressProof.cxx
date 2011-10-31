@@ -510,8 +510,8 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
 
    // Notify/warn about the dynamic startup option, if any
    TUrl uu(url), udef(urldef);
-   Bool_t extcluster = (strcmp(uu.GetHost(), udef.GetHost()) ||
-                       (uu.GetPort() != udef.GetPort())) ? kTRUE : kFALSE;
+   Bool_t extcluster = ((strcmp(uu.GetHost(), udef.GetHost()) ||
+                        (uu.GetPort() != udef.GetPort())) && strcmp(url,"lite://"))? kTRUE : kFALSE;
    if (gDynamicStartup && gverbose > 0) {
       // Check url
       if (extcluster) {
@@ -965,9 +965,12 @@ Int_t PT_Open(void *args)
    // Temp dir for PROOF tutorials
    PutPoint();
    TString tmpdir(gSystem->TempDirectory()), us;
-#if !defined(R__MACOSX) 
+#if defined(R__MACOSX) 
+   // Force '/tmp' under macosx, to avoid problems with lengths and symlinks
+   tmpdir = "/tmp";
+#endif
+   UserGroup_t *ug = gSystem->GetUserInfo(gSystem->GetUid());
    if (!tmpdir.EndsWith(us.Data())) {
-      UserGroup_t *ug = gSystem->GetUserInfo(gSystem->GetUid());
       if (ug) {
          us.Form("/%s", ug->fUser.Data());
          tmpdir += us;
@@ -977,6 +980,7 @@ Int_t PT_Open(void *args)
          return -1;
       }
    }
+#if !defined(R__MACOSX) 
    gtutdir.Form("%s/.proof-tutorial", tmpdir.Data());
 #else
    gtutdir.Form("%s/.proof", tmpdir.Data());
@@ -2199,9 +2203,14 @@ Int_t PT_AdminFunc(void *)
    gSystem->RedirectOutput(glogfile, "a", &gRH);
    TMacro macroLs(testLs);
    TString testLsLine = TString::Format("%s/testMacro.C", gsandbox.Data());
+   // The first part of <tmp> maybe sligthly different
+#if defined(R__MACOSX)
+   if (testLsLine.Index(".proof") != kNPOS)
+      testLsLine.Remove(0, testLsLine.Index(".proof"));
+#else
    if (testLsLine.Index(".proof-tutorial") != kNPOS)
-      // The first part of <tmp> maybe sligthly different
       testLsLine.Remove(0, testLsLine.Index(".proof-tutorial"));
+#endif
    if (!macroLs.GetLineWith(testLsLine)) {
       printf("\n >>> Test failure: Ls: output not consistent (line: '%s')\n", testLsLine.Data());
       printf(" >>> Log file: '%s'\n", testLs.Data());

@@ -56,6 +56,7 @@ private :
    Double_t              fPoint[3];         //! current point
    Double_t              fDirection[3];     //! current direction
    Double_t              fLastPoint[3];     //! last point for which safety was computed
+   Int_t                 fThreadId;         //! thread id for this navigator
    Int_t                 fLevel;            //! current geometry level;
    Int_t                 fNmany;            //! number of overlapping nodes on current branch
    Int_t                 fNextDaughterIndex; //! next daughter index after FindNextBoundary
@@ -84,6 +85,7 @@ private :
    TGeoCacheState       *fBackupState;      //! backup state
    TGeoHMatrix          *fCurrentMatrix;    //! current stored global matrix
    TGeoHMatrix          *fGlobalMatrix;     //! current pointer to cached global matrix
+   TGeoHMatrix          *fDivMatrix;        //! current local matrix of the selected division cell
    TString               fPath;             //! path to current node
     
 public :
@@ -126,6 +128,7 @@ public :
    Double_t               GetSafeDistance() const      {return fSafety;}
    Double_t               GetLastSafety() const        {return fLastSafety;}
    Double_t               GetStep() const              {return fStep;}
+   Int_t                  GetThreadId() const          {return fThreadId;}
    void                   InspectState() const;
    Bool_t                 IsSafeStep(Double_t proposed, Double_t &newsafety) const;
    Bool_t                 IsSameLocation(Double_t x, Double_t y, Double_t z, Bool_t change=kFALSE);
@@ -162,6 +165,7 @@ public :
    TGeoVolume            *GetCurrentVolume() const {return fCurrentNode->GetVolume();}
    const Double_t        *GetCldirChecked() const  {return fCldirChecked;}
    const Double_t        *GetCldir() const         {return fCldir;}
+   TGeoHMatrix           *GetDivMatrix() const     {return fDivMatrix;}
 //   Double_t               GetNormalChecked() const {return fNormalChecked;}
    const Double_t        *GetNormal() const        {return fNormal;}
    Int_t                  GetLevel() const         {return fLevel;}
@@ -202,5 +206,36 @@ public :
    ClassDef(TGeoNavigator, 0)          // geometry navigator class
 };
 
+#ifndef ROOT_TObjArray
+#include "TObjArray.h"
+#endif
+
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+// TGeoNavigatorArray - Class representing an array of navigators working //
+//   in a single thread.                                                  //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
+
+class TGeoNavigatorArray : public TObjArray
+{
+private:
+   TGeoNavigator         *fCurrentNavigator; // Current navigator
+   TGeoManager           *fGeoManager;       // Manager to which it applies
+   
+   TGeoNavigatorArray(const TGeoNavigatorArray&);
+   TGeoNavigatorArray& operator=(const TGeoNavigatorArray&);
+
+public:
+   TGeoNavigatorArray() : TObjArray(), fCurrentNavigator(0), fGeoManager(0) {}
+   TGeoNavigatorArray(TGeoManager *mgr) : TObjArray(), fCurrentNavigator(0), fGeoManager(mgr) {SetOwner();}
+   virtual ~TGeoNavigatorArray() {}
+   
+   TGeoNavigator         *AddNavigator();
+   inline TGeoNavigator  *GetCurrentNavigator() const {return fCurrentNavigator;}   
+   TGeoNavigator         *SetCurrentNavigator(Int_t inav) {return (fCurrentNavigator=(TGeoNavigator*)At(inav));}
+
+   ClassDef(TGeoNavigatorArray, 0)       // An array of navigators
+};   
 #endif
    

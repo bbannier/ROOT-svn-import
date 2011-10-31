@@ -320,14 +320,13 @@ void GetTreeVarsAndCuts(TGComboBox* dataSet, TString& variablesStr, TString& cut
    // Get the entry
    TGTextLBEntry* textEntry = 
       static_cast<TGTextLBEntry*>( dataSet->GetListBox()->GetEntry( dataSet->GetSelected() ) );
+   if (!textEntry) return;
    // Get the name of the tree
    TString nameStr ( textEntry->GetText()->GetString() );
    // Get the variables selected
    variablesStr = nameStr(nameStr.First('(') + 2, nameStr.First(',') - nameStr.First('(') - 3);
    // Get the cuts selected
    cutsStr = nameStr( nameStr.First(',') + 3, nameStr.First(')') - nameStr.First(',') - 4 );
-
-   return;
 }
 
 
@@ -1954,7 +1953,7 @@ void TFitEditor::DoFit()
    // Set the button so that the user cannot use it while fitting, set
    // the mouse to watch type and so on.
    fFitButton->SetState(kButtonEngaged);
-   if (gPad) gPad->GetVirtCanvas()->SetCursor(kWatch);
+   if (gPad && gPad->GetVirtCanvas()) gPad->GetVirtCanvas()->SetCursor(kWatch);
    gVirtualX->SetCursor(GetId(), gVirtualX->CreateCursor(kWatch));
 
    TVirtualPad *save = 0;
@@ -1964,7 +1963,8 @@ void TFitEditor::DoFit()
       gPad = fParentPad;
       fParentPad->cd();
 
-      fParentPad->GetCanvas()->SetCursor(kWatch);
+      if (fParentPad->GetCanvas())
+         fParentPad->GetCanvas()->SetCursor(kWatch);
    }
 
    // Get the ranges from the sliders
@@ -2158,7 +2158,8 @@ void TFitEditor::DoFit()
       if ( fType != kObjectTree ) { fSliderX->SetPosition(xmin, xmax); DoSliderXMoved(); }
       if ( fType != kObjectTree && fDim > 1 ) { fSliderY->SetPosition(ymin, ymax); DoSliderYMoved(); }
       if ( fType != kObjectTree && fDim > 2 ) { fSliderZ->SetPosition(zmin, zmax); DoSliderZMoved(); }
-      fParentPad->GetCanvas()->SetCursor(kPointer);
+      if (fParentPad->GetCanvas())
+         fParentPad->GetCanvas()->SetCursor(kPointer);
       fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
       
       if (save) gPad = save;
@@ -2168,7 +2169,7 @@ void TFitEditor::DoFit()
    }
 
    // Restore the Fit button and mouse cursor to their proper state.
-   if (gPad) gPad->GetVirtCanvas()->SetCursor(kPointer);
+   if (gPad && gPad->GetVirtCanvas()) gPad->GetVirtCanvas()->SetCursor(kPointer);
    gVirtualX->SetCursor(GetId(), gVirtualX->CreateCursor(kPointer));
    fFitButton->SetState(kButtonUp);
 
@@ -2185,12 +2186,15 @@ Int_t TFitEditor::CheckFunctionString(const char *fname)
    Int_t rvalue = 0;
    if ( fDim == 1 || fDim == 0 ) {
       TF1 form("tmpCheck", fname);
+      // coverity[uninit_use_in_call]
       rvalue = form.Compile();
    } else if ( fDim == 2 ) {
       TF2 form("tmpCheck", fname);
+      // coverity[uninit_use_in_call]
       rvalue = form.Compile();
    } else if ( fDim == 3 ) {
       TF3 form("tmpCheck", fname);
+      // coverity[uninit_use_in_call]
       rvalue = form.Compile();
    }
 
@@ -2230,6 +2234,7 @@ void TFitEditor::DoDataSet(Int_t selected)
 
    // Get the name and class of the selected object.
    TGTextLBEntry* textEntry = static_cast<TGTextLBEntry*>(fDataSet->GetListBox()->GetEntry(selected));
+   if (!textEntry) return;
    TString textEntryStr = textEntry->GetText()->GetString();
    TString name = textEntry->GetText()->GetString()+textEntry->GetText()->First(':')+2;
    TString className = textEntryStr(0,textEntry->GetText()->First(':'));
@@ -2669,7 +2674,7 @@ void TFitEditor::DrawSelection(bool restore)
    px2 = gPad->XtoAbsPixel(xright);
    py2 = gPad->YtoAbsPixel(ymax);
 
-   gPad->GetCanvas()->FeedbackMode(kTRUE);
+   if (gPad->GetCanvas()) gPad->GetCanvas()->FeedbackMode(kTRUE);
    gPad->SetLineWidth(1);
    gPad->SetLineColor(2);
    
@@ -3093,6 +3098,7 @@ TF1* TFitEditor::HasFitFunction()
    
    // Get the list of functions of the fit object
    TList *lf = GetFitObjectListOfFunctions();
+   TF1* func = 0;
 
    // If it exists
    if ( lf ) {
@@ -3102,11 +3108,11 @@ TF1* TFitEditor::HasFitFunction()
 
       // Then add all these functions to the fPrefFit structure.
       TObject *obj2;
-      TIter next(lf, kIterBackward);
+      TIter next(lf, kIterForward);
       // Go over all the elements in lf
       while ((obj2 = next())) {
          if (obj2->InheritsFrom(TF1::Class())) {
-            TF1* func = (TF1 *)obj2;
+            func = (TF1 *)obj2;
             fPrevFitIter it;
             // No go over all elements in fPrevFit
             for ( it = fPrevFit.begin(); it != fPrevFit.end(); ++it) {
@@ -3133,6 +3139,7 @@ TF1* TFitEditor::HasFitFunction()
       FillFunctionList();
       fDrawAdvanced->SetState(kButtonUp);
 
+
    } else {
       // If there is no prev fit functions.
       fTypeFit->Select(kFP_UFUNC);
@@ -3143,7 +3150,8 @@ TF1* TFitEditor::HasFitFunction()
    }
 
    fDrawAdvanced->SetState(kButtonDisabled);
-   return 0;
+
+   return func;
 }
 
 //______________________________________________________________________________

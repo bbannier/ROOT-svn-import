@@ -46,11 +46,14 @@
 //       * address is the address of the first item of a structure
 //       * leaflist is the concatenation of all the variable names and types
 //         separated by a colon character :
-//         The variable name and the variable type are separated by a slash (/).
-//         The variable type may be 0,1 or 2 characters. If no type is given,
-//         the type of the variable is assumed to be the same as the previous
-//         variable. If the first variable does not have a type, it is assumed
-//         of type F by default. The list of currently supported types is given below:
+//         The variable name and the variable type are separated by a
+//         slash (/). The variable type must be 1 character. (Characters
+//         after the first are legal and will be appended to the visible
+//         name of the leaf, but have no effect.) If no type is given, the
+//         type of the variable is assumed to be the same as the previous
+//         variable. If the first variable does not have a type, it is
+//         assumed of type F by default. The list of currently supported
+//         types is given below:
 //            - C : a character string terminated by the 0 character
 //            - B : an 8 bit signed integer (Char_t)
 //            - b : an 8 bit unsigned integer (UChar_t)
@@ -62,7 +65,7 @@
 //            - D : a 64 bit floating point (Double_t)
 //            - L : a 64 bit signed integer (Long64_t)
 //            - l : a 64 bit unsigned integer (ULong64_t)
-//            - O : a boolean (Bool_t)
+//            - O : [the letter 'o', not a zero] a boolean (Bool_t)
 //       * If the address points to a single numerical variable, the leaflist is optional:
 //           int value;
 //           tree->Branch(branchname, &value);
@@ -138,9 +141,9 @@
 //         STLcollection is the address of a pointer to std::vector, std::list,
 //         std::deque, std::set or std::multiset containing pointers to objects.
 //         If the splitlevel is a value bigger than 100 (TTree::kSplitCollectionOfPointers)
-//         then the collection will be written in split mode. Ie. if it contains objects of 
+//         then the collection will be written in split mode, e.g. if it contains objects of 
 //         any types deriving from TTrack this function will sort the objects
-//         basing on their type and store them in separate branches in split
+//         based on their type and store them in separate branches in split
 //         mode.
 //
 //  ==> branch->SetAddress(Void *address)
@@ -443,7 +446,7 @@ TTree::TFriendLock::TFriendLock(const TFriendLock& tfl) :
 //______________________________________________________________________________
 TTree::TFriendLock& TTree::TFriendLock::operator=(const TTree::TFriendLock& tfl)
 {
-   //assignement operator
+   //assignment operator
    if(this!=&tfl) {
       fTree=tfl.fTree;
       fMethodBit=tfl.fMethodBit;
@@ -513,7 +516,7 @@ TTree::TClusterIterator::TClusterIterator(TTree *tree, Long64_t firstEntry) : fT
 Long64_t TTree::TClusterIterator::GetEstimatedClusterSize()
 {
    // In the case where the cluster size was not fixed (old files and 
-   // case where autoflush was explicilty set to zero, we need estimate
+   // case where autoflush was explicitly set to zero, we need estimate
    // a cluster size in relation to the size of the cache.
 
    Long64_t zipBytes = fTree->GetZipBytes();
@@ -522,6 +525,16 @@ Long64_t TTree::TClusterIterator::GetEstimatedClusterSize()
    } else {
       Long64_t clusterEstimate = 1;
       Long64_t cacheSize = fTree->GetCacheSize();
+      if (cacheSize == 0) {
+         // Humm ... let's double check on the file.
+         TFile *file = fTree->GetCurrentFile();
+         if (file) {
+            TFileCacheRead *cache = file->GetCacheRead();
+            if (cache) {
+               cacheSize = cache->GetBufferSize();
+            }
+         }
+      }
       if (cacheSize > 0) {
          clusterEstimate = fTree->GetEntries() * cacheSize / zipBytes;
          if (clusterEstimate == 0)
@@ -647,6 +660,8 @@ TTree::TTree()
 
    fMaxEntryLoop = 1000000000;
    fMaxEntryLoop *= 1000;
+   
+   fBranches.SetOwner(kTRUE);
 }
 
 //______________________________________________________________________________
@@ -742,6 +757,8 @@ TTree::TTree(const char* name, const char* title, Int_t splitlevel /* = 99 */)
 
    // We become the current tree.
    gTree = this;
+
+   fBranches.SetOwner(kTRUE);
 
    // If title starts with "/" and is a valid folder name, a superbranch
    // is created.
@@ -873,7 +890,7 @@ void TTree::AddBranchToCache(const char*bname, Bool_t subbranches)
    // If bname="*" all branches are added to the cache.
    // if subbranches is true all the branches of the subbranches are
    // also put to the cache.
-
+   
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
@@ -886,11 +903,38 @@ void TTree::AddBranchToCache(TBranch *b, Bool_t subbranches)
    // Add branch b to the Tree cache.
    // if subbranches is true all the branches of the subbranches are
    // also put to the cache.
-
+   
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
    if (tc) tc->AddBranch(b,subbranches);
+}
+
+//______________________________________________________________________________
+void TTree::DropBranchFromCache(const char*bname, Bool_t subbranches)
+{
+   // Add branch with name bname to the Tree cache.
+   // If bname="*" all branches are added to the cache.
+   // if subbranches is true all the branches of the subbranches are
+   // also put to the cache.
+   
+   TFile *f = GetCurrentFile();
+   if (!f) return;
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   if (tc) tc->DropBranch(bname,subbranches);
+}
+
+//______________________________________________________________________________
+void TTree::DropBranchFromCache(TBranch *b, Bool_t subbranches)
+{
+   // Add branch b to the Tree cache.
+   // if subbranches is true all the branches of the subbranches are
+   // also put to the cache.
+   
+   TFile *f = GetCurrentFile();
+   if (!f) return;
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   if (tc) tc->DropBranch(b,subbranches);
 }
 
 
@@ -1058,7 +1102,8 @@ TFriendElement* TTree::AddFriend(TTree* tree, const char* alias, Bool_t warn)
    fFriends->Add(fe);
    TTree* t = fe->GetTree();
    if (warn && (t->GetEntries() < fEntries)) {
-      Warning("AddFriend", "FriendElement '%s' in file '%s' has less entries %lld than its parent tree: %lld", tree->GetName(), fe->GetFile() ? fe->GetFile()->GetName() : "(memory resident)", t->GetEntries(), fEntries);
+      Warning("AddFriend", "FriendElement '%s' in file '%s' has less entries %lld than its parent tree: %lld", 
+              tree->GetName(), fe->GetFile() ? fe->GetFile()->GetName() : "(memory resident)", t->GetEntries(), fEntries);
    }
    return fe;
 }
@@ -1080,7 +1125,7 @@ Long64_t TTree::AutoSave(Option_t* option)
    //
    //   Note that calling TTree::AutoSave too frequently (or similarly calling
    //   TTree::SetAutoSave with a small value) is an expensive operation.
-   //   You should make tests for your own application to find a compromize
+   //   You should make tests for your own application to find a compromise
    //   between speed and the quantity of information you may loose in case of
    //   a job crash.
    //
@@ -1102,7 +1147,7 @@ Long64_t TTree::AutoSave(Option_t* option)
    //   when writing the new header.
    //
    //   The function returns the number of bytes written to the file.
-   //   if the number of bytes is null, an error has occured while writing
+   //   if the number of bytes is null, an error has occurred while writing
    //   the header to the file.
    //
    //   How to write a Tree in one process and view it from another process
@@ -1246,7 +1291,8 @@ TBranch* TTree::BranchImp(const char* branchname, TClass* ptrClass, void* addobj
    if (addr && *addr) {
       actualClass = ptrClass->GetActualClass(*addr);
       if (!actualClass) {
-         Warning("Branch", "The actual TClass corresponding to the object provided for the definition of the branch \"%s\" is missing.\n\tThe object will be truncated down to its %s part", branchname, ptrClass->GetName());
+         Warning("Branch", "The actual TClass corresponding to the object provided for the definition of the branch \"%s\" is missing.\n\tThe object will be truncated down to its %s part",
+                 branchname, ptrClass->GetName());
          actualClass = ptrClass;
       } else if ((ptrClass != actualClass) && !actualClass->InheritsFrom(ptrClass)) {
          Error("Branch", "The actual class (%s) of the object provided for the definition of the branch \"%s\" does not inherit from %s", actualClass->GetName(), branchname, ptrClass->GetName());
@@ -1310,7 +1356,8 @@ TBranch* TTree::BranchImpRef(const char* branchname, const char *classname, TCla
       }
    }
    if (!actualClass) {
-      Warning("Branch", "The actual TClass corresponding to the object provided for the definition of the branch \"%s\" is missing.\n\tThe object will be truncated down to its %s part", branchname, ptrClass->GetName());
+      Warning("Branch", "The actual TClass corresponding to the object provided for the definition of the branch \"%s\" is missing.\n\tThe object will be truncated down to its %s part",
+              branchname, ptrClass->GetName());
       actualClass = ptrClass;
    } else if ((ptrClass != actualClass) && !actualClass->InheritsFrom(ptrClass)) {
       Error("Branch", "The actual class (%s) of the object provided for the definition of the branch \"%s\" does not inherit from %s", actualClass->GetName(), branchname, ptrClass->GetName());
@@ -1347,7 +1394,8 @@ TBranch* TTree::BranchImpRef(const char* branchname, TClass* ptrClass, EDataType
    }
    actualClass = ptrClass->GetActualClass(addobj);
    if (!actualClass) {
-      Warning("Branch", "The actual TClass corresponding to the object provided for the definition of the branch \"%s\" is missing.\n\tThe object will be truncated down to its %s part", branchname, ptrClass->GetName());
+      Warning("Branch", "The actual TClass corresponding to the object provided for the definition of the branch \"%s\" is missing.\n\tThe object will be truncated down to its %s part",
+              branchname, ptrClass->GetName());
       actualClass = ptrClass;
    } else if ((ptrClass != actualClass) && !actualClass->InheritsFrom(ptrClass)) {
       Error("Branch", "The actual class (%s) of the object provided for the definition of the branch \"%s\" does not inherit from %s", actualClass->GetName(), branchname, ptrClass->GetName());
@@ -1377,7 +1425,7 @@ Int_t TTree::Branch(TCollection* li, Int_t bufsize /* = 32000 */, Int_t splitlev
    //   Each entry in the collection becomes a top level branch if the
    //   corresponding class is not a collection. If it is a collection, the entry
    //   in the collection becomes in turn top level branches, etc.
-   //   The splitlevel is decreased by 1 everytime a new collection is found.
+   //   The splitlevel is decreased by 1 every time a new collection is found.
    //   For example if list is a TObjArray*
    //     - if splitlevel = 1, one top level branch is created for each element
    //        of the TObjArray.
@@ -1399,24 +1447,24 @@ Int_t TTree::Branch(TCollection* li, Int_t bufsize /* = 32000 */, Int_t splitlev
    // corresponding to the collection or object names. It is important
    // to give names to collections to avoid misleading branch names or
    // identical branch names. By default collections have a name equal to
-   // the corresponding class name, eg the default name for a TList is "TList".
+   // the corresponding class name, e.g. the default name for a TList is "TList".
    //
    // Example--------------------------------------------------------------:
    /*
    {
          TTree T("T","test list");
-         TList *l = new TList();
+         TList *list = new TList();
 
          TObjArray *a1 = new TObjArray();
          a1->SetName("a1");
-         l->Add(a1);
+         list->Add(a1);
          TH1F *ha1a = new TH1F("ha1a","ha1",100,0,1);
          TH1F *ha1b = new TH1F("ha1b","ha1",100,0,1);
          a1->Add(ha1a);
          a1->Add(ha1b);
          TObjArray *b1 = new TObjArray();
          b1->SetName("b1");
-         l->Add(b1);
+         list->Add(b1);
          TH1F *hb1a = new TH1F("hb1a","hb1",100,0,1);
          TH1F *hb1b = new TH1F("hb1b","hb1",100,0,1);
          b1->Add(hb1a);
@@ -1424,13 +1472,13 @@ Int_t TTree::Branch(TCollection* li, Int_t bufsize /* = 32000 */, Int_t splitlev
 
          TObjArray *a2 = new TObjArray();
          a2->SetName("a2");
-         l->Add(a2);
+         list->Add(a2);
          TH1S *ha2a = new TH1S("ha2a","ha2",100,0,1);
          TH1S *ha2b = new TH1S("ha2b","ha2",100,0,1);
          a2->Add(ha2a);
          a2->Add(ha2b);
 
-         T.Branch(l,16000,2);
+         T.Branch(list,16000,2);
          T.Print();
    }
    */
@@ -1554,26 +1602,16 @@ TBranch* TTree::Branch(const char* name, void* address, const char* leaflist, In
    //            - D : a 64 bit floating point (Double_t)
    //            - L : a 64 bit signed integer (Long64_t)
    //            - l : a 64 bit unsigned integer (ULong64_t)
-   //            - O : a boolean (Bool_t)
-   //
-   //         By default, a variable will be copied to the buffer with the number of
-   //         bytes specified in the type descriptor character. However, if the type
-   //         consists of 2 characters, the second character is an integer that
-   //         specifies the number of bytes to be used when copying the variable
-   //         to the output buffer. Example:
-   //             X         ; variable X, type Float_t
-   //             Y/I       : variable Y, type Int_t
-   //             Y/I2      ; variable Y, type Int_t converted to a 16 bits integer
+   //            - O : [the letter 'o', not a zero] a boolean (Bool_t)
    //
    //         Arrays of values are supported with the following syntax:
    //         If leaf name has the form var[nelem], where nelem is alphanumeric, then
-   //         If leaf name has the form var[nelem], where nelem is alphanumeric, then
    //            if nelem is a leaf name, it is used as the variable size of the array, 
    //            otherwise return 0.
-   //         If leaf name has the form var[nelem], where nelem is a digit, then
+   //         If leaf name has the form var[nelem], where nelem is a non-negative integer, then
    //            it is used as the fixed size of the array.
-   //         If leaf name has the form of a multi dimenantion array (eg var[nelem][nelem2])
-   //            where nelem and nelem2 are digits) then
+   //         If leaf name has the form of a multi-dimensional array (e.g. var[nelem][nelem2])
+   //            where nelem and nelem2 are non-negative integer) then
    //            it is used as a 2 dimensional array of fixed size.
    //         Any of other form is not supported.
    //
@@ -1584,7 +1622,7 @@ TBranch* TTree::Branch(const char* name, void* address, const char* leaflist, In
    //
    //       * bufsize is the buffer size in bytes for this branch
    //         The default value is 32000 bytes and should be ok for most cases.
-   //         You can specify a larger value (eg 256000) if your Tree is not split
+   //         You can specify a larger value (e.g. 256000) if your Tree is not split
    //         and each entry is large (Megabytes)
    //         A small value for bufsize is optimum if you intend to access
    //         the entries in the Tree randomly and your Tree is in split mode.
@@ -1669,7 +1707,7 @@ TBranch* TTree::BranchOld(const char* name, const char* classname, void* addobj,
    //
    //    bufsize is the buffer size in bytes for this branch
    //    The default value is 32000 bytes and should be ok for most cases.
-   //    You can specify a larger value (eg 256000) if your Tree is not split
+   //    You can specify a larger value (e.g. 256000) if your Tree is not split
    //    and each entry is large (Megabytes)
    //    A small value for bufsize is optimum if you intend to access
    //    the entries in the Tree randomly and your Tree is in split mode.
@@ -1819,7 +1857,7 @@ TBranch* TTree::BranchOld(const char* name, const char* classname, void* addobj,
             if (strlen(index) != 0) {
                // We are a pointer to a varying length array of basic types.
                //check that index is a valid data member name
-               //if member is part of an object (eg fA and index=fN)
+               //if member is part of an object (e.g. fA and index=fN)
                //index must be changed from fN to fA.fN
                TString aindex (rd->GetName());
                Ssiz_t rdot = aindex.Last('.');
@@ -1968,7 +2006,7 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* addr, Int_
    //
    //    bufsize is the buffer size in bytes for this branch
    //    The default value is 32000 bytes and should be ok for most cases.
-   //    You can specify a larger value (eg 256000) if your Tree is not split
+   //    You can specify a larger value (e.g. 256000) if your Tree is not split
    //    and each entry is large (Megabytes)
    //    A small value for bufsize is optimum if you intend to access
    //    the entries in the Tree randomly and your Tree is in split mode.
@@ -2153,7 +2191,7 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
 
    // Note: The branch constructor which takes a folder as input
    //       creates top-level branch names with dots in them to
-   //       indicate the folder heirarchy.
+   //       indicate the folder hierarchy.
    char* dot = (char*) strchr(name, '.');
    Int_t nch = strlen(name);
    Bool_t dotlast = kFALSE;
@@ -2221,7 +2259,7 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
                //        constructor which takes a folder as input.
                //        The internal dots in the name are in place of
                //        of the original slashes and represent the
-               //        folder heirarchy.
+               //        folder hierarchy.
                if (isBase) {
                   // FIXME: This is very strange, this is the only case where
                   //        we create a branch for a base class that does
@@ -2585,7 +2623,8 @@ Int_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType
    } else if ((expectedType != kOther_t) && (datatype != kOther_t) && (expectedType != kNoType_t) && (datatype != kNoType_t) && (expectedType != datatype)) {
       if (datatype != kChar_t) {
          // For backward compatibility we assume that (char*) was just a cast and/or a generic address
-         Error("SetBranchAddress", "The pointer type given \"%s\" (%d) does not correspond to the type needed \"%s\" (%d) by the branch: %s", TDataType::GetTypeName(datatype), datatype, TDataType::GetTypeName(expectedType), expectedType, branch->GetName());
+         Error("SetBranchAddress", "The pointer type given \"%s\" (%d) does not correspond to the type needed \"%s\" (%d) by the branch: %s", 
+               TDataType::GetTypeName(datatype), datatype, TDataType::GetTypeName(expectedType), expectedType, branch->GetName());
          return kMismatch;
       }
    }
@@ -3612,8 +3651,8 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  MinIf$(formula,condition)
    //  MaxIf$(formula,condition): return the minimum (maximum) (within one TTree entry)
    //                    of the value of the elements of the formula given as a parameter
-   //                    if they match the condition. If not element match the condition, the result is zero.  To avoid the
-   //                    the result is zero.  To avoid the consequent peak a zero, use the
+   //                    if they match the condition. If no element matches the condition, 
+   //                    the result is zero.  To avoid the resulting peak at zero, use the
    //                    pattern:
    //    tree->Draw("MinIf$(formula,condition)","condition");
    //                    which will avoid calculation MinIf$ for the entries that have no match
@@ -3715,14 +3754,18 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //     ====================================
    //  When option contains "norm" the output histogram is normalized to 1.
    //
-   //     Saving the result of Draw to a TEventList or a TEntryList
-   //     =========================================================
+   //     Saving the result of Draw to a TEventList, a TEntryList or a TEntryListArray 
+   //     ============================================================================
    //  TTree::Draw can be used to fill a TEventList object (list of entry numbers)
    //  instead of histogramming one variable.
    //  If varexp0 has the form >>elist , a TEventList object named "elist"
    //  is created in the current directory. elist will contain the list
    //  of entry numbers satisfying the current selection.
    //  If option "entrylist" is used, a TEntryList object is created
+   //  If the selection contains arrays, vectors or any container class and option 
+   //  "entrylistarray" is used, a TEntryListArray object is created
+   //  containing also the subentries satisfying the selection, i.e. the indices of
+   //  the branches which hold containers classes.
    //  Example:
    //    tree.Draw(">>yplus","y>0")
    //    will create a TEventList object named "yplus" in the current directory.
@@ -3731,6 +3774,8 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //    to print the list of entry numbers in the list.
    //    tree.Draw(">>yplus", "y>0", "entrylist")
    //    will create a TEntryList object names "yplus" in the current directory
+   //    tree.Draw(">>yplus", "y>0", "entrylistarray")
+   //    will create a TEntryListArray object names "yplus" in the current directory
    //
    //  By default, the specified entry list is reset.
    //  To continue to append data to an existing list, use "+" in front
@@ -3739,7 +3784,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //      will not reset yplus, but will enter the selected entries at the end
    //      of the existing list.
    //
-   //      Using a TEventList or a TEntryList as Input
+   //      Using a TEventList, TEntryList or TEntryListArray as Input
    //      ===========================
    //  Once a TEventList or a TEntryList object has been generated, it can be used as input
    //  for TTree::Draw. Use TTree::SetEventList or TTree::SetEntryList to set the
@@ -3758,9 +3803,9 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  with it, unless the user extracts it by calling GetEntryList() function.
    //  See also comments to SetEventList() function of TTree and TChain.
    //
-   //  If arrays are used in the selection critera, the entry entered in the
-   //  list are all the entries that have at least one element of the array that
-   //  satisfy the selection.
+   //  If arrays are used in the selection criteria and TEntryListArray is not used,
+   //  all the entries that have at least one element of the array that satisfy the selection
+   //  are entered in the list.
    //  Example:
    //      tree.Draw(">>pyplus","fTracks.fPy>0");
    //      tree->SetEventList(pyplus);
@@ -3777,6 +3822,16 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //      tree->Draw("fTracks.fPy");
    //  will draw the fPy of only the tracks that have a positive fPy.
    //
+   //  To draw only the elements that match a selection in case of arrays,
+   //  you can also use TEntryListArray (faster in case of a more general selection).
+   //  Example:
+   //      tree.Draw(">>pyplus","fTracks.fPy>0", "entrylistarray");
+   //      tree->SetEntryList(pyplus);
+   //      tree->Draw("fTracks.fPy");
+   //  
+   //  will draw the fPy of only the tracks that have a positive fPy, 
+   //  but without redoing the selection.   
+   //      
    //  Note: Use tree->SetEventList(0) if you do not want use the list as input.
    //
    //      How to obtain more info from TTree::Draw
@@ -4065,7 +4120,7 @@ static TBranch *R__FindBranchHelper(TObjArray *list, const char *branchname) {
 
       const char *name = where->GetName();
       UInt_t len = strlen(name);
-      if (name[len-1]==']') {
+      if (len && name[len-1]==']') {
          const  char *dim = strchr(name,'[');
          if (dim) {
             len = dim - name;
@@ -4596,14 +4651,14 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    //     getall = 1 : get all branches
    //
    //  The function returns the number of bytes read from the input buffer.
-   //  If entry does not exist  the function returns 0.
-   //  If an I/O error occurs,  the function returns -1.
+   //  If entry does not exist the function returns 0.
+   //  If an I/O error occurs, the function returns -1.
    //
-   //  If the Tree has friends, also read the friends entry
+   //  If the Tree has friends, also read the friends entry.
    //
    //  To activate/deactivate one or more branches, use TBranch::SetBranchStatus
    //  For example, if you have a Tree with several hundred branches, and you
-   //  are interested only by branches named "u" and "v", do
+   //  are interested only by branches named "a" and "b", do
    //     mytree.SetBranchStatus("*",0); //disable all branches
    //     mytree.SetBranchStatus("a",1);
    //     mytree.SetBranchStatus("b",1);
@@ -4639,21 +4694,21 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    //       T.GetEntry(i);
    //       // the object event has been filled at this point
    //    }
-   //   The default (recommended). At the first entry an object of the
-   //   class Event will be created and pointed by event.
-   //   At the following entries, event will be overwritten by the new data.
-   //   All internal members that are TObject* are automatically deleted.
-   //   It is important that these members be in a valid state when GetEntry
-   //   is called. Pointers must be correctly initialized.
-   //   However these internal members will not be deleted if the characters "->"
-   //   are specified as the first characters in the comment field of the data
-   //   member declaration.
+   //   The default (recommended). At the first entry an object of the class
+   //   Event will be created and pointed by event. At the following entries,
+   //   event will be overwritten by the new data. All internal members that are
+   //   TObject* are automatically deleted. It is important that these members
+   //   be in a valid state when GetEntry is called. Pointers must be correctly
+   //   initialized. However these internal members will not be deleted if the
+   //   characters "->" are specified as the first characters in the comment
+   //   field of the data member declaration.
+   //
    //   If "->" is specified, the pointer member is read via pointer->Streamer(buf).
-   //   In this case, it is assumed that the pointer is never null (case
-   //   of pointer TClonesArray *fTracks in the Event example).
-   //   If "->" is not specified, the pointer member is read via buf >> pointer.
-   //   In this case the pointer may be null. Note that the option with "->"
-   //   is faster to read or write and it also consumes less space in the file.
+   //   In this case, it is assumed that the pointer is never null (case of
+   //   pointer TClonesArray *fTracks in the Event example). If "->" is not
+   //   specified, the pointer member is read via buf >> pointer. In this case
+   //   the pointer may be null. Note that the option with "->" is faster to
+   //   read or write and it also consumes less space in the file.
    //
    //   OPTION 2
    //   --------
@@ -4679,9 +4734,9 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    //    }
    //
    //  It is strongly recommended to use the default option 1. It has the
-   //  additional advantage that functions like TTree::Draw (internally
-   //  calling TTree::GetEntry) will be functional even when the classes in the
-   //  file are not available.
+   //  additional advantage that functions like TTree::Draw (internally calling
+   //  TTree::GetEntry) will be functional even when the classes in the file are
+   //  not available.
 
    // We already have been visited while recursively looking
    // through the friends tree, let return
@@ -4949,51 +5004,41 @@ TIterator* TTree::GetIteratorOnAllLeaves(Bool_t dir)
 }
 
 //______________________________________________________________________________
-TLeaf* TTree::GetLeaf(const char* aname)
+TLeaf* TTree::GetLeafImpl(const char* branchname, const char *leafname)
 {
-   // Return pointer to the 1st Leaf named name in any Branch of this Tree or any branch in the list of friend trees.
+   // Return pointer to the 1st Leaf named name in any Branch of this 
+   // Tree or any branch in the list of friend trees.
    //
-   //  aname may be of the form branchname/leafname
-
-   if (aname == 0) return 0;
-
-   // We already have been visited while recursively looking
-   // through the friends tree, let return
-   if (kGetLeaf & fFriendLockStatus) {
-      return 0;
-   }
+   // The leaf name can contain the name of a friend tree with the
+   // syntax: friend_dir_and_tree.full_leaf_name
+   // the friend_dir_and_tree can be of the form
+   //    TDirectoryName/TreeName
+   
    TLeaf *leaf = 0;
-   char* slash = (char*) strchr(aname, '/');
-   char* name = 0;
-   UInt_t nbch = 0;
-   if (slash) {
-      name = slash + 1;
-      nbch = slash - aname;
-      TString brname(aname,nbch);
-      TBranch *branch = FindBranch(brname);
+   if (branchname) {
+      TBranch *branch = FindBranch(branchname);
       if (branch) {
-         leaf = branch->GetLeaf(name);
+         leaf = branch->GetLeaf(leafname);
          if (leaf) {
             return leaf;
          }
-      }
-   } else {
-      name = (char*) aname;
+      }      
    }
    TIter nextl(GetListOfLeaves());
    while ((leaf = (TLeaf*)nextl())) {
-      if (strcmp(leaf->GetName(),name)) continue;
-      if (slash) {
+      if (strcmp(leaf->GetName(),leafname)) continue;
+      if (branchname) {
+         UInt_t nbch = strlen(branchname);
          TBranch *br = leaf->GetBranch();
          const char* brname = br->GetName();
          TBranch *mother = br->GetMother();
-         if (strncmp(brname,aname,nbch)) {
+         if (strncmp(brname,branchname,nbch)) {
             if (mother != br) {
                const char *mothername = mother->GetName();
                UInt_t motherlen = strlen(mothername);
-               if (nbch > motherlen && strncmp(mothername,aname,motherlen)==0 && (mothername[motherlen-1]=='.' || aname[motherlen]=='.')) {
+               if (nbch > motherlen && strncmp(mothername,branchname,motherlen)==0 && (mothername[motherlen-1]=='.' || branchname[motherlen]=='.')) {
                   // The left part of the requested name match the name of the mother, let's see if the right part match the name of the branch.
-                  if (strncmp(brname,aname+motherlen+1,nbch-motherlen-1)) {
+                  if (strncmp(brname,branchname+motherlen+1,nbch-motherlen-1)) {
                      // No it does not
                      continue;
                   } // else we have match so we can proceed.
@@ -5005,7 +5050,7 @@ TLeaf* TTree::GetLeaf(const char* aname)
                continue;
             }
          }
-         // The start of the branch name is indentical to the content
+         // The start of the branch name is identical to the content
          // of 'aname' before the first '/'.
          // Let's make sure that it is not longer (we are trying
          // to avoid having jet2/value match the branch jet23
@@ -5022,11 +5067,11 @@ TLeaf* TTree::GetLeaf(const char* aname)
    while ((fe = (TFriendElement*)next())) {
       TTree *t = fe->GetTree();
       if (t) {
-         leaf = t->GetLeaf(aname);
+         leaf = t->GetLeaf(leafname);
          if (leaf) return leaf;
       }
    }
-
+   
    //second pass in the list of friends when the leaf name
    //is prefixed by the tree name
    TString strippedArg;
@@ -5034,23 +5079,67 @@ TLeaf* TTree::GetLeaf(const char* aname)
    while ((fe = (TFriendElement*)next())) {
       TTree *t = fe->GetTree();
       if (t==0) continue;
-      char *subname = (char*)strstr(name,fe->GetName());
-      if (subname != name) continue;
+      char *subname = (char*)strstr(leafname,fe->GetName());
+      if (subname != leafname) continue;
       Int_t l = strlen(fe->GetName());
       subname += l;
       if (*subname != '.') continue;
       subname++;
-      if (slash) {
-         strippedArg = aname;
-         strippedArg.Remove(nbch+1);
-      } else {
-         strippedArg = "";
-      }
       strippedArg += subname;
-      leaf = t->GetLeaf(strippedArg);
+      leaf = t->GetLeaf(branchname,subname);
       if (leaf) return leaf;
    }
    return 0;
+}
+
+//______________________________________________________________________________
+TLeaf* TTree::GetLeaf(const char* branchname, const char *leafname)
+{
+   // Return pointer to the 1st Leaf named name in any Branch of this 
+   // Tree or any branch in the list of friend trees.
+   //
+   // The leaf name can contain the name of a friend tree with the
+   // syntax: friend_dir_and_tree.full_leaf_name
+   // the friend_dir_and_tree can be of the form
+   //    TDirectoryName/TreeName
+
+   if (leafname == 0) return 0;
+   
+   // We already have been visited while recursively looking
+   // through the friends tree, let return
+   if (kGetLeaf & fFriendLockStatus) {
+      return 0;
+   }
+   
+   return GetLeafImpl(branchname,leafname);
+}
+   
+//______________________________________________________________________________
+TLeaf* TTree::GetLeaf(const char* aname)
+{
+   // Return pointer to the 1st Leaf named name in any Branch of this 
+   // Tree or any branch in the list of friend trees.
+   //
+   // aname may be of the form branchname/leafname
+
+   if (aname == 0) return 0;
+
+   // We already have been visited while recursively looking
+   // through the friends tree, let return
+   if (kGetLeaf & fFriendLockStatus) {
+      return 0;
+   }
+   char* slash = (char*) strrchr(aname, '/');
+   char* name = 0;
+   UInt_t nbch = 0;
+   if (slash) {
+      name = slash + 1;
+      nbch = slash - aname;
+      TString brname(aname,nbch);
+      return GetLeafImpl(brname.Data(),name);
+   } else {
+      return GetLeafImpl(0,aname);
+   }
 }
 
 //______________________________________________________________________________
@@ -5227,7 +5316,7 @@ Int_t TTree::LoadBaskets(Long64_t maxmemory)
    // If maxmemory is non null and positive SetMaxVirtualSize is called
    // with this value. Default for maxmemory is 2000000000 (2 Gigabytes).
    // The function returns the total number of baskets read into memory
-   // if negative an error occured while loading the branches.
+   // if negative an error occurred while loading the branches.
    // This method may be called to force branch baskets in memory
    // when random access to branch entries is required.
    // If random access to only a few branches is required, you should
@@ -5258,7 +5347,7 @@ Long64_t TTree::LoadTree(Long64_t entry)
    // through the friends tree, let return
    if (kLoadTree & fFriendLockStatus) {
       // We need to return a negative value to avoid a circular list of friend
-      // to think that there is always an entry somewhere in the lisst.
+      // to think that there is always an entry somewhere in the list.
       return -1;
    }
 
@@ -5607,7 +5696,8 @@ TTree* TTree::MergeTrees(TList* li, Option_t* /* option */)
       if (nentries == 0) continue;
       if (!newtree) {
          newtree = (TTree*)tree->CloneTree();
-
+         if (!newtree) continue;
+         
          // Once the cloning is done, separate the trees,
          // to avoid as many side-effects as possible
          tree->GetListOfClones()->Remove(newtree);
@@ -5793,7 +5883,7 @@ void TTree::OptimizeBaskets(ULong64_t maxMemory, Float_t minComp, Option_t *opti
          }
          newMemsize += newBsize;
          // For this number to be somewhat accurate when newBsize is 'low'
-         // we do not include any space for meta data in the requested size (newBsize) even-thouh SetBasketSize will 
+         // we do not include any space for meta data in the requested size (newBsize) even-though SetBasketSize will 
          // not let it be lower than 100+TBranch::fEntryOffsetLen.
          newBaskets += 1+Int_t(totBytes/newBsize); 
          if (pass == 0) continue;
@@ -5810,7 +5900,12 @@ void TTree::OptimizeBaskets(ULong64_t maxMemory, Float_t minComp, Option_t *opti
       Double_t bmin_new = bmin*memFactor;
       Double_t bmax_new = bmax*memFactor;
       static const UInt_t hardmax = 1*1024*1024*1024; // Really, really never give more than 1Gb to a single buffer.
-      static const UInt_t hardmin = 8;                // Really, really never go lower than 8 bytes (we use this number so that the calculation of the number of basket is consistent but in fact SetBasketSize will not let the size go below 100+TBranch::fEntryOffsetLen)
+
+      // Really, really never go lower than 8 bytes (we use this number
+      // so that the calculation of the number of basket is consistent
+      // but in fact SetBasketSize will not let the size go below
+      // 100+TBranch::fEntryOffsetLen)
+      static const UInt_t hardmin = 8;
       bmin = (bmin_new > hardmax) ? hardmax : ( bmin_new < hardmin ? hardmin : (UInt_t)bmin_new );
       bmax = (bmax_new > hardmax) ? bmin : (UInt_t)bmax_new;         
    }
@@ -6182,7 +6277,8 @@ char TTree::GetNewlineValue(istream &inputStream)
    long inPos = inputStream.tellg();
    char newline = '\n';
    while(1) {
-     char c = inputStream.get();
+     char c = 0;
+     inputStream.get(c);
      if(!inputStream.good()) {
        Error("ReadStream","Error reading stream: no newline found.");
        return 0;
@@ -6597,20 +6693,30 @@ void TTree::SetAutoFlush(Long64_t autof)
    // The AutoFlush mechanism is disabled.
    //
    // Flushing the buffers at regular intervals optimize the location of
-   // consecutive entries on the disk.
+   // consecutive entries on the disk by creating clusters of baskets.
    //
-   // The value of autoflush determine a size in number of entries of
+   // A cluster of baskets is a set of baskets that contains all
+   // the data for a (consecutive) set of entries and that is stored 
+   // consecutively on the disk.   When reading all the branches, this 
+   // is the minimum set of baskets that the TTreeCache will read.
+   //
+   //
+
+   // Implementation note:
+   // 
+   // A positive value of autoflush determines the size (in number of entries) of
    // a cluster of baskets.
    //
    // If the value of autoflush is changed over time (this happens in 
-   // particular when fast merge files), we record the previous values
-   // in the arrays fClusterRangeEnd and fClusterSize.
-   // A range of entries where the size of the cluster of basket is
-   // the same (i.e the value of AutoFlush was constant) is called 
-   // a ClusterRange.
+   // particular when the TTree results from fast merging many trees), 
+   // we record the values of fAutoFlush in the data members:
+   //     fClusterRangeEnd and fClusterSize.
+   // In the code we refer to a range of entries where the size of the 
+   // cluster of baskets is the same (i.e the value of AutoFlush was 
+   // constant) is called a ClusterRange.
    // 
-   // The 2 arrays have fNClusterRange active values and have 
-   // fMaxClusterRange allocated entries.
+   // The 2 arrays (fClusterRangeEnd and fClusterSize) have fNClusterRange 
+   // active (used) values and have fMaxClusterRange allocated entries.
    // 
    // fClusterRangeEnd contains the last entries number of a cluster range.
    // In particular this means that the 'next' cluster starts at fClusterRangeEnd[]+1
@@ -6637,8 +6743,9 @@ void TTree::SetAutoFlush(Long64_t autof)
    //          index, prevEntry, fEntries - 1, fAutoFlush);
    //
    
-   // Note:  We store the end of the cluster rather than its start in order to completely
-   // avoid using the array if the cluster size never varies.
+   // Note:  We store the entry number corresponding to the end of the cluster 
+   // rather than its start in order to avoid using the array if the cluster 
+   // size never varies (If there is only one value of AutoFlush for the whole TTree).
 
    if (fAutoFlush > 0 || autof > 0) {
       // The mechanism was already enabled, let's record the previous
@@ -6818,13 +6925,20 @@ void TTree::SetBranchStatus(const char* bname, Bool_t status, UInt_t* found)
    //    T.setBranchStatus("e",1);
    //    T.GetEntry(i);
    //
+   //  bname is interpreted as a wildcarded TRegexp (see TRegexp::MakeWildcard).
+   //  Thus, "a*b" or "a.*b" matches branches starting with "a" and ending with
+   //  "b", but not any other branch with an "a" followed at some point by a
+   //  "b". For this second behavior, use "*a*b*". Note that TRegExp does not
+   //  support '|', and so you cannot select, e.g. track and shower branches
+   //  with "track|shower".
+   // 
    //  WARNING! WARNING! WARNING!
-   //  SetBranchStatus is matching the branch based on regular expression match
-   //  of the branch 'name' and not on the branch hierarchy!
-   //  In order to be able to selectively enable a top level object that is 'split'
-   //  you need to make sure the name of the top level branch is prefixed to the
-   //  sub-branches' name(by adding a dot ('.') at the end of the Branch creation
-   //  and use the corresponding regular expression.
+   //  SetBranchStatus is matching the branch based on match of the branch
+   //  'name' and not on the branch hierarchy! In order to be able to
+   //  selectively enable a top level object that is 'split' you need to make
+   //  sure the name of the top level branch is prefixed to the sub-branches'
+   //  name (by adding a dot ('.') at the end of the Branch creation and use the
+   //  corresponding bname.
    //
    //  I.e If your Tree has been created in split mode with a parent branch "parent."
    //  (note the trailing dot).
@@ -7533,6 +7647,8 @@ void TTree::Streamer(TBuffer& b)
       Version_t R__v = b.ReadVersion(&R__s, &R__c);
       if (R__v > 4) {
          b.ReadClassBuffer(TTree::Class(), this, R__v, R__s, R__c);
+
+         fBranches.SetOwner(kTRUE); // True needed only for R__v < 19 and most R__v == 19
 
          if (fTreeIndex) {
             fTreeIndex->SetTree(this);
